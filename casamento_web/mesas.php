@@ -58,6 +58,31 @@ exigirAdmin();
   .mesa-node.parcial{ background:var(--gold-pale); border-color:var(--gold); }
   .mesa-node.cheia{ background:#e4f3e9; border-color:#1f7a3d; color:#17311f; }
   .mesa-node.excede{ background:#f7e5e3; border-color:var(--danger); color:#7d332d; }
+  .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:4px; box-shadow:0 0 0 6px rgba(180,134,74,.18); z-index:18; }
+
+  /* Coluna esquerda (planta + área de arrastar) */
+  .col-esq{ display:flex; flex-direction:column; gap:1.1rem; min-width:0; }
+
+  /* Área de arrastar convidados/convites */
+  .roster-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem; }
+  .roster-topo{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
+  .roster-topo .titulo{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); font-weight:600; flex:1; }
+  .roster-tabs{ display:flex; gap:.25rem; background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.2rem; }
+  .roster-tabs .rt{ border:none; background:transparent; color:var(--text); font-family:inherit; font-size:.82rem; padding:.35rem .8rem; border-radius:50px; cursor:pointer; }
+  .roster-tabs .rt.on{ background:var(--forest); color:#fff; }
+  .roster-filtro{ font-size:.8rem; color:#7a8078; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer; }
+  .roster-lista{ display:flex; flex-wrap:wrap; gap:.5rem; max-height:220px; overflow:auto; }
+  .chip-drag{ display:inline-flex; flex-direction:column; gap:.05rem; background:var(--cream); border:1px solid var(--line);
+    border-radius:12px; padding:.45rem .7rem; cursor:grab; touch-action:none; user-select:none; max-width:100%; }
+  .chip-drag:hover{ border-color:var(--gold-soft); }
+  .chip-drag.arrastando{ opacity:.4; }
+  .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+  .chip-drag .cd-meta{ font-size:.72rem; color:#8a8f88; }
+  .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
+  .roster-vazio{ color:#9aa09a; font-size:.86rem; padding:.4rem 0; }
+  .ghost-drag{ position:fixed; z-index:1000; transform:translate(-50%,-50%); pointer-events:none;
+    background:var(--forest); color:#fff; font-size:.85rem; padding:.4rem .7rem; border-radius:10px;
+    box-shadow:0 10px 26px rgba(0,0,0,.3); white-space:nowrap; }
 
   /* Painel lateral */
   .painel{ display:flex; flex-direction:column; gap:1rem; }
@@ -109,6 +134,7 @@ exigirAdmin();
   <div class="stats-mesa" id="stats"></div>
 
   <div class="layout">
+   <div class="col-esq">
     <!-- PLANTA -->
     <div class="planta-cartao">
       <div class="planta-topo">
@@ -125,6 +151,21 @@ exigirAdmin();
       </div>
       <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar. Toque numa mesa para ver e editar os detalhes.</p>
     </div>
+
+    <!-- ARRASTAR PARA UMA MESA -->
+    <div class="roster-cartao">
+      <div class="roster-topo">
+        <span class="titulo">Arraste para uma mesa</span>
+        <div class="roster-tabs">
+          <button class="rt on" data-tab="pessoas" onclick="mudarRoster('pessoas')">Pessoas</button>
+          <button class="rt" data-tab="convites" onclick="mudarRoster('convites')">Convites</button>
+        </div>
+        <label class="roster-filtro"><input type="checkbox" id="so-sentar" onchange="renderRoster()"> só por sentar</label>
+      </div>
+      <div class="roster-lista" id="roster-lista"></div>
+      <p style="font-size:.78rem;color:#9aa09a;margin:.5rem 0 0">Arraste um cartão para cima de uma mesa na planta para o sentar lá.</p>
+    </div>
+   </div>
 
     <!-- PAINEL -->
     <div class="painel">
@@ -174,19 +215,28 @@ async function api(action, opts={}){
   const r=await fetch('api.php?action='+action,opts); return r.json();
 }
 
-let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda';
+let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', rosterTab='pessoas';
+
+// Normalização: o MySQL devolve ids como texto; convertê-los para número
+// garante comparações fiáveis (=== entre ids) em todo o ecrã.
+const numOuNull=v=>(v===null||v===undefined||v==='')?null:+v;
+const normMesas=a=>(a||[]).map(m=>({...m, id:+m.id, capacidade:numOuNull(m.capacidade),
+  pos_x:numOuNull(m.pos_x), pos_y:numOuNull(m.pos_y), ocupacao:+m.ocupacao||0, convites:+m.convites||0, forma:m.forma||'redonda'}));
+const normConvites=a=>(a||[]).map(c=>({...c, id:+c.id, mesa_id:numOuNull(c.mesa_id), lugares:+c.lugares||0}));
+const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_id,
+  mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id)}));
 
 // ---------- carregar ----------
 async function carregar(){
   const [dm,dc,dg]=await Promise.all([api('mesa_list'), api('convite_list'), api('convidado_list')]);
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
-  MESAS=dm.mesas||[]; CONVITES=(dc&&dc.convites)||[]; CONVIDADOS=(dg&&dg.convidados)||[];
+  MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
   await autoPosicionar();
   renderTudo();
 }
 async function recarregarDados(){
   const [dc,dg]=await Promise.all([api('convite_list'), api('convidado_list')]);
-  CONVITES=(dc&&dc.convites)||[]; CONVIDADOS=(dg&&dg.convidados)||[];
+  CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
 }
 
 // Coloca em grelha as mesas ainda sem posição e persiste-as.
@@ -201,7 +251,7 @@ async function autoPosicionar(){
   await Promise.all(semPos.map(m=>salvarPos(m.id,m.pos_x,m.pos_y)));
 }
 
-function renderTudo(){ renderStats(); renderPlanta(); renderDetalhe(); }
+function renderTudo(){ renderStats(); renderPlanta(); renderDetalhe(); renderRoster(); }
 
 // ---------- estatísticas ----------
 function renderStats(){
@@ -387,7 +437,7 @@ async function adicionarMesa(){
   const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:0,nome,capacidade:cap,forma:novaForma})});
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
   $('nova-nome').value=''; $('nova-cap').value='';
-  MESAS=d.mesas;
+  MESAS=normMesas(d.mesas);
   // posiciona a nova mesa (sem posição) e seleciona-a
   await autoPosicionar();
   SEL=d.id||null;
@@ -402,7 +452,7 @@ async function guardarMesaEd(){
   const formaBtn=document.querySelector('#ed-forma button.on');
   const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:m.id,nome,capacidade:cap,forma:formaBtn?formaBtn.dataset.forma:'redonda'})});
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
-  MESAS=d.mesas; renderTudo(); toast('Mesa atualizada.');
+  MESAS=normMesas(d.mesas); renderTudo(); toast('Mesa atualizada.');
 }
 
 async function eliminar(id){
@@ -410,7 +460,7 @@ async function eliminar(id){
   if(!confirm(`Eliminar a mesa "${nome}"? Os convites e pessoas sentados ficam sem mesa.`)) return;
   const d=await api('mesa_delete&id='+id);
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas; if(SEL===id) SEL=null;
+  MESAS=normMesas(d.mesas); if(SEL===id) SEL=null;
   await recarregarDados(); renderTudo(); toast('Mesa eliminada.');
 }
 
@@ -419,25 +469,104 @@ async function sentar(conviteId){
   conviteId=+conviteId; if(!conviteId||!SEL) return;
   const d=await api('convite_mesa',{method:'POST',body:JSON.stringify({id:conviteId,mesa_id:SEL})});
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Convite sentado nesta mesa.');
+  MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Convite sentado nesta mesa.');
 }
 async function retirarConvite(conviteId){
   const d=await api('convite_mesa',{method:'POST',body:JSON.stringify({id:conviteId,mesa_id:''})});
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Convite retirado da mesa.');
+  MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Convite retirado da mesa.');
 }
 
 // Mover UMA pessoa (mesa individual): val vazio = segue o convite
 async function moverPessoa(gid, val){
   const d=await api('convidado_mesa',{method:'POST',body:JSON.stringify({id:+gid, mesa_id: val===''?'':+val})});
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Lugar atualizado.');
+  MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Lugar atualizado.');
 }
 async function trazerPessoa(gid){
   gid=+gid; if(!gid||!SEL) return;
   const d=await api('convidado_mesa',{method:'POST',body:JSON.stringify({id:gid, mesa_id:SEL})});
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Pessoa trazida para esta mesa.');
+  MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Pessoa trazida para esta mesa.');
+}
+
+// ---------- área de arrastar (roster) ----------
+function mudarRoster(tab){ rosterTab=tab; document.querySelectorAll('.roster-tabs .rt').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); renderRoster(); }
+
+function renderRoster(){
+  const box=$('roster-lista'); if(!box) return;
+  const soSentar=$('so-sentar') && $('so-sentar').checked;
+  let html='';
+  if(rosterTab==='pessoas'){
+    let itens=CONVIDADOS.slice().sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.nome||'').localeCompare(b.nome||''));
+    if(soSentar) itens=itens.filter(g=>g.mesa_efetiva_id==null);
+    html=itens.map(g=>{
+      const sem=g.mesa_efetiva_id==null;
+      const meta=g.mesa_efetiva_nome?('em '+esc(g.mesa_efetiva_nome)):'sem mesa';
+      return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}">
+        <span class="cd-nome">${esc(g.nome)}</span><span class="cd-meta">${esc(g.convite_nome)} · ${meta}</span></div>`;
+    }).join('');
+  } else {
+    let itens=CONVITES.slice().sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
+    if(soSentar) itens=itens.filter(c=>c.mesa_id==null);
+    html=itens.map(c=>{
+      const sem=c.mesa_id==null;
+      const meta=c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'sem mesa';
+      return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="convite" data-id="${c.id}" data-label="${esc(c.nome_final)}">
+        <span class="cd-nome">${esc(c.nome_final)}</span><span class="cd-meta">${c.lugares} lug. · ${meta}</span></div>`;
+    }).join('');
+  }
+  box.innerHTML = html || `<div class="roster-vazio">${soSentar?'Está tudo sentado. 🎉':'Nada a mostrar.'}</div>`;
+}
+
+// Arrastar um cartão (pessoa/convite) para cima de uma mesa da planta.
+let pend=null, ghost=null, arrItem=null;
+$('roster-lista').addEventListener('pointerdown', e=>{
+  const chip=e.target.closest('.chip-drag'); if(!chip) return;
+  pend={tipo:chip.dataset.tipo, id:+chip.dataset.id, label:chip.dataset.label, chip, sx:e.clientX, sy:e.clientY};
+  window.addEventListener('pointermove', talvezArrastar);
+  window.addEventListener('pointerup', cancelarArme, {once:true});
+});
+function talvezArrastar(e){
+  if(!pend) return;
+  if(Math.abs(e.clientX-pend.sx)>5 || Math.abs(e.clientY-pend.sy)>5){
+    window.removeEventListener('pointermove', talvezArrastar);
+    window.removeEventListener('pointerup', cancelarArme);
+    comecarArraste(e);
+  }
+}
+function cancelarArme(){ pend=null; window.removeEventListener('pointermove', talvezArrastar); }
+function comecarArraste(e){
+  arrItem={tipo:pend.tipo, id:pend.id}; pend.chip.classList.add('arrastando');
+  ghost=document.createElement('div'); ghost.className='ghost-drag'; ghost.textContent=pend.label;
+  document.body.appendChild(ghost); posGhost(e);
+  window.addEventListener('pointermove', moverArraste);
+  window.addEventListener('pointerup', largarArraste, {once:true});
+  pend=null;
+}
+function posGhost(e){ if(ghost){ ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px'; } }
+function mesaSob(e){ const el=document.elementFromPoint(e.clientX,e.clientY); return el&&el.closest('.mesa-node'); }
+function moverArraste(e){
+  posGhost(e);
+  const node=mesaSob(e);
+  document.querySelectorAll('.mesa-node.drop-alvo').forEach(n=>{ if(n!==node) n.classList.remove('drop-alvo'); });
+  if(node) node.classList.add('drop-alvo');
+}
+async function largarArraste(e){
+  window.removeEventListener('pointermove', moverArraste);
+  const node=mesaSob(e);
+  document.querySelectorAll('.mesa-node.drop-alvo').forEach(n=>n.classList.remove('drop-alvo'));
+  document.querySelectorAll('.chip-drag.arrastando').forEach(c=>c.classList.remove('arrastando'));
+  if(ghost){ ghost.remove(); ghost=null; }
+  const item=arrItem; arrItem=null;
+  if(!node || !item) return;
+  const mid=+node.dataset.id;
+  const acao = item.tipo==='pessoa' ? 'convidado_mesa' : 'convite_mesa';
+  const d=await api(acao,{method:'POST',body:JSON.stringify({id:item.id, mesa_id:mid})});
+  if(!d.success) return toast(d.message||'Erro.',true);
+  MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo();
+  const m=MESAS.find(x=>x.id===mid);
+  toast((item.tipo==='pessoa'?'Pessoa':'Convite')+' → '+(m?m.nome:'mesa'));
 }
 
 carregar();
