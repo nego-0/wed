@@ -24,6 +24,26 @@ function ehAdmin(): bool             { return papel() === 'admin'; }
 function podeEntrar(): bool          { return in_array(papel(), ['admin', 'porteiro'], true); }
 
 /**
+ * Token CSRF da sessão (gerado na primeira utilização). Deve ser incluído
+ * nos pedidos que alteram dados, no cabeçalho "X-CSRF-Token".
+ */
+function csrfToken(): string {
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf'];
+}
+
+/** Valida o token CSRF recebido (cabeçalho X-CSRF-Token ou campo 'csrf'). */
+function csrfValido(): bool {
+    $esperado = $_SESSION['csrf'] ?? '';
+    if ($esperado === '') return false;
+    $recebido = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if ($recebido === '') $recebido = (string)($_POST['csrf'] ?? ($_GET['csrf'] ?? ''));
+    return $recebido !== '' && hash_equals($esperado, $recebido);
+}
+
+/**
  * Autentica por nome de utilizador + senha (definidos em config.local.php).
  * Aceita senha em texto simples ('senha') ou em hash ('senha_hash').
  * Devolve o papel ('admin'/'porteiro') em caso de sucesso, ou null.

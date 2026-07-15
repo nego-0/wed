@@ -170,7 +170,9 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
         </div>
 
         <div id="detalhes-sim" style="display:none;">
-          <?php if ((int)$c['lugares'] > 1): ?>
+          <?php /* O seletor de número só aparece quando NÃO há lista nominal:
+                   com nomes, são as caixas "Quem vai comparecer?" que definem a contagem. */ ?>
+          <?php if ((int)$c['lugares'] > 1 && count($c['membros']) <= 1): ?>
           <div class="campo">
             <label>Quantas pessoas irão comparecer?</label>
             <select id="confirmados">

@@ -287,6 +287,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 
 <script>
 const BASE = <?= json_encode(base_url()) ?>;
+const CSRF = <?= json_encode(csrfToken()) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
 let CONVITES = [], MESAS = [], timer = null;
 let filtroTipo='', filtroLado='', filtroEstado='', filtroMesa='', filtroImpresso='';
@@ -301,6 +302,7 @@ async function api(action, opts={}){
   if(opts.body && typeof opts.body==='string'){
     try{ const b=JSON.parse(opts.body); if(b && typeof b==='object' && !Array.isArray(b)){ b.ts=agora(); opts.body=JSON.stringify(b); } }catch(e){}
   }
+  opts.headers = Object.assign({'X-CSRF-Token': CSRF}, opts.headers||{});
   const r=await fetch('api.php?action='+action, opts); return r.json();
 }
 function debounceCarregar(){ clearTimeout(timer); timer=setTimeout(carregar,300); }

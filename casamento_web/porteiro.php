@@ -122,6 +122,7 @@ exigirPorta();
 <div class="toast" id="toast"></div>
 
 <script>
+const CSRF = <?= json_encode(csrfToken()) ?>;
 const $=id=>document.getElementById(id);
 const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 function toast(m,e=false){const t=$('toast');t.textContent=m;t.className='toast mostrar'+(e?' erro':'');setTimeout(()=>t.className='toast',2400);}
@@ -131,6 +132,7 @@ async function api(a,o={}){
   if(o.body && typeof o.body==='string'){
     try{ const b=JSON.parse(o.body); if(b && typeof b==='object' && !Array.isArray(b)){ b.ts=agora(); o.body=JSON.stringify(b); } }catch(e){}
   }
+  o.headers = Object.assign({'X-CSRF-Token': CSRF}, o.headers||{});
   const r=await fetch('api.php?action='+a,o); return r.json();
 }
 

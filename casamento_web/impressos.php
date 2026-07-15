@@ -102,6 +102,7 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 <div class="toast" id="toast"></div>
 
 <script>
+const CSRF = <?= json_encode(csrfToken()) ?>;
 const $=id=>document.getElementById(id);
 function toast(m){const t=$('toast');t.textContent=m;t.className='toast mostrar';setTimeout(()=>t.className='toast',2200);}
 
@@ -118,7 +119,7 @@ async function marcar(el,id){
   const cartao=el.closest('.cartao'); const vai=!cartao.classList.contains('impresso');
   const agora=()=>{ const d=new Date(),p=n=>String(n).padStart(2,'0');
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); };
-  const r=await fetch(`api.php?action=convite_flag&id=${id}&campo=impresso&valor=${vai?1:0}&ts=${encodeURIComponent(agora())}`); const d=await r.json();
+  const r=await fetch(`api.php?action=convite_flag&id=${id}&campo=impresso&valor=${vai?1:0}&ts=${encodeURIComponent(agora())}`, {headers:{'X-CSRF-Token':CSRF}}); const d=await r.json();
   if(d.success){ cartao.classList.toggle('impresso',vai); el.querySelector('.txt').textContent=vai?'Impresso':'Marcar impresso';
     $('cont-impressos').textContent=document.querySelectorAll('.cartao.impresso').length; toast('Atualizado.'); }
 }

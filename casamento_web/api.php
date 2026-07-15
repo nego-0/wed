@@ -16,6 +16,14 @@ function corpo(): array {
 function ok(array $extra = []): void  { echo json_encode(['success' => true]  + $extra); exit; }
 function erro(string $m): void        { echo json_encode(['success' => false, 'message' => $m]); exit; }
 
+/** Exige um token CSRF válido nos pedidos autenticados que alteram dados. */
+function exigirCsrf(): void {
+    if (!csrfValido()) {
+        http_response_code(419);
+        erro('Sessão expirada ou pedido inválido. Recarregue a página e tente de novo.');
+    }
+}
+
 /**
  * Momento a gravar nas operações CRUD: usa a hora local do cliente
  * (enviada em "ts") quando válida; caso contrário, recorre ao NOW() do servidor.
@@ -76,7 +84,9 @@ if ($acao === 'rsvp_submit') {
 
     if ($decisao === 'nao') {
         $estado = 'recusado'; $confirm = 0;
-        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE convite_id=".(int)$c['id']);
+        // Ao recusar, repõe também a presença: quem não vem não pode ficar "presente".
+        $conn->query("UPDATE {$P}convidados SET rsvp='recusado', presente=0, presente_em=NULL WHERE convite_id=".(int)$c['id']);
+        $conn->query("UPDATE {$P}convites SET checkin_estado='aguardando', checkin_presentes=0, checkin_em=NULL WHERE id=".(int)$c['id']);
     } else {
         // Atualiza cada pessoa, se a página enviou a lista nominal
         $tot = 0; $vai = 0;
@@ -117,6 +127,7 @@ if ($acao === 'rsvp_submit') {
 // ---- Porteiro (admin ou porteiro) --------------------------
 if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entradas'], true)) {
     exigirPorta();
+    if ($acao === 'porta_checkin') exigirCsrf(); // altera dados: protegido por CSRF
 
     if ($acao === 'porta_stats') {
         $s = estatisticas($conn);
@@ -210,6 +221,12 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
 
 // ---- Admin --------------------------------------------------
 exigirAdmin();
+
+// Endpoints de admin que alteram dados: exigem token CSRF válido.
+if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
+                     'mesa_save','mesa_delete','importar'], true)) {
+    exigirCsrf();
+}
 
 if ($acao === 'convite_list') {
     $tipo=$_GET['tipo']??''; $lado=$_GET['lado']??''; $estado=$_GET['estado']??'';
