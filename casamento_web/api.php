@@ -243,7 +243,9 @@ if ($acao === 'convite_list') {
     if ($busca!==''){ $w.=" AND (c.nome_exibicao LIKE ? OR c.codigo LIKE ? OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.nome LIKE ?))";
                       $t.='sss'; $l="%$busca%"; $p[]=$l; $p[]=$l; $p[]=$l; }
     $sql="SELECT c.*, m.nome AS mesa_nome,
-                 GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt
+                 GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt,
+                 (SELECT COUNT(DISTINCT COALESCE(g2.mesa_id, c.mesa_id))
+                    FROM {$P}convidados g2 WHERE g2.convite_id=c.id) AS mesas_distintas
           FROM {$P}convites c
           LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
           LEFT JOIN {$P}convidados g ON g.convite_id=c.id
@@ -310,7 +312,13 @@ if ($acao === 'convite_save') {
         elseif ($presenca==='pendente')   $rsvp='pendente';
         else                              $rsvp = $ant['rsvp'] ?? 'pendente'; // sem presença: preserva
         $pres=(int)($ant['presente'] ?? 0);
-        $mesaMembro = isset($ant['mesa_id']) && $ant['mesa_id']!==null ? (int)$ant['mesa_id'] : null; // preserva a mesa individual
+        // Mesa individual: se o editor a enviou (chave 'mesa_id' presente), usa-a;
+        // caso contrário, preserva a que já existia (por nome).
+        if (is_array($m) && array_key_exists('mesa_id', $m)) {
+            $mesaMembro = ($m['mesa_id']!=='' && $m['mesa_id']!==null) ? (int)$m['mesa_id'] : null;
+        } else {
+            $mesaMembro = isset($ant['mesa_id']) && $ant['mesa_id']!==null ? (int)$ant['mesa_id'] : null;
+        }
         $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id)
                            VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?)");
         $q->bind_param('isisii',$id,$mn,$princ,$rsvp,$pres,$mesaMembro); $q->execute();
@@ -423,8 +431,8 @@ if ($acao === 'convidado_mesa') {
 }
 if ($acao === 'convidado_list') {
     // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
-    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa,
-                 c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite,
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente,
+                 c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
                  mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome
           FROM {$P}convidados g
           JOIN {$P}convites c ON g.convite_id=c.id

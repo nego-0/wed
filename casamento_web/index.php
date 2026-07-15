@@ -22,7 +22,8 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .banner-import h4{ margin-bottom:.2rem; }
   .banner-import p{ margin:0; font-size:.86rem; color:var(--text); }
   .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; }
-  .membro-linha input{ flex:1; }
+  .membro-linha input[type=text]{ flex:1; min-width:0; }
+  .membro-linha .m-mesa{ flex:0 0 auto; max-width:42%; font-size:.85rem; padding:.45rem .5rem; }
   .sugestoes{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0 .2rem; }
   .sugestao{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.25rem .7rem; font-size:.8rem; cursor:pointer; }
   .sugestao:hover{ background:var(--gold-pale); border-color:var(--gold-soft); }
@@ -419,7 +420,7 @@ function renderConvites(){
         <div class="convite-nome">${esc(c.nome_final)}</div>
         <div class="convite-meta">
           <span>${tagEstado(c.rsvp_estado)}</span>
-          <span>${c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'Sem mesa'}</span>
+          <span>${(+c.mesas_distintas>1)?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'Sem mesa')}</span>
           <span>Cód: <strong>${c.codigo}</strong></span>
           ${c.telefone?`<span>${esc(c.telefone)}</span>`:''}
           ${(c.rsvp_mensagem&&c.rsvp_mensagem.trim())?`<span class="tem-msg" title="Mensagem: ${esc(c.rsvp_mensagem)}" onclick="abrirMensagens()">${IC.balao}</span>`:''}
@@ -471,17 +472,23 @@ function abrirConvite(c){
   $('c-obs').value = c?(c.observacoes||''):'';
   $('membros').innerHTML='';
   const ms = c&&c.membros&&c.membros.length ? c.membros : [{nome:'',rsvp:'confirmado'}];
-  ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true));
+  ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true, m.mesa_id||''));
   sincroPresencaMembros($('c-presenca').value);
   if(c){ $('bloco-link').style.display='block'; $('c-link').value=BASE+'/convite-digital.php?c='+c.codigo; $('c-link').dataset.codigo=c.codigo; }
   else { $('bloco-link').style.display='none'; }
   atualizarPrevia(); renderSugestoes();
   abrir('ov-convite');
 }
-function addMembro(valor='', vai=true){
+function opcoesMesaMembro(selId){
+  let o='<option value="">Mesa do convite</option>';
+  (MESAS||[]).forEach(m=>{ o+=`<option value="${m.id}" ${String(selId)===String(m.id)?'selected':''}>${esc(m.nome)}</option>`; });
+  return o;
+}
+function addMembro(valor='', vai=true, mesaId=''){
   const div=document.createElement('div'); div.className='membro-linha';
   div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}></label>
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
+    <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
     <button class="btn-ico" type="button" onclick="this.parentElement.remove();renderSugestoes();atualizarPrevia()">✕</button>`;
   $('membros').appendChild(div);
 }
@@ -489,7 +496,8 @@ function nomesMembros(){ return [...$('membros').querySelectorAll('input[type=te
 function membrosComPresenca(){
   return [...$('membros').querySelectorAll('.membro-linha')].map(row=>({
     nome: row.querySelector('input[type=text]').value.trim(),
-    vai:  row.querySelector('.m-vai input')?.checked ?? true
+    vai:  row.querySelector('.m-vai input')?.checked ?? true,
+    mesa_id: row.querySelector('.m-mesa') ? row.querySelector('.m-mesa').value : ''
   })).filter(m=>m.nome);
 }
 // Mostra/oculta as marcações por pessoa conforme a presença escolhida

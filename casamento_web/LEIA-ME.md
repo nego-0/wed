@@ -85,7 +85,9 @@ Em `config.php` (não sensível):
 
 **Mesas.** Na página *Mesas* tem uma **planta visual do salão**: crie mesas (redondas ou retangulares) com capacidade, **arraste-as** para a sua posição real e veja a ocupação por cores (vazia, a encher, completa, excede a capacidade). Ao tocar numa mesa pode editar os dados, ver quem está sentado e **sentar/retirar convites**. As posições ficam guardadas.
 
-**Dividir um convite por várias mesas.** Cada pessoa de um convite pode ficar numa mesa diferente. No painel de uma mesa, cada pessoa tem um seletor de mesa; escolha outra mesa para a mover, ou *"Segue o convite"* para a devolver à mesa do convite. A mesa do convite continua a ser o padrão (para quem não tem mesa própria e para os lugares sem nome). A ocupação de cada mesa conta as pessoas pela sua mesa efetiva.
+**Dividir um convite por várias mesas.** Cada pessoa de um convite pode ficar numa mesa diferente. Há três formas de o fazer: no painel de uma mesa (cada pessoa tem um seletor de mesa), **arrastando** um cartão da lista *Pessoas* (abaixo da planta) para cima de uma mesa, ou no **editor do convite** (no painel principal, cada integrante tem um seletor de mesa — *"Mesa do convite"* por omissão). A mesa do convite continua a ser o padrão (para quem não tem mesa própria e para os lugares sem nome). A ocupação de cada mesa conta as pessoas pela sua mesa efetiva. No painel principal, um convite dividido aparece marcado como *"Dividido · N mesas"*.
+
+**Lista abaixo da planta.** Por baixo do canvas das mesas há uma lista com duas abas — *Pessoas* e *Convites* — com pesquisa por nome e filtros (por mesa: todas / sem mesa / com mesa; e por estado de RSVP). Qualquer cartão pode ser arrastado para uma mesa.
 
 **Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantas pessoas e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
 

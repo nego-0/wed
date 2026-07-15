@@ -60,23 +60,27 @@ exigirAdmin();
   .mesa-node.excede{ background:#f7e5e3; border-color:var(--danger); color:#7d332d; }
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:4px; box-shadow:0 0 0 6px rgba(180,134,74,.18); z-index:18; }
 
-  /* Coluna esquerda (planta + área de arrastar) */
-  .col-esq{ display:flex; flex-direction:column; gap:1.1rem; min-width:0; }
-
-  /* Área de arrastar convidados/convites */
-  .roster-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem; }
-  .roster-topo{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
-  .roster-topo .titulo{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); font-weight:600; flex:1; }
+  /* Lista principal (Pessoas / Convites) — largura total abaixo do canvas */
+  .roster-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem 1.1rem 1.1rem; margin-top:1.1rem; }
+  .roster-topo{ display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
   .roster-tabs{ display:flex; gap:.25rem; background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.2rem; }
-  .roster-tabs .rt{ border:none; background:transparent; color:var(--text); font-family:inherit; font-size:.82rem; padding:.35rem .8rem; border-radius:50px; cursor:pointer; }
+  .roster-tabs .rt{ border:none; background:transparent; color:var(--text); font-family:inherit; font-size:.92rem; padding:.45rem 1.1rem; border-radius:50px; cursor:pointer; }
   .roster-tabs .rt.on{ background:var(--forest); color:#fff; }
-  .roster-filtro{ font-size:.8rem; color:#7a8078; display:inline-flex; align-items:center; gap:.35rem; cursor:pointer; }
-  .roster-lista{ display:flex; flex-wrap:wrap; gap:.5rem; max-height:220px; overflow:auto; }
+  .roster-hint{ font-size:.78rem; color:#9aa09a; flex:1; min-width:180px; }
+  .roster-filtros{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
+  .roster-filtros input[type=search]{ flex:1; min-width:200px; }
+  .roster-filtros select{ min-width:150px; }
+  .chips-filtro{ display:flex; gap:.3rem; }
+  .chips-filtro .cf{ border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:.82rem;
+    padding:.4rem .8rem; border-radius:50px; cursor:pointer; }
+  .chips-filtro .cf.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
+  .roster-lista{ display:flex; flex-wrap:wrap; gap:.5rem; max-height:340px; overflow:auto; }
+  .roster-conta{ font-size:.76rem; color:#9aa09a; margin-top:.6rem; }
   .chip-drag{ display:inline-flex; flex-direction:column; gap:.05rem; background:var(--cream); border:1px solid var(--line);
     border-radius:12px; padding:.45rem .7rem; cursor:grab; touch-action:none; user-select:none; max-width:100%; }
   .chip-drag:hover{ border-color:var(--gold-soft); }
   .chip-drag.arrastando{ opacity:.4; }
-  .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+  .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; }
   .chip-drag .cd-meta{ font-size:.72rem; color:#8a8f88; }
   .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
   .roster-vazio{ color:#9aa09a; font-size:.86rem; padding:.4rem 0; }
@@ -134,7 +138,6 @@ exigirAdmin();
   <div class="stats-mesa" id="stats"></div>
 
   <div class="layout">
-   <div class="col-esq">
     <!-- PLANTA -->
     <div class="planta-cartao">
       <div class="planta-topo">
@@ -151,21 +154,6 @@ exigirAdmin();
       </div>
       <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar. Toque numa mesa para ver e editar os detalhes.</p>
     </div>
-
-    <!-- ARRASTAR PARA UMA MESA -->
-    <div class="roster-cartao">
-      <div class="roster-topo">
-        <span class="titulo">Arraste para uma mesa</span>
-        <div class="roster-tabs">
-          <button class="rt on" data-tab="pessoas" onclick="mudarRoster('pessoas')">Pessoas</button>
-          <button class="rt" data-tab="convites" onclick="mudarRoster('convites')">Convites</button>
-        </div>
-        <label class="roster-filtro"><input type="checkbox" id="so-sentar" onchange="renderRoster()"> só por sentar</label>
-      </div>
-      <div class="roster-lista" id="roster-lista"></div>
-      <p style="font-size:.78rem;color:#9aa09a;margin:.5rem 0 0">Arraste um cartão para cima de uma mesa na planta para o sentar lá.</p>
-    </div>
-   </div>
 
     <!-- PAINEL -->
     <div class="painel">
@@ -195,6 +183,28 @@ exigirAdmin();
         <div class="painel-vazio">Toque numa mesa da planta para ver quem está sentado, ajustar a capacidade ou removê-la.</div>
       </div>
     </div>
+  </div>
+
+  <!-- LISTA PRINCIPAL (abaixo do canvas, largura total) -->
+  <div class="roster-cartao">
+    <div class="roster-topo">
+      <div class="roster-tabs">
+        <button class="rt on" data-tab="pessoas" onclick="mudarRoster('pessoas')">Pessoas</button>
+        <button class="rt" data-tab="convites" onclick="mudarRoster('convites')">Convites</button>
+      </div>
+      <span class="roster-hint">Arraste um cartão para cima de uma mesa na planta para o sentar lá.</span>
+    </div>
+    <div class="roster-filtros">
+      <input type="search" id="roster-busca" placeholder="Procurar por nome…" oninput="renderRoster()">
+      <div class="chips-filtro" id="chips-mesa">
+        <button class="cf on" data-mesa="" onclick="filtroMesa('')">Todas</button>
+        <button class="cf" data-mesa="sem" onclick="filtroMesa('sem')">Sem mesa</button>
+        <button class="cf" data-mesa="com" onclick="filtroMesa('com')">Com mesa</button>
+      </div>
+      <select id="roster-estado" onchange="renderRoster()"></select>
+    </div>
+    <div class="roster-lista" id="roster-lista"></div>
+    <div class="roster-conta" id="roster-conta"></div>
   </div>
 </div>
 
@@ -490,16 +500,40 @@ async function trazerPessoa(gid){
   MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Pessoa trazida para esta mesa.');
 }
 
-// ---------- área de arrastar (roster) ----------
-function mudarRoster(tab){ rosterTab=tab; document.querySelectorAll('.roster-tabs .rt').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); renderRoster(); }
+// ---------- lista principal (roster) ----------
+let rosterMesa=''; // '' | 'sem' | 'com'
+const ESTADOS={
+  pessoas:[['','Todos os estados'],['confirmado','Confirmados'],['pendente','Pendentes'],['recusado','Recusados']],
+  convites:[['','Todos os estados'],['confirmado','Confirmados'],['parcial','Parciais'],['pendente','Pendentes'],['recusado','Recusados']]
+};
+function popularEstados(){
+  const sel=$('roster-estado'); if(!sel) return;
+  sel.innerHTML=ESTADOS[rosterTab].map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+}
+function mudarRoster(tab){
+  rosterTab=tab;
+  document.querySelectorAll('.roster-tabs .rt').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  popularEstados();
+  renderRoster();
+}
+function filtroMesa(v){
+  rosterMesa=v;
+  document.querySelectorAll('#chips-mesa .cf').forEach(b=>b.classList.toggle('on', b.dataset.mesa===v));
+  renderRoster();
+}
 
 function renderRoster(){
   const box=$('roster-lista'); if(!box) return;
-  const soSentar=$('so-sentar') && $('so-sentar').checked;
-  let html='';
+  const q=($('roster-busca')?$('roster-busca').value:'').trim().toLowerCase();
+  const est=$('roster-estado')?$('roster-estado').value:'';
+  const casaMesa=temMesa=>rosterMesa==='sem'?!temMesa:(rosterMesa==='com'?!!temMesa:true);
+  let html='', total=0;
   if(rosterTab==='pessoas'){
     let itens=CONVIDADOS.slice().sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.nome||'').localeCompare(b.nome||''));
-    if(soSentar) itens=itens.filter(g=>g.mesa_efetiva_id==null);
+    itens=itens.filter(g=>casaMesa(g.mesa_efetiva_id!=null)
+      && (!est || g.rsvp===est)
+      && (!q || (g.nome||'').toLowerCase().includes(q) || (g.convite_nome||'').toLowerCase().includes(q)));
+    total=itens.length;
     html=itens.map(g=>{
       const sem=g.mesa_efetiva_id==null;
       const meta=g.mesa_efetiva_nome?('em '+esc(g.mesa_efetiva_nome)):'sem mesa';
@@ -508,15 +542,21 @@ function renderRoster(){
     }).join('');
   } else {
     let itens=CONVITES.slice().sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
-    if(soSentar) itens=itens.filter(c=>c.mesa_id==null);
+    itens=itens.filter(c=>casaMesa(c.mesa_id!=null)
+      && (!est || c.rsvp_estado===est)
+      && (!q || (c.nome_final||'').toLowerCase().includes(q) || (c.codigo||'').toLowerCase().includes(q)
+             || (c.membros||[]).some(n=>(n||'').toLowerCase().includes(q))));
+    total=itens.length;
     html=itens.map(c=>{
       const sem=c.mesa_id==null;
-      const meta=c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'sem mesa';
+      const div=(+c.mesas_distintas>1);
+      const meta=div?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'sem mesa');
       return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="convite" data-id="${c.id}" data-label="${esc(c.nome_final)}">
         <span class="cd-nome">${esc(c.nome_final)}</span><span class="cd-meta">${c.lugares} lug. · ${meta}</span></div>`;
     }).join('');
   }
-  box.innerHTML = html || `<div class="roster-vazio">${soSentar?'Está tudo sentado. 🎉':'Nada a mostrar.'}</div>`;
+  box.innerHTML = html || `<div class="roster-vazio">Nada corresponde aos filtros.</div>`;
+  const cont=$('roster-conta'); if(cont) cont.textContent = total+(rosterTab==='pessoas'?(total===1?' pessoa':' pessoas'):(total===1?' convite':' convites'));
 }
 
 // Arrastar um cartão (pessoa/convite) para cima de uma mesa da planta.
@@ -569,6 +609,7 @@ async function largarArraste(e){
   toast((item.tipo==='pessoa'?'Pessoa':'Convite')+' → '+(m?m.nome:'mesa'));
 }
 
+popularEstados();
 carregar();
 </script>
 </body>
