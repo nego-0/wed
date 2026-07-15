@@ -94,7 +94,8 @@ Em `config.php` (não sensível):
 
 ## Notas importantes
 
-- A leitura de QR por câmara exige **HTTPS**. No InfinityFree, ative o certificado SSL grátis e aceda por `https://`.
+- **Funciona sem internet.** As bibliotecas (leitor de QR e gerador de QR) e os tipos de letra são servidos localmente a partir da pasta `assets/` — não há dependências de CDN. Assim, a página do porteiro continua a funcionar mesmo que a ligação à internet falhe no local do evento.
+- A leitura de QR por câmara exige **HTTPS** (regra do navegador, não do sistema). No InfinityFree, ative o certificado SSL grátis e aceda por `https://`. Em rede local de testes, `localhost` também é aceite.
 - Editar um convite preserva as confirmações e presenças já registadas.
 - O check-in à entrada só altera a presença — nunca apaga a confirmação feita pelo convidado.
 - O código QR aponta para o link do convite, pelo que serve tanto ao convidado (abre o seu convite) como ao porteiro (identifica-o à entrada).

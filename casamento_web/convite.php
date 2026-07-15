@@ -16,8 +16,7 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Confirmação · Isabel &amp; Abednego</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap" rel="stylesheet">
+<link href="assets/fontes.css" rel="stylesheet">
 <style>
   :root{
     --ink:#20342A; --forest:#2C4536; --forest-deep:#16261E;

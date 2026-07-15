@@ -1,0 +1,64 @@
+/* ============================================================
+   fontes.css — Tipos de letra servidos localmente (sem CDN)
+   Substitui o pedido às Google Fonts, para o sistema funcionar
+   mesmo sem internet (ex.: à porta do evento). Os ficheiros .woff2
+   já existem em assets/convite/fonts/.
+   ============================================================ */
+
+/* ---- Cormorant Garamond ---- */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('convite/fonts/cormorant-garamond-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic; font-weight: 400; font-display: swap;
+  src: url('convite/fonts/cormorant-garamond-latin-400-italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal; font-weight: 500; font-display: swap;
+  src: url('convite/fonts/cormorant-garamond-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic; font-weight: 500; font-display: swap;
+  src: url('convite/fonts/cormorant-garamond-latin-500-italic.woff2') format('woff2');
+}
+/* 600 cobre também os pedidos de 700 (o navegador usa o peso mais próximo). */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal; font-weight: 600 700; font-display: swap;
+  src: url('convite/fonts/cormorant-garamond-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic; font-weight: 600 700; font-display: swap;
+  src: url('convite/fonts/cormorant-garamond-latin-600-italic.woff2') format('woff2');
+}
+
+/* ---- Jost ---- */
+@font-face {
+  font-family: 'Jost';
+  font-style: normal; font-weight: 300; font-display: swap;
+  src: url('convite/fonts/jost-latin-300-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Jost';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('convite/fonts/jost-latin-400-normal.woff2') format('woff2');
+}
+/* 500 cobre também os pedidos de 600. */
+@font-face {
+  font-family: 'Jost';
+  font-style: normal; font-weight: 500 600; font-display: swap;
+  src: url('convite/fonts/jost-latin-500-normal.woff2') format('woff2');
+}
+
+/* ---- Pinyon Script ---- */
+@font-face {
+  font-family: 'Pinyon Script';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('convite/fonts/pinyon-script-latin-400-normal.woff2') format('woff2');
+}

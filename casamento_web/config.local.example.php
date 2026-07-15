@@ -21,16 +21,16 @@ return [
 
     // ---- Utilizadores (nome de utilizador + senha) ---------
     // 'papel': 'admin' (acede a tudo) ou 'porteiro' (só a página da porta).
-    // Use 'senha' (texto simples) OU 'senha_hash' (recomendado).
-    //
-    // Gerar um hash de senha:
+    // Recomendado: 'senha_hash' (a senha nunca fica legível no ficheiro).
+    // Gere o hash da sua senha com:
     //   php -r "echo password_hash('a-sua-senha', PASSWORD_DEFAULT), PHP_EOL;"
+    // e cole o resultado em 'senha_hash'.
     'utilizadores' => [
-        ['utilizador' => 'admin',    'senha' => 'MUDE_ESTA_SENHA', 'papel' => 'admin'],
-        ['utilizador' => 'porteiro', 'senha' => 'MUDE_ESTA_SENHA', 'papel' => 'porteiro'],
+        ['utilizador' => 'admin',    'senha_hash' => 'COLE_AQUI_O_HASH', 'papel' => 'admin'],
+        ['utilizador' => 'porteiro', 'senha_hash' => 'COLE_AQUI_O_HASH', 'papel' => 'porteiro'],
 
-        // Exemplo com hash em vez de texto simples:
-        // ['utilizador' => 'admin', 'senha_hash' => '$2y$10$....', 'papel' => 'admin'],
+        // Alternativa mais simples (senha legível neste ficheiro):
+        // ['utilizador' => 'admin', 'senha' => 'a-sua-senha', 'papel' => 'admin'],
     ],
 
 ];

@@ -8,10 +8,9 @@ exigirPorta();
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Porta · Isabel &amp; Abednego</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="assets/html5-qrcode.min.js"></script>
 <style>
   body{ background:linear-gradient(175deg,#16261E,#20342A); color:var(--ivory); min-height:100vh; }
   .porta-topo{ padding:1.1rem 1.25rem; display:flex; align-items:center; gap:.8rem; }

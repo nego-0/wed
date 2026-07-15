@@ -17,10 +17,9 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convites físicos · Isabel &amp; Abednego</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@300;400;500;600&family=Pinyon+Script&display=swap" rel="stylesheet">
+<link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="assets/qrious.min.js"></script>
 <style>
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1rem; }
   .cartao{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem; text-align:center; position:relative; }
