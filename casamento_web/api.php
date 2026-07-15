@@ -1,0 +1,426 @@
+<?php
+// ============================================================
+// api.php — Endpoints JSON (admin, RSVP público, porteiro)
+// ============================================================
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
+
+$acao = $_GET['action'] ?? '';
+
+// ---- Utilitários -------------------------------------------
+function corpo(): array {
+    static $c = null;
+    if ($c === null) $c = json_decode(file_get_contents('php://input'), true) ?: [];
+    return $c;
+}
+function ok(array $extra = []): void  { echo json_encode(['success' => true]  + $extra); exit; }
+function erro(string $m): void        { echo json_encode(['success' => false, 'message' => $m]); exit; }
+
+/**
+ * Momento a gravar nas operações CRUD: usa a hora local do cliente
+ * (enviada em "ts") quando válida; caso contrário, recorre ao NOW() do servidor.
+ * Devolve um fragmento SQL seguro ('AAAA-MM-DD HH:MM:SS' ou NOW()).
+ */
+function tsSql(): string {
+    global $conn;
+    $b  = corpo();
+    $ts = $b['ts'] ?? ($_GET['ts'] ?? ($_POST['ts'] ?? ''));
+    if (is_string($ts) && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $ts)) {
+        return "'" . $conn->real_escape_string($ts) . "'";
+    }
+    return 'NOW()';
+}
+$TS = tsSql(); // hora local do cliente para esta requisição
+
+// ============================================================
+// EXPORTAÇÃO CSV (admin)
+// ============================================================
+if ($acao === 'export') {
+    exigirAdmin();
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=convidados_isabel_abednego.csv');
+    $out = fopen('php://output', 'w'); fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
+    fputcsv($out, ['Convite','Tipo','Lado','Lugares','Mesa','Estado RSVP','Confirmados','Presentes','Telefone','Membros','Codigo','Link']);
+    $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
+                                GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR ', ') AS membros
+                         FROM {$P}convites c
+                         LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                         LEFT JOIN {$P}convidados g ON g.convite_id=c.id
+                         GROUP BY c.id ORDER BY c.nome_exibicao");
+    while ($r = $res->fetch_assoc()) {
+        fputcsv($out, [
+            nomeConvite($r), $r['tipo'], $r['lado'], $r['lugares'], $r['mesa_nome'],
+            $r['rsvp_estado'], $r['rsvp_confirmados'], $r['checkin_presentes'],
+            $r['telefone'], $r['membros'], $r['codigo'],
+            base_url().'/convite.php?c='.$r['codigo']
+        ]);
+    }
+    fclose($out); exit;
+}
+
+header('Content-Type: application/json; charset=utf-8');
+
+// ============================================================
+// AÇÕES PÚBLICAS (RSVP) — sem login, protegidas por código
+// ============================================================
+if ($acao === 'rsvp_submit') {
+    $d = corpo();
+    $codigo = trim($d['codigo'] ?? '');
+    $c = carregarConvite($conn, $codigo, 'codigo');
+    if (!$c) erro('Convite não encontrado.');
+
+    $decisao   = ($d['decisao'] ?? '') === 'sim' ? 'sim' : 'nao';
+    $mensagem  = trim($d['mensagem'] ?? '');
+    $confirm   = max(0, min((int)($d['confirmados'] ?? 0), (int)$c['lugares']));
+    $membros   = is_array($d['membros'] ?? null) ? $d['membros'] : [];
+
+    if ($decisao === 'nao') {
+        $estado = 'recusado'; $confirm = 0;
+        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE convite_id=".(int)$c['id']);
+    } else {
+        // Atualiza cada pessoa, se a página enviou a lista nominal
+        $tot = 0; $vai = 0;
+        foreach ($membros as $mm) {
+            $mid = (int)($mm['id'] ?? 0);
+            $ok  = !empty($mm['vai']);
+            $tot++; if ($ok) $vai++;
+            $rs  = $ok ? 'confirmado' : 'recusado';
+            if ($mid) {
+                $q = $conn->prepare("UPDATE {$P}convidados SET rsvp=? WHERE id=? AND convite_id=?");
+                $q->bind_param('sii', $rs, $mid, $c['id']); $q->execute();
+            }
+        }
+        if ($tot > 0) {
+            // Estado derivado das escolhas por pessoa
+            $confirm = $vai;
+            $estado  = $vai <= 0 ? 'recusado' : ($vai >= $tot ? 'confirmado' : 'parcial');
+        } else {
+            // Sem lista nominal: usa o número indicado
+            if ($confirm < 1) $confirm = 1;
+            $estado = ($confirm >= (int)$c['lugares']) ? 'confirmado' : 'parcial';
+        }
+    }
+
+    $st = $conn->prepare("UPDATE {$P}convites
+                          SET rsvp_estado=?, rsvp_confirmados=?, rsvp_mensagem=?, rsvp_em=$TS
+                          WHERE id=?");
+    $st->bind_param('sisi', $estado, $confirm, $mensagem, $c['id']); // string, int, string, int
+    $st->execute();
+
+    ok(['estado' => $estado, 'confirmados' => $confirm]);
+}
+
+// ============================================================
+// A partir daqui: exige login
+// ============================================================
+
+// ---- Porteiro (admin ou porteiro) --------------------------
+if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entradas'], true)) {
+    exigirPorta();
+
+    if ($acao === 'porta_stats') {
+        $s = estatisticas($conn);
+        ok(['presentes' => $s['presentes'], 'lug_confirm' => $s['lug_confirm'],
+            'no_local' => $s['no_local'], 'convites' => $s['convites']]);
+    }
+
+    if ($acao === 'porta_entradas') {
+        $r = $conn->query("SELECT id FROM {$P}convites
+                           WHERE checkin_estado IN ('presente','parcial')
+                           ORDER BY checkin_em DESC, atualizado_em DESC");
+        $ids = array_column($r->fetch_all(MYSQLI_ASSOC), 'id');
+        $lista = array_map(fn($id) => carregarConvite($conn, (int)$id), $ids);
+        $s = estatisticas($conn);
+        ok(['entradas' => $lista, 'presentes' => $s['presentes'], 'no_local' => $s['no_local']]);
+    }
+
+    if ($acao === 'porta_buscar') {
+        $termo = trim($_GET['q'] ?? '');
+        if ($termo === '') erro('Indique um código ou nome.');
+        // extrai código de um URL, se o QR trouxer o link completo
+        if (preg_match('/[?&]c=([A-Z0-9]+)/i', $termo, $m)) $termo = $m[1];
+
+        // 1) tenta por código exato
+        $c = carregarConvite($conn, strtoupper($termo), 'codigo');
+        if ($c) ok(['convite' => $c]);
+
+        // 2) procura por nome do convite ou de um membro
+        $like = "%$termo%";
+        $st = $conn->prepare("SELECT DISTINCT c.id FROM {$P}convites c
+                              LEFT JOIN {$P}convidados g ON g.convite_id=c.id
+                              WHERE c.nome_exibicao LIKE ? OR g.nome LIKE ?
+                              ORDER BY c.nome_exibicao LIMIT 12");
+        $st->bind_param('ss', $like, $like); $st->execute();
+        $ids = array_column($st->get_result()->fetch_all(MYSQLI_ASSOC), 'id');
+        if (!$ids) erro('Nenhum convite corresponde a "'.htmlspecialchars($termo).'".');
+        if (count($ids) === 1) ok(['convite' => carregarConvite($conn, (int)$ids[0])]);
+        $lista = array_map(fn($id) => carregarConvite($conn, (int)$id), $ids);
+        ok(['varios' => $lista]);
+    }
+
+    if ($acao === 'porta_checkin') {
+        $d = corpo();
+        $id   = (int)($d['convite_id'] ?? 0);
+        $modo = $d['modo'] ?? 'todos';   // 'todos' | 'membro' | 'anular'
+        $mid  = (int)($d['membro_id'] ?? 0);
+        $excecao = !empty($d['excecao']); // autorização manual do porteiro
+        $c = carregarConvite($conn, $id);
+        if (!$c) erro('Convite inválido.');
+
+        if ($modo === 'membro' && $mid) {
+            $q = $conn->prepare("SELECT presente, rsvp, nome FROM {$P}convidados WHERE id=? AND convite_id=?");
+            $q->bind_param('ii', $mid, $id); $q->execute();
+            $cur = $q->get_result()->fetch_assoc();
+            if (!$cur) erro('Pessoa não encontrada neste convite.');
+            $jaPresente = (int)$cur['presente'] === 1;
+            if (!$jaPresente && $cur['rsvp'] !== 'confirmado' && !$excecao) {
+                erro(($cur['nome'] ?: 'Esta pessoa') . ' não confirmou presença e não pode dar entrada.');
+            }
+            $novo = $jaPresente ? 0 : 1;
+            $q = $conn->prepare("UPDATE {$P}convidados SET presente=?, presente_em=".($novo?$TS:'NULL')." WHERE id=? AND convite_id=?");
+            $q->bind_param('iii', $novo, $mid, $id); $q->execute();
+            recalcularCheckin($conn, $id, $TS);
+        } elseif ($modo === 'anular') {
+            $conn->query("UPDATE {$P}convidados SET presente=0, presente_em=NULL WHERE convite_id=$id");
+            $conn->query("UPDATE {$P}convites SET checkin_estado='aguardando', checkin_presentes=0, checkin_em=NULL WHERE id=$id");
+        } else { // 'todos'
+            if (count($c['membros']) > 0) {
+                if ($excecao) {
+                    // Entrada excecional autorizada: admite todas as pessoas do convite
+                    $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE convite_id=$id");
+                } else {
+                    $r = $conn->query("SELECT COUNT(*) n FROM {$P}convidados WHERE convite_id=$id AND rsvp='confirmado'");
+                    $nconf = (int)$r->fetch_assoc()['n'];
+                    if ($nconf === 0) erro('Ninguém neste convite confirmou presença. Não é possível dar entrada.');
+                    $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE convite_id=$id AND rsvp='confirmado'");
+                }
+                recalcularCheckin($conn, $id, $TS);
+            } else {
+                if (!$excecao && !in_array($c['rsvp_estado'], ['confirmado','parcial'], true)) {
+                    erro('Este convite não confirmou presença. Não é possível dar entrada.');
+                }
+                $n = (int)($c['rsvp_confirmados'] ?: $c['lugares']);
+                $st = $conn->prepare("UPDATE {$P}convites SET checkin_estado='presente', checkin_presentes=?, checkin_em=$TS WHERE id=?");
+                $st->bind_param('ii', $n, $id); $st->execute();
+            }
+        }
+        ok(['convite' => carregarConvite($conn, $id)]);
+    }
+}
+
+// ---- Admin --------------------------------------------------
+exigirAdmin();
+
+if ($acao === 'convite_list') {
+    $tipo=$_GET['tipo']??''; $lado=$_GET['lado']??''; $estado=$_GET['estado']??'';
+    $mesa=$_GET['mesa']??''; $busca=trim($_GET['busca']??'');
+    $impresso=$_GET['impresso']??''; $enviado=$_GET['enviado']??'';
+    $w="WHERE 1=1"; $t=''; $p=[];
+    if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
+    if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
+    if (in_array($estado,['pendente','confirmado','recusado','parcial'],true)) { $w.=" AND c.rsvp_estado=?"; $t.='s'; $p[]=$estado; }
+    if ($impresso==='1') { $w.=" AND c.impresso=1"; }
+    if ($impresso==='0') { $w.=" AND c.impresso=0 AND c.tipo IN ('fisico','ambos')"; }
+    if ($enviado==='1')  { $w.=" AND c.enviado=1"; }
+    if ($mesa!=='') { $w.=" AND m.nome=?"; $t.='s'; $p[]=$mesa; }
+    if ($busca!==''){ $w.=" AND (c.nome_exibicao LIKE ? OR c.codigo LIKE ? OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.nome LIKE ?))";
+                      $t.='sss'; $l="%$busca%"; $p[]=$l; $p[]=$l; $p[]=$l; }
+    $sql="SELECT c.*, m.nome AS mesa_nome,
+                 GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt
+          FROM {$P}convites c
+          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+          LEFT JOIN {$P}convidados g ON g.convite_id=c.id
+          $w GROUP BY c.id ORDER BY c.nome_exibicao";
+    $st=$conn->prepare($sql);
+    if ($t) $st->bind_param($t, ...$p);
+    $st->execute();
+    $rows=$st->get_result()->fetch_all(MYSQLI_ASSOC);
+    foreach ($rows as &$r) { $r['nome_final']=nomeConvite($r); $r['membros']=$r['membros_txt']?explode('||',$r['membros_txt']):[]; unset($r['membros_txt']); }
+    ok(['convites'=>$rows,'stats'=>estatisticas($conn),'mesas'=>listarMesas($conn)]);
+}
+
+if ($acao === 'convite_get') {
+    $c = carregarConvite($conn, (int)($_GET['id']??0));
+    $c ? ok(['convite'=>$c]) : erro('Convite não encontrado.');
+}
+
+if ($acao === 'convite_save') {
+    $d = corpo();
+    $id       = (int)($d['id'] ?? 0);
+    $nome     = trim($d['nome_exibicao'] ?? '');
+    if ($nome === '') erro('O nome do convite é obrigatório.');
+    $sufixo   = trim($d['sufixo'] ?? ''); if ($sufixo==='') $sufixo=null;
+    $tipo     = in_array($d['tipo']??'',['digital','fisico','ambos'],true)?$d['tipo']:'digital';
+    $lado     = in_array($d['lado']??'',['noivo','noiva','ambos'],true)?$d['lado']:'noivo';
+    $lugares  = max(1,(int)($d['lugares']??1));
+    $telefone = trim($d['telefone'] ?? ''); if ($telefone==='') $telefone=null;
+    $obs      = trim($d['observacoes'] ?? ''); if ($obs==='') $obs=null;
+    $mesaId   = trim($d['mesa']??'')!=='' ? resolverMesa($conn, $d['mesa']) : null;
+    $mostrarN = !empty($d['mostrar_numero']) ? 1 : 0;
+    $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
+
+    if ($id) {
+        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,atualizado_em=$TS WHERE id=?");
+        $st->bind_param('ssissiissi',$nome,$sufixo,$mostrarN,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$id);
+        $st->execute();
+    } else {
+        $codigo=gerarCodigo($conn);
+        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_numero,tipo,lado,lugares,mesa_id,telefone,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st->bind_param('sssissiiss',$codigo,$nome,$sufixo,$mostrarN,$tipo,$lado,$lugares,$mesaId,$telefone,$obs);
+        $st->execute(); $id=$conn->insert_id;
+    }
+
+    // Preserva estados (rsvp/presença) por nome, antes de reconstruir a lista de membros
+    $anterior=[];
+    $r=$conn->query("SELECT nome,rsvp,presente,presente_em FROM {$P}convidados WHERE convite_id=$id");
+    while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
+
+    $presenca = in_array($d['presenca'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $d['presenca'] : '';
+
+    $conn->query("DELETE FROM {$P}convidados WHERE convite_id=$id");
+    $primeiro=true; $vaiCount=0; $totMembros=0;
+    foreach ($membros as $m) {
+        $mn=trim(is_array($m)?($m['nome']??''):$m);
+        if ($mn==='') continue;
+        $totMembros++;
+        $vai = is_array($m) ? !empty($m['vai']) : false;
+        $princ=$primeiro?1:0; $primeiro=false;
+        $ant=$anterior[strtolower($mn)] ?? null;
+        // Estado RSVP de cada pessoa, conforme a presença escolhida no painel
+        if     ($presenca==='confirmado') $rsvp='confirmado';
+        elseif ($presenca==='recusado')   $rsvp='recusado';
+        elseif ($presenca==='parcial')  { $rsvp = $vai?'confirmado':'recusado'; if($vai)$vaiCount++; }
+        elseif ($presenca==='pendente')   $rsvp='pendente';
+        else                              $rsvp = $ant['rsvp'] ?? 'pendente'; // sem presença: preserva
+        $pres=(int)($ant['presente'] ?? 0);
+        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em)
+                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').")");
+        $q->bind_param('isisi',$id,$mn,$princ,$rsvp,$pres); $q->execute();
+    }
+    recalcularCheckin($conn,$id,$TS); // atualiza contadores de presença; não toca no RSVP
+
+    // Aplica a presença escolhida ao convite
+    if ($presenca !== '') {
+        if ($presenca === 'confirmado') {
+            $conn->query("UPDATE {$P}convites SET rsvp_estado='confirmado', rsvp_confirmados=$lugares, rsvp_em=$TS WHERE id=$id");
+        } elseif ($presenca === 'recusado') {
+            $conn->query("UPDATE {$P}convites SET rsvp_estado='recusado', rsvp_confirmados=0, rsvp_em=$TS WHERE id=$id");
+        } elseif ($presenca === 'parcial') {
+            if ($totMembros > 0) {
+                // Presença exata: contagem e estado derivados das marcações individuais
+                $estado = $vaiCount<=0 ? 'recusado' : ($vaiCount>=$totMembros ? 'confirmado' : 'parcial');
+                $conn->query("UPDATE {$P}convites SET rsvp_estado='$estado', rsvp_confirmados=$vaiCount, rsvp_em=$TS WHERE id=$id");
+            } else {
+                $conn->query("UPDATE {$P}convites SET rsvp_estado='parcial', rsvp_confirmados=COALESCE(rsvp_confirmados,1), rsvp_em=$TS WHERE id=$id");
+            }
+        } else { // pendente
+            $conn->query("UPDATE {$P}convites SET rsvp_estado='pendente', rsvp_confirmados=NULL, rsvp_em=NULL WHERE id=$id");
+        }
+    }
+
+    ok(['convite'=>carregarConvite($conn,$id),'stats'=>estatisticas($conn)]);
+}
+
+if ($acao === 'convite_delete') {
+    $id=(int)($_GET['id']??0);
+    $st=$conn->prepare("DELETE FROM {$P}convites WHERE id=?"); $st->bind_param('i',$id); $ok=$st->execute();
+    $ok?ok(['stats'=>estatisticas($conn)]):erro('Não foi possível eliminar.');
+}
+
+if ($acao === 'convite_flag') {
+    $id=(int)($_GET['id']??0); $campo=$_GET['campo']??''; $valor=!empty($_GET['valor'])?1:0;
+    if (!in_array($campo,['impresso','enviado'],true)) erro('Campo inválido.');
+    $st=$conn->prepare("UPDATE {$P}convites SET $campo=?, atualizado_em=$TS WHERE id=?");
+    $st->bind_param('ii',$valor,$id); $st->execute();
+    ok(['stats'=>estatisticas($conn)]);
+}
+
+if ($acao === 'convite_rsvp_manual') {
+    $id=(int)($_GET['id']??0); $estado=$_GET['estado']??'';
+    if (!in_array($estado,['pendente','confirmado','recusado','parcial'],true)) erro('Estado inválido.');
+    $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_em=$TS WHERE id=?");
+    $st->bind_param('si',$estado,$id); $st->execute();
+    ok(['stats'=>estatisticas($conn)]);
+}
+
+// ---- Mesas --------------------------------------------------
+if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn)]); }
+if ($acao === 'mesa_save') {
+    $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
+    $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;
+    if ($nome==='') erro('Nome da mesa obrigatório.');
+    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=? WHERE id=?"); $st->bind_param('sii',$nome,$cap,$id); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade) VALUES (?,?)"); $st->bind_param('si',$nome,$cap); }
+    @$st->execute();
+    if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
+    ok(['mesas'=>listarMesas($conn)]);
+}
+if ($acao === 'mesa_delete') {
+    $id=(int)($_GET['id']??0);
+    $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
+    $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();
+    ok(['mesas'=>listarMesas($conn)]);
+}
+
+// ---- Importar da lista antiga ------------------------------
+if ($acao === 'importar') {
+    if (!listaAntigaExiste($conn)) erro('Não foi encontrada a lista antiga (tabela "guests").');
+    $jaTem=(int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_row()[0];
+    if ($jaTem>0 && empty($_GET['forcar'])) erro('Já existem convites. Para reimportar, confirme a substituição.');
+    if (!empty($_GET['forcar'])) { $conn->query("DELETE FROM {$P}convites"); }
+
+    $criadosC=0; $criadosG=0;
+
+    // Mapa mesa antiga -> nova
+    $mapaMesa=[];
+    if ($conn->query("SHOW TABLES LIKE 'mesas'")->num_rows) {
+        $res=$conn->query("SELECT id,name,capacity FROM mesas");
+        while($m=$res->fetch_assoc()) $mapaMesa[(int)$m['id']]=resolverMesa($conn,$m['name']);
+    }
+    $estadoMap=['confirmado'=>'confirmado','recusado'=>'recusado','pendente'=>'pendente'];
+
+    // Grupos (convites físicos) — cada invite_group vira um convite
+    if ($conn->query("SHOW TABLES LIKE 'invite_groups'")->num_rows) {
+        $grupos=$conn->query("SELECT id,name FROM invite_groups ORDER BY name");
+        while($g=$grupos->fetch_assoc()){
+            $st=$conn->prepare("SELECT name,confirmed,phone,notes,table_id FROM guests WHERE group_id=? ORDER BY name");
+            $st->bind_param('i',$g['id']); $st->execute();
+            $membros=$st->get_result()->fetch_all(MYSQLI_ASSOC);
+            if (!$membros) continue;
+            $tel=null; $mesa=null; $notas=null; $conf=0; $rec=0;
+            foreach($membros as $m){ if(!$tel&&$m['phone'])$tel=$m['phone']; if(!$mesa&&$m['table_id'])$mesa=$mapaMesa[(int)$m['table_id']]??null; if(!$notas&&$m['notes'])$notas=$m['notes'];
+                                     if($m['confirmed']==='confirmado')$conf++; if($m['confirmed']==='recusado')$rec++; }
+            $n=count($membros);
+            $estado = $conf===$n?'confirmado':($rec===$n?'recusado':(($conf||$rec)?'parcial':'pendente'));
+            $codigo=gerarCodigo($conn);
+            $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+            $tipo='fisico'; $lado='noivo';
+            $st->bind_param('ssssiissis',$codigo,$g['name'],$tipo,$lado,$n,$mesa,$tel,$estado,$conf,$notas);
+            $st->execute(); $cid=$conn->insert_id; $criadosC++;
+            $primeiro=true;
+            foreach($membros as $m){ $r=$estadoMap[$m['confirmed']]??'pendente'; $pr=$primeiro?1:0; $primeiro=false;
+                $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp) VALUES (?,?,?,?)");
+                $q->bind_param('isis',$cid,$m['name'],$pr,$r); $q->execute(); $criadosG++; }
+        }
+    }
+
+    // Convidados sem grupo -> convite digital individual
+    $sem=$conn->query("SELECT name,side,confirmed,phone,notes,table_id FROM guests WHERE group_id IS NULL ORDER BY name");
+    while($m=$sem->fetch_assoc()){
+        $codigo=gerarCodigo($conn);
+        $lado=in_array($m['side'],['noivo','noiva'],true)?$m['side']:'noivo';
+        $estado=$estadoMap[$m['confirmed']]??'pendente';
+        $conf=$estado==='confirmado'?1:0;
+        $mesa=$m['table_id']?($mapaMesa[(int)$m['table_id']]??null):null;
+        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $tipo='digital'; $lug=1;
+        $st->bind_param('ssssiissis',$codigo,$m['name'],$tipo,$lado,$lug,$mesa,$m['phone'],$estado,$conf,$m['notes']);
+        $st->execute(); $cid=$conn->insert_id; $criadosC++;
+        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp) VALUES (?,?,1,?)");
+        $q->bind_param('iss',$cid,$m['name'],$estado); $q->execute(); $criadosG++;
+    }
+
+    ok(['convites'=>$criadosC,'convidados'=>$criadosG]);
+}
+
+erro('Ação desconhecida.');
