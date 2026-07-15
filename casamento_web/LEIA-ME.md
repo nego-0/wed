@@ -17,6 +17,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `api.php` | Todos os pedidos JSON (gestão, RSVP público e porteiro) e exportação CSV. |
 | `login.php` / `logout.php` | Entrada e saída. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
+| `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
 | `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
 | `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir. |
@@ -82,7 +83,7 @@ Em `config.php` (não sensível):
 
 **Tipo do convite.** *Digital*, *Físico* ou *Ambos*. Todos os convites têm sempre um link e um QR; o tipo serve para organizar a produção (marcar como *impresso* / *enviado*).
 
-**Mesas.** Crie mesas com capacidade e atribua convites; o painel mostra a ocupação.
+**Mesas.** Na página *Mesas* tem uma **planta visual do salão**: crie mesas (redondas ou retangulares) com capacidade, **arraste-as** para a sua posição real e veja a ocupação por cores (vazia, a encher, completa, excede a capacidade). Ao tocar numa mesa pode editar os dados, ver quem está sentado e **sentar/retirar convites**. As posições ficam guardadas.
 
 **Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantas pessoas e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
 

@@ -84,7 +84,7 @@ exigirPorta();
     <div class="sub">Isabel &amp; Abednego</div>
   </div>
   <div class="nav">
-    <?php if (ehAdmin()): ?><a href="index.php">Painel</a><?php endif; ?>
+    <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>
     <a href="logout.php">Sair</a>
   </div>
 </div>

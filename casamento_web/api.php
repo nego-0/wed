@@ -224,7 +224,7 @@ exigirAdmin();
 
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
-                     'mesa_save','mesa_delete','importar'], true)) {
+                     'mesa_save','mesa_delete','mesa_pos','convite_mesa','importar'], true)) {
     exigirCsrf();
 }
 
@@ -365,17 +365,46 @@ if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn)]); }
 if ($acao === 'mesa_save') {
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
     $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;
+    $forma=in_array($d['forma']??'',['redonda','retangular'],true)?$d['forma']:'redonda';
     if ($nome==='') erro('Nome da mesa obrigatório.');
-    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=? WHERE id=?"); $st->bind_param('sii',$nome,$cap,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade) VALUES (?,?)"); $st->bind_param('si',$nome,$cap); }
+    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=? WHERE id=?"); $st->bind_param('sisi',$nome,$cap,$forma,$id); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma) VALUES (?,?,?)"); $st->bind_param('sis',$nome,$cap,$forma); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
-    ok(['mesas'=>listarMesas($conn)]);
+    $novoId = $id ?: $conn->insert_id;
+    ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
+}
+if ($acao === 'mesa_pos') {
+    // Guarda a posição (e opcionalmente a forma) de uma mesa na planta.
+    $d=corpo(); $id=(int)($d['id']??0);
+    if (!$id) erro('Mesa inválida.');
+    $x = isset($d['x']) && $d['x']!=='' ? max(0.0, min(100.0, (float)$d['x'])) : null;
+    $y = isset($d['y']) && $d['y']!=='' ? max(0.0, min(100.0, (float)$d['y'])) : null;
+    $forma = in_array($d['forma']??'',['redonda','retangular'],true) ? $d['forma'] : null;
+    if ($forma !== null) {
+        $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=?,forma=? WHERE id=?");
+        $st->bind_param('ddsi',$x,$y,$forma,$id);
+    } else {
+        $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=? WHERE id=?");
+        $st->bind_param('ddi',$x,$y,$id);
+    }
+    $st->execute();
+    ok();
 }
 if ($acao === 'mesa_delete') {
     $id=(int)($_GET['id']??0);
     $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
     $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();
+    ok(['mesas'=>listarMesas($conn)]);
+}
+if ($acao === 'convite_mesa') {
+    // Senta (mesa_id) ou retira (mesa_id vazio) um convite de uma mesa.
+    $d=corpo(); $id=(int)($d['id']??0);
+    if (!$id) erro('Convite inválido.');
+    $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=?,atualizado_em=$TS WHERE id=?"); $st->bind_param('ii',$mesaId,$id); }
+    else        { $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=NULL,atualizado_em=$TS WHERE id=?"); $st->bind_param('i',$id); }
+    $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
 

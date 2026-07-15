@@ -46,6 +46,9 @@ $conn->query("
         id INT AUTO_INCREMENT PRIMARY KEY,
         nome VARCHAR(191) NOT NULL UNIQUE,
         capacidade INT DEFAULT NULL,
+        pos_x DECIMAL(6,2) DEFAULT NULL,          -- posição na planta (% horizontal, 0-100)
+        pos_y DECIMAL(6,2) DEFAULT NULL,          -- posição na planta (% vertical, 0-100)
+        forma VARCHAR(20) DEFAULT 'redonda',      -- 'redonda' ou 'retangular'
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -92,6 +95,18 @@ $conn->query("
 $col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'mostrar_numero'");
 if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convites ADD COLUMN mostrar_numero TINYINT(1) DEFAULT 1 AFTER sufixo");
+}
+
+// Migração suave: posição e forma das mesas (para a planta visual)
+foreach ([
+    'pos_x' => "DECIMAL(6,2) DEFAULT NULL",
+    'pos_y' => "DECIMAL(6,2) DEFAULT NULL",
+    'forma' => "VARCHAR(20) DEFAULT 'redonda'",
+] as $coluna => $definicao) {
+    $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
+    if ($r && $r->num_rows === 0) {
+        $conn->query("ALTER TABLE {$P}mesas ADD COLUMN $coluna $definicao");
+    }
 }
 
 // ============================================================
@@ -227,12 +242,12 @@ function estatisticas(mysqli $conn): array {
 /** Lista simples de mesas com ocupação. */
 function listarMesas(mysqli $conn): array {
     global $P;
-    $sql = "SELECT m.id, m.nome, m.capacidade,
+    $sql = "SELECT m.id, m.nome, m.capacidade, m.pos_x, m.pos_y, m.forma,
                    COALESCE(SUM(c.lugares),0) AS ocupacao,
                    COUNT(c.id) AS convites
             FROM {$P}mesas m
             LEFT JOIN {$P}convites c ON c.mesa_id = m.id
-            GROUP BY m.id, m.nome, m.capacidade
+            GROUP BY m.id, m.nome, m.capacidade, m.pos_x, m.pos_y, m.forma
             ORDER BY m.nome";
     return $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
 }

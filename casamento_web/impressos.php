@@ -57,6 +57,7 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
     <div><h1>Convites físicos</h1><div class="sub">Etiquetas para envelopes · com QR de entrada</div></div>
     <nav class="nav no-print">
       <a href="index.php">Painel</a>
+      <a href="mesas.php">Mesas</a>
       <a href="impressos.php" class="ativo">Convites físicos</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>
