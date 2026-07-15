@@ -54,6 +54,9 @@ exigirPorta();
   .memb.excecional{ background:#fbf3e3; border-color:#e0b96a; }
   .memb.excecional .est-p{ background:#c88a2a; border-color:#c88a2a; color:#fff; }
   .memb .nm{ flex:1; font-size:1rem; }
+  .memb-mesa{ display:block; font-size:.75rem; color:var(--gold); margin-top:.1rem; }
+  .mesas-dividido{ background:var(--gold-pale); color:#6b4e22; border:1px solid var(--gold-soft);
+    border-radius:10px; padding:.55rem .8rem; font-size:.85rem; margin-bottom:1rem; }
   .acoes-porta{ display:flex; gap:.6rem; flex-wrap:wrap; }
   .acoes-porta .btn{ flex:1; justify-content:center; }
   .aviso-txt{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:.6rem .8rem; font-size:.88rem; margin-bottom:1rem; }
@@ -224,19 +227,23 @@ function mostrarConvite(c){
   else if(conf){ faixa='ok'; est='Presença confirmada'; }
 
   const temMemb=(c.membros&&c.membros.length>0);
+  const mesaBadge=m=>m.mesa_efetiva?`<span class="memb-mesa">Mesa: ${esc(m.mesa_efetiva)}</span>`:'';
+  // Assinala se o convite tem pessoas distribuídas por mais do que uma mesa
+  const mesasDistintas=temMemb ? [...new Set(c.membros.map(m=>m.mesa_efetiva||'—'))].filter(x=>x!=='—') : [];
+  const dividido=mesasDistintas.length>1;
   const membros = temMemb ? c.membros.map(m=>{
     const pres=+m.presente, conf=(m.rsvp==='confirmado');
     if(!conf && !pres){
       return `<div class="memb bloqueado" onclick="excecaoMembro(${c.id},${m.id})">
         <span class="est-p">✕</span>
-        <span class="nm">${esc(m.nome)}</span>
+        <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
         <span style="font-size:.75rem;color:#c98a86">não confirmou · autorizar?</span>
       </div>`;
     }
     const nota = pres ? (conf?'presente':'presente (exceção)') : 'marcar';
     return `<div class="memb ${pres?'presente':''} ${(pres&&!conf)?'excecional':''}" onclick="checkin(${c.id},'membro',${m.id})">
       <span class="est-p">${pres?'✓':''}</span>
-      <span class="nm">${esc(m.nome)}</span>
+      <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
       <span style="font-size:.75rem;color:#8a8f88">${nota}</span>
     </div>`;
   }).join('') : '';
@@ -261,6 +268,7 @@ function mostrarConvite(c){
     </div>
     <div class="conteudo">
       ${aviso}
+      ${dividido?`<div class="mesas-dividido">Convite dividido por mesas: <b>${mesasDistintas.map(esc).join(' · ')}</b></div>`:''}
       ${temMemb?`<div class="lista-memb">${membros}</div>`:''}
       <div class="acoes-porta">
         ${podeEntrar

@@ -85,9 +85,11 @@ Em `config.php` (não sensível):
 
 **Mesas.** Na página *Mesas* tem uma **planta visual do salão**: crie mesas (redondas ou retangulares) com capacidade, **arraste-as** para a sua posição real e veja a ocupação por cores (vazia, a encher, completa, excede a capacidade). Ao tocar numa mesa pode editar os dados, ver quem está sentado e **sentar/retirar convites**. As posições ficam guardadas.
 
+**Dividir um convite por várias mesas.** Cada pessoa de um convite pode ficar numa mesa diferente. No painel de uma mesa, cada pessoa tem um seletor de mesa; escolha outra mesa para a mover, ou *"Segue o convite"* para a devolver à mesa do convite. A mesa do convite continua a ser o padrão (para quem não tem mesa própria e para os lugares sem nome). A ocupação de cada mesa conta as pessoas pela sua mesa efetiva.
+
 **Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantas pessoas e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
 
-**Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). O contador de presenças atualiza em tempo real.
+**Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real.
 
 **Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
 

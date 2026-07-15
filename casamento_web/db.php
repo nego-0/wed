@@ -87,6 +87,7 @@ $conn->query("
         rsvp ENUM('pendente','confirmado','recusado') DEFAULT 'pendente',
         presente TINYINT(1) DEFAULT 0,
         presente_em TIMESTAMP NULL DEFAULT NULL,
+        mesa_id INT DEFAULT NULL,                  -- mesa individual (opcional); senão usa a do convite
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (convite_id) REFERENCES {$P}convites(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -107,6 +108,12 @@ foreach ([
     if ($r && $r->num_rows === 0) {
         $conn->query("ALTER TABLE {$P}mesas ADD COLUMN $coluna $definicao");
     }
+}
+
+// Migração suave: mesa individual por convidado (permite dividir um convite por várias mesas)
+$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'mesa_id'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN mesa_id INT DEFAULT NULL AFTER presente_em");
 }
 
 // ============================================================
@@ -239,17 +246,42 @@ function estatisticas(mysqli $conn): array {
     return $s;
 }
 
-/** Lista simples de mesas com ocupação. */
+/**
+ * Lista de mesas com ocupação, considerando mesas individuais por convidado.
+ * Ocupação de uma mesa =
+ *   (nº de pessoas nomeadas cuja mesa efetiva é esta: mesa própria, senão a do convite)
+ * + (lugares "sem nome" de cada convite atribuído a esta mesa: lugares − nº de nomeados).
+ */
 function listarMesas(mysqli $conn): array {
     global $P;
-    $sql = "SELECT m.id, m.nome, m.capacidade, m.pos_x, m.pos_y, m.forma,
-                   COALESCE(SUM(c.lugares),0) AS ocupacao,
-                   COUNT(c.id) AS convites
-            FROM {$P}mesas m
-            LEFT JOIN {$P}convites c ON c.mesa_id = m.id
-            GROUP BY m.id, m.nome, m.capacidade, m.pos_x, m.pos_y, m.forma
-            ORDER BY m.nome";
-    return $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma
+                           FROM {$P}mesas ORDER BY nome")->fetch_all(MYSQLI_ASSOC);
+    $idx = [];
+    foreach ($mesas as $i => $m) { $mesas[$i]['ocupacao'] = 0; $mesas[$i]['convites'] = 0; $idx[(int)$m['id']] = $i; }
+    $presenca = []; // mesaId => [conviteId => true] (para contar convites distintos por mesa)
+
+    // 1) Pessoas nomeadas na sua mesa efetiva (individual, senão a do convite).
+    $res = $conn->query("SELECT g.convite_id, COALESCE(g.mesa_id, c.mesa_id) AS eff
+                         FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id = c.id");
+    while ($r = $res->fetch_assoc()) {
+        $eff = $r['eff'] !== null ? (int)$r['eff'] : 0;
+        if ($eff && isset($idx[$eff])) {
+            $mesas[$idx[$eff]]['ocupacao'] += 1;
+            $presenca[$eff][(int)$r['convite_id']] = true;
+        }
+    }
+    // 2) Lugares sem nome (lugares além dos membros nomeados), na mesa do convite.
+    $res = $conn->query("SELECT c.id, c.mesa_id, c.lugares, COUNT(g.id) AS nomeados
+                         FROM {$P}convites c LEFT JOIN {$P}convidados g ON g.convite_id = c.id
+                         GROUP BY c.id, c.mesa_id, c.lugares");
+    while ($r = $res->fetch_assoc()) {
+        $mid = $r['mesa_id'] !== null ? (int)$r['mesa_id'] : 0;
+        if (!$mid || !isset($idx[$mid])) continue;
+        $extra = max(0, (int)$r['lugares'] - (int)$r['nomeados']);
+        if ($extra > 0) { $mesas[$idx[$mid]]['ocupacao'] += $extra; $presenca[$mid][(int)$r['id']] = true; }
+    }
+    foreach ($presenca as $mid => $set) { if (isset($idx[$mid])) $mesas[$idx[$mid]]['convites'] = count($set); }
+    return $mesas;
 }
 
 /** Carrega um convite (por id ou código) já com os membros e o nome final. */
@@ -263,9 +295,16 @@ function carregarConvite(mysqli $conn, $chave, string $por = 'id'): ?array {
     $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) return null;
-    $st = $conn->prepare("SELECT * FROM {$P}convidados WHERE convite_id=? ORDER BY principal DESC, nome");
+    $st = $conn->prepare("SELECT g.*, mg.nome AS mesa_nome
+                          FROM {$P}convidados g LEFT JOIN {$P}mesas mg ON g.mesa_id = mg.id
+                          WHERE g.convite_id=? ORDER BY g.principal DESC, g.nome");
     $st->bind_param('i', $c['id']); $st->execute();
     $c['membros'] = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    // Mesa efetiva de cada membro: a sua própria, senão a do convite.
+    foreach ($c['membros'] as &$m) {
+        $m['mesa_efetiva'] = $m['mesa_nome'] ?: ($c['mesa_nome'] ?: null);
+    }
+    unset($m);
     $c['nome_final'] = nomeConvite($c);
     return $c;
 }

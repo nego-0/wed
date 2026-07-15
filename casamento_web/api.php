@@ -224,7 +224,7 @@ exigirAdmin();
 
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
-                     'mesa_save','mesa_delete','mesa_pos','convite_mesa','importar'], true)) {
+                     'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar'], true)) {
     exigirCsrf();
 }
 
@@ -287,9 +287,9 @@ if ($acao === 'convite_save') {
         $st->execute(); $id=$conn->insert_id;
     }
 
-    // Preserva estados (rsvp/presença) por nome, antes de reconstruir a lista de membros
+    // Preserva estados (rsvp/presença/mesa individual) por nome, antes de reconstruir a lista de membros
     $anterior=[];
-    $r=$conn->query("SELECT nome,rsvp,presente,presente_em FROM {$P}convidados WHERE convite_id=$id");
+    $r=$conn->query("SELECT nome,rsvp,presente,presente_em,mesa_id FROM {$P}convidados WHERE convite_id=$id");
     while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
 
     $presenca = in_array($d['presenca'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $d['presenca'] : '';
@@ -310,9 +310,10 @@ if ($acao === 'convite_save') {
         elseif ($presenca==='pendente')   $rsvp='pendente';
         else                              $rsvp = $ant['rsvp'] ?? 'pendente'; // sem presença: preserva
         $pres=(int)($ant['presente'] ?? 0);
-        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em)
-                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').")");
-        $q->bind_param('isisi',$id,$mn,$princ,$rsvp,$pres); $q->execute();
+        $mesaMembro = isset($ant['mesa_id']) && $ant['mesa_id']!==null ? (int)$ant['mesa_id'] : null; // preserva a mesa individual
+        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id)
+                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?)");
+        $q->bind_param('isisii',$id,$mn,$princ,$rsvp,$pres,$mesaMembro); $q->execute();
     }
     recalcularCheckin($conn,$id,$TS); // atualiza contadores de presença; não toca no RSVP
 
@@ -394,11 +395,13 @@ if ($acao === 'mesa_pos') {
 if ($acao === 'mesa_delete') {
     $id=(int)($_GET['id']??0);
     $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
+    $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE mesa_id=$id"); // mesas individuais também
     $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convite_mesa') {
-    // Senta (mesa_id) ou retira (mesa_id vazio) um convite de uma mesa.
+    // Senta (mesa_id) ou retira (mesa_id vazio) um convite inteiro de uma mesa.
+    // Define a mesa "padrão" do convite; os membros sem mesa própria seguem-na.
     $d=corpo(); $id=(int)($d['id']??0);
     if (!$id) erro('Convite inválido.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
@@ -406,6 +409,36 @@ if ($acao === 'convite_mesa') {
     else        { $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=NULL,atualizado_em=$TS WHERE id=?"); $st->bind_param('i',$id); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
+}
+if ($acao === 'convidado_mesa') {
+    // Atribui/retira a mesa individual de UMA pessoa (permite dividir um convite por mesas).
+    // mesa_id vazio -> a pessoa volta a seguir a mesa do convite.
+    $d=corpo(); $gid=(int)($d['id']??0);
+    if (!$gid) erro('Pessoa inválida.');
+    $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=? WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
+    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    $st->execute();
+    ok(['mesas'=>listarMesas($conn)]);
+}
+if ($acao === 'convidado_list') {
+    // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa,
+                 c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite,
+                 mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome
+          FROM {$P}convidados g
+          JOIN {$P}convites c ON g.convite_id=c.id
+          LEFT JOIN {$P}mesas mp ON g.mesa_id=mp.id
+          LEFT JOIN {$P}mesas mc ON c.mesa_id=mc.id
+          ORDER BY c.nome_exibicao, g.principal DESC, g.nome";
+    $rows=$conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+    foreach ($rows as &$r) {
+        $r['convite_nome']  = nomeConvite($r); // usa nome_exibicao/lugares/sufixo
+        $r['mesa_efetiva_id']   = $r['mesa_pessoa'] !== null ? (int)$r['mesa_pessoa'] : ($r['mesa_convite'] !== null ? (int)$r['mesa_convite'] : null);
+        $r['mesa_efetiva_nome'] = $r['mesa_pessoa_nome'] ?: ($r['mesa_convite_nome'] ?: null);
+    }
+    unset($r);
+    ok(['convidados'=>$rows]);
 }
 
 // ---- Importar da lista antiga ------------------------------

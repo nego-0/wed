@@ -76,8 +76,9 @@ exigirAdmin();
   .barra-ocup span.cheio{ background:#1f7a3d; } .barra-ocup span.excede{ background:var(--danger); }
   .lista-sentados{ display:flex; flex-direction:column; gap:.4rem; margin:.4rem 0 .2rem; }
   .sentado{ display:flex; align-items:center; gap:.5rem; border:1px solid var(--line); border-radius:10px; padding:.4rem .6rem; font-size:.9rem; }
-  .sentado .nm{ flex:1; }
+  .sentado .nm{ flex:1; line-height:1.2; }
   .sentado .lg{ font-size:.75rem; color:#8a8f88; }
+  .sel-mini{ flex:none; max-width:52%; font-size:.8rem; padding:.35rem .4rem; }
   .vazio-mini{ color:#9aa09a; font-size:.86rem; padding:.3rem 0; }
   .painel-vazio{ color:#9aa09a; text-align:center; font-size:.9rem; padding:1.4rem .5rem; }
   select.sel-conv{ width:100%; }
@@ -173,15 +174,19 @@ async function api(action, opts={}){
   const r=await fetch('api.php?action='+action,opts); return r.json();
 }
 
-let MESAS=[], CONVITES=[], SEL=null, novaForma='redonda';
+let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda';
 
 // ---------- carregar ----------
 async function carregar(){
-  const [dm,dc]=await Promise.all([api('mesa_list'), api('convite_list')]);
+  const [dm,dc,dg]=await Promise.all([api('mesa_list'), api('convite_list'), api('convidado_list')]);
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
-  MESAS=dm.mesas||[]; CONVITES=(dc&&dc.convites)||[];
+  MESAS=dm.mesas||[]; CONVITES=(dc&&dc.convites)||[]; CONVIDADOS=(dg&&dg.convidados)||[];
   await autoPosicionar();
   renderTudo();
+}
+async function recarregarDados(){
+  const [dc,dg]=await Promise.all([api('convite_list'), api('convidado_list')]);
+  CONVITES=(dc&&dc.convites)||[]; CONVIDADOS=(dg&&dg.convidados)||[];
 }
 
 // Coloca em grelha as mesas ainda sem posição e persiste-as.
@@ -204,8 +209,8 @@ function renderStats(){
   const capTotal=MESAS.reduce((s,m)=>s+(+m.capacidade||0),0);
   const sentados=MESAS.reduce((s,m)=>s+(+m.ocupacao||0),0);
   const livres=Math.max(0,capTotal-sentados);
-  const excede=MESAS.some(m=>m.capacidade && (+m.ocupacao> +m.capacidade));
-  const semMesa=CONVITES.filter(c=>!c.mesa_id).reduce((s,c)=>s+(+c.lugares||0),0);
+  const totalLugares=CONVITES.reduce((s,c)=>s+(+c.lugares||0),0);
+  const semMesa=Math.max(0, totalLugares-sentados); // pessoas por sentar
   const card=(n,l,cls='')=>`<div class="sm ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   $('stats').innerHTML =
     card(nMesas,'Mesas')+
@@ -286,13 +291,28 @@ function selecionar(id){ SEL=id; renderPlanta(); renderDetalhe(); }
 function renderDetalhe(){
   const box=$('detalhe');
   const m=MESAS.find(x=>x.id===SEL);
-  if(!m){ box.innerHTML='<div class="painel-vazio">Toque numa mesa da planta para ver quem está sentado, ajustar a capacidade ou removê-la.</div>'; return; }
+  if(!m){ box.innerHTML='<div class="painel-vazio">Toque numa mesa da planta para ver quem está sentado, distribuir pessoas por mesas, ajustar a capacidade ou removê-la.</div>'; return; }
   const cap=+m.capacidade||0, oc=+m.ocupacao||0;
   const perc=cap?Math.min(100,Math.round(oc/cap*100)):(oc?100:0);
   const barCls=cap&&oc>cap?'excede':(cap&&oc>=cap?'cheio':'');
-  const sentados=CONVITES.filter(c=>+c.mesa_id===m.id);
-  const disponiveis=CONVITES.filter(c=>+c.mesa_id!==m.id)
-    .sort((a,b)=>(a.mesa_id?1:0)-(b.mesa_id?1:0) || (a.nome_final||'').localeCompare(b.nome_final||''));
+
+  // Pessoas cuja mesa efetiva é esta
+  const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
+  // Lugares "sem nome" (lugares além dos nomeados) dos convites ancorados aqui
+  const notas=CONVITES.filter(c=>+c.mesa_id===m.id).map(c=>{
+    const nomeados=CONVIDADOS.filter(g=>g.convite_id===c.id).length;
+    const extra=Math.max(0,(+c.lugares||0)-nomeados);
+    return extra>0?{nome:c.nome_final,extra}:null;
+  }).filter(Boolean);
+  // Pessoas noutras mesas / sem mesa (para trazer)
+  const outras=CONVIDADOS.filter(g=>g.mesa_efetiva_id!==m.id)
+    .sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.convite_nome||'').localeCompare(b.convite_nome||''));
+  // Convites para sentar inteiros (não ancorados aqui)
+  const convFora=CONVITES.filter(c=>+c.mesa_id!==m.id)
+    .sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
+  const convAqui=CONVITES.filter(c=>+c.mesa_id===m.id);
+
+  const optOutrasMesas=g=>MESAS.map(x=>`<option value="${x.id}" ${String(g.mesa_pessoa)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('');
 
   box.innerHTML=`
     <h3>${esc(m.nome)}</h3>
@@ -314,24 +334,36 @@ function renderDetalhe(){
       <div class="barra-ocup"><span class="${barCls}" style="width:${perc}%"></span></div>
     </div>
 
-    <div style="margin-top:.6rem">
-      <label style="font-size:.82rem;color:#7a8078">Convites nesta mesa (${sentados.length})</label>
+    <div style="margin-top:.7rem">
+      <label style="font-size:.82rem;color:#7a8078">Pessoas nesta mesa (${pessoas.length})</label>
       <div class="lista-sentados">
-        ${sentados.length ? sentados.map(c=>`
+        ${pessoas.length ? pessoas.map(g=>`
           <div class="sentado">
-            <span class="nm">${esc(c.nome_final)}</span>
-            <span class="lg">${c.lugares} lug.</span>
-            <button class="btn-ico" title="Retirar desta mesa" onclick="retirar(${c.id})">✕</button>
+            <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+            <select class="sel-mini" title="Mudar de mesa" onchange="moverPessoa(${g.id}, this.value)">
+              <option value="" ${g.mesa_pessoa==null?'selected':''}>${g.mesa_convite_nome?('Segue o convite ('+esc(g.mesa_convite_nome)+')'):'Sem mesa'}</option>
+              ${optOutrasMesas(g)}
+            </select>
           </div>`).join('') : '<div class="vazio-mini">Ainda ninguém sentado nesta mesa.</div>'}
+        ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
       </div>
     </div>
 
     <div style="margin-top:.7rem">
-      <label style="font-size:.82rem;color:#7a8078">Sentar convite nesta mesa</label>
-      <select class="sel-conv" id="sel-conv" onchange="sentar(this.value)">
-        <option value="">Escolher convite…</option>
-        ${disponiveis.map(c=>`<option value="${c.id}">${esc(c.nome_final)} · ${c.lugares} lug.${c.mesa_id?(' (Mesa: '+esc(c.mesa_nome||'')+')'):' (sem mesa)'}</option>`).join('')}
+      <label style="font-size:.82rem;color:#7a8078">Trazer uma pessoa para esta mesa</label>
+      <select class="sel-conv" onchange="trazerPessoa(this.value); this.value=''">
+        <option value="">Escolher pessoa…</option>
+        ${outras.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}${g.mesa_efetiva_nome?(' (em '+esc(g.mesa_efetiva_nome)+')'):' (sem mesa)'}</option>`).join('')}
       </select>
+    </div>
+
+    <div style="margin-top:.7rem">
+      <label style="font-size:.82rem;color:#7a8078">Sentar convite inteiro nesta mesa</label>
+      <select class="sel-conv" onchange="sentar(this.value); this.value=''">
+        <option value="">Escolher convite…</option>
+        ${convFora.map(c=>`<option value="${c.id}">${esc(c.nome_final)} · ${c.lugares} lug.${c.mesa_id?(' (Mesa: '+esc(c.mesa_nome||'')+')'):' (sem mesa)'}</option>`).join('')}
+      </select>
+      ${convAqui.length?`<div style="margin-top:.4rem">${convAqui.map(c=>`<span class="semmesa-chip">${esc(c.nome_final)}<button class="btn-ico" title="Retirar convite da mesa" onclick="retirarConvite(${c.id})">✕</button></span>`).join('')}</div>`:''}
     </div>
 
     <div class="acoes-bloco">
@@ -375,31 +407,37 @@ async function guardarMesaEd(){
 
 async function eliminar(id){
   const m=MESAS.find(x=>x.id===id); const nome=m?m.nome:'esta mesa';
-  if(!confirm(`Eliminar a mesa "${nome}"? Os convites sentados ficam sem mesa.`)) return;
+  if(!confirm(`Eliminar a mesa "${nome}"? Os convites e pessoas sentados ficam sem mesa.`)) return;
   const d=await api('mesa_delete&id='+id);
   if(!d.success) return toast(d.message||'Erro.',true);
   MESAS=d.mesas; if(SEL===id) SEL=null;
-  // reflete nos convites que ficaram sem mesa
-  CONVITES.forEach(c=>{ if(+c.mesa_id===id){ c.mesa_id=null; c.mesa_nome=null; } });
-  renderTudo(); toast('Mesa eliminada.');
+  await recarregarDados(); renderTudo(); toast('Mesa eliminada.');
 }
 
+// Sentar/retirar um CONVITE inteiro (mesa padrão do convite)
 async function sentar(conviteId){
-  conviteId=+conviteId; if(!conviteId) return;
+  conviteId=+conviteId; if(!conviteId||!SEL) return;
   const d=await api('convite_mesa',{method:'POST',body:JSON.stringify({id:conviteId,mesa_id:SEL})});
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas;
-  const c=CONVITES.find(x=>x.id===conviteId); const m=MESAS.find(x=>x.id===SEL);
-  if(c){ c.mesa_id=SEL; c.mesa_nome=m?m.nome:null; }
-  renderTudo(); toast('Convite sentado nesta mesa.');
+  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Convite sentado nesta mesa.');
 }
-
-async function retirar(conviteId){
+async function retirarConvite(conviteId){
   const d=await api('convite_mesa',{method:'POST',body:JSON.stringify({id:conviteId,mesa_id:''})});
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=d.mesas;
-  const c=CONVITES.find(x=>x.id===conviteId); if(c){ c.mesa_id=null; c.mesa_nome=null; }
-  renderTudo(); toast('Convite retirado da mesa.');
+  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Convite retirado da mesa.');
+}
+
+// Mover UMA pessoa (mesa individual): val vazio = segue o convite
+async function moverPessoa(gid, val){
+  const d=await api('convidado_mesa',{method:'POST',body:JSON.stringify({id:+gid, mesa_id: val===''?'':+val})});
+  if(!d.success) return toast(d.message||'Erro.',true);
+  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Lugar atualizado.');
+}
+async function trazerPessoa(gid){
+  gid=+gid; if(!gid||!SEL) return;
+  const d=await api('convidado_mesa',{method:'POST',body:JSON.stringify({id:gid, mesa_id:SEL})});
+  if(!d.success) return toast(d.message||'Erro.',true);
+  MESAS=d.mesas; await recarregarDados(); renderTudo(); toast('Pessoa trazida para esta mesa.');
 }
 
 carregar();
