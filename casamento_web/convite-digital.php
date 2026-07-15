@@ -55,11 +55,15 @@ if ($tpl === false || $tpl === '') {
 $nome = htmlspecialchars(nomeConviteVisivel($c), ENT_QUOTES, 'UTF-8');
 
 $mesaBlock = '';
-if (!empty($c['mesa_nome'])) {
-    $mesa = htmlspecialchars($c['mesa_nome'], ENT_QUOTES, 'UTF-8');
+$distrMesas = mesasDoConvite($conn, $c);
+if ($distrMesas) {
+    // Opção do convite digital: mostrar (ou não) o "(N pessoas)" ao lado de cada mesa.
+    $comNumMesa = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
+    $txtMesas = htmlspecialchars(textoMesas($distrMesas, $comNumMesa), ENT_QUOTES, 'UTF-8');
+    $rotuloMesa = count($distrMesas) > 1 ? 'Mesas' : 'Mesa';
     $mesaBlock = "<p class=\"guest-mesa\" style=\"margin-top:12px;font-family:'Cormorant Garamond',serif;"
-        . "font-size:17px;letter-spacing:.02em;color:#B4864A\">Mesa: "
-        . "<b style=\"font-weight:600;color:#2C4536\">{$mesa}</b></p>";
+        . "font-size:17px;letter-spacing:.02em;color:#B4864A\">{$rotuloMesa}: "
+        . "<b style=\"font-weight:600;color:#2C4536\">{$txtMesas}</b></p>";
 }
 
 $confirmUrl  = htmlspecialchars(base_url() . '/convite.php?c=' . $c['codigo'], ENT_QUOTES, 'UTF-8');

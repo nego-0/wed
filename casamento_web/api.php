@@ -276,16 +276,17 @@ if ($acao === 'convite_save') {
     $obs      = trim($d['observacoes'] ?? ''); if ($obs==='') $obs=null;
     $mesaId   = trim($d['mesa']??'')!=='' ? resolverMesa($conn, $d['mesa']) : null;
     $mostrarN = !empty($d['mostrar_numero']) ? 1 : 0;
+    $mostrarNM = !empty($d['mostrar_num_mesa']) ? 1 : 0;
     $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
 
     if ($id) {
-        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,atualizado_em=$TS WHERE id=?");
-        $st->bind_param('ssissiissi',$nome,$sufixo,$mostrarN,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$id);
+        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,atualizado_em=$TS WHERE id=?");
+        $st->bind_param('ssiissiissi',$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$id);
         $st->execute();
     } else {
         $codigo=gerarCodigo($conn);
-        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_numero,tipo,lado,lugares,mesa_id,telefone,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
-        $st->bind_param('sssissiiss',$codigo,$nome,$sufixo,$mostrarN,$tipo,$lado,$lugares,$mesaId,$telefone,$obs);
+        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_numero,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st->bind_param('sssiissiiss',$codigo,$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs);
         $st->execute(); $id=$conn->insert_id;
     }
 

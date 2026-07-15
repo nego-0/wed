@@ -58,7 +58,8 @@ $conn->query("
         codigo VARCHAR(12) NOT NULL UNIQUE,
         nome_exibicao VARCHAR(255) NOT NULL,          -- nome no convite (ex: Família Agostinho)
         sufixo VARCHAR(120) DEFAULT NULL,             -- override do texto entre parênteses
-        mostrar_numero TINYINT(1) DEFAULT 1,          -- mostrar o número entre parênteses no convite
+        mostrar_numero TINYINT(1) DEFAULT 1,          -- mostrar o número entre parênteses no nome do convite
+        mostrar_num_mesa TINYINT(1) DEFAULT 1,        -- mostrar o nº de pessoas por mesa no convite digital
         tipo ENUM('digital','fisico','ambos') DEFAULT 'digital',
         lado ENUM('noivo','noiva','ambos') DEFAULT 'noivo',
         lugares INT NOT NULL DEFAULT 1,
@@ -114,6 +115,12 @@ foreach ([
 $col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'mesa_id'");
 if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convidados ADD COLUMN mesa_id INT DEFAULT NULL AFTER presente_em");
+}
+
+// Migração suave: opção de mostrar o nº de pessoas por mesa no convite digital
+$col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'mostrar_num_mesa'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convites ADD COLUMN mostrar_num_mesa TINYINT(1) DEFAULT 1 AFTER mostrar_numero");
 }
 
 // ============================================================
@@ -307,6 +314,56 @@ function carregarConvite(mysqli $conn, $chave, string $por = 'id'): ?array {
     unset($m);
     $c['nome_final'] = nomeConvite($c);
     return $c;
+}
+
+/**
+ * Distribuição de um convite pelas mesas (considerando mesas individuais).
+ * Devolve uma lista ordenada por nome de mesa: [['nome'=>..., 'n'=>nº pessoas], ...].
+ * Cada pessoa nomeada conta na sua mesa efetiva (própria, senão a do convite);
+ * os lugares "sem nome" (lugares além dos nomeados) contam na mesa do convite.
+ */
+function mesasDoConvite(mysqli $conn, array $c): array {
+    global $P;
+    $cid     = (int)$c['id'];
+    $lugares = (int)($c['lugares'] ?? 0);
+    $res = $conn->query("SELECT COALESCE(mg.nome, mc.nome) AS mesa
+                         FROM {$P}convidados g
+                         LEFT JOIN {$P}mesas mg ON g.mesa_id = mg.id
+                         LEFT JOIN {$P}convites c ON g.convite_id = c.id
+                         LEFT JOIN {$P}mesas mc ON c.mesa_id = mc.id
+                         WHERE g.convite_id = $cid");
+    $cont = []; $nomeados = 0;
+    while ($r = $res->fetch_assoc()) {
+        $nomeados++;
+        $m = $r['mesa'];
+        if ($m === null || $m === '') continue;
+        $cont[$m] = ($cont[$m] ?? 0) + 1;
+    }
+    // Lugares sem nome -> mesa do convite
+    $extra = max(0, $lugares - $nomeados);
+    if ($extra > 0 && !empty($c['mesa_nome'])) {
+        $cont[$c['mesa_nome']] = ($cont[$c['mesa_nome']] ?? 0) + $extra;
+    }
+    ksort($cont, SORT_NATURAL | SORT_FLAG_CASE);
+    $out = [];
+    foreach ($cont as $nome => $n) $out[] = ['nome' => $nome, 'n' => $n];
+    return $out;
+}
+
+/**
+ * Texto das mesas de um convite. Ex.: "A (1 pessoa) e B (4 pessoas)".
+ * $comNumero controla se aparece o "(N pessoas)" ao lado de cada mesa.
+ */
+function textoMesas(array $lista, bool $comNumero = true): string {
+    if (!$lista) return '';
+    $partes = array_map(function ($m) use ($comNumero) {
+        if (!$comNumero) return $m['nome'];
+        $n = (int)$m['n'];
+        return $m['nome'] . ' (' . $n . ' ' . ($n === 1 ? 'pessoa' : 'pessoas') . ')';
+    }, $lista);
+    if (count($partes) === 1) return $partes[0];
+    $ultima = array_pop($partes);
+    return implode(', ', $partes) . ' e ' . $ultima;
 }
 
 /** Detecta se a lista antiga existe (para oferecer importação). */

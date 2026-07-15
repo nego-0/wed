@@ -134,10 +134,13 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       <div class="para">
         <div class="lab">Com todo o carinho, para</div>
         <div class="nome"><?= htmlspecialchars(nomeConviteVisivel($c)) ?></div>
-        <?php if (!empty($c['mesa_nome'])): ?>
+        <?php
+          $distrMesas = mesasDoConvite($conn, $c);
+          $comNumMesa = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
+          if ($distrMesas): ?>
           <div class="mesa">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16"/><path d="M6 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"/><path d="M6 10v8"/><path d="M18 10v8"/><path d="M4 14h16"/></svg>
-            Mesa: <strong style="margin-left:.15rem;"><?= htmlspecialchars($c['mesa_nome']) ?></strong>
+            <?= count($distrMesas)>1?'Mesas':'Mesa' ?>: <strong style="margin-left:.15rem;"><?= htmlspecialchars(textoMesas($distrMesas, $comNumMesa)) ?></strong>
           </div>
         <?php endif; ?>
       </div>

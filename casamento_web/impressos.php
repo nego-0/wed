@@ -90,7 +90,9 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
       <?php endif; ?>
       <canvas class="qr" data-link="<?= htmlspecialchars($link) ?>"></canvas>
       <div class="cod"><?= htmlspecialchars($c['codigo']) ?></div>
-      <?php if ($c['mesa_nome']): ?><div class="mesa">Mesa: <?= htmlspecialchars($c['mesa_nome']) ?></div><?php endif; ?>
+      <?php $distr = mesasDoConvite($conn, $c); if ($distr): ?>
+        <div class="mesa"><?= count($distr)>1?'Mesas':'Mesa' ?>: <?= htmlspecialchars(textoMesas($distr, true)) ?></div>
+      <?php endif; ?>
       <div class="marca no-print" onclick="marcar(this,<?= $c['id'] ?>)">
         <span class="cx">✓</span><span class="txt"><?= $c['impresso']?'Impresso':'Marcar impresso' ?></span>
       </div>

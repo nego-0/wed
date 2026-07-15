@@ -201,6 +201,11 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
         <span>Mostrar o número de pessoas entre parênteses no convite <small>(e a nota que o explica)</small></span>
       </label>
 
+      <label class="opcao-check">
+        <input type="checkbox" id="c-mostrar-num-mesa" checked>
+        <span>Mostrar o número de pessoas por mesa no convite digital <small>(ex.: Mesa: A (1 pessoa) e B (4 pessoas))</small></span>
+      </label>
+
       <div class="linha-form">
         <div><label>Tipo de convite</label>
           <input type="hidden" id="c-tipo" value="digital">
@@ -463,6 +468,7 @@ function abrirConvite(c){
   $('c-nome').value = c?c.nome_exibicao:'';
   $('c-sufixo').value = c?(c.sufixo||''):'';
   $('c-mostrar-numero').checked = c ? (String(c.mostrar_numero)!=='0') : true;
+  $('c-mostrar-num-mesa').checked = c ? (String(c.mostrar_num_mesa)!=='0') : true;
   $('c-lugares').value = c?c.lugares:1;
   pickVal('c-tipo', c?c.tipo:'digital');
   pickVal('c-lado', c?c.lado:'noivo');
@@ -540,6 +546,7 @@ async function guardarConvite(){
   const payload={
     id:$('c-id').value||0, nome_exibicao:nome, sufixo:$('c-sufixo').value,
     mostrar_numero:$('c-mostrar-numero').checked?1:0,
+    mostrar_num_mesa:$('c-mostrar-num-mesa').checked?1:0,
     tipo:$('c-tipo').value, lado:$('c-lado').value, lugares:$('c-lugares').value,
     mesa:$('c-mesa').value, telefone:$('c-telefone').value, observacoes:$('c-obs').value,
     presenca:$('c-presenca').value,

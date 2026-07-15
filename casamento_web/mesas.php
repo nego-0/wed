@@ -60,6 +60,15 @@ exigirAdmin();
   .mesa-node.excede{ background:#f7e5e3; border-color:var(--danger); color:#7d332d; }
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:4px; box-shadow:0 0 0 6px rgba(180,134,74,.18); z-index:18; }
 
+  /* Pastilhas de pessoas (mesa selecionada) — arrastáveis entre mesas */
+  .mesa-membros{ position:absolute; transform:translate(-50%, calc(var(--d)/2 + 8px)); z-index:16;
+    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; max-width:200px; pointer-events:none; }
+  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:.72rem; line-height:1.1;
+    padding:.18rem .55rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
+    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:96px; overflow:hidden; text-overflow:ellipsis; }
+  .mesa-membros .mp:hover{ background:var(--forest-deep); }
+  body.a-arrastar-item .mp{ pointer-events:none; }
+
   /* Lista principal (Pessoas / Convites) — largura total abaixo do canvas */
   .roster-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem 1.1rem 1.1rem; margin-top:1.1rem; }
   .roster-topo{ display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
@@ -292,7 +301,7 @@ function classeOcup(m){
 // ---------- planta ----------
 function renderPlanta(){
   const planta=$('planta');
-  planta.querySelectorAll('.mesa-node').forEach(n=>n.remove());
+  planta.querySelectorAll('.mesa-node, .mesa-membros').forEach(n=>n.remove());
   $('dica-vazia').style.display = MESAS.length ? 'none' : 'flex';
   MESAS.forEach(m=>{
     const cap=+m.capacidade||0, oc=+m.ocupacao||0;
@@ -306,6 +315,20 @@ function renderPlanta(){
     node.innerHTML=`<span class="mn-nome">${esc(m.nome)}</span>
       <span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
     planta.appendChild(node);
+    // Pastilhas de pessoas (arrastáveis) apenas para a mesa selecionada
+    if(SEL===m.id){
+      const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
+      if(pessoas.length){
+        const cl=document.createElement('div'); cl.className='mesa-membros';
+        cl.style.setProperty('--d', d+'px');
+        cl.style.left=(+m.pos_x||50)+'%'; cl.style.top=(+m.pos_y||50)+'%';
+        cl.innerHTML=pessoas.map(g=>{
+          const prim=(g.nome||'').split(' ')[0];
+          return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</span>`;
+        }).join('');
+        planta.appendChild(cl);
+      }
+    }
   });
 }
 
@@ -560,12 +583,19 @@ function renderRoster(){
 }
 
 // Arrastar um cartão (pessoa/convite) para cima de uma mesa da planta.
+// Fonte do arrasto: cartões da lista OU pastilhas de pessoa na própria planta.
 let pend=null, ghost=null, arrItem=null;
-$('roster-lista').addEventListener('pointerdown', e=>{
-  const chip=e.target.closest('.chip-drag'); if(!chip) return;
-  pend={tipo:chip.dataset.tipo, id:+chip.dataset.id, label:chip.dataset.label, chip, sx:e.clientX, sy:e.clientY};
+function iniciarArrasteDe(e, el){
+  pend={tipo:el.dataset.tipo, id:+el.dataset.id, label:el.dataset.label, chip:el, sx:e.clientX, sy:e.clientY};
   window.addEventListener('pointermove', talvezArrastar);
   window.addEventListener('pointerup', cancelarArme, {once:true});
+}
+$('roster-lista').addEventListener('pointerdown', e=>{
+  const chip=e.target.closest('.chip-drag'); if(chip) iniciarArrasteDe(e, chip);
+});
+// Pastilhas de pessoas na planta (arrastar entre mesas diretamente)
+$('planta').addEventListener('pointerdown', e=>{
+  const mp=e.target.closest('.mp'); if(mp) iniciarArrasteDe(e, mp);
 });
 function talvezArrastar(e){
   if(!pend) return;
@@ -578,6 +608,7 @@ function talvezArrastar(e){
 function cancelarArme(){ pend=null; window.removeEventListener('pointermove', talvezArrastar); }
 function comecarArraste(e){
   arrItem={tipo:pend.tipo, id:pend.id}; pend.chip.classList.add('arrastando');
+  document.body.classList.add('a-arrastar-item'); // desativa pointer-events das pastilhas
   ghost=document.createElement('div'); ghost.className='ghost-drag'; ghost.textContent=pend.label;
   document.body.appendChild(ghost); posGhost(e);
   window.addEventListener('pointermove', moverArraste);
@@ -594,9 +625,10 @@ function moverArraste(e){
 }
 async function largarArraste(e){
   window.removeEventListener('pointermove', moverArraste);
+  document.body.classList.remove('a-arrastar-item');
   const node=mesaSob(e);
   document.querySelectorAll('.mesa-node.drop-alvo').forEach(n=>n.classList.remove('drop-alvo'));
-  document.querySelectorAll('.chip-drag.arrastando').forEach(c=>c.classList.remove('arrastando'));
+  document.querySelectorAll('.chip-drag.arrastando, .mp.arrastando').forEach(c=>c.classList.remove('arrastando'));
   if(ghost){ ghost.remove(); ghost=null; }
   const item=arrItem; arrItem=null;
   if(!node || !item) return;
