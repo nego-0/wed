@@ -239,7 +239,8 @@ if ($acao === 'convite_list') {
     if ($impresso==='1') { $w.=" AND c.impresso=1"; }
     if ($impresso==='0') { $w.=" AND c.impresso=0 AND c.tipo IN ('fisico','ambos')"; }
     if ($enviado==='1')  { $w.=" AND c.enviado=1"; }
-    if ($mesa!=='') { $w.=" AND m.nome=?"; $t.='s'; $p[]=$mesa; }
+    if ($mesa==='__SEM_MESA__') { $w.=" AND c.mesa_id IS NULL"; }
+    elseif ($mesa!=='')         { $w.=" AND m.nome=?"; $t.='s'; $p[]=$mesa; }
     if ($busca!==''){ $w.=" AND (c.nome_exibicao LIKE ? OR c.codigo LIKE ? OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.nome LIKE ?))";
                       $t.='sss'; $l="%$busca%"; $p[]=$l; $p[]=$l; $p[]=$l; }
     $sql="SELECT c.*, m.nome AS mesa_nome,

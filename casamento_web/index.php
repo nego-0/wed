@@ -296,8 +296,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 const BASE = <?= json_encode(base_url()) ?>;
 const CSRF = <?= json_encode(csrfToken()) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
-let CONVITES = [], MESAS = [], timer = null;
+let CONVITES = [], MESAS = [], STATS = {}, timer = null;
 let filtroTipo='', filtroLado='', filtroEstado='', filtroMesa='', filtroImpresso='';
+const SEM_MESA = '__SEM_MESA__'; // valor especial do filtro "sem mesa"
 
 // ---------- utilidades ----------
 const $ = id => document.getElementById(id);
@@ -322,7 +323,7 @@ async function carregar(){
   });
   const d = await api('convite_list&'+q.toString());
   if(!d.success) return toast('Erro ao carregar.', true);
-  CONVITES=d.convites; MESAS=d.mesas;
+  CONVITES=d.convites; MESAS=d.mesas; STATS=d.stats||{};
   renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
 }
 
@@ -452,9 +453,13 @@ function renderFiltroMesas(){
   const box=$('filtro-mesas'); if(!box) return;
   if(!MESAS.length){ box.innerHTML=''; return; }
   const chip=(v,l,on)=>`<button class="chip-m${on?' on':''}" onclick="filtrarMesa('${esc(v)}')">${l}</button>`;
+  // Pessoas por sentar = total de lugares menos os já sentados nas mesas
+  const sentados=MESAS.reduce((s,m)=>s+(+m.ocupacao||0),0);
+  const semMesa=Math.max(0,(+STATS.lugares||0)-sentados);
   box.innerHTML = `<span class="chips-lbl">Mesa</span>`
     + chip('', 'Todas', !filtroMesa)
-    + MESAS.map(m=>chip(m.nome, esc(m.nome)+`<span class="chip-n">${m.convites||0}</span>`, filtroMesa===m.nome)).join('');
+    + chip(SEM_MESA, 'Sem mesa'+`<span class="chip-n">${semMesa}</span>`, filtroMesa===SEM_MESA)
+    + MESAS.map(m=>chip(m.nome, esc(m.nome)+`<span class="chip-n">${m.ocupacao||0}</span>`, filtroMesa===m.nome)).join('');
 }
 function renderDatalistMesas(){ $('lista-mesas').innerHTML=MESAS.map(m=>`<option value="${esc(m.nome)}">`).join(''); }
 
