@@ -14,10 +14,10 @@ exigirAdmin();
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <style>
-  .layout{ display:grid; grid-template-columns:1fr 340px; gap:1.1rem; align-items:start; }
-  @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
+  .layout{ display:grid; grid-template-columns:1fr 380px; gap:1.1rem; align-items:start; }
+  @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
 
-  /* Barra de estatísticas */
+  /* Estatísticas */
   .stats-mesa{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.7rem; margin-bottom:1.1rem; }
   .sm{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
   .sm .n{ font-family:var(--serif); font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1; }
@@ -35,14 +35,21 @@ exigirAdmin();
   .lg-cheia i{ background:#e4f3e9; border-color:#1f7a3d; }
   .lg-excede i{ background:#f7e5e3; border-color:var(--danger); }
 
-  .planta{ position:relative; width:100%; aspect-ratio:16/10; border-radius:14px; overflow:hidden;
+  /* overflow:visible para os nomes junto às mesas de borda não ficarem cortados */
+  .planta{ position:relative; width:100%; aspect-ratio:16/10; border-radius:14px; overflow:visible;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
       repeating-linear-gradient(0deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px),
       repeating-linear-gradient(90deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px);
-    border:1px dashed var(--gold-soft); touch-action:none; user-select:none; }
+    background-clip:padding-box; border:1px dashed var(--gold-soft); touch-action:none; user-select:none; }
   .planta .dica-vazia{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     color:#a7ad9f; font-size:.9rem; text-align:center; padding:1rem; }
+
+  /* Linhas-guia magnéticas */
+  .guia{ position:absolute; background:var(--gold); opacity:0; pointer-events:none; z-index:19; transition:opacity .08s; }
+  .guia.gv{ top:-4px; bottom:-4px; width:1.5px; transform:translateX(-50%); }
+  .guia.gh{ left:-4px; right:-4px; height:1.5px; transform:translateY(-50%); }
+  .guia.on{ opacity:.75; }
 
   .mesa-node{ position:absolute; transform:translate(-50%,-50%); cursor:grab;
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
@@ -61,35 +68,50 @@ exigirAdmin();
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:4px; box-shadow:0 0 0 6px rgba(180,134,74,.18); z-index:18; }
 
   /* Pastilhas de pessoas (mesa selecionada) — arrastáveis entre mesas */
-  .mesa-membros{ position:absolute; transform:translate(-50%, calc(var(--d)/2 + 8px)); z-index:16;
-    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; max-width:200px; pointer-events:none; }
+  .mesa-membros{ position:absolute; transform:translate(-50%, calc(var(--d)/2 + 8px)); z-index:17;
+    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; width:160px; pointer-events:none; }
+  .mesa-membros.acima{ transform:translate(-50%, calc(-100% - var(--d)/2 - 8px)); }
   .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:.72rem; line-height:1.1;
     padding:.18rem .55rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
-    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:96px; overflow:hidden; text-overflow:ellipsis; }
+    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:120px; overflow:hidden; text-overflow:ellipsis; }
   .mesa-membros .mp:hover{ background:var(--forest-deep); }
   body.a-arrastar-item .mp{ pointer-events:none; }
 
-  /* Lista principal (Pessoas / Convites) — largura total abaixo do canvas */
-  .roster-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem 1.1rem 1.1rem; margin-top:1.1rem; }
-  .roster-topo{ display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
-  .roster-tabs{ display:flex; gap:.25rem; background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.2rem; }
-  .roster-tabs .rt{ border:none; background:transparent; color:var(--text); font-family:inherit; font-size:.92rem; padding:.45rem 1.1rem; border-radius:50px; cursor:pointer; }
-  .roster-tabs .rt.on{ background:var(--forest); color:#fff; }
-  .roster-hint{ font-size:.78rem; color:#9aa09a; flex:1; min-width:180px; }
-  .roster-filtros{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
-  .roster-filtros input[type=search]{ flex:1; min-width:200px; }
-  .roster-filtros select{ min-width:150px; }
-  .chips-filtro{ display:flex; gap:.3rem; }
-  .chips-filtro .cf{ border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:.82rem;
-    padding:.4rem .8rem; border-radius:50px; cursor:pointer; }
-  .chips-filtro .cf.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
-  .roster-lista{ display:flex; flex-wrap:wrap; gap:.5rem; max-height:340px; overflow:auto; }
+  /* Painel direito: adicionar (compacto) + conjunto de abas */
+  .painel-mesas{ display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
+
+  .add-mesa{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.7rem .8rem; }
+  .add-mesa .am-linha{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+  .add-mesa input[type=text]{ flex:2 1 130px; min-width:0; }
+  .add-mesa input[type=number]{ flex:1 1 70px; min-width:0; }
+  .forma-mini{ display:inline-flex; gap:.25rem; }
+  .forma-mini button{ border:1.5px solid var(--line); background:#fff; border-radius:9px; padding:.4rem .55rem; cursor:pointer;
+    display:inline-flex; align-items:center; gap:.3rem; font-family:inherit; font-size:.78rem; color:var(--text); }
+  .forma-mini button .amostra{ background:var(--gold-soft); width:16px; height:12px; display:inline-block; }
+  .forma-mini button .amostra.r{ border-radius:50%; width:13px; height:13px; }
+  .forma-mini button.on{ border-color:var(--forest); background:var(--cream); color:var(--ink); }
+
+  .tabset{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:.8rem .9rem 1rem; display:flex; flex-direction:column; min-height:0; }
+  .tabset-tabs{ display:flex; gap:.3rem; flex-wrap:wrap; margin-bottom:.8rem; }
+  .tabset-tabs .rt{ border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:.85rem;
+    padding:.4rem .7rem; border-radius:50px; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
+  .tabset-tabs .rt.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
+  .tabset-tabs .rt-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:.72rem; min-width:1.1rem; text-align:center; }
+  .tabset-tabs .rt.on .rt-n{ background:rgba(255,255,255,.22); color:#fff; }
+  .tabset-tabs .rt-mesa{ border-color:var(--gold-soft); }
+  .tab-body{ overflow:auto; max-height:58vh; }
+  @media (max-width:900px){ .tab-body{ max-height:none; } .painel-mesas{ position:static; } }
+
+  .filtros-tab{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:.7rem; }
+  .filtros-tab input[type=search]{ flex:1; min-width:130px; }
+  .filtros-tab select{ min-width:130px; }
+  .lista-tab{ display:flex; flex-wrap:wrap; gap:.5rem; }
   .roster-conta{ font-size:.76rem; color:#9aa09a; margin-top:.6rem; }
   .chip-drag{ display:inline-flex; flex-direction:column; gap:.05rem; background:var(--cream); border:1px solid var(--line);
     border-radius:12px; padding:.45rem .7rem; cursor:grab; touch-action:none; user-select:none; max-width:100%; }
   .chip-drag:hover{ border-color:var(--gold-soft); }
   .chip-drag.arrastando{ opacity:.4; }
-  .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; }
+  .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
   .chip-drag .cd-meta{ font-size:.72rem; color:#8a8f88; }
   .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
   .roster-vazio{ color:#9aa09a; font-size:.86rem; padding:.4rem 0; }
@@ -97,10 +119,7 @@ exigirAdmin();
     background:var(--forest); color:#fff; font-size:.85rem; padding:.4rem .7rem; border-radius:10px;
     box-shadow:0 10px 26px rgba(0,0,0,.3); white-space:nowrap; }
 
-  /* Painel lateral */
-  .painel{ display:flex; flex-direction:column; gap:1rem; }
-  .bloco{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; }
-  .bloco h3{ font-family:var(--serif); font-size:1.1rem; color:var(--ink); margin:0 0 .7rem; }
+  /* Detalhe da mesa (dentro da aba) */
   .campo-mesa{ margin-bottom:.7rem; }
   .campo-mesa label{ display:block; font-size:.82rem; color:#7a8078; margin-bottom:.25rem; }
   .forma-pick{ display:flex; gap:.5rem; }
@@ -115,10 +134,8 @@ exigirAdmin();
   .lista-sentados{ display:flex; flex-direction:column; gap:.4rem; margin:.4rem 0 .2rem; }
   .sentado{ display:flex; align-items:center; gap:.5rem; border:1px solid var(--line); border-radius:10px; padding:.4rem .6rem; font-size:.9rem; }
   .sentado .nm{ flex:1; line-height:1.2; }
-  .sentado .lg{ font-size:.75rem; color:#8a8f88; }
   .sel-mini{ flex:none; max-width:52%; font-size:.8rem; padding:.35rem .4rem; }
   .vazio-mini{ color:#9aa09a; font-size:.86rem; padding:.3rem 0; }
-  .painel-vazio{ color:#9aa09a; text-align:center; font-size:.9rem; padding:1.4rem .5rem; }
   select.sel-conv{ width:100%; }
   .acoes-bloco{ display:flex; gap:.5rem; margin-top:.8rem; }
   .semmesa-chip{ display:inline-flex; align-items:center; gap:.35rem; background:var(--cream); border:1px solid var(--line);
@@ -159,61 +176,34 @@ exigirAdmin();
         </span>
       </div>
       <div class="planta" id="planta">
-        <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira no painel à direita e arraste-a para a posição.</div>
+        <div class="guia gv" id="guia-v"></div>
+        <div class="guia gh" id="guia-h"></div>
+        <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira ao lado e arraste-a para a posição.</div>
       </div>
-      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar. Toque numa mesa para ver e editar os detalhes.</p>
+      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes.</p>
     </div>
 
-    <!-- PAINEL -->
-    <div class="painel">
-      <!-- Adicionar -->
-      <div class="bloco">
-        <h3>Adicionar mesa</h3>
-        <div class="campo-mesa">
-          <label>Nome</label>
-          <input type="text" id="nova-nome" placeholder="Ex: Mesa 1, Honra, Família…">
-        </div>
-        <div class="campo-mesa">
-          <label>Capacidade (lugares)</label>
-          <input type="number" id="nova-cap" min="1" placeholder="opcional">
-        </div>
-        <div class="campo-mesa">
-          <label>Forma</label>
-          <div class="forma-pick" id="nova-forma">
-            <button type="button" data-forma="redonda" class="on"><span class="amostra r"></span>Redonda</button>
-            <button type="button" data-forma="retangular"><span class="amostra"></span>Retangular</button>
+    <!-- PAINEL DIREITO -->
+    <div class="painel-mesas">
+      <!-- Adicionar mesa (compacto) -->
+      <div class="add-mesa">
+        <div class="am-linha">
+          <input type="text" id="nova-nome" placeholder="Nova mesa (nome)">
+          <input type="number" id="nova-cap" min="1" placeholder="Lugares">
+          <div class="forma-mini" id="nova-forma">
+            <button type="button" data-forma="redonda" class="on" title="Redonda"><span class="amostra r"></span></button>
+            <button type="button" data-forma="retangular" title="Retangular"><span class="amostra"></span></button>
           </div>
+          <button class="btn btn-ouro btn-sm" onclick="adicionarMesa()">+ Mesa</button>
         </div>
-        <button class="btn btn-ouro" style="width:100%;justify-content:center" onclick="adicionarMesa()">+ Adicionar mesa</button>
       </div>
 
-      <!-- Detalhe da mesa selecionada -->
-      <div class="bloco" id="detalhe">
-        <div class="painel-vazio">Toque numa mesa da planta para ver quem está sentado, ajustar a capacidade ou removê-la.</div>
+      <!-- Conjunto de abas -->
+      <div class="tabset">
+        <div class="tabset-tabs" id="tabset-tabs"></div>
+        <div class="tab-body" id="tab-body"></div>
       </div>
     </div>
-  </div>
-
-  <!-- LISTA PRINCIPAL (abaixo do canvas, largura total) -->
-  <div class="roster-cartao">
-    <div class="roster-topo">
-      <div class="roster-tabs">
-        <button class="rt on" data-tab="pessoas" onclick="mudarRoster('pessoas')">Pessoas</button>
-        <button class="rt" data-tab="convites" onclick="mudarRoster('convites')">Convites</button>
-      </div>
-      <span class="roster-hint">Arraste um cartão para cima de uma mesa na planta para o sentar lá.</span>
-    </div>
-    <div class="roster-filtros">
-      <input type="search" id="roster-busca" placeholder="Procurar por nome…" oninput="renderRoster()">
-      <div class="chips-filtro" id="chips-mesa">
-        <button class="cf on" data-mesa="" onclick="filtroMesa('')">Todas</button>
-        <button class="cf" data-mesa="sem" onclick="filtroMesa('sem')">Sem mesa</button>
-        <button class="cf" data-mesa="com" onclick="filtroMesa('com')">Com mesa</button>
-      </div>
-      <select id="roster-estado" onchange="renderRoster()"></select>
-    </div>
-    <div class="roster-lista" id="roster-lista"></div>
-    <div class="roster-conta" id="roster-conta"></div>
   </div>
 </div>
 
@@ -234,7 +224,12 @@ async function api(action, opts={}){
   const r=await fetch('api.php?action='+action,opts); return r.json();
 }
 
-let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', rosterTab='pessoas';
+let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', activeTab='pessoas';
+
+const ESTADOS={
+  pessoas:[['','Todos os estados'],['confirmado','Confirmados'],['pendente','Pendentes'],['recusado','Recusados']],
+  convites:[['','Todos os estados'],['confirmado','Confirmados'],['parcial','Parciais'],['pendente','Pendentes'],['recusado','Recusados']]
+};
 
 // Normalização: o MySQL devolve ids como texto; convertê-los para número
 // garante comparações fiáveis (=== entre ids) em todo o ecrã.
@@ -262,15 +257,12 @@ async function recarregarDados(){
 async function autoPosicionar(){
   const semPos=MESAS.filter(m=>m.pos_x===null||m.pos_x===undefined);
   if(!semPos.length) return;
-  semPos.forEach((m,i)=>{
-    const col=i%4, row=Math.floor(i/4);
-    m.pos_x=18+col*22; m.pos_y=20+row*22;
-    if(m.pos_y>92) m.pos_y=92;
-  });
+  semPos.forEach((m,i)=>{ const col=i%4, row=Math.floor(i/4);
+    m.pos_x=18+col*22; m.pos_y=20+row*22; if(m.pos_y>92) m.pos_y=92; });
   await Promise.all(semPos.map(m=>salvarPos(m.id,m.pos_x,m.pos_y)));
 }
 
-function renderTudo(){ renderStats(); renderPlanta(); renderDetalhe(); renderRoster(); }
+function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); }
 
 // ---------- estatísticas ----------
 function renderStats(){
@@ -279,17 +271,13 @@ function renderStats(){
   const sentados=MESAS.reduce((s,m)=>s+(+m.ocupacao||0),0);
   const livres=Math.max(0,capTotal-sentados);
   const totalLugares=CONVITES.reduce((s,c)=>s+(+c.lugares||0),0);
-  const semMesa=Math.max(0, totalLugares-sentados); // pessoas por sentar
+  const semMesa=Math.max(0, totalLugares-sentados);
   const card=(n,l,cls='')=>`<div class="sm ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   $('stats').innerHTML =
-    card(nMesas,'Mesas')+
-    card(capTotal||'—','Capacidade')+
-    card(sentados,'Sentados','ok')+
-    card(livres,'Lugares livres')+
-    card(semMesa,'Sem mesa', semMesa>0?'alerta':'');
+    card(nMesas,'Mesas')+card(capTotal||'—','Capacidade')+card(sentados,'Sentados','ok')+
+    card(livres,'Lugares livres')+card(semMesa,'Sem mesa', semMesa>0?'alerta':'');
 }
 
-// ---------- classe/cor por ocupação ----------
 function classeOcup(m){
   const oc=+m.ocupacao||0, cap=+m.capacidade||0;
   if(cap>0 && oc>cap) return 'excede';
@@ -306,22 +294,20 @@ function renderPlanta(){
   MESAS.forEach(m=>{
     const cap=+m.capacidade||0, oc=+m.ocupacao||0;
     const d=Math.max(58,Math.min(104, 58 + (cap||4)*3));
+    const px=(+m.pos_x||50), py=(+m.pos_y||50);
     const node=document.createElement('div');
     node.className='mesa-node '+(m.forma==='retangular'?'retangular':'redonda')+' '+classeOcup(m)+(SEL===m.id?' sel':'');
-    node.dataset.id=m.id;
-    node.style.setProperty('--d', d+'px');
-    node.style.left=(+m.pos_x||50)+'%';
-    node.style.top=(+m.pos_y||50)+'%';
-    node.innerHTML=`<span class="mn-nome">${esc(m.nome)}</span>
-      <span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
+    node.dataset.id=m.id; node.style.setProperty('--d', d+'px');
+    node.style.left=px+'%'; node.style.top=py+'%';
+    node.innerHTML=`<span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
     planta.appendChild(node);
     // Pastilhas de pessoas (arrastáveis) apenas para a mesa selecionada
     if(SEL===m.id){
       const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
       if(pessoas.length){
-        const cl=document.createElement('div'); cl.className='mesa-membros';
-        cl.style.setProperty('--d', d+'px');
-        cl.style.left=(+m.pos_x||50)+'%'; cl.style.top=(+m.pos_y||50)+'%';
+        const cl=document.createElement('div');
+        cl.className='mesa-membros'+(py>62?' acima':''); // acima quando perto do fundo
+        cl.style.setProperty('--d', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
         cl.innerHTML=pessoas.map(g=>{
           const prim=(g.nome||'').split(' ')[0];
           return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</span>`;
@@ -332,7 +318,7 @@ function renderPlanta(){
   });
 }
 
-// ---------- arrastar ----------
+// ---------- arrastar mesas + linhas-guia magnéticas ----------
 let drag=null;
 $('planta').addEventListener('pointerdown', e=>{
   const node=e.target.closest('.mesa-node'); if(!node) return;
@@ -350,15 +336,27 @@ function onMove(e){
   let x=(e.clientX-drag.rect.left)/drag.rect.width*100;
   let y=(e.clientY-drag.rect.top)/drag.rect.height*100;
   x=Math.max(6,Math.min(94,x)); y=Math.max(8,Math.min(92,y));
+  // Encaixe magnético: alinhar com o centro de outra mesa (ou com o centro da planta)
+  const SNAP=1.6; let snapX=null, snapY=null;
+  const alvosX=[50], alvosY=[50];
+  MESAS.forEach(o=>{ if(o.id!==drag.id){ if(o.pos_x!=null)alvosX.push(o.pos_x); if(o.pos_y!=null)alvosY.push(o.pos_y); } });
+  alvosX.forEach(vx=>{ if(Math.abs(vx-x)<SNAP && (snapX===null||Math.abs(vx-x)<Math.abs(snapX-x))) snapX=vx; });
+  alvosY.forEach(vy=>{ if(Math.abs(vy-y)<SNAP && (snapY===null||Math.abs(vy-y)<Math.abs(snapY-y))) snapY=vy; });
+  if(snapX!==null) x=snapX; if(snapY!==null) y=snapY;
+  const gv=$('guia-v'), gh=$('guia-h');
+  if(snapX!==null){ gv.style.left=snapX+'%'; gv.classList.add('on'); } else gv.classList.remove('on');
+  if(snapY!==null){ gh.style.top=snapY+'%'; gh.classList.add('on'); } else gh.classList.remove('on');
   drag.node.style.left=x+'%'; drag.node.style.top=y+'%'; drag.x=x; drag.y=y;
 }
 function onUp(){
   window.removeEventListener('pointermove', onMove);
+  $('guia-v').classList.remove('on'); $('guia-h').classList.remove('on');
   if(!drag) return;
   const d=drag; drag=null; d.node.classList.remove('a-arrastar');
   if(d.moved){
     const m=MESAS.find(x=>x.id===d.id); if(m){ m.pos_x=d.x; m.pos_y=d.y; }
     salvarPos(d.id, d.x, d.y);
+    renderPlanta(); // reposiciona as pastilhas da mesa selecionada
   } else {
     selecionar(d.id);
   }
@@ -368,37 +366,91 @@ async function salvarPos(id,x,y,forma){
   await api('mesa_pos',{method:'POST',body:JSON.stringify(body)});
 }
 
-// ---------- seleção / detalhe ----------
-function selecionar(id){ SEL=id; renderPlanta(); renderDetalhe(); }
+// ---------- abas ----------
+function selecionar(id){ SEL=id; activeTab='mesa'; renderPlanta(); renderTabs(); renderTabBody(); }
+function irTab(k){ if(k==='mesa'&&!SEL) return; activeTab=k; renderTabs(); renderTabBody(); }
 
-function renderDetalhe(){
-  const box=$('detalhe');
-  const m=MESAS.find(x=>x.id===SEL);
-  if(!m){ box.innerHTML='<div class="painel-vazio">Toque numa mesa da planta para ver quem está sentado, distribuir pessoas por mesas, ajustar a capacidade ou removê-la.</div>'; return; }
+function renderTabs(){
+  const semMesaN=CONVIDADOS.filter(g=>g.mesa_efetiva_id==null).length;
+  const selM=MESAS.find(x=>x.id===SEL);
+  const abas=[['pessoas','Pessoas',CONVIDADOS.length],['convites','Convites',CONVITES.length],['semmesa','Sem mesa',semMesaN]];
+  if(selM) abas.push(['mesa', selM.nome, selM.ocupacao]);
+  else if(activeTab==='mesa') activeTab='pessoas';
+  $('tabset-tabs').innerHTML = abas.map(([k,l,n])=>
+    `<button class="rt ${activeTab===k?'on':''} ${k==='mesa'?'rt-mesa':''}" onclick="irTab('${k}')">${esc(l)}<span class="rt-n">${n}</span></button>`).join('');
+}
+
+function renderTabBody(){
+  const body=$('tab-body');
+  if(activeTab==='mesa' && SEL){ body.innerHTML=detalheHTML(); ligarDetalhe(body); return; }
+  const comEstado=(activeTab==='pessoas'||activeTab==='convites');
+  const ph = activeTab==='convites' ? 'Procurar convite, código…' : 'Procurar por nome…';
+  body.innerHTML=`
+    <div class="filtros-tab">
+      <input type="search" id="busca-tab" placeholder="${ph}" oninput="renderLista()">
+      ${comEstado?`<select id="estado-tab" onchange="renderLista()">${ESTADOS[activeTab].map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select>`:''}
+    </div>
+    <div class="lista-tab" id="lista-tab"></div>
+    <div class="roster-conta" id="roster-conta"></div>
+    <p style="font-size:.76rem;color:#9aa09a;margin:.6rem 0 0">Arraste um cartão para cima de uma mesa na planta.</p>`;
+  renderLista();
+}
+
+function renderLista(){
+  const box=$('lista-tab'); if(!box) return;
+  const q=($('busca-tab')?$('busca-tab').value:'').trim().toLowerCase();
+  const est=$('estado-tab')?$('estado-tab').value:'';
+  let html='', total=0, unidade='';
+  if(activeTab==='convites'){
+    let itens=CONVITES.slice().sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
+    itens=itens.filter(c=>(!est||c.rsvp_estado===est)
+      && (!q || (c.nome_final||'').toLowerCase().includes(q) || (c.codigo||'').toLowerCase().includes(q)
+             || (c.membros||[]).some(n=>(n||'').toLowerCase().includes(q))));
+    total=itens.length; unidade=total===1?' convite':' convites';
+    html=itens.map(c=>{
+      const sem=c.mesa_id==null, div=(+c.mesas_distintas>1);
+      const meta=div?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'sem mesa');
+      return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="convite" data-id="${c.id}" data-label="${esc(c.nome_final)}">
+        <span class="cd-nome">${esc(c.nome_final)}</span><span class="cd-meta">${c.lugares} lug. · ${meta}</span></div>`;
+    }).join('');
+  } else {
+    // pessoas ou semmesa
+    let itens=CONVIDADOS.slice().sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.nome||'').localeCompare(b.nome||''));
+    if(activeTab==='semmesa') itens=itens.filter(g=>g.mesa_efetiva_id==null);
+    itens=itens.filter(g=>(!est||g.rsvp===est)
+      && (!q || (g.nome||'').toLowerCase().includes(q) || (g.convite_nome||'').toLowerCase().includes(q)));
+    total=itens.length; unidade=total===1?' pessoa':' pessoas';
+    html=itens.map(g=>{
+      const sem=g.mesa_efetiva_id==null;
+      const meta=g.mesa_efetiva_nome?('em '+esc(g.mesa_efetiva_nome)):'sem mesa';
+      return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}">
+        <span class="cd-nome">${esc(g.nome)}</span><span class="cd-meta">${esc(g.convite_nome)} · ${meta}</span></div>`;
+    }).join('');
+  }
+  box.innerHTML = html || `<div class="roster-vazio">${activeTab==='semmesa'?'Está tudo sentado. 🎉':'Nada corresponde aos filtros.'}</div>`;
+  const cont=$('roster-conta'); if(cont) cont.textContent = total+unidade;
+}
+
+// ---------- detalhe da mesa (na aba) ----------
+function detalheHTML(){
+  const m=MESAS.find(x=>x.id===SEL); if(!m) return '';
   const cap=+m.capacidade||0, oc=+m.ocupacao||0;
   const perc=cap?Math.min(100,Math.round(oc/cap*100)):(oc?100:0);
   const barCls=cap&&oc>cap?'excede':(cap&&oc>=cap?'cheio':'');
-
-  // Pessoas cuja mesa efetiva é esta
   const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
-  // Lugares "sem nome" (lugares além dos nomeados) dos convites ancorados aqui
   const notas=CONVITES.filter(c=>+c.mesa_id===m.id).map(c=>{
     const nomeados=CONVIDADOS.filter(g=>g.convite_id===c.id).length;
     const extra=Math.max(0,(+c.lugares||0)-nomeados);
     return extra>0?{nome:c.nome_final,extra}:null;
   }).filter(Boolean);
-  // Pessoas noutras mesas / sem mesa (para trazer)
   const outras=CONVIDADOS.filter(g=>g.mesa_efetiva_id!==m.id)
     .sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.convite_nome||'').localeCompare(b.convite_nome||''));
-  // Convites para sentar inteiros (não ancorados aqui)
   const convFora=CONVITES.filter(c=>+c.mesa_id!==m.id)
     .sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
   const convAqui=CONVITES.filter(c=>+c.mesa_id===m.id);
-
   const optOutrasMesas=g=>MESAS.map(x=>`<option value="${x.id}" ${String(g.mesa_pessoa)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('');
 
-  box.innerHTML=`
-    <h3>${esc(m.nome)}</h3>
+  return `
     <div class="campo-mesa"><label>Nome</label><input type="text" id="ed-nome" value="${esc(m.nome)}"></div>
     <div class="campo-mesa"><label>Capacidade (lugares)</label><input type="number" id="ed-cap" min="1" value="${cap||''}" placeholder="opcional"></div>
     <div class="campo-mesa"><label>Forma</label>
@@ -452,7 +504,8 @@ function renderDetalhe(){
     <div class="acoes-bloco">
       <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
-
+}
+function ligarDetalhe(box){
   box.querySelectorAll('#ed-forma button').forEach(b=>b.addEventListener('click',()=>{
     box.querySelectorAll('#ed-forma button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
   }));
@@ -471,13 +524,11 @@ async function adicionarMesa(){
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
   $('nova-nome').value=''; $('nova-cap').value='';
   MESAS=normMesas(d.mesas);
-  // posiciona a nova mesa (sem posição) e seleciona-a
   await autoPosicionar();
-  SEL=d.id||null;
+  SEL=d.id||null; activeTab='mesa';
   renderTudo();
   toast('Mesa criada. Arraste-a para a posição.');
 }
-
 async function guardarMesaEd(){
   const m=MESAS.find(x=>x.id===SEL); if(!m) return;
   const nome=$('ed-nome').value.trim(); if(!nome) return toast('Indique o nome da mesa.',true);
@@ -487,17 +538,14 @@ async function guardarMesaEd(){
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
   MESAS=normMesas(d.mesas); renderTudo(); toast('Mesa atualizada.');
 }
-
 async function eliminar(id){
   const m=MESAS.find(x=>x.id===id); const nome=m?m.nome:'esta mesa';
   if(!confirm(`Eliminar a mesa "${nome}"? Os convites e pessoas sentados ficam sem mesa.`)) return;
   const d=await api('mesa_delete&id='+id);
   if(!d.success) return toast(d.message||'Erro.',true);
-  MESAS=normMesas(d.mesas); if(SEL===id) SEL=null;
+  MESAS=normMesas(d.mesas); if(SEL===id){ SEL=null; activeTab='pessoas'; }
   await recarregarDados(); renderTudo(); toast('Mesa eliminada.');
 }
-
-// Sentar/retirar um CONVITE inteiro (mesa padrão do convite)
 async function sentar(conviteId){
   conviteId=+conviteId; if(!conviteId||!SEL) return;
   const d=await api('convite_mesa',{method:'POST',body:JSON.stringify({id:conviteId,mesa_id:SEL})});
@@ -509,8 +557,6 @@ async function retirarConvite(conviteId){
   if(!d.success) return toast(d.message||'Erro.',true);
   MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Convite retirado da mesa.');
 }
-
-// Mover UMA pessoa (mesa individual): val vazio = segue o convite
 async function moverPessoa(gid, val){
   const d=await api('convidado_mesa',{method:'POST',body:JSON.stringify({id:+gid, mesa_id: val===''?'':+val})});
   if(!d.success) return toast(d.message||'Erro.',true);
@@ -523,80 +569,15 @@ async function trazerPessoa(gid){
   MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo(); toast('Pessoa trazida para esta mesa.');
 }
 
-// ---------- lista principal (roster) ----------
-let rosterMesa=''; // '' | 'sem' | 'com'
-const ESTADOS={
-  pessoas:[['','Todos os estados'],['confirmado','Confirmados'],['pendente','Pendentes'],['recusado','Recusados']],
-  convites:[['','Todos os estados'],['confirmado','Confirmados'],['parcial','Parciais'],['pendente','Pendentes'],['recusado','Recusados']]
-};
-function popularEstados(){
-  const sel=$('roster-estado'); if(!sel) return;
-  sel.innerHTML=ESTADOS[rosterTab].map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
-}
-function mudarRoster(tab){
-  rosterTab=tab;
-  document.querySelectorAll('.roster-tabs .rt').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
-  popularEstados();
-  renderRoster();
-}
-function filtroMesa(v){
-  rosterMesa=v;
-  document.querySelectorAll('#chips-mesa .cf').forEach(b=>b.classList.toggle('on', b.dataset.mesa===v));
-  renderRoster();
-}
-
-function renderRoster(){
-  const box=$('roster-lista'); if(!box) return;
-  const q=($('roster-busca')?$('roster-busca').value:'').trim().toLowerCase();
-  const est=$('roster-estado')?$('roster-estado').value:'';
-  const casaMesa=temMesa=>rosterMesa==='sem'?!temMesa:(rosterMesa==='com'?!!temMesa:true);
-  let html='', total=0;
-  if(rosterTab==='pessoas'){
-    let itens=CONVIDADOS.slice().sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.nome||'').localeCompare(b.nome||''));
-    itens=itens.filter(g=>casaMesa(g.mesa_efetiva_id!=null)
-      && (!est || g.rsvp===est)
-      && (!q || (g.nome||'').toLowerCase().includes(q) || (g.convite_nome||'').toLowerCase().includes(q)));
-    total=itens.length;
-    html=itens.map(g=>{
-      const sem=g.mesa_efetiva_id==null;
-      const meta=g.mesa_efetiva_nome?('em '+esc(g.mesa_efetiva_nome)):'sem mesa';
-      return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}">
-        <span class="cd-nome">${esc(g.nome)}</span><span class="cd-meta">${esc(g.convite_nome)} · ${meta}</span></div>`;
-    }).join('');
-  } else {
-    let itens=CONVITES.slice().sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
-    itens=itens.filter(c=>casaMesa(c.mesa_id!=null)
-      && (!est || c.rsvp_estado===est)
-      && (!q || (c.nome_final||'').toLowerCase().includes(q) || (c.codigo||'').toLowerCase().includes(q)
-             || (c.membros||[]).some(n=>(n||'').toLowerCase().includes(q))));
-    total=itens.length;
-    html=itens.map(c=>{
-      const sem=c.mesa_id==null;
-      const div=(+c.mesas_distintas>1);
-      const meta=div?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'sem mesa');
-      return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="convite" data-id="${c.id}" data-label="${esc(c.nome_final)}">
-        <span class="cd-nome">${esc(c.nome_final)}</span><span class="cd-meta">${c.lugares} lug. · ${meta}</span></div>`;
-    }).join('');
-  }
-  box.innerHTML = html || `<div class="roster-vazio">Nada corresponde aos filtros.</div>`;
-  const cont=$('roster-conta'); if(cont) cont.textContent = total+(rosterTab==='pessoas'?(total===1?' pessoa':' pessoas'):(total===1?' convite':' convites'));
-}
-
-// Arrastar um cartão (pessoa/convite) para cima de uma mesa da planta.
-// Fonte do arrasto: cartões da lista OU pastilhas de pessoa na própria planta.
+// ---------- arrastar cartões/pastilhas para uma mesa ----------
 let pend=null, ghost=null, arrItem=null;
 function iniciarArrasteDe(e, el){
   pend={tipo:el.dataset.tipo, id:+el.dataset.id, label:el.dataset.label, chip:el, sx:e.clientX, sy:e.clientY};
   window.addEventListener('pointermove', talvezArrastar);
   window.addEventListener('pointerup', cancelarArme, {once:true});
 }
-$('roster-lista').addEventListener('pointerdown', e=>{
-  const chip=e.target.closest('.chip-drag'); if(chip) iniciarArrasteDe(e, chip);
-});
-// Pastilhas de pessoas na planta (arrastar entre mesas diretamente)
-$('planta').addEventListener('pointerdown', e=>{
-  const mp=e.target.closest('.mp'); if(mp) iniciarArrasteDe(e, mp);
-});
+$('tab-body').addEventListener('pointerdown', e=>{ const chip=e.target.closest('.chip-drag'); if(chip) iniciarArrasteDe(e, chip); });
+$('planta').addEventListener('pointerdown', e=>{ const mp=e.target.closest('.mp'); if(mp) iniciarArrasteDe(e, mp); });
 function talvezArrastar(e){
   if(!pend) return;
   if(Math.abs(e.clientX-pend.sx)>5 || Math.abs(e.clientY-pend.sy)>5){
@@ -608,7 +589,7 @@ function talvezArrastar(e){
 function cancelarArme(){ pend=null; window.removeEventListener('pointermove', talvezArrastar); }
 function comecarArraste(e){
   arrItem={tipo:pend.tipo, id:pend.id}; pend.chip.classList.add('arrastando');
-  document.body.classList.add('a-arrastar-item'); // desativa pointer-events das pastilhas
+  document.body.classList.add('a-arrastar-item');
   ghost=document.createElement('div'); ghost.className='ghost-drag'; ghost.textContent=pend.label;
   document.body.appendChild(ghost); posGhost(e);
   window.addEventListener('pointermove', moverArraste);
@@ -641,7 +622,6 @@ async function largarArraste(e){
   toast((item.tipo==='pessoa'?'Pessoa':'Convite')+' → '+(m?m.nome:'mesa'));
 }
 
-popularEstados();
 carregar();
 </script>
 </body>

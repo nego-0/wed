@@ -89,7 +89,9 @@ Em `config.php` (não sensível):
 
 **Mesas no convite.** O convite (digital, físico e a página de confirmação) menciona **todas as mesas** dos seus integrantes, com o número de pessoas em cada uma — ex.: *"Mesas: A (1 pessoa) e B (4 pessoas)"*. No editor há a opção *"Mostrar o número de pessoas por mesa no convite digital"*, que liga/desliga o *(N pessoas)* junto a cada mesa nas páginas viradas ao convidado.
 
-**Lista abaixo da planta.** Por baixo do canvas das mesas há uma lista com duas abas — *Pessoas* e *Convites* — com pesquisa por nome e filtros (por mesa: todas / sem mesa / com mesa; e por estado de RSVP). Qualquer cartão pode ser arrastado para uma mesa.
+**Painel de abas.** Ao lado do canvas há um conjunto de abas — *Pessoas*, *Convites*, *Sem mesa* e (ao selecionar uma mesa) a aba dessa mesa com os seus detalhes e convidados. As abas *Pessoas*/*Convites* têm pesquisa e filtro por estado de RSVP; cada cartão pode ser arrastado para uma mesa da planta. A criação de mesas fica num formulário compacto por cima das abas.
+
+**Ao posicionar as mesas** surgem **linhas-guia magnéticas** que alinham a mesa que arrasta com o centro das outras (ou do salão). Ao selecionar uma mesa, as suas pessoas aparecem como pastilhas na planta que se arrastam para outra mesa.
 
 **Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantas pessoas e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
 
