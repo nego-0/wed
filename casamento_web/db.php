@@ -48,7 +48,8 @@ $conn->query("
         capacidade INT DEFAULT NULL,
         pos_x DECIMAL(6,2) DEFAULT NULL,          -- posição na planta (% horizontal, 0-100)
         pos_y DECIMAL(6,2) DEFAULT NULL,          -- posição na planta (% vertical, 0-100)
-        forma VARCHAR(20) DEFAULT 'redonda',      -- 'redonda' ou 'retangular'
+        forma VARCHAR(20) DEFAULT 'redonda',      -- redonda/oval/quadrada/retangular/comprida/ferradura
+        cor VARCHAR(20) DEFAULT NULL,             -- cor da mesa (chave da paleta), NULL = marfim
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -104,6 +105,7 @@ foreach ([
     'pos_x' => "DECIMAL(6,2) DEFAULT NULL",
     'pos_y' => "DECIMAL(6,2) DEFAULT NULL",
     'forma' => "VARCHAR(20) DEFAULT 'redonda'",
+    'cor'   => "VARCHAR(20) DEFAULT NULL",
 ] as $coluna => $definicao) {
     $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
     if ($r && $r->num_rows === 0) {
@@ -261,7 +263,7 @@ function estatisticas(mysqli $conn): array {
  */
 function listarMesas(mysqli $conn): array {
     global $P;
-    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma
+    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor
                            FROM {$P}mesas ORDER BY nome")->fetch_all(MYSQLI_ASSOC);
     $idx = [];
     foreach ($mesas as $i => $m) { $mesas[$i]['ocupacao'] = 0; $mesas[$i]['convites'] = 0; $idx[(int)$m['id']] = $i; }

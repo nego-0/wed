@@ -371,14 +371,18 @@ if ($acao === 'convite_rsvp_manual') {
 }
 
 // ---- Mesas --------------------------------------------------
+const FORMAS_MESA = ['redonda','oval','quadrada','retangular','comprida','ferradura'];
+const CORES_MESA  = ['neutra','verde','ouro','terracota','azul','ameixa','rosa','salva'];
+
 if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn)]); }
 if ($acao === 'mesa_save') {
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
     $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;
-    $forma=in_array($d['forma']??'',['redonda','retangular'],true)?$d['forma']:'redonda';
+    $forma=in_array($d['forma']??'',FORMAS_MESA,true)?$d['forma']:'redonda';
+    $cor=in_array($d['cor']??'',CORES_MESA,true)?$d['cor']:null; // NULL = marfim
     if ($nome==='') erro('Nome da mesa obrigatório.');
-    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=? WHERE id=?"); $st->bind_param('sisi',$nome,$cap,$forma,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma) VALUES (?,?,?)"); $st->bind_param('sis',$nome,$cap,$forma); }
+    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=? WHERE id=?"); $st->bind_param('sissi',$nome,$cap,$forma,$cor,$id); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor) VALUES (?,?,?,?)"); $st->bind_param('siss',$nome,$cap,$forma,$cor); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;
@@ -390,7 +394,7 @@ if ($acao === 'mesa_pos') {
     if (!$id) erro('Mesa inválida.');
     $x = isset($d['x']) && $d['x']!=='' ? max(0.0, min(100.0, (float)$d['x'])) : null;
     $y = isset($d['y']) && $d['y']!=='' ? max(0.0, min(100.0, (float)$d['y'])) : null;
-    $forma = in_array($d['forma']??'',['redonda','retangular'],true) ? $d['forma'] : null;
+    $forma = in_array($d['forma']??'',FORMAS_MESA,true) ? $d['forma'] : null;
     if ($forma !== null) {
         $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=?,forma=? WHERE id=?");
         $st->bind_param('ddsi',$x,$y,$forma,$id);
