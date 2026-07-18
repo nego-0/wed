@@ -1,13 +1,15 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/personalizacao.php';
 exigirPorta();
+$CAS = casalInfo(defsAtuais($conn));
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Porta · Isabel &amp; Abednego</title>
+<title>Porta · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <script src="assets/html5-qrcode.min.js"></script>
@@ -81,10 +83,10 @@ exigirPorta();
 </head>
 <body>
 <div class="porta-topo">
-  <div class="mono">I&amp;A</div>
+  <div class="mono"><?= escP($CAS['mono']) ?></div>
   <div>
     <h1>Entrada do evento</h1>
-    <div class="sub">Isabel &amp; Abednego</div>
+    <div class="sub"><?= escP($CAS['casal']) ?></div>
   </div>
   <div class="nav">
     <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>

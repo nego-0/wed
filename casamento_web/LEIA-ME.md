@@ -18,6 +18,8 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `login.php` / `logout.php` | Entrada e saída. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
 | `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
+| `convite-editor.php` | **Personalização completa do convite digital**: textos, história, cronograma, manual, fotos, música, cores e efeitos — com pré-visualização ao vivo. |
+| `personalizacao.php` | Motor da personalização: valores originais, validação e composição do convite. |
 | `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
 | `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir. |
@@ -98,6 +100,8 @@ Em `config.php` (não sensível):
 **Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real.
 
 **Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
+
+**Personalizar o convite digital.** Na página *Convite digital* pode alterar **tudo** o que aparece no convite, sem tocar em código: nomes do casal, data e hora (que passam a valer também na página de confirmação), local e ligação do Google Maps, todos os textos (pode usar `{noiva}`/`{noivo}`, `**negrito**` e `*itálico*`), os capítulos da história, os momentos do cronograma e as regras do manual (com escolha de ícones), a visibilidade de secções inteiras (história, interlúdio, cronograma, manual), as **fotografias e a música** (enviadas do computador; as imagens são comprimidas automaticamente), a **paleta de cores** (4 paletas prontas + ajuste fino de cada cor; o QR acompanha) e os efeitos (pétalas, música automática). A pré-visualização ao lado atualiza ao guardar. Campos repostos ao valor original deixam de ocupar espaço na base de dados. Cada convite pode ainda ter uma **mensagem pessoal** (campo no editor de convites do painel).
 
 ---
 

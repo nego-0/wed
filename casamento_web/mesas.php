@@ -4,13 +4,15 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
+$CAS = casalInfo(defsAtuais($conn));
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mesas · Isabel &amp; Abednego</title>
+<title>Mesas · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <style>
@@ -171,15 +173,16 @@ exigirAdmin();
 <body>
 <header class="topo">
   <div class="wrap">
-    <div class="monograma">I&amp;A</div>
+    <div class="monograma"><?= escP($CAS['mono']) ?></div>
     <div>
       <h1>Planta de Mesas</h1>
-      <div class="sub">Isabel &amp; Abednego · posição, capacidade e ocupação</div>
+      <div class="sub"><?= escP($CAS['casal']) ?> · posição, capacidade e ocupação</div>
     </div>
     <nav class="nav">
       <a href="index.php">Painel</a>
       <a href="mesas.php" class="ativo">Mesas</a>
       <a href="impressos.php">Convites físicos</a>
+      <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>
     </nav>

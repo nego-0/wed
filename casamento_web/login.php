@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/personalizacao.php';
+// Sem BD no ecrã de entrada: usa os nomes do config (defaults).
+$CAS = casalInfo(defsPadrao());
 $erro = '';
 $redir = $_GET['r'] ?? 'index.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -13,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entrar · Isabel &amp; Abednego</title>
+<title>Entrar · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <style>
@@ -31,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="login">
     <div class="card">
-      <div class="brasao">I&amp;A</div>
-      <div class="casal">Isabel &amp; Abednego</div>
+      <div class="brasao"><?= escP($CAS['mono']) ?></div>
+      <div class="casal"><?= escP($CAS['casal']) ?></div>
       <div class="evento">Gestão de Convidados</div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>
       <form method="post">

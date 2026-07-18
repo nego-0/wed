@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
+$CAS = casalInfo(defsAtuais($conn));
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
                             GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR ' · ') AS membros
                      FROM {$P}convites c
@@ -16,7 +18,7 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Convites físicos · Isabel &amp; Abednego</title>
+<title>Convites físicos · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <script src="assets/qrious.min.js"></script>
@@ -53,12 +55,13 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 <body>
 <header class="topo">
   <div class="wrap">
-    <div class="monograma">I&amp;A</div>
+    <div class="monograma"><?= escP($CAS['mono']) ?></div>
     <div><h1>Convites físicos</h1><div class="sub">Etiquetas para envelopes · com QR de entrada</div></div>
     <nav class="nav no-print">
       <a href="index.php">Painel</a>
       <a href="mesas.php">Mesas</a>
       <a href="impressos.php" class="ativo">Convites físicos</a>
+      <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>
     </nav>
@@ -83,7 +86,7 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
     ?>
     <div class="cartao <?= $c['impresso']?'impresso':'' ?>" data-busca="<?= htmlspecialchars($blob) ?>" data-id="<?= $c['id'] ?>">
       <div class="num"><?= $n ?></div>
-      <div class="selo-i">I&amp;A</div>
+      <div class="selo-i"><?= escP($CAS['mono']) ?></div>
       <div class="nm"><?= htmlspecialchars($nomeFinal) ?></div>
       <?php if ($c['membros'] && count(array_filter(explode(' · ',$c['membros'])))>1): ?>
         <div class="mm"><?= htmlspecialchars($c['membros']) ?></div>

@@ -4,6 +4,7 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/personalizacao.php';
 
 $acao = $_GET['action'] ?? '';
 
@@ -224,8 +225,50 @@ exigirAdmin();
 
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
-                     'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar'], true)) {
+                     'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
+                     'defs_save','def_upload'], true)) {
     exigirCsrf();
+}
+
+// ---- Personalização do convite digital ---------------------
+if ($acao === 'defs_save') {
+    $d = corpo();
+    $defs = is_array($d['defs'] ?? null) ? $d['defs'] : [];
+    ok(guardarDefinicoes($conn, $defs));
+}
+
+if ($acao === 'def_upload') {
+    // Upload de imagem/música do convite (grava o ficheiro e a definição).
+    $chave = $_POST['chave'] ?? '';
+    $tiposImg = ['media.hero','media.historia','media.interludio','media.acesso'];
+    $ehMusica = $chave === 'media.musica';
+    if (!$ehMusica && !in_array($chave, $tiposImg, true)) erro('Campo de ficheiro inválido.');
+    if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
+    $f = $_FILES['ficheiro'];
+    $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
+    if ($f['size'] > $max) erro('Ficheiro demasiado grande (máx. ' . ($ehMusica ? '8' : '5') . ' MB).');
+    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+    $extsOk = $ehMusica ? ['m4a','mp3'] : ['jpg','jpeg','png','webp'];
+    if (!in_array($ext, $extsOk, true)) erro('Formato não suportado (' . implode('/', $extsOk) . ').');
+    if (function_exists('finfo_open')) {
+        $fi = finfo_open(FILEINFO_MIME_TYPE);
+        $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
+        $mimesOk = $ehMusica ? ['audio/mp4','audio/x-m4a','audio/mpeg','video/mp4','audio/mp3']
+                             : ['image/jpeg','image/png','image/webp'];
+        if (!in_array($mt, $mimesOk, true)) erro('O conteúdo do ficheiro não corresponde ao formato.');
+    }
+    $dir = __DIR__ . '/assets/convite/custom';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+    if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
+    // Apaga o ficheiro custom anterior desta chave (nunca os originais)
+    $antigo = defsAtuais($conn)[$chave] ?? '';
+    if (str_starts_with($antigo, 'assets/convite/custom/') && !str_contains($antigo, '..')) {
+        @unlink(__DIR__ . '/' . $antigo);
+    }
+    $caminho = 'assets/convite/custom/' . $nomeFich;
+    guardarDefinicoes($conn, [$chave => $caminho]);
+    ok(['path' => $caminho]);
 }
 
 if ($acao === 'convite_list') {
@@ -275,19 +318,20 @@ if ($acao === 'convite_save') {
     $lugares  = max(1,(int)($d['lugares']??1));
     $telefone = trim($d['telefone'] ?? ''); if ($telefone==='') $telefone=null;
     $obs      = trim($d['observacoes'] ?? ''); if ($obs==='') $obs=null;
+    $msgP     = trim($d['msg_pessoal'] ?? ''); if ($msgP==='') $msgP=null;
     $mesaId   = trim($d['mesa']??'')!=='' ? resolverMesa($conn, $d['mesa']) : null;
     $mostrarN = !empty($d['mostrar_numero']) ? 1 : 0;
     $mostrarNM = !empty($d['mostrar_num_mesa']) ? 1 : 0;
     $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
 
     if ($id) {
-        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,atualizado_em=$TS WHERE id=?");
-        $st->bind_param('ssiissiissi',$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$id);
+        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
+        $st->bind_param('ssiissiisssi',$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
         $st->execute();
     } else {
         $codigo=gerarCodigo($conn);
-        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_numero,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
-        $st->bind_param('sssiissiiss',$codigo,$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs);
+        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_numero,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st->bind_param('sssiissiisss',$codigo,$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP);
         $st->execute(); $id=$conn->insert_id;
     }
 

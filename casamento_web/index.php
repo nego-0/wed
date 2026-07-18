@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
+$DEFS = defsAtuais($conn);
+$CAS  = casalInfo($DEFS);
+$dataExt = dataExtensa($DEFS['evento.data']);
 $temListaAntiga = listaAntigaExiste($conn);
 $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_row()[0];
 ?>
@@ -9,7 +13,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel · Isabel &amp; Abednego</title>
+<title>Painel · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <script src="assets/qrious.min.js"></script>
@@ -120,15 +124,16 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 <body>
 <header class="topo">
   <div class="wrap">
-    <div class="monograma">I&amp;A</div>
+    <div class="monograma"><?= escP($CAS['mono']) ?></div>
     <div>
       <h1>Gestão de Convidados</h1>
-      <div class="sub">Isabel &amp; Abednego · <?= EVENTO['data_ext'] ?></div>
+      <div class="sub"><?= escP($CAS['casal']) ?> · <?= escP($dataExt) ?></div>
     </div>
     <nav class="nav">
       <a href="index.php" class="ativo">Painel</a>
       <a href="mesas.php">Mesas</a>
       <a href="impressos.php">Convites físicos</a>
+      <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>
     </nav>
@@ -223,6 +228,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
         <div class="picker" data-target="c-presenca"></div>
       </div>
       <div style="margin-top:1rem;"><label>Observações</label><textarea id="c-obs" rows="2"></textarea></div>
+      <div style="margin-top:1rem;"><label>Mensagem pessoal no convite digital <span style="color:#aaa;font-weight:300">(opcional)</span></label><textarea id="c-msg" rows="2" placeholder="Ex: Mal podemos esperar por vos receber!"></textarea></div>
 
       <div id="bloco-link" style="display:none; margin-top:1.2rem;">
         <label>Link de confirmação / QR</label>
@@ -481,6 +487,7 @@ function abrirConvite(c){
   $('c-mesa').value = c?(c.mesa_nome||''):'';
   $('c-telefone').value = c?(c.telefone||''):'';
   $('c-obs').value = c?(c.observacoes||''):'';
+  $('c-msg').value = c?(c.msg_pessoal||''):'';
   $('membros').innerHTML='';
   const ms = c&&c.membros&&c.membros.length ? c.membros : [{nome:'',rsvp:'confirmado'}];
   ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true, m.mesa_id||''));
@@ -554,6 +561,7 @@ async function guardarConvite(){
     mostrar_num_mesa:$('c-mostrar-num-mesa').checked?1:0,
     tipo:$('c-tipo').value, lado:$('c-lado').value, lugares:$('c-lugares').value,
     mesa:$('c-mesa').value, telefone:$('c-telefone').value, observacoes:$('c-obs').value,
+    msg_pessoal:$('c-msg').value,
     presenca:$('c-presenca').value,
     membros:membrosComPresenca()
   };

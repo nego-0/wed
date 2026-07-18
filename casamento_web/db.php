@@ -76,6 +76,7 @@ $conn->query("
         checkin_presentes INT DEFAULT 0,
         checkin_em TIMESTAMP NULL DEFAULT NULL,
         observacoes TEXT DEFAULT NULL,
+        msg_pessoal TEXT DEFAULT NULL,               -- mensagem pessoal mostrada no convite digital
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -124,6 +125,20 @@ $col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'mostrar_num_mesa'");
 if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convites ADD COLUMN mostrar_num_mesa TINYINT(1) DEFAULT 1 AFTER mostrar_numero");
 }
+
+// Migração suave: mensagem pessoal por convite (convite digital)
+$col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'msg_pessoal'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convites ADD COLUMN msg_pessoal TEXT DEFAULT NULL AFTER observacoes");
+}
+
+// Definições do convite digital (personalização; ver personalizacao.php)
+$conn->query("
+    CREATE TABLE IF NOT EXISTS {$P}definicoes (
+        chave VARCHAR(64) NOT NULL PRIMARY KEY,
+        valor MEDIUMTEXT,
+        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 // ============================================================
 // Funções partilhadas

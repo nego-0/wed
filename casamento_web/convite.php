@@ -5,6 +5,13 @@
 // convite em PDF ou enviá-lo pelo WhatsApp.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/personalizacao.php';
+$DEFS = defsAtuais($conn);
+$CAS  = casalInfo($DEFS);
+$dataExt  = dataExtensa($DEFS['evento.data']);
+$horaTxt  = horaTexto($DEFS['evento.hora'], false);
+$tzOff    = (new DateTime('now', new DateTimeZone(date_default_timezone_get())))->format('P');
+$whats    = $DEFS['evento.whatsapp'];
 $codigo = strtoupper(trim($_GET['c'] ?? ''));
 $c = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
 $valido = (bool)$c;
@@ -15,7 +22,7 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Confirmação · Isabel &amp; Abednego</title>
+<title>Confirmação · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <style>
   :root{
@@ -113,10 +120,10 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 <?php if (!$valido): ?>
   <div class="folha"><div class="erro-pag">
     <div class="rotulo" style="color:var(--gold)">Convite</div>
-    <div class="casal">Isabel &amp; Abednego</div>
+    <div class="casal"><?= escP($CAS['casal']) ?></div>
     <p style="margin-top:1rem;">Este link de convite não é válido ou já não está disponível.<br>
     Por favor, confirme o endereço ou contacte os noivos.</p>
-    <p><a class="link-wa" href="https://wa.me/<?= EVENTO['whatsapp'] ?>">Falar pelo WhatsApp</a></p>
+    <p><a class="link-wa" href="https://wa.me/<?= escP($whats) ?>">Falar pelo WhatsApp</a></p>
   </div></div>
 <?php else:
   $jaRespondeu = $c['rsvp_estado'] !== 'pendente';
@@ -124,10 +131,10 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 ?>
   <div class="folha">
     <div class="cabeca">
-      <div class="selo">I&amp;A</div>
+      <div class="selo"><?= escP($CAS['mono']) ?></div>
       <div class="rotulo">Têm o prazer de o(a) convidar</div>
-      <div class="casal">Isabel &amp; Abednego</div>
-      <div class="quando"><?= EVENTO['data_ext'] ?> · <?= EVENTO['hora'] ?></div>
+      <div class="casal"><?= escP($CAS['casal']) ?></div>
+      <div class="quando"><?= escP($dataExt) ?> · <?= escP($horaTxt) ?></div>
     </div>
 
     <div class="corpo">
@@ -149,8 +156,8 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       <div class="divisor">✦</div>
 
       <div class="info-ev">
-        <strong><?= htmlspecialchars(EVENTO['local']) ?></strong><br>
-        <?= htmlspecialchars(EVENTO['cidade']) ?>
+        <strong><?= escP($DEFS['evento.local']) ?></strong><br>
+        <?= escP($DEFS['evento.cidade']) ?>
       </div>
 
       <div class="divisor">Confirmação de presença</div>
@@ -236,7 +243,7 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
     </div>
 
     <div class="rodape">
-      Dúvidas? <a class="link-wa" href="https://wa.me/<?= EVENTO['whatsapp'] ?>">Contacte-nos pelo WhatsApp</a>
+      Dúvidas? <a class="link-wa" href="https://wa.me/<?= escP($whats) ?>">Contacte-nos pelo WhatsApp</a>
     </div>
   </div>
 
@@ -245,7 +252,7 @@ const CODIGO   = <?= json_encode($c['codigo']) ?>;
 const LINK_DIGITAL = <?= json_encode($linkDigital) ?>;
 const LUGARES  = <?= (int)$c['lugares'] ?>;
 const TEM_MEMB = <?= count($c['membros']) > 1 ? 'true':'false' ?>;
-const DATA_EV  = new Date(<?= json_encode(EVENTO['data_iso'].'T'.EVENTO['hora'].':00') ?>);
+const DATA_EV  = new Date(<?= json_encode($DEFS['evento.data'].'T'.$DEFS['evento.hora'].':00'.$tzOff) ?>);
 let escolha = <?= $jaRespondeu ? json_encode($c['rsvp_estado']==='recusado'?'nao':'sim') : 'null' ?>;
 
 const $=id=>document.getElementById(id);
@@ -273,7 +280,7 @@ function escolher(v){
 function enviarWhatsapp(){
   let n=($('wa-num').value||'').replace(/\D/g,'');
   if(n.length<9){ alert('Indique um número de telefone válido, com o indicativo do país.'); return; }
-  const msg='Aqui está o meu convite para o casamento de Isabel & Abednego: '+LINK_DIGITAL;
+  const msg='Aqui está o meu convite para o casamento de <?= addslashes($CAS['casal']) ?>: '+LINK_DIGITAL;
   window.open('https://wa.me/'+n+'?text='+encodeURIComponent(msg),'_blank');
 }
 
