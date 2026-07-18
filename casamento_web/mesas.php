@@ -7,8 +7,6 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
 $CAS = casalInfo(defsAtuais($conn));
-$CANVAS = plantaConfig($conn);
-$FORMATOS = formatosPlanta();
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -69,7 +67,7 @@ $FORMATOS = formatosPlanta();
   /* Viewport com scroll (para o zoom) + planta que cresce dentro dela */
   .planta-viewport{ position:relative; overflow:auto; max-height:72vh; padding:18px; border-radius:14px;
     background:var(--ivory); border:1px solid var(--line); }
-  .planta{ position:relative; --z:1; width:calc(var(--z)*100%); aspect-ratio:var(--ar,16/10);
+  .planta{ position:relative; --z:0.8; width:calc(var(--z)*100%); aspect-ratio:16/10;
     border-radius:14px; overflow:visible; transition:width .18s ease;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
@@ -77,14 +75,13 @@ $FORMATOS = formatosPlanta();
       repeating-linear-gradient(90deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px);
     background-clip:padding-box; border:1px dashed var(--gold-soft); touch-action:none; user-select:none; }
 
-  /* Barra de zoom + formato do canvas */
+  /* Barra de zoom */
   .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
   .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:.78rem;
     padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
   .zoombar button:first-child{ border-left:0; }
   .zoombar button.on{ background:var(--forest); color:#fff; }
-  .sel-formato{ font-size:.8rem; padding:.32rem .5rem; }
   .planta .dica-vazia{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     color:#a7ad9f; font-size:.9rem; text-align:center; padding:1rem; }
 
@@ -235,7 +232,6 @@ $FORMATOS = formatosPlanta();
     <div class="grp"><span class="lbl">Forma</span><div class="formas" id="nova-forma"></div></div>
     <div class="grp"><span class="lbl">Cor</span><div class="cores" id="nova-cor"></div></div>
     <button class="btn btn-ouro btn-sm" onclick="adicionarMesa()">+ Mesa</button>
-    <button class="btn btn-fantasma btn-sm" id="btn-noivos" onclick="adicionarNoivos()" title="Mesa de honra dos noivos, com padrinhos e madrinhas">⚭ Mesa dos noivos</button>
   </div>
 
   <div class="layout">
@@ -245,15 +241,10 @@ $FORMATOS = formatosPlanta();
         <span class="titulo">Disposição do salão</span>
         <div class="planta-ctrls">
           <div class="zoombar" id="zoombar" title="Nível de zoom">
-            <button data-zoom="1" class="on" title="100% · vista panorâmica">100%</button>
-            <button data-zoom="1.5" title="150% · vista de área">150%</button>
-            <button data-zoom="2" title="200% · vista da mesa (nomes)">200%</button>
+            <button data-zoom="0.4" title="50% · vista ampla">50%</button>
+            <button data-zoom="0.8" class="on" title="100% · vista panorâmica">100%</button>
+            <button data-zoom="1.2" title="150% · vista de área">150%</button>
           </div>
-          <select class="sel-formato" id="sel-formato" onchange="setFormato(this.value)" title="Dimensões do canvas">
-            <?php foreach ($FORMATOS as $chave => $nome): ?>
-              <option value="<?= escP($chave) ?>" <?= $chave === $CANVAS['formato'] ? 'selected' : '' ?>><?= escP($nome) ?> (<?= escP($chave) ?>)</option>
-            <?php endforeach; ?>
-          </select>
         </div>
       </div>
       <div class="legenda" style="margin-bottom:.7rem">
@@ -269,7 +260,7 @@ $FORMATOS = formatosPlanta();
           <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
         </div>
       </div>
-      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes. Aumente para 200% para ver os nomes de todos os integrantes.</p>
+      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes.</p>
     </div>
 
     <!-- PAINEL DIREITO -->
@@ -300,26 +291,14 @@ async function api(action, opts={}){
 }
 
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='pessoas';
-let zoom=1, CANVAS_FMT=<?= json_encode($CANVAS['formato']) ?>;
+// Nível de zoom (fator aplicado ao canvas). A vista padrão (100%) foi reduzida em 20% -> 0.8.
+let zoom=0.8;
 
-// Aplica o formato (proporção) e o zoom ao canvas.
-function aplicarCanvas(){
-  const planta=$('planta');
-  planta.style.setProperty('--ar', CANVAS_FMT.replace(':','/'));
-  planta.style.setProperty('--z', zoom);
-}
+function aplicarCanvas(){ $('planta').style.setProperty('--z', zoom); }
 function setZoom(z){
   zoom=+z;
   document.querySelectorAll('#zoombar button').forEach(b=>b.classList.toggle('on', +b.dataset.zoom===zoom));
   aplicarCanvas();
-  renderPlanta(); // ao nível 200% mostram-se os nomes de todas as mesas
-}
-async function setFormato(fmt){
-  const ant=CANVAS_FMT; CANVAS_FMT=fmt; aplicarCanvas();
-  const d=await api('mesa_canvas',{method:'POST',body:JSON.stringify({formato:fmt})});
-  if(!d.success){ CANVAS_FMT=ant; aplicarCanvas(); $('sel-formato').value=ant; return toast(d.message||'Erro ao mudar o formato.',true); }
-  if(d.canvas&&d.canvas.formato){ CANVAS_FMT=d.canvas.formato; aplicarCanvas(); }
-  toast('Dimensões do canvas atualizadas.');
 }
 
 const FORMAS=[['redonda','Redonda'],['oval','Oval'],['quadrada','Quadrada'],['retangular','Retangular'],['comprida','Comprida'],['ferradura','Ferradura']];
@@ -345,7 +324,6 @@ const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_i
   mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id),
   papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
 const ehNoivos=m=>m&&m.especial==='noivos';
-const mesaNoivos=()=>MESAS.find(ehNoivos)||null;
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
 // A mesa dos noivos é propositadamente um pouco menor que as dos convidados.
 function baseMesa(m){
@@ -360,7 +338,6 @@ async function carregar(){
   const [dm,dc,dg]=await Promise.all([api('mesa_list'), api('convite_list'), api('convidado_list')]);
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
   MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
-  if(dm.canvas&&dm.canvas.formato){ CANVAS_FMT=dm.canvas.formato; const s=$('sel-formato'); if(s) s.value=CANVAS_FMT; }
   aplicarCanvas();
   await autoPosicionar();
   renderTudo();
@@ -377,13 +354,7 @@ async function autoPosicionar(){
   await Promise.all(semPos.map(m=>salvarPos(m.id,m.pos_x,m.pos_y)));
 }
 
-function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); atualizarBtnNoivos(); }
-function atualizarBtnNoivos(){
-  const b=$('btn-noivos'); if(!b) return;
-  const existe=!!mesaNoivos();
-  b.disabled=existe; b.style.opacity=existe?'.45':''; b.style.cursor=existe?'default':'';
-  b.title=existe?'A mesa dos noivos já existe':'Mesa de honra dos noivos, com padrinhos e madrinhas';
-}
+function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); }
 
 function renderStats(){
   const nMesas=MESAS.length;
@@ -444,22 +415,11 @@ function renderPlanta(){
         }).join('');
         planta.appendChild(ala);
       });
-      // Centro: pessoas sentadas na mesa dos noivos sem papel (ex.: o próprio casal).
-      const centro=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id && !g.papel);
-      if(centro.length){
-        const cl=document.createElement('div');
-        cl.className='mesa-membros'+(py>62?' acima':'');
-        cl.style.setProperty('--dbase', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
-        cl.innerHTML=centro.map(g=>{ const prim=(g.nome||'').split(' ')[0];
-          return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</span>`;
-        }).join('');
-        planta.appendChild(cl);
-      }
-      return; // a mesa dos noivos usa alas em vez do agrupamento genérico
+      return; // a mesa dos noivos só tem padrinhos/madrinhas, nas alas
     }
 
-    // Pastilhas de integrantes: da mesa selecionada, ou de TODAS ao zoom 200%.
-    if(SEL===m.id || zoom===2){
+    // Pastilhas de integrantes da mesa selecionada.
+    if(SEL===m.id){
       const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
       if(pessoas.length){
         const cl=document.createElement('div');
@@ -608,7 +568,7 @@ function detalheHTML(){
   const convFora=CONVITES.filter(c=>+c.mesa_id!==m.id)
     .sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
   const convAqui=CONVITES.filter(c=>+c.mesa_id===m.id);
-  const optOutrasMesas=g=>MESAS.map(x=>`<option value="${x.id}" ${String(g.mesa_pessoa)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('');
+  const optOutrasMesas=g=>MESAS.filter(x=>!ehNoivos(x)).map(x=>`<option value="${x.id}" ${String(g.mesa_pessoa)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('');
   const optTam=t=>['','Automático','p','Pequena','m','Média','g','Grande'].reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${(m.tamanho||'')===v?'selected':''}>${a[i+1]}</option>`,'');
 
   if(ehNoivos(m)) return detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras);
@@ -668,7 +628,6 @@ function detalheHTML(){
 function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
   const padrinhos=CONVIDADOS.filter(g=>g.papel==='padrinho');
   const madrinhas=CONVIDADOS.filter(g=>g.papel==='madrinha');
-  const centro=pessoas.filter(g=>!g.papel); // sentados na mesa dos noivos sem papel (o casal)
   const linhaPapel=g=>`
     <div class="sentado">
       <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
@@ -686,10 +645,9 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
   return `
     <div class="mesa-form">
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
-      <input type="number" id="ed-cap" min="1" value="${cap||''}" placeholder="Lug." style="flex:0 1 70px">
       <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
     </div>
-    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos ⚭. As alas são detetadas pelo <b>papel</b> de cada convidado — <b>padrinhos</b> à esquerda, <b>madrinhas</b> à direita. O papel também se define no editor do convite.</p>
+    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos ⚭. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
     <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
     ${bloco('Padrinhos · ala esquerda', padrinhos)}
     ${bloco('Madrinhas · ala direita', madrinhas)}
@@ -700,28 +658,7 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
         <option value="">+ Padrinho…</option>${optCand(candP)}</select>
       <select class="sel-conv" style="flex:1 1 120px" onchange="definirPapel(this.value,'madrinha'); this.value=''">
         <option value="">+ Madrinha…</option>${optCand(candM)}</select>
-    </div>
-
-    ${bloco2('Noivos · centro', centro)}
-    ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
-    <div class="rot">Trazer alguém para o centro</div>
-    <select class="sel-conv" onchange="trazerPessoa(this.value); this.value=''">
-      <option value="">Escolher pessoa…</option>
-      ${outras.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}${g.mesa_efetiva_nome?(' (em '+esc(g.mesa_efetiva_nome)+')'):' (sem mesa)'}</option>`).join('')}
-    </select>
-
-    <div class="acoes-bloco">
-      <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
-}
-// Bloco do centro: pessoas sem papel, com opção de sair da mesa.
-function bloco2(tit, arr){
-  return `<div class="rot">${tit} (${arr.length})</div>
-    <div class="lista-sentados">${arr.length?arr.map(g=>`
-      <div class="sentado">
-        <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
-        <button class="btn-ico" title="Retirar do centro" onclick="moverPessoa(${g.id}, '')">✕</button>
-      </div>`).join(''):'<div class="vazio-mini">Ninguém ao centro.</div>'}</div>`;
 }
 async function definirPapel(gid, papel){
   gid=+gid; if(!gid) return;
@@ -748,17 +685,6 @@ async function adicionarMesa(){
   SEL=d.id||null; activeTab='mesa';
   renderTudo();
   toast('Mesa criada. Arraste-a para a posição.');
-}
-async function adicionarNoivos(){
-  if(mesaNoivos()) return toast('A mesa dos noivos já existe.');
-  const d=await api('mesa_noivos',{method:'POST',body:JSON.stringify({})});
-  if(!d.success) return toast(d.message||'Erro ao criar a mesa dos noivos.',true);
-  MESAS=normMesas(d.mesas);
-  await recarregarDados(); // recalcula a mesa efetiva dos padrinhos/madrinhas (agora que a mesa existe)
-  await autoPosicionar();
-  SEL=d.id||null; activeTab='mesa';
-  renderTudo();
-  toast(d.existia?'A mesa dos noivos já existia.':'Mesa dos noivos criada. Arraste-a para o centro.');
 }
 async function guardarMesaEd(){
   const m=MESAS.find(x=>x.id===SEL); if(!m) return;
@@ -833,7 +759,8 @@ function posGhost(e){ if(ghost){ ghost.style.left=e.clientX+'px'; ghost.style.to
 function mesaSob(e){ const el=document.elementFromPoint(e.clientX,e.clientY); return el&&el.closest('.mesa-node'); }
 function moverArraste(e){
   posGhost(e);
-  const node=mesaSob(e);
+  let node=mesaSob(e);
+  if(node && ehNoivos(MESAS.find(x=>x.id===+node.dataset.id))) node=null; // noivos não aceita arrasto
   document.querySelectorAll('.mesa-node.drop-alvo').forEach(n=>{ if(n!==node) n.classList.remove('drop-alvo'); });
   if(node) node.classList.add('drop-alvo');
 }
@@ -847,6 +774,8 @@ async function largarArraste(e){
   const item=arrItem; arrItem=null;
   if(!node || !item) return;
   const mid=+node.dataset.id;
+  const alvo=MESAS.find(x=>x.id===mid);
+  if(ehNoivos(alvo)) return toast('Na mesa dos noivos só entram padrinhos e madrinhas (pelo papel).',true);
   const acao = item.tipo==='pessoa' ? 'convidado_mesa' : 'convite_mesa';
   const d=await api(acao,{method:'POST',body:JSON.stringify({id:item.id, mesa_id:mid})});
   if(!d.success) return toast(d.message||'Erro.',true);

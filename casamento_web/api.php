@@ -226,7 +226,7 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'mesa_noivos','mesa_canvas','convidado_papel','defs_save','def_upload'], true)) {
+                     'convidado_papel','defs_save','def_upload'], true)) {
     exigirCsrf();
 }
 
@@ -320,6 +320,7 @@ if ($acao === 'convite_save') {
     $obs      = trim($d['observacoes'] ?? ''); if ($obs==='') $obs=null;
     $msgP     = trim($d['msg_pessoal'] ?? ''); if ($msgP==='') $msgP=null;
     $mesaId   = trim($d['mesa']??'')!=='' ? resolverMesa($conn, $d['mesa']) : null;
+    if ($mesaId && mesaEhNoivos($conn,$mesaId)) $mesaId = null; // a mesa dos noivos não é atribuível a convites
     $mostrarN = !empty($d['mostrar_numero']) ? 1 : 0;
     $mostrarNM = !empty($d['mostrar_num_mesa']) ? 1 : 0;
     $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
@@ -427,7 +428,7 @@ const CORES_MESA  = ['neutra','verde','ouro','terracota','azul','ameixa','rosa',
 
 const TAMANHOS_MESA = ['auto','p','m','g'];
 
-if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn),'canvas'=>plantaConfig($conn)]); }
+if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn)]); }
 if ($acao === 'mesa_save') {
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
     $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;
@@ -441,25 +442,6 @@ if ($acao === 'mesa_save') {
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
-}
-if ($acao === 'mesa_noivos') {
-    // Cria a mesa especial dos noivos (só uma). Se já existir, devolve-a.
-    $ja = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1")->fetch_assoc();
-    if ($ja) { ok(['mesas'=>listarMesas($conn),'id'=>(int)$ja['id'],'existia'=>true]); }
-    $nome='Noivos'; $n=2;
-    while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='".$conn->real_escape_string($nome)."'")->num_rows) { $nome='Noivos '.$n++; }
-    $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial) VALUES (?,2,'redonda','ouro','noivos')");
-    $st->bind_param('s',$nome); $st->execute();
-    $novoId=$conn->insert_id; // capturar antes de listarMesas() (que corre outras queries)
-    ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
-}
-if ($acao === 'mesa_canvas') {
-    // Formato/proporção do canvas da planta (definição global).
-    $d=corpo(); $fmt=$d['formato'] ?? '';
-    if (!isset(formatosPlanta()[$fmt])) erro('Formato inválido.');
-    $st=$conn->prepare("INSERT INTO {$P}definicoes (chave,valor) VALUES ('planta.formato',?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-    $st->bind_param('s',$fmt); $st->execute();
-    ok(['canvas'=>plantaConfig($conn)]);
 }
 if ($acao === 'mesa_pos') {
     // Guarda a posição (e opcionalmente a forma) de uma mesa na planta.
@@ -480,6 +462,7 @@ if ($acao === 'mesa_pos') {
 }
 if ($acao === 'mesa_delete') {
     $id=(int)($_GET['id']??0);
+    if (mesaEhNoivos($conn,$id)) erro('A mesa dos noivos não pode ser eliminada.');
     $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
     $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE mesa_id=$id"); // mesas individuais também
     $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();
@@ -491,6 +474,7 @@ if ($acao === 'convite_mesa') {
     $d=corpo(); $id=(int)($d['id']??0);
     if (!$id) erro('Convite inválido.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
+    if ($mesaId && mesaEhNoivos($conn,$mesaId)) erro('A mesa dos noivos só admite padrinhos e madrinhas (pelo papel).');
     if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=?,atualizado_em=$TS WHERE id=?"); $st->bind_param('ii',$mesaId,$id); }
     else        { $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=NULL,atualizado_em=$TS WHERE id=?"); $st->bind_param('i',$id); }
     $st->execute();
@@ -502,6 +486,7 @@ if ($acao === 'convidado_mesa') {
     $d=corpo(); $gid=(int)($d['id']??0);
     if (!$gid) erro('Pessoa inválida.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
+    if ($mesaId && mesaEhNoivos($conn,$mesaId)) erro('A mesa dos noivos só admite padrinhos e madrinhas (pelo papel).');
     // Mudar de mesa limpa o lado na mesa dos noivos (só faz sentido lá).
     if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?, lado_noivos=NULL WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
     else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL, lado_noivos=NULL WHERE id=?"); $st->bind_param('i',$gid); }

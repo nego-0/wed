@@ -158,6 +158,15 @@ $conn->query("
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+// A mesa (especial) dos noivos existe sempre por padrão: cria-se se não houver nenhuma.
+$rn = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1");
+if ($rn && $rn->num_rows === 0) {
+    $nomeN = 'Noivos'; $n = 2;
+    while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='" . $conn->real_escape_string($nomeN) . "'")->num_rows) $nomeN = 'Noivos ' . $n++;
+    $stN = $conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
+    $stN->bind_param('s', $nomeN); $stN->execute();
+}
+
 // ============================================================
 // Funções partilhadas
 // ============================================================
@@ -332,17 +341,12 @@ function listarMesas(mysqli $conn): array {
     return $mesas;
 }
 
-/** Formatos (proporção) disponíveis para o canvas da planta. */
-function formatosPlanta(): array {
-    return ['16:10'=>'Panorâmica','3:2'=>'Paisagem','4:3'=>'Clássica','1:1'=>'Quadrada','21:9'=>'Ultra-larga'];
-}
-/** Configuração do canvas da planta (formato guardado nas definições). */
-function plantaConfig(mysqli $conn): array {
+/** Indica se uma mesa é a mesa (especial) dos noivos. */
+function mesaEhNoivos(mysqli $conn, int $id): bool {
     global $P;
-    $fmt = '16:10';
-    $r = @$conn->query("SELECT valor FROM {$P}definicoes WHERE chave='planta.formato' LIMIT 1");
-    if ($r && ($x = $r->fetch_assoc()) && isset(formatosPlanta()[$x['valor']])) $fmt = $x['valor'];
-    return ['formato' => $fmt];
+    if ($id <= 0) return false;
+    $r = $conn->query("SELECT 1 FROM {$P}mesas WHERE id=$id AND especial='noivos' LIMIT 1");
+    return $r && $r->num_rows > 0;
 }
 
 /** Carrega um convite (por id ou código) já com os membros e o nome final. */

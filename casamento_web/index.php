@@ -500,7 +500,8 @@ function abrirConvite(c){
 }
 function opcoesMesaMembro(selId){
   let o='<option value="">Mesa do convite</option>';
-  (MESAS||[]).forEach(m=>{ o+=`<option value="${m.id}" ${String(selId)===String(m.id)?'selected':''}>${esc(m.nome)}</option>`; });
+  // A mesa dos noivos não é selecionável: só a integram padrinhos e madrinhas (pelo papel).
+  (MESAS||[]).filter(m=>m.especial!=='noivos').forEach(m=>{ o+=`<option value="${m.id}" ${String(selId)===String(m.id)?'selected':''}>${esc(m.nome)}</option>`; });
   return o;
 }
 function opcoesPapelMembro(sel){
