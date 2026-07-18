@@ -348,7 +348,16 @@ function renderPlanta(){
 // ---------- arrastar mesas + linhas-guia magnéticas ----------
 let drag=null;
 $('planta').addEventListener('pointerdown', e=>{
-  const node=e.target.closest('.mesa-node'); if(!node) return;
+  const node=e.target.closest('.mesa-node');
+  if(!node){
+    // Clique no fundo do canvas (nem mesa nem pastilha): sem arrastar, limpa a seleção.
+    if(e.target.closest('.mp')) return;
+    const sx=e.clientX, sy=e.clientY;
+    window.addEventListener('pointerup', ev=>{
+      if(Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4) desselecionar();
+    }, {once:true});
+    return;
+  }
   const rect=$('planta').getBoundingClientRect();
   drag={id:+node.dataset.id, node, rect, moved:false, sx:e.clientX, sy:e.clientY,
         x:+node.style.left.replace('%',''), y:+node.style.top.replace('%','')};
@@ -390,6 +399,7 @@ async function salvarPos(id,x,y,forma){
 
 // ---------- abas ----------
 function selecionar(id){ SEL=id; activeTab='mesa'; renderPlanta(); renderTabs(); renderTabBody(); }
+function desselecionar(){ if(SEL===null) return; SEL=null; if(activeTab==='mesa') activeTab='pessoas'; renderPlanta(); renderTabs(); renderTabBody(); }
 function irTab(k){ if(k==='mesa'&&!SEL) return; activeTab=k; renderTabs(); renderTabBody(); }
 
 function renderTabs(){
