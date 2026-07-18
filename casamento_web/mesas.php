@@ -91,8 +91,24 @@ $CAS = casalInfo(defsAtuais($conn));
   .rz-s:hover{ border-bottom:2px solid var(--gold); }
   body.a-redimensionar{ cursor:nwse-resize; user-select:none; }
 
-  /* Barra de zoom */
+  /* Barra de zoom + botão de maximizar */
   .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .icon-btn{ border:1px solid var(--line); background:#fff; color:var(--text); border-radius:10px;
+    width:34px; height:32px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+  .icon-btn:hover{ border-color:var(--gold-soft); color:var(--forest); }
+  .icon-btn .i-comp{ display:none; }
+  body.mesas-max .icon-btn .i-exp{ display:none; }
+  body.mesas-max .icon-btn .i-comp{ display:inline-flex; }
+
+  /* Modo maximizado: a planta ocupa o ecrã, mantendo o conjunto de abas ao lado */
+  body.mesas-max{ overflow:hidden; }
+  body.mesas-max .container{ position:fixed; inset:0; z-index:1000; max-width:none; width:100%; margin:0;
+    padding:1rem 1.2rem; overflow:hidden;
+    background:linear-gradient(160deg,var(--ivory) 0%, var(--cream) 100%); }
+  body.mesas-max .topo, body.mesas-max .stats-mesa, body.mesas-max .barra-add{ display:none; }
+  body.mesas-max .rz{ display:none; }
+  body.mesas-max .painel-mesas{ position:static; }
+  body.mesas-max .tab-body{ max-height:calc(100vh - 9rem); }
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
   .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:.78rem;
     padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
@@ -262,6 +278,10 @@ $CAS = casalInfo(defsAtuais($conn));
             <button data-zoom="1" class="on" title="100% · vista panorâmica (canvas completo)">100%</button>
             <button data-zoom="1.5" title="150% · vista de área">150%</button>
           </div>
+          <button class="icon-btn" id="btn-max" onclick="toggleMax()" title="Maximizar a planta" aria-label="Maximizar a planta">
+            <svg class="i-exp" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            <svg class="i-comp" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+          </button>
         </div>
       </div>
       <div class="legenda" style="margin-bottom:.7rem">
@@ -317,12 +337,18 @@ let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor
 let zoom=1;
 // Dimensões guardadas do canvas (px). null = automático.
 let CANVAS={largura:null, altura:null};
+let maximizado=false;
 
 function aplicarCanvas(){ $('planta').style.setProperty('--z', zoom); }
 function setZoom(z){
   zoom=+z;
   document.querySelectorAll('#zoombar button').forEach(b=>b.classList.toggle('on', +b.dataset.zoom===zoom));
-  aplicarCanvas();
+  aplicarCanvas(); ajustarScrollCanvas();
+}
+// Só mostra os scrolls do canvas quando o conteúdo excede o espaço visível.
+// Como o "mundo" preenche sempre o canvas, só transborda quando o zoom é > 1.
+function ajustarScrollCanvas(){
+  $('planta-viewport').style.overflow = zoom > 1 ? 'auto' : 'hidden';
 }
 
 // Largura de conteúdo disponível no cartão (limite máximo do canvas).
@@ -333,12 +359,31 @@ function larguraDisponivel(){
 }
 // Aplica as dimensões guardadas (ou o automático) ao canvas.
 function aplicarTamanhoCanvas(){
-  const vp=$('planta-viewport'); const maxW=larguraDisponivel();
-  let w = CANVAS.largura ? Math.min(CANVAS.largura, maxW) : maxW;
-  w = Math.max(280, w);
-  let h = CANVAS.altura ? CANVAS.altura : Math.round(w*10/16);
-  h = Math.max(200, Math.min(2000, h));
+  const vp=$('planta-viewport');
+  // Liberta a largura para medir o espaço real da coluna (senão um canvas largo
+  // "estica" a coluna e a medição fica presa no valor anterior).
+  vp.style.width='0px';
+  const maxW=larguraDisponivel();
+  let w, h;
+  if(maximizado){
+    // Preenche o espaço disponível (largura do cartão, altura até ao fundo do ecrã).
+    w=maxW; vp.style.width=w+'px';
+    const top=vp.getBoundingClientRect().top;
+    h=Math.max(240, Math.round(window.innerHeight - top - 24));
+  } else {
+    w = CANVAS.largura ? Math.min(CANVAS.largura, maxW) : maxW;
+    w = Math.max(280, w);
+    h = CANVAS.altura ? CANVAS.altura : Math.round(w*10/16);
+    h = Math.max(200, Math.min(2000, h));
+  }
   vp.style.width=w+'px'; vp.style.height=h+'px';
+}
+// Maximizar/restaurar a tela de disposições, mantendo as abas ao lado.
+function toggleMax(){
+  maximizado=!maximizado;
+  document.body.classList.toggle('mesas-max', maximizado);
+  $('btn-max').title = maximizado ? 'Restaurar a planta' : 'Maximizar a planta';
+  aplicarTamanhoCanvas(); ajustarScrollCanvas(); renderPlanta();
 }
 // Redimensionar arrastando as bordas do canvas.
 let rz=null;
@@ -406,7 +451,7 @@ async function carregar(){
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
   MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
   if(dm.canvas){ CANVAS={largura:numOuNull(dm.canvas.largura), altura:numOuNull(dm.canvas.altura)}; }
-  aplicarCanvas(); aplicarTamanhoCanvas();
+  aplicarCanvas(); aplicarTamanhoCanvas(); ajustarScrollCanvas();
   await autoPosicionar();
   renderTudo();
 }
@@ -878,7 +923,8 @@ ligarPicker($('nova-forma'),'forma',v=>novaForma=v);
 ligarPicker($('nova-cor'),'cor',v=>novaCor=v);
 $('zoombar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setZoom(b.dataset.zoom); });
 document.querySelectorAll('.rz').forEach(h=> h.addEventListener('pointerdown', e=> iniciarRz(e, h.dataset.dir)));
-window.addEventListener('resize', aplicarTamanhoCanvas);
+window.addEventListener('resize', ()=>{ aplicarTamanhoCanvas(); ajustarScrollCanvas(); });
+window.addEventListener('keydown', e=>{ if(e.key==='Escape' && maximizado) toggleMax(); });
 aplicarCanvas();
 
 carregar();
