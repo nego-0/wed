@@ -7,6 +7,8 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
 $CAS = casalInfo(defsAtuais($conn));
+$CANVAS = plantaConfig($conn);
+$FORMATOS = formatosPlanta();
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -64,12 +66,25 @@ $CAS = casalInfo(defsAtuais($conn));
   .lg-vazia i{ background:#b7bbb5; } .lg-parcial i{ background:var(--gold); }
   .lg-cheia i{ background:#1f7a3d; } .lg-excede i{ background:var(--danger); }
 
-  .planta{ position:relative; width:100%; aspect-ratio:16/10; border-radius:14px; overflow:visible;
+  /* Viewport com scroll (para o zoom) + planta que cresce dentro dela */
+  .planta-viewport{ position:relative; overflow:auto; max-height:72vh; padding:18px; border-radius:14px;
+    background:var(--ivory); border:1px solid var(--line); }
+  .planta{ position:relative; --z:1; width:calc(var(--z)*100%); aspect-ratio:var(--ar,16/10);
+    border-radius:14px; overflow:visible; transition:width .18s ease;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
       repeating-linear-gradient(0deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px),
       repeating-linear-gradient(90deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px);
     background-clip:padding-box; border:1px dashed var(--gold-soft); touch-action:none; user-select:none; }
+
+  /* Barra de zoom + formato do canvas */
+  .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+  .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
+  .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:.78rem;
+    padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
+  .zoombar button:first-child{ border-left:0; }
+  .zoombar button.on{ background:var(--forest); color:#fff; }
+  .sel-formato{ font-size:.8rem; padding:.32rem .5rem; }
   .planta .dica-vazia{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     color:#a7ad9f; font-size:.9rem; text-align:center; padding:1rem; }
 
@@ -79,7 +94,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .guia.gh{ left:-4px; right:-4px; height:1.5px; transform:translateY(-50%); }
   .guia.on{ opacity:.75; }
 
-  .mesa-node{ position:absolute; transform:translate(-50%,-50%); cursor:grab;
+  .mesa-node{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); transform:translate(-50%,-50%); cursor:grab;
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     border:3px solid var(--gold-soft); background:var(--cream); color:var(--ink);
     box-shadow:0 4px 12px rgba(22,38,30,.12); transition:box-shadow .15s; }
@@ -92,6 +107,28 @@ $CAS = casalInfo(defsAtuais($conn));
   .forma-ferradura{ width:calc(var(--d)*1.6); height:calc(var(--d)*1.05); border-radius:16px 16px 8px 8px;
     clip-path:polygon(0 0,30% 0,30% 42%,70% 42%,70% 0,100% 0,100% 100%,0 100%);
     justify-content:flex-end; padding-bottom:calc(var(--d)*0.14); }
+  /* Mesa dos noivos — ilustração simbólica (alianças entrelaçadas) */
+  .forma-noivos{ width:calc(var(--d)*1.7); height:calc(var(--d)*1.12); border-radius:20px;
+    justify-content:flex-end; padding-bottom:calc(var(--d)*0.15); }
+  .cor-noivos, .forma-noivos{ background:linear-gradient(150deg,#faf1db,#f0dcae);
+    border-color:#B4864A; color:#5c4321; box-shadow:0 6px 20px rgba(180,134,74,.38); }
+  .noivos-rings{ position:absolute; top:calc(var(--d)*0.14); left:50%; transform:translateX(-50%); display:flex; }
+  .noivos-rings i{ width:calc(var(--d)*0.36); height:calc(var(--d)*0.36); border-radius:50%;
+    border:calc(var(--d)*0.065) solid #B4864A; background:transparent; box-sizing:border-box; }
+  .noivos-rings i:last-child{ margin-left:calc(var(--d)*-0.14); border-color:#d0a75f; }
+
+  /* Alas de padrinhos (esq.) e madrinhas (dir.) junto à mesa dos noivos */
+  .noivos-ala{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); z-index:16;
+    display:flex; flex-direction:column; gap:calc(var(--d)*0.06); width:calc(var(--d)*1.0); }
+  .noivos-ala.esq{ transform:translate(calc(-100% - var(--d)*0.98), -50%); }
+  .noivos-ala.dir{ transform:translate(calc(var(--d)*0.98), -50%); }
+  .noivos-ala .ala-tit{ font-size:calc(var(--d)*0.13); text-transform:uppercase; letter-spacing:.5px;
+    color:#8a6a2f; text-align:center; font-weight:700; }
+  .noivos-ala .ala-p{ background:#fff; border:1px solid #d8c193; border-radius:50px;
+    font-size:calc(var(--d)*0.14); padding:calc(var(--d)*0.05) calc(var(--d)*0.15); line-height:1.15;
+    text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#5c4321;
+    cursor:grab; touch-action:none; user-select:none; box-shadow:0 2px 6px rgba(180,134,74,.18); }
+  body.a-arrastar-item .noivos-ala .ala-p{ pointer-events:none; }
   /* Cores (paleta) */
   .cor-neutra{ background:var(--cream); border-color:var(--gold-soft); color:var(--ink); }
   .cor-verde{ background:#e4f0e8; border-color:#2C4536; color:#17311f; }
@@ -104,20 +141,20 @@ $CAS = casalInfo(defsAtuais($conn));
 
   .mesa-node.a-arrastar{ cursor:grabbing; box-shadow:0 10px 26px rgba(22,38,30,.28); z-index:20; }
   .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:3px; z-index:15; }
-  .mesa-node .mn-nome{ font-family:var(--serif); font-weight:600; font-size:.86rem; line-height:1.05; flex:none;
+  .mesa-node .mn-nome{ font-family:var(--serif); font-weight:600; font-size:calc(var(--d)*0.165); line-height:1.05; flex:none;
     max-width:92%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .mesa-node .mn-ocup{ font-size:.78rem; margin-top:.1rem; font-variant-numeric:tabular-nums; flex:none; }
+  .mesa-node .mn-ocup{ font-size:calc(var(--d)*0.15); margin-top:.1rem; font-variant-numeric:tabular-nums; flex:none; }
   .mesa-node .mn-dot{ position:absolute; top:6px; right:8px; width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
   .dot-vazia{ background:#b7bbb5; } .dot-parcial{ background:var(--gold); } .dot-cheia{ background:#1f7a3d; } .dot-excede{ background:var(--danger); }
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:4px; box-shadow:0 0 0 6px rgba(180,134,74,.18); z-index:18; }
 
   /* Pastilhas de pessoas (mesa selecionada) — arrastáveis entre mesas */
-  .mesa-membros{ position:absolute; transform:translate(-50%, calc(var(--d)/2 + 8px)); z-index:17;
-    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; width:160px; pointer-events:none; }
+  .mesa-membros{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); transform:translate(-50%, calc(var(--d)/2 + 8px)); z-index:17;
+    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; width:calc(var(--d)*2.1); pointer-events:none; }
   .mesa-membros.acima{ transform:translate(-50%, calc(-100% - var(--d)/2 - 8px)); }
-  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:.72rem; line-height:1.1;
+  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:calc(var(--d)*0.145); line-height:1.1;
     padding:.18rem .55rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
-    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:calc(var(--d)*1.6); overflow:hidden; text-overflow:ellipsis; }
   .mesa-membros .mp:hover{ background:var(--forest-deep); }
   body.a-arrastar-item .mp{ pointer-events:none; }
 
@@ -199,6 +236,7 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="grp"><span class="lbl">Forma</span><div class="formas" id="nova-forma"></div></div>
     <div class="grp"><span class="lbl">Cor</span><div class="cores" id="nova-cor"></div></div>
     <button class="btn btn-ouro btn-sm" onclick="adicionarMesa()">+ Mesa</button>
+    <button class="btn btn-fantasma btn-sm" id="btn-noivos" onclick="adicionarNoivos()" title="Mesa de honra dos noivos, com padrinhos e madrinhas">⚭ Mesa dos noivos</button>
   </div>
 
   <div class="layout">
@@ -206,19 +244,33 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="planta-cartao">
       <div class="planta-topo">
         <span class="titulo">Disposição do salão</span>
-        <span class="legenda">
-          <span class="lg-vazia"><i></i>Vazia</span>
-          <span class="lg-parcial"><i></i>A encher</span>
-          <span class="lg-cheia"><i></i>Completa</span>
-          <span class="lg-excede"><i></i>Excede</span>
-        </span>
+        <div class="planta-ctrls">
+          <div class="zoombar" id="zoombar" title="Nível de zoom">
+            <button data-zoom="1" class="on" title="100% · vista panorâmica">100%</button>
+            <button data-zoom="1.5" title="150% · vista de área">150%</button>
+            <button data-zoom="2" title="200% · vista da mesa (nomes)">200%</button>
+          </div>
+          <select class="sel-formato" id="sel-formato" onchange="setFormato(this.value)" title="Dimensões do canvas">
+            <?php foreach ($FORMATOS as $chave => $nome): ?>
+              <option value="<?= escP($chave) ?>" <?= $chave === $CANVAS['formato'] ? 'selected' : '' ?>><?= escP($nome) ?> (<?= escP($chave) ?>)</option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </div>
-      <div class="planta" id="planta">
-        <div class="guia gv" id="guia-v"></div>
-        <div class="guia gh" id="guia-h"></div>
-        <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
+      <div class="legenda" style="margin-bottom:.7rem">
+        <span class="lg-vazia"><i></i>Vazia</span>
+        <span class="lg-parcial"><i></i>A encher</span>
+        <span class="lg-cheia"><i></i>Completa</span>
+        <span class="lg-excede"><i></i>Excede</span>
       </div>
-      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes.</p>
+      <div class="planta-viewport" id="planta-viewport">
+        <div class="planta" id="planta">
+          <div class="guia gv" id="guia-v"></div>
+          <div class="guia gh" id="guia-h"></div>
+          <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
+        </div>
+      </div>
+      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes. Aumente para 200% para ver os nomes de todos os integrantes.</p>
     </div>
 
     <!-- PAINEL DIREITO -->
@@ -249,6 +301,27 @@ async function api(action, opts={}){
 }
 
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='pessoas';
+let zoom=1, CANVAS_FMT=<?= json_encode($CANVAS['formato']) ?>;
+
+// Aplica o formato (proporção) e o zoom ao canvas.
+function aplicarCanvas(){
+  const planta=$('planta');
+  planta.style.setProperty('--ar', CANVAS_FMT.replace(':','/'));
+  planta.style.setProperty('--z', zoom);
+}
+function setZoom(z){
+  zoom=+z;
+  document.querySelectorAll('#zoombar button').forEach(b=>b.classList.toggle('on', +b.dataset.zoom===zoom));
+  aplicarCanvas();
+  renderPlanta(); // ao nível 200% mostram-se os nomes de todas as mesas
+}
+async function setFormato(fmt){
+  const ant=CANVAS_FMT; CANVAS_FMT=fmt; aplicarCanvas();
+  const d=await api('mesa_canvas',{method:'POST',body:JSON.stringify({formato:fmt})});
+  if(!d.success){ CANVAS_FMT=ant; aplicarCanvas(); $('sel-formato').value=ant; return toast(d.message||'Erro ao mudar o formato.',true); }
+  if(d.canvas&&d.canvas.formato){ CANVAS_FMT=d.canvas.formato; aplicarCanvas(); }
+  toast('Dimensões do canvas atualizadas.');
+}
 
 const FORMAS=[['redonda','Redonda'],['oval','Oval'],['quadrada','Quadrada'],['retangular','Retangular'],['comprida','Comprida'],['ferradura','Ferradura']];
 const CORES=[['neutra','Marfim'],['verde','Verde'],['ouro','Ouro'],['terracota','Terracota'],['azul','Azul'],['ameixa','Ameixa'],['rosa','Rosa'],['salva','Salva']];
@@ -267,16 +340,28 @@ function ligarPicker(container, attr, cb){
 const numOuNull=v=>(v===null||v===undefined||v==='')?null:+v;
 const normMesas=a=>(a||[]).map(m=>({...m, id:+m.id, capacidade:numOuNull(m.capacidade),
   pos_x:numOuNull(m.pos_x), pos_y:numOuNull(m.pos_y), ocupacao:+m.ocupacao||0, convites:+m.convites||0,
-  forma:m.forma||'redonda', cor:m.cor||'neutra'}));
+  forma:m.forma||'redonda', cor:m.cor||'neutra', especial:m.especial||null, tamanho:m.tamanho||null}));
 const normConvites=a=>(a||[]).map(c=>({...c, id:+c.id, mesa_id:numOuNull(c.mesa_id), lugares:+c.lugares||0}));
 const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_id,
-  mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id)}));
+  mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id),
+  lado_noivos:g.lado_noivos||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
+const ehNoivos=m=>m&&m.especial==='noivos';
+const mesaNoivos=()=>MESAS.find(ehNoivos)||null;
+// Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
+function baseMesa(m){
+  if(ehNoivos(m)) return 96;
+  const t=m.tamanho;
+  if(t==='p') return 62; if(t==='m') return 84; if(t==='g') return 108;
+  const cap=+m.capacidade||4; return Math.max(58,Math.min(104, 58 + cap*3));
+}
 
 // ---------- carregar ----------
 async function carregar(){
   const [dm,dc,dg]=await Promise.all([api('mesa_list'), api('convite_list'), api('convidado_list')]);
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
   MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
+  if(dm.canvas&&dm.canvas.formato){ CANVAS_FMT=dm.canvas.formato; const s=$('sel-formato'); if(s) s.value=CANVAS_FMT; }
+  aplicarCanvas();
   await autoPosicionar();
   renderTudo();
 }
@@ -292,7 +377,13 @@ async function autoPosicionar(){
   await Promise.all(semPos.map(m=>salvarPos(m.id,m.pos_x,m.pos_y)));
 }
 
-function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); }
+function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); atualizarBtnNoivos(); }
+function atualizarBtnNoivos(){
+  const b=$('btn-noivos'); if(!b) return;
+  const existe=!!mesaNoivos();
+  b.disabled=existe; b.style.opacity=existe?'.45':''; b.style.cursor=existe?'default':'';
+  b.title=existe?'A mesa dos noivos já existe':'Mesa de honra dos noivos, com padrinhos e madrinhas';
+}
 
 function renderStats(){
   const nMesas=MESAS.length;
@@ -318,24 +409,50 @@ function estadoOcup(m){
 // ---------- planta ----------
 function renderPlanta(){
   const planta=$('planta');
-  planta.querySelectorAll('.mesa-node, .mesa-membros').forEach(n=>n.remove());
+  planta.querySelectorAll('.mesa-node, .mesa-membros, .noivos-ala').forEach(n=>n.remove());
   $('dica-vazia').style.display = MESAS.length ? 'none' : 'flex';
   MESAS.forEach(m=>{
     const cap=+m.capacidade||0, oc=+m.ocupacao||0, st=estadoOcup(m);
-    const d=Math.max(58,Math.min(104, 58 + (cap||4)*3));
+    const noivos=ehNoivos(m);
+    const d=baseMesa(m);
     const px=(+m.pos_x||50), py=(+m.pos_y||50);
     const node=document.createElement('div');
-    node.className='mesa-node forma-'+(m.forma||'redonda')+' cor-'+(m.cor||'neutra')+(SEL===m.id?' sel':'');
-    node.dataset.id=m.id; node.style.setProperty('--d', d+'px');
+    const forma = noivos ? 'noivos' : (m.forma||'redonda');
+    node.className='mesa-node forma-'+forma+' cor-'+(noivos?'noivos':(m.cor||'neutra'))+(SEL===m.id?' sel':'');
+    node.dataset.id=m.id; node.style.setProperty('--dbase', d+'px');
     node.style.left=px+'%'; node.style.top=py+'%';
-    node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
+    if(noivos){
+      node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="noivos-rings"><i></i><i></i></span>`+
+        `<span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
+    } else {
+      node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
+    }
     planta.appendChild(node);
-    if(SEL===m.id){
+
+    if(noivos){
+      // Alas de padrinhos (esquerda) e madrinhas (direita).
+      [['esq','Padrinhos'],['dir','Madrinhas']].forEach(([lado,tit])=>{
+        const gente=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id && g.lado_noivos===lado);
+        if(!gente.length) return;
+        const ala=document.createElement('div');
+        ala.className='noivos-ala '+lado; ala.style.setProperty('--dbase', d+'px');
+        ala.style.left=px+'%'; ala.style.top=py+'%';
+        ala.innerHTML=`<div class="ala-tit">${tit}</div>`+gente.map(g=>{
+          const prim=(g.nome||'').split(' ')[0];
+          return `<div class="ala-p mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</div>`;
+        }).join('');
+        planta.appendChild(ala);
+      });
+      return; // a mesa dos noivos usa alas em vez do agrupamento genérico
+    }
+
+    // Pastilhas de integrantes: da mesa selecionada, ou de TODAS ao zoom 200%.
+    if(SEL===m.id || zoom===2){
       const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
       if(pessoas.length){
         const cl=document.createElement('div');
         cl.className='mesa-membros'+(py>62?' acima':'');
-        cl.style.setProperty('--d', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
+        cl.style.setProperty('--dbase', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
         cl.innerHTML=pessoas.map(g=>{ const prim=(g.nome||'').split(' ')[0];
           return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</span>`;
         }).join('');
@@ -480,6 +597,9 @@ function detalheHTML(){
     .sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
   const convAqui=CONVITES.filter(c=>+c.mesa_id===m.id);
   const optOutrasMesas=g=>MESAS.map(x=>`<option value="${x.id}" ${String(g.mesa_pessoa)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('');
+  const optTam=t=>['','Automático','p','Pequena','m','Média','g','Grande'].reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${(m.tamanho||'')===v?'selected':''}>${a[i+1]}</option>`,'');
+
+  if(ehNoivos(m)) return detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras);
 
   return `
     <div class="mesa-form">
@@ -490,6 +610,8 @@ function detalheHTML(){
     <div class="mesa-form" style="margin-top:.55rem">
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Forma</span><div class="formas" id="ed-forma">${htmlFormas(m.forma)}</div></div>
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Cor</span><div class="cores" id="ed-cor">${htmlCores(m.cor||'neutra')}</div></div>
+      <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Dimensão</span>
+        <select id="ed-tam" class="sel-mini" title="Dimensão da mesa" onchange="guardarMesaEd()">${optTam(m.tamanho)}</select></div>
     </div>
 
     <div style="margin-top:1rem">
@@ -530,9 +652,54 @@ function detalheHTML(){
       <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
 }
+// Painel da mesa dos noivos: alas de padrinhos (esq.) e madrinhas (dir.).
+function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
+  const porLado=l=>pessoas.filter(g=>(g.lado_noivos||'')===l);
+  const centro=porLado(''), esq=porLado('esq'), dir=porLado('dir');
+  const linha=g=>`
+    <div class="sentado">
+      <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+      <select class="sel-mini" title="Lado na mesa dos noivos" onchange="definirLado(${g.id}, this.value)">
+        <option value="" ${(g.lado_noivos||'')===''?'selected':''}>Centro (noivos)</option>
+        <option value="esq" ${g.lado_noivos==='esq'?'selected':''}>Padrinho (esq.)</option>
+        <option value="dir" ${g.lado_noivos==='dir'?'selected':''}>Madrinha (dir.)</option>
+      </select>
+    </div>`;
+  const bloco=(tit,arr)=>`<div class="rot">${tit} (${arr.length})</div>
+    <div class="lista-sentados">${arr.length?arr.map(linha).join(''):'<div class="vazio-mini">Ainda ninguém.</div>'}</div>`;
+  return `
+    <div class="mesa-form">
+      <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
+      <input type="number" id="ed-cap" min="1" value="${cap||''}" placeholder="Lug." style="flex:0 1 70px">
+      <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
+    </div>
+    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos ⚭. Atribua os <b>padrinhos</b> à ala esquerda e as <b>madrinhas</b> à ala direita.</p>
+    <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
+    ${bloco('⚭ Noivos (centro)', centro)}
+    ${bloco('Padrinhos · ala esquerda', esq)}
+    ${bloco('Madrinhas · ala direita', dir)}
+    ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
+
+    <div class="rot">Trazer alguém para esta mesa</div>
+    <select class="sel-conv" onchange="trazerPessoa(this.value); this.value=''">
+      <option value="">Escolher pessoa…</option>
+      ${outras.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}${g.mesa_efetiva_nome?(' (em '+esc(g.mesa_efetiva_nome)+')'):' (sem mesa)'}</option>`).join('')}
+    </select>
+
+    <div class="acoes-bloco">
+      <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
+    </div>`;
+}
+async function definirLado(gid, lado){
+  const d=await api('convidado_lado',{method:'POST',body:JSON.stringify({id:+gid, lado})});
+  if(!d.success) return toast(d.message||'Erro.',true);
+  MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo();
+  toast(lado==='esq'?'Padrinho (ala esquerda).':lado==='dir'?'Madrinha (ala direita).':'Ao centro, com os noivos.');
+}
 function ligarDetalhe(box){
-  ligarPicker(box.querySelector('#ed-forma'),'forma');
-  ligarPicker(box.querySelector('#ed-cor'),'cor');
+  const f=box.querySelector('#ed-forma'), c=box.querySelector('#ed-cor');
+  if(f) ligarPicker(f,'forma');
+  if(c) ligarPicker(c,'cor');
 }
 
 // ---------- ações ----------
@@ -548,13 +715,24 @@ async function adicionarMesa(){
   renderTudo();
   toast('Mesa criada. Arraste-a para a posição.');
 }
+async function adicionarNoivos(){
+  if(mesaNoivos()) return toast('A mesa dos noivos já existe.');
+  const d=await api('mesa_noivos',{method:'POST',body:JSON.stringify({})});
+  if(!d.success) return toast(d.message||'Erro ao criar a mesa dos noivos.',true);
+  MESAS=normMesas(d.mesas);
+  await autoPosicionar();
+  SEL=d.id||null; activeTab='mesa';
+  renderTudo();
+  toast(d.existia?'A mesa dos noivos já existia.':'Mesa dos noivos criada. Arraste-a para o centro.');
+}
 async function guardarMesaEd(){
   const m=MESAS.find(x=>x.id===SEL); if(!m) return;
   const nome=$('ed-nome').value.trim(); if(!nome) return toast('Indique o nome da mesa.',true);
   const cap=$('ed-cap').value;
   const fb=document.querySelector('#ed-forma button.on'), cb=document.querySelector('#ed-cor button.on');
   const forma=fb?fb.dataset.forma:'redonda', cor=cb?cb.dataset.cor:'neutra';
-  const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:m.id,nome,capacidade:cap,forma,cor})});
+  const tamanho=$('ed-tam')?$('ed-tam').value:'';
+  const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:m.id,nome,capacidade:cap,forma,cor,tamanho})});
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
   MESAS=normMesas(d.mesas); renderTudo(); toast('Mesa atualizada.');
 }
@@ -647,6 +825,8 @@ $('nova-forma').innerHTML=htmlFormas('redonda');
 $('nova-cor').innerHTML=htmlCores('neutra');
 ligarPicker($('nova-forma'),'forma',v=>novaForma=v);
 ligarPicker($('nova-cor'),'cor',v=>novaCor=v);
+$('zoombar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setZoom(b.dataset.zoom); });
+aplicarCanvas();
 
 carregar();
 </script>

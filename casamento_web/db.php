@@ -120,6 +120,18 @@ if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convidados ADD COLUMN mesa_id INT DEFAULT NULL AFTER presente_em");
 }
 
+// Migração suave: lado do convidado na mesa dos noivos (padrinhos/madrinhas)
+$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'lado_noivos'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN lado_noivos VARCHAR(10) DEFAULT NULL AFTER mesa_id");
+}
+
+// Migração suave: mesa especial (noivos) e tamanho manual da mesa
+foreach (['especial' => "VARCHAR(20) DEFAULT NULL", 'tamanho' => "VARCHAR(10) DEFAULT NULL"] as $coluna => $definicao) {
+    $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
+    if ($r && $r->num_rows === 0) $conn->query("ALTER TABLE {$P}mesas ADD COLUMN $coluna $definicao");
+}
+
 // Migração suave: opção de mostrar o nº de pessoas por mesa no convite digital
 $col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'mostrar_num_mesa'");
 if ($col && $col->num_rows === 0) {
@@ -278,8 +290,8 @@ function estatisticas(mysqli $conn): array {
  */
 function listarMesas(mysqli $conn): array {
     global $P;
-    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor
-                           FROM {$P}mesas ORDER BY nome")->fetch_all(MYSQLI_ASSOC);
+    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho
+                           FROM {$P}mesas ORDER BY (especial='noivos') DESC, nome")->fetch_all(MYSQLI_ASSOC);
     $idx = [];
     foreach ($mesas as $i => $m) { $mesas[$i]['ocupacao'] = 0; $mesas[$i]['convites'] = 0; $idx[(int)$m['id']] = $i; }
     $presenca = []; // mesaId => [conviteId => true] (para contar convites distintos por mesa)
@@ -308,6 +320,19 @@ function listarMesas(mysqli $conn): array {
     return $mesas;
 }
 
+/** Formatos (proporção) disponíveis para o canvas da planta. */
+function formatosPlanta(): array {
+    return ['16:10'=>'Panorâmica','3:2'=>'Paisagem','4:3'=>'Clássica','1:1'=>'Quadrada','21:9'=>'Ultra-larga'];
+}
+/** Configuração do canvas da planta (formato guardado nas definições). */
+function plantaConfig(mysqli $conn): array {
+    global $P;
+    $fmt = '16:10';
+    $r = @$conn->query("SELECT valor FROM {$P}definicoes WHERE chave='planta.formato' LIMIT 1");
+    if ($r && ($x = $r->fetch_assoc()) && isset(formatosPlanta()[$x['valor']])) $fmt = $x['valor'];
+    return ['formato' => $fmt];
+}
+
 /** Carrega um convite (por id ou código) já com os membros e o nome final. */
 function carregarConvite(mysqli $conn, $chave, string $por = 'id'): ?array {
     global $P;
@@ -319,7 +344,7 @@ function carregarConvite(mysqli $conn, $chave, string $por = 'id'): ?array {
     $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) return null;
-    $st = $conn->prepare("SELECT g.*, mg.nome AS mesa_nome
+    $st = $conn->prepare("SELECT g.*, mg.nome AS mesa_nome, mg.especial AS mesa_especial
                           FROM {$P}convidados g LEFT JOIN {$P}mesas mg ON g.mesa_id = mg.id
                           WHERE g.convite_id=? ORDER BY g.principal DESC, g.nome");
     $st->bind_param('i', $c['id']); $st->execute();

@@ -226,7 +226,7 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'defs_save','def_upload'], true)) {
+                     'mesa_noivos','mesa_canvas','convidado_lado','defs_save','def_upload'], true)) {
     exigirCsrf();
 }
 
@@ -419,19 +419,41 @@ if ($acao === 'convite_rsvp_manual') {
 const FORMAS_MESA = ['redonda','oval','quadrada','retangular','comprida','ferradura'];
 const CORES_MESA  = ['neutra','verde','ouro','terracota','azul','ameixa','rosa','salva'];
 
-if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn)]); }
+const TAMANHOS_MESA = ['auto','p','m','g'];
+
+if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn),'canvas'=>plantaConfig($conn)]); }
 if ($acao === 'mesa_save') {
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
     $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;
     $forma=in_array($d['forma']??'',FORMAS_MESA,true)?$d['forma']:'redonda';
     $cor=in_array($d['cor']??'',CORES_MESA,true)?$d['cor']:null; // NULL = marfim
+    $tam=in_array($d['tamanho']??'',['p','m','g'],true)?$d['tamanho']:null; // NULL = automático
     if ($nome==='') erro('Nome da mesa obrigatório.');
-    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=? WHERE id=?"); $st->bind_param('sissi',$nome,$cap,$forma,$cor,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor) VALUES (?,?,?,?)"); $st->bind_param('siss',$nome,$cap,$forma,$cor); }
+    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=? WHERE id=?"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$id); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,tamanho) VALUES (?,?,?,?,?)"); $st->bind_param('sisss',$nome,$cap,$forma,$cor,$tam); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
+}
+if ($acao === 'mesa_noivos') {
+    // Cria a mesa especial dos noivos (só uma). Se já existir, devolve-a.
+    $ja = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1")->fetch_assoc();
+    if ($ja) { ok(['mesas'=>listarMesas($conn),'id'=>(int)$ja['id'],'existia'=>true]); }
+    $nome='Noivos'; $n=2;
+    while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='".$conn->real_escape_string($nome)."'")->num_rows) { $nome='Noivos '.$n++; }
+    $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial) VALUES (?,2,'redonda','ouro','noivos')");
+    $st->bind_param('s',$nome); $st->execute();
+    $novoId=$conn->insert_id; // capturar antes de listarMesas() (que corre outras queries)
+    ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
+}
+if ($acao === 'mesa_canvas') {
+    // Formato/proporção do canvas da planta (definição global).
+    $d=corpo(); $fmt=$d['formato'] ?? '';
+    if (!isset(formatosPlanta()[$fmt])) erro('Formato inválido.');
+    $st=$conn->prepare("INSERT INTO {$P}definicoes (chave,valor) VALUES ('planta.formato',?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('s',$fmt); $st->execute();
+    ok(['canvas'=>plantaConfig($conn)]);
 }
 if ($acao === 'mesa_pos') {
     // Guarda a posição (e opcionalmente a forma) de uma mesa na planta.
@@ -474,16 +496,28 @@ if ($acao === 'convidado_mesa') {
     $d=corpo(); $gid=(int)($d['id']??0);
     if (!$gid) erro('Pessoa inválida.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
-    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=? WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
-    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    // Mudar de mesa limpa o lado na mesa dos noivos (só faz sentido lá).
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?, lado_noivos=NULL WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
+    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL, lado_noivos=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    $st->execute();
+    ok(['mesas'=>listarMesas($conn)]);
+}
+if ($acao === 'convidado_lado') {
+    // Define o lado do convidado na mesa dos noivos: 'esq' (padrinhos), 'dir' (madrinhas) ou '' (centro/noivos).
+    $d=corpo(); $gid=(int)($d['id']??0);
+    if (!$gid) erro('Pessoa inválida.');
+    $lado = in_array($d['lado']??'', ['esq','dir'], true) ? $d['lado'] : null;
+    if ($lado){ $st=$conn->prepare("UPDATE {$P}convidados SET lado_noivos=? WHERE id=?"); $st->bind_param('si',$lado,$gid); }
+    else       { $st=$conn->prepare("UPDATE {$P}convidados SET lado_noivos=NULL WHERE id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convidado_list') {
     // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
-    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente,
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos,
                  c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
-                 mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome
+                 mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome,
+                 mp.especial AS mesa_pessoa_esp, mc.especial AS mesa_convite_esp
           FROM {$P}convidados g
           JOIN {$P}convites c ON g.convite_id=c.id
           LEFT JOIN {$P}mesas mp ON g.mesa_id=mp.id
@@ -494,6 +528,7 @@ if ($acao === 'convidado_list') {
         $r['convite_nome']  = nomeConvite($r); // usa nome_exibicao/lugares/sufixo
         $r['mesa_efetiva_id']   = $r['mesa_pessoa'] !== null ? (int)$r['mesa_pessoa'] : ($r['mesa_convite'] !== null ? (int)$r['mesa_convite'] : null);
         $r['mesa_efetiva_nome'] = $r['mesa_pessoa_nome'] ?: ($r['mesa_convite_nome'] ?: null);
+        $r['mesa_efetiva_esp']  = $r['mesa_pessoa'] !== null ? $r['mesa_pessoa_esp'] : $r['mesa_convite_esp'];
     }
     unset($r);
     ok(['convidados'=>$rows]);
