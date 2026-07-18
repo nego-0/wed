@@ -101,7 +101,7 @@ function defsPadrao(): array {
         'textos.lead' => "Há amores que, como o amanhecer, chegam devagar — e o nosso chegou para iluminar toda uma vida. É com o coração cheio de júbilo que {noiva} e {noivo} têm a honra de convidar V.\u{00A0}Exa. a partilhar a celebração do seu enlace matrimonial, e a alegria de um dia que ficará para sempre guardado na memória.",
         'textos.guest_label' => 'Convite reservado a',
         'textos.closing' => 'A vossa presença será o mais belo dos presentes — a luz e a música que tornarão eterno o mais feliz dos nossos dias.',
-        'textos.nota_parenteses' => 'O número entre parênteses corresponde ao número de pessoas para as quais o convite é destinado.',
+        'textos.nota_parenteses' => 'O número entre parênteses corresponde ao número de lugares para os quais o convite é destinado.',
         'gd.eyebrow' => 'Guarde esta data',
         'historia.visivel' => '1',
         'historia.eyebrow' => 'A nossa história',

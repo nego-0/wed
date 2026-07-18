@@ -81,7 +81,7 @@ Em `config.php` (não sensível):
 
 **Criar um convite.** Indique os nomes reais dos convidados; o sistema sugere automaticamente o nome a exibir (ex.: *Família Agostinho*, *Ana e Bruno*). Esse nome pode ser diferente dos nomes reais.
 
-**Regra do número entre parênteses.** Se o convite for para **uma só pessoa**, mostra apenas o nome. Para mais do que uma, acrescenta *(N pessoas)* — ou o texto que escrever no campo **Sufixo** (ex.: *e acompanhante*).
+**Regra do número entre parênteses.** Se o convite for para **um só lugar**, mostra apenas o nome. Para mais do que um, acrescenta *(N)* lugares — ou o texto que escrever no campo **Sufixo** (ex.: *e acompanhante*).
 
 **Tipo do convite.** *Digital*, *Físico* ou *Ambos*. Todos os convites têm sempre um link e um QR; o tipo serve para organizar a produção (marcar como *impresso* / *enviado*).
 
@@ -93,13 +93,13 @@ Em `config.php` (não sensível):
 
 **Dividir um convite por várias mesas.** Cada pessoa de um convite pode ficar numa mesa diferente. Há várias formas de o fazer: no painel de uma mesa (cada pessoa tem um seletor de mesa), **arrastando** um cartão da lista *Pessoas* (abaixo da planta) para uma mesa, **arrastando uma pessoa de uma mesa para outra diretamente na planta** (ao selecionar uma mesa, as suas pessoas surgem como pastilhas arrastáveis), ou no **editor do convite** (no painel principal, cada integrante tem um seletor de mesa — *"Mesa do convite"* por omissão). A mesa do convite continua a ser o padrão (para quem não tem mesa própria e para os lugares sem nome). A ocupação de cada mesa conta as pessoas pela sua mesa efetiva. No painel principal, um convite dividido aparece marcado como *"Dividido · N mesas"*.
 
-**Mesas no convite.** O convite (digital, físico e a página de confirmação) menciona **todas as mesas** dos seus integrantes, com o número de pessoas em cada uma — ex.: *"Mesas: A (1 pessoa) e B (4 pessoas)"*. No editor há a opção *"Mostrar o número de pessoas por mesa no convite digital"*, que liga/desliga o *(N pessoas)* junto a cada mesa nas páginas viradas ao convidado.
+**Mesas no convite.** O convite (digital, físico e a página de confirmação) menciona **todas as mesas** dos seus integrantes, com o número de lugares em cada uma — ex.: *"Mesas: A (1 lugar) e B (4 lugares)"*. No editor há a opção *"Mostrar o número de lugares por mesa no convite digital"*, que liga/desliga o *(N lugares)* junto a cada mesa nas páginas viradas ao convidado.
 
 **Painel de abas.** Ao lado do canvas há um conjunto de abas — *Pessoas*, *Convites*, *Sem mesa* e (ao selecionar uma mesa) a aba dessa mesa com os seus detalhes e convidados. As abas *Pessoas*/*Convites* têm pesquisa e filtro por estado de RSVP; cada cartão pode ser arrastado para uma mesa da planta. A criação de mesas fica num formulário compacto por cima das abas.
 
 **Ao posicionar as mesas** surgem **linhas-guia magnéticas** que alinham a mesa que arrasta com o centro das outras (ou do salão). Ao selecionar uma mesa, as suas pessoas aparecem como pastilhas na planta que se arrastam para outra mesa.
 
-**Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantas pessoas e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
+**Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantos lugares e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
 
 **Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real.
 

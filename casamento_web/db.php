@@ -414,15 +414,15 @@ function mesasDoConvite(mysqli $conn, array $c): array {
 }
 
 /**
- * Texto das mesas de um convite. Ex.: "A (1 pessoa) e B (4 pessoas)".
- * $comNumero controla se aparece o "(N pessoas)" ao lado de cada mesa.
+ * Texto das mesas de um convite. Ex.: "A (1 lugar) e B (4 lugares)".
+ * $comNumero controla se aparece o "(N lugares)" ao lado de cada mesa.
  */
 function textoMesas(array $lista, bool $comNumero = true): string {
     if (!$lista) return '';
     $partes = array_map(function ($m) use ($comNumero) {
         if (!$comNumero) return $m['nome'];
         $n = (int)$m['n'];
-        return $m['nome'] . ' (' . $n . ' ' . ($n === 1 ? 'pessoa' : 'pessoas') . ')';
+        return $m['nome'] . ' (' . $n . ' ' . ($n === 1 ? 'lugar' : 'lugares') . ')';
     }, $lista);
     if (count($partes) === 1) return $partes[0];
     $ultima = array_pop($partes);

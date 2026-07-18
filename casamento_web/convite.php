@@ -184,10 +184,10 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
                    com nomes, são as caixas "Quem vai comparecer?" que definem a contagem. */ ?>
           <?php if ((int)$c['lugares'] > 1 && count($c['membros']) <= 1): ?>
           <div class="campo">
-            <label>Quantas pessoas irão comparecer?</label>
+            <label>Quantos lugares irão ser ocupados?</label>
             <select id="confirmados">
               <?php for ($i=1;$i<=(int)$c['lugares'];$i++): ?>
-                <option value="<?= $i ?>"><?= $i ?> pessoa<?= $i>1?'s':'' ?></option>
+                <option value="<?= $i ?>"><?= $i ?> lugar<?= $i>1?'es':'' ?></option>
               <?php endfor; ?>
             </select>
           </div>

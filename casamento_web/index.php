@@ -204,12 +204,12 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 
       <label class="opcao-check">
         <input type="checkbox" id="c-mostrar-numero" checked onchange="atualizarPrevia()">
-        <span>Mostrar o número de pessoas entre parênteses no convite <small>(e a nota que o explica)</small></span>
+        <span>Mostrar o número de lugares entre parênteses no convite <small>(e a nota que o explica)</small></span>
       </label>
 
       <label class="opcao-check">
         <input type="checkbox" id="c-mostrar-num-mesa" checked>
-        <span>Mostrar o número de pessoas por mesa no convite digital <small>(ex.: Mesa: A (1 pessoa) e B (4 pessoas))</small></span>
+        <span>Mostrar o número de lugares por mesa no convite digital <small>(ex.: Mesa: A (1 lugar) e B (4 lugares))</small></span>
       </label>
 
       <div class="linha-form">
