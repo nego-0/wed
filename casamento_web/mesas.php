@@ -64,16 +64,17 @@ $CAS = casalInfo(defsAtuais($conn));
   .lg-vazia i{ background:#b7bbb5; } .lg-parcial i{ background:var(--gold); }
   .lg-cheia i{ background:#1f7a3d; } .lg-excede i{ background:var(--danger); }
 
-  /* Viewport com scroll (para o zoom) + planta que cresce dentro dela */
-  .planta-viewport{ position:relative; overflow:auto; max-height:72vh; padding:18px; border-radius:14px;
-    background:var(--ivory); border:1px solid var(--line); }
-  .planta{ position:relative; --z:1; width:calc(var(--z)*100%); aspect-ratio:16/10;
-    border-radius:14px; overflow:visible; transition:width .18s ease;
+  /* Canvas de tamanho FIXO (a moldura não muda com o zoom): é a janela de scroll.
+     O zoom amplia o "mundo" (.planta) dentro dela, sem alterar o tamanho do canvas. */
+  .planta-viewport{ position:relative; overflow:auto; width:100%; aspect-ratio:16/10; --z:1;
+    border-radius:14px; border:1px dashed var(--gold-soft); background:var(--ivory); }
+  .planta{ position:relative; width:calc(max(1, var(--z))*100%); aspect-ratio:16/10;
+    border-radius:14px; transition:width .18s ease; touch-action:none; user-select:none;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
       repeating-linear-gradient(0deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px),
       repeating-linear-gradient(90deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px);
-    background-clip:padding-box; border:1px dashed var(--gold-soft); touch-action:none; user-select:none; }
+    background-clip:padding-box; }
 
   /* Barra de zoom */
   .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
