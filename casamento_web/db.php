@@ -158,13 +158,18 @@ $conn->query("
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// A mesa (especial) dos noivos existe sempre por padrão: cria-se se não houver nenhuma.
-$rn = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1");
-if ($rn && $rn->num_rows === 0) {
-    $nomeN = 'Noivos'; $n = 2;
-    while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='" . $conn->real_escape_string($nomeN) . "'")->num_rows) $nomeN = 'Noivos ' . $n++;
-    $stN = $conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
-    $stN->bind_param('s', $nomeN); $stN->execute();
+// A mesa (especial) dos noivos existe por padrão: cria-se UMA vez (primeira utilização).
+// Depois fica eliminável — não volta a ser recriada automaticamente (repõe-se no botão da planta).
+$flag = $conn->query("SELECT valor FROM {$P}definicoes WHERE chave='noivos.criada' LIMIT 1");
+if ($flag && $flag->num_rows === 0) {
+    $rn = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1");
+    if ($rn && $rn->num_rows === 0) {
+        $nomeN = 'Noivos'; $n = 2;
+        while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='" . $conn->real_escape_string($nomeN) . "'")->num_rows) $nomeN = 'Noivos ' . $n++;
+        $stN = $conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
+        $stN->bind_param('s', $nomeN); $stN->execute();
+    }
+    $conn->query("INSERT INTO {$P}definicoes (chave,valor) VALUES ('noivos.criada','1') ON DUPLICATE KEY UPDATE valor='1'");
 }
 
 // ============================================================

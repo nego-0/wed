@@ -226,7 +226,7 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'convidado_papel','defs_save','def_upload'], true)) {
+                     'mesa_noivos','convidado_papel','defs_save','def_upload'], true)) {
     exigirCsrf();
 }
 
@@ -443,6 +443,17 @@ if ($acao === 'mesa_save') {
     $novoId = $id ?: $conn->insert_id;
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
 }
+if ($acao === 'mesa_noivos') {
+    // Repõe a mesa (especial) dos noivos, se tiver sido eliminada. Se já existir, devolve-a.
+    $ja = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1")->fetch_assoc();
+    if ($ja) { ok(['mesas'=>listarMesas($conn),'id'=>(int)$ja['id'],'existia'=>true]); }
+    $nome='Noivos'; $n=2;
+    while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='".$conn->real_escape_string($nome)."'")->num_rows) { $nome='Noivos '.$n++; }
+    $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
+    $st->bind_param('s',$nome); $st->execute();
+    $novoId=$conn->insert_id; // capturar antes de listarMesas() (que corre outras queries)
+    ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
+}
 if ($acao === 'mesa_pos') {
     // Guarda a posição (e opcionalmente a forma) de uma mesa na planta.
     $d=corpo(); $id=(int)($d['id']??0);
@@ -462,7 +473,6 @@ if ($acao === 'mesa_pos') {
 }
 if ($acao === 'mesa_delete') {
     $id=(int)($_GET['id']??0);
-    if (mesaEhNoivos($conn,$id)) erro('A mesa dos noivos não pode ser eliminada.');
     $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
     $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE mesa_id=$id"); // mesas individuais também
     $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();

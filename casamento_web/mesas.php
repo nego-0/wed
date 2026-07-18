@@ -232,6 +232,7 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="grp"><span class="lbl">Forma</span><div class="formas" id="nova-forma"></div></div>
     <div class="grp"><span class="lbl">Cor</span><div class="cores" id="nova-cor"></div></div>
     <button class="btn btn-ouro btn-sm" onclick="adicionarMesa()">+ Mesa</button>
+    <button class="btn btn-fantasma btn-sm" id="btn-noivos" style="display:none" onclick="adicionarNoivos()" title="Repor a mesa de honra dos noivos">⚭ Mesa dos noivos</button>
   </div>
 
   <div class="layout">
@@ -325,9 +326,9 @@ const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_i
   papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
 const ehNoivos=m=>m&&m.especial==='noivos';
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
-// A mesa dos noivos é propositadamente um pouco menor que as dos convidados.
+// A mesa dos noivos é propositadamente mais pequena que as dos convidados.
 function baseMesa(m){
-  if(ehNoivos(m)) return 62;
+  if(ehNoivos(m)) return 50;
   const t=m.tamanho;
   if(t==='p') return 62; if(t==='m') return 84; if(t==='g') return 108;
   const cap=+m.capacidade||4; return Math.max(58,Math.min(104, 58 + cap*3));
@@ -354,7 +355,11 @@ async function autoPosicionar(){
   await Promise.all(semPos.map(m=>salvarPos(m.id,m.pos_x,m.pos_y)));
 }
 
-function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); }
+function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); atualizarBtnNoivos(); }
+function atualizarBtnNoivos(){
+  const b=$('btn-noivos'); if(!b) return;
+  b.style.display = MESAS.some(ehNoivos) ? 'none' : ''; // só surge para repor, se tiver sido eliminada
+}
 
 function renderStats(){
   const nMesas=MESAS.length;
@@ -658,6 +663,10 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
         <option value="">+ Padrinho…</option>${optCand(candP)}</select>
       <select class="sel-conv" style="flex:1 1 120px" onchange="definirPapel(this.value,'madrinha'); this.value=''">
         <option value="">+ Madrinha…</option>${optCand(candM)}</select>
+    </div>
+
+    <div class="acoes-bloco">
+      <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
 }
 async function definirPapel(gid, papel){
@@ -685,6 +694,17 @@ async function adicionarMesa(){
   SEL=d.id||null; activeTab='mesa';
   renderTudo();
   toast('Mesa criada. Arraste-a para a posição.');
+}
+async function adicionarNoivos(){
+  if(MESAS.some(ehNoivos)) return;
+  const d=await api('mesa_noivos',{method:'POST',body:JSON.stringify({})});
+  if(!d.success) return toast(d.message||'Erro ao repor a mesa dos noivos.',true);
+  MESAS=normMesas(d.mesas);
+  await recarregarDados(); // recalcula a mesa efetiva dos padrinhos/madrinhas
+  await autoPosicionar();
+  SEL=d.id||null; activeTab='mesa';
+  renderTudo();
+  toast('Mesa dos noivos reposta.');
 }
 async function guardarMesaEd(){
   const m=MESAS.find(x=>x.id===SEL); if(!m) return;
