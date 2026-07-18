@@ -226,7 +226,7 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'mesa_noivos','convidado_papel','defs_save','def_upload'], true)) {
+                     'mesa_noivos','planta_size','convidado_papel','defs_save','def_upload'], true)) {
     exigirCsrf();
 }
 
@@ -428,7 +428,19 @@ const CORES_MESA  = ['neutra','verde','ouro','terracota','azul','ameixa','rosa',
 
 const TAMANHOS_MESA = ['auto','p','m','g'];
 
-if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn)]); }
+if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn), 'canvas'=>plantaConfig($conn)]); }
+if ($acao === 'planta_size') {
+    // Guarda as dimensões do canvas da planta (px), definidas ao arrastar as bordas.
+    $d=corpo();
+    $w = isset($d['largura']) && $d['largura']!=='' ? max(280, min(4000, (int)$d['largura'])) : null;
+    $h = isset($d['altura'])  && $d['altura']!==''  ? max(200, min(4000, (int)$d['altura']))  : null;
+    foreach (['planta.largura'=>$w, 'planta.altura'=>$h] as $chave=>$val) {
+        if ($val === null) { $conn->query("DELETE FROM {$P}definicoes WHERE chave='".$conn->real_escape_string($chave)."'"); continue; }
+        $st=$conn->prepare("INSERT INTO {$P}definicoes (chave,valor) VALUES (?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $sv=(string)$val; $st->bind_param('ss',$chave,$sv); $st->execute();
+    }
+    ok(['canvas'=>plantaConfig($conn)]);
+}
 if ($acao === 'mesa_save') {
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
     $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;

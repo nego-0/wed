@@ -65,16 +65,31 @@ $CAS = casalInfo(defsAtuais($conn));
   .lg-cheia i{ background:#1f7a3d; } .lg-excede i{ background:var(--danger); }
 
   /* Canvas de tamanho FIXO (a moldura não muda com o zoom): é a janela de scroll.
+     O tamanho é definido pelo utilizador (arrastar as bordas) e guardado na BD.
      O zoom amplia o "mundo" (.planta) dentro dela, sem alterar o tamanho do canvas. */
-  .planta-viewport{ position:relative; overflow:auto; width:100%; aspect-ratio:16/10; --z:1;
+  .canvas-wrap{ position:relative; display:inline-block; max-width:100%; }
+  .planta-viewport{ position:relative; box-sizing:border-box; overflow:auto; width:100%; height:56vh; --z:1;
     border-radius:14px; border:1px dashed var(--gold-soft); background:var(--ivory); }
-  .planta{ position:relative; width:calc(max(1, var(--z))*100%); aspect-ratio:16/10;
-    border-radius:14px; transition:width .18s ease; touch-action:none; user-select:none;
+  .planta{ position:relative; width:calc(max(1, var(--z))*100%); height:calc(max(1, var(--z))*100%);
+    border-radius:14px; transition:width .18s ease, height .18s ease; touch-action:none; user-select:none;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
       repeating-linear-gradient(0deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px),
       repeating-linear-gradient(90deg, transparent 0 39px, rgba(44,69,54,.05) 39px 40px);
     background-clip:padding-box; }
+
+  /* Pegas de redimensionamento do canvas (bordas) */
+  .rz{ position:absolute; z-index:6; background:transparent; touch-action:none; }
+  .rz-e{ top:0; right:-3px; width:12px; height:100%; cursor:ew-resize; }
+  .rz-s{ left:0; bottom:-3px; height:12px; width:100%; cursor:ns-resize; }
+  .rz-se{ right:-4px; bottom:-4px; width:20px; height:20px; cursor:nwse-resize; }
+  .rz-se::after{ content:""; position:absolute; right:3px; bottom:3px; width:11px; height:11px;
+    border-right:2px solid var(--gold); border-bottom:2px solid var(--gold);
+    border-bottom-right-radius:4px; opacity:.65; }
+  .rz-e:hover, .rz-s:hover{ background:rgba(180,134,74,.14); }
+  .rz-e:hover{ border-right:2px solid var(--gold); }
+  .rz-s:hover{ border-bottom:2px solid var(--gold); }
+  body.a-redimensionar{ cursor:nwse-resize; user-select:none; }
 
   /* Barra de zoom */
   .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
@@ -255,14 +270,19 @@ $CAS = casalInfo(defsAtuais($conn));
         <span class="lg-cheia"><i></i>Completa</span>
         <span class="lg-excede"><i></i>Excede</span>
       </div>
-      <div class="planta-viewport" id="planta-viewport">
-        <div class="planta" id="planta">
-          <div class="guia gv" id="guia-v"></div>
-          <div class="guia gh" id="guia-h"></div>
-          <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <div class="planta-viewport" id="planta-viewport">
+          <div class="planta" id="planta">
+            <div class="guia gv" id="guia-v"></div>
+            <div class="guia gh" id="guia-h"></div>
+            <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
+          </div>
         </div>
+        <div class="rz rz-e"  data-dir="e"  title="Arraste para ajustar a largura do canvas"></div>
+        <div class="rz rz-s"  data-dir="s"  title="Arraste para ajustar a altura do canvas"></div>
+        <div class="rz rz-se" data-dir="se" title="Arraste para redimensionar o canvas"></div>
       </div>
-      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes.</p>
+      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes. Arraste as <b>bordas do canvas</b> para o redimensionar.</p>
     </div>
 
     <!-- PAINEL DIREITO -->
@@ -295,12 +315,57 @@ async function api(action, opts={}){
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='pessoas';
 // Nível de zoom (fator aplicado ao canvas). A vista 100% usa todo o espaço do canvas (fator 1).
 let zoom=1;
+// Dimensões guardadas do canvas (px). null = automático.
+let CANVAS={largura:null, altura:null};
 
 function aplicarCanvas(){ $('planta').style.setProperty('--z', zoom); }
 function setZoom(z){
   zoom=+z;
   document.querySelectorAll('#zoombar button').forEach(b=>b.classList.toggle('on', +b.dataset.zoom===zoom));
   aplicarCanvas();
+}
+
+// Largura de conteúdo disponível no cartão (limite máximo do canvas).
+function larguraDisponivel(){
+  const cartao=$('planta-viewport').closest('.planta-cartao');
+  const cs=getComputedStyle(cartao);
+  return Math.floor(cartao.clientWidth - parseFloat(cs.paddingLeft||0) - parseFloat(cs.paddingRight||0));
+}
+// Aplica as dimensões guardadas (ou o automático) ao canvas.
+function aplicarTamanhoCanvas(){
+  const vp=$('planta-viewport'); const maxW=larguraDisponivel();
+  let w = CANVAS.largura ? Math.min(CANVAS.largura, maxW) : maxW;
+  w = Math.max(280, w);
+  let h = CANVAS.altura ? CANVAS.altura : Math.round(w*10/16);
+  h = Math.max(200, Math.min(2000, h));
+  vp.style.width=w+'px'; vp.style.height=h+'px';
+}
+// Redimensionar arrastando as bordas do canvas.
+let rz=null;
+function iniciarRz(e, dir){
+  e.preventDefault();
+  const vp=$('planta-viewport');
+  rz={dir, sx:e.clientX, sy:e.clientY, w:vp.offsetWidth, h:vp.offsetHeight, maxW:larguraDisponivel()};
+  document.body.classList.add('a-redimensionar');
+  window.addEventListener('pointermove', rzMove);
+  window.addEventListener('pointerup', rzUp, {once:true});
+}
+function rzMove(e){
+  if(!rz) return;
+  const vp=$('planta-viewport');
+  if(rz.dir.includes('e')){ vp.style.width =Math.max(280, Math.min(rz.maxW, rz.w+(e.clientX-rz.sx)))+'px'; }
+  if(rz.dir.includes('s')){ vp.style.height=Math.max(200, Math.min(2000,   rz.h+(e.clientY-rz.sy)))+'px'; }
+}
+async function rzUp(){
+  window.removeEventListener('pointermove', rzMove);
+  document.body.classList.remove('a-redimensionar');
+  if(!rz) return; rz=null;
+  const vp=$('planta-viewport');
+  CANVAS.largura=Math.round(vp.offsetWidth); CANVAS.altura=Math.round(vp.offsetHeight);
+  const d=await api('planta_size',{method:'POST',body:JSON.stringify({largura:CANVAS.largura, altura:CANVAS.altura})});
+  if(!d||!d.success) return toast((d&&d.message)||'Erro ao guardar as dimensões.',true);
+  if(d.canvas){ CANVAS={largura:numOuNull(d.canvas.largura), altura:numOuNull(d.canvas.altura)}; }
+  toast('Dimensões do canvas guardadas.');
 }
 
 const FORMAS=[['redonda','Redonda'],['oval','Oval'],['quadrada','Quadrada'],['retangular','Retangular'],['comprida','Comprida'],['ferradura','Ferradura']];
@@ -340,7 +405,8 @@ async function carregar(){
   const [dm,dc,dg]=await Promise.all([api('mesa_list'), api('convite_list'), api('convidado_list')]);
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
   MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
-  aplicarCanvas();
+  if(dm.canvas){ CANVAS={largura:numOuNull(dm.canvas.largura), altura:numOuNull(dm.canvas.altura)}; }
+  aplicarCanvas(); aplicarTamanhoCanvas();
   await autoPosicionar();
   renderTudo();
 }
@@ -811,6 +877,8 @@ $('nova-cor').innerHTML=htmlCores('neutra');
 ligarPicker($('nova-forma'),'forma',v=>novaForma=v);
 ligarPicker($('nova-cor'),'cor',v=>novaCor=v);
 $('zoombar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setZoom(b.dataset.zoom); });
+document.querySelectorAll('.rz').forEach(h=> h.addEventListener('pointerdown', e=> iniciarRz(e, h.dataset.dir)));
+window.addEventListener('resize', aplicarTamanhoCanvas);
 aplicarCanvas();
 
 carregar();

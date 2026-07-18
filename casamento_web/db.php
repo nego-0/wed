@@ -354,6 +354,22 @@ function mesaEhNoivos(mysqli $conn, int $id): bool {
     return $r && $r->num_rows > 0;
 }
 
+/**
+ * Dimensões guardadas do canvas da planta (largura/altura em px), definidas
+ * pelo utilizador ao arrastar as bordas. NULL = automático (por defeito).
+ */
+function plantaConfig(mysqli $conn): array {
+    global $P;
+    $cfg = ['largura' => null, 'altura' => null];
+    $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes WHERE chave IN ('planta.largura','planta.altura')");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $v = (int)$x['valor'];
+        if ($x['chave'] === 'planta.largura' && $v > 0) $cfg['largura'] = $v;
+        if ($x['chave'] === 'planta.altura'  && $v > 0) $cfg['altura']  = $v;
+    }
+    return $cfg;
+}
+
 /** Carrega um convite (por id ou código) já com os membros e o nome final. */
 function carregarConvite(mysqli $conn, $chave, string $por = 'id'): ?array {
     global $P;
