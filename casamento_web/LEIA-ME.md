@@ -99,7 +99,7 @@ Em `config.php` (não sensível):
 
 **Mesas no convite.** O convite (digital, físico e a página de confirmação) menciona **todas as mesas** dos seus integrantes, com o número de lugares em cada uma — ex.: *"Mesas: A (1 lugar) e B (4 lugares)"*. No editor há a opção *"Mostrar o número de lugares por mesa no convite digital"*, que liga/desliga o *(N lugares)* junto a cada mesa nas páginas viradas ao convidado.
 
-**Painel de abas.** Ao lado do canvas há um conjunto de abas — *Pessoas*, *Convites*, *Sem mesa* e (ao selecionar uma mesa) a aba dessa mesa com os seus detalhes e convidados. As abas *Pessoas*/*Convites* têm pesquisa e filtro por estado de RSVP; cada cartão pode ser arrastado para uma mesa da planta. A criação de mesas fica num formulário compacto por cima das abas.
+**Painel de abas.** Ao lado do canvas há um conjunto de abas — *Pessoas*, *Convites*, *Sem mesa* e (ao selecionar uma mesa) a aba dessa mesa com os seus detalhes e convidados. As abas *Pessoas*/*Convites* têm pesquisa e filtro por estado de RSVP; cada cartão pode ser arrastado para uma mesa da planta. A criação de mesas fica num formulário compacto por cima das abas. As listas longas do painel de uma mesa (mudar de mesa, trazer uma pessoa, sentar um convite, nomear padrinho/madrinha) são **dropdowns de pesquisa**: abrem uma caixa com campo de procura e resultados filtrados à medida que escreve.
 
 **Ao posicionar as mesas** surgem **linhas-guia magnéticas** que alinham a mesa que arrasta com o centro das outras (ou do salão). Ao selecionar uma mesa, as suas pessoas aparecem como pastilhas na planta que se arrastam para outra mesa.
 

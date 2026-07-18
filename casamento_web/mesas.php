@@ -228,11 +228,31 @@ $CAS = casalInfo(defsAtuais($conn));
   .sentado .nm{ flex:1; line-height:1.2; }
   .sel-mini{ flex:none; max-width:52%; font-size:.8rem; padding:.35rem .4rem; }
   .vazio-mini{ color:#9aa09a; font-size:.86rem; padding:.3rem 0; }
-  select.sel-conv{ width:100%; }
   .acoes-bloco{ display:flex; gap:.5rem; margin-top:.8rem; }
   .semmesa-chip{ display:inline-flex; align-items:center; gap:.35rem; background:var(--cream); border:1px solid var(--line);
     border-radius:50px; padding:.25rem .6rem; font-size:.8rem; margin:.15rem .2rem 0 0; }
   .rot{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; margin:.9rem 0 .3rem; }
+
+  /* Dropdown de pesquisa (substitui os <select> de listas longas) */
+  .combo{ position:relative; display:block; width:100%; }
+  .combo-btn{ width:100%; display:flex; align-items:center; gap:.4rem; text-align:left; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:.9rem;
+    padding:.5rem .6rem; border-radius:10px; line-height:1.2; }
+  .combo-btn:hover{ border-color:var(--gold-soft); }
+  .combo-btn .combo-txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .combo-btn .combo-cx{ margin-left:auto; color:#9aa09a; font-size:.7rem; flex:none; }
+  .combo.combo-inline{ flex:none; max-width:56%; min-width:120px; }
+  .combo.combo-inline .combo-btn{ font-size:.8rem; padding:.35rem .45rem; }
+  .combo-pop{ position:fixed; z-index:1200; background:#fff; border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 12px 30px rgba(22,38,30,.20); padding:.4rem; min-width:220px; }
+  .combo-pop[hidden]{ display:none; }
+  .combo-search{ width:100%; margin-bottom:.35rem; box-sizing:border-box; }
+  .combo-list{ max-height:244px; overflow:auto; display:flex; flex-direction:column; gap:.1rem; }
+  .combo-opt{ text-align:left; border:0; background:transparent; font-family:inherit; font-size:.86rem; color:var(--ink);
+    padding:.4rem .5rem; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; gap:.05rem; width:100%; }
+  .combo-opt:hover, .combo-opt.ativo{ background:var(--cream); }
+  .combo-opt .combo-sub{ font-size:.72rem; color:#8a8f88; }
+  .combo-vazio{ color:#9aa09a; font-size:.82rem; padding:.4rem .5rem; }
 </style>
 </head>
 <body>
@@ -668,6 +688,76 @@ function renderLista(){
   const cont=$('roster-conta'); if(cont) cont.textContent = total+unidade;
 }
 
+// ---------- dropdown de pesquisa (substitui os <select> longos) ----------
+function comboHTML(kind, arg, placeholder, cls){
+  return `<div class="combo ${cls||''}" data-kind="${kind}" data-arg="${arg??''}">
+    <button type="button" class="combo-btn"><span class="combo-txt">${esc(placeholder)}</span><span class="combo-cx">▾</span></button>
+    <div class="combo-pop" hidden>
+      <input type="text" class="combo-search" placeholder="Procurar…" autocomplete="off">
+      <div class="combo-list"></div>
+    </div>
+  </div>`;
+}
+function labelMesaPessoa(g){
+  if(g.mesa_pessoa==null) return g.mesa_convite_nome ? 'Segue o convite' : 'Sem mesa';
+  const m=MESAS.find(x=>x.id===g.mesa_pessoa); return m?m.nome:'Mesa';
+}
+// Opções de cada dropdown, conforme o seu tipo.
+function comboOpcoes(kind, arg){
+  if(kind==='mesa-pessoa'){
+    const g=CONVIDADOS.find(x=>x.id==arg);
+    const base={value:'', label:(g&&g.mesa_convite_nome)?('Segue o convite ('+g.mesa_convite_nome+')'):'Sem mesa'};
+    return [base].concat(MESAS.filter(m=>!ehNoivos(m)).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''))
+      .map(m=>({value:String(m.id), label:m.nome, sub:(m.ocupacao||0)+(m.capacidade?('/'+m.capacidade):'')+' lug.'})));
+  }
+  if(kind==='trazer'){
+    return CONVIDADOS.filter(g=>g.mesa_efetiva_id!==SEL)
+      .sort((a,b)=>((a.mesa_efetiva_id?1:0)-(b.mesa_efetiva_id?1:0))||(a.nome||'').localeCompare(b.nome||''))
+      .map(g=>({value:String(g.id), label:g.nome, sub:g.convite_nome+(g.mesa_efetiva_nome?(' · em '+g.mesa_efetiva_nome):' · sem mesa')}));
+  }
+  if(kind==='sentar'){
+    return CONVITES.filter(c=>+c.mesa_id!==SEL)
+      .sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''))
+      .map(c=>({value:String(c.id), label:c.nome_final, sub:c.lugares+' lug.'+(c.mesa_id?(' · '+(c.mesa_nome||'mesa')):' · sem mesa')}));
+  }
+  if(kind==='papel-add'){
+    return CONVIDADOS.filter(g=>g.papel!==arg).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''))
+      .map(g=>({value:String(g.id), label:g.nome, sub:g.convite_nome+(g.papel?(' · '+(g.papel==='padrinho'?'padrinho':'madrinha')):'')}));
+  }
+  return [];
+}
+function comboAcao(kind, arg, value){
+  if(kind==='mesa-pessoa') return moverPessoa(+arg, value);
+  if(kind==='trazer')      return trazerPessoa(value);
+  if(kind==='sentar')      return sentar(value);
+  if(kind==='papel-add')   return definirPapel(value, arg);
+}
+let comboAberto=null;
+function fecharCombo(){ if(comboAberto){ const p=comboAberto.querySelector('.combo-pop'); if(p) p.hidden=true; comboAberto=null; } }
+function abrirCombo(combo){
+  if(comboAberto===combo){ fecharCombo(); return; }
+  fecharCombo();
+  const btn=combo.querySelector('.combo-btn'), pop=combo.querySelector('.combo-pop');
+  const r=btn.getBoundingClientRect();
+  pop.style.left =Math.round(r.left)+'px';
+  pop.style.top  =Math.round(r.bottom+4)+'px';
+  pop.style.width=Math.max(220, Math.round(r.width))+'px';
+  pop.hidden=false; comboAberto=combo;
+  renderComboLista(combo, '');
+  const s=combo.querySelector('.combo-search'); s.value=''; setTimeout(()=>s.focus(), 0);
+  const pr=pop.getBoundingClientRect();
+  if(pr.bottom>window.innerHeight-8) pop.style.top=Math.max(8, Math.round(r.top-pr.height-4))+'px';
+}
+function renderComboLista(combo, q){
+  const lista=combo.querySelector('.combo-list');
+  q=(q||'').trim().toLowerCase();
+  const ops=comboOpcoes(combo.dataset.kind, combo.dataset.arg)
+    .filter(o=> !q || (o.label+' '+(o.sub||'')).toLowerCase().includes(q));
+  lista.innerHTML = ops.length ? ops.map(o=>
+    `<button type="button" class="combo-opt" data-value="${esc(o.value)}"><span>${esc(o.label)}</span>${o.sub?`<span class="combo-sub">${esc(o.sub)}</span>`:''}</button>`
+  ).join('') : '<div class="combo-vazio">Nada corresponde.</div>';
+}
+
 // ---------- detalhe da mesa (compacto, in-line) ----------
 function detalheHTML(){
   const m=MESAS.find(x=>x.id===SEL); if(!m) return '';
@@ -685,7 +775,6 @@ function detalheHTML(){
   const convFora=CONVITES.filter(c=>+c.mesa_id!==m.id)
     .sort((a,b)=>((a.mesa_id?1:0)-(b.mesa_id?1:0))||(a.nome_final||'').localeCompare(b.nome_final||''));
   const convAqui=CONVITES.filter(c=>+c.mesa_id===m.id);
-  const optOutrasMesas=g=>MESAS.filter(x=>!ehNoivos(x)).map(x=>`<option value="${x.id}" ${String(g.mesa_pessoa)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('');
   const optTam=t=>['','Automático','p','Pequena','m','Média','g','Grande'].reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${(m.tamanho||'')===v?'selected':''}>${a[i+1]}</option>`,'');
 
   if(ehNoivos(m)) return detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras);
@@ -716,25 +805,16 @@ function detalheHTML(){
       ${pessoas.length ? pessoas.map(g=>`
         <div class="sentado">
           <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
-          <select class="sel-mini" title="Mudar de mesa" onchange="moverPessoa(${g.id}, this.value)">
-            <option value="" ${g.mesa_pessoa==null?'selected':''}>${g.mesa_convite_nome?('Segue o convite ('+esc(g.mesa_convite_nome)+')'):'Sem mesa'}</option>
-            ${optOutrasMesas(g)}
-          </select>
+          ${comboHTML('mesa-pessoa', g.id, labelMesaPessoa(g), 'combo-inline')}
         </div>`).join('') : '<div class="vazio-mini">Ainda ninguém sentado nesta mesa.</div>'}
       ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
     </div>
 
     <div class="rot">Trazer uma pessoa para esta mesa</div>
-    <select class="sel-conv" onchange="trazerPessoa(this.value); this.value=''">
-      <option value="">Escolher pessoa…</option>
-      ${outras.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}${g.mesa_efetiva_nome?(' (em '+esc(g.mesa_efetiva_nome)+')'):' (sem mesa)'}</option>`).join('')}
-    </select>
+    ${comboHTML('trazer', '', 'Escolher pessoa…')}
 
     <div class="rot">Sentar convite inteiro nesta mesa</div>
-    <select class="sel-conv" onchange="sentar(this.value); this.value=''">
-      <option value="">Escolher convite…</option>
-      ${convFora.map(c=>`<option value="${c.id}">${esc(c.nome_final)} · ${c.lugares} lug.${c.mesa_id?(' (Mesa: '+esc(c.mesa_nome||'')+')'):' (sem mesa)'}</option>`).join('')}
-    </select>
+    ${comboHTML('sentar', '', 'Escolher convite…')}
     ${convAqui.length?`<div style="margin-top:.4rem">${convAqui.map(c=>`<span class="semmesa-chip">${esc(c.nome_final)}<button class="btn-ico" title="Retirar convite da mesa" onclick="retirarConvite(${c.id})">✕</button></span>`).join('')}</div>`:''}
 
     <div class="acoes-bloco">
@@ -756,9 +836,6 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
     </div>`;
   const bloco=(tit,arr)=>`<div class="rot">${tit} (${arr.length})</div>
     <div class="lista-sentados">${arr.length?arr.map(linhaPapel).join(''):'<div class="vazio-mini">Ainda ninguém.</div>'}</div>`;
-  const candP=CONVIDADOS.filter(g=>g.papel!=='padrinho');
-  const candM=CONVIDADOS.filter(g=>g.papel!=='madrinha');
-  const optCand=arr=>arr.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}</option>`).join('');
   return `
     <div class="mesa-form">
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
@@ -770,11 +847,9 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
     ${bloco('Madrinhas · ala direita', madrinhas)}
 
     <div class="rot">Nomear padrinho / madrinha</div>
-    <div class="mesa-form">
-      <select class="sel-conv" style="flex:1 1 120px" onchange="definirPapel(this.value,'padrinho'); this.value=''">
-        <option value="">+ Padrinho…</option>${optCand(candP)}</select>
-      <select class="sel-conv" style="flex:1 1 120px" onchange="definirPapel(this.value,'madrinha'); this.value=''">
-        <option value="">+ Madrinha…</option>${optCand(candM)}</select>
+    <div class="mesa-form" style="gap:.5rem">
+      <div style="flex:1 1 130px">${comboHTML('papel-add', 'padrinho', '+ Padrinho…')}</div>
+      <div style="flex:1 1 130px">${comboHTML('papel-add', 'madrinha', '+ Madrinha…')}</div>
     </div>
 
     <div class="acoes-bloco">
@@ -923,8 +998,20 @@ ligarPicker($('nova-forma'),'forma',v=>novaForma=v);
 ligarPicker($('nova-cor'),'cor',v=>novaCor=v);
 $('zoombar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setZoom(b.dataset.zoom); });
 document.querySelectorAll('.rz').forEach(h=> h.addEventListener('pointerdown', e=> iniciarRz(e, h.dataset.dir)));
-window.addEventListener('resize', ()=>{ aplicarTamanhoCanvas(); ajustarScrollCanvas(); });
-window.addEventListener('keydown', e=>{ if(e.key==='Escape' && maximizado) toggleMax(); });
+window.addEventListener('resize', ()=>{ fecharCombo(); aplicarTamanhoCanvas(); ajustarScrollCanvas(); });
+window.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(comboAberto) fecharCombo(); else if(maximizado) toggleMax(); } });
+
+// Dropdowns de pesquisa no painel de abas (delegação — o conteúdo é recriado a cada render).
+$('tab-body').addEventListener('click', e=>{
+  const opt=e.target.closest('.combo-opt');
+  if(opt){ const combo=opt.closest('.combo'); const {kind,arg}=combo.dataset; const v=opt.dataset.value||''; fecharCombo(); comboAcao(kind, arg, v); return; }
+  const btn=e.target.closest('.combo-btn');
+  if(btn){ abrirCombo(btn.closest('.combo')); }
+});
+$('tab-body').addEventListener('input', e=>{ const s=e.target.closest('.combo-search'); if(s) renderComboLista(s.closest('.combo'), s.value); });
+$('tab-body').addEventListener('scroll', fecharCombo, true);
+document.addEventListener('pointerdown', e=>{ if(comboAberto && !e.target.closest('.combo')) fecharCombo(); }, true);
+window.addEventListener('scroll', ()=>{ if(comboAberto) fecharCombo(); }, true);
 aplicarCanvas();
 
 carregar();
