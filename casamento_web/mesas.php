@@ -67,7 +67,7 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Viewport com scroll (para o zoom) + planta que cresce dentro dela */
   .planta-viewport{ position:relative; overflow:auto; max-height:72vh; padding:18px; border-radius:14px;
     background:var(--ivory); border:1px solid var(--line); }
-  .planta{ position:relative; --z:0.8; width:calc(var(--z)*100%); aspect-ratio:16/10;
+  .planta{ position:relative; --z:1; width:calc(var(--z)*100%); aspect-ratio:16/10;
     border-radius:14px; overflow:visible; transition:width .18s ease;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
@@ -105,7 +105,7 @@ $CAS = casalInfo(defsAtuais($conn));
     clip-path:polygon(0 0,30% 0,30% 42%,70% 42%,70% 0,100% 0,100% 100%,0 100%);
     justify-content:flex-end; padding-bottom:calc(var(--d)*0.14); }
   /* Mesa dos noivos — ilustração simbólica (alianças entrelaçadas), compacta */
-  .forma-noivos{ width:calc(var(--d)*1.22); height:calc(var(--d)*1.02); border-radius:16px;
+  .forma-noivos{ width:calc(var(--d)*1.08); height:calc(var(--d)*1.0); border-radius:16px;
     justify-content:flex-end; padding-bottom:calc(var(--d)*0.12); }
   .cor-noivos, .forma-noivos{ background:linear-gradient(150deg,#faf1db,#f0dcae);
     border-color:#B4864A; color:#5c4321; box-shadow:0 6px 20px rgba(180,134,74,.38); }
@@ -242,9 +242,9 @@ $CAS = casalInfo(defsAtuais($conn));
         <span class="titulo">Disposição do salão</span>
         <div class="planta-ctrls">
           <div class="zoombar" id="zoombar" title="Nível de zoom">
-            <button data-zoom="0.4" title="50% · vista ampla">50%</button>
-            <button data-zoom="0.8" class="on" title="100% · vista panorâmica">100%</button>
-            <button data-zoom="1.2" title="150% · vista de área">150%</button>
+            <button data-zoom="0.5" title="50% · vista ampla">50%</button>
+            <button data-zoom="1" class="on" title="100% · vista panorâmica (canvas completo)">100%</button>
+            <button data-zoom="1.5" title="150% · vista de área">150%</button>
           </div>
         </div>
       </div>
@@ -292,8 +292,8 @@ async function api(action, opts={}){
 }
 
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='pessoas';
-// Nível de zoom (fator aplicado ao canvas). A vista padrão (100%) foi reduzida em 20% -> 0.8.
-let zoom=0.8;
+// Nível de zoom (fator aplicado ao canvas). A vista 100% usa todo o espaço do canvas (fator 1).
+let zoom=1;
 
 function aplicarCanvas(){ $('planta').style.setProperty('--z', zoom); }
 function setZoom(z){
@@ -326,9 +326,9 @@ const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_i
   papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
 const ehNoivos=m=>m&&m.especial==='noivos';
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
-// A mesa dos noivos é propositadamente mais pequena que as dos convidados.
+// A mesa dos noivos tem a dimensão de uma mesa comum (tamanho geral).
 function baseMesa(m){
-  if(ehNoivos(m)) return 50;
+  if(ehNoivos(m)) return 78;
   const t=m.tamanho;
   if(t==='p') return 62; if(t==='m') return 84; if(t==='g') return 108;
   const cap=+m.capacidade||4; return Math.max(58,Math.min(104, 58 + cap*3));
