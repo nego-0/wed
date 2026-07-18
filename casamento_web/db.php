@@ -126,6 +126,12 @@ if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convidados ADD COLUMN lado_noivos VARCHAR(10) DEFAULT NULL AFTER mesa_id");
 }
 
+// Migração suave: papel do convidado (padrinho/madrinha) — deteta as alas dos noivos automaticamente
+$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'papel'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN papel VARCHAR(20) DEFAULT NULL AFTER lado_noivos");
+}
+
 // Migração suave: mesa especial (noivos) e tamanho manual da mesa
 foreach (['especial' => "VARCHAR(20) DEFAULT NULL", 'tamanho' => "VARCHAR(10) DEFAULT NULL"] as $coluna => $definicao) {
     $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
@@ -293,14 +299,20 @@ function listarMesas(mysqli $conn): array {
     $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho
                            FROM {$P}mesas ORDER BY (especial='noivos') DESC, nome")->fetch_all(MYSQLI_ASSOC);
     $idx = [];
-    foreach ($mesas as $i => $m) { $mesas[$i]['ocupacao'] = 0; $mesas[$i]['convites'] = 0; $idx[(int)$m['id']] = $i; }
+    $noivosId = 0;
+    foreach ($mesas as $i => $m) {
+        $mesas[$i]['ocupacao'] = 0; $mesas[$i]['convites'] = 0; $idx[(int)$m['id']] = $i;
+        if (($m['especial'] ?? '') === 'noivos') $noivosId = (int)$m['id'];
+    }
     $presenca = []; // mesaId => [conviteId => true] (para contar convites distintos por mesa)
 
-    // 1) Pessoas nomeadas na sua mesa efetiva (individual, senão a do convite).
-    $res = $conn->query("SELECT g.convite_id, COALESCE(g.mesa_id, c.mesa_id) AS eff
+    // 1) Pessoas nomeadas na sua mesa efetiva. Padrinhos/madrinhas sentam-se sempre
+    //    na mesa dos noivos (deteção automática pelo papel), se ela existir.
+    $res = $conn->query("SELECT g.convite_id, g.papel, COALESCE(g.mesa_id, c.mesa_id) AS eff
                          FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id = c.id");
     while ($r = $res->fetch_assoc()) {
         $eff = $r['eff'] !== null ? (int)$r['eff'] : 0;
+        if ($noivosId && in_array($r['papel'] ?? '', ['padrinho', 'madrinha'], true)) $eff = $noivosId;
         if ($eff && isset($idx[$eff])) {
             $mesas[$idx[$eff]]['ocupacao'] += 1;
             $presenca[$eff][(int)$r['convite_id']] = true;

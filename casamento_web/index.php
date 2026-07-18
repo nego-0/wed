@@ -25,9 +25,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .banner-import .txt{ flex:1 1 260px; }
   .banner-import h4{ margin-bottom:.2rem; }
   .banner-import p{ margin:0; font-size:.86rem; color:var(--text); }
-  .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; }
-  .membro-linha input[type=text]{ flex:1; min-width:0; }
-  .membro-linha .m-mesa{ flex:0 0 auto; max-width:42%; font-size:.85rem; padding:.45rem .5rem; }
+  .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; flex-wrap:wrap; }
+  .membro-linha input[type=text]{ flex:1 1 160px; min-width:0; }
+  .membro-linha .m-mesa{ flex:0 1 auto; max-width:38%; font-size:.85rem; padding:.45rem .5rem; }
+  .membro-linha .m-papel{ flex:0 1 auto; max-width:34%; font-size:.85rem; padding:.45rem .5rem; }
   .sugestoes{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0 .2rem; }
   .sugestao{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.25rem .7rem; font-size:.8rem; cursor:pointer; }
   .sugestao:hover{ background:var(--gold-pale); border-color:var(--gold-soft); }
@@ -490,7 +491,7 @@ function abrirConvite(c){
   $('c-msg').value = c?(c.msg_pessoal||''):'';
   $('membros').innerHTML='';
   const ms = c&&c.membros&&c.membros.length ? c.membros : [{nome:'',rsvp:'confirmado'}];
-  ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true, m.mesa_id||''));
+  ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true, m.mesa_id||'', m.papel||''));
   sincroPresencaMembros($('c-presenca').value);
   if(c){ $('bloco-link').style.display='block'; $('c-link').value=BASE+'/convite-digital.php?c='+c.codigo; $('c-link').dataset.codigo=c.codigo; }
   else { $('bloco-link').style.display='none'; }
@@ -502,11 +503,16 @@ function opcoesMesaMembro(selId){
   (MESAS||[]).forEach(m=>{ o+=`<option value="${m.id}" ${String(selId)===String(m.id)?'selected':''}>${esc(m.nome)}</option>`; });
   return o;
 }
-function addMembro(valor='', vai=true, mesaId=''){
+function opcoesPapelMembro(sel){
+  return ['','Convidado(a)','padrinho','Padrinho','madrinha','Madrinha']
+    .reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${sel===v?'selected':''}>${a[i+1]}</option>`,'');
+}
+function addMembro(valor='', vai=true, mesaId='', papel=''){
   const div=document.createElement('div'); div.className='membro-linha';
   div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}></label>
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
     <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
+    <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos">${opcoesPapelMembro(papel)}</select>
     <button class="btn-ico" type="button" onclick="this.parentElement.remove();renderSugestoes();atualizarPrevia()">✕</button>`;
   $('membros').appendChild(div);
 }
@@ -515,7 +521,8 @@ function membrosComPresenca(){
   return [...$('membros').querySelectorAll('.membro-linha')].map(row=>({
     nome: row.querySelector('input[type=text]').value.trim(),
     vai:  row.querySelector('.m-vai input')?.checked ?? true,
-    mesa_id: row.querySelector('.m-mesa') ? row.querySelector('.m-mesa').value : ''
+    mesa_id: row.querySelector('.m-mesa') ? row.querySelector('.m-mesa').value : '',
+    papel: row.querySelector('.m-papel') ? row.querySelector('.m-papel').value : ''
   })).filter(m=>m.nome);
 }
 // Mostra/oculta as marcações por pessoa conforme a presença escolhida

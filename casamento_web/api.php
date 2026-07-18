@@ -226,7 +226,7 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'mesa_noivos','mesa_canvas','convidado_lado','defs_save','def_upload'], true)) {
+                     'mesa_noivos','mesa_canvas','convidado_papel','defs_save','def_upload'], true)) {
     exigirCsrf();
 }
 
@@ -337,7 +337,7 @@ if ($acao === 'convite_save') {
 
     // Preserva estados (rsvp/presença/mesa individual) por nome, antes de reconstruir a lista de membros
     $anterior=[];
-    $r=$conn->query("SELECT nome,rsvp,presente,presente_em,mesa_id FROM {$P}convidados WHERE convite_id=$id");
+    $r=$conn->query("SELECT nome,rsvp,presente,presente_em,mesa_id,papel FROM {$P}convidados WHERE convite_id=$id");
     while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
 
     $presenca = in_array($d['presenca'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $d['presenca'] : '';
@@ -365,9 +365,15 @@ if ($acao === 'convite_save') {
         } else {
             $mesaMembro = isset($ant['mesa_id']) && $ant['mesa_id']!==null ? (int)$ant['mesa_id'] : null;
         }
-        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id)
-                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?)");
-        $q->bind_param('isisii',$id,$mn,$princ,$rsvp,$pres,$mesaMembro); $q->execute();
+        // Papel (padrinho/madrinha): se o editor o enviou, usa-o; senão preserva o anterior (por nome).
+        if (is_array($m) && array_key_exists('papel', $m)) {
+            $papelMembro = in_array($m['papel'], ['padrinho','madrinha'], true) ? $m['papel'] : null;
+        } else {
+            $papelMembro = in_array($ant['papel'] ?? '', ['padrinho','madrinha'], true) ? $ant['papel'] : null;
+        }
+        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id,papel)
+                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?,?)");
+        $q->bind_param('isisiis',$id,$mn,$princ,$rsvp,$pres,$mesaMembro,$papelMembro); $q->execute();
     }
     recalcularCheckin($conn,$id,$TS); // atualiza contadores de presença; não toca no RSVP
 
@@ -502,19 +508,20 @@ if ($acao === 'convidado_mesa') {
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
-if ($acao === 'convidado_lado') {
-    // Define o lado do convidado na mesa dos noivos: 'esq' (padrinhos), 'dir' (madrinhas) ou '' (centro/noivos).
+if ($acao === 'convidado_papel') {
+    // Define o papel do convidado: 'padrinho' (ala esquerda), 'madrinha' (ala direita) ou '' (nenhum).
+    // O papel deteta automaticamente as alas da mesa dos noivos.
     $d=corpo(); $gid=(int)($d['id']??0);
     if (!$gid) erro('Pessoa inválida.');
-    $lado = in_array($d['lado']??'', ['esq','dir'], true) ? $d['lado'] : null;
-    if ($lado){ $st=$conn->prepare("UPDATE {$P}convidados SET lado_noivos=? WHERE id=?"); $st->bind_param('si',$lado,$gid); }
-    else       { $st=$conn->prepare("UPDATE {$P}convidados SET lado_noivos=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    $papel = in_array($d['papel']??'', ['padrinho','madrinha'], true) ? $d['papel'] : null;
+    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=? WHERE id=?"); $st->bind_param('si',$papel,$gid); }
+    else        { $st=$conn->prepare("UPDATE {$P}convidados SET papel=NULL WHERE id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convidado_list') {
     // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
-    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos,
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos, g.papel,
                  c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
                  mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome,
                  mp.especial AS mesa_pessoa_esp, mc.especial AS mesa_convite_esp
@@ -524,11 +531,21 @@ if ($acao === 'convidado_list') {
           LEFT JOIN {$P}mesas mc ON c.mesa_id=mc.id
           ORDER BY c.nome_exibicao, g.principal DESC, g.nome";
     $rows=$conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+    // Mesa dos noivos (para a deteção automática de padrinhos/madrinhas).
+    $noivos = $conn->query("SELECT id, nome FROM {$P}mesas WHERE especial='noivos' LIMIT 1")->fetch_assoc();
     foreach ($rows as &$r) {
         $r['convite_nome']  = nomeConvite($r); // usa nome_exibicao/lugares/sufixo
-        $r['mesa_efetiva_id']   = $r['mesa_pessoa'] !== null ? (int)$r['mesa_pessoa'] : ($r['mesa_convite'] !== null ? (int)$r['mesa_convite'] : null);
-        $r['mesa_efetiva_nome'] = $r['mesa_pessoa_nome'] ?: ($r['mesa_convite_nome'] ?: null);
-        $r['mesa_efetiva_esp']  = $r['mesa_pessoa'] !== null ? $r['mesa_pessoa_esp'] : $r['mesa_convite_esp'];
+        $ehPad = in_array($r['papel'] ?? '', ['padrinho','madrinha'], true);
+        if ($ehPad && $noivos) {
+            // Padrinho/madrinha: sentado sempre na mesa dos noivos, na respetiva ala.
+            $r['mesa_efetiva_id']   = (int)$noivos['id'];
+            $r['mesa_efetiva_nome'] = $noivos['nome'];
+            $r['mesa_efetiva_esp']  = 'noivos';
+        } else {
+            $r['mesa_efetiva_id']   = $r['mesa_pessoa'] !== null ? (int)$r['mesa_pessoa'] : ($r['mesa_convite'] !== null ? (int)$r['mesa_convite'] : null);
+            $r['mesa_efetiva_nome'] = $r['mesa_pessoa_nome'] ?: ($r['mesa_convite_nome'] ?: null);
+            $r['mesa_efetiva_esp']  = $r['mesa_pessoa'] !== null ? $r['mesa_pessoa_esp'] : $r['mesa_convite_esp'];
+        }
     }
     unset($r);
     ok(['convidados'=>$rows]);

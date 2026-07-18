@@ -107,15 +107,15 @@ $FORMATOS = formatosPlanta();
   .forma-ferradura{ width:calc(var(--d)*1.6); height:calc(var(--d)*1.05); border-radius:16px 16px 8px 8px;
     clip-path:polygon(0 0,30% 0,30% 42%,70% 42%,70% 0,100% 0,100% 100%,0 100%);
     justify-content:flex-end; padding-bottom:calc(var(--d)*0.14); }
-  /* Mesa dos noivos — ilustração simbólica (alianças entrelaçadas) */
-  .forma-noivos{ width:calc(var(--d)*1.7); height:calc(var(--d)*1.12); border-radius:20px;
-    justify-content:flex-end; padding-bottom:calc(var(--d)*0.15); }
+  /* Mesa dos noivos — ilustração simbólica (alianças entrelaçadas), compacta */
+  .forma-noivos{ width:calc(var(--d)*1.22); height:calc(var(--d)*1.02); border-radius:16px;
+    justify-content:flex-end; padding-bottom:calc(var(--d)*0.12); }
   .cor-noivos, .forma-noivos{ background:linear-gradient(150deg,#faf1db,#f0dcae);
     border-color:#B4864A; color:#5c4321; box-shadow:0 6px 20px rgba(180,134,74,.38); }
-  .noivos-rings{ position:absolute; top:calc(var(--d)*0.14); left:50%; transform:translateX(-50%); display:flex; }
-  .noivos-rings i{ width:calc(var(--d)*0.36); height:calc(var(--d)*0.36); border-radius:50%;
-    border:calc(var(--d)*0.065) solid #B4864A; background:transparent; box-sizing:border-box; }
-  .noivos-rings i:last-child{ margin-left:calc(var(--d)*-0.14); border-color:#d0a75f; }
+  .noivos-rings{ position:absolute; top:calc(var(--d)*0.13); left:50%; transform:translateX(-50%); display:flex; }
+  .noivos-rings i{ width:calc(var(--d)*0.32); height:calc(var(--d)*0.32); border-radius:50%;
+    border:calc(var(--d)*0.058) solid #B4864A; background:transparent; box-sizing:border-box; }
+  .noivos-rings i:last-child{ margin-left:calc(var(--d)*-0.13); border-color:#d0a75f; }
 
   /* Alas de padrinhos (esq.) e madrinhas (dir.) junto à mesa dos noivos */
   .noivos-ala{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); z-index:16;
@@ -127,8 +127,7 @@ $FORMATOS = formatosPlanta();
   .noivos-ala .ala-p{ background:#fff; border:1px solid #d8c193; border-radius:50px;
     font-size:calc(var(--d)*0.14); padding:calc(var(--d)*0.05) calc(var(--d)*0.15); line-height:1.15;
     text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#5c4321;
-    cursor:grab; touch-action:none; user-select:none; box-shadow:0 2px 6px rgba(180,134,74,.18); }
-  body.a-arrastar-item .noivos-ala .ala-p{ pointer-events:none; }
+    user-select:none; box-shadow:0 2px 6px rgba(180,134,74,.18); }
   /* Cores (paleta) */
   .cor-neutra{ background:var(--cream); border-color:var(--gold-soft); color:var(--ink); }
   .cor-verde{ background:#e4f0e8; border-color:#2C4536; color:#17311f; }
@@ -344,12 +343,13 @@ const normMesas=a=>(a||[]).map(m=>({...m, id:+m.id, capacidade:numOuNull(m.capac
 const normConvites=a=>(a||[]).map(c=>({...c, id:+c.id, mesa_id:numOuNull(c.mesa_id), lugares:+c.lugares||0}));
 const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_id,
   mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id),
-  lado_noivos:g.lado_noivos||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
+  papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
 const ehNoivos=m=>m&&m.especial==='noivos';
 const mesaNoivos=()=>MESAS.find(ehNoivos)||null;
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
+// A mesa dos noivos é propositadamente um pouco menor que as dos convidados.
 function baseMesa(m){
-  if(ehNoivos(m)) return 96;
+  if(ehNoivos(m)) return 62;
   const t=m.tamanho;
   if(t==='p') return 62; if(t==='m') return 84; if(t==='g') return 108;
   const cap=+m.capacidade||4; return Math.max(58,Math.min(104, 58 + cap*3));
@@ -400,6 +400,7 @@ function renderStats(){
 
 function estadoOcup(m){
   const oc=+m.ocupacao||0, cap=+m.capacidade||0;
+  if(ehNoivos(m)) return oc>0?'cheia':'vazia'; // mesa de honra: sem alerta de "excede"
   if(cap>0 && oc>cap) return 'excede';
   if(cap>0 && oc===cap) return 'cheia';
   if(oc>0) return 'parcial';
@@ -423,26 +424,37 @@ function renderPlanta(){
     node.style.left=px+'%'; node.style.top=py+'%';
     if(noivos){
       node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="noivos-rings"><i></i><i></i></span>`+
-        `<span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
+        `<span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc||''}</span>`;
     } else {
       node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
     }
     planta.appendChild(node);
 
     if(noivos){
-      // Alas de padrinhos (esquerda) e madrinhas (direita).
-      [['esq','Padrinhos'],['dir','Madrinhas']].forEach(([lado,tit])=>{
-        const gente=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id && g.lado_noivos===lado);
+      // Alas de padrinhos (esquerda) e madrinhas (direita) — detetadas pelo papel do convidado.
+      [['esq','Padrinhos','padrinho'],['dir','Madrinhas','madrinha']].forEach(([lado,tit,pap])=>{
+        const gente=CONVIDADOS.filter(g=>g.papel===pap);
         if(!gente.length) return;
         const ala=document.createElement('div');
         ala.className='noivos-ala '+lado; ala.style.setProperty('--dbase', d+'px');
         ala.style.left=px+'%'; ala.style.top=py+'%';
         ala.innerHTML=`<div class="ala-tit">${tit}</div>`+gente.map(g=>{
           const prim=(g.nome||'').split(' ')[0];
-          return `<div class="ala-p mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</div>`;
+          return `<div class="ala-p" data-id="${g.id}" title="${esc(g.nome)} — ${tit}">${esc(prim)}</div>`;
         }).join('');
         planta.appendChild(ala);
       });
+      // Centro: pessoas sentadas na mesa dos noivos sem papel (ex.: o próprio casal).
+      const centro=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id && !g.papel);
+      if(centro.length){
+        const cl=document.createElement('div');
+        cl.className='mesa-membros'+(py>62?' acima':'');
+        cl.style.setProperty('--dbase', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
+        cl.innerHTML=centro.map(g=>{ const prim=(g.nome||'').split(' ')[0];
+          return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</span>`;
+        }).join('');
+        planta.appendChild(cl);
+      }
       return; // a mesa dos noivos usa alas em vez do agrupamento genérico
     }
 
@@ -652,35 +664,47 @@ function detalheHTML(){
       <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
 }
-// Painel da mesa dos noivos: alas de padrinhos (esq.) e madrinhas (dir.).
+// Painel da mesa dos noivos: alas detetadas pelo papel (padrinho/madrinha).
 function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
-  const porLado=l=>pessoas.filter(g=>(g.lado_noivos||'')===l);
-  const centro=porLado(''), esq=porLado('esq'), dir=porLado('dir');
-  const linha=g=>`
+  const padrinhos=CONVIDADOS.filter(g=>g.papel==='padrinho');
+  const madrinhas=CONVIDADOS.filter(g=>g.papel==='madrinha');
+  const centro=pessoas.filter(g=>!g.papel); // sentados na mesa dos noivos sem papel (o casal)
+  const linhaPapel=g=>`
     <div class="sentado">
       <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
-      <select class="sel-mini" title="Lado na mesa dos noivos" onchange="definirLado(${g.id}, this.value)">
-        <option value="" ${(g.lado_noivos||'')===''?'selected':''}>Centro (noivos)</option>
-        <option value="esq" ${g.lado_noivos==='esq'?'selected':''}>Padrinho (esq.)</option>
-        <option value="dir" ${g.lado_noivos==='dir'?'selected':''}>Madrinha (dir.)</option>
+      <select class="sel-mini" title="Papel do convidado" onchange="definirPapel(${g.id}, this.value)">
+        <option value="padrinho" ${g.papel==='padrinho'?'selected':''}>Padrinho (esq.)</option>
+        <option value="madrinha" ${g.papel==='madrinha'?'selected':''}>Madrinha (dir.)</option>
+        <option value="">Remover papel</option>
       </select>
     </div>`;
   const bloco=(tit,arr)=>`<div class="rot">${tit} (${arr.length})</div>
-    <div class="lista-sentados">${arr.length?arr.map(linha).join(''):'<div class="vazio-mini">Ainda ninguém.</div>'}</div>`;
+    <div class="lista-sentados">${arr.length?arr.map(linhaPapel).join(''):'<div class="vazio-mini">Ainda ninguém.</div>'}</div>`;
+  const candP=CONVIDADOS.filter(g=>g.papel!=='padrinho');
+  const candM=CONVIDADOS.filter(g=>g.papel!=='madrinha');
+  const optCand=arr=>arr.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}</option>`).join('');
   return `
     <div class="mesa-form">
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
       <input type="number" id="ed-cap" min="1" value="${cap||''}" placeholder="Lug." style="flex:0 1 70px">
       <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
     </div>
-    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos ⚭. Atribua os <b>padrinhos</b> à ala esquerda e as <b>madrinhas</b> à ala direita.</p>
+    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos ⚭. As alas são detetadas pelo <b>papel</b> de cada convidado — <b>padrinhos</b> à esquerda, <b>madrinhas</b> à direita. O papel também se define no editor do convite.</p>
     <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
-    ${bloco('⚭ Noivos (centro)', centro)}
-    ${bloco('Padrinhos · ala esquerda', esq)}
-    ${bloco('Madrinhas · ala direita', dir)}
-    ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
+    ${bloco('Padrinhos · ala esquerda', padrinhos)}
+    ${bloco('Madrinhas · ala direita', madrinhas)}
 
-    <div class="rot">Trazer alguém para esta mesa</div>
+    <div class="rot">Nomear padrinho / madrinha</div>
+    <div class="mesa-form">
+      <select class="sel-conv" style="flex:1 1 120px" onchange="definirPapel(this.value,'padrinho'); this.value=''">
+        <option value="">+ Padrinho…</option>${optCand(candP)}</select>
+      <select class="sel-conv" style="flex:1 1 120px" onchange="definirPapel(this.value,'madrinha'); this.value=''">
+        <option value="">+ Madrinha…</option>${optCand(candM)}</select>
+    </div>
+
+    ${bloco2('Noivos · centro', centro)}
+    ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
+    <div class="rot">Trazer alguém para o centro</div>
     <select class="sel-conv" onchange="trazerPessoa(this.value); this.value=''">
       <option value="">Escolher pessoa…</option>
       ${outras.map(g=>`<option value="${g.id}">${esc(g.nome)} · ${esc(g.convite_nome)}${g.mesa_efetiva_nome?(' (em '+esc(g.mesa_efetiva_nome)+')'):' (sem mesa)'}</option>`).join('')}
@@ -690,11 +714,21 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
       <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
 }
-async function definirLado(gid, lado){
-  const d=await api('convidado_lado',{method:'POST',body:JSON.stringify({id:+gid, lado})});
+// Bloco do centro: pessoas sem papel, com opção de sair da mesa.
+function bloco2(tit, arr){
+  return `<div class="rot">${tit} (${arr.length})</div>
+    <div class="lista-sentados">${arr.length?arr.map(g=>`
+      <div class="sentado">
+        <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+        <button class="btn-ico" title="Retirar do centro" onclick="moverPessoa(${g.id}, '')">✕</button>
+      </div>`).join(''):'<div class="vazio-mini">Ninguém ao centro.</div>'}</div>`;
+}
+async function definirPapel(gid, papel){
+  gid=+gid; if(!gid) return;
+  const d=await api('convidado_papel',{method:'POST',body:JSON.stringify({id:gid, papel})});
   if(!d.success) return toast(d.message||'Erro.',true);
   MESAS=normMesas(d.mesas); await recarregarDados(); renderTudo();
-  toast(lado==='esq'?'Padrinho (ala esquerda).':lado==='dir'?'Madrinha (ala direita).':'Ao centro, com os noivos.');
+  toast(papel==='padrinho'?'Padrinho (ala esquerda).':papel==='madrinha'?'Madrinha (ala direita).':'Papel removido.');
 }
 function ligarDetalhe(box){
   const f=box.querySelector('#ed-forma'), c=box.querySelector('#ed-cor');
@@ -720,6 +754,7 @@ async function adicionarNoivos(){
   const d=await api('mesa_noivos',{method:'POST',body:JSON.stringify({})});
   if(!d.success) return toast(d.message||'Erro ao criar a mesa dos noivos.',true);
   MESAS=normMesas(d.mesas);
+  await recarregarDados(); // recalcula a mesa efetiva dos padrinhos/madrinhas (agora que a mesa existe)
   await autoPosicionar();
   SEL=d.id||null; activeTab='mesa';
   renderTudo();
