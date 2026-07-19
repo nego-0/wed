@@ -276,6 +276,10 @@ if ($acao === 'convite_list') {
     $mesa=$_GET['mesa']??''; $busca=trim($_GET['busca']??'');
     $impresso=$_GET['impresso']??''; $enviado=$_GET['enviado']??'';
     $genero=$_GET['genero']??''; $brinde=$_GET['brinde']??'';
+    $temGen = colunaExiste($conn, "{$P}convidados", 'genero');
+    $temBri = colunaExiste($conn, "{$P}convidados", 'brinde');
+    $exprGen = $temGen ? "COALESCE(g.genero,'')" : "''";
+    $exprBri = $temBri ? "g.brinde" : "0";
     $w="WHERE 1=1"; $t=''; $p=[];
     if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
@@ -283,9 +287,9 @@ if ($acao === 'convite_list') {
     if ($impresso==='1') { $w.=" AND c.impresso=1"; }
     if ($impresso==='0') { $w.=" AND c.impresso=0 AND c.tipo IN ('fisico','ambos')"; }
     if ($enviado==='1')  { $w.=" AND c.enviado=1"; }
-    // Convites com pelo menos um integrante do género escolhido / que recebe brinde
-    if (in_array($genero,['m','f'],true)) { $w.=" AND EXISTS (SELECT 1 FROM {$P}convidados gg WHERE gg.convite_id=c.id AND gg.genero=?)"; $t.='s'; $p[]=$genero; }
-    if ($brinde==='1')                    { $w.=" AND EXISTS (SELECT 1 FROM {$P}convidados gb WHERE gb.convite_id=c.id AND gb.brinde=1)"; }
+    // Convites com pelo menos um integrante do género escolhido / que recebe brinde (só se as colunas existirem)
+    if ($temGen && in_array($genero,['m','f'],true)) { $w.=" AND EXISTS (SELECT 1 FROM {$P}convidados gg WHERE gg.convite_id=c.id AND gg.genero=?)"; $t.='s'; $p[]=$genero; }
+    if ($temBri && $brinde==='1')                    { $w.=" AND EXISTS (SELECT 1 FROM {$P}convidados gb WHERE gb.convite_id=c.id AND gb.brinde=1)"; }
     if ($mesa==='__SEM_MESA__') {
         // Com pelo menos um lugar por colocar: sem mesa de convite e com alguém (ou lugar sem nome) ainda por sentar.
         $w.=" AND c.mesa_id IS NULL AND ( EXISTS (SELECT 1 FROM {$P}convidados gs WHERE gs.convite_id=c.id AND gs.mesa_id IS NULL)
@@ -308,7 +312,7 @@ if ($acao === 'convite_list') {
                    m.nome
                  ) AS mesa_efetiva_nome,
                  GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt,
-                 GROUP_CONCAT(CONCAT_WS('\x1f', g.nome, COALESCE(g.genero,''), g.brinde)
+                 GROUP_CONCAT(CONCAT_WS('\x1f', g.nome, $exprGen, $exprBri)
                               ORDER BY g.principal DESC, g.nome SEPARATOR '\x1e') AS membros_det,
                  (SELECT COUNT(DISTINCT COALESCE(g2.mesa_id, c.mesa_id))
                     FROM {$P}convidados g2 WHERE g2.convite_id=c.id) AS mesas_distintas
@@ -371,10 +375,16 @@ if ($acao === 'convite_save') {
         $st->execute(); $id=$conn->insert_id;
     }
 
-    // Preserva estados (rsvp/presença/mesa individual) por nome, antes de reconstruir a lista de membros
+    // Preserva estados (rsvp/presença/mesa individual) por nome, antes de reconstruir a lista de membros.
+    // SELECT * para tolerar colunas que possam ainda não existir na BD (esquema por migrar).
     $anterior=[];
-    $r=$conn->query("SELECT nome,rsvp,presente,presente_em,mesa_id,papel,genero,brinde FROM {$P}convidados WHERE convite_id=$id");
-    while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
+    $r=$conn->query("SELECT * FROM {$P}convidados WHERE convite_id=$id");
+    if ($r) while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
+
+    // Colunas opcionais: só entram no INSERT se existirem (evita 500 por "Unknown column").
+    $temPapel  = colunaExiste($conn, "{$P}convidados", 'papel');
+    $temGenero = colunaExiste($conn, "{$P}convidados", 'genero');
+    $temBrinde = colunaExiste($conn, "{$P}convidados", 'brinde');
 
     $presenca = in_array($d['presenca'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $d['presenca'] : '';
 
@@ -418,9 +428,15 @@ if ($acao === 'convite_save') {
         } else {
             $brindeMembro = (int)($ant['brinde'] ?? 0) === 1 ? 1 : 0;
         }
-        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id,papel,genero,brinde)
-                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?,?,?,?)");
-        $q->bind_param('isisiissi',$id,$mn,$princ,$rsvp,$pres,$mesaMembro,$papelMembro,$genMembro,$brindeMembro); $q->execute();
+        // INSERT construído dinamicamente com as colunas existentes (tolerante a esquema por migrar).
+        $cols=['convite_id','nome','principal','rsvp','presente','presente_em','mesa_id'];
+        $plc =['?','?','?','?','?', ($pres?$TS:'NULL'), '?'];
+        $typ ='isisii'; $val=[$id,$mn,$princ,$rsvp,$pres,$mesaMembro];
+        if ($temPapel)  { $cols[]='papel';  $plc[]='?'; $typ.='s'; $val[]=$papelMembro; }
+        if ($temGenero) { $cols[]='genero'; $plc[]='?'; $typ.='s'; $val[]=$genMembro; }
+        if ($temBrinde) { $cols[]='brinde'; $plc[]='?'; $typ.='i'; $val[]=$brindeMembro; }
+        $q=$conn->prepare("INSERT INTO {$P}convidados (".implode(',',$cols).") VALUES (".implode(',',$plc).")");
+        if ($q) { $q->bind_param($typ, ...$val); $q->execute(); }
     }
     recalcularCheckin($conn,$id,$TS); // atualiza contadores de presença; não toca no RSVP
 
@@ -574,7 +590,10 @@ if ($acao === 'convidado_papel') {
 }
 if ($acao === 'convidado_list') {
     // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
-    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos, g.papel, g.genero, g.brinde,
+    // Colunas opcionais protegidas (tolerante a esquema por migrar).
+    $selGen = colunaExiste($conn, "{$P}convidados", 'genero') ? "g.genero" : "'' AS genero";
+    $selBri = colunaExiste($conn, "{$P}convidados", 'brinde') ? "g.brinde" : "0 AS brinde";
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos, g.papel, $selGen, $selBri,
                  c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
                  mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome,
                  mp.especial AS mesa_pessoa_esp, mc.especial AS mesa_convite_esp

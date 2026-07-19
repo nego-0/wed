@@ -132,14 +132,15 @@ if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convidados ADD COLUMN papel VARCHAR(20) DEFAULT NULL AFTER lado_noivos");
 }
 
-// Migração suave: género do convidado ('m'/'f'/NULL) e opção "Recebe Brinde"
+// Migração suave: género do convidado ('m'/'f'/NULL) e opção "Recebe Brinde".
+// Sem cláusula AFTER (não depende de outras colunas existirem) para ser robusta.
 $col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'genero'");
 if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN genero VARCHAR(1) DEFAULT NULL AFTER papel");
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN genero VARCHAR(1) DEFAULT NULL");
 }
 $col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'brinde'");
 if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN brinde TINYINT(1) DEFAULT 0 AFTER genero");
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN brinde TINYINT(1) DEFAULT 0");
 }
 
 // Migração suave: mesa especial (noivos) e tamanho manual da mesa
@@ -280,7 +281,8 @@ function recalcularCheckin(mysqli $conn, int $conviteId, string $tsSql = 'NOW()'
 /** Estatísticas globais para o painel. */
 function estatisticas(mysqli $conn): array {
     global $P;
-    $one = fn($sql) => (int)($conn->query($sql)->fetch_row()[0] ?? 0);
+    // Tolerante a queries que falhem (ex.: coluna ainda por migrar) — devolve 0 em vez de abortar.
+    $one = function($sql) use ($conn) { $r = @$conn->query($sql); return $r ? (int)($r->fetch_row()[0] ?? 0) : 0; };
     $s = [];
     $s['convites']     = $one("SELECT COUNT(*) FROM {$P}convites");
     $s['lugares']      = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites");
@@ -310,9 +312,11 @@ function estatisticas(mysqli $conn): array {
     $s['no_local']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE checkin_estado IN ('presente','parcial')");
     $s['mesas']        = $one("SELECT COUNT(*) FROM {$P}mesas");
     // Convidados nomeados por género e nº que recebe brinde
-    $s['pes_masculino'] = $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='m'");
-    $s['pes_feminino']  = $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='f'");
-    $s['pes_brinde']    = $one("SELECT COUNT(*) FROM {$P}convidados WHERE brinde=1");
+    $temGenColuna = colunaExiste($conn, "{$P}convidados", 'genero');
+    $temBriColuna = colunaExiste($conn, "{$P}convidados", 'brinde');
+    $s['pes_masculino'] = $temGenColuna ? $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='m'") : 0;
+    $s['pes_feminino']  = $temGenColuna ? $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='f'") : 0;
+    $s['pes_brinde']    = $temBriColuna ? $one("SELECT COUNT(*) FROM {$P}convidados WHERE brinde=1") : 0;
     return $s;
 }
 
@@ -358,6 +362,21 @@ function listarMesas(mysqli $conn): array {
     }
     foreach ($presenca as $mid => $set) { if (isset($idx[$mid])) $mesas[$idx[$mid]]['convites'] = count($set); }
     return $mesas;
+}
+
+/**
+ * Indica se uma coluna existe numa tabela (com cache por pedido).
+ * Torna o código tolerante a esquemas por migrar (uploads parciais em
+ * alojamento partilhado) — evita erros 500 por "Unknown column".
+ */
+function colunaExiste(mysqli $conn, string $tabela, string $coluna): bool {
+    static $cache = [];
+    $chave = $tabela . '.' . $coluna;
+    if (!array_key_exists($chave, $cache)) {
+        $r = @$conn->query("SHOW COLUMNS FROM `$tabela` LIKE '" . $conn->real_escape_string($coluna) . "'");
+        $cache[$chave] = ($r && $r->num_rows > 0);
+    }
+    return $cache[$chave];
 }
 
 /** Indica se uma mesa é a mesa (especial) dos noivos. */
