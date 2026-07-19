@@ -233,6 +233,11 @@ $CAS = casalInfo(defsAtuais($conn));
     border-radius:50px; padding:.25rem .6rem; font-size:.8rem; margin:.15rem .2rem 0 0; }
   .rot{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; margin:.9rem 0 .3rem; }
 
+  /* Ícones de género / brinde nas pastilhas com nomes */
+  .gi{ font-weight:700; line-height:1; }
+  .gi-m{ color:#4a6b7a; } .gi-f{ color:#b56b78; } .gi-b{ font-weight:400; }
+  .mp .gi-m, .mp .gi-f{ color:#eef3ee; } /* pastilhas verdes: ícone claro (a forma ♂/♀ distingue) */
+
   /* Dropdown de pesquisa (substitui os <select> de listas longas) */
   .combo{ position:relative; display:block; width:100%; }
   .combo-btn{ width:100%; display:flex; align-items:center; gap:.4rem; text-align:left; cursor:pointer;
@@ -454,7 +459,10 @@ const normMesas=a=>(a||[]).map(m=>({...m, id:+m.id, capacidade:numOuNull(m.capac
 const normConvites=a=>(a||[]).map(c=>({...c, id:+c.id, mesa_id:numOuNull(c.mesa_id), lugares:+c.lugares||0}));
 const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_id,
   mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id),
-  papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null}));
+  papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null, genero:g.genero||'', brinde:+g.brinde||0}));
+// Ícones sugestivos de género (e brinde) para as pastilhas com nomes.
+const genIco=g=> g==='m'?'<span class="gi gi-m" title="Masculino">♂</span> ':g==='f'?'<span class="gi gi-f" title="Feminino">♀</span> ':'';
+const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>':'';
 const ehNoivos=m=>m&&m.especial==='noivos';
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
 // A mesa dos noivos tem a dimensão de uma mesa comum (tamanho geral).
@@ -548,7 +556,7 @@ function renderPlanta(){
         ala.style.left=px+'%'; ala.style.top=py+'%';
         ala.innerHTML=`<div class="ala-tit">${tit}</div>`+gente.map(g=>{
           const prim=(g.nome||'').split(' ')[0];
-          return `<div class="ala-p" data-id="${g.id}" title="${esc(g.nome)} — ${tit}">${esc(prim)}</div>`;
+          return `<div class="ala-p" data-id="${g.id}" title="${esc(g.nome)} — ${tit}">${genIco(g.genero)}${esc(prim)}</div>`;
         }).join('');
         planta.appendChild(ala);
       });
@@ -563,7 +571,7 @@ function renderPlanta(){
         cl.className='mesa-membros'+(py>62?' acima':'');
         cl.style.setProperty('--dbase', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
         cl.innerHTML=pessoas.map(g=>{ const prim=(g.nome||'').split(' ')[0];
-          return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${esc(prim)}</span>`;
+          return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${genIco(g.genero)}${esc(prim)}</span>`;
         }).join('');
         planta.appendChild(cl);
       }
@@ -681,7 +689,7 @@ function renderLista(){
       const sem=g.mesa_efetiva_id==null;
       const meta=g.mesa_efetiva_nome?('em '+esc(g.mesa_efetiva_nome)):'sem mesa';
       return `<div class="chip-drag ${sem?'sem-mesa':''}" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}">
-        <span class="cd-nome">${esc(g.nome)}</span><span class="cd-meta">${esc(g.convite_nome)} · ${meta}</span></div>`;
+        <span class="cd-nome">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}</span><span class="cd-meta">${esc(g.convite_nome)} · ${meta}</span></div>`;
     }).join('');
   }
   box.innerHTML = html || `<div class="roster-vazio">${activeTab==='semmesa'?'Está tudo sentado. 🎉':'Nada corresponde aos filtros.'}</div>`;
@@ -804,7 +812,7 @@ function detalheHTML(){
     <div class="lista-sentados">
       ${pessoas.length ? pessoas.map(g=>`
         <div class="sentado">
-          <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+          <span class="nm">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
           ${comboHTML('mesa-pessoa', g.id, labelMesaPessoa(g), 'combo-inline')}
         </div>`).join('') : '<div class="vazio-mini">Ainda ninguém sentado nesta mesa.</div>'}
       ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
@@ -827,7 +835,7 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
   const madrinhas=CONVIDADOS.filter(g=>g.papel==='madrinha');
   const linhaPapel=g=>`
     <div class="sentado">
-      <span class="nm">${esc(g.nome)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+      <span class="nm">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
       <select class="sel-mini" title="Papel do convidado" onchange="definirPapel(${g.id}, this.value)">
         <option value="padrinho" ${g.papel==='padrinho'?'selected':''}>Padrinho (esq.)</option>
         <option value="madrinha" ${g.papel==='madrinha'?'selected':''}>Madrinha (dir.)</option>

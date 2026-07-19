@@ -27,8 +27,14 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .banner-import p{ margin:0; font-size:.86rem; color:var(--text); }
   .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; flex-wrap:wrap; }
   .membro-linha input[type=text]{ flex:1 1 160px; min-width:0; }
-  .membro-linha .m-mesa{ flex:0 1 auto; max-width:38%; font-size:.85rem; padding:.45rem .5rem; }
-  .membro-linha .m-papel{ flex:0 1 auto; max-width:34%; font-size:.85rem; padding:.45rem .5rem; }
+  .membro-linha .m-mesa{ flex:0 1 auto; max-width:34%; font-size:.85rem; padding:.45rem .5rem; }
+  .membro-linha .m-papel{ flex:0 1 auto; max-width:30%; font-size:.85rem; padding:.45rem .5rem; }
+  .membro-linha .m-genero{ flex:0 1 auto; max-width:26%; font-size:.85rem; padding:.45rem .5rem; }
+  .membro-linha .m-brinde{ display:inline-flex; align-items:center; gap:.25rem; font-size:.82rem; color:var(--text); white-space:nowrap; cursor:pointer; }
+  .membro-linha .m-brinde input{ width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
+  /* Ícones de género / brinde nas pastilhas */
+  .gi{ font-weight:700; line-height:1; }
+  .gi-m{ color:#4a6b7a; } .gi-f{ color:#b56b78; } .gi-b{ font-weight:400; }
   .sugestoes{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0 .2rem; }
   .sugestao{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.25rem .7rem; font-size:.8rem; cursor:pointer; }
   .sugestao:hover{ background:var(--gold-pale); border-color:var(--gold-soft); }
@@ -174,6 +180,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   <!-- FILTRO DE MESAS (chips) -->
   <div id="filtro-mesas" class="chips-mesa mb-4"></div>
 
+  <!-- FILTRO DE GÉNERO E BRINDE (chips) -->
+  <div id="filtro-genero" class="chips-mesa mb-4"></div>
+
   <!-- LISTA -->
   <div class="lista" id="lista"></div>
 </div>
@@ -304,7 +313,7 @@ const BASE = <?= json_encode(base_url()) ?>;
 const CSRF = <?= json_encode(csrfToken()) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
 let CONVITES = [], MESAS = [], STATS = {}, timer = null;
-let filtroTipo='', filtroLado='', filtroEstado='', filtroMesa='', filtroImpresso='';
+let filtroTipo='', filtroLado='', filtroEstado='', filtroMesa='', filtroImpresso='', filtroGenero='', filtroBrinde='';
 const SEM_MESA = '__SEM_MESA__'; // valor especial do filtro "sem mesa"
 
 // ---------- utilidades ----------
@@ -326,12 +335,13 @@ function debounceCarregar(){ clearTimeout(timer); timer=setTimeout(carregar,300)
 async function carregar(){
   const q = new URLSearchParams({
     tipo:filtroTipo, lado:filtroLado, estado:filtroEstado,
-    mesa:filtroMesa, busca:$('busca').value, impresso:filtroImpresso
+    mesa:filtroMesa, busca:$('busca').value, impresso:filtroImpresso,
+    genero:filtroGenero, brinde:filtroBrinde
   });
   const d = await api('convite_list&'+q.toString());
   if(!d.success) return toast('Erro ao carregar.', true);
   CONVITES=d.convites; MESAS=d.mesas; STATS=d.stats||{};
-  renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
+  renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderFiltroGenero(); renderDatalistMesas();
 }
 
 // Conjunto de ícones (SVG inline, traço fino)
@@ -393,7 +403,9 @@ function filtrarTipo(v){ if(filtroImpresso && v==='digital') filtroImpresso=''; 
 function filtrarLado(v){ filtroLado = (filtroLado===v?'':v); carregar(); }
 function filtrarImpresso(){ filtroImpresso = filtroImpresso==='1'?'':'1'; if(filtroImpresso==='1') filtroTipo=''; carregar(); }
 function filtrarMesa(v){ filtroMesa = (filtroMesa===v?'':v); carregar(); }
-function limparFiltros(){ filtroTipo=''; filtroLado=''; filtroEstado=''; filtroMesa=''; filtroImpresso=''; $('busca').value=''; carregar(); }
+function filtrarGenero(v){ filtroGenero = (filtroGenero===v?'':v); carregar(); }
+function filtrarBrinde(){ filtroBrinde = filtroBrinde==='1'?'':'1'; carregar(); }
+function limparFiltros(){ filtroTipo=''; filtroLado=''; filtroEstado=''; filtroMesa=''; filtroImpresso=''; filtroGenero=''; filtroBrinde=''; $('busca').value=''; carregar(); }
 
 // Seletores de ícones do modal (substituem os selects)
 const PICK = {
@@ -419,12 +431,16 @@ function tagEstado(e){
 }
 function iconeTipo(t){ return t==='fisico'?IC.envelope:(t==='ambos'?(IC.telemovel+IC.envelope):IC.telemovel); }
 function iconeLado(l){ return l==='noiva'?IC.noiva:(l==='ambos'?(IC.noivo+IC.noiva):IC.noivo); }
+// Ícones sugestivos de género (e brinde) para as pastilhas com nomes.
+const genIco=g=> g==='m'?'<span class="gi gi-m" title="Masculino">♂</span> ':g==='f'?'<span class="gi gi-f" title="Feminino">♀</span> ':'';
+const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>':'';
 
 function renderConvites(){
   const el=$('lista');
   if(!CONVITES.length){ el.innerHTML=`<div class="vazio"><div class="ico">✦</div><p>Ainda não há convites. Crie o primeiro ou importe a sua lista.</p></div>`; return; }
   el.innerHTML = CONVITES.map(c=>{
-    const membros = (c.membros||[]).map(m=>`<span class="membro-chip">${esc(m)}</span>`).join('');
+    const membros = (c.membros_det&&c.membros_det.length ? c.membros_det : (c.membros||[]).map(n=>({nome:n,genero:'',brinde:0})))
+      .map(m=>`<span class="membro-chip">${genIco(m.genero)}${esc(m.nome)}${brindeIco(m.brinde)}</span>`).join('');
     const confTxt = c.rsvp_confirmados!=null && c.rsvp_estado!=='pendente' ? ` · ${c.rsvp_confirmados}/${c.lugares} confirmados` : '';
     const presTxt = c.checkin_presentes>0 ? ` · <span style="color:var(--ok)">${c.checkin_presentes} no local</span>` : '';
     return `<div class="convite-row">
@@ -468,6 +484,16 @@ function renderFiltroMesas(){
     + chip(SEM_MESA, 'Sem mesa'+`<span class="chip-n">${semMesa}</span>`, filtroMesa===SEM_MESA)
     + MESAS.map(m=>chip(m.nome, esc(m.nome)+`<span class="chip-n">${m.ocupacao||0}</span>`, filtroMesa===m.nome)).join('');
 }
+function renderFiltroGenero(){
+  const box=$('filtro-genero'); if(!box) return;
+  const chip=(l,on,fn)=>`<button class="chip-m${on?' on':''}" onclick="${fn}">${l}</button>`;
+  box.innerHTML = `<span class="chips-lbl">Género</span>`
+    + chip('Todos', !filtroGenero, "filtrarGenero('')")
+    + chip('<span class="gi gi-m">♂</span> Masculino', filtroGenero==='m', "filtrarGenero('m')")
+    + chip('<span class="gi gi-f">♀</span> Feminino', filtroGenero==='f', "filtrarGenero('f')")
+    + `<span class="chips-lbl" style="margin-left:.7rem">Brinde</span>`
+    + chip('🎁 Recebe brinde', filtroBrinde==='1', "filtrarBrinde()");
+}
 function renderDatalistMesas(){ $('lista-mesas').innerHTML=MESAS.map(m=>`<option value="${esc(m.nome)}">`).join(''); }
 
 // ---------- modal convite ----------
@@ -491,7 +517,7 @@ function abrirConvite(c){
   $('c-msg').value = c?(c.msg_pessoal||''):'';
   $('membros').innerHTML='';
   const ms = c&&c.membros&&c.membros.length ? c.membros : [{nome:'',rsvp:'confirmado'}];
-  ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true, m.mesa_id||'', m.papel||''));
+  ms.forEach(m=>addMembro(m.nome||'', m.rsvp ? m.rsvp==='confirmado' : true, m.mesa_id||'', m.papel||'', m.genero||'', !!(+m.brinde)));
   sincroPresencaMembros($('c-presenca').value);
   if(c){ $('bloco-link').style.display='block'; $('c-link').value=BASE+'/convite-digital.php?c='+c.codigo; $('c-link').dataset.codigo=c.codigo; }
   else { $('bloco-link').style.display='none'; }
@@ -508,12 +534,18 @@ function opcoesPapelMembro(sel){
   return ['','Convidado(a)','padrinho','Padrinho','madrinha','Madrinha']
     .reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${sel===v?'selected':''}>${a[i+1]}</option>`,'');
 }
-function addMembro(valor='', vai=true, mesaId='', papel=''){
+function opcoesGeneroMembro(sel){
+  return ['','Género','m','♂ Masculino','f','♀ Feminino']
+    .reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${sel===v?'selected':''}>${a[i+1]}</option>`,'');
+}
+function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=false){
   const div=document.createElement('div'); div.className='membro-linha';
   div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}></label>
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
+    <select class="m-genero" title="Género do convidado">${opcoesGeneroMembro(genero)}</select>
     <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
     <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos">${opcoesPapelMembro(papel)}</select>
+    <label class="m-brinde" title="Recebe brinde"><input type="checkbox" ${brinde?'checked':''}> 🎁</label>
     <button class="btn-ico" type="button" onclick="this.parentElement.remove();renderSugestoes();atualizarPrevia()">✕</button>`;
   $('membros').appendChild(div);
 }
@@ -523,7 +555,9 @@ function membrosComPresenca(){
     nome: row.querySelector('input[type=text]').value.trim(),
     vai:  row.querySelector('.m-vai input')?.checked ?? true,
     mesa_id: row.querySelector('.m-mesa') ? row.querySelector('.m-mesa').value : '',
-    papel: row.querySelector('.m-papel') ? row.querySelector('.m-papel').value : ''
+    papel: row.querySelector('.m-papel') ? row.querySelector('.m-papel').value : '',
+    genero: row.querySelector('.m-genero') ? row.querySelector('.m-genero').value : '',
+    brinde: row.querySelector('.m-brinde input')?.checked ? 1 : 0
   })).filter(m=>m.nome);
 }
 // Mostra/oculta as marcações por pessoa conforme a presença escolhida

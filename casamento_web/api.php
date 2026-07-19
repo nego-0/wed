@@ -275,6 +275,7 @@ if ($acao === 'convite_list') {
     $tipo=$_GET['tipo']??''; $lado=$_GET['lado']??''; $estado=$_GET['estado']??'';
     $mesa=$_GET['mesa']??''; $busca=trim($_GET['busca']??'');
     $impresso=$_GET['impresso']??''; $enviado=$_GET['enviado']??'';
+    $genero=$_GET['genero']??''; $brinde=$_GET['brinde']??'';
     $w="WHERE 1=1"; $t=''; $p=[];
     if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
@@ -282,6 +283,9 @@ if ($acao === 'convite_list') {
     if ($impresso==='1') { $w.=" AND c.impresso=1"; }
     if ($impresso==='0') { $w.=" AND c.impresso=0 AND c.tipo IN ('fisico','ambos')"; }
     if ($enviado==='1')  { $w.=" AND c.enviado=1"; }
+    // Convites com pelo menos um integrante do género escolhido / que recebe brinde
+    if (in_array($genero,['m','f'],true)) { $w.=" AND EXISTS (SELECT 1 FROM {$P}convidados gg WHERE gg.convite_id=c.id AND gg.genero=?)"; $t.='s'; $p[]=$genero; }
+    if ($brinde==='1')                    { $w.=" AND EXISTS (SELECT 1 FROM {$P}convidados gb WHERE gb.convite_id=c.id AND gb.brinde=1)"; }
     if ($mesa==='__SEM_MESA__') {
         // Com pelo menos um lugar por colocar: sem mesa de convite e com alguém (ou lugar sem nome) ainda por sentar.
         $w.=" AND c.mesa_id IS NULL AND ( EXISTS (SELECT 1 FROM {$P}convidados gs WHERE gs.convite_id=c.id AND gs.mesa_id IS NULL)
@@ -304,6 +308,8 @@ if ($acao === 'convite_list') {
                    m.nome
                  ) AS mesa_efetiva_nome,
                  GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt,
+                 GROUP_CONCAT(CONCAT_WS('\x1f', g.nome, COALESCE(g.genero,''), g.brinde)
+                              ORDER BY g.principal DESC, g.nome SEPARATOR '\x1e') AS membros_det,
                  (SELECT COUNT(DISTINCT COALESCE(g2.mesa_id, c.mesa_id))
                     FROM {$P}convidados g2 WHERE g2.convite_id=c.id) AS mesas_distintas
           FROM {$P}convites c
@@ -314,7 +320,20 @@ if ($acao === 'convite_list') {
     if ($t) $st->bind_param($t, ...$p);
     $st->execute();
     $rows=$st->get_result()->fetch_all(MYSQLI_ASSOC);
-    foreach ($rows as &$r) { $r['nome_final']=nomeConvite($r); $r['membros']=$r['membros_txt']?explode('||',$r['membros_txt']):[]; unset($r['membros_txt']); }
+    foreach ($rows as &$r) {
+        $r['nome_final']=nomeConvite($r);
+        $r['membros']=$r['membros_txt']?explode('||',$r['membros_txt']):[];
+        // Detalhe por integrante (nome, género, brinde) para as pastilhas com ícones.
+        $det = (string)($r['membros_det'] ?? '');
+        $lista=[];
+        if ($det!=='') foreach (explode("\x1e", $det) as $linha) {
+            $c3=explode("\x1f", $linha);
+            $lista[]=['nome'=>$c3[0]??'', 'genero'=>$c3[1]??'', 'brinde'=>(int)($c3[2]??0)];
+        }
+        $r['membros_det']=$lista;
+        unset($r['membros_txt']);
+    }
+    unset($r);
     ok(['convites'=>$rows,'stats'=>estatisticas($conn),'mesas'=>listarMesas($conn)]);
 }
 
@@ -354,7 +373,7 @@ if ($acao === 'convite_save') {
 
     // Preserva estados (rsvp/presença/mesa individual) por nome, antes de reconstruir a lista de membros
     $anterior=[];
-    $r=$conn->query("SELECT nome,rsvp,presente,presente_em,mesa_id,papel FROM {$P}convidados WHERE convite_id=$id");
+    $r=$conn->query("SELECT nome,rsvp,presente,presente_em,mesa_id,papel,genero,brinde FROM {$P}convidados WHERE convite_id=$id");
     while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
 
     $presenca = in_array($d['presenca'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $d['presenca'] : '';
@@ -388,9 +407,20 @@ if ($acao === 'convite_save') {
         } else {
             $papelMembro = in_array($ant['papel'] ?? '', ['padrinho','madrinha'], true) ? $ant['papel'] : null;
         }
-        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id,papel)
-                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?,?)");
-        $q->bind_param('isisiis',$id,$mn,$princ,$rsvp,$pres,$mesaMembro,$papelMembro); $q->execute();
+        // Género ('m'/'f') e "Recebe Brinde": enviados pelo editor; senão preserva o anterior (por nome).
+        if (is_array($m) && array_key_exists('genero', $m)) {
+            $genMembro = in_array($m['genero'], ['m','f'], true) ? $m['genero'] : null;
+        } else {
+            $genMembro = in_array($ant['genero'] ?? '', ['m','f'], true) ? $ant['genero'] : null;
+        }
+        if (is_array($m) && array_key_exists('brinde', $m)) {
+            $brindeMembro = !empty($m['brinde']) ? 1 : 0;
+        } else {
+            $brindeMembro = (int)($ant['brinde'] ?? 0) === 1 ? 1 : 0;
+        }
+        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id,papel,genero,brinde)
+                           VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?,?,?,?)");
+        $q->bind_param('isisiisisi',$id,$mn,$princ,$rsvp,$pres,$mesaMembro,$papelMembro,$genMembro,$brindeMembro); $q->execute();
     }
     recalcularCheckin($conn,$id,$TS); // atualiza contadores de presença; não toca no RSVP
 
@@ -544,7 +574,7 @@ if ($acao === 'convidado_papel') {
 }
 if ($acao === 'convidado_list') {
     // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
-    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos, g.papel,
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos, g.papel, g.genero, g.brinde,
                  c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
                  mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome,
                  mp.especial AS mesa_pessoa_esp, mc.especial AS mesa_convite_esp

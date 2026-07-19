@@ -132,6 +132,16 @@ if ($col && $col->num_rows === 0) {
     $conn->query("ALTER TABLE {$P}convidados ADD COLUMN papel VARCHAR(20) DEFAULT NULL AFTER lado_noivos");
 }
 
+// Migração suave: género do convidado ('m'/'f'/NULL) e opção "Recebe Brinde"
+$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'genero'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN genero VARCHAR(1) DEFAULT NULL AFTER papel");
+}
+$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'brinde'");
+if ($col && $col->num_rows === 0) {
+    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN brinde TINYINT(1) DEFAULT 0 AFTER genero");
+}
+
 // Migração suave: mesa especial (noivos) e tamanho manual da mesa
 foreach (['especial' => "VARCHAR(20) DEFAULT NULL", 'tamanho' => "VARCHAR(10) DEFAULT NULL"] as $coluna => $definicao) {
     $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
