@@ -433,7 +433,7 @@ function renderConvites(){
         <div class="convite-nome">${esc(c.nome_final)}</div>
         <div class="convite-meta">
           <span>${tagEstado(c.rsvp_estado)}</span>
-          <span>${(+c.mesas_distintas>1)?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_nome?('Mesa: '+esc(c.mesa_nome)):'Sem mesa')}</span>
+          <span>${(+c.mesas_distintas>1)?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_efetiva_nome?('Mesa: '+esc(c.mesa_efetiva_nome)):'Sem mesa')}</span>
           <span>Cód: <strong>${c.codigo}</strong></span>
           ${c.telefone?`<span>${esc(c.telefone)}</span>`:''}
           ${(c.rsvp_mensagem&&c.rsvp_mensagem.trim())?`<span class="tem-msg" title="Mensagem: ${esc(c.rsvp_mensagem)}" onclick="abrirMensagens()">${IC.balao}</span>`:''}

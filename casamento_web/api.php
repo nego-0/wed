@@ -282,11 +282,27 @@ if ($acao === 'convite_list') {
     if ($impresso==='1') { $w.=" AND c.impresso=1"; }
     if ($impresso==='0') { $w.=" AND c.impresso=0 AND c.tipo IN ('fisico','ambos')"; }
     if ($enviado==='1')  { $w.=" AND c.enviado=1"; }
-    if ($mesa==='__SEM_MESA__') { $w.=" AND c.mesa_id IS NULL"; }
-    elseif ($mesa!=='')         { $w.=" AND m.nome=?"; $t.='s'; $p[]=$mesa; }
+    if ($mesa==='__SEM_MESA__') {
+        // Com pelo menos um lugar por colocar: sem mesa de convite e com alguém (ou lugar sem nome) ainda por sentar.
+        $w.=" AND c.mesa_id IS NULL AND ( EXISTS (SELECT 1 FROM {$P}convidados gs WHERE gs.convite_id=c.id AND gs.mesa_id IS NULL)
+                                        OR c.lugares > (SELECT COUNT(*) FROM {$P}convidados gn WHERE gn.convite_id=c.id) )";
+    }
+    elseif ($mesa!=='') {
+        // Presença EFETIVA nesta mesa: um membro sentado lá (mesa própria, senão a do convite),
+        // ou lugares sem nome de um convite cuja mesa é esta.
+        $w.=" AND ( EXISTS (SELECT 1 FROM {$P}convidados gm JOIN {$P}mesas mm ON mm.id=COALESCE(gm.mesa_id,c.mesa_id)
+                            WHERE gm.convite_id=c.id AND mm.nome=?)
+                  OR ( m.nome=? AND c.lugares > (SELECT COUNT(*) FROM {$P}convidados gc WHERE gc.convite_id=c.id) ) )";
+        $t.='ss'; $p[]=$mesa; $p[]=$mesa;
+    }
     if ($busca!==''){ $w.=" AND (c.nome_exibicao LIKE ? OR c.codigo LIKE ? OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.nome LIKE ?))";
                       $t.='sss'; $l="%$busca%"; $p[]=$l; $p[]=$l; $p[]=$l; }
     $sql="SELECT c.*, m.nome AS mesa_nome,
+                 COALESCE(
+                   (SELECT mm.nome FROM {$P}convidados g4 JOIN {$P}mesas mm ON mm.id=COALESCE(g4.mesa_id,c.mesa_id)
+                      WHERE g4.convite_id=c.id ORDER BY (g4.mesa_id IS NOT NULL) DESC, mm.nome LIMIT 1),
+                   m.nome
+                 ) AS mesa_efetiva_nome,
                  GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt,
                  (SELECT COUNT(DISTINCT COALESCE(g2.mesa_id, c.mesa_id))
                     FROM {$P}convidados g2 WHERE g2.convite_id=c.id) AS mesas_distintas
