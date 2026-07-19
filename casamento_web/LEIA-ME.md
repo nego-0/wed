@@ -81,7 +81,7 @@ Em `config.php` (não sensível):
 
 **Criar um convite.** Indique os nomes reais dos convidados; o sistema sugere automaticamente o nome a exibir (ex.: *Família Agostinho*, *Ana e Bruno*). Esse nome pode ser diferente dos nomes reais.
 
-**Género e brinde.** Cada integrante pode ter um **género** (masculino/feminino) e a opção **"Recebe Brinde"** 🎁, definidos no editor do convite. No painel há **filtros** por género e por "recebe brinde", e as **pastilhas com os nomes** (no painel e na gestão de mesas) mostram **ícones sugestivos**: ♂ (masculino), ♀ (feminino) e 🎁 para quem recebe brinde.
+**Género e brinde.** Cada integrante pode ter um **género** (masculino/feminino) e a opção **"Recebe Brinde"** 🎁, definidos no editor do convite. No painel há **cartões de estatística** para *Masculino*, *Feminino* e *Brindes* (com a contagem de convidados), que também servem de **filtro** ao clicar. As **pastilhas com os nomes** (no painel e na gestão de mesas) mostram **ícones sugestivos**: ♂ (masculino), ♀ (feminino) e 🎁 para quem recebe brinde.
 
 **Regra do número entre parênteses.** Se o convite for para **um só lugar**, mostra apenas o nome. Para mais do que um, acrescenta *(N)* lugares — ou o texto que escrever no campo **Sufixo** (ex.: *e acompanhante*).
 

@@ -180,9 +180,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   <!-- FILTRO DE MESAS (chips) -->
   <div id="filtro-mesas" class="chips-mesa mb-4"></div>
 
-  <!-- FILTRO DE GÉNERO E BRINDE (chips) -->
-  <div id="filtro-genero" class="chips-mesa mb-4"></div>
-
   <!-- LISTA -->
   <div class="lista" id="lista"></div>
 </div>
@@ -341,7 +338,7 @@ async function carregar(){
   const d = await api('convite_list&'+q.toString());
   if(!d.success) return toast('Erro ao carregar.', true);
   CONVITES=d.convites; MESAS=d.mesas; STATS=d.stats||{};
-  renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderFiltroGenero(); renderDatalistMesas();
+  renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
 }
 
 // Conjunto de ícones (SVG inline, traço fino)
@@ -356,7 +353,10 @@ const IC = {
   noivo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 14 L8 4.9 Q8 4.3 8.6 4.3 L15.4 4.3 Q16 4.3 16 4.9 L15.4 14"/><ellipse cx="12" cy="14" rx="8.6" ry="1.9"/><path d="M8.2 11.4 H15.8"/></svg>',
   noiva:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.4 Q12 13.4 20.5 16.4"/><path d="M4.8 16 L8 9.2 L10.4 13 L12 6.4 L13.6 13 L16 9.2 L19.2 16"/><circle cx="12" cy="5.6" r="1" fill="currentColor" stroke="none"/><circle cx="8" cy="8.4" r=".8" fill="currentColor" stroke="none"/><circle cx="16" cy="8.4" r=".8" fill="currentColor" stroke="none"/></svg>',
   balao:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>',
-  meio:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>'
+  meio:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>',
+  masculino:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="5"/><path d="M14.2 9.8 L20 4"/><path d="M15 4 H20 V9"/></svg>',
+  feminino:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M12 14 V21"/><path d="M9 18 H15"/></svg>',
+  brinde:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5.2 12 V20 H18.8 V12"/><path d="M12 8 V20"/><path d="M12 8 Q8 8 8 5.5 Q8 4 9.5 4 Q12 4.2 12 8 Q12 4.2 14.5 4 Q16 4 16 5.5 Q16 8 12 8"/></svg>'
 };
 
 function statCard(ic,n,sub,l,onclick,ativo,cls=''){
@@ -366,7 +366,7 @@ function statCard(ic,n,sub,l,onclick,ativo,cls=''){
 function renderStats(s){
   renderProgresso(s);
   const e=filtroEstado, t=filtroTipo, l=filtroLado;
-  const limpo = !e && !t && !l && !filtroImpresso && !filtroMesa && !$('busca').value;
+  const limpo = !e && !t && !l && !filtroImpresso && !filtroMesa && !filtroGenero && !filtroBrinde && !$('busca').value;
   const nc = n => n+(n===1?' convite':' convites');
   $('stats').innerHTML =
     statCard(IC.todos, s.lugares, nc(s.convites), 'Todos', "limparFiltros()", limpo)+
@@ -377,8 +377,12 @@ function renderStats(s){
     statCard(IC.envelope, s.pes_fisicos, nc(s.fisicos), 'Físicos', "filtrarTipo('fisico')", t==='fisico')+
     statCard(IC.impressora, s.pes_impressos, nc(s.impressos), 'Impressos', "filtrarImpresso()", filtroImpresso==='1')+
     statCard(IC.noivo, s.pes_noivos, nc(s.noivos), 'Noivo', "filtrarLado('noivo')", l==='noivo')+
-    statCard(IC.noiva, s.pes_noivas, nc(s.noivas), 'Noiva', "filtrarLado('noiva')", l==='noiva');
+    statCard(IC.noiva, s.pes_noivas, nc(s.noivas), 'Noiva', "filtrarLado('noiva')", l==='noiva')+
+    statCard(IC.masculino, s.pes_masculino||0, np(s.pes_masculino||0), 'Masculino', "filtrarGenero('m')", filtroGenero==='m')+
+    statCard(IC.feminino, s.pes_feminino||0, np(s.pes_feminino||0), 'Feminino', "filtrarGenero('f')", filtroGenero==='f','rosa')+
+    statCard(IC.brinde, s.pes_brinde||0, np(s.pes_brinde||0), 'Brindes', "filtrarBrinde()", filtroBrinde==='1','ouro');
 }
+const np = n => (+n===1?'convidado':'convidados');
 
 // Barra de progresso: preenchimento do número de convidados face à capacidade
 function renderProgresso(s){
@@ -483,16 +487,6 @@ function renderFiltroMesas(){
     + chip('', 'Todas', !filtroMesa)
     + chip(SEM_MESA, 'Sem mesa'+`<span class="chip-n">${semMesa}</span>`, filtroMesa===SEM_MESA)
     + MESAS.map(m=>chip(m.nome, esc(m.nome)+`<span class="chip-n">${m.ocupacao||0}</span>`, filtroMesa===m.nome)).join('');
-}
-function renderFiltroGenero(){
-  const box=$('filtro-genero'); if(!box) return;
-  const chip=(l,on,fn)=>`<button class="chip-m${on?' on':''}" onclick="${fn}">${l}</button>`;
-  box.innerHTML = `<span class="chips-lbl">Género</span>`
-    + chip('Todos', !filtroGenero, "filtrarGenero('')")
-    + chip('<span class="gi gi-m">♂</span> Masculino', filtroGenero==='m', "filtrarGenero('m')")
-    + chip('<span class="gi gi-f">♀</span> Feminino', filtroGenero==='f', "filtrarGenero('f')")
-    + `<span class="chips-lbl" style="margin-left:.7rem">Brinde</span>`
-    + chip('🎁 Recebe brinde', filtroBrinde==='1', "filtrarBrinde()");
 }
 function renderDatalistMesas(){ $('lista-mesas').innerHTML=MESAS.map(m=>`<option value="${esc(m.nome)}">`).join(''); }
 

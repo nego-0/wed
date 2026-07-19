@@ -420,7 +420,7 @@ if ($acao === 'convite_save') {
         }
         $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp,presente,presente_em,mesa_id,papel,genero,brinde)
                            VALUES (?,?,?,?,?,".($pres?$TS:'NULL').",?,?,?,?)");
-        $q->bind_param('isisiisisi',$id,$mn,$princ,$rsvp,$pres,$mesaMembro,$papelMembro,$genMembro,$brindeMembro); $q->execute();
+        $q->bind_param('isisiissi',$id,$mn,$princ,$rsvp,$pres,$mesaMembro,$papelMembro,$genMembro,$brindeMembro); $q->execute();
     }
     recalcularCheckin($conn,$id,$TS); // atualiza contadores de presença; não toca no RSVP
 

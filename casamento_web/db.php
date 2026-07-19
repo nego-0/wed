@@ -309,6 +309,10 @@ function estatisticas(mysqli $conn): array {
     $s['presentes']    = $one("SELECT COALESCE(SUM(checkin_presentes),0) FROM {$P}convites");
     $s['no_local']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE checkin_estado IN ('presente','parcial')");
     $s['mesas']        = $one("SELECT COUNT(*) FROM {$P}mesas");
+    // Convidados nomeados por género e nº que recebe brinde
+    $s['pes_masculino'] = $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='m'");
+    $s['pes_feminino']  = $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='f'");
+    $s['pes_brinde']    = $one("SELECT COUNT(*) FROM {$P}convidados WHERE brinde=1");
     return $s;
 }
 
