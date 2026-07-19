@@ -93,8 +93,10 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
       <?php endif; ?>
       <canvas class="qr" data-link="<?= htmlspecialchars($link) ?>"></canvas>
       <div class="cod"><?= htmlspecialchars($c['codigo']) ?></div>
-      <?php $distr = mesasDoConvite($conn, $c); if ($distr): ?>
-        <div class="mesa"><?= count($distr)>1?'Mesas':'Mesa' ?>: <?= htmlspecialchars(textoMesas($distr, true)) ?></div>
+      <?php $distr = mesasDoConvite($conn, $c); if ($distr):
+        // Mesma opção do convite digital: mostrar (ou não) o "(N lugares)" ao lado de cada mesa.
+        $comNumMesa = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1; ?>
+        <div class="mesa"><?= count($distr)>1?'Mesas':'Mesa' ?>: <?= htmlspecialchars(textoMesas($distr, $comNumMesa)) ?></div>
       <?php endif; ?>
       <div class="marca no-print" onclick="marcar(this,<?= $c['id'] ?>)">
         <span class="cx">✓</span><span class="txt"><?= $c['impresso']?'Impresso':'Marcar impresso' ?></span>

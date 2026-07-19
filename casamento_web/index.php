@@ -209,7 +209,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 
       <label class="opcao-check">
         <input type="checkbox" id="c-mostrar-num-mesa" checked>
-        <span>Mostrar o número de lugares por mesa no convite digital <small>(ex.: Mesa: A (1 lugar) e B (4 lugares))</small></span>
+        <span>Mostrar o número de lugares por mesa no convite (digital e físico) <small>(ex.: Mesa: A (1 lugar) e B (4 lugares))</small></span>
       </label>
 
       <div class="linha-form">
