@@ -95,7 +95,9 @@ if ($acao === 'rsvp_submit') {
             $mid = (int)($mm['id'] ?? 0);
             $ok  = !empty($mm['vai']);
             $tot++; if ($ok) $vai++;
-            $rs  = $ok ? 'confirmado' : 'recusado';
+            // Quem confirma fica 'confirmado'; quem não confirma fica 'pendente' (aguarda),
+            // para aparecer no card/filtro Pendentes. Recusa total trata-se no ramo 'nao'.
+            $rs  = $ok ? 'confirmado' : 'pendente';
             if ($mid) {
                 $q = $conn->prepare("UPDATE {$P}convidados SET rsvp=? WHERE id=? AND convite_id=?");
                 $q->bind_param('sii', $rs, $mid, $c['id']); $q->execute();
@@ -105,6 +107,9 @@ if ($acao === 'rsvp_submit') {
             // Estado derivado das escolhas por pessoa
             $confirm = $vai;
             $estado  = $vai <= 0 ? 'recusado' : ($vai >= $tot ? 'confirmado' : 'parcial');
+            // Caso terminal: alinha os membros ao estado (os não confirmados ficaram 'pendente' acima).
+            if ($estado === 'recusado')        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE convite_id=".(int)$c['id']);
+            elseif ($estado === 'confirmado')  $conn->query("UPDATE {$P}convidados SET rsvp='confirmado' WHERE convite_id=".(int)$c['id']);
         } else {
             // Sem lista nominal: usa o número indicado
             if ($confirm < 1) $confirm = 1;
@@ -423,7 +428,9 @@ if ($acao === 'convite_save') {
         // Estado RSVP de cada pessoa, conforme a presença escolhida no painel
         if     ($presenca==='confirmado') $rsvp='confirmado';
         elseif ($presenca==='recusado')   $rsvp='recusado';
-        elseif ($presenca==='parcial')  { $rsvp = $vai?'confirmado':'recusado'; if($vai)$vaiCount++; }
+        // Parcial: quem confirma fica 'confirmado'; quem ainda não confirmou fica 'pendente'
+        // (aguarda resposta), não 'recusado'. Assim aparece no card/filtro Pendentes.
+        elseif ($presenca==='parcial')  { $rsvp = $vai?'confirmado':'pendente'; if($vai)$vaiCount++; }
         elseif ($presenca==='pendente')   $rsvp='pendente';
         else                              $rsvp = $ant['rsvp'] ?? 'pendente'; // sem presença: preserva
         $pres=(int)($ant['presente'] ?? 0);
@@ -474,6 +481,10 @@ if ($acao === 'convite_save') {
                 // Presença exata: contagem e estado derivados das marcações individuais
                 $estado = $vaiCount<=0 ? 'recusado' : ($vaiCount>=$totMembros ? 'confirmado' : 'parcial');
                 $conn->query("UPDATE {$P}convites SET rsvp_estado='$estado', rsvp_confirmados=$vaiCount, rsvp_em=$TS WHERE id=$id");
+                // Se afinal o convite é totalmente confirmado/recusado, alinha os membros a esse estado
+                // (os não confirmados ficaram 'pendente' acima; aqui reconcilia-se o caso terminal).
+                if ($estado==='recusado')        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE convite_id=$id");
+                elseif ($estado==='confirmado')  $conn->query("UPDATE {$P}convidados SET rsvp='confirmado' WHERE convite_id=$id");
             } else {
                 $conn->query("UPDATE {$P}convites SET rsvp_estado='parcial', rsvp_confirmados=COALESCE(rsvp_confirmados,1), rsvp_em=$TS WHERE id=$id");
             }
