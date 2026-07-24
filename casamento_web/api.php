@@ -278,8 +278,19 @@ if ($acao === 'convite_list') {
     $genero=$_GET['genero']??''; $brinde=$_GET['brinde']??'';
     $temGen = colunaExiste($conn, "{$P}convidados", 'genero');
     $temBri = colunaExiste($conn, "{$P}convidados", 'brinde');
+    $temPapel = colunaExiste($conn, "{$P}convidados", 'papel');
     $exprGen = $temGen ? "COALESCE(g.genero,'')" : "''";
     $exprBri = $temBri ? "g.brinde" : "0";
+    // Id da mesa dos noivos: padrinhos/madrinhas sentam-se lá pelo papel (não por mesa_id).
+    $noivosId = 0;
+    if ($temPapel) { $nr=$conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1"); if ($nr && $row=$nr->fetch_row()) $noivosId=(int)$row[0]; }
+    // Mesa EFETIVA de um membro (alias): a dos noivos se for padrinho/madrinha, senão a própria/do convite.
+    $effMesa = function(string $a) use ($temPapel,$noivosId) {
+        return $temPapel
+            ? "CASE WHEN {$a}.papel IN ('padrinho','madrinha') THEN ".($noivosId?:'NULL')." ELSE COALESCE({$a}.mesa_id, c.mesa_id) END"
+            : "COALESCE({$a}.mesa_id, c.mesa_id)";
+    };
+    $temMesaExpr = fn(string $a) => $temPapel ? "({$a}.mesa_id IS NOT NULL OR {$a}.papel IN ('padrinho','madrinha'))" : "{$a}.mesa_id IS NOT NULL";
     $w="WHERE 1=1"; $t=''; $p=[];
     if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
@@ -302,24 +313,31 @@ if ($acao === 'convite_list') {
     }
     elseif ($mesa!=='') {
         // Presença EFETIVA nesta mesa: um membro sentado lá (mesa própria, senão a do convite),
-        // ou lugares sem nome de um convite cuja mesa é esta.
+        // ou lugares sem nome de um convite cuja mesa é esta. Se a mesa filtrada for a dos
+        // noivos, inclui também padrinhos/madrinhas (que lá se sentam pelo papel, não por mesa_id).
+        $exprPad = $temPapel
+            ? " OR EXISTS (SELECT 1 FROM {$P}convidados gp WHERE gp.convite_id=c.id AND gp.papel IN ('padrinho','madrinha')
+                           AND EXISTS (SELECT 1 FROM {$P}mesas mn WHERE mn.especial='noivos' AND mn.nome=?))"
+            : "";
         $w.=" AND ( EXISTS (SELECT 1 FROM {$P}convidados gm JOIN {$P}mesas mm ON mm.id=COALESCE(gm.mesa_id,c.mesa_id)
                             WHERE gm.convite_id=c.id AND mm.nome=?)
-                  OR ( m.nome=? AND c.lugares > (SELECT COUNT(*) FROM {$P}convidados gc WHERE gc.convite_id=c.id) ) )";
+                  OR ( m.nome=? AND c.lugares > (SELECT COUNT(*) FROM {$P}convidados gc WHERE gc.convite_id=c.id) )
+                  $exprPad )";
         $t.='ss'; $p[]=$mesa; $p[]=$mesa;
+        if ($temPapel) { $t.='s'; $p[]=$mesa; }
     }
     if ($busca!==''){ $w.=" AND (c.nome_exibicao LIKE ? OR c.codigo LIKE ? OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.nome LIKE ?))";
                       $t.='sss'; $l="%$busca%"; $p[]=$l; $p[]=$l; $p[]=$l; }
     $sql="SELECT c.*, m.nome AS mesa_nome,
                  COALESCE(
-                   (SELECT mm.nome FROM {$P}convidados g4 JOIN {$P}mesas mm ON mm.id=COALESCE(g4.mesa_id,c.mesa_id)
-                      WHERE g4.convite_id=c.id ORDER BY (g4.mesa_id IS NOT NULL) DESC, mm.nome LIMIT 1),
+                   (SELECT mm.nome FROM {$P}convidados g4 JOIN {$P}mesas mm ON mm.id={$effMesa('g4')}
+                      WHERE g4.convite_id=c.id ORDER BY {$temMesaExpr('g4')} DESC, mm.nome LIMIT 1),
                    m.nome
                  ) AS mesa_efetiva_nome,
                  GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR '||') AS membros_txt,
                  GROUP_CONCAT(CONCAT_WS('\x1f', g.nome, $exprGen, $exprBri)
                               ORDER BY g.principal DESC, g.nome SEPARATOR '\x1e') AS membros_det,
-                 (SELECT COUNT(DISTINCT COALESCE(g2.mesa_id, c.mesa_id))
+                 (SELECT COUNT(DISTINCT {$effMesa('g2')})
                     FROM {$P}convidados g2 WHERE g2.convite_id=c.id) AS mesas_distintas
           FROM {$P}convites c
           LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
