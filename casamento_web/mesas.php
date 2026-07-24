@@ -975,7 +975,8 @@ function mesaSob(e){ const el=document.elementFromPoint(e.clientX,e.clientY); re
 function moverArraste(e){
   posGhost(e);
   let node=mesaSob(e);
-  if(node && ehNoivos(MESAS.find(x=>x.id===+node.dataset.id))) node=null; // noivos não aceita arrasto
+  // A mesa dos noivos aceita PESSOAS (que se tornam padrinho/madrinha), mas não convites.
+  if(node && ehNoivos(MESAS.find(x=>x.id===+node.dataset.id)) && (!arrItem || arrItem.tipo!=='pessoa')) node=null;
   document.querySelectorAll('.mesa-node.drop-alvo').forEach(n=>{ if(n!==node) n.classList.remove('drop-alvo'); });
   if(node) node.classList.add('drop-alvo');
 }
@@ -990,7 +991,16 @@ async function largarArraste(e){
   if(!node || !item) return;
   const mid=+node.dataset.id;
   const alvo=MESAS.find(x=>x.id===mid);
-  if(ehNoivos(alvo)) return toast('Na mesa dos noivos só entram padrinhos e madrinhas (pelo papel).',true);
+  if(ehNoivos(alvo)){
+    // Largar na mesa dos noivos torna a pessoa padrinho/madrinha. Convites não entram.
+    if(item.tipo!=='pessoa') return toast('Na mesa dos noivos só entram padrinhos e madrinhas.',true);
+    const g=CONVIDADOS.find(x=>x.id===item.id);
+    // Género define o papel (♂ padrinho, ♀ madrinha); sem género, decide o lado onde se largou.
+    let papel = g&&g.genero==='m' ? 'padrinho' : g&&g.genero==='f' ? 'madrinha' : null;
+    if(!papel){ const r=node.getBoundingClientRect(); papel = (e.clientX < r.left + r.width/2) ? 'padrinho' : 'madrinha'; }
+    await definirPapel(item.id, papel);
+    return;
+  }
   const acao = item.tipo==='pessoa' ? 'convidado_mesa' : 'convite_mesa';
   const d=await api(acao,{method:'POST',body:JSON.stringify({id:item.id, mesa_id:mid})});
   if(!d.success) return toast(d.message||'Erro.',true);

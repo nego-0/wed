@@ -538,10 +538,28 @@ function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=fa
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
     <select class="m-genero" title="Género do convidado">${opcoesGeneroMembro(genero)}</select>
     <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
-    <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos">${opcoesPapelMembro(papel)}</select>
+    <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos" onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesPapelMembro(papel)}</select>
     <label class="m-brinde" title="Recebe brinde"><input type="checkbox" ${brinde?'checked':''}> 🎁</label>
     <button class="btn-ico" type="button" onclick="this.parentElement.remove();renderSugestoes();atualizarPrevia()">✕</button>`;
   $('membros').appendChild(div);
+  sincroMesaPapel(div);
+}
+// Padrinhos/madrinhas pertencem à mesa dos noivos (pelo papel); nesse caso a mesa
+// individual não se aplica — mostra "Mesa dos noivos" e desativa o seletor.
+function sincroMesaPapel(row){
+  if(!row) return;
+  const papelSel=row.querySelector('.m-papel'); const mesaSel=row.querySelector('.m-mesa');
+  if(!papelSel||!mesaSel) return;
+  const ehPapel = papelSel.value==='padrinho' || papelSel.value==='madrinha';
+  let opt=mesaSel.querySelector('option[data-noivos]');
+  if(ehPapel){
+    if(!opt){ opt=document.createElement('option'); opt.dataset.noivos='1'; opt.value=''; opt.textContent='Mesa dos noivos'; mesaSel.insertBefore(opt, mesaSel.firstChild); }
+    mesaSel.value=''; mesaSel.selectedIndex=[...mesaSel.options].indexOf(opt);
+    mesaSel.disabled=true;
+  } else {
+    if(opt) opt.remove();
+    mesaSel.disabled=false;
+  }
 }
 function nomesMembros(){ return [...$('membros').querySelectorAll('input[type=text]')].map(i=>i.value.trim()).filter(Boolean); }
 function membrosComPresenca(){

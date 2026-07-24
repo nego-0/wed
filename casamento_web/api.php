@@ -576,8 +576,10 @@ if ($acao === 'convidado_mesa') {
     if (!$gid) erro('Pessoa inválida.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
     if ($mesaId && mesaEhNoivos($conn,$mesaId)) erro('A mesa dos noivos só admite padrinhos e madrinhas (pelo papel).');
-    // Mudar de mesa limpa o lado na mesa dos noivos (só faz sentido lá).
-    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?, lado_noivos=NULL WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
+    // Sentar numa mesa normal tira a pessoa da mesa de honra: limpa o papel (padrinho/madrinha)
+    // e o lado. (papel só se limpa se a coluna existir — tolerante a esquema por migrar.)
+    $limpaPapel = colunaExiste($conn, "{$P}convidados", 'papel') ? ", papel=NULL" : "";
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?, lado_noivos=NULL$limpaPapel WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
     else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL, lado_noivos=NULL WHERE id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
@@ -588,7 +590,8 @@ if ($acao === 'convidado_papel') {
     $d=corpo(); $gid=(int)($d['id']??0);
     if (!$gid) erro('Pessoa inválida.');
     $papel = in_array($d['papel']??'', ['padrinho','madrinha'], true) ? $d['papel'] : null;
-    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=? WHERE id=?"); $st->bind_param('si',$papel,$gid); }
+    // Tornar-se padrinho/madrinha coloca a pessoa na mesa de honra: limpa a mesa individual.
+    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=?, mesa_id=NULL, lado_noivos=NULL WHERE id=?"); $st->bind_param('si',$papel,$gid); }
     else        { $st=$conn->prepare("UPDATE {$P}convidados SET papel=NULL WHERE id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
