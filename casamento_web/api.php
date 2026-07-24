@@ -283,7 +283,12 @@ if ($acao === 'convite_list') {
     $w="WHERE 1=1"; $t=''; $p=[];
     if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
-    if (in_array($estado,['pendente','confirmado','recusado','parcial'],true)) { $w.=" AND c.rsvp_estado=?"; $t.='s'; $p[]=$estado; }
+    // Filtro por estado: além do estado do convite, inclui convites com um integrante
+    // nesse estado (ex.: "pendentes" mostra também os parciais com gente ainda pendente).
+    if (in_array($estado,['pendente','confirmado','recusado'],true)) {
+        $w.=" AND (c.rsvp_estado=? OR EXISTS(SELECT 1 FROM {$P}convidados ge WHERE ge.convite_id=c.id AND ge.rsvp=?))";
+        $t.='ss'; $p[]=$estado; $p[]=$estado;
+    } elseif ($estado==='parcial') { $w.=" AND c.rsvp_estado='parcial'"; }
     if ($impresso==='1') { $w.=" AND c.impresso=1"; }
     if ($impresso==='0') { $w.=" AND c.impresso=0 AND c.tipo IN ('fisico','ambos')"; }
     if ($enviado==='1')  { $w.=" AND c.enviado=1"; }
