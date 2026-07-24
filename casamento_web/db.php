@@ -300,14 +300,20 @@ function estatisticas(mysqli $conn): array {
     $s['confirmados']  = $one("SELECT COUNT(*) FROM {$P}convites c WHERE " . $temEstado('confirmado'));
     $s['parciais']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE rsvp_estado='parcial'");
     $s['recusados']    = $one("SELECT COUNT(*) FROM {$P}convites c WHERE " . $temEstado('recusado'));
-    $s['pendentes']    = $one("SELECT COUNT(*) FROM {$P}convites c WHERE " . $temEstado('pendente'));
+    // Pendentes: totalmente pendentes + parciais (têm lugares por confirmar) + com algum integrante pendente.
+    $s['pendentes']    = $one("SELECT COUNT(*) FROM {$P}convites c WHERE c.rsvp_estado IN ('pendente','parcial')
+                               OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='pendente')");
     $s['lug_confirm']  = $one("SELECT COALESCE(SUM(rsvp_confirmados),0) FROM {$P}convites");
     // Convidados reais (pessoas) por situação. Pendentes/recusados = lugares dos convites
     // totalmente nesse estado + integrantes nesse estado em convites de OUTRO estado
     // (ex.: pendentes/recusados dentro de um convite "parcial"). Assim não se perdem nem duplicam.
     $s['pes_confirmados'] = $s['lug_confirm'];
+    // Pessoas pendentes = lugares dos convites totalmente pendentes + lugares por confirmar dos
+    // parciais (lugares - confirmados) + integrantes pendentes de convites de OUTRO estado.
+    // Grupos disjuntos por estado do convite -> sem duplicação.
     $s['pes_pendentes']   = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE rsvp_estado='pendente'")
-        + $one("SELECT COUNT(*) FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE g.rsvp='pendente' AND c.rsvp_estado<>'pendente'");
+        + $one("SELECT COALESCE(SUM(GREATEST(CAST(lugares AS SIGNED) - COALESCE(rsvp_confirmados,0), 0)),0) FROM {$P}convites WHERE rsvp_estado='parcial'")
+        + $one("SELECT COUNT(*) FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')");
     $s['pes_recusados']   = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE rsvp_estado='recusado'")
         + $one("SELECT COUNT(*) FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE g.rsvp='recusado' AND c.rsvp_estado<>'recusado'");
     $s['pes_digitais']    = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE tipo IN ('digital','ambos')");

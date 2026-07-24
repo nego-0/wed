@@ -301,7 +301,11 @@ if ($acao === 'convite_list') {
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
     // Filtro por estado: além do estado do convite, inclui convites com um integrante
     // nesse estado (ex.: "pendentes" mostra também os parciais com gente ainda pendente).
-    if (in_array($estado,['pendente','confirmado','recusado'],true)) {
+    if ($estado==='pendente') {
+        // Pendentes inclui os totalmente pendentes, os parciais (têm lugares por confirmar)
+        // e os que têm algum integrante ainda pendente.
+        $w.=" AND (c.rsvp_estado IN ('pendente','parcial') OR EXISTS(SELECT 1 FROM {$P}convidados ge WHERE ge.convite_id=c.id AND ge.rsvp='pendente'))";
+    } elseif (in_array($estado,['confirmado','recusado'],true)) {
         $w.=" AND (c.rsvp_estado=? OR EXISTS(SELECT 1 FROM {$P}convidados ge WHERE ge.convite_id=c.id AND ge.rsvp=?))";
         $t.='ss'; $p[]=$estado; $p[]=$estado;
     } elseif ($estado==='parcial') { $w.=" AND c.rsvp_estado='parcial'"; }
