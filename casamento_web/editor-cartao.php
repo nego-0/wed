@@ -23,13 +23,18 @@ $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
                    LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
                    WHERE c.tipo IN ('fisico','ambos') ORDER BY c.nome_exibicao LIMIT 1");
 $exemplo = $r ? $r->fetch_assoc() : null;
+$comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 if ($exemplo) {
-    $conv = ['nome' => nomeConviteVisivel($exemplo), 'mesas' => mesasDoConvite($conn, $exemplo)];
+    $conv = ['nome' => nomeParaCartao($exemplo, $comNumeroNome), 'mesas' => mesasDoConvite($conn, $exemplo)];
     $comLug = !isset($exemplo['mostrar_num_mesa']) || (int)$exemplo['mostrar_num_mesa'] === 1;
 } else {
     $conv = ['nome' => 'Família Agostinho', 'mesas' => [['nome'=>'Mesa Luar','n'=>1], ['nome'=>'Mesa Solar','n'=>4]]];
     $comLug = true;
 }
+
+$nomesProva = $exemplo
+    ? ['com' => nomeParaCartao($exemplo, true), 'sem' => nomeParaCartao($exemplo, false)]
+    : ['com' => $conv['nome'], 'sem' => $conv['nome']];
 
 // Trepadeiras de todas as folhagens: trocar de folhagem não volta ao servidor.
 $ramosJs = [];
@@ -40,7 +45,8 @@ $camposPorCamada = [
     'abertura'  => [['cartao.abertura', 'Texto de abertura', 'area', 'abertura']],
     'nomes'     => [['casal.noiva', 'Nome da noiva', 'texto', 'noiva'], ['casal.noivo', 'Nome do noivo', 'texto', 'noivo']],
     'frase'     => [['cartao.frase_convite', 'Frase de convite', 'area', 'frase']],
-    'convidado' => [['cartao.reservado', 'Rótulo', 'texto', 'reservado']],
+    'convidado' => [['cartao.reservado', 'Rótulo', 'texto', 'reservado'],
+                    ['cartao.numero_no_nome', 'Mostrar o (N) de lugares no nome', 'bool', '']],
     'logistica' => [['cartao.civil_titulo', 'Cerimónia', 'texto', 'civil_titulo'],
                     ['cartao.civil_hora', 'Hora da cerimónia (HH:MM)', 'hora', ''],
                     ['evento.venue_titulo', 'Receção', 'texto', 'copo_titulo'],
@@ -155,6 +161,7 @@ const RAMOS    = <?= json_encode($ramosJs, JSON_UNESCAPED_UNICODE) ?>;
 const CAMADAS  = <?= json_encode(cartaoCamadas(), JSON_UNESCAPED_UNICODE) ?>;
 const CAMPOS   = <?= json_encode($camposPorCamada, JSON_UNESCAPED_UNICODE) ?>;
 const ORNAMENTOS = ['ramos','volutas','moldura','floreados'];   // camadas sem texto
+const NOMES_PROVA = <?= json_encode($nomesProva, JSON_UNESCAPED_UNICODE) ?>;
 const MESES    = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIAS     = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 
@@ -166,7 +173,7 @@ let est = {
   textos:   <?= json_encode(array_intersect_key($defs, array_flip([
                  'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.civil_titulo',
                  'cartao.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
-                 'evento.venue_titulo','evento.local','evento.hora','evento.data'])), JSON_UNESCAPED_UNICODE) ?>
+                 'evento.venue_titulo','evento.local','evento.hora','evento.data','cartao.numero_no_nome'])), JSON_UNESCAPED_UNICODE) ?>
 };
 const original = JSON.parse(JSON.stringify(est));
 let sujo = false, selecionada = null, ferramenta = 'mover';
@@ -244,6 +251,13 @@ function renderProps(){
   }
   $('props').innerHTML = `<div class="vazio-painel" style="margin-bottom:.6rem"><b>${rot}</b></div>` + campos.map(([chave, rotulo, tipo]) => {
     const v = est.textos[chave] ?? '';
+    if (tipo === 'bool') {
+      return `<div class="campo"><label style="display:flex;align-items:center;gap:.45rem;text-transform:none;letter-spacing:0">
+        <input type="checkbox" data-chave="${chave}" ${String(v)==='1'?'checked':''} onchange="editarBool(this)"
+               style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer">
+        ${rotulo}</label>
+        <div class="ajuda">No cartão, os lugares já aparecem por baixo de cada mesa.</div></div>`;
+    }
     const ctl = tipo === 'area'
       ? `<textarea data-chave="${chave}" oninput="editarTexto(this)">${escaparHtml(v)}</textarea>`
       : `<input type="${tipo==='data'?'date':(tipo==='hora'?'time':'text')}" data-chave="${chave}" value="${escaparAttr(v)}" oninput="editarTexto(this)">`;
@@ -256,6 +270,12 @@ function escaparAttr(s){ return String(s).replace(/["&<>]/g, c => ({'"':'&quot;'
 // Escreve no cartão à medida que se escreve no campo
 function editarTexto(el){
   const chave = el.dataset.chave, valor = el.value;
+  est.textos[chave] = valor;
+  pintarTexto(chave, valor);
+  marcarSujo(true);
+}
+function editarBool(el){
+  const chave = el.dataset.chave, valor = el.checked ? '1' : '0';
   est.textos[chave] = valor;
   pintarTexto(chave, valor);
   marcarSujo(true);
@@ -277,6 +297,11 @@ function pintarTexto(chave, valor){
   if (chave === 'evento.hora' || chave === 'evento.local') {
     const n = c.querySelector('.ct-detalhe-2');
     if (n) n.innerHTML = escaparHtml(est.textos['evento.local'] || '') + '<br>às ' + horaPt(est.textos['evento.hora'] || '');
+    return;
+  }
+  if (chave === 'cartao.numero_no_nome') {
+    const n = c.querySelector('.ct-convidado');
+    if (n) n.textContent = valor === '1' ? NOMES_PROVA.com : NOMES_PROVA.sem;
     return;
   }
   if (chave === 'evento.data') {

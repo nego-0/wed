@@ -26,7 +26,8 @@ if (isset($_GET['modelo'])) {
     $comLug = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
     echo renderCartaoConvite(
         cartaoDadosEvento($defs),
-        ['nome' => nomeConviteVisivel($c), 'mesas' => mesasDoConvite($conn, $c)],
+        ['nome' => nomeParaCartao($c, ($defs['cartao.numero_no_nome'] ?? '1') === '1'),
+         'mesas' => mesasDoConvite($conn, $c)],
         cartaoPaleta($defs['cartao.paleta']),
         $defs['cartao.folhagem'],
         $comLug
@@ -97,7 +98,9 @@ $manuais = [
   .barra .cresce{ flex:1 1 200px; }
 
   /* ---- Lista de produção dos convites ---- */
-  .prod{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  /* Em ecrãs estreitos desliza a tabela, não a página inteira. */
+  .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .prod{ width:100%; border-collapse:collapse; min-width:520px; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
   .prod th{ background:var(--cream); font-size:.74rem; text-transform:uppercase; letter-spacing:.06em;
             color:#7a8078; text-align:left; padding:.6rem .8rem; font-weight:600; }
   .prod td{ border-top:1px solid var(--line); padding:.7rem .8rem; vertical-align:middle; font-size:.9rem; }
@@ -158,6 +161,8 @@ $manuais = [
     .topo{ background:#fff !important; color:var(--ink) !important; border-bottom:2px solid var(--gold); padding:0 0 .6rem !important; }
     .topo::after{ display:none; } .topo .monograma{ color:var(--gold); border-color:var(--gold); }
     .topo h1{ color:var(--ink); } .topo .sub{ color:var(--gold); }
+    .prod-scroll{ overflow:visible; }
+    .prod{ min-width:0; }
     .prod tr{ break-inside:avoid; }
     .brinde-cx, .var-item{ break-inside:avoid; }
   }
@@ -199,6 +204,7 @@ $manuais = [
     <?php if (!$convites): ?>
       <div class="vazio"><div class="ico">✉</div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
     <?php else: ?>
+    <div class="prod-scroll">
     <table class="prod" id="prod">
       <thead><tr>
         <th></th><th>Convite</th><th>Mesas</th><th>Código</th><th>QR</th><th class="no-print"></th>
@@ -224,6 +230,7 @@ $manuais = [
       <?php $n++; endforeach; ?>
       </tbody>
     </table>
+    </div>
     <?php endif; ?>
 
   <?php elseif ($aba === 'brindes'): ?>

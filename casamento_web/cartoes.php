@@ -19,6 +19,8 @@ if (!isset(cartaoPaletas()[$paletaSel]))     $paletaSel   = $defs['cartao.paleta
 if (!isset(cartaoFolhagens()[$folhagemSel])) $folhagemSel = $defs['cartao.folhagem'];
 $pal = cartaoPaleta($paletaSel);
 $ev  = cartaoDadosEvento($defs);
+// Mostrar (ou não) o "(N)" de lugares no nome — no cartão as mesas já o indicam.
+$comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 
 // Convites físicos (os que levam cartão impresso)
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
@@ -123,7 +125,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
       $mesas = mesasDoConvite($conn, $c);
       // Respeita a opção "mostrar o nº de lugares" do convite (igual ao digital e às etiquetas).
       $comLugares = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
-      $conv = ['nome' => nomeConviteVisivel($c), 'mesas' => $mesas];
+      $conv = ['nome' => nomeParaCartao($c, $comNumeroNome), 'mesas' => $mesas];
     ?>
     <div class="cartao-item">
       <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares) ?></div></div>

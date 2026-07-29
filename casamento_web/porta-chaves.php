@@ -95,6 +95,7 @@ $ib = inicialU($defs['casal.noivo']);
 <div class="container">
   <div class="barra">
     <div class="cresce"></div>
+    <a class="btn" href="editor-brindes.php">Editar brindes</a>
     <button class="btn" onclick="guardarEscolha()">Guardar escolha</button>
   </div>
 

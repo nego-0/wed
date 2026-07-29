@@ -164,6 +164,7 @@ function defsPadrao(): array {
         'cartao.civil_hora' => '10:30',
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
+        'cartao.numero_no_nome' => '1',   // '(N)' de lugares no nome do convidado, no cartão
         // ---- Porta-chaves comemorativo (45×60 mm) ----
         'chaveiro.acabamento' => 'classic',
         'chaveiro.quadra' => '5',
@@ -251,6 +252,8 @@ function validarDefinicao(string $chave, string $valor): ?string {
             ksort($out, SORT_NUMERIC);
             return json_encode($out, JSON_FORCE_OBJECT);
         }
+        case 'cartao.numero_no_nome':
+            return $valor === '1' ? '1' : '0';
         case 'cartao.camadas': {
             // Visibilidade das camadas do cartão: {"nome_da_camada": 0|1}
             if ($valor === '') return '';

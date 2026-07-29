@@ -137,6 +137,7 @@ Em `config.php` (não sensível):
 - **Camadas** — as doze partes do cartão (trepadeiras, volutas, moldura, floreados, abertura, nomes, frase, bloco do convidado, mesas, data, logística e frase final). O **olho** mostra ou oculta cada uma; a lista distingue camadas de texto (T) das decorativas (◈).
 - **Selecionar** — clicar numa camada, ou **diretamente no cartão**, marca-a e abre as suas propriedades.
 - **Propriedades** — os textos dessa camada. O que se escreve aparece **imediatamente no cartão**.
+- No **bloco do convidado** há ainda a opção **mostrar o “(N)” de lugares no nome**. Por omissão segue o convite, mas pode desligar-se: no cartão os lugares já aparecem por baixo de cada mesa, pelo que o número no nome é opcional.
 - **Barra de opções** — paleta, folhagem e zoom (com *Ajustar à janela*). A troca de paleta e de folhagem é instantânea, sem ir ao servidor: as cores são variáveis CSS e as trepadeiras já vêm todas carregadas.
 - **Ferramentas** — selecionar (V), texto (T), mão para arrastar a vista (H) e zoom (Z); `0` ajusta à janela.
 - A prova usa um convite real, para se ver o resultado com nomes e mesas verdadeiros. *Guardar* grava; *Repor originais* devolve tudo ao estado inicial. Sair com alterações por guardar pede confirmação.
