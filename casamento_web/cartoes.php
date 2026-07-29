@@ -39,60 +39,12 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 <title>Cartões 10×15 · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
+<link href="assets/pecas.css" rel="stylesheet">
 <style>
   /* ---- Escala: o cartão é desenhado a 720×1080 px (= 100×150 mm) ---- */
   .folha{ width:calc(720px * var(--esc)); height:calc(1080px * var(--esc)); }
-  .escala{ width:720px; height:1080px; transform:scale(var(--esc)); transform-origin:top left; }
+  .escala{ width:720px; height:1080px; transform:scale(var(--esc)); }
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(calc(720px * var(--esc)),1fr)); gap:1.6rem; justify-items:center; --esc:.42; }
-
-  /* O acrílico é transparente: mostra-se sobre fundo escuro, como no design */
-  .folha{ background:radial-gradient(120% 100% at 50% 15%,#2a2b26 0%,#191a16 55%,#0e0f0c 100%); border-radius:14px; overflow:hidden; }
-
-  .cartao{ width:720px; height:1080px; position:relative; overflow:hidden; background:transparent;
-           font-family:'Montserrat',sans-serif; }
-
-  .ct-ramo{ position:absolute; width:132px; height:270px; z-index:2; }
-  .ct-ramo-sd{ top:24px; right:24px; }
-  .ct-ramo-ie{ bottom:24px; left:24px; transform:rotate(180deg); }
-  .ct-moldura{ position:absolute; top:28px; left:28px; right:28px; bottom:28px; border:1.4px solid; z-index:2; pointer-events:none; }
-  .ct-voluta{ position:absolute; width:178px; height:178px; z-index:2; pointer-events:none; }
-  .ct-voluta-se{ top:24px; left:24px; }
-  .ct-voluta-id{ bottom:24px; right:24px; transform:rotate(180deg); }
-
-  .ct-conteudo{ position:relative; z-index:3; height:100%; box-sizing:border-box; padding:58px 58px 78px;
-                display:flex; flex-direction:column; align-items:center; justify-content:space-between; text-align:center; }
-  .ct-topo{ display:flex; flex-direction:column; align-items:center; }
-  .ct-abertura{ font-size:13px; font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase; }
-  .ct-nomes{ position:relative; margin:22px 0 6px; padding:0 30px; }
-  .ct-floreado{ position:absolute; width:150px; height:104px; z-index:0; opacity:.85; }
-  .ct-floreado-e{ left:-26px; top:-4px; }
-  .ct-floreado-d{ right:-26px; bottom:-4px; transform:rotate(180deg); }
-  .ct-nome{ position:relative; z-index:1; font-family:'Alex Brush',cursive; font-size:75px; line-height:.9; }
-  .ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; }
-  .ct-frase{ margin:14px 0 0; max-width:400px; font-family:'Cormorant Garamond',serif; font-style:italic;
-             font-size:20px; line-height:1.55; }
-
-  .ct-centro{ display:flex; flex-direction:column; align-items:center; gap:12px; }
-  .ct-filete{ width:120px; height:1px; opacity:.6; }
-  .ct-reservado{ font-size:12px; font-weight:500; letter-spacing:.28em; text-transform:uppercase; }
-  .ct-convidado{ font-family:'Alex Brush',cursive; font-size:48px; line-height:.9; }
-  .ct-mesas{ display:flex; gap:34px; align-items:stretch; margin-top:2px; }
-  .ct-mesa{ display:flex; flex-direction:column; align-items:center; gap:4px; }
-  .ct-mesa-n{ font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; }
-  .ct-mesa-l{ font-size:12px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; }
-  .ct-div-v{ width:1px; opacity:.35; }
-
-  .ct-base{ display:flex; flex-direction:column; align-items:center; width:449px; }
-  .ct-data{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:40px; line-height:1; }
-  .ct-dia{ margin-top:14px; font-size:12px; font-weight:500; letter-spacing:.32em; text-transform:uppercase; }
-  .ct-tracinho{ width:44px; height:1px; opacity:.5; margin:30px 0; }
-  .ct-tracinho-2{ margin:26px 0 16px; }
-  .ct-seccao{ font-size:14px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; }
-  .ct-seccao-2{ margin-top:26px; }
-  .ct-detalhe{ margin-top:9px; font-size:13px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; }
-  .ct-detalhe-2{ line-height:1.9; }
-  .ct-fecho{ margin:0; max-width:450px; font-family:'Cormorant Garamond',serif; font-style:italic;
-             font-size:19px; line-height:1.6; }
 
   /* ---- Barra de estilo ---- */
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
@@ -128,6 +80,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
       <a href="impressos.php">Convites físicos</a>
       <a href="cartoes.php" class="ativo">Cartões 10×15</a>
       <a href="porta-chaves.php">Porta-chaves</a>
+      <a href="graficas.php">Gráfica</a>
       <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>

@@ -25,7 +25,9 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir. |
 | `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico. |
 | `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso. |
-| `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados) e monograma. |
+| `graficas.php` | **Entregáveis à gráfica**: lista de produção dos convites físicos, brindes por género e manuais de impressão. |
+| `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados), monograma, faces do porta-chaves e modelo dos brindes. |
+| `assets/pecas.css` | Estilos das peças (cartão e porta-chaves), partilhados pelas páginas que as desenham. |
 | `assets/pecas/` | Biblioteca vetorial das peças (ícones SVG recoloráveis) e a imagem dos corações entrelaçados. |
 | `assets/estilo.css` | Estilo visual, alinhado com o convite (verde-floresta, dourado e marfim). |
 
@@ -116,6 +118,12 @@ Em `config.php` (não sensível):
 **Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
 
 **Cartões 10×15.** A página *Cartões 10×15* gera o **convite propriamente dito**, um por convidado, no formato 100×150 mm concebido para **impressão UV a dourado sobre acrílico transparente** (sem fundo impresso). Cada cartão é personalizado a partir da base de dados: o **nome tal como aparece no convite** e as **mesas do convidado com o número de lugares** — respeitando as opções “mostrar o número” e “mostrar o nº de lugares” de cada convite. Um convite dividido por várias mesas mostra uma coluna por mesa. Pode escolher a **paleta** (ouro quente, verde sálvia, terracota, rosa antigo) e a **folhagem** das trepadeiras (eucalipto, oliveira, feto, florido); o botão *Guardar estilo* fixa a escolha como predefinição. A folhagem, as volutas de canto e os floreados são **desenhados por código** (SVG gerado no servidor), pelo que acompanham a cor da paleta. Ao imprimir, cada cartão sai numa página de 100×150 mm.
+
+**Entregáveis à gráfica.** A página *Gráfica* reúne, em três separadores, tudo o que a gráfica precisa de receber:
+
+- **Convites físicos** — lista de produção simplificada: nome do convite tal como é impresso, mesas com o nº de lugares, código e **QR**. Cada linha tem uma ligação *ver modelo completo*, que abre o cartão 10×15 desse convite. A lista é pesquisável e imprimível.
+- **Brindes** — o brinde **atribuído a cada género** e as suas **variações**. De origem, o género masculino recebe o **porta-chaves**, cujas variações são as **frases do verso**: cada variação é mostrada tal como será produzida. Indica quantos convidados recebem o brinde (dos que estão marcados como *Recebe brinde*), quantas variações existem e como se distribuem. Convidados marcados para receber brinde mas **sem género definido** são assinalados à parte, para não passarem despercebidos. O género feminino fica como *por definir* até lhe ser atribuída uma peça.
+- **Manuais** — os manuais de impressão de cada peça (cartão 10×15 e porta-chaves), para abrir ou descarregar e entregar à gráfica.
 
 **Porta-chaves.** A página *Porta-chaves* apresenta a lembrança em acrílico de dois lados (45×60 mm) com o monograma do casal: a peça **inclina-se com o cursor** e **vira ao clique**. Pode escolher o **acabamento** (ouro sobre ébano, floresta, marfim) e a **quadra** do verso (8 à escolha, com as coordenadas do local por baixo). O monograma, o anel guilhoché e os ornamentos são gerados a partir das iniciais e da data do evento.
 

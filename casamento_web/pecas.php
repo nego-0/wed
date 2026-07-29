@@ -350,6 +350,130 @@ function chaveiroCantos(array $ac): string
 }
 
 /**
+ * Frente da peça: cartela, monograma, divisor e data.
+ * $plana = face solta (catálogos e provas), fora da peça 3D.
+ */
+function renderChaveiroFrente(array $ac, array $defs, string $ia, string $ib, string $dataPt, int $mono = 140, bool $plana = false): string
+{
+    ob_start(); ?>
+<div class="face<?= $plana ? ' face-plana' : '' ?>" style="background:<?= $ac['fundo'] ?>">
+  <div class="moldura" style="border-color:<?= $ac['ouro'] ?>"></div>
+  <div class="moldura dupla" style="border-color:<?= $ac['fio'] ?>"></div>
+  <div class="canto canto-se" style="border-color:<?= $ac['ouro'] ?>"></div>
+  <div class="canto canto-sd" style="border-color:<?= $ac['ouro'] ?>"></div>
+  <div class="canto canto-ie" style="border-color:<?= $ac['ouro'] ?>"></div>
+  <div class="canto canto-id" style="border-color:<?= $ac['ouro'] ?>"></div>
+  <div class="painel">
+    <div class="cartela" style="color:<?= $ac['cartela'] ?>">
+      <i style="background:<?= $ac['fio'] ?>"></i><?= escP($defs['chaveiro.cartela']) ?><i style="background:<?= $ac['fio'] ?>"></i>
+    </div>
+    <div><?= renderMonograma($mono, $ac, $ia, $ib) ?></div>
+    <?= chaveiroDivisor($ac, 'duplo') ?>
+    <div class="data-peca" style="color:<?= $ac['nomes'] ?>"><?= escP($dataPt) ?></div>
+  </div>
+  <?= chaveiroCantos($ac) ?>
+  <div class="brilho"></div>
+</div>
+<?php
+    return ob_get_clean();
+}
+
+/** Verso da peça: divisor, quadra, divisor e coordenadas do local. */
+function renderChaveiroVerso(array $ac, array $defs, string $quadra, bool $plana = false): string
+{
+    ob_start(); ?>
+<div class="face <?= $plana ? 'face-plana' : 'face-verso' ?>" style="background:<?= $ac['fundo'] ?>">
+  <div class="moldura" style="border-color:<?= $ac['ouro'] ?>"></div>
+  <div class="moldura dupla" style="border-color:<?= $ac['fio'] ?>"></div>
+  <div class="painel">
+    <?= chaveiroDivisor($ac, 'simples') ?>
+    <div class="quadra" style="color:<?= $ac['quadra'] ?>"><?= escP($quadra) ?></div>
+    <?= chaveiroDivisor($ac, 'duplo') ?>
+    <div class="coords">
+      <?php foreach ([$defs['chaveiro.coord_lat'], $defs['chaveiro.coord_lon']] as $co):
+        $co = trim($co);
+        $card = preg_match('/([NSEW])$/u', $co, $mm) ? $mm[1] : '';
+        $val  = trim(preg_replace('/\s*[NSEW]$/u', '', $co)); ?>
+        <div class="v" style="color:<?= $ac['nomes'] ?>"><?= escP($val) ?></div>
+        <div class="c" style="color:<?= $ac['ouro'] ?>"><?= escP($card) ?></div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?= chaveiroCantos($ac) ?>
+  <div class="brilho"></div>
+</div>
+<?php
+    return ob_get_clean();
+}
+
+// ------------------------------------------------------------
+// BRINDES POR GÉNERO
+// ------------------------------------------------------------
+
+/**
+ * Peças que podem ser atribuídas como brinde. Ao acrescentar uma nova
+ * peça, basta registá-la aqui (e criar o respetivo renderizador).
+ */
+function brindesPecas(): array {
+    return [
+        'porta-chaves' => [
+            'nome'      => 'Porta-chaves comemorativo',
+            'medida'    => '45 × 60 mm',
+            'material'  => 'Acrílico de dois lados, com argola metálica',
+            'pagina'    => 'porta-chaves.php',
+            'manual'    => 'assets/pecas/manuais/porta-chaves.html',
+            'variacoes' => 'quadra',   // as variações vêm das quadras do verso
+        ],
+    ];
+}
+
+/** Géneros a que se pode atribuir um brinde. */
+function brindesGeneros(): array {
+    return ['m' => 'Masculino', 'f' => 'Feminino'];
+}
+
+/**
+ * Índices das variações escolhidas para um género. Guardadas em JSON
+ * na definição brindes.{g}.variacoes; vazio = todas as variações da peça.
+ */
+function brindeVariacoes(array $defs, string $g): array {
+    $j = json_decode($defs["brindes.$g.variacoes"] ?? '', true);
+    if (!is_array($j)) return [];
+    $tot = count(chaveiroQuadras());
+    $out = [];
+    foreach ($j as $i) {
+        $i = (int)$i;
+        if ($i >= 0 && $i < $tot && !in_array($i, $out, true)) $out[] = $i;
+    }
+    sort($out);
+    return $out;
+}
+
+/**
+ * Brinde atribuído a cada género, já resolvido: peça, variações e
+ * quantidade de convidados que o recebem.
+ * $porGenero: ['m'=>n, 'f'=>n] — contagem vinda da base de dados.
+ */
+function brindesPorGenero(array $defs, array $porGenero): array {
+    $pecas = brindesPecas();
+    $out = [];
+    foreach (brindesGeneros() as $g => $rotulo) {
+        $chave = trim((string)($defs["brindes.$g.peca"] ?? ''));
+        $peca  = $pecas[$chave] ?? null;
+        $vars  = $peca ? brindeVariacoes($defs, $g) : [];
+        if ($peca && !$vars) $vars = array_keys(chaveiroQuadras()); // vazio = todas
+        $out[$g] = [
+            'rotulo'    => $rotulo,
+            'peca_id'   => $peca ? $chave : '',
+            'peca'      => $peca,
+            'variacoes' => $vars,
+            'quantidade'=> (int)($porGenero[$g] ?? 0),
+        ];
+    }
+    return $out;
+}
+
+/**
  * Monograma I&A dentro do anel guilhoché.
  * Toda a composição é relativa a $size (px), como no design.
  */

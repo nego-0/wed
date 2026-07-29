@@ -274,6 +274,7 @@ $CAS = casalInfo(defsAtuais($conn));
       <a href="impressos.php">Convites físicos</a>
       <a href="cartoes.php">Cartões 10×15</a>
       <a href="porta-chaves.php">Porta-chaves</a>
+      <a href="graficas.php">Gráfica</a>
       <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>

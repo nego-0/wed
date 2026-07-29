@@ -169,6 +169,12 @@ function defsPadrao(): array {
         'chaveiro.cartela' => 'NUPTIAE NOSTRAE',
         'chaveiro.coord_lat' => '15° 11′ 46.09″ S',
         'chaveiro.coord_lon' => '12° 09′ 10.11″ E',
+        // ---- Brindes por género (peça atribuída + variações a produzir) ----
+        // variações vazias = todas as da peça. '' na peça = ainda por definir.
+        'brindes.m.peca' => 'porta-chaves',
+        'brindes.m.variacoes' => '',
+        'brindes.f.peca' => '',
+        'brindes.f.variacoes' => '',
     ];
 }
 
@@ -224,6 +230,22 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return in_array($valor, ['classic','forest','ivory'], true) ? $valor : null;
         case 'chaveiro.quadra':
             return ctype_digit($valor) && (int)$valor >= 0 && (int)$valor <= 7 ? $valor : null;
+        case 'brindes.m.peca':
+        case 'brindes.f.peca':
+            // '' = por definir. As peças válidas ficam listadas em pecas.php.
+            return in_array($valor, ['', 'porta-chaves'], true) ? $valor : null;
+        case 'brindes.m.variacoes':
+        case 'brindes.f.variacoes': {
+            if ($valor === '') return '';           // vazio = todas as variações
+            $j = json_decode($valor, true); if (!is_array($j)) return null;
+            $out = [];
+            foreach ($j as $i) {
+                $i = (int)$i;
+                if ($i >= 0 && $i <= 7 && !in_array($i, $out, true)) $out[] = $i;
+            }
+            sort($out);
+            return json_encode($out);
+        }
         case 'evento.maps':
             return preg_match('#^https://#', $valor) ? substr($valor, 0, 500) : null;
         case 'evento.whatsapp':
