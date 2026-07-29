@@ -23,6 +23,10 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
 | `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir. |
+| `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico. |
+| `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso. |
+| `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados) e monograma. |
+| `assets/pecas/` | Biblioteca vetorial das peças (ícones SVG recoloráveis) e a imagem dos corações entrelaçados. |
 | `assets/estilo.css` | Estilo visual, alinhado com o convite (verde-floresta, dourado e marfim). |
 
 ---
@@ -110,6 +114,10 @@ Em `config.php` (não sensível):
 **Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real.
 
 **Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
+
+**Cartões 10×15.** A página *Cartões 10×15* gera o **convite propriamente dito**, um por convidado, no formato 100×150 mm concebido para **impressão UV a dourado sobre acrílico transparente** (sem fundo impresso). Cada cartão é personalizado a partir da base de dados: o **nome tal como aparece no convite** e as **mesas do convidado com o número de lugares** — respeitando as opções “mostrar o número” e “mostrar o nº de lugares” de cada convite. Um convite dividido por várias mesas mostra uma coluna por mesa. Pode escolher a **paleta** (ouro quente, verde sálvia, terracota, rosa antigo) e a **folhagem** das trepadeiras (eucalipto, oliveira, feto, florido); o botão *Guardar estilo* fixa a escolha como predefinição. A folhagem, as volutas de canto e os floreados são **desenhados por código** (SVG gerado no servidor), pelo que acompanham a cor da paleta. Ao imprimir, cada cartão sai numa página de 100×150 mm.
+
+**Porta-chaves.** A página *Porta-chaves* apresenta a lembrança em acrílico de dois lados (45×60 mm) com o monograma do casal: a peça **inclina-se com o cursor** e **vira ao clique**. Pode escolher o **acabamento** (ouro sobre ébano, floresta, marfim) e a **quadra** do verso (8 à escolha, com as coordenadas do local por baixo). O monograma, o anel guilhoché e os ornamentos são gerados a partir das iniciais e da data do evento.
 
 **Personalizar o convite digital.** Na página *Convite digital* pode alterar **tudo** o que aparece no convite, sem tocar em código: nomes do casal, data e hora (que passam a valer também na página de confirmação), local e ligação do Google Maps, todos os textos (pode usar `{noiva}`/`{noivo}`, `**negrito**` e `*itálico*`), os capítulos da história, os momentos do cronograma e as regras do manual (com escolha de ícones), a visibilidade de secções inteiras (história, interlúdio, cronograma, manual), as **fotografias e a música** (enviadas do computador; as imagens são comprimidas automaticamente), a **paleta de cores** (4 paletas prontas + ajuste fino de cada cor; o QR acompanha) e os efeitos (pétalas, música automática). A pré-visualização ao lado atualiza ao guardar. Campos repostos ao valor original deixam de ocupar espaço na base de dados. Cada convite pode ainda ter uma **mensagem pessoal** (campo no editor de convites do painel).
 

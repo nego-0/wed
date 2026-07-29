@@ -61,6 +61,8 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
       <a href="index.php">Painel</a>
       <a href="mesas.php">Mesas</a>
       <a href="impressos.php" class="ativo">Convites físicos</a>
+      <a href="cartoes.php">Cartões 10×15</a>
+      <a href="porta-chaves.php">Porta-chaves</a>
       <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
       <a href="logout.php">Sair</a>

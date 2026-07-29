@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 16" width="480" height="64">
+  <title>Losango divisor</title>
+  <line x1="6" y1="8" x2="44" y2="8" stroke="#C9A24A" stroke-width="1"></line>
+  <rect x="49" y="5" width="6" height="6" transform="rotate(45 52 8)" fill="none" stroke="#C9A24A" stroke-width="1"></rect>
+  <rect x="57" y="4.5" width="7" height="7" transform="rotate(45 60.5 8)" fill="#C9A24A"></rect>
+  <rect x="65" y="5" width="6" height="6" transform="rotate(45 68 8)" fill="none" stroke="#C9A24A" stroke-width="1"></rect>
+  <line x1="76" y1="8" x2="114" y2="8" stroke="#C9A24A" stroke-width="1"></line>
+</svg>

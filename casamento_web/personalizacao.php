@@ -154,6 +154,21 @@ function defsPadrao(): array {
         'tema.paleta' => '',
         'fx.petalas' => '1',
         'fx.autoplay' => '1',
+        // ---- Cartão de convite 10×15 (impressão a dourado sobre acrílico) ----
+        'cartao.paleta' => 'ouro',
+        'cartao.folhagem' => 'eucalipto',
+        'cartao.abertura' => "Junto com\nsuas famílias",
+        'cartao.frase_convite' => 'honram-se em convidá-los para a celebração do seu enlace matrimonial.',
+        'cartao.reservado' => 'Reservado a',
+        'cartao.civil_titulo' => 'Cerimónia Civil',
+        'cartao.civil_hora' => '10:30',
+        'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
+        // ---- Porta-chaves comemorativo (45×60 mm) ----
+        'chaveiro.acabamento' => 'classic',
+        'chaveiro.quadra' => '5',
+        'chaveiro.cartela' => 'NUPTIAE NOSTRAE',
+        'chaveiro.coord_lat' => '15° 11′ 46.09″ S',
+        'chaveiro.coord_lon' => '12° 09′ 10.11″ E',
     ];
 }
 
@@ -198,7 +213,17 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
+        case 'cartao.civil_hora':
             return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $valor) ? $valor : null;
+        // Enums das peças de design (chaves fixas aqui para não depender de pecas.php)
+        case 'cartao.paleta':
+            return in_array($valor, ['ouro','salvia','terracota','rosa'], true) ? $valor : null;
+        case 'cartao.folhagem':
+            return in_array($valor, ['eucalipto','oliveira','feto','florido'], true) ? $valor : null;
+        case 'chaveiro.acabamento':
+            return in_array($valor, ['classic','forest','ivory'], true) ? $valor : null;
+        case 'chaveiro.quadra':
+            return ctype_digit($valor) && (int)$valor >= 0 && (int)$valor <= 7 ? $valor : null;
         case 'evento.maps':
             return preg_match('#^https://#', $valor) ? substr($valor, 0, 500) : null;
         case 'evento.whatsapp':

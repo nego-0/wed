@@ -62,3 +62,18 @@
   font-style: normal; font-weight: 400; font-display: swap;
   src: url('convite/fonts/pinyon-script-latin-400-normal.woff2') format('woff2');
 }
+
+/* ---- Alex Brush (nomes do cartão de convite 10×15) ---- */
+@font-face {
+  font-family: 'Alex Brush';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('convite/fonts/alex-brush-latin-400-normal.woff2') format('woff2');
+}
+
+/* ---- Montserrat (maiúsculas do cartão de convite) ----
+   Ficheiro variável: um só woff2 cobre os pesos 300–700. */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal; font-weight: 300 700; font-display: swap;
+  src: url('convite/fonts/montserrat-latin-variable-normal.woff2') format('woff2');
+}

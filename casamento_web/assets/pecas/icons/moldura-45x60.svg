@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" width="360" height="480">
+  <title>Moldura 45x60mm — dupla linha e cantos</title>
+  <rect x="9" y="9" width="342" height="462" rx="10" fill="none" stroke="#C9A24A" stroke-width="1.4"></rect>
+  <rect x="14" y="14" width="332" height="452" rx="7" fill="none" stroke="#C9A24A" stroke-width="0.7" stroke-opacity="0.5"></rect>
+  <path d="M18 33 L18 18 L33 18" fill="none" stroke="#C9A24A" stroke-width="1.2"></path>
+  <rect x="27" y="27" width="4" height="4" transform="rotate(45 29 29)" fill="#C9A24A"></rect>
+  <path d="M342 33 L342 18 L327 18" fill="none" stroke="#C9A24A" stroke-width="1.2"></path>
+  <rect x="329" y="27" width="4" height="4" transform="rotate(45 331 29)" fill="#C9A24A"></rect>
+  <path d="M18 447 L18 462 L33 462" fill="none" stroke="#C9A24A" stroke-width="1.2"></path>
+  <rect x="27" y="449" width="4" height="4" transform="rotate(45 29 451)" fill="#C9A24A"></rect>
+  <path d="M342 447 L342 462 L327 462" fill="none" stroke="#C9A24A" stroke-width="1.2"></path>
+  <rect x="329" y="449" width="4" height="4" transform="rotate(45 331 451)" fill="#C9A24A"></rect>
+</svg>
