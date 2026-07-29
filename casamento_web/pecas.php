@@ -501,6 +501,37 @@ function pecaVariacoes(string $pecaId): array {
 }
 
 /**
+ * Pré-visualização de uma peça, para o editor e os catálogos.
+ * É o terceiro (e último) ponto de extensão de uma peça nova: catálogo em
+ * brindesPecas(), fonte das variações em pecaVariacoes() e o desenho aqui.
+ * $lado: 'frente' | 'verso'. Devolve '' se a peça não souber desenhar-se.
+ */
+function pecaPreVisualizacao(string $pecaId, int $varId, string $lado, array $defs): string {
+    switch ($pecaId) {
+        case 'porta-chaves': {
+            $ac = chaveiroAcabamento($defs['chaveiro.acabamento']);
+            if ($lado === 'frente') {
+                return renderChaveiroFrente(
+                    $ac, $defs, inicialU($defs['casal.noiva']), inicialU($defs['casal.noivo']),
+                    date('d · m · Y', strtotime($defs['evento.data'])), 140, true
+                );
+            }
+            $quadras = chaveiroQuadras();
+            return renderChaveiroVerso($ac, $defs, $quadras[$varId] ?? ($quadras[0] ?? ''), true);
+        }
+    }
+    return '';
+}
+
+/** Medidas da peça na pré-visualização (px), para o palco do editor. */
+function pecaMedidas(string $pecaId): array {
+    switch ($pecaId) {
+        case 'porta-chaves': return ['largura' => 250, 'altura' => 340];
+    }
+    return ['largura' => 250, 'altura' => 340];
+}
+
+/**
  * Seleção de variações de um género: [indice => quantidade].
  * Guardada em JSON na definição brindes.{g}.variacoes. Vazio = todas as
  * variações disponíveis, sem quantidade definida (0).

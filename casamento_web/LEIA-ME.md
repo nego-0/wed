@@ -122,6 +122,8 @@ Em `config.php` (não sensível):
 
 **Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
 
+**Impressão.** Ao imprimir os cartões, cada convite sai numa página de **100 × 150 mm**, sem fundo (o acrílico é transparente: só o dourado é impresso) e sem o cromo da aplicação. *Imprimir só este* dá uma única página. A vista de um só cartão mostra-o em grande no ecrã.
+
 **Cartões 10×15.** A página *Cartões 10×15* gera o **convite propriamente dito**, um por convidado, no formato 100×150 mm concebido para **impressão UV a dourado sobre acrílico transparente** (sem fundo impresso). Cada cartão é personalizado a partir da base de dados: o **nome tal como aparece no convite** e as **mesas do convidado com o número de lugares** — respeitando as opções “mostrar o número” e “mostrar o nº de lugares” de cada convite. Um convite dividido por várias mesas mostra uma coluna por mesa. Pode escolher a **paleta** (ouro quente, verde sálvia, terracota, rosa antigo) e a **folhagem** das trepadeiras (eucalipto, oliveira, feto, florido); o botão *Guardar estilo* fixa a escolha como predefinição. A folhagem, as volutas de canto e os floreados são **desenhados por código** (SVG gerado no servidor), pelo que acompanham a cor da paleta. Ao imprimir, cada cartão sai numa página de 100×150 mm.
 
 **Entregáveis à gráfica.** A página *Gráfica* reúne, em três separadores, tudo o que a gráfica precisa de receber. É a **porta de entrada única** para as peças: os cartões 10×15, as etiquetas e o porta-chaves deixaram de ter menu próprio e chegam-se a partir daqui.
@@ -141,7 +143,7 @@ Em `config.php` (não sensível):
 
 **Editar os brindes.** Em *Gráfica → Brindes → Editar brindes*, no mesmo ambiente:
 
-- Cada **género** é um documento (separadores em cima) e tem uma **peça** atribuída, escolhida de um catálogo — o sistema fica **aberto a novas peças**: registá-las no catálogo basta para aparecerem aqui.
+- Cada **género** é um documento (separadores em cima) e tem uma **peça** atribuída, escolhida de um catálogo. O sistema está **aberto a novas peças**: uma peça nova encaixa em três pontos, todos em `pecas.php` — a entrada no catálogo (`brindesPecas()`), a fonte das suas variações (`pecaVariacoes()`) e o seu desenho (`pecaPreVisualizacao()`). O editor pede a pré-visualização ao servidor, pelo que qualquer peça registada aparece aqui sem mais alterações.
 - **Variações disponíveis** — a lista das variações da peça (no porta-chaves, as frases do verso). O visto define **quais ficam disponíveis para a gráfica** e o campo ao lado **quantas produzir de cada uma**. Clicar numa variação mostra-a na mesa de trabalho.
 - **Produção** — resume a peça, quantos convidados recebem o brinde, quantas variações estão ativas e o total a produzir, avisando se **faltam** peças ou se há **reserva** a mais. *Repartir pelos convidados* distribui automaticamente o total pelas variações ativas.
 - Só as variações ativas (e as suas quantidades) chegam à página da gráfica.

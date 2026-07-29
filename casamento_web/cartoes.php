@@ -45,6 +45,8 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   .folha{ width:calc(720px * var(--esc)); height:calc(1080px * var(--esc)); }
   .escala{ width:720px; height:1080px; transform:scale(var(--esc)); }
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(calc(720px * var(--esc)),1fr)); gap:1.6rem; justify-items:center; --esc:.42; }
+  /* Um só cartão (?id=): mostra-se em grande, já que não compete por espaço */
+  .grelha-cartoes.unica{ --esc:.78; }
 
   /* ---- Barra de estilo ---- */
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
@@ -62,9 +64,14 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
     body{ background:#fff; }
     .no-print{ display:none !important; }
     .container{ padding:0; max-width:none; }
-    .grelha-cartoes{ display:block; --esc:.5249; }   /* 720px -> 100mm */
-    .folha{ background:#fff; border-radius:0; break-after:page; page-break-after:always; margin:0; }
-    .folha:last-child{ break-after:auto; page-break-after:auto; }
+    /* A regra tem de vencer também a vista de um só cartão (.unica). */
+    .grelha-cartoes, .grelha-cartoes.unica{ display:block; --esc:.5248; }   /* 720px -> 100mm */
+    /* A quebra vai no item, não na folha: a folha não é o último filho da grelha,
+       pelo que o :last-child nunca lá pegava e sobrava uma página em branco. */
+    .cartao-item{ margin:0; break-after:page; page-break-after:always; }
+    .cartao-item:last-child{ break-after:auto; page-break-after:auto; }
+    /* Medidas exatas da página, para não transbordar por sub-pixéis. */
+    .folha{ width:100mm; height:150mm; overflow:hidden; background:#fff; border-radius:0; margin:0; }
     .legenda{ display:none; }
   }
 </style>
@@ -102,6 +109,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
     </select>
     <div class="cresce"></div>
     <span class="tag neutra"><?= count($convites) ?> cartões</span>
+    <a class="btn" href="editor-cartao.php">Editar o cartão</a>
     <button class="btn" onclick="guardarEstilo()">Guardar estilo</button>
     <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
   </div>
@@ -109,7 +117,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   <?php if (!$convites): ?>
     <div class="vazio no-print"><div class="ico">✉</div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
   <?php else: ?>
-  <div class="grelha-cartoes">
+  <div class="grelha-cartoes <?= $soId ? 'unica' : '' ?>">
     <?php foreach ($convites as $c):
       // Personalização: nome tal como aparece no convite + mesas efetivas.
       $mesas = mesasDoConvite($conn, $c);
@@ -117,7 +125,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
       $comLugares = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
       $conv = ['nome' => nomeConviteVisivel($c), 'mesas' => $mesas];
     ?>
-    <div>
+    <div class="cartao-item">
       <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares) ?></div></div>
       <div class="legenda no-print"><?= escP($c['codigo']) ?> ·
         <a href="?id=<?= (int)$c['id'] ?>&paleta=<?= escP($paletaSel) ?>&folhagem=<?= escP($folhagemSel) ?>">imprimir só este</a></div>

@@ -22,6 +22,16 @@ if (colunaExiste($conn, "{$P}convidados", 'brinde') && colunaExiste($conn, "{$P}
 }
 $semGenero = (int)($porGenero[''] ?? 0);
 
+// ---- Fragmento: pré-visualização de uma peça (qualquer uma do catálogo) ----
+if (isset($_GET['previa'])) {
+    $pid  = (string)$_GET['previa'];
+    $vid  = (int)($_GET['v'] ?? 0);
+    $lado = ($_GET['lado'] ?? 'verso') === 'frente' ? 'frente' : 'verso';
+    if (!isset(brindesPecas()[$pid])) { http_response_code(404); exit('Peça desconhecida.'); }
+    echo pecaPreVisualizacao($pid, $vid, $lado, $defs);
+    exit;
+}
+
 $generos = brindesGeneros();
 $brindes = brindesPorGenero($defs, $porGenero);
 
@@ -40,7 +50,8 @@ foreach ($generos as $g => $rot) {
 $catalogo = [];
 foreach (brindesPecas() as $k => $p) {
     $catalogo[$k] = ['nome' => $p['nome'], 'medida' => $p['medida'], 'material' => $p['material'],
-                     'pagina' => $p['pagina'], 'variacoes' => pecaVariacoes($k)];
+                     'pagina' => $p['pagina'], 'variacoes' => pecaVariacoes($k),
+                     'medidas' => pecaMedidas($k)];
 }
 
 $ac      = chaveiroAcabamento($defs['chaveiro.acabamento']);
@@ -58,8 +69,9 @@ $gInicial = array_key_first($generos);
 <style>
   /* Pré-visualização do verso, com a quadra da variação escolhida */
   .palco-peca{ background:<?= $ac['fundo'] ?>; border-radius:14px; overflow:hidden;
-               width:calc(250px * var(--esc,1)); height:calc(340px * var(--esc,1)); }
-  .palco-peca .escala{ width:250px; height:340px; transform:scale(var(--esc,1)); transform-origin:top left; }
+               width:calc(var(--pw,250px) * var(--esc,1)); height:calc(var(--ph,340px) * var(--esc,1)); }
+  .palco-peca .escala{ width:var(--pw,250px); height:var(--ph,340px);
+                       transform:scale(var(--esc,1)); transform-origin:top left; }
   .lado{ display:flex; gap:.3rem; justify-content:center; margin-bottom:.7rem; }
 </style>
 </head>
@@ -134,8 +146,7 @@ const CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
 const CATALOGO  = <?= json_encode($catalogo, JSON_UNESCAPED_UNICODE) ?>;
 const SEM_GENERO = <?= (int)$semGenero ?>;
-const FRENTE_HTML = <?= json_encode(renderChaveiroFrente($ac, $defs, inicialU($defs['casal.noiva']), inicialU($defs['casal.noivo']), date('d · m · Y', strtotime($defs['evento.data'])), 140, true), JSON_UNESCAPED_UNICODE) ?>;
-const VERSOS = <?= json_encode(array_map(fn($q) => renderChaveiroVerso($ac, $defs, $q, true), $quadras), JSON_UNESCAPED_UNICODE) ?>;
+const CACHE_PREVIA = {};   // {peça|lado|variação: html}
 
 let est = <?= json_encode($estado, JSON_UNESCAPED_UNICODE) ?>;
 const original = JSON.parse(JSON.stringify(est));
@@ -148,15 +159,27 @@ function alternarPainel(h){ h.parentElement.classList.toggle('fechado'); }
 function pecaAtual(){ return CATALOGO[est[g].peca] || null; }
 
 // ---------- Vista da peça ----------
-function renderVista(){
-  const p = pecaAtual();
+async function renderVista(){
+  const p = pecaAtual(), palco = document.querySelector('.palco-peca');
   if (!p) { $('peca-vista').innerHTML = ''; $('legenda-var').textContent = 'Sem peça atribuída a este género.'; $('rot-lado').textContent=''; return; }
+  palco.style.setProperty('--pw', p.medidas.largura + 'px');
+  palco.style.setProperty('--ph', p.medidas.altura + 'px');
   $('rot-lado').textContent = lado === 'verso' ? 'Verso' : 'Frente';
-  if (lado === 'frente') { $('peca-vista').innerHTML = FRENTE_HTML; $('legenda-var').textContent = 'A frente é igual em todas as variações.'; return; }
   const i = varSel !== null ? varSel : (Object.keys(est[g].selecao)[0] ?? 0);
-  $('peca-vista').innerHTML = VERSOS[i] ?? '';
   const v = p.variacoes.find(x => x.id === +i);
-  $('legenda-var').textContent = v ? ('Variação ' + v.rotulo) : '';
+  $('legenda-var').textContent = lado === 'frente'
+    ? 'A frente é igual em todas as variações.'
+    : (v ? ('Variação ' + v.rotulo) : '');
+  // A peça desenha-se no servidor: assim qualquer peça do catálogo funciona aqui.
+  const chave = est[g].peca + '|' + lado + '|' + (lado === 'frente' ? 0 : i);
+  if (CACHE_PREVIA[chave] !== undefined) { $('peca-vista').innerHTML = CACHE_PREVIA[chave]; return; }
+  try {
+    const r = await fetch('editor-brindes.php?previa=' + encodeURIComponent(est[g].peca) +
+                          '&v=' + encodeURIComponent(i) + '&lado=' + lado);
+    const html = r.ok ? await r.text() : '';
+    CACHE_PREVIA[chave] = html;
+    $('peca-vista').innerHTML = html;
+  } catch (e) { $('peca-vista').innerHTML = ''; }
 }
 function virar(){ lado = lado === 'verso' ? 'frente' : 'verso'; renderVista(); }
 
