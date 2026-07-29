@@ -407,12 +407,16 @@ function mesaEhNoivos(mysqli $conn, int $id): bool {
  */
 function plantaConfig(mysqli $conn): array {
     global $P;
-    $cfg = ['largura' => null, 'altura' => null];
-    $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes WHERE chave IN ('planta.largura','planta.altura')");
+    // bloq_* travam o arrasto (mesas) e o redimensionar (canvas), contra arrastos acidentais.
+    $cfg = ['largura' => null, 'altura' => null, 'bloq_mesas' => 0, 'bloq_canvas' => 0];
+    $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes
+                        WHERE chave IN ('planta.largura','planta.altura','planta.bloq_mesas','planta.bloq_canvas')");
     if ($r) while ($x = $r->fetch_assoc()) {
         $v = (int)$x['valor'];
-        if ($x['chave'] === 'planta.largura' && $v > 0) $cfg['largura'] = $v;
-        if ($x['chave'] === 'planta.altura'  && $v > 0) $cfg['altura']  = $v;
+        if ($x['chave'] === 'planta.largura'     && $v > 0) $cfg['largura'] = $v;
+        if ($x['chave'] === 'planta.altura'      && $v > 0) $cfg['altura']  = $v;
+        if ($x['chave'] === 'planta.bloq_mesas')            $cfg['bloq_mesas']  = $v === 1 ? 1 : 0;
+        if ($x['chave'] === 'planta.bloq_canvas')           $cfg['bloq_canvas'] = $v === 1 ? 1 : 0;
     }
     return $cfg;
 }

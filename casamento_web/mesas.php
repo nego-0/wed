@@ -109,6 +109,17 @@ $CAS = casalInfo(defsAtuais($conn));
   body.mesas-max .rz{ display:none; }
   body.mesas-max .painel-mesas{ position:static; }
   body.mesas-max .tab-body{ max-height:calc(100vh - 9rem); }
+  /* Travas contra arrastos acidentais (ficam à esquerda do zoom) */
+  .bloqueios{ display:inline-flex; gap:.7rem; align-items:center; margin-right:.2rem; }
+  .bloqueios label{ display:inline-flex; align-items:center; gap:.3rem; font-size:.78rem;
+                    color:#7a8078; cursor:pointer; white-space:nowrap; }
+  .bloqueios input{ width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
+  .bloqueios label:has(input:checked){ color:var(--forest); font-weight:500; }
+  /* Com as mesas fixas, o cursor deixa de sugerir arrasto */
+  body.bloq-mesas .mesa-node{ cursor:pointer; }
+  /* Com o canvas fixo, as pegas de redimensionar desaparecem */
+  body.bloq-canvas .rz{ display:none; }
+
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
   .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:.78rem;
     padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
@@ -271,9 +282,6 @@ $CAS = casalInfo(defsAtuais($conn));
     <nav class="nav">
       <a href="index.php">Painel</a>
       <a href="mesas.php" class="ativo">Mesas</a>
-      <a href="impressos.php">Convites físicos</a>
-      <a href="cartoes.php">Cartões 10×15</a>
-      <a href="porta-chaves.php">Porta-chaves</a>
       <a href="graficas.php">Gráfica</a>
       <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
@@ -301,6 +309,14 @@ $CAS = casalInfo(defsAtuais($conn));
       <div class="planta-topo">
         <span class="titulo">Disposição do salão</span>
         <div class="planta-ctrls">
+          <div class="bloqueios">
+            <label title="Impede arrastar as mesas (continua a poder selecioná-las)">
+              <input type="checkbox" id="bloq-mesas" onchange="guardarBloqueio()"> Fixar mesas
+            </label>
+            <label title="Impede redimensionar o canvas pelas bordas">
+              <input type="checkbox" id="bloq-canvas" onchange="guardarBloqueio()"> Fixar canvas
+            </label>
+          </div>
           <div class="zoombar" id="zoombar" title="Nível de zoom">
             <button data-zoom="0.5" title="50% · vista ampla">50%</button>
             <button data-zoom="1" class="on" title="100% · vista panorâmica (canvas completo)">100%</button>
@@ -330,7 +346,7 @@ $CAS = casalInfo(defsAtuais($conn));
         <div class="rz rz-s"  data-dir="s"  title="Arraste para ajustar a altura do canvas"></div>
         <div class="rz rz-se" data-dir="se" title="Arraste para redimensionar o canvas"></div>
       </div>
-      <p style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0">Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes. Arraste as <b>bordas do canvas</b> para o redimensionar.</p>
+      <p id="dica-planta" style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0"></p>
     </div>
 
     <!-- PAINEL DIREITO -->
@@ -365,6 +381,33 @@ let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor
 let zoom=1;
 // Dimensões guardadas do canvas (px). null = automático.
 let CANVAS={largura:null, altura:null};
+// Travas contra arrastos acidentais (guardadas na base de dados).
+let BLOQ={mesas:false, canvas:false};
+function aplicarBloqueios(){
+  document.body.classList.toggle('bloq-mesas',  BLOQ.mesas);
+  document.body.classList.toggle('bloq-canvas', BLOQ.canvas);
+  const a=$('bloq-mesas'), b=$('bloq-canvas');
+  if(a) a.checked=BLOQ.mesas;
+  if(b) b.checked=BLOQ.canvas;
+  // A nota de ajuda acompanha o que está (ou não) bloqueado.
+  const dica=$('dica-planta'); if(!dica) return;
+  const partes=[];
+  partes.push(BLOQ.mesas
+    ? 'As mesas estão <b>fixas</b>: toque numa mesa para ver os detalhes, sem risco de a arrastar.'
+    : 'Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes.');
+  partes.push(BLOQ.canvas
+    ? 'O canvas está <b>fixo</b>.'
+    : 'Arraste as <b>bordas do canvas</b> para o redimensionar.');
+  dica.innerHTML=partes.join(' ');
+}
+async function guardarBloqueio(){
+  BLOQ.mesas  = $('bloq-mesas').checked;
+  BLOQ.canvas = $('bloq-canvas').checked;
+  aplicarBloqueios();
+  const d=await api('planta_bloqueio',{method:'POST',body:JSON.stringify({bloq_mesas:BLOQ.mesas?1:0, bloq_canvas:BLOQ.canvas?1:0})});
+  if(!d||!d.success) return toast((d&&d.message)||'Erro ao guardar.',true);
+  toast(BLOQ.mesas||BLOQ.canvas ? 'Bloqueio guardado.' : 'Bloqueios removidos.');
+}
 let maximizado=false;
 
 function aplicarCanvas(){ $('planta').style.setProperty('--z', zoom); }
@@ -416,6 +459,7 @@ function toggleMax(){
 // Redimensionar arrastando as bordas do canvas.
 let rz=null;
 function iniciarRz(e, dir){
+  if(BLOQ.canvas) return;   // canvas fixo: as bordas não redimensionam
   e.preventDefault();
   const vp=$('planta-viewport');
   rz={dir, sx:e.clientX, sy:e.clientY, w:vp.offsetWidth, h:vp.offsetHeight, maxW:larguraDisponivel()};
@@ -481,7 +525,8 @@ async function carregar(){
   const [dm,dc,dg]=await Promise.all([api('mesa_list'), api('convite_list'), api('convidado_list')]);
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
   MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
-  if(dm.canvas){ CANVAS={largura:numOuNull(dm.canvas.largura), altura:numOuNull(dm.canvas.altura)}; }
+  if(dm.canvas){ CANVAS={largura:numOuNull(dm.canvas.largura), altura:numOuNull(dm.canvas.altura)};
+    BLOQ={mesas:+dm.canvas.bloq_mesas===1, canvas:+dm.canvas.bloq_canvas===1}; aplicarBloqueios(); }
   aplicarCanvas(); aplicarTamanhoCanvas(); ajustarScrollCanvas();
   await autoPosicionar();
   renderTudo();
@@ -592,6 +637,14 @@ $('planta').addEventListener('pointerdown', e=>{
     const sx=e.clientX, sy=e.clientY;
     window.addEventListener('pointerup', ev=>{
       if(Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4) desselecionar();
+    }, {once:true});
+    return;
+  }
+  if(BLOQ.mesas){
+    // Mesas fixas: não se arrastam, mas continuam selecionáveis ao toque.
+    const sx=e.clientX, sy=e.clientY, id=+node.dataset.id;
+    window.addEventListener('pointerup', ev=>{
+      if(Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4) selecionar(id);
     }, {once:true});
     return;
   }

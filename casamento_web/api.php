@@ -231,7 +231,7 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'mesa_noivos','planta_size','convidado_papel','defs_save','def_upload'], true)) {
+                     'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload'], true)) {
     exigirCsrf();
 }
 
@@ -540,6 +540,17 @@ if ($acao === 'planta_size') {
         $sv=(string)$val; $st->bind_param('ss',$chave,$sv); $st->execute();
     }
     ok(['canvas'=>plantaConfig($conn)]);
+}
+if ($acao === 'planta_bloqueio') {
+    // Trava/destrava o arrasto das mesas e o redimensionar do canvas.
+    $d = corpo();
+    foreach (['bloq_mesas' => 'planta.bloq_mesas', 'bloq_canvas' => 'planta.bloq_canvas'] as $campo => $chave) {
+        if (!array_key_exists($campo, $d)) continue;
+        $val = !empty($d[$campo]) ? '1' : '0';
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (chave,valor) VALUES (?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st->bind_param('ss', $chave, $val); $st->execute();
+    }
+    ok(['canvas' => plantaConfig($conn)]);
 }
 if ($acao === 'mesa_save') {
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');

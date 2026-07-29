@@ -22,9 +22,9 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `personalizacao.php` | Motor da personalização: valores originais, validação e composição do convite. |
 | `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
 | `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
-| `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir. |
-| `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico. |
-| `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso. |
+| `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir (acessível a partir de *Gráfica*). |
+| `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico (acessível a partir de *Gráfica*). |
+| `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso (acessível a partir de *Gráfica*). |
 | `graficas.php` | **Entregáveis à gráfica**: lista de produção dos convites físicos, brindes por género e manuais de impressão. |
 | `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados), monograma, faces do porta-chaves e modelo dos brindes. |
 | `assets/pecas.css` | Estilos das peças (cartão e porta-chaves), partilhados pelas páginas que as desenham. |
@@ -93,6 +93,8 @@ Em `config.php` (não sensível):
 
 **Tipo do convite.** *Digital*, *Físico* ou *Ambos*. Todos os convites têm sempre um link e um QR; o tipo serve para organizar a produção (marcar como *impresso* / *enviado*).
 
+**Fixar mesas e canvas.** Por cima da planta, à esquerda dos botões de zoom, há duas opções — **Fixar mesas** e **Fixar canvas** — que travam o arrasto das mesas e o redimensionar do canvas, para evitar deslocações acidentais depois de a disposição estar definida. Ficam **guardadas na base de dados**, pelo que se mantêm entre sessões. Com as mesas fixas continua a poder **tocar numa mesa para ver os detalhes**; só o arrasto é que fica travado.
+
 **Mesas.** Na página *Mesas* tem uma **planta visual do salão**: crie mesas com capacidade, escolha a **forma** (redonda, oval, quadrada, retangular, comprida ou em ferradura), uma **cor** de uma paleta e a **dimensão** (automática, pequena, média ou grande), **arraste-as** para a sua posição real e veja a ocupação através de um ponto de estado (vazia, a encher, completa, excede a capacidade). O formulário de adicionar mesa fica por cima do canvas; ao selecionar uma mesa, a sua aba abre um formulário de edição compacto. As posições ficam guardadas.
 
 **Mesa dos noivos.** A planta tem, por padrão, uma **pastilha especial** dos noivos — com uma ilustração própria (as alianças entrelaçadas) — para representar o casal, com a **mesma dimensão** das restantes mesas. Só existe uma. Pode **eliminá-la** (no painel da mesa) e, se quiser, **repô-la** no botão *Mesa dos noivos* que surge por cima do canvas. As suas **alas laterais** (padrinhos à esquerda, madrinhas à direita) são preenchidas **automaticamente pelo papel de cada convidado**: quem tiver o papel *Padrinho* entra na ala esquerda e quem tiver *Madrinha* na ala direita, sem atribuição manual. O papel define-se no **editor do convite** (cada integrante tem um seletor *Convidado / Padrinho / Madrinha*) ou diretamente no painel da mesa dos noivos. **Só padrinhos e madrinhas** podem ficar nesta mesa — nenhum outro convidado lhe pode ser atribuído.
@@ -119,9 +121,9 @@ Em `config.php` (não sensível):
 
 **Cartões 10×15.** A página *Cartões 10×15* gera o **convite propriamente dito**, um por convidado, no formato 100×150 mm concebido para **impressão UV a dourado sobre acrílico transparente** (sem fundo impresso). Cada cartão é personalizado a partir da base de dados: o **nome tal como aparece no convite** e as **mesas do convidado com o número de lugares** — respeitando as opções “mostrar o número” e “mostrar o nº de lugares” de cada convite. Um convite dividido por várias mesas mostra uma coluna por mesa. Pode escolher a **paleta** (ouro quente, verde sálvia, terracota, rosa antigo) e a **folhagem** das trepadeiras (eucalipto, oliveira, feto, florido); o botão *Guardar estilo* fixa a escolha como predefinição. A folhagem, as volutas de canto e os floreados são **desenhados por código** (SVG gerado no servidor), pelo que acompanham a cor da paleta. Ao imprimir, cada cartão sai numa página de 100×150 mm.
 
-**Entregáveis à gráfica.** A página *Gráfica* reúne, em três separadores, tudo o que a gráfica precisa de receber:
+**Entregáveis à gráfica.** A página *Gráfica* reúne, em três separadores, tudo o que a gráfica precisa de receber. É a **porta de entrada única** para as peças: os cartões 10×15, as etiquetas e o porta-chaves deixaram de ter menu próprio e chegam-se a partir daqui.
 
-- **Convites físicos** — lista de produção simplificada: nome do convite tal como é impresso, mesas com o nº de lugares, código e **QR**. Cada linha tem uma ligação *ver modelo completo*, que abre o cartão 10×15 desse convite. A lista é pesquisável e imprimível.
+- **Convites físicos** — lista de produção simplificada: nome do convite tal como é impresso, mesas com o nº de lugares, código e **QR**. **Ao clicar numa linha, o modelo do cartão abre expandido** (ampliado até caber no ecrã), com ligação para o imprimir; *Esc* fecha. A lista é pesquisável e imprimível, e dá acesso a todos os modelos e às etiquetas para envelopes.
 - **Brindes** — o brinde **atribuído a cada género** e as suas **variações**. De origem, o género masculino recebe o **porta-chaves**, cujas variações são as **frases do verso**: cada variação é mostrada tal como será produzida. Indica quantos convidados recebem o brinde (dos que estão marcados como *Recebe brinde*), quantas variações existem e como se distribuem. Convidados marcados para receber brinde mas **sem género definido** são assinalados à parte, para não passarem despercebidos. O género feminino fica como *por definir* até lhe ser atribuída uma peça.
 - **Manuais** — os manuais de impressão de cada peça (cartão 10×15 e porta-chaves), para abrir ou descarregar e entregar à gráfica.
 

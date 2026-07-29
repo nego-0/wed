@@ -14,6 +14,26 @@ exigirAdmin();
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);
 
+// ---- Fragmento: só o cartão de um convite -------------------
+// Serve a pré-visualização expandida (pedida por fetch a partir da lista).
+if (isset($_GET['modelo'])) {
+    $mid = (int)$_GET['modelo'];
+    $st = $conn->prepare("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
+                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id WHERE c.id=? LIMIT 1");
+    $st->bind_param('i', $mid); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) { http_response_code(404); exit('Convite não encontrado.'); }
+    $comLug = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
+    echo renderCartaoConvite(
+        cartaoDadosEvento($defs),
+        ['nome' => nomeConviteVisivel($c), 'mesas' => mesasDoConvite($conn, $c)],
+        cartaoPaleta($defs['cartao.paleta']),
+        $defs['cartao.folhagem'],
+        $comLug
+    );
+    exit;
+}
+
 $abas = ['convites' => 'Convites físicos', 'brindes' => 'Brindes', 'manuais' => 'Manuais'];
 $aba  = $_GET['aba'] ?? 'convites';
 if (!isset($abas[$aba])) $aba = 'convites';
@@ -88,6 +108,23 @@ $manuais = [
   .prod .cod{ font-family:var(--serif); letter-spacing:2px; }
   .prod canvas{ display:block; background:#fff; }
   .prod .ver{ font-size:.82rem; white-space:nowrap; }
+  .prod tbody tr{ cursor:pointer; }
+
+  /* ---- Modelo expandido (sobreposição) ---- */
+  .ov-modelo{ position:fixed; inset:0; background:rgba(14,15,12,.86); display:none;
+              align-items:center; justify-content:center; z-index:80; padding:1rem; }
+  .ov-modelo.aberto{ display:flex; }
+  .mod-cx{ display:flex; flex-direction:column; align-items:center; gap:.8rem; max-height:100%; }
+  .mod-topo{ display:flex; align-items:center; gap:.9rem; color:var(--gold-pale); flex-wrap:wrap; justify-content:center; }
+  .mod-topo .nm{ font-family:var(--serif); font-size:1.15rem; }
+  .mod-topo .btn{ padding:.35rem .9rem; font-size:.82rem; }
+  .mod-fechar{ background:none; border:1px solid rgba(239,227,203,.35); color:var(--gold-pale);
+               border-radius:50%; width:30px; height:30px; cursor:pointer; font-size:1rem; line-height:1; }
+  .mod-palco{ background:radial-gradient(120% 100% at 50% 15%,#2a2b26 0%,#191a16 55%,#0e0f0c 100%);
+              border-radius:14px; overflow:hidden;
+              width:calc(720px * var(--me,.6)); height:calc(1080px * var(--me,.6)); }
+  .mod-palco .escala{ width:720px; height:1080px; transform:scale(var(--me,.6)); }
+  .mod-vazio{ color:var(--gold-pale); font-family:var(--serif); }
 
   /* ---- Brindes ---- */
   .brinde-cx{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:1.2rem; }
@@ -132,9 +169,6 @@ $manuais = [
     <nav class="nav no-print">
       <a href="index.php">Painel</a>
       <a href="mesas.php">Mesas</a>
-      <a href="impressos.php">Convites físicos</a>
-      <a href="cartoes.php">Cartões 10×15</a>
-      <a href="porta-chaves.php">Porta-chaves</a>
       <a href="graficas.php" class="ativo">Gráfica</a>
       <a href="convite-editor.php">Convite digital</a>
       <a href="porteiro.php">Porta</a>
@@ -155,6 +189,7 @@ $manuais = [
       <div class="cresce"><input type="search" id="busca" placeholder="Procurar convite, mesa ou código…" oninput="filtrar()"></div>
       <span class="tag neutra"><?= count($convites) ?> convites físicos</span>
       <a class="btn" href="cartoes.php">Ver todos os modelos</a>
+      <a class="btn" href="impressos.php">Etiquetas para envelopes</a>
       <button class="btn btn-ouro" onclick="window.print()">Imprimir lista</button>
     </div>
 
@@ -174,13 +209,14 @@ $manuais = [
         $link  = base_url() . '/convite.php?c=' . $c['codigo'];
         $blob  = strtolower($nome . ' ' . $txtMesas . ' ' . $c['codigo']);
       ?>
-        <tr data-busca="<?= escP($blob) ?>">
+        <tr data-busca="<?= escP($blob) ?>" data-id="<?= (int)$c['id'] ?>" data-nome="<?= escP($nome) ?>"
+            onclick="abrirModelo(this)" title="Ver o modelo expandido">
           <td class="n"><?= $n ?></td>
           <td class="nm"><?= escP($nome) ?></td>
           <td class="ms"><?= $txtMesas !== '' ? escP($txtMesas) : '<span class="por-definir">sem mesa</span>' ?></td>
           <td class="cod"><?= escP($c['codigo']) ?></td>
           <td><canvas class="qr" data-link="<?= escP($link) ?>"></canvas></td>
-          <td class="no-print ver"><a href="cartoes.php?id=<?= (int)$c['id'] ?>">Ver modelo completo</a></td>
+          <td class="no-print ver"><a href="cartoes.php?id=<?= (int)$c['id'] ?>" onclick="event.stopPropagation()">Imprimir</a></td>
         </tr>
       <?php $n++; endforeach; ?>
       </tbody>
@@ -270,6 +306,18 @@ $manuais = [
   <?php endif; ?>
 </div>
 
+<!-- Modelo do convite, expandido -->
+<div class="ov-modelo" id="ov-modelo" onclick="if(event.target===this) fecharModelo()">
+  <div class="mod-cx">
+    <div class="mod-topo">
+      <span class="nm" id="mod-nome"></span>
+      <a class="btn" id="mod-imprimir" href="#">Imprimir este cartão</a>
+      <button class="mod-fechar" onclick="fecharModelo()" title="Fechar (Esc)" aria-label="Fechar">✕</button>
+    </div>
+    <div class="mod-palco" id="mod-palco"><div class="escala" id="mod-corpo"></div></div>
+  </div>
+</div>
+
 <script>
 const $=id=>document.getElementById(id);
 // QR de cada convite (mesmo aspeto das etiquetas)
@@ -282,6 +330,33 @@ function filtrar(){
     tr.style.display = tr.dataset.busca.includes(q) ? '' : 'none';
   });
 }
+
+// ---- Modelo expandido ----
+// O cartão é pedido ao servidor (fragmento) e ampliado até caber no ecrã.
+function escalaModelo(){
+  const esc = Math.min((window.innerHeight - 150) / 1080, (window.innerWidth - 60) / 720);
+  return Math.max(.25, Math.min(1, esc));
+}
+async function abrirModelo(tr){
+  const id = tr.dataset.id;
+  $('mod-nome').textContent = tr.dataset.nome;
+  $('mod-imprimir').href = 'cartoes.php?id=' + id;
+  $('mod-corpo').innerHTML = '<div class="mod-vazio">A carregar…</div>';
+  $('ov-modelo').style.setProperty('--me', escalaModelo());
+  $('ov-modelo').classList.add('aberto');
+  try {
+    const r = await fetch('graficas.php?modelo=' + encodeURIComponent(id));
+    if (!r.ok) throw new Error(r.status);
+    $('mod-corpo').innerHTML = await r.text();
+  } catch (err) {
+    $('mod-corpo').innerHTML = '<div class="mod-vazio">Não foi possível carregar o modelo.</div>';
+  }
+}
+function fecharModelo(){ $('ov-modelo').classList.remove('aberto'); $('mod-corpo').innerHTML=''; }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') fecharModelo(); });
+window.addEventListener('resize', ()=>{
+  if($('ov-modelo').classList.contains('aberto')) $('ov-modelo').style.setProperty('--me', escalaModelo());
+});
 </script>
 </body>
 </html>
