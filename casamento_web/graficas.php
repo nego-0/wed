@@ -68,15 +68,20 @@ $quadras = chaveiroQuadras();
 $romanos = chaveiroRomanos();
 
 // ---- 3. Manuais --------------------------------------------
+// Os manuais são GERADOS da configuração atual (manual.php), pelo que
+// acompanham as edições. Os do pacote de design ficam como referência
+// histórica — não refletem as alterações feitas nos editores.
 $manuais = [
-    ['ficheiro' => 'assets/pecas/manuais/cartao-10x15.html',
+    ['peca'     => 'cartao',
      'titulo'   => 'Cartão de convite 10 × 15 cm',
      'sub'      => 'Impressão UV a dourado sobre acrílico transparente',
-     'peca'     => 'cartoes.php'],
-    ['ficheiro' => 'assets/pecas/manuais/porta-chaves.html',
+     'editor'   => 'editor-cartao.php',
+     'original' => 'assets/pecas/manuais/cartao-10x15.html'],
+    ['peca'     => 'porta-chaves',
      'titulo'   => 'Porta-chaves comemorativo',
      'sub'      => 'Acrílico de dois lados, 45 × 60 mm, com argola',
-     'peca'     => 'porta-chaves.php'],
+     'editor'   => 'editor-brindes.php',
+     'original' => 'assets/pecas/manuais/porta-chaves.html'],
 ];
 ?>
 <!DOCTYPE html>
@@ -153,6 +158,11 @@ $manuais = [
   .man h3{ margin:.4rem 0 .2rem; }
   .man p{ font-size:.86rem; color:#7a8078; margin:0 0 .9rem; }
   .man .acoes{ display:flex; gap:.5rem; flex-wrap:wrap; }
+  .man.orig{ background:#fbfaf6; }
+  .man.orig h3{ font-size:1rem; margin:0 0 .6rem; color:#7a8078; }
+  .nota-man{ background:var(--gold-pale); border:1px solid var(--gold-soft); border-radius:12px;
+             padding:.8rem 1rem; font-size:.88rem; margin-bottom:1.2rem; }
+  .nota-orig{ font-size:.84rem; color:#7a8078; margin:0 0 .9rem; }
 
   @media print{
     @page{ margin:12mm; }
@@ -296,20 +306,37 @@ $manuais = [
     <div class="barra no-print">
       <span class="tag neutra">Manuais de impressão</span>
     </div>
+    <div class="nota-man">Os manuais são <b>gerados a partir da configuração atual</b>: paleta, folhagem,
+      elementos ativos, textos, acabamento, variações e quantidades saem tal como estão definidos nos editores.
+      Depois de editar uma peça, basta abrir o manual outra vez.</div>
     <div class="manuais">
-      <?php foreach ($manuais as $m): $existe = is_readable(__DIR__ . '/' . $m['ficheiro']); ?>
+      <?php foreach ($manuais as $m): ?>
         <div class="man">
           <div class="ico">📄</div>
           <h3><?= escP($m['titulo']) ?></h3>
           <p><?= escP($m['sub']) ?></p>
           <div class="acoes">
+            <a class="btn btn-ouro" href="manual.php?peca=<?= escP($m['peca']) ?>">Abrir manual</a>
+            <a class="btn" href="<?= escP($m['editor']) ?>">Editar a peça</a>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <h3 style="margin:1.8rem 0 .4rem">Documentos originais do design</h3>
+    <p class="nota-orig">Os manuais ilustrados que vieram com o design. Servem de <b>referência</b> —
+      descrevem a peça como foi entregue e <b>não refletem</b> as edições feitas depois.</p>
+    <div class="manuais">
+      <?php foreach ($manuais as $m): $existe = is_readable(__DIR__ . '/' . $m['original']); ?>
+        <div class="man orig">
+          <h3><?= escP($m['titulo']) ?></h3>
+          <div class="acoes">
             <?php if ($existe): ?>
-              <a class="btn btn-ouro" href="<?= escP($m['ficheiro']) ?>" target="_blank" rel="noopener">Abrir manual</a>
-              <a class="btn" href="<?= escP($m['ficheiro']) ?>" download>Descarregar</a>
+              <a class="btn" href="<?= escP($m['original']) ?>" target="_blank" rel="noopener">Abrir original</a>
+              <a class="btn" href="<?= escP($m['original']) ?>" download>Descarregar</a>
             <?php else: ?>
-              <span class="por-definir">Manual em falta em <?= escP($m['ficheiro']) ?></span>
+              <span class="por-definir">Em falta: <?= escP($m['original']) ?></span>
             <?php endif; ?>
-            <a class="btn" href="<?= escP($m['peca']) ?>">Ver a peça</a>
           </div>
         </div>
       <?php endforeach; ?>

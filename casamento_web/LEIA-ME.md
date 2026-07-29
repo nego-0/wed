@@ -29,6 +29,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `editor-cartao.php` | **Editor do convite físico**, ao estilo de um editor de imagem: camadas, propriedades e pré-visualização ao vivo. |
 | `editor-brindes.php` | **Editor dos brindes**: peça por género, variações disponíveis à gráfica e quantidade de cada uma. |
 | `assets/editor.css` | Ambiente dos editores (barra de ferramentas, mesa de trabalho e painéis). |
+| `manual.php` | **Manual de impressão gerado** (cartão e porta-chaves): reflete a configuração atual, imprimível em A4. |
 | `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados), monograma, faces do porta-chaves e modelo dos brindes. |
 | `assets/pecas.css` | Estilos das peças (cartão e porta-chaves), partilhados pelas páginas que as desenham. |
 | `assets/pecas/` | Biblioteca vetorial das peças (ícones SVG recoloráveis) e a imagem dos corações entrelaçados. |
@@ -130,7 +131,7 @@ Em `config.php` (não sensível):
 
 - **Convites físicos** — lista de produção simplificada: nome do convite tal como é impresso, mesas com o nº de lugares, código e **QR**. **Ao clicar numa linha, o modelo do cartão abre expandido** (ampliado até caber no ecrã), com ligação para o imprimir; *Esc* fecha. A lista é pesquisável e imprimível, e dá acesso a todos os modelos e às etiquetas para envelopes.
 - **Brindes** — o brinde **atribuído a cada género** e as suas **variações**. De origem, o género masculino recebe o **porta-chaves**, cujas variações são as **frases do verso**: cada variação é mostrada tal como será produzida. Indica quantos convidados recebem o brinde (dos que estão marcados como *Recebe brinde*), quantas variações existem e como se distribuem. Convidados marcados para receber brinde mas **sem género definido** são assinalados à parte, para não passarem despercebidos. O género feminino fica como *por definir* até lhe ser atribuída uma peça.
-- **Manuais** — os manuais de impressão de cada peça (cartão 10×15 e porta-chaves), para abrir ou descarregar e entregar à gráfica.
+- **Manuais** — os manuais de impressão de cada peça, **gerados a partir da configuração atual**: acompanham as edições. Levam as especificações de produção (formato, sangria, tinta, linhas mínimas), a **paleta em uso com os códigos de cor**, a tipografia convertida em mm e pt, **quais os elementos a imprimir** (assinalando os que foram desligados nos editores), os textos tal como estão, e — no porta-chaves — o acabamento e a **tabela das variações escolhidas com a quantidade de cada uma**, mais provas visuais da peça. São imprimíveis em A4. Os manuais ilustrados que vieram com o design continuam acessíveis à parte, como referência do original.
 
 **Editar o convite físico.** Em *Gráfica → Convites físicos → Editar o cartão* abre-se um editor ao estilo de um editor de imagem: barra de ferramentas à esquerda, o cartão numa mesa de trabalho ao centro e, à direita, os painéis de **Propriedades** e **Camadas**.
 
