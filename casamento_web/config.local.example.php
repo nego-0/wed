@@ -15,8 +15,8 @@ return [
     // ---- Ligação à base de dados ---------------------------
     // Tenta 'local' primeiro (XAMPP/Wamp) e depois 'online' (alojamento).
     'db' => [
-        'local'  => ['host' => 'localhost',        'user' => 'root',            'pass' => '',                 'db' => 'wedding_guests'],
-        'online' => ['host' => 'SEU_HOST_MYSQL',   'user' => 'SEU_UTILIZADOR',  'pass' => 'SUA_PALAVRA_PASSE', 'db' => 'SUA_BASE_DE_DADOS'],
+        'local'  => ['host' => 'localhost',        'user' => 'root',            'pass' => '',                 'db' => 'wed'],
+        'online' => ['host' => 'sql300.infinityfree.com',   'user' => 'if0_40371922',  'pass' => 'ncm202605', 'db' => 'if0_40371922_wed'],
     ],
 
     // ---- Utilizadores (nome de utilizador + senha) ---------
@@ -26,8 +26,8 @@ return [
     //   php -r "echo password_hash('a-sua-senha', PASSWORD_DEFAULT), PHP_EOL;"
     // e cole o resultado em 'senha_hash'.
     'utilizadores' => [
-        ['utilizador' => 'admin',    'senha_hash' => 'COLE_AQUI_O_HASH', 'papel' => 'admin'],
-        ['utilizador' => 'porteiro', 'senha_hash' => 'COLE_AQUI_O_HASH', 'papel' => 'porteiro'],
+        ['utilizador' => 'admin',    'senha_hash' => '$2y$10$r/Jwoyuz8q8DGhXup6eLqO5hohSTRsY/szp1YqHWXRPP2wdn2poD.', 'papel' => 'admin'],
+        ['utilizador' => 'porteiro', 'senha_hash' => '$2y$10$r/Jwoyuz8q8DGhXup6eLqO5hohSTRsY/szp1YqHWXRPP2wdn2poD.', 'papel' => 'porteiro'],
 
         // Alternativa mais simples (senha legível neste ficheiro):
         // ['utilizador' => 'admin', 'senha' => 'a-sua-senha', 'papel' => 'admin'],
