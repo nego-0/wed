@@ -57,7 +57,7 @@ define('UTILIZADORES', cfg_local('utilizadores', []));
 
 // ---- Regras -------------------------------------------------
 const PREFIXO   = 'cw_';   // prefixo das tabelas novas (não mexe na lista antiga)
-const MAX_LUGARES_TOTAL = 300;  // teto de segurança de lugares no evento
+const MAX_LUGARES_TOTAL = 150;  // teto de segurança de lugares no evento
 
 // Fuso não é crítico aqui; datas guardadas em UTC pelo MySQL.
 date_default_timezone_set('Africa/Luanda');
