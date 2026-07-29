@@ -14,12 +14,19 @@
    CARTÃO DE CONVITE 10×15 (720×1080 px = 100×150 mm)
    ============================================================ */
 .cartao{ width:720px; height:1080px; position:relative; overflow:hidden; background:transparent;
-         font-family:'Montserrat',sans-serif; }
+         font-family:'Montserrat',sans-serif;
+         /* Paleta como variáveis: o editor troca-a sem voltar ao servidor. */
+         --ct-accent:#a1854e; --ct-name:#c9a862; --ct-sub:#b39a72; --ct-head:#cfae68; --ct-soft:#dcc79c; }
+/* Camada desligada no painel de camadas */
+.cartao .ct-oculta{ display:none !important; }
 
+/* Os SVG herdam a cor de acento por currentColor */
+.ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent); }
 .ct-ramo{ position:absolute; width:132px; height:270px; z-index:2; }
 .ct-ramo-sd{ top:24px; right:24px; }
 .ct-ramo-ie{ bottom:24px; left:24px; transform:rotate(180deg); }
-.ct-moldura{ position:absolute; top:28px; left:28px; right:28px; bottom:28px; border:1.4px solid; z-index:2; pointer-events:none; }
+.ct-moldura{ position:absolute; top:28px; left:28px; right:28px; bottom:28px;
+             border:1.4px solid var(--ct-accent); z-index:2; pointer-events:none; }
 .ct-voluta{ position:absolute; width:178px; height:178px; z-index:2; pointer-events:none; }
 .ct-voluta-se{ top:24px; left:24px; }
 .ct-voluta-id{ bottom:24px; right:24px; transform:rotate(180deg); }
@@ -27,37 +34,40 @@
 .ct-conteudo{ position:relative; z-index:3; height:100%; box-sizing:border-box; padding:58px 58px 78px;
               display:flex; flex-direction:column; align-items:center; justify-content:space-between; text-align:center; }
 .ct-topo{ display:flex; flex-direction:column; align-items:center; }
-.ct-abertura{ font-size:13px; font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase; }
+.ct-abertura{ font-size:13px; font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase;
+              color:var(--ct-soft); }
 .ct-nomes{ position:relative; margin:22px 0 6px; padding:0 30px; }
 .ct-floreado{ position:absolute; width:150px; height:104px; z-index:0; opacity:.85; }
 .ct-floreado-e{ left:-26px; top:-4px; }
 .ct-floreado-d{ right:-26px; bottom:-4px; transform:rotate(180deg); }
-.ct-nome{ position:relative; z-index:1; font-family:'Alex Brush',cursive; font-size:75px; line-height:.9; }
-.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; }
+.ct-nome{ position:relative; z-index:1; font-family:'Alex Brush',cursive; font-size:75px; line-height:.9;
+          color:var(--ct-name); }
+.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); }
 .ct-frase{ margin:14px 0 0; max-width:400px; font-family:'Cormorant Garamond',serif; font-style:italic;
-           font-size:20px; line-height:1.55; }
+           font-size:20px; line-height:1.55; color:var(--ct-sub); }
 
 .ct-centro{ display:flex; flex-direction:column; align-items:center; gap:12px; }
-.ct-filete{ width:120px; height:1px; opacity:.6; }
-.ct-reservado{ font-size:12px; font-weight:500; letter-spacing:.28em; text-transform:uppercase; }
-.ct-convidado{ font-family:'Alex Brush',cursive; font-size:48px; line-height:.9; }
+.ct-filete{ width:120px; height:1px; opacity:.6;
+            background:linear-gradient(90deg,transparent,var(--ct-accent),transparent); }
+.ct-reservado{ font-size:12px; font-weight:500; letter-spacing:.28em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-convidado{ font-family:'Alex Brush',cursive; font-size:48px; line-height:.9; color:var(--ct-name); }
 .ct-mesas{ display:flex; gap:34px; align-items:stretch; margin-top:2px; }
 .ct-mesa{ display:flex; flex-direction:column; align-items:center; gap:4px; }
-.ct-mesa-n{ font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; }
-.ct-mesa-l{ font-size:12px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; }
-.ct-div-v{ width:1px; opacity:.35; }
+.ct-mesa-n{ font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--ct-head); }
+.ct-mesa-l{ font-size:12px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-div-v{ width:1px; opacity:.35; background:var(--ct-accent); }
 
 .ct-base{ display:flex; flex-direction:column; align-items:center; width:449px; }
-.ct-data{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:40px; line-height:1; }
-.ct-dia{ margin-top:14px; font-size:12px; font-weight:500; letter-spacing:.32em; text-transform:uppercase; }
-.ct-tracinho{ width:44px; height:1px; opacity:.5; margin:30px 0; }
+.ct-data{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:40px; line-height:1; color:var(--ct-head); }
+.ct-dia{ margin-top:14px; font-size:12px; font-weight:500; letter-spacing:.32em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-tracinho{ width:44px; height:1px; opacity:.5; margin:30px 0; background:var(--ct-accent); }
 .ct-tracinho-2{ margin:26px 0 16px; }
-.ct-seccao{ font-size:14px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; }
+.ct-seccao{ font-size:14px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--ct-head); }
 .ct-seccao-2{ margin-top:26px; }
-.ct-detalhe{ margin-top:9px; font-size:13px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; }
+.ct-detalhe{ margin-top:9px; font-size:13px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--ct-soft); }
 .ct-detalhe-2{ line-height:1.9; }
 .ct-fecho{ margin:0; max-width:450px; font-family:'Cormorant Garamond',serif; font-style:italic;
-           font-size:19px; line-height:1.6; }
+           font-size:19px; line-height:1.6; color:var(--ct-sub); }
 
 /* O acrílico é transparente: mostra-se sobre fundo escuro, como no design. */
 .folha{ background:radial-gradient(120% 100% at 50% 15%,#2a2b26 0%,#191a16 55%,#0e0f0c 100%);

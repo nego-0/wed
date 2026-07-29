@@ -1,0 +1,162 @@
+/* ============================================================
+   editor.css — Ambiente de edição ao estilo de um editor de
+   imagem: barra de ferramentas à esquerda, mesa de trabalho ao
+   centro e painéis (propriedades / camadas) à direita.
+   Partilhado por editor-cartao.php e editor-brindes.php.
+   ============================================================ */
+
+:root{
+  --ed-fundo:#1e1f1c;      /* fundo da aplicação */
+  --ed-painel:#2a2c28;     /* painéis e barras */
+  --ed-painel-2:#323430;   /* cabeçalhos de painel */
+  --ed-mesa:#141511;       /* mesa de trabalho */
+  --ed-linha:#3b3e39;
+  --ed-texto:#d6d3c9;
+  --ed-texto-2:#8f938a;
+  --ed-ouro:#b4864a;
+  --ed-ouro-claro:#d9bc8c;
+  --ed-sel:#4a7a5e;
+}
+
+body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
+             font-family:'Jost',system-ui,sans-serif; font-size:13px;
+             height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+
+/* ---- Barra de menu ---------------------------------------- */
+.ed-menu{ display:flex; align-items:center; gap:.9rem; background:var(--ed-painel);
+          border-bottom:1px solid var(--ed-linha); padding:.45rem .8rem; flex:0 0 auto; }
+.ed-menu .marca{ display:flex; align-items:center; gap:.55rem; font-family:'Cormorant Garamond',serif;
+                 font-size:1.02rem; color:var(--ed-ouro-claro); }
+.ed-menu .ed-mono{ width:26px; height:26px; border:1px solid var(--ed-ouro); border-radius:50%;
+                display:flex; align-items:center; justify-content:center; font-size:.7rem; }
+.ed-menu .doc{ color:var(--ed-texto-2); }
+.ed-menu .doc b{ color:var(--ed-texto); font-weight:500; }
+.ed-menu .cresce{ flex:1; }
+.ed-menu a{ color:var(--ed-texto-2); text-decoration:none; }
+.ed-menu a:hover{ color:var(--ed-ouro-claro); }
+
+/* ---- Barra de opções (por baixo do menu) ------------------- */
+.ed-opcoes{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap;
+            background:var(--ed-painel-2); border-bottom:1px solid var(--ed-linha);
+            padding:.4rem .8rem; flex:0 0 auto; }
+.ed-opcoes .rot{ color:var(--ed-texto-2); font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; }
+.ed-sep{ width:1px; height:20px; background:var(--ed-linha); }
+
+/* ---- Corpo: ferramentas | mesa | painéis ------------------- */
+.ed-corpo{ flex:1; display:flex; min-height:0; }
+
+.ed-ferramentas{ width:46px; background:var(--ed-painel); border-right:1px solid var(--ed-linha);
+                 display:flex; flex-direction:column; align-items:center; gap:.25rem; padding:.5rem 0; flex:0 0 auto; }
+.ferr{ width:34px; height:34px; border:1px solid transparent; border-radius:7px; background:none;
+       color:var(--ed-texto-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.ferr:hover{ background:#34362f; color:var(--ed-texto); }
+.ferr.on{ background:var(--ed-ouro); border-color:var(--ed-ouro-claro); color:#1e1f1c; }
+.ferr svg{ width:17px; height:17px; }
+
+.ed-mesa{ flex:1; background:var(--ed-mesa); overflow:auto; position:relative;
+          display:flex; align-items:flex-start; justify-content:center; padding:26px; min-width:0; }
+.ed-mesa.mao{ cursor:grab; }
+.ed-mesa.mao:active{ cursor:grabbing; }
+/* Sombra de "papel" em volta da peça */
+.ed-arte{ position:relative; box-shadow:0 18px 50px rgba(0,0,0,.6); flex:0 0 auto; }
+
+.ed-paineis{ width:288px; background:var(--ed-painel); border-left:1px solid var(--ed-linha);
+             display:flex; flex-direction:column; flex:0 0 auto; overflow:hidden; }
+.ed-painel{ border-bottom:1px solid var(--ed-linha); display:flex; flex-direction:column; min-height:0; }
+.ed-painel > h3{ margin:0; background:var(--ed-painel-2); padding:.45rem .7rem; font-size:.72rem;
+              text-transform:uppercase; letter-spacing:.12em; color:var(--ed-texto-2); font-weight:500;
+              display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none; }
+.ed-painel > h3 .chev{ transition:transform .15s; }
+.ed-painel.fechado > h3 .chev{ transform:rotate(-90deg); }
+.ed-painel.fechado .ed-painel-corpo{ display:none; }
+.ed-painel-corpo{ padding:.6rem .7rem; overflow:auto; }
+.ed-painel.cresce{ flex:1; min-height:0; }
+
+/* ---- Camadas ---------------------------------------------- */
+.camada{ display:flex; align-items:center; gap:.5rem; padding:.32rem .4rem; border-radius:6px;
+         cursor:pointer; border:1px solid transparent; }
+.camada:hover{ background:#34362f; }
+.camada.sel{ background:#3d4a41; border-color:var(--ed-sel); }
+.camada .olho{ background:none; border:0; padding:0; cursor:pointer; color:var(--ed-texto-2);
+               display:flex; width:18px; }
+.camada .olho:hover{ color:var(--ed-texto); }
+.camada.oculta .nome{ color:#63665e; text-decoration:line-through; }
+.camada .olho svg{ width:15px; height:15px; }
+.camada .nome{ flex:1; }
+.camada .mini{ width:22px; height:16px; border:1px solid var(--ed-linha); border-radius:3px;
+               background:#1a1b17; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+               font-size:.66rem; color:var(--ed-texto-2); }
+
+/* ---- Campos ------------------------------------------------ */
+.campo{ margin-bottom:.7rem; }
+.campo label{ display:block; font-size:.72rem; color:var(--ed-texto-2); margin-bottom:.22rem;
+              text-transform:uppercase; letter-spacing:.07em; }
+.campo input[type=text], .campo input[type=number], .campo textarea, .campo select{
+  width:100%; box-sizing:border-box; background:#191a16; border:1px solid var(--ed-linha);
+  color:var(--ed-texto); border-radius:6px; padding:.4rem .55rem; font-family:inherit; font-size:.85rem; }
+.campo textarea{ resize:vertical; min-height:66px; line-height:1.45; }
+.campo input:focus, .campo textarea:focus, .campo select:focus{
+  outline:none; border-color:var(--ed-ouro); box-shadow:0 0 0 2px rgba(180,134,74,.18); }
+.campo .ajuda{ font-size:.72rem; color:var(--ed-texto-2); margin-top:.25rem; }
+.vazio-painel{ color:var(--ed-texto-2); font-size:.8rem; line-height:1.5; }
+
+/* ---- Botões ------------------------------------------------ */
+.bt{ background:#3a3d37; border:1px solid var(--ed-linha); color:var(--ed-texto); border-radius:6px;
+     padding:.35rem .7rem; font-family:inherit; font-size:.8rem; cursor:pointer; }
+.bt:hover{ background:#454941; }
+.bt.primario{ background:var(--ed-ouro); border-color:var(--ed-ouro); color:#1a1b17; font-weight:500; }
+.bt.primario:hover{ background:var(--ed-ouro-claro); }
+.bt:disabled{ opacity:.45; cursor:default; }
+.bt-min{ padding:.2rem .45rem; font-size:.75rem; }
+
+/* ---- Amostras de paleta ------------------------------------ */
+.amostras{ display:flex; gap:.35rem; align-items:center; }
+.amostra{ width:24px; height:24px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
+.amostra.on{ border-color:var(--ed-ouro-claro); box-shadow:0 0 0 2px rgba(0,0,0,.5) inset; }
+
+/* ---- Zoom -------------------------------------------------- */
+.zoom{ display:inline-flex; align-items:center; gap:.3rem; }
+.zoom .val{ min-width:44px; text-align:center; color:var(--ed-texto-2); }
+
+/* ---- Seleção na mesa (marca de elemento escolhido) --------- */
+.ed-arte [data-camada]{ position:relative; }
+.ed-arte.marcar [data-camada]:hover{ outline:1px dashed rgba(217,188,140,.55); outline-offset:2px; }
+.ed-arte [data-camada].sel-camada{ outline:1.5px solid var(--ed-ouro-claro); outline-offset:2px; }
+
+/* ---- Barra de estado --------------------------------------- */
+.ed-estado{ background:var(--ed-painel); border-top:1px solid var(--ed-linha); padding:.3rem .8rem;
+            font-size:.74rem; color:var(--ed-texto-2); display:flex; gap:1rem; align-items:center; flex:0 0 auto; }
+.ed-estado .cresce{ flex:1; }
+.sujo{ color:var(--ed-ouro-claro); }
+
+/* ---- Aviso / totais ---------------------------------------- */
+.aviso{ border-radius:6px; padding:.45rem .6rem; font-size:.78rem; line-height:1.45; margin-bottom:.6rem; }
+.aviso.ok{ background:rgba(74,122,94,.18); border:1px solid rgba(74,122,94,.5); color:#bfe0cd; }
+.aviso.alerta{ background:rgba(180,134,74,.16); border:1px solid rgba(180,134,74,.5); color:var(--ed-ouro-claro); }
+
+/* ---- Grelha de variações (editor de brindes) --------------- */
+.variacao{ display:flex; gap:.55rem; align-items:flex-start; padding:.5rem; border-radius:7px;
+           border:1px solid var(--ed-linha); margin-bottom:.5rem; background:#232520; cursor:pointer; }
+.variacao.on{ border-color:var(--ed-ouro); background:#2c2a22; }
+.variacao.sel{ box-shadow:0 0 0 2px rgba(217,188,140,.35); }
+.variacao input[type=checkbox]{ width:15px; height:15px; accent-color:var(--ed-ouro); margin-top:.15rem; cursor:pointer; }
+.variacao .txt{ flex:1; min-width:0; }
+.variacao .rom{ font-family:'Cormorant Garamond',serif; color:var(--ed-ouro-claro); font-size:.82rem; }
+.variacao .frase{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:.82rem;
+                  color:var(--ed-texto); white-space:pre-line; line-height:1.4; margin-top:.15rem; }
+.variacao .qtd{ width:62px; flex:0 0 auto; }
+.variacao .qtd input{ width:100%; box-sizing:border-box; background:#191a16; border:1px solid var(--ed-linha);
+                      color:var(--ed-texto); border-radius:5px; padding:.28rem .35rem; font-family:inherit;
+                      font-size:.82rem; text-align:center; }
+.variacao.desligada{ opacity:.5; }
+
+/* Documentos (géneros) no editor de brindes */
+.docs{ display:flex; gap:.3rem; }
+.doc-aba{ background:#2a2c28; border:1px solid var(--ed-linha); border-bottom:0; color:var(--ed-texto-2);
+          padding:.3rem .8rem; border-radius:6px 6px 0 0; cursor:pointer; font-family:inherit; font-size:.8rem; }
+.doc-aba.on{ background:var(--ed-mesa); color:var(--ed-texto); }
+
+@media (max-width:900px){
+  .ed-paineis{ width:230px; }
+  .ed-mesa{ padding:12px; }
+}

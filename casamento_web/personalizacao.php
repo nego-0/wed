@@ -163,6 +163,7 @@ function defsPadrao(): array {
         'cartao.civil_titulo' => 'Cerimónia Civil',
         'cartao.civil_hora' => '10:30',
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
+        'cartao.camadas' => '',   // vazio = todas as camadas visíveis
         // ---- Porta-chaves comemorativo (45×60 mm) ----
         'chaveiro.acabamento' => 'classic',
         'chaveiro.quadra' => '5',
@@ -236,15 +237,29 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return in_array($valor, ['', 'porta-chaves'], true) ? $valor : null;
         case 'brindes.m.variacoes':
         case 'brindes.f.variacoes': {
-            if ($valor === '') return '';           // vazio = todas as variações
+            // Mapa {indice: quantidade} — só as variações disponíveis à gráfica.
+            // Vazio = todas disponíveis, sem quantidade definida.
+            if ($valor === '') return '';
             $j = json_decode($valor, true); if (!is_array($j)) return null;
             $out = [];
-            foreach ($j as $i) {
+            foreach ($j as $i => $q) {
                 $i = (int)$i;
-                if ($i >= 0 && $i <= 7 && !in_array($i, $out, true)) $out[] = $i;
+                if ($i < 0 || $i > 7) continue;
+                $out[(string)$i] = max(0, min(9999, (int)$q));
             }
-            sort($out);
-            return json_encode($out);
+            if (!$out) return '';
+            ksort($out, SORT_NUMERIC);
+            return json_encode($out, JSON_FORCE_OBJECT);
+        }
+        case 'cartao.camadas': {
+            // Visibilidade das camadas do cartão: {"nome_da_camada": 0|1}
+            if ($valor === '') return '';
+            $j = json_decode($valor, true); if (!is_array($j)) return null;
+            $validas = ['ramos','volutas','moldura','floreados','abertura','nomes',
+                        'frase','convidado','mesas','data','logistica','fecho'];
+            $out = [];
+            foreach ($j as $k => $v) if (in_array($k, $validas, true)) $out[$k] = empty($v) ? 0 : 1;
+            return $out ? json_encode($out) : '';
         }
         case 'evento.maps':
             return preg_match('#^https://#', $valor) ? substr($valor, 0, 500) : null;

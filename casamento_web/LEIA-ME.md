@@ -26,6 +26,9 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico (acessível a partir de *Gráfica*). |
 | `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso (acessível a partir de *Gráfica*). |
 | `graficas.php` | **Entregáveis à gráfica**: lista de produção dos convites físicos, brindes por género e manuais de impressão. |
+| `editor-cartao.php` | **Editor do convite físico**, ao estilo de um editor de imagem: camadas, propriedades e pré-visualização ao vivo. |
+| `editor-brindes.php` | **Editor dos brindes**: peça por género, variações disponíveis à gráfica e quantidade de cada uma. |
+| `assets/editor.css` | Ambiente dos editores (barra de ferramentas, mesa de trabalho e painéis). |
 | `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados), monograma, faces do porta-chaves e modelo dos brindes. |
 | `assets/pecas.css` | Estilos das peças (cartão e porta-chaves), partilhados pelas páginas que as desenham. |
 | `assets/pecas/` | Biblioteca vetorial das peças (ícones SVG recoloráveis) e a imagem dos corações entrelaçados. |
@@ -126,6 +129,22 @@ Em `config.php` (não sensível):
 - **Convites físicos** — lista de produção simplificada: nome do convite tal como é impresso, mesas com o nº de lugares, código e **QR**. **Ao clicar numa linha, o modelo do cartão abre expandido** (ampliado até caber no ecrã), com ligação para o imprimir; *Esc* fecha. A lista é pesquisável e imprimível, e dá acesso a todos os modelos e às etiquetas para envelopes.
 - **Brindes** — o brinde **atribuído a cada género** e as suas **variações**. De origem, o género masculino recebe o **porta-chaves**, cujas variações são as **frases do verso**: cada variação é mostrada tal como será produzida. Indica quantos convidados recebem o brinde (dos que estão marcados como *Recebe brinde*), quantas variações existem e como se distribuem. Convidados marcados para receber brinde mas **sem género definido** são assinalados à parte, para não passarem despercebidos. O género feminino fica como *por definir* até lhe ser atribuída uma peça.
 - **Manuais** — os manuais de impressão de cada peça (cartão 10×15 e porta-chaves), para abrir ou descarregar e entregar à gráfica.
+
+**Editar o convite físico.** Em *Gráfica → Convites físicos → Editar o cartão* abre-se um editor ao estilo de um editor de imagem: barra de ferramentas à esquerda, o cartão numa mesa de trabalho ao centro e, à direita, os painéis de **Propriedades** e **Camadas**.
+
+- **Camadas** — as doze partes do cartão (trepadeiras, volutas, moldura, floreados, abertura, nomes, frase, bloco do convidado, mesas, data, logística e frase final). O **olho** mostra ou oculta cada uma; a lista distingue camadas de texto (T) das decorativas (◈).
+- **Selecionar** — clicar numa camada, ou **diretamente no cartão**, marca-a e abre as suas propriedades.
+- **Propriedades** — os textos dessa camada. O que se escreve aparece **imediatamente no cartão**.
+- **Barra de opções** — paleta, folhagem e zoom (com *Ajustar à janela*). A troca de paleta e de folhagem é instantânea, sem ir ao servidor: as cores são variáveis CSS e as trepadeiras já vêm todas carregadas.
+- **Ferramentas** — selecionar (V), texto (T), mão para arrastar a vista (H) e zoom (Z); `0` ajusta à janela.
+- A prova usa um convite real, para se ver o resultado com nomes e mesas verdadeiros. *Guardar* grava; *Repor originais* devolve tudo ao estado inicial. Sair com alterações por guardar pede confirmação.
+
+**Editar os brindes.** Em *Gráfica → Brindes → Editar brindes*, no mesmo ambiente:
+
+- Cada **género** é um documento (separadores em cima) e tem uma **peça** atribuída, escolhida de um catálogo — o sistema fica **aberto a novas peças**: registá-las no catálogo basta para aparecerem aqui.
+- **Variações disponíveis** — a lista das variações da peça (no porta-chaves, as frases do verso). O visto define **quais ficam disponíveis para a gráfica** e o campo ao lado **quantas produzir de cada uma**. Clicar numa variação mostra-a na mesa de trabalho.
+- **Produção** — resume a peça, quantos convidados recebem o brinde, quantas variações estão ativas e o total a produzir, avisando se **faltam** peças ou se há **reserva** a mais. *Repartir pelos convidados* distribui automaticamente o total pelas variações ativas.
+- Só as variações ativas (e as suas quantidades) chegam à página da gráfica.
 
 **Porta-chaves.** A página *Porta-chaves* apresenta a lembrança em acrílico de dois lados (45×60 mm) com o monograma do casal: a peça **inclina-se com o cursor** e **vira ao clique**. Pode escolher o **acabamento** (ouro sobre ébano, floresta, marfim) e a **quadra** do verso (8 à escolha, com as coordenadas do local por baixo). O monograma, o anel guilhoché e os ornamentos são gerados a partir das iniciais e da data do evento.
 

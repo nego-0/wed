@@ -181,73 +181,121 @@ function cartaoDadosEvento(array $defs): array {
  *        'mesas' vem de mesasDoConvite(); $comLugares controla se
  *        aparece o "N lugares" por baixo do nome da mesa.
  */
-function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhagem, bool $comLugares = true): string {
-    $ac = $pal['accent']; $nc = $pal['nameColor']; $sub = $pal['sub']; $head = $pal['head']; $soft = $pal['soft'];
+/** Camadas do cartão (ordem de topo para base, como no painel de camadas). */
+function cartaoCamadas(): array {
+    return [
+        'ramos'     => 'Trepadeiras',
+        'volutas'   => 'Volutas de canto',
+        'moldura'   => 'Moldura',
+        'floreados' => 'Floreados',
+        'abertura'  => 'Abertura',
+        'nomes'     => 'Nomes dos noivos',
+        'frase'     => 'Frase de convite',
+        'convidado' => 'Bloco do convidado',
+        'mesas'     => 'Mesas',
+        'data'      => 'Data',
+        'logistica' => 'Logística',
+        'fecho'     => 'Frase final',
+    ];
+}
+
+/** Visibilidade das camadas, a partir da definição JSON (ausente = visível). */
+function cartaoCamadasVisiveis(array $defs): array {
+    $j = json_decode($defs['cartao.camadas'] ?? '', true);
+    $out = [];
+    foreach (cartaoCamadas() as $k => $_) {
+        $out[$k] = (is_array($j) && array_key_exists($k, $j)) ? (int)!empty($j[$k]) : 1;
+    }
+    return $out;
+}
+
+/**
+ * Cartão de convite completo (720×1080), personalizado para um convidado.
+ *
+ * As cores entram como variáveis CSS (--ct-*) e os SVG usam currentColor:
+ * assim o editor troca de paleta sem voltar ao servidor. Cada bloco leva
+ * data-camada, para o painel de camadas o poder selecionar e ocultar.
+ *
+ * $conv: ['nome'=>string, 'mesas'=>[['nome'=>..,'n'=>..], …]]
+ */
+function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhagem, bool $comLugares = true, array $camadas = []): string {
     $e = fn($s) => escP($s);
+    // Camada oculta: ausente do array = visível.
+    $oc = fn($k) => (array_key_exists($k, $camadas) && !$camadas[$k]) ? ' ct-oculta' : '';
+
+    $vars = '--ct-accent:' . $pal['accent'] . ';--ct-name:' . $pal['nameColor']
+          . ';--ct-sub:' . $pal['sub'] . ';--ct-head:' . $pal['head'] . ';--ct-soft:' . $pal['soft'];
 
     // Blocos de mesa, separados por divisória vertical (o design usa 2 colunas).
     $mesas = '';
     foreach ($conv['mesas'] as $i => $m) {
-        if ($i > 0) $mesas .= '<div class="ct-div-v" style="background:'.$ac.'"></div>';
-        $mesas .= '<div class="ct-mesa">'
-                . '<div class="ct-mesa-n" style="color:'.$head.'">'.$e($m['nome']).'</div>';
+        if ($i > 0) $mesas .= '<div class="ct-div-v"></div>';
+        $mesas .= '<div class="ct-mesa"><div class="ct-mesa-n">' . $e($m['nome']) . '</div>';
         if ($comLugares) {
             $n = (int)$m['n'];
-            $mesas .= '<div class="ct-mesa-l" style="color:'.$soft.'">'.$n.' '.($n === 1 ? 'Lugar' : 'Lugares').'</div>';
+            $mesas .= '<div class="ct-mesa-l">' . $n . ' ' . ($n === 1 ? 'Lugar' : 'Lugares') . '</div>';
         }
         $mesas .= '</div>';
     }
-    $blocoMesas = $mesas !== '' ? '<div class="ct-mesas">'.$mesas.'</div>' : '';
-
-    $filete = '<div class="ct-filete" style="background:linear-gradient(90deg,transparent,'.$ac.',transparent)"></div>';
-    $tracinho = '<div class="ct-tracinho" style="background:'.$ac.'"></div>';
+    $blocoMesas = $mesas !== '' ? '<div class="ct-mesas' . $oc('mesas') . '" data-camada="mesas">' . $mesas . '</div>' : '';
 
     ob_start(); ?>
-<div class="cartao">
+<div class="cartao" style="<?= $vars ?>">
   <!-- trepadeiras: canto superior-direito e inferior-esquerdo (rodada 180°) -->
-  <div class="ct-ramo ct-ramo-sd"><?= svgTrepadeira($folhagem, $ac) ?></div>
-  <div class="ct-ramo ct-ramo-ie"><?= svgTrepadeira($folhagem, $ac) ?></div>
+  <div class="ct-ramos<?= $oc('ramos') ?>" data-camada="ramos">
+    <div class="ct-ramo ct-ramo-sd"><?= svgTrepadeira($folhagem, 'currentColor') ?></div>
+    <div class="ct-ramo ct-ramo-ie"><?= svgTrepadeira($folhagem, 'currentColor') ?></div>
+  </div>
 
   <!-- moldura dourada contínua + volutas de canto -->
-  <div class="ct-moldura" style="border-color:<?= $ac ?>"></div>
-  <div class="ct-voluta ct-voluta-se"><?= svgVoluta($ac) ?></div>
-  <div class="ct-voluta ct-voluta-id"><?= svgVoluta($ac) ?></div>
+  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"></div>
+  <div class="ct-volutas<?= $oc('volutas') ?>" data-camada="volutas">
+    <div class="ct-voluta ct-voluta-se"><?= svgVoluta('currentColor') ?></div>
+    <div class="ct-voluta ct-voluta-id"><?= svgVoluta('currentColor') ?></div>
+  </div>
 
   <div class="ct-conteudo">
     <!-- topo: abertura + nomes + frase -->
     <div class="ct-topo">
-      <div class="ct-abertura" style="color:<?= $soft ?>"><?= nl2br($e($ev['abertura']), false) ?></div>
-      <div class="ct-nomes">
-        <div class="ct-floreado ct-floreado-e"><?= svgFloreado($ac) ?></div>
-        <div class="ct-floreado ct-floreado-d"><?= svgFloreado($ac) ?></div>
-        <div class="ct-nome" style="color:<?= $nc ?>"><?= $e($ev['noiva']) ?></div>
-        <div class="ct-coracao" style="color:<?= $ac ?>">&#9825;</div>
-        <div class="ct-nome" style="color:<?= $nc ?>"><?= $e($ev['noivo']) ?></div>
+      <div class="ct-abertura<?= $oc('abertura') ?>" data-camada="abertura"><?= nl2br($e($ev['abertura']), false) ?></div>
+      <div class="ct-nomes<?= $oc('nomes') ?>" data-camada="nomes">
+        <div class="ct-floreados<?= $oc('floreados') ?>" data-camada="floreados">
+          <div class="ct-floreado ct-floreado-e"><?= svgFloreado('currentColor') ?></div>
+          <div class="ct-floreado ct-floreado-d"><?= svgFloreado('currentColor') ?></div>
+        </div>
+        <div class="ct-nome" data-campo="noiva"><?= $e($ev['noiva']) ?></div>
+        <div class="ct-coracao">&#9825;</div>
+        <div class="ct-nome" data-campo="noivo"><?= $e($ev['noivo']) ?></div>
       </div>
-      <p class="ct-frase" style="color:<?= $sub ?>"><?= $e($ev['frase']) ?></p>
+      <p class="ct-frase<?= $oc('frase') ?>" data-camada="frase" data-campo="frase"><?= $e($ev['frase']) ?></p>
     </div>
 
     <!-- centro: o convidado (personalizado) -->
-    <div class="ct-centro">
-      <?= $filete ?>
-      <div class="ct-reservado" style="color:<?= $soft ?>"><?= $e($ev['reservado']) ?></div>
-      <div class="ct-convidado" style="color:<?= $nc ?>"><?= $e($conv['nome']) ?></div>
+    <div class="ct-centro<?= $oc('convidado') ?>" data-camada="convidado">
+      <div class="ct-filete"></div>
+      <div class="ct-reservado" data-campo="reservado"><?= $e($ev['reservado']) ?></div>
+      <div class="ct-convidado"><?= $e($conv['nome']) ?></div>
       <?= $blocoMesas ?>
-      <?= $filete ?>
+      <div class="ct-filete"></div>
     </div>
 
     <!-- base: data + logística + frase final -->
     <div class="ct-base">
-      <div class="ct-data" style="color:<?= $head ?>"><?= $e($ev['data_ext']) ?></div>
-      <div class="ct-dia" style="color:<?= $soft ?>"><?= $e($ev['dia_semana']) ?></div>
-      <?= $tracinho ?>
-      <div class="ct-seccao" style="color:<?= $head ?>"><?= $e($ev['civil_titulo']) ?></div>
-      <div class="ct-detalhe" style="color:<?= $soft ?>">às <?= $e($ev['civil_hora']) ?></div>
-      <div class="ct-seccao ct-seccao-2" style="color:<?= $head ?>"><?= $e($ev['copo_titulo']) ?></div>
-      <div class="ct-detalhe ct-detalhe-2" style="color:<?= $soft ?>"><?= $e($ev['local']) ?><br>às <?= $e($ev['copo_hora']) ?></div>
-      <div class="ct-tracinho ct-tracinho-2" style="background:<?= $ac ?>"></div>
-      <p class="ct-fecho" style="color:<?= $sub ?>"><?= $e($ev['frase_final']) ?></p>
+      <div class="ct-bloco-data<?= $oc('data') ?>" data-camada="data">
+        <div class="ct-data"><?= $e($ev['data_ext']) ?></div>
+        <div class="ct-dia"><?= $e($ev['dia_semana']) ?></div>
+      </div>
+      <div class="ct-tracinho"></div>
+      <div class="ct-logistica<?= $oc('logistica') ?>" data-camada="logistica">
+        <div class="ct-seccao" data-campo="civil_titulo"><?= $e($ev['civil_titulo']) ?></div>
+        <div class="ct-detalhe">às <?= $e($ev['civil_hora']) ?></div>
+        <div class="ct-seccao ct-seccao-2" data-campo="copo_titulo"><?= $e($ev['copo_titulo']) ?></div>
+        <div class="ct-detalhe ct-detalhe-2"><?= $e($ev['local']) ?><br>às <?= $e($ev['copo_hora']) ?></div>
+      </div>
+      <div class="ct-tracinho ct-tracinho-2"></div>
+      <p class="ct-fecho<?= $oc('fecho') ?>" data-camada="fecho" data-campo="frase_final"><?= $e($ev['frase_final']) ?></p>
     </div>
+
   </div>
 </div>
 <?php
@@ -422,7 +470,7 @@ function brindesPecas(): array {
             'material'  => 'Acrílico de dois lados, com argola metálica',
             'pagina'    => 'porta-chaves.php',
             'manual'    => 'assets/pecas/manuais/porta-chaves.html',
-            'variacoes' => 'quadra',   // as variações vêm das quadras do verso
+            'variacoes' => 'quadra',   // fonte das variações: as quadras do verso
         ],
     ];
 }
@@ -433,25 +481,49 @@ function brindesGeneros(): array {
 }
 
 /**
- * Índices das variações escolhidas para um género. Guardadas em JSON
- * na definição brindes.{g}.variacoes; vazio = todas as variações da peça.
+ * Variações de uma peça, de forma genérica: [['id'=>0,'rotulo'=>'I','texto'=>'…'], …].
+ * Cada peça declara em brindesPecas() de onde vêm as suas variações; para
+ * acrescentar uma peça nova basta tratar aqui a sua fonte de variações.
  */
-function brindeVariacoes(array $defs, string $g): array {
-    $j = json_decode($defs["brindes.$g.variacoes"] ?? '', true);
-    if (!is_array($j)) return [];
-    $tot = count(chaveiroQuadras());
-    $out = [];
-    foreach ($j as $i) {
-        $i = (int)$i;
-        if ($i >= 0 && $i < $tot && !in_array($i, $out, true)) $out[] = $i;
+function pecaVariacoes(string $pecaId): array {
+    $peca = brindesPecas()[$pecaId] ?? null;
+    if (!$peca) return [];
+    switch ($peca['variacoes']) {
+        case 'quadra': {
+            $rom = chaveiroRomanos(); $out = [];
+            foreach (chaveiroQuadras() as $i => $q) {
+                $out[] = ['id' => $i, 'rotulo' => $rom[$i] ?? (string)($i + 1), 'texto' => $q];
+            }
+            return $out;
+        }
     }
-    sort($out);
+    return [];
+}
+
+/**
+ * Seleção de variações de um género: [indice => quantidade].
+ * Guardada em JSON na definição brindes.{g}.variacoes. Vazio = todas as
+ * variações disponíveis, sem quantidade definida (0).
+ */
+function brindeSelecao(array $defs, string $g, string $pecaId): array {
+    $vars = pecaVariacoes($pecaId);
+    $validos = array_column($vars, 'id');
+    $j = json_decode($defs["brindes.$g.variacoes"] ?? '', true);
+    $out = [];
+    if (is_array($j) && $j) {
+        foreach ($j as $i => $q) {
+            $i = (int)$i;
+            if (in_array($i, $validos, true)) $out[$i] = max(0, (int)$q);
+        }
+    }
+    if (!$out) foreach ($validos as $i) $out[$i] = 0;   // vazio = todas
+    ksort($out);
     return $out;
 }
 
 /**
- * Brinde atribuído a cada género, já resolvido: peça, variações e
- * quantidade de convidados que o recebem.
+ * Brinde atribuído a cada género, já resolvido: peça, variações disponíveis
+ * (com quantidade a produzir) e quantos convidados o recebem.
  * $porGenero: ['m'=>n, 'f'=>n] — contagem vinda da base de dados.
  */
 function brindesPorGenero(array $defs, array $porGenero): array {
@@ -460,14 +532,22 @@ function brindesPorGenero(array $defs, array $porGenero): array {
     foreach (brindesGeneros() as $g => $rotulo) {
         $chave = trim((string)($defs["brindes.$g.peca"] ?? ''));
         $peca  = $pecas[$chave] ?? null;
-        $vars  = $peca ? brindeVariacoes($defs, $g) : [];
-        if ($peca && !$vars) $vars = array_keys(chaveiroQuadras()); // vazio = todas
+        $sel   = $peca ? brindeSelecao($defs, $g, $chave) : [];
+        $vars  = [];
+        if ($peca) {
+            foreach (pecaVariacoes($chave) as $v) {
+                if (!array_key_exists($v['id'], $sel)) continue;   // variação não disponível
+                $v['quantidade'] = $sel[$v['id']];
+                $vars[] = $v;
+            }
+        }
         $out[$g] = [
-            'rotulo'    => $rotulo,
-            'peca_id'   => $peca ? $chave : '',
-            'peca'      => $peca,
-            'variacoes' => $vars,
-            'quantidade'=> (int)($porGenero[$g] ?? 0),
+            'rotulo'     => $rotulo,
+            'peca_id'    => $peca ? $chave : '',
+            'peca'       => $peca,
+            'variacoes'  => $vars,
+            'total_pecas'=> array_sum(array_column($vars, 'quantidade')),
+            'quantidade' => (int)($porGenero[$g] ?? 0),
         ];
     }
     return $out;

@@ -140,6 +140,8 @@ $manuais = [
   .var-rot{ font-size:.78rem; color:#7a8078; margin-top:.5rem; }
   .var-rot b{ font-family:var(--serif); color:var(--gold); }
   .por-definir{ color:#8a8f88; font-style:italic; }
+  .falta{ color:#a5473f; }
+  .sobra{ color:#1f7a3d; }
 
   /* ---- Manuais ---- */
   .manuais{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
@@ -190,6 +192,7 @@ $manuais = [
       <span class="tag neutra"><?= count($convites) ?> convites físicos</span>
       <a class="btn" href="cartoes.php">Ver todos os modelos</a>
       <a class="btn" href="impressos.php">Etiquetas para envelopes</a>
+      <a class="btn" href="editor-cartao.php">Editar o cartão</a>
       <button class="btn btn-ouro" onclick="window.print()">Imprimir lista</button>
     </div>
 
@@ -226,6 +229,7 @@ $manuais = [
   <?php elseif ($aba === 'brindes'): ?>
     <div class="barra no-print">
       <span class="tag neutra">Brinde atribuído por género</span>
+      <a class="btn" href="editor-brindes.php">Editar brindes</a>
       <div class="cresce"></div>
       <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
     </div>
@@ -249,31 +253,31 @@ $manuais = [
         </div>
 
         <?php if ($b['peca']): ?>
-          <?php
-            $qtd = $b['quantidade']; $nv = count($b['variacoes']);
-            $porVar = $nv ? (int)ceil($qtd / $nv) : 0;
-          ?>
+          <?php $qtd = $b['quantidade']; $nv = count($b['variacoes']); $tot = $b['total_pecas']; ?>
           <div class="brinde-meta">
             <b><?= $qtd ?></b> <?= $qtd === 1 ? 'convidado recebe' : 'convidados recebem' ?> este brinde ·
-            <b><?= $nv ?></b> <?= $nv === 1 ? 'variação' : 'variações' ?> (frase do verso)
-            <?php if ($qtd > 0 && $nv): ?>
-              <?php if ($qtd >= $nv): ?>
-                · ≈ <b><?= $porVar ?></b> <?= $porVar === 1 ? 'peça' : 'peças' ?> por variação
-              <?php else: ?>
-                · uma peça por variação, usando <b><?= $qtd ?></b> das <b><?= $nv ?></b>
+            <b><?= $nv ?></b> <?= $nv === 1 ? 'variação disponível' : 'variações disponíveis' ?>
+            <?php if ($tot > 0): ?>
+              · <b><?= $tot ?></b> <?= $tot === 1 ? 'peça' : 'peças' ?> a produzir
+              <?php if ($tot < $qtd): ?><span class="falta">(faltam <?= $qtd - $tot ?>)</span>
+              <?php elseif ($tot > $qtd && $qtd > 0): ?><span class="sobra">(+<?= $tot - $qtd ?> de reserva)</span>
               <?php endif; ?>
+            <?php else: ?>
+              · <span class="falta">quantidades por definir</span>
             <?php endif; ?>
             · <a href="<?= escP($b['peca']['pagina']) ?>">ver a peça</a>
             · <a href="<?= escP($b['peca']['manual']) ?>" target="_blank" rel="noopener">manual</a>
           </div>
 
           <div class="variacoes">
-            <?php foreach ($b['variacoes'] as $i): ?>
+            <?php foreach ($b['variacoes'] as $v): ?>
               <div class="var-item">
                 <div class="var-palco" style="background:<?= $acPeca['fundo'] ?>">
-                  <div class="escala"><?= renderChaveiroVerso($acPeca, $defs, $quadras[$i], true) ?></div>
+                  <div class="escala"><?= renderChaveiroVerso($acPeca, $defs, $v['texto'], true) ?></div>
                 </div>
-                <div class="var-rot">Variação <b><?= escP($romanos[$i]) ?></b></div>
+                <div class="var-rot">Variação <b><?= escP($v['rotulo']) ?></b>
+                  <?php if ($v['quantidade'] > 0): ?><br><?= $v['quantidade'] ?> <?= $v['quantidade'] === 1 ? 'peça' : 'peças' ?><?php endif; ?>
+                </div>
               </div>
             <?php endforeach; ?>
           </div>
