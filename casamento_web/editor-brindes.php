@@ -142,7 +142,7 @@ $gInicial = array_key_first($generos);
 </div>
 
 <script>
-const CSRF = <?= json_encode(csrfToken()) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
 const CATALOGO  = <?= json_encode($catalogo, JSON_UNESCAPED_UNICODE) ?>;
 const SEM_GENERO = <?= (int)$semGenero ?>;

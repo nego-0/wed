@@ -153,7 +153,7 @@ $camposPorCamada = [
 </div>
 
 <script>
-const CSRF = <?= json_encode(csrfToken()) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
 
 const PALETAS  = <?= json_encode(cartaoPaletas(), JSON_UNESCAPED_UNICODE) ?>;

@@ -144,7 +144,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 <div class="toast" id="toast"></div>
 
 <script>
-const CSRF = <?= json_encode(csrfToken()) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $=id=>document.getElementById(id);
 function toast(m){const t=$('toast');t.textContent=m;t.className='toast mostrar';setTimeout(()=>t.className='toast',2200);}
 

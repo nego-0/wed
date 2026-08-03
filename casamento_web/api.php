@@ -131,7 +131,7 @@ if ($acao === 'rsvp_submit') {
 // ============================================================
 
 // ---- Porteiro (admin ou porteiro) --------------------------
-if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entradas'], true)) {
+if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entradas','porta_dados'], true)) {
     exigirPorta();
     if ($acao === 'porta_checkin') exigirCsrf(); // altera dados: protegido por CSRF
 
@@ -139,6 +139,32 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
         $s = estatisticas($conn);
         ok(['presentes' => $s['presentes'], 'lug_confirm' => $s['lug_confirm'],
             'no_local' => $s['no_local'], 'convites' => $s['convites']]);
+    }
+
+    if ($acao === 'porta_dados') {
+        // Cópia completa e leve da lista, para o porteiro poder procurar
+        // SEM ligação à internet (guardada no dispositivo). Só o essencial.
+        $r = $conn->query("SELECT c.id, c.codigo, c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares,
+                                  c.rsvp_estado, c.rsvp_confirmados, c.checkin_estado, c.checkin_presentes,
+                                  c.observacoes, m.nome AS mesa_nome
+                           FROM {$P}convites c
+                           LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                           ORDER BY c.nome_exibicao");
+        $convites = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+        $porId = [];
+        foreach ($convites as &$c) {
+            $c['nome_final'] = nomeConvite($c);
+            $c['membros'] = [];
+            $porId[(int)$c['id']] = &$c;
+        }
+        unset($c);
+        $rg = $conn->query("SELECT id, convite_id, nome, rsvp, presente FROM {$P}convidados
+                            ORDER BY principal DESC, nome");
+        if ($rg) while ($g = $rg->fetch_assoc()) {
+            $cid = (int)$g['convite_id'];
+            if (isset($porId[$cid])) $porId[$cid]['membros'][] = $g;
+        }
+        ok(['convites' => $convites, 'gerado_em' => date('c')]);
     }
 
     if ($acao === 'porta_entradas') {

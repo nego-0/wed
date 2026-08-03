@@ -103,6 +103,19 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .pk.on{ border-color:var(--forest); background:var(--cream); color:var(--ink); font-weight:500; }
   .pk.on .pk-ic{ color:var(--forest); }
 
+  /* Ação de WhatsApp e menu "mais ações" */
+  .bt-wa{ display:inline-flex; align-items:center; gap:.3rem; }
+  .bt-wa svg{ width:14px; height:14px; color:#25D366; }
+  .bt-wa:hover{ border-color:#25D366; }
+  .menu-mais{ display:inline-block; }
+  .pop-mais{ position:fixed; z-index:70; width:190px; background:#fff; border:1px solid var(--line);
+    border-radius:12px; box-shadow:0 12px 32px rgba(32,52,42,.18); padding:.3rem; }
+  .pop-mais button{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer;
+    padding:.5rem .6rem; border-radius:8px; font-family:inherit; font-size:.86rem; color:var(--text); }
+  .pop-mais button:hover{ background:var(--cream); }
+  .pop-mais button.perigo{ color:var(--danger); }
+  .pop-mais button.perigo:hover{ background:#fdecea; }
+
   /* Indicador e lista de mensagens */
   .tem-msg{ display:inline-flex; align-items:center; color:var(--gold); cursor:pointer; }
   .tem-msg svg{ width:15px; height:15px; }
@@ -127,6 +140,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .ent-d-meta{ font-size:.82rem; color:#8a8f88; margin-top:.15rem; }
   .ent-d-pessoas{ font-size:.9rem; color:var(--text); margin-top:.35rem; }
 </style>
+<script src="assets/api.js"></script>
 </head>
 <body>
 <header class="topo">
@@ -307,7 +321,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
 
 <script>
 const BASE = <?= json_encode(base_url()) ?>;
-const CSRF = <?= json_encode(csrfToken()) ?>;
+const CASAL = <?= json_encode($CAS['casal']) ?>;
+const DATA_EXT = <?= json_encode($dataExt) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
 let CONVITES = [], MESAS = [], STATS = {}, timer = null;
 let filtroTipo='', filtroLado='', filtroEstado='', filtroMesa='', filtroImpresso='', filtroGenero='', filtroBrinde='';
@@ -319,13 +335,7 @@ const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&
 function toast(msg, erro=false){ const t=$('toast'); t.textContent=msg; t.className='toast mostrar'+(erro?' erro':''); setTimeout(()=>t.className='toast',2600); }
 function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
-async function api(action, opts={}){
-  if(opts.body && typeof opts.body==='string'){
-    try{ const b=JSON.parse(opts.body); if(b && typeof b==='object' && !Array.isArray(b)){ b.ts=agora(); opts.body=JSON.stringify(b); } }catch(e){}
-  }
-  opts.headers = Object.assign({'X-CSRF-Token': CSRF}, opts.headers||{});
-  const r=await fetch('api.php?action='+action, opts); return r.json();
-}
+// api() vem de assets/api.js (trata sessão expirada, falha de rede e erros do servidor)
 function debounceCarregar(){ clearTimeout(timer); timer=setTimeout(carregar,300); }
 
 // ---------- carregar ----------
@@ -343,6 +353,7 @@ async function carregar(){
 
 // Conjunto de ícones (SVG inline, traço fino)
 const IC = {
+  whatsapp:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.21 8.21 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.29z"/></svg>',
   todos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
   telemovel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>',
   envelope:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
@@ -463,14 +474,15 @@ function renderConvites(){
         <div class="membros-mini">${membros}</div>
       </div>
       <div class="acoes">
-        <button class="btn-ico" title="Copiar link do convite digital" onclick="copiarLinkDireto('${c.codigo}')">Link</button>
-        <button class="btn-ico" title="Ver convite digital" onclick="verConvite('${c.codigo}')">Ver</button>
-        <button class="btn-ico" title="Descarregar convite (ver offline)" onclick="baixarConvite('${c.codigo}')">Baixar</button>
-        <button class="btn-ico" title="QR" onclick="mostrarQR('${c.codigo}')">QR</button>
-        ${c.tipo!=='digital'?`<button class="btn-ico" title="Marcar impresso" onclick="flag(${c.id},'impresso',${c.impresso?0:1})" style="${c.impresso?'background:var(--ok-bg);color:var(--ok)':''}">${c.impresso?'Impresso ✓':'Impresso'}</button>`:''}
-        ${c.tipo!=='fisico'?`<button class="btn-ico" title="Marcar enviado" onclick="flag(${c.id},'enviado',${c.enviado?0:1})" style="${c.enviado?'background:var(--ok-bg);color:var(--ok)':''}">${c.enviado?'Enviado ✓':'Enviado'}</button>`:''}
+        ${c.telefone
+          ? `<button class="btn-ico bt-wa" title="Enviar o convite por WhatsApp para ${esc(c.telefone)}" onclick="enviarWhatsApp(${c.id})">${IC.whatsapp} Enviar</button>`
+          : `<button class="btn-ico" title="Sem telefone — adicione-o para poder enviar" onclick="editar(${c.id})" style="opacity:.55">${IC.whatsapp} Sem nº</button>`}
         <button class="btn-ico" title="Editar" onclick="editar(${c.id})">Editar</button>
-        <button class="btn-ico" title="Eliminar" onclick="eliminar(${c.id})">✕</button>
+        ${c.tipo!=='fisico'?`<button class="btn-ico" title="Marcar como enviado" onclick="flag(${c.id},'enviado',${c.enviado?0:1})" style="${c.enviado?'background:var(--ok-bg);color:var(--ok)':''}">${c.enviado?'Enviado ✓':'Enviado'}</button>`:''}
+        ${c.tipo!=='digital'?`<button class="btn-ico" title="Marcar como impresso" onclick="flag(${c.id},'impresso',${c.impresso?0:1})" style="${c.impresso?'background:var(--ok-bg);color:var(--ok)':''}">${c.impresso?'Impresso ✓':'Impresso'}</button>`:''}
+        <div class="menu-mais">
+          <button class="btn-ico" title="Mais ações" aria-haspopup="true" onclick="abrirMais(event,${c.id})">⋯</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -631,6 +643,54 @@ async function eliminar(id){ const c=CONVITES.find(x=>x.id==id); const nome=c?c.
   const d=await api('convite_delete&id='+id); if(d.success){toast('Convite eliminado.');carregar();} }
 
 function linkConvite(codigo){ return BASE+'/convite-digital.php?c='+codigo; }
+
+// ---------- enviar por WhatsApp ----------
+// Abre a conversa com o convidado, já com a mensagem e o link do convite.
+function telefoneWa(t){
+  const d = (t||'').replace(/\D/g,'');
+  if(!d) return '';
+  // Sem indicativo: assume Angola (244). Com 9 dígitos a começar por 9.
+  if(d.length === 9 && d[0] === '9') return '244'+d;
+  return d;
+}
+function mensagemWhatsApp(c){
+  const nome = (c.nome_final || c.nome_exibicao || '').trim();
+  const l = linkConvite(c.codigo);
+  return `Olá ${nome}! 💛\n\n${CASAL} têm o prazer de vos convidar para o seu casamento, no dia ${DATA_EXT}.\n\nO convite está aqui:\n${l}\n\nAgradecemos que confirme a presença por esse link. Até lá!`;
+}
+function enviarWhatsApp(id){
+  const c = CONVITES.find(x=>x.id==id); if(!c) return;
+  const tel = telefoneWa(c.telefone);
+  if(!tel) return toast('Este convite não tem telefone. Edite-o para o adicionar.', true);
+  window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(mensagemWhatsApp(c)), '_blank', 'noopener');
+  // Marca como enviado, se ainda não estiver (é o objetivo da ação).
+  if(!(+c.enviado)) flag(id,'enviado',1);
+}
+
+// ---------- menu "mais ações" ----------
+function fecharMais(){ const m=document.getElementById('pop-mais'); if(m) m.remove(); }
+function abrirMais(ev, id){
+  ev.stopPropagation(); fecharMais();
+  const c = CONVITES.find(x=>x.id==id); if(!c) return;
+  const itens = [
+    ['Copiar link',              `copiarLinkDireto('${c.codigo}')`],
+    ['Ver convite digital',      `verConvite('${c.codigo}')`],
+    ['Descarregar (offline)',    `baixarConvite('${c.codigo}')`],
+    ['Mostrar QR',               `mostrarQR('${c.codigo}')`],
+    ['Eliminar convite',         `eliminar(${c.id})`, 'perigo'],
+  ];
+  const pop = document.createElement('div');
+  pop.id = 'pop-mais'; pop.className = 'pop-mais';
+  pop.innerHTML = itens.map(([r,acao,cls]) =>
+    `<button class="${cls||''}" onclick="fecharMais();${acao}">${r}</button>`).join('');
+  document.body.appendChild(pop);
+  const r = ev.currentTarget.getBoundingClientRect();
+  const larg = 190;
+  pop.style.left = Math.max(8, Math.min(window.innerWidth - larg - 8, r.right - larg)) + 'px';
+  pop.style.top  = (r.bottom + 6) + 'px';
+  setTimeout(()=>document.addEventListener('click', fecharMais, {once:true}), 0);
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') fecharMais(); });
 function copiarLinkDireto(codigo){ copiarTexto(linkConvite(codigo)); }
 function copiarLink(){ copiarTexto($('c-link').value); }
 function verConvite(codigo){ window.open(linkConvite(codigo),'_blank','noopener'); }

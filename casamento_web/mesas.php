@@ -270,6 +270,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .combo-opt .combo-sub{ font-size:.72rem; color:#8a8f88; }
   .combo-vazio{ color:#9aa09a; font-size:.82rem; padding:.4rem .5rem; }
 </style>
+<script src="assets/api.js"></script>
 </head>
 <body>
 <header class="topo">
@@ -362,19 +363,13 @@ $CAS = casalInfo(defsAtuais($conn));
 <div class="toast" id="toast"></div>
 
 <script>
-const CSRF = <?= json_encode(csrfToken()) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $=id=>document.getElementById(id);
 const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 function toast(m,e=false){const t=$('toast');t.textContent=m;t.className='toast mostrar'+(e?' erro':'');setTimeout(()=>t.className='toast',2400);}
 function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
-async function api(action, opts={}){
-  if(opts.body && typeof opts.body==='string'){
-    try{ const b=JSON.parse(opts.body); if(b&&typeof b==='object'&&!Array.isArray(b)){ b.ts=agora(); opts.body=JSON.stringify(b); } }catch(e){}
-  }
-  opts.headers=Object.assign({'X-CSRF-Token':CSRF},opts.headers||{});
-  const r=await fetch('api.php?action='+action,opts); return r.json();
-}
+// api() vem de assets/api.js (trata sessão expirada, falha de rede e erros do servidor)
 
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='pessoas';
 // Nível de zoom (fator aplicado ao canvas). A vista 100% usa todo o espaço do canvas (fator 1).

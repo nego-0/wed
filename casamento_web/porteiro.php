@@ -14,6 +14,12 @@ $CAS = casalInfo(defsAtuais($conn));
 <link href="assets/estilo.css" rel="stylesheet">
 <script src="assets/html5-qrcode.min.js"></script>
 <style>
+  /* Aviso de ligação (offline / a sincronizar) */
+  .barra-offline{ position:fixed; left:0; right:0; bottom:0; z-index:900; padding:.55rem .9rem;
+    text-align:center; font-size:.86rem; font-weight:500; letter-spacing:.01em; }
+  .barra-offline.off{ background:#7a3b34; color:#ffe9e4; }
+  .barra-offline.sync{ background:var(--gold); color:#1a1b17; }
+
   body{ background:linear-gradient(175deg,#16261E,#20342A); color:var(--ivory); min-height:100vh; }
   .porta-topo{ padding:1.1rem 1.25rem; display:flex; align-items:center; gap:.8rem; }
   .porta-topo .mono{ width:44px;height:44px;border:2px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold-soft);font-family:var(--serif);font-weight:700; }
@@ -80,6 +86,9 @@ $CAS = casalInfo(defsAtuais($conn));
   .ent-meta{ font-size:.82rem; color:var(--gold-pale); margin-top:.15rem; }
   .ent-pessoas{ font-size:.88rem; color:var(--ivory); margin-top:.4rem; opacity:.9; }
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16261E">
+<script src="assets/api.js"></script>
 </head>
 <body>
 <div class="porta-topo">
@@ -127,23 +136,17 @@ $CAS = casalInfo(defsAtuais($conn));
 <div class="toast" id="toast"></div>
 
 <script>
-const CSRF = <?= json_encode(csrfToken()) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $=id=>document.getElementById(id);
 const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 function toast(m,e=false){const t=$('toast');t.textContent=m;t.className='toast mostrar'+(e?' erro':'');setTimeout(()=>t.className='toast',2400);}
 function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
-async function api(a,o={}){
-  if(o.body && typeof o.body==='string'){
-    try{ const b=JSON.parse(o.body); if(b && typeof b==='object' && !Array.isArray(b)){ b.ts=agora(); o.body=JSON.stringify(b); } }catch(e){}
-  }
-  o.headers = Object.assign({'X-CSRF-Token': CSRF}, o.headers||{});
-  const r=await fetch('api.php?action='+a,o); return r.json();
-}
+// api() vem de assets/api.js (trata sessão expirada, falha de rede e erros do servidor)
 
 // contador
 async function atualizarContador(){
-  const d=await api('porta_stats');
+  const d=await api('porta_stats',{silencioso:true});   // sondagem: não incomoda se falhar
   if(d.success){ $('c-presentes').textContent=d.presentes; $('c-confirm').textContent=d.lug_confirm; $('c-convites').textContent=d.convites; }
 }
 atualizarContador();
@@ -197,12 +200,112 @@ function pararScan(){
   ativo=false; $('leitor').classList.remove('on'); $('btn-scan').textContent='Abrir câmara para ler QR';
 }
 
+// Service worker: permite abrir a página sem rede (só a "casca").
+if('serviceWorker' in navigator && location.protocol !== 'file:'){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+// ---------- funcionamento sem internet ----------
+// A entrada do evento não pode parar se a rede falhar. Guardamos uma cópia
+// local da lista (para procurar) e uma fila dos check-ins feitos offline,
+// que é enviada assim que houver ligação outra vez.
+const LS_DADOS = 'porta.dados', LS_FILA = 'porta.fila';
+
+function guardarLocal(chave, valor){ try{ localStorage.setItem(chave, JSON.stringify(valor)); }catch(e){} }
+function lerLocal(chave, omissao){ try{ const v=localStorage.getItem(chave); return v?JSON.parse(v):omissao; }catch(e){ return omissao; } }
+
+let COPIA = lerLocal(LS_DADOS, null);
+let FILA  = lerLocal(LS_FILA, []);
+
+function online(){ return navigator.onLine !== false; }
+function marcarEstadoLigacao(){
+  const off = !online(), n = FILA.length;
+  let el = document.getElementById('barra-offline');
+  if(!off && !n){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id='barra-offline'; el.className='barra-offline'; document.body.appendChild(el); }
+  el.className = 'barra-offline' + (off ? ' off' : ' sync');
+  el.textContent = off
+    ? (n ? `Sem internet · a trabalhar offline · ${n} entrada(s) por enviar` : 'Sem internet · a trabalhar offline')
+    : `A enviar ${n} entrada(s) registada(s) offline…`;
+}
+
+// Descarrega a cópia local (silenciosamente; se falhar, fica a anterior)
+async function sincronizarCopia(){
+  const d = await api('porta_dados', {silencioso:true});
+  if(d && d.success && d.convites){
+    COPIA = { convites: d.convites, em: d.gerado_em };
+    guardarLocal(LS_DADOS, COPIA);
+  }
+}
+
+// Procura na cópia local, com a mesma lógica do servidor (código ou nome)
+function buscarLocal(termo){
+  if(!COPIA || !COPIA.convites) return null;
+  const m = termo.match(/[?&]c=([A-Z0-9]+)/i);
+  const t = (m ? m[1] : termo).trim().toLowerCase();
+  const porCodigo = COPIA.convites.find(c => (c.codigo||'').toLowerCase() === t);
+  if(porCodigo) return { convite: porCodigo };
+  const achados = COPIA.convites.filter(c =>
+    (c.nome_exibicao||'').toLowerCase().includes(t) ||
+    (c.membros||[]).some(g => (g.nome||'').toLowerCase().includes(t))).slice(0,12);
+  if(!achados.length) return { erro: `Nenhum convite corresponde a "${termo}".` };
+  return achados.length === 1 ? { convite: achados[0] } : { varios: achados };
+}
+
+// Aplica um check-in à cópia local, para o ecrã responder mesmo offline
+function aplicarLocal(conviteId, modo, membroId){
+  if(!COPIA) return null;
+  const c = COPIA.convites.find(x => +x.id === +conviteId); if(!c) return null;
+  if(modo === 'todos' || modo === 'anular'){
+    const p = modo !== 'anular';
+    (c.membros||[]).forEach(g => g.presente = p ? 1 : 0);
+    c.checkin_presentes = p ? (c.membros||[]).length : 0;
+    c.checkin_estado = p ? 'presente' : 'aguardando';
+  } else if(modo === 'membro'){
+    const g = (c.membros||[]).find(x => +x.id === +membroId);
+    if(g) g.presente = 1;
+    c.checkin_presentes = (c.membros||[]).filter(x => +x.presente).length;
+    c.checkin_estado = c.checkin_presentes >= (c.membros||[]).length ? 'presente' : 'parcial';
+  }
+  guardarLocal(LS_DADOS, COPIA);
+  return c;
+}
+
+// Envia a fila acumulada, pela ordem em que foi registada
+let aEnviar = false;
+async function enviarFila(){
+  if(aEnviar || !FILA.length || !online()) return;
+  aEnviar = true; marcarEstadoLigacao();
+  while(FILA.length){
+    const item = FILA[0];
+    const d = await api('porta_checkin', {method:'POST', body:JSON.stringify(item), silencioso:true});
+    if(!d || !d.success){ break; }      // sem rede ou recusado: tenta mais tarde
+    FILA.shift(); guardarLocal(LS_FILA, FILA);
+  }
+  aEnviar = false;
+  marcarEstadoLigacao();
+  if(!FILA.length){ toast('Entradas offline sincronizadas.'); atualizarContador(); sincronizarCopia(); }
+}
+window.addEventListener('online',  () => { marcarEstadoLigacao(); enviarFila(); });
+window.addEventListener('offline', marcarEstadoLigacao);
+
 // ---------- buscar ----------
 async function buscar(valor){
   const termo=(typeof valor==='string'?valor:$('q').value).trim();
   if(!termo) return;
-  const d=await api('porta_buscar&q='+encodeURIComponent(termo));
   const box=$('resultado'); box.classList.add('on');
+  let d;
+  if(online()){
+    d = await api('porta_buscar&q='+encodeURIComponent(termo), {silencioso:true, semAviso:true});
+  }
+  // Sem rede (ou a rede falhou): procura na cópia guardada no dispositivo.
+  if(!d || d._erro){
+    const loc = buscarLocal(termo);
+    if(!loc){ box.innerHTML=`<div class="cartao-conv"><div class="faixa rec"><div class="nome">Sem ligação</div><div class="meta">Ainda não há cópia local da lista. Ligue-se à internet uma vez para a descarregar.</div></div></div>`; return; }
+    if(loc.erro){ box.innerHTML=`<div class="cartao-conv"><div class="faixa rec"><div class="nome">Não encontrado</div><div class="meta">${esc(loc.erro)}</div></div></div>`; return; }
+    if(loc.varios){ mostrarVarios(loc.varios); return; }
+    mostrarConvite(loc.convite); return;
+  }
   if(!d.success){ box.innerHTML=`<div class="cartao-conv"><div class="faixa rec"><div class="nome">Não encontrado</div><div class="meta">${esc(d.message||'')}</div></div></div>`; return; }
   if(d.varios){ mostrarVarios(d.varios); return; }
   mostrarConvite(d.convite);
@@ -285,10 +388,22 @@ function mostrarConvite(c){
 }
 
 async function checkin(id,modo,membroId=0,excecao=false){
-  const d=await api('porta_checkin',{method:'POST',body:JSON.stringify({convite_id:id,modo,membro_id:membroId,excecao})});
+  const pedido = {convite_id:id, modo, membro_id:membroId, excecao};
+  const d = online() ? await api('porta_checkin',{method:'POST',body:JSON.stringify(pedido),silencioso:true,semAviso:true}) : null;
+
+  // Sem rede: regista localmente e põe em fila para enviar depois.
+  if(!d || d._erro){
+    FILA.push(pedido); guardarLocal(LS_FILA, FILA);
+    const c = aplicarLocal(id, modo, membroId);
+    marcarEstadoLigacao();
+    toast('Sem internet — entrada registada no dispositivo. Será enviada quando houver ligação.');
+    if(c) mostrarConvite(c);
+    return;
+  }
   if(!d.success) return toast(d.message||'Erro.',true);
   toast(modo==='anular'?'Entrada anulada.':(excecao?'Entrada excecional registada.':'Entrada registada.'));
   mostrarConvite(d.convite); atualizarContador();
+  aplicarLocal(id, modo, membroId);
 }
 function excecaoMembro(id,mid){
   if(confirm('Esta pessoa não confirmou presença.\n\nAutorizar a entrada em caráter excecional?')) checkin(id,'membro',mid,true);
@@ -333,6 +448,11 @@ async function carregarEntradas(){
     </div>`;
   }).join('');
 }
+
+// Arranque do modo offline (no fim: as variáveis do módulo já estão declaradas).
+marcarEstadoLigacao();
+sincronizarCopia();
+enviarFila();
 </script>
 </body>
 </html>

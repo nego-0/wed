@@ -71,6 +71,7 @@ $CAS = casalInfo(defsAtuais($conn));
   #prev{ width:100%; height:78vh; border:1px solid var(--line); border-radius:12px; background:#16261E; }
   .barra-guardar{ display:flex; gap:.6rem; margin-top:1rem; }
 </style>
+<script src="assets/api.js"></script>
 </head>
 <body>
 <header class="topo">
@@ -121,7 +122,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <div class="toast" id="toast"></div>
 
 <script>
-const CSRF = <?= json_encode(csrfToken()) ?>;
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
 const ATUAIS = <?= json_encode(defsAtuais($conn), JSON_UNESCAPED_UNICODE) ?>;
 const ICONES = <?= json_encode(iconesConvite()) ?>;
@@ -133,13 +134,7 @@ const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>
 function toast(m,e=false){const t=$('toast');t.textContent=m;t.className='toast mostrar'+(e?' erro':'');setTimeout(()=>t.className='toast',2600);}
 function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
-async function api(action, opts={}){
-  if(opts.body && typeof opts.body==='string'){
-    try{ const b=JSON.parse(opts.body); if(b&&typeof b==='object'&&!Array.isArray(b)){ b.ts=agora(); opts.body=JSON.stringify(b); } }catch(e){}
-  }
-  opts.headers=Object.assign({'X-CSRF-Token':CSRF},opts.headers||{});
-  const r=await fetch('api.php?action='+action,opts); return r.json();
-}
+// api() vem de assets/api.js (trata sessão expirada, falha de rede e erros do servidor)
 
 // ---------- estado ----------
 let VAL={...ATUAIS};                                  // valores em edição

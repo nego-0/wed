@@ -1,0 +1,20 @@
+{
+  "name": "Entrada do evento · Isabel & Abednego",
+  "short_name": "Entrada",
+  "description": "Leitura de convites e registo de entradas à porta do evento.",
+  "start_url": "porteiro.php",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16261E",
+  "theme_color": "#16261E",
+  "lang": "pt",
+  "icons": [
+    {
+      "src": "assets/pecas/icons/coracao.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

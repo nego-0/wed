@@ -311,11 +311,11 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
 <button id="audioBtn" aria-label="Ligar ou desligar música">
   <span class="bars"><i></i><i></i><i></i><i></i></span>
 </button>
-<audio id="bgAudio" loop preload="auto" src="{{MUSICA}}"></audio>
+<audio id="bgAudio" loop preload="none" src="{{MUSICA}}"></audio>
 <main>
   <section id="hero" class="page">
     <div class="frame">
-      <img src="{{IMG_HERO}}" alt="{{CASAL_ALT}}">
+      <img src="{{IMG_HERO}}" alt="{{CASAL_ALT}}" fetchpriority="high" decoding="async">
       <div class="veil"></div>
       <p class="kicker">{{KICKER}}</p>
       <div class="content">
@@ -422,7 +422,7 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
   </section>
   <section id="acesso" class="page">
     <div class="acesso-photo">
-      <img src="{{IMG_ACESSO}}" alt="{{CASAL_ALT}}">
+      <img src="{{IMG_ACESSO}}" alt="{{CASAL_ALT}}" loading="lazy" decoding="async">
       <div class="acesso-veil"></div>
       <div class="acesso-head">
         <span class="pageno">— quatro —</span>
