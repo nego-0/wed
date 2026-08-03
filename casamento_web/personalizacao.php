@@ -169,12 +169,13 @@ function defsPadrao(): array {
         'chaveiro.acabamento' => 'classic',
         'chaveiro.quadra' => '5',
         'chaveiro.cartela' => 'NUPTIAE NOSTRAE',
-        'chaveiro.coord_lat' => '15° 11′ 46.09″ S',
-        'chaveiro.coord_lon' => '12° 09′ 10.11″ E',
+        'chaveiro.coord_lat' => '15° 11′ 46.0″ S',
+        'chaveiro.coord_lon' => '12° 09′ 08.0″ E',
         // ---- Brindes por género (peça atribuída + variações a produzir) ----
         // variações vazias = todas as da peça. '' na peça = ainda por definir.
+        // Plano de tiragem do handoff: 70 porta-chaves = 6 lotes de 9 + 2 de 8.
         'brindes.m.peca' => 'porta-chaves',
-        'brindes.m.variacoes' => '',
+        'brindes.m.variacoes' => '{"0":9,"1":9,"2":9,"3":9,"4":9,"5":9,"6":8,"7":8}',
         'brindes.f.peca' => '',
         'brindes.f.variacoes' => '',
     ];

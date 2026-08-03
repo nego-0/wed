@@ -601,21 +601,24 @@ function brindesPorGenero(array $defs, array $porGenero): array {
  * Toda a composição é relativa a $size (px), como no design.
  */
 function renderMonograma(int $size, array $ac, string $ia, string $ib): string {
-    $band    = round($size * 0.055, 1);
-    $inner   = round($size * 0.150, 1);
-    $inner2  = round($size * 0.205, 1);
+    // Proporções do design de produção (handoff atualizado): anel guilhoché
+    // mais fino, círculos interiores um pouco maiores e losangos mais para fora.
+    $band    = round($size * 0.045, 1);
+    $inner   = round($size * 0.145, 1);
+    $inner2  = round($size * 0.185, 1);
     $letra   = round($size * 0.40, 1);
     $nest    = round($size * 0.055, 1);
     $shiftX  = round($size * 0.05, 1);
     $optical = round($size * 0.02, 1);
     $dTopo   = round($size * 0.052, 1);
     $dLado   = round($size * 0.034, 1);
-    $dOff    = round($size * 0.018, 1);
+    $dOff    = round($size * 0.026, 1);
     $cor     = $ac['mono']; $fio = $ac['fio']; $ouro = $ac['ouro'];
     $centro  = round($size * 0.07, 1);
 
-    $losango = function ($tam, $pos) use ($ouro) {
-        return '<div style="position:absolute;'.$pos.';width:'.$tam.'px;height:'.$tam.'px;background:'.$ouro.';transform:translate(-50%,-50%) rotate(45deg);"></div>';
+    $losango = function ($tam, $pos, $op = 1) use ($ouro) {
+        $o = $op < 1 ? 'opacity:'.$op.';' : '';
+        return '<div style="position:absolute;'.$pos.';width:'.$tam.'px;height:'.$tam.'px;background:'.$ouro.';'.$o.'transform:translate(-50%,-50%) rotate(45deg);"></div>';
     };
 
     ob_start(); ?>
@@ -626,8 +629,8 @@ function renderMonograma(int $size, array $ac, string $ia, string $ib): string {
   <div class="mono-fio mono-pont" style="inset:<?= $inner2 ?>px;border-color:<?= $fio ?>"></div>
   <?= $losango($dTopo, 'left:50%;top:'.(-$dOff).'px') ?>
   <?= $losango($dTopo, 'left:50%;top:calc(100% + '.$dOff.'px)') ?>
-  <?= $losango($dLado, 'top:50%;left:'.(-$dOff).'px') ?>
-  <?= $losango($dLado, 'top:50%;left:calc(100% + '.$dOff.'px)') ?>
+  <?= $losango($dLado, 'top:50%;left:'.(-$dOff).'px', 0.8) ?>
+  <?= $losango($dLado, 'top:50%;left:calc(100% + '.$dOff.'px)', 0.8) ?>
   <div class="mono-letras" style="font-size:<?= $letra ?>px;color:<?= $cor ?>;transform:translate(<?= -$shiftX ?>px,<?= -$optical ?>px)">
     <span style="margin-right:<?= -$nest ?>px"><?= escP($ia) ?></span><span><?= escP($ib) ?></span>
   </div>
