@@ -19,7 +19,7 @@ $CAS  = casalInfo($defs);
 if (isset($_GET['modelo'])) {
     $mid = (int)$_GET['modelo'];
     $st = $conn->prepare("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
-                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id WHERE c.id=? LIMIT 1");
+                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id WHERE c.id=? AND ".soVivos($conn,'c')." LIMIT 1");
     $st->bind_param('i', $mid); $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) { http_response_code(404); exit('Convite não encontrado.'); }
@@ -45,7 +45,7 @@ if ($aba === 'convites') {
     $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
                          FROM {$P}convites c
                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                         WHERE c.tipo IN ('fisico','ambos')
+                         WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                          ORDER BY c.nome_exibicao");
     $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }

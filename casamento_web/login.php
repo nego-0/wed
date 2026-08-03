@@ -4,12 +4,42 @@ require_once __DIR__ . '/personalizacao.php';
 // Sem BD no ecrã de entrada: usa os nomes do config (defaults).
 $CAS = casalInfo(defsPadrao());
 $erro = '';
-$redir = $_GET['r'] ?? 'index.php';
+
+/**
+ * Destino após entrar. Só se aceita um caminho interno simples — caso
+ * contrário `?r=https://exemplo.com` levaria o utilizador para fora do site
+ * depois de autenticar (redirecionamento aberto).
+ */
+$redir = (string)($_GET['r'] ?? 'index.php');
+$redir = ltrim(parse_url($redir, PHP_URL_PATH) ?? '', '/');   // descarta esquema, domínio e query
+if (!preg_match('/^[A-Za-z0-9_-]+\.php$/', $redir) || str_contains($redir, 'login')) {
+    $redir = 'index.php';
+}
+
+// Trava simples contra tentativas repetidas (força bruta), por sessão.
+const LOGIN_MAX = 5;            // tentativas antes de esperar
+const LOGIN_ESPERA = 60;        // segundos de espera
+$falhas  = (int)($_SESSION['login_falhas'] ?? 0);
+$ultima  = (int)($_SESSION['login_ultima'] ?? 0);
+$restam  = ($falhas >= LOGIN_MAX) ? (LOGIN_ESPERA - (time() - $ultima)) : 0;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $papel = autenticar($_POST['utilizador'] ?? '', $_POST['senha'] ?? '');
-    if ($papel === 'admin')    { header('Location: ' . (str_contains($redir,'login')?'index.php':$redir)); exit; }
-    if ($papel === 'porteiro') { header('Location: porteiro.php'); exit; }
-    $erro = 'Nome de utilizador ou palavra-passe incorretos.';
+    if ($restam > 0) {
+        $erro = "Demasiadas tentativas. Aguarde $restam segundo(s) e tente de novo.";
+    } else {
+        if ($falhas >= LOGIN_MAX) { $falhas = 0; $_SESSION['login_falhas'] = 0; }   // espera cumprida
+        $papel = autenticar($_POST['utilizador'] ?? '', $_POST['senha'] ?? '');
+        if ($papel) {
+            unset($_SESSION['login_falhas'], $_SESSION['login_ultima']);
+            header('Location: ' . ($papel === 'admin' ? $redir : 'porteiro.php'));
+            exit;
+        }
+        $_SESSION['login_falhas'] = $falhas + 1;
+        $_SESSION['login_ultima'] = time();
+        $restantes = LOGIN_MAX - ($falhas + 1);
+        $erro = 'Nome de utilizador ou palavra-passe incorretos.'
+              . ($restantes > 0 && $restantes <= 2 ? " Restam $restantes tentativa(s)." : '');
+    }
 }
 ?>
 <!DOCTYPE html>

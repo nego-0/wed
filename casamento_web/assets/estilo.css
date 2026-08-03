@@ -140,6 +140,11 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   box-shadow:0 10px 30px rgba(0,0,0,.3); z-index:90; transition:.25s; pointer-events:none; }
 .toast.mostrar{ opacity:1; transform:translateX(-50%) translateY(0); }
 .toast.erro{ background:var(--danger); }
+/* Toast com ação (ex.: "Anular") — tem de receber cliques. */
+.toast.accao{ pointer-events:auto; display:inline-flex; align-items:center; gap:1rem; }
+.toast .anular{ background:none; border:0; padding:0; cursor:pointer; font-family:inherit; font-size:.88rem;
+  font-weight:600; color:var(--gold-soft); text-decoration:underline; white-space:nowrap; }
+.toast .anular:hover{ color:var(--ivory); }
 
 .vazio{ text-align:center; padding:3rem 1rem; color:#9aa09a; }
 .vazio .ico{ font-size:2.4rem; opacity:.5; }

@@ -9,7 +9,7 @@ $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
                      FROM {$P}convites c
                      LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
                      LEFT JOIN {$P}convidados g ON g.convite_id=c.id
-                     WHERE c.tipo IN ('fisico','ambos')
+                     WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                      GROUP BY c.id ORDER BY c.nome_exibicao");
 $convites = $res->fetch_all(MYSQLI_ASSOC);
 $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;

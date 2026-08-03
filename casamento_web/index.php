@@ -7,7 +7,7 @@ $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $dataExt = dataExtensa($DEFS['evento.data']);
 $temListaAntiga = listaAntigaExiste($conn);
-$totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_row()[0];
+$totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE ".soVivos($conn,'c')."")->fetch_row()[0];
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -103,6 +103,20 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .pk.on{ border-color:var(--forest); background:var(--cream); color:var(--ink); font-weight:500; }
   .pk.on .pk-ic{ color:var(--forest); }
 
+  /* Seleção múltipla e ações em massa */
+  .sel-conv{ display:flex; align-items:center; padding-right:.2rem; cursor:pointer; }
+  .sel-conv input{ width:17px; height:17px; accent-color:var(--forest); cursor:pointer; }
+  .convite-row.selecionada{ background:var(--gold-pale); border-color:var(--gold-soft); }
+  .barra-selecao{ display:none; position:sticky; top:.5rem; z-index:30; gap:.45rem; flex-wrap:wrap;
+    align-items:center; background:var(--forest); color:#fff; border-radius:12px;
+    padding:.55rem .8rem; margin-bottom:.7rem; box-shadow:0 8px 24px rgba(32,52,42,.22); }
+  .barra-selecao.on{ display:flex; }
+  .barra-selecao .cont{ font-size:.88rem; margin-right:.3rem; }
+  .barra-selecao .cont b{ font-family:var(--serif); font-size:1.05rem; }
+  .barra-selecao .cresce{ flex:1; }
+  .barra-selecao .btn-ico{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.25); color:#fff; }
+  .barra-selecao .btn-ico:hover{ background:rgba(255,255,255,.22); }
+
   /* Ação de WhatsApp e menu "mais ações" */
   .bt-wa{ display:inline-flex; align-items:center; gap:.3rem; }
   .bt-wa svg{ width:14px; height:14px; color:#25D366; }
@@ -139,6 +153,24 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   .ent-d-hora{ font-size:.8rem; color:#9aa09a; white-space:nowrap; }
   .ent-d-meta{ font-size:.82rem; color:#8a8f88; margin-top:.15rem; }
   .ent-d-pessoas{ font-size:.9rem; color:var(--text); margin-top:.35rem; }
+
+  /* Histórico: reciclagem e registo de atividade */
+  .abas-hist{ display:flex; gap:.4rem; border-bottom:1px solid var(--line); margin-bottom:.9rem; }
+  .aba-h{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit;
+    font-size:.9rem; color:#8a8f88; padding:.5rem .8rem; margin-bottom:-1px; }
+  .aba-h.ativa{ color:var(--forest); border-bottom-color:var(--gold); font-weight:600; }
+  .lixo-item{ display:flex; align-items:center; gap:.7rem; border:1px solid var(--line); border-radius:12px;
+    padding:.7rem .9rem; margin-bottom:.55rem; background:#fff; }
+  .lixo-item .cresce{ min-width:0; }
+  .lixo-item strong{ font-family:var(--serif); font-size:1.05rem; color:var(--ink); display:block;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lixo-item small{ color:#9aa09a; font-size:.8rem; }
+  .reg-linha{ display:flex; gap:.6rem; align-items:baseline; padding:.45rem .2rem; border-bottom:1px solid var(--line); font-size:.86rem; }
+  .reg-linha:last-child{ border-bottom:0; }
+  .reg-quando{ color:#9aa09a; font-size:.78rem; white-space:nowrap; flex:none; width:92px; }
+  .reg-quem{ color:var(--forest); font-weight:600; white-space:nowrap; flex:none; }
+  .reg-que{ color:var(--text); min-width:0; overflow-wrap:anywhere; }
+  .vazio-hist{ color:#9aa09a; text-align:center; padding:1.4rem; }
 </style>
 <script src="assets/api.js"></script>
 </head>
@@ -187,6 +219,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
     <button class="btn btn-verde" onclick="abrirMesas()">Mesas</button>
     <button class="btn btn-fantasma" onclick="abrirMensagens()">Mensagens</button>
     <button class="btn btn-fantasma" onclick="abrirEntradas()">Entradas</button>
+    <button class="btn btn-fantasma" onclick="abrirHistorico()">Histórico</button>
     <a class="btn btn-fantasma" href="api.php?action=export">Exportar CSV</a>
     <button class="btn btn-ouro" onclick="novoConvite()">+ Novo convite</button>
   </div>
@@ -195,6 +228,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   <div id="filtro-mesas" class="chips-mesa mb-4"></div>
 
   <!-- LISTA -->
+  <div class="barra-selecao" id="barra-selecao"></div>
   <div class="lista" id="lista"></div>
 </div>
 
@@ -317,6 +351,21 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_
   </div>
 </div>
 
+<!-- ===== MODAL HISTÓRICO (reciclagem + registo de atividade) ===== -->
+<div class="overlay" id="ov-historico">
+  <div class="modal">
+    <div class="modal-topo"><h3>Histórico</h3><button class="fechar" onclick="fechar('ov-historico')">&times;</button></div>
+    <div class="modal-corpo">
+      <div class="abas-hist">
+        <button class="aba-h ativa" id="aba-lixo" onclick="abaHistorico('lixo')">Reciclagem</button>
+        <button class="aba-h" id="aba-registo" onclick="abaHistorico('registo')">Atividade</button>
+      </div>
+      <div id="hist-lixo"></div>
+      <div id="hist-registo" hidden></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -332,7 +381,17 @@ const SEM_MESA = '__SEM_MESA__'; // valor especial do filtro "sem mesa"
 // ---------- utilidades ----------
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-function toast(msg, erro=false){ const t=$('toast'); t.textContent=msg; t.className='toast mostrar'+(erro?' erro':''); setTimeout(()=>t.className='toast',2600); }
+let tToast=null;
+function toast(msg, erro=false){ const t=$('toast'); clearTimeout(tToast);
+  t.textContent=msg; t.className='toast mostrar'+(erro?' erro':''); tToast=setTimeout(()=>t.className='toast',2600); }
+/** Toast com um botão "Anular" — dá tempo (7s) de desfazer a ação. */
+function toastAnular(msg, aoAnular){
+  const t=$('toast'); clearTimeout(tToast);
+  t.innerHTML=`<span>${esc(msg)}</span><button type="button" class="anular">Anular</button>`;
+  t.className='toast mostrar accao';
+  t.querySelector('.anular').onclick=()=>{ clearTimeout(tToast); t.className='toast'; aoAnular(); };
+  tToast=setTimeout(()=>t.className='toast',7000);
+}
 function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
   return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
 // api() vem de assets/api.js (trata sessão expirada, falha de rede e erros do servidor)
@@ -450,15 +509,81 @@ function iconeLado(l){ return l==='noiva'?IC.noiva:(l==='ambos'?(IC.noivo+IC.noi
 const genIco=g=> g==='m'?'<span class="gi gi-m" title="Masculino">♂</span> ':g==='f'?'<span class="gi gi-f" title="Feminino">♀</span> ':'';
 const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>':'';
 
+// ---------- seleção múltipla / ações em massa ----------
+const SELEC = new Set();
+function alternarSelecao(id, on){ on ? SELEC.add(id) : SELEC.delete(id); renderBarraSelecao(); pintarSelecao(); }
+function pintarSelecao(){
+  document.querySelectorAll('.convite-row').forEach((row,i)=>{
+    const c = CONVITES[i]; if(!c) return;
+    row.classList.toggle('selecionada', SELEC.has(c.id));
+    const cx = row.querySelector('.sel-conv input'); if(cx) cx.checked = SELEC.has(c.id);
+  });
+}
+function selecionarTodos(on){
+  SELEC.clear();
+  if(on) CONVITES.forEach(c=>SELEC.add(c.id));
+  renderBarraSelecao(); pintarSelecao();
+}
+function limparSelecao(){ SELEC.clear(); renderBarraSelecao(); pintarSelecao(); }
+function renderBarraSelecao(){
+  const b = $('barra-selecao'); if(!b) return;
+  const n = SELEC.size;
+  b.classList.toggle('on', n > 0);
+  if(!n) return;
+  b.innerHTML = `<span class="cont"><b>${n}</b> ${n===1?'convite selecionado':'convites selecionados'}</span>
+    <button class="btn-ico" onclick="massaFlag('impresso',1)">Marcar impressos</button>
+    <button class="btn-ico" onclick="massaFlag('impresso',0)">Desmarcar impressos</button>
+    <button class="btn-ico" onclick="massaFlag('enviado',1)">Marcar enviados</button>
+    <button class="btn-ico" onclick="massaFlag('enviado',0)">Desmarcar enviados</button>
+    <button class="btn-ico" onclick="massaMesa()">Atribuir mesa…</button>
+    <div class="cresce"></div>
+    <button class="btn-ico" onclick="selecionarTodos(true)">Selecionar todos (${CONVITES.length})</button>
+    <button class="btn-ico" onclick="limparSelecao()">Limpar</button>`;
+}
+// Aplica uma marcação a todos os selecionados, um pedido de cada vez.
+async function massaFlag(campo, valor){
+  const ids = [...SELEC]; if(!ids.length) return;
+  let feitos = 0;
+  for(const id of ids){
+    const d = await api(`convite_flag&id=${id}&campo=${campo}&valor=${valor}`, {silencioso:true});
+    if(d && d.success) feitos++;
+  }
+  toast(`${feitos} de ${ids.length} convite(s) atualizados.`);
+  limparSelecao(); carregar();
+}
+async function massaMesa(){
+  const ids = [...SELEC]; if(!ids.length) return;
+  const nomes = (MESAS||[]).filter(m=>m.especial!=='noivos').map(m=>m.nome);
+  if(!nomes.length) return toast('Ainda não há mesas criadas.', true);
+  const escolha = prompt('Atribuir estes convites a que mesa?\n\nMesas: ' + nomes.join(', ') + '\n\n(deixe vazio para retirar da mesa)');
+  if(escolha === null) return;
+  const mesa = (MESAS||[]).find(m=>m.nome.toLowerCase() === escolha.trim().toLowerCase());
+  if(escolha.trim() !== '' && !mesa) return toast('Não existe uma mesa com esse nome.', true);
+  let feitos = 0;
+  for(const id of ids){
+    const d = await api('convite_mesa', {method:'POST', silencioso:true,
+      body: JSON.stringify({id, mesa_id: mesa ? mesa.id : ''})});
+    if(d && d.success) feitos++;
+  }
+  toast(`${feitos} de ${ids.length} convite(s) ${mesa ? 'atribuídos a '+mesa.nome : 'retirados da mesa'}.`);
+  limparSelecao(); carregar();
+}
+
 function renderConvites(){
   const el=$('lista');
   if(!CONVITES.length){ el.innerHTML=`<div class="vazio"><div class="ico">✦</div><p>Ainda não há convites. Crie o primeiro ou importe a sua lista.</p></div>`; return; }
+  // Convites que saíram da lista (por filtro) deixam de contar para a seleção
+  [...SELEC].forEach(id => { if(!CONVITES.some(c=>c.id==id)) SELEC.delete(id); });
+  renderBarraSelecao();
   el.innerHTML = CONVITES.map(c=>{
     const membros = (c.membros_det&&c.membros_det.length ? c.membros_det : (c.membros||[]).map(n=>({nome:n,genero:'',brinde:0})))
       .map(m=>`<span class="membro-chip">${genIco(m.genero)}${esc(m.nome)}${brindeIco(m.brinde)}</span>`).join('');
     const confTxt = c.rsvp_confirmados!=null && c.rsvp_estado!=='pendente' ? ` · ${c.rsvp_confirmados}/${c.lugares} confirmados` : '';
     const presTxt = c.checkin_presentes>0 ? ` · <span style="color:var(--ok)">${c.checkin_presentes} no local</span>` : '';
-    return `<div class="convite-row">
+    return `<div class="convite-row${SELEC.has(c.id)?' selecionada':''}">
+      <label class="sel-conv" title="Selecionar para ações em massa">
+        <input type="checkbox" ${SELEC.has(c.id)?'checked':''} onchange="alternarSelecao(${c.id},this.checked)">
+      </label>
       <div class="selo-tipo ${c.tipo}" title="${c.tipo}">${iconeTipo(c.tipo)}</div>
       <div>
         <div class="convite-nome">${esc(c.nome_final)}</div>
@@ -639,8 +764,15 @@ async function guardarConvite(){
 // ---------- ações de linha ----------
 async function flag(id,campo,valor){ const d=await api(`convite_flag&id=${id}&campo=${campo}&valor=${valor}`); if(d.success){toast('Atualizado.');carregar();} }
 async function eliminar(id){ const c=CONVITES.find(x=>x.id==id); const nome=c?c.nome_final:'este convite';
-  if(!confirm(`Eliminar o convite "${nome}"? Esta ação não pode ser anulada.`))return;
-  const d=await api('convite_delete&id='+id); if(d.success){toast('Convite eliminado.');carregar();} }
+  if(!confirm(`Eliminar o convite "${nome}"?\n\nVai para a reciclagem — pode repô-lo em Histórico.`))return;
+  const d=await api('convite_delete&id='+id);
+  if(d.success){ toastAnular(`"${nome}" foi para a reciclagem.`, ()=>repor(id)); carregar(); } }
+
+/** Repõe um convite que estava na reciclagem. */
+async function repor(id){
+  const d=await api('convite_restaurar&id='+id);
+  if(d.success){ toast('Convite reposto.'); carregar(); if($('ov-historico').classList.contains('aberto')) abaHistorico('lixo'); }
+}
 
 function linkConvite(codigo){ return BASE+'/convite-digital.php?c='+codigo; }
 
@@ -812,6 +944,69 @@ async function abrirEntradas(){
     }).join('');
   }
   abrir('ov-entradas');
+}
+
+// ---------- histórico: reciclagem + registo de atividade ----------
+function abrirHistorico(){ abrir('ov-historico'); abaHistorico('lixo'); }
+
+async function abaHistorico(qual){
+  const lixo = qual==='lixo';
+  $('aba-lixo').classList.toggle('ativa', lixo);
+  $('aba-registo').classList.toggle('ativa', !lixo);
+  $('hist-lixo').hidden = !lixo;
+  $('hist-registo').hidden = lixo;
+  lixo ? carregarLixo() : carregarRegisto();
+}
+
+async function carregarLixo(){
+  const el=$('hist-lixo');
+  el.innerHTML='<p class="vazio-hist">A carregar…</p>';
+  const d=await api('reciclagem');
+  const cs=(d && d.convites)||[];
+  const dias=(d && d.dias)||30;
+  if(!cs.length){ el.innerHTML=`<p class="vazio-hist">A reciclagem está vazia.<br><small>Os convites eliminados ficam aqui ${dias} dias antes de desaparecerem.</small></p>`; return; }
+  el.innerHTML=`<p class="msg-conta">${cs.length} convite(s) na reciclagem · apagam-se sozinhos ao fim de ${dias} dias</p>`
+    + cs.map(c=>`<div class="lixo-item">
+      <div class="cresce">
+        <strong>${esc(c.nome_exibicao)}</strong>
+        <small>${c.lugares} lugar(es) · Cód. ${esc(c.codigo)} · eliminado ${fmtHora(c.eliminado_em)}</small>
+      </div>
+      <button class="btn btn-fantasma" onclick="repor(${c.id})">Repor</button>
+      <button class="btn-ico" title="Apagar definitivamente" onclick="apagarDeVez(${c.id}, ${JSON.stringify(c.nome_exibicao)})">&times;</button>
+    </div>`).join('');
+}
+
+async function apagarDeVez(id, nome){
+  if(!confirm(`Apagar "${nome}" DEFINITIVAMENTE?\n\nJá não poderá ser reposto.`)) return;
+  const d=await api('convite_delete&definitivo=1&id='+id);
+  if(d.success){ toast('Convite apagado definitivamente.'); carregarLixo(); carregar(); }
+}
+
+const ACCOES = {
+  convite_criado:'criou o convite',      convite_editado:'editou o convite',
+  convite_eliminado:'enviou para a reciclagem', convite_reposto:'repôs o convite',
+  convite_apagado:'apagou definitivamente',     mesa_eliminada:'eliminou a mesa',
+  checkin:'registou entrada',            rsvp_manual:'alterou a presença',
+  impresso_sim:'marcou como impresso',   impresso_nao:'desmarcou impresso',
+  enviado_sim:'marcou como enviado',     enviado_nao:'desmarcou enviado',
+};
+
+async function carregarRegisto(){
+  const el=$('hist-registo');
+  el.innerHTML='<p class="vazio-hist">A carregar…</p>';
+  const d=await api('registo_lista');
+  const rs=(d && d.registos)||[];
+  if(!rs.length){ el.innerHTML='<p class="vazio-hist">Ainda não há atividade registada.</p>'; return; }
+  el.innerHTML=rs.map(r=>{
+    const que=ACCOES[r.accao]||esc(r.accao);
+    const alvo=r.alvo?` <b>${esc(r.alvo)}</b>`:'';
+    const det=r.detalhe?` <span style="color:#9aa09a">· ${esc(r.detalhe)}</span>`:'';
+    return `<div class="reg-linha">
+      <span class="reg-quando">${fmtHora(r.criado_em)}</span>
+      <span class="reg-quem">${esc(r.utilizador||'—')}</span>
+      <span class="reg-que">${que}${alvo}${det}</span>
+    </div>`;
+  }).join('');
 }
 
 montarPickers();

@@ -55,6 +55,7 @@ if ($acao === 'export') {
                          FROM {$P}convites c
                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
                          LEFT JOIN {$P}convidados g ON g.convite_id=c.id
+                         WHERE ".soVivos($conn,'c')."
                          GROUP BY c.id ORDER BY c.nome_exibicao");
     while ($r = $res->fetch_assoc()) {
         fputcsv($out, [
@@ -149,6 +150,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
                                   c.observacoes, m.nome AS mesa_nome
                            FROM {$P}convites c
                            LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                           WHERE ".soVivos($conn,'c')."
                            ORDER BY c.nome_exibicao");
         $convites = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
         $porId = [];
@@ -169,7 +171,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
 
     if ($acao === 'porta_entradas') {
         $r = $conn->query("SELECT id FROM {$P}convites
-                           WHERE checkin_estado IN ('presente','parcial')
+                           WHERE checkin_estado IN ('presente','parcial') AND ".soVivos($conn,'')."
                            ORDER BY checkin_em DESC, atualizado_em DESC");
         $ids = array_column($r->fetch_all(MYSQLI_ASSOC), 'id');
         $lista = array_map(fn($id) => carregarConvite($conn, (int)$id), $ids);
@@ -191,7 +193,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
         $like = "%$termo%";
         $st = $conn->prepare("SELECT DISTINCT c.id FROM {$P}convites c
                               LEFT JOIN {$P}convidados g ON g.convite_id=c.id
-                              WHERE c.nome_exibicao LIKE ? OR g.nome LIKE ?
+                              WHERE (c.nome_exibicao LIKE ? OR g.nome LIKE ?) AND ".soVivos($conn,'c')."
                               ORDER BY c.nome_exibicao LIMIT 12");
         $st->bind_param('ss', $like, $like); $st->execute();
         $ids = array_column($st->get_result()->fetch_all(MYSQLI_ASSOC), 'id');
@@ -247,6 +249,8 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
                 $st->bind_param('ii', $n, $id); $st->execute();
             }
         }
+        $qual = ['membro'=>'entrada de 1 pessoa', 'anular'=>'entrada anulada'][$modo] ?? 'entrada do convite';
+        registar($conn, 'checkin', $c['nome_final'] ?? '', $qual . ($excecao ? ' (excecional)' : ''));
         ok(['convite' => carregarConvite($conn, $id)]);
     }
 }
@@ -257,7 +261,8 @@ exigirAdmin();
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload'], true)) {
+                     'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload',
+                     'convite_restaurar'], true)) {
     exigirCsrf();
 }
 
@@ -322,7 +327,7 @@ if ($acao === 'convite_list') {
             : "COALESCE({$a}.mesa_id, c.mesa_id)";
     };
     $temMesaExpr = fn(string $a) => $temPapel ? "({$a}.mesa_id IS NOT NULL OR {$a}.papel IN ('padrinho','madrinha'))" : "{$a}.mesa_id IS NOT NULL";
-    $w="WHERE 1=1"; $t=''; $p=[];
+    $w="WHERE ".soVivos($conn,'c'); $t=''; $p=[];   // fora os que estão na reciclagem
     if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
     // Filtro por estado: além do estado do convite, inclui convites com um integrante
@@ -422,6 +427,7 @@ if ($acao === 'convite_save') {
     $mostrarNM = !empty($d['mostrar_num_mesa']) ? 1 : 0;
     $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
 
+    $novoConvite = !$id;
     if ($id) {
         $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
         $st->bind_param('ssiissiisssi',$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
@@ -523,13 +529,57 @@ if ($acao === 'convite_save') {
         }
     }
 
+    registar($conn, $novoConvite ? 'convite_criado' : 'convite_editado', $nome, 'id '.$id);
     ok(['convite'=>carregarConvite($conn,$id),'stats'=>estatisticas($conn)]);
 }
 
 if ($acao === 'convite_delete') {
-    $id=(int)($_GET['id']??0);
-    $st=$conn->prepare("DELETE FROM {$P}convites WHERE id=?"); $st->bind_param('i',$id); $ok=$st->execute();
-    $ok?ok(['stats'=>estatisticas($conn)]):erro('Não foi possível eliminar.');
+    // Eliminação REVERSÍVEL: o convite sai das listas mas fica recuperável.
+    // (?definitivo=1 apaga mesmo, usado ao esvaziar a reciclagem.)
+    $id  = (int)($_GET['id'] ?? 0);
+    $def = !empty($_GET['definitivo']);
+    $nome = '';
+    $rn = $conn->prepare("SELECT nome_exibicao FROM {$P}convites WHERE id=?");
+    $rn->bind_param('i',$id); $rn->execute();
+    if ($x = $rn->get_result()->fetch_assoc()) $nome = $x['nome_exibicao'];
+
+    if ($def) {
+        $st = $conn->prepare("DELETE FROM {$P}convites WHERE id=?");
+    } else {
+        $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=$TS WHERE id=?");
+    }
+    $st->bind_param('i',$id); $ok = $st->execute();
+    if (!$ok) erro('Não foi possível eliminar.');
+    registar($conn, $def ? 'convite_apagado' : 'convite_eliminado', $nome, 'id '.$id);
+    ok(['stats'=>estatisticas($conn), 'id'=>$id, 'nome'=>$nome, 'reversivel'=>!$def]);
+}
+
+if ($acao === 'convite_restaurar') {
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=NULL WHERE id=?");
+    $st->bind_param('i',$id); $ok = $st->execute();
+    if (!$ok) erro('Não foi possível repor o convite.');
+    registar($conn, 'convite_reposto', '', 'id '.$id);
+    ok(['stats'=>estatisticas($conn)]);
+}
+
+if ($acao === 'reciclagem') {
+    // Convites eliminados (recuperáveis). Ao abrir a reciclagem aproveita-se
+    // para deitar fora o que já lá está há mais de RECICLAGEM_DIAS — assim a
+    // limpeza acontece sozinha, sem uma tarefa agendada no servidor.
+    @$conn->query("DELETE FROM {$P}convites
+                   WHERE eliminado_em IS NOT NULL
+                     AND eliminado_em < DATE_SUB(NOW(), INTERVAL ".RECICLAGEM_DIAS." DAY)");
+    $r = $conn->query("SELECT id, codigo, nome_exibicao, lugares, eliminado_em
+                       FROM {$P}convites WHERE eliminado_em IS NOT NULL
+                       ORDER BY eliminado_em DESC");
+    ok(['convites' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [], 'dias' => RECICLAGEM_DIAS]);
+}
+
+if ($acao === 'registo_lista') {
+    $r = $conn->query("SELECT utilizador, papel, accao, alvo, detalhe, criado_em
+                       FROM {$P}registo ORDER BY id DESC LIMIT 200");
+    ok(['registos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : []]);
 }
 
 if ($acao === 'convite_flag') {
@@ -537,6 +587,7 @@ if ($acao === 'convite_flag') {
     if (!in_array($campo,['impresso','enviado'],true)) erro('Campo inválido.');
     $st=$conn->prepare("UPDATE {$P}convites SET $campo=?, atualizado_em=$TS WHERE id=?");
     $st->bind_param('ii',$valor,$id); $st->execute();
+    registar($conn, $campo.($valor?'_sim':'_nao'), '', 'id '.$id);
     ok(['stats'=>estatisticas($conn)]);
 }
 
@@ -545,6 +596,7 @@ if ($acao === 'convite_rsvp_manual') {
     if (!in_array($estado,['pendente','confirmado','recusado','parcial'],true)) erro('Estado inválido.');
     $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_em=$TS WHERE id=?");
     $st->bind_param('si',$estado,$id); $st->execute();
+    registar($conn, 'rsvp_manual', '', 'id '.$id.' -> '.$estado);
     ok(['stats'=>estatisticas($conn)]);
 }
 
@@ -622,9 +674,12 @@ if ($acao === 'mesa_pos') {
 }
 if ($acao === 'mesa_delete') {
     $id=(int)($_GET['id']??0);
+    $nm = $conn->query("SELECT nome FROM {$P}mesas WHERE id=$id");
+    $nomeMesa = ($nm && $x=$nm->fetch_assoc()) ? $x['nome'] : '';
     $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
     $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE mesa_id=$id"); // mesas individuais também
     $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();
+    registar($conn, 'mesa_eliminada', $nomeMesa, 'id '.$id);
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convite_mesa') {
@@ -646,11 +701,11 @@ if ($acao === 'convidado_mesa') {
     if (!$gid) erro('Pessoa inválida.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
     if ($mesaId && mesaEhNoivos($conn,$mesaId)) erro('A mesa dos noivos só admite padrinhos e madrinhas (pelo papel).');
-    // Sentar numa mesa normal tira a pessoa da mesa de honra: limpa o papel (padrinho/madrinha)
-    // e o lado. (papel só se limpa se a coluna existir — tolerante a esquema por migrar.)
+    // Sentar numa mesa normal tira a pessoa da mesa de honra: limpa o papel
+    // (padrinho/madrinha). Só se limpa se a coluna existir — tolerante a esquema por migrar.
     $limpaPapel = colunaExiste($conn, "{$P}convidados", 'papel') ? ", papel=NULL" : "";
-    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?, lado_noivos=NULL$limpaPapel WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
-    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL, lado_noivos=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?$limpaPapel WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
+    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL WHERE id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
@@ -661,7 +716,7 @@ if ($acao === 'convidado_papel') {
     if (!$gid) erro('Pessoa inválida.');
     $papel = in_array($d['papel']??'', ['padrinho','madrinha'], true) ? $d['papel'] : null;
     // Tornar-se padrinho/madrinha coloca a pessoa na mesa de honra: limpa a mesa individual.
-    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=?, mesa_id=NULL, lado_noivos=NULL WHERE id=?"); $st->bind_param('si',$papel,$gid); }
+    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=?, mesa_id=NULL WHERE id=?"); $st->bind_param('si',$papel,$gid); }
     else        { $st=$conn->prepare("UPDATE {$P}convidados SET papel=NULL WHERE id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
@@ -671,7 +726,7 @@ if ($acao === 'convidado_list') {
     // Colunas opcionais protegidas (tolerante a esquema por migrar).
     $selGen = colunaExiste($conn, "{$P}convidados", 'genero') ? "g.genero" : "'' AS genero";
     $selBri = colunaExiste($conn, "{$P}convidados", 'brinde') ? "g.brinde" : "0 AS brinde";
-    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.lado_noivos, g.papel, $selGen, $selBri,
+    $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.papel, $selGen, $selBri,
                  c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
                  mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome,
                  mp.especial AS mesa_pessoa_esp, mc.especial AS mesa_convite_esp
@@ -679,6 +734,7 @@ if ($acao === 'convidado_list') {
           JOIN {$P}convites c ON g.convite_id=c.id
           LEFT JOIN {$P}mesas mp ON g.mesa_id=mp.id
           LEFT JOIN {$P}mesas mc ON c.mesa_id=mc.id
+          WHERE ".soVivos($conn,'c')."
           ORDER BY c.nome_exibicao, g.principal DESC, g.nome";
     $rows=$conn->query($sql)->fetch_all(MYSQLI_ASSOC);
     // Mesa dos noivos (para a deteção automática de padrinhos/madrinhas).

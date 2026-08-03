@@ -95,79 +95,120 @@ $conn->query("
         FOREIGN KEY (convite_id) REFERENCES {$P}convites(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// Migração suave: garantir a coluna mostrar_numero em instalações anteriores
-$col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'mostrar_numero'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convites ADD COLUMN mostrar_numero TINYINT(1) DEFAULT 1 AFTER sufixo");
+// ============================================================
+// Migrações com versão
+//
+// Antes, cada pedido corria ~25 instruções DDL (CREATE TABLE IF NOT EXISTS,
+// SHOW COLUMNS, ALTER TABLE). Em alojamento partilhado isso é latência em
+// TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
+// cw_definicoes e só se corre o que falta.
+// ============================================================
+const ESQUEMA_VERSAO = 3;
+
+/** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
+function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
+    $r = @$c->query("SHOW COLUMNS FROM `$tabela` LIKE '" . $c->real_escape_string($coluna) . "'");
+    if ($r && $r->num_rows === 0) @$c->query("ALTER TABLE `$tabela` ADD COLUMN `$coluna` $def");
+}
+/** Cria um índice se ainda não existir. */
+function migIndice(mysqli $c, string $tabela, string $nome, string $colunas): void {
+    $r = @$c->query("SHOW INDEX FROM `$tabela` WHERE Key_name='" . $c->real_escape_string($nome) . "'");
+    if ($r && $r->num_rows === 0) @$c->query("CREATE INDEX `$nome` ON `$tabela` ($colunas)");
 }
 
-// Migração suave: posição e forma das mesas (para a planta visual)
-foreach ([
-    'pos_x' => "DECIMAL(6,2) DEFAULT NULL",
-    'pos_y' => "DECIMAL(6,2) DEFAULT NULL",
-    'forma' => "VARCHAR(20) DEFAULT 'redonda'",
-    'cor'   => "VARCHAR(20) DEFAULT NULL",
-] as $coluna => $definicao) {
-    $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
-    if ($r && $r->num_rows === 0) {
-        $conn->query("ALTER TABLE {$P}mesas ADD COLUMN $coluna $definicao");
-    }
-}
-
-// Migração suave: mesa individual por convidado (permite dividir um convite por várias mesas)
-$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'mesa_id'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN mesa_id INT DEFAULT NULL AFTER presente_em");
-}
-
-// Migração suave: lado do convidado na mesa dos noivos (padrinhos/madrinhas)
-$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'lado_noivos'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN lado_noivos VARCHAR(10) DEFAULT NULL AFTER mesa_id");
-}
-
-// Migração suave: papel do convidado (padrinho/madrinha) — deteta as alas dos noivos automaticamente
-$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'papel'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN papel VARCHAR(20) DEFAULT NULL AFTER lado_noivos");
-}
-
-// Migração suave: género do convidado ('m'/'f'/NULL) e opção "Recebe Brinde".
-// Sem cláusula AFTER (não depende de outras colunas existirem) para ser robusta.
-$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'genero'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN genero VARCHAR(1) DEFAULT NULL");
-}
-$col = $conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'brinde'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convidados ADD COLUMN brinde TINYINT(1) DEFAULT 0");
-}
-
-// Migração suave: mesa especial (noivos) e tamanho manual da mesa
-foreach (['especial' => "VARCHAR(20) DEFAULT NULL", 'tamanho' => "VARCHAR(10) DEFAULT NULL"] as $coluna => $definicao) {
-    $r = $conn->query("SHOW COLUMNS FROM {$P}mesas LIKE '$coluna'");
-    if ($r && $r->num_rows === 0) $conn->query("ALTER TABLE {$P}mesas ADD COLUMN $coluna $definicao");
-}
-
-// Migração suave: opção de mostrar o nº de pessoas por mesa no convite digital
-$col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'mostrar_num_mesa'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convites ADD COLUMN mostrar_num_mesa TINYINT(1) DEFAULT 1 AFTER mostrar_numero");
-}
-
-// Migração suave: mensagem pessoal por convite (convite digital)
-$col = $conn->query("SHOW COLUMNS FROM {$P}convites LIKE 'msg_pessoal'");
-if ($col && $col->num_rows === 0) {
-    $conn->query("ALTER TABLE {$P}convites ADD COLUMN msg_pessoal TEXT DEFAULT NULL AFTER observacoes");
-}
-
-// Definições do convite digital (personalização; ver personalizacao.php)
+// A tabela de definições tem de existir antes de se poder ler a versão.
 $conn->query("
     CREATE TABLE IF NOT EXISTS {$P}definicoes (
         chave VARCHAR(64) NOT NULL PRIMARY KEY,
         valor MEDIUMTEXT,
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$rv = @$conn->query("SELECT valor FROM {$P}definicoes WHERE chave='schema.versao' LIMIT 1");
+$versaoAtual = ($rv && $rv->num_rows) ? (int)$rv->fetch_assoc()['valor'] : 0;
+
+if ($versaoAtual < ESQUEMA_VERSAO) {
+
+    // ---- v1: colunas acrescentadas ao longo do desenvolvimento -----------
+    if ($versaoAtual < 1) {
+        migColuna($conn, "{$P}convites",   'mostrar_numero',   "TINYINT(1) DEFAULT 1");
+        migColuna($conn, "{$P}convites",   'mostrar_num_mesa', "TINYINT(1) DEFAULT 1");
+        migColuna($conn, "{$P}convites",   'msg_pessoal',      "TEXT DEFAULT NULL");
+        foreach (['pos_x' => "DECIMAL(6,2) DEFAULT NULL", 'pos_y' => "DECIMAL(6,2) DEFAULT NULL",
+                  'forma' => "VARCHAR(20) DEFAULT 'redonda'", 'cor' => "VARCHAR(20) DEFAULT NULL",
+                  'especial' => "VARCHAR(20) DEFAULT NULL", 'tamanho' => "VARCHAR(10) DEFAULT NULL"] as $col => $def) {
+            migColuna($conn, "{$P}mesas", $col, $def);
+        }
+        foreach (['mesa_id' => "INT DEFAULT NULL", 'papel' => "VARCHAR(20) DEFAULT NULL",
+                  'genero' => "VARCHAR(1) DEFAULT NULL", 'brinde' => "TINYINT(1) DEFAULT 0"] as $col => $def) {
+            migColuna($conn, "{$P}convidados", $col, $def);
+        }
+    }
+
+    // ---- v2: índices e integridade referencial ---------------------------
+    if ($versaoAtual < 2) {
+        // Colunas usadas em WHERE/JOIN que não tinham índice.
+        migIndice($conn, "{$P}convites",   'idx_conv_mesa',    'mesa_id');
+        migIndice($conn, "{$P}convites",   'idx_conv_estado',  'rsvp_estado');
+        migIndice($conn, "{$P}convites",   'idx_conv_tipo',    'tipo');
+        migIndice($conn, "{$P}convidados", 'idx_cvd_mesa',     'mesa_id');
+        migIndice($conn, "{$P}convidados", 'idx_cvd_rsvp',     'rsvp');
+        migIndice($conn, "{$P}convidados", 'idx_cvd_papel',    'papel');
+        migIndice($conn, "{$P}convidados", 'idx_cvd_genero',   'genero, brinde');
+        migIndice($conn, "{$P}mesas",      'idx_mesa_especial','especial');
+
+        // A integridade das mesas dependia de o código se lembrar de limpar as
+        // referências ao apagar. Passa a ser garantida pela base de dados.
+        // (Falha em silêncio se houver dados órfãos — sem consequências.)
+        $temFk = @$conn->query("SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+                                WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='{$P}convites'
+                                AND CONSTRAINT_NAME='fk_conv_mesa' LIMIT 1");
+        if ($temFk && $temFk->num_rows === 0) {
+            @$conn->query("UPDATE {$P}convites c LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                           SET c.mesa_id=NULL WHERE c.mesa_id IS NOT NULL AND m.id IS NULL");
+            @$conn->query("ALTER TABLE {$P}convites ADD CONSTRAINT fk_conv_mesa
+                           FOREIGN KEY (mesa_id) REFERENCES {$P}mesas(id) ON DELETE SET NULL");
+        }
+        $temFk2 = @$conn->query("SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+                                 WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='{$P}convidados'
+                                 AND CONSTRAINT_NAME='fk_cvd_mesa' LIMIT 1");
+        if ($temFk2 && $temFk2->num_rows === 0) {
+            @$conn->query("UPDATE {$P}convidados g LEFT JOIN {$P}mesas m ON g.mesa_id=m.id
+                           SET g.mesa_id=NULL WHERE g.mesa_id IS NOT NULL AND m.id IS NULL");
+            @$conn->query("ALTER TABLE {$P}convidados ADD CONSTRAINT fk_cvd_mesa
+                           FOREIGN KEY (mesa_id) REFERENCES {$P}mesas(id) ON DELETE SET NULL");
+        }
+
+        // lado_noivos ficou sem uso quando o "papel" passou a definir as alas:
+        // era sempre escrita a NULL e nunca lida. Sai do esquema.
+        $rl = @$conn->query("SHOW COLUMNS FROM {$P}convidados LIKE 'lado_noivos'");
+        if ($rl && $rl->num_rows) @$conn->query("ALTER TABLE {$P}convidados DROP COLUMN lado_noivos");
+    }
+
+    // ---- v3: eliminação reversível e registo de atividade ----------------
+    if ($versaoAtual < 3) {
+        // Eliminar um convite passa a ser reversível durante algum tempo.
+        migColuna($conn, "{$P}convites", 'eliminado_em', "TIMESTAMP NULL DEFAULT NULL");
+        migIndice($conn, "{$P}convites", 'idx_conv_eliminado', 'eliminado_em');
+
+        // Quem fez o quê (útil quando admin e porteiro partilham o dispositivo).
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}registo (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                utilizador VARCHAR(60) DEFAULT NULL,
+                papel VARCHAR(20) DEFAULT NULL,
+                accao VARCHAR(40) NOT NULL,
+                alvo VARCHAR(120) DEFAULT NULL,
+                detalhe VARCHAR(255) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_reg_data (criado_em),
+                INDEX idx_reg_accao (accao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+
+    @$conn->query("INSERT INTO {$P}definicoes (chave,valor) VALUES ('schema.versao','" . ESQUEMA_VERSAO . "')
+                   ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
+}
 
 // A mesa (especial) dos noivos existe por padrão: cria-se UMA vez (primeira utilização).
 // Depois fica eliminável — não volta a ser recriada automaticamente (repõe-se no botão da planta).
@@ -186,6 +227,32 @@ if ($flag && $flag->num_rows === 0) {
 // ============================================================
 // Funções partilhadas
 // ============================================================
+
+/**
+ * Regista uma ação no histórico (quem fez o quê). Nunca interrompe o fluxo:
+ * se a tabela ainda não existir, ignora em silêncio.
+ */
+function registar(mysqli $conn, string $accao, string $alvo = '', string $detalhe = ''): void {
+    global $P;
+    $u = function_exists('utilizadorAtual') ? (utilizadorAtual() ?? '') : '';
+    $p = function_exists('papel') ? (papel() ?? '') : '';
+    $st = @$conn->prepare("INSERT INTO {$P}registo (utilizador,papel,accao,alvo,detalhe) VALUES (?,?,?,?,?)");
+    if (!$st) return;
+    $alvo = substr($alvo, 0, 120); $detalhe = substr($detalhe, 0, 255);
+    $st->bind_param('sssss', $u, $p, $accao, $alvo, $detalhe);
+    @$st->execute();
+}
+
+/**
+ * Condição SQL que deixa de fora os convites postos na reciclagem.
+ * Devolve "1=1" enquanto a coluna não existir (esquema por migrar), para que
+ * a mesma consulta continue a funcionar numa base antiga.
+ */
+function soVivos(mysqli $conn, string $alias = 'c'): string {
+    global $P;
+    $col = $alias === '' ? 'eliminado_em' : "$alias.eliminado_em";
+    return colunaExiste($conn, "{$P}convites", 'eliminado_em') ? "$col IS NULL" : '1=1';
+}
 
 /** URL base do site (funciona em local e online, para links e QR). */
 function base_url(): string {
@@ -281,58 +348,84 @@ function recalcularCheckin(mysqli $conn, int $conviteId, string $tsSql = 'NOW()'
 /** Estatísticas globais para o painel. */
 function estatisticas(mysqli $conn): array {
     global $P;
-    // Tolerante a queries que falhem (ex.: coluna ainda por migrar) — devolve 0 em vez de abortar.
-    $one = function($sql) use ($conn) { $r = @$conn->query($sql); return $r ? (int)($r->fetch_row()[0] ?? 0) : 0; };
-    $s = [];
-    $s['convites']     = $one("SELECT COUNT(*) FROM {$P}convites");
-    $s['lugares']      = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites");
-    $s['convidados']   = $one("SELECT COUNT(*) FROM {$P}convidados");
-    $s['digitais']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE tipo IN ('digital','ambos')");
-    $s['fisicos']      = $one("SELECT COUNT(*) FROM {$P}convites WHERE tipo IN ('fisico','ambos')");
-    $s['noivos']       = $one("SELECT COUNT(*) FROM {$P}convites WHERE lado IN ('noivo','ambos')");
-    $s['noivas']       = $one("SELECT COUNT(*) FROM {$P}convites WHERE lado IN ('noiva','ambos')");
-    $s['impressos']    = $one("SELECT COUNT(*) FROM {$P}convites WHERE impresso=1");
-    $s['enviados']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE enviado=1");
-    // Contagem de convites por estado. Um convite conta para um estado se o seu
-    // rsvp_estado for esse OU se tiver um integrante nesse estado (ex.: um convite
-    // "parcial" com integrantes ainda pendentes conta também em "pendentes").
-    $temEstado = fn($e) => "(c.rsvp_estado='$e' OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='$e'))";
-    $s['confirmados']  = $one("SELECT COUNT(*) FROM {$P}convites c WHERE " . $temEstado('confirmado'));
-    $s['parciais']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE rsvp_estado='parcial'");
-    $s['recusados']    = $one("SELECT COUNT(*) FROM {$P}convites c WHERE " . $temEstado('recusado'));
-    // Pendentes: totalmente pendentes + parciais (têm lugares por confirmar) + com algum integrante pendente.
-    $s['pendentes']    = $one("SELECT COUNT(*) FROM {$P}convites c WHERE c.rsvp_estado IN ('pendente','parcial')
-                               OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='pendente')");
-    $s['lug_confirm']  = $one("SELECT COALESCE(SUM(rsvp_confirmados),0) FROM {$P}convites");
-    // Convidados reais (pessoas) por situação. Pendentes/recusados = lugares dos convites
-    // totalmente nesse estado + integrantes nesse estado em convites de OUTRO estado
-    // (ex.: pendentes/recusados dentro de um convite "parcial"). Assim não se perdem nem duplicam.
+    // Tolerante a queries que falhem (ex.: coluna ainda por migrar) — devolve 0.
+    $linha = function (string $sql) use ($conn): array {
+        $r = @$conn->query($sql);
+        return $r ? ($r->fetch_assoc() ?: []) : [];
+    };
+    $n = fn(array $a, string $k) => (int)($a[$k] ?? 0);
+    $vivos = soVivos($conn, 'c');   // os da reciclagem não entram nas contas
+
+    // ---- 1 query: tudo o que se agrega sobre a tabela de convites --------
+    // (antes eram ~20 queries separadas sobre a mesma tabela)
+    $c = $linha("SELECT
+        COUNT(*)                                              AS convites,
+        COALESCE(SUM(lugares),0)                              AS lugares,
+        COALESCE(SUM(rsvp_confirmados),0)                     AS lug_confirm,
+        SUM(tipo IN ('digital','ambos'))                      AS digitais,
+        SUM(tipo IN ('fisico','ambos'))                       AS fisicos,
+        SUM(lado IN ('noivo','ambos'))                        AS noivos,
+        SUM(lado IN ('noiva','ambos'))                        AS noivas,
+        SUM(impresso=1)                                       AS impressos,
+        SUM(enviado=1)                                        AS enviados,
+        SUM(rsvp_estado='parcial')                            AS parciais,
+        COALESCE(SUM(checkin_presentes),0)                    AS presentes,
+        SUM(checkin_estado IN ('presente','parcial'))         AS no_local,
+        COALESCE(SUM(CASE WHEN tipo IN ('digital','ambos') THEN lugares END),0) AS pes_digitais,
+        COALESCE(SUM(CASE WHEN tipo IN ('fisico','ambos')  THEN lugares END),0) AS pes_fisicos,
+        COALESCE(SUM(CASE WHEN impresso=1 THEN lugares END),0)                  AS pes_impressos,
+        COALESCE(SUM(CASE WHEN lado IN ('noivo','ambos') THEN lugares END),0)    AS pes_noivos,
+        COALESCE(SUM(CASE WHEN lado IN ('noiva','ambos') THEN lugares END),0)    AS pes_noivas,
+        COALESCE(SUM(CASE WHEN rsvp_estado='pendente' THEN lugares END),0)       AS lug_pendentes,
+        COALESCE(SUM(CASE WHEN rsvp_estado='recusado' THEN lugares END),0)       AS lug_recusados,
+        COALESCE(SUM(CASE WHEN rsvp_estado='parcial'
+                     THEN GREATEST(CAST(lugares AS SIGNED) - COALESCE(rsvp_confirmados,0), 0) END),0) AS lug_parc_pend
+        FROM {$P}convites c WHERE $vivos");
+
+    // ---- 1 query: contagem de convites por estado ------------------------
+    // Um convite conta para um estado se o seu rsvp_estado for esse OU se
+    // tiver um integrante nesse estado (ex.: "parcial" com gente pendente).
+    $e = $linha("SELECT
+        SUM(c.rsvp_estado='confirmado' OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='confirmado')) AS confirmados,
+        SUM(c.rsvp_estado='recusado'   OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='recusado'))   AS recusados,
+        SUM(c.rsvp_estado IN ('pendente','parcial') OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='pendente')) AS pendentes
+        FROM {$P}convites c WHERE $vivos");
+
+    // ---- 1 query: tudo sobre os convidados nomeados ----------------------
+    $temGen = colunaExiste($conn, "{$P}convidados", 'genero');
+    $temBri = colunaExiste($conn, "{$P}convidados", 'brinde');
+    $exprG  = $temGen ? "SUM(g.genero='m') AS masc, SUM(g.genero='f') AS fem" : "0 AS masc, 0 AS fem";
+    $exprB  = $temBri ? "SUM(g.brinde=1) AS brinde" : "0 AS brinde";
+    $g = $linha("SELECT COUNT(*) AS convidados, $exprG, $exprB,
+        SUM(g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')) AS pend_fora,
+        SUM(g.rsvp='recusado' AND c.rsvp_estado<>'recusado')                   AS rec_fora
+        FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE $vivos");
+
+    $mesas = $linha("SELECT COUNT(*) AS n FROM {$P}mesas");
+
+    $s = [
+        'convites'    => $n($c,'convites'),   'lugares'   => $n($c,'lugares'),
+        'convidados'  => $n($g,'convidados'), 'digitais'  => $n($c,'digitais'),
+        'fisicos'     => $n($c,'fisicos'),    'noivos'    => $n($c,'noivos'),
+        'noivas'      => $n($c,'noivas'),     'impressos' => $n($c,'impressos'),
+        'enviados'    => $n($c,'enviados'),   'parciais'  => $n($c,'parciais'),
+        'confirmados' => $n($e,'confirmados'),'recusados' => $n($e,'recusados'),
+        'pendentes'   => $n($e,'pendentes'),  'lug_confirm' => $n($c,'lug_confirm'),
+        'presentes'   => $n($c,'presentes'),  'no_local'  => $n($c,'no_local'),
+        'mesas'       => $n($mesas,'n'),      'capacidade'=> MAX_LUGARES_TOTAL,
+        'pes_digitais'  => $n($c,'pes_digitais'),  'pes_fisicos' => $n($c,'pes_fisicos'),
+        'pes_impressos' => $n($c,'pes_impressos'), 'pes_noivos'  => $n($c,'pes_noivos'),
+        'pes_noivas'    => $n($c,'pes_noivas'),
+        'pes_masculino' => $n($g,'masc'), 'pes_feminino' => $n($g,'fem'), 'pes_brinde' => $n($g,'brinde'),
+    ];
     $s['pes_confirmados'] = $s['lug_confirm'];
-    // Pessoas pendentes = lugares dos convites totalmente pendentes + lugares por confirmar dos
-    // parciais (lugares - confirmados) + integrantes pendentes de convites de OUTRO estado.
-    // Grupos disjuntos por estado do convite -> sem duplicação.
-    $s['pes_pendentes']   = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE rsvp_estado='pendente'")
-        + $one("SELECT COALESCE(SUM(GREATEST(CAST(lugares AS SIGNED) - COALESCE(rsvp_confirmados,0), 0)),0) FROM {$P}convites WHERE rsvp_estado='parcial'")
-        + $one("SELECT COUNT(*) FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')");
-    $s['pes_recusados']   = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE rsvp_estado='recusado'")
-        + $one("SELECT COUNT(*) FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE g.rsvp='recusado' AND c.rsvp_estado<>'recusado'");
-    $s['pes_digitais']    = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE tipo IN ('digital','ambos')");
-    $s['pes_fisicos']     = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE tipo IN ('fisico','ambos')");
-    $s['pes_impressos']   = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE impresso=1");
-    $s['pes_noivos']      = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE lado IN ('noivo','ambos')");
-    $s['pes_noivas']      = $one("SELECT COALESCE(SUM(lugares),0) FROM {$P}convites WHERE lado IN ('noiva','ambos')");
-    $s['capacidade']      = MAX_LUGARES_TOTAL;
-    $s['presentes']    = $one("SELECT COALESCE(SUM(checkin_presentes),0) FROM {$P}convites");
-    $s['no_local']     = $one("SELECT COUNT(*) FROM {$P}convites WHERE checkin_estado IN ('presente','parcial')");
-    $s['mesas']        = $one("SELECT COUNT(*) FROM {$P}mesas");
-    // Convidados nomeados por género e nº que recebe brinde
-    $temGenColuna = colunaExiste($conn, "{$P}convidados", 'genero');
-    $temBriColuna = colunaExiste($conn, "{$P}convidados", 'brinde');
-    $s['pes_masculino'] = $temGenColuna ? $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='m'") : 0;
-    $s['pes_feminino']  = $temGenColuna ? $one("SELECT COUNT(*) FROM {$P}convidados WHERE genero='f'") : 0;
-    $s['pes_brinde']    = $temBriColuna ? $one("SELECT COUNT(*) FROM {$P}convidados WHERE brinde=1") : 0;
+    // Pessoas por confirmar: lugares dos convites pendentes + lugares por confirmar
+    // dos parciais + integrantes pendentes de convites de outro estado (grupos disjuntos).
+    $s['pes_pendentes'] = $n($c,'lug_pendentes') + $n($c,'lug_parc_pend') + $n($g,'pend_fora');
+    $s['pes_recusados'] = $n($c,'lug_recusados') + $n($g,'rec_fora');
     return $s;
 }
+
 
 /**
  * Lista de mesas com ocupação, considerando mesas individuais por convidado.
@@ -355,7 +448,8 @@ function listarMesas(mysqli $conn): array {
     // 1) Pessoas nomeadas na sua mesa efetiva. Padrinhos/madrinhas sentam-se sempre
     //    na mesa dos noivos (deteção automática pelo papel), se ela existir.
     $res = $conn->query("SELECT g.convite_id, g.papel, COALESCE(g.mesa_id, c.mesa_id) AS eff
-                         FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id = c.id");
+                         FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id = c.id
+                         WHERE " . soVivos($conn, 'c'));
     while ($r = $res->fetch_assoc()) {
         $eff = $r['eff'] !== null ? (int)$r['eff'] : 0;
         if ($noivosId && in_array($r['papel'] ?? '', ['padrinho', 'madrinha'], true)) $eff = $noivosId;
@@ -367,6 +461,7 @@ function listarMesas(mysqli $conn): array {
     // 2) Lugares sem nome (lugares além dos membros nomeados), na mesa do convite.
     $res = $conn->query("SELECT c.id, c.mesa_id, c.lugares, COUNT(g.id) AS nomeados
                          FROM {$P}convites c LEFT JOIN {$P}convidados g ON g.convite_id = c.id
+                         WHERE " . soVivos($conn, 'c') . "
                          GROUP BY c.id, c.mesa_id, c.lugares");
     while ($r = $res->fetch_assoc()) {
         $mid = $r['mesa_id'] !== null ? (int)$r['mesa_id'] : 0;
@@ -421,13 +516,17 @@ function plantaConfig(mysqli $conn): array {
     return $cfg;
 }
 
-/** Carrega um convite (por id ou código) já com os membros e o nome final. */
-function carregarConvite(mysqli $conn, $chave, string $por = 'id'): ?array {
+/**
+ * Carrega um convite (por id ou código) já com os membros e o nome final.
+ * Convites na reciclagem ficam invisíveis, salvo pedido expresso ($eliminados).
+ */
+function carregarConvite(mysqli $conn, $chave, string $por = 'id', bool $eliminados = false): ?array {
     global $P;
     $col = $por === 'codigo' ? 'codigo' : 'id';
+    $vivo = $eliminados ? '1=1' : soVivos($conn, 'c');
     $st = $conn->prepare("SELECT c.*, m.nome AS mesa_nome
                           FROM {$P}convites c LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                          WHERE c.$col=? LIMIT 1");
+                          WHERE c.$col=? AND $vivo LIMIT 1");
     $por === 'codigo' ? $st->bind_param('s', $chave) : $st->bind_param('i', $chave);
     $st->execute();
     $c = $st->get_result()->fetch_assoc();

@@ -26,7 +26,7 @@ $comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
                      FROM {$P}convites c
                      LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                     WHERE c.tipo IN ('fisico','ambos')
+                     WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                      ORDER BY c.nome_exibicao");
 $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 

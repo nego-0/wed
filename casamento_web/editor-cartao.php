@@ -21,7 +21,8 @@ $ev       = cartaoDadosEvento($defs);
 // Convite de exemplo: usa um real (físico) para a prova ser fiel.
 $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
                    LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                   WHERE c.tipo IN ('fisico','ambos') ORDER BY c.nome_exibicao LIMIT 1");
+                   WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                   ORDER BY c.nome_exibicao LIMIT 1");
 $exemplo = $r ? $r->fetch_assoc() : null;
 $comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 if ($exemplo) {
