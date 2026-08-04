@@ -103,7 +103,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 3;
+const ESQUEMA_VERSAO = 4;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -203,6 +203,21 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_reg_data (criado_em),
                 INDEX idx_reg_accao (accao)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+
+    // ---- v4: versões guardadas do convite -------------------------------
+    if ($versaoAtual < 4) {
+        // Uma fotografia das definições do convite, com nome, para se poder
+        // experimentar à vontade e voltar atrás sem medo.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}versoes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(80) NOT NULL,
+                defs MEDIUMTEXT NOT NULL,
+                utilizador VARCHAR(60) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_ver_data (criado_em)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 

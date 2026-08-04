@@ -22,6 +22,12 @@ $CAS = casalInfo(defsAtuais($conn));
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/editor.css" rel="stylesheet">
 <style>
+  /* Só para as amostras do painel de tipografia mostrarem a letra certa. */
+  @font-face{font-family:'Alex Brush';src:url(assets/convite/fonts/alex-brush-latin-400-normal.woff2) format('woff2');font-display:swap}
+  @font-face{font-family:'Montserrat';src:url(assets/convite/fonts/montserrat-latin-variable-normal.woff2) format('woff2');font-weight:300 700;font-display:swap}
+  @font-face{font-family:'Pinyon Script';src:url(assets/convite/fonts/pinyon-script-latin-400-normal.woff2) format('woff2');font-display:swap}
+</style>
+<style>
   /* ---- Tela ---- */
   .cv-palco{ background:#0e0f0c; border-radius:10px; overflow:hidden; box-shadow:0 18px 50px rgba(0,0,0,.6);
              transition:width .18s ease; }
@@ -88,6 +94,10 @@ $CAS = casalInfo(defsAtuais($conn));
   .enq-rot{ font-size:.68rem; color:var(--ed-texto-2); text-transform:uppercase; letter-spacing:.07em; }
   .enq-dica{ font-size:.66rem; color:var(--ed-texto-2); margin-top:.2rem; }
 
+  .amostra-f{ margin-top:.3rem; padding:.3rem .45rem; background:#191a16; border:1px solid var(--ed-linha);
+    border-radius:5px; font-size:1.15rem; color:var(--ed-ouro-claro); text-align:center;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nome-v{ flex:1; min-width:0; font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .ed-estado .aviso-txt{ color:var(--ed-ouro-claro); }
   @media (max-width:900px){ .ed-paineis{ width:250px; } }
 </style>
@@ -159,6 +169,14 @@ $CAS = casalInfo(defsAtuais($conn));
       <div class="ed-painel-corpo" id="cores"></div>
     </div>
     <div class="ed-painel fechado">
+      <h3 onclick="alternarPainel(this)">Tipografia <span class="chev">▾</span></h3>
+      <div class="ed-painel-corpo" id="tipografia"></div>
+    </div>
+    <div class="ed-painel fechado">
+      <h3 onclick="alternarPainel(this)">Versões <span class="chev">▾</span></h3>
+      <div class="ed-painel-corpo" id="versoes"></div>
+    </div>
+    <div class="ed-painel fechado">
       <h3 onclick="alternarPainel(this)">Fotos e música <span class="chev">▾</span></h3>
       <div class="ed-painel-corpo" id="media"></div>
     </div>
@@ -185,6 +203,9 @@ const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
 const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
 const BLOCOS_MAX = <?= (int)BLOCOS_MAX ?>;
+const FONTES     = <?= json_encode(fontesConvite(), JSON_UNESCAPED_UNICODE) ?>;
+const PAPEIS     = <?= json_encode(papeisTipo(), JSON_UNESCAPED_UNICODE) ?>;
+const CASAL_NOME = <?= json_encode($CAS['casal']) ?>;
 const MARKDOWN = <?= json_encode(camposMarkdown()) ?>;
 const ICONES   = <?= json_encode(iconesConvite()) ?>;
 // Fotografias recortadas: têm ponto focal e aproximação (as outras mostram-se inteiras).
@@ -318,7 +339,7 @@ function registarPasso(){
 }
 function aplicarEstado(json){
   EST = JSON.parse(json);
-  renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos();
+  renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia();
   recarregarTela();
   marcarBotoes();
 }
@@ -805,6 +826,91 @@ async function enviarFicheiro(chave, input){
   renderMedia(); recarregarTela();
 }
 
+// ---------- tipografia ----------
+function renderTipografia(){
+  $('tipografia').innerHTML =
+    Object.entries(PAPEIS).map(([papel,p])=>{
+      const escolhida = EST.val[p.chave] || p.origem;
+      const opcoes = Object.entries(FONTES).filter(([,f])=>f.papeis.includes(papel));
+      return `<div class="campo"><label>${esc(p.rotulo)}</label>
+        <select onchange="mudarFonte('${p.chave}',this.value)">
+          ${opcoes.map(([k,f])=>`<option value="${k}" ${k===escolhida?'selected':''}>${esc(f.nome)}${k===p.origem?' (de origem)':''}</option>`).join('')}
+        </select>
+        <div class="amostra-f" style="font-family:${FONTES[escolhida].css}">${esc(CASAL_NOME)}</div>
+      </div>`;
+    }).join('') +
+    `<div class="campo"><label>Tamanho do texto<span class="contador">${EST.val['tipo.escala']||100}%</span></label>
+      <div class="enq-lin"><input type="range" min="80" max="130" step="5" value="${EST.val['tipo.escala']||100}"
+        oninput="mudarEscala(this.value)">
+        <button class="bt bt-min" onclick="mudarEscala(100)">Repor</button></div>
+      <div class="dica-md">Só o texto que se lê. Os nomes, a data e os títulos grandes ficam como o design os deixou.</div>
+    </div>`;
+}
+function mudarFonte(chave, v){
+  EST.val[chave] = v;
+  marcarSujo(true); registarPasso(); renderTipografia();
+  // A família é uma variável CSS: a tela muda sem voltar ao servidor. Mas se a
+  // fonte for uma das que não vêm carregadas, é preciso o servidor emitir o
+  // @font-face — daí a recarga nesse caso.
+  if (FONTES[v].face) recarregarTela();
+  else enviarTela({tipo:'tema', vars:{['f-'+chave.slice(5)]: FONTES[v].css}});
+  msg('Tipo de letra: ' + FONTES[v].nome);
+}
+function mudarEscala(v){
+  EST.val['tipo.escala'] = String(v);
+  marcarSujo(true); registarPasso(); renderTipografia();
+  enviarTela({tipo:'tema', vars:{'esc-txt': String(v/100)}});
+  msg('Tamanho do texto: ' + v + '%');
+}
+
+// ---------- versões guardadas ----------
+async function renderVersoes(){
+  const d = await api('versao_lista', {silencioso:true});
+  const vs = (d && d.versoes) || [];
+  $('versoes').innerHTML =
+    `<div class="campo"><label>Guardar esta versão</label>
+      <div class="enq-lin"><input type="text" id="nome-versao" placeholder="ex.: antes de mudar as cores" maxlength="80"
+        style="flex:1;background:#191a16;border:1px solid var(--ed-linha);color:var(--ed-texto);border-radius:5px;padding:.3rem .4rem;font-family:inherit;font-size:.8rem">
+        <button class="bt bt-min" onclick="guardarVersao()">Guardar</button></div>
+      <div class="dica-md">Guarda o convite tal como está <b>na base de dados</b>. Grave primeiro, se tiver alterações por gravar.</div>
+    </div>` +
+    (vs.length
+      ? vs.map(v=>`<div class="it">
+          <div class="it-topo"><span class="nome-v">${esc(v.nome)}</span>
+            <button class="bt bt-min" onclick="reporVersao(${v.id}, ${JSON.stringify(v.nome)})">Repor</button>
+            <button class="bt bt-min" onclick="apagarVersao(${v.id}, ${JSON.stringify(v.nome)})" title="Apagar">✕</button>
+          </div>
+          <div class="dica-md">${esc(v.utilizador||'—')} · ${fmtData(v.criado_em)}</div>
+        </div>`).join('')
+      : `<div class="sel-nada">Ainda não guardou nenhuma versão.</div>`) +
+    (vs.length ? `<div class="sel-nada">${vs.length} de ${d.max} versões.</div>` : '');
+}
+function fmtData(sql){
+  const d = new Date(String(sql).replace(' ','T'));
+  return isNaN(d) ? '' : d.toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+async function guardarVersao(){
+  const nome = ($('nome-versao').value||'').trim();
+  if (!nome) return msg('Dê um nome à versão, para a reconhecer mais tarde.');
+  if (SUJO && !confirm('Tem alterações por gravar.\n\nA versão guarda o convite como está na base de dados, sem elas. Continuar?')) return;
+  const d = await api('versao_criar', {method:'POST', body:JSON.stringify({nome})});
+  if (!d.success) return msg(d.message || 'Não foi possível guardar a versão.');
+  renderVersoes(); msg('Versão guardada: ' + nome);
+}
+async function reporVersao(id, nome){
+  if (!confirm(`Repor a versão "${nome}"?\n\nO convite volta a como estava quando a guardou.`)) return;
+  const d = await api('versao_repor&id='+id);
+  if (!d.success) return msg(d.message || 'Não foi possível repor.');
+  msg('Versão reposta: ' + nome + '. A recarregar…');
+  setTimeout(()=>{ SUJO = false; location.reload(); }, 700);   // o editor tem de reler tudo
+}
+async function apagarVersao(id, nome){
+  if (!confirm(`Apagar a versão "${nome}"?\n\nO convite não muda; perde-se apenas este ponto de regresso.`)) return;
+  const d = await api('versao_apagar&id='+id);
+  if (!d.success) return msg(d.message || 'Não foi possível apagar.');
+  renderVersoes(); msg('Versão apagada.');
+}
+
 // ---------- efeitos ----------
 function renderEfeitos(){
   $('efeitos').innerHTML = [['fx.petalas','Pétalas a cair'],['fx.autoplay','Música arranca ao abrir']]
@@ -918,7 +1024,7 @@ function reporSeccao(){
 }
 
 // ---------- arranque ----------
-renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos();
+renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia(); renderVersoes();
 aplicarZoom(); ajustarAltura(); marcarBotoes();
 $('tela').addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); });
 recarregarTela();                       // primeira pintura da tela

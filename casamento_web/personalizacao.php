@@ -177,7 +177,58 @@ function defsPadrao(): array {
         // secções livres que o casal acrescente, em JSON.
         'layout.ordem'  => 'hero,convite,historia,interludio,grande-dia,acesso,final',
         'layout.blocos' => '',
+        // ---- Tipografia ----
+        // Três papéis, e um tamanho para o texto que se lê. A tipografia de
+        // display (nomes, datas, títulos grandes) fica como o design a deixou.
+        'tipo.serif'  => 'cormorant',
+        'tipo.script' => 'pinyon',
+        'tipo.sans'   => 'jost',
+        'tipo.escala' => '100',
     ];
+}
+
+/**
+ * Tipos de letra disponíveis para o convite digital.
+ * O modelo já carrega Cormorant, Jost e Pinyon; os outros só entram quando
+ * são mesmo escolhidos, para não obrigar todos os convidados a descarregá-los.
+ */
+function fontesConvite(): array {
+    return [
+        'cormorant' => ['nome'=>'Cormorant Garamond', 'css'=>"'Cormorant Garamond',serif", 'papeis'=>['serif'],
+                        'face'=>null],
+        'jost'      => ['nome'=>'Jost',               'css'=>"'Jost',sans-serif",          'papeis'=>['sans'],
+                        'face'=>null],
+        'pinyon'    => ['nome'=>'Pinyon Script',      'css'=>"'Pinyon Script',cursive",    'papeis'=>['script'],
+                        'face'=>null],
+        'alexbrush' => ['nome'=>'Alex Brush',         'css'=>"'Alex Brush',cursive",       'papeis'=>['script'],
+                        'face'=>"@font-face{font-family:'Alex Brush';font-style:normal;font-weight:400;font-display:swap;"
+                              . "src:url(assets/convite/fonts/alex-brush-latin-400-normal.woff2) format('woff2')}"],
+        'montserrat'=> ['nome'=>'Montserrat',         'css'=>"'Montserrat',sans-serif",    'papeis'=>['sans','serif'],
+                        'face'=>"@font-face{font-family:'Montserrat';font-style:normal;font-weight:300 700;font-display:swap;"
+                              . "src:url(assets/convite/fonts/montserrat-latin-variable-normal.woff2) format('woff2')}"],
+    ];
+}
+
+/** Papéis tipográficos e a fonte de origem de cada um. */
+function papeisTipo(): array {
+    return ['serif'  => ['chave'=>'tipo.serif',  'rotulo'=>'Títulos e leitura', 'origem'=>'cormorant'],
+            'script' => ['chave'=>'tipo.script', 'rotulo'=>'Caligrafia',        'origem'=>'pinyon'],
+            'sans'   => ['chave'=>'tipo.sans',   'rotulo'=>'Rótulos e detalhes','origem'=>'jost']];
+}
+
+/** CSS da tipografia escolhida: variáveis + os @font-face que forem precisos. */
+function cssTipografia(array $defs): array {
+    $fontes = fontesConvite();
+    $vars = ''; $faces = '';
+    foreach (papeisTipo() as $papel => $p) {
+        $id = $defs[$p['chave']] ?? $p['origem'];
+        $f  = $fontes[$id] ?? $fontes[$p['origem']];
+        $vars .= '--f-'.$papel.':'.$f['css'].';';
+        if ($f['face'] && strpos($faces, $f['face']) === false) $faces .= $f['face'];
+    }
+    $esc = max(80, min(130, (int)($defs['tipo.escala'] ?? 100)));
+    $vars .= '--esc-txt:'.round($esc/100, 3).';';
+    return ['vars'=>$vars, 'faces'=>$faces];
 }
 
 // ============================================================
@@ -420,6 +471,16 @@ function validarDefinicao(string $chave, string $valor): ?string {
             }
             return $out ? jsonOuNulo($out) : '';
         }
+        case 'tipo.serif':
+        case 'tipo.script':
+        case 'tipo.sans': {
+            // A fonte tem de existir e servir para este papel.
+            $papel = substr($chave, 5);
+            $f = fontesConvite()[$valor] ?? null;
+            return ($f && in_array($papel, $f['papeis'], true)) ? $valor : null;
+        }
+        case 'tipo.escala':
+            return ctype_digit($valor) ? (string)max(80, min(130, (int)$valor)) : null;
         case 'cartao.numero_no_nome':
             return $valor === '1' ? '1' : '0';
         case 'cartao.camadas': {
@@ -591,7 +652,9 @@ function convitePlaceholders(array $defs): array {
         $vars .= '--foco-'.$id.':'.$e['x'].'% '.$e['y'].'%;';
         $vars .= '--zoom-'.$id.':'.($e['zoom']/100).';';
     }
-    $temaVars = $vars !== '' ? ':root{'.$vars.'}' : '';
+    $tipo  = cssTipografia($defs);
+    $vars .= $tipo['vars'];
+    $temaVars = $tipo['faces'] . ($vars !== '' ? ':root{'.$vars.'}' : '');
     $petais = json_encode([$pal['gold-pale'], $pal['gold-soft'], $pal['blush'], $pal['cream']]);
 
     return [

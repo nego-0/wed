@@ -262,7 +262,7 @@ exigirAdmin();
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
                      'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload',
-                     'convite_restaurar'], true)) {
+                     'convite_restaurar','versao_criar','versao_repor','versao_apagar'], true)) {
     exigirCsrf();
 }
 
@@ -270,7 +270,65 @@ if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsv
 if ($acao === 'defs_save') {
     $d = corpo();
     $defs = is_array($d['defs'] ?? null) ? $d['defs'] : [];
-    ok(guardarDefinicoes($conn, $defs));
+    $r = guardarDefinicoes($conn, $defs);
+    // Alterar o convite passa a deixar rasto, como já acontece com os convites.
+    if ($r['gravadas'] || $r['repostas']) {
+        registar($conn, 'convite_editado_defs', '',
+                 $r['gravadas'].' alterada(s), '.$r['repostas'].' reposta(s)');
+    }
+    ok($r);
+}
+
+// ---- Versões guardadas do convite digital -------------------
+// Uma fotografia das definições, com nome, para se experimentar sem medo.
+if ($acao === 'versao_criar') {
+    $d = corpo();
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('Dê um nome à versão, para a reconhecer mais tarde.');
+    $n = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes")->fetch_row()[0] ?? 0);
+    if ($n >= VERSOES_MAX) erro('Chegou ao máximo de '.VERSOES_MAX.' versões. Apague uma para guardar outra.');
+    // Guarda-se o estado ATUAL da base de dados, não o rascunho por gravar.
+    $atuais = defsAtuais($conn);
+    $guardar = [];
+    foreach (defsPadrao() as $k => $_) if (!str_starts_with($k, 'cartao.')) $guardar[$k] = (string)$atuais[$k];
+    $json = json_encode($guardar, JSON_UNESCAPED_UNICODE);
+    if ($json === false) erro('Não foi possível preparar a versão.');
+    $u = utilizadorAtual() ?? '';
+    $st = $conn->prepare("INSERT INTO {$P}versoes (nome, defs, utilizador) VALUES (?,?,?)");
+    $st->bind_param('sss', $nome, $json, $u);
+    if (!$st->execute()) erro('Não foi possível guardar a versão.');
+    registar($conn, 'versao_guardada', $nome, '');
+    ok(['id' => $conn->insert_id]);
+}
+
+if ($acao === 'versao_lista') {
+    $r = $conn->query("SELECT id, nome, utilizador, criado_em FROM {$P}versoes ORDER BY id DESC");
+    ok(['versoes' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [], 'max' => VERSOES_MAX]);
+}
+
+if ($acao === 'versao_repor') {
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome, defs FROM {$P}versoes WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $v = $st->get_result()->fetch_assoc();
+    if (!$v) erro('Versão não encontrada.');
+    $j = json_decode($v['defs'], true);
+    if (!is_array($j)) erro('Esta versão está ilegível.');
+    $r = guardarDefinicoes($conn, array_map('strval', $j));
+    registar($conn, 'versao_reposta', $v['nome'], $r['gravadas'].' definição(ões)');
+    ok($r + ['nome' => $v['nome']]);
+}
+
+if ($acao === 'versao_apagar') {
+    $id = (int)($_GET['id'] ?? 0);
+    $rn = $conn->prepare("SELECT nome FROM {$P}versoes WHERE id=?");
+    $rn->bind_param('i', $id); $rn->execute();
+    $x = $rn->get_result()->fetch_assoc();
+    $st = $conn->prepare("DELETE FROM {$P}versoes WHERE id=?");
+    $st->bind_param('i', $id);
+    if (!$st->execute()) erro('Não foi possível apagar a versão.');
+    registar($conn, 'versao_apagada', $x['nome'] ?? '', '');
+    ok();
 }
 
 if ($acao === 'def_upload') {

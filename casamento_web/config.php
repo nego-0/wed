@@ -60,6 +60,7 @@ const PREFIXO   = 'cw_';   // prefixo das tabelas novas (não mexe na lista anti
 const MAX_LUGARES_TOTAL = 150;  // teto de segurança de lugares no evento
 const RECICLAGEM_DIAS   = 30;   // dias que um convite eliminado fica recuperável
 const LISTA_POR_PAGINA  = 60;   // convites carregados de cada vez no painel
+const VERSOES_MAX       = 12;   // versões guardadas do convite digital
 
 // Fuso não é crítico aqui; datas guardadas em UTC pelo MySQL.
 date_default_timezone_set('Africa/Luanda');
