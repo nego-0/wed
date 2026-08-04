@@ -206,7 +206,9 @@ function pontelEditor(): string {
       var s2 = document.querySelector('[data-sec="' + d.sec + '"]');
       if (s2) s2.scrollIntoView({block:'start', behavior:'smooth'});
     }
-    if (d.tipo === 'tema'){
+    // Cores e enquadramento entram como variáveis CSS: mudam a peça sem a
+    // voltar a pedir ao servidor.
+    if (d.tipo === 'tema' || d.tipo === 'foco'){
       var r = document.documentElement;
       Object.keys(d.vars||{}).forEach(function(k){ r.style.setProperty('--'+k, d.vars[k]); });
     }

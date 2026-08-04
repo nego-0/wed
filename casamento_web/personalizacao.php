@@ -165,7 +165,32 @@ function defsPadrao(): array {
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
         'cartao.numero_no_nome' => '1',   // '(N)' de lugares no nome do convidado, no cartão
+        // ---- Enquadramento das fotografias recortadas ----
+        // "x y zoom": que ponto da fotografia fica no centro do recorte (em %)
+        // e quanto se aproxima (100 = sem aproximação). Os valores de origem são
+        // os que o design trazia calibrados para as fotografias originais.
+        'foto.hero'       => '50 8 100',
+        'foto.interludio' => '50 26 100',
+        'foto.acesso'     => '50 32 100',
     ];
+}
+
+/** As fotografias que são recortadas e por isso precisam de enquadramento. */
+function fotosEnquadraveis(): array {
+    return [
+        'hero'       => ['chave'=>'foto.hero',       'media'=>'media.hero',       'rotulo'=>'Capa',              'proporcao'=>'9/16'],
+        'interludio' => ['chave'=>'foto.interludio', 'media'=>'media.interludio', 'rotulo'=>'Interlúdio',        'proporcao'=>'9/16'],
+        'acesso'     => ['chave'=>'foto.acesso',     'media'=>'media.acesso',     'rotulo'=>'Passe de entrada',  'proporcao'=>'16/11'],
+    ];
+}
+
+/** "50 8 100" -> ['x'=>50,'y'=>8,'zoom'=>100]. Tolerante a valores estragados. */
+function lerEnquadramento(string $v): array {
+    $p = preg_split('/\s+/', trim($v));
+    $n = fn($i, $def) => isset($p[$i]) && is_numeric($p[$i]) ? (float)$p[$i] : $def;
+    return ['x' => max(0, min(100, $n(0, 50))),
+            'y' => max(0, min(100, $n(1, 50))),
+            'zoom' => max(100, min(300, $n(2, 100)))];
 }
 
 // ---- Ler / fundir com a BD ---------------------------------
@@ -228,6 +253,14 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return in_array($valor, ['ouro','salvia','terracota','rosa'], true) ? $valor : null;
         case 'cartao.folhagem':
             return in_array($valor, ['eucalipto','oliveira','feto','florido'], true) ? $valor : null;
+        case 'foto.hero':
+        case 'foto.interludio':
+        case 'foto.acesso': {
+            // "x y zoom" — posição do ponto que fica no centro do recorte, e aproximação.
+            if (!preg_match('/^\d{1,3}(\.\d+)?\s+\d{1,3}(\.\d+)?\s+\d{2,3}(\.\d+)?$/', $valor)) return null;
+            $e = lerEnquadramento($valor);
+            return round($e['x'],1).' '.round($e['y'],1).' '.round($e['zoom']);
+        }
         case 'cartao.numero_no_nome':
             return $valor === '1' ? '1' : '0';
         case 'cartao.camadas': {
@@ -390,12 +423,16 @@ function convitePlaceholders(array $defs): array {
     // Tema (override das variáveis CSS) + cores derivadas
     $pal = paletaEfetiva($defs);
     $ovJson = json_decode($defs['tema.paleta'] ?: '[]', true) ?: [];
-    $temaVars = '';
-    if ($ovJson) {
-        $temaVars = ':root{';
-        foreach ($ovJson as $v => $cor) if (in_array($v, TEMA_VARS_EDITAVEIS, true) && corHexValida($cor)) $temaVars .= '--'.$v.':'.$cor.';';
-        $temaVars .= '}';
+    $vars = '';
+    foreach ($ovJson as $v => $cor) if (in_array($v, TEMA_VARS_EDITAVEIS, true) && corHexValida($cor)) $vars .= '--'.$v.':'.$cor.';';
+    // Enquadramento das fotografias recortadas: que ponto fica ao centro e
+    // quanto se aproxima. Sai como variáveis para o editor as poder mudar ao vivo.
+    foreach (fotosEnquadraveis() as $id => $f) {
+        $e = lerEnquadramento($defs[$f['chave']] ?? '');
+        $vars .= '--foco-'.$id.':'.$e['x'].'% '.$e['y'].'%;';
+        $vars .= '--zoom-'.$id.':'.($e['zoom']/100).';';
     }
+    $temaVars = $vars !== '' ? ':root{'.$vars.'}' : '';
     $petais = json_encode([$pal['gold-pale'], $pal['gold-soft'], $pal['blush'], $pal['cream']]);
 
     return [

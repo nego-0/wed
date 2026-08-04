@@ -68,6 +68,19 @@ $CAS = casalInfo(defsAtuais($conn));
   .med .nm small{ display:block; color:var(--ed-texto-2); font-size:.66rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .med input[type=file]{ display:none; }
 
+  /* ---- Enquadramento (ponto focal + aproximação) ---- */
+  .enq{ margin:-.2rem 0 .7rem; }
+  .enq-caixa{ position:relative; width:100%; max-height:180px; overflow:hidden; border-radius:6px;
+    border:1px solid var(--ed-linha); background:#111; cursor:crosshair; touch-action:none; }
+  .enq-caixa img{ width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+  .enq-caixa .mira{ position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%;
+    border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.5); pointer-events:none; }
+  .enq-caixa .mira::after{ content:''; position:absolute; inset:6px; border-radius:50%; background:var(--ed-ouro); }
+  .enq-lin{ display:flex; align-items:center; gap:.4rem; margin-top:.35rem; }
+  .enq-lin input[type=range]{ flex:1; accent-color:var(--ed-ouro); }
+  .enq-rot{ font-size:.68rem; color:var(--ed-texto-2); text-transform:uppercase; letter-spacing:.07em; }
+  .enq-dica{ font-size:.66rem; color:var(--ed-texto-2); margin-top:.2rem; }
+
   .ed-estado .aviso-txt{ color:var(--ed-ouro-claro); }
   @media (max-width:900px){ .ed-paineis{ width:250px; } }
 </style>
@@ -163,6 +176,11 @@ const ATUAIS   = <?= json_encode(defsAtuais($conn), JSON_UNESCAPED_UNICODE) ?>;
 const SECCOES  = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
 const MARKDOWN = <?= json_encode(camposMarkdown()) ?>;
 const ICONES   = <?= json_encode(iconesConvite()) ?>;
+// Fotografias recortadas: têm ponto focal e aproximação (as outras mostram-se inteiras).
+const FOTOS_LISTA = <?= json_encode(array_map(fn($id,$f)=>$f+['id'=>$id], array_keys(fotosEnquadraveis()), fotosEnquadraveis()), JSON_UNESCAPED_UNICODE) ?>;
+const FOTOS = {}, FOTOS_POR_ID = {};
+FOTOS_LISTA.forEach(f=>{ FOTOS[f.media]=f; FOTOS_POR_ID[f.id]=f; });
+let MEDIA_V = Date.now();   // rebenta a cache das miniaturas depois de trocar um ficheiro
 const TEMAS    = <?= json_encode(temasPredef()) ?>;
 const TEMA_VARS= <?= json_encode(TEMA_VARS_EDITAVEIS) ?>;
 
@@ -481,15 +499,86 @@ function aplicarTema(k){
 // ---------- fotos e música ----------
 const MEDIA = [['media.hero','Capa'],['media.historia','História'],['media.interludio','Interlúdio'],
                ['media.acesso','Passe de entrada'],['media.musica','Música de fundo']];
+
+/** "50 8 100" -> {x,y,zoom} */
+function lerEnq(v){
+  const p = String(v||'').trim().split(/\s+/).map(Number);
+  return { x: isFinite(p[0])?p[0]:50, y: isFinite(p[1])?p[1]:50, zoom: isFinite(p[2])?p[2]:100 };
+}
+function escreverEnq(e){ return `${Math.round(e.x*10)/10} ${Math.round(e.y*10)/10} ${Math.round(e.zoom)}`; }
+
 function renderMedia(){
   $('media').innerHTML = MEDIA.map(([k,rot])=>{
     const v = EST.val[k]||'', img = k!=='media.musica';
-    return `<div class="med">
-      ${img?`<img src="${esc(v)}?v=${Date.now()}" alt="">`:`<span class="ico-prev" style="width:52px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ed-linha);border-radius:4px">♪</span>`}
+    const f = FOTOS[k];          // as recortadas têm enquadramento
+    let h = `<div class="med">
+      ${img?`<img src="${esc(v)}?v=${MEDIA_V}" alt="">`:`<span class="ico-prev" style="width:52px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ed-linha);border-radius:4px">♪</span>`}
       <span class="nm">${rot}<small>${esc(v.split('/').pop())}</small></span>
       <label class="bt bt-min">Trocar<input type="file" accept="${img?'image/*':'audio/*,.m4a,.mp3'}" onchange="enviarFicheiro('${k}',this)"></label>
     </div>`;
+    if (f){
+      const e = lerEnq(EST.val[f.chave]);
+      h += `<div class="enq" data-foto="${f.id}">
+        <div class="enq-caixa" style="aspect-ratio:${f.proporcao}" onpointerdown="arrastarFoco(event,'${f.id}')">
+          <img src="${esc(v)}?v=${MEDIA_V}" alt="" style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom/100})">
+          <span class="mira" style="left:${e.x}%;top:${e.y}%"></span>
+        </div>
+        <div class="enq-lin">
+          <span class="enq-rot">Aproximar</span>
+          <input type="range" min="100" max="220" step="1" value="${e.zoom}" oninput="mudarZoom('${f.id}',this.value)">
+          <button class="bt bt-min" onclick="reporFoco('${f.id}')" title="Repor o enquadramento original">Repor</button>
+        </div>
+        <div class="enq-dica">Arraste sobre a imagem para escolher o que fica ao centro.</div>
+      </div>`;
+    }
+    return h;
   }).join('') + `<div class="sel-nada">As imagens são reduzidas antes do envio. A música aceita até 8 MB.</div>`;
+}
+
+// ---------- enquadramento das fotografias ----------
+function aplicarFocoTela(id){
+  const f = FOTOS_POR_ID[id], e = lerEnq(EST.val[f.chave]);
+  enviarTela({tipo:'foco', vars:{ ['foco-'+id]: e.x+'% '+e.y+'%', ['zoom-'+id]: String(e.zoom/100) }});
+}
+function actualizarMira(id){
+  const f = FOTOS_POR_ID[id], e = lerEnq(EST.val[f.chave]);
+  const cx = document.querySelector(`.enq[data-foto="${id}"]`); if (!cx) return;
+  cx.querySelector('.mira').style.left = e.x+'%';
+  cx.querySelector('.mira').style.top  = e.y+'%';
+  const im = cx.querySelector('img');
+  im.style.objectPosition = e.x+'% '+e.y+'%';
+  im.style.transform = 'scale('+(e.zoom/100)+')';
+}
+function porFoco(id, x, y){
+  const f = FOTOS_POR_ID[id], e = lerEnq(EST.val[f.chave]);
+  e.x = Math.max(0, Math.min(100, x)); e.y = Math.max(0, Math.min(100, y));
+  EST.val[f.chave] = escreverEnq(e);
+  actualizarMira(id); aplicarFocoTela(id); marcarSujo(true); registarPasso();
+}
+function arrastarFoco(ev, id){
+  const caixa = ev.currentTarget;
+  caixa.setPointerCapture(ev.pointerId);
+  const mover = e2 => {
+    const r = caixa.getBoundingClientRect();
+    porFoco(id, (e2.clientX-r.left)/r.width*100, (e2.clientY-r.top)/r.height*100);
+  };
+  mover(ev);
+  const largar = () => { caixa.removeEventListener('pointermove', mover); caixa.removeEventListener('pointerup', largar); };
+  caixa.addEventListener('pointermove', mover);
+  caixa.addEventListener('pointerup', largar);
+  ev.preventDefault();
+}
+function mudarZoom(id, v){
+  const f = FOTOS_POR_ID[id], e = lerEnq(EST.val[f.chave]);
+  e.zoom = +v; EST.val[f.chave] = escreverEnq(e);
+  actualizarMira(id); aplicarFocoTela(id); marcarSujo(true); registarPasso();
+  msg('Aproximação: ' + Math.round(e.zoom) + '%');
+}
+function reporFoco(id){
+  const f = FOTOS_POR_ID[id];
+  EST.val[f.chave] = PADRAO[f.chave];
+  renderMedia(); aplicarFocoTela(id); marcarSujo(true); registarPasso();
+  msg('Enquadramento reposto: ' + f.rotulo);
 }
 async function comprimir(file, maxLado=1600, q=0.82){
   try{
@@ -516,7 +605,20 @@ async function enviarFicheiro(chave, input){
   const d = await r.json();
   if (!d.success) return msg(d.message||'Falha no envio.');
   EST.val[chave] = d.path; ATUAIS[chave] = d.path;
-  renderMedia(); recarregarTela(); msg('Ficheiro atualizado.');
+  MEDIA_V = Date.now();
+  // O enquadramento anterior tinha sido escolhido para a fotografia anterior:
+  // uma nova composição ficaria cortada no sítio errado. Volta ao centro, para
+  // ser reajustado à nova foto.
+  const foto = FOTOS[chave];
+  if (foto){
+    const e = lerEnq(EST.val[foto.chave]); e.x = 50; e.y = 50;
+    EST.val[foto.chave] = escreverEnq(e);
+    msg('Fotografia trocada — o enquadramento voltou ao centro. Arraste para o ajustar.');
+  } else {
+    msg('Ficheiro atualizado.');
+  }
+  marcarSujo(true); registarPasso();
+  renderMedia(); recarregarTela();
 }
 
 // ---------- efeitos ----------
