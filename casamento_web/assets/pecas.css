@@ -19,18 +19,41 @@
          --ct-accent:#a1854e; --ct-name:#c9a862; --ct-sub:#b39a72; --ct-head:#cfae68; --ct-soft:#dcc79c;
          /* Letra e escala do texto, pelos mesmos meios (ver cartaoEstiloVars()). */
          --cf-script:'Alex Brush',cursive; --cf-serif:'Cormorant Garamond',serif;
-         --cf-sans:'Montserrat',sans-serif; --ct-esc:1; }
+         --cf-sans:'Montserrat',sans-serif; --ct-esc:1;
+         /* Alternativas das camadas decorativas (ver cartaoEstiloVars()). */
+         --ct-mold-margem:28px; --ct-esc-ramos:1; --ct-esc-volutas:1; --ct-esc-floreados:1; }
 /* Camada desligada no painel de camadas */
 .cartao .ct-oculta{ display:none !important; }
 
 /* Os SVG herdam a cor de acento por currentColor */
 .ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent); }
-.ct-ramo{ position:absolute; width:132px; height:270px; z-index:2; }
+.ct-ramo{ position:absolute; width:calc(132px*var(--ct-esc-ramos)); height:calc(270px*var(--ct-esc-ramos)); z-index:2; }
 .ct-ramo-sd{ top:24px; right:24px; }
 .ct-ramo-ie{ bottom:24px; left:24px; transform:rotate(180deg); }
-.ct-moldura{ position:absolute; top:28px; left:28px; right:28px; bottom:28px;
-             border:1.4px solid var(--ct-accent); z-index:2; pointer-events:none; }
-.ct-voluta{ position:absolute; width:178px; height:178px; z-index:2; pointer-events:none; }
+
+/* ---- Moldura: quatro feitios à escolha ---------------------
+   Era uma linha só, sem alternativa a não ser desligá-la. O feitio vem
+   todo de variáveis, para o editor o trocar ao vivo e as páginas de
+   impressão o receberem já resolvido. */
+.ct-moldura{ position:absolute; inset:var(--ct-mold-margem); z-index:2; pointer-events:none;
+             border:var(--ct-mold-larg,1.4px) solid var(--ct-accent);
+             box-shadow:var(--ct-mold-sombra,none); }
+/* As quatro esquadrias: dois pseudo-elementos e dois <i>, escondidos
+   enquanto o feitio não for "só os cantos". */
+.ct-moldura::before, .ct-moldura::after, .ct-moldura i{
+  content:''; position:absolute; display:var(--ct-mold-cantos,none);
+  width:74px; height:74px; box-sizing:border-box; }
+.ct-moldura::before{ top:-1.4px; left:-1.4px;
+  border-top:1.4px solid var(--ct-accent); border-left:1.4px solid var(--ct-accent); }
+.ct-moldura::after{ bottom:-1.4px; right:-1.4px;
+  border-bottom:1.4px solid var(--ct-accent); border-right:1.4px solid var(--ct-accent); }
+.ct-moldura i:first-of-type{ top:-1.4px; right:-1.4px;
+  border-top:1.4px solid var(--ct-accent); border-right:1.4px solid var(--ct-accent); }
+.ct-moldura i:last-of-type{ bottom:-1.4px; left:-1.4px;
+  border-bottom:1.4px solid var(--ct-accent); border-left:1.4px solid var(--ct-accent); }
+
+.ct-voluta{ position:absolute; width:calc(178px*var(--ct-esc-volutas)); height:calc(178px*var(--ct-esc-volutas));
+            z-index:2; pointer-events:none; }
 .ct-voluta-se{ top:24px; left:24px; }
 .ct-voluta-id{ bottom:24px; right:24px; transform:rotate(180deg); }
 
@@ -40,7 +63,7 @@
 .ct-abertura{ font-size:calc(13px*var(--ct-esc)); font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase;
               color:var(--ct-soft); }
 .ct-nomes{ position:relative; margin:22px 0 6px; padding:0 30px; }
-.ct-floreado{ position:absolute; width:150px; height:104px; z-index:0; opacity:.85; }
+.ct-floreado{ position:absolute; width:calc(150px*var(--ct-esc-floreados)); height:calc(104px*var(--ct-esc-floreados)); z-index:0; opacity:.85; }
 .ct-floreado-e{ left:-26px; top:-4px; }
 .ct-floreado-d{ right:-26px; bottom:-4px; transform:rotate(180deg); }
 .ct-nome{ position:relative; z-index:1; font-family:var(--cf-script); font-size:75px; line-height:.9;

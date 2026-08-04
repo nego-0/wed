@@ -190,6 +190,11 @@ const RAMOS    = <?= json_encode($ramosJs, JSON_UNESCAPED_UNICODE) ?>;
 const CAMADAS  = <?= json_encode(cartaoCamadas(), JSON_UNESCAPED_UNICODE) ?>;
 const CAMPOS   = <?= json_encode($camposPorCamada, JSON_UNESCAPED_UNICODE) ?>;
 const ORNAMENTOS = ['ramos','volutas','moldura','floreados'];   // camadas sem texto
+const MOLDURAS  = <?= json_encode(cartaoMolduras(), JSON_UNESCAPED_UNICODE) ?>;
+const FOLHAGENS = <?= json_encode(cartaoFolhagens(), JSON_UNESCAPED_UNICODE) ?>;
+// O que cada camada decorativa oferece, além de se poder esconder.
+const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala',
+                     floreados:'cartao.floreados_escala' };
 const NOMES_PROVA = <?= json_encode($nomesProva, JSON_UNESCAPED_UNICODE) ?>;
 const PADRAO   = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
 const ATUAIS   = <?= json_encode(array_intersect_key($defs, array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
@@ -216,6 +221,9 @@ let est = {
   cores:    (()=>{ try { return JSON.parse(<?= json_encode($defs['cartao.cores']) ?> || '{}') || {}; } catch(e){ return {}; } })(),
   fontes:   <?= json_encode(array_intersect_key($defs, array_flip(['cartao.fonte_script','cartao.fonte_serif','cartao.fonte_sans'])), JSON_UNESCAPED_UNICODE) ?>,
   escala:   <?= json_encode($defs['cartao.escala']) ?>,
+  deco:     <?= json_encode(array_intersect_key($defs, array_flip([
+                 'cartao.moldura_estilo','cartao.moldura_margem',
+                 'cartao.ramos_escala','cartao.volutas_escala','cartao.floreados_escala'])), JSON_UNESCAPED_UNICODE) ?>,
   textos:   <?= json_encode(array_intersect_key($defs, array_flip([
                  'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.civil_titulo',
                  'cartao.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
@@ -252,7 +260,7 @@ function registarPasso(){
 }
 /** Volta a pintar o cartão inteiro a partir de est — usado ao desfazer/refazer. */
 function repintarTudo(){
-  aplicarPaleta(est.paleta, true); aplicarCoresLivres(); aplicarTipografia();
+  aplicarPaleta(est.paleta, true); aplicarCoresLivres(); aplicarTipografia(); aplicarDeco();
   aplicarFolhagem(est.folhagem);
   $('folhagem').value = est.folhagem;
   Object.entries(est.textos).forEach(([k,v]) => pintarTexto(k,v));
@@ -260,7 +268,8 @@ function repintarTudo(){
     const alvo = document.querySelector(`#escala [data-camada="${k}"]`);
     if (alvo) alvo.classList.toggle('ct-oculta', est.camadas[k] === 0);
   });
-  renderCamadas(); renderProps(); renderCores(); renderTipografia();
+  aplicarDeco();
+renderCamadas(); renderProps(); renderCores(); renderTipografia();
 }
 function aplicarEstado(json){ est = JSON.parse(json); repintarTudo(); marcarBotoes(); }
 function desfazer(){ if (hPos<=0) return; clearTimeout(tHist); hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
@@ -426,9 +435,18 @@ function renderProps(){
   const campos = CAMPOS[selecionada];
   if (!selecionada) { $('props').innerHTML = '<div class="vazio-painel">Escolha uma camada — na lista abaixo ou clicando no cartão — para editar o que ela mostra.</div>'; return; }
   const rot = CAMADAS[selecionada];
+  if (ORNAMENTOS.includes(selecionada)) return renderPropsOrnamento(selecionada, rot);
   if (!campos) {
-    $('props').innerHTML = `<div class="vazio-painel"><b>${rot}</b><br>Camada decorativa: não tem texto para editar.
-      Use o olho na lista de camadas para a mostrar ou ocultar, e a paleta para lhe mudar a cor.</div>`;
+    // A camada das mesas não é decorativa: mostra texto, mas o texto não é
+    // escrito aqui — vem do lugar de cada convidado.
+    $('props').innerHTML = `<div class="vazio-painel"><b>${rot}</b><br>
+      O que esta camada mostra vem das mesas de cada convidado, e por isso muda de cartão para cartão.
+      Altera-se na <b>Planta de Mesas</b>, não aqui.<br><br>
+      Aqui pode escondê-la (o olho na lista de camadas) e, na camada <b>Bloco do convidado</b>,
+      escolher se o número de lugares aparece junto ao nome.</div>
+      <div class="campo" style="margin-top:.5rem">
+        <a class="bt" style="display:block;text-align:center;text-decoration:none" href="mesas.php">Abrir a Planta de Mesas</a>
+      </div>`;
     return;
   }
   $('props').innerHTML = `<div class="vazio-painel" style="margin-bottom:.6rem"><b>${rot}</b></div>` + campos.map(([chave, rotulo, tipo]) => {
@@ -449,6 +467,91 @@ function renderProps(){
     return `<div class="campo"><label>${rotulo}${cont}</label>${ctl}</div>`;
   }).join('');
 }
+/**
+ * Propriedades de uma camada decorativa. Não têm texto, mas têm feitio: até
+ * aqui só se podiam ligar e desligar, e quem não gostasse da moldura ficava
+ * sem alternativa a não ser ficar sem ela.
+ */
+function renderPropsOrnamento(k, rot){
+  let h = `<div class="vazio-painel" style="margin-bottom:.6rem"><b>${rot}</b></div>`;
+
+  if (k === 'moldura'){
+    const est0 = est.deco['cartao.moldura_estilo'] || 'simples';
+    h += `<div class="campo"><label>Feitio</label>
+      <select onchange="mudarMoldura(this.value)">
+        ${Object.entries(MOLDURAS).map(([id,m]) =>
+          `<option value="${id}" ${id===est0?'selected':''}>${escaparHtml(m.nome)}</option>`).join('')}
+      </select>
+      <div class="ajuda">${escaparHtml((MOLDURAS[est0]||{}).nota || '')}</div></div>`;
+    h += faixa({rot:'Distância à borda', valor:est.deco['cartao.moldura_margem'] || 28,
+                min:16, max:48, passo:1, unidade:'px', origem:28,
+                fn:'mudarMolduraMargem',
+                ajuda:'Quanto a moldura se afasta do rebordo do cartão.'});
+  }
+
+  if (k === 'ramos'){
+    h += `<div class="campo"><label>Folhagem</label>
+      <select onchange="mudarFolhagem(this.value)">
+        ${Object.entries(FOLHAGENS).map(([id,f]) =>
+          `<option value="${id}" ${id===est.folhagem?'selected':''}>${escaparHtml(f.nome)}</option>`).join('')}
+      </select>
+      <div class="ajuda">A mesma escolha da barra de cima, à mão de quem está a mexer nesta camada.</div></div>`;
+  }
+
+  if (ORN_ESCALA[k]){
+    h += faixa({rot:'Tamanho', valor:est.deco[ORN_ESCALA[k]] || 100,
+                min:60, max:140, passo:5, unidade:'%', origem:100,
+                fn:`mudarOrnamento.bind(null,'${k}')`,
+                ajuda:'Só este ornamento. O resto do cartão fica onde está.'});
+  }
+
+  h += `<div class="ajuda" style="margin-top:.6rem">A cor vem do painel <b>Cores</b>.
+    Para tirar esta camada do cartão, use o olho na lista de camadas.</div>`;
+  $('props').innerHTML = h;
+}
+/** Uma faixa com o valor à vista e um botão que devolve o de origem. */
+function faixa(o){
+  return `<div class="campo"><label>${o.rot}<span class="contador">${o.valor}${o.unidade}</span></label>
+    <div class="vs-lin"><input type="range" min="${o.min}" max="${o.max}" step="${o.passo}" value="${o.valor}"
+      oninput="(${o.fn})(this.value)" style="flex:1">
+      <button class="bt bt-min" onclick="(${o.fn})(${o.origem})">Repor</button></div>
+    <div class="ajuda">${o.ajuda}</div></div>`;
+}
+function mudarMoldura(v){
+  est.deco['cartao.moldura_estilo'] = v;
+  aplicarDeco(); marcarSujo(true); registarPasso(); renderProps();
+  msg('Moldura: ' + (MOLDURAS[v]||{}).nome);
+}
+function mudarMolduraMargem(v){
+  est.deco['cartao.moldura_margem'] = String(v);
+  aplicarDeco(); marcarSujo(true); registarPasso(); renderProps();
+  msg('Moldura a ' + v + ' px da borda.');
+}
+function mudarOrnamento(k, v){
+  est.deco[ORN_ESCALA[k]] = String(v);
+  aplicarDeco(); marcarSujo(true); registarPasso(); renderProps();
+  msg(CAMADAS[k] + ': ' + v + '%');
+}
+function mudarFolhagem(v){
+  aplicarFolhagem(v); $('folhagem').value = v;
+  marcarSujo(true); registarPasso(); renderProps();
+  msg('Folhagem: ' + (FOLHAGENS[v]||{}).nome);
+}
+/** Põe no cartão o feitio das camadas decorativas. */
+function aplicarDeco(){
+  const c = cartao();
+  c.style.setProperty('--ct-mold-margem', (est.deco['cartao.moldura_margem'] || 28) + 'px');
+  // O feitio da moldura é um conjunto de variáveis — as mesmas que o servidor
+  // escreve, para o que se vê aqui ser o que sai impresso.
+  const feitio = est.deco['cartao.moldura_estilo'] || 'simples';
+  c.style.setProperty('--ct-mold-larg', feitio === 'cantos' ? '0' : (feitio === 'fina' ? '.7px' : '1.4px'));
+  c.style.setProperty('--ct-mold-sombra',
+    feitio === 'dupla' ? 'inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)' : 'none');
+  c.style.setProperty('--ct-mold-cantos', feitio === 'cantos' ? 'block' : 'none');
+  Object.entries(ORN_ESCALA).forEach(([orn, chave]) =>
+    c.style.setProperty('--ct-esc-' + orn, String((+est.deco[chave] || 100) / 100)));
+}
+
 /** Contador quase cheio (>90%) ou no limite: a cor avisa antes de cortar. */
 function classeCont(n, max){ return n >= max ? 'cheio' : (n > max*0.9 ? 'perto' : ''); }
 function escaparHtml(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
@@ -555,7 +658,7 @@ function alternarPainel(h){ h.parentElement.classList.toggle('fechado'); }
 // ---------- Guardar / repor ----------
 /** O estado do editor como definições, prontas para gravar. */
 function serializar(){
-  return Object.assign({}, est.textos, est.fontes, {
+  return Object.assign({}, est.textos, est.fontes, est.deco, {
     'cartao.paleta':   est.paleta,
     'cartao.folhagem': est.folhagem,
     'cartao.camadas':  JSON.stringify(est.camadas),
@@ -606,11 +709,26 @@ function repor(){
   repintarTudo(); marcarSujo(true); registarPasso();
   msg('Reposto — por guardar. Ctrl+Z desfaz.');
 }
+/** Devolve o feitio de origem de uma camada decorativa. */
+function reporOrnamento(){
+  const k = selecionada;
+  if (!confirm(`Repor o feitio original de "${CAMADAS[k]}"?\n\nPode desfazer com Ctrl+Z.`)) return;
+  if (k === 'moldura'){
+    est.deco['cartao.moldura_estilo'] = PADRAO['cartao.moldura_estilo'];
+    est.deco['cartao.moldura_margem'] = PADRAO['cartao.moldura_margem'];
+  }
+  if (ORN_ESCALA[k]) est.deco[ORN_ESCALA[k]] = PADRAO[ORN_ESCALA[k]];
+  if (k === 'ramos') aplicarFolhagem(PADRAO['cartao.folhagem']), $('folhagem').value = PADRAO['cartao.folhagem'];
+  aplicarDeco(); renderProps(); marcarSujo(true); registarPasso();
+  msg(`"${CAMADAS[k]}" reposta — por guardar. Ctrl+Z desfaz.`);
+}
+
 /** Repõe os textos de origem só da camada escolhida. */
 function reporCamada(){
   if (!selecionada) return msg('Escolha primeiro uma camada, na lista ou no cartão.');
+  if (ORNAMENTOS.includes(selecionada)) return reporOrnamento();
   const campos = CAMPOS[selecionada];
-  if (!campos) return msg('"' + CAMADAS[selecionada] + '" é decorativa: não tem textos para repor.');
+  if (!campos) return msg('"' + CAMADAS[selecionada] + '" mostra as mesas de cada convidado: altera-se na Planta de Mesas.');
   if (!confirm(`Repor os textos originais de "${CAMADAS[selecionada]}"?\n\nPode desfazer com Ctrl+Z.`)) return;
   campos.forEach(([chave]) => {
     if (!(chave in PADRAO)) return;

@@ -48,6 +48,26 @@ function cartaoPaleta(string $chave): array {
     return $p[$chave] ?? $p['ouro'];
 }
 
+/** Feitios da moldura, para o editor os oferecer e o cartão os desenhar. */
+function cartaoMolduras(): array {
+    return [
+        'simples' => ['nome'=>'Linha simples', 'nota'=>'Como foi desenhada'],
+        'dupla'   => ['nome'=>'Linha dupla',   'nota'=>'Duas linhas, mais cerimoniosa'],
+        'fina'    => ['nome'=>'Filete fino',   'nota'=>'Discreta, quase só sugerida'],
+        'cantos'  => ['nome'=>'Só os cantos',  'nota'=>'Esquadrias nos quatro cantos'],
+    ];
+}
+
+/** O feitio da moldura, em variáveis CSS. */
+function cartaoMolduraVars(string $estilo): string {
+    switch ($estilo) {
+        case 'fina':   return '--ct-mold-larg:.7px';
+        case 'dupla':  return '--ct-mold-larg:1.4px;--ct-mold-sombra:inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)';
+        case 'cantos': return '--ct-mold-larg:0;--ct-mold-cantos:block';
+        default:       return '--ct-mold-larg:1.4px';
+    }
+}
+
 /** Folhagem efetiva (chave -> array), com recurso a eucalipto. */
 function cartaoFolhagem(string $chave): array {
     $f = cartaoFolhagens();
@@ -102,6 +122,13 @@ function cartaoEstiloVars(array $defs): string {
     }
     $esc = (int)($defs['cartao.escala'] ?? 100);
     $v .= ';--ct-esc:'.(max(85, min(115, $esc)) / 100);
+    // Camadas decorativas: feitio e margem da moldura, tamanho de cada ornamento.
+    $v .= ';--ct-mold-margem:'.max(16, min(48, (int)($defs['cartao.moldura_margem'] ?? 28))).'px';
+    $v .= ';'.cartaoMolduraVars($defs['cartao.moldura_estilo'] ?? 'simples');
+    foreach (['ramos','volutas','floreados'] as $orn) {
+        $n = (int)($defs['cartao.'.$orn.'_escala'] ?? 100);
+        $v .= ';--ct-esc-'.$orn.':'.(max(60, min(140, $n)) / 100);
+    }
     return $v;
 }
 
@@ -313,7 +340,7 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
   </div>
 
   <!-- moldura dourada contínua + volutas de canto -->
-  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"></div>
+  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"><i></i><i></i></div>
   <div class="ct-volutas<?= $oc('volutas') ?>" data-camada="volutas">
     <div class="ct-voluta ct-voluta-se"><?= svgVoluta('currentColor') ?></div>
     <div class="ct-voluta ct-voluta-id"><?= svgVoluta('currentColor') ?></div>

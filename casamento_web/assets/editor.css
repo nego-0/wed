@@ -167,7 +167,10 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .zoom .val{ min-width:44px; text-align:center; color:var(--ed-texto-2); }
 
 /* ---- Seleção na mesa (marca de elemento escolhido) --------- */
-.ed-arte [data-camada]{ position:relative; }
+/* Nada de position:relative aqui. Havia-o, e esmagava a moldura do cartão:
+   ela é posicionada em absoluto pelo desenho, e passar a relativa punha-lhe a
+   altura a zero — as duas linhas colavam-se no topo. O realce usa outline,
+   que não precisa de contexto de posicionamento nenhum. */
 .ed-arte.marcar [data-camada]:hover{ outline:1px dashed rgba(217,188,140,.55); outline-offset:2px; }
 .ed-arte [data-camada].sel-camada{ outline:1.5px solid var(--ed-ouro-claro); outline-offset:2px; }
 

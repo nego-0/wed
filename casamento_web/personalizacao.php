@@ -193,6 +193,13 @@ function defsPadrao(): array {
         'cartao.fonte_serif'  => 'cormorant',
         'cartao.fonte_sans'   => 'montserrat',
         'cartao.escala' => '100',
+        // Alternativas das camadas decorativas: sem isto só se podiam ligar e
+        // desligar, e quem não gostasse da moldura ficava sem saída.
+        'cartao.moldura_estilo' => 'simples',   // simples · dupla · fina · cantos
+        'cartao.moldura_margem' => '28',        // px até à borda do cartão
+        'cartao.ramos_escala' => '100',
+        'cartao.volutas_escala' => '100',
+        'cartao.floreados_escala' => '100',
         // ---- Enquadramento das fotografias recortadas ----
         // "x y zoom": que ponto da fotografia fica no centro do recorte (em %)
         // e quanto se aproxima (100 = sem aproximação). Os valores de origem são
@@ -587,6 +594,14 @@ function validarDefinicao(string $chave, string $valor): ?string {
             // Mais apertado que no convite digital: o cartão tem 10×15 cm fixos
             // e o texto não tem para onde crescer sem transbordar.
             return ctype_digit($valor) ? (string)max(85, min(115, (int)$valor)) : null;
+        case 'cartao.moldura_estilo':
+            return in_array($valor, ['simples','dupla','fina','cantos'], true) ? $valor : null;
+        case 'cartao.moldura_margem':
+            return ctype_digit($valor) ? (string)max(16, min(48, (int)$valor)) : null;
+        case 'cartao.ramos_escala':
+        case 'cartao.volutas_escala':
+        case 'cartao.floreados_escala':
+            return ctype_digit($valor) ? (string)max(60, min(140, (int)$valor)) : null;
         case 'cartao.camadas': {
             // Visibilidade das camadas do cartão: {"nome_da_camada": 0|1}
             if ($valor === '') return '';
