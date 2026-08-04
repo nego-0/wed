@@ -9,6 +9,7 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
 exigirAdmin();
 
@@ -174,20 +175,7 @@ if ($pecaSel === 'porta-chaves') {
 </style>
 </head>
 <body>
-<header class="topo no-print">
-  <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div><h1>Manual de impressão</h1><div class="sub">Gerado a partir da configuração atual</div></div>
-    <nav class="nav">
-      <a href="index.php">Painel</a>
-      <a href="mesas.php">Mesas</a>
-      <a href="graficas.php" class="ativo">Gráfica</a>
-      <a href="convite-editor.php">Convite digital</a>
-      <a href="porteiro.php">Porta</a>
-      <a href="logout.php">Sair</a>
-    </nav>
-  </div>
-</header>
+<?php cabecalho('Manual de impressão', 'Gerado a partir da configuração atual', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
 <div class="man-wrap">

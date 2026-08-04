@@ -383,6 +383,22 @@ if ($acao === 'convite_list') {
           LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
           LEFT JOIN {$P}convidados g ON g.convite_id=c.id
           $w GROUP BY c.id ORDER BY c.nome_exibicao";
+
+    // Quantos convites correspondem ao filtro (para o "mostrar mais" saber
+    // quantos faltam). É uma consulta leve: só conta, não junta membros.
+    $sqlTotal = "SELECT COUNT(*) FROM {$P}convites c LEFT JOIN {$P}mesas m ON c.mesa_id=m.id $w";
+    $stc = $conn->prepare($sqlTotal);
+    if ($t) $stc->bind_param($t, ...$p);
+    $stc->execute();
+    $total = (int)($stc->get_result()->fetch_row()[0] ?? 0);
+
+    // Traz-se um pedaço de cada vez: com centenas de convites, mandar tudo de
+    // uma vez enche a rede e o telemóvel demora a desenhar a lista.
+    $porPag = (int)($_GET['por_pagina'] ?? LISTA_POR_PAGINA);
+    $porPag = max(10, min(1000, $porPag));
+    $pagina = max(1, (int)($_GET['pagina'] ?? 1));
+    $sql   .= " LIMIT " . $porPag . " OFFSET " . (($pagina - 1) * $porPag);
+
     $st=$conn->prepare($sql);
     if ($t) $st->bind_param($t, ...$p);
     $st->execute();
@@ -401,7 +417,9 @@ if ($acao === 'convite_list') {
         unset($r['membros_txt']);
     }
     unset($r);
-    ok(['convites'=>$rows,'stats'=>estatisticas($conn),'mesas'=>listarMesas($conn)]);
+    ok(['convites'=>$rows, 'stats'=>estatisticas($conn), 'mesas'=>listarMesas($conn),
+        'total'=>$total, 'pagina'=>$pagina, 'por_pagina'=>$porPag,
+        'ha_mais'=>($pagina * $porPag) < $total]);
 }
 
 if ($acao === 'convite_get') {
@@ -577,9 +595,16 @@ if ($acao === 'reciclagem') {
 }
 
 if ($acao === 'registo_lista') {
+    // O histórico só cresce: se mandássemos tudo, ao fim de um mês eram
+    // milhares de linhas em cada abertura da janela. Vai por pedaços.
+    $porPag = max(10, min(500, (int)($_GET['por_pagina'] ?? 100)));
+    $pagina = max(1, (int)($_GET['pagina'] ?? 1));
+    $total  = (int)(@$conn->query("SELECT COUNT(*) FROM {$P}registo")?->fetch_row()[0] ?? 0);
     $r = $conn->query("SELECT utilizador, papel, accao, alvo, detalhe, criado_em
-                       FROM {$P}registo ORDER BY id DESC LIMIT 200");
-    ok(['registos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : []]);
+                       FROM {$P}registo ORDER BY id DESC
+                       LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag));
+    ok(['registos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [],
+        'total' => $total, 'pagina' => $pagina, 'ha_mais' => ($pagina * $porPag) < $total]);
 }
 
 if ($acao === 'convite_flag') {

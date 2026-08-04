@@ -394,8 +394,15 @@ function estatisticas(mysqli $conn): array {
     // ---- 1 query: tudo sobre os convidados nomeados ----------------------
     $temGen = colunaExiste($conn, "{$P}convidados", 'genero');
     $temBri = colunaExiste($conn, "{$P}convidados", 'brinde');
-    $exprG  = $temGen ? "SUM(g.genero='m') AS masc, SUM(g.genero='f') AS fem" : "0 AS masc, 0 AS fem";
-    $exprB  = $temBri ? "SUM(g.brinde=1) AS brinde" : "0 AS brinde";
+    // Além das pessoas, conta-se também a quantos CONVITES pertencem: os cartões
+    // do painel dizem todos "N convite(s)", por isso precisam sempre deste número.
+    $exprG  = $temGen ? "SUM(g.genero='m') AS masc, SUM(g.genero='f') AS fem,
+                         COUNT(DISTINCT CASE WHEN g.genero='m' THEN g.convite_id END) AS conv_masc,
+                         COUNT(DISTINCT CASE WHEN g.genero='f' THEN g.convite_id END) AS conv_fem"
+                      : "0 AS masc, 0 AS fem, 0 AS conv_masc, 0 AS conv_fem";
+    $exprB  = $temBri ? "SUM(g.brinde=1) AS brinde,
+                         COUNT(DISTINCT CASE WHEN g.brinde=1 THEN g.convite_id END) AS conv_brinde"
+                      : "0 AS brinde, 0 AS conv_brinde";
     $g = $linha("SELECT COUNT(*) AS convidados, $exprG, $exprB,
         SUM(g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')) AS pend_fora,
         SUM(g.rsvp='recusado' AND c.rsvp_estado<>'recusado')                   AS rec_fora
@@ -417,6 +424,8 @@ function estatisticas(mysqli $conn): array {
         'pes_impressos' => $n($c,'pes_impressos'), 'pes_noivos'  => $n($c,'pes_noivos'),
         'pes_noivas'    => $n($c,'pes_noivas'),
         'pes_masculino' => $n($g,'masc'), 'pes_feminino' => $n($g,'fem'), 'pes_brinde' => $n($g,'brinde'),
+        'conv_masculino'=> $n($g,'conv_masc'), 'conv_feminino' => $n($g,'conv_fem'),
+        'conv_brinde'   => $n($g,'conv_brinde'),
     ];
     $s['pes_confirmados'] = $s['lug_confirm'];
     // Pessoas por confirmar: lugares dos convites pendentes + lugares por confirmar

@@ -276,15 +276,28 @@ let aEnviar = false;
 async function enviarFila(){
   if(aEnviar || !FILA.length || !online()) return;
   aEnviar = true; marcarEstadoLigacao();
+  const recusadas = [];
   while(FILA.length){
     const item = FILA[0];
-    const d = await api('porta_checkin', {method:'POST', body:JSON.stringify(item), silencioso:true});
-    if(!d || !d.success){ break; }      // sem rede ou recusado: tenta mais tarde
+    const d = await api('porta_checkin', {method:'POST', body:JSON.stringify(item), silencioso:true, semAviso:true});
+    // Distingue-se falha de LIGAÇÃO de recusa do SERVIDOR. Se a rede caiu,
+    // pára-se e tenta-se mais tarde. Mas se o servidor recusou (ex.: essa
+    // pessoa afinal não confirmou presença), guardar a entrada na fila para
+    // sempre entupia tudo o que vinha atrás — tira-se e avisa-se quem está à porta.
+    if(!d || d._erro){ break; }
+    if(!d.success){ recusadas.push(d.message || 'Entrada recusada pelo servidor.'); }
     FILA.shift(); guardarLocal(LS_FILA, FILA);
   }
   aEnviar = false;
   marcarEstadoLigacao();
-  if(!FILA.length){ toast('Entradas offline sincronizadas.'); atualizarContador(); sincronizarCopia(); }
+  if(recusadas.length){
+    toast(recusadas.length === 1 ? recusadas[0]
+        : recusadas.length + ' entradas offline não foram aceites. Confirme-as à mão.', true);
+  }
+  if(!FILA.length){
+    if(!recusadas.length) toast('Entradas offline sincronizadas.');
+    atualizarContador(); sincronizarCopia();
+  }
 }
 window.addEventListener('online',  () => { marcarEstadoLigacao(); enviarFila(); });
 window.addEventListener('offline', marcarEstadoLigacao);

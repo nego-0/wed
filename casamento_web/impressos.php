@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
 $CAS = casalInfo(defsAtuais($conn));
@@ -53,20 +54,7 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 </style>
 </head>
 <body>
-<header class="topo">
-  <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div><h1>Convites físicos</h1><div class="sub">Etiquetas para envelopes · com QR de entrada</div></div>
-    <nav class="nav no-print">
-      <a href="index.php">Painel</a>
-      <a href="mesas.php">Mesas</a>
-      <a href="graficas.php" class="ativo">Gráfica</a>
-      <a href="convite-editor.php">Convite digital</a>
-      <a href="porteiro.php">Porta</a>
-      <a href="logout.php">Sair</a>
-    </nav>
-  </div>
-</header>
+<?php cabecalho('Convites físicos', 'Etiquetas para envelopes · com QR de entrada', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
   <div class="barra no-print">

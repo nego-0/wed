@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
 $DEFS = defsAtuais($conn);
@@ -67,6 +68,35 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .stat-f.ativo .sn{ color:#fff; } .stat-f.ativo .sl{ color:var(--gold-pale); }
   .stat-f.ativo .si{ background:rgba(255,255,255,.15); color:var(--gold-pale); }
   .stat-f.verde .si{ color:#1f7a3d; } .stat-f.ouro .si{ color:var(--gold); } .stat-f.rosa .si{ color:#a5473f; }
+  /* Os cartões extra fazem parte da mesma grelha (display:contents) — assim
+     alinham com os outros em vez de formarem uma segunda grelha desencontrada. */
+  .stats-extra{ display:contents; }
+  .btn-stats-mais{ display:none; }
+  .esp-stats{ height:0; }   /* respiro entre os cartões e a barra de ações */
+
+  /* Fim da lista: "mostrar mais" e a contagem do que já se vê */
+  .btn-mais-lista{ display:flex; flex-direction:column; align-items:center; gap:.15rem; width:100%; margin-top:.4rem;
+    background:#fff; border:1px solid var(--line); border-radius:14px; padding:.8rem; cursor:pointer;
+    font-family:inherit; font-size:.95rem; color:var(--forest); transition:.16s; }
+  .btn-mais-lista:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.12); }
+  .btn-mais-lista small{ color:#9aa09a; font-size:.76rem; }
+  .btn-mais-lista .conta-extra{ display:inline-block; min-width:18px; padding:0 .35rem; border-radius:50px;
+    background:var(--cream); color:#8a8f88; font-size:.78rem; }
+  .fim-lista{ text-align:center; color:#b0b4ab; font-size:.8rem; margin:.9rem 0 0; }
+  @media (max-width:720px){
+    /* Colunas fixas: com auto-fit os 4 cartões de base ficavam 3+1, com um
+       cartão órfão na última linha. Assim formam um bloco certinho. */
+    .grelha-stats{ grid-template-columns:repeat(2,1fr); gap:.5rem; }
+    .stat-f{ padding:.6rem .4rem; }
+    .stat-f .si{ width:28px; height:28px; }
+    .stat-f .sn{ font-size:1.35rem; }
+    .stats-extra:not(.aberto){ display:none; }
+    .btn-stats-mais{ display:block; width:100%; margin:.6rem 0 0; background:#fff; border:1px solid var(--line);
+      border-radius:12px; padding:.55rem; font-family:inherit; font-size:.85rem; color:var(--forest); cursor:pointer; }
+    .btn-stats-mais:hover{ border-color:var(--gold-soft); }
+    .conta-extra{ display:inline-block; min-width:18px; padding:0 .3rem; margin-left:.25rem; border-radius:50px;
+      background:var(--cream); color:#8a8f88; font-size:.75rem; }
+  }
   .stat-f.ativo.verde,.stat-f.ativo.rosa,.stat-f.ativo.ouro{ background:var(--forest); }
 
   /* Ícones na linha do convite */
@@ -175,23 +205,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <script src="assets/api.js"></script>
 </head>
 <body>
-<header class="topo">
-  <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div>
-      <h1>Gestão de Convidados</h1>
-      <div class="sub"><?= escP($CAS['casal']) ?> · <?= escP($dataExt) ?></div>
-    </div>
-    <nav class="nav">
-      <a href="index.php" class="ativo">Painel</a>
-      <a href="mesas.php">Mesas</a>
-      <a href="graficas.php">Gráfica</a>
-      <a href="convite-editor.php">Convite digital</a>
-      <a href="porteiro.php">Porta</a>
-      <a href="logout.php">Sair</a>
-    </nav>
-  </div>
-</header>
+<?php cabecalho('Gestão de Convidados', $CAS['casal'].' · '.$dataExt, 'painel'); ?>
 
 <div class="container">
 
@@ -209,7 +223,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   <div id="progresso" class="progresso-cap mb-4"></div>
 
   <!-- ESTATÍSTICAS -->
-  <div class="grelha-stats mb-4" id="stats"></div>
+  <div class="grelha-stats" id="stats"></div>
+  <button class="btn-stats-mais mb-4" id="stats-mais" onclick="alternarStats()">Mais filtros</button>
+  <div class="esp-stats mb-4"></div>
 
   <!-- AÇÕES -->
   <div class="barra-acoes">
@@ -398,15 +414,21 @@ function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
 function debounceCarregar(){ clearTimeout(timer); timer=setTimeout(carregar,300); }
 
 // ---------- carregar ----------
-async function carregar(){
+// A lista vem por pedaços: mudar de filtro recomeça na primeira página,
+// "Mostrar mais" acrescenta a seguinte ao que já está no ecrã.
+let PAGINA = 1, TOTAL = 0, HA_MAIS = false;
+
+async function carregar(mais=false){
+  PAGINA = mais ? PAGINA + 1 : 1;
   const q = new URLSearchParams({
     tipo:filtroTipo, lado:filtroLado, estado:filtroEstado,
     mesa:filtroMesa, busca:$('busca').value, impresso:filtroImpresso,
-    genero:filtroGenero, brinde:filtroBrinde
+    genero:filtroGenero, brinde:filtroBrinde, pagina:PAGINA
   });
   const d = await api('convite_list&'+q.toString());
-  if(!d.success) return toast('Erro ao carregar.', true);
-  CONVITES=d.convites; MESAS=d.mesas; STATS=d.stats||{};
+  if(!d.success){ if(mais) PAGINA--; return toast('Erro ao carregar.', true); }
+  CONVITES = mais ? CONVITES.concat(d.convites) : d.convites;
+  MESAS=d.mesas; STATS=d.stats||{}; TOTAL=+d.total||CONVITES.length; HA_MAIS=!!d.ha_mais;
   renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
 }
 
@@ -429,30 +451,50 @@ const IC = {
   brinde:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5.2 12 V20 H18.8 V12"/><path d="M12 8 V20"/><path d="M12 8 Q8 8 8 5.5 Q8 4 9.5 4 Q12 4.2 12 8 Q12 4.2 14.5 4 Q16 4 16 5.5 Q16 8 12 8"/></svg>'
 };
 
-function statCard(ic,n,sub,l,onclick,ativo,cls=''){
-  return `<button class="stat-f ${cls}${ativo?' ativo':''}" onclick="${onclick}">
-    <span class="si">${ic}</span><span class="sn">${n}</span><span class="sl">${l}</span><span class="ss">${sub}</span></button>`;
+// Todos os cartões dizem o mesmo: número grande = PESSOAS, linha de baixo = a
+// quantos convites pertencem. Sem esta regra lia-se "6 · 2 convites" ao lado de
+// "0 · convidados" e não se percebia o que cada número contava.
+function statCard(ic,pessoas,convites,l,onclick,ativo,cls=''){
+  const p = (+pessoas===1?'1 pessoa':(+pessoas||0)+' pessoas');
+  const c = (+convites===1?'1 convite':(+convites||0)+' convites');
+  return `<button class="stat-f ${cls}${ativo?' ativo':''}" onclick="${onclick}" title="${l}: ${p} em ${c}">
+    <span class="si">${ic}</span><span class="sn">${+pessoas||0}</span><span class="sl">${l}</span><span class="ss">${c}</span></button>`;
 }
+
+// Os quatro primeiros são o essencial; no telemóvel os restantes ficam
+// escondidos atrás de "Mais filtros" para a lista não fugir do ecrã.
+const CARTOES_BASE = 4;
+
 function renderStats(s){
   renderProgresso(s);
   const e=filtroEstado, t=filtroTipo, l=filtroLado;
   const limpo = !e && !t && !l && !filtroImpresso && !filtroMesa && !filtroGenero && !filtroBrinde && !$('busca').value;
-  const nc = n => n+(n===1?' convite':' convites');
+  const cartoes = [
+    statCard(IC.todos, s.lugares, s.convites, 'Todos', "limparFiltros()", limpo),
+    statCard(IC.check, s.pes_confirmados, s.confirmados, 'Confirmados', "filtrarEstado('confirmado')", e==='confirmado','verde'),
+    statCard(IC.relogio, s.pes_pendentes, s.pendentes, 'Pendentes', "filtrarEstado('pendente')", e==='pendente','ouro'),
+    statCard(IC.xis, s.pes_recusados, s.recusados, 'Recusados', "filtrarEstado('recusado')", e==='recusado','rosa'),
+    statCard(IC.telemovel, s.pes_digitais, s.digitais, 'Digitais', "filtrarTipo('digital')", t==='digital'),
+    statCard(IC.envelope, s.pes_fisicos, s.fisicos, 'Físicos', "filtrarTipo('fisico')", t==='fisico'),
+    statCard(IC.impressora, s.pes_impressos, s.impressos, 'Impressos', "filtrarImpresso()", filtroImpresso==='1'),
+    statCard(IC.noivo, s.pes_noivos, s.noivos, 'Noivo', "filtrarLado('noivo')", l==='noivo'),
+    statCard(IC.noiva, s.pes_noivas, s.noivas, 'Noiva', "filtrarLado('noiva')", l==='noiva'),
+    statCard(IC.masculino, s.pes_masculino, s.conv_masculino, 'Masculino', "filtrarGenero('m')", filtroGenero==='m'),
+    statCard(IC.feminino, s.pes_feminino, s.conv_feminino, 'Feminino', "filtrarGenero('f')", filtroGenero==='f','rosa'),
+    statCard(IC.brinde, s.pes_brinde, s.conv_brinde, 'Brindes', "filtrarBrinde()", filtroBrinde==='1','ouro'),
+  ];
+  // Um filtro ativo entre os "extra" obriga a mostrá-los: senão o painel diria
+  // que está filtrado sem se ver por quê.
+  if (filtroTipo || filtroImpresso || filtroLado || filtroGenero || filtroBrinde) STATS_ABERTO = true;
   $('stats').innerHTML =
-    statCard(IC.todos, s.lugares, nc(s.convites), 'Todos', "limparFiltros()", limpo)+
-    statCard(IC.check, s.pes_confirmados, nc(s.confirmados), 'Confirmados', "filtrarEstado('confirmado')", e==='confirmado','verde')+
-    statCard(IC.relogio, s.pes_pendentes, nc(s.pendentes), 'Pendentes', "filtrarEstado('pendente')", e==='pendente','ouro')+
-    statCard(IC.xis, s.pes_recusados, nc(s.recusados), 'Recusados', "filtrarEstado('recusado')", e==='recusado','rosa')+
-    statCard(IC.telemovel, s.pes_digitais, nc(s.digitais), 'Digitais', "filtrarTipo('digital')", t==='digital')+
-    statCard(IC.envelope, s.pes_fisicos, nc(s.fisicos), 'Físicos', "filtrarTipo('fisico')", t==='fisico')+
-    statCard(IC.impressora, s.pes_impressos, nc(s.impressos), 'Impressos', "filtrarImpresso()", filtroImpresso==='1')+
-    statCard(IC.noivo, s.pes_noivos, nc(s.noivos), 'Noivo', "filtrarLado('noivo')", l==='noivo')+
-    statCard(IC.noiva, s.pes_noivas, nc(s.noivas), 'Noiva', "filtrarLado('noiva')", l==='noiva')+
-    statCard(IC.masculino, s.pes_masculino||0, np(s.pes_masculino||0), 'Masculino', "filtrarGenero('m')", filtroGenero==='m')+
-    statCard(IC.feminino, s.pes_feminino||0, np(s.pes_feminino||0), 'Feminino', "filtrarGenero('f')", filtroGenero==='f','rosa')+
-    statCard(IC.brinde, s.pes_brinde||0, np(s.pes_brinde||0), 'Brindes', "filtrarBrinde()", filtroBrinde==='1','ouro');
+    cartoes.slice(0, CARTOES_BASE).join('') +
+    `<div class="stats-extra${STATS_ABERTO?' aberto':''}">${cartoes.slice(CARTOES_BASE).join('')}</div>`;
+  $('stats-mais').innerHTML = STATS_ABERTO
+    ? 'Menos filtros'
+    : `Mais filtros <span class="conta-extra">${cartoes.length-CARTOES_BASE}</span>`;
 }
-const np = n => (+n===1?'convidado':'convidados');
+let STATS_ABERTO = false;
+function alternarStats(){ STATS_ABERTO = !STATS_ABERTO; carregar(); }
 
 // Barra de progresso: preenchimento do número de convidados face à capacidade
 function renderProgresso(s){
@@ -537,7 +579,7 @@ function renderBarraSelecao(){
     <button class="btn-ico" onclick="massaFlag('enviado',0)">Desmarcar enviados</button>
     <button class="btn-ico" onclick="massaMesa()">Atribuir mesa…</button>
     <div class="cresce"></div>
-    <button class="btn-ico" onclick="selecionarTodos(true)">Selecionar todos (${CONVITES.length})</button>
+    <button class="btn-ico" onclick="selecionarTodos(true)" title="${HA_MAIS?'Só os que já estão na lista; use "Mostrar mais" para trazer os restantes':''}">Selecionar ${HA_MAIS?'os visíveis':'todos'} (${CONVITES.length})</button>
     <button class="btn-ico" onclick="limparSelecao()">Limpar</button>`;
 }
 // Aplica uma marcação a todos os selecionados, um pedido de cada vez.
@@ -610,7 +652,18 @@ function renderConvites(){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + rodapeLista();
+}
+
+/** Rodapé da lista: quantos se veem, quantos há e o botão para trazer mais. */
+function rodapeLista(){
+  if(!HA_MAIS) return TOTAL > CONVITES.length ? '' :
+    (TOTAL > 10 ? `<p class="fim-lista">${TOTAL} convite(s) — está tudo aqui.</p>` : '');
+  const faltam = TOTAL - CONVITES.length;
+  return `<button class="btn-mais-lista" onclick="carregar(true)">
+      Mostrar mais <span class="conta-extra">${faltam}</span>
+      <small>a ver ${CONVITES.length} de ${TOTAL}</small>
+    </button>`;
 }
 
 function renderFiltroMesas(){
@@ -991,13 +1044,20 @@ const ACCOES = {
   enviado_sim:'marcou como enviado',     enviado_nao:'desmarcou enviado',
 };
 
-async function carregarRegisto(){
+let REGISTOS=[], REG_PAGINA=1, REG_MAIS=false, REG_TOTAL=0;
+
+async function carregarRegisto(mais=false){
   const el=$('hist-registo');
-  el.innerHTML='<p class="vazio-hist">A carregar…</p>';
-  const d=await api('registo_lista');
-  const rs=(d && d.registos)||[];
+  REG_PAGINA = mais ? REG_PAGINA+1 : 1;
+  if(!mais) el.innerHTML='<p class="vazio-hist">A carregar…</p>';
+  const d=await api('registo_lista&pagina='+REG_PAGINA);
+  if(!d.success){ if(mais) REG_PAGINA--; return; }
+  REGISTOS = mais ? REGISTOS.concat(d.registos||[]) : (d.registos||[]);
+  REG_MAIS = !!d.ha_mais; REG_TOTAL = +d.total||REGISTOS.length;
+  const rs=REGISTOS;
   if(!rs.length){ el.innerHTML='<p class="vazio-hist">Ainda não há atividade registada.</p>'; return; }
-  el.innerHTML=rs.map(r=>{
+  el.innerHTML=`<p class="msg-conta">${REG_TOTAL} ação(ões) registadas · a ver as ${rs.length} mais recentes</p>`
+    + rs.map(r=>{
     const que=ACCOES[r.accao]||esc(r.accao);
     const alvo=r.alvo?` <b>${esc(r.alvo)}</b>`:'';
     const det=r.detalhe?` <span style="color:#9aa09a">· ${esc(r.detalhe)}</span>`:'';
@@ -1006,7 +1066,9 @@ async function carregarRegisto(){
       <span class="reg-quem">${esc(r.utilizador||'—')}</span>
       <span class="reg-que">${que}${alvo}${det}</span>
     </div>`;
-  }).join('');
+  }).join('')
+    + (REG_MAIS ? `<button class="btn-mais-lista" onclick="carregarRegisto(true)">
+        Mostrar mais <span class="conta-extra">${REG_TOTAL-rs.length}</span></button>` : '');
 }
 
 montarPickers();

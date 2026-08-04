@@ -5,6 +5,7 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
 $CAS = casalInfo(defsAtuais($conn));
@@ -74,22 +75,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <script src="assets/api.js"></script>
 </head>
 <body>
-<header class="topo">
-  <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div>
-      <h1>Convite Digital</h1>
-      <div class="sub"><?= escP($CAS['casal']) ?> · personalização completa</div>
-    </div>
-    <nav class="nav">
-      <a href="index.php">Painel</a>
-      <a href="mesas.php">Mesas</a>
-      <a href="graficas.php">Gráfica</a>
-      <a href="convite-editor.php" class="ativo">Convite digital</a>
-      <a href="logout.php">Sair</a>
-    </nav>
-  </div>
-</header>
+<?php cabecalho('Convite Digital', $CAS['casal'].' · personalização completa', 'convite', ['sem_porta'=>true]); ?>
 
 <div class="container">
   <div class="ed-layout">

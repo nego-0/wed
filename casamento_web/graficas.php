@@ -8,6 +8,7 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
 exigirAdmin();
 
@@ -179,20 +180,7 @@ $manuais = [
 </style>
 </head>
 <body>
-<header class="topo">
-  <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div><h1>Entregáveis à gráfica</h1><div class="sub">O que a gráfica recebe: convites, brindes e manuais</div></div>
-    <nav class="nav no-print">
-      <a href="index.php">Painel</a>
-      <a href="mesas.php">Mesas</a>
-      <a href="graficas.php" class="ativo">Gráfica</a>
-      <a href="convite-editor.php">Convite digital</a>
-      <a href="porteiro.php">Porta</a>
-      <a href="logout.php">Sair</a>
-    </nav>
-  </div>
-</header>
+<?php cabecalho('Entregáveis à gráfica', 'O que a gráfica recebe: convites, brindes e manuais', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
   <div class="abas no-print">

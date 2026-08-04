@@ -6,6 +6,7 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
 exigirAdmin();
 
@@ -79,20 +80,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 </style>
 </head>
 <body>
-<header class="topo no-print">
-  <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div><h1>Cartões 10×15</h1><div class="sub">Convite para impressão a dourado sobre acrílico</div></div>
-    <nav class="nav">
-      <a href="index.php">Painel</a>
-      <a href="mesas.php">Mesas</a>
-      <a href="graficas.php" class="ativo">Gráfica</a>
-      <a href="convite-editor.php">Convite digital</a>
-      <a href="porteiro.php">Porta</a>
-      <a href="logout.php">Sair</a>
-    </nav>
-  </div>
-</header>
+<?php cabecalho('Cartões 10×15', 'Convite para impressão a dourado sobre acrílico', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
   <div class="barra no-print">
