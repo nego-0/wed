@@ -54,6 +54,57 @@ function cartaoFolhagem(string $chave): array {
     return $f[$chave] ?? $f['eucalipto'];
 }
 
+/**
+ * Nomes das cores da paleta do cartão como estão em cartaoPaletas(), por
+ * variável CSS: 'accent' -> --ct-accent, mas a chave da paleta é 'nameColor'.
+ */
+function cartaoChavesCor(): array {
+    return ['accent'=>'accent', 'name'=>'nameColor', 'sub'=>'sub', 'head'=>'head', 'soft'=>'soft'];
+}
+
+/**
+ * Paleta que o cartão usa mesmo: a escolhida, com as cores livres por cima.
+ * Sem cores livres é exatamente a paleta escolhida — quem não mexer não nota.
+ */
+function cartaoPaletaEfetiva(array $defs): array {
+    $pal = cartaoPaleta($defs['cartao.paleta'] ?? 'ouro');
+    $ov  = json_decode($defs['cartao.cores'] ?: '[]', true) ?: [];
+    foreach (cartaoChavesCor() as $var => $chave) {
+        if (corHexValida($ov[$var] ?? null)) $pal[$chave] = strtoupper($ov[$var]);
+    }
+    return $pal;
+}
+
+/**
+ * Papéis tipográficos do cartão. São os mesmos três do convite digital, mas
+ * com escolhas próprias: o cartão é gravado a dourado e pede outra letra.
+ */
+function papeisCartao(): array {
+    return ['script' => ['chave'=>'cartao.fonte_script', 'rotulo'=>'Nomes e caligrafia', 'origem'=>'alexbrush'],
+            'serif'  => ['chave'=>'cartao.fonte_serif',  'rotulo'=>'Frases e data',      'origem'=>'cormorant'],
+            'sans'   => ['chave'=>'cartao.fonte_sans',   'rotulo'=>'Rótulos e detalhes', 'origem'=>'montserrat']];
+}
+
+/**
+ * As variáveis CSS do cartão: cor, letra e escala do texto.
+ * Vão no atributo style do .cartao, para o editor as poder trocar ao vivo e as
+ * páginas de impressão as trazerem já resolvidas.
+ */
+function cartaoEstiloVars(array $defs): string {
+    $pal = cartaoPaletaEfetiva($defs);
+    $v = '--ct-accent:'.$pal['accent'].';--ct-name:'.$pal['nameColor']
+       . ';--ct-sub:'.$pal['sub'].';--ct-head:'.$pal['head'].';--ct-soft:'.$pal['soft'];
+    $fontes = fontesConvite();
+    foreach (papeisCartao() as $papel => $p) {
+        $id = $defs[$p['chave']] ?? $p['origem'];
+        $f  = $fontes[$id] ?? $fontes[$p['origem']];
+        $v .= ';--cf-'.$papel.':'.$f['css'];
+    }
+    $esc = (int)($defs['cartao.escala'] ?? 100);
+    $v .= ';--ct-esc:'.(max(85, min(115, $esc)) / 100);
+    return $v;
+}
+
 // ---- Geometria: curva de Bézier cúbica ----------------------
 
 /** Ponto na curva de Bézier cúbica definida por 4 pontos [x,y]. */
@@ -229,13 +280,16 @@ function cartaoCamadasVisiveis(array $defs): array {
  *
  * $conv: ['nome'=>string, 'mesas'=>[['nome'=>..,'n'=>..], …]]
  */
-function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhagem, bool $comLugares = true, array $camadas = []): string {
+function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhagem, bool $comLugares = true,
+                            array $camadas = [], ?string $estilo = null): string {
     $e = fn($s) => escP($s);
     // Camada oculta: ausente do array = visível.
     $oc = fn($k) => (array_key_exists($k, $camadas) && !$camadas[$k]) ? ' ct-oculta' : '';
 
-    $vars = '--ct-accent:' . $pal['accent'] . ';--ct-name:' . $pal['nameColor']
-          . ';--ct-sub:' . $pal['sub'] . ';--ct-head:' . $pal['head'] . ';--ct-soft:' . $pal['soft'];
+    // Quem passa $estilo (de cartaoEstiloVars) traz também a letra e a escala;
+    // sem ele, só as cores — e o CSS trata do resto com os valores de origem.
+    $vars = $estilo ?? ('--ct-accent:' . $pal['accent'] . ';--ct-name:' . $pal['nameColor']
+          . ';--ct-sub:' . $pal['sub'] . ';--ct-head:' . $pal['head'] . ';--ct-soft:' . $pal['soft']);
 
     // Blocos de mesa, separados por divisória vertical (o design usa 2 colunas).
     $mesas = '';

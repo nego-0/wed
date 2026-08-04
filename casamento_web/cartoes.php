@@ -18,7 +18,16 @@ $paletaSel   = $_GET['paleta']   ?? $defs['cartao.paleta'];
 $folhagemSel = $_GET['folhagem'] ?? $defs['cartao.folhagem'];
 if (!isset(cartaoPaletas()[$paletaSel]))     $paletaSel   = $defs['cartao.paleta'];
 if (!isset(cartaoFolhagens()[$folhagemSel])) $folhagemSel = $defs['cartao.folhagem'];
-$pal = cartaoPaleta($paletaSel);
+// As cores livres foram escolhidas para a paleta gravada: pré-visualizar outra
+// paleta mostra-a limpa, sem elas.
+$defsCartao = $defs;
+$defsCartao['cartao.paleta'] = $paletaSel;
+if ($paletaSel !== $defs['cartao.paleta']) $defsCartao['cartao.cores'] = '';
+$pal    = cartaoPaletaEfetiva($defsCartao);
+$estilo = cartaoEstiloVars($defsCartao);
+// As camadas desligadas no editor também não se imprimem — antes esta página
+// ignorava-as e saía um cartão diferente do que a prova mostrava.
+$camadasCartao = cartaoCamadasVisiveis($defs);
 $ev  = cartaoDadosEvento($defs);
 // Mostrar (ou não) o "(N)" de lugares no nome — no cartão as mesas já o indicam.
 $comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
@@ -116,7 +125,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
       $conv = ['nome' => nomeParaCartao($c, $comNumeroNome), 'mesas' => $mesas];
     ?>
     <div class="cartao-item">
-      <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares) ?></div></div>
+      <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares, $camadasCartao, $estilo) ?></div></div>
       <div class="legenda no-print"><?= escP($c['codigo']) ?> ·
         <a href="?id=<?= (int)$c['id'] ?>&paleta=<?= escP($paletaSel) ?>&folhagem=<?= escP($folhagemSel) ?>">imprimir só este</a></div>
     </div>

@@ -53,6 +53,8 @@ function dataExtensa(string $ymd): string {
 
 // ---- Paletas -----------------------------------------------
 const TEMA_VARS_EDITAVEIS = ['ink','forest','forest-deep','ivory','cream','sand','gold','gold-soft','gold-pale','blush','text'];
+// As cinco cores do cartão impresso (ver cartaoPaletas() em pecas.php).
+const CARTAO_VARS_COR = ['accent','name','sub','head','soft'];
 
 function temasPredef(): array {
     return [
@@ -165,6 +167,12 @@ function defsPadrao(): array {
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
         'cartao.numero_no_nome' => '1',   // '(N)' de lugares no nome do convidado, no cartão
+        // Cor e letra livres, por cima da paleta escolhida. Vazio = a paleta manda.
+        'cartao.cores' => '',
+        'cartao.fonte_script' => 'alexbrush',
+        'cartao.fonte_serif'  => 'cormorant',
+        'cartao.fonte_sans'   => 'montserrat',
+        'cartao.escala' => '100',
         // ---- Enquadramento das fotografias recortadas ----
         // "x y zoom": que ponto da fotografia fica no centro do recorte (em %)
         // e quanto se aproxima (100 = sem aproximação). Os valores de origem são
@@ -540,6 +548,25 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return ctype_digit($valor) ? (string)max(80, min(130, (int)$valor)) : null;
         case 'cartao.numero_no_nome':
             return $valor === '1' ? '1' : '0';
+        case 'cartao.cores': {
+            // Cores livres por cima da paleta: {"accent":"#RRGGBB", ...}
+            if ($valor === '') return '';
+            $j = json_decode($valor, true); if (!is_array($j)) return null;
+            $out = [];
+            foreach (CARTAO_VARS_COR as $v) if (corHexValida($j[$v] ?? null)) $out[$v] = strtoupper($j[$v]);
+            return $out ? json_encode($out) : '';
+        }
+        case 'cartao.fonte_script':
+        case 'cartao.fonte_serif':
+        case 'cartao.fonte_sans': {
+            $papel = substr($chave, 13);           // 'cartao.fonte_' + papel
+            $f = fontesConvite()[$valor] ?? null;
+            return ($f && in_array($papel, $f['papeis'], true)) ? $valor : null;
+        }
+        case 'cartao.escala':
+            // Mais apertado que no convite digital: o cartão tem 10×15 cm fixos
+            // e o texto não tem para onde crescer sem transbordar.
+            return ctype_digit($valor) ? (string)max(85, min(115, (int)$valor)) : null;
         case 'cartao.camadas': {
             // Visibilidade das camadas do cartão: {"nome_da_camada": 0|1}
             if ($valor === '') return '';

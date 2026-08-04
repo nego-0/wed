@@ -28,9 +28,11 @@ if (isset($_GET['modelo'])) {
         cartaoDadosEvento($defs),
         ['nome' => nomeParaCartao($c, ($defs['cartao.numero_no_nome'] ?? '1') === '1'),
          'mesas' => mesasDoConvite($conn, $c)],
-        cartaoPaleta($defs['cartao.paleta']),
+        cartaoPaletaEfetiva($defs),
         $defs['cartao.folhagem'],
-        $comLug
+        $comLug,
+        cartaoCamadasVisiveis($defs),
+        cartaoEstiloVars($defs)
     );
     exit;
 }

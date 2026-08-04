@@ -49,10 +49,6 @@ $CAS = casalInfo(defsAtuais($conn));
   /* ---- Propriedades ---- */
   .sel-nada{ color:var(--ed-texto-2); font-size:.8rem; line-height:1.55; }
   .campo .dica-md{ font-size:.68rem; color:var(--ed-texto-2); margin-top:.2rem; }
-  .contador{ float:right; font-variant-numeric:tabular-nums; }
-  .contador.perto{ color:var(--ed-ouro-claro); }
-  .contador.cheio{ color:#e08a7d; }
-  .campo.invalido input, .campo.invalido textarea{ border-color:#e08a7d; box-shadow:0 0 0 2px rgba(224,138,125,.2); }
 
   /* ---- Listas (capítulos, momentos, células) ---- */
   .it{ border:1px solid var(--ed-linha); border-radius:7px; padding:.45rem .5rem; margin-bottom:.45rem; background:#232520; }
@@ -66,9 +62,6 @@ $CAS = casalInfo(defsAtuais($conn));
   .it .lin{ display:flex; gap:.3rem; }
 
   /* ---- Cores ---- */
-  .cor-linha{ display:flex; align-items:center; gap:.4rem; margin-bottom:.3rem; }
-  .cor-linha input[type=color]{ width:28px; height:22px; border:none; background:none; padding:0; cursor:pointer; flex:none; }
-  .cor-linha span{ font-size:.72rem; color:var(--ed-texto-2); }
   .temas{ display:flex; gap:.3rem; flex-wrap:wrap; margin-bottom:.6rem; }
   .tema-bt{ display:flex; align-items:center; gap:.3rem; background:#2a2c28; border:1px solid var(--ed-linha);
     color:var(--ed-texto); border-radius:6px; padding:.25rem .45rem; cursor:pointer; font-family:inherit; font-size:.72rem; }
@@ -94,11 +87,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .enq-rot{ font-size:.68rem; color:var(--ed-texto-2); text-transform:uppercase; letter-spacing:.07em; }
   .enq-dica{ font-size:.66rem; color:var(--ed-texto-2); margin-top:.2rem; }
 
-  .amostra-f{ margin-top:.3rem; padding:.3rem .45rem; background:#191a16; border:1px solid var(--ed-linha);
-    border-radius:5px; font-size:1.15rem; color:var(--ed-ouro-claro); text-align:center;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .nome-v{ flex:1; min-width:0; font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ed-estado .aviso-txt{ color:var(--ed-ouro-claro); }
   @media (max-width:900px){ .ed-paineis{ width:250px; } }
 </style>
 </head>

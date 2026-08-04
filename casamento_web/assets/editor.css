@@ -2,7 +2,7 @@
    editor.css — Ambiente de edição ao estilo de um editor de
    imagem: barra de ferramentas à esquerda, mesa de trabalho ao
    centro e painéis (propriedades / camadas) à direita.
-   Usado por editor-cartao.php.
+   Usado por editor-cartao.php e convite-editor.php.
    ============================================================ */
 
 :root{
@@ -181,6 +181,23 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .aviso{ border-radius:6px; padding:.45rem .6rem; font-size:.78rem; line-height:1.45; margin-bottom:.6rem; }
 .aviso.ok{ background:rgba(74,122,94,.18); border:1px solid rgba(74,122,94,.5); color:#bfe0cd; }
 .aviso.alerta{ background:rgba(180,134,74,.16); border:1px solid rgba(180,134,74,.5); color:var(--ed-ouro-claro); }
+
+/* ---- Partilhado pelos dois editores: contadores, cores, tipografia ----
+   Estava só no editor do convite digital; o do impresso passou a usar o
+   mesmo, e uma definição só evita que os dois se desencontrem. */
+.contador{ float:right; font-variant-numeric:tabular-nums; }
+.contador.perto{ color:var(--ed-ouro-claro); }
+.contador.cheio{ color:#e08a7d; }
+.campo.invalido input, .campo.invalido textarea{ border-color:#e08a7d; box-shadow:0 0 0 2px rgba(224,138,125,.2); }
+
+.cor-linha{ display:flex; align-items:center; gap:.4rem; margin-bottom:.3rem; }
+.cor-linha input[type=color]{ width:28px; height:22px; border:none; background:none; padding:0; cursor:pointer; flex:none; }
+.cor-linha span{ flex:1; min-width:0; font-size:.72rem; color:var(--ed-texto-2); }
+
+.amostra-f{ margin-top:.3rem; padding:.3rem .45rem; background:#191a16; border:1px solid var(--ed-linha);
+  border-radius:5px; font-size:1.15rem; color:var(--ed-ouro-claro); text-align:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ed-estado .aviso-txt{ color:var(--ed-ouro-claro); }
 
 /* ---- Painel de versões (assets/versoes.js) ------------------ */
 .vs-lin{ display:flex; gap:.35rem; align-items:center; }
