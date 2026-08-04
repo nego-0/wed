@@ -70,7 +70,7 @@ $camposPorCamada = [
 
 <div class="ed-menu">
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
-  <span class="doc">Convite físico · <b>Cartão 10 × 15 cm</b></span>
+  <span class="doc">Convite impresso · <b>Cartão 10 × 15 cm</b></span>
   <div class="cresce"></div>
   <a href="graficas.php">← Entregáveis à gráfica</a>
   <span class="ed-sep"></span>
