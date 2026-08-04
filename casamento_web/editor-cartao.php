@@ -395,5 +395,6 @@ window.addEventListener('resize', () => { if (zoom <= .5) ajustar(); });
 
 renderCamadas(); renderProps(); ajustar();
 </script>
+<script src="assets/editor-paineis.js"></script>
 </body>
 </html>

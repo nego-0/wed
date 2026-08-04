@@ -1030,5 +1030,6 @@ $('tela').addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); }
 recarregarTela();                       // primeira pintura da tela
 msg('Clique num texto do convite para o editar.');
 </script>
+<script src="assets/editor-paineis.js"></script>
 </body>
 </html>
