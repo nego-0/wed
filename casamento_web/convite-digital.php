@@ -18,11 +18,34 @@ $c        = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
 $download = isset($_GET['download']) && $_GET['download'] === '1';
 
 // Pré-visualização do editor (só admin): convidado de exemplo, sem tocar na BD.
-if (isset($_GET['demo']) && $_GET['demo'] === '1') {
+$demo = isset($_GET['demo']) && $_GET['demo'] === '1';
+if ($demo) {
     if (!ehAdmin()) { http_response_code(403); exit('Apenas administração.'); }
     $c = ['id'=>0, 'codigo'=>'EXEMPLO', 'nome_exibicao'=>'Família Exemplo', 'sufixo'=>null,
           'mostrar_numero'=>1, 'mostrar_num_mesa'=>1, 'lugares'=>4, 'mesa_nome'=>'Mesa 1',
           'msg_pessoal'=>'', 'membros'=>[]];
+}
+
+// ---- Tela do editor -----------------------------------------
+// Só admin, e sempre dentro de ?demo=1. Marca as secções e os textos para o
+// editor os poder selecionar e reescrever ao vivo.
+$modoEditor = $demo && isset($_GET['editor']) && $_GET['editor'] === '1';
+
+// Rascunho por gravar: o editor envia o estado em edição para a tela poder
+// mostrar o que ainda não foi para a base de dados — secções escondidas,
+// listas, efeitos. Nada é gravado aqui; os valores passam pela mesma validação
+// da gravação, para o que se vê ser mesmo o que ficaria guardado.
+if ($modoEditor && isset($_POST['rascunho'])) {
+    $r = json_decode((string)$_POST['rascunho'], true);
+    if (is_array($r)) {
+        $padrao = defsPadrao();
+        foreach ($r as $k => $v) {
+            if (!array_key_exists($k, $padrao) || !is_string($v)) continue;
+            $ok = validarDefinicao($k, $v);
+            if ($ok === null) continue;                       // inválido: fica o que já lá estava
+            $DEFS[$k] = ($ok === '') ? $padrao[$k] : $ok;     // vazio = valor original
+        }
+    }
 }
 
 // ---- Convite inválido: página breve e autossuficiente --------
@@ -97,6 +120,8 @@ $msgBlock = $msgPessoal !== ''
       . "font-size:16px;line-height:1.6;color:{$pal['forest']}\">" . mdTexto($msgPessoal) . '</p>'
     : '';
 
+if ($modoEditor) $tpl = marcarParaEditor($tpl);
+
 $out = aplicarSeccoes($tpl, $DEFS);
 $out = strtr($out, convitePlaceholders($DEFS) + [
     '{{GUEST_NAME}}'   => $nome,
@@ -121,9 +146,77 @@ if ($download) {
     exit;
 }
 
+// ---- Tela do editor: ponte com a janela de edição -------------
+if ($modoEditor) $out = str_replace('</body>', pontelEditor() . '</body>', $out);
+
 // ---- Visualização normal (recursos externos) -----------------
 header('Content-Type: text/html; charset=utf-8');
 echo $out;
+
+/**
+ * Script que corre DENTRO da tela. Faz três coisas: assinala o que está sob
+ * o rato, avisa o editor de onde se clicou, e aceita ordens para reescrever
+ * um texto ou destacar uma secção — é isto que torna a edição imediata.
+ */
+function pontelEditor(): string {
+    return <<<'JS'
+<style id="ed-marcas">
+  /* Controlos destinados aos convidados não fazem parte da peça a editar. */
+  #dlBtn, #audioBtn{ display:none !important; }
+  [data-def]{ outline:1px dashed transparent; outline-offset:3px; transition:outline-color .12s; cursor:text; }
+  body.ed-marcar [data-def]:hover{ outline-color:rgba(217,188,140,.75); }
+  [data-def].ed-sel{ outline:1.5px solid #D9BC8C !important; outline-offset:3px; }
+  [data-sec].ed-sec-sel{ box-shadow:inset 0 0 0 2px rgba(217,188,140,.5); }
+  body.ed-marcar [data-sec]:hover{ box-shadow:inset 0 0 0 1px rgba(217,188,140,.25); }
+</style>
+<script>
+(function(){
+  var pai = window.parent; if (pai === window) return;
+  document.body.classList.add('ed-marcar');
+
+  // Na tela do editor o envelope já está aberto: quem edita não quer voltar a
+  // abri-lo a cada recarga. Os convidados continuam a recebê-lo fechado.
+  var capa = document.getElementById('cover');
+  if (capa){ capa.classList.add('open'); document.body.classList.add('opened'); capa.style.display = 'none'; }
+  function envia(m){ pai.postMessage(Object.assign({fonte:'tela'}, m), '*'); }
+
+  document.addEventListener('click', function(e){
+    var alvo = e.target.closest('[data-def]');
+    var sec  = e.target.closest('[data-sec]');
+    // Dentro da tela não se navega: os links são para os convidados.
+    var link = e.target.closest('a'); if (link) e.preventDefault();
+    envia({ tipo:'selecionar', def: alvo ? alvo.dataset.def : null, sec: sec ? sec.dataset.sec : null });
+  }, true);
+
+  window.addEventListener('message', function(e){
+    var d = e.data || {}; if (d.fonte !== 'editor') return;
+    if (d.tipo === 'texto'){
+      var el = document.querySelector('[data-def="' + d.def + '"]');
+      if (el) el.innerHTML = d.html;
+    }
+    if (d.tipo === 'marcar'){
+      document.querySelectorAll('.ed-sel').forEach(function(x){ x.classList.remove('ed-sel'); });
+      document.querySelectorAll('.ed-sec-sel').forEach(function(x){ x.classList.remove('ed-sec-sel'); });
+      if (d.def){ var a = document.querySelector('[data-def="' + d.def + '"]');
+                  if (a){ a.classList.add('ed-sel'); a.scrollIntoView({block:'center', behavior:'smooth'}); } }
+      if (d.sec){ var s = document.querySelector('[data-sec="' + d.sec + '"]');
+                  if (s){ s.classList.add('ed-sec-sel'); if(!d.def) s.scrollIntoView({block:'start', behavior:'smooth'}); } }
+    }
+    if (d.tipo === 'irPara'){
+      var s2 = document.querySelector('[data-sec="' + d.sec + '"]');
+      if (s2) s2.scrollIntoView({block:'start', behavior:'smooth'});
+    }
+    if (d.tipo === 'tema'){
+      var r = document.documentElement;
+      Object.keys(d.vars||{}).forEach(function(k){ r.style.setProperty('--'+k, d.vars[k]); });
+    }
+  });
+
+  envia({ tipo:'pronta' });
+})();
+</script>
+JS;
+}
 
 
 // ============================================================

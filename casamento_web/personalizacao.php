@@ -475,6 +475,93 @@ function aplicarSeccoes(string $html, array $defs): string {
     return numerarPaginas($html);
 }
 
+// ============================================================
+// Modo de edição: marcar o convite para a tela o poder manipular
+// ============================================================
+
+/**
+ * Secções do convite, pela ordem em que aparecem. É a lista de "camadas"
+ * do editor. 'opcional' diz se pode ser escondida (tem marcador SEC:).
+ */
+function seccoesConvite(): array {
+    return [
+        'hero'       => ['rotulo'=>'Capa',              'opcional'=>false, 'campos'=>['textos.kicker','textos.hero_sub','casal.noiva','casal.noivo']],
+        'convite'    => ['rotulo'=>'O convite',         'opcional'=>false, 'campos'=>['textos.convite_eyebrow','textos.lead','textos.guest_label','textos.closing']],
+        'historia'   => ['rotulo'=>'História',          'opcional'=>true,  'campos'=>['historia.eyebrow','historia.titulo','historia.quote','historia.autor']],
+        'interludio' => ['rotulo'=>'Interlúdio',        'opcional'=>true,  'campos'=>['interludio.quote','interludio.autor','interludio.fecho']],
+        'grande-dia' => ['rotulo'=>'O grande dia',      'opcional'=>false, 'campos'=>['gd.eyebrow','evento.venue_titulo','cronograma.titulo']],
+        'acesso'     => ['rotulo'=>'Passe de entrada',  'opcional'=>false, 'campos'=>['acesso.eyebrow','acesso.titulo','acesso.instrucao','acesso.nota']],
+        'final'      => ['rotulo'=>'Confirmação e fecho','opcional'=>false,'campos'=>['rsvp.titulo','rsvp.sub','rsvp.deadline','manual.titulo','footer.quote']],
+    ];
+}
+
+/**
+ * Placeholder -> definição que o alimenta. Só os que ocupam um elemento
+ * inteiro: são os que a tela consegue reescrever enquanto se escreve.
+ */
+function mapaDefEditor(): array {
+    return [
+        '{{KICKER}}'           => 'textos.kicker',
+        '{{HERO_SUB}}'         => 'textos.hero_sub',
+        '{{CONVITE_EYEBROW}}'  => 'textos.convite_eyebrow',
+        '{{LEAD}}'             => 'textos.lead',
+        '{{GUEST_LABEL}}'      => 'textos.guest_label',
+        '{{CLOSING}}'          => 'textos.closing',
+        '{{HIST_EYEBROW}}'     => 'historia.eyebrow',
+        '{{HIST_TITULO}}'      => 'historia.titulo',
+        '{{HIST_QUOTE}}'       => 'historia.quote',
+        '{{HIST_AUTOR}}'       => 'historia.autor',
+        '{{INTER_QUOTE}}'      => 'interludio.quote',
+        '{{INTER_AUTOR}}'      => 'interludio.autor',
+        '{{INTER_FECHO}}'      => 'interludio.fecho',
+        '{{GD_EYEBROW}}'       => 'gd.eyebrow',
+        '{{CRONO_TITULO}}'     => 'cronograma.titulo',
+        '{{VENUE_TITULO}}'     => 'evento.venue_titulo',
+        '{{ACESSO_EYEBROW}}'   => 'acesso.eyebrow',
+        '{{ACESSO_TITULO}}'    => 'acesso.titulo',
+        '{{ACESSO_INSTRUCAO}}' => 'acesso.instrucao',
+        '{{ACESSO_NOTA}}'      => 'acesso.nota',
+        '{{MANUAL_EYEBROW}}'   => 'manual.eyebrow',
+        '{{MANUAL_TITULO}}'    => 'manual.titulo',
+        '{{MANUAL_INTRO}}'     => 'manual.intro',
+        '{{RSVP_TITULO}}'      => 'rsvp.titulo',
+        '{{RSVP_SUB}}'         => 'rsvp.sub',
+        '{{RSVP_DEADLINE}}'    => 'rsvp.deadline',
+        '{{FOOTER_QUOTE}}'     => 'footer.quote',
+    ];
+}
+
+/**
+ * Definições cujo texto passa pelo mini-markdown (**negrito**, *itálico*,
+ * {noiva}/{noivo}, quebras de linha). A tela precisa de saber quais são para
+ * as reescrever com o mesmo aspeto do servidor; as restantes são texto simples.
+ */
+function camposMarkdown(): array {
+    return ['textos.lead','textos.closing','historia.quote','interludio.quote','interludio.fecho',
+            'acesso.instrucao','acesso.nota','manual.intro','rsvp.titulo','rsvp.sub','footer.quote'];
+}
+
+/**
+ * Prepara o modelo para a tela do editor: põe data-sec nas secções e
+ * data-def no elemento que envolve cada texto. Corre ANTES da substituição
+ * dos placeholders, e só no editor — o convite dos convidados sai limpo.
+ */
+function marcarParaEditor(string $html): string {
+    // Secções -> camadas
+    foreach (array_keys(seccoesConvite()) as $sec) {
+        $html = preg_replace('#(<section id="'.preg_quote($sec, '#').'")#', '$1 data-sec="'.$sec.'"', $html, 1);
+    }
+    // Cada texto -> o elemento que o contém fica identificado pela sua definição
+    foreach (mapaDefEditor() as $ph => $chave) {
+        $html = preg_replace_callback(
+            '#<([a-z0-9]+)((?:[^>"]|"[^"]*")*?)>(\s*)' . preg_quote($ph, '#') . '#i',
+            fn($m) => '<' . $m[1] . $m[2] . ' data-def="' . $chave . '">' . $m[3] . $ph,
+            $html, 1
+        );
+    }
+    return $html;
+}
+
 /** Numerais por extenso para a numeração das páginas do convite. */
 const ORDINAIS_PT = ['um','dois','três','quatro','cinco','seis','sete','oito','nove','dez'];
 
