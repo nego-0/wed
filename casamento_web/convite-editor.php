@@ -119,7 +119,6 @@ $CAS = casalInfo(defsAtuais($conn));
     <button class="bt bt-min" onclick="zoomPasso(1)" title="Ampliar">+</button>
   </div>
   <div class="cresce"></div>
-  <span class="rot" id="marca-sujo" hidden>alterações por guardar</span>
   <button class="bt" onclick="reporSeccao()">Repor esta secção</button>
   <button class="bt primario" onclick="guardar()">Guardar</button>
 </div>
@@ -180,6 +179,7 @@ $CAS = casalInfo(defsAtuais($conn));
   <span id="estado">Escolha um texto na tela, ou uma camada à direita.</span>
   <div class="cresce"></div>
   <span class="aviso-txt" id="passos"></span>
+  <span class="marca-sujo" id="marca-sujo">alterações por guardar</span>
 </div>
 
 <script src="<?= asset('assets/editor-adiar.js') ?>"></script>
@@ -349,7 +349,7 @@ function marcarBotoes(){
 }
 
 // ---------- alterações por guardar ----------
-function marcarSujo(v){ if (SUJO===v) return; SUJO=v; $('marca-sujo').hidden = !v; }
+function marcarSujo(v){ if (SUJO===v) return; SUJO=v; $('marca-sujo').classList.toggle('on', v); }
 window.addEventListener('beforeunload', e=>{ if (SUJO){ e.preventDefault(); e.returnValue=''; } });
 function msg(t){ $('estado').textContent = t; }
 

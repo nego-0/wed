@@ -107,6 +107,28 @@ const EXE=process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/c
     return correu === 0;
   }), 'um redesenho pedido durante a escolha da cor fica adiado');
 
+  // ---------- nada se mexe quando a edição começa ----------
+  // O aviso de "por guardar" vivia na barra de opções: ao aparecer, a barra
+  // passava a duas linhas e todo o editor descia 45px a meio do gesto. O
+  // controlo fugia de baixo do rato e o arrasto morria — parecia um botão.
+  for (const larg of [1440, 1200, 1024]) {
+    await p.setViewportSize({ width: larg, height: 860 });
+    await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
+    await p.waitForTimeout(1400);
+    await p.evaluate(() => selecionar('volutas'));
+    await p.waitForTimeout(400);
+    const alvo = p.locator('#props input[type=range]').first();
+    await alvo.scrollIntoViewIfNeeded(); await p.waitForTimeout(200);
+    const b0 = await alvo.boundingBox();
+    await p.evaluate(() => marcarSujo(true));        // a primeira alteração da sessão
+    await p.waitForTimeout(300);
+    const b1 = await alvo.boundingBox();
+    console.log(`  ${larg}px: barra em y=${Math.round(b0.y)} -> ${Math.round(b1.y)}`);
+    ok(Math.round(b0.y) === Math.round(b1.y) && Math.round(b0.x) === Math.round(b1.x),
+       `a ${larg}px, marcar "por guardar" não mexe com o controlo`);
+  }
+  await p.setViewportSize({ width: 1440, height: 950 });
+
   // ---------- editor do convite digital ----------
   await p.goto(BASE+'/convite-editor.php',{waitUntil:'networkidle'}); await p.waitForTimeout(2600);
   await p.evaluate(()=>document.querySelectorAll('.ed-painel').forEach(x=>{

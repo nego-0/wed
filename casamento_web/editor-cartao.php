@@ -108,7 +108,6 @@ $camposPorCamada = [
     <button class="bt bt-min" onclick="ajustar()" title="Ajustar à janela">Ajustar</button>
   </div>
   <div class="cresce"></div>
-  <span class="rot" id="marca-sujo" hidden>alterações por guardar</span>
   <button class="bt" onclick="reporCamada()" title="Repor os textos originais da camada escolhida">Repor esta camada</button>
   <button class="bt" onclick="repor()">Repor originais</button>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
@@ -176,6 +175,7 @@ $camposPorCamada = [
   <span id="estado-exemplo">Prova com: <?= escP($conv['nome']) ?></span>
   <span class="cresce"></span>
   <span class="aviso-txt" id="passos"></span>
+  <span class="marca-sujo" id="marca-sujo">alterações por guardar</span>
   <span id="estado-msg"></span>
 </div>
 
@@ -235,9 +235,8 @@ let sujo = false, selecionada = null, ferramenta = 'mover';
 
 function marcarSujo(v){
   if (sujo === v) return;
-  sujo = v; $('marca-sujo').hidden = !v;
-  $('estado-msg').textContent = v ? 'Alterações por guardar' : '';
-  $('estado-msg').className = v ? 'sujo' : '';
+  // O aviso é o selo ao lado; #estado-msg fica livre para as mensagens.
+  sujo = v; $('marca-sujo').classList.toggle('on', v);
 }
 function msg(t){ $('estado-msg').textContent = t; $('estado-msg').className = ''; }
 

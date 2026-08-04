@@ -40,6 +40,7 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
             background:var(--ed-painel-2); border-bottom:1px solid var(--ed-linha);
             padding:.4rem .8rem; flex:0 0 auto; }
 .ed-opcoes .rot{ color:var(--ed-texto-2); font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; }
+
 .ed-sep{ width:1px; height:20px; background:var(--ed-linha); }
 
 /* ---- Corpo: ferramentas | mesa | painéis ------------------- */
@@ -175,8 +176,18 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .ed-arte [data-camada].sel-camada{ outline:1.5px solid var(--ed-ouro-claro); outline-offset:2px; }
 
 /* ---- Barra de estado --------------------------------------- */
+/* Uma linha só, sempre: se esta barra crescesse, o corpo do editor encolhia
+   por baixo do rato. */
 .ed-estado{ background:var(--ed-painel); border-top:1px solid var(--ed-linha); padding:.3rem .8rem;
-            font-size:.74rem; color:var(--ed-texto-2); display:flex; gap:1rem; align-items:center; flex:0 0 auto; }
+            font-size:.74rem; color:var(--ed-texto-2); display:flex; gap:1rem; align-items:center;
+            flex:0 0 auto; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; }
+.ed-estado > span{ overflow:hidden; text-overflow:ellipsis; }
+/* O aviso de "por guardar" vivia na barra de opções. Quando aparecia, a barra
+   passava a duas linhas e todo o editor descia 45px — a meio de um arrasto, o
+   controlo fugia de baixo do rato e o gesto morria, como se fosse um botão.
+   Aqui não empurra nada, e o lugar fica reservado mesmo quando está apagado. */
+.marca-sujo{ color:var(--ed-ouro-claro); visibility:hidden; }
+.marca-sujo.on{ visibility:visible; }
 .ed-estado .cresce{ flex:1; }
 .sujo{ color:var(--ed-ouro-claro); }
 
