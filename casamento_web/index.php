@@ -34,8 +34,12 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .membro-linha .m-brinde{ display:inline-flex; align-items:center; gap:.25rem; font-size:.82rem; color:var(--text); white-space:nowrap; cursor:pointer; }
   .membro-linha .m-brinde input{ width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
   /* Ícones de género / brinde nas pastilhas */
-  .gi{ font-weight:700; line-height:1; }
-  .gi-m{ color:#4a6b7a; } .gi-f{ color:#b56b78; } .gi-b{ font-weight:400; }
+  /* ♂ e ♀ são glifos finos: à medida do texto à volta ficavam quase invisíveis.
+     Um pouco maiores, mais escuros e com uma fonte que os desenha bem. */
+  .gi{ font-weight:700; line-height:1; font-size:1.15em; vertical-align:-.05em;
+       font-family:'Segoe UI Symbol','Noto Sans Symbols 2','Noto Sans Symbols',
+                   'DejaVu Sans',system-ui,sans-serif; }
+  .gi-m{ color:#2f5568; } .gi-f{ color:#9c4256; } .gi-b{ font-weight:400; font-size:1em; }
   .sugestoes{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0 .2rem; }
   .sugestao{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.25rem .7rem; font-size:.8rem; cursor:pointer; }
   .sugestao:hover{ background:var(--gold-pale); border-color:var(--gold-soft); }
@@ -104,7 +108,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .lado-ic{ display:inline-flex; align-items:center; gap:.25rem; color:var(--gold); }
   .lado-ic svg{ width:15px; height:15px; }
   .stat-f .ss{ font-size:.66rem; color:#b0b4ab; margin-top:.1rem; }
-  .stat-f .ss .gi{ font-size:.8rem; }
+  .stat-f .ss .gi{ font-size:.92rem; }
   .stat-f.ativo .ss{ color:rgba(239,227,203,.7); }
   /* Cartão selecionado (fundo verde): os símbolos ♂/♀ herdam o tom claro. */
   .stat-f.ativo .ss .gi{ color:inherit; }

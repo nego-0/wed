@@ -21,7 +21,7 @@
          --cf-script:'Alex Brush',cursive; --cf-serif:'Cormorant Garamond',serif;
          --cf-sans:'Montserrat',sans-serif; --ct-esc:1;
          /* Alternativas das camadas decorativas (ver cartaoEstiloVars()). */
-         --ct-mold-margem:28px; --ct-esc-ramos:1; --ct-esc-volutas:1; --ct-esc-floreados:1; }
+         --ct-mold-margem:28px; --ct-mold-linha:1.4px; --ct-esc-ramos:1; --ct-esc-volutas:1; --ct-esc-floreados:1; }
 /* Camada desligada no painel de camadas */
 .cartao .ct-oculta{ display:none !important; }
 
@@ -44,13 +44,13 @@
   content:''; position:absolute; display:var(--ct-mold-cantos,none);
   width:74px; height:74px; box-sizing:border-box; }
 .ct-moldura::before{ top:-1.4px; left:-1.4px;
-  border-top:1.4px solid var(--ct-accent); border-left:1.4px solid var(--ct-accent); }
+  border-top:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-left:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
 .ct-moldura::after{ bottom:-1.4px; right:-1.4px;
-  border-bottom:1.4px solid var(--ct-accent); border-right:1.4px solid var(--ct-accent); }
+  border-bottom:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-right:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
 .ct-moldura i:first-of-type{ top:-1.4px; right:-1.4px;
-  border-top:1.4px solid var(--ct-accent); border-right:1.4px solid var(--ct-accent); }
+  border-top:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-right:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
 .ct-moldura i:last-of-type{ bottom:-1.4px; left:-1.4px;
-  border-bottom:1.4px solid var(--ct-accent); border-left:1.4px solid var(--ct-accent); }
+  border-bottom:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-left:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
 
 .ct-voluta{ position:absolute; width:calc(178px*var(--ct-esc-volutas)); height:calc(178px*var(--ct-esc-volutas));
             z-index:2; pointer-events:none; }

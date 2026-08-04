@@ -60,12 +60,21 @@ function cartaoMolduras(): array {
 
 /** O feitio da moldura, em variáveis CSS. */
 function cartaoMolduraVars(string $estilo): string {
+    // --ct-mold-linha é a espessura da linha visível; --ct-mold-larg é a borda
+    // da caixa (zero no feitio "cantos", que desenha só as esquadrias).
     switch ($estilo) {
-        case 'fina':   return '--ct-mold-larg:.7px';
-        case 'dupla':  return '--ct-mold-larg:1.4px;--ct-mold-sombra:inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)';
-        case 'cantos': return '--ct-mold-larg:0;--ct-mold-cantos:block';
-        default:       return '--ct-mold-larg:1.4px';
+        case 'fina':   return '--ct-mold-linha:.7px;--ct-mold-larg:.7px';
+        case 'dupla':  return '--ct-mold-linha:1.4px;--ct-mold-larg:1.4px;'
+                            . '--ct-mold-sombra:inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)';
+        case 'cantos': return '--ct-mold-linha:1.4px;--ct-mold-larg:0;--ct-mold-cantos:block';
+        default:       return '--ct-mold-linha:1.4px;--ct-mold-larg:1.4px';
     }
+}
+
+/** A espessura de origem de cada feitio, em px — o editor precisa dela para
+ *  compensar o zoom da prova. */
+function cartaoMolduraLinha(string $estilo): float {
+    return $estilo === 'fina' ? 0.7 : 1.4;
 }
 
 /** Folhagem efetiva (chave -> array), com recurso a eucalipto. */

@@ -544,7 +544,9 @@ function aplicarDeco(){
   // O feitio da moldura é um conjunto de variáveis — as mesmas que o servidor
   // escreve, para o que se vê aqui ser o que sai impresso.
   const feitio = est.deco['cartao.moldura_estilo'] || 'simples';
-  c.style.setProperty('--ct-mold-larg', feitio === 'cantos' ? '0' : (feitio === 'fina' ? '.7px' : '1.4px'));
+  const linha  = feitio === 'fina' ? '.7px' : '1.4px';
+  c.style.setProperty('--ct-mold-linha', linha);
+  c.style.setProperty('--ct-mold-larg', feitio === 'cantos' ? '0' : linha);
   c.style.setProperty('--ct-mold-sombra',
     feitio === 'dupla' ? 'inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)' : 'none');
   c.style.setProperty('--ct-mold-cantos', feitio === 'cantos' ? 'block' : 'none');
