@@ -206,14 +206,15 @@ function pontelEditor(): string {
   window.addEventListener('message', function(e){
     var d = e.data || {}; if (d.fonte !== 'editor') return;
     if (d.tipo === 'texto'){
-      var el = document.querySelector('[data-def="' + d.def + '"]');
-      if (el) el.innerHTML = d.html;
+      // Todas as ocorrências: os nomes dos noivos aparecem na capa e no convite.
+      document.querySelectorAll('[data-def="' + d.def + '"]').forEach(function(el){ el.innerHTML = d.html; });
     }
     if (d.tipo === 'marcar'){
       document.querySelectorAll('.ed-sel').forEach(function(x){ x.classList.remove('ed-sel'); });
       document.querySelectorAll('.ed-sec-sel').forEach(function(x){ x.classList.remove('ed-sec-sel'); });
-      if (d.def){ var a = document.querySelector('[data-def="' + d.def + '"]');
-                  if (a){ a.classList.add('ed-sel'); a.scrollIntoView({block:'center', behavior:'smooth'}); } }
+      if (d.def){ document.querySelectorAll('[data-def="' + d.def + '"]').forEach(function(x){ x.classList.add('ed-sel'); });
+                  var a = document.querySelector('[data-def="' + d.def + '"]');
+                  if (a) a.scrollIntoView({block:'center', behavior:'smooth'}); }
       if (d.sec){ var s = document.querySelector('[data-sec="' + d.sec + '"]');
                   if (s){ s.classList.add('ed-sec-sel'); if(!d.def) s.scrollIntoView({block:'start', behavior:'smooth'}); } }
     }

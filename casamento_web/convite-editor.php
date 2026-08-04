@@ -205,6 +205,12 @@ FOTOS_LISTA.forEach(f=>{ FOTOS[f.media]=f; FOTOS_POR_ID[f.id]=f; });
 let MEDIA_V = Date.now();   // rebenta a cache das miniaturas depois de trocar um ficheiro
 const TEMAS    = <?= json_encode(temasPredef()) ?>;
 const TEMA_VARS= <?= json_encode(TEMA_VARS_EDITAVEIS) ?>;
+const TEMA_ROT = <?= json_encode(temaVarsRotulos(), JSON_UNESCAPED_UNICODE) ?>;
+// Textos que o servidor compõe (data por extenso, "às 20h30", morada em várias
+// linhas): pintá-los em cru na tela mostrava "20:30" onde ficará "às 20h30".
+// Para estes espera-se uma pausa e recarrega-se a tela, como nas listas.
+const RECOMPOR = ['evento.data','evento.hora','evento.local','evento.cidade',
+                  'evento.maps','evento.whatsapp','footer.local','textos.nota_parenteses'];
 
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -616,9 +622,14 @@ function editar(el){
   if (lab){ lab.textContent = v.length+'/'+max; lab.className = 'contador '+classeCont(v.length,max); }
   // Escreve na tela imediatamente — é isto que faz a diferença entre um
   // formulário e um editor.
-  enviarTela({tipo:'texto', def:chave, html:paraTela(chave,v)});
+  if (RECOMPOR.includes(chave)){
+    clearTimeout(tRecompor); tRecompor = setTimeout(recarregarTela, 900);
+  } else {
+    enviarTela({tipo:'texto', def:chave, html:paraTela(chave,v)});
+  }
   marcarSujo(true); registarPasso();
 }
+let tRecompor = null;
 function alternarSub(chave){
   EST.val[chave] = EST.val[chave]==='0' ? '1' : '0';
   marcarSujo(true); registarPasso(); recarregarTela();
@@ -676,13 +687,35 @@ function renderCores(){
       `<button class="tema-bt" onclick="aplicarTema('')">Repor</button></div>` +
     TEMA_VARS.map(v=>{
       const cor = EST.paleta[v] || TEMAS['floresta'][v];
-      return `<label class="cor-linha"><input type="color" value="${cor}" oninput="editarCor('${v}',this.value)"><span>--${v}</span></label>`;
+      const r = TEMA_ROT[v] || {rotulo:v, onde:''};
+      return `<label class="cor-linha" title="${esc(r.onde)}">
+          <input type="color" value="${cor}" oninput="editarCor('${v}',this.value)">
+          <span>${esc(r.rotulo)}</span>
+          ${EST.paleta[v] ? `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor de origem">↺</button>` : ''}
+        </label>
+        <div class="cor-onde">${esc(r.onde)}</div>`;
     }).join('');
 }
 function editarCor(v,cor){
   EST.paleta[v] = cor.toUpperCase();
   enviarTela({tipo:'tema', vars:{[v]:EST.paleta[v]}});   // a tela muda de cor na hora
   marcarSujo(true); registarPasso();
+  mostrarRepor(v);
+}
+/** Faz aparecer o ↺ sem redesenhar o painel — redesenhar tirava o foco ao seletor. */
+function mostrarRepor(v){
+  const inp = document.querySelector(`#cores .cor-linha input[oninput*="'${v}'"]`);
+  if (inp && !inp.parentElement.querySelector('.bt')){
+    inp.parentElement.insertAdjacentHTML('beforeend',
+      `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor de origem">↺</button>`);
+  }
+}
+function limparCor(v){
+  delete EST.paleta[v];
+  // Sem valor próprio volta a valer o do modelo: manda-se o de origem à tela.
+  enviarTela({tipo:'tema', vars:{[v]: TEMAS['floresta'][v]}});
+  renderCores(); marcarSujo(true); registarPasso();
+  msg('Cor reposta: ' + ((TEMA_ROT[v]||{}).rotulo || v));
 }
 function aplicarTema(k){
   EST.paleta = {};

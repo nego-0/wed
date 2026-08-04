@@ -322,7 +322,7 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
   <div class="ct-conteudo">
     <!-- topo: abertura + nomes + frase -->
     <div class="ct-topo">
-      <div class="ct-abertura<?= $oc('abertura') ?>" data-camada="abertura"><?= nl2br($e($ev['abertura']), false) ?></div>
+      <div class="ct-abertura<?= $oc('abertura') ?>" data-camada="abertura" data-campo="abertura"><?= nl2br($e($ev['abertura']), false) ?></div>
       <div class="ct-nomes<?= $oc('nomes') ?>" data-camada="nomes">
         <div class="ct-floreados<?= $oc('floreados') ?>" data-camada="floreados">
           <div class="ct-floreado ct-floreado-e"><?= svgFloreado('currentColor') ?></div>

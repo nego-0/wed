@@ -52,7 +52,27 @@ function dataExtensa(string $ymd): string {
 }
 
 // ---- Paletas -----------------------------------------------
-const TEMA_VARS_EDITAVEIS = ['ink','forest','forest-deep','ivory','cream','sand','gold','gold-soft','gold-pale','blush','text'];
+// As cores do convite digital que se podem mesmo escolher. Eram onze, mas
+// --ink, --sand e --blush estão declaradas no modelo e nenhuma regra as usa:
+// mexer nelas não mudava nada, e o painel parecia avariado.
+const TEMA_VARS_EDITAVEIS = ['forest','forest-deep','ivory','cream','gold','gold-soft','gold-pale','text'];
+
+/**
+ * O que cada cor pinta, em português. Sem isto o painel mostrava "--gold-pale"
+ * e ninguém podia adivinhar o que ia mudar ao mexer-lhe.
+ */
+function temaVarsRotulos(): array {
+    return [
+        'forest'      => ['rotulo'=>'Verde principal',  'onde'=>'Títulos e ícones sobre o papel claro'],
+        'forest-deep' => ['rotulo'=>'Verde escuro',     'onde'=>'Fundo das secções escuras'],
+        'ivory'       => ['rotulo'=>'Papel claro',      'onde'=>'Fundo claro, e o texto sobre o verde escuro'],
+        'cream'       => ['rotulo'=>'Papel creme',      'onde'=>'Fundo do interlúdio'],
+        'gold'        => ['rotulo'=>'Dourado',          'onde'=>'Filetes, molduras e destaques'],
+        'gold-soft'   => ['rotulo'=>'Dourado suave',    'onde'=>'Chamadas, datas e a maioria dos detalhes'],
+        'gold-pale'   => ['rotulo'=>'Dourado pálido',   'onde'=>'Texto de apoio sobre fundo escuro'],
+        'text'        => ['rotulo'=>'Texto de leitura', 'onde'=>'Os parágrafos que se leem de corrido'],
+    ];
+}
 // As cinco cores do cartão impresso (ver cartaoPaletas() em pecas.php).
 const CARTAO_VARS_COR = ['accent','name','sub','head','soft'];
 
@@ -875,6 +895,16 @@ function mapaDefEditor(): array {
 }
 
 /**
+ * Textos que aparecem em mais do que um sítio, ou lado a lado com outro dentro
+ * do mesmo elemento — os nomes dos noivos partilham um <h1>. Para estes não
+ * serve marcar o elemento que os contém (reescrevê-lo apagava o vizinho):
+ * envolve-se cada ocorrência do próprio marcador.
+ */
+function mapaDefRepetido(): array {
+    return ['{{NOIVA}}' => 'casal.noiva', '{{NOIVO}}' => 'casal.noivo'];
+}
+
+/**
  * Definições cujo texto passa pelo mini-markdown (**negrito**, *itálico*,
  * {noiva}/{noivo}, quebras de linha). A tela precisa de saber quais são para
  * as reescrever com o mesmo aspeto do servidor; as restantes são texto simples.
@@ -901,6 +931,11 @@ function marcarParaEditor(string $html): string {
             fn($m) => '<' . $m[1] . $m[2] . ' data-def="' . $chave . '">' . $m[3] . $ph,
             $html, 1
         );
+    }
+    // Os repetidos ganham invólucro próprio, em todas as ocorrências. Sem isto,
+    // escrever os nomes dos noivos não mudava nada na tela.
+    foreach (mapaDefRepetido() as $ph => $chave) {
+        $html = str_replace($ph, '<span data-def="' . $chave . '">' . $ph . '</span>', $html);
     }
     return $html;
 }
