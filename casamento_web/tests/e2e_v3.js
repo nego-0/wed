@@ -1,3 +1,6 @@
+// Planta das mesas: mesa dos noivos, zoom, papéis nas alas, painel dos noivos.
+// A barra de zoom é 50/100/150 (factores 0.5/1/1.5) e a mesa dos noivos já se
+// pode eliminar, com um botão que a repõe. Ver tests/LEIA-ME.md.
 const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -10,6 +13,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   page.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE: ' + m.text()); });
   page.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
   const log = (...a) => console.log('•', ...a);
+  let fails = 0; const ok = (c, m) => { log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) fails++; };
 
   await page.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
   await page.fill('input[name=utilizador]', 'admin');
@@ -18,65 +22,99 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await page.waitForLoadState('networkidle');
 
   await page.goto(BASE + '/mesas.php', { waitUntil: 'networkidle' });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
 
-  // 1) noivos table exists by default (no create button)
-  const noivosCount = await page.locator('.mesa-node.forma-noivos').count();
-  const createBtn = await page.locator('#btn-noivos').count();
-  log('noivos exists by default:', noivosCount === 1, '| create button removed:', createBtn === 0);
+  // 1) a mesa dos noivos existe sempre; o botão de a repor fica escondido
+  ok(await page.locator('.mesa-node.forma-noivos').count() === 1, 'a mesa dos noivos existe por omissão');
+  ok(!(await page.locator('#btn-noivos').isVisible()), 'com a mesa no sítio, o botão de a repor está escondido');
 
-  // 2) canvas format selector removed
-  const fmtSel = await page.locator('#sel-formato').count();
-  log('canvas format selector removed:', fmtSel === 0);
+  // 2) o seletor de formato do canvas foi retirado
+  ok(await page.locator('#sel-formato').count() === 0, 'o seletor de formato do canvas já não existe');
 
-  // 3) zoom bar: 50/100/150, default 100 (factor 0.8)
-  const zoomLabels = await page.locator('#zoombar button').allTextContents();
-  const zoomVals = await page.locator('#zoombar button').evaluateAll(bs => bs.map(b => b.dataset.zoom));
-  const onLabel = await page.locator('#zoombar button.on').textContent();
-  const zNow = await page.locator('#planta').evaluate(el => getComputedStyle(el).getPropertyValue('--z').trim());
-  log('zoom labels:', JSON.stringify(zoomLabels), 'factors:', JSON.stringify(zoomVals));
-  log('default on:', onLabel, '| default --z (100% reduced 20%):', zNow);
+  // 3) barra de zoom: 50/100/150, factores 0.5/1/1.5, 100% por omissão
+  const zLer = () => page.locator('#planta').evaluate(el => getComputedStyle(el).getPropertyValue('--z').trim());
+  const rotulos  = await page.locator('#zoombar button').allTextContents();
+  const factores = await page.locator('#zoombar button').evaluateAll(bs => bs.map(b => b.dataset.zoom));
+  log('zoom:', JSON.stringify(rotulos), '→', JSON.stringify(factores));
+  ok(JSON.stringify(rotulos)  === JSON.stringify(['50%', '100%', '150%']), 'a barra de zoom tem três níveis');
+  ok(JSON.stringify(factores) === JSON.stringify(['0.5', '1', '1.5']), 'os factores acompanham os rótulos');
+  ok((await page.locator('#zoombar button.on').textContent()) === '100%', 'abre nos 100%');
+  ok(parseFloat(await zLer()) === 1, 'aos 100% o mundo tem o tamanho do canvas');
 
-  // switch to 50 and 150, verify factor
-  await page.click('#zoombar button[data-zoom="0.4"]'); await page.waitForTimeout(200);
-  const z50 = await page.locator('#planta').evaluate(el => getComputedStyle(el).getPropertyValue('--z').trim());
-  await page.click('#zoombar button[data-zoom="1.2"]'); await page.waitForTimeout(200);
-  const z150 = await page.locator('#planta').evaluate(el => getComputedStyle(el).getPropertyValue('--z').trim());
-  await page.click('#zoombar button[data-zoom="0.8"]'); await page.waitForTimeout(200);
-  log('50% ->', z50, '| 150% ->', z150);
+  for (const [f, rot] of [['0.5', '50%'], ['1.5', '150%']]) {
+    await page.click(`#zoombar button[data-zoom="${f}"]`);
+    await page.waitForTimeout(250);
+    ok(parseFloat(await zLer()) === parseFloat(f), `escolher ${rot} põe --z a ${f}`);
+    const ov = await page.locator('#planta-viewport').evaluate(el => getComputedStyle(el).overflow);
+    ok(f === '1.5' ? ov !== 'hidden' : ov === 'hidden',
+       `aos ${rot} os scrolls do canvas ${f === '1.5' ? 'aparecem' : 'ficam escondidos'}`);
+  }
+  await page.click('#zoombar button[data-zoom="1"]'); await page.waitForTimeout(250);
 
-  // 4) set roles via API, verify wings auto-detect
-  await page.evaluate(async () => {
-    const gl = await api('convidado_list');
-    const ana = gl.convidados.find(g => g.nome === 'Ana Teste');
-    const carla = gl.convidados.find(g => g.nome === 'Carla Padrinho');
-    await api('convidado_papel', { method:'POST', body: JSON.stringify({ id: ana.id, papel:'padrinho' }) });
-    await api('convidado_papel', { method:'POST', body: JSON.stringify({ id: carla.id, papel:'madrinha' }) });
-  });
-  await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(700);
-  const esq = await page.locator('.noivos-ala.esq .ala-p').allTextContents();
-  const dir = await page.locator('.noivos-ala.dir .ala-p').allTextContents();
-  log('wings — padrinhos:', JSON.stringify(esq), 'madrinhas:', JSON.stringify(dir));
-
-  // 5) only padrinhos/madrinhas can be placed at noivos: try to drag a person there -> rejected server-side
-  const rejected = await page.evaluate(async () => {
+  // 4) à mesa dos noivos só se sentam padrinhos e madrinhas.
+  // Prova-se ANTES de emprestar papéis: numa base pequena podia não sobrar
+  // ninguém sem papel para a prova.
+  const recusa = await page.evaluate(async () => {
     const gl = await api('convidado_list');
     const noivos = (await api('mesa_list')).mesas.find(m => m.especial === 'noivos');
-    const sofia = gl.convidados.find(g => g.nome === 'Sofia Convidada');
-    const r = await api('convidado_mesa', { method:'POST', body: JSON.stringify({ id: sofia.id, mesa_id: noivos.id }) });
+    const semPapel = (gl.convidados || []).find(g => !g.papel);
+    if (!semPapel) return { success: null, message: 'sem cobaia' };
+    const r = await api('convidado_mesa', { method: 'POST', body: JSON.stringify({ id: semPapel.id, mesa_id: noivos.id }) });
     return { success: r.success, message: r.message };
   });
-  log('assign regular person to noivos rejected:', rejected.success === false, '|', rejected.message);
+  log('recusa:', recusa.message);
+  ok(recusa.success === false, 'o servidor recusa sentar um convidado normal à mesa dos noivos');
 
-  // 6) noivos detail has no "center"/no delete button
+  // 5) papéis pela API: as alas apanham-nos sozinhas
+  const cobaias = await page.evaluate(async () => {
+    const gl = await api('convidado_list');
+    const livres = (gl.convidados || []).filter(g => !g.papel).slice(0, 2);
+    if (livres.length < 2) return null;
+    await api('convidado_papel', { method: 'POST', body: JSON.stringify({ id: livres[0].id, papel: 'padrinho' }) });
+    await api('convidado_papel', { method: 'POST', body: JSON.stringify({ id: livres[1].id, papel: 'madrinha' }) });
+    return livres.map(g => g.id);
+  });
+  ok(cobaias !== null, 'há convidados sem papel para a prova');
+  await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(900);
+  const esq = await page.locator('.noivos-ala.esq .ala-p').allTextContents();
+  const dir = await page.locator('.noivos-ala.dir .ala-p').allTextContents();
+  log('alas — padrinhos:', JSON.stringify(esq), '| madrinhas:', JSON.stringify(dir));
+  ok(esq.length > 0, 'os padrinhos aparecem na ala esquerda');
+  ok(dir.length > 0, 'as madrinhas aparecem na ala direita');
+
+  // 6) painel da mesa dos noivos
   await page.evaluate(() => { const N = MESAS.find(m => m.especial === 'noivos'); selecionar(N.id); });
-  await page.waitForTimeout(400);
-  const hasCentro = (await page.locator('.tab-body').innerHTML()).includes('centro');
-  const hasDelete = await page.locator('.tab-body button:has-text("Eliminar mesa")').count();
-  const hasNomear = (await page.locator('.tab-body').innerHTML()).includes('Nomear padrinho');
-  log('noivos panel — no center:', !hasCentro, '| no delete btn:', hasDelete === 0, '| has role naming:', hasNomear);
+  await page.waitForTimeout(500);
+  const html = await page.locator('.tab-body').innerHTML();
+  ok(!html.includes('centro'), 'o painel dos noivos não fala em centro de mesa');
+  ok(html.includes('Nomear padrinho'), 'o painel dos noivos deixa nomear padrinhos e madrinhas');
+  ok(html.includes('Padrinhos · ala esquerda') && html.includes('Madrinhas · ala direita'),
+     'o painel dos noivos separa as duas alas');
+
+  // 7) eliminar e repor a mesa dos noivos
+  page.once('dialog', d => d.accept());
+  await page.evaluate(() => { const N = MESAS.find(m => m.especial === 'noivos'); eliminar(N.id); });
+  await page.waitForTimeout(1200);
+  ok(await page.locator('.mesa-node.forma-noivos').count() === 0, 'a mesa dos noivos pode ser eliminada');
+  ok(await page.locator('#btn-noivos').isVisible(), 'sem ela, aparece o botão de a repor');
+  await page.click('#btn-noivos');
+  await page.waitForTimeout(1200);
+  ok(await page.locator('.mesa-node.forma-noivos').count() === 1, 'o botão repõe a mesa dos noivos');
+  ok(!(await page.locator('#btn-noivos').isVisible()), 'reposta a mesa, o botão volta a esconder-se');
 
   await page.screenshot({ path: OUT + '/mesas_v3.png' });
-  console.log('\nERRORS:', errs.length ? errs.join('\n') : 'none');
+
+  // ---- limpeza: devolver os papéis emprestados ----
+  if (cobaias) {
+    await page.evaluate(async ids => {
+      for (const id of ids) await api('convidado_papel', { method: 'POST', body: JSON.stringify({ id, papel: '' }) });
+    }, cobaias);
+  }
+
+  if (errs.length) console.log('\nERROS DE JS:\n' + errs.join('\n'));
+  ok(errs.length === 0, 'nenhum erro de JavaScript');
+
+  console.log(fails ? `\n${fails} FALHA(S)` : '\nTUDO VERDE');
   await browser.close();
+  process.exit(fails ? 1 : 0);
 })().catch(e => { console.error('FATAL', e); process.exit(1); });

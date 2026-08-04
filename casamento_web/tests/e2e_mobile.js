@@ -61,8 +61,14 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   const subs = await p.evaluate(()=>[...document.querySelectorAll('.stat-f')].map(c=>({
     l:c.querySelector('.sl').textContent, n:c.querySelector('.sn').textContent, s:c.querySelector('.ss').textContent, t:c.title })));
   console.log(subs.map(x=>`   ${x.l.padEnd(12)} ${x.n.padStart(3)}  ${x.s}`).join('\n'));
-  ok(subs.every(x=>/^\d+ convites?$/.test(x.s)), 'todos os cartões usam a mesma unidade na linha de baixo');
-  ok(subs.every(x=>/pessoas?\b.*\bem\b.*convites?/.test(x.t)), 'o título explica o que é cada número');
+  // O cartão dos brindes conta noutra unidade: mostra a repartição por género.
+  const brindes = subs.filter(x=>/Brindes/i.test(x.l));
+  const resto   = subs.filter(x=>!/Brindes/i.test(x.l));
+  ok(resto.every(x=>/^\d+ convites?$/.test(x.s)), 'os cartões de pessoas contam todos em convites');
+  ok(resto.every(x=>/pessoas?\b.*\bem\b.*convites?/.test(x.t)), 'o título explica o que é cada número');
+  ok(brindes.length === 1, 'há um cartão de brindes');
+  ok(brindes.every(x=>/♂\s*\d+\s*·\s*♀\s*\d+/.test(x.s)), 'o cartão dos brindes reparte-os por género');
+  ok(brindes.every(x=>/\d+ a homens.*\d+ a mulheres/.test(x.t)), 'o título dos brindes explica a repartição');
 
   console.log('\n==== '+(fails===0&&errs.length===0?'ALL PASS':(fails||errs.length)+' FAIL(S)')+' ====');
   console.log('ERRORS:', errs.length?errs.join('\n'):'none');
