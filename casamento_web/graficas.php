@@ -1,10 +1,9 @@
 <?php
 // ============================================================
-// graficas.php — Entregáveis à gráfica
-// Reúne num só sítio o que a gráfica precisa de receber:
-//   1. Convites físicos — lista simplificada (nome, mesas, QR)
-//   2. Brindes — a peça atribuída a cada género e as suas variações
-//   3. Manuais — instruções de impressão de cada peça
+// graficas.php — Convite impresso
+// O que a gráfica precisa de receber do convite físico:
+//   1. Lista de produção — nome, mesas e QR de cada convite
+//   2. Manual de impressão do cartão (gerado da configuração atual)
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
@@ -36,7 +35,7 @@ if (isset($_GET['modelo'])) {
     exit;
 }
 
-$abas = ['convites' => 'Convites físicos', 'brindes' => 'Brindes', 'manuais' => 'Manuais'];
+$abas = ['convites' => 'Lista de produção', 'manuais' => 'Manual de impressão'];
 $aba  = $_GET['aba'] ?? 'convites';
 if (!isset($abas[$aba])) $aba = 'convites';
 
@@ -51,45 +50,22 @@ if ($aba === 'convites') {
     $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }
 
-// ---- 2. Brindes por género ---------------------------------
-// Conta os convidados marcados como "recebe brinde", por género.
-$porGenero = [];
-if ($aba === 'brindes'
-    && colunaExiste($conn, "{$P}convidados", 'brinde')
-    && colunaExiste($conn, "{$P}convidados", 'genero')) {
-    $r = $conn->query("SELECT COALESCE(genero,'') AS g, COUNT(*) AS n
-                       FROM {$P}convidados WHERE brinde=1 GROUP BY COALESCE(genero,'')");
-    if ($r) while ($x = $r->fetch_assoc()) $porGenero[$x['g']] = (int)$x['n'];
-}
-$brindes = brindesPorGenero($defs, $porGenero);
-$semGenero = (int)($porGenero[''] ?? 0);   // recebem brinde mas sem género definido
-
-$acPeca  = chaveiroAcabamento($defs['chaveiro.acabamento']);
-$quadras = chaveiroQuadras();
-$romanos = chaveiroRomanos();
-
-// ---- 3. Manuais --------------------------------------------
-// Os manuais são GERADOS da configuração atual (manual.php), pelo que
-// acompanham as edições. Os do pacote de design ficam como referência
-// histórica — não refletem as alterações feitas nos editores.
-$manuais = [
-    ['peca'     => 'cartao',
-     'titulo'   => 'Cartão de convite 10 × 15 cm',
-     'sub'      => 'Impressão UV a dourado sobre acrílico transparente',
-     'editor'   => 'editor-cartao.php',
-     'original' => 'assets/pecas/manuais/cartao-10x15.html'],
-    ['peca'     => 'porta-chaves',
-     'titulo'   => 'Porta-chaves comemorativo',
-     'sub'      => 'Acrílico de dois lados, 45 × 60 mm, com argola',
-     'editor'   => 'editor-brindes.php',
-     'original' => 'assets/pecas/manuais/porta-chaves.html'],
+// ---- 2. Manual do cartão -----------------------------------
+// Gerado da configuração atual (manual.php), pelo que acompanha as edições.
+// O do pacote de design fica como referência histórica.
+$manual = [
+    'peca'     => 'cartao',
+    'titulo'   => 'Cartão de convite 10 × 15 cm',
+    'sub'      => 'Impressão UV a dourado sobre acrílico transparente',
+    'editor'   => 'editor-cartao.php',
+    'original' => 'assets/pecas/manuais/cartao-10x15.html',
 ];
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entregáveis à gráfica · <?= escP($CAS['casal']) ?></title>
+<title>Convite impresso · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <link href="assets/pecas.css" rel="stylesheet">
@@ -135,22 +111,7 @@ $manuais = [
   .mod-palco .escala{ width:720px; height:1080px; transform:scale(var(--me,.6)); }
   .mod-vazio{ color:var(--gold-pale); font-family:var(--serif); }
 
-  /* ---- Brindes ---- */
-  .brinde-cx{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:1.2rem; }
-  .brinde-topo{ display:flex; gap:1rem; align-items:baseline; flex-wrap:wrap; margin-bottom:.3rem; }
-  .brinde-topo h3{ margin:0; }
-  .brinde-meta{ font-size:.86rem; color:#7a8078; }
-  .brinde-meta b{ color:var(--ink); }
-  .variacoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:1rem; margin-top:1rem; }
-  .var-item{ text-align:center; }
-  .var-palco{ width:calc(250px * .62); height:calc(340px * .62); margin:0 auto;
-              border-radius:12px; overflow:hidden; }
-  .var-palco .escala{ width:250px; height:340px; transform:scale(.62); }
-  .var-rot{ font-size:.78rem; color:#7a8078; margin-top:.5rem; }
-  .var-rot b{ font-family:var(--serif); color:var(--gold); }
   .por-definir{ color:#8a8f88; font-style:italic; }
-  .falta{ color:#a5473f; }
-  .sobra{ color:#1f7a3d; }
 
   /* ---- Manuais ---- */
   .manuais{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
@@ -175,12 +136,11 @@ $manuais = [
     .prod-scroll{ overflow:visible; }
     .prod{ min-width:0; }
     .prod tr{ break-inside:avoid; }
-    .brinde-cx, .var-item{ break-inside:avoid; }
   }
 </style>
 </head>
 <body>
-<?php cabecalho('Entregáveis à gráfica', 'O que a gráfica recebe: convites, brindes e manuais', 'grafica', ['no_print'=>true]); ?>
+<?php cabecalho('Convite impresso', 'O que a gráfica recebe do convite físico: lista de produção e manual', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
   <div class="abas no-print">
@@ -231,103 +191,41 @@ $manuais = [
     </div>
     <?php endif; ?>
 
-  <?php elseif ($aba === 'brindes'): ?>
-    <div class="barra no-print">
-      <span class="tag neutra">Brinde atribuído por género</span>
-      <a class="btn" href="editor-brindes.php">Editar brindes</a>
-      <div class="cresce"></div>
-      <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
-    </div>
-
-    <?php if ($semGenero > 0): ?>
-      <div class="banner-aviso" style="background:var(--gold-pale);border:1px solid var(--gold-soft);border-radius:12px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.88rem">
-        <b><?= $semGenero ?></b> convidado(s) marcados para receber brinde ainda <b>sem género definido</b> — não entram em nenhuma das contagens abaixo.
-      </div>
-    <?php endif; ?>
-
-    <?php foreach ($brindes as $g => $b): ?>
-      <div class="brinde-cx">
-        <div class="brinde-topo">
-          <h3><?= escP($b['rotulo']) ?></h3>
-          <?php if ($b['peca']): ?>
-            <span class="brinde-meta"><b><?= escP($b['peca']['nome']) ?></b> ·
-              <?= escP($b['peca']['medida']) ?> · <?= escP($b['peca']['material']) ?></span>
-          <?php else: ?>
-            <span class="brinde-meta por-definir">Brinde ainda por definir para este género.</span>
-          <?php endif; ?>
-        </div>
-
-        <?php if ($b['peca']): ?>
-          <?php $qtd = $b['quantidade']; $nv = count($b['variacoes']); $tot = $b['total_pecas']; ?>
-          <div class="brinde-meta">
-            <b><?= $qtd ?></b> <?= $qtd === 1 ? 'convidado recebe' : 'convidados recebem' ?> este brinde ·
-            <b><?= $nv ?></b> <?= $nv === 1 ? 'variação disponível' : 'variações disponíveis' ?>
-            <?php if ($tot > 0): ?>
-              · <b><?= $tot ?></b> <?= $tot === 1 ? 'peça' : 'peças' ?> a produzir
-              <?php if ($tot < $qtd): ?><span class="falta">(faltam <?= $qtd - $tot ?>)</span>
-              <?php elseif ($tot > $qtd && $qtd > 0): ?><span class="sobra">(+<?= $tot - $qtd ?> de reserva)</span>
-              <?php endif; ?>
-            <?php else: ?>
-              · <span class="falta">quantidades por definir</span>
-            <?php endif; ?>
-            · <a href="<?= escP($b['peca']['pagina']) ?>">ver a peça</a>
-            · <a href="<?= escP($b['peca']['manual']) ?>" target="_blank" rel="noopener">manual</a>
-          </div>
-
-          <div class="variacoes">
-            <?php foreach ($b['variacoes'] as $v): ?>
-              <div class="var-item">
-                <div class="var-palco" style="background:<?= $acPeca['fundo'] ?>">
-                  <div class="escala"><?= renderChaveiroVerso($acPeca, $defs, $v['texto'], true) ?></div>
-                </div>
-                <div class="var-rot">Variação <b><?= escP($v['rotulo']) ?></b>
-                  <?php if ($v['quantidade'] > 0): ?><br><?= $v['quantidade'] ?> <?= $v['quantidade'] === 1 ? 'peça' : 'peças' ?><?php endif; ?>
-                </div>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
-      </div>
-    <?php endforeach; ?>
-
   <?php else: ?>
     <div class="barra no-print">
-      <span class="tag neutra">Manuais de impressão</span>
+      <span class="tag neutra">Manual de impressão do cartão</span>
     </div>
-    <div class="nota-man">Os manuais são <b>gerados a partir da configuração atual</b>: paleta, folhagem,
-      elementos ativos, textos, acabamento, variações e quantidades saem tal como estão definidos nos editores.
-      Depois de editar uma peça, basta abrir o manual outra vez.</div>
+    <div class="nota-man">O manual é <b>gerado a partir da configuração atual</b>: paleta, folhagem,
+      elementos ativos e textos saem tal como estão definidos no editor do cartão.
+      Depois de editar o cartão, basta abrir o manual outra vez.</div>
     <div class="manuais">
-      <?php foreach ($manuais as $m): ?>
-        <div class="man">
-          <div class="ico">📄</div>
-          <h3><?= escP($m['titulo']) ?></h3>
-          <p><?= escP($m['sub']) ?></p>
-          <div class="acoes">
-            <a class="btn btn-ouro" href="manual.php?peca=<?= escP($m['peca']) ?>">Abrir manual</a>
-            <a class="btn" href="<?= escP($m['editor']) ?>">Editar a peça</a>
-          </div>
+      <div class="man">
+        <div class="ico">📄</div>
+        <h3><?= escP($manual['titulo']) ?></h3>
+        <p><?= escP($manual['sub']) ?></p>
+        <div class="acoes">
+          <a class="btn btn-ouro" href="manual.php?peca=<?= escP($manual['peca']) ?>">Abrir manual</a>
+          <a class="btn" href="<?= escP($manual['editor']) ?>">Editar o cartão</a>
         </div>
-      <?php endforeach; ?>
+      </div>
     </div>
 
-    <h3 style="margin:1.8rem 0 .4rem">Documentos originais do design</h3>
-    <p class="nota-orig">Os manuais ilustrados que vieram com o design. Servem de <b>referência</b> —
-      descrevem a peça como foi entregue e <b>não refletem</b> as edições feitas depois.</p>
+    <h3 style="margin:1.8rem 0 .4rem">Documento original do design</h3>
+    <p class="nota-orig">O manual ilustrado que veio com o design. Serve de <b>referência</b> —
+      descreve o cartão como foi entregue e <b>não reflete</b> as edições feitas depois.</p>
     <div class="manuais">
-      <?php foreach ($manuais as $m): $existe = is_readable(__DIR__ . '/' . $m['original']); ?>
-        <div class="man orig">
-          <h3><?= escP($m['titulo']) ?></h3>
-          <div class="acoes">
-            <?php if ($existe): ?>
-              <a class="btn" href="<?= escP($m['original']) ?>" target="_blank" rel="noopener">Abrir original</a>
-              <a class="btn" href="<?= escP($m['original']) ?>" download>Descarregar</a>
-            <?php else: ?>
-              <span class="por-definir">Em falta: <?= escP($m['original']) ?></span>
-            <?php endif; ?>
-          </div>
+      <?php $existe = is_readable(__DIR__ . '/' . $manual['original']); ?>
+      <div class="man orig">
+        <h3><?= escP($manual['titulo']) ?></h3>
+        <div class="acoes">
+          <?php if ($existe): ?>
+            <a class="btn" href="<?= escP($manual['original']) ?>" target="_blank" rel="noopener">Abrir original</a>
+            <a class="btn" href="<?= escP($manual['original']) ?>" download>Descarregar</a>
+          <?php else: ?>
+            <span class="por-definir">Em falta: <?= escP($manual['original']) ?></span>
+          <?php endif; ?>
         </div>
-      <?php endforeach; ?>
+      </div>
     </div>
   <?php endif; ?>
 </div>

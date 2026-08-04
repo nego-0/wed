@@ -165,19 +165,6 @@ function defsPadrao(): array {
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
         'cartao.numero_no_nome' => '1',   // '(N)' de lugares no nome do convidado, no cartão
-        // ---- Porta-chaves comemorativo (45×60 mm) ----
-        'chaveiro.acabamento' => 'classic',
-        'chaveiro.quadra' => '5',
-        'chaveiro.cartela' => 'NUPTIAE NOSTRAE',
-        'chaveiro.coord_lat' => '15° 11′ 46.0″ S',
-        'chaveiro.coord_lon' => '12° 09′ 08.0″ E',
-        // ---- Brindes por género (peça atribuída + variações a produzir) ----
-        // variações vazias = todas as da peça. '' na peça = ainda por definir.
-        // Plano de tiragem do handoff: 70 porta-chaves = 6 lotes de 9 + 2 de 8.
-        'brindes.m.peca' => 'porta-chaves',
-        'brindes.m.variacoes' => '{"0":9,"1":9,"2":9,"3":9,"4":9,"5":9,"6":8,"7":8}',
-        'brindes.f.peca' => '',
-        'brindes.f.variacoes' => '',
     ];
 }
 
@@ -229,30 +216,6 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return in_array($valor, ['ouro','salvia','terracota','rosa'], true) ? $valor : null;
         case 'cartao.folhagem':
             return in_array($valor, ['eucalipto','oliveira','feto','florido'], true) ? $valor : null;
-        case 'chaveiro.acabamento':
-            return in_array($valor, ['classic','forest','ivory'], true) ? $valor : null;
-        case 'chaveiro.quadra':
-            return ctype_digit($valor) && (int)$valor >= 0 && (int)$valor <= 7 ? $valor : null;
-        case 'brindes.m.peca':
-        case 'brindes.f.peca':
-            // '' = por definir. As peças válidas ficam listadas em pecas.php.
-            return in_array($valor, ['', 'porta-chaves'], true) ? $valor : null;
-        case 'brindes.m.variacoes':
-        case 'brindes.f.variacoes': {
-            // Mapa {indice: quantidade} — só as variações disponíveis à gráfica.
-            // Vazio = todas disponíveis, sem quantidade definida.
-            if ($valor === '') return '';
-            $j = json_decode($valor, true); if (!is_array($j)) return null;
-            $out = [];
-            foreach ($j as $i => $q) {
-                $i = (int)$i;
-                if ($i < 0 || $i > 7) continue;
-                $out[(string)$i] = max(0, min(9999, (int)$q));
-            }
-            if (!$out) return '';
-            ksort($out, SORT_NUMERIC);
-            return json_encode($out, JSON_FORCE_OBJECT);
-        }
         case 'cartao.numero_no_nome':
             return $valor === '1' ? '1' : '0';
         case 'cartao.camadas': {

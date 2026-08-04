@@ -1,6 +1,6 @@
 /* ============================================================
    pecas.css — Estilos das peças de design, partilhados
-   Usado por cartoes.php, porta-chaves.php e graficas.php
+   Usado por cartoes.php e graficas.php
    (e pelas futuras áreas de edição). Aqui só entra o que
    desenha a PEÇA; o cromo de cada página fica na página.
    ============================================================ */
@@ -72,84 +72,3 @@
 /* O acrílico é transparente: mostra-se sobre fundo escuro, como no design. */
 .folha{ background:radial-gradient(120% 100% at 50% 15%,#2a2b26 0%,#191a16 55%,#0e0f0c 100%);
         border-radius:14px; overflow:hidden; }
-
-/* ============================================================
-   PORTA-CHAVES (250×340 px = 45×60 mm)
-   ============================================================ */
-.peca{ width:250px; height:340px; position:relative; transform-style:preserve-3d; }
-.peca-viva{ cursor:pointer; transition:transform .34s cubic-bezier(.2,.7,.2,1);
-            animation:kcSway 6.6s ease-in-out infinite; }
-.peca-viva.virada{ transition:transform 1.05s cubic-bezier(.66,.03,.2,1); }
-@keyframes kcSway{ 0%,100%{ rotate:y 0deg } 50%{ rotate:y 1.9deg } }
-
-.face{ position:absolute; inset:0; border-radius:20px; backface-visibility:hidden; -webkit-backface-visibility:hidden;
-       box-shadow:0 30px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(0,0,0,.35);
-       display:flex; align-items:center; justify-content:center; }
-.face-verso{ transform:rotateY(180deg); }
-/* Face solta (fora da peça 3D), para catálogos e provas.
-   Precisa de medidas próprias: sendo position:relative, o inset:0 da .face
-   não a dimensiona e ela colapsaria (o painel é absoluto). */
-.face-plana{ position:relative; transform:none; width:250px; height:340px; }
-
-.painel{ position:absolute; inset:11px; border-radius:9px; display:flex; flex-direction:column;
-         align-items:center; justify-content:space-evenly; text-align:center; padding:20px 16px; }
-.moldura{ position:absolute; inset:9px; border-radius:11px; border:1px solid; pointer-events:none; }
-.moldura.dupla{ inset:13px; border-radius:8px; opacity:.5; }
-.brilho{ position:absolute; inset:0; border-radius:20px; pointer-events:none; overflow:hidden; }
-.brilho::before{ content:''; position:absolute; top:-40%; left:var(--sx,0%); width:38%; height:180%;
-                 background:linear-gradient(100deg,transparent,rgba(255,255,255,.13),transparent);
-                 transform:rotate(14deg); transition:left .2s ease-out; }
-
-/* argola metálica */
-.argola{ position:absolute; top:-44px; left:50%; transform:translateX(-50%); z-index:4; }
-.argola .anel{ width:46px; height:46px; border-radius:50%; border:5px solid transparent;
-               background:conic-gradient(#f2f2f0,#9a9a95,#e6e6e2,#8d8d88,#f2f2f0) border-box;
-               -webkit-mask:linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-               -webkit-mask-composite:xor; mask-composite:exclude; }
-.argola .elo{ width:13px; height:22px; border-radius:4px; margin:-6px auto 0;
-              background:linear-gradient(90deg,#8d8d88,#efefec,#9a9a95); }
-
-/* frente */
-.cartela{ font-family:'Cormorant Garamond',serif; font-size:7.5px; letter-spacing:.44em;
-          text-transform:uppercase; display:flex; align-items:center; gap:9px; }
-.cartela i{ display:block; width:22px; height:1px; }
-.data-peca{ font-family:'Cormorant Garamond',serif; font-size:12.5px; letter-spacing:.30em; }
-
-/* divisores ornamentais */
-.div-orn{ display:flex; align-items:center; justify-content:center; gap:7px; margin:11px 0 9px; }
-.div-orn i{ display:block; width:30px; height:1px; }
-.div-orn b{ display:block; transform:rotate(45deg); }
-.div-orn .lc{ width:6px; height:6px; }                       /* losango cheio */
-.div-orn .lp{ width:3.5px; height:3.5px; }                   /* losango pequeno */
-.div-orn .lz{ width:7px; height:7px; border:1px solid; }     /* losango vazado */
-
-/* esquadrias e losangos dos cantos do painel */
-.canto{ position:absolute; width:13px; height:13px; border:1px solid; }
-.canto-se{ top:15px; left:15px; border-right:0; border-bottom:0; }
-.canto-sd{ top:15px; right:15px; border-left:0; border-bottom:0; }
-.canto-ie{ bottom:15px; left:15px; border-right:0; border-top:0; }
-.canto-id{ bottom:15px; right:15px; border-left:0; border-top:0; }
-.canto-lz{ position:absolute; width:6px; height:6px; transform:rotate(45deg); margin:23px; }
-
-/* verso */
-.quadra{ font-family:'Cormorant Garamond',serif; font-style:italic; font-size:16.5px; line-height:1.5;
-         white-space:pre-line; margin:10px 0; }
-.coords{ display:grid; grid-template-columns:auto auto; gap:5px 10px; align-items:baseline;
-         justify-content:center; margin-top:4px; }
-.coords .v{ font-family:'Cormorant Garamond',serif; font-size:13.5px; text-align:right; }
-.coords .c{ font-size:9.5px; letter-spacing:.26em; text-align:left; }
-
-/* ---- Monograma (nas duas faces) --------------------------- */
-.mono{ position:relative; }
-.mono-anel{ position:absolute; inset:0; border-radius:50%; border:1px solid;
-            box-shadow:inset 0 0 12px rgba(0,0,0,.16), 0 1px 3px rgba(0,0,0,.10); }
-.mono-guilloche{ position:absolute; border-radius:50%; opacity:.55;
-   -webkit-mask:radial-gradient(circle, transparent 66%, #000 71%, #000 95%, transparent 100%);
-           mask:radial-gradient(circle, transparent 66%, #000 71%, #000 95%, transparent 100%); }
-.mono-fio{ position:absolute; border-radius:50%; border:1px solid; }
-.mono-pont{ border-style:dotted; opacity:.7; }
-.mono-letras{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-              font-family:'Pinyon Script',cursive; line-height:1;
-              /* Relevo subtil nas iniciais douradas (design de produção) */
-              text-shadow:0 1px 2px rgba(0,0,0,.38), 0 0 1px rgba(255,238,190,.5); }
-.mono-centro{ position:absolute; left:50%; bottom:16%; transform:translateX(-50%); opacity:.6; }

@@ -5,7 +5,7 @@
 // Ao contrário de um manual em ficheiro, este acompanha as edições:
 // paleta, folhagem, camadas visíveis, textos, acabamento, variações
 // escolhidas e quantidades saem daqui tal como estão definidos.
-//   manual.php?peca=cartao | porta-chaves
+//   manual.php?peca=cartao
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
@@ -16,13 +16,11 @@ exigirAdmin();
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);
 
-$pecaSel = $_GET['peca'] ?? 'cartao';
-if (!in_array($pecaSel, ['cartao', 'porta-chaves'], true)) $pecaSel = 'cartao';
+$pecaSel = 'cartao';   // só há o manual do cartão de convite
 
 // ---- Conversões de medida ----------------------------------
-// O cartão é desenhado a 7,2 px = 1 mm; o porta-chaves a 250 px = 45 mm.
+// O cartão é desenhado a 7,2 px = 1 mm.
 $pxmmCartao   = 720 / 100;
-$pxmmChaveiro = 250 / 45;
 $mm2pt = fn(float $mm) => $mm * 2.83464567;
 $med = function (float $px, float $pxmm) use ($mm2pt) {
     $mm = $px / $pxmm;
@@ -78,42 +76,12 @@ if ($pecaSel === 'cartao') {
         ['Frase final',         $ev['frase_final']],
     ];
 }
-
-// ============================================================
-// Dados do manual do PORTA-CHAVES
-// ============================================================
-if ($pecaSel === 'porta-chaves') {
-    $acKey = $defs['chaveiro.acabamento'];
-    $ac    = chaveiroAcabamento($acKey);
-    $ia = inicialU($defs['casal.noiva']); $ib = inicialU($defs['casal.noivo']);
-    $dataPt = date('d · m · Y', strtotime($defs['evento.data']));
-
-    // Quem recebe o brinde, por género
-    $porGenero = [];
-    if (colunaExiste($conn, "{$P}convidados", 'brinde') && colunaExiste($conn, "{$P}convidados", 'genero')) {
-        $q = $conn->query("SELECT COALESCE(genero,'') AS g, COUNT(*) AS n
-                           FROM {$P}convidados WHERE brinde=1 GROUP BY COALESCE(genero,'')");
-        if ($q) while ($x = $q->fetch_assoc()) $porGenero[$x['g']] = (int)$x['n'];
-    }
-    $brindes = brindesPorGenero($defs, $porGenero);
-    // Só os géneros a que esta peça está atribuída
-    $usos = array_filter($brindes, fn($b) => $b['peca_id'] === 'porta-chaves');
-
-    $tipografiaK = [
-        ['Monograma (iniciais)', 'Pinyon Script 400', 140 * 0.40],
-        ['Quadra do verso',      'Cormorant Garamond it. 400', 16.5],
-        ['Data da frente',       'Cormorant Garamond 400', 12.5],
-        ['Cartela',              'Cormorant Garamond 400', 7.5],
-        ['Coordenadas (valor)',  'Cormorant Garamond 400', 13.5],
-        ['Coordenadas (cardeal)','Jost 400', 9.5],
-    ];
-}
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Manual de impressão · <?= $pecaSel === 'cartao' ? 'Cartão 10 × 15' : 'Porta-chaves' ?> · <?= escP($CAS['casal']) ?></title>
+<title>Manual de impressão · Cartão 10 × 15 · <?= escP($CAS['casal']) ?></title>
 <link href="assets/fontes.css" rel="stylesheet">
 <link href="assets/estilo.css" rel="stylesheet">
 <link href="assets/pecas.css" rel="stylesheet">
@@ -181,14 +149,12 @@ if ($pecaSel === 'porta-chaves') {
 <div class="man-wrap">
 
   <div class="barra-man no-print">
-    <a class="btn <?= $pecaSel === 'cartao' ? 'btn-ouro' : '' ?>" href="?peca=cartao">Cartão 10 × 15</a>
-    <a class="btn <?= $pecaSel === 'porta-chaves' ? 'btn-ouro' : '' ?>" href="?peca=porta-chaves">Porta-chaves</a>
+    <a class="btn" href="graficas.php">‹ Convite impresso</a>
     <div class="cresce"></div>
-    <a class="btn" href="<?= $pecaSel === 'cartao' ? 'editor-cartao.php' : 'editor-brindes.php' ?>">Editar</a>
+    <a class="btn" href="editor-cartao.php">Editar o cartão</a>
     <button class="btn btn-ouro" onclick="window.print()">Imprimir manual</button>
   </div>
 
-<?php if ($pecaSel === 'cartao'): ?>
 
   <div class="man-cab">
     <span class="selo-vivo">Reflete a configuração atual</span>
@@ -309,135 +275,6 @@ if ($pecaSel === 'porta-chaves') {
     </div>
   </div>
 
-<?php else: ?>
-
-  <?php $totalPecas = array_sum(array_column($usos, 'total_pecas')); ?>
-  <div class="man-cab">
-    <span class="selo-vivo">Reflete a configuração atual</span>
-    <h1>Porta-chaves comemorativo · 45 × 60 mm</h1>
-    <div class="sub"><?= escP($CAS['casal']) ?> · <?= escP(dataExtensa($defs['evento.data'])) ?></div>
-    <div class="meta">Gerado em <b><?= escP($geradoEm) ?></b> ·
-      Acabamento <b><?= escP($ac['nome']) ?></b> ·
-      <b><?= $totalPecas ?></b> <?= $totalPecas === 1 ? 'peça' : 'peças' ?> a produzir</div>
-  </div>
-
-  <div class="sec">
-    <h2><span class="n">1</span> Produção</h2>
-    <table class="tb">
-      <tr><th style="width:34%">Formato final</th><td>45 × 60 mm</td></tr>
-      <tr><th>Suporte</th><td>Acrílico de <b>dois lados</b> (frente e verso impressos)</td></tr>
-      <tr><th>Cantos</th><td>Arredondados: exterior 20 px (≈ 3,6 mm); painel impresso 9 px (≈ 1,6 mm)</td></tr>
-      <tr><th>Ferragem</th><td>Argola metálica prateada, furo centrado no topo</td></tr>
-      <tr><th>Acabamento</th><td><b><?= escP($ac['nome']) ?></b></td></tr>
-    </table>
-  </div>
-
-  <div class="sec">
-    <h2><span class="n">2</span> Cor</h2>
-    <div class="cores">
-      <?php foreach ([
-        'ouro' => ['Dourado', 'Moldura, losangos e divisores'],
-        'cartela' => ['Cartela', 'Subtítulo da frente'],
-        'mono' => ['Monograma', 'Iniciais'],
-        'nomes' => ['Data e coordenadas', 'Valores e data'],
-        'quadra' => ['Quadra', 'Frase do verso'],
-      ] as $k => [$rot, $uso]): ?>
-        <div class="cor">
-          <div class="amostra" style="background:<?= $ac[$k] ?>"></div>
-          <div class="txt"><b><?= escP($rot) ?></b><span class="hex"><?= strtoupper($ac[$k]) ?></span>
-            <div style="color:#7a8078;margin-top:.15rem"><?= escP($uso) ?></div></div>
-        </div>
-      <?php endforeach; ?>
-      <div class="cor"><div class="amostra" style="background:<?= $ac['fundo'] ?>"></div>
-        <div class="txt"><b>Fundo</b><span class="hex">gradiente</span>
-          <div style="color:#7a8078;margin-top:.15rem">Base da peça</div></div></div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <h2><span class="n">3</span> Tipografia</h2>
-    <table class="tb">
-      <thead><tr><th>Elemento</th><th>Tipo de letra</th><th class="num">px</th><th class="num">mm</th><th class="num">pt</th></tr></thead>
-      <tbody>
-      <?php foreach ($tipografiaK as [$rot, $fonte, $px]): $m = $med((float)$px, $pxmmChaveiro); ?>
-        <tr><td><?= escP($rot) ?></td><td><?= escP($fonte) ?></td>
-            <td class="num"><?= number_format((float)$px, 1, ',', '') ?></td>
-            <td class="num"><?= $m['mm'] ?></td><td class="num"><?= $m['pt'] ?></td></tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    <p style="font-size:.82rem;color:#7a8078;margin:.5rem 0 0">Pinyon Script, Cormorant Garamond e Jost
-      (Google Fonts, licença SIL OFL).</p>
-  </div>
-
-  <div class="sec">
-    <h2><span class="n">4</span> Frente (igual em todas as peças)</h2>
-    <table class="tb">
-      <tr><th style="width:34%">Cartela</th><td><?= escP($defs['chaveiro.cartela']) ?></td></tr>
-      <tr><th>Monograma</th><td>Iniciais <b><?= escP($ia . $ib) ?></b> em anel guilhoché, com 4 losangos (topo, base e laterais) e coração ao centro</td></tr>
-      <tr><th>Data</th><td><?= escP($dataPt) ?></td></tr>
-      <tr><th>Moldura</th><td>Dupla, com esquadrias e 4 losangos de canto</td></tr>
-    </table>
-  </div>
-
-  <div class="sec">
-    <h2><span class="n">5</span> Verso — variações a produzir</h2>
-    <?php if (!$usos): ?>
-      <div class="aviso-p">Esta peça <b>não está atribuída a nenhum género</b>. Atribua-a em
-        <i>Editar brindes</i> para que apareçam aqui as variações e as quantidades.</div>
-    <?php else: foreach ($usos as $b): ?>
-      <p style="font-size:.9rem;margin:.2rem 0 .6rem"><b><?= escP($b['rotulo']) ?></b> ·
-        <?= $b['quantidade'] ?> <?= $b['quantidade'] === 1 ? 'convidado recebe' : 'convidados recebem' ?> ·
-        <b><?= count($b['variacoes']) ?></b> <?= count($b['variacoes']) === 1 ? 'variação' : 'variações' ?> ·
-        total <b><?= $b['total_pecas'] ?></b> <?= $b['total_pecas'] === 1 ? 'peça' : 'peças' ?></p>
-      <table class="tb">
-        <thead><tr><th style="width:12%">Variação</th><th>Frase do verso</th><th class="num" style="width:18%">Quantidade</th></tr></thead>
-        <tbody>
-        <?php foreach ($b['variacoes'] as $v): ?>
-          <tr><td><b><?= escP($v['rotulo']) ?></b></td>
-              <td style="font-family:var(--serif);font-style:italic"><?= nl2br(escP($v['texto'])) ?></td>
-              <td class="num"><?= $v['quantidade'] > 0 ? '<b>'.$v['quantidade'].'</b>' : '<span style="color:#a5473f">por definir</span>' ?></td></tr>
-        <?php endforeach; ?>
-        </tbody>
-        <tfoot><tr><th></th><th style="text-align:right">Total</th><th class="num"><?= $b['total_pecas'] ?></th></tr></tfoot>
-      </table>
-      <?php if ($b['total_pecas'] < $b['quantidade']): ?>
-        <div class="aviso-p"><b>Atenção:</b> as quantidades somam <?= $b['total_pecas'] ?> peças, menos do que
-          os <?= $b['quantidade'] ?> convidados que recebem o brinde.</div>
-      <?php endif; ?>
-    <?php endforeach; endif; ?>
-    <table class="tb" style="margin-top:.8rem">
-      <tr><th style="width:34%">Coordenadas (comuns)</th>
-          <td><?= escP($defs['chaveiro.coord_lat']) ?> · <?= escP($defs['chaveiro.coord_lon']) ?></td></tr>
-    </table>
-  </div>
-
-  <div class="sec">
-    <h2><span class="n">6</span> Provas</h2>
-    <div class="provas">
-      <div class="prova">
-        <div class="palco palco-kc" style="background:<?= $ac['fundo'] ?>">
-          <div class="escala"><?= renderChaveiroFrente($ac, $defs, $ia, $ib, $dataPt, 140, true) ?></div>
-        </div>
-        <div class="rot"><b>Frente</b></div>
-      </div>
-      <?php $vs = $usos ? reset($usos)['variacoes'] : []; foreach (array_slice($vs, 0, 3) as $v): ?>
-        <div class="prova">
-          <div class="palco palco-kc" style="background:<?= $ac['fundo'] ?>">
-            <div class="escala"><?= renderChaveiroVerso($ac, $defs, $v['texto'], true) ?></div>
-          </div>
-          <div class="rot">Verso · variação <b><?= escP($v['rotulo']) ?></b><?= $v['quantidade'] > 0 ? ' · '.$v['quantidade'].'x' : '' ?></div>
-        </div>
-      <?php endforeach; ?>
-    </div>
-    <?php if (count($vs) > 3): ?>
-      <p style="font-size:.82rem;color:#7a8078;margin:.6rem 0 0">Mostram-se as 3 primeiras variações;
-        as <?= count($vs) ?> estão listadas na secção 5 e podem ver-se em
-        <i>Entregáveis à gráfica → Brindes</i>.</p>
-    <?php endif; ?>
-  </div>
-
-<?php endif; ?>
 
   <p style="font-size:.78rem;color:#9aa09a;border-top:1px solid var(--line);padding-top:.7rem">
     Documento gerado pelo sistema de gestão de convidados em <?= escP($geradoEm) ?>.
