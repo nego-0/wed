@@ -71,6 +71,8 @@ $CAS = casalInfo(defsAtuais($conn));
   .prev-topo strong{ font-family:var(--serif); color:var(--ink); flex:1; }
   #prev{ width:100%; height:78vh; border:1px solid var(--line); border-radius:12px; background:#16261E; }
   .barra-guardar{ display:flex; gap:.6rem; margin-top:1rem; }
+  .marca-sujo{ font-size:.74rem; color:var(--gold); background:var(--gold-pale); border:1px solid var(--gold-soft);
+    border-radius:50px; padding:.2rem .6rem; white-space:nowrap; }
 </style>
 <script src="assets/api.js"></script>
 </head>
@@ -82,6 +84,7 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="ed-cartao">
       <div class="ed-topo">
         <span class="dica">Tudo o que está no convite pode ser alterado aqui. Pode usar <b>{noiva}</b> e <b>{noivo}</b> nos textos, e **negrito** / *itálico*.</span>
+        <span class="marca-sujo" hidden>alterações por guardar</span>
         <button class="btn btn-ouro" onclick="guardar()">Guardar alterações</button>
       </div>
       <div class="ed-tabs" id="ed-tabs"></div>
@@ -123,10 +126,28 @@ function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
 // api() vem de assets/api.js (trata sessão expirada, falha de rede e erros do servidor)
 
 // ---------- estado ----------
+// Definições que NÃO pertencem a este editor: as do cartão impresso vivem em
+// editor-cartao.php; as de media são gravadas pelo próprio upload.
+const ALHEIAS=['cartao.','media.'];
 let VAL={...ATUAIS};                                  // valores em edição
 let LISTAS={ 'historia.capitulos':j('historia.capitulos'), 'cronograma.itens':j('cronograma.itens'), 'manual.itens':j('manual.itens') };
 let PALETA=(()=>{ try{ return JSON.parse(VAL['tema.paleta']||'{}')||{}; }catch(e){ return {}; } })();
 function j(k){ try{ return JSON.parse(VAL[k]||'[]')||[]; }catch(e){ return []; } }
+
+// ---------- alterações por guardar ----------
+// Sem isto, sair da página deitava fora tudo o que se tinha escrito, sem um aviso.
+let SUJO=false;
+function marcarSujo(v){
+  if(SUJO===v) return;
+  SUJO=v;
+  document.querySelectorAll('.marca-sujo').forEach(e=>e.hidden=!v);
+}
+document.addEventListener('input', e=>{ if(e.target.closest('#ed-corpo')) marcarSujo(true); });
+document.addEventListener('change', e=>{ if(e.target.closest('#ed-corpo')) marcarSujo(true); });
+window.addEventListener('beforeunload', e=>{
+  if(!SUJO) return;
+  e.preventDefault(); e.returnValue='';   // o browser mostra o seu próprio aviso
+});
 
 // ---------- separadores ----------
 const TABS=[
@@ -294,12 +315,34 @@ async function guardar(){
   VAL['cronograma.itens']=JSON.stringify(LISTAS['cronograma.itens']);
   VAL['manual.itens']=JSON.stringify(LISTAS['manual.itens']);
   VAL['tema.paleta']=Object.keys(PALETA).length?JSON.stringify(PALETA):'';
-  const defs={}; Object.keys(PADRAO).forEach(k=>{ if(!k.startsWith('media.')) defs[k]=String(VAL[k]??''); });
+  // Envia SÓ o que este editor governa e SÓ o que mudou. Antes mandava as 62
+  // definições, incluindo as do cartão impresso — quem editasse o cartão noutro
+  // separador via o seu trabalho voltar atrás ao gravar aqui.
+  const defs={};
+  Object.keys(PADRAO).forEach(k=>{
+    if(ALHEIAS.some(p=>k.startsWith(p))) return;      // do editor do cartão / geridas por upload
+    const novo=String(VAL[k]??'');
+    if(novo!==String(ATUAIS[k]??'')) defs[k]=novo;    // inalterado: não se toca
+  });
+  if(!Object.keys(defs).length){ toast('Não há alterações por guardar.'); return; }
   const d=await api('defs_save',{method:'POST',body:JSON.stringify({defs})});
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
-  const inv=(d.invalidas||[]).length?` (${d.invalidas.length} campo(s) inválido(s): ${d.invalidas.join(', ')})`:'';
-  toast('Convite atualizado.'+inv, !!inv);
+  const inv=(d.invalidas||[]);
+  // O que ficou gravado passa a ser a nova referência de "sem alterações".
+  Object.keys(defs).forEach(k=>{ if(!inv.includes(k)) ATUAIS[k]=defs[k]; });
+  marcarSujo(false);
+  toast(inv.length ? `Guardado, mas ${inv.length} campo(s) não foram aceites: ${inv.map(rotuloDe).join(', ')}.`
+                   : 'Convite atualizado.', !!inv.length);
   recarregarPrev();
+}
+
+/** Nome legível de uma definição, para as mensagens de erro. */
+function rotuloDe(chave){
+  for(const campos of Object.values(CAMPOS)){
+    const c=(campos||[]).find(x=>x[0]===chave);
+    if(c) return c[1];
+  }
+  return chave;
 }
 
 function reporTab(){

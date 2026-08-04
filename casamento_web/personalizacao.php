@@ -199,6 +199,18 @@ function casalInfo(array $defs): array {
 // ---- Validação e gravação ----------------------------------
 function corHexValida($c): bool { return is_string($c) && preg_match('/^#[0-9a-fA-F]{6}$/', $c); }
 
+/**
+ * Serializa uma lista para JSON, ou null se falhar.
+ * json_encode() devolve false perante texto que não seja UTF-8 válido. Como
+ * validarDefinicao() declara ?string, esse false chegaria a quem chama já
+ * convertido em '' — e '' significa "repor o original", ou seja, apagava a
+ * linha em silêncio. Devolver null trata o caso como o que é: valor inválido.
+ */
+function jsonOuNulo(array $lista): ?string {
+    $j = json_encode($lista, JSON_UNESCAPED_UNICODE);
+    return $j === false ? null : $j;
+}
+
 /** Valida um valor pela chave; devolve o valor normalizado ou null (inválido). */
 function validarDefinicao(string $chave, string $valor): ?string {
     $valor = trim($valor);
@@ -229,7 +241,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return $out ? json_encode($out) : '';
         }
         case 'evento.maps':
-            return preg_match('#^https://#', $valor) ? substr($valor, 0, 500) : null;
+            return preg_match('#^https://#', $valor) ? mb_substr($valor, 0, 500) : null;
         case 'evento.whatsapp':
             $d = preg_replace('/\D/', '', $valor); return $d;
         case 'historia.capitulos': {
@@ -239,9 +251,9 @@ function validarDefinicao(string $chave, string $valor): ?string {
                 if (!is_array($c)) continue;
                 $t = trim((string)($c['t'] ?? '')); $x = trim((string)($c['x'] ?? ''));
                 if ($t === '' && $x === '') continue;
-                $out[] = ['t'=>substr($t,0,200), 'x'=>substr($x,0,2000)];
+                $out[] = ['t'=>mb_substr($t,0,200), 'x'=>mb_substr($x,0,2000)];
             }
-            return json_encode($out, JSON_UNESCAPED_UNICODE);
+            return jsonOuNulo($out);
         }
         case 'cronograma.itens': {
             $j = json_decode($valor, true); if (!is_array($j)) return null;
@@ -249,11 +261,11 @@ function validarDefinicao(string $chave, string $valor): ?string {
             foreach (array_slice($j, 0, 12) as $c) {
                 if (!is_array($c)) continue;
                 $t = trim((string)($c['t'] ?? '')); if ($t === '') continue;
-                $out[] = ['h'=>substr(trim((string)($c['h'] ?? '')),0,20), 'p'=>substr(trim((string)($c['p'] ?? '')),0,30),
-                          't'=>substr($t,0,80), 's'=>substr(trim((string)($c['s'] ?? '')),0,80),
+                $out[] = ['h'=>mb_substr(trim((string)($c['h'] ?? '')),0,20), 'p'=>mb_substr(trim((string)($c['p'] ?? '')),0,30),
+                          't'=>mb_substr($t,0,80), 's'=>mb_substr(trim((string)($c['s'] ?? '')),0,80),
                           'i'=>isset($icones[$c['i'] ?? '']) ? $c['i'] : 'coracao'];
             }
-            return json_encode($out, JSON_UNESCAPED_UNICODE);
+            return jsonOuNulo($out);
         }
         case 'manual.itens': {
             $j = json_decode($valor, true); if (!is_array($j)) return null;
@@ -261,9 +273,9 @@ function validarDefinicao(string $chave, string $valor): ?string {
             foreach (array_slice($j, 0, 12) as $c) {
                 if (!is_array($c)) continue;
                 $x = trim((string)($c['x'] ?? '')); if ($x === '') continue;
-                $out[] = ['i'=>isset($icones[$c['i'] ?? '']) ? $c['i'] : 'coracao', 'x'=>substr($x,0,200)];
+                $out[] = ['i'=>isset($icones[$c['i'] ?? '']) ? $c['i'] : 'coracao', 'x'=>mb_substr($x,0,200)];
             }
-            return json_encode($out, JSON_UNESCAPED_UNICODE);
+            return jsonOuNulo($out);
         }
         case 'tema.paleta': {
             if ($valor === '') return '';
@@ -278,7 +290,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
         if (str_contains($valor, '..')) return null;
         return preg_match('#^assets/convite/[A-Za-z0-9._\-/]+$#', $valor) ? $valor : null;
     }
-    return substr($valor, 0, 4000); // texto simples/markdown
+    return mb_substr($valor, 0, 4000); // texto simples/markdown
 }
 
 /** Grava um conjunto de definições; valor vazio ou igual ao default repõe o original. */
@@ -346,7 +358,9 @@ function convitePlaceholders(array $defs): array {
     foreach ($caps as $i => $c) {
         $texto = mdTexto($c['x'] ?? '', $tokens);
         if ($i === 0 && preg_match('/^(<br\s*\/?>)*(\p{L})/u', $texto, $m, PREG_OFFSET_CAPTURE)) {
-            // Capitular na primeira letra do primeiro capítulo (como no original)
+            // Capitular na primeira letra do primeiro capítulo (como no original).
+            // Aqui o substr() por bytes é o correto: PREG_OFFSET_CAPTURE devolve
+            // deslocamentos em bytes e strlen() mede a letra na mesma unidade.
             $pos = $m[2][1]; $letra = $m[2][0];
             $texto = substr($texto, 0, $pos).'<span class="drop">'.$letra.'</span>'.substr($texto, $pos + strlen($letra));
         }
@@ -390,7 +404,7 @@ function convitePlaceholders(array $defs): array {
         '{{NOIVA}}' => escP($noiva), '{{NOIVO}}' => escP($noivo),
         '{{CASAL_ALT}}' => escP($noiva.' e '.$noivo),
         '{{DIA}}' => $d, '{{ANO}}' => $ano,
-        '{{MES_NOME}}' => escP($mesNome), '{{MES_ABREV}}' => escP(substr($mesNome, 0, 3)),
+        '{{MES_NOME}}' => escP($mesNome), '{{MES_ABREV}}' => escP(mb_substr($mesNome, 0, 3)),
         '{{DIA_SEMANA}}' => DIAS_PT[$w],
         '{{HORA_TXT}}' => escP(horaTexto($defs['evento.hora'])),
         '{{DATA_JS}}' => $defs['evento.data'].'T'.$defs['evento.hora'].':00'.$dt->format('P'),
@@ -456,6 +470,29 @@ function aplicarSeccoes(string $html, array $defs): string {
             $html = preg_replace('#<!--SEC:'.$sec.'-->.*?<!--/SEC:'.$sec.'-->#s', '', $html);
         }
     }
-    return str_replace(['<!--SEC:historia-->','<!--/SEC:historia-->','<!--SEC:interludio-->','<!--/SEC:interludio-->',
+    $html = str_replace(['<!--SEC:historia-->','<!--/SEC:historia-->','<!--SEC:interludio-->','<!--/SEC:interludio-->',
                         '<!--SEC:cronograma-->','<!--/SEC:cronograma-->','<!--SEC:manual-->','<!--/SEC:manual-->'], '', $html);
+    return numerarPaginas($html);
+}
+
+/** Numerais por extenso para a numeração das páginas do convite. */
+const ORDINAIS_PT = ['um','dois','três','quatro','cinco','seis','sete','oito','nove','dez'];
+
+/**
+ * Renumera as páginas pela ordem em que ficaram.
+ * Os números estavam escritos à mão no modelo, por isso esconder uma secção
+ * deixava um buraco visível na sequência ("— um — … — três —"). Aqui contam-se
+ * as páginas que sobreviveram e reescreve-se cada uma pela sua posição.
+ */
+function numerarPaginas(string $html): string {
+    $n = 0;
+    return preg_replace_callback(
+        '#(<span class="pageno[^"]*">)\s*—\s*[^<—]*\s*—\s*(</span>)#u',
+        function ($m) use (&$n) {
+            $rot = ORDINAIS_PT[$n] ?? (string)($n + 1);
+            $n++;
+            return $m[1] . '— ' . $rot . ' —' . $m[2];
+        },
+        $html
+    );
 }
