@@ -15,9 +15,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Painel · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
-<script src="assets/qrious.min.js"></script>
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
   .barra-acoes{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
   .barra-acoes .cresce{ flex:1 1 200px; }
@@ -209,7 +209,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .reg-que{ color:var(--text); min-width:0; overflow-wrap:anywhere; }
   .vazio-hist{ color:#9aa09a; text-align:center; padding:1.4rem; }
 </style>
-<script src="assets/api.js"></script>
+<script src="<?= asset('assets/api.js') ?>"></script>
 </head>
 <body>
 <?php cabecalho('Gestão de Convidados', $CAS['casal'].' · '.$dataExt, 'painel'); ?>
@@ -648,7 +648,7 @@ function renderConvites(){
         <input type="checkbox" ${SELEC.has(c.id)?'checked':''} onchange="alternarSelecao(${c.id},this.checked)">
       </label>
       <div class="selo-tipo ${c.tipo}" title="${c.tipo}">${iconeTipo(c.tipo)}</div>
-      <div>
+      <div class="convite-corpo">
         <div class="convite-nome">${esc(c.nome_final)}</div>
         <div class="convite-meta">
           <span>${tagEstado(c.rsvp_estado)}</span>

@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entrar · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <style>
   body{ display:flex; align-items:center; justify-content:center; padding:1.25rem; }
   .login{ width:100%; max-width:400px; text-align:center; }

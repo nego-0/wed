@@ -67,9 +67,9 @@ $camposPorCamada = [
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Editar convite físico · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/pecas.css" rel="stylesheet">
-<link href="assets/editor.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
 </head>
 <body class="editor">
 
@@ -179,8 +179,8 @@ $camposPorCamada = [
   <span id="estado-msg"></span>
 </div>
 
-<script src="assets/api.js"></script>
-<script src="assets/versoes.js"></script>
+<script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/versoes.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
@@ -340,7 +340,7 @@ function renderCores(){
       <div class="ajuda">Escolher uma paleta limpa as cores mudadas à mão.</div>
     </div>` +
     Object.keys(CORES_VAR).map(v =>
-      `<label class="cor-linha"><input type="color" value="${corDe(v)}" oninput="editarCor('${v}',this.value)">
+      `<label class="cor-linha"><input type="color" value="${corDe(v)}" oninput="editarCor('${v}',this.value,this)">
         <span>${CORES_ROT[v]}</span>${est.cores[v] ? `<button class="bt bt-min" onclick="limparCor('${v}')" title="Voltar à cor da paleta">↺</button>` : ''}</label>`).join('') +
     (Object.keys(est.cores).length
       ? `<button class="bt" style="width:100%;margin-top:.4rem" onclick="limparCores()">Repor as cores da paleta</button>`
@@ -350,10 +350,20 @@ function escolherPaleta(k){
   aplicarPaleta(k); marcarSujo(true); registarPasso();
   msg('Paleta: ' + (PALETAS[k]||{}).nome);
 }
-function editarCor(v, cor){
+function editarCor(v, cor, el){
   est.cores[v] = cor.toUpperCase();
   cartao().style.setProperty('--ct-'+v, est.cores[v]);
-  marcarSujo(true); registarPasso(); renderCores();
+  marcarSujo(true); registarPasso();
+  // Nada de renderCores() aqui: fecharia o seletor a meio da escolha.
+  if (el) mostrarRepor(v, el); else renderCores();
+}
+/** Faz aparecer o ↺ desta cor sem tocar no resto do painel. */
+function mostrarRepor(v, el){
+  const lin = el.closest('.cor-linha');
+  if (lin && !lin.querySelector('.bt')){
+    lin.insertAdjacentHTML('beforeend',
+      `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor da paleta">↺</button>`);
+  }
 }
 function limparCor(v){
   delete est.cores[v];
@@ -383,7 +393,7 @@ function renderTipografia(){
     }).join('') +
     `<div class="campo"><label>Tamanho do texto<span class="contador">${est.escala||100}%</span></label>
       <div class="vs-lin"><input type="range" min="85" max="115" step="5" value="${est.escala||100}"
-        oninput="mudarEscala(this.value)" style="flex:1">
+        oninput="mudarEscala(this.value,this)" style="flex:1">
         <button class="bt bt-min" onclick="mudarEscala(100)">Repor</button></div>
       <div class="ajuda">Só as frases e os rótulos que se leem de corrido. Os nomes e a data ficam como o design os deixou —
         o cartão tem 10×15 cm e não há para onde crescer.</div>
@@ -394,9 +404,10 @@ function mudarFonte(chave, v){
   aplicarTipografia(); marcarSujo(true); registarPasso(); renderTipografia();
   msg('Tipo de letra: ' + FONTES[v].nome);
 }
-function mudarEscala(v){
+function mudarEscala(v, el){
   est.escala = String(v);
-  aplicarTipografia(); marcarSujo(true); registarPasso(); renderTipografia();
+  aplicarTipografia(); marcarSujo(true); registarPasso();
+  if (el) valorNoRotulo(el, v + '%'); else renderTipografia();
   msg('Tamanho do texto: ' + v + '%');
 }
 
@@ -513,7 +524,7 @@ function renderPropsOrnamento(k, rot){
 function faixa(o){
   return `<div class="campo"><label>${o.rot}<span class="contador">${o.valor}${o.unidade}</span></label>
     <div class="vs-lin"><input type="range" min="${o.min}" max="${o.max}" step="${o.passo}" value="${o.valor}"
-      oninput="(${o.fn})(this.value)" style="flex:1">
+      oninput="(${o.fn})(this.value, this)" style="flex:1">
       <button class="bt bt-min" onclick="(${o.fn})(${o.origem})">Repor</button></div>
     <div class="ajuda">${o.ajuda}</div></div>`;
 }
@@ -522,14 +533,16 @@ function mudarMoldura(v){
   aplicarDeco(); marcarSujo(true); registarPasso(); renderProps();
   msg('Moldura: ' + (MOLDURAS[v]||{}).nome);
 }
-function mudarMolduraMargem(v){
+function mudarMolduraMargem(v, el){
   est.deco['cartao.moldura_margem'] = String(v);
-  aplicarDeco(); marcarSujo(true); registarPasso(); renderProps();
+  aplicarDeco(); marcarSujo(true); registarPasso();
+  if (el) valorNoRotulo(el, v + 'px'); else renderProps();
   msg('Moldura a ' + v + ' px da borda.');
 }
-function mudarOrnamento(k, v){
+function mudarOrnamento(k, v, el){
   est.deco[ORN_ESCALA[k]] = String(v);
-  aplicarDeco(); marcarSujo(true); registarPasso(); renderProps();
+  aplicarDeco(); marcarSujo(true); registarPasso();
+  if (el) valorNoRotulo(el, v + '%'); else renderProps();
   msg(CAMADAS[k] + ': ' + v + '%');
 }
 function mudarFolhagem(v){
@@ -552,6 +565,20 @@ function aplicarDeco(){
   c.style.setProperty('--ct-mold-cantos', feitio === 'cantos' ? 'block' : 'none');
   Object.entries(ORN_ESCALA).forEach(([orn, chave]) =>
     c.style.setProperty('--ct-esc-' + orn, String((+est.deco[chave] || 100) / 100)));
+}
+
+/**
+ * Atualiza o número ao lado do rótulo sem redesenhar o painel.
+ *
+ * Redesenhar durante o arrasto trocava o elemento por baixo do rato: o
+ * navegador perdia o alvo e o arrasto morria à primeira mexida — dava para
+ * clicar na faixa, mas não para a arrastar. O mesmo valia para os seletores
+ * de cor, que fechavam sozinhos.
+ */
+function valorNoRotulo(el, texto){
+  const campo = el && el.closest('.campo');
+  const c = campo && campo.querySelector('.contador');
+  if (c) c.textContent = texto;
 }
 
 /** Contador quase cheio (>90%) ou no limite: a cor avisa antes de cortar. */
@@ -766,6 +793,6 @@ renderCamadas(); renderProps(); renderCores(); renderTipografia();
 marcarBotoes(); ajustar();
 msg('Clique numa camada do cartão para a editar.');
 </script>
-<script src="assets/editor-paineis.js"></script>
+<script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
 </html>

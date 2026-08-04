@@ -49,9 +49,9 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cartões 10×15 · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
-<link href="assets/pecas.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <style>
   /* ---- Escala: o cartão é desenhado a 720×1080 px (= 100×150 mm) ---- */
   .folha{ width:calc(720px * var(--esc)); height:calc(1080px * var(--esc)); }

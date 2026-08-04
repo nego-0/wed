@@ -19,8 +19,8 @@ $CAS = casalInfo(defsAtuais($conn));
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convite digital · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/editor.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
 <style>
   /* Só para as amostras do painel de tipografia mostrarem a letra certa. */
   @font-face{font-family:'Alex Brush';src:url(assets/convite/fonts/alex-brush-latin-400-normal.woff2) format('woff2');font-display:swap}
@@ -182,8 +182,8 @@ $CAS = casalInfo(defsAtuais($conn));
   <span class="aviso-txt" id="passos"></span>
 </div>
 
-<script src="assets/api.js"></script>
-<script src="assets/versoes.js"></script>
+<script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/versoes.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
@@ -864,7 +864,7 @@ function renderTipografia(){
     }).join('') +
     `<div class="campo"><label>Tamanho do texto<span class="contador">${EST.val['tipo.escala']||100}%</span></label>
       <div class="enq-lin"><input type="range" min="80" max="130" step="5" value="${EST.val['tipo.escala']||100}"
-        oninput="mudarEscala(this.value)">
+        oninput="mudarEscala(this.value,this)">
         <button class="bt bt-min" onclick="mudarEscala(100)">Repor</button></div>
       <div class="dica-md">Só o texto que se lê. Os nomes, a data e os títulos grandes ficam como o design os deixou.</div>
     </div>`;
@@ -879,9 +879,13 @@ function mudarFonte(chave, v){
   else enviarTela({tipo:'tema', vars:{['f-'+chave.slice(5)]: FONTES[v].css}});
   msg('Tipo de letra: ' + FONTES[v].nome);
 }
-function mudarEscala(v){
+function mudarEscala(v, el){
   EST.val['tipo.escala'] = String(v);
-  marcarSujo(true); registarPasso(); renderTipografia();
+  marcarSujo(true); registarPasso();
+  // Redesenhar o painel a meio do arrasto trocava a faixa por baixo do rato e
+  // o arrasto morria: só se atualiza o número ao lado do rótulo.
+  if (el){ const c = el.closest('.campo').querySelector('.contador'); if (c) c.textContent = v + '%'; }
+  else renderTipografia();
   enviarTela({tipo:'tema', vars:{'esc-txt': String(v/100)}});
   msg('Tamanho do texto: ' + v + '%');
 }
@@ -1018,6 +1022,6 @@ $('tela').addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); }
 recarregarTela();                       // primeira pintura da tela
 msg('Clique num texto do convite para o editar.');
 </script>
-<script src="assets/editor-paineis.js"></script>
+<script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
 </html>

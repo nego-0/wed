@@ -10,9 +10,9 @@ $CAS = casalInfo(defsAtuais($conn));
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Porta · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
-<script src="assets/html5-qrcode.min.js"></script>
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<script src="<?= asset('assets/html5-qrcode.min.js') ?>"></script>
 <style>
   /* Aviso de ligação (offline / a sincronizar) */
   .barra-offline{ position:fixed; left:0; right:0; bottom:0; z-index:900; padding:.55rem .9rem;
@@ -88,7 +88,7 @@ $CAS = casalInfo(defsAtuais($conn));
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#16261E">
-<script src="assets/api.js"></script>
+<script src="<?= asset('assets/api.js') ?>"></script>
 </head>
 <body>
 <div class="porta-topo">

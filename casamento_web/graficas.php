@@ -68,10 +68,10 @@ $manual = [
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convite impresso · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
-<link href="assets/pecas.css" rel="stylesheet">
-<script src="assets/qrious.min.js"></script>
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
+<script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
   .abas{ display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.2rem; }
   .abas a{ background:#fff; border:1px solid var(--line); border-radius:50px; padding:.45rem 1.1rem;

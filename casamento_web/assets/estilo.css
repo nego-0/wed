@@ -85,7 +85,11 @@ a:hover{ text-decoration:underline; }
 .btn-linha:hover{ background:var(--gold); color:#fff; }
 .btn-fantasma{ background:transparent; border:1.5px solid var(--line); color:var(--text); }
 .btn-sm{ padding:.38rem .8rem; font-size:.82rem; }
-.btn-ico{ padding:.45rem .6rem; border-radius:10px; background:transparent; border:1px solid var(--line); color:var(--text); cursor:pointer; }
+/* O ícone tem de caber no botão: sem medida, o SVG do WhatsApp desenhava-se a
+   47px e esticava a linha do convite para o dobro da altura das outras. */
+.btn-ico{ display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .6rem; border-radius:10px;
+  background:transparent; border:1px solid var(--line); color:var(--text); cursor:pointer; line-height:1.2; }
+.btn-ico svg{ width:16px; height:16px; flex:none; }
 .btn-ico:hover{ background:var(--cream); }
 
 /* ---------- Formulários ---------- */
@@ -110,22 +114,26 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 /* ---------- Tabela / lista de convites ---------- */
 .filtros{ display:flex; flex-wrap:wrap; gap:.6rem; align-items:end; }
 .filtros .campo{ flex:1 1 150px; min-width:140px; }
-.lista{ display:grid; gap:.75rem; }
+.lista{ display:grid; gap:.5rem; }
 /* Quatro colunas para os quatro filhos: escolher, selo do tipo, o convite e as
    ações. Faltava a primeira desde que a caixa de seleção em massa entrou: com
    três colunas, o selo herdava o 1fr e esticava-se, o nome era empurrado para a
    direita e as ações caíam para uma segunda linha. */
-.convite-row{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1rem 1.15rem;
-  display:grid; grid-template-columns:auto auto 1fr auto; gap:1rem; align-items:center; transition:.18s; }
+.convite-row{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.6rem .8rem;
+  display:grid; grid-template-columns:auto auto 1fr auto; gap:.7rem; align-items:center; transition:.18s; }
 .convite-row:hover{ border-color:var(--gold-soft); box-shadow:0 6px 18px rgba(180,134,74,.12); }
-.selo-tipo{ width:44px; height:44px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center;
-  font-size:1.1rem; background:var(--cream); color:var(--forest); border:1px solid var(--line); }
+.selo-tipo{ width:32px; height:32px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center;
+  font-size:1rem; background:var(--cream); color:var(--forest); border:1px solid var(--line); }
+.selo-tipo svg{ width:16px; height:16px; }
 .selo-tipo.digital{ background:var(--gold-pale); color:#8A6031; }
 .selo-tipo.fisico{ background:var(--sand); color:var(--forest); }
 .selo-tipo.ambos{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); }
-.convite-nome{ font-family:var(--serif); font-size:1.2rem; font-weight:600; color:var(--ink); line-height:1.15; }
-.convite-meta{ font-size:.8rem; color:#8a8f88; display:flex; gap:.8rem; flex-wrap:wrap; margin-top:.2rem; }
-.membros-mini{ margin-top:.35rem; display:flex; gap:.3rem; flex-wrap:wrap; }
+.convite-nome{ font-family:var(--serif); font-size:1.05rem; font-weight:600; color:var(--ink); line-height:1.2; }
+/* Nome, estado e pessoas na mesma linha enquanto houver largura: em ecrãs
+   largos cada convite passa a caber numa linha só, em vez de três. */
+.convite-corpo{ display:flex; align-items:center; gap:.55rem .9rem; flex-wrap:wrap; min-width:0; }
+.convite-meta{ font-size:.78rem; color:#8a8f88; display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
+.membros-mini{ display:flex; gap:.28rem; flex-wrap:wrap; }
 .membro-chip{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.12rem .55rem; font-size:.76rem; color:var(--ink); }
 .acoes{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 

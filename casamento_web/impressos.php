@@ -20,9 +20,9 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convites físicos · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
-<script src="assets/qrious.min.js"></script>
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1rem; }
   .cartao{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem; text-align:center; position:relative; }

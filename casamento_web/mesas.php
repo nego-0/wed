@@ -14,8 +14,8 @@ $CAS = casalInfo(defsAtuais($conn));
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mesas · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <style>
   .layout{ display:grid; grid-template-columns:1fr 380px; gap:1.1rem; align-items:start; }
   @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
@@ -271,7 +271,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .combo-opt .combo-sub{ font-size:.72rem; color:#8a8f88; }
   .combo-vazio{ color:#9aa09a; font-size:.82rem; padding:.4rem .5rem; }
 </style>
-<script src="assets/api.js"></script>
+<script src="<?= asset('assets/api.js') ?>"></script>
 </head>
 <body>
 <?php cabecalho('Planta de Mesas', $CAS['casal'].' · posição, capacidade e ocupação', 'mesas'); ?>
@@ -350,6 +350,6 @@ $CAS = casalInfo(defsAtuais($conn));
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 </script>
-<script src="assets/mesas.js"></script>
+<script src="<?= asset('assets/mesas.js') ?>"></script>
 </body>
 </html>

@@ -64,3 +64,17 @@ const VERSOES_MAX       = 12;   // versões guardadas de cada convite (digital, 
 
 // Fuso não é crítico aqui; datas guardadas em UTC pelo MySQL.
 date_default_timezone_set('Africa/Luanda');
+
+/**
+ * Caminho de um ficheiro de assets com a data da última alteração no fim.
+ *
+ * Sem isto, um CSS corrigido não chegava a quem já tinha visitado o site: o
+ * navegador servia a cópia em cache e o defeito continuava à vista. Com a marca
+ * de tempo, cada alteração é um endereço novo — e enquanto nada muda o
+ * navegador continua a poupar o pedido.
+ */
+function asset(string $rel): string {
+    $abs = __DIR__ . '/' . ltrim($rel, '/');
+    $t = @filemtime($abs);
+    return $rel . ($t ? '?v=' . $t : '');
+}

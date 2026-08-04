@@ -83,9 +83,9 @@ if ($pecaSel === 'cartao') {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manual de impressão · Cartão 10 × 15 · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
-<link href="assets/estilo.css" rel="stylesheet">
-<link href="assets/pecas.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <style>
   .man-wrap{ max-width:960px; margin:0 auto; padding:0 1rem 3rem; }
   .man-cab{ border-bottom:3px double var(--gold-soft); padding-bottom:1rem; margin-bottom:1.6rem; }

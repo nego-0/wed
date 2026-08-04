@@ -23,7 +23,7 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Confirmação · <?= escP($CAS['casal']) ?></title>
-<link href="assets/fontes.css" rel="stylesheet">
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <style>
   :root{
     --ink:#20342A; --forest:#2C4536; --forest-deep:#16261E;
