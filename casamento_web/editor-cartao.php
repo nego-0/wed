@@ -179,6 +179,7 @@ $camposPorCamada = [
   <span id="estado-msg"></span>
 </div>
 
+<script src="<?= asset('assets/editor-adiar.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script>
@@ -269,7 +270,7 @@ function repintarTudo(){
     if (alvo) alvo.classList.toggle('ct-oculta', est.camadas[k] === 0);
   });
   aplicarDeco();
-renderCamadas(); renderProps(); renderCores(); renderTipografia();
+  renderCamadas(); renderProps(); renderCores(); renderTipografia();
 }
 function aplicarEstado(json){ est = JSON.parse(json); repintarTudo(); marcarBotoes(); }
 function desfazer(){ if (hPos<=0) return; clearTimeout(tHist); hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
@@ -328,7 +329,7 @@ function aplicarFolhagem(k){
 }
 
 // ---------- Painel de cores ----------
-function renderCores(){
+function renderCoresJa(){
   $('cores').innerHTML =
     `<div class="campo"><label>Paletas de origem</label>
       <div class="amostras">` +
@@ -339,9 +340,16 @@ function renderCores(){
       `</div>
       <div class="ajuda">Escolher uma paleta limpa as cores mudadas à mão.</div>
     </div>` +
+    // Nem <label> a envolver o seletor, nem botões a nascer durante a escolha:
+    // o painel de cores do navegador fecha-se assim que o elemento a que está
+    // preso muda de sítio ou de tamanho. O ↺ está sempre lá, só se apaga.
     Object.keys(CORES_VAR).map(v =>
-      `<label class="cor-linha"><input type="color" value="${corDe(v)}" oninput="editarCor('${v}',this.value,this)">
-        <span>${CORES_ROT[v]}</span>${est.cores[v] ? `<button class="bt bt-min" onclick="limparCor('${v}')" title="Voltar à cor da paleta">↺</button>` : ''}</label>`).join('') +
+      `<div class="cor-linha">
+        <input type="color" value="${corDe(v)}" aria-label="${CORES_ROT[v]}" oninput="editarCor('${v}',this.value,this)">
+        <span>${CORES_ROT[v]}</span>
+        <button class="bt bt-min repor-cor${est.cores[v] ? '' : ' vazio'}" onclick="limparCor('${v}')"
+                title="Voltar à cor da paleta" tabindex="${est.cores[v] ? 0 : -1}">↺</button>
+      </div>`).join('') +
     (Object.keys(est.cores).length
       ? `<button class="bt" style="width:100%;margin-top:.4rem" onclick="limparCores()">Repor as cores da paleta</button>`
       : `<div class="ajuda">Cada cor pode ser mudada à mão — o cartão é gravado a um só dourado, mas a prova no ecrã mostra os tons.</div>`);
@@ -354,16 +362,12 @@ function editarCor(v, cor, el){
   est.cores[v] = cor.toUpperCase();
   cartao().style.setProperty('--ct-'+v, est.cores[v]);
   marcarSujo(true); registarPasso();
-  // Nada de renderCores() aqui: fecharia o seletor a meio da escolha.
-  if (el) mostrarRepor(v, el); else renderCores();
-}
-/** Faz aparecer o ↺ desta cor sem tocar no resto do painel. */
-function mostrarRepor(v, el){
-  const lin = el.closest('.cor-linha');
-  if (lin && !lin.querySelector('.bt')){
-    lin.insertAdjacentHTML('beforeend',
-      `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor da paleta">↺</button>`);
-  }
+  // Nada de redesenhar aqui: fecharia o painel de cores a meio da escolha.
+  // O ↺ já existe na linha; basta deixar de estar apagado.
+  if (el){
+    const bt = el.closest('.cor-linha').querySelector('.repor-cor');
+    if (bt){ bt.classList.remove('vazio'); bt.tabIndex = 0; }
+  } else renderCores();
 }
 function limparCor(v){
   delete est.cores[v];
@@ -379,7 +383,7 @@ function limparCores(){
 }
 
 // ---------- Painel de tipografia ----------
-function renderTipografia(){
+function renderTipografiaJa(){
   $('tipografia').innerHTML =
     Object.entries(PAPEIS).map(([papel,p]) => {
       const escolhida = est.fontes[p.chave] || p.origem;
@@ -410,6 +414,14 @@ function mudarEscala(v, el){
   if (el) valorNoRotulo(el, v + '%'); else renderTipografia();
   msg('Tamanho do texto: ' + v + '%');
 }
+
+// Os redesenhos de painel passam pelo guarda de assets/editor-adiar.js: se
+// houver um gesto em curso (barra a ser arrastada, painel de cores aberto),
+// esperam pelo fim em vez de trocar o elemento por baixo do rato.
+const adiar = window.adiavel || ((n, f) => f);
+const renderProps      = adiar('props',      (...a) => renderPropsJa(...a));
+const renderCores      = adiar('cores',      (...a) => renderCoresJa(...a));
+const renderTipografia = adiar('tipografia', (...a) => renderTipografiaJa(...a));
 
 // ---------- Camadas ----------
 function renderCamadas(){
@@ -442,7 +454,7 @@ function selecionar(k){
 }
 
 // ---------- Propriedades ----------
-function renderProps(){
+function renderPropsJa(){
   const campos = CAMPOS[selecionada];
   if (!selecionada) { $('props').innerHTML = '<div class="vazio-painel">Escolha uma camada — na lista abaixo ou clicando no cartão — para editar o que ela mostra.</div>'; return; }
   const rot = CAMADAS[selecionada];

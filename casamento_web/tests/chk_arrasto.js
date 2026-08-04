@@ -76,6 +76,37 @@ const EXE=process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/c
      'o seletor de cor continua a ser o mesmo nó depois de várias mudanças');
   ok(await p.evaluate(()=>est.cores.accent) === '#0000FF', 'a última cor escolhida é a que fica');
 
+  // O painel de cores do navegador fecha-se se o elemento a que está preso
+  // mudar de sítio ou de tamanho. Nada pode mexer na linha durante a escolha.
+  const linha = await p.evaluate(()=>{
+    // A última cor, que nenhuma prova anterior tocou: é nela que o ↺ ainda
+    // não existiria se voltasse a nascer durante a escolha.
+    const ins = document.querySelectorAll('#cores input[type=color]');
+    const inp = ins[ins.length - 1];
+    const lin = inp.closest('.cor-linha');
+    const antes = { filhos: lin.children.length, larg: Math.round(lin.getBoundingClientRect().width),
+                    x: Math.round(inp.getBoundingClientRect().left), tag: lin.tagName };
+    ['#112233','#445566','#778899'].forEach(c=>{ inp.value=c; inp.dispatchEvent(new Event('input',{bubbles:true})); });
+    const dep = { filhos: lin.children.length, larg: Math.round(lin.getBoundingClientRect().width),
+                  x: Math.round(inp.getBoundingClientRect().left), tag: lin.tagName };
+    return { antes, dep };
+  });
+  console.log('  linha da cor:', JSON.stringify(linha));
+  ok(linha.antes.filhos === linha.dep.filhos, 'escolher a cor não faz nascer elementos na linha');
+  ok(linha.antes.x === linha.dep.x, 'o seletor de cor não se move enquanto se escolhe');
+  ok(linha.dep.tag !== 'LABEL', 'o seletor de cor não vive dentro de um <label> (que o reactivava)');
+
+  // O guarda existe e adia redesenhos durante um gesto
+  ok(await p.evaluate(()=>typeof window.adiavel === 'function'), 'o guarda que adia redesenhos está carregado');
+  ok(await p.evaluate(()=>{
+    let correu = 0;
+    const f = window.adiavel('prova', ()=>correu++);
+    const inp = document.querySelector('#cores input[type=color]');
+    inp.dispatchEvent(new Event('input',{bubbles:true}));   // marca "cor aberta"
+    f();                                                     // deve ficar adiado
+    return correu === 0;
+  }), 'um redesenho pedido durante a escolha da cor fica adiado');
+
   // ---------- editor do convite digital ----------
   await p.goto(BASE+'/convite-editor.php',{waitUntil:'networkidle'}); await p.waitForTimeout(2600);
   await p.evaluate(()=>document.querySelectorAll('.ed-painel').forEach(x=>{

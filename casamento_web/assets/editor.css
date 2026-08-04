@@ -196,6 +196,10 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .cor-linha{ display:flex; align-items:center; gap:.4rem; margin-bottom:.3rem; }
 .cor-linha input[type=color]{ width:28px; height:22px; border:none; background:none; padding:0; cursor:pointer; flex:none; }
 .cor-linha span{ flex:1; min-width:0; font-size:.75rem; color:var(--ed-texto); }
+/* O ↺ ocupa sempre o seu lugar: se nascesse ao mudar a cor, a linha mudava de
+   tamanho e o painel de cores do navegador fechava-se a meio da escolha. */
+.repor-cor{ flex:none; }
+.repor-cor.vazio{ visibility:hidden; pointer-events:none; }
 .cor-onde{ font-size:.66rem; color:var(--ed-texto-2); line-height:1.35; margin:-.15rem 0 .5rem 2.2rem; }
 
 .amostra-f{ margin-top:.3rem; padding:.3rem .45rem; background:#191a16; border:1px solid var(--ed-linha);

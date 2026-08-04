@@ -182,6 +182,7 @@ $CAS = casalInfo(defsAtuais($conn));
   <span class="aviso-txt" id="passos"></span>
 </div>
 
+<script src="<?= asset('assets/editor-adiar.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script>
@@ -409,6 +410,14 @@ function recarregarTela(){
   $('f-tela').submit();
 }
 
+// Os redesenhos de painel passam pelo guarda de assets/editor-adiar.js: se
+// houver um gesto em curso (barra a ser arrastada, painel de cores aberto),
+// esperam pelo fim em vez de trocar o elemento por baixo do rato.
+const adiar = window.adiavel || ((n, f) => f);
+const renderProps      = adiar('props',      (...a) => renderPropsJa(...a));
+const renderCores      = adiar('cores',      (...a) => renderCoresJa(...a));
+const renderTipografia = adiar('tipografia', (...a) => renderTipografiaJa(...a));
+
 // ---------- camadas ----------
 const OLHO_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const OLHO_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l18 18M10.6 10.7a3 3 0 004.2 4.2M9.9 5.2A9.6 9.6 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4M6.3 6.4A17 17 0 002 12s3.5 7 10 7a9.9 9.9 0 004-.8"/></svg>';
@@ -544,7 +553,7 @@ function alternarSec(k){
 }
 
 // ---------- propriedades ----------
-function renderProps(){
+function renderPropsJa(){
   const livre = blocoLivre(SEC);
   if (livre) return renderPropsLivre(livre);
   const s = SECCOES[SEC]; if (!s){ $('props').innerHTML=''; return; }
@@ -679,7 +688,7 @@ function removerItem(lk,i){
 }
 
 // ---------- cores ----------
-function renderCores(){
+function renderCoresJa(){
   $('cores').innerHTML =
     `<div class="temas">` + Object.entries(TEMAS).map(([k,t])=>
       `<button class="tema-bt" onclick="aplicarTema('${k}')" title="${esc(t.nome)}">
@@ -696,18 +705,16 @@ function renderCores(){
         <div class="cor-onde">${esc(r.onde)}</div>`;
     }).join('');
 }
-function editarCor(v,cor){
+function editarCor(v, cor, el){
   EST.paleta[v] = cor.toUpperCase();
   enviarTela({tipo:'tema', vars:{[v]:EST.paleta[v]}});   // a tela muda de cor na hora
   marcarSujo(true); registarPasso();
-  mostrarRepor(v);
-}
-/** Faz aparecer o ↺ sem redesenhar o painel — redesenhar tirava o foco ao seletor. */
-function mostrarRepor(v){
-  const inp = document.querySelector(`#cores .cor-linha input[oninput*="'${v}'"]`);
-  if (inp && !inp.parentElement.querySelector('.bt')){
-    inp.parentElement.insertAdjacentHTML('beforeend',
-      `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor de origem">↺</button>`);
+  // O ↺ já existe na linha; basta deixar de estar apagado. Fazê-lo nascer aqui
+  // mexia no elemento a que o painel de cores do navegador está preso, e ele
+  // fechava-se a meio da escolha.
+  if (el){
+    const bt = el.closest('.cor-linha').querySelector('.repor-cor');
+    if (bt){ bt.classList.remove('vazio'); bt.tabIndex = 0; }
   }
 }
 function limparCor(v){
@@ -850,7 +857,7 @@ async function enviarFicheiro(chave, input){
 }
 
 // ---------- tipografia ----------
-function renderTipografia(){
+function renderTipografiaJa(){
   $('tipografia').innerHTML =
     Object.entries(PAPEIS).map(([papel,p])=>{
       const escolhida = EST.val[p.chave] || p.origem;
