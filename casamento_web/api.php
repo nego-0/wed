@@ -262,7 +262,8 @@ exigirAdmin();
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
                      'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload',
-                     'convite_restaurar','versao_criar','versao_repor','versao_apagar'], true)) {
+                     'convite_restaurar','versao_criar','versao_aplicar','versao_atualizar',
+                     'versao_renomear','versao_apagar'], true)) {
     exigirCsrf();
 }
 
@@ -279,55 +280,137 @@ if ($acao === 'defs_save') {
     ok($r);
 }
 
-// ---- Versões guardadas do convite digital -------------------
-// Uma fotografia das definições, com nome, para se experimentar sem medo.
+// ---- Versões dos convites -----------------------------------
+// Cada peça (digital / impresso) tem as suas versões, e uma delas está em
+// vigor — a predefinida. Tornar predefinida é aplicar: as definições dessa
+// versão passam a ser as que o convite usa.
+
+/** Âmbito pedido, validado. */
+function ambitoPedido(): string {
+    $a = $_GET['ambito'] ?? (corpo()['ambito'] ?? 'digital');
+    return isset(ambitosVersao()[$a]) ? $a : 'digital';
+}
+
 if ($acao === 'versao_criar') {
     $d = corpo();
+    $ambito = ambitoPedido();
     $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
     if ($nome === '') erro('Dê um nome à versão, para a reconhecer mais tarde.');
-    $n = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes")->fetch_row()[0] ?? 0);
-    if ($n >= VERSOES_MAX) erro('Chegou ao máximo de '.VERSOES_MAX.' versões. Apague uma para guardar outra.');
-    // Guarda-se o estado ATUAL da base de dados, não o rascunho por gravar.
-    $atuais = defsAtuais($conn);
-    $guardar = [];
-    foreach (defsPadrao() as $k => $_) if (!str_starts_with($k, 'cartao.')) $guardar[$k] = (string)$atuais[$k];
-    $json = json_encode($guardar, JSON_UNESCAPED_UNICODE);
-    if ($json === false) erro('Não foi possível preparar a versão.');
+
+    $st = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE ambito=?");
+    $st->bind_param('s', $ambito); $st->execute();
+    if ((int)$st->get_result()->fetch_row()[0] >= VERSOES_MAX) {
+        erro('Chegou ao máximo de '.VERSOES_MAX.' versões desta peça. Apague uma para guardar outra.');
+    }
+    $json = jsonOuNulo(instantaneoAmbito($conn, $ambito));
+    if ($json === null) erro('Não foi possível preparar a versão.');
+
     $u = utilizadorAtual() ?? '';
-    $st = $conn->prepare("INSERT INTO {$P}versoes (nome, defs, utilizador) VALUES (?,?,?)");
-    $st->bind_param('sss', $nome, $json, $u);
+    $st = $conn->prepare("INSERT INTO {$P}versoes (nome, defs, utilizador, ambito) VALUES (?,?,?,?)");
+    $st->bind_param('ssss', $nome, $json, $u, $ambito);
     if (!$st->execute()) erro('Não foi possível guardar a versão.');
-    registar($conn, 'versao_guardada', $nome, '');
-    ok(['id' => $conn->insert_id]);
+    $id = $conn->insert_id;
+    // A primeira versão de uma peça fica logo como a que está em vigor: é o
+    // que ela é, já que foi tirada do estado atual.
+    $r = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE ambito=? AND predefinida=1");
+    $r->bind_param('s', $ambito); $r->execute();
+    if ((int)$r->get_result()->fetch_row()[0] === 0) {
+        $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id=$id");
+    }
+    registar($conn, 'versao_guardada', $nome, ambitosVersao()[$ambito]['rotulo']);
+    ok(['id' => $id]);
 }
 
 if ($acao === 'versao_lista') {
-    $r = $conn->query("SELECT id, nome, utilizador, criado_em FROM {$P}versoes ORDER BY id DESC");
-    ok(['versoes' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [], 'max' => VERSOES_MAX]);
+    $ambito = ambitoPedido();
+    $st = $conn->prepare("SELECT id, nome, utilizador, criado_em, atualizado_em, predefinida, defs
+                          FROM {$P}versoes WHERE ambito=? ORDER BY predefinida DESC, id DESC");
+    $st->bind_param('s', $ambito); $st->execute();
+    $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    $out = [];
+    foreach ($linhas as $v) {
+        // "em vigor" só é verdade se o que está gravado ainda bate com a versão:
+        // depois de mexer no editor, a predefinida fica desatualizada.
+        $igual = versaoIgualAoAtual($conn, $ambito, $v['defs']);
+        unset($v['defs']);                       // a lista não precisa do conteúdo
+        $v['predefinida'] = (int)$v['predefinida'];
+        $v['igual_ao_atual'] = $igual;
+        $out[] = $v;
+    }
+    ok(['versoes' => $out, 'max' => VERSOES_MAX, 'ambito' => $ambito,
+        'rotulo' => ambitosVersao()[$ambito]['rotulo']]);
 }
 
-if ($acao === 'versao_repor') {
+if ($acao === 'versao_aplicar') {
+    // Torna esta a versão em vigor: aplica as suas definições e marca-a.
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("SELECT nome, defs FROM {$P}versoes WHERE id=?");
+    $st = $conn->prepare("SELECT nome, defs, ambito FROM {$P}versoes WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
     if (!$v) erro('Versão não encontrada.');
     $j = json_decode($v['defs'], true);
     if (!is_array($j)) erro('Esta versão está ilegível.');
-    $r = guardarDefinicoes($conn, array_map('strval', $j));
-    registar($conn, 'versao_reposta', $v['nome'], $r['gravadas'].' definição(ões)');
-    ok($r + ['nome' => $v['nome']]);
+
+    // Só as chaves do próprio âmbito: aplicar uma versão do cartão não pode
+    // mexer no convite digital, nem o contrário.
+    $permitidas = array_flip(chavesDoAmbito($v['ambito']));
+    $defs = [];
+    foreach ($j as $k => $val) if (isset($permitidas[$k]) && is_string($val)) $defs[$k] = $val;
+    $r = guardarDefinicoes($conn, $defs);
+
+    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE ambito=?");
+    $st->bind_param('s', $v['ambito']); $st->execute();
+    $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id=$id");
+
+    registar($conn, 'versao_aplicada', $v['nome'], $r['gravadas'].' definição(ões)');
+    ok($r + ['nome' => $v['nome'], 'ambito' => $v['ambito']]);
+}
+
+if ($acao === 'versao_atualizar') {
+    // Reescreve o conteúdo da versão com o que está em vigor agora.
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome, ambito FROM {$P}versoes WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $v = $st->get_result()->fetch_assoc();
+    if (!$v) erro('Versão não encontrada.');
+    $json = jsonOuNulo(instantaneoAmbito($conn, $v['ambito']));
+    if ($json === null) erro('Não foi possível preparar a versão.');
+    $st = $conn->prepare("UPDATE {$P}versoes SET defs=?, atualizado_em=NOW() WHERE id=?");
+    $st->bind_param('si', $json, $id);
+    if (!$st->execute()) erro('Não foi possível atualizar a versão.');
+    registar($conn, 'versao_atualizada', $v['nome'], '');
+    ok(['nome' => $v['nome']]);
+}
+
+if ($acao === 'versao_renomear') {
+    $d = corpo();
+    $id = (int)($_GET['id'] ?? ($d['id'] ?? 0));
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('O nome não pode ficar vazio.');
+    $st = $conn->prepare("UPDATE {$P}versoes SET nome=? WHERE id=?");
+    $st->bind_param('si', $nome, $id);
+    if (!$st->execute()) erro('Não foi possível mudar o nome.');
+    registar($conn, 'versao_renomeada', $nome, 'id '.$id);
+    ok(['nome' => $nome]);
 }
 
 if ($acao === 'versao_apagar') {
     $id = (int)($_GET['id'] ?? 0);
-    $rn = $conn->prepare("SELECT nome FROM {$P}versoes WHERE id=?");
+    $rn = $conn->prepare("SELECT nome, ambito, predefinida FROM {$P}versoes WHERE id=?");
     $rn->bind_param('i', $id); $rn->execute();
     $x = $rn->get_result()->fetch_assoc();
+    if (!$x) erro('Versão não encontrada.');
     $st = $conn->prepare("DELETE FROM {$P}versoes WHERE id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a versão.');
-    registar($conn, 'versao_apagada', $x['nome'] ?? '', '');
+    // Apagar a que estava em vigor não muda o convite — só se perde o ponto de
+    // regresso. A mais recente das que ficam toma o lugar, para haver sempre uma.
+    if ((int)$x['predefinida'] === 1) {
+        $st = $conn->prepare("SELECT id FROM {$P}versoes WHERE ambito=? ORDER BY id DESC LIMIT 1");
+        $st->bind_param('s', $x['ambito']); $st->execute();
+        if ($nova = $st->get_result()->fetch_row()) $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id={$nova[0]}");
+    }
+    registar($conn, 'versao_apagada', $x['nome'], ambitosVersao()[$x['ambito']]['rotulo']);
     ok();
 }
 
@@ -355,9 +438,12 @@ if ($acao === 'def_upload') {
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
     $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
     if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
-    // Apaga o ficheiro custom anterior desta chave (nunca os originais)
+    // Apaga o ficheiro custom anterior desta chave (nunca os originais), a não
+    // ser que alguma versão guardada ainda o use — aplicá-la traria de volta um
+    // caminho sem ficheiro por trás.
     $antigo = defsAtuais($conn)[$chave] ?? '';
-    if (str_starts_with($antigo, 'assets/convite/custom/') && !str_contains($antigo, '..')) {
+    if (str_starts_with($antigo, 'assets/convite/custom/') && !str_contains($antigo, '..')
+        && !ficheiroEmVersao($conn, $antigo)) {
         @unlink(__DIR__ . '/' . $antigo);
     }
     $caminho = 'assets/convite/custom/' . $nomeFich;

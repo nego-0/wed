@@ -142,6 +142,10 @@ $camposPorCamada = [
       <h3 onclick="alternarPainel(this)">Camadas <span class="chev">▾</span></h3>
       <div class="ed-painel-corpo" id="camadas"></div>
     </div>
+    <div class="ed-painel fechado" id="p-versoes">
+      <h3 onclick="alternarPainel(this)">Versões <span class="chev">▾</span></h3>
+      <div class="ed-painel-corpo" id="versoes"></div>
+    </div>
   </div>
 </div>
 
@@ -153,6 +157,8 @@ $camposPorCamada = [
   <span id="estado-msg"></span>
 </div>
 
+<script src="assets/api.js"></script>
+<script src="assets/versoes.js"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
@@ -392,6 +398,16 @@ document.getElementById('amostras').addEventListener('click', e => {
 });
 $('folhagem').addEventListener('change', e => { aplicarFolhagem(e.target.value); marcarSujo(true); });
 window.addEventListener('resize', () => { if (zoom <= .5) ajustar(); });
+
+// ---------- Versões do convite impresso ----------
+// Painel partilhado com o editor do convite digital (assets/versoes.js).
+Versoes.montar({
+  ambito: 'impresso',
+  alvo:   'versoes',
+  sujo:   () => sujo,
+  msg,
+  aoAplicar: () => setTimeout(() => { sujo = false; location.reload(); }, 700)
+});
 
 renderCamadas(); renderProps(); ajustar();
 </script>

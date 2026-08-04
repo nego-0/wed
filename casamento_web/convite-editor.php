@@ -194,6 +194,7 @@ $CAS = casalInfo(defsAtuais($conn));
 </div>
 
 <script src="assets/api.js"></script>
+<script src="assets/versoes.js"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
@@ -864,51 +865,16 @@ function mudarEscala(v){
 }
 
 // ---------- versões guardadas ----------
-async function renderVersoes(){
-  const d = await api('versao_lista', {silencioso:true});
-  const vs = (d && d.versoes) || [];
-  $('versoes').innerHTML =
-    `<div class="campo"><label>Guardar esta versão</label>
-      <div class="enq-lin"><input type="text" id="nome-versao" placeholder="ex.: antes de mudar as cores" maxlength="80"
-        style="flex:1;background:#191a16;border:1px solid var(--ed-linha);color:var(--ed-texto);border-radius:5px;padding:.3rem .4rem;font-family:inherit;font-size:.8rem">
-        <button class="bt bt-min" onclick="guardarVersao()">Guardar</button></div>
-      <div class="dica-md">Guarda o convite tal como está <b>na base de dados</b>. Grave primeiro, se tiver alterações por gravar.</div>
-    </div>` +
-    (vs.length
-      ? vs.map(v=>`<div class="it">
-          <div class="it-topo"><span class="nome-v">${esc(v.nome)}</span>
-            <button class="bt bt-min" onclick="reporVersao(${v.id}, ${JSON.stringify(v.nome)})">Repor</button>
-            <button class="bt bt-min" onclick="apagarVersao(${v.id}, ${JSON.stringify(v.nome)})" title="Apagar">✕</button>
-          </div>
-          <div class="dica-md">${esc(v.utilizador||'—')} · ${fmtData(v.criado_em)}</div>
-        </div>`).join('')
-      : `<div class="sel-nada">Ainda não guardou nenhuma versão.</div>`) +
-    (vs.length ? `<div class="sel-nada">${vs.length} de ${d.max} versões.</div>` : '');
-}
-function fmtData(sql){
-  const d = new Date(String(sql).replace(' ','T'));
-  return isNaN(d) ? '' : d.toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-}
-async function guardarVersao(){
-  const nome = ($('nome-versao').value||'').trim();
-  if (!nome) return msg('Dê um nome à versão, para a reconhecer mais tarde.');
-  if (SUJO && !confirm('Tem alterações por gravar.\n\nA versão guarda o convite como está na base de dados, sem elas. Continuar?')) return;
-  const d = await api('versao_criar', {method:'POST', body:JSON.stringify({nome})});
-  if (!d.success) return msg(d.message || 'Não foi possível guardar a versão.');
-  renderVersoes(); msg('Versão guardada: ' + nome);
-}
-async function reporVersao(id, nome){
-  if (!confirm(`Repor a versão "${nome}"?\n\nO convite volta a como estava quando a guardou.`)) return;
-  const d = await api('versao_repor&id='+id);
-  if (!d.success) return msg(d.message || 'Não foi possível repor.');
-  msg('Versão reposta: ' + nome + '. A recarregar…');
-  setTimeout(()=>{ SUJO = false; location.reload(); }, 700);   // o editor tem de reler tudo
-}
-async function apagarVersao(id, nome){
-  if (!confirm(`Apagar a versão "${nome}"?\n\nO convite não muda; perde-se apenas este ponto de regresso.`)) return;
-  const d = await api('versao_apagar&id='+id);
-  if (!d.success) return msg(d.message || 'Não foi possível apagar.');
-  renderVersoes(); msg('Versão apagada.');
+// O painel em si vive em assets/versoes.js, partilhado com o editor do
+// convite impresso; aqui só se lhe dão as amarras desta página.
+function renderVersoes(){
+  Versoes.montar({
+    ambito: 'digital',
+    alvo:   'versoes',
+    sujo:   () => SUJO,
+    msg,
+    aoAplicar: () => setTimeout(()=>{ SUJO = false; location.reload(); }, 700)
+  });
 }
 
 // ---------- efeitos ----------

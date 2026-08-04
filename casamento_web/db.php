@@ -103,7 +103,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 4;
+const ESQUEMA_VERSAO = 5;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -219,6 +219,16 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_ver_data (criado_em)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+
+    // ---- v5: versões dos dois convites, com uma predefinida ---------------
+    if ($versaoAtual < 5) {
+        // 'ambito' separa o convite digital do cartão impresso: são peças
+        // distintas e cada uma tem a sua versão em vigor.
+        migColuna($conn, "{$P}versoes", 'ambito',        "VARCHAR(10) NOT NULL DEFAULT 'digital'");
+        migColuna($conn, "{$P}versoes", 'predefinida',   "TINYINT(1) NOT NULL DEFAULT 0");
+        migColuna($conn, "{$P}versoes", 'atualizado_em', "TIMESTAMP NULL DEFAULT NULL");
+        migIndice($conn, "{$P}versoes", 'idx_ver_ambito', 'ambito, predefinida');
     }
 
     @$conn->query("INSERT INTO {$P}definicoes (chave,valor) VALUES ('schema.versao','" . ESQUEMA_VERSAO . "')

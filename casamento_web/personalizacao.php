@@ -187,6 +187,63 @@ function defsPadrao(): array {
     ];
 }
 
+// ============================================================
+// Versões: cada peça tem as suas, e uma delas está em vigor
+// ============================================================
+
+/**
+ * As duas peças que se versionam. São coisas distintas — o convite que os
+ * convidados abrem e o cartão que vai para a gráfica — por isso cada uma tem
+ * as suas versões e a sua predefinida.
+ */
+function ambitosVersao(): array {
+    return [
+        'digital'  => ['rotulo' => 'Convite digital',  'editor' => 'convite-editor.php'],
+        'impresso' => ['rotulo' => 'Convite impresso', 'editor' => 'editor-cartao.php'],
+    ];
+}
+
+/** As definições que pertencem a um âmbito. O cartão é o prefixo 'cartao.'. */
+function chavesDoAmbito(string $ambito): array {
+    $todas = array_keys(defsPadrao());
+    return $ambito === 'impresso'
+        ? array_values(array_filter($todas, fn($k) => str_starts_with($k, 'cartao.')))
+        : array_values(array_filter($todas, fn($k) => !str_starts_with($k, 'cartao.')));
+}
+
+/** Fotografia do estado atual de uma peça, pronta a guardar como versão. */
+function instantaneoAmbito(mysqli $conn, string $ambito): array {
+    $atuais = defsAtuais($conn);
+    $out = [];
+    foreach (chavesDoAmbito($ambito) as $k) $out[$k] = (string)($atuais[$k] ?? '');
+    return $out;
+}
+
+/** Compara uma versão guardada com o que está em vigor agora. */
+function versaoIgualAoAtual(mysqli $conn, string $ambito, string $defsJson): bool {
+    $guardado = json_decode($defsJson, true);
+    if (!is_array($guardado)) return false;
+    foreach (instantaneoAmbito($conn, $ambito) as $k => $v) {
+        if ((string)($guardado[$k] ?? '') !== $v) return false;
+    }
+    return true;
+}
+
+/**
+ * Alguma versão guardada aponta para este ficheiro?
+ * Serve para não apagar do disco uma foto ou música a que uma versão antiga
+ * ainda se agarra — repô-la deixaria o convite com um buraco.
+ */
+function ficheiroEmVersao(mysqli $conn, string $caminho): bool {
+    global $P;
+    if ($caminho === '') return false;
+    $st = $conn->prepare("SELECT 1 FROM {$P}versoes WHERE defs LIKE CONCAT('%', ?, '%') LIMIT 1");
+    if (!$st) return true;               // sem certeza, guarda-se o ficheiro
+    $st->bind_param('s', $caminho);
+    $st->execute();
+    return (bool)$st->get_result()->fetch_row();
+}
+
 /**
  * Tipos de letra disponíveis para o convite digital.
  * O modelo já carrega Cormorant, Jost e Pinyon; os outros só entram quando
