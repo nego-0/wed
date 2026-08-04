@@ -183,6 +183,9 @@ $CAS = casalInfo(defsAtuais($conn));
 </div>
 
 <script src="<?= asset('assets/editor-adiar.js') ?>"></script>
+<?php if (($_GET['diag'] ?? '') === '1'): ?>
+<script src="<?= asset('assets/editor-diag.js') ?>"></script>
+<?php endif; ?>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script>

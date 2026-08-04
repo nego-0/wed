@@ -140,6 +140,15 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .campo{ margin-bottom:.7rem; }
 .campo label{ display:block; font-size:.72rem; color:var(--ed-texto-2); margin-bottom:.22rem;
               text-transform:uppercase; letter-spacing:.07em; }
+/* Sem isto, num ecrã tátil ou num rato de precisão o navegador entende o
+   arrasto horizontal como um gesto de deslocar a página e fica com ele: o
+   toque punha o valor por baixo do dedo e mais nada, como se a barra fosse um
+   botão. pan-y deixa continuar a rolar o painel na vertical.
+   O resto do editor — nós das mesas, pegas, enquadramento da foto — já o
+   fazia; as barras e os seletores de cor tinham ficado de fora. */
+.ed-paineis input[type=range]{ touch-action:pan-y; }
+.ed-paineis input[type=color]{ touch-action:none; }
+
 .campo input[type=text], .campo input[type=number], .campo textarea, .campo select{
   width:100%; box-sizing:border-box; background:#191a16; border:1px solid var(--ed-linha);
   color:var(--ed-texto); border-radius:6px; padding:.4rem .55rem; font-family:inherit; font-size:.85rem; }
