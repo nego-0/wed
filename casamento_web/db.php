@@ -400,9 +400,16 @@ function estatisticas(mysqli $conn): array {
                          COUNT(DISTINCT CASE WHEN g.genero='m' THEN g.convite_id END) AS conv_masc,
                          COUNT(DISTINCT CASE WHEN g.genero='f' THEN g.convite_id END) AS conv_fem"
                       : "0 AS masc, 0 AS fem, 0 AS conv_masc, 0 AS conv_fem";
+    // Brindes por género: quantos recebem, homens e mulheres. Só faz sentido
+    // quando existem as duas colunas; senão fica a zero.
+    $exprBg = ($temBri && $temGen)
+        ? "SUM(g.brinde=1 AND g.genero='m') AS brinde_m, SUM(g.brinde=1 AND g.genero='f') AS brinde_f,
+           SUM(g.brinde=1 AND (g.genero IS NULL OR g.genero='')) AS brinde_sg"
+        : "0 AS brinde_m, 0 AS brinde_f, 0 AS brinde_sg";
     $exprB  = $temBri ? "SUM(g.brinde=1) AS brinde,
-                         COUNT(DISTINCT CASE WHEN g.brinde=1 THEN g.convite_id END) AS conv_brinde"
-                      : "0 AS brinde, 0 AS conv_brinde";
+                         COUNT(DISTINCT CASE WHEN g.brinde=1 THEN g.convite_id END) AS conv_brinde,
+                         $exprBg"
+                      : "0 AS brinde, 0 AS conv_brinde, $exprBg";
     $g = $linha("SELECT COUNT(*) AS convidados, $exprG, $exprB,
         SUM(g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')) AS pend_fora,
         SUM(g.rsvp='recusado' AND c.rsvp_estado<>'recusado')                   AS rec_fora
@@ -426,6 +433,8 @@ function estatisticas(mysqli $conn): array {
         'pes_masculino' => $n($g,'masc'), 'pes_feminino' => $n($g,'fem'), 'pes_brinde' => $n($g,'brinde'),
         'conv_masculino'=> $n($g,'conv_masc'), 'conv_feminino' => $n($g,'conv_fem'),
         'conv_brinde'   => $n($g,'conv_brinde'),
+        'pes_brinde_m'  => $n($g,'brinde_m'), 'pes_brinde_f' => $n($g,'brinde_f'),
+        'pes_brinde_sg' => $n($g,'brinde_sg'),   // recebem brinde mas sem género definido
     ];
     $s['pes_confirmados'] = $s['lug_confirm'];
     // Pessoas por confirmar: lugares dos convites pendentes + lugares por confirmar

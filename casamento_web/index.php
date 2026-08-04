@@ -104,7 +104,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .lado-ic{ display:inline-flex; align-items:center; gap:.25rem; color:var(--gold); }
   .lado-ic svg{ width:15px; height:15px; }
   .stat-f .ss{ font-size:.66rem; color:#b0b4ab; margin-top:.1rem; }
+  .stat-f .ss .gi{ font-size:.8rem; }
   .stat-f.ativo .ss{ color:rgba(239,227,203,.7); }
+  /* Cartão selecionado (fundo verde): os símbolos ♂/♀ herdam o tom claro. */
+  .stat-f.ativo .ss .gi{ color:inherit; }
 
   /* Barra de progresso de capacidade */
   .progresso-cap{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1rem 1.15rem; }
@@ -454,11 +457,25 @@ const IC = {
 // Todos os cartões dizem o mesmo: número grande = PESSOAS, linha de baixo = a
 // quantos convites pertencem. Sem esta regra lia-se "6 · 2 convites" ao lado de
 // "0 · convidados" e não se percebia o que cada número contava.
-function statCard(ic,pessoas,convites,l,onclick,ativo,cls=''){
+function statCard(ic,pessoas,convites,l,onclick,ativo,cls='',subHtml='',titulo=''){
   const p = (+pessoas===1?'1 pessoa':(+pessoas||0)+' pessoas');
   const c = (+convites===1?'1 convite':(+convites||0)+' convites');
-  return `<button class="stat-f ${cls}${ativo?' ativo':''}" onclick="${onclick}" title="${l}: ${p} em ${c}">
-    <span class="si">${ic}</span><span class="sn">${+pessoas||0}</span><span class="sl">${l}</span><span class="ss">${c}</span></button>`;
+  const sub = subHtml || c;
+  const tit = titulo || `${l}: ${p} em ${c}`;
+  return `<button class="stat-f ${cls}${ativo?' ativo':''}" onclick="${onclick}" title="${tit}">
+    <span class="si">${ic}</span><span class="sn">${+pessoas||0}</span><span class="sl">${l}</span><span class="ss">${sub}</span></button>`;
+}
+
+// Sub-linha do cartão de brindes: quantos recebem por género (♂/♀).
+function brindeSub(s){
+  const m=+s.pes_brinde_m||0, f=+s.pes_brinde_f||0, sg=+s.pes_brinde_sg||0;
+  return `<span class="gi gi-m">♂</span> ${m} · <span class="gi gi-f">♀</span> ${f}`
+       + (sg?` · ${sg}?`:'');
+}
+function brindeTitulo(s){
+  const m=+s.pes_brinde_m||0, f=+s.pes_brinde_f||0, sg=+s.pes_brinde_sg||0;
+  return `Brindes: ${m} a homens · ${f} a mulheres`
+       + (sg?` · ${sg} sem género definido`:'') + ` (${(+s.pes_brinde||0)} no total)`;
 }
 
 // Os quatro primeiros são o essencial; no telemóvel os restantes ficam
@@ -481,7 +498,7 @@ function renderStats(s){
     statCard(IC.noiva, s.pes_noivas, s.noivas, 'Noiva', "filtrarLado('noiva')", l==='noiva'),
     statCard(IC.masculino, s.pes_masculino, s.conv_masculino, 'Masculino', "filtrarGenero('m')", filtroGenero==='m'),
     statCard(IC.feminino, s.pes_feminino, s.conv_feminino, 'Feminino', "filtrarGenero('f')", filtroGenero==='f','rosa'),
-    statCard(IC.brinde, s.pes_brinde, s.conv_brinde, 'Brindes', "filtrarBrinde()", filtroBrinde==='1','ouro'),
+    statCard(IC.brinde, s.pes_brinde, s.conv_brinde, 'Brindes', "filtrarBrinde()", filtroBrinde==='1','ouro', brindeSub(s), brindeTitulo(s)),
   ];
   // Um filtro ativo entre os "extra" obriga a mostrá-los: senão o painel diria
   // que está filtrado sem se ver por quê.
