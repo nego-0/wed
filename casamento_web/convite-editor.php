@@ -32,6 +32,13 @@ $CAS = casalInfo(defsAtuais($conn));
   .camada .op{ font-size:.68rem; color:var(--ed-texto-2); border:1px solid var(--ed-linha);
                border-radius:4px; padding:0 .25rem; }
   .camada.fixa .olho{ opacity:.25; cursor:not-allowed; }
+  .camada[draggable=true]{ cursor:grab; }
+  .camada.a-arrastar{ opacity:.4; }
+  .camada.cair-antes{ box-shadow:inset 0 2px 0 var(--ed-ouro); }
+  .camada.cair-depois{ box-shadow:inset 0 -2px 0 var(--ed-ouro); }
+  .add-sec{ display:flex; gap:.3rem; margin-top:.5rem; padding-top:.5rem; border-top:1px solid var(--ed-linha); }
+  .add-sec select{ flex:1; min-width:0; background:#191a16; border:1px solid var(--ed-linha);
+    color:var(--ed-texto); border-radius:5px; padding:.25rem .3rem; font-family:inherit; font-size:.76rem; }
 
   /* ---- Propriedades ---- */
   .sel-nada{ color:var(--ed-texto-2); font-size:.8rem; line-height:1.55; }
@@ -174,6 +181,10 @@ window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
 const ATUAIS   = <?= json_encode(defsAtuais($conn), JSON_UNESCAPED_UNICODE) ?>;
 const SECCOES  = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
+const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
+const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
+const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
+const BLOCOS_MAX = <?= (int)BLOCOS_MAX ?>;
 const MARKDOWN = <?= json_encode(camposMarkdown()) ?>;
 const ICONES   = <?= json_encode(iconesConvite()) ?>;
 // Fotografias recortadas: têm ponto focal e aproximação (as outras mostram-se inteiras).
@@ -253,8 +264,34 @@ let EST = {
     'manual.itens':       ler('manual.itens'),
   },
   paleta: (()=>{ try { return JSON.parse(ATUAIS['tema.paleta']||'{}')||{}; } catch(e){ return {}; } })(),
+  blocos: ler('layout.blocos'),                                  // secções livres
+  ordem:  (ATUAIS['layout.ordem']||'').split(',').filter(Boolean), // ordem das secções
 };
 function ler(k){ try { return JSON.parse(ATUAIS[k]||'[]')||[]; } catch(e){ return []; } }
+
+// ---------- as camadas: secções de origem + as livres, pela ordem ----------
+function blocoLivre(id){ return EST.blocos.find(b=>b.id===id) || null; }
+/** Lista ordenada de camadas, com a capa à cabeça e o fecho no fim. */
+function camadas(){
+  const validos = Object.keys(SECCOES).concat(EST.blocos.map(b=>b.id));
+  const ord = [];
+  EST.ordem.forEach(id=>{ if (validos.includes(id) && !ord.includes(id)) ord.push(id); });
+  validos.forEach(id=>{ if (!ord.includes(id)) ord.push(id); });
+  const meio = ord.filter(id=>id!==PRIMEIRO && id!==ULTIMO);
+  const final = [PRIMEIRO, ...meio, ULTIMO];
+  EST.ordem = final;
+  return final.map(id=>{
+    const b = blocoLivre(id);
+    return b ? { id, rotulo: b.titulo || 'Secção livre', livre: true, fixa: false }
+             : { id, rotulo: SECCOES[id] ? SECCOES[id].rotulo : id, livre: false,
+                 fixa: (id===PRIMEIRO || id===ULTIMO) };
+  });
+}
+function novoId(){
+  let n = 1, id;
+  do { id = 'bl' + n++; } while (EST.blocos.some(b=>b.id===id));
+  return id;
+}
 
 let SEC = 'hero';      // camada selecionada
 let DEF = null;        // texto selecionado dentro dela
@@ -326,8 +363,14 @@ window.addEventListener('message', e=>{
     if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF});
     return;
   }
+  if (d.tipo === 'atalho'){
+    if (d.tecla === 'z') d.shift ? refazer() : desfazer();
+    if (d.tecla === 'y') refazer();
+    if (d.tecla === 's') guardar();
+    return;
+  }
   if (d.tipo === 'selecionar'){
-    if (d.sec && SECCOES[d.sec]) SEC = d.sec;
+    if (d.sec && (SECCOES[d.sec] || blocoLivre(d.sec))) SEC = d.sec;
     DEF = (d.def && CAMPOS[d.def]) ? d.def : null;
     renderCamadas(); renderProps();
     enviarTela({tipo:'marcar', sec:SEC, def:DEF});
@@ -353,22 +396,127 @@ function recarregarTela(){
 const OLHO_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const OLHO_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l18 18M10.6 10.7a3 3 0 004.2 4.2M9.9 5.2A9.6 9.6 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4M6.3 6.4A17 17 0 002 12s3.5 7 10 7a9.9 9.9 0 004-.8"/></svg>';
 function renderCamadas(){
-  $('camadas').innerHTML = Object.entries(SECCOES).map(([k,s])=>{
-    const chaveVis = VISIVEL[k];
-    const vis = !chaveVis || EST.val[chaveVis] !== '0';
-    return `<div class="camada ${SEC===k?'sel':''} ${vis?'':'oculta'} ${chaveVis?'':'fixa'}" onclick="irCamada('${k}')">
-      <button class="olho" title="${chaveVis ? (vis?'Esconder esta secção':'Mostrar esta secção') : 'Esta secção é sempre visível'}"
-              onclick="event.stopPropagation();${chaveVis?`alternarSec('${k}')`:''}">${vis?OLHO_ON:OLHO_OFF}</button>
-      <span class="nome">${esc(s.rotulo)}</span>
-      ${chaveVis?'':'<span class="op">fixa</span>'}
+  const lista = camadas();
+  $('camadas').innerHTML = lista.map((c,i)=>{
+    const chaveVis = VISIVEL[c.id];
+    const podeEsconder = !!chaveVis || c.livre;
+    const vis = c.livre ? true : (!chaveVis || EST.val[chaveVis] !== '0');
+    const movivel = !c.fixa;
+    return `<div class="camada ${SEC===c.id?'sel':''} ${vis?'':'oculta'} ${movivel?'':'fixa'}"
+      draggable="${movivel}" data-id="${c.id}" data-i="${i}"
+      ondragstart="arrastarCamada(event)" ondragover="sobreCamada(event)"
+      ondrop="largarCamada(event)" ondragend="fimArrasto(event)"
+      onclick="irCamada('${c.id}')">
+      <button class="olho" title="${podeEsconder ? (vis?'Esconder esta secção':'Mostrar esta secção') : 'Esta secção é sempre visível'}"
+              onclick="event.stopPropagation();${chaveVis?`alternarSec('${c.id}')`:''}">${vis?OLHO_ON:OLHO_OFF}</button>
+      <span class="nome">${esc(c.rotulo)}</span>
+      ${c.livre ? '<span class="op">livre</span>' : (c.fixa ? '<span class="op">fixa</span>' : '')}
     </div>`;
-  }).join('');
+  }).join('') + `
+    <div class="add-sec">
+      ${EST.blocos.length < BLOCOS_MAX
+        ? `<select id="modelo-novo">${Object.entries(MODELOS).map(([k,m])=>`<option value="${k}">${esc(m.rotulo)}</option>`).join('')}</select>
+           <button class="bt bt-min" onclick="juntarBloco()">+ Acrescentar</button>`
+        : `<span class="sel-nada">Chegou ao máximo de ${BLOCOS_MAX} secções livres.</span>`}
+    </div>
+    <div class="sel-nada" style="margin-top:.35rem">Arraste as camadas para trocar a ordem. A capa abre e o fecho encerra.</div>`;
+}
+
+// ---------- arrastar para reordenar ----------
+let idArrastado = null;
+function arrastarCamada(ev){
+  const el = ev.currentTarget;
+  if (el.classList.contains('fixa')) { ev.preventDefault(); return; }
+  idArrastado = el.dataset.id;
+  el.classList.add('a-arrastar');
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', idArrastado);   // Firefox exige dados
+}
+function sobreCamada(ev){
+  const el = ev.currentTarget;
+  if (!idArrastado || el.dataset.id === idArrastado || el.classList.contains('fixa')) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  // Marca de onde vai cair: acima ou abaixo, conforme a metade em que se está.
+  const r = el.getBoundingClientRect();
+  el.classList.toggle('cair-antes', ev.clientY < r.top + r.height/2);
+  el.classList.toggle('cair-depois', ev.clientY >= r.top + r.height/2);
+}
+function largarCamada(ev){
+  const el = ev.currentTarget;
+  if (!idArrastado || el.dataset.id === idArrastado || el.classList.contains('fixa')) return;
+  ev.preventDefault();
+  const r = el.getBoundingClientRect();
+  const antes = ev.clientY < r.top + r.height/2;
+  const ordem = EST.ordem.filter(id=>id!==idArrastado);
+  const alvo = ordem.indexOf(el.dataset.id);
+  ordem.splice(antes ? alvo : alvo+1, 0, idArrastado);
+  EST.ordem = ordem;
+  limparMarcas();
+  marcarSujo(true); registarPasso(); renderCamadas(); recarregarTela();
+  msg('Ordem alterada. A numeração das páginas acompanha.');
+}
+function fimArrasto(){ idArrastado = null; limparMarcas(); }
+function limparMarcas(){
+  document.querySelectorAll('.camada').forEach(e=>e.classList.remove('cair-antes','cair-depois','a-arrastar'));
+}
+
+// ---------- secções livres ----------
+function juntarBloco(){
+  if (EST.blocos.length >= BLOCOS_MAX) return;
+  const m = MODELOS[$('modelo-novo').value] || MODELOS['livre'];
+  const b = { id: novoId(), eyebrow: m.eyebrow, titulo: m.titulo, texto: m.texto,
+              itens: (m.itens||[]).map(it=>({...it})) };
+  EST.blocos.push(b);
+  // Entra antes do fecho, que é sempre o último.
+  EST.ordem = EST.ordem.filter(id=>id!==ULTIMO).concat([b.id, ULTIMO]);
+  SEC = b.id; DEF = null;
+  marcarSujo(true); registarPasso();
+  renderCamadas(); renderProps(); recarregarTela();
+  msg('Secção acrescentada: ' + (b.titulo||'nova secção') + '. Arraste-a na lista para a mudar de sítio.');
+}
+function apagarBloco(id){
+  const b = blocoLivre(id); if (!b) return;
+  if (!confirm(`Apagar a secção "${b.titulo||'livre'}"?\n\nPode desfazer com Ctrl+Z.`)) return;
+  EST.blocos = EST.blocos.filter(x=>x.id!==id);
+  EST.ordem  = EST.ordem.filter(x=>x!==id);
+  SEC = PRIMEIRO; DEF = null;
+  marcarSujo(true); registarPasso();
+  renderCamadas(); renderProps(); recarregarTela();
+  msg('Secção apagada. Ctrl+Z devolve-a.');
+}
+let tBloco = null;
+function editarBloco(id, campo, v){
+  const b = blocoLivre(id); if (!b) return;
+  b[campo] = v;
+  if (campo === 'titulo') renderCamadas();          // o nome da camada acompanha
+  marcarSujo(true); registarPasso();
+  clearTimeout(tBloco); tBloco = setTimeout(recarregarTela, 800);
+}
+function juntarItemBloco(id){
+  const b = blocoLivre(id); if (!b || (b.itens||[]).length >= 8) return;
+  (b.itens = b.itens || []).push({i:'coracao', t:'', x:''});
+  marcarSujo(true); registarPasso(); renderProps();
+  clearTimeout(tBloco); tBloco = setTimeout(recarregarTela, 600);
+}
+function editarItemBloco(id, i, campo, v){
+  const b = blocoLivre(id); if (!b || !b.itens[i]) return;
+  b.itens[i][campo] = v;
+  marcarSujo(true); registarPasso();
+  clearTimeout(tBloco); tBloco = setTimeout(recarregarTela, 800);
+}
+function removerItemBloco(id, i){
+  const b = blocoLivre(id); if (!b) return;
+  b.itens.splice(i,1);
+  marcarSujo(true); registarPasso(); renderProps();
+  clearTimeout(tBloco); tBloco = setTimeout(recarregarTela, 600);
 }
 function irCamada(k){
   SEC = k; DEF = null;
   renderCamadas(); renderProps();
   enviarTela({tipo:'marcar', sec:k, def:null});
-  msg('Camada: ' + SECCOES[k].rotulo);
+  const b = blocoLivre(k);
+  msg('Camada: ' + (b ? (b.titulo||'secção livre') : (SECCOES[k] ? SECCOES[k].rotulo : k)));
 }
 function alternarSec(k){
   const chave = VISIVEL[k]; if (!chave) return;
@@ -380,6 +528,8 @@ function alternarSec(k){
 
 // ---------- propriedades ----------
 function renderProps(){
+  const livre = blocoLivre(SEC);
+  if (livre) return renderPropsLivre(livre);
   const s = SECCOES[SEC]; if (!s){ $('props').innerHTML=''; return; }
   const chaves = (s.campos||[]).concat(EXTRA[SEC]||[]).filter(c=>CAMPOS[c]);
   let h = `<div class="sel-nada" style="margin-bottom:.6rem"><b>${esc(s.rotulo)}</b></div>`;
@@ -407,6 +557,40 @@ function campoHTML(chave){
   return `<div class="campo"${sel}><label>${esc(rot)}${cont}</label>${ctl}${md}</div>`;
 }
 function classeCont(n,max){ return n>=max ? 'cheio' : (n>max*0.9 ? 'perto' : ''); }
+
+/** Propriedades de uma secção livre: os mesmos campos para todas. */
+function renderPropsLivre(b){
+  const cp = (campo, rot, tipo, max) => {
+    const v = b[campo] || '';
+    const ctl = tipo==='area'
+      ? `<textarea maxlength="${max}" oninput="editarBloco('${b.id}','${campo}',this.value);contarAqui(this,${max})">${esc(v)}</textarea>`
+      : `<input type="text" maxlength="${max}" value="${esc(v)}" oninput="editarBloco('${b.id}','${campo}',this.value);contarAqui(this,${max})">`;
+    return `<div class="campo"><label>${rot}<span class="contador ${classeCont(v.length,max)}">${v.length}/${max}</span></label>${ctl}</div>`;
+  };
+  const itens = b.itens || [];
+  $('props').innerHTML =
+    `<div class="sel-nada" style="margin-bottom:.6rem"><b>Secção livre</b> — acrescentada por si</div>` +
+    cp('eyebrow','Chamada','texto',120) +
+    cp('titulo','Título','texto',120) +
+    cp('texto','Texto','area',2000) +
+    `<div class="campo"><label>Destaques<span class="contador ${classeCont(itens.length,8)}">${itens.length}/8</span></label></div>` +
+    itens.map((it,i)=>`<div class="it">
+        <div class="it-topo"><span class="n">${i+1}</span>
+          <select onchange="editarItemBloco('${b.id}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
+            ${Object.keys(ICONES).map(n=>`<option value="${n}" ${n===it.i?'selected':''}>${n}</option>`).join('')}</select>
+          <button class="bt bt-min" onclick="removerItemBloco('${b.id}',${i})" title="Remover">✕</button>
+        </div>
+        <input type="text" placeholder="Título" value="${esc(it.t||'')}" oninput="editarItemBloco('${b.id}',${i},'t',this.value)">
+        <textarea placeholder="Texto" oninput="editarItemBloco('${b.id}',${i},'x',this.value)">${esc(it.x||'')}</textarea>
+      </div>`).join('') +
+    (itens.length < 8 ? `<button class="bt" style="width:100%" onclick="juntarItemBloco('${b.id}')">+ Destaque</button>` : '') +
+    `<div class="campo" style="margin-top:.8rem"><button class="bt" style="width:100%;color:#e08a7d" onclick="apagarBloco('${b.id}')">Apagar esta secção</button></div>`;
+}
+/** Atualiza o contador do campo que está a ser escrito. */
+function contarAqui(el, max){
+  const c = el.closest('.campo').querySelector('.contador');
+  if (c){ c.textContent = el.value.length+'/'+max; c.className = 'contador '+classeCont(el.value.length,max); }
+}
 
 function focar(chave){
   DEF = chave;
@@ -688,6 +872,8 @@ function serializar(){
   v['cronograma.itens']   = JSON.stringify(EST.listas['cronograma.itens']);
   v['manual.itens']       = JSON.stringify(EST.listas['manual.itens']);
   v['tema.paleta']        = Object.keys(EST.paleta).length ? JSON.stringify(EST.paleta) : '';
+  v['layout.blocos']      = EST.blocos.length ? JSON.stringify(EST.blocos) : '';
+  v['layout.ordem']       = EST.ordem.join(',');
   return v;
 }
 function rotuloDe(chave){ return CAMPOS[chave] ? CAMPOS[chave][0] : chave; }
@@ -721,6 +907,7 @@ function marcarInvalidos(inv){
 }
 
 function reporSeccao(){
+  if (blocoLivre(SEC)) return msg('Esta secção foi acrescentada por si — use "Apagar esta secção".');
   const s = SECCOES[SEC]; if (!s) return;
   if (!confirm(`Repor os textos originais de "${s.rotulo}"?\n\nPode desfazer com Ctrl+Z.`)) return;
   (s.campos||[]).concat(EXTRA[SEC]||[]).forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });

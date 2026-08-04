@@ -259,6 +259,14 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .mcell svg{width:30px;height:30px;stroke:var(--forest);fill:none;stroke-width:1.4;margin-bottom:12px}
 .mcell p{font-size:12px;letter-spacing:.06em;line-height:1.6;color:var(--forest-deep)}
 .mcell p b{font-weight:600;color:var(--gold)}
+/* ---- Secção livre (acrescentada pelo casal no editor) ---- */
+.bloco-livre{background:var(--ivory);text-align:center;padding-top:64px;padding-bottom:60px}
+.bloco-livre .eyebrow{color:var(--gold)}
+.bloco-livre h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(26px,6vw,32px);color:var(--forest);letter-spacing:.04em;margin:10px 0}
+.bloco-livre .bl-texto{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--text);max-width:400px;margin:0 auto 38px;font-size:16.5px;line-height:1.6}
+.bloco-livre .mcell{text-align:center}
+.bloco-livre .mcell b{display:block;margin-bottom:8px;font-family:'Jost',sans-serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.bloco-livre .mcell p:last-child{margin:0}
 #rsvp{background:linear-gradient(180deg,var(--ivory),var(--cream));text-align:center;padding-top:60px;position:relative}
 #rsvp h2{font-family:'Pinyon Script',cursive;font-weight:400;font-size:clamp(44px,10vw,60px);color:var(--forest);line-height:1.15}
 #rsvp .sub{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:18px;color:var(--text);max-width:390px;margin:16px auto 0;line-height:1.7}
@@ -313,6 +321,7 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
 </button>
 <audio id="bgAudio" loop preload="none" src="{{MUSICA}}"></audio>
 <main>
+<!--BLOCO:hero-->
   <section id="hero" class="page">
     <div class="frame">
       <img src="{{IMG_HERO}}" alt="{{CASAL_ALT}}" fetchpriority="high" decoding="async">
@@ -330,6 +339,8 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
       </div>
     </div>
   </section>
+<!--/BLOCO:hero-->
+<!--BLOCO:convite-->
   <section id="convite" class="page pad">
     <span class="pageno rv">— um —</span>
     <div class="monogram rv d1"><span>{{MONO}}</span></div>
@@ -342,6 +353,8 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
     </div>
     <p class="closing rv d4">{{CLOSING}}</p>
   </section>
+<!--/BLOCO:convite-->
+<!--BLOCO:historia-->
 <!--SEC:historia-->
   <section id="historia" class="page pad">
     <span class="pageno rv">— dois —</span>
@@ -362,6 +375,8 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
     </div>
   </section>
 <!--/SEC:historia-->
+<!--/BLOCO:historia-->
+<!--BLOCO:interludio-->
 <!--SEC:interludio-->
   <section id="interludio" class="page">
     <img class="inter-bg" src="{{IMG_INTERLUDIO}}" alt="{{CASAL_ALT}}" loading="lazy">
@@ -381,6 +396,8 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
     </div>
   </section>
 <!--/SEC:interludio-->
+<!--/BLOCO:interludio-->
+<!--BLOCO:grande-dia-->
   <section id="grande-dia" class="page pad">
     <span class="pageno rv">— três —</span>
     <span class="eyebrow rv">{{GD_EYEBROW}}</span>
@@ -420,6 +437,8 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
     </div>
 <!--/SEC:cronograma-->
   </section>
+<!--/BLOCO:grande-dia-->
+<!--BLOCO:acesso-->
   <section id="acesso" class="page">
     <div class="acesso-photo">
       <img src="{{IMG_ACESSO}}" alt="{{CASAL_ALT}}" loading="lazy" decoding="async">
@@ -441,6 +460,8 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
       <p class="qr-note rv d2">{{ACESSO_NOTA}}</p>
     </div>
   </section>
+<!--/BLOCO:acesso-->
+<!--BLOCO:final-->
   <section id="final" class="page">
 <!--SEC:manual-->
     <div id="manual" class="pad">
@@ -469,6 +490,7 @@ footer .fnote{margin-top:26px;font-family:'Cormorant Garamond',serif;font-style:
       <p class="fnote">{{FOOTER_QUOTE}}</p>
     </footer>
   </section>
+<!--/BLOCO:final-->
 </main>
 <script>
 (function(){

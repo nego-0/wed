@@ -122,6 +122,11 @@ $msgBlock = $msgPessoal !== ''
 
 if ($modoEditor) $tpl = marcarParaEditor($tpl);
 
+// Ordem: primeiro reordenam-se as secções (e entram as livres), depois
+// escondem-se as ocultas e só no fim se numeram as páginas — senão a
+// numeração sairia da ordem antiga.
+$tpl = ordenarBlocos($tpl, $DEFS, ['{noiva}' => $DEFS['casal.noiva'], '{noivo}' => $DEFS['casal.noivo']], $modoEditor);
+
 $out = aplicarSeccoes($tpl, $DEFS);
 $out = strtr($out, convitePlaceholders($DEFS) + [
     '{{GUEST_NAME}}'   => $nome,
@@ -187,6 +192,16 @@ function pontelEditor(): string {
     var link = e.target.closest('a'); if (link) e.preventDefault();
     envia({ tipo:'selecionar', def: alvo ? alvo.dataset.def : null, sec: sec ? sec.dataset.sec : null });
   }, true);
+
+  // Depois de clicar no convite o teclado fica dentro da tela, e os atalhos do
+  // editor deixavam de responder. Reencaminham-se para a janela de edição.
+  document.addEventListener('keydown', function(e){
+    var k = (e.key || '').toLowerCase();
+    if ((e.ctrlKey || e.metaKey) && (k === 'z' || k === 'y' || k === 's')){
+      e.preventDefault();
+      envia({ tipo:'atalho', tecla:k, shift:e.shiftKey });
+    }
+  });
 
   window.addEventListener('message', function(e){
     var d = e.data || {}; if (d.fonte !== 'editor') return;

@@ -172,7 +172,130 @@ function defsPadrao(): array {
         'foto.hero'       => '50 8 100',
         'foto.interludio' => '50 26 100',
         'foto.acesso'     => '50 32 100',
+        // ---- Estrutura do convite ----
+        // Ordem das secções (a capa abre e o fecho encerra, sempre) e as
+        // secções livres que o casal acrescente, em JSON.
+        'layout.ordem'  => 'hero,convite,historia,interludio,grande-dia,acesso,final',
+        'layout.blocos' => '',
     ];
+}
+
+// ============================================================
+// Blocos: as secções do convite, na ordem escolhida
+// ============================================================
+
+/** Secções que vêm com o convite. A capa é sempre a primeira e o fecho o último. */
+function blocosBase(): array { return ['hero','convite','historia','interludio','grande-dia','acesso','final']; }
+const BLOCO_PRIMEIRO = 'hero';
+const BLOCO_ULTIMO   = 'final';
+const BLOCOS_MAX     = 6;      // secções livres, além das que já vêm no convite
+
+/** Modelos de secção livre oferecidos no editor (só pré-preenchem o conteúdo). */
+function modelosBloco(): array {
+    return [
+        'presentes' => ['rotulo'=>'Lista de presentes', 'icone'=>'brinde',
+            'eyebrow'=>'Com todo o carinho', 'titulo'=>'Lista de presentes',
+            'texto'=>'A vossa presença é o nosso maior presente. Para quem quiser oferecer algo mais, deixamos aqui algumas ideias.',
+            'itens'=>[['i'=>'coracao','t'=>'','x'=>'']]],
+        'chegar' => ['rotulo'=>'Como chegar', 'icone'=>'envelope',
+            'eyebrow'=>'Para não se perder', 'titulo'=>'Como chegar',
+            'texto'=>'Deixamos as indicações para chegar ao local da celebração.',
+            'itens'=>[['i'=>'relogio','t'=>'','x'=>'']]],
+        'alojamento' => ['rotulo'=>'Alojamento', 'icone'=>'estrela',
+            'eyebrow'=>'Para quem vem de longe', 'titulo'=>'Onde ficar',
+            'texto'=>'Algumas sugestões de alojamento perto do local.',
+            'itens'=>[['i'=>'estrela','t'=>'','x'=>'']]],
+        'padrinhos' => ['rotulo'=>'Padrinhos e madrinhas', 'icone'=>'aneis',
+            'eyebrow'=>'Ao nosso lado', 'titulo'=>'Padrinhos e madrinhas',
+            'texto'=>'As pessoas que escolhemos para estar connosco neste dia.',
+            'itens'=>[['i'=>'aneis','t'=>'','x'=>'']]],
+        'livre' => ['rotulo'=>'Secção livre', 'icone'=>'coracao',
+            'eyebrow'=>'', 'titulo'=>'Nova secção', 'texto'=>'', 'itens'=>[]],
+    ];
+}
+
+/** Secções livres gravadas, já validadas. */
+function blocosLivres(array $defs): array {
+    $j = json_decode($defs['layout.blocos'] ?? '', true);
+    return is_array($j) ? $j : [];
+}
+
+/**
+ * Ordem efetiva das secções: o que está gravado, limpo de ids desconhecidos,
+ * com a capa à cabeça e o fecho no fim, e com o que faltar acrescentado.
+ */
+function ordemBlocos(array $defs): array {
+    $validos = array_merge(blocosBase(), array_column(blocosLivres($defs), 'id'));
+    $pedida  = array_filter(array_map('trim', explode(',', (string)($defs['layout.ordem'] ?? ''))));
+    $ordem = [];
+    foreach ($pedida as $id) if (in_array($id, $validos, true) && !in_array($id, $ordem, true)) $ordem[] = $id;
+    foreach ($validos as $id) if (!in_array($id, $ordem, true)) $ordem[] = $id;   // nunca se perde nada
+    // A capa abre e o fecho encerra: é o que faz o convite ler-se como um livro.
+    $ordem = array_values(array_diff($ordem, [BLOCO_PRIMEIRO, BLOCO_ULTIMO]));
+    array_unshift($ordem, BLOCO_PRIMEIRO);
+    $ordem[] = BLOCO_ULTIMO;
+    return $ordem;
+}
+
+/** Compõe o HTML de uma secção livre, com as classes do próprio convite. */
+function renderBlocoLivre(array $b, array $tokens, bool $editor = false): string {
+    $icones = iconesConvite();
+    $eyebrow = trim((string)($b['eyebrow'] ?? ''));
+    $titulo  = trim((string)($b['titulo'] ?? ''));
+    $texto   = trim((string)($b['texto'] ?? ''));
+    $itens   = is_array($b['itens'] ?? null) ? $b['itens'] : [];
+    $id      = escP($b['id'] ?? 'bloco');
+
+    // data-sec só no editor (é o que permite clicar na secção dentro da tela):
+    // o convite dos convidados sai sem marca nenhuma.
+    $marca = $editor ? ' data-sec="'.$id.'"' : '';
+    $h  = '  <section id="'.$id.'"'.$marca.' class="page pad bloco-livre">'."\n";
+    $h .= '    <span class="pageno rv">— um —</span>'."\n";
+    if ($eyebrow !== '') $h .= '    <span class="eyebrow rv">'.escP(strtr($eyebrow, $tokens)).'</span>'."\n";
+    if ($titulo  !== '') $h .= '    <h2 class="rv d1">'.escP(strtr($titulo, $tokens)).'</h2>'."\n";
+    if ($texto   !== '') $h .= '    <p class="bl-texto rv d1">'.mdTexto($texto, $tokens).'</p>'."\n";
+    if ($itens) {
+        $celulas = '';
+        foreach ($itens as $i => $it) {
+            $ic = $icones[$it['i'] ?? ''] ?? $icones['coracao'];
+            $t  = trim((string)($it['t'] ?? ''));
+            $x  = trim((string)($it['x'] ?? ''));
+            if ($t === '' && $x === '') continue;
+            $celulas .= '        <div class="mcell rv'.($i % 2 ? ' d1' : '').'"><svg viewBox="0 0 24 24">'.$ic.'</svg>'
+               .  ($t !== '' ? '<b>'.escP(strtr($t, $tokens)).'</b>' : '')
+               .  ($x !== '' ? '<p>'.mdTexto($x, $tokens).'</p>' : '')
+               .  '</div>'."\n";
+        }
+        if ($celulas !== '') $h .= '    <div class="mgrid">'."\n".$celulas.'    </div>'."\n";
+    }
+    $h .= '  </section>'."\n";
+    return $h;
+}
+
+/**
+ * Reordena as secções e insere as livres.
+ * O modelo traz cada secção entre <!--BLOCO:id--> … <!--/BLOCO:id-->; aqui
+ * separam-se, e voltam a ser emitidas pela ordem escolhida.
+ */
+function ordenarBlocos(string $html, array $defs, array $tokens = [], bool $editor = false): string {
+    if (!preg_match('#<main>(.*)</main>#s', $html, $m)) return $html;
+    $corpo = $m[1];
+
+    $pecas = [];
+    if (preg_match_all('#<!--BLOCO:([a-z0-9\-]+)-->(.*?)<!--/BLOCO:\1-->#s', $corpo, $mm, PREG_SET_ORDER)) {
+        foreach ($mm as $x) $pecas[$x[1]] = $x[2];
+    }
+    if (!$pecas) return $html;
+
+    foreach (blocosLivres($defs) as $b) {
+        if (!empty($b['id'])) $pecas[$b['id']] = "\n".renderBlocoLivre($b, $tokens, $editor);
+    }
+
+    $novo = '';
+    foreach (ordemBlocos($defs) as $id) if (isset($pecas[$id])) $novo .= $pecas[$id];
+    // str_replace e não preg_replace: o HTML pode conter $ ou \\, que numa
+    // substituição por expressão regular seriam lidos como retrovisores.
+    return str_replace($m[0], '<main>'.$novo.'</main>', $html);
 }
 
 /** As fotografias que são recortadas e por isso precisam de enquadramento. */
@@ -260,6 +383,42 @@ function validarDefinicao(string $chave, string $valor): ?string {
             if (!preg_match('/^\d{1,3}(\.\d+)?\s+\d{1,3}(\.\d+)?\s+\d{2,3}(\.\d+)?$/', $valor)) return null;
             $e = lerEnquadramento($valor);
             return round($e['x'],1).' '.round($e['y'],1).' '.round($e['zoom']);
+        }
+        case 'layout.ordem': {
+            // Lista de ids separados por vírgula. Guarda-se o que é reconhecível;
+            // ordemBlocos() trata de pôr a capa à frente e o fecho no fim.
+            $ids = array_filter(array_map('trim', explode(',', $valor)),
+                                fn($i) => preg_match('/^[a-z0-9\-]{1,24}$/', $i));
+            return implode(',', array_unique($ids));
+        }
+        case 'layout.blocos': {
+            if ($valor === '') return '';
+            $j = json_decode($valor, true); if (!is_array($j)) return null;
+            $icones = iconesConvite(); $out = []; $vistos = [];
+            foreach (array_slice($j, 0, BLOCOS_MAX) as $b) {
+                if (!is_array($b)) continue;
+                $id = (string)($b['id'] ?? '');
+                // O id entra no HTML e na ordem: só letras, números e hífen.
+                if (!preg_match('/^bl[a-z0-9\-]{1,20}$/', $id) || in_array($id, $vistos, true)) continue;
+                if (in_array($id, blocosBase(), true)) continue;      // não pode chocar com as secções de origem
+                $vistos[] = $id;
+                $itens = [];
+                foreach (array_slice(is_array($b['itens'] ?? null) ? $b['itens'] : [], 0, 8) as $it) {
+                    if (!is_array($it)) continue;
+                    $t = mb_substr(trim((string)($it['t'] ?? '')), 0, 80);
+                    $x = mb_substr(trim((string)($it['x'] ?? '')), 0, 400);
+                    if ($t === '' && $x === '') continue;
+                    $itens[] = ['i' => isset($icones[$it['i'] ?? '']) ? $it['i'] : 'coracao', 't' => $t, 'x' => $x];
+                }
+                $out[] = [
+                    'id'      => $id,
+                    'eyebrow' => mb_substr(trim((string)($b['eyebrow'] ?? '')), 0, 120),
+                    'titulo'  => mb_substr(trim((string)($b['titulo'] ?? '')), 0, 120),
+                    'texto'   => mb_substr(trim((string)($b['texto'] ?? '')), 0, 2000),
+                    'itens'   => $itens,
+                ];
+            }
+            return $out ? jsonOuNulo($out) : '';
         }
         case 'cartao.numero_no_nome':
             return $valor === '1' ? '1' : '0';
