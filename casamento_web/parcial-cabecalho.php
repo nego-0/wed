@@ -12,7 +12,7 @@ function menuPrincipal(): array {
         'painel'  => ['index.php',           'Painel'],
         'mesas'   => ['mesas.php',           'Mesas'],
         'grafica' => ['graficas.php',        'Convite impresso'],
-        'convite' => ['convite-editor.php',  'Convite digital'],
+        'convite' => ['digital.php',         'Convite digital'],
         'porta'   => ['porteiro.php',        'Porta'],
     ];
 }

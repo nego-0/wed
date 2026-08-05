@@ -31,6 +31,11 @@ if ($demo) {
 // editor os poder selecionar e reescrever ao vivo.
 $modoEditor = $demo && isset($_GET['editor']) && $_GET['editor'] === '1';
 
+// Prova encolhida (a miniatura da página de entrada): o convite é o mesmo, mas
+// sem os botões flutuantes, que numa miniatura só fazem barulho e se sobrepõem
+// ao rótulo por cima.
+$modoProva = $demo && ($_GET['prova'] ?? '') === '1';
+
 // Rascunho por gravar: o editor envia o estado em edição para a tela poder
 // mostrar o que ainda não foi para a base de dados — secções escondidas,
 // listas, efeitos. Nada é gravado aqui; os valores passam pela mesma validação
@@ -149,6 +154,12 @@ if ($download) {
     header('Content-Length: ' . strlen($out));
     echo $out;
     exit;
+}
+
+// ---- Prova encolhida: sem os botões flutuantes ----------------
+if ($modoProva) {
+    $out = str_replace('</head>',
+        "<style>#dlBtn,#audioBtn{display:none!important}</style></head>", $out);
 }
 
 // ---- Tela do editor: ponte com a janela de edição -------------

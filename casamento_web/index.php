@@ -166,6 +166,8 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .pop-mais button:hover{ background:var(--cream); }
   .pop-mais button.perigo{ color:var(--danger); }
   .pop-mais button.perigo:hover{ background:#fdecea; }
+  /* Aberto para cima, a sombra vem de baixo. */
+  .pop-mais.acima{ box-shadow:0 -12px 32px rgba(32,52,42,.18); }
 
   /* Indicador e lista de mensagens */
   .tem-msg{ display:inline-flex; align-items:center; color:var(--gold); cursor:pointer; }
@@ -893,7 +895,16 @@ function abrirMais(ev, id){
   const r = ev.currentTarget.getBoundingClientRect();
   const larg = 190;
   pop.style.left = Math.max(8, Math.min(window.innerWidth - larg - 8, r.right - larg)) + 'px';
-  pop.style.top  = (r.bottom + 6) + 'px';
+  // Abre para baixo, mas se não couber abre para cima: nos últimos convites da
+  // lista o menu ficava cortado pela borda de baixo e as ações lá do fundo —
+  // eliminar, entre elas — nem se viam.
+  const alt = pop.offsetHeight;
+  const folgaBaixo = window.innerHeight - r.bottom - 6;
+  const paraCima = folgaBaixo < alt && r.top - 6 > folgaBaixo;
+  pop.classList.toggle('acima', paraCima);
+  pop.style.top = paraCima
+    ? Math.max(8, r.top - alt - 6) + 'px'
+    : Math.min(r.bottom + 6, window.innerHeight - alt - 8) + 'px';
   setTimeout(()=>document.addEventListener('click', fecharMais, {once:true}), 0);
 }
 document.addEventListener('keydown', e => { if(e.key==='Escape') fecharMais(); });
