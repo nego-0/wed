@@ -40,6 +40,7 @@ Entram com **admin / noivos2026**.
 | `e2e_statcards.js`      | filtros pelos cartões de estatística                            |
 | `e2e_lixo.js`           | reciclagem: eliminar, repor, anular                             |
 | `nav_check.js`          | todas as páginas respondem e o menu marca a certa               |
+| `chk_versao.js`         | a página de versão diz a verdade, e ?diag=1 traz o diagnóstico  |
 
 ## Deixam a base como a encontraram
 

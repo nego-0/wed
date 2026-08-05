@@ -34,6 +34,11 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .ed-menu .cresce{ flex:1; }
 .ed-menu a{ color:var(--ed-texto-2); text-decoration:none; }
 .ed-menu a:hover{ color:var(--ed-ouro-claro); }
+/* Assinatura do que está instalado. Confirma num relance que o servidor tem
+   mesmo a versão que se julga — sem isto, uma correção entregue e não
+   instalada é indistinguível de uma correção que não funciona. */
+.ed-menu .versao-app{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.7rem;
+  color:#63665e; border:1px solid var(--ed-linha); border-radius:5px; padding:.1rem .35rem; }
 
 /* ---- Barra de opções (por baixo do menu) ------------------- */
 .ed-opcoes{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap;

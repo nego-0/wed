@@ -78,3 +78,35 @@ function asset(string $rel): string {
     $t = @filemtime($abs);
     return $rel . ($t ? '?v=' . $t : '');
 }
+
+/**
+ * Ficheiros que compõem a aplicação, para efeitos de versão.
+ * A data de modificação não serve: um envio por FTP baralha-a. O que conta é
+ * o conteúdo.
+ */
+function ficheirosApp(): array {
+    return ['index.php','api.php','db.php','config.php','personalizacao.php','pecas.php',
+            'editor-cartao.php','convite-editor.php','convite-digital.php','mesas.php',
+            'cartoes.php','graficas.php','manual.php','impressos.php','porteiro.php',
+            'convite.php','login.php','auth.php',
+            'assets/estilo.css','assets/editor.css','assets/pecas.css',
+            'assets/api.js','assets/mesas.js','assets/versoes.js',
+            'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
+            'assets/convite-base.html'];
+}
+
+/**
+ * Assinatura curta do que está instalado. Muda sempre que qualquer ficheiro
+ * muda, e é igual em duas instalações iguais — serve para confirmar, à
+ * distância, se um servidor tem mesmo a versão que se julga.
+ */
+function versaoApp(): string {
+    static $v = null;
+    if ($v !== null) return $v;
+    $h = '';
+    foreach (ficheirosApp() as $f) {
+        $abs = __DIR__ . '/' . $f;
+        $h .= is_readable($abs) ? md5_file($abs) : 'ausente';
+    }
+    return $v = substr(md5($h), 0, 8);
+}

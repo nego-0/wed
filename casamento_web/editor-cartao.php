@@ -77,6 +77,7 @@ $camposPorCamada = [
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
   <span class="doc">Convite impresso · <b>Cartão 10 × 15 cm</b></span>
   <div class="cresce"></div>
+  <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
   <a href="graficas.php">← Entregáveis à gráfica</a>
   <span class="ed-sep"></span>
   <a href="cartoes.php">Ver todos os cartões</a>

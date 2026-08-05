@@ -97,6 +97,7 @@ $CAS = casalInfo(defsAtuais($conn));
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
   <span class="doc">Convite digital · <b><?= escP($CAS['casal']) ?></b></span>
   <div class="cresce"></div>
+  <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
   <a href="index.php">← Painel</a>
   <span class="ed-sep"></span>
   <a href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir o convite</a>
