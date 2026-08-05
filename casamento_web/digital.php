@@ -65,28 +65,55 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
   .barra .cresce{ flex:1 1 200px; }
 
-  /* ---- Estado da peça: prova ao lado do que há para fazer ---- */
-  .peca{ display:grid; grid-template-columns:minmax(200px,260px) 1fr; gap:1.4rem;
-         background:#fff; border:1px solid var(--line); border-radius:16px; padding:1.2rem; margin-bottom:1.4rem; }
+  /* ---- Estado da peça ----------------------------------------
+     Três colunas em ecrãs largos: a prova, o que há para saber e fazer, e as
+     versões mais recentes. Antes eram duas, a do meio esticava-se a ocupar
+     tudo e sobrava meia página vazia. */
+  .peca{ display:grid; grid-template-columns:170px minmax(260px,1fr) minmax(220px,340px);
+         gap:1.4rem; align-items:start; max-width:1120px;
+         background:#fff; border:1px solid var(--line); border-radius:16px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
+  @media (max-width:1100px){ .peca{ grid-template-columns:150px 1fr; } .peca-vs{ grid-column:1 / -1; } }
+  @media (max-width:560px){ .peca{ grid-template-columns:1fr; } .peca-prova{ max-width:190px; } }
+
   .peca-prova{ border-radius:12px; overflow:hidden; border:1px solid var(--line);
                background:var(--forest-deep); position:relative; aspect-ratio:390/640; }
   /* A prova é o convite verdadeiro, encolhido. Não recebe cliques: é para ver. */
   .peca-prova iframe{ position:absolute; top:0; left:0; width:390px; height:640px; border:0;
-                      transform:scale(var(--pv,.62)); transform-origin:top left; pointer-events:none; }
+                      transform:scale(var(--pv,.44)); transform-origin:top left; pointer-events:none; }
   .peca-prova .lupa{ position:absolute; left:0; right:0; bottom:0; text-align:center;
-                     padding:.45rem; background:rgba(14,15,12,.82);
-                     color:var(--gold-pale); font-size:.76rem; text-decoration:none; }
+                     padding:.4rem; background:rgba(14,15,12,.82);
+                     color:var(--gold-pale); font-size:.72rem; text-decoration:none; }
   .peca-prova .lupa:hover{ background:rgba(14,15,12,.95); color:#fff; }
-  .peca h2{ margin:0 0 .3rem; }
-  .peca .estado-linha{ margin:.5rem 0 0; font-size:.9rem; line-height:1.6; }
-  .peca .acoes{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem; }
+
+  .peca h2{ margin:0 0 .4rem; font-size:1.35rem; }
+  .peca .estado-linha{ margin:0; font-size:.88rem; line-height:1.55; color:#6d726b; }
+  /* Nome próprio: não herda o .acoes global, que empurra tudo para a direita. */
+  .peca-acoes{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.9rem; justify-content:flex-start; }
   .selo-v{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
            padding:.2rem .7rem; font-size:.8rem; }
   .selo-v.ok{ background:#eaf4ee; border:1px solid #bcdcc8; color:#1f6b38; }
   .selo-v.fora{ background:#fdf3e6; border:1px solid var(--gold-soft); color:#8A6031; }
-  .mini{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-top:.9rem; }
-  .mini div{ font-size:.82rem; color:#8a8f88; }
-  .mini b{ display:block; font-family:var(--serif); font-size:1.5rem; color:var(--ink); line-height:1.1; }
+  .mini{ display:flex; gap:1.2rem; flex-wrap:wrap; margin:.8rem 0 0; }
+  .mini div{ font-size:.78rem; color:#8a8f88; }
+  .mini b{ display:block; font-family:var(--serif); font-size:1.35rem; color:var(--ink); line-height:1.1; }
+
+  /* Coluna das versões recentes, dentro do cartão */
+  .peca-vs{ border-left:1px solid var(--line); padding-left:1.2rem; }
+  @media (max-width:1100px){ .peca-vs{ border-left:0; border-top:1px solid var(--line);
+                                       padding-left:0; padding-top:.9rem; } }
+  .peca-vs h3{ font-size:.72rem; text-transform:uppercase; letter-spacing:.07em;
+               color:#8a8f88; margin:0 0 .5rem; }
+  .peca-vs ul{ list-style:none; margin:0; padding:0; }
+  .peca-vs li{ display:flex; align-items:baseline; gap:.45rem; padding:.28rem 0;
+               border-bottom:1px solid var(--cream); font-size:.84rem; }
+  .peca-vs li:last-child{ border-bottom:0; }
+  .peca-vs li .nm{ font-family:var(--serif); color:var(--ink); min-width:0;
+                   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .peca-vs li .qd{ margin-left:auto; }
+  .peca-vs li .em{ font-size:.68rem; color:#1f6b38; white-space:nowrap; }
+  .peca-vs li .qd{ font-size:.72rem; color:#a3a8a1; white-space:nowrap; }
+  .peca-vs .maisv{ font-size:.78rem; display:inline-block; margin-top:.5rem; }
+  .peca-vs .nada{ font-size:.82rem; color:#8a8f88; line-height:1.5; }
 
   /* ---- Lista dos convites digitais ---- */
   .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -146,11 +173,36 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
         <?php if ($enviados): ?><div><b><?= (int)$enviados ?></b> já enviados</div><?php endif; ?>
         <div><b><?= count($versoes) ?></b> versões guardadas</div>
       </div>
-      <div class="acoes">
+      <div class="peca-acoes">
         <a class="btn btn-ouro" href="convite-editor.php">Editar o convite</a>
         <a class="btn" href="convite-digital.php?demo=1" target="_blank" rel="noopener">Ver como um convidado</a>
         <a class="btn" href="index.php">Painel de convidados</a>
       </div>
+    </div>
+
+    <div class="peca-vs">
+      <h3>Versões guardadas</h3>
+      <?php if (!$versoes): ?>
+        <p class="nada">Nenhuma ainda. Guarde a primeira no editor para poder
+          experimentar mudanças e voltar atrás.</p>
+      <?php else: ?>
+        <ul>
+          <?php foreach (array_slice($versoes, 0, 5) as $v):
+            $vig = $emVigor && (int)$emVigor['id'] === (int)$v['id']; ?>
+            <li>
+              <span class="nm"><?= escP($v['nome']) ?></span>
+              <?php if ($vig): ?><span class="em">✓ em vigor</span><?php endif; ?>
+              <span class="qd"><?= escP($v['utilizador'] ?: '—') ?> ·
+                <?= escP(date('d/m H:i', strtotime($v['criado_em']))) ?></span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <?php if (count($versoes) > 5): ?>
+          <a class="maisv" href="?aba=versoes">Ver as <?= count($versoes) ?> versões</a>
+        <?php else: ?>
+          <a class="maisv" href="convite-editor.php">Gerir no editor</a>
+        <?php endif; ?>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -227,7 +279,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
 (function ajustarProva(){
   const cx = document.querySelector('.peca-prova');
   if (!cx) return;
-  const medir = () => cx.style.setProperty('--pv', (cx.clientWidth / 390).toFixed(3));
+  const medir = () => cx.style.setProperty('--pv', (cx.clientWidth / 390).toFixed(4));
   medir(); window.addEventListener('resize', medir);
 })();
 

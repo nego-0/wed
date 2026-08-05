@@ -37,6 +37,13 @@ if (isset($_GET['modelo'])) {
     exit;
 }
 
+// Qual a versão do cartão que está em vigor — a que se imprime e a que o
+// manual retrata. Sem isto, a página do impresso dizia menos do que a do
+// digital sobre o estado da própria peça.
+$emVigor = versaoEmVigor($conn, 'impresso');
+$nVersoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes WHERE ambito='impresso'")
+                       ->fetch_row()[0] ?? 0);
+
 $abas = ['convites' => 'Lista de produção', 'manuais' => 'Manual de impressão'];
 $aba  = $_GET['aba'] ?? 'convites';
 if (!isset($abas[$aba])) $aba = 'convites';
@@ -73,6 +80,19 @@ $manual = [
 <link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
+  /* Faixa com o estado da peça, acima das abas. */
+  .estado-peca{ display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
+    background:#fff; border:1px solid var(--line); border-radius:14px;
+    padding:.7rem .95rem; margin-bottom:1rem; }
+  .estado-peca .cresce{ flex:1; }
+  .estado-peca .txt{ font-size:.85rem; color:#6d726b; }
+  .estado-peca .qtd{ white-space:nowrap; }
+  .selo-v{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
+           padding:.2rem .7rem; font-size:.8rem; white-space:nowrap; }
+  .selo-v.ok{ background:#eaf4ee; border:1px solid #bcdcc8; color:#1f6b38; }
+  .selo-v.fora{ background:#fdf3e6; border:1px solid var(--gold-soft); color:#8A6031; }
+  .btn-sm{ padding:.3rem .8rem; font-size:.82rem; }
+
   .abas{ display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.2rem; }
   .abas a{ background:#fff; border:1px solid var(--line); border-radius:50px; padding:.45rem 1.1rem;
            font-size:.88rem; color:var(--text); text-decoration:none; }
@@ -145,6 +165,24 @@ $manual = [
 <?php cabecalho('Convite impresso', 'O que a gráfica recebe do convite físico: lista de produção e manual', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
+  <div class="estado-peca no-print">
+    <?php if ($emVigor): ?>
+      <span class="selo-v ok">✓ Em vigor: <b><?= escP($emVigor['nome']) ?></b></span>
+      <span class="txt">É esta versão do cartão que se imprime, e a que o manual retrata.</span>
+    <?php elseif ($nVersoes): ?>
+      <span class="selo-v fora">Fora de qualquer versão</span>
+      <span class="txt">O cartão tem alterações que não estão guardadas em nenhuma versão.
+        É este estado que se imprime.</span>
+    <?php else: ?>
+      <span class="selo-v fora">Sem versões guardadas</span>
+      <span class="txt">Ainda não guardou nenhuma versão do cartão. Guarde uma no editor
+        para poder experimentar mudanças e voltar atrás.</span>
+    <?php endif; ?>
+    <span class="cresce"></span>
+    <span class="txt qtd"><?= $nVersoes ?> <?= $nVersoes === 1 ? 'versão guardada' : 'versões guardadas' ?></span>
+    <a class="btn btn-sm" href="editor-cartao.php">Editar o cartão</a>
+  </div>
+
   <div class="abas no-print">
     <?php foreach ($abas as $k => $r): ?>
       <a href="?aba=<?= $k ?>" class="<?= $k === $aba ? 'on' : '' ?>"><?= escP($r) ?></a>

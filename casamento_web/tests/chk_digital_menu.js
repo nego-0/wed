@@ -42,6 +42,33 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForLoadState('networkidle');
   ok(await p.locator('.nota').count() === 1, 'a aba das versões explica-se');
 
+  // ---------- 1b. o cartão de estado é compacto e sem vãos ----------
+  await p.setViewportSize({ width: 1885, height: 950 });
+  await p.goto(BASE + '/digital.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1600);
+  const cx = await p.locator('.peca').boundingBox();
+  console.log('   cartão de estado:', Math.round(cx.width) + 'x' + Math.round(cx.height));
+  ok(cx.height <= 400, `o cartão de estado cabe em 400px de altura (${Math.round(cx.height)})`);
+  ok(cx.width <= 1200, 'e não se estica por todo o ecrã em monitores largos');
+  ok(await p.locator('.peca-vs').count() === 1, 'a terceira coluna mostra as versões guardadas');
+  // Os botões ficam à esquerda: o .acoes global empurrava-os para a direita.
+  const bt = await p.locator('.peca-acoes .btn').first().boundingBox();
+  const info = await p.locator('.peca > div').nth(1).boundingBox();
+  ok(bt.x - info.x < 40, 'os botões ficam encostados ao texto, não atirados para a direita');
+
+  // ---------- 1c. o convite impresso também diz qual a versão em vigor ----------
+  await p.goto(BASE + '/graficas.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(900);
+  ok(await p.locator('.estado-peca').count() === 1, 'a entrada do convite impresso mostra o estado da peça');
+  ok(await p.locator('.estado-peca .selo-v').count() === 1, 'com o selo da versão em vigor');
+  const txt = (await p.locator('.estado-peca').innerText()).replace(/\s+/g, ' ');
+  console.log('   impresso:', txt.slice(0, 110));
+  ok(/Em vigor|Fora de qualquer versão|Sem versões guardadas/.test(txt),
+     'e diz em palavras qual é o estado');
+  ok(await p.locator('.estado-peca a[href="editor-cartao.php"]').count() === 1,
+     'com o caminho para o editor do cartão');
+  await p.setViewportSize({ width: 1440, height: 760 });
+
   // ---------- 2. o menu "⋯" abre para cima quando não cabe ----------
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1800);
