@@ -16,20 +16,15 @@ exigirAdmin();
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);
 
-$abas = ['convites' => 'Convites a enviar', 'versoes' => 'Estado e versões'];
-$aba  = $_GET['aba'] ?? 'convites';
-if (!isset($abas[$aba])) $aba = 'convites';
-
-// ---- Convites que levam convite digital ---------------------
-$convites = [];
-if ($aba === 'convites') {
-    $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
-                         FROM {$P}convites c
-                         LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                         WHERE c.tipo IN ('digital','ambos') AND ".soVivos($conn,'c')."
-                         ORDER BY c.nome_exibicao");
-    $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
-}
+// Uma página só. Havia duas abas — "Convites a enviar" e "Estado e versões" —
+// mas o estado já está no cartão do topo e as versões cabem lá ao lado: as
+// abas escondiam metade do que a página tem para dizer, sem nada a ganhar.
+$res = $conn->query("SELECT c.*, m.nome AS mesa_nome
+                     FROM {$P}convites c
+                     LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                     WHERE c.tipo IN ('digital','ambos') AND ".soVivos($conn,'c')."
+                     ORDER BY c.nome_exibicao");
+$convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 
 // ---- Versões guardadas e a que está em vigor ------------------
 $emVigor  = versaoEmVigor($conn, 'digital');
@@ -57,11 +52,6 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
-  .abas{ display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.2rem; }
-  .abas a{ background:#fff; border:1px solid var(--line); border-radius:50px; padding:.45rem 1.1rem;
-           font-size:.88rem; color:var(--text); text-decoration:none; }
-  .abas a:hover{ border-color:var(--gold-soft); }
-  .abas a.on{ background:var(--forest); border-color:var(--forest); color:#fff; }
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
   .barra .cresce{ flex:1 1 200px; }
 
@@ -70,7 +60,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
      versões mais recentes. Antes eram duas, a do meio esticava-se a ocupar
      tudo e sobrava meia página vazia. */
   .peca{ display:grid; grid-template-columns:170px minmax(260px,1fr) minmax(220px,340px);
-         gap:1.4rem; align-items:start; max-width:1120px;
+         gap:1.4rem; align-items:start;
          background:#fff; border:1px solid var(--line); border-radius:16px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   @media (max-width:1100px){ .peca{ grid-template-columns:150px 1fr; } .peca-vs{ grid-column:1 / -1; } }
   @media (max-width:560px){ .peca{ grid-template-columns:1fr; } .peca-prova{ max-width:190px; } }
@@ -130,22 +120,12 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .prod .ac{ white-space:nowrap; }
   .prod .ac a{ font-size:.82rem; margin-right:.6rem; }
 
-  /* ---- Versões ---- */
-  .vs-lista{ display:grid; gap:.6rem; }
-  .vs-l{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
-         display:flex; align-items:center; gap:.8rem; flex-wrap:wrap; }
-  .vs-l.vigor{ border-color:#bcdcc8; background:#f6fbf8; }
-  .vs-l .nm{ font-family:var(--serif); font-size:1.05rem; color:var(--ink); }
-  .vs-l .qd{ font-size:.8rem; color:#8a8f88; }
-  .vs-l .cresce{ flex:1; }
-  .nota{ background:var(--cream); border:1px solid var(--line); border-radius:12px;
-         padding:.8rem 1rem; font-size:.88rem; line-height:1.6; margin-bottom:1rem; }
 </style>
 </head>
 <body>
 <?php cabecalho('Convite digital', 'O convite que os convidados abrem no telemóvel', 'convite'); ?>
 
-<main class="wrap">
+<main class="container">
   <!-- Estado da peça -->
   <div class="peca">
     <div class="peca-prova">
@@ -161,7 +141,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
         <?php elseif ($versoes): ?>
           <span class="selo-v fora">Fora de qualquer versão</span><br>
           O convite tem alterações que não estão guardadas em nenhuma versão. É este estado
-          que os convidados recebem. Guarde-o no editor, ou volte a uma das versões abaixo.
+          que os convidados recebem. Guarde-o no editor, ou volte a uma das versões ao lado.
         <?php else: ?>
           <span class="selo-v fora">Sem versões guardadas</span><br>
           Ainda não guardou nenhuma versão. Guarde uma no editor para poder experimentar
@@ -198,7 +178,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
           <?php endforeach; ?>
         </ul>
         <?php if (count($versoes) > 5): ?>
-          <a class="maisv" href="?aba=versoes">Ver as <?= count($versoes) ?> versões</a>
+          <a class="maisv" href="convite-editor.php">Ver as <?= count($versoes) ?> no editor</a>
         <?php else: ?>
           <a class="maisv" href="convite-editor.php">Gerir no editor</a>
         <?php endif; ?>
@@ -206,70 +186,39 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
     </div>
   </div>
 
-  <div class="abas">
-    <?php foreach ($abas as $k => $r): ?>
-      <a href="?aba=<?= $k ?>" class="<?= $k === $aba ? 'on' : '' ?>"><?= escP($r) ?></a>
-    <?php endforeach; ?>
-  </div>
-
-  <?php if ($aba === 'convites'): ?>
-    <div class="barra no-print">
+  <div class="barra no-print">
       <div class="cresce"><input type="search" id="busca" placeholder="Procurar convite ou código…" oninput="filtrar()"></div>
       <span class="tag neutra"><?= count($convites) ?> convites digitais</span>
       <a class="btn" href="index.php">Enviar pelo painel</a>
     </div>
 
-    <?php if (!$convites): ?>
-      <div class="vazio"><div class="ico">✉</div><p>Ainda não há convites marcados como digitais.<br>
-        No painel, defina o tipo do convite como “Digital” ou “Ambos”.</p></div>
-    <?php else: ?>
-      <div class="prod-scroll">
-      <table class="prod" id="prod">
-        <thead><tr><th></th><th>Convite</th><th>Código</th><th>QR</th><th></th></tr></thead>
-        <tbody>
-        <?php $n = 1; foreach ($convites as $c):
-          $nome = nomeConviteVisivel($c);
-          $link = base_url() . '/convite-digital.php?c=' . $c['codigo'];
-        ?>
-          <tr data-busca="<?= escP(strtolower($nome . ' ' . $c['codigo'])) ?>">
-            <td class="n"><?= $n ?></td>
-            <td class="nm"><?= escP($nome) ?></td>
-            <td class="cod"><?= escP($c['codigo']) ?></td>
-            <td><canvas class="qr" data-link="<?= escP($link) ?>"></canvas></td>
-            <td class="ac">
-              <a href="<?= escP($link) ?>" target="_blank" rel="noopener">Abrir</a>
-              <a href="#" onclick="copiar('<?= escP($link) ?>');return false">Copiar link</a>
-              <a href="<?= escP($link) ?>&amp;download=1">Descarregar</a>
-            </td>
-          </tr>
-        <?php $n++; endforeach; ?>
-        </tbody>
-      </table>
-      </div>
-    <?php endif; ?>
-
+  <?php if (!$convites): ?>
+    <div class="vazio"><div class="ico">✉</div><p>Ainda não há convites marcados como digitais.<br>
+      No painel, defina o tipo do convite como “Digital” ou “Ambos”.</p></div>
   <?php else: ?>
-    <div class="nota">Cada versão é uma fotografia do convite inteiro — textos, cores, letra,
-      secções e fotografias. Guardam-se e aplicam-se no <a href="convite-editor.php">editor</a>;
-      aqui vê-se quais existem e qual está em vigor.</div>
-    <?php if (!$versoes): ?>
-      <div class="vazio"><div class="ico">🗂</div><p>Ainda não há versões guardadas.<br>
-        Abra o editor e guarde a primeira — depois pode mudar o que quiser e voltar atrás.</p></div>
-    <?php else: ?>
-      <div class="vs-lista">
-        <?php foreach ($versoes as $v): $vig = $emVigor && (int)$emVigor['id'] === (int)$v['id']; ?>
-          <div class="vs-l <?= $vig ? 'vigor' : '' ?>">
-            <span class="nm"><?= escP($v['nome']) ?></span>
-            <?php if ($vig): ?><span class="selo-v ok">✓ em vigor</span><?php endif; ?>
-            <span class="cresce"></span>
-            <span class="qd"><?= escP($v['utilizador'] ?: '—') ?> ·
-              <?= escP(date('d/m/Y H:i', strtotime($v['criado_em']))) ?>
-              <?= $v['atualizado_em'] ? ' · atualizada ' . escP(date('d/m/Y H:i', strtotime($v['atualizado_em']))) : '' ?></span>
-          </div>
-        <?php endforeach; ?>
-      </div>
-      <p style="margin-top:1rem"><a class="btn" href="convite-editor.php">Gerir as versões no editor</a></p>
-    <?php endif; ?>
+    <div class="prod-scroll">
+    <table class="prod" id="prod">
+      <thead><tr><th></th><th>Convite</th><th>Código</th><th>QR</th><th></th></tr></thead>
+      <tbody>
+      <?php $n = 1; foreach ($convites as $c):
+        $nome = nomeConviteVisivel($c);
+        $link = base_url() . '/convite-digital.php?c=' . $c['codigo'];
+      ?>
+        <tr data-busca="<?= escP(strtolower($nome . ' ' . $c['codigo'])) ?>">
+          <td class="n"><?= $n ?></td>
+          <td class="nm"><?= escP($nome) ?></td>
+          <td class="cod"><?= escP($c['codigo']) ?></td>
+          <td><canvas class="qr" data-link="<?= escP($link) ?>"></canvas></td>
+          <td class="ac">
+            <a href="<?= escP($link) ?>" target="_blank" rel="noopener">Abrir</a>
+            <a href="#" onclick="copiar('<?= escP($link) ?>');return false">Copiar link</a>
+            <a href="<?= escP($link) ?>&amp;download=1">Descarregar</a>
+          </td>
+        </tr>
+      <?php $n++; endforeach; ?>
+      </tbody>
+    </table>
+    </div>
   <?php endif; ?>
 </main>
 

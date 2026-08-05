@@ -30,17 +30,14 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(!/editor/.test(p.url()), 'e a navegação leva à página de entrada');
   ok(await p.locator('.peca-prova iframe').count() === 1, 'a entrada mostra uma prova do convite');
   ok(await p.locator('a.btn:has-text("Editar o convite")').count() === 1, 'com um botão para o editor');
-  ok(await p.locator('.abas a').count() === 2, 'e duas abas, como o convite impresso');
+  ok(await p.locator('.abas').count() === 0, 'sem abas: tudo o que a página tem está à vista');
+  ok(await p.locator('#prod').count() === 1, 'a lista de convites aparece logo, sem ter de escolher aba');
   ok(await p.locator('.selo-v').count() >= 1, 'diz qual a versão em vigor (ou que não há nenhuma)');
   // o mesmo item do menu fica marcado
   ok(await p.locator('.topo .nav a.ativo:has-text("Convite digital")').count() === 1,
      'o menu marca "Convite digital" como página atual');
   await p.screenshot({ path: OUT + '/digital_entrada.png' });
 
-  // a aba das versões abre
-  await p.click('.abas a:has-text("Estado e versões")');
-  await p.waitForLoadState('networkidle');
-  ok(await p.locator('.nota').count() === 1, 'a aba das versões explica-se');
 
   // ---------- 1b. o cartão de estado é compacto e sem vãos ----------
   await p.setViewportSize({ width: 1885, height: 950 });
@@ -55,6 +52,23 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   const bt = await p.locator('.peca-acoes .btn').first().boundingBox();
   const info = await p.locator('.peca > div').nth(1).boundingBox();
   ok(bt.x - info.x < 40, 'os botões ficam encostados ao texto, não atirados para a direita');
+
+  // Nenhuma largura pode fazer a página transbordar para o lado.
+  for (const larg of [1885, 1280, 900, 430]) {
+    await p.setViewportSize({ width: larg, height: 900 });
+    await p.goto(BASE + '/digital.php', { waitUntil: 'networkidle' });
+    await p.waitForTimeout(900);
+    const t = await p.evaluate(() => ({
+      transborda: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      // A tabela desliza dentro da sua caixa; o resto não pode sair da página.
+      fora: [...document.querySelectorAll('main > *, .peca > *')].filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && (r.right > document.documentElement.clientWidth + 1 || r.left < -1);
+      }).length,
+    }));
+    ok(!t.transborda && t.fora === 0, `a ${larg}px a página não transborda para o lado`);
+  }
+  await p.setViewportSize({ width: 1885, height: 950 });
 
   // ---------- 1c. o convite impresso também diz qual a versão em vigor ----------
   await p.goto(BASE + '/graficas.php', { waitUntil: 'networkidle' });

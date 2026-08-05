@@ -18,7 +18,7 @@ const PAGINAS = [
   'manual.php', 'impressos.php', 'porteiro.php', 'versao.php',
   'editor-cartao.php', 'convite-editor.php',
   'convite-digital.php?demo=1', 'convite-digital.php?demo=1&prova=1',
-  'digital.php?aba=versoes', 'graficas.php?aba=manuais', 'editor-cartao.php?diag=1',
+  'graficas.php?aba=manuais', 'editor-cartao.php?diag=1',
 ];
 
 // O que denuncia um erro do PHP no meio do HTML.
