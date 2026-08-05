@@ -228,6 +228,7 @@ const ALHEIAS = ['cartao.', 'media.'];
 // Os limites são os que o servidor aplica: mostrá-los evita a surpresa de ver
 // o texto cortado depois de gravar.
 const CAMPOS = {
+  'capa.monograma':['Monograma do selo','texto',12], 'capa.dica':['Dica de abertura','texto',40],
   'casal.noiva':['Nome da noiva','texto',80], 'casal.noivo':['Nome do noivo','texto',80],
   'textos.kicker':['Frase do topo','texto',80], 'textos.hero_sub':['Subtítulo da capa','texto',80],
   'textos.convite_eyebrow':['Chamada','texto',120],
@@ -294,6 +295,10 @@ function ler(k){ try { return JSON.parse(ATUAIS[k]||'[]')||[]; } catch(e){ retur
 // ---------- as camadas: secções de origem + as livres, pela ordem ----------
 function blocoLivre(id){ return EST.blocos.find(b=>b.id===id) || null; }
 /** Lista ordenada de camadas, com a capa à cabeça e o fecho no fim. */
+// A capa que abre (o envelope selado com o monograma) é a primeira camada,
+// sempre fixa e sempre visível: é a porta de entrada do convite.
+const CAPA_ID = 'capa';
+const CAPA_ROTULO = 'Envelope';
 function camadas(){
   const validos = Object.keys(SECCOES).concat(EST.blocos.map(b=>b.id));
   const ord = [];
@@ -302,13 +307,23 @@ function camadas(){
   const meio = ord.filter(id=>id!==PRIMEIRO && id!==ULTIMO);
   const final = [PRIMEIRO, ...meio, ULTIMO];
   EST.ordem = final;
-  return final.map(id=>{
+  const conteudo = final.map(id=>{
     const b = blocoLivre(id);
     return b ? { id, rotulo: b.titulo || 'Secção livre', livre: true, fixa: false }
              : { id, rotulo: SECCOES[id] ? SECCOES[id].rotulo : id, livre: false,
                  fixa: (id===PRIMEIRO || id===ULTIMO) };
   });
+  return [{ id: CAPA_ID, rotulo: CAPA_ROTULO, livre: false, fixa: true }, ...conteudo];
 }
+/** Rótulo de uma camada, seja secção, envelope ou bloco livre. */
+function rotuloCamada(k){
+  if (k === CAPA_ID) return CAPA_ROTULO;
+  const b = blocoLivre(k);
+  return b ? (b.titulo || 'secção livre') : (SECCOES[k] ? SECCOES[k].rotulo : k);
+}
+/** Iniciais para o monograma automático (o servidor faz a versão definitiva). */
+function inicialJS(s){ s = (s||'').trim(); return s ? s[0].toUpperCase() : ''; }
+function monogramaAuto(){ return inicialJS(EST.val['casal.noiva']) + '&' + inicialJS(EST.val['casal.noivo']); }
 function novoId(){
   let n = 1, id;
   do { id = 'bl' + n++; } while (EST.blocos.some(b=>b.id===id));
@@ -382,6 +397,7 @@ window.addEventListener('message', e=>{
   if (d.tipo === 'pronta'){
     telaPronta = true;
     enviarTela({tipo:'tema', vars:EST.paleta});
+    enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});   // a tela recarrega escondida
     if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF});
     return;
   }
@@ -392,14 +408,15 @@ window.addEventListener('message', e=>{
     return;
   }
   if (d.tipo === 'selecionar'){
-    if (d.sec && (SECCOES[d.sec] || blocoLivre(d.sec))) SEC = d.sec;
+    if (d.sec && (d.sec===CAPA_ID || SECCOES[d.sec] || blocoLivre(d.sec))) SEC = d.sec;
     DEF = (d.def && CAMPOS[d.def]) ? d.def : null;
     renderCamadas(); renderProps();
+    enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});
     enviarTela({tipo:'marcar', sec:SEC, def:DEF});
     if (DEF){ msg('A editar: ' + CAMPOS[DEF][0]);
               const el = document.querySelector('#props [data-chave="'+DEF+'"]');
               if (el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
-    else msg('Camada: ' + (SECCOES[SEC]?SECCOES[SEC].rotulo:SEC));
+    else msg('Camada: ' + rotuloCamada(SEC));
   }
 });
 /**
@@ -544,9 +561,9 @@ function removerItemBloco(id, i){
 function irCamada(k){
   SEC = k; DEF = null;
   renderCamadas(); renderProps();
+  enviarTela({tipo:'capa', mostrar: k===CAPA_ID});   // revela ou esconde o envelope
   enviarTela({tipo:'marcar', sec:k, def:null});
-  const b = blocoLivre(k);
-  msg('Camada: ' + (b ? (b.titulo||'secção livre') : (SECCOES[k] ? SECCOES[k].rotulo : k)));
+  msg('Camada: ' + rotuloCamada(k));
 }
 function alternarSec(k){
   const chave = VISIVEL[k]; if (!chave) return;
@@ -558,6 +575,7 @@ function alternarSec(k){
 
 // ---------- propriedades ----------
 function renderPropsJa(){
+  if (SEC === CAPA_ID) return renderPropsCapa();
   const livre = blocoLivre(SEC);
   if (livre) return renderPropsLivre(livre);
   const s = SECCOES[SEC]; if (!s){ $('props').innerHTML=''; return; }
@@ -571,6 +589,18 @@ function renderPropsJa(){
   h += chaves.map(c=>campoHTML(c)).join('');
   const lk = LISTAS_SEC[SEC];
   if (lk) h += listaHTML(lk);
+  $('props').innerHTML = h;
+  if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
+}
+/** Propriedades da capa que abre (o envelope selado). */
+function renderPropsCapa(){
+  let h = `<div class="sel-nada" style="margin-bottom:.6rem"><b>${esc(CAPA_ROTULO)}</b> — a capa fechada que os convidados tocam para abrir.</div>`;
+  h += campoHTML('capa.monograma');
+  h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
+        O monograma aparece no selo, no separador do convite e no rodapé.</div>`;
+  h += campoHTML('capa.dica');
+  h += `<div class="sel-nada" style="margin-top:.7rem;line-height:1.5">Os <b>nomes</b> e a <b>data</b> na capa vêm da camada
+        <b>Capa</b> e da data do evento — mudam-se aí, e a capa acompanha.</div>`;
   $('props').innerHTML = h;
   if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
 }
@@ -637,6 +667,9 @@ function editar(el){
   // formulário e um editor.
   if (RECOMPOR.includes(chave)){
     clearTimeout(tRecompor); tRecompor = setTimeout(recarregarTela, 900);
+  } else if (chave === 'capa.monograma'){
+    // Vazio volta às iniciais automáticas, como fará o servidor ao gravar.
+    enviarTela({tipo:'texto', def:chave, html: esc(v.trim() || monogramaAuto())});
   } else {
     enviarTela({tipo:'texto', def:chave, html:paraTela(chave,v)});
   }
@@ -1016,6 +1049,12 @@ function marcarInvalidos(inv){
 }
 
 function reporSeccao(){
+  if (SEC === CAPA_ID){
+    if (!confirm('Repor o monograma e a dica originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
+    ['capa.monograma','capa.dica'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
+    marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+    return msg('Envelope reposto — por guardar. Ctrl+Z desfaz.');
+  }
   if (blocoLivre(SEC)) return msg('Esta secção foi acrescentada por si — use "Apagar esta secção".');
   const s = SECCOES[SEC]; if (!s) return;
   if (!confirm(`Repor os textos originais de "${s.rotulo}"?\n\nPode desfazer com Ctrl+Z.`)) return;

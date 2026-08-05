@@ -117,6 +117,10 @@ function defsPadrao(): array {
         'evento.cidade' => 'Namibe · Angola',
         'evento.maps'   => 'https://maps.app.goo.gl/9o8MAHokTFRpgDBG9',
         'evento.whatsapp' => EVENTO['whatsapp'],
+        // ---- Capa que abre (o envelope selado com o monograma) ----
+        // Monograma vazio = as iniciais dos nomes (ex.: "I&A"); pode dar-se um à mão.
+        'capa.monograma' => '',
+        'capa.dica' => 'Toque para abrir',
         'textos.kicker' => 'Vamos nos casar',
         'textos.hero_sub' => 'O nosso casamento',
         'textos.convite_eyebrow' => 'Venha partilhar a nossa alegria',
@@ -539,6 +543,13 @@ function validarDefinicao(string $chave, string $valor): ?string {
         return $valor === '1' ? '1' : '0';
     }
     switch ($chave) {
+        case 'capa.monograma':
+            // Curto: cabe num selo. Vazio volta às iniciais automáticas.
+            return mb_substr($valor, 0, 12);
+        case 'capa.dica':
+            // Vazio volta ao "Toque para abrir" (guardarDefinicoes repõe o default),
+            // para a capa não ficar sem indicação de que se toca para abrir.
+            return mb_substr($valor, 0, 40);
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
@@ -739,7 +750,9 @@ function convitePlaceholders(array $defs): array {
     $noiva = $defs['casal.noiva']; $noivo = $defs['casal.noivo'];
     $tokens = ['{noiva}'=>$noiva, '{noivo}'=>$noivo];
     $casal = $noiva.' & '.$noivo;
-    $mono  = inicialU($noiva).'&'.inicialU($noivo);
+    // Monograma do selo: o que se escreveu à mão, ou as iniciais dos nomes.
+    $monoAuto = inicialU($noiva).'&'.inicialU($noivo);
+    $mono  = trim((string)($defs['capa.monograma'] ?? '')) !== '' ? $defs['capa.monograma'] : $monoAuto;
     $slug  = slugCasal($noiva, $noivo);
 
     // Data / hora
@@ -811,6 +824,7 @@ function convitePlaceholders(array $defs): array {
     return [
         '{{TITLE}}' => escP($casal.' — '.$dataExt),
         '{{MONO}}' => escP($mono),
+        '{{COVER_HINT}}' => escP($defs['capa.dica']),
         '{{NOIVA}}' => escP($noiva), '{{NOIVO}}' => escP($noivo),
         '{{CASAL_ALT}}' => escP($noiva.' e '.$noivo),
         '{{DIA}}' => $d, '{{ANO}}' => $ano,
@@ -938,6 +952,7 @@ function mapaDefEditor(): array {
         '{{RSVP_SUB}}'         => 'rsvp.sub',
         '{{RSVP_DEADLINE}}'    => 'rsvp.deadline',
         '{{FOOTER_QUOTE}}'     => 'footer.quote',
+        '{{COVER_HINT}}'       => 'capa.dica',
     ];
 }
 
@@ -948,7 +963,10 @@ function mapaDefEditor(): array {
  * envolve-se cada ocorrência do próprio marcador.
  */
 function mapaDefRepetido(): array {
-    return ['{{NOIVA}}' => 'casal.noiva', '{{NOIVO}}' => 'casal.noivo'];
+    // O monograma aparece no selo da capa, no separador do convite e no rodapé.
+    // É a marca do casal: muda-se num sítio, muda em todos.
+    return ['{{NOIVA}}' => 'casal.noiva', '{{NOIVO}}' => 'casal.noivo',
+            '{{MONO}}'  => 'capa.monograma'];
 }
 
 /**
@@ -967,6 +985,9 @@ function camposMarkdown(): array {
  * dos placeholders, e só no editor — o convite dos convidados sai limpo.
  */
 function marcarParaEditor(string $html): string {
+    // A capa que abre (o envelope selado) é uma camada como as outras, mas não
+    // é uma <section> dentro de <main>: marca-se à parte.
+    $html = preg_replace('#(<div id="cover")#', '$1 data-sec="capa"', $html, 1);
     // Secções -> camadas
     foreach (array_keys(seccoesConvite()) as $sec) {
         $html = preg_replace('#(<section id="'.preg_quote($sec, '#').'")#', '$1 data-sec="'.$sec.'"', $html, 1);

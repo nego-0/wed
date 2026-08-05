@@ -190,18 +190,24 @@ function pontelEditor(): string {
   var pai = window.parent; if (pai === window) return;
   document.body.classList.add('ed-marcar');
 
-  // Na tela do editor o envelope já está aberto: quem edita não quer voltar a
-  // abri-lo a cada recarga. Os convidados continuam a recebê-lo fechado.
+  // A tela mostra o conteúdo, não a capa: quem edita não quer voltar a abri-la a
+  // cada recarga. Fica escondida mas FECHADA (sem .open), para que, quando a
+  // camada "Envelope" for escolhida, ela apareça com o selo à mostra.
+  // Os convidados continuam a recebê-la fechada e por abrir.
   var capa = document.getElementById('cover');
-  if (capa){ capa.classList.add('open'); document.body.classList.add('opened'); capa.style.display = 'none'; }
+  if (capa){ capa.classList.remove('open'); document.body.classList.add('opened'); capa.style.display = 'none'; }
+  function mostrarCapa(sim){ if (capa) capa.style.display = sim ? '' : 'none'; }
   function envia(m){ pai.postMessage(Object.assign({fonte:'tela'}, m), '*'); }
 
   document.addEventListener('click', function(e){
+    var noCapa = e.target.closest('#cover');
     var alvo = e.target.closest('[data-def]');
     var sec  = e.target.closest('[data-sec]');
     // Dentro da tela não se navega: os links são para os convidados.
     var link = e.target.closest('a'); if (link) e.preventDefault();
     envia({ tipo:'selecionar', def: alvo ? alvo.dataset.def : null, sec: sec ? sec.dataset.sec : null });
+    // Clicar na capa é para a editar, não para a abrir: trava o openCover.
+    if (noCapa) e.stopPropagation();
   }, true);
 
   // Depois de clicar no convite o teclado fica dentro da tela, e os atalhos do
@@ -233,6 +239,8 @@ function pontelEditor(): string {
       var s2 = document.querySelector('[data-sec="' + d.sec + '"]');
       if (s2) s2.scrollIntoView({block:'start', behavior:'smooth'});
     }
+    // Mostrar ou esconder a capa que abre, conforme a camada escolhida.
+    if (d.tipo === 'capa'){ mostrarCapa(!!d.mostrar); }
     // Cores e enquadramento entram como variáveis CSS: mudam a peça sem a
     // voltar a pedir ao servidor.
     if (d.tipo === 'tema' || d.tipo === 'foco'){

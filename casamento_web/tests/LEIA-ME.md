@@ -44,6 +44,7 @@ Entram com **admin / noivos2026**.
 | `chk_versao.js`         | a página de versão diz a verdade, e ?diag=1 traz o diagnóstico  |
 | `chk_versao_vigor.js`   | a versão em vigor é a que os convidados recebem e o manual retrata |
 | `chk_digital_menu.js`   | entrada do convite digital, e o menu "⋯" a abrir para cima quando não cabe |
+| `chk_capa.js`           | a capa (envelope) com monograma editável no editor do convite digital |
 
 ## Deixam a base como a encontraram
 
