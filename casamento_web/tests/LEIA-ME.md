@@ -40,6 +40,7 @@ Entram com **admin / noivos2026**.
 | `e2e_statcards.js`      | filtros pelos cartões de estatística                            |
 | `e2e_lixo.js`           | reciclagem: eliminar, repor, anular                             |
 | `nav_check.js`          | todas as páginas respondem e o menu marca a certa               |
+| `chk_paginas.js`        | cada página chega ao fim, sem rebentar nem deixar erro do PHP   |
 | `chk_versao.js`         | a página de versão diz a verdade, e ?diag=1 traz o diagnóstico  |
 | `chk_versao_vigor.js`   | a versão em vigor é a que os convidados recebem e o manual retrata |
 | `chk_digital_menu.js`   | entrada do convite digital, e o menu "⋯" a abrir para cima quando não cabe |

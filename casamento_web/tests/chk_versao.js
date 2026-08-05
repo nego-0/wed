@@ -14,6 +14,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
 
   await p.goto(BASE + '/versao.php', { waitUntil: 'networkidle' });
+  // A página tem de chegar ao fim. Sem isto, esta prova passava com a página
+  // truncada a meio por um erro do PHP: as partes que olhava eram desenhadas
+  // antes do ponto onde rebentava.
+  const html = await p.content();
+  ok(/<\/html>\s*$/i.test(html.trim()), 'a página de versão chega ao fim, inteira');
+  ok(!/Fatal error|call to undefined|Uncaught/i.test(html), 'e sem rasto de erro do PHP');
+  const linhasTab = await p.locator('table tr').count();
+  console.log('  linhas na tabela:', linhasTab);
+  ok(linhasTab >= 12, 'a tabela lista todas as correções, não pára a meio');
+
   const assin = (await p.locator('.assin').textContent()).trim();
   console.log('  assinatura:', assin);
   ok(/^[0-9a-f]{8}$/.test(assin), 'a assinatura é um hash curto do conteúdo instalado');
