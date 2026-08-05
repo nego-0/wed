@@ -2,9 +2,11 @@
    versoes.js — Painel de versões, partilhado pelos dois editores
 
    Cada peça (convite digital, convite impresso) guarda as suas
-   versões em separado. Uma delas está "em vigor" — a predefinida:
-   é a que o convite mostra. Aplicar uma versão é torná-la a
-   predefinida.
+   versões em separado. Está "em vigor" a versão cujo conteúdo é o
+   que a peça mostra neste momento — a que os convidados recebem e a
+   que o manual de impressão retrata. Não é uma marca guardada: é uma
+   verdade sobre a peça, verificada de cada vez que a lista se abre.
+   Tornar uma versão a predefinida é aplicá-la.
 
    Depois de aplicar, o utilizador continua a editar; a versão
    passa então a estar desatualizada face ao que está gravado. O
@@ -51,6 +53,7 @@
     var api    = global.api;
     var lista  = [];
     var max    = 0;
+    var algumaEmVigor = true;
     var ocupado = false;
 
     function q(accao, extra) {
@@ -68,9 +71,8 @@
 
     // ---- desenho ----
     function estado(v) {
-      if (v.predefinida && v.igual_ao_atual) return ['vigor',  'Em vigor'];
-      if (v.predefinida)                     return ['mudou',  'Em vigor · com alterações desde então'];
-      if (v.igual_ao_atual)                  return ['igual',  'Igual ao que está gravado'];
+      if (v.em_vigor) return ['vigor', 'Em vigor · é esta que os convidados recebem'];
+      if (v.escolhida) return ['mudou', 'Foi a última aplicada · a peça mudou desde então'];
       return ['', ''];
     }
 
@@ -88,18 +90,16 @@
       var corpo = lista.length
         ? lista.map(function (v) {
             var e = estado(v), acs = [];
-            if (!v.predefinida || !v.igual_ao_atual) {
+            if (!v.em_vigor) {
               acs.push('<button class="bt bt-min vs-aplicar" data-id="' + v.id + '">' +
-                       (v.predefinida ? 'Voltar a esta' : 'Tornar predefinida') + '</button>');
-            }
-            if (!v.igual_ao_atual) {
+                       (v.escolhida ? 'Voltar a esta' : 'Pôr esta em vigor') + '</button>');
               acs.push('<button class="bt bt-min vs-atualizar" data-id="' + v.id + '" ' +
-                       'title="Reescreve a versão com o que está gravado agora">Atualizar</button>');
+                       'title="Reescreve a versão com o que a peça mostra agora">Atualizar</button>');
             }
             acs.push('<button class="bt bt-min vs-renomear" data-id="' + v.id + '" title="Mudar o nome">Nome</button>');
             acs.push('<button class="bt bt-min vs-apagar" data-id="' + v.id + '" title="Apagar esta versão">✕</button>');
 
-            return '<div class="vs-item' + (v.predefinida ? ' vs-em-vigor' : '') + '">' +
+            return '<div class="vs-item' + (v.em_vigor ? ' vs-em-vigor' : '') + '">' +
                      '<div class="vs-topo">' +
                        '<span class="vs-nome">' + esc(v.nome) + '</span>' +
                        (e[1] ? '<span class="vs-selo vs-' + e[0] + '">' + esc(e[1]) + '</span>' : '') +
@@ -113,8 +113,14 @@
         : '<div class="vazio-painel">Ainda não guardou nenhuma versão desta peça. ' +
           'Guarde uma antes de experimentar mudanças grandes — volta a ela num clique.</div>';
 
+      // Sem nenhuma versão a bater certo, a peça tem alterações que não estão
+      // guardadas em lado nenhum: se a enviar agora, é isto que segue.
+      var aviso = (lista.length && !algumaEmVigor)
+        ? '<div class="vs-aviso">A peça tem alterações que não estão em nenhuma versão. ' +
+          'É este estado que os convidados recebem. Guarde-o como versão nova, ou volte a uma das de baixo.</div>'
+        : '';
       var rodape = lista.length ? '<div class="vs-dica vs-conta">' + lista.length + ' de ' + max + ' versões.</div>' : '';
-      caixa.innerHTML = topo + corpo + rodape;
+      caixa.innerHTML = topo + aviso + corpo + rodape;
     }
 
     async function recarregar() {
@@ -125,6 +131,7 @@
       }
       lista = d.versoes || [];
       max   = d.max || 0;
+      algumaEmVigor = !!d.alguma_em_vigor;
       desenhar();
     }
 
@@ -150,7 +157,7 @@
     async function aplicar(id) {
       var nome = nomeDe(id);
       if (sujo() && !confirm('Tem alterações por gravar.\n\nAplicar "' + nome + '" descarta-as. Continuar?')) return;
-      else if (!sujo() && !confirm('Tornar "' + nome + '" a versão predefinida?\n\nA peça passa a ser como estava quando a guardou.')) return;
+      else if (!sujo() && !confirm('Pôr "' + nome + '" em vigor?\n\nA peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.')) return;
       var d = await correr(function () { return api(q('versao_aplicar', '&id=' + id)); });
       if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível aplicar a versão.');
       dizer('Versão em vigor: ' + nome + '. A recarregar…');
@@ -182,8 +189,8 @@
 
     async function apagar(id) {
       var v = lista.filter(function (x) { return String(x.id) === String(id); })[0];
-      var extra = v && v.predefinida
-        ? '\n\nEsta é a versão em vigor. A peça não muda; passa a estar em vigor a mais recente das que ficam.'
+      var extra = v && v.em_vigor
+        ? '\n\nÉ a versão que está em vigor. A peça não muda — perde-se só o registo de que este era o estado guardado.'
         : '\n\nA peça não muda; perde-se apenas este ponto de regresso.';
       if (!confirm('Apagar a versão "' + (v ? v.nome : '') + '"?' + extra)) return;
       var d = await correr(function () { return api(q('versao_apagar', '&id=' + id)); });

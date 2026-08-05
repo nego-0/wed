@@ -252,6 +252,11 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .vs-selo.vs-igual{ background:#34362f; color:var(--ed-texto-2); }
 .vs-acoes{ display:flex; gap:.3rem; flex-wrap:wrap; margin-top:.4rem; }
 .vs-conta{ text-align:right; }
+/* A peça mudou e essas mudanças não estão em versão nenhuma — é o que os
+   convidados recebem se o convite seguir agora. */
+.vs-aviso{ background:rgba(180,134,74,.16); border:1px solid rgba(180,134,74,.5);
+  color:var(--ed-ouro-claro); border-radius:7px; padding:.45rem .55rem; margin-bottom:.5rem;
+  font-size:.72rem; line-height:1.45; }
 .vs-ocupado{ opacity:.55; pointer-events:none; }
 
 @media (max-width:900px){

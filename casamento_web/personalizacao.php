@@ -265,6 +265,27 @@ function versaoIgualAoAtual(mysqli $conn, string $ambito, string $defsJson): boo
 }
 
 /**
+ * A versão que está em vigor num âmbito: aquela cujo conteúdo é o que a peça
+ * mostra agora. Devolve null se a peça tiver alterações que não estão guardadas
+ * em versão nenhuma.
+ *
+ * É calculada, não lida de uma marca: uma marca guardada acabava a apontar para
+ * uma versão enquanto a peça já mostrava outra coisa.
+ */
+function versaoEmVigor(mysqli $conn, string $ambito): ?array {
+    global $P;
+    $st = $conn->prepare("SELECT id, nome, defs, criado_em, atualizado_em
+                          FROM {$P}versoes WHERE ambito=? ORDER BY id DESC");
+    if (!$st) return null;
+    $st->bind_param('s', $ambito);
+    $st->execute();
+    foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $v) {
+        if (versaoIgualAoAtual($conn, $ambito, $v['defs'])) { unset($v['defs']); return $v; }
+    }
+    return null;
+}
+
+/**
  * Alguma versão guardada aponta para este ficheiro?
  * Serve para não apagar do disco uma foto ou música a que uma versão antiga
  * ainda se agarra — repô-la deixaria o convite com um buraco.
@@ -460,15 +481,24 @@ function lerEnquadramento(string $v): array {
 }
 
 // ---- Ler / fundir com a BD ---------------------------------
-function definicoesBD(mysqli $conn): array {
+function definicoesBD(mysqli $conn, bool $recarregar = false): array {
     global $P;
     static $cache = null;
-    if ($cache !== null) return $cache;
+    if ($cache !== null && !$recarregar) return $cache;
     $cache = [];
     $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes");
     if ($r) while ($x = $r->fetch_assoc()) $cache[$x['chave']] = $x['valor'];
     return $cache;
 }
+
+/**
+ * Esquece o que estava lido, para a próxima leitura ir à base de dados.
+ *
+ * Sem isto, gravar e voltar a ler no mesmo pedido devolvia os valores de antes
+ * da gravação — e uma versão criada logo a seguir a gravar guardava o estado
+ * antigo, não o que se acabara de gravar.
+ */
+function esquecerDefinicoes(mysqli $conn): void { definicoesBD($conn, true); }
 
 /** Definições efetivas: defaults + valores personalizados (BD ganha). */
 function defsAtuais(mysqli $conn): array {
@@ -685,6 +715,8 @@ function guardarDefinicoes(mysqli $conn, array $novos): array {
             $gravadas++;
         }
     }
+    // O que estava lido em memória ficou velho neste instante.
+    if ($gravadas || $repostas) esquecerDefinicoes($conn);
     return ['gravadas'=>$gravadas, 'repostas'=>$repostas, 'invalidas'=>$invalidas];
 }
 

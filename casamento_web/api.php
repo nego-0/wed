@@ -310,13 +310,12 @@ if ($acao === 'versao_criar') {
     $st->bind_param('ssss', $nome, $json, $u, $ambito);
     if (!$st->execute()) erro('Não foi possível guardar a versão.');
     $id = $conn->insert_id;
-    // A primeira versão de uma peça fica logo como a que está em vigor: é o
-    // que ela é, já que foi tirada do estado atual.
-    $r = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE ambito=? AND predefinida=1");
-    $r->bind_param('s', $ambito); $r->execute();
-    if ((int)$r->get_result()->fetch_row()[0] === 0) {
-        $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id=$id");
-    }
+    // Uma versão acabada de guardar É a peça neste momento — foi tirada dela.
+    // Antes só a primeira ficava marcada, e a marca ficava presa numa versão
+    // antiga enquanto o convite já mostrava outra coisa.
+    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE ambito=?");
+    $st->bind_param('s', $ambito); $st->execute();
+    $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id=$id");
     registar($conn, 'versao_guardada', $nome, ambitosVersao()[$ambito]['rotulo']);
     ok(['id' => $id]);
 }
@@ -328,17 +327,26 @@ if ($acao === 'versao_lista') {
     $st->bind_param('s', $ambito); $st->execute();
     $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
     $out = [];
+    $algumaEmVigor = false;
     foreach ($linhas as $v) {
-        // "em vigor" só é verdade se o que está gravado ainda bate com a versão:
-        // depois de mexer no editor, a predefinida fica desatualizada.
-        $igual = versaoIgualAoAtual($conn, $ambito, $v['defs']);
+        // "Em vigor" é uma verdade sobre a peça, não uma marca guardada: é-o a
+        // versão cujo conteúdo bate certo com o que a peça mostra agora. Uma
+        // marca guardada acabava a mentir — dizia "em vigor" numa versão
+        // enquanto o convite enviado mostrava outra coisa.
+        $v['em_vigor'] = versaoIgualAoAtual($conn, $ambito, $v['defs']);
+        if ($v['em_vigor']) $algumaEmVigor = true;
         unset($v['defs']);                       // a lista não precisa do conteúdo
-        $v['predefinida'] = (int)$v['predefinida'];
-        $v['igual_ao_atual'] = $igual;
+        $v['escolhida'] = (int)$v['predefinida']; // a última que o utilizador aplicou
+        unset($v['predefinida']);
         $out[] = $v;
     }
+    // As que estão em vigor à cabeça; depois as mais recentes.
+    usort($out, fn($a, $b) => ($b['em_vigor'] <=> $a['em_vigor']) ?: ($b['id'] <=> $a['id']));
     ok(['versoes' => $out, 'max' => VERSOES_MAX, 'ambito' => $ambito,
-        'rotulo' => ambitosVersao()[$ambito]['rotulo']]);
+        'rotulo' => ambitosVersao()[$ambito]['rotulo'],
+        // Sem nenhuma a bater certo, a peça tem alterações que não estão
+        // guardadas em versão nenhuma — e o painel tem de o dizer.
+        'alguma_em_vigor' => $algumaEmVigor]);
 }
 
 if ($acao === 'versao_aplicar') {
@@ -403,13 +411,9 @@ if ($acao === 'versao_apagar') {
     $st = $conn->prepare("DELETE FROM {$P}versoes WHERE id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a versão.');
-    // Apagar a que estava em vigor não muda o convite — só se perde o ponto de
-    // regresso. A mais recente das que ficam toma o lugar, para haver sempre uma.
-    if ((int)$x['predefinida'] === 1) {
-        $st = $conn->prepare("SELECT id FROM {$P}versoes WHERE ambito=? ORDER BY id DESC LIMIT 1");
-        $st->bind_param('s', $x['ambito']); $st->execute();
-        if ($nova = $st->get_result()->fetch_row()) $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id={$nova[0]}");
-    }
+    // Apagar não muda a peça — só se perde o ponto de regresso. Antes promovia-se
+    // outra a "em vigor" sem lhe aplicar nada, o que era falso: ficava marcada
+    // uma versão cujo conteúdo não era o que o convite mostrava.
     registar($conn, 'versao_apagada', $x['nome'], ambitosVersao()[$x['ambito']]['rotulo']);
     ok();
 }
