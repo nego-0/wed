@@ -268,15 +268,12 @@ function cartaoDadosEvento(array $defs): array {
  *        aparece o "N lugares" por baixo do nome da mesa.
  */
 /**
- * Nome do convidado tal como sai no cartão. Com $comNumero a falso, omite
- * o "(N)" de lugares — que no cartão já aparece no bloco das mesas — mas
- * mantém sempre um sufixo escrito (ex.: "e acompanhante").
+ * Nome do convidado tal como sai no cartão: o nome e, se existir, o sufixo
+ * escrito entre parênteses (ex.: "e acompanhante"). O número de lugares não
+ * entra no nome — aparece, quando pedido, no bloco das mesas.
  */
-function nomeParaCartao(array $c, bool $comNumero = true): string {
-    if ($comNumero) return nomeConviteVisivel($c);
-    $nome = trim($c['nome_exibicao']);
-    $suf  = trim((string)($c['sufixo'] ?? ''));
-    return $suf !== '' ? "$nome ($suf)" : $nome;
+function nomeParaCartao(array $c): string {
+    return nomeConviteVisivel($c);
 }
 
 /** Camadas do cartão (ordem de topo para base, como no painel de camadas). */

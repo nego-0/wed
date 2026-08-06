@@ -58,8 +58,7 @@ $conn->query("
         id INT AUTO_INCREMENT PRIMARY KEY,
         codigo VARCHAR(12) NOT NULL UNIQUE,
         nome_exibicao VARCHAR(255) NOT NULL,          -- nome no convite (ex: Família Agostinho)
-        sufixo VARCHAR(120) DEFAULT NULL,             -- override do texto entre parênteses
-        mostrar_numero TINYINT(1) DEFAULT 1,          -- mostrar o número entre parênteses no nome do convite
+        sufixo VARCHAR(120) DEFAULT NULL,             -- texto opcional entre parênteses no nome (ex: e acompanhante)
         mostrar_num_mesa TINYINT(1) DEFAULT 1,        -- mostrar o nº de pessoas por mesa no convite digital
         tipo ENUM('digital','fisico','ambos') DEFAULT 'digital',
         lado ENUM('noivo','noiva','ambos') DEFAULT 'noivo',
@@ -131,7 +130,6 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
 
     // ---- v1: colunas acrescentadas ao longo do desenvolvimento -----------
     if ($versaoAtual < 1) {
-        migColuna($conn, "{$P}convites",   'mostrar_numero',   "TINYINT(1) DEFAULT 1");
         migColuna($conn, "{$P}convites",   'mostrar_num_mesa', "TINYINT(1) DEFAULT 1");
         migColuna($conn, "{$P}convites",   'msg_pessoal',      "TEXT DEFAULT NULL");
         foreach (['pos_x' => "DECIMAL(6,2) DEFAULT NULL", 'pos_y' => "DECIMAL(6,2) DEFAULT NULL",
@@ -303,40 +301,19 @@ function gerarCodigo(mysqli $conn): string {
 }
 
 /**
- * Nome final do convite, aplicando a regra do número entre parênteses.
- * - 1 lugar  -> apenas o nome (sem parênteses)
- * - >1 lugar -> "Nome (N)"  ou o sufixo personalizado, se existir.
+ * Nome final do convite. Um sufixo textual (ex.: "e acompanhante") aparece
+ * entre parênteses; sem ele, fica só o nome. O número de lugares nunca vai
+ * para o nome — é informação de gestão, mostrada onde faz sentido (mesas).
  */
 function nomeConvite(array $c): string {
     $nome = trim($c['nome_exibicao']);
-    $lug  = (int)($c['lugares'] ?? 1);
     $suf  = trim((string)($c['sufixo'] ?? ''));
-    if ($suf !== '')  return "$nome ($suf)";
-    if ($lug <= 1)    return $nome;
-    return "$nome ($lug)";
+    return $suf !== '' ? "$nome ($suf)" : $nome;
 }
 
-/**
- * Nome tal como aparece NO CONVITE do convidado, respeitando a opção
- * "mostrar_numero". Um sufixo textual mantém-se sempre; o número entre
- * parênteses (o nº de lugares) só surge quando a opção está ativa.
- */
+/** O nome tal como aparece no convite do convidado — igual ao nome final. */
 function nomeConviteVisivel(array $c): string {
-    $nome = trim($c['nome_exibicao']);
-    $lug  = (int)($c['lugares'] ?? 1);
-    $suf  = trim((string)($c['sufixo'] ?? ''));
-    $mostrar = !isset($c['mostrar_numero']) || (int)$c['mostrar_numero'] === 1;
-    if ($suf !== '')          return "$nome ($suf)";
-    if ($mostrar && $lug > 1) return "$nome ($lug)";
-    return $nome;
-}
-
-/** Indica se o número entre parênteses (nº de lugares) é mostrado no convite. */
-function mostraNumeroConvite(array $c): bool {
-    $lug = (int)($c['lugares'] ?? 1);
-    $suf = trim((string)($c['sufixo'] ?? ''));
-    $mostrar = !isset($c['mostrar_numero']) || (int)$c['mostrar_numero'] === 1;
-    return $mostrar && $suf === '' && $lug > 1;
+    return nomeConvite($c);
 }
 
 /** Resolve/insere uma mesa pelo nome e devolve o id. */

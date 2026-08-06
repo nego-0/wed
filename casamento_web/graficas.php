@@ -26,7 +26,7 @@ if (isset($_GET['modelo'])) {
     $comLug = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
     echo renderCartaoConvite(
         cartaoDadosEvento($defs),
-        ['nome' => nomeParaCartao($c, ($defs['cartao.numero_no_nome'] ?? '1') === '1'),
+        ['nome' => nomeParaCartao($c),
          'mesas' => mesasDoConvite($conn, $c)],
         cartaoPaletaEfetiva($defs),
         $defs['cartao.folhagem'],

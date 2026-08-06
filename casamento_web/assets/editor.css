@@ -48,6 +48,10 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 
 .ed-sep{ width:1px; height:20px; background:var(--ed-linha); }
 
+/* Seletor de versões na barra: a versão em vigor aparece escolhida. Cabe ao
+   pé do "Guardar"; as opções longas de gerir não podem esticar a barra. */
+.ed-opcoes .sel-versao{ max-width:15rem; font-size:.82rem; }
+
 /* ---- Corpo: ferramentas | mesa | painéis ------------------- */
 .ed-corpo{ flex:1; display:flex; min-height:0; }
 

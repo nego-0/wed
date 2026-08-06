@@ -22,7 +22,7 @@ $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
 if ($demo) {
     if (!ehAdmin()) { http_response_code(403); exit('Apenas administração.'); }
     $c = ['id'=>0, 'codigo'=>'EXEMPLO', 'nome_exibicao'=>'Família Exemplo', 'sufixo'=>null,
-          'mostrar_numero'=>1, 'mostrar_num_mesa'=>1, 'lugares'=>4, 'mesa_nome'=>'Mesa 1',
+          'mostrar_num_mesa'=>1, 'lugares'=>4, 'mesa_nome'=>'Mesa 1',
           'msg_pessoal'=>'', 'membros'=>[]];
 }
 
@@ -113,11 +113,6 @@ $confirmUrl  = escP(base_url() . '/convite.php?c=' . $c['codigo']);
 $downloadUrl = escP('convite-digital.php?c=' . $c['codigo'] . '&download=1');
 $qrValue     = base_url() . '/convite-digital.php?c=' . $c['codigo'];
 
-// A nota dos parênteses só aparece quando o número é mesmo mostrado no convite
-$guestNote = mostraNumeroConvite($c)
-    ? '<p class="guest-note">' . mdTexto($DEFS['textos.nota_parenteses']) . '</p>'
-    : '';
-
 // Mensagem pessoal deste convite (opcional)
 $msgPessoal = trim((string)($c['msg_pessoal'] ?? ''));
 $msgBlock = $msgPessoal !== ''
@@ -136,7 +131,6 @@ $out = aplicarSeccoes($tpl, $DEFS);
 $out = strtr($out, convitePlaceholders($DEFS) + [
     '{{GUEST_NAME}}'   => $nome,
     '{{MESA_BLOCK}}'   => $mesaBlock,
-    '{{GUEST_NOTE}}'   => $guestNote,
     '{{MSG_PESSOAL}}'  => $msgBlock,
     '{{CONFIRM_URL}}'  => $confirmUrl,
     '{{DOWNLOAD_URL}}' => $downloadUrl,

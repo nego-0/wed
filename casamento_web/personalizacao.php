@@ -127,7 +127,6 @@ function defsPadrao(): array {
         'textos.lead' => "Há amores que, como o amanhecer, chegam devagar — e o nosso chegou para iluminar toda uma vida. É com o coração cheio de júbilo que {noiva} e {noivo} têm a honra de convidar V.\u{00A0}Exa. a partilhar a celebração do seu enlace matrimonial, e a alegria de um dia que ficará para sempre guardado na memória.",
         'textos.guest_label' => 'Convite reservado a',
         'textos.closing' => 'A vossa presença será o mais belo dos presentes — a luz e a música que tornarão eterno o mais feliz dos nossos dias.',
-        'textos.nota_parenteses' => 'O número entre parênteses corresponde ao número de lugares para os quais o convite é destinado.',
         'gd.eyebrow' => 'Guarde esta data',
         'historia.visivel' => '1',
         'historia.eyebrow' => 'A nossa história',
@@ -190,7 +189,6 @@ function defsPadrao(): array {
         'cartao.civil_hora' => '10:30',
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
-        'cartao.numero_no_nome' => '1',   // '(N)' de lugares no nome do convidado, no cartão
         // Cor e letra livres, por cima da paleta escolhida. Vazio = a paleta manda.
         'cartao.cores' => '',
         'cartao.fonte_script' => 'alexbrush',
@@ -654,8 +652,6 @@ function validarDefinicao(string $chave, string $valor): ?string {
         }
         case 'tipo.escala':
             return ctype_digit($valor) ? (string)max(80, min(130, (int)$valor)) : null;
-        case 'cartao.numero_no_nome':
-            return $valor === '1' ? '1' : '0';
         case 'cartao.cores': {
             // Cores livres por cima da paleta: {"accent":"#RRGGBB", ...}
             if ($valor === '') return '';

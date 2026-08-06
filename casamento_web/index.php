@@ -282,11 +282,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
       <div class="previa" id="previa">Família Agostinho</div>
 
       <label class="opcao-check">
-        <input type="checkbox" id="c-mostrar-numero" checked onchange="atualizarPrevia()">
-        <span>Mostrar o número de lugares entre parênteses no convite <small>(e a nota que o explica)</small></span>
-      </label>
-
-      <label class="opcao-check">
         <input type="checkbox" id="c-mostrar-num-mesa" checked>
         <span>Mostrar o número de lugares por mesa no convite (digital e físico) <small>(ex.: Mesa: A (1 lugar) e B (4 lugares))</small></span>
       </label>
@@ -712,7 +707,6 @@ function abrirConvite(c){
   $('c-id').value = c?c.id:'';
   $('c-nome').value = c?c.nome_exibicao:'';
   $('c-sufixo').value = c?(c.sufixo||''):'';
-  $('c-mostrar-numero').checked = c ? (String(c.mostrar_numero)!=='0') : true;
   $('c-mostrar-num-mesa').checked = c ? (String(c.mostrar_num_mesa)!=='0') : true;
   $('c-lugares').value = c?c.lugares:1;
   pickVal('c-tipo', c?c.tipo:'digital');
@@ -812,11 +806,8 @@ function renderSugestoes(){
 }
 function atualizarPrevia(){
   const nome=$('c-nome').value.trim()||'(nome do convite)';
-  const lug=+$('c-lugares').value||1; const suf=$('c-sufixo').value.trim();
-  const mostrar=$('c-mostrar-numero').checked;
-  let out=nome;
-  if(suf) out=`${nome} (${suf})`; else if(mostrar && lug>1) out=`${nome} (${lug})`;
-  $('previa').textContent=out;
+  const suf=$('c-sufixo').value.trim();
+  $('previa').textContent = suf ? `${nome} (${suf})` : nome;
 }
 
 async function guardarConvite(){
@@ -824,7 +815,6 @@ async function guardarConvite(){
   if(!nome) return toast('Indique o nome a exibir no convite.', true);
   const payload={
     id:$('c-id').value||0, nome_exibicao:nome, sufixo:$('c-sufixo').value,
-    mostrar_numero:$('c-mostrar-numero').checked?1:0,
     mostrar_num_mesa:$('c-mostrar-num-mesa').checked?1:0,
     tipo:$('c-tipo').value, lado:$('c-lado').value, lugares:$('c-lugares').value,
     mesa:$('c-mesa').value, telefone:$('c-telefone').value, observacoes:$('c-obs').value,

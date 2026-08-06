@@ -120,6 +120,10 @@ $CAS = casalInfo(defsAtuais($conn));
     <button class="bt bt-min" onclick="zoomPasso(1)" title="Ampliar">+</button>
   </div>
   <div class="cresce"></div>
+  <span class="rot">Versão</span>
+  <select id="sel-versao" class="sel-versao"
+          title="A versão em vigor — a que os convidados recebem. Escolha outra para a aplicar, ou use as ações de gerir."></select>
+  <span class="ed-sep"></span>
   <button class="bt" onclick="reporSeccao()">Repor esta secção</button>
   <button class="bt primario" onclick="guardar()">Guardar</button>
 </div>
@@ -160,10 +164,6 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="ed-painel fechado">
       <h3 onclick="alternarPainel(this)">Tipografia <span class="chev">▾</span></h3>
       <div class="ed-painel-corpo" id="tipografia"></div>
-    </div>
-    <div class="ed-painel fechado">
-      <h3 onclick="alternarPainel(this)">Versões <span class="chev">▾</span></h3>
-      <div class="ed-painel-corpo" id="versoes"></div>
     </div>
     <div class="ed-painel fechado">
       <h3 onclick="alternarPainel(this)">Fotos e música <span class="chev">▾</span></h3>
@@ -215,7 +215,7 @@ const TEMA_ROT = <?= json_encode(temaVarsRotulos(), JSON_UNESCAPED_UNICODE) ?>;
 // linhas): pintá-los em cru na tela mostrava "20:30" onde ficará "às 20h30".
 // Para estes espera-se uma pausa e recarrega-se a tela, como nas listas.
 const RECOMPOR = ['evento.data','evento.hora','evento.local','evento.cidade',
-                  'evento.maps','evento.whatsapp','footer.local','textos.nota_parenteses'];
+                  'evento.maps','evento.whatsapp','footer.local'];
 
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -235,7 +235,6 @@ const CAMPOS = {
   'textos.lead':['Texto principal','area',4000],
   'textos.guest_label':['Rótulo do convidado','texto',80],
   'textos.closing':['Texto de fecho','area',4000],
-  'textos.nota_parenteses':['Nota dos parênteses','area',4000],
   'historia.eyebrow':['Chamada','texto',120], 'historia.titulo':['Título','texto',120],
   'historia.quote':['Citação de abertura','area',4000], 'historia.autor':['Autor da citação','texto',80],
   'interludio.quote':['Citação','area',4000], 'interludio.autor':['Autor','texto',80],
@@ -258,7 +257,6 @@ const CAMPOS = {
 // Campos extra que cada secção mostra, além dos que se selecionam na tela.
 const EXTRA = {
   'hero':['evento.data','evento.hora'],
-  'convite':['textos.nota_parenteses'],
   'grande-dia':['evento.local','evento.cidade','evento.maps'],
   'final':['footer.local','evento.whatsapp'],
 };
@@ -940,7 +938,7 @@ function mudarEscala(v, el){
 function renderVersoes(){
   Versoes.montar({
     ambito: 'digital',
-    alvo:   'versoes',
+    alvo:   'sel-versao',
     sujo:   () => SUJO,
     msg,
     aoAplicar: () => setTimeout(()=>{ SUJO = false; location.reload(); }, 700)

@@ -83,30 +83,38 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(!/Fora de qualquer vers/i.test(banda),
      'a entrada já não usa o aviso inconsistente "Fora de qualquer versão"');
 
-  // ---------- o painel mostra o aviso ----------
-  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
-  await p.waitForTimeout(2400);
-  await p.evaluate(() => document.querySelectorAll('.ed-painel').forEach(x => {
-    if (/Versões/.test(x.querySelector('h3').textContent)) x.classList.remove('fechado'); }));
-  await p.waitForFunction(() => document.querySelectorAll('#versoes .vs-item').length === 2, null, { timeout: 9000 });
-  ok(await p.locator('#versoes .vs-aviso').count() === 1,
-     'o painel avisa que a peça tem alterações fora de qualquer versão');
-  const avisoTxt = (await p.locator('#versoes .vs-aviso').first().textContent()).replace(/\s+/g, ' ');
-  ok(/«A»/.test(avisoTxt),
-     'o aviso do painel nomeia a última versão aplicada, como a entrada faz');
-  const selos = await p.evaluate(() => [...document.querySelectorAll('#versoes .vs-selo')].map(s => s.textContent.trim()));
-  console.log('   selos:', JSON.stringify(selos));
-  ok(!selos.some(s => /^Em vigor/.test(s)), 'nenhuma versão se diz em vigor quando nenhuma está');
+  // ---------- o seletor da barra conta o mesmo estado ----------
+  // A versão vive agora num <select> na barra de cima. Fora de versão, a opção
+  // escolhida di-lo, e a última aplicada (A) aparece assinalada na lista.
+  const opcoesSel = () => p.evaluate(() =>
+    [...document.querySelectorAll('#sel-versao option')].map(o => o.textContent.trim()));
+  const escolhidaSel = () => p.evaluate(() => {
+    const s = document.getElementById('sel-versao');
+    return s && s.selectedIndex >= 0 ? s.options[s.selectedIndex].textContent.trim() : '';
+  });
 
-  // Voltar a A pelo painel e confirmar que o aviso desaparece
+  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await p.waitForFunction(() =>
+    document.querySelectorAll('#sel-versao optgroup[label="Pôr em vigor"] option').length === 2,
+    null, { timeout: 9000 });
+  console.log('   opções do seletor (fora de versão):', JSON.stringify(await opcoesSel()));
+  ok(/fora de vers/i.test(await escolhidaSel()),
+     'o seletor mostra que a peça está fora de versão');
+  ok((await opcoesSel()).some(o => /^A\b/.test(o) && /última aplicada/i.test(o)),
+     'o seletor assinala A como a última aplicada');
+  ok(!(await opcoesSel()).some(o => /em vigor/i.test(o)),
+     'nenhuma versão se diz em vigor quando nenhuma está');
+
+  // Voltar a A e confirmar que o seletor passa a mostrá-la em vigor
   await api('versao_aplicar&id=' + idA);
-  await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2400);
-  await p.evaluate(() => document.querySelectorAll('.ed-painel').forEach(x => {
-    if (/Versões/.test(x.querySelector('h3').textContent)) x.classList.remove('fechado'); }));
-  await p.waitForFunction(() => document.querySelectorAll('#versoes .vs-item').length === 2, null, { timeout: 9000 });
-  ok(await p.locator('#versoes .vs-aviso').count() === 0, 'reposta a versão, o aviso desaparece');
-  ok(/Em vigor/.test(await p.locator('#versoes .vs-selo').first().textContent()),
-     'e a versão em vigor volta a dizê-lo');
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('#sel-versao option')].some(o => /em vigor/i.test(o.textContent)),
+    null, { timeout: 9000 });
+  const esc2 = await escolhidaSel();
+  console.log('   escolhida no seletor:', esc2);
+  ok(/^A\b/.test(esc2) && /em vigor/i.test(esc2),
+     'reposta a versão, o seletor mostra A em vigor e escolhida');
 
   // ---------- convite impresso: o manual segue a versão ----------
   await api('defs_save', { defs: { 'cartao.reservado': 'RESERVADO VERSAO P1' } });

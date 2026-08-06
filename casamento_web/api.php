@@ -145,7 +145,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
     if ($acao === 'porta_dados') {
         // Cópia completa e leve da lista, para o porteiro poder procurar
         // SEM ligação à internet (guardada no dispositivo). Só o essencial.
-        $r = $conn->query("SELECT c.id, c.codigo, c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares,
+        $r = $conn->query("SELECT c.id, c.codigo, c.nome_exibicao, c.sufixo, c.lugares,
                                   c.rsvp_estado, c.rsvp_confirmados, c.checkin_estado, c.checkin_presentes,
                                   c.observacoes, m.nome AS mesa_nome
                            FROM {$P}convites c
@@ -589,19 +589,18 @@ if ($acao === 'convite_save') {
     $msgP     = trim($d['msg_pessoal'] ?? ''); if ($msgP==='') $msgP=null;
     $mesaId   = trim($d['mesa']??'')!=='' ? resolverMesa($conn, $d['mesa']) : null;
     if ($mesaId && mesaEhNoivos($conn,$mesaId)) $mesaId = null; // a mesa dos noivos não é atribuível a convites
-    $mostrarN = !empty($d['mostrar_numero']) ? 1 : 0;
     $mostrarNM = !empty($d['mostrar_num_mesa']) ? 1 : 0;
     $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
 
     $novoConvite = !$id;
     if ($id) {
-        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_numero=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
-        $st->bind_param('ssiissiisssi',$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
+        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
+        $st->bind_param('ssissiisssi',$nome,$sufixo,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
         $st->execute();
     } else {
         $codigo=gerarCodigo($conn);
-        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_numero,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
-        $st->bind_param('sssiissiisss',$codigo,$nome,$sufixo,$mostrarN,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP);
+        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st->bind_param('sssissiisss',$codigo,$nome,$sufixo,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP);
         $st->execute(); $id=$conn->insert_id;
     }
 
@@ -900,7 +899,7 @@ if ($acao === 'convidado_list') {
     $selGen = colunaExiste($conn, "{$P}convidados", 'genero') ? "g.genero" : "'' AS genero";
     $selBri = colunaExiste($conn, "{$P}convidados", 'brinde') ? "g.brinde" : "0 AS brinde";
     $sql="SELECT g.id, g.nome, g.convite_id, g.mesa_id AS mesa_pessoa, g.rsvp, g.presente, g.papel, $selGen, $selBri,
-                 c.nome_exibicao, c.sufixo, c.mostrar_numero, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
+                 c.nome_exibicao, c.sufixo, c.lugares, c.mesa_id AS mesa_convite, c.codigo,
                  mp.nome AS mesa_pessoa_nome, mc.nome AS mesa_convite_nome,
                  mp.especial AS mesa_pessoa_esp, mc.especial AS mesa_convite_esp
           FROM {$P}convidados g

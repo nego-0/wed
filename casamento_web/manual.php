@@ -46,7 +46,6 @@ if ($pecaSel === 'cartao') {
     $camadas  = cartaoCamadasVisiveis($defs);
     $rotulos  = cartaoCamadas();
     $ev       = cartaoDadosEvento($defs);
-    $comNum   = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 
     // Prova visual com um convite real, se existir
     $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
@@ -55,7 +54,7 @@ if ($pecaSel === 'cartao') {
                        ORDER BY c.nome_exibicao LIMIT 1");
     $ex = $r ? $r->fetch_assoc() : null;
     $conv = $ex
-        ? ['nome' => nomeParaCartao($ex, $comNum), 'mesas' => mesasDoConvite($conn, $ex)]
+        ? ['nome' => nomeParaCartao($ex), 'mesas' => mesasDoConvite($conn, $ex)]
         : ['nome' => 'Família Agostinho', 'mesas' => [['nome'=>'Mesa Luar','n'=>1], ['nome'=>'Mesa Solar','n'=>4]]];
 
     // Quantos cartões há a produzir
@@ -266,8 +265,7 @@ if ($pecaSel === 'cartao') {
     </table>
     <div class="aviso-p"><b>Variável por convidado:</b> o nome no bloco “<?= escP($ev['reservado']) ?>” e as
       mesas com o número de lugares mudam em cada cartão. A lista completa está em
-      <i>Entregáveis à gráfica → Convites físicos</i>.
-      <?= $comNum ? 'O nome inclui o “(N)” de lugares.' : 'O nome <b>não</b> inclui o “(N)” de lugares.' ?></div>
+      <i>Entregáveis à gráfica → Convites físicos</i>.</div>
   </div>
 
   <div class="sec">

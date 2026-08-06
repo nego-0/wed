@@ -37,8 +37,8 @@ function correcoesEsperadas(): array {
          'pecas.php', 'function cartaoMolduras('],
         ['Cores do convite digital com nome',
          'personalizacao.php', 'function temaVarsRotulos('],
-        ['Versões dos dois convites',
-         'assets/versoes.js', 'Versoes'],
+        ['Versões dos dois convites, num seletor na barra superior',
+         'assets/versoes.js', 'Pôr em vigor'],
         ['Capa (envelope) com monograma editável no editor digital',
          'convite-editor.php', "CAPA_ID = 'capa'"],
     ];

@@ -29,18 +29,13 @@ $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
                    WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                    ORDER BY c.nome_exibicao LIMIT 1");
 $exemplo = $r ? $r->fetch_assoc() : null;
-$comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 if ($exemplo) {
-    $conv = ['nome' => nomeParaCartao($exemplo, $comNumeroNome), 'mesas' => mesasDoConvite($conn, $exemplo)];
+    $conv = ['nome' => nomeParaCartao($exemplo), 'mesas' => mesasDoConvite($conn, $exemplo)];
     $comLug = !isset($exemplo['mostrar_num_mesa']) || (int)$exemplo['mostrar_num_mesa'] === 1;
 } else {
     $conv = ['nome' => 'Família Agostinho', 'mesas' => [['nome'=>'Mesa Luar','n'=>1], ['nome'=>'Mesa Solar','n'=>4]]];
     $comLug = true;
 }
-
-$nomesProva = $exemplo
-    ? ['com' => nomeParaCartao($exemplo, true), 'sem' => nomeParaCartao($exemplo, false)]
-    : ['com' => $conv['nome'], 'sem' => $conv['nome']];
 
 // Trepadeiras de todas as folhagens: trocar de folhagem não volta ao servidor.
 $ramosJs = [];
@@ -51,8 +46,7 @@ $camposPorCamada = [
     'abertura'  => [['cartao.abertura', 'Texto de abertura', 'area', 'abertura']],
     'nomes'     => [['casal.noiva', 'Nome da noiva', 'texto', 'noiva'], ['casal.noivo', 'Nome do noivo', 'texto', 'noivo']],
     'frase'     => [['cartao.frase_convite', 'Frase de convite', 'area', 'frase']],
-    'convidado' => [['cartao.reservado', 'Rótulo', 'texto', 'reservado'],
-                    ['cartao.numero_no_nome', 'Mostrar o (N) de lugares no nome', 'bool', '']],
+    'convidado' => [['cartao.reservado', 'Rótulo', 'texto', 'reservado']],
     'logistica' => [['cartao.civil_titulo', 'Cerimónia', 'texto', 'civil_titulo'],
                     ['cartao.civil_hora', 'Hora da cerimónia (HH:MM)', 'hora', ''],
                     ['evento.venue_titulo', 'Receção', 'texto', 'copo_titulo'],
@@ -109,6 +103,10 @@ $camposPorCamada = [
     <button class="bt bt-min" onclick="ajustar()" title="Ajustar à janela">Ajustar</button>
   </div>
   <div class="cresce"></div>
+  <span class="rot">Versão</span>
+  <select id="sel-versao" class="sel-versao"
+          title="A versão em vigor — a que se imprime e a que o manual retrata. Escolha outra para a aplicar, ou use as ações de gerir."></select>
+  <span class="ed-sep"></span>
   <button class="bt" onclick="reporCamada()" title="Repor os textos originais da camada escolhida">Repor esta camada</button>
   <button class="bt" onclick="repor()">Repor originais</button>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
@@ -163,10 +161,6 @@ $camposPorCamada = [
       <h3 onclick="alternarPainel(this)">Tipografia <span class="chev">▾</span></h3>
       <div class="ed-painel-corpo" id="tipografia"></div>
     </div>
-    <div class="ed-painel fechado" id="p-versoes">
-      <h3 onclick="alternarPainel(this)">Versões <span class="chev">▾</span></h3>
-      <div class="ed-painel-corpo" id="versoes"></div>
-    </div>
   </div>
 </div>
 
@@ -200,7 +194,6 @@ const FOLHAGENS = <?= json_encode(cartaoFolhagens(), JSON_UNESCAPED_UNICODE) ?>;
 // O que cada camada decorativa oferece, além de se poder esconder.
 const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala',
                      floreados:'cartao.floreados_escala' };
-const NOMES_PROVA = <?= json_encode($nomesProva, JSON_UNESCAPED_UNICODE) ?>;
 const PADRAO   = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
 const ATUAIS   = <?= json_encode(array_intersect_key($defs, array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
 const FONTES   = <?= json_encode(fontesConvite(), JSON_UNESCAPED_UNICODE) ?>;
@@ -232,7 +225,7 @@ let est = {
   textos:   <?= json_encode(array_intersect_key($defs, array_flip([
                  'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.civil_titulo',
                  'cartao.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
-                 'evento.venue_titulo','evento.local','evento.hora','evento.data','cartao.numero_no_nome'])), JSON_UNESCAPED_UNICODE) ?>
+                 'evento.venue_titulo','evento.local','evento.hora','evento.data'])), JSON_UNESCAPED_UNICODE) ?>
 };
 const original = JSON.parse(JSON.stringify(est));
 let sujo = false, selecionada = null, ferramenta = 'mover';
@@ -635,11 +628,6 @@ function pintarTexto(chave, valor){
     if (n) n.innerHTML = escaparHtml(est.textos['evento.local'] || '') + '<br>às ' + horaPt(est.textos['evento.hora'] || '');
     return;
   }
-  if (chave === 'cartao.numero_no_nome') {
-    const n = c.querySelector('.ct-convidado');
-    if (n) n.textContent = valor === '1' ? NOMES_PROVA.com : NOMES_PROVA.sem;
-    return;
-  }
   if (chave === 'evento.data') {
     const d = new Date(valor + 'T12:00:00');
     if (isNaN(d)) return;
@@ -798,7 +786,7 @@ window.addEventListener('resize', () => { if (zoom <= .5) ajustar(); });
 // Painel partilhado com o editor do convite digital (assets/versoes.js).
 Versoes.montar({
   ambito: 'impresso',
-  alvo:   'versoes',
+  alvo:   'sel-versao',
   sujo:   () => sujo,
   msg,
   aoAplicar: () => setTimeout(() => { sujo = false; location.reload(); }, 700)

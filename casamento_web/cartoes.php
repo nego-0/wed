@@ -29,8 +29,6 @@ $estilo = cartaoEstiloVars($defsCartao);
 // ignorava-as e saía um cartão diferente do que a prova mostrava.
 $camadasCartao = cartaoCamadasVisiveis($defs);
 $ev  = cartaoDadosEvento($defs);
-// Mostrar (ou não) o "(N)" de lugares no nome — no cartão as mesas já o indicam.
-$comNumeroNome = ($defs['cartao.numero_no_nome'] ?? '1') === '1';
 
 // Convites físicos (os que levam cartão impresso)
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
@@ -122,7 +120,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
       $mesas = mesasDoConvite($conn, $c);
       // Respeita a opção "mostrar o nº de lugares" do convite (igual ao digital e às etiquetas).
       $comLugares = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
-      $conv = ['nome' => nomeParaCartao($c, $comNumeroNome), 'mesas' => $mesas];
+      $conv = ['nome' => nomeParaCartao($c), 'mesas' => $mesas];
     ?>
     <div class="cartao-item">
       <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares, $camadasCartao, $estilo) ?></div></div>
