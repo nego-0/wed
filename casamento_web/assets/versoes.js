@@ -114,10 +114,15 @@
           'Guarde uma antes de experimentar mudanças grandes — volta a ela num clique.</div>';
 
       // Sem nenhuma versão a bater certo, a peça tem alterações que não estão
-      // guardadas em lado nenhum: se a enviar agora, é isto que segue.
+      // guardadas em lado nenhum: se a enviar agora, é isto que segue. A mesma
+      // mensagem, com o mesmo nome, aparece na entrada da peça (digital.php /
+      // graficas.php) — as duas contam o estado da peça da mesma maneira.
+      var escolhida = lista.filter(function (v) { return v.escolhida; })[0];
       var aviso = (lista.length && !algumaEmVigor)
-        ? '<div class="vs-aviso">A peça tem alterações que não estão em nenhuma versão. ' +
-          'É este estado que os convidados recebem. Guarde-o como versão nova, ou volte a uma das de baixo.</div>'
+        ? '<div class="vs-aviso">A peça tem alterações que ainda não estão em nenhuma versão. ' +
+          'É este estado que os convidados recebem. Guarde-as como versão nova' +
+          (escolhida ? ', ou volte a «' + esc(escolhida.nome) + '».' : ', ou volte a uma das de baixo.') +
+          '</div>'
         : '';
       var rodape = lista.length ? '<div class="vs-dica vs-conta">' + lista.length + ' de ' + max + ' versões.</div>' : '';
       caixa.innerHTML = topo + aviso + corpo + rodape;

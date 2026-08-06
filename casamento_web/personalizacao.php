@@ -290,6 +290,46 @@ function versaoEmVigor(mysqli $conn, string $ambito): ?array {
 }
 
 /**
+ * Estado de versões de uma peça, num único modelo partilhado pela entrada
+ * (digital.php / graficas.php) e pelo painel do editor (versoes.js). Antes
+ * cada sítio dizia o estado por palavras suas: a entrada atirava um seco
+ * "Fora de qualquer versão" enquanto o painel dizia, da mesma peça, "foi a
+ * última aplicada · a peça mudou desde então" — a mesma verdade contada de
+ * duas maneiras que pareciam contradizer-se.
+ *
+ * Devolve sempre ['estado', 'nome', 'id']:
+ *   'vigor'    — há uma versão cujo conteúdo é o que a peça mostra agora
+ *                ('nome' é a dela).
+ *   'alterada' — nenhuma bate certo, mas a última aplicada é conhecida
+ *                ('nome' é a dela): a peça derivou dessa versão.
+ *   'nenhuma'  — há versões, nenhuma bate certo e nenhuma consta como a
+ *                última aplicada (caso raro: apagou-se a aplicada).
+ *   'sem'      — ainda não há versões nenhumas.
+ */
+function versaoEstado(mysqli $conn, string $ambito): array {
+    global $P;
+    $vazio = ['estado' => 'sem', 'nome' => '', 'id' => 0];
+    $st = $conn->prepare("SELECT id, nome, predefinida, defs
+                          FROM {$P}versoes WHERE ambito=? ORDER BY id DESC");
+    if (!$st) return $vazio;
+    $st->bind_param('s', $ambito);
+    $st->execute();
+    $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    if (!$linhas) return $vazio;
+
+    $escolhida = null;
+    foreach ($linhas as $v) {
+        if (versaoIgualAoAtual($conn, $ambito, $v['defs'])) {
+            return ['estado' => 'vigor', 'nome' => $v['nome'], 'id' => (int)$v['id']];
+        }
+        if ((int)$v['predefinida'] === 1 && $escolhida === null) $escolhida = $v;
+    }
+    return $escolhida
+        ? ['estado' => 'alterada', 'nome' => $escolhida['nome'], 'id' => (int)$escolhida['id']]
+        : ['estado' => 'nenhuma', 'nome' => '', 'id' => 0];
+}
+
+/**
  * Alguma versão guardada aponta para este ficheiro?
  * Serve para não apagar do disco uma foto ou música a que uma versão antiga
  * ainda se agarra — repô-la deixaria o convite com um buraco.

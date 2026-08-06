@@ -28,6 +28,7 @@ $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 
 // ---- Versões guardadas e a que está em vigor ------------------
 $emVigor  = versaoEmVigor($conn, 'digital');
+$estadoVs = versaoEstado($conn, 'digital');   // modelo partilhado com o painel
 $versoes  = [];
 $r = $conn->query("SELECT id, nome, utilizador, criado_em, atualizado_em
                    FROM {$P}versoes WHERE ambito='digital' ORDER BY id DESC");
@@ -135,12 +136,16 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
     <div>
       <h2><?= escP($CAS['casal']) ?></h2>
       <div class="estado-linha">
-        <?php if ($emVigor): ?>
-          <span class="selo-v ok">✓ Em vigor: <b><?= escP($emVigor['nome']) ?></b></span><br>
+        <?php if ($estadoVs['estado'] === 'vigor'): ?>
+          <span class="selo-v ok">✓ Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span><br>
           É esta versão que os convidados recebem quando o convite é enviado ou aberto.
-        <?php elseif ($versoes): ?>
-          <span class="selo-v fora">Fora de qualquer versão</span><br>
-          O convite tem alterações que não estão guardadas em nenhuma versão. É este estado
+        <?php elseif ($estadoVs['estado'] === 'alterada'): ?>
+          <span class="selo-v fora"><b><?= escP($estadoVs['nome']) ?></b> · com alterações</span><br>
+          A peça tem alterações que ainda não guardou como versão. É este estado que os
+          convidados recebem. Guarde-as no editor, ou volte a «<?= escP($estadoVs['nome']) ?>» ao lado.
+        <?php elseif ($estadoVs['estado'] === 'nenhuma'): ?>
+          <span class="selo-v fora">Sem versão em vigor</span><br>
+          Nenhuma das versões guardadas corresponde ao que a peça mostra agora. É este estado
           que os convidados recebem. Guarde-o no editor, ou volte a uma das versões ao lado.
         <?php else: ?>
           <span class="selo-v fora">Sem versões guardadas</span><br>

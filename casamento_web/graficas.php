@@ -41,6 +41,7 @@ if (isset($_GET['modelo'])) {
 // manual retrata. Sem isto, a página do impresso dizia menos do que a do
 // digital sobre o estado da própria peça.
 $emVigor = versaoEmVigor($conn, 'impresso');
+$estadoVs = versaoEstado($conn, 'impresso');   // modelo partilhado com o painel
 $nVersoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes WHERE ambito='impresso'")
                        ->fetch_row()[0] ?? 0);
 
@@ -166,13 +167,17 @@ $manual = [
 
 <div class="container">
   <div class="estado-peca no-print">
-    <?php if ($emVigor): ?>
-      <span class="selo-v ok">✓ Em vigor: <b><?= escP($emVigor['nome']) ?></b></span>
+    <?php if ($estadoVs['estado'] === 'vigor'): ?>
+      <span class="selo-v ok">✓ Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span>
       <span class="txt">É esta versão do cartão que se imprime, e a que o manual retrata.</span>
-    <?php elseif ($nVersoes): ?>
-      <span class="selo-v fora">Fora de qualquer versão</span>
-      <span class="txt">O cartão tem alterações que não estão guardadas em nenhuma versão.
-        É este estado que se imprime.</span>
+    <?php elseif ($estadoVs['estado'] === 'alterada'): ?>
+      <span class="selo-v fora"><b><?= escP($estadoVs['nome']) ?></b> · com alterações</span>
+      <span class="txt">O cartão tem alterações que ainda não guardou como versão. É este estado
+        que se imprime. Guarde-as no editor, ou volte a «<?= escP($estadoVs['nome']) ?>».</span>
+    <?php elseif ($estadoVs['estado'] === 'nenhuma'): ?>
+      <span class="selo-v fora">Sem versão em vigor</span>
+      <span class="txt">Nenhuma das versões guardadas corresponde ao cartão que se imprime agora.
+        Guarde-o no editor, ou volte a uma das versões.</span>
     <?php else: ?>
       <span class="selo-v fora">Sem versões guardadas</span>
       <span class="txt">Ainda não guardou nenhuma versão do cartão. Guarde uma no editor

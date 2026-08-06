@@ -72,6 +72,17 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(d.versoes.find(v => v.nome === 'A').escolhida === 1,
      'mas continua a saber-se qual foi a última aplicada');
 
+  // ---------- entrada e painel contam o MESMO estado ----------
+  // A peça derivou da última aplicada (A). A entrada tem de a nomear, como o
+  // painel faz — não atirar um seco "Fora de qualquer versão" que a contradiz.
+  await p.goto(BASE + '/digital.php', { waitUntil: 'networkidle' });
+  const banda = (await p.locator('.estado-linha').first().textContent()).replace(/\s+/g, ' ').trim();
+  console.log('   banda da entrada:', banda);
+  ok(/\bA\b/.test(banda) && /altera/i.test(banda),
+     'a entrada nomeia a última versão aplicada e diz que a peça tem alterações');
+  ok(!/Fora de qualquer vers/i.test(banda),
+     'a entrada já não usa o aviso inconsistente "Fora de qualquer versão"');
+
   // ---------- o painel mostra o aviso ----------
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(2400);
@@ -80,6 +91,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.waitForFunction(() => document.querySelectorAll('#versoes .vs-item').length === 2, null, { timeout: 9000 });
   ok(await p.locator('#versoes .vs-aviso').count() === 1,
      'o painel avisa que a peça tem alterações fora de qualquer versão');
+  const avisoTxt = (await p.locator('#versoes .vs-aviso').first().textContent()).replace(/\s+/g, ' ');
+  ok(/«A»/.test(avisoTxt),
+     'o aviso do painel nomeia a última versão aplicada, como a entrada faz');
   const selos = await p.evaluate(() => [...document.querySelectorAll('#versoes .vs-selo')].map(s => s.textContent.trim()));
   console.log('   selos:', JSON.stringify(selos));
   ok(!selos.some(s => /^Em vigor/.test(s)), 'nenhuma versão se diz em vigor quando nenhuma está');
