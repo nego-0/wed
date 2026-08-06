@@ -102,7 +102,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 5;
+const ESQUEMA_VERSAO = 6;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -113,6 +113,11 @@ function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void
 function migIndice(mysqli $c, string $tabela, string $nome, string $colunas): void {
     $r = @$c->query("SHOW INDEX FROM `$tabela` WHERE Key_name='" . $c->real_escape_string($nome) . "'");
     if ($r && $r->num_rows === 0) @$c->query("CREATE INDEX `$nome` ON `$tabela` ($colunas)");
+}
+/** Larga uma coluna, se ainda existir (usado dentro das migrações). */
+function migLargarColuna(mysqli $c, string $tabela, string $coluna): void {
+    $r = @$c->query("SHOW COLUMNS FROM `$tabela` LIKE '" . $c->real_escape_string($coluna) . "'");
+    if ($r && $r->num_rows) @$c->query("ALTER TABLE `$tabela` DROP COLUMN `$coluna`");
 }
 
 // A tabela de definições tem de existir antes de se poder ler a versão.
@@ -227,6 +232,19 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}versoes", 'predefinida',   "TINYINT(1) NOT NULL DEFAULT 0");
         migColuna($conn, "{$P}versoes", 'atualizado_em', "TIMESTAMP NULL DEFAULT NULL");
         migIndice($conn, "{$P}versoes", 'idx_ver_ambito', 'ambito, predefinida');
+    }
+
+    // ---- v6: fim do "(N)" de lugares no nome do convidado -----------------
+    if ($versaoAtual < 6) {
+        // A coluna que ligava/desligava o número entre parênteses deixou de ser
+        // usada — o número já não entra no nome. Sai do esquema.
+        migLargarColuna($conn, "{$P}convites", 'mostrar_numero');
+
+        // Definições órfãs: as chaves que governavam o número e a nota que o
+        // explicava já não existem em defsPadrao(). Sem default a que voltar,
+        // uma linha guardada ficaria presa para sempre — apaga-se.
+        @$conn->query("DELETE FROM {$P}definicoes
+                       WHERE chave IN ('cartao.numero_no_nome','textos.nota_parenteses')");
     }
 
     @$conn->query("INSERT INTO {$P}definicoes (chave,valor) VALUES ('schema.versao','" . ESQUEMA_VERSAO . "')
