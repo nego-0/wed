@@ -26,11 +26,24 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .banner-import .txt{ flex:1 1 260px; }
   .banner-import h4{ margin-bottom:.2rem; }
   .banner-import p{ margin:0; font-size:.86rem; color:var(--text); }
-  .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; flex-wrap:wrap; }
+  /* Uma pessoa = uma linha. Os pormenores (género, mesa, papel, brinde) são
+     pedidos na mesma, mas só quando se abrem: seis controlos lado a lado não
+     cabiam na largura do modal e quebravam para uma segunda linha, o que fazia
+     uma família de quatro parecer um formulário de dezasseis campos. */
+  .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.45rem; flex-wrap:wrap; }
   .membro-linha input[type=text]{ flex:1 1 160px; min-width:0; }
-  .membro-linha .m-mesa{ flex:0 1 auto; max-width:34%; font-size:.85rem; padding:.45rem .5rem; }
-  .membro-linha .m-papel{ flex:0 1 auto; max-width:30%; font-size:.85rem; padding:.45rem .5rem; }
-  .membro-linha .m-genero{ flex:0 1 auto; max-width:26%; font-size:.85rem; padding:.45rem .5rem; }
+  .m-mais{ flex:none; width:34px; height:34px; border:1px solid var(--line); background:#fff;
+           border-radius:9px; cursor:pointer; color:#8a9089; font-size:1rem; line-height:1;
+           position:relative; }
+  .m-mais:hover{ border-color:var(--gold-soft); color:var(--forest); }
+  .membro-linha.aberta .m-mais{ background:var(--cream); border-color:var(--gold-soft); color:var(--forest); }
+  /* Ponto dourado: esta pessoa tem pormenores preenchidos, mesmo fechada. */
+  .m-mais.tem::after{ content:''; position:absolute; top:5px; right:5px; width:6px; height:6px;
+                      border-radius:50%; background:var(--gold); }
+  .m-extras{ display:none; flex-basis:100%; gap:.4rem; flex-wrap:wrap; align-items:center;
+             background:var(--cream); border-radius:10px; padding:.5rem .6rem; margin:.1rem 0 .5rem; }
+  .membro-linha.aberta .m-extras{ display:flex; }
+  .m-extras select{ flex:1 1 130px; min-width:0; font-size:.85rem; padding:.4rem .5rem; margin:0; }
   .membro-linha .m-brinde{ display:inline-flex; align-items:center; gap:.25rem; font-size:.82rem; color:var(--text); white-space:nowrap; cursor:pointer; }
   .membro-linha .m-brinde input{ width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
   /* Ícones de género / brinde nas pastilhas */
@@ -44,6 +57,40 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .sugestao{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.25rem .7rem; font-size:.8rem; cursor:pointer; }
   .sugestao:hover{ background:var(--gold-pale); border-color:var(--gold-soft); }
   .previa{ background:var(--forest-deep); color:var(--gold-pale); font-family:var(--serif); font-size:1.15rem; padding:.7rem 1rem; border-radius:10px; text-align:center; margin:.3rem 0 1rem; }
+
+  /* ---- Formulário do convite: secções com marco visível ----
+     Era uma lista plana de treze campos sem hierarquia. Os mesmos campos,
+     arrumados por assunto, dão ao olho pontos de referência. */
+  .modal-convite{ max-width:720px; }
+  /* Dentro do formulário, os seletores são escolhas rápidas, não cartazes:
+     ícone e texto na mesma linha poupam três alturas de botão no ecrã. */
+  .modal-convite .pk{ flex-direction:row; justify-content:center; gap:.4rem; padding:.5rem .4rem; }
+  .modal-convite .pk .pk-ic svg{ width:16px; height:16px; }
+  /* A prévia mostra como o nome sai no convite — é uma confirmação, não o
+     protagonista do ecrã. */
+  .modal-convite .previa{ font-size:1rem; padding:.5rem .9rem; margin:.45rem 0 0; text-align:left;
+                          display:flex; align-items:baseline; gap:.6rem; }
+  .modal-convite .previa::before{ content:'No convite'; font-family:var(--sans); font-size:.68rem;
+                                  text-transform:uppercase; letter-spacing:.08em; color:#8a9a8d; flex:none; }
+  .fset{ border-top:1px solid var(--line); margin-top:1.25rem; padding-top:1.1rem; }
+  .fset:first-of-type{ border-top:0; margin-top:0; padding-top:0; }
+  .fset-t{ font-family:var(--serif); font-size:1.12rem; font-weight:600; color:var(--forest);
+           margin:0 0 .75rem; display:flex; align-items:baseline; gap:.5rem; }
+  .fset-t .cont{ font-family:var(--sans); font-size:.76rem; font-weight:400; color:#9aa09a;
+                 text-transform:none; letter-spacing:0; }
+  /* Duas colunas para os campos curtos: menos rolo, mesma informação. */
+  .lf2{ display:grid; grid-template-columns:1fr 1fr; gap:.9rem; margin-top:.9rem; }
+  @media (max-width:620px){
+    .lf2{ grid-template-columns:1fr; }
+    /* No telemóvel, quatro botões lado a lado não cabem: passam a duas filas
+       em vez de rebentarem a largura do modal. */
+    .modal-convite .picker{ flex-wrap:wrap; }
+    .modal-convite .pk{ flex:1 1 calc(50% - .3rem); }
+  }
+  .lf2 > div{ min-width:0; }
+  .lf2 label{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* "opcional" não precisa de gritar em maiúsculas ao lado da etiqueta. */
+  label .opt{ text-transform:none; letter-spacing:0; font-weight:400; color:#a3a8a1; font-size:.92em; }
   .link-box{ display:flex; gap:.4rem; align-items:center; background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:.4rem .4rem .4rem .8rem; font-size:.82rem; }
   .link-box input{ border:none; background:transparent; padding:.2rem 0; font-size:.82rem; }
   .link-box input:focus{ box-shadow:none; }
@@ -177,7 +224,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .msg-topo{ display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; }
   .msg-topo strong{ font-family:var(--serif); font-size:1.05rem; color:var(--ink); }
   .msg-txt{ margin:0; font-style:italic; color:var(--text); line-height:1.55; }
-  .opcao-check{ display:flex; align-items:flex-start; gap:.6rem; margin-top:.8rem; cursor:pointer; font-size:.92rem; color:var(--text); }
+  /* É um <label>, e o estilo global põe as etiquetas em maiúsculas — uma frase
+     inteira assim lia-se como um aviso gritado. Aqui é uma opção: fala normal. */
+  .opcao-check{ display:flex; align-items:flex-start; gap:.6rem; margin-top:.8rem; cursor:pointer;
+                font-size:.92rem; color:var(--text); text-transform:none; letter-spacing:0; font-weight:400; }
   .opcao-check input{ width:18px; height:18px; margin-top:.1rem; accent-color:var(--forest); flex:none; }
   .opcao-check small{ color:#9aa09a; }
   .membro-linha .m-vai{ display:none; align-items:center; justify-content:center; flex:none; }
@@ -259,51 +309,65 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
 <!-- ===== MODAL CONVITE ===== -->
 <div class="overlay" id="ov-convite">
-  <div class="modal">
+  <div class="modal modal-convite">
     <div class="modal-topo"><h3 id="modal-titulo">Novo convite</h3><button class="fechar" onclick="fechar('ov-convite')">&times;</button></div>
     <div class="modal-corpo">
       <input type="hidden" id="c-id">
 
-      <label>Convidados (nomes reais)</label>
-      <div id="membros"></div>
-      <button class="btn btn-fantasma btn-sm" type="button" onclick="addMembro()">+ Adicionar pessoa</button>
+      <!-- 1. Quem vem -->
+      <section class="fset">
+        <h4 class="fset-t">Quem vem <span class="cont" id="cont-pessoas"></span></h4>
+        <div id="membros"></div>
+        <button class="btn btn-fantasma btn-sm" type="button" onclick="addMembro()">+ Adicionar pessoa</button>
+      </section>
 
-      <div style="margin-top:1.1rem;">
-        <label>Nome a exibir no convite</label>
+      <!-- 2. O convite: como se apresenta e como chega -->
+      <section class="fset">
+        <h4 class="fset-t">O convite</h4>
+        <label>Nome a exibir</label>
         <div class="sugestoes" id="sugestoes"></div>
-        <input type="text" id="c-nome" placeholder="Ex: Família Agostinho, Sr. João e Sra. Maria…" oninput="atualizarPrevia()">
-      </div>
+        <input type="text" id="c-nome" placeholder="Ex: Família Agostinho, Sr. João e Sra. Maria…" oninput="NOME_AUTO=false;atualizarPrevia()">
+        <div class="previa" id="previa">Família Agostinho</div>
 
-      <div class="linha-form" style="margin-top:1rem;">
-        <div><label>Lugares</label><input type="number" id="c-lugares" min="1" value="1" oninput="atualizarPrevia()"></div>
-        <div><label>Sufixo (opcional)</label><input type="text" id="c-sufixo" placeholder="ex: e acompanhante" oninput="atualizarPrevia()"></div>
-      </div>
+        <div class="lf2">
+          <div><label>Lugares</label><input type="number" id="c-lugares" min="1" value="1" oninput="atualizarPrevia()"></div>
+          <div><label>Sufixo <span class="opt">· opcional</span></label><input type="text" id="c-sufixo" placeholder="ex: e acompanhante" oninput="atualizarPrevia()"></div>
+        </div>
 
-      <div class="previa" id="previa">Família Agostinho</div>
+        <div class="lf2">
+          <div><label>Como é entregue</label>
+            <input type="hidden" id="c-tipo" value="digital">
+            <div class="picker" data-target="c-tipo"></div></div>
+          <div><label>Telefone <span class="opt">· opcional</span></label><input type="text" id="c-telefone" placeholder="+244…"></div>
+        </div>
 
-      <label class="opcao-check">
-        <input type="checkbox" id="c-mostrar-num-mesa" checked>
-        <span>Mostrar o número de lugares por mesa no convite (digital e físico) <small>(ex.: Mesa: A (1 lugar) e B (4 lugares))</small></span>
-      </label>
+        <div style="margin-top:.9rem;"><label>Mensagem pessoal <span class="opt">· opcional, só no convite digital</span></label>
+          <textarea id="c-msg" rows="2" placeholder="Ex: Mal podemos esperar por vos receber!"></textarea></div>
 
-      <div class="linha-form">
-        <div><label>Tipo de convite</label>
-          <input type="hidden" id="c-tipo" value="digital">
-          <div class="picker" data-target="c-tipo"></div></div>
-        <div><label>Lado</label>
-          <input type="hidden" id="c-lado" value="noivo">
-          <div class="picker" data-target="c-lado"></div></div>
-        <div><label>Mesa</label><input type="text" id="c-mesa" list="lista-mesas" placeholder="Nome da mesa"><datalist id="lista-mesas"></datalist></div>
-        <div><label>Telefone</label><input type="text" id="c-telefone" placeholder="+244…"></div>
-      </div>
+        <label class="opcao-check">
+          <input type="checkbox" id="c-mostrar-num-mesa" checked>
+          <span>Mostrar os lugares por mesa no convite <small>ex.: Mesa A (1 lugar) e B (4 lugares)</small></span>
+        </label>
+      </section>
 
-      <div style="margin-top:1rem;">
-        <label>Presença</label>
-        <input type="hidden" id="c-presenca" value="pendente">
-        <div class="picker" data-target="c-presenca"></div>
-      </div>
-      <div style="margin-top:1rem;"><label>Observações</label><textarea id="c-obs" rows="2"></textarea></div>
-      <div style="margin-top:1rem;"><label>Mensagem pessoal no convite digital <span style="color:#aaa;font-weight:300">(opcional)</span></label><textarea id="c-msg" rows="2" placeholder="Ex: Mal podemos esperar por vos receber!"></textarea></div>
+      <!-- 3. Organização: o que serve a gestão, não o convidado -->
+      <section class="fset">
+        <h4 class="fset-t">Organização</h4>
+        <div class="lf2">
+          <div><label>Convidado de</label>
+            <input type="hidden" id="c-lado" value="noivo">
+            <div class="picker" data-target="c-lado"></div></div>
+          <div><label>Mesa</label><input type="text" id="c-mesa" list="lista-mesas" placeholder="Nome da mesa"><datalist id="lista-mesas"></datalist></div>
+        </div>
+
+        <div style="margin-top:.9rem;">
+          <label>Presença</label>
+          <input type="hidden" id="c-presenca" value="pendente">
+          <div class="picker" data-target="c-presenca"></div>
+        </div>
+
+        <div style="margin-top:.9rem;"><label>Observações <span class="opt">· opcional</span></label><textarea id="c-obs" rows="2"></textarea></div>
+      </section>
 
       <div id="bloco-link" style="display:none; margin-top:1.2rem;">
         <label>Link de confirmação / QR</label>
@@ -395,6 +459,8 @@ const DATA_EXT = <?= json_encode($dataExt) ?>;
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
 let CONVITES = [], MESAS = [], STATS = {}, timer = null;
+// O nome a exibir ainda é o proposto automaticamente (ninguém lhe mexeu à mão).
+let NOME_AUTO = true;
 let filtroTipo='', filtroLado='', filtroEstado='', filtroMesa='', filtroImpresso='', filtroGenero='', filtroBrinde='';
 const SEM_MESA = '__SEM_MESA__'; // valor especial do filtro "sem mesa"
 
@@ -704,6 +770,9 @@ async function editar(id){ const d=await api('convite_get&id='+id); if(d.success
 
 function abrirConvite(c){
   $('modal-titulo').textContent = c?'Editar convite':'Novo convite';
+  // Num convite novo, o nome a exibir é proposto a partir dos nomes das pessoas.
+  // Num já existente, o nome é escolha do utilizador — não se lhe mexe.
+  NOME_AUTO = !c;
   $('c-id').value = c?c.id:'';
   $('c-nome').value = c?c.nome_exibicao:'';
   $('c-sufixo').value = c?(c.sufixo||''):'';
@@ -741,15 +810,42 @@ function opcoesGeneroMembro(sel){
 }
 function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=false){
   const div=document.createElement('div'); div.className='membro-linha';
+  // A linha pede o nome; o "⋯" abre os pormenores desta pessoa. São os mesmos
+  // campos de sempre — só deixam de ocupar o ecrã de quem não os usa.
   div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}></label>
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
-    <select class="m-genero" title="Género do convidado">${opcoesGeneroMembro(genero)}</select>
-    <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
-    <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos" onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesPapelMembro(papel)}</select>
-    <label class="m-brinde" title="Recebe brinde"><input type="checkbox" ${brinde?'checked':''}> 🎁</label>
-    <button class="btn-ico" type="button" onclick="this.parentElement.remove();renderSugestoes();atualizarPrevia()">✕</button>`;
+    <button class="m-mais" type="button" title="Género, mesa, papel e brinde desta pessoa"
+            onclick="alternarExtras(this)">⋯</button>
+    <button class="btn-ico" type="button" title="Retirar esta pessoa"
+            onclick="this.closest('.membro-linha').remove();renderSugestoes();atualizarPrevia();contarPessoas()">✕</button>
+    <div class="m-extras" onchange="marcarExtras(this.closest('.membro-linha'))">
+      <select class="m-genero" title="Género do convidado">${opcoesGeneroMembro(genero)}</select>
+      <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
+      <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos" onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesPapelMembro(papel)}</select>
+      <label class="m-brinde" title="Recebe brinde"><input type="checkbox" ${brinde?'checked':''}> 🎁</label>
+    </div>`;
   $('membros').appendChild(div);
   sincroMesaPapel(div);
+  marcarExtras(div);
+  contarPessoas();
+}
+/** Abre/fecha os pormenores de uma pessoa. */
+function alternarExtras(bt){ bt.closest('.membro-linha').classList.toggle('aberta'); }
+/** Marca o "⋯" quando a pessoa tem pormenores preenchidos — para se ver de fora. */
+function marcarExtras(row){
+  if(!row) return;
+  const bt=row.querySelector('.m-mais'); if(!bt) return;
+  const tem = !!(row.querySelector('.m-genero')?.value)
+           || !!(row.querySelector('.m-mesa')?.value)
+           || !!(row.querySelector('.m-papel')?.value)
+           || !!(row.querySelector('.m-brinde input')?.checked);
+  bt.classList.toggle('tem', tem);
+}
+/** Quantas pessoas nomeadas, ao lado do título da secção. */
+function contarPessoas(){
+  const el=$('cont-pessoas'); if(!el) return;
+  const n=nomesMembros().length;
+  el.textContent = n ? (n===1 ? '1 pessoa' : n+' pessoas') : '';
 }
 // Padrinhos/madrinhas pertencem à mesa dos noivos (pelo papel); nesse caso a mesa
 // individual não se aplica — mostra "Mesa dos noivos" e desativa o seletor.
@@ -800,9 +896,17 @@ function renderSugestoes(){
     if(primeiros.length===2) sug.add(primeiros[0]+' e '+primeiros[1]);
     else if(primeiros.length>2) sug.add(primeiros.slice(0,-1).join(', ')+' e '+primeiros.slice(-1));
   }
-  box.innerHTML=[...sug].map(s=>`<span class="sugestao" onclick="$('c-nome').value=this.textContent;atualizarPrevia()">${esc(s)}</span>`).join('');
+  box.innerHTML=[...sug].map(s=>`<span class="sugestao" onclick="NOME_AUTO=false;$('c-nome').value=this.textContent;atualizarPrevia()">${esc(s)}</span>`).join('');
   // ajustar lugares automaticamente ao nº de pessoas, se ainda em branco/1
   if(nomes.length>1 && (+$('c-lugares').value)<=1) $('c-lugares').value=nomes.length;
+  // A melhor sugestão entra já no campo, em vez de esperar por um clique. Deixa
+  // de ser uma decisão a tomar e passa a ser uma proposta a corrigir — mas só
+  // enquanto ninguém lhe tiver mexido à mão.
+  if(NOME_AUTO){
+    const primeira=[...sug][0]||'';
+    if($('c-nome').value!==primeira){ $('c-nome').value=primeira; atualizarPrevia(); }
+  }
+  contarPessoas();
 }
 function atualizarPrevia(){
   const nome=$('c-nome').value.trim()||'(nome do convite)';
