@@ -32,6 +32,9 @@
    *   op.ambito    'digital' | 'impresso'
    *   op.alvo      id ou elemento do <select> onde desenhar
    *   op.sujo      função que diz se há alterações por gravar
+   *   op.gravar    função (async) que grava as alterações do editor; devolve
+   *                false se falhar. Chamada antes de guardar/atualizar uma
+   *                versão, para a versão levar as alterações que estão no ecrã.
    *   op.msg       função para escrever na barra de estado
    *   op.aoAplicar chamada depois de aplicar; por omissão recarrega a página
    * @returns {{recarregar: function}}
@@ -119,10 +122,20 @@
     }
 
     // ---- ações ----
+    // Uma versão fotografa o que está GRAVADO. Se o editor tem alterações por
+    // gravar, grava-as primeiro — senão a versão sairia sem elas, e o
+    // utilizador diria, com razão, que "as alterações não ficaram guardadas".
+    // Sem forma de gravar (op.gravar em falta), pede confirmação como dantes.
+    async function garantirGravado() {
+      if (!sujo()) return true;
+      if (op.gravar) { var ok = await op.gravar(); return ok !== false; }
+      return confirm('Tem alterações por gravar.\n\nA versão guarda a peça como está gravada, sem elas. Continuar?');
+    }
+
     async function criarNova() {
-      var nome = (prompt('Nome para a nova versão — fotografa o que está gravado agora:', '') || '').trim();
+      var nome = (prompt('Nome para a nova versão — fotografa o convite tal como está:', '') || '').trim();
       if (!nome) { desenhar(); return; }
-      if (sujo() && !confirm('Tem alterações por gravar.\n\nA versão guarda a peça como está gravada, sem elas. Continuar?')) { desenhar(); return; }
+      if (!(await garantirGravado())) { desenhar(); return; }
       var d = await correr(function () {
         return api(q('versao_criar'), { method: 'POST', body: JSON.stringify({ nome: nome, ambito: ambito }) });
       });
@@ -144,7 +157,8 @@
 
     async function atualizar(id) {
       var v = porId(id), nome = v ? v.nome : '';
-      if (!confirm('Atualizar "' + nome + '" com o que está gravado agora?\n\nO conteúdo antigo da versão perde-se.')) { desenhar(); return; }
+      if (!confirm('Atualizar "' + nome + '" com o convite tal como está agora?\n\nO conteúdo antigo da versão perde-se.')) { desenhar(); return; }
+      if (!(await garantirGravado())) { desenhar(); return; }
       var d = await correr(function () { return api(q('versao_atualizar', '&id=' + id)); });
       if (!d || !d.success) { desenhar(); return dizer((d && d.message) || 'Não foi possível atualizar a versão.'); }
       await recarregar();

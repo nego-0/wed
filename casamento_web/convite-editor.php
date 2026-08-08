@@ -940,6 +940,7 @@ function renderVersoes(){
     ambito: 'digital',
     alvo:   'sel-versao',
     sujo:   () => SUJO,
+    gravar: guardar,          // grava as edições do ecrã antes de as fotografar na versão
     msg,
     aoAplicar: () => setTimeout(()=>{ SUJO = false; location.reload(); }, 700)
   });
@@ -1027,9 +1028,9 @@ async function guardar(){
     const novo = String(v[k] ?? '');
     if (novo !== String(ATUAIS[k] ?? '')) defs[k] = novo;
   });
-  if (!Object.keys(defs).length){ msg('Não há alterações por guardar.'); marcarSujo(false); return; }
+  if (!Object.keys(defs).length){ msg('Não há alterações por guardar.'); marcarSujo(false); return true; }
   const d = await api('defs_save', {method:'POST', body:JSON.stringify({defs})});
-  if (!d.success) return msg(d.message || 'Erro ao guardar.');
+  if (!d.success){ msg(d.message || 'Erro ao guardar.'); return false; }
   const inv = d.invalidas || [];
   Object.keys(defs).forEach(k=>{ if (!inv.includes(k)) ATUAIS[k] = defs[k]; });
   marcarSujo(false);
@@ -1037,6 +1038,7 @@ async function guardar(){
   msg(inv.length ? `Guardado, mas ${inv.length} campo(s) não foram aceites: ${inv.map(rotuloDe).join(', ')}.`
                  : 'Convite guardado.');
   recarregarTela();
+  return inv.length === 0;
 }
 function marcarInvalidos(inv){
   document.querySelectorAll('#props .campo').forEach(c=>c.classList.remove('invalido'));
