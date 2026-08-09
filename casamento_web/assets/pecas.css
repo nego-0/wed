@@ -25,6 +25,12 @@
 /* Camada desligada no painel de camadas */
 .cartao .ct-oculta{ display:none !important; }
 
+/* A cor do cartão É a peça, não enfeite da página: ao imprimir, o navegador
+   descarta fundos por omissão (só os desenha se quem imprime se lembrar de
+   ligar "Gráficos de fundo"), e a gráfica recebia cartões sem cor nenhuma.
+   Aqui pede-se que sejam impressos tal como se veem. */
+.cartao, .cartao *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
 /* Os SVG herdam a cor de acento por currentColor */
 .ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent); }
 .ct-ramo{ position:absolute; width:calc(132px*var(--ct-esc-ramos)); height:calc(270px*var(--ct-esc-ramos)); z-index:2; }

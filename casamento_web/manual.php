@@ -114,7 +114,10 @@ if ($pecaSel === 'cartao') {
 
   .cores{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:.7rem; }
   .cor{ border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .cor .amostra{ height:46px; }
+  /* Numa amostra de cor, o fundo é o conteúdo. Sem isto o navegador
+     descarta-o ao imprimir e a gráfica recebe cinco quadrados brancos com
+     códigos hexadecimais por baixo — que é o oposto de uma amostra. */
+  .cor .amostra{ height:46px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .cor .txt{ padding:.4rem .55rem; font-size:.78rem; }
   .cor .txt b{ display:block; font-family:var(--serif); font-size:.9rem; }
   .cor .hex{ font-family:ui-monospace,monospace; color:#7a8078; }
