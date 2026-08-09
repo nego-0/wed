@@ -6,10 +6,16 @@
 // "o servidor tem a correção X?". Em vez de adivinhar, abre-se esta
 // página e lê-se. Cada correção recente tem uma marca no código; aqui
 // procura-se essa marca e diz-se se está lá ou não.
+//
+// ---- A REGRA -----------------------------------------------
+// Quem mexe na aplicação acrescenta aqui a marca do que mexeu. Uma linha,
+// no fim da lista: o nome da alteração, o ficheiro, e um pedaço de texto
+// que só exista depois dela. Sem isso esta página envelhece em silêncio —
+// continua a dizer "está tudo cá" enquanto o servidor tem código de há
+// meses, que é exatamente a mentira que ela existe para evitar.
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
-require_once __DIR__ . '/personalizacao.php';   // escP()
 exigirAdmin();
 
 /** Uma correção, e a marca que a denuncia no código instalado. */
@@ -43,6 +49,52 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'VERSAO_PADRAO_NOME'],
         ['Capa (envelope) com monograma editável no editor digital',
          'convite-editor.php', "CAPA_ID = 'capa'"],
+
+        // ---- Vários casamentos na mesma casa ----
+        ['Cada dado sabe de que casamento é',
+         'db.php', 'function doCasamento('],
+        ['Guarda de âmbito: consulta sem dono reclama',
+         'db.php', 'class LigacaoAmbito'],
+        ['Contas na base de dados, e não no ficheiro de configuração',
+         'auth.php', 'function casamentosDoUtilizador('],
+        ['Página dos casamentos, com fila de aprovação',
+         'plataforma.php', 'function carregarContas('],
+        ['A porta não lê o convite de outro casamento',
+         'api.php', "'codigo_local'"],
+        ['Convite público só de casamentos ativos',
+         'db.php', "w.estado='ativo'"],
+        ['Cópia offline da porta separada por casamento',
+         'porteiro.php', "'porta.dados.' + CASAMENTO"],
+        ['Manifesto da porta com o nome do casamento aberto',
+         'manifest.php', 'application/manifest+json'],
+
+        // ---- Endereço público (esquema v8) ----
+        ['Endereço público por casamento (QR e links)',
+         'db.php', 'function enderecoPublico('],
+        ['Aviso antes de imprimir QR para um endereço local',
+         'parcial-endereco.php', 'function barraEndereco('],
+
+        // ---- Contas, papéis e suporte ----
+        ['Inscrição pública de um casal, com aprovação',
+         'registo.php', 'registo_publico'],
+        ['Códigos de suporte: ver, corrigir, revogar',
+         'api.php', "'suporte_codigo_criar'"],
+        ['Revogar um código expulsa quem já lá estava',
+         'auth.php', 'revogado_em IS NULL'],
+        ['Ecrã em modo de leitura (o que escreve fica apagado)',
+         'assets/so-ver.js', 'soVerAviso'],
+        ['Gestos da planta travados no modo de leitura',
+         'assets/mesas.js', 'function travaLeitura('],
+
+        // ---- A ficha do casamento manda nas peças ----
+        ['Nomes e data do casal chegam sozinhos a todas as peças',
+         'personalizacao.php', 'function identidadeCasamento('],
+        ['Área de gestão do casamento (ficha, evento, equipa, conta)',
+         'gestao.php', 'casamento_identidade'],
+        ['Entrada e inscrição sem nome de casal nenhum',
+         'config.php', 'const PLATAFORMA'],
+        ['O admin da plataforma não é nenhum dos casais',
+         'auth.php', 'function entrouComoPlataforma('],
     ];
 }
 
@@ -61,6 +113,14 @@ $faltam = count(array_filter($resultados, fn($r) => !$r['ok']));
 
 $emFalta = [];
 foreach (ficheirosApp() as $f) if (!is_readable(__DIR__ . '/' . $f)) $emFalta[] = $f;
+
+// O esquema da base é a outra metade da pergunta: os ficheiros podem estar
+// todos cá e a migração não ter corrido — e então falta metade da correção,
+// da pior maneira, porque à vista está tudo bem.
+$esqR = @$conn->query("SELECT valor FROM " . PREFIXO . "definicoes
+                       WHERE casamento_id=0 AND chave='schema.versao' LIMIT 1");
+$esqInstalado = ($esqR && ($x = $esqR->fetch_assoc())) ? (int)$x['valor'] : 0;
+$esqOk = ($esqInstalado === ESQUEMA_VERSAO);
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -95,6 +155,16 @@ foreach (ficheirosApp() as $f) if (!is_readable(__DIR__ . '/' . $f)) $emFalta[] 
 iguais dão a mesma assinatura.</p>
 <div class="assin"><?= versaoApp() ?></div>
 
+<p style="margin:0 0 1rem">Esquema da base de dados:
+  <b class="<?= $esqOk ? 'sim' : 'nao' ?>">v<?= $esqInstalado ?></b>
+  <?php if (!$esqOk): ?>
+    — esperava-se <b>v<?= ESQUEMA_VERSAO ?></b>. A migração não correu, ou correu a meio:
+    os ficheiros podem estar todos cá e faltar na mesma metade da correção.
+  <?php else: ?>
+    <span style="color:#8a8f88">(em dia)</span>
+  <?php endif; ?>
+</p>
+
 <?php if ($faltam): ?>
   <div class="aviso mau"><b><?= $faltam ?> correção(ões) recente(s) não estão neste servidor.</b><br>
   O código que está a correr é mais antigo do que o que foi entregue. Enquanto assim for,
@@ -122,7 +192,7 @@ iguais dão a mesma assinatura.</p>
 <div class="copiar">
   <button class="btn" onclick="copiar()">Copiar este resumo</button>
 </div>
-<pre id="resumo" style="display:none"><?= escP(versaoApp()) ?> · <?= $faltam ?> em falta
+<pre id="resumo" style="display:none"><?= escP(versaoApp()) ?> · esquema v<?= $esqInstalado ?>/<?= ESQUEMA_VERSAO ?> · <?= $faltam ?> em falta
 <?php foreach ($resultados as $r) echo ($r['ok'] ? '[ok] ' : '[--] ') . $r['nome'] . "\n"; ?>
 PHP <?= PHP_VERSION ?> · <?= escP($_SERVER['SERVER_SOFTWARE'] ?? '?') ?></pre>
 <script>

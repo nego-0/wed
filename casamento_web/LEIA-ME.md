@@ -20,6 +20,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
+| `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |
 | `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
 | `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
@@ -147,6 +148,21 @@ senha temporária para lha entregar.
 impressos, são para sempre. Cada casamento tem o seu endereço, fixado na barra
 que aparece nas páginas que geram links e QR — que avisa, antes de imprimir,
 quando o endereço só existe na máquina de quem o está a ver.
+
+---
+
+## Ao mexer no código: a página de versão
+
+`versao.php` responde à pergunta que por telefone é impossível — *"o servidor
+já tem a correção X?"*. Só responde se for alimentada: **quem mexe na aplicação
+acrescenta lá uma linha** em `correcoesEsperadas()`, com o nome da alteração, o
+ficheiro e um pedaço de texto que só exista depois dela.
+
+Sem isso a página envelhece em silêncio: continua a dizer "está tudo cá"
+enquanto o servidor corre código de há meses — exatamente a mentira que ela
+existe para evitar. A página mostra também a versão do esquema da base, que é a
+outra metade da pergunta: os ficheiros podem estar todos lá e a migração não ter
+corrido.
 
 ---
 

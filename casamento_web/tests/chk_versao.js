@@ -24,6 +24,15 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   console.log('  linhas na tabela:', linhasTab);
   ok(linhasTab >= 12, 'a tabela lista todas as correções, não pára a meio');
 
+  // A outra metade da pergunta "o servidor tem isto?": os ficheiros podem
+  // estar todos cá e a migração não ter corrido — e então falta metade da
+  // correção, da pior maneira, porque à vista está tudo bem.
+  const txtEsq = await p.locator('body').innerText();
+  const mEsq = txtEsq.match(/Esquema da base de dados:\s*v(\d+)/);
+  console.log('  esquema anunciado:', mEsq ? 'v' + mEsq[1] : '(não diz)');
+  ok(!!mEsq, 'a página diz que versão do esquema está instalada');
+  ok(/\(em dia\)/.test(txtEsq), 'e nesta instalação o esquema está em dia');
+
   const assin = (await p.locator('.assin').textContent()).trim();
   console.log('  assinatura:', assin);
   ok(/^[0-9a-f]{8}$/.test(assin), 'a assinatura é um hash curto do conteúdo instalado');
