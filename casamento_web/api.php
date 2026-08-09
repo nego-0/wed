@@ -55,7 +55,7 @@ if ($acao === 'export') {
                          FROM {$P}convites c
                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
                          LEFT JOIN {$P}convidados g ON g.convite_id=c.id
-                         WHERE ".soVivos($conn,'c')."
+                         WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c')."
                          GROUP BY c.id ORDER BY c.nome_exibicao");
     while ($r = $res->fetch_assoc()) {
         fputcsv($out, [
@@ -87,8 +87,8 @@ if ($acao === 'rsvp_submit') {
     if ($decisao === 'nao') {
         $estado = 'recusado'; $confirm = 0;
         // Ao recusar, repõe também a presença: quem não vem não pode ficar "presente".
-        $conn->query("UPDATE {$P}convidados SET rsvp='recusado', presente=0, presente_em=NULL WHERE convite_id=".(int)$c['id']);
-        $conn->query("UPDATE {$P}convites SET checkin_estado='aguardando', checkin_presentes=0, checkin_em=NULL WHERE id=".(int)$c['id']);
+        $conn->query("UPDATE {$P}convidados SET rsvp='recusado', presente=0, presente_em=NULL WHERE " . doCasamento() . " AND convite_id=".(int)$c['id']);
+        $conn->query("UPDATE {$P}convites SET checkin_estado='aguardando', checkin_presentes=0, checkin_em=NULL WHERE " . doCasamento() . " AND id=".(int)$c['id']);
     } else {
         // Atualiza cada pessoa, se a página enviou a lista nominal
         $tot = 0; $vai = 0;
@@ -100,7 +100,7 @@ if ($acao === 'rsvp_submit') {
             // para aparecer no card/filtro Pendentes. Recusa total trata-se no ramo 'nao'.
             $rs  = $ok ? 'confirmado' : 'pendente';
             if ($mid) {
-                $q = $conn->prepare("UPDATE {$P}convidados SET rsvp=? WHERE id=? AND convite_id=?");
+                $q = $conn->prepare("UPDATE {$P}convidados SET rsvp=? WHERE " . doCasamento() . " AND id=? AND convite_id=?");
                 $q->bind_param('sii', $rs, $mid, $c['id']); $q->execute();
             }
         }
@@ -109,8 +109,8 @@ if ($acao === 'rsvp_submit') {
             $confirm = $vai;
             $estado  = $vai <= 0 ? 'recusado' : ($vai >= $tot ? 'confirmado' : 'parcial');
             // Caso terminal: alinha os membros ao estado (os não confirmados ficaram 'pendente' acima).
-            if ($estado === 'recusado')        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE convite_id=".(int)$c['id']);
-            elseif ($estado === 'confirmado')  $conn->query("UPDATE {$P}convidados SET rsvp='confirmado' WHERE convite_id=".(int)$c['id']);
+            if ($estado === 'recusado')        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE " . doCasamento() . " AND convite_id=".(int)$c['id']);
+            elseif ($estado === 'confirmado')  $conn->query("UPDATE {$P}convidados SET rsvp='confirmado' WHERE " . doCasamento() . " AND convite_id=".(int)$c['id']);
         } else {
             // Sem lista nominal: usa o número indicado
             if ($confirm < 1) $confirm = 1;
@@ -120,7 +120,7 @@ if ($acao === 'rsvp_submit') {
 
     $st = $conn->prepare("UPDATE {$P}convites
                           SET rsvp_estado=?, rsvp_confirmados=?, rsvp_mensagem=?, rsvp_em=$TS
-                          WHERE id=?");
+                          WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('sisi', $estado, $confirm, $mensagem, $c['id']); // string, int, string, int
     $st->execute();
 
@@ -150,7 +150,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
                                   c.observacoes, m.nome AS mesa_nome
                            FROM {$P}convites c
                            LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                           WHERE ".soVivos($conn,'c')."
+                           WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c')."
                            ORDER BY c.nome_exibicao");
         $convites = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
         $porId = [];
@@ -161,7 +161,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
         }
         unset($c);
         $rg = $conn->query("SELECT id, convite_id, nome, rsvp, presente FROM {$P}convidados
-                            ORDER BY principal DESC, nome");
+                            WHERE " . doCasamento() . " ORDER BY principal DESC, nome");
         if ($rg) while ($g = $rg->fetch_assoc()) {
             $cid = (int)$g['convite_id'];
             if (isset($porId[$cid])) $porId[$cid]['membros'][] = $g;
@@ -171,7 +171,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
 
     if ($acao === 'porta_entradas') {
         $r = $conn->query("SELECT id FROM {$P}convites
-                           WHERE checkin_estado IN ('presente','parcial') AND ".soVivos($conn,'')."
+                           WHERE " . doCasamento() . " AND checkin_estado IN ('presente','parcial') AND ".soVivos($conn,'')."
                            ORDER BY checkin_em DESC, atualizado_em DESC");
         $ids = array_column($r->fetch_all(MYSQLI_ASSOC), 'id');
         $lista = array_map(fn($id) => carregarConvite($conn, (int)$id), $ids);
@@ -193,7 +193,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
         $like = "%$termo%";
         $st = $conn->prepare("SELECT DISTINCT c.id FROM {$P}convites c
                               LEFT JOIN {$P}convidados g ON g.convite_id=c.id
-                              WHERE (c.nome_exibicao LIKE ? OR g.nome LIKE ?) AND ".soVivos($conn,'c')."
+                              WHERE " . doCasamento('c') . " AND (c.nome_exibicao LIKE ? OR g.nome LIKE ?) AND ".soVivos($conn,'c')."
                               ORDER BY c.nome_exibicao LIMIT 12");
         $st->bind_param('ss', $like, $like); $st->execute();
         $ids = array_column($st->get_result()->fetch_all(MYSQLI_ASSOC), 'id');
@@ -222,22 +222,22 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
                 erro(($cur['nome'] ?: 'Esta pessoa') . ' não confirmou presença e não pode dar entrada.');
             }
             $novo = $jaPresente ? 0 : 1;
-            $q = $conn->prepare("UPDATE {$P}convidados SET presente=?, presente_em=".($novo?$TS:'NULL')." WHERE id=? AND convite_id=?");
+            $q = $conn->prepare("UPDATE {$P}convidados SET presente=?, presente_em=".($novo?$TS:'NULL')." WHERE " . doCasamento() . " AND id=? AND convite_id=?");
             $q->bind_param('iii', $novo, $mid, $id); $q->execute();
             recalcularCheckin($conn, $id, $TS);
         } elseif ($modo === 'anular') {
-            $conn->query("UPDATE {$P}convidados SET presente=0, presente_em=NULL WHERE convite_id=$id");
-            $conn->query("UPDATE {$P}convites SET checkin_estado='aguardando', checkin_presentes=0, checkin_em=NULL WHERE id=$id");
+            $conn->query("UPDATE {$P}convidados SET presente=0, presente_em=NULL WHERE " . doCasamento() . " AND convite_id=$id");
+            $conn->query("UPDATE {$P}convites SET checkin_estado='aguardando', checkin_presentes=0, checkin_em=NULL WHERE " . doCasamento() . " AND id=$id");
         } else { // 'todos'
             if (count($c['membros']) > 0) {
                 if ($excecao) {
                     // Entrada excecional autorizada: admite todas as pessoas do convite
-                    $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE convite_id=$id");
+                    $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE " . doCasamento() . " AND convite_id=$id");
                 } else {
                     $r = $conn->query("SELECT COUNT(*) n FROM {$P}convidados WHERE convite_id=$id AND rsvp='confirmado'");
                     $nconf = (int)$r->fetch_assoc()['n'];
                     if ($nconf === 0) erro('Ninguém neste convite confirmou presença. Não é possível dar entrada.');
-                    $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE convite_id=$id AND rsvp='confirmado'");
+                    $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE " . doCasamento() . " AND convite_id=$id AND rsvp='confirmado'");
                 }
                 recalcularCheckin($conn, $id, $TS);
             } else {
@@ -245,7 +245,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
                     erro('Este convite não confirmou presença. Não é possível dar entrada.');
                 }
                 $n = (int)($c['rsvp_confirmados'] ?: $c['lugares']);
-                $st = $conn->prepare("UPDATE {$P}convites SET checkin_estado='presente', checkin_presentes=?, checkin_em=$TS WHERE id=?");
+                $st = $conn->prepare("UPDATE {$P}convites SET checkin_estado='presente', checkin_presentes=?, checkin_em=$TS WHERE " . doCasamento() . " AND id=?");
                 $st->bind_param('ii', $n, $id); $st->execute();
             }
         }
@@ -263,7 +263,8 @@ if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsv
                      'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
                      'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload',
                      'convite_restaurar','versao_criar','versao_aplicar','versao_atualizar',
-                     'versao_renomear','versao_apagar'], true)) {
+                     'versao_renomear','versao_apagar',
+                     'casamento_criar','casamento_abrir','casamento_apagar'], true)) {
     exigirCsrf();
 }
 
@@ -297,7 +298,7 @@ if ($acao === 'versao_criar') {
     $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
     if ($nome === '') erro('Dê um nome à versão, para a reconhecer mais tarde.');
 
-    $st = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE ambito=?");
+    $st = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $ambito); $st->execute();
     if ((int)$st->get_result()->fetch_row()[0] >= VERSOES_MAX) {
         erro('Chegou ao máximo de '.VERSOES_MAX.' versões desta peça. Apague uma para guardar outra.');
@@ -306,16 +307,16 @@ if ($acao === 'versao_criar') {
     if ($json === null) erro('Não foi possível preparar a versão.');
 
     $u = utilizadorAtual() ?? '';
-    $st = $conn->prepare("INSERT INTO {$P}versoes (nome, defs, utilizador, ambito) VALUES (?,?,?,?)");
+    $st = $conn->prepare("INSERT INTO {$P}versoes (casamento_id, nome, defs, utilizador, ambito) VALUES (" . casamentoAtual() . ",?,?,?,?)");
     $st->bind_param('ssss', $nome, $json, $u, $ambito);
     if (!$st->execute()) erro('Não foi possível guardar a versão.');
     $id = $conn->insert_id;
     // Uma versão acabada de guardar É a peça neste momento — foi tirada dela.
     // Antes só a primeira ficava marcada, e a marca ficava presa numa versão
     // antiga enquanto o convite já mostrava outra coisa.
-    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE ambito=?");
+    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $ambito); $st->execute();
-    $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id=$id");
+    $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
     registar($conn, 'versao_guardada', $nome, ambitosVersao()[$ambito]['rotulo']);
     ok(['id' => $id]);
 }
@@ -323,7 +324,7 @@ if ($acao === 'versao_criar') {
 if ($acao === 'versao_lista') {
     $ambito = ambitoPedido();
     $st = $conn->prepare("SELECT id, nome, utilizador, criado_em, atualizado_em, predefinida, defs
-                          FROM {$P}versoes WHERE ambito=? ORDER BY predefinida DESC, id DESC");
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY predefinida DESC, id DESC");
     $st->bind_param('s', $ambito); $st->execute();
     $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
     $out = [];
@@ -369,13 +370,13 @@ if ($acao === 'versao_aplicar') {
     if ($id === VERSAO_PADRAO_ID) {
         $ambito = ambitoPedido();
         $r = aplicarPadrao($conn, $ambito);
-        $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE ambito=?");
+        $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
         $st->bind_param('s', $ambito); $st->execute();
         registar($conn, 'versao_aplicada', VERSAO_PADRAO_NOME, $r['repostas'].' definição(ões)');
         ok($r + ['nome' => VERSAO_PADRAO_NOME, 'ambito' => $ambito]);
     }
 
-    $st = $conn->prepare("SELECT nome, defs, ambito FROM {$P}versoes WHERE id=?");
+    $st = $conn->prepare("SELECT nome, defs, ambito FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
     if (!$v) erro('Versão não encontrada.');
@@ -389,9 +390,9 @@ if ($acao === 'versao_aplicar') {
     foreach ($j as $k => $val) if (isset($permitidas[$k]) && is_string($val)) $defs[$k] = $val;
     $r = guardarDefinicoes($conn, $defs);
 
-    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE ambito=?");
+    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $v['ambito']); $st->execute();
-    $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE id=$id");
+    $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
 
     registar($conn, 'versao_aplicada', $v['nome'], $r['gravadas'].' definição(ões)');
     ok($r + ['nome' => $v['nome'], 'ambito' => $v['ambito']]);
@@ -402,13 +403,13 @@ if ($acao === 'versao_atualizar') {
     $id = (int)($_GET['id'] ?? 0);
     // A versão padrão é a peça de origem: não se reescreve.
     if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não se reescreve. Guarde as suas alterações como uma versão nova.');
-    $st = $conn->prepare("SELECT nome, ambito FROM {$P}versoes WHERE id=?");
+    $st = $conn->prepare("SELECT nome, ambito FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
     if (!$v) erro('Versão não encontrada.');
     $json = jsonOuNulo(instantaneoAmbito($conn, $v['ambito']));
     if ($json === null) erro('Não foi possível preparar a versão.');
-    $st = $conn->prepare("UPDATE {$P}versoes SET defs=?, atualizado_em=NOW() WHERE id=?");
+    $st = $conn->prepare("UPDATE {$P}versoes SET defs=?, atualizado_em=NOW() WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si', $json, $id);
     if (!$st->execute()) erro('Não foi possível atualizar a versão.');
     registar($conn, 'versao_atualizada', $v['nome'], '');
@@ -422,7 +423,7 @@ if ($acao === 'versao_renomear') {
     if ($nome === '') erro('O nome não pode ficar vazio.');
     // A versão padrão é a peça de origem: não se renomeia.
     if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não muda de nome. Guarde as suas alterações como uma versão nova.');
-    $st = $conn->prepare("UPDATE {$P}versoes SET nome=? WHERE id=?");
+    $st = $conn->prepare("UPDATE {$P}versoes SET nome=? WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si', $nome, $id);
     if (!$st->execute()) erro('Não foi possível mudar o nome.');
     registar($conn, 'versao_renomeada', $nome, 'id '.$id);
@@ -433,11 +434,11 @@ if ($acao === 'versao_apagar') {
     $id = (int)($_GET['id'] ?? 0);
     // A versão padrão é a peça de origem: não se apaga.
     if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não se apaga. Guarde as suas alterações como uma versão nova.');
-    $rn = $conn->prepare("SELECT nome, ambito, predefinida FROM {$P}versoes WHERE id=?");
+    $rn = $conn->prepare("SELECT nome, ambito, predefinida FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $rn->bind_param('i', $id); $rn->execute();
     $x = $rn->get_result()->fetch_assoc();
     if (!$x) erro('Versão não encontrada.');
-    $st = $conn->prepare("DELETE FROM {$P}versoes WHERE id=?");
+    $st = $conn->prepare("DELETE FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a versão.');
     // Apagar não muda a peça — só se perde o ponto de regresso. Antes promovia-se
@@ -496,7 +497,7 @@ if ($acao === 'convite_list') {
     $exprBri = $temBri ? "g.brinde" : "0";
     // Id da mesa dos noivos: padrinhos/madrinhas sentam-se lá pelo papel (não por mesa_id).
     $noivosId = 0;
-    if ($temPapel) { $nr=$conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1"); if ($nr && $row=$nr->fetch_row()) $noivosId=(int)$row[0]; }
+    if ($temPapel) { $nr=$conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND especial='noivos' LIMIT 1"); if ($nr && $row=$nr->fetch_row()) $noivosId=(int)$row[0]; }
     // Mesa EFETIVA de um membro (alias): a dos noivos se for padrinho/madrinha, senão a própria/do convite.
     $effMesa = function(string $a) use ($temPapel,$noivosId) {
         return $temPapel
@@ -504,7 +505,8 @@ if ($acao === 'convite_list') {
             : "COALESCE({$a}.mesa_id, c.mesa_id)";
     };
     $temMesaExpr = fn(string $a) => $temPapel ? "({$a}.mesa_id IS NOT NULL OR {$a}.papel IN ('padrinho','madrinha'))" : "{$a}.mesa_id IS NOT NULL";
-    $w="WHERE ".soVivos($conn,'c'); $t=''; $p=[];   // fora os que estão na reciclagem
+    // O âmbito abre o WHERE: tudo o que se filtre a seguir já é deste casamento.
+    $w="WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c'); $t=''; $p=[];   // fora os que estão na reciclagem
     if (in_array($tipo,['digital','fisico','ambos'],true))            { $w.=" AND c.tipo=?"; $t.='s'; $p[]=$tipo; }
     if (in_array($lado,['noivo','noiva','ambos'],true))              { $w.=" AND c.lado=?"; $t.='s'; $p[]=$lado; }
     // Filtro por estado: além do estado do convite, inclui convites com um integrante
@@ -631,12 +633,12 @@ if ($acao === 'convite_save') {
     if ($id) {
         // 'sufixo' fica de fora: já não se pede no formulário, e reescrevê-lo
         // aqui apagaria o que convites antigos ainda tenham guardado.
-        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
+        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE " . doCasamento() . " AND id=?");
         $st->bind_param('sissiisssi',$nome,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
         $st->execute();
     } else {
         $codigo=gerarCodigo($conn);
-        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st=$conn->prepare("INSERT INTO {$P}convites (casamento_id,codigo,nome_exibicao,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
         $st->bind_param('ssissiisss',$codigo,$nome,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP);
         $st->execute(); $id=$conn->insert_id;
     }
@@ -644,7 +646,7 @@ if ($acao === 'convite_save') {
     // Preserva estados (rsvp/presença/mesa individual) por nome, antes de reconstruir a lista de membros.
     // SELECT * para tolerar colunas que possam ainda não existir na BD (esquema por migrar).
     $anterior=[];
-    $r=$conn->query("SELECT * FROM {$P}convidados WHERE convite_id=$id");
+    $r=$conn->query("SELECT * FROM {$P}convidados WHERE " . doCasamento() . " AND convite_id=$id");
     if ($r) while($x=$r->fetch_assoc()) $anterior[strtolower(trim($x['nome']))]=$x;
 
     // Colunas opcionais: só entram no INSERT se existirem (evita 500 por "Unknown column").
@@ -654,7 +656,7 @@ if ($acao === 'convite_save') {
 
     $presenca = in_array($d['presenca'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $d['presenca'] : '';
 
-    $conn->query("DELETE FROM {$P}convidados WHERE convite_id=$id");
+    $conn->query("DELETE FROM {$P}convidados WHERE " . doCasamento() . " AND convite_id=$id");
     $primeiro=true; $vaiCount=0; $totMembros=0;
     foreach ($membros as $m) {
         $mn=trim(is_array($m)?($m['nome']??''):$m);
@@ -697,8 +699,8 @@ if ($acao === 'convite_save') {
             $brindeMembro = (int)($ant['brinde'] ?? 0) === 1 ? 1 : 0;
         }
         // INSERT construído dinamicamente com as colunas existentes (tolerante a esquema por migrar).
-        $cols=['convite_id','nome','principal','rsvp','presente','presente_em','mesa_id'];
-        $plc =['?','?','?','?','?', ($pres?$TS:'NULL'), '?'];
+        $cols=['casamento_id','convite_id','nome','principal','rsvp','presente','presente_em','mesa_id'];
+        $plc =[(string)casamentoAtual(),'?','?','?','?','?', ($pres?$TS:'NULL'), '?'];
         $typ ='isisii'; $val=[$id,$mn,$princ,$rsvp,$pres,$mesaMembro];
         if ($temPapel)  { $cols[]='papel';  $plc[]='?'; $typ.='s'; $val[]=$papelMembro; }
         if ($temGenero) { $cols[]='genero'; $plc[]='?'; $typ.='s'; $val[]=$genMembro; }
@@ -711,23 +713,23 @@ if ($acao === 'convite_save') {
     // Aplica a presença escolhida ao convite
     if ($presenca !== '') {
         if ($presenca === 'confirmado') {
-            $conn->query("UPDATE {$P}convites SET rsvp_estado='confirmado', rsvp_confirmados=$lugares, rsvp_em=$TS WHERE id=$id");
+            $conn->query("UPDATE {$P}convites SET rsvp_estado='confirmado', rsvp_confirmados=$lugares, rsvp_em=$TS WHERE " . doCasamento() . " AND id=$id");
         } elseif ($presenca === 'recusado') {
-            $conn->query("UPDATE {$P}convites SET rsvp_estado='recusado', rsvp_confirmados=0, rsvp_em=$TS WHERE id=$id");
+            $conn->query("UPDATE {$P}convites SET rsvp_estado='recusado', rsvp_confirmados=0, rsvp_em=$TS WHERE " . doCasamento() . " AND id=$id");
         } elseif ($presenca === 'parcial') {
             if ($totMembros > 0) {
                 // Presença exata: contagem e estado derivados das marcações individuais
                 $estado = $vaiCount<=0 ? 'recusado' : ($vaiCount>=$totMembros ? 'confirmado' : 'parcial');
-                $conn->query("UPDATE {$P}convites SET rsvp_estado='$estado', rsvp_confirmados=$vaiCount, rsvp_em=$TS WHERE id=$id");
+                $conn->query("UPDATE {$P}convites SET rsvp_estado='$estado', rsvp_confirmados=$vaiCount, rsvp_em=$TS WHERE " . doCasamento() . " AND id=$id");
                 // Se afinal o convite é totalmente confirmado/recusado, alinha os membros a esse estado
                 // (os não confirmados ficaram 'pendente' acima; aqui reconcilia-se o caso terminal).
-                if ($estado==='recusado')        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE convite_id=$id");
-                elseif ($estado==='confirmado')  $conn->query("UPDATE {$P}convidados SET rsvp='confirmado' WHERE convite_id=$id");
+                if ($estado==='recusado')        $conn->query("UPDATE {$P}convidados SET rsvp='recusado' WHERE " . doCasamento() . " AND convite_id=$id");
+                elseif ($estado==='confirmado')  $conn->query("UPDATE {$P}convidados SET rsvp='confirmado' WHERE " . doCasamento() . " AND convite_id=$id");
             } else {
-                $conn->query("UPDATE {$P}convites SET rsvp_estado='parcial', rsvp_confirmados=COALESCE(rsvp_confirmados,1), rsvp_em=$TS WHERE id=$id");
+                $conn->query("UPDATE {$P}convites SET rsvp_estado='parcial', rsvp_confirmados=COALESCE(rsvp_confirmados,1), rsvp_em=$TS WHERE " . doCasamento() . " AND id=$id");
             }
         } else { // pendente
-            $conn->query("UPDATE {$P}convites SET rsvp_estado='pendente', rsvp_confirmados=NULL, rsvp_em=NULL WHERE id=$id");
+            $conn->query("UPDATE {$P}convites SET rsvp_estado='pendente', rsvp_confirmados=NULL, rsvp_em=NULL WHERE " . doCasamento() . " AND id=$id");
         }
     }
 
@@ -741,14 +743,14 @@ if ($acao === 'convite_delete') {
     $id  = (int)($_GET['id'] ?? 0);
     $def = !empty($_GET['definitivo']);
     $nome = '';
-    $rn = $conn->prepare("SELECT nome_exibicao FROM {$P}convites WHERE id=?");
+    $rn = $conn->prepare("SELECT nome_exibicao FROM {$P}convites WHERE " . doCasamento() . " AND id=?");
     $rn->bind_param('i',$id); $rn->execute();
     if ($x = $rn->get_result()->fetch_assoc()) $nome = $x['nome_exibicao'];
 
     if ($def) {
-        $st = $conn->prepare("DELETE FROM {$P}convites WHERE id=?");
+        $st = $conn->prepare("DELETE FROM {$P}convites WHERE " . doCasamento() . " AND id=?");
     } else {
-        $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=$TS WHERE id=?");
+        $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=$TS WHERE " . doCasamento() . " AND id=?");
     }
     $st->bind_param('i',$id); $ok = $st->execute();
     if (!$ok) erro('Não foi possível eliminar.');
@@ -758,11 +760,71 @@ if ($acao === 'convite_delete') {
 
 if ($acao === 'convite_restaurar') {
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=NULL WHERE id=?");
+    $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=NULL WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i',$id); $ok = $st->execute();
     if (!$ok) erro('Não foi possível repor o convite.');
     registar($conn, 'convite_reposto', '', 'id '.$id);
     ok(['stats'=>estatisticas($conn)]);
+}
+
+// ---- Casamentos ---------------------------------------------
+// O mínimo para haver mais do que um. Os ecrãs de gestão (lista, aprovação de
+// registos, convites de acesso) são da etapa seguinte; aqui fica o que a
+// aplicação precisa para saber em qual está e para as provas poderem existir.
+
+if ($acao === 'casamento_criar') {
+    $d = corpo();
+    $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 160);
+    $noiva = mb_substr(trim((string)($d['noiva'] ?? '')), 0, 80);
+    $noivo = mb_substr(trim((string)($d['noivo'] ?? '')), 0, 80);
+    if ($nome === '') $nome = trim($noiva . ' & ' . $noivo);
+    if (trim($nome, ' &') === '') erro('Dê um nome ao casamento.');
+    $data = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['data'] ?? '')) ? $d['data'] : null;
+    // Nasce ativo quando é o admin a criá-lo. O registo público entra como
+    // 'pendente' e é o admin que o faz passar a ativo (etapa 5).
+    $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado)
+                          VALUES (?,?,?,?, 'ativo')");
+    $st->bind_param('ssss', $nome, $noiva, $noivo, $data);
+    if (!$st->execute()) erro('Não foi possível criar o casamento.');
+    $novo = $conn->insert_id;
+    registar($conn, 'casamento_criado', $nome, 'id ' . $novo);
+    ok(['id' => $novo, 'nome' => $nome]);
+}
+
+if ($acao === 'casamento_abrir') {
+    // Passa a ser este o casamento em causa, para os pedidos seguintes.
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT id, nome, estado FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+    if ($c['estado'] === 'arquivado') erro('Esse casamento está arquivado.');
+    $_SESSION['casamento_id'] = (int)$c['id'];
+    usarCasamento((int)$c['id']);
+    ok(['id' => (int)$c['id'], 'nome' => $c['nome']]);
+}
+
+if ($acao === 'casamento_apagar') {
+    // Apaga um casamento e tudo o que é dele. O nº 1 não se apaga: é o que
+    // existia antes de haver vários, e apagá-lo por engano levava tudo.
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 1) erro('Este casamento não pode ser apagado.');
+    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+    // Pela ordem certa: os convidados dependem dos convites.
+    foreach (['convidados','convites','mesas','versoes','registo','definicoes'] as $t) {
+        $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
+        $st->bind_param('i', $id); @$st->execute();
+    }
+    $st = $conn->prepare("DELETE FROM {$P}acessos WHERE casamento_id=?");
+    $st->bind_param('i', $id); @$st->execute();
+    $st = $conn->prepare("DELETE FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    if ((int)($_SESSION['casamento_id'] ?? 0) === $id) unset($_SESSION['casamento_id']);
+    registar($conn, 'casamento_apagado', $c['nome'], 'id ' . $id);
+    ok(['id' => $id]);
 }
 
 if ($acao === 'esquema_info') {
@@ -802,10 +864,10 @@ if ($acao === 'reciclagem') {
     // para deitar fora o que já lá está há mais de RECICLAGEM_DIAS — assim a
     // limpeza acontece sozinha, sem uma tarefa agendada no servidor.
     @$conn->query("DELETE FROM {$P}convites
-                   WHERE eliminado_em IS NOT NULL
+                   WHERE " . doCasamento() . " AND eliminado_em IS NOT NULL
                      AND eliminado_em < DATE_SUB(NOW(), INTERVAL ".RECICLAGEM_DIAS." DAY)");
     $r = $conn->query("SELECT id, codigo, nome_exibicao, lugares, eliminado_em
-                       FROM {$P}convites WHERE eliminado_em IS NOT NULL
+                       FROM {$P}convites WHERE " . doCasamento() . " AND eliminado_em IS NOT NULL
                        ORDER BY eliminado_em DESC");
     ok(['convites' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [], 'dias' => RECICLAGEM_DIAS]);
 }
@@ -815,9 +877,9 @@ if ($acao === 'registo_lista') {
     // milhares de linhas em cada abertura da janela. Vai por pedaços.
     $porPag = max(10, min(500, (int)($_GET['por_pagina'] ?? 100)));
     $pagina = max(1, (int)($_GET['pagina'] ?? 1));
-    $total  = (int)(@$conn->query("SELECT COUNT(*) FROM {$P}registo")?->fetch_row()[0] ?? 0);
+    $total  = (int)(@$conn->query("SELECT COUNT(*) FROM {$P}registo WHERE " . doCasamento() . "")?->fetch_row()[0] ?? 0);
     $r = $conn->query("SELECT utilizador, papel, accao, alvo, detalhe, criado_em
-                       FROM {$P}registo ORDER BY id DESC
+                       FROM {$P}registo WHERE " . doCasamento() . " ORDER BY id DESC
                        LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag));
     ok(['registos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [],
         'total' => $total, 'pagina' => $pagina, 'ha_mais' => ($pagina * $porPag) < $total]);
@@ -826,7 +888,7 @@ if ($acao === 'registo_lista') {
 if ($acao === 'convite_flag') {
     $id=(int)($_GET['id']??0); $campo=$_GET['campo']??''; $valor=!empty($_GET['valor'])?1:0;
     if (!in_array($campo,['impresso','enviado'],true)) erro('Campo inválido.');
-    $st=$conn->prepare("UPDATE {$P}convites SET $campo=?, atualizado_em=$TS WHERE id=?");
+    $st=$conn->prepare("UPDATE {$P}convites SET $campo=?, atualizado_em=$TS WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('ii',$valor,$id); $st->execute();
     registar($conn, $campo.($valor?'_sim':'_nao'), '', 'id '.$id);
     ok(['stats'=>estatisticas($conn)]);
@@ -835,7 +897,7 @@ if ($acao === 'convite_flag') {
 if ($acao === 'convite_rsvp_manual') {
     $id=(int)($_GET['id']??0); $estado=$_GET['estado']??'';
     if (!in_array($estado,['pendente','confirmado','recusado','parcial'],true)) erro('Estado inválido.');
-    $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_em=$TS WHERE id=?");
+    $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_em=$TS WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si',$estado,$id); $st->execute();
     registar($conn, 'rsvp_manual', '', 'id '.$id.' -> '.$estado);
     ok(['stats'=>estatisticas($conn)]);
@@ -854,9 +916,10 @@ if ($acao === 'planta_size') {
     $w = isset($d['largura']) && $d['largura']!=='' ? max(280, min(4000, (int)$d['largura'])) : null;
     $h = isset($d['altura'])  && $d['altura']!==''  ? max(200, min(4000, (int)$d['altura']))  : null;
     foreach (['planta.largura'=>$w, 'planta.altura'=>$h] as $chave=>$val) {
-        if ($val === null) { $conn->query("DELETE FROM {$P}definicoes WHERE chave='".$conn->real_escape_string($chave)."'"); continue; }
-        $st=$conn->prepare("INSERT INTO {$P}definicoes (chave,valor) VALUES (?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-        $sv=(string)$val; $st->bind_param('ss',$chave,$sv); $st->execute();
+        $cid = casamentoAtual();
+        if ($val === null) { $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='".$conn->real_escape_string($chave)."'"); continue; }
+        $st=$conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (?,?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $sv=(string)$val; $st->bind_param('iss',$cid,$chave,$sv); $st->execute();
     }
     ok(['canvas'=>plantaConfig($conn)]);
 }
@@ -866,7 +929,7 @@ if ($acao === 'planta_bloqueio') {
     foreach (['bloq_mesas' => 'planta.bloq_mesas', 'bloq_canvas' => 'planta.bloq_canvas'] as $campo => $chave) {
         if (!array_key_exists($campo, $d)) continue;
         $val = !empty($d[$campo]) ? '1' : '0';
-        $st = $conn->prepare("INSERT INTO {$P}definicoes (chave,valor) VALUES (?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (" . casamentoAtual() . ",?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
         $st->bind_param('ss', $chave, $val); $st->execute();
     }
     ok(['canvas' => plantaConfig($conn)]);
@@ -878,8 +941,8 @@ if ($acao === 'mesa_save') {
     $cor=in_array($d['cor']??'',CORES_MESA,true)?$d['cor']:null; // NULL = marfim
     $tam=in_array($d['tamanho']??'',['p','m','g'],true)?$d['tamanho']:null; // NULL = automático
     if ($nome==='') erro('Nome da mesa obrigatório.');
-    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=? WHERE id=?"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,tamanho) VALUES (?,?,?,?,?)"); $st->bind_param('sisss',$nome,$cap,$forma,$cor,$tam); }
+    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=? WHERE " . doCasamento() . " AND id=?"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$id); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho) VALUES (" . casamentoAtual() . ",?,?,?,?,?)"); $st->bind_param('sisss',$nome,$cap,$forma,$cor,$tam); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;
@@ -887,11 +950,11 @@ if ($acao === 'mesa_save') {
 }
 if ($acao === 'mesa_noivos') {
     // Repõe a mesa (especial) dos noivos, se tiver sido eliminada. Se já existir, devolve-a.
-    $ja = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1")->fetch_assoc();
+    $ja = $conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND especial='noivos' LIMIT 1")->fetch_assoc();
     if ($ja) { ok(['mesas'=>listarMesas($conn),'id'=>(int)$ja['id'],'existia'=>true]); }
     $nome='Noivos'; $n=2;
-    while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='".$conn->real_escape_string($nome)."'")->num_rows) { $nome='Noivos '.$n++; }
-    $st=$conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
+    while ($conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND nome='".$conn->real_escape_string($nome)."'")->num_rows) { $nome='Noivos '.$n++; }
+    $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (" . casamentoAtual() . ",?,2,'redonda','ouro','noivos',50,42)");
     $st->bind_param('s',$nome); $st->execute();
     $novoId=$conn->insert_id; // capturar antes de listarMesas() (que corre outras queries)
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
@@ -904,10 +967,10 @@ if ($acao === 'mesa_pos') {
     $y = isset($d['y']) && $d['y']!=='' ? max(0.0, min(100.0, (float)$d['y'])) : null;
     $forma = in_array($d['forma']??'',FORMAS_MESA,true) ? $d['forma'] : null;
     if ($forma !== null) {
-        $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=?,forma=? WHERE id=?");
+        $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=?,forma=? WHERE " . doCasamento() . " AND id=?");
         $st->bind_param('ddsi',$x,$y,$forma,$id);
     } else {
-        $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=? WHERE id=?");
+        $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=? WHERE " . doCasamento() . " AND id=?");
         $st->bind_param('ddi',$x,$y,$id);
     }
     $st->execute();
@@ -915,11 +978,11 @@ if ($acao === 'mesa_pos') {
 }
 if ($acao === 'mesa_delete') {
     $id=(int)($_GET['id']??0);
-    $nm = $conn->query("SELECT nome FROM {$P}mesas WHERE id=$id");
+    $nm = $conn->query("SELECT nome FROM {$P}mesas WHERE " . doCasamento() . " AND id=$id");
     $nomeMesa = ($nm && $x=$nm->fetch_assoc()) ? $x['nome'] : '';
-    $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE mesa_id=$id");
-    $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE mesa_id=$id"); // mesas individuais também
-    $st=$conn->prepare("DELETE FROM {$P}mesas WHERE id=?"); $st->bind_param('i',$id); $st->execute();
+    $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE " . doCasamento() . " AND mesa_id=$id");
+    $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE " . doCasamento() . " AND mesa_id=$id"); // mesas individuais também
+    $st=$conn->prepare("DELETE FROM {$P}mesas WHERE " . doCasamento() . " AND id=?"); $st->bind_param('i',$id); $st->execute();
     registar($conn, 'mesa_eliminada', $nomeMesa, 'id '.$id);
     ok(['mesas'=>listarMesas($conn)]);
 }
@@ -930,8 +993,8 @@ if ($acao === 'convite_mesa') {
     if (!$id) erro('Convite inválido.');
     $mesaId = (isset($d['mesa_id']) && $d['mesa_id']!=='' && $d['mesa_id']!==null) ? (int)$d['mesa_id'] : null;
     if ($mesaId && mesaEhNoivos($conn,$mesaId)) erro('A mesa dos noivos só admite padrinhos e madrinhas (pelo papel).');
-    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=?,atualizado_em=$TS WHERE id=?"); $st->bind_param('ii',$mesaId,$id); }
-    else        { $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=NULL,atualizado_em=$TS WHERE id=?"); $st->bind_param('i',$id); }
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=?,atualizado_em=$TS WHERE " . doCasamento() . " AND id=?"); $st->bind_param('ii',$mesaId,$id); }
+    else        { $st=$conn->prepare("UPDATE {$P}convites SET mesa_id=NULL,atualizado_em=$TS WHERE " . doCasamento() . " AND id=?"); $st->bind_param('i',$id); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
@@ -945,8 +1008,8 @@ if ($acao === 'convidado_mesa') {
     // Sentar numa mesa normal tira a pessoa da mesa de honra: limpa o papel
     // (padrinho/madrinha). Só se limpa se a coluna existir — tolerante a esquema por migrar.
     $limpaPapel = colunaExiste($conn, "{$P}convidados", 'papel') ? ", papel=NULL" : "";
-    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?$limpaPapel WHERE id=?"); $st->bind_param('ii',$mesaId,$gid); }
-    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    if ($mesaId){ $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=?$limpaPapel WHERE " . doCasamento() . " AND id=?"); $st->bind_param('ii',$mesaId,$gid); }
+    else        { $st=$conn->prepare("UPDATE {$P}convidados SET mesa_id=NULL WHERE " . doCasamento() . " AND id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
@@ -957,8 +1020,8 @@ if ($acao === 'convidado_papel') {
     if (!$gid) erro('Pessoa inválida.');
     $papel = in_array($d['papel']??'', ['padrinho','madrinha'], true) ? $d['papel'] : null;
     // Tornar-se padrinho/madrinha coloca a pessoa na mesa de honra: limpa a mesa individual.
-    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=?, mesa_id=NULL WHERE id=?"); $st->bind_param('si',$papel,$gid); }
-    else        { $st=$conn->prepare("UPDATE {$P}convidados SET papel=NULL WHERE id=?"); $st->bind_param('i',$gid); }
+    if ($papel){ $st=$conn->prepare("UPDATE {$P}convidados SET papel=?, mesa_id=NULL WHERE " . doCasamento() . " AND id=?"); $st->bind_param('si',$papel,$gid); }
+    else        { $st=$conn->prepare("UPDATE {$P}convidados SET papel=NULL WHERE " . doCasamento() . " AND id=?"); $st->bind_param('i',$gid); }
     $st->execute();
     ok(['mesas'=>listarMesas($conn)]);
 }
@@ -975,11 +1038,11 @@ if ($acao === 'convidado_list') {
           JOIN {$P}convites c ON g.convite_id=c.id
           LEFT JOIN {$P}mesas mp ON g.mesa_id=mp.id
           LEFT JOIN {$P}mesas mc ON c.mesa_id=mc.id
-          WHERE ".soVivos($conn,'c')."
+          WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c')."
           ORDER BY c.nome_exibicao, g.principal DESC, g.nome";
     $rows=$conn->query($sql)->fetch_all(MYSQLI_ASSOC);
     // Mesa dos noivos (para a deteção automática de padrinhos/madrinhas).
-    $noivos = $conn->query("SELECT id, nome FROM {$P}mesas WHERE especial='noivos' LIMIT 1")->fetch_assoc();
+    $noivos = $conn->query("SELECT id, nome FROM {$P}mesas WHERE " . doCasamento() . " AND especial='noivos' LIMIT 1")->fetch_assoc();
     foreach ($rows as &$r) {
         $r['convite_nome']  = nomeConvite($r); // usa nome_exibicao/lugares/sufixo
         $ehPad = in_array($r['papel'] ?? '', ['padrinho','madrinha'], true);
@@ -1003,7 +1066,7 @@ if ($acao === 'importar') {
     if (!listaAntigaExiste($conn)) erro('Não foi encontrada a lista antiga (tabela "guests").');
     $jaTem=(int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_row()[0];
     if ($jaTem>0 && empty($_GET['forcar'])) erro('Já existem convites. Para reimportar, confirme a substituição.');
-    if (!empty($_GET['forcar'])) { $conn->query("DELETE FROM {$P}convites"); }
+    if (!empty($_GET['forcar'])) { $conn->query("DELETE FROM {$P}convites WHERE " . doCasamento()); }
 
     $criadosC=0; $criadosG=0;
 
@@ -1029,13 +1092,13 @@ if ($acao === 'importar') {
             $n=count($membros);
             $estado = $conf===$n?'confirmado':($rec===$n?'recusado':(($conf||$rec)?'parcial':'pendente'));
             $codigo=gerarCodigo($conn);
-            $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+            $st=$conn->prepare("INSERT INTO {$P}convites (casamento_id,codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
             $tipo='fisico'; $lado='noivo';
             $st->bind_param('ssssiissis',$codigo,$g['name'],$tipo,$lado,$n,$mesa,$tel,$estado,$conf,$notas);
             $st->execute(); $cid=$conn->insert_id; $criadosC++;
             $primeiro=true;
             foreach($membros as $m){ $r=$estadoMap[$m['confirmed']]??'pendente'; $pr=$primeiro?1:0; $primeiro=false;
-                $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp) VALUES (?,?,?,?)");
+                $q=$conn->prepare("INSERT INTO {$P}convidados (casamento_id,convite_id,nome,principal,rsvp) VALUES (" . casamentoAtual() . ",?,?,?,?)");
                 $q->bind_param('isis',$cid,$m['name'],$pr,$r); $q->execute(); $criadosG++; }
         }
     }
@@ -1048,11 +1111,11 @@ if ($acao === 'importar') {
         $estado=$estadoMap[$m['confirmed']]??'pendente';
         $conf=$estado==='confirmado'?1:0;
         $mesa=$m['table_id']?($mapaMesa[(int)$m['table_id']]??null):null;
-        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st=$conn->prepare("INSERT INTO {$P}convites (casamento_id,codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
         $tipo='digital'; $lug=1;
         $st->bind_param('ssssiissis',$codigo,$m['name'],$tipo,$lado,$lug,$mesa,$m['phone'],$estado,$conf,$m['notes']);
         $st->execute(); $cid=$conn->insert_id; $criadosC++;
-        $q=$conn->prepare("INSERT INTO {$P}convidados (convite_id,nome,principal,rsvp) VALUES (?,?,1,?)");
+        $q=$conn->prepare("INSERT INTO {$P}convidados (casamento_id,convite_id,nome,principal,rsvp) VALUES (" . casamentoAtual() . ",?,?,1,?)");
         $q->bind_param('iss',$cid,$m['name'],$estado); $q->execute(); $criadosG++;
     }
 

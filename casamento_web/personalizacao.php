@@ -277,7 +277,7 @@ function versaoIgualAoAtual(mysqli $conn, string $ambito, string $defsJson): boo
 function versaoEmVigor(mysqli $conn, string $ambito): ?array {
     global $P;
     $st = $conn->prepare("SELECT id, nome, defs, criado_em, atualizado_em
-                          FROM {$P}versoes WHERE ambito=? ORDER BY id DESC");
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY id DESC");
     if (!$st) return null;
     $st->bind_param('s', $ambito);
     $st->execute();
@@ -307,7 +307,7 @@ function versaoEmVigor(mysqli $conn, string $ambito): ?array {
 function versaoEstado(mysqli $conn, string $ambito): array {
     global $P;
     $st = $conn->prepare("SELECT id, nome, predefinida, defs
-                          FROM {$P}versoes WHERE ambito=? ORDER BY id DESC");
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY id DESC");
     $linhas = [];
     if ($st) {
         $st->bind_param('s', $ambito);
@@ -376,7 +376,8 @@ function aplicarPadrao(mysqli $conn, string $ambito): array {
 function ficheiroEmVersao(mysqli $conn, string $caminho): bool {
     global $P;
     if ($caminho === '') return false;
-    $st = $conn->prepare("SELECT 1 FROM {$P}versoes WHERE defs LIKE CONCAT('%', ?, '%') LIMIT 1");
+    $st = $conn->prepare("SELECT 1 FROM {$P}versoes WHERE " . doCasamento() . "
+                          AND defs LIKE CONCAT('%', ?, '%') LIMIT 1");
     if (!$st) return true;               // sem certeza, guarda-se o ficheiro
     $st->bind_param('s', $caminho);
     $st->execute();

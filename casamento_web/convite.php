@@ -6,14 +6,17 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/personalizacao.php';
+// Primeiro o convite, só depois as definições: é o código que diz de que
+// casamento se trata, e cada casamento tem os seus nomes, cores e textos.
+$codigo = strtoupper(trim($_GET['c'] ?? ''));
+$c = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
+
 $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $dataExt  = dataExtensa($DEFS['evento.data']);
 $horaTxt  = horaTexto($DEFS['evento.hora'], false);
 $tzOff    = (new DateTime('now', new DateTimeZone(date_default_timezone_get())))->format('P');
 $whats    = $DEFS['evento.whatsapp'];
-$codigo = strtoupper(trim($_GET['c'] ?? ''));
-$c = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
 $valido = (bool)$c;
 $linkDigital = $valido ? base_url() . '/convite-digital.php?c=' . $c['codigo'] : '';
 $linkPdf     = $valido ? $linkDigital . '&download=1' : '';

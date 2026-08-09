@@ -8,7 +8,7 @@ $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $dataExt = dataExtensa($DEFS['evento.data']);
 $temListaAntiga = listaAntigaExiste($conn);
-$totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE ".soVivos($conn,'c')."")->fetch_row()[0];
+$totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c')."")->fetch_row()[0];
 ?>
 <!DOCTYPE html>
 <html lang="pt">

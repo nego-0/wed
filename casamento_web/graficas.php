@@ -19,7 +19,7 @@ $CAS  = casalInfo($defs);
 if (isset($_GET['modelo'])) {
     $mid = (int)$_GET['modelo'];
     $st = $conn->prepare("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
-                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id WHERE c.id=? AND ".soVivos($conn,'c')." LIMIT 1");
+                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id WHERE " . doCasamento('c') . " AND c.id=? AND ".soVivos($conn,'c')." LIMIT 1");
     $st->bind_param('i', $mid); $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) { http_response_code(404); exit('Convite não encontrado.'); }
@@ -42,7 +42,7 @@ if (isset($_GET['modelo'])) {
 // digital sobre o estado da própria peça.
 $emVigor = versaoEmVigor($conn, 'impresso');
 $estadoVs = versaoEstado($conn, 'impresso');   // modelo partilhado com o painel
-$nVersoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes WHERE ambito='impresso'")
+$nVersoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes WHERE " . doCasamento() . " AND ambito='impresso'")
                        ->fetch_row()[0] ?? 0);
 
 $abas = ['convites' => 'Lista de produção', 'manuais' => 'Manual de impressão'];
@@ -55,7 +55,7 @@ if ($aba === 'convites') {
     $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
                          FROM {$P}convites c
                          LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                         WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                         WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                          ORDER BY c.nome_exibicao");
     $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 }

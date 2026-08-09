@@ -115,3 +115,12 @@ function versaoApp(): string {
     }
     return $v = substr(md5($h), 0, 8);
 }
+
+// ---- Vigilância do âmbito de casamento ----------------------
+// Com vários casamentos na mesma base, uma consulta sem filtro de dono é uma
+// fuga de dados. Em modo estrito a ligação rebenta em vez de a deixar passar;
+// liga-se nas provas (AMBITO_ESTRITO=1 no ambiente) e deixa-se desligado em
+// produção, onde a falha vai para o log sem derrubar a página.
+if (!defined('AMBITO_ESTRITO')) {
+    define('AMBITO_ESTRITO', (string)getenv('AMBITO_ESTRITO') === '1');
+}

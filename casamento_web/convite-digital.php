@@ -11,10 +11,14 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 
-$DEFS = defsAtuais($conn);
-
+// O convite tem de ser encontrado ANTES de se lerem as definições: é o código
+// que revela de que casamento se trata, e as definições (nomes, cores, textos)
+// são de cada casamento. Ao contrário, o convidado recebia o convite certo
+// vestido com o desenho de outro casal.
 $codigo   = strtoupper(trim($_GET['c'] ?? ''));
 $c        = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
+
+$DEFS = defsAtuais($conn);
 $download = isset($_GET['download']) && $_GET['download'] === '1';
 
 // Pré-visualização do editor (só admin): convidado de exemplo, sem tocar na BD.

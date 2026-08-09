@@ -50,7 +50,7 @@ if ($pecaSel === 'cartao') {
     // Prova visual com um convite real, se existir
     $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
                        LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                       WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                       WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                        ORDER BY c.nome_exibicao LIMIT 1");
     $ex = $r ? $r->fetch_assoc() : null;
     $conv = $ex
@@ -58,7 +58,7 @@ if ($pecaSel === 'cartao') {
         : ['nome' => 'Família Agostinho', 'mesas' => [['nome'=>'Mesa Luar','n'=>1], ['nome'=>'Mesa Solar','n'=>4]]];
 
     // Quantos cartões há a produzir
-    $totCartoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."")->fetch_row()[0] ?? 0);
+    $totCartoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE " . doCasamento('c') . " AND tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."")->fetch_row()[0] ?? 0);
 
     $tipografia = [
         ['Nomes dos noivos',      "Alex Brush 400",            75],

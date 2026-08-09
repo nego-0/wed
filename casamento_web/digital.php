@@ -22,7 +22,7 @@ $CAS  = casalInfo($defs);
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
                      FROM {$P}convites c
                      LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                     WHERE c.tipo IN ('digital','ambos') AND ".soVivos($conn,'c')."
+                     WHERE " . doCasamento('c') . " AND c.tipo IN ('digital','ambos') AND ".soVivos($conn,'c')."
                      ORDER BY c.nome_exibicao");
 $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 
@@ -31,12 +31,12 @@ $emVigor  = versaoEmVigor($conn, 'digital');
 $estadoVs = versaoEstado($conn, 'digital');   // modelo partilhado com o painel
 $versoes  = [];
 $r = $conn->query("SELECT id, nome, utilizador, criado_em, atualizado_em
-                   FROM {$P}versoes WHERE ambito='digital' ORDER BY id DESC");
+                   FROM {$P}versoes WHERE " . doCasamento() . " AND ambito='digital' ORDER BY id DESC");
 if ($r) $versoes = $r->fetch_all(MYSQLI_ASSOC);
 
 // Contagens para o resumo do topo
 $tot = $conn->query("SELECT COUNT(*) FROM {$P}convites
-                     WHERE tipo IN ('digital','ambos') AND ".soVivos($conn,''))->fetch_row()[0] ?? 0;
+                     WHERE " . doCasamento() . " AND tipo IN ('digital','ambos') AND ".soVivos($conn,''))->fetch_row()[0] ?? 0;
 $enviados = 0;
 if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
     $enviados = $conn->query("SELECT COUNT(*) FROM {$P}convites

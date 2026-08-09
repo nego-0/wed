@@ -10,10 +10,58 @@ require_once __DIR__ . '/config.php';
 // o script (o que causaria um HTTP 500 antes de tentar a config seguinte).
 mysqli_report(MYSQLI_REPORT_OFF);
 
+/**
+ * Ligação que vigia o âmbito.
+ *
+ * Com vários casamentos na mesma base, uma consulta esquecida sem filtro de
+ * dono mostra os convidados de um casal a outro. São perto de 150 sítios a
+ * tocar nas tabelas: confiar em revê-los todos a olho é confiar de mais.
+ *
+ * Esta ligação olha para cada instrução antes de a correr. Se ela mexe numa
+ * tabela que pertence a um casamento e não menciona 'casamento_id', reclama:
+ * rebenta nas provas (para a falha ser impossível de ignorar) e regista no
+ * log em produção (para nunca derrubar uma página em casamento).
+ */
+class LigacaoAmbito extends mysqli {
+    /** Tabelas cujos dados pertencem a um casamento. */
+    private const TABELAS = ['convites','convidados','mesas','versoes','registo','definicoes'];
+    public static bool $vigiar = false;   // ligado só depois de o esquema estar pronto
+
+    private function auditar(string $sql): void {
+        if (!self::$vigiar) return;
+        $s = ltrim($sql);
+        // Só instruções de dados: o esquema e as leituras de metadados não têm
+        // dono, e a própria migração corre antes de haver âmbito.
+        if (!preg_match('/^(SELECT|INSERT|UPDATE|DELETE|REPLACE)\b/i', $s)) return;
+        $p = preg_quote(PREFIXO, '/');
+        $alvo = '/\b' . $p . '(' . implode('|', self::TABELAS) . ')\b/i';
+        if (!preg_match($alvo, $s, $m)) return;
+        if (stripos($s, 'casamento_id') !== false) return;
+        // information_schema e afins não contam.
+        if (stripos($s, 'information_schema') !== false) return;
+        $aviso = 'Consulta sem âmbito de casamento (tabela ' . $m[0] . '): '
+               . preg_replace('/\s+/', ' ', mb_substr($s, 0, 240));
+        if (defined('AMBITO_ESTRITO') && AMBITO_ESTRITO) throw new RuntimeException($aviso);
+        error_log($aviso);
+    }
+
+    #[\ReturnTypeWillChange]
+    public function query(string $query, int $result_mode = MYSQLI_STORE_RESULT) {
+        $this->auditar($query);
+        return parent::query($query, $result_mode);
+    }
+
+    #[\ReturnTypeWillChange]
+    public function prepare(string $query) {
+        $this->auditar($query);
+        return parent::prepare($query);
+    }
+}
+
 $conn = null; $CONFIG_ATIVA = null; $ULTIMO_ERRO = '';
 foreach (DB_CONFIGS as $nome => $cfg) {
     try {
-        $t = @new mysqli($cfg['host'], $cfg['user'], $cfg['pass'], $cfg['db']);
+        $t = @new LigacaoAmbito($cfg['host'], $cfg['user'], $cfg['pass'], $cfg['db']);
         if ($t && !$t->connect_error) { $conn = $t; $CONFIG_ATIVA = $nome; break; }
         if ($t && $t->connect_error) { $ULTIMO_ERRO = $t->connect_error; }
     } catch (\Throwable $e) {
@@ -47,19 +95,35 @@ $P = PREFIXO; // atalho para o prefixo
 // "qual?", para que não haja duas respostas diferentes no mesmo pedido — é o
 // que separa um sistema de vários casais de uma fuga de dados entre eles.
 //
-// Nesta etapa devolve sempre o nº 1 (o casamento que já existia). A etapa
-// seguinte liga-o à sessão: o casamento dos noivos que entraram, ou aquele que
-// o pessoal da plataforma escolheu abrir.
+// A resposta vem, por esta ordem:
+//   1. o que o pedido já fixou (usarCasamento) — é o caso do convite público,
+//      onde é o código do convidado que revela de que casamento se trata;
+//   2. o casamento aberto na sessão de quem entrou;
+//   3. o nº 1, para o sistema continuar a servir quem tem uma instalação de um
+//      casamento só e ainda não passou por um ecrã de escolha.
 // ============================================================
 const CASAMENTO_SISTEMA = 0;   // definições que não são de casamento nenhum
 
 function casamentoAtual(): int {
-    return $GLOBALS['CASAMENTO_ID'] ?? 1;
+    if (isset($GLOBALS['CASAMENTO_ID'])) return (int)$GLOBALS['CASAMENTO_ID'];
+    if (isset($_SESSION['casamento_id'])) return (int)$_SESSION['casamento_id'];
+    return 1;
 }
 
 /** Fixa o casamento em causa para o resto do pedido. */
 function usarCasamento(int $id): void {
     $GLOBALS['CASAMENTO_ID'] = max(1, $id);
+}
+
+/**
+ * Fragmento SQL que prende uma consulta ao casamento em causa. Segue o mesmo
+ * idioma do soVivos(): entra no WHERE, ao lado das outras condições.
+ *
+ *   WHERE " . doCasamento('c') . " AND ..."
+ */
+function doCasamento(string $alias = ''): string {
+    $col = $alias === '' ? 'casamento_id' : "$alias.casamento_id";
+    return "$col = " . casamentoAtual();
 }
 
 // ---- Esquema (tabelas novas, prefixadas) -------------------
@@ -422,15 +486,20 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
 }
 
+// A partir daqui o esquema está pronto e todo o dado tem dono: a ligação passa
+// a reclamar de qualquer consulta que mexa numa tabela de casamento sem dizer
+// de qual. Em provas rebenta; em produção fica no log.
+LigacaoAmbito::$vigiar = true;
+
 // A mesa (especial) dos noivos existe por padrão: cria-se UMA vez (primeira utilização).
 // Depois fica eliminável — não volta a ser recriada automaticamente (repõe-se no botão da planta).
 $flag = $conn->query("SELECT valor FROM {$P}definicoes WHERE chave='noivos.criada' AND casamento_id=0 LIMIT 1");
 if ($flag && $flag->num_rows === 0) {
-    $rn = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1");
+    $rn = $conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND especial='noivos' LIMIT 1");
     if ($rn && $rn->num_rows === 0) {
         $nomeN = 'Noivos'; $n = 2;
-        while ($conn->query("SELECT id FROM {$P}mesas WHERE nome='" . $conn->real_escape_string($nomeN) . "'")->num_rows) $nomeN = 'Noivos ' . $n++;
-        $stN = $conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
+        while ($conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND nome='" . $conn->real_escape_string($nomeN) . "'")->num_rows) $nomeN = 'Noivos ' . $n++;
+        $stN = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (" . casamentoAtual() . ",?,2,'redonda','ouro','noivos',50,42)");
         $stN->bind_param('s', $nomeN); $stN->execute();
     }
     $conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'noivos.criada','1') ON DUPLICATE KEY UPDATE valor='1'");
@@ -448,7 +517,7 @@ function registar(mysqli $conn, string $accao, string $alvo = '', string $detalh
     global $P;
     $u = function_exists('utilizadorAtual') ? (utilizadorAtual() ?? '') : '';
     $p = function_exists('papel') ? (papel() ?? '') : '';
-    $st = @$conn->prepare("INSERT INTO {$P}registo (utilizador,papel,accao,alvo,detalhe) VALUES (?,?,?,?,?)");
+    $st = @$conn->prepare("INSERT INTO {$P}registo (casamento_id,utilizador,papel,accao,alvo,detalhe) VALUES (" . casamentoAtual() . ",?,?,?,?,?)");
     if (!$st) return;
     $alvo = substr($alvo, 0, 120); $detalhe = substr($detalhe, 0, 255);
     $st->bind_param('sssss', $u, $p, $accao, $alvo, $detalhe);
@@ -482,7 +551,9 @@ function gerarCodigo(mysqli $conn): string {
     do {
         $c = '';
         for ($i = 0; $i < 6; $i++) $c .= $alfabeto[random_int(0, strlen($alfabeto) - 1)];
-        $st = $conn->prepare("SELECT id FROM {$P}convites WHERE codigo=? LIMIT 1");
+        // Sem âmbito de propósito: o código é a chave pública e tem de ser
+        // único em todo o sistema, senão um endereço serviria dois casamentos.
+        $st = $conn->prepare("SELECT id FROM {$P}convites WHERE casamento_id > 0 AND codigo=? LIMIT 1");
         $st->bind_param('s', $c); $st->execute();
         $existe = $st->get_result()->fetch_assoc();
     } while ($existe);
@@ -510,10 +581,10 @@ function resolverMesa(mysqli $conn, string $nome): ?int {
     global $P;
     $nome = trim($nome);
     if ($nome === '') return null;
-    $st = $conn->prepare("SELECT id FROM {$P}mesas WHERE nome=? LIMIT 1");
+    $st = $conn->prepare("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND nome=? LIMIT 1");
     $st->bind_param('s', $nome); $st->execute();
     if ($r = $st->get_result()->fetch_assoc()) return (int)$r['id'];
-    $st = $conn->prepare("INSERT INTO {$P}mesas (nome) VALUES (?)");
+    $st = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome) VALUES (" . casamentoAtual() . ",?)");
     $st->bind_param('s', $nome); $st->execute();
     return $conn->insert_id;
 }
@@ -524,7 +595,7 @@ function recalcularCheckin(mysqli $conn, int $conviteId, string $tsSql = 'NOW()'
     $st = $conn->prepare("SELECT COUNT(*) tot,
                                  SUM(CASE WHEN rsvp='confirmado' THEN 1 ELSE 0 END) conf,
                                  COALESCE(SUM(presente),0) pres
-                          FROM {$P}convidados WHERE convite_id=?");
+                          FROM {$P}convidados WHERE " . doCasamento() . " AND convite_id=?");
     $st->bind_param('i', $conviteId); $st->execute();
     $r = $st->get_result()->fetch_assoc();
     $tot = (int)$r['tot']; $conf = (int)$r['conf']; $pres = (int)$r['pres'];
@@ -532,7 +603,7 @@ function recalcularCheckin(mysqli $conn, int $conviteId, string $tsSql = 'NOW()'
     $base = $conf > 0 ? $conf : $tot; // "presente" quando todos os confirmados entraram
     $estado = $pres === 0 ? 'aguardando' : ($pres >= $base ? 'presente' : 'parcial');
     $em = $pres > 0 ? "COALESCE(checkin_em, $tsSql)" : 'NULL';
-    $st = $conn->prepare("UPDATE {$P}convites SET checkin_estado=?, checkin_presentes=?, checkin_em=$em WHERE id=?");
+    $st = $conn->prepare("UPDATE {$P}convites SET checkin_estado=?, checkin_presentes=?, checkin_em=$em WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('sii', $estado, $pres, $conviteId); $st->execute();
 }
 
@@ -571,7 +642,7 @@ function estatisticas(mysqli $conn): array {
         COALESCE(SUM(CASE WHEN rsvp_estado='recusado' THEN lugares END),0)       AS lug_recusados,
         COALESCE(SUM(CASE WHEN rsvp_estado='parcial'
                      THEN GREATEST(CAST(lugares AS SIGNED) - COALESCE(rsvp_confirmados,0), 0) END),0) AS lug_parc_pend
-        FROM {$P}convites c WHERE $vivos");
+        FROM {$P}convites c WHERE " . doCasamento("c") . " AND $vivos");
 
     // ---- 1 query: contagem de convites por estado ------------------------
     // Um convite conta para um estado se o seu rsvp_estado for esse OU se
@@ -580,7 +651,7 @@ function estatisticas(mysqli $conn): array {
         SUM(c.rsvp_estado='confirmado' OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='confirmado')) AS confirmados,
         SUM(c.rsvp_estado='recusado'   OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='recusado'))   AS recusados,
         SUM(c.rsvp_estado IN ('pendente','parcial') OR EXISTS(SELECT 1 FROM {$P}convidados g WHERE g.convite_id=c.id AND g.rsvp='pendente')) AS pendentes
-        FROM {$P}convites c WHERE $vivos");
+        FROM {$P}convites c WHERE " . doCasamento("c") . " AND $vivos");
 
     // ---- 1 query: tudo sobre os convidados nomeados ----------------------
     $temGen = colunaExiste($conn, "{$P}convidados", 'genero');
@@ -604,9 +675,9 @@ function estatisticas(mysqli $conn): array {
     $g = $linha("SELECT COUNT(*) AS convidados, $exprG, $exprB,
         SUM(g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')) AS pend_fora,
         SUM(g.rsvp='recusado' AND c.rsvp_estado<>'recusado')                   AS rec_fora
-        FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE $vivos");
+        FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE " . doCasamento("c") . " AND $vivos");
 
-    $mesas = $linha("SELECT COUNT(*) AS n FROM {$P}mesas");
+    $mesas = $linha("SELECT COUNT(*) AS n FROM {$P}mesas WHERE " . doCasamento() . "");
 
     $s = [
         'convites'    => $n($c,'convites'),   'lugares'   => $n($c,'lugares'),
@@ -645,7 +716,7 @@ function estatisticas(mysqli $conn): array {
 function listarMesas(mysqli $conn): array {
     global $P;
     $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho
-                           FROM {$P}mesas ORDER BY (especial='noivos') DESC, nome")->fetch_all(MYSQLI_ASSOC);
+                           FROM {$P}mesas WHERE " . doCasamento() . " ORDER BY (especial='noivos') DESC, nome")->fetch_all(MYSQLI_ASSOC);
     $idx = [];
     $noivosId = 0;
     foreach ($mesas as $i => $m) {
@@ -658,7 +729,7 @@ function listarMesas(mysqli $conn): array {
     //    na mesa dos noivos (deteção automática pelo papel), se ela existir.
     $res = $conn->query("SELECT g.convite_id, g.papel, COALESCE(g.mesa_id, c.mesa_id) AS eff
                          FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id = c.id
-                         WHERE " . soVivos($conn, 'c'));
+                         WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c'));
     while ($r = $res->fetch_assoc()) {
         $eff = $r['eff'] !== null ? (int)$r['eff'] : 0;
         if ($noivosId && in_array($r['papel'] ?? '', ['padrinho', 'madrinha'], true)) $eff = $noivosId;
@@ -670,7 +741,7 @@ function listarMesas(mysqli $conn): array {
     // 2) Lugares sem nome (lugares além dos membros nomeados), na mesa do convite.
     $res = $conn->query("SELECT c.id, c.mesa_id, c.lugares, COUNT(g.id) AS nomeados
                          FROM {$P}convites c LEFT JOIN {$P}convidados g ON g.convite_id = c.id
-                         WHERE " . soVivos($conn, 'c') . "
+                         WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c') . "
                          GROUP BY c.id, c.mesa_id, c.lugares");
     while ($r = $res->fetch_assoc()) {
         $mid = $r['mesa_id'] !== null ? (int)$r['mesa_id'] : 0;
@@ -701,7 +772,7 @@ function colunaExiste(mysqli $conn, string $tabela, string $coluna): bool {
 function mesaEhNoivos(mysqli $conn, int $id): bool {
     global $P;
     if ($id <= 0) return false;
-    $r = $conn->query("SELECT 1 FROM {$P}mesas WHERE id=$id AND especial='noivos' LIMIT 1");
+    $r = $conn->query("SELECT 1 FROM {$P}mesas WHERE " . doCasamento() . " AND id=$id AND especial='noivos' LIMIT 1");
     return $r && $r->num_rows > 0;
 }
 
@@ -714,7 +785,8 @@ function plantaConfig(mysqli $conn): array {
     // bloq_* travam o arrasto (mesas) e o redimensionar (canvas), contra arrastos acidentais.
     $cfg = ['largura' => null, 'altura' => null, 'bloq_mesas' => 0, 'bloq_canvas' => 0];
     $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes
-                        WHERE chave IN ('planta.largura','planta.altura','planta.bloq_mesas','planta.bloq_canvas')");
+                        WHERE " . doCasamento() . "
+                          AND chave IN ('planta.largura','planta.altura','planta.bloq_mesas','planta.bloq_canvas')");
     if ($r) while ($x = $r->fetch_assoc()) {
         $v = (int)$x['valor'];
         if ($x['chave'] === 'planta.largura'     && $v > 0) $cfg['largura'] = $v;
@@ -733,16 +805,25 @@ function carregarConvite(mysqli $conn, $chave, string $por = 'id', bool $elimina
     global $P;
     $col = $por === 'codigo' ? 'codigo' : 'id';
     $vivo = $eliminados ? '1=1' : soVivos($conn, 'c');
+    // Por CÓDIGO é a porta pública: o convidado abre um endereço e não há
+    // sessão nenhuma que diga de que casamento se trata — é o próprio código
+    // que o revela. Por isso esta procura corre em todos os casamentos (os
+    // códigos são únicos no sistema inteiro) e, mal o encontre, fixa o âmbito
+    // para tudo o que vier a seguir no pedido.
+    // Por ID é sempre dentro do casamento em causa: um id de outro casal não
+    // pode ser alcançado escrevendo um número no endereço.
+    $ambito = $por === 'codigo' ? 'c.casamento_id > 0' : doCasamento('c');
     $st = $conn->prepare("SELECT c.*, m.nome AS mesa_nome
                           FROM {$P}convites c LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                          WHERE c.$col=? AND $vivo LIMIT 1");
+                          WHERE $ambito AND c.$col=? AND $vivo LIMIT 1");
     $por === 'codigo' ? $st->bind_param('s', $chave) : $st->bind_param('i', $chave);
     $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) return null;
+    if ($por === 'codigo' && !empty($c['casamento_id'])) usarCasamento((int)$c['casamento_id']);
     $st = $conn->prepare("SELECT g.*, mg.nome AS mesa_nome, mg.especial AS mesa_especial
                           FROM {$P}convidados g LEFT JOIN {$P}mesas mg ON g.mesa_id = mg.id
-                          WHERE g.convite_id=? ORDER BY g.principal DESC, g.nome");
+                          WHERE " . doCasamento('g') . " AND g.convite_id=? ORDER BY g.principal DESC, g.nome");
     $st->bind_param('i', $c['id']); $st->execute();
     $c['membros'] = $st->get_result()->fetch_all(MYSQLI_ASSOC);
     // Mesa efetiva de cada membro: a sua própria, senão a do convite.
@@ -769,7 +850,7 @@ function mesasDoConvite(mysqli $conn, array $c): array {
                          LEFT JOIN {$P}mesas mg ON g.mesa_id = mg.id
                          LEFT JOIN {$P}convites c ON g.convite_id = c.id
                          LEFT JOIN {$P}mesas mc ON c.mesa_id = mc.id
-                         WHERE g.convite_id = $cid");
+                         WHERE " . doCasamento('g') . " AND g.convite_id = $cid");
     $cont = []; $nomeados = 0;
     while ($r = $res->fetch_assoc()) {
         $nomeados++;

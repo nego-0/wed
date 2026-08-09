@@ -34,7 +34,7 @@ $ev  = cartaoDadosEvento($defs);
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
                      FROM {$P}convites c
                      LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                     WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                     WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                      ORDER BY c.nome_exibicao");
 $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
 

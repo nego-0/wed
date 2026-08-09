@@ -51,3 +51,15 @@ Entram com **admin / noivos2026**.
 Cada prova repõe o que mexeu. Se uma falhar a meio pode deixar rasto — a
 reciclagem e as versões guardadas são os sítios onde isso se nota. `correr.js`
 avisa quando encontra lixo de uma corrida anterior.
+
+## Modo estrito do âmbito (vários casamentos)
+
+Arranque o servidor com `AMBITO_ESTRITO=1`:
+
+```
+AMBITO_ESTRITO=1 php -S 127.0.0.1:8920 -t .
+```
+
+Assim, qualquer consulta que toque numa tabela de casamento sem dizer de qual
+rebenta a página em vez de passar despercebida — e as provas apanham-na. Em
+produção deixa-se desligado: a falha vai para o log sem derrubar nada.

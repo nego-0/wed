@@ -26,7 +26,7 @@ $chavesCartao = chavesDoAmbito('impresso');
 // Convite de exemplo: usa um real (físico) para a prova ser fiel.
 $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
                    LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                   WHERE c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                   WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
                    ORDER BY c.nome_exibicao LIMIT 1");
 $exemplo = $r ? $r->fetch_assoc() : null;
 if ($exemplo) {
