@@ -133,8 +133,6 @@ if ($pecaSel === 'cartao') {
   .prova .rot b{ color:var(--ink); }
   .palco-cartao{ width:calc(720px * .34); height:calc(1080px * .34); background:#fff; }
   .palco-cartao .escala{ width:720px; height:1080px; transform:scale(.34); transform-origin:top left; }
-  .palco-kc{ width:calc(250px * .62); height:calc(340px * .62); }
-  .palco-kc .escala{ width:250px; height:340px; transform:scale(.62); transform-origin:top left; }
 
   .lista-check{ margin:0; padding-left:1.2rem; font-size:.9rem; line-height:1.7; }
   .barra-man{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin:1rem 0 1.4rem; }

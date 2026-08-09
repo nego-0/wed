@@ -85,10 +85,15 @@ function asset(string $rel): string {
  * o conteúdo.
  */
 function ficheirosApp(): array {
+    // Toda a página que se instala entra aqui. 'digital.php' e o cabeçalho
+    // partilhado ficaram de fora quando foram criados, e por isso mexer neles
+    // não mudava a assinatura — que existe justamente para dizer se o que está
+    // instalado é o que se julga.
     return ['index.php','api.php','db.php','config.php','personalizacao.php','pecas.php',
             'editor-cartao.php','convite-editor.php','convite-digital.php','mesas.php',
-            'cartoes.php','graficas.php','manual.php','impressos.php','porteiro.php',
-            'convite.php','login.php','auth.php',
+            'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
+            'porteiro.php','convite.php','login.php','auth.php',
+            'parcial-cabecalho.php','versao.php',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
