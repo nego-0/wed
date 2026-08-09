@@ -138,6 +138,48 @@ const entrar = async (ctx, u, p) => {
   ok(txtDig.includes('Quinta ' + marca) && txtDig.includes('Lobito'),
      'o local e a cidade escritos na gestão aparecem no convite digital');
 
+  // ---------- 4b. os dados do evento entram no primeiro registo ----------
+  // Um casamento que nasce sem os seus dados fica com os do config.php à
+  // espera de que alguém se lembre — e o casal manda convites com a morada de
+  // outra pessoa. Perguntar tudo à nascença é o que evita isso.
+  const nascido = await api('casamento_criar', {
+    nome: 'ZZ Completo ' + marca, noiva: 'Sara', noivo: 'Simão', data: '2027-09-11',
+    hora: '19:00', local: 'Salão ' + marca, cidade: 'Benguela', convidados: '240',
+    whatsapp: '244911222333',
+    civil_hora: '09:30', civil_local: 'Conservatória ' + marca,
+    religiosa_hora: '16:00', religiosa_local: 'Igreja ' + marca,
+  });
+  console.log('   criado com dados:', JSON.stringify(nascido));
+  ok(nascido.dados_do_evento >= 8, 'criar um casamento guarda logo os dados do evento');
+
+  await api('casamento_abrir&id=' + nascido.id);
+  await admin.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
+  const campos = await admin.evaluate(() => {
+    const v = {};
+    document.querySelectorAll('[data-chave]').forEach(e => { v[e.dataset.chave] = e.value; });
+    return v;
+  });
+  console.log('   na gestão:', JSON.stringify(campos));
+  ok(campos['evento.local'] === 'Salão ' + marca && campos['evento.cidade'] === 'Benguela',
+     'o local e a cidade ficaram gravados');
+  ok(campos['evento.convidados'] === '240', 'e o número de convidados que se espera');
+  ok(campos['evento.civil_hora'] === '09:30' && campos['evento.civil_local'].includes('Conservatória'),
+     'a cerimónia civil, com hora e local');
+  ok(campos['evento.religiosa_hora'] === '16:00' && campos['evento.religiosa_local'].includes('Igreja'),
+     'e a religiosa também');
+
+  // O número de convidados é o teto da barra do painel — era 150 para todos.
+  const st = await api('convite_list');
+  ok(st.stats.capacidade === 240, 'o teto do painel passa a ser o deste casal (' + st.stats.capacidade + ')');
+
+  // As cerimónias são opcionais: um casamento sem elas não as anuncia.
+  const semCerimonia = await api('casamento_criar', { nome: 'ZZ Sem cerimónias ' + marca,
+                                                      noiva: 'Tina', noivo: 'Tó' });
+  await api('casamento_abrir&id=' + semCerimonia.id);
+  const defsSem = (await admin.evaluate(async () =>
+    (await fetch('api.php?action=dados_exportar&ambito=casamento')).json())).casamentos[0].definicoes;
+  ok(!defsSem['evento.religiosa_hora'], 'sem cerimónia religiosa, não fica hora nenhuma escrita');
+
   // ---------- 5. cada casamento com a sua ficha ----------
   const outro = await api('casamento_criar', { nome: 'ZZ Outro ' + marca, noiva: 'Vera', noivo: 'Vasco' });
   await api('casamento_abrir&id=' + outro.id);
@@ -154,7 +196,7 @@ const entrar = async (ctx, u, p) => {
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1');
-  for (const id of [cas.id, outro.id]) {
+  for (const id of [cas.id, outro.id, nascido.id, semCerimonia.id]) {
     // Apagar exige arquivar antes — o mesmo caminho que a página faz.
     await api('casamento_estado&id=' + id + '&estado=arquivado');
     await api('casamento_apagar&id=' + id);

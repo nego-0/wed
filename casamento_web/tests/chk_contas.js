@@ -50,7 +50,13 @@ const entrar = async (ctx, user, pass) => {
   await anon.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
   await anon.fill('#noiva', 'Nadia' + marca); await anon.fill('#noivo', 'Nuno' + marca);
   await anon.fill('#email', emailCasal); await anon.fill('#senha', SENHA);
-  await anon.click('#btn'); await anon.waitForTimeout(700);
+  // Os dados do evento perguntam-se aqui, no primeiro registo — é o que evita
+  // um casamento a viver meses com a morada do casal de origem.
+  await anon.fill('#data', '2027-03-20'); await anon.fill('#hora', '18:30');
+  await anon.fill('#local', 'Salão ' + marca); await anon.fill('#cidade', 'Huambo');
+  await anon.fill('#convidados', '80'); await anon.fill('#whatsapp', '244911000111');
+  await anon.fill('#religiosa_hora', '15:00'); await anon.fill('#religiosa_local', 'Igreja ' + marca);
+  await anon.click('#btn'); await anon.waitForTimeout(900);
   ok(await anon.locator('#obrigado').isVisible(), 'a inscrição confirma no ecrã que ficou à espera');
 
   // A conta existe — mas não entra.
@@ -82,6 +88,23 @@ const entrar = async (ctx, user, pass) => {
 
   const casal = await entrar(await b.newContext(), emailCasal, SENHA);
   ok(!casal.url().includes('login.php'), 'e o casal passa a entrar');
+
+  // E entra num casamento que já é o SEU: com o que escreveu na inscrição.
+  await casal.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
+  const meus = await casal.evaluate(() => {
+    const v = {}; document.querySelectorAll('[data-chave]').forEach(e => { v[e.dataset.chave] = e.value; });
+    v['_noiva'] = document.getElementById('f-noiva').value;
+    v['_data']  = document.getElementById('f-data').value;
+    return v;
+  });
+  console.log('   o que o casal encontra:', JSON.stringify(meus).slice(0, 200));
+  ok(meus._noiva === 'Nadia' + marca && meus._data === '2027-03-20', 'a ficha é a que ele escreveu');
+  ok(meus['evento.local'] === 'Salão ' + marca && meus['evento.cidade'] === 'Huambo',
+     'o local e a cidade também');
+  ok(meus['evento.convidados'] === '80', 'e quantos convidados espera');
+  ok(meus['evento.religiosa_hora'] === '15:00', 'a cerimónia religiosa que indicou');
+  ok(meus['evento.civil_hora'] !== '' && meus['evento.civil_local'] === '',
+     'e o que não indicou fica no original, sem inventar nada');
 
   // ---------- 3. o suporte não entra sem código ----------
   const emailSup = 'suporte.' + marca + '@exemplo.pt';

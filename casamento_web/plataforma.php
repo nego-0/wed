@@ -263,12 +263,34 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   <?php if ($mandaNaCasa): ?>
     <div class="painel">
       <h3>Novo casamento</h3>
-      <div class="dica">Cria o casamento já ativo. A conta dos noivos liga-se a ele a seguir.</div>
-      <div class="lf">
+      <div class="dica">Cria o casamento já ativo, com os seus dados. A conta dos noivos liga-se a
+        ele a seguir, em <b>Gestão</b>. O que ficar em branco fica no original e edita-se depois —
+        mas o que se preencher aqui poupa o casal de mandar convites com a morada de outra pessoa.</div>
+      <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
         <div><label>Nome</label><input type="text" id="n-nome" placeholder="Ex: Isabel &amp; Abednego"></div>
         <div><label>Noiva</label><input type="text" id="n-noiva" placeholder="Isabel"></div>
         <div><label>Noivo</label><input type="text" id="n-noivo" placeholder="Abednego"></div>
-        <div><button class="btn btn-ouro" onclick="criar()">Criar</button></div>
+      </div>
+      <div class="lf" style="grid-template-columns:repeat(4,1fr)">
+        <div><label>Data</label><input type="date" id="n-data"></div>
+        <div><label>Hora da festa</label><input type="time" id="n-hora"></div>
+        <div><label>Convidados que espera</label><input type="number" id="n-convidados" min="1" max="5000"></div>
+        <div><label>WhatsApp</label><input type="text" id="n-whatsapp" inputmode="numeric"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:2fr 1fr">
+        <div><label>Local da festa</label><input type="text" id="n-local"></div>
+        <div><label>Cidade / região</label><input type="text" id="n-cidade"></div>
+      </div>
+      <div class="dica" style="margin:.9rem 0 .4rem">As cerimónias, se as houver.</div>
+      <div class="lf" style="grid-template-columns:repeat(4,1fr)">
+        <div><label>Civil · hora</label><input type="time" id="n-civil-hora"></div>
+        <div><label>Civil · local</label><input type="text" id="n-civil-local"></div>
+        <div><label>Religiosa · hora</label><input type="time" id="n-religiosa-hora"></div>
+        <div><label>Religiosa · local</label><input type="text" id="n-religiosa-local"></div>
+      </div>
+      <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin-top:1rem">
+        <button class="btn btn-ouro" onclick="criar()">Criar</button>
+        <span class="dica" style="margin:0">Só os nomes são obrigatórios.</span>
       </div>
     </div>
   <?php endif; ?>
@@ -441,12 +463,17 @@ async function abrir(id){
   if (d && d.success) location.href = 'index.php';
 }
 async function criar(){
-  const nome = document.getElementById('n-nome').value.trim();
-  const noiva = document.getElementById('n-noiva').value.trim();
-  const noivo = document.getElementById('n-noivo').value.trim();
-  if (!nome && !noiva && !noivo) return toast('Indique ao menos os nomes dos noivos.', true);
-  const d = await api('casamento_criar', { method:'POST',
-    body: JSON.stringify({ nome, noiva, noivo }) });
+  const v = id => (document.getElementById(id).value || '').trim();
+  if (!v('n-nome') && !v('n-noiva') && !v('n-noivo')) {
+    return toast('Indique ao menos os nomes dos noivos.', true);
+  }
+  const d = await api('casamento_criar', { method:'POST', body: JSON.stringify({
+    nome: v('n-nome'), noiva: v('n-noiva'), noivo: v('n-noivo'), data: v('n-data'),
+    hora: v('n-hora'), local: v('n-local'), cidade: v('n-cidade'),
+    convidados: v('n-convidados'), whatsapp: v('n-whatsapp'),
+    civil_hora: v('n-civil-hora'), civil_local: v('n-civil-local'),
+    religiosa_hora: v('n-religiosa-hora'), religiosa_local: v('n-religiosa-local'),
+  }) });
   if (d && d.success) location.reload();
 }
 async function aprovar(id){

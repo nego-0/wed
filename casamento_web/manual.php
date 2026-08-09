@@ -76,7 +76,14 @@ if ($pecaSel === 'cartao') {
         ['Frase de convite',    $ev['frase']],
         ['Rótulo do convidado', $ev['reservado']],
         ['Data',                $ev['data_ext'] . ' · ' . $ev['dia_semana']],
-        ['Cerimónia',           $ev['civil_titulo'] . ' · às ' . $ev['civil_hora']],
+        ['Cerimónia civil',     $ev['civil_hora'] !== ''
+                                 ? $ev['civil_titulo'] . ' · às ' . $ev['civil_hora']
+                                   . ($ev['civil_local'] !== '' ? ' · ' . $ev['civil_local'] : '')
+                                 : '(não se anuncia)'],
+        ['Cerimónia religiosa', $ev['relig_hora'] !== ''
+                                 ? 'às ' . $ev['relig_hora']
+                                   . ($ev['relig_local'] !== '' ? ' · ' . $ev['relig_local'] : '')
+                                 : '(não se anuncia)'],
         ['Receção',             $ev['copo_titulo'] . ' · ' . $ev['local'] . ' · às ' . $ev['copo_hora']],
         ['Frase final',         $ev['frase_final']],
     ];

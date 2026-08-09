@@ -49,7 +49,7 @@ $camposPorCamada = [
     'frase'     => [['cartao.frase_convite', 'Frase de convite', 'area', 'frase']],
     'convidado' => [['cartao.reservado', 'Rótulo', 'texto', 'reservado']],
     'logistica' => [['cartao.civil_titulo', 'Cerimónia', 'texto', 'civil_titulo'],
-                    ['cartao.civil_hora', 'Hora da cerimónia (HH:MM)', 'hora', ''],
+                    ['evento.civil_hora', 'Hora da cerimónia (HH:MM)', 'hora', ''],
                     ['evento.venue_titulo', 'Receção', 'texto', 'copo_titulo'],
                     ['evento.local', 'Local', 'texto', ''],
                     ['evento.hora', 'Hora da receção (HH:MM)', 'hora', '']],
@@ -226,7 +226,7 @@ let est = {
                  'cartao.ramos_escala','cartao.volutas_escala','cartao.floreados_escala'])), JSON_UNESCAPED_UNICODE) ?>,
   textos:   <?= json_encode(array_intersect_key($defs, array_flip([
                  'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.civil_titulo',
-                 'cartao.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
+                 'evento.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
                  'evento.venue_titulo','evento.local','evento.hora','evento.data'])), JSON_UNESCAPED_UNICODE) ?>
 };
 const original = JSON.parse(JSON.stringify(est));
@@ -624,7 +624,7 @@ function pintarTexto(chave, valor){
     return;
   }
   // Campos compostos: hora e local entram nas linhas de detalhe; a data é escrita por extenso.
-  if (chave === 'cartao.civil_hora') { const n = c.querySelectorAll('.ct-detalhe')[0]; if (n) n.textContent = 'às ' + horaPt(valor); return; }
+  if (chave === 'evento.civil_hora') { const n = c.querySelectorAll('.ct-detalhe')[0]; if (n) n.textContent = 'às ' + horaPt(valor); return; }
   if (chave === 'evento.hora' || chave === 'evento.local') {
     const n = c.querySelector('.ct-detalhe-2');
     if (n) n.innerHTML = escaparHtml(est.textos['evento.local'] || '') + '<br>às ' + horaPt(est.textos['evento.hora'] || '');

@@ -46,6 +46,41 @@ function contaNoivos(mysqli $conn, int $cid, int $exceto): int {
     return (int)$st->get_result()->fetch_assoc()['n'];
 }
 
+/**
+ * Os dados do evento, escritos à nascença do casamento.
+ *
+ * Perguntar tudo no primeiro registo evita o casamento que fica meses com o
+ * local de outra pessoa — os valores de origem vêm do config.php, e um casal
+ * que nunca abra o editor manda convites com a morada errada. Aqui grava-se o
+ * que ele escreveu, e o resto fica no original até alguém lá ir.
+ */
+function guardarEventoDoRegisto(mysqli $conn, int $cid, array $d): int {
+    $mapa = [
+        'hora'            => 'evento.hora',
+        'venue_titulo'    => 'evento.venue_titulo',
+        'local'           => 'evento.local',
+        'cidade'          => 'evento.cidade',
+        'convidados'      => 'evento.convidados',
+        'whatsapp'        => 'evento.whatsapp',
+        'maps'            => 'evento.maps',
+        'civil_hora'      => 'evento.civil_hora',
+        'civil_local'     => 'evento.civil_local',
+        'religiosa_hora'  => 'evento.religiosa_hora',
+        'religiosa_local' => 'evento.religiosa_local',
+    ];
+    $defs = [];
+    foreach ($mapa as $campo => $chave) {
+        if (!array_key_exists($campo, $d)) continue;      // não veio: fica o original
+        $defs[$chave] = (string)$d[$campo];
+    }
+    if (!$defs) return 0;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+    $r = guardarDefinicoes($conn, $defs);
+    usarCasamento($anterior > 0 ? $anterior : $cid);
+    return (int)($r['gravadas'] ?? 0);
+}
+
 /** Senha temporária legível, para se entregar a quem se convida. */
 function senhaTemporaria(): string {
     $a = 'abcdefghijkmnpqrstuvwxyz23456789';   // sem l, o, 0, 1
@@ -249,10 +284,12 @@ if ($acao === 'registo_publico') {
     $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?, 'noivos')");
     $st->bind_param('ii', $uid, $cid); @$st->execute();
 
+    $gravadas = guardarEventoDoRegisto($conn, $cid, $d);
+
     $_SESSION['registo_feito'] = time();
     usarCasamento($cid);
     registar($conn, 'registo_publico', $nomeConta, $email);
-    ok(['casamento' => $cid]);
+    ok(['casamento' => $cid, 'dados_do_evento' => $gravadas]);
 }
 
 // ============================================================
@@ -984,8 +1021,9 @@ if ($acao === 'casamento_criar') {
     $st->bind_param('ssss', $nome, $noiva, $noivo, $data);
     if (!$st->execute()) erro('Não foi possível criar o casamento.');
     $novo = $conn->insert_id;
+    $gravadas = guardarEventoDoRegisto($conn, $novo, $d);
     registar($conn, 'casamento_criado', $nome, 'id ' . $novo);
-    ok(['id' => $novo, 'nome' => $nome]);
+    ok(['id' => $novo, 'nome' => $nome, 'dados_do_evento' => $gravadas]);
 }
 
 if ($acao === 'casamento_abrir') {

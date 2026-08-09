@@ -39,6 +39,9 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .msg.mau{ background:var(--danger-bg); color:var(--danger); }
   .feito{ text-align:center; }
   .feito .ico{ font-size:2.4rem; color:var(--gold); }
+  .seccao{ font-family:var(--serif); color:var(--forest); font-size:1.05rem;
+           margin:1.4rem 0 .7rem; padding-bottom:.3rem; border-bottom:1px solid var(--line); }
+  .seccao span{ font-family:var(--sans); font-size:.76rem; color:#9aa09a; font-weight:400; }
   @media (max-width:520px){ .par{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -47,7 +50,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     <div class="card" id="formulario">
       <div class="brasao"><?= escP(PLATAFORMA['marca']) ?></div>
       <div class="tit">Inscrever o nosso casamento</div>
-      <div class="sub">Deixe aqui os vossos nomes e uma conta de acesso.<br>
+      <div class="sub">Deixe aqui os dados do vosso casamento e uma conta de acesso.<br>
         A inscrição é revista por quem gere a plataforma antes de abrir.</div>
 
       <div class="msg mau" id="erro" style="display:none"></div>
@@ -58,8 +61,40 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         <div class="campo"><label for="noivo">Nome do noivo</label>
           <input type="text" id="noivo" autocomplete="off" required></div>
       </div>
-      <div class="campo"><label for="data">Data do casamento <span style="font-weight:400;color:#9aa09a">(se já a souberem)</span></label>
-        <input type="date" id="data"></div>
+      <div class="par">
+        <div class="campo"><label for="data">Data do casamento</label>
+          <input type="date" id="data"></div>
+        <div class="campo"><label for="hora">Hora da festa</label>
+          <input type="time" id="hora" value="20:30"></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="local">Local da festa</label>
+          <input type="text" id="local" placeholder="Ex: Estufa Municipal"></div>
+        <div class="campo"><label for="cidade">Cidade / região</label>
+          <input type="text" id="cidade" placeholder="Ex: Namibe · Angola"></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="convidados">Convidados que esperam</label>
+          <input type="number" id="convidados" min="1" max="5000" placeholder="150"></div>
+        <div class="campo"><label for="whatsapp">WhatsApp de contacto</label>
+          <input type="text" id="whatsapp" placeholder="244900000000" inputmode="numeric"></div>
+      </div>
+
+      <div class="seccao">As cerimónias <span>opcional — deixe em branco o que não se aplicar</span></div>
+      <div class="par">
+        <div class="campo"><label for="civil_hora">Civil · hora</label>
+          <input type="time" id="civil_hora"></div>
+        <div class="campo"><label for="civil_local">Civil · local</label>
+          <input type="text" id="civil_local" placeholder="Ex: Conservatória"></div>
+      </div>
+      <div class="par">
+        <div class="campo"><label for="religiosa_hora">Religiosa · hora</label>
+          <input type="time" id="religiosa_hora"></div>
+        <div class="campo"><label for="religiosa_local">Religiosa · local</label>
+          <input type="text" id="religiosa_local" placeholder="Ex: Igreja de São José"></div>
+      </div>
+
+      <div class="seccao">A vossa conta</div>
       <div class="campo"><label for="email">Email de acesso</label>
         <input type="email" id="email" autocomplete="email" autocapitalize="none" spellcheck="false" required>
         <div class="nota">É por aqui que entram depois de a inscrição ser aprovada.</div></div>
@@ -88,9 +123,17 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <script>
 const $ = id => document.getElementById(id);
 async function enviar(){
+  // Tudo o que a página pergunta vai no mesmo pedido: o casamento nasce com os
+  // seus dados, e não com os do casal de origem do config.php à espera de que
+  // alguém se lembre de os trocar.
+  const campo = id => ($(id).value || '').trim();
   const dados = {
-    noiva: $('noiva').value.trim(), noivo: $('noivo').value.trim(),
-    data:  $('data').value, email: $('email').value.trim(), senha: $('senha').value,
+    noiva: campo('noiva'), noivo: campo('noivo'), data: campo('data'),
+    email: campo('email'), senha: $('senha').value,
+    hora: campo('hora'), local: campo('local'), cidade: campo('cidade'),
+    convidados: campo('convidados'), whatsapp: campo('whatsapp'),
+    civil_hora: campo('civil_hora'), civil_local: campo('civil_local'),
+    religiosa_hora: campo('religiosa_hora'), religiosa_local: campo('religiosa_local'),
   };
   $('erro').style.display = 'none';
   $('btn').disabled = true;

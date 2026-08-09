@@ -72,7 +72,9 @@ define('UTILIZADORES', cfg_local('utilizadores', []));
 
 // ---- Regras -------------------------------------------------
 const PREFIXO   = 'cw_';   // prefixo das tabelas novas (não mexe na lista antiga)
-const MAX_LUGARES_TOTAL = 150;  // teto de segurança de lugares no evento
+// Teto de lugares por omissão. Cada casamento tem o seu ('evento.convidados',
+// pedido no registo); este é só o valor de origem de quem nunca o preencheu.
+const MAX_LUGARES_TOTAL = 150;
 const RECICLAGEM_DIAS   = 30;   // dias que um convite eliminado fica recuperável
 const LISTA_POR_PAGINA  = 60;   // convites carregados de cada vez no painel
 const VERSOES_MAX       = 12;   // versões guardadas de cada convite (digital, impresso)

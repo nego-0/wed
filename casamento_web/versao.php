@@ -109,6 +109,10 @@ function correcoesEsperadas(): array {
          'api.php', "SET u.estado='inativo'"],
         ['A lista principal da administração só mostra casamentos ativos',
          'plataforma.php', '$suspensos'],
+        ['Convidados esperados, e as duas cerimónias, nos dados do evento',
+         'personalizacao.php', "'evento.religiosa_local'"],
+        ['Os dados do evento pedem-se no primeiro registo',
+         'api.php', 'function guardarEventoDoRegisto('],
     ];
 }
 

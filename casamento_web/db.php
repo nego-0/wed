@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 10;
+const ESQUEMA_VERSAO = 11;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -526,6 +526,23 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                        NOT NULL DEFAULT 'pendente'");
     }
 
+    // ---- v11: a hora da cerimónia é do evento, não do cartão --------------
+    // Estava em 'cartao.civil_hora', e por isso viajava nas versões do cartão
+    // impresso: repor um desenho antigo mudava a HORA a que as pessoas se
+    // apresentam na igreja. A hora é um facto do casamento; o desenho lê-a.
+    if ($versaoAtual < 11) {
+        // Copia-se em vez de renomear: a chave nova pode já existir nalgum
+        // casamento, e a chave primária é (casamento, chave) — um rename cego
+        // rebentava aí e deixava metade dos casamentos por migrar.
+        @$conn->query("INSERT IGNORE INTO {$P}definicoes (casamento_id, chave, valor)
+                       SELECT casamento_id, 'evento.civil_hora', valor
+                       FROM {$P}definicoes WHERE chave='cartao.civil_hora'");
+        // As versões guardadas do cartão levaram a chave antiga lá dentro; não
+        // se reescrevem (são fotografias do que foi), mas a chave já não existe
+        // e o instantâneo do âmbito deixa de a ver — que é o que se quer.
+        @$conn->query("DELETE FROM {$P}definicoes WHERE chave='cartao.civil_hora'");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -780,7 +797,12 @@ function estatisticas(mysqli $conn): array {
         'confirmados' => $n($e,'confirmados'),'recusados' => $n($e,'recusados'),
         'pendentes'   => $n($e,'pendentes'),  'lug_confirm' => $n($c,'lug_confirm'),
         'presentes'   => $n($c,'presentes'),  'no_local'  => $n($c,'no_local'),
-        'mesas'       => $n($mesas,'n'),      'capacidade'=> MAX_LUGARES_TOTAL,
+        'mesas'       => $n($mesas,'n'),
+        // Quantas pessoas este casal espera receber (MAX_LUGARES_TOTAL era o
+        // mesmo teto para toda a gente, o que não quer dizer nada com vários).
+        'capacidade'  => function_exists('defsAtuais')
+                         ? (int)(defsAtuais($conn)['evento.convidados'] ?: MAX_LUGARES_TOTAL)
+                         : MAX_LUGARES_TOTAL,
         'pes_digitais'  => $n($c,'pes_digitais'),  'pes_fisicos' => $n($c,'pes_fisicos'),
         'pes_impressos' => $n($c,'pes_impressos'), 'pes_noivos'  => $n($c,'pes_noivos'),
         'pes_noivas'    => $n($c,'pes_noivas'),

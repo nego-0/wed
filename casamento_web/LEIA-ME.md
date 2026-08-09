@@ -95,6 +95,21 @@ abrir-lhe o primeiro da lista era pô-lo dentro da festa de um casal ao acaso,
 com poderes de gestão e sem ter pedido nada. Escolhe um na lista, e o menu das
 páginas do casamento só aparece depois disso.
 
+**Os dados do evento pedem-se à nascença.** A inscrição pública e a criação
+pelo admin perguntam tudo: nomes, data, hora e local da festa, cidade,
+**quantos convidados se espera**, WhatsApp, e — opcionalmente — a hora e o
+local da **cerimónia civil** e da **cerimónia religiosa**. Um casamento que
+nasce vazio fica com os valores de origem do `config.php` à espera de que
+alguém se lembre, e o casal manda convites com a morada de outra pessoa.
+
+O número de convidados é o teto da barra de capacidade do painel (era
+`MAX_LUGARES_TOTAL`, o mesmo 150 para toda a gente). As cerimónias só se
+anunciam se tiverem hora: sem ela, a secção nem sai no cartão. E a hora da
+cerimónia deixou de viver em `cartao.civil_hora` — estava no âmbito do desenho
+impresso, e por isso **repor uma versão antiga do cartão mudava a hora a que as
+pessoas se apresentam na igreja**. Agora é `evento.civil_hora`, um facto do
+casamento que o desenho lê (esquema v11).
+
 **Arquivar e apagar.** Na Administração, cada casamento pode ser **suspenso**
 (o casal deixa de entrar e os convites deixam de abrir para os convidados),
 **arquivado** (sai das listas de trabalho, inteiro) ou **apagado**. Apagar só é

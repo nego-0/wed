@@ -150,6 +150,17 @@ function defsPadrao(): array {
         'evento.cidade' => 'Namibe · Angola',
         'evento.maps'   => 'https://maps.app.goo.gl/9o8MAHokTFRpgDBG9',
         'evento.whatsapp' => EVENTO['whatsapp'],
+        // Quantas pessoas se espera receber. Era um teto fixo no config.php,
+        // igual para todos os casamentos — o que num sistema de vários não
+        // quer dizer nada: cada casal sabe o tamanho da sua festa.
+        'evento.convidados' => (string)MAX_LUGARES_TOTAL,
+        // As duas cerimónias, à parte da festa. Opcionais: há casamentos só
+        // com uma, e há quem faça as duas no mesmo sítio. Sem hora, a cerimónia
+        // simplesmente não se anuncia.
+        'evento.civil_hora'      => '10:30',
+        'evento.civil_local'     => '',
+        'evento.religiosa_hora'  => '',
+        'evento.religiosa_local' => '',
         // ---- Capa que abre (o envelope selado com o monograma) ----
         // Monograma vazio = as iniciais dos nomes (ex.: "I&A"); pode dar-se um à mão.
         'capa.monograma' => '',
@@ -219,7 +230,6 @@ function defsPadrao(): array {
         'cartao.frase_convite' => 'honram-se em convidá-los para a celebração do seu enlace matrimonial.',
         'cartao.reservado' => 'Reservado a',
         'cartao.civil_titulo' => 'Cerimónia Civil',
-        'cartao.civil_hora' => '10:30',
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
         // Cor e letra livres, por cima da paleta escolhida. Vazio = a paleta manda.
@@ -677,8 +687,20 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
-        case 'cartao.civil_hora':
             return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $valor) ? $valor : null;
+        case 'evento.civil_hora':
+        case 'evento.religiosa_hora':
+            // Vazio é uma resposta: quer dizer "não há", e a cerimónia não se anuncia.
+            if ($valor === '') return '';
+            return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $valor) ? $valor : null;
+        case 'evento.civil_local':
+        case 'evento.religiosa_local':
+            return mb_substr($valor, 0, 120);
+        case 'evento.convidados': {
+            if ($valor === '') return '';
+            if (!preg_match('/^\d{1,5}$/', $valor)) return null;
+            return (string)max(1, min((int)$valor, 5000));
+        }
         // Enums das peças de design (chaves fixas aqui para não depender de pecas.php)
         case 'cartao.paleta':
             return in_array($valor, ['ouro','salvia','terracota','rosa'], true) ? $valor : null;

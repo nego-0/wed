@@ -252,7 +252,11 @@ function cartaoDadosEvento(array $defs): array {
         'data_ext'     => dataExtensa($data),
         'dia_semana'   => $ts ? DIAS_PT[(int)date('w', $ts)] : '',
         'civil_titulo' => $defs['cartao.civil_titulo'],
-        'civil_hora'   => horaTexto($defs['cartao.civil_hora'], false),
+        'civil_hora'   => horaTexto($defs['evento.civil_hora'] ?? '', false),
+        'civil_local'  => trim((string)($defs['evento.civil_local'] ?? '')),
+        // A religiosa é opcional, como a civil: sem hora, não se anuncia.
+        'relig_hora'   => horaTexto($defs['evento.religiosa_hora'] ?? '', false),
+        'relig_local'  => trim((string)($defs['evento.religiosa_local'] ?? '')),
         'copo_titulo'  => $defs['evento.venue_titulo'],
         'local'        => $defs['evento.local'],
         'copo_hora'    => horaTexto($defs['evento.hora'], false),
@@ -385,8 +389,18 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
       </div>
       <div class="ct-tracinho"></div>
       <div class="ct-logistica<?= $oc('logistica') ?>" data-camada="logistica">
-        <div class="ct-seccao" data-campo="civil_titulo"><?= $e($ev['civil_titulo']) ?></div>
-        <div class="ct-detalhe">às <?= $e($ev['civil_hora']) ?></div>
+        <?php // Cada cerimónia só aparece se tiver hora. Um cartão que anuncia
+              // "às " sem hora nenhuma é pior do que um cartão sem a linha. ?>
+        <?php if ($ev['civil_hora'] !== ''): ?>
+          <div class="ct-seccao" data-campo="civil_titulo"><?= $e($ev['civil_titulo']) ?></div>
+          <div class="ct-detalhe">às <?= $e($ev['civil_hora']) ?><?php
+            if ($ev['civil_local'] !== ''): ?><br><?= $e($ev['civil_local']) ?><?php endif; ?></div>
+        <?php endif; ?>
+        <?php if ($ev['relig_hora'] !== ''): ?>
+          <div class="ct-seccao ct-seccao-2">Cerimónia Religiosa</div>
+          <div class="ct-detalhe">às <?= $e($ev['relig_hora']) ?><?php
+            if ($ev['relig_local'] !== ''): ?><br><?= $e($ev['relig_local']) ?><?php endif; ?></div>
+        <?php endif; ?>
         <div class="ct-seccao ct-seccao-2" data-campo="copo_titulo"><?= $e($ev['copo_titulo']) ?></div>
         <div class="ct-detalhe ct-detalhe-2"><?= $e($ev['local']) ?><br>às <?= $e($ev['copo_hora']) ?></div>
       </div>

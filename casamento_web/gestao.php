@@ -51,13 +51,21 @@ if ($souAdmin) {
 // Os campos do evento que esta página governa: rótulo, tipo e limite (o mesmo
 // que validarDefinicao aplica, para ninguém se surpreender depois de gravar).
 $CAMPOS_EVENTO = [
-    'evento.hora'          => ['Hora da festa', 'time', 5],
-    'evento.venue_titulo'  => ['Título do momento', 'text', 80],
-    'evento.local'         => ['Local', 'text', 120],
-    'evento.cidade'        => ['Cidade / região', 'text', 80],
-    'evento.maps'          => ['Ligação do Google Maps', 'url', 500],
-    'evento.whatsapp'      => ['WhatsApp de contacto', 'text', 20],
-    'cartao.civil_hora'    => ['Hora da cerimónia civil', 'time', 5],
+    'evento.hora'          => ['Hora da festa', 'time', 5, ''],
+    'evento.venue_titulo'  => ['Título do momento', 'text', 80, ''],
+    'evento.local'         => ['Local da festa', 'text', 120, ''],
+    'evento.cidade'        => ['Cidade / região', 'text', 80, ''],
+    'evento.convidados'    => ['Convidados que espera', 'number', 5, 'Serve de teto na barra do painel.'],
+    'evento.maps'          => ['Ligação do Google Maps', 'url', 500, ''],
+    'evento.whatsapp'      => ['WhatsApp de contacto', 'text', 20, ''],
+];
+// As duas cerimónias, à parte da festa — e opcionais: há casamentos só com uma.
+// Sem hora, a cerimónia simplesmente não se anuncia em lado nenhum.
+$CAMPOS_CERIMONIA = [
+    'evento.civil_hora'      => ['Cerimónia civil · hora', 'time', 5, ''],
+    'evento.civil_local'     => ['Cerimónia civil · local', 'text', 120, ''],
+    'evento.religiosa_hora'  => ['Cerimónia religiosa · hora', 'time', 5, ''],
+    'evento.religiosa_local' => ['Cerimónia religiosa · local', 'text', 120, ''],
 ];
 ?>
 <!DOCTYPE html>
@@ -154,9 +162,23 @@ $CAMPOS_EVENTO = [
       <div class="dica">Onde, a que horas e por onde falar consigo. Estes valores entram no convite
         digital, no cartão impresso e na página de confirmação — não é preciso ir ao editor por causa deles.</div>
       <div class="grelha">
-        <?php foreach ($CAMPOS_EVENTO as $chave => [$rot, $tipo, $lim]):
+        <?php foreach ($CAMPOS_EVENTO as $chave => [$rot, $tipo, $lim, $nota]):
           $id = 'd-' . str_replace('.', '-', $chave); ?>
           <div class="campo<?= $chave === 'evento.maps' ? ' largo' : '' ?>">
+            <label for="<?= $id ?>"><?= escP($rot) ?></label>
+            <input type="<?= $tipo ?>" id="<?= $id ?>" data-chave="<?= escP($chave) ?>"
+                   maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>">
+            <?php if ($nota): ?><div class="dica" style="margin:.25rem 0 0"><?= escP($nota) ?></div><?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <div class="dica" style="margin:1.2rem 0 .6rem"><b>As cerimónias</b>, se as houver —
+        deixe em branco o que não se aplicar. Sem hora, a cerimónia não se anuncia.</div>
+      <div class="grelha">
+        <?php foreach ($CAMPOS_CERIMONIA as $chave => [$rot, $tipo, $lim, $nota]):
+          $id = 'd-' . str_replace('.', '-', $chave); ?>
+          <div class="campo">
             <label for="<?= $id ?>"><?= escP($rot) ?></label>
             <input type="<?= $tipo ?>" id="<?= $id ?>" data-chave="<?= escP($chave) ?>"
                    maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>">
