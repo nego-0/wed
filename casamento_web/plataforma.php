@@ -152,7 +152,9 @@ $CAS = casalInfo(defsAtuais($conn));
             <span><b><?= (int)($n['convites'] ?? 0) ?></b> convites</span>
             <span><b><?= (int)($n['pessoas'] ?? 0) ?></b> pessoas</span>
             <span><b><?= (int)($n['mesas'] ?? 0) ?></b> mesas</span>
-            <?php if (($c['papel'] ?? '') === 'porteiro'): ?><span>o seu papel: porteiro</span><?php endif; ?>
+            <?php if (($c['papel'] ?? '') === 'porteiro'): ?><span>o seu papel: porteiro</span>
+            <?php elseif (($c['papel'] ?? '') === 'plataforma'): ?><span>entra como administração da plataforma</span>
+            <?php endif; ?>
           </div>
         </div>
         <div class="ac">

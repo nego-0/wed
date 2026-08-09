@@ -124,15 +124,7 @@ function podeCorrigir(): bool {
 function casamentosDoUtilizador(mysqli $conn): array {
     global $P;
     $out = [];
-    if (ehAdminPlataforma()) {
-        $r = @$conn->query("SELECT id, nome, estado FROM {$P}casamentos
-                            WHERE estado <> 'arquivado' ORDER BY id");
-        if ($r) while ($x = $r->fetch_assoc()) {
-            $x['papel'] = 'noivos';
-            $out[(int)$x['id']] = $x;
-        }
-        return $out;
-    }
+    // Os casamentos onde esta conta tem lugar por direito próprio.
     $st = @$conn->prepare("SELECT c.id, c.nome, c.estado, a.papel
                            FROM {$P}acessos a JOIN {$P}casamentos c ON c.id = a.casamento_id
                            WHERE a.utilizador_id = ? AND c.estado <> 'arquivado'
@@ -142,6 +134,21 @@ function casamentosDoUtilizador(mysqli $conn): array {
         $st->bind_param('i', $uid); $st->execute();
         $r = $st->get_result();
         while ($x = $r->fetch_assoc()) $out[(int)$x['id']] = $x;
+    }
+    // O admin da plataforma chega a todos — mas como QUEM RESPONDE PELA CASA, e
+    // não como um dos noivos. Chamar-lhe 'noivos' punha-o na equipa do casal,
+    // na lista de quem gere o casamento, como se fosse da família: o sistema
+    // dizia uma coisa que não é verdade, e o casal via lá dentro alguém que
+    // nunca convidou.
+    if (ehAdminPlataforma()) {
+        $r = @$conn->query("SELECT id, nome, estado FROM {$P}casamentos
+                            WHERE estado <> 'arquivado' ORDER BY id");
+        if ($r) while ($x = $r->fetch_assoc()) {
+            if (isset($out[(int)$x['id']])) continue;   // tem lugar próprio: manda esse
+            $x['papel'] = 'plataforma';
+            $out[(int)$x['id']] = $x;
+        }
+        ksort($out);
     }
     // E os que um código de suporte abriu nesta sessão.
     foreach (suporteAcessos() as $id => $v) {
@@ -175,10 +182,18 @@ function abrirCasamento(mysqli $conn, int $casamentoId): bool {
     $p = papelNoCasamento($conn, $casamentoId);
     if ($p === null) return false;
     $_SESSION['casamento_id'] = $casamentoId;
-    // 'noivos' é quem gere a peça — as páginas conhecem-no por 'admin'.
+    // 'noivos' é quem gere a peça — as páginas conhecem-no por 'admin'. O
+    // pessoal da casa entra com os mesmos poderes, mas fica registado que é
+    // ISSO que ele é: as páginas dizem-no, e a equipa do casal não o inclui.
     $_SESSION['papel'] = $p === 'porteiro' ? 'porteiro' : 'admin';
+    $_SESSION['como_plataforma'] = ($p === 'plataforma');
     usarCasamento($casamentoId);
     return true;
+}
+
+/** Está a ver este casamento por ser da casa, e não por ser dele? */
+function entrouComoPlataforma(): bool {
+    return !empty($_SESSION['como_plataforma']);
 }
 
 /**

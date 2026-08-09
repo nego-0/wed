@@ -1,8 +1,11 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_once __DIR__ . '/personalizacao.php';
-// Sem BD no ecrã de entrada: usa os nomes do config (defaults).
-$CAS = casalInfo(defsPadrao());
+// A entrada não é de casamento nenhum.
+//
+// Enquanto houve um casal, pôr o nome dele aqui era acolhedor. Com a casa a
+// servir vários, quem chega para entrar no SEU casamento era recebido pelo
+// nome de outras pessoas — e o porteiro contratado por dois casais nunca sabia
+// em qual estava a entrar. A entrada passou a ser da casa.
 $erro = '';
 
 /**
@@ -41,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['login_falhas'] = $falhas + 1;
         $_SESSION['login_ultima'] = time();
         $restantes = LOGIN_MAX - ($falhas + 1);
-        $erro = 'Nome de utilizador ou palavra-passe incorretos.'
+        $erro = 'Email ou palavra-passe incorretos.'
               . ($restantes > 0 && $restantes <= 2 ? " Restam $restantes tentativa(s)." : '');
     }
 }
@@ -50,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entrar · <?= escP($CAS['casal']) ?></title>
+<title>Entrar · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <style>
@@ -59,8 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .login .card{ padding:2.4rem 2rem; }
   .brasao{ width:70px; height:70px; margin:0 auto 1rem; border:2px solid var(--gold-soft); border-radius:50%;
     display:flex; align-items:center; justify-content:center; color:var(--gold); font-family:var(--serif); font-weight:700; font-size:1.3rem; }
-  .casal{ font-family:var(--script); font-size:2.4rem; color:var(--forest); line-height:1; margin-bottom:.2rem; }
-  .evento{ font-family:var(--serif); font-size:.95rem; color:var(--gold); letter-spacing:2px; text-transform:uppercase; margin-bottom:1.6rem; }
+  .casa{ font-family:var(--serif); font-size:1.75rem; color:var(--forest); line-height:1.15; margin-bottom:.3rem; }
+  .evento{ font-family:var(--sans); font-size:.86rem; color:#8a8f88; margin-bottom:1.6rem; }
   .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:.85rem; margin-bottom:1rem; }
   .dica{ font-size:.78rem; color:#9aa09a; margin-top:1.1rem; }
 </style>
@@ -68,13 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="login">
     <div class="card">
-      <div class="brasao"><?= escP($CAS['mono']) ?></div>
-      <div class="casal"><?= escP($CAS['casal']) ?></div>
-      <div class="evento">Gestão de Convidados</div>
+      <div class="brasao"><?= escP(PLATAFORMA['marca']) ?></div>
+      <div class="casa"><?= escP(PLATAFORMA['nome']) ?></div>
+      <div class="evento"><?= escP(PLATAFORMA['sub']) ?></div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>
       <form method="post">
         <div style="text-align:left; margin-bottom:1rem;">
-          <label for="utilizador">Nome de utilizador</label>
+          <label for="utilizador">Email</label>
           <input type="text" id="utilizador" name="utilizador" autofocus required autocomplete="username" autocapitalize="none" spellcheck="false">
         </div>
         <div style="text-align:left; margin-bottom:1rem;">
@@ -83,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <button class="btn btn-verde" style="width:100%; justify-content:center;" type="submit">Entrar</button>
       </form>
-      <div class="dica">Administração e porta de entrada usam contas distintas.<br>
+      <div class="dica">Entre com o seu email. Depois de entrar, escolhe-se o casamento.<br>
         Ainda não tem conta? <a href="registo.php" style="color:var(--gold)">Inscreva o seu casamento</a>.</div>
     </div>
   </div>

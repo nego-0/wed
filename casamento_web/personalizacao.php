@@ -7,7 +7,8 @@
 require_once __DIR__ . '/config.php';
 
 // ---- Escape utilitário -------------------------------------
-function escP($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+// escP() mudou-se para config.php: é um utilitário de escrita, e páginas que
+// não têm convite nenhum (a entrada, a inscrição) também precisam dele.
 
 /**
  * Texto do editor -> HTML seguro: escapa tudo, aplica mini-markdown

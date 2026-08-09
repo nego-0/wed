@@ -104,6 +104,39 @@ const entrar = async (ctx, user, pass) => {
   ok(/A trabalhar em/.test(cab) && cab.includes('ZZ Casamento A ' + marca),
      'o cabeçalho nomeia o casamento aberto, para não se editar o casal errado');
 
+  // ---------- a entrada não é de casamento nenhum ----------
+  const porta = await (await b.newContext()).newPage();
+  await porta.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  const txtLogin = await porta.locator('body').innerText();
+  const tituloLogin = await porta.title();
+  console.log('   entrada:', txtLogin.replace(/\s+/g, ' ').slice(0, 80), '| título:', tituloLogin);
+  ok(!/Isabel|Abednego/.test(txtLogin + tituloLogin),
+     'a página de entrada não mostra o nome de casal nenhum');
+  ok(txtLogin.includes('Gestão de Convidados'), 'mostra a casa, que é de quem lá chega');
+  await porta.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
+  ok(!/Isabel|Abednego/.test(await porta.locator('body').innerText()),
+     'e a inscrição também não');
+
+  // ---------- o admin não é nenhum dos casais ----------
+  // Entra em qualquer casamento porque responde pela casa. Isso não faz dele
+  // um dos noivos, e o sistema tem de dizer a diferença.
+  await api('casamento_abrir&id=' + casB.id);
+  await admin.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+  const tira = await admin.locator('.tira-suporte').innerText().catch(() => '');
+  console.log('   tira no casamento alheio:', tira.replace(/\s+/g, ' ').slice(0, 90));
+  ok(/administração da plataforma/.test(tira),
+     'o admin, em casa alheia, é avisado de que não está na sua');
+
+  const equipaB = await api('acesso_lista');
+  const emailsB = (equipaB.acessos || []).map(a => a.email);
+  console.log('   equipa do casamento alheio:', JSON.stringify(emailsB));
+  ok(!emailsB.includes('admin@local'),
+     'e não aparece na equipa desse casamento, porque não é dela');
+
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  ok((await admin.locator('body').innerText()).includes('administração da plataforma'),
+     'a lista de casamentos diz com que título ele lá entra');
+
   // ---------- limpeza ----------
   // Primeiro os casamentos (que levam com eles os lugares), e só depois a
   // conta — que a esta altura já não pertence a casamento nenhum. Sem isto,

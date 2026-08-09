@@ -12,17 +12,15 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
-require_once __DIR__ . '/personalizacao.php';
 
 // Quem já entrou não tem nada a fazer aqui.
 if (podeEntrar()) { header('Location: index.php'); exit; }
-$CAS = casalInfo(defsPadrao());
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inscrever o nosso casamento</title>
+<title>Inscrever o nosso casamento · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <style>
@@ -47,7 +45,7 @@ $CAS = casalInfo(defsPadrao());
 <body>
   <div class="reg">
     <div class="card" id="formulario">
-      <div class="brasao">&#10047;</div>
+      <div class="brasao"><?= escP(PLATAFORMA['marca']) ?></div>
       <div class="tit">Inscrever o nosso casamento</div>
       <div class="sub">Deixe aqui os vossos nomes e uma conta de acesso.<br>
         A inscrição é revista por quem gere a plataforma antes de abrir.</div>

@@ -41,6 +41,19 @@ const EVENTO = [
     'whatsapp'  => '244000000000',                // AJUSTE: nº WhatsApp p/ contacto (formato internacional, só dígitos)
 ];
 
+/** Escapa texto para HTML. Usado em todas as páginas, tenham convite ou não. */
+function escP($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+
+// ---- A plataforma, que não é de casal nenhum ----------------
+// A casa serve vários casamentos. Há sítios que são de todos e de nenhum — a
+// entrada, a inscrição — e onde mostrar o nome de um casal era mostrar o de
+// outras pessoas a quem lá chega. Estes são os nomes da CASA.
+const PLATAFORMA = [
+    'nome'  => 'Gestão de Convidados',
+    'sub'   => 'Convites, mesas e entradas do seu casamento',
+    'marca' => '✦',
+];
+
 // ---- Base de dados -----------------------------------------
 // Os dados reais de ligação vêm de config.local.php ('db').
 // O default abaixo serve apenas para desenvolvimento local (XAMPP/Wamp).

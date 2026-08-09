@@ -70,6 +70,18 @@ não os confundir:
 | Na plataforma | `admin` | vê todos os casamentos, aprova inscrições, gere contas |
 | Na plataforma | `suporte` | **nada, por direito próprio** — só entra com um código que o casal lhe der |
 
+**O admin não é nenhum dos casais.** Entra em qualquer casamento porque
+responde pela casa, e o sistema di-lo em vez de o disfarçar: nos casamentos
+onde não tem lugar próprio o seu papel é `plataforma`, não aparece na equipa do
+casal, a lista de casamentos diz com que título lá entra, e uma tira no
+cabeçalho lembra-o de que está na festa de outras pessoas. Se alguém lhe der um
+lugar de verdade num casamento (uma linha em `cw_acessos`), é esse que manda —
+o que é verdade continua a ser dito.
+
+**A entrada não é de casamento nenhum.** `login.php` e `registo.php` mostram a
+casa (`PLATAFORMA`, em `config.php`), e não um casal: com vários casamentos,
+quem chegava para entrar no seu era recebido pelo nome de outras pessoas.
+
 **A ficha manda nas peças.** Os nomes e a data que o casal deu ao inscrever-se
 (ou que o admin escreveu ao criar o casamento) vivem em `cw_casamentos` e
 entram como **valor de origem** de `defsPadrao()` — não como definições

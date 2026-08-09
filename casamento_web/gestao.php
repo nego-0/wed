@@ -282,11 +282,16 @@ async function carregarAcessos(){
       <button class="btn btn-sm" onclick="trocarPapel(${a.utilizador_id}, '${a.papel === 'noivos' ? 'porteiro' : 'noivos'}')">
         Passar a ${a.papel === 'noivos' ? 'porteiro' : 'noivos'}</button>
       <button class="btn btn-sm" onclick="tirar(${a.utilizador_id}, '${esc(nome)}')">Tirar</button>`;
+    // Quem é da casa entra em qualquer casamento por responder pela plataforma.
+    // Se também tem lugar aqui, aparece — mas dito pelo que é, e não como se
+    // fosse do casal.
+    const daCasa = a.papel_plataforma
+      ? `<span class="et">${esc(a.papel_plataforma)} da plataforma</span>` : '';
     return `<div class="linha">
       <div class="selo">${esc(nome.slice(0,1).toUpperCase())}</div>
       <div>
         <div class="nm">${esc(nome)} ${eu ? '<span class="et">é você</span>' : ''}
-          <span class="et ${esc(a.estado)}">${esc(a.estado)}</span></div>
+          <span class="et ${esc(a.estado)}">${esc(a.estado)}</span> ${daCasa}</div>
         <div class="mt">${esc(a.email)} · ${a.papel === 'noivos' ? 'gere o casamento' : 'só a porta'}
           ${a.ultimo_acesso ? '· último acesso ' + esc(a.ultimo_acesso.slice(0,10)) : '· nunca entrou'}</div>
       </div>

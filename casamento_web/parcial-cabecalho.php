@@ -83,12 +83,34 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
  * partilhado. Eram precisamente as que ficavam sem aviso nenhum.
  */
 function tiraSuporte(bool $noPrint = false): void {
-    if (!function_exists('emVisitaDeSuporte') || !emVisitaDeSuporte()) return;
+    if (!function_exists('emVisitaDeSuporte')) return;
+    $visita = emVisitaDeSuporte();
+    $daCasa = function_exists('entrouComoPlataforma') && entrouComoPlataforma();
+    if (!$visita && !$daCasa) return;
     static $jaSaiu = false;
     if ($jaSaiu) return;                 // uma página, uma tira
     $jaSaiu = true;
+    $semPapel = $noPrint ? ' no-print' : '';
+
+    // O admin da plataforma não é nenhum dos casais. Entra em qualquer
+    // casamento porque responde pela casa — e essa diferença tem de estar à
+    // vista, senão passa a tarde a mexer na festa de um casal convencido de
+    // que está na sua própria conta.
+    if (!$visita): ?>
+<div class="tira-suporte<?= $semPapel ?>">
+  Está a ver este casamento como <b>administração da plataforma</b>, e não como os noivos.
+  Tudo o que fizer aqui é na festa deles.
+  <a href="plataforma.php">ver os casamentos</a>
+</div>
+<style>
+  .tira-suporte{ background:var(--warn-bg); border-bottom:1px solid var(--warn); color:var(--ink);
+                 text-align:center; padding:.45rem .8rem; font-size:.82rem; }
+  .tira-suporte a{ color:inherit; }
+  @media print{ .tira-suporte{ display:none !important; } }
+</style>
+<?php return; endif;
+
     $podeMexer = podeCorrigir();
-    $semPapel  = $noPrint ? ' no-print' : '';
 
     if (!$podeMexer):
         // O ecrã em modo de leitura. Vai com 'defer' para correr depois de

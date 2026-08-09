@@ -1118,7 +1118,8 @@ function mandaNosAcessos(int $cid): bool {
 if ($acao === 'acesso_lista') {
     exigirAdminApi();
     $cid = casamentoAtual();
-    $st = $conn->prepare("SELECT a.utilizador_id, a.papel, u.email, u.nome, u.estado, u.ultimo_acesso
+    $st = $conn->prepare("SELECT a.utilizador_id, a.papel, u.email, u.nome, u.estado, u.ultimo_acesso,
+                                 u.papel_plataforma
                           FROM {$P}acessos a JOIN {$P}utilizadores u ON u.id = a.utilizador_id
                           WHERE a.casamento_id = ? ORDER BY a.papel, u.nome, u.email");
     $st->bind_param('i', $cid); $st->execute();
