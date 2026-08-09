@@ -150,7 +150,11 @@ const entrar = async (ctx, user, pass) => {
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1');
-  for (const id of [casA.id, casB.id]) await api('casamento_apagar&id=' + id);
+  for (const id of [casA.id, casB.id]) {
+    // Apagar exige arquivar antes — o mesmo caminho que a página faz.
+    await api('casamento_estado&id=' + id + '&estado=arquivado');
+    await api('casamento_apagar&id=' + id);
+  }
 
   console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
   await b.close(); process.exit(f ? 1 : 0);

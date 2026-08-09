@@ -1374,34 +1374,57 @@ if ($acao === 'casamento_estado') {
         $st->bind_param('i', $id);
         if ($st->execute()) $contas = $conn->affected_rows;
     }
+    // Arquivar o casamento que está aberto tem de o fechar: senão a sessão
+    // continuava a trabalhar dentro de uma casa que já saiu das listas.
+    if ($novo === 'arquivado' && (int)($_SESSION['casamento_id'] ?? 0) === $id) {
+        $_SESSION['casamento_id'] = 0;
+        $_SESSION['papel'] = null;
+    }
     registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas conta(s) ativada(s)" : ''));
     ok(['id' => $id, 'estado' => $novo, 'contas_ativadas' => $contas]);
 }
 
 if ($acao === 'casamento_apagar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga casamentos.');
-    // Apaga um casamento e tudo o que é dele. O nº 1 não se apaga: é o que
-    // existia antes de haver vários, e apagá-lo por engano levava tudo.
+    // Apaga um casamento e TUDO o que é dele. Não se desfaz, e por isso pede-se
+    // um passo antes: só se apaga o que já está arquivado.
+    //
+    // A trava antiga era o número — "o nº1 não se apaga" —, o que protegia um
+    // casamento por acaso de ter sido o primeiro e deixava todos os outros à
+    // mão de um clique. Arquivar primeiro protege-os a todos, e pela razão
+    // certa: um casamento arquivado já saiu das listas de trabalho, já ninguém
+    // o está a usar, e apagá-lo é uma segunda decisão e não a mesma.
     $id = (int)($_GET['id'] ?? 0);
-    if ($id <= 1) erro('Este casamento não pode ser apagado.');
-    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, estado FROM {$P}casamentos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) erro('Casamento não encontrado.');
-    // Pela ordem certa: os convidados dependem dos convites.
-    foreach (['convidados','convites','mesas','versoes','registo','definicoes'] as $t) {
-        $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
-        $st->bind_param('i', $id); @$st->execute();
+    if ($c['estado'] !== 'arquivado') {
+        erro('Só se apaga um casamento arquivado. Arquive-o primeiro — e leve os dados, '
+           . 'se ainda os quiser.');
     }
-    foreach (['acessos', 'suporte_codigos'] as $t) {
+    // O que se vai levar, para o dizer depois: apagar em silêncio um casamento
+    // com 200 convidados lá dentro não é resposta para quem carregou no botão.
+    $levou = [];
+    foreach (['convites' => 'convites', 'convidados' => 'pessoas', 'mesas' => 'mesas'] as $tab => $rot) {
+        $r = @$conn->query("SELECT COUNT(*) n FROM {$P}$tab WHERE casamento_id=" . $id);
+        $levou[$rot] = $r ? (int)$r->fetch_assoc()['n'] : 0;
+    }
+    // Pela ordem certa: os convidados dependem dos convites.
+    foreach (['convidados','convites','mesas','versoes','registo','definicoes',
+              'acessos','suporte_codigos'] as $t) {
         $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
         $st->bind_param('i', $id); @$st->execute();
     }
     $st = $conn->prepare("DELETE FROM {$P}casamentos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
-    if ((int)($_SESSION['casamento_id'] ?? 0) === $id) unset($_SESSION['casamento_id']);
-    registar($conn, 'casamento_apagado', $c['nome'], 'id ' . $id);
-    ok(['id' => $id]);
+    if ((int)($_SESSION['casamento_id'] ?? 0) === $id) {
+        $_SESSION['casamento_id'] = 0;
+        $_SESSION['papel'] = null;
+    }
+    registar($conn, 'casamento_apagado', $c['nome'],
+             $levou['convites'] . ' convites · ' . $levou['pessoas'] . ' pessoas');
+    ok(['id' => $id, 'nome' => $c['nome'], 'levou' => $levou]);
 }
 
 if ($acao === 'esquema_info') {
@@ -1726,6 +1749,14 @@ if ($acao === 'dados_exportar') {
         if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva a casa inteira.');
         $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
         if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
+    } elseif (!empty($_GET['id'])) {
+        // Um casamento em concreto. Só o admin da casa, e serve sobretudo para
+        // os arquivados: esses não se podem abrir, e sem isto "levar os dados"
+        // de um arquivado levava, calado, os do casamento que estivesse aberto.
+        if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva os dados de outro casamento.');
+        $ids = [(int)$_GET['id']];
+        $r = @$conn->query("SELECT id FROM {$P}casamentos WHERE id=" . $ids[0]);
+        if (!$r || !$r->num_rows) erro('Casamento não encontrado.');
     } else {
         exigirAdminApi();
         $ids = [casamentoAtual()];

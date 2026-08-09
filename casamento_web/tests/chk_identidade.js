@@ -154,7 +154,11 @@ const entrar = async (ctx, u, p) => {
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1');
-  for (const id of [cas.id, outro.id]) await api('casamento_apagar&id=' + id);
+  for (const id of [cas.id, outro.id]) {
+    // Apagar exige arquivar antes — o mesmo caminho que a página faz.
+    await api('casamento_estado&id=' + id + '&estado=arquivado');
+    await api('casamento_apagar&id=' + id);
+  }
   await admin.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   ok((await admin.locator('.topo').innerText()).includes('Isabel'),
      'e o casamento de sempre continua a ser o que era');

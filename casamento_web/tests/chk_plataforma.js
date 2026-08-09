@@ -79,6 +79,7 @@ const entrar = async (ctx, user, pass) => {
   const criaSemCasa = await recem._api('casamento_criar', { nome: 'ZZ Sem casa ' + marca });
   ok(criaSemCasa && criaSemCasa.success,
      'e, sem casamento aberto, ainda cria casamentos — que é como abre o primeiro');
+  await api('casamento_estado&id=' + criaSemCasa.id + '&estado=arquivado');
   await api('casamento_apagar&id=' + criaSemCasa.id);
 
   // ---------- os noivos de A: só o que é deles ----------
@@ -167,6 +168,48 @@ const entrar = async (ctx, user, pass) => {
   ok((await admin.locator('body').innerText()).includes('administração da plataforma'),
      'a lista de casamentos diz com que título ele lá entra');
 
+  // ---------- arquivar, reabrir, apagar ----------
+  const alvo = await api('casamento_criar', { nome: 'ZZ A arquivar ' + marca, noiva: 'Zita', noivo: 'Zé' });
+  await api('casamento_abrir&id=' + alvo.id);
+  await api('convite_save', { nome_exibicao: 'ZZ Convidado do arquivo', tipo: 'digital',
+                              lado: 'ambos', membros: ['Alguém'] });
+
+  // Apagar sem arquivar é recusado — é a trava que substitui o "o nº1 não se apaga".
+  const cedo = await api('casamento_apagar&id=' + alvo.id);
+  console.log('   apagar sem arquivar:', JSON.stringify(cedo));
+  ok(cedo && cedo.success === false, 'não se apaga um casamento que ainda está de pé');
+
+  const arq = await api('casamento_estado&id=' + alvo.id + '&estado=arquivado');
+  ok(arq && arq.success, 'arquiva-se');
+  ok((await api('casamento_abrir&id=' + alvo.id)).success === false,
+     'e um casamento arquivado já não se abre');
+
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  const txtArq = await admin.locator('body').innerText();
+  ok(/Arquivados/.test(txtArq) && txtArq.includes('ZZ A arquivar ' + marca),
+     'aparece na secção dos arquivados — arquivar não é perder de vista');
+
+  // Os dados de um arquivado ainda se podem levar: é para isso que ele lá está.
+  const dadosArq = await admin.evaluate(async (id) =>
+    (await fetch('api.php?action=dados_exportar&ambito=casamento&id=' + id)).json(), alvo.id);
+  ok(dadosArq && dadosArq.casamentos && dadosArq.casamentos[0].ficha.noiva === 'Zita',
+     'e os seus dados ainda se levam, pelo número, sem o abrir');
+
+  // Reabrir devolve-o inteiro.
+  await api('casamento_estado&id=' + alvo.id + '&estado=ativo');
+  const reaberto = await api('casamento_abrir&id=' + alvo.id);
+  ok(reaberto && reaberto.success, 'reabrir devolve-o');
+  ok((await api('convite_list')).convites.length === 1, 'com o que lá estava dentro');
+
+  // E apagar, depois de arquivar, leva tudo — e diz o que levou.
+  await api('casamento_abrir&id=1');
+  await api('casamento_estado&id=' + alvo.id + '&estado=arquivado');
+  const morto = await api('casamento_apagar&id=' + alvo.id);
+  console.log('   apagado:', JSON.stringify(morto));
+  ok(morto && morto.success && morto.levou && morto.levou.convites === 1,
+     'apagar um arquivado leva tudo, e diz quantos convites e pessoas levou');
+  ok((await api('casamento_abrir&id=' + alvo.id)).success === false, 'e o casamento deixa de existir');
+
   // ---------- nem no casamento nº1, que ele herdou ----------
   // O 'admin' do config.local.php ficou, na migração, com um lugar de noivos no
   // casamento nº1 — nesse mundo de um casamento só, ele era o casal. Com vários,
@@ -195,7 +238,11 @@ const entrar = async (ctx, user, pass) => {
   // conta — que a esta altura já não pertence a casamento nenhum. Sem isto,
   // cada corrida deixava mais uma conta de mentira na base.
   await api('casamento_abrir&id=1');
-  for (const id of [casA.id, casB.id, pend.id]) await api('casamento_apagar&id=' + id);
+  for (const id of [casA.id, casB.id, pend.id]) {
+    // Apagar exige arquivar antes — o mesmo caminho que a página faz.
+    await api('casamento_estado&id=' + id + '&estado=arquivado');
+    await api('casamento_apagar&id=' + id);
+  }
   const limpaConta = await api('utilizador_apagar&id=' + contaA.id);
   ok(limpaConta && limpaConta.success, 'a conta de prova, já sem casamento, apaga-se');
 

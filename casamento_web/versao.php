@@ -103,6 +103,8 @@ function correcoesEsperadas(): array {
          'api.php', 'function retratoCasamento('],
         ['Importação da lista antiga ("guests") removida',
          'api.php', 'dados_importar'],
+        ['Arquivar, reabrir e apagar casamentos (apagar só depois de arquivar)',
+         'plataforma.php', 'function apagar('],
     ];
 }
 

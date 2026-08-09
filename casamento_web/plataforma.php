@@ -101,6 +101,16 @@ if ($daCasa) {
     if ($r && ($x = $r->fetch_assoc())) $G['proximo'] = $x;
 }
 
+// Os arquivados saem de casamentosDoUtilizador() — é o que arquivar quer dizer.
+// Mas alguém tem de os poder ver, senão arquivar era perdê-los: ficavam na base
+// sem porta por onde voltar.
+$arquivados = [];
+if (ehAdminPlataforma()) {
+    $r = @$conn->query("SELECT id, nome, data_evento FROM {$P}casamentos
+                        WHERE estado='arquivado' ORDER BY nome");
+    if ($r) $arquivados = $r->fetch_all(MYSQLI_ASSOC);
+}
+
 // Registos à espera de aprovação (só o admin da plataforma os despacha).
 $pendentes = [];
 if (ehAdminPlataforma()) {
@@ -285,10 +295,49 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <?php else: ?>
             <button class="btn btn-sm" onclick="abrir(<?= (int)$id ?>)">Abrir</button>
           <?php endif; ?>
+          <?php if ($mandaNaCasa): ?>
+            <?php if (($c['estado'] ?? '') === 'suspenso'): ?>
+              <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'ativo','<?= escP($c['nome']) ?>')">Reativar</button>
+            <?php else: ?>
+              <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'suspenso','<?= escP($c['nome']) ?>')">Suspender</button>
+            <?php endif; ?>
+            <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'arquivado','<?= escP($c['nome']) ?>')">Arquivar</button>
+          <?php endif; ?>
         </div>
       </div>
     <?php endforeach; ?>
   </div>
+
+  <?php if ($arquivados): ?>
+    <div class="painel" style="margin-top:1.4rem">
+      <h3>Arquivados</h3>
+      <div class="dica">Fora das listas de trabalho, mas inteiros: nada se perdeu.
+        Reabrir devolve-os como estavam. <b>Apagar</b> é a única coisa aqui que não se desfaz —
+        e por isso só se pode fazer depois de arquivar.</div>
+      <div class="cas-lista">
+        <?php foreach ($arquivados as $a): ?>
+          <div class="cas">
+            <div class="selo"><?= escP(mb_strtoupper(mb_substr($a['nome'], 0, 1))) ?></div>
+            <div>
+              <div class="nm"><?= escP($a['nome']) ?> <span class="et">arquivado</span></div>
+              <div class="meta">
+                <span><b><?= (int)($conta[(int)$a['id']]['convites'] ?? 0) ?></b> convites</span>
+                <span><b><?= (int)($conta[(int)$a['id']]['pessoas'] ?? 0) ?></b> pessoas</span>
+                <?php if (!empty($a['data_evento'])): ?>
+                  <span><?= escP(date('d/m/Y', strtotime($a['data_evento']))) ?></span>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="ac">
+              <a class="btn btn-sm" href="api.php?action=dados_exportar&amp;ambito=casamento&amp;id=<?= (int)$a['id'] ?>">Levar os dados</a>
+              <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$a['id'] ?>,'ativo','<?= escP($a['nome']) ?>')">Reabrir</button>
+              <button class="btn btn-sm" onclick="apagar(<?= (int)$a['id'] ?>,'<?= escP($a['nome']) ?>')">Apagar</button>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endif; ?>
 
   <?php if (ehAdminPlataforma()): ?>
     <div class="painel" style="margin-top:1.4rem">
@@ -373,6 +422,34 @@ async function entrarComCodigo(){
   if (!codigo) return toast('Escreva o código que o casal lhe deu.', true);
   const d = await api('suporte_entrar', { method:'POST', body: JSON.stringify({ codigo }) });
   if (d && d.success) location.href = 'index.php';
+}
+
+// ---------- arquivar, reabrir, apagar ----------
+const AVISO_ESTADO = {
+  arquivado: 'Arquivar «%s»?\n\nSai das listas de trabalho e o casal deixa de lá entrar. '
+           + 'Nada se apaga — reabre-se quando quiser.',
+  suspenso:  'Suspender «%s»?\n\nO casal deixa de entrar, e os convites deixam de abrir '
+           + 'para os convidados. Nada se apaga.',
+  ativo:     'Reabrir «%s»?\n\nVolta às listas e o casal volta a entrar.',
+};
+async function mudarEstado(id, estado, nome){
+  if (!confirm(AVISO_ESTADO[estado].replace('%s', nome))) return;
+  const d = await api('casamento_estado&id=' + id + '&estado=' + estado, { method:'POST' });
+  if (d && d.success) location.reload();
+}
+async function apagar(id, nome){
+  // Escrever o nome, e não só carregar em "OK": é a única coisa aqui que não
+  // se desfaz, e um clique distraído não deve chegar para a fazer.
+  const escrito = prompt('Apagar «' + nome + '» DE VEZ?\n\n'
+    + 'Vão-se os convites, as pessoas, as mesas, o desenho e o histórico. Não se desfaz.\n'
+    + 'Se ainda quiser os dados, cancele e use «Levar os dados» primeiro.\n\n'
+    + 'Para confirmar, escreva o nome do casamento:');
+  if (escrito === null) return;
+  if (escrito.trim() !== nome.trim()) return toast('O nome não confere. Nada foi apagado.', true);
+  const d = await api('casamento_apagar&id=' + id, { method:'POST' });
+  if (!d || !d.success) return;
+  toast('Apagado: ' + (d.levou ? `${d.levou.convites} convite(s), ${d.levou.pessoas} pessoa(s).` : ''));
+  setTimeout(() => location.reload(), 1500);
 }
 
 // ---------- trazer casamentos de um ficheiro ----------

@@ -134,6 +134,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     if (m.nome === 'Mesa Partilhada') await api('mesa_delete&id=' + m.id, {});
   }
   await api('defs_save', { defs: { 'textos.kicker': '' } });
+  await api('casamento_estado&id=' + id2 + '&estado=arquivado', {});
   await api('casamento_apagar&id=' + id2, {});
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');

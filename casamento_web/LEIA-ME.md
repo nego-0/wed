@@ -95,6 +95,17 @@ abrir-lhe o primeiro da lista era pô-lo dentro da festa de um casal ao acaso,
 com poderes de gestão e sem ter pedido nada. Escolhe um na lista, e o menu das
 páginas do casamento só aparece depois disso.
 
+**Arquivar e apagar.** Na Administração, cada casamento pode ser **suspenso**
+(o casal deixa de entrar e os convites deixam de abrir para os convidados),
+**arquivado** (sai das listas de trabalho, inteiro) ou **apagado**. Apagar só é
+possível depois de arquivar: a trava antiga era o número — *"o nº 1 não se
+apaga"* —, o que protegia um casamento por acaso de ter sido o primeiro e
+deixava todos os outros à mão de um clique. Arquivar primeiro protege-os a
+todos, e pela razão certa. Os arquivados têm secção própria, com **reabrir**,
+**apagar** e **levar os dados** — arquivar não é perder de vista. Apagar pede
+que se escreva o nome do casamento, e diz depois quantos convites e pessoas
+levou.
+
 **Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
 casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho
 dos convites, as mesas, os convites e as pessoas — e traz-se de volta por ali
