@@ -260,6 +260,15 @@ function autenticar(string $utilizador, string $senha): ?string {
     // dê), e antes ficava com 'admin' e sem casamento aberto: casamentoAtual()
     // respondia 1 por omissão e a pessoa aterrava, com poderes de gestão, na
     // casa do primeiro casal do sistema.
+    // O pessoal da casa não aterra na festa de ninguém. Chega a todos os
+    // casamentos, mas nenhum é o "seu": abrir-lhe o primeiro da lista punha-o
+    // dentro do casamento de um casal ao acaso, com poderes de gestão e sem ter
+    // pedido nada. Vai para a página dos casamentos, e escolhe.
+    if (ehPessoalPlataforma()) {
+        $_SESSION['casamento_id'] = 0;
+        $_SESSION['papel'] = null;
+        return 'plataforma';
+    }
     $lista = casamentosDoUtilizador($conn);
     if ($lista) {
         abrirCasamento($conn, (int)array_key_first($lista));
@@ -290,10 +299,26 @@ suporteAcessos();
 
 /** Exige admin; caso contrário redireciona para o login. */
 function exigirAdmin(): void {
-    if (!ehAdmin()) { header('Location: login.php?r=' . urlencode($_SERVER['REQUEST_URI'] ?? 'index.php')); exit; }
+    if (ehAdmin()) return;
+    header('Location: ' . portaFechada('index.php')); exit;
 }
 
 /** Exige admin ou porteiro. */
 function exigirPorta(): void {
-    if (!podeEntrar()) { header('Location: login.php?r=' . urlencode($_SERVER['REQUEST_URI'] ?? 'porteiro.php')); exit; }
+    if (podeEntrar()) return;
+    header('Location: ' . portaFechada('porteiro.php')); exit;
+}
+
+/**
+ * Para onde mandar quem não pode ver esta página.
+ *
+ * Quem não tem sessão vai para a entrada, e volta aqui depois. Mas quem TEM
+ * sessão e só não escolheu casamento nenhum — o pessoal da casa, acabado de
+ * entrar — não pode ir para o login: já lá esteve, e ver o ecrã de entrada
+ * outra vez parece uma sessão que caiu. Vai escolher um casamento, que é o que
+ * lhe falta.
+ */
+function portaFechada(string $omissao): string {
+    if (utilizadorId() && casamentoAtual() <= 0) return 'plataforma.php';
+    return 'login.php?r=' . urlencode($_SERVER['REQUEST_URI'] ?? $omissao);
 }

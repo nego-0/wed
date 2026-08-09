@@ -41,6 +41,66 @@ $r = @$conn->query("SELECT c.id FROM {$P}casamentos c
                     WHERE c.estado <> 'arquivado' GROUP BY c.id HAVING COUNT(a.id) = 0");
 if ($r) while ($x = $r->fetch_assoc()) $semDono[(int)$x['id']] = true;
 
+// ---- Estatísticas de toda a casa (só para quem responde por ela) ----------
+// Esta é a página onde o pessoal da plataforma aterra ao entrar. Aterrar numa
+// lista de nomes não diz nada sobre o estado do sistema: quantos casamentos
+// estão de pé, quanta gente lá dentro, o que está à espera de alguém.
+//
+// As consultas atravessam casamentos de propósito e dizem-no ('casamento_id > 0'),
+// que é o que o guarda de âmbito exige para as deixar passar.
+$G = null;
+if ($daCasa) {
+    $G = ['casamentos'=>0, 'ativos'=>0, 'pendentes'=>0, 'suspensos'=>0,
+          'convites'=>0, 'pessoas'=>0, 'confirmadas'=>0, 'presentes'=>0,
+          'contas'=>0, 'contas_ativas'=>0, 'contas_espera'=>0, 'contas_suspensas'=>0,
+          'codigos'=>0, 'sem_dono'=>count($semDono), 'proximo'=>null];
+
+    $r = @$conn->query("SELECT estado, COUNT(*) n FROM {$P}casamentos GROUP BY estado");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $G['casamentos'] += (int)$x['n'];
+        if ($x['estado'] === 'ativo')    $G['ativos']    = (int)$x['n'];
+        if ($x['estado'] === 'pendente') $G['pendentes'] = (int)$x['n'];
+        if ($x['estado'] === 'suspenso') $G['suspensos'] = (int)$x['n'];
+    }
+
+    $vivos = soVivos($conn, 'c');
+    $r = @$conn->query("SELECT COUNT(*) n FROM {$P}convites c WHERE c.casamento_id > 0 AND $vivos");
+    if ($r) $G['convites'] = (int)$r->fetch_assoc()['n'];
+
+    $r = @$conn->query("SELECT COUNT(*) tot,
+                               SUM(CASE WHEN g.rsvp='confirmado' THEN 1 ELSE 0 END) conf,
+                               COALESCE(SUM(g.presente),0) pres
+                        FROM {$P}convidados g
+                        JOIN {$P}convites c ON c.id = g.convite_id AND c.casamento_id = g.casamento_id
+                        WHERE g.casamento_id > 0 AND $vivos");
+    if ($r && ($x = $r->fetch_assoc())) {
+        $G['pessoas']     = (int)$x['tot'];
+        $G['confirmadas'] = (int)$x['conf'];
+        $G['presentes']   = (int)$x['pres'];
+    }
+
+    $r = @$conn->query("SELECT estado, COUNT(*) n FROM {$P}utilizadores GROUP BY estado");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $G['contas'] += (int)$x['n'];
+        if ($x['estado'] === 'ativo')    $G['contas_ativas']    = (int)$x['n'];
+        if ($x['estado'] === 'pendente') $G['contas_espera']    = (int)$x['n'];
+        if ($x['estado'] === 'suspenso') $G['contas_suspensas'] = (int)$x['n'];
+    }
+
+    // Portas abertas ao suporte, neste momento. É o número que um administrador
+    // deve poder ver de relance: cada um destes é alguém de fora com acesso a
+    // uma festa que não é sua.
+    $r = @$conn->query("SELECT COUNT(*) n FROM {$P}suporte_codigos
+                        WHERE casamento_id > 0 AND revogado_em IS NULL
+                          AND (expira_em IS NULL OR expira_em > NOW())");
+    if ($r) $G['codigos'] = (int)$r->fetch_assoc()['n'];
+
+    $r = @$conn->query("SELECT nome, data_evento FROM {$P}casamentos
+                        WHERE estado='ativo' AND data_evento >= CURDATE()
+                        ORDER BY data_evento LIMIT 1");
+    if ($r && ($x = $r->fetch_assoc())) $G['proximo'] = $x;
+}
+
 // Registos à espera de aprovação (só o admin da plataforma os despacha).
 $pendentes = [];
 if (ehAdminPlataforma()) {
@@ -49,7 +109,11 @@ if (ehAdminPlataforma()) {
     if ($r) $pendentes = $r->fetch_all(MYSQLI_ASSOC);
 }
 
-$CAS = casalInfo(defsAtuais($conn));
+// Sem casamento aberto não há casal a nomear — e ler as definições do
+// casamento 0 devolvia o casal de origem do config.php, que não é de ninguém
+// aqui. O cabeçalho, nesse caso, veste-se da casa.
+$CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
+                   : ['mono'=>PLATAFORMA['marca'], 'casal'=>PLATAFORMA['nome'], 'noiva'=>'', 'noivo'=>''];
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -81,6 +145,19 @@ $CAS = casalInfo(defsAtuais($conn));
   .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
   .falta{ color:var(--warn); font-weight:500; }
+  .numeros{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+            gap:.7rem; margin-bottom:.8rem; }
+  .numeros .n{ background:#fff; border:1px solid var(--line); border-radius:12px;
+               padding:.85rem 1rem; }
+  .numeros .n b{ display:block; font-family:var(--serif); font-size:1.9rem; line-height:1;
+                 color:var(--forest); }
+  .numeros .n span{ display:block; font-size:.76rem; text-transform:uppercase;
+                    letter-spacing:.05em; color:#8a8f88; margin-top:.35rem; }
+  .numeros .n em{ display:block; font-style:normal; font-size:.76rem; color:#a2a8a2; margin-top:.2rem; }
+  .numeros .n.alerta{ border-color:var(--gold-soft); background:var(--gold-pale); }
+  .numeros .n.alerta b{ color:var(--gold); }
+  .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.84rem; color:#8a8f88;
+               margin-bottom:1.4rem; padding:0 .2rem; }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
             padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
   .lf{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.7rem; align-items:end; }
@@ -88,9 +165,41 @@ $CAS = casalInfo(defsAtuais($conn));
 </style>
 </head>
 <body>
-<?php cabecalho('Casamentos', $daCasa ? 'Todos os casamentos que o sistema serve' : 'Os casamentos a que tem acesso', 'plataforma'); ?>
+<?php cabecalho($daCasa ? 'Administração' : 'Casamentos',
+                $daCasa ? 'O estado do sistema e os casamentos que ele serve'
+                        : 'Os casamentos a que tem acesso', 'plataforma'); ?>
 
 <main class="container">
+
+  <?php if ($G): ?>
+    <div class="numeros">
+      <div class="n"><b><?= $G['ativos'] ?></b><span>casamentos ativos</span>
+        <?php if ($G['pendentes']): ?><em><?= $G['pendentes'] ?> à espera</em><?php endif; ?></div>
+      <div class="n"><b><?= $G['convites'] ?></b><span>convites</span>
+        <em>em toda a casa</em></div>
+      <div class="n"><b><?= $G['pessoas'] ?></b><span>pessoas convidadas</span>
+        <em><?= $G['confirmadas'] ?> confirmaram</em></div>
+      <div class="n"><b><?= $G['presentes'] ?></b><span>entradas registadas</span>
+        <em>desde sempre</em></div>
+      <div class="n"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
+        <em><?= $G['contas_espera'] ?> por aprovar · <?= $G['contas_suspensas'] ?> suspensas</em></div>
+      <div class="n<?= $G['codigos'] ? ' alerta' : '' ?>"><b><?= $G['codigos'] ?></b>
+        <span>códigos de suporte de pé</span>
+        <em><?= $G['codigos'] ? 'acesso de fora, agora' : 'nenhuma porta aberta' ?></em></div>
+    </div>
+    <div class="linha-info">
+      <?php if ($G['proximo']): ?>
+        <span>Próximo casamento: <b><?= escP($G['proximo']['nome']) ?></b>
+          <?= escP(date('d/m/Y', strtotime($G['proximo']['data_evento']))) ?></span>
+      <?php else: ?>
+        <span>Nenhum casamento ativo com data marcada.</span>
+      <?php endif; ?>
+      <?php if ($G['sem_dono']): ?>
+        <span class="falta"><?= $G['sem_dono'] ?> casamento(s) sem conta dos noivos</span>
+      <?php endif; ?>
+      <?php if ($G['suspensos']): ?><span><?= $G['suspensos'] ?> suspenso(s)</span><?php endif; ?>
+    </div>
+  <?php endif; ?>
 
   <?php if ($pendentes): ?>
     <div class="painel" style="border-color:var(--warn); border-left:4px solid var(--warn)">

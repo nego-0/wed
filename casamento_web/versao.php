@@ -95,6 +95,10 @@ function correcoesEsperadas(): array {
          'config.php', 'const PLATAFORMA'],
         ['O admin da plataforma não é nenhum dos casais',
          'auth.php', 'function entrouComoPlataforma('],
+        ['Entrada do admin: administração com números de todo o sistema',
+         'plataforma.php', 'class="numeros"'],
+        ['Ações da plataforma funcionam sem casamento aberto',
+         'config.php', 'function acoesSemCasamento('],
     ];
 }
 

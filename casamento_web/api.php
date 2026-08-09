@@ -63,7 +63,12 @@ function senhaTemporaria(): string {
  * acesso. Aqui responde-se 403 e diz-se porquê.
  */
 function exigirAdminApi(): void {
+    global $acao;
     if (ehAdmin()) return;
+    // As ações da própria plataforma não são de casamento nenhum: quem responde
+    // pela casa tem de as poder fazer sem ter uma festa aberta — é assim que
+    // entra. Cada uma delas confere depois, por si, se é mesmo admin da casa.
+    if (ehAdminPlataforma() && in_array($acao, acoesSemCasamento(), true)) return;
     http_response_code(403);
     erro(utilizadorId()
         ? 'Não tem um casamento aberto com poderes de gestão.'
@@ -1406,10 +1411,18 @@ if ($acao === 'esquema_info') {
     $um = function (string $sql) use ($conn) {
         $r = @$conn->query($sql); return $r ? (int)$r->fetch_row()[0] : -1;
     };
+    // O registo fica de fora desta conta, e de propósito: uma ação da PLATAFORMA
+    // (criar um casamento, aprovar um registo, mexer numa conta) não pertence a
+    // casamento nenhum, e o seu rasto vive no 0 — o mesmo sítio reservado onde
+    // está a versão do esquema. Contá-lo como órfão era chamar defeito ao que
+    // está certo, e habituar a prova a ver vermelho.
     $orfaos = 0;
-    foreach (['convites','convidados','mesas','versoes','registo'] as $t) {
+    foreach (['convites','convidados','mesas','versoes'] as $t) {
         $orfaos += max(0, $um("SELECT COUNT(*) FROM {$P}$t WHERE casamento_id IS NULL OR casamento_id < 1"));
     }
+    $registoSistema = max(0, $um("SELECT COUNT(*) FROM {$P}registo WHERE casamento_id = 0"));
+    $registoOrfao   = max(0, $um("SELECT COUNT(*) FROM {$P}registo WHERE casamento_id IS NULL OR casamento_id < 0"));
+    $orfaos += $registoOrfao;
     // As definições do sistema (versão do esquema) vivem no casamento 0.
     $sistemaFora = $um("SELECT COUNT(*) FROM {$P}definicoes WHERE chave='schema.versao' AND casamento_id=0") === 1;
     // O nome da mesa tem de ser único por casamento, não em toda a tabela.
@@ -1426,6 +1439,7 @@ if ($acao === 'esquema_info') {
         'contas'      => $um("SELECT COUNT(*) FROM {$P}utilizadores"),
         'acessos'     => $um("SELECT COUNT(*) FROM {$P}acessos"),
         'orfaos'      => $orfaos,
+        'registo_da_plataforma' => $registoSistema,
         'sistema_fora_de_casamento' => $sistemaFora,
         'mesa_unica_por_casamento'  => $mesaOk,
     ]]);

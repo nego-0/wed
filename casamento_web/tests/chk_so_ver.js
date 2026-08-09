@@ -33,6 +33,9 @@ const rotulos = (p, sel) => p.$$eval(sel, els => els.map(e =>
   const marca = 'zz' + String(Date.now()).slice(-6);
 
   const admin = await entrar(await b.newContext(), 'admin', 'noivos2026');
+  // O admin entra sem casamento aberto (é da plataforma, não de um casal), e é
+  // preciso um aberto para lhe gerar um código de suporte.
+  await admin._api('casamento_abrir&id=1');
   const email = 'leitura.' + marca + '@exemplo.pt';
   await admin._api('utilizador_criar', { email, nome: 'Leitura', senha: 'segredo12345',
                                          papel_plataforma: 'suporte' });

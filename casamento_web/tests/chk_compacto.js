@@ -10,6 +10,15 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await p.goto(BASE+'/login.php',{waitUntil:'networkidle'});
   await p.fill('input[name=utilizador]','admin'); await p.fill('input[name=senha]','noivos2026');
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
+  // O admin entra sem casamento aberto (é da plataforma, não de um casal):
+  // escolhe-se o nº1, que é onde estas provas trabalham.
+  await p.evaluate(async () => {
+    await fetch('api.php?action=casamento_abrir&id=1',
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
+  });
+  // Entrar deixou de aterrar no painel de um casal: vai-se lá de propósito.
+  await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+
   await p.waitForTimeout(1800);
 
   const linhas = await p.locator('.convite-row').count();

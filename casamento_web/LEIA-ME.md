@@ -87,6 +87,14 @@ era dele. Um casamento pode assim ficar **sem conta de noivos**, e isso passou
 a ver-se: a lista de casamentos marca-o e a Gestão explica-o, com o campo de
 convidar logo por baixo.
 
+**Onde o admin aterra.** Ao entrar, o pessoal da casa vai para `plataforma.php`
+— a administração, com os números de todo o sistema: casamentos ativos e à
+espera, convites, pessoas, confirmações, entradas, contas, e quantos códigos de
+suporte estão de pé neste momento. E **não fica com casamento nenhum aberto**:
+abrir-lhe o primeiro da lista era pô-lo dentro da festa de um casal ao acaso,
+com poderes de gestão e sem ter pedido nada. Escolhe um na lista, e o menu das
+páginas do casamento só aparece depois disso.
+
 **A entrada não é de casamento nenhum.** `login.php` e `registo.php` mostram a
 casa (`PLATAFORMA`, em `config.php`), e não um casal: com vários casamentos,
 quem chegava para entrar no seu era recebido pelo nome de outras pessoas.

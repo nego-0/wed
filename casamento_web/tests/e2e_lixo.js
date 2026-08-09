@@ -17,6 +17,15 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await page.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
   await page.fill('input[name=utilizador]', 'admin'); await page.fill('input[name=senha]', 'noivos2026');
   await page.click('button[type=submit]'); await page.waitForLoadState('networkidle');
+  // O admin entra sem casamento aberto (é da plataforma, não de um casal):
+  // escolhe-se o nº1, que é onde estas provas trabalham.
+  await page.evaluate(async () => {
+    await fetch('api.php?action=casamento_abrir&id=1',
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
+  });
+  // Entrar deixou de aterrar no painel de um casal: vai-se lá de propósito.
+  await page.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+
   await page.waitForTimeout(900);
 
   // usa o api() da própria página (mesmo caminho que a interface percorre)

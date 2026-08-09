@@ -8,6 +8,15 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   const log=(...a)=>console.log('•',...a);
   await p.goto(BASE+'/login.php'); await p.fill('input[name=utilizador]','admin'); await p.fill('input[name=senha]','noivos2026');
   await p.click('button[type=submit],input[type=submit]'); await p.waitForLoadState('networkidle');
+  // O admin entra sem casamento aberto (é da plataforma, não de um casal):
+  // escolhe-se o nº1, que é onde esta prova trabalha.
+  await p.evaluate(async () => {
+    await fetch('api.php?action=casamento_abrir&id=1',
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
+  });
+  // Entrar deixou de aterrar no painel de um casal: vai-se lá de propósito.
+  await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+
   await p.goto(BASE+'/index.php',{waitUntil:'networkidle'}); await p.waitForTimeout(700);
   // click the "Mesa A" filter chip
   const chip=p.locator('.chips-mesa, [id]').locator('text=Mesa A').first();

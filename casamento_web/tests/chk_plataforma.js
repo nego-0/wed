@@ -51,6 +51,36 @@ const entrar = async (ctx, user, pass) => {
   ok(txtAdmin.includes('ZZ Casamento A ' + marca) && txtAdmin.includes('ZZ Casamento B ' + marca),
      'o pessoal da plataforma vê todos os casamentos na página');
 
+  // ---------- o admin aterra na administração, não na festa de ninguém ----------
+  const recem = await entrar(await b.newContext(), 'admin', 'noivos2026');
+  console.log('   o admin aterra em:', recem.url().replace(BASE, ''));
+  ok(recem.url().includes('plataforma.php'),
+     'ao entrar, o admin vai para a administração e não para o painel de um casal');
+
+  const cabRecem = await recem.locator('header').innerText();
+  ok(!/A trabalhar em/.test(cabRecem),
+     'e não fica com o casamento de ninguém aberto por si');
+  ok(!/Isabel|Abednego/.test(cabRecem) && /Administração/.test(cabRecem),
+     'o cabeçalho é da casa, e não de um casal ao acaso');
+  ok((await recem.locator('.topo .monograma').innerText()).trim() === '✦',
+     'e o monograma é a marca da plataforma, não as iniciais de um casal');
+
+  const nums = await recem.locator('.numeros').innerText();
+  console.log('   números:', nums.replace(/\s+/g, ' ').slice(0, 140));
+  for (const rot of ['casamentos ativos', 'convites', 'pessoas convidadas',
+                     'entradas registadas', 'contas ativas', 'códigos de suporte']) {
+    ok(nums.toLowerCase().includes(rot), 'a administração mostra: ' + rot);
+  }
+  // Os números são do SISTEMA: os casamentos criados acima têm de lá estar.
+  const nAtivos = parseInt((nums.match(/(\d+)\s*\n?\s*CASAMENTOS ATIVOS/i) || [])[1] || '0', 10);
+  ok(nAtivos >= 3, 'e contam todos os casamentos, não só um (' + nAtivos + ')');
+
+  // Sem casamento aberto, continua a poder fazer o que é da casa.
+  const criaSemCasa = await recem._api('casamento_criar', { nome: 'ZZ Sem casa ' + marca });
+  ok(criaSemCasa && criaSemCasa.success,
+     'e, sem casamento aberto, ainda cria casamentos — que é como abre o primeiro');
+  await api('casamento_apagar&id=' + criaSemCasa.id);
+
   // ---------- os noivos de A: só o que é deles ----------
   const noivosA = await entrar(await b.newContext(), emailA, 'segredo12345');
   ok(noivosA.url().includes('index.php') || noivosA.url().includes('plataforma.php'),

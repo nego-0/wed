@@ -144,6 +144,19 @@ function acoesDoCasamento(): array {
             'suporte_codigo_criar','suporte_codigo_revogar'];
 }
 
+/**
+ * Ações que NÃO precisam de um casamento aberto.
+ *
+ * O pessoal da casa entra sem casamento nenhum — de propósito, para não
+ * aterrar na festa de um casal ao acaso. Mas as ações da plataforma (criar
+ * casamentos, aprovar registos, gerir contas) são exatamente as que ele precisa
+ * de fazer nesse estado. Sem esta lista, quem responde pela casa entrava e não
+ * conseguia fazer nada — nem sequer abrir um casamento.
+ */
+function acoesSemCasamento(): array {
+    return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'esquema_info', 'acesso_dar']);
+}
+
 function acoesDeEscrita(): array {
     return array_merge(acoesDoCasamento(), acoesDaPlataforma());
 }
