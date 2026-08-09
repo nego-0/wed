@@ -179,8 +179,50 @@ const entrar = async (ctx, user, pass) => {
   console.log('   apagar sem arquivar:', JSON.stringify(cedo));
   ok(cedo && cedo.success === false, 'não se apaga um casamento que ainda está de pé');
 
+  // Uma conta que só existe por causa deste casamento para com ele.
+  const emailZ = 'zita.' + marca + '@exemplo.pt';
+  const contaZ = await api('utilizador_criar', { email: emailZ, nome: 'Zita', senha: 'segredo12345',
+                                                 casamento_id: alvo.id, papel: 'noivos' });
+  // E uma que também tem outro casamento NÃO pode parar por causa deste.
+  const emailD = 'dupla.' + marca + '@exemplo.pt';
+  const contaD = await api('utilizador_criar', { email: emailD, nome: 'Dupla', senha: 'segredo12345',
+                                                 casamento_id: alvo.id, papel: 'porteiro' });
+  await api('acesso_dar&utilizador=' + contaD.id + '&casamento=' + casA.id + '&papel=porteiro');
+
+  // A lista principal é a das casas em funcionamento. Um suspenso sai dela e vai
+  // para a sua secção: misturados, a lista deixava de responder à pergunta que
+  // se lhe faz de manhã — em quantos casamentos estamos a trabalhar.
+  await api('casamento_estado&id=' + alvo.id + '&estado=suspenso');
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  const susp = await admin.evaluate((nome) => {
+    const sec = [...document.querySelectorAll('.painel')].find(p => /Suspensos/.test(p.querySelector('h3')?.textContent || ''));
+    const principal = [...document.querySelectorAll('main > .cas-lista > .cas')];
+    return { naSeccao: !!(sec && sec.innerText.includes(nome)),
+             naPrincipal: principal.some(c => c.innerText.includes(nome)),
+             ativosNaPrincipal: principal.length };
+  }, 'ZZ A arquivar ' + marca);
+  console.log('   suspenso:', JSON.stringify(susp));
+  ok(susp.naSeccao, 'um casamento suspenso vai para a secção dos suspensos');
+  ok(!susp.naPrincipal, 'e sai da lista principal');
+  const soAtivos = await admin.evaluate(() =>
+    [...document.querySelectorAll('main > .cas-lista > .cas')].every(c => /ATIVO/i.test(c.innerText)));
+  ok(soAtivos, 'a lista principal só tem casamentos ativos');
+  await api('casamento_estado&id=' + alvo.id + '&estado=ativo');
+
   const arq = await api('casamento_estado&id=' + alvo.id + '&estado=arquivado');
+  console.log('   arquivar:', JSON.stringify(arq));
   ok(arq && arq.success, 'arquiva-se');
+  ok(arq.contas_paradas === 1, 'e para as contas que só existiam por causa dele');
+
+  const estadoDe = async (email) => {
+    const l = await api('utilizador_lista&q=' + encodeURIComponent(email));
+    return ((l.contas || [])[0] || {}).estado;
+  };
+  ok(await estadoDe(emailZ) === 'inativo', 'a conta do casal fica «inativo»');
+  ok(await estadoDe(emailD) === 'ativo',
+     'mas quem tem outro casamento de pé continua a entrar — não se fecha por tabela');
+  const zitaTenta = await entrar(await b.newContext(), emailZ, 'segredo12345');
+  ok(zitaTenta.url().includes('login.php'), 'e uma conta parada não entra');
   ok((await api('casamento_abrir&id=' + alvo.id)).success === false,
      'e um casamento arquivado já não se abre');
 
@@ -195,8 +237,10 @@ const entrar = async (ctx, user, pass) => {
   ok(dadosArq && dadosArq.casamentos && dadosArq.casamentos[0].ficha.noiva === 'Zita',
      'e os seus dados ainda se levam, pelo número, sem o abrir');
 
-  // Reabrir devolve-o inteiro.
-  await api('casamento_estado&id=' + alvo.id + '&estado=ativo');
+  // Reabrir devolve-o inteiro — e devolve também as contas que pararam com ele.
+  const reab = await api('casamento_estado&id=' + alvo.id + '&estado=ativo');
+  ok(reab.contas_ativadas === 1, 'reabrir devolve as contas que tinham parado');
+  ok(await estadoDe(emailZ) === 'ativo', 'a conta do casal volta a «ativo»');
   const reaberto = await api('casamento_abrir&id=' + alvo.id);
   ok(reaberto && reaberto.success, 'reabrir devolve-o');
   ok((await api('convite_list')).convites.length === 1, 'com o que lá estava dentro');
@@ -242,6 +286,12 @@ const entrar = async (ctx, user, pass) => {
     // Apagar exige arquivar antes — o mesmo caminho que a página faz.
     await api('casamento_estado&id=' + id + '&estado=arquivado');
     await api('casamento_apagar&id=' + id);
+  }
+  // Apagados os casamentos, os seus lugares foram com eles: estas contas ficam
+  // órfãs, e é isso que as deixa apagáveis.
+  for (const e of [emailZ, emailD]) {
+    const l = await api('utilizador_lista&q=' + encodeURIComponent(e));
+    for (const c of l.contas || []) await api('utilizador_apagar&id=' + c.id);
   }
   const limpaConta = await api('utilizador_apagar&id=' + contaA.id);
   ok(limpaConta && limpaConta.success, 'a conta de prova, já sem casamento, apaga-se');

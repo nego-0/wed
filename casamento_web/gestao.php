@@ -90,6 +90,7 @@ $CAMPOS_EVENTO = [
   .et.ativo{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.pendente,.et.expirado{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .et.suspenso,.et.revogado{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
+  .et.inativo{ background:var(--cream); color:#8a8f88; border-color:var(--line); }
   .et.valido{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .lf{ display:grid; grid-template-columns:2fr 1fr auto; gap:.7rem; align-items:end; margin-top:1rem;
        padding-top:1rem; border-top:1px dashed var(--line); }

@@ -105,6 +105,10 @@ function correcoesEsperadas(): array {
          'api.php', 'dados_importar'],
         ['Arquivar, reabrir e apagar casamentos (apagar só depois de arquivar)',
          'plataforma.php', 'function apagar('],
+        ['Arquivar um casamento para as contas que só existem por causa dele',
+         'api.php', "SET u.estado='inativo'"],
+        ['A lista principal da administração só mostra casamentos ativos',
+         'plataforma.php', '$suspensos'],
     ];
 }
 

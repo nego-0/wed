@@ -111,6 +111,18 @@ if (ehAdminPlataforma()) {
     if ($r) $arquivados = $r->fetch_all(MYSQLI_ASSOC);
 }
 
+// A lista de cima é a das casas EM FUNCIONAMENTO. Um casamento por aprovar já
+// tem o seu lugar na fila, um arquivado tem a sua secção, e um suspenso passa a
+// ter a dele: misturados, a lista principal deixava de responder à pergunta que
+// se lhe faz de manhã — em quantos casamentos é que estamos a trabalhar.
+$suspensos = [];
+foreach ($meus as $id => $c) {
+    if (($c['estado'] ?? '') !== 'ativo') {
+        if (($c['estado'] ?? '') === 'suspenso') $suspensos[$id] = $c;
+        unset($meus[$id]);
+    }
+}
+
 // Registos à espera de aprovação (só o admin da plataforma os despacha).
 $pendentes = [];
 if (ehAdminPlataforma()) {
@@ -149,6 +161,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .et.ativo{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.pendente{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .et.suspenso{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
+  .et.inativo{ background:var(--cream); color:#8a8f88; border-color:var(--line); }
   .et.agora{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
@@ -308,6 +321,34 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <?php endforeach; ?>
   </div>
 
+  <?php if ($suspensos): ?>
+    <div class="painel" style="margin-top:1.4rem">
+      <h3>Suspensos</h3>
+      <div class="dica">O casal não entra e os convites não abrem para os convidados.
+        Nada se apagou — reativar devolve tudo ao que era.</div>
+      <div class="cas-lista">
+        <?php foreach ($suspensos as $id => $c): ?>
+          <div class="cas">
+            <div class="selo"><?= escP(mb_strtoupper(mb_substr($c['nome'], 0, 1))) ?></div>
+            <div>
+              <div class="nm"><?= escP($c['nome']) ?> <span class="et suspenso">suspenso</span></div>
+              <div class="meta">
+                <span><b><?= (int)($conta[(int)$id]['convites'] ?? 0) ?></b> convites</span>
+                <span><b><?= (int)($conta[(int)$id]['pessoas'] ?? 0) ?></b> pessoas</span>
+              </div>
+            </div>
+            <div class="ac">
+              <?php if ($mandaNaCasa): ?>
+                <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'ativo','<?= escP($c['nome']) ?>')">Reativar</button>
+                <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'arquivado','<?= escP($c['nome']) ?>')">Arquivar</button>
+              <?php endif; ?>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
   <?php if ($arquivados): ?>
     <div class="painel" style="margin-top:1.4rem">
       <h3>Arquivados</h3>
@@ -426,8 +467,9 @@ async function entrarComCodigo(){
 
 // ---------- arquivar, reabrir, apagar ----------
 const AVISO_ESTADO = {
-  arquivado: 'Arquivar «%s»?\n\nSai das listas de trabalho e o casal deixa de lá entrar. '
-           + 'Nada se apaga — reabre-se quando quiser.',
+  arquivado: 'Arquivar «%s»?\n\nSai das listas de trabalho, e as contas que só existem '
+           + 'por causa dele ficam paradas — o casal deixa de entrar. Nada se apaga: '
+           + 'reabrir devolve o casamento e as contas.',
   suspenso:  'Suspender «%s»?\n\nO casal deixa de entrar, e os convites deixam de abrir '
            + 'para os convidados. Nada se apaga.',
   ativo:     'Reabrir «%s»?\n\nVolta às listas e o casal volta a entrar.',
@@ -435,7 +477,12 @@ const AVISO_ESTADO = {
 async function mudarEstado(id, estado, nome){
   if (!confirm(AVISO_ESTADO[estado].replace('%s', nome))) return;
   const d = await api('casamento_estado&id=' + id + '&estado=' + estado, { method:'POST' });
-  if (d && d.success) location.reload();
+  if (!d || !d.success) return;
+  // Dizer quantas contas foram atrás: quem arquiva tem de saber que fechou a
+  // porta a pessoas, e não só a um casamento.
+  if (d.contas_paradas)  toast(d.contas_paradas + ' conta(s) ficaram paradas com ele.');
+  if (d.contas_ativadas) toast(d.contas_ativadas + ' conta(s) voltaram com ele.');
+  setTimeout(() => location.reload(), d.contas_paradas || d.contas_ativadas ? 1600 : 0);
 }
 async function apagar(id, nome){
   // Escrever o nome, e não só carregar em "OK": é a única coisa aqui que não
@@ -491,6 +538,10 @@ async function carregarContas(){
     const nome = c.nome || c.email;
     const plat = c.papel_plataforma ? `<span class="et agora">${esc(c.papel_plataforma)} da plataforma</span>` : '';
     const trocaEstado = c.estado === 'ativo' ? 'suspenso' : 'ativo';
+    // 'inativo' quer dizer "o casamento dela foi arquivado", e não "alguém a
+    // fechou". Sem o dizer, a lista parecia ter contas avariadas.
+    const porque = c.estado === 'inativo'
+      ? ' <span class="meta">parada com o casamento arquivado</span>' : '';
     const acoes = eu ? '<span class="meta">é você</span>' : `
       <button class="btn btn-sm" onclick="estadoConta(${c.id}, '${trocaEstado}')">
         ${c.estado === 'ativo' ? 'Suspender' : 'Ativar'}</button>
@@ -498,7 +549,7 @@ async function carregarContas(){
     return `<div class="cas">
       <div class="selo">${esc(nome.slice(0,1).toUpperCase())}</div>
       <div>
-        <div class="nm">${esc(nome)} <span class="et ${esc(c.estado)}">${esc(c.estado)}</span> ${plat}</div>
+        <div class="nm">${esc(nome)} <span class="et ${esc(c.estado)}">${esc(c.estado)}</span> ${plat}${porque}</div>
         <div class="meta"><span>${esc(c.email)}</span>
           <span>${c.casamentos} casamento(s)</span>
           <span>${c.ultimo_acesso ? 'último acesso ' + esc(c.ultimo_acesso.slice(0,10)) : 'nunca entrou'}</span></div>

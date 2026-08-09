@@ -106,6 +106,18 @@ todos, e pela razão certa. Os arquivados têm secção própria, com **reabrir*
 que se escreva o nome do casamento, e diz depois quantos convites e pessoas
 levou.
 
+Arquivar **para também as contas** que só existem por causa daquele casamento:
+ficam em `inativo` e deixam de entrar. Só essas — quem for porteiro de outro
+casamento de pé não é fechado por tabela, e o pessoal da plataforma nunca é
+tocado. `inativo` é um estado à parte de `suspenso` de propósito: um é o
+casamento que acabou, o outro é uma decisão sobre a pessoa — e ao reabrir
+voltam as primeiras, não as segundas.
+
+A lista principal da Administração mostra apenas os casamentos **ativos**. Os
+que estão por aprovar têm a sua fila, os suspensos e os arquivados têm as suas
+secções: misturados, a lista deixava de responder à pergunta que se lhe faz de
+manhã — em quantos casamentos estamos a trabalhar.
+
 **Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
 casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho
 dos convites, as mesas, os convites e as pessoas — e traz-se de volta por ali

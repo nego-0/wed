@@ -1315,7 +1315,7 @@ if ($acao === 'utilizador_estado') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o estado das contas.');
     $id = (int)($_GET['id'] ?? 0);
     $novo = (string)($_GET['estado'] ?? '');
-    if (!in_array($novo, ['pendente','ativo','suspenso'], true)) erro('Estado inválido.');
+    if (!in_array($novo, ['pendente','ativo','suspenso','inativo'], true)) erro('Estado inválido.');
     if ($id === utilizadorId()) erro('Não pode mudar o estado da sua própria conta.');
     $st = $conn->prepare("SELECT email FROM {$P}utilizadores WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
@@ -1361,17 +1361,43 @@ if ($acao === 'casamento_estado') {
     $st->bind_param('si', $novo, $id);
     if (!$st->execute()) erro('Não foi possível mudar o estado.');
 
-    // Aprovar um registo é abrir a porta às duas coisas ao mesmo tempo: o
-    // casamento passa a ativo E a conta de quem se inscreveu deixa de estar à
-    // espera. Aprovar só o casamento deixava o casal de fora, sem perceber
-    // porquê — e o admin convencido de que já tinha tratado do assunto.
+    // O estado do casamento arrasta o das contas que só existem por causa dele.
+    //
+    // Aprovar é abrir a porta às duas coisas ao mesmo tempo: o casamento passa
+    // a ativo E a conta de quem se inscreveu deixa de estar à espera. Aprovar
+    // só o casamento deixava o casal de fora, sem perceber porquê — e o admin
+    // convencido de que já tinha tratado do assunto.
+    //
+    // Arquivar é o inverso: as contas do casal e do porteiro daquele casamento
+    // ficam paradas, porque já não há lá nada para fazer. Só as que não têm
+    // outro casamento de pé — quem é porteiro em dois não pode ficar fechado
+    // por causa de um — e nunca o pessoal da casa, que não depende de
+    // casamento nenhum para existir.
     $contas = 0;
     if ($novo === 'ativo') {
+        // Volta quem parou COM ele: 'inativo' e 'pendente'. Quem foi suspenso
+        // por outra razão continua suspenso — reabrir um casamento não desfaz
+        // uma decisão que alguém tomou sobre uma pessoa.
         $st = $conn->prepare("UPDATE {$P}utilizadores u
                               JOIN {$P}acessos a ON a.utilizador_id = u.id
                               SET u.estado='ativo'
-                              WHERE a.casamento_id = ? AND u.estado='pendente'");
+                              WHERE a.casamento_id = ? AND u.estado IN ('pendente','inativo')");
         $st->bind_param('i', $id);
+        if ($st->execute()) $contas = $conn->affected_rows;
+    } elseif ($novo === 'arquivado') {
+        $st = $conn->prepare("UPDATE {$P}utilizadores u
+                              JOIN {$P}acessos a ON a.utilizador_id = u.id
+                              SET u.estado='inativo'
+                              WHERE a.casamento_id = ?
+                                AND u.estado = 'ativo'
+                                AND u.papel_plataforma IS NULL
+                                AND NOT EXISTS (
+                                      SELECT 1 FROM {$P}acessos a2
+                                      JOIN {$P}casamentos c2 ON c2.id = a2.casamento_id
+                                      WHERE a2.utilizador_id = u.id
+                                        AND a2.casamento_id <> ?
+                                        AND c2.estado <> 'arquivado')");
+        $st->bind_param('ii', $id, $id);
         if ($st->execute()) $contas = $conn->affected_rows;
     }
     // Arquivar o casamento que está aberto tem de o fechar: senão a sessão
@@ -1380,8 +1406,11 @@ if ($acao === 'casamento_estado') {
         $_SESSION['casamento_id'] = 0;
         $_SESSION['papel'] = null;
     }
-    registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas conta(s) ativada(s)" : ''));
-    ok(['id' => $id, 'estado' => $novo, 'contas_ativadas' => $contas]);
+    $rotulo = $novo === 'arquivado' ? 'conta(s) parada(s)' : 'conta(s) ativada(s)';
+    registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas $rotulo" : ''));
+    ok(['id' => $id, 'estado' => $novo,
+        'contas_ativadas' => $novo === 'arquivado' ? 0 : $contas,
+        'contas_paradas'  => $novo === 'arquivado' ? $contas : 0]);
 }
 
 if ($acao === 'casamento_apagar') {

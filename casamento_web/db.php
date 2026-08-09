@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 9;
+const ESQUEMA_VERSAO = 10;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -512,6 +512,18 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         @$conn->query("DELETE a FROM {$P}acessos a
                        JOIN {$P}utilizadores u ON u.id = a.utilizador_id
                        WHERE u.papel_plataforma = 'admin'");
+    }
+
+    // ---- v10: contas paradas por o casamento ter sido arquivado -----------
+    // 'suspenso' é uma decisão sobre a PESSOA — alguém decidiu fechar-lhe a
+    // porta. Uma conta que para porque o casamento acabou não é a mesma coisa,
+    // e tratá-las pelo mesmo nome tirava a única forma de as distinguir depois:
+    // ao reabrir um casamento, quem se reativa é quem parou com ele, e não
+    // quem foi suspenso por outra razão qualquer.
+    if ($versaoAtual < 10) {
+        @$conn->query("ALTER TABLE {$P}utilizadores
+                       MODIFY estado ENUM('pendente','ativo','suspenso','inativo')
+                       NOT NULL DEFAULT 'pendente'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
