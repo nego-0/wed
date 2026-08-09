@@ -91,6 +91,14 @@ uma ficar para trás da outra. Uma página pode desmentir a descoberta com
 `data-escrita="1"` (a leitura do código não lá chega). O que escapar continua
 a ser recusado, com mensagem, antes de sair do navegador.
 
+Os **gestos** não têm botão que se apague — arrastar uma mesa, largar uma
+pastilha noutra, escolher numa lista que se abre. Aí é a própria página que
+sabe quais deles escrevem: `assets/mesas.js` pergunta antes de armar o gesto, e
+a planta apresenta-se fixa (o mesmo caminho que já tinha para "mesas fixas"),
+com tudo à vista e tudo tocável. As caixas do bloqueio continuam a mostrar o
+que o **casal** configurou — trocá-las pela nossa trava dava a quem vem ajudar
+uma leitura errada da planta alheia.
+
 **Senhas.** Cada pessoa muda a sua em `equipa.php`. Não há envio de correio
 configurado, e prometer um email que nunca chega seria pior: quando alguém
 perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma

@@ -19,15 +19,38 @@ let zoom=1;
 let CANVAS={largura:null, altura:null};
 // Travas contra arrastos acidentais (guardadas na base de dados).
 let BLOQ={mesas:false, canvas:false};
+
+// ---------- visita de suporte com código de leitura ----------
+// Aqui quase nada se faz por botões: arrasta-se uma mesa, larga-se uma pastilha
+// noutra, escolhe-se numa lista que se abre. Esses gestos vivem em
+// addEventListener, que o so-ver.js não consegue ler para os apagar — e um
+// gesto que se completa e depois desfaz sozinho é pior do que um gesto que não
+// arranca. Por isso é esta página, que sabe quais deles escrevem, a dizê-lo.
+const SO_VER = !!window.SO_VER;
+function travaLeitura(){
+  if(!SO_VER) return false;
+  if(typeof window.soVerAviso === 'function') window.soVerAviso();
+  return true;
+}
+// Uma visita de leitura fixa as mesas e o canvas — mas sem mexer no BLOQ, que
+// é o que o CASAL configurou e o que as caixas mostram. Confundir as duas
+// coisas dava a quem vem ajudar uma leitura errada da planta do casal.
+const mesasFixas = () => BLOQ.mesas  || SO_VER;
+const canvasFixo = () => BLOQ.canvas || SO_VER;
 function aplicarBloqueios(){
-  document.body.classList.toggle('bloq-mesas',  BLOQ.mesas);
-  document.body.classList.toggle('bloq-canvas', BLOQ.canvas);
+  document.body.classList.toggle('bloq-mesas',  mesasFixas());
+  document.body.classList.toggle('bloq-canvas', canvasFixo());
   const a=$('bloq-mesas'), b=$('bloq-canvas');
   if(a) a.checked=BLOQ.mesas;
   if(b) b.checked=BLOQ.canvas;
   // A nota de ajuda acompanha o que está (ou não) bloqueado.
   const dica=$('dica-planta'); if(!dica) return;
   const partes=[];
+  if(SO_VER){
+    dica.innerHTML='Visita de <b>leitura</b>: a planta mostra-se toda — toque numa mesa para ver '
+                 + 'os detalhes. Mover mesas, sentar pessoas e redimensionar o canvas ficam de fora.';
+    return;
+  }
   partes.push(BLOQ.mesas
     ? 'As mesas estão <b>fixas</b>: toque numa mesa para ver os detalhes, sem risco de a arrastar.'
     : 'Arraste as mesas para as posicionar (alinham-se com linhas-guia). Toque numa mesa para ver os detalhes.');
@@ -95,7 +118,7 @@ function toggleMax(){
 // Redimensionar arrastando as bordas do canvas.
 let rz=null;
 function iniciarRz(e, dir){
-  if(BLOQ.canvas) return;   // canvas fixo: as bordas não redimensionam
+  if(canvasFixo()) return;   // canvas fixo: as bordas não redimensionam
   e.preventDefault();
   const vp=$('planta-viewport');
   rz={dir, sx:e.clientX, sy:e.clientY, w:vp.offsetWidth, h:vp.offsetHeight, maxW:larguraDisponivel()};
@@ -276,11 +299,16 @@ $('planta').addEventListener('pointerdown', e=>{
     }, {once:true});
     return;
   }
-  if(BLOQ.mesas){
+  if(mesasFixas()){
     // Mesas fixas: não se arrastam, mas continuam selecionáveis ao toque.
     const sx=e.clientX, sy=e.clientY, id=+node.dataset.id;
     window.addEventListener('pointerup', ev=>{
-      if(Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4) selecionar(id);
+      const parado = Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4;
+      if(parado) return selecionar(id);
+      // Foi mesmo uma tentativa de arrastar. Se as mesas estão fixas por ser
+      // uma visita de leitura, diz-se — a trava da planta é do casal e essa
+      // fala por si na nota, mas esta não.
+      if(SO_VER) travaLeitura();
     }, {once:true});
     return;
   }
@@ -427,6 +455,9 @@ function comboOpcoes(kind, arg){
   return [];
 }
 function comboAcao(kind, arg, value){
+  // Quatro escritas atrás de listas que se abrem: nenhuma tem botão que o
+  // so-ver.js possa apagar, e todas passam por aqui.
+  if(travaLeitura()) return;
   if(kind==='mesa-pessoa') return moverPessoa(+arg, value);
   if(kind==='trazer')      return trazerPessoa(value);
   if(kind==='sentar')      return sentar(value);
@@ -649,6 +680,9 @@ function talvezArrastar(e){
   if(Math.abs(e.clientX-pend.sx)>5 || Math.abs(e.clientY-pend.sy)>5){
     window.removeEventListener('pointermove', talvezArrastar);
     window.removeEventListener('pointerup', cancelarArme);
+    // Aqui, e não no pointerdown: assim um toque para ver não dá aviso nenhum,
+    // e só quem tenta mesmo arrastar ouve a razão.
+    if(travaLeitura()){ pend=null; return; }
     comecarArraste(e);
   }
 }

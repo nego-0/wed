@@ -34,6 +34,12 @@
     else global.alert(MSG);
   }
 
+  // Para o que esta descoberta não alcança: um gesto (arrastar uma mesa, largar
+  // uma pastilha) não tem botão para apagar, e o seu manipulador foi posto por
+  // addEventListener, que não se deixa ler. Quem sabe que aquele gesto escreve
+  // é a própria página; pergunta aqui, e o gesto nem chega a começar.
+  global.soVerAviso = avisar;
+
   // ---------- 1. a porta ----------
   if (typeof global.api === 'function') {
     var apiOriginal = global.api;
