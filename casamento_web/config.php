@@ -49,10 +49,12 @@ define('DB_CONFIGS', cfg_local('db', [
     'local' => ['host' => 'localhost', 'user' => 'root', 'pass' => '', 'db' => 'wedding_guests'],
 ]));
 
-// ---- Utilizadores (nome de utilizador + senha) -------------
-// Definidos em config.local.php ('utilizadores'). Cada entrada tem:
-//   'utilizador', 'papel' ('admin' ou 'porteiro') e 'senha' OU 'senha_hash'.
-// Ver auth.php para a lógica de autenticação.
+// ---- Utilizadores (semente inicial) -------------------------
+// As contas vivem na base de dados (tabela cw_utilizadores) e gerem-se pela
+// aplicação. Esta lista serve só para SEMEAR a primeira instalação: a migração
+// v7 copia-a para a base, uma única vez, e a partir daí é ignorada.
+// Cada entrada tem 'utilizador', 'papel' ('admin' ou 'porteiro') e 'senha'
+// OU 'senha_hash'. Ver auth.php.
 define('UTILIZADORES', cfg_local('utilizadores', []));
 
 // ---- Regras -------------------------------------------------
@@ -93,7 +95,7 @@ function ficheirosApp(): array {
             'editor-cartao.php','convite-editor.php','convite-digital.php','mesas.php',
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
-            'parcial-cabecalho.php','versao.php',
+            'parcial-cabecalho.php','versao.php','plataforma.php',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',

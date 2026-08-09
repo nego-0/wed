@@ -14,6 +14,9 @@ function menuPrincipal(): array {
         'grafica' => ['graficas.php',        'Convite impresso'],
         'convite' => ['digital.php',         'Convite digital'],
         'porta'   => ['porteiro.php',        'Porta'],
+        // A entrada da plataforma só aparece a quem tem mais do que um
+        // casamento à mão — para quem só tem o seu, seria uma porta para nada.
+        'plataforma' => ['plataforma.php',   'Casamentos'],
     ];
 }
 
@@ -34,6 +37,13 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     }
     $itens = menuPrincipal();
     if (!empty($opcoes['sem_porta'])) unset($itens['porta']);
+    // "Casamentos" só faz sentido a quem escolhe entre vários.
+    $variosCasamentos = false;
+    if (function_exists('casamentosDoUtilizador') && isset($GLOBALS['conn'])) {
+        $variosCasamentos = ehPessoalPlataforma()
+                         || count(casamentosDoUtilizador($GLOBALS['conn'])) > 1;
+    }
+    if (!$variosCasamentos) unset($itens['plataforma']);
     $semPapel = !empty($opcoes['no_print']) ? ' no-print' : '';
     ?>
 <header class="topo<?= $semPapel ?>">
@@ -42,6 +52,15 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     <div>
       <h1><?= escP($titulo) ?></h1>
       <?php if ($sub !== ''): ?><div class="sub"><?= escP($sub) ?></div><?php endif; ?>
+      <?php if (!empty($variosCasamentos)):
+        $nomeAberto = '';
+        $stc = @$GLOBALS['conn']->prepare("SELECT nome FROM " . PREFIXO . "casamentos WHERE id=?");
+        if ($stc) { $cid = casamentoAtual(); $stc->bind_param('i', $cid); $stc->execute();
+                    $rowc = $stc->get_result()->fetch_assoc(); $nomeAberto = $rowc['nome'] ?? ''; }
+        if ($nomeAberto !== ''): ?>
+        <div class="sub" style="opacity:.85">A trabalhar em: <b><?= escP($nomeAberto) ?></b>
+          · <a href="plataforma.php" style="color:inherit;text-decoration:underline">trocar</a></div>
+      <?php endif; endif; ?>
     </div>
     <nav class="nav<?= $semPapel ?>">
       <?php foreach ($itens as $chave => [$url, $rotulo]): ?>

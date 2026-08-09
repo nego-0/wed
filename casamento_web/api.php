@@ -264,7 +264,8 @@ if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsv
                      'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload',
                      'convite_restaurar','versao_criar','versao_aplicar','versao_atualizar',
                      'versao_renomear','versao_apagar',
-                     'casamento_criar','casamento_abrir','casamento_apagar'], true)) {
+                     'casamento_criar','casamento_abrir','casamento_apagar','casamento_estado',
+                     'utilizador_criar','acesso_dar'], true)) {
     exigirCsrf();
 }
 
@@ -773,6 +774,7 @@ if ($acao === 'convite_restaurar') {
 // aplicação precisa para saber em qual está e para as provas poderem existir.
 
 if ($acao === 'casamento_criar') {
+    if (!ehPessoalPlataforma()) erro('Só o pessoal da plataforma cria casamentos.');
     $d = corpo();
     $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 160);
     $noiva = mb_substr(trim((string)($d['noiva'] ?? '')), 0, 80);
@@ -799,12 +801,78 @@ if ($acao === 'casamento_abrir') {
     $c = $st->get_result()->fetch_assoc();
     if (!$c) erro('Casamento não encontrado.');
     if ($c['estado'] === 'arquivado') erro('Esse casamento está arquivado.');
-    $_SESSION['casamento_id'] = (int)$c['id'];
-    usarCasamento((int)$c['id']);
+    // Ter o número não chega: é preciso ter lugar lá dentro. Sem isto, bastava
+    // escrever outro id no endereço para entrar no casamento de outro casal.
+    if (!abrirCasamento($conn, (int)$c['id'])) erro('Não tem acesso a esse casamento.');
+    registar($conn, 'casamento_aberto', $c['nome'], 'id ' . (int)$c['id']);
     ok(['id' => (int)$c['id'], 'nome' => $c['nome']]);
 }
 
+if ($acao === 'utilizador_criar') {
+    // Contas criadas pela casa. O registo público (que entra 'pendente' e
+    // espera aprovação) é da etapa seguinte; usa a mesma tabela.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma cria contas.');
+    $d = corpo();
+    $email = mb_strtolower(trim((string)($d['email'] ?? '')));
+    $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 120);
+    $senha = (string)($d['senha'] ?? '');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
+    if (mb_strlen($senha) < 8) erro('A senha precisa de pelo menos 8 caracteres.');
+    $plat = in_array($d['papel_plataforma'] ?? '', ['admin','suporte'], true) ? $d['papel_plataforma'] : null;
+    $hash = password_hash($senha, PASSWORD_DEFAULT);
+    $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, papel_plataforma, estado)
+                          VALUES (?,?,?,?, 'ativo')");
+    $st->bind_param('ssss', $email, $nome, $hash, $plat);
+    if (!$st->execute()) erro('Já existe uma conta com esse email.');
+    $uid = $conn->insert_id;
+
+    // Liga-se logo a um casamento, se vier indicado — é o caso comum: criar a
+    // conta dos noivos de um casamento acabado de abrir.
+    $cid = (int)($d['casamento_id'] ?? 0);
+    $papelCas = in_array($d['papel'] ?? '', ['noivos','porteiro'], true) ? $d['papel'] : 'noivos';
+    if ($cid > 0) {
+        $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?,?)");
+        $st->bind_param('iis', $uid, $cid, $papelCas);
+        @$st->execute();
+    }
+    registar($conn, 'conta_criada', $email, $plat ? ('plataforma: '.$plat) : ('casamento '.$cid));
+    ok(['id' => $uid, 'email' => $email]);
+}
+
+if ($acao === 'acesso_dar') {
+    // Dá (ou muda) o lugar de alguém num casamento.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma dá acessos.');
+    $uid = (int)($_GET['utilizador'] ?? 0);
+    $cid = (int)($_GET['casamento'] ?? 0);
+    $papelCas = in_array($_GET['papel'] ?? '', ['noivos','porteiro'], true) ? $_GET['papel'] : 'noivos';
+    if ($uid <= 0 || $cid <= 0) erro('Indique a conta e o casamento.');
+    $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?,?)
+                          ON DUPLICATE KEY UPDATE papel=VALUES(papel)");
+    $st->bind_param('iis', $uid, $cid, $papelCas);
+    if (!$st->execute()) erro('Não foi possível dar o acesso.');
+    registar($conn, 'acesso_dado', 'conta '.$uid, 'casamento '.$cid.' · '.$papelCas);
+    ok(['utilizador' => $uid, 'casamento' => $cid, 'papel' => $papelCas]);
+}
+
+if ($acao === 'casamento_estado') {
+    // Aprovar um registo (pendente → ativo), suspender ou arquivar.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o estado de um casamento.');
+    $id = (int)($_GET['id'] ?? 0);
+    $novo = (string)($_GET['estado'] ?? '');
+    if (!in_array($novo, ['pendente','ativo','suspenso','arquivado'], true)) erro('Estado inválido.');
+    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+    $st = $conn->prepare("UPDATE {$P}casamentos SET estado=? WHERE id=?");
+    $st->bind_param('si', $novo, $id);
+    if (!$st->execute()) erro('Não foi possível mudar o estado.');
+    registar($conn, 'casamento_estado', $c['nome'], $novo);
+    ok(['id' => $id, 'estado' => $novo]);
+}
+
 if ($acao === 'casamento_apagar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga casamentos.');
     // Apaga um casamento e tudo o que é dele. O nº 1 não se apaga: é o que
     // existia antes de haver vários, e apagá-lo por engano levava tudo.
     $id = (int)($_GET['id'] ?? 0);
