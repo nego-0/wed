@@ -40,6 +40,28 @@ try {
 
 $P = PREFIXO; // atalho para o prefixo
 
+// ============================================================
+// Qual o casamento em causa
+//
+// Todo o dado pertence a um casamento. Este é o ÚNICO sítio que responde a
+// "qual?", para que não haja duas respostas diferentes no mesmo pedido — é o
+// que separa um sistema de vários casais de uma fuga de dados entre eles.
+//
+// Nesta etapa devolve sempre o nº 1 (o casamento que já existia). A etapa
+// seguinte liga-o à sessão: o casamento dos noivos que entraram, ou aquele que
+// o pessoal da plataforma escolheu abrir.
+// ============================================================
+const CASAMENTO_SISTEMA = 0;   // definições que não são de casamento nenhum
+
+function casamentoAtual(): int {
+    return $GLOBALS['CASAMENTO_ID'] ?? 1;
+}
+
+/** Fixa o casamento em causa para o resto do pedido. */
+function usarCasamento(int $id): void {
+    $GLOBALS['CASAMENTO_ID'] = max(1, $id);
+}
+
 // ---- Esquema (tabelas novas, prefixadas) -------------------
 $conn->query("
     CREATE TABLE IF NOT EXISTS {$P}mesas (
@@ -102,7 +124,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 6;
+const ESQUEMA_VERSAO = 7;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -247,13 +269,162 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                        WHERE chave IN ('cartao.numero_no_nome','textos.nota_parenteses')");
     }
 
-    @$conn->query("INSERT INTO {$P}definicoes (chave,valor) VALUES ('schema.versao','" . ESQUEMA_VERSAO . "')
+    // ---- v7: vários casamentos, vários utilizadores -----------------------
+    // O sistema nasceu para um casamento só: a sua identidade estava metade no
+    // config.php (constante EVENTO) e metade numa tabela de definições global.
+    // Aqui abre-se para muitos — cada peça de dados passa a saber a quem
+    // pertence, e as contas saem do ficheiro de configuração para a base.
+    if ($versaoAtual < 7) {
+        // Quem é quem. 'estado' pendente: um registo público só entra em
+        // funcionamento depois de o admin o aprovar.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}casamentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(160) NOT NULL,
+                noiva VARCHAR(80) DEFAULT NULL,
+                noivo VARCHAR(80) DEFAULT NULL,
+                data_evento DATE DEFAULT NULL,
+                estado ENUM('pendente','ativo','suspenso','arquivado') NOT NULL DEFAULT 'pendente',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_cas_estado (estado)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}utilizadores (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(190) NOT NULL UNIQUE,
+                nome VARCHAR(120) DEFAULT NULL,
+                senha_hash VARCHAR(255) NOT NULL,
+                -- NULL = utilizador comum (noivos/porteiro). Só o pessoal da
+                -- plataforma tem papel aqui.
+                papel_plataforma ENUM('admin','suporte') DEFAULT NULL,
+                estado ENUM('pendente','ativo','suspenso') NOT NULL DEFAULT 'pendente',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ultimo_acesso TIMESTAMP NULL DEFAULT NULL,
+                INDEX idx_util_estado (estado)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Quem entra em que casamento, e como. Um utilizador pode ser noivo de
+        // um casamento e porteiro de outro.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}acessos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                utilizador_id INT NOT NULL,
+                casamento_id INT NOT NULL,
+                papel ENUM('noivos','porteiro') NOT NULL DEFAULT 'noivos',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_acesso (utilizador_id, casamento_id),
+                INDEX idx_acesso_cas (casamento_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // O suporte não entra por direito próprio: entra com um código que o
+        // casal gera e pode revogar, e que diz se pode só ver ou também mexer.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}suporte_codigos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                codigo VARCHAR(16) NOT NULL UNIQUE,
+                pode_corrigir TINYINT(1) NOT NULL DEFAULT 0,
+                criado_por INT DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expira_em DATETIME DEFAULT NULL,
+                usado_por INT DEFAULT NULL,
+                usado_em DATETIME NULL DEFAULT NULL,
+                revogado_em DATETIME NULL DEFAULT NULL,
+                INDEX idx_sup_cas (casamento_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // ---- cada peça de dados passa a saber de quem é ----
+        foreach (['convites', 'convidados', 'mesas', 'versoes', 'registo'] as $t) {
+            migColuna($conn, "{$P}$t", 'casamento_id', "INT NOT NULL DEFAULT 1");
+            migIndice($conn, "{$P}$t", "idx_{$t}_cas", 'casamento_id');
+        }
+
+        // ---- o casamento que já existia passa a ser o nº 1 ----
+        $r = @$conn->query("SELECT COUNT(*) FROM {$P}casamentos");
+        $jaHa = $r ? (int)$r->fetch_row()[0] : 0;
+        if ($jaHa === 0) {
+            $lerDef = function (string $chave, string $fallback) use ($conn, $P) {
+                $st = $conn->prepare("SELECT valor FROM {$P}definicoes WHERE chave=? LIMIT 1");
+                if (!$st) return $fallback;
+                $st->bind_param('s', $chave); $st->execute();
+                $x = $st->get_result()->fetch_assoc();
+                return ($x && $x['valor'] !== '') ? $x['valor'] : $fallback;
+            };
+            // A identidade estava repartida: o que o utilizador já tinha
+            // gravado manda; o resto vem da constante EVENTO do config.php.
+            $noiva = $lerDef('casal.noiva', EVENTO['noiva']);
+            $noivo = $lerDef('casal.noivo', EVENTO['noivo']);
+            $data  = $lerDef('evento.data', EVENTO['data_iso']);
+            $nome  = trim($noiva . ' & ' . $noivo);
+            $st = $conn->prepare("INSERT INTO {$P}casamentos (id, nome, noiva, noivo, data_evento, estado)
+                                  VALUES (1, ?, ?, ?, ?, 'ativo')");
+            $st->bind_param('ssss', $nome, $noiva, $noivo, $data);
+            @$st->execute();
+        }
+
+        // O nome da mesa era único em toda a tabela: dois casais não podiam
+        // ambos ter uma "Mesa 1". Passa a ser único dentro de cada casamento.
+        $ru = @$conn->query("SHOW KEYS FROM {$P}mesas WHERE Key_name='nome'");
+        if ($ru && $ru->num_rows) @$conn->query("ALTER TABLE {$P}mesas DROP INDEX nome");
+        $ru2 = @$conn->query("SHOW KEYS FROM {$P}mesas WHERE Key_name='uq_mesa_nome'");
+        if ($ru2 && $ru2->num_rows === 0) {
+            @$conn->query("ALTER TABLE {$P}mesas ADD UNIQUE KEY uq_mesa_nome (casamento_id, nome)");
+        }
+
+        // ---- as definições passam a ser por casamento ----
+        // O 0 fica reservado ao sistema (schema.versao, noivos.criada): não
+        // pertencem a casamento nenhum e não podem viajar com eles.
+        migColuna($conn, "{$P}definicoes", 'casamento_id', "INT NOT NULL DEFAULT 1");
+        @$conn->query("UPDATE {$P}definicoes SET casamento_id=0
+                       WHERE chave IN ('schema.versao','noivos.criada')");
+        // A chave deixa de bastar sozinha: 'tema.paleta' existe uma vez por
+        // casamento. Troca-se a chave primária por (casamento, chave).
+        $rk = @$conn->query("SHOW KEYS FROM {$P}definicoes WHERE Key_name='PRIMARY'");
+        if ($rk && $rk->num_rows === 1) {   // ainda é só a coluna 'chave'
+            @$conn->query("ALTER TABLE {$P}definicoes DROP PRIMARY KEY,
+                           ADD PRIMARY KEY (casamento_id, chave)");
+        }
+
+        // ---- as contas saem do config.local.php para a base ----
+        // Corre uma só vez: depois disto, gerem-se pela aplicação.
+        $r = @$conn->query("SELECT COUNT(*) FROM {$P}utilizadores");
+        if ($r && (int)$r->fetch_row()[0] === 0) {
+            foreach (UTILIZADORES as $u) {
+                if (!is_array($u) || empty($u['utilizador'])) continue;
+                $nomeU = trim((string)$u['utilizador']);
+                // Sem email no formato antigo: compõe-se um, que o utilizador
+                // troca depois. O importante é não perder o acesso.
+                $email = filter_var($nomeU, FILTER_VALIDATE_EMAIL) ? $nomeU : $nomeU . '@local';
+                $hash  = !empty($u['senha_hash']) ? (string)$u['senha_hash']
+                       : password_hash((string)($u['senha'] ?? bin2hex(random_bytes(8))), PASSWORD_DEFAULT);
+                $ehAdmin = ($u['papel'] ?? '') === 'admin';
+                $plat  = $ehAdmin ? 'admin' : null;
+                $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, papel_plataforma, estado)
+                                      VALUES (?,?,?,?,'ativo')");
+                $st->bind_param('ssss', $email, $nomeU, $hash, $plat);
+                if (!@$st->execute()) continue;
+                $uid = $conn->insert_id;
+                // Quem era admin fica também dono do casamento nº 1; quem era
+                // porteiro fica porteiro dele.
+                $papel = $ehAdmin ? 'noivos' : 'porteiro';
+                $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel)
+                                      VALUES (?, 1, ?)");
+                $st->bind_param('is', $uid, $papel);
+                @$st->execute();
+            }
+        }
+    }
+
+    // A versão do esquema é do sistema, não de um casamento: vive no 0.
+    @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
 }
 
 // A mesa (especial) dos noivos existe por padrão: cria-se UMA vez (primeira utilização).
 // Depois fica eliminável — não volta a ser recriada automaticamente (repõe-se no botão da planta).
-$flag = $conn->query("SELECT valor FROM {$P}definicoes WHERE chave='noivos.criada' LIMIT 1");
+$flag = $conn->query("SELECT valor FROM {$P}definicoes WHERE chave='noivos.criada' AND casamento_id=0 LIMIT 1");
 if ($flag && $flag->num_rows === 0) {
     $rn = $conn->query("SELECT id FROM {$P}mesas WHERE especial='noivos' LIMIT 1");
     if ($rn && $rn->num_rows === 0) {
@@ -262,7 +433,7 @@ if ($flag && $flag->num_rows === 0) {
         $stN = $conn->prepare("INSERT INTO {$P}mesas (nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (?,2,'redonda','ouro','noivos',50,42)");
         $stN->bind_param('s', $nomeN); $stN->execute();
     }
-    $conn->query("INSERT INTO {$P}definicoes (chave,valor) VALUES ('noivos.criada','1') ON DUPLICATE KEY UPDATE valor='1'");
+    $conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'noivos.criada','1') ON DUPLICATE KEY UPDATE valor='1'");
 }
 
 // ============================================================

@@ -566,12 +566,20 @@ function lerEnquadramento(string $v): array {
 // ---- Ler / fundir com a BD ---------------------------------
 function definicoesBD(mysqli $conn, bool $recarregar = false): array {
     global $P;
-    static $cache = null;
-    if ($cache !== null && !$recarregar) return $cache;
-    $cache = [];
-    $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes");
-    if ($r) while ($x = $r->fetch_assoc()) $cache[$x['chave']] = $x['valor'];
-    return $cache;
+    // O cache é por casamento: com vários abertos no mesmo pedido (o suporte a
+    // saltar entre eles), um cache único servia as definições de um ao outro.
+    static $cache = [];
+    $cid = casamentoAtual();
+    if (isset($cache[$cid]) && !$recarregar) return $cache[$cid];
+    $cache[$cid] = [];
+    $st = $conn->prepare("SELECT chave, valor FROM {$P}definicoes WHERE casamento_id=?");
+    if ($st) {
+        $st->bind_param('i', $cid);
+        $st->execute();
+        $r = $st->get_result();
+        while ($x = $r->fetch_assoc()) $cache[$cid][$x['chave']] = $x['valor'];
+    }
+    return $cache[$cid];
 }
 
 /**
@@ -792,14 +800,15 @@ function guardarDefinicoes(mysqli $conn, array $novos): array {
         if (!array_key_exists($chave, $padrao) || !is_string($valor)) continue;
         $v = validarDefinicao($chave, $valor);
         if ($v === null) { $invalidas[] = $chave; continue; }
+        $cid = casamentoAtual();
         if ($v === '' || $v === $padrao[$chave]) {
-            $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE chave=?");
-            $st->bind_param('s', $chave); $st->execute();
+            $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=? AND chave=?");
+            $st->bind_param('is', $cid, $chave); $st->execute();
             $repostas++;
         } else {
-            $st = $conn->prepare("INSERT INTO {$P}definicoes (chave, valor) VALUES (?,?)
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)
                                   ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-            $st->bind_param('ss', $chave, $v); $st->execute();
+            $st->bind_param('iss', $cid, $chave, $v); $st->execute();
             $gravadas++;
         }
     }

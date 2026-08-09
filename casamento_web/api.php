@@ -765,6 +765,38 @@ if ($acao === 'convite_restaurar') {
     ok(['stats'=>estatisticas($conn)]);
 }
 
+if ($acao === 'esquema_info') {
+    // Retrato do esqueleto de dados. Serve para uma prova poder afirmar que a
+    // migração para vários casamentos ficou bem feita — sobretudo que nenhum
+    // dado ficou sem dono, que é o que separa isto de uma fuga entre casais.
+    $um = function (string $sql) use ($conn) {
+        $r = @$conn->query($sql); return $r ? (int)$r->fetch_row()[0] : -1;
+    };
+    $orfaos = 0;
+    foreach (['convites','convidados','mesas','versoes','registo'] as $t) {
+        $orfaos += max(0, $um("SELECT COUNT(*) FROM {$P}$t WHERE casamento_id IS NULL OR casamento_id < 1"));
+    }
+    // As definições do sistema (versão do esquema) vivem no casamento 0.
+    $sistemaFora = $um("SELECT COUNT(*) FROM {$P}definicoes WHERE chave='schema.versao' AND casamento_id=0") === 1;
+    // O nome da mesa tem de ser único por casamento, não em toda a tabela.
+    $mesaOk = false;
+    $rk = @$conn->query("SHOW KEYS FROM {$P}mesas WHERE Key_name='uq_mesa_nome'");
+    if ($rk) {
+        $cols = [];
+        while ($x = $rk->fetch_assoc()) $cols[] = $x['Column_name'];
+        $mesaOk = in_array('casamento_id', $cols, true) && in_array('nome', $cols, true);
+    }
+    ok(['esquema' => [
+        'versao'      => ESQUEMA_VERSAO,
+        'casamentos'  => $um("SELECT COUNT(*) FROM {$P}casamentos"),
+        'contas'      => $um("SELECT COUNT(*) FROM {$P}utilizadores"),
+        'acessos'     => $um("SELECT COUNT(*) FROM {$P}acessos"),
+        'orfaos'      => $orfaos,
+        'sistema_fora_de_casamento' => $sistemaFora,
+        'mesa_unica_por_casamento'  => $mesaOk,
+    ]]);
+}
+
 if ($acao === 'reciclagem') {
     // Convites eliminados (recuperáveis). Ao abrir a reciclagem aproveita-se
     // para deitar fora o que já lá está há mais de RECICLAGEM_DIAS — assim a
