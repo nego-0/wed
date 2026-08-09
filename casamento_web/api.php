@@ -17,6 +17,66 @@ function corpo(): array {
 function ok(array $extra = []): void  { echo json_encode(['success' => true]  + $extra); exit; }
 function erro(string $m): void        { echo json_encode(['success' => false, 'message' => $m]); exit; }
 
+/**
+ * Exige poder escrever no casamento aberto.
+ *
+ * A única situação em que não se pode é a visita de suporte com um código de
+ * "ver". Fica aqui, num sítio só, à frente de tudo o que altera dados: um
+ * código de ver que deixasse mexer não era um código de ver.
+ */
+function exigirCorrecao(): void {
+    if (!podeCorrigir()) {
+        http_response_code(403);
+        erro('Está a acompanhar este casamento com um código de leitura. '
+           . 'Para corrigir, peça ao casal um código com permissão de correção.');
+    }
+}
+
+/**
+ * Quantos gestores ficariam neste casamento se tirássemos esta conta.
+ * Serve para não deixar um casamento sem ninguém que lhe mexa — um erro
+ * de um clique que só se desfaz por fora, na base de dados.
+ */
+function contaNoivos(mysqli $conn, int $cid, int $exceto): int {
+    global $P;
+    $st = $conn->prepare("SELECT COUNT(*) n FROM {$P}acessos
+                          WHERE casamento_id=? AND papel='noivos' AND utilizador_id <> ?");
+    if (!$st) return 0;
+    $st->bind_param('ii', $cid, $exceto); $st->execute();
+    return (int)$st->get_result()->fetch_assoc()['n'];
+}
+
+/** Senha temporária legível, para se entregar a quem se convida. */
+function senhaTemporaria(): string {
+    $a = 'abcdefghijkmnpqrstuvwxyz23456789';   // sem l, o, 0, 1
+    $s = '';
+    for ($i = 0; $i < 10; $i++) $s .= $a[random_int(0, strlen($a) - 1)];
+    return $s;
+}
+
+/**
+ * As mesmas portas de exigirAdmin()/exigirPorta(), mas a responder como API.
+ *
+ * As originais reencaminham para o login, o que numa página é o certo e numa
+ * chamada de API é uma armadilha: o pedido recebe a página de entrada em HTML
+ * onde esperava JSON, e quem chamou fica sem perceber que lhe faltava o
+ * acesso. Aqui responde-se 403 e diz-se porquê.
+ */
+function exigirAdminApi(): void {
+    if (ehAdmin()) return;
+    http_response_code(403);
+    erro(utilizadorId()
+        ? 'Não tem um casamento aberto com poderes de gestão.'
+        : 'Sessão terminada. Entre de novo.');
+}
+function exigirPortaApi(): void {
+    if (podeEntrar()) return;
+    http_response_code(403);
+    erro(utilizadorId()
+        ? 'Não tem um casamento aberto.'
+        : 'Sessão terminada. Entre de novo.');
+}
+
 /** Exige um token CSRF válido nos pedidos autenticados que alteram dados. */
 function exigirCsrf(): void {
     if (!csrfValido()) {
@@ -135,13 +195,130 @@ if ($acao === 'rsvp_submit') {
 }
 
 // ============================================================
+// REGISTO PÚBLICO — um casal inscreve-se, o admin é que abre a porta
+// ============================================================
+if ($acao === 'registo_publico') {
+    $d = corpo();
+    $noiva = mb_substr(trim((string)($d['noiva'] ?? '')), 0, 80);
+    $noivo = mb_substr(trim((string)($d['noivo'] ?? '')), 0, 80);
+    $email = mb_strtolower(trim((string)($d['email'] ?? '')));
+    $senha = (string)($d['senha'] ?? '');
+    $data  = trim((string)($d['data'] ?? ''));
+    if ($noiva === '' || $noivo === '')          erro('Indique os nomes dos noivos.');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
+    if (mb_strlen($senha) < 8)                    erro('A senha precisa de pelo menos 8 caracteres.');
+    if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) erro('Data inválida.');
+
+    // Trava contra enchentes: um registo de cada vez por visitante, e um teto
+    // global por hora. Sem isto, um guião automático enchia a fila de
+    // aprovação de lixo e o admin deixava de ver os pedidos verdadeiros.
+    if (!empty($_SESSION['registo_feito']) && (time() - (int)$_SESSION['registo_feito']) < 900) {
+        erro('Já foi enviado um registo há pouco. Aguarde, por favor.');
+    }
+    $r = @$conn->query("SELECT COUNT(*) n FROM {$P}casamentos
+                        WHERE estado='pendente' AND criado_em > (NOW() - INTERVAL 1 HOUR)");
+    if ($r && (int)$r->fetch_assoc()['n'] >= 20) {
+        erro('Há demasiados registos à espera neste momento. Tente mais tarde, por favor.');
+    }
+
+    // A conta primeiro: se o email já existir, não se cria casamento nenhum.
+    $hash = password_hash($senha, PASSWORD_DEFAULT);
+    $nomeConta = trim("$noiva & $noivo");
+    $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                          VALUES (?,?,?, 'pendente')");
+    $st->bind_param('sss', $email, $nomeConta, $hash);
+    if (!$st->execute()) erro('Já existe uma conta com esse email. Tente entrar, ou use outro.');
+    $uid = $conn->insert_id;
+
+    $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado)
+                          VALUES (?,?,?,?, 'pendente')");
+    $dataOuNulo = $data !== '' ? $data : null;
+    $st->bind_param('ssss', $nomeConta, $noiva, $noivo, $dataOuNulo);
+    if (!$st->execute()) {
+        // Sem casamento, a conta ficaria a pairar: desfaz-se.
+        $conn->query("DELETE FROM {$P}utilizadores WHERE id=" . (int)$uid);
+        erro('Não foi possível registar. Tente de novo, por favor.');
+    }
+    $cid = $conn->insert_id;
+
+    $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?, 'noivos')");
+    $st->bind_param('ii', $uid, $cid); @$st->execute();
+
+    $_SESSION['registo_feito'] = time();
+    usarCasamento($cid);
+    registar($conn, 'registo_publico', $nomeConta, $email);
+    ok(['casamento' => $cid]);
+}
+
+// ============================================================
 // A partir daqui: exige login
 // ============================================================
+// Autenticado, mas ainda sem casa: o suporte antes de lhe darem um código, ou
+// um registo aprovado a que falte o casamento. Estas ações são as que se pode
+// fazer nesse estado.
+if (in_array($acao, ['suporte_entrar','senha_mudar'], true)) {
+    if (!utilizadorId()) { http_response_code(401); erro('Sessão terminada. Entre de novo.'); }
+    exigirCsrf();
+
+    if ($acao === 'suporte_entrar') {
+        // O código é do casal para o suporte. Não é uma segunda porta de
+        // entrada: quem o usa já se autenticou, e tem de ser da casa.
+        if (!ehPessoalPlataforma()) erro('Só o pessoal da plataforma usa códigos de suporte.');
+        $cod = mb_strtoupper(trim((string)(corpo()['codigo'] ?? '')));
+        if ($cod === '') erro('Indique o código.');
+        $st = $conn->prepare("SELECT id, casamento_id, pode_corrigir, expira_em, revogado_em
+                              FROM {$P}suporte_codigos WHERE codigo=? LIMIT 1");
+        $st->bind_param('s', $cod); $st->execute();
+        $s = $st->get_result()->fetch_assoc();
+        // A mesma resposta para código errado, revogado ou expirado: quem
+        // tentar adivinhar não fica a saber qual dos três acertou.
+        $mau = 'Código inválido, revogado ou expirado.';
+        if (!$s) erro($mau);
+        if ($s['revogado_em'] !== null) erro($mau);
+        if ($s['expira_em'] !== null && strtotime($s['expira_em']) < time()) erro($mau);
+
+        $cid = (int)$s['casamento_id'];
+        $q = $conn->prepare("SELECT nome, estado FROM {$P}casamentos WHERE id=?");
+        $q->bind_param('i', $cid); $q->execute();
+        $cas = $q->get_result()->fetch_assoc();
+        if (!$cas || $cas['estado'] === 'arquivado') erro($mau);
+
+        $acessos = suporteAcessos();
+        $acessos[$cid] = ['corrigir' => (int)$s['pode_corrigir'], 'codigo' => (int)$s['id']];
+        $_SESSION['suporte_acessos'] = $acessos;
+
+        $uid = utilizadorId();
+        $st = $conn->prepare("UPDATE {$P}suporte_codigos SET usado_por=?, usado_em=NOW() WHERE id=?");
+        $st->bind_param('ii', $uid, $s['id']); @$st->execute();
+
+        abrirCasamento($conn, $cid);
+        registar($conn, 'suporte_entrou', $cas['nome'],
+                 (int)$s['pode_corrigir'] ? 'pode corrigir' : 'só ver');
+        ok(['casamento' => $cid, 'nome' => $cas['nome'], 'pode_corrigir' => (int)$s['pode_corrigir']]);
+    }
+
+    if ($acao === 'senha_mudar') {
+        $d = corpo();
+        $velha = (string)($d['atual'] ?? '');
+        $nova  = (string)($d['nova'] ?? '');
+        if (mb_strlen($nova) < 8) erro('A nova senha precisa de pelo menos 8 caracteres.');
+        $uid = utilizadorId();
+        $r = $conn->query("SELECT senha_hash FROM {$P}utilizadores WHERE id=$uid LIMIT 1");
+        $u = $r ? $r->fetch_assoc() : null;
+        if (!$u || !password_verify($velha, (string)$u['senha_hash'])) erro('A senha atual não confere.');
+        $hash = password_hash($nova, PASSWORD_DEFAULT);
+        $st = $conn->prepare("UPDATE {$P}utilizadores SET senha_hash=? WHERE id=?");
+        $st->bind_param('si', $hash, $uid);
+        if (!$st->execute()) erro('Não foi possível mudar a senha.');
+        registar($conn, 'senha_mudada', utilizadorAtual() ?? '');
+        ok();
+    }
+}
 
 // ---- Porteiro (admin ou porteiro) --------------------------
 if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entradas','porta_dados'], true)) {
-    exigirPorta();
-    if ($acao === 'porta_checkin') exigirCsrf(); // altera dados: protegido por CSRF
+    exigirPortaApi();
+    if ($acao === 'porta_checkin') { exigirCsrf(); exigirCorrecao(); }  // altera dados
 
     if ($acao === 'porta_stats') {
         $s = estatisticas($conn);
@@ -267,7 +444,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
 }
 
 // ---- Admin --------------------------------------------------
-exigirAdmin();
+exigirAdminApi();
 
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
 if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
@@ -276,8 +453,18 @@ if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsv
                      'convite_restaurar','versao_criar','versao_aplicar','versao_atualizar',
                      'versao_renomear','versao_apagar',
                      'casamento_criar','casamento_abrir','casamento_apagar','casamento_estado',
-                     'casamento_endereco','utilizador_criar','utilizador_apagar','acesso_dar'], true)) {
+                     'casamento_endereco','utilizador_criar','utilizador_apagar','utilizador_estado',
+                     'utilizador_repor_senha','acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
+                     'suporte_codigo_criar','suporte_codigo_revogar','suporte_sair'], true)) {
     exigirCsrf();
+    // E, se estiver a ver a casa com um código de leitura, fica-se por ver.
+    // As ações da própria plataforma (criar contas, mudar estados) não são
+    // dados de casamento nenhum e não passam por aqui.
+    if (!in_array($acao, ['casamento_criar','casamento_abrir','casamento_estado','casamento_apagar',
+                          'utilizador_criar','utilizador_apagar','utilizador_estado',
+                          'utilizador_repor_senha','suporte_sair'], true)) {
+        exigirCorrecao();
+    }
 }
 
 // ---- Personalização do convite digital ---------------------
@@ -785,7 +972,9 @@ if ($acao === 'convite_restaurar') {
 // aplicação precisa para saber em qual está e para as provas poderem existir.
 
 if ($acao === 'casamento_criar') {
-    if (!ehPessoalPlataforma()) erro('Só o pessoal da plataforma cria casamentos.');
+    // Criar casamentos é do admin da casa. O suporte entra nos que o casal lhe
+    // abrir por código, e não abre casas novas.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma cria casamentos.');
     $d = corpo();
     $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 160);
     $noiva = mb_substr(trim((string)($d['noiva'] ?? '')), 0, 80);
@@ -833,8 +1022,14 @@ if ($acao === 'utilizador_apagar') {
     $st->bind_param('i', $id); $st->execute();
     $u = $st->get_result()->fetch_assoc();
     if (!$u) erro('Conta não encontrada.');
-    if ($u['papel_plataforma']) erro('Contas da plataforma não se apagam por aqui.');
     if ((int)$u['n'] > 0) erro('Esta conta ainda tem lugar num casamento. Retire-lho primeiro.');
+    // O último admin da plataforma não se apaga: ficaria uma casa sem chaves,
+    // e a única saída era ir à base de dados por fora.
+    if ($u['papel_plataforma'] === 'admin') {
+        $r = $conn->query("SELECT COUNT(*) n FROM {$P}utilizadores
+                           WHERE papel_plataforma='admin' AND estado='ativo' AND id <> " . (int)$id);
+        if ($r && (int)$r->fetch_assoc()['n'] === 0) erro('É o último admin da plataforma.');
+    }
     $st = $conn->prepare("DELETE FROM {$P}utilizadores WHERE id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a conta.');
@@ -887,8 +1082,98 @@ if ($acao === 'utilizador_criar') {
     ok(['id' => $uid, 'email' => $email]);
 }
 
+// ---- Quem entra neste casamento -----------------------------
+// A gestão dos lugares é de quem gere o casamento aberto: são os noivos que
+// convidam o seu porteiro, e não a plataforma que lho impõe. Numa visita de
+// suporte com código de leitura, isto não se mexe (exigirCorrecao acima).
+
+/** Quem manda nos lugares deste casamento? */
+function mandaNosAcessos(int $cid): bool {
+    return ehAdminPlataforma() || ($cid === casamentoAtual() && ehAdmin());
+}
+
+if ($acao === 'acesso_lista') {
+    exigirAdminApi();
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT a.utilizador_id, a.papel, u.email, u.nome, u.estado, u.ultimo_acesso
+                          FROM {$P}acessos a JOIN {$P}utilizadores u ON u.id = a.utilizador_id
+                          WHERE a.casamento_id = ? ORDER BY a.papel, u.nome, u.email");
+    $st->bind_param('i', $cid); $st->execute();
+    ok(['acessos' => $st->get_result()->fetch_all(MYSQLI_ASSOC), 'eu' => utilizadorId()]);
+}
+
+if ($acao === 'acesso_convidar') {
+    // Dá lugar a alguém no casamento aberto, pelo email. Se a conta ainda não
+    // existir, cria-se — é como se convida um porteiro que nunca cá esteve.
+    $cid = casamentoAtual();
+    if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
+    $d = corpo();
+    $email = mb_strtolower(trim((string)($d['email'] ?? '')));
+    $papelCas = in_array($d['papel'] ?? '', ['noivos','porteiro'], true) ? $d['papel'] : 'porteiro';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
+
+    $st = $conn->prepare("SELECT id, nome FROM {$P}utilizadores WHERE email=? LIMIT 1");
+    $st->bind_param('s', $email); $st->execute();
+    $u = $st->get_result()->fetch_assoc();
+    $senhaNova = '';
+    if ($u) {
+        $uid = (int)$u['id'];
+    } else {
+        // Conta nova: senha temporária, mostrada uma vez a quem convida, para
+        // lha entregar. Não há correio configurado — e inventar um envio que
+        // não acontece seria pior do que dizer as coisas como são.
+        $senhaNova = senhaTemporaria();
+        $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 120);
+        $hash = password_hash($senhaNova, PASSWORD_DEFAULT);
+        $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                              VALUES (?,?,?, 'ativo')");
+        $st->bind_param('sss', $email, $nome, $hash);
+        if (!$st->execute()) erro('Não foi possível criar a conta.');
+        $uid = $conn->insert_id;
+    }
+    $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?,?)
+                          ON DUPLICATE KEY UPDATE papel=VALUES(papel)");
+    $st->bind_param('iis', $uid, $cid, $papelCas);
+    if (!$st->execute()) erro('Não foi possível dar o acesso.');
+    registar($conn, 'acesso_dado', $email, $papelCas);
+    ok(['utilizador' => $uid, 'email' => $email, 'papel' => $papelCas, 'senha' => $senhaNova]);
+}
+
+if ($acao === 'acesso_papel') {
+    $cid = casamentoAtual();
+    if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
+    $uid = (int)($_GET['utilizador'] ?? 0);
+    $papelCas = in_array($_GET['papel'] ?? '', ['noivos','porteiro'], true) ? $_GET['papel'] : '';
+    if ($uid <= 0 || $papelCas === '') erro('Indique a conta e o papel.');
+    // Ninguém se despromove a si próprio: o casamento ficaria sem quem o gere.
+    if ($uid === utilizadorId() && $papelCas !== 'noivos') erro('Não pode tirar-se a si próprio a gestão.');
+    if ($papelCas === 'porteiro' && contaNoivos($conn, $cid, $uid) === 0) {
+        erro('Este casamento ficaria sem ninguém a geri-lo.');
+    }
+    $st = $conn->prepare("UPDATE {$P}acessos SET papel=? WHERE utilizador_id=? AND casamento_id=?");
+    $st->bind_param('sii', $papelCas, $uid, $cid);
+    if (!$st->execute()) erro('Não foi possível mudar o papel.');
+    registar($conn, 'acesso_papel', 'conta '.$uid, $papelCas);
+    ok(['utilizador' => $uid, 'papel' => $papelCas]);
+}
+
+if ($acao === 'acesso_tirar') {
+    $cid = casamentoAtual();
+    if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
+    $uid = (int)($_GET['utilizador'] ?? 0);
+    if ($uid <= 0) erro('Indique a conta.');
+    if ($uid === utilizadorId()) erro('Não pode tirar-se a si próprio deste casamento.');
+    if (contaNoivos($conn, $cid, $uid) === 0) erro('Este casamento ficaria sem ninguém a geri-lo.');
+    $st = $conn->prepare("DELETE FROM {$P}acessos WHERE utilizador_id=? AND casamento_id=?");
+    $st->bind_param('ii', $uid, $cid);
+    if (!$st->execute()) erro('Não foi possível tirar o acesso.');
+    registar($conn, 'acesso_tirado', 'conta '.$uid, 'casamento '.$cid);
+    ok(['utilizador' => $uid]);
+}
+
 if ($acao === 'acesso_dar') {
-    // Dá (ou muda) o lugar de alguém num casamento.
+    // Dá (ou muda) o lugar de alguém num casamento, indicando qual. É a versão
+    // da plataforma; o casal usa 'acesso_convidar', no casamento que tem aberto.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma dá acessos.');
     $uid = (int)($_GET['utilizador'] ?? 0);
     $cid = (int)($_GET['casamento'] ?? 0);
@@ -900,6 +1185,137 @@ if ($acao === 'acesso_dar') {
     if (!$st->execute()) erro('Não foi possível dar o acesso.');
     registar($conn, 'acesso_dado', 'conta '.$uid, 'casamento '.$cid.' · '.$papelCas);
     ok(['utilizador' => $uid, 'casamento' => $cid, 'papel' => $papelCas]);
+}
+
+// ---- Códigos de suporte -------------------------------------
+// A porta que o casal abre ao suporte, e fecha quando quiser. Um código diz
+// a que casamento dá acesso, se deixa só ver ou também corrigir, e até quando.
+
+if ($acao === 'suporte_codigo_lista') {
+    exigirAdminApi();
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT s.id, s.codigo, s.pode_corrigir, s.criado_em, s.expira_em,
+                                 s.usado_em, s.revogado_em, u.email AS usado_por_email
+                          FROM {$P}suporte_codigos s
+                          LEFT JOIN {$P}utilizadores u ON u.id = s.usado_por
+                          WHERE s.casamento_id=? ORDER BY s.id DESC LIMIT 40");
+    $st->bind_param('i', $cid); $st->execute();
+    $lista = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    $agora = time();
+    foreach ($lista as &$l) {
+        $l['estado'] = $l['revogado_em'] !== null ? 'revogado'
+                     : (($l['expira_em'] !== null && strtotime($l['expira_em']) < $agora) ? 'expirado' : 'valido');
+    }
+    unset($l);
+    ok(['codigos' => $lista]);
+}
+
+if ($acao === 'suporte_codigo_criar') {
+    exigirAdminApi();
+    if (emVisitaDeSuporte()) erro('Uma visita de suporte não gera códigos de acesso.');
+    $d = corpo();
+    $corrigir = !empty($d['pode_corrigir']) ? 1 : 0;
+    // Prazo curto por omissão: um código sem fim é uma porta que fica aberta.
+    $dias = (int)($d['dias'] ?? 7);
+    $dias = max(1, min($dias, 90));
+    $cid  = casamentoAtual();
+    $uid  = utilizadorId();
+
+    $alfabeto = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    do {
+        $cod = '';
+        for ($i = 0; $i < 8; $i++) $cod .= $alfabeto[random_int(0, strlen($alfabeto) - 1)];
+        $q = $conn->prepare("SELECT id FROM {$P}suporte_codigos WHERE codigo=? LIMIT 1");
+        $q->bind_param('s', $cod); $q->execute();
+        $existe = $q->get_result()->fetch_assoc();
+    } while ($existe);
+
+    $st = $conn->prepare("INSERT INTO {$P}suporte_codigos
+                            (casamento_id, codigo, pode_corrigir, criado_por, expira_em)
+                          VALUES (?,?,?,?, DATE_ADD(NOW(), INTERVAL ? DAY))");
+    $st->bind_param('isiii', $cid, $cod, $corrigir, $uid, $dias);
+    if (!$st->execute()) erro('Não foi possível gerar o código.');
+    registar($conn, 'suporte_codigo', $cod, ($corrigir ? 'pode corrigir' : 'só ver') . " · $dias dia(s)");
+    ok(['codigo' => $cod, 'pode_corrigir' => $corrigir, 'dias' => $dias]);
+}
+
+if ($acao === 'suporte_codigo_revogar') {
+    exigirAdminApi();
+    $id  = (int)($_GET['id'] ?? 0);
+    $cid = casamentoAtual();
+    $st = $conn->prepare("UPDATE {$P}suporte_codigos SET revogado_em=NOW()
+                          WHERE id=? AND casamento_id=? AND revogado_em IS NULL");
+    $st->bind_param('ii', $id, $cid);
+    if (!$st->execute() || $conn->affected_rows === 0) erro('Esse código já não está de pé.');
+    registar($conn, 'suporte_codigo_revogado', 'código ' . $id);
+    ok(['id' => $id]);
+}
+
+if ($acao === 'suporte_sair') {
+    // Fecha a visita ao casamento aberto, sem esperar que o código expire.
+    $cid = casamentoAtual();
+    $acessos = suporteAcessos();
+    unset($acessos[$cid]);
+    $_SESSION['suporte_acessos'] = $acessos;
+    $_SESSION['casamento_id'] = 0;
+    $_SESSION['papel'] = null;
+    ok();
+}
+
+// ---- Contas, vistas pela plataforma -------------------------
+if ($acao === 'utilizador_lista') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê as contas.');
+    $q = trim((string)($_GET['q'] ?? ''));
+    $sql = "SELECT u.id, u.email, u.nome, u.papel_plataforma, u.estado, u.criado_em, u.ultimo_acesso,
+                   (SELECT COUNT(*) FROM {$P}acessos a WHERE a.utilizador_id = u.id) casamentos
+            FROM {$P}utilizadores u";
+    if ($q !== '') {
+        $sql .= " WHERE u.email LIKE ? OR u.nome LIKE ?";
+        $sql .= " ORDER BY u.estado='pendente' DESC, u.id DESC LIMIT 100";
+        $st = $conn->prepare($sql);
+        $like = "%$q%"; $st->bind_param('ss', $like, $like);
+    } else {
+        $sql .= " ORDER BY u.estado='pendente' DESC, u.id DESC LIMIT 100";
+        $st = $conn->prepare($sql);
+    }
+    $st->execute();
+    ok(['contas' => $st->get_result()->fetch_all(MYSQLI_ASSOC), 'eu' => utilizadorId()]);
+}
+
+if ($acao === 'utilizador_estado') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o estado das contas.');
+    $id = (int)($_GET['id'] ?? 0);
+    $novo = (string)($_GET['estado'] ?? '');
+    if (!in_array($novo, ['pendente','ativo','suspenso'], true)) erro('Estado inválido.');
+    if ($id === utilizadorId()) erro('Não pode mudar o estado da sua própria conta.');
+    $st = $conn->prepare("SELECT email FROM {$P}utilizadores WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $u = $st->get_result()->fetch_assoc();
+    if (!$u) erro('Conta não encontrada.');
+    $st = $conn->prepare("UPDATE {$P}utilizadores SET estado=? WHERE id=?");
+    $st->bind_param('si', $novo, $id);
+    if (!$st->execute()) erro('Não foi possível mudar o estado.');
+    registar($conn, 'conta_estado', (string)$u['email'], $novo);
+    ok(['id' => $id, 'estado' => $novo]);
+}
+
+if ($acao === 'utilizador_repor_senha') {
+    // Não há correio configurado, e um envio que não acontece era pior do que
+    // não o prometer: gera-se uma senha temporária, mostra-se UMA vez a quem
+    // a há de entregar, e quem a receber muda-a na sua conta.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma repõe senhas.');
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT email FROM {$P}utilizadores WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $u = $st->get_result()->fetch_assoc();
+    if (!$u) erro('Conta não encontrada.');
+    $nova = senhaTemporaria();
+    $hash = password_hash($nova, PASSWORD_DEFAULT);
+    $st = $conn->prepare("UPDATE {$P}utilizadores SET senha_hash=? WHERE id=?");
+    $st->bind_param('si', $hash, $id);
+    if (!$st->execute()) erro('Não foi possível repor a senha.');
+    registar($conn, 'senha_reposta', (string)$u['email']);
+    ok(['id' => $id, 'email' => $u['email'], 'senha' => $nova]);
 }
 
 if ($acao === 'casamento_estado') {
@@ -915,8 +1331,22 @@ if ($acao === 'casamento_estado') {
     $st = $conn->prepare("UPDATE {$P}casamentos SET estado=? WHERE id=?");
     $st->bind_param('si', $novo, $id);
     if (!$st->execute()) erro('Não foi possível mudar o estado.');
-    registar($conn, 'casamento_estado', $c['nome'], $novo);
-    ok(['id' => $id, 'estado' => $novo]);
+
+    // Aprovar um registo é abrir a porta às duas coisas ao mesmo tempo: o
+    // casamento passa a ativo E a conta de quem se inscreveu deixa de estar à
+    // espera. Aprovar só o casamento deixava o casal de fora, sem perceber
+    // porquê — e o admin convencido de que já tinha tratado do assunto.
+    $contas = 0;
+    if ($novo === 'ativo') {
+        $st = $conn->prepare("UPDATE {$P}utilizadores u
+                              JOIN {$P}acessos a ON a.utilizador_id = u.id
+                              SET u.estado='ativo'
+                              WHERE a.casamento_id = ? AND u.estado='pendente'");
+        $st->bind_param('i', $id);
+        if ($st->execute()) $contas = $conn->affected_rows;
+    }
+    registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas conta(s) ativada(s)" : ''));
+    ok(['id' => $id, 'estado' => $novo, 'contas_ativadas' => $contas]);
 }
 
 if ($acao === 'casamento_apagar') {
@@ -934,8 +1364,10 @@ if ($acao === 'casamento_apagar') {
         $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
         $st->bind_param('i', $id); @$st->execute();
     }
-    $st = $conn->prepare("DELETE FROM {$P}acessos WHERE casamento_id=?");
-    $st->bind_param('i', $id); @$st->execute();
+    foreach (['acessos', 'suporte_codigos'] as $t) {
+        $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
+        $st->bind_param('i', $id); @$st->execute();
+    }
     $st = $conn->prepare("DELETE FROM {$P}casamentos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     if ((int)($_SESSION['casamento_id'] ?? 0) === $id) unset($_SESSION['casamento_id']);

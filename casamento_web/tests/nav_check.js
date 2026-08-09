@@ -9,7 +9,7 @@ const EXE=process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/c
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
   // Os editores (convite-editor.php, editor-cartao.php) não têm o cabeçalho
   // partilhado: ocupam o ecrã inteiro, como um editor de imagem.
-  const paginas=['index.php','mesas.php','graficas.php','digital.php','cartoes.php','manual.php','impressos.php'];
+  const paginas=['index.php','mesas.php','graficas.php','digital.php','cartoes.php','manual.php','impressos.php','equipa.php'];
   let fails=0;
   for(const f of paginas){
     const r=await p.goto(BASE+'/'+f,{waitUntil:'domcontentloaded'});

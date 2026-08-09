@@ -16,6 +16,11 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `auth.php` | Autenticação por sessão, por **nome de utilizador + senha** (administrador e porteiro). |
 | `api.php` | Todos os pedidos JSON (gestão, RSVP público e porteiro) e exportação CSV. |
 | `login.php` / `logout.php` | Entrada e saída. |
+| `registo.php` | **Inscrição pública** de um casal: cria a conta e o casamento em espera, e não abre a porta a ninguém — quem aprova é o admin da plataforma. |
+| `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
+| `equipa.php` | Quem entra neste casamento (noivos, porteiro), os códigos de suporte que o casal gera e revoga, e a mudança da própria senha. |
+| `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
+| `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
 | `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
 | `convite-editor.php` | **Personalização completa do convite digital**: textos, história, cronograma, manual, fotos, música, cores e efeitos — com pré-visualização ao vivo. |
@@ -42,6 +47,50 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 - **`cw_convites`** — o convite é a unidade central: código único, nome a exibir, sufixo opcional, tipo (`digital`/`fisico`/`ambos`), lado, número de lugares, mesa, telefone, estados de RSVP e de entrada, mensagens e observações.
 - **`cw_convidados`** — as pessoas nominais de cada convite (com RSVP e presença individuais).
 - **`cw_mesas`** — mesas com capacidade e ocupação.
+- **`cw_casamentos`** — quem é quem: nome, noivos, data, estado (`pendente`/`ativo`/`suspenso`/`arquivado`) e o endereço público por onde os convidados chegam.
+- **`cw_utilizadores`** — as contas (email, senha cifrada, papel na plataforma, estado).
+- **`cw_acessos`** — quem entra em que casamento, e como (`noivos` / `porteiro`).
+- **`cw_suporte_codigos`** — as chaves temporárias que o casal dá ao suporte.
+
+Todas as tabelas de dados levam `casamento_id`. A ligação à base **audita cada
+instrução**: uma consulta que mexa nos dados de um casamento sem dizer de qual
+rebenta nas provas (`AMBITO_ESTRITO=1`) e fica no log em produção.
+
+---
+
+## Vários casamentos, várias contas
+
+A casa serve vários casais ao mesmo tempo. Há dois níveis de papéis, e convém
+não os confundir:
+
+| Nível | Papéis | O que pode |
+|---|---|---|
+| No casamento | `noivos` | gere tudo o que é desse casamento |
+| No casamento | `porteiro` | só a porta: procurar convites e registar entradas |
+| Na plataforma | `admin` | vê todos os casamentos, aprova inscrições, gere contas |
+| Na plataforma | `suporte` | **nada, por direito próprio** — só entra com um código que o casal lhe der |
+
+**Como entra um casal novo.** Inscreve-se em `registo.php`. A conta e o
+casamento ficam `pendente`, e a entrada recusa-lhe o acesso — de propósito. O
+admin da plataforma vê a inscrição na fila em `plataforma.php` e aprova-a;
+aprovar o casamento ativa, no mesmo gesto, a conta de quem se inscreveu.
+
+**Como o suporte ajuda.** O casal gera, em `equipa.php`, um código que diz se
+dá para **ver** ou para **ver e corrigir**, e por quantos dias. Entrega-o. O
+suporte escreve-o em `plataforma.php` e passa a acompanhar aquele casamento,
+com uma tira no cabeçalho que não deixa esquecer em casa de quem está. Um
+código de leitura recusa qualquer escrita, no servidor. Revogar fecha a porta
+**já** — inclusive a quem estava lá dentro nesse momento.
+
+**Senhas.** Cada pessoa muda a sua em `equipa.php`. Não há envio de correio
+configurado, e prometer um email que nunca chega seria pior: quando alguém
+perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma
+senha temporária para lha entregar.
+
+**O endereço público.** Os QR e os links dos convites são absolutos e, uma vez
+impressos, são para sempre. Cada casamento tem o seu endereço, fixado na barra
+que aparece nas páginas que geram links e QR — que avisa, antes de imprimir,
+quando o endereço só existe na máquina de quem o está a ver.
 
 ---
 

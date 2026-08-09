@@ -41,20 +41,93 @@ function ehAdminPlataforma(): bool   { return papelPlataforma() === 'admin'; }
 function ehSuporte(): bool           { return papelPlataforma() === 'suporte'; }
 function ehPessoalPlataforma(): bool { return in_array(papelPlataforma(), ['admin','suporte'], true); }
 
+// ---- Visitas do suporte ------------------------------------
+// O suporte não entra em casa de ninguém por direito próprio. O casal gera um
+// código, entrega-o, e é esse código que abre a porta — dizendo se é só para
+// ver ou também para corrigir. A visita vive na sessão: fecha-se ao sair, e o
+// casal pode revogar o código a qualquer momento.
+
+/**
+ * Casamentos abertos nesta sessão por um código de suporte.
+ *
+ * Confere os códigos na base, uma vez por pedido. Sem isto, revogar um código
+ * só fechava a porta a quem ainda não tinha entrado: quem já lá estava ficava
+ * lá dentro enquanto não fechasse a sessão — e "revogar" tem de querer dizer
+ * agora, não da próxima vez.
+ */
+function suporteAcessos(): array {
+    global $P;
+    static $validado = false;
+    $ac = is_array($_SESSION['suporte_acessos'] ?? null) ? $_SESSION['suporte_acessos'] : [];
+    if (!$ac || $validado) return $ac;
+    $conn = $GLOBALS['conn'] ?? null;
+    if (!($conn instanceof mysqli)) return $ac;
+    $validado = true;
+
+    $ids = [];
+    foreach ($ac as $v) { $id = (int)($v['codigo'] ?? 0); if ($id > 0) $ids[] = $id; }
+    $vivos = [];
+    if ($ids) {
+        $lista = implode(',', $ids);   // inteiros, saídos de casts
+        $r = @$conn->query("SELECT id, casamento_id, pode_corrigir FROM {$P}suporte_codigos
+                            WHERE id IN ($lista) AND revogado_em IS NULL
+                              AND (expira_em IS NULL OR expira_em > NOW())");
+        if ($r) while ($x = $r->fetch_assoc()) $vivos[(int)$x['id']] = $x;
+    }
+
+    $novo = [];
+    foreach ($ac as $cid => $v) {
+        $codigo = (int)($v['codigo'] ?? 0);
+        if (!isset($vivos[$codigo])) continue;                       // revogado ou expirado
+        // A permissão também pode ter mudado: manda a que está na base.
+        $novo[(int)$cid] = ['corrigir' => (int)$vivos[$codigo]['pode_corrigir'], 'codigo' => $codigo];
+    }
+    if ($novo !== $ac) {
+        $_SESSION['suporte_acessos'] = $novo;
+        // Se a visita que morreu era o casamento aberto, fecha-se já — senão a
+        // sessão continuava com papel de gestão sobre uma casa onde já não entra.
+        $aberto = (int)($_SESSION['casamento_id'] ?? 0);
+        if ($aberto > 0 && isset($ac[$aberto]) && !isset($novo[$aberto])) {
+            $_SESSION['casamento_id'] = 0;
+            $_SESSION['papel'] = null;
+        }
+    }
+    return $novo;
+}
+
+/** Esta sessão está num casamento por código de suporte (e não por direito)? */
+function emVisitaDeSuporte(?int $casamentoId = null): bool {
+    $id = $casamentoId ?? casamentoAtual();
+    return isset(suporteAcessos()[$id]);
+}
+
+/**
+ * Pode escrever no casamento aberto?
+ *
+ * Só é falso num caso: visita de suporte com um código de "ver". É a última
+ * porta antes da escrita, e por isso responde sobre o casamento em causa —
+ * não sobre quem é a pessoa.
+ */
+function podeCorrigir(): bool {
+    $v = suporteAcessos()[casamentoAtual()] ?? null;
+    if ($v === null) return true;                  // não é visita: manda o papel
+    return !empty($v['corrigir']);
+}
+
 /**
  * Os casamentos a que este utilizador chega, e com que papel.
- * O pessoal da plataforma chega a todos; os restantes, só àqueles em que
- * têm lugar (tabela de acessos).
+ *
+ * O admin da plataforma chega a todos — é quem responde pela casa. O suporte
+ * chega apenas aos que lhe foram abertos por código, e aos que tenha por
+ * acesso próprio. Os restantes, só àqueles em que têm lugar.
  */
 function casamentosDoUtilizador(mysqli $conn): array {
     global $P;
     $out = [];
-    if (ehPessoalPlataforma()) {
+    if (ehAdminPlataforma()) {
         $r = @$conn->query("SELECT id, nome, estado FROM {$P}casamentos
                             WHERE estado <> 'arquivado' ORDER BY id");
         if ($r) while ($x = $r->fetch_assoc()) {
-            // Quem é da casa entra como quem gere — o que o suporte pode
-            // MEXER é outra conversa, e decide-se no ponto de escrita.
             $x['papel'] = 'noivos';
             $out[(int)$x['id']] = $x;
         }
@@ -64,11 +137,26 @@ function casamentosDoUtilizador(mysqli $conn): array {
                            FROM {$P}acessos a JOIN {$P}casamentos c ON c.id = a.casamento_id
                            WHERE a.utilizador_id = ? AND c.estado <> 'arquivado'
                            ORDER BY c.id");
-    if (!$st) return $out;
-    $uid = utilizadorId();
-    $st->bind_param('i', $uid); $st->execute();
-    $r = $st->get_result();
-    while ($x = $r->fetch_assoc()) $out[(int)$x['id']] = $x;
+    if ($st) {
+        $uid = utilizadorId();
+        $st->bind_param('i', $uid); $st->execute();
+        $r = $st->get_result();
+        while ($x = $r->fetch_assoc()) $out[(int)$x['id']] = $x;
+    }
+    // E os que um código de suporte abriu nesta sessão.
+    foreach (suporteAcessos() as $id => $v) {
+        if (isset($out[(int)$id])) continue;
+        $q = @$conn->prepare("SELECT id, nome, estado FROM {$P}casamentos
+                              WHERE id=? AND estado <> 'arquivado'");
+        if (!$q) continue;
+        $q->bind_param('i', $id); $q->execute();
+        if ($x = $q->get_result()->fetch_assoc()) {
+            $x['papel']   = 'noivos';
+            $x['suporte'] = empty($v['corrigir']) ? 'ver' : 'corrigir';
+            $out[(int)$x['id']] = $x;
+        }
+    }
+    ksort($out);
     return $out;
 }
 
@@ -114,9 +202,11 @@ function csrfValido(): bool {
 }
 
 /**
- * Autentica por nome de utilizador + senha (definidos em config.local.php).
- * Aceita senha em texto simples ('senha') ou em hash ('senha_hash').
- * Devolve o papel ('admin'/'porteiro') em caso de sucesso, ou null.
+ * Autentica por email (ou nome) + senha, contra as contas da base.
+ *
+ * Devolve, em caso de sucesso: 'admin' ou 'porteiro' (o papel no casamento
+ * que se abriu), ou 'plataforma' quando a conta é boa mas ainda não tem
+ * casamento nenhum onde entrar. Devolve null quando não autentica.
  */
 function autenticar(string $utilizador, string $senha): ?string {
     global $conn, $P;
@@ -148,15 +238,22 @@ function autenticar(string $utilizador, string $senha): ?string {
     @$conn->query("UPDATE {$P}utilizadores SET ultimo_acesso = NOW() WHERE id = " . (int)$u['id']);
 
     // Abre-se um casamento: se só há um, é esse; se há vários, o primeiro, e
-    // quem quiser troca depois. Sem nenhum, a conta entra mas não vê peça
-    // nenhuma — é o caso de um registo aprovado a que ainda falta o casamento.
+    // quem quiser troca depois.
+    //
+    // Sem nenhum, não se abre nada — e é preciso dizê-lo com clareza. O
+    // suporte entra sempre assim (só lá chega com um código que o casal lhe
+    // dê), e antes ficava com 'admin' e sem casamento aberto: casamentoAtual()
+    // respondia 1 por omissão e a pessoa aterrava, com poderes de gestão, na
+    // casa do primeiro casal do sistema.
     $lista = casamentosDoUtilizador($conn);
     if ($lista) {
         abrirCasamento($conn, (int)array_key_first($lista));
-    } else {
-        $_SESSION['papel'] = ehPessoalPlataforma() ? 'admin' : null;
+        return papel();
     }
-    return papel();
+    $_SESSION['casamento_id'] = 0;   // 0 = casamento nenhum, e não "o primeiro"
+    $_SESSION['papel'] = null;
+    // Autenticou-se: não é uma senha errada. Só ainda não tem casa onde entrar.
+    return 'plataforma';
 }
 
 function terminarSessao(): void {
@@ -168,6 +265,13 @@ function terminarSessao(): void {
     }
     session_destroy();
 }
+
+// Confere as visitas de suporte logo à entrada do pedido, antes de qualquer
+// página ou endpoint perguntar pelo papel. Deixar isto para quando alguém
+// chamasse suporteAcessos() era deixá-lo por fazer: um pedido que só pergunte
+// ehAdmin() — e são quase todos — nunca lá chegava, e um código revogado
+// continuava a servir.
+suporteAcessos();
 
 /** Exige admin; caso contrário redireciona para o login. */
 function exigirAdmin(): void {

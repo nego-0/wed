@@ -31,7 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $papel = autenticar($_POST['utilizador'] ?? '', $_POST['senha'] ?? '');
         if ($papel) {
             unset($_SESSION['login_falhas'], $_SESSION['login_ultima']);
-            header('Location: ' . ($papel === 'admin' ? $redir : 'porteiro.php'));
+            // Cada um para onde lhe serve: a porta para a porta, e quem entrou
+            // sem casamento aberto (o suporte, à espera de um código) para a
+            // página dos casamentos, que é onde o pode arranjar.
+            $destino = ['porteiro' => 'porteiro.php', 'plataforma' => 'plataforma.php'][$papel] ?? $redir;
+            header('Location: ' . $destino);
             exit;
         }
         $_SESSION['login_falhas'] = $falhas + 1;
@@ -79,7 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <button class="btn btn-verde" style="width:100%; justify-content:center;" type="submit">Entrar</button>
       </form>
-      <div class="dica">Administração e porta de entrada usam contas distintas.</div>
+      <div class="dica">Administração e porta de entrada usam contas distintas.<br>
+        Ainda não tem conta? <a href="registo.php" style="color:var(--gold)">Inscreva o seu casamento</a>.</div>
     </div>
   </div>
 </body>

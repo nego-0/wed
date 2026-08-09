@@ -96,6 +96,7 @@ function ficheirosApp(): array {
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
+            'registo.php','equipa.php',
             'manifest.php','sw.js',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js',

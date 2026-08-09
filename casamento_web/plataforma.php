@@ -22,6 +22,7 @@ if (!papel() && !ehPessoalPlataforma()) {
 $meus    = casamentosDoUtilizador($conn);
 $aberto  = casamentoAtual();
 $daCasa  = ehPessoalPlataforma();
+$mandaNaCasa = ehAdminPlataforma();   // criar casamentos e gerir contas é do admin
 
 // Números de cada casamento, numa consulta só por tabela — em alojamento
 // partilhado, uma consulta por linha da lista custa caro.
@@ -68,7 +69,10 @@ $CAS = casalInfo(defsAtuais($conn));
   .et.agora{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; }
+  .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
+  .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
+  .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
+            padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
   .lf{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.7rem; align-items:end; }
   @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .cas{ grid-template-columns:auto 1fr; } .cas .ac{ grid-column:1/-1; } }
 </style>
@@ -100,7 +104,21 @@ $CAS = casalInfo(defsAtuais($conn));
     </div>
   <?php endif; ?>
 
-  <?php if ($daCasa): ?>
+  <?php if (ehSuporte()): ?>
+    <div class="painel">
+      <h3>Entrar com um código do casal</h3>
+      <div class="dica">O suporte não entra em casa de ninguém por direito próprio: é o casal
+        que gera um código e o entrega. O código diz se pode só ver ou também corrigir,
+        e o casal revoga-o quando quiser.</div>
+      <div class="lf" style="grid-template-columns:1fr auto">
+        <div><label>Código</label>
+          <input type="text" id="s-codigo" placeholder="XXXXXXXX" autocapitalize="characters" spellcheck="false"></div>
+        <div><button class="btn btn-ouro" onclick="entrarComCodigo()">Entrar</button></div>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($mandaNaCasa): ?>
     <div class="painel">
       <h3>Novo casamento</h3>
       <div class="dica">Cria o casamento já ativo. A conta dos noivos liga-se a ele a seguir.</div>
@@ -147,6 +165,22 @@ $CAS = casalInfo(defsAtuais($conn));
       </div>
     <?php endforeach; ?>
   </div>
+
+  <?php if (ehAdminPlataforma()): ?>
+    <div class="painel" style="margin-top:1.4rem">
+      <h3>Contas</h3>
+      <div class="dica">Todas as contas do sistema. Uma conta <b>suspensa</b> não entra —
+        e a mensagem que recebe é a mesma de senha errada, para quem tenta adivinhar
+        não ficar a saber que a conta existe.</div>
+      <div class="lf" style="grid-template-columns:1fr auto;margin-bottom:.6rem">
+        <div><input type="search" id="q-conta" placeholder="Procurar por email ou nome…"
+                    oninput="carregarContas()"></div>
+        <div></div>
+      </div>
+      <div id="lista-contas"><div class="dica">A carregar…</div></div>
+      <div class="segredo" id="senha-reposta" style="display:none"></div>
+    </div>
+  <?php endif; ?>
 </main>
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
@@ -174,6 +208,58 @@ async function recusar(id){
   const d = await api('casamento_estado&id=' + id + '&estado=suspenso', { method:'POST' });
   if (d && d.success) location.reload();
 }
+async function entrarComCodigo(){
+  const codigo = document.getElementById('s-codigo').value.trim();
+  if (!codigo) return toast('Escreva o código que o casal lhe deu.', true);
+  const d = await api('suporte_entrar', { method:'POST', body: JSON.stringify({ codigo }) });
+  if (d && d.success) location.href = 'index.php';
+}
+
+// ---------- contas (só o admin da plataforma) ----------
+const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+async function carregarContas(){
+  const alvo = document.getElementById('lista-contas');
+  if (!alvo) return;
+  const q = (document.getElementById('q-conta').value || '').trim();
+  const d = await api('utilizador_lista' + (q ? '&q=' + encodeURIComponent(q) : ''));
+  if (!d || !d.success) return;
+  if (!d.contas.length){ alvo.innerHTML = '<div class="dica">Nenhuma conta corresponde.</div>'; return; }
+  alvo.innerHTML = d.contas.map(c => {
+    const eu = +c.id === +d.eu;
+    const nome = c.nome || c.email;
+    const plat = c.papel_plataforma ? `<span class="et agora">${esc(c.papel_plataforma)} da plataforma</span>` : '';
+    const trocaEstado = c.estado === 'ativo' ? 'suspenso' : 'ativo';
+    const acoes = eu ? '<span class="meta">é você</span>' : `
+      <button class="btn btn-sm" onclick="estadoConta(${c.id}, '${trocaEstado}')">
+        ${c.estado === 'ativo' ? 'Suspender' : 'Ativar'}</button>
+      <button class="btn btn-sm" onclick="reporSenha(${c.id}, '${esc(c.email)}')">Repor senha</button>`;
+    return `<div class="cas">
+      <div class="selo">${esc(nome.slice(0,1).toUpperCase())}</div>
+      <div>
+        <div class="nm">${esc(nome)} <span class="et ${esc(c.estado)}">${esc(c.estado)}</span> ${plat}</div>
+        <div class="meta"><span>${esc(c.email)}</span>
+          <span>${c.casamentos} casamento(s)</span>
+          <span>${c.ultimo_acesso ? 'último acesso ' + esc(c.ultimo_acesso.slice(0,10)) : 'nunca entrou'}</span></div>
+      </div>
+      <div class="ac">${acoes}</div>
+    </div>`;
+  }).join('');
+}
+async function estadoConta(id, estado){
+  if (estado === 'suspenso' && !confirm('Suspender esta conta?\n\nDeixa de entrar até ser reativada.')) return;
+  const d = await api('utilizador_estado&id=' + id + '&estado=' + estado, { method:'POST' });
+  if (d && d.success) carregarContas();
+}
+async function reporSenha(id, email){
+  if (!confirm('Repor a senha de ' + email + '?\n\nA senha atual deixa de servir. A nova aparece aqui, uma vez.')) return;
+  const d = await api('utilizador_repor_senha&id=' + id, { method:'POST' });
+  if (!d || !d.success) return;
+  const cx = document.getElementById('senha-reposta');
+  cx.style.display = '';
+  cx.innerHTML = `Senha nova de <b>${esc(d.email)}</b>: <b class="cod">${esc(d.senha)}</b><br>
+    Entregue-lha agora — não volta a aparecer. Ela deve mudá-la na página Equipa.`;
+}
+carregarContas();
 </script>
 </body>
 </html>

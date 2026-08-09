@@ -14,6 +14,7 @@ function menuPrincipal(): array {
         'grafica' => ['graficas.php',        'Convite impresso'],
         'convite' => ['digital.php',         'Convite digital'],
         'porta'   => ['porteiro.php',        'Porta'],
+        'equipa'  => ['equipa.php',          'Equipa'],
         // A entrada da plataforma só aparece a quem tem mais do que um
         // casamento à mão — para quem só tem o seu, seria uma porta para nada.
         'plataforma' => ['plataforma.php',   'Casamentos'],
@@ -71,4 +72,21 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   </div>
 </header>
 <?php
+    // Visita de suporte: uma tira que não deixa esquecer em casa de quem se
+    // está. Sem isto, uma pessoa da plataforma passava a tarde a mexer na
+    // festa de um casal convencida de que era a de outro.
+    if (function_exists('emVisitaDeSuporte') && emVisitaDeSuporte()):
+        $podeMexer = podeCorrigir(); ?>
+<div class="tira-suporte<?= $semPapel ?>">
+  Visita de suporte <b><?= $podeMexer ? 'com permissão de correção' : 'de leitura' ?></b>
+  — <?= $podeMexer ? 'pode ver e corrigir.' : 'pode ver; alterar, não.' ?>
+  <a href="equipa.php">terminar a visita</a>
+</div>
+<style>
+  .tira-suporte{ background:var(--warn-bg); border-bottom:1px solid var(--warn); color:var(--ink);
+                 text-align:center; padding:.45rem .8rem; font-size:.82rem; }
+  .tira-suporte a{ color:inherit; }
+  @media print{ .tira-suporte{ display:none !important; } }
+</style>
+<?php endif;
 }
