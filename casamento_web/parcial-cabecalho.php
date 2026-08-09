@@ -14,7 +14,7 @@ function menuPrincipal(): array {
         'grafica' => ['graficas.php',        'Convite impresso'],
         'convite' => ['digital.php',         'Convite digital'],
         'porta'   => ['porteiro.php',        'Porta'],
-        'equipa'  => ['equipa.php',          'Equipa'],
+        'gestao'  => ['gestao.php',          'Gestão'],
         // A entrada da plataforma só aparece a quem tem mais do que um
         // casamento à mão — para quem só tem o seu, seria uma porta para nada.
         'plataforma' => ['plataforma.php',   'Casamentos'],
@@ -105,7 +105,7 @@ function tiraSuporte(bool $noPrint = false): void {
   Visita de suporte <b><?= $podeMexer ? 'com permissão de correção' : 'de leitura' ?></b>
   — <?= $podeMexer ? 'pode ver e corrigir.'
                    : 'pode ver tudo; alterar, não — o que estiver apagado nesta página não responde.' ?>
-  <a href="equipa.php">terminar a visita</a>
+  <a href="gestao.php">terminar a visita</a>
 </div>
 <style>
   .tira-suporte{ background:var(--warn-bg); border-bottom:1px solid var(--warn); color:var(--ink);

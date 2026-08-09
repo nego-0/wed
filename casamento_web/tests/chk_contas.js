@@ -163,11 +163,11 @@ const entrar = async (ctx, user, pass) => {
   ok(porteiroTenta && porteiroTenta.success === false, 'e não chega ao painel dos noivos');
 
   // O porteiro chega à página da Equipa (é lá que muda a sua senha), mas o que
-  // lá vê é só a sua conta — não a equipa nem os códigos de suporte.
-  await porteiro.goto(BASE + '/equipa.php', { waitUntil: 'networkidle' });
+  // lá vê é só a sua conta — nem a equipa, nem os códigos, nem os dados do evento.
+  await porteiro.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
   const txtEq = await porteiro.locator('body').innerText();
   ok(txtEq.includes('A minha conta') && !txtEq.includes('Códigos de suporte'),
-     'o porteiro muda a sua senha na Equipa, mas não vê a equipa nem os códigos');
+     'o porteiro muda a sua senha na Gestão, mas não vê a equipa nem os códigos');
 
   const equipa = await casal._api('acesso_lista');
   ok((equipa.acessos || []).some(a => a.email === emailPorteiro), 'a equipa mostra os dois');

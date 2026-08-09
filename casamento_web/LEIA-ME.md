@@ -18,7 +18,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `login.php` / `logout.php` | Entrada e saída. |
 | `registo.php` | **Inscrição pública** de um casal: cria a conta e o casamento em espera, e não abre a porta a ninguém — quem aprova é o admin da plataforma. |
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
-| `equipa.php` | Quem entra neste casamento (noivos, porteiro), os códigos de suporte que o casal gera e revoga, e a mudança da própria senha. |
+| `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
 | `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
@@ -70,12 +70,31 @@ não os confundir:
 | Na plataforma | `admin` | vê todos os casamentos, aprova inscrições, gere contas |
 | Na plataforma | `suporte` | **nada, por direito próprio** — só entra com um código que o casal lhe der |
 
+**A ficha manda nas peças.** Os nomes e a data que o casal deu ao inscrever-se
+(ou que o admin escreveu ao criar o casamento) vivem em `cw_casamentos` e
+entram como **valor de origem** de `defsPadrao()` — não como definições
+gravadas. Daí seguem sozinhos para tudo o que delas sai: o monograma, o
+cabeçalho, o convite digital, o cartão impresso, a página de confirmação, a
+contagem decrescente, o manifesto da porta e o nome do ficheiro CSV. A versão
+"Original" de cada casamento passa também a ser a dele.
+
+O editor do convite continua a poder escrever um nome diferente por cima — é
+para isso que serve. Quando isso acontece, a página de gestão di-lo, e guardar
+a ficha retira essa cópia: sem isso, mudar o nome na ficha não mudava nada no
+convite e ninguém percebia porquê.
+
+**Onde o casal gere isto.** `gestao.php` junta o que é do casamento e não do
+desenho de uma peça: a ficha, os dados do evento (hora, sítio, mapa,
+contacto), o endereço público, quem entra e com que papel, as contas dos
+porteiros, os códigos de suporte e a mudança da própria senha. A última secção
+é para toda a gente — era a única forma de um porteiro poder mudar a sua.
+
 **Como entra um casal novo.** Inscreve-se em `registo.php`. A conta e o
 casamento ficam `pendente`, e a entrada recusa-lhe o acesso — de propósito. O
 admin da plataforma vê a inscrição na fila em `plataforma.php` e aprova-a;
 aprovar o casamento ativa, no mesmo gesto, a conta de quem se inscreveu.
 
-**Como o suporte ajuda.** O casal gera, em `equipa.php`, um código que diz se
+**Como o suporte ajuda.** O casal gera, em `gestao.php`, um código que diz se
 dá para **ver** ou para **ver e corrigir**, e por quantos dias. Entrega-o. O
 suporte escreve-o em `plataforma.php` e passa a acompanhar aquele casamento,
 com uma tira no cabeçalho que não deixa esquecer em casa de quem está. Um
@@ -99,7 +118,7 @@ com tudo à vista e tudo tocável. As caixas do bloqueio continuam a mostrar o
 que o **casal** configurou — trocá-las pela nossa trava dava a quem vem ajudar
 uma leitura errada da planta alheia.
 
-**Senhas.** Cada pessoa muda a sua em `equipa.php`. Não há envio de correio
+**Senhas.** Cada pessoa muda a sua em `gestao.php`. Não há envio de correio
 configurado, e prometer um email que nunca chega seria pior: quando alguém
 perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma
 senha temporária para lha entregar.

@@ -1,38 +1,82 @@
 <?php
 // ============================================================
-// equipa.php — Quem entra neste casamento, e com que chave
+// gestao.php — Os dados do casamento, num sítio só
 //
-// Três coisas que andavam sem sítio:
-//   • os lugares no casamento aberto (noivos, porteiro) — que são do casal a
-//     dar e a tirar, e não da plataforma a impor;
-//   • os códigos que o casal gera para o suporte poder ver, ou corrigir, e
-//     que revoga quando quiser;
-//   • a própria conta — mudar a senha, que até aqui não tinha onde se fazer.
+// Até aqui, mudar a data do evento fazia-se... no editor do convite digital,
+// entre a cor das pétalas e a citação do rodapé. E os nomes dos noivos, que a
+// ficha do casamento já conhecia desde a inscrição, tinham de ser reescritos
+// lá dentro para aparecerem nas peças.
 //
-// A última é para toda a gente, incluindo quem só trabalha à porta.
+// Esta página junta o que é do CASAMENTO — e não do desenho de uma peça:
+//
+//   • a ficha (nomes e data), que é o valor de origem de tudo o resto;
+//   • os dados do evento (hora, sítio, mapa, contacto);
+//   • o endereço público por onde os convidados chegam;
+//   • quem entra, com que papel, e as contas dos porteiros;
+//   • os códigos que abrem a porta ao suporte;
+//   • a própria conta de quem está a ver.
+//
+// A última secção é para toda a gente, incluindo quem só trabalha à porta —
+// era a única forma de um porteiro poder mudar a sua senha.
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
+require_once __DIR__ . '/parcial-endereco.php';
 exigirPorta();
 
 $souAdmin = ehAdmin();
 $visita   = emVisitaDeSuporte();
 $soVer    = $visita && !podeCorrigir();
-$CAS = casalInfo(defsAtuais($conn));
+$DEFS = defsAtuais($conn);
+$CAS  = casalInfo($DEFS);
+
+// A ficha, tal como está guardada — e não como as peças a mostram: se alguém
+// escreveu outro nome por cima, no editor, é preciso poder ver a diferença.
+$ficha = ['nome'=>'', 'noiva'=>'', 'noivo'=>'', 'data_evento'=>''];
+if ($souAdmin) {
+    $r = @$conn->query("SELECT nome, noiva, noivo, data_evento FROM {$P}casamentos
+                        WHERE id=" . casamentoAtual() . " LIMIT 1");
+    if ($r && ($x = $r->fetch_assoc())) $ficha = array_map(fn($v) => (string)$v, $x);
+}
+// Campos do convite que estão escritos POR CIMA da ficha (linha em cw_definicoes).
+$porCima = [];
+if ($souAdmin) {
+    $r = @$conn->query("SELECT chave FROM {$P}definicoes WHERE " . doCasamento()
+                       . " AND chave IN ('casal.noiva','casal.noivo','evento.data')");
+    if ($r) while ($x = $r->fetch_assoc()) $porCima[] = $x['chave'];
+}
+
+// Os campos do evento que esta página governa: rótulo, tipo e limite (o mesmo
+// que validarDefinicao aplica, para ninguém se surpreender depois de gravar).
+$CAMPOS_EVENTO = [
+    'evento.hora'          => ['Hora da festa', 'time', 5],
+    'evento.venue_titulo'  => ['Título do momento', 'text', 80],
+    'evento.local'         => ['Local', 'text', 120],
+    'evento.cidade'        => ['Cidade / região', 'text', 80],
+    'evento.maps'          => ['Ligação do Google Maps', 'url', 500],
+    'evento.whatsapp'      => ['WhatsApp de contacto', 'text', 20],
+    'cartao.civil_hora'    => ['Hora da cerimónia civil', 'time', 5],
+];
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Equipa · <?= escP($CAS['casal']) ?></title>
+<title>Gestão · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
   .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:1rem; line-height:1.5; }
+  .grelha{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.8rem; }
+  .grelha .campo{ min-width:0; }
+  .grelha label{ display:block; }
+  .largo{ grid-column:1/-1; }
+  .fim{ display:flex; gap:.6rem; align-items:center; margin-top:1rem; }
+  .fim .estado{ font-size:.82rem; color:#8a8f88; }
   .linha{ display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center;
           padding:.65rem 0; border-top:1px solid var(--line); }
   .linha:first-of-type{ border-top:0; }
@@ -50,16 +94,18 @@ $CAS = casalInfo(defsAtuais($conn));
   .lf{ display:grid; grid-template-columns:2fr 1fr auto; gap:.7rem; align-items:end; margin-top:1rem;
        padding-top:1rem; border-top:1px dashed var(--line); }
   .cod{ font-family:ui-monospace,monospace; font-size:1.05rem; letter-spacing:.12em; color:var(--ink); }
-  .aviso-visita{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
-                 border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
             padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
+  .aviso-visita{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
+                 border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
+  .porcima{ background:var(--cream); border-left:3px solid var(--gold-soft); border-radius:8px;
+            padding:.6rem .8rem; font-size:.83rem; color:#6c7570; margin-top:.9rem; line-height:1.55; }
   @media (max-width:640px){ .lf{ grid-template-columns:1fr; } .linha{ grid-template-columns:auto 1fr; }
                             .linha .ac{ grid-column:1/-1; } }
 </style>
 </head>
 <body>
-<?php cabecalho('Equipa', 'Quem entra neste casamento, e com que chave', 'equipa'); ?>
+<?php cabecalho('Gestão', 'Os dados do casamento, quem lá entra e a sua conta', 'gestao'); ?>
 
 <main class="container">
 
@@ -67,16 +113,71 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="aviso-visita">
       Está a acompanhar este casamento com um código de suporte
       <b><?= $soVer ? 'de leitura' : 'com permissão de correção' ?></b>.
-      <?= $soVer ? 'Pode ver tudo; alterar, não.' : 'Pode ver e corrigir.' ?>
       <a href="#" onclick="sairVisita();return false">Terminar a visita</a>.
     </div>
   <?php endif; ?>
 
   <?php if ($souAdmin): ?>
     <div class="painel">
+      <h3>O nosso casamento</h3>
+      <div class="dica">É daqui que sai o resto: o monograma, o cabeçalho, os nomes no convite,
+        no cartão impresso e na contagem decrescente. Mude aqui uma vez, e muda em todo o lado.</div>
+      <div class="grelha">
+        <div class="campo"><label for="f-noiva">Nome da noiva</label>
+          <input type="text" id="f-noiva" maxlength="80" value="<?= escP($ficha['noiva']) ?>"></div>
+        <div class="campo"><label for="f-noivo">Nome do noivo</label>
+          <input type="text" id="f-noivo" maxlength="80" value="<?= escP($ficha['noivo']) ?>"></div>
+        <div class="campo"><label for="f-data">Data do casamento</label>
+          <input type="date" id="f-data" value="<?= escP($ficha['data_evento']) ?>"></div>
+        <div class="campo largo"><label for="f-nome">Como o casamento se chama no sistema</label>
+          <input type="text" id="f-nome" maxlength="160" value="<?= escP($ficha['nome']) ?>"
+                 placeholder="Deixe vazio para usar «Noiva &amp; Noivo»"></div>
+      </div>
+      <?php if ($porCima): ?>
+        <div class="porcima">
+          O convite tem <b><?= count($porCima) ?> destes campos escritos por cima</b>, no editor
+          (<?= escP(implode(', ', $porCima)) ?>) — e é essa versão que os convidados veem.
+          Ao guardar aqui, essa cópia é retirada e as peças voltam a seguir estes valores.
+        </div>
+      <?php endif; ?>
+      <div class="fim">
+        <button class="btn btn-ouro" onclick="guardarFicha()">Guardar</button>
+        <span class="estado" id="e-ficha"></span>
+      </div>
+    </div>
+
+    <div class="painel">
+      <h3>O evento</h3>
+      <div class="dica">Onde, a que horas e por onde falar consigo. Estes valores entram no convite
+        digital, no cartão impresso e na página de confirmação — não é preciso ir ao editor por causa deles.</div>
+      <div class="grelha">
+        <?php foreach ($CAMPOS_EVENTO as $chave => [$rot, $tipo, $lim]):
+          $id = 'd-' . str_replace('.', '-', $chave); ?>
+          <div class="campo<?= $chave === 'evento.maps' ? ' largo' : '' ?>">
+            <label for="<?= $id ?>"><?= escP($rot) ?></label>
+            <input type="<?= $tipo ?>" id="<?= $id ?>" data-chave="<?= escP($chave) ?>"
+                   maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>">
+          </div>
+        <?php endforeach; ?>
+      </div>
+      <div class="fim">
+        <button class="btn btn-ouro" onclick="guardarEvento()">Guardar</button>
+        <span class="estado" id="e-evento"></span>
+      </div>
+    </div>
+
+    <div class="painel">
+      <h3>Endereço público</h3>
+      <div class="dica">O endereço por onde os convidados chegam. É este que vai nos QR impressos —
+        e no papel já não há emenda.</div>
+      <?php barraEndereco('os links e os QR dos convites'); ?>
+    </div>
+
+    <div class="painel">
       <h3>Quem entra neste casamento</h3>
       <div class="dica">Os <b>noivos</b> gerem tudo. O <b>porteiro</b> só vê a porta:
-        procura convites e regista entradas, e mais nada.</div>
+        procura convites e regista entradas, e mais nada. Convide-o pelo email — se ainda não
+        tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.</div>
       <div id="lista-acessos"><div class="dica">A carregar…</div></div>
 
       <?php if (!$soVer): ?>
@@ -95,7 +196,7 @@ $CAS = casalInfo(defsAtuais($conn));
       <h3>Códigos de suporte</h3>
       <div class="dica">Se precisar de ajuda de quem gere a plataforma, gere aqui um código e entregue-o.
         Sem código, o suporte não entra neste casamento. Pode revogá-lo a qualquer momento —
-        e o código deixa de servir mesmo que a pessoa ainda o tenha.</div>
+        e deixa de servir mesmo a quem esteja a usá-lo nesse instante.</div>
       <div id="lista-codigos"><div class="dica">A carregar…</div></div>
 
       <?php if (!$visita): ?>
@@ -121,12 +222,16 @@ $CAS = casalInfo(defsAtuais($conn));
   <div class="painel">
     <h3>A minha conta</h3>
     <div class="dica">Entrou como <b><?= escP(utilizadorAtual() ?? '') ?></b>.</div>
-    <div class="lf" style="border-top:0;padding-top:0;margin-top:0;grid-template-columns:1fr 1fr auto">
-      <div><label>Senha atual</label><input type="password" id="p-atual" autocomplete="current-password"></div>
-      <div><label>Nova senha</label><input type="password" id="p-nova" autocomplete="new-password"></div>
-      <div><button class="btn" onclick="mudarSenha()">Mudar senha</button></div>
+    <div class="grelha">
+      <div class="campo"><label for="p-atual">Senha atual</label>
+        <input type="password" id="p-atual" autocomplete="current-password"></div>
+      <div class="campo"><label for="p-nova">Nova senha</label>
+        <input type="password" id="p-nova" autocomplete="new-password"></div>
     </div>
-    <div class="dica" style="margin:.6rem 0 0">Pelo menos 8 caracteres.</div>
+    <div class="fim">
+      <button class="btn" onclick="mudarSenha()">Mudar senha</button>
+      <span class="estado">Pelo menos 8 caracteres.</span>
+    </div>
   </div>
 </main>
 
@@ -138,7 +243,31 @@ $CAS = casalInfo(defsAtuais($conn));
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const SOU_ADMIN = <?= $souAdmin ? 'true' : 'false' ?>;
-const SO_VER    = <?= $soVer ? 'true' : 'false' ?>;
+const SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;
+function toast(m, mau){ const t=$('toast'); t.textContent=m; t.className='toast mostrar'+(mau?' mau':'');
+                        setTimeout(()=>t.className='toast', 2600); }
+
+// ---------- a ficha ----------
+async function guardarFicha(){
+  const d = await api('casamento_identidade', { method:'POST', body: JSON.stringify({
+    noiva: $('f-noiva').value.trim(), noivo: $('f-noivo').value.trim(),
+    data_evento: $('f-data').value, nome: $('f-nome').value.trim() }) });
+  if (!d || !d.success) return;
+  $('e-ficha').textContent = 'Guardado. A recarregar…';
+  // Recarrega-se de propósito: o monograma, o cabeçalho e o título da página
+  // mudam com isto, e mostrá-los desatualizados seria mentir sobre o efeito.
+  setTimeout(() => location.reload(), 700);
+}
+
+// ---------- o evento ----------
+async function guardarEvento(){
+  const defs = {};
+  document.querySelectorAll('[data-chave]').forEach(el => { defs[el.dataset.chave] = el.value; });
+  const d = await api('defs_save', { method:'POST', body: JSON.stringify({ defs }) });
+  if (!d || !d.success) return;
+  $('e-evento').textContent = (d.gravadas || 0) + ' alterado(s), ' + (d.repostas || 0) + ' reposto(s).';
+  toast('Dados do evento guardados.');
+}
 
 // ---------- quem entra ----------
 async function carregarAcessos(){
@@ -149,7 +278,7 @@ async function carregarAcessos(){
   alvo.innerHTML = d.acessos.map(a => {
     const eu = +a.utilizador_id === +d.eu;
     const nome = a.nome || a.email;
-    const acoes = (SO_VER || eu) ? '' : `
+    const acoes = (SO_VER_UI || eu) ? '' : `
       <button class="btn btn-sm" onclick="trocarPapel(${a.utilizador_id}, '${a.papel === 'noivos' ? 'porteiro' : 'noivos'}')">
         Passar a ${a.papel === 'noivos' ? 'porteiro' : 'noivos'}</button>
       <button class="btn btn-sm" onclick="tirar(${a.utilizador_id}, '${esc(nome)}')">Tirar</button>`;
@@ -158,13 +287,13 @@ async function carregarAcessos(){
       <div>
         <div class="nm">${esc(nome)} ${eu ? '<span class="et">é você</span>' : ''}
           <span class="et ${esc(a.estado)}">${esc(a.estado)}</span></div>
-        <div class="mt">${esc(a.email)} · ${a.papel === 'noivos' ? 'gere o casamento' : 'só a porta'}</div>
+        <div class="mt">${esc(a.email)} · ${a.papel === 'noivos' ? 'gere o casamento' : 'só a porta'}
+          ${a.ultimo_acesso ? '· último acesso ' + esc(a.ultimo_acesso.slice(0,10)) : '· nunca entrou'}</div>
       </div>
       <div class="ac">${acoes}</div>
     </div>`;
   }).join('');
 }
-
 async function convidar(){
   const email = $('a-email').value.trim();
   if (!email) return toast('Indique o email.', true);
@@ -176,13 +305,12 @@ async function convidar(){
     $('senha-nova').style.display = '';
     $('senha-nova').innerHTML = `Conta criada para <b>${esc(d.email)}</b>.
       Senha temporária: <b class="cod">${esc(d.senha)}</b><br>
-      Entregue-lha agora — não volta a aparecer. Ela deve mudá-la na página Equipa.`;
+      Entregue-lha agora — não volta a aparecer. Ela deve mudá-la nesta página, em «A minha conta».`;
   } else {
     toast('Acesso dado a ' + d.email + '.');
   }
   carregarAcessos();
 }
-
 async function trocarPapel(uid, papel){
   const d = await api('acesso_papel&utilizador=' + uid + '&papel=' + papel, { method:'POST' });
   if (d && d.success) carregarAcessos();
@@ -216,7 +344,6 @@ async function carregarCodigos(){
     </div>`;
   }).join('');
 }
-
 async function gerarCodigo(){
   const d = await api('suporte_codigo_criar', { method:'POST',
     body: JSON.stringify({ pode_corrigir: $('s-corrigir').value === '1', dias: +$('s-dias').value }) });
@@ -240,7 +367,6 @@ async function mudarSenha(){
   const d = await api('senha_mudar', { method:'POST', body: JSON.stringify({ atual, nova }) });
   if (d && d.success){ $('p-atual').value = $('p-nova').value = ''; toast('Senha mudada.'); }
 }
-
 async function sairVisita(){
   const d = await api('suporte_sair', { method:'POST' });
   if (d && d.success) location.href = 'plataforma.php';

@@ -1027,6 +1027,39 @@ if ($acao === 'utilizador_apagar') {
     ok(['id' => $id]);
 }
 
+if ($acao === 'casamento_identidade') {
+    // A ficha do casamento: os nomes e a data que definem tudo o resto. Quem
+    // gere o casamento aberto pode mudá-la.
+    if (!ehAdmin()) erro('Não gere este casamento.');
+    $d = corpo();
+    $noiva = mb_substr(trim((string)($d['noiva'] ?? '')), 0, 80);
+    $noivo = mb_substr(trim((string)($d['noivo'] ?? '')), 0, 80);
+    $data  = trim((string)($d['data_evento'] ?? ''));
+    $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 160);
+    if ($noiva === '' || $noivo === '') erro('Indique os nomes dos noivos.');
+    if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) erro('Data inválida.');
+    if ($nome === '') $nome = "$noiva & $noivo";
+
+    $cid = casamentoAtual();
+    $st = $conn->prepare("UPDATE {$P}casamentos SET nome=?, noiva=?, noivo=?, data_evento=? WHERE id=?");
+    $dataOuNulo = $data !== '' ? $data : null;
+    $st->bind_param('ssssi', $nome, $noiva, $noivo, $dataOuNulo, $cid);
+    if (!$st->execute()) erro('Não foi possível guardar.');
+
+    // A ficha é o VALOR DE ORIGEM das peças (ver identidadeCasamento). Se o
+    // convite tinha estes campos escritos por cima — porque alguém os mudou no
+    // editor —, essa cópia continuaria a ganhar, e mudar o nome aqui não mudava
+    // nada lá. Tira-se a cópia: quem quiser um nome diferente NO CONVITE volta
+    // a escrevê-lo no editor, de propósito.
+    $chaves = ["'casal.noiva'", "'casal.noivo'"];
+    if ($data !== '') $chaves[] = "'evento.data'";
+    $conn->query("DELETE FROM {$P}definicoes WHERE " . doCasamento()
+                 . " AND chave IN (" . implode(',', $chaves) . ")");
+
+    registar($conn, 'casamento_ficha', $nome, $data !== '' ? $data : 'sem data');
+    ok(['nome' => $nome, 'noiva' => $noiva, 'noivo' => $noivo, 'data_evento' => $data]);
+}
+
 if ($acao === 'casamento_endereco') {
     // O endereço por onde os convidados chegam a ESTE casamento. Quem gere o
     // casamento aberto pode fixá-lo — é ele que sai nos QR e nos links.

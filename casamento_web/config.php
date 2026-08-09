@@ -96,7 +96,7 @@ function ficheirosApp(): array {
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
-            'registo.php','equipa.php',
+            'registo.php','gestao.php',
             'manifest.php','sw.js',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js',
@@ -126,7 +126,8 @@ function acoesDoCasamento(): array {
             'convidado_papel','planta_size','planta_bloqueio','importar',
             'defs_save','def_upload','porta_checkin',
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
-            'casamento_endereco','acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
+            'casamento_identidade','casamento_endereco',
+            'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
             'suporte_codigo_criar','suporte_codigo_revogar'];
 }
 

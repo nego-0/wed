@@ -257,7 +257,7 @@ async function reporSenha(id, email){
   const cx = document.getElementById('senha-reposta');
   cx.style.display = '';
   cx.innerHTML = `Senha nova de <b>${esc(d.email)}</b>: <b class="cod">${esc(d.senha)}</b><br>
-    Entregue-lha agora — não volta a aparecer. Ela deve mudá-la na página Equipa.`;
+    Entregue-lha agora — não volta a aparecer. Ela deve mudá-la na página Gestão.`;
 }
 carregarContas();
 </script>

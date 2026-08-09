@@ -17,7 +17,7 @@ const PAGINAS = [
   'index.php', 'mesas.php', 'graficas.php', 'digital.php', 'cartoes.php',
   'manual.php', 'impressos.php', 'porteiro.php', 'versao.php',
   'editor-cartao.php', 'convite-editor.php',
-  'plataforma.php', 'equipa.php', 'registo.php',
+  'plataforma.php', 'gestao.php', 'registo.php',
   'convite-digital.php?demo=1', 'convite-digital.php?demo=1&prova=1',
   'graficas.php?aba=manuais', 'editor-cartao.php?diag=1',
 ];

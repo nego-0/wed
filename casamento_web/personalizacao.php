@@ -105,9 +105,41 @@ function iconesConvite(): array {
     ];
 }
 
+/**
+ * Quem é este casamento, segundo a sua própria ficha.
+ *
+ * Os nomes e a data que o casal escreveu ao inscrever-se (ou que o admin
+ * escreveu ao criar o casamento) vivem em cw_casamentos. Sem isto ficavam lá
+ * quietos: as peças todas — convite, cartão, monograma, cabeçalho, manifesto —
+ * saem de defsPadrao(), e defsPadrao() falava de um casal só, o do config.php.
+ * Um casal novo inscrevia-se e via, em todo o lado, o nome de outras pessoas.
+ *
+ * Entram como VALOR DE ORIGEM, e não como definições gravadas: assim a versão
+ * "Original" de cada casamento é a dele, e mudar o nome na ficha muda-o em
+ * todo o lado sem deixar cópias por trás.
+ */
+function identidadeCasamento(): array {
+    global $conn, $P;
+    static $cache = [];
+    $id = function_exists('casamentoAtual') ? casamentoAtual() : 0;
+    if (array_key_exists($id, $cache)) return $cache[$id];
+    $out = [];
+    if ($id > 0 && isset($conn) && $conn instanceof mysqli) {
+        $r = @$conn->query("SELECT noiva, noivo, data_evento FROM {$P}casamentos WHERE id=$id LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) {
+            if (trim((string)$x['noiva']) !== '') $out['casal.noiva'] = trim($x['noiva']);
+            if (trim((string)$x['noivo']) !== '') $out['casal.noivo'] = trim($x['noivo']);
+            if (!empty($x['data_evento']) && $x['data_evento'] !== '0000-00-00') {
+                $out['evento.data'] = $x['data_evento'];
+            }
+        }
+    }
+    return $cache[$id] = $out;
+}
+
 // ---- Defaults (= convite original, byte a byte) ------------
 function defsPadrao(): array {
-    return [
+    $p = [
         'casal.noiva' => EVENTO['noiva'],
         'casal.noivo' => EVENTO['noivo'],
         'evento.data' => EVENTO['data_iso'],
@@ -222,6 +254,9 @@ function defsPadrao(): array {
         'tipo.sans'   => 'jost',
         'tipo.escala' => '100',
     ];
+    // A ficha do casamento manda sobre o config.php: são os nomes e a data que
+    // este casal deu de si. Só o que ele preencheu — o resto fica como veio.
+    return identidadeCasamento() + $p;
 }
 
 // ============================================================
