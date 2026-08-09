@@ -44,8 +44,15 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
     return r.json();
   }, { a: accao, c: corpo });
 
+  // Restos de uma corrida que tenha rebentado antes de limpar: sem isto, o
+  // alvo deixa de ser único e a prova seguinte falha por arrasto.
+  const MARCA = 'ZZ Prova Cartão Cheio';
+  for (const c of ((await api('convite_list')).convites || [])) {
+    if ((c.nome_exibicao || '').includes(MARCA)) await api('convite_delete&id=' + c.id + '&definitivo=1', {});
+  }
+
   const d = await api('convite_save', {
-    nome_exibicao: 'Família Nascimento Agostinho e Silva Pereira',
+    nome_exibicao: MARCA + ' Nascimento Agostinho e Silva Pereira',
     tipo: 'ambos', lado: 'ambos', lugares: 10, telefone: '+244912000111',
     membros: ['Ana Maria Nascimento','Rui Miguel Agostinho','Marta Sofia Agostinho',
               'Tiago André Agostinho','Inês Nascimento','Pedro Nascimento',
@@ -56,7 +63,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
 
   const cheio = await p.evaluate(() => {
     const r = [...document.querySelectorAll('.convite-row')]
-      .find(x => x.querySelector('.convite-nome').textContent.includes('Nascimento Agostinho'));
+      .find(x => x.querySelector('.convite-nome').textContent.includes("ZZ Prova Cartão Cheio"));
     if (!r) return null;
     const chips = [...r.querySelectorAll('.membro-chip')];
     return {
@@ -71,6 +78,39 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(cheio && cheio.alt <= 60, `um convite de dez pessoas cabe na mesma altura (${cheio && cheio.alt}px)`);
   ok(cheio && !cheio.esmagada, 'nenhuma pastilha de nome sai esmagada');
   ok(cheio && cheio.temMais, 'os convidados que não cabem são contados num "+N"');
+
+  // ---- clicar no "+N" abre a lista toda no próprio cartão ----
+  const alvo = '.convite-row:has(.convite-nome[title*="ZZ Prova Cartão Cheio"])';
+  const estado = () => p.evaluate((s) => {
+    const r = document.querySelector(s);
+    return { alt: Math.round(r.getBoundingClientRect().height),
+             nomes: [...r.querySelectorAll('.membro-chip')].map(c => c.textContent.trim()),
+             aberta: r.classList.contains('pessoas-abertas'),
+             aria: r.querySelector('.membro-chip.mais')?.getAttribute('aria-expanded') };
+  }, alvo);
+
+  await p.locator(alvo + ' .membro-chip.mais').click();
+  await p.waitForTimeout(300);
+  const ab = await estado();
+  console.log('   aberto:', JSON.stringify(ab.nomes));
+  ok(ab.aberta && ab.aria === 'true', 'clicar no "+N" abre a lista de pessoas');
+  ok(ab.nomes.filter(n => !/menos/.test(n)).length === 10, 'aparecem os dez convidados');
+  ok(ab.nomes.some(n => /Ana Maria Nascimento/.test(n)),
+     'os nomes vêm por inteiro, não só o primeiro nome');
+  ok(ab.alt > cheio.alt, 'o cartão cresce só depois de o utilizador o pedir');
+
+  await p.locator(alvo + ' .membro-chip.mais').click();
+  await p.waitForTimeout(300);
+  const fe = await estado();
+  ok(!fe.aberta && fe.alt === cheio.alt, 'voltar a clicar fecha e devolve a altura de antes');
+
+  // a lista é redesenhada por inteiro a cada ação: a abertura tem de sobreviver
+  await p.locator(alvo + ' .membro-chip.mais').click();
+  await p.waitForTimeout(300);
+  await p.evaluate(() => renderConvites());
+  await p.waitForTimeout(200);
+  ok((await estado()).aberta, 'a lista aberta não se fecha sozinha ao redesenhar');
+
   if (idCheio) await api('convite_delete&id=' + idCheio + '&definitivo=1', {});
 
   // o CSS chega com marca de versão

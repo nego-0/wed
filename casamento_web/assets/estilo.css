@@ -150,6 +150,9 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   /* As pastilhas nunca encolhem: uma pastilha esmagada a "A…" não diz nada. */
   .convite-row .membros-mini{ flex:none; }
   .convite-row .membro-chip{ flex:none; }
+  /* Aberta, a tira passa para uma linha só dela, com todos os nomes. */
+  .convite-row.pessoas-abertas .convite-corpo{ flex-wrap:wrap; }
+  .convite-row.pessoas-abertas .membros-mini{ flex:1 1 100%; }
 }
 /* Nome, estado e pessoas na mesma linha enquanto houver largura: em ecrãs
    largos cada convite passa a caber numa linha só, em vez de três. */
@@ -160,8 +163,15 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
    vinte convidados. */
 .membros-mini{ display:flex; gap:.28rem; flex-wrap:nowrap; min-width:0; }
 .membro-chip{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.12rem .55rem;
-  font-size:.76rem; color:var(--ink); white-space:nowrap; max-width:14ch; overflow:hidden; text-overflow:ellipsis; }
-.membro-chip.mais{ background:transparent; color:#8a8f88; border-style:dashed; cursor:default; }
+  font-family:inherit; font-size:.76rem; color:var(--ink); white-space:nowrap;
+  max-width:14ch; overflow:hidden; text-overflow:ellipsis; }
+/* A conta dos que não cabem é um botão: abre a lista toda no próprio cartão. */
+.membro-chip.mais{ background:transparent; color:#8a8f88; border-style:dashed; cursor:pointer; }
+.membro-chip.mais:hover{ background:var(--gold-pale); border-color:var(--gold-soft); color:var(--ink); }
+/* Aberta a lista, os nomes vêm por inteiro e a tira ocupa a sua própria linha:
+   aqui o cartão cresce porque foi o utilizador que pediu para o ver. */
+.convite-row.pessoas-abertas .membros-mini{ flex-wrap:wrap; }
+.convite-row.pessoas-abertas .membro-chip{ max-width:none; }
 .acoes{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
 /* ---------- Modal ---------- */

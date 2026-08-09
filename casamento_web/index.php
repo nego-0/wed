@@ -639,6 +639,9 @@ const primeiroNome=n=> String(n||'').trim().split(/\s+/)[0] || '';
 
 // ---------- seleção múltipla / ações em massa ----------
 const SELEC = new Set();
+// Convites cuja lista de pessoas o utilizador abriu. Guarda-se à parte porque a
+// lista é redesenhada por inteiro a cada ação — sem isto, fechava-se sozinha.
+const PESSOAS_ABERTAS = new Set();
 function alternarSelecao(id, on){ on ? SELEC.add(id) : SELEC.delete(id); renderBarraSelecao(); pintarSelecao(); }
 function pintarSelecao(){
   document.querySelectorAll('.convite-row').forEach((row,i)=>{
@@ -710,15 +713,21 @@ function renderConvites(){
     // alguns e conta-se o resto; o nome completo fica no título e na edição.
     const pessoas = (c.membros_det&&c.membros_det.length ? c.membros_det : (c.membros||[]).map(n=>({nome:n,genero:'',brinde:0})));
     const MAX_CHIPS = 2;
-    const membros = pessoas.slice(0, MAX_CHIPS).map(m=>
-        `<span class="membro-chip" title="${esc(m.nome)}">${genIco(m.genero)}${esc(primeiroNome(m.nome))}${brindeIco(m.brinde)}</span>`
-      ).join('')
-      + (pessoas.length > MAX_CHIPS
-          ? `<span class="membro-chip mais" title="${esc(pessoas.slice(MAX_CHIPS).map(m=>m.nome).join(', '))}">+${pessoas.length-MAX_CHIPS}</span>`
+    const aberto = PESSOAS_ABERTAS.has(c.id);
+    const escondidos = pessoas.length - MAX_CHIPS;
+    // Aberto mostra toda a gente pelo nome completo; fechado, só os primeiros
+    // nomes de dois e a conta do resto — que é um botão, não um rótulo.
+    const chip = m => `<span class="membro-chip" title="${esc(m.nome)}">`
+      + `${genIco(m.genero)}${esc(aberto ? m.nome : primeiroNome(m.nome))}${brindeIco(m.brinde)}</span>`;
+    const membros = (aberto ? pessoas : pessoas.slice(0, MAX_CHIPS)).map(chip).join('')
+      + (escondidos > 0
+          ? `<button type="button" class="membro-chip mais" aria-expanded="${aberto}"
+               title="${aberto ? 'Mostrar menos' : 'Ver os outros '+escondidos+' convidados'}"
+               onclick="alternarPessoas(${c.id})">${aberto ? '− menos' : '+'+escondidos}</button>`
           : '');
     const confTxt = c.rsvp_confirmados!=null && c.rsvp_estado!=='pendente' ? ` · ${c.rsvp_confirmados}/${c.lugares} confirmados` : '';
     const presTxt = c.checkin_presentes>0 ? ` · <span style="color:var(--ok)">${c.checkin_presentes} no local</span>` : '';
-    return `<div class="convite-row${SELEC.has(c.id)?' selecionada':''}">
+    return `<div class="convite-row${SELEC.has(c.id)?' selecionada':''}${aberto?' pessoas-abertas':''}">
       <label class="sel-conv" title="Selecionar para ações em massa">
         <input type="checkbox" ${SELEC.has(c.id)?'checked':''} onchange="alternarSelecao(${c.id},this.checked)">
       </label>
@@ -750,6 +759,12 @@ function renderConvites(){
     </div>`;
   }).join('') + rodapeLista();
   marcarMetaCortada();
+}
+
+/** Abre ou fecha a lista de pessoas de um convite, no próprio cartão. */
+function alternarPessoas(id){
+  if(PESSOAS_ABERTAS.has(id)) PESSOAS_ABERTAS.delete(id); else PESSOAS_ABERTAS.add(id);
+  renderConvites();
 }
 
 /**
