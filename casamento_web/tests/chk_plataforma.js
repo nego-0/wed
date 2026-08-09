@@ -137,6 +137,29 @@ const entrar = async (ctx, user, pass) => {
   ok((await admin.locator('body').innerText()).includes('administração da plataforma'),
      'a lista de casamentos diz com que título ele lá entra');
 
+  // ---------- nem no casamento nº1, que ele herdou ----------
+  // O 'admin' do config.local.php ficou, na migração, com um lugar de noivos no
+  // casamento nº1 — nesse mundo de um casamento só, ele era o casal. Com vários,
+  // esse lugar mente na mesma. A v9 tira-o.
+  await api('casamento_abrir&id=1');
+  const equipa1 = await api('acesso_lista');
+  const emails1 = (equipa1.acessos || []).map(a => a.email + ':' + a.papel);
+  console.log('   equipa do casamento nº1:', JSON.stringify(emails1));
+  ok(!emails1.some(e => e.startsWith('admin@local')),
+     'o admin herdado também saiu da equipa do casamento nº1');
+
+  // E o buraco que isso deixa não fica escondido: um casamento sem conta de
+  // noivos é um casamento a que o casal não chega.
+  await admin.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
+  await admin.waitForTimeout(900);
+  const txtEq = await admin.locator('#lista-acessos').innerText();
+  console.log('   aviso na equipa:', txtEq.replace(/\s+/g, ' ').slice(0, 100));
+  ok(/não tem nenhuma conta de noivos/.test(txtEq),
+     'e a Gestão avisa que o casamento ficou sem conta dos noivos');
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  ok((await admin.locator('body').innerText()).includes('sem conta dos noivos'),
+     'a lista de casamentos marca-o também');
+
   // ---------- limpeza ----------
   // Primeiro os casamentos (que levam com eles os lugares), e só depois a
   // conta — que a esta altura já não pertence a casamento nenhum. Sem isto,

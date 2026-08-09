@@ -31,6 +31,15 @@ foreach ([['convites', 'convites'], ['convidados', 'pessoas'], ['mesas', 'mesas'
     $r = @$conn->query("SELECT casamento_id, COUNT(*) n FROM {$P}$tab GROUP BY casamento_id");
     if ($r) while ($x = $r->fetch_assoc()) $conta[(int)$x['casamento_id']][$rot] = (int)$x['n'];
 }
+// Casamentos sem uma conta de noivos. Desde que o admin da plataforma deixou de
+// ocupar um lugar que não era dele, isto deixou de ser uma hipótese teórica:
+// um casamento pode ficar sem ninguém que seja MESMO dele — e é preciso vê-lo,
+// senão o casal nunca recebe as chaves da sua própria festa.
+$semDono = [];
+$r = @$conn->query("SELECT c.id FROM {$P}casamentos c
+                    LEFT JOIN {$P}acessos a ON a.casamento_id = c.id AND a.papel = 'noivos'
+                    WHERE c.estado <> 'arquivado' GROUP BY c.id HAVING COUNT(a.id) = 0");
+if ($r) while ($x = $r->fetch_assoc()) $semDono[(int)$x['id']] = true;
 
 // Registos à espera de aprovação (só o admin da plataforma os despacha).
 $pendentes = [];
@@ -71,6 +80,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
   .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
+  .falta{ color:var(--warn); font-weight:500; }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
             padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
   .lf{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.7rem; align-items:end; }
@@ -154,6 +164,9 @@ $CAS = casalInfo(defsAtuais($conn));
             <span><b><?= (int)($n['mesas'] ?? 0) ?></b> mesas</span>
             <?php if (($c['papel'] ?? '') === 'porteiro'): ?><span>o seu papel: porteiro</span>
             <?php elseif (($c['papel'] ?? '') === 'plataforma'): ?><span>entra como administração da plataforma</span>
+            <?php endif; ?>
+            <?php if (!empty($semDono[(int)$id])): ?>
+              <span class="falta">sem conta dos noivos</span>
             <?php endif; ?>
           </div>
         </div>

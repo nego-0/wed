@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 8;
+const ESQUEMA_VERSAO = 9;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -492,6 +492,26 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // pode mudar o endereço para onde apontam convites já entregues.
     if ($versaoAtual < 8) {
         migColuna($conn, "{$P}casamentos", 'endereco_publico', "VARCHAR(200) NOT NULL DEFAULT ''");
+    }
+
+    // ---- v9: o admin da plataforma não é nenhum dos casais ----------------
+    // A v7 trouxe o 'admin' do config.local.php para a base e deu-lhe, além do
+    // papel de plataforma, um lugar de NOIVOS no casamento nº1 — porque nesse
+    // mundo de um casamento só ele era, de facto, o casal.
+    //
+    // Com a casa a servir vários, esse lugar passou a mentir: punha quem
+    // responde pela plataforma dentro da equipa de um casal, na lista de quem
+    // gere aquele casamento, como se fosse da família.
+    //
+    // Tira-se o lugar, não o acesso: o admin continua a chegar a todos os
+    // casamentos por ser quem é (ver casamentosDoUtilizador), e a diferença é
+    // que o sistema passa a dizer com que título lá entra. Se um casamento
+    // precisar mesmo de uma conta de noivos, dá-se-lhe uma em Gestão — e a
+    // página avisa quando não há nenhuma.
+    if ($versaoAtual < 9) {
+        @$conn->query("DELETE a FROM {$P}acessos a
+                       JOIN {$P}utilizadores u ON u.id = a.utilizador_id
+                       WHERE u.papel_plataforma = 'admin'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

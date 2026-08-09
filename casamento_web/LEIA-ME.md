@@ -78,6 +78,14 @@ cabeçalho lembra-o de que está na festa de outras pessoas. Se alguém lhe der 
 lugar de verdade num casamento (uma linha em `cw_acessos`), é esse que manda —
 o que é verdade continua a ser dito.
 
+O `admin` herdado do `config.local.php` tinha, desde a migração v7, um lugar de
+noivos no casamento nº 1: nesse mundo de um casamento só, ele *era* o casal. A
+**v9** tira esse lugar (e o de qualquer outro admin de plataforma). Não lhe
+tira acesso nenhum — chega lá pelo papel que tem —, tira-lhe o título que não
+era dele. Um casamento pode assim ficar **sem conta de noivos**, e isso passou
+a ver-se: a lista de casamentos marca-o e a Gestão explica-o, com o campo de
+convidar logo por baixo.
+
 **A entrada não é de casamento nenhum.** `login.php` e `registo.php` mostram a
 casa (`PLATAFORMA`, em `config.php`), e não um casal: com vários casamentos,
 quem chegava para entrar no seu era recebido pelo nome de outras pessoas.

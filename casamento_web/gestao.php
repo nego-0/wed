@@ -100,6 +100,8 @@ $CAMPOS_EVENTO = [
                  border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
   .porcima{ background:var(--cream); border-left:3px solid var(--gold-soft); border-radius:8px;
             padding:.6rem .8rem; font-size:.83rem; color:#6c7570; margin-top:.9rem; line-height:1.55; }
+  .semdono{ background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px;
+            padding:.6rem .8rem; font-size:.84rem; color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
   @media (max-width:640px){ .lf{ grid-template-columns:1fr; } .linha{ grid-template-columns:auto 1fr; }
                             .linha .ac{ grid-column:1/-1; } }
 </style>
@@ -274,8 +276,20 @@ async function carregarAcessos(){
   const d = await api('acesso_lista');
   if (!d || !d.success) return;
   const alvo = $('lista-acessos');
-  if (!d.acessos.length){ alvo.innerHTML = '<div class="dica">Ninguém, além de si.</div>'; return; }
-  alvo.innerHTML = d.acessos.map(a => {
+  if (!d.acessos.length){
+    alvo.innerHTML = `<div class="semdono" style="margin-bottom:0">Este casamento <b>ainda não tem conta nenhuma</b>.
+      Dê acesso, aqui em baixo, ao email de quem o vai gerir — sem isso, só a plataforma lá entra.</div>`;
+    return;
+  }
+  // Um casamento sem conta de noivos é um casamento sem dono: quem responde
+  // pela plataforma chega lá, mas o casal não. Diz-se, e diz-se onde se
+  // resolve — o campo de convidar está logo por baixo.
+  const temDono = d.acessos.some(a => a.papel === 'noivos');
+  const aviso = temDono ? '' :
+    `<div class="semdono">Este casamento <b>não tem nenhuma conta de noivos</b>.
+     Quem responde pela plataforma chega cá, mas o casal não. Dê acesso, aqui em baixo,
+     ao email de quem o vai gerir.</div>`;
+  alvo.innerHTML = aviso + d.acessos.map(a => {
     const eu = +a.utilizador_id === +d.eu;
     const nome = a.nome || a.email;
     const acoes = (SO_VER_UI || eu) ? '' : `
