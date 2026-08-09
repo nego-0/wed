@@ -328,6 +328,7 @@ if ($acao === 'versao_lista') {
     $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
     $out = [];
     $algumaEmVigor = false;
+
     foreach ($linhas as $v) {
         // "Em vigor" é uma verdade sobre a peça, não uma marca guardada: é-o a
         // versão cujo conteúdo bate certo com o que a peça mostra agora. Uma
@@ -338,10 +339,21 @@ if ($acao === 'versao_lista') {
         unset($v['defs']);                       // a lista não precisa do conteúdo
         $v['escolhida'] = (int)$v['predefinida']; // a última que o utilizador aplicou
         unset($v['predefinida']);
+        $v['padrao'] = 0;
         $out[] = $v;
     }
     // As que estão em vigor à cabeça; depois as mais recentes.
     usort($out, fn($a, $b) => ($b['em_vigor'] <=> $a['em_vigor']) ?: ($b['id'] <=> $a['id']));
+
+    // A versão padrão fecha a lista, sempre no mesmo sítio: é a peça como o
+    // sistema a traz de origem — o ponto de regresso. Não vem da tabela, por
+    // isso não se apaga nem se reescreve; quem a editar guarda com outro nome.
+    $noPadrao = noPadrao($conn, $ambito);
+    if ($noPadrao) $algumaEmVigor = true;
+    $out[] = ['id' => VERSAO_PADRAO_ID, 'nome' => VERSAO_PADRAO_NOME, 'utilizador' => null,
+              'criado_em' => null, 'atualizado_em' => null,
+              'em_vigor' => $noPadrao, 'escolhida' => 0, 'padrao' => 1];
+
     ok(['versoes' => $out, 'max' => VERSOES_MAX, 'ambito' => $ambito,
         'rotulo' => ambitosVersao()[$ambito]['rotulo'],
         // Sem nenhuma a bater certo, a peça tem alterações que não estão
@@ -352,6 +364,17 @@ if ($acao === 'versao_lista') {
 if ($acao === 'versao_aplicar') {
     // Torna esta a versão em vigor: aplica as suas definições e marca-a.
     $id = (int)($_GET['id'] ?? 0);
+
+    // A padrão não está na tabela: aplicá-la é devolver a peça à origem.
+    if ($id === VERSAO_PADRAO_ID) {
+        $ambito = ambitoPedido();
+        $r = aplicarPadrao($conn, $ambito);
+        $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE ambito=?");
+        $st->bind_param('s', $ambito); $st->execute();
+        registar($conn, 'versao_aplicada', VERSAO_PADRAO_NOME, $r['repostas'].' definição(ões)');
+        ok($r + ['nome' => VERSAO_PADRAO_NOME, 'ambito' => $ambito]);
+    }
+
     $st = $conn->prepare("SELECT nome, defs, ambito FROM {$P}versoes WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
@@ -377,6 +400,8 @@ if ($acao === 'versao_aplicar') {
 if ($acao === 'versao_atualizar') {
     // Reescreve o conteúdo da versão com o que está em vigor agora.
     $id = (int)($_GET['id'] ?? 0);
+    // A versão padrão é a peça de origem: não se reescreve.
+    if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não se reescreve. Guarde as suas alterações como uma versão nova.');
     $st = $conn->prepare("SELECT nome, ambito FROM {$P}versoes WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
@@ -395,6 +420,8 @@ if ($acao === 'versao_renomear') {
     $id = (int)($_GET['id'] ?? ($d['id'] ?? 0));
     $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
     if ($nome === '') erro('O nome não pode ficar vazio.');
+    // A versão padrão é a peça de origem: não se renomeia.
+    if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não muda de nome. Guarde as suas alterações como uma versão nova.');
     $st = $conn->prepare("UPDATE {$P}versoes SET nome=? WHERE id=?");
     $st->bind_param('si', $nome, $id);
     if (!$st->execute()) erro('Não foi possível mudar o nome.');
@@ -404,6 +431,8 @@ if ($acao === 'versao_renomear') {
 
 if ($acao === 'versao_apagar') {
     $id = (int)($_GET['id'] ?? 0);
+    // A versão padrão é a peça de origem: não se apaga.
+    if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não se apaga. Guarde as suas alterações como uma versão nova.');
     $rn = $conn->prepare("SELECT nome, ambito, predefinida FROM {$P}versoes WHERE id=?");
     $rn->bind_param('i', $id); $rn->execute();
     $x = $rn->get_result()->fetch_assoc();

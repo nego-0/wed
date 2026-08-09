@@ -94,12 +94,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   });
 
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
-  await p.waitForFunction(() =>
-    document.querySelectorAll('#sel-versao optgroup[label="Pôr em vigor"] option').length === 2,
-    null, { timeout: 9000 });
+  // Espera-se pelas duas versões guardadas (A e B). O seletor traz também a
+  // padrão "Original", que existe sempre — daí contar pelos nomes, não pelo
+  // total de opções.
+  await p.waitForFunction(() => {
+    const t = [...document.querySelectorAll('#sel-versao option')].map(o => o.textContent.trim());
+    return t.some(x => /^A\b/.test(x)) && t.some(x => /^B\b/.test(x));
+  }, null, { timeout: 9000 });
   console.log('   opções do seletor (fora de versão):', JSON.stringify(await opcoesSel()));
-  ok(/fora de vers/i.test(await escolhidaSel()),
-     'o seletor mostra que a peça está fora de versão');
+  ok(/Alterado/i.test(await escolhidaSel()),
+     'o seletor mostra que a peça está fora das versões guardadas');
   ok((await opcoesSel()).some(o => /^A\b/.test(o) && /última aplicada/i.test(o)),
      'o seletor assinala A como a última aplicada');
   ok(!(await opcoesSel()).some(o => /em vigor/i.test(o)),
@@ -134,7 +138,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await api('defs_save', { defs: { 'cartao.reservado': 'RESERVADO FORA DE VERSAO' } });
   man = await noManual();
   console.log('   manual depois de editar:', man);
-  ok(/sem versão guardada/.test(man), 'sem versão a bater certo, o manual di-lo em vez de mentir');
+  ok(/com alterações/.test(man), 'sem versão a bater certo, o manual di-lo em vez de mentir');
 
   // ---------- limpeza ----------
   for (const amb of ['digital', 'impresso']) {

@@ -73,39 +73,47 @@
     }
 
     // ---- desenho ----
-    // A versão em vigor fica escolhida; se nenhuma bater certo, fica escolhida
-    // uma opção-estado ("com alterações"), para o seletor nunca mentir sobre
-    // qual versão está em uso. As ações de gerir apontam à versão mais
-    // relevante — a em vigor, ou a última aplicada.
+    // A versão em vigor fica escolhida, pelo nome que lhe deram ao guardar. Se
+    // a peça não bater certo com nenhuma, fica escolhida uma linha que diz de
+    // qual delas derivou — o seletor nunca mostra um nome que não seja verdade.
+    //
+    // A padrão ("Original") vem sempre no fim: é a peça de origem e o ponto de
+    // regresso. Não se renomeia, não se reescreve e não se apaga — por isso as
+    // ações de gerir nunca a apontam; a única saída é guardar com outro nome.
     function desenhar() {
       var emVigor   = lista.filter(function (v) { return v.em_vigor; })[0];
       var escolhida = lista.filter(function (v) { return v.escolhida; })[0];
-      var alvo = emVigor || escolhida || lista[0] || null;
-      alvoId = alvo ? alvo.id : 0;
+      // O alvo das ações de gerir é a versão de que a peça veio: a que está em
+      // vigor, ou a última aplicada. Nunca a padrão — e nunca uma versão
+      // qualquer só porque existe: quem editou o Original não pode acabar a
+      // reescrever, sem dar por isso, uma versão que nada tem a ver. Nesse
+      // caso resta guardar com outro nome, que é como se sai do Original.
+      var alvo = [emVigor, escolhida].filter(function (v) { return v && !v.padrao; })[0] || null;
+      alvoId = alvo ? alvo.id : null;
+
+      // De onde a peça derivou, quando não bate certo com nenhuma versão.
+      var base = escolhida || lista.filter(function (v) { return v.padrao; })[0];
 
       var html = '';
-      if (!lista.length) {
-        html += '<optgroup label="Estado">' +
-                opt('__nada', 'Sem versões guardadas', true, true) + '</optgroup>';
-      } else {
-        if (!emVigor) {
-          html += '<optgroup label="Estado atual">' +
-                  opt('__estado', '● Com alterações — fora de versão', true, true) +
-                  '</optgroup>';
-        }
-        html += '<optgroup label="Pôr em vigor">';
-        lista.forEach(function (v) {
-          var etiqueta = v.nome +
-            (v.em_vigor ? '  — em vigor' : (v.escolhida ? '  — última aplicada' : ''));
-          html += opt(v.id, etiqueta, !!(emVigor && v.id === emVigor.id));
-        });
-        html += '</optgroup>';
+      if (!emVigor) {
+        html += '<optgroup label="Estado da peça">' +
+                opt('__estado', '● Alterado' + (base ? ' — a partir de ' + base.nome : ''), true, true) +
+                '</optgroup>';
       }
+
+      html += '<optgroup label="' + (emVigor ? 'Versão em vigor' : 'Pôr em vigor') + '">';
+      lista.forEach(function (v) {
+        var etiqueta = v.nome
+          + (v.em_vigor ? '  — em vigor' : (v.escolhida ? '  — última aplicada' : ''))
+          + (v.padrao && !v.em_vigor ? '  — peça de origem' : '');
+        html += opt(v.id, etiqueta, !!(emVigor && v.id === emVigor.id));
+      });
+      html += '</optgroup>';
 
       html += '<optgroup label="Gerir">';
       html += opt('__nova', '＋ Guardar como nova versão…');
       if (alvo) {
-        html += opt('__renomear',  'Renomear «' + alvo.nome + '»…');
+        html += opt('__renomear',  'Mudar o nome a «' + alvo.nome + '»…');
         html += opt('__atualizar', 'Atualizar «' + alvo.nome + '» com o estado atual');
         html += opt('__apagar',    'Apagar «' + alvo.nome + '»…');
       }
@@ -146,8 +154,11 @@
 
     async function aplicar(id) {
       var v = porId(id), nome = v ? v.nome : '';
+      var oQueFica = (v && v.padrao)
+        ? 'A peça volta a ser como veio de origem — é o que os convidados passam a receber. As versões que guardou não se perdem.'
+        : 'A peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.';
       if (sujo() && !confirm('Tem alterações por gravar.\n\nAplicar "' + nome + '" descarta-as. Continuar?')) { desenhar(); return; }
-      if (!sujo() && !confirm('Pôr "' + nome + '" em vigor?\n\nA peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.')) { desenhar(); return; }
+      if (!sujo() && !confirm('Pôr "' + nome + '" em vigor?\n\n' + oQueFica)) { desenhar(); return; }
       var d = await correr(function () { return api(q('versao_aplicar', '&id=' + id)); });
       if (!d || !d.success) { desenhar(); return dizer((d && d.message) || 'Não foi possível aplicar a versão.'); }
       dizer('Versão em vigor: ' + nome + '. A recarregar…');
@@ -200,8 +211,9 @@
       if (v === '__atualizar') return atualizar(alvoId);
       if (v === '__apagar')    return apagar(alvoId);
       if (v === '__estado' || v === '__nada' || v === '') { desenhar(); return; }
+      // A padrão tem o id 0 — que é um id válido, não "nenhum".
       var id = parseInt(v, 10);
-      if (!id) { desenhar(); return; }
+      if (isNaN(id) || !porId(id)) { desenhar(); return; }
       var emVigor = lista.filter(function (x) { return x.em_vigor; })[0];
       if (emVigor && emVigor.id === id) return;   // já está em vigor
       aplicar(id);

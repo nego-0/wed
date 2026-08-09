@@ -77,7 +77,9 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(await p.locator('.estado-peca .selo-v').count() === 1, 'com o selo da versão em vigor');
   const txt = (await p.locator('.estado-peca').innerText()).replace(/\s+/g, ' ');
   console.log('   impresso:', txt.slice(0, 110));
-  ok(/Em vigor|Fora de qualquer versão|Sem versões guardadas/.test(txt),
+  // Com a versão padrão a existir sempre, a peça está "em vigor" nalguma versão
+  // ou "com alterações" a partir dela — nunca órfã.
+  ok(/Em vigor|com alterações|Sem versão em vigor/.test(txt),
      'e diz em palavras qual é o estado');
   ok(await p.locator('.estado-peca a[href="editor-cartao.php"]').count() === 1,
      'com o caminho para o editor do cartão');

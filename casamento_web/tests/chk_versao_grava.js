@@ -69,9 +69,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const lerDef = async (k) => {
     await p.goto(BASE + '/convite-editor.php', { waitUntil: 'domcontentloaded' });
     // page.content() codifica as aspas do script como &quot; — descodifica-se.
+    // Lê-se do objeto ATUAIS: a página traz também o PADRAO, e procurar a chave
+    // à solta podia devolver o valor de origem em vez do que está gravado.
     const html = (await p.content()).replace(/&quot;/g, '"');
-    const m = html.match(new RegExp('"' + k.replace('.', '\\.') + '":"([^"]*)"'));
-    return m ? m[1] : null;
+    const m = html.match(/const ATUAIS\s*=\s*(\{.*?\});/s);
+    if (!m) return null;
+    try { return JSON.parse(m[1])[k]; } catch (e) { return null; }
   };
   ok(await lerDef(chave) === marca, 'a alteração ficou gravada na definição, não só no ecrã');
 

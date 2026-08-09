@@ -39,6 +39,8 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'function temaVarsRotulos('],
         ['Versões dos dois convites, num seletor na barra superior',
          'assets/versoes.js', 'Pôr em vigor'],
+        ['Versão padrão «Original», que não se apaga nem se reescreve',
+         'personalizacao.php', 'VERSAO_PADRAO_NOME'],
         ['Capa (envelope) com monograma editável no editor digital',
          'convite-editor.php', "CAPA_ID = 'capa'"],
     ];

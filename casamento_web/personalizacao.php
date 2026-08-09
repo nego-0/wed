@@ -306,14 +306,14 @@ function versaoEmVigor(mysqli $conn, string $ambito): ?array {
  */
 function versaoEstado(mysqli $conn, string $ambito): array {
     global $P;
-    $vazio = ['estado' => 'sem', 'nome' => '', 'id' => 0];
     $st = $conn->prepare("SELECT id, nome, predefinida, defs
                           FROM {$P}versoes WHERE ambito=? ORDER BY id DESC");
-    if (!$st) return $vazio;
-    $st->bind_param('s', $ambito);
-    $st->execute();
-    $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
-    if (!$linhas) return $vazio;
+    $linhas = [];
+    if ($st) {
+        $st->bind_param('s', $ambito);
+        $st->execute();
+        $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
 
     $escolhida = null;
     foreach ($linhas as $v) {
@@ -322,9 +322,50 @@ function versaoEstado(mysqli $conn, string $ambito): array {
         }
         if ((int)$v['predefinida'] === 1 && $escolhida === null) $escolhida = $v;
     }
-    return $escolhida
-        ? ['estado' => 'alterada', 'nome' => $escolhida['nome'], 'id' => (int)$escolhida['id']]
-        : ['estado' => 'nenhuma', 'nome' => '', 'id' => 0];
+    // Nenhuma versão guardada bate certo — mas a peça pode estar tal como veio
+    // de origem, que é uma versão como as outras (só que não se apaga).
+    if (noPadrao($conn, $ambito)) {
+        return ['estado' => 'vigor', 'nome' => VERSAO_PADRAO_NOME, 'id' => VERSAO_PADRAO_ID];
+    }
+    if ($escolhida) {
+        return ['estado' => 'alterada', 'nome' => $escolhida['nome'], 'id' => (int)$escolhida['id']];
+    }
+    // Sem versão aplicada conhecida, a peça derivou do original.
+    return ['estado' => 'alterada', 'nome' => VERSAO_PADRAO_NOME, 'id' => VERSAO_PADRAO_ID];
+}
+
+/**
+ * A versão padrão — a peça tal como o sistema a traz de origem. Existe sempre,
+ * em qualquer instalação, e por isso não se guarda em tabela nenhuma: é
+ * calculada a partir de defsPadrao(). Não se apaga nem se reescreve — quem
+ * quiser mexer nela guarda o resultado com outro nome.
+ */
+const VERSAO_PADRAO_ID   = 0;
+const VERSAO_PADRAO_NOME = 'Original';
+
+/** As definições de origem de uma peça, no mesmo formato de um instantâneo. */
+function padraoAmbito(string $ambito): array {
+    $p = defsPadrao(); $out = [];
+    foreach (chavesDoAmbito($ambito) as $k) $out[$k] = (string)($p[$k] ?? '');
+    return $out;
+}
+
+/** A peça está agora exatamente como veio de origem? */
+function noPadrao(mysqli $conn, string $ambito): bool {
+    return instantaneoAmbito($conn, $ambito) == padraoAmbito($ambito);
+}
+
+/**
+ * Repõe uma peça no original.
+ *
+ * Escrevem-se os valores de origem, não vazios: para uma chave de sim/não,
+ * validarDefinicao('') devolve '0' — que é um valor, não "sem valor" — e a
+ * peça acabava com as secções todas escondidas em vez de reposta. Com o valor
+ * de origem, guardarDefinicoes() reconhece-o como igual ao padrão e apaga a
+ * linha, que é a forma de dizer "volta à origem".
+ */
+function aplicarPadrao(mysqli $conn, string $ambito): array {
+    return guardarDefinicoes($conn, padraoAmbito($ambito));
 }
 
 /**

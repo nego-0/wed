@@ -32,7 +32,7 @@ $geradoEm = date('d/m/Y \à\s H:i');
 // De que versão do cartão saiu este manual. O manual retrata sempre o que a
 // peça mostra neste momento — dizer aqui qual é evita a dúvida de estar a
 // imprimir por um manual tirado de outra versão.
-$verManual = versaoEmVigor($conn, 'impresso');
+$verManual = versaoEstado($conn, 'impresso');   // mesmo modelo de estado do resto do sistema
 
 // ============================================================
 // Dados do manual do CARTÃO
@@ -169,11 +169,11 @@ if ($pecaSel === 'cartao') {
       Paleta <b><?= escP($pal['nome']) ?></b> · Folhagem <b><?= escP($folh['nome']) ?></b> ·
       <b><?= $totCartoes ?></b> <?= $totCartoes === 1 ? 'cartão' : 'cartões' ?> a produzir</div>
     <div class="meta">Versão do cartão:
-      <?php if ($verManual): ?>
+      <?php if ($verManual['estado'] === 'vigor'): ?>
         <b><?= escP($verManual['nome']) ?></b> — é a que está em vigor, e é esta que se imprime.
       <?php else: ?>
-        <b>sem versão guardada</b> — o cartão tem alterações que não estão em nenhuma versão.
-        É este estado que este manual retrata.
+        <b><?= escP($verManual['nome']) ?> · com alterações</b> — o cartão tem alterações que ainda
+        não guardou como versão. É este estado que este manual retrata.
       <?php endif; ?>
     </div>
   </div>
