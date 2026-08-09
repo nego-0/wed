@@ -634,6 +634,8 @@ function iconeLado(l){ return l==='noiva'?IC.noiva:(l==='ambos'?(IC.noivo+IC.noi
 // Ícones sugestivos de género (e brinde) para as pastilhas com nomes.
 const genIco=g=> g==='m'?'<span class="gi gi-m" title="Masculino">♂</span> ':g==='f'?'<span class="gi gi-f" title="Feminino">♀</span> ':'';
 const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>':'';
+/** Primeiro nome — é o que se procura ao varrer a lista; o resto está no título. */
+const primeiroNome=n=> String(n||'').trim().split(/\s+/)[0] || '';
 
 // ---------- seleção múltipla / ações em massa ----------
 const SELEC = new Set();
@@ -702,8 +704,18 @@ function renderConvites(){
   [...SELEC].forEach(id => { if(!CONVITES.some(c=>c.id==id)) SELEC.delete(id); });
   renderBarraSelecao();
   el.innerHTML = CONVITES.map(c=>{
-    const membros = (c.membros_det&&c.membros_det.length ? c.membros_det : (c.membros||[]).map(n=>({nome:n,genero:'',brinde:0})))
-      .map(m=>`<span class="membro-chip">${genIco(m.genero)}${esc(m.nome)}${brindeIco(m.brinde)}</span>`).join('');
+    // A tira de pessoas é um resumo para varrer com o olho, não a lista toda:
+    // com seis convidados as pastilhas quebravam para uma segunda linha e o
+    // cartão passava de 53px para 104px. Mostram-se os primeiros nomes de
+    // alguns e conta-se o resto; o nome completo fica no título e na edição.
+    const pessoas = (c.membros_det&&c.membros_det.length ? c.membros_det : (c.membros||[]).map(n=>({nome:n,genero:'',brinde:0})));
+    const MAX_CHIPS = 2;
+    const membros = pessoas.slice(0, MAX_CHIPS).map(m=>
+        `<span class="membro-chip" title="${esc(m.nome)}">${genIco(m.genero)}${esc(primeiroNome(m.nome))}${brindeIco(m.brinde)}</span>`
+      ).join('')
+      + (pessoas.length > MAX_CHIPS
+          ? `<span class="membro-chip mais" title="${esc(pessoas.slice(MAX_CHIPS).map(m=>m.nome).join(', '))}">+${pessoas.length-MAX_CHIPS}</span>`
+          : '');
     const confTxt = c.rsvp_confirmados!=null && c.rsvp_estado!=='pendente' ? ` · ${c.rsvp_confirmados}/${c.lugares} confirmados` : '';
     const presTxt = c.checkin_presentes>0 ? ` · <span style="color:var(--ok)">${c.checkin_presentes} no local</span>` : '';
     return `<div class="convite-row${SELEC.has(c.id)?' selecionada':''}">
@@ -712,7 +724,7 @@ function renderConvites(){
       </label>
       <div class="selo-tipo ${c.tipo}" title="${c.tipo}">${iconeTipo(c.tipo)}</div>
       <div class="convite-corpo">
-        <div class="convite-nome">${esc(c.nome_final)}</div>
+        <div class="convite-nome" title="${esc(c.nome_final)}">${esc(c.nome_final)}</div>
         <div class="convite-meta">
           <span>${tagEstado(c.rsvp_estado)}</span>
           <span>${(+c.mesas_distintas>1)?('Dividido · '+c.mesas_distintas+' mesas'):(c.mesa_efetiva_nome?('Mesa: '+esc(c.mesa_efetiva_nome)):'Sem mesa')}</span>
@@ -737,7 +749,19 @@ function renderConvites(){
       </div>
     </div>`;
   }).join('') + rodapeLista();
+  marcarMetaCortada();
 }
+
+/**
+ * Marca as linhas de estado que não couberam, para o esbatido aparecer só onde
+ * há mesmo texto cortado. Só o CSS não chega: é preciso medir.
+ */
+function marcarMetaCortada(){
+  document.querySelectorAll('.convite-row .convite-meta').forEach(m=>{
+    m.classList.toggle('cortado', m.scrollWidth > m.clientWidth + 1);
+  });
+}
+addEventListener('resize', ()=>{ clearTimeout(window._tMeta); window._tMeta=setTimeout(marcarMetaCortada,150); });
 
 /** Rodapé da lista: quantos se veem, quantos há e o botão para trazer mais. */
 function rodapeLista(){

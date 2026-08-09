@@ -24,6 +24,14 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
     ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o) }
     : undefined), [q, o]);
 
+  // ---------- reciclagem vazia à partida ----------
+  // Adiante conta-se exatamente 1 item na reciclagem, por isso qualquer convite
+  // eliminado por uma prova anterior fazia esta falhar sem nada de errado no
+  // código. A prova passa a preparar o seu próprio terreno.
+  const lixoAntes = await api('reciclagem');
+  for (const c of (lixoAntes.convites || [])) await api('convite_delete&id=' + c.id + '&definitivo=1', {});
+  if ((lixoAntes.convites || []).length) log('reciclagem limpa:', lixoAntes.convites.length, 'resto(s) de provas anteriores');
+
   // ---------- estado inicial ----------
   const ini = await api('convite_list');
   const nIni = ini.convites.length, statsIni = ini.stats.convites;

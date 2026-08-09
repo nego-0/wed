@@ -31,6 +31,48 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(m.every(x=>x.alt <= 60), `cada convite cabe em 60px de altura (${m[0].alt}px)`);
   ok(m.every(x=>x.nomeEsq < 140), 'o nome fica encostado ao selo, sem vão a meio');
 
+  // ---- um convite cheio não pode ser mais alto que um vazio ----
+  // Antes, as pastilhas dos convidados quebravam para uma segunda linha e um
+  // convite de seis pessoas ocupava 104px contra 53px de um de duas. O teste
+  // só passava porque os dados de então tinham poucos convidados — agora cria
+  // o caso difícil em vez de esperar por ele.
+  const api = (accao, corpo) => p.evaluate(async ({ a, c }) => {
+    const r = await fetch('api.php?action=' + a, {
+      method: c ? 'POST' : 'GET',
+      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+      body: c ? JSON.stringify(c) : undefined });
+    return r.json();
+  }, { a: accao, c: corpo });
+
+  const d = await api('convite_save', {
+    nome_exibicao: 'Família Nascimento Agostinho e Silva Pereira',
+    tipo: 'ambos', lado: 'ambos', lugares: 10, telefone: '+244912000111',
+    membros: ['Ana Maria Nascimento','Rui Miguel Agostinho','Marta Sofia Agostinho',
+              'Tiago André Agostinho','Inês Nascimento','Pedro Nascimento',
+              'Joana Maria do Nascimento','Carlos Alberto','Beatriz N.','Duarte N.'] });
+  const idCheio = d && d.convite && d.convite.id;
+  ok(!!idCheio, 'cria um convite com dez convidados e nome comprido');
+  await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(1800);
+
+  const cheio = await p.evaluate(() => {
+    const r = [...document.querySelectorAll('.convite-row')]
+      .find(x => x.querySelector('.convite-nome').textContent.includes('Nascimento Agostinho'));
+    if (!r) return null;
+    const chips = [...r.querySelectorAll('.membro-chip')];
+    return {
+      alt: Math.round(r.getBoundingClientRect().height),
+      chips: chips.length,
+      // uma pastilha esmagada a "A…" não diz nada: nenhuma pode vir cortada
+      esmagada: chips.some(c => c.scrollWidth > c.clientWidth + 1),
+      temMais: chips.some(c => c.classList.contains('mais') && /^\+\d+$/.test(c.textContent.trim()))
+    };
+  });
+  console.log('   convite cheio:', JSON.stringify(cheio));
+  ok(cheio && cheio.alt <= 60, `um convite de dez pessoas cabe na mesma altura (${cheio && cheio.alt}px)`);
+  ok(cheio && !cheio.esmagada, 'nenhuma pastilha de nome sai esmagada');
+  ok(cheio && cheio.temMais, 'os convidados que não cabem são contados num "+N"');
+  if (idCheio) await api('convite_delete&id=' + idCheio + '&definitivo=1', {});
+
   // o CSS chega com marca de versão
   const links = await p.evaluate(()=>[...document.querySelectorAll('link[rel=stylesheet]')].map(l=>l.getAttribute('href')));
   console.log('  css:', links.join(' '));

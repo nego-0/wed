@@ -129,12 +129,39 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 .selo-tipo.fisico{ background:var(--sand); color:var(--forest); }
 .selo-tipo.ambos{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); }
 .convite-nome{ font-family:var(--serif); font-size:1.05rem; font-weight:600; color:var(--ink); line-height:1.2; }
+/* Em ecrã largo o cartão é sempre de uma linha: nome, estado e pessoas
+   encolhem com reticências em vez de quebrarem. Antes, um convite com seis
+   convidados ocupava o dobro da altura de um com dois — numa lista longa é
+   essa irregularidade que a faz parecer pesada. O que ficar cortado está no
+   título (passar o rato) e na edição. */
+@media (min-width:900px){
+  .convite-row .convite-corpo{ flex-wrap:nowrap; }
+  .convite-row .convite-nome, .convite-row .convite-meta{ min-width:0; }
+  /* O nome cede primeiro: é o que se reconhece por metade. */
+  .convite-row .convite-nome{ flex:0 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* O estado corta de uma vez, sem partir "Sem mesa" ao meio. */
+  .convite-row .convite-meta{ flex:0 1 auto; overflow:hidden; flex-wrap:nowrap; }
+  .convite-row .convite-meta > span{ white-space:nowrap; }
+  /* Cortado a meio, um telefone lê-se como outro número. O esbatido diz
+     "continua" em vez de mentir. A marca é posta por JS, que sabe medir. */
+  .convite-row .convite-meta.cortado{
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);
+            mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent); }
+  /* As pastilhas nunca encolhem: uma pastilha esmagada a "A…" não diz nada. */
+  .convite-row .membros-mini{ flex:none; }
+  .convite-row .membro-chip{ flex:none; }
+}
 /* Nome, estado e pessoas na mesma linha enquanto houver largura: em ecrãs
    largos cada convite passa a caber numa linha só, em vez de três. */
 .convite-corpo{ display:flex; align-items:center; gap:.55rem .9rem; flex-wrap:wrap; min-width:0; }
 .convite-meta{ font-size:.78rem; color:#8a8f88; display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
-.membros-mini{ display:flex; gap:.28rem; flex-wrap:wrap; }
-.membro-chip{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.12rem .55rem; font-size:.76rem; color:var(--ink); }
+/* A tira de pessoas nunca quebra para uma segunda linha: são poucos nomes e
+   um contador do resto, para o cartão manter a mesma altura com dois ou com
+   vinte convidados. */
+.membros-mini{ display:flex; gap:.28rem; flex-wrap:nowrap; min-width:0; }
+.membro-chip{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.12rem .55rem;
+  font-size:.76rem; color:var(--ink); white-space:nowrap; max-width:14ch; overflow:hidden; text-overflow:ellipsis; }
+.membro-chip.mais{ background:transparent; color:#8a8f88; border-style:dashed; cursor:default; }
 .acoes{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
 /* ---------- Modal ---------- */
