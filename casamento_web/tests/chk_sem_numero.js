@@ -24,11 +24,11 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     return r.json();
   }, { a: accao, c: corpo });
 
-  // ---- um convite de 4 lugares, sem sufixo ----
+  // ---- um convite de quatro pessoas ----
   let d = await api('convite_save', {
     nome_exibicao: 'Casa Teste Numero', tipo: 'ambos', lado: 'ambos',
-    lugares: 4, sufixo: '', membros: ['Ana', 'Rui'] });
-  ok(d.success, 'cria um convite de teste com 4 lugares');
+    membros: ['Ana', 'Rui', 'Zé', 'Tó'] });
+  ok(d.success, 'cria um convite de teste com quatro pessoas');
   const cod = d.convite && d.convite.codigo;
   const id  = d.convite && d.convite.id;
 
@@ -39,19 +39,19 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   }, cod);
 
   let nome = await nomeNoConvite();
-  console.log('   nome no convite (sem sufixo):', JSON.stringify(nome));
+  console.log('   nome no convite:', JSON.stringify(nome));
   ok(nome === 'Casa Teste Numero', 'o nome sai sem o "(4)" de lugares');
   ok(!/\(\d+\)/.test(nome), 'não há número nenhum entre parênteses no nome');
 
-  // ---- o mesmo convite, agora com sufixo escrito ----
+  // ---- o sufixo deixou de existir: nem um cliente antigo o consegue pôr ----
   d = await api('convite_save', {
     id: id, nome_exibicao: 'Casa Teste Numero', tipo: 'ambos', lado: 'ambos',
-    lugares: 4, sufixo: 'e acompanhante', membros: ['Ana', 'Rui'] });
-  ok(d.success, 'guarda o convite com um sufixo escrito');
+    sufixo: 'e acompanhante', membros: ['Ana', 'Rui', 'Zé', 'Tó'] });
+  ok(d.success, 'guarda o convite ignorando um sufixo enviado à antiga');
   nome = await nomeNoConvite();
-  console.log('   nome no convite (com sufixo):', JSON.stringify(nome));
-  ok(nome === 'Casa Teste Numero (e acompanhante)',
-     'o sufixo escrito continua a aparecer entre parênteses');
+  console.log('   nome depois de tentar pôr sufixo:', JSON.stringify(nome));
+  ok(nome === 'Casa Teste Numero',
+     'o nome não ganha parênteses nenhuns — o sufixo já não se aceita');
 
   // ---- os controlos do "(N)" desapareceram das páginas de edição ----
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });

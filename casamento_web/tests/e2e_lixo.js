@@ -102,7 +102,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
 
   // ---------- interface ----------
   // põe um convite na reciclagem para a janela ter o que mostrar
-  const cUI = await api('convite_save', { nome_exibicao: 'Teste Janela', tipo: 'digital', lado: 'ambos', lugares: 3, membros: [], ts: '2026-08-03 10:00:00' });
+  const cUI = await api('convite_save', { nome_exibicao: 'Teste Janela', tipo: 'digital', lado: 'ambos', membros: ['Um','Dois','Três'], ts: '2026-08-03 10:00:00' });
   await api('convite_delete&id=' + cUI.convite.id);
 
   await page.reload({ waitUntil: 'networkidle' });

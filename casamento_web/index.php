@@ -91,6 +91,8 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .lf2 label{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   /* "opcional" não precisa de gritar em maiúsculas ao lado da etiqueta. */
   label .opt{ text-transform:none; letter-spacing:0; font-weight:400; color:#a3a8a1; font-size:.92em; }
+  /* O campo "Lugares" saiu; esta linha diz de onde passam a vir. */
+  .dica-lugares{ font-size:.8rem; color:#9aa09a; margin-top:.5rem; }
   .link-box{ display:flex; gap:.4rem; align-items:center; background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:.4rem .4rem .4rem .8rem; font-size:.82rem; }
   .link-box input{ border:none; background:transparent; padding:.2rem 0; font-size:.82rem; }
   .link-box input:focus{ box-shadow:none; }
@@ -319,6 +321,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
         <h4 class="fset-t">Quem vem <span class="cont" id="cont-pessoas"></span></h4>
         <div id="membros"></div>
         <button class="btn btn-fantasma btn-sm" type="button" onclick="addMembro()">+ Adicionar pessoa</button>
+        <div class="dica-lugares">Cada pessoa é um lugar — os lugares do convite contam-se por esta lista.</div>
       </section>
 
       <!-- 2. O convite: como se apresenta e como chega -->
@@ -328,11 +331,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
         <div class="sugestoes" id="sugestoes"></div>
         <input type="text" id="c-nome" placeholder="Ex: Família Agostinho, Sr. João e Sra. Maria…" oninput="NOME_AUTO=false;atualizarPrevia()">
         <div class="previa" id="previa">Família Agostinho</div>
-
-        <div class="lf2">
-          <div><label>Lugares</label><input type="number" id="c-lugares" min="1" value="1" oninput="atualizarPrevia()"></div>
-          <div><label>Sufixo <span class="opt">· opcional</span></label><input type="text" id="c-sufixo" placeholder="ex: e acompanhante" oninput="atualizarPrevia()"></div>
-        </div>
 
         <div class="lf2">
           <div><label>Como é entregue</label>
@@ -814,9 +812,7 @@ function abrirConvite(c){
   NOME_AUTO = !c;
   $('c-id').value = c?c.id:'';
   $('c-nome').value = c?c.nome_exibicao:'';
-  $('c-sufixo').value = c?(c.sufixo||''):'';
   $('c-mostrar-num-mesa').checked = c ? (String(c.mostrar_num_mesa)!=='0') : true;
-  $('c-lugares').value = c?c.lugares:1;
   pickVal('c-tipo', c?c.tipo:'digital');
   pickVal('c-lado', c?c.lado:'noivo');
   pickVal('c-presenca', c?(c.rsvp_estado||'pendente'):'pendente');
@@ -936,8 +932,6 @@ function renderSugestoes(){
     else if(primeiros.length>2) sug.add(primeiros.slice(0,-1).join(', ')+' e '+primeiros.slice(-1));
   }
   box.innerHTML=[...sug].map(s=>`<span class="sugestao" onclick="NOME_AUTO=false;$('c-nome').value=this.textContent;atualizarPrevia()">${esc(s)}</span>`).join('');
-  // ajustar lugares automaticamente ao nº de pessoas, se ainda em branco/1
-  if(nomes.length>1 && (+$('c-lugares').value)<=1) $('c-lugares').value=nomes.length;
   // A melhor sugestão entra já no campo, em vez de esperar por um clique. Deixa
   // de ser uma decisão a tomar e passa a ser uma proposta a corrigir — mas só
   // enquanto ninguém lhe tiver mexido à mão.
@@ -948,18 +942,17 @@ function renderSugestoes(){
   contarPessoas();
 }
 function atualizarPrevia(){
-  const nome=$('c-nome').value.trim()||'(nome do convite)';
-  const suf=$('c-sufixo').value.trim();
-  $('previa').textContent = suf ? `${nome} (${suf})` : nome;
+  $('previa').textContent = $('c-nome').value.trim() || '(nome do convite)';
 }
 
 async function guardarConvite(){
   const nome=$('c-nome').value.trim();
   if(!nome) return toast('Indique o nome a exibir no convite.', true);
   const payload={
-    id:$('c-id').value||0, nome_exibicao:nome, sufixo:$('c-sufixo').value,
+    // Sem 'lugares': o servidor conta-os pelos nomes das pessoas.
+    id:$('c-id').value||0, nome_exibicao:nome,
     mostrar_num_mesa:$('c-mostrar-num-mesa').checked?1:0,
-    tipo:$('c-tipo').value, lado:$('c-lado').value, lugares:$('c-lugares').value,
+    tipo:$('c-tipo').value, lado:$('c-lado').value,
     mesa:$('c-mesa').value, telefone:$('c-telefone').value, observacoes:$('c-obs').value,
     msg_pessoal:$('c-msg').value,
     presenca:$('c-presenca').value,

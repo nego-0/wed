@@ -41,8 +41,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // O nome a exibir chega proposto a partir dos nomes das pessoas
   ok(await p.evaluate(() => document.getElementById('c-nome').value) === 'Família Prova',
      'o nome a exibir vem proposto a partir dos nomes das pessoas');
-  ok(await p.evaluate(() => document.getElementById('c-lugares').value) === '2',
-     'os lugares acompanham o número de pessoas');
+  ok(await p.evaluate(() => !document.getElementById('c-lugares') && !document.getElementById('c-sufixo')),
+     'o formulário já não pede lugares nem sufixo');
 
   // Uma pessoa por linha: os pormenores só aparecem ao abrir o "⋯"
   ok(await p.evaluate(() => {
@@ -67,7 +67,6 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'o "⋯" assinala que a pessoa tem pormenores preenchidos');
 
   await p.evaluate((mesa) => {
-    document.getElementById('c-sufixo').value = 'e acompanhante';
     document.getElementById('c-telefone').value = '+244912345678';
     document.getElementById('c-obs').value = 'Obs de prova';
     document.getElementById('c-msg').value = 'Mensagem de prova';
@@ -96,7 +95,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     const rows = [...document.querySelectorAll('#membros .membro-linha')];
     const rui = rows.find(r => r.querySelector('input[type=text]').value === 'Rui Prova');
     return {
-      nome: g('c-nome'), sufixo: g('c-sufixo'), lugares: g('c-lugares'),
+      nome: g('c-nome'),
       telefone: g('c-telefone'), obs: g('c-obs'), msg: g('c-msg'), mesa: g('c-mesa'),
       numMesa: document.getElementById('c-mostrar-num-mesa').checked,
       tipo: g('c-tipo'), lado: g('c-lado'), presenca: g('c-presenca'),
@@ -107,11 +106,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       ruiMarcado: rui ? rui.querySelector('.m-mais').classList.contains('tem') : null
     };
   });
+  // Os lugares já não têm campo: lêem-se de onde passaram a viver.
+  v.lugaresBD = (await api('convite_get&id=' + id)).convite.lugares;
   console.log('   reaberto:', JSON.stringify(v));
 
   ok(v.nome === 'Família Prova',          'nome a exibir volta certo');
-  ok(v.sufixo === 'e acompanhante',       'sufixo volta certo');
-  ok(v.lugares === '2',                   'lugares voltam certos');
+  ok(+v.lugaresBD === 2,                  'os lugares ficam iguais ao número de pessoas (2)');
   ok(v.telefone === '+244912345678',      'telefone volta certo');
   ok(v.obs === 'Obs de prova',            'observações voltam certas');
   ok(v.msg === 'Mensagem de prova',       'mensagem pessoal volta certa');
@@ -125,6 +125,30 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(v.ruiBrinde === true,                'brinde da pessoa volta certo');
   ok(v.ruiMesa === true,                  'mesa individual da pessoa volta certa');
   ok(v.ruiMarcado === true,               'ao reabrir, o "⋯" mostra que essa pessoa tem pormenores');
+
+  // ---------- os lugares seguem as pessoas ----------
+  // É esta a razão de o campo ter saído: acrescentar ou tirar uma pessoa muda
+  // os lugares sozinho, sem um campo à parte que pudesse discordar da lista.
+  await p.evaluate(() => { addMembro('Terceira Prova'); renderSugestoes(); });
+  await p.waitForTimeout(200);
+  await p.evaluate(() => guardarConvite());
+  await p.waitForTimeout(1500);
+  let lug = (await api('convite_get&id=' + id)).convite.lugares;
+  console.log('   com três pessoas → lugares:', lug);
+  ok(+lug === 3, 'acrescentar uma pessoa acrescenta um lugar');
+
+  await p.evaluate((i) => editar(i), id);
+  await p.waitForTimeout(900);
+  await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#membros .membro-linha')];
+    rows[rows.length - 1].querySelector('.btn-ico').click();   // retira a última
+  });
+  await p.waitForTimeout(200);
+  await p.evaluate(() => guardarConvite());
+  await p.waitForTimeout(1500);
+  lug = (await api('convite_get&id=' + id)).convite.lugares;
+  console.log('   com duas pessoas → lugares:', lug);
+  ok(+lug === 2, 'retirar uma pessoa retira um lugar');
 
   // ---------- limpeza ----------
   await api('convite_delete&id=' + id + '&definitivo=1', {});

@@ -580,10 +580,8 @@ if ($acao === 'convite_save') {
     $id       = (int)($d['id'] ?? 0);
     $nome     = trim($d['nome_exibicao'] ?? '');
     if ($nome === '') erro('O nome do convite é obrigatório.');
-    $sufixo   = trim($d['sufixo'] ?? ''); if ($sufixo==='') $sufixo=null;
     $tipo     = in_array($d['tipo']??'',['digital','fisico','ambos'],true)?$d['tipo']:'digital';
     $lado     = in_array($d['lado']??'',['noivo','noiva','ambos'],true)?$d['lado']:'noivo';
-    $lugares  = max(1,(int)($d['lugares']??1));
     $telefone = trim($d['telefone'] ?? ''); if ($telefone==='') $telefone=null;
     $obs      = trim($d['observacoes'] ?? ''); if ($obs==='') $obs=null;
     $msgP     = trim($d['msg_pessoal'] ?? ''); if ($msgP==='') $msgP=null;
@@ -592,15 +590,25 @@ if ($acao === 'convite_save') {
     $mostrarNM = !empty($d['mostrar_num_mesa']) ? 1 : 0;
     $membros  = is_array($d['membros'] ?? null) ? $d['membros'] : [];
 
+    // Os lugares são as pessoas convidadas: contam-se os nomes em vez de se
+    // pedirem à parte. Um campo separado só podia discordar da lista — e a
+    // importação já fazia esta conta. Mínimo de 1, para um convite nunca
+    // ficar sem lugar nenhum enquanto o nome não é escrito.
+    $nomeados = 0;
+    foreach ($membros as $m) { if (trim(is_array($m) ? ($m['nome'] ?? '') : $m) !== '') $nomeados++; }
+    $lugares = max(1, $nomeados);
+
     $novoConvite = !$id;
     if ($id) {
-        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,sufixo=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
-        $st->bind_param('ssissiisssi',$nome,$sufixo,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
+        // 'sufixo' fica de fora: já não se pede no formulário, e reescrevê-lo
+        // aqui apagaria o que convites antigos ainda tenham guardado.
+        $st=$conn->prepare("UPDATE {$P}convites SET nome_exibicao=?,mostrar_num_mesa=?,tipo=?,lado=?,lugares=?,mesa_id=?,telefone=?,observacoes=?,msg_pessoal=?,atualizado_em=$TS WHERE id=?");
+        $st->bind_param('sissiisssi',$nome,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP,$id);
         $st->execute();
     } else {
         $codigo=gerarCodigo($conn);
-        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,sufixo,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
-        $st->bind_param('sssissiisss',$codigo,$nome,$sufixo,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP);
+        $st=$conn->prepare("INSERT INTO {$P}convites (codigo,nome_exibicao,mostrar_num_mesa,tipo,lado,lugares,mesa_id,telefone,observacoes,msg_pessoal,criado_em,atualizado_em) VALUES (?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
+        $st->bind_param('ssissiisss',$codigo,$nome,$mostrarNM,$tipo,$lado,$lugares,$mesaId,$telefone,$obs,$msgP);
         $st->execute(); $id=$conn->insert_id;
     }
 
