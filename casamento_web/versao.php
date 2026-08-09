@@ -99,6 +99,10 @@ function correcoesEsperadas(): array {
          'plataforma.php', 'class="numeros"'],
         ['Ações da plataforma funcionam sem casamento aberto',
          'config.php', 'function acoesSemCasamento('],
+        ['Levar e trazer os dados (casamento, ou a casa inteira)',
+         'api.php', 'function retratoCasamento('],
+        ['Importação da lista antiga ("guests") removida',
+         'api.php', 'dados_importar'],
     ];
 }
 

@@ -292,6 +292,32 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
   <?php if (ehAdminPlataforma()): ?>
     <div class="painel" style="margin-top:1.4rem">
+      <h3>Cópia de segurança</h3>
+      <div class="dica">Levar a casa inteira num ficheiro: todos os casamentos, com as suas fichas,
+        convites, pessoas, mesas e desenhos, mais a lista de contas. Um casamento à parte
+        descarrega-se abrindo-o e indo a <b>Gestão</b>.</div>
+      <div class="lf" style="grid-template-columns:auto auto 1fr">
+        <div><a class="btn" href="api.php?action=dados_exportar&amp;ambito=sistema">Descarregar tudo</a></div>
+        <div><a class="btn" href="api.php?action=dados_exportar&amp;ambito=sistema&amp;senhas=1"
+               onclick="return confirm('O ficheiro leva as senhas cifradas de todas as contas.\n\n'
+                 + 'Guarde-o como guardaria a base de dados. Continuar?')">Descarregar com senhas</a></div>
+        <div></div>
+      </div>
+      <div class="dica" style="margin:.7rem 0 0">Sem as senhas, o ficheiro serve para repor os dados
+        mas não os acessos — quem lá estiver terá de receber senhas novas.</div>
+
+      <div class="lf" style="grid-template-columns:1fr auto">
+        <div><label for="sis-ficheiro">Trazer casamentos de um ficheiro</label>
+          <input type="file" id="sis-ficheiro" accept=".json,application/json"></div>
+        <div><button class="btn" onclick="importarSistema()">Criar como casamentos novos</button></div>
+      </div>
+      <div class="dica" style="margin:.5rem 0 0">Cria casamentos <b>novos</b>: não substitui nem
+        mistura nada com o que já cá está. Para substituir um casamento em concreto, abra-o e use a
+        página de Gestão.</div>
+      <div class="segredo" id="sis-resultado" style="display:none"></div>
+    </div>
+
+    <div class="painel">
       <h3>Contas</h3>
       <div class="dica">Todas as contas do sistema. Uma conta <b>suspensa</b> não entra —
         e a mensagem que recebe é a mesma de senha errada, para quem tenta adivinhar
@@ -307,9 +333,19 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   <?php endif; ?>
 </main>
 
+<div class="toast" id="toast"></div>
+
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script>
+// Esta página chamava toast() sem o ter: as mensagens de erro rebentavam em
+// silêncio na consola, em vez de aparecerem a quem estava a olhar.
+function toast(m, mau){
+  const el = document.getElementById('toast');
+  el.textContent = m; el.className = 'toast mostrar' + (mau ? ' erro' : '');
+  setTimeout(() => el.className = 'toast', 2800);
+}
+
 async function abrir(id){
   const d = await api('casamento_abrir&id=' + id, { method:'POST' });
   if (d && d.success) location.href = 'index.php';
@@ -337,6 +373,31 @@ async function entrarComCodigo(){
   if (!codigo) return toast('Escreva o código que o casal lhe deu.', true);
   const d = await api('suporte_entrar', { method:'POST', body: JSON.stringify({ codigo }) });
   if (d && d.success) location.href = 'index.php';
+}
+
+// ---------- trazer casamentos de um ficheiro ----------
+async function importarSistema(){
+  const f = document.getElementById('sis-ficheiro').files[0];
+  if (!f) return toast('Escolha o ficheiro primeiro.', true);
+  let dados;
+  try { dados = JSON.parse(await f.text()); }
+  catch (e) { return toast('Esse ficheiro não é um JSON válido.', true); }
+  if (!dados || dados.formato !== 'casamento-web/1') {
+    return toast('Este ficheiro não é uma exportação deste sistema.', true);
+  }
+  const n = (dados.casamentos || []).length;
+  if (!confirm(`Criar ${n} casamento(s) novo(s) a partir deste ficheiro?\n\n`
+    + 'Nada do que já cá está é tocado.')) return;
+  const d = await api('dados_importar', { method:'POST',
+    body: JSON.stringify({ modo: 'novo', ficheiro: dados }) });
+  if (!d || !d.success) return;
+  const linhas = (d.resumo || []).map(r =>
+    `<b>${esc(r.nome)}</b> — ${r.convites} convite(s), ${r.pessoas} pessoa(s), ${r.mesas} mesa(s)`
+    + (r.codigos_trocados ? ` · ${r.codigos_trocados} código(s) trocado(s)` : ''));
+  const cx = document.getElementById('sis-resultado');
+  cx.style.display = '';
+  cx.innerHTML = 'Criados:<br>' + linhas.join('<br>');
+  setTimeout(() => location.reload(), 2500);
 }
 
 // ---------- contas (só o admin da plataforma) ----------

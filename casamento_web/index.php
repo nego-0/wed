@@ -7,7 +7,6 @@ exigirAdmin();
 $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $dataExt = dataExtensa($DEFS['evento.data']);
-$temListaAntiga = listaAntigaExiste($conn);
 $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c')."")->fetch_row()[0];
 ?>
 <!DOCTYPE html>
@@ -21,11 +20,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <style>
   .barra-acoes{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
   .barra-acoes .cresce{ flex:1 1 200px; }
-  .banner-import{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); border:1px solid var(--gold-soft);
-    border-radius:14px; padding:1rem 1.25rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-bottom:1.25rem; }
-  .banner-import .txt{ flex:1 1 260px; }
-  .banner-import h4{ margin-bottom:.2rem; }
-  .banner-import p{ margin:0; font-size:.86rem; color:var(--text); }
   /* Uma pessoa = uma linha. Os pormenores (género, mesa, papel, brinde) são
      pedidos na mesma, mas só quando se abrem: seis controlos lado a lado não
      cabiam na largura do modal e quebravam para uma segunda linha, o que fazia
@@ -269,16 +263,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <?php cabecalho('Gestão de Convidados', $CAS['casal'].' · '.$dataExt, 'painel'); ?>
 
 <div class="container">
-
-  <?php if ($temListaAntiga && $totalConvites === 0): ?>
-  <div class="banner-import" id="banner-import">
-    <div class="txt">
-      <h4>Importar a sua lista atual</h4>
-      <p>Encontrámos a lista de convidados existente. Quer trazer esses convidados para o novo sistema, organizados em convites?</p>
-    </div>
-    <button class="btn btn-ouro" onclick="importar(false)">Importar agora</button>
-  </div>
-  <?php endif; ?>
 
   <!-- PROGRESSO DE CAPACIDADE -->
   <div id="progresso" class="progresso-cap mb-4"></div>
@@ -1098,19 +1082,6 @@ async function guardarMesa(){
 async function eliminarMesa(id){ const m=MESAS.find(x=>x.id==id); const nome=m?m.nome:'esta mesa';
   if(!confirm(`Eliminar a mesa "${nome}"? Os convites ficam sem mesa.`))return;
   const d=await api('mesa_delete&id='+id); if(d.success){MESAS=d.mesas;renderMesasGestao();renderFiltroMesas();carregar();toast('Mesa eliminada.');} }
-
-// ---------- importar ----------
-async function importar(forcar){
-  if(!forcar && !confirm('Importar os convidados da lista atual para o novo sistema?'))return;
-  toast('A importar…');
-  const d=await api('importar'+(forcar?'&forcar=1':''));
-  if(!d.success){
-    if(d.message && d.message.includes('Já existem') && confirm('Já existem convites. Substituir tudo pela lista antiga?')) return importar(true);
-    return toast(d.message,true);
-  }
-  const b=$('banner-import'); if(b)b.remove();
-  toast(`Importados ${d.convites} convites e ${d.convidados} convidados.`); carregar();
-}
 
 // ---------- modais base ----------
 function abrir(id){ $(id).classList.add('aberto'); }

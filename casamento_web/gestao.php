@@ -221,6 +221,33 @@ $CAMPOS_EVENTO = [
     </div>
   <?php endif; ?>
 
+  <?php if ($souAdmin): ?>
+    <div class="painel">
+      <h3>Os nossos dados</h3>
+      <div class="dica">Os dados deste casamento são seus. Leve-os quando quiser — para guardar,
+        para mudar de servidor, ou só para não ficar dependente de ninguém. O ficheiro traz a ficha,
+        o desenho dos convites, as mesas, os convites e as pessoas.</div>
+      <div class="fim" style="margin-top:0">
+        <a class="btn" href="api.php?action=dados_exportar&amp;ambito=casamento">Descarregar os meus dados</a>
+        <span class="estado">Um ficheiro <code>.json</code>, legível e completo.</span>
+      </div>
+
+      <?php if (!$soVer): ?>
+      <div class="lf" style="grid-template-columns:1fr auto">
+        <div><label for="imp-ficheiro">Trazer dados de um ficheiro</label>
+          <input type="file" id="imp-ficheiro" accept=".json,application/json"></div>
+        <div><button class="btn" onclick="importarDados()">Substituir por este ficheiro</button></div>
+      </div>
+      <div class="semdono" style="margin:.8rem 0 0">
+        <b>Substituir apaga o que está cá.</b> Os convites, as pessoas, as mesas e o desenho deste
+        casamento são trocados pelos do ficheiro. Não é uma junção — é uma troca. Descarregue os
+        dados atuais primeiro, se quiser poder voltar atrás.
+      </div>
+      <div class="segredo" id="imp-resultado" style="display:none"></div>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
   <div class="painel">
     <h3>A minha conta</h3>
     <div class="dica">Entrou como <b><?= escP(utilizadorAtual() ?? '') ?></b>.</div>
@@ -246,7 +273,7 @@ const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const SOU_ADMIN = <?= $souAdmin ? 'true' : 'false' ?>;
 const SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;
-function toast(m, mau){ const t=$('toast'); t.textContent=m; t.className='toast mostrar'+(mau?' mau':'');
+function toast(m, mau){ const t=$('toast'); t.textContent=m; t.className='toast mostrar'+(mau?' erro':'');
                         setTimeout(()=>t.className='toast', 2600); }
 
 // ---------- a ficha ----------
@@ -386,6 +413,40 @@ async function mudarSenha(){
   const d = await api('senha_mudar', { method:'POST', body: JSON.stringify({ atual, nova }) });
   if (d && d.success){ $('p-atual').value = $('p-nova').value = ''; toast('Senha mudada.'); }
 }
+// ---------- trazer dados de um ficheiro ----------
+async function importarDados(){
+  const f = $('imp-ficheiro').files[0];
+  if (!f) return toast('Escolha o ficheiro primeiro.', true);
+  let dados;
+  try { dados = JSON.parse(await f.text()); }
+  catch (e) { return toast('Esse ficheiro não é um JSON válido.', true); }
+  if (!dados || dados.formato !== 'casamento-web/1') {
+    return toast('Este ficheiro não é uma exportação deste sistema.', true);
+  }
+  // Contam-se as coisas ANTES de perguntar: uma confirmação que não diz o que
+  // vai acontecer não é uma confirmação.
+  const c = (dados.casamentos || [])[0] || {};
+  const nc = (c.convites || []).length;
+  const np = (c.convites || []).reduce((s, x) => s + ((x.membros || []).length), 0);
+  const nm = (c.mesas || []).length;
+  if (!confirm(`Substituir os dados deste casamento?\n\n`
+    + `Entram: ${nc} convite(s), ${np} pessoa(s), ${nm} mesa(s).\n`
+    + `Sai: tudo o que está cá agora.\n\nIsto não se desfaz.`)) return;
+  const comFicha = confirm('Trazer também os nomes e a data do ficheiro?\n\n'
+    + 'OK = sim, ficam os do ficheiro.\nCancelar = não, ficam os que já cá estão.');
+  const d = await api('dados_importar', { method:'POST',
+    body: JSON.stringify({ modo: 'substituir', com_ficha: comFicha, ficheiro: dados }) });
+  if (!d || !d.success) return;
+  const r = (d.resumo || [])[0] || {};
+  $('imp-resultado').style.display = '';
+  $('imp-resultado').innerHTML = `Entraram <b>${r.convites || 0}</b> convite(s), `
+    + `<b>${r.pessoas || 0}</b> pessoa(s), <b>${r.mesas || 0}</b> mesa(s) e `
+    + `<b>${r.versoes || 0}</b> versão(ões).`
+    + (r.codigos_trocados ? `<br><b>${r.codigos_trocados}</b> código(s) tiveram de mudar por já `
+        + `estarem em uso — os QR antigos desses convites deixam de servir.` : '');
+  toast('Dados importados.');
+}
+
 async function sairVisita(){
   const d = await api('suporte_sair', { method:'POST' });
   if (d && d.success) location.href = 'plataforma.php';

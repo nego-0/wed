@@ -1648,64 +1648,299 @@ if ($acao === 'convidado_list') {
 }
 
 // ---- Importar da lista antiga ------------------------------
-if ($acao === 'importar') {
-    if (!listaAntigaExiste($conn)) erro('Não foi encontrada a lista antiga (tabela "guests").');
-    $jaTem=(int)$conn->query("SELECT COUNT(*) FROM {$P}convites")->fetch_row()[0];
-    if ($jaTem>0 && empty($_GET['forcar'])) erro('Já existem convites. Para reimportar, confirme a substituição.');
-    if (!empty($_GET['forcar'])) { $conn->query("DELETE FROM {$P}convites WHERE " . doCasamento()); }
+// ============================================================
+// LEVAR OS DADOS DAQUI, E TRAZÊ-LOS DE VOLTA
+//
+// Os dados de um casamento são do casal, não da casa. Tem de haver forma de os
+// levar — para guardar, para mudar de servidor, para não ficar refém de
+// ninguém. E o admin precisa do mesmo à escala da casa, que é o que se chama
+// uma cópia de segurança.
+//
+// O ficheiro é JSON e diz de si: formato, versão do esquema, quando e por quem
+// foi feito. As mesas viajam pelo NOME e não pelo número — os números são desta
+// base e não querem dizer nada noutra.
+// ============================================================
 
-    $criadosC=0; $criadosG=0;
+/** Tudo o que compõe um casamento, pronto a escrever num ficheiro. */
+function retratoCasamento(mysqli $conn, int $cid): array {
+    global $P;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
 
-    // Mapa mesa antiga -> nova
-    $mapaMesa=[];
-    if ($conn->query("SHOW TABLES LIKE 'mesas'")->num_rows) {
-        $res=$conn->query("SELECT id,name,capacity FROM mesas");
-        while($m=$res->fetch_assoc()) $mapaMesa[(int)$m['id']]=resolverMesa($conn,$m['name']);
+    $um = function (string $sql) use ($conn) {
+        $r = @$conn->query($sql); return $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+    };
+    $ficha = [];
+    $r = @$conn->query("SELECT nome, noiva, noivo, data_evento, estado, endereco_publico
+                        FROM {$P}casamentos WHERE id=$cid LIMIT 1");
+    if ($r) $ficha = $r->fetch_assoc() ?: [];
+
+    $defs = [];
+    foreach ($um("SELECT chave, valor FROM {$P}definicoes WHERE casamento_id=$cid") as $d) {
+        $defs[$d['chave']] = $d['valor'];
     }
-    $estadoMap=['confirmado'=>'confirmado','recusado'=>'recusado','pendente'=>'pendente'];
 
-    // Grupos (convites físicos) — cada invite_group vira um convite
-    if ($conn->query("SHOW TABLES LIKE 'invite_groups'")->num_rows) {
-        $grupos=$conn->query("SELECT id,name FROM invite_groups ORDER BY name");
-        while($g=$grupos->fetch_assoc()){
-            $st=$conn->prepare("SELECT name,confirmed,phone,notes,table_id FROM guests WHERE group_id=? ORDER BY name");
-            $st->bind_param('i',$g['id']); $st->execute();
-            $membros=$st->get_result()->fetch_all(MYSQLI_ASSOC);
-            if (!$membros) continue;
-            $tel=null; $mesa=null; $notas=null; $conf=0; $rec=0;
-            foreach($membros as $m){ if(!$tel&&$m['phone'])$tel=$m['phone']; if(!$mesa&&$m['table_id'])$mesa=$mapaMesa[(int)$m['table_id']]??null; if(!$notas&&$m['notes'])$notas=$m['notes'];
-                                     if($m['confirmed']==='confirmado')$conf++; if($m['confirmed']==='recusado')$rec++; }
-            $n=count($membros);
-            $estado = $conf===$n?'confirmado':($rec===$n?'recusado':(($conf||$rec)?'parcial':'pendente'));
-            $codigo=gerarCodigo($conn);
-            $st=$conn->prepare("INSERT INTO {$P}convites (casamento_id,codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
-            $tipo='fisico'; $lado='noivo';
-            $st->bind_param('ssssiissis',$codigo,$g['name'],$tipo,$lado,$n,$mesa,$tel,$estado,$conf,$notas);
-            $st->execute(); $cid=$conn->insert_id; $criadosC++;
-            $primeiro=true;
-            foreach($membros as $m){ $r=$estadoMap[$m['confirmed']]??'pendente'; $pr=$primeiro?1:0; $primeiro=false;
-                $q=$conn->prepare("INSERT INTO {$P}convidados (casamento_id,convite_id,nome,principal,rsvp) VALUES (" . casamentoAtual() . ",?,?,?,?)");
-                $q->bind_param('isis',$cid,$m['name'],$pr,$r); $q->execute(); $criadosG++; }
+    $mesas = $um("SELECT nome, capacidade, forma, cor, especial, pos_x, pos_y, tamanho
+                  FROM {$P}mesas WHERE casamento_id=$cid ORDER BY nome");
+
+    // O nome da mesa, e não o seu número: o número é desta base.
+    $convites = $um("SELECT c.codigo, c.nome_exibicao, c.sufixo, c.tipo, c.lado, c.lugares,
+                            m.nome AS mesa, c.telefone, c.msg_pessoal, c.observacoes,
+                            c.rsvp_estado, c.rsvp_confirmados, c.rsvp_mensagem,
+                            c.checkin_estado, c.checkin_presentes,
+                            c.enviado, c.impresso, c.mostrar_num_mesa, c.eliminado_em
+                     FROM {$P}convites c LEFT JOIN {$P}mesas m ON m.id = c.mesa_id
+                     WHERE c.casamento_id=$cid ORDER BY c.id");
+    $porCodigo = [];
+    foreach ($convites as $i => $c) $porCodigo[$c['codigo']] = $i;
+    foreach ($convites as &$c) $c['membros'] = [];
+    unset($c);
+    foreach ($um("SELECT c.codigo, g.nome, g.genero, g.principal, g.rsvp, g.presente,
+                         g.brinde, g.papel, mg.nome AS mesa
+                  FROM {$P}convidados g
+                  JOIN {$P}convites c ON c.id = g.convite_id
+                  LEFT JOIN {$P}mesas mg ON mg.id = g.mesa_id
+                  WHERE g.casamento_id=$cid ORDER BY g.principal DESC, g.nome") as $g) {
+        $cod = $g['codigo']; unset($g['codigo']);
+        if (isset($porCodigo[$cod])) $convites[$porCodigo[$cod]]['membros'][] = $g;
+    }
+
+    $versoes = $um("SELECT nome, ambito, defs, predefinida, utilizador, criado_em, atualizado_em
+                    FROM {$P}versoes WHERE casamento_id=$cid ORDER BY id");
+
+    $acessos = $um("SELECT u.email, u.nome, a.papel FROM {$P}acessos a
+                    JOIN {$P}utilizadores u ON u.id = a.utilizador_id
+                    WHERE a.casamento_id=$cid ORDER BY a.papel, u.email");
+
+    usarCasamento($anterior > 0 ? $anterior : 1);
+    return ['ficha' => $ficha, 'definicoes' => $defs, 'mesas' => $mesas,
+            'convites' => $convites, 'versoes' => $versoes, 'acessos' => $acessos];
+}
+
+if ($acao === 'dados_exportar') {
+    $ambito = ($_GET['ambito'] ?? 'casamento') === 'sistema' ? 'sistema' : 'casamento';
+    $comSenhas = !empty($_GET['senhas']);
+
+    $ids = [];
+    if ($ambito === 'sistema') {
+        if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva a casa inteira.');
+        $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
+        if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
+    } else {
+        exigirAdminApi();
+        $ids = [casamentoAtual()];
+        if ($ids[0] <= 0) erro('Não há casamento aberto.');
+    }
+
+    $saida = [
+        'formato'    => 'casamento-web/1',
+        'esquema'    => ESQUEMA_VERSAO,
+        'ambito'     => $ambito,
+        'gerado_em'  => date('c'),
+        'gerado_por' => utilizadorAtual() ?? '',
+        'casamentos' => [],
+    ];
+    foreach ($ids as $cid) $saida['casamentos'][] = retratoCasamento($conn, $cid);
+
+    if ($ambito === 'sistema') {
+        // As contas só na cópia da casa inteira — e as senhas só a pedido, que
+        // um ficheiro com senhas (ainda que cifradas) guarda-se como se guarda
+        // a base de dados, não como se guarda uma folha de cálculo.
+        $cols = 'id, email, nome, papel_plataforma, estado, criado_em' . ($comSenhas ? ', senha_hash' : '');
+        $r = @$conn->query("SELECT $cols FROM {$P}utilizadores ORDER BY id");
+        $contas = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+        foreach ($contas as &$c) unset($c['id']);
+        unset($c);
+        $saida['contas'] = $contas;
+        $saida['com_senhas'] = $comSenhas ? 1 : 0;
+    }
+
+    $nome = 'dados-' . ($ambito === 'sistema' ? 'sistema' : 'casamento') . '-' . date('Y-m-d') . '.json';
+    registar($conn, 'dados_exportados', $ambito, count($ids) . ' casamento(s)');
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename=' . $nome);
+    echo json_encode($saida, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    exit;
+}
+
+/**
+ * Escreve um casamento a partir de um retrato. Devolve o que fez.
+ *
+ * Os códigos dos convites são únicos em todo o sistema: se um já estiver
+ * tomado, gera-se outro — e diz-se quantos, porque um código que muda é um QR
+ * já impresso que deixa de servir.
+ */
+function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array {
+    global $P;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+    $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
+              'definicoes' => 0, 'codigos_trocados' => 0];
+
+    // Fora o que lá estava. É o que "substituir" quer dizer, e a página diz-o
+    // antes de chegar aqui.
+    foreach (['convidados', 'convites', 'mesas', 'versoes', 'definicoes'] as $t) {
+        $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+    }
+
+    if ($comFicha && !empty($r['ficha'])) {
+        $f = $r['ficha'];
+        $st = $conn->prepare("UPDATE {$P}casamentos SET nome=?, noiva=?, noivo=?, data_evento=? WHERE id=?");
+        $nome = mb_substr((string)($f['nome'] ?? ''), 0, 160);
+        $noiva = mb_substr((string)($f['noiva'] ?? ''), 0, 80);
+        $noivo = mb_substr((string)($f['noivo'] ?? ''), 0, 80);
+        $data = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($f['data_evento'] ?? '')) ? $f['data_evento'] : null;
+        $st->bind_param('ssssi', $nome, $noiva, $noivo, $data, $cid);
+        @$st->execute();
+    }
+
+    foreach ((array)($r['definicoes'] ?? []) as $k => $v) {
+        if (!is_string($k) || !is_string($v)) continue;
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)");
+        $st->bind_param('iss', $cid, $k, $v);
+        if (@$st->execute()) $feito['definicoes']++;
+    }
+
+    $idMesa = [];
+    foreach ((array)($r['mesas'] ?? []) as $m) {
+        if (!is_array($m) || trim((string)($m['nome'] ?? '')) === '') continue;
+        $nm = (string)$m['nome']; $cap = (int)($m['capacidade'] ?? 8);
+        $forma = (string)($m['forma'] ?? 'redonda'); $cor = (string)($m['cor'] ?? 'neutra');
+        $esp = isset($m['especial']) && $m['especial'] !== null ? (string)$m['especial'] : null;
+        $px = isset($m['pos_x']) && $m['pos_x'] !== null ? (float)$m['pos_x'] : null;
+        $py = isset($m['pos_y']) && $m['pos_y'] !== null ? (float)$m['pos_y'] : null;
+        $tam = (int)($m['tamanho'] ?? 100);
+        $st = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y,tamanho)
+                              VALUES ($cid,?,?,?,?,?,?,?,?)");
+        $st->bind_param('sisssddi', $nm, $cap, $forma, $cor, $esp, $px, $py, $tam);
+        if (@$st->execute()) { $idMesa[$nm] = $conn->insert_id; $feito['mesas']++; }
+    }
+
+    foreach ((array)($r['convites'] ?? []) as $c) {
+        if (!is_array($c) || trim((string)($c['nome_exibicao'] ?? '')) === '') continue;
+        $codigo = strtoupper(trim((string)($c['codigo'] ?? '')));
+        if ($codigo === '' || !preg_match('/^[A-Z0-9]{4,16}$/', $codigo)) {
+            $codigo = gerarCodigo($conn); $feito['codigos_trocados']++;
+        } else {
+            $q = $conn->prepare("SELECT id FROM {$P}convites WHERE casamento_id > 0 AND codigo=? LIMIT 1");
+            $q->bind_param('s', $codigo); $q->execute();
+            if ($q->get_result()->fetch_assoc()) { $codigo = gerarCodigo($conn); $feito['codigos_trocados']++; }
+        }
+        $mesaId = $idMesa[(string)($c['mesa'] ?? '')] ?? null;
+        $st = $conn->prepare("INSERT INTO {$P}convites
+              (casamento_id, codigo, nome_exibicao, sufixo, tipo, lado, lugares, mesa_id, telefone,
+               msg_pessoal, observacoes, rsvp_estado, rsvp_confirmados, rsvp_mensagem,
+               checkin_estado, checkin_presentes, enviado, impresso, mostrar_num_mesa, eliminado_em)
+              VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $vals = [
+            $codigo,
+            mb_substr((string)$c['nome_exibicao'], 0, 160),
+            isset($c['sufixo']) && $c['sufixo'] !== null ? (string)$c['sufixo'] : null,
+            in_array($c['tipo'] ?? '', ['digital','fisico','ambos'], true) ? $c['tipo'] : 'digital',
+            in_array($c['lado'] ?? '', ['noivo','noiva','ambos'], true) ? $c['lado'] : 'ambos',
+            max(1, (int)($c['lugares'] ?? 1)),
+            $mesaId,
+            isset($c['telefone']) && $c['telefone'] !== null ? (string)$c['telefone'] : null,
+            isset($c['msg_pessoal']) && $c['msg_pessoal'] !== null ? (string)$c['msg_pessoal'] : null,
+            isset($c['observacoes']) && $c['observacoes'] !== null ? (string)$c['observacoes'] : null,
+            in_array($c['rsvp_estado'] ?? '', ['pendente','confirmado','parcial','recusado'], true) ? $c['rsvp_estado'] : 'pendente',
+            (int)($c['rsvp_confirmados'] ?? 0),
+            isset($c['rsvp_mensagem']) && $c['rsvp_mensagem'] !== null ? (string)$c['rsvp_mensagem'] : null,
+            in_array($c['checkin_estado'] ?? '', ['aguardando','presente','parcial'], true) ? $c['checkin_estado'] : 'aguardando',
+            (int)($c['checkin_presentes'] ?? 0),
+            (int)!empty($c['enviado']),
+            (int)!empty($c['impresso']),
+            isset($c['mostrar_num_mesa']) ? (int)$c['mostrar_num_mesa'] : 1,
+            isset($c['eliminado_em']) && $c['eliminado_em'] !== null ? (string)$c['eliminado_em'] : null,
+        ];
+        $st->bind_param('sssssiissssissiiiis', ...$vals);   // 19 colunas, pela ordem acima
+        if (!@$st->execute()) continue;
+        $convId = $conn->insert_id; $feito['convites']++;
+
+        foreach ((array)($c['membros'] ?? []) as $g) {
+            if (!is_array($g) || trim((string)($g['nome'] ?? '')) === '') continue;
+            $gm = $idMesa[(string)($g['mesa'] ?? '')] ?? null;
+            $q = $conn->prepare("INSERT INTO {$P}convidados
+                  (casamento_id, convite_id, nome, genero, principal, rsvp, presente, brinde, papel, mesa_id)
+                  VALUES ($cid,?,?,?,?,?,?,?,?,?)");
+            $gnome = mb_substr((string)$g['nome'], 0, 120);
+            $gen  = in_array($g['genero'] ?? '', ['m','f'], true) ? $g['genero'] : null;
+            $prin = (int)!empty($g['principal']);
+            $rsvp = in_array($g['rsvp'] ?? '', ['pendente','confirmado','recusado'], true) ? $g['rsvp'] : 'pendente';
+            $pres = (int)!empty($g['presente']);
+            $bri  = (int)!empty($g['brinde']);
+            $pap  = isset($g['papel']) && $g['papel'] !== null ? (string)$g['papel'] : null;
+            $q->bind_param('issisiisi', $convId, $gnome, $gen, $prin, $rsvp, $pres, $bri, $pap, $gm);
+            if (@$q->execute()) $feito['pessoas']++;
         }
     }
 
-    // Convidados sem grupo -> convite digital individual
-    $sem=$conn->query("SELECT name,side,confirmed,phone,notes,table_id FROM guests WHERE group_id IS NULL ORDER BY name");
-    while($m=$sem->fetch_assoc()){
-        $codigo=gerarCodigo($conn);
-        $lado=in_array($m['side'],['noivo','noiva'],true)?$m['side']:'noivo';
-        $estado=$estadoMap[$m['confirmed']]??'pendente';
-        $conf=$estado==='confirmado'?1:0;
-        $mesa=$m['table_id']?($mapaMesa[(int)$m['table_id']]??null):null;
-        $st=$conn->prepare("INSERT INTO {$P}convites (casamento_id,codigo,nome_exibicao,tipo,lado,lugares,mesa_id,telefone,rsvp_estado,rsvp_confirmados,observacoes,criado_em,atualizado_em) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?,?,?,?, $TS, $TS)");
-        $tipo='digital'; $lug=1;
-        $st->bind_param('ssssiissis',$codigo,$m['name'],$tipo,$lado,$lug,$mesa,$m['phone'],$estado,$conf,$m['notes']);
-        $st->execute(); $cid=$conn->insert_id; $criadosC++;
-        $q=$conn->prepare("INSERT INTO {$P}convidados (casamento_id,convite_id,nome,principal,rsvp) VALUES (" . casamentoAtual() . ",?,?,1,?)");
-        $q->bind_param('iss',$cid,$m['name'],$estado); $q->execute(); $criadosG++;
+    foreach ((array)($r['versoes'] ?? []) as $v) {
+        if (!is_array($v) || trim((string)($v['nome'] ?? '')) === '') continue;
+        $st = $conn->prepare("INSERT INTO {$P}versoes (casamento_id, nome, ambito, defs, predefinida, utilizador)
+                              VALUES ($cid,?,?,?,?,?)");
+        $vn = mb_substr((string)$v['nome'], 0, 80);
+        $va = in_array($v['ambito'] ?? '', ['digital','impresso'], true) ? $v['ambito'] : 'digital';
+        $vd = (string)($v['defs'] ?? '{}');
+        $vp = (int)!empty($v['predefinida']);
+        $vu = (string)($v['utilizador'] ?? '');
+        $st->bind_param('sssis', $vn, $va, $vd, $vp, $vu);
+        if (@$st->execute()) $feito['versoes']++;
     }
 
-    ok(['convites'=>$criadosC,'convidados'=>$criadosG]);
+    usarCasamento($anterior > 0 ? $anterior : $cid);
+    return $feito;
 }
+
+if ($acao === 'dados_importar') {
+    $d = corpo();
+    $f = is_array($d['ficheiro'] ?? null) ? $d['ficheiro'] : null;
+    $modo = ($d['modo'] ?? 'substituir') === 'novo' ? 'novo' : 'substituir';
+    if (!$f) erro('Ficheiro inválido: não se percebeu o conteúdo.');
+    if (($f['formato'] ?? '') !== 'casamento-web/1') {
+        erro('Este ficheiro não é uma exportação deste sistema.');
+    }
+    $lista = is_array($f['casamentos'] ?? null) ? $f['casamentos'] : [];
+    if (!$lista) erro('O ficheiro não traz casamento nenhum.');
+
+    $resumo = [];
+    if ($modo === 'novo') {
+        if (!ehAdminPlataforma()) erro('Só o admin da plataforma traz casamentos novos.');
+        foreach ($lista as $r) {
+            if (!is_array($r)) continue;
+            $fi = (array)($r['ficha'] ?? []);
+            $nome  = mb_substr(trim((string)($fi['nome'] ?? 'Casamento importado')), 0, 160) ?: 'Casamento importado';
+            $noiva = mb_substr((string)($fi['noiva'] ?? ''), 0, 80);
+            $noivo = mb_substr((string)($fi['noivo'] ?? ''), 0, 80);
+            $data  = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($fi['data_evento'] ?? '')) ? $fi['data_evento'] : null;
+            $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado)
+                                  VALUES (?,?,?,?, 'ativo')");
+            $st->bind_param('ssss', $nome, $noiva, $noivo, $data);
+            if (!$st->execute()) continue;
+            $novo = $conn->insert_id;
+            $feito = reporCasamento($conn, $novo, $r, false);
+            $feito['id'] = $novo; $feito['nome'] = $nome;
+            $resumo[] = $feito;
+            registar($conn, 'dados_importados', $nome, 'casamento novo #' . $novo);
+        }
+        if (!$resumo) erro('Não foi possível criar casamento nenhum a partir do ficheiro.');
+    } else {
+        exigirAdminApi();
+        exigirCorrecao();
+        $cid = casamentoAtual();
+        if ($cid <= 0) erro('Não há casamento aberto.');
+        if (count($lista) > 1) {
+            erro('Este ficheiro traz ' . count($lista) . ' casamentos. Para os trazer todos, '
+               . 'use "criar casamentos novos" na página de administração.');
+        }
+        $comFicha = !empty($d['com_ficha']);
+        $feito = reporCasamento($conn, $cid, $lista[0], $comFicha);
+        $feito['id'] = $cid;
+        $resumo[] = $feito;
+        registar($conn, 'dados_importados', 'substituição', json_encode($feito));
+    }
+    ok(['modo' => $modo, 'resumo' => $resumo]);
+}
+
 
 erro('Ação desconhecida.');

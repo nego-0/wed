@@ -136,12 +136,13 @@ function acoesDaPlataforma(): array {
 function acoesDoCasamento(): array {
     return ['convite_save','convite_delete','convite_flag','convite_rsvp_manual','convite_restaurar',
             'mesa_save','mesa_delete','mesa_pos','mesa_noivos','convite_mesa','convidado_mesa',
-            'convidado_papel','planta_size','planta_bloqueio','importar',
+            'convidado_papel','planta_size','planta_bloqueio',
             'defs_save','def_upload','porta_checkin',
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
             'casamento_identidade','casamento_endereco',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
-            'suporte_codigo_criar','suporte_codigo_revogar'];
+            'suporte_codigo_criar','suporte_codigo_revogar',
+            'dados_importar'];
 }
 
 /**
@@ -154,7 +155,8 @@ function acoesDoCasamento(): array {
  * conseguia fazer nada — nem sequer abrir um casamento.
  */
 function acoesSemCasamento(): array {
-    return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'esquema_info', 'acesso_dar']);
+    return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'esquema_info', 'acesso_dar',
+                                             'dados_exportar', 'dados_importar']);
 }
 
 function acoesDeEscrita(): array {

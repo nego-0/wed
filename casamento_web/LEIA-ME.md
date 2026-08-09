@@ -95,6 +95,19 @@ abrir-lhe o primeiro da lista era pô-lo dentro da festa de um casal ao acaso,
 com poderes de gestão e sem ter pedido nada. Escolhe um na lista, e o menu das
 páginas do casamento só aparece depois disso.
 
+**Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
+casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho
+dos convites, as mesas, os convites e as pessoas — e traz-se de volta por ali
+mesmo, o que **substitui** o que lá está (a página di-lo, com as contas do que
+entra e do que sai, antes de perguntar). O admin leva a casa inteira em
+`plataforma.php`, com ou sem as senhas cifradas das contas, e traz casamentos
+de um ficheiro **como novos**, sem tocar no que já cá está.
+
+As mesas viajam pelo **nome**, não pelo número — um id desta base não quer
+dizer nada noutra. Os códigos dos convites tentam manter-se; quando já estão em
+uso, geram-se outros e diz-se **quantos**, porque um código que muda é um QR já
+impresso que deixa de servir.
+
 **A entrada não é de casamento nenhum.** `login.php` e `registo.php` mostram a
 casa (`PLATAFORMA`, em `config.php`), e não um casal: com vários casamentos,
 quem chegava para entrar no seu era recebido pelo nome de outras pessoas.

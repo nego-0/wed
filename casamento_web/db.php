@@ -972,8 +972,4 @@ function textoMesas(array $lista, bool $comNumero = true): string {
     return implode(', ', $partes) . ' e ' . $ultima;
 }
 
-/** Detecta se a lista antiga existe (para oferecer importação). */
-function listaAntigaExiste(mysqli $conn): bool {
-    $r = $conn->query("SHOW TABLES LIKE 'guests'");
-    return $r && $r->num_rows > 0;
-}
+
