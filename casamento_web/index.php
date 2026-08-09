@@ -451,7 +451,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <div class="toast" id="toast"></div>
 
 <script>
-const BASE = <?= json_encode(base_url()) ?>;
+const BASE = <?= json_encode(enderecoPublico()) ?>;
 const CASAL = <?= json_encode($CAS['casal']) ?>;
 const DATA_EXT = <?= json_encode($dataExt) ?>;
 window.CSRF = <?= json_encode(csrfToken()) ?>;

@@ -86,7 +86,9 @@ $CAS = casalInfo(defsAtuais($conn));
   .ent-meta{ font-size:.82rem; color:var(--gold-pale); margin-top:.15rem; }
   .ent-pessoas{ font-size:.88rem; color:var(--ivory); margin-top:.4rem; opacity:.9; }
 </style>
-<link rel="manifest" href="manifest.json">
+<!-- use-credentials: sem isto o navegador pede o manifesto sem a sessão, e a
+     aplicação instalada ficava com o nome genérico em vez do casamento. -->
+<link rel="manifest" href="manifest.php" crossorigin="use-credentials">
 <meta name="theme-color" content="#16261E">
 <script src="<?= asset('assets/api.js') ?>"></script>
 </head>
@@ -209,10 +211,32 @@ if('serviceWorker' in navigator && location.protocol !== 'file:'){
 // A entrada do evento não pode parar se a rede falhar. Guardamos uma cópia
 // local da lista (para procurar) e uma fila dos check-ins feitos offline,
 // que é enviada assim que houver ligação outra vez.
-const LS_DADOS = 'porta.dados', LS_FILA = 'porta.fila';
+//
+// As chaves levam o número do casamento. Quem trabalha em dois — o pessoal da
+// casa, um porteiro contratado por dois casais — usava o mesmo telemóvel e o
+// mesmo navegador: com uma chave só, chegava ao casamento de hoje e procurava
+// na lista de ontem. E a fila de entradas por enviar é ainda mais delicada:
+// enviada no casamento errado, dava entrada às pessoas erradas. Por isso cada
+// casamento tem a sua, e só se envia a do que está aberto.
+const CASAMENTO = <?= (int)casamentoAtual() ?>;
+const LS_DADOS = 'porta.dados.' + CASAMENTO, LS_FILA = 'porta.fila.' + CASAMENTO;
 
 function guardarLocal(chave, valor){ try{ localStorage.setItem(chave, JSON.stringify(valor)); }catch(e){} }
 function lerLocal(chave, omissao){ try{ const v=localStorage.getItem(chave); return v?JSON.parse(v):omissao; }catch(e){ return omissao; } }
+
+// Antes de haver vários casamentos as chaves não tinham número. Se ficou
+// alguma coisa lá dentro — sobretudo entradas por enviar —, é do casamento nº1,
+// o único que então existia: adota-se uma vez e apaga-se a antiga.
+(function herdarChavesAntigas(){
+  if (CASAMENTO !== 1) return;
+  [['porta.dados', LS_DADOS], ['porta.fila', LS_FILA]].forEach(([velha, nova]) => {
+    try {
+      const v = localStorage.getItem(velha);
+      if (v !== null && localStorage.getItem(nova) === null) localStorage.setItem(nova, v);
+      if (v !== null) localStorage.removeItem(velha);
+    } catch (e) {}
+  });
+})();
 
 let COPIA = lerLocal(LS_DADOS, null);
 let FILA  = lerLocal(LS_FILA, []);

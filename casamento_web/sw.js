@@ -9,7 +9,7 @@
    Nada relacionado com a API é guardado em cache: os pedidos de
    check-in têm de chegar mesmo ao servidor, ou ficam em fila.
    ============================================================ */
-const CACHE = 'porta-v1';
+const CACHE = 'porta-v2';   // v2: deixou de guardar páginas de outros casamentos
 
 // Casca mínima para a página abrir offline.
 const CASCA = [
@@ -47,12 +47,20 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.endsWith('/api.php')) return;       // dados: sempre da rede
+  if (url.pathname.endsWith('/manifest.php')) return;  // muda com o casamento aberto
+
+  // Guarda-se a CASCA e os recursos estáticos — nunca outras páginas.
+  // Com vários casamentos na mesma casa, os endereços são iguais para todos
+  // (index.php é index.php); guardar páginas dava, sem rede, a página de um
+  // casal a quem está a trabalhar noutro.
+  const ficheiro = url.pathname.split('/').pop() || '';
+  const guardavel = CASCA.includes(ficheiro) || url.pathname.includes('/assets/');
 
   // Rede primeiro (para ter sempre a versão mais recente), cache como recurso.
   e.respondWith(
     fetch(req)
       .then(res => {
-        if (res && res.ok) {
+        if (res && res.ok && guardavel) {
           const copia = res.clone();
           caches.open(CACHE).then(c => c.put(req, copia)).catch(() => {});
         }

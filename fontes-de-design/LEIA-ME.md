@@ -24,7 +24,7 @@ precisa deles:
 
 | Ficheiro | Onde é usado |
 |---|---|
-| `casamento_web/assets/pecas/icons/coracao.svg` | Ícone da aplicação do porteiro (`manifest.json`) |
+| `casamento_web/assets/pecas/icons/coracao.svg` | Ícone da aplicação do porteiro (`manifest.php`) |
 | `casamento_web/assets/pecas/manuais/cartao-10x15.html` | Botão «Abrir original» na página do convite impresso |
 
 ## Se algum destes motivos voltar a ser preciso

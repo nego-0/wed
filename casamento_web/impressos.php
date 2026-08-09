@@ -3,6 +3,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
 $CAS = casalInfo(defsAtuais($conn));
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
@@ -14,6 +15,7 @@ $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
                      GROUP BY c.id ORDER BY c.nome_exibicao");
 $convites = $res->fetch_all(MYSQLI_ASSOC);
 $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
+$ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -57,6 +59,8 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
 <?php cabecalho('Convites físicos', 'Etiquetas para envelopes · com QR de entrada', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
+  <?php barraEndereco('os QR destas etiquetas'); ?>
+
   <div class="barra no-print">
     <div class="cresce"><input type="search" id="busca" placeholder="Procurar…" oninput="filtrar()"></div>
     <span class="tag neutra"><?= count($convites) ?> convites · <span id="cont-impressos"><?= $impressos ?></span> impressos</span>
@@ -69,7 +73,7 @@ $impressos = 0; foreach ($convites as $c) if ($c['impresso']) $impressos++;
   <div class="grelha-cartoes" id="grelha">
     <?php $n=1; foreach ($convites as $c):
       $nomeFinal = nomeConviteVisivel($c);
-      $link = base_url().'/convite.php?c='.$c['codigo'];
+      $link = $ENDERECO.'/convite.php?c='.$c['codigo'];
       $blob = strtolower($nomeFinal.' '.$c['membros'].' '.$c['codigo'].' '.$c['mesa_nome']);
     ?>
     <div class="cartao <?= $c['impresso']?'impresso':'' ?>" data-busca="<?= htmlspecialchars($blob) ?>" data-id="<?= $c['id'] ?>">

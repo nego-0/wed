@@ -11,10 +11,12 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
+require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
 
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);
+$ENDERECO = enderecoPublico();   // para onde apontam os links e os QR desta lista
 
 // Uma página só. Havia duas abas — "Convites a enviar" e "Estado e versões" —
 // mas o estado já está no cartão do topo e as versões cabem lá ao lado: as
@@ -191,6 +193,8 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
     </div>
   </div>
 
+  <?php barraEndereco('os links e os QR dos convites digitais'); ?>
+
   <div class="barra no-print">
       <div class="cresce"><input type="search" id="busca" placeholder="Procurar convite ou código…" oninput="filtrar()"></div>
       <span class="tag neutra"><?= count($convites) ?> convites digitais</span>
@@ -207,7 +211,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       <tbody>
       <?php $n = 1; foreach ($convites as $c):
         $nome = nomeConviteVisivel($c);
-        $link = base_url() . '/convite-digital.php?c=' . $c['codigo'];
+        $link = $ENDERECO . '/convite-digital.php?c=' . $c['codigo'];
       ?>
         <tr data-busca="<?= escP(strtolower($nome . ' ' . $c['codigo'])) ?>">
           <td class="n"><?= $n ?></td>

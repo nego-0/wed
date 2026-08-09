@@ -105,8 +105,13 @@ const entrar = async (ctx, user, pass) => {
      'o cabeçalho nomeia o casamento aberto, para não se editar o casal errado');
 
   // ---------- limpeza ----------
+  // Primeiro os casamentos (que levam com eles os lugares), e só depois a
+  // conta — que a esta altura já não pertence a casamento nenhum. Sem isto,
+  // cada corrida deixava mais uma conta de mentira na base.
   await api('casamento_abrir&id=1');
   for (const id of [casA.id, casB.id, pend.id]) await api('casamento_apagar&id=' + id);
+  const limpaConta = await api('utilizador_apagar&id=' + contaA.id);
+  ok(limpaConta && limpaConta.success, 'a conta de prova, já sem casamento, apaga-se');
 
   console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
   await b.close(); process.exit(f ? 1 : 0);

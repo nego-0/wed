@@ -18,7 +18,7 @@ $horaTxt  = horaTexto($DEFS['evento.hora'], false);
 $tzOff    = (new DateTime('now', new DateTimeZone(date_default_timezone_get())))->format('P');
 $whats    = $DEFS['evento.whatsapp'];
 $valido = (bool)$c;
-$linkDigital = $valido ? base_url() . '/convite-digital.php?c=' . $c['codigo'] : '';
+$linkDigital = $valido ? enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'] : '';
 $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 ?>
 <!DOCTYPE html>
@@ -121,12 +121,16 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 </head>
 <body>
 <?php if (!$valido): ?>
+  <?php
+    // Código que não abre porta nenhuma: a página não nomeia casal nenhum nem
+    // dá o contacto de ninguém. Com vários casamentos na mesma casa, o casal
+    // que aqui aparecesse seria sempre o mesmo — e não tem que ver com quem
+    // escreveu o endereço errado.
+  ?>
   <div class="folha"><div class="erro-pag">
     <div class="rotulo" style="color:var(--gold)">Convite</div>
-    <div class="casal"><?= escP($CAS['casal']) ?></div>
     <p style="margin-top:1rem;">Este link de convite não é válido ou já não está disponível.<br>
-    Por favor, confirme o endereço ou contacte os noivos.</p>
-    <p><a class="link-wa" href="https://wa.me/<?= escP($whats) ?>">Falar pelo WhatsApp</a></p>
+    Por favor, confirme o endereço ou contacte quem lhe enviou o convite.</p>
   </div></div>
 <?php else:
   $jaRespondeu = $c['rsvp_estado'] !== 'pendente';

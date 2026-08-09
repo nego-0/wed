@@ -59,17 +59,20 @@ if ($modoEditor && isset($_POST['rascunho'])) {
 
 // ---- Convite inválido: página breve e autossuficiente --------
 if (!$c) {
+    // Sem código válido não se sabe de que casamento se trata — e o que aqui
+    // aparecesse seria o do primeiro casamento da casa, que nada tem que ver
+    // com quem escreveu o endereço errado. Página neutra: sem nomes, sem
+    // contactos de ninguém.
     http_response_code(404);
     header('Content-Type: text/html; charset=utf-8');
-    $CAS = casalInfo($DEFS);
     echo '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-       . '<title>Convite · ' . escP($CAS['casal']) . '</title>'
+       . '<title>Convite não encontrado</title>'
        . '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;'
        . 'font-family:Georgia,serif;background:#16261E;color:#FBF8F1;text-align:center;padding:2rem}a{color:#D9BC8C}</style>'
-       . '</head><body><div><p style="font-size:1.6rem;color:#D9BC8C">' . escP($CAS['casal']) . '</p>'
-       . '<p>Este convite não foi encontrado. Confirme o endereço, por favor, ou fale com os noivos.</p>'
-       . '<p><a href="https://wa.me/' . escP($DEFS['evento.whatsapp']) . '">Falar pelo WhatsApp</a></p></div></body></html>';
+       . '</head><body><div><p style="font-size:1.6rem;color:#D9BC8C">Convite</p>'
+       . '<p>Este convite não foi encontrado. Confirme o endereço, por favor, '
+       . 'ou fale com quem lho enviou.</p></div></body></html>';
     exit;
 }
 
@@ -113,9 +116,9 @@ if ($distrMesas) {
         . "<b style=\"font-weight:600;color:{$pal['forest']}\">{$txtMesas}</b></p>";
 }
 
-$confirmUrl  = escP(base_url() . '/convite.php?c=' . $c['codigo']);
+$confirmUrl  = escP(enderecoPublico() . '/convite.php?c=' . $c['codigo']);
 $downloadUrl = escP('convite-digital.php?c=' . $c['codigo'] . '&download=1');
-$qrValue     = base_url() . '/convite-digital.php?c=' . $c['codigo'];
+$qrValue     = enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'];
 
 // Mensagem pessoal deste convite (opcional)
 $msgPessoal = trim((string)($c['msg_pessoal'] ?? ''));

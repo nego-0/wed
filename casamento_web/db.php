@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 7;
+const ESQUEMA_VERSAO = 8;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -481,6 +481,19 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
     }
 
+    // ---- v8: o endereço público de cada casamento -------------------------
+    // Os QR e os links dos convites são absolutos e, uma vez impressos, são
+    // para sempre. Até aqui saíam do pedido em curso (base_url()): quem
+    // preparasse os cartões a partir de um endereço de testes levava para a
+    // gráfica um QR que aponta para uma máquina que o convidado nunca alcança.
+    //
+    // Fica ao lado do casamento, e não nas definições, de propósito: as
+    // definições viajam nas versões do convite, e repor uma versão antiga não
+    // pode mudar o endereço para onde apontam convites já entregues.
+    if ($versaoAtual < 8) {
+        migColuna($conn, "{$P}casamentos", 'endereco_publico', "VARCHAR(200) NOT NULL DEFAULT ''");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -542,6 +555,53 @@ function base_url(): string {
     $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $dir    = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
     return "$scheme://$host$dir";
+}
+
+/**
+ * O endereço por onde os convidados deste casamento chegam.
+ *
+ * Se o casal (ou o pessoal da casa) tiver fixado um, é esse — e é esse que vai
+ * nos QR, nos links partilhados e no PDF. Sem nada fixado, deduz-se do pedido
+ * em curso, que é o que sempre se fez e serve bem quando há um só endereço.
+ */
+function enderecoPublico(?int $casamentoId = null): string {
+    global $conn, $P;
+    static $cache = [];
+    $id = $casamentoId ?? casamentoAtual();
+    if (!array_key_exists($id, $cache)) {
+        $cache[$id] = '';
+        if ($id > 0 && isset($conn)) {
+            $r = @$conn->query("SELECT endereco_publico FROM {$P}casamentos WHERE id=" . (int)$id . " LIMIT 1");
+            if ($r && ($x = $r->fetch_assoc())) $cache[$id] = rtrim((string)$x['endereco_publico'], '/');
+        }
+    }
+    return $cache[$id] !== '' ? $cache[$id] : base_url();
+}
+
+/**
+ * Um endereço que só existe na máquina de quem o está a ver.
+ *
+ * Serve para avisar antes de imprimir: um QR para 127.0.0.1 ou para a rede de
+ * casa não abre no telemóvel de ninguém, e no papel já não há emenda.
+ */
+function enderecoSoLocal(string $url): bool {
+    $h = strtolower((string)parse_url($url, PHP_URL_HOST));
+    if ($h === '') return true;
+    return $h === 'localhost' || str_ends_with($h, '.local') || str_ends_with($h, '.localhost')
+        || preg_match('/^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1)/', $h) === 1;
+}
+
+/** Aceita um endereço público escrito à mão. Devolve null se não servir. */
+function limparEndereco(string $v): ?string {
+    $v = trim($v);
+    if ($v === '') return '';                       // vazio = voltar a deduzir do pedido
+    if (!preg_match('#^https?://#i', $v)) $v = 'https://' . $v;
+    $v = rtrim($v, '/');
+    if (mb_strlen($v) > 200) return null;
+    $p = parse_url($v);
+    if (!$p || empty($p['host']) || str_contains($v, ' ')) return null;
+    if (!empty($p['query']) || !empty($p['fragment'])) return null;
+    return $v;
 }
 
 /** Código único e legível (sem caracteres ambíguos). */
@@ -803,20 +863,27 @@ function plantaConfig(mysqli $conn): array {
  */
 function carregarConvite(mysqli $conn, $chave, string $por = 'id', bool $eliminados = false): ?array {
     global $P;
-    $col = $por === 'codigo' ? 'codigo' : 'id';
+    $porCodigo = ($por === 'codigo' || $por === 'codigo_local');
+    $col  = $porCodigo ? 'codigo' : 'id';
     $vivo = $eliminados ? '1=1' : soVivos($conn, 'c');
-    // Por CÓDIGO é a porta pública: o convidado abre um endereço e não há
-    // sessão nenhuma que diga de que casamento se trata — é o próprio código
-    // que o revela. Por isso esta procura corre em todos os casamentos (os
-    // códigos são únicos no sistema inteiro) e, mal o encontre, fixa o âmbito
-    // para tudo o que vier a seguir no pedido.
+    // Por CÓDIGO ('codigo') é a porta pública: o convidado abre um endereço e
+    // não há sessão nenhuma que diga de que casamento se trata — é o próprio
+    // código que o revela. Por isso esta procura corre em todos os casamentos
+    // (os códigos são únicos no sistema inteiro) e, mal o encontre, fixa o
+    // âmbito para tudo o que vier a seguir no pedido. Só serve casamentos
+    // ativos: um registo por aprovar, suspenso ou arquivado não tem convites
+    // de pé no mundo.
+    // Por CÓDIGO DA CASA ('codigo_local') é o mesmo código, mas dentro do
+    // casamento aberto — é o que a porta usa, para o porteiro de um casamento
+    // não ler (nem ficar a saber) o convite de outro.
     // Por ID é sempre dentro do casamento em causa: um id de outro casal não
     // pode ser alcançado escrevendo um número no endereço.
-    $ambito = $por === 'codigo' ? 'c.casamento_id > 0' : doCasamento('c');
+    $juncao = $por === 'codigo' ? " JOIN {$P}casamentos w ON w.id = c.casamento_id " : '';
+    $ambito = $por === 'codigo' ? "c.casamento_id > 0 AND w.estado='ativo'" : doCasamento('c');
     $st = $conn->prepare("SELECT c.*, m.nome AS mesa_nome
-                          FROM {$P}convites c LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                          FROM {$P}convites c$juncao LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
                           WHERE $ambito AND c.$col=? AND $vivo LIMIT 1");
-    $por === 'codigo' ? $st->bind_param('s', $chave) : $st->bind_param('i', $chave);
+    $porCodigo ? $st->bind_param('s', $chave) : $st->bind_param('i', $chave);
     $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) return null;

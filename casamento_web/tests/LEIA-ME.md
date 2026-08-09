@@ -45,6 +45,15 @@ Entram com **admin / noivos2026**.
 | `chk_versao_vigor.js`   | a versão em vigor é a que os convidados recebem e o manual retrata |
 | `chk_digital_menu.js`   | entrada do convite digital, e o menu "⋯" a abrir para cima quando não cabe |
 | `chk_capa.js`           | a capa (envelope) com monograma editável no editor do convite digital |
+| `chk_sem_numero.js`     | o número de lugares não entra no nome do convite, em peça nenhuma |
+| `chk_versao_grava.js`   | guardar uma versão apanha o que está no ecrã, e não só o que já foi gravado |
+| `chk_versao_padrao.js`  | a versão "Original" repõe a peça tal como veio, sem esconder secções |
+| `chk_form_convite.js`   | o formulário do convite pede tudo o que pedia, em menos espaço |
+| `chk_impressao_cor.js`  | as cores dos cartões sobrevivem à impressão                     |
+| `chk_multi_fundacao.js` | o esquema de vários casamentos: colunas, chaves e o casamento nº1 |
+| `chk_isolamento.js`     | nenhuma consulta toca em dados de casamento sem dizer de qual   |
+| `chk_plataforma.js`     | vários casamentos e várias contas: cada um só entra no seu      |
+| `chk_publico_multi.js`  | a porta pública com vários casamentos: código, casamento inativo, o porteiro que não lê o convite alheio, e o endereço dos QR |
 
 ## Deixam a base como a encontraram
 

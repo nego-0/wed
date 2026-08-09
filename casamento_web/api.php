@@ -46,8 +46,15 @@ $TS = tsSql(); // hora local do cliente para esta requisição
 // ============================================================
 if ($acao === 'export') {
     exigirAdmin();
+    // O nome do ficheiro é o do casal aberto: com vários casamentos na mesma
+    // casa, três exportações com o mesmo nome acabam por se sobrepor na pasta
+    // das transferências de quem as fez.
+    $alcunha = strtolower(casalInfo(defsAtuais($conn))['casal']);
+    $alcunha = preg_replace('/[^a-z0-9]+/', '_',
+                 iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $alcunha) ?: 'convidados');
+    $alcunha = trim((string)$alcunha, '_') ?: 'convidados';
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=convidados_isabel_abednego.csv');
+    header('Content-Disposition: attachment; filename=convidados_' . $alcunha . '.csv');
     $out = fopen('php://output', 'w'); fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
     fputcsv($out, ['Convite','Tipo','Lado','Lugares','Mesa','Estado RSVP','Confirmados','Presentes','Telefone','Membros','Codigo','Link']);
     $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
@@ -62,7 +69,7 @@ if ($acao === 'export') {
             nomeConvite($r), $r['tipo'], $r['lado'], $r['lugares'], $r['mesa_nome'],
             $r['rsvp_estado'], $r['rsvp_confirmados'], $r['checkin_presentes'],
             $r['telefone'], $r['membros'], $r['codigo'],
-            base_url().'/convite.php?c='.$r['codigo']
+            enderecoPublico().'/convite.php?c='.$r['codigo']
         ]);
     }
     fclose($out); exit;
@@ -185,8 +192,10 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
         // extrai código de um URL, se o QR trouxer o link completo
         if (preg_match('/[?&]c=([A-Z0-9]+)/i', $termo, $m)) $termo = $m[1];
 
-        // 1) tenta por código exato
-        $c = carregarConvite($conn, strtoupper($termo), 'codigo');
+        // 1) tenta por código exato, DENTRO do casamento aberto — o porteiro de
+        // um casamento não pode ler o convite de outro por lhe passar um QR
+        // alheio pela câmara.
+        $c = carregarConvite($conn, strtoupper($termo), 'codigo_local');
         if ($c) ok(['convite' => $c]);
 
         // 2) procura por nome do convite ou de um membro
@@ -213,7 +222,8 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
         if (!$c) erro('Convite inválido.');
 
         if ($modo === 'membro' && $mid) {
-            $q = $conn->prepare("SELECT presente, rsvp, nome FROM {$P}convidados WHERE id=? AND convite_id=?");
+            $q = $conn->prepare("SELECT presente, rsvp, nome FROM {$P}convidados
+                                 WHERE " . doCasamento() . " AND id=? AND convite_id=?");
             $q->bind_param('ii', $mid, $id); $q->execute();
             $cur = $q->get_result()->fetch_assoc();
             if (!$cur) erro('Pessoa não encontrada neste convite.');
@@ -234,7 +244,8 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
                     // Entrada excecional autorizada: admite todas as pessoas do convite
                     $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE " . doCasamento() . " AND convite_id=$id");
                 } else {
-                    $r = $conn->query("SELECT COUNT(*) n FROM {$P}convidados WHERE convite_id=$id AND rsvp='confirmado'");
+                    $r = $conn->query("SELECT COUNT(*) n FROM {$P}convidados
+                                       WHERE " . doCasamento() . " AND convite_id=$id AND rsvp='confirmado'");
                     $nconf = (int)$r->fetch_assoc()['n'];
                     if ($nconf === 0) erro('Ninguém neste convite confirmou presença. Não é possível dar entrada.');
                     $conn->query("UPDATE {$P}convidados SET presente=1, presente_em=$TS WHERE " . doCasamento() . " AND convite_id=$id AND rsvp='confirmado'");
@@ -265,7 +276,7 @@ if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsv
                      'convite_restaurar','versao_criar','versao_aplicar','versao_atualizar',
                      'versao_renomear','versao_apagar',
                      'casamento_criar','casamento_abrir','casamento_apagar','casamento_estado',
-                     'utilizador_criar','acesso_dar'], true)) {
+                     'casamento_endereco','utilizador_criar','utilizador_apagar','acesso_dar'], true)) {
     exigirCsrf();
 }
 
@@ -806,6 +817,43 @@ if ($acao === 'casamento_abrir') {
     if (!abrirCasamento($conn, (int)$c['id'])) erro('Não tem acesso a esse casamento.');
     registar($conn, 'casamento_aberto', $c['nome'], 'id ' . (int)$c['id']);
     ok(['id' => (int)$c['id'], 'nome' => $c['nome']]);
+}
+
+if ($acao === 'utilizador_apagar') {
+    // Só contas ÓRFÃS: as que já não pertencem a casamento nenhum. Uma conta
+    // ligada a um casamento apaga-se tirando-lhe primeiro o lugar lá — assim
+    // não há como, num clique, deixar um casal sem quem lhe gere a festa.
+    // Desativar uma conta em funcionamento é outra coisa, e faz-se à parte.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga contas.');
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id === utilizadorId()) erro('Não pode apagar a sua própria conta.');
+    $st = $conn->prepare("SELECT u.id, u.email, u.papel_plataforma,
+                                 (SELECT COUNT(*) FROM {$P}acessos a WHERE a.utilizador_id = u.id) n
+                          FROM {$P}utilizadores u WHERE u.id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $u = $st->get_result()->fetch_assoc();
+    if (!$u) erro('Conta não encontrada.');
+    if ($u['papel_plataforma']) erro('Contas da plataforma não se apagam por aqui.');
+    if ((int)$u['n'] > 0) erro('Esta conta ainda tem lugar num casamento. Retire-lho primeiro.');
+    $st = $conn->prepare("DELETE FROM {$P}utilizadores WHERE id=?");
+    $st->bind_param('i', $id);
+    if (!$st->execute()) erro('Não foi possível apagar a conta.');
+    registar($conn, 'utilizador_apagado', (string)$u['email']);
+    ok(['id' => $id]);
+}
+
+if ($acao === 'casamento_endereco') {
+    // O endereço por onde os convidados chegam a ESTE casamento. Quem gere o
+    // casamento aberto pode fixá-lo — é ele que sai nos QR e nos links.
+    $d = corpo();
+    $novo = limparEndereco((string)($d['endereco'] ?? ''));
+    if ($novo === null) erro('Endereço inválido. Escreva algo como https://casamento.exemplo.pt');
+    $st = $conn->prepare("UPDATE {$P}casamentos SET endereco_publico=? WHERE id=?");
+    $id = casamentoAtual();
+    $st->bind_param('si', $novo, $id);
+    if (!$st->execute()) erro('Não foi possível guardar o endereço.');
+    registar($conn, 'endereco_publico', $novo !== '' ? $novo : '(deduzido do pedido)');
+    ok(['endereco' => $novo]);
 }
 
 if ($acao === 'utilizador_criar') {

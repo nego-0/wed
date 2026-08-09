@@ -9,10 +9,12 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
+require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
 
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);
+$ENDERECO = enderecoPublico();   // para onde apontam os QR desta lista
 
 // ---- Fragmento: só o cartão de um convite -------------------
 // Serve a pré-visualização expandida (pedida por fetch a partir da lista).
@@ -166,6 +168,8 @@ $manual = [
 <?php cabecalho('Convite impresso', 'O que a gráfica recebe do convite físico: lista de produção e manual', 'grafica', ['no_print'=>true]); ?>
 
 <div class="container">
+  <?php barraEndereco('os QR da lista de produção'); ?>
+
   <div class="estado-peca no-print">
     <?php if ($estadoVs['estado'] === 'vigor'): ?>
       <span class="selo-v ok">✓ Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span>
@@ -218,7 +222,7 @@ $manual = [
         $distr = mesasDoConvite($conn, $c);
         $comLug = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
         $txtMesas = textoMesas($distr, $comLug);
-        $link  = base_url() . '/convite.php?c=' . $c['codigo'];
+        $link  = $ENDERECO . '/convite.php?c=' . $c['codigo'];
         $blob  = strtolower($nome . ' ' . $txtMesas . ' ' . $c['codigo']);
       ?>
         <tr data-busca="<?= escP($blob) ?>" data-id="<?= (int)$c['id'] ?>" data-nome="<?= escP($nome) ?>"
