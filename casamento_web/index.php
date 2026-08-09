@@ -298,7 +298,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     <button class="btn btn-fantasma" onclick="abrirEntradas()">Entradas</button>
     <button class="btn btn-fantasma" onclick="abrirHistorico()">Histórico</button>
     <a class="btn btn-fantasma" href="api.php?action=export">Exportar CSV</a>
-    <button class="btn btn-ouro" onclick="novoConvite()">+ Novo convite</button>
+    <!-- data-escrita: abrir a janela não escreve nada, mas só serve para criar.
+           Numa visita de leitura, deixá-la abrir era convidar a preencher um
+           formulário inteiro para o Guardar dizer que não. -->
+      <button class="btn btn-ouro" data-escrita="1" onclick="novoConvite()">+ Novo convite</button>
   </div>
 
   <!-- FILTRO DE MESAS (chips) -->
@@ -751,7 +754,7 @@ function renderConvites(){
         ${c.tipo!=='fisico'?`<button class="btn-ico" title="Marcar como enviado" onclick="flag(${c.id},'enviado',${c.enviado?0:1})" style="${c.enviado?'background:var(--ok-bg);color:var(--ok)':''}">${c.enviado?'Enviado ✓':'Enviado'}</button>`:''}
         ${c.tipo!=='digital'?`<button class="btn-ico" title="Marcar como impresso" onclick="flag(${c.id},'impresso',${c.impresso?0:1})" style="${c.impresso?'background:var(--ok-bg);color:var(--ok)':''}">${c.impresso?'Impresso ✓':'Impresso'}</button>`:''}
         <div class="menu-mais">
-          <button class="btn-ico" title="Mais ações" aria-haspopup="true" onclick="abrirMais(event,${c.id})">⋯</button>
+          <button class="btn-ico" title="Mais ações" aria-haspopup="true" data-escrita="0" onclick="abrirMais(event,${c.id})">⋯</button>
         </div>
       </div>
     </div>`;

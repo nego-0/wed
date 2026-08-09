@@ -101,7 +101,37 @@ function ficheirosApp(): array {
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
+            'assets/so-ver.js',
             'assets/convite-base.html'];
+}
+
+/**
+ * As ações da API que ALTERAM dados. Uma lista só, usada em três sítios: o
+ * token CSRF, a recusa de escrita numa visita de leitura, e o ecrã (que
+ * desliga os controlos que iriam bater com o nariz na porta).
+ *
+ * Escrita em duas partes de propósito: as da plataforma (criar casamentos,
+ * mexer em contas) não são dados de casamento nenhum, e por isso não caem na
+ * regra do "só ver".
+ */
+function acoesDaPlataforma(): array {
+    return ['casamento_criar','casamento_abrir','casamento_estado','casamento_apagar',
+            'utilizador_criar','utilizador_apagar','utilizador_estado',
+            'utilizador_repor_senha','suporte_sair'];
+}
+
+function acoesDoCasamento(): array {
+    return ['convite_save','convite_delete','convite_flag','convite_rsvp_manual','convite_restaurar',
+            'mesa_save','mesa_delete','mesa_pos','mesa_noivos','convite_mesa','convidado_mesa',
+            'convidado_papel','planta_size','planta_bloqueio','importar',
+            'defs_save','def_upload','porta_checkin',
+            'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
+            'casamento_endereco','acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
+            'suporte_codigo_criar','suporte_codigo_revogar'];
+}
+
+function acoesDeEscrita(): array {
+    return array_merge(acoesDoCasamento(), acoesDaPlataforma());
 }
 
 /**

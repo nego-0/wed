@@ -82,6 +82,15 @@ com uma tira no cabeçalho que não deixa esquecer em casa de quem está. Um
 código de leitura recusa qualquer escrita, no servidor. Revogar fecha a porta
 **já** — inclusive a quem estava lá dentro nesse momento.
 
+Num código de leitura o ecrã acompanha a fechadura: `assets/so-ver.js` desliga
+os controlos que iriam bater com o nariz na porta e deixa vivos os que só
+mostram. Descobre-os lendo o próprio código da página, contra a mesma lista de
+ações que o servidor usa (`acoesDoCasamento()`, em `config.php`) — não há como
+uma ficar para trás da outra. Uma página pode desmentir a descoberta com
+`data-escrita="0"` (só abre coisas que escrevem, como o menu "…") ou
+`data-escrita="1"` (a leitura do código não lá chega). O que escapar continua
+a ser recusado, com mensagem, antes de sair do navegador.
+
 **Senhas.** Cada pessoa muda a sua em `equipa.php`. Não há envio de correio
 configurado, e prometer um email que nunca chega seria pior: quando alguém
 perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma

@@ -11,6 +11,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 exigirAdmin();
 $CAS = casalInfo(defsAtuais($conn));
 ?>
@@ -92,6 +93,7 @@ $CAS = casalInfo(defsAtuais($conn));
 </style>
 </head>
 <body class="editor">
+<?php tiraSuporte(true); ?>
 
 <div class="ed-menu">
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>

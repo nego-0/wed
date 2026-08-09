@@ -447,24 +447,14 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
 exigirAdminApi();
 
 // Endpoints de admin que alteram dados: exigem token CSRF válido.
-if (in_array($acao, ['convite_save','convite_delete','convite_flag','convite_rsvp_manual',
-                     'mesa_save','mesa_delete','mesa_pos','convite_mesa','convidado_mesa','importar',
-                     'mesa_noivos','planta_size','planta_bloqueio','convidado_papel','defs_save','def_upload',
-                     'convite_restaurar','versao_criar','versao_aplicar','versao_atualizar',
-                     'versao_renomear','versao_apagar',
-                     'casamento_criar','casamento_abrir','casamento_apagar','casamento_estado',
-                     'casamento_endereco','utilizador_criar','utilizador_apagar','utilizador_estado',
-                     'utilizador_repor_senha','acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
-                     'suporte_codigo_criar','suporte_codigo_revogar','suporte_sair'], true)) {
+// A lista vive em config.php (acoesDeEscrita), para o ecrã poder desligar
+// exatamente os mesmos controlos que o servidor recusaria.
+if (in_array($acao, acoesDeEscrita(), true)) {
     exigirCsrf();
     // E, se estiver a ver a casa com um código de leitura, fica-se por ver.
-    // As ações da própria plataforma (criar contas, mudar estados) não são
-    // dados de casamento nenhum e não passam por aqui.
-    if (!in_array($acao, ['casamento_criar','casamento_abrir','casamento_estado','casamento_apagar',
-                          'utilizador_criar','utilizador_apagar','utilizador_estado',
-                          'utilizador_repor_senha','suporte_sair'], true)) {
-        exigirCorrecao();
-    }
+    // As ações da própria plataforma (criar casamentos, mexer em contas) não
+    // são dados de casamento nenhum e não passam por aqui.
+    if (in_array($acao, acoesDoCasamento(), true)) exigirCorrecao();
 }
 
 // ---- Personalização do convite digital ---------------------

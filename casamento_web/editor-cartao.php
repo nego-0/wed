@@ -8,6 +8,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/pecas.php';
+require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 exigirAdmin();
 
 $defs = defsAtuais($conn);
@@ -66,6 +67,7 @@ $camposPorCamada = [
 <link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
 </head>
 <body class="editor">
+<?php tiraSuporte(true); ?>
 
 <div class="ed-menu">
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>

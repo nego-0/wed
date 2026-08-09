@@ -72,14 +72,39 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   </div>
 </header>
 <?php
-    // Visita de suporte: uma tira que não deixa esquecer em casa de quem se
-    // está. Sem isto, uma pessoa da plataforma passava a tarde a mexer na
-    // festa de um casal convencida de que era a de outro.
-    if (function_exists('emVisitaDeSuporte') && emVisitaDeSuporte()):
-        $podeMexer = podeCorrigir(); ?>
+    tiraSuporte(!empty($opcoes['no_print']));
+}
+
+/**
+ * A tira da visita de suporte, e o modo de leitura do ecrã.
+ *
+ * Fica à parte de cabecalho() porque as páginas que mais precisam dela — os
+ * dois editores e a porta — têm barra própria e nunca chamaram o cabeçalho
+ * partilhado. Eram precisamente as que ficavam sem aviso nenhum.
+ */
+function tiraSuporte(bool $noPrint = false): void {
+    if (!function_exists('emVisitaDeSuporte') || !emVisitaDeSuporte()) return;
+    static $jaSaiu = false;
+    if ($jaSaiu) return;                 // uma página, uma tira
+    $jaSaiu = true;
+    $podeMexer = podeCorrigir();
+    $semPapel  = $noPrint ? ' no-print' : '';
+
+    if (!$podeMexer):
+        // O ecrã em modo de leitura. Vai com 'defer' para correr depois de
+        // toda a página — inclusive do api.js que carrega lá em baixo, que é
+        // o que este ficheiro precisa de embrulhar. ?>
+<script>window.SO_VER = true; window.SO_VER_ACOES = <?= json_encode(acoesDoCasamento()) ?>;</script>
+<script defer src="<?= asset('assets/so-ver.js') ?>"></script>
+<style>
+  .so-ver-off{ opacity:.42; cursor:not-allowed !important; filter:grayscale(.65); }
+  .so-ver-off:hover{ opacity:.42; box-shadow:none; }
+</style>
+<?php endif; ?>
 <div class="tira-suporte<?= $semPapel ?>">
   Visita de suporte <b><?= $podeMexer ? 'com permissão de correção' : 'de leitura' ?></b>
-  — <?= $podeMexer ? 'pode ver e corrigir.' : 'pode ver; alterar, não.' ?>
+  — <?= $podeMexer ? 'pode ver e corrigir.'
+                   : 'pode ver tudo; alterar, não — o que estiver apagado nesta página não responde.' ?>
   <a href="equipa.php">terminar a visita</a>
 </div>
 <style>
@@ -88,5 +113,5 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   .tira-suporte a{ color:inherit; }
   @media print{ .tira-suporte{ display:none !important; } }
 </style>
-<?php endif;
+<?php
 }

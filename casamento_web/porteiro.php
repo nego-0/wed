@@ -2,6 +2,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 exigirPorta();
 $CAS = casalInfo(defsAtuais($conn));
 ?>
@@ -93,6 +94,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <script src="<?= asset('assets/api.js') ?>"></script>
 </head>
 <body>
+<?php tiraSuporte(true); ?>
 <div class="porta-topo">
   <div class="mono"><?= escP($CAS['mono']) ?></div>
   <div>

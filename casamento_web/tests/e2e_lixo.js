@@ -89,7 +89,13 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(accoes.includes('convite_criado'), 'regista a criação');
   ok(accoes.includes('convite_eliminado'), 'regista a eliminação');
   ok(accoes.includes('convite_reposto'), 'regista a reposição');
-  ok(rs.every(r => r.utilizador === 'admin'), 'guarda QUEM fez a ação');
+  // Só as ações desta prova: o registo é de todo o casamento, e desde que há
+  // contas a sério passam por lá outras pessoas (uma visita de suporte, um
+  // porteiro). Exigir que TUDO fosse do admin era uma prova a falar de si
+  // própria e não do que se quer garantir — que a ação fica com o nome de quem
+  // a fez.
+  const meus = rs.filter(r => ['convite_criado','convite_eliminado','convite_reposto'].includes(r.accao));
+  ok(meus.length > 0 && meus.every(r => r.utilizador === 'admin'), 'guarda QUEM fez a ação');
 
   // ---------- apagar de vez ----------
   await api('convite_delete&id=' + id);
