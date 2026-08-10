@@ -6,10 +6,11 @@
 // modelos são o outro lado — convites prontos, feitos pela casa, para um casal
 // começar de qualquer coisa bonita em vez de uma folha em branco.
 //
-// Como se faz um modelo: abre-se um casamento, desenha-se o convite no editor
-// até ficar bem, e guarda-se aqui. É por isso que a página pede um casamento
-// aberto para criar ou recapturar — o modelo é uma FOTOGRAFIA de um convite a
-// sério, e não um formulário à parte que teria de repetir o editor inteiro.
+// Como se faz um modelo: cria-se aqui (do desenho de origem, ou do convite de
+// um casamento que esteja aberto) e desenha-se no editor de sempre, que abre em
+// modo de modelo — sem casamento nenhum pelo meio. Pedir emprestada a casa de
+// um casal para fazer um modelo da CASA era pedir o que não é preciso, e
+// arriscar deixar lá o rascunho.
 //
 // Aplicar um modelo COPIA-O para as definições do casamento. A partir daí o
 // desenho é do casal: mexer no modelo depois disso não lhe toca, e um casal que
@@ -71,23 +72,16 @@ if ($aberto > 0) {
 
 <main class="container">
 
-  <?php if ($aberto <= 0): ?>
-    <div class="aviso">
-      Não tem casamento nenhum aberto. Pode ver, publicar e apagar modelos —
-      mas <b>criar um modelo é fotografar um convite a sério</b>: abra um casamento,
-      desenhe lá o convite como quer que ele fique, e volte aqui para o guardar.
-      <a href="plataforma.php">Escolher um casamento</a>.
-    </div>
-  <?php endif; ?>
-
   <div class="painel">
     <h3>Novo modelo</h3>
     <div class="dica">
       <?php if ($aberto > 0): ?>
-        Guarda o convite de <b><?= escP($nomeAberto) ?></b>, tal como está agora, como um modelo
-        para toda a gente. Só o desenho viaja — nomes, datas e convidados ficam onde estão.
+        Nasce do convite de <b><?= escP($nomeAberto) ?></b>, tal como está agora — ou do desenho de
+        origem, se preferir começar do princípio. Só o desenho viaja: nomes, datas e convidados
+        ficam onde estão. Depois de criado, desenha-se no editor, sem casamento nenhum pelo meio.
       <?php else: ?>
-        Precisa de um casamento aberto: o modelo é uma fotografia do convite que lá estiver.
+        Nasce do desenho de origem e desenha-se a seguir no editor — sem ter de pedir emprestada
+        a casa de um casal para fazer um modelo da casa.
       <?php endif; ?>
     </div>
     <div class="lf">
@@ -96,13 +90,19 @@ if ($aberto > 0) {
       <div><label>Peça</label>
         <select id="n-ambito"><option value="digital">Convite digital</option>
                               <option value="impresso">Convite impresso</option></select></div>
-      <div><button class="btn btn-ouro" onclick="criar()" <?= $aberto > 0 ? '' : 'disabled' ?>>Guardar modelo</button></div>
+      <div><button class="btn btn-ouro" onclick="criar()">Criar modelo</button></div>
     </div>
     <div class="dica" style="margin:.7rem 0 0">
       <label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400">
         <input type="checkbox" id="n-visivel" checked style="width:auto;margin:0">
         Publicar já (os casais passam a vê-lo no seletor de versões)
       </label>
+      <?php if ($aberto > 0): ?>
+      <label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400;margin-left:1.2rem">
+        <input type="checkbox" id="n-zero" style="width:auto;margin:0">
+        Começar do desenho de origem, e não do convite deste casamento
+      </label>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -175,7 +175,8 @@ async function carregar(){
         </div>
       </div>
       <div class="ac">
-        <button class="btn btn-sm" onclick="editar(${m.id})">Editar</button>
+        <a class="btn btn-sm btn-ouro" href="${m.ambito === 'impresso' ? 'editor-cartao' : 'convite-editor'}.php?modelo=${m.id}">Desenhar</a>
+        <button class="btn btn-sm" onclick="editar(${m.id})">Nome</button>
         <button class="btn btn-sm" onclick="publicar(${m.id}, ${+m.visivel ? 0 : 1})">
           ${+m.visivel ? 'Retirar' : 'Publicar'}</button>
         <button class="btn btn-sm" onclick="apagar(${m.id}, '${esc(m.nome)}')">Apagar</button>
@@ -189,10 +190,10 @@ async function criar(){
   if (!nome) return toast('Dê um nome ao modelo.', true);
   const d = await api('modelo_criar', { method:'POST', body: JSON.stringify({
     nome, descricao: $('n-desc').value.trim(), ambito: $('n-ambito').value,
-    visivel: $('n-visivel').checked }) });
+    visivel: $('n-visivel').checked, do_zero: !!($('n-zero') && $('n-zero').checked) }) });
   if (!d || !d.success) return;
   $('n-nome').value = $('n-desc').value = '';
-  toast('Modelo guardado com ' + d.definicoes + ' definição(ões).');
+  toast('Modelo criado. Carregue em «Desenhar» para o compor.');
   carregar();
 }
 

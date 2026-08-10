@@ -24,7 +24,8 @@ $download = isset($_GET['download']) && $_GET['download'] === '1';
 // Pré-visualização do editor (só admin): convidado de exemplo, sem tocar na BD.
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
 if ($demo) {
-    if (!ehAdmin()) { http_response_code(403); exit('Apenas administração.'); }
+    // Também o admin da plataforma, que desenha modelos sem casamento aberto.
+    if (!ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
     $c = ['id'=>0, 'codigo'=>'EXEMPLO', 'nome_exibicao'=>'Família Exemplo', 'sufixo'=>null,
           'mostrar_num_mesa'=>1, 'lugares'=>4, 'mesa_nome'=>'Mesa 1',
           'msg_pessoal'=>'', 'membros'=>[]];

@@ -12,14 +12,18 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
-exigirAdmin();
-$CAS = casalInfo(defsAtuais($conn));
+// Desenhar um modelo da casa não é entrar em casa de casal nenhum: quem
+// responde pela plataforma chega aqui sem ter casamento aberto.
+[$DEFS_ED, $MODELO] = defsDoEditor($conn, 'digital');
+if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
+$CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
+               : casalInfo($DEFS_ED);
 ?>
 <!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Convite digital · <?= escP($CAS['casal']) ?></title>
+<title><?= $MODELO ? 'Modelo · ' : 'Convite digital · ' ?><?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
 <style>
@@ -41,6 +45,15 @@ $CAS = casalInfo(defsAtuais($conn));
   .camada.fixa .olho{ opacity:.25; cursor:not-allowed; }
   .camada[draggable=true]{ cursor:grab; }
   .camada.a-arrastar{ opacity:.4; }
+  /* O cadeado só se vê ao passar por cima, ou quando está fechado: uma coluna
+     de cadeados abertos em todas as linhas é ruído, não informação. */
+  .camada .cadeado{ margin-left:auto; width:26px; height:22px; padding:2px 4px; border:0;
+                    background:none; color:var(--ed-texto-2); cursor:pointer; opacity:0;
+                    transition:opacity .12s; }
+  .camada:hover .cadeado, .camada.trancada .cadeado{ opacity:.85; }
+  .camada .cadeado svg{ width:14px; height:14px; display:block; }
+  .camada.trancada{ border-left:2px solid var(--ed-ouro, #C9A862); }
+  .camada.trancada .nome{ opacity:.75; }
   .camada.cair-antes{ box-shadow:inset 0 2px 0 var(--ed-ouro); }
   .camada.cair-depois{ box-shadow:inset 0 -2px 0 var(--ed-ouro); }
   .add-sec{ display:flex; gap:.3rem; margin-top:.5rem; padding-top:.5rem; border-top:1px solid var(--ed-linha); }
@@ -83,6 +96,14 @@ $CAS = casalInfo(defsAtuais($conn));
   .enq-caixa .mira{ position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%;
     border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.5); pointer-events:none; }
   .enq-caixa .mira::after{ content:''; position:absolute; inset:6px; border-radius:50%; background:var(--ed-ouro); }
+  /* Guias magnéticas: aparecem só no instante em que o ponto se cola a elas. */
+  .enq-caixa .guias{ position:absolute; inset:0; pointer-events:none; }
+  .enq-caixa .guias::before, .enq-caixa .guias::after{ content:''; position:absolute; opacity:0;
+        background:var(--ed-ouro); transition:opacity .08s; }
+  .enq-caixa .guias::before{ top:0; bottom:0; left:var(--gx,50%); width:1px; }
+  .enq-caixa .guias::after{ left:0; right:0; top:var(--gy,50%); height:1px; }
+  .enq-caixa .guias.v::before{ opacity:.95; }
+  .enq-caixa .guias.h::after{ opacity:.95; }
   .enq-lin{ display:flex; align-items:center; gap:.4rem; margin-top:.35rem; }
   .enq-lin input[type=range]{ flex:1; accent-color:var(--ed-ouro); }
   .enq-rot{ font-size:.68rem; color:var(--ed-texto-2); text-transform:uppercase; letter-spacing:.07em; }
@@ -93,6 +114,17 @@ $CAS = casalInfo(defsAtuais($conn));
 </style>
 </head>
 <body class="editor">
+<?php if ($MODELO): ?>
+  <div class="tira-modelo">
+    A desenhar o modelo <b><?= escP($MODELO['nome']) ?></b> — um desenho da casa, não o convite de
+    um casal. <a href="modelos.php">voltar aos modelos</a>
+  </div>
+  <style>
+    .tira-modelo{ background:var(--gold-pale); border-bottom:1px solid var(--gold-soft); color:var(--ink);
+                  text-align:center; padding:.4rem .8rem; font-size:.82rem; }
+    .tira-modelo a{ color:inherit; }
+  </style>
+<?php endif; ?>
 <?php tiraSuporte(true); ?>
 
 <div class="ed-menu">
@@ -194,7 +226,10 @@ $CAS = casalInfo(defsAtuais($conn));
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
-const ATUAIS   = <?= json_encode(defsAtuais($conn), JSON_UNESCAPED_UNICODE) ?>;
+const ATUAIS   = <?= json_encode($DEFS_ED, JSON_UNESCAPED_UNICODE) ?>;
+// Quando se está a desenhar um modelo da casa, é ele que se grava — e não as
+// definições de um casamento.
+const MODELO   = <?= json_encode($MODELO, JSON_UNESCAPED_UNICODE) ?>;
 const SECCOES  = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
 const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
@@ -289,6 +324,10 @@ let EST = {
   paleta: (()=>{ try { return JSON.parse(ATUAIS['tema.paleta']||'{}')||{}; } catch(e){ return {}; } })(),
   blocos: ler('layout.blocos'),                                  // secções livres
   ordem:  (ATUAIS['layout.ordem']||'').split(',').filter(Boolean), // ordem das secções
+  // Secções trancadas: não se arrastam nem se escondem sem primeiro destrancar.
+  // Numa lista que se reordena a arrastar, um gesto distraído desfaz o que se
+  // levou meia hora a compor — e o desfazer nem sempre se lembra de o dizer.
+  trancados: new Set((ATUAIS['layout.trancados']||'').split(',').filter(Boolean),),
 };
 function ler(k){ try { return JSON.parse(ATUAIS[k]||'[]')||[]; } catch(e){ return []; } }
 
@@ -442,22 +481,36 @@ const renderTipografia = adiar('tipografia', (...a) => renderTipografiaJa(...a))
 // ---------- camadas ----------
 const OLHO_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const OLHO_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l18 18M10.6 10.7a3 3 0 004.2 4.2M9.9 5.2A9.6 9.6 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4M6.3 6.4A17 17 0 002 12s3.5 7 10 7a9.9 9.9 0 004-.8"/></svg>';
+const CADEADO_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>';
+const CADEADO_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 017.5-2"/></svg>';
+
+/** Tranca/destranca uma secção. Trancada não se arrasta, não se esconde. */
+function alternarTranca(id){
+  if (EST.trancados.has(id)) EST.trancados.delete(id); else EST.trancados.add(id);
+  marcarSujo(true);
+  renderCamadas();
+  msg(EST.trancados.has(id) ? 'Secção trancada — não se arrasta nem se esconde.' : 'Secção destrancada.');
+}
 function renderCamadas(){
   const lista = camadas();
   $('camadas').innerHTML = lista.map((c,i)=>{
     const chaveVis = VISIVEL[c.id];
     const podeEsconder = !!chaveVis || c.livre;
     const vis = c.livre ? true : (!chaveVis || EST.val[chaveVis] !== '0');
-    const movivel = !c.fixa;
-    return `<div class="camada ${SEC===c.id?'sel':''} ${vis?'':'oculta'} ${movivel?'':'fixa'}"
+    const trancada = EST.trancados.has(c.id);
+    const movivel = !c.fixa && !trancada;
+    return `<div class="camada ${SEC===c.id?'sel':''} ${vis?'':'oculta'} ${movivel?'':'fixa'} ${trancada?'trancada':''}"
       draggable="${movivel}" data-id="${c.id}" data-i="${i}"
       ondragstart="arrastarCamada(event)" ondragover="sobreCamada(event)"
       ondrop="largarCamada(event)" ondragend="fimArrasto(event)"
       onclick="irCamada('${c.id}')">
-      <button class="olho" title="${podeEsconder ? (vis?'Esconder esta secção':'Mostrar esta secção') : 'Esta secção é sempre visível'}"
-              onclick="event.stopPropagation();${chaveVis?`alternarSec('${c.id}')`:''}">${vis?OLHO_ON:OLHO_OFF}</button>
+      <button class="olho" title="${trancada ? 'Trancada: destranque para esconder'
+                                             : (podeEsconder ? (vis?'Esconder esta secção':'Mostrar esta secção') : 'Esta secção é sempre visível')}"
+              onclick="event.stopPropagation();${(chaveVis && !trancada)?`alternarSec('${c.id}')`:''}">${vis?OLHO_ON:OLHO_OFF}</button>
       <span class="nome">${esc(c.rotulo)}</span>
       ${c.livre ? '<span class="op">livre</span>' : (c.fixa ? '<span class="op">fixa</span>' : '')}
+      <button class="cadeado" title="${trancada ? 'Destrancar' : 'Trancar: não se arrasta nem se esconde'}"
+              onclick="event.stopPropagation();alternarTranca('${c.id}')">${trancada?CADEADO_ON:CADEADO_OFF}</button>
     </div>`;
   }).join('') + `
     <div class="add-sec">
@@ -794,13 +847,15 @@ function renderMedia(){
         <div class="enq-caixa" style="aspect-ratio:${f.proporcao}" onpointerdown="arrastarFoco(event,'${f.id}')">
           <img src="${esc(v)}?v=${MEDIA_V}" alt="" style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom/100})">
           <span class="mira" style="left:${e.x}%;top:${e.y}%"></span>
+          <span class="guias"></span>
         </div>
         <div class="enq-lin">
           <span class="enq-rot">Aproximar</span>
           <input type="range" min="100" max="220" step="1" value="${e.zoom}" oninput="mudarZoom('${f.id}',this.value)">
           <button class="bt bt-min" onclick="reporFoco('${f.id}')" title="Repor o enquadramento original">Repor</button>
         </div>
-        <div class="enq-dica">Arraste sobre a imagem para escolher o que fica ao centro.</div>
+        <div class="enq-dica">Arraste sobre a imagem para escolher o que fica ao centro.
+          Cola-se ao centro e aos terços; com <b>Shift</b> arrasta livre.</div>
       </div>`;
     }
     return h;
@@ -827,15 +882,42 @@ function porFoco(id, x, y){
   EST.val[f.chave] = escreverEnq(e);
   actualizarMira(id); aplicarFocoTela(id); marcarSujo(true); registarPasso();
 }
+// Linhas a que o ponto focal se cola: o centro e os terços. São as posições que
+// se procuram de facto — um rosto ao centro, o horizonte num terço — e acertar
+// nelas à mão, num quadrado de 180px, é trabalho de paciência que ninguém deve
+// ter de fazer. Com Shift arrasta-se livre, para quem quer mesmo 47%.
+const IMAS = [33.333, 50, 66.667];
+const IMA_DIST = 3.2;                     // em % da caixa: perto o suficiente
+function colar(v){
+  for (const a of IMAS) if (Math.abs(v - a) < IMA_DIST) return a;
+  return v;
+}
 function arrastarFoco(ev, id){
   const caixa = ev.currentTarget;
   caixa.setPointerCapture(ev.pointerId);
+  const guias = caixa.querySelector('.guias');
   const mover = e2 => {
     const r = caixa.getBoundingClientRect();
-    porFoco(id, (e2.clientX-r.left)/r.width*100, (e2.clientY-r.top)/r.height*100);
+    let x = (e2.clientX-r.left)/r.width*100, y = (e2.clientY-r.top)/r.height*100;
+    if (!e2.shiftKey) {
+      const cx = colar(x), cy = colar(y);
+      // As guias acendem-se só quando se está mesmo colado: uma grelha sempre
+      // acesa é decoração, e deixa de dizer o que quer que seja.
+      if (guias) {
+        guias.style.setProperty('--gx', cx + '%');
+        guias.style.setProperty('--gy', cy + '%');
+        guias.classList.toggle('v', cx !== x);
+        guias.classList.toggle('h', cy !== y);
+      }
+      x = cx; y = cy;
+    } else if (guias) { guias.classList.remove('v','h'); }
+    porFoco(id, x, y);
   };
   mover(ev);
-  const largar = () => { caixa.removeEventListener('pointermove', mover); caixa.removeEventListener('pointerup', largar); };
+  const largar = () => {
+    if (guias) guias.classList.remove('v','h');
+    caixa.removeEventListener('pointermove', mover); caixa.removeEventListener('pointerup', largar);
+  };
   caixa.addEventListener('pointermove', mover);
   caixa.addEventListener('pointerup', largar);
   ev.preventDefault();
@@ -1017,9 +1099,21 @@ function serializar(){
   v['tema.paleta']        = Object.keys(EST.paleta).length ? JSON.stringify(EST.paleta) : '';
   v['layout.blocos']      = EST.blocos.length ? JSON.stringify(EST.blocos) : '';
   v['layout.ordem']       = EST.ordem.join(',');
+  v['layout.trancados']   = [...EST.trancados].join(',');
   return v;
 }
 function rotuloDe(chave){ return CAMPOS[chave] ? CAMPOS[chave][0] : chave; }
+// Um modelo guarda-se INTEIRO: não tem "o que mudou desde o casamento", tem o
+// desenho que é. Só as chaves deste editor, que o servidor volta a filtrar.
+function serializarTudo(){
+  const v = serializar(), fora = {};
+  Object.keys(PADRAO).forEach(k => {
+    if (ALHEIAS.some(p => k.startsWith(p))) return;
+    fora[k] = String(v[k] ?? '');
+  });
+  return fora;
+}
+
 async function guardar(){
   const v = serializar();
   // Só o que este editor governa, e só o que mudou: assim não pisa o cartão
@@ -1031,14 +1125,16 @@ async function guardar(){
     if (novo !== String(ATUAIS[k] ?? '')) defs[k] = novo;
   });
   if (!Object.keys(defs).length){ msg('Não há alterações por guardar.'); marcarSujo(false); return true; }
-  const d = await api('defs_save', {method:'POST', body:JSON.stringify({defs})});
+  const d = MODELO
+    ? await api('modelo_defs&id=' + MODELO.id, {method:'POST', body:JSON.stringify({defs: serializarTudo()})})
+    : await api('defs_save', {method:'POST', body:JSON.stringify({defs})});
   if (!d.success){ msg(d.message || 'Erro ao guardar.'); return false; }
   const inv = d.invalidas || [];
   Object.keys(defs).forEach(k=>{ if (!inv.includes(k)) ATUAIS[k] = defs[k]; });
   marcarSujo(false);
   marcarInvalidos(inv);
   msg(inv.length ? `Guardado, mas ${inv.length} campo(s) não foram aceites: ${inv.map(rotuloDe).join(', ')}.`
-                 : 'Convite guardado.');
+                 : (MODELO ? 'Modelo guardado.' : 'Convite guardado.'));
   recarregarTela();
   return inv.length === 0;
 }

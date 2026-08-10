@@ -142,16 +142,29 @@ são o outro lado — convites prontos, feitos pela casa, para um casal começar
 qualquer coisa bonita em vez de uma folha em branco. Aparecem no seletor de
 versões dos dois editores, num grupo «Modelos da casa».
 
-Um modelo é uma **fotografia de um convite a sério**: abre-se um casamento,
-desenha-se lá até ficar bem, e guarda-se em `modelos.php`. Por isso a página
-pede um casamento aberto para criar ou recapturar — a alternativa seria repetir
-o editor inteiro num formulário à parte.
+Um modelo cria-se em `modelos.php` e **desenha-se no editor de sempre**, que
+abre em modo de modelo (`convite-editor.php?modelo=N`, `editor-cartao.php?modelo=N`)
+— sem casamento nenhum pelo meio. Pedir emprestada a casa de um casal para fazer
+um modelo da casa era pedir o que não é preciso, e arriscar deixar lá o rascunho.
+Uma tira no topo do editor não deixa esquecer que o que se está a desenhar é da
+casa e não de um casal.
 
 Aplicar um modelo **copia-o** para as definições do casamento. A partir daí o
 desenho é do casal: mexer no modelo depois disso não lhe toca, e apagar o
 modelo também não. É a diferença entre dar uma receita e cozinhar em casa
 alheia — e é o que evita que um casal acorde com o convite mudado porque a casa
 mexeu numa coisa dela.
+
+**O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
+e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um
+**cadeado**: trancada não se arrasta nem se esconde, e a tranca viaja com o
+desenho (`layout.trancados`). O cadeado só se vê ao passar por cima, ou quando
+está fechado: uma coluna de cadeados abertos em todas as linhas é ruído.
+
+O ponto focal das fotografias — o único sítio destes editores com posicionamento
+livre em duas dimensões — **cola-se ao centro e aos terços**, com guias que
+acendem só no instante em que ele lá encosta. Com **Shift** arrasta livre, para
+quem quer mesmo 47%.
 
 **Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
 casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho

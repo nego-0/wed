@@ -2206,9 +2206,15 @@ if ($acao === 'modelo_criar') {
         $permitidas = array_flip(chavesDoAmbito($ambito));
         $defs = [];
         foreach ($d['defs'] as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
-    } else {
-        if (casamentoAtual() <= 0) erro('Abra um casamento: o modelo faz-se do que ele mostra agora.');
+    } elseif (casamentoAtual() > 0 && empty($d['do_zero'])) {
+        // Do que o casamento aberto mostra agora — é assim que se guarda um
+        // convite que se acabou de desenhar para alguém.
         $defs = instantaneoAmbito($conn, $ambito);
+    } else {
+        // Sem casamento aberto, o modelo nasce do desenho de origem e desenha-se
+        // no editor a seguir. Obrigar a abrir a casa de um casal para fazer um
+        // modelo da CASA era pedir emprestado o que não é preciso.
+        $defs = padraoAmbito($ambito);
     }
     if (!$defs) erro('Não há nada para guardar neste modelo.');
 
@@ -2258,6 +2264,37 @@ if ($acao === 'modelo_editar') {
     if (!$st->execute()) erro('Não foi possível guardar.');
     registar($conn, 'modelo_editado', $nome, empty($d['recapturar']) ? '' : 'desenho recapturado');
     ok(['id' => $id, 'nome' => $nome]);
+}
+
+if ($acao === 'modelo_defs') {
+    // O desenho de um modelo, vindo do editor. É o que faz um modelo poder ser
+    // trabalhado sem se abrir a casa de um casal.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma desenha modelos.');
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome, ambito FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) erro('Modelo não encontrado.');
+
+    $d = corpo();
+    $permitidas = array_flip(chavesDoAmbito($m['ambito']));
+    $padrao = defsPadrao();
+    $defs = []; $invalidas = [];
+    foreach ((array)($d['defs'] ?? []) as $k => $v) {
+        if (!isset($permitidas[$k]) || !is_string($v)) continue;
+        $ok = validarDefinicao($k, $v);
+        if ($ok === null) { $invalidas[] = $k; continue; }
+        // Igual ao original não se guarda: o modelo fica só com o que o desenho
+        // mudou, e um valor de origem que mude no futuro acompanha-o.
+        if ($ok === (string)($padrao[$k] ?? '')) continue;
+        $defs[$k] = $ok;
+    }
+    $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
+    $st = $conn->prepare("UPDATE {$P}modelos SET defs=?, atualizado_em=NOW() WHERE id=?");
+    $st->bind_param('si', $j, $id);
+    if (!$st->execute()) erro('Não foi possível guardar o modelo.');
+    registar($conn, 'modelo_desenhado', (string)$m['nome'], count($defs) . ' definição(ões)');
+    ok(['gravadas' => count($defs), 'invalidas' => $invalidas]);
 }
 
 if ($acao === 'modelo_apagar') {

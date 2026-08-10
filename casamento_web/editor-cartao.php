@@ -9,10 +9,11 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/pecas.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
-exigirAdmin();
-
-$defs = defsAtuais($conn);
-$CAS  = casalInfo($defs);
+require_once __DIR__ . '/personalizacao.php';
+[$defs, $MODELO] = defsDoEditor($conn, 'impresso');
+if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
+$CAS  = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
+                : casalInfo($defs);
 
 $pal      = cartaoPaletaEfetiva($defs);
 $estilo   = cartaoEstiloVars($defs);
@@ -67,6 +68,17 @@ $camposPorCamada = [
 <link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
 </head>
 <body class="editor">
+<?php if ($MODELO): ?>
+  <div class="tira-modelo">
+    A desenhar o modelo <b><?= escP($MODELO['nome']) ?></b> — um desenho da casa, não o convite de
+    um casal. <a href="modelos.php">voltar aos modelos</a>
+  </div>
+  <style>
+    .tira-modelo{ background:var(--gold-pale); border-bottom:1px solid var(--gold-soft); color:var(--ink);
+                  text-align:center; padding:.4rem .8rem; font-size:.82rem; }
+    .tira-modelo a{ color:inherit; }
+  </style>
+<?php endif; ?>
 <?php tiraSuporte(true); ?>
 
 <div class="ed-menu">
@@ -198,6 +210,8 @@ const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala
                      floreados:'cartao.floreados_escala' };
 const PADRAO   = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
 const ATUAIS   = <?= json_encode(array_intersect_key($defs, array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
+// Desenhar um modelo da casa: grava-se nele, e não nas definições de um casamento.
+const MODELO   = <?= json_encode($MODELO, JSON_UNESCAPED_UNICODE) ?>;
 const FONTES   = <?= json_encode(fontesConvite(), JSON_UNESCAPED_UNICODE) ?>;
 const PAPEIS   = <?= json_encode(papeisCartao(), JSON_UNESCAPED_UNICODE) ?>;
 // Nome da variável CSS -> chave dentro da paleta (o "name" chama-se nameColor).
@@ -707,6 +721,14 @@ function rotuloDe(chave){
   }
   return chave;
 }
+// Um modelo guarda-se inteiro: é o desenho que é, e não a diferença para um
+// casamento qualquer.
+function serializarTudo(){
+  const v = serializar(), fora = {};
+  Object.keys(PADRAO).forEach(k => { if (k in v) fora[k] = String(v[k] ?? ''); });
+  return fora;
+}
+
 async function guardar(){
   const v = serializar();
   // Só o que mudou, e só as chaves do cartão: assim não se pisa o convite
@@ -719,7 +741,9 @@ async function guardar(){
   });
   if (!Object.keys(defs).length){ marcarSujo(false); msg('Não há alterações por guardar.'); return true; }
   $('bt-guardar').disabled = true; msg('A guardar…');
-  const d = await api('defs_save', {method:'POST', body: JSON.stringify({defs})});
+  const d = MODELO
+    ? await api('modelo_defs&id=' + MODELO.id, {method:'POST', body: JSON.stringify({defs: serializarTudo()})})
+    : await api('defs_save', {method:'POST', body: JSON.stringify({defs})});
   $('bt-guardar').disabled = false;
   if (!d.success){ msg(d.message || 'Não foi possível guardar.'); return false; }
   const inv = d.invalidas || [];

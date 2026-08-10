@@ -138,6 +138,39 @@ function identidadeCasamento(): array {
     return $cache[$id] = $out;
 }
 
+/**
+ * As definições que um editor deve mostrar: as do casamento aberto, ou as de um
+ * MODELO da casa quando se está a desenhá-lo.
+ *
+ * Fazer um modelo obrigava, até aqui, a abrir o casamento de alguém e a desenhar
+ * lá dentro — com a festa de um casal a servir de rascunho, e o risco de deixar
+ * lá o rascunho. O modelo passa a editar-se em si próprio, sem casa emprestada.
+ *
+ * Devolve [definições, modelo] — o modelo é null quando se está num casamento.
+ */
+function defsDoEditor(mysqli $conn, string $ambito): array {
+    $id = (int)($_GET['modelo'] ?? 0);
+    if ($id <= 0 || !function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) {
+        return [defsAtuais($conn), null];
+    }
+    global $P;
+    $st = $conn->prepare("SELECT id, nome, ambito, defs FROM {$P}modelos WHERE id=?");
+    if (!$st) return [defsAtuais($conn), null];
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m || $m['ambito'] !== $ambito) return [defsAtuais($conn), null];
+
+    // O modelo assenta sobre os valores de origem: guarda só o que o desenho
+    // mudou, e o resto tem de vir de algum lado.
+    $defs = defsPadrao();
+    $j = json_decode((string)$m['defs'], true);
+    $permitidas = array_flip(chavesDoAmbito($ambito));
+    if (is_array($j)) foreach ($j as $k => $v) {
+        if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+    }
+    return [$defs, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];
+}
+
 // ---- Defaults (= convite original, byte a byte) ------------
 function defsPadrao(): array {
     $p = [
@@ -257,6 +290,10 @@ function defsPadrao(): array {
         // secções livres que o casal acrescente, em JSON.
         'layout.ordem'  => 'hero,convite,historia,interludio,grande-dia,acesso,final',
         'layout.blocos' => '',
+        // Secções trancadas: lista de ids. Trancada não se arrasta nem se
+        // esconde — é a rede contra o gesto distraído numa lista que se
+        // reordena a arrastar.
+        'layout.trancados' => '',
         // ---- Tipografia ----
         // Três papéis, e um tamanho para o texto que se lê. A tipografia de
         // display (nomes, datas, títulos grandes) fica como o design a deixou.
@@ -714,6 +751,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
             $e = lerEnquadramento($valor);
             return round($e['x'],1).' '.round($e['y'],1).' '.round($e['zoom']);
         }
+        case 'layout.trancados':
         case 'layout.ordem': {
             // Lista de ids separados por vírgula. Guarda-se o que é reconhecível;
             // ordemBlocos() trata de pôr a capa à frente e o fecho no fim.

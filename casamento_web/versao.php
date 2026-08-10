@@ -125,6 +125,12 @@ function correcoesEsperadas(): array {
          'modelos.php', 'modelo_criar'],
         ['Os modelos aparecem no seletor de versões dos editores',
          'assets/versoes.js', 'Modelos da casa'],
+        ['Desenhar um modelo sem abrir o casamento de ninguém',
+         'personalizacao.php', 'function defsDoEditor('],
+        ['Trancar camadas: não se arrastam nem se escondem',
+         'convite-editor.php', 'function alternarTranca('],
+        ['Ponto focal com guias magnéticas (centro e terços)',
+         'convite-editor.php', 'const IMAS ='],
     ];
 }
 
