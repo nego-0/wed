@@ -121,6 +121,10 @@ function correcoesEsperadas(): array {
          'api.php', "'utilizador_editar'"],
         ['Conta de suporte não se prende a casamentos; noivos só criam porteiros',
          'api.php', 'não se prende a um casamento'],
+        ['Modelos de convite da casa, para todos os casais',
+         'modelos.php', 'modelo_criar'],
+        ['Os modelos aparecem no seletor de versões dos editores',
+         'assets/versoes.js', 'Modelos da casa'],
     ];
 }
 

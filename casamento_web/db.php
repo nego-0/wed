@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 12;
+const ESQUEMA_VERSAO = 13;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -549,6 +549,30 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // ver em cima aquilo em que andou ontem.
     if ($versaoAtual < 12) {
         migColuna($conn, "{$P}casamentos", 'ultimo_acesso', "DATETIME NULL DEFAULT NULL");
+    }
+
+    // ---- v13: modelos de convite da casa ----------------------------------
+    // As versões (cw_versoes) são de cada casamento: o desenho que ESTE casal
+    // guardou. Faltava o outro lado — os desenhos que a casa oferece a todos,
+    // para um casal começar de um convite bonito em vez de uma folha em branco.
+    //
+    // Ficam à parte, e sem casamento_id, porque não são de casamento nenhum:
+    // são da plataforma. Aplicar um modelo é copiá-lo para as definições do
+    // casamento — a partir daí é dele, e mexer no modelo já não lhe toca.
+    if ($versaoAtual < 13) {
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}modelos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nome VARCHAR(120) NOT NULL,
+                descricao VARCHAR(400) DEFAULT NULL,
+                ambito ENUM('digital','impresso') NOT NULL DEFAULT 'digital',
+                defs MEDIUMTEXT NOT NULL,
+                visivel TINYINT(1) NOT NULL DEFAULT 1,
+                criado_por VARCHAR(120) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em DATETIME NULL DEFAULT NULL,
+                INDEX idx_modelo_ambito (ambito, visivel)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -20,6 +20,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
+| `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
 | `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |
 | `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
@@ -134,6 +135,23 @@ trabalhou** (`cw_casamentos.ultimo_acesso`, esquema v12). O número é a ordem
 por que foram criados, a menos útil de todas: quem abre a página de manhã quer
 ver em cima aquilo em que andou ontem. Abre nos **ativos**; os por aprovar
 também têm a sua fila em cima.
+
+**Modelos de convite.** As versões (`cw_versoes`) são de cada casamento: o
+desenho que *aquele* casal guardou. Os **modelos** (`cw_modelos`, esquema v13)
+são o outro lado — convites prontos, feitos pela casa, para um casal começar de
+qualquer coisa bonita em vez de uma folha em branco. Aparecem no seletor de
+versões dos dois editores, num grupo «Modelos da casa».
+
+Um modelo é uma **fotografia de um convite a sério**: abre-se um casamento,
+desenha-se lá até ficar bem, e guarda-se em `modelos.php`. Por isso a página
+pede um casamento aberto para criar ou recapturar — a alternativa seria repetir
+o editor inteiro num formulário à parte.
+
+Aplicar um modelo **copia-o** para as definições do casamento. A partir daí o
+desenho é do casal: mexer no modelo depois disso não lhe toca, e apagar o
+modelo também não. É a diferença entre dar uma receita e cozinhar em casa
+alheia — e é o que evita que um casal acorde com o convite mudado porque a casa
+mexeu numa coisa dela.
 
 **Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
 casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho

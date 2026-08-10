@@ -18,6 +18,7 @@ function menuPrincipal(): array {
         // A entrada da plataforma só aparece a quem tem mais do que um
         // casamento à mão — para quem só tem o seu, seria uma porta para nada.
         'plataforma' => ['plataforma.php',   'Casamentos'],
+        'modelos'    => ['modelos.php',      'Modelos'],
     ];
 }
 
@@ -52,10 +53,12 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
                          || count(casamentosDoUtilizador($GLOBALS['conn'])) > 1;
     }
     if (!$variosCasamentos) unset($itens['plataforma']);
+    // Os modelos são da casa: quem não responde por ela não tem lá o que fazer.
+    if (!function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) unset($itens['modelos']);
     // Sem casamento aberto, as entradas do menu levavam todas ao mesmo sítio:
     // de volta a esta página, porque não há casamento nenhum para mostrar. Um
     // menu que só sabe dizer "não" é pior do que um menu curto.
-    if ($semCasamento) $itens = array_intersect_key($itens, ['plataforma' => 1]);
+    if ($semCasamento) $itens = array_intersect_key($itens, ['plataforma' => 1, 'modelos' => 1]);
     $semPapel = !empty($opcoes['no_print']) ? ' no-print' : '';
     ?>
 <header class="topo<?= $semPapel ?>">

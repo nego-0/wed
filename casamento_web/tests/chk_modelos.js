@@ -1,0 +1,157 @@
+// Modelos de convite: os desenhos que a casa oferece a todos.
+//
+// Um modelo é uma FOTOGRAFIA de um convite a sério — abre-se um casamento,
+// desenha-se lá, e guarda-se. Aplicá-lo COPIA-O para o casamento do casal, e é
+// aí que está o que interessa provar:
+//
+//   1. o modelo nasce do que o casamento aberto mostra agora;
+//   2. um casal aplica-o e o seu convite passa a ser assim;
+//   3. depois disso o desenho é DELE — mexer no modelo não lhe toca, e apagar
+//      o modelo também não;
+//   4. um modelo do cartão não mexe no convite digital, nem o contrário;
+//   5. por publicar, não se vê nem se aplica;
+//   6. os modelos levam-se e trazem-se num ficheiro;
+//   7. só quem responde pela casa os faz.
+const { chromium } = require('playwright-core');
+const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+
+const entrar = async (ctx, u, p) => {
+  const g = await ctx.newPage();
+  await g.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  await g.fill('input[name=utilizador]', u); await g.fill('input[name=senha]', p);
+  await g.click('button[type=submit]'); await g.waitForLoadState('networkidle');
+  g._api = (a, c) => g.evaluate(async ({ a, c }) => {
+    const r = await fetch('api.php?action=' + a, { method: 'POST',
+      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+      body: c ? JSON.stringify(c) : undefined });
+    return r.json();
+  }, { a, c });
+  g._baixar = (q) => g.evaluate(async (q) => (await fetch('api.php?action=' + q)).json(), q);
+  return g;
+};
+
+(async () => {
+  const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
+  let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
+  const marca = 'zz' + String(Date.now()).slice(-6);
+
+  const admin = await entrar(await b.newContext(), 'admin', 'noivos2026');
+  const api = admin._api;
+
+  // ---------- 1. o modelo faz-se de um convite a sério ----------
+  const oficina = await api('casamento_criar', { nome: 'ZZ Oficina ' + marca, noiva: 'Olga', noivo: 'Otto' });
+  await api('casamento_abrir&id=' + oficina.id);
+  await api('defs_save', { defs: { 'textos.kicker': 'Marca do modelo ' + marca,
+                                   'textos.hero_sub': 'Sub do modelo ' + marca,
+                                   'cartao.abertura': 'Cartao do modelo ' + marca } });
+
+  const mod = await api('modelo_criar', { nome: 'ZZ Modelo digital ' + marca,
+                                          descricao: 'Feito na prova', ambito: 'digital', visivel: true });
+  console.log('   modelo:', JSON.stringify(mod));
+  ok(mod && mod.success && mod.definicoes > 10,
+     'o modelo nasce do convite do casamento aberto, com as suas definições');
+
+  const modCartao = await api('modelo_criar', { nome: 'ZZ Modelo impresso ' + marca,
+                                                ambito: 'impresso', visivel: true });
+  ok(modCartao && modCartao.success, 'e faz-se o mesmo para o convite impresso');
+
+  // ---------- 2. um casal aplica-o ----------
+  const casal = await api('casamento_criar', { nome: 'ZZ Casal ' + marca, noiva: 'Pia', noivo: 'Pedro' });
+  await api('casamento_abrir&id=' + casal.id);
+  const antes = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(!antes['textos.kicker'], 'o casal começa sem desenho próprio nenhum');
+
+  const aplicou = await api('modelo_aplicar&id=' + mod.id);
+  console.log('   aplicar:', JSON.stringify(aplicou).slice(0, 120));
+  ok(aplicou && aplicou.success, 'o casal aplica o modelo');
+  const depois = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(depois['textos.kicker'] === 'Marca do modelo ' + marca,
+     'e o seu convite passa a ser o do modelo');
+
+  // ---------- 4. cada peça no seu lugar ----------
+  ok(!depois['cartao.abertura'],
+     'um modelo do convite digital não mexe no cartão impresso');
+  await api('modelo_aplicar&id=' + modCartao.id);
+  const comCartao = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(comCartao['cartao.abertura'] === 'Cartao do modelo ' + marca, 'e o do cartão mexe no cartão');
+
+  // ---------- 3. depois de aplicado, o desenho é do casal ----------
+  await api('casamento_abrir&id=' + oficina.id);
+  await api('defs_save', { defs: { 'textos.kicker': 'MUDOU na oficina ' + marca } });
+  await api('modelo_editar', { id: mod.id, nome: 'ZZ Modelo digital ' + marca, recapturar: true });
+  await api('casamento_abrir&id=' + casal.id);
+  const intocado = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  console.log('   no casal depois de mexer no modelo:', intocado['textos.kicker']);
+  ok(intocado['textos.kicker'] === 'Marca do modelo ' + marca,
+     'mexer no modelo NÃO toca em quem já o aplicou — o desenho passou a ser dele');
+
+  await api('modelo_apagar&id=' + mod.id);
+  const semModelo = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(semModelo['textos.kicker'] === 'Marca do modelo ' + marca,
+     'e apagar o modelo também não — quem o usou fica como está');
+
+  // ---------- 5. por publicar, não se vê nem se aplica ----------
+  await api('casamento_abrir&id=' + oficina.id);
+  const rascunho = await api('modelo_criar', { nome: 'ZZ Rascunho ' + marca,
+                                               ambito: 'digital', visivel: false });
+  const emailC = 'modelos.' + marca + '@exemplo.pt';
+  await api('utilizador_criar', { email: emailC, nome: 'Casal Modelos', senha: 'segredo12345',
+                                  casamento_id: casal.id, papel: 'noivos' });
+  const noivos = await entrar(await b.newContext(), emailC, 'segredo12345');
+  const vistos = (await noivos._api('modelo_lista&ambito=digital')).modelos || [];
+  const nomes = vistos.map(m => m.nome);
+  console.log('   modelos que o casal vê:', JSON.stringify(nomes));
+  ok(!nomes.includes('ZZ Rascunho ' + marca), 'um modelo por publicar não aparece ao casal');
+  const tentaRascunho = await noivos._api('modelo_aplicar&id=' + rascunho.id);
+  ok(tentaRascunho && tentaRascunho.success === false, 'nem se aplica escrevendo-lhe o número');
+
+  // ---------- 7. só a casa faz modelos ----------
+  const tentaCriar = await noivos._api('modelo_criar', { nome: 'ZZ Do casal', ambito: 'digital' });
+  ok(tentaCriar && tentaCriar.success === false, 'um casal não faz modelos');
+  const tentaApagar = await noivos._api('modelo_apagar&id=' + modCartao.id);
+  ok(tentaApagar && tentaApagar.success === false, 'nem os apaga');
+
+  // Mas usa os publicados — que é a razão de existirem.
+  const usa = await noivos._api('modelo_aplicar&id=' + modCartao.id);
+  ok(usa && usa.success, 'e usa os que estão publicados');
+
+  // ---------- 6. levar e trazer ----------
+  const fich = await admin._baixar('modelos_exportar');
+  console.log('   ficheiro de modelos:', fich.formato, '·', (fich.modelos || []).length, 'modelo(s)');
+  ok(fich.formato === 'casamento-web/modelos/1' && fich.modelos.length >= 2,
+     'os modelos levam-se num ficheiro');
+  ok(fich.modelos.some(m => m.defs && m.defs['cartao.abertura']),
+     'e o ficheiro leva mesmo os desenhos, não só os nomes');
+
+  const trazidos = await api('modelos_importar', { ficheiro: fich });
+  console.log('   importação:', JSON.stringify(trazidos));
+  ok(trazidos && trazidos.success && trazidos.entraram >= 2, 'e trazem-se de volta');
+  const mau = await api('modelos_importar', { ficheiro: { formato: 'outra-coisa' } });
+  ok(mau && mau.success === false, 'um ficheiro que não é de modelos é recusado');
+
+  // ---------- a página do admin ----------
+  await admin.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
+  await admin.waitForTimeout(900);
+  const txt = await admin.locator('#lista').innerText();
+  ok(txt.includes('ZZ Modelo impresso ' + marca), 'a página lista os modelos');
+  // innerText devolve o texto RENDERIZADO, e as etiquetas são maiúsculas por CSS.
+  ok(/por publicar/i.test(txt), 'e distingue os que ainda não estão publicados');
+
+  // ---------- limpeza ----------
+  const todos = (await api('modelo_lista')).modelos || [];
+  for (const m of todos) if (m.nome.includes(marca)) await api('modelo_apagar&id=' + m.id);
+  await api('casamento_abrir&id=1');
+  for (const id of [oficina.id, casal.id]) {
+    await api('casamento_estado&id=' + id + '&estado=arquivado');
+    await api('casamento_apagar&id=' + id);
+  }
+  for (const c of (await api('utilizador_lista&q=' + marca)).contas || []) {
+    await api('utilizador_apagar&id=' + c.id);
+  }
+  ok(((await api('modelo_lista')).modelos || []).filter(m => m.nome.includes(marca)).length === 0,
+     'a prova não deixa modelos de mentira na base');
+
+  console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
+  await b.close(); process.exit(f ? 1 : 0);
+})().catch(e => { console.error('FATAL', e); process.exit(1); });

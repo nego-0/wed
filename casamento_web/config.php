@@ -111,7 +111,7 @@ function ficheirosApp(): array {
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
-            'registo.php','gestao.php',
+            'registo.php','gestao.php','modelos.php',
             'manifest.php','sw.js',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js',
@@ -132,7 +132,8 @@ function ficheirosApp(): array {
 function acoesDaPlataforma(): array {
     return ['casamento_criar','casamento_abrir','casamento_fechar','casamento_estado',
             'casamento_apagar','utilizador_criar','utilizador_editar','utilizador_apagar',
-            'utilizador_estado','utilizador_repor_senha','acesso_tirar_de','suporte_sair'];
+            'utilizador_estado','utilizador_repor_senha','acesso_tirar_de','suporte_sair',
+            'modelo_criar','modelo_editar','modelo_apagar','modelos_importar'];
 }
 
 function acoesDoCasamento(): array {
@@ -144,7 +145,7 @@ function acoesDoCasamento(): array {
             'casamento_identidade','casamento_endereco',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
             'suporte_codigo_criar','suporte_codigo_revogar',
-            'dados_importar'];
+            'dados_importar','modelo_aplicar'];
 }
 
 /**
@@ -159,7 +160,8 @@ function acoesDoCasamento(): array {
 function acoesSemCasamento(): array {
     return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'utilizador_casamentos',
                                              'casamento_lista', 'esquema_info', 'acesso_dar',
-                                             'dados_exportar', 'dados_importar']);
+                                             'dados_exportar', 'dados_importar',
+                                             'modelo_lista', 'modelos_exportar', 'modelos_importar']);
 }
 
 function acoesDeEscrita(): array {

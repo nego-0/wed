@@ -2164,4 +2164,190 @@ if ($acao === 'dados_importar') {
 }
 
 
+// ============================================================
+// MODELOS DE CONVITE — os desenhos que a casa oferece a todos
+//
+// As versões são de cada casamento: o que ESTE casal guardou. Os modelos são o
+// outro lado — desenhos prontos, feitos pela casa, para um casal começar de um
+// convite bonito em vez de uma folha em branco.
+//
+// Aplicar um modelo é COPIÁ-LO para as definições do casamento. A partir daí o
+// desenho é do casal: mexer no modelo depois disso não lhe toca, e um casal que
+// tenha personalizado o seu convite não acorda com ele mudado porque a casa
+// mexeu num modelo. É a diferença entre dar uma receita e cozinhar em casa
+// alheia.
+// ============================================================
+
+if ($acao === 'modelo_lista') {
+    // Os casais veem os visíveis; quem gere a casa vê todos, para poder
+    // preparar um modelo antes de o mostrar.
+    if (!utilizadorId()) { http_response_code(401); erro('Sessão terminada. Entre de novo.'); }
+    $a = ($_GET['ambito'] ?? '') ;
+    $onde = isset(ambitosVersao()[$a]) ? "ambito='" . $conn->real_escape_string($a) . "'" : '1=1';
+    if (!ehAdminPlataforma()) $onde .= ' AND visivel=1';
+    $r = @$conn->query("SELECT id, nome, descricao, ambito, visivel, criado_por, criado_em, atualizado_em
+                        FROM {$P}modelos WHERE $onde ORDER BY ambito, nome");
+    ok(['modelos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : []]);
+}
+
+if ($acao === 'modelo_criar') {
+    // Nasce do que está em vigor no casamento aberto: preparar um modelo é
+    // desenhar o convite como se fosse para alguém, e depois guardá-lo aqui.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma faz modelos.');
+    $d = corpo();
+    $ambito = isset(ambitosVersao()[$d['ambito'] ?? '']) ? $d['ambito'] : 'digital';
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 120);
+    if ($nome === '') erro('Dê um nome ao modelo.');
+    $descricao = mb_substr(trim((string)($d['descricao'] ?? '')), 0, 400);
+
+    // Ou os valores que vieram no pedido (importação), ou o retrato do que o
+    // casamento aberto mostra agora.
+    if (is_array($d['defs'] ?? null)) {
+        $permitidas = array_flip(chavesDoAmbito($ambito));
+        $defs = [];
+        foreach ($d['defs'] as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+    } else {
+        if (casamentoAtual() <= 0) erro('Abra um casamento: o modelo faz-se do que ele mostra agora.');
+        $defs = instantaneoAmbito($conn, $ambito);
+    }
+    if (!$defs) erro('Não há nada para guardar neste modelo.');
+
+    $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por)
+                          VALUES (?,?,?,?,?,?)");
+    $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
+    $vis = empty($d['visivel']) ? 0 : 1;
+    $quem = utilizadorAtual() ?? '';
+    $st->bind_param('ssssis', $nome, $descricao, $ambito, $j, $vis, $quem);
+    if (!$st->execute()) erro('Não foi possível guardar o modelo.');
+    // O número do modelo lê-se JÁ: registar() escreve uma linha no histórico, e
+    // a partir daí insert_id é o dessa linha — devolvia-se um número que não é
+    // de modelo nenhum, e o modelo acabado de criar ficava inalcançável.
+    $novoId = $conn->insert_id;
+    registar($conn, 'modelo_criado', $nome, $ambito . ' · ' . count($defs) . ' definição(ões)');
+    ok(['id' => $novoId, 'nome' => $nome, 'ambito' => $ambito, 'definicoes' => count($defs)]);
+}
+
+if ($acao === 'modelo_editar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita modelos.');
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome, ambito FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) erro('Modelo não encontrado.');
+
+    $nome = mb_substr(trim((string)($d['nome'] ?? $m['nome'])), 0, 120);
+    if ($nome === '') erro('Dê um nome ao modelo.');
+    $descricao = mb_substr(trim((string)($d['descricao'] ?? '')), 0, 400);
+    $vis = empty($d['visivel']) ? 0 : 1;
+
+    // "Recapturar" é o que torna isto trabalhável: abre-se um casamento, mexe-se
+    // no convite até ficar bem, e traz-se o resultado para o modelo.
+    if (!empty($d['recapturar'])) {
+        if (casamentoAtual() <= 0) erro('Abra um casamento para trazer de lá o desenho.');
+        $defs = instantaneoAmbito($conn, $m['ambito']);
+        $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
+        $st = $conn->prepare("UPDATE {$P}modelos SET nome=?, descricao=?, visivel=?, defs=?,
+                                     atualizado_em=NOW() WHERE id=?");
+        $st->bind_param('ssisi', $nome, $descricao, $vis, $j, $id);
+    } else {
+        $st = $conn->prepare("UPDATE {$P}modelos SET nome=?, descricao=?, visivel=?,
+                                     atualizado_em=NOW() WHERE id=?");
+        $st->bind_param('ssii', $nome, $descricao, $vis, $id);
+    }
+    if (!$st->execute()) erro('Não foi possível guardar.');
+    registar($conn, 'modelo_editado', $nome, empty($d['recapturar']) ? '' : 'desenho recapturado');
+    ok(['id' => $id, 'nome' => $nome]);
+}
+
+if ($acao === 'modelo_apagar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga modelos.');
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) erro('Modelo não encontrado.');
+    $st = $conn->prepare("DELETE FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id);
+    if (!$st->execute()) erro('Não foi possível apagar.');
+    // Apagar um modelo não desfaz nada em casamento nenhum: quem o aplicou
+    // ficou com uma cópia, e é dele.
+    registar($conn, 'modelo_apagado', (string)$m['nome']);
+    ok(['id' => $id, 'nome' => $m['nome']]);
+}
+
+if ($acao === 'modelo_aplicar') {
+    // Do lado do casal: traz o desenho da casa para o seu convite.
+    exigirAdminApi();
+    exigirCorrecao();
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome, ambito, defs, visivel FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) erro('Modelo não encontrado.');
+    if (!(int)$m['visivel'] && !ehAdminPlataforma()) erro('Esse modelo não está disponível.');
+    $j = json_decode((string)$m['defs'], true);
+    if (!is_array($j)) erro('Esse modelo está ilegível.');
+
+    // Só as chaves do próprio âmbito: um modelo do cartão não mexe no convite
+    // digital, nem o contrário.
+    $permitidas = array_flip(chavesDoAmbito($m['ambito']));
+    $defs = [];
+    foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+    $r = guardarDefinicoes($conn, $defs);
+    // Deixa de haver versão em vigor: o que a peça mostra agora veio de fora.
+    $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
+    $st->bind_param('s', $m['ambito']); $st->execute();
+    registar($conn, 'modelo_aplicado', (string)$m['nome'], $r['gravadas'] . ' definição(ões)');
+    ok($r + ['nome' => $m['nome'], 'ambito' => $m['ambito']]);
+}
+
+if ($acao === 'modelos_exportar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva os modelos.');
+    $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel FROM {$P}modelos ORDER BY ambito, nome");
+    $lista = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+    foreach ($lista as &$m) { $m['defs'] = json_decode($m['defs'], true) ?: []; }
+    unset($m);
+    $saida = ['formato' => 'casamento-web/modelos/1', 'esquema' => ESQUEMA_VERSAO,
+              'gerado_em' => date('c'), 'gerado_por' => utilizadorAtual() ?? '',
+              'modelos' => $lista];
+    registar($conn, 'modelos_exportados', count($lista) . ' modelo(s)');
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename=modelos-' . date('Y-m-d') . '.json');
+    echo json_encode($saida, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+    exit;
+}
+
+if ($acao === 'modelos_importar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma traz modelos.');
+    $d = corpo();
+    $f = is_array($d['ficheiro'] ?? null) ? $d['ficheiro'] : null;
+    if (!$f || ($f['formato'] ?? '') !== 'casamento-web/modelos/1') {
+        erro('Este ficheiro não é uma exportação de modelos deste sistema.');
+    }
+    $entrou = 0; $saltou = 0;
+    foreach ((array)($f['modelos'] ?? []) as $m) {
+        if (!is_array($m)) { $saltou++; continue; }
+        $nome = mb_substr(trim((string)($m['nome'] ?? '')), 0, 120);
+        $ambito = isset(ambitosVersao()[$m['ambito'] ?? '']) ? $m['ambito'] : 'digital';
+        $permitidas = array_flip(chavesDoAmbito($ambito));
+        $defs = [];
+        foreach ((array)($m['defs'] ?? []) as $k => $v) {
+            if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+        }
+        if ($nome === '' || !$defs) { $saltou++; continue; }
+        $descricao = mb_substr(trim((string)($m['descricao'] ?? '')), 0, 400);
+        $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
+        $vis = empty($m['visivel']) ? 0 : 1;
+        $quem = utilizadorAtual() ?? '';
+        $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por)
+                              VALUES (?,?,?,?,?,?)");
+        $st->bind_param('ssssis', $nome, $descricao, $ambito, $j, $vis, $quem);
+        if (@$st->execute()) $entrou++; else $saltou++;
+    }
+    if (!$entrou) erro('O ficheiro não trouxe modelo nenhum aproveitável.');
+    registar($conn, 'modelos_importados', $entrou . ' modelo(s)');
+    ok(['entraram' => $entrou, 'saltados' => $saltou]);
+}
+
 erro('Ação desconhecida.');

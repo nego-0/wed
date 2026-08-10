@@ -56,6 +56,7 @@ Entram com **admin / noivos2026**.
 | `chk_publico_multi.js`  | a porta pública com vários casamentos: código, casamento inativo, o porteiro que não lê o convite alheio, e o endereço dos QR |
 | `chk_identidade.js`     | os nomes e a data da ficha do casamento chegam sozinhos a todas as peças, e cada casamento tem a sua |
 | `chk_contas.js`         | registo público e aprovação, códigos de suporte (ver / corrigir / revogar), equipa do casamento e contas suspensas |
+| `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
 | `chk_dados.js`          | levar os dados e trazê-los de volta: o que sai volta igual, substituir substitui, e cada um só leva o que é seu |
 | `chk_so_ver.js`         | o ecrã em modo de leitura: o que escreve fica apagado, o que só mostra continua vivo, e os gestos da planta não arrancam — mas arrancam com um código de correção |
 

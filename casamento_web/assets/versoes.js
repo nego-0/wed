@@ -48,6 +48,7 @@
     var dizer  = op.msg  || function () {};
     var api    = global.api;
     var lista  = [];
+    var modelos = [];          // os desenhos que a casa oferece a todos
     var alvoId = 0;            // a versão sobre a qual agem renomear/atualizar/apagar
     var ocupado = false;
 
@@ -110,6 +111,17 @@
       });
       html += '</optgroup>';
 
+      // Os modelos da casa: um sítio por onde começar quando a folha está em
+      // branco. Aplicar copia o desenho para este casamento — a partir daí é
+      // dele, e o que a casa fizer ao modelo já não lhe toca.
+      if (modelos.length) {
+        html += '<optgroup label="Modelos da casa">';
+        modelos.forEach(function (m) {
+          html += opt('m' + m.id, '◆ ' + m.nome + (+m.visivel ? '' : '  — por publicar'));
+        });
+        html += '</optgroup>';
+      }
+
       html += '<optgroup label="Gerir">';
       html += opt('__nova', '＋ Guardar como nova versão…');
       if (alvo) {
@@ -126,7 +138,23 @@
       var d = await api(q('versao_lista'), { silencioso: true });
       if (!d || !d.success) { sel.innerHTML = '<option>—</option>'; return; }
       lista = d.versoes || [];
+      var m = await api('modelo_lista&ambito=' + encodeURIComponent(ambito), { silencioso: true });
+      modelos = (m && m.success) ? (m.modelos || []) : [];
       desenhar();
+    }
+
+    async function aplicarModelo(id) {
+      var m = modelos.filter(function (x) { return x.id == id; })[0];
+      var nome = m ? m.nome : '';
+      if (!confirm('Usar o modelo "' + nome + '"?\n\n'
+        + 'O desenho da peça passa a ser o do modelo — é o que os convidados passam a receber. '
+        + 'As versões que guardou não se perdem, e pode voltar a qualquer uma delas.'
+        + (sujo() ? '\n\nAs alterações por gravar perdem-se.' : ''))) { desenhar(); return; }
+      var d = await correr(function () { return api('modelo_aplicar&id=' + id, { method: 'POST' }); });
+      if (!d || !d.success) { desenhar(); return dizer((d && d.message) || 'Não foi possível usar o modelo.'); }
+      dizer('Modelo aplicado: ' + nome + '. A recarregar…');
+      if (op.aoAplicar) op.aoAplicar(d);
+      else setTimeout(function () { global.location.reload(); }, 700);
     }
 
     // ---- ações ----
@@ -211,6 +239,7 @@
       if (v === '__atualizar') return atualizar(alvoId);
       if (v === '__apagar')    return apagar(alvoId);
       if (v === '__estado' || v === '__nada' || v === '') { desenhar(); return; }
+      if (v.charAt(0) === 'm') return aplicarModelo(v.slice(1));
       // A padrão tem o id 0 — que é um id válido, não "nenhum".
       var id = parseInt(v, 10);
       if (isNaN(id) || !porId(id)) { desenhar(); return; }
