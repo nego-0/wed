@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 11;
+const ESQUEMA_VERSAO = 12;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -541,6 +541,14 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         // se reescrevem (são fotografias do que foi), mas a chave já não existe
         // e o instantâneo do âmbito deixa de a ver — que é o que se quer.
         @$conn->query("DELETE FROM {$P}definicoes WHERE chave='cartao.civil_hora'");
+    }
+
+    // ---- v12: quando é que se trabalhou neste casamento pela última vez ----
+    // A lista da administração ordenava-se pelo número, que é a ordem por que
+    // foram criados — a menos útil de todas. Quem abre a página de manhã quer
+    // ver em cima aquilo em que andou ontem.
+    if ($versaoAtual < 12) {
+        migColuna($conn, "{$P}casamentos", 'ultimo_acesso', "DATETIME NULL DEFAULT NULL");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

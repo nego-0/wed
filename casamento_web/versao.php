@@ -113,6 +113,14 @@ function correcoesEsperadas(): array {
          'personalizacao.php', "'evento.religiosa_local'"],
         ['Os dados do evento pedem-se no primeiro registo',
          'api.php', 'function guardarEventoDoRegisto('],
+        ['Sair do casamento sem terminar a sessão',
+         'auth.php', 'function fecharCasamento('],
+        ['Lista de casamentos dinâmica, por ordem de uso',
+         'api.php', "'casamento_lista'"],
+        ['Contas: criar, editar, apagar e dar lugares em casamentos',
+         'api.php', "'utilizador_editar'"],
+        ['Conta de suporte não se prende a casamentos; noivos só criam porteiros',
+         'api.php', 'não se prende a um casamento'],
     ];
 }
 

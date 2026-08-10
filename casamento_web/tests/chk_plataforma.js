@@ -47,7 +47,8 @@ const entrar = async (ctx, user, pass) => {
 
   // A plataforma vê os dois na página.
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
-  const txtAdmin = await admin.locator('body').innerText();
+  await admin.waitForTimeout(1000);          // a lista é servida por casamento_lista
+  const txtAdmin = await admin.locator('#lista-casamentos').innerText();
   ok(txtAdmin.includes('ZZ Casamento A ' + marca) && txtAdmin.includes('ZZ Casamento B ' + marca),
      'o pessoal da plataforma vê todos os casamentos na página');
 
@@ -194,19 +195,17 @@ const entrar = async (ctx, user, pass) => {
   // se lhe faz de manhã — em quantos casamentos estamos a trabalhar.
   await api('casamento_estado&id=' + alvo.id + '&estado=suspenso');
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
-  const susp = await admin.evaluate((nome) => {
-    const sec = [...document.querySelectorAll('.painel')].find(p => /Suspensos/.test(p.querySelector('h3')?.textContent || ''));
-    const principal = [...document.querySelectorAll('main > .cas-lista > .cas')];
-    return { naSeccao: !!(sec && sec.innerText.includes(nome)),
-             naPrincipal: principal.some(c => c.innerText.includes(nome)),
-             ativosNaPrincipal: principal.length };
-  }, 'ZZ A arquivar ' + marca);
-  console.log('   suspenso:', JSON.stringify(susp));
-  ok(susp.naSeccao, 'um casamento suspenso vai para a secção dos suspensos');
-  ok(!susp.naPrincipal, 'e sai da lista principal');
-  const soAtivos = await admin.evaluate(() =>
-    [...document.querySelectorAll('main > .cas-lista > .cas')].every(c => /ATIVO/i.test(c.innerText)));
-  ok(soAtivos, 'a lista principal só tem casamentos ativos');
+  await admin.waitForTimeout(900);
+  const nomeAlvo = 'ZZ A arquivar ' + marca;
+  const listaAtivos = await admin.locator('#lista-casamentos').innerText();
+  ok(!listaAtivos.includes(nomeAlvo), 'um casamento suspenso sai da vista dos ativos');
+  ok(/ATIVO/i.test(listaAtivos) && !/SUSPENSO/i.test(listaAtivos),
+     'e a vista de abertura só tem casamentos ativos');
+
+  await admin.click('#filtros-cas .chip[data-estado=suspenso]');
+  await admin.waitForTimeout(700);
+  ok((await admin.locator('#lista-casamentos').innerText()).includes(nomeAlvo),
+     'e encontra-se no filtro dos suspensos');
   await api('casamento_estado&id=' + alvo.id + '&estado=ativo');
 
   const arq = await api('casamento_estado&id=' + alvo.id + '&estado=arquivado');
@@ -227,9 +226,11 @@ const entrar = async (ctx, user, pass) => {
      'e um casamento arquivado já não se abre');
 
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
-  const txtArq = await admin.locator('body').innerText();
-  ok(/Arquivados/.test(txtArq) && txtArq.includes('ZZ A arquivar ' + marca),
-     'aparece na secção dos arquivados — arquivar não é perder de vista');
+  await admin.waitForTimeout(900);
+  await admin.click('#filtros-cas .chip[data-estado=arquivado]');
+  await admin.waitForTimeout(700);
+  ok((await admin.locator('#lista-casamentos').innerText()).includes(nomeAlvo),
+     'encontra-se no filtro dos arquivados — arquivar não é perder de vista');
 
   // Os dados de um arquivado ainda se podem levar: é para isso que ele lá está.
   const dadosArq = await admin.evaluate(async (id) =>
@@ -253,6 +254,77 @@ const entrar = async (ctx, user, pass) => {
   ok(morto && morto.success && morto.levou && morto.levou.convites === 1,
      'apagar um arquivado leva tudo, e diz quantos convites e pessoas levou');
   ok((await api('casamento_abrir&id=' + alvo.id)).success === false, 'e o casamento deixa de existir');
+
+  // ---------- sair do casamento sem terminar a sessão ----------
+  await api('casamento_abrir&id=' + casA.id);
+  ok((await api('convite_list')).success, 'com o casamento aberto, vê-se a casa por dentro');
+  const saiu = await api('casamento_fechar');
+  console.log('   fechar:', JSON.stringify(saiu));
+  ok(saiu && saiu.success && saiu.nome.includes('ZZ Casamento A'), 'fecha-se o casamento em que se estava');
+  ok((await api('convite_list')).success === false, 'e deixa de se ver a casa por dentro');
+  ok((await api('casamento_lista')).success, 'mas a sessão continua de pé — não se foi embora');
+
+  // ---------- a lista por ordem de uso ----------
+  await api('casamento_abrir&id=' + casB.id);
+  await api('casamento_fechar');
+  const ordem = await api('casamento_lista');
+  console.log('   ordem:', JSON.stringify(ordem.casamentos.map(c => c.nome)));
+  ok(ordem.casamentos[0].nome.includes('ZZ Casamento B'),
+     'o último em que se trabalhou fica em cima');
+  ok(!!ordem.casamentos[0].ultimo_acesso, 'e a lista traz quando foi');
+
+  const procura = await api('casamento_lista&q=' + encodeURIComponent('Casamento B ' + marca));
+  ok(procura.casamentos.length === 1, 'a lista procura-se pelo nome');
+
+  // ---------- contas: criar, editar, dar e tirar lugares ----------
+  const emailP = 'porta2.' + marca + '@exemplo.pt';
+  const novaP = await api('utilizador_criar', { email: emailP, nome: 'Porteiro Novo',
+                                                senha: 'segredo12345', casamento_id: casA.id,
+                                                papel: 'porteiro' });
+  ok(novaP && novaP.success, 'o admin cria uma conta de porteiro ligada a um casamento');
+  const lug = await api('utilizador_casamentos&id=' + novaP.id);
+  ok((lug.acessos || []).length === 1 && lug.acessos[0].papel === 'porteiro',
+     'e vê-se o lugar que ela tem');
+
+  await api('acesso_dar&utilizador=' + novaP.id + '&casamento=' + casB.id + '&papel=noivos');
+  ok((await api('utilizador_casamentos&id=' + novaP.id)).acessos.length === 2,
+     'dá-se-lhe lugar noutro casamento, com outro papel');
+  await api('acesso_tirar_de&utilizador=' + novaP.id + '&casamento=' + casB.id);
+  ok((await api('utilizador_casamentos&id=' + novaP.id)).acessos.length === 1, 'e tira-se');
+
+  const edit = await api('utilizador_editar', { id: novaP.id, nome: 'Porteiro Editado',
+                                                email: 'editado.' + marca + '@exemplo.pt' });
+  ok(edit && edit.success && edit.email.startsWith('editado.'), 'edita-se o nome e o email da conta');
+
+  // ---------- o suporte não se prende a casamentos ----------
+  const presa = await api('utilizador_criar', { email: 'sup2.' + marca + '@exemplo.pt',
+                                                nome: 'Sup', senha: 'segredo12345',
+                                                papel_plataforma: 'suporte', casamento_id: casA.id });
+  console.log('   suporte com casamento:', JSON.stringify(presa));
+  ok(presa && presa.success === false,
+     'uma conta de suporte NÃO se cria presa a um casamento — entra por código');
+
+  const supOk = await api('utilizador_criar', { email: 'sup3.' + marca + '@exemplo.pt',
+                                                nome: 'Sup', senha: 'segredo12345',
+                                                papel_plataforma: 'suporte' });
+  ok(supOk && supOk.success, 'cria-se sem casamento nenhum');
+  const prender = await api('acesso_dar&utilizador=' + supOk.id + '&casamento=' + casA.id + '&papel=noivos');
+  ok(prender && prender.success === false, 'e não se lhe pode dar um lugar depois');
+
+  // Passar uma conta com lugares a suporte larga-os: passa a entrar por código.
+  await api('utilizador_editar', { id: novaP.id, papel_plataforma: 'suporte' });
+  ok((await api('utilizador_casamentos&id=' + novaP.id)).acessos.length === 0,
+     'e uma conta que passa a suporte larga os lugares que tinha');
+
+  // ---------- os noivos só criam porteiros ----------
+  await api('casamento_abrir&id=' + casA.id);
+  const noivosA2 = await entrar(await b.newContext(), emailA, 'segredo12345');
+  const tentaNoivos = await noivosA2._api('acesso_convidar',
+    { email: 'outro.' + marca + '@exemplo.pt', papel: 'noivos' });
+  console.log('   noivos a convidar noivos:', JSON.stringify(tentaNoivos).slice(0, 90));
+  ok(tentaNoivos && tentaNoivos.success && tentaNoivos.papel === 'porteiro',
+     'um convite dos noivos sai sempre como porteiro, peçam o que pedirem');
+  await noivosA2._api('acesso_tirar&utilizador=' + tentaNoivos.utilizador);
 
   // ---------- nem no casamento nº1, que ele herdou ----------
   // O 'admin' do config.local.php ficou, na migração, com um lugar de noivos no
@@ -289,7 +361,8 @@ const entrar = async (ctx, user, pass) => {
   }
   // Apagados os casamentos, os seus lugares foram com eles: estas contas ficam
   // órfãs, e é isso que as deixa apagáveis.
-  for (const e of [emailZ, emailD]) {
+  for (const e of [emailZ, emailD, 'editado.' + marca + '@exemplo.pt',
+                   'sup3.' + marca + '@exemplo.pt', 'outro.' + marca + '@exemplo.pt']) {
     const l = await api('utilizador_lista&q=' + encodeURIComponent(e));
     for (const c of l.contas || []) await api('utilizador_apagar&id=' + c.id);
   }

@@ -111,8 +111,19 @@ function tiraSuporte(bool $noPrint = false): void {
 <div class="tira-suporte<?= $semPapel ?>">
   Está a ver este casamento como <b>administração da plataforma</b>, e não como os noivos.
   Tudo o que fizer aqui é na festa deles.
-  <a href="plataforma.php">ver os casamentos</a>
+  <a href="plataforma.php">ver os casamentos</a> ·
+  <a href="#" onclick="sairDoCasamento(event)">sair deste casamento</a>
 </div>
+<script>
+// Sair do casamento sem terminar a sessão. Sem isto, a única forma de sair era
+// abrir outro — ou ir-se embora, que é responder a uma pergunta com outra.
+function sairDoCasamento(ev){
+  ev.preventDefault();
+  fetch('api.php?action=casamento_fechar', { method:'POST',
+    headers:{ 'X-CSRF-Token': window.CSRF || '' } })
+    .then(() => location.href = 'plataforma.php');
+}
+</script>
 <style>
   .tira-suporte{ background:var(--warn-bg); border-bottom:1px solid var(--warn); color:var(--ink);
                  text-align:center; padding:.45rem .8rem; font-size:.82rem; }

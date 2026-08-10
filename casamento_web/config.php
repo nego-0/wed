@@ -130,9 +130,9 @@ function ficheirosApp(): array {
  * regra do "só ver".
  */
 function acoesDaPlataforma(): array {
-    return ['casamento_criar','casamento_abrir','casamento_estado','casamento_apagar',
-            'utilizador_criar','utilizador_apagar','utilizador_estado',
-            'utilizador_repor_senha','suporte_sair'];
+    return ['casamento_criar','casamento_abrir','casamento_fechar','casamento_estado',
+            'casamento_apagar','utilizador_criar','utilizador_editar','utilizador_apagar',
+            'utilizador_estado','utilizador_repor_senha','acesso_tirar_de','suporte_sair'];
 }
 
 function acoesDoCasamento(): array {
@@ -157,7 +157,8 @@ function acoesDoCasamento(): array {
  * conseguia fazer nada — nem sequer abrir um casamento.
  */
 function acoesSemCasamento(): array {
-    return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'esquema_info', 'acesso_dar',
+    return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'utilizador_casamentos',
+                                             'casamento_lista', 'esquema_info', 'acesso_dar',
                                              'dados_exportar', 'dados_importar']);
 }
 

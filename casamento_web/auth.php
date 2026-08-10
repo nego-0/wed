@@ -188,7 +188,29 @@ function abrirCasamento(mysqli $conn, int $casamentoId): bool {
     $_SESSION['papel'] = $p === 'porteiro' ? 'porteiro' : 'admin';
     $_SESSION['como_plataforma'] = ($p === 'plataforma');
     usarCasamento($casamentoId);
+    // Fica o rasto de quando se trabalhou nele pela última vez: é o que põe a
+    // lista da administração por ordem de uso, e não por ordem de criação.
+    @$conn->query("UPDATE {$GLOBALS['P']}casamentos SET ultimo_acesso = NOW()
+                   WHERE id = " . (int)$casamentoId);
     return true;
+}
+
+/**
+ * Fecha o casamento aberto, sem fechar a sessão.
+ *
+ * Quem responde pela casa entra e sai de casamentos alheios o dia todo. Sem
+ * isto, a única forma de sair de um era abrir outro — ou terminar a sessão
+ * inteira, o que é responder a uma pergunta com outra.
+ */
+function fecharCasamento(): void {
+    $cid = casamentoAtual();
+    // Se lá estava por um código de suporte, a visita termina com a saída.
+    $ac = suporteAcessos();
+    if (isset($ac[$cid])) { unset($ac[$cid]); $_SESSION['suporte_acessos'] = $ac; }
+    $_SESSION['casamento_id'] = 0;
+    $_SESSION['papel'] = null;
+    $_SESSION['como_plataforma'] = false;
+    unset($GLOBALS['CASAMENTO_ID']);
 }
 
 /** Está a ver este casamento por ser da casa, e não por ser dele? */

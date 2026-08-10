@@ -168,6 +168,16 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
   .falta{ color:var(--warn); font-weight:500; }
+  .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
+  .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
+         padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
+  .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
+  .editor-conta{ grid-column:1/-1; border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.8rem; }
+  .editor-conta .lf{ margin-top:.5rem; }
+  .lugares{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.5rem 0; }
+  .lugar{ background:var(--cream); border:1px solid var(--line); border-radius:50px;
+          padding:.15rem .3rem .15rem .7rem; font-size:.8rem; display:inline-flex; gap:.4rem; align-items:center; }
+  .lugar button{ border:0; background:none; color:var(--danger); cursor:pointer; font-size:1rem; line-height:1; }
   .numeros{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
             gap:.7rem; margin-bottom:.8rem; }
   .numeros .n{ background:#fff; border:1px solid var(--line); border-radius:12px;
@@ -295,112 +305,24 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     </div>
   <?php endif; ?>
 
-  <div class="cas-lista">
-    <?php if (!$meus): ?>
-      <div class="vazio"><div class="ico">✦</div>
-        <p>Ainda não tem nenhum casamento.<br>
-          <?= $daCasa ? 'Crie o primeiro no painel acima.' : 'Fale com quem lhe deu acesso.' ?></p></div>
-    <?php endif; ?>
-
-    <?php foreach ($meus as $id => $c):
-      $eAberto = ((int)$id === (int)$aberto);
-      $n = $conta[(int)$id] ?? []; ?>
-      <div class="cas<?= $eAberto ? ' aberto' : '' ?>">
-        <div class="selo"><?= escP(mb_strtoupper(mb_substr($c['nome'], 0, 1))) ?></div>
-        <div>
-          <div class="nm"><?= escP($c['nome']) ?>
-            <?php if ($eAberto): ?><span class="et agora">aberto agora</span><?php endif; ?>
-            <span class="et <?= escP($c['estado']) ?>"><?= escP($c['estado']) ?></span>
-          </div>
-          <div class="meta">
-            <span><b><?= (int)($n['convites'] ?? 0) ?></b> convites</span>
-            <span><b><?= (int)($n['pessoas'] ?? 0) ?></b> pessoas</span>
-            <span><b><?= (int)($n['mesas'] ?? 0) ?></b> mesas</span>
-            <?php if (($c['papel'] ?? '') === 'porteiro'): ?><span>o seu papel: porteiro</span>
-            <?php elseif (($c['papel'] ?? '') === 'plataforma'): ?><span>entra como administração da plataforma</span>
-            <?php endif; ?>
-            <?php if (!empty($semDono[(int)$id])): ?>
-              <span class="falta">sem conta dos noivos</span>
-            <?php endif; ?>
-          </div>
-        </div>
-        <div class="ac">
-          <?php if ($eAberto): ?>
-            <a class="btn btn-ouro btn-sm" href="index.php">Continuar</a>
-          <?php else: ?>
-            <button class="btn btn-sm" onclick="abrir(<?= (int)$id ?>)">Abrir</button>
-          <?php endif; ?>
-          <?php if ($mandaNaCasa): ?>
-            <?php if (($c['estado'] ?? '') === 'suspenso'): ?>
-              <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'ativo','<?= escP($c['nome']) ?>')">Reativar</button>
-            <?php else: ?>
-              <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'suspenso','<?= escP($c['nome']) ?>')">Suspender</button>
-            <?php endif; ?>
-            <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'arquivado','<?= escP($c['nome']) ?>')">Arquivar</button>
-          <?php endif; ?>
-        </div>
-      </div>
-    <?php endforeach; ?>
+  <div class="painel" style="margin-top:1.4rem">
+    <h3>Casamentos</h3>
+    <div class="dica">Por ordem do que se mexeu por último — quem abre esta página de manhã
+      quer ver em cima aquilo em que andou ontem, e não o mais antigo do sistema.</div>
+    <div class="lf" style="grid-template-columns:1fr auto;margin-bottom:.7rem">
+      <div><input type="search" id="q-cas" placeholder="Procurar casamento ou noivos…"
+                  oninput="carregarCasamentos()"></div>
+      <div></div>
+    </div>
+    <div class="filtros" id="filtros-cas">
+      <?php foreach (['ativo'=>'Ativos','pendente'=>'Por aprovar','suspenso'=>'Suspensos',
+                      'arquivado'=>'Arquivados','todos'=>'Todos'] as $k => $rot): ?>
+        <button class="chip<?= $k === 'ativo' ? ' on' : '' ?>" data-estado="<?= $k ?>"
+                onclick="filtrarCasamentos('<?= $k ?>')"><?= escP($rot) ?></button>
+      <?php endforeach; ?>
+    </div>
+    <div class="cas-lista" id="lista-casamentos"><div class="dica">A carregar…</div></div>
   </div>
-
-  <?php if ($suspensos): ?>
-    <div class="painel" style="margin-top:1.4rem">
-      <h3>Suspensos</h3>
-      <div class="dica">O casal não entra e os convites não abrem para os convidados.
-        Nada se apagou — reativar devolve tudo ao que era.</div>
-      <div class="cas-lista">
-        <?php foreach ($suspensos as $id => $c): ?>
-          <div class="cas">
-            <div class="selo"><?= escP(mb_strtoupper(mb_substr($c['nome'], 0, 1))) ?></div>
-            <div>
-              <div class="nm"><?= escP($c['nome']) ?> <span class="et suspenso">suspenso</span></div>
-              <div class="meta">
-                <span><b><?= (int)($conta[(int)$id]['convites'] ?? 0) ?></b> convites</span>
-                <span><b><?= (int)($conta[(int)$id]['pessoas'] ?? 0) ?></b> pessoas</span>
-              </div>
-            </div>
-            <div class="ac">
-              <?php if ($mandaNaCasa): ?>
-                <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'ativo','<?= escP($c['nome']) ?>')">Reativar</button>
-                <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$id ?>,'arquivado','<?= escP($c['nome']) ?>')">Arquivar</button>
-              <?php endif; ?>
-            </div>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  <?php endif; ?>
-
-  <?php if ($arquivados): ?>
-    <div class="painel" style="margin-top:1.4rem">
-      <h3>Arquivados</h3>
-      <div class="dica">Fora das listas de trabalho, mas inteiros: nada se perdeu.
-        Reabrir devolve-os como estavam. <b>Apagar</b> é a única coisa aqui que não se desfaz —
-        e por isso só se pode fazer depois de arquivar.</div>
-      <div class="cas-lista">
-        <?php foreach ($arquivados as $a): ?>
-          <div class="cas">
-            <div class="selo"><?= escP(mb_strtoupper(mb_substr($a['nome'], 0, 1))) ?></div>
-            <div>
-              <div class="nm"><?= escP($a['nome']) ?> <span class="et">arquivado</span></div>
-              <div class="meta">
-                <span><b><?= (int)($conta[(int)$a['id']]['convites'] ?? 0) ?></b> convites</span>
-                <span><b><?= (int)($conta[(int)$a['id']]['pessoas'] ?? 0) ?></b> pessoas</span>
-                <?php if (!empty($a['data_evento'])): ?>
-                  <span><?= escP(date('d/m/Y', strtotime($a['data_evento']))) ?></span>
-                <?php endif; ?>
-              </div>
-            </div>
-            <div class="ac">
-              <a class="btn btn-sm" href="api.php?action=dados_exportar&amp;ambito=casamento&amp;id=<?= (int)$a['id'] ?>">Levar os dados</a>
-              <button class="btn btn-sm" onclick="mudarEstado(<?= (int)$a['id'] ?>,'ativo','<?= escP($a['nome']) ?>')">Reabrir</button>
-              <button class="btn btn-sm" onclick="apagar(<?= (int)$a['id'] ?>,'<?= escP($a['nome']) ?>')">Apagar</button>
-            </div>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  <?php endif; ?>
 
   <?php if (ehAdminPlataforma()): ?>
     <div class="painel" style="margin-top:1.4rem">
@@ -434,7 +356,26 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="dica">Todas as contas do sistema. Uma conta <b>suspensa</b> não entra —
         e a mensagem que recebe é a mesma de senha errada, para quem tenta adivinhar
         não ficar a saber que a conta existe.</div>
-      <div class="lf" style="grid-template-columns:1fr auto;margin-bottom:.6rem">
+      <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin-bottom:.2rem">
+        <div><label>Nome</label><input type="text" id="c-nome" placeholder="Nome de quem usa a conta"></div>
+        <div><label>Email</label><input type="email" id="c-email" autocapitalize="none" spellcheck="false"></div>
+        <div><label>Tipo</label>
+          <select id="c-tipo" onchange="tipoMudou()">
+            <option value="noivos">Noivos</option>
+            <option value="porteiro">Porteiro</option>
+            <option value="suporte">Suporte</option>
+            <option value="admin">Admin da plataforma</option>
+          </select></div>
+        <div><button class="btn btn-ouro" onclick="criarConta()">Criar conta</button></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr auto;margin-top:.4rem" id="linha-casamento">
+        <div><label>Casamento a que fica ligada</label>
+          <select id="c-casamento"><option value="">— nenhum, ligo depois —</option></select></div>
+        <div></div>
+      </div>
+      <div class="dica" id="nota-tipo" style="margin:.4rem 0 1rem">A senha é gerada aqui e mostrada uma vez.</div>
+
+      <div class="lf" style="grid-template-columns:1fr auto;margin:0 0 .6rem;border:0;padding:0">
         <div><input type="search" id="q-conta" placeholder="Procurar por email ou nome…"
                     oninput="carregarContas()"></div>
         <div></div>
@@ -551,14 +492,128 @@ async function importarSistema(){
   setTimeout(() => location.reload(), 2500);
 }
 
+// ---------- os casamentos, por ordem de uso ----------
+let ESTADO_CAS = 'ativo';
+function filtrarCasamentos(e){
+  ESTADO_CAS = e;
+  document.querySelectorAll('#filtros-cas .chip').forEach(c =>
+    c.classList.toggle('on', c.dataset.estado === e));
+  carregarCasamentos();
+}
+const quando = s => {
+  if (!s) return 'nunca aberto';
+  const d = new Date(s.replace(' ', 'T'));
+  const dias = Math.floor((Date.now() - d) / 86400000);
+  if (dias <= 0) return 'aberto hoje';
+  if (dias === 1) return 'aberto ontem';
+  if (dias < 30) return 'aberto há ' + dias + ' dias';
+  return 'aberto em ' + s.slice(0, 10);
+};
+async function carregarCasamentos(){
+  const alvo = document.getElementById('lista-casamentos');
+  const q = (document.getElementById('q-cas').value || '').trim();
+  const d = await api('casamento_lista&estado=' + ESTADO_CAS + (q ? '&q=' + encodeURIComponent(q) : ''));
+  if (!d || !d.success) return;
+  if (!d.casamentos.length){
+    alvo.innerHTML = '<div class="dica">Nenhum casamento aqui.</div>'; return;
+  }
+  alvo.innerHTML = d.casamentos.map(c => {
+    const aberto = +c.id === +d.aberto;
+    const arq = c.estado === 'arquivado';
+    const acoes = [];
+    if (aberto) {
+      acoes.push('<a class="btn btn-ouro btn-sm" href="index.php">Continuar</a>');
+      // Sair sem ir embora: quem responde pela casa entra e sai de casamentos
+      // alheios o dia todo, e a única saída era abrir outro ou terminar sessão.
+      acoes.push(`<button class="btn btn-sm" onclick="fecharCasamento()">Sair deste casamento</button>`);
+    } else if (!arq) {
+      acoes.push(`<button class="btn btn-sm" onclick="abrir(${c.id})">Abrir</button>`);
+    }
+    if (MANDA_NA_CASA) {
+      const n = esc(c.nome);
+      if (arq) {
+        acoes.push(`<a class="btn btn-sm" href="api.php?action=dados_exportar&ambito=casamento&id=${c.id}">Levar os dados</a>`);
+        acoes.push(`<button class="btn btn-sm" onclick="mudarEstado(${c.id},'ativo','${n}')">Reabrir</button>`);
+        acoes.push(`<button class="btn btn-sm" onclick="apagar(${c.id},'${n}')">Apagar</button>`);
+      } else {
+        acoes.push(c.estado === 'suspenso'
+          ? `<button class="btn btn-sm" onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
+          : `<button class="btn btn-sm" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
+        acoes.push(`<button class="btn btn-sm" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
+      }
+    }
+    return `<div class="cas${aberto ? ' aberto' : ''}">
+      <div class="selo">${esc((c.nome || '?').slice(0,1).toUpperCase())}</div>
+      <div>
+        <div class="nm">${esc(c.nome)}
+          ${aberto ? '<span class="et agora">aberto agora</span>' : ''}
+          <span class="et ${esc(c.estado)}">${esc(c.estado)}</span></div>
+        <div class="meta">
+          <span><b>${c.convites}</b> convites</span>
+          <span><b>${c.pessoas}</b> pessoas</span>
+          <span>${esc(quando(c.ultimo_acesso))}</span>
+          ${+c.donos === 0 ? '<span class="falta">sem conta dos noivos</span>' : ''}
+        </div>
+      </div>
+      <div class="ac">${acoes.join('')}</div>
+    </div>`;
+  }).join('');
+}
+async function fecharCasamento(){
+  const d = await api('casamento_fechar', { method:'POST' });
+  if (d && d.success) location.reload();
+}
+
 // ---------- contas (só o admin da plataforma) ----------
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const $ = id => document.getElementById(id);
+let CONTAS = {};   // as contas já carregadas, para o editor não as ir procurar outra vez
+// Uma conta de suporte não se prende a casamento nenhum: entra com o código
+// que o casal gerar. Dizê-lo aqui evita a pergunta de quem tenta ligá-la a um.
+function tipoMudou(){
+  const tipo = $('c-tipo').value;
+  const preso = (tipo === 'noivos' || tipo === 'porteiro');
+  $('linha-casamento').style.display = preso ? '' : 'none';
+  $('nota-tipo').innerHTML = {
+    noivos:   'Gere um casamento inteiro. A senha é gerada aqui e mostrada uma vez.',
+    porteiro: 'Só a porta do casamento: procurar convites e registar entradas.',
+    suporte:  '<b>Não se liga a casamento nenhum.</b> Entra com o código que o casal gerar — '
+            + 'é esse código que lhe abre a porta e diz se pode ver ou também corrigir.',
+    admin:    'Responde pela casa: vê todos os casamentos, aprova registos e gere contas.',
+  }[tipo];
+}
+async function encherCasamentos(){
+  const d = await api('casamento_lista&estado=todos');
+  if (!d || !d.success) return;
+  $('c-casamento').innerHTML = '<option value="">— nenhum, ligo depois —</option>'
+    + d.casamentos.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+}
+async function criarConta(){
+  const tipo = $('c-tipo').value;
+  const email = $('c-email').value.trim();
+  if (!email) return toast('Indique o email.', true);
+  const senha = 'tmp' + Math.random().toString(36).slice(2, 10);
+  const corpo = { email, nome: $('c-nome').value.trim(), senha };
+  if (tipo === 'suporte' || tipo === 'admin') corpo.papel_plataforma = tipo;
+  else { corpo.papel = tipo; corpo.casamento_id = +$('c-casamento').value || 0; }
+  const d = await api('utilizador_criar', { method:'POST', body: JSON.stringify(corpo) });
+  if (!d || !d.success) return;
+  $('c-nome').value = $('c-email').value = '';
+  const cx = $('senha-reposta');
+  cx.style.display = '';
+  cx.innerHTML = `Conta criada para <b>${esc(d.email)}</b>. Senha: <b class="cod">${esc(senha)}</b><br>
+    Entregue-lha agora — não volta a aparecer. Ela deve mudá-la em Gestão.`;
+  carregarContas();
+}
+
 async function carregarContas(){
   const alvo = document.getElementById('lista-contas');
   if (!alvo) return;
   const q = (document.getElementById('q-conta').value || '').trim();
   const d = await api('utilizador_lista' + (q ? '&q=' + encodeURIComponent(q) : ''));
   if (!d || !d.success) return;
+  CONTAS = {};
+  d.contas.forEach(c => { CONTAS[c.id] = c; });
   if (!d.contas.length){ alvo.innerHTML = '<div class="dica">Nenhuma conta corresponde.</div>'; return; }
   alvo.innerHTML = d.contas.map(c => {
     const eu = +c.id === +d.eu;
@@ -569,10 +624,13 @@ async function carregarContas(){
     // fechou". Sem o dizer, a lista parecia ter contas avariadas.
     const porque = c.estado === 'inativo'
       ? ' <span class="meta">parada com o casamento arquivado</span>' : '';
-    const acoes = eu ? '<span class="meta">é você</span>' : `
+    const acoes = `
+      <button class="btn btn-sm" onclick="editarConta(${c.id})">Editar</button>`
+      + (eu ? '<span class="meta">é você</span>' : `
       <button class="btn btn-sm" onclick="estadoConta(${c.id}, '${trocaEstado}')">
         ${c.estado === 'ativo' ? 'Suspender' : 'Ativar'}</button>
-      <button class="btn btn-sm" onclick="reporSenha(${c.id}, '${esc(c.email)}')">Repor senha</button>`;
+      <button class="btn btn-sm" onclick="reporSenha(${c.id}, '${esc(c.email)}')">Repor senha</button>
+      <button class="btn btn-sm" onclick="apagarConta(${c.id}, '${esc(c.email)}')">Apagar</button>`);
     return `<div class="cas">
       <div class="selo">${esc(nome.slice(0,1).toUpperCase())}</div>
       <div>
@@ -582,8 +640,73 @@ async function carregarContas(){
           <span>${c.ultimo_acesso ? 'último acesso ' + esc(c.ultimo_acesso.slice(0,10)) : 'nunca entrou'}</span></div>
       </div>
       <div class="ac">${acoes}</div>
+      <div class="editor-conta" id="ed-${c.id}" style="display:none"></div>
     </div>`;
   }).join('');
+}
+
+// ---------- editar uma conta, e os casamentos onde tem lugar ----------
+async function editarConta(id){
+  const cx = document.getElementById('ed-' + id);
+  if (cx.style.display !== 'none'){ cx.style.display = 'none'; return; }
+  cx.style.display = '';
+  cx.innerHTML = '<div class="dica">A carregar…</div>';
+  const [lug, cas] = await Promise.all([
+    api('utilizador_casamentos&id=' + id), api('casamento_lista&estado=todos'),
+  ]);
+  const c = CONTAS[id] || {};
+  const tipo = c.papel_plataforma || 'casamento';
+  const preso = tipo === 'casamento';
+  cx.innerHTML = `
+    <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin:0">
+      <div><label>Nome</label><input type="text" id="e-nome-${id}" value="${esc(c.nome || '')}"></div>
+      <div><label>Email</label><input type="email" id="e-email-${id}" value="${esc(c.email || '')}"></div>
+      <div><label>Tipo</label>
+        <select id="e-tipo-${id}">
+          <option value="casamento"${preso ? ' selected' : ''}>Conta de casamento</option>
+          <option value="suporte"${tipo === 'suporte' ? ' selected' : ''}>Suporte</option>
+          <option value="admin"${tipo === 'admin' ? ' selected' : ''}>Admin da plataforma</option>
+        </select></div>
+      <div><button class="btn btn-ouro btn-sm" onclick="guardarConta(${id})">Guardar</button></div>
+    </div>
+    ${tipo === 'suporte' ? `<div class="dica" style="margin:.6rem 0 0">Conta de suporte:
+       entra nos casamentos com o código que cada casal gerar, e não por lugar próprio.</div>`
+    : `<div class="lugares" id="lug-${id}">${
+        (lug.acessos || []).length
+          ? (lug.acessos || []).map(a => `<span class="lugar">${esc(a.nome)} · ${esc(a.papel)}
+              <button title="Tirar" onclick="tirarLugar(${id},${a.casamento_id})">×</button></span>`).join('')
+          : '<span class="dica">Sem lugar em casamento nenhum.</span>'}</div>
+      <div class="lf" style="grid-template-columns:2fr 1fr auto;margin-top:.4rem">
+        <div><select id="nl-cas-${id}">${(cas.casamentos || []).map(w =>
+              `<option value="${w.id}">${esc(w.nome)}</option>`).join('')}</select></div>
+        <div><select id="nl-papel-${id}"><option value="noivos">Noivos</option><option value="porteiro">Porteiro</option></select></div>
+        <div><button class="btn btn-sm" onclick="darLugar(${id})">Dar lugar</button></div>
+      </div>`}`;
+}
+async function guardarConta(id){
+  const tipo = document.getElementById('e-tipo-' + id).value;
+  const d = await api('utilizador_editar', { method:'POST', body: JSON.stringify({
+    id, nome: document.getElementById('e-nome-' + id).value.trim(),
+    email: document.getElementById('e-email-' + id).value.trim(),
+    papel_plataforma: tipo === 'casamento' ? '' : tipo,
+  }) });
+  if (d && d.success){ toast('Conta guardada.'); carregarContas(); }
+}
+async function darLugar(id){
+  const d = await api('acesso_dar&utilizador=' + id
+    + '&casamento=' + document.getElementById('nl-cas-' + id).value
+    + '&papel=' + document.getElementById('nl-papel-' + id).value, { method:'POST' });
+  if (d && d.success){ document.getElementById('ed-' + id).style.display = 'none'; editarConta(id); }
+}
+async function tirarLugar(id, casamento){
+  const d = await api('acesso_tirar_de&utilizador=' + id + '&casamento=' + casamento, { method:'POST' });
+  if (d && d.success){ document.getElementById('ed-' + id).style.display = 'none'; editarConta(id); }
+}
+async function apagarConta(id, email){
+  if (!confirm('Apagar a conta de ' + email + '?\n\nNão se desfaz. Se ela ainda tiver lugar '
+    + 'nalgum casamento, tire-lho primeiro em Editar.')) return;
+  const d = await api('utilizador_apagar&id=' + id, { method:'POST' });
+  if (d && d.success){ toast('Conta apagada.'); carregarContas(); }
 }
 async function estadoConta(id, estado){
   if (estado === 'suspenso' && !confirm('Suspender esta conta?\n\nDeixa de entrar até ser reativada.')) return;
@@ -600,6 +723,12 @@ async function reporSenha(id, email){
     Entregue-lha agora — não volta a aparecer. Ela deve mudá-la na página Gestão.`;
 }
 carregarContas();
+
+// ---------- arranque ----------
+const MANDA_NA_CASA = <?= $mandaNaCasa ? 'true' : 'false' ?>;
+carregarCasamentos();
+carregarContas();
+if (MANDA_NA_CASA){ encherCasamentos(); tipoMudou(); }
 </script>
 </body>
 </html>

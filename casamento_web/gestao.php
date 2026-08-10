@@ -202,7 +202,10 @@ $CAMPOS_CERIMONIA = [
       <h3>Quem entra neste casamento</h3>
       <div class="dica">Os <b>noivos</b> gerem tudo. O <b>porteiro</b> só vê a porta:
         procura convites e regista entradas, e mais nada. Convide-o pelo email — se ainda não
-        tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.</div>
+        tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.<br>
+        Daqui convidam-se <b>porteiros</b>. Passar a gestão do casamento a outra conta faz-se com
+        quem responde pela plataforma presente — senão bastava um convite mal dirigido para o
+        casamento passar a ser de outra pessoa.</div>
       <div id="lista-acessos"><div class="dica">A carregar…</div></div>
 
       <?php if (!$soVer): ?>
@@ -210,7 +213,7 @@ $CAMPOS_CERIMONIA = [
         <div><label>Email de quem convida</label>
           <input type="email" id="a-email" placeholder="porteiro@exemplo.pt" autocapitalize="none" spellcheck="false"></div>
         <div><label>Papel</label>
-          <select id="a-papel"><option value="porteiro">Porteiro</option><option value="noivos">Noivos</option></select></div>
+          <select id="a-papel" disabled><option value="porteiro">Porteiro</option></select></div>
         <div><button class="btn btn-ouro" onclick="convidar()">Dar acesso</button></div>
       </div>
       <div class="segredo" id="senha-nova" style="display:none"></div>
@@ -343,8 +346,6 @@ async function carregarAcessos(){
     const eu = +a.utilizador_id === +d.eu;
     const nome = a.nome || a.email;
     const acoes = (SO_VER_UI || eu) ? '' : `
-      <button class="btn btn-sm" onclick="trocarPapel(${a.utilizador_id}, '${a.papel === 'noivos' ? 'porteiro' : 'noivos'}')">
-        Passar a ${a.papel === 'noivos' ? 'porteiro' : 'noivos'}</button>
       <button class="btn btn-sm" onclick="tirar(${a.utilizador_id}, '${esc(nome)}')">Tirar</button>`;
     // Quem é da casa entra em qualquer casamento por responder pela plataforma.
     // Se também tem lugar aqui, aparece — mas dito pelo que é, e não como se
@@ -367,7 +368,7 @@ async function convidar(){
   const email = $('a-email').value.trim();
   if (!email) return toast('Indique o email.', true);
   const d = await api('acesso_convidar', { method:'POST',
-    body: JSON.stringify({ email, papel: $('a-papel').value }) });
+    body: JSON.stringify({ email, papel: 'porteiro' }) });
   if (!d || !d.success) return;
   $('a-email').value = '';
   if (d.senha){

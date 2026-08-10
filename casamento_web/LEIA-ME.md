@@ -128,10 +128,12 @@ tocado. `inativo` é um estado à parte de `suspenso` de propósito: um é o
 casamento que acabou, o outro é uma decisão sobre a pessoa — e ao reabrir
 voltam as primeiras, não as segundas.
 
-A lista principal da Administração mostra apenas os casamentos **ativos**. Os
-que estão por aprovar têm a sua fila, os suspensos e os arquivados têm as suas
-secções: misturados, a lista deixava de responder à pergunta que se lhe faz de
-manhã — em quantos casamentos estamos a trabalhar.
+A lista de casamentos da Administração é servida por `casamento_lista`,
+procurável e filtrada por estado — e ordenada pelo **último em que se
+trabalhou** (`cw_casamentos.ultimo_acesso`, esquema v12). O número é a ordem
+por que foram criados, a menos útil de todas: quem abre a página de manhã quer
+ver em cima aquilo em que andou ontem. Abre nos **ativos**; os por aprovar
+também têm a sua fila em cima.
 
 **Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
 casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho

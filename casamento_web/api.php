@@ -1041,6 +1041,54 @@ if ($acao === 'casamento_abrir') {
     ok(['id' => (int)$c['id'], 'nome' => $c['nome']]);
 }
 
+if ($acao === 'utilizador_editar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita contas.');
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $st = $conn->prepare("SELECT email, papel_plataforma FROM {$P}utilizadores WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $u = $st->get_result()->fetch_assoc();
+    if (!$u) erro('Conta não encontrada.');
+
+    $email = mb_strtolower(trim((string)($d['email'] ?? $u['email'])));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
+    $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 120);
+    $plat  = array_key_exists('papel_plataforma', $d)
+           ? (in_array($d['papel_plataforma'], ['admin','suporte'], true) ? $d['papel_plataforma'] : null)
+           : $u['papel_plataforma'];
+
+    // Não se tira a si próprio o papel que lhe permite estar nesta página: o
+    // sistema ficava sem quem responde por ele, e a única saída era a base.
+    if ($id === utilizadorId() && $plat !== 'admin') erro('Não pode tirar-se a si próprio da administração.');
+    if ($u['papel_plataforma'] === 'admin' && $plat !== 'admin') {
+        $r = $conn->query("SELECT COUNT(*) n FROM {$P}utilizadores
+                           WHERE papel_plataforma='admin' AND estado='ativo' AND id <> " . $id);
+        if ($r && (int)$r->fetch_assoc()['n'] === 0) erro('É o último admin da plataforma.');
+    }
+    // Uma conta que passa a suporte larga os lugares que tinha: passa a entrar
+    // por código, e um lugar próprio seria uma porta paralela.
+    if ($plat === 'suporte' && $u['papel_plataforma'] !== 'suporte') {
+        $conn->query("DELETE FROM {$P}acessos WHERE utilizador_id=" . $id);
+    }
+
+    $st = $conn->prepare("UPDATE {$P}utilizadores SET email=?, nome=?, papel_plataforma=? WHERE id=?");
+    $st->bind_param('sssi', $email, $nome, $plat, $id);
+    if (!$st->execute()) erro('Já existe uma conta com esse email.');
+    registar($conn, 'conta_editada', $email, $plat ? ('plataforma: ' . $plat) : 'sem papel de plataforma');
+    ok(['id' => $id, 'email' => $email, 'papel_plataforma' => $plat]);
+}
+
+if ($acao === 'utilizador_casamentos') {
+    // Os lugares desta conta, para os poder dar e tirar num sítio só.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os lugares de uma conta.');
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT a.casamento_id, a.papel, c.nome, c.estado
+                          FROM {$P}acessos a JOIN {$P}casamentos c ON c.id = a.casamento_id
+                          WHERE a.utilizador_id = ? ORDER BY c.nome");
+    $st->bind_param('i', $id); $st->execute();
+    ok(['acessos' => $st->get_result()->fetch_all(MYSQLI_ASSOC)]);
+}
+
 if ($acao === 'utilizador_apagar') {
     // Só contas ÓRFÃS: as que já não pertencem a casamento nenhum. Uma conta
     // ligada a um casamento apaga-se tirando-lhe primeiro o lugar lá — assim
@@ -1118,8 +1166,16 @@ if ($acao === 'casamento_endereco') {
 }
 
 if ($acao === 'utilizador_criar') {
-    // Contas criadas pela casa. O registo público (que entra 'pendente' e
-    // espera aprovação) é da etapa seguinte; usa a mesma tabela.
+    // Contas criadas pela casa. O registo público entra 'pendente' e espera
+    // aprovação; usa a mesma tabela.
+    //
+    // Três tipos, e a diferença entre eles não é decorativa:
+    //   • noivos   — gerem um casamento; ligam-se a ele aqui.
+    //   • porteiro — só a porta desse casamento.
+    //   • suporte  — NÃO se liga a casamento nenhum. Entra com o código que o
+    //     casal gerar, e é esse código que lhe abre a porta e diz o que pode
+    //     fazer lá dentro. Prender uma conta de suporte a um casamento seria
+    //     dar-lhe pela porta das traseiras o que o casal tem de decidir.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma cria contas.');
     $d = corpo();
     $email = mb_strtolower(trim((string)($d['email'] ?? '')));
@@ -1128,6 +1184,9 @@ if ($acao === 'utilizador_criar') {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
     if (mb_strlen($senha) < 8) erro('A senha precisa de pelo menos 8 caracteres.');
     $plat = in_array($d['papel_plataforma'] ?? '', ['admin','suporte'], true) ? $d['papel_plataforma'] : null;
+    if ($plat === 'suporte' && (int)($d['casamento_id'] ?? 0) > 0) {
+        erro('Uma conta de suporte não se prende a um casamento: entra com o código que o casal gerar.');
+    }
     $hash = password_hash($senha, PASSWORD_DEFAULT);
     $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, papel_plataforma, estado)
                           VALUES (?,?,?,?, 'ativo')");
@@ -1177,6 +1236,10 @@ if ($acao === 'acesso_convidar') {
     $d = corpo();
     $email = mb_strtolower(trim((string)($d['email'] ?? '')));
     $papelCas = in_array($d['papel'] ?? '', ['noivos','porteiro'], true) ? $d['papel'] : 'porteiro';
+    // Os noivos convidam PORTEIROS. Passar a gestão do casamento a outra conta
+    // é coisa que se faz com quem responde pela casa presente — senão bastava
+    // um convite mal dirigido para o casamento passar a ser de outra pessoa.
+    if (!ehAdminPlataforma()) $papelCas = 'porteiro';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
 
     $st = $conn->prepare("SELECT id, nome FROM {$P}utilizadores WHERE email=? LIMIT 1");
@@ -1246,6 +1309,13 @@ if ($acao === 'acesso_dar') {
     $cid = (int)($_GET['casamento'] ?? 0);
     $papelCas = in_array($_GET['papel'] ?? '', ['noivos','porteiro'], true) ? $_GET['papel'] : 'noivos';
     if ($uid <= 0 || $cid <= 0) erro('Indique a conta e o casamento.');
+    $q = $conn->prepare("SELECT papel_plataforma FROM {$P}utilizadores WHERE id=?");
+    $q->bind_param('i', $uid); $q->execute();
+    $alvo = $q->get_result()->fetch_assoc();
+    if (!$alvo) erro('Conta não encontrada.');
+    if (($alvo['papel_plataforma'] ?? '') === 'suporte') {
+        erro('Uma conta de suporte não se prende a um casamento: entra com o código que o casal gerar.');
+    }
     $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?,?)
                           ON DUPLICATE KEY UPDATE papel=VALUES(papel)");
     $st->bind_param('iis', $uid, $cid, $papelCas);
@@ -1318,18 +1388,56 @@ if ($acao === 'suporte_codigo_revogar') {
     ok(['id' => $id]);
 }
 
-if ($acao === 'suporte_sair') {
-    // Fecha a visita ao casamento aberto, sem esperar que o código expire.
-    $cid = casamentoAtual();
-    $acessos = suporteAcessos();
-    unset($acessos[$cid]);
-    $_SESSION['suporte_acessos'] = $acessos;
-    $_SESSION['casamento_id'] = 0;
-    $_SESSION['papel'] = null;
-    ok();
+if ($acao === 'suporte_sair' || $acao === 'casamento_fechar') {
+    // Sair do casamento em que se está a trabalhar, sem terminar a sessão.
+    // Vale para a visita de suporte (que assim não espera que o código expire)
+    // e para quem responde pela casa, que entra e sai de casamentos alheios o
+    // dia todo — e cuja única saída era abrir outro ou ir-se embora.
+    $nome = '';
+    $r = @$conn->query("SELECT nome FROM {$P}casamentos WHERE id=" . casamentoAtual());
+    if ($r && ($x = $r->fetch_assoc())) $nome = (string)$x['nome'];
+    if ($nome !== '') registar($conn, 'casamento_fechado', $nome);
+    fecharCasamento();
+    ok(['nome' => $nome]);
 }
 
 // ---- Contas, vistas pela plataforma -------------------------
+if ($acao === 'casamento_lista') {
+    // A lista da administração, servida como a das contas: procurável e por
+    // ordem de USO. O número é a ordem por que foram criados, que é a menos
+    // útil de todas — quem abre a página quer ver em cima aquilo em que andou.
+    if (!ehPessoalPlataforma()) erro('Só o pessoal da plataforma vê os casamentos.');
+    $q  = trim((string)($_GET['q'] ?? ''));
+    $est = (string)($_GET['estado'] ?? 'ativo');
+    if (!in_array($est, ['ativo','pendente','suspenso','arquivado','todos'], true)) $est = 'ativo';
+
+    $onde = $est === 'todos' ? '1=1' : "c.estado = '" . $conn->real_escape_string($est) . "'";
+    $liga = '';
+    if ($q !== '') {
+        $s = $conn->real_escape_string($q);
+        $onde .= " AND (c.nome LIKE '%$s%' OR c.noiva LIKE '%$s%' OR c.noivo LIKE '%$s%')";
+    }
+    $r = @$conn->query("SELECT c.id, c.nome, c.noiva, c.noivo, c.estado, c.data_evento, c.ultimo_acesso,
+                               (SELECT COUNT(*) FROM {$P}convites v
+                                 WHERE v.casamento_id = c.id AND v.eliminado_em IS NULL) convites,
+                               (SELECT COUNT(*) FROM {$P}convidados g
+                                 WHERE g.casamento_id = c.id) pessoas,
+                               (SELECT COUNT(*) FROM {$P}acessos a
+                                 WHERE a.casamento_id = c.id AND a.papel='noivos') donos
+                        FROM {$P}casamentos c
+                        WHERE $onde
+                        ORDER BY c.ultimo_acesso IS NULL, c.ultimo_acesso DESC, c.id DESC
+                        LIMIT 200");
+    $lista = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+
+    // Quem não é admin da casa só vê aqueles onde tem lugar.
+    if (!ehAdminPlataforma()) {
+        $meus = casamentosDoUtilizador($conn);
+        $lista = array_values(array_filter($lista, fn($c) => isset($meus[(int)$c['id']])));
+    }
+    ok(['casamentos' => $lista, 'aberto' => casamentoAtual(), 'estado' => $est]);
+}
+
 if ($acao === 'utilizador_lista') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê as contas.');
     $q = trim((string)($_GET['q'] ?? ''));
@@ -1383,6 +1491,21 @@ if ($acao === 'utilizador_repor_senha') {
     if (!$st->execute()) erro('Não foi possível repor a senha.');
     registar($conn, 'senha_reposta', (string)$u['email']);
     ok(['id' => $id, 'email' => $u['email'], 'senha' => $nova]);
+}
+
+if ($acao === 'acesso_tirar_de') {
+    // Tira o lugar de uma conta num casamento indicado. O 'acesso_tirar' é do
+    // casal, e trabalha sempre no casamento aberto; este é da plataforma, que
+    // arruma contas sem ter de abrir a casa de cada uma.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma arruma lugares por aqui.');
+    $uid = (int)($_GET['utilizador'] ?? 0);
+    $cid = (int)($_GET['casamento'] ?? 0);
+    if ($uid <= 0 || $cid <= 0) erro('Indique a conta e o casamento.');
+    $st = $conn->prepare("DELETE FROM {$P}acessos WHERE utilizador_id=? AND casamento_id=?");
+    $st->bind_param('ii', $uid, $cid);
+    if (!$st->execute()) erro('Não foi possível tirar o lugar.');
+    registar($conn, 'acesso_tirado', 'conta ' . $uid, 'casamento ' . $cid);
+    ok(['utilizador' => $uid, 'casamento' => $cid]);
 }
 
 if ($acao === 'casamento_estado') {
