@@ -158,7 +158,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok((await p.locator('#props .pos-linha').count()) >= 4, 'com um bloco por peça do envelope');
 
   const tela = p.frameLocator('#tela');
-  ok(await tela.locator('#cover [data-livre="capa.nomes"]').count() === 1,
+  ok(await tela.locator('#cover [data-livre="capa:nomes"]').count() === 1,
      'e a tela marca os blocos móveis');
   ok(await tela.locator('#cover .ed-guias').count() === 1, 'com guias próprias');
 
@@ -173,7 +173,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.mouse.up(); await p.keyboard.up('Shift');
   await p.waitForTimeout(400);
 
-  const gravadoJs = await p.evaluate(() => EST.pos['capa.nomes'] || '');
+  const gravadoJs = await p.evaluate(() => EST.pos['capa:nomes'] || '');
   ok(gravadoJs !== '', 'arrastar na tela chega ao editor: ' + (gravadoJs || '(nada)'));
   ok(parseFloat(gravadoJs.split(' ')[1]) < 0, 'com o sinal certo — para cima é negativo');
   ok(/%/.test(await p.locator('#props .pos-linha .val').first().innerText() +
@@ -201,14 +201,81 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   // ---- repor deixa a peça como o design a desenhou ----
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(3000);
-  await p.evaluate(() => { irCamada('capa'); reporLivre('capa.nomes'); });
-  ok(await p.evaluate(() => !EST.pos['capa.nomes']), 'repor limpa o deslocamento');
+  await p.evaluate(() => { irCamada('capa'); reporLivre('capa:nomes'); });
+  ok(await p.evaluate(() => !EST.pos['capa:nomes']), 'repor limpa o deslocamento');
   ok(await p.evaluate(() => guardar()), 'e grava-se de volta');
   await p.goto(BASE + '/convite-digital.php?c=' + codigo, { waitUntil: 'networkidle' });
   ok(await p.evaluate(() => {
        const t = getComputedStyle(document.querySelector('#cover .cover-names')).translate;
        return t === 'none' || /^0px( 0px)?$/.test(t);
      }), 'e o convite volta a ser exatamente o de origem');
+
+  // ============ 3. as páginas do corpo (texto que corre) ============
+  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(3000);
+  await p.evaluate(() => irCamada('convite'));
+  await p.waitForTimeout(900);
+  ok(await p.locator('#props .grupo h4').count() >= 1,
+     'a página do convite também traz painel de posição');
+  ok(/largura/.test(await p.locator('#props .grupo .ajuda').innerText()),
+     'e avisa que aqui a medida é a largura, porque a página cresce com o texto');
+  ok(await tela.locator('#convite [data-livre="convite:cartao"]').count() === 1,
+     'o cartão do convidado é um bloco móvel');
+
+  // A tela do editor mostra o conteúdo (a capa fica escondida): rolar até lá.
+  await p.evaluate(() => enviarTela({ tipo:'irPara', sec:'convite' }));
+  await p.waitForTimeout(900);
+  const cartao = await tela.locator('#convite .guest-card').boundingBox();
+  await p.mouse.move(cartao.x + cartao.width / 2, cartao.y + 30); await p.mouse.down();
+  await p.keyboard.down('Shift');
+  for (let i = 1; i <= 8; i++) await p.mouse.move(cartao.x + cartao.width / 2 + 4 * i, cartao.y + 30 + 6 * i);
+  await p.mouse.up(); await p.keyboard.up('Shift');
+  await p.waitForTimeout(400);
+  const noCorpo = await p.evaluate(() => EST.pos['convite:cartao'] || '');
+  ok(noCorpo !== '', 'arrastar um bloco numa página que corre também conta: ' + (noCorpo || '(nada)'));
+  ok(parseFloat(noCorpo.split(' ')[1]) > 0, 'e para baixo é positivo');
+
+  // Um bloco de uma secção que não existe (nem existiu) não passa a validação.
+  await p.evaluate(() => { EST.pos['inventada:coisa'] = '5 5'; });
+  ok(await p.evaluate(() => guardar()), 'grava-se com o intruso pelo meio');
+  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(2500);
+  ok(await p.evaluate(() => !EST.pos['inventada:coisa']), 'e o intruso não sobrevive');
+  ok(await p.evaluate(() => !!EST.pos['convite:cartao']), 'mas o bloco a sério sim');
+
+  await p.goto(BASE + '/convite-digital.php?c=' + codigo, { waitUntil: 'networkidle' });
+  const corpoConvidado = await p.evaluate(() => ({
+    t: getComputedStyle(document.querySelector('#convite .guest-card')).translate,
+    // A unidade das páginas é a LARGURA: os dois eixos medem-se pela mesma régua.
+    u: getComputedStyle(document.querySelector('#convite')).getPropertyValue('--uw').trim()
+  }));
+  ok(corpoConvidado.t !== 'none' && !/^0px/.test(corpoConvidado.t),
+     `o convidado recebe o bloco onde ele ficou (${corpoConvidado.t})`);
+  ok(corpoConvidado.u !== '', 'e a página traz a sua unidade de medida');
+
+  // ---- uma secção livre, acabada de criar ----
+  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(2500);
+  const secId = await p.evaluate(() => { juntarBloco(); return SEC; });
+  await p.waitForTimeout(2500);
+  ok(/^bl/.test(secId), 'cria-se uma secção livre: ' + secId);
+  ok(await p.locator('#props .grupo h4').count() >= 1,
+     'uma secção acabada de criar já se deixa compor, sem recarregar a página');
+  ok(await tela.locator(`#${secId} [data-livre="${secId}:titulo"]`).count() === 1,
+     'e a tela marca-lhe os blocos');
+  await p.evaluate(s => { moverLivre(s + ':titulo', 4, 3); }, secId);
+  ok(await p.evaluate(s => !!EST.pos[s + ':titulo'], secId), 'os blocos dela movem-se');
+  ok(await p.evaluate(() => guardar()), 'e a composição dela grava-se');
+  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(2500);
+  ok(await p.evaluate(s => !!EST.pos[s + ':titulo'], secId),
+     'sobrevivendo à gravação (o padrão "bl…:elemento" passa a validação)');
+
+  // ---- deixar a casa como se encontrou ----
+  await p.evaluate(s => { EST.pos = {}; EST.blocos = EST.blocos.filter(b => b.id !== s);
+                          EST.ordem = EST.ordem.filter(x => x !== s); }, secId);
+  await p.evaluate(() => guardar());
+  await p.waitForTimeout(600);
 
   // ---- o que o servidor recusa ----
   // ---- o que o servidor recusa ----

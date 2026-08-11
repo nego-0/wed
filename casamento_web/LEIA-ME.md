@@ -168,10 +168,10 @@ quem quer mesmo 47%.
 **A tela de posicionamento livre.** Havia duas maneiras de compor uma peça:
 aceitar o sítio que o design deu a cada bloco, ou não a ter. Agora há a
 terceira — **arrastar o bloco na própria peça**. Vale no cartão impresso (cada
-camada: os nomes, a data, a logística, os ornamentos) e nas duas telas de
-tamanho conhecido do convite digital: o **envelope** e a **capa de entrada**.
-O resto do convite é texto que corre, e uma composição feita à mão numa página
-que cresce com o conteúdo desmancha-se no telemóvel seguinte.
+camada: os nomes, a data, a logística, os ornamentos) e em **todas** as páginas
+do convite digital — o envelope, a capa de entrada, cada uma das secções de
+origem e também as **secções livres** que o casal acrescente, que se deixam
+compor mal nascem, sem recarregar a página.
 
 O deslocamento guarda-se em **percentagem da tela**, nunca em píxeis
 (`cartao.posicoes`, `layout.posicoes`, JSON `{"bloco":"x y"}`). É isto que faz
@@ -180,6 +180,29 @@ gráfica, e o envelope composto no computador chegar inteiro ao telemóvel. Um
 par a zeros nunca chega a gravar-se: uma peça que ninguém arrastou continua a
 ser, ao píxel, a que o design desenhou — e é por isso que nada disto mexeu nos
 convites que já estavam feitos.
+
+**Que percentagem, de quê.** O envelope enche o ecrã e a capa de entrada tem
+altura calculada: nessas duas, a vertical é mesmo percentagem da **altura**.
+As páginas do corpo do convite não têm altura própria — têm o texto que lá
+está, e esse reflui (três linhas no computador, seis no telemóvel). Dizer "10%
+para baixo" de uma coisa que muda de tamanho não quer dizer nada, por isso aí
+**os dois eixos se medem em percentagem da largura da página**
+(`min(100vw,640px)`, que é o que `main{max-width:640px}` deixa) — a única
+medida que se mantém quando o parágrafo de cima cresce. O painel do editor
+di-lo, na secção onde isso é verdade.
+
+Um bloco movido **flutua**: deixa o lugar aberto e passa por cima dos vizinhos,
+em vez de os empurrar (é `translate`, não layout). Numa página que corre, isso
+significa que uma composição arrojada pode sobrepor-se noutro ecrã — é o preço
+de compor à mão sobre texto que reflui, e por isso cada secção tem o seu
+**Repor a composição desta camada**, à mão de semear.
+
+Os ids das posições levam **dois pontos** (`convite:cartao`, `capa:nomes`): as
+definições usam o ponto, e um id igualzinho a uma chave de definição era um
+engano à espera de acontecer. Os das secções livres seguem o feitio
+`bl…:elemento` e passam por padrão, porque a validação corre sem saber que
+secções aquele casal criou; um id de uma secção que já não existe escreve uma
+regra CSS sem dono e a página fica exatamente igual.
 
 O íman não é uma grelha: são as linhas que a peça já tem — o centro, os terços
 e as bordas da tela, as bordas e os centros dos **outros** blocos, e o sítio de

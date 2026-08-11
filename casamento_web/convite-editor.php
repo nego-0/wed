@@ -228,7 +228,7 @@ const SECCOES  = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
 // tamanho conhecido (o envelope e a capa de entrada) os têm: o resto do
 // convite é texto que corre, e uma composição à mão numa página que cresce
 // com o conteúdo desmancha-se no telemóvel seguinte.
-const LIVRES = <?= json_encode(posicoesLivres(), JSON_UNESCAPED_UNICODE) ?>;
+const LIVRES = <?= json_encode(posicoesLivres($DEFS_ED), JSON_UNESCAPED_UNICODE) ?>;
 const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
 const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
@@ -437,10 +437,30 @@ function paraTela(chave, valor){
 // O bloco escolhido na tela (o que as propriedades mostram e as setas afinam).
 let LIVRE = null;
 
+// Uma secção livre criada nesta sessão ainda não existia quando o servidor
+// escreveu LIVRES. Os blocos dela são sempre os mesmos cinco, por isso
+// compõem-se aqui — senão, uma secção acabada de criar só se deixava compor
+// depois de recarregar a página.
+const LIVRE_BLOCOS = [['numero','Número da página','.pageno'], ['chamada','Chamada','.eyebrow'],
+                      ['titulo','Título','h2'], ['texto','Texto','.bl-texto'],
+                      ['itens','Destaques','.mgrid']];
+/** LIVRES, com as secções livres de agora acrescentadas. */
+function livresTodos(){
+  const fora = Object.assign({}, LIVRES);
+  EST.blocos.forEach(b => {
+    if (!/^bl[a-z0-9-]{1,20}$/.test(b.id || '')) return;
+    LIVRE_BLOCOS.forEach(([k, rot, sel]) => {
+      const id = b.id + ':' + k;
+      if (!fora[id]) fora[id] = { rotulo:rot, sec:b.id, tela:'#'+b.id, sel:'#'+b.id+' '+sel, fixa:false };
+    });
+  });
+  return fora;
+}
+
 /** O mapa gravado, com os números já separados — é o que a tela recebe. */
 function mapaPos(){
   const fora = {};
-  Object.keys(LIVRES).forEach(id => { const p = posDe(id); if (EST.pos[id]) fora[id] = p; });
+  Object.keys(EST.pos).forEach(id => { fora[id] = posDe(id); });
   return fora;
 }
 /** Grava (ou apaga, quando volta à origem) o deslocamento de um bloco. */
@@ -453,13 +473,15 @@ function moverLivre(id, x, y){
   enviarTela({tipo:'pos', id:id, x:x, y:y});
 }
 function reporLivre(id){
-  if (!EST.pos[id]) return msg(`"${LIVRES[id].rotulo}" já está no sítio de origem.`);
+  const bl = livresTodos()[id] || { rotulo:id };
+  if (!EST.pos[id]) return msg(`"${bl.rotulo}" já está no sítio de origem.`);
   moverLivre(id, 0, 0);
   marcarSujo(true); registarPasso(); renderProps();
-  msg(`"${LIVRES[id].rotulo}" voltou ao sítio de origem.`);
+  msg(`"${bl.rotulo}" voltou ao sítio de origem.`);
 }
 function reporLivresDa(sec){
-  const ids = Object.keys(LIVRES).filter(id => LIVRES[id].sec === sec && EST.pos[id]);
+  const L = livresTodos();
+  const ids = Object.keys(L).filter(id => L[id].sec === sec && EST.pos[id]);
   if (!ids.length) return msg('Nada foi movido nesta camada.');
   if (!confirm('Repor todos os blocos desta camada no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
   ids.forEach(id => moverLivre(id, 0, 0));
@@ -473,15 +495,17 @@ function escolherLivre(id){ LIVRE = id; renderProps(); enviarTela({tipo:'livre-s
  * outras, dizer "arraste" seria prometer o que a página não faz.
  */
 function painelLivre(sec){
-  const ids = Object.keys(LIVRES).filter(id => LIVRES[id].sec === sec);
+  const L = livresTodos();
+  const ids = Object.keys(L).filter(id => L[id].sec === sec);
   if (!ids.length) return '';
   const num = n => (n > 0 ? '+' : '') + n.toFixed(2).replace(/\.?0+$/, '') + '%';
   const movidos = ids.filter(id => EST.pos[id]).length;
+  const fixa = !!L[ids[0]].fixa;
   return `<div class="grupo"><h4>Posição dos blocos${movidos ? ` <span class="op">${movidos} movido${movidos>1?'s':''}</span>` : ''}</h4>
     ${ids.map(id => {
       const p = posDe(id), mov = !!EST.pos[id];
       return `<div class="campo">
-        <label>${esc(LIVRES[id].rotulo)}</label>
+        <label>${esc(L[id].rotulo)}</label>
         <div class="pos-linha">
           <span class="val">${mov ? num(p.x) + ' · ' + num(p.y) : 'no sítio de origem'}</span>
           <button class="bt bt-min ${LIVRE===id?'primario':''}" onclick="escolherLivre('${id}')" title="Assinalar na tela">Ver</button>
@@ -490,8 +514,12 @@ function painelLivre(sec){
       </div>`;
     }).join('')}
     <div class="ajuda">Arraste cada bloco na tela. Cola-se ao centro, às bordas e aos outros blocos —
-      o <b>Shift</b> desliga o íman. O deslocamento é guardado em percentagem da tela, para a composição
-      chegar inteira ao telemóvel.</div>
+      o <b>Shift</b> desliga o íman e as <b>setas</b> afinam ponto a ponto.
+      ${fixa
+        ? 'O deslocamento é guardado em percentagem desta tela, para a composição chegar inteira ao telemóvel.'
+        : 'Esta página cresce com o texto que lá está, por isso o deslocamento mede-se em percentagem da '
+          + '<b>largura</b> — a única medida que não muda quando um parágrafo passa de três linhas a seis. '
+          + 'O bloco movido <b>flutua</b>: deixa o lugar aberto e não empurra os vizinhos.'}</div>
     ${movidos ? `<button class="bt" style="width:100%;margin-top:.4rem" onclick="reporLivresDa('${sec}')">Repor a composição desta camada</button>` : ''}
   </div>`;
 }
@@ -507,18 +535,18 @@ window.addEventListener('message', e=>{
     telaPronta = true;
     enviarTela({tipo:'tema', vars:EST.paleta});
     enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});   // a tela recarrega escondida
-    enviarTela({tipo:'livres', mapa:LIVRES, pos:mapaPos()});
+    enviarTela({tipo:'livres', mapa:livresTodos(), pos:mapaPos()});
     if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF});
     return;
   }
   // Arrasto na tela: o gesto correu lá dentro, aqui só chega o resultado.
-  if (d.tipo === 'pegou'){ if (LIVRES[d.id]) { LIVRE = d.id; renderProps(); } return; }
+  if (d.tipo === 'pegou'){ if (livresTodos()[d.id]) { LIVRE = d.id; renderProps(); } return; }
   if (d.tipo === 'moveu'){
-    if (!LIVRES[d.id]) return;
+    const bl = livresTodos()[d.id]; if (!bl) return;
     LIVRE = d.id;
     guardarPos(d.id, d.x, d.y);
     marcarSujo(true); registarPasso(); renderProps();
-    msg(`${LIVRES[d.id].rotulo}: ${d.x}% · ${d.y}%`);
+    msg(`${bl.rotulo}: ${d.x}% · ${d.y}%`);
     return;
   }
   if (d.tipo === 'atalho'){
@@ -780,6 +808,7 @@ function renderPropsLivre(b){
         <textarea placeholder="Texto" oninput="editarItemBloco('${b.id}',${i},'x',this.value)">${esc(it.x||'')}</textarea>
       </div>`).join('') +
     (itens.length < 8 ? `<button class="bt" style="width:100%" onclick="juntarItemBloco('${b.id}')">+ Destaque</button>` : '') +
+    painelLivre(b.id) +
     `<div class="campo" style="margin-top:.8rem"><button class="bt" style="width:100%;color:#e08a7d" onclick="apagarBloco('${b.id}')">Apagar esta secção</button></div>`;
 }
 /** Atualiza o contador do campo que está a ser escrito. */
@@ -1172,7 +1201,7 @@ document.addEventListener('keydown', e=>{
   // As setas afinam o bloco escolhido na tela, ponto a ponto: 0,25% da tela,
   // ou 2% com Shift. É o ajuste que o rato não dá.
   const setas = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
-  if (setas[e.key] && LIVRE && LIVRES[LIVRE]){
+  if (setas[e.key] && LIVRE && livresTodos()[LIVRE]){
     e.preventDefault();
     const passo = e.shiftKey ? 2 : 0.25, p = posDe(LIVRE), lim = TelaLivre.limitar;
     moverLivre(LIVRE, TelaLivre.arred(lim(p.x + setas[e.key][0]*passo)),

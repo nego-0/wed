@@ -598,13 +598,13 @@ function escreverPosicao(float $x, float $y): string {
  * O que não estiver na lista cai; o que estiver na origem (0 0) não se
  * guarda, para o gravado ser só o que alguém decidiu mesmo mudar.
  */
-function validarPosicoes(string $valor, array $idsValidos): ?string {
+function validarPosicoes(string $valor, callable $aceita): ?string {
     if ($valor === '') return '';
     $j = json_decode($valor, true);
     if (!is_array($j)) return null;
     $out = [];
     foreach ($j as $k => $v) {
-        if (!in_array($k, $idsValidos, true)) continue;
+        if (!is_string($k) || !$aceita($k)) continue;
         $p = lerPosicao($v);
         if (!$p || ($p['x'] === 0.0 && $p['y'] === 0.0)) continue;
         $out[$k] = escreverPosicao($p['x'], $p['y']);
@@ -629,25 +629,115 @@ function posicoesGravadas(?string $json): array {
  * convite é texto que corre, e arrastar um parágrafo numa página que cresce
  * com o conteúdo dá composições que se desmancham no telemóvel seguinte.
  */
-function posicoesLivres(): array {
+function posicoesLivres(array $defs = []): array {
+    // Os ids levam DOIS PONTOS de propósito ("capa:nomes", e não "capa.nomes"):
+    // as definições usam o ponto, e um id de posição igualzinho a uma chave de
+    // definição é um engano à espera de acontecer.
+    //
     // 'tela' é a caixa de referência do arrasto — aquela de que as
     // percentagens são percentagem. 'sec' é a camada onde o bloco aparece no
-    // painel do editor.
-    $capa = '#cover';
-    $hero = '#hero .frame';
-    return [
-        'capa.bloco' => ['rotulo' => 'Envelope inteiro',   'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .seal-wrap'],
-        'capa.selo'  => ['rotulo' => 'Selo',               'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .seal'],
-        'capa.nomes' => ['rotulo' => 'Nomes',              'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .cover-names'],
-        'capa.data'  => ['rotulo' => 'Data',               'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .cover-date'],
-        'capa.dica'  => ['rotulo' => 'Convite para abrir', 'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .cover-hint'],
-        'hero.bloco' => ['rotulo' => 'Bloco de entrada',   'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .content'],
-        'hero.selo'  => ['rotulo' => 'Sobrescrito',        'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .kicker'],
-        'hero.nomes' => ['rotulo' => 'Nomes',              'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero h1'],
-        'hero.sub'   => ['rotulo' => 'Subtítulo',          'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .sub'],
-        'hero.data'  => ['rotulo' => 'Data',               'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .datebar'],
-        'hero.dica'  => ['rotulo' => 'Indicação de rolar', 'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .scrollcue'],
-    ];
+    // painel do editor. 'fixa' distingue as duas telas de tamanho conhecido
+    // (o envelope e a capa de entrada, onde a vertical é % da ALTURA) das
+    // páginas que correm com o texto (onde é % da largura — ver cssPosicoes).
+    $L = [];
+    $por = function (string $sec, string $tela, array $itens, bool $fixa = false) use (&$L) {
+        foreach ($itens as $chave => [$rotulo, $sel]) {
+            $L[$sec . ':' . $chave] = ['rotulo'=>$rotulo, 'sec'=>$sec, 'tela'=>$tela,
+                                       'sel'=>$sel, 'fixa'=>$fixa];
+        }
+    };
+
+    // ---- As duas telas de tamanho conhecido ----
+    $por('capa', '#cover', [
+        'bloco' => ['Envelope inteiro',   '#cover .seal-wrap'],
+        'selo'  => ['Selo',               '#cover .seal'],
+        'nomes' => ['Nomes',              '#cover .cover-names'],
+        'data'  => ['Data',               '#cover .cover-date'],
+        'dica'  => ['Convite para abrir', '#cover .cover-hint'],
+    ], true);
+    $por('hero', '#hero .frame', [
+        'bloco' => ['Bloco de entrada',   '#hero .content'],
+        'selo'  => ['Sobrescrito',        '#hero .kicker'],
+        'nomes' => ['Nomes',              '#hero h1'],
+        'sub'   => ['Subtítulo',          '#hero .sub'],
+        'data'  => ['Data',               '#hero .datebar'],
+        'dica'  => ['Indicação de rolar', '#hero .scrollcue'],
+    ], true);
+
+    // ---- As páginas do corpo do convite ----
+    $por('convite', '#convite', [
+        'numero'    => ['Número da página', '#convite .pageno'],
+        'monograma' => ['Monograma',        '#convite .monogram'],
+        'chamada'   => ['Chamada',          '#convite .eyebrow'],
+        'texto'     => ['Texto principal',  '#convite .lead'],
+        'cartao'    => ['Cartão do convidado', '#convite .guest-card'],
+        'fecho'     => ['Frase de fecho',   '#convite .closing'],
+    ]);
+    $por('historia', '#historia', [
+        'numero'    => ['Número da página', '#historia .pageno'],
+        'titulo'    => ['Chamada e título', '#historia .titles'],
+        'citacao'   => ['Citação',          '#historia .open-quote'],
+        'risco'     => ['Filete',           '#historia .rule'],
+        'foto'      => ['Fotografia',       '#historia .story-photo'],
+        'capitulos' => ['Capítulos',        '#historia .thread'],
+    ]);
+    $por('interludio', '#interludio', [
+        'bloco'   => ['Bloco inteiro', '#interludio .inter-content'],
+        'ornato'  => ['Ornamento',     '#interludio .inter-orn'],
+        'citacao' => ['Citação',       '#interludio blockquote'],
+        'autor'   => ['Autoria',       '#interludio cite'],
+        'fecho'   => ['Frase de fecho','#interludio .inter-close'],
+    ]);
+    $por('grande-dia', '#grande-dia', [
+        'numero'     => ['Número da página',  '#grande-dia .pageno'],
+        'chamada'    => ['Chamada',           '#grande-dia .eyebrow'],
+        'data'       => ['Data em grande',    '#grande-dia .bigdate'],
+        'ano'        => ['Ano',               '#grande-dia .year'],
+        'dia'        => ['Dia da semana',     '#grande-dia .weekday'],
+        'contagem'   => ['Contagem decrescente', '#grande-dia #countdown'],
+        'calendario' => ['Botão do calendário',  '#grande-dia .cal-btn'],
+        'local'      => ['Local do evento',   '#grande-dia .venue'],
+        'cronograma' => ['Cronograma',        '#grande-dia .timeline-wrap'],
+    ]);
+    $por('acesso', '#acesso', [
+        'titulo'    => ['Título sobre a foto', '#acesso .acesso-head'],
+        'qr'        => ['Cartão do código QR', '#acesso .qr-card'],
+        'instrucao' => ['Instrução',           '#acesso .qr-instr'],
+        'nota'      => ['Nota',                '#acesso .qr-note'],
+    ]);
+    $por('final', '#final', [
+        'manual' => ['Manual do convidado', '#final #manual'],
+        'rsvp'   => ['Confirmação',         '#final #rsvp'],
+        'rodape' => ['Rodapé',              '#final footer'],
+    ]);
+
+    // ---- Secções livres, que só existem depois de alguém as criar ----
+    foreach (blocosLivres($defs) as $b) {
+        $id = (string)($b['id'] ?? '');
+        if (!preg_match('/^bl[a-z0-9\-]{1,20}$/', $id)) continue;
+        $por($id, '#' . $id, [
+            'numero'  => ['Número da página', '#' . $id . ' .pageno'],
+            'chamada' => ['Chamada',          '#' . $id . ' .eyebrow'],
+            'titulo'  => ['Título',           '#' . $id . ' h2'],
+            'texto'   => ['Texto',            '#' . $id . ' .bl-texto'],
+            'itens'   => ['Destaques',        '#' . $id . ' .mgrid'],
+        ]);
+    }
+    return $L;
+}
+
+/**
+ * Um id de posição do convite digital é aceitável?
+ *
+ * Os blocos das secções de origem estão na lista; os das secções livres
+ * seguem o feitio "bl…:elemento" e aceitam-se pelo padrão, porque a
+ * validação corre sem saber que secções livres este casal criou. Um id de
+ * uma secção que já não existe não faz mal nenhum: cssPosicoes() escreve
+ * uma regra para um seletor sem dono, e a página fica exatamente igual.
+ */
+function idPosicaoValido(string $id): bool {
+    if (isset(posicoesLivres()[$id])) return true;
+    return (bool)preg_match('/^bl[a-z0-9\-]{1,20}:(numero|chamada|titulo|texto|itens)$/', $id);
 }
 
 /**
@@ -660,15 +750,24 @@ function posicoesLivres(): array {
  * de os apagar.
  */
 function cssPosicoes(array $defs): string {
-    // A capa de entrada tem altura calculada (min(100vh,860px), nunca abaixo
-    // de 600px): a unidade vertical acompanha-a, para 10% ser mesmo 10% dela.
-    $css = '#cover{--uw:1vw;--uh:1vh}'
+    // A unidade de medida de cada tela: 1% dela.
+    //
+    // O envelope enche o ecrã e a capa de entrada tem altura calculada
+    // (min(100vh,860px), nunca abaixo de 600px) — nessas, a vertical é mesmo
+    // % da altura. Nas páginas do corpo, a altura é o texto que lá está e
+    // muda com a largura do ecrã: 10% de uma coisa que se reflui não quer
+    // dizer nada. Aí os DOIS eixos se medem em % da LARGURA da página
+    // (min(100vw,640px), que é o que main{max-width:640px} deixa), a única
+    // medida que se mantém quando o texto passa de três linhas a seis.
+    $pag = 'calc(min(100vw,640px)/100)';
+    $css = '.page{--uw:' . $pag . ';--uh:' . $pag . '}'
+         . '#cover{--uw:1vw;--uh:1vh}'
          . '#hero .frame{--uw:1vw;--uh:calc(max(600px,min(100vh,860px))/100)}'
          . '[data-livre]{translate:calc(var(--px,0)*var(--uw,1vw)) calc(var(--py,0)*var(--uh,1vh))}';
     // Cada bloco movido leva a declaração inteira: o convite que o convidado
     // recebe não tem data-livre nenhum (isso é marca do editor), e sem o
     // translate aqui as percentagens gravadas não moviam coisa alguma.
-    $livres = posicoesLivres();
+    $livres = posicoesLivres($defs);
     foreach (posicoesGravadas($defs['layout.posicoes'] ?? '') as $id => $p) {
         if (!isset($livres[$id])) continue;
         $css .= $livres[$id]['sel'] . '{--px:' . $p['x'] . ';--py:' . $p['y']
@@ -968,9 +1067,9 @@ function validarDefinicao(string $chave, string $valor): ?string {
         }
         case 'cartao.posicoes':
             // Deslocamento de cada camada do cartão, em % de 720×1080.
-            return validarPosicoes($valor, CARTAO_CAMADAS_IDS);
+            return validarPosicoes($valor, fn($k) => in_array($k, CARTAO_CAMADAS_IDS, true));
         case 'layout.posicoes':
-            return validarPosicoes($valor, array_keys(posicoesLivres()));
+            return validarPosicoes($valor, 'idPosicaoValido');
         case 'evento.maps':
             return preg_match('#^https://#', $valor) ? mb_substr($valor, 0, 500) : null;
         case 'evento.whatsapp':
