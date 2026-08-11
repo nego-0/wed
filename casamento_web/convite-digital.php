@@ -41,6 +41,14 @@ $modoEditor = $demo && isset($_GET['editor']) && $_GET['editor'] === '1';
 // ao rótulo por cima.
 $modoProva = $demo && ($_GET['prova'] ?? '') === '1';
 
+// Prova de um MODELO da casa: o desenho é o do modelo, e não o de casamento
+// nenhum. É o que permite à página dos modelos mostrar o que cada um é, em vez
+// de o pedir a quem só tem o nome para adivinhar.
+if ($demo && (int)($_GET['modelo'] ?? 0) > 0) {
+    [$defsMod, $MOD] = defsDoEditor($conn, 'digital');
+    if ($MOD) $DEFS = $defsMod;
+}
+
 // Rascunho por gravar: o editor envia o estado em edição para a tela poder
 // mostrar o que ainda não foi para a base de dados — secções escondidas,
 // listas, efeitos. Nada é gravado aqui; os valores passam pela mesma validação

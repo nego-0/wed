@@ -1422,6 +1422,12 @@ if ($acao === 'casamento_lista') {
                                  WHERE v.casamento_id = c.id AND v.eliminado_em IS NULL) convites,
                                (SELECT COUNT(*) FROM {$P}convidados g
                                  WHERE g.casamento_id = c.id) pessoas,
+                               -- Quantos já disseram que vêm. Um casamento com
+                               -- 200 convites e 3 confirmações é uma notícia
+                               -- diferente de um com 200 e 180; a lista dizia
+                               -- os dois da mesma maneira.
+                               (SELECT COUNT(*) FROM {$P}convidados g2
+                                 WHERE g2.casamento_id = c.id AND g2.rsvp = 'confirmado') confirmados,
                                (SELECT COUNT(*) FROM {$P}acessos a
                                  WHERE a.casamento_id = c.id AND a.papel='noivos') donos
                         FROM {$P}casamentos c

@@ -20,6 +20,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
+| `modelo-prova.php` | A cara de um modelo do convite impresso, sozinha numa folha — é o que a grelha dos modelos encolhe para miniatura. |
 | `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
 | `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |
 | `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
@@ -87,6 +88,30 @@ tira acesso nenhum — chega lá pelo papel que tem —, tira-lhe o título que 
 era dele. Um casamento pode assim ficar **sem conta de noivos**, e isso passou
 a ver-se: a lista de casamentos marca-o e a Gestão explica-o, com o campo de
 convidar logo por baixo.
+
+**O painel, arrumado por quem o usa.** O que se faz todos os dias — ver e abrir
+casamentos — estava a 800px do topo, por baixo de um formulário de catorze
+campos que se usa uma vez por mês. Os formulários (novo casamento, nova conta,
+cópia de segurança) passaram a **painéis que dobram**: uma linha fechada, tudo
+lá dentro a um clique. A lista subiu para os 550px e a página encolheu de
+1900px para 1130px.
+
+Cada casamento diz agora **quando é e quanto falta** («19/12/2026 · faltam 130
+dias»), quantas pessoas já confirmaram, e mostra a proporção numa barra. E as
+ações separaram-se: **abrir** fica sozinho e à vista, porque é o que se faz nove
+em cada dez vezes; suspender, arquivar e apagar foram para um «⋯». Ao mesmo
+peso, um clique distraído arquivava a festa de alguém. A lista de contas segue a
+mesma regra — editar à frente, repor a senha e apagar atrás. Os números do topo
+que levam a algum lado passaram a botões e levam mesmo lá.
+
+**Os modelos mostram a cara.** `modelos.php` é uma página sobre desenhos e não
+mostrava desenho nenhum: escolher um modelo pelo nome é escolher às cegas. Cada
+modelo passa a trazer a sua **miniatura desenhada a sério** — o convite digital
+por `convite-digital.php?…&modelo=N`, o cartão por `modelo-prova.php?modelo=N`
+—, encolhida por `transform` a partir da largura real da moldura, para a grelha
+poder mudar de colunas sem cortar a peça. Um modelo por publicar distingue-se à
+vista, e o estado vazio deixou de mandar abrir um casamento à toa (deixou de ser
+preciso quando os modelos passaram a nascer sem casa emprestada).
 
 **Onde o admin aterra.** Ao entrar, o pessoal da casa vai para `plataforma.php`
 — a administração, com os números de todo o sistema: casamentos ativos e à

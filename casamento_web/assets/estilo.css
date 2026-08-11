@@ -203,3 +203,56 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   .convite-row .acoes{ grid-column:1 / -1; justify-content:flex-start; }
   .topo .nav{ margin-left:0; width:100%; }
 }
+
+/* ============================================================
+   Painéis que dobram (<details class="painel dobra">)
+   Formulários que se usam uma vez por mês ocupavam o ecrã por
+   cima daquilo que se vem cá fazer todos os dias. Agora pedem
+   um clique e devolvem o espaço a quem só quer trabalhar.
+   ============================================================ */
+/* Dois nomes de classe de propósito: o .painel de cada página é declarado no
+   <style> da própria página, que vem DEPOIS desta folha — com um só nome, o
+   padding do painel ganhava e a dobra fechada ficava 35px mais alta do que a
+   linha que mostra. */
+.dobra, .painel.dobra{ padding:0; }
+.dobra > summary{ list-style:none; cursor:pointer; padding:.95rem 1.2rem; display:flex;
+                  align-items:baseline; gap:.5rem; font-family:var(--serif); font-size:1.05rem;
+                  color:var(--ink); border-radius:14px; }
+.dobra > summary::-webkit-details-marker{ display:none; }
+.dobra > summary:hover{ background:var(--cream); }
+.dobra > summary small{ font-family:var(--sans); font-size:.82rem; color:#8a8f88; font-weight:400; }
+.dobra > summary .mais{ display:inline-flex; align-items:center; justify-content:center;
+                        width:22px; height:22px; flex:none; border-radius:7px; background:var(--cream);
+                        border:1px solid var(--line); color:var(--forest); font-family:var(--sans);
+                        font-size:.95rem; line-height:1; align-self:center; transition:.15s; }
+.dobra[open] > summary{ border-bottom:1px solid var(--line); border-radius:14px 14px 0 0; }
+.dobra[open] > summary .mais{ background:var(--gold-pale); border-color:var(--gold-soft); transform:rotate(45deg); }
+/* As margens do conteúdo só valem com ele à vista: fechadas, deixavam o
+   painel 35px mais alto do que a linha que mostra — espaço em branco a fingir
+   que ali estava alguma coisa. */
+.dobra[open] > *:not(summary){ margin-left:1.2rem; margin-right:1.2rem; }
+.dobra[open] > *:last-child{ margin-bottom:1.1rem; }
+.dobra[open] > .dica:first-of-type{ margin-top:.9rem; }
+/* Uma dobra dentro de um painel não repete a moldura do painel. */
+.dobra-dentro{ border:1px solid var(--line); border-radius:12px; margin:0 0 .2rem; }
+.dobra-dentro > summary{ padding:.6rem .8rem; font-size:.95rem; }
+.dobra-dentro[open] > *:not(summary){ margin-left:.8rem; margin-right:.8rem; }
+
+/* ============================================================
+   Menu "⋯" de uma linha de lista
+   A ação que se faz nove em cada dez vezes fica sozinha e à
+   vista; o que estraga fica atrás de um clique. Ao mesmo peso,
+   um gesto distraído arquivava a festa de alguém.
+   ============================================================ */
+.mm{ position:relative; display:inline-block; }
+.mm > button{ width:32px; padding-left:0; padding-right:0; }
+.mm-pop{ position:absolute; right:0; top:calc(100% + 4px); z-index:60; width:180px; background:#fff;
+         border:1px solid var(--line); border-radius:12px; padding:.3rem;
+         box-shadow:0 12px 32px rgba(32,52,42,.18); text-align:left; }
+.mm-pop button, .mm-pop a{ display:block; width:100%; text-align:left; background:none; border:0;
+         cursor:pointer; padding:.45rem .6rem; border-radius:8px; font-family:var(--sans);
+         font-size:.85rem; color:var(--text); text-decoration:none; }
+.mm-pop button:hover, .mm-pop a:hover{ background:var(--cream); }
+.mm-pop button.perigo{ color:var(--danger); }
+.mm-pop button.perigo:hover{ background:var(--danger-bg); }
+.mm-pop hr{ border:0; border-top:1px solid var(--line); margin:.25rem 0; }

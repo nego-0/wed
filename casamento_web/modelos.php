@@ -45,13 +45,38 @@ if ($aberto > 0) {
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
   .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
   .lf{ display:grid; grid-template-columns:2fr 3fr 1fr auto; gap:.7rem; align-items:end; }
-  .mod{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
-        display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center; margin-bottom:.6rem; }
-  .mod .selo{ width:38px; height:38px; border-radius:10px; background:var(--cream); color:var(--forest);
-              display:flex; align-items:center; justify-content:center; border:1px solid var(--line); font-size:1.1rem; }
-  .mod .nm{ font-family:var(--serif); font-size:1.1rem; color:var(--ink); }
-  .mod .meta{ font-size:.8rem; color:#8a8f88; display:flex; gap:.7rem; flex-wrap:wrap; margin-top:.15rem; }
-  .mod .ac{ display:flex; gap:.4rem; align-items:center; white-space:nowrap; }
+  /* ---- A grelha dos modelos ----
+     Esta página é sobre DESENHOS, e não mostrava desenho nenhum: escolher um
+     modelo pelo nome é escolher às cegas. Cada um passa a trazer a sua cara,
+     desenhada a sério (o cartão por modelo-prova.php, o convite digital por
+     convite-digital.php?modelo=N) e encolhida para caber. */
+  .grelha{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:1rem; }
+  .mod{ background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+        display:flex; flex-direction:column; transition:.16s; }
+  .mod:hover{ border-color:var(--gold-soft); box-shadow:0 8px 22px rgba(180,134,74,.14); }
+  .mod.por-publicar{ background:repeating-linear-gradient(135deg,#fff 0 10px,#fdfbf6 10px 20px); }
+  /* A moldura tem a proporção do cartão (2:3); a prova é desenhada em tamanho
+     real e encolhida por transform, para o que se vê ser o que sai. */
+  .cara{ position:relative; width:100%; aspect-ratio:2/3; overflow:hidden; background:#20211c;
+         border-bottom:1px solid var(--line); display:block; }
+  .cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left; pointer-events:none; }
+  .cara .selo{ position:absolute; right:.4rem; top:.4rem; z-index:2; width:26px; height:26px;
+               border-radius:8px; background:rgba(255,255,255,.92); color:var(--forest);
+               display:flex; align-items:center; justify-content:center; font-size:.9rem;
+               border:1px solid var(--line); }
+  .cara .lupa{ position:absolute; inset:0; z-index:3; display:flex; align-items:center;
+               justify-content:center; background:rgba(22,38,30,.55); color:var(--ivory);
+               font-size:.82rem; opacity:0; transition:.15s; text-decoration:none; }
+  .mod:hover .cara .lupa{ opacity:1; }
+  .mod .corpo{ padding:.7rem .8rem; display:flex; flex-direction:column; gap:.3rem; flex:1; }
+  .mod .nm{ font-family:var(--serif); font-size:1.02rem; color:var(--ink); line-height:1.25; }
+  .mod .meta{ font-size:.76rem; color:#8a8f88; display:flex; gap:.5rem; flex-wrap:wrap; }
+  .mod .desc{ font-size:.8rem; color:#6c7570; line-height:1.45; }
+  .mod .ac{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap;
+            padding:.6rem .8rem; border-top:1px solid var(--line); margin-top:auto; }
+  .mod .ac .btn{ font-size:.78rem; padding:.3rem .6rem; }
+  .vazio-mod{ border:1px dashed var(--line); border-radius:14px; padding:2rem 1.2rem;
+              text-align:center; color:#8a8f88; font-size:.9rem; line-height:1.6; }
   .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
@@ -72,8 +97,9 @@ if ($aberto > 0) {
 
 <main class="container">
 
-  <div class="painel">
-    <h3>Novo modelo</h3>
+  <details class="painel dobra" id="d-novo">
+    <summary><span class="mais">+</span> Novo modelo
+      <small>nasce do desenho de origem e desenha-se no editor</small></summary>
     <div class="dica">
       <?php if ($aberto > 0): ?>
         Nasce do convite de <b><?= escP($nomeAberto) ?></b>, tal como está agora — ou do desenho de
@@ -104,7 +130,7 @@ if ($aberto > 0) {
       </label>
       <?php endif; ?>
     </div>
-  </div>
+  </details>
 
   <div class="painel">
     <h3>Modelos</h3>
@@ -118,19 +144,20 @@ if ($aberto > 0) {
     <div id="lista"><div class="dica">A carregar…</div></div>
   </div>
 
-  <div class="painel">
-    <h3>Levar e trazer</h3>
+  <details class="painel dobra" id="d-levar">
+    <summary><span class="mais">+</span> Levar e trazer
+      <small>guardar os modelos num ficheiro, ou trazê-los de outra instalação</small></summary>
     <div class="dica">Os modelos num ficheiro, para os guardar ou os levar para outra instalação.
       Trazer <b>acrescenta</b>: não substitui nem mistura nada com os que já cá estão.</div>
     <div class="lf" style="grid-template-columns:auto 1fr auto">
-      <div><a class="btn" href="api.php?action=modelos_exportar">Descarregar os modelos</a></div>
-      <div><label>Trazer de um ficheiro</label>
+      <div><label>&nbsp;</label><a class="btn" href="api.php?action=modelos_exportar">Descarregar os modelos</a></div>
+      <div><label for="imp">Trazer de um ficheiro</label>
         <input type="file" id="imp" accept=".json,application/json"></div>
-      <div><button class="btn" onclick="importar()">Trazer</button></div>
+      <div><label>&nbsp;</label><button class="btn" onclick="importar()">Trazer</button></div>
     </div>
     <div class="segredo" id="imp-res" style="display:none;background:var(--gold-pale);
          border:1px dashed var(--gold-soft);border-radius:10px;padding:.8rem .9rem;margin-top:.9rem;font-size:.88rem"></div>
-  </div>
+  </details>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -158,32 +185,86 @@ async function carregar(){
   d.modelos.forEach(m => { MODELOS[m.id] = m; });
   const alvo = $('lista');
   if (!d.modelos.length){
-    alvo.innerHTML = '<div class="dica">Ainda não há modelos. O primeiro faz-se do convite de um casamento aberto.</div>';
+    // O estado vazio dizia que o primeiro modelo se faz "do convite de um
+    // casamento aberto" — deixou de ser verdade quando os modelos passaram a
+    // nascer sem casa emprestada, e mandava o admin abrir um casamento à toa.
+    alvo.innerHTML = `<div class="vazio-mod">
+      ${AMBITO ? 'Ainda não há modelos desta peça.'
+               : 'Ainda não há modelos.'}<br>
+      Faça o primeiro em <b>Novo modelo</b>, aqui em cima: nasce do desenho de origem
+      ${TEM_CASAMENTO ? 'ou do convite do casamento aberto, ' : ''}e desenha-se a seguir no editor.
+    </div>`;
     return;
   }
-  alvo.innerHTML = d.modelos.map(m => `
-    <div class="mod">
-      <div class="selo">${m.ambito === 'impresso' ? '&#9635;' : '&#9993;'}</div>
-      <div>
-        <div class="nm">${esc(m.nome)}
-          <span class="et ${+m.visivel ? 'publicado' : 'rascunho'}">${+m.visivel ? 'publicado' : 'por publicar'}</span>
-          <span class="et">${m.ambito === 'impresso' ? 'impresso' : 'digital'}</span></div>
+  alvo.innerHTML = '<div class="grelha">' + d.modelos.map(m => {
+    const impresso = m.ambito === 'impresso';
+    const editor = (impresso ? 'editor-cartao' : 'convite-editor') + '.php?modelo=' + m.id;
+    // A prova é desenhada em tamanho real e encolhida: o cartão tem 720px de
+    // largura, o convite digital 640. É por isso que a escala difere.
+    const larg = impresso ? 720 : 640, esc0 = impresso ? 0.29 : 0.33;
+    const prova = impresso
+      ? `modelo-prova.php?modelo=${m.id}`
+      : `convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=${m.id}`;
+    return `<div class="mod${+m.visivel ? '' : ' por-publicar'}">
+      <div class="cara">
+        <span class="selo" title="${impresso ? 'Convite impresso' : 'Convite digital'}">${impresso ? '&#9635;' : '&#9993;'}</span>
+        <iframe src="${prova}" loading="lazy" tabindex="-1" aria-hidden="true" scrolling="no"
+                style="width:${larg}px;height:${Math.round(larg*1.5)}px;transform:scale(var(--e))"
+                onload="ajustarCara(this)" data-larg="${larg}" data-esc="${esc0}"></iframe>
+        <a class="lupa" href="${editor}">Abrir no editor</a>
+      </div>
+      <div class="corpo">
+        <div class="nm">${esc(m.nome)}</div>
+        ${m.descricao ? `<div class="desc">${esc(m.descricao)}</div>` : ''}
         <div class="meta">
-          ${m.descricao ? `<span>${esc(m.descricao)}</span>` : ''}
-          <span>de ${esc(m.criado_por || '—')}</span>
+          <span class="et ${+m.visivel ? 'publicado' : 'rascunho'}">${+m.visivel ? 'publicado' : 'por publicar'}</span>
           <span>${esc((m.atualizado_em || m.criado_em || '').slice(0,10))}</span>
         </div>
       </div>
       <div class="ac">
-        <a class="btn btn-sm btn-ouro" href="${m.ambito === 'impresso' ? 'editor-cartao' : 'convite-editor'}.php?modelo=${m.id}">Desenhar</a>
-        <button class="btn btn-sm" onclick="editar(${m.id})">Nome</button>
+        <a class="btn btn-sm btn-ouro" href="${editor}">Desenhar</a>
         <button class="btn btn-sm" onclick="publicar(${m.id}, ${+m.visivel ? 0 : 1})">
           ${+m.visivel ? 'Retirar' : 'Publicar'}</button>
-        <button class="btn btn-sm" onclick="apagar(${m.id}, '${esc(m.nome)}')">Apagar</button>
+        <span class="mm"><button class="btn btn-sm" title="Mais ações"
+              onclick="abrirMais(event,${m.id})">⋯</button>
+          <span class="mm-pop" id="mm-${m.id}" style="display:none">
+            <button onclick="editar(${m.id})">Mudar o nome</button>
+            <hr>
+            <button class="perigo" onclick="apagar(${m.id}, '${esc(m.nome)}')">Apagar</button>
+          </span></span>
       </div>
       <div class="editor-mod" id="ed-${m.id}" style="display:none"></div>
-    </div>`).join('');
+    </div>`;
+  }).join('') + '</div>';
 }
+
+/** O menu "⋯" de um modelo. Um de cada vez, e fecha-se ao clicar fora. */
+function abrirMais(ev, id){
+  ev.stopPropagation();
+  const alvo = $('mm-' + id);
+  const jaAberto = alvo && alvo.style.display !== 'none';
+  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
+  if (alvo && !jaAberto) alvo.style.display = '';
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
+});
+
+/**
+ * Encolhe a prova para caber na moldura. A escala vem da largura real da
+ * moldura, e não de um número fixo: a grelha muda de colunas com o ecrã, e
+ * uma escala fixa deixava faixas por preencher ou cortava a peça.
+ */
+function ajustarCara(fr){
+  const cx = fr.parentElement; if (!cx) return;
+  const e = cx.clientWidth / (+fr.dataset.larg || 720);
+  fr.style.setProperty('--e', e);
+  fr.style.height = Math.ceil(cx.clientHeight / e) + 'px';
+}
+addEventListener('resize', () => {
+  clearTimeout(window._tCara);
+  window._tCara = setTimeout(() => document.querySelectorAll('.cara iframe').forEach(ajustarCara), 150);
+});
 
 async function criar(){
   const nome = $('n-nome').value.trim();

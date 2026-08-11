@@ -177,6 +177,24 @@ function correcoesEsperadas(): array {
          'index.php', 'function sincroPapelGenero('],
         ['Cada pessoa em duas linhas alinhadas, com tudo à vista',
          'index.php', 'grid-template-columns:2fr 1fr 1fr auto'],
+
+        // ---- Painel da administração e modelos ----
+        ['Painéis que dobram: o que se usa uma vez por mês não come o ecrã',
+         'assets/estilo.css', '.painel.dobra{ padding:0; }'],
+        ['A ação que estraga fica atrás do "⋯", e não ao lado da que não estraga',
+         'assets/estilo.css', '.mm-pop button.perigo'],
+        ['A lista de casamentos diz a data, quanto falta e quantos confirmaram',
+         'plataforma.php', 'function dataCasamento('],
+        ['Quantos confirmaram, por casamento, na lista da administração',
+         'api.php', "g2.rsvp = 'confirmado') confirmados"],
+        ['Os números da administração levam mesmo a algum lado',
+         'plataforma.php', 'numeros button.n'],
+        ['Os modelos mostram a cara, e não só o nome',
+         'modelos.php', 'function ajustarCara('],
+        ['Prova do cartão de um modelo, sem casamento nenhum pelo meio',
+         'modelo-prova.php', 'defsDoEditor'],
+        ['O convite digital desenha-se com as definições de um modelo',
+         'convite-digital.php', "(int)(\$_GET['modelo'] ?? 0) > 0"],
     ];
 }
 

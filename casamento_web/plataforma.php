@@ -166,6 +166,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
   .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
+
+  /* Os painéis que dobram vivem em assets/estilo.css: são de duas páginas. */
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
   .falta{ color:var(--warn); font-weight:500; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
@@ -189,6 +191,25 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .numeros .n em{ display:block; font-style:normal; font-size:.76rem; color:#a2a8a2; margin-top:.2rem; }
   .numeros .n.alerta{ border-color:var(--gold-soft); background:var(--gold-pale); }
   .numeros .n.alerta b{ color:var(--gold); }
+  /* Um número que leva a algum lado tem de o parecer. Os que são só contagem
+     ficam como estavam — fingir que tudo é clicável é pior do que não o ser. */
+  .numeros button.n{ font:inherit; text-align:left; cursor:pointer; transition:.15s; }
+  .numeros button.n:hover{ border-color:var(--gold-soft); transform:translateY(-2px);
+                           box-shadow:0 6px 16px rgba(180,134,74,.12); }
+  .numeros button.n::after{ content:'ver →'; display:block; font-size:.72rem; color:var(--gold);
+                            margin-top:.35rem; opacity:0; transition:.15s; }
+  .numeros button.n:hover::after{ opacity:1; }
+
+  /* ---- A linha de um casamento ----
+     Dizia convites, pessoas e quando se lá mexeu. Faltava o que mais importa
+     a quem gere casamentos: QUANDO é, e quantos já disseram que vêm. */
+  .cas .quando{ font-variant-numeric:tabular-nums; }
+  .cas .conta{ color:var(--gold); font-weight:500; }
+  .cas .barra{ height:4px; border-radius:50px; background:var(--cream); overflow:hidden;
+               margin-top:.45rem; max-width:260px; }
+  .cas .barra i{ display:block; height:100%; background:var(--ok); }
+  .cas .ac .btn{ white-space:nowrap; }
+  /* O menu "⋯" vive em assets/estilo.css: é de duas páginas. */
   .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.84rem; color:#8a8f88;
                margin-bottom:1.4rem; padding:0 .2rem; }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
@@ -205,17 +226,27 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <main class="container">
 
   <?php if ($G): ?>
+    <?php // Os números que levam a algum lado são botões e levam mesmo lá:
+          // um painel de contagens que não responde ao clique convida a
+          // tentar e a não perceber porque nada aconteceu. ?>
     <div class="numeros">
-      <div class="n"><b><?= $G['ativos'] ?></b><span>casamentos ativos</span>
-        <?php if ($G['pendentes']): ?><em><?= $G['pendentes'] ?> à espera</em><?php endif; ?></div>
+      <button type="button" class="n" onclick="filtrarCasamentos('ativo',1)"
+              title="Ver os casamentos ativos"><b><?= $G['ativos'] ?></b><span>casamentos ativos</span>
+        <?php if ($G['pendentes']): ?><em><?= $G['pendentes'] ?> à espera</em><?php endif; ?></button>
       <div class="n"><b><?= $G['convites'] ?></b><span>convites</span>
         <em>em toda a casa</em></div>
       <div class="n"><b><?= $G['pessoas'] ?></b><span>pessoas convidadas</span>
         <em><?= $G['confirmadas'] ?> confirmaram</em></div>
       <div class="n"><b><?= $G['presentes'] ?></b><span>entradas registadas</span>
         <em>desde sempre</em></div>
-      <div class="n"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
-        <em><?= $G['contas_espera'] ?> por aprovar · <?= $G['contas_suspensas'] ?> suspensas</em></div>
+      <?php if (ehAdminPlataforma()): ?>
+        <button type="button" class="n" onclick="irPara('lista-contas')"
+                title="Ver a lista de contas"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
+          <em><?= $G['contas_espera'] ?> por aprovar · <?= $G['contas_suspensas'] ?> suspensas</em></button>
+      <?php else: ?>
+        <div class="n"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
+          <em><?= $G['contas_espera'] ?> por aprovar · <?= $G['contas_suspensas'] ?> suspensas</em></div>
+      <?php endif; ?>
       <div class="n<?= $G['codigos'] ? ' alerta' : '' ?>"><b><?= $G['codigos'] ?></b>
         <span>códigos de suporte de pé</span>
         <em><?= $G['codigos'] ? 'acesso de fora, agora' : 'nenhuma porta aberta' ?></em></div>
@@ -230,7 +261,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <?php if ($G['sem_dono']): ?>
         <span class="falta"><?= $G['sem_dono'] ?> casamento(s) sem conta dos noivos</span>
       <?php endif; ?>
-      <?php if ($G['suspensos']): ?><span><?= $G['suspensos'] ?> suspenso(s)</span><?php endif; ?>
+      <?php if ($G['suspensos']): ?>
+        <a href="#" onclick="filtrarCasamentos('suspenso',1);return false"><?= $G['suspensos'] ?> suspenso(s)</a>
+      <?php endif; ?>
     </div>
   <?php endif; ?>
 
@@ -271,8 +304,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   <?php endif; ?>
 
   <?php if ($mandaNaCasa): ?>
-    <div class="painel">
-      <h3>Novo casamento</h3>
+    <details class="painel dobra" id="d-casamento">
+      <summary><span class="mais">+</span> Novo casamento
+        <small>criar um casamento à mão, já ativo</small></summary>
       <div class="dica">Cria o casamento já ativo, com os seus dados. A conta dos noivos liga-se a
         ele a seguir, em <b>Gestão</b>. O que ficar em branco fica no original e edita-se depois —
         mas o que se preencher aqui poupa o casal de mandar convites com a morada de outra pessoa.</div>
@@ -302,7 +336,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <button class="btn btn-ouro" onclick="criar()">Criar</button>
         <span class="dica" style="margin:0">Só os nomes são obrigatórios.</span>
       </div>
-    </div>
+    </details>
   <?php endif; ?>
 
   <div class="painel" style="margin-top:1.4rem">
@@ -325,8 +359,45 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   </div>
 
   <?php if (ehAdminPlataforma()): ?>
-    <div class="painel" style="margin-top:1.4rem">
-      <h3>Cópia de segurança</h3>
+    <div class="painel">
+      <h3>Contas</h3>
+      <div class="dica">Todas as contas do sistema. Uma conta <b>suspensa</b> não entra —
+        e a mensagem que recebe é a mesma de senha errada, para quem tenta adivinhar
+        não ficar a saber que a conta existe.</div>
+      <details class="dobra dobra-dentro" id="d-conta">
+      <summary><span class="mais">+</span> Nova conta
+        <small>noivos, porteiro, suporte ou administração</small></summary>
+      <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin-bottom:.2rem">
+        <div><label>Nome</label><input type="text" id="c-nome" placeholder="Nome de quem usa a conta"></div>
+        <div><label>Email</label><input type="email" id="c-email" autocapitalize="none" spellcheck="false"></div>
+        <div><label>Tipo</label>
+          <select id="c-tipo" onchange="tipoMudou()">
+            <option value="noivos">Noivos</option>
+            <option value="porteiro">Porteiro</option>
+            <option value="suporte">Suporte</option>
+            <option value="admin">Admin da plataforma</option>
+          </select></div>
+        <div><button class="btn btn-ouro" onclick="criarConta()">Criar conta</button></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr auto;margin-top:.4rem" id="linha-casamento">
+        <div><label>Casamento a que fica ligada</label>
+          <select id="c-casamento"><option value="">— nenhum, ligo depois —</option></select></div>
+        <div></div>
+      </div>
+      <div class="dica" id="nota-tipo" style="margin:.4rem 0 .2rem">A senha é gerada aqui e mostrada uma vez.</div>
+      </details>
+
+      <div class="lf" style="grid-template-columns:1fr auto;margin:.8rem 0 .6rem;border:0;padding:0">
+        <div><input type="search" id="q-conta" placeholder="Procurar por email ou nome…"
+                    oninput="carregarContas()"></div>
+        <div></div>
+      </div>
+      <div id="lista-contas"><div class="dica">A carregar…</div></div>
+      <div class="segredo" id="senha-reposta" style="display:none"></div>
+    </div>
+  <details class="painel dobra" id="d-copia" style="margin-top:1.4rem">
+      <summary><span class="mais">+</span> Cópia de segurança
+        <small>levar a casa inteira num ficheiro, ou trazer casamentos de outro</small></summary>
       <div class="dica">Levar a casa inteira num ficheiro: todos os casamentos, com as suas fichas,
         convites, pessoas, mesas e desenhos, mais a lista de contas. Um casamento à parte
         descarrega-se abrindo-o e indo a <b>Gestão</b>.</div>
@@ -349,40 +420,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         mistura nada com o que já cá está. Para substituir um casamento em concreto, abra-o e use a
         página de Gestão.</div>
       <div class="segredo" id="sis-resultado" style="display:none"></div>
-    </div>
-
-    <div class="painel">
-      <h3>Contas</h3>
-      <div class="dica">Todas as contas do sistema. Uma conta <b>suspensa</b> não entra —
-        e a mensagem que recebe é a mesma de senha errada, para quem tenta adivinhar
-        não ficar a saber que a conta existe.</div>
-      <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin-bottom:.2rem">
-        <div><label>Nome</label><input type="text" id="c-nome" placeholder="Nome de quem usa a conta"></div>
-        <div><label>Email</label><input type="email" id="c-email" autocapitalize="none" spellcheck="false"></div>
-        <div><label>Tipo</label>
-          <select id="c-tipo" onchange="tipoMudou()">
-            <option value="noivos">Noivos</option>
-            <option value="porteiro">Porteiro</option>
-            <option value="suporte">Suporte</option>
-            <option value="admin">Admin da plataforma</option>
-          </select></div>
-        <div><button class="btn btn-ouro" onclick="criarConta()">Criar conta</button></div>
-      </div>
-      <div class="lf" style="grid-template-columns:1fr auto;margin-top:.4rem" id="linha-casamento">
-        <div><label>Casamento a que fica ligada</label>
-          <select id="c-casamento"><option value="">— nenhum, ligo depois —</option></select></div>
-        <div></div>
-      </div>
-      <div class="dica" id="nota-tipo" style="margin:.4rem 0 1rem">A senha é gerada aqui e mostrada uma vez.</div>
-
-      <div class="lf" style="grid-template-columns:1fr auto;margin:0 0 .6rem;border:0;padding:0">
-        <div><input type="search" id="q-conta" placeholder="Procurar por email ou nome…"
-                    oninput="carregarContas()"></div>
-        <div></div>
-      </div>
-      <div id="lista-contas"><div class="dica">A carregar…</div></div>
-      <div class="segredo" id="senha-reposta" style="display:none"></div>
-    </div>
+    </details>
   <?php endif; ?>
 </main>
 
@@ -494,11 +532,14 @@ async function importarSistema(){
 
 // ---------- os casamentos, por ordem de uso ----------
 let ESTADO_CAS = 'ativo';
-function filtrarCasamentos(e){
+function filtrarCasamentos(e, saltar){
   ESTADO_CAS = e;
   document.querySelectorAll('#filtros-cas .chip').forEach(c =>
     c.classList.toggle('on', c.dataset.estado === e));
   carregarCasamentos();
+  // Vindo de um número lá de cima, o filtro muda uma lista que está fora do
+  // ecrã: sem levar o olho lá, parece que o clique não fez nada.
+  if (saltar) irPara('lista-casamentos');
 }
 const quando = s => {
   if (!s) return 'nunca aberto';
@@ -520,28 +561,43 @@ async function carregarCasamentos(){
   alvo.innerHTML = d.casamentos.map(c => {
     const aberto = +c.id === +d.aberto;
     const arq = c.estado === 'arquivado';
-    const acoes = [];
-    if (aberto) {
-      acoes.push('<a class="btn btn-ouro btn-sm" href="index.php">Continuar</a>');
-      // Sair sem ir embora: quem responde pela casa entra e sai de casamentos
-      // alheios o dia todo, e a única saída era abrir outro ou terminar sessão.
-      acoes.push(`<button class="btn btn-sm" onclick="fecharCasamento()">Sair deste casamento</button>`);
-    } else if (!arq) {
-      acoes.push(`<button class="btn btn-sm" onclick="abrir(${c.id})">Abrir</button>`);
-    }
+    const n = esc(c.nome);
+    // A ação principal fica sozinha e à vista; suspender, arquivar e apagar
+    // vão para o "⋯". Ao mesmo peso, um clique distraído arquivava a festa de
+    // alguém — e as três eram lidas como se fossem tão comuns como abrir.
+    let principal = '';
+    if (aberto) principal = '<a class="btn btn-ouro btn-sm" href="index.php">Continuar</a>';
+    else if (!arq) principal = `<button class="btn btn-ouro btn-sm" onclick="abrir(${c.id})">Abrir</button>`;
+
+    const mais = [];
+    // Sair sem ir embora: quem responde pela casa entra e sai de casamentos
+    // alheios o dia todo, e a única saída era abrir outro ou terminar sessão.
+    if (aberto) mais.push(`<button onclick="fecharCasamento()">Sair deste casamento</button>`);
     if (MANDA_NA_CASA) {
-      const n = esc(c.nome);
       if (arq) {
-        acoes.push(`<a class="btn btn-sm" href="api.php?action=dados_exportar&ambito=casamento&id=${c.id}">Levar os dados</a>`);
-        acoes.push(`<button class="btn btn-sm" onclick="mudarEstado(${c.id},'ativo','${n}')">Reabrir</button>`);
-        acoes.push(`<button class="btn btn-sm" onclick="apagar(${c.id},'${n}')">Apagar</button>`);
+        mais.push(`<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reabrir</button>`);
+        mais.push(`<a href="api.php?action=dados_exportar&ambito=casamento&id=${c.id}">Levar os dados</a>`);
+        mais.push('<hr>');
+        mais.push(`<button class="perigo" onclick="apagar(${c.id},'${n}')">Apagar para sempre</button>`);
       } else {
-        acoes.push(c.estado === 'suspenso'
-          ? `<button class="btn btn-sm" onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
-          : `<button class="btn btn-sm" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
-        acoes.push(`<button class="btn btn-sm" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
+        mais.push('<hr>');
+        mais.push(c.estado === 'suspenso'
+          ? `<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
+          : `<button class="perigo" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
+        mais.push(`<button class="perigo" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
       }
     }
+    const menu = mais.length
+      ? `<span class="mm"><button class="btn btn-sm" title="Mais ações"
+             onclick="abrirMais(event,${c.id})">⋯</button>
+           <span class="mm-pop" id="mm-${c.id}" style="display:none">${mais.join('')}</span></span>`
+      : '';
+
+    // Confirmações: um casamento com 200 pessoas e 3 confirmadas é outra
+    // notícia que um com 200 e 180, e a lista dizia os dois da mesma maneira.
+    const pes = +c.pessoas || 0, conf = +c.confirmados || 0;
+    const pc = pes ? Math.round(conf / pes * 100) : 0;
+
     return `<div class="cas${aberto ? ' aberto' : ''}">
       <div class="selo">${esc((c.nome || '?').slice(0,1).toUpperCase())}</div>
       <div>
@@ -549,15 +605,51 @@ async function carregarCasamentos(){
           ${aberto ? '<span class="et agora">aberto agora</span>' : ''}
           <span class="et ${esc(c.estado)}">${esc(c.estado)}</span></div>
         <div class="meta">
+          ${dataCasamento(c.data_evento)}
           <span><b>${c.convites}</b> convites</span>
-          <span><b>${c.pessoas}</b> pessoas</span>
+          <span><b>${pes}</b> pessoas${pes ? ` · <b>${conf}</b> confirmaram` : ''}</span>
           <span>${esc(quando(c.ultimo_acesso))}</span>
           ${+c.donos === 0 ? '<span class="falta">sem conta dos noivos</span>' : ''}
         </div>
+        ${pes ? `<div class="barra" title="${conf} de ${pes} confirmaram (${pc}%)"><i style="width:${pc}%"></i></div>` : ''}
       </div>
-      <div class="ac">${acoes.join('')}</div>
+      <div class="ac">${principal}${menu}</div>
     </div>`;
   }).join('');
+}
+
+/** A data do casamento, e quanto falta — que é o que se quer saber primeiro. */
+function dataCasamento(iso){
+  if (!iso || iso === '0000-00-00') return '<span style="color:#b0b5af">sem data</span>';
+  const d = new Date(iso + 'T12:00:00');
+  if (isNaN(d)) return '';
+  const hoje = new Date(); hoje.setHours(12,0,0,0);
+  const dias = Math.round((d - hoje) / 86400000);
+  const data = d.toLocaleDateString('pt-PT', { day:'2-digit', month:'short', year:'numeric' });
+  let falta;
+  if (dias > 1)       falta = `<span class="conta">faltam ${dias} dias</span>`;
+  else if (dias === 1) falta = '<span class="conta">é amanhã</span>';
+  else if (dias === 0) falta = '<span class="conta">é hoje</span>';
+  else                falta = `<span style="color:#b0b5af">há ${Math.abs(dias)} dias</span>`;
+  return `<span class="quando">${esc(data)}</span> ${falta}`;
+}
+
+/** O menu "⋯" de um casamento. Um de cada vez, e fecha-se ao clicar fora. */
+function abrirMais(ev, id){
+  ev.stopPropagation();
+  const alvo = document.getElementById('mm-' + id);
+  const jaAberto = alvo && alvo.style.display !== 'none';
+  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
+  if (alvo && !jaAberto) alvo.style.display = '';
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
+});
+
+/** Leva o olho até um sítio da página e assinala-o por um instante. */
+function irPara(id){
+  const el = document.getElementById(id); if (!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 async function fecharCasamento(){
   const d = await api('casamento_fechar', { method:'POST' });
@@ -624,13 +716,20 @@ async function carregarContas(){
     // fechou". Sem o dizer, a lista parecia ter contas avariadas.
     const porque = c.estado === 'inativo'
       ? ' <span class="meta">parada com o casamento arquivado</span>' : '';
-    const acoes = `
-      <button class="btn btn-sm" onclick="editarConta(${c.id})">Editar</button>`
+    // Como na lista de casamentos: editar à frente, e o que estraga atrás do
+    // "⋯". Repor a senha de alguém e apagar-lhe a conta não são gestos que
+    // devam estar a um clique de distância do que se faz todos os dias.
+    const acoes = `<button class="btn btn-sm" onclick="editarConta(${c.id})">Editar</button>`
       + (eu ? '<span class="meta">é você</span>' : `
-      <button class="btn btn-sm" onclick="estadoConta(${c.id}, '${trocaEstado}')">
-        ${c.estado === 'ativo' ? 'Suspender' : 'Ativar'}</button>
-      <button class="btn btn-sm" onclick="reporSenha(${c.id}, '${esc(c.email)}')">Repor senha</button>
-      <button class="btn btn-sm" onclick="apagarConta(${c.id}, '${esc(c.email)}')">Apagar</button>`);
+      <span class="mm"><button class="btn btn-sm" title="Mais ações"
+            onclick="abrirMais(event,'c${c.id}')">⋯</button>
+        <span class="mm-pop" id="mm-c${c.id}" style="display:none">
+          <button onclick="reporSenha(${c.id}, '${esc(c.email)}')">Repor senha</button>
+          <hr>
+          <button class="${c.estado === 'ativo' ? 'perigo' : ''}" onclick="estadoConta(${c.id}, '${trocaEstado}')">
+            ${c.estado === 'ativo' ? 'Suspender' : 'Ativar'}</button>
+          <button class="perigo" onclick="apagarConta(${c.id}, '${esc(c.email)}')">Apagar</button>
+        </span></span>`);
     return `<div class="cas">
       <div class="selo">${esc(nome.slice(0,1).toUpperCase())}</div>
       <div>
