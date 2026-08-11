@@ -40,6 +40,21 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .m-extras select{ flex:1 1 130px; min-width:0; font-size:.85rem; padding:.4rem .5rem; margin:0; }
   .membro-linha .m-brinde{ display:inline-flex; align-items:center; gap:.25rem; font-size:.82rem; color:var(--text); white-space:nowrap; cursor:pointer; }
   .membro-linha .m-brinde input{ width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
+  /* Género e papel: dois botões cada, em vez de duas caixas de escolha. São
+     duas perguntas de duas respostas — numa lista dessas, o menu que abre e
+     fecha esconde metade da resposta e obriga a um clique a mais para ver a
+     outra. Aqui está tudo à vista, e vê-se o que está escolhido sem abrir nada. */
+  .m-extras .seg{ display:inline-flex; flex:1 1 200px; min-width:0; background:#fff;
+                  border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .m-extras .seg button{ flex:1 1 0; min-width:0; border:0; border-right:1px solid var(--line);
+                         background:transparent; font:inherit; font-size:.82rem; color:#6d746c;
+                         padding:.42rem .3rem; cursor:pointer; white-space:nowrap;
+                         overflow:hidden; text-overflow:ellipsis; }
+  .m-extras .seg button:last-child{ border-right:0; }
+  .m-extras .seg button:hover:not(:disabled){ background:var(--cream); }
+  .m-extras .seg button.on{ background:var(--gold-pale); color:var(--forest); font-weight:600;
+                            box-shadow:inset 0 0 0 1px var(--gold-soft); }
+  .m-extras .seg button:disabled{ opacity:.45; cursor:not-allowed; }
   /* Ícones de género / brinde nas pastilhas */
   /* ♂ e ♀ são glifos finos: à medida do texto à volta ficavam quase invisíveis.
      Um pouco maiores, mais escuros e com uma fonte que os desenha bem. */
@@ -822,14 +837,20 @@ function opcoesMesaMembro(selId){
   (MESAS||[]).filter(m=>m.especial!=='noivos').forEach(m=>{ o+=`<option value="${m.id}" ${String(selId)===String(m.id)?'selected':''}>${esc(m.nome)}</option>`; });
   return o;
 }
-function opcoesPapelMembro(sel){
-  return ['','Convidado(a)','padrinho','Padrinho','madrinha','Madrinha']
-    .reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${sel===v?'selected':''}>${a[i+1]}</option>`,'');
+/**
+ * Um par de botões que guarda a escolha em data-v. Serve o género e o papel:
+ * duas perguntas de duas respostas, e nas duas se quer ver a resposta sem
+ * abrir nada.
+ */
+function segMembro(classe, v, botoes){
+  return `<div class="seg ${classe}" data-v="${esc(v)}">`
+    + botoes.map(([val, rot, tit]) =>
+        `<button type="button" data-v="${esc(val)}" class="${v===val?'on':''}"
+                 title="${esc(tit||rot)}">${rot}</button>`).join('')
+    + `</div>`;
 }
-function opcoesGeneroMembro(sel){
-  return ['','Género','m','♂ Masculino','f','♀ Feminino']
-    .reduce((o,v,i,a)=>i%2?o:o+`<option value="${v}" ${sel===v?'selected':''}>${a[i+1]}</option>`,'');
-}
+/** O que a segunda pastilha do papel diz — e se se pode sequer carregar nela. */
+const PM_ROTULO = { m:'Padrinho', f:'Madrinha', '':'Padrinho · Madrinha' };
 function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=false){
   const div=document.createElement('div'); div.className='membro-linha';
   // A linha pede o nome; o "⋯" abre os pormenores desta pessoa. São os mesmos
@@ -840,26 +861,87 @@ function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=fa
             onclick="alternarExtras(this)">⋯</button>
     <button class="btn-ico" type="button" title="Retirar esta pessoa"
             onclick="this.closest('.membro-linha').remove();renderSugestoes();atualizarPrevia();contarPessoas()">✕</button>
-    <div class="m-extras" onchange="marcarExtras(this.closest('.membro-linha'))">
-      <select class="m-genero" title="Género do convidado">${opcoesGeneroMembro(genero)}</select>
+    <div class="m-extras" onchange="marcarExtras(this.closest('.membro-linha'))"
+         onclick="cliqueSeg(event)">
       <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
-      <select class="m-papel" title="Papel: padrinho/madrinha entram nas alas da mesa dos noivos" onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesPapelMembro(papel)}</select>
-      <label class="m-brinde" title="Recebe brinde"><input type="checkbox" ${brinde?'checked':''}> 🎁</label>
+      <label class="m-brinde" title="Esta pessoa recebe brinde">Brindes? <input type="checkbox" ${brinde?'checked':''}> 🎁</label>
+      ${segMembro('m-genero', genero, [
+        ['m', '♂ Masculino', 'Masculino'],
+        ['f', '♀ Feminino',  'Feminino']])}
+      ${segMembro('m-papel', papel, [
+        ['',   'Convidado', 'Convidado(a) — o papel de origem'],
+        ['pm', PM_ROTULO[genero] || PM_ROTULO[''],
+               'Padrinhos e madrinhas sentam-se nas alas da mesa dos noivos']])}
     </div>`;
   $('membros').appendChild(div);
+  sincroPapelGenero(div);
   sincroMesaPapel(div);
   marcarExtras(div);
   contarPessoas();
 }
 /** Abre/fecha os pormenores de uma pessoa. */
 function alternarExtras(bt){ bt.closest('.membro-linha').classList.toggle('aberta'); }
+
+/** Valor escolhido num par de pastilhas. */
+function segValor(row, classe){ return row.querySelector('.'+classe)?.dataset.v || ''; }
+
+/**
+ * Clique numa das pastilhas de género ou de papel.
+ *
+ * O género alterna: carregar na que já está escolhida limpa-a (o género é
+ * opcional, como sempre foi). O papel não — "Convidado" é o de origem e há de
+ * estar sempre um dos dois aceso.
+ */
+function cliqueSeg(ev){
+  const bt = ev.target.closest('.seg button'); if (!bt) return;
+  const seg = bt.closest('.seg'), row = bt.closest('.membro-linha');
+  if (seg.classList.contains('m-genero')) {
+    seg.dataset.v = (seg.dataset.v === bt.dataset.v) ? '' : bt.dataset.v;
+  } else {
+    if (bt.disabled) return;
+    // A pastilha guarda "pm"; o que se grava é a palavra que o género dita.
+    seg.dataset.v = bt.dataset.v === 'pm'
+      ? (segValor(row, 'm-genero') === 'f' ? 'madrinha' : 'padrinho') : '';
+  }
+  sincroPapelGenero(row);
+  sincroMesaPapel(row);
+  marcarExtras(row);
+  atualizarPrevia();
+}
+
+/**
+ * O papel é gendrado: chama-se padrinho ou madrinha conforme quem o tem. Por
+ * isso a segunda pastilha só se pode escrever depois de o género estar dito —
+ * até lá anuncia as duas hipóteses e não se deixa carregar. Escolhido o
+ * género, o rótulo passa a ser a palavra certa, e quem já era padrinho passa a
+ * madrinha (ou o contrário) sem ter de o dizer outra vez.
+ */
+function sincroPapelGenero(row){
+  if (!row) return;
+  const g = segValor(row, 'm-genero');
+  const seg = row.querySelector('.m-papel'); if (!seg) return;
+  // Sem género não há palavra: o papel volta a Convidado.
+  if (!g && seg.dataset.v) seg.dataset.v = '';
+  if (g && seg.dataset.v) seg.dataset.v = (g === 'f' ? 'madrinha' : 'padrinho');
+
+  row.querySelectorAll('.m-genero button').forEach(b =>
+    b.classList.toggle('on', b.dataset.v === g));
+
+  const [btConv, btPm] = seg.querySelectorAll('button');
+  btPm.textContent = PM_ROTULO[g] || PM_ROTULO[''];
+  btPm.disabled = !g;
+  btPm.title = g ? 'Padrinhos e madrinhas sentam-se nas alas da mesa dos noivos'
+                 : 'Escolha primeiro o género — este papel chama-se padrinho ou madrinha conforme.';
+  btConv.classList.toggle('on', !seg.dataset.v);
+  btPm.classList.toggle('on', !!seg.dataset.v);
+}
 /** Marca o "⋯" quando a pessoa tem pormenores preenchidos — para se ver de fora. */
 function marcarExtras(row){
   if(!row) return;
   const bt=row.querySelector('.m-mais'); if(!bt) return;
-  const tem = !!(row.querySelector('.m-genero')?.value)
+  const tem = !!segValor(row, 'm-genero')
            || !!(row.querySelector('.m-mesa')?.value)
-           || !!(row.querySelector('.m-papel')?.value)
+           || !!segValor(row, 'm-papel')
            || !!(row.querySelector('.m-brinde input')?.checked);
   bt.classList.toggle('tem', tem);
 }
@@ -873,9 +955,9 @@ function contarPessoas(){
 // individual não se aplica — mostra "Mesa dos noivos" e desativa o seletor.
 function sincroMesaPapel(row){
   if(!row) return;
-  const papelSel=row.querySelector('.m-papel'); const mesaSel=row.querySelector('.m-mesa');
-  if(!papelSel||!mesaSel) return;
-  const ehPapel = papelSel.value==='padrinho' || papelSel.value==='madrinha';
+  const mesaSel=row.querySelector('.m-mesa');
+  if(!row.querySelector('.m-papel')||!mesaSel) return;
+  const ehPapel = !!segValor(row, 'm-papel');
   let opt=mesaSel.querySelector('option[data-noivos]');
   if(ehPapel){
     if(!opt){ opt=document.createElement('option'); opt.dataset.noivos='1'; opt.value=''; opt.textContent='Mesa dos noivos'; mesaSel.insertBefore(opt, mesaSel.firstChild); }
@@ -892,8 +974,8 @@ function membrosComPresenca(){
     nome: row.querySelector('input[type=text]').value.trim(),
     vai:  row.querySelector('.m-vai input')?.checked ?? true,
     mesa_id: row.querySelector('.m-mesa') ? row.querySelector('.m-mesa').value : '',
-    papel: row.querySelector('.m-papel') ? row.querySelector('.m-papel').value : '',
-    genero: row.querySelector('.m-genero') ? row.querySelector('.m-genero').value : '',
+    papel: segValor(row, 'm-papel'),
+    genero: segValor(row, 'm-genero'),
     brinde: row.querySelector('.m-brinde input')?.checked ? 1 : 0
   })).filter(m=>m.nome);
 }

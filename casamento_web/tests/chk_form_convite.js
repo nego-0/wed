@@ -62,7 +62,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.evaluate((mesa) => {
     const r = document.querySelectorAll('#membros .membro-linha')[1];
     r.querySelector('.m-mais').click();
-    r.querySelector('.m-genero').value = 'm';
+    r.querySelector('.m-genero button[data-v=m]').click();
     const ms = r.querySelector('.m-mesa');
     const opt = [...ms.options].find(o => o.textContent.includes(mesa));
     if (opt) ms.value = opt.value;
@@ -109,7 +109,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       numMesa: document.getElementById('c-mostrar-num-mesa').checked,
       tipo: g('c-tipo'), lado: g('c-lado'), presenca: g('c-presenca'),
       pessoas: rows.length,
-      ruiGenero: rui ? rui.querySelector('.m-genero').value : null,
+      ruiGenero: rui ? rui.querySelector('.m-genero').dataset.v : null,
       ruiBrinde: rui ? rui.querySelector('.m-brinde input').checked : null,
       ruiMesa: rui ? !!rui.querySelector('.m-mesa').value : null,
       ruiMarcado: rui ? rui.querySelector('.m-mais').classList.contains('tem') : null
@@ -134,6 +134,66 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(v.ruiBrinde === true,                'brinde da pessoa volta certo');
   ok(v.ruiMesa === true,                  'mesa individual da pessoa volta certa');
   ok(v.ruiMarcado === true,               'ao reabrir, o "⋯" mostra que essa pessoa tem pormenores');
+
+  // ---------- género e papel: duas pastilhas, e o papel segue o género ----------
+  const seg = await p.evaluate(() => {
+    const r = document.querySelectorAll('#membros .membro-linha')[0];
+    r.querySelector('.m-mais').click();
+    const gs = r.querySelector('.m-genero'), ps = r.querySelector('.m-papel');
+    const pm = () => ps.querySelectorAll('button')[1];
+    const out = {};
+    // De origem: Convidado aceso, e a segunda pastilha por escrever.
+    out.convidadoPorPadrao = ps.querySelectorAll('button')[0].classList.contains('on') && !ps.dataset.v;
+    out.pmSemGenero = { rot: pm().textContent.trim(), travada: pm().disabled };
+    pm().click();                                   // não deve fazer nada
+    out.semGeneroNaoPega = !ps.dataset.v;
+
+    gs.querySelector('button[data-v=m]').click();   // Masculino
+    out.rotMasculino = pm().textContent.trim();
+    out.pmLivre = !pm().disabled;
+    pm().click();
+    out.papelMasculino = ps.dataset.v;
+
+    gs.querySelector('button[data-v=f]').click();   // passa a Feminino
+    out.rotFeminino = pm().textContent.trim();
+    out.papelFeminino = ps.dataset.v;               // acompanha, sem ser preciso repetir
+
+    gs.querySelector('button[data-v=f]').click();   // tira o género
+    out.semGeneroVoltaConvidado = ps.dataset.v === '' &&
+      ps.querySelectorAll('button')[0].classList.contains('on');
+
+    // Deixar como estava para o resto da prova.
+    gs.querySelector('button[data-v=f]').click(); pm().click();
+    out.mesaTrancadaComPapel = r.querySelector('.m-mesa').disabled;
+    return out;
+  });
+  console.log('   pastilhas:', JSON.stringify(seg));
+  ok(seg.convidadoPorPadrao, '"Convidado" vem escolhido de origem');
+  ok(seg.pmSemGenero.rot === 'Padrinho · Madrinha' && seg.pmSemGenero.travada,
+     'sem género, a segunda pastilha anuncia as duas hipóteses e não se deixa carregar');
+  ok(seg.semGeneroNaoPega, 'e carregar nela não escolhe nada');
+  ok(seg.rotMasculino === 'Padrinho' && seg.pmLivre, 'com Masculino, passa a dizer "Padrinho"');
+  ok(seg.papelMasculino === 'padrinho', 'e é isso que fica escolhido');
+  ok(seg.rotFeminino === 'Madrinha', 'trocar para Feminino reescreve o rótulo');
+  ok(seg.papelFeminino === 'madrinha', 'e o papel acompanha sozinho — não se repete a escolha');
+  ok(seg.semGeneroVoltaConvidado,
+     'tirar o género devolve o papel a Convidado, que sem género não tem nome');
+  ok(seg.mesaTrancadaComPapel, 'e quem é padrinho/madrinha fica na mesa dos noivos');
+
+  await p.evaluate(() => guardarConvite());
+  await p.waitForTimeout(1500);
+  await p.evaluate(i => editar(i), id);
+  await p.waitForTimeout(900);
+  const depois = await p.evaluate(() => {
+    const r = [...document.querySelectorAll('#membros .membro-linha')]
+      .find(x => x.querySelector('input[type=text]').value === 'Ana Prova');
+    const ps = r.querySelector('.m-papel');
+    return { papel: ps.dataset.v, rot: ps.querySelectorAll('button')[1].textContent.trim(),
+             acesa: ps.querySelectorAll('button')[1].classList.contains('on') };
+  });
+  ok(depois.papel === 'madrinha', 'o papel grava-se e volta certo');
+  ok(depois.rot === 'Madrinha' && depois.acesa,
+     'e ao reabrir a pastilha já vem com a palavra certa, acesa');
 
   // ---------- os lugares seguem as pessoas ----------
   // É esta a razão de o campo ter saído: acrescentar ou tirar uma pessoa muda

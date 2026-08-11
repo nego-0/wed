@@ -395,7 +395,18 @@ Em `config.php` (não sensível):
 
 **Mesas.** Na página *Mesas* tem uma **planta visual do salão**: crie mesas com capacidade, escolha a **forma** (redonda, oval, quadrada, retangular, comprida ou em ferradura), uma **cor** de uma paleta e a **dimensão** (automática, pequena, média ou grande), **arraste-as** para a sua posição real e veja a ocupação através de um ponto de estado (vazia, a encher, completa, excede a capacidade). O formulário de adicionar mesa fica por cima do canvas; ao selecionar uma mesa, a sua aba abre um formulário de edição compacto. As posições ficam guardadas.
 
-**Mesa dos noivos.** A planta tem, por padrão, uma **pastilha especial** dos noivos — com uma ilustração própria (as alianças entrelaçadas) — para representar o casal, com a **mesma dimensão** das restantes mesas. Só existe uma. Pode **eliminá-la** (no painel da mesa) e, se quiser, **repô-la** no botão *Mesa dos noivos* que surge por cima do canvas. As suas **alas laterais** (padrinhos à esquerda, madrinhas à direita) são preenchidas **automaticamente pelo papel de cada convidado**: quem tiver o papel *Padrinho* entra na ala esquerda e quem tiver *Madrinha* na ala direita, sem atribuição manual. O papel define-se no **editor do convite** (cada integrante tem um seletor *Convidado / Padrinho / Madrinha*) ou diretamente no painel da mesa dos noivos. **Só padrinhos e madrinhas** podem ficar nesta mesa — nenhum outro convidado lhe pode ser atribuído.
+**Mesa dos noivos.** A planta tem, por padrão, uma **pastilha especial** dos noivos — com uma ilustração própria (as alianças entrelaçadas) — para representar o casal, com a **mesma dimensão** das restantes mesas. Só existe uma. Pode **eliminá-la** (no painel da mesa) e, se quiser, **repô-la** no botão *Mesa dos noivos* que surge por cima do canvas. As suas **alas laterais** (padrinhos à esquerda, madrinhas à direita) são preenchidas **automaticamente pelo papel de cada convidado**: quem tiver o papel *Padrinho* entra na ala esquerda e quem tiver *Madrinha* na ala direita, sem atribuição manual. O papel define-se no **formulário do convite** ou diretamente no painel da mesa dos noivos.
+
+No formulário, cada pessoa tem duas pastilhas de duas respostas — o **género**
+(*♂ Masculino* / *♀ Feminino*) e o **papel** (*Convidado* / *Padrinho* ou
+*Madrinha*), com *Convidado* aceso de origem. Eram duas caixas de escolha, e
+numa pergunta de duas respostas o menu que abre e fecha esconde metade da
+resposta para pedir um clique a mais. O papel é **gendrado**: chama-se padrinho
+ou madrinha conforme quem o tem, e por isso a segunda pastilha só se escreve
+depois de o género estar dito — até lá anuncia as duas hipóteses e não se deixa
+carregar. Escolhido o género, passa a dizer a palavra certa; trocar de género
+depois disso troca também o papel, sem ser preciso repetir a escolha. Tirar o
+género devolve o papel a *Convidado*, que sem género não tem nome. **Só padrinhos e madrinhas** podem ficar nesta mesa — nenhum outro convidado lhe pode ser atribuído.
 
 **Zoom.** A **barra de zoom** tem três níveis: **50%** (vista ampla), **100%** (vista panorâmica padrão) e **150%** (vista de área). O **canvas mantém sempre o mesmo tamanho** — o zoom não altera o canvas, apenas amplia ou reduz o conteúdo dentro dele: a 50% as mesas ficam mais pequenas no mesmo espaço, a 100% preenchem-no e a 150% ficam ampliadas, com deslocamento (scroll) para percorrer o salão.
 

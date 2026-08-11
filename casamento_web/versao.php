@@ -169,6 +169,12 @@ function correcoesEsperadas(): array {
          'manual.php', '$moldLinha'],
         ['O manual lista as camadas movidas e viradas, em % e em mm',
          'manual.php', 'Composição — camadas fora do sítio de origem'],
+
+        // ---- Formulário do convite ----
+        ['Género e papel em pastilhas, e não em caixas de escolha',
+         'index.php', 'function segMembro('],
+        ['O papel segue o género: Padrinho ou Madrinha, conforme',
+         'index.php', 'function sincroPapelGenero('],
     ];
 }
 
