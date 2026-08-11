@@ -45,15 +45,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
   .camada.fixa .olho{ opacity:.25; cursor:not-allowed; }
   .camada[draggable=true]{ cursor:grab; }
   .camada.a-arrastar{ opacity:.4; }
-  /* O cadeado só se vê ao passar por cima, ou quando está fechado: uma coluna
-     de cadeados abertos em todas as linhas é ruído, não informação. */
-  .camada .cadeado{ margin-left:auto; width:26px; height:22px; padding:2px 4px; border:0;
-                    background:none; color:var(--ed-texto-2); cursor:pointer; opacity:0;
-                    transition:opacity .12s; }
-  .camada:hover .cadeado, .camada.trancada .cadeado{ opacity:.85; }
-  .camada .cadeado svg{ width:14px; height:14px; display:block; }
-  .camada.trancada{ border-left:2px solid var(--ed-ouro, #C9A862); }
-  .camada.trancada .nome{ opacity:.75; }
+  /* O cadeado é comum aos dois editores: o desenho está em assets/editor.css. */
   .camada.cair-antes{ box-shadow:inset 0 2px 0 var(--ed-ouro); }
   .camada.cair-depois{ box-shadow:inset 0 -2px 0 var(--ed-ouro); }
   .add-sec{ display:flex; gap:.3rem; margin-top:.5rem; padding-top:.5rem; border-top:1px solid var(--ed-linha); }
@@ -223,6 +215,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 <?php endif; ?>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
+<script src="<?= asset('assets/tela-livre.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
@@ -231,6 +224,11 @@ const ATUAIS   = <?= json_encode($DEFS_ED, JSON_UNESCAPED_UNICODE) ?>;
 // definições de um casamento.
 const MODELO   = <?= json_encode($MODELO, JSON_UNESCAPED_UNICODE) ?>;
 const SECCOES  = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
+// Blocos que se podem arrastar na tela, por camada. Só as duas telas de
+// tamanho conhecido (o envelope e a capa de entrada) os têm: o resto do
+// convite é texto que corre, e uma composição à mão numa página que cresce
+// com o conteúdo desmancha-se no telemóvel seguinte.
+const LIVRES = <?= json_encode(posicoesLivres(), JSON_UNESCAPED_UNICODE) ?>;
 const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
 const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
@@ -328,7 +326,16 @@ let EST = {
   // Numa lista que se reordena a arrastar, um gesto distraído desfaz o que se
   // levou meia hora a compor — e o desfazer nem sempre se lembra de o dizer.
   trancados: new Set((ATUAIS['layout.trancados']||'').split(',').filter(Boolean),),
+  // Onde cada bloco móvel foi parar, em % da sua tela. Sem entrada = no sítio
+  // que o design lhe deu.
+  pos: (()=>{ try { return JSON.parse(ATUAIS['layout.posicoes']||'{}') || {}; } catch(e){ return {}; } })(),
 };
+// O gravado é "x y"; cá dentro dá jeito ter os números à mão.
+function posDe(id){
+  const v = EST.pos[id]; if (!v) return {x:0, y:0};
+  const p = String(v).split(/\s+/);
+  return { x: parseFloat(p[0])||0, y: parseFloat(p[1])||0 };
+}
 function ler(k){ try { return JSON.parse(ATUAIS[k]||'[]')||[]; } catch(e){ return []; } }
 
 // ---------- as camadas: secções de origem + as livres, pela ordem ----------
@@ -426,6 +433,69 @@ function paraTela(chave, valor){
   return MARKDOWN.includes(chave) ? mdJs(valor) : esc(valor);
 }
 
+// ---------- posicionamento livre ----------
+// O bloco escolhido na tela (o que as propriedades mostram e as setas afinam).
+let LIVRE = null;
+
+/** O mapa gravado, com os números já separados — é o que a tela recebe. */
+function mapaPos(){
+  const fora = {};
+  Object.keys(LIVRES).forEach(id => { const p = posDe(id); if (EST.pos[id]) fora[id] = p; });
+  return fora;
+}
+/** Grava (ou apaga, quando volta à origem) o deslocamento de um bloco. */
+function guardarPos(id, x, y){
+  if (Math.abs(x) < 0.005 && Math.abs(y) < 0.005) delete EST.pos[id];
+  else EST.pos[id] = x + ' ' + y;
+}
+function moverLivre(id, x, y){
+  guardarPos(id, x, y);
+  enviarTela({tipo:'pos', id:id, x:x, y:y});
+}
+function reporLivre(id){
+  if (!EST.pos[id]) return msg(`"${LIVRES[id].rotulo}" já está no sítio de origem.`);
+  moverLivre(id, 0, 0);
+  marcarSujo(true); registarPasso(); renderProps();
+  msg(`"${LIVRES[id].rotulo}" voltou ao sítio de origem.`);
+}
+function reporLivresDa(sec){
+  const ids = Object.keys(LIVRES).filter(id => LIVRES[id].sec === sec && EST.pos[id]);
+  if (!ids.length) return msg('Nada foi movido nesta camada.');
+  if (!confirm('Repor todos os blocos desta camada no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
+  ids.forEach(id => moverLivre(id, 0, 0));
+  marcarSujo(true); registarPasso(); renderProps();
+  msg('Composição de origem reposta — por guardar.');
+}
+function escolherLivre(id){ LIVRE = id; renderProps(); enviarTela({tipo:'livre-sel', id:id}); }
+
+/**
+ * O painel de posição de uma camada. Só aparece nas duas que o têm; nas
+ * outras, dizer "arraste" seria prometer o que a página não faz.
+ */
+function painelLivre(sec){
+  const ids = Object.keys(LIVRES).filter(id => LIVRES[id].sec === sec);
+  if (!ids.length) return '';
+  const num = n => (n > 0 ? '+' : '') + n.toFixed(2).replace(/\.?0+$/, '') + '%';
+  const movidos = ids.filter(id => EST.pos[id]).length;
+  return `<div class="grupo"><h4>Posição dos blocos${movidos ? ` <span class="op">${movidos} movido${movidos>1?'s':''}</span>` : ''}</h4>
+    ${ids.map(id => {
+      const p = posDe(id), mov = !!EST.pos[id];
+      return `<div class="campo">
+        <label>${esc(LIVRES[id].rotulo)}</label>
+        <div class="pos-linha">
+          <span class="val">${mov ? num(p.x) + ' · ' + num(p.y) : 'no sítio de origem'}</span>
+          <button class="bt bt-min ${LIVRE===id?'primario':''}" onclick="escolherLivre('${id}')" title="Assinalar na tela">Ver</button>
+          <button class="bt bt-min" onclick="reporLivre('${id}')" ${mov?'':'disabled'}>Repor</button>
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="ajuda">Arraste cada bloco na tela. Cola-se ao centro, às bordas e aos outros blocos —
+      o <b>Shift</b> desliga o íman. O deslocamento é guardado em percentagem da tela, para a composição
+      chegar inteira ao telemóvel.</div>
+    ${movidos ? `<button class="bt" style="width:100%;margin-top:.4rem" onclick="reporLivresDa('${sec}')">Repor a composição desta camada</button>` : ''}
+  </div>`;
+}
+
 // ---------- comunicação com a tela ----------
 function enviarTela(m){
   const f = $('tela'); if (!f || !f.contentWindow) return;
@@ -437,7 +507,18 @@ window.addEventListener('message', e=>{
     telaPronta = true;
     enviarTela({tipo:'tema', vars:EST.paleta});
     enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});   // a tela recarrega escondida
+    enviarTela({tipo:'livres', mapa:LIVRES, pos:mapaPos()});
     if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF});
+    return;
+  }
+  // Arrasto na tela: o gesto correu lá dentro, aqui só chega o resultado.
+  if (d.tipo === 'pegou'){ if (LIVRES[d.id]) { LIVRE = d.id; renderProps(); } return; }
+  if (d.tipo === 'moveu'){
+    if (!LIVRES[d.id]) return;
+    LIVRE = d.id;
+    guardarPos(d.id, d.x, d.y);
+    marcarSujo(true); registarPasso(); renderProps();
+    msg(`${LIVRES[d.id].rotulo}: ${d.x}% · ${d.y}%`);
     return;
   }
   if (d.tipo === 'atalho'){
@@ -642,6 +723,7 @@ function renderPropsJa(){
   h += chaves.map(c=>campoHTML(c)).join('');
   const lk = LISTAS_SEC[SEC];
   if (lk) h += listaHTML(lk);
+  h += painelLivre(SEC);
   $('props').innerHTML = h;
   if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
 }
@@ -654,6 +736,7 @@ function renderPropsCapa(){
   h += campoHTML('capa.dica');
   h += `<div class="sel-nada" style="margin-top:.7rem;line-height:1.5">Os <b>nomes</b> e a <b>data</b> na capa vêm da camada
         <b>Capa</b> e da data do evento — mudam-se aí, e a capa acompanha.</div>`;
+  h += painelLivre(CAPA_ID);
   $('props').innerHTML = h;
   if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
 }
@@ -1086,6 +1169,17 @@ document.addEventListener('keydown', e=>{
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); refazer(); return; }
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); guardar(); return; }
   if (emCampo) return;
+  // As setas afinam o bloco escolhido na tela, ponto a ponto: 0,25% da tela,
+  // ou 2% com Shift. É o ajuste que o rato não dá.
+  const setas = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+  if (setas[e.key] && LIVRE && LIVRES[LIVRE]){
+    e.preventDefault();
+    const passo = e.shiftKey ? 2 : 0.25, p = posDe(LIVRE), lim = TelaLivre.limitar;
+    moverLivre(LIVRE, TelaLivre.arred(lim(p.x + setas[e.key][0]*passo)),
+                      TelaLivre.arred(lim(p.y + setas[e.key][1]*passo)));
+    marcarSujo(true); registarPasso(); renderProps();
+    return;
+  }
   if (e.key.toLowerCase()==='v') ferramenta('selecionar');
   if (e.key.toLowerCase()==='p') ferramenta('limpo');
 });
@@ -1100,6 +1194,7 @@ function serializar(){
   v['layout.blocos']      = EST.blocos.length ? JSON.stringify(EST.blocos) : '';
   v['layout.ordem']       = EST.ordem.join(',');
   v['layout.trancados']   = [...EST.trancados].join(',');
+  v['layout.posicoes']    = Object.keys(EST.pos).length ? JSON.stringify(EST.pos) : '';
   return v;
 }
 function rotuloDe(chave){ return CAMPOS[chave] ? CAMPOS[chave][0] : chave; }

@@ -25,6 +25,14 @@
 /* Camada desligada no painel de camadas */
 .cartao .ct-oculta{ display:none !important; }
 
+/* Posicionamento livre: cada camada pode afastar-se do sítio que o design lhe
+   deu. O deslocamento vem em % do cartão (--px/--py) e converte-se aqui, que
+   o cartão tem 720×1080 px fixos: 1% = 7,2 px na largura e 10,8 px na altura.
+   Usa-se `translate` e não `transform` para não apagar as rotações que o
+   desenho já faz (a trepadeira de baixo, a voluta oposta). Sem variáveis, o
+   valor é zero e a camada fica exatamente onde sempre esteve. */
+.cartao [data-camada]{ translate:calc(var(--px,0) * 7.2px) calc(var(--py,0) * 10.8px); }
+
 /* A cor do cartão É a peça, não enfeite da página: ao imprimir, o navegador
    descarta fundos por omissão (só os desenha se quem imprime se lembrar de
    ligar "Gráficos de fundo"), e a gráfica recebia cartões sem cor nenhuma.

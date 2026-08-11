@@ -161,10 +161,37 @@ e um gesto distraído desfazia meia hora de composição. Cada camada tem agora 
 desenho (`layout.trancados`). O cadeado só se vê ao passar por cima, ou quando
 está fechado: uma coluna de cadeados abertos em todas as linhas é ruído.
 
-O ponto focal das fotografias — o único sítio destes editores com posicionamento
-livre em duas dimensões — **cola-se ao centro e aos terços**, com guias que
+O ponto focal das fotografias **cola-se ao centro e aos terços**, com guias que
 acendem só no instante em que ele lá encosta. Com **Shift** arrasta livre, para
 quem quer mesmo 47%.
+
+**A tela de posicionamento livre.** Havia duas maneiras de compor uma peça:
+aceitar o sítio que o design deu a cada bloco, ou não a ter. Agora há a
+terceira — **arrastar o bloco na própria peça**. Vale no cartão impresso (cada
+camada: os nomes, a data, a logística, os ornamentos) e nas duas telas de
+tamanho conhecido do convite digital: o **envelope** e a **capa de entrada**.
+O resto do convite é texto que corre, e uma composição feita à mão numa página
+que cresce com o conteúdo desmancha-se no telemóvel seguinte.
+
+O deslocamento guarda-se em **percentagem da tela**, nunca em píxeis
+(`cartao.posicoes`, `layout.posicoes`, JSON `{"bloco":"x y"}`). É isto que faz
+uma composição feita a 33% de zoom sair igual nos 720×1080 que vão para a
+gráfica, e o envelope composto no computador chegar inteiro ao telemóvel. Um
+par a zeros nunca chega a gravar-se: uma peça que ninguém arrastou continua a
+ser, ao píxel, a que o design desenhou — e é por isso que nada disto mexeu nos
+convites que já estavam feitos.
+
+O íman não é uma grelha: são as linhas que a peça já tem — o centro, os terços
+e as bordas da tela, as bordas e os centros dos **outros** blocos, e o sítio de
+origem do próprio bloco (voltar atrás tem de ser fácil). As guias acendem só
+quando ele está mesmo colado. **Shift** desliga o íman; as **setas** afinam
+ponto a ponto (0,25% da tela, ou 2% com Shift).
+
+O cartão ganhou o mesmo **cadeado** das secções (`cartao.trancados`): camada
+trancada não se arrasta nem se esconde. O motor do gesto é um só —
+`assets/tela-livre.js` —, usado tal e qual pelos dois editores; no convite
+digital corre **dentro da tela**, que é um iframe, porque quem manda no gesto é
+o documento onde o rato está. De lá sai só o resultado: que bloco, e para onde.
 
 **Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
 casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho

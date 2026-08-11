@@ -298,6 +298,16 @@ function cartaoCamadas(): array {
     ];
 }
 
+/** Deslocamento gravado de cada camada, em % do cartão (ausente = no sítio). */
+function cartaoPosicoes(array $defs): array {
+    return posicoesGravadas($defs['cartao.posicoes'] ?? '');
+}
+
+/** Camadas trancadas do cartão: não se arrastam nem se escondem. */
+function cartaoTrancadas(array $defs): array {
+    return array_values(array_filter(array_map('trim', explode(',', (string)($defs['cartao.trancados'] ?? '')))));
+}
+
 /** Visibilidade das camadas, a partir da definição JSON (ausente = visível). */
 function cartaoCamadasVisiveis(array $defs): array {
     $j = json_decode($defs['cartao.camadas'] ?? '', true);
@@ -318,10 +328,17 @@ function cartaoCamadasVisiveis(array $defs): array {
  * $conv: ['nome'=>string, 'mesas'=>[['nome'=>..,'n'=>..], …]]
  */
 function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhagem, bool $comLugares = true,
-                            array $camadas = [], ?string $estilo = null): string {
+                            array $camadas = [], ?string $estilo = null, array $posicoes = []): string {
     $e = fn($s) => escP($s);
     // Camada oculta: ausente do array = visível.
     $oc = fn($k) => (array_key_exists($k, $camadas) && !$camadas[$k]) ? ' ct-oculta' : '';
+    // Camada movida: o deslocamento entra como variáveis, e o CSS trata do
+    // resto. Sem entrada no mapa não sai atributo nenhum — um cartão que
+    // ninguém arrastou continua a ser exatamente o HTML de sempre.
+    $ps = function (string $k) use ($posicoes): string {
+        $p = $posicoes[$k] ?? null;
+        return is_array($p) ? ' style="--px:' . (float)$p['x'] . ';--py:' . (float)$p['y'] . '"' : '';
+    };
 
     // Quem passa $estilo (de cartaoEstiloVars) traz também a letra e a escala;
     // sem ele, só as cores — e o CSS trata do resto com os valores de origem.
@@ -339,19 +356,19 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
         }
         $mesas .= '</div>';
     }
-    $blocoMesas = $mesas !== '' ? '<div class="ct-mesas' . $oc('mesas') . '" data-camada="mesas">' . $mesas . '</div>' : '';
+    $blocoMesas = $mesas !== '' ? '<div class="ct-mesas' . $oc('mesas') . '" data-camada="mesas"' . $ps('mesas') . '>' . $mesas . '</div>' : '';
 
     ob_start(); ?>
 <div class="cartao" style="<?= $vars ?>">
   <!-- trepadeiras: canto superior-direito e inferior-esquerdo (rodada 180°) -->
-  <div class="ct-ramos<?= $oc('ramos') ?>" data-camada="ramos">
+  <div class="ct-ramos<?= $oc('ramos') ?>" data-camada="ramos"<?= $ps('ramos') ?>>
     <div class="ct-ramo ct-ramo-sd"><?= svgTrepadeira($folhagem, 'currentColor') ?></div>
     <div class="ct-ramo ct-ramo-ie"><?= svgTrepadeira($folhagem, 'currentColor') ?></div>
   </div>
 
   <!-- moldura dourada contínua + volutas de canto -->
-  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"><i></i><i></i></div>
-  <div class="ct-volutas<?= $oc('volutas') ?>" data-camada="volutas">
+  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"<?= $ps('moldura') ?>><i></i><i></i></div>
+  <div class="ct-volutas<?= $oc('volutas') ?>" data-camada="volutas"<?= $ps('volutas') ?>>
     <div class="ct-voluta ct-voluta-se"><?= svgVoluta('currentColor') ?></div>
     <div class="ct-voluta ct-voluta-id"><?= svgVoluta('currentColor') ?></div>
   </div>
@@ -359,9 +376,9 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
   <div class="ct-conteudo">
     <!-- topo: abertura + nomes + frase -->
     <div class="ct-topo">
-      <div class="ct-abertura<?= $oc('abertura') ?>" data-camada="abertura" data-campo="abertura"><?= nl2br($e($ev['abertura']), false) ?></div>
-      <div class="ct-nomes<?= $oc('nomes') ?>" data-camada="nomes">
-        <div class="ct-floreados<?= $oc('floreados') ?>" data-camada="floreados">
+      <div class="ct-abertura<?= $oc('abertura') ?>" data-camada="abertura"<?= $ps('abertura') ?> data-campo="abertura"><?= nl2br($e($ev['abertura']), false) ?></div>
+      <div class="ct-nomes<?= $oc('nomes') ?>" data-camada="nomes"<?= $ps('nomes') ?>>
+        <div class="ct-floreados<?= $oc('floreados') ?>" data-camada="floreados"<?= $ps('floreados') ?>>
           <div class="ct-floreado ct-floreado-e"><?= svgFloreado('currentColor') ?></div>
           <div class="ct-floreado ct-floreado-d"><?= svgFloreado('currentColor') ?></div>
         </div>
@@ -369,11 +386,11 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
         <div class="ct-coracao">&#9825;</div>
         <div class="ct-nome" data-campo="noivo"><?= $e($ev['noivo']) ?></div>
       </div>
-      <p class="ct-frase<?= $oc('frase') ?>" data-camada="frase" data-campo="frase"><?= $e($ev['frase']) ?></p>
+      <p class="ct-frase<?= $oc('frase') ?>" data-camada="frase"<?= $ps('frase') ?> data-campo="frase"><?= $e($ev['frase']) ?></p>
     </div>
 
     <!-- centro: o convidado (personalizado) -->
-    <div class="ct-centro<?= $oc('convidado') ?>" data-camada="convidado">
+    <div class="ct-centro<?= $oc('convidado') ?>" data-camada="convidado"<?= $ps('convidado') ?>>
       <div class="ct-filete"></div>
       <div class="ct-reservado" data-campo="reservado"><?= $e($ev['reservado']) ?></div>
       <div class="ct-convidado"><?= $e($conv['nome']) ?></div>
@@ -383,12 +400,12 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
 
     <!-- base: data + logística + frase final -->
     <div class="ct-base">
-      <div class="ct-bloco-data<?= $oc('data') ?>" data-camada="data">
+      <div class="ct-bloco-data<?= $oc('data') ?>" data-camada="data"<?= $ps('data') ?>>
         <div class="ct-data"><?= $e($ev['data_ext']) ?></div>
         <div class="ct-dia"><?= $e($ev['dia_semana']) ?></div>
       </div>
       <div class="ct-tracinho"></div>
-      <div class="ct-logistica<?= $oc('logistica') ?>" data-camada="logistica">
+      <div class="ct-logistica<?= $oc('logistica') ?>" data-camada="logistica"<?= $ps('logistica') ?>>
         <?php // Cada cerimónia só aparece se tiver hora. Um cartão que anuncia
               // "às " sem hora nenhuma é pior do que um cartão sem a linha. ?>
         <?php if ($ev['civil_hora'] !== ''): ?>
@@ -405,7 +422,7 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
         <div class="ct-detalhe ct-detalhe-2"><?= $e($ev['local']) ?><br>às <?= $e($ev['copo_hora']) ?></div>
       </div>
       <div class="ct-tracinho ct-tracinho-2"></div>
-      <p class="ct-fecho<?= $oc('fecho') ?>" data-camada="fecho" data-campo="frase_final"><?= $e($ev['frase_final']) ?></p>
+      <p class="ct-fecho<?= $oc('fecho') ?>" data-camada="fecho"<?= $ps('fecho') ?> data-campo="frase_final"><?= $e($ev['frase_final']) ?></p>
     </div>
 
   </div>

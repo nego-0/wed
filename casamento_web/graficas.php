@@ -34,7 +34,8 @@ if (isset($_GET['modelo'])) {
         $defs['cartao.folhagem'],
         $comLug,
         cartaoCamadasVisiveis($defs),
-        cartaoEstiloVars($defs)
+        cartaoEstiloVars($defs),
+        cartaoPosicoes($defs)
     );
     exit;
 }

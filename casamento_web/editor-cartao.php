@@ -19,6 +19,8 @@ $pal      = cartaoPaletaEfetiva($defs);
 $estilo   = cartaoEstiloVars($defs);
 $folhagem = $defs['cartao.folhagem'];
 $camadas  = cartaoCamadasVisiveis($defs);
+$posicoes = cartaoPosicoes($defs);
+$trancadas= cartaoTrancadas($defs);
 $ev       = cartaoDadosEvento($defs);
 
 // Chaves que este editor governa — as do cartão, e só essas. Serve para gravar
@@ -122,6 +124,7 @@ $camposPorCamada = [
           title="A versão em vigor — a que se imprime e a que o manual retrata. Escolha outra para a aplicar, ou use as ações de gerir."></select>
   <span class="ed-sep"></span>
   <button class="bt" onclick="reporCamada()" title="Repor os textos originais da camada escolhida">Repor esta camada</button>
+  <button class="bt" onclick="reporPosicoes()" title="Devolver todas as camadas ao sítio que o design lhes deu">Repor composição</button>
   <button class="bt" onclick="repor()">Repor originais</button>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
 </div>
@@ -129,7 +132,7 @@ $camposPorCamada = [
 <div class="ed-corpo">
   <!-- Ferramentas -->
   <div class="ed-ferramentas">
-    <button class="ferr on" data-ferr="mover" title="Selecionar camada (V)">
+    <button class="ferr on" data-ferr="mover" title="Selecionar e arrastar camada (V)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 3l7 17 2.5-6.5L20 11z"/></svg>
     </button>
     <button class="ferr" data-ferr="texto" title="Editar texto (T)">
@@ -149,8 +152,9 @@ $camposPorCamada = [
   <!-- Mesa de trabalho -->
   <div class="ed-mesa" id="mesa">
     <div class="ed-arte marcar" id="arte" style="--esc:.5">
+      <span class="tela-guias" id="guias"></span>
       <div class="escala" id="escala" style="width:720px;height:1080px;transform:scale(var(--esc));transform-origin:top left">
-        <?= renderCartaoConvite($ev, $conv, $pal, $folhagem, $comLug, $camadas, $estilo) ?>
+        <?= renderCartaoConvite($ev, $conv, $pal, $folhagem, $comLug, $camadas, $estilo, $posicoes) ?>
       </div>
     </div>
   </div>
@@ -194,6 +198,7 @@ $camposPorCamada = [
 <?php endif; ?>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
+<script src="<?= asset('assets/tela-livre.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
@@ -241,7 +246,14 @@ let est = {
   textos:   <?= json_encode(array_intersect_key($defs, array_flip([
                  'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.civil_titulo',
                  'evento.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
-                 'evento.venue_titulo','evento.local','evento.hora','evento.data'])), JSON_UNESCAPED_UNICODE) ?>
+                 'evento.venue_titulo','evento.local','evento.hora','evento.data'])), JSON_UNESCAPED_UNICODE) ?>,
+  // Onde cada camada foi parar, em % do cartão. Sem entrada = no sítio que o
+  // design lhe deu — e é assim que fica um cartão que ninguém arrastou.
+  pos:      <?= json_encode((object)$posicoes, JSON_UNESCAPED_UNICODE) ?>,
+  // Camadas trancadas: não se arrastam nem se escondem. A tela de
+  // posicionamento livre precisa desta rede — bastava um gesto distraído
+  // sobre a moldura para desmanchar a composição inteira.
+  trancados: <?= json_encode($trancadas, JSON_UNESCAPED_UNICODE) ?>
 };
 const original = JSON.parse(JSON.stringify(est));
 let sujo = false, selecionada = null, ferramenta = 'mover';
@@ -281,7 +293,7 @@ function repintarTudo(){
     const alvo = document.querySelector(`#escala [data-camada="${k}"]`);
     if (alvo) alvo.classList.toggle('ct-oculta', est.camadas[k] === 0);
   });
-  aplicarDeco();
+  aplicarDeco(); aplicarPosicoes();
   renderCamadas(); renderProps(); renderCores(); renderTipografia();
 }
 function aplicarEstado(json){ est = JSON.parse(json); repintarTudo(); marcarBotoes(); }
@@ -436,21 +448,29 @@ const renderCores      = adiar('cores',      (...a) => renderCoresJa(...a));
 const renderTipografia = adiar('tipografia', (...a) => renderTipografiaJa(...a));
 
 // ---------- Camadas ----------
+const OLHO_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.8"/></svg>';
+const OLHO_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4l16 16M10.7 6.2A9.9 9.9 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.4 8.3A17 17 0 0 0 2 12s3.6 7 10 7c1.4 0 2.7-.3 3.8-.8"/></svg>';
+const CADEADO_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></svg>';
+const CADEADO_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.6a4 4 0 0 1 7.8-1"/></svg>';
+
 function renderCamadas(){
   $('camadas').innerHTML = Object.entries(CAMADAS).map(([k, rot]) => {
     const vis = est.camadas[k] !== 0;
-    return `<div class="camada ${selecionada===k?'sel':''} ${vis?'':'oculta'}" data-k="${k}" onclick="selecionar('${k}')">
-      <button class="olho" onclick="event.stopPropagation();alternarCamada('${k}')" title="${vis?'Ocultar':'Mostrar'}">
-        ${vis
-          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.8"/></svg>'
-          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4l16 16M10.7 6.2A9.9 9.9 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8M6.4 8.3A17 17 0 0 0 2 12s3.6 7 10 7c1.4 0 2.7-.3 3.8-.8"/></svg>'}
-      </button>
+    const tr  = estaTrancada(k);
+    const mov = !!est.pos[k];
+    return `<div class="camada ${selecionada===k?'sel':''} ${vis?'':'oculta'} ${tr?'trancada':''}" data-k="${k}" onclick="selecionar('${k}')">
+      <button class="olho" title="${tr ? 'Trancada: destranque para esconder' : (vis?'Ocultar':'Mostrar')}"
+              onclick="event.stopPropagation();${tr?'':`alternarCamada('${k}')`}">${vis?OLHO_ON:OLHO_OFF}</button>
       <span class="nome">${rot}</span>
+      ${mov ? '<span class="mini" title="Movida do sítio de origem">✥</span>' : ''}
       <span class="mini" title="${ORNAMENTOS.includes(k)?'Camada decorativa':'Camada de texto'}">${ORNAMENTOS.includes(k)?'◈':'T'}</span>
+      <button class="cadeado" title="${tr ? 'Destrancar' : 'Trancar: não se arrasta nem se esconde'}"
+              onclick="event.stopPropagation();alternarTranca('${k}')">${tr?CADEADO_ON:CADEADO_OFF}</button>
     </div>`;
   }).join('');
 }
 function alternarCamada(k){
+  if (estaTrancada(k)) return msg(`"${CAMADAS[k]}" está trancada — destranque-a primeiro.`);
   est.camadas[k] = est.camadas[k] === 0 ? 1 : 0;
   const alvo = document.querySelector(`#escala [data-camada="${k}"]`);
   if (alvo) alvo.classList.toggle('ct-oculta', est.camadas[k] === 0);
@@ -466,9 +486,29 @@ function selecionar(k){
 }
 
 // ---------- Propriedades ----------
+/**
+ * O bloco de posição, comum a todas as camadas. Está no painel porque o
+ * arrasto sozinho não diz onde a camada está nem como voltar atrás — e uma
+ * composição que não se sabe desfazer não se experimenta.
+ */
+function blocoPosicao(k){
+  const p = posDe(k), movida = !!est.pos[k], tr = estaTrancada(k);
+  const num = n => (n > 0 ? '+' : '') + n.toFixed(2).replace(/\.?0+$/, '') + '%';
+  return `<div class="campo">
+    <label>Posição na tela</label>
+    <div class="pos-linha">
+      <span class="val">${movida ? num(p.x) + ' · ' + num(p.y) : 'no sítio de origem'}</span>
+      <button class="bt bt-min" onclick="reporPosicao('${k}')" ${movida?'':'disabled'}>Repor</button>
+    </div>
+    <div class="ajuda">${tr
+      ? 'Camada trancada: destranque-a (o cadeado, na lista de camadas) para a poder arrastar.'
+      : 'Arraste a camada no cartão. Ela cola-se ao centro, às bordas e aos outros blocos — o <b>Shift</b> desliga o íman, e as setas afinam ponto a ponto.'}</div>
+  </div>`;
+}
+
 function renderPropsJa(){
   const campos = CAMPOS[selecionada];
-  if (!selecionada) { $('props').innerHTML = '<div class="vazio-painel">Escolha uma camada — na lista abaixo ou clicando no cartão — para editar o que ela mostra.</div>'; return; }
+  if (!selecionada) { $('props').innerHTML = '<div class="vazio-painel">Escolha uma camada — na lista abaixo ou clicando no cartão — para editar o que ela mostra e onde ela fica.</div>'; return; }
   const rot = CAMADAS[selecionada];
   if (ORNAMENTOS.includes(selecionada)) return renderPropsOrnamento(selecionada, rot);
   if (!campos) {
@@ -481,7 +521,7 @@ function renderPropsJa(){
       escolher se o número de lugares aparece junto ao nome.</div>
       <div class="campo" style="margin-top:.5rem">
         <a class="bt" style="display:block;text-align:center;text-decoration:none" href="mesas.php">Abrir a Planta de Mesas</a>
-      </div>`;
+      </div>` + blocoPosicao(selecionada);
     return;
   }
   $('props').innerHTML = `<div class="vazio-painel" style="margin-bottom:.6rem"><b>${rot}</b></div>` + campos.map(([chave, rotulo, tipo]) => {
@@ -500,7 +540,7 @@ function renderPropsJa(){
       : `<input type="${tipo==='data'?'date':(tipo==='hora'?'time':'text')}" data-chave="${chave}" ${max?`maxlength="${max}"`:''}
                 value="${escaparAttr(v)}" oninput="editarTexto(this)">`;
     return `<div class="campo"><label>${rotulo}${cont}</label>${ctl}</div>`;
-  }).join('');
+  }).join('') + blocoPosicao(selecionada);
 }
 /**
  * Propriedades de uma camada decorativa. Não têm texto, mas têm feitio: até
@@ -540,6 +580,7 @@ function renderPropsOrnamento(k, rot){
                 ajuda:'Só este ornamento. O resto do cartão fica onde está.'});
   }
 
+  h += blocoPosicao(k);
   h += `<div class="ajuda" style="margin-top:.6rem">A cor vem do painel <b>Cores</b>.
     Para tirar esta camada do cartão, use o olho na lista de camadas.</div>`;
   $('props').innerHTML = h;
@@ -589,6 +630,52 @@ function aplicarDeco(){
   c.style.setProperty('--ct-mold-cantos', feitio === 'cantos' ? 'block' : 'none');
   Object.entries(ORN_ESCALA).forEach(([orn, chave]) =>
     c.style.setProperty('--ct-esc-' + orn, String((+est.deco[chave] || 100) / 100)));
+}
+
+// ---------- Tela de posicionamento livre ----------
+// Cada camada arrasta-se pelo próprio cartão. O deslocamento guarda-se em
+// PERCENTAGEM da peça, nunca em pixels: é o que faz a composição feita a 33%
+// de zoom sair igual em 720×1080 na gráfica.
+function posDe(k){ return est.pos[k] || {x:0, y:0}; }
+function estaTrancada(k){ return est.trancados.indexOf(k) >= 0; }
+/** Escreve o deslocamento no cartão (e limpa a marca quando volta à origem). */
+function pintarPos(k, x, y){
+  const el = document.querySelector(`#escala [data-camada="${k}"]`);
+  if (!el) return;
+  const naOrigem = Math.abs(x) < 0.005 && Math.abs(y) < 0.005;
+  el.style.setProperty('--px', naOrigem ? '' : String(x));
+  el.style.setProperty('--py', naOrigem ? '' : String(y));
+  el.classList.toggle('movida', !naOrigem);
+}
+function definirPos(k, x, y){
+  if (Math.abs(x) < 0.005 && Math.abs(y) < 0.005) delete est.pos[k];
+  else est.pos[k] = {x:x, y:y};
+  pintarPos(k, x, y);
+}
+/** Volta a pintar todas as camadas a partir de est.pos — usado ao desfazer. */
+function aplicarPosicoes(){
+  Object.keys(CAMADAS).forEach(k => { const p = posDe(k); pintarPos(k, p.x, p.y); });
+  document.querySelectorAll('#escala [data-camada]').forEach(el =>
+    el.classList.toggle('trancada-camada', estaTrancada(el.dataset.camada)));
+}
+function reporPosicao(k){
+  if (!est.pos[k]) return msg('"' + CAMADAS[k] + '" já está no sítio de origem.');
+  definirPos(k, 0, 0); marcarSujo(true); registarPasso(); renderProps();
+  msg(`"${CAMADAS[k]}" voltou ao sítio de origem.`);
+}
+function reporPosicoes(){
+  if (!Object.keys(est.pos).length) return msg('Nenhuma camada foi movida.');
+  if (!confirm('Repor TODAS as camadas no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
+  Object.keys(CAMADAS).forEach(k => definirPos(k, 0, 0));
+  marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
+  msg('Composição de origem reposta — por guardar.');
+}
+function alternarTranca(k){
+  const i = est.trancados.indexOf(k);
+  if (i >= 0) est.trancados.splice(i, 1); else est.trancados.push(k);
+  aplicarPosicoes(); renderCamadas(); marcarSujo(true); registarPasso();
+  msg(estaTrancada(k) ? `"${CAMADAS[k]}" trancada — não se arrasta nem se esconde.`
+                      : `"${CAMADAS[k]}" destrancada.`);
 }
 
 /**
@@ -661,10 +748,13 @@ function usarFerramenta(f){
   $('mesa').classList.toggle('mao', f === 'mao');
   // A vista limpa tira as marcas de seleção, para se ver o cartão como sai impresso.
   $('arte').classList.toggle('marcar', f === 'mover' || f === 'texto');
+  $('arte').classList.toggle('livre', f === 'mover');
   if (f === 'limpo') document.querySelectorAll('#escala [data-camada]').forEach(n => n.classList.remove('sel-camada'));
   else if (selecionada) selecionar(selecionada);
   if (f === 'texto' && selecionada) { const t = $('props').querySelector('input,textarea'); if (t) t.focus(); }
-  msg(f === 'limpo' ? 'Vista limpa: sem marcas de seleção.' : 'Clique numa camada do cartão para a editar.');
+  msg(f === 'limpo' ? 'Vista limpa: sem marcas de seleção.'
+    : (f === 'mover' ? 'Clique numa camada para a escolher — ou arraste-a para a mudar de sítio.'
+                     : 'Clique numa camada do cartão para a editar.'));
 }
 document.querySelectorAll('.ferr').forEach(b => b.addEventListener('click', () => usarFerramenta(b.dataset.ferr)));
 
@@ -674,6 +764,17 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='y'){ e.preventDefault(); refazer(); return; }
   if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); guardar(); return; }
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  // As setas afinam a camada escolhida ponto a ponto — o que o rato não dá.
+  // Um passo é 0,25% do cartão (1,8 px na largura); com Shift, 2%.
+  const setas = { ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1] };
+  if (setas[e.key] && selecionada && !estaTrancada(selecionada)) {
+    e.preventDefault();
+    const passo = e.shiftKey ? 2 : 0.25, p = posDe(selecionada);
+    definirPos(selecionada, TelaLivre.arred(TelaLivre.limitar(p.x + setas[e.key][0]*passo)),
+                            TelaLivre.arred(TelaLivre.limitar(p.y + setas[e.key][1]*passo)));
+    marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
+    return;
+  }
   const m = { v:'mover', t:'texto', h:'mao', z:'zoom', p:'limpo' }[e.key.toLowerCase()];
   if (m) usarFerramenta(m);
   if (e.key === '0') ajustar();
@@ -684,6 +785,28 @@ $('escala').addEventListener('click', e => {
   if (ferramenta === 'zoom') { zoomPasso(e.shiftKey ? -1 : 1); return; }
   const alvo = e.target.closest('[data-camada]');
   if (alvo) selecionar(alvo.dataset.camada);
+});
+
+// Arrastar as camadas pelo próprio cartão (só com a ferramenta de mover).
+// A caixa de referência é #escala — a peça em tamanho real, antes do zoom —
+// para as percentagens não dependerem da ampliação a que se está a trabalhar.
+TelaLivre.ligar({
+  tela: $('escala'),
+  guias: $('guias'),
+  ativo: () => ferramenta === 'mover',
+  blocos: () => Object.keys(CAMADAS).map(k =>
+            ({ id:k, el: document.querySelector(`#escala [data-camada="${k}"]`) }))
+            .filter(b => b.el && est.camadas[b.id] !== 0),
+  pos: posDe,
+  trancado: estaTrancada,
+  pegar: k => { if (selecionada !== k) selecionar(k); $('arte').classList.add('a-mover'); },
+  mover: (k, x, y) => pintarPos(k, x, y),
+  largar: (k, x, y) => {
+    $('arte').classList.remove('a-mover');
+    definirPos(k, x, y);
+    marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
+    msg(est.pos[k] ? `${CAMADAS[k]}: ${x}% · ${y}%` : `"${CAMADAS[k]}" voltou ao sítio de origem.`);
+  }
 });
 // Ferramenta "mão": arrastar a vista
 (() => {
@@ -711,7 +834,13 @@ function serializar(){
     'cartao.folhagem': est.folhagem,
     'cartao.camadas':  JSON.stringify(est.camadas),
     'cartao.cores':    Object.keys(est.cores).length ? JSON.stringify(est.cores) : '',
-    'cartao.escala':   String(est.escala || 100)
+    'cartao.escala':   String(est.escala || 100),
+    // Só o que foi mesmo movido: um mapa vazio grava-se como vazio, e a peça
+    // volta a ser exatamente a que o design desenhou.
+    'cartao.posicoes': Object.keys(est.pos).length
+                       ? JSON.stringify(Object.fromEntries(
+                           Object.entries(est.pos).map(([k,p]) => [k, p.x + ' ' + p.y]))) : '',
+    'cartao.trancados': est.trancados.join(',')
   });
 }
 function rotuloDe(chave){
@@ -820,9 +949,10 @@ Versoes.montar({
   aoAplicar: () => setTimeout(() => { sujo = false; location.reload(); }, 700)
 });
 
+aplicarPosicoes();
 renderCamadas(); renderProps(); renderCores(); renderTipografia();
 marcarBotoes(); ajustar();
-msg('Clique numa camada do cartão para a editar.');
+msg('Clique numa camada para a editar — ou arraste-a no cartão para a mudar de sítio.');
 </script>
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>

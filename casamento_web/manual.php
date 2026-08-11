@@ -280,7 +280,7 @@ if ($pecaSel === 'cartao') {
     <h2><span class="n">6</span> Prova</h2>
     <div class="provas">
       <div class="prova">
-        <div class="palco palco-cartao"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhKey, true, $camadas, $estilo) ?></div></div>
+        <div class="palco palco-cartao"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhKey, true, $camadas, $estilo, cartaoPosicoes($defs)) ?></div></div>
         <div class="rot">Exemplo: <b><?= escP($conv['nome']) ?></b> · fundo branco = zona não impressa</div>
       </div>
       <div style="flex:1;min-width:220px">

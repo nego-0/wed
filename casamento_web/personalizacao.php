@@ -278,6 +278,12 @@ function defsPadrao(): array {
         'cartao.ramos_escala' => '100',
         'cartao.volutas_escala' => '100',
         'cartao.floreados_escala' => '100',
+        // Posicionamento livre: quanto cada camada se afastou do sítio que o
+        // design lhe deu, em % do cartão. Vazio = a composição de origem, ao
+        // pixel. JSON {"camada":"x y"}; ver posicaoLivre().
+        'cartao.posicoes' => '',
+        // Camadas trancadas do cartão: não se arrastam nem se escondem.
+        'cartao.trancados' => '',
         // ---- Enquadramento das fotografias recortadas ----
         // "x y zoom": que ponto da fotografia fica no centro do recorte (em %)
         // e quanto se aproxima (100 = sem aproximação). Os valores de origem são
@@ -294,6 +300,10 @@ function defsPadrao(): array {
         // esconde — é a rede contra o gesto distraído numa lista que se
         // reordena a arrastar.
         'layout.trancados' => '',
+        // Posicionamento livre no convite digital: as duas telas de tamanho
+        // fixo (o envelope e a capa de entrada) deixam mover os seus blocos.
+        // JSON {"id":"x y"}, em % da tela; ver posicoesLivres().
+        'layout.posicoes' => '',
         // ---- Tipografia ----
         // Três papéis, e um tamanho para o texto que se lê. A tipografia de
         // display (nomes, datas, títulos grandes) fica como o design a deixou.
@@ -545,6 +555,128 @@ function modelosBloco(): array {
     ];
 }
 
+// ============================================================
+// Posicionamento livre
+//
+// Há duas maneiras de compor uma peça: aceitar o sítio que o design deu a
+// cada bloco, ou movê-lo. Até aqui só havia a primeira. O deslocamento
+// guarda-se como um par "x y" em PERCENTAGEM da tela onde o bloco vive — não
+// em pixels — para a mesma composição servir o cartão de 720×1080 e o ecrã
+// de um telemóvel qualquer. Zero em ambos = exatamente o desenho de origem,
+// e é por isso que uma peça que ninguém arrastou continua a sair igual ao
+// que sempre saiu.
+// ============================================================
+
+/** Limite do deslocamento, em % da tela. Passar disto é atirar fora do papel. */
+const POS_LIMITE = 60.0;
+
+/**
+ * As camadas do cartão, só os ids. Repetidas aqui de propósito: a validação
+ * corre em pedidos que não carregam pecas.php (a API de gravação, por
+ * exemplo), e um require a mais só para ler uma lista de doze palavras
+ * custava mais do que a duplicação. cartaoCamadas() é a que tem os rótulos.
+ */
+const CARTAO_CAMADAS_IDS = ['ramos','volutas','moldura','floreados','abertura','nomes',
+                            'frase','convidado','mesas','data','logistica','fecho'];
+
+/** Lê um par "x y" gravado. Devolve null se não for um par utilizável. */
+function lerPosicao($valor): ?array {
+    if (!is_string($valor) || !preg_match('/^-?\d{1,3}(\.\d{1,2})?\s+-?\d{1,3}(\.\d{1,2})?$/', trim($valor))) return null;
+    [$x, $y] = preg_split('/\s+/', trim($valor));
+    $lim = fn($n) => round(max(-POS_LIMITE, min(POS_LIMITE, (float)$n)), 2);
+    return ['x' => $lim($x), 'y' => $lim($y)];
+}
+
+/** Escreve um par já limitado, na forma canónica ("0 0" nunca chega a gravar-se). */
+function escreverPosicao(float $x, float $y): string {
+    $lim = fn($n) => round(max(-POS_LIMITE, min(POS_LIMITE, $n)), 2);
+    return $lim($x) . ' ' . $lim($y);
+}
+
+/**
+ * Valida um mapa de posições contra a lista de ids que a peça reconhece.
+ * O que não estiver na lista cai; o que estiver na origem (0 0) não se
+ * guarda, para o gravado ser só o que alguém decidiu mesmo mudar.
+ */
+function validarPosicoes(string $valor, array $idsValidos): ?string {
+    if ($valor === '') return '';
+    $j = json_decode($valor, true);
+    if (!is_array($j)) return null;
+    $out = [];
+    foreach ($j as $k => $v) {
+        if (!in_array($k, $idsValidos, true)) continue;
+        $p = lerPosicao($v);
+        if (!$p || ($p['x'] === 0.0 && $p['y'] === 0.0)) continue;
+        $out[$k] = escreverPosicao($p['x'], $p['y']);
+    }
+    return $out ? json_encode($out) : '';
+}
+
+/** Mapa id => ['x'=>float,'y'=>float] a partir de uma definição gravada. */
+function posicoesGravadas(?string $json): array {
+    $j = json_decode((string)$json, true);
+    if (!is_array($j)) return [];
+    $out = [];
+    foreach ($j as $k => $v) { $p = lerPosicao($v); if ($p) $out[(string)$k] = $p; }
+    return $out;
+}
+
+/**
+ * Os blocos que se podem mover no convite digital.
+ *
+ * Só as duas telas de tamanho conhecido entram: o envelope (fixo, do tamanho
+ * do ecrã) e a capa de entrada (uma página de altura calculada). O resto do
+ * convite é texto que corre, e arrastar um parágrafo numa página que cresce
+ * com o conteúdo dá composições que se desmancham no telemóvel seguinte.
+ */
+function posicoesLivres(): array {
+    // 'tela' é a caixa de referência do arrasto — aquela de que as
+    // percentagens são percentagem. 'sec' é a camada onde o bloco aparece no
+    // painel do editor.
+    $capa = '#cover';
+    $hero = '#hero .frame';
+    return [
+        'capa.bloco' => ['rotulo' => 'Envelope inteiro',   'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .seal-wrap'],
+        'capa.selo'  => ['rotulo' => 'Selo',               'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .seal'],
+        'capa.nomes' => ['rotulo' => 'Nomes',              'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .cover-names'],
+        'capa.data'  => ['rotulo' => 'Data',               'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .cover-date'],
+        'capa.dica'  => ['rotulo' => 'Convite para abrir', 'sec'=>'capa', 'tela'=>$capa, 'sel'=>'#cover .cover-hint'],
+        'hero.bloco' => ['rotulo' => 'Bloco de entrada',   'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .content'],
+        'hero.selo'  => ['rotulo' => 'Sobrescrito',        'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .kicker'],
+        'hero.nomes' => ['rotulo' => 'Nomes',              'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero h1'],
+        'hero.sub'   => ['rotulo' => 'Subtítulo',          'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .sub'],
+        'hero.data'  => ['rotulo' => 'Data',               'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .datebar'],
+        'hero.dica'  => ['rotulo' => 'Indicação de rolar', 'sec'=>'hero', 'tela'=>$hero, 'sel'=>'#hero .scrollcue'],
+    ];
+}
+
+/**
+ * CSS do posicionamento livre do convite digital.
+ *
+ * Sai sempre — mesmo sem nada movido — porque também define a unidade de
+ * medida (--uw/--uh, 1% da tela) de que o editor precisa para arrastar. Usa
+ * a propriedade `translate`, e não `transform`: assim compõe-se com os
+ * transforms que o design já usa (a legenda centrada, a folha rodada) em vez
+ * de os apagar.
+ */
+function cssPosicoes(array $defs): string {
+    // A capa de entrada tem altura calculada (min(100vh,860px), nunca abaixo
+    // de 600px): a unidade vertical acompanha-a, para 10% ser mesmo 10% dela.
+    $css = '#cover{--uw:1vw;--uh:1vh}'
+         . '#hero .frame{--uw:1vw;--uh:calc(max(600px,min(100vh,860px))/100)}'
+         . '[data-livre]{translate:calc(var(--px,0)*var(--uw,1vw)) calc(var(--py,0)*var(--uh,1vh))}';
+    // Cada bloco movido leva a declaração inteira: o convite que o convidado
+    // recebe não tem data-livre nenhum (isso é marca do editor), e sem o
+    // translate aqui as percentagens gravadas não moviam coisa alguma.
+    $livres = posicoesLivres();
+    foreach (posicoesGravadas($defs['layout.posicoes'] ?? '') as $id => $p) {
+        if (!isset($livres[$id])) continue;
+        $css .= $livres[$id]['sel'] . '{--px:' . $p['x'] . ';--py:' . $p['y']
+              . ';translate:calc(var(--px)*var(--uw,1vw)) calc(var(--py)*var(--uh,1vh))}';
+    }
+    return $css;
+}
+
 /** Secções livres gravadas, já validadas. */
 function blocosLivres(array $defs): array {
     $j = json_decode($defs['layout.blocos'] ?? '', true);
@@ -751,6 +883,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
             $e = lerEnquadramento($valor);
             return round($e['x'],1).' '.round($e['y'],1).' '.round($e['zoom']);
         }
+        case 'cartao.trancados':
         case 'layout.trancados':
         case 'layout.ordem': {
             // Lista de ids separados por vírgula. Guarda-se o que é reconhecível;
@@ -829,12 +962,15 @@ function validarDefinicao(string $chave, string $valor): ?string {
             // Visibilidade das camadas do cartão: {"nome_da_camada": 0|1}
             if ($valor === '') return '';
             $j = json_decode($valor, true); if (!is_array($j)) return null;
-            $validas = ['ramos','volutas','moldura','floreados','abertura','nomes',
-                        'frase','convidado','mesas','data','logistica','fecho'];
             $out = [];
-            foreach ($j as $k => $v) if (in_array($k, $validas, true)) $out[$k] = empty($v) ? 0 : 1;
+            foreach ($j as $k => $v) if (in_array($k, CARTAO_CAMADAS_IDS, true)) $out[$k] = empty($v) ? 0 : 1;
             return $out ? json_encode($out) : '';
         }
+        case 'cartao.posicoes':
+            // Deslocamento de cada camada do cartão, em % de 720×1080.
+            return validarPosicoes($valor, CARTAO_CAMADAS_IDS);
+        case 'layout.posicoes':
+            return validarPosicoes($valor, array_keys(posicoesLivres()));
         case 'evento.maps':
             return preg_match('#^https://#', $valor) ? mb_substr($valor, 0, 500) : null;
         case 'evento.whatsapp':
@@ -1001,7 +1137,10 @@ function convitePlaceholders(array $defs): array {
     }
     $tipo  = cssTipografia($defs);
     $vars .= $tipo['vars'];
-    $temaVars = $tipo['faces'] . ($vars !== '' ? ':root{'.$vars.'}' : '');
+    // O posicionamento livre viaja na mesma folha do tema: é composição da
+    // peça, e tem de acompanhar o convite também quando ele é descarregado
+    // para ver sem rede.
+    $temaVars = $tipo['faces'] . ($vars !== '' ? ':root{'.$vars.'}' : '') . cssPosicoes($defs);
     $petais = json_encode([$pal['gold-pale'], $pal['gold-soft'], $pal['blush'], $pal['cream']]);
 
     return [

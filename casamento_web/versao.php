@@ -131,6 +131,22 @@ function correcoesEsperadas(): array {
          'convite-editor.php', 'function alternarTranca('],
         ['Ponto focal com guias magnéticas (centro e terços)',
          'convite-editor.php', 'const IMAS ='],
+
+        // ---- Tela de posicionamento livre ----
+        ['Arrastar blocos na peça, com alinhamento magnético e guias',
+         'assets/tela-livre.js', 'function encostar('],
+        ['Deslocamento guardado em % da peça (e não em píxeis)',
+         'personalizacao.php', 'function validarPosicoes('],
+        ['O cartão impresso leva as camadas para onde as puserem',
+         'assets/pecas.css', '.cartao [data-camada]{ translate:'],
+        ['Camadas do cartão com cadeado próprio',
+         'editor-cartao.php', 'function alternarTranca('],
+        ['Envelope e capa de entrada com blocos arrastáveis',
+         'personalizacao.php', 'function posicoesLivres('],
+        ['A composição livre acompanha o convite que o convidado abre',
+         'personalizacao.php', 'function cssPosicoes('],
+        ['Arrasto dentro da tela do convite digital (o iframe manda no gesto)',
+         'convite-digital.php', 'function montarLivres('],
     ];
 }
 

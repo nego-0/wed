@@ -28,6 +28,7 @@ $estilo = cartaoEstiloVars($defsCartao);
 // As camadas desligadas no editor também não se imprimem — antes esta página
 // ignorava-as e saía um cartão diferente do que a prova mostrava.
 $camadasCartao = cartaoCamadasVisiveis($defs);
+$posicoesCartao = cartaoPosicoes($defs);
 $ev  = cartaoDadosEvento($defs);
 
 // Convites físicos (os que levam cartão impresso)
@@ -123,7 +124,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
       $conv = ['nome' => nomeParaCartao($c), 'mesas' => $mesas];
     ?>
     <div class="cartao-item">
-      <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares, $camadasCartao, $estilo) ?></div></div>
+      <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares, $camadasCartao, $estilo, $posicoesCartao) ?></div></div>
       <div class="legenda no-print"><?= escP($c['codigo']) ?> ·
         <a href="?id=<?= (int)$c['id'] ?>&paleta=<?= escP($paletaSel) ?>&folhagem=<?= escP($folhagemSel) ?>">imprimir só este</a></div>
     </div>

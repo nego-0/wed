@@ -193,6 +193,51 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .ed-arte.marcar [data-camada]:hover{ outline:1px dashed rgba(217,188,140,.55); outline-offset:2px; }
 .ed-arte [data-camada].sel-camada{ outline:1.5px solid var(--ed-ouro-claro); outline-offset:2px; }
 
+/* ---- Cadeado das camadas ----------------------------------- */
+/* Só se vê ao passar por cima, ou quando está fechado: uma coluna de cadeados
+   abertos em todas as linhas é ruído, não informação. */
+.camada .cadeado{ margin-left:auto; width:26px; height:22px; padding:2px 4px; border:0;
+                  background:none; color:var(--ed-texto-2); cursor:pointer; opacity:0;
+                  transition:opacity .12s; }
+.camada:hover .cadeado, .camada.trancada .cadeado{ opacity:.85; }
+.camada .cadeado svg{ width:14px; height:14px; display:block; }
+.camada.trancada{ border-left:2px solid var(--ed-ouro, #C9A862); }
+.camada.trancada .nome{ opacity:.75; }
+
+/* ---- Tela de posicionamento livre -------------------------- */
+/* Cada camada arrasta-se pela própria peça. O cursor é o que anuncia que
+   isto é agarrável — sem ele, ninguém descobre que pode mexer. */
+/* Com a ferramenta de mover não se seleciona texto: arrastar uma frase
+   pintava-a de azul e o gesto ficava a parecer outra coisa. */
+.ed-arte.livre{ user-select:none; -webkit-user-select:none; }
+.ed-arte.livre [data-camada]{ cursor:grab; }
+.ed-arte.livre [data-camada].trancada-camada{ cursor:not-allowed; }
+.ed-arte.livre.a-mover [data-camada]{ cursor:grabbing; }
+.ed-arte [data-camada].movida{ outline:1px dashed rgba(201,168,98,.35); outline-offset:2px; }
+
+/* As guias vivem por cima da peça e não apanham o rato. Estão sempre no
+   sítio; o que muda é a opacidade — acendem só quando o bloco está mesmo
+   colado, senão o olho aprende a ignorá-las. */
+.tela-guias{ position:absolute; inset:0; pointer-events:none; z-index:60; }
+.tela-guias::before, .tela-guias::after{ content:''; position:absolute; opacity:0;
+  background:var(--ed-ouro-claro,#D9BC8C); box-shadow:0 0 3px rgba(217,188,140,.7);
+  transition:opacity .08s; }
+.tela-guias::before{ top:0; bottom:0; left:var(--gx,50%); width:1px; }
+.tela-guias::after{ left:0; right:0; top:var(--gy,50%); height:1px; }
+.tela-guias.v::before{ opacity:.95; }
+.tela-guias.h::after{ opacity:.95; }
+
+/* Leitura e reposição do deslocamento, no painel de propriedades. */
+.pos-linha{ display:flex; align-items:center; gap:.4rem; }
+.pos-linha .val{ flex:1; color:var(--ed-texto-2); font-size:.74rem; font-variant-numeric:tabular-nums; }
+/* Um grupo dentro do painel de propriedades: a posição dos blocos é outro
+   assunto que não os textos, e sem a linha de cima lia-se como continuação. */
+.ed-painel-corpo .grupo{ margin-top:.7rem; padding-top:.55rem; border-top:1px solid var(--ed-linha); }
+.ed-painel-corpo .grupo h4{ margin:0 0 .45rem; font-size:.7rem; font-weight:600; letter-spacing:.09em;
+                            text-transform:uppercase; color:var(--ed-texto-2); }
+.ed-painel-corpo .grupo h4 .op{ margin-left:.35rem; text-transform:none; letter-spacing:0;
+                                border:1px solid var(--ed-linha); border-radius:4px; padding:0 .25rem; }
+
 /* ---- Barra de estado --------------------------------------- */
 /* Uma linha só, sempre: se esta barra crescesse, o corpo do editor encolhia
    por baixo do rato. */

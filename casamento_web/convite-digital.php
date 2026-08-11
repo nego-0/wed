@@ -165,7 +165,11 @@ if ($modoProva) {
 }
 
 // ---- Tela do editor: ponte com a janela de edição -------------
-if ($modoEditor) $out = str_replace('</body>', pontelEditor() . '</body>', $out);
+// O motor de arrasto entra na própria tela: quem manda no gesto é o documento
+// onde o rato está, e a tela é um iframe. A janela de edição só recebe o
+// resultado (ver pontelEditor()).
+if ($modoEditor) $out = str_replace('</body>',
+    '<script src="assets/tela-livre.js"></script>' . pontelEditor() . '</body>', $out);
 
 // ---- Visualização normal (recursos externos) -----------------
 header('Content-Type: text/html; charset=utf-8');
@@ -186,6 +190,18 @@ function pontelEditor(): string {
   [data-def].ed-sel{ outline:1.5px solid #D9BC8C !important; outline-offset:3px; }
   [data-sec].ed-sec-sel{ box-shadow:inset 0 0 0 2px rgba(217,188,140,.5); }
   body.ed-marcar [data-sec]:hover{ box-shadow:inset 0 0 0 1px rgba(217,188,140,.25); }
+  /* Tela de posicionamento livre: o cursor é o que anuncia o que se agarra. */
+  body.ed-livre [data-livre]{ cursor:grab; }
+  body.ed-livre.ed-a-mover [data-livre]{ cursor:grabbing; }
+  body.ed-livre [data-livre].ed-livre-sel{ outline:1.5px dashed rgba(217,188,140,.85); outline-offset:4px; }
+  /* As guias acendem-se só quando o bloco está mesmo colado a uma linha. */
+  .ed-guias{ position:absolute; inset:0; pointer-events:none; z-index:900; }
+  .ed-guias::before, .ed-guias::after{ content:''; position:absolute; opacity:0; background:#D9BC8C;
+    box-shadow:0 0 3px rgba(217,188,140,.8); transition:opacity .08s; }
+  .ed-guias::before{ top:0; bottom:0; left:var(--gx,50%); width:1px; }
+  .ed-guias::after{ left:0; right:0; top:var(--gy,50%); height:1px; }
+  .ed-guias.v::before{ opacity:.95; }
+  .ed-guias.h::after{ opacity:.95; }
 </style>
 <script>
 (function(){
@@ -249,7 +265,83 @@ function pontelEditor(): string {
       var r = document.documentElement;
       Object.keys(d.vars||{}).forEach(function(k){ r.style.setProperty('--'+k, d.vars[k]); });
     }
+    // Posicionamento livre: o editor manda o que se pode mover e onde está.
+    if (d.tipo === 'livres'){ montarLivres(d.mapa||{}, d.pos||{}); }
+    if (d.tipo === 'pos'){ pintarPos(d.id, d.x, d.y); }
+    if (d.tipo === 'livre-sel'){
+      marcarLivre(d.id);
+      var alvo = elDe(d.id);
+      if (alvo) alvo.scrollIntoView({block:'center', behavior:'smooth'});
+    }
   });
+
+  // ---- Posicionamento livre, dentro da tela --------------------
+  // O arrasto tem de correr AQUI: o rato está neste documento, e a janela de
+  // edição só veria coordenadas que não sabe traduzir. Daqui sai apenas o
+  // resultado — que bloco, e para onde.
+  var LIVRES = {}, TELAS = [];
+
+  function elDe(id){ return LIVRES[id] ? LIVRES[id].el : null; }
+  function pintarPos(id, x, y){
+    var el = elDe(id); if (!el) return;
+    var origem = Math.abs(x) < 0.005 && Math.abs(y) < 0.005;
+    el.style.setProperty('--px', origem ? '0' : String(x));
+    el.style.setProperty('--py', origem ? '0' : String(y));
+    if (LIVRES[id]) LIVRES[id].pos = { x:x, y:y };
+  }
+  function marcarLivre(id){
+    Object.keys(LIVRES).forEach(function(k){
+      if (LIVRES[k].el) LIVRES[k].el.classList.toggle('ed-livre-sel', k === id);
+    });
+  }
+
+  function guiasDe(tela){
+    var g = tela.querySelector(':scope > .ed-guias');
+    if (!g){
+      g = document.createElement('span'); g.className = 'ed-guias';
+      // A tela precisa de ser o contexto de posicionamento das guias; o
+      // envelope e a moldura da entrada já são relativos ou fixos.
+      if (getComputedStyle(tela).position === 'static') tela.style.position = 'relative';
+      tela.appendChild(g);
+    }
+    return g;
+  }
+
+  /**
+   * Recebe o mapa de blocos móveis (id -> selector) e liga o arrasto em cada
+   * tela de tamanho conhecido. Os blocos são marcados com data-livre, que é o
+   * que o CSS usa para os deslocar ao vivo.
+   */
+  function montarLivres(mapa, pos){
+    TELAS.forEach(function(t){ t.desligar(); }); TELAS = [];
+    LIVRES = {};
+    document.body.classList.add('ed-livre');
+    var porTela = {};
+    Object.keys(mapa).forEach(function(id){
+      var el = document.querySelector(mapa[id].sel);
+      if (!el) return;
+      el.dataset.livre = id;
+      var p = pos[id] || { x:0, y:0 };
+      LIVRES[id] = { el:el, pos:p, tela:mapa[id].tela };
+      (porTela[mapa[id].tela] = porTela[mapa[id].tela] || []).push(id);
+    });
+    Object.keys(porTela).forEach(function(selTela){
+      var tela = document.querySelector(selTela); if (!tela) return;
+      var ids = porTela[selTela];
+      TELAS.push(window.TelaLivre.ligar({
+        tela: tela,
+        guias: guiasDe(tela),
+        blocos: function(){ return ids.map(function(id){ return { id:id, el:elDe(id) }; }); },
+        pos: function(id){ return (LIVRES[id]||{}).pos || {x:0,y:0}; },
+        trancado: function(){ return false; },
+        pegar: function(id){ document.body.classList.add('ed-a-mover'); marcarLivre(id);
+                             envia({ tipo:'pegou', id:id }); },
+        mover: function(id, x, y){ pintarPos(id, x, y); },
+        largar: function(id, x, y){ document.body.classList.remove('ed-a-mover');
+                                    pintarPos(id, x, y); envia({ tipo:'moveu', id:id, x:x, y:y }); }
+      }));
+    });
+  }
 
   envia({ tipo:'pronta' });
 })();
