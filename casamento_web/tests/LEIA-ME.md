@@ -58,6 +58,7 @@ Entram com **admin / noivos2026**.
 | `chk_contas.js`         | registo público e aprovação, códigos de suporte (ver / corrigir / revogar), equipa do casamento e contas suspensas |
 | `chk_editor_avancado.js`| desenhar modelos sem casa emprestada, camadas trancadas que resistem ao arrasto, e o ponto focal que se cola às guias |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
+| `chk_editor_espaco.js`  | o editor avisa quando o ecrã é pequeno (e deixa continuar), e o manual de impressão segue o cartão em vigor |
 | `chk_tela_livre.js`     | posicionamento livre: arrastar blocos no cartão, no envelope e nas páginas do corpo (incluindo secções livres), íman, cadeado, e a composição a chegar ao convidado |
 | `chk_dados.js`          | levar os dados e trazê-los de volta: o que sai volta igual, substituir substitui, e cada um só leva o que é seu |
 | `chk_so_ver.js`         | o ecrã em modo de leitura: o que escreve fica apagado, o que só mostra continua vivo, e os gestos da planta não arrancam — mas arrancam com um código de correção |

@@ -47,6 +47,20 @@ if ($pecaSel === 'cartao') {
     $rotulos  = cartaoCamadas();
     $ev       = cartaoDadosEvento($defs);
 
+    // Composição livre: onde e como cada camada foi parar. A gráfica recebe a
+    // arte já montada, mas quem confere a prova precisa de saber que o que vê
+    // torto está torto de propósito.
+    $posic    = cartaoPosicoes($defs);
+    // Feitio da moldura e tamanho dos ornamentos, como estão AGORA. Estavam
+    // escritos à mão nesta página, e diziam sempre o mesmo enquanto o cartão
+    // mudava por baixo — o manual passava a mentir com toda a confiança.
+    $moldKey  = $defs['cartao.moldura_estilo'];
+    $mold     = cartaoMolduras()[$moldKey] ?? cartaoMolduras()['simples'];
+    $moldMarg = (int)$defs['cartao.moldura_margem'];
+    $moldLinha= cartaoMolduraLinha($moldKey);
+    $escOrn   = fn(string $o) => (int)$defs['cartao.'.$o.'_escala'];
+    $cxOrn    = fn(float $l, float $a, int $e) => round($l*$e/100).' × '.round($a*$e/100).' px';
+
     // Prova visual com um convite real, se existir
     $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
                        LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
@@ -258,10 +272,49 @@ if ($pecaSel === 'cartao') {
         <?= escP(implode(', ', array_map(fn($k) => $rotulos[$k], $omitidas))) ?>.</div>
     <?php endif; ?>
     <table class="tb" style="margin-top:.8rem">
-      <tr><th style="width:34%">Moldura</th><td>Retângulo fechado, 1,4 px (≈ 0,2 mm), a 28 px (≈ 3,9 mm) da aresta</td></tr>
-      <tr><th>Trepadeiras</th><td>Cantos superior-direito e inferior-esquerdo (rodada 180°), caixa 132 × 270 px</td></tr>
-      <tr><th>Volutas</th><td>Cantos superior-esquerdo e inferior-direito (rodada 180°), caixa 178 × 178 px</td></tr>
+      <tr><th style="width:34%">Moldura</th><td><?= escP($mold['nome']) ?> —
+        <?= $moldKey === 'cantos'
+              ? 'esquadrias de 74 × 74 px nos quatro cantos'
+              : ($moldKey === 'dupla' ? 'duas linhas' : 'retângulo fechado') ?>,
+        <?= number_format($moldLinha, 1, ',', '') ?> px
+        (≈ <?= number_format($moldLinha / $pxmmCartao, 2, ',', '') ?> mm),
+        a <?= $moldMarg ?> px (≈ <?= number_format($moldMarg / $pxmmCartao, 1, ',', '') ?> mm) da aresta</td></tr>
+      <tr><th>Trepadeiras</th><td>Cantos superior-direito e inferior-esquerdo (rodada 180°), caixa
+        <?= $cxOrn(132, 270, $escOrn('ramos')) ?><?= $escOrn('ramos') !== 100 ? ' (a '.$escOrn('ramos').'%)' : '' ?></td></tr>
+      <tr><th>Volutas</th><td>Cantos superior-esquerdo e inferior-direito (rodada 180°), caixa
+        <?= $cxOrn(178, 178, $escOrn('volutas')) ?><?= $escOrn('volutas') !== 100 ? ' (a '.$escOrn('volutas').'%)' : '' ?></td></tr>
+      <tr><th>Floreados</th><td>Aos lados dos nomes (o da direita rodado 180°), caixa
+        <?= $cxOrn(150, 104, $escOrn('floreados')) ?><?= $escOrn('floreados') !== 100 ? ' (a '.$escOrn('floreados').'%)' : '' ?></td></tr>
     </table>
+
+    <?php // Composição livre: só aparece quando alguém mexeu. Um cartão pela
+          // composição de origem não precisa de uma tabela a dizê-lo. ?>
+    <?php if ($posic): ?>
+      <h3 style="margin:1rem 0 .3rem;font-size:.92rem">Composição — camadas fora do sítio de origem</h3>
+      <div class="aviso-p"><b>Não é erro de montagem.</b> Estas camadas foram deslocadas ou viradas
+        de propósito no editor. A arte que segue já vai assim; a tabela existe para a prova ser
+        conferida contra o que foi decidido, e não contra o desenho de origem.</div>
+      <table class="tb">
+        <thead><tr><th>Camada</th><th class="num" style="width:20%">Horizontal</th>
+          <th class="num" style="width:20%">Vertical</th><th class="num" style="width:16%">Volta</th></tr></thead>
+        <tbody>
+        <?php foreach ($rotulos as $k => $rot): $p = $posic[$k] ?? null; if (!$p) continue;
+              $mm = fn(float $pc, float $lado) => number_format($pc / 100 * $lado / $pxmmCartao, 1, ',', ''); ?>
+          <tr class="<?= $camadas[$k] !== 0 ? '' : 'off' ?>">
+            <td><?= escP($rot) ?><?= $camadas[$k] !== 0 ? '' : ' <span style="color:#7a8078">(desligada)</span>' ?></td>
+            <td class="num"><?= $p['x'] > 0 ? '+' : '' ?><?= rtrim(rtrim(number_format($p['x'], 2, ',', ''), '0'), ',') ?> %
+              <span style="color:#7a8078">(<?= $mm($p['x'], CARTAO_L) ?> mm)</span></td>
+            <td class="num"><?= $p['y'] > 0 ? '+' : '' ?><?= rtrim(rtrim(number_format($p['y'], 2, ',', ''), '0'), ',') ?> %
+              <span style="color:#7a8078">(<?= $mm($p['y'], CARTAO_A) ?> mm)</span></td>
+            <td class="num"><?= $p['a'] ? (($p['a'] > 0 ? '+' : '') . rtrim(rtrim(number_format($p['a'], 1, ',', ''), '0'), ',') . '°') : '—' ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      <p style="font-size:.82rem;color:#7a8078;margin:.4rem 0 0">As percentagens são do cartão
+        (720 × 1080 px); os milímetros são a mesma medida em papel. A volta é à volta do centro
+        de cada camada.</p>
+    <?php endif; ?>
   </div>
 
   <div class="sec">
@@ -280,7 +333,7 @@ if ($pecaSel === 'cartao') {
     <h2><span class="n">6</span> Prova</h2>
     <div class="provas">
       <div class="prova">
-        <div class="palco palco-cartao"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhKey, true, $camadas, $estilo, cartaoPosicoes($defs)) ?></div></div>
+        <div class="palco palco-cartao"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhKey, true, $camadas, $estilo, $posic) ?></div></div>
         <div class="rot">Exemplo: <b><?= escP($conv['nome']) ?></b> · fundo branco = zona não impressa</div>
       </div>
       <div style="flex:1;min-width:220px">

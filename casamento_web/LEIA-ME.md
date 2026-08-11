@@ -197,6 +197,37 @@ significa que uma composição arrojada pode sobrepor-se noutro ecrã — é o p
 de compor à mão sobre texto que reflui, e por isso cada secção tem o seu
 **Repor a composição desta camada**, à mão de semear.
 
+**Virar.** O mesmo bloco também se vira, à volta do próprio centro: **Alt +
+arrastar** na peça (encosta de 15 em 15 graus, e o **Shift** solta-a),
+**Alt + setas** para afinar um grau de cada vez, ou a barra no painel. A volta
+viaja no mesmo valor gravado, como terceiro número (`"x y ângulo"`) — e um
+bloco que só foi movido continua a gravar-se com dois, para ocupar exatamente
+o que ocupava antes de haver rotação. No CSS é a propriedade `rotate`, irmã da
+`translate` e pela mesma razão: compõe-se com os transforms do design em vez
+de os apagar.
+
+**Mesa mínima.** Os editores têm três colunas — ferramentas, peça e painéis — e
+uma barra de opções que não deve passar a duas linhas. Abaixo de
+`EDITOR_MIN_L × EDITOR_MIN_A` (**1200 × 700**, em `config.php`) deixam de caber:
+os painéis comem a peça, a barra quebra, e o editor salta por baixo do rato a
+meio de um gesto. Isso não se descobre a olho — descobre-se depois de meia hora
+de trabalho, quando um arrasto sai torto e não se percebe porquê. Daí o aviso
+(`assets/editor-espaco.js`): diz a medida que se tem, a que falta e qual dos
+lados é que falta. **Não é uma porta fechada**: há «continuar mesmo assim», que
+vale para a sessão de trabalho e deixa uma marca na barra de estado — clicar
+nela traz o aviso de volta.
+
+**O manual de impressão acompanha.** É gerado, não escrito: a prova visual é o
+cartão a sério, com a composição aplicada, e as tabelas de especificação dizem
+o feitio da moldura, a distância à aresta e o tamanho de cada ornamento **como
+estão agora** — estavam escritos à mão e diziam sempre o mesmo enquanto o
+cartão mudava por baixo, que é um manual a mentir com toda a confiança. Quando
+há camadas fora do sítio, nasce uma tabela **«Composição»** com o deslocamento
+e a volta de cada uma, em percentagem e em milímetros de papel, e um aviso de
+que não é erro de montagem — a arte já segue assim, e quem confere a prova
+precisa de saber contra o quê a conferir. Pôr outra versão em vigor muda a peça
+e o manual acompanha, sem lhe tocar.
+
 Os ids das posições levam **dois pontos** (`convite:cartao`, `capa:nomes`): as
 definições usam o ponto, e um id igualzinho a uma chave de definição era um
 engano à espera de acontecer. Os das secções livres seguem o feitio

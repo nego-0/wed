@@ -216,6 +216,8 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
+<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?> };</script>
+<script src="<?= asset('assets/editor-espaco.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
@@ -332,9 +334,9 @@ let EST = {
 };
 // O gravado é "x y"; cá dentro dá jeito ter os números à mão.
 function posDe(id){
-  const v = EST.pos[id]; if (!v) return {x:0, y:0};
+  const v = EST.pos[id]; if (!v) return {x:0, y:0, a:0};
   const p = String(v).split(/\s+/);
-  return { x: parseFloat(p[0])||0, y: parseFloat(p[1])||0 };
+  return { x: parseFloat(p[0])||0, y: parseFloat(p[1])||0, a: parseFloat(p[2])||0 };
 }
 function ler(k){ try { return JSON.parse(ATUAIS[k]||'[]')||[]; } catch(e){ return []; } }
 
@@ -463,19 +465,30 @@ function mapaPos(){
   Object.keys(EST.pos).forEach(id => { fora[id] = posDe(id); });
   return fora;
 }
-/** Grava (ou apaga, quando volta à origem) o deslocamento de um bloco. */
-function guardarPos(id, x, y){
-  if (Math.abs(x) < 0.005 && Math.abs(y) < 0.005) delete EST.pos[id];
-  else EST.pos[id] = x + ' ' + y;
+/** Grava (ou apaga, quando volta à origem) o deslocamento e a volta. */
+function guardarPos(id, x, y, a){
+  a = a || 0;
+  if (Math.abs(x) < 0.005 && Math.abs(y) < 0.005 && Math.abs(a) < 0.05) delete EST.pos[id];
+  else EST.pos[id] = x + ' ' + y + (a ? ' ' + a : '');
 }
-function moverLivre(id, x, y){
-  guardarPos(id, x, y);
-  enviarTela({tipo:'pos', id:id, x:x, y:y});
+function moverLivre(id, x, y, a){
+  a = a || 0;
+  guardarPos(id, x, y, a);
+  enviarTela({tipo:'pos', id:id, x:x, y:y, a:a});
+}
+/** Só a volta, deixando o bloco onde está. */
+function virarLivre(id, v, el){
+  const p = posDe(id);
+  moverLivre(id, p.x, p.y, TelaLivre.limitarAng(+v || 0));
+  marcarSujo(true); registarPasso();
+  if (el){ const c = el.closest('.campo').querySelector('.contador'); if (c) c.textContent = (+v||0) + '°'; }
+  else renderProps();
+  msg(`${(livresTodos()[id]||{}).rotulo || id}: ${(+v||0)}°`);
 }
 function reporLivre(id){
   const bl = livresTodos()[id] || { rotulo:id };
   if (!EST.pos[id]) return msg(`"${bl.rotulo}" já está no sítio de origem.`);
-  moverLivre(id, 0, 0);
+  moverLivre(id, 0, 0, 0);
   marcarSujo(true); registarPasso(); renderProps();
   msg(`"${bl.rotulo}" voltou ao sítio de origem.`);
 }
@@ -484,7 +497,7 @@ function reporLivresDa(sec){
   const ids = Object.keys(L).filter(id => L[id].sec === sec && EST.pos[id]);
   if (!ids.length) return msg('Nada foi movido nesta camada.');
   if (!confirm('Repor todos os blocos desta camada no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
-  ids.forEach(id => moverLivre(id, 0, 0));
+  ids.forEach(id => moverLivre(id, 0, 0, 0));
   marcarSujo(true); registarPasso(); renderProps();
   msg('Composição de origem reposta — por guardar.');
 }
@@ -504,15 +517,28 @@ function painelLivre(sec){
   return `<div class="grupo"><h4>Posição dos blocos${movidos ? ` <span class="op">${movidos} movido${movidos>1?'s':''}</span>` : ''}</h4>
     ${ids.map(id => {
       const p = posDe(id), mov = !!EST.pos[id];
+      const onde = mov ? [num(p.x) + ' · ' + num(p.y)].concat(p.a ? [p.a + '°'] : []).join(' · ')
+                       : 'no sítio de origem';
       return `<div class="campo">
         <label>${esc(L[id].rotulo)}</label>
         <div class="pos-linha">
-          <span class="val">${mov ? num(p.x) + ' · ' + num(p.y) : 'no sítio de origem'}</span>
+          <span class="val">${onde}</span>
           <button class="bt bt-min ${LIVRE===id?'primario':''}" onclick="escolherLivre('${id}')" title="Assinalar na tela">Ver</button>
           <button class="bt bt-min" onclick="reporLivre('${id}')" ${mov?'':'disabled'}>Repor</button>
         </div>
       </div>`;
     }).join('')}
+    ${LIVRE && L[LIVRE] && L[LIVRE].sec === sec ? (() => {
+      // A volta é do bloco escolhido, e só dele: uma barra por cada um dos
+      // nove blocos desta página seria um painel que ninguém lê.
+      const a = posDe(LIVRE).a;
+      return `<div class="campo"><label>Volta de «${esc(L[LIVRE].rotulo)}»<span class="contador">${a}°</span></label>
+        <div class="vs-lin"><input type="range" min="-180" max="180" step="1" value="${a}"
+          oninput="virarLivre('${LIVRE}', this.value, this)" style="flex:1">
+          <button class="bt bt-min" onclick="virarLivre('${LIVRE}', 0)">Repor</button></div>
+        <div class="ajuda">Vira o bloco à volta do próprio centro. Também com <b>Alt</b> + arrastar na tela
+          (encosta de 15 em 15 graus; o <b>Shift</b> solta-a), ou <b>Alt</b> + setas.</div></div>`;
+    })() : `<div class="ajuda">Escolha um bloco (<b>Ver</b>, ou clique nele na tela) para lhe dar volta.</div>`}
     <div class="ajuda">Arraste cada bloco na tela. Cola-se ao centro, às bordas e aos outros blocos —
       o <b>Shift</b> desliga o íman e as <b>setas</b> afinam ponto a ponto.
       ${fixa
@@ -544,9 +570,9 @@ window.addEventListener('message', e=>{
   if (d.tipo === 'moveu'){
     const bl = livresTodos()[d.id]; if (!bl) return;
     LIVRE = d.id;
-    guardarPos(d.id, d.x, d.y);
+    guardarPos(d.id, d.x, d.y, d.a);
     marcarSujo(true); registarPasso(); renderProps();
-    msg(`${bl.rotulo}: ${d.x}% · ${d.y}%`);
+    msg(`${bl.rotulo}: ${d.x}% · ${d.y}%${d.a ? ' · ' + d.a + '°' : ''}`);
     return;
   }
   if (d.tipo === 'atalho'){
@@ -1204,8 +1230,10 @@ document.addEventListener('keydown', e=>{
   if (setas[e.key] && LIVRE && livresTodos()[LIVRE]){
     e.preventDefault();
     const passo = e.shiftKey ? 2 : 0.25, p = posDe(LIVRE), lim = TelaLivre.limitar;
+    // Com Alt as setas viram em vez de deslocar: 1° de cada vez, 15° com Shift.
+    if (e.altKey){ virarLivre(LIVRE, p.a + (setas[e.key][0] + setas[e.key][1]) * (e.shiftKey ? 15 : 1)); return; }
     moverLivre(LIVRE, TelaLivre.arred(lim(p.x + setas[e.key][0]*passo)),
-                      TelaLivre.arred(lim(p.y + setas[e.key][1]*passo)));
+                      TelaLivre.arred(lim(p.y + setas[e.key][1]*passo)), p.a);
     marcarSujo(true); registarPasso(); renderProps();
     return;
   }

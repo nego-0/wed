@@ -267,7 +267,7 @@ function pontelEditor(): string {
     }
     // Posicionamento livre: o editor manda o que se pode mover e onde está.
     if (d.tipo === 'livres'){ montarLivres(d.mapa||{}, d.pos||{}); }
-    if (d.tipo === 'pos'){ pintarPos(d.id, d.x, d.y); }
+    if (d.tipo === 'pos'){ pintarPos(d.id, d.x, d.y, d.a); }
     if (d.tipo === 'livre-sel'){
       marcarLivre(d.id);
       var alvo = elDe(d.id);
@@ -282,12 +282,13 @@ function pontelEditor(): string {
   var LIVRES = {}, TELAS = [];
 
   function elDe(id){ return LIVRES[id] ? LIVRES[id].el : null; }
-  function pintarPos(id, x, y){
+  function pintarPos(id, x, y, a){
     var el = elDe(id); if (!el) return;
-    var origem = Math.abs(x) < 0.005 && Math.abs(y) < 0.005;
-    el.style.setProperty('--px', origem ? '0' : String(x));
-    el.style.setProperty('--py', origem ? '0' : String(y));
-    if (LIVRES[id]) LIVRES[id].pos = { x:x, y:y };
+    a = a || 0;
+    el.style.setProperty('--px', String(x));
+    el.style.setProperty('--py', String(y));
+    el.style.setProperty('--pa', String(a));
+    if (LIVRES[id]) LIVRES[id].pos = { x:x, y:y, a:a };
   }
   function marcarLivre(id){
     Object.keys(LIVRES).forEach(function(k){
@@ -321,7 +322,7 @@ function pontelEditor(): string {
       var el = document.querySelector(mapa[id].sel);
       if (!el) return;
       el.dataset.livre = id;
-      var p = pos[id] || { x:0, y:0 };
+      var p = pos[id] || { x:0, y:0, a:0 };
       LIVRES[id] = { el:el, pos:p, tela:mapa[id].tela };
       (porTela[mapa[id].tela] = porTela[mapa[id].tela] || []).push(id);
     });
@@ -332,13 +333,14 @@ function pontelEditor(): string {
         tela: tela,
         guias: guiasDe(tela),
         blocos: function(){ return ids.map(function(id){ return { id:id, el:elDe(id) }; }); },
-        pos: function(id){ return (LIVRES[id]||{}).pos || {x:0,y:0}; },
+        pos: function(id){ return (LIVRES[id]||{}).pos || {x:0,y:0,a:0}; },
         trancado: function(){ return false; },
         pegar: function(id){ document.body.classList.add('ed-a-mover'); marcarLivre(id);
                              envia({ tipo:'pegou', id:id }); },
-        mover: function(id, x, y){ pintarPos(id, x, y); },
-        largar: function(id, x, y){ document.body.classList.remove('ed-a-mover');
-                                    pintarPos(id, x, y); envia({ tipo:'moveu', id:id, x:x, y:y }); }
+        mover: function(id, x, y, a){ pintarPos(id, x, y, a); },
+        largar: function(id, x, y, a){ document.body.classList.remove('ed-a-mover');
+                                       pintarPos(id, x, y, a);
+                                       envia({ tipo:'moveu', id:id, x:x, y:y, a:a||0 }); }
       }));
     });
   }

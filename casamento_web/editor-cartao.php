@@ -199,6 +199,8 @@ $camposPorCamada = [
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
+<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?> };</script>
+<script src="<?= asset('assets/editor-espaco.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
@@ -494,16 +496,23 @@ function selecionar(k){
 function blocoPosicao(k){
   const p = posDe(k), movida = !!est.pos[k], tr = estaTrancada(k);
   const num = n => (n > 0 ? '+' : '') + n.toFixed(2).replace(/\.?0+$/, '') + '%';
+  const onde = movida
+    ? [num(p.x) + ' · ' + num(p.y)].concat(p.a ? [p.a + '°'] : []).join(' · ')
+    : 'no sítio de origem';
   return `<div class="campo">
     <label>Posição na tela</label>
     <div class="pos-linha">
-      <span class="val">${movida ? num(p.x) + ' · ' + num(p.y) : 'no sítio de origem'}</span>
+      <span class="val">${onde}</span>
       <button class="bt bt-min" onclick="reporPosicao('${k}')" ${movida?'':'disabled'}>Repor</button>
     </div>
     <div class="ajuda">${tr
-      ? 'Camada trancada: destranque-a (o cadeado, na lista de camadas) para a poder arrastar.'
+      ? 'Camada trancada: destranque-a (o cadeado, na lista de camadas) para a poder arrastar ou virar.'
       : 'Arraste a camada no cartão. Ela cola-se ao centro, às bordas e aos outros blocos — o <b>Shift</b> desliga o íman, e as setas afinam ponto a ponto.'}</div>
-  </div>`;
+  </div>` + (tr ? '' : faixa({
+    rot:'Volta', valor:p.a, min:-180, max:180, passo:1, unidade:'°', origem:0,
+    fn:`mudarAngulo.bind(null,'${k}')`,
+    ajuda:'Vira a camada à volta do próprio centro. Também com <b>Alt</b> + arrastar no cartão '
+        + '(encosta de 15 em 15 graus; o <b>Shift</b> solta-a), ou <b>Alt</b> + setas.'}));
 }
 
 function renderPropsJa(){
@@ -636,37 +645,52 @@ function aplicarDeco(){
 // Cada camada arrasta-se pelo próprio cartão. O deslocamento guarda-se em
 // PERCENTAGEM da peça, nunca em pixels: é o que faz a composição feita a 33%
 // de zoom sair igual em 720×1080 na gráfica.
-function posDe(k){ return est.pos[k] || {x:0, y:0}; }
+function posDe(k){ const p = est.pos[k]; return p ? {x:p.x, y:p.y, a:p.a||0} : {x:0, y:0, a:0}; }
 function estaTrancada(k){ return est.trancados.indexOf(k) >= 0; }
-/** Escreve o deslocamento no cartão (e limpa a marca quando volta à origem). */
-function pintarPos(k, x, y){
+/** Escreve o deslocamento e a volta no cartão (e limpa a marca na origem). */
+function pintarPos(k, x, y, a){
   const el = document.querySelector(`#escala [data-camada="${k}"]`);
   if (!el) return;
-  const naOrigem = Math.abs(x) < 0.005 && Math.abs(y) < 0.005;
+  a = a || 0;
+  const naOrigem = Math.abs(x) < 0.005 && Math.abs(y) < 0.005 && Math.abs(a) < 0.05;
   el.style.setProperty('--px', naOrigem ? '' : String(x));
   el.style.setProperty('--py', naOrigem ? '' : String(y));
+  el.style.setProperty('--pa', naOrigem ? '' : String(a));
   el.classList.toggle('movida', !naOrigem);
 }
-function definirPos(k, x, y){
-  if (Math.abs(x) < 0.005 && Math.abs(y) < 0.005) delete est.pos[k];
-  else est.pos[k] = {x:x, y:y};
-  pintarPos(k, x, y);
+function definirPos(k, x, y, a){
+  a = a || 0;
+  if (Math.abs(x) < 0.005 && Math.abs(y) < 0.005 && Math.abs(a) < 0.05) delete est.pos[k];
+  else est.pos[k] = {x:x, y:y, a:a};
+  pintarPos(k, x, y, a);
+}
+/** Só a volta, deixando o bloco onde está. */
+function definirAngulo(k, a){
+  const p = posDe(k);
+  definirPos(k, p.x, p.y, TelaLivre.limitarAng(+a || 0));
+}
+function mudarAngulo(k, v, el){
+  definirAngulo(k, v);
+  marcarSujo(true); registarPasso();
+  if (el) valorNoRotulo(el, (+v||0) + '°'); else renderProps();
+  renderCamadas();
+  msg(`${CAMADAS[k]}: ${(+v||0)}°`);
 }
 /** Volta a pintar todas as camadas a partir de est.pos — usado ao desfazer. */
 function aplicarPosicoes(){
-  Object.keys(CAMADAS).forEach(k => { const p = posDe(k); pintarPos(k, p.x, p.y); });
+  Object.keys(CAMADAS).forEach(k => { const p = posDe(k); pintarPos(k, p.x, p.y, p.a); });
   document.querySelectorAll('#escala [data-camada]').forEach(el =>
     el.classList.toggle('trancada-camada', estaTrancada(el.dataset.camada)));
 }
 function reporPosicao(k){
   if (!est.pos[k]) return msg('"' + CAMADAS[k] + '" já está no sítio de origem.');
-  definirPos(k, 0, 0); marcarSujo(true); registarPasso(); renderProps();
-  msg(`"${CAMADAS[k]}" voltou ao sítio de origem.`);
+  definirPos(k, 0, 0, 0); marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
+  msg(`"${CAMADAS[k]}" voltou ao sítio e à posição de origem.`);
 }
 function reporPosicoes(){
   if (!Object.keys(est.pos).length) return msg('Nenhuma camada foi movida.');
   if (!confirm('Repor TODAS as camadas no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
-  Object.keys(CAMADAS).forEach(k => definirPos(k, 0, 0));
+  Object.keys(CAMADAS).forEach(k => definirPos(k, 0, 0, 0));
   marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
   msg('Composição de origem reposta — por guardar.');
 }
@@ -770,8 +794,13 @@ document.addEventListener('keydown', e => {
   if (setas[e.key] && selecionada && !estaTrancada(selecionada)) {
     e.preventDefault();
     const passo = e.shiftKey ? 2 : 0.25, p = posDe(selecionada);
+    // Com Alt as setas viram em vez de deslocar: 1° de cada vez, 15° com Shift.
+    if (e.altKey) {
+      const giro = (setas[e.key][0] + setas[e.key][1]) * (e.shiftKey ? 15 : 1);
+      definirAngulo(selecionada, p.a + giro);
+    } else
     definirPos(selecionada, TelaLivre.arred(TelaLivre.limitar(p.x + setas[e.key][0]*passo)),
-                            TelaLivre.arred(TelaLivre.limitar(p.y + setas[e.key][1]*passo)));
+                            TelaLivre.arred(TelaLivre.limitar(p.y + setas[e.key][1]*passo)), p.a);
     marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
     return;
   }
@@ -800,12 +829,13 @@ TelaLivre.ligar({
   pos: posDe,
   trancado: estaTrancada,
   pegar: k => { if (selecionada !== k) selecionar(k); $('arte').classList.add('a-mover'); },
-  mover: (k, x, y) => pintarPos(k, x, y),
-  largar: (k, x, y) => {
+  mover: (k, x, y, a) => pintarPos(k, x, y, a),
+  largar: (k, x, y, a) => {
     $('arte').classList.remove('a-mover');
-    definirPos(k, x, y);
+    definirPos(k, x, y, a);
     marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
-    msg(est.pos[k] ? `${CAMADAS[k]}: ${x}% · ${y}%` : `"${CAMADAS[k]}" voltou ao sítio de origem.`);
+    msg(est.pos[k] ? `${CAMADAS[k]}: ${x}% · ${y}%${a ? ' · ' + a + '°' : ''}`
+                   : `"${CAMADAS[k]}" voltou ao sítio de origem.`);
   }
 });
 // Ferramenta "mão": arrastar a vista
@@ -839,7 +869,8 @@ function serializar(){
     // volta a ser exatamente a que o design desenhou.
     'cartao.posicoes': Object.keys(est.pos).length
                        ? JSON.stringify(Object.fromEntries(
-                           Object.entries(est.pos).map(([k,p]) => [k, p.x + ' ' + p.y]))) : '',
+                           Object.entries(est.pos).map(([k,p]) =>
+                             [k, p.x + ' ' + p.y + (p.a ? ' ' + p.a : '')]))) : '',
     'cartao.trancados': est.trancados.join(',')
   });
 }

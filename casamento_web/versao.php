@@ -155,6 +155,20 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'function cssPosicoes('],
         ['Arrasto dentro da tela do convite digital (o iframe manda no gesto)',
          'convite-digital.php', 'function montarLivres('],
+
+        // ---- Volta, mesa mínima e o manual a par ----
+        ['Virar blocos: Alt + arrastar, barra no painel, Alt + setas',
+         'assets/tela-livre.js', 'function colarAng('],
+        ['A volta viaja no mesmo valor gravado ("x y ângulo")',
+         'personalizacao.php', 'const POS_ANGULO'],
+        ['Aviso de ecrã pequeno para o editor (com saída para continuar)',
+         'assets/editor-espaco.js', 'esp-aviso'],
+        ['Mesa mínima do editor definida num sítio só',
+         'config.php', 'const EDITOR_MIN_L'],
+        ['O manual diz o feitio da moldura e o tamanho dos ornamentos de agora',
+         'manual.php', '$moldLinha'],
+        ['O manual lista as camadas movidas e viradas, em % e em mm',
+         'manual.php', 'Composição — camadas fora do sítio de origem'],
     ];
 }
 

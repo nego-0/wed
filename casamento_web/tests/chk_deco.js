@@ -46,7 +46,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const txt = (await p.locator('#props').innerText()).replace(/\s+/g, ' ');
   ok(!/não tem texto para editar/.test(txt), 'a moldura deixou de dizer só "não tem texto para editar"');
   ok(await p.locator('#props select').count() === 1, 'a moldura oferece um feitio à escolha');
-  ok(await p.locator('#props input[type=range]').count() === 1, 'a moldura oferece a distância à borda');
+  // Contar barras deixou de servir: desde a tela de posicionamento livre, cada
+  // camada tem também a sua barra de volta. Procura-se a que interessa.
+  ok(await p.locator('#props input[type=range][oninput*="mudarMolduraMargem"]').count() === 1,
+     'a moldura oferece a distância à borda');
+  ok(await p.locator('#props input[type=range][oninput*="mudarAngulo"]').count() === 1,
+     'e a volta, como qualquer outra camada');
 
   for (const [id, esperado] of [['fina','.7px'], ['simples','1.4px'], ['cantos','0'], ['dupla','1.4px']]) {
     await p.selectOption('#props select', id); await p.waitForTimeout(350);

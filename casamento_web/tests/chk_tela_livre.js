@@ -41,17 +41,20 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const caixa = await p.locator(sel).first().boundingBox();
     if (!caixa) throw new Error('sem caixa: ' + sel);
     const x = caixa.x + caixa.width / 2, y = caixa.y + caixa.height / 2;
+    if (opc.alt) await p.keyboard.down('Alt');
     await p.mouse.move(x, y);
     await p.mouse.down();
     if (opc.shift) await p.keyboard.down('Shift');
     for (let i = 1; i <= 8; i++) await p.mouse.move(x + dx * i / 8, y + dy * i / 8);
     await p.mouse.up();
     if (opc.shift) await p.keyboard.up('Shift');
+    if (opc.alt) await p.keyboard.up('Alt');
     await p.waitForTimeout(150);
   }
   const posDe = k => p.evaluate(k => {
     const el = document.querySelector(`#escala [data-camada="${k}"]`);
     return { px: el.style.getPropertyValue('--px'), py: el.style.getPropertyValue('--py'),
+             pa: el.style.getPropertyValue('--pa'),
              est: JSON.parse(JSON.stringify(window.est ? est.pos : {})) };
   }, k);
 
@@ -124,8 +127,31 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
 
   await p.screenshot({ path: OUT + '/tela-livre-cartao.png' });
 
+  // ---- virar a camada (Alt + arrastar) ----
+  await p.evaluate(() => { definirPos('nomes', 0, 0, 0); selecionar('nomes'); });
+  await arrastar('#escala [data-camada="nomes"]', 70, 70, { alt: true });
+  const virada = await posDe('nomes');
+  ok(parseFloat(virada.pa || 0) !== 0, `Alt + arrastar vira a camada (${virada.pa || 0}°)`);
+  ok(parseFloat(virada.pa) % 15 === 0, 'e a volta encosta de 15 em 15 graus');
+  ok(parseFloat(virada.px || 0) === 0 && parseFloat(virada.py || 0) === 0,
+     'sem a deslocar — virar é virar');
+  ok(/rotate/.test(await p.evaluate(() =>
+       getComputedStyle(document.querySelector('#escala [data-camada="nomes"]')).rotate ? 'rotate' : '')),
+     'o navegador aplica mesmo a volta');
+  ok(/°/.test(await p.locator('#props .pos-linha .val').innerText()),
+     'e as propriedades dizem-na');
+
+  // A barra do painel é o outro caminho para o mesmo sítio.
+  await p.evaluate(() => mudarAngulo('nomes', -12));
+  ok(Math.abs(parseFloat((await posDe('nomes')).pa) + 12) < 0.001, 'a barra do painel também vira');
+  // Alt + setas: um grau de cada vez.
+  await p.evaluate(() => { document.body.focus(); });
+  await p.keyboard.down('Alt'); await p.keyboard.press('ArrowRight'); await p.keyboard.up('Alt');
+  ok(Math.abs(parseFloat((await posDe('nomes')).pa) + 11) < 0.001, 'e Alt + seta afina um grau');
+  await p.evaluate(() => definirPos('nomes', 0, 0, 0));
+
   // ---- gravar e reler ----
-  await p.evaluate(() => { definirPos('fecho', -6.5, -12.25); definirPos('data', 3, 0);
+  await p.evaluate(() => { definirPos('fecho', -6.5, -12.25, 0); definirPos('data', 3, 0, -7.5);
                            est.trancados = ['moldura']; });
   ok(await p.evaluate(() => guardar()), 'a composição grava-se');
   await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
@@ -134,6 +160,9 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(relido.pos.fecho && relido.pos.fecho.x === -6.5 && relido.pos.fecho.y === -12.25,
      'e volta inteira ao reabrir o editor');
   ok(relido.tr.indexOf('moldura') >= 0, 'com as camadas trancadas incluídas');
+  ok(relido.pos.data && relido.pos.data.a === -7.5, 'e a volta sobrevive à gravação');
+  ok(relido.pos.fecho && !relido.pos.fecho.a,
+     'um bloco só movido continua a gravar-se com dois números, como antes de haver volta');
   ok(await p.locator('#escala [data-camada="fecho"].movida').count() === 1,
      'o cartão nasce já com a camada no sítio novo');
 
@@ -217,7 +246,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForTimeout(900);
   ok(await p.locator('#props .grupo h4').count() >= 1,
      'a página do convite também traz painel de posição');
-  ok(/largura/.test(await p.locator('#props .grupo .ajuda').innerText()),
+  ok(/largura/.test(await p.locator('#props .grupo').innerText()),
      'e avisa que aqui a medida é a largura, porque a página cresce com o texto');
   ok(await tela.locator('#convite [data-livre="convite:cartao"]').count() === 1,
      'o cartão do convidado é um bloco móvel');

@@ -579,18 +579,35 @@ const POS_LIMITE = 60.0;
 const CARTAO_CAMADAS_IDS = ['ramos','volutas','moldura','floreados','abertura','nomes',
                             'frase','convidado','mesas','data','logistica','fecho'];
 
-/** Lê um par "x y" gravado. Devolve null se não for um par utilizável. */
+/** Volta máxima, em graus. Meia volta para cada lado chega a qualquer ângulo. */
+const POS_ANGULO = 180.0;
+
+/**
+ * Lê um "x y" ou "x y ângulo" gravado. Devolve null se não for utilizável.
+ *
+ * O ângulo é o terceiro número, e é opcional de propósito: o que foi gravado
+ * antes de haver rotação continua a ler-se tal e qual, e um bloco só movido
+ * continua a gravar-se com dois números.
+ */
 function lerPosicao($valor): ?array {
-    if (!is_string($valor) || !preg_match('/^-?\d{1,3}(\.\d{1,2})?\s+-?\d{1,3}(\.\d{1,2})?$/', trim($valor))) return null;
-    [$x, $y] = preg_split('/\s+/', trim($valor));
-    $lim = fn($n) => round(max(-POS_LIMITE, min(POS_LIMITE, (float)$n)), 2);
-    return ['x' => $lim($x), 'y' => $lim($y)];
+    if (!is_string($valor)) return null;
+    $n = '-?\d{1,3}(?:\.\d{1,2})?';
+    if (!preg_match("/^$n\s+$n(\s+$n)?$/", trim($valor))) return null;
+    $p = preg_split('/\s+/', trim($valor));
+    $lim = fn($v) => round(max(-POS_LIMITE, min(POS_LIMITE, (float)$v)), 2);
+    $ang = fn($v) => round(max(-POS_ANGULO, min(POS_ANGULO, (float)$v)), 1);
+    return ['x' => $lim($p[0]), 'y' => $lim($p[1]), 'a' => $ang($p[2] ?? 0)];
 }
 
-/** Escreve um par já limitado, na forma canónica ("0 0" nunca chega a gravar-se). */
-function escreverPosicao(float $x, float $y): string {
+/**
+ * Escreve um deslocamento já limitado, na forma canónica.
+ * Sem volta, saem dois números — para um bloco só movido continuar a ocupar
+ * exatamente o que ocupava antes de haver rotação.
+ */
+function escreverPosicao(float $x, float $y, float $a = 0.0): string {
     $lim = fn($n) => round(max(-POS_LIMITE, min(POS_LIMITE, $n)), 2);
-    return $lim($x) . ' ' . $lim($y);
+    $ang = round(max(-POS_ANGULO, min(POS_ANGULO, $a)), 1);
+    return $lim($x) . ' ' . $lim($y) . ($ang == 0.0 ? '' : ' ' . $ang);
 }
 
 /**
@@ -606,8 +623,9 @@ function validarPosicoes(string $valor, callable $aceita): ?string {
     foreach ($j as $k => $v) {
         if (!is_string($k) || !$aceita($k)) continue;
         $p = lerPosicao($v);
-        if (!$p || ($p['x'] === 0.0 && $p['y'] === 0.0)) continue;
-        $out[$k] = escreverPosicao($p['x'], $p['y']);
+        // Nem movido nem rodado é o desenho de origem: não se grava.
+        if (!$p || ($p['x'] == 0.0 && $p['y'] == 0.0 && $p['a'] == 0.0)) continue;
+        $out[$k] = escreverPosicao($p['x'], $p['y'], $p['a']);
     }
     return $out ? json_encode($out) : '';
 }
@@ -760,10 +778,15 @@ function cssPosicoes(array $defs): string {
     // (min(100vw,640px), que é o que main{max-width:640px} deixa), a única
     // medida que se mantém quando o texto passa de três linhas a seis.
     $pag = 'calc(min(100vw,640px)/100)';
+    // translate e rotate são propriedades por sua conta: compõem-se com os
+    // transforms que o design já usa (a legenda centrada, a folha rodada) em
+    // vez de os apagarem.
+    $mover = 'translate:calc(var(--px,0)*var(--uw,1vw)) calc(var(--py,0)*var(--uh,1vh));'
+           . 'rotate:calc(var(--pa,0)*1deg)';
     $css = '.page{--uw:' . $pag . ';--uh:' . $pag . '}'
          . '#cover{--uw:1vw;--uh:1vh}'
          . '#hero .frame{--uw:1vw;--uh:calc(max(600px,min(100vh,860px))/100)}'
-         . '[data-livre]{translate:calc(var(--px,0)*var(--uw,1vw)) calc(var(--py,0)*var(--uh,1vh))}';
+         . '[data-livre]{' . $mover . '}';
     // Cada bloco movido leva a declaração inteira: o convite que o convidado
     // recebe não tem data-livre nenhum (isso é marca do editor), e sem o
     // translate aqui as percentagens gravadas não moviam coisa alguma.
@@ -771,7 +794,7 @@ function cssPosicoes(array $defs): string {
     foreach (posicoesGravadas($defs['layout.posicoes'] ?? '') as $id => $p) {
         if (!isset($livres[$id])) continue;
         $css .= $livres[$id]['sel'] . '{--px:' . $p['x'] . ';--py:' . $p['y']
-              . ';translate:calc(var(--px)*var(--uw,1vw)) calc(var(--py)*var(--uh,1vh))}';
+              . ';--pa:' . $p['a'] . ';' . $mover . '}';
     }
     return $css;
 }

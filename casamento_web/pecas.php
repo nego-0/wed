@@ -337,7 +337,9 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
     // ninguém arrastou continua a ser exatamente o HTML de sempre.
     $ps = function (string $k) use ($posicoes): string {
         $p = $posicoes[$k] ?? null;
-        return is_array($p) ? ' style="--px:' . (float)$p['x'] . ';--py:' . (float)$p['y'] . '"' : '';
+        if (!is_array($p)) return '';
+        return ' style="--px:' . (float)$p['x'] . ';--py:' . (float)$p['y']
+             . ';--pa:' . (float)($p['a'] ?? 0) . '"';
     };
 
     // Quem passa $estilo (de cartaoEstiloVars) traz também a letra e a escala;

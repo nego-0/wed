@@ -71,6 +71,12 @@ define('DB_CONFIGS', cfg_local('db', [
 define('UTILIZADORES', cfg_local('utilizadores', []));
 
 // ---- Regras -------------------------------------------------
+// Mesa mínima para os editores de convite: três colunas (ferramentas, peça e
+// painéis) e uma barra de opções que não deve passar a duas linhas. Abaixo
+// disto o editor ainda abre, mas avisa — ver assets/editor-espaco.js.
+const EDITOR_MIN_L = 1200;   // largura, em px de CSS
+const EDITOR_MIN_A = 700;    // altura
+
 const PREFIXO   = 'cw_';   // prefixo das tabelas novas (não mexe na lista antiga)
 // Teto de lugares por omissão. Cada casamento tem o seu ('evento.convidados',
 // pedido no registo); este é só o valor de origem de quem nunca o preencheu.

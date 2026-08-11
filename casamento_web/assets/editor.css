@@ -312,3 +312,28 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
   .ed-paineis{ width:230px; }
   .ed-mesa{ padding:12px; }
 }
+
+/* ---- Aviso de ecrã apertado (assets/editor-espaco.js) ------ */
+/* Não é uma porta fechada: é um aviso de trabalho, com saída para quem
+   quiser continuar mesmo assim. Ver o comentário no topo do script. */
+.esp-aviso{ position:fixed; inset:0; z-index:9000; display:none;
+            align-items:center; justify-content:center; padding:1.2rem;
+            background:rgba(12,13,11,.86); backdrop-filter:blur(3px); }
+.esp-aviso.on{ display:flex; }
+.esp-cartao{ max-width:460px; background:var(--ed-painel,#26281f); color:var(--ed-texto,#e8e7df);
+             border:1px solid var(--ed-linha,#3a3d33); border-radius:12px; padding:1.3rem 1.4rem;
+             box-shadow:0 20px 60px rgba(0,0,0,.6); font-size:.86rem; line-height:1.6; }
+.esp-cartao h2{ margin:0 0 .5rem; font-size:1.02rem; color:var(--ed-ouro-claro,#D9BC8C); font-weight:600; }
+.esp-cartao p{ margin:0 0 .7rem; }
+.esp-cartao .esp-med{ color:var(--ed-ouro-claro,#D9BC8C); font-variant-numeric:tabular-nums; }
+.esp-cartao .esp-sug{ color:var(--ed-texto-2,#9aa094); }
+.esp-bt{ display:flex; gap:.6rem; align-items:center; margin-top:.9rem; }
+.esp-ok{ background:var(--ed-ouro,#C9A862); color:#1b1c17; border:0; border-radius:7px;
+         padding:.45rem .9rem; font:inherit; font-weight:600; cursor:pointer; }
+.esp-volta{ color:var(--ed-texto-2,#9aa094); font-size:.8rem; }
+/* Enquanto o aviso está à frente, nada se arrasta por baixo dele. */
+body.esp-travado .ed-corpo{ pointer-events:none; }
+
+.esp-chip{ display:none; color:var(--ed-ouro-claro,#D9BC8C); cursor:pointer;
+           border:1px solid rgba(201,168,98,.45); border-radius:5px; padding:0 .35rem; }
+.esp-chip.on{ display:inline-block; }

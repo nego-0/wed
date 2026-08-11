@@ -23,9 +23,22 @@
   var TOL = 1.0;
   /** Limite do deslocamento, em % — o mesmo do servidor (POS_LIMITE). */
   var LIMITE = 60;
+  /** Meia volta para cada lado (POS_ANGULO), e o passo a que a volta encosta. */
+  var ANGULO = 180;
+  var ANG_PASSO = 15, ANG_TOL = 4;
 
   function limitar(n) { return Math.max(-LIMITE, Math.min(LIMITE, n)); }
   function arred(n) { return Math.round(n * 100) / 100; }
+  /** Normaliza para -180..180 e arredonda a uma casa. */
+  function limitarAng(n) {
+    n = ((n + 180) % 360 + 360) % 360 - 180;
+    return Math.round(Math.max(-ANGULO, Math.min(ANGULO, n)) * 10) / 10;
+  }
+  /** Encosta a volta ao múltiplo de 15° mais próximo, se lá andar perto. */
+  function colarAng(n) {
+    var m = Math.round(n / ANG_PASSO) * ANG_PASSO;
+    return Math.abs(n - m) <= ANG_TOL ? m : n;
+  }
 
   /**
    * Retângulo de um elemento em % da tela, já descontado o deslocamento
@@ -115,9 +128,23 @@
 
       var t = op.tela.getBoundingClientRect();
       if (!t.width || !t.height) return;
-      var p = op.pos(meu.id) || { x: 0, y: 0 };
+      var p = op.pos(meu.id) || { x: 0, y: 0, a: 0 };
       var base = caixaBase(meu.el, op.tela, p);
       if (!base) return;
+
+      // Alt = virar em vez de deslocar. O ângulo segue o ponteiro à volta do
+      // centro do bloco, contado a partir de onde o gesto começou — assim o
+      // bloco não salta para debaixo do rato ao primeiro movimento.
+      if (e.altKey) {
+        var r = meu.el.getBoundingClientRect();
+        var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        g = { id: meu.id, rodar: true, x0: p.x, y0: p.y, a0: p.a || 0,
+              cx: cx, cy: cy, ang0: Math.atan2(e.clientY - cy, e.clientX - cx),
+              mexeu: false };
+        if (op.pegar) op.pegar(meu.id);
+        e.preventDefault();
+        return;
+      }
 
       // As linhas contra as quais este bloco se alinha: a tela (bordas,
       // centro e terços) e todos os outros blocos, onde eles estão agora.
@@ -133,7 +160,7 @@
       // O sítio de origem também é uma linha: voltar atrás tem de ser fácil.
       lx.push(base.e, base.c, base.d); ly.push(base.t, base.m, base.b);
 
-      g = { id: meu.id, x0: p.x, y0: p.y, px: e.clientX, py: e.clientY,
+      g = { id: meu.id, x0: p.x, y0: p.y, a0: p.a || 0, px: e.clientX, py: e.clientY,
             larg: t.width, alt: t.height, base: base,
             lx: juntar(lx), ly: juntar(ly), mexeu: false };
       if (op.pegar) op.pegar(meu.id);
@@ -142,6 +169,18 @@
 
     function mover(e) {
       if (!g) return;
+
+      if (g.rodar) {
+        var a = g.a0 + (Math.atan2(e.clientY - g.cy, e.clientX - g.cx) - g.ang0) * 180 / Math.PI;
+        if (!g.mexeu && Math.abs(a - g.a0) < 0.5) return;
+        g.mexeu = true;
+        a = limitarAng(a);
+        if (!e.shiftKey) a = colarAng(a);   // Shift = ângulo à vontade
+        g.ux = g.x0; g.uy = g.y0; g.ua = a;
+        op.mover(g.id, g.ux, g.uy, g.ua);
+        return;
+      }
+
       var nx = limitar(g.x0 + (e.clientX - g.px) / g.larg * 100);
       var ny = limitar(g.y0 + (e.clientY - g.py) / g.alt * 100);
       if (!g.mexeu && Math.abs(nx - g.x0) < 0.05 && Math.abs(ny - g.y0) < 0.05) return;
@@ -155,14 +194,14 @@
         if (ey) { ny = limitar(ny + ey.d); gy = ey.linha; }
       }
       acender(gx, gy);
-      g.ux = arred(nx); g.uy = arred(ny);
-      op.mover(g.id, g.ux, g.uy);
+      g.ux = arred(nx); g.uy = arred(ny); g.ua = g.a0;
+      op.mover(g.id, g.ux, g.uy, g.ua);
     }
 
     function largar() {
       if (!g) return;
       var f = g; g = null; apagar();
-      if (f.mexeu && op.largar) op.largar(f.id, f.ux, f.uy);
+      if (f.mexeu && op.largar) op.largar(f.id, f.ux, f.uy, f.ua);
     }
 
     op.tela.addEventListener('pointerdown', comecar);
@@ -184,5 +223,7 @@
     };
   }
 
-  raizGlobal.TelaLivre = { ligar: ligar, limitar: limitar, arred: arred, TOL: TOL, LIMITE: LIMITE };
+  raizGlobal.TelaLivre = { ligar: ligar, limitar: limitar, arred: arred,
+                           limitarAng: limitarAng, colarAng: colarAng,
+                           TOL: TOL, LIMITE: LIMITE, ANGULO: ANGULO };
 })(window);
