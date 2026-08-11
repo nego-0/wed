@@ -175,6 +175,8 @@ function correcoesEsperadas(): array {
          'index.php', 'function segMembro('],
         ['O papel segue o género: Padrinho ou Madrinha, conforme',
          'index.php', 'function sincroPapelGenero('],
+        ['Cada pessoa em duas linhas alinhadas, com tudo à vista',
+         'index.php', 'grid-template-columns:2fr 1fr 1fr auto'],
     ];
 }
 

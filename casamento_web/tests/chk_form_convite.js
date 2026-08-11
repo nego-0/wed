@@ -1,7 +1,8 @@
-// O formulário de convites foi reorganizado (secções, uma linha por pessoa e
-// os pormenores de cada pessoa atrás do "⋯"). Nenhum campo foi retirado — este
-// teste preenche TODOS, grava, reabre e confirma que todos voltam com o que se
-// escreveu. É o caminho que o utilizador percorre, não só a API.
+// O formulário de convites: secções, e cada pessoa em duas linhas de colunas
+// alinhadas — nome, mesa e brindes em cima; género e papel em baixo, tudo à
+// vista. Nenhum campo foi retirado: este teste preenche TODOS, grava, reabre e
+// confirma que todos voltam com o que se escreveu. É o caminho que o
+// utilizador percorre, não só a API.
 const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -53,27 +54,49 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(await p.evaluate(() => !document.getElementById('c-lugares') && !document.getElementById('c-sufixo')),
      'o formulário já não pede lugares nem sufixo');
 
-  // Uma pessoa por linha: os pormenores só aparecem ao abrir o "⋯"
+  // Todos os campos de cada pessoa estão à vista — nada atrás de um "⋯".
+  ok(await p.evaluate(() => !document.querySelector('#membros .m-mais')),
+     'o "⋯" desapareceu: os campos de cada pessoa estão todos à vista');
   ok(await p.evaluate(() => {
     const r = document.querySelectorAll('#membros .membro-linha')[1];
-    return getComputedStyle(r.querySelector('.m-extras')).display === 'none';
-  }), 'os pormenores de cada pessoa começam fechados');
+    return getComputedStyle(r.querySelector('.m-extras')).display !== 'none'
+        && ['.m-mesa', '.m-brinde', '.m-genero', '.m-papel']
+             .every(s => r.querySelector(s).getBoundingClientRect().width > 0);
+  }), 'mesa, brindes, género e papel veem-se sem abrir nada');
+
+  // As proporções pedidas: nome 50%, mesa 25%, brindes 25%; e em baixo quatro
+  // pastilhas de 25% cada, alinhadas por baixo dos campos de cima.
+  const larg = await p.evaluate(() => {
+    const r = document.querySelectorAll('#membros .membro-linha')[1];
+    const L = s => r.querySelector(s).getBoundingClientRect();
+    const linha1 = L('.m-brinde').right - L('input[type=text]').left;
+    const pc = n => Math.round(n / linha1 * 1000) / 10;
+    const bts = [...r.querySelectorAll('.m-extras .seg button')];
+    return { nome: pc(L('input[type=text]').width), mesa: pc(L('.m-mesa').width),
+             brinde: pc(L('.m-brinde').width),
+             pastilhas: bts.map(b => pc(b.getBoundingClientRect().width)),
+             // A segunda linha começa e acaba onde a primeira: é isso o alinhamento.
+             esq: Math.abs(bts[0].getBoundingClientRect().left - L('input[type=text]').left) < 2,
+             dir: Math.abs(bts[3].getBoundingClientRect().right - L('.m-brinde').right) < 2 };
+  });
+  console.log('   larguras:', JSON.stringify(larg));
+  const perto = (v, alvo) => Math.abs(v - alvo) <= 3;
+  ok(perto(larg.nome, 50),   `o nome ocupa metade da linha (${larg.nome}%)`);
+  ok(perto(larg.mesa, 25),   `a mesa ocupa um quarto (${larg.mesa}%)`);
+  ok(perto(larg.brinde, 25), `os brindes ocupam um quarto (${larg.brinde}%)`);
+  ok(larg.pastilhas.length === 4 && larg.pastilhas.every(v => perto(v, 25)),
+     `as quatro pastilhas ocupam um quarto cada (${larg.pastilhas.join('% · ')}%)`);
+  ok(larg.esq && larg.dir, 'e a segunda linha começa e acaba onde a primeira');
 
   await p.evaluate((mesa) => {
     const r = document.querySelectorAll('#membros .membro-linha')[1];
-    r.querySelector('.m-mais').click();
     r.querySelector('.m-genero button[data-v=m]').click();
     const ms = r.querySelector('.m-mesa');
     const opt = [...ms.options].find(o => o.textContent.includes(mesa));
     if (opt) ms.value = opt.value;
     r.querySelector('.m-brinde input').checked = true;
-    r.querySelector('.m-extras').dispatchEvent(new Event('change', { bubbles: true }));
   }, MESA);
   await p.waitForTimeout(200);
-  ok(await p.evaluate(() => document.querySelectorAll('#membros .membro-linha')[1].classList.contains('aberta')),
-     'o "⋯" abre os pormenores dessa pessoa');
-  ok(await p.evaluate(() => document.querySelectorAll('#membros .membro-linha')[1].querySelector('.m-mais').classList.contains('tem')),
-     'o "⋯" assinala que a pessoa tem pormenores preenchidos');
 
   await p.evaluate((mesa) => {
     document.getElementById('c-telefone').value = '+244912345678';
@@ -111,8 +134,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       pessoas: rows.length,
       ruiGenero: rui ? rui.querySelector('.m-genero').dataset.v : null,
       ruiBrinde: rui ? rui.querySelector('.m-brinde input').checked : null,
-      ruiMesa: rui ? !!rui.querySelector('.m-mesa').value : null,
-      ruiMarcado: rui ? rui.querySelector('.m-mais').classList.contains('tem') : null
+      ruiMesa: rui ? !!rui.querySelector('.m-mesa').value : null
     };
   });
   // Os lugares já não têm campo: lêem-se de onde passaram a viver.
@@ -133,12 +155,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(v.ruiGenero === 'm',                 'género da pessoa volta certo');
   ok(v.ruiBrinde === true,                'brinde da pessoa volta certo');
   ok(v.ruiMesa === true,                  'mesa individual da pessoa volta certa');
-  ok(v.ruiMarcado === true,               'ao reabrir, o "⋯" mostra que essa pessoa tem pormenores');
 
   // ---------- género e papel: duas pastilhas, e o papel segue o género ----------
   const seg = await p.evaluate(() => {
     const r = document.querySelectorAll('#membros .membro-linha')[0];
-    r.querySelector('.m-mais').click();
     const gs = r.querySelector('.m-genero'), ps = r.querySelector('.m-papel');
     const pm = () => ps.querySelectorAll('button')[1];
     const out = {};

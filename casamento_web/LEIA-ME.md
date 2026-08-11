@@ -397,7 +397,14 @@ Em `config.php` (não sensível):
 
 **Mesa dos noivos.** A planta tem, por padrão, uma **pastilha especial** dos noivos — com uma ilustração própria (as alianças entrelaçadas) — para representar o casal, com a **mesma dimensão** das restantes mesas. Só existe uma. Pode **eliminá-la** (no painel da mesa) e, se quiser, **repô-la** no botão *Mesa dos noivos* que surge por cima do canvas. As suas **alas laterais** (padrinhos à esquerda, madrinhas à direita) são preenchidas **automaticamente pelo papel de cada convidado**: quem tiver o papel *Padrinho* entra na ala esquerda e quem tiver *Madrinha* na ala direita, sem atribuição manual. O papel define-se no **formulário do convite** ou diretamente no painel da mesa dos noivos.
 
-No formulário, cada pessoa tem duas pastilhas de duas respostas — o **género**
+No formulário, cada pessoa ocupa **duas linhas de colunas alinhadas**: em cima
+o nome (metade da largura), a mesa e os brindes (um quarto cada); em baixo as
+quatro pastilhas do género e do papel, um quarto cada, debaixo dos campos de
+cima. Estiveram atrás de um «⋯» porque seis controlos lado a lado não cabiam
+sem quebrar; alinhados em grelha cabem, e uma pessoa lê-se toda de uma vez, sem
+abrir nada. Em ecrã estreito as colunas colapsam em vez de cortarem palavras.
+
+Cada pessoa tem duas pastilhas de duas respostas — o **género**
 (*♂ Masculino* / *♀ Feminino*) e o **papel** (*Convidado* / *Padrinho* ou
 *Madrinha*), com *Convidado* aceso de origem. Eram duas caixas de escolha, e
 numa pergunta de duas respostas o menu que abre e fecha esconde metade da

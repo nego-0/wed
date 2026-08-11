@@ -24,29 +24,31 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
      pedidos na mesma, mas só quando se abrem: seis controlos lado a lado não
      cabiam na largura do modal e quebravam para uma segunda linha, o que fazia
      uma família de quatro parecer um formulário de dezasseis campos. */
-  .membro-linha{ display:flex; gap:.5rem; align-items:center; margin-bottom:.45rem; flex-wrap:wrap; }
-  .membro-linha input[type=text]{ flex:1 1 160px; min-width:0; }
-  .m-mais{ flex:none; width:34px; height:34px; border:1px solid var(--line); background:#fff;
-           border-radius:9px; cursor:pointer; color:#8a9089; font-size:1rem; line-height:1;
-           position:relative; }
-  .m-mais:hover{ border-color:var(--gold-soft); color:var(--forest); }
-  .membro-linha.aberta .m-mais{ background:var(--cream); border-color:var(--gold-soft); color:var(--forest); }
-  /* Ponto dourado: esta pessoa tem pormenores preenchidos, mesmo fechada. */
-  .m-mais.tem::after{ content:''; position:absolute; top:5px; right:5px; width:6px; height:6px;
-                      border-radius:50%; background:var(--gold); }
-  .m-extras{ display:none; flex-basis:100%; gap:.4rem; flex-wrap:wrap; align-items:center;
-             background:var(--cream); border-radius:10px; padding:.5rem .6rem; margin:.1rem 0 .5rem; }
-  .membro-linha.aberta .m-extras{ display:flex; }
-  .m-extras select{ flex:1 1 130px; min-width:0; font-size:.85rem; padding:.4rem .5rem; margin:0; }
-  .membro-linha .m-brinde{ display:inline-flex; align-items:center; gap:.25rem; font-size:.82rem; color:var(--text); white-space:nowrap; cursor:pointer; }
-  .membro-linha .m-brinde input{ width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
+  /* Uma pessoa = duas linhas de colunas alinhadas. Em cima o nome (metade),
+     a mesa e os brindes (um quarto cada); em baixo as quatro pastilhas, um
+     quarto cada, a caírem debaixo dos campos de cima. Tudo à vista: nada de
+     abrir para ver o que já está preenchido. */
+  .membro-linha{ display:grid; grid-template-columns:2fr 1fr 1fr auto;
+                 gap:.4rem .5rem; align-items:center;
+                 margin-bottom:.55rem; padding-bottom:.55rem; border-bottom:1px solid var(--line); }
+  .membro-linha:last-child{ border-bottom:0; }
+  .membro-linha input[type=text]{ min-width:0; margin:0; }
+  /* A segunda linha ocupa as três colunas dos campos — não a do ✕ —, para as
+     pastilhas ficarem debaixo deles e não desalinhadas por 34px. */
+  .m-extras{ grid-column:1 / 4; display:grid; grid-template-columns:1fr 1fr; gap:.4rem; align-items:center; }
+  .m-extras select{ min-width:0; font-size:.85rem; padding:.4rem .5rem; margin:0; }
+  .membro-linha .m-mesa{ min-width:0; font-size:.85rem; padding:.42rem .5rem; margin:0; }
+  .membro-linha .m-brinde{ display:inline-flex; align-items:center; justify-content:center; gap:.3rem;
+                           font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; color:#6d746c;
+                           white-space:nowrap; cursor:pointer; min-width:0; }
+  .membro-linha .m-brinde input{ width:16px; height:16px; accent-color:var(--gold); cursor:pointer; flex:none; }
   /* Género e papel: dois botões cada, em vez de duas caixas de escolha. São
      duas perguntas de duas respostas — numa lista dessas, o menu que abre e
      fecha esconde metade da resposta e obriga a um clique a mais para ver a
      outra. Aqui está tudo à vista, e vê-se o que está escolhido sem abrir nada. */
-  .m-extras .seg{ display:inline-flex; flex:1 1 200px; min-width:0; background:#fff;
+  .m-extras .seg{ display:grid; grid-template-columns:1fr 1fr; min-width:0; background:#fff;
                   border:1px solid var(--line); border-radius:9px; overflow:hidden; }
-  .m-extras .seg button{ flex:1 1 0; min-width:0; border:0; border-right:1px solid var(--line);
+  .m-extras .seg button{ min-width:0; border:0; border-right:1px solid var(--line);
                          background:transparent; font:inherit; font-size:.82rem; color:#6d746c;
                          padding:.42rem .3rem; cursor:pointer; white-space:nowrap;
                          overflow:hidden; text-overflow:ellipsis; }
@@ -55,6 +57,13 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .m-extras .seg button.on{ background:var(--gold-pale); color:var(--forest); font-weight:600;
                             box-shadow:inset 0 0 0 1px var(--gold-soft); }
   .m-extras .seg button:disabled{ opacity:.45; cursor:not-allowed; }
+  /* Num ecrã estreito, quatro pastilhas de 25% deixam de caber sem cortar as
+     palavras: passam a duas por linha, cada uma com metade. */
+  @media (max-width:560px){
+    .membro-linha{ grid-template-columns:1fr 1fr auto; }
+    .membro-linha input[type=text]{ grid-column:1 / 4; }
+    .m-extras{ grid-column:1 / 4; grid-template-columns:1fr; }
+  }
   /* Ícones de género / brinde nas pastilhas */
   /* ♂ e ♀ são glifos finos: à medida do texto à volta ficavam quase invisíveis.
      Um pouco maiores, mais escuros e com uma fonte que os desenha bem. */
@@ -241,10 +250,19 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                 font-size:.92rem; color:var(--text); text-transform:none; letter-spacing:0; font-weight:400; }
   .opcao-check input{ width:18px; height:18px; margin-top:.1rem; accent-color:var(--forest); flex:none; }
   .opcao-check small{ color:#9aa09a; }
-  .membro-linha .m-vai{ display:none; align-items:center; justify-content:center; flex:none; }
+  .membro-linha .m-vai{ display:none; align-items:center; justify-content:center; }
   #membros.parcial .membro-linha .m-vai{ display:inline-flex; }
   .membro-linha .m-vai input{ width:18px; height:18px; accent-color:#1f7a3d; cursor:pointer; }
-  #membros.parcial .membro-linha{ background:#f4faf5; border-radius:10px; padding:.15rem .3rem; }
+  /* Na confirmação parcial entra uma coluna à cabeça (a caixa do "vem"). As
+     colunas dos campos mantêm-se, e a segunda linha acompanha o desvio. */
+  #membros.parcial .membro-linha{ background:#f4faf5; border-radius:10px; padding:.3rem .4rem;
+                                  grid-template-columns:auto 2fr 1fr 1fr auto; }
+  #membros.parcial .m-extras{ grid-column:2 / 5; }
+  @media (max-width:560px){
+    #membros.parcial .membro-linha{ grid-template-columns:auto 1fr 1fr auto; }
+    #membros.parcial .membro-linha input[type=text]{ grid-column:2 / 5; }
+    #membros.parcial .m-extras{ grid-column:1 / 5; }
+  }
   .entradas-topo-dash{ text-align:center; color:#7a8078; font-size:.9rem; margin-bottom:.9rem; }
   .entradas-topo-dash b{ color:#1f7a3d; font-family:var(--serif); font-size:1.15rem; }
   .entrada-d{ border:1px solid var(--line); border-left:3px solid #1f7a3d; border-radius:12px; padding:.75rem 1rem; margin-bottom:.6rem; background:#fff; }
@@ -853,18 +871,19 @@ function segMembro(classe, v, botoes){
 const PM_ROTULO = { m:'Padrinho', f:'Madrinha', '':'Padrinho · Madrinha' };
 function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=false){
   const div=document.createElement('div'); div.className='membro-linha';
-  // A linha pede o nome; o "⋯" abre os pormenores desta pessoa. São os mesmos
-  // campos de sempre — só deixam de ocupar o ecrã de quem não os usa.
+  // Duas linhas de colunas alinhadas, e nada escondido: em cima o nome (metade
+  // da largura), a mesa e os brindes (um quarto cada); em baixo as quatro
+  // pastilhas do género e do papel, um quarto cada, debaixo dos campos de
+  // cima. Estavam atrás de um "⋯" para caberem; alinhadas em grelha cabem, e
+  // uma pessoa lê-se toda de uma vez.
   div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}></label>
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
-    <button class="m-mais" type="button" title="Género, mesa, papel e brinde desta pessoa"
-            onclick="alternarExtras(this)">⋯</button>
+    <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)"
+            onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesMesaMembro(mesaId)}</select>
+    <label class="m-brinde" title="Esta pessoa recebe brinde">Brindes? <input type="checkbox" ${brinde?'checked':''}> 🎁</label>
     <button class="btn-ico" type="button" title="Retirar esta pessoa"
             onclick="this.closest('.membro-linha').remove();renderSugestoes();atualizarPrevia();contarPessoas()">✕</button>
-    <div class="m-extras" onchange="marcarExtras(this.closest('.membro-linha'))"
-         onclick="cliqueSeg(event)">
-      <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)">${opcoesMesaMembro(mesaId)}</select>
-      <label class="m-brinde" title="Esta pessoa recebe brinde">Brindes? <input type="checkbox" ${brinde?'checked':''}> 🎁</label>
+    <div class="m-extras" onclick="cliqueSeg(event)">
       ${segMembro('m-genero', genero, [
         ['m', '♂ Masculino', 'Masculino'],
         ['f', '♀ Feminino',  'Feminino']])}
@@ -876,11 +895,8 @@ function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=fa
   $('membros').appendChild(div);
   sincroPapelGenero(div);
   sincroMesaPapel(div);
-  marcarExtras(div);
   contarPessoas();
 }
-/** Abre/fecha os pormenores de uma pessoa. */
-function alternarExtras(bt){ bt.closest('.membro-linha').classList.toggle('aberta'); }
 
 /** Valor escolhido num par de pastilhas. */
 function segValor(row, classe){ return row.querySelector('.'+classe)?.dataset.v || ''; }
@@ -905,7 +921,6 @@ function cliqueSeg(ev){
   }
   sincroPapelGenero(row);
   sincroMesaPapel(row);
-  marcarExtras(row);
   atualizarPrevia();
 }
 
@@ -934,16 +949,6 @@ function sincroPapelGenero(row){
                  : 'Escolha primeiro o género — este papel chama-se padrinho ou madrinha conforme.';
   btConv.classList.toggle('on', !seg.dataset.v);
   btPm.classList.toggle('on', !!seg.dataset.v);
-}
-/** Marca o "⋯" quando a pessoa tem pormenores preenchidos — para se ver de fora. */
-function marcarExtras(row){
-  if(!row) return;
-  const bt=row.querySelector('.m-mais'); if(!bt) return;
-  const tem = !!segValor(row, 'm-genero')
-           || !!(row.querySelector('.m-mesa')?.value)
-           || !!segValor(row, 'm-papel')
-           || !!(row.querySelector('.m-brinde input')?.checked);
-  bt.classList.toggle('tem', tem);
 }
 /** Quantas pessoas nomeadas, ao lado do título da secção. */
 function contarPessoas(){
