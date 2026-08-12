@@ -57,6 +57,8 @@ foreach (cartaoFolhagens() as $k => $f) $ramosJs[$k] = svgTrepadeira($k, 'curren
 // esperar por um pedido ao servidor para a ver não é decidir, é adivinhar.
 $floreadosJs = [];
 foreach (cartaoFloreados() as $k => $f) $floreadosJs[$k] = svgFloreado('currentColor', $k);
+$volutasJs = [];  foreach (cartaoVolutas() as $k => $f) $volutasJs[$k] = svgVoluta('currentColor', $k);
+$elosJs    = [];  foreach (cartaoElos()    as $k => $f) $elosJs[$k]    = htmlElo($k);
 
 // Campos de texto editáveis, por camada
 $camposPorCamada = [
@@ -232,6 +234,10 @@ const MOLDURAS  = <?= json_encode(cartaoMolduras(), JSON_UNESCAPED_UNICODE) ?>;
 const FOLHAGENS = <?= json_encode(cartaoFolhagens(), JSON_UNESCAPED_UNICODE) ?>;
 const FLOREADOS = <?= json_encode(cartaoFloreados(), JSON_UNESCAPED_UNICODE) ?>;
 const FLOREADOS_SVG = <?= json_encode($floreadosJs, JSON_UNESCAPED_UNICODE) ?>;
+const VOLUTAS      = <?= json_encode(cartaoVolutas(), JSON_UNESCAPED_UNICODE) ?>;
+const VOLUTAS_SVG  = <?= json_encode($volutasJs, JSON_UNESCAPED_UNICODE) ?>;
+const ELOS         = <?= json_encode(cartaoElos(), JSON_UNESCAPED_UNICODE) ?>;
+const ELOS_HTML    = <?= json_encode($elosJs, JSON_UNESCAPED_UNICODE) ?>;
 // O que cada camada decorativa oferece, além de se poder esconder.
 const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala',
                      floreados:'cartao.floreados_escala' };
@@ -271,6 +277,8 @@ let est = {
   paleta:   <?= json_encode($defs['cartao.paleta']) ?>,
   folhagem: <?= json_encode($folhagem) ?>,
   floreado: <?= json_encode($defs['cartao.floreado']) ?>,
+  voluta:   <?= json_encode($defs['cartao.voluta']) ?>,
+  elo:      <?= json_encode($defs['cartao.elo']) ?>,
   camadas:  <?= json_encode($camadas) ?>,
   cores:    (()=>{ try { return JSON.parse(<?= json_encode($defs['cartao.cores']) ?> || '{}') || {}; } catch(e){ return {}; } })(),
   fontes:   <?= json_encode(array_intersect_key($defs, array_flip(['cartao.fonte_script','cartao.fonte_serif','cartao.fonte_sans'])), JSON_UNESCAPED_UNICODE) ?>,
@@ -323,6 +331,7 @@ function registarPasso(){
 function repintarTudo(){
   aplicarPaleta(est.paleta, true); aplicarCoresLivres(); aplicarTipografia(); aplicarDeco();
   aplicarFolhagem(est.folhagem); aplicarFloreado(est.floreado);
+  aplicarVoluta(est.voluta); aplicarElo(est.elo);
   $('folhagem').value = est.folhagem;
   Object.entries(est.textos).forEach(([k,v]) => pintarTexto(k,v));
   pintarLogistica();
@@ -391,6 +400,22 @@ function aplicarFolhagem(k){
 function aplicarFloreado(k){
   est.floreado = k;
   document.querySelectorAll('#escala .ct-floreado').forEach(r => { r.innerHTML = FLOREADOS_SVG[k] || ''; });
+}
+function aplicarVoluta(k){
+  est.voluta = k;
+  document.querySelectorAll('#escala .ct-voluta').forEach(r => { r.innerHTML = VOLUTAS_SVG[k] || ''; });
+}
+/** O elo entre os nomes nasce e morre: troca-se o elemento, não só o texto. */
+function aplicarElo(k){
+  est.elo = k;
+  const nomes = document.querySelector('#escala .ct-nomes'); if (!nomes) return;
+  const antigo = nomes.querySelector('.ct-coracao');
+  if (antigo) antigo.remove();
+  const html = ELOS_HTML[k] || '';
+  if (html) {
+    const primeiro = nomes.querySelectorAll('.ct-nome')[0];
+    if (primeiro) primeiro.insertAdjacentHTML('afterend', html);
+  }
 }
 
 // ---------- Painel de cores ----------
@@ -590,6 +615,7 @@ function renderPropsJa(){
     return `<div class="campo"><label>${rotulo}${cont}</label>${ctl}</div>`;
   }).join('')
   + (selecionada === 'logistica' ? blocoCerimonias() : '')
+  + (selecionada === 'nomes' ? feitio('Entre os nomes', ELOS, est.elo, 'mudarElo') : '')
   + blocoPosicao(selecionada);
 }
 /**
@@ -614,14 +640,8 @@ function renderPropsOrnamento(k, rot){
                 ajuda:'Quanto a moldura se afasta do rebordo do cartão.'});
   }
 
-  if (k === 'floreados'){
-    h += `<div class="campo"><label>Feitio</label>
-      <select onchange="mudarFloreado(this.value)">
-        ${Object.entries(FLOREADOS).map(([id,f]) =>
-          `<option value="${id}" ${id===est.floreado?'selected':''}>${escaparHtml(f.nome)}</option>`).join('')}
-      </select>
-      <div class="ajuda">${escaparHtml((FLOREADOS[est.floreado]||{}).nota || '')}</div></div>`;
-  }
+  if (k === 'floreados') h += feitio('Feitio', FLOREADOS, est.floreado, 'mudarFloreado');
+  if (k === 'volutas')   h += feitio('Feitio', VOLUTAS,   est.voluta,   'mudarVoluta');
 
   if (k === 'ramos'){
     h += `<div class="campo"><label>Folhagem</label>
@@ -669,9 +689,26 @@ function mudarOrnamento(k, v, el){
   if (el) valorNoRotulo(el, v + '%'); else renderProps();
   msg(CAMADAS[k] + ': ' + v + '%');
 }
+/** Um seletor de feitio, com a nota do que está escolhido por baixo. */
+function feitio(rot, lista, atual, fn){
+  return `<div class="campo"><label>${rot}</label>
+    <select onchange="${fn}(this.value)">
+      ${Object.entries(lista).map(([id,f]) =>
+        `<option value="${id}" ${id===atual?'selected':''}>${escaparHtml(f.nome)}</option>`).join('')}
+    </select>
+    <div class="ajuda">${escaparHtml((lista[atual]||{}).nota || '')}</div></div>`;
+}
 function mudarFloreado(v){
   aplicarFloreado(v); marcarSujo(true); registarPasso(); renderProps();
   msg('Floreado: ' + (FLOREADOS[v]||{}).nome);
+}
+function mudarVoluta(v){
+  aplicarVoluta(v); marcarSujo(true); registarPasso(); renderProps();
+  msg('Volutas: ' + (VOLUTAS[v]||{}).nome);
+}
+function mudarElo(v){
+  aplicarElo(v); marcarSujo(true); registarPasso(); renderProps();
+  msg('Entre os nomes: ' + (ELOS[v]||{}).nome);
 }
 function mudarFolhagem(v){
   aplicarFolhagem(v); $('folhagem').value = v;
@@ -1008,6 +1045,8 @@ function serializar(){
     'cartao.paleta':   est.paleta,
     'cartao.folhagem': est.folhagem,
     'cartao.floreado': est.floreado,
+    'cartao.voluta':   est.voluta,
+    'cartao.elo':      est.elo,
     'cartao.camadas':  JSON.stringify(est.camadas),
     'cartao.cores':    Object.keys(est.cores).length ? JSON.stringify(est.cores) : '',
     'cartao.escala':   String(est.escala || 100),
@@ -1085,6 +1124,7 @@ function reporOrnamento(){
   if (ORN_ESCALA[k]) est.deco[ORN_ESCALA[k]] = PADRAO[ORN_ESCALA[k]];
   if (k === 'ramos') aplicarFolhagem(PADRAO['cartao.folhagem']), $('folhagem').value = PADRAO['cartao.folhagem'];
   if (k === 'floreados') aplicarFloreado(PADRAO['cartao.floreado']);
+  if (k === 'volutas')   aplicarVoluta(PADRAO['cartao.voluta']);
   aplicarDeco(); renderProps(); marcarSujo(true); registarPasso();
   msg(`"${CAMADAS[k]}" reposta — por guardar. Ctrl+Z desfaz.`);
 }
@@ -1101,6 +1141,7 @@ function reporCamada(){
     est.textos[chave] = PADRAO[chave];
     pintarTexto(chave, PADRAO[chave]);
   });
+  if (selecionada === 'nomes') aplicarElo(PADRAO['cartao.elo']);   // os nomes trazem o que os liga
   renderProps(); marcarSujo(true); registarPasso();
   msg(`"${CAMADAS[selecionada]}" reposta — por guardar. Ctrl+Z desfaz.`);
 }

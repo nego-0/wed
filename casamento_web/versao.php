@@ -221,12 +221,26 @@ function correcoesEsperadas(): array {
         // ---- Floreados ----
         ['Uma camada por mover não leva transformação nenhuma (nem a zero)',
          'assets/pecas.css', 'translate:var(--mv, none)'],
-        ['Os floreados ladeiam os nomes em vez de os atravessar',
-         'assets/pecas.css', '.ct-floreado-e{ right:calc(100% - 12px)'],
+        ['Os floreados voltaram ao sítio que o desenho de origem lhes deu',
+         'assets/pecas.css', '.ct-floreado-e{ left:-26px; top:-4px; }'],
+        ['O clássico é o traço da referência, ponto por ponto',
+         'pecas.php', 'M148 98 C 90 100 36 84 20 36 C 12 14 34 2 46 20'],
         ['Cinco feitios de floreado, à escolha no editor',
          'pecas.php', 'function cartaoFloreados('],
         ['Todos ancorados no mesmo ponto: trocar de feitio não desalinha',
          'pecas.php', 'a MESMA âncora'],
+
+        // ---- Cantos, molduras e elos ----
+        ['Cinco volutas de canto, à escolha no editor',
+         'pecas.php', 'function cartaoVolutas('],
+        ['Sete molduras, três delas novas',
+         'pecas.php', "'tripla'"],
+        ['A "linha dupla" passou a ser mesmo duas linhas',
+         'pecas.php', 'Uma sombra transparente não apaga'],
+        ['Seis elos entre os nomes, o "&" entre eles',
+         'pecas.php', 'function cartaoElos('],
+        ['O manual de impressão anuncia volutas, floreados e elo',
+         'manual.php', 'Entre os nomes'],
     ];
 }
 

@@ -51,10 +51,13 @@ function cartaoPaleta(string $chave): array {
 /** Feitios da moldura, para o editor os oferecer e o cartão os desenhar. */
 function cartaoMolduras(): array {
     return [
-        'simples' => ['nome'=>'Linha simples', 'nota'=>'Como foi desenhada'],
-        'dupla'   => ['nome'=>'Linha dupla',   'nota'=>'Duas linhas, mais cerimoniosa'],
-        'fina'    => ['nome'=>'Filete fino',   'nota'=>'Discreta, quase só sugerida'],
-        'cantos'  => ['nome'=>'Só os cantos',  'nota'=>'Esquadrias nos quatro cantos'],
+        'simples'     => ['nome'=>'Linha simples',  'nota'=>'Como foi desenhada'],
+        'dupla'       => ['nome'=>'Linha dupla',    'nota'=>'Duas linhas com ar entre elas, mais cerimoniosa'],
+        'tripla'      => ['nome'=>'Três linhas',    'nota'=>'Uma no meio e duas finas a acompanhá-la'],
+        'fina'        => ['nome'=>'Filete fino',    'nota'=>'Discreta, quase só sugerida'],
+        'pontilhada'  => ['nome'=>'Pontilhada',     'nota'=>'Uma linha de pontos, leve e informal'],
+        'arredondada' => ['nome'=>'Cantos redondos','nota'=>'A mesma linha, com as esquinas suavizadas'],
+        'cantos'      => ['nome'=>'Só os cantos',   'nota'=>'Esquadrias nos quatro cantos'],
     ];
 }
 
@@ -62,10 +65,23 @@ function cartaoMolduras(): array {
 function cartaoMolduraVars(string $estilo): string {
     // --ct-mold-linha é a espessura da linha visível; --ct-mold-larg é a borda
     // da caixa (zero no feitio "cantos", que desenha só as esquadrias).
+    // As linhas de dentro e de fora são ELEMENTOS, e não sombras.
+    //
+    // A "linha dupla" era `inset 0 0 0 4px transparent, inset 0 0 0 5.4px
+    // accent`. Uma sombra transparente não apaga o que está por baixo: o anel
+    // de 5,4px ficava maciço e colado à borda, e o que se via era uma banda
+    // dourada grossa — nunca foram duas linhas. Sobre um cartão transparente
+    // (o acrílico) não há cor de fundo com que abrir o intervalo, por isso a
+    // única maneira honesta é desenhar cada linha por sua conta.
     switch ($estilo) {
         case 'fina':   return '--ct-mold-linha:.7px;--ct-mold-larg:.7px';
         case 'dupla':  return '--ct-mold-linha:1.4px;--ct-mold-larg:1.4px;'
-                            . '--ct-mold-sombra:inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)';
+                            . '--ct-mold-a1:block;--ct-mold-i1:6px;--ct-mold-w1:1px';
+        case 'tripla': return '--ct-mold-linha:1.4px;--ct-mold-larg:1.6px;'
+                            . '--ct-mold-a1:block;--ct-mold-i1:6px;--ct-mold-w1:.9px;'
+                            . '--ct-mold-a2:block;--ct-mold-i2:-6px;--ct-mold-w2:.9px';
+        case 'pontilhada': return '--ct-mold-linha:1.4px;--ct-mold-larg:2px;--ct-mold-tipo:dotted';
+        case 'arredondada': return '--ct-mold-linha:1.4px;--ct-mold-larg:1.4px;--ct-mold-raio:26px';
         case 'cantos': return '--ct-mold-linha:1.4px;--ct-mold-larg:0;--ct-mold-cantos:block';
         default:       return '--ct-mold-linha:1.4px;--ct-mold-larg:1.4px';
     }
@@ -74,7 +90,10 @@ function cartaoMolduraVars(string $estilo): string {
 /** A espessura de origem de cada feitio, em px — o editor precisa dela para
  *  compensar o zoom da prova. */
 function cartaoMolduraLinha(string $estilo): float {
-    return $estilo === 'fina' ? 0.7 : 1.4;
+    if ($estilo === 'fina')        return 0.7;
+    if ($estilo === 'tripla')      return 1.6;
+    if ($estilo === 'pontilhada')  return 2.0;
+    return 1.4;
 }
 
 /** Folhagem efetiva (chave -> array), com recurso a eucalipto. */
@@ -215,17 +234,99 @@ function svgEspiral(float $cx, float $cy, float $r0, float $r1, float $a0, float
 }
 
 /** Voluta ornamental de canto: varrimento + espiral + folha, espelhada, + losango. */
-function svgVoluta(string $cor): string {
-    $varrimento = 'M120 22 C 88 22 56 28 46 54';
-    $caracol    = svgEspiral(43, 66, 15, 2.5, -M_PI*0.52, M_PI*1.72, 44);
-    $folha      = '<path d="M90 20 Q 103 8 118 15 Q 105 27 90 20 Z" fill="'.$cor.'" opacity="0.9"/>';
-    $grupo = '<path d="'.$varrimento.'" fill="none" stroke="'.$cor.'" stroke-width="1.5" stroke-linecap="round"/>'
-           . '<path d="'.$caracol.'" fill="none" stroke="'.$cor.'" stroke-width="1.4" stroke-linecap="round"/>'
-           . $folha;
+/**
+ * Feitios da voluta de canto.
+ *
+ * Cada um desenha METADE — a que assenta no lado de cima — e o código
+ * espelha-a pela diagonal do canto. A simetria fica exata por construção, e
+ * não por duas metades feitas à mão que quase batem certo. O 'caracol' é o
+ * desenho de origem, intacto.
+ */
+function cartaoVolutas(): array {
+    return [
+        'caracol'   => ['nome'=>'Caracol',   'nota'=>'A voluta que o design trouxe'],
+        'folha'     => ['nome'=>'Folha',     'nota'=>'Hastes com folhas, a condizer com as trepadeiras'],
+        'arco'      => ['nome'=>'Arco',      'nota'=>'Um quarto de círculo com uma conta ao meio'],
+        'esquadria' => ['nome'=>'Esquadria', 'nota'=>'Duas linhas e um losango — geométrico e discreto'],
+        'leque'     => ['nome'=>'Leque',     'nota'=>'Três raios abertos a partir do canto'],
+    ];
+}
+function cartaoVoluta(string $chave): array {
+    $v = cartaoVolutas();
+    return $v[$chave] ?? $v['caracol'];
+}
+
+function svgVoluta(string $cor, string $tipo = 'caracol'): string {
+    $t = fn(string $d, float $w = 1.5) =>
+        '<path d="'.$d.'" fill="none" stroke="'.$cor.'" stroke-width="'.$w.'" stroke-linecap="round"/>';
+    $losango = '<path d="M31 31 l7 7 -7 7 -7 -7 z" fill="'.$cor.'"/>';
+
+    switch ($tipo) {
+        case 'folha':
+            $grupo = $t('M124 20 C 92 20 58 28 44 56');
+            foreach ([[108,20,8],[86,23,18],[66,31,34],[52,44,52]] as [$x,$y,$a]) {
+                $grupo .= '<path d="M0 0 C 7 -6 18 -5 23 0 C 18 5 7 6 0 0 Z" transform="translate('.$x.' '.$y.') rotate('.$a.')"'
+                        . ' fill="none" stroke="'.$cor.'" stroke-width="1.2"/>';
+            }
+            break;
+        case 'arco':
+            $grupo = $t('M126 24 A 102 102 0 0 0 24 126', 1.4)
+                   . '<circle cx="54" cy="54" r="3.4" fill="'.$cor.'"/>'
+                   . $t('M126 24 l 8 -8', 1.2);
+            break;
+        case 'esquadria':
+            $grupo = $t('M132 18 L 18 18 L 18 132', 1.4)
+                   . $t('M132 30 L 30 30 L 30 132', 1.1);
+            $losango = '<path d="M52 52 l8 8 -8 8 -8 -8 z" fill="'.$cor.'"/>';
+            break;
+        case 'leque':
+            $grupo = $t('M128 26 C 96 26 62 34 40 60', 1.3)
+                   . $t('M112 40 C 88 42 66 50 50 68', 1.2)
+                   . $t('M94 56 C 78 58 64 64 56 76', 1.1)
+                   . '<circle cx="34" cy="34" r="3" fill="'.$cor.'"/>';
+            $losango = '';
+            break;
+        default:   // CARACOL — o desenho de origem, intacto
+            $grupo = $t('M120 22 C 88 22 56 28 46 54')
+                   . $t(svgEspiral(43, 66, 15, 2.5, -M_PI*0.52, M_PI*1.72, 44), 1.4)
+                   . '<path d="M90 20 Q 103 8 118 15 Q 105 27 90 20 Z" fill="'.$cor.'" opacity="0.9"/>';
+    }
+    // Espelhar pela diagonal do canto: matrix(0 1 1 0 0 0) troca x com y.
     $espelhado = '<g transform="matrix(0 1 1 0 0 0)">'.$grupo.'</g>';
-    $losango   = '<path d="M31 31 l7 7 -7 7 -7 -7 z" fill="'.$cor.'"/>';
     return '<svg viewBox="0 0 150 150" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;overflow:visible">'
          . $grupo . $espelhado . $losango . '</svg>';
+}
+
+/**
+ * O que liga os dois nomes.
+ *
+ * Era um coração e mais nada. O e-comercial na letra das frases é, para muito
+ * convite, a escolha mais bonita — e não havia por onde a fazer.
+ */
+function cartaoElos(): array {
+    return [
+        'coracao'   => ['nome'=>'Coração', 'nota'=>'♡ — como o design o trouxe'],
+        'comercial' => ['nome'=>'&',       'nota'=>'O e-comercial, na letra das frases'],
+        'letra'     => ['nome'=>'e',       'nota'=>'A palavra, na caligrafia dos nomes'],
+        'losango'   => ['nome'=>'Losango', 'nota'=>'O mesmo losango dos cantos'],
+        'filete'    => ['nome'=>'Filete',  'nota'=>'Um traço curto entre os dois nomes'],
+        'nada'      => ['nome'=>'Nada',    'nota'=>'Os nomes, um por baixo do outro'],
+    ];
+}
+function cartaoElo(string $chave): array {
+    $e = cartaoElos();
+    return $e[$chave] ?? $e['coracao'];
+}
+/** O elo, já em HTML. Vazio quando é "nada" — e aí nem o espaço fica. */
+function htmlElo(string $tipo): string {
+    switch ($tipo) {
+        case 'comercial': return '<div class="ct-coracao ct-elo-amp">&amp;</div>';
+        case 'letra':     return '<div class="ct-coracao ct-elo-e">e</div>';
+        case 'losango':   return '<div class="ct-coracao ct-elo-los">&#9670;</div>';
+        case 'filete':    return '<div class="ct-coracao ct-elo-fil"></div>';
+        case 'nada':      return '';
+        default:          return '<div class="ct-coracao">&#9825;</div>';
+    }
 }
 
 /** Floreado caligráfico que ladeia os nomes dos noivos. */
@@ -325,6 +426,8 @@ function cartaoDadosEvento(array $defs): array {
         'relig_hora'   => horaTexto($defs['evento.religiosa_hora'] ?? '', false),
         'relig_local'  => trim((string)($defs['evento.religiosa_local'] ?? '')),
         'floreado'     => $defs['cartao.floreado'] ?? 'classico',
+        'voluta'       => $defs['cartao.voluta'] ?? 'caracol',
+        'elo'          => $defs['cartao.elo'] ?? 'coracao',
         'copo_titulo'  => $defs['evento.venue_titulo'],
         'local'        => $defs['evento.local'],
         'copo_hora'    => horaTexto($defs['evento.hora'], false),
@@ -475,10 +578,13 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
   </div>
 
   <!-- moldura dourada contínua + volutas de canto -->
-  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"<?= $ps('moldura') ?>><i></i><i></i></div>
+  <?php // Quatro <i> decorativos: os dois primeiros são esquadrias (feitio "só
+        // os cantos"), os dois últimos são os anéis de dentro e de fora (dupla
+        // e tripla). Ver cartaoMolduraVars() e pecas.css. ?>
+  <div class="ct-moldura<?= $oc('moldura') ?>" data-camada="moldura"<?= $ps('moldura') ?>><i></i><i></i><i></i><i></i></div>
   <div class="ct-volutas<?= $oc('volutas') ?>" data-camada="volutas"<?= $ps('volutas') ?>>
-    <div class="ct-voluta ct-voluta-se"><?= svgVoluta('currentColor') ?></div>
-    <div class="ct-voluta ct-voluta-id"><?= svgVoluta('currentColor') ?></div>
+    <div class="ct-voluta ct-voluta-se"><?= svgVoluta('currentColor', $ev['voluta']) ?></div>
+    <div class="ct-voluta ct-voluta-id"><?= svgVoluta('currentColor', $ev['voluta']) ?></div>
   </div>
 
   <div class="ct-conteudo">
@@ -491,7 +597,7 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
           <div class="ct-floreado ct-floreado-d"><?= svgFloreado('currentColor', $ev['floreado']) ?></div>
         </div>
         <div class="ct-nome" data-campo="noiva"><?= $e($ev['noiva']) ?></div>
-        <div class="ct-coracao">&#9825;</div>
+        <?= htmlElo($ev['elo']) ?>
         <div class="ct-nome" data-campo="noivo"><?= $e($ev['noivo']) ?></div>
       </div>
       <p class="ct-frase<?= $oc('frase') ?>" data-camada="frase"<?= $ps('frase') ?> data-campo="frase"><?= $e($ev['frase']) ?></p>

@@ -59,20 +59,32 @@
    todo de variáveis, para o editor o trocar ao vivo e as páginas de
    impressão o receberem já resolvido. */
 .ct-moldura{ position:absolute; inset:var(--ct-mold-margem); z-index:2; pointer-events:none;
-             border:var(--ct-mold-larg,1.4px) solid var(--ct-accent);
-             box-shadow:var(--ct-mold-sombra,none); }
+             border:var(--ct-mold-larg,1.4px) var(--ct-mold-tipo,solid) var(--ct-accent);
+             border-radius:var(--ct-mold-raio,0); }
 /* As quatro esquadrias: dois pseudo-elementos e dois <i>, escondidos
    enquanto o feitio não for "só os cantos". */
-.ct-moldura::before, .ct-moldura::after, .ct-moldura i{
+.ct-moldura::before, .ct-moldura::after,
+.ct-moldura i:nth-of-type(1), .ct-moldura i:nth-of-type(2){
   content:''; position:absolute; display:var(--ct-mold-cantos,none);
   width:74px; height:74px; box-sizing:border-box; }
+/* Os anéis de dentro e de fora da moldura (feitios "dupla" e "tripla").
+   Têm de ser elementos: uma sombra transparente não abre intervalo nenhum, e
+   o cartão é transparente — não há cor de fundo com que o desenhar. */
+.ct-moldura i:nth-of-type(3), .ct-moldura i:nth-of-type(4){
+  content:''; position:absolute; box-sizing:border-box;
+  border-radius:var(--ct-mold-raio,0); border-style:var(--ct-mold-tipo,solid);
+  border-color:var(--ct-accent); }
+.ct-moldura i:nth-of-type(3){ display:var(--ct-mold-a1,none); inset:var(--ct-mold-i1,6px);
+                              border-width:var(--ct-mold-w1,1px); }
+.ct-moldura i:nth-of-type(4){ display:var(--ct-mold-a2,none); inset:var(--ct-mold-i2,-6px);
+                              border-width:var(--ct-mold-w2,1px); }
 .ct-moldura::before{ top:-1.4px; left:-1.4px;
   border-top:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-left:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
 .ct-moldura::after{ bottom:-1.4px; right:-1.4px;
   border-bottom:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-right:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
-.ct-moldura i:first-of-type{ top:-1.4px; right:-1.4px;
+.ct-moldura i:nth-of-type(1){ top:-1.4px; right:-1.4px;
   border-top:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-right:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
-.ct-moldura i:last-of-type{ bottom:-1.4px; left:-1.4px;
+.ct-moldura i:nth-of-type(2){ bottom:-1.4px; left:-1.4px;
   border-bottom:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-left:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
 
 .ct-voluta{ position:absolute; width:calc(178px*var(--ct-esc-volutas)); height:calc(178px*var(--ct-esc-volutas));
@@ -102,7 +114,15 @@
 .ct-floreado-d{ right:-26px; bottom:-4px; rotate:180deg; }
 .ct-nome{ position:relative; z-index:1; font-family:var(--cf-script); font-size:75px; line-height:.9;
           color:var(--ct-name); }
-.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); }
+.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); line-height:1; }
+/* O que liga os dois nomes. Cada feitio pede a sua letra e o seu tamanho: um
+   & na caligrafia dos nomes fica ilegível, e um coração em corpo 36 come a
+   linha toda. Ver cartaoElos(). */
+.ct-elo-amp{ font-family:var(--cf-serif); font-style:italic; font-size:36px; color:var(--ct-name); margin:-2px 0 0; }
+.ct-elo-e{ font-family:var(--cf-script); font-size:34px; color:var(--ct-name); margin:-4px 0 -2px; }
+.ct-elo-los{ font-size:11px; margin:6px 0; }
+.ct-elo-fil{ width:54px; height:1px; margin:12px 0; opacity:.7;
+             background:linear-gradient(90deg,transparent,var(--ct-accent),transparent); }
 .ct-frase{ margin:14px 0 0; max-width:400px; font-family:var(--cf-serif); font-style:italic;
            font-size:calc(20px*var(--ct-esc)); line-height:1.55; color:var(--ct-sub); }
 

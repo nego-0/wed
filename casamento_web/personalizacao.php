@@ -270,7 +270,9 @@ function defsPadrao(): array {
         // ---- Cartão de convite 10×15 (impressão a dourado sobre acrílico) ----
         'cartao.paleta' => 'ouro',
         'cartao.folhagem' => 'eucalipto',
-        'cartao.floreado' => 'classico',   // feitio do ornamento que ladeia os nomes
+        'cartao.floreado' => 'classico',   // feitio do ornamento que abraça os nomes
+        'cartao.voluta'   => 'caracol',    // feitio das volutas de canto
+        'cartao.elo'      => 'coracao',    // o que liga os dois nomes
         'cartao.abertura' => "Junto com\nsuas famílias",
         'cartao.frase_convite' => 'honram-se em convidá-los para a celebração do seu enlace matrimonial.',
         'cartao.reservado' => 'Reservado a',
@@ -1038,6 +1040,10 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return in_array($valor, ['eucalipto','oliveira','feto','florido'], true) ? $valor : null;
         case 'cartao.floreado':
             return in_array($valor, ['classico','voluta','ramo','filete','gota'], true) ? $valor : null;
+        case 'cartao.voluta':
+            return in_array($valor, ['caracol','folha','arco','esquadria','leque'], true) ? $valor : null;
+        case 'cartao.elo':
+            return in_array($valor, ['coracao','comercial','letra','losango','filete','nada'], true) ? $valor : null;
         case 'foto.hero':
         case 'foto.interludio':
         case 'foto.acesso': {
@@ -1114,7 +1120,8 @@ function validarDefinicao(string $chave, string $valor): ?string {
             // e o texto não tem para onde crescer sem transbordar.
             return ctype_digit($valor) ? (string)max(85, min(115, (int)$valor)) : null;
         case 'cartao.moldura_estilo':
-            return in_array($valor, ['simples','dupla','fina','cantos'], true) ? $valor : null;
+            return in_array($valor, ['simples','dupla','tripla','fina','pontilhada','arredondada','cantos'],
+                            true) ? $valor : null;
         case 'cartao.moldura_margem':
             return ctype_digit($valor) ? (string)max(16, min(48, (int)$valor)) : null;
         case 'cartao.ramos_escala':

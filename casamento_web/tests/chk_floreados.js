@@ -50,18 +50,21 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const fx = document.createRange(); fx.selectNodeContents(el);
     const t = fx.getBoundingClientRect();
     return { esq: g('.ct-floreado-e'), dir: g('.ct-floreado-d'),
-             texto: { e: t.left - n.left, d: t.right - n.left }, alt: n.height };
+             texto: { e: t.left - n.left, d: t.right - n.left }, alt: n.height, larg: n.width };
   });
   const c0 = await cx();
   console.log('   ', JSON.stringify(c0));
-  ok(c0.esq.d <= c0.texto.e + 1,
-     `o floreado da esquerda acaba antes de o nome começar (${Math.round(c0.esq.d)} ≤ ${Math.round(c0.texto.e)})`);
-  ok(c0.dir.e >= c0.texto.d - 1,
-     `e o da direita começa depois de ele acabar (${Math.round(c0.dir.e)} ≥ ${Math.round(c0.texto.d)})`);
-  ok(c0.esq.t > 0 && c0.esq.b < c0.alt + 1,
-     'ficam dentro da altura do bloco dos nomes, e não a pairar acima dele');
-  ok(Math.abs(c0.esq.t - c0.dir.t) < 1 && Math.abs(c0.esq.b - c0.dir.b) < 1,
-     'os dois à mesma altura — são um par, e viam-se desencontrados');
+  // O par abraça os nomes em simetria ROTACIONAL — é o desenho de referência,
+  // e a mesma ideia das volutas e das trepadeiras em cantos opostos. O que
+  // estava errado não era isto: era o invólucro a virar bloco contentor, que
+  // punha o da direita a pairar 100px ACIMA do bloco.
+  ok(Math.abs(c0.esq.t - (c0.alt - c0.dir.b)) < 1.5 &&
+     Math.abs(c0.esq.e - (c0.larg - c0.dir.d)) < 1.5,
+     'o par é rotacionalmente simétrico à volta do centro dos nomes');
+  ok(c0.dir.b > 0 && c0.dir.t < c0.alt,
+     `o da direita fica dentro do bloco dos nomes, e não a pairar acima (topo ${Math.round(c0.dir.t)})`);
+  ok(c0.esq.t > -8 && c0.esq.t < 8,
+     `e o da esquerda encosta ao topo, como o design o pôs (${Math.round(c0.esq.t)})`);
 
   // A causa: uma camada por mover não pode criar bloco contentor nenhum.
   const trans = await p.evaluate(() => {
@@ -70,6 +73,13 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   });
   ok(trans.tr === 'none' && trans.rt === 'none',
      `uma camada por mover não leva transformação nenhuma (${trans.tr} / ${trans.rt})`);
+
+  // O traço do clássico é o do desenho de origem, e não uma aproximação.
+  const traco = await p.evaluate(() => [...document.querySelectorAll('#escala .ct-floreado-e path')]
+    .map(x => x.getAttribute('d')));
+  ok(traco[0] === 'M148 98 C 90 100 36 84 20 36 C 12 14 34 2 46 20' &&
+     traco[1] === 'M46 20 C 41 11 30 11 27 21',
+     'o clássico é o traço do ficheiro de referência, ponto por ponto');
 
   // ============ 2. cinco feitios, à escolha ============
   await p.evaluate(() => selecionar('floreados'));
@@ -94,7 +104,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const c = await cx();
     ok(medidas[v].caminhos > 0, `"${t}" desenha mesmo alguma coisa (${medidas[v].caminhos} traços)`);
     ok(Math.abs(c.esq.t - c0.esq.t) < 1 && Math.abs(c.esq.e - c0.esq.e) < 1,
-       `"${t}" fica exatamente no mesmo sítio do clássico`);
+       `"${t}" fica na mesma caixa do clássico`);
   }
   const assinaturas = new Set(Object.values(medidas).map(m => m.caminhos + ':' + m.d));
   ok(assinaturas.size === 5, `os cinco são desenhos diferentes (${assinaturas.size} distintos)`);
@@ -111,10 +121,10 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const el = document.querySelector('.cartao .ct-floreado-e');
     const n = el.closest('.ct-nomes').getBoundingClientRect(), r = el.getBoundingClientRect();
     return { polig: !!el.querySelector('path[fill]:not([fill=none])'),
-             foraDoTexto: r.right - n.left };
+             topo: Math.round(r.top - n.top) };
   });
   ok(naFolha.polig, 'a folha de impressão traz o filete (que é o único com losango cheio)');
-  ok(naFolha.foraDoTexto < 45, 'e continua ao lado dos nomes, não por cima');
+  ok(Math.abs(naFolha.topo + 4) < 2, `e no sítio de origem (top ${naFolha.topo}, esperado -4)`);
 
   await p.goto(BASE + '/manual.php', { waitUntil: 'networkidle' });
   ok(/Filete/.test(await p.locator('.man-wrap').innerText()),
