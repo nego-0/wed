@@ -100,13 +100,43 @@ movido volta a não mudar nada — que é o que se tinha prometido.
 
 Ganharam também **cinco feitios** (`cartao.floreado`), à escolha na camada
 *Floreados*: **Clássico** (a volta longa com o gancho), **Voluta**, **Raminho**
-(haste com folhas, a condizer com as trepadeiras), **Filete** (uma linha e um
-losango — o mais discreto, e o que melhor se porta com nomes compridos) e
-**Gota**. Todos são desenhados na mesma caixa e com a **mesma âncora** — a
-ponta fina sai a meio da margem virada para os nomes —, para trocar de feitio
-ser uma escolha de desenho e não um desalinhamento. Só traço: o cartão é
-gravado a um só dourado, e uma mancha cheia não se imprime a foil sem virar
-borrão. O manual de impressão nomeia o que estiver escolhido.
+(haste com folhas, a condizer com as trepadeiras), **Filete** (o mesmo gesto
+mais fino, a fechar num losango — o mais discreto dos cinco) e **Gota**. O
+clássico é o traço do desenho de origem **ponto por ponto**, conferido contra o
+ficheiro de referência; os outros quatro é que se desenharam a partir dele.
+Todos partilham a mesma caixa e a **mesma âncora** — a ponta grossa sai em
+(148, 98) —, para trocar de feitio ser uma escolha de desenho e não um
+desalinhamento. Só traço: o cartão é gravado a um só dourado, e uma mancha
+cheia não se imprime a foil sem virar borrão. O manual de impressão nomeia o
+que estiver escolhido.
+
+**Cantos, molduras e o que liga os nomes.** As volutas dos cantos passaram a
+ter **cinco feitios** (`cartao.voluta`): **Caracol** (o de origem), **Folha**,
+**Arco**, **Esquadria** e **Leque**. Cada uma é desenhada uma vez e espelhada
+pela diagonal do canto com `matrix(0 1 1 0 0 0)`.
+
+A moldura passou de quatro feitios a **sete** (`cartao.moldura_estilo`), com
+**Três linhas**, **Pontilhada** e **Cantos redondos** a juntarem-se às
+anteriores. E a **Linha dupla** passou a ser mesmo duas linhas: era
+`inset 0 0 0 4px transparent, inset 0 0 0 5.4px accent`, e **uma sombra
+transparente não apaga o que tem por baixo** — o anel de 5,4 px ficava maciço e
+o que se via era uma banda dourada grossa. Sobre um cartão transparente não há
+cor de fundo com que abrir o intervalo, por isso cada linha é agora um
+**elemento seu**.
+
+Entre os dois nomes havia um coração e mais nada. Há agora **seis elos**
+(`cartao.elo`): **Coração**, **&**, **e**, **Losango**, **Filete** e **Nada**.
+
+Os feitios de moldura são escritos **uma vez só**, em `cartaoMolduraVars()`; o
+editor recebe-os do servidor já resolvidos. Chegou a tê-los copiados num `if`
+seu, e a cópia ficou para trás quando nasceram os três feitios novos — a folha
+de cartões saía com o feitio certo e o editor mostrava sempre a linha simples.
+
+Nem tudo isto se apanha com provas. `tests/amostras.js` desenha um cartão por
+cada feitio, inteiro e de perto, para se poderem ver lado a lado: foi assim que
+se viu que o floreado *Filete* era feito de retas e lia-se como um risco em
+diagonal por cima dos nomes, e que a voluta *Leque* eram três curvas que o
+espelho cruzava com outras três. Nenhum dos dois dava erro nenhum.
 
 **As duas cerimónias são opcionais — e agora dizem-no.** A civil e a religiosa
 acrescentam-se e removem-se por inteiro, nos **dois** editores, com um botão

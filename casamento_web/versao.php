@@ -241,6 +241,16 @@ function correcoesEsperadas(): array {
          'pecas.php', 'function cartaoElos('],
         ['O manual de impressão anuncia volutas, floreados e elo',
          'manual.php', 'Entre os nomes'],
+        ['Uma lista só de feitios de moldura: o editor lê a do servidor',
+         'editor-cartao.php', 'const MOLDURA_VARS'],
+        ['Mudar de moldura já não deixa agarradas as variáveis da anterior',
+         'editor-cartao.php', 'c.style.removeProperty(k)'],
+        ['O floreado "filete" acompanha os nomes em vez de os riscar',
+         'pecas.php', 'lia-se como um risco em diagonal'],
+        ['A voluta "leque" são três arcos do mesmo centro, e não seis riscos',
+         'pecas.php', 'Três quartos de círculo do mesmo centro'],
+        ['O elo "filete" fica centrado entre os nomes',
+         'assets/pecas.css', 'margin:12px auto'],
     ];
 }
 

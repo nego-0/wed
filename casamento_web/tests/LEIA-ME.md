@@ -16,6 +16,16 @@ node correr.js                                     # todas
 node chk_deco.js                                   # só uma
 ```
 
+`amostras.js` não é uma prova e o `correr.js` não lhe pega. Desenha um cartão
+por cada feitio de floreado, voluta, moldura e elo — o cartão inteiro e um
+recorte de perto — para se poderem pôr lado a lado e decidir se são bonitos.
+Foi assim que se apanhou o floreado "filete" feito de retas e o "leque" com
+seis riscos cruzados: nenhum dos dois dava erro, só ficavam feios.
+
+```sh
+TEST_OUT=/tmp/amostras node amostras.js
+```
+
 Três variáveis de ambiente, todas com valor por omissão:
 
 | Variável   | Para quê                        | Por omissão                                      |
@@ -58,7 +68,8 @@ Entram com **admin / noivos2026**.
 | `chk_contas.js`         | registo público e aprovação, códigos de suporte (ver / corrigir / revogar), equipa do casamento e contas suspensas |
 | `chk_editor_avancado.js`| desenhar modelos sem casa emprestada, camadas trancadas que resistem ao arrasto, e o ponto focal que se cola às guias |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
-| `chk_floreados.js`      | os floreados ladeiam os nomes (e não os atravessam), e os cinco feitios ficam todos no mesmo sítio |
+| `chk_floreados.js`      | os floreados abraçam os nomes no sítio que o desenho de origem lhes deu, o clássico é o traço da referência ponto por ponto, e os cinco feitios ficam todos na mesma âncora |
+| `chk_ornamentos.js`     | as cinco volutas de canto e os seis elos entre os nomes: cada uma cabe na sua caixa, o elo fica centrado, e as escolhas chegam à folha de cartões e ao manual |
 | `chk_cerimonias.js`     | cerimónias que se acrescentam e removem nas duas peças, cronograma que se rearranja, e a hora vazia que já não é meia-noite |
 | `chk_admin_ui.js`       | o painel da administração arrumado por quem o usa, e os modelos a mostrarem a cara |
 | `chk_editor_espaco.js`  | o editor avisa quando o ecrã é pequeno (e deixa continuar), e o manual de impressão segue o cartão em vigor |
