@@ -293,9 +293,13 @@ function pontelEditor(): string {
   function pintarPos(id, x, y, a){
     var el = elDe(id); if (!el) return;
     a = a || 0;
+    var origem = Math.abs(x) < 0.005 && Math.abs(y) < 0.005 && Math.abs(a) < 0.05;
     el.style.setProperty('--px', String(x));
     el.style.setProperty('--py', String(y));
     el.style.setProperty('--pa', String(a));
+    // Na origem tiram-se: ver o comentário em cssPosicoes().
+    el.style.setProperty('--mv', origem ? '' : 'calc('+x+'*var(--uw,1vw)) calc('+y+'*var(--uh,1vh))');
+    el.style.setProperty('--rt', origem ? '' : a + 'deg');
     if (LIVRES[id]) LIVRES[id].pos = { x:x, y:y, a:a };
   }
   function marcarLivre(id){

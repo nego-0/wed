@@ -89,6 +89,25 @@ era dele. Um casamento pode assim ficar **sem conta de noivos**, e isso passou
 a ver-se: a lista de casamentos marca-o e a Gestão explica-o, com o campo de
 convidar logo por baixo.
 
+**Os floreados.** O par que ladeia os nomes atravessava o primeiro deles, e o
+da direita ia parar acima do bloco. A causa não estava à vista: a regra do
+posicionamento livre punha `translate: calc(0 * 7.2px)` em **todas** as
+camadas, e um translate a zero **continua a ser um translate** — o que faz do
+elemento o bloco contentor dos descendentes em posição absoluta. Os floreados
+posicionam-se contra o bloco dos nomes; passaram a posicionar-se contra um
+invólucro de altura zero. O valor de origem passou a ser `none`, e quem não foi
+movido volta a não mudar nada — que é o que se tinha prometido.
+
+Ganharam também **cinco feitios** (`cartao.floreado`), à escolha na camada
+*Floreados*: **Clássico** (a volta longa com o gancho), **Voluta**, **Raminho**
+(haste com folhas, a condizer com as trepadeiras), **Filete** (uma linha e um
+losango — o mais discreto, e o que melhor se porta com nomes compridos) e
+**Gota**. Todos são desenhados na mesma caixa e com a **mesma âncora** — a
+ponta fina sai a meio da margem virada para os nomes —, para trocar de feitio
+ser uma escolha de desenho e não um desalinhamento. Só traço: o cartão é
+gravado a um só dourado, e uma mancha cheia não se imprime a foil sem virar
+borrão. O manual de impressão nomeia o que estiver escolhido.
+
 **As duas cerimónias são opcionais — e agora dizem-no.** A civil e a religiosa
 acrescentam-se e removem-se por inteiro, nos **dois** editores, com um botão
 para cada. É a **hora** que decide se existem — remover é limpá-la —, mas fazer

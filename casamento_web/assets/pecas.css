@@ -33,8 +33,14 @@
    `transform`, para não apagar as rotações que o desenho já faz (a trepadeira
    de baixo, a voluta oposta). Sem variáveis o valor é zero e a camada fica
    exatamente onde e como sempre esteve. */
-.cartao [data-camada]{ translate:calc(var(--px,0) * 7.2px) calc(var(--py,0) * 10.8px);
-                       rotate:calc(var(--pa,0) * 1deg); }
+/* CUIDADO com o valor de origem: tem de ser `none`, e não zero.
+   Um elemento com translate/rotate — mesmo a zero — passa a ser o bloco
+   contentor dos descendentes em posição absoluta. Com `calc(0 * 7.2px)` aqui,
+   TODAS as camadas do cartão passaram a sê-lo, e os floreados (que se colocam
+   contra .ct-nomes) foram parar a uma caixa de altura zero: o da esquerda
+   atravessava o primeiro nome e o da direita saltava para fora do bloco.
+   Com `none`, quem não foi movido não muda nada — que é o que se prometeu. */
+.cartao [data-camada]{ translate:var(--mv, none); rotate:var(--rt, none); }
 
 /* A cor do cartão É a peça, não enfeite da página: ao imprimir, o navegador
    descarta fundos por omissão (só os desenha se quem imprime se lembrar de
@@ -80,9 +86,16 @@
 .ct-abertura{ font-size:calc(13px*var(--ct-esc)); font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase;
               color:var(--ct-soft); }
 .ct-nomes{ position:relative; margin:22px 0 6px; padding:0 30px; }
-.ct-floreado{ position:absolute; width:calc(150px*var(--ct-esc-floreados)); height:calc(104px*var(--ct-esc-floreados)); z-index:0; opacity:.85; }
-.ct-floreado-e{ left:-26px; top:-4px; }
-.ct-floreado-d{ right:-26px; bottom:-4px; transform:rotate(180deg); }
+/* Os floreados LADEIAM os nomes — não passam por cima deles.
+   Estavam ancorados nos cantos (left:-26 / right:-26) com 150px de largura:
+   num bloco de 317px, o da esquerda entrava 124px pelo primeiro nome adentro
+   e atravessava-o, e o da direita ia parar acima do bloco. Agora encostam-se
+   por fora, a meia altura, e o que sobra do lado é espaço vazio do cartão. */
+.ct-floreado{ position:absolute; top:50%;
+              width:calc(150px*var(--ct-esc-floreados)); height:calc(110px*var(--ct-esc-floreados));
+              z-index:0; opacity:.85; }
+.ct-floreado-e{ right:calc(100% - 12px); translate:0 -50%; }
+.ct-floreado-d{ left:calc(100% - 12px);  translate:0 -50%; rotate:180deg; }
 .ct-nome{ position:relative; z-index:1; font-family:var(--cf-script); font-size:75px; line-height:.9;
           color:var(--ct-name); }
 .ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); }

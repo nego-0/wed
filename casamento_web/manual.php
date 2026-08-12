@@ -283,8 +283,9 @@ if ($pecaSel === 'cartao') {
         <?= $cxOrn(132, 270, $escOrn('ramos')) ?><?= $escOrn('ramos') !== 100 ? ' (a '.$escOrn('ramos').'%)' : '' ?></td></tr>
       <tr><th>Volutas</th><td>Cantos superior-esquerdo e inferior-direito (rodada 180°), caixa
         <?= $cxOrn(178, 178, $escOrn('volutas')) ?><?= $escOrn('volutas') !== 100 ? ' (a '.$escOrn('volutas').'%)' : '' ?></td></tr>
-      <tr><th>Floreados</th><td>Aos lados dos nomes (o da direita rodado 180°), caixa
-        <?= $cxOrn(150, 104, $escOrn('floreados')) ?><?= $escOrn('floreados') !== 100 ? ' (a '.$escOrn('floreados').'%)' : '' ?></td></tr>
+      <tr><th>Floreados</th><td><?= escP(cartaoFloreado($defs['cartao.floreado'])['nome']) ?> —
+        aos lados dos nomes (o da direita rodado 180°), caixa
+        <?= $cxOrn(150, 110, $escOrn('floreados')) ?><?= $escOrn('floreados') !== 100 ? ' (a '.$escOrn('floreados').'%)' : '' ?></td></tr>
     </table>
 
     <?php // Composição livre: só aparece quando alguém mexeu. Um cartão pela

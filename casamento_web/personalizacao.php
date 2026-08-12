@@ -270,6 +270,7 @@ function defsPadrao(): array {
         // ---- Cartão de convite 10×15 (impressão a dourado sobre acrílico) ----
         'cartao.paleta' => 'ouro',
         'cartao.folhagem' => 'eucalipto',
+        'cartao.floreado' => 'classico',   // feitio do ornamento que ladeia os nomes
         'cartao.abertura' => "Junto com\nsuas famílias",
         'cartao.frase_convite' => 'honram-se em convidá-los para a celebração do seu enlace matrimonial.',
         'cartao.reservado' => 'Reservado a',
@@ -791,8 +792,11 @@ function cssPosicoes(array $defs): string {
     // translate e rotate são propriedades por sua conta: compõem-se com os
     // transforms que o design já usa (a legenda centrada, a folha rodada) em
     // vez de os apagarem.
-    $mover = 'translate:calc(var(--px,0)*var(--uw,1vw)) calc(var(--py,0)*var(--uh,1vh));'
-           . 'rotate:calc(var(--pa,0)*1deg)';
+    // O valor de origem é `none`, e não zero: um translate a zero continua a
+    // ser um translate, e faz do bloco o contentor de quem lá dentro se
+    // posiciona em absoluto. No cartão isso desalinhou os floreados; aqui
+    // seria a mesma armadilha à espera do próximo elemento absoluto.
+    $mover = 'translate:var(--mv,none);rotate:var(--rt,none)';
     $css = '.page{--uw:' . $pag . ';--uh:' . $pag . '}'
          . '#cover{--uw:1vw;--uh:1vh}'
          . '#hero .frame{--uw:1vw;--uh:calc(max(600px,min(100vh,860px))/100)}'
@@ -803,8 +807,9 @@ function cssPosicoes(array $defs): string {
     $livres = posicoesLivres($defs);
     foreach (posicoesGravadas($defs['layout.posicoes'] ?? '') as $id => $p) {
         if (!isset($livres[$id])) continue;
-        $css .= $livres[$id]['sel'] . '{--px:' . $p['x'] . ';--py:' . $p['y']
-              . ';--pa:' . $p['a'] . ';' . $mover . '}';
+        $css .= $livres[$id]['sel'] . '{--px:' . $p['x'] . ';--py:' . $p['y'] . ';--pa:' . $p['a']
+              . ';--mv:calc(' . $p['x'] . '*var(--uw,1vw)) calc(' . $p['y'] . '*var(--uh,1vh))'
+              . ';--rt:' . $p['a'] . 'deg;' . $mover . '}';
     }
     return $css;
 }
@@ -1031,6 +1036,8 @@ function validarDefinicao(string $chave, string $valor): ?string {
             return in_array($valor, ['ouro','salvia','terracota','rosa'], true) ? $valor : null;
         case 'cartao.folhagem':
             return in_array($valor, ['eucalipto','oliveira','feto','florido'], true) ? $valor : null;
+        case 'cartao.floreado':
+            return in_array($valor, ['classico','voluta','ramo','filete','gota'], true) ? $valor : null;
         case 'foto.hero':
         case 'foto.interludio':
         case 'foto.acesso': {

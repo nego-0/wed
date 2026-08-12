@@ -53,6 +53,10 @@ if ($exemplo) {
 // Trepadeiras de todas as folhagens: trocar de folhagem não volta ao servidor.
 $ramosJs = [];
 foreach (cartaoFolhagens() as $k => $f) $ramosJs[$k] = svgTrepadeira($k, 'currentColor');
+// O mesmo para os floreados: trocar de feitio é uma decisão de desenho, e
+// esperar por um pedido ao servidor para a ver não é decidir, é adivinhar.
+$floreadosJs = [];
+foreach (cartaoFloreados() as $k => $f) $floreadosJs[$k] = svgFloreado('currentColor', $k);
 
 // Campos de texto editáveis, por camada
 $camposPorCamada = [
@@ -226,6 +230,8 @@ const CAMPOS   = <?= json_encode($camposPorCamada, JSON_UNESCAPED_UNICODE) ?>;
 const ORNAMENTOS = ['ramos','volutas','moldura','floreados'];   // camadas sem texto
 const MOLDURAS  = <?= json_encode(cartaoMolduras(), JSON_UNESCAPED_UNICODE) ?>;
 const FOLHAGENS = <?= json_encode(cartaoFolhagens(), JSON_UNESCAPED_UNICODE) ?>;
+const FLOREADOS = <?= json_encode(cartaoFloreados(), JSON_UNESCAPED_UNICODE) ?>;
+const FLOREADOS_SVG = <?= json_encode($floreadosJs, JSON_UNESCAPED_UNICODE) ?>;
 // O que cada camada decorativa oferece, além de se poder esconder.
 const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala',
                      floreados:'cartao.floreados_escala' };
@@ -264,6 +270,7 @@ const DIAS     = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quint
 let est = {
   paleta:   <?= json_encode($defs['cartao.paleta']) ?>,
   folhagem: <?= json_encode($folhagem) ?>,
+  floreado: <?= json_encode($defs['cartao.floreado']) ?>,
   camadas:  <?= json_encode($camadas) ?>,
   cores:    (()=>{ try { return JSON.parse(<?= json_encode($defs['cartao.cores']) ?> || '{}') || {}; } catch(e){ return {}; } })(),
   fontes:   <?= json_encode(array_intersect_key($defs, array_flip(['cartao.fonte_script','cartao.fonte_serif','cartao.fonte_sans'])), JSON_UNESCAPED_UNICODE) ?>,
@@ -315,7 +322,7 @@ function registarPasso(){
 /** Volta a pintar o cartão inteiro a partir de est — usado ao desfazer/refazer. */
 function repintarTudo(){
   aplicarPaleta(est.paleta, true); aplicarCoresLivres(); aplicarTipografia(); aplicarDeco();
-  aplicarFolhagem(est.folhagem);
+  aplicarFolhagem(est.folhagem); aplicarFloreado(est.floreado);
   $('folhagem').value = est.folhagem;
   Object.entries(est.textos).forEach(([k,v]) => pintarTexto(k,v));
   pintarLogistica();
@@ -380,6 +387,10 @@ function aplicarTipografia(){
 function aplicarFolhagem(k){
   est.folhagem = k;
   document.querySelectorAll('#escala .ct-ramo').forEach(r => { r.innerHTML = RAMOS[k] || ''; });
+}
+function aplicarFloreado(k){
+  est.floreado = k;
+  document.querySelectorAll('#escala .ct-floreado').forEach(r => { r.innerHTML = FLOREADOS_SVG[k] || ''; });
 }
 
 // ---------- Painel de cores ----------
@@ -603,6 +614,15 @@ function renderPropsOrnamento(k, rot){
                 ajuda:'Quanto a moldura se afasta do rebordo do cartão.'});
   }
 
+  if (k === 'floreados'){
+    h += `<div class="campo"><label>Feitio</label>
+      <select onchange="mudarFloreado(this.value)">
+        ${Object.entries(FLOREADOS).map(([id,f]) =>
+          `<option value="${id}" ${id===est.floreado?'selected':''}>${escaparHtml(f.nome)}</option>`).join('')}
+      </select>
+      <div class="ajuda">${escaparHtml((FLOREADOS[est.floreado]||{}).nota || '')}</div></div>`;
+  }
+
   if (k === 'ramos'){
     h += `<div class="campo"><label>Folhagem</label>
       <select onchange="mudarFolhagem(this.value)">
@@ -649,6 +669,10 @@ function mudarOrnamento(k, v, el){
   if (el) valorNoRotulo(el, v + '%'); else renderProps();
   msg(CAMADAS[k] + ': ' + v + '%');
 }
+function mudarFloreado(v){
+  aplicarFloreado(v); marcarSujo(true); registarPasso(); renderProps();
+  msg('Floreado: ' + (FLOREADOS[v]||{}).nome);
+}
 function mudarFolhagem(v){
   aplicarFolhagem(v); $('folhagem').value = v;
   marcarSujo(true); registarPasso(); renderProps();
@@ -686,6 +710,11 @@ function pintarPos(k, x, y, a){
   el.style.setProperty('--px', naOrigem ? '' : String(x));
   el.style.setProperty('--py', naOrigem ? '' : String(y));
   el.style.setProperty('--pa', naOrigem ? '' : String(a));
+  // Na origem, TIRAM-SE: um translate a zero continua a ser um translate, e
+  // faz da camada o bloco contentor de quem lá dentro se posiciona em
+  // absoluto (ver pecas.css). O que não foi movido não mexe em nada.
+  el.style.setProperty('--mv', naOrigem ? '' : (x * 7.2) + 'px ' + (y * 10.8) + 'px');
+  el.style.setProperty('--rt', naOrigem ? '' : a + 'deg');
   el.classList.toggle('movida', !naOrigem);
 }
 function definirPos(k, x, y, a){
@@ -978,6 +1007,7 @@ function serializar(){
   return Object.assign({}, est.textos, est.fontes, est.deco, {
     'cartao.paleta':   est.paleta,
     'cartao.folhagem': est.folhagem,
+    'cartao.floreado': est.floreado,
     'cartao.camadas':  JSON.stringify(est.camadas),
     'cartao.cores':    Object.keys(est.cores).length ? JSON.stringify(est.cores) : '',
     'cartao.escala':   String(est.escala || 100),
@@ -1054,6 +1084,7 @@ function reporOrnamento(){
   }
   if (ORN_ESCALA[k]) est.deco[ORN_ESCALA[k]] = PADRAO[ORN_ESCALA[k]];
   if (k === 'ramos') aplicarFolhagem(PADRAO['cartao.folhagem']), $('folhagem').value = PADRAO['cartao.folhagem'];
+  if (k === 'floreados') aplicarFloreado(PADRAO['cartao.floreado']);
   aplicarDeco(); renderProps(); marcarSujo(true); registarPasso();
   msg(`"${CAMADAS[k]}" reposta — por guardar. Ctrl+Z desfaz.`);
 }

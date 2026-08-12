@@ -217,6 +217,16 @@ function correcoesEsperadas(): array {
          'modelos.php', 'era ele que cortava o menu'],
         ['Um modelo não tem versões: o seletor vazio saiu',
          'editor-cartao.php', 'if (!MODELO) Versoes.montar('],
+
+        // ---- Floreados ----
+        ['Uma camada por mover não leva transformação nenhuma (nem a zero)',
+         'assets/pecas.css', 'translate:var(--mv, none)'],
+        ['Os floreados ladeiam os nomes em vez de os atravessar',
+         'assets/pecas.css', '.ct-floreado-e{ right:calc(100% - 12px)'],
+        ['Cinco feitios de floreado, à escolha no editor',
+         'pecas.php', 'function cartaoFloreados('],
+        ['Todos ancorados no mesmo ponto: trocar de feitio não desalinha',
+         'pecas.php', 'a MESMA âncora'],
     ];
 }
 
