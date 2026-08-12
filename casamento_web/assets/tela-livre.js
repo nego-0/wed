@@ -115,14 +115,28 @@
     function comecar(e) {
       if (e.button !== undefined && e.button !== 0) return;
       if (!podeMover()) return;
-      var blocos = op.blocos(), meu = null;
+      var blocos = op.blocos(), meu = null, sob = [];
       for (var i = 0; i < blocos.length; i++) {
         if (blocos[i].el && blocos[i].el.contains(e.target)) {
+          sob.push(blocos[i]);
           // O mais interior ganha: arrastar os nomes move os nomes, não o
           // bloco inteiro que os contém. Para mover o conjunto escolhe-se
           // ele na lista de camadas e arrasta-se pelo que ele tem de seu.
           if (!meu || meu.el.contains(blocos[i].el)) meu = blocos[i];
         }
+      }
+      // ...com uma exceção: a camada JÁ ESCOLHIDA na lista ganha a quem esteja
+      // por dentro dela. A regra de cima dizia "para mover o conjunto escolhe-se
+      // ele na lista e arrasta-se pelo que ele tem de seu" — só que os nomes
+      // quase não têm nada de seu que o floreado não cubra, e pegar-lhes pela
+      // orla movia o floreado. Escolher uma camada e pegar-lhe dentro é dizer
+      // qual se quer mover.
+      // (Onde a escolhida nem sequer está sob o ponteiro — o meio do floreado,
+      // que é o nome de cima a tapá-lo — isto não se aplica nem deve: ali o que
+      // está debaixo do dedo é mesmo o nome.)
+      if (op.escolhida) {
+        var q = op.escolhida();
+        for (var j = 0; j < sob.length; j++) if (sob[j].id === q) { meu = sob[j]; break; }
       }
       if (!meu || op.trancado && op.trancado(meu.id)) return;
 

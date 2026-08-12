@@ -1029,6 +1029,7 @@ TelaLivre.ligar({
             ({ id:k, el: document.querySelector(`#escala [data-camada="${k}"]`) }))
             .filter(b => b.el && est.camadas[b.id] !== 0),
   pos: posDe,
+  escolhida: () => selecionada,
   trancado: estaTrancada,
   pegar: k => { if (selecionada !== k) selecionar(k); $('arte').classList.add('a-mover'); },
   mover: (k, x, y, a) => pintarPos(k, x, y, a),

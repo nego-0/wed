@@ -203,6 +203,26 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.screenshot({ path: OUT + '/floreados.png' });
   await api('defs_save', { defs: { 'cartao.floreado': 'classico' } });
 
+  // Arrastar move a camada ESCOLHIDA, e não a que estiver por dentro dela. Os
+  // nomes quase não têm orla que o floreado não cubra: sem esta regra,
+  // escolher "Nomes" e pegar-lhes pela beira arrastava o floreado.
+  for (const [escolha, esperada] of [['floreados', 'floreados'], ['nomes', 'nomes']]) {
+    await api('defs_save', { defs: { 'cartao.posicoes': '' } });
+    await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
+    await p.waitForTimeout(1300);
+    await p.evaluate(c => selecionar(c), escolha);
+    await p.waitForTimeout(250);
+    const r = await (await p.$('#escala .ct-floreado-e')).boundingBox();
+    const x = r.x + 8, y = r.y + r.height / 2;      // a orla do floreado
+    await p.mouse.move(x, y); await p.mouse.down();
+    await p.mouse.move(x + 50, y, { steps: 8 }); await p.mouse.up();
+    await p.waitForTimeout(300);
+    const movidas = await p.evaluate(() => Object.keys(est.pos));
+    ok(movidas.length === 1 && movidas[0] === esperada,
+       `com "${escolha}" escolhida, arrastar move "${esperada}" (moveu ${JSON.stringify(movidas)})`);
+  }
+  await api('defs_save', { defs: { 'cartao.posicoes': '' } });
+
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));
   console.log(f ? `\n${f} verificação(ões) falharam` : '\nTudo certo.');
   await b.close(); process.exit(f ? 1 : 0);

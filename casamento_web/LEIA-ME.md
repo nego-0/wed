@@ -116,6 +116,12 @@ de baixo subia até encostar à volta do floreado. Agora são 1,2 (as mesmas
 24 px), e os feitios de elo alternativos — que em corpo 34 ou 36 precisam de
 entrelinha curta — pedem `line-height:1` cada um por si.
 
+De caminho, **arrastar passou a mover a camada escolhida** e não a que estiver
+por dentro dela. A regra era "o mais interior ganha", com a nota de que para
+mover o conjunto se escolhe na lista e se arrasta "pelo que ele tem de seu" —
+só que os nomes quase não têm orla que o floreado não cubra, e pegar-lhes pela
+beira arrastava o floreado.
+
 Ganharam também **cinco feitios** (`cartao.floreado`), à escolha na camada
 *Floreados*: **Clássico** (a volta longa com o gancho), **Voluta**, **Raminho**
 (haste com folhas, a condizer com as trepadeiras), **Filete** (o mesmo gesto

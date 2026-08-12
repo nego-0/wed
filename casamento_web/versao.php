@@ -259,6 +259,8 @@ function correcoesEsperadas(): array {
          'assets/pecas.css', 'color:var(--ct-accent); line-height:1.2'],
         ['Os feitios de elo mantêm a entrelinha curta que pedem',
          'assets/pecas.css', 'margin:-2px 0 0; line-height:1'],
+        ['Arrastar move a camada escolhida, e não a que está por dentro dela',
+         'assets/tela-livre.js', 'if (op.escolhida)'],
     ];
 }
 
