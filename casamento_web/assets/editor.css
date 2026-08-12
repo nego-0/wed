@@ -106,6 +106,11 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
    coluna que desliza não há espaço livre, e o flex-shrink esmagava-o a nada. */
 .ed-painel.cresce{ flex:1 0 auto; min-height:0; }
 .ed-painel.cresce .ed-painel-corpo{ max-height:none; }
+/* As propriedades são o painel mais fundo dos três: uma camada com texto,
+   cerimónias, posição e volta não cabia nos 220px de todos, e o que ficava de
+   fora era justamente o que se tinha vindo fazer. Continua a poder puxar-se
+   pela pega; isto é só um ponto de partida honesto. */
+#p-props > .ed-painel-corpo{ max-height:min(42vh, 400px); }
 
 /* Sombra que aparece só quando há mais conteúdo acima ou abaixo. As barras
    deste sistema são de sobreposição e não ocupam espaço, por isso um campo
@@ -337,3 +342,14 @@ body.esp-travado .ed-corpo{ pointer-events:none; }
 .esp-chip{ display:none; color:var(--ed-ouro-claro,#D9BC8C); cursor:pointer;
            border:1px solid rgba(201,168,98,.45); border-radius:5px; padding:0 .35rem; }
 .esp-chip.on{ display:inline-block; }
+
+/* ---- Cerimónias opcionais, no painel de propriedades ------- */
+/* Uma que existe mostra-se dentro de uma caixa; uma que não existe é só o
+   botão de a acrescentar. Ver ficarem diferentes é o que diz, sem ler, quais
+   é que o convite anuncia. */
+.cer-dentro{ background:#2b2d26; border:1px solid var(--ed-linha); border-radius:9px;
+             padding:.55rem .6rem; margin-bottom:.5rem; }
+.cer-dentro > label{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.cer-dentro > label .bt{ text-transform:none; letter-spacing:0; font-size:.7rem; padding:.15rem .45rem; }
+.cer-fora{ margin-bottom:.5rem; }
+.cer-fora .bt{ border-style:dashed; }

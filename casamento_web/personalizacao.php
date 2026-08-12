@@ -41,9 +41,15 @@ const DIAS_PT   = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quin
 
 /** '20:30' -> 'Ás 20h30' · '16:00' -> 'Ás 16h' */
 function horaTexto(string $hhmm, bool $comAs = true): string {
+    // Hora por preencher não é meia-noite. Sem isto, explode(':','') dava
+    // (int)'' = 0 e uma cerimónia que ninguém marcou anunciava-se "às 0h" em
+    // todos os cartões — e, pior, o teste que a esconde ("hora vazia = não se
+    // anuncia") nunca chegava a ser verdade.
+    $hhmm = trim($hhmm);
+    if ($hhmm === '') return '';
     [$h, $m] = array_pad(explode(':', $hhmm), 2, '00');
     $txt = (int)$h . 'h' . ((int)$m ? sprintf('%02d', (int)$m) : '');
-    return ($comAs ? 'Ás ' : '') . $txt;
+    return ($comAs ? 'Às ' : '') . $txt;
 }
 
 function dataExtensa(string $ymd): string {
@@ -190,8 +196,13 @@ function defsPadrao(): array {
         // As duas cerimónias, à parte da festa. Opcionais: há casamentos só
         // com uma, e há quem faça as duas no mesmo sítio. Sem hora, a cerimónia
         // simplesmente não se anuncia.
+        // O título de cada uma vive aqui, e não no cartão: as duas peças
+        // anunciam a mesma cerimónia, e um título que só o impresso soubesse
+        // obrigava a escrevê-lo duas vezes (e a vê-las discordar).
+        'evento.civil_titulo'    => 'Cerimónia Civil',
         'evento.civil_hora'      => '10:30',
         'evento.civil_local'     => '',
+        'evento.religiosa_titulo'=> 'Cerimónia Religiosa',
         'evento.religiosa_hora'  => '',
         'evento.religiosa_local' => '',
         // ---- Capa que abre (o envelope selado com o monograma) ----
@@ -262,7 +273,6 @@ function defsPadrao(): array {
         'cartao.abertura' => "Junto com\nsuas famílias",
         'cartao.frase_convite' => 'honram-se em convidá-los para a celebração do seu enlace matrimonial.',
         'cartao.reservado' => 'Reservado a',
-        'cartao.civil_titulo' => 'Cerimónia Civil',
         'cartao.frase_final' => 'Há dias que se vivem uma vez e se recordam para sempre, e a sua companhia será parte do mais nobre que havemos de recordar.',
         'cartao.camadas' => '',   // vazio = todas as camadas visíveis
         // Cor e letra livres, por cima da paleta escolhida. Vazio = a paleta manda.
@@ -799,6 +809,28 @@ function cssPosicoes(array $defs): string {
     return $css;
 }
 
+/**
+ * As duas cerimónias, para o convite digital.
+ *
+ * São opcionais e é a HORA que decide: sem hora não há cerimónia a anunciar,
+ * e o bloco não sai de todo. Era o que o cartão já fazia; o convite digital
+ * nem sequer as mostrava, e um casal que tivesse marcado a igreja no registo
+ * via essa informação só no papel.
+ */
+function cerimoniasHtml(array $defs): string {
+    $out = '';
+    foreach ([['civil', 'Civil'], ['religiosa', 'Religiosa']] as [$k, $_]) {
+        $hora = trim((string)($defs['evento.'.$k.'_hora'] ?? ''));
+        if ($hora === '') continue;
+        $local = trim((string)($defs['evento.'.$k.'_local'] ?? ''));
+        $out .= '<div class="cer"><h3>' . escP($defs['evento.'.$k.'_titulo']) . '</h3>'
+              . '<div class="h">' . escP(horaTexto($hora)) . '</div>'
+              . ($local !== '' ? '<div class="l">' . escP($local) . '</div>' : '')
+              . '</div>';
+    }
+    return $out === '' ? '' : '    <div class="cerimonias rv d2">' . $out . '</div>';
+}
+
 /** Secções livres gravadas, já validadas. */
 function blocosLivres(array $defs): array {
     $j = json_decode($defs['layout.blocos'] ?? '', true);
@@ -984,6 +1016,8 @@ function validarDefinicao(string $chave, string $valor): ?string {
             // Vazio é uma resposta: quer dizer "não há", e a cerimónia não se anuncia.
             if ($valor === '') return '';
             return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $valor) ? $valor : null;
+        case 'evento.civil_titulo':
+        case 'evento.religiosa_titulo':
         case 'evento.civil_local':
         case 'evento.religiosa_local':
             return mb_substr($valor, 0, 120);
@@ -1294,6 +1328,7 @@ function convitePlaceholders(array $defs): array {
         '{{CRONO_TITULO}}' => escP($defs['cronograma.titulo']),
         '{{CRONO_SUB}}' => escP(DIAS_PT[$w].', '.$d.' de '.$mesNome),
         '{{CRONO_ITENS}}' => $htmlCrono,
+        '{{CERIMONIAS}}' => cerimoniasHtml($defs),
         '{{VENUE_TITULO}}' => escP($defs['evento.venue_titulo']),
         '{{VENUE_LINHAS}}' => escP($defs['evento.local']).'<br>'.escP($defs['evento.cidade']),
         '{{MAPS_URL}}' => escP($defs['evento.maps']),

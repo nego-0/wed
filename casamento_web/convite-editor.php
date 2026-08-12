@@ -146,10 +146,15 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
     <button class="bt bt-min" onclick="zoomPasso(1)" title="Ampliar">+</button>
   </div>
   <div class="cresce"></div>
-  <span class="rot">Versão</span>
-  <select id="sel-versao" class="sel-versao"
-          title="A versão em vigor — a que os convidados recebem. Escolha outra para a aplicar, ou use as ações de gerir."></select>
-  <span class="ed-sep"></span>
+  <?php // As versões são de um casamento: guardam o que ESTE casal decidiu. Um
+        // modelo da casa não tem versões, e o seletor saía vazio — um controlo
+        // que não faz nada é pior do que um controlo que não está lá. ?>
+  <?php if (!$MODELO): ?>
+    <span class="rot">Versão</span>
+    <select id="sel-versao" class="sel-versao"
+            title="A versão em vigor — a que os convidados recebem. Escolha outra para a aplicar, ou use as ações de gerir."></select>
+    <span class="ed-sep"></span>
+  <?php endif; ?>
   <button class="bt" onclick="reporSeccao()">Repor esta secção</button>
   <button class="bt primario" onclick="guardar()">Guardar</button>
 </div>
@@ -252,7 +257,11 @@ const TEMA_ROT = <?= json_encode(temaVarsRotulos(), JSON_UNESCAPED_UNICODE) ?>;
 // linhas): pintá-los em cru na tela mostrava "20:30" onde ficará "às 20h30".
 // Para estes espera-se uma pausa e recarrega-se a tela, como nas listas.
 const RECOMPOR = ['evento.data','evento.hora','evento.local','evento.cidade',
-                  'evento.maps','evento.whatsapp','footer.local'];
+                  'evento.maps','evento.whatsapp','footer.local',
+                  // As cerimónias são compostas pelo servidor ("Ás 15h", e o
+                  // bloco inteiro a nascer e a morrer com a hora).
+                  'evento.civil_titulo','evento.civil_hora','evento.civil_local',
+                  'evento.religiosa_titulo','evento.religiosa_hora','evento.religiosa_local'];
 
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -279,6 +288,12 @@ const CAMPOS = {
   'gd.eyebrow':['Chamada','texto',120],
   'evento.venue_titulo':['Título do momento','texto',80],
   'cronograma.titulo':['Título do cronograma','texto',120],
+  'evento.civil_titulo':['Nome da cerimónia civil','texto',40],
+  'evento.civil_hora':['Hora da cerimónia civil','hora',5],
+  'evento.civil_local':['Local da cerimónia civil','texto',80],
+  'evento.religiosa_titulo':['Nome da cerimónia religiosa','texto',40],
+  'evento.religiosa_hora':['Hora da cerimónia religiosa','hora',5],
+  'evento.religiosa_local':['Local da cerimónia religiosa','texto',80],
   'acesso.eyebrow':['Chamada','texto',120], 'acesso.titulo':['Título','texto',120],
   'acesso.instrucao':['Instrução junto ao QR','area',4000], 'acesso.nota':['Nota de rodapé','area',4000],
   'manual.eyebrow':['Chamada do manual','texto',120], 'manual.titulo':['Título do manual','texto',120],
@@ -550,6 +565,62 @@ function painelLivre(sec){
   </div>`;
 }
 
+/**
+ * As duas cerimónias, no painel: cada uma acrescenta-se e remove-se por
+ * inteiro. É a HORA que decide se existe — remover é limpá-la —, mas fazer
+ * isso à mão num campo de hora não se descobre.
+ *
+ * O convite digital nem sequer as mostrava: um casal que tivesse marcado a
+ * igreja no registo via essa informação só no papel.
+ */
+const CERIMONIAS = [
+  ['civil',     'Cerimónia civil',     '10:30'],
+  ['religiosa', 'Cerimónia religiosa', '15:00']
+];
+function blocoCerimonias(){
+  return `<div class="grupo"><h4>Cerimónias</h4>
+    <div class="ajuda">Opcionais, as duas. Há casamentos só com uma, e há quem faça as duas
+      no mesmo sítio — o que não for acrescentado não aparece no convite. São as mesmas do
+      cartão impresso: escritas aqui, valem nas duas peças.</div>
+    ${CERIMONIAS.map(([k, rot, horaPadrao]) => {
+      const hora = EST.val['evento.' + k + '_hora'] || '';
+      if (!hora) {
+        return `<div class="campo cer-fora">
+          <button class="bt" style="width:100%" onclick="acrescentarCerimonia('${k}','${horaPadrao}')">
+            + Acrescentar ${rot.toLowerCase()}</button></div>`;
+      }
+      return `<div class="campo cer-dentro">
+        <label>${rot}
+          <button class="bt bt-min" onclick="removerCerimonia('${k}','${rot}')"
+                  title="Tirar esta cerimónia do convite">Remover</button></label>
+        <input type="text" data-chave="evento.${k}_titulo" maxlength="40"
+               value="${esc(EST.val['evento.' + k + '_titulo'] || '')}"
+               placeholder="Como se chama" oninput="editar(this)">
+        <div class="vs-lin" style="margin-top:.35rem">
+          <input type="time" data-chave="evento.${k}_hora" value="${esc(hora)}"
+                 oninput="editar(this)" style="flex:0 0 110px">
+          <input type="text" data-chave="evento.${k}_local" maxlength="80"
+                 value="${esc(EST.val['evento.' + k + '_local'] || '')}"
+                 placeholder="Onde é (opcional)" oninput="editar(this)" style="flex:1">
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+function acrescentarCerimonia(k, horaPadrao){
+  EST.val['evento.' + k + '_hora'] = horaPadrao;
+  if (!EST.val['evento.' + k + '_titulo']) EST.val['evento.' + k + '_titulo'] = PADRAO['evento.' + k + '_titulo'];
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+  msg('Cerimónia acrescentada — ajuste a hora e o local.');
+}
+function removerCerimonia(k, rot){
+  if (!confirm(`Tirar a ${rot.toLowerCase()} do convite?\n\nA hora e o local são apagados. Ctrl+Z desfaz.`)) return;
+  EST.val['evento.' + k + '_hora'] = '';
+  EST.val['evento.' + k + '_local'] = '';
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+  msg(`"${rot}" deixou de se anunciar.`);
+}
+
 // ---------- comunicação com a tela ----------
 function enviarTela(m){
   const f = $('tela'); if (!f || !f.contentWindow) return;
@@ -775,6 +846,7 @@ function renderPropsJa(){
              style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> ${rot}</label></div>`;
   });
   h += chaves.map(c=>campoHTML(c)).join('');
+  if (SEC === 'grande-dia') h += blocoCerimonias();
   const lk = LISTAS_SEC[SEC];
   if (lk) h += listaHTML(lk);
   h += painelLivre(SEC);
@@ -880,6 +952,10 @@ function listaHTML(lk){
       <div class="it-topo"><span class="n">${i+1}</span>
         ${cfg.icone?`<select onchange="editarItem('${lk}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
           ${Object.keys(ICONES).map(n=>`<option value="${n}" ${n===it.i?'selected':''}>${n}</option>`).join('')}</select>`:'<span class="cresce"></span>'}
+        <button class="bt bt-min" onclick="moverItem('${lk}',${i},-1)" ${i===0?'disabled':''}
+                title="Subir">↑</button>
+        <button class="bt bt-min" onclick="moverItem('${lk}',${i},1)" ${i===itens.length-1?'disabled':''}
+                title="Descer">↓</button>
         <button class="bt bt-min" onclick="removerItem('${lk}',${i})" title="Remover">✕</button>
       </div>
       ${cfg.campos.map(([c,ph,tag])=> tag==='textarea'
@@ -892,6 +968,19 @@ function listaHTML(lk){
   else
     h += `<div class="sel-nada">Chegou ao máximo de ${cfg.max}. Remova um para juntar outro.</div>`;
   return h;
+}
+/**
+ * Troca um item de lugar. O cronograma é uma linha do tempo — a ordem é o
+ * assunto dele —, e até aqui só se podia acertar apagando e voltando a
+ * escrever. As setas valem para todas as listas: os capítulos da história
+ * também se contam por ordem.
+ */
+function moverItem(lk, i, d){
+  const l = EST.listas[lk]; if (!l) return;
+  const j = i + d; if (j < 0 || j >= l.length) return;
+  [l[i], l[j]] = [l[j], l[i]];
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+  msg('Movido para ' + (j + 1) + '.º');
 }
 let tLista = null;
 function editarItem(lk,i,campo,v){
@@ -1158,6 +1247,7 @@ function mudarEscala(v, el){
 // O painel em si vive em assets/versoes.js, partilhado com o editor do
 // convite impresso; aqui só se lhe dão as amarras desta página.
 function renderVersoes(){
+  if (MODELO) return;   // um modelo da casa não tem versões
   Versoes.montar({
     ambito: 'digital',
     alvo:   'sel-versao',

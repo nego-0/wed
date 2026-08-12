@@ -251,10 +251,11 @@ function cartaoDadosEvento(array $defs): array {
         'reservado'    => $defs['cartao.reservado'],
         'data_ext'     => dataExtensa($data),
         'dia_semana'   => $ts ? DIAS_PT[(int)date('w', $ts)] : '',
-        'civil_titulo' => $defs['cartao.civil_titulo'],
+        'civil_titulo' => $defs['evento.civil_titulo'],
         'civil_hora'   => horaTexto($defs['evento.civil_hora'] ?? '', false),
         'civil_local'  => trim((string)($defs['evento.civil_local'] ?? '')),
         // A religiosa é opcional, como a civil: sem hora, não se anuncia.
+        'relig_titulo' => $defs['evento.religiosa_titulo'],
         'relig_hora'   => horaTexto($defs['evento.religiosa_hora'] ?? '', false),
         'relig_local'  => trim((string)($defs['evento.religiosa_local'] ?? '')),
         'copo_titulo'  => $defs['evento.venue_titulo'],
@@ -301,6 +302,37 @@ function cartaoCamadas(): array {
 /** Deslocamento gravado de cada camada, em % do cartão (ausente = no sítio). */
 function cartaoPosicoes(array $defs): array {
     return posicoesGravadas($defs['cartao.posicoes'] ?? '');
+}
+
+/**
+ * O bloco de logística do cartão: as cerimónias que houver, e a receção.
+ *
+ * Cada cerimónia só aparece se tiver HORA — é assim que se acrescenta e se
+ * remove uma, sem campo à parte a dizer "mostrar". O primeiro título visível
+ * não leva a margem de cima (ct-seccao-2), senão o bloco nascia com um vazio
+ * por cima quando a civil não existe.
+ *
+ * Vive numa função porque o editor a redesenha ao vivo, e duas cópias do
+ * mesmo desenho acabam sempre a discordar uma da outra.
+ */
+function cartaoLogistica(array $ev): string {
+    $e = fn($s) => escP($s);
+    $h = ''; $primeiro = true;
+    $bloco = function (string $titulo, string $hora, string $local) use (&$h, &$primeiro, $e) {
+        if ($hora === '') return;
+        $h .= '<div class="ct-seccao' . ($primeiro ? '' : ' ct-seccao-2') . '">' . $e($titulo) . '</div>'
+            . '<div class="ct-detalhe">às ' . $e($hora)
+            . ($local !== '' ? '<br>' . $e($local) : '') . '</div>';
+        $primeiro = false;
+    };
+    $bloco($ev['civil_titulo'], $ev['civil_hora'], $ev['civil_local']);
+    $bloco($ev['relig_titulo'], $ev['relig_hora'], $ev['relig_local']);
+    // A receção não é opcional: é a festa, e é para ela que se convida.
+    $h .= '<div class="ct-seccao' . ($primeiro ? '' : ' ct-seccao-2') . '" data-campo="copo_titulo">'
+        . $e($ev['copo_titulo']) . '</div>'
+        . '<div class="ct-detalhe ct-detalhe-2">' . $e($ev['local'])
+        . ($ev['copo_hora'] !== '' ? '<br>às ' . $e($ev['copo_hora']) : '') . '</div>';
+    return $h;
 }
 
 /** Camadas trancadas do cartão: não se arrastam nem se escondem. */
@@ -416,12 +448,14 @@ function renderCartaoConvite(array $ev, array $conv, array $pal, string $folhage
             if ($ev['civil_local'] !== ''): ?><br><?= $e($ev['civil_local']) ?><?php endif; ?></div>
         <?php endif; ?>
         <?php if ($ev['relig_hora'] !== ''): ?>
-          <div class="ct-seccao ct-seccao-2">Cerimónia Religiosa</div>
+          <div class="ct-seccao ct-seccao-2" data-campo="relig_titulo"><?= $e($ev['relig_titulo']) ?></div>
           <div class="ct-detalhe">às <?= $e($ev['relig_hora']) ?><?php
             if ($ev['relig_local'] !== ''): ?><br><?= $e($ev['relig_local']) ?><?php endif; ?></div>
         <?php endif; ?>
         <div class="ct-seccao ct-seccao-2" data-campo="copo_titulo"><?= $e($ev['copo_titulo']) ?></div>
-        <div class="ct-detalhe ct-detalhe-2"><?= $e($ev['local']) ?><br>às <?= $e($ev['copo_hora']) ?></div>
+        <div class="ct-detalhe ct-detalhe-2"><?= $e($ev['local']) ?><?php
+          // Sem hora não se escreve "às " a apontar para nada.
+          if ($ev['copo_hora'] !== ''): ?><br>às <?= $e($ev['copo_hora']) ?><?php endif; ?></div>
       </div>
       <div class="ct-tracinho ct-tracinho-2"></div>
       <p class="ct-fecho<?= $oc('fecho') ?>" data-camada="fecho"<?= $ps('fecho') ?> data-campo="frase_final"><?= $e($ev['frase_final']) ?></p>

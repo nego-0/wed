@@ -89,6 +89,34 @@ era dele. Um casamento pode assim ficar **sem conta de noivos**, e isso passou
 a ver-se: a lista de casamentos marca-o e a Gestão explica-o, com o campo de
 convidar logo por baixo.
 
+**As duas cerimónias são opcionais — e agora dizem-no.** A civil e a religiosa
+acrescentam-se e removem-se por inteiro, nos **dois** editores, com um botão
+para cada. É a **hora** que decide se existem — remover é limpá-la —, mas fazer
+isso à mão num campo de hora não se descobre, e deixava o casal a apagar
+dígitos à espera que a linha desaparecesse. O título de cada uma passou para o
+âmbito do evento (`evento.civil_titulo`, `evento.religiosa_titulo`, esquema
+**v14**): as duas peças anunciam a mesma cerimónia, e um título que só o
+impresso soubesse acabaria com cada peça a dizer o seu. O **convite digital**,
+que nem sequer as mostrava, passa a anunciá-las na página do grande dia — um
+casal que tivesse marcado a igreja no registo via essa informação só no papel.
+
+Havia aqui um defeito à vista de toda a gente: `horaTexto('')` dava **"0h"** —
+`explode(':','')` devolve `['']` e `(int)''` é `0`. Todos os cartões anunciavam
+uma «Cerimónia Religiosa às 0h» que ninguém marcou, e o teste que a devia
+esconder (*sem hora não se anuncia*) nunca chegava a ser verdade. A cópia em
+JavaScript do editor tinha o mesmo. Hora por preencher não é meia-noite.
+
+E outro, mais fundo: o editor do cartão mostrava o local da festa, a hora, os
+nomes dos noivos e a data — e a gravação **deitava-os fora em silêncio**,
+porque só enviava as chaves do âmbito `cartao.`. Os campos estavam lá e não
+guardavam nada. Passa a governar também as chaves do evento que mostra; um
+**modelo** continua a levar só o desenho, que é o que ele é.
+
+**O cronograma rearranja-se.** É uma linha do tempo — a ordem é o assunto dele
+— e até aqui só se acertava apagando e voltando a escrever. Cada momento ganhou
+setas para subir e descer, e valem para todas as listas: os capítulos da
+história também se contam por ordem.
+
 **O painel, arrumado por quem o usa.** O que se faz todos os dias — ver e abrir
 casamentos — estava a 800px do topo, por baixo de um formulário de catorze
 campos que se usa uma vez por mês. Os formulários (novo casamento, nova conta,

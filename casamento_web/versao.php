@@ -195,6 +195,28 @@ function correcoesEsperadas(): array {
          'modelo-prova.php', 'defsDoEditor'],
         ['O convite digital desenha-se com as definições de um modelo',
          'convite-digital.php', "(int)(\$_GET['modelo'] ?? 0) > 0"],
+
+        // ---- Cerimónias, cronograma, e o que estava partido ----
+        ['Hora por preencher não é meia-noite (era "às 0h" em todos os cartões)',
+         'personalizacao.php', "if (\$hhmm === '') return '';"],
+        ['O mesmo, na cópia em JavaScript do editor',
+         'editor-cartao.php', 'const v = String(hhmm||\'\').trim(); if (!v) return \'\';'],
+        ['Cerimónias com acrescentar e remover, nos dois editores',
+         'editor-cartao.php', 'function acrescentarCerimonia('],
+        ['O convite digital passa a anunciar as cerimónias',
+         'personalizacao.php', 'function cerimoniasHtml('],
+        ['Título de cada cerimónia partilhado pelas duas peças (esquema v14)',
+         'db.php', "SET chave='evento.civil_titulo'"],
+        ['Um bloco de logística só, servidor e editor a desenhá-lo igual',
+         'pecas.php', 'function cartaoLogistica('],
+        ['O editor do cartão grava mesmo os dados do evento que mostra',
+         'editor-cartao.php', '$chavesEditor = array_merge('],
+        ['Cronograma (e as outras listas) rearranjam-se',
+         'convite-editor.php', 'function moverItem('],
+        ['O menu "⋯" dos modelos deixou de ser cortado pelo cartão',
+         'modelos.php', 'era ele que cortava o menu'],
+        ['Um modelo não tem versões: o seletor vazio saiu',
+         'editor-cartao.php', 'if (!MODELO) Versoes.montar('],
     ];
 }
 

@@ -95,7 +95,7 @@ if ($pecaSel === 'cartao') {
                                    . ($ev['civil_local'] !== '' ? ' · ' . $ev['civil_local'] : '')
                                  : '(não se anuncia)'],
         ['Cerimónia religiosa', $ev['relig_hora'] !== ''
-                                 ? 'às ' . $ev['relig_hora']
+                                 ? $ev['relig_titulo'] . ' · às ' . $ev['relig_hora']
                                    . ($ev['relig_local'] !== '' ? ' · ' . $ev['relig_local'] : '')
                                  : '(não se anuncia)'],
         ['Receção',             $ev['copo_titulo'] . ' · ' . $ev['local'] . ' · às ' . $ev['copo_hora']],

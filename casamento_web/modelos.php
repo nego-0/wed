@@ -51,14 +51,17 @@ if ($aberto > 0) {
      desenhada a sério (o cartão por modelo-prova.php, o convite digital por
      convite-digital.php?modelo=N) e encolhida para caber. */
   .grelha{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:1rem; }
-  .mod{ background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  /* Sem overflow:hidden aqui: era ele que cortava o menu "⋯" — o painel abria,
+     mas ficava recortado pela borda do cartão e parecia não fazer nada. Quem
+     precisa de recortar é a moldura da miniatura, e essa recorta-se a si. */
+  .mod{ background:#fff; border:1px solid var(--line); border-radius:14px;
         display:flex; flex-direction:column; transition:.16s; }
   .mod:hover{ border-color:var(--gold-soft); box-shadow:0 8px 22px rgba(180,134,74,.14); }
   .mod.por-publicar{ background:repeating-linear-gradient(135deg,#fff 0 10px,#fdfbf6 10px 20px); }
   /* A moldura tem a proporção do cartão (2:3); a prova é desenhada em tamanho
      real e encolhida por transform, para o que se vê ser o que sai. */
   .cara{ position:relative; width:100%; aspect-ratio:2/3; overflow:hidden; background:#20211c;
-         border-bottom:1px solid var(--line); display:block; }
+         border-bottom:1px solid var(--line); display:block; border-radius:13px 13px 0 0; }
   .cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left; pointer-events:none; }
   .cara .selo{ position:absolute; right:.4rem; top:.4rem; z-index:2; width:26px; height:26px;
                border-radius:8px; background:rgba(255,255,255,.92); color:var(--forest);

@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 13;
+const ESQUEMA_VERSAO = 14;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -573,6 +573,17 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 atualizado_em DATETIME NULL DEFAULT NULL,
                 INDEX idx_modelo_ambito (ambito, visivel)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+
+    // v14 — o título da cerimónia civil passou de 'cartao.civil_titulo' para
+    // 'evento.civil_titulo'. As duas peças anunciam a mesma cerimónia: com o
+    // título fechado no âmbito do impresso, o convite digital não lhe podia
+    // tocar e cada peça acabaria a dizer o seu. Quem já o tinha escrito
+    // à mão não o perde.
+    if ($versaoAtual < 14) {
+        @$conn->query("UPDATE IGNORE {$P}definicoes SET chave='evento.civil_titulo'
+                        WHERE chave='cartao.civil_titulo'");
+        @$conn->query("DELETE FROM {$P}definicoes WHERE chave='cartao.civil_titulo'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

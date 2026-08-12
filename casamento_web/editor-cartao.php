@@ -26,6 +26,15 @@ $ev       = cartaoDadosEvento($defs);
 // Chaves que este editor governa — as do cartão, e só essas. Serve para gravar
 // apenas o que mudou, sem pisar o convite digital.
 $chavesCartao = chavesDoAmbito('impresso');
+// ...e as do evento e do casal que este editor mostra no cartão. São de âmbito
+// digital (não começam por 'cartao.'), mas quem as escreve aqui espera que
+// fiquem escritas.
+$chavesEditor = array_merge($chavesCartao, [
+    'casal.noiva', 'casal.noivo', 'evento.data', 'evento.hora', 'evento.local',
+    'evento.venue_titulo',
+    'evento.civil_titulo', 'evento.civil_hora', 'evento.civil_local',
+    'evento.religiosa_titulo', 'evento.religiosa_hora', 'evento.religiosa_local',
+]);
 
 // Convite de exemplo: usa um real (físico) para a prova ser fiel.
 $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
@@ -51,9 +60,9 @@ $camposPorCamada = [
     'nomes'     => [['casal.noiva', 'Nome da noiva', 'texto', 'noiva'], ['casal.noivo', 'Nome do noivo', 'texto', 'noivo']],
     'frase'     => [['cartao.frase_convite', 'Frase de convite', 'area', 'frase']],
     'convidado' => [['cartao.reservado', 'Rótulo', 'texto', 'reservado']],
-    'logistica' => [['cartao.civil_titulo', 'Cerimónia', 'texto', 'civil_titulo'],
-                    ['evento.civil_hora', 'Hora da cerimónia (HH:MM)', 'hora', ''],
-                    ['evento.venue_titulo', 'Receção', 'texto', 'copo_titulo'],
+    // A receção é a festa e está sempre cá; as duas cerimónias são opcionais e
+    // têm bloco próprio, com acrescentar e remover (ver blocoCerimonias()).
+    'logistica' => [['evento.venue_titulo', 'Receção', 'texto', 'copo_titulo'],
                     ['evento.local', 'Local', 'texto', ''],
                     ['evento.hora', 'Hora da receção (HH:MM)', 'hora', '']],
     'fecho'     => [['cartao.frase_final', 'Frase final', 'area', 'frase_final']],
@@ -119,10 +128,15 @@ $camposPorCamada = [
     <button class="bt bt-min" onclick="ajustar()" title="Ajustar à janela">Ajustar</button>
   </div>
   <div class="cresce"></div>
-  <span class="rot">Versão</span>
-  <select id="sel-versao" class="sel-versao"
-          title="A versão em vigor — a que se imprime e a que o manual retrata. Escolha outra para a aplicar, ou use as ações de gerir."></select>
-  <span class="ed-sep"></span>
+  <?php // As versões são de um casamento: guardam o que ESTE casal decidiu. Um
+        // modelo da casa não tem versões, e o seletor saía vazio — um controlo
+        // que não faz nada é pior do que um controlo que não está lá. ?>
+  <?php if (!$MODELO): ?>
+    <span class="rot">Versão</span>
+    <select id="sel-versao" class="sel-versao"
+            title="A versão em vigor — a que se imprime e a que o manual retrata. Escolha outra para a aplicar, ou use as ações de gerir."></select>
+    <span class="ed-sep"></span>
+  <?php endif; ?>
   <button class="bt" onclick="reporCamada()" title="Repor os textos originais da camada escolhida">Repor esta camada</button>
   <button class="bt" onclick="reporPosicoes()" title="Devolver todas as camadas ao sítio que o design lhes deu">Repor composição</button>
   <button class="bt" onclick="repor()">Repor originais</button>
@@ -215,7 +229,19 @@ const FOLHAGENS = <?= json_encode(cartaoFolhagens(), JSON_UNESCAPED_UNICODE) ?>;
 // O que cada camada decorativa oferece, além de se poder esconder.
 const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala',
                      floreados:'cartao.floreados_escala' };
-const PADRAO   = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
+// As chaves que ESTE editor governa. Não são só as do cartão: ele mostra (e
+// deixa escrever) o local e a hora da festa, os nomes dos noivos e as
+// cerimónias, que vivem no âmbito do evento. Sem elas aqui, guardar()
+// filtrava-as e o que se escrevia nesses campos era deitado fora em silêncio.
+const PADRAO   = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesEditor)), JSON_UNESCAPED_UNICODE) ?>;
+// Um modelo é o DESENHO, e não a festa: dele só saem as chaves do cartão. É
+// o que o servidor já exige (modelo_defs filtra pelo âmbito); dizê-lo também
+// aqui evita mandar o que vai ser deitado fora.
+const PADRAO_MODELO = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
+// As chaves do evento não são do âmbito do cartão (o convite digital também as
+// usa), mas o cartão mostra-as — e para as repor é preciso saber o original.
+const PADRAO_EV = <?= json_encode(array_intersect_key(defsPadrao(), array_flip([
+    'evento.civil_titulo','evento.religiosa_titulo','evento.venue_titulo'])), JSON_UNESCAPED_UNICODE) ?>;
 const ATUAIS   = <?= json_encode(array_intersect_key($defs, array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
 // Desenhar um modelo da casa: grava-se nele, e não nas definições de um casamento.
 const MODELO   = <?= json_encode($MODELO, JSON_UNESCAPED_UNICODE) ?>;
@@ -229,7 +255,7 @@ const CASAL_NOME = <?= json_encode($CAS['casal']) ?>;
 // cabe em 10×15 cm sem o texto transbordar da moldura. Mostrá-los à medida que
 // se escreve evita descobrir o problema só na prova impressa.
 const LIMITES = { 'casal.noiva':28, 'casal.noivo':28, 'cartao.abertura':60,
-                  'cartao.frase_convite':160, 'cartao.reservado':30, 'cartao.civil_titulo':40,
+                  'cartao.frase_convite':160, 'cartao.reservado':30, 'evento.civil_titulo':40, 'evento.religiosa_titulo':40,
                   'cartao.frase_final':220, 'evento.venue_titulo':40, 'evento.local':80 };
 const MESES    = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIAS     = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
@@ -246,9 +272,10 @@ let est = {
                  'cartao.moldura_estilo','cartao.moldura_margem',
                  'cartao.ramos_escala','cartao.volutas_escala','cartao.floreados_escala'])), JSON_UNESCAPED_UNICODE) ?>,
   textos:   <?= json_encode(array_intersect_key($defs, array_flip([
-                 'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.civil_titulo',
-                 'evento.civil_hora','cartao.frase_final','casal.noiva','casal.noivo',
-                 'evento.venue_titulo','evento.local','evento.hora','evento.data'])), JSON_UNESCAPED_UNICODE) ?>,
+                 'cartao.abertura','cartao.frase_convite','cartao.reservado','cartao.frase_final',
+                 'casal.noiva','casal.noivo','evento.venue_titulo','evento.local','evento.hora','evento.data',
+                 'evento.civil_titulo','evento.civil_hora','evento.civil_local',
+                 'evento.religiosa_titulo','evento.religiosa_hora','evento.religiosa_local'])), JSON_UNESCAPED_UNICODE) ?>,
   // Onde cada camada foi parar, em % do cartão. Sem entrada = no sítio que o
   // design lhe deu — e é assim que fica um cartão que ninguém arrastou.
   pos:      <?= json_encode((object)$posicoes, JSON_UNESCAPED_UNICODE) ?>,
@@ -291,6 +318,7 @@ function repintarTudo(){
   aplicarFolhagem(est.folhagem);
   $('folhagem').value = est.folhagem;
   Object.entries(est.textos).forEach(([k,v]) => pintarTexto(k,v));
+  pintarLogistica();
   Object.keys(CAMADAS).forEach(k => {
     const alvo = document.querySelector(`#escala [data-camada="${k}"]`);
     if (alvo) alvo.classList.toggle('ct-oculta', est.camadas[k] === 0);
@@ -549,7 +577,9 @@ function renderPropsJa(){
       : `<input type="${tipo==='data'?'date':(tipo==='hora'?'time':'text')}" data-chave="${chave}" ${max?`maxlength="${max}"`:''}
                 value="${escaparAttr(v)}" oninput="editarTexto(this)">`;
     return `<div class="campo"><label>${rotulo}${cont}</label>${ctl}</div>`;
-  }).join('') + blocoPosicao(selecionada);
+  }).join('')
+  + (selecionada === 'logistica' ? blocoCerimonias() : '')
+  + blocoPosicao(selecionada);
 }
 /**
  * Propriedades de uma camada decorativa. Não têm texto, mas têm feitio: até
@@ -740,7 +770,7 @@ function pintarTexto(chave, valor){
   const c = document.querySelector('#escala .cartao');
   const porCampo = {
     'cartao.abertura':'abertura', 'cartao.frase_convite':'frase', 'cartao.reservado':'reservado',
-    'cartao.civil_titulo':'civil_titulo', 'cartao.frase_final':'frase_final',
+    'evento.civil_titulo':'civil_titulo', 'evento.religiosa_titulo':'relig_titulo', 'cartao.frase_final':'frase_final',
     'casal.noiva':'noiva', 'casal.noivo':'noivo', 'evento.venue_titulo':'copo_titulo'
   };
   if (porCampo[chave]) {
@@ -748,13 +778,11 @@ function pintarTexto(chave, valor){
     if (n) n.innerHTML = chave === 'cartao.abertura' ? escaparHtml(valor).replace(/\n/g,'<br>') : escaparHtml(valor);
     return;
   }
-  // Campos compostos: hora e local entram nas linhas de detalhe; a data é escrita por extenso.
-  if (chave === 'evento.civil_hora') { const n = c.querySelectorAll('.ct-detalhe')[0]; if (n) n.textContent = 'às ' + horaPt(valor); return; }
-  if (chave === 'evento.hora' || chave === 'evento.local') {
-    const n = c.querySelector('.ct-detalhe-2');
-    if (n) n.innerHTML = escaparHtml(est.textos['evento.local'] || '') + '<br>às ' + horaPt(est.textos['evento.hora'] || '');
-    return;
-  }
+  // A logística inteira redesenha-se de uma vez: acrescentar ou remover uma
+  // cerimónia muda a ESTRUTURA do bloco (títulos que nascem e morrem, e a
+  // margem de cima que salta para o primeiro que sobrar), e remendar linha a
+  // linha só acertava enquanto ninguém mexesse no que existe.
+  if (/^evento\.(civil|religiosa)_|^evento\.(hora|local|venue_titulo)$/.test(chave)) { pintarLogistica(); return; }
   if (chave === 'evento.data') {
     const d = new Date(valor + 'T12:00:00');
     if (isNaN(d)) return;
@@ -763,7 +791,95 @@ function pintarTexto(chave, valor){
     if (di) di.textContent = DIAS[d.getDay()];
   }
 }
-function horaPt(hhmm){ const [h,m] = String(hhmm||'').split(':'); if(h===undefined) return ''; return (+h)+'h'+(+m?String(m).padStart(2,'0'):''); }
+/**
+ * Redesenha o bloco de logística — o mesmo desenho que cartaoLogistica() faz
+ * no servidor. Cada cerimónia só entra se tiver hora, e o primeiro título
+ * visível não leva a margem de cima.
+ */
+function pintarLogistica(){
+  const box = document.querySelector('#escala .ct-logistica'); if (!box) return;
+  const t = est.textos, hp = k => horaPt(t[k] || '');
+  let h = '', primeiro = true;
+  const bloco = (titulo, hora, local) => {
+    if (!hora) return;
+    h += `<div class="ct-seccao${primeiro ? '' : ' ct-seccao-2'}">${escaparHtml(titulo || '')}</div>`
+       + `<div class="ct-detalhe">às ${escaparHtml(hora)}${local ? '<br>' + escaparHtml(local) : ''}</div>`;
+    primeiro = false;
+  };
+  bloco(t['evento.civil_titulo'], hp('evento.civil_hora'), t['evento.civil_local']);
+  bloco(t['evento.religiosa_titulo'], hp('evento.religiosa_hora'), t['evento.religiosa_local']);
+  h += `<div class="ct-seccao${primeiro ? '' : ' ct-seccao-2'}" data-campo="copo_titulo">${escaparHtml(t['evento.venue_titulo'] || '')}</div>`
+     + `<div class="ct-detalhe ct-detalhe-2">${escaparHtml(t['evento.local'] || '')}`
+     + (hp('evento.hora') ? '<br>às ' + escaparHtml(hp('evento.hora')) : '') + `</div>`;
+  box.innerHTML = h;
+}
+
+/**
+ * As duas cerimónias, no painel: cada uma acrescenta-se e remove-se por
+ * inteiro. É a HORA que decide se existe — remover é limpá-la —, mas fazer
+ * isso à mão num campo de hora não se descobre, e deixava o casal a apagar
+ * dígitos à espera que a linha desaparecesse.
+ */
+const CERIMONIAS = [
+  ['civil',     'Cerimónia civil',     '10:30'],
+  ['religiosa', 'Cerimónia religiosa', '15:00']
+];
+function blocoCerimonias(){
+  // Num modelo, isto não se governa: as cerimónias são de cada casamento, e o
+  // servidor (modelo_defs) só guarda as chaves do cartão. Mostrar os controlos
+  // seria oferecer o que a gravação ia deitar fora.
+  if (MODELO) return `<div class="campo" style="margin-top:.9rem"><label>Cerimónias</label>
+    <div class="ajuda">As cerimónias, o local e a hora são de cada casamento — um modelo é o
+      <b>desenho</b>, não a festa. Cada casal preenche-as na sua ficha, e o cartão acompanha.</div></div>`;
+  return `<div class="campo" style="margin-top:.9rem"><label>Cerimónias</label>
+    <div class="ajuda">Opcionais, as duas. Há casamentos só com uma, e há quem faça as duas
+      no mesmo sítio — o que não for acrescentado não aparece no cartão.</div></div>`
+    + CERIMONIAS.map(([k, rot, horaPadrao]) => {
+      const hora = est.textos['evento.' + k + '_hora'] || '';
+      if (!hora) {
+        return `<div class="campo cer-fora">
+          <button class="bt" style="width:100%" onclick="acrescentarCerimonia('${k}','${horaPadrao}')">
+            + Acrescentar ${rot.toLowerCase()}</button></div>`;
+      }
+      return `<div class="campo cer-dentro">
+        <label>${rot}
+          <button class="bt bt-min" onclick="removerCerimonia('${k}','${rot}')"
+                  title="Tirar esta cerimónia do cartão">Remover</button></label>
+        <input type="text" data-chave="evento.${k}_titulo" maxlength="40"
+               value="${escaparAttr(est.textos['evento.' + k + '_titulo'] || '')}"
+               placeholder="Como se chama" oninput="editarTexto(this)">
+        <div class="vs-lin" style="margin-top:.35rem">
+          <input type="time" data-chave="evento.${k}_hora" value="${escaparAttr(hora)}"
+                 oninput="editarTexto(this)" style="flex:0 0 110px">
+          <input type="text" data-chave="evento.${k}_local" maxlength="80"
+                 value="${escaparAttr(est.textos['evento.' + k + '_local'] || '')}"
+                 placeholder="Onde é (opcional)" oninput="editarTexto(this)" style="flex:1">
+        </div>
+      </div>`;
+    }).join('');
+}
+function acrescentarCerimonia(k, horaPadrao){
+  est.textos['evento.' + k + '_hora'] = horaPadrao;
+  if (!est.textos['evento.' + k + '_titulo']) est.textos['evento.' + k + '_titulo'] = PADRAO_EV['evento.' + k + '_titulo'];
+  pintarLogistica(); marcarSujo(true); registarPasso(); renderProps();
+  msg('Cerimónia acrescentada — ajuste a hora e o local.');
+}
+function removerCerimonia(k, rot){
+  if (!confirm(`Tirar a ${rot.toLowerCase()} do cartão?\n\nA hora e o local são apagados. Ctrl+Z desfaz.`)) return;
+  est.textos['evento.' + k + '_hora'] = '';
+  est.textos['evento.' + k + '_local'] = '';
+  pintarLogistica(); marcarSujo(true); registarPasso(); renderProps();
+  msg(`"${rot}" deixou de se anunciar.`);
+}
+
+// Hora por preencher não é meia-noite — o mesmo que horaTexto() faz no
+// servidor. Sem isto, ''.split(':') dava [''] e (+'') dava 0: uma cerimónia
+// removida continuava a anunciar-se "às 0h" na prova do editor.
+function horaPt(hhmm){
+  const v = String(hhmm||'').trim(); if (!v) return '';
+  const [h,m] = v.split(':'); if (h===undefined) return '';
+  return (+h)+'h'+(+m?String(m).padStart(2,'0'):'');
+}
 
 // ---------- Ferramentas ----------
 function usarFerramenta(f){
@@ -885,7 +1001,7 @@ function rotuloDe(chave){
 // casamento qualquer.
 function serializarTudo(){
   const v = serializar(), fora = {};
-  Object.keys(PADRAO).forEach(k => { if (k in v) fora[k] = String(v[k] ?? ''); });
+  Object.keys(PADRAO_MODELO).forEach(k => { if (k in v) fora[k] = String(v[k] ?? ''); });
   return fora;
 }
 
@@ -971,7 +1087,8 @@ window.addEventListener('resize', () => { if (zoom <= .5) ajustar(); });
 
 // ---------- Versões do convite impresso ----------
 // Painel partilhado com o editor do convite digital (assets/versoes.js).
-Versoes.montar({
+// Só há versões de um casamento; a desenhar um modelo, não há seletor.
+if (!MODELO) Versoes.montar({
   ambito: 'impresso',
   alvo:   'sel-versao',
   sujo:   () => sujo,

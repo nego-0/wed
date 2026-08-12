@@ -91,6 +91,10 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   const temEnq = await p.locator('.enq-caixa').first().isVisible().catch(() => false);
   if (temEnq) {
     const caixa = p.locator('.enq-caixa').first();
+    // A coluna dos painéis rola: sem trazer o enquadramento à vista, o arrasto
+    // ia parar fora da janela e não mexia nada. É o que quem edita faz.
+    await caixa.scrollIntoViewIfNeeded();
+    await p.waitForTimeout(250);
     const bb = await caixa.boundingBox();
     // Larga-se a 1,5% do terço: perto, mas não em cima. Sem íman ficaria assim.
     const alvoX = bb.x + bb.width * 0.348, alvoY = bb.y + bb.height * 0.50;
