@@ -34,11 +34,21 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const mold = () => p.evaluate(() => {
     const m = document.querySelector('#escala .ct-moldura'), cs = getComputedStyle(m);
     const c = getComputedStyle(document.querySelector('#escala .cartao'));
+    // Os anéis de dentro e de fora são os <i> 3 e 4 — elementos, não sombras.
+    // Conta-se quantos estão mesmo visíveis e a que distância da borda ficam.
+    const is = [...m.querySelectorAll('i')];
+    const caixa = m.getBoundingClientRect();
+    const aneis = is.slice(2)
+      .filter(i => getComputedStyle(i).display !== 'none')
+      .map(i => Math.round(i.getBoundingClientRect().top - caixa.top));
     return { linha: c.getPropertyValue('--ct-mold-linha').trim(),
              larg:  c.getPropertyValue('--ct-mold-larg').trim(),
-             cantos: c.getPropertyValue('--ct-mold-cantos').trim(),
+             // O que interessa é a esquadria estar à vista, e não a variável
+             // dizer "none": um feitio que não precise dela apaga-a, e apagada
+             // vale o valor de origem da folha de estilo — que é esconder.
+             cantos: getComputedStyle(is[0]).display,
              margem: c.getPropertyValue('--ct-mold-margem').trim(),
-             sombra: cs.boxShadow, bordaReal: cs.borderTopWidth };
+             aneis, bordaReal: cs.borderTopWidth };
   });
 
   // ---- moldura: as quatro alternativas ----
@@ -53,18 +63,37 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(await p.locator('#props input[type=range][oninput*="mudarAngulo"]').count() === 1,
      'e a volta, como qualquer outra camada');
 
-  for (const [id, esperado] of [['fina','.7px'], ['simples','1.4px'], ['cantos','0'], ['dupla','1.4px']]) {
+  for (const [id, esperado] of [['fina','.7px'], ['simples','1.4px'], ['cantos','0'],
+                                ['dupla','1.4px'], ['tripla','1.6px'],
+                                ['pontilhada','2px'], ['arredondada','1.4px']]) {
     await p.selectOption('#props select', id); await p.waitForTimeout(350);
     const m = await mold();
-    console.log(`  ${id.padEnd(8)} linha=${m.linha} (real ${m.bordaReal}) cantos=${m.cantos}`);
+    console.log(`  ${id.padEnd(11)} linha=${m.linha} (real ${m.bordaReal}) cantos=${m.cantos} anéis=[${m.aneis}]`);
     ok(m.larg === esperado, `feitio "${id}" põe a espessura em ${esperado}`);
     if (id === 'cantos') ok(m.cantos === 'block' && m.bordaReal === '0px', 'o feitio "só os cantos" troca a linha pelas esquadrias');
-    if (id === 'dupla')  ok(/inset/.test(m.sombra), 'o feitio "linha dupla" desenha a segunda linha');
-    if (id === 'simples') ok(!/inset/.test(m.sombra) && m.cantos === 'none', 'o feitio simples não deixa restos dos outros');
+    // A "linha dupla" era uma sombra `inset ... transparent` sobre outra: uma
+    // sombra transparente não apaga o que tem por baixo, e o que se via era
+    // uma banda maciça. Agora cada linha é um anel seu, e vê-se o intervalo.
+    if (id === 'dupla')  ok(m.aneis.length === 1 && m.aneis[0] >= 4,
+                            `o feitio "linha dupla" desenha mesmo a segunda linha, afastada (${m.aneis[0]}px)`);
+    if (id === 'tripla') ok(m.aneis.length === 2 && m.aneis[0] > 0 && m.aneis[1] < 0,
+                            `"três linhas" põe uma por dentro e outra por fora ([${m.aneis}])`);
+    if (id === 'simples') ok(m.aneis.length === 0 && m.cantos === 'none', 'o feitio simples não deixa restos dos outros');
+    if (id === 'pontilhada') ok(await p.evaluate(() =>
+        getComputedStyle(document.querySelector('#escala .ct-moldura')).borderTopStyle === 'dotted'),
+        'a "pontilhada" é mesmo uma linha de pontos');
+    if (id === 'arredondada') ok(await p.evaluate(() =>
+        parseFloat(getComputedStyle(document.querySelector('#escala .ct-moldura')).borderTopLeftRadius) > 10,
+        ), 'os "cantos redondos" arredondam mesmo as esquinas');
   }
   await p.selectOption('#props select', 'cantos'); await p.waitForTimeout(300);
-  ok(await p.evaluate(() => [...document.querySelectorAll('#escala .ct-moldura i')]
-       .every(i => getComputedStyle(i).display === 'block')), 'as quatro esquadrias aparecem');
+  // Só os dois primeiros <i> são esquadrias (os outros dois são os anéis); as
+  // outras duas esquadrias são o ::before e o ::after.
+  ok(await p.evaluate(() => [...document.querySelectorAll('#escala .ct-moldura i')].slice(0, 2)
+       .every(i => getComputedStyle(i).display === 'block')
+     && ['::before','::after'].every(q =>
+          getComputedStyle(document.querySelector('#escala .ct-moldura'), q).display === 'block')),
+     'as quatro esquadrias aparecem');
   await p.selectOption('#props select', 'simples'); await p.waitForTimeout(300);
 
   // A moldura tem de ficar simétrica dentro do cartão — já esteve com altura
@@ -140,14 +169,17 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     const st = await p.evaluate(() => {
       const c = document.querySelector('.cartao'); if (!c) return null;
       const cs = getComputedStyle(c);
+      const m = c.querySelector('.ct-moldura');
+      const aneis = m ? [...m.querySelectorAll('i')].slice(2)
+                          .filter(i => getComputedStyle(i).display !== 'none').length : 0;
       return { margem: cs.getPropertyValue('--ct-mold-margem').trim(),
-               sombra: cs.getPropertyValue('--ct-mold-sombra').trim().slice(0, 10),
+               aneis,
                vol:    cs.getPropertyValue('--ct-esc-volutas').trim() };
     });
     console.log(`  ${nome}:`, JSON.stringify(st));
     ok(st && st.margem === '36px', nome + ' respeita a margem da moldura');
     ok(st && st.vol === '1.2', nome + ' respeita o tamanho das volutas');
-    ok(st && /inset/.test(st.sombra), nome + ' desenha a moldura dupla');
+    ok(st && st.aneis === 1, nome + ' desenha a segunda linha da moldura dupla');
   }
 
   // ---- limpeza ----

@@ -120,10 +120,17 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   const naFolha = await p.evaluate(() => {
     const el = document.querySelector('.cartao .ct-floreado-e');
     const n = el.closest('.ct-nomes').getBoundingClientRect(), r = el.getBoundingClientRect();
+    // A folha desenha o cartão em `transform:scale(--esc)`, por isso o que se
+    // mede aqui vem encolhido. Desfaz-se a escala antes de comparar com o
+    // desenho de origem, senão a verificação estaria a medir o zoom.
+    const caixa = el.closest('.escala');
+    const esc = caixa ? caixa.getBoundingClientRect().width / caixa.offsetWidth : 1;
     return { polig: !!el.querySelector('path[fill]:not([fill=none])'),
-             topo: Math.round(r.top - n.top) };
+             esc:   Math.round(esc * 1000) / 1000,
+             topo:  Math.round((r.top - n.top) / esc) };
   });
   ok(naFolha.polig, 'a folha de impressão traz o filete (que é o único com losango cheio)');
+  ok(naFolha.esc > 0 && naFolha.esc < 1, `a folha encolhe o cartão (escala ${naFolha.esc})`);
   ok(Math.abs(naFolha.topo + 4) < 2, `e no sítio de origem (top ${naFolha.topo}, esperado -4)`);
 
   await p.goto(BASE + '/manual.php', { waitUntil: 'networkidle' });

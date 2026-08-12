@@ -60,6 +60,19 @@ foreach (cartaoFloreados() as $k => $f) $floreadosJs[$k] = svgFloreado('currentC
 $volutasJs = [];  foreach (cartaoVolutas() as $k => $f) $volutasJs[$k] = svgVoluta('currentColor', $k);
 $elosJs    = [];  foreach (cartaoElos()    as $k => $f) $elosJs[$k]    = htmlElo($k);
 
+// O feitio de cada moldura, tal como o servidor o escreve, partido em pares
+// para o editor os poder pôr um a um. Assim não há duas listas a divergir.
+$molduraVarsJs = [];
+foreach (array_keys(cartaoMolduras()) as $k) {
+    $pares = [];
+    foreach (explode(';', cartaoMolduraVars($k)) as $decl) {
+        if (strpos($decl, ':') === false) continue;
+        [$nome, $valor] = explode(':', $decl, 2);
+        $pares[trim($nome)] = trim($valor);
+    }
+    $molduraVarsJs[$k] = $pares;
+}
+
 // Campos de texto editáveis, por camada
 $camposPorCamada = [
     'abertura'  => [['cartao.abertura', 'Texto de abertura', 'area', 'abertura']],
@@ -231,6 +244,11 @@ const CAMADAS  = <?= json_encode(cartaoCamadas(), JSON_UNESCAPED_UNICODE) ?>;
 const CAMPOS   = <?= json_encode($camposPorCamada, JSON_UNESCAPED_UNICODE) ?>;
 const ORNAMENTOS = ['ramos','volutas','moldura','floreados'];   // camadas sem texto
 const MOLDURAS  = <?= json_encode(cartaoMolduras(), JSON_UNESCAPED_UNICODE) ?>;
+// As variáveis de cada feitio vêm do servidor já resolvidas. O editor chegou a
+// tê-las escritas à mão, e a cópia ficou para trás quando nasceram feitios
+// novos: o cartão saía impresso de um modo e mostrava-se de outro. Há uma
+// definição só — cartaoMolduraVars() — e é esta.
+const MOLDURA_VARS = <?= json_encode($molduraVarsJs, JSON_UNESCAPED_UNICODE) ?>;
 const FOLHAGENS = <?= json_encode(cartaoFolhagens(), JSON_UNESCAPED_UNICODE) ?>;
 const FLOREADOS = <?= json_encode(cartaoFloreados(), JSON_UNESCAPED_UNICODE) ?>;
 const FLOREADOS_SVG = <?= json_encode($floreadosJs, JSON_UNESCAPED_UNICODE) ?>;
@@ -722,12 +740,14 @@ function aplicarDeco(){
   // O feitio da moldura é um conjunto de variáveis — as mesmas que o servidor
   // escreve, para o que se vê aqui ser o que sai impresso.
   const feitio = est.deco['cartao.moldura_estilo'] || 'simples';
-  const linha  = feitio === 'fina' ? '.7px' : '1.4px';
-  c.style.setProperty('--ct-mold-linha', linha);
-  c.style.setProperty('--ct-mold-larg', feitio === 'cantos' ? '0' : linha);
-  c.style.setProperty('--ct-mold-sombra',
-    feitio === 'dupla' ? 'inset 0 0 0 4px transparent, inset 0 0 0 5.4px var(--ct-accent)' : 'none');
-  c.style.setProperty('--ct-mold-cantos', feitio === 'cantos' ? 'block' : 'none');
+  // Limpa-se tudo o que qualquer feitio possa pôr antes de escrever o deste,
+  // senão as variáveis do feitio anterior ficavam agarradas ao cartão (era
+  // assim que "três linhas" deixava a linha de fora ao passar para "simples").
+  // O que se apagar volta ao valor de origem da folha de estilo.
+  Object.values(MOLDURA_VARS).forEach(vars =>
+    Object.keys(vars).forEach(k => c.style.removeProperty(k)));
+  Object.entries(MOLDURA_VARS[feitio] || MOLDURA_VARS.simples || {})
+    .forEach(([k, v]) => c.style.setProperty(k, v));
   Object.entries(ORN_ESCALA).forEach(([orn, chave]) =>
     c.style.setProperty('--ct-esc-' + orn, String((+est.deco[chave] || 100) / 100)));
 }
