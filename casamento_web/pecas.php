@@ -270,9 +270,12 @@ function svgVoluta(string $cor, string $tipo = 'caracol'): string {
             }
             break;
         case 'arco':
+            // Um quarto de círculo centrado no canto: já é simétrico em
+            // relação à diagonal, por isso o espelho assenta-lhe em cima e não
+            // acrescenta nada. Tinha um risco de remate (`l 8 -8`) que, depois
+            // de espelhado, lia-se como um bico torto nas duas pontas.
             $grupo = $t('M126 24 A 102 102 0 0 0 24 126', 1.4)
-                   . '<circle cx="54" cy="54" r="3.4" fill="'.$cor.'"/>'
-                   . $t('M126 24 l 8 -8', 1.2);
+                   . '<circle cx="54" cy="54" r="3.4" fill="'.$cor.'"/>';
             break;
         case 'esquadria':
             $grupo = $t('M132 18 L 18 18 L 18 132', 1.4)
@@ -280,10 +283,17 @@ function svgVoluta(string $cor, string $tipo = 'caracol'): string {
             $losango = '<path d="M52 52 l8 8 -8 8 -8 -8 z" fill="'.$cor.'"/>';
             break;
         case 'leque':
-            $grupo = $t('M128 26 C 96 26 62 34 40 60', 1.3)
-                   . $t('M112 40 C 88 42 66 50 50 68', 1.2)
-                   . $t('M94 56 C 78 58 64 64 56 76', 1.1)
-                   . '<circle cx="34" cy="34" r="3" fill="'.$cor.'"/>';
+            // Três quartos de círculo do mesmo centro, encaixados. Como cada um
+            // é simétrico em relação à diagonal do canto, o espelho cai-lhes
+            // exatamente por cima.
+            //
+            // Antes eram três curvas soltas, nenhuma delas simétrica: o espelho
+            // punha outras três a atravessá-las e o canto ficava com seis riscos
+            // de comprimentos diferentes — um rabisco, não um leque.
+            $grupo = $t('M126 24 A 102 102 0 0 0 24 126', 1.4)
+                   . $t('M104 24 A 80 80 0 0 0 24 104', 1.1)
+                   . $t('M82 24 A 58 58 0 0 0 24 82', 0.9)
+                   . '<circle cx="42" cy="42" r="2.8" fill="'.$cor.'"/>';
             $losango = '';
             break;
         default:   // CARACOL — o desenho de origem, intacto
@@ -380,11 +390,15 @@ function svgFloreado(string $cor, string $tipo = 'classico'): string {
             $c .= $t('M20 36 C 12 14 34 2 46 20', 1.3);
             break;
         case 'filete':
-            // Uma régua com um losango a fechar. O mais discreto de todos, e o
-            // que melhor se porta em cartões com nomes compridos.
-            $c = $t('M148 98 L 58 64', 1.4)
-               . '<path d="M54 62.8 l 4.4 -6.6 l 8 3 l -4.4 6.6 Z" fill="'.$cor.'" stroke="none"/>'
-               . $t('M44 54 L 24 46', 1.1);
+            // O gesto do clássico, mais fino, a fechar num losango em vez do
+            // gancho. É o mais discreto dos cinco.
+            //
+            // Chegou a ser feito de retas — `L 58 64` e outra a seguir. Ao pô-lo
+            // ao lado dos outros no contacto, lia-se como um risco em diagonal
+            // por cima dos nomes, e não como um ornamento: nesta caixa a curva
+            // é que acompanha a caligrafia. Aqui só muda a espessura e o remate.
+            $c = $t('M148 98 C 90 100 36 84 20 36 C 12 14 34 2 46 20', 1.0)
+               . '<path d="M46 14 l 5.4 6 l -5.4 6 l -5.4 -6 Z" fill="'.$cor.'" stroke="none"/>';
             break;
         case 'gota':
             // Duas curvas que se cruzam e fecham numa lágrima.

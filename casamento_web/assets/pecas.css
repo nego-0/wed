@@ -121,7 +121,10 @@
 .ct-elo-amp{ font-family:var(--cf-serif); font-style:italic; font-size:36px; color:var(--ct-name); margin:-2px 0 0; }
 .ct-elo-e{ font-family:var(--cf-script); font-size:34px; color:var(--ct-name); margin:-4px 0 -2px; }
 .ct-elo-los{ font-size:11px; margin:6px 0; }
-.ct-elo-fil{ width:54px; height:1px; margin:12px 0; opacity:.7;
+/* O filete é o único elo que não é texto, e por isso não lhe chega o
+   text-align do bloco dos nomes: com margem lateral a zero encostava à
+   esquerda. As margens laterais são `auto` de propósito. */
+.ct-elo-fil{ width:54px; height:1px; margin:12px auto; opacity:.7;
              background:linear-gradient(90deg,transparent,var(--ct-accent),transparent); }
 .ct-frase{ margin:14px 0 0; max-width:400px; font-family:var(--cf-serif); font-style:italic;
            font-size:calc(20px*var(--ct-esc)); line-height:1.55; color:var(--ct-sub); }
