@@ -251,6 +251,14 @@ function correcoesEsperadas(): array {
          'pecas.php', 'Três quartos de círculo do mesmo centro'],
         ['O elo "filete" fica centrado entre os nomes',
          'assets/pecas.css', 'margin:12px auto'],
+
+        // ---- O cartão volta a ser o do desenho de origem ----
+        ['Pegar numa camada já não desloca os ornamentos que ela leva',
+         'assets/pecas.css', '.ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent);'],
+        ['O coração entre os nomes tem a altura do original (24 px)',
+         'assets/pecas.css', 'color:var(--ct-accent); line-height:1.2'],
+        ['Os feitios de elo mantêm a entrelinha curta que pedem',
+         'assets/pecas.css', 'margin:-2px 0 0; line-height:1'],
     ];
 }
 

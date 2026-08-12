@@ -98,6 +98,24 @@ posicionam-se contra o bloco dos nomes; passaram a posicionar-se contra um
 invólucro de altura zero. O valor de origem passou a ser `none`, e quem não foi
 movido volta a não mudar nada — que é o que se tinha prometido.
 
+Isso resolvia a camada **parada**. Faltava a camada **em movimento**: o editor
+põe-lhe `translate`/`rotate` para a arrastar, e aí o invólucro *torna-se mesmo*
+o bloco contentor. Se ele não tiver a medida daquilo contra que os ornamentos
+se posicionam, saltam ao primeiro toque — antes ainda de se ter arrastado
+nada. Era o que se via: pegar no floreado atirava-o 30 px para dentro (a
+entrada do bloco dos nomes), e o mesmo valia para as volutas e as trepadeiras.
+Os três invólucros passaram a `position:absolute; inset:0`, coincidindo com o
+que substituem; ser ou não bloco contentor deixou de fazer diferença nenhuma.
+
+**O ar entre os nomes e o floreado.** O floreado nunca saiu do sítio —
+`left:-26px` / `top:-4px` são os do ficheiro de referência, conferidos. Quem
+tinha saído era o nome de baixo: `.ct-coracao` levava `line-height:1`, e o
+desenho de origem não declara entrelinha nenhuma no coração — `normal` dá
+24 px em corpo 20. Com 1 dava 20, os dois nomes fechavam-se quatro píxeis e o
+de baixo subia até encostar à volta do floreado. Agora são 1,2 (as mesmas
+24 px), e os feitios de elo alternativos — que em corpo 34 ou 36 precisam de
+entrelinha curta — pedem `line-height:1` cada um por si.
+
 Ganharam também **cinco feitios** (`cartao.floreado`), à escolha na camada
 *Floreados*: **Clássico** (a volta longa com o gancho), **Voluta**, **Raminho**
 (haste com folhas, a condizer com as trepadeiras), **Filete** (o mesmo gesto

@@ -49,7 +49,26 @@
 .cartao, .cartao *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
 /* Os SVG herdam a cor de acento por currentColor */
-.ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent); }
+/* Cada invólucro de camada TEM DE SER uma caixa com a mesma medida daquilo
+   contra que os seus ornamentos se posicionam — o cartão, para os ramos e as
+   volutas; o bloco dos nomes, para os floreados.
+
+   Eram caixas estáticas de altura zero. Enquanto ninguém lhes tocava não fazia
+   diferença, porque quem mandava era o antepassado posicionado. Mas o editor
+   põe-lhes `translate`/`rotate` para as arrastar, e isso faz delas o bloco
+   contentor dos descendentes em posição absoluta: de repente o `left:-26px` do
+   floreado esquerdo deixava de contar a partir da caixa dos nomes e passava a
+   contar da caixa de CONTEÚDO do invólucro — 30 px mais para dentro, que é a
+   entrada do bloco dos nomes. Ao primeiro toque, e ainda antes de se ter
+   arrastado nada, o par saltava.
+   Com `inset:0` o invólucro coincide com aquilo que substitui, e passar a ser
+   bloco contentor deixa de mudar seja o que for: arrastar move o conjunto sem
+   o deformar. */
+.ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent);
+   position:absolute; inset:0; pointer-events:none; }
+/* O invólucro não apanha o ponteiro (senão tapava o cartão todo); os
+   ornamentos apanham-no, como sempre apanharam. */
+.ct-ramo, .ct-floreado{ pointer-events:auto; }
 .ct-ramo{ position:absolute; width:calc(132px*var(--ct-esc-ramos)); height:calc(270px*var(--ct-esc-ramos)); z-index:2; }
 .ct-ramo-sd{ top:24px; right:24px; }
 .ct-ramo-ie{ bottom:24px; left:24px; transform:rotate(180deg); }
@@ -114,13 +133,19 @@
 .ct-floreado-d{ right:-26px; bottom:-4px; rotate:180deg; }
 .ct-nome{ position:relative; z-index:1; font-family:var(--cf-script); font-size:75px; line-height:.9;
           color:var(--ct-name); }
-.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); line-height:1; }
+/* A entrelinha do coração é 1,2 e não 1. O desenho de origem não a declara, e
+   `normal` dá 24 px em corpo 20; com 1 dava 20, os dois nomes fechavam-se
+   quatro píxeis, e o nome de baixo subia até tocar na volta do floreado. O
+   floreado está no sítio que o desenho lhe deu (left:-26px / top:-4px, iguais
+   aos do ficheiro de referência) — quem tinha saído do sítio era o nome. */
+.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); line-height:1.2; }
 /* O que liga os dois nomes. Cada feitio pede a sua letra e o seu tamanho: um
    & na caligrafia dos nomes fica ilegível, e um coração em corpo 36 come a
-   linha toda. Ver cartaoElos(). */
-.ct-elo-amp{ font-family:var(--cf-serif); font-style:italic; font-size:36px; color:var(--ct-name); margin:-2px 0 0; }
-.ct-elo-e{ font-family:var(--cf-script); font-size:34px; color:var(--ct-name); margin:-4px 0 -2px; }
-.ct-elo-los{ font-size:11px; margin:6px 0; }
+   linha toda. Ver cartaoElos(). Estes pedem entrelinha 1: em corpo 34 ou 36 a
+   entrelinha do coração afastaria os nomes de mais. */
+.ct-elo-amp{ font-family:var(--cf-serif); font-style:italic; font-size:36px; color:var(--ct-name); margin:-2px 0 0; line-height:1; }
+.ct-elo-e{ font-family:var(--cf-script); font-size:34px; color:var(--ct-name); margin:-4px 0 -2px; line-height:1; }
+.ct-elo-los{ font-size:11px; margin:6px 0; line-height:1; }
 /* O filete é o único elo que não é texto, e por isso não lhe chega o
    text-align do bloco dos nomes: com margem lateral a zero encostava à
    esquerda. As margens laterais são `auto` de propósito. */

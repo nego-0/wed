@@ -74,6 +74,65 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(trans.tr === 'none' && trans.rt === 'none',
      `uma camada por mover não leva transformação nenhuma (${trans.tr} / ${trans.rt})`);
 
+  // ...mas mover uma também não pode DEFORMAR nada. Pôr-lhe translate ou rotate
+  // faz dela o bloco contentor dos ornamentos que lá vivem, e se o invólucro
+  // não tiver a medida daquilo contra que eles se posicionam, saltam ao
+  // primeiro toque — antes sequer de se ter arrastado. Já aconteceu três vezes.
+  const aoPegar = await p.evaluate(() => {
+    const casos = [
+      ['floreados', '.ct-floreado-e',  '.ct-nomes'],
+      ['floreados', '.ct-floreado-d',  '.ct-nomes'],
+      ['volutas',   '.ct-voluta-se',   '.cartao'],
+      ['ramos',     '.ct-ramo-sd',     '.cartao'],
+    ];
+    const r = [];
+    for (const [camada, orn, contra] of casos) {
+      const inv = document.querySelector(`#escala [data-camada="${camada}"]`);
+      const onde = () => {
+        const a = document.querySelector('#escala ' + orn).getBoundingClientRect();
+        const b = document.querySelector('#escala ' + contra).getBoundingClientRect();
+        return [+(a.left - b.left).toFixed(1), +(a.top - b.top).toFixed(1)];
+      };
+      const parado = onde();
+      inv.style.translate = '0px 0px';  const comTranslate = onde();
+      inv.style.rotate    = '0deg';     const comRotate    = onde();
+      inv.style.translate = ''; inv.style.rotate = '';
+      r.push({ camada, orn, parado, comTranslate, comRotate });
+    }
+    return r;
+  });
+  for (const c of aoPegar) {
+    const igual = a => a[0] === c.parado[0] && a[1] === c.parado[1];
+    ok(igual(c.comTranslate) && igual(c.comRotate),
+       `pegar em "${c.camada}" não mexe com ${c.orn} `
+       + `(parado [${c.parado}], com translate [${c.comTranslate}], com volta [${c.comRotate}])`);
+  }
+
+  // O ar entre os nomes e o floreado. O desenho de origem deixa-o dos dois
+  // lados, e ele não vem do floreado (que está em left:-26px / top:-4px, como
+  // no ficheiro de referência) — vem da altura do elo. O coração não declara
+  // entrelinha no original, e `normal` dá 24 px em corpo 20; com entrelinha 1
+  // dava 20, os nomes fechavam-se quatro píxeis e o de baixo ia tocar na volta.
+  const elo = await p.evaluate(() => {
+    const h = document.querySelector('#escala .ct-coracao');
+    const esc = h.closest('.escala');
+    const s = esc ? esc.getBoundingClientRect().width / esc.offsetWidth : 1;
+    return +(h.getBoundingClientRect().height / s).toFixed(1);
+  });
+  ok(Math.abs(elo - 24) < 1, `o coração ocupa as 24 px do original (${elo})`);
+
+  // E o que daí resulta: o intervalo entre os dois nomes. Mede-se de caixa a
+  // caixa, que é exato — o ar até ao traço do floreado só se julga a olho, e
+  // para isso está o tests/amostras.js. São as 24 px do elo mais as duas
+  // margens de 2 px: 28. Com entrelinha 1 dava 24, e era esse o encosto.
+  const entre = await p.evaluate(() => {
+    const cx = document.querySelector('#escala .cartao');
+    const s = cx.getBoundingClientRect().width / cx.offsetWidth;
+    const n = [...document.querySelectorAll('#escala .ct-nome')].map(x => x.getBoundingClientRect());
+    return +((n[1].top - n[0].bottom) / s).toFixed(1);
+  });
+  ok(Math.abs(entre - 28) < 1, `os dois nomes ficam a 28 px um do outro, como no original (${entre})`);
+
   // O traço do clássico é o do desenho de origem, e não uma aproximação.
   const traco = await p.evaluate(() => [...document.querySelectorAll('#escala .ct-floreado-e path')]
     .map(x => x.getAttribute('d')));
