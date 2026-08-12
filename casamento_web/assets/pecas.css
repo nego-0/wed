@@ -86,16 +86,20 @@
 .ct-abertura{ font-size:calc(13px*var(--ct-esc)); font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase;
               color:var(--ct-soft); }
 .ct-nomes{ position:relative; margin:22px 0 6px; padding:0 30px; }
-/* Os floreados LADEIAM os nomes — não passam por cima deles.
-   Estavam ancorados nos cantos (left:-26 / right:-26) com 150px de largura:
-   num bloco de 317px, o da esquerda entrava 124px pelo primeiro nome adentro
-   e atravessava-o, e o da direita ia parar acima do bloco. Agora encostam-se
-   por fora, a meia altura, e o que sobra do lado é espaço vazio do cartão. */
-.ct-floreado{ position:absolute; top:50%;
-              width:calc(150px*var(--ct-esc-floreados)); height:calc(110px*var(--ct-esc-floreados));
-              z-index:0; opacity:.85; }
-.ct-floreado-e{ right:calc(100% - 12px); translate:0 -50%; }
-.ct-floreado-d{ left:calc(100% - 12px);  translate:0 -50%; rotate:180deg; }
+/* Os floreados abraçam o par de nomes em simetria ROTACIONAL: o da esquerda
+   com o gancho em cima e a volta a descer para o coração, o da direita igual
+   e rodado meia volta. É o desenho de origem, e é a mesma ideia das volutas e
+   das trepadeiras (cantos opostos, 180° entre si).
+   Estiveram desalinhados por uma razão que não era o desenho: a regra do
+   posicionamento livre punha um translate a zero em todas as camadas, e um
+   translate — mesmo a zero — faz do elemento o bloco contentor de quem lá
+   dentro se posiciona em absoluto. O invólucro .ct-floreados, que tem altura
+   zero, passou a ser esse bloco. Corrigido isso (ver a regra data-camada
+   acima), estas coordenadas voltam a ser as certas. */
+.ct-floreado{ position:absolute; z-index:0; opacity:.85;
+              width:calc(150px*var(--ct-esc-floreados)); height:calc(104px*var(--ct-esc-floreados)); }
+.ct-floreado-e{ left:-26px; top:-4px; }
+.ct-floreado-d{ right:-26px; bottom:-4px; rotate:180deg; }
 .ct-nome{ position:relative; z-index:1; font-family:var(--cf-script); font-size:75px; line-height:.9;
           color:var(--ct-name); }
 .ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); }

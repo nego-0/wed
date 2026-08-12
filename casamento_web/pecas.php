@@ -232,10 +232,13 @@ function svgVoluta(string $cor): string {
 /**
  * Feitios do floreado que ladeia os nomes.
  *
- * Todos desenhados na mesma caixa (150 × 110) e com a MESMA âncora: a ponta
- * fina sai a meio da margem direita (y ≈ 55), que é o lado virado para os
- * nomes. Sem essa regra, trocar de feitio mudava também o sítio — e o que
+ * Todos desenhados na mesma caixa (150 × 110) e com a MESMA âncora do
+ * clássico: a ponta grossa sai em (148, 98) e o remate fica em cima, à
+ * esquerda. Sem essa regra, trocar de feitio mudava também o sítio, e o que
  * era uma escolha de desenho passava a ser um desalinhamento.
+ *
+ * O clássico é o traço do desenho de origem, intacto — conferido contra o
+ * ficheiro de referência.
  */
 function cartaoFloreados(): array {
     return [
@@ -262,34 +265,38 @@ function svgFloreado(string $cor, string $tipo = 'classico'): string {
         '<path d="'.$d.'" fill="none" stroke="'.$cor.'" stroke-width="'.$w.'" stroke-linecap="round"/>';
     switch ($tipo) {
         case 'voluta':
-            // Dois enrolamentos: o de fora abre, o de dentro fecha sobre si.
-            $c = $t('M150 55 C 112 58 74 52 50 38 C 30 26 32 8 48 10 C 60 12 60 27 44 32 C 26 38 16 50 16 66')
-               . $t('M16 66 C 15 76 22 82 30 80', 1.2);
+            // A mesma varredura, a fechar num caracol em vez de num gancho.
+            $c = $t('M148 98 C 90 100 36 84 20 36 C 12 14 34 2 46 20')
+               . $t('M46 20 C 54 32 42 44 28 38 C 18 34 16 24 22 20', 1.3);
             break;
         case 'ramo':
-            // Haste com folhas alternadas: a mesma linguagem das trepadeiras.
-            $c = $t('M150 55 C 108 60 62 52 26 28');
-            foreach ([[112,52,-24],[88,49,20],[64,44,-28],[44,37,16]] as [$x,$y,$a]) {
-                $c .= '<path d="M0 0 C 9 -7 22 -6 27 0 C 22 6 9 7 0 0 Z" transform="translate('.$x.' '.$y.') rotate('.$a.')"'
+            // A varredura com folhas ao longo dela: a língua das trepadeiras.
+            $c = $t('M148 98 C 90 100 36 84 20 36');
+            foreach ([[104,96,-10],[75,88,-26],[50,74,-48],[31,55,-70]] as [$x,$y,$a]) {
+                $c .= '<path d="M0 0 C 8 -6 20 -5 25 0 C 20 5 8 6 0 0 Z" transform="translate('.$x.' '.$y.') rotate('.$a.')"'
                     . ' fill="none" stroke="'.$cor.'" stroke-width="1.2"/>';
             }
-            $c .= $t('M26 28 C 18 20 20 10 30 12', 1.2);
+            $c .= $t('M20 36 C 12 14 34 2 46 20', 1.3);
             break;
         case 'filete':
-            // Uma régua que afina, com um losango a fechar. O mais discreto de
-            // todos, e o que melhor se porta em cartões com nomes compridos.
-            $c = $t('M150 55 L 52 55', 1.4)
-               . '<path d="M52 55 l 9 -7 l 9 7 l -9 7 Z" fill="'.$cor.'" stroke="none"/>'
-               . $t('M34 55 L 12 55', 1.1);
+            // Uma régua com um losango a fechar. O mais discreto de todos, e o
+            // que melhor se porta em cartões com nomes compridos.
+            $c = $t('M148 98 L 58 64', 1.4)
+               . '<path d="M54 62.8 l 4.4 -6.6 l 8 3 l -4.4 6.6 Z" fill="'.$cor.'" stroke="none"/>'
+               . $t('M44 54 L 24 46', 1.1);
             break;
         case 'gota':
             // Duas curvas que se cruzam e fecham numa lágrima.
-            $c = $t('M150 55 C 108 57 62 50 34 32 C 16 20 22 4 40 10 C 54 15 52 34 30 46 C 18 53 12 66 16 78')
-               . $t('M150 55 C 116 53 78 48 56 38', 1.1);
+            $c = $t('M148 98 C 90 100 36 84 20 36 C 12 14 36 2 46 22 C 54 39 30 46 18 32')
+               . $t('M148 98 C 100 94 58 80 34 60', 1.1);
             break;
-        default:   // clássico — a volta longa de origem, agora ancorada a meio
-            $c = $t('M150 55 C 92 58 38 44 22 22')
-               . $t('M22 22 C 14 10 30 0 38 12 C 43 21 32 28 22 23', 1.3);
+        default:
+            // CLÁSSICO — o traço do desenho de origem, ponto por ponto. Não se
+            // toca: comparei-o com o ficheiro de referência e é este. As
+            // alternativas é que se desenharam a partir dele, a começar e a
+            // acabar nos mesmos pontos.
+            $c = $t('M148 98 C 90 100 36 84 20 36 C 12 14 34 2 46 20')
+               . $t('M46 20 C 41 11 30 11 27 21', 1.3);
     }
     return '<svg viewBox="0 0 150 110" style="width:100%;height:100%;display:block;overflow:visible">'
          . $c . '</svg>';
