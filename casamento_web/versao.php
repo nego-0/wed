@@ -269,6 +269,14 @@ function correcoesEsperadas(): array {
          'editor-cartao.php', 'as cerimónias vêm ANTES da receção'],
         ['O botão "mais ações" leva três pontos em SVG, e não o glifo caído',
          'assets/estilo.css', '.ico-mais{'],
+
+        // ---- Cerimónias também no editor de modelos do admin ----
+        ['Um modelo do cartão pode levar a logística (cerimónias e receção)',
+         'personalizacao.php', 'function chavesModelo('],
+        ['No editor de modelos, as cerimónias marcam-se como no do casal',
+         'editor-cartao.php', 'as cerimónias marcam-se na mesma'],
+        ['Mas são de exemplo: aplicar o modelo não reescreve as do casal',
+         'api.php', 'nunca reescreve as cerimónias que o casal já marcou'],
     ];
 }
 

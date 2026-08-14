@@ -189,6 +189,16 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     ok(!/0H\b/i.test(t), 'o modelo do cartão já não anuncia uma cerimónia às 0h: ' + t);
     ok(await p.locator('#sel-versao').count() === 0,
        'e o seletor de versões, que num modelo saía vazio, deixou de estar lá');
+
+    // No modelo, o admin marca cerimónias na mesma — são de exemplo, para o
+    // desenho ficar realista. Antes o painel só mostrava um aviso de que "não
+    // se governa"; agora tem os mesmos controlos, com a ajuda a dizer que são
+    // de exemplo e não passam para o casal.
+    await p.evaluate(() => selecionar('logistica')); await p.waitForTimeout(400);
+    ok(await p.locator('#props .cer-dentro, #props .cer-fora').count() >= 1,
+       'o modelo do cartão traz os controlos de cerimónia, como o editor do casal');
+    ok(/exemplo/i.test(await p.locator('#props').innerText()),
+       'e a ajuda diz que as cerimónias do modelo são de exemplo');
     await p.screenshot({ path: OUT + '/cerimonias-modelo.png' });
   }
 

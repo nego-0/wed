@@ -2209,7 +2209,7 @@ if ($acao === 'modelo_criar') {
     // Ou os valores que vieram no pedido (importação), ou o retrato do que o
     // casamento aberto mostra agora.
     if (is_array($d['defs'] ?? null)) {
-        $permitidas = array_flip(chavesDoAmbito($ambito));
+        $permitidas = array_flip(chavesModelo($ambito));
         $defs = [];
         foreach ($d['defs'] as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
     } elseif (casamentoAtual() > 0 && empty($d['do_zero'])) {
@@ -2283,7 +2283,9 @@ if ($acao === 'modelo_defs') {
     if (!$m) erro('Modelo não encontrado.');
 
     $d = corpo();
-    $permitidas = array_flip(chavesDoAmbito($m['ambito']));
+    // Um modelo do cartão pode ainda guardar a logística (cerimónias e receção)
+    // — é o que o admin desenha aqui. Não se aplica ao casal (ver modelo_aplicar).
+    $permitidas = array_flip(chavesModelo($m['ambito']));
     $padrao = defsPadrao();
     $defs = []; $invalidas = [];
     foreach ((array)($d['defs'] ?? []) as $k => $v) {
@@ -2333,7 +2335,9 @@ if ($acao === 'modelo_aplicar') {
     if (!is_array($j)) erro('Esse modelo está ilegível.');
 
     // Só as chaves do próprio âmbito: um modelo do cartão não mexe no convite
-    // digital, nem o contrário.
+    // digital, nem o contrário. E de propósito chavesDoAmbito, não chavesModelo:
+    // a logística que o admin meteu no modelo é só para o desenhar; aplicar um
+    // modelo do cartão nunca reescreve as cerimónias que o casal já marcou.
     $permitidas = array_flip(chavesDoAmbito($m['ambito']));
     $defs = [];
     foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
@@ -2373,7 +2377,7 @@ if ($acao === 'modelos_importar') {
         if (!is_array($m)) { $saltou++; continue; }
         $nome = mb_substr(trim((string)($m['nome'] ?? '')), 0, 120);
         $ambito = isset(ambitosVersao()[$m['ambito'] ?? '']) ? $m['ambito'] : 'digital';
-        $permitidas = array_flip(chavesDoAmbito($ambito));
+        $permitidas = array_flip(chavesModelo($ambito));
         $defs = [];
         foreach ((array)($m['defs'] ?? []) as $k => $v) {
             if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;

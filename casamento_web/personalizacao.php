@@ -170,7 +170,7 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     // mudou, e o resto tem de vir de algum lado.
     $defs = defsPadrao();
     $j = json_decode((string)$m['defs'], true);
-    $permitidas = array_flip(chavesDoAmbito($ambito));
+    $permitidas = array_flip(chavesModelo($ambito));
     if (is_array($j)) foreach ($j as $k => $v) {
         if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
     }
@@ -352,6 +352,31 @@ function chavesDoAmbito(string $ambito): array {
     return $ambito === 'impresso'
         ? array_values(array_filter($todas, fn($k) => str_starts_with($k, 'cartao.')))
         : array_values(array_filter($todas, fn($k) => !str_starts_with($k, 'cartao.')));
+}
+
+/** O conteúdo da camada "Cerimónias e receção" do cartão: hora e local das
+ *  cerimónias e da receção. São chaves de âmbito digital (evento.*), mas o
+ *  cartão desenha-as, e um modelo do cartão pode levá-las para a prova parecer
+ *  um convite a sério. */
+function chavesLogisticaCartao(): array {
+    return ['evento.venue_titulo', 'evento.local', 'evento.hora',
+            'evento.civil_titulo', 'evento.civil_hora', 'evento.civil_local',
+            'evento.religiosa_titulo', 'evento.religiosa_hora', 'evento.religiosa_local'];
+}
+
+/**
+ * As chaves que um MODELO de um âmbito pode guardar. É como chavesDoAmbito(),
+ * mas um modelo do cartão leva ainda a logística (cerimónias e receção): não é
+ * desenho, é conteúdo de exemplo, e serve para o admin desenhar o modelo com um
+ * convite a sério à frente. NÃO se aplica ao casal — aplicar um modelo do
+ * cartão continua a mexer só no desenho (ver modelo_aplicar, que usa
+ * chavesDoAmbito e não esta). É a diferença entre o que um modelo GUARDA e o
+ * que um modelo IMPÕE.
+ */
+function chavesModelo(string $ambito): array {
+    return $ambito === 'impresso'
+        ? array_merge(chavesDoAmbito('impresso'), chavesLogisticaCartao())
+        : chavesDoAmbito($ambito);
 }
 
 /** Fotografia do estado atual de uma peça, pronta a guardar como versão. */

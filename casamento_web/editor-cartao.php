@@ -35,6 +35,10 @@ $chavesEditor = array_merge($chavesCartao, [
     'evento.civil_titulo', 'evento.civil_hora', 'evento.civil_local',
     'evento.religiosa_titulo', 'evento.religiosa_hora', 'evento.religiosa_local',
 ]);
+// O que um MODELO do cartão guarda: o desenho (cartao.*) e a logística
+// (cerimónias e receção), para o admin o poder desenhar com um convite a sério
+// à frente. É design-only — aplicar o modelo não mexe nas cerimónias do casal.
+$chavesModelo = chavesModelo('impresso');
 
 // Convite de exemplo: usa um real (físico) para a prova ser fiel.
 $r = $conn->query("SELECT c.*, m.nome AS mesa_nome FROM {$P}convites c
@@ -264,15 +268,19 @@ const ORN_ESCALA = { ramos:'cartao.ramos_escala', volutas:'cartao.volutas_escala
 // cerimónias, que vivem no âmbito do evento. Sem elas aqui, guardar()
 // filtrava-as e o que se escrevia nesses campos era deitado fora em silêncio.
 const PADRAO   = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesEditor)), JSON_UNESCAPED_UNICODE) ?>;
-// Um modelo é o DESENHO, e não a festa: dele só saem as chaves do cartão. É
-// o que o servidor já exige (modelo_defs filtra pelo âmbito); dizê-lo também
-// aqui evita mandar o que vai ser deitado fora.
-const PADRAO_MODELO = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
+// Um modelo do cartão guarda o desenho (cartao.*) e ainda a logística —
+// cerimónias e receção —, para o admin o desenhar com um convite a sério à
+// frente. Aplicar o modelo continua a não tocar nas cerimónias do casal: isso
+// é o servidor que garante (modelo_aplicar usa chavesDoAmbito, não chavesModelo).
+const PADRAO_MODELO = <?= json_encode(array_intersect_key(defsPadrao(), array_flip($chavesModelo)), JSON_UNESCAPED_UNICODE) ?>;
 // As chaves do evento não são do âmbito do cartão (o convite digital também as
 // usa), mas o cartão mostra-as — e para as repor é preciso saber o original.
 const PADRAO_EV = <?= json_encode(array_intersect_key(defsPadrao(), array_flip([
     'evento.civil_titulo','evento.religiosa_titulo','evento.venue_titulo'])), JSON_UNESCAPED_UNICODE) ?>;
-const ATUAIS   = <?= json_encode(array_intersect_key($defs, array_flip($chavesCartao)), JSON_UNESCAPED_UNICODE) ?>;
+// O que está gravado, para se detetar o que mudou. Todas as chaves que o editor
+// mexe (não só cartao.*): sem as do evento aqui, mudar uma cerimónia comparava
+// contra "indefinido" e o modelo achava sempre que havia alteração por guardar.
+const ATUAIS   = <?= json_encode(array_intersect_key($defs, array_flip($chavesEditor)), JSON_UNESCAPED_UNICODE) ?>;
 // Desenhar um modelo da casa: grava-se nele, e não nas definições de um casamento.
 const MODELO   = <?= json_encode($MODELO, JSON_UNESCAPED_UNICODE) ?>;
 const FONTES   = <?= json_encode(fontesConvite(), JSON_UNESCAPED_UNICODE) ?>;
@@ -914,15 +922,17 @@ const CERIMONIAS = [
   ['religiosa', 'Cerimónia religiosa', '15:00']
 ];
 function blocoCerimonias(){
-  // Num modelo, isto não se governa: as cerimónias são de cada casamento, e o
-  // servidor (modelo_defs) só guarda as chaves do cartão. Mostrar os controlos
-  // seria oferecer o que a gravação ia deitar fora.
-  if (MODELO) return `<div class="campo" style="margin-top:.9rem"><label>Cerimónias</label>
-    <div class="ajuda">As cerimónias, o local e a hora são de cada casamento — um modelo é o
-      <b>desenho</b>, não a festa. Cada casal preenche-as na sua ficha, e o cartão acompanha.</div></div>`;
+  // Num modelo, as cerimónias marcam-se na mesma — mas são de exemplo, para o
+  // desenho ficar realista. NÃO passam para o casal quando ele aplica o modelo
+  // (o servidor garante-o); por isso o texto de ajuda muda para o dizer.
+  const ajuda = MODELO
+    ? `De exemplo, para desenhar o modelo com um convite a sério à frente. <b>Não</b>
+       passam para o casal — quando ele aplicar o modelo, aplica-se o desenho; as
+       cerimónias dele ficam como estão.`
+    : `Opcionais, as duas. Há casamentos só com uma, e há quem faça as duas no
+       mesmo sítio — o que não for acrescentado não aparece no cartão.`;
   return `<div class="campo" style="margin-top:.9rem"><label>Cerimónias</label>
-    <div class="ajuda">Opcionais, as duas. Há casamentos só com uma, e há quem faça as duas
-      no mesmo sítio — o que não for acrescentado não aparece no cartão.</div></div>`
+    <div class="ajuda">${ajuda}</div></div>`
     + CERIMONIAS.map(([k, rot, horaPadrao]) => {
       const hora = est.textos['evento.' + k + '_hora'] || '';
       if (!hora) {

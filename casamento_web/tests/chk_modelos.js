@@ -76,6 +76,31 @@ const entrar = async (ctx, u, p) => {
   const comCartao = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(comCartao['cartao.abertura'] === 'Cartao do modelo ' + marca, 'e o do cartão mexe no cartão');
 
+  // ---------- 8. cerimónias no modelo do cartão: só para desenhar ----------
+  // O admin pode marcar cerimónias no modelo do cartão (é o que dá corpo à
+  // prova), mas são de EXEMPLO: aplicar o modelo aplica o desenho e NÃO reescreve
+  // as cerimónias que o casal já tenha. É o pedido — o recurso em todos os
+  // editores, incluindo o do admin —, sem apagar dados de ninguém.
+  await api('modelo_defs&id=' + modCartao.id, { defs: {
+    'evento.civil_hora': '11:45', 'evento.civil_local': 'Sala do Modelo',
+    'evento.religiosa_hora': '16:00', 'evento.religiosa_local': 'Igreja do Modelo' } });
+  const fichCer = await admin._baixar('modelos_exportar');
+  const guardado = (fichCer.modelos || []).find(m => m.nome === 'ZZ Modelo impresso ' + marca);
+  ok(guardado && guardado.defs && guardado.defs['evento.civil_hora'] === '11:45'
+       && guardado.defs['evento.religiosa_local'] === 'Igreja do Modelo',
+     'o modelo do cartão guarda mesmo as cerimónias que o admin lhe põe');
+
+  await api('casamento_abrir&id=' + casal.id);
+  await api('defs_save', { defs: { 'evento.civil_hora': '09:15', 'evento.civil_local': 'Casa do Casal' } });
+  await api('modelo_aplicar&id=' + modCartao.id);
+  const cerCasal = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  console.log('   cerimónias do casal após aplicar o modelo:',
+    cerCasal['evento.civil_hora'], '/', cerCasal['evento.civil_local']);
+  ok(cerCasal['evento.civil_hora'] === '09:15' && cerCasal['evento.civil_local'] === 'Casa do Casal',
+     'aplicar o modelo NÃO reescreve as cerimónias do casal — o desenho aplica-se, a festa é dele');
+  ok(cerCasal['evento.religiosa_local'] !== 'Igreja do Modelo',
+     'e a cerimónia de exemplo do modelo não passou para o casal');
+
   // ---------- 3. depois de aplicado, o desenho é do casal ----------
   await api('casamento_abrir&id=' + oficina.id);
   await api('defs_save', { defs: { 'textos.kicker': 'MUDOU na oficina ' + marca } });

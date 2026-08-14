@@ -182,8 +182,20 @@ JavaScript do editor tinha o mesmo. Hora por preencher não é meia-noite.
 E outro, mais fundo: o editor do cartão mostrava o local da festa, a hora, os
 nomes dos noivos e a data — e a gravação **deitava-os fora em silêncio**,
 porque só enviava as chaves do âmbito `cartao.`. Os campos estavam lá e não
-guardavam nada. Passa a governar também as chaves do evento que mostra; um
-**modelo** continua a levar só o desenho, que é o que ele é.
+guardavam nada. Passa a governar também as chaves do evento que mostra.
+
+**As cerimónias, também no editor do admin.** O admin desenha os modelos do
+cartão sem entrar na casa de nenhum casal, e a camada *Cerimónias e receção*
+ficava-lhe bloqueada — «um modelo é o desenho, não a festa». Só que desenhar um
+cartão sem poder pôr lá uma cerimónia a sério é desenhar às cegas. Agora
+marcam-se na mesma, com os mesmos controlos do editor do casal. A diferença
+está no que acontece a seguir: um modelo do cartão **guarda** as cerimónias
+(para a prova e a miniatura ficarem realistas), mas **não as impõe**. Quando um
+casal aplica o modelo, aplica-se o desenho (`cartao.*`) e as cerimónias dele
+ficam intactas — o servidor filtra por `chavesDoAmbito` ao aplicar, e não por
+`chavesModelo`. É a distinção entre o que um modelo *guarda* e o que um modelo
+*escreve no convite de quem o usa*. O painel di-lo, para não haver enganos: as
+cerimónias do modelo são «de exemplo… não passam para o casal».
 
 **O cronograma rearranja-se.** É uma linha do tempo — a ordem é o assunto dele
 — e até aqui só se acertava apagando e voltando a escrever. Cada momento ganhou
