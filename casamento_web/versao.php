@@ -289,6 +289,10 @@ function correcoesEsperadas(): array {
          'registo.php', 'data-mapa data-mapa-local="civil_local"'],
         ['No convite, o local com mapa vira uma ligação "ver no mapa"',
          'personalizacao.php', "\$maps !== ''"],
+        ['O form "Novo casamento" do admin também traz os campos de mapa',
+         'plataforma.php', 'id="n-civil-maps"'],
+        ['O local com mapa leva o pino de localização no convite',
+         'personalizacao.php', 'function iconePino('],
     ];
 }
 

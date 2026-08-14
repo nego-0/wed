@@ -52,6 +52,17 @@ const entrar = async (ctx, user, pass) => {
   ok(txtAdmin.includes('ZZ Casamento A ' + marca) && txtAdmin.includes('ZZ Casamento B ' + marca),
      'o pessoal da plataforma vê todos os casamentos na página');
 
+  // O formulário "Novo casamento" tem os campos de mapa dos três locais, com o
+  // apoio de escolher no Maps e ler as coordenadas — como o registo e a gestão.
+  await admin.evaluate(() => { const d = document.getElementById('d-casamento'); if (d) d.open = true; });
+  await admin.waitForTimeout(300);
+  const mapasNovo = await admin.evaluate(() =>
+    [...document.querySelectorAll('#d-casamento input[data-mapa]')].map(e => e.id));
+  ok(mapasNovo.length === 3 && mapasNovo.includes('n-civil-maps') && mapasNovo.includes('n-religiosa-maps'),
+     'o form "Novo casamento" tem os três campos de Google Maps (' + mapasNovo.join(', ') + ')');
+  ok(await admin.locator('#d-casamento .mapa-btn').count() === 3,
+     'cada um com o botão de escolher no Maps');
+
   // ---------- o admin aterra na administração, não na festa de ninguém ----------
   const recem = await entrar(await b.newContext(), 'admin', 'noivos2026');
   console.log('   o admin aterra em:', recem.url().replace(BASE, ''));

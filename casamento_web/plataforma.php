@@ -325,12 +325,22 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div><label>Local da festa</label><input type="text" id="n-local"></div>
         <div><label>Cidade / região</label><input type="text" id="n-cidade"></div>
       </div>
+      <div class="lf" style="grid-template-columns:1fr">
+        <div><label>Local da festa · Google Maps</label>
+          <input type="url" id="n-maps" data-mapa data-mapa-local="n-local" placeholder="https://maps.app.goo.gl/…"></div>
+      </div>
       <div class="dica" style="margin:.9rem 0 .4rem">As cerimónias, se as houver.</div>
       <div class="lf" style="grid-template-columns:repeat(4,1fr)">
         <div><label>Civil · hora</label><input type="time" id="n-civil-hora"></div>
         <div><label>Civil · local</label><input type="text" id="n-civil-local"></div>
         <div><label>Religiosa · hora</label><input type="time" id="n-religiosa-hora"></div>
         <div><label>Religiosa · local</label><input type="text" id="n-religiosa-local"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 1fr">
+        <div><label>Civil · Google Maps</label>
+          <input type="url" id="n-civil-maps" data-mapa data-mapa-local="n-civil-local" placeholder="https://maps.app.goo.gl/…"></div>
+        <div><label>Religiosa · Google Maps</label>
+          <input type="url" id="n-religiosa-maps" data-mapa data-mapa-local="n-religiosa-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
       <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin-top:1rem">
         <button class="btn btn-ouro" onclick="criar()">Criar</button>
@@ -428,6 +438,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script>
 // Esta página chamava toast() sem o ter: as mensagens de erro rebentavam em
 // silêncio na consola, em vez de aparecerem a quem estava a olhar.
@@ -448,10 +459,10 @@ async function criar(){
   }
   const d = await api('casamento_criar', { method:'POST', body: JSON.stringify({
     nome: v('n-nome'), noiva: v('n-noiva'), noivo: v('n-noivo'), data: v('n-data'),
-    hora: v('n-hora'), local: v('n-local'), cidade: v('n-cidade'),
+    hora: v('n-hora'), local: v('n-local'), cidade: v('n-cidade'), maps: v('n-maps'),
     convidados: v('n-convidados'), whatsapp: v('n-whatsapp'),
-    civil_hora: v('n-civil-hora'), civil_local: v('n-civil-local'),
-    religiosa_hora: v('n-religiosa-hora'), religiosa_local: v('n-religiosa-local'),
+    civil_hora: v('n-civil-hora'), civil_local: v('n-civil-local'), civil_maps: v('n-civil-maps'),
+    religiosa_hora: v('n-religiosa-hora'), religiosa_local: v('n-religiosa-local'), religiosa_maps: v('n-religiosa-maps'),
   }) });
   if (d && d.success) location.reload();
 }

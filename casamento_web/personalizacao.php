@@ -851,6 +851,14 @@ function cssPosicoes(array $defs): string {
  * nem sequer as mostrava, e um casal que tivesse marcado a igreja no registo
  * via essa informação só no papel.
  */
+/** O pino de localização (estilo Google Maps), para marcar um local que se abre
+ *  no mapa. Herda a cor por currentColor. */
+function iconePino(): string {
+    return '<svg class="pino" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+         . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+         . '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+}
+
 function cerimoniasHtml(array $defs): string {
     $out = '';
     foreach ([['civil', 'Civil'], ['religiosa', 'Religiosa']] as [$k, $_]) {
@@ -860,8 +868,11 @@ function cerimoniasHtml(array $defs): string {
         $maps  = trim((string)($defs['evento.'.$k.'_maps'] ?? ''));
         $localHtml = '';
         if ($local !== '') {
+            // Com ligação, o local é um "ver no mapa" com o pino de localização;
+            // sem ela, é texto simples. O pino diz, à vista, que aquilo se abre.
             $localHtml = $maps !== ''
-                ? '<div class="l"><a href="' . escP($maps) . '" target="_blank" rel="noopener">' . escP($local) . '</a></div>'
+                ? '<div class="l"><a href="' . escP($maps) . '" target="_blank" rel="noopener" title="Ver no Google Maps">'
+                    . iconePino() . escP($local) . '</a></div>'
                 : '<div class="l">' . escP($local) . '</div>';
         }
         $out .= '<div class="cer"><h3>' . escP($defs['evento.'.$k.'_titulo']) . '</h3>'

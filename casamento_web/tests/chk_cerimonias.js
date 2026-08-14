@@ -145,8 +145,11 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     'evento.civil_maps': 'https://maps.app.goo.gl/provaCer' } });
   const htmlConvite = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
-  const temElo = /class="cerimonias[^]*?<div class="l"><a href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^>]*>Conservatória do Namibe<\/a>/.test(htmlConvite);
+  const temElo = /class="cerimonias[^]*?<div class="l"><a href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^>]*>.*?Conservatória do Namibe<\/a>/.test(htmlConvite);
   ok(temElo, 'a cerimónia com mapa mostra o local como ligação no convite');
+  // ...e com o pino de localização, para se ver à vista que aquilo abre no mapa.
+  const temPino = /class="cerimonias[^]*?<div class="l"><a [^>]*>\s*<svg class="pino"/.test(htmlConvite);
+  ok(temPino, 'a ligação leva o ícone de localização do Google Maps');
   await api('defs_save', { defs: { 'evento.civil_maps': '' } });
   const semElo = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
