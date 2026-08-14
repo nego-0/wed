@@ -137,6 +137,22 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(await tela.locator('#grande-dia .cerimonias .cer').count() === 1,
      'remover no digital tira-a da tela');
 
+  // ============ 4b. o local com Google Maps vira ligação no convite ============
+  // A ligação do mapa marca-se nos formulários do casamento (gestão e registo),
+  // não no editor; o convite lê-a e faz do local um "ver no mapa".
+  await api('defs_save', { defs: {
+    'evento.civil_hora': '10:30', 'evento.civil_local': 'Conservatória do Namibe',
+    'evento.civil_maps': 'https://maps.app.goo.gl/provaCer' } });
+  const htmlConvite = await p.evaluate(async () =>
+    await (await fetch('convite-digital.php?demo=1')).text());
+  const temElo = /class="cerimonias[^]*?<div class="l"><a href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^>]*>Conservatória do Namibe<\/a>/.test(htmlConvite);
+  ok(temElo, 'a cerimónia com mapa mostra o local como ligação no convite');
+  await api('defs_save', { defs: { 'evento.civil_maps': '' } });
+  const semElo = await p.evaluate(async () =>
+    await (await fetch('convite-digital.php?demo=1')).text());
+  ok(/<div class="l">Conservatória do Namibe<\/div>/.test(semElo),
+     'e sem mapa fica texto simples, sem ligação');
+
   // ============ 5. o cronograma rearranja-se ============
   const ordem = () => p.evaluate(() => EST.listas['cronograma.itens'].map(x => x.t));
   const antes = await ordem();
@@ -205,9 +221,9 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   // Deixar a casa como se encontrou.
   await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
   await api('defs_save', { defs: { 'evento.civil_titulo': 'Cerimónia Civil',
-                                   'evento.civil_hora': '10:30', 'evento.civil_local': '',
+                                   'evento.civil_hora': '10:30', 'evento.civil_local': '', 'evento.civil_maps': '',
                                    'evento.religiosa_titulo': 'Cerimónia Religiosa',
-                                   'evento.religiosa_hora': '', 'evento.religiosa_local': '' } });
+                                   'evento.religiosa_hora': '', 'evento.religiosa_local': '', 'evento.religiosa_maps': '' } });
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));
   console.log(f ? `\n${f} verificação(ões) falharam` : '\nTudo certo.');

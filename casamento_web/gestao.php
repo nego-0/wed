@@ -64,8 +64,17 @@ $CAMPOS_EVENTO = [
 $CAMPOS_CERIMONIA = [
     'evento.civil_hora'      => ['Cerimónia civil · hora', 'time', 5, ''],
     'evento.civil_local'     => ['Cerimónia civil · local', 'text', 120, ''],
+    'evento.civil_maps'      => ['Cerimónia civil · Google Maps', 'url', 500, ''],
     'evento.religiosa_hora'  => ['Cerimónia religiosa · hora', 'time', 5, ''],
     'evento.religiosa_local' => ['Cerimónia religiosa · local', 'text', 120, ''],
+    'evento.religiosa_maps'  => ['Cerimónia religiosa · Google Maps', 'url', 500, ''],
+];
+// O campo do nome do local que cada ligação do mapa acompanha (para o botão
+// "Escolher no Google Maps" já abrir à procura desse sítio).
+$MAPA_LOCAL = [
+    'evento.maps'           => 'evento.local',
+    'evento.civil_maps'     => 'evento.civil_local',
+    'evento.religiosa_maps' => 'evento.religiosa_local',
 ];
 ?>
 <!DOCTYPE html>
@@ -163,11 +172,14 @@ $CAMPOS_CERIMONIA = [
         digital, no cartão impresso e na página de confirmação — não é preciso ir ao editor por causa deles.</div>
       <div class="grelha">
         <?php foreach ($CAMPOS_EVENTO as $chave => [$rot, $tipo, $lim, $nota]):
-          $id = 'd-' . str_replace('.', '-', $chave); ?>
-          <div class="campo<?= $chave === 'evento.maps' ? ' largo' : '' ?>">
+          $id = 'd-' . str_replace('.', '-', $chave);
+          $ehMapa = isset($MAPA_LOCAL[$chave]);
+          $localId = $ehMapa ? 'd-' . str_replace('.', '-', $MAPA_LOCAL[$chave]) : ''; ?>
+          <div class="campo<?= $ehMapa ? ' largo' : '' ?>">
             <label for="<?= $id ?>"><?= escP($rot) ?></label>
             <input type="<?= $tipo ?>" id="<?= $id ?>" data-chave="<?= escP($chave) ?>"
-                   maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>">
+                   maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>"
+                   <?= $ehMapa ? 'data-mapa data-mapa-local="' . escP($localId) . '" placeholder="https://maps.app.goo.gl/…"' : '' ?>>
             <?php if ($nota): ?><div class="dica" style="margin:.25rem 0 0"><?= escP($nota) ?></div><?php endif; ?>
           </div>
         <?php endforeach; ?>
@@ -177,11 +189,14 @@ $CAMPOS_CERIMONIA = [
         deixe em branco o que não se aplicar. Sem hora, a cerimónia não se anuncia.</div>
       <div class="grelha">
         <?php foreach ($CAMPOS_CERIMONIA as $chave => [$rot, $tipo, $lim, $nota]):
-          $id = 'd-' . str_replace('.', '-', $chave); ?>
-          <div class="campo">
+          $id = 'd-' . str_replace('.', '-', $chave);
+          $ehMapa = isset($MAPA_LOCAL[$chave]);
+          $localId = $ehMapa ? 'd-' . str_replace('.', '-', $MAPA_LOCAL[$chave]) : ''; ?>
+          <div class="campo<?= $ehMapa ? ' largo' : '' ?>">
             <label for="<?= $id ?>"><?= escP($rot) ?></label>
             <input type="<?= $tipo ?>" id="<?= $id ?>" data-chave="<?= escP($chave) ?>"
-                   maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>">
+                   maxlength="<?= (int)$lim ?>" value="<?= escP((string)($DEFS[$chave] ?? '')) ?>"
+                   <?= $ehMapa ? 'data-mapa data-mapa-local="' . escP($localId) . '" placeholder="https://maps.app.goo.gl/…"' : '' ?>>
           </div>
         <?php endforeach; ?>
       </div>
@@ -294,6 +309,7 @@ $CAMPOS_CERIMONIA = [
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));

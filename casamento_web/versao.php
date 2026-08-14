@@ -277,6 +277,18 @@ function correcoesEsperadas(): array {
          'editor-cartao.php', 'as cerimónias marcam-se na mesma'],
         ['Mas são de exemplo: aplicar o modelo não reescreve as do casal',
          'api.php', 'nunca reescreve as cerimónias que o casal já marcou'],
+
+        // ---- Ligações do Google Maps dos locais ----
+        ['Cada cerimónia ganha a sua ligação do Google Maps',
+         'personalizacao.php', "'evento.civil_maps'"],
+        ['O campo do mapa abre o Google Maps e lê as coordenadas da ligação',
+         'assets/maps-campo.js', 'function coordsDe('],
+        ['Os formulários do casamento (gestão e registo) trazem os campos de mapa',
+         'gestao.php', "'evento.civil_maps'"],
+        ['O registo público leva as ligações do mapa dos locais',
+         'registo.php', 'data-mapa data-mapa-local="civil_local"'],
+        ['No convite, o local com mapa vira uma ligação "ver no mapa"',
+         'personalizacao.php', "\$maps !== ''"],
     ];
 }
 

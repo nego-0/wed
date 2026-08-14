@@ -56,6 +56,15 @@ const entrar = async (ctx, user, pass) => {
   await anon.fill('#local', 'Salão ' + marca); await anon.fill('#cidade', 'Huambo');
   await anon.fill('#convidados', '80'); await anon.fill('#whatsapp', '244911000111');
   await anon.fill('#religiosa_hora', '15:00'); await anon.fill('#religiosa_local', 'Igreja ' + marca);
+  // As ligações do Google Maps dos locais, e a leitura das coordenadas na hora.
+  await anon.fill('#maps', 'https://maps.app.goo.gl/exemplo' + marca);
+  await anon.fill('#religiosa_maps',
+    'https://www.google.com/maps/place/Igreja/@-12.34,15.67,17z/data=!3d-12.3456!4d15.6789');
+  ok(await anon.locator('input[data-mapa]').count() === 3 && await anon.locator('.mapa-btn').count() === 3,
+     'o registo público tem os três campos de mapa, com o botão de escolher no Maps');
+  const coordsReg = await anon.evaluate(() =>
+    document.getElementById('religiosa_maps').nextElementSibling.querySelector('.mapa-coords').textContent);
+  ok(/-12\.3456.*15\.6789/.test(coordsReg), 'e lê as coordenadas da ligação colada: ' + coordsReg);
   await anon.click('#btn'); await anon.waitForTimeout(900);
   ok(await anon.locator('#obrigado').isVisible(), 'a inscrição confirma no ecrã que ficou à espera');
 
@@ -105,6 +114,13 @@ const entrar = async (ctx, user, pass) => {
   ok(meus['evento.religiosa_hora'] === '15:00', 'a cerimónia religiosa que indicou');
   ok(meus['evento.civil_hora'] !== '' && meus['evento.civil_local'] === '',
      'e o que não indicou fica no original, sem inventar nada');
+  ok(meus['evento.maps'] === 'https://maps.app.goo.gl/exemplo' + marca
+       && /15\.6789/.test(meus['evento.religiosa_maps'] || ''),
+     'as ligações do Google Maps dos locais chegaram do registo à gestão');
+  // E a gestão traz o mesmo apoio: campo de mapa com botão e leitura de coordenadas.
+  ok(await casal.locator('input[data-chave="evento.religiosa_maps"][data-mapa]').count() === 1
+       && await casal.locator('.mapa-btn').count() >= 3,
+     'a gestão também tem os campos de mapa, com o botão de escolher no Maps');
 
   // ---------- 3. o suporte não entra sem código ----------
   const emailSup = 'suporte.' + marca + '@exemplo.pt';

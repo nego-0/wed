@@ -202,9 +202,11 @@ function defsPadrao(): array {
         'evento.civil_titulo'    => 'Cerimónia Civil',
         'evento.civil_hora'      => '10:30',
         'evento.civil_local'     => '',
+        'evento.civil_maps'      => '',
         'evento.religiosa_titulo'=> 'Cerimónia Religiosa',
         'evento.religiosa_hora'  => '',
         'evento.religiosa_local' => '',
+        'evento.religiosa_maps'  => '',
         // ---- Capa que abre (o envelope selado com o monograma) ----
         // Monograma vazio = as iniciais dos nomes (ex.: "I&A"); pode dar-se um à mão.
         'capa.monograma' => '',
@@ -855,9 +857,16 @@ function cerimoniasHtml(array $defs): string {
         $hora = trim((string)($defs['evento.'.$k.'_hora'] ?? ''));
         if ($hora === '') continue;
         $local = trim((string)($defs['evento.'.$k.'_local'] ?? ''));
+        $maps  = trim((string)($defs['evento.'.$k.'_maps'] ?? ''));
+        $localHtml = '';
+        if ($local !== '') {
+            $localHtml = $maps !== ''
+                ? '<div class="l"><a href="' . escP($maps) . '" target="_blank" rel="noopener">' . escP($local) . '</a></div>'
+                : '<div class="l">' . escP($local) . '</div>';
+        }
         $out .= '<div class="cer"><h3>' . escP($defs['evento.'.$k.'_titulo']) . '</h3>'
               . '<div class="h">' . escP(horaTexto($hora)) . '</div>'
-              . ($local !== '' ? '<div class="l">' . escP($local) . '</div>' : '')
+              . $localHtml
               . '</div>';
     }
     return $out === '' ? '' : '    <div class="cerimonias rv d2">' . $out . '</div>';
@@ -1167,6 +1176,12 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'layout.posicoes':
             return validarPosicoes($valor, 'idPosicaoValido');
         case 'evento.maps':
+        case 'evento.civil_maps':
+        case 'evento.religiosa_maps':
+            // Vazio é válido — é o que limpa a ligação (a cerimónia pode não ter
+            // sítio marcado no mapa). Se vier algo, tem de ser um endereço https:
+            // é o que o Google Maps dá, e o que se pode abrir sem sustos.
+            if (trim($valor) === '') return '';
             return preg_match('#^https://#', $valor) ? mb_substr($valor, 0, 500) : null;
         case 'evento.whatsapp':
             $d = preg_replace('/\D/', '', $valor); return $d;

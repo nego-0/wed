@@ -73,6 +73,8 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         <div class="campo"><label for="cidade">Cidade / região</label>
           <input type="text" id="cidade" placeholder="Ex: Namibe · Angola"></div>
       </div>
+      <div class="campo"><label for="maps">Local da festa · Google Maps</label>
+        <input type="url" id="maps" data-mapa data-mapa-local="local" placeholder="https://maps.app.goo.gl/…"></div>
       <div class="par">
         <div class="campo"><label for="convidados">Convidados que esperam</label>
           <input type="number" id="convidados" min="1" max="5000" placeholder="150"></div>
@@ -87,12 +89,16 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         <div class="campo"><label for="civil_local">Civil · local</label>
           <input type="text" id="civil_local" placeholder="Ex: Conservatória"></div>
       </div>
+      <div class="campo"><label for="civil_maps">Civil · Google Maps</label>
+        <input type="url" id="civil_maps" data-mapa data-mapa-local="civil_local" placeholder="https://maps.app.goo.gl/…"></div>
       <div class="par">
         <div class="campo"><label for="religiosa_hora">Religiosa · hora</label>
           <input type="time" id="religiosa_hora"></div>
         <div class="campo"><label for="religiosa_local">Religiosa · local</label>
           <input type="text" id="religiosa_local" placeholder="Ex: Igreja de São José"></div>
       </div>
+      <div class="campo"><label for="religiosa_maps">Religiosa · Google Maps</label>
+        <input type="url" id="religiosa_maps" data-mapa data-mapa-local="religiosa_local" placeholder="https://maps.app.goo.gl/…"></div>
 
       <div class="seccao">A vossa conta</div>
       <div class="campo"><label for="email">Email de acesso</label>
@@ -120,6 +126,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     </div>
   </div>
 
+<script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
 async function enviar(){
@@ -131,9 +138,10 @@ async function enviar(){
     noiva: campo('noiva'), noivo: campo('noivo'), data: campo('data'),
     email: campo('email'), senha: $('senha').value,
     hora: campo('hora'), local: campo('local'), cidade: campo('cidade'),
+    maps: campo('maps'),
     convidados: campo('convidados'), whatsapp: campo('whatsapp'),
-    civil_hora: campo('civil_hora'), civil_local: campo('civil_local'),
-    religiosa_hora: campo('religiosa_hora'), religiosa_local: campo('religiosa_local'),
+    civil_hora: campo('civil_hora'), civil_local: campo('civil_local'), civil_maps: campo('civil_maps'),
+    religiosa_hora: campo('religiosa_hora'), religiosa_local: campo('religiosa_local'), religiosa_maps: campo('religiosa_maps'),
   };
   $('erro').style.display = 'none';
   $('btn').disabled = true;

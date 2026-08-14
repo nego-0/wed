@@ -65,8 +65,10 @@ function guardarEventoDoRegisto(mysqli $conn, int $cid, array $d): int {
         'maps'            => 'evento.maps',
         'civil_hora'      => 'evento.civil_hora',
         'civil_local'     => 'evento.civil_local',
+        'civil_maps'      => 'evento.civil_maps',
         'religiosa_hora'  => 'evento.religiosa_hora',
         'religiosa_local' => 'evento.religiosa_local',
+        'religiosa_maps'  => 'evento.religiosa_maps',
     ];
     $defs = [];
     foreach ($mapa as $campo => $chave) {

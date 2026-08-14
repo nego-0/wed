@@ -42,6 +42,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `assets/pecas.css` | Estilos das peças (cartão e porta-chaves), partilhados pelas páginas que as desenham. |
 | `assets/pecas/` | Biblioteca vetorial das peças (ícones SVG recoloráveis) e a imagem dos corações entrelaçados. |
 | `assets/estilo.css` | Estilo visual, alinhado com o convite (verde-floresta, dourado e marfim). |
+| `assets/maps-campo.js` | O campo da ligação do Google Maps: abre o Maps para escolher o sítio e lê-lhe as coordenadas, sem embutir mapa nenhum nem depender da API do Google. |
 
 ---
 
@@ -246,6 +247,19 @@ pelo admin perguntam tudo: nomes, data, hora e local da festa, cidade,
 local da **cerimónia civil** e da **cerimónia religiosa**. Um casamento que
 nasce vazio fica com os valores de origem do `config.php` à espera de que
 alguém se lembre, e o casal manda convites com a morada de outra pessoa.
+
+**Cada local tem a sua ligação do Google Maps.** A festa já tinha uma; agora as
+duas cerimónias também (`evento.civil_maps`, `evento.religiosa_maps`), tanto no
+formulário do admin (`gestao.php`) como no registo público (`registo.php`).
+Cada campo traz um botão **Escolher no Google Maps** — abre o Maps a procurar o
+sítio pelo nome que já se escreveu no campo do local — e, assim que se cola uma
+ligação, **lê-lhe as coordenadas** e mostra-as por baixo, prontas a copiar. Não
+se embute mapa nenhum na página: isso pedia uma chave da API do Google e rede
+aberta; abrir o Maps numa aba e trazer de lá a ligação faz o mesmo e funciona
+em qualquer lado (ver `assets/maps-campo.js`, que também sabe extrair as
+coordenadas dos vários feitios de endereço do Maps: `@lat,lng`, `!3d…!4d…`,
+`?q=lat,lng`). No convite, um local com ligação passa a ser um **«ver no mapa»**
+clicável; sem ligação, fica texto simples.
 
 O número de convidados é o teto da barra de capacidade do painel (era
 `MAX_LUGARES_TOTAL`, o mesmo 150 para toda a gente). As cerimónias só se
