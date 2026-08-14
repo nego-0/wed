@@ -226,6 +226,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .bt-wa svg{ width:14px; height:14px; color:#25D366; }
   .bt-wa:hover{ border-color:#25D366; }
   .menu-mais{ display:inline-block; }
+  /* O botão dos três pontos leva o SVG .ico-mais (ver estilo.css): o glifo "⋯"
+     desenhava-se caído para o fundo da linha. Centra-se o ícone na sua caixa. */
+  .bt-mais{ justify-content:center; }
   .pop-mais{ position:fixed; z-index:70; width:190px; background:#fff; border:1px solid var(--line);
     border-radius:12px; box-shadow:0 12px 32px rgba(32,52,42,.18); padding:.3rem; }
   .pop-mais button{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer;
@@ -771,7 +774,7 @@ function renderConvites(){
         ${c.tipo!=='fisico'?`<button class="btn-ico" title="Marcar como enviado" onclick="flag(${c.id},'enviado',${c.enviado?0:1})" style="${c.enviado?'background:var(--ok-bg);color:var(--ok)':''}">${c.enviado?'Enviado ✓':'Enviado'}</button>`:''}
         ${c.tipo!=='digital'?`<button class="btn-ico" title="Marcar como impresso" onclick="flag(${c.id},'impresso',${c.impresso?0:1})" style="${c.impresso?'background:var(--ok-bg);color:var(--ok)':''}">${c.impresso?'Impresso ✓':'Impresso'}</button>`:''}
         <div class="menu-mais">
-          <button class="btn-ico" title="Mais ações" aria-haspopup="true" data-escrita="0" onclick="abrirMais(event,${c.id})">⋯</button>
+          <button class="btn-ico bt-mais" title="Mais ações" aria-haspopup="true" data-escrita="0" onclick="abrirMais(event,${c.id})"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
         </div>
       </div>
     </div>`;

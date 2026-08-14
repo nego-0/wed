@@ -205,6 +205,12 @@ peso, um clique distraído arquivava a festa de alguém. A lista de contas segue
 mesma regra — editar à frente, repor a senha e apagar atrás. Os números do topo
 que levam a algum lado passaram a botões e levam mesmo lá.
 
+O próprio botão do «⋯» leva agora **três pontos em SVG** e não o glifo `⋯`: esse
+desenha-se encostado ao fundo da linha na maioria dos tipos de letra, e ficava
+caído dentro do botão redondo por muito que se centrasse a caixa. O ícone tem a
+sua própria caixa e centra-se sempre, nas três listas (casamentos, contas e
+modelos) e na lista de convites.
+
 **Os modelos mostram a cara.** `modelos.php` é uma página sobre desenhos e não
 mostrava desenho nenhum: escolher um modelo pelo nome é escolher às cegas. Cada
 modelo passa a trazer a sua **miniatura desenhada a sério** — o convite digital
@@ -573,9 +579,10 @@ género devolve o papel a *Convidado*, que sem género não tem nome. **Só padr
 
 **Editar o convite físico.** Em *Gráfica → Convites físicos → Editar o cartão* abre-se um editor ao estilo de um editor de imagem: barra de ferramentas à esquerda, o cartão numa mesa de trabalho ao centro e, à direita, os painéis de **Propriedades** e **Camadas**.
 
-- **Camadas** — as doze partes do cartão (trepadeiras, volutas, moldura, floreados, abertura, nomes, frase, bloco do convidado, mesas, data, logística e frase final). O **olho** mostra ou oculta cada uma; a lista distingue camadas de texto (T) das decorativas (◈).
+- **Camadas** — as doze partes do cartão (trepadeiras, volutas, moldura, floreados, abertura, nomes, frase, bloco do convidado, mesas, data, **cerimónias e receção** e frase final). O **olho** mostra ou oculta cada uma; a lista distingue camadas de texto (T) das decorativas (◈).
 - **Selecionar** — clicar numa camada, ou **diretamente no cartão**, marca-a e abre as suas propriedades.
 - **Propriedades** — os textos dessa camada. O que se escreve aparece **imediatamente no cartão**.
+- Na camada **Cerimónias e receção** marcam-se a **hora e o local** das cerimónias **civil** e **religiosa** — cada uma opcional, com um botão para a acrescentar e outro para a tirar — e ainda a receção (o copo d'água). As cerimónias vêm à cabeça do painel, que é o que a maioria vem cá procurar. Chamava-se «Logística», nome que ninguém associava a marcar uma cerimónia; passou a dizer o que lá se faz.
 - No **bloco do convidado** há ainda a opção **mostrar o “(N)” de lugares no nome**. Por omissão segue o convite, mas pode desligar-se: no cartão os lugares já aparecem por baixo de cada mesa, pelo que o número no nome é opcional.
 - **Barra de opções** — paleta, folhagem e zoom (com *Ajustar à janela*). A troca de paleta e de folhagem é instantânea, sem ir ao servidor: as cores são variáveis CSS e as trepadeiras já vêm todas carregadas.
 - **Ferramentas** — selecionar (V), texto (T), mão para arrastar a vista (H) e zoom (Z); `0` ajusta à janela.

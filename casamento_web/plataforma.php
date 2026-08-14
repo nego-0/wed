@@ -589,7 +589,7 @@ async function carregarCasamentos(){
     }
     const menu = mais.length
       ? `<span class="mm"><button class="btn btn-sm" title="Mais ações"
-             onclick="abrirMais(event,${c.id})">⋯</button>
+             onclick="abrirMais(event,${c.id})"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
            <span class="mm-pop" id="mm-${c.id}" style="display:none">${mais.join('')}</span></span>`
       : '';
 
@@ -722,7 +722,7 @@ async function carregarContas(){
     const acoes = `<button class="btn btn-sm" onclick="editarConta(${c.id})">Editar</button>`
       + (eu ? '<span class="meta">é você</span>' : `
       <span class="mm"><button class="btn btn-sm" title="Mais ações"
-            onclick="abrirMais(event,'c${c.id}')">⋯</button>
+            onclick="abrirMais(event,'c${c.id}')"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
         <span class="mm-pop" id="mm-c${c.id}" style="display:none">
           <button onclick="reporSenha(${c.id}, '${esc(c.email)}')">Repor senha</button>
           <hr>

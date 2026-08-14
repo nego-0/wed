@@ -478,7 +478,7 @@ function cartaoCamadas(): array {
         'convidado' => 'Bloco do convidado',
         'mesas'     => 'Mesas',
         'data'      => 'Data',
-        'logistica' => 'Logística',
+        'logistica' => 'Cerimónias e receção',
         'fecho'     => 'Frase final',
     ];
 }

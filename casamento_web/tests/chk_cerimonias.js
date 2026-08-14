@@ -51,6 +51,26 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   // ============ 2. acrescentar e remover, no cartão ============
   await p.evaluate(() => selecionar('logistica'));
   await p.waitForTimeout(300);
+
+  // A camada onde as cerimónias se metem tinha um nome — "Logística" — que
+  // ninguém associa a marcar a hora e o sítio de uma cerimónia. Passou a
+  // chamar-se pelo que lá se faz, e as cerimónias vêm à cabeça do painel,
+  // antes da receção: é o que a maioria vem cá procurar.
+  const rotulo = await p.evaluate(() =>
+    [...document.querySelectorAll('[onclick^="selecionar"]')]
+      .map(e => e.textContent.trim().split('\n')[0]).find(t => /Cerim|Log[íi]st/.test(t)));
+  ok(/Cerim[óo]nias/i.test(rotulo || ''),
+     `a camada anuncia-se pelas cerimónias na lista ("${rotulo}")`);
+  ok(/Cerim[óo]nias/i.test(await p.evaluate(() =>
+        document.querySelector('#props .vazio-painel b').textContent)),
+     'e o painel abre com esse nome');
+  const ordemPainel = await p.evaluate(() => {
+    const txt = document.querySelector('#props').innerText;
+    return { cer: txt.search(/CERIM[ÓO]NIA/i), rec: txt.search(/RECE[ÇC][ÃA]O/i) };
+  });
+  ok(ordemPainel.cer >= 0 && ordemPainel.rec >= 0 && ordemPainel.cer < ordemPainel.rec,
+     'as cerimónias vêm antes da receção no painel');
+
   ok(await p.locator('#props .cer-dentro').count() === 1, 'a civil aparece no painel como existente');
   ok(await p.locator('#props .cer-fora .bt').count() === 1, 'e a religiosa como um convite a acrescentá-la');
 

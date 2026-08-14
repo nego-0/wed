@@ -229,7 +229,7 @@ async function carregar(){
         <button class="btn btn-sm" onclick="publicar(${m.id}, ${+m.visivel ? 0 : 1})">
           ${+m.visivel ? 'Retirar' : 'Publicar'}</button>
         <span class="mm"><button class="btn btn-sm" title="Mais ações"
-              onclick="abrirMais(event,${m.id})">⋯</button>
+              onclick="abrirMais(event,${m.id})"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
           <span class="mm-pop" id="mm-${m.id}" style="display:none">
             <button onclick="editar(${m.id})">Mudar o nome</button>
             <hr>

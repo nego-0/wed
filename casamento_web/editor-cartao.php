@@ -615,7 +615,11 @@ function renderPropsJa(){
       </div>` + blocoPosicao(selecionada);
     return;
   }
-  $('props').innerHTML = `<div class="vazio-painel" style="margin-bottom:.6rem"><b>${rot}</b></div>` + campos.map(([chave, rotulo, tipo]) => {
+  // Na camada da logística as cerimónias vêm ANTES da receção: é o que dá nome
+  // à camada ("Cerimónias e receção") e o que a maioria vem cá procurar. A
+  // receção é fixa; as cerimónias é que se acrescentam, e têm de saltar à vista.
+  const cerimonias = selecionada === 'logistica' ? blocoCerimonias() : '';
+  $('props').innerHTML = `<div class="vazio-painel" style="margin-bottom:.6rem"><b>${rot}</b></div>` + cerimonias + campos.map(([chave, rotulo, tipo]) => {
     const v = est.textos[chave] ?? '';
     if (tipo === 'bool') {
       return `<div class="campo"><label style="display:flex;align-items:center;gap:.45rem;text-transform:none;letter-spacing:0">
@@ -632,7 +636,6 @@ function renderPropsJa(){
                 value="${escaparAttr(v)}" oninput="editarTexto(this)">`;
     return `<div class="campo"><label>${rotulo}${cont}</label>${ctl}</div>`;
   }).join('')
-  + (selecionada === 'logistica' ? blocoCerimonias() : '')
   + (selecionada === 'nomes' ? feitio('Entre os nomes', ELOS, est.elo, 'mudarElo') : '')
   + blocoPosicao(selecionada);
 }

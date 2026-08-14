@@ -261,6 +261,14 @@ function correcoesEsperadas(): array {
          'assets/pecas.css', 'margin:-2px 0 0; line-height:1'],
         ['Arrastar move a camada escolhida, e não a que está por dentro dela',
          'assets/tela-livre.js', 'if (op.escolhida)'],
+
+        // ---- Cerimónias mais fáceis de achar, e o menu "⋯" a direito ----
+        ['A camada da logística chama-se pelo que lá se faz: cerimónias e receção',
+         'pecas.php', "'Cerimónias e receção'"],
+        ['No editor do impresso, as cerimónias vêm à cabeça do painel da camada',
+         'editor-cartao.php', 'as cerimónias vêm ANTES da receção'],
+        ['O botão "mais ações" leva três pontos em SVG, e não o glifo caído',
+         'assets/estilo.css', '.ico-mais{'],
     ];
 }
 

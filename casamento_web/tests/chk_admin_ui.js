@@ -74,6 +74,24 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(linha && linha.escondidas.some(x => /Arquivar|Suspender/.test(x)),
      'e arquivar/suspender ficaram atrás do "⋯"');
 
+  // O botão dos três pontos leva um SVG centrado, e não o glifo "⋯" — esse
+  // desenhava-se caído para o fundo do botão redondo, seja qual for o tipo de
+  // letra. Confirma-se que é um ícone e que o seu centro coincide com o do botão.
+  const ico = await p.evaluate(() => {
+    const btn = document.querySelector('#lista-casamentos .mm > button'); if (!btn) return null;
+    const svg = btn.querySelector('svg.ico-mais'); if (!svg) return { semSvg: true, txt: btn.textContent.trim() };
+    const bb = btn.getBoundingClientRect(), ib = svg.getBoundingClientRect();
+    return { pontos: svg.querySelectorAll('circle').length,
+             desvioV: Math.round((ib.top + ib.height / 2) - (bb.top + bb.height / 2)),
+             desvioH: Math.round((ib.left + ib.width / 2) - (bb.left + bb.width / 2)),
+             glifo: /⋯/.test(btn.textContent) };
+  });
+  ok(ico && !ico.semSvg && ico.pontos === 3,
+     'o botão "mais ações" desenha três pontos em SVG' + (ico && ico.semSvg ? ` (ainda é texto "${ico.txt}")` : ''));
+  ok(ico && !ico.glifo, 'e já não usa o glifo "⋯", que ficava caído');
+  ok(ico && Math.abs(ico.desvioV) <= 1 && Math.abs(ico.desvioH) <= 1,
+     `os pontos ficam centrados no botão (desvio ${ico && ico.desvioH}/${ico && ico.desvioV}px)`);
+
   // O "⋯" abre, e fecha-se ao clicar fora.
   await p.click('#lista-casamentos .mm > button'); await p.waitForTimeout(200);
   ok(await p.evaluate(() => [...document.querySelectorAll('.mm-pop')].some(x => x.style.display !== 'none')),
