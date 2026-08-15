@@ -303,6 +303,14 @@ function correcoesEsperadas(): array {
          'db.php', 'os modelos de origem da casa'],
         ['Aplicar um modelo é ficar com ele — o de origem devolve a peça à origem',
          'api.php', 'Aplicar um modelo é FICAR com ele'],
+
+        // ---- Visibilidade dos modelos por casamento (esquema v16) ----
+        ['Um modelo pode destinar-se a todos os casais ou só aos escolhidos',
+         'db.php', 'visibilidade dos modelos por casamento'],
+        ['O admin escolhe quem vê cada modelo, no painel dos modelos',
+         'modelos.php', 'function quemVe('],
+        ['O casal só vê e aplica os modelos que lhe são destinados',
+         'api.php', "alcance='todos' OR id IN"],
     ];
 }
 

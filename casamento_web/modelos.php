@@ -84,6 +84,14 @@ if ($aberto > 0) {
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.rascunho{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
+  .et.alcance{ background:#fff; color:#6c7570; text-transform:none; letter-spacing:0; }
+  /* Painel "quem vê": as opções e a lista de casamentos. */
+  .editor-mod .op{ display:flex; align-items:center; gap:.45rem; font-size:.88rem; color:var(--text);
+                   text-transform:none; letter-spacing:0; cursor:pointer; }
+  .editor-mod .op input{ width:auto; margin:0; }
+  .editor-mod .lista-cas{ max-height:230px; overflow:auto; border:1px solid var(--line);
+                          border-radius:10px; padding:.5rem .6rem; display:flex; flex-direction:column; gap:.35rem; }
+  .editor-mod .cas-item{ padding:.15rem 0; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
@@ -221,6 +229,10 @@ async function carregar(){
         ${m.descricao ? `<div class="desc">${esc(m.descricao)}</div>` : ''}
         <div class="meta">
           <span class="et ${+m.visivel ? 'publicado' : 'rascunho'}">${+m.visivel ? 'publicado' : 'por publicar'}</span>
+          ${+m.visivel ? `<span class="et alcance" title="Quem vê este modelo">${
+              m.alcance === 'selecionados'
+                ? '&#9737; ' + (m.casamentos || []).length + ' casamento' + ((m.casamentos||[]).length===1?'':'s')
+                : '&#9737; todos os casais'}</span>` : ''}
           <span>${esc((m.atualizado_em || m.criado_em || '').slice(0,10))}</span>
         </div>
       </div>
@@ -231,6 +243,7 @@ async function carregar(){
         <span class="mm"><button class="btn btn-sm" title="Mais ações"
               onclick="abrirMais(event,${m.id})"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
           <span class="mm-pop" id="mm-${m.id}" style="display:none">
+            <button onclick="quemVe(${m.id})">Quem vê este modelo</button>
             <button onclick="editar(${m.id})">Mudar o nome</button>
             <hr>
             <button class="perigo" onclick="apagar(${m.id}, '${esc(m.nome)}')">Apagar</button>
@@ -281,11 +294,20 @@ async function criar(){
   carregar();
 }
 
-function editar(id){
+/** Abre o painel de baixo de um modelo num dado modo; se já estava aberto no
+ *  mesmo modo, fecha-o (é o mesmo botão a alternar). Devolve o elemento, ou
+ *  null quando só fechou. */
+function abrirPainel(id, modo){
   const cx = $('ed-' + id);
-  if (cx.style.display !== 'none'){ cx.style.display = 'none'; return; }
+  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
+  if (cx.style.display !== 'none' && cx.dataset.modo === modo){ cx.style.display = 'none'; return null; }
+  cx.dataset.modo = modo; cx.style.display = '';
+  return cx;
+}
+
+function editar(id){
+  const cx = abrirPainel(id, 'nome'); if (!cx) return;
   const m = MODELOS[id] || {};
-  cx.style.display = '';
   cx.innerHTML = `
     <div class="lf" style="grid-template-columns:2fr 3fr auto;margin:0">
       <div><label>Nome</label><input type="text" id="e-nome-${id}" value="${esc(m.nome)}"></div>
@@ -318,6 +340,64 @@ async function publicar(id, visivel){
   const d = await api('modelo_editar', { method:'POST', body: JSON.stringify({
     id, nome: m.nome, descricao: m.descricao || '', visivel }) });
   if (d && d.success){ toast(visivel ? 'Publicado.' : 'Retirado dos casais.'); carregar(); }
+}
+
+/** Quem vê este modelo: todos os casais, ou só os casamentos escolhidos. */
+async function quemVe(id){
+  const cx = abrirPainel(id, 'vis'); if (!cx) return;
+  const m = MODELOS[id] || {};
+  cx.innerHTML = '<div class="dica" style="margin:0">A carregar casamentos…</div>';
+  const d = await api('casamento_lista&estado=ativo');
+  const cas = (d && d.casamentos) || [];
+  const sel = new Set((m.casamentos || []).map(Number));
+  const escolhidos = m.alcance === 'selecionados';
+  const aviso = +m.visivel ? '' :
+    `<div class="dica" style="margin:0 0 .6rem;color:var(--gold)">Este modelo está <b>por publicar</b> —
+     ninguém o vê enquanto não carregar em «Publicar». Aqui escolhe-se <b>quem</b> o verá depois.</div>`;
+  cx.innerHTML = aviso + `
+    <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.5rem">
+      <label class="op"><input type="radio" name="alc-${id}" value="todos" ${escolhidos?'':'checked'}
+             onchange="alternarAlcance(${id})"> Todos os casais</label>
+      <label class="op"><input type="radio" name="alc-${id}" value="selecionados" ${escolhidos?'checked':''}
+             onchange="alternarAlcance(${id})"> Só os casamentos escolhidos</label>
+    </div>
+    <div id="cx-cas-${id}" style="display:${escolhidos?'block':'none'}">
+      <input type="text" placeholder="Procurar casamento…" oninput="filtrarCas(${id}, this.value)"
+             style="margin-bottom:.5rem">
+      <div class="lista-cas">
+        ${cas.length ? cas.map(c => `<label class="op cas-item" data-nome="${esc((c.nome||'').toLowerCase())}">
+            <input type="checkbox" value="${c.id}" ${sel.has(+c.id)?'checked':''}>
+            ${esc(c.nome)} <span class="dica" style="margin:0">${esc(c.data_evento ? c.data_evento.slice(0,10) : '')}</span>
+          </label>`).join('')
+          : '<div class="dica" style="margin:0">Não há casamentos ativos para escolher.</div>'}
+      </div>
+    </div>
+    <div style="margin-top:.7rem">
+      <button class="btn btn-ouro btn-sm" onclick="guardarVisibilidade(${id})">Guardar</button>
+    </div>`;
+}
+function alternarAlcance(id){
+  const esc = document.querySelector(`input[name="alc-${id}"]:checked`).value === 'selecionados';
+  $('cx-cas-' + id).style.display = esc ? 'block' : 'none';
+}
+function filtrarCas(id, q){
+  q = (q || '').trim().toLowerCase();
+  document.querySelectorAll(`#cx-cas-${id} .cas-item`).forEach(el => {
+    el.style.display = !q || el.dataset.nome.includes(q) ? '' : 'none';
+  });
+}
+async function guardarVisibilidade(id){
+  const alcance = document.querySelector(`input[name="alc-${id}"]:checked`).value;
+  const casamentos = [...document.querySelectorAll(`#cx-cas-${id} input[type=checkbox]:checked`)].map(x => +x.value);
+  if (alcance === 'selecionados' && !casamentos.length){
+    return toast('Escolha ao menos um casamento, ou deixe em «Todos os casais».', true);
+  }
+  const d = await api('modelo_visibilidade', { method:'POST', body: JSON.stringify({ id, alcance, casamentos }) });
+  if (d && d.success){
+    toast(d.alcance === 'todos' ? 'Passa a ver-se em todos os casais.'
+                                : `Passa a ver-se em ${d.casamentos.length} casamento(s).`);
+    carregar();
+  }
 }
 async function apagar(id, nome){
   if (!confirm('Apagar o modelo "' + nome + '"?\n\n'

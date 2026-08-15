@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 15;
+const ESQUEMA_VERSAO = 16;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -608,6 +608,24 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             $st->bind_param('sss', $nome, $desc, $amb);
             @$st->execute();
         }
+    }
+
+    // v16 — visibilidade dos modelos por casamento. Até aqui um modelo era de
+    // todos (visivel=1) ou de ninguém (rascunho). Passa a poder ser de alguns:
+    // 'alcance' diz se um modelo publicado se vê em todos os casamentos ou só
+    // nos escolhidos, e a tabela de junção diz quais.
+    if ($versaoAtual < 16) {
+        migColuna($conn, "{$P}modelos", 'alcance',
+                  "ENUM('todos','selecionados') NOT NULL DEFAULT 'todos'");
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}modelo_casamentos (
+                modelo_id INT NOT NULL,
+                casamento_id INT NOT NULL,
+                PRIMARY KEY (modelo_id, casamento_id),
+                INDEX idx_mc_casamento (casamento_id),
+                FOREIGN KEY (modelo_id) REFERENCES {$P}modelos(id) ON DELETE CASCADE,
+                FOREIGN KEY (casamento_id) REFERENCES {$P}casamentos(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

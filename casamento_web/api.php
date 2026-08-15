@@ -2187,15 +2187,75 @@ if ($acao === 'dados_importar') {
 // ============================================================
 
 if ($acao === 'modelo_lista') {
-    // Os casais veem os visíveis; quem gere a casa vê todos, para poder
-    // preparar um modelo antes de o mostrar.
+    // Os casais veem os que lhes são destinados; quem gere a casa vê todos,
+    // para poder preparar um modelo antes de o mostrar.
     if (!utilizadorId()) { http_response_code(401); erro('Sessão terminada. Entre de novo.'); }
     $a = ($_GET['ambito'] ?? '') ;
     $onde = isset(ambitosVersao()[$a]) ? "ambito='" . $conn->real_escape_string($a) . "'" : '1=1';
-    if (!ehAdminPlataforma()) $onde .= ' AND visivel=1';
-    $r = @$conn->query("SELECT id, nome, descricao, ambito, visivel, criado_por, criado_em, atualizado_em
+    if (!ehAdminPlataforma()) {
+        // Um casal vê um modelo se estiver publicado E se lhe for destinado:
+        // ou é de todos, ou é dos escolhidos e ele é um deles.
+        $cid = casamentoAtual();
+        $onde .= " AND visivel=1 AND (alcance='todos' OR id IN
+                     (SELECT modelo_id FROM {$P}modelo_casamentos WHERE casamento_id=" . (int)$cid . "))";
+    }
+    $r = @$conn->query("SELECT id, nome, descricao, ambito, visivel, alcance, criado_por, criado_em, atualizado_em
                         FROM {$P}modelos WHERE $onde ORDER BY ambito, nome");
-    ok(['modelos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : []]);
+    $modelos = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+    // Ao admin junta-se quais casamentos cada modelo "de escolhidos" alcança,
+    // para o painel os mostrar assinalados.
+    if (ehAdminPlataforma() && $modelos) {
+        $sel = [];
+        $rr = @$conn->query("SELECT modelo_id, casamento_id FROM {$P}modelo_casamentos");
+        if ($rr) while ($x = $rr->fetch_assoc()) $sel[(int)$x['modelo_id']][] = (int)$x['casamento_id'];
+        foreach ($modelos as &$m) $m['casamentos'] = $sel[(int)$m['id']] ?? [];
+        unset($m);
+    }
+    ok(['modelos' => $modelos]);
+}
+
+if ($acao === 'modelo_visibilidade') {
+    // Quem vê este modelo: todos os casais, ou só os escolhidos. É do admin.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma gere a visibilidade dos modelos.');
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) erro('Modelo não encontrado.');
+
+    $alcance = ($d['alcance'] ?? 'todos') === 'selecionados' ? 'selecionados' : 'todos';
+    // Os ids vêm do cliente: só entram os que são mesmo casamentos, para não
+    // encher a tabela de junção com números inventados.
+    $ids = [];
+    if ($alcance === 'selecionados') {
+        foreach ((array)($d['casamentos'] ?? []) as $c) {
+            $c = (int)$c;
+            if ($c > 0) $ids[$c] = true;
+        }
+        if ($ids) {
+            $lista = implode(',', array_map('intval', array_keys($ids)));
+            $rr = @$conn->query("SELECT id FROM {$P}casamentos WHERE id IN ($lista)");
+            $validos = [];
+            if ($rr) while ($x = $rr->fetch_assoc()) $validos[(int)$x['id']] = true;
+            $ids = $validos;
+        }
+        // Escolhidos sem escolha nenhuma não faz sentido: seria um modelo que
+        // ninguém vê, o que já é o "rascunho". Guarda-se como 'todos' e o painel
+        // avisa. (Aqui só se normaliza: sem ids, volta a 'todos'.)
+        if (!$ids) $alcance = 'todos';
+    }
+
+    $st = $conn->prepare("UPDATE {$P}modelos SET alcance=? WHERE id=?");
+    $st->bind_param('si', $alcance, $id); $st->execute();
+    $conn->query("DELETE FROM {$P}modelo_casamentos WHERE modelo_id=" . $id);
+    if ($alcance === 'selecionados' && $ids) {
+        $st = $conn->prepare("INSERT INTO {$P}modelo_casamentos (modelo_id, casamento_id) VALUES (?, ?)");
+        foreach (array_keys($ids) as $c) { $st->bind_param('ii', $id, $c); @$st->execute(); }
+    }
+    registar($conn, 'modelo_visibilidade', (string)$m['nome'],
+             $alcance === 'todos' ? 'todos os casamentos' : count($ids) . ' casamento(s)');
+    ok(['id' => $id, 'alcance' => $alcance, 'casamentos' => array_keys($ids)]);
 }
 
 if ($acao === 'modelo_criar') {
@@ -2328,11 +2388,23 @@ if ($acao === 'modelo_aplicar') {
     exigirAdminApi();
     exigirCorrecao();
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("SELECT nome, ambito, defs, visivel FROM {$P}modelos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, ambito, defs, visivel, alcance FROM {$P}modelos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
     if (!$m) erro('Modelo não encontrado.');
-    if (!(int)$m['visivel'] && !ehAdminPlataforma()) erro('Esse modelo não está disponível.');
+    // Um casal só aplica o que vê: publicado, e destinado a ele (de todos, ou
+    // dos escolhidos com ele entre eles). O admin aplica qualquer um.
+    if (!ehAdminPlataforma()) {
+        $podeVer = (int)$m['visivel'] === 1;
+        if ($podeVer && $m['alcance'] === 'selecionados') {
+            $st = $conn->prepare("SELECT 1 FROM {$P}modelo_casamentos
+                                  WHERE modelo_id=? AND casamento_id=? LIMIT 1");
+            $cid = casamentoAtual();
+            $st->bind_param('ii', $id, $cid); $st->execute();
+            $podeVer = (bool)$st->get_result()->fetch_row();
+        }
+        if (!$podeVer) erro('Esse modelo não está disponível.');
+    }
     $j = json_decode((string)$m['defs'], true);
     if (!is_array($j)) erro('Esse modelo está ilegível.');
 

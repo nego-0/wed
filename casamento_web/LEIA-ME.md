@@ -334,6 +334,19 @@ ele mudar. Aplicá-los devolve a peça à origem, mesmo já customizada — que 
 que se espera de «aplicar o modelo da casa». São normais no resto: o admin pode
 desenhá-los (e aí passam a um modelo seu), publicá-los ou apagá-los.
 
+**Quem vê cada modelo** (esquema v16). Um modelo era de todos (publicado) ou de
+ninguém (rascunho). Passa a poder ser **de alguns**: no painel dos modelos,
+o «⋯ → Quem vê este modelo» escolhe entre **todos os casais** ou **só os
+casamentos escolhidos**, com uma lista pesquisável dos casamentos ativos a
+marcar. A coluna `cw_modelos.alcance` guarda a escolha e a tabela de junção
+`cw_modelo_casamentos` diz quais — apagada por si mesma quando o modelo ou o
+casamento desaparece (`ON DELETE CASCADE`). Um casal só **vê e aplica** um
+modelo publicado que lhe seja destinado (de todos, ou dos escolhidos com ele
+entre eles); o cartão de cada modelo mostra o alcance à vista («todos os casais»
+ou «N casamentos»). Escolher «só os escolhidos» sem escolher ninguém não faz
+sentido — seria um modelo que ninguém vê, que já é o rascunho —, por isso
+normaliza-se de volta para «todos», e o painel avisa.
+
 **O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
 e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um
 **cadeado**: trancada não se arrasta nem se esconde, e a tranca viaja com o

@@ -145,6 +145,27 @@ const entrar = async (ctx, u, p) => {
   const usa = await noivos._api('modelo_aplicar&id=' + modCartao.id);
   ok(usa && usa.success, 'e usa os que estão publicados');
 
+  // ---------- 10. um modelo pode ver-se só em certos casamentos ----------
+  // Restrito a OUTRO casamento: este casal deixa de o ver e de o aplicar.
+  await api('modelo_visibilidade', { id: modCartao.id, alcance: 'selecionados', casamentos: [oficina.id] });
+  const soOutro = ((await noivos._api('modelo_lista&ambito=impresso')).modelos || []).map(m => +m.id);
+  ok(!soOutro.includes(+modCartao.id),
+     'um modelo destinado a outro casamento não aparece a este casal');
+  const negado = await noivos._api('modelo_aplicar&id=' + modCartao.id);
+  ok(negado && negado.success === false,
+     'e o casal não o aplica, mesmo escrevendo-lhe o número');
+
+  // Destinado a ELE: volta a vê-lo e a poder aplicá-lo.
+  await api('modelo_visibilidade', { id: modCartao.id, alcance: 'selecionados', casamentos: [casal.id] });
+  const comEle = ((await noivos._api('modelo_lista&ambito=impresso')).modelos || []).map(m => +m.id);
+  ok(comEle.includes(+modCartao.id), 'destinado a este casamento, o casal já o vê');
+  ok((await noivos._api('modelo_aplicar&id=' + modCartao.id)).success, 'e aplica-o');
+
+  // Escolhidos sem escolher ninguém não faz sentido: normaliza-se para "todos".
+  const semNinguem = await api('modelo_visibilidade', { id: modCartao.id, alcance: 'selecionados', casamentos: [] });
+  ok(semNinguem && semNinguem.alcance === 'todos',
+     'escolhidos sem ninguém escolhido volta a ser "todos"');
+
   // ---------- 6. levar e trazer ----------
   const fich = await admin._baixar('modelos_exportar');
   console.log('   ficheiro de modelos:', fich.formato, '·', (fich.modelos || []).length, 'modelo(s)');
