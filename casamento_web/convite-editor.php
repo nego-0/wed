@@ -257,7 +257,7 @@ const TEMA_ROT = <?= json_encode(temaVarsRotulos(), JSON_UNESCAPED_UNICODE) ?>;
 // linhas): pintá-los em cru na tela mostrava "20:30" onde ficará "às 20h30".
 // Para estes espera-se uma pausa e recarrega-se a tela, como nas listas.
 const RECOMPOR = ['evento.data','evento.hora','evento.local','evento.cidade',
-                  'evento.maps','evento.whatsapp','footer.local',
+                  'evento.whatsapp','footer.local',
                   // As cerimónias são compostas pelo servidor ("Ás 15h", e o
                   // bloco inteiro a nascer e a morrer com a hora).
                   'evento.civil_titulo','evento.civil_hora','evento.civil_local',
@@ -303,13 +303,17 @@ const CAMPOS = {
   'footer.local':['Localidade no rodapé','texto',80], 'footer.quote':['Citação do rodapé','area',4000],
   'evento.data':['Data do evento','data',10], 'evento.hora':['Hora','hora',5],
   'evento.local':['Local','texto',120], 'evento.cidade':['Cidade / região','texto',80],
-  'evento.maps':['Ligação do Google Maps','texto',500],
+  // 'evento.maps' de propósito fora: a ligação do mapa é dado do evento e
+  // edita-se só na gestão dos noivos, não neste editor.
   'evento.whatsapp':['WhatsApp de contacto','texto',20],
 };
 // Campos extra que cada secção mostra, além dos que se selecionam na tela.
 const EXTRA = {
   'hero':['evento.data','evento.hora'],
-  'grande-dia':['evento.local','evento.cidade','evento.maps'],
+  // A ligação do Google Maps NÃO se edita aqui: é dado do evento, e muda-se só
+  // na área de gestão dos noivos (gestao.php). O editor mostra-a no convite,
+  // não a governa. Ver também CAMPOS e RECOMPOR, sem 'evento.maps'.
+  'grande-dia':['evento.local','evento.cidade'],
   'final':['footer.local','evento.whatsapp'],
 };
 // Listas editáveis, por secção

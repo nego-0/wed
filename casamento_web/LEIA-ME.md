@@ -259,9 +259,16 @@ se embute mapa nenhum na página: isso pedia uma chave da API do Google e rede
 aberta; abrir o Maps numa aba e trazer de lá a ligação faz o mesmo e funciona
 em qualquer lado (ver `assets/maps-campo.js`, que também sabe extrair as
 coordenadas dos vários feitios de endereço do Maps: `@lat,lng`, `!3d…!4d…`,
-`?q=lat,lng`). No convite digital, um local com ligação passa a ser um **«ver no
-mapa»** clicável, marcado com o **pino de localização** (o ícone do Google Maps);
-sem ligação, fica texto simples.
+`?q=lat,lng`). No convite digital, um local com ligação passa a ser uma
+**pastilha «ver no mapa»** com o **pino de localização** (o ícone do Google
+Maps) — o mesmo feitio do botão *Local do evento* da receção, à escala das
+cerimónias; sem ligação, fica texto simples.
+
+As ligações são **dado do evento**, não desenho: mudam-se só onde o casamento
+se preenche (os três formulários acima), e **não nos editores**. O editor do
+convite digital mostra a ligação no convite mas deixou de a deixar editar — lá
+mexe-se no local e na cidade, a ligação do mapa é assunto da *Gestão*. É a mesma
+regra que separa o que a peça mostra do que é dado do casamento.
 
 O número de convidados é o teto da barra de capacidade do painel (era
 `MAX_LUGARES_TOTAL`, o mesmo 150 para toda a gente). As cerimónias só se
@@ -625,7 +632,7 @@ género devolve o papel a *Convidado*, que sem género não tem nome. **Só padr
 
 **Porta-chaves.** A página *Porta-chaves* apresenta a lembrança em acrílico de dois lados (45×60 mm) com o monograma do casal: a peça **inclina-se com o cursor** e **vira ao clique**. Pode escolher o **acabamento** (ouro sobre ébano, floresta, marfim) e a **quadra** do verso (8 à escolha, com as coordenadas do local por baixo). O monograma, o anel guilhoché e os ornamentos são gerados a partir das iniciais e da data do evento.
 
-**Personalizar o convite digital.** Na página *Convite digital* pode alterar **tudo** o que aparece no convite, sem tocar em código: nomes do casal, data e hora (que passam a valer também na página de confirmação), local e ligação do Google Maps, todos os textos (pode usar `{noiva}`/`{noivo}`, `**negrito**` e `*itálico*`), os capítulos da história, os momentos do cronograma e as regras do manual (com escolha de ícones), a visibilidade de secções inteiras (história, interlúdio, cronograma, manual), as **fotografias e a música** (enviadas do computador; as imagens são comprimidas automaticamente), a **paleta de cores** (4 paletas prontas + ajuste fino de cada cor; o QR acompanha) e os efeitos (pétalas, música automática). A pré-visualização ao lado atualiza ao guardar. Campos repostos ao valor original deixam de ocupar espaço na base de dados. Cada convite pode ainda ter uma **mensagem pessoal** (campo no editor de convites do painel).
+**Personalizar o convite digital.** Na página *Convite digital* pode alterar **tudo** o que aparece no convite, sem tocar em código: nomes do casal, data e hora (que passam a valer também na página de confirmação), local e cidade do evento, todos os textos (pode usar `{noiva}`/`{noivo}`, `**negrito**` e `*itálico*`), os capítulos da história, os momentos do cronograma e as regras do manual (com escolha de ícones), a visibilidade de secções inteiras (história, interlúdio, cronograma, manual), as **fotografias e a música** (enviadas do computador; as imagens são comprimidas automaticamente), a **paleta de cores** (4 paletas prontas + ajuste fino de cada cor; o QR acompanha) e os efeitos (pétalas, música automática). A pré-visualização ao lado atualiza ao guardar. Campos repostos ao valor original deixam de ocupar espaço na base de dados. Cada convite pode ainda ter uma **mensagem pessoal** (campo no editor de convites do painel).
 
 ---
 

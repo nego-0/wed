@@ -122,6 +122,14 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.evaluate(() => irCamada('grande-dia')); await p.waitForTimeout(900);
   ok(await p.locator('#props .cer-dentro').count() === 2,
      'as mesmas duas cerimónias aparecem no editor digital');
+  // A ligação do Google Maps NÃO se edita no editor: é dado do evento, muda-se
+  // na gestão dos noivos. O local e a cidade, esses, editam-se aqui.
+  const campos = await p.evaluate(() =>
+    [...document.querySelectorAll('#props [data-chave]')].map(e => e.dataset.chave));
+  ok(!campos.includes('evento.maps'),
+     'o editor digital já não deixa mudar a ligação do Google Maps');
+  ok(campos.includes('evento.local') && campos.includes('evento.cidade'),
+     'mas continua a editar o local e a cidade do evento');
   const tela = p.frameLocator('#tela');
   ok(await tela.locator('#grande-dia .cerimonias .cer').count() === 2,
      'e o convite passa a anunciá-las — antes só existiam no papel');
@@ -145,11 +153,12 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     'evento.civil_maps': 'https://maps.app.goo.gl/provaCer' } });
   const htmlConvite = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
-  const temElo = /class="cerimonias[^]*?<div class="l"><a href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^>]*>.*?Conservatória do Namibe<\/a>/.test(htmlConvite);
-  ok(temElo, 'a cerimónia com mapa mostra o local como ligação no convite');
-  // ...e com o pino de localização, para se ver à vista que aquilo abre no mapa.
-  const temPino = /class="cerimonias[^]*?<div class="l"><a [^>]*>\s*<svg class="pino"/.test(htmlConvite);
-  ok(temPino, 'a ligação leva o ícone de localização do Google Maps');
+  // A ligação é uma pastilha (.cer-mapa) — o mesmo feitio do botão do local do
+  // evento —, com o pino e o nome do local lá dentro.
+  const temElo = /class="cerimonias[^]*?<a class="cer-mapa" href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^]*?<span>Conservatória do Namibe<\/span>/.test(htmlConvite);
+  ok(temElo, 'a cerimónia com mapa mostra o local numa pastilha "ver no mapa"');
+  const temPino = /<a class="cer-mapa"[^>]*>\s*<svg class="pino"/.test(htmlConvite);
+  ok(temPino, 'a pastilha leva o ícone de localização do Google Maps');
   await api('defs_save', { defs: { 'evento.civil_maps': '' } });
   const semElo = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());

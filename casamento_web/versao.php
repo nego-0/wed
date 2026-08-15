@@ -293,6 +293,10 @@ function correcoesEsperadas(): array {
          'plataforma.php', 'id="n-civil-maps"'],
         ['O local com mapa leva o pino de localização no convite',
          'personalizacao.php', 'function iconePino('],
+        ['A ligação do mapa deixou de se editar no editor do convite digital',
+         'convite-editor.php', "'grande-dia':['evento.local','evento.cidade']"],
+        ['O local da cerimónia com mapa é uma pastilha, como o botão da receção',
+         'personalizacao.php', 'class="cer-mapa"'],
     ];
 }
 

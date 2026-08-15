@@ -199,10 +199,14 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .cerimonias h3{font-family:var(--f-sans);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px;font-weight:500}
 .cerimonias .h{font-family:var(--f-serif);font-size:26px;color:var(--ivory);line-height:1}
 .cerimonias .l{font-size:13px;line-height:1.6;color:var(--gold-pale);margin-top:6px}
-.cerimonias .l a{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px;
-  border-bottom:1px solid transparent;transition:border-color .18s,color .18s}
-.cerimonias .l a:hover{color:var(--ivory);border-bottom-color:var(--gold-soft)}
-.cerimonias .l a .pino{width:13px;height:13px;flex:none;color:var(--gold)}
+/* Com ligação, o local é uma pastilha de contorno com o pino — o mesmo feitio
+   do botão "Local do evento" da receção, à escala das cerimónias. */
+.cerimonias .l a.cer-mapa{display:inline-flex;align-items:center;gap:7px;margin-top:2px;
+  padding:7px 15px;border-radius:60px;border:1px solid var(--gold-soft);color:var(--gold-pale);
+  background:transparent;text-decoration:none;font-size:12px;line-height:1.3;letter-spacing:.02em;
+  transition:background .3s ease,transform .3s ease,border-color .3s ease}
+.cerimonias .l a.cer-mapa:hover{background:rgba(217,188,140,.12);border-color:var(--gold);transform:translateY(-2px)}
+.cerimonias .l a.cer-mapa .pino{width:14px;height:14px;flex:none;color:var(--gold)}
 #grande-dia .venue h3{font-family:var(--f-serif);font-weight:600;font-size:24px;color:var(--ivory);margin-bottom:8px;letter-spacing:.04em}
 #grande-dia .venue p{color:var(--gold-pale);font-size:15px;line-height:1.7;font-family:var(--f-serif);font-style:italic}
 .btn{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:15px 34px;border-radius:60px;text-decoration:none;font-size:12px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;transition:transform .35s ease,box-shadow .35s ease}

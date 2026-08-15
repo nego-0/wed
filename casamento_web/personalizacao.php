@@ -868,11 +868,12 @@ function cerimoniasHtml(array $defs): string {
         $maps  = trim((string)($defs['evento.'.$k.'_maps'] ?? ''));
         $localHtml = '';
         if ($local !== '') {
-            // Com ligação, o local é um "ver no mapa" com o pino de localização;
-            // sem ela, é texto simples. O pino diz, à vista, que aquilo se abre.
+            // Com ligação, o local é uma pastilha "ver no mapa" com o pino de
+            // localização — o mesmo feitio do botão da receção; sem ela, é texto
+            // simples. O pino diz, à vista, que aquilo se abre no mapa.
             $localHtml = $maps !== ''
-                ? '<div class="l"><a href="' . escP($maps) . '" target="_blank" rel="noopener" title="Ver no Google Maps">'
-                    . iconePino() . escP($local) . '</a></div>'
+                ? '<div class="l"><a class="cer-mapa" href="' . escP($maps) . '" target="_blank" rel="noopener" title="Ver no Google Maps">'
+                    . iconePino() . '<span>' . escP($local) . '</span></a></div>'
                 : '<div class="l">' . escP($local) . '</div>';
         }
         $out .= '<div class="cer"><h3>' . escP($defs['evento.'.$k.'_titulo']) . '</h3>'
