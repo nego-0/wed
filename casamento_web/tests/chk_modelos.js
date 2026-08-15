@@ -188,6 +188,25 @@ const entrar = async (ctx, u, p) => {
   // innerText devolve o texto RENDERIZADO, e as etiquetas são maiúsculas por CSS.
   ok(/por publicar/i.test(txt), 'e distingue os que ainda não estão publicados');
 
+  // As opções de um modelo abrem numa JANELA, e não dentro do cartão: um cartão
+  // da grelha tem ~260px, e a lista de casamentos espremida nessa coluna era
+  // ilegível — e esticava a linha inteira, desalinhando os cartões vizinhos.
+  const antesAlt = await admin.evaluate(() => document.documentElement.scrollHeight);
+  const algum = await admin.evaluate(() => +Object.keys(MODELOS)[0]);
+  await admin.evaluate((id) => quemVe(id), algum);
+  await admin.waitForTimeout(800);
+  const jan = await admin.evaluate(() => {
+    const o = document.getElementById('ov-modelo');
+    const corpo = document.getElementById('ov-corpo');
+    return { aberta: o.classList.contains('aberto'),
+             largura: Math.round(corpo.getBoundingClientRect().width),
+             alt: document.documentElement.scrollHeight };
+  });
+  ok(jan.aberta, 'as opções do modelo abrem numa janela própria');
+  ok(jan.largura > 400, `com largura para se ler (${jan.largura}px, e não a coluna do cartão)`);
+  ok(jan.alt === antesAlt, 'e a grelha dos modelos não se mexe por baixo dela');
+  await admin.evaluate(() => fechar('ov-modelo'));
+
   // ---------- 9. os modelos de origem da casa constam da lista ----------
   // O desenho que o sistema traz — o impresso e o digital — está na lista desde
   // o início, um por peça, sem o admin ter de o criar. (No fim, porque aplicar

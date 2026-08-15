@@ -345,7 +345,11 @@ modelo publicado que lhe seja destinado (de todos, ou dos escolhidos com ele
 entre eles); o cartão de cada modelo mostra o alcance à vista («todos os casais»
 ou «N casamentos»). Escolher «só os escolhidos» sem escolher ninguém não faz
 sentido — seria um modelo que ninguém vê, que já é o rascunho —, por isso
-normaliza-se de volta para «todos», e o painel avisa.
+normaliza-se de volta para «todos», e o painel avisa. As opções de um modelo (mudar o nome,
+quem o vê) abrem numa **janela** e não dentro do cartão: um cartão da grelha
+tem ~260 px de largura, e uma lista de casamentos com procura espremida nessa
+coluna era ilegível — além de esticar a linha inteira da grelha e desalinhar os
+cartões vizinhos.
 
 **O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
 e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um

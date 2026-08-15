@@ -309,6 +309,8 @@ function correcoesEsperadas(): array {
          'db.php', 'visibilidade dos modelos por casamento'],
         ['O admin escolhe quem vê cada modelo, no painel dos modelos',
          'modelos.php', 'function quemVe('],
+        ['As opções de um modelo abrem numa janela, e não espremidas no cartão',
+         'modelos.php', 'id="ov-modelo"'],
         ['O casal só vê e aplica os modelos que lhe são destinados',
          'api.php', "alcance='todos' OR id IN"],
     ];

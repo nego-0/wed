@@ -85,20 +85,26 @@ if ($aberto > 0) {
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.rascunho{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .et.alcance{ background:#fff; color:#6c7570; text-transform:none; letter-spacing:0; }
-  /* Painel "quem vê": as opções e a lista de casamentos. */
-  .editor-mod .op{ display:flex; align-items:center; gap:.45rem; font-size:.88rem; color:var(--text);
-                   text-transform:none; letter-spacing:0; cursor:pointer; }
-  .editor-mod .op input{ width:auto; margin:0; }
-  .editor-mod .lista-cas{ max-height:230px; overflow:auto; border:1px solid var(--line);
-                          border-radius:10px; padding:.5rem .6rem; display:flex; flex-direction:column; gap:.35rem; }
-  .editor-mod .cas-item{ padding:.15rem 0; }
+  /* Janela das opções de um modelo: as escolhas e a lista de casamentos.
+     Vive no modal (ver #ov-modelo), que tem largura para uma lista se ler. */
+  .modal-corpo .escolhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:.9rem; }
+  .modal-corpo .op{ display:flex; align-items:center; gap:.5rem; font-size:.92rem; color:var(--text);
+                    text-transform:none; letter-spacing:0; cursor:pointer; font-weight:400; }
+  .modal-corpo .op input{ width:auto; margin:0; accent-color:var(--forest); flex:none; }
+  .modal-corpo .lista-cas{ max-height:min(46vh,300px); overflow:auto; border:1px solid var(--line);
+                           border-radius:12px; padding:.5rem .7rem; display:flex; flex-direction:column; }
+  .modal-corpo .cas-item{ padding:.42rem .2rem; border-bottom:1px solid var(--line); }
+  .modal-corpo .cas-item:last-child{ border-bottom:0; }
+  .modal-corpo .cas-nome{ flex:1; min-width:0; }
+  .modal-corpo .cas-data{ color:#8a8f88; font-size:.82rem; }
+  .jan-fim{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.2rem;
+            border-top:1px solid var(--line); padding-top:1rem; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .aviso{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
           border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1rem; line-height:1.5; }
-  .editor-mod{ grid-column:1/-1; border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.8rem; }
   @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .mod{ grid-template-columns:auto 1fr; }
                             .mod .ac{ grid-column:1/-1; } }
 </style>
@@ -172,6 +178,20 @@ if ($aberto > 0) {
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- As opções de um modelo (mudar o nome, quem o vê) abrem AQUI, e não dentro
+     do cartão: um cartão da grelha tem ~260px de largura, e uma lista de
+     casamentos com procura espremida nessa coluna ficava ilegível — além de
+     esticar a linha inteira da grelha e desalinhar os cartões vizinhos. -->
+<div class="overlay" id="ov-modelo">
+  <div class="modal">
+    <div class="modal-topo">
+      <h3 id="ov-titulo">Modelo</h3>
+      <button class="fechar" onclick="fechar('ov-modelo')">&times;</button>
+    </div>
+    <div class="modal-corpo" id="ov-corpo"></div>
+  </div>
+</div>
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
@@ -249,7 +269,6 @@ async function carregar(){
             <button class="perigo" onclick="apagar(${m.id}, '${esc(m.nome)}')">Apagar</button>
           </span></span>
       </div>
-      <div class="editor-mod" id="ed-${m.id}" style="display:none"></div>
     </div>`;
   }).join('') + '</div>';
 }
@@ -294,33 +313,42 @@ async function criar(){
   carregar();
 }
 
-/** Abre o painel de baixo de um modelo num dado modo; se já estava aberto no
- *  mesmo modo, fecha-o (é o mesmo botão a alternar). Devolve o elemento, ou
- *  null quando só fechou. */
-function abrirPainel(id, modo){
-  const cx = $('ed-' + id);
+/** Abre a janela das opções de um modelo, com um título e um corpo. */
+function abrirModelo(titulo, html){
   document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
-  if (cx.style.display !== 'none' && cx.dataset.modo === modo){ cx.style.display = 'none'; return null; }
-  cx.dataset.modo = modo; cx.style.display = '';
-  return cx;
+  $('ov-titulo').textContent = titulo;
+  $('ov-corpo').innerHTML = html;
+  abrir('ov-modelo');
+  return $('ov-corpo');
 }
+function abrir(id){ $(id).classList.add('aberto'); }
+function fechar(id){ $(id).classList.remove('aberto'); }
+// Clicar no fundo fecha, como nas outras janelas da casa.
+document.addEventListener('click', e => {
+  const o = $('ov-modelo');
+  if (o && e.target === o) fechar('ov-modelo');
+});
+addEventListener('keydown', e => { if (e.key === 'Escape') fechar('ov-modelo'); });
 
 function editar(id){
-  const cx = abrirPainel(id, 'nome'); if (!cx) return;
   const m = MODELOS[id] || {};
-  cx.innerHTML = `
-    <div class="lf" style="grid-template-columns:2fr 3fr auto;margin:0">
-      <div><label>Nome</label><input type="text" id="e-nome-${id}" value="${esc(m.nome)}"></div>
-      <div><label>Descrição</label><input type="text" id="e-desc-${id}" value="${esc(m.descricao || '')}"></div>
-      <div><button class="btn btn-ouro btn-sm" onclick="guardar(${id})">Guardar</button></div>
-    </div>
-    <div class="dica" style="margin:.7rem 0 0">
+  abrirModelo('Mudar o nome', `
+    <div class="campo"><label for="e-nome-${id}">Nome</label>
+      <input type="text" id="e-nome-${id}" value="${esc(m.nome)}"></div>
+    <div class="campo"><label for="e-desc-${id}">Descrição</label>
+      <input type="text" id="e-desc-${id}" value="${esc(m.descricao || '')}"></div>
+    <div class="dica" style="margin:.2rem 0 1rem">
       ${TEM_CASAMENTO
         ? `<button class="btn btn-sm" onclick="recapturar(${id})">Trazer o desenho do casamento aberto</button>
-           <span style="margin-left:.5rem">Substitui o desenho guardado neste modelo pelo que o
-           casamento aberto mostra agora. Os casais que já o usaram não são tocados.</span>`
+           <div style="margin-top:.4rem">Substitui o desenho guardado neste modelo pelo que o
+           casamento aberto mostra agora. Os casais que já o usaram não são tocados.</div>`
         : 'Para trocar o desenho deste modelo, abra o casamento onde o desenhou.'}
-    </div>`;
+    </div>
+    <div class="jan-fim">
+      <button class="btn" onclick="fechar('ov-modelo')">Cancelar</button>
+      <button class="btn btn-ouro" onclick="guardar(${id})">Guardar</button>
+    </div>`);
+  $('e-nome-' + id).focus();
 }
 
 async function guardar(id, recapturar){
@@ -328,7 +356,7 @@ async function guardar(id, recapturar){
   const d = await api('modelo_editar', { method:'POST', body: JSON.stringify({
     id, nome: $('e-nome-' + id).value.trim(), descricao: $('e-desc-' + id).value.trim(),
     visivel: +m.visivel ? 1 : 0, recapturar: !!recapturar }) });
-  if (d && d.success){ toast('Modelo guardado.'); carregar(); }
+  if (d && d.success){ fechar('ov-modelo'); toast('Modelo guardado.'); carregar(); }
 }
 async function recapturar(id){
   if (!confirm('Trazer o desenho do casamento aberto para este modelo?\n\n'
@@ -344,18 +372,17 @@ async function publicar(id, visivel){
 
 /** Quem vê este modelo: todos os casais, ou só os casamentos escolhidos. */
 async function quemVe(id){
-  const cx = abrirPainel(id, 'vis'); if (!cx) return;
   const m = MODELOS[id] || {};
-  cx.innerHTML = '<div class="dica" style="margin:0">A carregar casamentos…</div>';
+  abrirModelo('Quem vê «' + m.nome + '»', '<div class="dica" style="margin:0">A carregar casamentos…</div>');
   const d = await api('casamento_lista&estado=ativo');
   const cas = (d && d.casamentos) || [];
   const sel = new Set((m.casamentos || []).map(Number));
   const escolhidos = m.alcance === 'selecionados';
   const aviso = +m.visivel ? '' :
-    `<div class="dica" style="margin:0 0 .6rem;color:var(--gold)">Este modelo está <b>por publicar</b> —
-     ninguém o vê enquanto não carregar em «Publicar». Aqui escolhe-se <b>quem</b> o verá depois.</div>`;
-  cx.innerHTML = aviso + `
-    <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:.5rem">
+    `<div class="aviso">Este modelo está <b>por publicar</b> — ninguém o vê enquanto não carregar
+     em «Publicar». Aqui escolhe-se <b>quem</b> o verá depois.</div>`;
+  $('ov-corpo').innerHTML = aviso + `
+    <div class="escolhas">
       <label class="op"><input type="radio" name="alc-${id}" value="todos" ${escolhidos?'':'checked'}
              onchange="alternarAlcance(${id})"> Todos os casais</label>
       <label class="op"><input type="radio" name="alc-${id}" value="selecionados" ${escolhidos?'checked':''}
@@ -367,13 +394,15 @@ async function quemVe(id){
       <div class="lista-cas">
         ${cas.length ? cas.map(c => `<label class="op cas-item" data-nome="${esc((c.nome||'').toLowerCase())}">
             <input type="checkbox" value="${c.id}" ${sel.has(+c.id)?'checked':''}>
-            ${esc(c.nome)} <span class="dica" style="margin:0">${esc(c.data_evento ? c.data_evento.slice(0,10) : '')}</span>
+            <span class="cas-nome">${esc(c.nome)}</span>
+            <span class="cas-data">${esc(c.data_evento ? c.data_evento.slice(0,10) : '')}</span>
           </label>`).join('')
           : '<div class="dica" style="margin:0">Não há casamentos ativos para escolher.</div>'}
       </div>
     </div>
-    <div style="margin-top:.7rem">
-      <button class="btn btn-ouro btn-sm" onclick="guardarVisibilidade(${id})">Guardar</button>
+    <div class="jan-fim">
+      <button class="btn" onclick="fechar('ov-modelo')">Cancelar</button>
+      <button class="btn btn-ouro" onclick="guardarVisibilidade(${id})">Guardar</button>
     </div>`;
 }
 function alternarAlcance(id){
@@ -394,6 +423,7 @@ async function guardarVisibilidade(id){
   }
   const d = await api('modelo_visibilidade', { method:'POST', body: JSON.stringify({ id, alcance, casamentos }) });
   if (d && d.success){
+    fechar('ov-modelo');
     toast(d.alcance === 'todos' ? 'Passa a ver-se em todos os casais.'
                                 : `Passa a ver-se em ${d.casamentos.length} casamento(s).`);
     carregar();
