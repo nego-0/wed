@@ -316,11 +316,23 @@ um modelo da casa era pedir o que não é preciso, e arriscar deixar lá o rascu
 Uma tira no topo do editor não deixa esquecer que o que se está a desenhar é da
 casa e não de um casal.
 
-Aplicar um modelo **copia-o** para as definições do casamento. A partir daí o
-desenho é do casal: mexer no modelo depois disso não lhe toca, e apagar o
-modelo também não. É a diferença entre dar uma receita e cozinhar em casa
-alheia — e é o que evita que um casal acorde com o convite mudado porque a casa
-mexeu numa coisa dela.
+Aplicar um modelo é **ficar com ele**: parte-se do desenho de origem da peça e
+põe-se o modelo por cima, para o casal ficar exatamente com o modelo e não com
+uma mistura do que tinha. A partir daí o desenho é do casal: mexer no modelo
+depois disso não lhe toca, e apagar o modelo também não. É a diferença entre dar
+uma receita e cozinhar em casa alheia — e é o que evita que um casal acorde com
+o convite mudado porque a casa mexeu numa coisa dela.
+
+**Os modelos de origem da casa** (esquema v15). A lista começava vazia: o
+desenho que o sistema traz — o convite impresso e o digital tal como são de
+origem — não constava dela, e para o ter o admin tinha de fazer um «novo modelo
+do zero». Passam a estar lá desde o início, um por peça («Convite impresso
+(modelo da casa)» e «Convite digital (modelo da casa)»), publicados. Guardam
+`defs` vazio de propósito: um modelo assenta no desenho de origem e guarda só o
+que muda, por isso um modelo vazio **é** o desenho de origem, e acompanha-o se
+ele mudar. Aplicá-los devolve a peça à origem, mesmo já customizada — que é o
+que se espera de «aplicar o modelo da casa». São normais no resto: o admin pode
+desenhá-los (e aí passam a um modelo seu), publicá-los ou apagá-los.
 
 **O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
 e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um

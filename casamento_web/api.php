@@ -2341,8 +2341,14 @@ if ($acao === 'modelo_aplicar') {
     // a logística que o admin meteu no modelo é só para o desenhar; aplicar um
     // modelo do cartão nunca reescreve as cerimónias que o casal já marcou.
     $permitidas = array_flip(chavesDoAmbito($m['ambito']));
-    $defs = [];
-    foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+    $doModelo = [];
+    foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $doModelo[$k] = $v;
+    // Aplicar um modelo é FICAR com ele, não misturá-lo com o que estava:
+    // parte-se do desenho de origem do âmbito e põe-se o modelo por cima. O que
+    // o casal tinha à mão e o modelo não traz volta à origem, em vez de ficar
+    // pelo meio. Um modelo vazio — o de origem da casa — devolve a peça à
+    // origem, que é o que se espera de "aplicar o modelo da casa".
+    $defs = array_merge(padraoAmbito($m['ambito']), $doModelo);
     $r = guardarDefinicoes($conn, $defs);
     // Deixa de haver versão em vigor: o que a peça mostra agora veio de fora.
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");

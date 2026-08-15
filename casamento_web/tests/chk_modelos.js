@@ -81,7 +81,11 @@ const entrar = async (ctx, u, p) => {
   // prova), mas são de EXEMPLO: aplicar o modelo aplica o desenho e NÃO reescreve
   // as cerimónias que o casal já tenha. É o pedido — o recurso em todos os
   // editores, incluindo o do admin —, sem apagar dados de ninguém.
+  // modelo_defs GRAVA o conjunto que recebe: mantém-se o desenho do cartão
+  // (cartao.abertura) além das cerimónias, senão apagava-se o que a secção 1
+  // lhe pôs — e a secção 6 conta com ele no ficheiro exportado.
   await api('modelo_defs&id=' + modCartao.id, { defs: {
+    'cartao.abertura': 'Cartao do modelo ' + marca,
     'evento.civil_hora': '11:45', 'evento.civil_local': 'Sala do Modelo',
     'evento.religiosa_hora': '16:00', 'evento.religiosa_local': 'Igreja do Modelo' } });
   const fichCer = await admin._baixar('modelos_exportar');
@@ -162,6 +166,23 @@ const entrar = async (ctx, u, p) => {
   ok(txt.includes('ZZ Modelo impresso ' + marca), 'a página lista os modelos');
   // innerText devolve o texto RENDERIZADO, e as etiquetas são maiúsculas por CSS.
   ok(/por publicar/i.test(txt), 'e distingue os que ainda não estão publicados');
+
+  // ---------- 9. os modelos de origem da casa constam da lista ----------
+  // O desenho que o sistema traz — o impresso e o digital — está na lista desde
+  // o início, um por peça, sem o admin ter de o criar. (No fim, porque aplicar
+  // o de origem mexe no casal, e as secções acima contam com o que ele tinha.)
+  const listaCasa = (await api('modelo_lista')).modelos || [];
+  const daCasa = listaCasa.filter(m => m.criado_por === 'sistema');
+  ok(daCasa.some(m => m.ambito === 'impresso') && daCasa.some(m => m.ambito === 'digital'),
+     'a lista traz o modelo de origem do impresso e do digital (' + daCasa.map(m => m.ambito).join(', ') + ')');
+  ok(daCasa.every(m => +m.visivel === 1), 'e vêm publicados, prontos a usar');
+  const origDig = daCasa.find(m => m.ambito === 'digital');
+  await api('casamento_abrir&id=' + casal.id);
+  await api('defs_save', { defs: { 'textos.kicker': 'CUSTOM ' + marca } });
+  await api('modelo_aplicar&id=' + origDig.id);
+  const voltou = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(!voltou['textos.kicker'],
+     'aplicar o modelo de origem devolve a peça ao desenho da casa, mesmo já customizada');
 
   // ---------- limpeza ----------
   const todos = (await api('modelo_lista')).modelos || [];

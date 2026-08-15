@@ -297,6 +297,12 @@ function correcoesEsperadas(): array {
          'convite-editor.php', "'grande-dia':['evento.local','evento.cidade']"],
         ['O local da cerimónia com mapa é uma pastilha, como o botão da receção',
          'personalizacao.php', 'class="cer-mapa"'],
+
+        // ---- Os modelos de origem da casa (esquema v15) ----
+        ['O impresso e o digital de origem constam da lista de modelos',
+         'db.php', 'os modelos de origem da casa'],
+        ['Aplicar um modelo é ficar com ele — o de origem devolve a peça à origem',
+         'api.php', 'Aplicar um modelo é FICAR com ele'],
     ];
 }
 

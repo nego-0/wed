@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 14;
+const ESQUEMA_VERSAO = 15;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -584,6 +584,30 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         @$conn->query("UPDATE IGNORE {$P}definicoes SET chave='evento.civil_titulo'
                         WHERE chave='cartao.civil_titulo'");
         @$conn->query("DELETE FROM {$P}definicoes WHERE chave='cartao.civil_titulo'");
+    }
+
+    // v15 — os modelos de origem da casa. A lista de modelos começava vazia, e
+    // o desenho que o sistema traz (o convite impresso e o digital tal como são
+    // de origem) não constava dela: para o ter, o admin tinha de fazer um
+    // "novo modelo do zero". Passa a estar lá desde o início, um por peça.
+    //
+    // defs vazio, de propósito: um modelo assenta sobre o desenho de origem e
+    // guarda só o que muda — sem nada guardado, é o próprio desenho de origem,
+    // e acompanha-o se ele mudar. Marcados com criado_por='sistema' para não os
+    // duplicar; se o admin os apagar, é escolha dele e não voltam.
+    if ($versaoAtual < 15) {
+        foreach ([['impresso', 'Convite impresso (modelo da casa)'],
+                  ['digital',  'Convite digital (modelo da casa)']] as [$amb, $nome]) {
+            $existe = @$conn->query("SELECT 1 FROM {$P}modelos
+                                     WHERE ambito='" . $conn->real_escape_string($amb) . "'
+                                     AND criado_por='sistema' LIMIT 1");
+            if ($existe && $existe->num_rows) continue;
+            $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por)
+                                  VALUES (?, ?, ?, '{}', 1, 'sistema')");
+            $desc = 'O desenho que o sistema traz de origem — o ponto de partida da casa.';
+            $st->bind_param('sss', $nome, $desc, $amb);
+            @$st->execute();
+        }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
