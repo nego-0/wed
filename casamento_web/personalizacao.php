@@ -441,11 +441,50 @@ function podeSerVazio(string $chave): bool {
 }
 
 /**
+ * As categorias da galeria: a secção onde uma fotografia foi feita para entrar.
+ *
+ * 'sem' é uma resposta legítima — o admin pode guardar uma fotografia sem lhe
+ * decidir o lugar já, e decidir depois. É o que faz da galeria um acervo e não
+ * quatro gavetas.
+ */
+function categoriasGaleria(): array {
+    return ['capa'       => 'Capa',
+            'historia'   => 'História',
+            'interludio' => 'Interlúdio',
+            'acesso'     => 'Acesso (QR)',
+            'sem'        => 'Sem categoria'];
+}
+
+/** A chave de definição de cada categoria (e o contrário). */
+function chaveDaCategoria(string $cat): ?string {
+    return ['capa' => 'media.hero', 'historia' => 'media.historia',
+            'interludio' => 'media.interludio', 'acesso' => 'media.acesso'][$cat] ?? null;
+}
+
+function categoriaDaChave(string $chave): string {
+    return array_flip(['capa' => 'media.hero', 'historia' => 'media.historia',
+                       'interludio' => 'media.interludio',
+                       'acesso' => 'media.acesso'])[$chave] ?? 'sem';
+}
+
+/**
+ * A categoria de um ficheiro enviado, lida do prefixo do nome.
+ *
+ * 'hero-' é aceite por compatibilidade: foi assim que os primeiros envios foram
+ * gravados, antes de a galeria ter categorias.
+ */
+function categoriaDoFicheiro(string $nome): string {
+    $pre = strtok($nome, '-');
+    if ($pre === 'hero') return 'capa';
+    return isset(categoriasGaleria()[$pre]) ? $pre : 'sem';
+}
+
+/**
  * A galeria de fotografias que a casa traz para os modelos.
  *
  * São do Pexels (licença livre, uso comercial, sem atribuição obrigatória) e
- * vêm já recortadas para a moldura de cada secção — por isso quem escolhe uma
- * fica com o enquadramento certo, sem ter de o acertar à mão.
+ * vêm já recortadas para a moldura da sua categoria — por isso quem escolhe
+ * uma fica com o enquadramento certo, sem ter de o acertar à mão.
  *
  * O acervo é variado de propósito, e com mais casais de pele escura do que
  * qualquer outra coisa: é quem este sistema serve. A proveniência de cada
@@ -453,80 +492,67 @@ function podeSerVazio(string $chave): bool {
  * da fotografia no Pexels.
  */
 function galeriaExemplo(): array {
-    return [
-        'media.hero' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
-            'capa-34371787.jpg' => 'Jardim ao fim da tarde',
-            'capa-31877241.jpg' => 'Fato branco, palmeiras',
-            'capa-35845533.jpg' => 'Traje tradicional, azul e ouro',
-            'capa-38739043.jpg' => 'Traje tradicional, estúdio',
-            'capa-35069916.jpg' => 'Casamento indiano, ao ar livre',
-            'capa-29237392.jpg' => 'Abraço em jardim',
-        ]],
-        'media.historia' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
-            'historia-18706408.jpg' => 'A aliança a ser posta',
-            'historia-30268255.jpg' => 'Mãos, luz quente',
-            'historia-30008469.jpg' => 'A aliança sobre o vestido',
-            'historia-27463225.jpg' => 'Mãos pousadas, preto e branco',
-            'historia-38147801.jpg' => 'Pulseiras e hena',
-            'historia-28588976.jpg' => 'Mãos dadas, alianças',
-        ]],
-        'media.interludio' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
-            'interludio-30679260.jpg' => 'Testa com testa',
-            'interludio-37828095.jpg' => 'Mãos que se procuram',
-            'interludio-31673125.jpg' => 'Penumbra, a aliança',
-            'interludio-37045023.jpg' => 'Guirlandas',
-            'interludio-12153956.jpg' => 'Turbante e sorriso',
-            'interludio-31953140.jpg' => 'Interior amplo',
-        ]],
-        'media.acesso' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
-            'acesso-32895248.jpg' => 'Sob o véu',
-            'acesso-29747608.jpg' => 'Exterior, tons de terra',
-            'acesso-26711184.jpg' => 'Verde, testa com testa',
-            'acesso-38708859.jpg' => 'Riso à entrada',
-            'acesso-36248917.jpg' => 'Mandapa florido',
-            'acesso-36297030.jpg' => 'Pátio histórico',
-        ]],
+    $itens = [
+        'capa-34371787.jpg' => 'Jardim ao fim da tarde',
+        'capa-31877241.jpg' => 'Fato branco, palmeiras',
+        'capa-35845533.jpg' => 'Traje tradicional, azul e ouro',
+        'capa-38739043.jpg' => 'Traje tradicional, estúdio',
+        'capa-35069916.jpg' => 'Casamento indiano, ao ar livre',
+        'capa-29237392.jpg' => 'Abraço em jardim',
+        'historia-18706408.jpg' => 'A aliança a ser posta',
+        'historia-30268255.jpg' => 'Mãos, luz quente',
+        'historia-30008469.jpg' => 'A aliança sobre o vestido',
+        'historia-27463225.jpg' => 'Mãos pousadas, preto e branco',
+        'historia-38147801.jpg' => 'Pulseiras e hena',
+        'historia-28588976.jpg' => 'Mãos dadas, alianças',
+        'interludio-30679260.jpg' => 'Testa com testa',
+        'interludio-37828095.jpg' => 'Mãos que se procuram',
+        'interludio-31673125.jpg' => 'Penumbra, a aliança',
+        'interludio-37045023.jpg' => 'Guirlandas',
+        'interludio-12153956.jpg' => 'Turbante e sorriso',
+        'interludio-31953140.jpg' => 'Interior amplo',
+        'acesso-32895248.jpg' => 'Sob o véu',
+        'acesso-29747608.jpg' => 'Exterior, tons de terra',
+        'acesso-26711184.jpg' => 'Verde, testa com testa',
+        'acesso-38708859.jpg' => 'Riso à entrada',
+        'acesso-36248917.jpg' => 'Mandapa florido',
+        'acesso-36297030.jpg' => 'Pátio histórico',
     ];
-}
-
-/** A que secção pertence um ficheiro enviado, pelo prefixo do nome. */
-function prefixoGaleria(string $chave): string {
-    return str_replace('media.', '', $chave);
-}
-
-/**
- * A galeria de uma secção: as fotografias que a casa traz MAIS as que o admin
- * enviou.
- *
- * As enviadas ficam — não substituem a anterior. Uma imagem de exemplo não é
- * uma definição que se troca, é um acervo que cresce: quem prepara vários
- * modelos quer poder voltar atrás e usar noutro a que já tinha enviado.
- */
-function galeriaDaSeccao(string $chave): array {
-    $casa = galeriaExemplo()[$chave] ?? null;
     $out = [];
-    if ($casa) foreach ($casa['itens'] as $f => $legenda) {
-        if (is_file(__DIR__ . '/' . $casa['pasta'] . $f)) {
-            $out[] = ['src' => $casa['pasta'] . $f, 'nome' => $legenda, 'da_casa' => true];
-        }
-    }
-    // As enviadas pelo admin, da mais recente para a mais antiga.
-    $dir = __DIR__ . '/assets/convite/exemplo';
-    $pre = prefixoGaleria($chave) . '-';
-    $enviadas = is_dir($dir) ? (glob("$dir/$pre*") ?: []) : [];
-    usort($enviadas, fn($a, $b) => filemtime($b) <=> filemtime($a));
-    foreach ($enviadas as $caminho) {
-        $out[] = ['src'  => 'assets/convite/exemplo/' . basename($caminho),
-                  'nome' => 'Enviada a ' . date('j/n/Y', filemtime($caminho)),
-                  'da_casa' => false];
+    foreach ($itens as $f => $nome) {
+        $out[] = ['ficheiro' => $f, 'nome' => $nome, 'categoria' => categoriaDoFicheiro($f)];
     }
     return $out;
 }
 
-/** A galeria toda, secção a secção. */
+const GALERIA_CASA = 'assets/convite/galeria/';
+const GALERIA_ENVIADAS = 'assets/convite/exemplo/';
+
+/**
+ * A galeria inteira: as fotografias que a casa traz MAIS as que o admin enviou,
+ * numa lista só, cada uma com a sua categoria.
+ *
+ * Uma lista só, e não quatro: uma fotografia enviada para o interlúdio pode
+ * servir a capa, e quatro gavetas fechadas escondiam-na. As categorias servem
+ * para arrumar e filtrar, não para separar.
+ */
 function galeriaCompleta(): array {
     $out = [];
-    foreach (array_keys(galeriaExemplo()) as $chave) $out[$chave] = galeriaDaSeccao($chave);
+    foreach (galeriaExemplo() as $it) {
+        if (is_file(__DIR__ . '/' . GALERIA_CASA . $it['ficheiro'])) {
+            $out[] = ['src' => GALERIA_CASA . $it['ficheiro'], 'nome' => $it['nome'],
+                      'categoria' => $it['categoria'], 'da_casa' => true];
+        }
+    }
+    $dir = __DIR__ . '/' . rtrim(GALERIA_ENVIADAS, '/');
+    $enviadas = is_dir($dir) ? (glob("$dir/*.{jpg,jpeg,png,webp,svg}", GLOB_BRACE) ?: []) : [];
+    usort($enviadas, fn($a, $b) => filemtime($b) <=> filemtime($a));
+    foreach ($enviadas as $caminho) {
+        $nome = basename($caminho);
+        $out[] = ['src' => GALERIA_ENVIADAS . $nome,
+                  'nome' => 'Enviada a ' . date('j/n/Y', filemtime($caminho)),
+                  'categoria' => categoriaDoFicheiro($nome), 'da_casa' => false];
+    }
     return $out;
 }
 

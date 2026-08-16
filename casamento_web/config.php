@@ -141,6 +141,7 @@ function acoesDaPlataforma(): array {
             'utilizador_estado','utilizador_repor_senha','acesso_tirar_de','suporte_sair',
             'modelo_criar','modelo_editar','modelo_defs','modelo_apagar','modelo_visibilidade',
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
+            'modelo_exemplo_categoria',
             'modelos_importar'];
 }
 

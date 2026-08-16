@@ -143,11 +143,18 @@ if ($aberto > 0) {
   .modal-corpo .gal-esc{ display:block; width:100%; padding:0; border:0; background:none;
                          cursor:pointer; font-family:var(--sans); text-align:left; }
   .modal-corpo .gal-i img{ display:block; width:100%; aspect-ratio:16/10; object-fit:cover; }
-  .modal-corpo .gal-i span{ display:block; padding:.34rem .5rem; font-size:.74rem; color:#6c7570; }
-  .modal-corpo .gal-et{ position:absolute; left:.35rem; top:.35rem; font-style:normal;
-                        font-size:.64rem; text-transform:uppercase; letter-spacing:.05em;
-                        background:rgba(255,255,255,.9); color:#6c7570; border-radius:50px;
-                        padding:.08rem .45rem; }
+  .modal-corpo .gal-pe{ padding:.34rem .45rem; }
+  .modal-corpo .gal-nm{ display:block; font-size:.73rem; color:#6c7570;
+                        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .modal-corpo .gal-pe select{ margin-top:.25rem; padding:.2rem .3rem; font-size:.74rem; }
+  .modal-corpo .gal-et{ display:block; margin-top:.15rem; font-style:normal; font-size:.68rem;
+                        color:#a8ada6; }
+  /* Os separadores por categoria, com a conta de cada uma: numa biblioteca que
+     cresce, saber quantas ha antes de abrir a aba poupa o clique. */
+  .modal-corpo .gal-abas{ display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:.7rem; }
+  .modal-corpo .gal-abas .chip b{ font-weight:600; opacity:.6; margin-left:.15rem; }
+  .modal-corpo .gal-env{ display:grid; grid-template-columns:1fr auto auto; gap:.5rem;
+                         align-items:center; }
   .modal-corpo .gal-x{ position:absolute; right:.3rem; top:.3rem; width:24px; height:24px;
                        border:0; border-radius:50%; background:rgba(255,255,255,.92);
                        color:var(--danger); font-size:1rem; line-height:1; cursor:pointer;
@@ -220,6 +227,7 @@ if ($aberto > 0) {
     </div>
     <div id="ex-corpo"><div class="dica" style="margin:0">A carregar…</div></div>
     <div class="jan-fim">
+      <button class="btn" onclick="abrirGaleria()">Gerir a galeria</button>
       <button class="btn" onclick="exemploFabrica()">Repor os de fábrica</button>
       <button class="btn btn-ouro" onclick="guardarExemplo()">Guardar</button>
     </div>
@@ -550,13 +558,16 @@ const EX_GRUPOS = [
 const EX_CHAVES = EX_GRUPOS.flatMap(g =>
   (g.campos || []).map(c => c.k)
     .concat((g.imagens || []).flatMap(i => i.enq ? [i.k, i.enq] : [i.k])));
-let EX_FABRICA = {}, EX_GALERIA = {}, EX_ATUAL = {}, EX_DIM = {};
+let EX_FABRICA = {}, EX_GALERIA = [], EX_ATUAL = {}, EX_DIM = {}, EX_CATEGORIAS = {};
+const EX_CAT_DA_CHAVE = { 'media.hero':'capa', 'media.historia':'historia',
+                          'media.interludio':'interludio', 'media.acesso':'acesso' };
 
 async function carregarExemplo(soDados){
   const d = await api('modelo_exemplo');
   if (!d || !d.success) return;
   EX_FABRICA = d.fabrica || {};
-  EX_GALERIA = d.galeria || {};
+  EX_GALERIA = d.galeria || [];
+  EX_CATEGORIAS = d.categorias || {};
   EX_ATUAL = d.exemplo || {};
   EX_DIM = {};
   EX_GRUPOS.forEach(g => (g.imagens || []).forEach(i => EX_DIM[i.k] = i.dim || ''));
@@ -595,7 +606,7 @@ function cartaoImagem(i, ex){
           style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom / 100})"></div>
      <div class="nm">${i.r}</div>
      <div class="med">${i.dim || ''}</div>
-     <button class="btn btn-gal" onclick="abrirGaleria('${i.k}','${i.r}')">Galeria da casa</button>
+     <button class="btn btn-gal" onclick="abrirGaleria('${i.k}','${i.r}')">Galeria</button>
      <input type="file" accept="image/*,.svg" onchange="enviarExemplo('${i.k}', this)">
      ${i.enq ? `<div class="enq" data-alvo="ex-img-${i.k}">
         ${[['x','X'],['y','Y'],['zoom','Zoom']].map(([c, r]) => `<div><span>${r}</span>
@@ -614,76 +625,108 @@ function verEnq(chaveEnq, idImg){
 
 /* A galeria da casa: fotografias que ja vem recortadas para a moldura da
    seccao, e por isso entram sem ser preciso acertar o enquadramento. */
-let GAL_CHAVE = '', GAL_ROTULO = '';
+let GAL_CHAVE = '', GAL_ROTULO = '', GAL_ABA = 'todas';
 
+/* A galeria abre de dois sítios: de uma imagem do painel (e aí escolher aplica
+   àquela secção) ou do botão "Gerir a galeria" (e aí é só arrumar). Mostra
+   sempre TUDO, com separadores por categoria — uma fotografia enviada para o
+   interlúdio pode muito bem servir a capa. */
 function abrirGaleria(chave, rotulo){
-  GAL_CHAVE = chave; GAL_ROTULO = rotulo;
-  abrirModelo('Galeria · ' + rotulo, '');
+  GAL_CHAVE = chave || ''; GAL_ROTULO = rotulo || '';
+  GAL_ABA = chave ? (EX_CAT_DA_CHAVE[chave] || 'todas') : 'todas';
+  abrirModelo(chave ? 'Galeria · escolher para ' + rotulo : 'Galeria de fotografias', '');
   pintarGaleria();
 }
 
+function contarCat(cat){
+  return (EX_GALERIA || []).filter(f => cat === 'todas' || f.categoria === cat).length;
+}
+
 function pintarGaleria(){
-  const fotos = EX_GALERIA[GAL_CHAVE] || [];
-  const emUso = (EX_ATUAL || {})[GAL_CHAVE] || '';
+  const cats = EX_CATEGORIAS || {};
+  const abas = [['todas', 'Todas']].concat(Object.keys(cats).map(c => [c, cats[c]]));
+  const fotos = (EX_GALERIA || []).filter(f => GAL_ABA === 'todas' || f.categoria === GAL_ABA);
+  const usadas = Object.values(EX_ATUAL || {});
+  const opcCat = c => Object.keys(cats)
+      .map(k => `<option value="${k}"${k === c ? ' selected' : ''}>${esc(cats[k])}</option>`).join('');
+
   $('ov-corpo').innerHTML = `
-    <div class="dica" style="margin:0 0 .8rem">As da casa vêm já recortadas para esta secção.
-      Pode acrescentar as suas: ficam aqui para usar em qualquer modelo, e só saem se as
-      apagar. Escolher uma centra o enquadramento.</div>
+    <div class="dica" style="margin:0 0 .7rem">${GAL_CHAVE
+      ? 'Toque numa fotografia para a pôr em <b>' + esc(GAL_ROTULO) + '</b>. As da casa vêm '
+        + 'recortadas para a sua categoria; escolher uma centra o enquadramento.'
+      : 'Todas as fotografias que a casa traz e as que enviou. Aqui arruma-as por categoria '
+        + 'e apaga as suas; para as usar, abra a galeria a partir da imagem que quer trocar.'}</div>
+    <div class="gal-abas">${abas.map(([c, r]) => `
+      <button class="chip${GAL_ABA === c ? ' on' : ''}" onclick="mudarAba('${c}')">
+        ${esc(r)} <b>${contarCat(c)}</b></button>`).join('')}</div>
     <div class="gal">${fotos.map(f => `
-      <div class="gal-i${f.src === emUso ? ' em-uso' : ''}">
-        <button class="gal-esc" onclick="escolherDaGaleria('${esc(f.src)}')" title="${esc(f.nome)}">
-          <img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy">
-          <span>${esc(f.nome)}</span></button>
-        ${f.da_casa ? '<em class="gal-et">da casa</em>'
-                    : `<button class="gal-x" title="Apagar esta imagem"
-                         onclick="apagarDaGaleria('${esc(f.src)}')">&times;</button>`}
-      </div>`).join('') || '<div class="dica" style="margin:0">Ainda não há nada aqui.</div>'}</div>
+      <div class="gal-i${usadas.includes(f.src) ? ' em-uso' : ''}">
+        ${GAL_CHAVE
+          ? `<button class="gal-esc" onclick="escolherDaGaleria('${esc(f.src)}')" title="Usar em ${esc(GAL_ROTULO)}">
+               <img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy"></button>`
+          : `<div class="gal-esc"><img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy"></div>`}
+        <div class="gal-pe">
+          <span class="gal-nm">${esc(f.nome)}</span>
+          ${f.da_casa
+            ? `<em class="gal-et">${esc(cats[f.categoria] || f.categoria)} · da casa</em>`
+            : `<select onchange="mudarCategoria('${esc(f.src)}', this.value)">${opcCat(f.categoria)}</select>`}
+        </div>
+        ${f.da_casa ? '' : `<button class="gal-x" title="Apagar esta fotografia"
+                              onclick="apagarDaGaleria('${esc(f.src)}')">&times;</button>`}
+      </div>`).join('') || '<div class="dica" style="margin:0">Nada nesta categoria.</div>'}</div>
     <div class="gal-mais">
-      <label for="gal-env">Acrescentar uma fotografia sua</label>
-      <input type="file" id="gal-env" accept="image/*,.svg" onchange="enviarParaGaleria(this)">
-      <div class="med">${(EX_DIM[GAL_CHAVE] || '')}</div>
+      <label for="gal-env">Acrescentar uma fotografia</label>
+      <div class="gal-env">
+        <input type="file" id="gal-env" accept="image/*,.svg">
+        <select id="gal-env-cat">${opcCat(GAL_ABA === 'todas' ? 'sem' : GAL_ABA)}</select>
+        <button class="btn btn-ouro" onclick="enviarParaGaleria()">Enviar</button>
+      </div>
+      <div class="med">A categoria diz para que secção a fotografia foi feita —
+        «sem categoria» guarda-a à mesma, para decidir depois.</div>
     </div>
     <div class="jan-fim"><button class="btn" onclick="fechar('ov-modelo')">Fechar</button></div>`;
 }
 
-/** Envia uma fotografia do admin: entra na galeria E passa a ser a que está em vigor. */
-async function enviarParaGaleria(el){
-  const f = el.files[0]; if (!f) return;
-  const fd = new FormData(); fd.append('chave', GAL_CHAVE); fd.append('ficheiro', f);
+function mudarAba(c){ GAL_ABA = c; pintarGaleria(); }
+
+/** Envia uma fotografia para a galeria, na categoria escolhida. */
+async function enviarParaGaleria(){
+  const el = $('gal-env'), f = el && el.files[0];
+  if (!f) return toast('Escolha o ficheiro primeiro.', true);
+  const fd = new FormData();
+  fd.append('ficheiro', f);
+  fd.append('categoria', $('gal-env-cat').value);
+  // Só entra em vigor se a galeria tiver sido aberta a partir de uma secção E a
+  // categoria escolhida for a dela; senão é só acervo.
+  if (GAL_CHAVE && EX_CAT_DA_CHAVE[GAL_CHAVE] === $('gal-env-cat').value) fd.append('chave', GAL_CHAVE);
   const d = await api('modelo_exemplo_upload', { method:'POST', body: fd });
   el.value = '';
   if (!d || !d.success) return;
-  EX_GALERIA[GAL_CHAVE] = d.galeria || EX_GALERIA[GAL_CHAVE];
-  await carregarExemplo(true);
-  pintarGaleria();
+  aplicarGaleria(d);
   toast('Fotografia acrescentada à galeria.');
+}
+
+async function mudarCategoria(src, cat){
+  const d = await api('modelo_exemplo_categoria', { method:'POST',
+                       body: JSON.stringify({ src, categoria: cat }) });
+  if (!d || !d.success) return;
+  aplicarGaleria(d);
+  toast('Arrumada em «' + (EX_CATEGORIAS[cat] || cat) + '».');
 }
 
 async function apagarDaGaleria(src){
   if (!confirm('Apagar esta fotografia da galeria?\n\nOs modelos já criados com ela ficam como estão.')) return;
-  const d = await api('modelo_exemplo_apagar', { method:'POST',
-                       body: JSON.stringify({ chave: GAL_CHAVE, src }) });
+  const d = await api('modelo_exemplo_apagar', { method:'POST', body: JSON.stringify({ src }) });
   if (!d || !d.success) return;
-  EX_GALERIA[GAL_CHAVE] = d.galeria || [];
-  await carregarExemplo(true);
-  pintarGaleria();
+  aplicarGaleria(d);
   toast('Apagada.');
 }
 
-async function escolherDaGaleria(src){
-  const chave = GAL_CHAVE;
-  const corpo = { [chave]: src };
-  // A fotografia da galeria ja vem cortada a medida: o enquadramento volta ao
-  // centro, senao herdava o desvio que servia a imagem anterior.
-  const enq = { 'media.hero':'foto.hero', 'media.interludio':'foto.interludio',
-                'media.acesso':'foto.acesso' }[chave];
-  if (enq) corpo[enq] = '50 50 100';
-  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
-  if (!d || !d.success) return;
-  fechar('ov-modelo');
-  EX_ATUAL = d.exemplo;
-  pintarExemplo(d.exemplo);
-  toast('Imagem de exemplo escolhida.');
+/** O que a API devolveu depois de mexer na galeria, posto no ecrã. */
+function aplicarGaleria(d){
+  if (d.galeria) EX_GALERIA = d.galeria;
+  if (d.exemplo) { EX_ATUAL = d.exemplo; pintarExemplo(d.exemplo); }
+  pintarGaleria();
 }
 
 async function enviarExemplo(chave, el){

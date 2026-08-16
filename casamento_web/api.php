@@ -2263,7 +2263,8 @@ if ($acao === 'modelo_exemplo') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os dados de exemplo.');
     // A galeria vai com o resto: o painel precisa dela para a janela de escolha.
     ok(['exemplo' => exemploModelo($conn), 'fabrica' => exemploDeFabrica(),
-        'chaves' => chavesExemplo(), 'galeria' => galeriaCompleta()]);
+        'chaves' => chavesExemplo(), 'galeria' => galeriaCompleta(),
+        'categorias' => categoriasGaleria()]);
 }
 
 if ($acao === 'modelo_exemplo_guardar') {
@@ -2317,9 +2318,14 @@ if ($acao === 'modelo_exemplo_upload') {
     // Uma imagem para o convite de exemplo. Vai para uma pasta só dela: não se
     // mistura com as fotografias de um casamento, que são de alguém.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
+    // 'chave' diz em que secção a pôr em vigor, e pode vir vazia: da janela de
+    // gestão envia-se para a galeria sem a usar já em lado nenhum.
     $chave = $_POST['chave'] ?? '';
     $ehMusica = $chave === 'media.musica';
-    if (!$ehMusica && !in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
+    $categoria = $_POST['categoria'] ?? ($chave ? categoriaDaChave($chave) : 'sem');
+    if (!isset(categoriasGaleria()[$categoria])) $categoria = 'sem';
+    if ($chave !== '' && !$ehMusica
+        && !in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
         erro('Campo de ficheiro inválido.');
     }
     if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
@@ -2339,46 +2345,72 @@ if ($acao === 'modelo_exemplo_upload') {
     }
     $dir = __DIR__ . '/assets/convite/exemplo';
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999)
+    // O prefixo do nome é a categoria: é dele que ela se lê ao listar a galeria.
+    $nomeFich = ($ehMusica ? 'musica' : $categoria) . '-' . time() . '-' . random_int(100, 999)
               . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
     if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
     // A anterior NÃO se apaga: as enviadas juntam-se à galeria desta secção, e
     // quem prepara vários modelos quer poder voltar a uma que já tinha enviado.
     // Para a tirar de vez há a ação modelo_exemplo_apagar.
     $caminho = 'assets/convite/exemplo/' . $nomeFich;
-    $chaveDef = 'modelo.exemplo.' . $chave;
-    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0,?,?)
-                          ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-    $st->bind_param('ss', $chaveDef, $caminho); $st->execute();
-    registar($conn, 'modelo_exemplo', 'imagem de exemplo', $chave);
-    ok(['path' => $caminho, 'galeria' => galeriaDaSeccao($chave)]);
+    if ($chave !== '') {
+        $chaveDef = 'modelo.exemplo.' . $chave;
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0,?,?)
+                              ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st->bind_param('ss', $chaveDef, $caminho); $st->execute();
+    }
+    registar($conn, 'modelo_exemplo', 'imagem para a galeria', $categoria);
+    ok(['path' => $caminho, 'galeria' => galeriaCompleta(), 'exemplo' => exemploModelo($conn)]);
 }
 
 if ($acao === 'modelo_exemplo_apagar') {
     // Tirar da galeria uma imagem que o admin enviou. As da casa não se apagam:
     // vêm com a instalação, e um ficheiro em falta partiria a lista a todos.
-    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
-    $d = corpo();
-    $chave = (string)($d['chave'] ?? '');
-    $src   = (string)($d['src'] ?? '');
-    if (!isset(galeriaExemplo()[$chave]) && $chave !== 'media.musica') erro('Secção inválida.');
-    if (!str_starts_with($src, 'assets/convite/exemplo/') || str_contains($src, '..')) {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita a galeria.');
+    $src = (string)(corpo()['src'] ?? '');
+    if (!str_starts_with($src, GALERIA_ENVIADAS) || str_contains($src, '..')) {
         erro('Só se apagam as imagens que enviou — as da casa ficam.');
     }
     $abs = __DIR__ . '/' . $src;
     if (!is_file($abs)) erro('Essa imagem já não está cá.');
-    // Se era a que estava em vigor, a secção volta à de fábrica em vez de ficar
-    // a apontar para um ficheiro que já não existe.
-    if ((exemploModelo($conn)[$chave] ?? '') === $src) {
-        $fab = exemploDeFabrica()[$chave] ?? '';
-        $k = 'modelo.exemplo.' . $chave;
+    // Se estava em vigor nalguma secção, essa volta ao valor de fábrica em vez
+    // de ficar a apontar para um ficheiro que já não existe.
+    foreach (exemploModelo($conn) as $k => $v) {
+        if ($v !== $src) continue;
+        $chaveDef = 'modelo.exemplo.' . $k;
         $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave=?");
-        $st->bind_param('s', $k); $st->execute();
-        if ($fab === '') { /* sem valor de fábrica: fica o de origem */ }
+        $st->bind_param('s', $chaveDef); $st->execute();
     }
     @unlink($abs);
-    registar($conn, 'modelo_exemplo', 'imagem de exemplo apagada', basename($src));
-    ok(['galeria' => galeriaDaSeccao($chave), 'exemplo' => exemploModelo($conn)]);
+    registar($conn, 'modelo_exemplo', 'imagem apagada da galeria', basename($src));
+    ok(['galeria' => galeriaCompleta(), 'exemplo' => exemploModelo($conn)]);
+}
+
+if ($acao === 'modelo_exemplo_categoria') {
+    // Mudar a categoria de uma imagem enviada. A categoria vive no prefixo do
+    // nome, por isso mudá-la é mudar o ficheiro de nome — e quem estivesse a
+    // apontar para o nome antigo passa a apontar para o novo.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita a galeria.');
+    $d = corpo();
+    $src = (string)($d['src'] ?? '');
+    $cat = (string)($d['categoria'] ?? '');
+    if (!isset(categoriasGaleria()[$cat])) erro('Categoria inválida.');
+    if (!str_starts_with($src, GALERIA_ENVIADAS) || str_contains($src, '..')) {
+        erro('As imagens da casa já vêm arrumadas — só as suas se mudam de sítio.');
+    }
+    $abs = __DIR__ . '/' . $src;
+    if (!is_file($abs)) erro('Essa imagem já não está cá.');
+
+    $resto = substr(basename($src), strpos(basename($src), '-') + 1);
+    $novoNome = $cat . '-' . $resto;
+    $novoSrc = GALERIA_ENVIADAS . $novoNome;
+    if ($novoSrc !== $src) {
+        if (!@rename($abs, __DIR__ . '/' . $novoSrc)) erro('Não foi possível mudar a categoria.');
+        $st = $conn->prepare("UPDATE {$P}definicoes SET valor=? WHERE casamento_id=0 AND valor=?");
+        $st->bind_param('ss', $novoSrc, $src); $st->execute();
+    }
+    registar($conn, 'modelo_exemplo', 'categoria da imagem', $cat);
+    ok(['src' => $novoSrc, 'galeria' => galeriaCompleta(), 'exemplo' => exemploModelo($conn)]);
 }
 
 if ($acao === 'modelo_criar') {

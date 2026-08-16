@@ -405,20 +405,34 @@ qualquer outra coisa — é quem este sistema serve. Há também casamentos indi
 e europeus, porque um exemplo que só mostra um tipo de casamento diz ao resto
 que o produto não é para eles.
 
-No painel, cada imagem tem um botão **«Galeria da casa»** que abre uma janela
-com todas as opções daquela secção; escolher uma põe-na em vigor e **centra o
-enquadramento**, já que o ficheiro vem cortado à medida. A que está a ser usada
-aparece marcada.
+**Uma lista só, com separadores.** A galeria abre de dois sítios: do botão de
+cada imagem do painel — e aí escolher aplica àquela secção —, ou de **«Gerir a
+galeria»**, que a abre só para arrumar. Em qualquer dos casos mostra **tudo**,
+com separadores por categoria (Todas · Capa · História · Interlúdio · Acesso ·
+Sem categoria) e a conta de cada um. Quatro gavetas fechadas escondiam o óbvio:
+uma fotografia enviada a pensar no interlúdio pode muito bem servir a capa. As
+categorias arrumam e filtram; não separam. Aberta a partir de uma secção, a
+galeria começa no separador dela — mas os outros continuam a um clique.
 
-**O admin acrescenta as suas.** A mesma janela tem um campo de envio, e o que
-sobe **junta-se** à galeria em vez de substituir o que lá estava — uma imagem de
-exemplo não é uma definição que se troca, é um acervo que cresce, e quem prepara
-vários modelos quer poder voltar a uma que já tinha enviado. As enviadas vivem
-em `assets/convite/exemplo/` (fora do versionamento), distinguem-se das da casa
-à vista, e só elas se podem apagar — as da casa vêm com a instalação, e um
-ficheiro em falta partiria a lista a toda a gente. Apagar uma que estivesse em
-vigor devolve a secção ao valor de fábrica, em vez de a deixar a apontar para um
-ficheiro que já não existe.
+Escolher uma fotografia põe-na em vigor e **centra o enquadramento**, já que os
+ficheiros da casa vêm cortados à medida da sua categoria. As que estão em uso
+aparecem marcadas.
+
+**O admin acrescenta as suas, e arruma-as.** O campo de envio pede a categoria —
+ou **«sem categoria»**, que guarda a fotografia à mesma para lhe decidir o lugar
+depois. Uma fotografia enviada sem categoria fica só no acervo: não entra em
+vigor em secção nenhuma. Depois arruma-se, num seletor por baixo de cada
+miniatura; a categoria vive no prefixo do nome do ficheiro, por isso mudá-la
+renomeia-o — e quem estivesse a apontar para o nome antigo passa a apontar para
+o novo.
+
+O que sobe **junta-se** à galeria em vez de substituir o que lá estava: uma
+imagem de exemplo não é uma definição que se troca, é um acervo que cresce. As
+enviadas vivem em `assets/convite/exemplo/` (fora do versionamento),
+distinguem-se das da casa à vista, e só elas se podem apagar — as da casa vêm
+com a instalação, e um ficheiro em falta partiria a lista a toda a gente. Apagar
+uma que estivesse em vigor devolve essa secção ao valor de fábrica, em vez de a
+deixar a apontar para um ficheiro que já não existe.
 
 Cada campo é validado por `validarDefinicao()`, a mesma de sempre — uma segunda
 cópia das regras aqui ficava para trás à primeira mudança. Deixar um campo em

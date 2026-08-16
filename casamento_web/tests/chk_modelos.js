@@ -264,13 +264,47 @@ const entrar = async (ctx, u, p) => {
      `os dados de exemplo leem-se (${exAntes.exemplo['casal.noiva']} & ${exAntes.exemplo['casal.noivo']})`);
   ok(/galeria\//.test(exAntes.fabrica['media.hero']),
      'e de fábrica as imagens vêm da galeria da casa');
-  const gal = exAntes.galeria || {};
-  const semGal = ['media.hero','media.historia','media.interludio','media.acesso']
-                   .filter(k => (gal[k] || []).length < 3);
-  ok(!semGal.length,
-     'cada secção tem galeria para escolher' + (semGal.length ? ' — falta ' + semGal.join(', ') : ''));
-  ok((gal['media.hero'] || []).every(f => f.da_casa),
-     'e as que a casa traz vêm marcadas como suas');
+  // A galeria e UMA lista com categorias, e nao quatro gavetas fechadas: uma
+  // fotografia enviada para o interludio pode muito bem servir a capa.
+  const gal = exAntes.galeria || [];
+  ok(Array.isArray(gal) && gal.length >= 20,
+     `a galeria vem numa lista so, com tudo dentro (${gal.length} fotografias)`);
+  const porCat = {};
+  gal.forEach(f => porCat[f.categoria] = (porCat[f.categoria] || 0) + 1);
+  const semCat = ['capa','historia','interludio','acesso'].filter(c => (porCat[c] || 0) < 3);
+  ok(!semCat.length,
+     'cada categoria tem por onde escolher' + (semCat.length ? ' — falta ' + semCat.join(', ') : ''));
+  ok(Object.keys(exAntes.categorias || {}).includes('sem'),
+     'e ha uma categoria para as que ainda nao tem lugar decidido');
+  ok(gal.every(f => f.da_casa), 'as que a casa traz vem marcadas como suas');
+
+  // Enviar sem categoria guarda na mesma, e NAO poe nada em vigor.
+  const antesAcesso = exAntes.exemplo['media.acesso'];
+  const env = await admin.evaluate(async () => {
+    const r = await fetch('assets/convite/galeria/acesso-38708859.jpg');
+    const fd = new FormData();
+    fd.append('ficheiro', new File([await r.blob()], 'prova.jpg', { type: 'image/jpeg' }));
+    fd.append('categoria', 'sem');
+    return (await (await fetch('api.php?action=modelo_exemplo_upload',
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF }, body: fd })).json());
+  });
+  ok(env && env.success && /exemplo\/sem-/.test(env.path || ''),
+     `uma fotografia sem categoria guarda-se a mesma (${env && env.path})`);
+  ok(env.exemplo['media.acesso'] === antesAcesso,
+     'e nao entra em vigor em seccao nenhuma — fica so no acervo');
+  ok((env.galeria || []).some(f => f.src === env.path && f.categoria === 'sem' && !f.da_casa),
+     'aparece na galeria, marcada como enviada e sem categoria');
+
+  // Arrumar depois: a categoria muda, e o ficheiro muda de nome com ela.
+  const arr = await api('modelo_exemplo_categoria', { src: env.path, categoria: 'capa' });
+  ok(arr && arr.success && /exemplo\/capa-/.test(arr.src || ''),
+     `e arruma-se depois numa categoria (${arr && arr.src})`);
+  const apg = await api('modelo_exemplo_apagar', { src: arr.src });
+  ok(apg && apg.success && !(apg.galeria || []).some(f => !f.da_casa),
+     'as enviadas apagam-se; as da casa nao');
+  const casaMau = await api('modelo_exemplo_apagar',
+                            { src: 'assets/convite/galeria/capa-34371787.jpg' });
+  ok(casaMau && casaMau.success === false, 'e apagar uma da casa e recusado');
 
   // A identidade INTEIRA está lá para preencher. Metade dos campos faltava.
   const faltam = ['casal.noiva','casal.noivo','evento.data','evento.hora','evento.convidados',
