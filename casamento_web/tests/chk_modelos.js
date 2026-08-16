@@ -265,6 +265,48 @@ const entrar = async (ctx, u, p) => {
   ok(/generico-/.test(exAntes.fabrica['media.hero']),
      'e de fábrica as imagens são desenho da casa, não fotografias');
 
+  // A identidade INTEIRA está lá para preencher. Metade dos campos faltava.
+  const faltam = ['casal.noiva','casal.noivo','evento.data','evento.hora','evento.convidados',
+                  'evento.whatsapp','evento.venue_titulo','evento.local','evento.cidade','evento.maps',
+                  'evento.civil_titulo','evento.civil_hora','evento.civil_local','evento.civil_maps',
+                  'evento.religiosa_titulo','evento.religiosa_hora','evento.religiosa_local',
+                  'evento.religiosa_maps','media.hero','media.historia','media.interludio',
+                  'media.acesso','media.musica','foto.hero','foto.interludio','foto.acesso']
+                 .filter(k => !(exAntes.chaves || []).includes(k));
+  ok(!faltam.length, 'e são a identidade inteira do convite' + (faltam.length ? ' — falta ' + faltam.join(', ') : ''));
+
+  // A página mostra um campo por cada uma delas — não bastam existir no servidor.
+  await admin.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
+  await admin.waitForTimeout(1200);
+  const semCampo = await admin.evaluate(() => EX_CHAVES.filter(k =>
+    k.startsWith('media.') ? !document.getElementById('ex-img-' + k)
+    : k.startsWith('foto.') ? !document.getElementById('ex-' + k + '-x')
+    : !document.getElementById('ex-' + k)));
+  ok(Array.isArray(semCampo) && !semCampo.length,
+     'e o painel tem um campo para cada uma' + (semCampo && semCampo.length ? ' — falta ' + semCampo.join(', ') : ''));
+
+  // Guardam-se e voltam: as horas, os mapas, o contacto e o enquadramento.
+  const cheio = { 'evento.civil_local':'Conservatória de Exemplo',
+                  'evento.civil_maps':'https://maps.app.goo.gl/exemplo',
+                  'evento.religiosa_hora':'16:00', 'evento.whatsapp':'244 900 000 000',
+                  'foto.hero':'40 30 120' };
+  await api('modelo_exemplo_guardar', cheio);
+  const lido = (await api('modelo_exemplo')).exemplo || {};
+  ok(lido['evento.civil_local'] === cheio['evento.civil_local']
+     && lido['evento.civil_maps'] === cheio['evento.civil_maps']
+     && lido['evento.religiosa_hora'] === '16:00' && lido['foto.hero'] === '40 30 120',
+     'e guardam-se todas, enquadramento incluído (' + lido['foto.hero'] + ')');
+  ok(lido['evento.whatsapp'] === '244900000000',
+     'com a mesma limpeza de sempre — o WhatsApp fica só em dígitos');
+  const mapaMau = await api('modelo_exemplo_guardar', { 'evento.civil_maps': 'javascript:alert(1)' });
+  ok(mapaMau && mapaMau.success === false, 'e uma ligação que não é https é recusada');
+  // Em branco onde branco não é resposta volta ao de fábrica, e não dá erro.
+  await api('modelo_exemplo_guardar', { 'casal.noiva': '', 'evento.data': '' });
+  const reposto = (await api('modelo_exemplo')).exemplo || {};
+  ok(reposto['casal.noiva'] === exAntes.fabrica['casal.noiva']
+     && reposto['evento.data'] === exAntes.fabrica['evento.data'],
+     'um campo obrigatório deixado em branco volta ao de fábrica');
+
   // Um modelo feito ANTES da mudança e outro DEPOIS: só o segundo a apanha.
   await api('casamento_abrir&id=' + oficina.id);
   const exAntesMod = await api('modelo_criar', { nome: 'ZZ Exemplo antes ' + marca, ambito: 'digital' });

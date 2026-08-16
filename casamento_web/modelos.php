@@ -99,16 +99,35 @@ if ($aberto > 0) {
   .modal-corpo .cas-data{ color:#8a8f88; font-size:.82rem; }
   .jan-fim{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.2rem;
             border-top:1px solid var(--line); padding-top:1rem; }
-  /* Os dados de exemplo: as imagens em fila, cada uma com a sua miniatura. */
-  .exs{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); margin-top:.9rem; }
+  /* ---- Os dados de exemplo dos modelos ----
+     São a identidade INTEIRA de um convite, e vista de enfiada é uma parede de
+     campos. Vem por grupos, na ordem por que se lê um convite. */
+  .ex-grupo{ border-top:1px solid var(--line); margin-top:1rem; padding-top:.9rem; }
+  .ex-grupo:first-child{ border-top:0; margin-top:0; padding-top:0; }
+  .ex-grupo > h4{ margin:0 0 .1rem; font-size:.88rem; font-family:var(--sans);
+                  font-weight:600; color:var(--ink); }
+  .ex-grupo > .nota{ font-size:.8rem; color:#8a8f88; margin-bottom:.7rem; line-height:1.5; }
+  .ex-campos{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .ex-campos label{ display:block; margin-bottom:.3rem; font-size:.76rem; text-transform:uppercase;
+                    letter-spacing:.06em; color:#8a8f88; }
+  /* align-items:start — a capa é ao alto e as outras ao baixo; esticadas todas
+     à altura da mais alta, ficavam três cartões com meio palmo de branco. */
+  .exs{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+        align-items:start; }
   .ex{ border:1px solid var(--line); border-radius:12px; padding:.6rem; background:#fff; }
-  /* contain, e não cover: aqui escolhe-se uma imagem, e para a escolher é
-     preciso vê-la inteira — a capa é ao alto e o resto ao baixo. */
-  .ex .mini{ display:block; width:100%; aspect-ratio:4/3; object-fit:contain; border-radius:8px;
-             background:#20211c; border:1px solid var(--line); }
-  .ex label{ display:block; margin:.5rem 0 .3rem; font-size:.76rem; text-transform:uppercase;
-             letter-spacing:.06em; color:#8a8f88; }
+  /* A miniatura recorta como a secção recorta no convite (cover + foco + zoom):
+     é o único modo de o enquadramento ao lado querer dizer alguma coisa. */
+  .ex .moldura{ display:block; width:100%; aspect-ratio:16/10; overflow:hidden; border-radius:8px;
+                background:#20211c; border:1px solid var(--line); }
+  .ex.alto .moldura{ aspect-ratio:4/5; }
+  .ex .moldura img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ex .nm{ margin:.5rem 0 .3rem; font-size:.76rem; text-transform:uppercase;
+           letter-spacing:.06em; color:#8a8f88; }
   .ex input[type=file]{ font-size:.76rem; width:100%; }
+  .ex .enq{ display:grid; grid-template-columns:repeat(3,1fr); gap:.3rem; margin-top:.45rem; }
+  .ex .enq input{ padding:.3rem .35rem; font-size:.78rem; text-align:center; }
+  .ex .enq span{ display:block; font-size:.66rem; text-transform:uppercase; letter-spacing:.05em;
+                 color:#a8ada6; text-align:center; margin-bottom:.15rem; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
@@ -169,8 +188,7 @@ if ($aberto > 0) {
       <br>Isto vale para os modelos que criar <b>daqui para a frente</b>: os que já existem ficam
       exatamente como estão.
     </div>
-    <div class="lf" id="ex-campos"><div class="dica" style="margin:0">A carregar…</div></div>
-    <div class="exs" id="ex-imagens"></div>
+    <div id="ex-corpo"><div class="dica" style="margin:0">A carregar…</div></div>
     <div class="jan-fim">
       <button class="btn" onclick="exemploFabrica()">Repor os de fábrica</button>
       <button class="btn btn-ouro" onclick="guardarExemplo()">Guardar</button>
@@ -457,13 +475,51 @@ async function apagar(id, nome){
 /* ---- Os dados de exemplo com que um modelo novo nasce -------------------
    Não são de casamento nenhum: vivem na linha 0 das definições. Editá-los não
    toca em modelo nenhum já feito — só nos que se criarem a seguir. */
-const EX_ROTULO = {
-  'casal.noiva':'Noiva', 'casal.noivo':'Noivo', 'evento.data':'Data',
-  'evento.hora':'Hora', 'evento.venue_titulo':'Título do local',
-  'evento.local':'Local', 'evento.cidade':'Cidade',
-  'media.hero':'Capa', 'media.historia':'História',
-  'media.interludio':'Interlúdio', 'media.acesso':'Acesso (QR)'
-};
+/* Os campos por grupos, na ordem por que se lê um convite. `tipo` é o do
+   <input>; 'ficheiro' é uma imagem (ou a música) com envio próprio, e `enq` diz
+   qual a chave de enquadramento que a acompanha. */
+const EX_GRUPOS = [
+  { titulo:'O casal e o dia',
+    nota:'É este o nome que se lê na capa de qualquer modelo.',
+    campos:[
+      { k:'casal.noiva', r:'Noiva' },
+      { k:'casal.noivo', r:'Noivo' },
+      { k:'evento.data', r:'Data', tipo:'date' },
+      { k:'evento.hora', r:'Hora', tipo:'time' },
+      { k:'evento.convidados', r:'Lugares', tipo:'number' },
+      { k:'evento.whatsapp', r:'WhatsApp', ph:'só dígitos' } ] },
+  { titulo:'Onde é a festa',
+    campos:[
+      { k:'evento.venue_titulo', r:'Título' },
+      { k:'evento.local', r:'Local' },
+      { k:'evento.cidade', r:'Cidade' },
+      { k:'evento.maps', r:'Google Maps', tipo:'url', ph:'https://…' } ] },
+  { titulo:'Cerimónia civil',
+    nota:'Sem hora, a cerimónia não se anuncia — deixar em branco é uma resposta.',
+    campos:[
+      { k:'evento.civil_titulo', r:'Título' },
+      { k:'evento.civil_hora', r:'Hora', tipo:'time' },
+      { k:'evento.civil_local', r:'Local' },
+      { k:'evento.civil_maps', r:'Google Maps', tipo:'url', ph:'https://…' } ] },
+  { titulo:'Cerimónia religiosa',
+    campos:[
+      { k:'evento.religiosa_titulo', r:'Título' },
+      { k:'evento.religiosa_hora', r:'Hora', tipo:'time' },
+      { k:'evento.religiosa_local', r:'Local' },
+      { k:'evento.religiosa_maps', r:'Google Maps', tipo:'url', ph:'https://…' } ] },
+  { titulo:'Imagens e som',
+    nota:'A miniatura recorta como a secção recorta no convite. Por baixo, o '
+       + 'enquadramento: o ponto da imagem que fica ao centro (X, Y) e a aproximação.',
+    imagens:[
+      { k:'media.hero', r:'Capa', enq:'foto.hero', alto:true },
+      { k:'media.historia', r:'História' },
+      { k:'media.interludio', r:'Interlúdio', enq:'foto.interludio' },
+      { k:'media.acesso', r:'Acesso (QR)', enq:'foto.acesso' },
+      { k:'media.musica', r:'Música', som:true } ] }
+];
+const EX_CHAVES = EX_GRUPOS.flatMap(g =>
+  (g.campos || []).map(c => c.k)
+    .concat((g.imagens || []).flatMap(i => i.enq ? [i.k, i.enq] : [i.k])));
 let EX_FABRICA = {};
 
 async function carregarExemplo(){
@@ -473,19 +529,50 @@ async function carregarExemplo(){
   pintarExemplo(d.exemplo || {});
 }
 
+/** "50 8 100" -> {x,y,zoom}. Vazio vale o centro sem aproximação. */
+function lerEnq(v){
+  const p = String(v || '').trim().split(/\s+/).map(Number);
+  return { x: p[0] >= 0 ? p[0] : 50, y: p[1] >= 0 ? p[1] : 50, zoom: p[2] > 0 ? p[2] : 100 };
+}
+
 function pintarExemplo(ex){
-  $('ex-campos').innerHTML = Object.keys(EX_ROTULO)
-    .filter(k => !k.startsWith('media.'))
-    .map(k => `<div><label for="ex-${k}">${EX_ROTULO[k]}</label>
-       <input type="${k==='evento.data'?'date':k==='evento.hora'?'time':'text'}"
-              id="ex-${k}" value="${esc(ex[k] ?? '')}"></div>`).join('');
-  $('ex-imagens').innerHTML = Object.keys(EX_ROTULO)
-    .filter(k => k.startsWith('media.'))
-    .map(k => `<div class="ex">
-       <img class="mini" id="ex-img-${k}" src="${esc(ex[k] ?? '')}" alt="${EX_ROTULO[k]}">
-       <label>${EX_ROTULO[k]}</label>
-       <input type="file" accept="image/*" onchange="enviarExemplo('${k}', this)">
-     </div>`).join('');
+  $('ex-corpo').innerHTML = EX_GRUPOS.map(g => `
+    <div class="ex-grupo">
+      <h4>${g.titulo}</h4>
+      ${g.nota ? `<div class="nota">${g.nota}</div>` : ''}
+      ${g.campos ? `<div class="ex-campos">${g.campos.map(c => `
+        <div><label for="ex-${c.k}">${c.r}</label>
+          <input type="${c.tipo || 'text'}" id="ex-${c.k}" value="${esc(ex[c.k] ?? '')}"
+                 ${c.ph ? `placeholder="${c.ph}"` : ''}></div>`).join('')}</div>` : ''}
+      ${g.imagens ? `<div class="exs">${g.imagens.map(i => cartaoImagem(i, ex)).join('')}</div>` : ''}
+    </div>`).join('');
+}
+
+function cartaoImagem(i, ex){
+  if (i.som) return `<div class="ex">
+     <div class="moldura" style="display:flex;align-items:center;justify-content:center">
+       <audio id="ex-img-${i.k}" src="${esc(ex[i.k] ?? '')}" controls style="width:92%"></audio></div>
+     <div class="nm">${i.r}</div>
+     <input type="file" accept=".m4a,.mp3,audio/*" onchange="enviarExemplo('${i.k}', this)"></div>`;
+  const e = lerEnq(ex[i.enq]);
+  return `<div class="ex${i.alto ? ' alto' : ''}">
+     <div class="moldura"><img id="ex-img-${i.k}" src="${esc(ex[i.k] ?? '')}" alt="${i.r}"
+          style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom / 100})"></div>
+     <div class="nm">${i.r}</div>
+     <input type="file" accept="image/*,.svg" onchange="enviarExemplo('${i.k}', this)">
+     ${i.enq ? `<div class="enq" data-alvo="ex-img-${i.k}">
+        ${[['x','X'],['y','Y'],['zoom','Zoom']].map(([c, r]) => `<div><span>${r}</span>
+          <input type="number" id="ex-${i.enq}-${c}" value="${e[c]}" min="0"
+                 max="${c === 'zoom' ? 300 : 100}" oninput="verEnq('${i.enq}','ex-img-${i.k}')"></div>`).join('')}
+      </div>` : ''}</div>`;
+}
+
+/** Mostra na miniatura o enquadramento que se está a escrever. */
+function verEnq(chaveEnq, idImg){
+  const v = c => +($('ex-' + chaveEnq + '-' + c) || {}).value || 0;
+  const img = $(idImg); if (!img) return;
+  img.style.objectPosition = v('x') + '% ' + v('y') + '%';
+  img.style.transform = 'scale(' + Math.max(100, v('zoom')) / 100 + ')';
 }
 
 async function enviarExemplo(chave, el){
@@ -497,21 +584,34 @@ async function enviarExemplo(chave, el){
   el.value = '';
   if (!d || !d.success) return;
   $('ex-img-' + chave).src = d.path + '?t=' + Date.now();
-  toast('Imagem de exemplo trocada.');
+  toast('Ficheiro de exemplo trocado.');
+}
+
+/** O que está nos campos, pronto a enviar. As imagens vão pelo seu envio. */
+function corpoExemplo(){
+  const corpo = {};
+  EX_CHAVES.forEach(k => {
+    if (k.startsWith('media.')) return;
+    if (k.startsWith('foto.')) {
+      const v = c => ($('ex-' + k + '-' + c) || {}).value;
+      if ($('ex-' + k + '-x')) corpo[k] = [v('x'), v('y'), v('zoom')].join(' ');
+      return;
+    }
+    const el = $('ex-' + k);
+    if (el) corpo[k] = el.value;
+  });
+  return corpo;
 }
 
 async function guardarExemplo(){
-  const corpo = {};
-  Object.keys(EX_ROTULO).filter(k => !k.startsWith('media.'))
-        .forEach(k => corpo[k] = $('ex-' + k).value);
-  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
+  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpoExemplo()) });
   if (d && d.success){ pintarExemplo(d.exemplo); toast('Dados de exemplo guardados.'); }
 }
 
 async function exemploFabrica(){
-  if (!confirm('Repor o casal, o evento e as imagens de exemplo tal como vêm de fábrica?')) return;
+  if (!confirm('Repor o casal, o evento, as imagens e o som de exemplo tal como vêm de fábrica?')) return;
   const corpo = {};
-  Object.keys(EX_ROTULO).forEach(k => corpo[k] = EX_FABRICA[k] ?? '');
+  EX_CHAVES.forEach(k => corpo[k] = EX_FABRICA[k] ?? '');
   const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
   if (d && d.success){ pintarExemplo(d.exemplo); toast('Reposto o de fábrica.'); }
 }

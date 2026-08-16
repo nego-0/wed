@@ -2271,30 +2271,30 @@ if ($acao === 'modelo_exemplo_guardar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
     $d = corpo();
     $fabrica = exemploDeFabrica();
-    $mudados = [];
+    $mudados = []; $invalidas = [];
     foreach (chavesExemplo() as $k) {
         if (!array_key_exists($k, $d)) continue;
         $v = trim((string)$d[$k]);
+        // Campo deixado em branco onde branco não é uma resposta (um modelo sem
+        // nome de noiva não é um modelo): volta ao de fábrica, e não a um erro.
+        if ($v === '' && !podeSerVazio($k)) $v = (string)($fabrica[$k] ?? '');
         if (str_starts_with($k, 'media.')) {
-            // Um caminho de imagem, e um que exista: um exemplo com uma imagem
-            // partida é pior do que um exemplo com a de fábrica.
-            if ($v === '') { $v = $fabrica[$k]; }
-            elseif (!preg_match('#^assets/convite/[\w./-]+$#', $v) || str_contains($v, '..')
-                    || !is_file(__DIR__ . '/' . $v)) {
-                erro('Imagem de exemplo inválida: ' . $k);
+            // Um caminho de ficheiro nosso, e um que exista: um exemplo com uma
+            // imagem partida é pior do que um exemplo com a de fábrica.
+            if ($v !== '' && (!preg_match('#^assets/convite/[\w./-]+$#', $v)
+                              || str_contains($v, '..') || !is_file(__DIR__ . '/' . $v))) {
+                $invalidas[] = $k; continue;
             }
-        } elseif ($k === 'evento.data') {
-            if ($v !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) erro('Data de exemplo inválida.');
-            if ($v === '') $v = $fabrica[$k];
-        } elseif ($k === 'evento.hora') {
-            if ($v !== '' && !preg_match('/^\d{1,2}:\d{2}$/', $v)) erro('Hora de exemplo inválida.');
-            if ($v === '') $v = $fabrica[$k];
         } else {
-            if (mb_strlen($v) > 120) erro('Texto de exemplo demasiado longo: ' . $k);
-            if ($v === '') $v = $fabrica[$k];
+            // A mesma validação de sempre — é ela que sabe o que cada chave
+            // aceita, e uma cópia aqui ficava para trás à primeira mudança.
+            $limpo = validarDefinicao($k, $v);
+            if ($limpo === null) { $invalidas[] = $k; continue; }
+            $v = $limpo;
         }
         $mudados[$k] = $v;
     }
+    if ($invalidas) erro('Valor inválido em: ' . implode(', ', $invalidas));
     if (!$mudados) erro('Nada para guardar.');
 
     // Os dados de exemplo são do sistema, não de um casamento: vivem na linha 0.
@@ -2317,20 +2317,23 @@ if ($acao === 'modelo_exemplo_upload') {
     // mistura com as fotografias de um casamento, que são de alguém.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
     $chave = $_POST['chave'] ?? '';
-    if (!in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
+    $ehMusica = $chave === 'media.musica';
+    if (!$ehMusica && !in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
         erro('Campo de ficheiro inválido.');
     }
     if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
     $f = $_FILES['ficheiro'];
-    if ($f['size'] > 5*1024*1024) erro('Ficheiro demasiado grande (máx. 5 MB).');
+    $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
+    if ($f['size'] > $max) erro('Ficheiro demasiado grande (máx. ' . ($ehMusica ? '8' : '5') . ' MB).');
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ['jpg','jpeg','png','webp','svg'], true)) erro('Formato não suportado (jpg/png/webp/svg).');
+    $extsOk = $ehMusica ? ['m4a','mp3'] : ['jpg','jpeg','png','webp','svg'];
+    if (!in_array($ext, $extsOk, true)) erro('Formato não suportado (' . implode('/', $extsOk) . ').');
     if (function_exists('finfo_open')) {
         $fi = finfo_open(FILEINFO_MIME_TYPE);
         $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
-        if (!in_array($mt, ['image/jpeg','image/png','image/webp','image/svg+xml','text/plain','text/xml'], true)) {
-            erro('O conteúdo do ficheiro não corresponde ao formato.');
-        }
+        $mimesOk = $ehMusica ? ['audio/mp4','audio/x-m4a','audio/mpeg','video/mp4','audio/mp3']
+                             : ['image/jpeg','image/png','image/webp','image/svg+xml','text/plain','text/xml'];
+        if (!in_array($mt, $mimesOk, true)) erro('O conteúdo do ficheiro não corresponde ao formato.');
         if ($ext === 'svg' && !in_array($mt, ['image/svg+xml','text/plain','text/xml'], true)) erro('SVG inválido.');
     }
     $dir = __DIR__ . '/assets/convite/exemplo';

@@ -421,9 +421,23 @@ function padraoDesenho(string $ambito): array {
  * porque não viaja de todo (ver identidadeGenerica).
  */
 function chavesExemplo(): array {
-    return ['casal.noiva','casal.noivo','evento.data','evento.hora',
-            'evento.venue_titulo','evento.local','evento.cidade',
-            'media.hero','media.historia','media.interludio','media.acesso'];
+    // Derivada, e não escrita à mão: é a identidade INTEIRA do convite — o
+    // casal, o evento todo, as imagens, a música e o enquadramento delas. Uma
+    // lista à mão fica para trás no dia em que se acrescentar uma chave, e foi
+    // o que aconteceu: metade dos campos não estava lá para preencher.
+    return array_values(array_filter(chavesDoAmbito('digital'),
+        fn($k) => preg_match('/^(casal|evento|media|foto)\./', $k)));
+}
+
+/**
+ * Chaves em que deixar o campo em branco é uma RESPOSTA, e não um esquecimento:
+ * quer dizer "não há". Nas outras, branco volta ao valor de fábrica — um modelo
+ * sem nome de noiva não é um modelo, é um convite por acabar.
+ */
+function podeSerVazio(string $chave): bool {
+    return (bool)preg_match(
+        '/^evento\.(maps|whatsapp|convidados|civil_(hora|local|maps)|religiosa_(hora|local|maps))$/',
+        $chave);
 }
 
 /**
@@ -432,19 +446,29 @@ function chavesExemplo(): array {
  */
 function exemploDeFabrica(): array {
     $p = defsPadrao();
-    return [
-        'casal.noiva'         => 'Ana',
-        'casal.noivo'         => 'Bruno',
-        'evento.data'         => '2027-06-12',
-        'evento.hora'         => (string)($p['evento.hora'] ?? ''),
-        'evento.venue_titulo' => (string)($p['evento.venue_titulo'] ?? ''),
-        'evento.local'        => 'Quinta das Acácias',
-        'evento.cidade'       => 'Luanda · Angola',
-        'media.hero'          => 'assets/convite/generico-hero.svg',
-        'media.historia'      => 'assets/convite/generico-historia.svg',
-        'media.interludio'    => 'assets/convite/generico-interludio.svg',
-        'media.acesso'        => 'assets/convite/generico-acesso.svg',
+    // Só o que é do primeiro casal é que muda; o resto (horas, títulos, número
+    // de lugares, enquadramentos) é o de origem, que já não é de ninguém.
+    $proprio = [
+        'casal.noiva'   => 'Ana',
+        'casal.noivo'   => 'Bruno',
+        'evento.data'   => '2027-06-12',
+        'evento.local'  => 'Quinta das Acácias',
+        'evento.cidade' => 'Luanda · Angola',
+        // Contacto e mapas em branco: não há endereço nem telefone de exemplo
+        // que se possa inventar sem mandar alguém a lado nenhum.
+        'evento.maps'     => '',
+        'evento.whatsapp' => '',
+        'evento.civil_local'     => '', 'evento.civil_maps'     => '',
+        'evento.religiosa_local' => '', 'evento.religiosa_maps' => '',
+        // As imagens são desenho da casa, e não fotografias de ninguém.
+        'media.hero'       => 'assets/convite/generico-hero.svg',
+        'media.historia'   => 'assets/convite/generico-historia.svg',
+        'media.interludio' => 'assets/convite/generico-interludio.svg',
+        'media.acesso'     => 'assets/convite/generico-acesso.svg',
     ];
+    $out = [];
+    foreach (chavesExemplo() as $k) $out[$k] = $proprio[$k] ?? (string)($p[$k] ?? '');
+    return $out;
 }
 
 /**
@@ -465,30 +489,15 @@ function exemploModelo(mysqli $conn): array {
 }
 
 /**
- * A identidade com que um modelo novo nasce: os dados de exemplo, mais o que
- * da identidade não viaja de todo.
+ * A identidade com que um modelo novo nasce.
  *
- * Um modelo é da casa e serve todos os casais — a sua prova não pode ser o
- * retrato de um deles, e o contacto e a logística de um casal não têm nada que
- * andar dentro de um desenho.
+ * É exatamente o que o admin definiu como exemplo: chavesExemplo() cobre a
+ * identidade toda do convite, e por isso nada aqui fica por trocar. Um modelo é
+ * da casa e serve todos os casais — a sua prova não pode ser o retrato de um
+ * deles, nem levar consigo o contacto ou a logística de ninguém.
  */
 function identidadeGenerica(mysqli $conn): array {
-    $p = defsPadrao();
-    $g = exemploModelo($conn);
-    // Contacto e locais das cerimónias: em branco. Não há valor de exemplo que
-    // faça sentido para um número de telefone ou uma ligação ao mapa.
-    foreach (['evento.maps','evento.whatsapp',
-              'evento.civil_local','evento.civil_maps',
-              'evento.religiosa_local','evento.religiosa_maps'] as $k) $g[$k] = '';
-    // O resto (nº de convidados, títulos e horas das cerimónias, enquadramento
-    // das imagens) fica no de origem.
-    foreach (chavesDoAmbito('digital') as $k) {
-        if (isset($g[$k])) continue;
-        if (preg_match('/^(foto\.|evento\.(convidados|civil_|religiosa_))/', $k)) {
-            $g[$k] = (string)($p[$k] ?? '');
-        }
-    }
-    return $g;
+    return exemploModelo($conn);
 }
 
 /**

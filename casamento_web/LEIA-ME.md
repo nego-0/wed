@@ -379,18 +379,35 @@ Isto vale para os modelos que se criarem **a partir de agora**. Um modelo já
 feito é o trabalho de alguém e não se reescreve por baixo dele: `defsDoEditor()`
 mostra o que o modelo guardou, e nada lhe é sobreposto.
 
-**Os dados de exemplo** (esquema v19). O casal, o evento e as quatro imagens com
-que um modelo novo nasce editam-se na página dos modelos, em «Dados de exemplo
-dos modelos». De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das
-Acácias, Luanda — e, como imagens, quatro SVG na paleta do convite
+**Os dados de exemplo** (esquema v19). Editam-se na página dos modelos, em
+«Dados de exemplo dos modelos», e são a **identidade inteira** de um convite:
+`chavesExemplo()` é derivada de `chavesDoAmbito('digital')` e não escrita à mão,
+justamente porque uma lista à mão fica para trás — à primeira versão faltava
+metade dos campos. São 26: o casal, a data, a hora, os lugares, o WhatsApp, o
+título/local/cidade/mapa da festa, as duas cerimónias por inteiro (título, hora,
+local, mapa), as quatro imagens, a música, e o enquadramento das três imagens
+que o têm. O painel agrupa-os pela ordem por que se lê um convite.
+
+De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das Acácias, Luanda, sem
+contacto nem mapas (não há telefone de exemplo que se possa inventar sem mandar
+alguém a lado nenhum) — e, como imagens, quatro SVG na paleta do convite
 (`generico-hero.svg` e companhia): um arco botânico, um ramo de eucalipto, arcos
 concêntricos e uma moldura com raminhos nos cantos. São **desenho da casa**, e
 não fotografias de ninguém, que é o que faz sentido num exemplo.
 
+Cada campo é validado por `validarDefinicao()`, a mesma de sempre — uma segunda
+cópia das regras aqui ficava para trás à primeira mudança. Deixar um campo em
+branco volta ao valor de fábrica, **exceto** onde branco é uma resposta
+(`podeSerVazio()`: mapas, WhatsApp, lugares, e as horas e locais das cerimónias —
+uma cerimónia sem hora é uma cerimónia que não se anuncia).
+
 Vivem na linha 0 das definições — a do sistema —, sob o prefixo
 `modelo.exemplo.`, e um valor igual ao de fábrica apaga a linha, como em
-qualquer definição. As imagens que o admin envie vão para
-`assets/convite/exemplo/` (fora do versionamento, como os uploads do convite).
+qualquer definição. As imagens e a música que o admin envie vão para
+`assets/convite/exemplo/` (fora do versionamento, como os uploads do convite). A
+miniatura de cada imagem recorta como a secção recorta no convite — `cover` com
+o foco e o zoom do enquadramento —, senão os três números ao lado não queriam
+dizer nada.
 
 Nada disto toca no **convite de origem**: as suas quatro imagens continuam a ser
 as fotografias de sempre em `assets/convite/`, e é com elas que um casamento
