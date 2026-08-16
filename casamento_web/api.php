@@ -2276,8 +2276,9 @@ if ($acao === 'modelo_criar') {
         foreach ($d['defs'] as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
     } elseif (casamentoAtual() > 0 && empty($d['do_zero'])) {
         // Do que o casamento aberto mostra agora — é assim que se guarda um
-        // convite que se acabou de desenhar para alguém.
-        $defs = instantaneoAmbito($conn, $ambito);
+        // convite que se acabou de desenhar para alguém. A IDENTIDADE, essa,
+        // fica genérica: um modelo da casa não é o retrato de um casal.
+        $defs = instantaneoModelo($conn, $ambito);
     } else {
         // Sem casamento aberto, o modelo nasce do desenho de origem e desenha-se
         // no editor a seguir. Obrigar a abrir a casa de um casal para fazer um
@@ -2319,7 +2320,7 @@ if ($acao === 'modelo_editar') {
     // no convite até ficar bem, e traz-se o resultado para o modelo.
     if (!empty($d['recapturar'])) {
         if (casamentoAtual() <= 0) erro('Abra um casamento para trazer de lá o desenho.');
-        $defs = instantaneoAmbito($conn, $m['ambito']);
+        $defs = instantaneoModelo($conn, $m['ambito']);   // sem a identidade do casal
         $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
         $st = $conn->prepare("UPDATE {$P}modelos SET nome=?, descricao=?, visivel=?, defs=?,
                                      atualizado_em=NOW() WHERE id=?");
@@ -2412,7 +2413,10 @@ if ($acao === 'modelo_aplicar') {
     // digital, nem o contrário. E de propósito chavesDoAmbito, não chavesModelo:
     // a logística que o admin meteu no modelo é só para o desenhar; aplicar um
     // modelo do cartão nunca reescreve as cerimónias que o casal já marcou.
-    $permitidas = array_flip(chavesDoAmbito($m['ambito']));
+    // Só o DESENHO: um modelo não escreve o nome dos noivos, os dados do evento
+    // nem as fotografias de quem o aplica. Guarda-os (a prova precisa deles),
+    // mas guarda-os genéricos e nunca os impõe — a festa é de cada casal.
+    $permitidas = array_flip(chavesDesenho($m['ambito']));
     $doModelo = [];
     foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $doModelo[$k] = $v;
     // Aplicar um modelo é FICAR com ele, não misturá-lo com o que estava:
@@ -2420,7 +2424,7 @@ if ($acao === 'modelo_aplicar') {
     // o casal tinha à mão e o modelo não traz volta à origem, em vez de ficar
     // pelo meio. Um modelo vazio — o de origem da casa — devolve a peça à
     // origem, que é o que se espera de "aplicar o modelo da casa".
-    $defs = array_merge(padraoAmbito($m['ambito']), $doModelo);
+    $defs = array_merge(padraoDesenho($m['ambito']), $doModelo);
     $r = guardarDefinicoes($conn, $defs);
     // Deixa de haver versão em vigor: o que a peça mostra agora veio de fora.
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");

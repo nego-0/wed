@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 812" width="1300" height="812"
+     role="img" aria-label="Moldura dourada com folhagem nos cantos, sobre fundo verde-floresta">
+  <!-- Imagem de origem do ACESSO (a secção do QR): uma moldura discreta, que é
+       o que ali faz sentido. Ver generico-hero.svg. -->
+  <defs>
+    <linearGradient id="fa" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#2A4234"/>
+      <stop offset="0.6" stop-color="#1A2D24"/>
+      <stop offset="1" stop-color="#111C17"/>
+    </linearGradient>
+    <radialGradient id="ba" cx="0.5" cy="0.42" r="0.66">
+      <stop offset="0" stop-color="#618B6E" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="#618B6E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="oa" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EFE3CB"/>
+      <stop offset="0.55" stop-color="#D9BC8C"/>
+      <stop offset="1" stop-color="#B4864A"/>
+    </linearGradient>
+    <symbol id="fa-folha" viewBox="0 0 40 18">
+      <path d="M0 9 C 10 -4 30 -4 40 9 C 30 22 10 22 0 9 Z" fill="none" stroke="url(#oa)" stroke-width="1.4"/>
+    </symbol>
+  </defs>
+
+  <rect width="1300" height="812" fill="url(#fa)"/>
+  <rect width="1300" height="812" fill="url(#ba)"/>
+
+  <!-- A moldura: uma linha, e uma segunda mais fina por dentro. -->
+  <g fill="none" stroke="url(#oa)">
+    <rect x="86" y="76" width="1128" height="660" stroke-width="1.6" opacity="0.85"/>
+    <rect x="104" y="94" width="1092" height="624" stroke-width="0.8" opacity="0.42"/>
+  </g>
+
+  <!-- Nos quatro cantos, um raminho a entrar para dentro. -->
+  <g>
+    <g transform="translate(86 76)">
+      <path d="M0 132 C 6 60 60 6 132 0" fill="none" stroke="url(#oa)" stroke-width="1.5" opacity="0.9"/>
+      <use href="#fa-folha" x="10"  y="86" width="64" height="29" transform="rotate(-62 42 100)"/>
+      <use href="#fa-folha" x="40"  y="38" width="60" height="27" transform="rotate(-42 70 51)"/>
+      <use href="#fa-folha" x="86"  y="6"  width="56" height="25" transform="rotate(-22 114 18)"/>
+    </g>
+    <g transform="translate(1214 76) scale(-1 1)">
+      <path d="M0 132 C 6 60 60 6 132 0" fill="none" stroke="url(#oa)" stroke-width="1.5" opacity="0.9"/>
+      <use href="#fa-folha" x="10"  y="86" width="64" height="29" transform="rotate(-62 42 100)"/>
+      <use href="#fa-folha" x="40"  y="38" width="60" height="27" transform="rotate(-42 70 51)"/>
+      <use href="#fa-folha" x="86"  y="6"  width="56" height="25" transform="rotate(-22 114 18)"/>
+    </g>
+    <g transform="translate(86 736) scale(1 -1)">
+      <path d="M0 132 C 6 60 60 6 132 0" fill="none" stroke="url(#oa)" stroke-width="1.5" opacity="0.9"/>
+      <use href="#fa-folha" x="10"  y="86" width="64" height="29" transform="rotate(-62 42 100)"/>
+      <use href="#fa-folha" x="40"  y="38" width="60" height="27" transform="rotate(-42 70 51)"/>
+      <use href="#fa-folha" x="86"  y="6"  width="56" height="25" transform="rotate(-22 114 18)"/>
+    </g>
+    <g transform="translate(1214 736) scale(-1 -1)">
+      <path d="M0 132 C 6 60 60 6 132 0" fill="none" stroke="url(#oa)" stroke-width="1.5" opacity="0.9"/>
+      <use href="#fa-folha" x="10"  y="86" width="64" height="29" transform="rotate(-62 42 100)"/>
+      <use href="#fa-folha" x="40"  y="38" width="60" height="27" transform="rotate(-42 70 51)"/>
+      <use href="#fa-folha" x="86"  y="6"  width="56" height="25" transform="rotate(-22 114 18)"/>
+    </g>
+  </g>
+
+  <g fill="#EFE3CB">
+    <circle cx="650" cy="240" r="2.1" opacity="0.18"/>
+    <circle cx="470" cy="600" r="1.8" opacity="0.16"/>
+    <circle cx="860" cy="560" r="1.6" opacity="0.15"/>
+  </g>
+</svg>

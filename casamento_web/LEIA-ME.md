@@ -351,6 +351,41 @@ tem ~260 px de largura, e uma lista de casamentos com procura espremida nessa
 coluna era ilegível — além de esticar a linha inteira da grelha e desalinhar os
 cartões vizinhos.
 
+**Um modelo é um desenho, não um casal** (esquema v17/v18). Um modelo era um
+retrato inteiro da peça onde foi composto — e isso incluía o nome dos noivos, a
+data, o local, o WhatsApp e as fotografias. Aplicá-lo **renomeava o casal**:
+a Sara e o Tomás carregavam no modelo da casa e passavam a chamar-se Isabel e
+Abednego. Era esta a razão por que «os noivos não conseguem colocar em vigor
+outros modelos padrão» — conseguiam, mas o resultado era inaceitável, por isso
+não servia.
+
+Separam-se agora duas coisas que estavam misturadas:
+
+- **o que um modelo guarda** (`chavesModelo`) — tudo o que o editor compõe, para
+  a pré-visualização do modelo fazer sentido;
+- **o que um modelo impõe** (`chavesDesenho`) — só o desenho: tipos de letra,
+  cores, molduras, ornamentos, disposição. Nada de `casal.`, `evento.`, `media.`
+  ou `foto.`.
+
+Aplicar um modelo escreve o desenho dele e devolve o resto ao de origem; o nome,
+a data, o local, os links e as fotografias do casal ficam onde estavam. O
+inverso também: **criar** um modelo já não copia a identidade de quem o compôs.
+`instantaneoModelo()` troca-a por uma **identidade de exemplo** — Ana & Bruno,
+12 de Junho de 2027, Quinta das Acácias, Luanda — e é essa que aparece na prova
+e na miniatura de qualquer modelo, mesmo nos antigos, que a migração v17 limpou.
+Os valores de exemplo vivem no `config.php` (`identidadeGenericaBase()`) e não no
+`personalizacao.php`: as migrações do `db.php` correm antes desse ficheiro estar
+carregado.
+
+**As imagens de origem do convite** eram quatro fotografias do primeiro casal,
+que todo o casamento novo herdava e todo o modelo levava consigo. Passam a ser
+**desenho da casa** — quatro SVG na paleta do convite (`generico-hero.svg` e
+companhia): um arco botânico, um ramo de eucalipto, arcos concêntricos e uma
+moldura com raminhos nos cantos. Não são fotografias de ninguém, e por isso
+podem ser o que um casal vê antes de pôr as suas. As fotografias reais não se
+perderam: mudaram para `assets/convite/casal/` e a migração v18 fixa-as **só no
+casamento 1**, como conteúdo dele.
+
 **O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
 e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um
 **cadeado**: trancada não se arrasta nem se esconde, e a tranca viaja com o

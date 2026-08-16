@@ -65,6 +65,31 @@ const entrar = async (ctx, u, p) => {
   const aplicou = await api('modelo_aplicar&id=' + mod.id);
   console.log('   aplicar:', JSON.stringify(aplicou).slice(0, 120));
   ok(aplicou && aplicou.success, 'o casal aplica o modelo');
+
+  // ---------- 11. o modelo é o DESENHO, não a identidade de quem o compôs ----
+  // A oficina chama-se Olga & Otto. Um modelo feito lá levava o nome deles, a
+  // data, a morada e as fotografias — e aplicá-lo rebatizava o casal que o
+  // usasse. Era por isso que os modelos da casa não serviam a ninguém.
+  const semDono = ((await admin._baixar('modelos_exportar')).modelos || [])
+                     .find(x => x.nome === 'ZZ Modelo digital ' + marca) || { defs: {} };
+  ok(semDono.defs['casal.noiva'] !== 'Olga' && semDono.defs['casal.noivo'] !== 'Otto',
+     `o modelo não guarda o nome do casal onde foi composto (${semDono.defs['casal.noiva']} & ${semDono.defs['casal.noivo']})`);
+  ok(!/convite\/casal\//.test(String(semDono.defs['media.hero'] || '')),
+     `nem as fotografias dele (${semDono.defs['media.hero']})`);
+
+  const idApos = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(!idApos['casal.noiva'] && !idApos['casal.noivo'],
+     'e aplicá-lo não escreve nome nenhum no casal que o usou');
+  ok(!idApos['media.hero'], 'nem lhe troca as fotografias');
+
+  // A prova do modelo mostra um casal de exemplo, e não o da oficina.
+  const provaHtml = await admin.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), mod.id);
+  ok(!/Olga/.test(provaHtml) && /Ana/.test(provaHtml),
+     'a prova do modelo mostra o casal de exemplo, não o da oficina');
+  ok(!/convite\/casal\//.test(provaHtml),
+     'e as imagens dela são as genéricas da casa, não fotografias de ninguém');
+
   const depois = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(depois['textos.kicker'] === 'Marca do modelo ' + marca,
      'e o seu convite passa a ser o do modelo');

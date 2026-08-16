@@ -167,13 +167,20 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     if (!$m || $m['ambito'] !== $ambito) return [defsAtuais($conn), null];
 
     // O modelo assenta sobre os valores de origem: guarda só o que o desenho
-    // mudou, e o resto tem de vir de algum lado.
-    $defs = defsPadrao();
+    // mudou, e o resto tem de vir de algum lado. A IDENTIDADE, essa, é sempre a
+    // genérica: um modelo não é de casal nenhum, e a sua prova não pode mostrar
+    // o nome nem os retratos de um. Sem esta linha, um modelo sem identidade
+    // guardada (o de origem da casa, que guarda defs vazio) caía nos valores de
+    // origem — que são os do primeiro casal.
+    $defs = array_merge(defsPadrao(), identidadeGenerica());
     $j = json_decode((string)$m['defs'], true);
     $permitidas = array_flip(chavesModelo($ambito));
     if (is_array($j)) foreach ($j as $k => $v) {
         if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
     }
+    // ...e o que o modelo tenha guardado da identidade não se sobrepõe a ela:
+    // os modelos antigos guardaram o casal onde foram compostos.
+    $defs = array_merge($defs, identidadeGenerica());
     return [$defs, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];
 }
 
@@ -261,10 +268,16 @@ function defsPadrao(): array {
         'rsvp.deadline' => 'Confirme a sua presença até 5 de Dezembro',
         'footer.local' => 'Moçâmedes',
         'footer.quote' => '“Amor é fogo que arde sem se ver.” — Luís de Camões',
-        'media.hero' => 'assets/convite/hero.jpg',
-        'media.historia' => 'assets/convite/historia.jpg',
-        'media.interludio' => 'assets/convite/interludio.jpg',
-        'media.acesso' => 'assets/convite/acesso.jpg',
+        // As imagens de origem são DESENHO da casa, e não fotografias.
+        // Eram os retratos do primeiro casal: cada casamento novo nascia com a
+        // cara deles, e um modelo feito a partir de um casamento levava-os para
+        // o convite de outro. As fotografias do primeiro casal continuam cá, em
+        // assets/convite/casal/ — mas como conteúdo DELE (ver esquema v18), e
+        // não como o valor de origem do produto.
+        'media.hero' => 'assets/convite/generico-hero.svg',
+        'media.historia' => 'assets/convite/generico-historia.svg',
+        'media.interludio' => 'assets/convite/generico-interludio.svg',
+        'media.acesso' => 'assets/convite/generico-acesso.svg',
         'media.musica' => 'assets/convite/musica.m4a',
         'tema.paleta' => '',
         'fx.petalas' => '1',
@@ -379,6 +392,72 @@ function chavesModelo(string $ambito): array {
     return $ambito === 'impresso'
         ? array_merge(chavesDoAmbito('impresso'), chavesLogisticaCartao())
         : chavesDoAmbito($ambito);
+}
+
+/**
+ * O que num modelo é DESENHO — e portanto o que ele pode escrever no convite
+ * de quem o aplica.
+ *
+ * Ficam de fora a identidade do casal, os dados do evento, as fotografias e o
+ * seu enquadramento: isso é de cada casamento, não do desenho. Sem esta linha,
+ * um modelo feito a partir de um casamento levava consigo o nome dos noivos e
+ * as fotos deles — e aplicá-lo noutro casamento rebatizava o casal e trocava-lhe
+ * os retratos. Era por isso que um casal não podia usar os modelos da casa.
+ *
+ * O modelo continua a GUARDAR estas chaves (a prova e a miniatura precisam de um
+ * convite com corpo), mas guarda-as genéricas — ver instantaneoModelo().
+ */
+function chavesDesenho(string $ambito): array {
+    // O cartão já é só desenho: tudo o que lá está começa por 'cartao.'.
+    if ($ambito === 'impresso') return chavesDoAmbito('impresso');
+    return array_values(array_filter(chavesDoAmbito('digital'),
+        fn($k) => !preg_match('/^(casal|evento|media|foto)\./', $k)));
+}
+
+/** O desenho de origem de um âmbito, só com as chaves que um modelo impõe. */
+function padraoDesenho(string $ambito): array {
+    $p = defsPadrao(); $out = [];
+    foreach (chavesDesenho($ambito) as $k) $out[$k] = (string)($p[$k] ?? '');
+    return $out;
+}
+
+/**
+ * A identidade genérica que um modelo mostra na sua prova: um casal de exemplo,
+ * um evento de exemplo e as imagens de origem.
+ *
+ * Um modelo é da casa e serve todos os casais — a prova não pode ser o retrato
+ * de um deles. Sem isto, o desenho guardado trazia o nome, a data, a morada e
+ * as fotografias do casamento onde foi composto.
+ */
+function identidadeGenerica(): array {
+    $p = defsPadrao();
+    // Os valores literais vivem no config.php: a migração do esquema precisa
+    // deles antes de este ficheiro estar carregado.
+    $g = identidadeGenericaBase();
+    // Fotos e enquadramentos: os de origem, que são imagens genéricas da casa.
+    foreach (chavesDoAmbito('digital') as $k) {
+        if (preg_match('/^(media|foto)\./', $k)) $g[$k] = (string)($p[$k] ?? '');
+    }
+    // O resto do evento (hora, títulos, nº de convidados) fica no de origem.
+    foreach (['evento.hora','evento.venue_titulo','evento.convidados',
+              'evento.civil_titulo','evento.civil_hora',
+              'evento.religiosa_titulo','evento.religiosa_hora'] as $k) {
+        if (!isset($g[$k])) $g[$k] = (string)($p[$k] ?? '');
+    }
+    return $g;
+}
+
+/**
+ * O retrato que um modelo guarda: o desenho do casamento aberto, com a
+ * identidade trocada pela genérica. É o que faz um modelo servir todos.
+ */
+function instantaneoModelo(mysqli $conn, string $ambito): array {
+    $out = instantaneoAmbito($conn, $ambito);
+    $permitidas = array_flip(chavesModelo($ambito));
+    foreach (identidadeGenerica() as $k => $v) {
+        if (isset($permitidas[$k])) $out[$k] = $v;
+    }
+    return $out;
 }
 
 /** Fotografia do estado atual de uma peça, pronta a guardar como versão. */

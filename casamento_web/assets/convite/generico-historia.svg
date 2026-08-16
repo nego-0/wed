@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750"
+     role="img" aria-label="Ramo de eucalipto dourado sobre fundo verde-floresta">
+  <!-- Imagem de origem da HISTÓRIA. Ver generico-hero.svg: é desenho da casa, e
+       não a fotografia de um casal. -->
+  <defs>
+    <linearGradient id="fh" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2C4536"/>
+      <stop offset="0.55" stop-color="#1D3227"/>
+      <stop offset="1" stop-color="#13201A"/>
+    </linearGradient>
+    <radialGradient id="bh" cx="0.72" cy="0.28" r="0.7">
+      <stop offset="0" stop-color="#628C6E" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#628C6E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="oh" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#B4864A"/>
+      <stop offset="0.5" stop-color="#D9BC8C"/>
+      <stop offset="1" stop-color="#EFE3CB"/>
+    </linearGradient>
+    <symbol id="fo" viewBox="0 0 44 20">
+      <path d="M0 10 C 11 -3 33 -3 44 10 C 33 23 11 23 0 10 Z" fill="none" stroke="url(#oh)" stroke-width="1.5"/>
+      <path d="M3 10 H 41" stroke="url(#oh)" stroke-width="0.85" opacity="0.65"/>
+    </symbol>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#fh)"/>
+  <rect width="1200" height="750" fill="url(#bh)"/>
+
+  <!-- Um ramo que atravessa a imagem, com folhas alternadas. -->
+  <g fill="none" stroke="url(#oh)" stroke-linecap="round">
+    <path d="M-20 512 C 220 470 430 402 640 316 C 800 250 950 196 1120 168" stroke-width="2.2"/>
+    <path d="M120 604 C 330 566 520 500 700 424" stroke-width="1" opacity="0.42"/>
+  </g>
+  <g>
+    <use href="#fo" x="120" y="452" width="96" height="44" transform="rotate(-18 168 474)"/>
+    <use href="#fo" x="250" y="418" width="92" height="42" transform="rotate(-22 296 439)"/>
+    <use href="#fo" x="382" y="378" width="90" height="41" transform="rotate(-25 427 398)"/>
+    <use href="#fo" x="514" y="332" width="88" height="40" transform="rotate(-28 558 352)"/>
+    <use href="#fo" x="648" y="284" width="84" height="38" transform="rotate(-24 690 303)"/>
+    <use href="#fo" x="780" y="244" width="80" height="36" transform="rotate(-20 820 262)"/>
+    <use href="#fo" x="912" y="212" width="76" height="35" transform="rotate(-15 950 229)"/>
+
+    <use href="#fo" x="188" y="512" width="84" height="38" transform="rotate(14 230 531)"/>
+    <use href="#fo" x="320" y="474" width="82" height="37" transform="rotate(11 361 492)"/>
+    <use href="#fo" x="452" y="430" width="80" height="36" transform="rotate(8 492 448)"/>
+    <use href="#fo" x="586" y="386" width="76" height="35" transform="rotate(6 624 403)"/>
+    <use href="#fo" x="718" y="342" width="72" height="33" transform="rotate(4 754 358)"/>
+  </g>
+
+  <path d="M1140 156 l 12 15 l -12 15 l -12 -15 z" fill="url(#oh)" opacity="0.9"/>
+
+  <g fill="#EFE3CB">
+    <circle cx="342" cy="216" r="2.4" opacity="0.24"/>
+    <circle cx="880" cy="530" r="2.0" opacity="0.20"/>
+    <circle cx="560" cy="632" r="1.7" opacity="0.18"/>
+  </g>
+</svg>

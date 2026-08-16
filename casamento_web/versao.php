@@ -313,6 +313,22 @@ function correcoesEsperadas(): array {
          'modelos.php', 'id="ov-modelo"'],
         ['O casal só vê e aplica os modelos que lhe são destinados',
          'api.php', "alcance='todos' OR id IN"],
+
+        // ---- Um modelo é desenho, não é o casal que o compôs (esquema v17/v18) ----
+        ['Um modelo novo nasce com noivos e evento de exemplo, não com os da oficina',
+         'personalizacao.php', 'function instantaneoModelo('],
+        ['Os nomes de exemplo vivem no config, que a migração já tem à mão',
+         'config.php', 'function identidadeGenericaBase('],
+        ['Aplicar um modelo impõe o desenho e não toca no nome de ninguém',
+         'personalizacao.php', 'function chavesDesenho('],
+        ['A prova de um modelo mostra sempre o casal de exemplo',
+         'personalizacao.php', 'não se sobrepõe a ela'],
+        ['Os modelos antigos foram limpos do casal que os compôs',
+         'db.php', 'identidadeGenericaBase()'],
+        ['As imagens de origem do convite são desenho da casa, não fotografias',
+         'personalizacao.php', 'generico-hero.svg'],
+        ['As fotografias do primeiro casal ficaram só com ele',
+         'db.php', "'assets/convite/casal/hero.jpg'"],
     ];
 }
 

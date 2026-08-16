@@ -135,6 +135,28 @@ function ficheirosApp(): array {
  * mexer em contas) não são dados de casamento nenhum, e por isso não caem na
  * regra do "só ver".
  */
+/**
+ * A identidade de exemplo dos modelos da casa: um casal e um evento que não são
+ * de ninguém.
+ *
+ * Um modelo serve todos os casais, e a sua prova não pode ser o retrato de um
+ * deles. Vive aqui, e não em personalizacao.php, porque a migração do esquema
+ * (db.php) precisa dela antes de personalizacao.php estar carregado.
+ */
+function identidadeGenericaBase(): array {
+    return [
+        'casal.noiva'  => 'Ana',
+        'casal.noivo'  => 'Bruno',
+        'evento.data'  => '2027-06-12',
+        'evento.local' => 'Quinta das Acácias',
+        'evento.cidade'=> 'Luanda · Angola',
+        'evento.maps'  => '',
+        'evento.whatsapp' => '',
+        'evento.civil_local' => '',      'evento.civil_maps' => '',
+        'evento.religiosa_local' => '',  'evento.religiosa_maps' => '',
+    ];
+}
+
 function acoesDaPlataforma(): array {
     return ['casamento_criar','casamento_abrir','casamento_fechar','casamento_estado',
             'casamento_apagar','utilizador_criar','utilizador_editar','utilizador_apagar',
