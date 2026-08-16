@@ -501,18 +501,28 @@ function identidadeGenerica(mysqli $conn): array {
 }
 
 /**
+ * Troca num conjunto de definições a identidade pela de exemplo.
+ *
+ * Vale para qualquer modelo que nasça agora, venha ele do convite de um
+ * casamento aberto ou do desenho de origem. O desenho de origem é o do primeiro
+ * casal: nascer dele trazia-lhe o nome e as fotografias na mesma.
+ */
+function comIdentidadeDeExemplo(mysqli $conn, string $ambito, array $defs): array {
+    $permitidas = array_flip(chavesModelo($ambito));
+    foreach (identidadeGenerica($conn) as $k => $v) {
+        if (isset($permitidas[$k])) $defs[$k] = $v;
+    }
+    return $defs;
+}
+
+/**
  * O retrato que um modelo NOVO guarda: o desenho do casamento aberto, com a
  * identidade trocada pela de exemplo. É o que faz um modelo servir todos.
  *
  * Só se aplica a quem nasce agora: um modelo já guardado fica como está.
  */
 function instantaneoModelo(mysqli $conn, string $ambito): array {
-    $out = instantaneoAmbito($conn, $ambito);
-    $permitidas = array_flip(chavesModelo($ambito));
-    foreach (identidadeGenerica($conn) as $k => $v) {
-        if (isset($permitidas[$k])) $out[$k] = $v;
-    }
-    return $out;
+    return comIdentidadeDeExemplo($conn, $ambito, instantaneoAmbito($conn, $ambito));
 }
 
 /** Fotografia do estado atual de uma peça, pronta a guardar como versão. */

@@ -319,6 +319,17 @@ const entrar = async (ctx, u, p) => {
   ok(nascido.defs['casal.noiva'] === 'Zita ' + marca && nascido.defs['evento.local'] === 'Salão ' + marca,
      `um modelo criado agora nasce com os dados de exemplo em vigor (${nascido.defs['casal.noiva']})`);
 
+  // Do ZERO, e nao do convite do casamento aberto: o desenho de origem e o do
+  // primeiro casal, e sem a troca o modelo nascia com o nome e as fotos dele.
+  const doZero = await api('modelo_criar', { nome: 'ZZ Exemplo do zero ' + marca,
+                                             ambito: 'digital', do_zero: true });
+  const nascidoZero = ((await admin._baixar('modelos_exportar')).modelos || [])
+                        .find(x => x.nome === 'ZZ Exemplo do zero ' + marca) || { defs: {} };
+  ok(nascidoZero.defs['casal.noiva'] === 'Zita ' + marca
+     && /generico-hero/.test(String(nascidoZero.defs['media.hero'] || '')),
+     `um modelo feito do zero tambem (${nascidoZero.defs['casal.noiva']}, ${nascidoZero.defs['media.hero']})`);
+  await api('modelo_apagar&id=' + doZero.id);
+
   const jaFeito = fichEx.find(x => x.nome === 'ZZ Exemplo antes ' + marca) || { defs: {} };
   ok(jaFeito.defs['casal.noiva'] === exAntes.exemplo['casal.noiva'],
      `e o modelo feito ANTES fica exatamente como estava (${jaFeito.defs['casal.noiva']})`);

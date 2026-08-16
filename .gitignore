@@ -14,3 +14,6 @@ casamento_web/assets/convite/custom/*
 # Imagens de exemplo dos modelos, enviadas pelo admin — só o .htaccess é versionado
 casamento_web/assets/convite/exemplo/*
 !casamento_web/assets/convite/exemplo/.htaccess
+
+# Cache do Python do gerador das imagens de exemplo
+__pycache__/

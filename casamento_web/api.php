@@ -2374,13 +2374,17 @@ if ($acao === 'modelo_criar') {
     } elseif (casamentoAtual() > 0 && empty($d['do_zero'])) {
         // Do que o casamento aberto mostra agora — é assim que se guarda um
         // convite que se acabou de desenhar para alguém. A IDENTIDADE, essa,
-        // fica genérica: um modelo da casa não é o retrato de um casal.
+        // fica de exemplo: um modelo da casa não é o retrato de um casal.
         $defs = instantaneoModelo($conn, $ambito);
     } else {
         // Sem casamento aberto, o modelo nasce do desenho de origem e desenha-se
         // no editor a seguir. Obrigar a abrir a casa de um casal para fazer um
         // modelo da CASA era pedir emprestado o que não é preciso.
-        $defs = padraoAmbito($ambito);
+        //
+        // Mas o desenho de origem é o do PRIMEIRO casal: sem esta troca, um
+        // modelo feito do zero nascia com o nome e as fotografias dele — o
+        // mesmo problema, pela porta do lado.
+        $defs = comIdentidadeDeExemplo($conn, $ambito, padraoAmbito($ambito));
     }
     if (!$defs) erro('Não há nada para guardar neste modelo.');
 

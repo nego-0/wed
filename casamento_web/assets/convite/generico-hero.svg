@@ -1,85 +1,228 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1247" width="1000" height="1247"
-     role="img" aria-label="Arco de folhagem dourada sobre fundo verde-floresta">
-  <!-- Imagem de origem da CAPA. Não é uma fotografia: é o desenho da casa, para
-       que um convite acabado de nascer (ou um modelo) não mostre o retrato de
-       um casal a outro. Mesma paleta do convite: verde-floresta e dourado. -->
+     role="img" aria-label="Ilustracao de um casal de noivos diante de um arco de flores brancas">
+  <!-- Imagem de exemplo da CAPA, na composicao da fotografia original: o casal
+       de corpo inteiro diante do arco florido, com a relva e a mesa ao fundo. -->
   <defs>
-    <linearGradient id="fundo" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#31503E"/>
-      <stop offset="0.45" stop-color="#22392C"/>
-      <stop offset="1" stop-color="#13201A"/>
-    </linearGradient>
-    <radialGradient id="brilho" cx="0.5" cy="0.3" r="0.75">
-      <stop offset="0" stop-color="#5D8468" stop-opacity="0.5"/>
-      <stop offset="1" stop-color="#5D8468" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="ouro" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#EFE3CB"/>
-      <stop offset="0.5" stop-color="#D9BC8C"/>
-      <stop offset="1" stop-color="#B4864A"/>
-    </linearGradient>
-    <!-- Uma folha, usada muitas vezes ao longo dos ramos. -->
-    <symbol id="folha" viewBox="0 0 40 18">
-      <path d="M0 9 C 10 -4 30 -4 40 9 C 30 22 10 22 0 9 Z" fill="none" stroke="url(#ouro)" stroke-width="1.4"/>
-      <path d="M2 9 H 38" stroke="url(#ouro)" stroke-width="0.8" opacity="0.7"/>
-    </symbol>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#3A4E63"/><stop offset="0.55" stop-color="#25384B"/>
+      <stop offset="1" stop-color="#16222F"/></linearGradient>
+    <linearGradient id="gvestido" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#EAF3FA"/><stop offset="0.45" stop-color="#C3D8E9"/>
+      <stop offset="1" stop-color="#93B3CC"/></linearGradient>
+    <linearGradient id="gfato" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#3C6E9E"/><stop offset="0.5" stop-color="#1E3D63"/>
+      <stop offset="1" stop-color="#12243C"/></linearGradient>
+    <linearGradient id="gpele" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#A2734F"/><stop offset="1" stop-color="#7A5138"/></linearGradient>
+    <radialGradient id="luz" cx="0.5" cy="0.34" r="0.62">
+      <stop offset="0" stop-color="#A9C0D0" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#A9C0D0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="vinheta" cx="0.5" cy="0.44" r="0.78">
+      <stop offset="0.54" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.5"/></radialGradient>
+    <symbol id="fl" viewBox="-20 -20 40 40" overflow="visible"><g fill="#F5F1E8"><ellipse cx="0.0" cy="-10.0" rx="7.6" ry="5.6" transform="rotate(0 0.0 -10.0)"/><ellipse cx="9.5" cy="-3.1" rx="7.6" ry="5.6" transform="rotate(72 9.5 -3.1)"/><ellipse cx="5.9" cy="8.1" rx="7.6" ry="5.6" transform="rotate(144 5.9 8.1)"/><ellipse cx="-5.9" cy="8.1" rx="7.6" ry="5.6" transform="rotate(216 -5.9 8.1)"/><ellipse cx="-9.5" cy="-3.1" rx="7.6" ry="5.6" transform="rotate(288 -9.5 -3.1)"/></g><circle r="3.4" fill="#E0D8C6"/></symbol>
+    <symbol id="fl2" viewBox="-20 -20 40 40" overflow="visible"><g fill="#FDFBF6"><ellipse cx="0.0" cy="-10.0" rx="7.6" ry="5.6" transform="rotate(0 0.0 -10.0)"/><ellipse cx="9.5" cy="-3.1" rx="7.6" ry="5.6" transform="rotate(72 9.5 -3.1)"/><ellipse cx="5.9" cy="8.1" rx="7.6" ry="5.6" transform="rotate(144 5.9 8.1)"/><ellipse cx="-5.9" cy="8.1" rx="7.6" ry="5.6" transform="rotate(216 -5.9 8.1)"/><ellipse cx="-9.5" cy="-3.1" rx="7.6" ry="5.6" transform="rotate(288 -9.5 -3.1)"/></g><circle r="3.4" fill="#D8CFBB"/></symbol>
+    <symbol id="fo" viewBox="-16 -8 32 16" overflow="visible"><path d="M-14 0 C -7 -8 7 -8 14 0 C 7 8 -7 8 -14 0 Z" fill="#54705A"/><path d="M-14 0 H 14" stroke="#31462F" stroke-width="0.8" opacity="0.5"/></symbol>
   </defs>
 
   <rect width="1000" height="1247" fill="url(#fundo)"/>
-  <rect width="1000" height="1247" fill="url(#brilho)"/>
+  <g opacity="0.14" fill="#DDE6EE"><rect x="0" y="0" width="22" height="1247"/><rect x="62" y="0" width="14" height="1247"/><rect x="124" y="0" width="22" height="1247"/><rect x="186" y="0" width="30" height="1247"/><rect x="248" y="0" width="14" height="1247"/><rect x="310" y="0" width="14" height="1247"/><rect x="372" y="0" width="30" height="1247"/><rect x="434" y="0" width="14" height="1247"/><rect x="496" y="0" width="22" height="1247"/><rect x="558" y="0" width="30" height="1247"/><rect x="620" y="0" width="14" height="1247"/><rect x="682" y="0" width="30" height="1247"/><rect x="744" y="0" width="14" height="1247"/><rect x="806" y="0" width="14" height="1247"/><rect x="868" y="0" width="14" height="1247"/><rect x="930" y="0" width="22" height="1247"/><rect x="992" y="0" width="22" height="1247"/></g>
+  <rect width="1000" height="1247" fill="url(#luz)"/>
 
-  <!-- O arco: dois ramos que sobem e se encontram no alto. -->
-  <g fill="none" stroke="url(#ouro)" stroke-linecap="round">
-    <path d="M120 1180 C 96 900 150 620 300 430 C 380 330 450 270 500 232"
-          stroke-width="2.4" opacity="0.95"/>
-    <path d="M880 1180 C 904 900 850 620 700 430 C 620 330 550 270 500 232"
-          stroke-width="2.4" opacity="0.95"/>
-    <path d="M168 1180 C 150 920 200 660 330 486" stroke-width="1" opacity="0.5"/>
-    <path d="M832 1180 C 850 920 800 660 670 486" stroke-width="1" opacity="0.5"/>
+  <!-- relva, e a mesa branca que atravessa o fundo -->
+  <rect x="0" y="1004" width="1000" height="243" fill="#3E5C3C"/>
+  <rect x="0" y="1004" width="1000" height="10" fill="#4E7049" opacity="0.7"/>
+  <g fill="#F2EEE4" opacity="0.92">
+    <rect x="52" y="944" width="896" height="24" rx="6"/>
+    <rect x="116" y="968" width="13" height="86"/><rect x="871" y="968" width="13" height="86"/>
   </g>
 
-  <!-- Folhas ao longo dos dois ramos, viradas para fora. -->
-  <g opacity="0.92">
-    <use href="#folha" x="96"  y="1052" width="86" height="39" transform="rotate(-104 139 1071)"/>
-    <use href="#folha" x="88"  y="930"  width="92" height="41" transform="rotate(-96 134 950)"/>
-    <use href="#folha" x="92"  y="806"  width="88" height="40" transform="rotate(-86 136 826)"/>
-    <use href="#folha" x="106" y="684"  width="84" height="38" transform="rotate(-76 148 703)"/>
-    <use href="#folha" x="130" y="566"  width="80" height="36" transform="rotate(-64 170 584)"/>
-    <use href="#folha" x="168" y="458"  width="76" height="34" transform="rotate(-52 206 475)"/>
-    <use href="#folha" x="222" y="366"  width="72" height="32" transform="rotate(-40 258 382)"/>
-    <use href="#folha" x="290" y="292"  width="66" height="30" transform="rotate(-30 323 307)"/>
-    <use href="#folha" x="366" y="244"  width="58" height="26" transform="rotate(-18 395 257)"/>
-
-    <use href="#folha" x="818" y="1052" width="86" height="39" transform="rotate(104 861 1071)"/>
-    <use href="#folha" x="820" y="930"  width="92" height="41" transform="rotate(96 866 950)"/>
-    <use href="#folha" x="820" y="806"  width="88" height="40" transform="rotate(86 864 826)"/>
-    <use href="#folha" x="810" y="684"  width="84" height="38" transform="rotate(76 852 703)"/>
-    <use href="#folha" x="790" y="566"  width="80" height="36" transform="rotate(64 830 584)"/>
-    <use href="#folha" x="756" y="458"  width="76" height="34" transform="rotate(52 794 475)"/>
-    <use href="#folha" x="706" y="366"  width="72" height="32" transform="rotate(40 742 382)"/>
-    <use href="#folha" x="644" y="292"  width="66" height="30" transform="rotate(30 677 307)"/>
-    <use href="#folha" x="576" y="244"  width="58" height="26" transform="rotate(18 605 257)"/>
+  <g>
+    <use href="#fl" x="152" y="333" width="51" height="51" transform="rotate(10 177 358)" opacity="0.76"/>
+    <use href="#fo" x="175" y="353" width="40" height="40" transform="rotate(117 195 373)" opacity="0.86"/>
+    <use href="#fl" x="158" y="298" width="51" height="51" transform="rotate(328 184 323)" opacity="0.81"/>
+    <use href="#fo" x="193" y="318" width="39" height="39" transform="rotate(293 213 338)" opacity="0.86"/>
+    <use href="#fo" x="192" y="266" width="51" height="51" transform="rotate(47 217 291)" opacity="0.75"/>
+    <use href="#fl2" x="225" y="235" width="41" height="41" transform="rotate(280 245 255)" opacity="0.88"/>
+    <use href="#fl" x="225" y="223" width="49" height="49" transform="rotate(62 250 248)" opacity="0.84"/>
+    <use href="#fo" x="204" y="198" width="47" height="47" transform="rotate(22 228 222)" opacity="0.90"/>
+    <use href="#fl2" x="229" y="218" width="41" height="41" transform="rotate(282 249 238)" opacity="0.73"/>
+    <use href="#fl" x="237" y="190" width="42" height="42" transform="rotate(69 259 211)" opacity="0.71"/>
+    <use href="#fl2" x="284" y="172" width="28" height="28" transform="rotate(202 297 186)" opacity="0.93"/>
+    <use href="#fl2" x="285" y="131" width="53" height="53" transform="rotate(117 311 157)" opacity="0.99"/>
+    <use href="#fl" x="285" y="130" width="44" height="44" transform="rotate(249 307 152)" opacity="0.84"/>
+    <use href="#fl2" x="337" y="130" width="41" height="41" transform="rotate(183 358 151)" opacity="0.77"/>
+    <use href="#fl2" x="341" y="128" width="41" height="41" transform="rotate(332 362 149)" opacity="0.97"/>
+    <use href="#fl2" x="375" y="112" width="31" height="31" transform="rotate(49 391 127)" opacity="0.74"/>
+    <use href="#fl" x="411" y="120" width="39" height="39" transform="rotate(242 430 140)" opacity="0.83"/>
+    <use href="#fl2" x="412" y="113" width="31" height="31" transform="rotate(282 427 129)" opacity="0.97"/>
+    <use href="#fo" x="450" y="125" width="30" height="30" transform="rotate(232 465 140)" opacity="0.81"/>
+    <use href="#fl" x="483" y="94" width="33" height="33" transform="rotate(348 499 110)" opacity="0.77"/>
+    <use href="#fl2" x="508" y="75" width="55" height="55" transform="rotate(319 535 102)" opacity="0.75"/>
+    <use href="#fl" x="510" y="111" width="46" height="46" transform="rotate(58 532 134)" opacity="0.83"/>
+    <use href="#fl2" x="523" y="104" width="41" height="41" transform="rotate(152 544 125)" opacity="0.81"/>
+    <use href="#fl2" x="548" y="124" width="28" height="28" transform="rotate(7 562 138)" opacity="0.87"/>
+    <use href="#fl" x="601" y="121" width="39" height="39" transform="rotate(138 620 140)" opacity="0.86"/>
+    <use href="#fl" x="630" y="119" width="34" height="34" transform="rotate(41 647 136)" opacity="0.98"/>
+    <use href="#fl" x="644" y="143" width="32" height="32" transform="rotate(30 660 159)" opacity="0.78"/>
+    <use href="#fl" x="649" y="137" width="53" height="53" transform="rotate(97 675 164)" opacity="0.74"/>
+    <use href="#fo" x="688" y="181" width="38" height="38" transform="rotate(295 707 199)" opacity="0.78"/>
+    <use href="#fo" x="693" y="185" width="29" height="29" transform="rotate(205 708 200)" opacity="0.91"/>
+    <use href="#fl" x="691" y="203" width="28" height="28" transform="rotate(288 705 217)" opacity="0.76"/>
+    <use href="#fl2" x="722" y="220" width="53" height="53" transform="rotate(338 748 247)" opacity="0.89"/>
+    <use href="#fl" x="746" y="205" width="50" height="50" transform="rotate(219 771 230)" opacity="0.77"/>
+    <use href="#fl" x="745" y="250" width="33" height="33" transform="rotate(163 762 266)" opacity="0.80"/>
+    <use href="#fl2" x="734" y="254" width="42" height="42" transform="rotate(224 755 275)" opacity="0.71"/>
+    <use href="#fl" x="747" y="254" width="47" height="47" transform="rotate(349 771 278)" opacity="0.78"/>
+    <use href="#fl2" x="757" y="314" width="30" height="30" transform="rotate(226 772 329)" opacity="0.86"/>
+    <use href="#fl2" x="765" y="309" width="31" height="31" transform="rotate(180 780 324)" opacity="0.75"/>
+    <use href="#fl" x="778" y="357" width="36" height="36" transform="rotate(358 796 375)" opacity="0.71"/>
+    <use href="#fo" x="769" y="363" width="25" height="25" transform="rotate(198 782 376)" opacity="0.76"/>
+    <use href="#fl2" x="181" y="377" width="40" height="40" transform="rotate(38 200 396)" opacity="0.95"/>
+    <use href="#fl2" x="194" y="408" width="38" height="38" transform="rotate(197 213 427)" opacity="0.97"/>
+    <use href="#fl2" x="160" y="410" width="55" height="55" transform="rotate(248 187 438)" opacity="0.99"/>
+    <use href="#fo" x="173" y="475" width="35" height="35" transform="rotate(262 191 492)" opacity="0.74"/>
+    <use href="#fl" x="192" y="461" width="56" height="56" transform="rotate(301 220 489)" opacity="0.70"/>
+    <use href="#fl2" x="160" y="503" width="44" height="44" transform="rotate(155 182 525)" opacity="0.72"/>
+    <use href="#fl2" x="162" y="547" width="46" height="46" transform="rotate(313 185 569)" opacity="0.90"/>
+    <use href="#fl" x="185" y="574" width="34" height="34" transform="rotate(249 202 591)" opacity="0.71"/>
+    <use href="#fl2" x="159" y="615" width="31" height="31" transform="rotate(160 174 630)" opacity="0.78"/>
+    <use href="#fo" x="164" y="642" width="55" height="55" transform="rotate(116 192 669)" opacity="0.71"/>
+    <use href="#fl" x="194" y="681" width="52" height="52" transform="rotate(128 220 707)" opacity="0.70"/>
+    <use href="#fl2" x="180" y="717" width="37" height="37" transform="rotate(100 199 736)" opacity="0.90"/>
+    <use href="#fl" x="190" y="724" width="33" height="33" transform="rotate(33 206 741)" opacity="0.95"/>
+    <use href="#fo" x="203" y="793" width="29" height="29" transform="rotate(15 217 807)" opacity="0.71"/>
+    <use href="#fl" x="199" y="823" width="34" height="34" transform="rotate(30 216 840)" opacity="0.99"/>
+    <use href="#fl" x="167" y="827" width="51" height="51" transform="rotate(237 193 853)" opacity="0.91"/>
+    <use href="#fl2" x="153" y="870" width="52" height="52" transform="rotate(275 179 896)" opacity="0.92"/>
+    <use href="#fl2" x="157" y="881" width="40" height="40" transform="rotate(261 177 901)" opacity="0.89"/>
+    <use href="#fo" x="171" y="925" width="26" height="26" transform="rotate(321 184 938)" opacity="0.89"/>
+    <use href="#fo" x="166" y="941" width="48" height="48" transform="rotate(50 190 965)" opacity="0.86"/>
+    <use href="#fl" x="758" y="341" width="41" height="41" transform="rotate(298 778 361)" opacity="0.88"/>
+    <use href="#fo" x="757" y="377" width="53" height="53" transform="rotate(344 783 403)" opacity="0.89"/>
+    <use href="#fl" x="765" y="446" width="27" height="27" transform="rotate(48 779 460)" opacity="0.81"/>
+    <use href="#fl2" x="793" y="443" width="28" height="28" transform="rotate(201 807 457)" opacity="0.89"/>
+    <use href="#fo" x="768" y="477" width="44" height="44" transform="rotate(88 790 499)" opacity="0.78"/>
+    <use href="#fl" x="776" y="500" width="39" height="39" transform="rotate(269 795 520)" opacity="0.85"/>
+    <use href="#fo" x="798" y="573" width="41" height="41" transform="rotate(189 819 594)" opacity="0.92"/>
+    <use href="#fl" x="781" y="581" width="40" height="40" transform="rotate(305 800 601)" opacity="0.77"/>
+    <use href="#fl" x="758" y="591" width="48" height="48" transform="rotate(266 782 615)" opacity="0.99"/>
+    <use href="#fl2" x="774" y="635" width="40" height="40" transform="rotate(28 794 655)" opacity="0.97"/>
+    <use href="#fl" x="801" y="665" width="34" height="34" transform="rotate(222 818 682)" opacity="0.89"/>
+    <use href="#fl" x="766" y="738" width="27" height="27" transform="rotate(119 779 752)" opacity="0.90"/>
+    <use href="#fo" x="780" y="722" width="46" height="46" transform="rotate(204 803 745)" opacity="0.70"/>
+    <use href="#fl2" x="791" y="758" width="27" height="27" transform="rotate(350 804 771)" opacity="0.73"/>
+    <use href="#fl2" x="788" y="833" width="32" height="32" transform="rotate(105 803 849)" opacity="0.85"/>
+    <use href="#fl2" x="800" y="848" width="39" height="39" transform="rotate(276 819 867)" opacity="1.00"/>
+    <use href="#fl2" x="770" y="863" width="42" height="42" transform="rotate(352 791 884)" opacity="0.98"/>
+    <use href="#fl2" x="773" y="922" width="25" height="25" transform="rotate(28 786 935)" opacity="0.85"/>
+    <use href="#fl2" x="776" y="939" width="56" height="56" transform="rotate(139 804 967)" opacity="0.97"/>
+    <use href="#fl" x="767" y="946" width="54" height="54" transform="rotate(209 794 973)" opacity="0.74"/>
+    <use href="#fl2" x="183" y="371" width="41" height="41" transform="rotate(48 204 391)" opacity="0.95"/>
+    <use href="#fl" x="205" y="373" width="41" height="41" transform="rotate(253 225 394)" opacity="0.77"/>
+    <use href="#fl2" x="184" y="313" width="53" height="53" transform="rotate(142 211 340)" opacity="0.75"/>
+    <use href="#fo" x="163" y="312" width="54" height="54" transform="rotate(162 190 339)" opacity="0.79"/>
+    <use href="#fl2" x="191" y="245" width="29" height="29" transform="rotate(135 205 259)" opacity="0.74"/>
+    <use href="#fl2" x="188" y="223" width="35" height="35" transform="rotate(270 205 240)" opacity="0.95"/>
+    <use href="#fl" x="215" y="247" width="29" height="29" transform="rotate(257 230 261)" opacity="0.97"/>
+    <use href="#fl2" x="249" y="201" width="34" height="34" transform="rotate(23 266 218)" opacity="0.82"/>
+    <use href="#fl" x="260" y="245" width="52" height="52" transform="rotate(130 286 271)" opacity="0.83"/>
+    <use href="#fl" x="280" y="185" width="33" height="33" transform="rotate(101 297 202)" opacity="0.72"/>
+    <use href="#fo" x="251" y="145" width="45" height="45" transform="rotate(337 274 167)" opacity="0.77"/>
+    <use href="#fo" x="269" y="121" width="33" height="33" transform="rotate(114 286 137)" opacity="0.93"/>
+    <use href="#fl2" x="293" y="154" width="49" height="49" transform="rotate(318 318 179)" opacity="0.94"/>
+    <use href="#fo" x="364" y="127" width="44" height="44" transform="rotate(198 386 150)" opacity="0.92"/>
+    <use href="#fo" x="361" y="156" width="26" height="26" transform="rotate(148 374 169)" opacity="0.88"/>
+    <use href="#fl2" x="341" y="124" width="29" height="29" transform="rotate(175 356 138)" opacity="0.97"/>
+    <use href="#fl" x="444" y="138" width="42" height="42" transform="rotate(170 465 159)" opacity="0.80"/>
+    <use href="#fo" x="431" y="110" width="34" height="34" transform="rotate(266 448 127)" opacity="0.90"/>
+    <use href="#fl" x="419" y="141" width="37" height="37" transform="rotate(108 438 160)" opacity="0.87"/>
+    <use href="#fl" x="466" y="112" width="37" height="37" transform="rotate(232 485 130)" opacity="0.72"/>
+    <use href="#fl2" x="555" y="75" width="40" height="40" transform="rotate(198 575 95)" opacity="0.84"/>
+    <use href="#fl2" x="507" y="147" width="35" height="35" transform="rotate(154 524 165)" opacity="0.86"/>
+    <use href="#fl" x="546" y="86" width="32" height="32" transform="rotate(123 563 102)" opacity="0.73"/>
+    <use href="#fl2" x="514" y="98" width="32" height="32" transform="rotate(291 531 115)" opacity="0.76"/>
+    <use href="#fl2" x="641" y="148" width="25" height="25" transform="rotate(138 654 161)" opacity="0.92"/>
+    <use href="#fl2" x="602" y="142" width="31" height="31" transform="rotate(122 618 158)" opacity="0.72"/>
+    <use href="#fl2" x="684" y="153" width="33" height="33" transform="rotate(45 701 170)" opacity="0.85"/>
+    <use href="#fl" x="641" y="145" width="44" height="44" transform="rotate(33 663 167)" opacity="0.97"/>
+    <use href="#fo" x="658" y="148" width="37" height="37" transform="rotate(161 676 166)" opacity="0.99"/>
+    <use href="#fl" x="722" y="184" width="51" height="51" transform="rotate(46 748 210)" opacity="0.83"/>
+    <use href="#fl2" x="683" y="222" width="49" height="49" transform="rotate(349 707 246)" opacity="0.85"/>
+    <use href="#fo" x="729" y="258" width="27" height="27" transform="rotate(308 743 272)" opacity="0.99"/>
   </g>
 
-  <!-- O remate do arco: um losango entre as duas pontas. -->
-  <path d="M500 214 l 13 17 l -13 17 l -13 -17 z" fill="url(#ouro)" opacity="0.95"/>
-
-  <!-- Poeira de luz, muito ao de leve. -->
-  <g fill="#EFE3CB">
-    <circle cx="238" cy="742"  r="2.6" opacity="0.30"/>
-    <circle cx="781" cy="612"  r="2.2" opacity="0.26"/>
-    <circle cx="340" cy="982"  r="1.8" opacity="0.22"/>
-    <circle cx="676" cy="880"  r="2.4" opacity="0.24"/>
-    <circle cx="452" cy="656"  r="1.6" opacity="0.20"/>
-    <circle cx="566" cy="1046" r="2.0" opacity="0.20"/>
+  <!-- o casal: 420x760 no seu proprio sistema, posto ao centro -->
+  <g transform="translate(172 246) scale(1.26)">
+    
+  <!-- O NOIVO, meio passo atras -->
+  <g>
+    <path d="M348 142 h 26 v 44 q -13 9 -26 0 Z" fill="#6B462F"/>
+    <!-- calcas: uma anca so, que depois se abre em duas pernas -->
+    <path d="M300 400 L 424 400 C 426 470 424 560 420 748 L 372 748
+             C 368 620 366 540 362 470 C 358 540 356 620 352 748 L 304 748
+             C 300 560 298 470 300 400 Z" fill="url(#gfato)"/>
+    <!-- tronco -->
+    <path d="M342 188 C 314 200 302 238 300 286 C 298 336 300 378 302 412
+             L 422 412 C 424 378 426 336 424 286 C 422 238 410 200 382 188
+             C 370 200 354 200 342 188 Z" fill="url(#gfato)"/>
+    <path d="M362 194 L 362 408" stroke="#0F2135" stroke-width="2.4" opacity="0.7"/>
+    <path d="M342 190 L 362 226 L 382 190" fill="none" stroke="#0F2135"
+          stroke-width="2" opacity="0.55"/>
+    <path d="M388 244 h 30 v 36 h -30 z" fill="none" stroke="#0F2135"
+          stroke-width="1.6" opacity="0.45"/>
+    <!-- braco de fora, afilado -->
+    <path d="M418 206 C 434 234 442 296 440 350 C 440 364 428 366 425 352
+             C 423 302 418 258 406 226 Z" fill="url(#gfato)"/>
+    <!-- o braco de dentro nao se desenha: fica por tras dela -->
+    <ellipse cx="360" cy="104" rx="37" ry="44" fill="url(#gpele)"/>
+    <path d="M324 100 C 323 66 341 48 361 48 C 382 48 398 66 397 102
+             C 385 82 372 74 359 74 C 344 74 331 84 324 100 Z" fill="#241A16"/>
   </g>
 
-  <!-- Escurece o pé, que é onde o convite assenta o texto. -->
-  <rect y="890" width="1000" height="357" fill="url(#pe)"/>
-  <defs>
-    <linearGradient id="pe" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#13201A" stop-opacity="0"/>
-      <stop offset="1" stop-color="#13201A" stop-opacity="0.75"/>
-    </linearGradient>
-  </defs>
+  <!-- A NOIVA, a frente -->
+  <g>
+    <!-- o cabelo que fica por tras: volume, e uma onda de um lado so -->
+    <ellipse cx="197" cy="114" rx="41" ry="49" fill="#241A16"/>
+    <path d="M232 120 C 250 168 252 232 240 288 C 234 316 222 336 210 346
+             C 226 306 232 250 226 196 Z" fill="#241A16"/>
+    <path d="M162 128 C 150 176 150 232 158 280 C 160 294 152 300 146 288
+             C 136 244 138 176 152 132 Z" fill="#241A16"/>
+    <path d="M185 164 h 25 v 46 q -12 10 -25 0 Z" fill="#6B462F"/>
+    <!-- saia -->
+    <path d="M162 344 C 148 442 128 566 110 716 C 107 736 114 748 132 748
+             L 266 748 C 284 748 291 736 288 716 C 270 566 250 442 236 344 Z"
+          fill="url(#gvestido)"/>
+    <path d="M174 356 C 162 462 148 578 136 716" stroke="#7E9FBA"
+          stroke-width="2" fill="none" opacity="0.45"/>
+    <path d="M200 356 C 199 462 198 578 197 716" stroke="#7E9FBA"
+          stroke-width="1.6" fill="none" opacity="0.3"/>
+    <path d="M226 356 C 236 462 250 578 262 716" stroke="#7E9FBA"
+          stroke-width="2" fill="none" opacity="0.45"/>
+    <!-- corpete, com o decote em coracao -->
+    <path d="M160 226 C 172 216 188 214 199 222 C 210 214 226 216 238 226
+             C 244 262 246 306 240 348 C 212 360 186 360 158 348
+             C 152 306 154 262 160 226 Z" fill="url(#gvestido)"/>
+    <path d="M160 226 C 174 240 189 242 199 234 C 209 242 224 240 238 226"
+          fill="none" stroke="#FFF" stroke-width="2.2" opacity="0.6"/>
+    <!-- Um braco desce ao lado, o outro pousa-lhe a mao no peito. Dois bracos
+         a fechar sobre a cintura desenhavam uma ferradura, e nao um casal. -->
+    <g stroke="#8B5E40" stroke-width="12" fill="none" stroke-linecap="round">
+      <path d="M158 242 C 134 274 130 322 138 366"/>
+      <path d="M236 240 C 262 252 288 266 308 280"/>
+    </g>
+    <ellipse cx="139" cy="376" rx="9" ry="13" fill="#8B5E40"/>
+    <ellipse cx="315" cy="284" rx="16" ry="11" fill="#8B5E40"
+             transform="rotate(16 315 284)"/>
+    <circle cx="308" cy="279" r="3.2" fill="#E7D9A8"/>
+    <!-- cabeca -->
+    <ellipse cx="197" cy="124" rx="38" ry="46" fill="url(#gpele)"/>
+    <path d="M160 116 C 158 78 178 58 200 58 C 226 58 244 80 242 118
+             C 230 94 216 86 197 88 C 178 90 166 100 160 116 Z" fill="#241A16"/>
+    <circle cx="163" cy="140" r="3.6" fill="#E7D9A8"/>
+  </g>
+
+  </g>
+
+  <rect width="1000" height="1247" fill="url(#vinheta)"/>
 </svg>

@@ -390,10 +390,20 @@ que o têm. O painel agrupa-os pela ordem por que se lê um convite.
 
 De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das Acácias, Luanda, sem
 contacto nem mapas (não há telefone de exemplo que se possa inventar sem mandar
-alguém a lado nenhum) — e, como imagens, quatro SVG na paleta do convite
-(`generico-hero.svg` e companhia): um arco botânico, um ramo de eucalipto, arcos
-concêntricos e uma moldura com raminhos nos cantos. São **desenho da casa**, e
-não fotografias de ninguém, que é o que faz sentido num exemplo.
+alguém a lado nenhum) — e, como imagens, quatro SVG (`generico-hero.svg` e
+companhia) que **seguem a composição das fotografias de origem**: o casal de
+corpo inteiro diante do arco florido, o momento da aliança, o mesmo retrato a
+preto e branco, e o plano fechado com a aliança a apanhar a luz. Mesmos
+enquadramentos, mesma paleta azul e marfim — mas desenhados, sem rosto, e
+portanto de ninguém. É o que faz sentido num exemplo: um modelo tem de parecer
+um convite a sério, e um ornamento abstrato no lugar da capa não parecia.
+
+Saem de `assets/convite/gerar-genericas.py` (a cena) e `gerar_casal.py` (as
+figuras), que ficam ao lado delas: são determinísticos, e mexer numa cor ou num
+enquadramento é mexer no gerador e correr outra vez, em vez de editar vinte mil
+caracteres de `path` à mão. **O plano fechado do `acesso` não é o da fotografia**
+— lá é a mão dela sobre o ombro dele, e uma mão desenhada àquele tamanho não sai
+bem; ficou um plano médio dos dois com a aliança em destaque, que diz o mesmo.
 
 Cada campo é validado por `validarDefinicao()`, a mesma de sempre — uma segunda
 cópia das regras aqui ficava para trás à primeira mudança. Deixar um campo em
