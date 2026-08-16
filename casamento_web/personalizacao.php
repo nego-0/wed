@@ -167,20 +167,15 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     if (!$m || $m['ambito'] !== $ambito) return [defsAtuais($conn), null];
 
     // O modelo assenta sobre os valores de origem: guarda só o que o desenho
-    // mudou, e o resto tem de vir de algum lado. A IDENTIDADE, essa, é sempre a
-    // genérica: um modelo não é de casal nenhum, e a sua prova não pode mostrar
-    // o nome nem os retratos de um. Sem esta linha, um modelo sem identidade
-    // guardada (o de origem da casa, que guarda defs vazio) caía nos valores de
-    // origem — que são os do primeiro casal.
-    $defs = array_merge(defsPadrao(), identidadeGenerica());
+    // mudou, e o resto tem de vir de algum lado. Mostra-se o que ELE guardou —
+    // um modelo já feito não se reescreve por baixo de quem o desenhou. Os
+    // modelos novos nascem com a identidade de exemplo (ver instantaneoModelo).
+    $defs = defsPadrao();
     $j = json_decode((string)$m['defs'], true);
     $permitidas = array_flip(chavesModelo($ambito));
     if (is_array($j)) foreach ($j as $k => $v) {
         if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
     }
-    // ...e o que o modelo tenha guardado da identidade não se sobrepõe a ela:
-    // os modelos antigos guardaram o casal onde foram compostos.
-    $defs = array_merge($defs, identidadeGenerica());
     return [$defs, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];
 }
 
@@ -268,16 +263,10 @@ function defsPadrao(): array {
         'rsvp.deadline' => 'Confirme a sua presença até 5 de Dezembro',
         'footer.local' => 'Moçâmedes',
         'footer.quote' => '“Amor é fogo que arde sem se ver.” — Luís de Camões',
-        // As imagens de origem são DESENHO da casa, e não fotografias.
-        // Eram os retratos do primeiro casal: cada casamento novo nascia com a
-        // cara deles, e um modelo feito a partir de um casamento levava-os para
-        // o convite de outro. As fotografias do primeiro casal continuam cá, em
-        // assets/convite/casal/ — mas como conteúdo DELE (ver esquema v18), e
-        // não como o valor de origem do produto.
-        'media.hero' => 'assets/convite/generico-hero.svg',
-        'media.historia' => 'assets/convite/generico-historia.svg',
-        'media.interludio' => 'assets/convite/generico-interludio.svg',
-        'media.acesso' => 'assets/convite/generico-acesso.svg',
+        'media.hero' => 'assets/convite/hero.jpg',
+        'media.historia' => 'assets/convite/historia.jpg',
+        'media.interludio' => 'assets/convite/interludio.jpg',
+        'media.acesso' => 'assets/convite/acesso.jpg',
         'media.musica' => 'assets/convite/musica.m4a',
         'tema.paleta' => '',
         'fx.petalas' => '1',
@@ -389,8 +378,13 @@ function chavesLogisticaCartao(): array {
  * que um modelo IMPÕE.
  */
 function chavesModelo(string $ambito): array {
+    // O cartão leva ainda o casal e a data: são o corpo do cartão, e sem eles a
+    // prova de um modelo do impresso caía nos valores de origem — que são os do
+    // primeiro casal. Guardados, um modelo novo leva os de exemplo (ver
+    // instantaneoModelo); impostos é que não são nunca (ver chavesDesenho).
     return $ambito === 'impresso'
-        ? array_merge(chavesDoAmbito('impresso'), chavesLogisticaCartao())
+        ? array_merge(chavesDoAmbito('impresso'), chavesLogisticaCartao(),
+                      ['casal.noiva', 'casal.noivo', 'evento.data'])
         : chavesDoAmbito($ambito);
 }
 
@@ -422,39 +416,91 @@ function padraoDesenho(string $ambito): array {
 }
 
 /**
- * A identidade genérica que um modelo mostra na sua prova: um casal de exemplo,
- * um evento de exemplo e as imagens de origem.
- *
- * Um modelo é da casa e serve todos os casais — a prova não pode ser o retrato
- * de um deles. Sem isto, o desenho guardado trazia o nome, a data, a morada e
- * as fotografias do casamento onde foi composto.
+ * Os dados de exemplo que o admin pode editar: o casal, o evento e as imagens
+ * com que um modelo NOVO nasce. Só estes — o resto da identidade não se edita
+ * porque não viaja de todo (ver identidadeGenerica).
  */
-function identidadeGenerica(): array {
+function chavesExemplo(): array {
+    return ['casal.noiva','casal.noivo','evento.data','evento.hora',
+            'evento.venue_titulo','evento.local','evento.cidade',
+            'media.hero','media.historia','media.interludio','media.acesso'];
+}
+
+/**
+ * Os valores de fábrica desses dados: um casal e um evento que não são de
+ * ninguém, e quatro imagens que são desenho da casa e não fotografias.
+ */
+function exemploDeFabrica(): array {
     $p = defsPadrao();
-    // Os valores literais vivem no config.php: a migração do esquema precisa
-    // deles antes de este ficheiro estar carregado.
-    $g = identidadeGenericaBase();
-    // Fotos e enquadramentos: os de origem, que são imagens genéricas da casa.
-    foreach (chavesDoAmbito('digital') as $k) {
-        if (preg_match('/^(media|foto)\./', $k)) $g[$k] = (string)($p[$k] ?? '');
+    return [
+        'casal.noiva'         => 'Ana',
+        'casal.noivo'         => 'Bruno',
+        'evento.data'         => '2027-06-12',
+        'evento.hora'         => (string)($p['evento.hora'] ?? ''),
+        'evento.venue_titulo' => (string)($p['evento.venue_titulo'] ?? ''),
+        'evento.local'        => 'Quinta das Acácias',
+        'evento.cidade'       => 'Luanda · Angola',
+        'media.hero'          => 'assets/convite/generico-hero.svg',
+        'media.historia'      => 'assets/convite/generico-historia.svg',
+        'media.interludio'    => 'assets/convite/generico-interludio.svg',
+        'media.acesso'        => 'assets/convite/generico-acesso.svg',
+    ];
+}
+
+/**
+ * Os dados de exemplo em vigor: os de fábrica, com o que o admin tenha mudado
+ * por cima. Vivem na linha 0 das definições — a do sistema, que é de onde são:
+ * não são de casamento nenhum.
+ */
+function exemploModelo(mysqli $conn): array {
+    global $P;
+    $out = exemploDeFabrica();
+    $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes WHERE casamento_id=0
+                        AND chave LIKE 'modelo.exemplo.%'");
+    if ($r) while ($f = $r->fetch_assoc()) {
+        $k = substr($f['chave'], strlen('modelo.exemplo.'));
+        if (isset($out[$k])) $out[$k] = (string)$f['valor'];
     }
-    // O resto do evento (hora, títulos, nº de convidados) fica no de origem.
-    foreach (['evento.hora','evento.venue_titulo','evento.convidados',
-              'evento.civil_titulo','evento.civil_hora',
-              'evento.religiosa_titulo','evento.religiosa_hora'] as $k) {
-        if (!isset($g[$k])) $g[$k] = (string)($p[$k] ?? '');
+    return $out;
+}
+
+/**
+ * A identidade com que um modelo novo nasce: os dados de exemplo, mais o que
+ * da identidade não viaja de todo.
+ *
+ * Um modelo é da casa e serve todos os casais — a sua prova não pode ser o
+ * retrato de um deles, e o contacto e a logística de um casal não têm nada que
+ * andar dentro de um desenho.
+ */
+function identidadeGenerica(mysqli $conn): array {
+    $p = defsPadrao();
+    $g = exemploModelo($conn);
+    // Contacto e locais das cerimónias: em branco. Não há valor de exemplo que
+    // faça sentido para um número de telefone ou uma ligação ao mapa.
+    foreach (['evento.maps','evento.whatsapp',
+              'evento.civil_local','evento.civil_maps',
+              'evento.religiosa_local','evento.religiosa_maps'] as $k) $g[$k] = '';
+    // O resto (nº de convidados, títulos e horas das cerimónias, enquadramento
+    // das imagens) fica no de origem.
+    foreach (chavesDoAmbito('digital') as $k) {
+        if (isset($g[$k])) continue;
+        if (preg_match('/^(foto\.|evento\.(convidados|civil_|religiosa_))/', $k)) {
+            $g[$k] = (string)($p[$k] ?? '');
+        }
     }
     return $g;
 }
 
 /**
- * O retrato que um modelo guarda: o desenho do casamento aberto, com a
- * identidade trocada pela genérica. É o que faz um modelo servir todos.
+ * O retrato que um modelo NOVO guarda: o desenho do casamento aberto, com a
+ * identidade trocada pela de exemplo. É o que faz um modelo servir todos.
+ *
+ * Só se aplica a quem nasce agora: um modelo já guardado fica como está.
  */
 function instantaneoModelo(mysqli $conn, string $ambito): array {
     $out = instantaneoAmbito($conn, $ambito);
     $permitidas = array_flip(chavesModelo($ambito));
-    foreach (identidadeGenerica() as $k => $v) {
+    foreach (identidadeGenerica($conn) as $k => $v) {
         if (isset($permitidas[$k])) $out[$k] = $v;
     }
     return $out;

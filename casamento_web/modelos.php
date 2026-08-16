@@ -99,6 +99,16 @@ if ($aberto > 0) {
   .modal-corpo .cas-data{ color:#8a8f88; font-size:.82rem; }
   .jan-fim{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.2rem;
             border-top:1px solid var(--line); padding-top:1rem; }
+  /* Os dados de exemplo: as imagens em fila, cada uma com a sua miniatura. */
+  .exs{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); margin-top:.9rem; }
+  .ex{ border:1px solid var(--line); border-radius:12px; padding:.6rem; background:#fff; }
+  /* contain, e não cover: aqui escolhe-se uma imagem, e para a escolher é
+     preciso vê-la inteira — a capa é ao alto e o resto ao baixo. */
+  .ex .mini{ display:block; width:100%; aspect-ratio:4/3; object-fit:contain; border-radius:8px;
+             background:#20211c; border:1px solid var(--line); }
+  .ex label{ display:block; margin:.5rem 0 .3rem; font-size:.76rem; text-transform:uppercase;
+             letter-spacing:.06em; color:#8a8f88; }
+  .ex input[type=file]{ font-size:.76rem; width:100%; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
@@ -149,6 +159,24 @@ if ($aberto > 0) {
     </div>
   </details>
 
+  <details class="painel dobra" id="d-exemplo">
+    <summary><span class="mais">+</span> Dados de exemplo dos modelos
+      <small>o casal e o evento com que um modelo novo nasce</small></summary>
+    <div class="dica">
+      Um modelo é um desenho, e serve todos os casais — por isso não pode nascer com o nome, a
+      data e as fotografias do casamento onde foi composto. Nasce com <b>estes</b> dados, que não
+      são de ninguém, e são os que se veem na prova e na miniatura do modelo.
+      <br>Isto vale para os modelos que criar <b>daqui para a frente</b>: os que já existem ficam
+      exatamente como estão.
+    </div>
+    <div class="lf" id="ex-campos"><div class="dica" style="margin:0">A carregar…</div></div>
+    <div class="exs" id="ex-imagens"></div>
+    <div class="jan-fim">
+      <button class="btn" onclick="exemploFabrica()">Repor os de fábrica</button>
+      <button class="btn btn-ouro" onclick="guardarExemplo()">Guardar</button>
+    </div>
+  </details>
+
   <div class="painel">
     <h3>Modelos</h3>
     <div class="dica">Um modelo publicado aparece a todos os casais, no seletor de versões do editor.
@@ -195,6 +223,7 @@ if ($aberto > 0) {
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -274,17 +303,6 @@ async function carregar(){
 }
 
 /** O menu "⋯" de um modelo. Um de cada vez, e fecha-se ao clicar fora. */
-function abrirMais(ev, id){
-  ev.stopPropagation();
-  const alvo = $('mm-' + id);
-  const jaAberto = alvo && alvo.style.display !== 'none';
-  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
-  if (alvo && !jaAberto) alvo.style.display = '';
-}
-document.addEventListener('click', () => {
-  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
-});
-
 /**
  * Encolhe a prova para caber na moldura. A escala vem da largura real da
  * moldura, e não de um número fixo: a grelha muda de colunas com o ecrã, e
@@ -436,6 +454,68 @@ async function apagar(id, nome){
   if (d && d.success){ toast('Modelo apagado.'); carregar(); }
 }
 
+/* ---- Os dados de exemplo com que um modelo novo nasce -------------------
+   Não são de casamento nenhum: vivem na linha 0 das definições. Editá-los não
+   toca em modelo nenhum já feito — só nos que se criarem a seguir. */
+const EX_ROTULO = {
+  'casal.noiva':'Noiva', 'casal.noivo':'Noivo', 'evento.data':'Data',
+  'evento.hora':'Hora', 'evento.venue_titulo':'Título do local',
+  'evento.local':'Local', 'evento.cidade':'Cidade',
+  'media.hero':'Capa', 'media.historia':'História',
+  'media.interludio':'Interlúdio', 'media.acesso':'Acesso (QR)'
+};
+let EX_FABRICA = {};
+
+async function carregarExemplo(){
+  const d = await api('modelo_exemplo');
+  if (!d || !d.success) return;
+  EX_FABRICA = d.fabrica || {};
+  pintarExemplo(d.exemplo || {});
+}
+
+function pintarExemplo(ex){
+  $('ex-campos').innerHTML = Object.keys(EX_ROTULO)
+    .filter(k => !k.startsWith('media.'))
+    .map(k => `<div><label for="ex-${k}">${EX_ROTULO[k]}</label>
+       <input type="${k==='evento.data'?'date':k==='evento.hora'?'time':'text'}"
+              id="ex-${k}" value="${esc(ex[k] ?? '')}"></div>`).join('');
+  $('ex-imagens').innerHTML = Object.keys(EX_ROTULO)
+    .filter(k => k.startsWith('media.'))
+    .map(k => `<div class="ex">
+       <img class="mini" id="ex-img-${k}" src="${esc(ex[k] ?? '')}" alt="${EX_ROTULO[k]}">
+       <label>${EX_ROTULO[k]}</label>
+       <input type="file" accept="image/*" onchange="enviarExemplo('${k}', this)">
+     </div>`).join('');
+}
+
+async function enviarExemplo(chave, el){
+  const f = el.files[0];
+  if (!f) return;
+  const fd = new FormData();
+  fd.append('chave', chave); fd.append('ficheiro', f);
+  const d = await api('modelo_exemplo_upload', { method:'POST', body: fd });
+  el.value = '';
+  if (!d || !d.success) return;
+  $('ex-img-' + chave).src = d.path + '?t=' + Date.now();
+  toast('Imagem de exemplo trocada.');
+}
+
+async function guardarExemplo(){
+  const corpo = {};
+  Object.keys(EX_ROTULO).filter(k => !k.startsWith('media.'))
+        .forEach(k => corpo[k] = $('ex-' + k).value);
+  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
+  if (d && d.success){ pintarExemplo(d.exemplo); toast('Dados de exemplo guardados.'); }
+}
+
+async function exemploFabrica(){
+  if (!confirm('Repor o casal, o evento e as imagens de exemplo tal como vêm de fábrica?')) return;
+  const corpo = {};
+  Object.keys(EX_ROTULO).forEach(k => corpo[k] = EX_FABRICA[k] ?? '');
+  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
+  if (d && d.success){ pintarExemplo(d.exemplo); toast('Reposto o de fábrica.'); }
+}
+
 async function importar(){
   const f = $('imp').files[0];
   if (!f) return toast('Escolha o ficheiro primeiro.', true);
@@ -451,6 +531,7 @@ async function importar(){
 }
 
 carregar();
+carregarExemplo();
 </script>
 </body>
 </html>

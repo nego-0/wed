@@ -439,6 +439,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
+<script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script>
 // Esta página chamava toast() sem o ter: as mensagens de erro rebentavam em
 // silêncio na consola, em vez de aparecerem a quem estava a olhar.
@@ -645,17 +646,8 @@ function dataCasamento(iso){
   return `<span class="quando">${esc(data)}</span> ${falta}`;
 }
 
-/** O menu "⋯" de um casamento. Um de cada vez, e fecha-se ao clicar fora. */
-function abrirMais(ev, id){
-  ev.stopPropagation();
-  const alvo = document.getElementById('mm-' + id);
-  const jaAberto = alvo && alvo.style.display !== 'none';
-  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
-  if (alvo && !jaAberto) alvo.style.display = '';
-}
-document.addEventListener('click', () => {
-  document.querySelectorAll('.mm-pop').forEach(x => x.style.display = 'none');
-});
+/* O menu "⋯" (abrirMais) vive em assets/menu-mais.js: era o mesmo código aqui
+   e em modelos.php, e uma correção feita num sítio não chegava ao outro. */
 
 /** Leva o olho até um sítio da página e assinala-o por um instante. */
 function irPara(id){

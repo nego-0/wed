@@ -314,21 +314,27 @@ function correcoesEsperadas(): array {
         ['O casal só vê e aplica os modelos que lhe são destinados',
          'api.php', "alcance='todos' OR id IN"],
 
-        // ---- Um modelo é desenho, não é o casal que o compôs (esquema v17/v18) ----
+        // ---- Um modelo é desenho, não é o casal que o compôs ----
         ['Um modelo novo nasce com noivos e evento de exemplo, não com os da oficina',
          'personalizacao.php', 'function instantaneoModelo('],
-        ['Os nomes de exemplo vivem no config, que a migração já tem à mão',
-         'config.php', 'function identidadeGenericaBase('],
         ['Aplicar um modelo impõe o desenho e não toca no nome de ninguém',
          'personalizacao.php', 'function chavesDesenho('],
-        ['A prova de um modelo mostra sempre o casal de exemplo',
-         'personalizacao.php', 'não se sobrepõe a ela'],
-        ['Os modelos antigos foram limpos do casal que os compôs',
-         'db.php', 'identidadeGenericaBase()'],
-        ['As imagens de origem do convite são desenho da casa, não fotografias',
+        ['Um modelo do cartão guarda o casal de exemplo, que é o corpo da prova',
+         'personalizacao.php', "'casal.noiva', 'casal.noivo', 'evento.data'"],
+        ['Um modelo já feito não se reescreve por baixo de quem o desenhou',
+         'personalizacao.php', 'um modelo já feito não se reescreve'],
+
+        // ---- Os dados de exemplo dos modelos, à mão do admin (esquema v19) ----
+        ['O admin edita o casal, o evento e as imagens com que um modelo nasce',
+         'personalizacao.php', 'function exemploModelo('],
+        ['E fá-lo na página dos modelos, com as imagens à vista',
+         'modelos.php', 'id="d-exemplo"'],
+        ['As imagens de exemplo são desenho da casa, e não fotografias de ninguém',
          'personalizacao.php', 'generico-hero.svg'],
-        ['As fotografias do primeiro casal ficaram só com ele',
-         'db.php', "'assets/convite/casal/hero.jpg'"],
+        ['O convite de origem ficou como sempre esteve — mexeu-se nos modelos',
+         'db.php', "valor LIKE 'assets/convite/casal/%'"],
+        ['O menu "⋯" vira-se para cima quando não há espaço em baixo',
+         'assets/menu-mais.js', "classList.add('acima')"],
     ];
 }
 

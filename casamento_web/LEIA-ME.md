@@ -351,7 +351,7 @@ tem ~260 px de largura, e uma lista de casamentos com procura espremida nessa
 coluna era ilegível — além de esticar a linha inteira da grelha e desalinhar os
 cartões vizinhos.
 
-**Um modelo é um desenho, não um casal** (esquema v17/v18). Um modelo era um
+**Um modelo é um desenho, não um casal.** Um modelo era um
 retrato inteiro da peça onde foi composto — e isso incluía o nome dos noivos, a
 data, o local, o WhatsApp e as fotografias. Aplicá-lo **renomeava o casal**:
 a Sara e o Tomás carregavam no modelo da casa e passavam a chamar-se Isabel e
@@ -370,21 +370,39 @@ Separam-se agora duas coisas que estavam misturadas:
 Aplicar um modelo escreve o desenho dele e devolve o resto ao de origem; o nome,
 a data, o local, os links e as fotografias do casal ficam onde estavam. O
 inverso também: **criar** um modelo já não copia a identidade de quem o compôs.
-`instantaneoModelo()` troca-a por uma **identidade de exemplo** — Ana & Bruno,
-12 de Junho de 2027, Quinta das Acácias, Luanda — e é essa que aparece na prova
-e na miniatura de qualquer modelo, mesmo nos antigos, que a migração v17 limpou.
-Os valores de exemplo vivem no `config.php` (`identidadeGenericaBase()`) e não no
-`personalizacao.php`: as migrações do `db.php` correm antes desse ficheiro estar
-carregado.
+`instantaneoModelo()` troca-a pelos **dados de exemplo** (a seguir), e é essa
+identidade que fica guardada no modelo e aparece na sua prova e na sua
+miniatura. Um modelo do cartão guarda também o casal e a data, apesar de nunca
+os impor: são o corpo do cartão, e sem eles a prova caía nos valores de origem.
 
-**As imagens de origem do convite** eram quatro fotografias do primeiro casal,
-que todo o casamento novo herdava e todo o modelo levava consigo. Passam a ser
-**desenho da casa** — quatro SVG na paleta do convite (`generico-hero.svg` e
-companhia): um arco botânico, um ramo de eucalipto, arcos concêntricos e uma
-moldura com raminhos nos cantos. Não são fotografias de ninguém, e por isso
-podem ser o que um casal vê antes de pôr as suas. As fotografias reais não se
-perderam: mudaram para `assets/convite/casal/` e a migração v18 fixa-as **só no
-casamento 1**, como conteúdo dele.
+Isto vale para os modelos que se criarem **a partir de agora**. Um modelo já
+feito é o trabalho de alguém e não se reescreve por baixo dele: `defsDoEditor()`
+mostra o que o modelo guardou, e nada lhe é sobreposto.
+
+**Os dados de exemplo** (esquema v19). O casal, o evento e as quatro imagens com
+que um modelo novo nasce editam-se na página dos modelos, em «Dados de exemplo
+dos modelos». De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das
+Acácias, Luanda — e, como imagens, quatro SVG na paleta do convite
+(`generico-hero.svg` e companhia): um arco botânico, um ramo de eucalipto, arcos
+concêntricos e uma moldura com raminhos nos cantos. São **desenho da casa**, e
+não fotografias de ninguém, que é o que faz sentido num exemplo.
+
+Vivem na linha 0 das definições — a do sistema —, sob o prefixo
+`modelo.exemplo.`, e um valor igual ao de fábrica apaga a linha, como em
+qualquer definição. As imagens que o admin envie vão para
+`assets/convite/exemplo/` (fora do versionamento, como os uploads do convite).
+
+Nada disto toca no **convite de origem**: as suas quatro imagens continuam a ser
+as fotografias de sempre em `assets/convite/`, e é com elas que um casamento
+novo nasce. Trocá-las por desenho genérico chegou a ser feito (esquemas 17 e 18)
+e foi desfeito: era mudar o produto quando o que estava errado eram os modelos.
+A v19 limpa o que a v18 tinha deixado escrito.
+
+**O menu «⋯».** Estava copiado linha por linha em `modelos.php` e em
+`plataforma.php`, e uma correção feita num sítio não chegava ao outro. Passa a
+viver em `assets/menu-mais.js`, e aproveitou-se para lhe dar o que faltava:
+**vira-se para cima** quando não há espaço em baixo. Abria sempre para baixo, e
+o menu do último cartão de uma grelha caía fora do ecrã — parecia não fazer nada.
 
 **O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
 e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um

@@ -2258,6 +2258,100 @@ if ($acao === 'modelo_visibilidade') {
     ok(['id' => $id, 'alcance' => $alcance, 'casamentos' => array_keys($ids)]);
 }
 
+if ($acao === 'modelo_exemplo') {
+    // Os dados com que um modelo NOVO nasce. Só de leitura.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os dados de exemplo.');
+    ok(['exemplo' => exemploModelo($conn), 'fabrica' => exemploDeFabrica(),
+        'chaves' => chavesExemplo()]);
+}
+
+if ($acao === 'modelo_exemplo_guardar') {
+    // O admin muda o casal e o evento de exemplo. Vale para os modelos que se
+    // criarem daqui para a frente: os que já existem ficam como estão.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
+    $d = corpo();
+    $fabrica = exemploDeFabrica();
+    $mudados = [];
+    foreach (chavesExemplo() as $k) {
+        if (!array_key_exists($k, $d)) continue;
+        $v = trim((string)$d[$k]);
+        if (str_starts_with($k, 'media.')) {
+            // Um caminho de imagem, e um que exista: um exemplo com uma imagem
+            // partida é pior do que um exemplo com a de fábrica.
+            if ($v === '') { $v = $fabrica[$k]; }
+            elseif (!preg_match('#^assets/convite/[\w./-]+$#', $v) || str_contains($v, '..')
+                    || !is_file(__DIR__ . '/' . $v)) {
+                erro('Imagem de exemplo inválida: ' . $k);
+            }
+        } elseif ($k === 'evento.data') {
+            if ($v !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) erro('Data de exemplo inválida.');
+            if ($v === '') $v = $fabrica[$k];
+        } elseif ($k === 'evento.hora') {
+            if ($v !== '' && !preg_match('/^\d{1,2}:\d{2}$/', $v)) erro('Hora de exemplo inválida.');
+            if ($v === '') $v = $fabrica[$k];
+        } else {
+            if (mb_strlen($v) > 120) erro('Texto de exemplo demasiado longo: ' . $k);
+            if ($v === '') $v = $fabrica[$k];
+        }
+        $mudados[$k] = $v;
+    }
+    if (!$mudados) erro('Nada para guardar.');
+
+    // Os dados de exemplo são do sistema, não de um casamento: vivem na linha 0.
+    // Igual ao de fábrica é não ter escolha nenhuma — a linha sai, como em
+    // qualquer definição que volte ao valor de origem.
+    $ins = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0,?,?)
+                           ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $del = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave=?");
+    foreach ($mudados as $k => $v) {
+        $chave = 'modelo.exemplo.' . $k;
+        if ($v === ($fabrica[$k] ?? null)) { $del->bind_param('s', $chave); $del->execute(); }
+        else { $ins->bind_param('ss', $chave, $v); $ins->execute(); }
+    }
+    registar($conn, 'modelo_exemplo', 'dados de exemplo dos modelos', implode(', ', array_keys($mudados)));
+    ok(['exemplo' => exemploModelo($conn)]);
+}
+
+if ($acao === 'modelo_exemplo_upload') {
+    // Uma imagem para o convite de exemplo. Vai para uma pasta só dela: não se
+    // mistura com as fotografias de um casamento, que são de alguém.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
+    $chave = $_POST['chave'] ?? '';
+    if (!in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
+        erro('Campo de ficheiro inválido.');
+    }
+    if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
+    $f = $_FILES['ficheiro'];
+    if ($f['size'] > 5*1024*1024) erro('Ficheiro demasiado grande (máx. 5 MB).');
+    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg','jpeg','png','webp','svg'], true)) erro('Formato não suportado (jpg/png/webp/svg).');
+    if (function_exists('finfo_open')) {
+        $fi = finfo_open(FILEINFO_MIME_TYPE);
+        $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
+        if (!in_array($mt, ['image/jpeg','image/png','image/webp','image/svg+xml','text/plain','text/xml'], true)) {
+            erro('O conteúdo do ficheiro não corresponde ao formato.');
+        }
+        if ($ext === 'svg' && !in_array($mt, ['image/svg+xml','text/plain','text/xml'], true)) erro('SVG inválido.');
+    }
+    $dir = __DIR__ . '/assets/convite/exemplo';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999)
+              . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+    if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
+    // A imagem de exemplo anterior sai, se era desta pasta. As de fábrica ficam.
+    $antigo = exemploModelo($conn)[$chave] ?? '';
+    if (str_starts_with($antigo, 'assets/convite/exemplo/') && !str_contains($antigo, '..')) {
+        @unlink(__DIR__ . '/' . $antigo);
+    }
+    $caminho = 'assets/convite/exemplo/' . $nomeFich;
+    $chaveDef = 'modelo.exemplo.' . $chave;
+    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0,?,?)
+                          ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('ss', $chaveDef, $caminho); $st->execute();
+    registar($conn, 'modelo_exemplo', 'imagem de exemplo', $chave);
+    ok(['path' => $caminho]);
+}
+
 if ($acao === 'modelo_criar') {
     // Nasce do que está em vigor no casamento aberto: preparar um modelo é
     // desenhar o convite como se fosse para alguém, e depois guardá-lo aqui.

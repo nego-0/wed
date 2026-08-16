@@ -252,6 +252,9 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
    botão tem 32px de largura e o ícone só 16. */
 .mm > button{ width:32px; padding-left:0; padding-right:0; justify-content:center; }
 .ico-mais{ width:16px; height:16px; fill:currentColor; display:block; flex:none; }
+/* Por baixo do botão; para cima quando não há espaço em baixo (ver
+   assets/menu-mais.js) — senão o menu do último cartão abria fora do ecrã. */
+.mm-pop.acima{ top:auto; bottom:calc(100% + 4px); }
 .mm-pop{ position:absolute; right:0; top:calc(100% + 4px); z-index:60; width:180px; background:#fff;
          border:1px solid var(--line); border-radius:12px; padding:.3rem;
          box-shadow:0 12px 32px rgba(32,52,42,.18); text-align:left; }

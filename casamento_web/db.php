@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 18;
+const ESQUEMA_VERSAO = 19;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -628,64 +628,20 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 
-    // v17 — tirar dos modelos já guardados a identidade do casal onde foram
-    // compostos. Um modelo feito a partir de um casamento levava consigo o nome
-    // dos noivos, a data, a morada e as fotografias deles: aplicá-lo noutro
-    // casamento rebatizava o casal. Passa a guardar-se identidade genérica (o
-    // desenho é que é o modelo), e os que já existem são corrigidos aqui.
-    if ($versaoAtual < 17) {
-        $rr = @$conn->query("SELECT id, defs FROM {$P}modelos");
-        if ($rr) {
-            $generica = identidadeGenericaBase();
-            while ($m = $rr->fetch_assoc()) {
-                $j = json_decode((string)$m['defs'], true);
-                if (!is_array($j) || !$j) continue;
-                $mudou = false;
-                foreach ($j as $k => $v) {
-                    if (!preg_match('/^(casal|evento|media|foto)\./', $k)) continue;
-                    if (array_key_exists($k, $generica)) {
-                        if ((string)$v !== $generica[$k]) { $j[$k] = $generica[$k]; $mudou = true; }
-                    } else {
-                        // Fotos, enquadramentos e o resto do evento: sem valor
-                        // próprio, o modelo passa a valer o de origem da casa.
-                        unset($j[$k]); $mudou = true;
-                    }
-                }
-                if (!$mudou) continue;
-                $st = $conn->prepare("UPDATE {$P}modelos SET defs=? WHERE id=?");
-                $novoJson = json_encode($j, JSON_UNESCAPED_UNICODE);
-                $st->bind_param('si', $novoJson, $m['id']);
-                @$st->execute();
-            }
-        }
-    }
-
-    // v18 — as imagens de origem passaram a ser desenho da casa, e não as
-    // fotografias do primeiro casal.
+    // v19 — desfaz a v18, que mudou as fotografias de origem do convite para
+    // assets/convite/casal/. A troca das imagens de origem por desenho da casa
+    // passou a valer só para os modelos NOVOS (ver exemploDeFabrica), e não
+    // para o produto inteiro, por isso as fotografias voltaram ao sítio de
+    // sempre. Quem já tinha corrido a v18 ficou a apontar para uma pasta que já
+    // não existe: as linhas com o caminho de lá saem, e cada casamento volta a
+    // valer o de origem — que é exatamente o mesmo ficheiro.
     //
-    // As fotografias não se perdem: mudaram para assets/convite/casal/ e ficam
-    // a ser conteúdo do casamento nº 1 — aquele de quem elas são, e o que a
-    // instalação traz de raiz. Os OUTROS casamentos passam a mostrar o desenho
-    // genérico, que é o ponto: mostravam o retrato de um casal alheio só por
-    // ser o valor de origem do produto.
-    if ($versaoAtual < 18) {
-        $mudou = ['media.hero'       => 'assets/convite/casal/hero.jpg',
-                  'media.historia'   => 'assets/convite/casal/historia.jpg',
-                  'media.interludio' => 'assets/convite/casal/interludio.jpg',
-                  'media.acesso'     => 'assets/convite/casal/acesso.jpg'];
-        $ins = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (1,?,?)
-                               ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-        $up  = $conn->prepare("UPDATE {$P}definicoes SET valor=? WHERE chave=? AND valor=?");
-        foreach ($mudou as $chave => $novo) {
-            // O casamento nº 1 fica com as fotografias, agora como escolha sua.
-            $ins->bind_param('ss', $chave, $novo);
-            @$ins->execute();
-            // Quem quer que apontasse à mão para o ficheiro antigo acompanha a
-            // mudança de sítio — corrige-se o caminho, não a escolha.
-            $velho = str_replace('convite/casal/', 'convite/', $novo);
-            $up->bind_param('sss', $novo, $chave, $velho);
-            @$up->execute();
-        }
+    // (As versões 17 e 18 não existem mais: uma reescrevia os modelos já
+    // guardados, o que era o erro que esta desfaz.)
+    if ($versaoAtual < 19) {
+        @$conn->query("DELETE FROM {$P}definicoes
+                       WHERE chave IN ('media.hero','media.historia','media.interludio','media.acesso')
+                       AND valor LIKE 'assets/convite/casal/%'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

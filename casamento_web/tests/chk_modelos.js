@@ -74,8 +74,14 @@ const entrar = async (ctx, u, p) => {
                      .find(x => x.nome === 'ZZ Modelo digital ' + marca) || { defs: {} };
   ok(semDono.defs['casal.noiva'] !== 'Olga' && semDono.defs['casal.noivo'] !== 'Otto',
      `o modelo não guarda o nome do casal onde foi composto (${semDono.defs['casal.noiva']} & ${semDono.defs['casal.noivo']})`);
-  ok(!/convite\/casal\//.test(String(semDono.defs['media.hero'] || '')),
-     `nem as fotografias dele (${semDono.defs['media.hero']})`);
+  ok(/generico-hero/.test(String(semDono.defs['media.hero'] || '')),
+     `nem as fotografias dele: nasce com a imagem de exemplo (${semDono.defs['media.hero']})`);
+  // O mesmo para o cartão: o casal e a data são o corpo dele, e sem os guardar
+  // a sua prova caía no casal de origem.
+  const semDonoCartao = ((await admin._baixar('modelos_exportar')).modelos || [])
+                     .find(x => x.nome === 'ZZ Modelo impresso ' + marca) || { defs: {} };
+  ok(semDonoCartao.defs['casal.noiva'] === 'Ana' && semDonoCartao.defs['casal.noivo'] === 'Bruno',
+     `e o modelo do cartão também nasce com o casal de exemplo (${semDonoCartao.defs['casal.noiva']} & ${semDonoCartao.defs['casal.noivo']})`);
 
   const idApos = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(!idApos['casal.noiva'] && !idApos['casal.noivo'],
@@ -87,8 +93,8 @@ const entrar = async (ctx, u, p) => {
     await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), mod.id);
   ok(!/Olga/.test(provaHtml) && /Ana/.test(provaHtml),
      'a prova do modelo mostra o casal de exemplo, não o da oficina');
-  ok(!/convite\/casal\//.test(provaHtml),
-     'e as imagens dela são as genéricas da casa, não fotografias de ninguém');
+  ok(/generico-hero/.test(provaHtml) && !/convite\/hero\.jpg/.test(provaHtml),
+     'e as imagens dela são as de exemplo, não fotografias de ninguém');
 
   const depois = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(depois['textos.kicker'] === 'Marca do modelo ' + marca,
@@ -248,6 +254,48 @@ const entrar = async (ctx, u, p) => {
   const voltou = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(!voltou['textos.kicker'],
      'aplicar o modelo de origem devolve a peça ao desenho da casa, mesmo já customizada');
+
+  // ---------- 12. os dados de exemplo dos modelos novos ----------
+  // O admin escolhe com que casal e que imagens um modelo NOVO nasce. Mexer
+  // neles não pode tocar num modelo já feito — nem no convite de origem, que é
+  // o produto e não um exemplo.
+  const exAntes = await api('modelo_exemplo');
+  ok(exAntes && exAntes.success && exAntes.exemplo['casal.noiva'],
+     `os dados de exemplo leem-se (${exAntes.exemplo['casal.noiva']} & ${exAntes.exemplo['casal.noivo']})`);
+  ok(/generico-/.test(exAntes.fabrica['media.hero']),
+     'e de fábrica as imagens são desenho da casa, não fotografias');
+
+  // Um modelo feito ANTES da mudança e outro DEPOIS: só o segundo a apanha.
+  await api('casamento_abrir&id=' + oficina.id);
+  const exAntesMod = await api('modelo_criar', { nome: 'ZZ Exemplo antes ' + marca, ambito: 'digital' });
+  await api('modelo_exemplo_guardar', { 'casal.noiva': 'Zita ' + marca, 'casal.noivo': 'Zeca',
+                                        'evento.local': 'Salão ' + marca });
+  const exDepoisMod = await api('modelo_criar', { nome: 'ZZ Exemplo depois ' + marca, ambito: 'digital' });
+
+  const fichEx = (await admin._baixar('modelos_exportar')).modelos || [];
+  const nascido = fichEx.find(x => x.nome === 'ZZ Exemplo depois ' + marca) || { defs: {} };
+  ok(nascido.defs['casal.noiva'] === 'Zita ' + marca && nascido.defs['evento.local'] === 'Salão ' + marca,
+     `um modelo criado agora nasce com os dados de exemplo em vigor (${nascido.defs['casal.noiva']})`);
+
+  const jaFeito = fichEx.find(x => x.nome === 'ZZ Exemplo antes ' + marca) || { defs: {} };
+  ok(jaFeito.defs['casal.noiva'] === exAntes.exemplo['casal.noiva'],
+     `e o modelo feito ANTES fica exatamente como estava (${jaFeito.defs['casal.noiva']})`);
+  const provaAntes = await admin.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), exAntesMod.id);
+  ok(!new RegExp('Zita ' + marca).test(provaAntes),
+     'e a prova dele também — um modelo já feito não se reescreve por baixo de quem o desenhou');
+
+  // O convite de origem é o produto, não um exemplo: continua com as suas imagens.
+  const origem = await admin.evaluate(async () =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1')).text());
+  ok(/convite\/hero\.jpg/.test(origem),
+     'e o convite de origem mantém as imagens de sempre — mexeu-se nos modelos, não no produto');
+
+  await api('modelo_exemplo_guardar', exAntes.fabrica);
+  const exReposto = await api('modelo_exemplo');
+  ok(exReposto.exemplo['casal.noiva'] === exAntes.fabrica['casal.noiva'],
+     'e repõem-se os de fábrica');
+  for (const m of [exAntesMod, exDepoisMod]) await api('modelo_apagar&id=' + m.id);
 
   // ---------- limpeza ----------
   const todos = (await api('modelo_lista')).modelos || [];
