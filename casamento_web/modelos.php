@@ -130,6 +130,34 @@ if ($aberto > 0) {
   .ex .enq input{ padding:.3rem .35rem; font-size:.78rem; text-align:center; }
   .ex .enq span{ display:block; font-size:.66rem; text-transform:uppercase; letter-spacing:.05em;
                  color:#a8ada6; text-align:center; margin-bottom:.15rem; }
+  .ex .btn-gal{ width:100%; font-size:.78rem; padding:.32rem .5rem; margin-bottom:.35rem; }
+  /* A galeria da casa, dentro da janela: uma grelha de fotografias a escolher. */
+  .modal-corpo .gal{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+                     max-height:min(56vh,420px); overflow:auto; padding:.2rem; }
+  .modal-corpo .gal-i{ position:relative; border:1px solid var(--line); background:#fff;
+                       border-radius:10px; overflow:hidden; transition:.14s; }
+  .modal-corpo .gal-i:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.18); }
+  /* A que esta em vigor marca-se: numa grelha de vinte, saber qual e a de agora
+     e a primeira pergunta que se faz. */
+  .modal-corpo .gal-i.em-uso{ border-color:var(--forest); box-shadow:0 0 0 2px var(--forest); }
+  .modal-corpo .gal-esc{ display:block; width:100%; padding:0; border:0; background:none;
+                         cursor:pointer; font-family:var(--sans); text-align:left; }
+  .modal-corpo .gal-i img{ display:block; width:100%; aspect-ratio:16/10; object-fit:cover; }
+  .modal-corpo .gal-i span{ display:block; padding:.34rem .5rem; font-size:.74rem; color:#6c7570; }
+  .modal-corpo .gal-et{ position:absolute; left:.35rem; top:.35rem; font-style:normal;
+                        font-size:.64rem; text-transform:uppercase; letter-spacing:.05em;
+                        background:rgba(255,255,255,.9); color:#6c7570; border-radius:50px;
+                        padding:.08rem .45rem; }
+  .modal-corpo .gal-x{ position:absolute; right:.3rem; top:.3rem; width:24px; height:24px;
+                       border:0; border-radius:50%; background:rgba(255,255,255,.92);
+                       color:var(--danger); font-size:1rem; line-height:1; cursor:pointer;
+                       padding:0; }
+  .modal-corpo .gal-x:hover{ background:var(--danger); color:#fff; }
+  /* Acrescentar uma fotografia: fica no fim da janela, depois do que ja la esta. */
+  .modal-corpo .gal-mais{ border-top:1px solid var(--line); margin-top:.9rem; padding-top:.8rem; }
+  .modal-corpo .gal-mais label{ display:block; margin-bottom:.35rem; font-size:.76rem;
+                                text-transform:uppercase; letter-spacing:.06em; color:#8a8f88; }
+  .modal-corpo .gal-mais .med{ font-size:.72rem; color:#a8ada6; margin-top:.3rem; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
@@ -522,13 +550,17 @@ const EX_GRUPOS = [
 const EX_CHAVES = EX_GRUPOS.flatMap(g =>
   (g.campos || []).map(c => c.k)
     .concat((g.imagens || []).flatMap(i => i.enq ? [i.k, i.enq] : [i.k])));
-let EX_FABRICA = {};
+let EX_FABRICA = {}, EX_GALERIA = {}, EX_ATUAL = {}, EX_DIM = {};
 
-async function carregarExemplo(){
+async function carregarExemplo(soDados){
   const d = await api('modelo_exemplo');
   if (!d || !d.success) return;
   EX_FABRICA = d.fabrica || {};
-  pintarExemplo(d.exemplo || {});
+  EX_GALERIA = d.galeria || {};
+  EX_ATUAL = d.exemplo || {};
+  EX_DIM = {};
+  EX_GRUPOS.forEach(g => (g.imagens || []).forEach(i => EX_DIM[i.k] = i.dim || ''));
+  if (!soDados) pintarExemplo(EX_ATUAL);
 }
 
 /** "50 8 100" -> {x,y,zoom}. Vazio vale o centro sem aproximação. */
@@ -563,6 +595,7 @@ function cartaoImagem(i, ex){
           style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom / 100})"></div>
      <div class="nm">${i.r}</div>
      <div class="med">${i.dim || ''}</div>
+     <button class="btn btn-gal" onclick="abrirGaleria('${i.k}','${i.r}')">Galeria da casa</button>
      <input type="file" accept="image/*,.svg" onchange="enviarExemplo('${i.k}', this)">
      ${i.enq ? `<div class="enq" data-alvo="ex-img-${i.k}">
         ${[['x','X'],['y','Y'],['zoom','Zoom']].map(([c, r]) => `<div><span>${r}</span>
@@ -577,6 +610,80 @@ function verEnq(chaveEnq, idImg){
   const img = $(idImg); if (!img) return;
   img.style.objectPosition = v('x') + '% ' + v('y') + '%';
   img.style.transform = 'scale(' + Math.max(100, v('zoom')) / 100 + ')';
+}
+
+/* A galeria da casa: fotografias que ja vem recortadas para a moldura da
+   seccao, e por isso entram sem ser preciso acertar o enquadramento. */
+let GAL_CHAVE = '', GAL_ROTULO = '';
+
+function abrirGaleria(chave, rotulo){
+  GAL_CHAVE = chave; GAL_ROTULO = rotulo;
+  abrirModelo('Galeria · ' + rotulo, '');
+  pintarGaleria();
+}
+
+function pintarGaleria(){
+  const fotos = EX_GALERIA[GAL_CHAVE] || [];
+  const emUso = (EX_ATUAL || {})[GAL_CHAVE] || '';
+  $('ov-corpo').innerHTML = `
+    <div class="dica" style="margin:0 0 .8rem">As da casa vêm já recortadas para esta secção.
+      Pode acrescentar as suas: ficam aqui para usar em qualquer modelo, e só saem se as
+      apagar. Escolher uma centra o enquadramento.</div>
+    <div class="gal">${fotos.map(f => `
+      <div class="gal-i${f.src === emUso ? ' em-uso' : ''}">
+        <button class="gal-esc" onclick="escolherDaGaleria('${esc(f.src)}')" title="${esc(f.nome)}">
+          <img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy">
+          <span>${esc(f.nome)}</span></button>
+        ${f.da_casa ? '<em class="gal-et">da casa</em>'
+                    : `<button class="gal-x" title="Apagar esta imagem"
+                         onclick="apagarDaGaleria('${esc(f.src)}')">&times;</button>`}
+      </div>`).join('') || '<div class="dica" style="margin:0">Ainda não há nada aqui.</div>'}</div>
+    <div class="gal-mais">
+      <label for="gal-env">Acrescentar uma fotografia sua</label>
+      <input type="file" id="gal-env" accept="image/*,.svg" onchange="enviarParaGaleria(this)">
+      <div class="med">${(EX_DIM[GAL_CHAVE] || '')}</div>
+    </div>
+    <div class="jan-fim"><button class="btn" onclick="fechar('ov-modelo')">Fechar</button></div>`;
+}
+
+/** Envia uma fotografia do admin: entra na galeria E passa a ser a que está em vigor. */
+async function enviarParaGaleria(el){
+  const f = el.files[0]; if (!f) return;
+  const fd = new FormData(); fd.append('chave', GAL_CHAVE); fd.append('ficheiro', f);
+  const d = await api('modelo_exemplo_upload', { method:'POST', body: fd });
+  el.value = '';
+  if (!d || !d.success) return;
+  EX_GALERIA[GAL_CHAVE] = d.galeria || EX_GALERIA[GAL_CHAVE];
+  await carregarExemplo(true);
+  pintarGaleria();
+  toast('Fotografia acrescentada à galeria.');
+}
+
+async function apagarDaGaleria(src){
+  if (!confirm('Apagar esta fotografia da galeria?\n\nOs modelos já criados com ela ficam como estão.')) return;
+  const d = await api('modelo_exemplo_apagar', { method:'POST',
+                       body: JSON.stringify({ chave: GAL_CHAVE, src }) });
+  if (!d || !d.success) return;
+  EX_GALERIA[GAL_CHAVE] = d.galeria || [];
+  await carregarExemplo(true);
+  pintarGaleria();
+  toast('Apagada.');
+}
+
+async function escolherDaGaleria(src){
+  const chave = GAL_CHAVE;
+  const corpo = { [chave]: src };
+  // A fotografia da galeria ja vem cortada a medida: o enquadramento volta ao
+  // centro, senao herdava o desvio que servia a imagem anterior.
+  const enq = { 'media.hero':'foto.hero', 'media.interludio':'foto.interludio',
+                'media.acesso':'foto.acesso' }[chave];
+  if (enq) corpo[enq] = '50 50 100';
+  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
+  if (!d || !d.success) return;
+  fechar('ov-modelo');
+  EX_ATUAL = d.exemplo;
+  pintarExemplo(d.exemplo);
+  toast('Imagem de exemplo escolhida.');
 }
 
 async function enviarExemplo(chave, el){
@@ -609,7 +716,7 @@ function corpoExemplo(){
 
 async function guardarExemplo(){
   const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpoExemplo()) });
-  if (d && d.success){ pintarExemplo(d.exemplo); toast('Dados de exemplo guardados.'); }
+  if (d && d.success){ EX_ATUAL = d.exemplo; pintarExemplo(d.exemplo); toast('Dados de exemplo guardados.'); }
 }
 
 async function exemploFabrica(){
@@ -617,7 +724,7 @@ async function exemploFabrica(){
   const corpo = {};
   EX_CHAVES.forEach(k => corpo[k] = EX_FABRICA[k] ?? '');
   const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
-  if (d && d.success){ pintarExemplo(d.exemplo); toast('Reposto o de fábrica.'); }
+  if (d && d.success){ EX_ATUAL = d.exemplo; pintarExemplo(d.exemplo); toast('Reposto o de fábrica.'); }
 }
 
 async function importar(){

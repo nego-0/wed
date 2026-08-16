@@ -140,7 +140,8 @@ function acoesDaPlataforma(): array {
             'casamento_apagar','utilizador_criar','utilizador_editar','utilizador_apagar',
             'utilizador_estado','utilizador_repor_senha','acesso_tirar_de','suporte_sair',
             'modelo_criar','modelo_editar','modelo_defs','modelo_apagar','modelo_visibilidade',
-            'modelo_exemplo_guardar','modelo_exemplo_upload','modelos_importar'];
+            'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
+            'modelos_importar'];
 }
 
 function acoesDoCasamento(): array {

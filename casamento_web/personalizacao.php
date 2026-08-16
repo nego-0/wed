@@ -441,6 +441,96 @@ function podeSerVazio(string $chave): bool {
 }
 
 /**
+ * A galeria de fotografias que a casa traz para os modelos.
+ *
+ * São do Pexels (licença livre, uso comercial, sem atribuição obrigatória) e
+ * vêm já recortadas para a moldura de cada secção — por isso quem escolhe uma
+ * fica com o enquadramento certo, sem ter de o acertar à mão.
+ *
+ * O acervo é variado de propósito, e com mais casais de pele escura do que
+ * qualquer outra coisa: é quem este sistema serve. A proveniência de cada
+ * ficheiro está em assets/convite/galeria/CREDITOS.md, e o número no nome é o
+ * da fotografia no Pexels.
+ */
+function galeriaExemplo(): array {
+    return [
+        'media.hero' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
+            'capa-34371787.jpg' => 'Jardim ao fim da tarde',
+            'capa-31877241.jpg' => 'Fato branco, palmeiras',
+            'capa-35845533.jpg' => 'Traje tradicional, azul e ouro',
+            'capa-38739043.jpg' => 'Traje tradicional, estúdio',
+            'capa-35069916.jpg' => 'Casamento indiano, ao ar livre',
+            'capa-29237392.jpg' => 'Abraço em jardim',
+        ]],
+        'media.historia' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
+            'historia-18706408.jpg' => 'A aliança a ser posta',
+            'historia-30268255.jpg' => 'Mãos, luz quente',
+            'historia-30008469.jpg' => 'A aliança sobre o vestido',
+            'historia-27463225.jpg' => 'Mãos pousadas, preto e branco',
+            'historia-38147801.jpg' => 'Pulseiras e hena',
+            'historia-28588976.jpg' => 'Mãos dadas, alianças',
+        ]],
+        'media.interludio' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
+            'interludio-30679260.jpg' => 'Testa com testa',
+            'interludio-37828095.jpg' => 'Mãos que se procuram',
+            'interludio-31673125.jpg' => 'Penumbra, a aliança',
+            'interludio-37045023.jpg' => 'Guirlandas',
+            'interludio-12153956.jpg' => 'Turbante e sorriso',
+            'interludio-31953140.jpg' => 'Interior amplo',
+        ]],
+        'media.acesso' => ['pasta' => 'assets/convite/galeria/', 'itens' => [
+            'acesso-32895248.jpg' => 'Sob o véu',
+            'acesso-29747608.jpg' => 'Exterior, tons de terra',
+            'acesso-26711184.jpg' => 'Verde, testa com testa',
+            'acesso-38708859.jpg' => 'Riso à entrada',
+            'acesso-36248917.jpg' => 'Mandapa florido',
+            'acesso-36297030.jpg' => 'Pátio histórico',
+        ]],
+    ];
+}
+
+/** A que secção pertence um ficheiro enviado, pelo prefixo do nome. */
+function prefixoGaleria(string $chave): string {
+    return str_replace('media.', '', $chave);
+}
+
+/**
+ * A galeria de uma secção: as fotografias que a casa traz MAIS as que o admin
+ * enviou.
+ *
+ * As enviadas ficam — não substituem a anterior. Uma imagem de exemplo não é
+ * uma definição que se troca, é um acervo que cresce: quem prepara vários
+ * modelos quer poder voltar atrás e usar noutro a que já tinha enviado.
+ */
+function galeriaDaSeccao(string $chave): array {
+    $casa = galeriaExemplo()[$chave] ?? null;
+    $out = [];
+    if ($casa) foreach ($casa['itens'] as $f => $legenda) {
+        if (is_file(__DIR__ . '/' . $casa['pasta'] . $f)) {
+            $out[] = ['src' => $casa['pasta'] . $f, 'nome' => $legenda, 'da_casa' => true];
+        }
+    }
+    // As enviadas pelo admin, da mais recente para a mais antiga.
+    $dir = __DIR__ . '/assets/convite/exemplo';
+    $pre = prefixoGaleria($chave) . '-';
+    $enviadas = is_dir($dir) ? (glob("$dir/$pre*") ?: []) : [];
+    usort($enviadas, fn($a, $b) => filemtime($b) <=> filemtime($a));
+    foreach ($enviadas as $caminho) {
+        $out[] = ['src'  => 'assets/convite/exemplo/' . basename($caminho),
+                  'nome' => 'Enviada a ' . date('j/n/Y', filemtime($caminho)),
+                  'da_casa' => false];
+    }
+    return $out;
+}
+
+/** A galeria toda, secção a secção. */
+function galeriaCompleta(): array {
+    $out = [];
+    foreach (array_keys(galeriaExemplo()) as $chave) $out[$chave] = galeriaDaSeccao($chave);
+    return $out;
+}
+
+/**
  * Os valores de fábrica desses dados: um casal e um evento que não são de
  * ninguém, e quatro imagens que são desenho da casa e não fotografias.
  */
@@ -460,11 +550,16 @@ function exemploDeFabrica(): array {
         'evento.whatsapp' => '',
         'evento.civil_local'     => '', 'evento.civil_maps'     => '',
         'evento.religiosa_local' => '', 'evento.religiosa_maps' => '',
-        // As imagens são desenho da casa, e não fotografias de ninguém.
-        'media.hero'       => 'assets/convite/generico-hero.svg',
-        'media.historia'   => 'assets/convite/generico-historia.svg',
-        'media.interludio' => 'assets/convite/generico-interludio.svg',
-        'media.acesso'     => 'assets/convite/generico-acesso.svg',
+        // Fotografias da galeria da casa (Pexels, licença livre): um modelo tem
+        // de parecer um convite a sério, e um desenho no lugar da capa não
+        // parecia. Ver assets/convite/galeria/CREDITOS.md.
+        'media.hero'       => 'assets/convite/galeria/capa-34371787.jpg',
+        'media.historia'   => 'assets/convite/galeria/historia-18706408.jpg',
+        'media.interludio' => 'assets/convite/galeria/interludio-30679260.jpg',
+        'media.acesso'     => 'assets/convite/galeria/acesso-32895248.jpg',
+        // Vêm já cortadas à medida da secção: o enquadramento é o centro.
+        'foto.hero' => '50 50 100', 'foto.interludio' => '50 50 100',
+        'foto.acesso' => '50 50 100',
     ];
     $out = [];
     foreach (chavesExemplo() as $k) $out[$k] = $proprio[$k] ?? (string)($p[$k] ?? '');

@@ -2261,8 +2261,9 @@ if ($acao === 'modelo_visibilidade') {
 if ($acao === 'modelo_exemplo') {
     // Os dados com que um modelo NOVO nasce. Só de leitura.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os dados de exemplo.');
+    // A galeria vai com o resto: o painel precisa dela para a janela de escolha.
     ok(['exemplo' => exemploModelo($conn), 'fabrica' => exemploDeFabrica(),
-        'chaves' => chavesExemplo()]);
+        'chaves' => chavesExemplo(), 'galeria' => galeriaCompleta()]);
 }
 
 if ($acao === 'modelo_exemplo_guardar') {
@@ -2341,18 +2342,43 @@ if ($acao === 'modelo_exemplo_upload') {
     $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999)
               . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
     if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
-    // A imagem de exemplo anterior sai, se era desta pasta. As de fábrica ficam.
-    $antigo = exemploModelo($conn)[$chave] ?? '';
-    if (str_starts_with($antigo, 'assets/convite/exemplo/') && !str_contains($antigo, '..')) {
-        @unlink(__DIR__ . '/' . $antigo);
-    }
+    // A anterior NÃO se apaga: as enviadas juntam-se à galeria desta secção, e
+    // quem prepara vários modelos quer poder voltar a uma que já tinha enviado.
+    // Para a tirar de vez há a ação modelo_exemplo_apagar.
     $caminho = 'assets/convite/exemplo/' . $nomeFich;
     $chaveDef = 'modelo.exemplo.' . $chave;
     $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0,?,?)
                           ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
     $st->bind_param('ss', $chaveDef, $caminho); $st->execute();
     registar($conn, 'modelo_exemplo', 'imagem de exemplo', $chave);
-    ok(['path' => $caminho]);
+    ok(['path' => $caminho, 'galeria' => galeriaDaSeccao($chave)]);
+}
+
+if ($acao === 'modelo_exemplo_apagar') {
+    // Tirar da galeria uma imagem que o admin enviou. As da casa não se apagam:
+    // vêm com a instalação, e um ficheiro em falta partiria a lista a todos.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
+    $d = corpo();
+    $chave = (string)($d['chave'] ?? '');
+    $src   = (string)($d['src'] ?? '');
+    if (!isset(galeriaExemplo()[$chave]) && $chave !== 'media.musica') erro('Secção inválida.');
+    if (!str_starts_with($src, 'assets/convite/exemplo/') || str_contains($src, '..')) {
+        erro('Só se apagam as imagens que enviou — as da casa ficam.');
+    }
+    $abs = __DIR__ . '/' . $src;
+    if (!is_file($abs)) erro('Essa imagem já não está cá.');
+    // Se era a que estava em vigor, a secção volta à de fábrica em vez de ficar
+    // a apontar para um ficheiro que já não existe.
+    if ((exemploModelo($conn)[$chave] ?? '') === $src) {
+        $fab = exemploDeFabrica()[$chave] ?? '';
+        $k = 'modelo.exemplo.' . $chave;
+        $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave=?");
+        $st->bind_param('s', $k); $st->execute();
+        if ($fab === '') { /* sem valor de fábrica: fica o de origem */ }
+    }
+    @unlink($abs);
+    registar($conn, 'modelo_exemplo', 'imagem de exemplo apagada', basename($src));
+    ok(['galeria' => galeriaDaSeccao($chave), 'exemplo' => exemploModelo($conn)]);
 }
 
 if ($acao === 'modelo_criar') {

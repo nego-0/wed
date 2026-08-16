@@ -74,7 +74,7 @@ const entrar = async (ctx, u, p) => {
                      .find(x => x.nome === 'ZZ Modelo digital ' + marca) || { defs: {} };
   ok(semDono.defs['casal.noiva'] !== 'Olga' && semDono.defs['casal.noivo'] !== 'Otto',
      `o modelo não guarda o nome do casal onde foi composto (${semDono.defs['casal.noiva']} & ${semDono.defs['casal.noivo']})`);
-  ok(/generico-hero/.test(String(semDono.defs['media.hero'] || '')),
+  ok(/galeria\//.test(String(semDono.defs['media.hero'] || '')),
      `nem as fotografias dele: nasce com a imagem de exemplo (${semDono.defs['media.hero']})`);
   // O mesmo para o cartão: o casal e a data são o corpo dele, e sem os guardar
   // a sua prova caía no casal de origem.
@@ -93,8 +93,8 @@ const entrar = async (ctx, u, p) => {
     await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), mod.id);
   ok(!/Olga/.test(provaHtml) && /Ana/.test(provaHtml),
      'a prova do modelo mostra o casal de exemplo, não o da oficina');
-  ok(/generico-hero/.test(provaHtml) && !/convite\/hero\.jpg/.test(provaHtml),
-     'e as imagens dela são as de exemplo, não fotografias de ninguém');
+  ok(/galeria\//.test(provaHtml) && !/convite\/hero\.jpg/.test(provaHtml),
+     'e as imagens dela são as da galeria, não as fotografias do casal de origem');
 
   const depois = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(depois['textos.kicker'] === 'Marca do modelo ' + marca,
@@ -262,8 +262,15 @@ const entrar = async (ctx, u, p) => {
   const exAntes = await api('modelo_exemplo');
   ok(exAntes && exAntes.success && exAntes.exemplo['casal.noiva'],
      `os dados de exemplo leem-se (${exAntes.exemplo['casal.noiva']} & ${exAntes.exemplo['casal.noivo']})`);
-  ok(/generico-/.test(exAntes.fabrica['media.hero']),
-     'e de fábrica as imagens são desenho da casa, não fotografias');
+  ok(/galeria\//.test(exAntes.fabrica['media.hero']),
+     'e de fábrica as imagens vêm da galeria da casa');
+  const gal = exAntes.galeria || {};
+  const semGal = ['media.hero','media.historia','media.interludio','media.acesso']
+                   .filter(k => (gal[k] || []).length < 3);
+  ok(!semGal.length,
+     'cada secção tem galeria para escolher' + (semGal.length ? ' — falta ' + semGal.join(', ') : ''));
+  ok((gal['media.hero'] || []).every(f => f.da_casa),
+     'e as que a casa traz vêm marcadas como suas');
 
   // A identidade INTEIRA está lá para preencher. Metade dos campos faltava.
   const faltam = ['casal.noiva','casal.noivo','evento.data','evento.hora','evento.convidados',
@@ -326,7 +333,7 @@ const entrar = async (ctx, u, p) => {
   const nascidoZero = ((await admin._baixar('modelos_exportar')).modelos || [])
                         .find(x => x.nome === 'ZZ Exemplo do zero ' + marca) || { defs: {} };
   ok(nascidoZero.defs['casal.noiva'] === 'Zita ' + marca
-     && /generico-hero/.test(String(nascidoZero.defs['media.hero'] || '')),
+     && /galeria\//.test(String(nascidoZero.defs['media.hero'] || '')),
      `um modelo feito do zero tambem (${nascidoZero.defs['casal.noiva']}, ${nascidoZero.defs['media.hero']})`);
   await api('modelo_apagar&id=' + doZero.id);
 

@@ -390,20 +390,35 @@ que o têm. O painel agrupa-os pela ordem por que se lê um convite.
 
 De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das Acácias, Luanda, sem
 contacto nem mapas (não há telefone de exemplo que se possa inventar sem mandar
-alguém a lado nenhum) — e, como imagens, quatro SVG (`generico-hero.svg` e
-companhia) que **seguem a composição das fotografias de origem**: o casal de
-corpo inteiro diante do arco florido, o momento da aliança, o mesmo retrato a
-preto e branco, e o plano fechado com a aliança a apanhar a luz. Mesmos
-enquadramentos, mesma paleta azul e marfim — mas desenhados, sem rosto, e
-portanto de ninguém. É o que faz sentido num exemplo: um modelo tem de parecer
-um convite a sério, e um ornamento abstrato no lugar da capa não parecia.
+alguém a lado nenhum) — e, como imagens, quatro fotografias da galeria da casa.
 
-Saem de `assets/convite/gerar-genericas.py` (a cena) e `gerar_casal.py` (as
-figuras), que ficam ao lado delas: são determinísticos, e mexer numa cor ou num
-enquadramento é mexer no gerador e correr outra vez, em vez de editar vinte mil
-caracteres de `path` à mão. **O plano fechado do `acesso` não é o da fotografia**
-— lá é a mão dela sobre o ombro dele, e uma mão desenhada àquele tamanho não sai
-bem; ficou um plano médio dos dois com a aliança em destaque, que diz o mesmo.
+**A galeria da casa.** Um modelo tem de parecer um convite a sério, e desenhos
+no lugar das fotografias não pareciam. A instalação traz **24 fotografias** em
+`assets/convite/galeria/`, seis por secção, já recortadas para a moldura de cada
+uma (a capa 1000×1247, as restantes 1300×812 ou 1200×750) e o interlúdio já
+convertido a preto e branco. São do Pexels, sob licença livre para uso
+comercial; a proveniência de cada uma está em `galeria/CREDITOS.md`, e a lista
+que o painel lê é `galeriaExemplo()`.
+
+O acervo é variado de propósito, e com mais casais de pele escura do que
+qualquer outra coisa — é quem este sistema serve. Há também casamentos indianos
+e europeus, porque um exemplo que só mostra um tipo de casamento diz ao resto
+que o produto não é para eles.
+
+No painel, cada imagem tem um botão **«Galeria da casa»** que abre uma janela
+com todas as opções daquela secção; escolher uma põe-na em vigor e **centra o
+enquadramento**, já que o ficheiro vem cortado à medida. A que está a ser usada
+aparece marcada.
+
+**O admin acrescenta as suas.** A mesma janela tem um campo de envio, e o que
+sobe **junta-se** à galeria em vez de substituir o que lá estava — uma imagem de
+exemplo não é uma definição que se troca, é um acervo que cresce, e quem prepara
+vários modelos quer poder voltar a uma que já tinha enviado. As enviadas vivem
+em `assets/convite/exemplo/` (fora do versionamento), distinguem-se das da casa
+à vista, e só elas se podem apagar — as da casa vêm com a instalação, e um
+ficheiro em falta partiria a lista a toda a gente. Apagar uma que estivesse em
+vigor devolve a secção ao valor de fábrica, em vez de a deixar a apontar para um
+ficheiro que já não existe.
 
 Cada campo é validado por `validarDefinicao()`, a mesma de sempre — uma segunda
 cópia das regras aqui ficava para trás à primeira mudança. Deixar um campo em
