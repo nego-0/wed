@@ -121,8 +121,10 @@ if ($aberto > 0) {
                 background:#20211c; border:1px solid var(--line); }
   .ex.alto .moldura{ aspect-ratio:4/5; }
   .ex .moldura img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .ex .nm{ margin:.5rem 0 .3rem; font-size:.76rem; text-transform:uppercase;
+  .ex .nm{ margin:.5rem 0 .1rem; font-size:.76rem; text-transform:uppercase;
            letter-spacing:.06em; color:#8a8f88; }
+  /* A medida que a peca espera. Sem isto, cada envio era uma adivinha. */
+  .ex .med{ font-size:.7rem; color:#a8ada6; margin-bottom:.35rem; }
   .ex input[type=file]{ font-size:.76rem; width:100%; }
   .ex .enq{ display:grid; grid-template-columns:repeat(3,1fr); gap:.3rem; margin-top:.45rem; }
   .ex .enq input{ padding:.3rem .35rem; font-size:.78rem; text-align:center; }
@@ -511,11 +513,11 @@ const EX_GRUPOS = [
     nota:'A miniatura recorta como a secção recorta no convite. Por baixo, o '
        + 'enquadramento: o ponto da imagem que fica ao centro (X, Y) e a aproximação.',
     imagens:[
-      { k:'media.hero', r:'Capa', enq:'foto.hero', alto:true },
-      { k:'media.historia', r:'História' },
-      { k:'media.interludio', r:'Interlúdio', enq:'foto.interludio' },
-      { k:'media.acesso', r:'Acesso (QR)', enq:'foto.acesso' },
-      { k:'media.musica', r:'Música', som:true } ] }
+      { k:'media.hero', r:'Capa', enq:'foto.hero', alto:true, dim:'ao alto · 1000×1247 ou maior' },
+      { k:'media.historia', r:'História', dim:'ao baixo · 1200×750 ou maior' },
+      { k:'media.interludio', r:'Interlúdio', enq:'foto.interludio', dim:'ao baixo · 1300×812 ou maior' },
+      { k:'media.acesso', r:'Acesso (QR)', enq:'foto.acesso', dim:'ao baixo · 1300×812 ou maior' },
+      { k:'media.musica', r:'Música', som:true, dim:'m4a ou mp3 · até 8 MB' } ] }
 ];
 const EX_CHAVES = EX_GRUPOS.flatMap(g =>
   (g.campos || []).map(c => c.k)
@@ -553,12 +555,14 @@ function cartaoImagem(i, ex){
      <div class="moldura" style="display:flex;align-items:center;justify-content:center">
        <audio id="ex-img-${i.k}" src="${esc(ex[i.k] ?? '')}" controls style="width:92%"></audio></div>
      <div class="nm">${i.r}</div>
+     <div class="med">${i.dim || ''}</div>
      <input type="file" accept=".m4a,.mp3,audio/*" onchange="enviarExemplo('${i.k}', this)"></div>`;
   const e = lerEnq(ex[i.enq]);
   return `<div class="ex${i.alto ? ' alto' : ''}">
      <div class="moldura"><img id="ex-img-${i.k}" src="${esc(ex[i.k] ?? '')}" alt="${i.r}"
           style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom / 100})"></div>
      <div class="nm">${i.r}</div>
+     <div class="med">${i.dim || ''}</div>
      <input type="file" accept="image/*,.svg" onchange="enviarExemplo('${i.k}', this)">
      ${i.enq ? `<div class="enq" data-alvo="ex-img-${i.k}">
         ${[['x','X'],['y','Y'],['zoom','Zoom']].map(([c, r]) => `<div><span>${r}</span>
