@@ -61,8 +61,11 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(/on/.test(await p.evaluate(() => document.getElementById('marca-sujo').className)),
      'o editor assinala que há alterações por gravar');
 
-  // Guardar como nova versão — sem ter clicado no "Guardar" principal
-  await p.selectOption('#sel-versao', '__nova');
+  // Guardar como nova versão — sem ter clicado no "Guardar" principal.
+  // Agora é um botão dentro do painel, e não uma opção do <select>.
+  await p.click('#bt-versao');
+  await p.waitForSelector('[data-ac=nova]', { timeout: 9000 });
+  await p.click('[data-ac=nova]');
   await p.waitForFunction(() =>
     !/\bon\b/.test(document.getElementById('marca-sujo').className), null, { timeout: 9000 });
   ok(true, 'guardar a versão gravou as alterações pendentes (o aviso desapareceu)');

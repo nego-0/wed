@@ -154,29 +154,70 @@ function identidadeCasamento(): array {
  *
  * Devolve [definições, modelo] — o modelo é null quando se está num casamento.
  */
+/**
+ * Devolve [definições, modelo-em-edição, modelo-visto].
+ *
+ * O segundo só vem preenchido para o admin: é ele que põe o editor em modo de
+ * modelo. O terceiro vem sempre que o modelo se resolveu, e é o que as provas
+ * usam — um casal pode VER um modelo que lhe é destinado sem o poder editar.
+ */
 function defsDoEditor(mysqli $conn, string $ambito): array {
     $id = (int)($_GET['modelo'] ?? 0);
-    if ($id <= 0 || !function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) {
-        return [defsAtuais($conn), null];
-    }
+    if ($id <= 0) return [defsAtuais($conn), null, null];
     global $P;
-    $st = $conn->prepare("SELECT id, nome, ambito, defs FROM {$P}modelos WHERE id=?");
-    if (!$st) return [defsAtuais($conn), null];
+    $st = $conn->prepare("SELECT id, nome, ambito, defs, visivel, alcance FROM {$P}modelos WHERE id=?");
+    if (!$st) return [defsAtuais($conn), null, null];
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
-    if (!$m || $m['ambito'] !== $ambito) return [defsAtuais($conn), null];
+    if (!$m || $m['ambito'] !== $ambito) return [defsAtuais($conn), null, null];
 
-    // O modelo assenta sobre os valores de origem: guarda só o que o desenho
-    // mudou, e o resto tem de vir de algum lado. Mostra-se o que ELE guardou —
-    // um modelo já feito não se reescreve por baixo de quem o desenhou. Os
-    // modelos novos nascem com a identidade de exemplo (ver instantaneoModelo).
-    $defs = defsPadrao();
-    $j = json_decode((string)$m['defs'], true);
-    $permitidas = array_flip(chavesModelo($ambito));
-    if (is_array($j)) foreach ($j as $k => $v) {
-        if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+    // Quem pode VER o desenho de um modelo é quem o pode aplicar. O admin, e um
+    // casal a quem o modelo esteja destinado — a mesma regra de modelo_aplicar.
+    //
+    // Só o admin é que via: por isso as miniaturas dos modelos, no painel do
+    // casal, desenhavam todas o convite DELE. Escolher um modelo entre seis
+    // imagens iguais é escolher às cegas com passos a mais.
+    if (!function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) {
+        if ((int)$m['visivel'] !== 1) return [defsAtuais($conn), null, null];
+        if ($m['alcance'] === 'selecionados') {
+            $st = $conn->prepare("SELECT 1 FROM {$P}modelo_casamentos
+                                  WHERE modelo_id=? AND casamento_id=? LIMIT 1");
+            $cid = casamentoAtual();
+            $st->bind_param('ii', $id, $cid); $st->execute();
+            if (!$st->get_result()->fetch_row()) return [defsAtuais($conn), null, null];
+        }
     }
-    return [$defs, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];
+
+    $j = json_decode((string)$m['defs'], true);
+    if (!is_array($j)) $j = [];
+
+    // Quem vê, e para quê, muda o que se mostra.
+    //
+    // O ADMIN está a curar o modelo: vê o que ELE guardou, identidade de
+    // exemplo incluída. Um modelo já feito não se reescreve por baixo de quem
+    // o desenhou (os novos nascem com a de exemplo — ver instantaneoModelo).
+    if (function_exists('ehAdminPlataforma') && ehAdminPlataforma()) {
+        $defs = defsPadrao();
+        $permitidas = array_flip(chavesModelo($ambito));
+        foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+        $info = ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito];
+        return [$defs, $info, $info];
+    }
+
+    // O CASAL está a escolher: o que lhe interessa ver é o RESULTADO — o
+    // desenho do modelo com o nome, a data e as fotografias dele. É
+    // exatamente o que aplicar produz (ver modelo_aplicar), e por isso a
+    // miniatura não promete nada que a aplicação não cumpra.
+    //
+    // O SEGUNDO valor fica a null de propósito — o casal está a espreitar um
+    // modelo, não a editá-lo, e o editor não deve entrar em modo de modelo. O
+    // TERCEIRO diz que o modelo foi mesmo resolvido, que é o que as páginas de
+    // prova precisam de saber para mostrarem o desenho dele.
+    $desenho = array_flip(chavesDesenho($ambito));
+    $defs = defsAtuais($conn);
+    foreach (padraoDesenho($ambito) as $k => $v) $defs[$k] = $v;
+    foreach ($j as $k => $v) if (isset($desenho[$k]) && is_string($v)) $defs[$k] = $v;
+    return [$defs, null, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];
 }
 
 // ---- Defaults (= convite original, byte a byte) ------------
@@ -520,9 +561,46 @@ function galeriaExemplo(): array {
     ];
     $out = [];
     foreach ($itens as $f => $nome) {
-        $out[] = ['ficheiro' => $f, 'nome' => $nome, 'categoria' => categoriaDoFicheiro($f)];
+        $out[] = ['ficheiro' => GALERIA_CASA . $f, 'nome' => $nome,
+                  'categoria' => categoriaDoFicheiro($f)];
+    }
+    // As quatro fotografias do convite de ORIGEM. Vivem noutra pasta (são o
+    // produto, não a galeria), mas aparecem aqui à mesma: são fotografias como
+    // as outras, e não há razão para o admin não as poder pôr num modelo.
+    foreach (['capa' => 'hero.jpg', 'historia' => 'historia.jpg',
+              'interludio' => 'interludio.jpg', 'acesso' => 'acesso.jpg'] as $cat => $f) {
+        $out[] = ['ficheiro' => 'assets/convite/' . $f,
+                  'nome' => 'Convite de origem', 'categoria' => $cat];
     }
     return $out;
+}
+
+/**
+ * As fotografias da casa que o admin tirou da galeria.
+ *
+ * Tirar, e não apagar: o ficheiro vem com a instalação e um deploy trá-lo-ia de
+ * volta, por isso o que se guarda é a decisão. Assim também se pode repor.
+ */
+function galeriaOcultas(mysqli $conn): array {
+    global $P;
+    $r = @$conn->query("SELECT valor FROM {$P}definicoes
+                        WHERE casamento_id=0 AND chave='modelo.galeria.ocultas' LIMIT 1");
+    $j = ($r && ($x = $r->fetch_assoc())) ? json_decode((string)$x['valor'], true) : [];
+    return is_array($j) ? array_values(array_filter($j, 'is_string')) : [];
+}
+
+function guardarGaleriaOcultas(mysqli $conn, array $ocultas): void {
+    global $P;
+    $j = json_encode(array_values(array_unique($ocultas)), JSON_UNESCAPED_SLASHES);
+    if ($ocultas) {
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor)
+                              VALUES (0,'modelo.galeria.ocultas',?)
+                              ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st->bind_param('s', $j); $st->execute();
+    } else {
+        @$conn->query("DELETE FROM {$P}definicoes
+                       WHERE casamento_id=0 AND chave='modelo.galeria.ocultas'");
+    }
 }
 
 const GALERIA_CASA = 'assets/convite/galeria/';
@@ -536,11 +614,13 @@ const GALERIA_ENVIADAS = 'assets/convite/exemplo/';
  * servir a capa, e quatro gavetas fechadas escondiam-na. As categorias servem
  * para arrumar e filtrar, não para separar.
  */
-function galeriaCompleta(): array {
+function galeriaCompleta(mysqli $conn): array {
+    $ocultas = array_flip(galeriaOcultas($conn));
     $out = [];
     foreach (galeriaExemplo() as $it) {
-        if (is_file(__DIR__ . '/' . GALERIA_CASA . $it['ficheiro'])) {
-            $out[] = ['src' => GALERIA_CASA . $it['ficheiro'], 'nome' => $it['nome'],
+        if (isset($ocultas[$it['ficheiro']])) continue;
+        if (is_file(__DIR__ . '/' . $it['ficheiro'])) {
+            $out[] = ['src' => $it['ficheiro'], 'nome' => $it['nome'],
                       'categoria' => $it['categoria'], 'da_casa' => true];
         }
     }

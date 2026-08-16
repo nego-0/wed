@@ -302,9 +302,24 @@ const entrar = async (ctx, u, p) => {
   const apg = await api('modelo_exemplo_apagar', { src: arr.src });
   ok(apg && apg.success && !(apg.galeria || []).some(f => !f.da_casa),
      'as enviadas apagam-se; as da casa nao');
-  const casaMau = await api('modelo_exemplo_apagar',
-                            { src: 'assets/convite/galeria/capa-34371787.jpg' });
-  ok(casaMau && casaMau.success === false, 'e apagar uma da casa e recusado');
+  // As fotografias do convite de ORIGEM tambem estao na galeria: sao fotografias
+  // como as outras, e nao ha razao para nao se poderem por num modelo.
+  ok(gal.some(f => f.src === 'assets/convite/hero.jpg' && f.categoria === 'capa'),
+     'as fotografias do convite de origem estao na galeria');
+
+  // Uma da casa tira-se da galeria - mas escondendo, nao apagando: o ficheiro
+  // vem com a instalacao e um deploy tra-lo-ia de volta.
+  const alvoCasa = 'assets/convite/galeria/capa-34371787.jpg';
+  const tirou = await api('modelo_exemplo_apagar', { src: alvoCasa });
+  ok(tirou && tirou.success && !(tirou.galeria || []).some(f => f.src === alvoCasa),
+     'tambem se tiram da galeria as que a casa traz');
+  const aindaLa = await admin.evaluate(async () =>
+    (await fetch('assets/convite/galeria/capa-34371787.jpg')).ok);
+  ok(aindaLa, 'e o ficheiro fica no servidor — esconde-se a decisao, nao se destroi o que veio na instalacao');
+  ok((tirou.ocultas || 0) === 1, 'a galeria diz quantas estao escondidas');
+  const reps = await api('modelo_exemplo_repor');
+  ok(reps && reps.success && (reps.galeria || []).some(f => f.src === alvoCasa),
+     'e repoem-se todas de uma vez');
 
   // A identidade INTEIRA está lá para preencher. Metade dos campos faltava.
   const faltam = ['casal.noiva','casal.noivo','evento.data','evento.hora','evento.convidados',
@@ -390,6 +405,42 @@ const entrar = async (ctx, u, p) => {
   ok(exReposto.exemplo['casal.noiva'] === exAntes.fabrica['casal.noiva'],
      'e repõem-se os de fábrica');
   for (const m of [exAntesMod, exDepoisMod]) await api('modelo_apagar&id=' + m.id);
+
+  // ---------- 13. o casal ve os modelos, e ve o que vai receber ----------
+  // A queixa era "os noivos nao conseguem por em vigor outros modelos". A acao
+  // corria bem; o que falhava era o ecra. Duas coisas de fundo:
+  //  - a prova de um modelo so o admin a via, e por isso as miniaturas do casal
+  //    desenhavam todas o convite DELE — escolher entre imagens iguais;
+  //  - aplicar um modelo que ja era o desenho em vigor recarregava a pagina em
+  //    silencio, e quem o fez concluia que nao tinha funcionado.
+  await api('casamento_abrir&id=' + oficina.id);
+  await api('defs_save', { defs: { 'capa.dica': 'ABRA COM CARINHO ' + marca } });
+  const modVer = await api('modelo_criar', { nome: 'ZZ Para o casal ' + marca,
+                                             ambito: 'digital', visivel: true });
+  await api('casamento_abrir&id=' + casal.id);
+
+  const provaCasal = await noivos.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), modVer.id);
+  ok(/ABRA COM CARINHO/.test(provaCasal),
+     'o casal ve a prova de um modelo que lhe e destinado — o desenho DELE, e nao o seu convite');
+  ok(/Pia/.test(provaCasal) || /PIA/i.test(provaCasal),
+     'e ve-o com o SEU nome: a miniatura mostra o resultado, nao o modelo');
+
+  const rascunho2 = await api('modelo_criar', { nome: 'ZZ Escondido ' + marca,
+                                                ambito: 'digital', visivel: false });
+  const provaProibida = await noivos.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), rascunho2.id);
+  ok(!/ABRA COM CARINHO/.test(provaProibida),
+     'mas nao espreita um modelo por publicar — ver e poder aplicar andam juntos');
+  await api('modelo_apagar&id=' + rascunho2.id);
+
+  const posto = await noivos._api('modelo_aplicar&id=' + modVer.id);
+  ok(posto && posto.success && posto.mudou === true,
+     'o casal poe o modelo em vigor, e a resposta diz que mudou mesmo');
+  const outraVez = await noivos._api('modelo_aplicar&id=' + modVer.id);
+  ok(outraVez && outraVez.success && outraVez.mudou === false,
+     'aplicar o mesmo outra vez diz que nao havia nada para mudar, em vez de fingir');
+  await api('modelo_apagar&id=' + modVer.id);
 
   // ---------- limpeza ----------
   const todos = (await api('modelo_lista')).modelos || [];

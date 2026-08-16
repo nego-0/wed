@@ -155,9 +155,8 @@ $camposPorCamada = [
         // modelo da casa não tem versões, e o seletor saía vazio — um controlo
         // que não faz nada é pior do que um controlo que não está lá. ?>
   <?php if (!$MODELO): ?>
-    <span class="rot">Versão</span>
-    <select id="sel-versao" class="sel-versao"
-            title="A versão em vigor — a que se imprime e a que o manual retrata. Escolha outra para a aplicar, ou use as ações de gerir."></select>
+    <button id="bt-versao" class="btn-versao"
+            title="Versões e modelos">—</button>
     <span class="ed-sep"></span>
   <?php endif; ?>
   <button class="bt" onclick="reporCamada()" title="Repor os textos originais da camada escolhida">Repor esta camada</button>
@@ -1196,7 +1195,7 @@ window.addEventListener('resize', () => { if (zoom <= .5) ajustar(); });
 // Só há versões de um casamento; a desenhar um modelo, não há seletor.
 if (!MODELO) Versoes.montar({
   ambito: 'impresso',
-  alvo:   'sel-versao',
+  alvo:   'bt-versao',
   sujo:   () => sujo,
   gravar: guardar,          // grava as edições do ecrã antes de as fotografar na versão
   msg,

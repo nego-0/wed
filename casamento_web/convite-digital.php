@@ -45,7 +45,10 @@ $modoProva = $demo && ($_GET['prova'] ?? '') === '1';
 // nenhum. É o que permite à página dos modelos mostrar o que cada um é, em vez
 // de o pedir a quem só tem o nome para adivinhar.
 if ($demo && (int)($_GET['modelo'] ?? 0) > 0) {
-    [$defsMod, $MOD] = defsDoEditor($conn, 'digital');
+    // O terceiro valor: o modelo VISTO. O segundo é o modelo em edição, que
+    // só o admin tem — e usá-lo aqui fazia a prova do casal cair no convite
+    // dele, com todas as miniaturas iguais.
+    [$defsMod, , $MOD] = defsDoEditor($conn, 'digital');
     if ($MOD) $DEFS = $defsMod;
 }
 

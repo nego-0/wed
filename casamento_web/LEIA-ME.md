@@ -428,11 +428,21 @@ o novo.
 
 O que sobe **junta-se** à galeria em vez de substituir o que lá estava: uma
 imagem de exemplo não é uma definição que se troca, é um acervo que cresce. As
-enviadas vivem em `assets/convite/exemplo/` (fora do versionamento),
-distinguem-se das da casa à vista, e só elas se podem apagar — as da casa vêm
-com a instalação, e um ficheiro em falta partiria a lista a toda a gente. Apagar
-uma que estivesse em vigor devolve essa secção ao valor de fábrica, em vez de a
-deixar a apontar para um ficheiro que já não existe.
+enviadas vivem em `assets/convite/exemplo/`, fora do versionamento.
+
+**Tirar da galeria** vale para todas — inclusive as da casa. Só que as duas
+coisas não são a mesma: uma fotografia enviada **apaga-se** (o ficheiro é do
+admin, e some), e uma da casa **esconde-se**. O ficheiro dessa vem com a
+instalação e um deploy trá-lo-ia de volta, por isso o que se guarda é a decisão
+de não a querer — numa lista em `modelo.galeria.ocultas`. É também o que permite
+o botão **«Repor as da casa»**, que um apagar irreversível não daria. Em qualquer
+dos casos, tirar uma que estivesse em vigor devolve essa secção ao valor de
+fábrica, em vez de a deixar a apontar para o que já não se vê.
+
+As quatro fotografias do **convite de origem** (`assets/convite/hero.jpg` e
+companhia) também aparecem na galeria, na categoria da sua secção. São
+fotografias como as outras, e não havia razão para não se poderem pôr num
+modelo — o que faz disso uma escolha do admin, e não uma herança automática.
 
 Cada campo é validado por `validarDefinicao()`, a mesma de sempre — uma segunda
 cópia das regras aqui ficava para trás à primeira mudança. Deixar um campo em
@@ -459,6 +469,36 @@ A v19 limpa o que a v18 tinha deixado escrito.
 viver em `assets/menu-mais.js`, e aproveitou-se para lhe dar o que faltava:
 **vira-se para cima** quando não há espaço em baixo. Abria sempre para baixo, e
 o menu do último cartão de uma grelha caía fora do ecrã — parecia não fazer nada.
+
+**Versões e modelos: um painel, e não um `<select>` de tudo.** Cabia tudo no
+mesmo menu suspenso da barra — as versões do casal, os modelos da casa e as
+ações de gerir. Três consequências, todas más: escolher um modelo parecia
+escolher uma versão (e não é a mesma coisa: uma é o que **este** casal guardou,
+a outra é um desenho da casa); os modelos escolhiam-se pelo **nome**, às cegas,
+quando um modelo é precisamente um desenho; e aplicar um modelo que já era o
+desenho em vigor recarregava a página sem nada mudar, em silêncio.
+
+Era esta a queixa de que «os noivos não conseguem pôr modelos em vigor». A ação
+corria bem — verifiquei-a — e não dizia nada. Três correções, e as três são de
+fundo:
+
+- a barra passa a ter um **botão que diz o estado** («Original — em vigor», ou
+  «Alterado — de Original»), e abre um painel com duas abas: **Versões
+  guardadas** (com o que se faz a cada uma, linha a linha) e **Modelos da casa**;
+- os modelos aparecem em **miniaturas desenhadas a sério** — a mesma prova que a
+  página dos modelos usa, composta em tamanho real e encolhida para caber;
+- `modelo_aplicar` passa a comparar a peça **antes e depois** e a devolver
+  `mudou`. Quando não mudou nada, o painel di-lo em vez de recarregar uma página
+  igual: *«já era o desenho em vigor — não havia nada para mudar»*.
+
+**A prova de um modelo mostra o resultado, e não o modelo.** `defsDoEditor()`
+passou a responder a três coisas em vez de duas: as definições, o modelo **em
+edição** (só para o admin, que é quem o cura) e o modelo **visto**. Antes, só o
+admin é que podia ver a prova de um modelo — e por isso as miniaturas no painel
+do casal desenhavam todas o convite *dele*, todas iguais. Agora um casal vê
+qualquer modelo que lhe seja destinado (a mesma regra de o poder aplicar), e vê
+o desenho **com o seu próprio nome, data e fotografias** — que é exatamente o
+que aplicar produz. A miniatura não promete nada que a aplicação não cumpra.
 
 **O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
 e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um

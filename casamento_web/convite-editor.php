@@ -150,9 +150,8 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
         // modelo da casa não tem versões, e o seletor saía vazio — um controlo
         // que não faz nada é pior do que um controlo que não está lá. ?>
   <?php if (!$MODELO): ?>
-    <span class="rot">Versão</span>
-    <select id="sel-versao" class="sel-versao"
-            title="A versão em vigor — a que os convidados recebem. Escolha outra para a aplicar, ou use as ações de gerir."></select>
+    <button id="bt-versao" class="btn-versao"
+            title="Versões e modelos">—</button>
     <span class="ed-sep"></span>
   <?php endif; ?>
   <button class="bt" onclick="reporSeccao()">Repor esta secção</button>
@@ -1254,7 +1253,7 @@ function renderVersoes(){
   if (MODELO) return;   // um modelo da casa não tem versões
   Versoes.montar({
     ambito: 'digital',
-    alvo:   'sel-versao',
+    alvo:   'bt-versao',
     sujo:   () => SUJO,
     gravar: guardar,          // grava as edições do ecrã antes de as fotografar na versão
     msg,

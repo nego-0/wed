@@ -2263,8 +2263,8 @@ if ($acao === 'modelo_exemplo') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os dados de exemplo.');
     // A galeria vai com o resto: o painel precisa dela para a janela de escolha.
     ok(['exemplo' => exemploModelo($conn), 'fabrica' => exemploDeFabrica(),
-        'chaves' => chavesExemplo(), 'galeria' => galeriaCompleta(),
-        'categorias' => categoriasGaleria()]);
+        'chaves' => chavesExemplo(), 'galeria' => galeriaCompleta($conn),
+        'categorias' => categoriasGaleria(), 'ocultas' => count(galeriaOcultas($conn))]);
 }
 
 if ($acao === 'modelo_exemplo_guardar') {
@@ -2360,30 +2360,52 @@ if ($acao === 'modelo_exemplo_upload') {
         $st->bind_param('ss', $chaveDef, $caminho); $st->execute();
     }
     registar($conn, 'modelo_exemplo', 'imagem para a galeria', $categoria);
-    ok(['path' => $caminho, 'galeria' => galeriaCompleta(), 'exemplo' => exemploModelo($conn)]);
+    ok(['path' => $caminho, 'galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn)]);
 }
 
 if ($acao === 'modelo_exemplo_apagar') {
-    // Tirar da galeria uma imagem que o admin enviou. As da casa não se apagam:
-    // vêm com a instalação, e um ficheiro em falta partiria a lista a todos.
+    // Tirar uma fotografia da galeria. As que o admin enviou apagam-se mesmo;
+    // as da casa só se ESCONDEM — o ficheiro vem com a instalação e um deploy
+    // trá-lo-ia de volta, por isso o que se guarda é a decisão de não a querer.
+    // Assim também se podem repor, que é o que um apagar irreversível não dava.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita a galeria.');
     $src = (string)(corpo()['src'] ?? '');
-    if (!str_starts_with($src, GALERIA_ENVIADAS) || str_contains($src, '..')) {
-        erro('Só se apagam as imagens que enviou — as da casa ficam.');
+    if (str_contains($src, '..')) erro('Caminho inválido.');
+    $daCasa = !str_starts_with($src, GALERIA_ENVIADAS);
+    if ($daCasa) {
+        $existe = false;
+        foreach (galeriaExemplo() as $it) if ($it['ficheiro'] === $src) $existe = true;
+        if (!$existe) erro('Essa fotografia não é da galeria.');
+    } elseif (!is_file(__DIR__ . '/' . $src)) {
+        erro('Essa imagem já não está cá.');
     }
-    $abs = __DIR__ . '/' . $src;
-    if (!is_file($abs)) erro('Essa imagem já não está cá.');
     // Se estava em vigor nalguma secção, essa volta ao valor de fábrica em vez
-    // de ficar a apontar para um ficheiro que já não existe.
+    // de ficar a apontar para uma fotografia que já não se vê.
     foreach (exemploModelo($conn) as $k => $v) {
         if ($v !== $src) continue;
         $chaveDef = 'modelo.exemplo.' . $k;
         $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave=?");
         $st->bind_param('s', $chaveDef); $st->execute();
     }
-    @unlink($abs);
-    registar($conn, 'modelo_exemplo', 'imagem apagada da galeria', basename($src));
-    ok(['galeria' => galeriaCompleta(), 'exemplo' => exemploModelo($conn)]);
+    if ($daCasa) {
+        $oc = galeriaOcultas($conn); $oc[] = $src; guardarGaleriaOcultas($conn, $oc);
+    } else {
+        @unlink(__DIR__ . '/' . $src);
+    }
+    registar($conn, 'modelo_exemplo', $daCasa ? 'fotografia da casa escondida' : 'fotografia apagada',
+             basename($src));
+    ok(['galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn),
+        'ocultas' => count(galeriaOcultas($conn))]);
+}
+
+if ($acao === 'modelo_exemplo_repor') {
+    // Trazer de volta as fotografias da casa que foram escondidas.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita a galeria.');
+    $quantas = count(galeriaOcultas($conn));
+    if (!$quantas) erro('Não há nenhuma escondida.');
+    guardarGaleriaOcultas($conn, []);
+    registar($conn, 'modelo_exemplo', 'galeria da casa reposta', $quantas . ' fotografia(s)');
+    ok(['galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn), 'ocultas' => 0]);
 }
 
 if ($acao === 'modelo_exemplo_categoria') {
@@ -2410,7 +2432,7 @@ if ($acao === 'modelo_exemplo_categoria') {
         $st->bind_param('ss', $novoSrc, $src); $st->execute();
     }
     registar($conn, 'modelo_exemplo', 'categoria da imagem', $cat);
-    ok(['src' => $novoSrc, 'galeria' => galeriaCompleta(), 'exemplo' => exemploModelo($conn)]);
+    ok(['src' => $novoSrc, 'galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn)]);
 }
 
 if ($acao === 'modelo_criar') {
@@ -2584,7 +2606,14 @@ if ($acao === 'modelo_aplicar') {
     // pelo meio. Um modelo vazio — o de origem da casa — devolve a peça à
     // origem, que é o que se espera de "aplicar o modelo da casa".
     $defs = array_merge(padraoDesenho($m['ambito']), $doModelo);
+    // O que a peça mostrava ANTES, para se poder dizer com verdade se mudou.
+    // Sem isto, aplicar um modelo que já era o desenho em vigor recarregava a
+    // página sem nada mudar — e quem o fez concluía, com razão, que não tinha
+    // funcionado. 'gravadas' não serve: conta escritas, não diferenças.
+    $antesDefs = instantaneoAmbito($conn, $m['ambito']);
     $r = guardarDefinicoes($conn, $defs);
+    $depoisDefs = instantaneoAmbito($conn, $m['ambito']);
+    $r['mudou'] = $antesDefs != $depoisDefs;
     // Deixa de haver versão em vigor: o que a peça mostra agora veio de fora.
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $m['ambito']); $st->execute();

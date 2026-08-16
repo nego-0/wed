@@ -50,7 +50,94 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 
 /* Seletor de versões na barra: a versão em vigor aparece escolhida. Cabe ao
    pé do "Guardar"; as opções longas de gerir não podem esticar a barra. */
-.ed-opcoes .sel-versao{ max-width:15rem; font-size:.82rem; }
+/* ---- Versões e modelos ----------------------------------------------
+   O botão da barra diz o ESTADO da peça, e é só isso: quem quer mexer abre o
+   painel. Antes era um <select> com versões, modelos e ações de gerir todos
+   lá dentro — e escolher um modelo parecia escolher uma versão. */
+.btn-versao{ display:inline-flex; flex-direction:column; align-items:flex-start; gap:0;
+             max-width:16rem; padding:.24rem .7rem; line-height:1.15; cursor:pointer;
+             background:var(--ed-painel-2); color:var(--ed-texto);
+             border:1px solid var(--ed-linha); border-radius:8px;
+             font-family:inherit; text-align:left; }
+.btn-versao:hover{ border-color:var(--ed-ouro); }
+.btn-versao b{ font-weight:500; font-size:.84rem; max-width:14.6rem;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.btn-versao i{ font-style:normal; font-size:.68rem; color:var(--ed-texto-2);
+               text-transform:uppercase; letter-spacing:.05em; }
+.btn-versao.alterado{ border-color:var(--ed-ouro); }
+.btn-versao.alterado b{ color:var(--ed-ouro-claro); }
+
+.vs-jan{ position:fixed; inset:0; z-index:8000; display:none;
+         background:rgba(10,11,9,.72); padding:2.4vh 1rem; overflow:auto; }
+.vs-jan.aberta{ display:block; }
+.vs-jan.ocupado{ cursor:progress; }
+.vs-jan.ocupado .vs-caixa{ opacity:.6; pointer-events:none; }
+.vs-caixa{ max-width:min(900px,94vw); margin:0 auto; background:var(--ed-painel);
+           border:1px solid var(--ed-linha); border-radius:14px; overflow:hidden;
+           box-shadow:0 24px 60px rgba(0,0,0,.5); }
+.vs-topo{ display:flex; align-items:center; justify-content:space-between;
+          padding:.7rem 1rem; background:var(--ed-painel-2);
+          border-bottom:1px solid var(--ed-linha); }
+.vs-topo h3{ margin:0; font-size:1rem; font-weight:500; color:var(--ed-ouro-claro); }
+.vs-x{ background:none; border:0; color:var(--ed-texto-2); font-size:1.5rem;
+       line-height:1; cursor:pointer; padding:0 .2rem; }
+.vs-x:hover{ color:var(--ed-texto); }
+.vs-abas{ display:flex; gap:.3rem; padding:.6rem 1rem 0; }
+.vs-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
+         color:var(--ed-texto-2); font-family:inherit; font-size:.86rem;
+         padding:.4rem .6rem .5rem; }
+.vs-aba b{ font-weight:500; opacity:.6; }
+.vs-aba.on{ color:var(--ed-ouro-claro); border-bottom-color:var(--ed-ouro); }
+.vs-corpo{ padding:.9rem 1rem 1.1rem; }
+
+.vs-estado{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+            font-size:.88rem; margin-bottom:.9rem; padding:.55rem .8rem;
+            background:var(--ed-mesa); border:1px solid var(--ed-linha); border-radius:10px; }
+.vs-estado b{ color:var(--ed-texto); font-weight:500; }
+.vs-estado em{ font-style:normal; color:var(--ed-texto-2); font-size:.8rem;
+               flex-basis:100%; }
+.vs-pt{ width:8px; height:8px; border-radius:50%; background:var(--ed-ouro); flex:none; }
+.vs-pt.ok{ background:var(--ed-sel); }
+
+.vs-lista{ display:flex; flex-direction:column; }
+.vs-it{ display:flex; align-items:center; justify-content:space-between; gap:.8rem;
+        flex-wrap:wrap; padding:.6rem .2rem; border-bottom:1px solid var(--ed-linha); }
+.vs-it:last-child{ border-bottom:0; }
+.vs-it.em-vigor .vs-it-nm{ color:var(--ed-ouro-claro); }
+.vs-it-nm{ font-size:.92rem; display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.vs-q{ color:var(--ed-texto-2); font-size:.76rem; }
+.vs-et{ font-size:.66rem; text-transform:uppercase; letter-spacing:.05em;
+        border:1px solid var(--ed-linha); border-radius:50px; padding:.05rem .45rem;
+        color:var(--ed-texto-2); }
+.vs-et.ok{ border-color:var(--ed-sel); color:#8fc0a4; }
+.vs-it-ac{ display:flex; gap:.35rem; flex-wrap:wrap; }
+.vs-b{ background:var(--ed-painel-2); color:var(--ed-texto); border:1px solid var(--ed-linha);
+       border-radius:7px; padding:.28rem .6rem; font-size:.78rem; font-family:inherit;
+       cursor:pointer; }
+.vs-b:hover{ border-color:var(--ed-ouro); }
+.vs-b.prim{ background:var(--ed-ouro); border-color:var(--ed-ouro); color:#1e1f1c; }
+.vs-b.prim:hover{ background:var(--ed-ouro-claro); }
+.vs-b.perigo:hover{ border-color:#b4564a; color:#e0938a; }
+.vs-fim{ display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
+         border-top:1px solid var(--ed-linha); margin-top:.8rem; padding-top:.9rem; }
+.vs-nota{ font-size:.8rem; color:var(--ed-texto-2); line-height:1.5; }
+.vs-nota-topo{ margin-bottom:.9rem; }
+.vs-vazio{ text-align:center; color:var(--ed-texto-2); padding:2rem 1rem;
+           border:1px dashed var(--ed-linha); border-radius:12px; line-height:1.7; }
+
+/* As miniaturas dos modelos: desenhadas a sério e encolhidas para caber. Um
+   modelo é um desenho — escolhê-lo por uma linha de texto era às cegas. */
+.vs-grelha{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); }
+.vs-mod{ border:1px solid var(--ed-linha); border-radius:12px; overflow:hidden;
+         background:var(--ed-mesa); display:flex; flex-direction:column; }
+.vs-mod:hover{ border-color:var(--ed-ouro); }
+.vs-cara{ position:relative; width:100%; overflow:hidden; background:#111; }
+.vs-cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left;
+                 pointer-events:none; }
+.vs-mod-pe{ padding:.55rem .65rem; display:flex; flex-direction:column; gap:.35rem;
+            flex:1; }
+.vs-mod-nm{ font-size:.86rem; color:var(--ed-texto); }
+.vs-mod-ds{ font-size:.75rem; color:var(--ed-texto-2); line-height:1.45; flex:1; }
 
 /* ---- Corpo: ferramentas | mesa | painéis ------------------- */
 .ed-corpo{ flex:1; display:flex; min-height:0; }

@@ -61,40 +61,59 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok((d.versoes || []).some(v => v.padrao && v.nome === 'Original'),
      'e a padrão continua lá, intacta, depois das tentativas');
 
-  // ---------- o seletor, em cada estado ----------
-  const opcoes = async () => {
+  // ---------- o painel de versões, em cada estado ----------
+  // O <select> de tudo-misturado deu lugar a um botão de estado e a uma janela
+  // com duas abas. Lê-se o botão (o estado) e o corpo da aba das versões.
+  const painel = async () => {
     await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
     await p.waitForTimeout(1700);
-    return p.evaluate(() => [...document.querySelectorAll('#sel-versao option')]
-      .map(o => ({ txt: o.textContent.trim(), sel: o.selected, val: o.value })));
+    await p.click('#bt-versao');
+    await p.waitForTimeout(900);
+    return p.evaluate(() => ({
+      botao: (document.getElementById('bt-versao') || {}).textContent || '',
+      estado: (document.querySelector('.vs-estado') || {}).textContent || '',
+      itens: [...document.querySelectorAll('.vs-it')].map(i => ({
+        nome: (i.querySelector('.vs-it-nm') || {}).textContent.trim(),
+        acoes: [...i.querySelectorAll('[data-ac]')].map(b => b.dataset.ac)
+      })),
+      temNova: !!document.querySelector('[data-ac=nova]')
+    }));
   };
-  const escolhida = o => (o.filter(x => x.sel)[0] || {}).txt || '';
-  const temGerir  = o => o.some(x => /^(Mudar o nome|Atualizar|Apagar)/.test(x.txt));
+  const gerirDe = (o, nome) => {
+    const it = o.itens.filter(i => i.nome.indexOf(nome) === 0)[0];
+    return it ? it.acoes : [];
+  };
 
-  let o = await opcoes();
-  ok(/^Original/.test(escolhida(o)) && /em vigor/.test(escolhida(o)),
-     'o seletor mostra "Original — em vigor"');
-  ok(!temGerir(o), 'no Original não se oferece renomear, atualizar nem apagar');
+  let o = await painel();
+  ok(/Original/.test(o.botao) && /em vigor/.test(o.botao),
+     'o botão da barra diz «Original — em vigor»');
+  ok(/Em vigor/.test(o.estado) && /Original/.test(o.estado),
+     'e o painel repete-o, com o que isso quer dizer');
+  ok(gerirDe(o, 'Original').indexOf('apagar') < 0
+     && gerirDe(o, 'Original').indexOf('renomear') < 0,
+     'no Original não se oferece renomear, atualizar nem apagar');
 
   // Editar a partir do Original: a única saída é guardar com outro nome
   await api('defs_save', { defs: { 'textos.kicker': 'SAIU DO ORIGINAL' } });
-  o = await opcoes();
-  console.log('   editado a partir do Original:', JSON.stringify(o.map(x => x.txt)));
-  ok(/Alterado/.test(escolhida(o)) && /Original/.test(escolhida(o)),
-     'diz que a peça foi alterada a partir do Original');
-  ok(!temGerir(o), 'editar o Original não oferece reescrever nada — só guardar como nova');
-  ok(o.some(x => /Guardar como nova/.test(x.txt)), 'oferece guardar como versão nova');
+  o = await painel();
+  console.log('   editado a partir do Original:', o.botao.replace(/\s+/g, ' '));
+  ok(/Alterado/.test(o.botao), 'o botão passa a dizer «Alterado»');
+  ok(/alterações por versionar/i.test(o.estado) && /Original/.test(o.estado),
+     'e o painel diz de onde a peça veio');
+  ok(o.temNova, 'oferece guardar como versão nova');
 
   // ---------- guardar com um nome: é esse nome que aparece ----------
   await api('versao_criar&ambito=digital', { nome: 'Clássica dourada' });
-  o = await opcoes();
-  console.log('   depois de guardar:', JSON.stringify(o.map(x => x.txt)));
-  ok(/^Clássica dourada/.test(escolhida(o)) && /em vigor/.test(escolhida(o)),
+  o = await painel();
+  console.log('   depois de guardar:', JSON.stringify(o.itens.map(i => i.nome)));
+  ok(/Clássica dourada/.test(o.botao) && /em vigor/.test(o.botao),
      'a versão guardada aparece em vigor, com o nome escolhido');
-  ok(o.some(x => /^Original/.test(x.txt)), 'o Original continua na lista');
-  ok(temGerir(o), 'numa versão guardada já se pode renomear, atualizar e apagar');
-  ok(o.filter(x => /Clássica dourada/.test(x.txt)).length >= 2,
-     'as ações de gerir apontam à versão guardada, pelo nome');
+  ok(o.itens.some(i => /^Original/.test(i.nome)), 'o Original continua na lista');
+  const g = gerirDe(o, 'Clássica dourada');
+  ok(g.indexOf('renomear') >= 0 && g.indexOf('atualizar') >= 0 && g.indexOf('apagar') >= 0,
+     'numa versão guardada já se pode renomear, atualizar e apagar');
+  ok(gerirDe(o, 'Original').indexOf('apagar') < 0,
+     'e o Original continua sem essas ações — cada linha manda em si');
 
   // ---------- voltar ao Original repõe mesmo a peça ----------
   // Lê-se do que o servidor entrega. Tem de ser o objeto ATUAIS: a página traz

@@ -155,6 +155,8 @@ if ($aberto > 0) {
   .modal-corpo .gal-abas .chip b{ font-weight:600; opacity:.6; margin-left:.15rem; }
   .modal-corpo .gal-env{ display:grid; grid-template-columns:1fr auto auto; gap:.5rem;
                          align-items:center; }
+  .modal-corpo .gal-rep{ margin-top:.6rem; font-size:.82rem; color:#6c7570;
+                         display:flex; gap:.6rem; align-items:center; }
   .modal-corpo .gal-x{ position:absolute; right:.3rem; top:.3rem; width:24px; height:24px;
                        border:0; border-radius:50%; background:rgba(255,255,255,.92);
                        color:var(--danger); font-size:1rem; line-height:1; cursor:pointer;
@@ -558,7 +560,7 @@ const EX_GRUPOS = [
 const EX_CHAVES = EX_GRUPOS.flatMap(g =>
   (g.campos || []).map(c => c.k)
     .concat((g.imagens || []).flatMap(i => i.enq ? [i.k, i.enq] : [i.k])));
-let EX_FABRICA = {}, EX_GALERIA = [], EX_ATUAL = {}, EX_DIM = {}, EX_CATEGORIAS = {};
+let EX_FABRICA = {}, EX_GALERIA = [], EX_ATUAL = {}, EX_DIM = {}, EX_CATEGORIAS = {}, EX_OCULTAS = 0;
 const EX_CAT_DA_CHAVE = { 'media.hero':'capa', 'media.historia':'historia',
                           'media.interludio':'interludio', 'media.acesso':'acesso' };
 
@@ -568,6 +570,7 @@ async function carregarExemplo(soDados){
   EX_FABRICA = d.fabrica || {};
   EX_GALERIA = d.galeria || [];
   EX_CATEGORIAS = d.categorias || {};
+  EX_OCULTAS = d.ocultas || 0;
   EX_ATUAL = d.exemplo || {};
   EX_DIM = {};
   EX_GRUPOS.forEach(g => (g.imagens || []).forEach(i => EX_DIM[i.k] = i.dim || ''));
@@ -671,8 +674,8 @@ function pintarGaleria(){
             ? `<em class="gal-et">${esc(cats[f.categoria] || f.categoria)} · da casa</em>`
             : `<select onchange="mudarCategoria('${esc(f.src)}', this.value)">${opcCat(f.categoria)}</select>`}
         </div>
-        ${f.da_casa ? '' : `<button class="gal-x" title="Apagar esta fotografia"
-                              onclick="apagarDaGaleria('${esc(f.src)}')">&times;</button>`}
+        <button class="gal-x" title="${f.da_casa ? 'Tirar da galeria' : 'Apagar esta fotografia'}"
+                onclick="apagarDaGaleria('${esc(f.src)}', ${f.da_casa ? 'true' : 'false'})">&times;</button>
       </div>`).join('') || '<div class="dica" style="margin:0">Nada nesta categoria.</div>'}</div>
     <div class="gal-mais">
       <label for="gal-env">Acrescentar uma fotografia</label>
@@ -683,6 +686,8 @@ function pintarGaleria(){
       </div>
       <div class="med">A categoria diz para que secção a fotografia foi feita —
         «sem categoria» guarda-a à mesma, para decidir depois.</div>
+      ${EX_OCULTAS ? `<div class="gal-rep">Tirou <b>${EX_OCULTAS}</b> fotografia(s) da casa.
+        <button class="btn" onclick="reporGaleria()">Repor as da casa</button></div>` : ''}
     </div>
     <div class="jan-fim"><button class="btn" onclick="fechar('ov-modelo')">Fechar</button></div>`;
 }
@@ -714,8 +719,21 @@ async function mudarCategoria(src, cat){
   toast('Arrumada em «' + (EX_CATEGORIAS[cat] || cat) + '».');
 }
 
-async function apagarDaGaleria(src){
-  if (!confirm('Apagar esta fotografia da galeria?\n\nOs modelos já criados com ela ficam como estão.')) return;
+/** Trazer de volta as da casa que foram tiradas. */
+async function reporGaleria(){
+  const d = await api('modelo_exemplo_repor', { method:'POST' });
+  if (!d || !d.success) return;
+  aplicarGaleria(d);
+  toast('Galeria da casa reposta.');
+}
+
+async function apagarDaGaleria(src, daCasa){
+  const aviso = daCasa
+    ? 'Tirar esta fotografia da galeria?\n\nÉ da casa: o ficheiro fica no servidor e pode repô-la '
+      + 'a qualquer momento em «Repor as da casa».'
+    : 'Apagar esta fotografia da galeria?\n\nO ficheiro é apagado. Os modelos já criados com ela '
+      + 'ficam como estão.';
+  if (!confirm(aviso)) return;
   const d = await api('modelo_exemplo_apagar', { method:'POST', body: JSON.stringify({ src }) });
   if (!d || !d.success) return;
   aplicarGaleria(d);
@@ -725,6 +743,7 @@ async function apagarDaGaleria(src){
 /** O que a API devolveu depois de mexer na galeria, posto no ecrã. */
 function aplicarGaleria(d){
   if (d.galeria) EX_GALERIA = d.galeria;
+  if (d.ocultas !== undefined) EX_OCULTAS = d.ocultas;
   if (d.exemplo) { EX_ATUAL = d.exemplo; pintarExemplo(d.exemplo); }
   pintarGaleria();
 }

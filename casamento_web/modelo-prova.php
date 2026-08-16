@@ -15,9 +15,13 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/pecas.php';
 require_once __DIR__ . '/personalizacao.php';
 
-if (!ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
+// O admin vê qualquer modelo; um casal vê os que lhe são destinados — é a
+// mesma regra de os aplicar, e é o que permite ao painel do editor mostrar as
+// miniaturas em vez de uma lista de nomes. defsDoEditor é que decide: o
+// terceiro valor só vem preenchido para quem tem direito a ver este modelo.
+if (!ehAdminPlataforma() && !casamentoAtual()) { http_response_code(403); exit('Sem acesso.'); }
 
-[$defs, $MODELO] = defsDoEditor($conn, 'impresso');
+[$defs, , $MODELO] = defsDoEditor($conn, 'impresso');
 if (!$MODELO) { http_response_code(404); exit('Modelo não encontrado.'); }
 
 // Um convidado de exemplo: o cartão é personalizado por pessoa, e um cartão

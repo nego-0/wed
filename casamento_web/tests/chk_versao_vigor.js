@@ -92,42 +92,46 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(!/Fora de qualquer vers/i.test(banda),
      'a entrada já não usa o aviso inconsistente "Fora de qualquer versão"');
 
-  // ---------- o seletor da barra conta o mesmo estado ----------
-  // A versão vive agora num <select> na barra de cima. Fora de versão, a opção
-  // escolhida di-lo, e a última aplicada (A) aparece assinalada na lista.
-  const opcoesSel = () => p.evaluate(() =>
-    [...document.querySelectorAll('#sel-versao option')].map(o => o.textContent.trim()));
-  const escolhidaSel = () => p.evaluate(() => {
-    const s = document.getElementById('sel-versao');
-    return s && s.selectedIndex >= 0 ? s.options[s.selectedIndex].textContent.trim() : '';
-  });
+  // ---------- o painel da barra conta o mesmo estado ----------
+  // A versão vive num botão de estado na barra de cima, que abre um painel.
+  // Fora de versão, o botão di-lo; a última aplicada (A) fica assinalada na
+  // lista, dentro do painel.
+  const abrirPainel = async () => {
+    await p.click('#bt-versao');
+    await p.waitForSelector('.vs-it', { timeout: 9000 });
+  };
+  const botao = () => p.evaluate(() =>
+    (document.getElementById('bt-versao') || {}).textContent.replace(/\s+/g, ' ').trim());
+  const linhas = () => p.evaluate(() =>
+    [...document.querySelectorAll('.vs-it-nm')].map(o => o.textContent.replace(/\s+/g, ' ').trim()));
 
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
-  // Espera-se pelas duas versões guardadas (A e B). O seletor traz também a
-  // padrão "Original", que existe sempre — daí contar pelos nomes, não pelo
-  // total de opções.
+  // Espera-se pelas duas versões guardadas (A e B). A lista traz também a
+  // padrão "Original", que existe sempre — daí contar pelos nomes.
+  await p.waitForFunction(() => /Alterado|em vigor/.test(
+    (document.getElementById('bt-versao') || {}).textContent || ''), null, { timeout: 9000 });
+  await abrirPainel();
   await p.waitForFunction(() => {
-    const t = [...document.querySelectorAll('#sel-versao option')].map(o => o.textContent.trim());
-    return t.some(x => /^A\b/.test(x)) && t.some(x => /^B\b/.test(x));
+    const t = [...document.querySelectorAll('.vs-it-nm')].map(o => o.textContent);
+    return t.some(x => /^A\b/.test(x.trim())) && t.some(x => /^B\b/.test(x.trim()));
   }, null, { timeout: 9000 });
-  console.log('   opções do seletor (fora de versão):', JSON.stringify(await opcoesSel()));
-  ok(/Alterado/i.test(await escolhidaSel()),
-     'o seletor mostra que a peça está fora das versões guardadas');
-  ok((await opcoesSel()).some(o => /^A\b/.test(o) && /última aplicada/i.test(o)),
-     'o seletor assinala A como a última aplicada');
-  ok(!(await opcoesSel()).some(o => /em vigor/i.test(o)),
+  console.log('   linhas do painel (fora de versão):', JSON.stringify(await linhas()));
+  ok(/Alterado/i.test(await botao()),
+     'o botão mostra que a peça está fora das versões guardadas');
+  ok((await linhas()).some(o => /^A\b/.test(o) && /última aplicada/i.test(o)),
+     'o painel assinala A como a última aplicada');
+  ok(!(await linhas()).some(o => /em vigor/i.test(o)),
      'nenhuma versão se diz em vigor quando nenhuma está');
 
-  // Voltar a A e confirmar que o seletor passa a mostrá-la em vigor
+  // Voltar a A e confirmar que o botão passa a mostrá-la em vigor
   await api('versao_aplicar&id=' + idA);
   await p.reload({ waitUntil: 'networkidle' });
-  await p.waitForFunction(() =>
-    [...document.querySelectorAll('#sel-versao option')].some(o => /em vigor/i.test(o.textContent)),
-    null, { timeout: 9000 });
-  const esc2 = await escolhidaSel();
-  console.log('   escolhida no seletor:', esc2);
+  await p.waitForFunction(() => /em vigor/i.test(
+    (document.getElementById('bt-versao') || {}).textContent || ''), null, { timeout: 9000 });
+  const esc2 = await botao();
+  console.log('   botão da barra:', esc2);
   ok(/^A\b/.test(esc2) && /em vigor/i.test(esc2),
-     'reposta a versão, o seletor mostra A em vigor e escolhida');
+     'reposta a versão, o botão mostra A em vigor');
 
   // ---------- convite impresso: o manual segue a versão ----------
   await api('defs_save', { defs: { 'cartao.reservado': 'RESERVADO VERSAO P1' } });
