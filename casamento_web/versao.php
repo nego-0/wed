@@ -369,6 +369,18 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'miniatura não promete nada'],
         ['Aplicar um modelo que já estava em vigor di-lo, em vez de fingir',
          'api.php', "'mudou'] = \$antesDefs"],
+
+        // ---- A casa oferece mesmo outros desenhos (esquema v20) ----
+        ['Os modelos da casa são desenhos diferentes, e não a origem com dois nomes',
+         'db.php', 'modelos da casa que sejam MESMO outros desenhos'],
+        ['O que É a origem chama-se «Desenho de origem»',
+         'db.php', 'Desenho de origem · convite digital'],
+        ['A lista de modelos diz qual deles é já o desenho da peça',
+         'api.php', "\$m['em_vigor'] = \$seAplicado == \$atual[\$amb];"],
+        ['Um modelo já em vigor não se oferece para aplicar outra vez',
+         'assets/versoes.js', 'var jaEsta = !!m.em_vigor;'],
+        ['E a barra diz o nome do modelo em vigor, em vez de «Alterado»',
+         'assets/versoes.js', 'function modeloEmVigor('],
         ['Um modelo feito do zero também nasce com a identidade de exemplo',
          'api.php', 'comIdentidadeDeExemplo($conn, $ambito, padraoAmbito($ambito))'],
         ['O convite de origem ficou como sempre esteve — mexeu-se nos modelos',

@@ -205,11 +205,18 @@ const entrar = async (ctx, u, p) => {
   ok(fich.modelos.some(m => m.defs && m.defs['cartao.abertura']),
      'e o ficheiro leva mesmo os desenhos, não só os nomes');
 
+  const idsAntes = new Set(((await api('modelo_lista')).modelos || []).map(m => +m.id));
   const trazidos = await api('modelos_importar', { ficheiro: fich });
   console.log('   importação:', JSON.stringify(trazidos));
   ok(trazidos && trazidos.success && trazidos.entraram >= 2, 'e trazem-se de volta');
   const mau = await api('modelos_importar', { ficheiro: { formato: 'outra-coisa' } });
   ok(mau && mau.success === false, 'um ficheiro que não é de modelos é recusado');
+  // Trazer ACRESCENTA — e o que entrou agora sao copias de tudo, modelos da casa
+  // incluidos (desde que estes deixaram de ter defs vazio, ja nao sao saltados).
+  // Se ficassem, acumulavam-se a cada corrida da prova.
+  for (const m of (await api('modelo_lista')).modelos || []) {
+    if (!idsAntes.has(+m.id)) await api('modelo_apagar&id=' + m.id);
+  }
 
   // ---------- a página do admin ----------
   await admin.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
@@ -441,6 +448,54 @@ const entrar = async (ctx, u, p) => {
   ok(outraVez && outraVez.success && outraVez.mudou === false,
      'aplicar o mesmo outra vez diz que nao havia nada para mudar, em vez de fingir');
   await api('modelo_apagar&id=' + modVer.id);
+
+  // ---------- 14. a casa oferece mesmo OUTROS desenhos ----------
+  // A raiz de "os noivos nao conseguem por em vigor outros modelos": os dois
+  // unicos modelos que um casal via tinham defs vazio, ou seja ERAM o desenho de
+  // origem. Aplicar qualquer deles devolvia a peca a origem, que passa a
+  // coincidir com a versao "Original" — e por isso, em TODOS os casos, ficava
+  // "Original em vigor". Nao havia outro modelo: havia a origem, com dois nomes.
+  const daCasaTodos = ((await api('modelo_lista')).modelos || [])
+                        .filter(m => m.criado_por === 'sistema');
+  for (const amb of ['digital', 'impresso']) {
+    const n = daCasaTodos.filter(m => m.ambito === amb).length;
+    ok(n >= 3, `a casa traz mais do que a origem no ${amb} (${n} modelos)`);
+  }
+  ok(daCasaTodos.some(m => /Desenho de origem/.test(m.nome)),
+     'e o que E a origem diz que o e, em vez de se chamar "modelo da casa"');
+
+  // Cada um deles e um desenho DIFERENTE: aplicados, dao pecas diferentes.
+  await api('casamento_abrir&id=' + casal.id);
+  const digitais = daCasaTodos.filter(m => m.ambito === 'digital' && !/origem/i.test(m.nome));
+  const paletas = new Set();
+  for (const m of digitais) {
+    await api('modelo_aplicar&id=' + m.id);
+    const d = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+    paletas.add(String(d['tema.paleta'] || ''));
+  }
+  ok(paletas.size === digitais.length && !paletas.has(''),
+     `e cada um deixa a peca diferente da anterior (${paletas.size} de ${digitais.length})`);
+
+  // A lista diz qual e JA o desenho da peca — sem isso o painel oferecia "por
+  // em vigor" a um modelo que ja estava em vigor, e nada mudava.
+  const ultimo = digitais[digitais.length - 1];
+  const marcados = ((await api('modelo_lista&ambito=digital')).modelos || []).filter(m => m.em_vigor);
+  ok(marcados.length === 1 && +marcados[0].id === +ultimo.id,
+     `a lista assinala o modelo que esta em vigor, e so esse (${marcados.map(m => m.nome).join(', ')})`);
+
+  // Voltar a origem: o modelo de origem passa a ser o assinalado.
+  const origemDig = daCasaTodos.filter(m => m.ambito === 'digital' && /origem/i.test(m.nome))[0];
+  await api('modelo_aplicar&id=' + origemDig.id);
+  const naOrigem = ((await api('modelo_lista&ambito=digital')).modelos || []).filter(m => m.em_vigor);
+  ok(naOrigem.length === 1 && +naOrigem[0].id === +origemDig.id,
+     'de volta a origem, e o modelo de origem que aparece em vigor');
+
+  // E as cerimonias que o casal marcou continuam la: aplicar um modelo mexe no
+  // DESENHO, e por isso a peca nao volta a coincidir com a versao "Original" —
+  // que e um retrato do convite inteiro, cerimonias incluidas.
+  const cerAinda = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(cerAinda['evento.civil_local'] === 'Casa do Casal',
+     'e as cerimonias do casal atravessaram tudo isto sem se mexerem');
 
   // ---------- limpeza ----------
   const todos = (await api('modelo_lista')).modelos || [];

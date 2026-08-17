@@ -491,6 +491,36 @@ fundo:
   `mudou`. Quando não mudou nada, o painel di-lo em vez de recarregar uma página
   igual: *«já era o desenho em vigor — não havia nada para mudar»*.
 
+**A casa tinha de ter mesmo outros desenhos** (esquema v20). Aqui estava a raiz
+da queixa, e ela era literal. A v15 semeou dois modelos da casa — «Convite
+digital (modelo da casa)» e o impresso — ambos com `defs` **vazio**. E um modelo
+vazio *é* o desenho de origem: aplicá-lo devolve a peça à origem, que passa a
+coincidir com a versão «Original». Um casal via dois modelos, escolhia um, e
+ficava sempre com **«Original em vigor»** — em todos os casos, porque não havia
+outro modelo. Havia a origem, com dois nomes.
+
+A v20 semeia variações a sério, uma por paleta que o sistema já tinha: no
+digital **Borgonha**, **Meia-noite** e **Terracota** (de `temasPredef()`); no
+impresso **Sálvia**, **Terracota** e **Rosa velho** (paleta e folhagem, que é o
+que ali se vê). E os dois de origem passam a chamar-se **«Desenho de origem»**,
+que é o que são — o ponto de partida e o caminho de volta. A migração usa
+`temasPredef()` em vez de copiar as cores: `personalizacao.php` só depende do
+`config.php`, e por isso entra numa migração sem circularidade.
+
+Duas correções de honestidade no painel, pela mesma razão:
+
+- `modelo_lista` passa a dizer, para cada modelo, se ele **já é** o desenho da
+  peça (a mesma conta de `modelo_aplicar`, feita sem gravar nada). O painel
+  marca-o e **não lhe oferece «Pôr em vigor»** — oferecer uma ação que não faz
+  nada foi metade do problema;
+- quando a peça tem exatamente o desenho de um modelo e nenhuma versão guardada
+  bate certo, a barra passa a dizer **«Borgonha — modelo em vigor»** em vez de
+  «Alterado». Dizer «Alterado» a quem acabou de pôr um modelo em vigor é
+  contradizê-lo.
+
+Uma versão guardada tem prioridade sobre um modelo na barra: a versão é do
+casal, o modelo é da casa.
+
 **A prova de um modelo mostra o resultado, e não o modelo.** `defsDoEditor()`
 passou a responder a três coisas em vez de duas: as definições, o modelo **em
 edição** (só para o admin, que é quem o cura) e o modelo **visto**. Antes, só o

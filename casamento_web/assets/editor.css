@@ -65,6 +65,8 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .btn-versao i{ font-style:normal; font-size:.68rem; color:var(--ed-texto-2);
                text-transform:uppercase; letter-spacing:.05em; }
 .btn-versao.alterado{ border-color:var(--ed-ouro); }
+.btn-versao.modelo{ border-color:var(--ed-sel); }
+.btn-versao.modelo b{ color:#8fc0a4; }
 .btn-versao.alterado b{ color:var(--ed-ouro-claro); }
 
 .vs-jan{ position:fixed; inset:0; z-index:8000; display:none;
@@ -131,6 +133,7 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .vs-mod{ border:1px solid var(--ed-linha); border-radius:12px; overflow:hidden;
          background:var(--ed-mesa); display:flex; flex-direction:column; }
 .vs-mod:hover{ border-color:var(--ed-ouro); }
+.vs-mod.em-vigor{ border-color:var(--ed-sel); box-shadow:0 0 0 1px var(--ed-sel); }
 .vs-cara{ position:relative; width:100%; overflow:hidden; background:#111; }
 .vs-cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left;
                  pointer-events:none; }

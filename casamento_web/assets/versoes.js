@@ -95,15 +95,26 @@
     }
     function emVigor()  { return lista.filter(function (v) { return v.em_vigor; })[0]; }
     function escolhida(){ return lista.filter(function (v) { return v.escolhida; })[0]; }
+    /* O modelo cujo desenho é o da peça, se houver. Uma versão guardada tem
+       prioridade: é do casal, e o modelo é da casa. */
+    function modeloEmVigor(){ return modelos.filter(function (m) { return m.em_vigor; })[0]; }
 
     // ---- o botão da barra: diz o estado, e é só isso ----
     function pintarBotao() {
       var v = emVigor();
+      var mod = modeloEmVigor();
       var base = escolhida() || lista.filter(function (x) { return x.padrao; })[0];
       if (v) {
         bt.className = 'btn-versao';
         bt.innerHTML = '<b>' + esc(v.nome) + '</b> <i>em vigor</i>';
         bt.title = 'A versão em vigor é «' + v.nome + '» — é o que os convidados recebem.';
+      } else if (mod) {
+        // Dizer "Alterado" quando a peça é exatamente um modelo é enganador: o
+        // casal acabou de o pôr em vigor, e o botão dizia-lhe que não estava.
+        bt.className = 'btn-versao modelo';
+        bt.innerHTML = '<b>' + esc(mod.nome) + '</b> <i>modelo em vigor</i>';
+        bt.title = 'A peça tem o desenho do modelo «' + mod.nome + '». '
+                 + 'Guarde-o como versão para poder voltar a ele mais tarde.';
       } else {
         bt.className = 'btn-versao alterado';
         bt.innerHTML = '<b>Alterado</b> <i>' + (base ? 'de ' + esc(base.nome) : 'fora de versão') + '</i>';
@@ -160,13 +171,20 @@
 
     function htmlEstado() {
       var v = emVigor();
+      var mod = modeloEmVigor();
       var base = escolhida() || lista.filter(function (x) { return x.padrao; })[0];
-      return v
-        ? '<div class="vs-estado"><span class="vs-pt ok"></span>Em vigor: <b>' + esc(v.nome) + '</b>' +
-          '<em>é este o convite que os seus convidados recebem</em></div>'
-        : '<div class="vs-estado alt"><span class="vs-pt"></span>Com alterações por versionar' +
-          (base ? ', a partir de <b>' + esc(base.nome) + '</b>' : '') +
-          '<em>o que está no ecrã já é o que os convidados recebem — guarde uma versão para poder voltar aqui</em></div>';
+      if (v) {
+        return '<div class="vs-estado"><span class="vs-pt ok"></span>Em vigor: <b>' + esc(v.nome) + '</b>' +
+               '<em>é este o convite que os seus convidados recebem</em></div>';
+      }
+      if (mod) {
+        return '<div class="vs-estado"><span class="vs-pt ok"></span>Em vigor: o modelo <b>' +
+               esc(mod.nome) + '</b><em>é este o convite que os seus convidados recebem. ' +
+               'Guarde-o como versão se quiser poder voltar a ele depois de mexer.</em></div>';
+      }
+      return '<div class="vs-estado alt"><span class="vs-pt"></span>Com alterações por versionar' +
+             (base ? ', a partir de <b>' + esc(base.nome) + '</b>' : '') +
+             '<em>o que está no ecrã já é o que os convidados recebem — guarde uma versão para poder voltar aqui</em></div>';
     }
 
     function htmlVersoes() {
@@ -203,12 +221,18 @@
         '<b>desenho</b> da peça — os seus nomes, datas, locais e fotografias ficam como estão. ' +
         'As versões que guardou também: pode voltar a qualquer uma.</div>' +
         '<div class="vs-grelha">' + modelos.map(function (m) {
-          return '<div class="vs-mod">' +
+          // Um modelo que JÁ é o desenho da peça não se oferece para aplicar:
+          // dizia-se "pôr em vigor", nada mudava, e a culpa parecia ser do botão.
+          var jaEsta = !!m.em_vigor;
+          return '<div class="vs-mod' + (jaEsta ? ' em-vigor' : '') + '">' +
             '<div class="vs-cara"><iframe src="' + esc(provaDe(ambito, m.id)) + '" loading="lazy" ' +
               'tabindex="-1" scrolling="no" title="' + esc(m.nome) + '"></iframe></div>' +
-            '<div class="vs-mod-pe"><span class="vs-mod-nm">' + esc(m.nome) + '</span>' +
+            '<div class="vs-mod-pe"><span class="vs-mod-nm">' + esc(m.nome) +
+              (jaEsta ? ' <span class="vs-et ok">em vigor</span>' : '') + '</span>' +
               (m.descricao ? '<span class="vs-mod-ds">' + esc(m.descricao) + '</span>' : '') +
-              '<button class="vs-b prim" data-ac="modelo" data-id="' + m.id + '">Pôr em vigor</button>' +
+              (jaEsta
+                ? '<span class="vs-nota">É este o desenho da peça agora.</span>'
+                : '<button class="vs-b prim" data-ac="modelo" data-id="' + m.id + '">Pôr em vigor</button>') +
             '</div></div>';
         }).join('') + '</div>';
     }

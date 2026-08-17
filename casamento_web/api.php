@@ -2199,9 +2199,36 @@ if ($acao === 'modelo_lista') {
         $onde .= " AND visivel=1 AND (alcance='todos' OR id IN
                      (SELECT modelo_id FROM {$P}modelo_casamentos WHERE casamento_id=" . (int)$cid . "))";
     }
-    $r = @$conn->query("SELECT id, nome, descricao, ambito, visivel, alcance, criado_por, criado_em, atualizado_em
+    $r = @$conn->query("SELECT id, nome, descricao, ambito, defs, visivel, alcance, criado_por, criado_em, atualizado_em
                         FROM {$P}modelos WHERE $onde ORDER BY ambito, nome");
     $modelos = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+
+    // Qual deles é JÁ o desenho da peça. Sem isto o painel oferecia "pôr em
+    // vigor" a um modelo que já estava em vigor — e o casal carregava, nada
+    // mudava, e concluía que a função não funcionava. Compara-se o que aplicar
+    // produziria com o que a peça mostra: é a mesma conta de modelo_aplicar.
+    $atual = [];
+    if (casamentoAtual() > 0) {
+        foreach (array_keys(ambitosVersao()) as $amb) $atual[$amb] = instantaneoAmbito($conn, $amb);
+    }
+    foreach ($modelos as &$m) {
+        $amb = $m['ambito'];
+        $m['em_vigor'] = false;
+        if (isset($atual[$amb])) {
+            $j = json_decode((string)$m['defs'], true);
+            $permitidas = array_flip(chavesDesenho($amb));
+            $doModelo = [];
+            if (is_array($j)) foreach ($j as $k => $v) {
+                if (isset($permitidas[$k]) && is_string($v)) $doModelo[$k] = $v;
+            }
+            $seAplicado = array_merge($atual[$amb], padraoDesenho($amb), $doModelo);
+            $m['em_vigor'] = $seAplicado == $atual[$amb];
+        }
+        // O desenho não vai para o cliente: é grande, e a lista só precisa de
+        // saber quem é quem.
+        unset($m['defs']);
+    }
+    unset($m);
     // Ao admin junta-se quais casamentos cada modelo "de escolhidos" alcança,
     // para o painel os mostrar assinalados.
     if (ehAdminPlataforma() && $modelos) {

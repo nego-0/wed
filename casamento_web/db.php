@@ -188,7 +188,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 19;
+const ESQUEMA_VERSAO = 20;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -642,6 +642,70 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         @$conn->query("DELETE FROM {$P}definicoes
                        WHERE chave IN ('media.hero','media.historia','media.interludio','media.acesso')
                        AND valor LIKE 'assets/convite/casal/%'");
+    }
+
+    // v20 — modelos da casa que sejam MESMO outros desenhos.
+    //
+    // A v15 semeou dois: "Convite digital (modelo da casa)" e o impresso, ambos
+    // com defs vazio. Um modelo vazio É o desenho de origem — e por isso aplicar
+    // qualquer deles devolvia a peça à origem, que passa a coincidir com a
+    // versão "Original". Um casal via dois modelos, escolhia um, e ficava sempre
+    // com "Original em vigor". Era a queixa de "não consigo pôr outro modelo em
+    // vigor", e tinha razão: não havia outro. Havia a origem, com dois nomes.
+    //
+    // Semeiam-se agora variações a sério, uma por paleta que o sistema já tem.
+    if ($versaoAtual < 20) {
+        // personalizacao.php só depende do config.php: pode entrar aqui sem
+        // circularidade, e assim as paletas não se duplicam nesta migração.
+        require_once __DIR__ . '/personalizacao.php';
+
+        // Os dois de origem passam a dizer o que são. Só se o nome for ainda o
+        // semeado — um nome que o admin tenha mudado é dele.
+        foreach ([['digital', 'Convite digital (modelo da casa)', 'Desenho de origem · convite digital'],
+                  ['impresso', 'Convite impresso (modelo da casa)', 'Desenho de origem · convite impresso']]
+                 as [$amb, $velho, $novo]) {
+            $st = $conn->prepare("UPDATE {$P}modelos SET nome=?,
+                                  descricao='O ponto de partida da casa, e o caminho de volta: aplicá-lo devolve a peça ao desenho de origem.'
+                                  WHERE nome=? AND ambito=? AND criado_por='sistema'");
+            $st->bind_param('sss', $novo, $velho, $amb); @$st->execute();
+        }
+
+        $ins = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, alcance, criado_por)
+                               VALUES (?,?,?,?,1,'todos','sistema')");
+        $jaLa = function (string $nome, string $amb) use ($conn, $P): bool {
+            $st = $conn->prepare("SELECT 1 FROM {$P}modelos WHERE nome=? AND ambito=? LIMIT 1");
+            $st->bind_param('ss', $nome, $amb); $st->execute();
+            return (bool)$st->get_result()->fetch_row();
+        };
+
+        // ---- convite digital: uma paleta por modelo ----
+        $temas = temasPredef();
+        foreach ([['borgonha',  'Borgonha',   'Vinho profundo e ouro velho, para uma festa à noite.'],
+                  ['meianoite', 'Meia-noite', 'Azul de fim de tarde, sóbrio e formal.'],
+                  ['terracota', 'Terracota',  'Barro e areia, para uma festa ao ar livre.']]
+                 as [$k, $nome, $desc]) {
+            if (!isset($temas[$k]) || $jaLa($nome, 'digital')) continue;
+            $paleta = [];
+            foreach (TEMA_VARS_EDITAVEIS as $v) {
+                if (isset($temas[$k][$v])) $paleta[$v] = strtoupper($temas[$k][$v]);
+            }
+            $defs = json_encode(['tema.paleta' => json_encode($paleta, JSON_UNESCAPED_SLASHES)],
+                                JSON_UNESCAPED_UNICODE);
+            $amb = 'digital';
+            $ins->bind_param('ssss', $nome, $desc, $amb, $defs); @$ins->execute();
+        }
+
+        // ---- convite impresso: paleta e folhagem, que é o que ali se vê ----
+        foreach ([['salvia',    'eucalipto', 'coracao',   'Sálvia',    'Verde acinzentado e folha de oliveira.'],
+                  ['terracota', 'florido',   'losango',   'Terracota', 'Barro quente, com folhagem florida.'],
+                  ['rosa',      'feto',      'comercial', 'Rosa velho','Rosa fumado e feto, para um cartão mais leve.']]
+                 as [$pal, $folha, $elo, $nome, $desc]) {
+            if ($jaLa($nome, 'impresso')) continue;
+            $defs = json_encode(['cartao.paleta' => $pal, 'cartao.folhagem' => $folha,
+                                 'cartao.elo' => $elo], JSON_UNESCAPED_UNICODE);
+            $amb = 'impresso';
+            $ins->bind_param('ssss', $nome, $desc, $amb, $defs); @$ins->execute();
+        }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
