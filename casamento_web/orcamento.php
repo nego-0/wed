@@ -154,7 +154,7 @@ $CAS  = casalInfo($DEFS);
     <div class="ajustes">
       <div class="campo">
         <label for="a-total">Orçamento total (teto)</label>
-        <input type="text" id="a-total" inputmode="decimal" placeholder="ex.: 2 500 000">
+        <input type="text" id="a-total" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00">
       </div>
       <div class="campo">
         <label for="a-moeda">Moeda</label>
@@ -208,7 +208,7 @@ $CAS  = casalInfo($DEFS);
     </div>
     <div class="campo">
       <label for="mc-previsto">Previsto</label>
-      <input type="text" id="mc-previsto" inputmode="decimal" placeholder="0">
+      <input type="text" id="mc-previsto" class="campo-moeda" inputmode="decimal" placeholder="0,00">
     </div>
     <div class="fim">
       <button class="btn btn-fantasma" onclick="fechar('m-cat')">Cancelar</button>
@@ -229,7 +229,7 @@ $CAS  = casalInfo($DEFS);
     <div class="lin2">
       <div class="campo">
         <label for="md-valor">Valor</label>
-        <input type="text" id="md-valor" inputmode="decimal" placeholder="0">
+        <input type="text" id="md-valor" class="campo-moeda" inputmode="decimal" placeholder="0,00">
       </div>
       <div class="campo">
         <label for="md-estado">Estado</label>
@@ -277,7 +277,7 @@ $CAS  = casalInfo($DEFS);
     <div class="lin2">
       <div class="campo">
         <label for="mp-valor">Valor</label>
-        <input type="text" id="mp-valor" inputmode="decimal" placeholder="0">
+        <input type="text" id="mp-valor" class="campo-moeda" inputmode="decimal" placeholder="0,00">
       </div>
       <div class="campo">
         <label for="mp-data">Vence a</label>

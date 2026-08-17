@@ -35,6 +35,59 @@
   }
   function pct(parte, todo) { return todo > 0 ? Math.max(0, Math.min(100, (parte / todo) * 100)) : 0; }
 
+  // ---- máscara dos campos de preço ----
+  // Espaço entre os milhares e vírgula decimal, à medida que se escreve; duas
+  // casas garantidas ao sair do campo. O servidor (orcValor) reconhece este
+  // formato, por isso envia-se o texto do campo tal e qual.
+  function agrupar(inteiro) { return inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+  // Só dígitos e uma vírgula (a primeira), com a parte decimal a duas casas.
+  function limparMoeda(s) {
+    s = String(s).replace(/[^\d,]/g, '');
+    var i = s.indexOf(',');
+    if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/,/g, '');
+    return s;
+  }
+
+  // Formata o que está no campo. comCasas=true força as duas casas decimais.
+  function formatarMoeda(s, comCasas) {
+    s = limparMoeda(s);
+    if (s === '') return '';
+    var partes = s.split(',');
+    var ip = partes[0].replace(/^0+(?=\d)/, ''); if (ip === '') ip = '0';
+    var dp = partes.length > 1 ? partes[1].slice(0, 2) : null;
+    var out = agrupar(ip);
+    if (dp !== null) out += ',' + dp;
+    if (comCasas) {
+      if (dp === null) out += ',00';
+      else if (dp.length === 1) out += '0';
+      else if (dp.length === 0) out += '00';
+    }
+    return out;
+  }
+
+  // Um número (ou "1234.50" do servidor) para o campo: "1 234,50" — ou vazio.
+  function paraCampo(v) {
+    var n = num(v);
+    if (n === 0) return '';
+    var partes = n.toFixed(2).split('.');
+    return agrupar(partes[0]) + ',' + partes[1];
+  }
+
+  // Reformata enquanto se escreve, sem perder o cursor de vista.
+  function aoDigitar(el) {
+    var antes = el.value.slice(0, el.selectionStart == null ? el.value.length : el.selectionStart);
+    var digitosAntes = (antes.match(/[\d,]/g) || []).length;
+    el.value = formatarMoeda(el.value, false);
+    var pos = 0, cont = 0;
+    while (pos < el.value.length && cont < digitosAntes) {
+      if (/[\d,]/.test(el.value[pos])) cont++;
+      pos++;
+    }
+    if (el.setSelectionRange) { try { el.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } }
+  }
+  function aoSair(el) { if (el.value.trim() !== '') el.value = formatarMoeda(el.value, true); }
+
   // ---- carregar ----
   async function carregar() {
     var d = await window.api('orc_estado', { method: 'GET' });
@@ -49,7 +102,7 @@
     renderDespesas(ORC.despesas, ORC.categorias);
     renderPagamentos(ORC.pagamentos);
     // ajustes (só se o utilizador não estiver a escrever agora)
-    if (document.activeElement !== $('a-total')) $('a-total').value = ORC.resumo.teto > 0 ? ORC.resumo.teto : '';
+    if (document.activeElement !== $('a-total')) $('a-total').value = paraCampo(ORC.resumo.teto);
     if (document.activeElement !== $('a-moeda')) $('a-moeda').value = MOEDA === 'Kz' ? '' : MOEDA;
   }
 
@@ -207,7 +260,7 @@
     if (!c) return;
     $('m-cat-titulo').textContent = 'Editar categoria';
     $('mc-id').value = c.id; $('mc-nome').value = c.nome;
-    $('mc-previsto').value = num(c.previsto) || '';
+    $('mc-previsto').value = paraCampo(c.previsto);
     abrir('m-cat');
   };
 
@@ -253,7 +306,7 @@
     if (!d) return;
     $('m-desp-titulo').textContent = 'Editar despesa';
     $('md-id').value = d.id; $('md-desc').value = d.descricao;
-    $('md-valor').value = num(d.valor) || ''; $('md-estado').value = d.estado;
+    $('md-valor').value = paraCampo(d.valor); $('md-estado').value = d.estado;
     $('md-fornecedor').value = d.fornecedor || ''; $('md-nota').value = d.nota || '';
     preencheCategorias('md-categoria', d.categoria_id);
     $('md-parcelas-cx').style.display = PODE ? '' : 'none';
@@ -350,6 +403,12 @@
     if (ev.target.classList && ev.target.classList.contains('modal-fundo')) {
       ev.target.classList.remove('aberto');
     }
+  });
+
+  // Os campos de preço formatam-se ao escrever e fecham as duas casas ao sair.
+  document.querySelectorAll('.campo-moeda').forEach(function (el) {
+    el.addEventListener('input', function () { aoDigitar(el); });
+    el.addEventListener('blur', function () { aoSair(el); });
   });
 
   // Sem permissão de escrita, os botões de topo não fazem sentido.
