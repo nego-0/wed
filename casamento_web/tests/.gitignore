@@ -4,3 +4,5 @@
 # para uma pasta temporária que só existia na máquina de quem o criou.
 node_modules/
 node_modules
+# Capturas de ecrã das provas: geram-se ao correr, não se versionam.
+_*.png

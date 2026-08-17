@@ -393,6 +393,8 @@ function correcoesEsperadas(): array {
          'db.php', "valor LIKE 'assets/convite/casal/%'"],
         ['O menu "⋯" vira-se para cima quando não há espaço em baixo',
          'assets/menu-mais.js', "classList.add('acima')"],
+        ['O modelo em vigor manda na barra sobre a «Original» de origem derivada',
+         'assets/versoes.js', 'if (v && v.padrao && mod) v = null;'],
     ];
 }
 

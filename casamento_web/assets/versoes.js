@@ -104,6 +104,10 @@
       var v = emVigor();
       var mod = modeloEmVigor();
       var base = escolhida() || lista.filter(function (x) { return x.padrao; })[0];
+      // A «Original» é a peça de origem derivada, não uma versão que o casal
+      // guardou. Se o casal pôs um modelo em vigor cujo desenho é o de origem,
+      // é o modelo que manda — dizer «Original» escondia a escolha que ele fez.
+      if (v && v.padrao && mod) v = null;
       if (v) {
         bt.className = 'btn-versao';
         bt.innerHTML = '<b>' + esc(v.nome) + '</b> <i>em vigor</i>';
@@ -173,6 +177,8 @@
       var v = emVigor();
       var mod = modeloEmVigor();
       var base = escolhida() || lista.filter(function (x) { return x.padrao; })[0];
+      // Ver pintarBotao(): o modelo em vigor manda sobre a «Original» derivada.
+      if (v && v.padrao && mod) v = null;
       if (v) {
         return '<div class="vs-estado"><span class="vs-pt ok"></span>Em vigor: <b>' + esc(v.nome) + '</b>' +
                '<em>é este o convite que os seus convidados recebem</em></div>';
@@ -188,19 +194,22 @@
     }
 
     function htmlVersoes() {
+      var mod = modeloEmVigor();
       return htmlEstado() +
         '<div class="vs-lista">' + lista.map(function (v) {
+          // A «Original» derivada cede a vez ao modelo em vigor (ver htmlEstado).
+          var vigora = v.em_vigor && !(v.padrao && mod);
           var etiquetas =
-            (v.em_vigor ? '<span class="vs-et ok">em vigor</span>' : '') +
+            (vigora ? '<span class="vs-et ok">em vigor</span>' : '') +
             (v.padrao ? '<span class="vs-et">peça de origem</span>' : '') +
-            (!v.em_vigor && v.escolhida ? '<span class="vs-et">última aplicada</span>' : '');
-          var acoes = (v.em_vigor ? '' :
+            (!vigora && v.escolhida ? '<span class="vs-et">última aplicada</span>' : '');
+          var acoes = (vigora ? '' :
                 '<button class="vs-b prim" data-ac="aplicar" data-id="' + v.id + '">Pôr em vigor</button>') +
             (v.padrao ? '' :
                 '<button class="vs-b" data-ac="atualizar" data-id="' + v.id + '">Atualizar</button>' +
                 '<button class="vs-b" data-ac="renomear" data-id="' + v.id + '">Mudar o nome</button>' +
                 '<button class="vs-b perigo" data-ac="apagar" data-id="' + v.id + '">Apagar</button>');
-          return '<div class="vs-it' + (v.em_vigor ? ' em-vigor' : '') + '">' +
+          return '<div class="vs-it' + (vigora ? ' em-vigor' : '') + '">' +
                    '<div class="vs-it-nm">' + esc(v.nome) + ' ' + etiquetas +
                      '<span class="vs-q">' + esc(quando(v.criada_em)) + '</span></div>' +
                    '<div class="vs-it-ac">' + acoes + '</div></div>';
