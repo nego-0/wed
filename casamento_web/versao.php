@@ -395,6 +395,8 @@ function correcoesEsperadas(): array {
          'assets/menu-mais.js', "classList.add('acima')"],
         ['O modelo em vigor manda na barra sobre a «Original» de origem derivada',
          'assets/versoes.js', 'if (v && v.padrao && mod) v = null;'],
+        ['Um modelo empresta as fotos às secções que o casal ainda não mexeu',
+         'api.php', 'foreach (fotosDeModelo() as $kMedia => $kFoto) {'],
     ];
 }
 

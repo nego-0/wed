@@ -2650,6 +2650,26 @@ if ($acao === 'modelo_aplicar') {
     // pelo meio. Um modelo vazio — o de origem da casa — devolve a peça à
     // origem, que é o que se espera de "aplicar o modelo da casa".
     $defs = array_merge(padraoDesenho($m['ambito']), $doModelo);
+    // As fotografias não são desenho — são de cada casal, e por isso um modelo
+    // não as impõe. Mas um casal que ainda não pôs foto nenhuma fica melhor
+    // servido com as do modelo (que o admin escolheu a condizer) do que com as
+    // de origem. Regra, secção a secção: se a foto do casal ainda é a de origem
+    // (não lhe mexeu), empresta-se a do modelo e o seu enquadramento; uma foto
+    // que o casal já trocou fica intocada — nunca se apaga trabalho seu.
+    if ($m['ambito'] === 'digital') {
+        $padrao = defsPadrao();
+        $atuais = defsAtuais($conn);
+        foreach (fotosDeModelo() as $kMedia => $kFoto) {
+            $doCasal  = (string)($atuais[$kMedia] ?? '');
+            $deOrigem = (string)($padrao[$kMedia] ?? '');
+            $noModelo = (array_key_exists($kMedia, $j) && is_string($j[$kMedia])) ? $j[$kMedia] : '';
+            if ($doCasal === $deOrigem && $noModelo !== '') {
+                $defs[$kMedia] = $noModelo;
+                if ($kFoto !== null && array_key_exists($kFoto, $j) && is_string($j[$kFoto]))
+                    $defs[$kFoto] = $j[$kFoto];
+            }
+        }
+    }
     // O que a peça mostrava ANTES, para se poder dizer com verdade se mudou.
     // Sem isto, aplicar um modelo que já era o desenho em vigor recarregava a
     // página sem nada mudar — e quem o fez concluía, com razão, que não tinha

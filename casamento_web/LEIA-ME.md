@@ -323,6 +323,19 @@ depois disso não lhe toca, e apagar o modelo também não. É a diferença entr
 uma receita e cozinhar em casa alheia — e é o que evita que um casal acorde com
 o convite mudado porque a casa mexeu numa coisa dela.
 
+**As fotografias são do casal, mas o modelo empresta as suas a quem ainda não
+pôs as próprias.** O desenho que um modelo impõe (`chavesDesenho`) deixa de fora
+os nomes, o evento e as fotografias — senão aplicar um modelo rebatizava o casal
+e trocava-lhe os retratos. Só que as fotos de exemplo que o admin define para os
+modelos (a capa, a história, o interlúdio, o passe) nunca chegavam ao casal, e um
+casal sem fotos suas ficava com as de origem em vez das do modelo que escolheu.
+A regra, secção a secção (só no convite digital — no cartão as imagens já são
+`cartao.*`, que é desenho): se a foto do casal naquela secção **ainda é a de
+origem** (não lhe mexeu), aplicar o modelo empresta-lhe a foto do modelo e o seu
+enquadramento; uma foto que o casal **já trocou** fica intocada. Nunca se apaga
+uma fotografia do casal — só se preenche o que ele deixou por preencher. Ver
+`fotosDeModelo()` e `modelo_aplicar` em `api.php`; a prova é `tests/probe_fotos.js`.
+
 **Os modelos de origem da casa** (esquema v15). A lista começava vazia: o
 desenho que o sistema traz — o convite impresso e o digital tal como são de
 origem — não constava dela, e para o ter o admin tinha de fazer um «novo modelo

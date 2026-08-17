@@ -86,7 +86,11 @@ const entrar = async (ctx, u, p) => {
   const idApos = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
   ok(!idApos['casal.noiva'] && !idApos['casal.noivo'],
      'e aplicá-lo não escreve nome nenhum no casal que o usou');
-  ok(!idApos['media.hero'], 'nem lhe troca as fotografias');
+  // As fotografias são outra história: o casal ainda não tinha mexido nas suas,
+  // por isso o modelo empresta-lhe as de exemplo (da galeria). Uma foto que o
+  // casal já tivesse trocado ficaria intocada — ver tests/probe_fotos.js.
+  ok(/galeria\//.test(String(idApos['media.hero'] || '')),
+     `mas as fotos, que o casal não mexeu, passam a ser as do modelo (${idApos['media.hero']})`);
 
   // A prova do modelo mostra um casal de exemplo, e não o da oficina.
   const provaHtml = await admin.evaluate(async (id) =>

@@ -1352,6 +1352,21 @@ function ordenarBlocos(string $html, array $defs, array $tokens = [], bool $edit
     return str_replace($m[0], '<main>'.$novo.'</main>', $html);
 }
 
+/**
+ * As fotografias de um convite digital, cada uma com a sua chave de
+ * enquadramento (null quando a secção não recorta). Um modelo empresta-as a um
+ * casal que ainda não pôs as suas — ver modelo_aplicar. A música fica de fora:
+ * é 'media.', mas não é fotografia.
+ */
+function fotosDeModelo(): array {
+    return [
+        'media.hero'       => 'foto.hero',
+        'media.historia'   => null,
+        'media.interludio' => 'foto.interludio',
+        'media.acesso'     => 'foto.acesso',
+    ];
+}
+
 /** As fotografias que são recortadas e por isso precisam de enquadramento. */
 function fotosEnquadraveis(): array {
     return [
