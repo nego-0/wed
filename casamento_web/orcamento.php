@@ -52,10 +52,6 @@ $CAS  = casalInfo($DEFS);
   .legenda{ display:flex; flex-wrap:wrap; gap:1rem; margin-top:.8rem; font-size:.8rem; color:#8a8f88; }
   .legenda i{ width:11px; height:11px; border-radius:3px; display:inline-block; margin-right:.4rem; vertical-align:middle; }
 
-  /* ---- Ajustes (teto / moeda) ---- */
-  .ajustes{ display:grid; grid-template-columns:1fr 160px auto; gap:.7rem; align-items:end; }
-  @media(max-width:640px){ .ajustes{ grid-template-columns:1fr; } }
-
   /* ---- Categorias ---- */
   .cat{ border-top:1px solid var(--line); padding:.75rem 0; }
   .cat:first-of-type{ border-top:0; }
@@ -111,6 +107,28 @@ $CAS  = casalInfo($DEFS);
   .modal .fim{ display:flex; gap:.6rem; justify-content:flex-end; margin-top:1.2rem; }
   .aviso-visita{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
                  border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
+
+  /* Cabeçalho de painel (título + botão) que quebra em vez de transbordar. */
+  .painel-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.8rem 1rem; flex-wrap:wrap; }
+  .painel-topo .btn{ flex:0 0 auto; }
+  /* Conteúdo largo (a tabela de despesas) rola no seu próprio quadro. */
+  .tabela-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table.desp{ min-width:480px; }
+
+  /* ---- Ecrã estreito ---- */
+  @media (max-width:640px){
+    .painel{ padding:1rem 1.05rem; }
+    .curso-topo{ gap:.6rem 1.2rem; }
+    .curso-num{ font-size:1.7rem; }
+    .curso-falta{ text-align:left; }
+    /* O calendário passa a duas linhas: data e valor em cima, descrição e ação por baixo. */
+    .pag .data{ grid-row:1; grid-column:1; }
+    .pag .mt{ grid-row:1; grid-column:2; }
+    .pag .desc{ grid-row:2; grid-column:1 / -1; }
+    .pag > span:last-child{ grid-row:3; grid-column:1 / -1; }
+    .modal{ padding:1.2rem 1.1rem; }
+    .modal .lin2{ grid-template-columns:1fr; }
+  }
 </style>
 </head>
 <body>
@@ -145,28 +163,12 @@ $CAS  = casalInfo($DEFS);
       <span><i class="s-prev"></i>Previsto</span>
       <span><i style="background:var(--cream);border:1px solid var(--line)"></i>Folga até ao teto</span>
     </div>
-  </div>
-
-  <!-- Teto e moeda -->
-  <div class="painel">
-    <h3>Teto e moeda</h3>
-    <p class="dica">O teto é opcional: sem ele, a barra mede-se pela soma dos previstos das categorias.</p>
-    <div class="ajustes">
-      <div class="campo">
-        <label for="a-total">Orçamento total (teto)</label>
-        <input type="text" id="a-total" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00">
-      </div>
-      <div class="campo">
-        <label for="a-moeda">Moeda</label>
-        <input type="text" id="a-moeda" maxlength="8" placeholder="Kz">
-      </div>
-      <button class="btn btn-ouro" id="a-guardar" onclick="guardarAjustes()">Guardar</button>
-    </div>
+    <p class="dica" style="margin:.9rem 0 0">O <b>teto</b> e a <b>moeda</b> definem-se em <a href="gestao.php" style="color:var(--gold)">Gestão</a>. Sem teto, a barra mede-se pela soma dos previstos das categorias.</p>
   </div>
 
   <!-- Categorias -->
   <div class="painel">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:1rem">
+    <div class="painel-topo">
       <div>
         <h3>Categorias</h3>
         <p class="dica" style="margin-bottom:0">Onde pesa a festa. A barra de cada uma é o real sobre o previsto.</p>
@@ -178,7 +180,7 @@ $CAS  = casalInfo($DEFS);
 
   <!-- Despesas -->
   <div class="painel">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:1rem">
+    <div class="painel-topo">
       <div>
         <h3>Despesas</h3>
         <p class="dica" style="margin-bottom:0">Cada compromisso, com o seu estado: previsto, contratado ou pago.</p>
@@ -306,6 +308,7 @@ $CAS  = casalInfo($DEFS);
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script>window.SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/moeda.js') ?>"></script>
 <script src="<?= asset('assets/orcamento.js') ?>"></script>
 </body>
 </html>

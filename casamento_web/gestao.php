@@ -32,6 +32,12 @@ $soVer    = $visita && !podeCorrigir();
 $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 
+// O orçamento total (teto) e a moeda são factos do casamento, como a ficha —
+// definem-se aqui, e não na página do orçamento, que passa a ser só a leitura
+// das despesas. Lêem-se direto (não vivem em defsAtuais).
+$orcTeto  = $souAdmin ? (float)(orcamentoResumo($conn)['teto'] ?? 0) : 0.0;
+$orcMoeda = $souAdmin ? orcamentoMoeda($conn) : 'Kz';
+
 // A ficha, tal como está guardada — e não como as peças a mostram: se alguém
 // escreveu outro nome por cima, no editor, é preciso poder ver a diferença.
 $ficha = ['nome'=>'', 'noiva'=>'', 'noivo'=>'', 'data_evento'=>''];
@@ -207,6 +213,29 @@ $MAPA_LOCAL = [
     </div>
 
     <div class="painel">
+      <h3>Orçamento</h3>
+      <div class="dica">O teto do orçamento e a moeda em que o conta. O teto é opcional — sem ele,
+        a barra do <a href="orcamento.php" style="color:var(--gold)">Orçamento</a> mede-se pela soma
+        dos previstos das categorias. A gestão das despesas é feita lá.</div>
+      <div class="grelha">
+        <div class="campo">
+          <label for="d-orc-total">Orçamento total (teto)</label>
+          <input type="text" id="d-orc-total" class="campo-moeda" inputmode="decimal"
+                 placeholder="ex.: 2 500 000,00" value="<?= $orcTeto > 0 ? escP(number_format($orcTeto, 2, ',', ' ')) : '' ?>">
+        </div>
+        <div class="campo">
+          <label for="d-orc-moeda">Moeda</label>
+          <input type="text" id="d-orc-moeda" maxlength="8" placeholder="Kz"
+                 value="<?= $orcMoeda === 'Kz' ? '' : escP($orcMoeda) ?>">
+        </div>
+      </div>
+      <div class="fim">
+        <button class="btn btn-ouro" onclick="guardarOrcamento()">Guardar</button>
+        <span class="estado" id="e-orcamento"></span>
+      </div>
+    </div>
+
+    <div class="painel">
       <h3>Endereço público</h3>
       <div class="dica">O endereço por onde os convidados chegam. É este que vai nos QR impressos —
         e no papel já não há emenda.</div>
@@ -310,6 +339,7 @@ $MAPA_LOCAL = [
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
+<script src="<?= asset('assets/moeda.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -339,6 +369,21 @@ async function guardarEvento(){
   $('e-evento').textContent = (d.gravadas || 0) + ' alterado(s), ' + (d.repostas || 0) + ' reposto(s).';
   toast('Dados do evento guardados.');
 }
+
+// ---------- o orçamento (teto e moeda) ----------
+async function guardarOrcamento(){
+  const d = await api('orc_ajuste', { method:'POST', body: JSON.stringify({
+    total: $('d-orc-total').value.trim(), moeda: $('d-orc-moeda').value.trim() }) });
+  if (!d || !d.success) return;
+  const r = d.resumo || {};
+  $('e-orcamento').textContent = r.teto > 0
+    ? ('Teto: ' + (window.Moeda ? window.Moeda.paraCampo(r.teto) : r.teto) + ' ' + (d.moeda || 'Kz') + '.')
+    : 'Sem teto — a barra usa a soma dos previstos.';
+  toast('Orçamento guardado.');
+}
+
+// A máscara dos campos de preço (espaço nos milhares, duas casas).
+if (window.Moeda) window.Moeda.ligar('.campo-moeda');
 
 // ---------- quem entra ----------
 async function carregarAcessos(){

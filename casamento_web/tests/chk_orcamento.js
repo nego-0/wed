@@ -113,20 +113,67 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const impCat = (e3.categorias.find(c => c.id === impBanda.categoria_id) || {}).nome;
   ok(impCat === 'Fotografia e vídeo', 'a despesa reencontrou a sua gaveta pelo nome');
 
-  // ---------- a página desenha ----------
+  // ---------- o teto pelo formulário do admin (casamento_criar) ----------
+  const wForm = await api('casamento_criar', { nome: 'PROVA Teto Admin', noiva: 'F', noivo: 'G', orcamento_total: '3 000 000,00' });
+  ok(wForm && wForm.success, 'o admin cria um casamento com orçamento total');
+  await abrir(wForm.id);
+  const eForm = await api('orc_estado');
+  ok(N(eForm.resumo.teto) === 3000000, 'o orçamento total do formulário do admin fica gravado como teto');
+  ok((eForm.categorias || []).length >= 10, 'e o casamento criado à mão nasce com as gavetas');
+
+  // ---------- o teto pelo registo público ----------
+  const anon = await (await b.newContext()).newPage();
+  await anon.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
+  const emailPub = 'prova.orc.' + Date.now() + '@exemplo.ao';
+  const reg = await anon.evaluate(async (email) => {
+    const r = await fetch('api.php?action=registo_publico', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noiva: 'Púb', noivo: 'Lica', email: email, senha: '12345678', orcamento_total: '1 800 000,00' }) });
+    return r.json();
+  }, emailPub);
+  ok(reg && reg.success, 'o registo público aceita o orçamento total');
+  const cidPub = reg.casamento;
+  await anon.close();
+  await abrir(cidPub);
+  const ePub = await api('orc_estado');
+  ok(N(ePub.resumo.teto) === 1800000, 'o teto indicado no registo público fica gravado');
+  ok((ePub.categorias || []).length >= 10, 'e o casamento do registo público nasce com as gavetas');
+
+  // ---------- o teto define-se na Gestão ----------
   await abrir(w1.id);
+  await p.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(300);
+  ok(!!(await p.$('#d-orc-total')), 'a Gestão tem o campo do orçamento total');
+  await p.fill('#d-orc-total', '4500000');
+  await p.click('button[onclick="guardarOrcamento()"]');
+  await p.waitForTimeout(400);
+  const eGest = await api('orc_estado');
+  ok(N(eGest.resumo.teto) === 4500000, 'guardar na Gestão altera o teto do orçamento');
+
+  // ---------- a página desenha ----------
   await p.goto(BASE + '/orcamento.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(400);
   const comprometidoTxt = await p.textContent('#c-comprometido');
   ok(comprometidoTxt && !/^—/.test(comprometidoTxt.trim()), 'a página mostra o comprometido, não um traço');
   const segmentos = await p.$$eval('#c-barra span', els => els.length);
   ok(segmentos >= 3, 'a barra do curso tem os três segmentos (pago, contratado, previsto)');
+  // O teto já não se define aqui — mudou-se para a Gestão.
+  ok(!(await p.$('#a-total')), 'a página do orçamento já não tem o campo do teto');
+  const scroll = await p.$('.tabela-scroll');
+  ok(!!scroll, 'a tabela de despesas está num quadro que rola (responsiva)');
 
   // O porteiro não chega aqui: a página é dos noivos.
   ok(!(await p.$('nav a[href="orcamento.php"]')) === false, 'o menu tem a entrada do Orçamento para o admin');
 
+  // limpeza das contas do registo público (casamento primeiro, depois a conta órfã)
+  await api('casamento_estado&id=' + cidPub + '&estado=arquivado', {});
+  await api('casamento_apagar&id=' + cidPub, {});
+  const listaU = await api('utilizador_lista');
+  const conta = (listaU.contas || []).find(u => u.email === emailPub);
+  if (conta) await api('utilizador_apagar&id=' + conta.id, {});
+
   // ---------- limpeza ----------
-  for (const id of [w1.id, w2.id, w3]) {
+  for (const id of [w1.id, w2.id, w3, wForm.id]) {
     await api('casamento_estado&id=' + id + '&estado=arquivado', {});
     await api('casamento_apagar&id=' + id, {});
   }

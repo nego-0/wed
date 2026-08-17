@@ -120,7 +120,7 @@ function ficheirosApp(): array {
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
             'manifest.php','sw.js',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
-            'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js',
+            'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
             'assets/so-ver.js',
             'assets/convite-base.html'];

@@ -34,59 +34,9 @@
     return s + ' ' + MOEDA;
   }
   function pct(parte, todo) { return todo > 0 ? Math.max(0, Math.min(100, (parte / todo) * 100)) : 0; }
-
-  // ---- máscara dos campos de preço ----
-  // Espaço entre os milhares e vírgula decimal, à medida que se escreve; duas
-  // casas garantidas ao sair do campo. O servidor (orcValor) reconhece este
-  // formato, por isso envia-se o texto do campo tal e qual.
-  function agrupar(inteiro) { return inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
-
-  // Só dígitos e uma vírgula (a primeira), com a parte decimal a duas casas.
-  function limparMoeda(s) {
-    s = String(s).replace(/[^\d,]/g, '');
-    var i = s.indexOf(',');
-    if (i !== -1) s = s.slice(0, i + 1) + s.slice(i + 1).replace(/,/g, '');
-    return s;
-  }
-
-  // Formata o que está no campo. comCasas=true força as duas casas decimais.
-  function formatarMoeda(s, comCasas) {
-    s = limparMoeda(s);
-    if (s === '') return '';
-    var partes = s.split(',');
-    var ip = partes[0].replace(/^0+(?=\d)/, ''); if (ip === '') ip = '0';
-    var dp = partes.length > 1 ? partes[1].slice(0, 2) : null;
-    var out = agrupar(ip);
-    if (dp !== null) out += ',' + dp;
-    if (comCasas) {
-      if (dp === null) out += ',00';
-      else if (dp.length === 1) out += '0';
-      else if (dp.length === 0) out += '00';
-    }
-    return out;
-  }
-
-  // Um número (ou "1234.50" do servidor) para o campo: "1 234,50" — ou vazio.
-  function paraCampo(v) {
-    var n = num(v);
-    if (n === 0) return '';
-    var partes = n.toFixed(2).split('.');
-    return agrupar(partes[0]) + ',' + partes[1];
-  }
-
-  // Reformata enquanto se escreve, sem perder o cursor de vista.
-  function aoDigitar(el) {
-    var antes = el.value.slice(0, el.selectionStart == null ? el.value.length : el.selectionStart);
-    var digitosAntes = (antes.match(/[\d,]/g) || []).length;
-    el.value = formatarMoeda(el.value, false);
-    var pos = 0, cont = 0;
-    while (pos < el.value.length && cont < digitosAntes) {
-      if (/[\d,]/.test(el.value[pos])) cont++;
-      pos++;
-    }
-    if (el.setSelectionRange) { try { el.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } }
-  }
-  function aoSair(el) { if (el.value.trim() !== '') el.value = formatarMoeda(el.value, true); }
+  // A máscara dos campos de preço vive em assets/moeda.js (window.Moeda), porque
+  // a Gestão e o registo também a usam. paraCampo() formata um número do servidor.
+  function paraCampo(v) { return window.Moeda ? window.Moeda.paraCampo(v) : String(num(v) || ''); }
 
   // ---- carregar ----
   async function carregar() {
@@ -101,9 +51,6 @@
     renderCategorias(ORC.categorias, ORC.sem_categoria);
     renderDespesas(ORC.despesas, ORC.categorias);
     renderPagamentos(ORC.pagamentos);
-    // ajustes (só se o utilizador não estiver a escrever agora)
-    if (document.activeElement !== $('a-total')) $('a-total').value = paraCampo(ORC.resumo.teto);
-    if (document.activeElement !== $('a-moeda')) $('a-moeda').value = MOEDA === 'Kz' ? '' : MOEDA;
   }
 
   // ---- retrato do curso ----
@@ -180,7 +127,7 @@
     }
     var nomeCat = {};
     cats.forEach(function (c) { nomeCat[c.id] = c.nome; });
-    var h = '<table class="desp"><thead><tr><th>Despesa</th><th>Categoria</th><th>Estado</th>'
+    var h = '<div class="tabela-scroll"><table class="desp"><thead><tr><th>Despesa</th><th>Categoria</th><th>Estado</th>'
       + '<th style="text-align:right">Valor</th>' + (PODE ? '<th></th>' : '') + '</tr></thead><tbody>';
     desp.forEach(function (d) {
       var parc = num(d.n_parcelas) > 0
@@ -199,7 +146,7 @@
       }
       h += '</tr>';
     });
-    h += '</tbody></table>';
+    h += '</tbody></table></div>';
     box.innerHTML = h;
   }
 
@@ -237,15 +184,7 @@
   function fechar(id) { $(id).classList.remove('aberto'); }
   window.fechar = fechar;
 
-  // ---- ajustes (teto / moeda) ----
-  async function guardarAjustes() {
-    var d = await window.api('orc_ajuste', {
-      method: 'POST',
-      body: JSON.stringify({ total: $('a-total').value.trim(), moeda: $('a-moeda').value.trim() })
-    });
-    if (d && d.success) { toast('Guardado.'); carregar(); }
-  }
-  window.guardarAjustes = guardarAjustes;
+  // O teto e a moeda definem-se agora na Gestão — ver o painel "Orçamento" lá.
 
   // ---- categorias ----
   function abrirCategoria() {
@@ -406,14 +345,11 @@
   });
 
   // Os campos de preço formatam-se ao escrever e fecham as duas casas ao sair.
-  document.querySelectorAll('.campo-moeda').forEach(function (el) {
-    el.addEventListener('input', function () { aoDigitar(el); });
-    el.addEventListener('blur', function () { aoSair(el); });
-  });
+  if (window.Moeda) window.Moeda.ligar('.campo-moeda');
 
   // Sem permissão de escrita, os botões de topo não fazem sentido.
   if (!PODE) {
-    document.querySelectorAll('.painel .btn, #a-guardar').forEach(function (b) { b.style.display = 'none'; });
+    document.querySelectorAll('.painel .btn').forEach(function (b) { b.style.display = 'none'; });
   }
 
   carregar();

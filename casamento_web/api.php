@@ -75,10 +75,14 @@ function guardarEventoDoRegisto(mysqli $conn, int $cid, array $d): int {
         if (!array_key_exists($campo, $d)) continue;      // não veio: fica o original
         $defs[$chave] = (string)$d[$campo];
     }
-    if (!$defs) return 0;
+    // O orçamento total é do casamento (como a ficha), e não do desenho do
+    // convite: grava-se à parte, pelo mesmo ajudante que a Gestão usa.
+    $temTeto = array_key_exists('orcamento_total', $d);
+    if (!$defs && !$temTeto) return 0;
     $anterior = casamentoAtual();
     usarCasamento($cid);
-    $r = guardarDefinicoes($conn, $defs);
+    $r = $defs ? guardarDefinicoes($conn, $defs) : ['gravadas' => 0];
+    if ($temTeto) orcamentoDefinirTeto($conn, $cid, $d['orcamento_total']);
     usarCasamento($anterior > 0 ? $anterior : $cid);
     return (int)($r['gravadas'] ?? 0);
 }
@@ -287,6 +291,7 @@ if ($acao === 'registo_publico') {
     $st->bind_param('ii', $uid, $cid); @$st->execute();
 
     $gravadas = guardarEventoDoRegisto($conn, $cid, $d);
+    semearOrcamento($conn, $cid);   // começa com as gavetas de origem, como os do admin
 
     $_SESSION['registo_feito'] = time();
     usarCasamento($cid);
@@ -2261,31 +2266,11 @@ if ($acao === 'dados_importar') {
 // noivos: exigirAdminApi() barra o porteiro, e a leitura (orc_estado) fica de
 // fora de acoesDoCasamento() para uma visita de suporte poder VER sem mexer.
 //
-// O dinheiro chega do ecrã como texto e sai daqui normalizado para DECIMAL —
-// orcValor() aceita "1.234,56", "1234.56" ou "1 234,56" sem se enganar.
+// O dinheiro chega do ecrã como texto e sai normalizado para DECIMAL —
+// orcValor() (em db.php) aceita "1.234,56", "1234.56" ou "1 234,56" sem se
+// enganar; o teto e a moeda gravam-se pelos ajudantes de db.php, os mesmos
+// que a Gestão e o registo usam.
 // ============================================================
-
-/** Normaliza um valor de dinheiro do ecrã para DECIMAL(12,2) em texto. */
-function orcValor($v): string {
-    $s = trim((string)$v);
-    if ($s === '') return '0.00';
-    $s = preg_replace('/[^\d,.]/', '', $s);
-    if ($s === '') return '0.00';
-    // O último separador (vírgula ou ponto) é o decimal; o outro é dos milhares.
-    $lc = strrpos($s, ','); $ld = strrpos($s, '.');
-    $dec = max($lc === false ? -1 : $lc, $ld === false ? -1 : $ld);
-    if ($dec >= 0) {
-        $int = preg_replace('/\D/', '', substr($s, 0, $dec));
-        $frac = preg_replace('/\D/', '', substr($s, $dec + 1));
-        $num = ($int === '' ? '0' : $int) . '.' . substr($frac . '00', 0, 2);
-    } else {
-        $num = preg_replace('/\D/', '', $s) . '.00';
-    }
-    $f = (float)$num;
-    if ($f < 0) $f = 0.0;
-    if ($f > 99999999.99) $f = 99999999.99;   // cabe em DECIMAL(12,2)
-    return number_format($f, 2, '.', '');
-}
 
 if ($acao === 'orc_estado') {
     // Uma leitura só: o retrato em números, as gavetas com o real de cada uma,
@@ -2338,31 +2323,14 @@ if ($acao === 'orc_estado') {
 }
 
 if ($acao === 'orc_ajuste') {
-    // O teto e a moeda. Vivem em cw_definicoes para viajarem no retrato do
-    // casamento sem tratamento à parte. Teto a zero (ou vazio) = sem teto: a
-    // barra passa a medir-se pela soma dos previstos das categorias.
+    // O teto e a moeda — geridos na Gestão, mas o mesmo endpoint serve. Vivem
+    // em cw_definicoes para viajarem no retrato do casamento sem tratamento à
+    // parte. Teto a zero (ou vazio) = sem teto: a barra mede-se então pela soma
+    // dos previstos das categorias.
     $d = corpo(); $cid = casamentoAtual();
     if ($cid <= 0) erro('Não há casamento aberto.');
-    if (array_key_exists('total', $d)) {
-        $t = orcValor($d['total']);
-        if ((float)$t <= 0) {
-            $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.total'");
-        } else {
-            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,'orcamento.total',?)
-                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-            $st->bind_param('s', $t); $st->execute();
-        }
-    }
-    if (array_key_exists('moeda', $d)) {
-        $m = mb_substr(trim((string)$d['moeda']), 0, 8);
-        if ($m === '' || $m === 'Kz') {
-            $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.moeda'");
-        } else {
-            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,'orcamento.moeda',?)
-                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
-            $st->bind_param('s', $m); $st->execute();
-        }
-    }
+    if (array_key_exists('total', $d)) orcamentoDefinirTeto($conn, $cid, $d['total']);
+    if (array_key_exists('moeda', $d)) orcamentoDefinirMoeda($conn, $cid, $d['moeda']);
     registar($conn, 'orcamento_ajuste', '', 'teto e moeda');
     ok(['resumo' => orcamentoResumo($conn), 'moeda' => orcamentoMoeda($conn)]);
 }

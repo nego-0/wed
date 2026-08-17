@@ -1056,6 +1056,62 @@ function estatisticas(mysqli $conn): array {
     return $s;
 }
 
+/**
+ * Normaliza um valor de dinheiro (do ecrã ou de um ficheiro) para
+ * DECIMAL(12,2) em texto. Aceita "1.234,56", "1234.56" ou "1 234,56": o último
+ * separador (vírgula ou ponto) é o decimal, o outro é dos milhares.
+ *
+ * Vive aqui, e não na API, porque a Gestão, o registo e o próprio módulo
+ * partilham-no — um valor há de sair sempre igual, venha de onde vier.
+ */
+function orcValor($v): string {
+    $s = trim((string)$v);
+    if ($s === '') return '0.00';
+    $s = preg_replace('/[^\d,.]/', '', $s);
+    if ($s === '') return '0.00';
+    $lc = strrpos($s, ','); $ld = strrpos($s, '.');
+    $dec = max($lc === false ? -1 : $lc, $ld === false ? -1 : $ld);
+    if ($dec >= 0) {
+        $int = preg_replace('/\D/', '', substr($s, 0, $dec));
+        $frac = preg_replace('/\D/', '', substr($s, $dec + 1));
+        $num = ($int === '' ? '0' : $int) . '.' . substr($frac . '00', 0, 2);
+    } else {
+        $num = preg_replace('/\D/', '', $s) . '.00';
+    }
+    $f = (float)$num;
+    if ($f < 0) $f = 0.0;
+    if ($f > 99999999.99) $f = 99999999.99;   // cabe em DECIMAL(12,2)
+    return number_format($f, 2, '.', '');
+}
+
+/** Define (ou limpa) o teto do orçamento de um casamento. Vazio/zero = sem teto. */
+function orcamentoDefinirTeto(mysqli $conn, int $cid, $valor): void {
+    global $P;
+    if ($cid <= 0) return;
+    $t = orcValor($valor);
+    if ((float)$t <= 0) {
+        $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.total'");
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,'orcamento.total',?)
+                              ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st->bind_param('s', $t); $st->execute();
+    }
+}
+
+/** Define (ou limpa) a moeda. Vazio ou 'Kz' volta ao Kwanza (linha apagada). */
+function orcamentoDefinirMoeda(mysqli $conn, int $cid, $valor): void {
+    global $P;
+    if ($cid <= 0) return;
+    $m = mb_substr(trim((string)$valor), 0, 8);
+    if ($m === '' || $m === 'Kz') {
+        $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.moeda'");
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,'orcamento.moeda',?)
+                              ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st->bind_param('s', $m); $st->execute();
+    }
+}
+
 /** As gavetas de origem do orçamento — um começo sensato, todas editáveis. */
 function orcamentoCategoriasPadrao(): array {
     return ['Local e espaço','Alimentação e bebidas','Traje e beleza',

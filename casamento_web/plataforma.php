@@ -326,6 +326,10 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div><label>Cidade / região</label><input type="text" id="n-cidade"></div>
       </div>
       <div class="lf" style="grid-template-columns:1fr">
+        <div><label>Orçamento total <small style="color:#8a8f88">· opcional, serve de teto no Orçamento</small></label>
+          <input type="text" id="n-orcamento" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr">
         <div><label>Local da festa · Google Maps</label>
           <input type="url" id="n-maps" data-mapa data-mapa-local="n-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
@@ -440,7 +444,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
+<script src="<?= asset('assets/moeda.js') ?>"></script>
 <script>
+if (window.Moeda) window.Moeda.ligar('.campo-moeda');
 // Esta página chamava toast() sem o ter: as mensagens de erro rebentavam em
 // silêncio na consola, em vez de aparecerem a quem estava a olhar.
 function toast(m, mau){
@@ -462,6 +468,7 @@ async function criar(){
     nome: v('n-nome'), noiva: v('n-noiva'), noivo: v('n-noivo'), data: v('n-data'),
     hora: v('n-hora'), local: v('n-local'), cidade: v('n-cidade'), maps: v('n-maps'),
     convidados: v('n-convidados'), whatsapp: v('n-whatsapp'),
+    orcamento_total: v('n-orcamento'),
     civil_hora: v('n-civil-hora'), civil_local: v('n-civil-local'), civil_maps: v('n-civil-maps'),
     religiosa_hora: v('n-religiosa-hora'), religiosa_local: v('n-religiosa-local'), religiosa_maps: v('n-religiosa-maps'),
   }) });

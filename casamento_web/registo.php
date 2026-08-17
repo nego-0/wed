@@ -81,6 +81,9 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         <div class="campo"><label for="whatsapp">WhatsApp de contacto</label>
           <input type="text" id="whatsapp" placeholder="244900000000" inputmode="numeric"></div>
       </div>
+      <div class="campo"><label for="orcamento_total">Orçamento total <span style="font-weight:400;color:#8a8f88">· opcional</span></label>
+        <input type="text" id="orcamento_total" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00">
+        <div class="nota">Serve de teto para acompanhar as despesas. Fica para preencher depois, se preferir.</div></div>
 
       <div class="seccao">As cerimónias <span>opcional — deixe em branco o que não se aplicar</span></div>
       <div class="par">
@@ -127,8 +130,10 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   </div>
 
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
+<script src="<?= asset('assets/moeda.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
+if (window.Moeda) window.Moeda.ligar('.campo-moeda');
 async function enviar(){
   // Tudo o que a página pergunta vai no mesmo pedido: o casamento nasce com os
   // seus dados, e não com os do casal de origem do config.php à espera de que
@@ -140,6 +145,7 @@ async function enviar(){
     hora: campo('hora'), local: campo('local'), cidade: campo('cidade'),
     maps: campo('maps'),
     convidados: campo('convidados'), whatsapp: campo('whatsapp'),
+    orcamento_total: campo('orcamento_total'),
     civil_hora: campo('civil_hora'), civil_local: campo('civil_local'), civil_maps: campo('civil_maps'),
     religiosa_hora: campo('religiosa_hora'), religiosa_local: campo('religiosa_local'), religiosa_maps: campo('religiosa_maps'),
   };
