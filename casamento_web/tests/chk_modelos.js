@@ -497,6 +497,45 @@ const entrar = async (ctx, u, p) => {
   ok(cerAinda['evento.civil_local'] === 'Casa do Casal',
      'e as cerimonias do casal atravessaram tudo isto sem se mexerem');
 
+  // ---------- 15. UM em vigor, e nao todos os de igual desenho ----------
+  // A queixa com a imagem: tres modelos marcados "EM VIGOR" ao mesmo tempo. Sao
+  // modelos criados do convite do casal sem lhe mexer no desenho — por isso
+  // ficaram iguais a origem, e a conta "aplicar isto nao mudava nada" dava-os a
+  // todos como em vigor. "Em vigor" e o modelo que foi MESMO aplicado, um so.
+  // De um casamento LIMPO (desenho na origem), para os modelos saírem iguais à
+  // origem — que é o caso da queixa. A oficina já tem o desenho mexido acima.
+  const limpo = await api('casamento_criar', { nome: 'ZZ Limpo ' + marca, noiva: 'Lia', noivo: 'Leo' });
+  await api('casamento_abrir&id=' + limpo.id);
+  const ig1 = await api('modelo_criar', { nome: 'ZZ Igual A ' + marca, ambito: 'digital', visivel: true });
+  const ig2 = await api('modelo_criar', { nome: 'ZZ Igual B ' + marca, ambito: 'digital', visivel: true });
+  await api('casamento_abrir&id=' + casal.id);
+  await api('modelo_aplicar&id=' + origemDig.id);   // peca na origem; ig1/ig2 sao iguais a origem
+
+  const iguais = (await api('modelo_lista&ambito=digital')).modelos || [];
+  const mesmoDesenho = iguais.filter(m => m.mesmo_desenho).length;
+  ok(mesmoDesenho >= 3,
+     `varios modelos tem o mesmo desenho da peca (${mesmoDesenho}) — e o cenario da queixa`);
+  ok(iguais.filter(m => m.em_vigor).length <= 1,
+     `mas no maximo UM se diz em vigor (${iguais.filter(m => m.em_vigor).map(m => m.nome).join(', ') || 'nenhum'})`);
+
+  // Aplicar um deles — sem mudar o desenho — passa a marca-LO a ele, e so a ele.
+  const apIg = await api('modelo_aplicar&id=' + ig1.id);
+  ok(apIg && apIg.success, 'aplicar um modelo de desenho igual responde bem');
+  const depoisIg = (await api('modelo_lista&ambito=digital')).modelos || [];
+  const marcadosIg = depoisIg.filter(m => m.em_vigor);
+  ok(marcadosIg.length === 1 && +marcadosIg[0].id === +ig1.id,
+     `e passa a ser esse o unico em vigor, mesmo com desenho igual aos outros (${marcadosIg.map(m => m.nome).join(', ')})`);
+
+  // Mexer no desenho a mao tira o modelo de vigor.
+  await api('defs_save', { defs: { 'textos.kicker': 'A MINHA MARCA ' + marca } });
+  const aposMao = (await api('modelo_lista&ambito=digital')).modelos || [];
+  ok(!aposMao.some(m => m.em_vigor),
+     'e editar a peca a mao tira o modelo de vigor — o desenho passou a ser do casal');
+  await api('modelo_aplicar&id=' + origemDig.id);
+  await api('modelo_apagar&id=' + ig1.id); await api('modelo_apagar&id=' + ig2.id);
+  await api('casamento_estado&id=' + limpo.id + '&estado=arquivado');
+  await api('casamento_apagar&id=' + limpo.id);
+
   // ---------- limpeza ----------
   const todos = (await api('modelo_lista')).modelos || [];
   for (const m of todos) if (m.nome.includes(marca)) await api('modelo_apagar&id=' + m.id);

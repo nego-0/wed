@@ -369,11 +369,14 @@
         + (sujo() ? '\n\nAs alterações por gravar perdem-se.' : ''))) return;
       var d = await correr(function () { return api('modelo_aplicar&id=' + id, { method: 'POST' }); });
       if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível pôr o modelo em vigor.');
-      // Dizer a verdade quando não mudou nada. Recarregar em silêncio uma
-      // página igual é o que fazia parecer que a ação tinha falhado.
+      // Quando o desenho não muda (o modelo era igual ao que já lá estava),
+      // não se recarrega a página — mas o modelo em vigor MUDOU: passou a ser
+      // este. Recarregar só o painel move a marca «em vigor» para ele e o botão
+      // da barra passa a dizer o seu nome. É o feedback que faltava — antes
+      // parecia que a ação não tinha feito nada.
       if (d.mudou === false) {
         await recarregar();
-        return dizer('«' + m.nome + '» já era o desenho em vigor — não havia nada para mudar.');
+        return dizer('«' + m.nome + '» em vigor. O desenho é igual ao que já tinha.');
       }
       depoisDeAplicar('Modelo em vigor: ' + m.nome + '. A recarregar…');
     }

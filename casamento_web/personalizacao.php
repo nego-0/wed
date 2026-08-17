@@ -155,6 +155,45 @@ function identidadeCasamento(): array {
  * Devolve [definições, modelo] — o modelo é null quando se está num casamento.
  */
 /**
+ * Qual modelo da casa está EM VIGOR nesta peça, e não «qual teria o mesmo
+ * desenho».
+ *
+ * Adivinhar por comparação partia-se: dois modelos com o mesmo desenho (o mais
+ * comum é serem ambos iguais à origem) davam-se ambos como «em vigor». Guarda-se
+ * agora o modelo que foi MESMO aplicado, e é esse — um só, ou nenhum. Quando o
+ * desenho passa a vir de outro lado (uma versão, uma edição à mão), esquece-se.
+ */
+function modeloEmVigorId(mysqli $conn, string $ambito): int {
+    global $P;
+    $cid = casamentoAtual();
+    if ($cid <= 0) return 0;
+    $chave = 'modelo.vigor.' . $ambito;
+    $st = $conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=? AND chave=? LIMIT 1");
+    $st->bind_param('is', $cid, $chave); $st->execute();
+    $r = $st->get_result()->fetch_row();
+    return $r ? (int)$r[0] : 0;
+}
+
+function marcarModeloEmVigor(mysqli $conn, string $ambito, int $id): void {
+    global $P;
+    $cid = casamentoAtual();
+    if ($cid <= 0) return;
+    $chave = 'modelo.vigor.' . $ambito; $v = (string)$id;
+    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)
+                          ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('iss', $cid, $chave, $v); $st->execute();
+}
+
+function esquecerModeloEmVigor(mysqli $conn, string $ambito): void {
+    global $P;
+    $cid = casamentoAtual();
+    if ($cid <= 0) return;
+    $chave = 'modelo.vigor.' . $ambito;
+    $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=? AND chave=?");
+    $st->bind_param('is', $cid, $chave); $st->execute();
+}
+
+/**
  * Devolve [definições, modelo-em-edição, modelo-visto].
  *
  * O segundo só vem preenchido para o admin: é ele que põe o editor em modo de

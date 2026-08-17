@@ -506,6 +506,12 @@ if ($acao === 'defs_save') {
     $d = corpo();
     $defs = is_array($d['defs'] ?? null) ? $d['defs'] : [];
     $r = guardarDefinicoes($conn, $defs);
+    // Mexer no desenho à mão tira o modelo de vigor: o que a peça mostra deixou
+    // de ser puramente o dele. (Se voltarem ao desenho exato do modelo, a lista
+    // volta a marcá-lo — a marca confirma-se contra o desenho, não fica presa.)
+    if ($r['gravadas'] || $r['repostas']) {
+        foreach (array_keys(ambitosVersao()) as $amb) esquecerModeloEmVigor($conn, $amb);
+    }
     // Alterar o convite passa a deixar rasto, como já acontece com os convites.
     if ($r['gravadas'] || $r['repostas']) {
         registar($conn, 'convite_editado_defs', '',
@@ -550,6 +556,7 @@ if ($acao === 'versao_criar') {
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $ambito); $st->execute();
     $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
+    esquecerModeloEmVigor($conn, $ambito);
     registar($conn, 'versao_guardada', $nome, ambitosVersao()[$ambito]['rotulo']);
     ok(['id' => $id]);
 }
@@ -605,6 +612,7 @@ if ($acao === 'versao_aplicar') {
         $r = aplicarPadrao($conn, $ambito);
         $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
         $st->bind_param('s', $ambito); $st->execute();
+        esquecerModeloEmVigor($conn, $ambito);
         registar($conn, 'versao_aplicada', VERSAO_PADRAO_NOME, $r['repostas'].' definição(ões)');
         ok($r + ['nome' => VERSAO_PADRAO_NOME, 'ambito' => $ambito]);
     }
@@ -626,6 +634,7 @@ if ($acao === 'versao_aplicar') {
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $v['ambito']); $st->execute();
     $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
+    esquecerModeloEmVigor($conn, $v['ambito']);
 
     registar($conn, 'versao_aplicada', $v['nome'], $r['gravadas'].' definição(ões)');
     ok($r + ['nome' => $v['nome'], 'ambito' => $v['ambito']]);
@@ -2207,13 +2216,17 @@ if ($acao === 'modelo_lista') {
     // vigor" a um modelo que já estava em vigor — e o casal carregava, nada
     // mudava, e concluía que a função não funcionava. Compara-se o que aplicar
     // produziria com o que a peça mostra: é a mesma conta de modelo_aplicar.
-    $atual = [];
+    $atual = []; $vigorId = [];
     if (casamentoAtual() > 0) {
-        foreach (array_keys(ambitosVersao()) as $amb) $atual[$amb] = instantaneoAmbito($conn, $amb);
+        foreach (array_keys(ambitosVersao()) as $amb) {
+            $atual[$amb] = instantaneoAmbito($conn, $amb);
+            $vigorId[$amb] = modeloEmVigorId($conn, $amb);
+        }
     }
     foreach ($modelos as &$m) {
         $amb = $m['ambito'];
         $m['em_vigor'] = false;
+        $m['mesmo_desenho'] = false;
         if (isset($atual[$amb])) {
             $j = json_decode((string)$m['defs'], true);
             $permitidas = array_flip(chavesDesenho($amb));
@@ -2222,7 +2235,11 @@ if ($acao === 'modelo_lista') {
                 if (isset($permitidas[$k]) && is_string($v)) $doModelo[$k] = $v;
             }
             $seAplicado = array_merge($atual[$amb], padraoDesenho($amb), $doModelo);
-            $m['em_vigor'] = $seAplicado == $atual[$amb];
+            // «Mesmo desenho»: aplicá-lo seria um não-fazer-nada visível. «Em
+            // vigor»: é ESTE o modelo que foi aplicado, e o desenho continua o
+            // dele. Só um pode estar em vigor; vários podem ter o mesmo desenho.
+            $m['mesmo_desenho'] = $seAplicado == $atual[$amb];
+            $m['em_vigor'] = $m['mesmo_desenho'] && (int)$m['id'] === ($vigorId[$amb] ?? 0);
         }
         // O desenho não vai para o cliente: é grande, e a lista só precisa de
         // saber quem é quem.
@@ -2644,6 +2661,9 @@ if ($acao === 'modelo_aplicar') {
     // Deixa de haver versão em vigor: o que a peça mostra agora veio de fora.
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $m['ambito']); $st->execute();
+    // E fica registado QUE modelo está em vigor — para a lista marcar um só, e
+    // não todos os que por acaso tenham o mesmo desenho.
+    marcarModeloEmVigor($conn, $m['ambito'], $id);
     registar($conn, 'modelo_aplicado', (string)$m['nome'], $r['gravadas'] . ' definição(ões)');
     ok($r + ['nome' => $m['nome'], 'ambito' => $m['ambito']]);
 }

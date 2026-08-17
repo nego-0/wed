@@ -521,6 +521,24 @@ Duas correções de honestidade no painel, pela mesma razão:
 Uma versão guardada tem prioridade sobre um modelo na barra: a versão é do
 casal, o modelo é da casa.
 
+**«Em vigor» é o modelo aplicado, não todos os de igual desenho.** A primeira
+versão desta marca partia-se: `em_vigor` significava «aplicar isto não mudaria
+nada», e como o mais comum é vários modelos terem o **mesmo desenho** (todos
+iguais à origem — por exemplo, criados a partir do convite de um casal sem lhe
+mexer no desenho), davam-se **todos** como em vigor ao mesmo tempo. Três cartões
+com a etiqueta «EM VIGOR» de uma vez, e aplicar qualquer um deles não mudava
+nada visível — donde a queixa de que «não dá para pôr outro em vigor».
+
+Passa a guardar-se qual modelo foi **mesmo aplicado** (`modelo.vigor.<âmbito>`,
+por casamento). `modeloEmVigorId()` lê-o; `marcarModeloEmVigor()` grava-o ao
+aplicar; e ele **esquece-se** quando o desenho passa a vir de outro lado — uma
+versão aplicada, ou uma edição à mão. A lista distingue então duas coisas:
+**`mesmo_desenho`** (aplicar seria um não-fazer-nada — pode ser de vários) e
+**`em_vigor`** (é este o modelo aplicado, e o desenho continua o dele — um só, ou
+nenhum). Aplicar um modelo de desenho idêntico deixou de parecer inútil: a
+etiqueta «em vigor» **muda-se para ele** e a barra passa a dizer o seu nome, que
+é o feedback que faltava.
+
 **A prova de um modelo mostra o resultado, e não o modelo.** `defsDoEditor()`
 passou a responder a três coisas em vez de duas: as definições, o modelo **em
 edição** (só para o admin, que é quem o cura) e o modelo **visto**. Antes, só o
