@@ -14,6 +14,7 @@ function menuPrincipal(): array {
         'grafica' => ['graficas.php',        'Convite impresso'],
         'convite' => ['digital.php',         'Convite digital'],
         'porta'   => ['porteiro.php',        'Porta'],
+        'orcamento' => ['orcamento.php',     'Orçamento'],
         'gestao'  => ['gestao.php',          'Gestão'],
         // A entrada da plataforma só aparece a quem tem mais do que um
         // casamento à mão — para quem só tem o seu, seria uma porta para nada.
@@ -53,6 +54,10 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
                          || count(casamentosDoUtilizador($GLOBALS['conn'])) > 1;
     }
     if (!$variosCasamentos) unset($itens['plataforma']);
+    // O orçamento é dos noivos: o porteiro, que trabalha à porta, não tem lá
+    // contas nenhumas. (Numa visita de suporte, o papel continua 'admin' e a
+    // entrada fica — vê-se, mas em leitura, como o resto da página.)
+    if (!function_exists('ehAdmin') || !ehAdmin()) unset($itens['orcamento']);
     // Os modelos são da casa: quem não responde por ela não tem lá o que fazer.
     if (!function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) unset($itens['modelos']);
     // Sem casamento aberto, as entradas do menu levavam todas ao mesmo sítio:

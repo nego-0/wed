@@ -1033,6 +1033,7 @@ if ($acao === 'casamento_criar') {
     if (!$st->execute()) erro('Não foi possível criar o casamento.');
     $novo = $conn->insert_id;
     $gravadas = guardarEventoDoRegisto($conn, $novo, $d);
+    semearOrcamento($conn, $novo);   // começa com as gavetas de origem
     registar($conn, 'casamento_criado', $nome, 'id ' . $novo);
     ok(['id' => $novo, 'nome' => $nome, 'dados_do_evento' => $gravadas]);
 }
@@ -1617,9 +1618,11 @@ if ($acao === 'casamento_apagar') {
         $r = @$conn->query("SELECT COUNT(*) n FROM {$P}$tab WHERE casamento_id=" . $id);
         $levou[$rot] = $r ? (int)$r->fetch_assoc()['n'] : 0;
     }
-    // Pela ordem certa: os convidados dependem dos convites.
+    // Pela ordem certa: os convidados dependem dos convites, e as parcelas das
+    // despesas, e estas das categorias.
     foreach (['convidados','convites','mesas','versoes','registo','definicoes',
-              'acessos','suporte_codigos'] as $t) {
+              'acessos','suporte_codigos',
+              'orcamento_pagamentos','orcamento_despesas','orcamento_categorias'] as $t) {
         $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
         $st->bind_param('i', $id); @$st->execute();
     }
@@ -1942,9 +1945,35 @@ function retratoCasamento(mysqli $conn, int $cid): array {
                     JOIN {$P}utilizadores u ON u.id = a.utilizador_id
                     WHERE a.casamento_id=$cid ORDER BY a.papel, u.email");
 
+    // ---- o orçamento ----
+    // As gavetas viajam com o seu nome; as despesas guardam o NOME da gaveta a
+    // que pertencem (o número é desta base) e levam as suas parcelas dentro,
+    // como os convites levam os integrantes. O teto e a moeda já vão em
+    // 'definicoes', por isso não têm aqui tratamento à parte.
+    $orcCategorias = $um("SELECT nome, previsto, ordem FROM {$P}orcamento_categorias
+                          WHERE casamento_id=$cid ORDER BY ordem, nome");
+    $orcDespesas = $um("SELECT d.id, d.descricao, d.fornecedor, d.valor, d.estado, d.nota, d.criado_em,
+                               c.nome AS categoria
+                        FROM {$P}orcamento_despesas d
+                        LEFT JOIN {$P}orcamento_categorias c ON c.id = d.categoria_id
+                        WHERE d.casamento_id=$cid ORDER BY d.id");
+    $porDespId = [];
+    foreach ($orcDespesas as $i => $d) { $porDespId[$d['id']] = $i; }
+    foreach ($orcDespesas as &$d) $d['pagamentos'] = [];
+    unset($d);
+    foreach ($um("SELECT despesa_id, valor, data_prevista, pago_em, nota
+                  FROM {$P}orcamento_pagamentos WHERE casamento_id=$cid
+                  ORDER BY (data_prevista IS NULL), data_prevista, id") as $p) {
+        $did = $p['despesa_id']; unset($p['despesa_id']);
+        if (isset($porDespId[$did])) $orcDespesas[$porDespId[$did]]['pagamentos'][] = $p;
+    }
+    foreach ($orcDespesas as &$d) unset($d['id']);   // o id é desta base
+    unset($d);
+
     usarCasamento($anterior > 0 ? $anterior : 1);
     return ['ficha' => $ficha, 'definicoes' => $defs, 'mesas' => $mesas,
-            'convites' => $convites, 'versoes' => $versoes, 'acessos' => $acessos];
+            'convites' => $convites, 'versoes' => $versoes, 'acessos' => $acessos,
+            'orcamento' => ['categorias' => $orcCategorias, 'despesas' => $orcDespesas]];
 }
 
 if ($acao === 'dados_exportar') {
@@ -2013,11 +2042,14 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
     $anterior = casamentoAtual();
     usarCasamento($cid);
     $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
-              'definicoes' => 0, 'codigos_trocados' => 0];
+              'definicoes' => 0, 'codigos_trocados' => 0,
+              'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0];
 
     // Fora o que lá estava. É o que "substituir" quer dizer, e a página diz-o
-    // antes de chegar aqui.
-    foreach (['convidados', 'convites', 'mesas', 'versoes', 'definicoes'] as $t) {
+    // antes de chegar aqui. As parcelas antes das despesas, e estas antes das
+    // categorias, para as chaves estrangeiras não travarem.
+    foreach (['convidados', 'convites', 'mesas', 'versoes', 'definicoes',
+              'orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
         $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
     }
 
@@ -2126,6 +2158,46 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
         if (@$st->execute()) $feito['versoes']++;
     }
 
+    // ---- orçamento: gavetas, despesas e parcelas ----
+    // As gavetas primeiro, para as despesas as reencontrarem pelo nome (o
+    // número era da outra base). Depois cada despesa, e as suas parcelas dentro.
+    $idCat = [];
+    foreach ((array)($r['orcamento']['categorias'] ?? []) as $c) {
+        if (!is_array($c) || trim((string)($c['nome'] ?? '')) === '') continue;
+        $nm = mb_substr((string)$c['nome'], 0, 80);
+        $prev = orcValor($c['previsto'] ?? '0');
+        $ord = (int)($c['ordem'] ?? 0);
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,previsto,ordem) VALUES ($cid,?,?,?)");
+        $st->bind_param('ssi', $nm, $prev, $ord);
+        if (@$st->execute()) { $idCat[$nm] = $conn->insert_id; $feito['orc_categorias']++; }
+    }
+    foreach ((array)($r['orcamento']['despesas'] ?? []) as $dsp) {
+        if (!is_array($dsp) || trim((string)($dsp['descricao'] ?? '')) === '') continue;
+        $catId = $idCat[(string)($dsp['categoria'] ?? '')] ?? null;
+        $desc = mb_substr((string)$dsp['descricao'], 0, 160);
+        $forn = isset($dsp['fornecedor']) && $dsp['fornecedor'] !== null ? mb_substr((string)$dsp['fornecedor'], 0, 120) : null;
+        $val  = orcValor($dsp['valor'] ?? '0');
+        $estado = in_array($dsp['estado'] ?? '', ['previsto','contratado','pago'], true) ? $dsp['estado'] : 'previsto';
+        $nota = isset($dsp['nota']) && $dsp['nota'] !== null ? mb_substr((string)$dsp['nota'], 0, 255) : null;
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_despesas (casamento_id,categoria_id,descricao,fornecedor,valor,estado,nota)
+                              VALUES ($cid,?,?,?,?,?,?)");
+        $st->bind_param('isssss', $catId, $desc, $forn, $val, $estado, $nota);
+        if (!@$st->execute()) continue;
+        $despId = $conn->insert_id; $feito['orc_despesas']++;
+
+        foreach ((array)($dsp['pagamentos'] ?? []) as $p) {
+            if (!is_array($p)) continue;
+            $pv = orcValor($p['valor'] ?? '0');
+            $pd = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($p['data_prevista'] ?? '')) ? $p['data_prevista'] : null;
+            $pp = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($p['pago_em'] ?? '')) ? $p['pago_em'] : null;
+            $pn = isset($p['nota']) && $p['nota'] !== null ? mb_substr((string)$p['nota'], 0, 160) : null;
+            $q = $conn->prepare("INSERT INTO {$P}orcamento_pagamentos (casamento_id,despesa_id,valor,data_prevista,pago_em,nota)
+                                 VALUES ($cid,?,?,?,?,?)");
+            $q->bind_param('issss', $despId, $pv, $pd, $pp, $pn);
+            if (@$q->execute()) $feito['orc_pagamentos']++;
+        }
+    }
+
     usarCasamento($anterior > 0 ? $anterior : $cid);
     return $feito;
 }
@@ -2178,6 +2250,250 @@ if ($acao === 'dados_importar') {
         registar($conn, 'dados_importados', 'substituição', json_encode($feito));
     }
     ok(['modo' => $modo, 'resumo' => $resumo]);
+}
+
+
+// ============================================================
+// ORÇAMENTO — o curso das despesas do casamento
+//
+// Três tabelas com dono (categorias, despesas, pagamentos) e dois ajustes que
+// vivem em cw_definicoes (o teto e a moeda). Tudo por casamento e só para os
+// noivos: exigirAdminApi() barra o porteiro, e a leitura (orc_estado) fica de
+// fora de acoesDoCasamento() para uma visita de suporte poder VER sem mexer.
+//
+// O dinheiro chega do ecrã como texto e sai daqui normalizado para DECIMAL —
+// orcValor() aceita "1.234,56", "1234.56" ou "1 234,56" sem se enganar.
+// ============================================================
+
+/** Normaliza um valor de dinheiro do ecrã para DECIMAL(12,2) em texto. */
+function orcValor($v): string {
+    $s = trim((string)$v);
+    if ($s === '') return '0.00';
+    $s = preg_replace('/[^\d,.]/', '', $s);
+    if ($s === '') return '0.00';
+    // O último separador (vírgula ou ponto) é o decimal; o outro é dos milhares.
+    $lc = strrpos($s, ','); $ld = strrpos($s, '.');
+    $dec = max($lc === false ? -1 : $lc, $ld === false ? -1 : $ld);
+    if ($dec >= 0) {
+        $int = preg_replace('/\D/', '', substr($s, 0, $dec));
+        $frac = preg_replace('/\D/', '', substr($s, $dec + 1));
+        $num = ($int === '' ? '0' : $int) . '.' . substr($frac . '00', 0, 2);
+    } else {
+        $num = preg_replace('/\D/', '', $s) . '.00';
+    }
+    $f = (float)$num;
+    if ($f < 0) $f = 0.0;
+    if ($f > 99999999.99) $f = 99999999.99;   // cabe em DECIMAL(12,2)
+    return number_format($f, 2, '.', '');
+}
+
+if ($acao === 'orc_estado') {
+    // Uma leitura só: o retrato em números, as gavetas com o real de cada uma,
+    // as despesas e as parcelas. É o que a página desenha.
+    $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+
+    $cats = [];
+    $rc = @$conn->query("SELECT c.id, c.nome, c.previsto, c.ordem,
+            COALESCE((SELECT SUM(valor) FROM {$P}orcamento_despesas d
+                      WHERE d.casamento_id=$cid AND d.categoria_id=c.id),0) AS real_total,
+            COALESCE((SELECT SUM(valor) FROM {$P}orcamento_despesas d
+                      WHERE d.casamento_id=$cid AND d.categoria_id=c.id AND d.estado='pago'),0) AS pago
+            FROM {$P}orcamento_categorias c WHERE c.casamento_id=$cid
+            ORDER BY c.ordem, c.nome");
+    if ($rc) $cats = $rc->fetch_all(MYSQLI_ASSOC);
+
+    // O que ficou sem gaveta (categoria apagada): conta na barra, e o casal vê
+    // que existe para lhe dar destino.
+    $semCat = @$conn->query("SELECT COALESCE(SUM(valor),0) AS s, COUNT(*) AS n
+            FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND categoria_id IS NULL")->fetch_assoc();
+
+    $desp = [];
+    $rd = @$conn->query("SELECT dd.id, dd.categoria_id, dd.descricao, dd.fornecedor, dd.valor, dd.estado, dd.nota,
+            COALESCE((SELECT SUM(valor) FROM {$P}orcamento_pagamentos p
+                      WHERE p.casamento_id=$cid AND p.despesa_id=dd.id),0) AS pago_parcelas,
+            (SELECT COUNT(*) FROM {$P}orcamento_pagamentos p
+                      WHERE p.casamento_id=$cid AND p.despesa_id=dd.id) AS n_parcelas
+            FROM {$P}orcamento_despesas dd WHERE dd.casamento_id=$cid
+            ORDER BY dd.criado_em DESC, dd.id DESC");
+    if ($rd) $desp = $rd->fetch_all(MYSQLI_ASSOC);
+
+    $pags = [];
+    $rp = @$conn->query("SELECT p.id, p.despesa_id, p.valor, p.data_prevista, p.pago_em, p.nota,
+            d.descricao AS despesa
+            FROM {$P}orcamento_pagamentos p
+            JOIN {$P}orcamento_despesas d ON d.id = p.despesa_id AND d.casamento_id=$cid
+            WHERE p.casamento_id=$cid
+            ORDER BY (p.data_prevista IS NULL), p.data_prevista, p.id");
+    if ($rp) $pags = $rp->fetch_all(MYSQLI_ASSOC);
+
+    ok([
+        'resumo'     => orcamentoResumo($conn),
+        'moeda'      => orcamentoMoeda($conn),
+        'categorias' => $cats,
+        'sem_categoria' => ['valor' => (float)($semCat['s'] ?? 0), 'n' => (int)($semCat['n'] ?? 0)],
+        'despesas'   => $desp,
+        'pagamentos' => $pags,
+    ]);
+}
+
+if ($acao === 'orc_ajuste') {
+    // O teto e a moeda. Vivem em cw_definicoes para viajarem no retrato do
+    // casamento sem tratamento à parte. Teto a zero (ou vazio) = sem teto: a
+    // barra passa a medir-se pela soma dos previstos das categorias.
+    $d = corpo(); $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    if (array_key_exists('total', $d)) {
+        $t = orcValor($d['total']);
+        if ((float)$t <= 0) {
+            $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.total'");
+        } else {
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,'orcamento.total',?)
+                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+            $st->bind_param('s', $t); $st->execute();
+        }
+    }
+    if (array_key_exists('moeda', $d)) {
+        $m = mb_substr(trim((string)$d['moeda']), 0, 8);
+        if ($m === '' || $m === 'Kz') {
+            $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.moeda'");
+        } else {
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,'orcamento.moeda',?)
+                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+            $st->bind_param('s', $m); $st->execute();
+        }
+    }
+    registar($conn, 'orcamento_ajuste', '', 'teto e moeda');
+    ok(['resumo' => orcamentoResumo($conn), 'moeda' => orcamentoMoeda($conn)]);
+}
+
+if ($acao === 'orc_categoria_guardar') {
+    $d = corpo(); $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    $id = (int)($d['id'] ?? 0);
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('Dê um nome à categoria.');
+    $prev = orcValor($d['previsto'] ?? '0');
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}orcamento_categorias SET nome=?, previsto=? WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('ssi', $nome, $prev, $id); @$st->execute();
+    } else {
+        $ord = (int)(@$conn->query("SELECT COALESCE(MAX(ordem),-1)+1 AS o FROM {$P}orcamento_categorias WHERE casamento_id=$cid")->fetch_assoc()['o'] ?? 0);
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,previsto,ordem) VALUES ($cid,?,?,?)");
+        $st->bind_param('ssi', $nome, $prev, $ord); @$st->execute();
+        $id = $conn->insert_id;
+    }
+    registar($conn, 'orcamento_categoria', $nome, $id ? ('id ' . $id) : 'nova');
+    ok(['id' => $id, 'resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_categoria_apagar') {
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    if (!$id) erro('Categoria inválida.');
+    // As despesas ficam: a chave estrangeira põe-lhes categoria_id a NULL. O
+    // dinheiro não desaparece só porque a gaveta mudou de nome.
+    $st = $conn->prepare("DELETE FROM {$P}orcamento_categorias WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('i', $id); @$st->execute();
+    registar($conn, 'orcamento_categoria_apagada', '', 'id ' . $id);
+    ok(['resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_despesa_guardar') {
+    $d = corpo(); $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    $id = (int)($d['id'] ?? 0);
+    $desc = mb_substr(trim((string)($d['descricao'] ?? '')), 0, 160);
+    if ($desc === '') erro('Descreva a despesa.');
+    $forn = mb_substr(trim((string)($d['fornecedor'] ?? '')), 0, 120); $forn = $forn === '' ? null : $forn;
+    $val  = orcValor($d['valor'] ?? '0');
+    $estado = in_array($d['estado'] ?? '', ['previsto','contratado','pago'], true) ? $d['estado'] : 'previsto';
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 255); $nota = $nota === '' ? null : $nota;
+    // A categoria só vale se for deste casamento — senão fica sem gaveta.
+    $catId = null;
+    if (!empty($d['categoria_id'])) {
+        $c = (int)$d['categoria_id'];
+        $q = $conn->prepare("SELECT id FROM {$P}orcamento_categorias WHERE casamento_id=$cid AND id=? LIMIT 1");
+        $q->bind_param('i', $c); $q->execute();
+        if ($q->get_result()->fetch_row()) $catId = $c;
+    }
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}orcamento_despesas SET categoria_id=?, descricao=?, fornecedor=?, valor=?, estado=?, nota=?
+                              WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('isssssi', $catId, $desc, $forn, $val, $estado, $nota, $id); @$st->execute();
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_despesas (casamento_id,categoria_id,descricao,fornecedor,valor,estado,nota)
+                              VALUES ($cid,?,?,?,?,?,?)");
+        $st->bind_param('isssss', $catId, $desc, $forn, $val, $estado, $nota); @$st->execute();
+        $id = $conn->insert_id;
+    }
+    registar($conn, 'orcamento_despesa', $desc, $estado);
+    ok(['id' => $id, 'resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_despesa_apagar') {
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    if (!$id) erro('Despesa inválida.');
+    // As parcelas vão atrás dela (CASCADE na base).
+    $st = $conn->prepare("DELETE FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('i', $id); @$st->execute();
+    registar($conn, 'orcamento_despesa_apagada', '', 'id ' . $id);
+    ok(['resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_pagamento_guardar') {
+    $d = corpo(); $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    $id = (int)($d['id'] ?? 0);
+    $despId = (int)($d['despesa_id'] ?? 0);
+    // A parcela pertence a uma despesa deste casamento — e não a outra qualquer.
+    $q = $conn->prepare("SELECT id FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND id=? LIMIT 1");
+    $q->bind_param('i', $despId); $q->execute();
+    if (!$q->get_result()->fetch_row()) erro('Despesa inválida.');
+    $val = orcValor($d['valor'] ?? '0');
+    $dataP  = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['data_prevista'] ?? '')) ? $d['data_prevista'] : null;
+    $pagoEm = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['pago_em'] ?? '')) ? $d['pago_em'] : null;
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 160); $nota = $nota === '' ? null : $nota;
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}orcamento_pagamentos SET valor=?, data_prevista=?, pago_em=?, nota=?
+                              WHERE casamento_id=$cid AND id=? AND despesa_id=?");
+        $st->bind_param('ssssii', $val, $dataP, $pagoEm, $nota, $id, $despId); @$st->execute();
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_pagamentos (casamento_id,despesa_id,valor,data_prevista,pago_em,nota)
+                              VALUES ($cid,?,?,?,?,?)");
+        $st->bind_param('issss', $despId, $val, $dataP, $pagoEm, $nota); @$st->execute();
+        $id = $conn->insert_id;
+    }
+    registar($conn, 'orcamento_pagamento', '', 'id ' . $id);
+    ok(['id' => $id, 'resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_pagamento_liquidar') {
+    // Dar por paga (ou desmarcar) uma parcela. Sem data explícita, fica hoje.
+    $d = corpo(); $cid = casamentoAtual();
+    $id = (int)($d['id'] ?? ($_GET['id'] ?? 0));
+    if (!$id) erro('Pagamento inválido.');
+    $liq = !empty($d['pago']) || (($_GET['pago'] ?? '') === '1');
+    if ($liq) {
+        $data = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['pago_em'] ?? '')) ? $d['pago_em'] : date('Y-m-d');
+        $st = $conn->prepare("UPDATE {$P}orcamento_pagamentos SET pago_em=? WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('si', $data, $id);
+    } else {
+        $st = $conn->prepare("UPDATE {$P}orcamento_pagamentos SET pago_em=NULL WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('i', $id);
+    }
+    @$st->execute();
+    ok(['resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_pagamento_apagar') {
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    if (!$id) erro('Pagamento inválido.');
+    $st = $conn->prepare("DELETE FROM {$P}orcamento_pagamentos WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('i', $id); @$st->execute();
+    ok(['resumo' => orcamentoResumo($conn)]);
 }
 
 

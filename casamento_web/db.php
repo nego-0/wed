@@ -24,7 +24,8 @@ mysqli_report(MYSQLI_REPORT_OFF);
  */
 class LigacaoAmbito extends mysqli {
     /** Tabelas cujos dados pertencem a um casamento. */
-    private const TABELAS = ['convites','convidados','mesas','versoes','registo','definicoes'];
+    private const TABELAS = ['convites','convidados','mesas','versoes','registo','definicoes',
+                             'orcamento_categorias','orcamento_despesas','orcamento_pagamentos'];
     public static bool $vigiar = false;   // ligado só depois de o esquema estar pronto
 
     private function auditar(string $sql): void {
@@ -188,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 20;
+const ESQUEMA_VERSAO = 21;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -708,6 +709,76 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
     }
 
+    // v21 — o orçamento do casamento.
+    //
+    // Um módulo à parte, para os noivos verem o CURSO das despesas: quanto se
+    // planeou, quanto se contratou, quanto já saiu, e o que falta pagar até ao
+    // dia. Três tabelas, todas com dono (casamento_id) e vigiadas como as
+    // outras — um casal nunca vê as contas de outro.
+    //
+    // O teto e a moeda não são tabela: vivem em cw_definicoes ('orcamento.total',
+    // 'orcamento.moeda'), que já viaja no retrato do casamento. Assim o
+    // orçamento inteiro entra e sai com o export/import sem tratamento especial
+    // para os ajustes.
+    if ($versaoAtual < 21) {
+        // As gavetas do dinheiro. 'previsto' é o que se planeia gastar em cada
+        // uma; a soma dá o orçamento por baixo, quando não há teto à mão.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}orcamento_categorias (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                nome VARCHAR(80) NOT NULL,
+                previsto DECIMAL(12,2) NOT NULL DEFAULT 0,
+                ordem INT NOT NULL DEFAULT 0,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_orccat_cas (casamento_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Cada compromisso, uma linha. O 'estado' é o que divide a barra do
+        // curso: previsto (estimado) -> contratado (comprometido) -> pago (saiu).
+        // A categoria some por SET NULL: apagar uma gaveta não apaga a despesa.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}orcamento_despesas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                categoria_id INT DEFAULT NULL,
+                descricao VARCHAR(160) NOT NULL,
+                fornecedor VARCHAR(120) DEFAULT NULL,
+                valor DECIMAL(12,2) NOT NULL DEFAULT 0,
+                estado ENUM('previsto','contratado','pago') NOT NULL DEFAULT 'previsto',
+                nota VARCHAR(255) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_orcdesp_cas (casamento_id),
+                INDEX idx_orcdesp_cat (categoria_id),
+                FOREIGN KEY (categoria_id) REFERENCES {$P}orcamento_categorias(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // As saídas no tempo: sinal e prestações. É a data_prevista que ordena
+        // o calendário — o \"curso\" no tempo, o que é preciso ter em caixa e
+        // quando. Apagar a despesa leva as suas parcelas (CASCADE).
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}orcamento_pagamentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                despesa_id INT NOT NULL,
+                valor DECIMAL(12,2) NOT NULL DEFAULT 0,
+                data_prevista DATE DEFAULT NULL,
+                pago_em DATE DEFAULT NULL,
+                nota VARCHAR(160) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_orcpag_cas (casamento_id),
+                INDEX idx_orcpag_desp (despesa_id),
+                FOREIGN KEY (despesa_id) REFERENCES {$P}orcamento_despesas(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Um conjunto de gavetas sensato à partida, para o casal não começar
+        // numa folha em branco. São editáveis e apagáveis — cada festa gasta à
+        // sua maneira. Semeadas no casamento que já existe (o nº 1); os novos
+        // recebem-nas ao serem criados (ver api.php casamento_criar).
+        semearOrcamento($conn, 1);
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -983,6 +1054,91 @@ function estatisticas(mysqli $conn): array {
     $s['pes_pendentes'] = $n($c,'lug_pendentes') + $n($c,'lug_parc_pend') + $n($g,'pend_fora');
     $s['pes_recusados'] = $n($c,'lug_recusados') + $n($g,'rec_fora');
     return $s;
+}
+
+/** As gavetas de origem do orçamento — um começo sensato, todas editáveis. */
+function orcamentoCategoriasPadrao(): array {
+    return ['Local e espaço','Alimentação e bebidas','Traje e beleza',
+            'Fotografia e vídeo','Música e animação','Decoração e flores',
+            'Convites e papelaria','Alianças','Transporte','Lua-de-mel','Outros'];
+}
+
+/** Semeia as gavetas de origem num casamento que ainda não tenha nenhuma. */
+function semearOrcamento(mysqli $conn, int $cid): void {
+    global $P;
+    if ($cid <= 0) return;
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}orcamento_categorias WHERE casamento_id=$cid");
+    if (!$r || (int)$r->fetch_row()[0] > 0) return;   // já tem gavetas: não mexe
+    $ordem = 0;
+    foreach (orcamentoCategoriasPadrao() as $nome) {
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,ordem) VALUES ($cid,?,?)");
+        $st->bind_param('si', $nome, $ordem); @$st->execute(); $ordem++;
+    }
+}
+
+/** A moeda do casamento (símbolo curto). Vazio volta ao Kwanza. */
+function orcamentoMoeda(mysqli $conn): string {
+    global $P;
+    $st = @$conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=" . casamentoAtual() . " AND chave='orcamento.moeda' LIMIT 1");
+    if ($st && $st->execute() && ($x = $st->get_result()->fetch_assoc()) && trim((string)$x['valor']) !== '') {
+        return mb_substr(trim((string)$x['valor']), 0, 8);
+    }
+    return 'Kz';
+}
+
+/**
+ * O retrato do orçamento em números: o teto, o que já se comprometeu e o que
+ * falta, e a repartição por gaveta. Serve a página, a pista do painel e a
+ * prova — uma conta só, calculada num sítio.
+ *
+ * Tolerante como estatisticas(): se as tabelas ainda não migraram, devolve
+ * zeros em vez de rebentar.
+ */
+function orcamentoResumo(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $linha = function (string $sql) use ($conn): array {
+        $r = @$conn->query($sql); return $r ? ($r->fetch_assoc() ?: []) : [];
+    };
+    $f = fn(array $a, string $k) => (float)($a[$k] ?? 0);
+
+    // Somas por estado, numa query.
+    $d = $linha("SELECT
+        COALESCE(SUM(valor),0)                                   AS total,
+        COALESCE(SUM(CASE WHEN estado='previsto'   THEN valor END),0) AS previsto,
+        COALESCE(SUM(CASE WHEN estado='contratado' THEN valor END),0) AS contratado,
+        COALESCE(SUM(CASE WHEN estado='pago'       THEN valor END),0) AS pago,
+        COUNT(*)                                                 AS n
+        FROM {$P}orcamento_despesas WHERE casamento_id=$cid");
+
+    // O teto, se o casal o definiu; senão fica a zero e a base passa a ser a
+    // soma dos previstos das categorias.
+    $teto = 0.0;
+    $rt = @$conn->query("SELECT valor FROM {$P}definicoes WHERE casamento_id=$cid AND chave='orcamento.total' LIMIT 1");
+    if ($rt && ($x = $rt->fetch_assoc())) $teto = max(0.0, (float)$x['valor']);
+
+    $catPrev = $linha("SELECT COALESCE(SUM(previsto),0) AS s FROM {$P}orcamento_categorias WHERE casamento_id=$cid");
+    $somaPrevisto = $f($catPrev, 's');
+
+    $contratado = $f($d,'contratado');
+    $pago       = $f($d,'pago');
+    $comprometido = $contratado + $pago;                 // o que já está preso
+    $base = $teto > 0 ? $teto : $somaPrevisto;           // o tal "teto" efetivo
+
+    return [
+        'moeda'         => orcamentoMoeda($conn),
+        'teto'          => $teto,                          // 0 = não definido
+        'base'          => $base,                          // teto, ou soma dos previstos
+        'categorias_previsto' => $somaPrevisto,
+        'despesas'      => (int)($d['n'] ?? 0),
+        'total'         => $f($d,'total'),                 // soma de todas as despesas
+        'previsto'      => $f($d,'previsto'),              // só as ainda por contratar
+        'contratado'    => $contratado,
+        'pago'          => $pago,
+        'comprometido'  => $comprometido,
+        'falta'         => $base - $comprometido,          // margem (negativo = passou)
+        'acima_do_teto' => $base > 0 && $comprometido > $base,
+    ];
 }
 
 

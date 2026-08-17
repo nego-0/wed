@@ -117,10 +117,10 @@ function ficheirosApp(): array {
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
-            'registo.php','gestao.php','modelos.php','modelo-prova.php',
+            'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
             'manifest.php','sw.js',
             'assets/estilo.css','assets/editor.css','assets/pecas.css',
-            'assets/api.js','assets/mesas.js','assets/versoes.js',
+            'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
             'assets/so-ver.js',
             'assets/convite-base.html'];
@@ -154,7 +154,10 @@ function acoesDoCasamento(): array {
             'casamento_identidade','casamento_endereco',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
             'suporte_codigo_criar','suporte_codigo_revogar',
-            'dados_importar','modelo_aplicar'];
+            'dados_importar','modelo_aplicar',
+            'orc_ajuste','orc_categoria_guardar','orc_categoria_apagar',
+            'orc_despesa_guardar','orc_despesa_apagar',
+            'orc_pagamento_guardar','orc_pagamento_apagar','orc_pagamento_liquidar'];
 }
 
 /**
