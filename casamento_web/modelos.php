@@ -180,6 +180,19 @@ if ($aberto > 0) {
   .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
+  .chip-sep{ width:1px; align-self:stretch; background:var(--line); margin:.1rem .3rem; }
+  .chip-ferramentas{ border-style:dashed; }
+  .chip-ferramentas.on{ background:var(--gold); border-color:var(--gold); border-style:solid; color:#fff; }
+  .fr-bloco{ border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin-bottom:1rem; }
+  .fr-bloco h4{ margin:0 0 .3rem; font-family:var(--sans); font-size:1rem; }
+  .fr-lista{ list-style:none; padding:0; margin:.6rem 0; display:grid; gap:.4rem; }
+  .fr-item{ display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
+            padding:.35rem .2rem; border-bottom:1px solid var(--line); }
+  .fr-item:last-child{ border-bottom:0; }
+  .fr-nome{ font-weight:600; }
+  .fr-est{ font-size:.78rem; }
+  .fr-est.ok{ color:var(--ok, #4b8b6f); }
+  .fr-est.falta{ color:var(--warn, #b5713a); font-weight:600; }
   .aviso{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
           border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1rem; line-height:1.5; }
   @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .mod{ grid-template-columns:auto 1fr; }
@@ -249,28 +262,16 @@ if ($aberto > 0) {
     <div class="dica">Um modelo publicado aparece a todos os casais, no seletor de versões do editor.
       Um por publicar fica só para si — serve para o preparar com calma.</div>
     <div class="filtros" id="filtros">
-      <button class="chip on" data-ambito="" onclick="filtrar('')">Todos</button>
-      <button class="chip" data-ambito="digital" onclick="filtrar('digital')">Convite digital</button>
-      <button class="chip" data-ambito="impresso" onclick="filtrar('impresso')">Convite impresso</button>
+      <button class="chip on" data-vista="digital" data-ambito="" onclick="filtrar('')">Todos</button>
+      <button class="chip" data-vista="digital" data-ambito="digital" onclick="filtrar('digital')">Convite digital</button>
+      <button class="chip" data-vista="digital" data-ambito="impresso" onclick="filtrar('impresso')">Convite impresso</button>
+      <span class="chip-sep" aria-hidden="true"></span>
+      <button class="chip chip-ferramentas" data-vista="ferramentas" onclick="verFerramentas()">&#9881; Reposição e ficheiros</button>
     </div>
     <div id="restauro"></div>
     <div id="lista"><div class="dica">A carregar…</div></div>
+    <div id="ferramentas" style="display:none"></div>
   </div>
-
-  <details class="painel dobra" id="d-levar">
-    <summary><span class="mais">+</span> Levar e trazer
-      <small>guardar os modelos num ficheiro, ou trazê-los de outra instalação</small></summary>
-    <div class="dica">Os modelos num ficheiro, para os guardar ou os levar para outra instalação.
-      Trazer <b>acrescenta</b>: não substitui nem mistura nada com os que já cá estão.</div>
-    <div class="lf" style="grid-template-columns:auto 1fr auto">
-      <div><label>&nbsp;</label><a class="btn" href="api.php?action=modelos_exportar">Descarregar os modelos</a></div>
-      <div><label for="imp">Trazer de um ficheiro</label>
-        <input type="file" id="imp" accept=".json,application/json"></div>
-      <div><label>&nbsp;</label><button class="btn" onclick="importar()">Trazer</button></div>
-    </div>
-    <div class="segredo" id="imp-res" style="display:none;background:var(--gold-pale);
-         border:1px dashed var(--gold-soft);border-radius:10px;padding:.8rem .9rem;margin-top:.9rem;font-size:.88rem"></div>
-  </details>
 </main>
 
 <div class="toast" id="toast"></div>
@@ -296,7 +297,7 @@ if ($aberto > 0) {
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const TEM_CASAMENTO = <?= $aberto > 0 ? 'true' : 'false' ?>;
-let AMBITO = '', MODELOS = {}, CATALOGO = [];
+let AMBITO = '', MODELOS = {}, CATALOGO = [], VISTA = 'modelos';
 const rotAmb = a => a === 'impresso' ? 'convite impresso' : 'convite digital';
 
 /* A rede de segurança: se um modelo de origem da casa foi apagado por lapso,
@@ -330,12 +331,82 @@ async function restaurar(alvos){
           : 'Não faltava nenhum modelo de origem.');
   carregar();
 }
+
+/* O corpo da pastilha «Reposição e ficheiros»: o estado do catálogo de origem
+   com os botões de repor, e o levar/trazer num ficheiro. */
+function pintarFerramentas(){
+  const cx = $('ferramentas'); if (!cx) return;
+  const faltam = CATALOGO.filter(c => c.em_falta);
+  const linhas = CATALOGO.map(c =>
+    `<li class="fr-item${c.em_falta ? ' falta' : ''}">
+       <span class="fr-nome">${esc(c.nome)}</span>
+       <span class="restauro-amb">${rotAmb(c.ambito)}</span>
+       ${c.origem ? '<span class="et fabrica">&#128274; ficheiro de origem</span>' : ''}
+       ${c.em_falta
+         ? `<span class="fr-est falta">falta</span>
+            <button class="btn btn-sm" onclick='restaurar(${JSON.stringify([{ambito:c.ambito,nome:c.nome}])})'>Repor</button>`
+         : '<span class="fr-est ok">&#10003; presente</span>'}
+     </li>`).join('');
+
+  cx.innerHTML = `
+    <div class="fr-bloco">
+      <h4>Repor os modelos de origem</h4>
+      <div class="dica">Os modelos que a casa traz de origem. Repô-los devolve o que faltar,
+        sem tocar nos modelos que criou. ${faltam.length
+          ? '<b>Faltam ' + faltam.length + '.</b>' : 'Está tudo presente.'}</div>
+      <ul class="fr-lista">${linhas}</ul>
+      <div class="jan-fim" style="justify-content:flex-start">
+        <button class="btn btn-ouro" onclick="restaurar(null)" ${faltam.length ? '' : 'disabled'}>
+          Repor os que faltam</button>
+        <button class="btn" onclick="reporDesenhoDeOrigem()">Repor o desenho de origem em todos</button>
+      </div>
+    </div>
+
+    <div class="fr-bloco">
+      <h4>Levar e trazer</h4>
+      <div class="dica">Os modelos num ficheiro, para os guardar ou os levar para outra instalação.
+        Trazer <b>acrescenta</b>: não substitui nem mistura nada com os que já cá estão.</div>
+      <div class="lf" style="grid-template-columns:auto 1fr auto">
+        <div><label>&nbsp;</label><a class="btn" href="api.php?action=modelos_exportar">Descarregar os modelos</a></div>
+        <div><label for="imp">Trazer de um ficheiro</label>
+          <input type="file" id="imp" accept=".json,application/json"></div>
+        <div><label>&nbsp;</label><button class="btn" onclick="importar()">Trazer</button></div>
+      </div>
+      <div class="segredo" id="imp-res" style="display:none;background:var(--gold-pale);
+           border:1px dashed var(--gold-soft);border-radius:10px;padding:.8rem .9rem;margin-top:.9rem;font-size:.88rem"></div>
+    </div>`;
+}
+
+async function reporDesenhoDeOrigem(){
+  if (!confirm('Devolver ao desenho de origem os modelos da casa que ainda têm o nome de origem?\n\n'
+    + 'Os modelos que criou não são tocados — só os da casa voltam ao que o sistema traz.')) return;
+  const d = await api('modelos_restaurar', { method:'POST', body: JSON.stringify({ repor: true }) });
+  if (!d || !d.success) return;
+  const n = (d.criados || []).length + (d.repostos || []).length;
+  toast(n ? n + ' modelo(s) de origem repostos.' : 'Já estavam todos no desenho de origem.');
+  carregar();
+}
 function toast(m, mau){ const t=$('toast'); t.textContent=m; t.className='toast mostrar'+(mau?' erro':'');
                         setTimeout(()=>t.className='toast', 2800); }
 
 function filtrar(a){
-  AMBITO = a;
-  document.querySelectorAll('#filtros .chip').forEach(c => c.classList.toggle('on', c.dataset.ambito === a));
+  AMBITO = a; VISTA = 'modelos';
+  document.querySelectorAll('#filtros .chip').forEach(c =>
+    c.classList.toggle('on', c.dataset.vista === 'digital' && c.dataset.ambito === a));
+  $('lista').style.display = ''; $('restauro').style.display = '';
+  $('ferramentas').style.display = 'none';
+  carregar();
+}
+
+/* A pastilha das ferramentas: reposição dos modelos de origem e levar/trazer
+   num ficheiro. Não filtra a lista — troca o corpo do painel por estas opções,
+   que são da casa inteira e não de uma peça só. */
+function verFerramentas(){
+  VISTA = 'ferramentas';
+  document.querySelectorAll('#filtros .chip').forEach(c =>
+    c.classList.toggle('on', c.dataset.vista === 'ferramentas'));
+  $('lista').style.display = 'none'; $('restauro').style.display = 'none';
+  $('ferramentas').style.display = '';
   carregar();
 }
 
@@ -346,6 +417,7 @@ async function carregar(){
   d.modelos.forEach(m => { MODELOS[m.id] = m; });
   CATALOGO = d.catalogo || [];
   pintarRestauro();
+  if (VISTA === 'ferramentas') pintarFerramentas();
   const alvo = $('lista');
   if (!d.modelos.length){
     // O estado vazio dizia que o primeiro modelo se faz "do convite de um
