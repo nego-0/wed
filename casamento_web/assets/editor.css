@@ -273,6 +273,16 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .campo input[type=text], .campo input[type=number], .campo textarea, .campo select{
   width:100%; box-sizing:border-box; background:#191a16; border:1px solid var(--ed-linha);
   color:var(--ed-texto); border-radius:6px; padding:.4rem .55rem; font-family:inherit; font-size:.85rem; }
+/* Os seletores dos painéis vestem-se como o da barra: seta própria em vez da
+   de fábrica, que trazia consigo a caixa clara do sistema. Vale para os dois
+   editores — o do convite digital e o do cartão impresso. */
+.campo select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238f938a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right .5rem center; background-size:11px;
+  padding-right:1.6rem; cursor:pointer; }
+.campo select:hover{ border-color:var(--ed-ouro); }
+.campo select option{ background:var(--ed-painel); color:var(--ed-texto); }
 .campo textarea{ resize:vertical; min-height:66px; line-height:1.45; }
 .campo input:focus, .campo textarea:focus, .campo select:focus{
   outline:none; border-color:var(--ed-ouro); box-shadow:0 0 0 2px rgba(180,134,74,.18); }

@@ -138,7 +138,8 @@ $camposPorCamada = [
   </div>
   <span class="ed-sep"></span>
   <span class="rot">Folhagem</span>
-  <select id="folhagem" style="background:#191a16;border:1px solid var(--ed-linha);color:var(--ed-texto);border-radius:6px;padding:.28rem .5rem;font-family:inherit">
+  <?php // Sem estilo à mão: veste-se pela barra, como o seletor do outro editor. ?>
+  <select id="folhagem">
     <?php foreach (cartaoFolhagens() as $k => $f): ?>
       <option value="<?= $k ?>" <?= $k === $folhagem ? 'selected' : '' ?>><?= escP($f['nome']) ?></option>
     <?php endforeach; ?>

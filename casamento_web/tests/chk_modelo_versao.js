@@ -110,6 +110,52 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(aindaLa && aindaLa.nome === 'Borgonha',
      'e o modelo da casa continua lá, com o nome de sempre — não foi reescrito');
 
+  // ---------- 7. o mesmo no CARTÃO IMPRESSO ----------
+  // O cartão tem as suas peças e os seus modelos, mas as regras são as mesmas:
+  // a peça diz o nome do modelo, e alterá-lo obriga a uma versão do casal.
+  const salvia = ((await api('modelo_lista&ambito=impresso')).modelos || [])
+                   .find(m => m.nome === 'Sálvia');
+  ok(!!salvia, 'a casa oferece o modelo impresso «Sálvia»');
+  await api('modelo_aplicar&id=' + salvia.id, {});
+
+  const rotuloCartao = async () => {
+    await olho.goto(BASE + '/graficas.php', { waitUntil: 'domcontentloaded' });
+    return (await olho.textContent('.estado-peca')).replace(/\s+/g, ' ').trim();
+  };
+  const cartaoVigor = await rotuloCartao();
+  console.log('   cartão:', JSON.stringify(cartaoVigor.slice(0, 48)));
+  ok(/Sálvia/.test(cartaoVigor) && !/Original/.test(cartaoVigor),
+     'aplicado o modelo impresso, o cartão diz «Sálvia» — e não «Original»');
+
+  await api('defs_save', { defs: { 'cartao.reservado': 'Reservado ' + marca } });
+  const cartaoAlterado = await rotuloCartao();
+  console.log('   cartão:', JSON.stringify(cartaoAlterado.slice(0, 48)));
+  ok(/Sálvia/.test(cartaoAlterado) && /com alterações/.test(cartaoAlterado),
+     'mexido à mão, o cartão diz «Sálvia · com alterações»');
+
+  const recusaCartao = await api('defs_save', { defs: { 'cartao.reservado': 'Outro ' + marca },
+                                                proteger_desenho: true });
+  ok(recusaCartao && recusaCartao.success === false && recusaCartao.precisa_versao === true
+     && recusaCartao.base === 'Sálvia',
+     'alterar o desenho de um modelo impresso também obriga a uma versão com nome');
+
+  const cartaoGuardado = await api('defs_save', { defs: { 'cartao.reservado': 'Outro ' + marca },
+                                                  proteger_desenho: true,
+                                                  versao_nome: 'O nosso cartão ' + marca });
+  ok(cartaoGuardado && cartaoGuardado.success && cartaoGuardado.versao
+     && cartaoGuardado.versao.ambito === 'impresso',
+     'e a versão que nasce é do cartão, não do convite digital');
+
+  // As duas peças têm versões próprias: mexer numa não mexe na outra.
+  const vsDigital = ((await api('versao_lista&ambito=digital')).versoes || []).map(v => v.nome);
+  const vsImpresso = ((await api('versao_lista&ambito=impresso')).versoes || []).map(v => v.nome);
+  console.log('   versões digital :', JSON.stringify(vsDigital));
+  console.log('   versões impresso:', JSON.stringify(vsImpresso));
+  ok(vsDigital.some(n => n.startsWith('A nossa')) && !vsDigital.some(n => n.startsWith('O nosso cartão')),
+     'a versão do convite digital fica na peça dela');
+  ok(vsImpresso.some(n => n.startsWith('O nosso cartão')) && !vsImpresso.some(n => n.startsWith('A nossa')),
+     'e a do cartão na dele — cada peça guarda as suas');
+
   // ---------- limpeza ----------
   for (const id of [casal.id, outro.id]) {
     await api('casamento_estado&id=' + id + '&estado=arquivado', {});
