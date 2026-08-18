@@ -85,6 +85,7 @@ if ($aberto > 0) {
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.rascunho{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .et.alcance{ background:#fff; color:#6c7570; text-transform:none; letter-spacing:0; }
+  .et.origem{ background:rgba(180,134,74,.12); color:var(--gold); border-color:var(--gold); }
   /* Janela das opções de um modelo: as escolhas e a lista de casamentos.
      Vive no modal (ver #ov-modelo), que tem largura para uma lista se ler. */
   .modal-corpo .escolhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:.9rem; }
@@ -340,6 +341,7 @@ async function carregar(){
               m.alcance === 'selecionados'
                 ? '&#9737; ' + (m.casamentos || []).length + ' casamento' + ((m.casamentos||[]).length===1?'':'s')
                 : '&#9737; todos os casais'}</span>` : ''}
+          ${m.de_origem ? `<span class="et origem" title="É a peça de origem desta peça: o ponto de regresso, e o nome por que a peça se dá a conhecer">&#9873; peça de origem</span>` : ''}
           <span>${esc((m.atualizado_em || m.criado_em || '').slice(0,10))}</span>
         </div>
       </div>
@@ -352,6 +354,11 @@ async function carregar(){
           <span class="mm-pop" id="mm-${m.id}" style="display:none">
             <button onclick="quemVe(${m.id})">Quem vê este modelo</button>
             <button onclick="editar(${m.id})">Mudar o nome</button>
+            ${m.de_origem
+              ? `<button onclick="definirOrigem(${m.id}, 0)">Deixar de ser peça de origem</button>`
+              : ((+m.visivel && m.alcance === 'todos')
+                  ? `<button onclick="definirOrigem(${m.id}, 1)">Definir como peça de origem</button>`
+                  : '')}
             <hr>
             <button class="perigo" onclick="apagar(${m.id}, '${esc(m.nome)}')">Apagar</button>
           </span></span>
@@ -510,6 +517,24 @@ async function apagar(id, nome){
     + 'Os casais que já o usaram ficam como estão — o desenho passou a ser deles.')) return;
   const d = await api('modelo_apagar&id=' + id, { method:'POST' });
   if (d && d.success){ toast('Modelo apagado.'); carregar(); }
+}
+
+/* A peça de origem: o ponto de regresso de uma peça, e o nome por que ela se dá
+   a conhecer quando o casal não tem versão nem outro modelo aplicado. É uma só
+   por peça (digital e impresso), e uma escolha da casa — não de um casamento.
+   Só um modelo publicado e disponível a todos pode sê-la. */
+async function definirOrigem(id, on){
+  const m = MODELOS[id] || {};
+  if (on && !confirm('Passar «' + (m.nome||'') + '» a peça de origem'
+      + (m.ambito === 'impresso' ? ' do cartão impresso' : ' do convite digital') + '?\n\n'
+      + 'Passa a ser o ponto de regresso desta peça, e o nome por que ela se dá a '
+      + 'conhecer quando o casal ainda não escolheu nada.')) return;
+  const d = await api('modelo_pecaorigem&ambito=' + encodeURIComponent(m.ambito) + '&id=' + (on ? id : 0),
+                      { method:'POST' });
+  if (!d || !d.success) return;
+  toast(on ? 'Passou a ser a peça de origem: ' + (d.nome || m.nome)
+           : 'Deixou de ser a peça de origem (volta ao automático).');
+  carregar();
 }
 
 /* ---- Os dados de exemplo com que um modelo novo nasce -------------------

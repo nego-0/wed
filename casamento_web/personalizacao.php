@@ -271,20 +271,59 @@ function modeloDaPeca(mysqli $conn, string $ambito): ?array {
             'exato' => modeloIgualAPeca($ambito, (string)$m['defs'], instantaneoAmbito($conn, $ambito))];
 }
 
+/** O modelo que o admin designou como peça de origem deste âmbito (id ou 0). */
+function pecaOrigemId(mysqli $conn, string $ambito): int {
+    global $P;
+    $chave = 'modelo.pecaorigem.' . $ambito;
+    $st = @$conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=0 AND chave=? LIMIT 1");
+    if (!$st) return 0;
+    $st->bind_param('s', $chave); $st->execute();
+    $r = $st->get_result()->fetch_row();
+    return $r ? (int)$r[0] : 0;
+}
+
+/** Guarda (ou limpa, com 0) o modelo que é a peça de origem deste âmbito. */
+function definirPecaOrigem(mysqli $conn, string $ambito, int $id): void {
+    global $P;
+    $chave = 'modelo.pecaorigem.' . $ambito;
+    if ($id > 0) {
+        $v = (string)$id;
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0,?,?)
+                              ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        $st->bind_param('ss', $chave, $v); $st->execute();
+    } else {
+        $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave=?");
+        $st->bind_param('s', $chave); $st->execute();
+    }
+}
+
 /**
- * O modelo da casa que É a peça de origem: aquele cujo desenho coincide com o
- * de origem. É o antigo «Desenho de origem», agora um modelo com nome próprio.
+ * O modelo da casa que É a peça de origem deste âmbito.
  *
- * Encontra-se pelo DESENHO, não pelo nome: se o admin lhe mudar o nome, o
- * sistema continua a reconhecê-lo, e a peça na origem passa a dizer o nome novo.
+ * Primeiro, o que o admin escolheu (modelo.pecaorigem.<ambito>). Se não
+ * escolheu nenhum — ou o que escolheu já não existe —, cai no que traz o
+ * desenho de origem de fábrica, encontrado pelo DESENHO (não pelo nome, para
+ * o reconhecer mesmo depois de renomeado). Null se não houver nenhum.
  */
 function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
     global $P;
     static $cache = [];
     if (array_key_exists($ambito, $cache)) return $cache[$ambito];
+    $ambEsc = $conn->real_escape_string($ambito);
+
+    // 1) A escolha do admin.
+    $esc = pecaOrigemId($conn, $ambito);
+    if ($esc > 0) {
+        $st = $conn->prepare("SELECT id, nome FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+        $st->bind_param('is', $esc, $ambito); $st->execute();
+        if ($m = $st->get_result()->fetch_assoc()) {
+            return $cache[$ambito] = ['id' => (int)$m['id'], 'nome' => (string)$m['nome']];
+        }
+    }
+    // 2) O modelo de fábrica, pelo desenho de origem.
     $origem = padraoDesenho($ambito);
     $r = @$conn->query("SELECT id, nome, defs FROM {$P}modelos
-                        WHERE ambito='" . $conn->real_escape_string($ambito) . "' AND criado_por='sistema'");
+                        WHERE ambito='$ambEsc' AND criado_por='sistema'");
     $achado = null;
     if ($r) while ($m = $r->fetch_assoc()) {
         if (desenhoDoModelo($ambito, (string)$m['defs']) == $origem) {
@@ -293,6 +332,30 @@ function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
         }
     }
     return $cache[$ambito] = $achado;
+}
+
+/** O desenho de um modelo (por id), no formato de um instantâneo. Null se não existir. */
+function desenhoDoModeloId(mysqli $conn, string $ambito, int $id): ?array {
+    global $P;
+    if ($id <= 0) return null;
+    $st = $conn->prepare("SELECT defs FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('is', $id, $ambito); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    return $m ? desenhoDoModelo($ambito, (string)$m['defs']) : null;
+}
+
+/**
+ * A peça está pousada no desenho de origem (o do modelo de origem designado)?
+ * Se não houver modelo de origem, cai na comparação com o de fábrica.
+ */
+function naOrigem(mysqli $conn, string $ambito): bool {
+    $m = modeloDeOrigem($conn, $ambito);
+    if (!$m) return noPadrao($conn, $ambito);
+    $des = desenhoDoModeloId($conn, $ambito, $m['id']);
+    if ($des === null) return noPadrao($conn, $ambito);
+    return array_merge(instantaneoAmbito($conn, $ambito), padraoDesenho($ambito), $des)
+           == instantaneoAmbito($conn, $ambito);
 }
 
 /**
@@ -969,9 +1032,9 @@ function versaoEstado(mysqli $conn, string $ambito): array {
         return ['estado' => 'vigor', 'nome' => $mod['nome'],
                 'id' => VERSAO_PADRAO_ID, 'modelo' => true];
     }
-    // Ou tal como veio de origem — que é o modelo da casa «de origem», e é o
-    // nome DELE que se mostra (não «Original», que não é modelo nenhum).
-    if (noPadrao($conn, $ambito)) {
+    // Ou pousada no desenho de origem — o do modelo de origem (o que o admin
+    // designou, ou o de fábrica) — e é o nome DELE que se mostra.
+    if (naOrigem($conn, $ambito)) {
         return ['estado' => 'vigor', 'nome' => nomeDaOrigem($conn, $ambito),
                 'id' => VERSAO_PADRAO_ID, 'modelo' => true];
     }

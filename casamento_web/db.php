@@ -189,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 22;
+const ESQUEMA_VERSAO = 23;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -817,6 +817,35 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         foreach ($realojar as $chave => [$velho, $novo]) {
             $st = $conn->prepare("UPDATE {$P}definicoes SET valor=? WHERE chave=? AND valor=?");
             $st->bind_param('sss', $novo, $chave, $velho); @$st->execute();
+        }
+    }
+
+    // v23 — a «peça de origem» passa a ser um modelo designado.
+    //
+    // Antes, o ponto de regresso de cada peça achava-se pelo DESENHO (o modelo
+    // da casa cujo desenho era o de fábrica). Bastava o admin retocar esse
+    // modelo para o desenho deixar de bater certo e a peça voltar a chamar-se
+    // «Original». Agora o admin designa qual modelo é a peça de origem
+    // (modelo.pecaorigem.<âmbito>, no 0), e semeia-se com o Isabel & Abednego —
+    // o que já era a origem — para nada mudar de comportamento à partida.
+    if ($versaoAtual < 23) {
+        foreach (['digital', 'impresso'] as $amb) {
+            $chave = 'modelo.pecaorigem.' . $amb;
+            // Só se ainda não houver designação — uma escolha do admin é dele.
+            $st = $conn->prepare("SELECT 1 FROM {$P}definicoes WHERE casamento_id=0 AND chave=? LIMIT 1");
+            $st->bind_param('s', $chave); @$st->execute();
+            if ($st->get_result()->fetch_row()) continue;
+            // O modelo de origem: o Isabel & Abednego semeado (criado_por='sistema').
+            $st = $conn->prepare("SELECT id FROM {$P}modelos
+                                  WHERE ambito=? AND criado_por='sistema' AND nome='Isabel & Abednego'
+                                  ORDER BY id LIMIT 1");
+            $st->bind_param('s', $amb); @$st->execute();
+            $r = $st->get_result()->fetch_row();
+            if (!$r) continue;
+            $id = (string)(int)$r[0];
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,?,?)
+                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+            $st->bind_param('ss', $chave, $id); @$st->execute();
         }
     }
 

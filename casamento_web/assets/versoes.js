@@ -194,11 +194,15 @@
     }
 
     function htmlVersoes() {
-      var mod = modeloEmVigor();
       return htmlEstado() +
         '<div class="vs-lista">' + lista.map(function (v) {
-          // A «Original» derivada cede a vez ao modelo em vigor (ver htmlEstado).
-          var vigora = v.em_vigor && !(v.padrao && mod);
+          // A peça de origem manda quando a peça repousa mesmo no desenho dela:
+          // aí mostra-se «em vigor», e não um «Pôr em vigor» que não muda nada —
+          // era esse botão a dar a entender que o desenho de origem, já em uso,
+          // ainda estava por aplicar. Nas versões guardadas, vale o em_vigor tal
+          // e qual. (A barra e o banner preferem o nome do modelo — ver
+          // htmlEstado —, mas aqui a linha da origem diz o seu próprio estado.)
+          var vigora = v.em_vigor;
           var etiquetas =
             (vigora ? '<span class="vs-et ok">em vigor</span>' : '') +
             (v.padrao ? '<span class="vs-et">peça de origem</span>' : '') +

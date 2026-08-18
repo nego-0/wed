@@ -642,13 +642,15 @@ if ($acao === 'versao_lista') {
     // A versão padrão fecha a lista, sempre no mesmo sítio: é a peça como o
     // sistema a traz de origem — o ponto de regresso. Não vem da tabela, por
     // isso não se apaga nem se reescreve; quem a editar guarda com outro nome.
-    $noPadrao = noPadrao($conn, $ambito);
-    if ($noPadrao) $algumaEmVigor = true;
+    // Em vigor quando a peça repousa no desenho de origem — o do modelo de
+    // origem (designado pelo admin, ou o de fábrica), e não só o de fábrica cru.
+    $naOrigem = naOrigem($conn, $ambito);
+    if ($naOrigem) $algumaEmVigor = true;
     // O nome é o do modelo de origem da casa — não «Original», que não é
     // modelo nenhum. O padrão continua a ser o ponto de regresso (padrao=1).
     $out[] = ['id' => VERSAO_PADRAO_ID, 'nome' => nomeDaOrigem($conn, $ambito), 'utilizador' => null,
               'criado_em' => null, 'atualizado_em' => null,
-              'em_vigor' => $noPadrao, 'escolhida' => 0, 'padrao' => 1];
+              'em_vigor' => $naOrigem, 'escolhida' => 0, 'padrao' => 1];
 
     ok(['versoes' => $out, 'max' => VERSOES_MAX, 'ambito' => $ambito,
         'rotulo' => ambitosVersao()[$ambito]['rotulo'],
@@ -661,10 +663,20 @@ if ($acao === 'versao_aplicar') {
     // Torna esta a versão em vigor: aplica as suas definições e marca-a.
     $id = (int)($_GET['id'] ?? 0);
 
-    // A padrão não está na tabela: aplicá-la é devolver a peça à origem.
+    // A padrão não está na tabela: aplicá-la é devolver a peça à origem — ao
+    // desenho do modelo de origem (o que o admin designou, ou o de fábrica).
+    // Repõe-se tudo de fábrica e, por cima, escreve-se o desenho desse modelo;
+    // quando ele traz o desenho de fábrica (o caso comum), dá exatamente o
+    // mesmo que um regresso puro à origem. É o nome DELE que a peça passa a dar.
     if ($id === VERSAO_PADRAO_ID) {
         $ambito = ambitoPedido();
-        $r = aplicarPadrao($conn, $ambito);
+        $base = padraoAmbito($ambito);
+        $orig = modeloDeOrigem($conn, $ambito);
+        if ($orig) {
+            $des = desenhoDoModeloId($conn, $ambito, (int)$orig['id']);
+            if ($des) $base = array_merge($base, $des);
+        }
+        $r = guardarDefinicoes($conn, $base);
         $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
         $st->bind_param('s', $ambito); $st->execute();
         esquecerModeloEmVigor($conn, $ambito);
@@ -2551,23 +2563,38 @@ if ($acao === 'modelo_lista') {
     // vigor" a um modelo que já estava em vigor — e o casal carregava, nada
     // mudava, e concluía que a função não funcionava. Compara-se o que aplicar
     // produziria com o que a peça mostra: é a mesma conta de modelo_aplicar.
-    $atual = []; $vigorId = [];
+    // Qual modelo é a peça de origem de cada âmbito é uma verdade da CASA (a
+    // designação vive no 0), independente de haver casamento aberto — o admin
+    // tem de a ver na página dos modelos mesmo sem um casamento à frente.
+    $atual = []; $vigorId = []; $origemId = []; $naOrigem = [];
+    foreach (array_keys(ambitosVersao()) as $amb) {
+        $o = modeloDeOrigem($conn, $amb);
+        $origemId[$amb] = $o ? (int)$o['id'] : 0;
+    }
     if (casamentoAtual() > 0) {
         foreach (array_keys(ambitosVersao()) as $amb) {
             $atual[$amb] = instantaneoAmbito($conn, $amb);
             $vigorId[$amb] = modeloEmVigorId($conn, $amb);
+            $naOrigem[$amb] = naOrigem($conn, $amb);
         }
     }
     foreach ($modelos as &$m) {
         $amb = $m['ambito'];
         $m['em_vigor'] = false;
         $m['mesmo_desenho'] = false;
+        // Este modelo é a peça de origem deste âmbito? (Assinala-o no painel.)
+        $m['de_origem'] = isset($origemId[$amb]) && (int)$m['id'] === $origemId[$amb];
         if (isset($atual[$amb])) {
             // «Mesmo desenho»: aplicá-lo seria um não-fazer-nada visível. «Em
             // vigor»: é ESTE o modelo que foi aplicado, e o desenho continua o
             // dele. Só um pode estar em vigor; vários podem ter o mesmo desenho.
+            //
+            // Quando ninguém foi aplicado à mão mas a peça repousa no desenho de
+            // origem, é o modelo de origem que está em vigor — senão o painel
+            // dizia que nenhum estava, com a peça a mostrar o desenho dele.
+            $vig = ($vigorId[$amb] ?? 0) ?: (($naOrigem[$amb] ?? false) ? ($origemId[$amb] ?? 0) : 0);
             $m['mesmo_desenho'] = modeloIgualAPeca($amb, (string)$m['defs'], $atual[$amb]);
-            $m['em_vigor'] = $m['mesmo_desenho'] && (int)$m['id'] === ($vigorId[$amb] ?? 0);
+            $m['em_vigor'] = $m['mesmo_desenho'] && (int)$m['id'] === $vig;
         }
         // O desenho não vai para o cliente: é grande, e a lista só precisa de
         // saber quem é quem.
@@ -2935,6 +2962,34 @@ if ($acao === 'modelo_apagar') {
     // ficou com uma cópia, e é dele.
     registar($conn, 'modelo_apagado', (string)$m['nome']);
     ok(['id' => $id, 'nome' => $m['nome']]);
+}
+
+if ($acao === 'modelo_pecaorigem') {
+    // O admin designa qual modelo da casa É a «peça de origem» de um âmbito: o
+    // ponto de regresso, e o nome por que a peça se dá a conhecer quando não
+    // tem versão nem outro modelo aplicado. É uma escolha da casa (global), não
+    // de um casamento. id=0 devolve a designação ao automático (o de fábrica,
+    // achado pelo desenho).
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma define a peça de origem.');
+    exigirCorrecao();
+    $ambito = ambitoPedido();
+    $id = (int)($_GET['id'] ?? 0);
+    $nome = null;
+    if ($id > 0) {
+        $st = $conn->prepare("SELECT nome, ambito, visivel, alcance FROM {$P}modelos WHERE id=?");
+        $st->bind_param('i', $id); $st->execute();
+        $m = $st->get_result()->fetch_assoc();
+        if (!$m) erro('Modelo não encontrado.');
+        if ($m['ambito'] !== $ambito) erro('Esse modelo é de outra peça.');
+        // A peça de origem serve todos os casais: tem de estar publicada e ser
+        // de todos. Um modelo só para alguns não pode ser o ponto de regresso.
+        if ((int)$m['visivel'] !== 1 || $m['alcance'] !== 'todos')
+            erro('A peça de origem tem de ser um modelo publicado e disponível a todos.');
+        $nome = (string)$m['nome'];
+    }
+    definirPecaOrigem($conn, $ambito, $id);
+    registar($conn, 'peca_origem_definida', $nome ?? '(automático)', $ambito);
+    ok(['ambito' => $ambito, 'id' => $id, 'nome' => $nome ?? nomeDaOrigem($conn, $ambito)]);
 }
 
 if ($acao === 'modelo_aplicar') {
