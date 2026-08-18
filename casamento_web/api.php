@@ -2618,7 +2618,32 @@ if ($acao === 'modelo_lista') {
         foreach ($modelos as &$m) $m['casamentos'] = $sel[(int)$m['id']] ?? [];
         unset($m);
     }
-    ok(['modelos' => $modelos]);
+    // Ao admin junta-se o catálogo dos modelos de origem, com o que falta —
+    // para o painel poder oferecer repô-los se algum foi apagado por lapso.
+    $extra = ['modelos' => $modelos];
+    if (ehAdminPlataforma()) $extra['catalogo'] = catalogoModelosEmFalta($conn);
+    ok($extra);
+}
+
+if ($acao === 'modelos_restaurar') {
+    // Repõe os modelos que a casa traz de origem — os que faltarem, ou uns
+    // quantos escolhidos. Serve de rede quando o admin apaga algum por lapso.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma restaura modelos.');
+    exigirCorrecao();
+    $d = corpo();
+    $alvos = null;
+    if (!empty($d['alvos']) && is_array($d['alvos'])) {
+        $alvos = [];
+        foreach ($d['alvos'] as $a) {
+            if (isset($a['ambito'], $a['nome']) && isset(ambitosVersao()[$a['ambito']]))
+                $alvos[] = ['ambito' => (string)$a['ambito'], 'nome' => (string)$a['nome']];
+        }
+    }
+    $repor = !empty($d['repor']);
+    $res = restaurarModelosDeCasa($conn, $alvos, $repor);
+    $feito = array_merge($res['criados'], $res['repostos']);
+    registar($conn, 'modelos_restaurados', $feito ? implode(', ', $feito) : '(nada em falta)');
+    ok($res + ['catalogo' => catalogoModelosEmFalta($conn)]);
 }
 
 if ($acao === 'modelo_visibilidade') {

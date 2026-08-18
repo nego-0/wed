@@ -142,7 +142,7 @@ function acoesDaPlataforma(): array {
             'modelo_criar','modelo_editar','modelo_defs','modelo_apagar','modelo_visibilidade',
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
-            'modelos_importar'];
+            'modelos_importar','modelos_restaurar'];
 }
 
 function acoesDoCasamento(): array {

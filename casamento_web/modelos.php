@@ -87,6 +87,13 @@ if ($aberto > 0) {
   .et.alcance{ background:#fff; color:#6c7570; text-transform:none; letter-spacing:0; }
   .et.origem{ background:rgba(180,134,74,.12); color:var(--gold); border-color:var(--gold); }
   .et.fabrica{ background:#f4f2ee; color:#6c7570; text-transform:none; letter-spacing:0; }
+  .restauro{ display:flex; gap:1rem; align-items:flex-start; justify-content:space-between;
+             flex-wrap:wrap; background:var(--gold-pale); border:1px solid var(--gold-soft);
+             border-radius:12px; padding:.9rem 1.1rem; margin:.2rem 0 1rem; }
+  .restauro-txt{ flex:1 1 320px; font-size:.9rem; color:#5b6460; }
+  .restauro-lista{ list-style:none; padding:0; margin:.5rem 0 0; display:grid; gap:.35rem; }
+  .restauro-lista li{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+  .restauro-amb{ font-size:.78rem; color:#8a938e; }
   /* Janela das opções de um modelo: as escolhas e a lista de casamentos.
      Vive no modal (ver #ov-modelo), que tem largura para uma lista se ler. */
   .modal-corpo .escolhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:.9rem; }
@@ -246,6 +253,7 @@ if ($aberto > 0) {
       <button class="chip" data-ambito="digital" onclick="filtrar('digital')">Convite digital</button>
       <button class="chip" data-ambito="impresso" onclick="filtrar('impresso')">Convite impresso</button>
     </div>
+    <div id="restauro"></div>
     <div id="lista"><div class="dica">A carregar…</div></div>
   </div>
 
@@ -288,7 +296,40 @@ if ($aberto > 0) {
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const TEM_CASAMENTO = <?= $aberto > 0 ? 'true' : 'false' ?>;
-let AMBITO = '', MODELOS = {};
+let AMBITO = '', MODELOS = {}, CATALOGO = [];
+const rotAmb = a => a === 'impresso' ? 'convite impresso' : 'convite digital';
+
+/* A rede de segurança: se um modelo de origem da casa foi apagado por lapso,
+   aqui volta a semear-se. Só aparece quando falta algum — e respeita o filtro
+   de peça que estiver escolhido. */
+function pintarRestauro(){
+  const cx = $('restauro'); if (!cx) return;
+  const faltam = CATALOGO.filter(c => c.em_falta && (!AMBITO || c.ambito === AMBITO));
+  if (!faltam.length){ cx.innerHTML = ''; return; }
+  cx.innerHTML = `<div class="restauro">
+    <div class="restauro-txt">
+      <b>${faltam.length === 1 ? 'Falta um modelo de origem da casa'
+                               : 'Faltam ' + faltam.length + ' modelos de origem da casa'}.</b>
+      Foram apagados — pode repô-los tal como o sistema os traz, sem tocar nos que criou.
+      <ul class="restauro-lista">${faltam.map(c =>
+        `<li>${esc(c.nome)} <span class="restauro-amb">${rotAmb(c.ambito)}</span>` +
+        (c.origem ? ' <span class="et fabrica">&#128274; ficheiro de origem</span>' : '') +
+        ` <button class="btn btn-sm" onclick='restaurar(${JSON.stringify([{ambito:c.ambito,nome:c.nome}])})'>Repor este</button></li>`
+      ).join('')}</ul>
+    </div>
+    <div><button class="btn btn-ouro" onclick="restaurar(null)">Repor todos os que faltam</button></div>
+  </div>`;
+}
+
+async function restaurar(alvos){
+  const d = await api('modelos_restaurar', { method:'POST',
+    body: JSON.stringify(alvos ? { alvos } : {}) });
+  if (!d || !d.success) return;
+  const n = (d.criados || []).length;
+  toast(n ? (n === 1 ? 'Modelo de origem reposto.' : n + ' modelos de origem repostos.')
+          : 'Não faltava nenhum modelo de origem.');
+  carregar();
+}
 function toast(m, mau){ const t=$('toast'); t.textContent=m; t.className='toast mostrar'+(mau?' erro':'');
                         setTimeout(()=>t.className='toast', 2800); }
 
@@ -303,6 +344,8 @@ async function carregar(){
   if (!d || !d.success) return;
   MODELOS = {};
   d.modelos.forEach(m => { MODELOS[m.id] = m; });
+  CATALOGO = d.catalogo || [];
+  pintarRestauro();
   const alvo = $('lista');
   if (!d.modelos.length){
     // O estado vazio dizia que o primeiro modelo se faz "do convite de um

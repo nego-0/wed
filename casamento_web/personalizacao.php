@@ -364,6 +364,125 @@ function razaoProtecaoOrigem(mysqli $conn, int $id, string $ambito): ?string {
     return null;
 }
 
+/**
+ * O catálogo dos modelos que a casa traz de origem — a mesma lista que as
+ * migrações semeiam (v20/v22), aqui numa só fonte para se poder REPOR.
+ *
+ * Um admin pode apagar um modelo da casa por lapso, ou até esvaziar a lista;
+ * daqui volta-se a semear o que faltar, sem tocar no que já lá está nem nos
+ * modelos que o próprio admin criou. Cada entrada traz o desenho tal como de
+ * origem, e 'origem' marca o ficheiro de origem de cada peça.
+ */
+function catalogoModelosDeCasa(): array {
+    $padrao = defsPadrao();
+    $out = [];
+
+    // O ficheiro de origem de cada peça: defs = retrato completo do desenho de
+    // origem (chavesModelo), como o do primeiro modelo (ver migração v22).
+    foreach (['digital', 'impresso'] as $amb) {
+        $snap = [];
+        foreach (chavesModelo($amb) as $k) $snap[$k] = (string)($padrao[$k] ?? '');
+        $out[] = ['ambito' => $amb, 'nome' => 'Isabel & Abednego', 'origem' => true,
+                  'descricao' => 'O ponto de partida da casa, e o caminho de volta: aplicá-lo devolve a peça ao desenho de origem.',
+                  'defs' => json_encode($snap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)];
+    }
+
+    // Variações do convite digital — uma paleta por modelo.
+    $temas = temasPredef();
+    foreach ([['borgonha',  'Borgonha',   'Vinho profundo e ouro velho, para uma festa à noite.'],
+              ['meianoite', 'Meia-noite', 'Azul de fim de tarde, sóbrio e formal.'],
+              ['terracota', 'Terracota',  'Barro e areia, para uma festa ao ar livre.']]
+             as [$k, $nome, $desc]) {
+        if (!isset($temas[$k])) continue;
+        $paleta = [];
+        foreach (TEMA_VARS_EDITAVEIS as $v) if (isset($temas[$k][$v])) $paleta[$v] = strtoupper($temas[$k][$v]);
+        $out[] = ['ambito' => 'digital', 'nome' => $nome, 'origem' => false, 'descricao' => $desc,
+                  'defs' => json_encode(['tema.paleta' => json_encode($paleta, JSON_UNESCAPED_SLASHES)],
+                                        JSON_UNESCAPED_UNICODE)];
+    }
+
+    // Variações do convite impresso — paleta, folhagem e elo, que é o que ali se vê.
+    foreach ([['salvia',    'eucalipto', 'coracao',   'Sálvia',     'Verde acinzentado e folha de oliveira.'],
+              ['terracota', 'florido',   'losango',   'Terracota',  'Barro quente, com folhagem florida.'],
+              ['rosa',      'feto',      'comercial', 'Rosa velho', 'Rosa fumado e feto, para um cartão mais leve.']]
+             as [$pal, $folha, $elo, $nome, $desc]) {
+        $out[] = ['ambito' => 'impresso', 'nome' => $nome, 'origem' => false, 'descricao' => $desc,
+                  'defs' => json_encode(['cartao.paleta' => $pal, 'cartao.folhagem' => $folha,
+                                         'cartao.elo' => $elo], JSON_UNESCAPED_UNICODE)];
+    }
+    return $out;
+}
+
+/** Qual dos modelos de origem falta na lista (para o painel oferecer repô-los). */
+function catalogoModelosEmFalta(mysqli $conn): array {
+    global $P;
+    $out = [];
+    foreach (catalogoModelosDeCasa() as $m) {
+        $st = $conn->prepare("SELECT 1 FROM {$P}modelos WHERE nome=? AND ambito=? LIMIT 1");
+        $st->bind_param('ss', $m['nome'], $m['ambito']); $st->execute();
+        $out[] = ['ambito' => $m['ambito'], 'nome' => $m['nome'], 'origem' => $m['origem'],
+                  'descricao' => $m['descricao'], 'em_falta' => !$st->get_result()->fetch_row()];
+    }
+    return $out;
+}
+
+/**
+ * Repõe os modelos que a casa traz de origem.
+ *
+ * Cria os que faltarem (por nome+âmbito); com $repor, reescreve também o
+ * desenho dos que já existem, devolvendo-os ao de origem. Nunca toca nos
+ * modelos que o admin criou. $alvos limita a uns quantos ([['ambito','nome']]);
+ * null repõe o catálogo todo. No fim, garante que a peça de origem de cada peça
+ * aponta para um modelo que existe.
+ */
+function restaurarModelosDeCasa(mysqli $conn, ?array $alvos = null, bool $repor = false): array {
+    global $P;
+    $criados = []; $repostos = [];
+    foreach (catalogoModelosDeCasa() as $m) {
+        if ($alvos !== null) {
+            $quer = false;
+            foreach ($alvos as $a) if (($a['ambito'] ?? '') === $m['ambito'] && ($a['nome'] ?? '') === $m['nome']) { $quer = true; break; }
+            if (!$quer) continue;
+        }
+        $st = $conn->prepare("SELECT id FROM {$P}modelos WHERE nome=? AND ambito=? LIMIT 1");
+        $st->bind_param('ss', $m['nome'], $m['ambito']); $st->execute();
+        $r = $st->get_result()->fetch_row();
+        if ($r) {
+            if ($repor) {
+                $id = (int)$r[0];
+                $st = $conn->prepare("UPDATE {$P}modelos SET descricao=?, defs=?, visivel=1,
+                                      alcance='todos', criado_por='sistema', atualizado_em=NOW() WHERE id=?");
+                $st->bind_param('ssi', $m['descricao'], $m['defs'], $id); $st->execute();
+                $repostos[] = $m['nome'] . ' · ' . $m['ambito'];
+            }
+            continue;
+        }
+        $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, alcance, criado_por)
+                              VALUES (?,?,?,?,1,'todos','sistema')");
+        $st->bind_param('ssss', $m['nome'], $m['descricao'], $m['ambito'], $m['defs']); $st->execute();
+        $criados[] = $m['nome'] . ' · ' . $m['ambito'];
+    }
+
+    // A designação de peça de origem não pode ficar a apontar para o vazio: se
+    // o modelo designado desapareceu, reaponta-se para o Isabel & Abednego que
+    // se acabou de repor (procurado à mão, para não depender de caches).
+    foreach (['digital', 'impresso'] as $amb) {
+        $des = pecaOrigemId($conn, $amb);
+        if ($des > 0) {
+            $st = $conn->prepare("SELECT 1 FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+            $st->bind_param('is', $des, $amb); $st->execute();
+            if ($st->get_result()->fetch_row()) continue;   // ainda existe: deixa-se estar
+        }
+        $st = $conn->prepare("SELECT id FROM {$P}modelos
+                              WHERE nome='Isabel & Abednego' AND ambito=? AND criado_por='sistema'
+                              ORDER BY id LIMIT 1");
+        $st->bind_param('s', $amb); $st->execute();
+        $r = $st->get_result()->fetch_row();
+        if ($r) definirPecaOrigem($conn, $amb, (int)$r[0]);
+    }
+    return ['criados' => $criados, 'repostos' => $repostos];
+}
+
 /** O desenho de um modelo (por id), no formato de um instantâneo. Null se não existir. */
 function desenhoDoModeloId(mysqli $conn, string $ambito, int $id): ?array {
     global $P;
