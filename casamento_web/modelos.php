@@ -181,8 +181,13 @@ if ($aberto > 0) {
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .chip-sep{ width:1px; align-self:stretch; background:var(--line); margin:.1rem .3rem; }
-  .chip-ferramentas{ border-style:dashed; }
+  .chip-acao.on{ background:var(--gold); border-color:var(--gold); color:#fff; }
+  .chip-ferramentas{ border-style:dashed; display:inline-flex; align-items:center; gap:.35rem; }
   .chip-ferramentas.on{ background:var(--gold); border-color:var(--gold); border-style:solid; color:#fff; }
+  .chip-num{ display:inline-flex; align-items:center; justify-content:center; min-width:1.15rem;
+             height:1.15rem; padding:0 .3rem; border-radius:50px; background:var(--warn,#b5713a);
+             color:#fff; font-size:.72rem; font-weight:700; line-height:1; }
+  .chip-ferramentas.on .chip-num{ background:#fff; color:var(--gold); }
   .fr-bloco{ border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin-bottom:1rem; }
   .fr-bloco h4{ margin:0 0 .3rem; font-family:var(--sans); font-size:1rem; }
   .fr-lista{ list-style:none; padding:0; margin:.6rem 0; display:grid; gap:.4rem; }
@@ -204,59 +209,6 @@ if ($aberto > 0) {
 
 <main class="container">
 
-  <details class="painel dobra" id="d-novo">
-    <summary><span class="mais">+</span> Novo modelo
-      <small>nasce do desenho de origem e desenha-se no editor</small></summary>
-    <div class="dica">
-      <?php if ($aberto > 0): ?>
-        Nasce do convite de <b><?= escP($nomeAberto) ?></b>, tal como está agora — ou do desenho de
-        origem, se preferir começar do princípio. Só o desenho viaja: nomes, datas e convidados
-        ficam onde estão. Depois de criado, desenha-se no editor, sem casamento nenhum pelo meio.
-      <?php else: ?>
-        Nasce do desenho de origem e desenha-se a seguir no editor — sem ter de pedir emprestada
-        a casa de um casal para fazer um modelo da casa.
-      <?php endif; ?>
-    </div>
-    <div class="lf">
-      <div><label>Nome</label><input type="text" id="n-nome" placeholder="Ex: Clássico verde"></div>
-      <div><label>Descrição</label><input type="text" id="n-desc" placeholder="Para quem é, o que tem de particular"></div>
-      <div><label>Peça</label>
-        <select id="n-ambito"><option value="digital">Convite digital</option>
-                              <option value="impresso">Convite impresso</option></select></div>
-      <div><button class="btn btn-ouro" onclick="criar()">Criar modelo</button></div>
-    </div>
-    <div class="dica" style="margin:.7rem 0 0">
-      <label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400">
-        <input type="checkbox" id="n-visivel" checked style="width:auto;margin:0">
-        Publicar já (os casais passam a vê-lo no seletor de versões)
-      </label>
-      <?php if ($aberto > 0): ?>
-      <label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400;margin-left:1.2rem">
-        <input type="checkbox" id="n-zero" style="width:auto;margin:0">
-        Começar do desenho de origem, e não do convite deste casamento
-      </label>
-      <?php endif; ?>
-    </div>
-  </details>
-
-  <details class="painel dobra" id="d-exemplo">
-    <summary><span class="mais">+</span> Dados de exemplo dos modelos
-      <small>o casal e o evento com que um modelo novo nasce</small></summary>
-    <div class="dica">
-      Um modelo é um desenho, e serve todos os casais — por isso não pode nascer com o nome, a
-      data e as fotografias do casamento onde foi composto. Nasce com <b>estes</b> dados, que não
-      são de ninguém, e são os que se veem na prova e na miniatura do modelo.
-      <br>Isto vale para os modelos que criar <b>daqui para a frente</b>: os que já existem ficam
-      exatamente como estão.
-    </div>
-    <div id="ex-corpo"><div class="dica" style="margin:0">A carregar…</div></div>
-    <div class="jan-fim">
-      <button class="btn" onclick="abrirGaleria()">Gerir a galeria</button>
-      <button class="btn" onclick="exemploFabrica()">Repor os de fábrica</button>
-      <button class="btn btn-ouro" onclick="guardarExemplo()">Guardar</button>
-    </div>
-  </details>
-
   <div class="painel">
     <h3>Modelos</h3>
     <div class="dica">Um modelo publicado aparece a todos os casais, no seletor de versões do editor.
@@ -266,11 +218,62 @@ if ($aberto > 0) {
       <button class="chip" data-vista="digital" data-ambito="digital" onclick="filtrar('digital')">Convite digital</button>
       <button class="chip" data-vista="digital" data-ambito="impresso" onclick="filtrar('impresso')">Convite impresso</button>
       <span class="chip-sep" aria-hidden="true"></span>
-      <button class="chip chip-ferramentas" data-vista="ferramentas" onclick="verFerramentas()">&#9881; Reposição e ficheiros</button>
+      <button class="chip chip-acao" data-vista="novo" onclick="verNovo()">&#43; Novo modelo</button>
+      <button class="chip chip-acao" data-vista="exemplo" onclick="verExemplo()">Dados de exemplo dos modelos</button>
+      <button class="chip chip-ferramentas" data-vista="ferramentas" onclick="verFerramentas()">&#9881; Reposição e ficheiros<span class="chip-num" id="fr-num" hidden></span></button>
     </div>
-    <div id="restauro"></div>
+
     <div id="lista"><div class="dica">A carregar…</div></div>
     <div id="ferramentas" style="display:none"></div>
+
+    <div id="vista-novo" style="display:none">
+      <div class="dica">
+        <?php if ($aberto > 0): ?>
+          Nasce do convite de <b><?= escP($nomeAberto) ?></b>, tal como está agora — ou do desenho de
+          origem, se preferir começar do princípio. Só o desenho viaja: nomes, datas e convidados
+          ficam onde estão. Depois de criado, desenha-se no editor, sem casamento nenhum pelo meio.
+        <?php else: ?>
+          Nasce do desenho de origem e desenha-se a seguir no editor — sem ter de pedir emprestada
+          a casa de um casal para fazer um modelo da casa.
+        <?php endif; ?>
+      </div>
+      <div class="lf">
+        <div><label>Nome</label><input type="text" id="n-nome" placeholder="Ex: Clássico verde"></div>
+        <div><label>Descrição</label><input type="text" id="n-desc" placeholder="Para quem é, o que tem de particular"></div>
+        <div><label>Peça</label>
+          <select id="n-ambito"><option value="digital">Convite digital</option>
+                                <option value="impresso">Convite impresso</option></select></div>
+        <div><button class="btn btn-ouro" onclick="criar()">Criar modelo</button></div>
+      </div>
+      <div class="dica" style="margin:.7rem 0 0">
+        <label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400">
+          <input type="checkbox" id="n-visivel" checked style="width:auto;margin:0">
+          Publicar já (os casais passam a vê-lo no seletor de versões)
+        </label>
+        <?php if ($aberto > 0): ?>
+        <label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400;margin-left:1.2rem">
+          <input type="checkbox" id="n-zero" style="width:auto;margin:0">
+          Começar do desenho de origem, e não do convite deste casamento
+        </label>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <div id="vista-exemplo" style="display:none">
+      <div class="dica">
+        Um modelo é um desenho, e serve todos os casais — por isso não pode nascer com o nome, a
+        data e as fotografias do casamento onde foi composto. Nasce com <b>estes</b> dados, que não
+        são de ninguém, e são os que se veem na prova e na miniatura do modelo.
+        <br>Isto vale para os modelos que criar <b>daqui para a frente</b>: os que já existem ficam
+        exatamente como estão.
+      </div>
+      <div id="ex-corpo"><div class="dica" style="margin:0">A carregar…</div></div>
+      <div class="jan-fim">
+        <button class="btn" onclick="abrirGaleria()">Gerir a galeria</button>
+        <button class="btn" onclick="exemploFabrica()">Repor os de fábrica</button>
+        <button class="btn btn-ouro" onclick="guardarExemplo()">Guardar</button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -300,28 +303,6 @@ const TEM_CASAMENTO = <?= $aberto > 0 ? 'true' : 'false' ?>;
 let AMBITO = '', MODELOS = {}, CATALOGO = [], VISTA = 'modelos';
 const rotAmb = a => a === 'impresso' ? 'convite impresso' : 'convite digital';
 
-/* A rede de segurança: se um modelo de origem da casa foi apagado por lapso,
-   aqui volta a semear-se. Só aparece quando falta algum — e respeita o filtro
-   de peça que estiver escolhido. */
-function pintarRestauro(){
-  const cx = $('restauro'); if (!cx) return;
-  const faltam = CATALOGO.filter(c => c.em_falta && (!AMBITO || c.ambito === AMBITO));
-  if (!faltam.length){ cx.innerHTML = ''; return; }
-  cx.innerHTML = `<div class="restauro">
-    <div class="restauro-txt">
-      <b>${faltam.length === 1 ? 'Falta um modelo de origem da casa'
-                               : 'Faltam ' + faltam.length + ' modelos de origem da casa'}.</b>
-      Foram apagados — pode repô-los tal como o sistema os traz, sem tocar nos que criou.
-      <ul class="restauro-lista">${faltam.map(c =>
-        `<li>${esc(c.nome)} <span class="restauro-amb">${rotAmb(c.ambito)}</span>` +
-        (c.origem ? ' <span class="et fabrica">&#128274; ficheiro de origem</span>' : '') +
-        ` <button class="btn btn-sm" onclick='restaurar(${JSON.stringify([{ambito:c.ambito,nome:c.nome}])})'>Repor este</button></li>`
-      ).join('')}</ul>
-    </div>
-    <div><button class="btn btn-ouro" onclick="restaurar(null)">Repor todos os que faltam</button></div>
-  </div>`;
-}
-
 async function restaurar(alvos){
   const d = await api('modelos_restaurar', { method:'POST',
     body: JSON.stringify(alvos ? { alvos } : {}) });
@@ -332,8 +313,9 @@ async function restaurar(alvos){
   carregar();
 }
 
-/* O corpo da pastilha «Reposição e ficheiros»: o estado do catálogo de origem
-   com os botões de repor, e o levar/trazer num ficheiro. */
+/* O corpo da pastilha «Reposição e ficheiros»: o aviso do que falta e o estado
+   do catálogo de origem com os botões de repor, e o levar/trazer num ficheiro.
+   É aqui — e não na lista — que mora o aviso de reposição. */
 function pintarFerramentas(){
   const cx = $('ferramentas'); if (!cx) return;
   const faltam = CATALOGO.filter(c => c.em_falta);
@@ -348,12 +330,19 @@ function pintarFerramentas(){
          : '<span class="fr-est ok">&#10003; presente</span>'}
      </li>`).join('');
 
+  const aviso = faltam.length
+    ? `<div class="restauro"><div class="restauro-txt">
+         <b>${faltam.length === 1 ? 'Falta um modelo de origem da casa'
+                                  : 'Faltam ' + faltam.length + ' modelos de origem da casa'}.</b>
+         Foram apagados — pode repô-los tal como o sistema os traz, sem tocar nos que criou.</div></div>`
+    : '';
+
   cx.innerHTML = `
     <div class="fr-bloco">
       <h4>Repor os modelos de origem</h4>
+      ${aviso}
       <div class="dica">Os modelos que a casa traz de origem. Repô-los devolve o que faltar,
-        sem tocar nos modelos que criou. ${faltam.length
-          ? '<b>Faltam ' + faltam.length + '.</b>' : 'Está tudo presente.'}</div>
+        sem tocar nos modelos que criou. ${faltam.length ? '' : 'Está tudo presente.'}</div>
       <ul class="fr-lista">${linhas}</ul>
       <div class="jan-fim" style="justify-content:flex-start">
         <button class="btn btn-ouro" onclick="restaurar(null)" ${faltam.length ? '' : 'disabled'}>
@@ -377,6 +366,16 @@ function pintarFerramentas(){
     </div>`;
 }
 
+/* O número na pastilha de reposição: quantos modelos de origem faltam. Fica
+   sempre à vista, mesmo sem abrir a pastilha, para o aviso não passar
+   despercebido. */
+function pintarNumFerramentas(){
+  const el = $('fr-num'); if (!el) return;
+  const n = CATALOGO.filter(c => c.em_falta).length;
+  if (n){ el.textContent = n; el.hidden = false; }
+  else { el.hidden = true; el.textContent = ''; }
+}
+
 async function reporDesenhoDeOrigem(){
   if (!confirm('Devolver ao desenho de origem os modelos da casa que ainda têm o nome de origem?\n\n'
     + 'Os modelos que criou não são tocados — só os da casa voltam ao que o sistema traz.')) return;
@@ -389,12 +388,23 @@ async function reporDesenhoDeOrigem(){
 function toast(m, mau){ const t=$('toast'); t.textContent=m; t.className='toast mostrar'+(mau?' erro':'');
                         setTimeout(()=>t.className='toast', 2800); }
 
+/* Uma só vista de cada vez: a lista (com o filtro de peça), ou a vista de uma
+   das pastilhas de ação. A barra de pastilhas fica sempre à vista. */
+function esconderVistas(){
+  ['lista','ferramentas','vista-novo','vista-exemplo'].forEach(id => {
+    const e = $(id); if (e) e.style.display = 'none';
+  });
+}
+function marcarChip(sel){
+  document.querySelectorAll('#filtros .chip').forEach(c => c.classList.remove('on'));
+  const c = document.querySelector(sel); if (c) c.classList.add('on');
+}
+
 function filtrar(a){
   AMBITO = a; VISTA = 'modelos';
   document.querySelectorAll('#filtros .chip').forEach(c =>
     c.classList.toggle('on', c.dataset.vista === 'digital' && c.dataset.ambito === a));
-  $('lista').style.display = ''; $('restauro').style.display = '';
-  $('ferramentas').style.display = 'none';
+  esconderVistas(); $('lista').style.display = '';
   carregar();
 }
 
@@ -402,11 +412,24 @@ function filtrar(a){
    num ficheiro. Não filtra a lista — troca o corpo do painel por estas opções,
    que são da casa inteira e não de uma peça só. */
 function verFerramentas(){
-  VISTA = 'ferramentas';
-  document.querySelectorAll('#filtros .chip').forEach(c =>
-    c.classList.toggle('on', c.dataset.vista === 'ferramentas'));
-  $('lista').style.display = 'none'; $('restauro').style.display = 'none';
-  $('ferramentas').style.display = '';
+  VISTA = 'ferramentas'; marcarChip('.chip-ferramentas');
+  esconderVistas(); $('ferramentas').style.display = '';
+  carregar();
+}
+
+/* Fazer um modelo novo. */
+function verNovo(){
+  VISTA = 'novo'; marcarChip('[data-vista="novo"]');
+  esconderVistas(); $('vista-novo').style.display = '';
+  carregar();
+}
+
+/* Os dados de exemplo com que um modelo novo nasce. */
+let EX_CARREGADO = false;
+function verExemplo(){
+  VISTA = 'exemplo'; marcarChip('[data-vista="exemplo"]');
+  esconderVistas(); $('vista-exemplo').style.display = '';
+  if (!EX_CARREGADO){ carregarExemplo(); EX_CARREGADO = true; }
   carregar();
 }
 
@@ -416,7 +439,7 @@ async function carregar(){
   MODELOS = {};
   d.modelos.forEach(m => { MODELOS[m.id] = m; });
   CATALOGO = d.catalogo || [];
-  pintarRestauro();
+  pintarNumFerramentas();
   if (VISTA === 'ferramentas') pintarFerramentas();
   const alvo = $('lista');
   if (!d.modelos.length){
@@ -426,8 +449,9 @@ async function carregar(){
     alvo.innerHTML = `<div class="vazio-mod">
       ${AMBITO ? 'Ainda não há modelos desta peça.'
                : 'Ainda não há modelos.'}<br>
-      Faça o primeiro em <b>Novo modelo</b>, aqui em cima: nasce do desenho de origem
+      Faça o primeiro na pastilha <b>Novo modelo</b>, aqui em cima: nasce do desenho de origem
       ${TEM_CASAMENTO ? 'ou do convite do casamento aberto, ' : ''}e desenha-se a seguir no editor.
+      ${CATALOGO.some(c => c.em_falta) ? '<br>Faltam modelos de origem da casa — reponha-os na pastilha <b>Reposição e ficheiros</b>.' : ''}
     </div>`;
     return;
   }
@@ -947,8 +971,8 @@ async function importar(){
   carregar();
 }
 
-carregar();
-carregarExemplo();
+carregar();   // a lista, e o número na pastilha de reposição. Os dados de
+              // exemplo carregam-se quando a sua pastilha se abre (ver verExemplo).
 </script>
 </body>
 </html>
