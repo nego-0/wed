@@ -644,7 +644,9 @@ if ($acao === 'versao_lista') {
     // isso não se apaga nem se reescreve; quem a editar guarda com outro nome.
     $noPadrao = noPadrao($conn, $ambito);
     if ($noPadrao) $algumaEmVigor = true;
-    $out[] = ['id' => VERSAO_PADRAO_ID, 'nome' => VERSAO_PADRAO_NOME, 'utilizador' => null,
+    // O nome é o do modelo de origem da casa — não «Original», que não é
+    // modelo nenhum. O padrão continua a ser o ponto de regresso (padrao=1).
+    $out[] = ['id' => VERSAO_PADRAO_ID, 'nome' => nomeDaOrigem($conn, $ambito), 'utilizador' => null,
               'criado_em' => null, 'atualizado_em' => null,
               'em_vigor' => $noPadrao, 'escolhida' => 0, 'padrao' => 1];
 
@@ -666,8 +668,9 @@ if ($acao === 'versao_aplicar') {
         $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
         $st->bind_param('s', $ambito); $st->execute();
         esquecerModeloEmVigor($conn, $ambito);
-        registar($conn, 'versao_aplicada', VERSAO_PADRAO_NOME, $r['repostas'].' definição(ões)');
-        ok($r + ['nome' => VERSAO_PADRAO_NOME, 'ambito' => $ambito]);
+        $nomeOrigem = nomeDaOrigem($conn, $ambito);
+        registar($conn, 'versao_aplicada', $nomeOrigem, $r['repostas'].' definição(ões)');
+        ok($r + ['nome' => $nomeOrigem, 'ambito' => $ambito]);
     }
 
     $st = $conn->prepare("SELECT nome, defs, ambito FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
@@ -696,8 +699,8 @@ if ($acao === 'versao_aplicar') {
 if ($acao === 'versao_atualizar') {
     // Reescreve o conteúdo da versão com o que está em vigor agora.
     $id = (int)($_GET['id'] ?? 0);
-    // A versão padrão é a peça de origem: não se reescreve.
-    if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não se reescreve. Guarde as suas alterações como uma versão nova.');
+    // A peça de origem (o modelo da casa) não se reescreve.
+    if ($id === VERSAO_PADRAO_ID) erro('«'.nomeDaOrigem($conn, ambitoPedido()).'» é o desenho de origem da casa: não se reescreve. Guarde as suas alterações como uma versão nova.');
     $st = $conn->prepare("SELECT nome, ambito FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
@@ -716,8 +719,8 @@ if ($acao === 'versao_renomear') {
     $id = (int)($_GET['id'] ?? ($d['id'] ?? 0));
     $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
     if ($nome === '') erro('O nome não pode ficar vazio.');
-    // A versão padrão é a peça de origem: não se renomeia.
-    if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não muda de nome. Guarde as suas alterações como uma versão nova.');
+    // A peça de origem (o modelo da casa) não muda de nome por aqui.
+    if ($id === VERSAO_PADRAO_ID) erro('«'.nomeDaOrigem($conn, ambitoPedido()).'» é o desenho de origem da casa: muda-se de nome nos Modelos, não aqui.');
     $st = $conn->prepare("UPDATE {$P}versoes SET nome=? WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si', $nome, $id);
     if (!$st->execute()) erro('Não foi possível mudar o nome.');
@@ -727,8 +730,8 @@ if ($acao === 'versao_renomear') {
 
 if ($acao === 'versao_apagar') {
     $id = (int)($_GET['id'] ?? 0);
-    // A versão padrão é a peça de origem: não se apaga.
-    if ($id === VERSAO_PADRAO_ID) erro('A versão «'.VERSAO_PADRAO_NOME.'» é a peça de origem: não se apaga. Guarde as suas alterações como uma versão nova.');
+    // A peça de origem (o modelo da casa) não se apaga.
+    if ($id === VERSAO_PADRAO_ID) erro('«'.nomeDaOrigem($conn, ambitoPedido()).'» é o desenho de origem da casa: não se apaga.');
     $rn = $conn->prepare("SELECT nome, ambito, predefinida FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $rn->bind_param('i', $id); $rn->execute();
     $x = $rn->get_result()->fetch_assoc();

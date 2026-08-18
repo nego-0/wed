@@ -1,10 +1,12 @@
-// A versão padrão ("Original") — a peça como o sistema a traz de origem.
-// Existe sempre, aparece no seletor, aplica-se para voltar atrás, e não se
-// apaga, não se renomeia nem se reescreve: quem a edita guarda com outro nome.
-// As versões guardadas aparecem no seletor com o nome que lhes deram.
+// A versão padrão — a peça como o sistema a traz de origem. Existe sempre,
+// aparece no seletor, aplica-se para voltar atrás, e não se apaga, não se
+// renomeia nem se reescreve: quem a edita guarda com outro nome. Dá-se a
+// conhecer pelo nome do MODELO de origem da casa (Isabel & Abednego), e não
+// por «Original», que não é modelo nenhum.
 const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const ORIGEM = 'Isabel & Abednego';   // o nome por que a peça de origem se dá a conhecer
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -44,7 +46,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   let d = await api('versao_lista&ambito=digital');
   const padrao = (d.versoes || []).filter(v => v.padrao)[0];
   ok(!!padrao, 'a versão padrão aparece na lista mesmo sem nada guardado');
-  ok(padrao && padrao.nome === 'Original', 'chama-se "Original"');
+  ok(padrao && padrao.nome === ORIGEM, 'chama-se «' + ORIGEM + '» — o modelo de origem, não «Original»');
   ok(padrao && padrao.em_vigor === true, 'com a peça de origem, é ela que está em vigor');
   ok(d.alguma_em_vigor === true, 'a peça nunca fica "fora de qualquer versão"');
 
@@ -58,7 +60,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     if (r && r.message) console.log('   →', rot + ':', r.message);
   }
   d = await api('versao_lista&ambito=digital');
-  ok((d.versoes || []).some(v => v.padrao && v.nome === 'Original'),
+  ok((d.versoes || []).some(v => v.padrao && v.nome === ORIGEM),
      'e a padrão continua lá, intacta, depois das tentativas');
 
   // ---------- o painel de versões, em cada estado ----------
@@ -85,20 +87,20 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   };
 
   let o = await painel();
-  ok(/Original/.test(o.botao) && /em vigor/.test(o.botao),
-     'o botão da barra diz «Original — em vigor»');
-  ok(/Em vigor/.test(o.estado) && /Original/.test(o.estado),
+  ok(o.botao.includes(ORIGEM) && /em vigor/.test(o.botao),
+     'o botão da barra diz «' + ORIGEM + ' — em vigor»');
+  ok(/Em vigor/.test(o.estado) && o.estado.includes(ORIGEM),
      'e o painel repete-o, com o que isso quer dizer');
-  ok(gerirDe(o, 'Original').indexOf('apagar') < 0
-     && gerirDe(o, 'Original').indexOf('renomear') < 0,
-     'no Original não se oferece renomear, atualizar nem apagar');
+  ok(gerirDe(o, ORIGEM).indexOf('apagar') < 0
+     && gerirDe(o, ORIGEM).indexOf('renomear') < 0,
+     'na origem não se oferece renomear, atualizar nem apagar');
 
   // Editar a partir do Original: a única saída é guardar com outro nome
   await api('defs_save', { defs: { 'textos.kicker': 'SAIU DO ORIGINAL' } });
   o = await painel();
   console.log('   editado a partir do Original:', o.botao.replace(/\s+/g, ' '));
   ok(/Alterado/.test(o.botao), 'o botão passa a dizer «Alterado»');
-  ok(/alterações por versionar/i.test(o.estado) && /Original/.test(o.estado),
+  ok(/alterações por versionar/i.test(o.estado) && o.estado.includes(ORIGEM),
      'e o painel diz de onde a peça veio');
   ok(o.temNova, 'oferece guardar como versão nova');
 
@@ -108,12 +110,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   console.log('   depois de guardar:', JSON.stringify(o.itens.map(i => i.nome)));
   ok(/Clássica dourada/.test(o.botao) && /em vigor/.test(o.botao),
      'a versão guardada aparece em vigor, com o nome escolhido');
-  ok(o.itens.some(i => /^Original/.test(i.nome)), 'o Original continua na lista');
+  ok(o.itens.some(i => i.nome.indexOf(ORIGEM) === 0), 'a origem continua na lista');
   const g = gerirDe(o, 'Clássica dourada');
   ok(g.indexOf('renomear') >= 0 && g.indexOf('atualizar') >= 0 && g.indexOf('apagar') >= 0,
      'numa versão guardada já se pode renomear, atualizar e apagar');
-  ok(gerirDe(o, 'Original').indexOf('apagar') < 0,
-     'e o Original continua sem essas ações — cada linha manda em si');
+  ok(gerirDe(o, ORIGEM).indexOf('apagar') < 0,
+     'e a origem continua sem essas ações — cada linha manda em si');
 
   // ---------- voltar ao Original repõe mesmo a peça ----------
   // Lê-se do que o servidor entrega. Tem de ser o objeto ATUAIS: a página traz
@@ -134,13 +136,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(dep !== 'ALGO BEM DIFERENTE', 'voltar ao Original repõe a peça de origem');
   d = await api('versao_lista&ambito=digital');
   ok((d.versoes || []).filter(v => v.padrao)[0].em_vigor === true,
-     'e o Original volta a constar como em vigor');
+     'e a origem volta a constar como em vigor');
   ok((d.versoes || []).some(v => !v.padrao && v.nome === 'Clássica dourada'),
      'voltar ao Original não apaga as versões guardadas');
 
   // ---------- o mesmo vale para o convite impresso ----------
   const di = await api('versao_lista&ambito=impresso');
-  ok((di.versoes || []).some(v => v.padrao && v.nome === 'Original'),
+  ok((di.versoes || []).some(v => v.padrao && v.nome === ORIGEM),
      'o convite impresso também tem a sua versão padrão');
   const ri = await api('versao_apagar&id=0&ambito=impresso');
   ok(ri && ri.success === false, 'e também lá se recusa apagá-la');

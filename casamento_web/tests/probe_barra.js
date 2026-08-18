@@ -44,7 +44,8 @@ const entrar = async (ctx, u, s) => {
 
   const noivos = await entrar(await b.newContext(), emailC, 'segredo12345');
 
-  // Antes de aplicar: a barra diz «Original em vigor» (a peça é a de origem).
+  // Antes de aplicar: a barra nomeia a peça de origem — o modelo da casa
+  // «Isabel & Abednego» —, e nunca «Original», que não é modelo nenhum.
   await noivos.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
   await noivos.waitForFunction(() => {
     const el = document.getElementById('bt-versao');
@@ -52,7 +53,8 @@ const entrar = async (ctx, u, s) => {
   }, { timeout: 8000 }).catch(() => {});
   const barraAntes = (await noivos.textContent('#bt-versao') || '').replace(/\s+/g, ' ').trim();
   console.log('   barra antes de aplicar:', JSON.stringify(barraAntes));
-  ok(/Original/i.test(barraAntes), 'sem escolha própria, a barra mostra a Original de origem');
+  ok(/Isabel & Abednego/.test(barraAntes) && !/Original/i.test(barraAntes),
+     'sem escolha própria, a barra mostra o modelo de origem «Isabel & Abednego» — e não «Original»');
 
   // O casal põe o modelo em vigor.
   const posto = await noivos._api('modelo_aplicar&id=' + mod.id);

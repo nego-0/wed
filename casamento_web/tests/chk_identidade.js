@@ -59,7 +59,13 @@ const entrar = async (ctx, u, p) => {
     await admin.goto(BASE + '/' + pag, { waitUntil: 'networkidle' });
     const txt = await admin.locator('body').innerText();
     ok(txt.includes(NOIVA) && txt.includes(NOIVO), quem + ' mostra os nomes deste casal');
-    ok(!/Isabel|Abednego/.test(txt), 'e não mostra os do casal do config.php — ' + quem);
+    // A linha de estado nomeia o DESENHO — o modelo de origem «Isabel &
+    // Abednego» —, que por acaso tem os nomes do casal semente. Isso não é a
+    // identidade a fugir para a peça deste casal: tira-se antes de a procurar.
+    const estado = await admin.locator('.estado-peca, .estado-linha').allInnerTexts().catch(() => []);
+    let corpo = txt;
+    for (const e of estado) corpo = corpo.split(e).join('');
+    ok(!/Isabel|Abednego/.test(corpo), 'e não mostra os do casal do config.php — ' + quem);
   }
 
   // O monograma sai das iniciais, sem ninguém o escrever.

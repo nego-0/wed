@@ -135,8 +135,8 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const r = await fetch('api.php?action=versao_lista&ambito=impresso', { headers: { 'X-CSRF-Token': window.CSRF } });
     return r.json();
   });
-  const original = (vs.versoes || []).find(v => v.padrao || /original/i.test(v.nome));
-  ok(!!original, 'existe a versão «Original»');
+  const original = (vs.versoes || []).find(v => v.padrao);
+  ok(!!original, 'existe a versão de origem (a peça como a casa a traz)');
   await p.evaluate(async id => {
     await fetch('api.php?action=versao_aplicar&ambito=impresso&id=' + id,
       { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });

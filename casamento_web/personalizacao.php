@@ -272,6 +272,40 @@ function modeloDaPeca(mysqli $conn, string $ambito): ?array {
 }
 
 /**
+ * O modelo da casa que É a peça de origem: aquele cujo desenho coincide com o
+ * de origem. É o antigo «Desenho de origem», agora um modelo com nome próprio.
+ *
+ * Encontra-se pelo DESENHO, não pelo nome: se o admin lhe mudar o nome, o
+ * sistema continua a reconhecê-lo, e a peça na origem passa a dizer o nome novo.
+ */
+function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
+    global $P;
+    static $cache = [];
+    if (array_key_exists($ambito, $cache)) return $cache[$ambito];
+    $origem = padraoDesenho($ambito);
+    $r = @$conn->query("SELECT id, nome, defs FROM {$P}modelos
+                        WHERE ambito='" . $conn->real_escape_string($ambito) . "' AND criado_por='sistema'");
+    $achado = null;
+    if ($r) while ($m = $r->fetch_assoc()) {
+        if (desenhoDoModelo($ambito, (string)$m['defs']) == $origem) {
+            $achado = ['id' => (int)$m['id'], 'nome' => (string)$m['nome']];
+            break;
+        }
+    }
+    return $cache[$ambito] = $achado;
+}
+
+/**
+ * O nome por que a peça de origem se dá a conhecer. É um MODELO da casa (o de
+ * origem), e é o nome dele que aparece — não «Original», que não é modelo
+ * nenhum. Só quando esse modelo já não existe é que se cai no nome de recurso.
+ */
+function nomeDaOrigem(mysqli $conn, string $ambito): string {
+    $m = modeloDeOrigem($conn, $ambito);
+    return $m ? $m['nome'] : VERSAO_PADRAO_NOME;
+}
+
+/**
  * Devolve [definições, modelo-em-edição, modelo-visto].
  *
  * O segundo só vem preenchido para o admin: é ele que põe o editor em modo de
@@ -935,10 +969,11 @@ function versaoEstado(mysqli $conn, string $ambito): array {
         return ['estado' => 'vigor', 'nome' => $mod['nome'],
                 'id' => VERSAO_PADRAO_ID, 'modelo' => true];
     }
-    // Ou tal como veio de origem, que é uma versão como as outras (só que não
-    // se apaga).
+    // Ou tal como veio de origem — que é o modelo da casa «de origem», e é o
+    // nome DELE que se mostra (não «Original», que não é modelo nenhum).
     if (noPadrao($conn, $ambito)) {
-        return ['estado' => 'vigor', 'nome' => VERSAO_PADRAO_NOME, 'id' => VERSAO_PADRAO_ID];
+        return ['estado' => 'vigor', 'nome' => nomeDaOrigem($conn, $ambito),
+                'id' => VERSAO_PADRAO_ID, 'modelo' => true];
     }
     if ($mod) {
         return ['estado' => 'alterada', 'nome' => $mod['nome'],
@@ -947,8 +982,9 @@ function versaoEstado(mysqli $conn, string $ambito): array {
     if ($escolhida) {
         return ['estado' => 'alterada', 'nome' => $escolhida['nome'], 'id' => (int)$escolhida['id']];
     }
-    // Sem versão aplicada conhecida, a peça derivou do original.
-    return ['estado' => 'alterada', 'nome' => VERSAO_PADRAO_NOME, 'id' => VERSAO_PADRAO_ID];
+    // Sem versão aplicada conhecida, a peça derivou do desenho de origem.
+    return ['estado' => 'alterada', 'nome' => nomeDaOrigem($conn, $ambito),
+            'id' => VERSAO_PADRAO_ID, 'modelo' => true];
 }
 
 /**

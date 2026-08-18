@@ -41,6 +41,21 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const casal = await api('casamento_criar', { nome: 'ZZ Modelo+Versao ' + marca, noiva: 'Vera', noivo: 'Vasco' });
   await api('casamento_abrir&id=' + casal.id, {});
 
+  // ---------- 0. na origem, a peça diz o nome do modelo de origem ----------
+  // Nunca «Original», que não é modelo nenhum. Vale nas duas peças.
+  const linhaImpresso = async () => {
+    await olho.goto(BASE + '/graficas.php', { waitUntil: 'domcontentloaded' });
+    return (await olho.textContent('.estado-peca')).replace(/\s+/g, ' ').trim();
+  };
+  const digOrigem = await rotulo("digital.php");
+  const impOrigem = await linhaImpresso();
+  console.log('   origem digital :', JSON.stringify(digOrigem.slice(0, 40)));
+  console.log('   origem impresso:', JSON.stringify(impOrigem.slice(0, 40)));
+  ok(/Isabel & Abednego/.test(digOrigem) && !/Original/.test(digOrigem),
+     'na origem, o convite digital diz «Isabel & Abednego» — nunca «Original»');
+  ok(/Isabel & Abednego/.test(impOrigem) && !/Original/.test(impOrigem),
+     'na origem, o cartão impresso diz «Isabel & Abednego» — nunca «Original»');
+
   // ---------- 1. quem nunca escolheu modelo grava à vontade ----------
   // A peça de origem não é desenho de ninguém: quem começa do princípio não
   // está a mexer no modelo de outrem, e não tem de baptizar o primeiro retoque.
@@ -48,6 +63,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
                                          proteger_desenho: true });
   ok(solto && solto.success && !solto.precisa_versao,
      'sem modelo escolhido, o casal grava sem ter de dar nome a nada');
+  // E depois de mexer, continua a derivar da origem — «Isabel & Abednego», não «Original».
+  const soltoLinha = await rotulo("digital.php");
+  ok(/Isabel & Abednego/.test(soltoLinha) && !/Original/.test(soltoLinha),
+     'e a linha diz «Isabel & Abednego · com alterações» — não «Original»');
 
   // ---------- 2. aplicado um modelo, a peça diz o NOME dele ----------
   const borgonha = ((await api('modelo_lista&ambito=digital')).modelos || [])
