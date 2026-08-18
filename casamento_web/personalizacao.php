@@ -348,10 +348,13 @@ function defsPadrao(): array {
         'rsvp.deadline' => 'Confirme a sua presença até 5 de Dezembro',
         'footer.local' => 'Moçâmedes',
         'footer.quote' => '“Amor é fogo que arde sem se ver.” — Luís de Camões',
-        'media.hero' => 'assets/convite/hero.jpg',
-        'media.historia' => 'assets/convite/historia.jpg',
-        'media.interludio' => 'assets/convite/interludio.jpg',
-        'media.acesso' => 'assets/convite/acesso.jpg',
+        // As quatro fotografias de origem (o convite Isabel & Abednego) vivem na
+        // galeria da casa, ao lado das restantes fotografias de modelo — não
+        // têm tratamento à parte.
+        'media.hero' => 'assets/convite/galeria/capa-isabel-abednego.jpg',
+        'media.historia' => 'assets/convite/galeria/historia-isabel-abednego.jpg',
+        'media.interludio' => 'assets/convite/galeria/interludio-isabel-abednego.jpg',
+        'media.acesso' => 'assets/convite/galeria/acesso-isabel-abednego.jpg',
         'media.musica' => 'assets/convite/musica.m4a',
         'tema.paleta' => '',
         'fx.petalas' => '1',
@@ -578,6 +581,12 @@ function categoriaDoFicheiro(string $nome): string {
  */
 function galeriaExemplo(): array {
     $itens = [
+        // As fotografias do convite de origem (Isabel & Abednego), agora aqui
+        // como as outras — o convite que o sistema traz de fábrica.
+        'capa-isabel-abednego.jpg'       => 'Isabel & Abednego · capa',
+        'historia-isabel-abednego.jpg'   => 'Isabel & Abednego · história',
+        'interludio-isabel-abednego.jpg' => 'Isabel & Abednego · interlúdio',
+        'acesso-isabel-abednego.jpg'     => 'Isabel & Abednego · acesso',
         'capa-34371787.jpg' => 'Jardim ao fim da tarde',
         'capa-31877241.jpg' => 'Fato branco, palmeiras',
         'capa-35845533.jpg' => 'Traje tradicional, azul e ouro',
@@ -607,14 +616,6 @@ function galeriaExemplo(): array {
     foreach ($itens as $f => $nome) {
         $out[] = ['ficheiro' => GALERIA_CASA . $f, 'nome' => $nome,
                   'categoria' => categoriaDoFicheiro($f)];
-    }
-    // As quatro fotografias do convite de ORIGEM. Vivem noutra pasta (são o
-    // produto, não a galeria), mas aparecem aqui à mesma: são fotografias como
-    // as outras, e não há razão para o admin não as poder pôr num modelo.
-    foreach (['capa' => 'hero.jpg', 'historia' => 'historia.jpg',
-              'interludio' => 'interludio.jpg', 'acesso' => 'acesso.jpg'] as $cat => $f) {
-        $out[] = ['ficheiro' => 'assets/convite/' . $f,
-                  'nome' => 'Convite de origem', 'categoria' => $cat];
     }
     return $out;
 }

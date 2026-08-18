@@ -313,10 +313,10 @@ const entrar = async (ctx, u, p) => {
   const apg = await api('modelo_exemplo_apagar', { src: arr.src });
   ok(apg && apg.success && !(apg.galeria || []).some(f => !f.da_casa),
      'as enviadas apagam-se; as da casa nao');
-  // As fotografias do convite de ORIGEM tambem estao na galeria: sao fotografias
-  // como as outras, e nao ha razao para nao se poderem por num modelo.
-  ok(gal.some(f => f.src === 'assets/convite/hero.jpg' && f.categoria === 'capa'),
-     'as fotografias do convite de origem estao na galeria');
+  // As fotografias do convite de origem (Isabel & Abednego) vivem na galeria,
+  // ao lado das outras — sem tratamento a parte.
+  ok(gal.some(f => f.src === 'assets/convite/galeria/capa-isabel-abednego.jpg' && f.categoria === 'capa'),
+     'as fotografias do convite de origem estao na galeria, com as restantes');
 
   // Uma da casa tira-se da galeria - mas escondendo, nao apagando: o ficheiro
   // vem com a instalacao e um deploy tra-lo-ia de volta.
@@ -408,7 +408,7 @@ const entrar = async (ctx, u, p) => {
   // O convite de origem é o produto, não um exemplo: continua com as suas imagens.
   const origem = await admin.evaluate(async () =>
     await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1')).text());
-  ok(/convite\/hero\.jpg/.test(origem),
+  ok(/galeria\/capa-isabel-abednego\.jpg/.test(origem),
      'e o convite de origem mantém as imagens de sempre — mexeu-se nos modelos, não no produto');
 
   await api('modelo_exemplo_guardar', exAntes.fabrica);
@@ -465,12 +465,14 @@ const entrar = async (ctx, u, p) => {
     const n = daCasaTodos.filter(m => m.ambito === amb).length;
     ok(n >= 3, `a casa traz mais do que a origem no ${amb} (${n} modelos)`);
   }
-  ok(daCasaTodos.some(m => /Desenho de origem/.test(m.nome)),
-     'e o que E a origem diz que o e, em vez de se chamar "modelo da casa"');
+  ok(daCasaTodos.some(m => m.nome === 'Isabel & Abednego'),
+     'o desenho de origem e um modelo normal, com nome proprio (Isabel & Abednego)');
+  ok(!daCasaTodos.some(m => /Desenho de origem|modelo da casa/.test(m.nome)),
+     'e ja nao ha nenhum modelo tratado a parte ("Desenho de origem"/"modelo da casa")');
 
   // Cada um deles e um desenho DIFERENTE: aplicados, dao pecas diferentes.
   await api('casamento_abrir&id=' + casal.id);
-  const digitais = daCasaTodos.filter(m => m.ambito === 'digital' && !/origem/i.test(m.nome));
+  const digitais = daCasaTodos.filter(m => m.ambito === 'digital' && m.nome !== 'Isabel & Abednego');
   const paletas = new Set();
   for (const m of digitais) {
     await api('modelo_aplicar&id=' + m.id);
@@ -487,8 +489,8 @@ const entrar = async (ctx, u, p) => {
   ok(marcados.length === 1 && +marcados[0].id === +ultimo.id,
      `a lista assinala o modelo que esta em vigor, e so esse (${marcados.map(m => m.nome).join(', ')})`);
 
-  // Voltar a origem: o modelo de origem passa a ser o assinalado.
-  const origemDig = daCasaTodos.filter(m => m.ambito === 'digital' && /origem/i.test(m.nome))[0];
+  // Voltar a origem: o modelo de origem (agora "Isabel & Abednego") passa a ser o assinalado.
+  const origemDig = daCasaTodos.filter(m => m.ambito === 'digital' && m.nome === 'Isabel & Abednego')[0];
   await api('modelo_aplicar&id=' + origemDig.id);
   const naOrigem = ((await api('modelo_lista&ambito=digital')).modelos || []).filter(m => m.em_vigor);
   ok(naOrigem.length === 1 && +naOrigem[0].id === +origemDig.id,

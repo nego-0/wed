@@ -15,6 +15,22 @@ restantes 1300×812 ou 1200×750) e o interlúdio convertido a preto e branco, q
 é como a secção o mostra. O número no nome é o da fotografia no Pexels: para
 chegar ao original, `https://www.pexels.com/photo/<número>/`.
 
+## Fotografias de origem (Isabel & Abednego)
+
+Os quatro ficheiros `*-isabel-abednego.jpg` **não** são do Pexels: são as
+fotografias do convite que o sistema traz de fábrica (o modelo «Isabel &
+Abednego»). Viviam soltas em `assets/convite/` e passaram para aqui, ao lado
+das restantes, para deixarem de ser um caso à parte.
+
+| Ficheiro | Secção |
+|---|---|
+| `capa-isabel-abednego.jpg` | Capa |
+| `historia-isabel-abednego.jpg` | História |
+| `interludio-isabel-abednego.jpg` | Interlúdio |
+| `acesso-isabel-abednego.jpg` | Passe de entrada |
+
+## Galeria do Pexels
+
 | Ficheiro | Secção | Descrição | Original |
 |---|---|---|---|
 | `capa-34371787.jpg` | Capa | Jardim ao fim da tarde | [34371787](https://www.pexels.com/photo/34371787/) |

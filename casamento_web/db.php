@@ -189,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 21;
+const ESQUEMA_VERSAO = 22;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -777,6 +777,47 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         // sua maneira. Semeadas no casamento que já existe (o nº 1); os novos
         // recebem-nas ao serem criados (ver api.php casamento_criar).
         semearOrcamento($conn, 1);
+    }
+
+    // v22 — o primeiro modelo deixa de ser especial.
+    //
+    // Os dois modelos que o sistema semeou (v15/v20) eram "Desenho de origem"
+    // com defs vazio: um caso à parte, e as suas fotografias (o convite Isabel
+    // & Abednego) viviam soltas em assets/convite/, longe das dos outros
+    // modelos. Passam a ser modelos normais — nome próprio (Isabel & Abednego)
+    // e defs completas, como um modelo do admin. As fotografias já foram
+    // realojadas na galeria (no repositório e no defsPadrao); aqui trata-se só
+    // dos dados.
+    if ($versaoAtual < 22) {
+        require_once __DIR__ . '/personalizacao.php';
+
+        // Um retrato completo do desenho de origem de cada peça, no mesmo
+        // formato de um modelo do admin (chavesModelo). As chaves de média já
+        // apontam para a galeria, porque vêm do defsPadrao novo.
+        $padrao = defsPadrao();
+        foreach (['digital', 'impresso'] as $amb) {
+            $snap = [];
+            foreach (chavesModelo($amb) as $k) $snap[$k] = (string)($padrao[$k] ?? '');
+            $defs = json_encode($snap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            // Só se ainda for o modelo semeado com o nome antigo — um nome que o
+            // admin já tenha mudado é dele.
+            $st = $conn->prepare("UPDATE {$P}modelos SET nome='Isabel & Abednego', defs=?
+                                  WHERE ambito=? AND criado_por='sistema' AND nome LIKE 'Desenho de origem%'");
+            $st->bind_param('ss', $defs, $amb); @$st->execute();
+        }
+
+        // Quem tinha escolhido à mão a foto de origem fica a apontar para o
+        // sítio novo, para o convite não ficar com uma imagem partida.
+        $realojar = [
+            'media.hero'       => ['assets/convite/hero.jpg',       'assets/convite/galeria/capa-isabel-abednego.jpg'],
+            'media.historia'   => ['assets/convite/historia.jpg',   'assets/convite/galeria/historia-isabel-abednego.jpg'],
+            'media.interludio' => ['assets/convite/interludio.jpg', 'assets/convite/galeria/interludio-isabel-abednego.jpg'],
+            'media.acesso'     => ['assets/convite/acesso.jpg',     'assets/convite/galeria/acesso-isabel-abednego.jpg'],
+        ];
+        foreach ($realojar as $chave => [$velho, $novo]) {
+            $st = $conn->prepare("UPDATE {$P}definicoes SET valor=? WHERE chave=? AND valor=?");
+            $st->bind_param('sss', $novo, $chave, $velho); @$st->execute();
+        }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

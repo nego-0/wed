@@ -60,7 +60,7 @@ const entrar = async (ctx, u, s) => {
   const n1 = await entrar(await b.newContext(), e1, 'segredo12345');
 
   const antes1 = await defs(c1.id);
-  ok(!antes1['media.hero'] || antes1['media.hero'] === 'assets/convite/hero.jpg',
+  ok(!antes1['media.hero'] || antes1['media.hero'] === 'assets/convite/galeria/capa-isabel-abednego.jpg',
      'o casal 1 começa na foto de origem');
 
   const ap1 = await n1._api('modelo_aplicar&id=' + mod.id);
