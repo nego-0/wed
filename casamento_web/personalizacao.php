@@ -296,6 +296,8 @@ function defsPadrao(): array {
         // Como o envelope se abre ao toque: portas ao meio (de origem), a
         // subir, cruzado (uma metade sobe, a outra desce) ou o selo a esvair-se.
         'capa.abertura' => 'portas',
+        // O feitio do selo do monograma: cera (de origem), anel, camafeu ou liso.
+        'capa.selo' => 'cera',
         'textos.kicker' => 'Vamos nos casar',
         'textos.hero_sub' => 'O nosso casamento',
         'textos.convite_eyebrow' => 'Venha partilhar a nossa alegria',
@@ -1465,6 +1467,9 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'capa.abertura':
             // Como o envelope se abre. Um valor que não reconheça volta ao de origem.
             return in_array($valor, ['portas','subir','cruzado','esvair'], true) ? $valor : 'portas';
+        case 'capa.selo':
+            // O feitio do selo. Desconhecido volta ao de origem (cera).
+            return in_array($valor, ['cera','anel','camafeu','liso'], true) ? $valor : 'cera';
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
@@ -1775,6 +1780,7 @@ function convitePlaceholders(array $defs): array {
         '{{MONO}}' => escP($mono),
         '{{COVER_HINT}}' => escP($defs['capa.dica']),
         '{{ABERTURA}}' => escP($defs['capa.abertura'] ?? 'portas'),
+        '{{SELO}}' => escP($defs['capa.selo'] ?? 'cera'),
         '{{NOIVA}}' => escP($noiva), '{{NOIVO}}' => escP($noivo),
         '{{CASAL_ALT}}' => escP($noiva.' e '.$noivo),
         '{{DIA}}' => $d, '{{ANO}}' => $ano,

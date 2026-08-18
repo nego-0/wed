@@ -58,15 +58,15 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(await tela().locator('#cover').isVisible(), 'e a capa continua à vista no Envelope');
   ok(await tela().locator('#cover .seal [data-def="capa.monograma"]').isVisible(), 'com o selo do monograma à vista');
 
-  // ---------- 2b. as aberturas do envelope ----------
-  const temSel = await p.locator('#props select').count() > 0;
-  ok(temSel, 'o Envelope tem o seletor de abertura');
-  await p.selectOption('#props select', 'cruzado');
+  // ---------- 2b. os selos do monograma (não animam: seguros de intercalar) ----------
+  const seloSel = p.locator('#props select').filter({ hasText: 'Camafeu' });
+  ok(await seloSel.count() > 0, 'o Envelope tem o seletor de selo do monograma');
+  await seloSel.selectOption('camafeu');
   await p.waitForTimeout(300);
-  ok(await tela().locator('#cover').getAttribute('data-abre') === 'cruzado',
-     'escolher uma abertura muda o modo do envelope na tela');
-  await p.selectOption('#props select', 'portas');   // volta ao de origem
-  await p.waitForTimeout(300);
+  ok(await tela().locator('#cover').getAttribute('data-selo') === 'camafeu',
+     'escolher um selo muda o feitio do monograma na tela');
+  await seloSel.selectOption('cera');   // volta ao de origem
+  await p.waitForTimeout(200);
 
   // ---------- 3. o painel oferece monograma e dica ----------
   ok(await p.locator('#props [data-chave="capa.monograma"]').count() === 1, 'o painel tem o campo do monograma');
@@ -94,6 +94,17 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForTimeout(500);
   ok(/^[A-Z]&[A-Z]$/.test((await tela().locator('#cover .seal [data-def="capa.monograma"]').innerText()).trim()),
      'apagar o monograma volta às iniciais automáticas');
+
+  // ---------- 5b. as aberturas do envelope (a pré-visualização anima a capa) ----------
+  // Fica para o fim das leituras do selo: jogar a animação esconde a capa ~2s
+  // (o #cover atrasa a volta à vista), e uma leitura a meio sairia vazia.
+  const abreSel = p.locator('#props select').filter({ hasText: 'Portas ao meio' });
+  ok(await abreSel.count() > 0, 'o Envelope tem o seletor de abertura');
+  await abreSel.selectOption('cruzado');
+  await p.waitForTimeout(300);
+  ok(await tela().locator('#cover').getAttribute('data-abre') === 'cruzado',
+     'escolher uma abertura muda o modo do envelope na tela');
+  await abreSel.selectOption('portas');   // volta ao de origem
 
   // ---------- 5. editar a dica ----------
   await p.fill('#props [data-chave="capa.monograma"]', 'I♥A');   // deixa um monograma para gravar

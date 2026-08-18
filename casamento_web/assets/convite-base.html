@@ -50,6 +50,19 @@ img{display:block}
 #cover .seal{width:150px;height:150px;margin:0 auto 28px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#E4C795,#B4864A 55%,#8A6031 100%);box-shadow:0 14px 44px rgba(0,0,0,.5),inset 0 2px 6px rgba(255,255,255,.35),inset 0 -4px 10px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;position:relative;animation:sealPulse 3.4s ease-in-out infinite}
 #cover .seal::before{content:"";position:absolute;inset:11px;border-radius:50%;border:1px solid rgba(251,248,241,.55)}
 #cover .seal span{font-family:var(--f-script);font-size:54px;color:var(--forest-deep);transform:translateY(-4px)}
+/* Selos alternativos do monograma. "cera" é o de origem (regras acima); os
+   outros trocam o feitio do disco. Um data-selo desconhecido fica na cera. */
+/* anel: aro dourado aberto, sem cera, iniciais em ouro */
+#cover[data-selo="anel"] .seal{background:none;box-shadow:none;border:3px solid var(--gold-soft)}
+#cover[data-selo="anel"] .seal::before{inset:8px;border-color:rgba(217,188,140,.45)}
+#cover[data-selo="anel"] .seal span{color:var(--gold-soft)}
+/* camafeu: disco escuro (verde da mata), iniciais e aro em ouro */
+#cover[data-selo="camafeu"] .seal{background:radial-gradient(circle at 34% 30%,#2b4838,var(--forest-deep) 72%);box-shadow:0 14px 44px rgba(0,0,0,.5),inset 0 2px 6px rgba(255,255,255,.08),inset 0 -4px 10px rgba(0,0,0,.45)}
+#cover[data-selo="camafeu"] .seal::before{border-color:rgba(217,188,140,.6)}
+#cover[data-selo="camafeu"] .seal span{color:var(--gold-soft)}
+/* liso: ouro fosco, sem brilho nem aro — o mais discreto */
+#cover[data-selo="liso"] .seal{background:#C79A5A;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#cover[data-selo="liso"] .seal::before{display:none}
 @keyframes sealPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
 #cover .cover-names{display:flex;flex-direction:column;align-items:center;gap:2px;margin-bottom:22px}
 .cn-name{font-family:var(--f-serif);font-size:clamp(22px,5vw,30px);letter-spacing:.4em;text-transform:uppercase;color:var(--gold-pale);font-weight:500;text-indent:.4em}
@@ -318,7 +331,7 @@ footer .fnote{margin-top:26px;font-family:var(--f-serif);font-style:italic;font-
 <style id="tema">{{TEMA_VARS}}</style>
 </head>
 <body>
-<div id="cover" data-abre="{{ABERTURA}}" role="button" tabindex="0" aria-label="Toque para abrir o convite">
+<div id="cover" data-abre="{{ABERTURA}}" data-selo="{{SELO}}" role="button" tabindex="0" aria-label="Toque para abrir o convite">
   <div class="gate left"></div>
   <div class="gate right"></div>
   <div class="seal-wrap">

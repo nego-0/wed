@@ -862,6 +862,7 @@ function renderPropsCapa(){
   h += campoHTML('capa.monograma');
   h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
         O monograma aparece no selo, no separador do convite e no rodapé.</div>`;
+  h += seloHTML();
   h += campoHTML('capa.dica');
   h += aberturaHTML();
   h += `<div class="sel-nada" style="margin-top:.7rem;line-height:1.5">Os <b>nomes</b> e a <b>data</b> na capa vêm da camada
@@ -886,6 +887,21 @@ function mudarAbertura(v){
   marcarSujo(true); registarPasso();
   // Mostra a abertura escolhida na tela, sem recarregar: joga a animação uma vez.
   enviarTela({tipo:'capa_previa', abre:v});
+}
+// Os feitios do selo do monograma, pela mesma ordem que o servidor aceita.
+const SELOS = [['cera','Cera'],['anel','Anel'],['camafeu','Camafeu'],['liso','Liso']];
+function seloHTML(){
+  const atual = EST.val['capa.selo'] || 'cera';
+  const ops = SELOS.map(([v,r])=>`<option value="${v}"${v===atual?' selected':''}>${esc(r)}</option>`).join('');
+  return `<div class="campo"><label>Selo do monograma</label>
+    <select onchange="mudarSelo(this.value)">${ops}</select>
+    <div class="dica-md">O desenho do selo na capa. Escolha para o ver na tela.</div></div>`;
+}
+function mudarSelo(v){
+  if (!SELOS.some(([k])=>k===v)) v = 'cera';
+  EST.val['capa.selo'] = v;
+  marcarSujo(true); registarPasso();
+  enviarTela({tipo:'capa_selo', selo:v});   // troca o feitio na tela, sem recarregar
 }
 function campoHTML(chave){
   const [rot, tipo, max] = CAMPOS[chave];
@@ -1411,8 +1427,8 @@ function marcarInvalidos(inv){
 
 function reporSeccao(){
   if (SEC === CAPA_ID){
-    if (!confirm('Repor o monograma, a dica e a abertura originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
-    ['capa.monograma','capa.dica','capa.abertura'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
+    if (!confirm('Repor o monograma, o selo, a dica e a abertura originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
+    ['capa.monograma','capa.selo','capa.dica','capa.abertura'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
     marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
     return msg('Envelope reposto — por guardar. Ctrl+Z desfaz.');
   }

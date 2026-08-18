@@ -281,6 +281,11 @@ function pontelEditor(): string {
       clearTimeout(capa._reseal);
       capa._reseal = setTimeout(function(){ capa.classList.remove('open'); }, 2200);
     }
+    // Trocar o feitio do selo: muda na hora, sem recarregar nem abrir.
+    if (d.tipo === 'capa_selo' && capa){
+      capa.setAttribute('data-selo', d.selo || 'cera');
+      mostrarCapa(true);
+    }
     // Cores e enquadramento entram como variáveis CSS: mudam a peça sem a
     // voltar a pedir ao servidor.
     if (d.tipo === 'tema' || d.tipo === 'foco'){
