@@ -50,6 +50,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e é o único — uma só peça de origem por peça');
   ok((await nomeOrigem()).nome === 'Isabel & Abednego',
      'a linha de origem das versões dá o nome desse modelo');
+  ok(isabel && isabel.de_fabrica === true && isabel.protegido === true,
+     'o ficheiro de fábrica está assinalado e protegido de apagar');
+
+  // ---------- 0b. o ficheiro de origem de fábrica NÃO se apaga ----------
+  const apFab = await api('modelo_apagar&id=' + isabel.id, {});
+  ok(apFab && apFab.success === false && /origem de fábrica/.test(apFab.message || ''),
+     'apagar o ficheiro de origem de fábrica é recusado');
 
   // ---------- 1. o admin passa a origem para outro modelo ----------
   const borgonha = mods.find(m => m.nome === 'Borgonha');
@@ -66,6 +73,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(mods.filter(m => m.de_origem).length === 1, 'continua a ser um só');
   ok((await nomeOrigem()).nome === 'Borgonha',
      'a linha de origem das versões passa a dar «Borgonha»');
+  // Designado, «Borgonha» fica protegido; e o ficheiro de fábrica continua protegido.
+  const bMarc = mods.find(m => m.id === borgonha.id);
+  const iMarc = mods.find(m => m.id === isabel.id);
+  ok(bMarc && bMarc.protegido === true, 'o modelo designado fica protegido de apagar');
+  ok(iMarc && iMarc.de_fabrica === true && iMarc.protegido === true,
+     'e o ficheiro de fábrica continua protegido, ainda que outro seja a origem');
+  const apDes = await api('modelo_apagar&id=' + borgonha.id, {});
+  ok(apDes && apDes.success === false && /definido como peça de origem/.test(apDes.message || ''),
+     'apagar o modelo designado como origem é recusado');
+  const apFab2 = await api('modelo_apagar&id=' + isabel.id, {});
+  ok(apFab2 && apFab2.success === false,
+     'e o ficheiro de fábrica continua sem se poder apagar');
 
   // ---------- 2. «voltar à origem» repõe o desenho de «Borgonha» ----------
   await api('versao_aplicar&ambito=digital&id=0', {});
@@ -96,6 +115,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const mods2 = await listaDig();
   ok(mods2.find(m => m.id === isabel.id).de_origem === true,
      'que volta a aparecer assinalado como peça de origem');
+  ok(mods2.find(m => m.id === borgonha.id).protegido === false,
+     'e «Borgonha», já sem a designação, volta a poder apagar-se');
 
   // ---------- limpeza: repor a designação semeada e apagar o casal ----------
   await api('modelo_pecaorigem&ambito=digital&id=' + isabel.id, {});   // repõe o estado semeado

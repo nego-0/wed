@@ -298,29 +298,17 @@ function definirPecaOrigem(mysqli $conn, string $ambito, int $id): void {
 }
 
 /**
- * O modelo da casa que É a peça de origem deste âmbito.
- *
- * Primeiro, o que o admin escolheu (modelo.pecaorigem.<ambito>). Se não
- * escolheu nenhum — ou o que escolheu já não existe —, cai no que traz o
- * desenho de origem de fábrica, encontrado pelo DESENHO (não pelo nome, para
- * o reconhecer mesmo depois de renomeado). Null se não houver nenhum.
+ * O modelo de fábrica de um âmbito: o que traz o desenho de origem, semeado
+ * pelo sistema. Acha-se pelo DESENHO (não pelo nome, para o reconhecer mesmo
+ * depois de renomeado). É o «ficheiro de origem» — a rede de segurança que
+ * existe sempre e nunca se apaga, esteja ou não designado como peça de origem.
+ * Null se não houver nenhum.
  */
-function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
+function modeloDeFabrica(mysqli $conn, string $ambito): ?array {
     global $P;
     static $cache = [];
     if (array_key_exists($ambito, $cache)) return $cache[$ambito];
     $ambEsc = $conn->real_escape_string($ambito);
-
-    // 1) A escolha do admin.
-    $esc = pecaOrigemId($conn, $ambito);
-    if ($esc > 0) {
-        $st = $conn->prepare("SELECT id, nome FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
-        $st->bind_param('is', $esc, $ambito); $st->execute();
-        if ($m = $st->get_result()->fetch_assoc()) {
-            return $cache[$ambito] = ['id' => (int)$m['id'], 'nome' => (string)$m['nome']];
-        }
-    }
-    // 2) O modelo de fábrica, pelo desenho de origem.
     $origem = padraoDesenho($ambito);
     $r = @$conn->query("SELECT id, nome, defs FROM {$P}modelos
                         WHERE ambito='$ambEsc' AND criado_por='sistema'");
@@ -332,6 +320,48 @@ function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
         }
     }
     return $cache[$ambito] = $achado;
+}
+
+/**
+ * O modelo da casa que É a peça de origem deste âmbito.
+ *
+ * Primeiro, o que o admin escolheu (modelo.pecaorigem.<ambito>). Se não
+ * escolheu nenhum — ou o que escolheu já não existe —, cai no modelo de
+ * fábrica (o ficheiro de origem). Null se não houver nenhum.
+ */
+function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
+    global $P;
+    static $cache = [];
+    if (array_key_exists($ambito, $cache)) return $cache[$ambito];
+
+    // 1) A escolha do admin.
+    $esc = pecaOrigemId($conn, $ambito);
+    if ($esc > 0) {
+        $st = $conn->prepare("SELECT id, nome FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+        $st->bind_param('is', $esc, $ambito); $st->execute();
+        if ($m = $st->get_result()->fetch_assoc()) {
+            return $cache[$ambito] = ['id' => (int)$m['id'], 'nome' => (string)$m['nome']];
+        }
+    }
+    // 2) O modelo de fábrica, pelo desenho de origem.
+    return $cache[$ambito] = modeloDeFabrica($conn, $ambito);
+}
+
+/**
+ * Este modelo não se pode apagar por ser peça de origem? Devolve a razão (para
+ * a mensagem), ou null se for apagável.
+ *
+ * Protegidos: o modelo de fábrica de cada âmbito (a rede de segurança, sempre),
+ * e o que o admin tiver designado como peça de origem (enquanto o estiver).
+ */
+function razaoProtecaoOrigem(mysqli $conn, int $id, string $ambito): ?string {
+    if ($id <= 0) return null;
+    $fab = modeloDeFabrica($conn, $ambito);
+    if ($fab && (int)$fab['id'] === $id)
+        return 'é a peça de origem de fábrica — o ponto de regresso que existe sempre e não se apaga';
+    if (pecaOrigemId($conn, $ambito) === $id)
+        return 'está definido como peça de origem — retire-lhe essa designação para o poder apagar';
+    return null;
 }
 
 /** O desenho de um modelo (por id), no formato de um instantâneo. Null se não existir. */

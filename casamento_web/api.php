@@ -2566,10 +2566,13 @@ if ($acao === 'modelo_lista') {
     // Qual modelo é a peça de origem de cada âmbito é uma verdade da CASA (a
     // designação vive no 0), independente de haver casamento aberto — o admin
     // tem de a ver na página dos modelos mesmo sem um casamento à frente.
-    $atual = []; $vigorId = []; $origemId = []; $naOrigem = [];
+    $atual = []; $vigorId = []; $origemId = []; $naOrigem = []; $fabricaId = []; $designadaId = [];
     foreach (array_keys(ambitosVersao()) as $amb) {
         $o = modeloDeOrigem($conn, $amb);
         $origemId[$amb] = $o ? (int)$o['id'] : 0;
+        $fab = modeloDeFabrica($conn, $amb);
+        $fabricaId[$amb] = $fab ? (int)$fab['id'] : 0;
+        $designadaId[$amb] = pecaOrigemId($conn, $amb);
     }
     if (casamentoAtual() > 0) {
         foreach (array_keys(ambitosVersao()) as $amb) {
@@ -2584,6 +2587,11 @@ if ($acao === 'modelo_lista') {
         $m['mesmo_desenho'] = false;
         // Este modelo é a peça de origem deste âmbito? (Assinala-o no painel.)
         $m['de_origem'] = isset($origemId[$amb]) && (int)$m['id'] === $origemId[$amb];
+        // É o ficheiro de origem de fábrica (a rede de segurança de sempre)?
+        $m['de_fabrica'] = isset($fabricaId[$amb]) && (int)$m['id'] === $fabricaId[$amb];
+        // Protegido de apagar: o de fábrica, ou o designado como origem.
+        $m['protegido'] = $m['de_fabrica']
+            || (isset($designadaId[$amb]) && (int)$m['id'] === $designadaId[$amb]);
         if (isset($atual[$amb])) {
             // «Mesmo desenho»: aplicá-lo seria um não-fazer-nada visível. «Em
             // vigor»: é ESTE o modelo que foi aplicado, e o desenho continua o
@@ -2951,10 +2959,14 @@ if ($acao === 'modelo_defs') {
 if ($acao === 'modelo_apagar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga modelos.');
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("SELECT nome FROM {$P}modelos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, ambito FROM {$P}modelos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
     if (!$m) erro('Modelo não encontrado.');
+    // A peça de origem não se apaga: nem o ficheiro de origem de fábrica, nem o
+    // modelo que o admin tenha designado como origem enquanto o estiver.
+    $razao = razaoProtecaoOrigem($conn, $id, (string)$m['ambito']);
+    if ($razao !== null) erro('«' . $m['nome'] . '» ' . $razao . '.');
     $st = $conn->prepare("DELETE FROM {$P}modelos WHERE id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar.');
