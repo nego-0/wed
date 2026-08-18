@@ -293,6 +293,9 @@ function defsPadrao(): array {
         // Monograma vazio = as iniciais dos nomes (ex.: "I&A"); pode dar-se um à mão.
         'capa.monograma' => '',
         'capa.dica' => 'Toque para abrir',
+        // Como o envelope se abre ao toque: portas ao meio (de origem), a
+        // subir, cruzado (uma metade sobe, a outra desce) ou o selo a esvair-se.
+        'capa.abertura' => 'portas',
         'textos.kicker' => 'Vamos nos casar',
         'textos.hero_sub' => 'O nosso casamento',
         'textos.convite_eyebrow' => 'Venha partilhar a nossa alegria',
@@ -1459,6 +1462,9 @@ function validarDefinicao(string $chave, string $valor): ?string {
             // Vazio volta ao "Toque para abrir" (guardarDefinicoes repõe o default),
             // para a capa não ficar sem indicação de que se toca para abrir.
             return mb_substr($valor, 0, 40);
+        case 'capa.abertura':
+            // Como o envelope se abre. Um valor que não reconheça volta ao de origem.
+            return in_array($valor, ['portas','subir','cruzado','esvair'], true) ? $valor : 'portas';
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
@@ -1768,6 +1774,7 @@ function convitePlaceholders(array $defs): array {
         '{{TITLE}}' => escP($casal.' — '.$dataExt),
         '{{MONO}}' => escP($mono),
         '{{COVER_HINT}}' => escP($defs['capa.dica']),
+        '{{ABERTURA}}' => escP($defs['capa.abertura'] ?? 'portas'),
         '{{NOIVA}}' => escP($noiva), '{{NOIVO}}' => escP($noivo),
         '{{CASAL_ALT}}' => escP($noiva.' e '.$noivo),
         '{{DIA}}' => $d, '{{ANO}}' => $ano,

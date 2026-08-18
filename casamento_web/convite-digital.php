@@ -270,6 +270,17 @@ function pontelEditor(): string {
     }
     // Mostrar ou esconder a capa que abre, conforme a camada escolhida.
     if (d.tipo === 'capa'){ mostrarCapa(!!d.mostrar); }
+    // Pré-ver uma abertura: troca o modo, mostra a capa e joga a animação uma
+    // vez — depois volta a fechar-se, pronta para a próxima escolha.
+    if (d.tipo === 'capa_previa' && capa){
+      capa.setAttribute('data-abre', d.abre || 'portas');
+      mostrarCapa(true);
+      capa.classList.remove('open');
+      void capa.offsetWidth;                 // reinicia a transição
+      requestAnimationFrame(function(){ capa.classList.add('open'); });
+      clearTimeout(capa._reseal);
+      capa._reseal = setTimeout(function(){ capa.classList.remove('open'); }, 2200);
+    }
     // Cores e enquadramento entram como variáveis CSS: mudam a peça sem a
     // voltar a pedir ao servidor.
     if (d.tipo === 'tema' || d.tipo === 'foco'){

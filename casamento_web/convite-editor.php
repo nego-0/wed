@@ -396,7 +396,7 @@ function novoId(){
   return id;
 }
 
-let SEC = 'hero';      // camada selecionada
+let SEC = CAPA_ID;     // camada selecionada — abre no Envelope, a porta de entrada
 let DEF = null;        // texto selecionado dentro dela
 let SUJO = false;
 let telaPronta = false;
@@ -863,11 +863,29 @@ function renderPropsCapa(){
   h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
         O monograma aparece no selo, no separador do convite e no rodapé.</div>`;
   h += campoHTML('capa.dica');
+  h += aberturaHTML();
   h += `<div class="sel-nada" style="margin-top:.7rem;line-height:1.5">Os <b>nomes</b> e a <b>data</b> na capa vêm da camada
         <b>Capa</b> e da data do evento — mudam-se aí, e a capa acompanha.</div>`;
   h += painelLivre(CAPA_ID);
   $('props').innerHTML = h;
   if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
+}
+// As aberturas do envelope, pela mesma ordem que o servidor aceita.
+const ABERTURAS = [['portas','Portas ao meio'],['subir','A subir'],
+                   ['cruzado','Cruzado'],['esvair','A esvair-se']];
+function aberturaHTML(){
+  const atual = EST.val['capa.abertura'] || 'portas';
+  const ops = ABERTURAS.map(([v,r])=>`<option value="${v}"${v===atual?' selected':''}>${esc(r)}</option>`).join('');
+  return `<div class="campo"><label>Abertura</label>
+    <select onchange="mudarAbertura(this.value)">${ops}</select>
+    <div class="dica-md">Como o envelope se abre ao toque. Toque no seletor para ver cada uma na tela.</div></div>`;
+}
+function mudarAbertura(v){
+  if (!ABERTURAS.some(([k])=>k===v)) v = 'portas';
+  EST.val['capa.abertura'] = v;
+  marcarSujo(true); registarPasso();
+  // Mostra a abertura escolhida na tela, sem recarregar: joga a animação uma vez.
+  enviarTela({tipo:'capa_previa', abre:v});
 }
 function campoHTML(chave){
   const [rot, tipo, max] = CAMPOS[chave];
@@ -1393,8 +1411,8 @@ function marcarInvalidos(inv){
 
 function reporSeccao(){
   if (SEC === CAPA_ID){
-    if (!confirm('Repor o monograma e a dica originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
-    ['capa.monograma','capa.dica'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
+    if (!confirm('Repor o monograma, a dica e a abertura originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
+    ['capa.monograma','capa.dica','capa.abertura'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
     marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
     return msg('Envelope reposto — por guardar. Ctrl+Z desfaz.');
   }

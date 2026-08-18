@@ -51,12 +51,22 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(await p.locator('#camadas .camada').first().getAttribute('draggable') === 'false',
      'o envelope é fixo — não se arrasta nem se esconde');
 
-  // ---------- 2. escolher o envelope mostra a capa na tela ----------
-  ok(!(await tela().locator('#cover').isVisible()), 'antes de escolher, a capa está escondida (vê-se o conteúdo)');
-  await p.locator('#camadas .camada:has-text("Envelope")').click();
+  // ---------- 2. o editor abre no envelope: a capa aparece primeiro ----------
+  ok(await tela().locator('#cover').isVisible(), 'o editor abre no Envelope — a capa selada aparece primeiro');
+  await p.locator('#camadas .camada:has-text("Envelope")').click();   // garante a seleção
   await p.waitForTimeout(600);
-  ok(await tela().locator('#cover').isVisible(), 'escolher o envelope revela a capa selada');
+  ok(await tela().locator('#cover').isVisible(), 'e a capa continua à vista no Envelope');
   ok(await tela().locator('#cover .seal [data-def="capa.monograma"]').isVisible(), 'com o selo do monograma à vista');
+
+  // ---------- 2b. as aberturas do envelope ----------
+  const temSel = await p.locator('#props select').count() > 0;
+  ok(temSel, 'o Envelope tem o seletor de abertura');
+  await p.selectOption('#props select', 'cruzado');
+  await p.waitForTimeout(300);
+  ok(await tela().locator('#cover').getAttribute('data-abre') === 'cruzado',
+     'escolher uma abertura muda o modo do envelope na tela');
+  await p.selectOption('#props select', 'portas');   // volta ao de origem
+  await p.waitForTimeout(300);
 
   // ---------- 3. o painel oferece monograma e dica ----------
   ok(await p.locator('#props [data-chave="capa.monograma"]').count() === 1, 'o painel tem o campo do monograma');
