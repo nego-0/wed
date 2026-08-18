@@ -68,6 +68,8 @@ Entram com **admin / noivos2026**.
 | `chk_contas.js`         | registo público e aprovação, códigos de suporte (ver / corrigir / revogar), equipa do casamento e contas suspensas |
 | `chk_editor_avancado.js`| desenhar modelos sem casa emprestada, camadas trancadas que resistem ao arrasto, e o ponto focal que se cola às guias |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
+| `chk_modelo_versao.js`  | a peça chama o modelo pelo nome (em vigor e com alterações), e alterá-lo obriga a uma versão do casal, com nome, que mais ninguém vê |
+| `chk_orcamento.js`      | o curso das despesas: contas do resumo, isolamento entre casamentos, a ida e volta no export/import, e o teto pelos formulários de registo e pela Gestão |
 | `chk_floreados.js`      | os floreados abraçam os nomes no sítio que o desenho de origem lhes deu, o clássico é o traço da referência ponto por ponto, e os cinco feitios ficam todos na mesma âncora |
 | `chk_ornamentos.js`     | as cinco volutas de canto e os seis elos entre os nomes: cada uma cabe na sua caixa, o elo fica centrado, e as escolhas chegam à folha de cartões e ao manual |
 | `chk_cerimonias.js`     | cerimónias que se acrescentam e removem nas duas peças, cronograma que se rearranja, e a hora vazia que já não é meia-noite |

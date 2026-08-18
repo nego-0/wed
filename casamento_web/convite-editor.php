@@ -1289,7 +1289,9 @@ function renderVersoes(){
     ambito: 'digital',
     alvo:   'bt-versao',
     sujo:   () => SUJO,
-    gravar: guardar,          // grava as edições do ecrã antes de as fotografar na versão
+    // Grava as edições do ecrã antes de as fotografar na versão. Sem a guarda
+    // do desenho da casa: o painel já pediu o nome e cria a versão a seguir.
+    gravar: () => guardar({ semProteger: true }),
     msg,
     aoAplicar: () => setTimeout(()=>{ SUJO = false; location.reload(); }, 700)
   });
@@ -1393,7 +1395,7 @@ function serializarTudo(){
   return fora;
 }
 
-async function guardar(){
+async function guardar(opcoes){
   const v = serializar();
   // Só o que este editor governa, e só o que mudou: assim não pisa o cartão
   // impresso nem reescreve definições que ninguém tocou.
@@ -1404,16 +1406,31 @@ async function guardar(){
     if (novo !== String(ATUAIS[k] ?? '')) defs[k] = novo;
   });
   if (!Object.keys(defs).length){ msg('Não há alterações por guardar.'); marcarSujo(false); return true; }
-  const d = MODELO
+  // A guarda do desenho da casa não se aplica quando quem grava é o painel de
+  // versões: ele já pediu o nome e cria a versão logo a seguir.
+  const proteger = !MODELO && !(opcoes && opcoes.semProteger);
+  let d = MODELO
     ? await api('modelo_defs&id=' + MODELO.id, {method:'POST', body:JSON.stringify({defs: serializarTudo()})})
-    : await api('defs_save', {method:'POST', body:JSON.stringify({defs})});
+    : await api('defs_save', {method:'POST', body:JSON.stringify({defs, proteger_desenho:proteger}), semAviso:proteger});
+  // O desenho é da casa (um modelo, ou a peça de origem): as alterações do
+  // casal não se escrevem por cima dele — nascem como versão sua, com nome.
+  let nascida = null;
+  if (d && d.precisa_versao){
+    const nome = (prompt(d.message + '\n\nNome da sua versão:', '') || '').trim();
+    if (!nome){ msg('Por guardar: as alterações a um desenho da casa precisam de uma versão com nome.'); return false; }
+    d = await api('defs_save', {method:'POST',
+                                body:JSON.stringify({defs, proteger_desenho:true, versao_nome:nome})});
+    nascida = d && d.success ? (d.versao || null) : null;
+  }
   if (!d.success){ msg(d.message || 'Erro ao guardar.'); return false; }
   const inv = d.invalidas || [];
   Object.keys(defs).forEach(k=>{ if (!inv.includes(k)) ATUAIS[k] = defs[k]; });
   marcarSujo(false);
   marcarInvalidos(inv);
   msg(inv.length ? `Guardado, mas ${inv.length} campo(s) não foram aceites: ${inv.map(rotuloDe).join(', ')}.`
-                 : (MODELO ? 'Modelo guardado.' : 'Convite guardado.'));
+                 : (nascida ? `Guardado na sua versão «${nascida.nome}».`
+                            : (MODELO ? 'Modelo guardado.' : 'Convite guardado.')));
+  if (nascida) renderVersoes();      // o painel passa a mostrar a versão nova em vigor
   recarregarTela();
   return inv.length === 0;
 }

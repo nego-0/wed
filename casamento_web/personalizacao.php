@@ -182,15 +182,93 @@ function marcarModeloEmVigor(mysqli $conn, string $ambito, int $id): void {
     $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)
                           ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
     $st->bind_param('iss', $cid, $chave, $v); $st->execute();
+    // Passa a ser este o modelo de onde a peça vem: a proveniência antiga morre.
+    esquecerDefCasamento($conn, 'modelo.origem.' . $ambito);
 }
 
-function esquecerModeloEmVigor(mysqli $conn, string $ambito): void {
+/** Apaga uma definição deste casamento. */
+function esquecerDefCasamento(mysqli $conn, string $chave): void {
     global $P;
     $cid = casamentoAtual();
     if ($cid <= 0) return;
-    $chave = 'modelo.vigor.' . $ambito;
     $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=? AND chave=?");
     $st->bind_param('is', $cid, $chave); $st->execute();
+}
+
+/**
+ * O modelo deixa de estar EM VIGOR.
+ *
+ * Com $guardarOrigem, não se esquece de todo: o id passa para
+ * 'modelo.origem.<âmbito>'. É a diferença entre "o desenho já não é puramente o
+ * dele" (uma edição à mão) e "o desenho passou a vir de outro lado" (aplicar
+ * uma versão). No primeiro caso a peça continua a DERIVAR do modelo, e é esse
+ * o nome que se lhe há de dar — dizer "Original" quando o casal escolheu
+ * «Borgonha» é nomear a peça errada.
+ */
+function esquecerModeloEmVigor(mysqli $conn, string $ambito, bool $guardarOrigem = false): void {
+    global $P;
+    $cid = casamentoAtual();
+    if ($cid <= 0) return;
+    if ($guardarOrigem) {
+        $id = modeloEmVigorId($conn, $ambito);
+        if ($id > 0) {
+            $chave = 'modelo.origem.' . $ambito; $v = (string)$id;
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)
+                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+            $st->bind_param('iss', $cid, $chave, $v); $st->execute();
+        }
+    } else {
+        esquecerDefCasamento($conn, 'modelo.origem.' . $ambito);
+    }
+    esquecerDefCasamento($conn, 'modelo.vigor.' . $ambito);
+}
+
+/** O modelo de onde a peça veio: o que está em vigor, ou o último aplicado. */
+function modeloProvenienciaId(mysqli $conn, string $ambito): int {
+    global $P;
+    $id = modeloEmVigorId($conn, $ambito);
+    if ($id > 0) return $id;
+    $cid = casamentoAtual();
+    if ($cid <= 0) return 0;
+    $chave = 'modelo.origem.' . $ambito;
+    $st = $conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=? AND chave=? LIMIT 1");
+    $st->bind_param('is', $cid, $chave); $st->execute();
+    $r = $st->get_result()->fetch_row();
+    return $r ? (int)$r[0] : 0;
+}
+
+/** O desenho de um modelo — só as chaves que ele impõe a quem o aplica. */
+function desenhoDoModelo(string $ambito, string $defsJson): array {
+    $j = json_decode($defsJson, true);
+    $permitidas = array_flip(chavesDesenho($ambito));
+    $out = [];
+    if (is_array($j)) foreach ($j as $k => $v) {
+        if (isset($permitidas[$k]) && is_string($v)) $out[$k] = $v;
+    }
+    return $out;
+}
+
+/** Aplicar este modelo à peça, tal como ela está, não mudaria nada? */
+function modeloIgualAPeca(string $ambito, string $defsJson, array $atual): bool {
+    return array_merge($atual, padraoDesenho($ambito), desenhoDoModelo($ambito, $defsJson)) == $atual;
+}
+
+/**
+ * O modelo de onde a peça veio, com nome: ['id','nome','exato'].
+ * 'exato' diz se o desenho ainda é o dele, ou se já se lhe mexeu por cima.
+ * Null quando a peça não veio de modelo nenhum (ou ele foi apagado entretanto).
+ */
+function modeloDaPeca(mysqli $conn, string $ambito): ?array {
+    global $P;
+    $id = modeloProvenienciaId($conn, $ambito);
+    if ($id <= 0) return null;
+    $st = $conn->prepare("SELECT id, nome, defs FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('is', $id, $ambito); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) return null;
+    return ['id' => (int)$m['id'], 'nome' => (string)$m['nome'],
+            'exato' => modeloIgualAPeca($ambito, (string)$m['defs'], instantaneoAmbito($conn, $ambito))];
 }
 
 /**
@@ -845,16 +923,57 @@ function versaoEstado(mysqli $conn, string $ambito): array {
         }
         if ((int)$v['predefinida'] === 1 && $escolhida === null) $escolhida = $v;
     }
-    // Nenhuma versão guardada bate certo — mas a peça pode estar tal como veio
-    // de origem, que é uma versão como as outras (só que não se apaga).
+    // Nenhuma versão guardada bate certo — mas a peça pode vir de um MODELO, e
+    // esse tem nome próprio. Chamar-lhe "Original" era nomear a peça errada:
+    // quem escolheu «Borgonha» quer ler «Borgonha», em vigor ou com alterações.
+    //
+    // Vem antes da versão escolhida de propósito: aplicar uma versão esquece o
+    // modelo (ver esquecerModeloEmVigor), por isso um modelo conhecido aqui é
+    // sempre mais recente do que a última versão aplicada.
+    $mod = modeloDaPeca($conn, $ambito);
+    if ($mod && $mod['exato']) {
+        return ['estado' => 'vigor', 'nome' => $mod['nome'],
+                'id' => VERSAO_PADRAO_ID, 'modelo' => true];
+    }
+    // Ou tal como veio de origem, que é uma versão como as outras (só que não
+    // se apaga).
     if (noPadrao($conn, $ambito)) {
         return ['estado' => 'vigor', 'nome' => VERSAO_PADRAO_NOME, 'id' => VERSAO_PADRAO_ID];
+    }
+    if ($mod) {
+        return ['estado' => 'alterada', 'nome' => $mod['nome'],
+                'id' => VERSAO_PADRAO_ID, 'modelo' => true];
     }
     if ($escolhida) {
         return ['estado' => 'alterada', 'nome' => $escolhida['nome'], 'id' => (int)$escolhida['id']];
     }
     // Sem versão aplicada conhecida, a peça derivou do original.
     return ['estado' => 'alterada', 'nome' => VERSAO_PADRAO_NOME, 'id' => VERSAO_PADRAO_ID];
+}
+
+/**
+ * A peça está pousada num MODELO da casa, e não numa versão do casal?
+ *
+ * É a pergunta que decide se uma alteração pode ser gravada por cima ou se tem
+ * de nascer como versão própria. Um modelo serve todos os casais: o que um
+ * casal lhe muda é dele, e tem de passar a ter nome dele.
+ *
+ * A peça de origem, essa, não conta: quem nunca escolheu modelo nenhum está a
+ * fazer o seu convite do princípio, e não a mexer no desenho de outrem. Só
+ * quando o casal escolhe um modelo é que há um desenho da casa a proteger.
+ */
+function pecaEmModeloDaCasa(mysqli $conn, string $ambito): bool {
+    global $P;
+    if (modeloDaPeca($conn, $ambito) === null) return false;   // não veio de modelo nenhum
+    $st = $conn->prepare("SELECT defs FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=?");
+    if ($st) {
+        $st->bind_param('s', $ambito); $st->execute();
+        foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $v) {
+            // Numa versão sua, o casal manda: grava por cima à vontade.
+            if (versaoIgualAoAtual($conn, $ambito, $v['defs'])) return false;
+        }
+    }
+    return true;
 }
 
 /**

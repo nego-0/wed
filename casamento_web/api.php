@@ -510,17 +510,53 @@ if (in_array($acao, acoesDeEscrita(), true)) {
 if ($acao === 'defs_save') {
     $d = corpo();
     $defs = is_array($d['defs'] ?? null) ? $d['defs'] : [];
-    $r = guardarDefinicoes($conn, $defs);
-    // Mexer no desenho à mão tira o modelo de vigor: o que a peça mostra deixou
-    // de ser puramente o dele. (Se voltarem ao desenho exato do modelo, a lista
-    // volta a marcá-lo — a marca confirma-se contra o desenho, não fica presa.)
-    if ($r['gravadas'] || $r['repostas']) {
-        foreach (array_keys(ambitosVersao()) as $amb) esquecerModeloEmVigor($conn, $amb);
+    $nomeVersao = mb_substr(trim((string)($d['versao_nome'] ?? '')), 0, 80);
+    // Os editores pedem a guarda do desenho da casa; quem chama a API em cru
+    // (a Gestão, os cartões, uma prova) grava como sempre gravou.
+    $proteger = !empty($d['proteger_desenho']);
+
+    // Que peças é que esta gravação toca no DESENHO. Só o desenho está em
+    // causa: os dados do casamento (nomes, datas, locais) são do casal e
+    // gravam-se sempre — quem os escreve é a Gestão, não quem mexe num modelo.
+    $tocaDesenho = [];
+    foreach (array_keys(ambitosVersao()) as $amb) {
+        $desenho = array_flip(chavesDesenho($amb));
+        foreach (array_keys($defs) as $k) {
+            if (isset($desenho[$k])) { $tocaDesenho[] = $amb; break; }
+        }
     }
-    // Alterar o convite passa a deixar rasto, como já acontece com os convites.
+
+    // Um MODELO da casa não se reescreve por baixo: ele serve todos os casais,
+    // e as alterações deste casal nascem como versão dele, com nome. Sem nome
+    // não se grava nada; o editor pede-o e volta a tentar.
+    if ($proteger && $nomeVersao === '' && $tocaDesenho) {
+        $daCasa = array_values(array_filter($tocaDesenho,
+                    fn($amb) => pecaEmModeloDaCasa($conn, $amb)));
+        if ($daCasa) {
+            $base = versaoEstado($conn, $daCasa[0]);
+            echo json_encode(['success' => false, 'precisa_versao' => true,
+                'ambito' => $daCasa[0], 'base' => $base['nome'],
+                'message' => '«' . $base['nome'] . '» é um desenho da casa, e serve todos os '
+                           . 'casais: as suas alterações ficam numa versão sua. Dê-lhe um nome.']);
+            exit;
+        }
+    }
+
+    $r = guardarDefinicoes($conn, $defs);
     if ($r['gravadas'] || $r['repostas']) {
+        // Mexer no desenho à mão tira o modelo de vigor: o que a peça mostra
+        // deixou de ser puramente o dele. Guarda-se de onde veio, para se lhe
+        // poder continuar a chamar pelo nome ("«Borgonha» · com alterações").
+        foreach ($tocaDesenho as $amb) esquecerModeloEmVigor($conn, $amb, true);
+        // Alterar o convite passa a deixar rasto, como já acontece com os convites.
         registar($conn, 'convite_editado_defs', '',
                  $r['gravadas'].' alterada(s), '.$r['repostas'].' reposta(s)');
+    }
+    // Com nome, o que se acabou de gravar fica guardado como versão do casal —
+    // dela, e só dela: uma versão vive no casamento a que pertence.
+    if ($nomeVersao !== '' && $tocaDesenho) {
+        $id = criarVersaoDaPeca($conn, $tocaDesenho[0], $nomeVersao);
+        $r['versao'] = ['id' => $id, 'nome' => $nomeVersao, 'ambito' => $tocaDesenho[0]];
     }
     ok($r);
 }
@@ -536,10 +572,16 @@ function ambitoPedido(): string {
     return isset(ambitosVersao()[$a]) ? $a : 'digital';
 }
 
-if ($acao === 'versao_criar') {
-    $d = corpo();
-    $ambito = ambitoPedido();
-    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+/**
+ * Guarda a peça, tal como está agora, como versão deste casamento.
+ *
+ * Uma versão é do casal e só dele: vive em cw_versoes com o seu casamento_id,
+ * e não há por onde outro casal lá chegar. É o que permite mexer num desenho
+ * da casa sem o reescrever — o que sai daqui é uma peça nova, com nome.
+ */
+function criarVersaoDaPeca(mysqli $conn, string $ambito, string $nome): int {
+    global $P;
+    $nome = mb_substr(trim($nome), 0, 80);
     if ($nome === '') erro('Dê um nome à versão, para a reconhecer mais tarde.');
 
     $st = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=?");
@@ -561,9 +603,15 @@ if ($acao === 'versao_criar') {
     $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
     $st->bind_param('s', $ambito); $st->execute();
     $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
+    // A peça passa a ser desta versão, e não do modelo de onde veio.
     esquecerModeloEmVigor($conn, $ambito);
     registar($conn, 'versao_guardada', $nome, ambitosVersao()[$ambito]['rotulo']);
-    ok(['id' => $id]);
+    return $id;
+}
+
+if ($acao === 'versao_criar') {
+    $d = corpo();
+    ok(['id' => criarVersaoDaPeca($conn, ambitoPedido(), (string)($d['nome'] ?? ''))]);
 }
 
 if ($acao === 'versao_lista') {
@@ -2512,17 +2560,10 @@ if ($acao === 'modelo_lista') {
         $m['em_vigor'] = false;
         $m['mesmo_desenho'] = false;
         if (isset($atual[$amb])) {
-            $j = json_decode((string)$m['defs'], true);
-            $permitidas = array_flip(chavesDesenho($amb));
-            $doModelo = [];
-            if (is_array($j)) foreach ($j as $k => $v) {
-                if (isset($permitidas[$k]) && is_string($v)) $doModelo[$k] = $v;
-            }
-            $seAplicado = array_merge($atual[$amb], padraoDesenho($amb), $doModelo);
             // «Mesmo desenho»: aplicá-lo seria um não-fazer-nada visível. «Em
             // vigor»: é ESTE o modelo que foi aplicado, e o desenho continua o
             // dele. Só um pode estar em vigor; vários podem ter o mesmo desenho.
-            $m['mesmo_desenho'] = $seAplicado == $atual[$amb];
+            $m['mesmo_desenho'] = modeloIgualAPeca($amb, (string)$m['defs'], $atual[$amb]);
             $m['em_vigor'] = $m['mesmo_desenho'] && (int)$m['id'] === ($vigorId[$amb] ?? 0);
         }
         // O desenho não vai para o cliente: é grande, e a lista só precisa de

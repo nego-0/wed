@@ -1107,7 +1107,7 @@ function serializarTudo(){
   return fora;
 }
 
-async function guardar(){
+async function guardar(opcoes){
   const v = serializar();
   // Só o que mudou, e só as chaves do cartão: assim não se pisa o convite
   // digital nem se reescrevem definições que ninguém tocou.
@@ -1119,9 +1119,24 @@ async function guardar(){
   });
   if (!Object.keys(defs).length){ marcarSujo(false); msg('Não há alterações por guardar.'); return true; }
   $('bt-guardar').disabled = true; msg('A guardar…');
-  const d = MODELO
+  // A guarda do desenho da casa não se aplica quando quem grava é o painel de
+  // versões: ele já pediu o nome e cria a versão logo a seguir.
+  const proteger = !MODELO && !(opcoes && opcoes.semProteger);
+  let d = MODELO
     ? await api('modelo_defs&id=' + MODELO.id, {method:'POST', body: JSON.stringify({defs: serializarTudo()})})
-    : await api('defs_save', {method:'POST', body: JSON.stringify({defs})});
+    : await api('defs_save', {method:'POST', body: JSON.stringify({defs, proteger_desenho:proteger}), semAviso:proteger});
+  // O desenho é da casa (um modelo, ou o cartão de origem): o que o casal muda
+  // não se escreve por cima dele — nasce como versão sua, com nome.
+  let nascida = null;
+  if (d && d.precisa_versao){
+    const nome = (prompt(d.message + '\n\nNome da sua versão:', '') || '').trim();
+    if (!nome){ $('bt-guardar').disabled = false;
+                msg('Por guardar: as alterações a um desenho da casa precisam de uma versão com nome.');
+                return false; }
+    d = await api('defs_save', {method:'POST',
+                                body: JSON.stringify({defs, proteger_desenho:true, versao_nome:nome})});
+    nascida = d && d.success ? (d.versao || null) : null;
+  }
   $('bt-guardar').disabled = false;
   if (!d.success){ msg(d.message || 'Não foi possível guardar.'); return false; }
   const inv = d.invalidas || [];
@@ -1129,7 +1144,7 @@ async function guardar(){
   marcarSujo(false);
   marcarInvalidos(inv);
   msg(inv.length ? `Guardado, mas ${inv.length} campo(s) não foram aceites: ${inv.map(rotuloDe).join(', ')}.`
-                 : 'Guardado.');
+                 : (nascida ? `Guardado na sua versão «${nascida.nome}».` : 'Guardado.'));
   if (!inv.length) setTimeout(() => { if(!sujo) msg(''); }, 2500);
   return inv.length === 0;
 }
@@ -1197,7 +1212,9 @@ if (!MODELO) Versoes.montar({
   ambito: 'impresso',
   alvo:   'bt-versao',
   sujo:   () => sujo,
-  gravar: guardar,          // grava as edições do ecrã antes de as fotografar na versão
+  // Grava as edições do ecrã antes de as fotografar na versão. Sem a guarda do
+  // desenho da casa: o painel já pediu o nome e cria a versão a seguir.
+  gravar: () => guardar({ semProteger: true }),
   msg,
   aoAplicar: () => setTimeout(() => { sujo = false; location.reload(); }, 700)
 });
