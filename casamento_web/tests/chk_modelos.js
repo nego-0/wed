@@ -343,8 +343,10 @@ const entrar = async (ctx, u, p) => {
   ok(!faltam.length, 'e são a identidade inteira do convite' + (faltam.length ? ' — falta ' + faltam.join(', ') : ''));
 
   // A página mostra um campo por cada uma delas — não bastam existir no servidor.
+  // Os dados de exemplo estão agora na sua pastilha, e carregam ao abri-la.
   await admin.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
-  await admin.waitForTimeout(1200);
+  await admin.click('#filtros [data-vista="exemplo"]');
+  await admin.waitForFunction(() => document.querySelector('#ex-corpo .ex') !== null, { timeout: 8000 });
   const semCampo = await admin.evaluate(() => EX_CHAVES.filter(k =>
     k.startsWith('media.') ? !document.getElementById('ex-img-' + k)
     : k.startsWith('foto.') ? !document.getElementById('ex-' + k + '-x')

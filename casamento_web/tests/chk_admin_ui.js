@@ -125,6 +125,23 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(await p.evaluate(() =>
        [...document.querySelectorAll('#filtros .chip')].some(c => c.dataset.vista === 'novo')),
      '"Novo modelo" é uma pastilha na barra dos modelos');
+
+  // Nos dados de exemplo: escolher uma foto da galeria tem de funcionar (a
+  // função chegou a desaparecer), e tocar numa imagem abre-a em grande.
+  await p.click('#filtros [data-vista="exemplo"]'); await p.waitForTimeout(1500);
+  ok(await p.evaluate(() => typeof escolherDaGaleria === 'function' && typeof maximizar === 'function'),
+     'as funções de escolher da galeria e de maximizar existem');
+  const nImg = await p.locator('#ex-corpo .ex .moldura img').count();
+  ok(nImg >= 1, 'os dados de exemplo mostram as imagens das secções (' + nImg + ')');
+  await p.locator('#ex-corpo .ex .moldura img').first().click({ force: true }); await p.waitForTimeout(250);
+  ok(await p.locator('#lightbox.on').count() === 1, 'tocar numa imagem abre-a em grande');
+  await p.locator('#lightbox').click(); await p.waitForTimeout(150);
+  await p.locator('#ex-corpo .ex .btn-gal').first().click(); await p.waitForTimeout(600);
+  ok(await p.locator('.gal .gal-i .gal-esc').count() >= 1, 'a galeria abre com fotografias para escolher');
+  await p.locator('.gal .gal-i .gal-esc').first().click(); await p.waitForTimeout(700);
+  ok(await p.locator('#ov-modelo.aberto').count() === 0,
+     'escolher uma fotografia aplica-a e fecha a galeria');
+  await p.click('#filtros [data-vista="digital"][data-ambito=""]'); await p.waitForTimeout(3000);
   ok(await p.locator('#lista .grelha .mod').count() >= 2, 'os modelos vêm numa grelha de cartões');
 
   const caras = await p.evaluate(() => [...document.querySelectorAll('#lista .mod')].map(m => ({

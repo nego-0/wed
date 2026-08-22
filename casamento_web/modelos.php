@@ -141,6 +141,11 @@ if ($aberto > 0) {
                  color:#a8ada6; text-align:center; margin-bottom:.15rem; }
   .ex .btn-gal{ width:100%; font-size:.78rem; padding:.32rem .5rem; margin-bottom:.35rem; }
   /* A galeria da casa, dentro da janela: uma grelha de fotografias a escolher. */
+  /* Ver uma imagem em grande, por cima de tudo. */
+  #lightbox{ position:fixed; inset:0; z-index:1000; display:none; align-items:center;
+             justify-content:center; padding:2rem; background:rgba(20,25,22,.86); cursor:zoom-out; }
+  #lightbox.on{ display:flex; }
+  #lightbox img{ max-width:95vw; max-height:95vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
   .modal-corpo .gal{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
                      max-height:min(56vh,420px); overflow:auto; padding:.2rem; }
   .modal-corpo .gal-i{ position:relative; border:1px solid var(--line); background:#fff;
@@ -731,6 +736,10 @@ const EX_CHAVES = EX_GRUPOS.flatMap(g =>
 let EX_FABRICA = {}, EX_GALERIA = [], EX_ATUAL = {}, EX_DIM = {}, EX_CATEGORIAS = {}, EX_OCULTAS = 0;
 const EX_CAT_DA_CHAVE = { 'media.hero':'capa', 'media.historia':'historia',
                           'media.interludio':'interludio', 'media.acesso':'acesso' };
+// A chave de enquadramento de cada imagem, para o repor ao centro quando se
+// escolhe uma fotografia nova (ver escolherDaGaleria).
+const EX_ENQ_DA_CHAVE = {};
+EX_GRUPOS.forEach(g => (g.imagens || []).forEach(i => { if (i.enq) EX_ENQ_DA_CHAVE[i.k] = i.enq; }));
 
 async function carregarExemplo(soDados){
   const d = await api('modelo_exemplo');
@@ -774,7 +783,8 @@ function cartaoImagem(i, ex){
   const e = lerEnq(ex[i.enq]);
   return `<div class="ex${i.alto ? ' alto' : ''}">
      <div class="moldura"><img id="ex-img-${i.k}" src="${esc(ex[i.k] ?? '')}" alt="${i.r}"
-          style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom / 100})"></div>
+          style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom / 100});cursor:zoom-in"
+          title="Ver em grande" onclick="maximizar(this.src)"></div>
      <div class="nm">${i.r}</div>
      <div class="med">${i.dim || ''}</div>
      <button class="btn btn-gal" onclick="abrirGaleria('${i.k}','${i.r}')">Galeria</button>
@@ -835,7 +845,8 @@ function pintarGaleria(){
         ${GAL_CHAVE
           ? `<button class="gal-esc" onclick="escolherDaGaleria('${esc(f.src)}')" title="Usar em ${esc(GAL_ROTULO)}">
                <img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy"></button>`
-          : `<div class="gal-esc"><img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy"></div>`}
+          : `<button class="gal-esc" onclick="maximizar('${esc(f.src)}')" title="Ver em grande">
+               <img src="${esc(f.src)}" alt="${esc(f.nome)}" loading="lazy"></button>`}
         <div class="gal-pe">
           <span class="gal-nm">${esc(f.nome)}</span>
           ${f.da_casa
@@ -861,6 +872,43 @@ function pintarGaleria(){
 }
 
 function mudarAba(c){ GAL_ABA = c; pintarGaleria(); }
+
+/**
+ * Escolher uma fotografia da galeria para a secção de onde a galeria foi aberta.
+ * Sem secção-alvo (galeria aberta só para arrumar), um toque é para ver em
+ * grande. A fotografia da galeria já vem cortada à medida, por isso o
+ * enquadramento volta ao centro — senão herdava o desvio da imagem anterior.
+ */
+async function escolherDaGaleria(src){
+  const chave = GAL_CHAVE;
+  if (!chave) { maximizar(src); return; }
+  const corpo = { [chave]: src };
+  const enq = EX_ENQ_DA_CHAVE[chave];
+  if (enq) corpo[enq] = '50 50 100';
+  const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });
+  if (!d || !d.success) return;
+  fechar('ov-modelo');
+  EX_ATUAL = d.exemplo;
+  pintarExemplo(d.exemplo);
+  toast('Imagem de exemplo escolhida.');
+}
+
+/** Ver uma imagem em grande, num fundo escuro. Toque ou Esc para fechar. */
+function maximizar(src){
+  if (!src) return;
+  let ov = document.getElementById('lightbox');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = 'lightbox';
+    ov.addEventListener('click', () => ov.classList.remove('on'));
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = '<img src="' + String(src).replace(/"/g, '&quot;') + '" alt="">';
+  ov.classList.add('on');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ const ov = document.getElementById('lightbox'); if (ov) ov.classList.remove('on'); }
+});
 
 /** Envia uma fotografia para a galeria, na categoria escolhida. */
 async function enviarParaGaleria(){
