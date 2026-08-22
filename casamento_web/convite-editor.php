@@ -154,7 +154,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
             title="Versões e modelos">—</button>
     <span class="ed-sep"></span>
   <?php endif; ?>
-  <button class="bt" onclick="reporSeccao()">Repor esta secção</button>
+  <button class="bt" id="bt-repor" onclick="reporSeccao()">Repor Secção</button>
   <button class="bt primario" onclick="guardar()">Guardar</button>
 </div>
 
@@ -317,6 +317,15 @@ const EXTRA = {
 };
 // Listas editáveis, por secção
 const LISTAS_SEC = { 'historia':'historia.capitulos', 'grande-dia':'cronograma.itens', 'final':'manual.itens' };
+// A fotografia (e o seu enquadramento) que cada secção tem. Repor a secção
+// repõe também isto — a foto volta à do desenho de origem, e a que o casal
+// tenha posto à mão é largada. A música de fundo não é de secção nenhuma.
+const MEDIA_SEC = {
+  'hero':       ['media.hero', 'foto.hero'],
+  'historia':   ['media.historia'],
+  'interludio': ['media.interludio', 'foto.interludio'],
+  'acesso':     ['media.acesso', 'foto.acesso'],
+};
 const LISTA_CAMPOS = {
   'historia.capitulos':{ rot:'Capítulos', novo:()=>({t:'',x:''}), max:8,
     campos:[['t','Título','input'],['x','Texto','textarea']] },
@@ -822,7 +831,7 @@ function removerItemBloco(id, i){
 }
 function irCamada(k){
   SEC = k; DEF = null;
-  renderCamadas(); renderProps();
+  renderCamadas(); renderProps(); rotularBotaoRepor();
   enviarTela({tipo:'capa', mostrar: k===CAPA_ID});   // revela ou esconde o envelope
   enviarTela({tipo:'marcar', sec:k, def:null});
   msg('Camada: ' + rotuloCamada(k));
@@ -837,6 +846,7 @@ function alternarSec(k){
 
 // ---------- propriedades ----------
 function renderPropsJa(){
+  rotularBotaoRepor();               // o botão de repor acompanha sempre a secção
   if (SEC === CAPA_ID) return renderPropsCapa();
   const livre = blocoLivre(SEC);
   if (livre) return renderPropsLivre(livre);
@@ -1442,7 +1452,13 @@ function marcarInvalidos(inv){
   });
 }
 
-function reporSeccao(){
+/** O botão diz sempre que secção repõe: «Repor Secção (Nome)». */
+function rotularBotaoRepor(){
+  const b = document.getElementById('bt-repor'); if (!b) return;
+  b.textContent = 'Repor Secção (' + rotuloCamada(SEC) + ')';
+}
+
+async function reporSeccao(){
   if (SEC === CAPA_ID){
     if (!confirm('Repor o monograma, o selo, a dica e a abertura originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
     ['capa.monograma','capa.selo','capa.dica','capa.abertura'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
@@ -1451,17 +1467,42 @@ function reporSeccao(){
   }
   if (blocoLivre(SEC)) return msg('Esta secção foi acrescentada por si — use "Apagar esta secção".');
   const s = SECCOES[SEC]; if (!s) return;
-  if (!confirm(`Repor os textos originais de "${s.rotulo}"?\n\nPode desfazer com Ctrl+Z.`)) return;
+  // Repor a secção INTEIRA no desenho de origem: os textos, as listas, e também
+  // a fotografia e o seu enquadramento — o que larga a foto que o casal tenha
+  // posto à mão nesta secção e devolve a de origem.
+  const mediaSec = MEDIA_SEC[SEC] || [];
+  const fotos = mediaSec.filter(k=>k.startsWith('media.'));
+  const aviso = fotos.length
+    ? `Repor tudo em "${s.rotulo}" — textos e fotografia — para o desenho de origem?\n\n`
+      + `A fotografia que tenha escolhido para esta secção é substituída pela de origem, já e sem desfazer.`
+    : `Repor os textos originais de "${s.rotulo}"?\n\nPode desfazer com Ctrl+Z.`;
+  if (!confirm(aviso)) return;
+
+  // Os textos e as listas repõem-se no ecrã, para guardar (Ctrl+Z desfaz).
   (s.campos||[]).concat(EXTRA[SEC]||[]).forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
   const lk = LISTAS_SEC[SEC];
   if (lk && lk in PADRAO){ try { EST.listas[lk] = JSON.parse(PADRAO[lk]||'[]'); } catch(e){} }
-  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
-  msg(`"${s.rotulo}" reposta — por guardar. Ctrl+Z desfaz.`);
+
+  // A fotografia e o seu enquadramento gravam-se JÁ — como qualquer troca de
+  // foto neste editor, que nunca foi "por guardar". Assim a foto que o casal
+  // tinha posto à mão sai mesmo, e volta a de origem.
+  if (mediaSec.length){
+    const defs = {};
+    mediaSec.forEach(k=>{ if (k in PADRAO){ defs[k] = PADRAO[k]; EST.val[k] = PADRAO[k]; ATUAIS[k] = PADRAO[k]; } });
+    const d = await api('defs_save', { method:'POST', body: JSON.stringify({ defs }) });
+    if (!d || !d.success) return msg((d && d.message) || 'Não foi possível repor a fotografia.');
+    MEDIA_V = Date.now();
+  }
+
+  marcarSujo(true); registarPasso(); renderProps(); renderMedia(); recarregarTela();
+  msg(fotos.length
+    ? `"${s.rotulo}" reposta — a foto voltou à de origem; os textos ficam por guardar.`
+    : `"${s.rotulo}" reposta — por guardar. Ctrl+Z desfaz.`);
 }
 
 // ---------- arranque ----------
 renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia(); renderVersoes();
-aplicarZoom(); ajustarAltura(); marcarBotoes();
+aplicarZoom(); ajustarAltura(); marcarBotoes(); rotularBotaoRepor();
 $('tela').addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); });
 recarregarTela();                       // primeira pintura da tela
 msg('Clique num texto do convite para o editar.');
