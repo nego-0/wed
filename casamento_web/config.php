@@ -157,7 +157,7 @@ function acoesDoCasamento(): array {
             'suporte_codigo_criar','suporte_codigo_revogar',
             'dados_importar','modelo_aplicar',
             'orc_ajuste','orc_categoria_guardar','orc_categoria_apagar',
-            'orc_despesa_guardar','orc_despesa_apagar',
+            'orc_despesa_guardar','orc_despesa_apagar','orc_despesa_fatura','orc_despesa_fatura_apagar',
             'orc_pagamento_guardar','orc_pagamento_apagar','orc_pagamento_liquidar'];
 }
 

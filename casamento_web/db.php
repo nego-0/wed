@@ -189,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 24;
+const ESQUEMA_VERSAO = 25;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -863,6 +863,15 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migIndice($conn, "{$P}casamentos", 'idx_cas_licenca', 'licenca_ate');
     }
 
+    // v25 — a fatura de cada despesa (foto ou PDF).
+    //
+    // Uma despesa passa a poder levar anexada a sua fatura/recibo: guarda-se o
+    // caminho do ficheiro (em assets/faturas/<casamento>/), e o resto — abrir,
+    // trocar, apagar — trata-se na API (ver orc_despesa_fatura).
+    if ($versaoAtual < 25) {
+        migColuna($conn, "{$P}orcamento_despesas", 'fatura', "VARCHAR(255) DEFAULT NULL");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -1196,24 +1205,17 @@ function orcamentoDefinirMoeda(mysqli $conn, int $cid, $valor): void {
     }
 }
 
-/** As gavetas de origem do orçamento — um começo sensato, todas editáveis. */
-function orcamentoCategoriasPadrao(): array {
-    return ['Local e espaço','Alimentação e bebidas','Traje e beleza',
-            'Fotografia e vídeo','Música e animação','Decoração e flores',
-            'Convites e papelaria','Alianças','Transporte','Lua-de-mel','Outros'];
-}
-
-/** Semeia as gavetas de origem num casamento que ainda não tenha nenhuma. */
+/**
+ * O orçamento nasce vazio, de propósito.
+ *
+ * Antes semeavam-se gavetas de origem («Local», «Alimentação»…), mas cada
+ * casamento é seu: uma lista imposta obrigava o casal a apagar o que não lhe
+ * servia antes de começar. Agora começa em branco e cada um cria as categorias
+ * que quiser — a função fica para os pontos que a chamam não terem de saber
+ * disto.
+ */
 function semearOrcamento(mysqli $conn, int $cid): void {
-    global $P;
-    if ($cid <= 0) return;
-    $r = @$conn->query("SELECT COUNT(*) FROM {$P}orcamento_categorias WHERE casamento_id=$cid");
-    if (!$r || (int)$r->fetch_row()[0] > 0) return;   // já tem gavetas: não mexe
-    $ordem = 0;
-    foreach (orcamentoCategoriasPadrao() as $nome) {
-        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,ordem) VALUES ($cid,?,?)");
-        $st->bind_param('si', $nome, $ordem); @$st->execute(); $ordem++;
-    }
+    // Sem gavetas de origem. (Ver a nota acima.)
 }
 
 /** A moeda do casamento (símbolo curto). Vazio volta ao Kwanza. */

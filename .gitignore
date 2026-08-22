@@ -15,5 +15,8 @@ casamento_web/assets/convite/custom/*
 casamento_web/assets/convite/exemplo/*
 !casamento_web/assets/convite/exemplo/.htaccess
 
+# Faturas/recibos das despesas do orçamento, enviados pelos noivos — nunca versionados
+casamento_web/assets/faturas/
+
 # Cache do Python do gerador das imagens de exemplo
 __pycache__/

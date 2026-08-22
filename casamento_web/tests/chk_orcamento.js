@@ -39,13 +39,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   if (!w1.success || !w2.success) { console.log('FAIL: não criou os casamentos'); await b.close(); process.exit(1); }
   console.log('   casamentos:', w1.id, w2.id);
 
-  // ---------- as gavetas de origem ----------
+  // ---------- nasce SEM categorias; o casal cria as suas ----------
   await abrir(w1.id);
   let e1 = await api('orc_estado');
   ok(e1 && e1.success, 'orc_estado responde num casamento novo');
-  ok((e1.categorias || []).length >= 10, 'um casamento novo já nasce com as gavetas de origem');
+  ok((e1.categorias || []).length === 0, 'um casamento novo nasce SEM categorias impostas');
+  const catNova = await api('orc_categoria_guardar', { nome: 'Fotografia e vídeo', previsto: '900000' });
+  ok(catNova && catNova.success, 'o casal cria a categoria que quer');
+  e1 = await api('orc_estado');
   const catFoto = catId(e1, 'Fotografia e vídeo');
-  ok(!!catFoto, 'existe a gaveta "Fotografia e vídeo"');
+  ok(!!catFoto, 'e ela passa a existir');
 
   // ---------- teto, moeda e despesas ----------
   await api('orc_ajuste', { total: '2000000', moeda: 'AOA' });
@@ -88,7 +91,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     return r.json();
   });
   const oA = (dump.casamentos || [])[0] || {};
-  ok(oA.orcamento && (oA.orcamento.categorias || []).length >= 10, 'o export leva as categorias');
+  ok(oA.orcamento && (oA.orcamento.categorias || []).length >= 1, 'o export leva as categorias criadas');
   ok((oA.orcamento.despesas || []).length === 3, 'o export leva as três despesas');
   const dumpBanda = (oA.orcamento.despesas || []).find(d => d.descricao === 'Banda') || {};
   ok((dumpBanda.pagamentos || []).length === 1, 'e leva a parcela dentro da sua despesa');
@@ -119,7 +122,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await abrir(wForm.id);
   const eForm = await api('orc_estado');
   ok(N(eForm.resumo.teto) === 3000000, 'o orçamento total do formulário do admin fica gravado como teto');
-  ok((eForm.categorias || []).length >= 10, 'e o casamento criado à mão nasce com as gavetas');
+  ok((eForm.categorias || []).length === 0, 'e o casamento criado à mão nasce sem categorias impostas');
 
   // ---------- o teto pelo registo público ----------
   const anon = await (await b.newContext()).newPage();
@@ -137,7 +140,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await abrir(cidPub);
   const ePub = await api('orc_estado');
   ok(N(ePub.resumo.teto) === 1800000, 'o teto indicado no registo público fica gravado');
-  ok((ePub.categorias || []).length >= 10, 'e o casamento do registo público nasce com as gavetas');
+  ok((ePub.categorias || []).length === 0, 'e o casamento do registo público nasce sem categorias impostas');
 
   // ---------- o teto define-se na Gestão ----------
   await abrir(w1.id);
@@ -152,15 +155,41 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // ---------- a página desenha ----------
   await p.goto(BASE + '/orcamento.php', { waitUntil: 'networkidle' });
-  await p.waitForTimeout(400);
-  const comprometidoTxt = await p.textContent('#c-comprometido');
-  ok(comprometidoTxt && !/^—/.test(comprometidoTxt.trim()), 'a página mostra o comprometido, não um traço');
-  const segmentos = await p.$$eval('#c-barra span', els => els.length);
+  await p.waitForTimeout(500);
+  const kpis = await p.$$eval('#o-kpis .kpi', els => els.map(e => e.textContent));
+  ok(kpis.length === 4, 'a saúde do orçamento mostra quatro indicadores');
+  ok(kpis.some(t => /Comprometido/.test(t) && !/^—/.test(t.trim())),
+     'entre eles o comprometido, com um valor e não um traço');
+  const segmentos = await p.$$eval('#o-barra span', els => els.length);
   ok(segmentos >= 3, 'a barra do curso tem os três segmentos (pago, contratado, previsto)');
   // O teto já não se define aqui — mudou-se para a Gestão.
   ok(!(await p.$('#a-total')), 'a página do orçamento já não tem o campo do teto');
   const scroll = await p.$('.tabela-scroll');
   ok(!!scroll, 'a tabela de despesas está num quadro que rola (responsiva)');
+
+  // ---------- a fatura de uma despesa (foto) ----------
+  // Um PNG mínimo (1×1), enviado pela API como a página o faria.
+  const px = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+  const fat = await p.evaluate(async ({ id, b64 }) => {
+    const bin = atob(b64); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const fd = new FormData();
+    fd.append('id', id); fd.append('ficheiro', new File([arr], 'fatura.png', { type: 'image/png' }));
+    const r = await fetch('api.php?action=orc_despesa_fatura', {
+      method: 'POST', headers: { 'X-CSRF-Token': window.CSRF }, body: fd });
+    return r.json();
+  }, { id: dContr.id, b64: px });
+  ok(fat && fat.success && /^assets\/faturas\//.test(fat.fatura || ''),
+     'anexar uma foto à despesa guarda a fatura (' + (fat && fat.fatura) + ')');
+  let eF = await api('orc_estado');
+  const comFat = (eF.despesas || []).find(d => +d.id === +dContr.id) || {};
+  ok(!!comFat.fatura, 'e o estado do orçamento passa a trazer o caminho da fatura');
+  // Removê-la limpa o campo.
+  const rem = await api('orc_despesa_fatura_apagar&id=' + dContr.id, {});
+  ok(rem && rem.success, 'remover a fatura responde bem');
+  eF = await api('orc_estado');
+  const semFat = (eF.despesas || []).find(d => +d.id === +dContr.id) || {};
+  ok(!semFat.fatura, 'e a despesa fica de novo sem fatura');
 
   // O porteiro não chega aqui: a página é dos noivos.
   ok(!(await p.$('nav a[href="orcamento.php"]')) === false, 'o menu tem a entrada do Orçamento para o admin');

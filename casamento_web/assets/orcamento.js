@@ -17,6 +17,7 @@
   var PODE = !window.SO_VER_UI;        // pode mexer? (leitura de suporte não)
   var ORC = null;                      // o último estado recebido
   var MOEDA = 'Kz';
+  var FATURA_ALVO = 0;                 // a despesa a que o próximo ficheiro se anexa
 
   function toast(m, mau) {
     var t = $('toast'); if (!t) return;
@@ -31,12 +32,26 @@
     var n = num(v);
     var casas = (Math.round(n * 100) % 100 === 0) ? 0 : 2;
     var s = n.toLocaleString('pt-PT', { minimumFractionDigits: casas, maximumFractionDigits: 2 });
-    return s + ' ' + MOEDA;
+    return s + ' ' + MOEDA;
   }
   function pct(parte, todo) { return todo > 0 ? Math.max(0, Math.min(100, (parte / todo) * 100)) : 0; }
-  // A máscara dos campos de preço vive em assets/moeda.js (window.Moeda), porque
-  // a Gestão e o registo também a usam. paraCampo() formata um número do servidor.
   function paraCampo(v) { return window.Moeda ? window.Moeda.paraCampo(v) : String(num(v) || ''); }
+
+  // ---- ver uma imagem em grande ----
+  function maximizar(src) {
+    if (!src) return;
+    var ov = $('lightbox');
+    ov.innerHTML = '<img src="' + String(src).replace(/"/g, '&quot;') + '" alt="">';
+    ov.classList.add('on');
+  }
+  window.orcVerImagem = maximizar;
+  document.addEventListener('click', function (ev) {
+    if (ev.target && ev.target.id === 'lightbox') ev.target.classList.remove('on');
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') { var o = $('lightbox'); if (o) o.classList.remove('on'); }
+  });
+  function ehImagem(src) { return /\.(jpe?g|png|webp)$/i.test(src || ''); }
 
   // ---- carregar ----
   async function carregar() {
@@ -53,57 +68,64 @@
     renderPagamentos(ORC.pagamentos);
   }
 
-  // ---- retrato do curso ----
+  // ---- saúde do orçamento: KPIs + barra ----
   function renderResumo(r) {
-    $('c-comprometido').innerHTML = fmt(r.comprometido)
-      + ' <small>de ' + esc(r.base > 0 ? fmt(r.base) : 'sem teto') + '</small>';
+    var margemMau = r.acima_do_teto;
+    var margemTxt = r.base <= 0 ? '—'
+      : (r.falta >= 0 ? fmt(r.falta) : fmt(Math.abs(r.falta)));
+    var margemLbl = r.base <= 0 ? 'Defina um teto ou previstos'
+      : (r.falta >= 0 ? 'Margem até ao teto' : 'Acima do teto');
 
-    var cx = $('c-falta-cx'), v = $('c-falta'), l = $('c-falta-l');
-    if (r.base <= 0) {
-      cx.className = 'curso-falta'; v.textContent = '—';
-      l.textContent = 'Defina um teto ou os previstos';
-    } else if (r.falta < 0) {
-      cx.className = 'curso-falta mau'; v.textContent = fmt(Math.abs(r.falta));
-      l.textContent = 'Acima do teto';
-    } else {
-      cx.className = 'curso-falta ok'; v.textContent = fmt(r.falta);
-      l.textContent = 'Margem até ao teto';
-    }
+    var kpis = [
+      { n: r.base > 0 ? fmt(r.base) : 'sem teto', l: 'Orçamento', cls: '' },
+      { n: fmt(r.comprometido), l: 'Comprometido', cls: 'ouro' },
+      { n: fmt(r.pago), l: 'Já pago', cls: 'pago' },
+      { n: margemTxt, l: margemLbl, cls: 'margem' + (margemMau ? ' mau' : '') }
+    ];
+    $('o-kpis').innerHTML = kpis.map(function (k) {
+      return '<div class="kpi ' + k.cls + '"><div class="n">' + k.n + '</div><div class="l">' + esc(k.l) + '</div></div>';
+    }).join('');
 
+    // A barra: pago + contratado + previsto sobre o maior de (teto, total gasto).
     var totalDesp = r.pago + r.contratado + r.previsto;
     var denom = Math.max(r.base, totalDesp, 1);
-    var barra = $('c-barra'); barra.innerHTML = '';
-    [['s-pago', r.pago, 'Pago'], ['s-contr', r.contratado, 'Contratado'], ['s-prev', r.previsto, 'Previsto']]
-      .forEach(function (seg) {
-        if (seg[1] <= 0) return;
-        var w = pct(seg[1], denom);
-        var el = document.createElement('span');
-        el.className = seg[0]; el.style.width = w + '%';
-        el.title = seg[2] + ': ' + fmt(seg[1]);
-        if (w > 12) el.textContent = fmt(seg[1]);
-        barra.appendChild(el);
-      });
+    var segs = [['g-pago', r.pago, 'Pago'], ['g-contr', r.contratado, 'Contratado'], ['g-prev', r.previsto, 'Previsto']];
+    $('o-barra').innerHTML = segs.map(function (s) {
+      if (s[1] <= 0) return '';
+      var w = pct(s[1], denom);
+      return '<span class="' + s[0] + '" style="width:' + w + '%" title="' + s[2] + ': ' + esc(fmt(s[1])) + '">'
+        + (w > 14 ? esc(fmt(s[1])) : '') + '</span>';
+    }).join('');
+
+    var folga = r.base > 0 ? Math.max(0, r.base - totalDesp) : 0;
+    var leg = [['var(--o-pago)', 'Pago', r.pago], ['var(--o-contr)', 'Contratado', r.contratado],
+               ['var(--o-prev)', 'Previsto', r.previsto]];
+    if (r.base > 0) leg.push(['var(--o-track)', 'Folga até ao teto', folga]);
+    $('o-legenda').innerHTML = leg.map(function (l) {
+      return '<span><i style="background:' + l[0] + '"></i>' + esc(l[1]) + ' <b>' + esc(fmt(l[2])) + '</b></span>';
+    }).join('');
   }
 
   // ---- categorias ----
   function renderCategorias(cats, semCat) {
     var box = $('lista-categorias');
     if (!cats.length && (!semCat || semCat.n === 0)) {
-      box.innerHTML = '<div class="vazio">Ainda sem categorias. Crie uma para começar a arrumar as despesas.</div>';
+      box.innerHTML = '<div class="vazio">Ainda sem categorias.<br>Crie as que fizerem sentido para a vossa festa — nada vem imposto.'
+        + (PODE ? '<br><button class="btn btn-fantasma" onclick="abrirCategoria()">+ Criar a primeira</button>' : '') + '</div>';
       return;
     }
-    var h = '';
+    var h = '<div class="o-cats">';
     cats.forEach(function (c) {
       var prev = num(c.previsto), real = num(c.real_total);
       var acima = prev > 0 && real > prev;
-      h += '<div class="cat">'
-        + '<div class="cat-topo"><span class="cat-nome">' + esc(c.nome) + '</span>'
-        + '<span class="cat-vals"><b>' + fmt(real) + '</b>'
-        + (prev > 0 ? ' de ' + fmt(prev) : ' · sem previsto') + '</span></div>'
-        + '<div class="cat-barra' + (acima ? ' acima' : '') + '"><i style="width:'
-        + (prev > 0 ? pct(real, prev) : (real > 0 ? 100 : 0)) + '%"></i></div>';
+      var p = prev > 0 ? pct(real, prev) : (real > 0 ? 100 : 0);
+      h += '<div class="o-cat' + (acima ? ' acima' : '') + '">'
+        + (prev > 0 ? '<span class="pct">' + Math.round(prev > 0 ? (real / prev) * 100 : 0) + '%</span>' : '')
+        + '<div class="nome">' + esc(c.nome) + '</div>'
+        + '<div class="vals"><b>' + fmt(real) + '</b>' + (prev > 0 ? ' de ' + fmt(prev) : ' · sem previsto') + '</div>'
+        + '<div class="meter"><i style="width:' + p + '%"></i></div>';
       if (PODE) {
-        h += '<div class="cat-ac">'
+        h += '<div class="acs">'
           + '<button class="mini" onclick="orcEditarCategoria(' + c.id + ')">Editar</button>'
           + '<button class="mini perigo" onclick="orcApagarCategoria(' + c.id + ',\'' + esc(c.nome).replace(/'/g, "\\'") + '\')">Apagar</button>'
           + '</div>';
@@ -111,23 +133,37 @@
       h += '</div>';
     });
     if (semCat && semCat.n > 0) {
-      h += '<div class="cat"><div class="cat-topo"><span class="cat-nome" style="color:#8a8f88">Sem categoria</span>'
-        + '<span class="cat-vals"><b>' + fmt(semCat.valor) + '</b> · ' + semCat.n + ' despesa(s)</span></div>'
-        + '<div class="dica" style="margin:.3rem 0 0">Estas despesas ficaram sem gaveta. Abra cada uma e escolha-lhe uma categoria.</div></div>';
+      h += '<div class="o-cat semcat"><div class="nome" style="color:#8a7a4e">Sem categoria</div>'
+        + '<div class="vals"><b>' + fmt(semCat.valor) + '</b> · ' + semCat.n + ' despesa(s)</div>'
+        + '<div class="dica" style="margin:.4rem 0 0">Abra cada uma e dê-lhe uma categoria.</div></div>';
     }
-    box.innerHTML = h;
+    box.innerHTML = h + '</div>';
   }
 
   // ---- despesas ----
+  function celaFatura(d) {
+    if (d.fatura) {
+      var abrir = ehImagem(d.fatura)
+        ? '<img class="fat-thumb" src="' + esc(d.fatura) + '" alt="fatura" onclick="orcVerImagem(\'' + esc(d.fatura) + '\')">'
+        : '<a class="fat-chip" href="' + esc(d.fatura) + '" target="_blank" rel="noopener">&#128196; PDF</a>';
+      return '<span style="display:inline-flex;align-items:center">' + abrir
+        + (PODE ? '<button class="fat-x" title="Remover a fatura" onclick="orcApagarFatura(' + d.id + ')">&times;</button>' : '') + '</span>';
+    }
+    return PODE ? '<button class="fat-anexar" onclick="orcAnexarFatura(' + d.id + ')">+ fatura</button>'
+                : '<span style="color:#b9beb6">—</span>';
+  }
+
   function renderDespesas(desp, cats) {
     var box = $('lista-despesas');
     if (!desp.length) {
-      box.innerHTML = '<div class="vazio">Ainda sem despesas. Comece por lançar as que já conhece.</div>';
+      box.innerHTML = '<div class="vazio">Ainda sem despesas. Comece por lançar as que já conhece.'
+        + (PODE ? '<br><button class="btn btn-ouro" onclick="abrirDespesa()">+ Primeira despesa</button>' : '') + '</div>';
       return;
     }
     var nomeCat = {};
     cats.forEach(function (c) { nomeCat[c.id] = c.nome; });
-    var h = '<div class="tabela-scroll"><table class="desp"><thead><tr><th>Despesa</th><th>Categoria</th><th>Estado</th>'
+    var h = '<div class="tabela-scroll"><table class="desp"><thead><tr>'
+      + '<th>Despesa</th><th>Categoria</th><th>Estado</th><th>Fatura</th>'
       + '<th style="text-align:right">Valor</th>' + (PODE ? '<th></th>' : '') + '</tr></thead><tbody>';
     desp.forEach(function (d) {
       var parc = num(d.n_parcelas) > 0
@@ -138,6 +174,7 @@
         + parc + '</td>'
         + '<td>' + (d.categoria_id && nomeCat[d.categoria_id] ? esc(nomeCat[d.categoria_id]) : '<span style="color:#b9beb6">—</span>') + '</td>'
         + '<td><span class="est ' + d.estado + '">' + d.estado + '</span></td>'
+        + '<td>' + celaFatura(d) + '</td>'
         + '<td class="d-val">' + fmt(d.valor) + '</td>';
       if (PODE) {
         h += '<td class="d-ac">'
@@ -150,7 +187,7 @@
     box.innerHTML = h;
   }
 
-  // ---- calendário de pagamentos ----
+  // ---- calendário de pagamentos, agrupado por mês ----
   function renderPagamentos(pags) {
     var box = $('lista-pagamentos');
     if (!pags.length) {
@@ -158,9 +195,13 @@
       return;
     }
     var hoje = new Date().toISOString().slice(0, 10);
-    var h = '';
+    var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    var h = '', mesAtual = '';
     pags.forEach(function (p) {
       var pago = !!p.pago_em;
+      var chaveData = pago ? p.pago_em : p.data_prevista;
+      var mes = chaveData ? (function () { var d = chaveData.split('-'); return meses[(+d[1] || 1) - 1] + ' de ' + d[0]; })() : 'Sem data';
+      if (mes !== mesAtual) { h += '<div class="o-mes">' + esc(mes) + '</div>'; mesAtual = mes; }
       var venceu = !pago && p.data_prevista && p.data_prevista < hoje;
       var dataTxt = pago ? ('pago ' + p.pago_em) : (p.data_prevista || 'sem data');
       h += '<div class="pag">'
@@ -168,12 +209,9 @@
         + '<span class="desc">' + esc(p.despesa) + (p.nota ? '<small>' + esc(p.nota) + '</small>' : '') + '</span>'
         + '<span class="mt">' + fmt(p.valor) + '</span>';
       if (PODE) {
-        h += '<span>'
-          + '<button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
+        h += '<span><button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
           + (pago ? 'Desmarcar' : 'Dar por pago') + '</button></span>';
-      } else {
-        h += '<span></span>';
-      }
+      } else { h += '<span></span>'; }
       h += '</div>';
     });
     box.innerHTML = h;
@@ -183,8 +221,6 @@
   function abrir(id) { $(id).classList.add('aberto'); }
   function fechar(id) { $(id).classList.remove('aberto'); }
   window.fechar = fechar;
-
-  // O teto e a moeda definem-se agora na Gestão — ver o painel "Orçamento" lá.
 
   // ---- categorias ----
   function abrirCategoria() {
@@ -236,6 +272,7 @@
     $('md-estado').value = 'previsto'; $('md-fornecedor').value = ''; $('md-nota').value = '';
     preencheCategorias('md-categoria', '');
     $('md-parcelas-cx').style.display = 'none';    // parcelas só depois de existir
+    $('md-fatura-cx').style.display = 'none';       // fatura idem
     abrir('m-desp'); setTimeout(function () { $('md-desc').focus(); }, 50);
   }
   window.abrirDespesa = abrirDespesa;
@@ -249,9 +286,28 @@
     $('md-fornecedor').value = d.fornecedor || ''; $('md-nota').value = d.nota || '';
     preencheCategorias('md-categoria', d.categoria_id);
     $('md-parcelas-cx').style.display = PODE ? '' : 'none';
+    $('md-fatura-cx').style.display = '';
+    renderFaturaNoModal(d);
     renderParcelasNoModal(id);
     abrir('m-desp');
   };
+
+  function renderFaturaNoModal(d) {
+    var box = $('md-fatura');
+    if (d.fatura) {
+      var vis = ehImagem(d.fatura)
+        ? '<img src="' + esc(d.fatura) + '" alt="fatura" onclick="orcVerImagem(\'' + esc(d.fatura) + '\')">'
+        : '<a class="fat-chip" href="' + esc(d.fatura) + '" target="_blank" rel="noopener">&#128196; Abrir PDF</a>';
+      box.innerHTML = '<div class="prev">' + vis
+        + (PODE ? '<span><button class="mini" onclick="orcAnexarFatura(' + d.id + ')">Trocar</button> '
+          + '<button class="mini perigo" onclick="orcApagarFatura(' + d.id + ')">Remover</button></span>' : '')
+        + '</div>';
+    } else {
+      box.innerHTML = PODE
+        ? '<button class="fat-anexar" onclick="orcAnexarFatura(' + d.id + ')">+ Anexar foto ou PDF</button>'
+        : '<div class="dica" style="margin:0">Sem fatura anexada.</div>';
+    }
+  }
 
   function renderParcelasNoModal(despId) {
     var box = $('md-parcelas');
@@ -275,13 +331,16 @@
       })
     });
     if (!d || !d.success) return;
-    // Fica aberta se acabou de nascer, para se poderem juntar parcelas.
+    // Fica aberta se acabou de nascer, para se poderem juntar fatura e parcelas.
     if (!$('md-id').value && d.id) {
       $('md-id').value = d.id;
       $('m-desp-titulo').textContent = 'Editar despesa';
       $('md-parcelas-cx').style.display = PODE ? '' : 'none';
-      toast('Despesa criada. Junte-lhe parcelas, se quiser.');
-      await carregar(); renderParcelasNoModal(d.id);
+      $('md-fatura-cx').style.display = '';
+      toast('Despesa criada. Junte-lhe a fatura e as parcelas, se quiser.');
+      await carregar();
+      var nova = (ORC.despesas || []).find(function (x) { return +x.id === +d.id; }) || { id: d.id };
+      renderFaturaNoModal(nova); renderParcelasNoModal(d.id);
     } else {
       fechar('m-desp'); toast('Despesa guardada.'); carregar();
     }
@@ -289,9 +348,42 @@
   window.guardarDespesa = guardarDespesa;
 
   window.orcApagarDespesa = async function (id) {
-    if (!confirm('Apagar esta despesa?\n\nAs suas parcelas vão com ela. Isto não se desfaz.')) return;
+    if (!confirm('Apagar esta despesa?\n\nAs suas parcelas e a fatura vão com ela. Isto não se desfaz.')) return;
     var d = await window.api('orc_despesa_apagar&id=' + id, { method: 'POST' });
     if (d && d.success) { toast('Despesa apagada.'); carregar(); }
+  };
+
+  // ---- fatura ----
+  window.orcAnexarFatura = function (id) {
+    FATURA_ALVO = id;
+    $('md-fatura-input').click();
+  };
+  $('md-fatura-input').addEventListener('change', async function () {
+    var f = this.files[0]; if (!f || !FATURA_ALVO) return;
+    var fd = new FormData();
+    fd.append('id', FATURA_ALVO); fd.append('ficheiro', f);
+    var d = await window.api('orc_despesa_fatura', { method: 'POST', body: fd });
+    this.value = '';
+    if (!d || !d.success) return;
+    toast('Fatura anexada.');
+    var alvo = FATURA_ALVO;
+    await carregar();
+    if ($('m-desp').classList.contains('aberto') && +$('md-id').value === +alvo) {
+      var dd = (ORC.despesas || []).find(function (x) { return +x.id === +alvo; });
+      if (dd) renderFaturaNoModal(dd);
+    }
+  });
+
+  window.orcApagarFatura = async function (id) {
+    if (!confirm('Remover a fatura desta despesa?')) return;
+    var d = await window.api('orc_despesa_fatura_apagar&id=' + id, { method: 'POST' });
+    if (!d || !d.success) return;
+    toast('Fatura removida.');
+    await carregar();
+    if ($('m-desp').classList.contains('aberto') && +$('md-id').value === +id) {
+      var dd = (ORC.despesas || []).find(function (x) { return +x.id === +id; }) || { id: id };
+      renderFaturaNoModal(dd);
+    }
   };
 
   // ---- parcelas ----
@@ -349,7 +441,7 @@
 
   // Sem permissão de escrita, os botões de topo não fazem sentido.
   if (!PODE) {
-    document.querySelectorAll('.painel .btn').forEach(function (b) { b.style.display = 'none'; });
+    document.querySelectorAll('.painel-topo .btn').forEach(function (b) { b.style.display = 'none'; });
   }
 
   carregar();

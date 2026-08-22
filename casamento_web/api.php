@@ -88,6 +88,13 @@ function guardarEventoDoRegisto(mysqli $conn, int $cid, array $d): int {
 }
 
 /** Senha temporária legível, para se entregar a quem se convida. */
+/** Apaga do disco um ficheiro de fatura, com cuidado: só dentro de assets/faturas/. */
+function apagarFaturaFich(string $caminho): void {
+    if ($caminho === '' || str_contains($caminho, '..')) return;
+    if (!str_starts_with($caminho, 'assets/faturas/')) return;
+    @unlink(__DIR__ . '/' . $caminho);
+}
+
 function senhaTemporaria(): string {
     $a = 'abcdefghijkmnpqrstuvwxyz23456789';   // sem l, o, 0, 1
     $s = '';
@@ -2473,7 +2480,7 @@ if ($acao === 'orc_estado') {
             FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND categoria_id IS NULL")->fetch_assoc();
 
     $desp = [];
-    $rd = @$conn->query("SELECT dd.id, dd.categoria_id, dd.descricao, dd.fornecedor, dd.valor, dd.estado, dd.nota,
+    $rd = @$conn->query("SELECT dd.id, dd.categoria_id, dd.descricao, dd.fornecedor, dd.valor, dd.estado, dd.nota, dd.fatura,
             COALESCE((SELECT SUM(valor) FROM {$P}orcamento_pagamentos p
                       WHERE p.casamento_id=$cid AND p.despesa_id=dd.id),0) AS pago_parcelas,
             (SELECT COUNT(*) FROM {$P}orcamento_pagamentos p
@@ -2582,11 +2589,66 @@ if ($acao === 'orc_despesa_apagar') {
     $cid = casamentoAtual();
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
     if (!$id) erro('Despesa inválida.');
+    // A fatura anexada vai com ela: o ficheiro sai do disco.
+    $q = $conn->prepare("SELECT fatura FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND id=? LIMIT 1");
+    $q->bind_param('i', $id); $q->execute();
+    $ant = $q->get_result()->fetch_assoc();
+    if ($ant && !empty($ant['fatura'])) apagarFaturaFich((string)$ant['fatura']);
     // As parcelas vão atrás dela (CASCADE na base).
     $st = $conn->prepare("DELETE FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND id=?");
     $st->bind_param('i', $id); @$st->execute();
     registar($conn, 'orcamento_despesa_apagada', '', 'id ' . $id);
     ok(['resumo' => orcamentoResumo($conn)]);
+}
+
+if ($acao === 'orc_despesa_fatura') {
+    // Anexa (ou troca) a fatura/recibo de uma despesa — foto ou PDF. Guarda-se
+    // por casamento, em assets/faturas/<cid>/, e o caminho fica na despesa.
+    exigirCorrecao();
+    $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    $id = (int)($_POST['id'] ?? 0);
+    $q = $conn->prepare("SELECT fatura FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND id=? LIMIT 1");
+    $q->bind_param('i', $id); $q->execute();
+    $desp = $q->get_result()->fetch_assoc();
+    if (!$desp) erro('Despesa inválida.');
+    if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
+    $f = $_FILES['ficheiro'];
+    if ($f['size'] > 8*1024*1024) erro('Ficheiro demasiado grande (máx. 8 MB).');
+    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+    $extsOk = ['jpg','jpeg','png','webp','pdf'];
+    if (!in_array($ext, $extsOk, true)) erro('A fatura tem de ser uma imagem (JPG, PNG, WEBP) ou um PDF.');
+    if (function_exists('finfo_open')) {
+        $fi = finfo_open(FILEINFO_MIME_TYPE);
+        $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
+        $mimesOk = ['image/jpeg','image/png','image/webp','application/pdf'];
+        if (!in_array($mt, $mimesOk, true)) erro('O conteúdo do ficheiro não corresponde a uma imagem ou PDF.');
+    }
+    $dir = __DIR__ . '/assets/faturas/' . $cid;
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $nomeFich = 'desp' . $id . '-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+    if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar a fatura.');
+    if (!empty($desp['fatura'])) apagarFaturaFich((string)$desp['fatura']);   // fora a anterior
+    $caminho = 'assets/faturas/' . $cid . '/' . $nomeFich;
+    $st = $conn->prepare("UPDATE {$P}orcamento_despesas SET fatura=? WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('si', $caminho, $id); @$st->execute();
+    registar($conn, 'orcamento_fatura', '', 'despesa ' . $id);
+    ok(['id' => $id, 'fatura' => $caminho]);
+}
+
+if ($acao === 'orc_despesa_fatura_apagar') {
+    exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    if (!$id) erro('Despesa inválida.');
+    $q = $conn->prepare("SELECT fatura FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND id=? LIMIT 1");
+    $q->bind_param('i', $id); $q->execute();
+    $desp = $q->get_result()->fetch_assoc();
+    if (!$desp) erro('Despesa inválida.');
+    if (!empty($desp['fatura'])) apagarFaturaFich((string)$desp['fatura']);
+    $st = $conn->prepare("UPDATE {$P}orcamento_despesas SET fatura=NULL WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('i', $id); @$st->execute();
+    ok(['id' => $id]);
 }
 
 if ($acao === 'orc_pagamento_guardar') {
