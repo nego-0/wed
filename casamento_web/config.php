@@ -150,7 +150,7 @@ function acoesDoCasamento(): array {
     return ['convite_save','convite_delete','convite_flag','convite_rsvp_manual','convite_restaurar',
             'mesa_save','mesa_delete','mesa_pos','mesa_noivos','convite_mesa','convidado_mesa',
             'convidado_papel','planta_size','planta_bloqueio',
-            'defs_save','def_upload','porta_checkin',
+            'defs_save','def_upload','def_media_repor','porta_checkin',
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
             'casamento_identidade','casamento_endereco',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',

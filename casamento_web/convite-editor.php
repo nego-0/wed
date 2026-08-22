@@ -326,6 +326,24 @@ const MEDIA_SEC = {
   'interludio': ['media.interludio', 'foto.interludio'],
   'acesso':     ['media.acesso', 'foto.acesso'],
 };
+// TODAS as chaves de origem que pertencem a cada secção — para repor a secção
+// INTEIRA (textos, estilos próprios como o selo/abertura, visibilidade, o
+// enquadramento e a foto), e não só uns campos à mão. As cores, os tipos de
+// letra e a escala do texto são do convite INTEIRO (tema global), não de uma
+// secção: repô-los aqui mudaria a peça toda, e por isso ficam de fora.
+const SEC_DONO = {
+  'hero':       k => ['textos.kicker','textos.hero_sub','casal.noiva','casal.noivo','media.hero','foto.hero'].includes(k),
+  'convite':    k => ['textos.convite_eyebrow','textos.lead','textos.guest_label','textos.closing'].includes(k),
+  'historia':   k => /^historia\./.test(k) || k === 'media.historia',
+  'interludio': k => /^interludio\./.test(k) || k === 'media.interludio' || k === 'foto.interludio',
+  'grande-dia': k => /^(gd|evento|cronograma)\./.test(k),
+  'acesso':     k => /^acesso\./.test(k) || k === 'media.acesso' || k === 'foto.acesso',
+  'final':      k => /^(rsvp|manual|footer)\./.test(k),
+  'capa':       k => /^capa\./.test(k),
+};
+function chavesDaSeccao(sec){
+  const m = SEC_DONO[sec]; return m ? Object.keys(PADRAO).filter(m) : [];
+}
 const LISTA_CAMPOS = {
   'historia.capitulos':{ rot:'Capítulos', novo:()=>({t:'',x:''}), max:8,
     campos:[['t','Título','input'],['x','Texto','textarea']] },
@@ -1459,45 +1477,51 @@ function rotularBotaoRepor(){
 }
 
 async function reporSeccao(){
-  if (SEC === CAPA_ID){
-    if (!confirm('Repor o monograma, o selo, a dica e a abertura originais do envelope?\n\nPode desfazer com Ctrl+Z.')) return;
-    ['capa.monograma','capa.selo','capa.dica','capa.abertura'].forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
-    marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
-    return msg('Envelope reposto — por guardar. Ctrl+Z desfaz.');
-  }
   if (blocoLivre(SEC)) return msg('Esta secção foi acrescentada por si — use "Apagar esta secção".');
-  const s = SECCOES[SEC]; if (!s) return;
-  // Repor a secção INTEIRA no desenho de origem: os textos, as listas, e também
-  // a fotografia e o seu enquadramento — o que larga a foto que o casal tenha
-  // posto à mão nesta secção e devolve a de origem.
-  const mediaSec = MEDIA_SEC[SEC] || [];
-  const fotos = mediaSec.filter(k=>k.startsWith('media.'));
+  const ehCapa = SEC === CAPA_ID;
+  const s = SECCOES[SEC];
+  if (!ehCapa && !s) return;
+  const rotulo = rotuloCamada(SEC);
+
+  // Tudo o que é DESTA secção: as chaves de origem do seu namespace (textos,
+  // estilos próprios, visibilidade, enquadramento), a foto, as listas e a
+  // posição dos blocos. As cores e os tipos de letra são do convite inteiro e
+  // não se mexem aqui.
+  const chaves  = chavesDaSeccao(SEC);
+  const fotos   = (MEDIA_SEC[SEC] || []).filter(k => k.startsWith('media.'));
+  const blocos  = Object.keys(livresTodos()).filter(id => (livresTodos()[id]||{}).sec === SEC && EST.pos[id]);
+
   const aviso = fotos.length
-    ? `Repor tudo em "${s.rotulo}" — textos e fotografia — para o desenho de origem?\n\n`
-      + `A fotografia que tenha escolhido para esta secção é substituída pela de origem, já e sem desfazer.`
-    : `Repor os textos originais de "${s.rotulo}"?\n\nPode desfazer com Ctrl+Z.`;
+    ? `Repor TUDO em "${rotulo}" no modelo de origem?\n\n`
+      + `Voltam os textos, os estilos, a composição e a fotografia — e a foto que `
+      + `tenha posto à mão nesta secção é apagada, já e sem desfazer.`
+    : `Repor tudo em "${rotulo}" no modelo de origem?\n\n`
+      + `Voltam os textos, os estilos e a composição desta secção. Pode desfazer com Ctrl+Z.`;
   if (!confirm(aviso)) return;
 
-  // Os textos e as listas repõem-se no ecrã, para guardar (Ctrl+Z desfaz).
-  (s.campos||[]).concat(EXTRA[SEC]||[]).forEach(k=>{ if (k in PADRAO) EST.val[k] = PADRAO[k]; });
+  // 1) Os valores da secção (menos as fotos, que se gravam à parte).
+  chaves.forEach(k => { if (!k.startsWith('media.') && k in PADRAO) EST.val[k] = PADRAO[k]; });
+  // 2) As listas da secção.
   const lk = LISTAS_SEC[SEC];
   if (lk && lk in PADRAO){ try { EST.listas[lk] = JSON.parse(PADRAO[lk]||'[]'); } catch(e){} }
+  // 3) A composição: os blocos desta secção voltam ao sítio de origem.
+  blocos.forEach(id => moverLivre(id, 0, 0, 0));
 
-  // A fotografia e o seu enquadramento gravam-se JÁ — como qualquer troca de
-  // foto neste editor, que nunca foi "por guardar". Assim a foto que o casal
-  // tinha posto à mão sai mesmo, e volta a de origem.
-  if (mediaSec.length){
-    const defs = {};
-    mediaSec.forEach(k=>{ if (k in PADRAO){ defs[k] = PADRAO[k]; EST.val[k] = PADRAO[k]; ATUAIS[k] = PADRAO[k]; } });
-    const d = await api('defs_save', { method:'POST', body: JSON.stringify({ defs }) });
+  // 4) A(s) fotografia(s): gravam-se JÁ e APAGAM o ficheiro que o casal enviou —
+  //    media.* está fora da gravação normal, e a foto neste editor nunca foi
+  //    "por guardar". def_media_repor põe a de origem e limpa o ficheiro custom.
+  if (fotos.length){
+    fotos.forEach(k => { if (k in PADRAO){ EST.val[k] = PADRAO[k]; ATUAIS[k] = PADRAO[k]; } });
+    const d = await api('def_media_repor', { method:'POST', body: JSON.stringify({ chaves: fotos }) });
     if (!d || !d.success) return msg((d && d.message) || 'Não foi possível repor a fotografia.');
     MEDIA_V = Date.now();
   }
 
-  marcarSujo(true); registarPasso(); renderProps(); renderMedia(); recarregarTela();
+  marcarSujo(true); registarPasso();
+  renderCamadas(); renderProps(); renderMedia(); recarregarTela();
   msg(fotos.length
-    ? `"${s.rotulo}" reposta — a foto voltou à de origem; os textos ficam por guardar.`
-    : `"${s.rotulo}" reposta — por guardar. Ctrl+Z desfaz.`);
+    ? `"${rotulo}" reposta no modelo de origem — a foto voltou à de origem; o resto fica por guardar.`
+    : `"${rotulo}" reposta no modelo de origem — por guardar. Ctrl+Z desfaz.`);
 }
 
 // ---------- arranque ----------

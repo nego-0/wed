@@ -1,9 +1,9 @@
 // «Repor Secção (Nome)» no editor do convite digital.
 //
-// Duas coisas: o botão diz sempre que secção repõe, e repor a secção devolve-a
-// INTEIRA ao desenho de origem — textos E fotografia. A foto que o casal tenha
-// posto à mão para a secção é largada (o retoque some do casamento e volta a
-// valer a de origem).
+// O botão diz sempre que secção repõe, e repor devolve a secção INTEIRA ao
+// modelo de origem — todos os itens do seu namespace (textos, estilos,
+// visibilidade), a composição (posição dos blocos) e a fotografia. A foto que o
+// casal tenha enviado à mão é mesmo APAGADA do servidor.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -12,14 +12,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const p = await b.newContext().then(c => c.newPage());
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  p.on('dialog', d => d.accept());        // confirma os avisos de repor
+  p.on('dialog', d => d.accept());
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
   await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', 'noivos2026');
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
 
-  // Um casamento-oficina próprio, para não sujar o de ninguém.
   const casal = await p.evaluate(async () => {
     const r = await fetch('api.php?action=casamento_criar', { method: 'POST',
       headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
@@ -30,41 +29,65 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.evaluate(async (id) => { await fetch('api.php?action=casamento_abrir&id=' + id,
     { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } }); }, cid);
 
-  // A secção «Capa» ganha uma foto manual e um texto próprio.
+  // Retoques manuais na secção «Capa» (hero): texto, um estilo/visibilidade
+  // vizinho, e uma FOTO enviada de verdade (para haver ficheiro a apagar).
+  const foto = await p.evaluate(async () => {
+    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+    const bin = atob(b64); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const fd = new FormData();
+    fd.append('chave', 'media.hero'); fd.append('ficheiro', new File([arr], 'foto.png', { type: 'image/png' }));
+    const r = await fetch('api.php?action=def_upload', { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF }, body: fd });
+    return r.json();
+  });
+  ok(foto && foto.success && /assets\/convite\/custom\//.test(foto.path || ''),
+     'a foto manual entrou em ' + (foto && foto.path));
+  const fotoUrl = BASE + '/' + foto.path;
+  ok((await p.request.get(fotoUrl)).status() === 200, 'e o ficheiro existe no servidor');
   await p.evaluate(async () => { await fetch('api.php?action=defs_save', { method: 'POST',
     headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ defs: { 'media.hero': 'assets/convite/custom/manual-teste.jpg',
-                                   'textos.kicker': 'KICKER MANUAL' } }) }); });
+    body: JSON.stringify({ defs: { 'textos.kicker': 'KICKER MANUAL', 'textos.hero_sub': 'SUB MANUAL' } }) }); });
 
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1200);
 
   // ---------- 1. o botão diz a secção ----------
-  const lblEnv = (await p.textContent('#bt-repor') || '').trim();
-  ok(lblEnv === 'Repor Secção (Envelope)', 'no envelope, o botão diz «Repor Secção (Envelope)» — ' + JSON.stringify(lblEnv));
+  ok((await p.textContent('#bt-repor') || '').trim() === 'Repor Secção (Envelope)',
+     'no envelope, o botão diz «Repor Secção (Envelope)»');
   await p.evaluate(() => irCamada('hero')); await p.waitForTimeout(300);
-  const lblHero = (await p.textContent('#bt-repor') || '').trim();
-  ok(lblHero === 'Repor Secção (Capa)', 'na Capa, diz «Repor Secção (Capa)» — ' + JSON.stringify(lblHero));
+  ok((await p.textContent('#bt-repor') || '').trim() === 'Repor Secção (Capa)',
+     'na Capa, diz «Repor Secção (Capa)»');
 
-  // ---------- 2. repor devolve texto e foto à origem ----------
+  // ---------- 2. repor devolve TODOS os itens da secção à origem ----------
   const padraoHero = await p.evaluate(() => PADRAO['media.hero']);
-  const antes = await p.evaluate(() => EST.val['media.hero']);
-  ok(antes === 'assets/convite/custom/manual-teste.jpg', 'antes, a Capa tem a foto manual');
   await p.evaluate(async () => { await reporSeccao(); });
-  await p.waitForTimeout(500);
-  ok(await p.evaluate(() => EST.val['media.hero']) === padraoHero, 'depois, a foto da Capa volta à de origem');
-  ok(await p.evaluate(() => EST.val['textos.kicker']) === (await p.evaluate(() => PADRAO['textos.kicker'])),
-     'e o texto (kicker) volta ao de origem');
+  await p.waitForTimeout(600);
+  ok(await p.evaluate(() => EST.val['media.hero']) === padraoHero, 'a foto da Capa volta à de origem');
+  ok(await p.evaluate(() => EST.val['textos.kicker'] === PADRAO['textos.kicker']), 'o kicker volta ao de origem');
+  ok(await p.evaluate(() => EST.val['textos.hero_sub'] === PADRAO['textos.hero_sub']), 'e o subtítulo também');
 
-  // ---------- 3. o servidor larga mesmo o retoque manual ----------
+  // ---------- 3. a foto enviada à mão foi mesmo APAGADA do servidor ----------
+  ok((await p.request.get(fotoUrl)).status() !== 200,
+     'o ficheiro que o casal tinha enviado deixou de existir no servidor');
   const serv = await p.evaluate(async (id) => {
     const r = await fetch('api.php?action=dados_exportar&ambito=casamento&id=' + id);
     return ((await r.json()).casamentos[0].definicoes || {})['media.hero'];
   }, cid);
-  // Repor grava o valor de origem: guardarDefinicoes apaga a linha igual ao
-  // padrão, por isso deixa de haver retoque — o efetivo passa a ser a de origem.
-  ok(serv === undefined || serv === padraoHero,
-     'no servidor, o retoque manual da foto foi largado (fica a de origem)');
+  ok(serv === undefined || serv === padraoHero, 'e o efetivo passa a ser a foto de origem');
+
+  // ---------- 4. repor uma secção com listas e visibilidade ----------
+  // Na História, esconde-se a secção e muda-se um texto; repor traz tudo de volta.
+  await p.evaluate(async () => { await fetch('api.php?action=defs_save', { method: 'POST',
+    headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ defs: { 'historia.visivel': '0', 'historia.titulo': 'TITULO MANUAL' } }) }); });
+  await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(1000);
+  await p.evaluate(() => irCamada('historia')); await p.waitForTimeout(200);
+  await p.evaluate(async () => { await reporSeccao(); });
+  await p.waitForTimeout(400);
+  ok(await p.evaluate(() => EST.val['historia.titulo'] === PADRAO['historia.titulo']),
+     'na História, o título volta ao de origem');
+  ok(await p.evaluate(() => EST.val['historia.visivel'] === PADRAO['historia.visivel']),
+     'e a visibilidade da secção também (um item que não era campo de texto)');
 
   // limpeza
   await p.evaluate(async (id) => {

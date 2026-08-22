@@ -859,6 +859,33 @@ if ($acao === 'def_upload') {
     ok(['path' => $caminho]);
 }
 
+if ($acao === 'def_media_repor') {
+    // Repõe fotografias (media.*) no valor de origem e APAGA o ficheiro custom
+    // que o casal tinha enviado para essa secção — a não ser que uma versão
+    // guardada ainda o use. Serve o "Repor Secção" do editor, que larga mesmo a
+    // foto posta à mão. (media.* está fora da gravação normal — ver ALHEIAS.)
+    exigirCorrecao();
+    $d = corpo();
+    $chaves = is_array($d['chaves'] ?? null) ? $d['chaves'] : [];
+    $padrao = defsPadrao();
+    $atuais = defsAtuais($conn);
+    $novos = []; $limpos = [];
+    foreach ($chaves as $k) {
+        if (!is_string($k) || !str_starts_with($k, 'media.')) continue;
+        if (!array_key_exists($k, $padrao)) continue;
+        $antigo = (string)($atuais[$k] ?? '');
+        if (str_starts_with($antigo, 'assets/convite/custom/') && !str_contains($antigo, '..')
+            && !ficheiroEmVersao($conn, $antigo)) {
+            @unlink(__DIR__ . '/' . $antigo);
+            $limpos[] = $antigo;
+        }
+        $novos[$k] = (string)$padrao[$k];
+    }
+    if ($novos) guardarDefinicoes($conn, $novos);
+    registar($conn, 'media_reposta', implode(', ', array_keys($novos)), count($limpos) . ' ficheiro(s) apagado(s)');
+    ok(['repostas' => array_keys($novos), 'apagados' => count($limpos)]);
+}
+
 if ($acao === 'convite_list') {
     $tipo=$_GET['tipo']??''; $lado=$_GET['lado']??''; $estado=$_GET['estado']??'';
     $mesa=$_GET['mesa']??''; $busca=trim($_GET['busca']??'');
