@@ -14,6 +14,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const p = await (await b.newContext({ viewport: { width: 1400, height: 950 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
+  p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Prova' : undefined)); // «Guardar Como» pede nome
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });

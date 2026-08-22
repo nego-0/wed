@@ -286,6 +286,21 @@
       escalarProvas();
     }
 
+    // O estado atual, para quem precise de decidir fora do painel (por exemplo,
+    // o botão «Guardar/Actualizar/Guardar Como» do editor).
+    //   propria — a versão DO CASAL em vigor (nem a origem, nem um modelo); ou null.
+    //   emVigor — o que está em vigor (pode ser a peça de origem).
+    //   modelo  — o modelo da casa em vigor, se houver.
+    function estadoAtual() {
+      var vig = emVigor();
+      return {
+        propria: lista.filter(function (v) { return v.em_vigor && !v.padrao; })[0] || null,
+        emVigor: vig || null,
+        naOrigem: !!(vig && vig.padrao),
+        modelo: modeloEmVigor() || null
+      };
+    }
+
     async function recarregar() {
       var d = await api(q('versao_lista'), { silencioso: true });
       lista = (d && d.success) ? (d.versoes || []) : [];
@@ -293,6 +308,7 @@
       modelos = (m && m.success) ? (m.modelos || []) : [];
       pintarBotao();
       pintar();
+      if (op.aoEstado) op.aoEstado(estadoAtual());
     }
 
     // ---- ações ----
@@ -399,7 +415,7 @@
 
     pintarBotao();
     recarregar();
-    return { recarregar: recarregar, abrir: abrir };
+    return { recarregar: recarregar, abrir: abrir, estado: estadoAtual };
   }
 
   global.Versoes = { montar: montar };

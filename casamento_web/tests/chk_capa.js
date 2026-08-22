@@ -12,6 +12,8 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  // Guardar num casamento sem versão sua é agora «Guardar Como»: pede um nome.
+  p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Prova capa' : undefined));
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
@@ -34,8 +36,14 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
     return r.json();
   }, { a, c });
 
-  // base limpa
+  // base limpa: sem versões próprias (para o estado ser determinista — a peça
+  // fica na origem, e guardar é «Guardar Como»), e a capa no valor de origem.
+  const limparVersoes = async () => {
+    const vs = (await api('versao_lista&ambito=digital')).versoes || [];
+    for (const v of vs) if (!v.padrao) await api('versao_apagar&ambito=digital&id=' + v.id, {});
+  };
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+  await limparVersoes();
   await api('defs_save', { defs: { 'capa.monograma': '', 'capa.dica': 'Toque para abrir' } });
 
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
@@ -134,6 +142,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
      'o convidado recebe a capa fechada, por abrir');
 
   // ---------- limpeza ----------
+  await limparVersoes();
   await api('defs_save', { defs: { 'capa.monograma': '', 'capa.dica': 'Toque para abrir' } });
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');

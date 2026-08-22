@@ -13,6 +13,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const p = await (await b.newContext({ viewport: { width: 1400, height: 1000 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
+  p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Prova' : undefined)); // «Guardar Como» pede nome
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
@@ -89,8 +90,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForTimeout(250);
   ok(/Igreja da S[ée]/i.test(await logistica()), 'o local entra por baixo da hora');
 
-  // Remover volta atrás (com confirmação).
-  p.once('dialog', d => d.accept());
+  // Remover volta atrás (com confirmação — o handler global aceita-a).
   await p.evaluate(() => removerCerimonia('civil', 'Cerimónia civil'));
   await p.waitForTimeout(300);
   t = await logistica();
@@ -139,7 +139,6 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(/Às /.test(txtTela) && !/Ás /.test(txtTela),
      'e "Às", com o acento certo — era "Ás" à vista dos convidados');
 
-  p.once('dialog', d => d.accept());
   await p.evaluate(() => removerCerimonia('religiosa', 'Cerimónia religiosa'));
   await p.waitForTimeout(3000);
   ok(await tela.locator('#grande-dia .cerimonias .cer').count() === 1,

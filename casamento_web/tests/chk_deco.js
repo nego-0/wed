@@ -11,7 +11,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const errs = [];
   p.on('pageerror', e => errs.push(e.message));
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  p.on('dialog', d => d.accept());
+  p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Prova' : undefined)); // «Guardar Como» pede nome
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
