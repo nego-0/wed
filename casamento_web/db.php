@@ -189,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 23;
+const ESQUEMA_VERSAO = 24;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -847,6 +847,20 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                                   ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
             $st->bind_param('ss', $chave, $id); @$st->execute();
         }
+    }
+
+    // v24 — a licença de uso de cada casamento.
+    //
+    // Um casamento passa a ter um período de uso: quantos meses a licença dura
+    // ('licenca_meses', 0 = sem limite) e a data em que expira ('licenca_ate',
+    // NULL = ilimitada ou ainda por iniciar). O relógio começa quando o
+    // casamento fica ativo (aprovação, ou criação já ativa) — ver casamento_estado
+    // e casamento_criar. Expirada a licença, o casamento é suspenso sozinho, e
+    // com ele as contas que dele dependem (ver suspenderLicencasExpiradas).
+    if ($versaoAtual < 24) {
+        migColuna($conn, "{$P}casamentos", 'licenca_meses', "INT NOT NULL DEFAULT 0");
+        migColuna($conn, "{$P}casamentos", 'licenca_ate',   "DATE DEFAULT NULL");
+        migIndice($conn, "{$P}casamentos", 'idx_cas_licenca', 'licenca_ate');
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -96,6 +96,40 @@ function senhaTemporaria(): string {
 }
 
 /**
+ * Cria (ou liga, se já existir) uma conta a um casamento, com um papel. Devolve
+ * ['id','email','senha','novo'] — a senha só vem preenchida quando a conta é
+ * nova, para se entregar uma vez. Usada ao criar um casamento com as contas dos
+ * noivos e do porteiro de uma vez. Chama erro() (que termina) se o email for
+ * inválido — por isso valide os formatos ANTES de criar o casamento.
+ */
+function contaParaCasamento(mysqli $conn, string $email, string $nome, string $senha,
+                            int $cid, string $papel): array {
+    global $P;
+    $email = mb_strtolower(trim($email));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro("Email inválido para a conta de $papel.");
+    $st = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
+    $st->bind_param('s', $email); $st->execute();
+    $ex = $st->get_result()->fetch_row();
+    $senhaMostrar = '';
+    if ($ex) {
+        $uid = (int)$ex[0];                       // conta existente: só se liga o lugar
+    } else {
+        if (mb_strlen($senha) < 8) $senha = senhaTemporaria();
+        $senhaMostrar = $senha;
+        $hash = password_hash($senha, PASSWORD_DEFAULT);
+        $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                              VALUES (?,?,?, 'ativo')");
+        $st->bind_param('sss', $email, $nome, $hash);
+        if (!$st->execute()) erro("Já existe uma conta com o email $email.");
+        $uid = $conn->insert_id;
+    }
+    $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel)
+                          VALUES (?,?,?)");
+    $st->bind_param('iis', $uid, $cid, $papel); @$st->execute();
+    return ['id' => $uid, 'email' => $email, 'senha' => $senhaMostrar, 'novo' => !$ex];
+}
+
+/**
  * As mesmas portas de exigirAdmin()/exigirPorta(), mas a responder como API.
  *
  * As originais reencaminham para o login, o que numa página é o certo e numa
@@ -276,10 +310,13 @@ if ($acao === 'registo_publico') {
     if (!$st->execute()) erro('Já existe uma conta com esse email. Tente entrar, ou use outro.');
     $uid = $conn->insert_id;
 
-    $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado)
-                          VALUES (?,?,?,?, 'pendente')");
+    // O período de licença que o casal deseja (em meses; 0 = não indicado). Fica
+    // guardado, mas o relógio só arranca quando o admin aprovar (ver casamento_estado).
+    $meses = max(0, min(120, (int)($d['licenca_meses'] ?? 0)));
+    $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado, licenca_meses)
+                          VALUES (?,?,?,?, 'pendente', ?)");
     $dataOuNulo = $data !== '' ? $data : null;
-    $st->bind_param('ssss', $nomeConta, $noiva, $noivo, $dataOuNulo);
+    $st->bind_param('ssssi', $nomeConta, $noiva, $noivo, $dataOuNulo, $meses);
     if (!$st->execute()) {
         // Sem casamento, a conta ficaria a pairar: desfaz-se.
         $conn->query("DELETE FROM {$P}utilizadores WHERE id=" . (int)$uid);
@@ -289,6 +326,26 @@ if ($acao === 'registo_publico') {
 
     $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?, 'noivos')");
     $st->bind_param('ii', $uid, $cid); @$st->execute();
+
+    // A conta do porteiro, se o casal a quis já indicar. Entra 'pendente' como o
+    // casamento: passa a ativa quando o admin aprovar (retomarContasDoCasamento).
+    $portEmail = mb_strtolower(trim((string)($d['porteiro_email'] ?? '')));
+    if ($portEmail !== '' && filter_var($portEmail, FILTER_VALIDATE_EMAIL) && $portEmail !== $email) {
+        $portSenha = (string)($d['porteiro_senha'] ?? '');
+        if (mb_strlen($portSenha) >= 8) {
+            $ph = password_hash($portSenha, PASSWORD_DEFAULT);
+            $pn = 'Porteiro · ' . $nomeConta;
+            $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                                  VALUES (?,?,?, 'pendente')");
+            $st->bind_param('sss', $portEmail, $pn, $ph);
+            if (@$st->execute()) {
+                $pid = $conn->insert_id;
+                $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel)
+                                      VALUES (?,?, 'porteiro')");
+                $st->bind_param('ii', $pid, $cid); @$st->execute();
+            }
+        }
+    }
 
     $gravadas = guardarEventoDoRegisto($conn, $cid, $d);
     semearOrcamento($conn, $cid);   // começa com as gavetas de origem, como os do admin
@@ -1093,17 +1150,54 @@ if ($acao === 'casamento_criar') {
     if ($nome === '') $nome = trim($noiva . ' & ' . $noivo);
     if (trim($nome, ' &') === '') erro('Dê um nome ao casamento.');
     $data = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['data'] ?? '')) ? $d['data'] : null;
+
+    // A licença: quantos meses dura (0 = sem limite) e se arranca já ativa. O
+    // relógio só começa a contar quando a licença fica ativa — aqui, se assim se
+    // pedir; senão fica definida mas parada, para o admin a iniciar quando quiser.
+    $meses = max(0, min(120, (int)($d['licenca_meses'] ?? 0)));
+    $licencaAtiva = !empty($d['licenca_ativa']);
+
+    // As contas a criar com o casamento — validam-se os emails ANTES de criar
+    // nada, para não deixar um casamento órfão se um email vier torto.
+    $noivosEmail   = mb_strtolower(trim((string)($d['noivos_email'] ?? '')));
+    $porteiroEmail = mb_strtolower(trim((string)($d['porteiro_email'] ?? '')));
+    if ($noivosEmail !== '' && !filter_var($noivosEmail, FILTER_VALIDATE_EMAIL))
+        erro('O email da conta dos noivos é inválido.');
+    if ($porteiroEmail !== '' && !filter_var($porteiroEmail, FILTER_VALIDATE_EMAIL))
+        erro('O email da conta do porteiro é inválido.');
+    if ($noivosEmail !== '' && $noivosEmail === $porteiroEmail)
+        erro('A conta dos noivos e a do porteiro não podem ter o mesmo email.');
+
     // Nasce ativo quando é o admin a criá-lo. O registo público entra como
     // 'pendente' e é o admin que o faz passar a ativo (etapa 5).
-    $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado)
-                          VALUES (?,?,?,?, 'ativo')");
-    $st->bind_param('ssss', $nome, $noiva, $noivo, $data);
+    $ate = ($meses > 0 && $licencaAtiva)
+         ? (new DateTimeImmutable('today'))->modify("+$meses months")->format('Y-m-d') : null;
+    $st = $conn->prepare("INSERT INTO {$P}casamentos
+                          (nome, noiva, noivo, data_evento, estado, licenca_meses, licenca_ate)
+                          VALUES (?,?,?,?, 'ativo', ?, ?)");
+    $st->bind_param('ssssis', $nome, $noiva, $noivo, $data, $meses, $ate);
     if (!$st->execute()) erro('Não foi possível criar o casamento.');
     $novo = $conn->insert_id;
     $gravadas = guardarEventoDoRegisto($conn, $novo, $d);
     semearOrcamento($conn, $novo);   // começa com as gavetas de origem
-    registar($conn, 'casamento_criado', $nome, 'id ' . $novo);
-    ok(['id' => $novo, 'nome' => $nome, 'dados_do_evento' => $gravadas]);
+
+    // As contas, se vieram. Guardam-se as senhas geradas para as mostrar uma vez.
+    $contas = [];
+    if ($noivosEmail !== '') {
+        $contas['noivos'] = contaParaCasamento($conn, $noivosEmail,
+            mb_substr(trim((string)($d['noivos_nome'] ?? $nome)), 0, 120),
+            (string)($d['noivos_senha'] ?? ''), $novo, 'noivos');
+    }
+    if ($porteiroEmail !== '') {
+        $contas['porteiro'] = contaParaCasamento($conn, $porteiroEmail,
+            mb_substr(trim((string)($d['porteiro_nome'] ?? ('Porteiro · ' . $nome))), 0, 120),
+            (string)($d['porteiro_senha'] ?? ''), $novo, 'porteiro');
+    }
+
+    registar($conn, 'casamento_criado', $nome, 'id ' . $novo
+        . ($meses ? " · licença $meses mês(es)" . ($licencaAtiva ? ' (ativa)' : ' (por iniciar)') : ''));
+    ok(['id' => $novo, 'nome' => $nome, 'dados_do_evento' => $gravadas,
+        'licenca' => licencaInfo($conn, $novo), 'contas' => $contas]);
 }
 
 if ($acao === 'casamento_abrir') {
@@ -1498,6 +1592,8 @@ if ($acao === 'casamento_lista') {
         $onde .= " AND (c.nome LIKE '%$s%' OR c.noiva LIKE '%$s%' OR c.noivo LIKE '%$s%')";
     }
     $r = @$conn->query("SELECT c.id, c.nome, c.noiva, c.noivo, c.estado, c.data_evento, c.ultimo_acesso,
+                               c.licenca_meses, c.licenca_ate,
+                               DATEDIFF(c.licenca_ate, CURDATE()) licenca_dias,
                                (SELECT COUNT(*) FROM {$P}convites v
                                  WHERE v.casamento_id = c.id AND v.eliminado_em IS NULL) convites,
                                (SELECT COUNT(*) FROM {$P}convidados g
@@ -1527,18 +1623,22 @@ if ($acao === 'casamento_lista') {
 if ($acao === 'utilizador_lista') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê as contas.');
     $q = trim((string)($_GET['q'] ?? ''));
+    // 'tipo=plataforma' devolve só as contas administrativas (admin e suporte).
+    // As de noivos/porteiro vivem nos dados do próprio casamento (Gestão), e não
+    // se misturam com estas — ver a aba «Contas administrativas» da plataforma.
+    $tipo = (string)($_GET['tipo'] ?? '');
+    $filtroTipo = $tipo === 'plataforma' ? " u.papel_plataforma IS NOT NULL"
+               : ($tipo === 'casamento'  ? " u.papel_plataforma IS NULL" : '');
+    $onde = [];
+    if ($filtroTipo !== '') $onde[] = $filtroTipo;
+    if ($q !== '')          $onde[] = " (u.email LIKE ? OR u.nome LIKE ?)";
     $sql = "SELECT u.id, u.email, u.nome, u.papel_plataforma, u.estado, u.criado_em, u.ultimo_acesso,
                    (SELECT COUNT(*) FROM {$P}acessos a WHERE a.utilizador_id = u.id) casamentos
-            FROM {$P}utilizadores u";
-    if ($q !== '') {
-        $sql .= " WHERE u.email LIKE ? OR u.nome LIKE ?";
-        $sql .= " ORDER BY u.estado='pendente' DESC, u.id DESC LIMIT 100";
-        $st = $conn->prepare($sql);
-        $like = "%$q%"; $st->bind_param('ss', $like, $like);
-    } else {
-        $sql .= " ORDER BY u.estado='pendente' DESC, u.id DESC LIMIT 100";
-        $st = $conn->prepare($sql);
-    }
+            FROM {$P}utilizadores u"
+         . ($onde ? " WHERE" . implode(' AND', $onde) : '')
+         . " ORDER BY u.estado='pendente' DESC, u.id DESC LIMIT 100";
+    $st = $conn->prepare($sql);
+    if ($q !== '') { $like = "%$q%"; $st->bind_param('ss', $like, $like); }
     $st->execute();
     ok(['contas' => $st->get_result()->fetch_all(MYSQLI_ASSOC), 'eu' => utilizadorId()]);
 }
@@ -1622,42 +1722,58 @@ if ($acao === 'casamento_estado') {
     // casamento nenhum para existir.
     $contas = 0;
     if ($novo === 'ativo') {
-        // Volta quem parou COM ele: 'inativo' e 'pendente'. Quem foi suspenso
-        // por outra razão continua suspenso — reabrir um casamento não desfaz
-        // uma decisão que alguém tomou sobre uma pessoa.
-        $st = $conn->prepare("UPDATE {$P}utilizadores u
-                              JOIN {$P}acessos a ON a.utilizador_id = u.id
-                              SET u.estado='ativo'
-                              WHERE a.casamento_id = ? AND u.estado IN ('pendente','inativo')");
-        $st->bind_param('i', $id);
-        if ($st->execute()) $contas = $conn->affected_rows;
-    } elseif ($novo === 'arquivado') {
-        $st = $conn->prepare("UPDATE {$P}utilizadores u
-                              JOIN {$P}acessos a ON a.utilizador_id = u.id
-                              SET u.estado='inativo'
-                              WHERE a.casamento_id = ?
-                                AND u.estado = 'ativo'
-                                AND u.papel_plataforma IS NULL
-                                AND NOT EXISTS (
-                                      SELECT 1 FROM {$P}acessos a2
-                                      JOIN {$P}casamentos c2 ON c2.id = a2.casamento_id
-                                      WHERE a2.utilizador_id = u.id
-                                        AND a2.casamento_id <> ?
-                                        AND c2.estado <> 'arquivado')");
-        $st->bind_param('ii', $id, $id);
-        if ($st->execute()) $contas = $conn->affected_rows;
+        // Ativar arranca (ou reinicia, se tinha expirado) o relógio da licença,
+        // e devolve à vida as contas que tinham parado com o casamento.
+        iniciarLicenca($conn, $id);
+        $contas = retomarContasDoCasamento($conn, $id);
+    } elseif ($novo === 'arquivado' || $novo === 'suspenso') {
+        // Arquivar e suspender fecham a porta às contas que só dele dependem.
+        $contas = pararContasDoCasamento($conn, $id);
     }
-    // Arquivar o casamento que está aberto tem de o fechar: senão a sessão
-    // continuava a trabalhar dentro de uma casa que já saiu das listas.
-    if ($novo === 'arquivado' && (int)($_SESSION['casamento_id'] ?? 0) === $id) {
+    // Arquivar ou suspender o casamento aberto tem de o fechar: senão a sessão
+    // continuava a trabalhar dentro de uma casa que já saiu das listas de pé.
+    if (($novo === 'arquivado' || $novo === 'suspenso') && (int)($_SESSION['casamento_id'] ?? 0) === $id) {
         $_SESSION['casamento_id'] = 0;
         $_SESSION['papel'] = null;
     }
-    $rotulo = $novo === 'arquivado' ? 'conta(s) parada(s)' : 'conta(s) ativada(s)';
+    $parou = ($novo === 'arquivado' || $novo === 'suspenso');
+    $rotulo = $parou ? 'conta(s) parada(s)' : 'conta(s) ativada(s)';
     registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas $rotulo" : ''));
     ok(['id' => $id, 'estado' => $novo,
-        'contas_ativadas' => $novo === 'arquivado' ? 0 : $contas,
-        'contas_paradas'  => $novo === 'arquivado' ? $contas : 0]);
+        'contas_ativadas' => $parou ? 0 : $contas,
+        'contas_paradas'  => $parou ? $contas : 0]);
+}
+
+if ($acao === 'casamento_licenca') {
+    // Define ou ajusta a licença de um casamento: o período (meses) e, se se
+    // pedir, arranca já o relógio. Serve para estender uma licença a acabar, ou
+    // para iniciar uma que ficou por começar. Reiniciar dá período novo a contar
+    // de hoje. É do admin da plataforma.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma gere licenças.');
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+    $meses = max(0, min(120, (int)($d['licenca_meses'] ?? 0)));
+    // 'iniciar' arranca o relógio de hoje; 'reiniciar' fá-lo mesmo que já esteja
+    // a correr (estender). Sem nenhum, só se grava o período (fica por iniciar).
+    $iniciar   = !empty($d['iniciar']);
+    $reiniciar = !empty($d['reiniciar']);
+    if ($meses <= 0) {
+        // Sem limite: apaga qualquer expiração.
+        $conn->query("UPDATE {$P}casamentos SET licenca_meses=0, licenca_ate=NULL WHERE id=$id");
+    } elseif ($reiniciar) {
+        $conn->query("UPDATE {$P}casamentos SET licenca_meses=$meses,
+                      licenca_ate=DATE_ADD(CURDATE(), INTERVAL $meses MONTH) WHERE id=$id");
+    } else {
+        $conn->query("UPDATE {$P}casamentos SET licenca_meses=$meses WHERE id=$id");
+        if ($iniciar) iniciarLicenca($conn, $id);   // só arranca se ainda não corria
+    }
+    registar($conn, 'casamento_licenca', (string)$c['nome'],
+             $meses ? "$meses mês(es)" . ($iniciar || $reiniciar ? ' (a contar)' : '') : 'sem limite');
+    ok(['id' => $id, 'licenca' => licencaInfo($conn, $id)]);
 }
 
 if ($acao === 'casamento_apagar') {

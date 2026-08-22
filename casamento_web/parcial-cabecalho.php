@@ -72,6 +72,19 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     <div>
       <h1><?= escP($titulo) ?></h1>
       <?php if ($sub !== ''): ?><div class="sub"><?= escP($sub) ?></div><?php endif; ?>
+      <?php
+        // Quanto tempo de licença resta a este casamento — logo abaixo dos
+        // nomes, para o casal saber sempre com que prazo conta. Só quando há
+        // casamento aberto e a licença tem limite.
+        if (!$semCasamento && function_exists('licencaInfo') && isset($GLOBALS['conn'])):
+          $licInfo = licencaInfo($GLOBALS['conn'], casamentoAtual());
+          $licRot  = licencaRotulo($licInfo);
+          if ($licRot !== ''):
+            $licMau = !$licInfo['iniciada'] || (int)$licInfo['dias'] < 15; ?>
+        <div class="sub licenca-restante<?= $licMau ? ' aviso' : '' ?>">&#8987; <?= escP($licRot) ?><?php
+          if ($licInfo['iniciada'] && $licInfo['ate']):
+            ?> · até <?= escP(date('d/m/Y', strtotime($licInfo['ate']))) ?><?php endif; ?></div>
+      <?php endif; endif; ?>
       <?php if (!empty($variosCasamentos)):
         $nomeAberto = '';
         $stc = @$GLOBALS['conn']->prepare("SELECT nome FROM " . PREFIXO . "casamentos WHERE id=?");

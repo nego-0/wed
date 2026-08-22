@@ -51,6 +51,8 @@ a:hover{ text-decoration:underline; }
 }
 .topo h1{ color:var(--ivory); font-size:1.35rem; line-height:1.1; }
 .topo .sub{ font-family:var(--serif); font-style:italic; color:var(--gold-pale); font-size:1rem; margin-top:.1rem; }
+.topo .sub.licenca-restante{ font-family:var(--sans); font-style:normal; font-size:.82rem; opacity:.9; }
+.topo .sub.licenca-restante.aviso{ color:#f4c9a0; opacity:1; font-weight:600; }
 .topo .nav{ margin-left:auto; display:flex; gap:.4rem; flex-wrap:wrap; }
 .topo .nav a{
   color:var(--ivory); border:1px solid rgba(233,223,201,.35); border-radius:50px;

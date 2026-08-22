@@ -29,17 +29,15 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1200);
 
-  // Os formulários que se usam uma vez por mês estão dobrados.
-  for (const [id, rot] of [['d-casamento','Novo casamento'], ['d-conta','Nova conta'],
-                           ['d-copia','Cópia de segurança']]) {
-    ok(await p.evaluate(i => { const d = document.getElementById(i); return d && !d.open; }, id),
-       `"${rot}" começa dobrado`);
-  }
-  // O que interessa é o ecrã que o painel come, e não como o navegador esconde
-  // o conteúdo: fechado tem de ser uma linha, e não um formulário inteiro.
-  const dobrado = await p.evaluate(() =>
-    document.getElementById('d-casamento').getBoundingClientRect().height);
-  ok(dobrado < 80, `fechado, ocupa uma linha e não um formulário (${Math.round(dobrado)}px)`);
+  // A página abre nos casamentos, e criar/contas são pastilhas à parte — o
+  // trabalho de todos os dias não fica soterrado por formulários de uso raro.
+  const chips = await p.evaluate(() =>
+    [...document.querySelectorAll('#vista-chips .chip')].map(c => c.dataset.vista));
+  ok(chips.includes('casamentos') && chips.includes('novo') && chips.includes('contas'),
+     'a barra tem as pastilhas Casamentos, Novo casamento e Contas administrativas');
+  ok(await p.locator('#vista-casamentos').isVisible()
+     && !(await p.locator('#vista-novo').isVisible()),
+     'abre nos casamentos, com o novo formulário guardado noutra pastilha');
 
   // O trabalho de todos os dias tem de estar acima da dobra.
   const alturas = await p.evaluate(() => ({
@@ -49,11 +47,15 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   console.log('   lista a', Math.round(alturas.lista), 'px · página', alturas.pagina, 'px');
   ok(alturas.lista < 700, `a lista de casamentos aparece sem rolar muito (${Math.round(alturas.lista)}px)`);
 
-  await p.click('#d-casamento > summary'); await p.waitForTimeout(250);
-  const aberto = await p.evaluate(() =>
-    document.getElementById('d-casamento').getBoundingClientRect().height);
-  ok(aberto > dobrado * 3, `e um clique no título abre-o todo (${Math.round(aberto)}px)`);
-  await p.click('#d-casamento > summary'); await p.waitForTimeout(200);
+  // A pastilha "Novo casamento" revela o formulário; voltar a "Casamentos" esconde-o.
+  await p.click('#vista-chips [data-vista="novo"]'); await p.waitForTimeout(250);
+  ok(await p.locator('#vista-novo').isVisible() && await p.locator('#n-nome').isVisible(),
+     'a pastilha "Novo casamento" mostra o formulário de criar');
+  await p.click('#vista-chips [data-vista="contas"]'); await p.waitForTimeout(200);
+  ok(await p.locator('#vista-contas').isVisible()
+     && await p.evaluate(() => { const d = document.getElementById('d-conta'); return d && !d.open; }),
+     'a pastilha "Contas administrativas" abre com a "Nova conta" dobrada');
+  await p.click('#vista-chips [data-vista="casamentos"]'); await p.waitForTimeout(200);
 
   // A linha do casamento diz quando é, quanto falta e quantos confirmaram.
   const linha = await p.evaluate(() => {
@@ -120,8 +122,9 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
 
   await p.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(3500);
-  ok(await p.evaluate(() => { const d = document.getElementById('d-novo'); return d && !d.open; }),
-     '"Novo modelo" começa dobrado');
+  ok(await p.evaluate(() =>
+       [...document.querySelectorAll('#filtros .chip')].some(c => c.dataset.vista === 'novo')),
+     '"Novo modelo" é uma pastilha na barra dos modelos');
   ok(await p.locator('#lista .grelha .mod').count() >= 2, 'os modelos vêm numa grelha de cartões');
 
   const caras = await p.evaluate(() => [...document.querySelectorAll('#lista .mod')].map(m => ({

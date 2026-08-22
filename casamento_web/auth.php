@@ -218,6 +218,133 @@ function entrouComoPlataforma(): bool {
     return !empty($_SESSION['como_plataforma']);
 }
 
+// ============================================================
+// A licença de uso de um casamento
+//
+// Cada casamento tem um período de uso, em meses ('licenca_meses'; 0 = sem
+// limite). O relógio começa quando o casamento fica ativo — aí grava-se a data
+// de expiração ('licenca_ate'). Expirada, o casamento é suspenso sozinho, e com
+// ele as contas que só dele dependem.
+// ============================================================
+
+/** O que se sabe da licença de um casamento, pronto para mostrar e decidir. */
+function licencaInfo(mysqli $conn, int $cid): array {
+    global $P;
+    $base = ['meses' => 0, 'ate' => null, 'ilimitada' => true,
+             'iniciada' => false, 'expirada' => false, 'dias' => null];
+    if ($cid <= 0) return $base;
+    $st = @$conn->prepare("SELECT licenca_meses, licenca_ate FROM {$P}casamentos WHERE id=? LIMIT 1");
+    if (!$st) return $base;
+    $st->bind_param('i', $cid); $st->execute();
+    $r = $st->get_result()->fetch_assoc();
+    if (!$r) return $base;
+    $meses = (int)$r['licenca_meses'];
+    $ate   = $r['licenca_ate'] ?: null;
+    if ($meses <= 0) return ['meses' => 0, 'ate' => null, 'ilimitada' => true,
+                             'iniciada' => false, 'expirada' => false, 'dias' => null];
+    if ($ate === null) return ['meses' => $meses, 'ate' => null, 'ilimitada' => false,
+                               'iniciada' => false, 'expirada' => false, 'dias' => null];
+    $hoje = new DateTimeImmutable('today');
+    $fim  = new DateTimeImmutable($ate);
+    $dias = (int)$hoje->diff($fim)->format('%r%a');
+    return ['meses' => $meses, 'ate' => $ate, 'ilimitada' => false,
+            'iniciada' => true, 'expirada' => $dias < 0, 'dias' => $dias];
+}
+
+/**
+ * Arranca (ou reinicia) o relógio da licença de um casamento: grava a data de
+ * expiração a partir de hoje. Só mexe se houver período definido e a licença
+ * ainda não estiver a correr (ou já ter expirado — reativar dá período novo).
+ */
+function iniciarLicenca(mysqli $conn, int $cid): void {
+    global $P;
+    $info = licencaInfo($conn, $cid);
+    if ($info['ilimitada']) return;                       // sem limite: nada a marcar
+    if ($info['iniciada'] && !$info['expirada']) return;  // já a correr: não se reinicia
+    $meses = (int)$info['meses'];
+    @$conn->query("UPDATE {$P}casamentos
+                   SET licenca_ate = DATE_ADD(CURDATE(), INTERVAL $meses MONTH)
+                   WHERE id = " . (int)$cid);
+}
+
+/**
+ * Para as contas que só existem por causa deste casamento: passam a 'inativo'.
+ * São as contas de noivos/porteiro cujo único casamento de pé é este, e nunca
+ * o pessoal da plataforma, que não depende de casamento nenhum. Devolve quantas.
+ *
+ * 'inativo' (e não 'suspenso') de propósito: é o estado "parada por causa do
+ * casamento", que reabrir o casamento desfaz — ao contrário de uma suspensão
+ * que alguém decidiu sobre a pessoa.
+ */
+function pararContasDoCasamento(mysqli $conn, int $cid): int {
+    global $P;
+    $st = @$conn->prepare("UPDATE {$P}utilizadores u
+                           JOIN {$P}acessos a ON a.utilizador_id = u.id
+                           SET u.estado='inativo'
+                           WHERE a.casamento_id = ?
+                             AND u.estado = 'ativo'
+                             AND u.papel_plataforma IS NULL
+                             AND NOT EXISTS (
+                                   SELECT 1 FROM {$P}acessos a2
+                                   JOIN {$P}casamentos c2 ON c2.id = a2.casamento_id
+                                   WHERE a2.utilizador_id = u.id
+                                     AND a2.casamento_id <> ?
+                                     AND c2.estado NOT IN ('arquivado','suspenso'))");
+    if (!$st) return 0;
+    $st->bind_param('ii', $cid, $cid);
+    return $st->execute() ? $conn->affected_rows : 0;
+}
+
+/**
+ * Devolve à vida as contas que tinham parado com este casamento: 'inativo' e
+ * 'pendente' voltam a 'ativo'. Não toca em 'suspenso' — reabrir um casamento
+ * não desfaz uma decisão tomada sobre uma pessoa. Devolve quantas voltaram.
+ */
+function retomarContasDoCasamento(mysqli $conn, int $cid): int {
+    global $P;
+    $st = @$conn->prepare("UPDATE {$P}utilizadores u
+                           JOIN {$P}acessos a ON a.utilizador_id = u.id
+                           SET u.estado='ativo'
+                           WHERE a.casamento_id = ? AND u.estado IN ('pendente','inativo')");
+    if (!$st) return 0;
+    $st->bind_param('i', $cid);
+    return $st->execute() ? $conn->affected_rows : 0;
+}
+
+/** Uma frase curta sobre o que resta da licença, para o cabeçalho e as listas. */
+function licencaRotulo(array $info): string {
+    if ($info['ilimitada']) return '';
+    if (!$info['iniciada'])  return 'licença por iniciar';
+    $d = (int)$info['dias'];
+    if ($d < 0)   return 'licença expirada';
+    if ($d === 0) return 'licença termina hoje';
+    if ($d === 1) return 'falta 1 dia de licença';
+    if ($d < 45)  return "faltam $d dias de licença";
+    $m = (int)round($d / 30);
+    return "faltam ~$m meses de licença";
+}
+
+/**
+ * Suspende os casamentos cuja licença expirou, e para as contas com eles.
+ *
+ * Corre nos pontos de entrada (login, página da plataforma): é barata quando
+ * não há nada a fazer, e é o que garante que uma licença vencida fecha a porta
+ * mesmo sem ninguém carregar num botão. Devolve quantos casamentos suspendeu.
+ */
+function suspenderLicencasExpiradas(mysqli $conn): int {
+    global $P;
+    $r = @$conn->query("SELECT id FROM {$P}casamentos
+                        WHERE estado='ativo' AND licenca_ate IS NOT NULL AND licenca_ate < CURDATE()");
+    if (!$r || !$r->num_rows) return 0;
+    $ids = [];
+    while ($x = $r->fetch_row()) $ids[] = (int)$x[0];
+    foreach ($ids as $cid) {
+        @$conn->query("UPDATE {$P}casamentos SET estado='suspenso' WHERE id=$cid");
+        pararContasDoCasamento($conn, $cid);
+    }
+    return count($ids);
+}
+
 /**
  * Token CSRF da sessão (gerado na primeira utilização). Deve ser incluído
  * nos pedidos que alteram dados, no cabeçalho "X-CSRF-Token".
@@ -261,6 +388,15 @@ function autenticar(string $utilizador, string $senha): ?string {
     $u = $st->get_result()->fetch_assoc();
     if (!$u) return null;
     if (!password_verify($senha, (string)$u['senha_hash'])) return null;
+    // Antes de deixar entrar, fecha-se a porta às licenças vencidas: um
+    // casamento expirado é suspenso, e as contas que dele dependem passam a
+    // 'inativo' — e é isso que a verificação de estado, logo abaixo, apanha.
+    // (O pessoal da plataforma não depende de casamento nenhum e passa sempre.)
+    suspenderLicencasExpiradas($conn);
+    if ($u['papel_plataforma'] === null) {
+        $q = @$conn->query("SELECT estado FROM {$P}utilizadores WHERE id=" . (int)$u['id']);
+        if ($q && ($x = $q->fetch_assoc())) $u['estado'] = $x['estado'];
+    }
     // Um registo por aprovar, ou uma conta suspensa, não entra. A mensagem
     // fica igual à de senha errada: quem tenta adivinhar não fica a saber
     // que a conta existe.

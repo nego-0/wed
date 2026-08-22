@@ -52,16 +52,22 @@ const entrar = async (ctx, user, pass) => {
   ok(txtAdmin.includes('ZZ Casamento A ' + marca) && txtAdmin.includes('ZZ Casamento B ' + marca),
      'o pessoal da plataforma vê todos os casamentos na página');
 
-  // O formulário "Novo casamento" tem os campos de mapa dos três locais, com o
-  // apoio de escolher no Maps e ler as coordenadas — como o registo e a gestão.
-  await admin.evaluate(() => { const d = document.getElementById('d-casamento'); if (d) d.open = true; });
+  // A pastilha "Novo casamento" abre um formulário com os campos de mapa dos
+  // três locais, com o apoio de escolher no Maps — como o registo e a gestão.
+  await admin.evaluate(() => { if (window.verVista) verVista('novo'); });
   await admin.waitForTimeout(300);
   const mapasNovo = await admin.evaluate(() =>
-    [...document.querySelectorAll('#d-casamento input[data-mapa]')].map(e => e.id));
+    [...document.querySelectorAll('#vista-novo input[data-mapa]')].map(e => e.id));
   ok(mapasNovo.length === 3 && mapasNovo.includes('n-civil-maps') && mapasNovo.includes('n-religiosa-maps'),
      'o form "Novo casamento" tem os três campos de Google Maps (' + mapasNovo.join(', ') + ')');
-  ok(await admin.locator('#d-casamento .mapa-btn').count() === 3,
+  ok(await admin.locator('#vista-novo .mapa-btn').count() === 3,
      'cada um com o botão de escolher no Maps');
+  // E, novo, os campos de licença e das contas dos noivos e do porteiro.
+  ok(await admin.locator('#n-licenca').count() === 1 && await admin.locator('#n-licenca-ativa').count() === 1,
+     'o form tem o período de licença e a opção de a iniciar ativa');
+  ok(await admin.locator('#n-noivos-email').count() === 1 && await admin.locator('#n-porteiro-email').count() === 1,
+     'e as contas dos noivos e do porteiro');
+  await admin.evaluate(() => { if (window.verVista) verVista('casamentos'); });
 
   // ---------- o admin aterra na administração, não na festa de ninguém ----------
   const recem = await entrar(await b.newContext(), 'admin', 'noivos2026');

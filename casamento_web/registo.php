@@ -111,6 +111,27 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         <input type="password" id="senha" autocomplete="new-password" required>
         <div class="nota">Pelo menos 8 caracteres.</div></div>
 
+      <div class="seccao">Período de licença de uso</div>
+      <div class="campo"><label for="licenca">Quanto tempo pretendem usar a plataforma</label>
+        <select id="licenca" onchange="licencaMudou()">
+          <option value="3">3 meses</option>
+          <option value="6" selected>6 meses</option>
+          <option value="12">12 meses</option>
+          <option value="outro">Outro…</option>
+        </select>
+        <div class="nota">O tempo começa a contar quando a inscrição for aprovada.</div></div>
+      <div class="campo" id="licenca-outro" style="display:none">
+        <label for="licenca_meses_custom">Meses</label>
+        <input type="number" id="licenca_meses_custom" min="1" max="120" placeholder="ex.: 18"></div>
+
+      <div class="seccao">Conta do porteiro <span>opcional — quem regista as entradas à porta</span></div>
+      <div class="campo"><label for="porteiro_email">Email (utilizador) do porteiro</label>
+        <input type="email" id="porteiro_email" autocapitalize="none" spellcheck="false" placeholder="porta-…">
+        <div class="nota">Sugerimos um utilizador; podem trocá-lo. Fica pronto quando a inscrição for aprovada.</div></div>
+      <div class="campo"><label for="porteiro_senha">Palavra-passe do porteiro</label>
+        <input type="text" id="porteiro_senha" autocomplete="off" spellcheck="false">
+        <div class="nota">Pelo menos 8 caracteres. Só se preenchida é que a conta do porteiro é criada.</div></div>
+
       <button class="btn btn-verde" style="width:100%;justify-content:center" id="btn" onclick="enviar()">Inscrever</button>
       <div class="nota" style="text-align:center;margin-top:1rem">
         Já têm conta? <a href="login.php" style="color:var(--gold)">Entrar</a>
@@ -134,6 +155,35 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <script>
 const $ = id => document.getElementById(id);
 if (window.Moeda) window.Moeda.ligar('.campo-moeda');
+
+// O período de licença: presets, ou um número livre em «Outro…».
+function licencaMudou(){
+  $('licenca-outro').style.display = $('licenca').value === 'outro' ? '' : 'none';
+}
+function licencaMeses(){
+  const v = $('licenca').value;
+  return v === 'outro' ? Math.max(0, parseInt($('licenca_meses_custom').value || '0', 10)) : parseInt(v, 10);
+}
+
+// Uma sugestão de utilizador único para o porteiro, a partir dos nomes: fácil de
+// dizer e improvável de colidir. Só se preenche enquanto ninguém lhe tocar.
+function slug(s){
+  return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+let PORT_TOCADO = false;
+$('porteiro_email').addEventListener('input', () => { PORT_TOCADO = true; });
+function sugerirPorteiro(){
+  if (PORT_TOCADO) return;
+  const base = [slug($('noiva').value), slug($('noivo').value)].filter(Boolean).join('-') || 'casamento';
+  const suf = Math.random().toString(36).slice(2, 5);
+  const host = (location.hostname || 'convite.local').replace(/^www\./, '');
+  $('porteiro_email').value = `porta-${base}-${suf}@${host}`;
+  if (!$('porteiro_senha').value) $('porteiro_senha').value = 'porta' + Math.random().toString(36).slice(2, 10);
+}
+$('noiva').addEventListener('input', sugerirPorteiro);
+$('noivo').addEventListener('input', sugerirPorteiro);
+
 async function enviar(){
   // Tudo o que a página pergunta vai no mesmo pedido: o casamento nasce com os
   // seus dados, e não com os do casal de origem do config.php à espera de que
@@ -146,6 +196,8 @@ async function enviar(){
     maps: campo('maps'),
     convidados: campo('convidados'), whatsapp: campo('whatsapp'),
     orcamento_total: campo('orcamento_total'),
+    licenca_meses: licencaMeses(),
+    porteiro_email: campo('porteiro_email'), porteiro_senha: $('porteiro_senha').value,
     civil_hora: campo('civil_hora'), civil_local: campo('civil_local'), civil_maps: campo('civil_maps'),
     religiosa_hora: campo('religiosa_hora'), religiosa_local: campo('religiosa_local'), religiosa_maps: campo('religiosa_maps'),
   };

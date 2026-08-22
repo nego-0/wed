@@ -19,6 +19,12 @@ if (!papel() && !ehPessoalPlataforma()) {
     header('Location: login.php?r=' . urlencode('plataforma.php')); exit;
 }
 
+// Antes de desenhar as listas, fecha-se a porta às licenças vencidas: os
+// casamentos expirados passam a suspensos (e as contas deles param), para a
+// página mostrar já o estado verdadeiro — é aqui que a suspensão automática se
+// torna visível a quem responde pela casa.
+if (ehPessoalPlataforma()) suspenderLicencasExpiradas($conn);
+
 $meus    = casamentosDoUtilizador($conn);
 $aberto  = casamentoAtual();
 $daCasa  = ehPessoalPlataforma();
@@ -225,6 +231,19 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
 <main class="container">
 
+  <?php // As pastilhas que comandam a página: os casamentos, criar um novo, e as
+        // contas administrativas. As duas últimas são do admin da casa. ?>
+  <div class="filtros vista-chips" id="vista-chips" style="margin-bottom:1.2rem">
+    <button class="chip on" data-vista="casamentos" onclick="verVista('casamentos')">Casamentos</button>
+    <?php if ($mandaNaCasa): ?>
+      <button class="chip" data-vista="novo" onclick="verVista('novo')">&#43; Novo casamento</button>
+    <?php endif; ?>
+    <?php if (ehAdminPlataforma()): ?>
+      <button class="chip" data-vista="contas" onclick="verVista('contas')">Contas administrativas</button>
+    <?php endif; ?>
+  </div>
+
+  <div id="vista-casamentos">
   <?php if ($G): ?>
     <?php // Os números que levam a algum lado são botões e levam mesmo lá:
           // um painel de contagens que não responde ao clique convida a
@@ -240,8 +259,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="n"><b><?= $G['presentes'] ?></b><span>entradas registadas</span>
         <em>desde sempre</em></div>
       <?php if (ehAdminPlataforma()): ?>
-        <button type="button" class="n" onclick="irPara('lista-contas')"
-                title="Ver a lista de contas"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
+        <button type="button" class="n" onclick="verVista('contas')"
+                title="Ver as contas administrativas"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
           <em><?= $G['contas_espera'] ?> por aprovar · <?= $G['contas_suspensas'] ?> suspensas</em></button>
       <?php else: ?>
         <div class="n"><b><?= $G['contas_ativas'] ?></b><span>contas ativas</span>
@@ -303,17 +322,36 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     </div>
   <?php endif; ?>
 
+  <div class="painel" style="margin-top:1.4rem">
+    <h3>Casamentos</h3>
+    <div class="dica">Por ordem do que se mexeu por último — quem abre esta página de manhã
+      quer ver em cima aquilo em que andou ontem, e não o mais antigo do sistema.</div>
+    <div class="lf" style="grid-template-columns:1fr auto;margin-bottom:.7rem">
+      <div><input type="search" id="q-cas" placeholder="Procurar casamento ou noivos…"
+                  oninput="carregarCasamentos()"></div>
+      <div></div>
+    </div>
+    <div class="filtros" id="filtros-cas">
+      <?php foreach (['ativo'=>'Ativos','pendente'=>'Por aprovar','suspenso'=>'Suspensos',
+                      'arquivado'=>'Arquivados','todos'=>'Todos'] as $k => $rot): ?>
+        <button class="chip<?= $k === 'ativo' ? ' on' : '' ?>" data-estado="<?= $k ?>"
+                onclick="filtrarCasamentos('<?= $k ?>')"><?= escP($rot) ?></button>
+      <?php endforeach; ?>
+    </div>
+    <div class="cas-lista" id="lista-casamentos"><div class="dica">A carregar…</div></div>
+  </div>
+  </div><!-- /vista-casamentos -->
+
   <?php if ($mandaNaCasa): ?>
-    <details class="painel dobra" id="d-casamento">
-      <summary><span class="mais">+</span> Novo casamento
-        <small>criar um casamento à mão, já ativo</small></summary>
-      <div class="dica">Cria o casamento já ativo, com os seus dados. A conta dos noivos liga-se a
-        ele a seguir, em <b>Gestão</b>. O que ficar em branco fica no original e edita-se depois —
-        mas o que se preencher aqui poupa o casal de mandar convites com a morada de outra pessoa.</div>
+  <div id="vista-novo" style="display:none">
+    <div class="painel">
+      <h3>Novo casamento</h3>
+      <div class="dica">Cria o casamento já ativo, com os seus dados e, se quiser, já com as contas
+        dos noivos e do porteiro. O que ficar em branco fica no original e edita-se depois.</div>
       <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
         <div><label>Nome</label><input type="text" id="n-nome" placeholder="Ex: Isabel &amp; Abednego"></div>
-        <div><label>Noiva</label><input type="text" id="n-noiva" placeholder="Isabel"></div>
-        <div><label>Noivo</label><input type="text" id="n-noivo" placeholder="Abednego"></div>
+        <div><label>Noiva</label><input type="text" id="n-noiva" placeholder="Isabel" oninput="sugerirPorteiro()"></div>
+        <div><label>Noivo</label><input type="text" id="n-noivo" placeholder="Abednego" oninput="sugerirPorteiro()"></div>
       </div>
       <div class="lf" style="grid-template-columns:repeat(4,1fr)">
         <div><label>Data</label><input type="date" id="n-data"></div>
@@ -346,57 +384,64 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div><label>Religiosa · Google Maps</label>
           <input type="url" id="n-religiosa-maps" data-mapa data-mapa-local="n-religiosa-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
-      <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin-top:1rem">
-        <button class="btn btn-ouro" onclick="criar()">Criar</button>
-        <span class="dica" style="margin:0">Só os nomes são obrigatórios.</span>
+
+      <div class="dica" style="margin:1.1rem 0 .4rem"><b>A licença de uso.</b> Quanto tempo o casamento
+        fica disponível. Expirada, é suspenso sozinho.</div>
+      <div class="lf" style="grid-template-columns:1fr 1fr auto;align-items:center">
+        <div><label>Período de licença</label>
+          <select id="n-licenca" onchange="licencaMudou()">
+            <option value="0">Sem limite</option>
+            <option value="3">3 meses</option>
+            <option value="6" selected>6 meses</option>
+            <option value="12">12 meses</option>
+            <option value="outro">Outro…</option>
+          </select></div>
+        <div id="n-licenca-outro" style="display:none"><label>Meses</label>
+          <input type="number" id="n-licenca-meses" min="1" max="120" placeholder="ex.: 18"></div>
+        <div><label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400">
+          <input type="checkbox" id="n-licenca-ativa" checked style="width:auto;margin:0">
+          Iniciar com a licença já ativa</label></div>
       </div>
-    </details>
+
+      <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:#8a8f88">· opcional — quem gere o casamento</small></div>
+      <div class="lf" style="grid-template-columns:2fr 2fr">
+        <div><label>Email dos noivos</label><input type="email" id="n-noivos-email" autocapitalize="none" spellcheck="false"></div>
+        <div><label>Palavra-passe</label><input type="text" id="n-noivos-senha" autocomplete="off" spellcheck="false" placeholder="deixe em branco para gerar"></div>
+      </div>
+      <div class="dica" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
+      <div class="lf" style="grid-template-columns:2fr 2fr">
+        <div><label>Email (utilizador) do porteiro</label><input type="email" id="n-porteiro-email" autocapitalize="none" spellcheck="false" placeholder="porta-…"></div>
+        <div><label>Palavra-passe</label><input type="text" id="n-porteiro-senha" autocomplete="off" spellcheck="false" placeholder="deixe em branco para gerar"></div>
+      </div>
+
+      <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin-top:1.1rem">
+        <button class="btn btn-ouro" onclick="criar()">Criar casamento</button>
+        <span class="dica" style="margin:0">Só os nomes são obrigatórios. As senhas geradas mostram-se uma vez.</span>
+      </div>
+      <div class="segredo" id="n-resultado" style="display:none"></div>
+    </div>
+  </div>
   <?php endif; ?>
 
-  <div class="painel" style="margin-top:1.4rem">
-    <h3>Casamentos</h3>
-    <div class="dica">Por ordem do que se mexeu por último — quem abre esta página de manhã
-      quer ver em cima aquilo em que andou ontem, e não o mais antigo do sistema.</div>
-    <div class="lf" style="grid-template-columns:1fr auto;margin-bottom:.7rem">
-      <div><input type="search" id="q-cas" placeholder="Procurar casamento ou noivos…"
-                  oninput="carregarCasamentos()"></div>
-      <div></div>
-    </div>
-    <div class="filtros" id="filtros-cas">
-      <?php foreach (['ativo'=>'Ativos','pendente'=>'Por aprovar','suspenso'=>'Suspensos',
-                      'arquivado'=>'Arquivados','todos'=>'Todos'] as $k => $rot): ?>
-        <button class="chip<?= $k === 'ativo' ? ' on' : '' ?>" data-estado="<?= $k ?>"
-                onclick="filtrarCasamentos('<?= $k ?>')"><?= escP($rot) ?></button>
-      <?php endforeach; ?>
-    </div>
-    <div class="cas-lista" id="lista-casamentos"><div class="dica">A carregar…</div></div>
-  </div>
-
   <?php if (ehAdminPlataforma()): ?>
+    <div id="vista-contas" style="display:none">
     <div class="painel">
-      <h3>Contas</h3>
-      <div class="dica">Todas as contas do sistema. Uma conta <b>suspensa</b> não entra —
-        e a mensagem que recebe é a mesma de senha errada, para quem tenta adivinhar
-        não ficar a saber que a conta existe.</div>
+      <h3>Contas administrativas</h3>
+      <div class="dica">As contas de <b>administração</b> e <b>suporte</b> da casa. As contas de
+        noivos e porteiro vivem em cada casamento — abra o casamento e veja-as em <b>Gestão</b>.
+        Uma conta <b>suspensa</b> não entra, e recebe a mesma mensagem de senha errada.</div>
       <details class="dobra dobra-dentro" id="d-conta">
-      <summary><span class="mais">+</span> Nova conta
-        <small>noivos, porteiro, suporte ou administração</small></summary>
+      <summary><span class="mais">+</span> Nova conta administrativa
+        <small>suporte ou administração da plataforma</small></summary>
       <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin-bottom:.2rem">
         <div><label>Nome</label><input type="text" id="c-nome" placeholder="Nome de quem usa a conta"></div>
         <div><label>Email</label><input type="email" id="c-email" autocapitalize="none" spellcheck="false"></div>
         <div><label>Tipo</label>
           <select id="c-tipo" onchange="tipoMudou()">
-            <option value="noivos">Noivos</option>
-            <option value="porteiro">Porteiro</option>
             <option value="suporte">Suporte</option>
             <option value="admin">Admin da plataforma</option>
           </select></div>
         <div><button class="btn btn-ouro" onclick="criarConta()">Criar conta</button></div>
-      </div>
-      <div class="lf" style="grid-template-columns:1fr auto;margin-top:.4rem" id="linha-casamento">
-        <div><label>Casamento a que fica ligada</label>
-          <select id="c-casamento"><option value="">— nenhum, ligo depois —</option></select></div>
-        <div></div>
       </div>
       <div class="dica" id="nota-tipo" style="margin:.4rem 0 .2rem">A senha é gerada aqui e mostrada uma vez.</div>
       </details>
@@ -435,6 +480,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         página de Gestão.</div>
       <div class="segredo" id="sis-resultado" style="display:none"></div>
     </details>
+    </div><!-- /vista-contas -->
   <?php endif; ?>
 </main>
 
@@ -455,6 +501,49 @@ function toast(m, mau){
   setTimeout(() => el.className = 'toast', 2800);
 }
 
+// ---------- as pastilhas: casamentos · novo · contas administrativas ----------
+function verVista(v){
+  ['casamentos','novo','contas'].forEach(id => {
+    const e = document.getElementById('vista-' + id);
+    if (e) e.style.display = id === v ? '' : 'none';
+  });
+  document.querySelectorAll('#vista-chips .chip').forEach(c =>
+    c.classList.toggle('on', c.dataset.vista === v));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ---------- o formulário de novo casamento: licença e contas ----------
+function licencaMudou(){
+  const el = document.getElementById('n-licenca-outro');
+  if (el) el.style.display = document.getElementById('n-licenca').value === 'outro' ? '' : 'none';
+}
+function licencaMesesNovo(){
+  const v = document.getElementById('n-licenca').value;
+  return v === 'outro'
+    ? Math.max(0, parseInt(document.getElementById('n-licenca-meses').value || '0', 10))
+    : parseInt(v, 10);
+}
+// Sugere um utilizador único para o porteiro, a partir dos nomes. Só enquanto
+// ninguém lhe tocar — quem escrever o seu próprio manda.
+function slugNome(s){
+  return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+let PORT_TOCADO = false;
+function sugerirPorteiro(){
+  const eIn = document.getElementById('n-porteiro-email');
+  const sIn = document.getElementById('n-porteiro-senha');
+  if (!eIn) return;
+  if (!eIn.dataset.lig){ eIn.addEventListener('input', () => PORT_TOCADO = true); eIn.dataset.lig = '1'; }
+  if (PORT_TOCADO) return;
+  const base = [slugNome((document.getElementById('n-noiva')||{}).value),
+                slugNome((document.getElementById('n-noivo')||{}).value)].filter(Boolean).join('-') || 'casamento';
+  const suf = Math.random().toString(36).slice(2, 5);
+  const host = (location.hostname || 'convite.local').replace(/^www\./, '');
+  eIn.value = `porta-${base}-${suf}@${host}`;
+  if (sIn && !sIn.value) sIn.value = 'porta' + Math.random().toString(36).slice(2, 10);
+}
+
 async function abrir(id){
   const d = await api('casamento_abrir&id=' + id, { method:'POST' });
   if (d && d.success) location.href = 'index.php';
@@ -469,10 +558,38 @@ async function criar(){
     hora: v('n-hora'), local: v('n-local'), cidade: v('n-cidade'), maps: v('n-maps'),
     convidados: v('n-convidados'), whatsapp: v('n-whatsapp'),
     orcamento_total: v('n-orcamento'),
+    licenca_meses: licencaMesesNovo(),
+    licenca_ativa: document.getElementById('n-licenca-ativa').checked,
+    noivos_email: v('n-noivos-email'), noivos_senha: v('n-noivos-senha'),
+    porteiro_email: v('n-porteiro-email'), porteiro_senha: v('n-porteiro-senha'),
     civil_hora: v('n-civil-hora'), civil_local: v('n-civil-local'), civil_maps: v('n-civil-maps'),
     religiosa_hora: v('n-religiosa-hora'), religiosa_local: v('n-religiosa-local'), religiosa_maps: v('n-religiosa-maps'),
   }) });
-  if (d && d.success) location.reload();
+  if (!d || !d.success) return;
+  // As senhas geradas mostram-se UMA vez: se recarregasse já, perdiam-se. Só se
+  // recarrega quando não há nada de secreto para o admin copiar.
+  const contas = d.contas || {};
+  const linhas = [];
+  ['noivos','porteiro'].forEach(t => {
+    const c = contas[t];
+    if (c) linhas.push(`<b>${t === 'noivos' ? 'Noivos' : 'Porteiro'}</b>: <span class="cod">${esc(c.email)}</span>`
+      + (c.senha ? ` · senha <b class="cod">${esc(c.senha)}</b>` : ' · conta já existente, ligada'));
+  });
+  const lic = d.licenca && !d.licenca.ilimitada
+    ? (d.licenca.iniciada ? `Licença de ${d.licenca.meses} mês(es), até ${esc((d.licenca.ate||'').split('-').reverse().join('/'))}.`
+                          : `Licença de ${d.licenca.meses} mês(es), por iniciar.`)
+    : 'Sem limite de licença.';
+  const cx = document.getElementById('n-resultado');
+  cx.style.display = '';
+  cx.innerHTML = `Casamento <b>${esc(d.nome)}</b> criado. ${lic}`
+    + (linhas.length ? '<br>' + linhas.join('<br>') + '<br><small>Entregue as senhas agora — não voltam a aparecer.</small>' : '')
+    + `<br><button class="btn btn-sm" style="margin-top:.6rem" onclick="verVista('casamentos');carregarCasamentos()">Ver nos casamentos</button>`;
+  ['n-nome','n-noiva','n-noivo','n-data','n-hora','n-local','n-cidade','n-maps','n-convidados','n-whatsapp',
+   'n-orcamento','n-civil-hora','n-civil-local','n-civil-maps','n-religiosa-hora','n-religiosa-local',
+   'n-religiosa-maps','n-noivos-email','n-noivos-senha','n-porteiro-email','n-porteiro-senha']
+    .forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  PORT_TOCADO = false;
+  toast('Casamento criado.');
 }
 async function aprovar(id){
   const d = await api('casamento_estado&id=' + id + '&estado=ativo', { method:'POST' });
@@ -599,6 +716,7 @@ async function carregarCasamentos(){
         mais.push('<hr>');
         mais.push(`<button class="perigo" onclick="apagar(${c.id},'${n}')">Apagar para sempre</button>`);
       } else {
+        mais.push(`<button onclick="gerirLicenca(${c.id},'${n}')">Gerir licença</button>`);
         mais.push('<hr>');
         mais.push(c.estado === 'suspenso'
           ? `<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
@@ -628,6 +746,7 @@ async function carregarCasamentos(){
           <span><b>${c.convites}</b> convites</span>
           <span><b>${pes}</b> pessoas${pes ? ` · <b>${conf}</b> confirmaram` : ''}</span>
           <span>${esc(quando(c.ultimo_acesso))}</span>
+          ${licencaMeta(c)}
           ${+c.donos === 0 ? '<span class="falta">sem conta dos noivos</span>' : ''}
         </div>
         ${pes ? `<div class="barra" title="${conf} de ${pes} confirmaram (${pc}%)"><i style="width:${pc}%"></i></div>` : ''}
@@ -635,6 +754,31 @@ async function carregarCasamentos(){
       <div class="ac">${principal}${menu}</div>
     </div>`;
   }).join('');
+}
+
+/** O que resta da licença, para a linha do casamento. */
+function licencaMeta(c){
+  const m = +c.licenca_meses || 0;
+  if (!m) return '<span style="color:#b0b5af">licença sem limite</span>';
+  if (!c.licenca_ate) return '<span class="falta">licença por iniciar</span>';
+  const dias = c.licenca_dias == null ? null : +c.licenca_dias;
+  if (dias == null) return '';
+  if (dias < 0)  return '<span class="falta">licença expirada</span>';
+  if (dias < 45) return `<span class="falta">licença: faltam ${dias} dia(s)</span>`;
+  return `<span class="conta">licença: ~${Math.round(dias/30)} mes(es)</span>`;
+}
+
+/** Gerir a licença de um casamento: estender/definir o período, e iniciá-la. */
+async function gerirLicenca(id, nome){
+  const cur = prompt('Licença de «' + nome + '» — meses de uso (0 = sem limite).\n\n'
+    + 'Guardar reinicia o relógio a contar de hoje.', '12');
+  if (cur === null) return;
+  const meses = Math.max(0, Math.min(120, parseInt(cur, 10) || 0));
+  const d = await api('casamento_licenca', { method:'POST',
+    body: JSON.stringify({ id, licenca_meses: meses, reiniciar: meses > 0 }) });
+  if (!d || !d.success) return;
+  toast(meses ? 'Licença definida: ' + meses + ' mês(es), a contar de hoje.' : 'Licença sem limite.');
+  carregarCasamentos();
 }
 
 /** A data do casamento, e quanto falta — que é o que se quer saber primeiro. */
@@ -670,34 +814,22 @@ async function fecharCasamento(){
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const $ = id => document.getElementById(id);
 let CONTAS = {};   // as contas já carregadas, para o editor não as ir procurar outra vez
-// Uma conta de suporte não se prende a casamento nenhum: entra com o código
-// que o casal gerar. Dizê-lo aqui evita a pergunta de quem tenta ligá-la a um.
+// Só contas administrativas por aqui: suporte e admin. As de noivos/porteiro
+// criam-se em cada casamento (no formulário de novo casamento, ou em Gestão).
 function tipoMudou(){
   const tipo = $('c-tipo').value;
-  const preso = (tipo === 'noivos' || tipo === 'porteiro');
-  $('linha-casamento').style.display = preso ? '' : 'none';
   $('nota-tipo').innerHTML = {
-    noivos:   'Gere um casamento inteiro. A senha é gerada aqui e mostrada uma vez.',
-    porteiro: 'Só a porta do casamento: procurar convites e registar entradas.',
     suporte:  '<b>Não se liga a casamento nenhum.</b> Entra com o código que o casal gerar — '
             + 'é esse código que lhe abre a porta e diz se pode ver ou também corrigir.',
     admin:    'Responde pela casa: vê todos os casamentos, aprova registos e gere contas.',
   }[tipo];
-}
-async function encherCasamentos(){
-  const d = await api('casamento_lista&estado=todos');
-  if (!d || !d.success) return;
-  $('c-casamento').innerHTML = '<option value="">— nenhum, ligo depois —</option>'
-    + d.casamentos.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
 }
 async function criarConta(){
   const tipo = $('c-tipo').value;
   const email = $('c-email').value.trim();
   if (!email) return toast('Indique o email.', true);
   const senha = 'tmp' + Math.random().toString(36).slice(2, 10);
-  const corpo = { email, nome: $('c-nome').value.trim(), senha };
-  if (tipo === 'suporte' || tipo === 'admin') corpo.papel_plataforma = tipo;
-  else { corpo.papel = tipo; corpo.casamento_id = +$('c-casamento').value || 0; }
+  const corpo = { email, nome: $('c-nome').value.trim(), senha, papel_plataforma: tipo };
   const d = await api('utilizador_criar', { method:'POST', body: JSON.stringify(corpo) });
   if (!d || !d.success) return;
   $('c-nome').value = $('c-email').value = '';
@@ -712,7 +844,9 @@ async function carregarContas(){
   const alvo = document.getElementById('lista-contas');
   if (!alvo) return;
   const q = (document.getElementById('q-conta').value || '').trim();
-  const d = await api('utilizador_lista' + (q ? '&q=' + encodeURIComponent(q) : ''));
+  // Só as contas administrativas (admin e suporte). As de noivos/porteiro
+  // pertencem a cada casamento e veem-se lá, em Gestão.
+  const d = await api('utilizador_lista&tipo=plataforma' + (q ? '&q=' + encodeURIComponent(q) : ''));
   if (!d || !d.success) return;
   CONTAS = {};
   d.contas.forEach(c => { CONTAS[c.id] = c; });
@@ -831,13 +965,11 @@ async function reporSenha(id, email){
   cx.innerHTML = `Senha nova de <b>${esc(d.email)}</b>: <b class="cod">${esc(d.senha)}</b><br>
     Entregue-lha agora — não volta a aparecer. Ela deve mudá-la na página Gestão.`;
 }
-carregarContas();
-
 // ---------- arranque ----------
 const MANDA_NA_CASA = <?= $mandaNaCasa ? 'true' : 'false' ?>;
 carregarCasamentos();
 carregarContas();
-if (MANDA_NA_CASA){ encherCasamentos(); tipoMudou(); }
+if (document.getElementById('c-tipo')) tipoMudou();
 </script>
 </body>
 </html>
