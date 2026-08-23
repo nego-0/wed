@@ -137,7 +137,7 @@ function ficheirosApp(): array {
  */
 function acoesDaPlataforma(): array {
     return ['casamento_criar','casamento_abrir','casamento_fechar','casamento_estado',
-            'casamento_licenca',
+            'casamento_licenca','casamento_editar',
             'casamento_apagar','utilizador_criar','utilizador_editar','utilizador_apagar',
             'utilizador_estado','utilizador_repor_senha','acesso_tirar_de','suporte_sair',
             'modelo_criar','modelo_editar','modelo_defs','modelo_apagar','modelo_visibilidade',
@@ -172,7 +172,7 @@ function acoesDoCasamento(): array {
  */
 function acoesSemCasamento(): array {
     return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'utilizador_casamentos',
-                                             'casamento_lista', 'esquema_info', 'acesso_dar',
+                                             'casamento_lista', 'casamento_ficha', 'esquema_info', 'acesso_dar',
                                              'dados_exportar', 'dados_importar',
                                              'modelo_lista', 'modelo_defs', 'modelo_exemplo',
                                              'modelos_exportar', 'modelos_importar']);

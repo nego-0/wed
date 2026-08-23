@@ -48,8 +48,12 @@ const entrar = async (ctx, user, pass) => {
 
   const anon = await (await b.newContext()).newPage();
   await anon.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
+  // O formulário público arruma o evento e as cerimónias em blocos que dobram;
+  // abrem-se todos antes de preencher, senão os campos escondidos não recebem texto.
+  await anon.evaluate(() => document.querySelectorAll('details.bloco').forEach(d => d.open = true));
   await anon.fill('#noiva', 'Nadia' + marca); await anon.fill('#noivo', 'Nuno' + marca);
   await anon.fill('#email', emailCasal); await anon.fill('#senha', SENHA);
+  await anon.fill('#confirmar', SENHA);   // o formulário público pede a confirmação da palavra-passe
   // Os dados do evento perguntam-se aqui, no primeiro registo — é o que evita
   // um casamento a viver meses com a morada do casal de origem.
   await anon.fill('#data', '2027-03-20'); await anon.fill('#hora', '18:30');

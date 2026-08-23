@@ -54,8 +54,11 @@ if ($r) while ($x = $r->fetch_assoc()) $semDono[(int)$x['id']] = true;
 //
 // As consultas atravessam casamentos de propósito e dizem-no ('casamento_id > 0'),
 // que é o que o guarda de âmbito exige para as deixar passar.
+// O painel de estado da casa é do ADMIN. O suporte não tem aqui um posto de
+// comando: entra num casamento com o código que o casal lhe der, e o que
+// precisa de ver é isso — não o retrato de toda a casa.
 $G = null;
-if ($daCasa) {
+if ($mandaNaCasa) {
     $G = ['casamentos'=>0, 'ativos'=>0, 'pendentes'=>0, 'suspensos'=>0,
           'convites'=>0, 'pessoas'=>0, 'confirmadas'=>0, 'presentes'=>0,
           'contas'=>0, 'contas_ativas'=>0, 'contas_espera'=>0, 'contas_suspensas'=>0,
@@ -182,10 +185,6 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .editor-conta{ grid-column:1/-1; border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.8rem; }
   .editor-conta .lf{ margin-top:.5rem; }
-  .lugares{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.5rem 0; }
-  .lugar{ background:var(--cream); border:1px solid var(--line); border-radius:50px;
-          padding:.15rem .3rem .15rem .7rem; font-size:.8rem; display:inline-flex; gap:.4rem; align-items:center; }
-  .lugar button{ border:0; background:none; color:var(--danger); cursor:pointer; font-size:1rem; line-height:1; }
   .numeros{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
             gap:.7rem; margin-bottom:.8rem; }
   .numeros .n{ background:#fff; border:1px solid var(--line); border-radius:12px;
@@ -222,14 +221,122 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
   .lf{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.7rem; align-items:end; }
   @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .cas{ grid-template-columns:auto 1fr; } .cas .ac{ grid-column:1/-1; } }
+
+  /* ---- Verificações de preenchimento (as mesmas do formulário público) ----
+     Um campo com erro acende a vermelho e diz o que falta, logo por baixo. */
+  .campo{ display:flex; flex-direction:column; }
+  .campo input, .campo select{ transition:border-color .15s, box-shadow .15s; }
+  .campo.mau input, .campo.mau select{ border-color:var(--danger); }
+  .campo.mau input:focus, .campo.mau select:focus{ box-shadow:0 0 0 3px rgba(165,71,63,.15); }
+  .campo.ok input:not(:focus){ border-color:#bcd6c4; }
+  .err{ display:none; color:var(--danger); font-size:.77rem; margin-top:.34rem; line-height:1.45; }
+  .campo.mau .err{ display:block; }
+  /* Palavra-passe: o olho para mostrar, e a força ao lado. O campo reserva
+     espaço à direita para o botão não passar por cima do que se escreve. */
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ padding-right:4.6rem; }
+  .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
+            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+  .pw-olho:hover{ color:var(--forest); }
+  .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }
+  .pw-barras{ display:flex; gap:3px; flex:1; }
+  .pw-barras i{ height:4px; flex:1; border-radius:50px; background:var(--cream); transition:background .2s; }
+  .pw-forca.f1 i:nth-child(1){ background:var(--danger); }
+  .pw-forca.f2 i:nth-child(-n+2){ background:var(--warn); }
+  .pw-forca.f3 i:nth-child(-n+3){ background:#9a9a3c; }
+  .pw-forca.f4 i{ background:var(--ok); }
+  .pw-rot{ font-size:.72rem; color:#9aa09a; white-space:nowrap; min-width:4.5rem; text-align:right; }
+
+  /* O aviso de estado da licença, no modal, veste-se do que diz. */
+  .lic-estado.ok{ background:var(--ok-bg); border-color:var(--ok); border-style:solid; }
+  .lic-estado.warn{ background:var(--warn-bg); border-color:var(--warn); border-style:solid; }
+  .lic-estado.danger{ background:var(--danger-bg); border-color:var(--danger); border-style:solid; }
+  /* No modal, os campos empilham-se em ecrã estreito. */
+  @media (max-width:560px){ .modal-corpo .lf{ grid-template-columns:1fr; } }
+  /* Os separadores de secção do editor completo. */
+  .ed-sec{ font-family:var(--serif); color:var(--forest); font-size:1.02rem; margin:1.2rem 0 .5rem;
+           padding-top:.9rem; border-top:1px solid var(--line); }
+  .ed-sec:first-of-type{ border-top:0; padding-top:0; margin-top:.2rem; }
+  .ed-conta{ border:1px solid var(--line); border-radius:12px; padding:.7rem .8rem; margin-bottom:.6rem; }
+  .ed-conta .cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+  .ed-conta .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
 </style>
 </head>
 <body>
-<?php cabecalho($daCasa ? 'Administração' : 'Casamentos',
-                $daCasa ? 'O estado do sistema e os casamentos que ele serve'
-                        : 'Os casamentos a que tem acesso', 'plataforma'); ?>
+<?php
+  // O título veste-se de quem chega: o admin vê a casa toda; o suporte tem um
+  // posto simples, à volta do código; o casal vê os seus casamentos.
+  if ($mandaNaCasa)      { $tit = 'Administração'; $sub = 'O estado do sistema e os casamentos que ele serve'; }
+  elseif (ehSuporte())   { $tit = 'Suporte';       $sub = 'Entre num casamento com o código que o casal lhe der'; }
+  else                   { $tit = 'Casamentos';    $sub = 'Os casamentos a que tem acesso'; }
+  cabecalho($tit, $sub, 'plataforma');
+?>
 
 <main class="container">
+
+<?php if (ehSuporte()): ?>
+  <?php // ---- O posto do suporte: simples e ao que interessa ----
+        // Nada de painel de estado da casa. O suporte não abre casamentos por
+        // direito próprio: entra com o código que o casal gera e entrega, e
+        // trata da sua própria conta. É só isto que precisa de ver. ?>
+  <div class="painel">
+    <h3>Entrar com um código do casal</h3>
+    <div class="dica">O suporte não entra em casa de ninguém por direito próprio: é o casal
+      que gera um código e o entrega. O código diz se pode só ver ou também corrigir,
+      e o casal revoga-o quando quiser.</div>
+    <div class="lf" style="grid-template-columns:1fr auto">
+      <div><label for="s-codigo">Código</label>
+        <input type="text" id="s-codigo" placeholder="XXXXXXXX" autocapitalize="characters"
+               spellcheck="false" onkeydown="if(event.key==='Enter')entrarComCodigo()"></div>
+      <div><button class="btn btn-ouro" onclick="entrarComCodigo()">Entrar</button></div>
+    </div>
+  </div>
+
+  <div class="painel">
+    <h3>A minha conta</h3>
+    <div class="dica">Entrou como <b><?= escP(utilizadorAtual() ?? '') ?></b>. Aqui muda a sua
+      própria palavra-passe — mais nada. Pelo menos 8 caracteres.</div>
+    <div class="lf" style="grid-template-columns:1fr 1fr auto">
+      <div><label for="sp-atual">Palavra-passe atual</label>
+        <input type="password" id="sp-atual" autocomplete="current-password"></div>
+      <div><label for="sp-nova">Nova palavra-passe</label>
+        <input type="password" id="sp-nova" autocomplete="new-password"></div>
+      <div><button class="btn" onclick="mudarMinhaSenha()">Mudar palavra-passe</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
+  <script src="<?= asset('assets/api.js') ?>"></script>
+  <script>
+  function toast(m, mau){
+    const el = document.getElementById('toast');
+    el.textContent = m; el.className = 'toast mostrar' + (mau ? ' erro' : '');
+    setTimeout(() => el.className = 'toast', 2800);
+  }
+  async function entrarComCodigo(){
+    const codigo = document.getElementById('s-codigo').value.trim();
+    if (!codigo) return toast('Escreva o código que o casal lhe deu.', true);
+    const d = await api('suporte_entrar', { method:'POST', body: JSON.stringify({ codigo }) });
+    if (d && d.success) location.href = 'index.php';
+  }
+  async function mudarMinhaSenha(){
+    const atual = document.getElementById('sp-atual').value;
+    const nova  = document.getElementById('sp-nova').value;
+    if (!atual || !nova) return toast('Preencha as duas palavras-passe.', true);
+    if (nova.length < 8)  return toast('A nova precisa de pelo menos 8 caracteres.', true);
+    const d = await api('senha_mudar', { method:'POST', body: JSON.stringify({ atual, nova }) });
+    if (d && d.success){
+      document.getElementById('sp-atual').value = document.getElementById('sp-nova').value = '';
+      toast('Palavra-passe mudada.');
+    }
+  }
+  </script>
+</main>
+</body>
+</html>
+<?php return; // o suporte não vê nada do painel de administração abaixo ?>
+<?php endif; ?>
 
   <?php // As pastilhas que comandam a página: os casamentos, criar um novo, e as
         // contas administrativas. As duas últimas são do admin da casa. ?>
@@ -308,19 +415,6 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     </div>
   <?php endif; ?>
 
-  <?php if (ehSuporte()): ?>
-    <div class="painel">
-      <h3>Entrar com um código do casal</h3>
-      <div class="dica">O suporte não entra em casa de ninguém por direito próprio: é o casal
-        que gera um código e o entrega. O código diz se pode só ver ou também corrigir,
-        e o casal revoga-o quando quiser.</div>
-      <div class="lf" style="grid-template-columns:1fr auto">
-        <div><label>Código</label>
-          <input type="text" id="s-codigo" placeholder="XXXXXXXX" autocapitalize="characters" spellcheck="false"></div>
-        <div><button class="btn btn-ouro" onclick="entrarComCodigo()">Entrar</button></div>
-      </div>
-    </div>
-  <?php endif; ?>
 
   <div class="painel" style="margin-top:1.4rem">
     <h3>Casamentos</h3>
@@ -403,15 +497,34 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           Iniciar com a licença já ativa</label></div>
       </div>
 
-      <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:#8a8f88">· opcional — quem gere o casamento</small></div>
-      <div class="lf" style="grid-template-columns:2fr 2fr">
-        <div><label>Email dos noivos</label><input type="email" id="n-noivos-email" autocapitalize="none" spellcheck="false"></div>
-        <div><label>Palavra-passe</label><input type="text" id="n-noivos-senha" autocomplete="off" spellcheck="false" placeholder="deixe em branco para gerar"></div>
+      <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:#8a8f88">· opcional — quem gere o casamento. Deixe em branco para não criar já.</small></div>
+      <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
+        <div class="campo"><label for="n-noivos-email">Email dos noivos</label>
+          <input type="email" id="n-noivos-email" autocapitalize="none" spellcheck="false">
+          <div class="err"></div></div>
+        <div class="campo"><label for="n-noivos-senha">Palavra-passe</label>
+          <div class="pw-wrap"><input type="password" id="n-noivos-senha" autocomplete="off" spellcheck="false" placeholder="em branco = gerada">
+            <button type="button" class="pw-olho" id="olho-ne" onclick="verSenha('n-noivos-senha','olho-ne')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
+          <div class="pw-forca" id="forca-ne" aria-hidden="true"><span class="pw-barras"><i></i><i></i><i></i><i></i></span><span class="pw-rot" id="rot-ne"></span></div>
+          <div class="err"></div></div>
+        <div class="campo"><label for="n-noivos-confirmar">Repetir</label>
+          <div class="pw-wrap"><input type="password" id="n-noivos-confirmar" autocomplete="off" spellcheck="false" placeholder="repita a palavra-passe">
+            <button type="button" class="pw-olho" id="olho-nc" onclick="verSenha('n-noivos-confirmar','olho-nc')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
+          <div class="err"></div></div>
       </div>
       <div class="dica" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
-      <div class="lf" style="grid-template-columns:2fr 2fr">
-        <div><label>Email (utilizador) do porteiro</label><input type="email" id="n-porteiro-email" autocapitalize="none" spellcheck="false" placeholder="porta-…"></div>
-        <div><label>Palavra-passe</label><input type="text" id="n-porteiro-senha" autocomplete="off" spellcheck="false" placeholder="deixe em branco para gerar"></div>
+      <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
+        <div class="campo"><label for="n-porteiro-email">Email (utilizador) do porteiro</label>
+          <input type="email" id="n-porteiro-email" autocapitalize="none" spellcheck="false" placeholder="porta-…">
+          <div class="err"></div></div>
+        <div class="campo"><label for="n-porteiro-senha">Palavra-passe</label>
+          <div class="pw-wrap"><input type="password" id="n-porteiro-senha" autocomplete="off" spellcheck="false" placeholder="em branco = gerada">
+            <button type="button" class="pw-olho" id="olho-pe" onclick="verSenha('n-porteiro-senha','olho-pe')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
+          <div class="err"></div></div>
+        <div class="campo"><label for="n-porteiro-confirmar">Repetir</label>
+          <div class="pw-wrap"><input type="password" id="n-porteiro-confirmar" autocomplete="off" spellcheck="false" placeholder="repita a palavra-passe">
+            <button type="button" class="pw-olho" id="olho-pc" onclick="verSenha('n-porteiro-confirmar','olho-pc')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
+          <div class="err"></div></div>
       </div>
 
       <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin-top:1.1rem">
@@ -484,6 +597,119 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   <?php endif; ?>
 </main>
 
+<?php // ---- Modal: gerir a licença de um casamento ---- ?>
+<div class="overlay" id="ov-licenca">
+  <div class="modal">
+    <div class="modal-topo">
+      <h3>Licença · <span id="lic-nome"></span></h3>
+      <button class="fechar" onclick="fecharModal('ov-licenca')">&times;</button>
+    </div>
+    <div class="modal-corpo">
+      <div class="segredo lic-estado" id="lic-estado" style="margin-top:0"></div>
+      <div class="dica">Quanto tempo o casamento fica disponível. Expirada, é suspenso sozinho —
+        e as contas que só dele dependem param com ele.</div>
+      <div class="lf" style="grid-template-columns:1fr 1fr">
+        <div><label for="lic-periodo">Período de licença</label>
+          <select id="lic-periodo" onchange="licPeriodoMudou()">
+            <option value="0">Sem limite</option>
+            <option value="3">3 meses</option>
+            <option value="6">6 meses</option>
+            <option value="12">12 meses</option>
+            <option value="outro">Outro…</option>
+          </select></div>
+        <div id="lic-outro" style="display:none"><label for="lic-meses">Meses</label>
+          <input type="number" id="lic-meses" min="1" max="120" placeholder="ex.: 18"></div>
+      </div>
+      <label id="lic-reiniciar-linha" style="display:flex;gap:.5rem;align-items:center;font-weight:400;margin-top:.9rem">
+        <input type="checkbox" id="lic-reiniciar" checked style="width:auto;margin:0">
+        <span id="lic-reiniciar-rot">Reiniciar o relógio a contar de hoje</span></label>
+      <div class="dica" style="margin:.4rem 0 0">Sem esta opção, o período fica guardado mas o relógio
+        não é mexido — serve para corrigir o número de meses sem dar tempo novo.</div>
+      <div class="fim" style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem">
+        <button class="btn" onclick="fecharModal('ov-licenca')">Cancelar</button>
+        <button class="btn btn-ouro" onclick="guardarLicenca()">Guardar licença</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<?php // ---- Modal: editar todos os dados de um casamento ---- ?>
+<div class="overlay" id="ov-editar">
+  <div class="modal" style="max-width:820px">
+    <div class="modal-topo">
+      <h3>Editar · <span id="ed-nome-topo"></span></h3>
+      <button class="fechar" onclick="fecharModal('ov-editar')">&times;</button>
+    </div>
+    <div class="modal-corpo">
+      <input type="hidden" id="ed-id">
+      <h4 class="ed-sec">Identidade</h4>
+      <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
+        <div><label for="ed-cnome">Nome do casamento</label><input type="text" id="ed-cnome"></div>
+        <div><label for="ed-noiva">Noiva</label><input type="text" id="ed-noiva"></div>
+        <div><label for="ed-noivo">Noivo</label><input type="text" id="ed-noivo"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 1fr 1fr">
+        <div><label for="ed-data">Data</label><input type="date" id="ed-data"></div>
+        <div><label for="ed-hora">Hora da festa</label><input type="time" id="ed-hora"></div>
+        <div><label for="ed-convidados">Convidados que espera</label><input type="number" id="ed-convidados" min="1" max="5000"></div>
+      </div>
+
+      <h4 class="ed-sec">O evento</h4>
+      <div class="lf" style="grid-template-columns:2fr 1fr">
+        <div><label for="ed-local">Local da festa</label><input type="text" id="ed-local"></div>
+        <div><label for="ed-cidade">Cidade / região</label><input type="text" id="ed-cidade"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 1fr">
+        <div><label for="ed-whatsapp">WhatsApp</label><input type="text" id="ed-whatsapp" inputmode="numeric"></div>
+        <div><label for="ed-orcamento">Orçamento total <small style="color:#8a8f88">· opcional</small></label>
+          <input type="text" id="ed-orcamento" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr">
+        <div><label for="ed-maps">Local da festa · Google Maps</label>
+          <input type="url" id="ed-maps" data-mapa data-mapa-local="ed-local" placeholder="https://maps.app.goo.gl/…"></div>
+      </div>
+      <div class="dica" style="margin:.6rem 0 .3rem">As cerimónias, se as houver.</div>
+      <div class="lf" style="grid-template-columns:1fr 2fr">
+        <div><label for="ed-civil-hora">Civil · hora</label><input type="time" id="ed-civil-hora"></div>
+        <div><label for="ed-civil-local">Civil · local</label><input type="text" id="ed-civil-local"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 2fr">
+        <div><label for="ed-religiosa-hora">Religiosa · hora</label><input type="time" id="ed-religiosa-hora"></div>
+        <div><label for="ed-religiosa-local">Religiosa · local</label><input type="text" id="ed-religiosa-local"></div>
+      </div>
+      <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin:.6rem 0 0">
+        <button class="btn btn-ouro" onclick="guardarDadosCasamento()">Guardar dados</button>
+        <span class="dica" style="margin:0">A identidade e o evento. As contas geram-se abaixo.</span>
+      </div>
+
+      <h4 class="ed-sec">Contas associadas</h4>
+      <div class="dica" style="margin:-.3rem 0 .5rem">Os <b>noivos</b> gerem o casamento; o <b>porteiro</b>
+        só regista entradas. Aqui muda-se o email, repõe-se a senha ou tira-se o acesso.</div>
+      <div id="ed-contas"><div class="dica">A carregar…</div></div>
+
+      <details class="dobra dobra-dentro" id="ed-nova-conta" style="margin-top:.8rem">
+        <summary><span class="mais">+</span> Adicionar uma conta</summary>
+        <div class="lf" style="grid-template-columns:1fr 2fr 2fr auto;margin-top:.5rem">
+          <div><label>Papel</label>
+            <select id="ed-np-papel"><option value="porteiro">Porteiro</option><option value="noivos">Noivos</option></select></div>
+          <div class="campo"><label for="ed-np-email">Email</label>
+            <input type="email" id="ed-np-email" autocapitalize="none" spellcheck="false"><div class="err"></div></div>
+          <div class="campo"><label for="ed-np-senha">Palavra-passe <small style="color:#8a8f88">· em branco = gerada</small></label>
+            <div class="pw-wrap"><input type="password" id="ed-np-senha" autocomplete="off" spellcheck="false">
+              <button type="button" class="pw-olho" id="olho-np" onclick="verSenha('ed-np-senha','olho-np')">mostrar</button></div>
+            <div class="err"></div></div>
+          <div><button class="btn btn-ouro btn-sm" onclick="adicionarConta()">Adicionar</button></div>
+        </div>
+      </details>
+
+      <div class="segredo" id="ed-segredo" style="display:none"></div>
+      <div class="fim" style="display:flex;justify-content:flex-end;margin-top:1rem">
+        <button class="btn" onclick="fecharModal('ov-editar')">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
@@ -541,7 +767,92 @@ function sugerirPorteiro(){
   const suf = Math.random().toString(36).slice(2, 5);
   const host = (location.hostname || 'convite.local').replace(/^www\./, '');
   eIn.value = `porta-${base}-${suf}@${host}`;
-  if (sIn && !sIn.value) sIn.value = 'porta' + Math.random().toString(36).slice(2, 10);
+  if (sIn && !sIn.value){
+    sIn.value = 'porta' + Math.random().toString(36).slice(2, 10);
+    const cIn = document.getElementById('n-porteiro-confirmar');
+    if (cIn) cIn.value = sIn.value;   // a sugestão já vem confirmada consigo mesma
+  }
+}
+
+// ---------- verificações de preenchimento das contas (email / senha) ----------
+// As mesmas do formulário público, aqui só nos campos das contas: o email tem
+// de parecer um email; a palavra-passe, se se escrever uma, precisa de 8 e de
+// bater certo com a repetição. Em branco, a conta não se cria (ou a senha é
+// gerada) — por isso um par vazio é válido.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const valc = id => (document.getElementById(id).value || '').trim();
+function marca(id, erro){
+  const el = document.getElementById(id), c = el.closest('.campo'); if (!c) return !erro;
+  const box = c.querySelector('.err');
+  if (erro){ c.classList.add('mau'); c.classList.remove('ok'); if (box) box.textContent = erro; el.setAttribute('aria-invalid','true'); }
+  else { c.classList.remove('mau'); el.removeAttribute('aria-invalid'); if (valc(id)) c.classList.add('ok'); else c.classList.remove('ok'); }
+  return !erro;
+}
+function regraConta(id){
+  const v = valc(id);
+  switch (id){
+    case 'n-noivos-email':
+      if (!v) return '';                                   // sem email: não se cria a conta
+      return EMAIL_RE.test(v) ? '' : 'Esse email não parece válido.';
+    case 'n-noivos-senha':
+      if (!v) return '';                                   // em branco: senha gerada
+      return v.length >= 8 ? '' : 'Pelo menos 8 caracteres.';
+    case 'n-noivos-confirmar':
+      if (!valc('n-noivos-senha')) return '';
+      return v === document.getElementById('n-noivos-senha').value ? '' : 'As palavras-passe não coincidem.';
+    case 'n-porteiro-email':
+      if (!v && !valc('n-porteiro-senha')) return '';      // par vazio: opcional
+      return EMAIL_RE.test(v) ? '' : 'Email do porteiro inválido.';
+    case 'n-porteiro-senha':
+      if (!v) return '';
+      return v.length >= 8 ? '' : 'Pelo menos 8 caracteres para o porteiro.';
+    case 'n-porteiro-confirmar':
+      if (!valc('n-porteiro-senha')) return '';
+      return v === document.getElementById('n-porteiro-senha').value ? '' : 'As palavras-passe não coincidem.';
+  }
+  return '';
+}
+function validaConta(id){ return marca(id, regraConta(id)); }
+const CAMPOS_CONTA = ['n-noivos-email','n-noivos-senha','n-noivos-confirmar',
+                      'n-porteiro-email','n-porteiro-senha','n-porteiro-confirmar'];
+const PARES_CONTA = { 'n-noivos-senha':['n-noivos-confirmar'], 'n-noivos-confirmar':['n-noivos-senha'],
+                      'n-porteiro-senha':['n-porteiro-confirmar','n-porteiro-email'],
+                      'n-porteiro-confirmar':['n-porteiro-senha'],
+                      'n-porteiro-email':['n-porteiro-senha'] };
+CAMPOS_CONTA.forEach(id => {
+  const el = document.getElementById(id); if (!el) return;
+  el.addEventListener('blur', () => validaConta(id));
+  el.addEventListener('input', () => {
+    if (el.closest('.campo').classList.contains('mau')) validaConta(id);
+    (PARES_CONTA[id] || []).forEach(p => { const pe = document.getElementById(p);
+      if (pe && pe.closest('.campo').classList.contains('mau')) validaConta(p); });
+  });
+});
+
+// A força de uma palavra-passe, para os dois campos de senha.
+function ligarForca(campoId, caixaId, rotId){
+  const el = document.getElementById(campoId), box = document.getElementById(caixaId);
+  if (!el || !box) return;
+  el.addEventListener('input', () => {
+    const v = el.value, rot = document.getElementById(rotId);
+    let n = 0;
+    if (v.length >= 8) n++;
+    if (v.length >= 12) n++;
+    if (/[a-z]/.test(v) && /[A-Z]/.test(v)) n++;
+    if (/\d/.test(v) && /[^\w\s]/.test(v)) n++;
+    if (v && n === 0) n = 1;
+    box.className = 'pw-forca f' + n;
+    rot.textContent = v ? ['', 'fraca', 'razoável', 'boa', 'forte'][n] : '';
+  });
+}
+ligarForca('n-noivos-senha', 'forca-ne', 'rot-ne');
+ligarForca('n-porteiro-senha', 'forca-pe', 'rot-pe');
+
+// Mostrar / ocultar uma palavra-passe.
+function verSenha(id, olhoId){
+  const el = document.getElementById(id), b = document.getElementById(olhoId), ver = el.type === 'password';
+  el.type = ver ? 'text' : 'password';
+  b.textContent = ver ? 'ocultar' : 'mostrar';
 }
 
 async function abrir(id){
@@ -552,6 +863,16 @@ async function criar(){
   const v = id => (document.getElementById(id).value || '').trim();
   if (!v('n-nome') && !v('n-noiva') && !v('n-noivo')) {
     return toast('Indique ao menos os nomes dos noivos.', true);
+  }
+  // As contas passam pelas mesmas verificações do formulário público: um email
+  // torto ou uma confirmação que não bate certo são apanhados aqui, e o primeiro
+  // campo com erro chama o olho a si.
+  let primeiro = null;
+  CAMPOS_CONTA.forEach(id => { if (!validaConta(id) && !primeiro) primeiro = id; });
+  if (primeiro){
+    const el = document.getElementById(primeiro);
+    el.focus(); el.closest('.campo').scrollIntoView({ behavior:'smooth', block:'center' });
+    return toast('Reveja os dados das contas assinalados a vermelho.', true);
   }
   const d = await api('casamento_criar', { method:'POST', body: JSON.stringify({
     nome: v('n-nome'), noiva: v('n-noiva'), noivo: v('n-noivo'), data: v('n-data'),
@@ -586,8 +907,13 @@ async function criar(){
     + `<br><button class="btn btn-sm" style="margin-top:.6rem" onclick="verVista('casamentos');carregarCasamentos()">Ver nos casamentos</button>`;
   ['n-nome','n-noiva','n-noivo','n-data','n-hora','n-local','n-cidade','n-maps','n-convidados','n-whatsapp',
    'n-orcamento','n-civil-hora','n-civil-local','n-civil-maps','n-religiosa-hora','n-religiosa-local',
-   'n-religiosa-maps','n-noivos-email','n-noivos-senha','n-porteiro-email','n-porteiro-senha']
+   'n-religiosa-maps','n-noivos-email','n-noivos-senha','n-noivos-confirmar',
+   'n-porteiro-email','n-porteiro-senha','n-porteiro-confirmar']
     .forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  // Limpa as marcas de erro/válido e as barras de força, para o formulário
+  // ficar como novo à próxima.
+  document.querySelectorAll('#vista-novo .campo').forEach(c => c.classList.remove('mau','ok'));
+  ['forca-ne','forca-pe'].forEach(i => { const e = document.getElementById(i); if (e) e.className = 'pw-forca'; });
   PORT_TOCADO = false;
   toast('Casamento criado.');
 }
@@ -599,12 +925,6 @@ async function recusar(id){
   if (!confirm('Recusar este registo?\n\nO casal deixa de poder entrar. Nada se apaga.')) return;
   const d = await api('casamento_estado&id=' + id + '&estado=suspenso', { method:'POST' });
   if (d && d.success) location.reload();
-}
-async function entrarComCodigo(){
-  const codigo = document.getElementById('s-codigo').value.trim();
-  if (!codigo) return toast('Escreva o código que o casal lhe deu.', true);
-  const d = await api('suporte_entrar', { method:'POST', body: JSON.stringify({ codigo }) });
-  if (d && d.success) location.href = 'index.php';
 }
 
 // ---------- arquivar, reabrir, apagar ----------
@@ -691,6 +1011,8 @@ async function carregarCasamentos(){
   const q = (document.getElementById('q-cas').value || '').trim();
   const d = await api('casamento_lista&estado=' + ESTADO_CAS + (q ? '&q=' + encodeURIComponent(q) : ''));
   if (!d || !d.success) return;
+  CASAMENTOS = {};
+  d.casamentos.forEach(c => { CASAMENTOS[c.id] = c; });   // para os modais não irem procurar outra vez
   if (!d.casamentos.length){
     alvo.innerHTML = '<div class="dica">Nenhum casamento aqui.</div>'; return;
   }
@@ -716,7 +1038,8 @@ async function carregarCasamentos(){
         mais.push('<hr>');
         mais.push(`<button class="perigo" onclick="apagar(${c.id},'${n}')">Apagar para sempre</button>`);
       } else {
-        mais.push(`<button onclick="gerirLicenca(${c.id},'${n}')">Gerir licença</button>`);
+        mais.push(`<button onclick="editarTudo(${c.id})">Editar todos os dados…</button>`);
+        mais.push(`<button onclick="gerirLicenca(${c.id})">Gerir licença…</button>`);
         mais.push('<hr>');
         mais.push(c.estado === 'suspenso'
           ? `<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
@@ -768,17 +1091,186 @@ function licencaMeta(c){
   return `<span class="conta">licença: ~${Math.round(dias/30)} mes(es)</span>`;
 }
 
-/** Gerir a licença de um casamento: estender/definir o período, e iniciá-la. */
-async function gerirLicenca(id, nome){
-  const cur = prompt('Licença de «' + nome + '» — meses de uso (0 = sem limite).\n\n'
-    + 'Guardar reinicia o relógio a contar de hoje.', '12');
-  if (cur === null) return;
-  const meses = Math.max(0, Math.min(120, parseInt(cur, 10) || 0));
+/** Uma frase sobre o estado atual da licença, para o topo do modal. */
+function licencaEstado(c){
+  const m = +c.licenca_meses || 0;
+  if (!m) return { txt: 'Sem limite de licença — o casamento não expira.', cls: 'ok' };
+  if (!c.licenca_ate) return { txt: `Licença de ${m} mês(es), <b>por iniciar</b> — o relógio ainda não começou.`, cls: 'warn' };
+  const dias = c.licenca_dias == null ? null : +c.licenca_dias;
+  const ate = (c.licenca_ate || '').split('-').reverse().join('/');
+  if (dias == null) return { txt: `Licença de ${m} mês(es).`, cls: '' };
+  if (dias < 0)  return { txt: `Licença de ${m} mês(es) — <b>expirada</b> em ${esc(ate)} (há ${Math.abs(dias)} dia(s)).`, cls: 'danger' };
+  if (dias < 45) return { txt: `Licença de ${m} mês(es) — termina em ${esc(ate)}, <b>faltam ${dias} dia(s)</b>.`, cls: 'warn' };
+  return { txt: `Licença de ${m} mês(es) — ativa até ${esc(ate)} (~${Math.round(dias/30)} mês(es)).`, cls: 'ok' };
+}
+
+/** Gerir a licença de um casamento: um modal completo em vez de um prompt seco. */
+let LICENCA_ALVO = 0;
+function gerirLicenca(id){
+  const c = CASAMENTOS[id]; if (!c) return;
+  LICENCA_ALVO = id;
+  const est = licencaEstado(c);
+  const m = +c.licenca_meses || 0;
+  const jaIniciada = m > 0 && !!c.licenca_ate;
+  $('lic-nome').textContent = c.nome || 'Casamento';
+  $('lic-estado').className = 'segredo lic-estado ' + (est.cls || '');
+  $('lic-estado').innerHTML = est.txt;
+  // O período começa no que está definido; «Outro…» abre a caixa dos meses.
+  const presets = [0, 3, 6, 12];
+  $('lic-periodo').value = presets.includes(m) ? String(m) : 'outro';
+  $('lic-outro').style.display = presets.includes(m) ? 'none' : '';
+  $('lic-meses').value = presets.includes(m) ? '' : m;
+  // Por omissão, iniciar/reiniciar o relógio: é o gesto comum (dar tempo novo).
+  $('lic-reiniciar').checked = true;
+  $('lic-reiniciar-linha').style.display = ($('lic-periodo').value === '0') ? 'none' : '';
+  $('lic-reiniciar-rot').textContent = jaIniciada
+    ? 'Reiniciar o relógio a contar de hoje' : 'Iniciar já o relógio (a contar de hoje)';
+  abrirModal('ov-licenca');
+}
+function licPeriodoMudou(){
+  const v = $('lic-periodo').value;
+  $('lic-outro').style.display = v === 'outro' ? '' : 'none';
+  $('lic-reiniciar-linha').style.display = v === '0' ? 'none' : '';
+}
+function licMesesEscolhidos(){
+  const v = $('lic-periodo').value;
+  return v === 'outro' ? Math.max(0, Math.min(120, parseInt($('lic-meses').value || '0', 10))) : parseInt(v, 10);
+}
+async function guardarLicenca(){
+  const meses = licMesesEscolhidos();
+  const reiniciar = meses > 0 && $('lic-reiniciar').checked;
   const d = await api('casamento_licenca', { method:'POST',
-    body: JSON.stringify({ id, licenca_meses: meses, reiniciar: meses > 0 }) });
+    body: JSON.stringify({ id: LICENCA_ALVO, licenca_meses: meses, iniciar: reiniciar, reiniciar }) });
   if (!d || !d.success) return;
-  toast(meses ? 'Licença definida: ' + meses + ' mês(es), a contar de hoje.' : 'Licença sem limite.');
+  fecharModal('ov-licenca');
+  toast(meses
+    ? 'Licença: ' + meses + ' mês(es)' + (reiniciar ? ', a contar de hoje.' : ' (guardada).')
+    : 'Licença sem limite.');
   carregarCasamentos();
+}
+
+// ---------- editar TODOS os dados de um casamento (identidade + evento + contas) ----------
+let EDITAR_ALVO = 0;
+async function editarTudo(id){
+  EDITAR_ALVO = id;
+  $('ed-segredo').style.display = 'none'; $('ed-segredo').innerHTML = '';
+  // Limpa a caixa de nova conta, para não trazer o que ficou de outro casamento.
+  ['ed-np-email','ed-np-senha'].forEach(i => { const e = $(i); if (e) e.value = ''; });
+  document.querySelectorAll('#ov-editar .campo').forEach(c => c.classList.remove('mau','ok'));
+  const nc = $('ed-nova-conta'); if (nc) nc.open = false;
+  $('ed-contas').innerHTML = '<div class="dica">A carregar…</div>';
+  abrirModal('ov-editar');
+  const d = await api('casamento_ficha&id=' + id);
+  if (!d || !d.success){ fecharModal('ov-editar'); return; }
+  const c = d.casamento, ev = d.evento || {};
+  $('ed-id').value = id;
+  $('ed-nome-topo').textContent = c.nome || 'Casamento';
+  $('ed-cnome').value = c.nome || '';
+  $('ed-noiva').value = c.noiva || '';
+  $('ed-noivo').value = c.noivo || '';
+  $('ed-data').value  = (c.data_evento && c.data_evento !== '0000-00-00') ? c.data_evento : '';
+  const pv = (k, id2) => { const e = $(id2); if (e) e.value = ev[k] || ''; };
+  pv('evento.hora','ed-hora'); pv('evento.local','ed-local'); pv('evento.cidade','ed-cidade');
+  pv('evento.convidados','ed-convidados'); pv('evento.whatsapp','ed-whatsapp'); pv('evento.maps','ed-maps');
+  pv('evento.civil_hora','ed-civil-hora'); pv('evento.civil_local','ed-civil-local');
+  pv('evento.religiosa_hora','ed-religiosa-hora'); pv('evento.religiosa_local','ed-religiosa-local');
+  // O orçamento passa pela máscara, para se ver com os separadores certos.
+  const orc = $('ed-orcamento');
+  if (orc){ orc.value = ev['orcamento.total'] || '';
+    if (window.Moeda && orc.value) orc.value = window.Moeda.paraCampo(orc.value); }
+  pintarContasEd(d.contas || []);
+}
+function pintarContasEd(contas){
+  const alvo = $('ed-contas');
+  if (!contas.length){ alvo.innerHTML = '<div class="dica">Este casamento ainda não tem contas. Adicione uma abaixo.</div>'; return; }
+  alvo.innerHTML = contas.map(a => {
+    const uid = a.utilizador_id;
+    const papel = a.papel === 'noivos' ? 'Noivos · gere o casamento' : 'Porteiro · só a porta';
+    return `<div class="ed-conta" id="edc-${uid}">
+      <div class="cab"><span class="et ${a.papel === 'noivos' ? 'agora' : ''}">${esc(papel)}</span>
+        <span class="et ${esc(a.estado)}">${esc(a.estado)}</span></div>
+      <div class="lf" style="grid-template-columns:2fr 2fr auto;margin:0">
+        <div><label>Email</label><input type="email" id="edc-email-${uid}" value="${esc(a.email || '')}" autocapitalize="none" spellcheck="false"></div>
+        <div><label>Nome</label><input type="text" id="edc-nome-${uid}" value="${esc(a.nome || '')}"></div>
+        <div class="ac" style="align-self:end">
+          <button class="btn btn-sm" onclick="guardarContaLigada(${uid})">Guardar</button>
+          <button class="btn btn-sm" onclick="reporSenhaLigada(${uid}, '${esc(a.email)}')">Repor senha</button>
+          <button class="btn btn-sm perigo" onclick="tirarContaLigada(${uid}, '${esc(a.nome || a.email)}')">Tirar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function dadosEventoEd(){
+  const v = id => ($(id).value || '').trim();
+  return {
+    nome: v('ed-cnome'), noiva: v('ed-noiva'), noivo: v('ed-noivo'), data: v('ed-data'),
+    hora: v('ed-hora'), local: v('ed-local'), cidade: v('ed-cidade'), maps: v('ed-maps'),
+    convidados: v('ed-convidados'), whatsapp: v('ed-whatsapp'),
+    orcamento_total: v('ed-orcamento'),
+    civil_hora: v('ed-civil-hora'), civil_local: v('ed-civil-local'),
+    religiosa_hora: v('ed-religiosa-hora'), religiosa_local: v('ed-religiosa-local'),
+  };
+}
+async function guardarDadosCasamento(){
+  const corpo = Object.assign({ id: EDITAR_ALVO }, dadosEventoEd());
+  const d = await api('casamento_editar', { method:'POST', body: JSON.stringify(corpo) });
+  if (!d || !d.success) return;
+  $('ed-nome-topo').textContent = d.nome || '';
+  toast('Dados do casamento guardados.');
+  carregarCasamentos();
+}
+async function adicionarConta(){
+  const papel = $('ed-np-papel').value;
+  const email = ($('ed-np-email').value || '').trim();
+  const senha = $('ed-np-senha').value;
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  marca('ed-np-email', emailOk ? '' : 'Indique um email válido.');
+  marca('ed-np-senha', (!senha || senha.length >= 8) ? '' : 'Pelo menos 8 caracteres (ou deixe em branco).');
+  if (!emailOk || (senha && senha.length < 8)) return;
+  const corpo = Object.assign({ id: EDITAR_ALVO }, dadosEventoEd());
+  if (papel === 'noivos'){ corpo.noivos_email = email; corpo.noivos_senha = senha; }
+  else { corpo.porteiro_email = email; corpo.porteiro_senha = senha; }
+  const d = await api('casamento_editar', { method:'POST', body: JSON.stringify(corpo) });
+  if (!d || !d.success) return;
+  const c = (d.contas || {})[papel];
+  const cx = $('ed-segredo');
+  if (c){
+    cx.style.display = '';
+    cx.innerHTML = `Conta de <b>${papel === 'noivos' ? 'noivos' : 'porteiro'}</b> ligada: <span class="cod">${esc(c.email)}</span>`
+      + (c.senha ? ` · senha <b class="cod">${esc(c.senha)}</b><br><small>Entregue-a agora — não volta a aparecer.</small>`
+                 : ' · conta já existente, ligada.');
+  }
+  $('ed-np-email').value = $('ed-np-senha').value = '';
+  editarTudoRecarregar();
+  carregarCasamentos();
+  toast('Conta adicionada.');
+}
+// Recarrega só a lista de contas do modal, sem fechar nem perder o segredo mostrado.
+async function editarTudoRecarregar(){
+  const d = await api('casamento_ficha&id=' + EDITAR_ALVO);
+  if (d && d.success) pintarContasEd(d.contas || []);
+}
+async function guardarContaLigada(uid){
+  const d = await api('utilizador_editar', { method:'POST', body: JSON.stringify({
+    id: uid, nome: ($('edc-nome-' + uid).value || '').trim(),
+    email: ($('edc-email-' + uid).value || '').trim(),
+  }) });
+  if (d && d.success){ toast('Conta guardada.'); carregarCasamentos(); }
+}
+async function reporSenhaLigada(uid, email){
+  if (!confirm('Repor a senha de ' + email + '?\n\nA senha atual deixa de servir. A nova aparece aqui, uma vez.')) return;
+  const d = await api('utilizador_repor_senha&id=' + uid, { method:'POST' });
+  if (!d || !d.success) return;
+  const cx = $('ed-segredo');
+  cx.style.display = '';
+  cx.innerHTML = `Senha nova de <b>${esc(d.email)}</b>: <b class="cod">${esc(d.senha)}</b><br>
+    <small>Entregue-a agora — não volta a aparecer.</small>`;
+}
+async function tirarContaLigada(uid, nome){
+  if (!confirm('Tirar o acesso de ' + nome + ' a este casamento?\n\nA conta continua a existir.')) return;
+  const d = await api('acesso_tirar_de&utilizador=' + uid + '&casamento=' + EDITAR_ALVO, { method:'POST' });
+  if (d && d.success){ toast('Acesso tirado.'); editarTudoRecarregar(); carregarCasamentos(); }
 }
 
 /** A data do casamento, e quanto falta — que é o que se quer saber primeiro. */
@@ -814,6 +1306,11 @@ async function fecharCasamento(){
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const $ = id => document.getElementById(id);
 let CONTAS = {};   // as contas já carregadas, para o editor não as ir procurar outra vez
+let CASAMENTOS = {};  // idem, para os modais de licença e de edição completa
+
+// Abrir e fechar as janelas modais (o «abrir» já existe, para abrir casamentos).
+function abrirModal(id){ const e = $(id); if (e) e.classList.add('aberto'); }
+function fecharModal(id){ const e = $(id); if (e) e.classList.remove('aberto'); }
 // Só contas administrativas por aqui: suporte e admin. As de noivos/porteiro
 // criam-se em cada casamento (no formulário de novo casamento, ou em Gestão).
 function tipoMudou(){
@@ -879,7 +1376,6 @@ async function carregarContas(){
       <div>
         <div class="nm">${esc(nome)} <span class="et ${esc(c.estado)}">${esc(c.estado)}</span> ${plat}${porque}</div>
         <div class="meta"><span>${esc(c.email)}</span>
-          <span>${c.casamentos} casamento(s)</span>
           <span>${c.ultimo_acesso ? 'último acesso ' + esc(c.ultimo_acesso.slice(0,10)) : 'nunca entrou'}</span></div>
       </div>
       <div class="ac">${acoes}</div>
@@ -888,62 +1384,39 @@ async function carregarContas(){
   }).join('');
 }
 
-// ---------- editar uma conta, e os casamentos onde tem lugar ----------
+// ---------- editar uma conta administrativa (admin ou suporte) ----------
+// Estas contas não se prendem a casamento nenhum: o admin responde por toda a
+// casa, o suporte entra por código. Por isso não há aqui lugares a dar nem a
+// tirar — só o nome, o email e qual dos dois papéis é.
 async function editarConta(id){
   const cx = document.getElementById('ed-' + id);
   if (cx.style.display !== 'none'){ cx.style.display = 'none'; return; }
   cx.style.display = '';
-  cx.innerHTML = '<div class="dica">A carregar…</div>';
-  const [lug, cas] = await Promise.all([
-    api('utilizador_casamentos&id=' + id), api('casamento_lista&estado=todos'),
-  ]);
   const c = CONTAS[id] || {};
-  const tipo = c.papel_plataforma || 'casamento';
-  const preso = tipo === 'casamento';
+  const tipo = c.papel_plataforma === 'admin' ? 'admin' : 'suporte';
   cx.innerHTML = `
     <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin:0">
       <div><label>Nome</label><input type="text" id="e-nome-${id}" value="${esc(c.nome || '')}"></div>
       <div><label>Email</label><input type="email" id="e-email-${id}" value="${esc(c.email || '')}"></div>
       <div><label>Tipo</label>
         <select id="e-tipo-${id}">
-          <option value="casamento"${preso ? ' selected' : ''}>Conta de casamento</option>
           <option value="suporte"${tipo === 'suporte' ? ' selected' : ''}>Suporte</option>
           <option value="admin"${tipo === 'admin' ? ' selected' : ''}>Admin da plataforma</option>
         </select></div>
       <div><button class="btn btn-ouro btn-sm" onclick="guardarConta(${id})">Guardar</button></div>
     </div>
-    ${tipo === 'suporte' ? `<div class="dica" style="margin:.6rem 0 0">Conta de suporte:
-       entra nos casamentos com o código que cada casal gerar, e não por lugar próprio.</div>`
-    : `<div class="lugares" id="lug-${id}">${
-        (lug.acessos || []).length
-          ? (lug.acessos || []).map(a => `<span class="lugar">${esc(a.nome)} · ${esc(a.papel)}
-              <button title="Tirar" onclick="tirarLugar(${id},${a.casamento_id})">×</button></span>`).join('')
-          : '<span class="dica">Sem lugar em casamento nenhum.</span>'}</div>
-      <div class="lf" style="grid-template-columns:2fr 1fr auto;margin-top:.4rem">
-        <div><select id="nl-cas-${id}">${(cas.casamentos || []).map(w =>
-              `<option value="${w.id}">${esc(w.nome)}</option>`).join('')}</select></div>
-        <div><select id="nl-papel-${id}"><option value="noivos">Noivos</option><option value="porteiro">Porteiro</option></select></div>
-        <div><button class="btn btn-sm" onclick="darLugar(${id})">Dar lugar</button></div>
-      </div>`}`;
+    <div class="dica" style="margin:.6rem 0 0">${tipo === 'suporte'
+      ? 'Suporte: entra nos casamentos com o código que cada casal gerar.'
+      : 'Admin: responde pela casa — vê todos os casamentos, aprova registos e gere contas.'}</div>`;
 }
 async function guardarConta(id){
   const tipo = document.getElementById('e-tipo-' + id).value;
   const d = await api('utilizador_editar', { method:'POST', body: JSON.stringify({
     id, nome: document.getElementById('e-nome-' + id).value.trim(),
     email: document.getElementById('e-email-' + id).value.trim(),
-    papel_plataforma: tipo === 'casamento' ? '' : tipo,
+    papel_plataforma: tipo,
   }) });
   if (d && d.success){ toast('Conta guardada.'); carregarContas(); }
-}
-async function darLugar(id){
-  const d = await api('acesso_dar&utilizador=' + id
-    + '&casamento=' + document.getElementById('nl-cas-' + id).value
-    + '&papel=' + document.getElementById('nl-papel-' + id).value, { method:'POST' });
-  if (d && d.success){ document.getElementById('ed-' + id).style.display = 'none'; editarConta(id); }
-}
-async function tirarLugar(id, casamento){
-  const d = await api('acesso_tirar_de&utilizador=' + id + '&casamento=' + casamento, { method:'POST' });
-  if (d && d.success){ document.getElementById('ed-' + id).style.display = 'none'; editarConta(id); }
 }
 async function apagarConta(id, email){
   if (!confirm('Apagar a conta de ' + email + '?\n\nNão se desfaz. Se ela ainda tiver lugar '

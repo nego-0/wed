@@ -52,8 +52,11 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 
   /* Palavra-passe: olho para mostrar, e a força ao lado. */
   .pw-wrap{ position:relative; }
-  .pw-wrap input{ padding-right:2.6rem; }
-  .pw-olho{ position:absolute; right:.55rem; top:50%; transform:translateY(-50%); border:0; background:none;
+  /* Espaço à direita para o botão «mostrar»/«ocultar» — sem isto, o texto que
+     se escreve passa por baixo do botão e fica ilegível. A folga acompanha a
+     largura da palavra mais longa. */
+  .pw-wrap input{ padding-right:4.6rem; }
+  .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
             cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
   .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }

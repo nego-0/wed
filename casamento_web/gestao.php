@@ -244,21 +244,20 @@ $MAPA_LOCAL = [
 
     <div class="painel">
       <h3>Quem entra neste casamento</h3>
-      <div class="dica">Os <b>noivos</b> gerem tudo. O <b>porteiro</b> só vê a porta:
+      <div class="dica">Além de vós, podem convidar <b>porteiros</b>. O porteiro só vê a porta:
         procura convites e regista entradas, e mais nada. Convide-o pelo email — se ainda não
-        tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.<br>
-        Daqui convidam-se <b>porteiros</b>. Passar a gestão do casamento a outra conta faz-se com
-        quem responde pela plataforma presente — senão bastava um convite mal dirigido para o
-        casamento passar a ser de outra pessoa.</div>
+        tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.</div>
       <div id="lista-acessos"><div class="dica">A carregar…</div></div>
 
       <?php if (!$soVer): ?>
-      <div class="lf">
-        <div><label>Email de quem convida</label>
-          <input type="email" id="a-email" placeholder="porteiro@exemplo.pt" autocapitalize="none" spellcheck="false"></div>
-        <div><label>Papel</label>
-          <select id="a-papel" disabled><option value="porteiro">Porteiro</option></select></div>
-        <div><button class="btn btn-ouro" onclick="convidar()">Dar acesso</button></div>
+      <div class="dica" style="margin:.9rem 0 .3rem"><b>Convidar um porteiro</b></div>
+      <div class="lf" style="grid-template-columns:1.4fr 1.4fr auto">
+        <div><label for="a-email">Email do porteiro</label>
+          <input type="email" id="a-email" placeholder="porteiro@exemplo.pt" autocapitalize="none" spellcheck="false"
+                 onkeydown="if(event.key==='Enter')convidar()"></div>
+        <div><label for="a-nome">Nome <small style="color:#8a8f88">· opcional</small></label>
+          <input type="text" id="a-nome" placeholder="Como o quer identificar"></div>
+        <div><button class="btn btn-ouro" onclick="convidar()">Convidar porteiro</button></div>
       </div>
       <div class="segredo" id="senha-nova" style="display:none"></div>
       <?php endif; ?>
@@ -427,11 +426,13 @@ async function carregarAcessos(){
 }
 async function convidar(){
   const email = $('a-email').value.trim();
-  if (!email) return toast('Indique o email.', true);
+  const nome  = ($('a-nome') ? $('a-nome').value.trim() : '');
+  if (!email) return toast('Indique o email do porteiro.', true);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('Esse email não parece válido.', true);
   const d = await api('acesso_convidar', { method:'POST',
-    body: JSON.stringify({ email, papel: 'porteiro' }) });
+    body: JSON.stringify({ email, nome, papel: 'porteiro' }) });
   if (!d || !d.success) return;
-  $('a-email').value = '';
+  $('a-email').value = ''; if ($('a-nome')) $('a-nome').value = '';
   if (d.senha){
     $('senha-nova').style.display = '';
     $('senha-nova').innerHTML = `Conta criada para <b>${esc(d.email)}</b>.

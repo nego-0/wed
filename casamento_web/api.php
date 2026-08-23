@@ -1810,6 +1810,110 @@ if ($acao === 'casamento_licenca') {
     ok(['id' => $id, 'licenca' => licencaInfo($conn, $id)]);
 }
 
+if ($acao === 'casamento_ficha') {
+    // A ficha COMPLETA de um casamento, para o admin a editar da lista sem ter
+    // de o abrir: a identidade, os dados do evento e as contas ligadas a ele.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê a ficha completa.');
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT id, nome, noiva, noivo, data_evento, estado FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+
+    // Os dados do evento vivem nas definições do casamento. Lêem-se as chaves
+    // que o formulário de novo casamento também escreve — mais o teto do orçamento.
+    $chaves = ['evento.hora','evento.venue_titulo','evento.local','evento.cidade','evento.convidados',
+               'evento.whatsapp','evento.maps','evento.civil_hora','evento.civil_local','evento.civil_maps',
+               'evento.religiosa_hora','evento.religiosa_local','evento.religiosa_maps','orcamento.total'];
+    $evento = [];
+    $q = $conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=? AND chave=?");
+    foreach ($chaves as $ch) {
+        $q->bind_param('is', $id, $ch); $q->execute();
+        $row = $q->get_result()->fetch_row();
+        $evento[$ch] = $row ? (string)$row[0] : '';
+    }
+
+    // As contas de noivos e porteiro deste casamento.
+    $st = $conn->prepare("SELECT a.utilizador_id, a.papel, u.email, u.nome, u.estado, u.ultimo_acesso
+                          FROM {$P}acessos a JOIN {$P}utilizadores u ON u.id = a.utilizador_id
+                          WHERE a.casamento_id = ? AND a.papel IN ('noivos','porteiro')
+                          ORDER BY a.papel, u.nome, u.email");
+    $st->bind_param('i', $id); $st->execute();
+    $contas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    ok(['casamento' => $c, 'evento' => $evento, 'contas' => $contas,
+        'licenca' => licencaInfo($conn, $id)]);
+}
+
+if ($acao === 'casamento_editar') {
+    // Editar TODOS os dados de um casamento a partir da lista (identidade +
+    // evento + orçamento) e, se se pedir, criar/ligar as contas de noivos e
+    // porteiro. É do admin da plataforma — a versão da lista do 'casamento_identidade',
+    // que só trabalha no casamento aberto.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita casamentos.');
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $st = $conn->prepare("SELECT id, nome FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+
+    $noiva = mb_substr(trim((string)($d['noiva'] ?? '')), 0, 80);
+    $noivo = mb_substr(trim((string)($d['noivo'] ?? '')), 0, 80);
+    $data  = trim((string)($d['data'] ?? ''));
+    $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 160);
+    if ($noiva === '' || $noivo === '') erro('Indique os nomes dos noivos.');
+    if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) erro('Data inválida.');
+    if ($nome === '') $nome = "$noiva & $noivo";
+
+    // Valida os emails das contas ANTES de mexer em nada, para não deixar o
+    // casamento a meio se um vier torto.
+    $noivosEmail   = mb_strtolower(trim((string)($d['noivos_email'] ?? '')));
+    $porteiroEmail = mb_strtolower(trim((string)($d['porteiro_email'] ?? '')));
+    if ($noivosEmail !== '' && !filter_var($noivosEmail, FILTER_VALIDATE_EMAIL))
+        erro('O email da conta dos noivos é inválido.');
+    if ($porteiroEmail !== '' && !filter_var($porteiroEmail, FILTER_VALIDATE_EMAIL))
+        erro('O email da conta do porteiro é inválido.');
+    if ($noivosEmail !== '' && $noivosEmail === $porteiroEmail)
+        erro('A conta dos noivos e a do porteiro não podem ter o mesmo email.');
+
+    $st = $conn->prepare("UPDATE {$P}casamentos SET nome=?, noiva=?, noivo=?, data_evento=? WHERE id=?");
+    $dataOuNulo = $data !== '' ? $data : null;
+    $st->bind_param('ssssi', $nome, $noiva, $noivo, $dataOuNulo, $id);
+    if (!$st->execute()) erro('Não foi possível guardar a ficha.');
+
+    // Como no 'casamento_identidade': a ficha é o valor de origem das peças, por
+    // isso apaga-se qualquer cópia escrita por cima no editor, senão mudar o
+    // nome aqui não mudava nada no convite.
+    usarCasamento($id);
+    $chaves = ["'casal.noiva'", "'casal.noivo'"];
+    if ($data !== '') $chaves[] = "'evento.data'";
+    $conn->query("DELETE FROM {$P}definicoes WHERE " . doCasamento()
+                 . " AND chave IN (" . implode(',', $chaves) . ")");
+
+    // Os dados do evento e o teto do orçamento, pelo mesmo ajudante do registo.
+    $gravadas = guardarEventoDoRegisto($conn, $id, $d);
+
+    // As contas: cria (ou liga, se o email já tiver conta) as que vierem no
+    // pedido. O contaParaCasamento faz o INSERT IGNORE do lugar, por isso é
+    // seguro mesmo que a conta já exista.
+    $contas = [];
+    if ($noivosEmail !== '') {
+        $contas['noivos'] = contaParaCasamento($conn, $noivosEmail,
+            mb_substr(trim((string)($d['noivos_nome'] ?? $nome)), 0, 120),
+            (string)($d['noivos_senha'] ?? ''), $id, 'noivos');
+    }
+    if ($porteiroEmail !== '') {
+        $contas['porteiro'] = contaParaCasamento($conn, $porteiroEmail,
+            mb_substr(trim((string)($d['porteiro_nome'] ?? ('Porteiro · ' . $nome))), 0, 120),
+            (string)($d['porteiro_senha'] ?? ''), $id, 'porteiro');
+    }
+
+    registar($conn, 'casamento_ficha', $nome, 'edição completa (id ' . $id . ')');
+    ok(['id' => $id, 'nome' => $nome, 'noiva' => $noiva, 'noivo' => $noivo,
+        'data_evento' => $data, 'dados_do_evento' => $gravadas, 'contas' => $contas]);
+}
+
 if ($acao === 'casamento_apagar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga casamentos.');
     // Apaga um casamento e TUDO o que é dele. Não se desfaz, e por isso pede-se
