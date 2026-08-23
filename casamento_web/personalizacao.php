@@ -499,12 +499,20 @@ function desenhoDoModeloId(mysqli $conn, string $ambito, int $id): ?array {
  * Se não houver modelo de origem, cai na comparação com o de fábrica.
  */
 function naOrigem(mysqli $conn, string $ambito): bool {
+    $inst = instantaneoAmbito($conn, $ambito);
+    // As fotografias contam. Uma foto posta à mão (media.* fora do valor de
+    // origem) é uma saída da origem, mesmo que o desenho não tenha mudado. Sem
+    // isto, trocar uma fotografia deixava a peça a dizer-se «na origem» — e a
+    // foto ficava fora de qualquer versão, a caminho de se perder.
+    $padrao = defsPadrao();
+    foreach ($inst as $k => $v) {
+        if (str_starts_with($k, 'media.') && $v !== (string)($padrao[$k] ?? '')) return false;
+    }
     $m = modeloDeOrigem($conn, $ambito);
     if (!$m) return noPadrao($conn, $ambito);
     $des = desenhoDoModeloId($conn, $ambito, $m['id']);
     if ($des === null) return noPadrao($conn, $ambito);
-    return array_merge(instantaneoAmbito($conn, $ambito), padraoDesenho($ambito), $des)
-           == instantaneoAmbito($conn, $ambito);
+    return array_merge($inst, padraoDesenho($ambito), $des) == $inst;
 }
 
 /**

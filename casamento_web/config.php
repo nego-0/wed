@@ -150,10 +150,10 @@ function acoesDoCasamento(): array {
     return ['convite_save','convite_delete','convite_flag','convite_rsvp_manual','convite_restaurar',
             'mesa_save','mesa_delete','mesa_pos','mesa_noivos','convite_mesa','convidado_mesa',
             'convidado_papel','planta_size','planta_bloqueio',
-            'defs_save','def_upload','def_media_repor','porta_checkin',
+            'defs_save','def_upload','def_media_repor','media_descartar','porta_checkin',
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
             'casamento_identidade','casamento_endereco',
-            'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel',
+            'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel','conta_apagar_do_casamento',
             'suporte_codigo_criar','suporte_codigo_revogar',
             'dados_importar','modelo_aplicar',
             'orc_ajuste','orc_categoria_guardar','orc_categoria_apagar',
@@ -173,6 +173,7 @@ function acoesDoCasamento(): array {
 function acoesSemCasamento(): array {
     return array_merge(acoesDaPlataforma(), ['utilizador_lista', 'utilizador_casamentos',
                                              'casamento_lista', 'casamento_ficha', 'esquema_info', 'acesso_dar',
+                                             'conta_apagar_do_casamento',
                                              'dados_exportar', 'dados_importar',
                                              'modelo_lista', 'modelo_defs', 'modelo_exemplo',
                                              'modelos_exportar', 'modelos_importar']);

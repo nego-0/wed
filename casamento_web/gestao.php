@@ -406,7 +406,7 @@ async function carregarAcessos(){
     const eu = +a.utilizador_id === +d.eu;
     const nome = a.nome || a.email;
     const acoes = (SO_VER_UI || eu) ? '' : `
-      <button class="btn btn-sm" onclick="tirar(${a.utilizador_id}, '${esc(nome)}')">Tirar</button>`;
+      <button class="btn btn-sm perigo" onclick="tirar(${a.utilizador_id}, '${esc(nome)}')">Eliminar conta</button>`;
     // Quem é da casa entra em qualquer casamento por responder pela plataforma.
     // Se também tem lugar aqui, aparece — mas dito pelo que é, e não como se
     // fosse do casal.
@@ -448,9 +448,10 @@ async function trocarPapel(uid, papel){
   if (d && d.success) carregarAcessos();
 }
 async function tirar(uid, nome){
-  if (!confirm('Tirar o acesso de ' + nome + ' a este casamento?\n\nA conta continua a existir.')) return;
-  const d = await api('acesso_tirar&utilizador=' + uid, { method:'POST' });
-  if (d && d.success) carregarAcessos();
+  if (!confirm('Eliminar a conta de ' + nome + '?\n\nA conta é apagada e deixa de entrar. '
+    + 'Não se desfaz. O email fica livre para uma conta nova.')) return;
+  const d = await api('conta_apagar_do_casamento&utilizador=' + uid, { method:'POST' });
+  if (d && d.success){ toast('Conta eliminada.'); carregarAcessos(); }
 }
 
 // ---------- códigos de suporte ----------

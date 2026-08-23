@@ -463,6 +463,17 @@ function marcarBotoes(){
 // ---------- alterações por guardar ----------
 function marcarSujo(v){ if (SUJO===v) return; SUJO=v; $('marca-sujo').classList.toggle('on', v); }
 window.addEventListener('beforeunload', e=>{ if (SUJO){ e.preventDefault(); e.returnValue=''; } });
+// Uma foto trocada só FICA se o casal guardar/actualizar uma versão. Se sair
+// sem o fazer — incluindo fechar a aba ou o navegador —, avisa-se o servidor
+// para repor a foto anterior e apagar a nova. O servidor não faz nada se, afinal,
+// já estiver tudo guardado (a troca deixou de estar pendente ao guardar a versão).
+let FOTO_TROCADA = false;
+window.addEventListener('pagehide', () => {
+  if (!FOTO_TROCADA) return;
+  try {
+    navigator.sendBeacon('api.php?action=media_descartar&csrf=' + encodeURIComponent(window.CSRF || ''));
+  } catch (e) {}
+});
 function msg(t){ $('estado').textContent = t; }
 
 // ---------- markdown igual ao do servidor ----------
@@ -1251,6 +1262,10 @@ async function enviarFicheiro(chave, input){
   const d = await r.json();
   if (!d.success) return msg(d.message||'Falha no envio.');
   EST.val[chave] = d.path; ATUAIS[chave] = d.path;
+  // A partir de agora há uma troca de foto por confirmar: se o casal sair sem
+  // guardar uma versão, o servidor repõe a anterior (ver o pagehide, acima). A
+  // música não conta — não anda por versões.
+  if (chave !== 'media.musica') FOTO_TROCADA = true;
   MEDIA_V = Date.now();
   // O enquadramento anterior tinha sido escolhido para a fotografia anterior:
   // uma nova composição ficaria cortada no sítio errado. Volta ao centro, para

@@ -422,7 +422,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       quer ver em cima aquilo em que andou ontem, e não o mais antigo do sistema.</div>
     <div class="lf" style="grid-template-columns:1fr auto;margin-bottom:.7rem">
       <div><input type="search" id="q-cas" placeholder="Procurar casamento ou noivos…"
-                  oninput="carregarCasamentos()"></div>
+                  autocomplete="off" name="procurar-casamento" oninput="carregarCasamentos()"></div>
       <div></div>
     </div>
     <div class="filtros" id="filtros-cas">
@@ -500,29 +500,29 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:#8a8f88">· opcional — quem gere o casamento. Deixe em branco para não criar já.</small></div>
       <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
         <div class="campo"><label for="n-noivos-email">Email dos noivos</label>
-          <input type="email" id="n-noivos-email" autocapitalize="none" spellcheck="false">
+          <input type="email" id="n-noivos-email" autocomplete="off" autocapitalize="none" spellcheck="false">
           <div class="err"></div></div>
         <div class="campo"><label for="n-noivos-senha">Palavra-passe</label>
-          <div class="pw-wrap"><input type="password" id="n-noivos-senha" autocomplete="off" spellcheck="false" placeholder="em branco = gerada">
+          <div class="pw-wrap"><input type="password" id="n-noivos-senha" autocomplete="new-password" spellcheck="false" placeholder="em branco = gerada">
             <button type="button" class="pw-olho" id="olho-ne" onclick="verSenha('n-noivos-senha','olho-ne')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
           <div class="pw-forca" id="forca-ne" aria-hidden="true"><span class="pw-barras"><i></i><i></i><i></i><i></i></span><span class="pw-rot" id="rot-ne"></span></div>
           <div class="err"></div></div>
         <div class="campo"><label for="n-noivos-confirmar">Repetir</label>
-          <div class="pw-wrap"><input type="password" id="n-noivos-confirmar" autocomplete="off" spellcheck="false" placeholder="repita a palavra-passe">
+          <div class="pw-wrap"><input type="password" id="n-noivos-confirmar" autocomplete="new-password" spellcheck="false" placeholder="repita a palavra-passe">
             <button type="button" class="pw-olho" id="olho-nc" onclick="verSenha('n-noivos-confirmar','olho-nc')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
           <div class="err"></div></div>
       </div>
       <div class="dica" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
       <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
         <div class="campo"><label for="n-porteiro-email">Email (utilizador) do porteiro</label>
-          <input type="email" id="n-porteiro-email" autocapitalize="none" spellcheck="false" placeholder="porta-…">
+          <input type="email" id="n-porteiro-email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="porta-…">
           <div class="err"></div></div>
         <div class="campo"><label for="n-porteiro-senha">Palavra-passe</label>
-          <div class="pw-wrap"><input type="password" id="n-porteiro-senha" autocomplete="off" spellcheck="false" placeholder="em branco = gerada">
+          <div class="pw-wrap"><input type="password" id="n-porteiro-senha" autocomplete="new-password" spellcheck="false" placeholder="em branco = gerada">
             <button type="button" class="pw-olho" id="olho-pe" onclick="verSenha('n-porteiro-senha','olho-pe')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
           <div class="err"></div></div>
         <div class="campo"><label for="n-porteiro-confirmar">Repetir</label>
-          <div class="pw-wrap"><input type="password" id="n-porteiro-confirmar" autocomplete="off" spellcheck="false" placeholder="repita a palavra-passe">
+          <div class="pw-wrap"><input type="password" id="n-porteiro-confirmar" autocomplete="new-password" spellcheck="false" placeholder="repita a palavra-passe">
             <button type="button" class="pw-olho" id="olho-pc" onclick="verSenha('n-porteiro-confirmar','olho-pc')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
           <div class="err"></div></div>
       </div>
@@ -561,7 +561,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
       <div class="lf" style="grid-template-columns:1fr auto;margin:.8rem 0 .6rem;border:0;padding:0">
         <div><input type="search" id="q-conta" placeholder="Procurar por email ou nome…"
-                    oninput="carregarContas()"></div>
+                    autocomplete="off" name="procurar-conta" oninput="carregarContas()"></div>
         <div></div>
       </div>
       <div id="lista-contas"><div class="dica">A carregar…</div></div>
@@ -693,9 +693,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <div><label>Papel</label>
             <select id="ed-np-papel"><option value="porteiro">Porteiro</option><option value="noivos">Noivos</option></select></div>
           <div class="campo"><label for="ed-np-email">Email</label>
-            <input type="email" id="ed-np-email" autocapitalize="none" spellcheck="false"><div class="err"></div></div>
+            <input type="email" id="ed-np-email" autocomplete="off" autocapitalize="none" spellcheck="false"><div class="err"></div></div>
           <div class="campo"><label for="ed-np-senha">Palavra-passe <small style="color:#8a8f88">· em branco = gerada</small></label>
-            <div class="pw-wrap"><input type="password" id="ed-np-senha" autocomplete="off" spellcheck="false">
+            <div class="pw-wrap"><input type="password" id="ed-np-senha" autocomplete="new-password" spellcheck="false">
               <button type="button" class="pw-olho" id="olho-np" onclick="verSenha('ed-np-senha','olho-np')">mostrar</button></div>
             <div class="err"></div></div>
           <div><button class="btn btn-ouro btn-sm" onclick="adicionarConta()">Adicionar</button></div>
@@ -1195,7 +1195,7 @@ function pintarContasEd(contas){
         <div class="ac" style="align-self:end">
           <button class="btn btn-sm" onclick="guardarContaLigada(${uid})">Guardar</button>
           <button class="btn btn-sm" onclick="reporSenhaLigada(${uid}, '${esc(a.email)}')">Repor senha</button>
-          <button class="btn btn-sm perigo" onclick="tirarContaLigada(${uid}, '${esc(a.nome || a.email)}')">Tirar</button>
+          <button class="btn btn-sm perigo" onclick="tirarContaLigada(${uid}, '${esc(a.nome || a.email)}')">Eliminar conta</button>
         </div>
       </div>
     </div>`;
@@ -1268,9 +1268,10 @@ async function reporSenhaLigada(uid, email){
     <small>Entregue-a agora — não volta a aparecer.</small>`;
 }
 async function tirarContaLigada(uid, nome){
-  if (!confirm('Tirar o acesso de ' + nome + ' a este casamento?\n\nA conta continua a existir.')) return;
-  const d = await api('acesso_tirar_de&utilizador=' + uid + '&casamento=' + EDITAR_ALVO, { method:'POST' });
-  if (d && d.success){ toast('Acesso tirado.'); editarTudoRecarregar(); carregarCasamentos(); }
+  if (!confirm('Eliminar a conta de ' + nome + '?\n\nA conta é apagada e deixa de entrar. '
+    + 'Não se desfaz. O email fica livre para uma conta nova.')) return;
+  const d = await api('conta_apagar_do_casamento&utilizador=' + uid + '&casamento=' + EDITAR_ALVO, { method:'POST' });
+  if (d && d.success){ toast('Conta eliminada.'); editarTudoRecarregar(); carregarCasamentos(); }
 }
 
 /** A data do casamento, e quanto falta — que é o que se quer saber primeiro. */

@@ -95,6 +95,95 @@ function apagarFaturaFich(string $caminho): void {
     @unlink(__DIR__ . '/' . $caminho);
 }
 
+/** Um caminho é uma fotografia posta à mão (custom), e não um asset de origem? */
+function ehFotoCustom(string $caminho): bool {
+    return $caminho !== '' && !str_contains($caminho, '..')
+        && str_starts_with($caminho, 'assets/convite/custom/');
+}
+
+/**
+ * Fotografias trocadas no editor mas ainda POR GUARDAR numa versão.
+ *
+ * Trocar uma foto grava-a logo na peça (para se ver na tela), mas ela só FICA se
+ * o casal actualizar/guardar uma versão. Enquanto isso não acontece, a troca é
+ * provisória: guarda-se aqui o ficheiro novo e o valor anterior, para se poder
+ * repor a foto antiga e apagar a nova se o casal sair sem guardar. É por
+ * casamento e por sessão — cada um trata das suas.
+ */
+function &pendenteMedia(): array {
+    $cid = casamentoAtual();
+    if (!isset($_SESSION['media_pendente']) || !is_array($_SESSION['media_pendente'])) {
+        $_SESSION['media_pendente'] = [];
+    }
+    if (!isset($_SESSION['media_pendente'][$cid]) || !is_array($_SESSION['media_pendente'][$cid])) {
+        $_SESSION['media_pendente'][$cid] = [];
+    }
+    return $_SESSION['media_pendente'][$cid];
+}
+
+/** Regista uma troca de foto por confirmar: o ficheiro novo e o valor anterior. */
+function marcarMediaPendente(mysqli $conn, string $chave, string $novo, string $anterior): void {
+    $pend = &pendenteMedia();
+    // Se já havia uma troca por guardar nesta secção, o «anterior» a preservar é
+    // o da primeira (o último valor MESMO guardado); e o ficheiro intermédio,
+    // que nunca chegou a ficar, pode ir já.
+    if (isset($pend[$chave])) {
+        $intermedio = (string)($pend[$chave]['novo'] ?? '');
+        $anteriorReal = (string)($pend[$chave]['anterior'] ?? $anterior);
+        if ($intermedio !== '' && $intermedio !== $novo && $intermedio !== $anteriorReal
+            && ehFotoCustom($intermedio) && !ficheiroEmVersao($conn, $intermedio)) {
+            @unlink(__DIR__ . '/' . $intermedio);
+        }
+        $anterior = $anteriorReal;
+    }
+    $pend[$chave] = ['novo' => $novo, 'anterior' => $anterior];
+}
+
+/**
+ * O casal saiu sem guardar: repõe cada foto pendente no valor anterior e apaga
+ * o ficheiro novo (se ninguém mais o usa). Devolve quantos ficheiros se apagaram.
+ */
+function descartarMediaPendente(mysqli $conn): int {
+    $pend = &pendenteMedia();
+    $reverter = []; $apagados = 0;
+    foreach ($pend as $chave => $par) {
+        $novo = (string)($par['novo'] ?? '');
+        $anterior = (string)($par['anterior'] ?? '');
+        $reverter[$chave] = $anterior;
+        if ($novo !== '' && $novo !== $anterior && ehFotoCustom($novo) && !ficheiroEmVersao($conn, $novo)) {
+            @unlink(__DIR__ . '/' . $novo); $apagados++;
+        }
+    }
+    if ($reverter) guardarDefinicoes($conn, $reverter);
+    $cid = casamentoAtual();
+    unset($_SESSION['media_pendente'][$cid]);
+    return $apagados;
+}
+
+/**
+ * As fotos pendentes ficaram (o casal guardou uma versão, ou aplicou outra):
+ * larga-se o registo e apagam-se os ficheiros que já ninguém usa — nem a peça
+ * em vigor, nem versão guardada nenhuma. Não repõe nada: a peça já é o que é.
+ */
+function assentarMediaPendente(mysqli $conn): int {
+    $pend = &pendenteMedia();
+    if (!$pend) { return 0; }
+    $emUso = [];
+    foreach (defsAtuais($conn) as $v) if (is_string($v)) $emUso[$v] = true;
+    $apagados = 0;
+    foreach ($pend as $par) {
+        foreach (['novo', 'anterior'] as $q) {
+            $f = (string)($par[$q] ?? '');
+            if (ehFotoCustom($f) && !isset($emUso[$f]) && !ficheiroEmVersao($conn, $f)) {
+                @unlink(__DIR__ . '/' . $f); $apagados++;
+            }
+        }
+    }
+    $cid = casamentoAtual();
+    unset($_SESSION['media_pendente'][$cid]);
+    return $apagados;
+}
+
 function senhaTemporaria(): string {
     $a = 'abcdefghijkmnpqrstuvwxyz23456789';   // sem l, o, 0, 1
     $s = '';
@@ -103,11 +192,15 @@ function senhaTemporaria(): string {
 }
 
 /**
- * Cria (ou liga, se já existir) uma conta a um casamento, com um papel. Devolve
- * ['id','email','senha','novo'] — a senha só vem preenchida quando a conta é
- * nova, para se entregar uma vez. Usada ao criar um casamento com as contas dos
- * noivos e do porteiro de uma vez. Chama erro() (que termina) se o email for
- * inválido — por isso valide os formatos ANTES de criar o casamento.
+ * Cria uma conta NOVA e liga-a a um casamento, com um papel. Devolve
+ * ['id','email','senha','novo'] — a senha vem preenchida, para se entregar uma
+ * vez. Usada ao criar/editar um casamento com as contas dos noivos e do porteiro.
+ *
+ * Um email é de UMA conta e de UMA função: se já existir, recusa-se, em vez de
+ * o religar. Reatribuir um email que já é de alguém a outro papel seria abrir
+ * uma porta com uma chave que já é de outra pessoa. Chama erro() (que termina)
+ * se o email for inválido ou já estiver em uso — por isso valide ANTES de criar
+ * o que quer que seja à volta.
  */
 function contaParaCasamento(mysqli $conn, string $email, string $nome, string $senha,
                             int $cid, string $papel): array {
@@ -116,24 +209,20 @@ function contaParaCasamento(mysqli $conn, string $email, string $nome, string $s
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro("Email inválido para a conta de $papel.");
     $st = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
     $st->bind_param('s', $email); $st->execute();
-    $ex = $st->get_result()->fetch_row();
-    $senhaMostrar = '';
-    if ($ex) {
-        $uid = (int)$ex[0];                       // conta existente: só se liga o lugar
-    } else {
-        if (mb_strlen($senha) < 8) $senha = senhaTemporaria();
-        $senhaMostrar = $senha;
-        $hash = password_hash($senha, PASSWORD_DEFAULT);
-        $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
-                              VALUES (?,?,?, 'ativo')");
-        $st->bind_param('sss', $email, $nome, $hash);
-        if (!$st->execute()) erro("Já existe uma conta com o email $email.");
-        $uid = $conn->insert_id;
+    if ($st->get_result()->fetch_row()) {
+        erro("Já existe uma conta com o email $email. Cada email serve uma só conta — use outro.");
     }
+    if (mb_strlen($senha) < 8) $senha = senhaTemporaria();
+    $hash = password_hash($senha, PASSWORD_DEFAULT);
+    $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                          VALUES (?,?,?, 'ativo')");
+    $st->bind_param('sss', $email, $nome, $hash);
+    if (!$st->execute()) erro("Já existe uma conta com o email $email.");
+    $uid = $conn->insert_id;
     $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel)
                           VALUES (?,?,?)");
     $st->bind_param('iis', $uid, $cid, $papel); @$st->execute();
-    return ['id' => $uid, 'email' => $email, 'senha' => $senhaMostrar, 'novo' => !$ex];
+    return ['id' => $uid, 'email' => $email, 'senha' => $senha, 'novo' => true];
 }
 
 /**
@@ -669,6 +758,9 @@ function criarVersaoDaPeca(mysqli $conn, string $ambito, string $nome): int {
     $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
     // A peça passa a ser desta versão, e não do modelo de onde veio.
     esquecerModeloEmVigor($conn, $ambito);
+    // As fotos trocadas ficaram guardadas nesta versão: largam o estado de
+    // «por confirmar» e apaga-se o que já não serve.
+    if ($ambito === 'digital') assentarMediaPendente($conn);
     registar($conn, 'versao_guardada', $nome, ambitosVersao()[$ambito]['rotulo']);
     return $id;
 }
@@ -744,6 +836,7 @@ if ($acao === 'versao_aplicar') {
         $st = $conn->prepare("UPDATE {$P}versoes SET predefinida=0 WHERE " . doCasamento() . " AND ambito=?");
         $st->bind_param('s', $ambito); $st->execute();
         esquecerModeloEmVigor($conn, $ambito);
+        if ($ambito === 'digital') assentarMediaPendente($conn);
         $nomeOrigem = nomeDaOrigem($conn, $ambito);
         registar($conn, 'versao_aplicada', $nomeOrigem, $r['repostas'].' definição(ões)');
         ok($r + ['nome' => $nomeOrigem, 'ambito' => $ambito]);
@@ -767,6 +860,7 @@ if ($acao === 'versao_aplicar') {
     $st->bind_param('s', $v['ambito']); $st->execute();
     $conn->query("UPDATE {$P}versoes SET predefinida=1 WHERE " . doCasamento() . " AND id=$id");
     esquecerModeloEmVigor($conn, $v['ambito']);
+    if ($v['ambito'] === 'digital') assentarMediaPendente($conn);
 
     registar($conn, 'versao_aplicada', $v['nome'], $r['gravadas'].' definição(ões)');
     ok($r + ['nome' => $v['nome'], 'ambito' => $v['ambito']]);
@@ -786,6 +880,7 @@ if ($acao === 'versao_atualizar') {
     $st = $conn->prepare("UPDATE {$P}versoes SET defs=?, atualizado_em=NOW() WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si', $json, $id);
     if (!$st->execute()) erro('Não foi possível atualizar a versão.');
+    if ($v['ambito'] === 'digital') assentarMediaPendente($conn);
     registar($conn, 'versao_atualizada', $v['nome'], '');
     ok(['nome' => $v['nome']]);
 }
@@ -808,18 +903,45 @@ if ($acao === 'versao_apagar') {
     $id = (int)($_GET['id'] ?? 0);
     // A peça de origem (o modelo da casa) não se apaga.
     if ($id === VERSAO_PADRAO_ID) erro('«'.nomeDaOrigem($conn, ambitoPedido()).'» é o desenho de origem da casa: não se apaga.');
-    $rn = $conn->prepare("SELECT nome, ambito, predefinida FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
+    $rn = $conn->prepare("SELECT nome, ambito, predefinida, defs FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $rn->bind_param('i', $id); $rn->execute();
     $x = $rn->get_result()->fetch_assoc();
     if (!$x) erro('Versão não encontrada.');
+    // As fotografias que ESTA versão trazia — para as poder apagar do disco a
+    // seguir, se mais ninguém as usar. Lêem-se antes de apagar a versão.
+    $fotosDaVersao = [];
+    $j = json_decode((string)$x['defs'], true);
+    if (is_array($j)) {
+        foreach ($j as $k => $val) {
+            if (is_string($k) && str_starts_with($k, 'media.') && is_string($val)
+                && str_starts_with($val, 'assets/convite/custom/') && !str_contains($val, '..')) {
+                $fotosDaVersao[] = $val;
+            }
+        }
+    }
     $st = $conn->prepare("DELETE FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a versão.');
+    // Apagar a versão apaga as fotos que só ela tinha anexadas — mas nunca uma
+    // que a peça ainda mostra (está nas definições em vigor) ou que outra versão
+    // guardada ainda usa. Assim não se acumulam ficheiros órfãos no disco, e não
+    // se parte uma foto que continua a ser precisa noutro lado.
+    $emUso = defsAtuais($conn);
+    $emUsoAgora = [];
+    foreach ($emUso as $vv) if (is_string($vv)) $emUsoAgora[$vv] = true;
+    $apagadas = 0;
+    foreach (array_unique($fotosDaVersao) as $cam) {
+        if (isset($emUsoAgora[$cam])) continue;                 // a peça ainda a mostra
+        if (ficheiroEmVersao($conn, $cam)) continue;            // outra versão ainda a usa
+        @unlink(__DIR__ . '/' . $cam);
+        $apagadas++;
+    }
     // Apagar não muda a peça — só se perde o ponto de regresso. Antes promovia-se
     // outra a "em vigor" sem lhe aplicar nada, o que era falso: ficava marcada
     // uma versão cujo conteúdo não era o que o convite mostrava.
-    registar($conn, 'versao_apagada', $x['nome'], ambitosVersao()[$x['ambito']]['rotulo']);
-    ok();
+    registar($conn, 'versao_apagada', $x['nome'],
+             ambitosVersao()[$x['ambito']]['rotulo'] . ($apagadas ? " · $apagadas foto(s) apagada(s)" : ''));
+    ok(['fotos_apagadas' => $apagadas]);
 }
 
 if ($acao === 'def_upload') {
@@ -846,17 +968,29 @@ if ($acao === 'def_upload') {
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
     $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
     if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
-    // Apaga o ficheiro custom anterior desta chave (nunca os originais), a não
-    // ser que alguma versão guardada ainda o use — aplicá-la traria de volta um
-    // caminho sem ficheiro por trás.
-    $antigo = defsAtuais($conn)[$chave] ?? '';
-    if (str_starts_with($antigo, 'assets/convite/custom/') && !str_contains($antigo, '..')
-        && !ficheiroEmVersao($conn, $antigo)) {
-        @unlink(__DIR__ . '/' . $antigo);
-    }
     $caminho = 'assets/convite/custom/' . $nomeFich;
+    // A troca fica logo à vista na tela, mas é PROVISÓRIA: só fica mesmo se o
+    // casal guardar/actualizar uma versão. Por isso não se apaga já o ficheiro
+    // anterior — pode ser preciso repô-lo se o casal sair sem guardar. Guarda-se
+    // o par (novo, anterior) para o poder desfazer. A música (media.musica) não
+    // entra neste jogo: não é foto e não anda por versões.
+    $antigo = (string)(defsAtuais($conn)[$chave] ?? '');
+    if (!$ehMusica) {
+        marcarMediaPendente($conn, $chave, $caminho, $antigo);
+    } elseif (ehFotoCustom($antigo) && !ficheiroEmVersao($conn, $antigo)) {
+        @unlink(__DIR__ . '/' . $antigo);   // música: comporta-se como antes
+    }
     guardarDefinicoes($conn, [$chave => $caminho]);
     ok(['path' => $caminho]);
+}
+
+if ($acao === 'media_descartar') {
+    // O casal saiu do editor sem guardar: repõem-se as fotos trocadas no valor
+    // anterior e apagam-se os ficheiros novos. É o pedido que a página envia ao
+    // sair (pagehide), por sendBeacon. Sem trocas por guardar, não faz nada.
+    exigirCorrecao();
+    $n = descartarMediaPendente($conn);
+    ok(['apagados' => $n]);
 }
 
 if ($acao === 'def_media_repor') {
@@ -1437,8 +1571,8 @@ if ($acao === 'acesso_lista') {
 }
 
 if ($acao === 'acesso_convidar') {
-    // Dá lugar a alguém no casamento aberto, pelo email. Se a conta ainda não
-    // existir, cria-se — é como se convida um porteiro que nunca cá esteve.
+    // Dá lugar a um porteiro no casamento aberto, pelo email. A conta é sempre
+    // NOVA: um email é de uma só conta, e não se reatribui a quem já é de alguém.
     $cid = casamentoAtual();
     if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
     $d = corpo();
@@ -1450,25 +1584,23 @@ if ($acao === 'acesso_convidar') {
     if (!ehAdminPlataforma()) $papelCas = 'porteiro';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
 
-    $st = $conn->prepare("SELECT id, nome FROM {$P}utilizadores WHERE email=? LIMIT 1");
+    // Um email já em uso não se realoca: cada email serve uma só conta.
+    $st = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
     $st->bind_param('s', $email); $st->execute();
-    $u = $st->get_result()->fetch_assoc();
-    $senhaNova = '';
-    if ($u) {
-        $uid = (int)$u['id'];
-    } else {
-        // Conta nova: senha temporária, mostrada uma vez a quem convida, para
-        // lha entregar. Não há correio configurado — e inventar um envio que
-        // não acontece seria pior do que dizer as coisas como são.
-        $senhaNova = senhaTemporaria();
-        $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 120);
-        $hash = password_hash($senhaNova, PASSWORD_DEFAULT);
-        $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
-                              VALUES (?,?,?, 'ativo')");
-        $st->bind_param('sss', $email, $nome, $hash);
-        if (!$st->execute()) erro('Não foi possível criar a conta.');
-        $uid = $conn->insert_id;
+    if ($st->get_result()->fetch_row()) {
+        erro('Já existe uma conta com esse email. Cada email serve uma só conta — use outro.');
     }
+    // Conta nova: senha temporária, mostrada uma vez a quem convida, para lha
+    // entregar. Não há correio configurado — e inventar um envio que não
+    // acontece seria pior do que dizer as coisas como são.
+    $senhaNova = senhaTemporaria();
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 120);
+    $hash = password_hash($senhaNova, PASSWORD_DEFAULT);
+    $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                          VALUES (?,?,?, 'ativo')");
+    $st->bind_param('sss', $email, $nome, $hash);
+    if (!$st->execute()) erro('Não foi possível criar a conta.');
+    $uid = $conn->insert_id;
     $st = $conn->prepare("INSERT INTO {$P}acessos (utilizador_id, casamento_id, papel) VALUES (?,?,?)
                           ON DUPLICATE KEY UPDATE papel=VALUES(papel)");
     $st->bind_param('iis', $uid, $cid, $papelCas);
@@ -1726,6 +1858,53 @@ if ($acao === 'acesso_tirar_de') {
     if (!$st->execute()) erro('Não foi possível tirar o lugar.');
     registar($conn, 'acesso_tirado', 'conta ' . $uid, 'casamento ' . $cid);
     ok(['utilizador' => $uid, 'casamento' => $cid]);
+}
+
+if ($acao === 'conta_apagar_do_casamento') {
+    // «Tirar conta» — elimina mesmo a conta ligada a este casamento, e não só o
+    // seu lugar. Com um email por conta e por função, a conta de um porteiro (ou
+    // de um casal) existe por causa deste casamento: tirá-la é apagá-la. Serve
+    // aos noivos (no casamento aberto) e ao admin (a partir da lista, indicando
+    // o casamento). Por segurança, se a conta ainda tiver lugar noutro casamento,
+    // só se lhe tira o lugar aqui — não se leva o que também é de outra festa.
+    $cid = (int)($_GET['casamento'] ?? 0);
+    if ($cid <= 0) $cid = casamentoAtual();
+    if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
+    $uid = (int)($_GET['utilizador'] ?? 0);
+    if ($uid <= 0) erro('Indique a conta.');
+    if ($uid === utilizadorId()) erro('Não pode eliminar a sua própria conta.');
+    // O papel desta conta NESTE casamento — para só travar a saída de quem o
+    // gere. Tirar um porteiro nunca deixa o casamento sem dono; tirar o último
+    // casal, sim, e isso não se faz sem passar a gestão a outra conta antes.
+    $st = $conn->prepare("SELECT papel FROM {$P}acessos WHERE utilizador_id=? AND casamento_id=? LIMIT 1");
+    $st->bind_param('ii', $uid, $cid); $st->execute();
+    $ac = $st->get_result()->fetch_assoc();
+    if (!$ac) erro('Essa conta não tem lugar neste casamento.');
+    if ($ac['papel'] === 'noivos' && contaNoivos($conn, $cid, $uid) === 0) {
+        erro('Este casamento ficaria sem ninguém a geri-lo. Dê a gestão a outra conta primeiro.');
+    }
+    $st = $conn->prepare("SELECT email, papel_plataforma FROM {$P}utilizadores WHERE id=?");
+    $st->bind_param('i', $uid); $st->execute();
+    $u = $st->get_result()->fetch_assoc();
+    if (!$u) erro('Conta não encontrada.');
+    if ($u['papel_plataforma'] !== null) erro('As contas da plataforma não se eliminam por aqui.');
+
+    // Tira o lugar neste casamento.
+    $st = $conn->prepare("DELETE FROM {$P}acessos WHERE utilizador_id=? AND casamento_id=?");
+    $st->bind_param('ii', $uid, $cid);
+    if (!$st->execute()) erro('Não foi possível tirar o acesso.');
+    // Se a conta já não serve casamento nenhum, elimina-se de vez.
+    $r = $conn->query("SELECT COUNT(*) n FROM {$P}acessos WHERE utilizador_id=" . $uid);
+    $restam = $r ? (int)$r->fetch_assoc()['n'] : 0;
+    $apagada = false;
+    if ($restam === 0) {
+        $st = $conn->prepare("DELETE FROM {$P}utilizadores WHERE id=?");
+        $st->bind_param('i', $uid); @$st->execute();
+        $apagada = true;
+    }
+    registar($conn, 'conta_apagada', (string)$u['email'],
+             $apagada ? 'eliminada' : 'tirada do casamento ' . $cid . ' (tem outros)');
+    ok(['utilizador' => $uid, 'apagada' => $apagada]);
 }
 
 if ($acao === 'casamento_estado') {
