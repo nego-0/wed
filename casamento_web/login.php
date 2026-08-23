@@ -66,6 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .evento{ font-family:var(--sans); font-size:.86rem; color:#8a8f88; margin-bottom:1.6rem; }
   .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:.85rem; margin-bottom:1rem; }
   .dica{ font-size:.78rem; color:#9aa09a; margin-top:1.1rem; }
+  /* Verificações por campo, como nos outros formulários da casa. */
+  .campo{ text-align:left; margin-bottom:1rem; }
+  .campo input{ transition:border-color .15s, box-shadow .15s; }
+  .campo.mau input{ border-color:var(--danger); }
+  .campo.mau input:focus{ box-shadow:0 0 0 3px rgba(165,71,63,.15); }
+  .err{ display:none; color:var(--danger); font-size:.77rem; margin-top:.34rem; }
+  .campo.mau .err{ display:block; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ padding-right:4.6rem; }
+  .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
+            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+  .pw-olho:hover{ color:var(--forest); }
 </style>
 </head>
 <body>
@@ -75,14 +87,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="casa"><?= escP(PLATAFORMA['nome']) ?></div>
       <div class="evento"><?= escP(PLATAFORMA['sub']) ?></div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>
-      <form method="post">
-        <div style="text-align:left; margin-bottom:1rem;">
+      <form method="post" id="form-login" novalidate>
+        <div class="campo">
           <label for="utilizador">Email</label>
-          <input type="text" id="utilizador" name="utilizador" autofocus required autocomplete="username" autocapitalize="none" spellcheck="false">
+          <input type="text" id="utilizador" name="utilizador" autofocus autocomplete="username" autocapitalize="none" spellcheck="false">
+          <div class="err"></div>
         </div>
-        <div style="text-align:left; margin-bottom:1rem;">
+        <div class="campo">
           <label for="senha">Palavra-passe</label>
-          <input type="password" id="senha" name="senha" required autocomplete="current-password">
+          <div class="pw-wrap">
+            <input type="password" id="senha" name="senha" autocomplete="current-password">
+            <button type="button" class="pw-olho" id="olho" onclick="verSenha()" aria-label="Mostrar a palavra-passe">mostrar</button>
+          </div>
+          <div class="err"></div>
         </div>
         <button class="btn btn-verde" style="width:100%; justify-content:center;" type="submit">Entrar</button>
       </form>
@@ -90,5 +107,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Ainda não tem conta? <a href="registo.php" style="color:var(--gold)">Inscreva o seu casamento</a>.</div>
     </div>
   </div>
+<script>
+  const $ = id => document.getElementById(id);
+  // A verificação que falta antes de ir ao servidor: assinala, por campo e em
+  // português, o que ficou por preencher — em vez do aviso cru do navegador.
+  function marca(id, erro){
+    const c = $(id).closest('.campo'); if (!c) return !erro;
+    const box = c.querySelector('.err');
+    if (erro){ c.classList.add('mau'); if (box) box.textContent = erro; $(id).setAttribute('aria-invalid','true'); }
+    else { c.classList.remove('mau'); $(id).removeAttribute('aria-invalid'); }
+    return !erro;
+  }
+  function regra(id){
+    const v = ($(id).value || '').trim();
+    if (id === 'utilizador') return v ? '' : 'Escreva o seu email.';
+    if (id === 'senha')      return $(id).value ? '' : 'Escreva a sua palavra-passe.';
+    return '';
+  }
+  ['utilizador','senha'].forEach(id => {
+    $(id).addEventListener('blur', () => marca(id, regra(id)));
+    $(id).addEventListener('input', () => { if ($(id).closest('.campo').classList.contains('mau')) marca(id, regra(id)); });
+  });
+  $('form-login').addEventListener('submit', e => {
+    let primeiro = null;
+    ['utilizador','senha'].forEach(id => { if (!marca(id, regra(id)) && !primeiro) primeiro = id; });
+    if (primeiro){ e.preventDefault(); $(primeiro).focus(); }
+  });
+  function verSenha(){
+    const el = $('senha'), b = $('olho'), ver = el.type === 'password';
+    el.type = ver ? 'text' : 'password';
+    b.textContent = ver ? 'ocultar' : 'mostrar';
+  }
+</script>
 </body>
 </html>

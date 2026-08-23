@@ -128,6 +128,17 @@ $MAPA_LOCAL = [
             padding:.6rem .8rem; font-size:.84rem; color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
   @media (max-width:640px){ .lf{ grid-template-columns:1fr; } .linha{ grid-template-columns:auto 1fr; }
                             .linha .ac{ grid-column:1/-1; } }
+  /* Verificações por campo, como nos outros formulários da casa. */
+  .campo input{ transition:border-color .15s, box-shadow .15s; }
+  .campo.mau input{ border-color:var(--danger); }
+  .campo.mau input:focus{ box-shadow:0 0 0 3px rgba(165,71,63,.15); }
+  .err{ display:none; color:var(--danger); font-size:.77rem; margin-top:.34rem; }
+  .campo.mau .err{ display:block; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ padding-right:4.6rem; }
+  .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
+            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+  .pw-olho:hover{ color:var(--forest); }
 </style>
 </head>
 <body>
@@ -251,13 +262,14 @@ $MAPA_LOCAL = [
 
       <?php if (!$soVer): ?>
       <div class="dica" style="margin:.9rem 0 .3rem"><b>Convidar um porteiro</b></div>
-      <div class="lf" style="grid-template-columns:1.4fr 1.4fr auto">
-        <div><label for="a-email">Email do porteiro</label>
+      <div class="lf" style="grid-template-columns:1.4fr 1.4fr auto;align-items:start">
+        <div class="campo"><label for="a-email">Email do porteiro</label>
           <input type="email" id="a-email" placeholder="porteiro@exemplo.pt" autocapitalize="none" spellcheck="false"
-                 onkeydown="if(event.key==='Enter')convidar()"></div>
-        <div><label for="a-nome">Nome <small style="color:#8a8f88">· opcional</small></label>
+                 onkeydown="if(event.key==='Enter')convidar()">
+          <div class="err"></div></div>
+        <div class="campo"><label for="a-nome">Nome <small style="color:#8a8f88">· opcional</small></label>
           <input type="text" id="a-nome" placeholder="Como o quer identificar"></div>
-        <div><button class="btn btn-ouro" onclick="convidar()">Convidar porteiro</button></div>
+        <div style="align-self:start;margin-top:1.55rem"><button class="btn btn-ouro" onclick="convidar()">Convidar porteiro</button></div>
       </div>
       <div class="segredo" id="senha-nova" style="display:none"></div>
       <?php endif; ?>
@@ -322,9 +334,13 @@ $MAPA_LOCAL = [
     <div class="dica">Entrou como <b><?= escP(utilizadorAtual() ?? '') ?></b>.</div>
     <div class="grelha">
       <div class="campo"><label for="p-atual">Senha atual</label>
-        <input type="password" id="p-atual" autocomplete="current-password"></div>
+        <div class="pw-wrap"><input type="password" id="p-atual" autocomplete="current-password">
+          <button type="button" class="pw-olho" id="olho-pa" onclick="verSenhaConta('p-atual','olho-pa')" aria-label="Mostrar">mostrar</button></div>
+        <div class="err"></div></div>
       <div class="campo"><label for="p-nova">Nova senha</label>
-        <input type="password" id="p-nova" autocomplete="new-password"></div>
+        <div class="pw-wrap"><input type="password" id="p-nova" autocomplete="new-password">
+          <button type="button" class="pw-olho" id="olho-pn" onclick="verSenhaConta('p-nova','olho-pn')" aria-label="Mostrar">mostrar</button></div>
+        <div class="err"></div></div>
     </div>
     <div class="fim">
       <button class="btn" onclick="mudarSenha()">Mudar senha</button>
@@ -424,11 +440,30 @@ async function carregarAcessos(){
     </div>`;
   }).join('');
 }
+// Assinala um campo com o seu erro (ou limpa-o). O mesmo idioma dos outros forms.
+function marca(id, erro){
+  const el = $(id), c = el && el.closest('.campo'); if (!c) return !erro;
+  const box = c.querySelector('.err');
+  if (erro){ c.classList.add('mau'); if (box) box.textContent = erro; el.setAttribute('aria-invalid','true'); }
+  else { c.classList.remove('mau'); el.removeAttribute('aria-invalid'); }
+  return !erro;
+}
+function verSenhaConta(id, olhoId){
+  const el = $(id), b = $(olhoId), ver = el.type === 'password';
+  el.type = ver ? 'text' : 'password';
+  b.textContent = ver ? 'ocultar' : 'mostrar';
+}
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if ($('a-email')) $('a-email').addEventListener('input', () => {
+  if ($('a-email').closest('.campo').classList.contains('mau'))
+    marca('a-email', EMAIL_RE.test($('a-email').value.trim()) ? '' : 'Esse email não parece válido.');
+});
 async function convidar(){
   const email = $('a-email').value.trim();
   const nome  = ($('a-nome') ? $('a-nome').value.trim() : '');
-  if (!email) return toast('Indique o email do porteiro.', true);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('Esse email não parece válido.', true);
+  const erroEmail = !email ? 'Indique o email do porteiro.'
+                  : (EMAIL_RE.test(email) ? '' : 'Esse email não parece válido.');
+  if (!marca('a-email', erroEmail)) { $('a-email').focus(); return; }
   const d = await api('acesso_convidar', { method:'POST',
     body: JSON.stringify({ email, nome, papel: 'porteiro' }) });
   if (!d || !d.success) return;
@@ -494,11 +529,22 @@ async function revogar(id){
 }
 
 // ---------- a minha conta ----------
+if ($('p-nova')) $('p-nova').addEventListener('input', () => {
+  if ($('p-nova').closest('.campo').classList.contains('mau'))
+    marca('p-nova', $('p-nova').value.length >= 8 ? '' : 'Pelo menos 8 caracteres.');
+});
 async function mudarSenha(){
   const atual = $('p-atual').value, nova = $('p-nova').value;
-  if (!atual || !nova) return toast('Preencha as duas senhas.', true);
+  let mau = false;
+  if (!marca('p-atual', atual ? '' : 'Escreva a sua senha atual.')) mau = true;
+  if (!marca('p-nova', !nova ? 'Escreva a nova senha.' : (nova.length >= 8 ? '' : 'Pelo menos 8 caracteres.'))) mau = true;
+  if (mau) return;
   const d = await api('senha_mudar', { method:'POST', body: JSON.stringify({ atual, nova }) });
-  if (d && d.success){ $('p-atual').value = $('p-nova').value = ''; toast('Senha mudada.'); }
+  if (d && d.success){
+    $('p-atual').value = $('p-nova').value = '';
+    ['p-atual','p-nova'].forEach(id => $(id).closest('.campo').classList.remove('mau'));
+    toast('Senha mudada.');
+  }
 }
 // ---------- trazer dados de um ficheiro ----------
 async function importarDados(){

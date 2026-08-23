@@ -498,7 +498,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       </div>
 
       <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:#8a8f88">· opcional — quem gere o casamento. Deixe em branco para não criar já.</small></div>
-      <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
+      <div class="lf" style="grid-template-columns:2fr 1fr 1fr;align-items:start">
         <div class="campo"><label for="n-noivos-email">Email dos noivos</label>
           <input type="email" id="n-noivos-email" autocomplete="off" autocapitalize="none" spellcheck="false">
           <div class="err"></div></div>
@@ -513,13 +513,14 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <div class="err"></div></div>
       </div>
       <div class="dica" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
-      <div class="lf" style="grid-template-columns:2fr 1fr 1fr">
+      <div class="lf" style="grid-template-columns:2fr 1fr 1fr;align-items:start">
         <div class="campo"><label for="n-porteiro-email">Email (utilizador) do porteiro</label>
           <input type="email" id="n-porteiro-email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="porta-…">
           <div class="err"></div></div>
         <div class="campo"><label for="n-porteiro-senha">Palavra-passe</label>
           <div class="pw-wrap"><input type="password" id="n-porteiro-senha" autocomplete="new-password" spellcheck="false" placeholder="em branco = gerada">
             <button type="button" class="pw-olho" id="olho-pe" onclick="verSenha('n-porteiro-senha','olho-pe')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
+          <div class="pw-forca" id="forca-pe" aria-hidden="true"><span class="pw-barras"><i></i><i></i><i></i><i></i></span><span class="pw-rot" id="rot-pe"></span></div>
           <div class="err"></div></div>
         <div class="campo"><label for="n-porteiro-confirmar">Repetir</label>
           <div class="pw-wrap"><input type="password" id="n-porteiro-confirmar" autocomplete="new-password" spellcheck="false" placeholder="repita a palavra-passe">
@@ -546,10 +547,12 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <details class="dobra dobra-dentro" id="d-conta">
       <summary><span class="mais">+</span> Nova conta administrativa
         <small>suporte ou administração da plataforma</small></summary>
-      <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin-bottom:.2rem">
-        <div><label>Nome</label><input type="text" id="c-nome" placeholder="Nome de quem usa a conta"></div>
-        <div><label>Email</label><input type="email" id="c-email" autocapitalize="none" spellcheck="false"></div>
-        <div><label>Tipo</label>
+      <div class="lf" style="grid-template-columns:2fr 2fr 1fr auto;margin-bottom:.2rem;align-items:start">
+        <div class="campo"><label for="c-nome">Nome</label>
+          <input type="text" id="c-nome" placeholder="Nome de quem usa a conta"><div class="err"></div></div>
+        <div class="campo"><label for="c-email">Email</label>
+          <input type="email" id="c-email" autocomplete="off" autocapitalize="none" spellcheck="false"><div class="err"></div></div>
+        <div><label for="c-tipo">Tipo</label>
           <select id="c-tipo" onchange="tipoMudou()">
             <option value="suporte">Suporte</option>
             <option value="admin">Admin da plataforma</option>
@@ -668,14 +671,23 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div><label for="ed-maps">Local da festa · Google Maps</label>
           <input type="url" id="ed-maps" data-mapa data-mapa-local="ed-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
+      <div class="lf" style="grid-template-columns:2fr 1fr">
+        <div><label for="ed-venue">Título do local <small style="color:#8a8f88">· ex.: «Copo d’água»</small></label>
+          <input type="text" id="ed-venue"></div>
+        <div></div>
+      </div>
       <div class="dica" style="margin:.6rem 0 .3rem">As cerimónias, se as houver.</div>
-      <div class="lf" style="grid-template-columns:1fr 2fr">
+      <div class="lf" style="grid-template-columns:1fr 2fr 1fr 2fr;align-items:start">
         <div><label for="ed-civil-hora">Civil · hora</label><input type="time" id="ed-civil-hora"></div>
         <div><label for="ed-civil-local">Civil · local</label><input type="text" id="ed-civil-local"></div>
-      </div>
-      <div class="lf" style="grid-template-columns:1fr 2fr">
         <div><label for="ed-religiosa-hora">Religiosa · hora</label><input type="time" id="ed-religiosa-hora"></div>
         <div><label for="ed-religiosa-local">Religiosa · local</label><input type="text" id="ed-religiosa-local"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 1fr;align-items:start">
+        <div><label for="ed-civil-maps">Civil · Google Maps</label>
+          <input type="url" id="ed-civil-maps" data-mapa data-mapa-local="ed-civil-local" placeholder="https://maps.app.goo.gl/…"></div>
+        <div><label for="ed-religiosa-maps">Religiosa · Google Maps</label>
+          <input type="url" id="ed-religiosa-maps" data-mapa data-mapa-local="ed-religiosa-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
       <div class="fim" style="display:flex;gap:.6rem;align-items:center;margin:.6rem 0 0">
         <button class="btn btn-ouro" onclick="guardarDadosCasamento()">Guardar dados</button>
@@ -847,6 +859,12 @@ function ligarForca(campoId, caixaId, rotId){
 }
 ligarForca('n-noivos-senha', 'forca-ne', 'rot-ne');
 ligarForca('n-porteiro-senha', 'forca-pe', 'rot-pe');
+// A conta administrativa: limpa a marca de erro do email enquanto se corrige.
+document.getElementById('c-email')?.addEventListener('input', () => {
+  const c = document.getElementById('c-email').closest('.campo');
+  if (c && c.classList.contains('mau')) marca('c-email',
+    EMAIL_RE.test(document.getElementById('c-email').value.trim()) ? '' : 'Esse email não parece válido.');
+});
 
 // Mostrar / ocultar uma palavra-passe.
 function verSenha(id, olhoId){
@@ -1171,9 +1189,10 @@ async function editarTudo(id){
   $('ed-data').value  = (c.data_evento && c.data_evento !== '0000-00-00') ? c.data_evento : '';
   const pv = (k, id2) => { const e = $(id2); if (e) e.value = ev[k] || ''; };
   pv('evento.hora','ed-hora'); pv('evento.local','ed-local'); pv('evento.cidade','ed-cidade');
+  pv('evento.venue_titulo','ed-venue');
   pv('evento.convidados','ed-convidados'); pv('evento.whatsapp','ed-whatsapp'); pv('evento.maps','ed-maps');
-  pv('evento.civil_hora','ed-civil-hora'); pv('evento.civil_local','ed-civil-local');
-  pv('evento.religiosa_hora','ed-religiosa-hora'); pv('evento.religiosa_local','ed-religiosa-local');
+  pv('evento.civil_hora','ed-civil-hora'); pv('evento.civil_local','ed-civil-local'); pv('evento.civil_maps','ed-civil-maps');
+  pv('evento.religiosa_hora','ed-religiosa-hora'); pv('evento.religiosa_local','ed-religiosa-local'); pv('evento.religiosa_maps','ed-religiosa-maps');
   // O orçamento passa pela máscara, para se ver com os separadores certos.
   const orc = $('ed-orcamento');
   if (orc){ orc.value = ev['orcamento.total'] || '';
@@ -1206,10 +1225,11 @@ function dadosEventoEd(){
   return {
     nome: v('ed-cnome'), noiva: v('ed-noiva'), noivo: v('ed-noivo'), data: v('ed-data'),
     hora: v('ed-hora'), local: v('ed-local'), cidade: v('ed-cidade'), maps: v('ed-maps'),
+    venue_titulo: v('ed-venue'),
     convidados: v('ed-convidados'), whatsapp: v('ed-whatsapp'),
     orcamento_total: v('ed-orcamento'),
-    civil_hora: v('ed-civil-hora'), civil_local: v('ed-civil-local'),
-    religiosa_hora: v('ed-religiosa-hora'), religiosa_local: v('ed-religiosa-local'),
+    civil_hora: v('ed-civil-hora'), civil_local: v('ed-civil-local'), civil_maps: v('ed-civil-maps'),
+    religiosa_hora: v('ed-religiosa-hora'), religiosa_local: v('ed-religiosa-local'), religiosa_maps: v('ed-religiosa-maps'),
   };
 }
 async function guardarDadosCasamento(){
@@ -1325,12 +1345,17 @@ function tipoMudou(){
 async function criarConta(){
   const tipo = $('c-tipo').value;
   const email = $('c-email').value.trim();
-  if (!email) return toast('Indique o email.', true);
+  // Assinala o campo, em vez de um aviso solto: o email é obrigatório e tem de
+  // parecer um email.
+  const erroEmail = !email ? 'Indique o email da conta.'
+                  : (EMAIL_RE.test(email) ? '' : 'Esse email não parece válido.');
+  if (!marca('c-email', erroEmail)) { $('c-email').focus(); return; }
   const senha = 'tmp' + Math.random().toString(36).slice(2, 10);
   const corpo = { email, nome: $('c-nome').value.trim(), senha, papel_plataforma: tipo };
   const d = await api('utilizador_criar', { method:'POST', body: JSON.stringify(corpo) });
   if (!d || !d.success) return;
   $('c-nome').value = $('c-email').value = '';
+  $('c-email').closest('.campo').classList.remove('mau','ok');
   const cx = $('senha-reposta');
   cx.style.display = '';
   cx.innerHTML = `Conta criada para <b>${esc(d.email)}</b>. Senha: <b class="cod">${esc(senha)}</b><br>

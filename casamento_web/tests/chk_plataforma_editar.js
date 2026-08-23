@@ -90,11 +90,18 @@ const entrar = async (ctx, user, pass) => {
   await admin.fill('#ed-hora', '17:45');
   await admin.fill('#ed-local', 'Salão ' + marca);
   await admin.fill('#ed-noiva', 'Ana Maria');
+  // Os campos que antes faltavam ao editor: título do local e os mapas das cerimónias.
+  await admin.fill('#ed-venue', 'Copo d’água ' + marca);
+  await admin.fill('#ed-civil-local', 'Conservatória ' + marca);
+  await admin.fill('#ed-religiosa-local', 'Igreja ' + marca);
   await admin.evaluate(() => guardarDadosCasamento()); await admin.waitForTimeout(400);
   let ficha = await api('casamento_ficha&id=' + w.id);
   ok(ficha.casamento.noiva === 'Ana Maria', 'guardar muda a identidade');
   ok(ficha.evento['evento.hora'] === '17:45' && ficha.evento['evento.local'] === 'Salão ' + marca,
      'e guarda a hora e o local do evento');
+  ok(ficha.evento['evento.venue_titulo'] === 'Copo d’água ' + marca, 'guarda o título do local (campo antes em falta)');
+  ok(ficha.evento['evento.civil_local'] === 'Conservatória ' + marca
+     && ficha.evento['evento.religiosa_local'] === 'Igreja ' + marca, 'guarda os locais das cerimónias');
 
   // adicionar um porteiro pelo editor
   const portEmail = 'porta.' + marca + '@exemplo.pt';
