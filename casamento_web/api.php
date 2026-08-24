@@ -2103,6 +2103,31 @@ if ($acao === 'casamento_editar') {
         'data_evento' => $data, 'dados_do_evento' => $gravadas, 'contas' => $contas]);
 }
 
+/**
+ * Apaga as contas que só existem por causa deste casamento — as de casamento
+ * (noivos/porteiro) sem lugar em mais nenhum. Nunca o pessoal da plataforma
+ * (admin/suporte), e nunca quem ainda é porteiro ou casal noutra festa. Corre
+ * ANTES de se apagarem os acessos, porque é por eles que se sabe de quem é cada
+ * conta. Devolve quantas contas foram eliminadas.
+ */
+function apagarContasDoCasamento(mysqli $conn, int $cid): int {
+    global $P;
+    $ids = [];
+    $r = @$conn->query("SELECT DISTINCT a.utilizador_id
+                        FROM {$P}acessos a JOIN {$P}utilizadores u ON u.id = a.utilizador_id
+                        WHERE a.casamento_id=$cid AND u.papel_plataforma IS NULL");
+    if ($r) while ($x = $r->fetch_row()) $ids[] = (int)$x[0];
+    $n = 0;
+    foreach ($ids as $uid) {
+        $q = @$conn->query("SELECT COUNT(*) FROM {$P}acessos WHERE utilizador_id=$uid AND casamento_id <> $cid");
+        if ($q && (int)$q->fetch_row()[0] > 0) continue;   // ainda serve outra festa
+        $conn->query("DELETE FROM {$P}acessos WHERE utilizador_id=$uid");
+        $conn->query("DELETE FROM {$P}utilizadores WHERE id=$uid");
+        $n++;
+    }
+    return $n;
+}
+
 if ($acao === 'casamento_apagar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga casamentos.');
     // Apaga um casamento e TUDO o que é dele. Não se desfaz, e por isso pede-se
@@ -2129,6 +2154,13 @@ if ($acao === 'casamento_apagar') {
         $r = @$conn->query("SELECT COUNT(*) n FROM {$P}$tab WHERE casamento_id=" . $id);
         $levou[$rot] = $r ? (int)$r->fetch_assoc()['n'] : 0;
     }
+    // As fotos que o casal anexou vivem no disco; limpa-se a peça à origem antes
+    // de apagar as linhas, para não as deixar órfãs no servidor.
+    reporFabricaPartes($conn, $id, array_keys(partesCasamento()));
+    // As contas de casamento (noivos/porteiro) só existem por causa dele: apagar
+    // o casamento apaga-as também. Corre antes dos acessos, que é por eles que se
+    // sabe de quem são.
+    $levou['contas'] = apagarContasDoCasamento($conn, $id);
     // Pela ordem certa: os convidados dependem dos convites, e as parcelas das
     // despesas, e estas das categorias.
     foreach (['convidados','convites','mesas','versoes','registo','definicoes',
@@ -2144,7 +2176,8 @@ if ($acao === 'casamento_apagar') {
         $_SESSION['papel'] = null;
     }
     registar($conn, 'casamento_apagado', $c['nome'],
-             $levou['convites'] . ' convites · ' . $levou['pessoas'] . ' pessoas');
+             $levou['convites'] . ' convites · ' . $levou['pessoas'] . ' pessoas · '
+             . $levou['contas'] . ' contas');
     ok(['id' => $id, 'nome' => $c['nome'], 'levou' => $levou]);
 }
 
@@ -4110,6 +4143,10 @@ if ($acao === 'sistema_repor_fabrica') {
             // linhas na base deixaria órfãs.
             reporFabricaPartes($conn, $cid, $partes);
             if ($modo === 'apagar') {
+                // As contas de casamento (noivos/porteiro) só existem por causa
+                // dele — vão com ele. Antes dos acessos, que é por eles que se
+                // sabe de quem são.
+                $res['contas_casamento'] = ($res['contas_casamento'] ?? 0) + apagarContasDoCasamento($conn, $cid);
                 foreach (['convidados','convites','mesas','versoes','registo','definicoes',
                           'acessos','suporte_codigos',
                           'orcamento_pagamentos','orcamento_despesas','orcamento_categorias'] as $t) {

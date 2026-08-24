@@ -87,16 +87,22 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
      && (await api('versao_lista&ambito=digital')).versoes.filter(v => !v.padrao).length === 0,
      'e o casamento fica vazio (convites e versões)');
 
-  // ---------- admin: apagar um casamento por inteiro ----------
+  // ---------- admin: apagar um casamento por inteiro (leva as contas dele) ----------
   const wd = await api('casamento_criar', { nome: 'ZZ Del ' + mk, noiva: 'D', noivo: 'E' }, 1);
   await api('casamento_abrir&id=' + wd.id, {});
   await api('convite_save', { nome_exibicao: 'Del ' + mk, tipo: 'ambos', lado: 'noiva', membros: ['Z'] }, 1);
+  const emailDel = 'del.porta.' + mk + '@ex.pt';
+  await api('acesso_convidar', { email: emailDel, papel: 'porteiro' }, 1);   // conta que só existe por causa deste casamento
+  ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailDel))).contas || []).length === 1, 'a conta de porteiro existe antes de apagar');
   const rda = await api('sistema_repor_fabrica',
     { alvos: ['casamentos'], casamentos: [wd.id], casamentos_modo: 'apagar' }, 1);
   ok(rda.success && rda.res.casamentos_apagados === 1, 'admin apaga 1 casamento por inteiro');
+  ok(rda.res.contas_casamento >= 1, 'e a operação diz que levou as contas do casamento');
   await api('casamento_abrir&id=1', {});
   ok(!(await api('casamento_lista&estado=todos')).casamentos.some(c => +c.id === +wd.id),
      'e o casamento já não consta da lista');
+  ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailDel))).contas || []).length === 0,
+     'a conta de porteiro foi apagada com o casamento');
 
   // ---------- casal: repor de fábrica das versões apaga a foto anexada ----------
   const w2 = await api('casamento_criar', { nome: 'ZZ SelF ' + mk, noiva: 'F', noivo: 'G' }, 1);
@@ -139,6 +145,18 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailA))).contas || []).length === 0, 'o suporte desapareceu');
   ok(((await api('utilizador_lista&q=admin')).contas || []).some(c => c.papel_plataforma === 'admin'),
      'e a própria conta (admin) fica — não se tranca fora');
+
+  // ---------- apagar um casamento (a via normal) leva também as suas contas ----------
+  const wc = await api('casamento_criar', { nome: 'ZZ ApC ' + mk, noiva: 'A', noivo: 'B' }, 1);
+  await api('casamento_abrir&id=' + wc.id, {});
+  const emailC = 'apc.porta.' + mk + '@ex.pt';
+  await api('acesso_convidar', { email: emailC, papel: 'porteiro' }, 1);
+  await api('casamento_abrir&id=1', {});
+  await api('casamento_estado&id=' + wc.id + '&estado=arquivado', {});
+  const delc = await api('casamento_apagar&id=' + wc.id, {});
+  ok(delc.success && delc.levou && delc.levou.contas >= 1, 'casamento_apagar diz quantas contas levou');
+  ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailC))).contas || []).length === 0,
+     'e a conta de porteiro desapareceu com o casamento');
 
   // ---------- os painéis existem no ecrã ----------
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });

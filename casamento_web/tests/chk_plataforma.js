@@ -367,24 +367,27 @@ const entrar = async (ctx, user, pass) => {
      'a lista de casamentos marca-o também');
 
   // ---------- limpeza ----------
-  // Primeiro os casamentos (que levam com eles os lugares), e só depois a
-  // conta — que a esta altura já não pertence a casamento nenhum. Sem isto,
-  // cada corrida deixava mais uma conta de mentira na base.
+  // Apagar um casamento apaga tudo o que é dele — as contas de casamento
+  // (noivos/porteiro) que só existem por sua causa incluídas. Por isso basta
+  // apagar os casamentos: as contas do casal e do porteiro vão atrás.
   await api('casamento_abrir&id=1');
   for (const id of [casA.id, casB.id, pend.id]) {
     // Apagar exige arquivar antes — o mesmo caminho que a página faz.
     await api('casamento_estado&id=' + id + '&estado=arquivado');
     await api('casamento_apagar&id=' + id);
   }
-  // Apagados os casamentos, os seus lugares foram com eles: estas contas ficam
-  // órfãs, e é isso que as deixa apagáveis.
+  // A conta dos noivos de casA só vivia por causa dele: apagá-lo apagou-a. É a
+  // prova de que «apagar um casamento apaga todos os dados do mesmo».
+  const restaA = await api('utilizador_lista&q=' + encodeURIComponent(emailA));
+  ok((restaA.contas || []).length === 0,
+     'a conta dos noivos foi-se com o casamento que a criou');
+  // Já as administrativas (suporte/admin de prova) não dependem de casamento
+  // nenhum e ficam — apagam-se à mão, para não deixar lixo na base.
   for (const e of [emailZ, emailD, 'editado.' + marca + '@exemplo.pt',
                    'sup3.' + marca + '@exemplo.pt', 'outro.' + marca + '@exemplo.pt']) {
     const l = await api('utilizador_lista&q=' + encodeURIComponent(e));
     for (const c of l.contas || []) await api('utilizador_apagar&id=' + c.id);
   }
-  const limpaConta = await api('utilizador_apagar&id=' + contaA.id);
-  ok(limpaConta && limpaConta.success, 'a conta de prova, já sem casamento, apaga-se');
 
   console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
   await b.close(); process.exit(f ? 1 : 0);
