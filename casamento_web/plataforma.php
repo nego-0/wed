@@ -730,7 +730,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
       <details class="dobra dobra-dentro" id="ed-nova-conta" style="margin-top:.8rem">
         <summary><span class="mais">+</span> Adicionar uma conta</summary>
-        <div class="lf" style="grid-template-columns:1fr 2fr 2fr auto;margin-top:.5rem">
+        <div class="lf" style="grid-template-columns:1fr 2fr 2fr auto;margin-top:.5rem;align-items:start">
           <div><label>Papel</label>
             <select id="ed-np-papel"><option value="porteiro">Porteiro</option><option value="noivos">Noivos</option></select></div>
           <div class="campo"><label for="ed-np-email">Email</label>
@@ -739,7 +739,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             <div class="pw-wrap"><input type="password" id="ed-np-senha" autocomplete="new-password" spellcheck="false">
               <button type="button" class="pw-olho" id="olho-np" onclick="verSenha('ed-np-senha','olho-np')">mostrar</button></div>
             <div class="err"></div></div>
-          <div><button class="btn btn-ouro btn-sm" onclick="adicionarConta()">Adicionar</button></div>
+          <div><label aria-hidden="true" class="sp-label">&nbsp;</label>
+            <button class="btn btn-ouro btn-sm" onclick="adicionarConta()">Adicionar</button></div>
         </div>
       </details>
 
