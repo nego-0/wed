@@ -2405,6 +2405,35 @@ if ($acao === 'convidado_list') {
 // base e não querem dizer nada noutra.
 // ============================================================
 
+/**
+ * As contagens do que ficou num ficheiro de exportação, para irem no cabeçalho.
+ * Lêem-se do próprio $saida já montado — assim contam exatamente o que lá está,
+ * quer seja a casa inteira, um casamento ou só umas secções dele.
+ */
+function resumoExportacao(array $saida): array {
+    $r = ['casamentos' => count($saida['casamentos'] ?? []),
+          'convites' => 0, 'pessoas' => 0, 'mesas' => 0, 'versoes' => 0,
+          'orcamento_despesas' => 0];
+    foreach ((array)($saida['casamentos'] ?? []) as $c) {
+        $r['mesas']   += count((array)($c['mesas'] ?? []));
+        $r['versoes'] += count((array)($c['versoes'] ?? []));
+        $r['orcamento_despesas'] += count((array)($c['orcamento']['despesas'] ?? []));
+        foreach ((array)($c['convites'] ?? []) as $cv) {
+            $r['convites']++;
+            $r['pessoas'] += count((array)($cv['membros'] ?? []));
+        }
+    }
+    if (isset($saida['modelos'])) $r['modelos'] = count((array)$saida['modelos']);
+    if (isset($saida['contas'])) {
+        $cc = 0; $ca = 0;
+        foreach ((array)$saida['contas'] as $u) { !empty($u['papel_plataforma']) ? $ca++ : $cc++; }
+        $r['contas'] = $cc + $ca;
+        $r['contas_casamento'] = $cc;
+        $r['contas_administrativas'] = $ca;
+    }
+    return $r;
+}
+
 /** Tudo o que compõe um casamento, pronto a escrever num ficheiro. */
 function retratoCasamento(mysqli $conn, int $cid): array {
     global $P;
@@ -2539,6 +2568,9 @@ if ($acao === 'dados_exportar') {
         'ambito'     => $ambito,
         'gerado_em'  => date('c'),
         'gerado_por' => utilizadorAtual() ?? '',
+        // O resumo do que vai no ficheiro fica no cabeçalho — preenche-se no fim,
+        // mas a chave nasce já aqui para ficar por cima, à vista de quem o abre.
+        'resumo'     => null,
         'casamentos' => [],
     ];
     if ($partes) $saida['partes'] = $partes;
@@ -2570,6 +2602,11 @@ if ($acao === 'dados_exportar') {
         $saida['contas'] = $contas;
         $saida['com_senhas'] = $comSenhas ? 1 : 0;
     }
+
+    // O resumo do que ficou no ficheiro — quantos casamentos, convites, pessoas,
+    // mesas, versões, despesas, modelos e contas. É a primeira coisa que se lê ao
+    // abrir o ficheiro, e a forma de confirmar de relance que não se perdeu nada.
+    $saida['resumo'] = resumoExportacao($saida);
 
     $nome = 'dados-' . ($ambito === 'sistema' ? 'sistema' : 'casamento') . '-' . date('Y-m-d') . '.json';
     registar($conn, 'dados_exportados', $ambito,
@@ -3886,8 +3923,13 @@ if ($acao === 'modelos_exportar') {
     $lista = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
     foreach ($lista as &$m) { $m['defs'] = json_decode($m['defs'], true) ?: []; }
     unset($m);
+    // Os modelos por âmbito, para o resumo do cabeçalho dizer de relance quantos
+    // digitais e quantos impressos vão no ficheiro.
+    $porAmbito = [];
+    foreach ($lista as $m) { $a = $m['ambito'] ?? '?'; $porAmbito[$a] = ($porAmbito[$a] ?? 0) + 1; }
     $saida = ['formato' => 'casamento-web/modelos/1', 'esquema' => ESQUEMA_VERSAO,
               'gerado_em' => date('c'), 'gerado_por' => utilizadorAtual() ?? '',
+              'resumo' => ['modelos' => count($lista)] + $porAmbito,
               'modelos' => $lista];
     registar($conn, 'modelos_exportados', count($lista) . ' modelo(s)');
     header('Content-Type: application/json; charset=utf-8');

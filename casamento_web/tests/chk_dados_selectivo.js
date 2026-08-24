@@ -43,6 +43,11 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok(r0.convites && r0.convites.length === 1, 'exportar partes=convidados traz os convites');
   ok(!r0.mesas && !r0.versoes && !r0.orcamento, 'e NÃO traz mesas/versões/orçamento');
   ok(JSON.stringify(soConv.partes) === '["convidados"]', 'o ficheiro declara as partes que leva');
+  // O cabeçalho leva um resumo do que se exportou — e vem por cima, antes dos dados.
+  ok(soConv.resumo && soConv.resumo.convites === 1 && soConv.resumo.casamentos === 1,
+     'o cabeçalho traz o resumo do que foi exportado (casamentos, convites)');
+  ok(Object.keys(soConv).indexOf('resumo') < Object.keys(soConv).indexOf('casamentos'),
+     'o resumo fica no cabeçalho, antes dos casamentos');
 
   // ---------- casal: repor de fábrica só as mesas ----------
   const rf = await api('casamento_repor_fabrica', { partes: ['mesas'] }, 1);
@@ -65,6 +70,9 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok(Array.isArray(sis.contas) && sis.contas.every(c => c.papel_plataforma),
      'inc=contas_admin traz SÓ as contas administrativas');
   ok(!sis.casamentos.length, 'e NÃO traz casamentos quando não se pedem');
+  ok(sis.resumo && sis.resumo.modelos === sis.modelos.length
+     && sis.resumo.contas_administrativas === sis.contas.length,
+     'o resumo do admin conta os modelos e separa as contas por família');
   const sisCC = await baixar('&ambito=sistema&inc=contas_casamento');
   ok((sisCC.contas || []).every(c => !c.papel_plataforma),
      'inc=contas_casamento traz SÓ as contas de casamento (noivos/porteiro)');
