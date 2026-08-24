@@ -143,7 +143,7 @@ function acoesDaPlataforma(): array {
             'modelo_criar','modelo_editar','modelo_defs','modelo_apagar','modelo_visibilidade',
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
-            'modelos_importar','modelos_restaurar'];
+            'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica'];
 }
 
 function acoesDoCasamento(): array {
@@ -154,6 +154,7 @@ function acoesDoCasamento(): array {
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
             'casamento_identidade','casamento_endereco',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel','conta_apagar_do_casamento',
+            'casamento_repor_fabrica',
             'suporte_codigo_criar','suporte_codigo_revogar',
             'dados_importar','modelo_aplicar',
             'orc_ajuste','orc_categoria_guardar','orc_categoria_apagar',

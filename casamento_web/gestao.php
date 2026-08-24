@@ -122,7 +122,7 @@ $MAPA_LOCAL = [
             padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
   .aviso-visita{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
                  border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
-  .porcima{ background:var(--cream); border-left:3px solid var(--gold-soft); border-radius:8px;
+  .porcima, .nota-dados{ background:var(--cream); border-left:3px solid var(--gold-soft); border-radius:8px;
             padding:.6rem .8rem; font-size:.83rem; color:#6c7570; margin-top:.9rem; line-height:1.55; }
   .semdono{ background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px;
             padding:.6rem .8rem; font-size:.84rem; color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
@@ -139,6 +139,10 @@ $MAPA_LOCAL = [
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
             cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
+  /* As caixas de seleção das partes dos dados (levar / trazer / repor). */
+  .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.35rem .9rem; margin:.5rem 0 .9rem; }
+  .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:.9rem; color:var(--ink); cursor:pointer; }
+  .dsel input{ width:auto; margin:0; accent-color:var(--forest); flex:none; }
 </style>
 </head>
 <body>
@@ -305,27 +309,31 @@ $MAPA_LOCAL = [
   <?php if ($souAdmin): ?>
     <div class="painel">
       <h3>Os nossos dados</h3>
-      <div class="dica">Os dados deste casamento são seus. Leve-os quando quiser — para guardar,
-        para mudar de servidor, ou só para não ficar dependente de ninguém. O ficheiro traz a ficha,
-        o desenho dos convites, as mesas, os convites e as pessoas.</div>
-      <div class="fim" style="margin-top:0">
-        <a class="btn" href="api.php?action=dados_exportar&amp;ambito=casamento">Descarregar os meus dados</a>
-        <span class="estado">Um ficheiro <code>.json</code>, legível e completo.</span>
+      <div class="dica">Os dados deste casamento são seus. Escolha as partes e depois
+        <b>descarregue</b>-as para guardar, <b>traga</b>-as de um ficheiro, ou <b>reponha</b>-as
+        de fábrica. Cada operação mexe só no que estiver assinalado.</div>
+      <div class="dsel" id="dsel-noivos">
+        <?php foreach (['convidados'=>'Lista de convidados','mesas'=>'Mesas',
+                        'digital'=>'Versões do convite digital','impresso'=>'Versões do convite impresso',
+                        'orcamento'=>'Orçamento'] as $k => $rot): ?>
+          <label><input type="checkbox" value="<?= $k ?>" checked> <?= escP($rot) ?></label>
+        <?php endforeach; ?>
       </div>
-
+      <div class="fim" style="margin-top:.2rem;flex-wrap:wrap">
+        <button class="btn" onclick="exportarSel()">Descarregar selecionados</button>
+        <?php if (!$soVer): ?>
+        <button class="btn" onclick="document.getElementById('imp-ficheiro').click()">Trazer de um ficheiro…</button>
+        <input type="file" id="imp-ficheiro" accept=".json,application/json" style="display:none" onchange="importarSel()">
+        <button class="btn perigo" onclick="reporFabricaSel()">Repor de fábrica</button>
+        <?php endif; ?>
+        <span class="estado">Um ficheiro <code>.json</code>, legível.</span>
+      </div>
       <?php if (!$soVer): ?>
-      <div class="lf" style="grid-template-columns:1fr auto">
-        <div><label for="imp-ficheiro">Trazer dados de um ficheiro</label>
-          <input type="file" id="imp-ficheiro" accept=".json,application/json"></div>
-        <div><button class="btn" onclick="importarDados()">Substituir por este ficheiro</button></div>
-      </div>
-      <div class="semdono" style="margin:.8rem 0 0">
-        <b>Substituir apaga o que está cá.</b> Os convites, as pessoas, as mesas e o desenho deste
-        casamento são trocados pelos do ficheiro. Não é uma junção — é uma troca. Descarregue os
-        dados atuais primeiro, se quiser poder voltar atrás.
-      </div>
-      <div class="segredo" id="imp-resultado" style="display:none"></div>
+      <div class="nota-dados" style="margin-top:.9rem"><b>Trazer</b> substitui as partes escolhidas pelas do
+        ficheiro; <b>repor de fábrica</b> esvazia-as. Nenhuma das duas é uma junção — e não se desfazem.
+        Descarregue primeiro, se quiser poder voltar atrás.</div>
       <?php endif; ?>
+      <div class="segredo" id="imp-resultado" style="display:none"></div>
     </div>
   <?php endif; ?>
 
@@ -546,38 +554,56 @@ async function mudarSenha(){
     toast('Senha mudada.');
   }
 }
-// ---------- trazer dados de um ficheiro ----------
-async function importarDados(){
-  const f = $('imp-ficheiro').files[0];
-  if (!f) return toast('Escolha o ficheiro primeiro.', true);
+// ---------- os nossos dados: levar, trazer, repor — por partes ----------
+const ROT_PARTES = { convidados:'lista de convidados', mesas:'mesas',
+  digital:'versões do convite digital', impresso:'versões do convite impresso', orcamento:'orçamento' };
+function partesEscolhidas(){
+  return Array.from(document.querySelectorAll('#dsel-noivos input:checked')).map(i => i.value);
+}
+function exportarSel(){
+  const partes = partesEscolhidas();
+  if (!partes.length) return toast('Escolha ao menos uma parte.', true);
+  location.href = 'api.php?action=dados_exportar&ambito=casamento&partes=' + encodeURIComponent(partes.join(','));
+}
+async function importarSel(){
+  const partes = partesEscolhidas();
+  const inp = $('imp-ficheiro');
+  const f = inp.files[0]; inp.value = '';   // permite reescolher o mesmo ficheiro
+  if (!partes.length) return toast('Escolha as partes a trazer.', true);
+  if (!f) return;
   let dados;
   try { dados = JSON.parse(await f.text()); }
   catch (e) { return toast('Esse ficheiro não é um JSON válido.', true); }
   if (!dados || dados.formato !== 'casamento-web/1') {
     return toast('Este ficheiro não é uma exportação deste sistema.', true);
   }
-  // Contam-se as coisas ANTES de perguntar: uma confirmação que não diz o que
-  // vai acontecer não é uma confirmação.
-  const c = (dados.casamentos || [])[0] || {};
-  const nc = (c.convites || []).length;
-  const np = (c.convites || []).reduce((s, x) => s + ((x.membros || []).length), 0);
-  const nm = (c.mesas || []).length;
-  if (!confirm(`Substituir os dados deste casamento?\n\n`
-    + `Entram: ${nc} convite(s), ${np} pessoa(s), ${nm} mesa(s).\n`
-    + `Sai: tudo o que está cá agora.\n\nIsto não se desfaz.`)) return;
-  const comFicha = confirm('Trazer também os nomes e a data do ficheiro?\n\n'
-    + 'OK = sim, ficam os do ficheiro.\nCancelar = não, ficam os que já cá estão.');
+  const rot = partes.map(p => ROT_PARTES[p]).join(', ');
+  if (!confirm('Trazer do ficheiro: ' + rot + '?\n\n'
+    + 'Estas partes são substituídas pelas do ficheiro (as que ele tiver). Não é uma junção, '
+    + 'e não se desfaz.')) return;
   const d = await api('dados_importar', { method:'POST',
-    body: JSON.stringify({ modo: 'substituir', com_ficha: comFicha, ficheiro: dados }) });
+    body: JSON.stringify({ modo:'substituir', partes, ficheiro: dados }) });
   if (!d || !d.success) return;
   const r = (d.resumo || [])[0] || {};
   $('imp-resultado').style.display = '';
-  $('imp-resultado').innerHTML = `Entraram <b>${r.convites || 0}</b> convite(s), `
-    + `<b>${r.pessoas || 0}</b> pessoa(s), <b>${r.mesas || 0}</b> mesa(s) e `
-    + `<b>${r.versoes || 0}</b> versão(ões).`
+  $('imp-resultado').innerHTML = 'Trazidos: '
+    + `<b>${r.convites || 0}</b> convite(s), <b>${r.pessoas || 0}</b> pessoa(s), `
+    + `<b>${r.mesas || 0}</b> mesa(s), <b>${r.versoes || 0}</b> versão(ões).`
     + (r.codigos_trocados ? `<br><b>${r.codigos_trocados}</b> código(s) tiveram de mudar por já `
         + `estarem em uso — os QR antigos desses convites deixam de servir.` : '');
-  toast('Dados importados.');
+  toast('Dados trazidos.');
+  setTimeout(() => location.reload(), 1400);
+}
+async function reporFabricaSel(){
+  const partes = partesEscolhidas();
+  if (!partes.length) return toast('Escolha o que repor de fábrica.', true);
+  const rot = partes.map(p => ROT_PARTES[p]).join(', ');
+  if (!confirm('Repor de fábrica: ' + rot + '?\n\n'
+    + 'Estas partes ficam vazias, como um casamento acabado de criar. Não se desfaz.')) return;
+  const d = await api('casamento_repor_fabrica', { method:'POST', body: JSON.stringify({ partes }) });
+  if (!d || !d.success) return;
+  toast('Reposto de fábrica: ' + rot + '.');
+  setTimeout(() => location.reload(), 1400);
 }
 
 async function sairVisita(){

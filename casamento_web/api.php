@@ -18,6 +18,16 @@ function ok(array $extra = []): void  { echo json_encode(['success' => true]  + 
 function erro(string $m): void        { echo json_encode(['success' => false, 'message' => $m]); exit; }
 
 /**
+ * Uma lista vinda do pedido, quer seja um array JSON (["a","b"]) quer uma
+ * string com vírgulas ("a,b"). As checkboxes do ecrã mandam arrays; um link de
+ * descarga manda a string na query — os dois têm de servir.
+ */
+function listaCorpo($v): array {
+    $itens = is_array($v) ? $v : explode(',', (string)$v);
+    return array_values(array_filter(array_map(fn($x) => trim((string)$x), $itens), fn($x) => $x !== ''));
+}
+
+/**
  * Exige poder escrever no casamento aberto.
  *
  * A única situação em que não se pode é a visita de suporte com um código de
@@ -2480,12 +2490,31 @@ function retratoCasamento(mysqli $conn, int $cid): array {
 if ($acao === 'dados_exportar') {
     $ambito = ($_GET['ambito'] ?? 'casamento') === 'sistema' ? 'sistema' : 'casamento';
     $comSenhas = !empty($_GET['senhas']);
+    // As secções que o casal escolheu levar (só faz sentido no âmbito casamento).
+    $partes = array_values(array_intersect(
+        array_filter(array_map('trim', explode(',', (string)($_GET['partes'] ?? '')))),
+        array_keys(partesCasamento())));
+    // Os âmbitos que o admin escolheu levar (só no âmbito sistema). Sem escolha,
+    // vale o de sempre: os casamentos e as contas.
+    $incRaw = array_filter(array_map('trim', explode(',', (string)($_GET['inc'] ?? ''))));
+    $incCas = !$incRaw || in_array('casamentos', $incRaw, true);
+    $incMod = in_array('modelos', $incRaw, true);
+    $incCon = !$incRaw || in_array('contas', $incRaw, true);
 
     $ids = [];
     if ($ambito === 'sistema') {
         if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva a casa inteira.');
-        $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
-        if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
+        if ($incCas) {
+            // Todos, ou só os escolhidos (lista de ids em 'casamentos').
+            $sel = array_filter(array_map('intval', explode(',', (string)($_GET['casamentos'] ?? ''))));
+            if ($sel) {
+                $lista = implode(',', $sel);
+                $r = @$conn->query("SELECT id FROM {$P}casamentos WHERE id IN ($lista) ORDER BY id");
+            } else {
+                $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
+            }
+            if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
+        }
     } elseif (!empty($_GET['id'])) {
         // Um casamento em concreto. Só o admin da casa, e serve sobretudo para
         // os arquivados: esses não se podem abrir, e sem isto "levar os dados"
@@ -2508,12 +2537,24 @@ if ($acao === 'dados_exportar') {
         'gerado_por' => utilizadorAtual() ?? '',
         'casamentos' => [],
     ];
-    foreach ($ids as $cid) $saida['casamentos'][] = retratoCasamento($conn, $cid);
+    if ($partes) $saida['partes'] = $partes;
+    foreach ($ids as $cid) {
+        $retrato = retratoCasamento($conn, $cid);
+        $saida['casamentos'][] = $partes ? retratoParcial($retrato, $partes) : $retrato;
+    }
 
-    if ($ambito === 'sistema') {
-        // As contas só na cópia da casa inteira — e as senhas só a pedido, que
-        // um ficheiro com senhas (ainda que cifradas) guarda-se como se guarda
-        // a base de dados, não como se guarda uma folha de cálculo.
+    if ($ambito === 'sistema' && $incMod) {
+        // Os modelos da casa — o mesmo conteúdo que 'modelos_exportar'.
+        $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel FROM {$P}modelos ORDER BY ambito, nome");
+        $modelos = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+        foreach ($modelos as &$m) $m['defs'] = json_decode($m['defs'], true) ?: [];
+        unset($m);
+        $saida['modelos'] = $modelos;
+    }
+    if ($ambito === 'sistema' && $incCon) {
+        // As contas — e as senhas só a pedido, que um ficheiro com senhas (ainda
+        // que cifradas) guarda-se como se guarda a base de dados, não como se
+        // guarda uma folha de cálculo.
         $cols = 'id, email, nome, papel_plataforma, estado, criado_em' . ($comSenhas ? ', senha_hash' : '');
         $r = @$conn->query("SELECT $cols FROM {$P}utilizadores ORDER BY id");
         $contas = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
@@ -2524,56 +2565,36 @@ if ($acao === 'dados_exportar') {
     }
 
     $nome = 'dados-' . ($ambito === 'sistema' ? 'sistema' : 'casamento') . '-' . date('Y-m-d') . '.json';
-    registar($conn, 'dados_exportados', $ambito, count($ids) . ' casamento(s)');
+    registar($conn, 'dados_exportados', $ambito,
+             count($ids) . ' casamento(s)' . ($partes ? ' · ' . implode('+', $partes) : ''));
     header('Content-Type: application/json; charset=utf-8');
     header('Content-Disposition: attachment; filename=' . $nome);
     echo json_encode($saida, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     exit;
 }
 
-/**
- * Escreve um casamento a partir de um retrato. Devolve o que fez.
- *
- * Os códigos dos convites são únicos em todo o sistema: se um já estiver
- * tomado, gera-se outro — e diz-se quantos, porque um código que muda é um QR
- * já impresso que deixa de servir.
- */
-function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array {
-    global $P;
-    $anterior = casamentoAtual();
-    usarCasamento($cid);
-    $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
-              'definicoes' => 0, 'codigos_trocados' => 0,
-              'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0];
+// ============================================================
+// Importação por secção
+//
+// Escrever um casamento a partir de um retrato faz-se por peças: as mesas, os
+// convites (com as pessoas dentro), as versões, o orçamento e a ficha/desenho.
+// Cada peça tem o seu escritor, e a importação — cheia ou selectiva — compõe-se
+// deles. Assim o casal pode trazer só a lista de convidados sem tocar no resto,
+// e a importação da casa inteira continua a ser a soma de todas as peças.
+// ============================================================
 
-    // Fora o que lá estava. É o que "substituir" quer dizer, e a página diz-o
-    // antes de chegar aqui. As parcelas antes das despesas, e estas antes das
-    // categorias, para as chaves estrangeiras não travarem.
-    foreach (['convidados', 'convites', 'mesas', 'versoes', 'definicoes',
-              'orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
-        $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
-    }
+/** Mapa nome→id das mesas de um casamento, para religar convites pelo nome. */
+function mapaMesas(mysqli $conn, int $cid): array {
+    global $P; $m = [];
+    $r = @$conn->query("SELECT id, nome FROM {$P}mesas WHERE casamento_id=$cid");
+    if ($r) while ($x = $r->fetch_assoc()) $m[(string)$x['nome']] = (int)$x['id'];
+    return $m;
+}
 
-    if ($comFicha && !empty($r['ficha'])) {
-        $f = $r['ficha'];
-        $st = $conn->prepare("UPDATE {$P}casamentos SET nome=?, noiva=?, noivo=?, data_evento=? WHERE id=?");
-        $nome = mb_substr((string)($f['nome'] ?? ''), 0, 160);
-        $noiva = mb_substr((string)($f['noiva'] ?? ''), 0, 80);
-        $noivo = mb_substr((string)($f['noivo'] ?? ''), 0, 80);
-        $data = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($f['data_evento'] ?? '')) ? $f['data_evento'] : null;
-        $st->bind_param('ssssi', $nome, $noiva, $noivo, $data, $cid);
-        @$st->execute();
-    }
-
-    foreach ((array)($r['definicoes'] ?? []) as $k => $v) {
-        if (!is_string($k) || !is_string($v)) continue;
-        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)");
-        $st->bind_param('iss', $cid, $k, $v);
-        if (@$st->execute()) $feito['definicoes']++;
-    }
-
-    $idMesa = [];
-    foreach ((array)($r['mesas'] ?? []) as $m) {
+/** Escreve as mesas de um retrato. Devolve quantas. */
+function impMesas(mysqli $conn, int $cid, array $mesas): int {
+    global $P; $n = 0;
+    foreach ($mesas as $m) {
         if (!is_array($m) || trim((string)($m['nome'] ?? '')) === '') continue;
         $nm = (string)$m['nome']; $cap = (int)($m['capacidade'] ?? 8);
         $forma = (string)($m['forma'] ?? 'redonda'); $cor = (string)($m['cor'] ?? 'neutra');
@@ -2584,10 +2605,17 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
         $st = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y,tamanho)
                               VALUES ($cid,?,?,?,?,?,?,?,?)");
         $st->bind_param('sisssddi', $nm, $cap, $forma, $cor, $esp, $px, $py, $tam);
-        if (@$st->execute()) { $idMesa[$nm] = $conn->insert_id; $feito['mesas']++; }
+        if (@$st->execute()) $n++;
     }
+    return $n;
+}
 
-    foreach ((array)($r['convites'] ?? []) as $c) {
+/** Escreve os convites (e as pessoas dentro). Devolve ['convites','pessoas','codigos_trocados']. */
+function impConvites(mysqli $conn, int $cid, array $convites): array {
+    global $P;
+    $idMesa = mapaMesas($conn, $cid);          // as mesas que já lá estão, pelo nome
+    $feito = ['convites' => 0, 'pessoas' => 0, 'codigos_trocados' => 0];
+    foreach ($convites as $c) {
         if (!is_array($c) || trim((string)($c['nome_exibicao'] ?? '')) === '') continue;
         $codigo = strtoupper(trim((string)($c['codigo'] ?? '')));
         if ($codigo === '' || !preg_match('/^[A-Z0-9]{4,16}$/', $codigo)) {
@@ -2645,8 +2673,13 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
             if (@$q->execute()) $feito['pessoas']++;
         }
     }
+    return $feito;
+}
 
-    foreach ((array)($r['versoes'] ?? []) as $v) {
+/** Escreve versões (a lista já vem filtrada pelo âmbito que se quer). Devolve quantas. */
+function impVersoes(mysqli $conn, int $cid, array $versoes): int {
+    global $P; $n = 0;
+    foreach ($versoes as $v) {
         if (!is_array($v) || trim((string)($v['nome'] ?? '')) === '') continue;
         $st = $conn->prepare("INSERT INTO {$P}versoes (casamento_id, nome, ambito, defs, predefinida, utilizador)
                               VALUES ($cid,?,?,?,?,?)");
@@ -2656,14 +2689,19 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
         $vp = (int)!empty($v['predefinida']);
         $vu = (string)($v['utilizador'] ?? '');
         $st->bind_param('sssis', $vn, $va, $vd, $vp, $vu);
-        if (@$st->execute()) $feito['versoes']++;
+        if (@$st->execute()) $n++;
     }
+    return $n;
+}
 
-    // ---- orçamento: gavetas, despesas e parcelas ----
-    // As gavetas primeiro, para as despesas as reencontrarem pelo nome (o
-    // número era da outra base). Depois cada despesa, e as suas parcelas dentro.
+/** Escreve o orçamento: gavetas, despesas e parcelas. Devolve os três totais. */
+function impOrcamento(mysqli $conn, int $cid, array $orc): array {
+    global $P;
+    $feito = ['orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0];
+    // As gavetas primeiro, para as despesas as reencontrarem pelo nome (o número
+    // era da outra base). Depois cada despesa, e as suas parcelas dentro.
     $idCat = [];
-    foreach ((array)($r['orcamento']['categorias'] ?? []) as $c) {
+    foreach ((array)($orc['categorias'] ?? []) as $c) {
         if (!is_array($c) || trim((string)($c['nome'] ?? '')) === '') continue;
         $nm = mb_substr((string)$c['nome'], 0, 80);
         $prev = orcValor($c['previsto'] ?? '0');
@@ -2672,7 +2710,7 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
         $st->bind_param('ssi', $nm, $prev, $ord);
         if (@$st->execute()) { $idCat[$nm] = $conn->insert_id; $feito['orc_categorias']++; }
     }
-    foreach ((array)($r['orcamento']['despesas'] ?? []) as $dsp) {
+    foreach ((array)($orc['despesas'] ?? []) as $dsp) {
         if (!is_array($dsp) || trim((string)($dsp['descricao'] ?? '')) === '') continue;
         $catId = $idCat[(string)($dsp['categoria'] ?? '')] ?? null;
         $desc = mb_substr((string)$dsp['descricao'], 0, 160);
@@ -2697,6 +2735,183 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
             $q->bind_param('issss', $despId, $pv, $pd, $pp, $pn);
             if (@$q->execute()) $feito['orc_pagamentos']++;
         }
+    }
+    return $feito;
+}
+
+/** Escreve a ficha (se pedida) e as definições. Devolve quantas definições. */
+function impFichaDefs(mysqli $conn, int $cid, array $r, bool $comFicha): int {
+    global $P;
+    if ($comFicha && !empty($r['ficha'])) {
+        $f = $r['ficha'];
+        $st = $conn->prepare("UPDATE {$P}casamentos SET nome=?, noiva=?, noivo=?, data_evento=? WHERE id=?");
+        $nome = mb_substr((string)($f['nome'] ?? ''), 0, 160);
+        $noiva = mb_substr((string)($f['noiva'] ?? ''), 0, 80);
+        $noivo = mb_substr((string)($f['noivo'] ?? ''), 0, 80);
+        $data = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($f['data_evento'] ?? '')) ? $f['data_evento'] : null;
+        $st->bind_param('ssssi', $nome, $noiva, $noivo, $data, $cid);
+        @$st->execute();
+    }
+    $n = 0;
+    foreach ((array)($r['definicoes'] ?? []) as $k => $v) {
+        if (!is_string($k) || !is_string($v)) continue;
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)");
+        $st->bind_param('iss', $cid, $k, $v);
+        if (@$st->execute()) $n++;
+    }
+    return $n;
+}
+
+/**
+ * Escreve um casamento INTEIRO a partir de um retrato. Devolve o que fez.
+ *
+ * Os códigos dos convites são únicos em todo o sistema: se um já estiver
+ * tomado, gera-se outro — e diz-se quantos, porque um código que muda é um QR
+ * já impresso que deixa de servir.
+ */
+function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array {
+    global $P;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+
+    // Fora o que lá estava. É o que "substituir" quer dizer, e a página di-lo
+    // antes de chegar aqui. As parcelas antes das despesas, e estas antes das
+    // categorias, para as chaves estrangeiras não travarem.
+    foreach (['convidados', 'convites', 'mesas', 'versoes', 'definicoes',
+              'orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
+        $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+    }
+
+    $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
+              'definicoes' => 0, 'codigos_trocados' => 0,
+              'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0];
+    $feito['definicoes'] = impFichaDefs($conn, $cid, $r, $comFicha);
+    $feito['mesas']      = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
+    $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
+    $feito['convites'] = $cv['convites']; $feito['pessoas'] = $cv['pessoas'];
+    $feito['codigos_trocados'] = $cv['codigos_trocados'];
+    $feito['versoes'] = impVersoes($conn, $cid, (array)($r['versoes'] ?? []));
+    foreach (impOrcamento($conn, $cid, (array)($r['orcamento'] ?? [])) as $k => $v) $feito[$k] = $v;
+
+    usarCasamento($anterior > 0 ? $anterior : $cid);
+    return $feito;
+}
+
+/** As secções que um casal pode escolher, e a etiqueta de cada uma. */
+function partesCasamento(): array {
+    return ['convidados' => 'Lista de convidados', 'mesas' => 'Mesas',
+            'digital' => 'Versões do convite digital', 'impresso' => 'Versões do convite impresso',
+            'orcamento' => 'Orçamento'];
+}
+
+/** Um retrato ficando só com as secções pedidas (a ficha vai sempre, para nomear). */
+function retratoParcial(array $r, array $partes): array {
+    $out = ['ficha' => $r['ficha'] ?? [], 'partes' => array_values($partes)];
+    if (in_array('convidados', $partes, true)) $out['convites'] = $r['convites'] ?? [];
+    if (in_array('mesas', $partes, true))      $out['mesas'] = $r['mesas'] ?? [];
+    $amb = [];
+    if (in_array('digital', $partes, true))  $amb[] = 'digital';
+    if (in_array('impresso', $partes, true)) $amb[] = 'impresso';
+    if ($amb) $out['versoes'] = array_values(array_filter((array)($r['versoes'] ?? []),
+        fn($v) => in_array($v['ambito'] ?? '', $amb, true)));
+    if (in_array('orcamento', $partes, true)) {
+        $out['orcamento'] = $r['orcamento'] ?? [];
+        $out['definicoes'] = array_intersect_key((array)($r['definicoes'] ?? []),
+            array_flip(['orcamento.total', 'orcamento.moeda']));
+    }
+    return $out;
+}
+
+/**
+ * Escreve só as secções pedidas de um retrato, substituindo o que lá estava
+ * DESSAS secções e deixando o resto intacto. Devolve o que fez.
+ */
+function reporCasamentoPartes(mysqli $conn, int $cid, array $r, array $partes): array {
+    global $P;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+    $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
+              'codigos_trocados' => 0, 'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0];
+
+    if (in_array('mesas', $partes, true)) {
+        // Trocar a planta larga os lugares que apontavam para as mesas antigas.
+        $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE casamento_id=$cid");
+        $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE casamento_id=$cid");
+        $conn->query("DELETE FROM {$P}mesas WHERE casamento_id=$cid");
+        $feito['mesas'] = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
+    }
+    if (in_array('convidados', $partes, true)) {
+        $conn->query("DELETE FROM {$P}convidados WHERE casamento_id=$cid");
+        $conn->query("DELETE FROM {$P}convites WHERE casamento_id=$cid");
+        $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
+        $feito['convites'] = $cv['convites']; $feito['pessoas'] = $cv['pessoas'];
+        $feito['codigos_trocados'] = $cv['codigos_trocados'];
+    }
+    foreach (['digital', 'impresso'] as $amb) {
+        if (!in_array($amb, $partes, true)) continue;
+        $st = $conn->prepare("DELETE FROM {$P}versoes WHERE casamento_id=? AND ambito=?");
+        $st->bind_param('is', $cid, $amb); $st->execute();
+        $vs = array_values(array_filter((array)($r['versoes'] ?? []), fn($v) => ($v['ambito'] ?? '') === $amb));
+        $feito['versoes'] += impVersoes($conn, $cid, $vs);
+    }
+    if (in_array('orcamento', $partes, true)) {
+        foreach (['orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
+            $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+        }
+        $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave IN ('orcamento.total','orcamento.moeda')");
+        foreach (impOrcamento($conn, $cid, (array)($r['orcamento'] ?? [])) as $k => $v) $feito[$k] = $v;
+        foreach (['orcamento.total', 'orcamento.moeda'] as $k) {
+            $val = $r['definicoes'][$k] ?? null;
+            if (is_string($val) && $val !== '') {
+                $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,?,?)");
+                $st->bind_param('ss', $k, $val); @$st->execute();
+            }
+        }
+        esquecerDefinicoes($conn);
+    }
+
+    usarCasamento($anterior > 0 ? $anterior : $cid);
+    return $feito;
+}
+
+/**
+ * Repõe de fábrica as secções pedidas: apaga o que o casal lá pôs, sem trazer
+ * nada de volta. Devolve quanto se apagou de cada secção.
+ */
+function reporFabricaPartes(mysqli $conn, int $cid, array $partes): array {
+    global $P;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+    $um = fn(string $sql) => (int)(@$conn->query($sql)?->fetch_row()[0] ?? 0);
+    $feito = [];
+
+    if (in_array('convidados', $partes, true)) {
+        $feito['convites'] = $um("SELECT COUNT(*) FROM {$P}convites WHERE casamento_id=$cid");
+        $feito['pessoas']  = $um("SELECT COUNT(*) FROM {$P}convidados WHERE casamento_id=$cid");
+        $conn->query("DELETE FROM {$P}convidados WHERE casamento_id=$cid");
+        $conn->query("DELETE FROM {$P}convites WHERE casamento_id=$cid");
+    }
+    if (in_array('mesas', $partes, true)) {
+        $feito['mesas'] = $um("SELECT COUNT(*) FROM {$P}mesas WHERE casamento_id=$cid");
+        $conn->query("UPDATE {$P}convites SET mesa_id=NULL WHERE casamento_id=$cid");
+        $conn->query("UPDATE {$P}convidados SET mesa_id=NULL WHERE casamento_id=$cid");
+        $conn->query("DELETE FROM {$P}mesas WHERE casamento_id=$cid");
+    }
+    foreach (['digital', 'impresso'] as $amb) {
+        if (!in_array($amb, $partes, true)) continue;
+        $q = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE casamento_id=? AND ambito=?");
+        $q->bind_param('is', $cid, $amb); $q->execute();
+        $feito['versoes'] = ($feito['versoes'] ?? 0) + (int)$q->get_result()->fetch_row()[0];
+        $d = $conn->prepare("DELETE FROM {$P}versoes WHERE casamento_id=? AND ambito=?");
+        $d->bind_param('is', $cid, $amb); $d->execute();
+    }
+    if (in_array('orcamento', $partes, true)) {
+        $feito['orc_despesas'] = $um("SELECT COUNT(*) FROM {$P}orcamento_despesas WHERE casamento_id=$cid");
+        foreach (['orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
+            $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+        }
+        $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave IN ('orcamento.total','orcamento.moeda')");
+        esquecerDefinicoes($conn);
     }
 
     usarCasamento($anterior > 0 ? $anterior : $cid);
@@ -2744,13 +2959,42 @@ if ($acao === 'dados_importar') {
             erro('Este ficheiro traz ' . count($lista) . ' casamentos. Para os trazer todos, '
                . 'use "criar casamentos novos" na página de administração.');
         }
-        $comFicha = !empty($d['com_ficha']);
-        $feito = reporCasamento($conn, $cid, $lista[0], $comFicha);
+        $r0 = $lista[0];
+        // As secções que o casal escolheu trazer. Vale a interseção do que se
+        // pediu com o que o ficheiro traz mesmo — trazer «convidados» de um
+        // ficheiro que não os tem esvaziaria a lista sem aviso.
+        $partesPedidas = array_values(array_intersect(listaCorpo($d['partes'] ?? ''), array_keys(partesCasamento())));
+        $noFicheiro = (isset($r0['partes']) && is_array($r0['partes']))
+            ? $r0['partes'] : array_keys(partesCasamento());   // retrato cheio traz tudo
+        if ($partesPedidas) {
+            $ef = array_values(array_intersect($partesPedidas, $noFicheiro));
+            if (!$ef) erro('O ficheiro não traz as secções que escolheu.');
+            $feito = reporCasamentoPartes($conn, $cid, $r0, $ef);
+            $feito['partes'] = $ef;
+        } else {
+            $comFicha = !empty($d['com_ficha']);
+            $feito = reporCasamento($conn, $cid, $r0, $comFicha);
+        }
         $feito['id'] = $cid;
         $resumo[] = $feito;
         registar($conn, 'dados_importados', 'substituição', json_encode($feito));
     }
     ok(['modo' => $modo, 'resumo' => $resumo]);
+}
+
+if ($acao === 'casamento_repor_fabrica') {
+    // O casal repõe de fábrica as secções que escolher: apaga o que lá pôs
+    // (lista de convidados, mesas, versões, orçamento), sem trazer nada de volta.
+    exigirAdminApi();
+    exigirCorrecao();
+    $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    $d = corpo();
+    $partes = array_values(array_intersect(listaCorpo($d['partes'] ?? ''), array_keys(partesCasamento())));
+    if (!$partes) erro('Escolha o que quer repor de fábrica.');
+    $feito = reporFabricaPartes($conn, $cid, $partes);
+    registar($conn, 'casamento_reposto', 'fábrica', implode('+', $partes));
+    ok(['partes' => $partes, 'feito' => $feito]);
 }
 
 
@@ -3642,6 +3886,109 @@ if ($acao === 'modelos_importar') {
     if (!$entrou) erro('O ficheiro não trouxe modelo nenhum aproveitável.');
     registar($conn, 'modelos_importados', $entrou . ' modelo(s)');
     ok(['entraram' => $entrou, 'saltados' => $saltou]);
+}
+
+if ($acao === 'sistema_importar') {
+    // A importação da casa, por âmbitos escolhidos (casamentos, modelos, contas),
+    // a partir de um ficheiro da exportação da casa. Os casamentos entram SEMPRE
+    // como novos — não se mistura nem se substitui nada do que já cá está. As
+    // contas que já existem (mesmo email) saltam-se: um email é de uma só conta.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma importa a casa.');
+    $d = corpo();
+    $f = is_array($d['ficheiro'] ?? null) ? $d['ficheiro'] : null;
+    if (!$f || ($f['formato'] ?? '') !== 'casamento-web/1') {
+        erro('Este ficheiro não é uma exportação deste sistema.');
+    }
+    $inc = listaCorpo($d['inc'] ?? '');
+    if (!$inc) erro('Escolha o que quer importar.');
+    $res = ['casamentos' => 0, 'modelos' => 0, 'contas' => 0, 'contas_saltadas' => 0];
+    $criados = [];
+
+    if (in_array('casamentos', $inc, true)) {
+        foreach ((array)($f['casamentos'] ?? []) as $r) {
+            if (!is_array($r)) continue;
+            $fi = (array)($r['ficha'] ?? []);
+            $nome  = mb_substr(trim((string)($fi['nome'] ?? 'Casamento importado')), 0, 160) ?: 'Casamento importado';
+            $noiva = mb_substr((string)($fi['noiva'] ?? ''), 0, 80);
+            $noivo = mb_substr((string)($fi['noivo'] ?? ''), 0, 80);
+            $data  = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($fi['data_evento'] ?? '')) ? $fi['data_evento'] : null;
+            $st = $conn->prepare("INSERT INTO {$P}casamentos (nome, noiva, noivo, data_evento, estado) VALUES (?,?,?,?, 'ativo')");
+            $st->bind_param('ssss', $nome, $noiva, $noivo, $data);
+            if (!$st->execute()) continue;
+            $novo = $conn->insert_id;
+            reporCasamento($conn, $novo, $r, false);
+            $res['casamentos']++; $criados[] = $nome;
+        }
+    }
+    if (in_array('modelos', $inc, true)) {
+        foreach ((array)($f['modelos'] ?? []) as $m) {
+            if (!is_array($m)) continue;
+            $nome = mb_substr(trim((string)($m['nome'] ?? '')), 0, 120);
+            $ambito = isset(ambitosVersao()[$m['ambito'] ?? '']) ? $m['ambito'] : 'digital';
+            $permitidas = array_flip(chavesModelo($ambito));
+            $defs = [];
+            foreach ((array)($m['defs'] ?? []) as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+            if ($nome === '' || !$defs) continue;
+            $descricao = mb_substr(trim((string)($m['descricao'] ?? '')), 0, 400);
+            $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
+            $vis = empty($m['visivel']) ? 0 : 1;
+            $quem = utilizadorAtual() ?? '';
+            $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por) VALUES (?,?,?,?,?,?)");
+            $st->bind_param('ssssis', $nome, $descricao, $ambito, $j, $vis, $quem);
+            if (@$st->execute()) $res['modelos']++;
+        }
+    }
+    if (in_array('contas', $inc, true)) {
+        foreach ((array)($f['contas'] ?? []) as $c) {
+            if (!is_array($c)) continue;
+            $email = mb_strtolower(trim((string)($c['email'] ?? '')));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+            $q = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
+            $q->bind_param('s', $email); $q->execute();
+            if ($q->get_result()->fetch_row()) { $res['contas_saltadas']++; continue; }
+            $nome = mb_substr((string)($c['nome'] ?? ''), 0, 120);
+            $plat = in_array($c['papel_plataforma'] ?? null, ['admin', 'suporte'], true) ? $c['papel_plataforma'] : null;
+            $estado = in_array($c['estado'] ?? '', ['ativo', 'pendente', 'suspenso', 'inativo'], true) ? $c['estado'] : 'ativo';
+            $hash = (isset($c['senha_hash']) && is_string($c['senha_hash']) && $c['senha_hash'] !== '')
+                  ? $c['senha_hash'] : password_hash(senhaTemporaria(), PASSWORD_DEFAULT);
+            $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, papel_plataforma, estado) VALUES (?,?,?,?,?)");
+            $st->bind_param('sssss', $email, $nome, $hash, $plat, $estado);
+            if (@$st->execute()) $res['contas']++;
+        }
+    }
+    registar($conn, 'sistema_importado', implode('+', $inc), json_encode($res));
+    ok(['inc' => array_values($inc), 'res' => $res, 'criados' => $criados]);
+}
+
+if ($acao === 'sistema_repor_fabrica') {
+    // Reposição de fábrica, do lado da casa: repor os modelos de origem, e/ou
+    // repor casamentos escolhidos ao estado de fábrica (esvaziar-lhes a lista de
+    // convidados, as mesas, as versões e o orçamento). Não se desfaz.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma repõe de fábrica.');
+    exigirCorrecao();
+    $d = corpo();
+    $alvos = listaCorpo($d['alvos'] ?? '');
+    $res = [];
+    if (in_array('modelos', $alvos, true)) {
+        $rr = restaurarModelosDeCasa($conn, null, true);   // repõe todos os de origem
+        $res['modelos'] = count(array_merge($rr['criados'], $rr['repostos']));
+    }
+    if (in_array('casamentos', $alvos, true)) {
+        $ids = array_values(array_filter(array_map('intval', listaCorpo($d['casamentos'] ?? ''))));
+        if (!$ids) erro('Escolha os casamentos a repor de fábrica.');
+        $partes = array_keys(partesCasamento());
+        $n = 0;
+        foreach ($ids as $cid) {
+            $q = @$conn->query("SELECT id FROM {$P}casamentos WHERE id=" . (int)$cid);
+            if (!$q || !$q->num_rows) continue;
+            reporFabricaPartes($conn, (int)$cid, $partes);
+            $n++;
+        }
+        $res['casamentos'] = $n;
+    }
+    if (!$res) erro('Escolha o que quer repor de fábrica.');
+    registar($conn, 'sistema_reposto', 'fábrica', json_encode($res));
+    ok(['res' => $res]);
 }
 
 erro('Ação desconhecida.');

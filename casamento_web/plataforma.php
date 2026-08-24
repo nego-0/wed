@@ -260,6 +260,12 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .ed-conta{ border:1px solid var(--line); border-radius:12px; padding:.7rem .8rem; margin-bottom:.6rem; }
   .ed-conta .cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
   .ed-conta .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
+  /* As caixas de seleção do painel de dados (âmbitos e casamentos). */
+  .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.35rem .9rem; margin:.4rem 0 .9rem; }
+  .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:.9rem; color:var(--ink); cursor:pointer; }
+  .dsel input{ width:auto; margin:0; accent-color:var(--forest); flex:none; }
+  .dsel-cas{ max-height:230px; overflow:auto; border:1px solid var(--line); border-radius:10px;
+             padding:.6rem .8rem; background:var(--cream); }
 </style>
 </head>
 <body>
@@ -347,6 +353,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <?php endif; ?>
     <?php if (ehAdminPlataforma()): ?>
       <button class="chip" data-vista="contas" onclick="verVista('contas')">Contas administrativas</button>
+      <button class="chip" data-vista="dados" onclick="verVista('dados')">Dados e reposição</button>
     <?php endif; ?>
   </div>
 
@@ -570,33 +577,46 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div id="lista-contas"><div class="dica">A carregar…</div></div>
       <div class="segredo" id="senha-reposta" style="display:none"></div>
     </div>
-  <details class="painel dobra" id="d-copia" style="margin-top:1.4rem">
-      <summary><span class="mais">+</span> Cópia de segurança
-        <small>levar a casa inteira num ficheiro, ou trazer casamentos de outro</small></summary>
-      <div class="dica">Levar a casa inteira num ficheiro: todos os casamentos, com as suas fichas,
-        convites, pessoas, mesas e desenhos, mais a lista de contas. Um casamento à parte
-        descarrega-se abrindo-o e indo a <b>Gestão</b>.</div>
-      <div class="lf" style="grid-template-columns:auto auto 1fr">
-        <div><a class="btn" href="api.php?action=dados_exportar&amp;ambito=sistema">Descarregar tudo</a></div>
-        <div><a class="btn" href="api.php?action=dados_exportar&amp;ambito=sistema&amp;senhas=1"
-               onclick="return confirm('O ficheiro leva as senhas cifradas de todas as contas.\n\n'
-                 + 'Guarde-o como guardaria a base de dados. Continuar?')">Descarregar com senhas</a></div>
-        <div></div>
-      </div>
-      <div class="dica" style="margin:.7rem 0 0">Sem as senhas, o ficheiro serve para repor os dados
-        mas não os acessos — quem lá estiver terá de receber senhas novas.</div>
-
-      <div class="lf" style="grid-template-columns:1fr auto">
-        <div><label for="sis-ficheiro">Trazer casamentos de um ficheiro</label>
-          <input type="file" id="sis-ficheiro" accept=".json,application/json"></div>
-        <div><button class="btn" onclick="importarSistema()">Criar como casamentos novos</button></div>
-      </div>
-      <div class="dica" style="margin:.5rem 0 0">Cria casamentos <b>novos</b>: não substitui nem
-        mistura nada com o que já cá está. Para substituir um casamento em concreto, abra-o e use a
-        página de Gestão.</div>
-      <div class="segredo" id="sis-resultado" style="display:none"></div>
-    </details>
     </div><!-- /vista-contas -->
+
+    <div id="vista-dados" style="display:none">
+    <div class="painel">
+      <h3>Dados e reposição</h3>
+      <div class="dica">Um sítio só para levar a casa num ficheiro, trazê-la de volta, ou repor
+        de fábrica — sempre <b>só o que assinalar</b>. Escolha os âmbitos e, para os casamentos,
+        quais; depois <b>Exportar</b>, <b>Importar</b> ou <b>Repor de fábrica</b>.</div>
+
+      <h4 class="ed-sec">Âmbitos</h4>
+      <div class="dsel" id="dados-inc">
+        <label><input type="checkbox" value="casamentos" checked onchange="dadosCasToggle()"> Casamentos</label>
+        <label><input type="checkbox" value="modelos"> Modelos da casa</label>
+        <label><input type="checkbox" value="contas"> Contas</label>
+        <label><input type="checkbox" id="dados-senhas"> Contas <b>com senhas</b> <small style="color:#8a8f88">· só na exportação</small></label>
+      </div>
+
+      <div id="dados-cas-bloco">
+        <div class="dica" style="display:flex;gap:.6rem;align-items:center;margin:.2rem 0 .4rem;flex-wrap:wrap">
+          <span>Quais casamentos? <small>Vazio = todos, na exportação.</small></span>
+          <button class="btn btn-sm" onclick="dadosCasTodos(true)">Todos</button>
+          <button class="btn btn-sm" onclick="dadosCasTodos(false)">Nenhum</button>
+        </div>
+        <div class="dsel dsel-cas" id="dados-cas-lista"><div class="dica">A carregar…</div></div>
+      </div>
+
+      <div class="fim" style="flex-wrap:wrap;margin-top:1rem">
+        <button class="btn btn-ouro" onclick="exportarDados()">Exportar selecionados</button>
+        <button class="btn" onclick="document.getElementById('dados-ficheiro').click()">Importar de ficheiro…</button>
+        <input type="file" id="dados-ficheiro" accept=".json,application/json" style="display:none" onchange="importarDados()">
+        <button class="btn perigo" onclick="reporFabricaDados()">Repor de fábrica</button>
+      </div>
+      <div class="porcima" style="margin-top:.8rem">
+        <b>Exportar</b> descarrega um ficheiro <code>.json</code>. <b>Importar</b> traz os casamentos
+        <b>como novos</b> (não substitui nada), os modelos e as contas que ainda não existam.
+        <b>Repor de fábrica</b> repõe os modelos de origem e/ou esvazia os casamentos escolhidos —
+        e isso não se desfaz.</div>
+      <div class="segredo" id="dados-resultado" style="display:none"></div>
+    </div>
+    </div><!-- /vista-dados -->
   <?php endif; ?>
 </main>
 
@@ -739,14 +759,15 @@ function toast(m, mau){
   setTimeout(() => el.className = 'toast', 2800);
 }
 
-// ---------- as pastilhas: casamentos · novo · contas administrativas ----------
+// ---------- as pastilhas: casamentos · novo · contas · dados ----------
 function verVista(v){
-  ['casamentos','novo','contas'].forEach(id => {
+  ['casamentos','novo','contas','dados'].forEach(id => {
     const e = document.getElementById('vista-' + id);
     if (e) e.style.display = id === v ? '' : 'none';
   });
   document.querySelectorAll('#vista-chips .chip').forEach(c =>
     c.classList.toggle('on', c.dataset.vista === v));
+  if (v === 'dados') carregarDadosCasamentos();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -979,29 +1000,95 @@ async function apagar(id, nome){
   setTimeout(() => location.reload(), 1500);
 }
 
-// ---------- trazer casamentos de um ficheiro ----------
-async function importarSistema(){
-  const f = document.getElementById('sis-ficheiro').files[0];
-  if (!f) return toast('Escolha o ficheiro primeiro.', true);
+// ---------- dados e reposição (a pastilha do admin) ----------
+async function carregarDadosCasamentos(){
+  const alvo = document.getElementById('dados-cas-lista');
+  if (!alvo || alvo.dataset.pronto) return;   // carrega uma vez
+  const d = await api('casamento_lista&estado=todos');
+  if (!d || !d.success) return;
+  alvo.dataset.pronto = '1';
+  alvo.innerHTML = (d.casamentos || []).map(c =>
+    `<label><input type="checkbox" value="${c.id}"> ${esc(c.nome)}
+       <small style="color:#8a8f88">${esc(c.estado)}</small></label>`).join('')
+    || '<div class="dica">Nenhum casamento.</div>';
+}
+function dadosCasToggle(){
+  const on = document.querySelector('#dados-inc input[value="casamentos"]').checked;
+  document.getElementById('dados-cas-bloco').style.display = on ? '' : 'none';
+}
+function dadosCasTodos(v){
+  document.querySelectorAll('#dados-cas-lista input').forEach(i => i.checked = v);
+}
+function incEscolhidos(){
+  return Array.from(document.querySelectorAll('#dados-inc input[value]:checked')).map(i => i.value);
+}
+function casEscolhidos(){
+  return Array.from(document.querySelectorAll('#dados-cas-lista input:checked')).map(i => i.value);
+}
+function exportarDados(){
+  const inc = incEscolhidos();
+  if (!inc.length) return toast('Escolha ao menos um âmbito.', true);
+  const q = ['ambito=sistema', 'inc=' + encodeURIComponent(inc.join(','))];
+  if (inc.includes('casamentos')){
+    const ids = casEscolhidos();
+    if (ids.length) q.push('casamentos=' + ids.join(','));   // vazio = todos
+  }
+  if (document.getElementById('dados-senhas').checked && inc.includes('contas')) q.push('senhas=1');
+  location.href = 'api.php?action=dados_exportar&' + q.join('&');
+}
+async function importarDados(){
+  const inp = document.getElementById('dados-ficheiro');
+  const f = inp.files[0]; inp.value = '';
+  const inc = incEscolhidos();
+  if (!inc.length) return toast('Escolha o que trazer do ficheiro.', true);
+  if (!f) return;
   let dados;
   try { dados = JSON.parse(await f.text()); }
   catch (e) { return toast('Esse ficheiro não é um JSON válido.', true); }
   if (!dados || dados.formato !== 'casamento-web/1') {
     return toast('Este ficheiro não é uma exportação deste sistema.', true);
   }
-  const n = (dados.casamentos || []).length;
-  if (!confirm(`Criar ${n} casamento(s) novo(s) a partir deste ficheiro?\n\n`
-    + 'Nada do que já cá está é tocado.')) return;
-  const d = await api('dados_importar', { method:'POST',
-    body: JSON.stringify({ modo: 'novo', ficheiro: dados }) });
+  const rot = { casamentos:'casamentos (como novos)', modelos:'modelos', contas:'contas' };
+  if (!confirm('Trazer do ficheiro: ' + inc.map(i => rot[i]).join(', ') + '?\n\n'
+    + 'Os casamentos entram como NOVOS; modelos e contas que já existam saltam-se. '
+    + 'Nada do que já cá está é substituído.')) return;
+  const d = await api('sistema_importar', { method:'POST', body: JSON.stringify({ inc, ficheiro: dados }) });
   if (!d || !d.success) return;
-  const linhas = (d.resumo || []).map(r =>
-    `<b>${esc(r.nome)}</b> — ${r.convites} convite(s), ${r.pessoas} pessoa(s), ${r.mesas} mesa(s)`
-    + (r.codigos_trocados ? ` · ${r.codigos_trocados} código(s) trocado(s)` : ''));
-  const cx = document.getElementById('sis-resultado');
+  const r = d.res || {};
+  const cx = document.getElementById('dados-resultado');
   cx.style.display = '';
-  cx.innerHTML = 'Criados:<br>' + linhas.join('<br>');
-  setTimeout(() => location.reload(), 2500);
+  cx.innerHTML = 'Trazidos: '
+    + `<b>${r.casamentos || 0}</b> casamento(s), <b>${r.modelos || 0}</b> modelo(s), `
+    + `<b>${r.contas || 0}</b> conta(s)` + (r.contas_saltadas ? ` (${r.contas_saltadas} já existiam)` : '') + '.';
+  toast('Importação concluída.');
+  document.getElementById('dados-cas-lista').dataset.pronto = '';   // relista os casamentos novos
+  setTimeout(() => { carregarCasamentos(); carregarDadosCasamentos(); }, 300);
+}
+async function reporFabricaDados(){
+  const inc = incEscolhidos();
+  const alvos = [];
+  if (inc.includes('modelos')) alvos.push('modelos');
+  const ids = inc.includes('casamentos') ? casEscolhidos() : [];
+  if (ids.length) alvos.push('casamentos');
+  if (!alvos.length) {
+    return toast('Assinale «Modelos» e/ou «Casamentos» (com casamentos escolhidos) para repor.', true);
+  }
+  const partes = [];
+  if (alvos.includes('modelos')) partes.push('os modelos de origem da casa');
+  if (alvos.includes('casamentos')) partes.push(ids.length + ' casamento(s) ao estado de fábrica (lista, mesas, versões, orçamento)');
+  if (!confirm('Repor de fábrica ' + partes.join(' e ') + '?\n\nNão se desfaz.')) return;
+  const d = await api('sistema_repor_fabrica', { method:'POST',
+    body: JSON.stringify({ alvos, casamentos: ids }) });
+  if (!d || !d.success) return;
+  const r = d.res || {};
+  const cx = document.getElementById('dados-resultado');
+  cx.style.display = '';
+  cx.innerHTML = 'Reposto de fábrica: '
+    + (r.modelos != null ? `<b>${r.modelos}</b> modelo(s)` : '')
+    + (r.modelos != null && r.casamentos != null ? ' · ' : '')
+    + (r.casamentos != null ? `<b>${r.casamentos}</b> casamento(s)` : '') + '.';
+  toast('Reposição concluída.');
+  setTimeout(() => carregarCasamentos(), 300);
 }
 
 // ---------- os casamentos, por ordem de uso ----------
