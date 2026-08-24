@@ -353,7 +353,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <?php endif; ?>
     <?php if (ehAdminPlataforma()): ?>
       <button class="chip" data-vista="contas" onclick="verVista('contas')">Contas administrativas</button>
-      <button class="chip" data-vista="dados" onclick="verVista('dados')">Dados e reposição</button>
+      <button class="chip" data-vista="dados" onclick="verVista('dados')">Gestão de Dados</button>
     <?php endif; ?>
   </div>
 
@@ -581,10 +581,10 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
     <div id="vista-dados" style="display:none">
     <div class="painel">
-      <h3>Dados e reposição</h3>
-      <div class="dica">Um sítio só para levar a casa num ficheiro, trazê-la de volta, ou repor
-        de fábrica — sempre <b>só o que assinalar</b>. Escolha os âmbitos e, para os casamentos,
-        quais; depois <b>Exportar</b>, <b>Importar</b> ou <b>Repor de fábrica</b>.</div>
+      <h3>Gestão de Dados</h3>
+      <div class="dica">Um sítio só para levar a casa num ficheiro, trazê-la de volta, ou
+        <b>apagar</b> — sempre <b>só o que assinalar</b>. Escolha os âmbitos e, para os casamentos,
+        quais; depois <b>Exportar</b>, <b>Importar</b> ou <b>Apagar</b>.</div>
 
       <h4 class="ed-sec">Âmbitos</h4>
       <div class="dsel" id="dados-inc">
@@ -602,20 +602,27 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <button class="btn btn-sm" onclick="dadosCasTodos(false)">Nenhum</button>
         </div>
         <div class="dsel dsel-cas" id="dados-cas-lista"><div class="dica">A carregar…</div></div>
+        <div class="dica" style="display:flex;gap:1rem;align-items:center;margin:.5rem 0 .2rem;flex-wrap:wrap">
+          <span>Ao <b>Apagar</b>, os casamentos escolhidos:</span>
+          <label><input type="radio" name="cas-modo" value="esvaziar" checked> Esvaziar
+            <small style="color:#8a8f88">· fica o casamento, sem os dados</small></label>
+          <label><input type="radio" name="cas-modo" value="apagar"> Apagar
+            <small style="color:#8a8f88">· remove o casamento por inteiro</small></label>
+        </div>
       </div>
 
       <div class="fim" style="flex-wrap:wrap;margin-top:1rem">
         <button class="btn btn-ouro" onclick="exportarDados()">Exportar selecionados</button>
         <button class="btn" onclick="document.getElementById('dados-ficheiro').click()">Importar de ficheiro…</button>
         <input type="file" id="dados-ficheiro" accept=".json,application/json" style="display:none" onchange="importarDados()">
-        <button class="btn perigo" onclick="reporFabricaDados()">Repor de fábrica</button>
+        <button class="btn perigo" onclick="apagarDados()">Apagar</button>
       </div>
       <div class="porcima" style="margin-top:.8rem">
         <b>Exportar</b> descarrega um ficheiro <code>.json</code>. <b>Importar</b> traz os casamentos
         <b>como novos</b> (não substitui nada), os modelos e as contas que ainda não existam.
-        <b>Repor de fábrica</b> <b>apaga dados</b>: os modelos personalizados (ficam os de origem),
-        as contas de casamento e/ou as administrativas (a sua nunca), e/ou esvazia os casamentos
-        escolhidos. Não se desfaz.</div>
+        <b>Apagar</b> elimina dados: os modelos personalizados (ficam os de origem),
+        as contas de casamento e/ou as administrativas (a sua nunca), e — conforme escolher —
+        <b>esvazia</b> ou <b>apaga por inteiro</b> os casamentos assinalados. Não se desfaz.</div>
       <div class="segredo" id="dados-resultado" style="display:none"></div>
     </div>
     </div><!-- /vista-dados -->
@@ -1002,7 +1009,7 @@ async function apagar(id, nome){
   setTimeout(() => location.reload(), 1500);
 }
 
-// ---------- dados e reposição (a pastilha do admin) ----------
+// ---------- gestão de dados (a pastilha do admin) ----------
 async function carregarDadosCasamentos(){
   const alvo = document.getElementById('dados-cas-lista');
   if (!alvo || alvo.dataset.pronto) return;   // carrega uma vez
@@ -1068,7 +1075,11 @@ async function importarDados(){
   document.getElementById('dados-cas-lista').dataset.pronto = '';   // relista os casamentos novos
   setTimeout(() => { carregarCasamentos(); carregarDadosCasamentos(); }, 300);
 }
-async function reporFabricaDados(){
+function casModo(){
+  const r = document.querySelector('input[name="cas-modo"]:checked');
+  return r && r.value === 'apagar' ? 'apagar' : 'esvaziar';
+}
+async function apagarDados(){
   const inc = incEscolhidos();
   const alvos = [];
   const linhas = [];
@@ -1076,13 +1087,19 @@ async function reporFabricaDados(){
   if (inc.includes('contas_casamento')){ alvos.push('contas_casamento'); linhas.push('apagar as contas de casamento (noivos e porteiros)'); }
   if (inc.includes('contas_admin')){     alvos.push('contas_admin');     linhas.push('apagar as contas administrativas (exceto a sua)'); }
   const ids = inc.includes('casamentos') ? casEscolhidos() : [];
-  if (ids.length){ alvos.push('casamentos'); linhas.push('esvaziar ' + ids.length + ' casamento(s): lista, mesas, versões, orçamento'); }
+  const modo = casModo();
+  if (ids.length){
+    alvos.push('casamentos');
+    linhas.push(modo === 'apagar'
+      ? 'APAGAR por inteiro ' + ids.length + ' casamento(s)'
+      : 'esvaziar ' + ids.length + ' casamento(s): lista, mesas, versões, orçamento');
+  }
   if (!alvos.length) {
     return toast('Assinale contas, modelos e/ou casamentos (com casamentos escolhidos) para apagar.', true);
   }
-  if (!confirm('Repor de fábrica — isto APAGA dados:\n\n• ' + linhas.join('\n• ') + '\n\nNão se desfaz.')) return;
+  if (!confirm('Apagar — isto elimina dados:\n\n• ' + linhas.join('\n• ') + '\n\nNão se desfaz.')) return;
   const d = await api('sistema_repor_fabrica', { method:'POST',
-    body: JSON.stringify({ alvos, casamentos: ids }) });
+    body: JSON.stringify({ alvos, casamentos: ids, casamentos_modo: modo }) });
   if (!d || !d.success) return;
   const r = d.res || {};
   const p = [];
@@ -1090,10 +1107,11 @@ async function reporFabricaDados(){
   if (r.contas_casamento != null) p.push(`<b>${r.contas_casamento}</b> conta(s) de casamento`);
   if (r.contas_admin != null) p.push(`<b>${r.contas_admin}</b> conta(s) administrativa(s)`);
   if (r.casamentos != null) p.push(`<b>${r.casamentos}</b> casamento(s) esvaziado(s)`);
+  if (r.casamentos_apagados != null) p.push(`<b>${r.casamentos_apagados}</b> casamento(s) apagado(s)`);
   const cx = document.getElementById('dados-resultado');
   cx.style.display = '';
-  cx.innerHTML = 'Apagado na reposição de fábrica: ' + p.join(' · ') + '.';
-  toast('Reposição concluída.');
+  cx.innerHTML = 'Apagado: ' + p.join(' · ') + '.';
+  toast('Dados apagados.');
   document.getElementById('dados-cas-lista').dataset.pronto = '';
   setTimeout(() => { carregarCasamentos(); carregarDadosCasamentos(); }, 300);
 }

@@ -77,13 +77,26 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok((sisCC.contas || []).every(c => !c.papel_plataforma),
      'inc=contas_casamento traz SÓ as contas de casamento (noivos/porteiro)');
 
-  // ---------- admin: repor um casamento de fábrica ----------
-  const rfa = await api('sistema_repor_fabrica', { alvos: ['casamentos'], casamentos: [w.id] }, 1);
-  ok(rfa.success && rfa.res.casamentos === 1, 'admin repõe 1 casamento de fábrica');
-  await api('casamento_abrir&id=' + w.id, {});
+  // ---------- admin: esvaziar um casamento (fica o casamento, sem os dados) ----------
+  const rfa = await api('sistema_repor_fabrica',
+    { alvos: ['casamentos'], casamentos: [w.id], casamentos_modo: 'esvaziar' }, 1);
+  ok(rfa.success && rfa.res.casamentos === 1, 'admin esvazia 1 casamento');
+  const aindaLa = await api('casamento_abrir&id=' + w.id, {});
+  ok(aindaLa.success, 'e o casamento continua a existir (só esvaziado)');
   ok((await api('convite_list')).convites.length === 0
      && (await api('versao_lista&ambito=digital')).versoes.filter(v => !v.padrao).length === 0,
      'e o casamento fica vazio (convites e versões)');
+
+  // ---------- admin: apagar um casamento por inteiro ----------
+  const wd = await api('casamento_criar', { nome: 'ZZ Del ' + mk, noiva: 'D', noivo: 'E' }, 1);
+  await api('casamento_abrir&id=' + wd.id, {});
+  await api('convite_save', { nome_exibicao: 'Del ' + mk, tipo: 'ambos', lado: 'noiva', membros: ['Z'] }, 1);
+  const rda = await api('sistema_repor_fabrica',
+    { alvos: ['casamentos'], casamentos: [wd.id], casamentos_modo: 'apagar' }, 1);
+  ok(rda.success && rda.res.casamentos_apagados === 1, 'admin apaga 1 casamento por inteiro');
+  await api('casamento_abrir&id=1', {});
+  ok(!(await api('casamento_lista&estado=todos')).casamentos.some(c => +c.id === +wd.id),
+     'e o casamento já não consta da lista');
 
   // ---------- casal: repor de fábrica das versões apaga a foto anexada ----------
   const w2 = await api('casamento_criar', { nome: 'ZZ SelF ' + mk, noiva: 'F', noivo: 'G' }, 1);
@@ -130,13 +143,18 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   // ---------- os painéis existem no ecrã ----------
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   ok(await p.locator('#vista-chips .chip[data-vista="dados"]').count() === 1,
-     'a pastilha «Dados e reposição» está na barra do admin');
+     'a pastilha «Gestão de Dados» está na barra do admin');
   await p.evaluate(() => verVista('dados')); await p.waitForTimeout(400);
   ok(await p.locator('#dados-inc input[value="casamentos"]').count() === 1
      && await p.locator('#dados-inc input[value="modelos"]').count() === 1
      && await p.locator('#dados-inc input[value="contas_casamento"]').count() === 1
      && await p.locator('#dados-inc input[value="contas_admin"]').count() === 1,
      'com as caixas de âmbito (casamentos, modelos, contas de casamento, contas administrativas)');
+  ok(await p.locator('input[name="cas-modo"][value="esvaziar"]').count() === 1
+     && await p.locator('input[name="cas-modo"][value="apagar"]').count() === 1,
+     'e com a escolha de esvaziar ou apagar os casamentos');
+  ok(await p.locator('#vista-dados .btn.perigo').first().innerText().then(t => t.trim() === 'Apagar'),
+     'o botão vermelho diz «Apagar» (já não «Repor de fábrica»)');
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1', {});

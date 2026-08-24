@@ -4051,11 +4051,11 @@ if ($acao === 'sistema_importar') {
 }
 
 if ($acao === 'sistema_repor_fabrica') {
-    // Reposição de fábrica, do lado da casa: é APAGAR dados, para deixar a casa
-    // como veio. Apaga os modelos personalizados (ficam os de origem), apaga as
-    // contas que não são de plataforma (nunca a própria), e/ou esvazia casamentos
-    // escolhidos (lista de convidados, mesas, versões, orçamento). Não se desfaz.
-    if (!ehAdminPlataforma()) erro('Só o admin da plataforma repõe de fábrica.');
+    // Gestão de dados, do lado da casa: é APAGAR. Apaga os modelos personalizados
+    // (ficam os de origem), apaga as contas que não são de plataforma (nunca a
+    // própria), e mexe nos casamentos escolhidos de uma de duas maneiras — esvaziá-
+    // los (fica o casamento, sem os dados) ou apagá-los por inteiro. Não se desfaz.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga os dados da casa.');
     exigirCorrecao();
     $d = corpo();
     $alvos = listaCorpo($d['alvos'] ?? '');
@@ -4095,19 +4095,37 @@ if ($acao === 'sistema_repor_fabrica') {
     }
     if (in_array('casamentos', $alvos, true)) {
         $ids = array_values(array_filter(array_map('intval', listaCorpo($d['casamentos'] ?? ''))));
-        if (!$ids) erro('Escolha os casamentos a repor de fábrica.');
+        if (!$ids) erro('Escolha os casamentos.');
+        // Duas maneiras: «esvaziar» deixa a ficha e as contas do casamento e tira-
+        // lhe os dados; «apagar» leva o casamento inteiro. O primeiro é o de sempre.
+        $modo = (($d['casamentos_modo'] ?? 'esvaziar') === 'apagar') ? 'apagar' : 'esvaziar';
         $partes = array_keys(partesCasamento());
         $n = 0;
         foreach ($ids as $cid) {
-            $q = @$conn->query("SELECT id FROM {$P}casamentos WHERE id=" . (int)$cid);
+            $cid = (int)$cid;
+            $q = @$conn->query("SELECT id FROM {$P}casamentos WHERE id=$cid");
             if (!$q || !$q->num_rows) continue;
-            reporFabricaPartes($conn, (int)$cid, $partes);
+            // Nos dois casos limpa-se primeiro por peças: além de esvaziar os dados,
+            // isto apaga do disco as fotos que o casal anexou, que uma limpeza só de
+            // linhas na base deixaria órfãs.
+            reporFabricaPartes($conn, $cid, $partes);
+            if ($modo === 'apagar') {
+                foreach (['convidados','convites','mesas','versoes','registo','definicoes',
+                          'acessos','suporte_codigos',
+                          'orcamento_pagamentos','orcamento_despesas','orcamento_categorias'] as $t) {
+                    $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+                }
+                $conn->query("DELETE FROM {$P}casamentos WHERE id=$cid");
+                if ((int)($_SESSION['casamento_id'] ?? 0) === $cid) {
+                    $_SESSION['casamento_id'] = 0; $_SESSION['papel'] = null;
+                }
+            }
             $n++;
         }
-        $res['casamentos'] = $n;
+        $res[$modo === 'apagar' ? 'casamentos_apagados' : 'casamentos'] = $n;
     }
-    if (!$res) erro('Escolha o que quer repor de fábrica.');
-    registar($conn, 'sistema_reposto', 'fábrica', json_encode($res));
+    if (!$res) erro('Escolha o que quer apagar.');
+    registar($conn, 'sistema_dados_apagados', 'gestão', json_encode($res));
     ok(['res' => $res]);
 }
 

@@ -324,13 +324,13 @@ $MAPA_LOCAL = [
         <?php if (!$soVer): ?>
         <button class="btn" onclick="document.getElementById('imp-ficheiro').click()">Trazer de um ficheiro…</button>
         <input type="file" id="imp-ficheiro" accept=".json,application/json" style="display:none" onchange="importarSel()">
-        <button class="btn perigo" onclick="reporFabricaSel()">Repor de fábrica</button>
+        <button class="btn perigo" onclick="reporFabricaSel()">Apagar</button>
         <?php endif; ?>
         <span class="estado">Um ficheiro <code>.json</code>, legível.</span>
       </div>
       <?php if (!$soVer): ?>
       <div class="nota-dados" style="margin-top:.9rem"><b>Trazer</b> substitui as partes escolhidas pelas do
-        ficheiro; <b>repor de fábrica</b> esvazia-as. Nenhuma das duas é uma junção — e não se desfazem.
+        ficheiro; <b>Apagar</b> esvazia-as. Nenhuma das duas é uma junção — e não se desfazem.
         Descarregue primeiro, se quiser poder voltar atrás.</div>
       <?php endif; ?>
       <div class="segredo" id="imp-resultado" style="display:none"></div>
@@ -596,13 +596,13 @@ async function importarSel(){
 }
 async function reporFabricaSel(){
   const partes = partesEscolhidas();
-  if (!partes.length) return toast('Escolha o que repor de fábrica.', true);
+  if (!partes.length) return toast('Escolha o que apagar.', true);
   const rot = partes.map(p => ROT_PARTES[p]).join(', ');
-  if (!confirm('Repor de fábrica: ' + rot + '?\n\n'
+  if (!confirm('Apagar: ' + rot + '?\n\n'
     + 'Estas partes ficam vazias, como um casamento acabado de criar. Não se desfaz.')) return;
   const d = await api('casamento_repor_fabrica', { method:'POST', body: JSON.stringify({ partes }) });
   if (!d || !d.success) return;
-  toast('Reposto de fábrica: ' + rot + '.');
+  toast('Apagado: ' + rot + '.');
   setTimeout(() => location.reload(), 1400);
 }
 
