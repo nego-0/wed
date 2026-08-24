@@ -2496,10 +2496,14 @@ if ($acao === 'dados_exportar') {
         array_keys(partesCasamento())));
     // Os âmbitos que o admin escolheu levar (só no âmbito sistema). Sem escolha,
     // vale o de sempre: os casamentos e as contas.
+    // As contas contam-se em duas famílias: as de CASAMENTO (noivos/porteiro) e
+    // as ADMINISTRATIVAS (admin/suporte). Cada uma escolhe-se à parte; o token
+    // antigo «contas» vale pelas duas, para os links de sempre continuarem.
     $incRaw = array_filter(array_map('trim', explode(',', (string)($_GET['inc'] ?? ''))));
     $incCas = !$incRaw || in_array('casamentos', $incRaw, true);
     $incMod = in_array('modelos', $incRaw, true);
-    $incCon = !$incRaw || in_array('contas', $incRaw, true);
+    $incContasCas = !$incRaw || in_array('contas', $incRaw, true) || in_array('contas_casamento', $incRaw, true);
+    $incContasAdm = !$incRaw || in_array('contas', $incRaw, true) || in_array('contas_admin', $incRaw, true);
 
     $ids = [];
     if ($ambito === 'sistema') {
@@ -2551,12 +2555,15 @@ if ($acao === 'dados_exportar') {
         unset($m);
         $saida['modelos'] = $modelos;
     }
-    if ($ambito === 'sistema' && $incCon) {
-        // As contas — e as senhas só a pedido, que um ficheiro com senhas (ainda
-        // que cifradas) guarda-se como se guarda a base de dados, não como se
-        // guarda uma folha de cálculo.
+    if ($ambito === 'sistema' && ($incContasCas || $incContasAdm)) {
+        // As contas escolhidas — as de casamento (papel_plataforma NULL), as
+        // administrativas (admin/suporte), ou ambas. As senhas só a pedido, que
+        // um ficheiro com senhas (ainda que cifradas) guarda-se como se guarda a
+        // base de dados, não como se guarda uma folha de cálculo.
+        $cond = ($incContasCas && $incContasAdm) ? '1=1'
+              : ($incContasCas ? 'papel_plataforma IS NULL' : 'papel_plataforma IS NOT NULL');
         $cols = 'id, email, nome, papel_plataforma, estado, criado_em' . ($comSenhas ? ', senha_hash' : '');
-        $r = @$conn->query("SELECT $cols FROM {$P}utilizadores ORDER BY id");
+        $r = @$conn->query("SELECT $cols FROM {$P}utilizadores WHERE $cond ORDER BY id");
         $contas = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
         foreach ($contas as &$c) unset($c['id']);
         unset($c);
@@ -3971,16 +3978,24 @@ if ($acao === 'sistema_importar') {
             if (@$st->execute()) $res['modelos']++;
         }
     }
-    if (in_array('contas', $inc, true)) {
+    // As contas escolhidas — de casamento, administrativas, ou ambas. O token
+    // antigo «contas» vale pelas duas.
+    $impCC = in_array('contas_casamento', $inc, true) || in_array('contas', $inc, true);
+    $impCA = in_array('contas_admin', $inc, true) || in_array('contas', $inc, true);
+    if ($impCC || $impCA) {
         foreach ((array)($f['contas'] ?? []) as $c) {
             if (!is_array($c)) continue;
+            $plat = in_array($c['papel_plataforma'] ?? null, ['admin', 'suporte'], true) ? $c['papel_plataforma'] : null;
+            // Só a família que se pediu: uma conta de admin não entra num
+            // «importar só contas de casamento», nem o contrário.
+            if ($plat !== null && !$impCA) continue;
+            if ($plat === null && !$impCC) continue;
             $email = mb_strtolower(trim((string)($c['email'] ?? '')));
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
             $q = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
             $q->bind_param('s', $email); $q->execute();
             if ($q->get_result()->fetch_row()) { $res['contas_saltadas']++; continue; }
             $nome = mb_substr((string)($c['nome'] ?? ''), 0, 120);
-            $plat = in_array($c['papel_plataforma'] ?? null, ['admin', 'suporte'], true) ? $c['papel_plataforma'] : null;
             $estado = in_array($c['estado'] ?? '', ['ativo', 'pendente', 'suspenso', 'inativo'], true) ? $c['estado'] : 'ativo';
             $hash = (isset($c['senha_hash']) && is_string($c['senha_hash']) && $c['senha_hash'] !== '')
                   ? $c['senha_hash'] : password_hash(senhaTemporaria(), PASSWORD_DEFAULT);
@@ -4015,18 +4030,26 @@ if ($acao === 'sistema_repor_fabrica') {
         }
         $res['modelos'] = count($ids);
     }
-    if (in_array('contas', $alvos, true)) {
-        // Apaga as contas de casamento (noivos/porteiro). As de plataforma
-        // (admin/suporte) ficam protegidas, e a própria nunca se apaga.
-        $eu = utilizadorId();
+    $eu = utilizadorId();
+    $apagarContas = function (string $cond) use ($conn, $P, $eu): int {
         $ids = [];
-        $r = @$conn->query("SELECT id FROM {$P}utilizadores WHERE papel_plataforma IS NULL AND id <> " . (int)$eu);
+        $r = @$conn->query("SELECT id FROM {$P}utilizadores WHERE ($cond) AND id <> " . (int)$eu);
         if ($r) while ($x = $r->fetch_row()) $ids[] = (int)$x[0];
         foreach ($ids as $id) {
             $conn->query("DELETE FROM {$P}acessos WHERE utilizador_id=$id");
             $conn->query("DELETE FROM {$P}utilizadores WHERE id=$id");
         }
-        $res['contas'] = count($ids);
+        return count($ids);
+    };
+    // «contas» (antigo) = as de casamento. As duas famílias, à parte:
+    if (in_array('contas', $alvos, true) || in_array('contas_casamento', $alvos, true)) {
+        // Contas de casamento (noivos/porteiro). A própria nunca se apaga.
+        $res['contas_casamento'] = $apagarContas('papel_plataforma IS NULL');
+    }
+    if (in_array('contas_admin', $alvos, true)) {
+        // Contas administrativas (admin/suporte) — exceto a sua, para não se
+        // trancar fora.
+        $res['contas_admin'] = $apagarContas('papel_plataforma IS NOT NULL');
     }
     if (in_array('casamentos', $alvos, true)) {
         $ids = array_values(array_filter(array_map('intval', listaCorpo($d['casamentos'] ?? ''))));

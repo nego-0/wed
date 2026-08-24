@@ -590,7 +590,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="dsel" id="dados-inc">
         <label><input type="checkbox" value="casamentos" checked onchange="dadosCasToggle()"> Casamentos</label>
         <label><input type="checkbox" value="modelos"> Modelos da casa</label>
-        <label><input type="checkbox" value="contas"> Contas</label>
+        <label><input type="checkbox" value="contas_casamento"> Contas de casamento <small style="color:#8a8f88">· noivos e porteiros</small></label>
+        <label><input type="checkbox" value="contas_admin"> Contas administrativas <small style="color:#8a8f88">· admin e suporte</small></label>
         <label><input type="checkbox" id="dados-senhas"> Contas <b>com senhas</b> <small style="color:#8a8f88">· só na exportação</small></label>
       </div>
 
@@ -613,8 +614,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <b>Exportar</b> descarrega um ficheiro <code>.json</code>. <b>Importar</b> traz os casamentos
         <b>como novos</b> (não substitui nada), os modelos e as contas que ainda não existam.
         <b>Repor de fábrica</b> <b>apaga dados</b>: os modelos personalizados (ficam os de origem),
-        as contas de casamento (as de plataforma e a sua ficam) e/ou esvazia os casamentos escolhidos.
-        Não se desfaz.</div>
+        as contas de casamento e/ou as administrativas (a sua nunca), e/ou esvazia os casamentos
+        escolhidos. Não se desfaz.</div>
       <div class="segredo" id="dados-resultado" style="display:none"></div>
     </div>
     </div><!-- /vista-dados -->
@@ -1034,7 +1035,8 @@ function exportarDados(){
     const ids = casEscolhidos();
     if (ids.length) q.push('casamentos=' + ids.join(','));   // vazio = todos
   }
-  if (document.getElementById('dados-senhas').checked && inc.includes('contas')) q.push('senhas=1');
+  const temContas = inc.includes('contas_casamento') || inc.includes('contas_admin');
+  if (document.getElementById('dados-senhas').checked && temContas) q.push('senhas=1');
   location.href = 'api.php?action=dados_exportar&' + q.join('&');
 }
 async function importarDados(){
@@ -1049,7 +1051,8 @@ async function importarDados(){
   if (!dados || dados.formato !== 'casamento-web/1') {
     return toast('Este ficheiro não é uma exportação deste sistema.', true);
   }
-  const rot = { casamentos:'casamentos (como novos)', modelos:'modelos', contas:'contas' };
+  const rot = { casamentos:'casamentos (como novos)', modelos:'modelos',
+                contas_casamento:'contas de casamento', contas_admin:'contas administrativas' };
   if (!confirm('Trazer do ficheiro: ' + inc.map(i => rot[i]).join(', ') + '?\n\n'
     + 'Os casamentos entram como NOVOS; modelos e contas que já existam saltam-se. '
     + 'Nada do que já cá está é substituído.')) return;
@@ -1070,11 +1073,12 @@ async function reporFabricaDados(){
   const alvos = [];
   const linhas = [];
   if (inc.includes('modelos')){ alvos.push('modelos'); linhas.push('apagar os modelos personalizados (ficam os de origem)'); }
-  if (inc.includes('contas')){  alvos.push('contas');  linhas.push('apagar as contas de casamento (as de plataforma e a sua ficam)'); }
+  if (inc.includes('contas_casamento')){ alvos.push('contas_casamento'); linhas.push('apagar as contas de casamento (noivos e porteiros)'); }
+  if (inc.includes('contas_admin')){     alvos.push('contas_admin');     linhas.push('apagar as contas administrativas (exceto a sua)'); }
   const ids = inc.includes('casamentos') ? casEscolhidos() : [];
   if (ids.length){ alvos.push('casamentos'); linhas.push('esvaziar ' + ids.length + ' casamento(s): lista, mesas, versões, orçamento'); }
   if (!alvos.length) {
-    return toast('Assinale «Modelos», «Contas» e/ou «Casamentos» (com casamentos escolhidos) para repor.', true);
+    return toast('Assinale contas, modelos e/ou casamentos (com casamentos escolhidos) para apagar.', true);
   }
   if (!confirm('Repor de fábrica — isto APAGA dados:\n\n• ' + linhas.join('\n• ') + '\n\nNão se desfaz.')) return;
   const d = await api('sistema_repor_fabrica', { method:'POST',
@@ -1083,8 +1087,9 @@ async function reporFabricaDados(){
   const r = d.res || {};
   const p = [];
   if (r.modelos != null) p.push(`<b>${r.modelos}</b> modelo(s)`);
-  if (r.contas != null) p.push(`<b>${r.contas}</b> conta(s)`);
-  if (r.casamentos != null) p.push(`<b>${r.casamentos}</b> casamento(s)`);
+  if (r.contas_casamento != null) p.push(`<b>${r.contas_casamento}</b> conta(s) de casamento`);
+  if (r.contas_admin != null) p.push(`<b>${r.contas_admin}</b> conta(s) administrativa(s)`);
+  if (r.casamentos != null) p.push(`<b>${r.casamentos}</b> casamento(s) esvaziado(s)`);
   const cx = document.getElementById('dados-resultado');
   cx.style.display = '';
   cx.innerHTML = 'Apagado na reposição de fábrica: ' + p.join(' · ') + '.';

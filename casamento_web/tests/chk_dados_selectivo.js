@@ -59,11 +59,15 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok((await api('versao_lista&ambito=digital')).versoes.filter(v => !v.padrao).length === 1,
      'e não toca nas versões, que continuam');
 
-  // ---------- admin: exportar por âmbitos ----------
-  const sis = await baixar('&ambito=sistema&inc=modelos,contas');
+  // ---------- admin: exportar por âmbitos (contas separadas por família) ----------
+  const sis = await baixar('&ambito=sistema&inc=modelos,contas_admin');
   ok(Array.isArray(sis.modelos) && sis.modelos.length > 0, 'admin: inc=modelos traz os modelos');
-  ok(Array.isArray(sis.contas), 'e as contas');
+  ok(Array.isArray(sis.contas) && sis.contas.every(c => c.papel_plataforma),
+     'inc=contas_admin traz SÓ as contas administrativas');
   ok(!sis.casamentos.length, 'e NÃO traz casamentos quando não se pedem');
+  const sisCC = await baixar('&ambito=sistema&inc=contas_casamento');
+  ok((sisCC.contas || []).every(c => !c.papel_plataforma),
+     'inc=contas_casamento traz SÓ as contas de casamento (noivos/porteiro)');
 
   // ---------- admin: repor um casamento de fábrica ----------
   const rfa = await api('sistema_repor_fabrica', { alvos: ['casamentos'], casamentos: [w.id] }, 1);
@@ -97,15 +101,23 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok(!(await api('modelo_lista&ambito=digital')).modelos.some(m => +m.id === +mod.id), 'o modelo personalizado desapareceu');
   ok((await api('modelo_lista&ambito=digital')).modelos.length >= 1, 'e os modelos de origem ficam');
 
-  // ---------- admin: repor «contas» apaga as de casamento, não as de plataforma ----------
+  // ---------- admin: apagar contas de casamento vs administrativas ----------
   const emailN = 'sel.porta.' + mk + '@ex.pt';
+  const emailA = 'sel.sup.' + mk + '@ex.pt';
   await api('casamento_abrir&id=' + w2.id, {});
-  await api('acesso_convidar', { email: emailN, papel: 'porteiro' }, 1);
-  const rc = await api('sistema_repor_fabrica', { alvos: ['contas'] }, 1);
-  ok(rc.success && rc.res.contas >= 1, 'repor de fábrica «contas» apaga contas de casamento');
+  await api('acesso_convidar', { email: emailN, papel: 'porteiro' }, 1);       // conta de casamento
+  await api('utilizador_criar', { email: emailA, nome: 'Sup', senha: 'segredo12345', papel_plataforma: 'suporte' }, 1); // administrativa
+  // Apagar só as de casamento: o suporte fica.
+  const rc = await api('sistema_repor_fabrica', { alvos: ['contas_casamento'] }, 1);
+  ok(rc.success && rc.res.contas_casamento >= 1, 'repor «contas de casamento» apaga noivos/porteiro');
   ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailN))).contas || []).length === 0, 'a conta de casamento desapareceu');
+  ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailA))).contas || []).length === 1, 'a conta administrativa ficou');
+  // Apagar as administrativas: o suporte sai, o admin (próprio) fica.
+  const ra = await api('sistema_repor_fabrica', { alvos: ['contas_admin'] }, 1);
+  ok(ra.success && ra.res.contas_admin >= 1, 'repor «contas administrativas» apaga admin/suporte');
+  ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailA))).contas || []).length === 0, 'o suporte desapareceu');
   ok(((await api('utilizador_lista&q=admin')).contas || []).some(c => c.papel_plataforma === 'admin'),
-     'e a conta de plataforma (admin) fica protegida');
+     'e a própria conta (admin) fica — não se tranca fora');
 
   // ---------- os painéis existem no ecrã ----------
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
@@ -114,13 +126,22 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   await p.evaluate(() => verVista('dados')); await p.waitForTimeout(400);
   ok(await p.locator('#dados-inc input[value="casamentos"]').count() === 1
      && await p.locator('#dados-inc input[value="modelos"]').count() === 1
-     && await p.locator('#dados-inc input[value="contas"]').count() === 1,
-     'com as caixas de âmbito (casamentos, modelos, contas)');
+     && await p.locator('#dados-inc input[value="contas_casamento"]').count() === 1
+     && await p.locator('#dados-inc input[value="contas_admin"]').count() === 1,
+     'com as caixas de âmbito (casamentos, modelos, contas de casamento, contas administrativas)');
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1', {});
   await api('casamento_estado&id=' + w.id + '&estado=arquivado', {});
   await api('casamento_apagar&id=' + w.id, {});
+  await api('casamento_estado&id=' + w2.id + '&estado=arquivado', {});
+  await api('casamento_apagar&id=' + w2.id, {});
+  // Apagar contas por família esvaziou o pool da base — inclusive o porteiro que
+  // o casamento nº1 tinha de origem. Repõe-se esse estado (um porteiro no nº1, e
+  // uma conta administrativa), para as provas seguintes encontrarem o que
+  // esperam. A conta «admin», essa, nunca se apaga.
+  await api('acesso_convidar', { email: 'base.porteiro.' + mk + '@exemplo.pt', papel: 'porteiro' }, 1);
+  await api('utilizador_criar', { email: 'base.suporte.' + mk + '@exemplo.pt', nome: 'Base Suporte', senha: 'segredo12345', papel_plataforma: 'suporte' }, 1);
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');
   ok(errs.length === 0, 'nenhum erro de JavaScript');
