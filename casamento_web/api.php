@@ -2875,6 +2875,34 @@ function reporCasamentoPartes(mysqli $conn, int $cid, array $r, array $partes): 
 }
 
 /**
+ * Devolve uma peça (digital/impresso) ao desenho de origem: o de fábrica, com o
+ * desenho do modelo de origem por cima, se o houver. A identidade do casal
+ * (as chaves casal. e evento.) é da ficha do casamento, não do desenho — fica.
+ * As fotografias postas à mão saem, do desenho e do disco. Corre no casamento
+ * em uso (usarCasamento já foi chamado por quem chama).
+ */
+function reporPecaAOrigem(mysqli $conn, string $ambito): void {
+    $atuais = defsAtuais($conn);
+    $base = padraoAmbito($ambito);
+    $orig = modeloDeOrigem($conn, $ambito);
+    if ($orig) {
+        $des = desenhoDoModeloId($conn, $ambito, (int)$orig['id']);
+        if ($des) $base = array_merge($base, $des);
+    }
+    // A identidade não é desenho: mantém-se o que a ficha do casamento diz.
+    foreach ($base as $k => $v) {
+        if (preg_match('/^(casal|evento)\./', $k)) $base[$k] = (string)($atuais[$k] ?? $v);
+    }
+    // As fotografias do casal saem do disco (as que mais ninguém use).
+    foreach ($atuais as $k => $v) {
+        if (str_starts_with($k, 'media.') && ehFotoCustom((string)$v) && !ficheiroEmVersao($conn, (string)$v)) {
+            @unlink(__DIR__ . '/' . $v);
+        }
+    }
+    guardarDefinicoes($conn, $base);
+}
+
+/**
  * Repõe de fábrica as secções pedidas: apaga o que o casal lá pôs, sem trazer
  * nada de volta. Devolve quanto se apagou de cada secção.
  */
@@ -2899,11 +2927,16 @@ function reporFabricaPartes(mysqli $conn, int $cid, array $partes): array {
     }
     foreach (['digital', 'impresso'] as $amb) {
         if (!in_array($amb, $partes, true)) continue;
+        // Apaga as versões guardadas dessa peça...
         $q = $conn->prepare("SELECT COUNT(*) FROM {$P}versoes WHERE casamento_id=? AND ambito=?");
         $q->bind_param('is', $cid, $amb); $q->execute();
         $feito['versoes'] = ($feito['versoes'] ?? 0) + (int)$q->get_result()->fetch_row()[0];
         $d = $conn->prepare("DELETE FROM {$P}versoes WHERE casamento_id=? AND ambito=?");
         $d->bind_param('is', $cid, $amb); $d->execute();
+        // ...e devolve a peça ao desenho de origem, largando as fotos que o casal
+        // pôs à mão. A identidade (nomes, data) é da ficha e fica. Reposição de
+        // fábrica é apagar o que se acrescentou, não só as versões guardadas.
+        reporPecaAOrigem($conn, $amb);
     }
     if (in_array('orcamento', $partes, true)) {
         $feito['orc_despesas'] = $um("SELECT COUNT(*) FROM {$P}orcamento_despesas WHERE casamento_id=$cid");
@@ -3961,17 +3994,39 @@ if ($acao === 'sistema_importar') {
 }
 
 if ($acao === 'sistema_repor_fabrica') {
-    // Reposição de fábrica, do lado da casa: repor os modelos de origem, e/ou
-    // repor casamentos escolhidos ao estado de fábrica (esvaziar-lhes a lista de
-    // convidados, as mesas, as versões e o orçamento). Não se desfaz.
+    // Reposição de fábrica, do lado da casa: é APAGAR dados, para deixar a casa
+    // como veio. Apaga os modelos personalizados (ficam os de origem), apaga as
+    // contas que não são de plataforma (nunca a própria), e/ou esvazia casamentos
+    // escolhidos (lista de convidados, mesas, versões, orçamento). Não se desfaz.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma repõe de fábrica.');
     exigirCorrecao();
     $d = corpo();
     $alvos = listaCorpo($d['alvos'] ?? '');
     $res = [];
     if (in_array('modelos', $alvos, true)) {
-        $rr = restaurarModelosDeCasa($conn, null, true);   // repõe todos os de origem
-        $res['modelos'] = count(array_merge($rr['criados'], $rr['repostos']));
+        // Apaga os modelos que o admin criou; ficam os de origem da casa
+        // (criado_por='sistema'). Com eles, os laços de «visível só a estes».
+        $ids = [];
+        $r = @$conn->query("SELECT id FROM {$P}modelos WHERE criado_por <> 'sistema'");
+        if ($r) while ($x = $r->fetch_row()) $ids[] = (int)$x[0];
+        foreach ($ids as $id) {
+            $conn->query("DELETE FROM {$P}modelo_casamentos WHERE modelo_id=$id");
+            $conn->query("DELETE FROM {$P}modelos WHERE id=$id");
+        }
+        $res['modelos'] = count($ids);
+    }
+    if (in_array('contas', $alvos, true)) {
+        // Apaga as contas de casamento (noivos/porteiro). As de plataforma
+        // (admin/suporte) ficam protegidas, e a própria nunca se apaga.
+        $eu = utilizadorId();
+        $ids = [];
+        $r = @$conn->query("SELECT id FROM {$P}utilizadores WHERE papel_plataforma IS NULL AND id <> " . (int)$eu);
+        if ($r) while ($x = $r->fetch_row()) $ids[] = (int)$x[0];
+        foreach ($ids as $id) {
+            $conn->query("DELETE FROM {$P}acessos WHERE utilizador_id=$id");
+            $conn->query("DELETE FROM {$P}utilizadores WHERE id=$id");
+        }
+        $res['contas'] = count($ids);
     }
     if (in_array('casamentos', $alvos, true)) {
         $ids = array_values(array_filter(array_map('intval', listaCorpo($d['casamentos'] ?? ''))));

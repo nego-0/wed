@@ -612,8 +612,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="porcima" style="margin-top:.8rem">
         <b>Exportar</b> descarrega um ficheiro <code>.json</code>. <b>Importar</b> traz os casamentos
         <b>como novos</b> (não substitui nada), os modelos e as contas que ainda não existam.
-        <b>Repor de fábrica</b> repõe os modelos de origem e/ou esvazia os casamentos escolhidos —
-        e isso não se desfaz.</div>
+        <b>Repor de fábrica</b> <b>apaga dados</b>: os modelos personalizados (ficam os de origem),
+        as contas de casamento (as de plataforma e a sua ficam) e/ou esvazia os casamentos escolhidos.
+        Não se desfaz.</div>
       <div class="segredo" id="dados-resultado" style="display:none"></div>
     </div>
     </div><!-- /vista-dados -->
@@ -1067,28 +1068,29 @@ async function importarDados(){
 async function reporFabricaDados(){
   const inc = incEscolhidos();
   const alvos = [];
-  if (inc.includes('modelos')) alvos.push('modelos');
+  const linhas = [];
+  if (inc.includes('modelos')){ alvos.push('modelos'); linhas.push('apagar os modelos personalizados (ficam os de origem)'); }
+  if (inc.includes('contas')){  alvos.push('contas');  linhas.push('apagar as contas de casamento (as de plataforma e a sua ficam)'); }
   const ids = inc.includes('casamentos') ? casEscolhidos() : [];
-  if (ids.length) alvos.push('casamentos');
+  if (ids.length){ alvos.push('casamentos'); linhas.push('esvaziar ' + ids.length + ' casamento(s): lista, mesas, versões, orçamento'); }
   if (!alvos.length) {
-    return toast('Assinale «Modelos» e/ou «Casamentos» (com casamentos escolhidos) para repor.', true);
+    return toast('Assinale «Modelos», «Contas» e/ou «Casamentos» (com casamentos escolhidos) para repor.', true);
   }
-  const partes = [];
-  if (alvos.includes('modelos')) partes.push('os modelos de origem da casa');
-  if (alvos.includes('casamentos')) partes.push(ids.length + ' casamento(s) ao estado de fábrica (lista, mesas, versões, orçamento)');
-  if (!confirm('Repor de fábrica ' + partes.join(' e ') + '?\n\nNão se desfaz.')) return;
+  if (!confirm('Repor de fábrica — isto APAGA dados:\n\n• ' + linhas.join('\n• ') + '\n\nNão se desfaz.')) return;
   const d = await api('sistema_repor_fabrica', { method:'POST',
     body: JSON.stringify({ alvos, casamentos: ids }) });
   if (!d || !d.success) return;
   const r = d.res || {};
+  const p = [];
+  if (r.modelos != null) p.push(`<b>${r.modelos}</b> modelo(s)`);
+  if (r.contas != null) p.push(`<b>${r.contas}</b> conta(s)`);
+  if (r.casamentos != null) p.push(`<b>${r.casamentos}</b> casamento(s)`);
   const cx = document.getElementById('dados-resultado');
   cx.style.display = '';
-  cx.innerHTML = 'Reposto de fábrica: '
-    + (r.modelos != null ? `<b>${r.modelos}</b> modelo(s)` : '')
-    + (r.modelos != null && r.casamentos != null ? ' · ' : '')
-    + (r.casamentos != null ? `<b>${r.casamentos}</b> casamento(s)` : '') + '.';
+  cx.innerHTML = 'Apagado na reposição de fábrica: ' + p.join(' · ') + '.';
   toast('Reposição concluída.');
-  setTimeout(() => carregarCasamentos(), 300);
+  document.getElementById('dados-cas-lista').dataset.pronto = '';
+  setTimeout(() => { carregarCasamentos(); carregarDadosCasamentos(); }, 300);
 }
 
 // ---------- os casamentos, por ordem de uso ----------

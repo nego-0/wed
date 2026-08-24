@@ -5,8 +5,12 @@
 // (casamentos, modelos, contas). O que se prova é que cada operação mexe SÓ no
 // que se assinala — e deixa o resto quieto.
 const { chromium } = require('playwright-core');
+const fs = require('fs');
+const path = require('path');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const ROOT = path.resolve(__dirname, '..') + '/';
+const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { return false; } };
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -68,6 +72,40 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok((await api('convite_list')).convites.length === 0
      && (await api('versao_lista&ambito=digital')).versoes.filter(v => !v.padrao).length === 0,
      'e o casamento fica vazio (convites e versões)');
+
+  // ---------- casal: repor de fábrica das versões apaga a foto anexada ----------
+  const w2 = await api('casamento_criar', { nome: 'ZZ SelF ' + mk, noiva: 'F', noivo: 'G' }, 1);
+  await api('casamento_abrir&id=' + w2.id, {});
+  const P1 = await p.evaluate(async () => {
+    const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+    const bin = atob(b64); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const fd = new FormData();
+    fd.append('chave', 'media.hero'); fd.append('ficheiro', new Blob([arr], { type: 'image/png' }), 'f.png');
+    const r = await fetch('api.php?action=def_upload', { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF }, body: fd });
+    return (await r.json()).path;
+  });
+  ok(existe(P1), 'a foto do casal existe no disco');
+  await api('casamento_repor_fabrica', { partes: ['digital'] }, 1);
+  ok(!existe(P1), 'repor de fábrica «digital» apaga a foto que o casal pôs');
+
+  // ---------- admin: repor «modelos» apaga os personalizados ----------
+  const mod = await api('modelo_criar', { nome: 'ZZ ModSel ' + mk, descricao: 'x', ambito: 'digital', visivel: true }, 1);
+  ok((await api('modelo_lista&ambito=digital')).modelos.some(m => +m.id === +mod.id), 'modelo personalizado criado');
+  const rm = await api('sistema_repor_fabrica', { alvos: ['modelos'] }, 1);
+  ok(rm.success && rm.res.modelos >= 1, 'repor de fábrica «modelos» APAGA os personalizados');
+  ok(!(await api('modelo_lista&ambito=digital')).modelos.some(m => +m.id === +mod.id), 'o modelo personalizado desapareceu');
+  ok((await api('modelo_lista&ambito=digital')).modelos.length >= 1, 'e os modelos de origem ficam');
+
+  // ---------- admin: repor «contas» apaga as de casamento, não as de plataforma ----------
+  const emailN = 'sel.porta.' + mk + '@ex.pt';
+  await api('casamento_abrir&id=' + w2.id, {});
+  await api('acesso_convidar', { email: emailN, papel: 'porteiro' }, 1);
+  const rc = await api('sistema_repor_fabrica', { alvos: ['contas'] }, 1);
+  ok(rc.success && rc.res.contas >= 1, 'repor de fábrica «contas» apaga contas de casamento');
+  ok(((await api('utilizador_lista&q=' + encodeURIComponent(emailN))).contas || []).length === 0, 'a conta de casamento desapareceu');
+  ok(((await api('utilizador_lista&q=admin')).contas || []).some(c => c.papel_plataforma === 'admin'),
+     'e a conta de plataforma (admin) fica protegida');
 
   // ---------- os painéis existem no ecrã ----------
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
