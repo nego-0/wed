@@ -66,6 +66,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     if ($semCasamento) $itens = array_intersect_key($itens, ['plataforma' => 1, 'modelos' => 1]);
     $semPapel = !empty($opcoes['no_print']) ? ' no-print' : '';
     ?>
+<?php include __DIR__ . '/parcial-tema.php'; ?>
 <header class="topo<?= $semPapel ?>">
   <div class="wrap">
     <div class="monograma"><?= escP($CAS['mono']) ?></div>
@@ -99,6 +100,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
       <?php foreach ($itens as $chave => [$url, $rotulo]): ?>
       <a href="<?= $url ?>"<?= $chave === $ativo ? ' class="ativo" aria-current="page"' : '' ?>><?= $rotulo ?></a>
       <?php endforeach; ?>
+      <button type="button" class="nav-tema" onclick="trocarTema()" title="Alternar entre o tema NIRAS e o clássico"><span class="glf" aria-hidden="true">&#9680;</span> <span data-tema-rotulo>Tema NIRAS</span></button>
       <a href="logout.php">Sair</a>
     </nav>
   </div>

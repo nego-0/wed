@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-marca.php';
 // A entrada não é de casamento nenhum.
 //
 // Enquanto houve um casal, pôr o nome dele aqui era acolhedor. Com a casa a
@@ -56,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Entrar · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:center; justify-content:center; padding:1.25rem; }
   .login{ width:100%; max-width:400px; text-align:center; }
@@ -83,7 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="login">
     <div class="card">
-      <div class="brasao"><?= escP(PLATAFORMA['marca']) ?></div>
+      <?php marcaNiras('grande so-niras'); ?>
+      <div class="brasao so-classico"><?= escP(PLATAFORMA['marca']) ?></div>
       <div class="casa"><?= escP(PLATAFORMA['nome']) ?></div>
       <div class="evento"><?= escP(PLATAFORMA['sub']) ?></div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>
@@ -105,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
       <div class="dica">Entre com o seu email. Depois de entrar, escolhe-se o casamento.<br>
         Ainda não tem conta? <a href="registo.php" style="color:var(--gold)">Inscreva o seu casamento</a>.</div>
+      <div class="tema-rodape">Aparência: <button type="button" data-tema-rotulo onclick="trocarTema()">Tema NIRAS</button></div>
     </div>
   </div>
 <script>

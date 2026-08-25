@@ -1,29 +1,60 @@
 /* ============================================================
-   estilo.css — Sistema de design (Isabel & Abednego)
-   Paleta botânica: verde-floresta + dourado + marfim
+   estilo.css — Sistema de design
+   ------------------------------------------------------------
+   DOIS TEMAS, um só conjunto de tokens:
+   • Tema 1 (padrão) — NIRAS: azul-noite + verde institucional.
+     A identidade da entidade que gere o sistema.
+   • Tema 2 — Clássico: verde-floresta + dourado + marfim.
+     A identidade botânica de origem, guardada em [data-tema="classico"].
+   Troca-se em <html data-tema="..."> (ver parcial-tema.php). Todo o
+   sistema já lê por tokens, por isso retematizar é só trocar os valores.
    ============================================================ */
 :root{
+  /* ---- Tema 1 · NIRAS (padrão) ---- */
+  --ink:#12222F; --forest:#16283A; --forest-deep:#0C1925;
+  --ivory:#F6F8F4; --cream:#EEF2EA; --sand:#E1E8DB;
+  --gold:#4C8C1E; --gold-soft:#63B22B; --gold-pale:#E7F3DA; --gold-deep:#3C7517;
+  --blush:#E1E8DB; --text:#28323B;
+  --ok:#3E8E3E; --ok-bg:#E7F2E2;
+  --warn:#9C7413; --warn-bg:#F6EDD6;
+  --danger:#B4443C; --danger-bg:#F6E4E1;
+  --line:rgba(18,34,47,.12);
+  --shadow:0 10px 30px rgba(18,34,47,.09);
+  --ring:rgba(99,178,43,.28);
+  --radius:14px;
+  --serif:'Archivo','Segoe UI Semibold','Segoe UI',system-ui,sans-serif;
+  --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --script:'Archivo','Segoe UI',system-ui,sans-serif;
+  --app-bg:
+    radial-gradient(1000px 560px at 90% -10%, rgba(99,178,43,.10), transparent 60%),
+    radial-gradient(760px 480px at -8% 108%, rgba(18,34,47,.06), transparent 55%),
+    linear-gradient(165deg,#F8FAF6 0%, #EDF2EA 100%);
+}
+:root[data-tema="classico"]{
+  /* ---- Tema 2 · Clássico (botânico de origem) ---- */
   --ink:#20342A; --forest:#2C4536; --forest-deep:#16261E;
   --ivory:#FBF8F1; --cream:#F5EEDF; --sand:#E9DFC9;
-  --gold:#B4864A; --gold-soft:#D9BC8C; --gold-pale:#EFE3CB;
+  --gold:#B4864A; --gold-soft:#D9BC8C; --gold-pale:#EFE3CB; --gold-deep:#8A6031;
   --blush:#E4CDBB; --text:#3B4A40;
   --ok:#2f7d4f; --ok-bg:#e7f1ea;
   --warn:#a8792f; --warn-bg:#f6ecd8;
   --danger:#a5473f; --danger-bg:#f4e2df;
   --line:rgba(44,69,54,.12);
   --shadow:0 12px 34px rgba(22,38,30,.10);
+  --ring:rgba(180,134,74,.18);
   --radius:16px;
   --serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Jost',system-ui,-apple-system,sans-serif;
   --script:'Pinyon Script',cursive;
+  --app-bg:
+    radial-gradient(900px 500px at 88% -8%, rgba(217,188,140,.30), transparent 60%),
+    radial-gradient(700px 460px at -6% 108%, rgba(44,69,54,.10), transparent 55%),
+    linear-gradient(160deg,var(--ivory) 0%, var(--cream) 100%);
 }
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body{
   margin:0; font-family:var(--sans); color:var(--text); font-weight:300;
-  background:
-    radial-gradient(900px 500px at 88% -8%, rgba(217,188,140,.30), transparent 60%),
-    radial-gradient(700px 460px at -6% 108%, rgba(44,69,54,.10), transparent 55%),
-    linear-gradient(160deg,var(--ivory) 0%, var(--cream) 100%);
+  background:var(--app-bg);
   min-height:100vh;
 }
 h1,h2,h3,h4{ font-family:var(--serif); color:var(--ink); font-weight:600; margin:0; }
@@ -80,7 +111,7 @@ a:hover{ text-decoration:underline; }
 .btn{ font-family:var(--sans); font-weight:500; border:none; border-radius:50px; padding:.6rem 1.25rem;
   cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-size:.9rem; transition:.18s; }
 .btn:hover{ transform:translateY(-1px); }
-.btn-ouro{ background:linear-gradient(135deg,var(--gold),#8A6031); color:#fff; }
+.btn-ouro{ background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep)); color:#fff; }
 .btn-ouro:hover{ box-shadow:0 8px 22px rgba(180,134,74,.4); }
 .btn-verde{ background:linear-gradient(135deg,var(--forest),var(--forest-deep)); color:var(--ivory); }
 .btn-linha{ background:transparent; border:1.5px solid var(--gold); color:var(--gold); }
@@ -98,7 +129,7 @@ a:hover{ text-decoration:underline; }
 label{ font-size:.78rem; font-weight:500; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:.35rem; }
 input,select,textarea{ font-family:var(--sans); font-weight:300; width:100%; padding:.6rem .8rem;
   border:1.5px solid var(--line); border-radius:10px; background:#fff; color:var(--text); font-size:.95rem; }
-input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,134,74,.15); }
+input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
 .linha-form{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.9rem; }
 .check{ display:flex; align-items:center; gap:.5rem; }
 .check input{ width:auto; }
@@ -127,7 +158,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 .selo-tipo{ width:32px; height:32px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center;
   font-size:1rem; background:var(--cream); color:var(--forest); border:1px solid var(--line); }
 .selo-tipo svg{ width:16px; height:16px; }
-.selo-tipo.digital{ background:var(--gold-pale); color:#8A6031; }
+.selo-tipo.digital{ background:var(--gold-pale); color:var(--gold-deep); }
 .selo-tipo.fisico{ background:var(--sand); color:var(--forest); }
 .selo-tipo.ambos{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); }
 .convite-nome{ font-family:var(--serif); font-size:1.05rem; font-weight:600; color:var(--ink); line-height:1.2; }
@@ -204,6 +235,10 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   .convite-row{ grid-template-columns:auto auto 1fr; }
   .convite-row .acoes{ grid-column:1 / -1; justify-content:flex-start; }
   .topo .nav{ margin-left:0; width:100%; }
+  /* Cabeçalho mais compacto no telemóvel — deixa o essencial (e a caixa de
+     procura) caber no primeiro ecrã. */
+  .topo{ padding:1.05rem 1.1rem; }
+  .topo .wrap{ gap:.7rem; }
 }
 
 /* ============================================================
@@ -267,3 +302,49 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 .mm-pop button.perigo{ color:var(--danger); }
 .mm-pop button.perigo:hover{ background:var(--danger-bg); }
 .mm-pop hr{ border:0; border-top:1px solid var(--line); margin:.25rem 0; }
+
+/* ============================================================
+   Marca NIRAS (logótipo) e alternador de tema
+   ============================================================ */
+.marca-niras{ display:inline-flex; align-items:center; gap:.6rem; line-height:1; }
+.marca-niras .marca-simbolo{ flex:none; display:block; }
+/* Logótipo oficial (ficheiro em assets/logo-niras.*), quando presente. */
+.marca-oficial{ display:block; height:2.3rem; width:auto; max-width:100%; }
+.marca-niras.grande .marca-oficial{ height:3.2rem; }
+.marca-wordmark{
+  font-family:var(--serif); font-weight:800; letter-spacing:.13em;
+  font-size:1.55rem; color:var(--ink);
+}
+/* Na entrada e na inscrição o logótipo é grande e centrado. */
+.marca-niras.grande{ justify-content:center; gap:.8rem; margin-bottom:.4rem; }
+.marca-niras.grande .marca-wordmark{ font-size:2rem; }
+
+/* O símbolo é sempre o verde institucional; a palavra segue a tinta do tema
+   (azul-noite no NIRAS, verde-floresta no clássico) — legível nos dois. */
+
+/* Mostrar a marca certa conforme o tema: NIRAS por defeito, brasão no clássico.
+   O !important é para vencer o .brasao{display:flex} que o <style> de cada
+   página (login/registo) declara depois desta folha. */
+.so-classico{ display:none !important; }
+:root[data-tema="classico"] .so-niras{ display:none !important; }
+:root[data-tema="classico"] .so-classico{ display:revert !important; }
+
+/* Alternador de tema na barra de navegação (mesma pele dos links do topo). */
+.nav-tema{
+  color:var(--ivory); background:transparent; cursor:pointer;
+  border:1px solid rgba(255,255,255,.35); border-radius:50px;
+  padding:.4rem .85rem; font-size:.82rem; font-family:var(--sans); font-weight:400;
+  display:inline-flex; gap:.4rem; align-items:center;
+}
+.nav-tema:hover{ background:rgba(255,255,255,.14); }
+.nav-tema .glf{ font-size:.95rem; line-height:1; }
+/* No telemóvel, o menu já é comprido: o alternador sai daqui (a entrada e a
+   inscrição têm-no no rodapé, esse fica sempre à mão). */
+@media (max-width:640px){ .nav-tema{ display:none; } }
+
+/* Alternador discreto no rodapé da entrada/inscrição. */
+.tema-rodape{ margin-top:1.2rem; font-size:.76rem; color:#9aa09a; }
+.tema-rodape button{
+  border:0; background:none; cursor:pointer; color:var(--gold);
+  font:inherit; text-decoration:underline; padding:0;
+}

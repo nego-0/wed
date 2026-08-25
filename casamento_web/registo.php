@@ -12,6 +12,7 @@
 // ============================================================
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-marca.php';
 
 // Quem já entrou não tem nada a fazer aqui.
 if (podeEntrar()) { header('Location: index.php'); exit; }
@@ -23,6 +24,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <title>Inscrever o nosso casamento · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:flex-start; justify-content:center; padding:1.5rem 1.25rem; }
   .reg{ width:100%; max-width:560px; }
@@ -99,7 +101,8 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <body>
   <div class="reg">
     <form class="card" id="formulario" novalidate autocomplete="on" onsubmit="return false">
-      <div class="brasao"><?= escP(PLATAFORMA['marca']) ?></div>
+      <?php marcaNiras('grande so-niras'); ?>
+      <div class="brasao so-classico"><?= escP(PLATAFORMA['marca']) ?></div>
       <div class="tit">Inscrever o nosso casamento</div>
       <div class="sub">Deixem os dados do vosso casamento e uma conta de acesso.
         A inscrição é revista por quem gere a plataforma antes de abrir.</div>
@@ -222,6 +225,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 
       <button class="btn btn-verde btn-enviar" id="btn" type="submit" onclick="enviar()">Inscrever o nosso casamento</button>
       <div class="entrar-nota">Já têm conta? <a href="login.php" style="color:var(--gold)">Entrar</a></div>
+      <div class="tema-rodape" style="text-align:center">Aparência: <button type="button" data-tema-rotulo onclick="trocarTema()">Tema NIRAS</button></div>
     </form>
 
     <div class="card feito" id="obrigado" style="display:none">
