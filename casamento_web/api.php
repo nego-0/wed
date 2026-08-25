@@ -2248,6 +2248,66 @@ if ($acao === 'registo_lista') {
         'total' => $total, 'pagina' => $pagina, 'ha_mais' => ($pagina * $porPag) < $total]);
 }
 
+if ($acao === 'registo_auditoria') {
+    // O registo completo da casa — de todos os casamentos e da plataforma —,
+    // com filtros e pesquisa. Só o admin. Ao contrário do casal (que só vê o
+    // seu, por registo_lista), esta vista atravessa os casamentos de propósito:
+    // por isso desliga-se a vigia de âmbito à volta das consultas, que é a
+    // válvula honesta para uma leitura transversal e legítima.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê o registo completo.');
+    $porPag = max(10, min(200, (int)($_GET['por_pagina'] ?? 60)));
+    $pagina = max(1, (int)($_GET['pagina'] ?? 1));
+    $cond = ['1=1']; $par = []; $tipos = '';
+    if (isset($_GET['casamento']) && $_GET['casamento'] !== '' && $_GET['casamento'] !== 'todos') {
+        $cond[] = 'r.casamento_id = ?'; $par[] = (int)$_GET['casamento']; $tipos .= 'i';
+    }
+    if (!empty($_GET['accao'])) { $cond[] = 'r.accao = ?'; $par[] = (string)$_GET['accao']; $tipos .= 's'; }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['de'] ?? '')))  { $cond[] = 'r.criado_em >= ?'; $par[] = $_GET['de'] . ' 00:00:00'; $tipos .= 's'; }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['ate'] ?? ''))) { $cond[] = 'r.criado_em <= ?'; $par[] = $_GET['ate'] . ' 23:59:59'; $tipos .= 's'; }
+    $q = trim((string)($_GET['q'] ?? ''));
+    if ($q !== '') {
+        $cond[] = '(r.utilizador LIKE ? OR r.alvo LIKE ? OR r.detalhe LIKE ? OR r.accao LIKE ?)';
+        $like = '%' . $q . '%'; array_push($par, $like, $like, $like, $like); $tipos .= 'ssss';
+    }
+    $where = implode(' AND ', $cond);
+
+    $prev = LigacaoAmbito::$vigiar; LigacaoAmbito::$vigiar = false;
+    try {
+        $stc = $conn->prepare("SELECT COUNT(*) FROM {$P}registo r WHERE $where");
+        if ($par) $stc->bind_param($tipos, ...$par);
+        $stc->execute(); $total = (int)$stc->get_result()->fetch_row()[0];
+
+        $sql = "SELECT r.casamento_id, c.nome AS casamento, r.utilizador, r.papel,
+                       r.accao, r.alvo, r.detalhe, r.criado_em
+                FROM {$P}registo r LEFT JOIN {$P}casamentos c ON c.id = r.casamento_id
+                WHERE $where ORDER BY r.id DESC LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag);
+        $st = $conn->prepare($sql);
+        if ($par) $st->bind_param($tipos, ...$par);
+        $st->execute(); $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        $accoes = [];
+        $ra = $conn->query("SELECT DISTINCT accao FROM {$P}registo ORDER BY accao");
+        if ($ra) while ($x = $ra->fetch_row()) $accoes[] = $x[0];
+    } finally {
+        LigacaoAmbito::$vigiar = $prev;
+    }
+    ok(['registos' => $rows, 'total' => $total, 'pagina' => $pagina,
+        'ha_mais' => ($pagina * $porPag) < $total, 'accoes' => $accoes]);
+}
+
+if ($acao === 'sistema_tema_guardar') {
+    // O tema é uma definição da casa (casamento_id=0), que só o admin muda.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o tema do sistema.');
+    $d = corpo();
+    $tema = (string)($d['tema'] ?? '');
+    if (!isset(temasDisponiveis()[$tema])) erro('Tema desconhecido.');
+    $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave='sistema.tema'");
+    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0, 'sistema.tema', ?)");
+    $st->bind_param('s', $tema); $st->execute();
+    registar($conn, 'tema_sistema', $tema, temasDisponiveis()[$tema]);
+    ok(['tema' => $tema, 'rotulo' => temasDisponiveis()[$tema]]);
+}
+
 if ($acao === 'convite_flag') {
     $id=(int)($_GET['id']??0); $campo=$_GET['campo']??''; $valor=!empty($_GET['valor'])?1:0;
     if (!in_array($campo,['impresso','enviado'],true)) erro('Campo inválido.');

@@ -100,13 +100,15 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
       <?php foreach ($itens as $chave => [$url, $rotulo]): ?>
       <a href="<?= $url ?>"<?= $chave === $ativo ? ' class="ativo" aria-current="page"' : '' ?>><?= $rotulo ?></a>
       <?php endforeach; ?>
-      <button type="button" class="nav-tema" onclick="trocarTema()" title="Alternar entre o tema NIRAS e o clássico"><span class="glf" aria-hidden="true">&#9680;</span> <span data-tema-rotulo>Tema NIRAS</span></button>
       <a href="logout.php">Sair</a>
     </nav>
   </div>
 </header>
 <?php
     tiraSuporte(!empty($opcoes['no_print']));
+    // A pastilha circular do tema — discreta, no canto. Só onde há cabeçalho
+    // (páginas com estilo.css); nunca no papel.
+    if (empty($opcoes['no_print'])) include __DIR__ . '/parcial-seletor-tema.php';
 }
 
 /**

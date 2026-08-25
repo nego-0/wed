@@ -1,28 +1,22 @@
 <?php
 // ============================================================
-// parcial-tema.php — Arranque e troca de tema, num sítio só
-// O tema padrão é o NIRAS (o :root do estilo.css). Quem escolher
-// o «Clássico» fica com essa preferência guardada no navegador e
-// aplicada em <html data-tema="classico">. Corre cedo, para não
-// haver salto de cor ao carregar. Incluir dentro do <head>.
+// parcial-tema.php — Aplica o tema, cedo, para não haver salto
+// ------------------------------------------------------------
+// Duas camadas:
+//   • base — o tema do sistema, que o admin define (Definições);
+//   • escolha pessoal — cada utilizador pode trocar, e essa fica
+//     no navegador (localStorage 'tema'). A escolha pessoal ganha
+//     à base. Muda-se na pastilha circular (ver parcial-seletor-tema).
+// Incluir dentro do <head> (ou o mais cedo possível no corpo).
 // ============================================================
+$temaSistema = function_exists('temaSistema') ? temaSistema() : 'niras';
 ?>
 <script>
-(function(){ try{
-  if (localStorage.getItem('tema') === 'classico')
-    document.documentElement.setAttribute('data-tema','classico');
-}catch(e){} })();
-function trocarTema(){ try{
-  var d = document.documentElement, classico = d.getAttribute('data-tema') === 'classico';
-  if (classico){ d.removeAttribute('data-tema'); localStorage.setItem('tema','niras'); }
-  else { d.setAttribute('data-tema','classico'); localStorage.setItem('tema','classico'); }
-  atualizarRotuloTema();
-}catch(e){} }
-function atualizarRotuloTema(){ try{
-  var classico = document.documentElement.getAttribute('data-tema') === 'classico';
-  document.querySelectorAll('[data-tema-rotulo]').forEach(function(el){
-    el.textContent = classico ? 'Tema clássico' : 'Tema NIRAS';
-  });
-}catch(e){} }
-document.addEventListener('DOMContentLoaded', atualizarRotuloTema);
+(function(){
+  var base = <?= json_encode($temaSistema) ?>, escolha = null;
+  try { escolha = localStorage.getItem('tema'); } catch (e) {}
+  var validos = ['niras','classico','azul','escuro'];
+  var t = (escolha && validos.indexOf(escolha) >= 0) ? escolha : base;
+  document.documentElement.setAttribute('data-tema', t);
+})();
 </script>

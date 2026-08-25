@@ -13,6 +13,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <title>Porta · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<?php include __DIR__ . '/parcial-tema.php'; ?>
 <script src="<?= asset('assets/html5-qrcode.min.js') ?>"></script>
 <style>
   /* Aviso de ligação (offline / a sincronizar) */
@@ -493,5 +494,6 @@ marcarEstadoLigacao();
 sincronizarCopia();
 enviarFila();
 </script>
+<?php include __DIR__ . '/parcial-seletor-tema.php'; ?>
 </body>
 </html>

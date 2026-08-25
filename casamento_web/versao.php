@@ -435,6 +435,7 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
 <title>Versão instalada</title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ padding:1.5rem; max-width:820px; margin:0 auto; }
   h1{ margin-bottom:.2rem; }
@@ -508,5 +509,6 @@ function copiar(){
   document.querySelector('.copiar .btn').textContent = 'Copiado';
 }
 </script>
+<?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
 </body>
 </html>

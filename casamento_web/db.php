@@ -915,6 +915,46 @@ function registar(mysqli $conn, string $accao, string $alvo = '', string $detalh
     @$st->execute();
 }
 
+/** Os temas que o sistema oferece (chave => rótulo). O 1.º é o padrão. */
+function temasDisponiveis(): array {
+    return [
+        'niras'    => 'NIRAS',
+        'classico' => 'Clássico',
+        'azul'     => 'Azul corporativo',
+        'escuro'   => 'Escuro',
+    ];
+}
+
+/** Amostras de cor e uma nota de cada tema — para o seletor e as Definições. */
+function temasAmostras(): array {
+    return [
+        'niras'    => ['cores' => ['#16283A', '#63B22B', '#F6F8F4'], 'desc' => 'Azul-noite + verde institucional.'],
+        'classico' => ['cores' => ['#2C4536', '#B4864A', '#FBF8F1'], 'desc' => 'Verde-floresta, dourado e marfim.'],
+        'azul'     => ['cores' => ['#123C63', '#2E86C8', '#F4F7FB'], 'desc' => 'Azul corporativo, claro.'],
+        'escuro'   => ['cores' => ['#0E1B25', '#8AD24A', '#17232C'], 'desc' => 'Grafite escuro, acento verde.'],
+    ];
+}
+
+/**
+ * O tema escolhido para o sistema — uma definição da casa (casamento_id=0),
+ * que o admin controla. Vale para toda a gente e todas as páginas. Sem escolha,
+ * é o NIRAS. Lê-se uma vez por pedido.
+ */
+function temaSistema(): string {
+    static $t = null;
+    if ($t !== null) return $t;
+    $t = 'niras';
+    $conn = $GLOBALS['conn'] ?? null;
+    if ($conn instanceof mysqli) {
+        $r = @$conn->query("SELECT valor FROM " . PREFIXO . "definicoes WHERE casamento_id=0 AND chave='sistema.tema' LIMIT 1");
+        if ($r && ($row = $r->fetch_row())) {
+            $v = (string)$row[0];
+            if (isset(temasDisponiveis()[$v])) $t = $v;
+        }
+    }
+    return $t;
+}
+
 /**
  * Condição SQL que deixa de fora os convites postos na reciclagem.
  * Devolve "1=1" enquanto a coluna não existir (esquema por migrar), para que

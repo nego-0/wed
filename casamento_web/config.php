@@ -143,7 +143,8 @@ function acoesDaPlataforma(): array {
             'modelo_criar','modelo_editar','modelo_defs','modelo_apagar','modelo_visibilidade',
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
-            'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica'];
+            'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica',
+            'sistema_tema_guardar'];
 }
 
 function acoesDoCasamento(): array {
@@ -177,7 +178,8 @@ function acoesSemCasamento(): array {
                                              'conta_apagar_do_casamento',
                                              'dados_exportar', 'dados_importar',
                                              'modelo_lista', 'modelo_defs', 'modelo_exemplo',
-                                             'modelos_exportar', 'modelos_importar']);
+                                             'modelos_exportar', 'modelos_importar',
+                                             'registo_auditoria']);
 }
 
 function acoesDeEscrita(): array {

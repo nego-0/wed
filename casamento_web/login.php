@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .login .card{ padding:2.4rem 2rem; }
   .brasao{ width:70px; height:70px; margin:0 auto 1rem; border:2px solid var(--gold-soft); border-radius:50%;
     display:flex; align-items:center; justify-content:center; color:var(--gold); font-family:var(--serif); font-weight:700; font-size:1.3rem; }
-  .casa{ font-family:var(--serif); font-size:1.75rem; color:var(--forest); line-height:1.15; margin-bottom:.3rem; }
+  .casa{ font-family:var(--serif); font-size:1.75rem; color:var(--ink); line-height:1.15; margin-bottom:.3rem; }
   .evento{ font-family:var(--sans); font-size:.86rem; color:#8a8f88; margin-bottom:1.6rem; }
   .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:.85rem; margin-bottom:1rem; }
   .dica{ font-size:.78rem; color:#9aa09a; margin-top:1.1rem; }
@@ -108,7 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
       <div class="dica">Entre com o seu email. Depois de entrar, escolhe-se o casamento.<br>
         Ainda não tem conta? <a href="registo.php" style="color:var(--gold)">Inscreva o seu casamento</a>.</div>
-      <div class="tema-rodape">Aparência: <button type="button" data-tema-rotulo onclick="trocarTema()">Tema NIRAS</button></div>
     </div>
   </div>
 <script>
@@ -143,5 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     b.textContent = ver ? 'ocultar' : 'mostrar';
   }
 </script>
+<?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
 </body>
 </html>

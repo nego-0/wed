@@ -32,7 +32,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .brasao{ width:64px; height:64px; margin:0 auto .9rem; border:2px solid var(--gold-soft); border-radius:50%;
     display:flex; align-items:center; justify-content:center; color:var(--gold);
     font-family:var(--serif); font-weight:700; font-size:1.2rem; }
-  .tit{ font-family:var(--serif); font-size:1.65rem; color:var(--forest); text-align:center; line-height:1.2; }
+  .tit{ font-family:var(--serif); font-size:1.65rem; color:var(--ink); text-align:center; line-height:1.2; }
   .sub{ text-align:center; color:#8a8f88; font-size:.9rem; margin:.4rem auto 1.6rem; line-height:1.55; max-width:42ch; }
 
   .par{ display:grid; grid-template-columns:1fr 1fr; gap:.85rem; }
@@ -60,7 +60,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
             cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
-  .pw-olho:hover{ color:var(--forest); }
+  .pw-olho:hover{ color:var(--ink); }
   .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }
   .pw-barras{ display:flex; gap:3px; flex:1; }
   .pw-barras i{ height:4px; flex:1; border-radius:50px; background:var(--sand); transition:background .2s; }
@@ -71,13 +71,13 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .pw-rot{ font-size:.72rem; color:#9aa09a; white-space:nowrap; min-width:4.5rem; text-align:right; }
 
   /* Secções e blocos opcionais que dobram. */
-  .seccao{ font-family:var(--serif); color:var(--forest); font-size:1.08rem;
+  .seccao{ font-family:var(--serif); color:var(--ink); font-size:1.08rem;
            margin:1.6rem 0 .8rem; padding-bottom:.35rem; border-bottom:1px solid var(--line);
            display:flex; align-items:baseline; gap:.5rem; }
   .seccao .op{ font-family:var(--sans); font-size:.74rem; color:#9aa09a; font-weight:400; }
-  details.bloco{ border:1px solid var(--line); border-radius:12px; margin:1rem 0; background:#fdfbf6; }
+  details.bloco{ border:1px solid var(--line); border-radius:12px; margin:1rem 0; background:var(--card); }
   details.bloco > summary{ list-style:none; cursor:pointer; padding:.85rem 1rem; display:flex;
-      align-items:center; gap:.6rem; font-family:var(--serif); color:var(--forest); font-size:1rem; }
+      align-items:center; gap:.6rem; font-family:var(--serif); color:var(--ink); font-size:1rem; }
   details.bloco > summary::-webkit-details-marker{ display:none; }
   details.bloco > summary .op{ font-family:var(--sans); font-size:.74rem; color:#9aa09a; font-weight:400; margin-left:auto; }
   details.bloco > summary .chev{ transition:transform .2s; color:var(--gold-soft); }
@@ -225,7 +225,6 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 
       <button class="btn btn-verde btn-enviar" id="btn" type="submit" onclick="enviar()">Inscrever o nosso casamento</button>
       <div class="entrar-nota">Já têm conta? <a href="login.php" style="color:var(--gold)">Entrar</a></div>
-      <div class="tema-rodape" style="text-align:center">Aparência: <button type="button" data-tema-rotulo onclick="trocarTema()">Tema NIRAS</button></div>
     </form>
 
     <div class="card feito" id="obrigado" style="display:none">
@@ -422,5 +421,6 @@ async function enviar(){
   btn.disabled = false; btn.textContent = rot;
 }
 </script>
+<?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
 </body>
 </html>

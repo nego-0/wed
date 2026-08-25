@@ -354,6 +354,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <?php if (ehAdminPlataforma()): ?>
       <button class="chip" data-vista="contas" onclick="verVista('contas')">Contas administrativas</button>
       <button class="chip" data-vista="dados" onclick="verVista('dados')">Gestão de Dados</button>
+      <button class="chip" data-vista="registo" onclick="verVista('registo')">Registo de ações</button>
+      <button class="chip" data-vista="definicoes" onclick="verVista('definicoes')">Definições</button>
     <?php endif; ?>
   </div>
 
@@ -626,6 +628,87 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="segredo" id="dados-resultado" style="display:none"></div>
     </div>
     </div><!-- /vista-dados -->
+
+    <?php // ===== Registo de ações (auditoria) — só admin ===== ?>
+    <div id="vista-registo" style="display:none">
+    <div class="painel">
+      <h3>Registo de ações</h3>
+      <div class="dica">O rasto do que se faz na casa — em todos os casamentos e na plataforma. Filtre e
+        pesquise. (Os noivos veem, no seu Painel, apenas o histórico do próprio casamento.)</div>
+      <div class="lf" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr auto;align-items:end;margin-top:.6rem">
+        <div class="campo"><label>Casamento</label>
+          <select id="aud-casamento"><option value="todos">Todos</option><option value="0">Plataforma</option></select></div>
+        <div class="campo"><label>Ação</label>
+          <select id="aud-accao"><option value="">Todas</option></select></div>
+        <div class="campo"><label>De</label><input type="date" id="aud-de"></div>
+        <div class="campo"><label>Até</label><input type="date" id="aud-ate"></div>
+        <div><button class="btn btn-ouro" onclick="auditarFiltrar()">Filtrar</button></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr auto;align-items:end;margin-top:.5rem">
+        <div><input type="search" id="aud-q" placeholder="Pesquisar por email, alvo ou detalhe…" autocomplete="off"
+                    name="pesq-registo" onkeydown="if(event.key==='Enter')auditarFiltrar()"></div>
+        <div><button class="btn btn-fantasma" onclick="auditarLimpar()">Limpar filtros</button></div>
+      </div>
+      <div id="aud-total" class="dica" style="margin-top:.8rem"></div>
+      <div id="aud-resultado"><div class="dica">A carregar…</div></div>
+      <div style="text-align:center;margin-top:1rem">
+        <button class="btn btn-fantasma" id="aud-mais" style="display:none" onclick="auditarMais()">Ver mais</button></div>
+    </div>
+    </div><!-- /vista-registo -->
+
+    <?php // ===== Definições do sistema — só admin ===== ?>
+    <style>
+      .temas{ display:grid; grid-template-columns:repeat(auto-fill,minmax(235px,1fr)); gap:.8rem; margin:.3rem 0 .2rem; }
+      .tema-op{ display:flex; flex-direction:column; gap:.5rem; border:1.5px solid var(--line); border-radius:12px;
+        padding:.9rem 1rem; cursor:pointer; background:var(--card); position:relative; transition:.15s; }
+      .tema-op:hover{ border-color:var(--gold-soft); }
+      .tema-op.on{ border-color:var(--gold-soft); box-shadow:0 0 0 3px var(--ring); }
+      .tema-op input{ position:absolute; top:.7rem; right:.7rem; width:auto; }
+      .tema-amostra{ display:flex; gap:5px; }
+      .tema-amostra i{ width:30px; height:20px; border-radius:5px; display:block; border:1px solid rgba(0,0,0,.10); }
+      .tema-nome{ font-weight:600; color:var(--ink); }
+      .tema-desc{ font-size:.8rem; color:#8a8f88; line-height:1.4; }
+      #aud-tabela{ width:100%; border-collapse:collapse; font-size:.86rem; }
+      #aud-tabela th{ text-align:left; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase;
+        color:#8a8f88; padding:.5rem .6rem; border-bottom:1px solid var(--line); }
+      #aud-tabela td{ padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+      #aud-tabela .a-accao{ font-family:var(--mono,monospace); font-weight:600; color:var(--gold); white-space:nowrap; }
+      #aud-tabela .a-quando{ white-space:nowrap; color:#8a8f88; }
+    </style>
+    <div id="vista-definicoes" style="display:none">
+    <div class="painel">
+      <h3>Definições do sistema</h3>
+      <div class="dica">O <b>tema visual</b> é da casa — só o admin o muda, e vale para toda a gente.
+        Escolha um e guarde.</div>
+      <h4 class="ed-sec">Tema visual</h4>
+      <div class="temas" id="temas">
+        <?php
+          $temaAtualDef = temaSistema();
+          $previews = [
+            'niras'    => ['#16283A', '#63B22B', '#F6F8F4', 'Azul-noite + verde institucional.'],
+            'classico' => ['#2C4536', '#B4864A', '#FBF8F1', 'Verde-floresta, dourado e marfim.'],
+            'azul'     => ['#123C63', '#2E86C8', '#F4F7FB', 'Azul corporativo, claro.'],
+            'escuro'   => ['#0E1B25', '#8AD24A', '#17232C', 'Grafite escuro, acento verde.'],
+          ];
+          foreach (temasDisponiveis() as $chave => $rot):
+            [$c1, $c2, $c3, $desc] = $previews[$chave] ?? ['#888','#888','#eee',''];
+            $on = $chave === $temaAtualDef; ?>
+        <label class="tema-op<?= $on ? ' on' : '' ?>">
+          <input type="radio" name="tema" value="<?= $chave ?>" <?= $on ? 'checked' : '' ?> onchange="marcarTema(this)">
+          <span class="tema-amostra"><i style="background:<?= $c1 ?>"></i><i style="background:<?= $c2 ?>"></i><i style="background:<?= $c3 ?>"></i></span>
+          <span class="tema-nome"><?= escP($rot) ?><?= $chave === 'niras' ? ' <small style="color:#8a8f88">· padrão</small>' : '' ?></span>
+          <span class="tema-desc"><?= escP($desc) ?></span>
+        </label>
+        <?php endforeach; ?>
+      </div>
+      <div class="fim" style="margin-top:1rem">
+        <button class="btn btn-ouro" onclick="guardarTema()">Guardar tema</button>
+        <span class="estado" id="tema-estado"></span>
+      </div>
+      <div class="porcima" style="margin-top:.8rem">Aplica-se a todas as páginas e a todos os utilizadores —
+        entrada, inscrição e área de gestão. A mudança fica visível no carregamento seguinte de cada página.</div>
+    </div>
+    </div><!-- /vista-definicoes -->
   <?php endif; ?>
 </main>
 
@@ -769,16 +852,107 @@ function toast(m, mau){
   setTimeout(() => el.className = 'toast', 2800);
 }
 
-// ---------- as pastilhas: casamentos · novo · contas · dados ----------
+// ---------- as pastilhas: casamentos · novo · contas · dados · registo · definições ----------
 function verVista(v){
-  ['casamentos','novo','contas','dados'].forEach(id => {
+  ['casamentos','novo','contas','dados','registo','definicoes'].forEach(id => {
     const e = document.getElementById('vista-' + id);
     if (e) e.style.display = id === v ? '' : 'none';
   });
   document.querySelectorAll('#vista-chips .chip').forEach(c =>
     c.classList.toggle('on', c.dataset.vista === v));
   if (v === 'dados') carregarDadosCasamentos();
+  if (v === 'registo') auditarPrimeiraVez();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ---------- Definições: o tema do sistema ----------
+function marcarTema(inp){
+  document.querySelectorAll('#temas .tema-op').forEach(l => l.classList.remove('on'));
+  if (inp && inp.closest('.tema-op')) inp.closest('.tema-op').classList.add('on');
+}
+async function guardarTema(){
+  const sel = document.querySelector('#temas input[name="tema"]:checked');
+  if (!sel) return;
+  const est = document.getElementById('tema-estado');
+  const d = await api('sistema_tema_guardar', { method:'POST', body: JSON.stringify({ tema: sel.value }) });
+  if (!d || !d.success) return;
+  if (est) est.textContent = 'Guardado. A aplicar…';
+  toast('Tema da casa guardado: ' + (d.rotulo || sel.value) + '.');
+  // Isto define a BASE (para todos). Limpa-se a escolha pessoal deste navegador
+  // para o próprio admin passar a ver a base que acabou de definir.
+  try { localStorage.removeItem('tema'); } catch (e) {}
+  setTimeout(() => location.reload(), 700);
+}
+
+// ---------- Registo de ações (auditoria do admin) ----------
+let AUD_PAGINA = 1, AUD_ROWS = [], AUD_PRONTO = false;
+async function auditarPrimeiraVez(){
+  if (AUD_PRONTO) return; AUD_PRONTO = true;
+  // preencher o filtro de casamentos
+  try {
+    const d = await api('casamento_lista&estado=todos');
+    const sel = document.getElementById('aud-casamento');
+    (d.casamentos || []).forEach(c => {
+      const o = document.createElement('option'); o.value = c.id; o.textContent = c.nome; sel.appendChild(o);
+    });
+  } catch (e) {}
+  auditarFiltrar();
+}
+function audParams(){
+  const p = ['por_pagina=60', 'pagina=' + AUD_PAGINA];
+  const cas = document.getElementById('aud-casamento').value;
+  const accao = document.getElementById('aud-accao').value;
+  const de = document.getElementById('aud-de').value, ate = document.getElementById('aud-ate').value;
+  const q = document.getElementById('aud-q').value.trim();
+  if (cas && cas !== 'todos') p.push('casamento=' + encodeURIComponent(cas));
+  if (accao) p.push('accao=' + encodeURIComponent(accao));
+  if (de) p.push('de=' + de); if (ate) p.push('ate=' + ate);
+  if (q) p.push('q=' + encodeURIComponent(q));
+  return p.join('&');
+}
+async function auditarFiltrar(){ AUD_PAGINA = 1; AUD_ROWS = []; await auditarCarregar(); }
+async function auditarMais(){ AUD_PAGINA++; await auditarCarregar(true); }
+async function auditarCarregar(concat){
+  const d = await api('registo_auditoria&' + audParams());
+  if (!d || !d.success) return;
+  AUD_ROWS = concat ? AUD_ROWS.concat(d.registos || []) : (d.registos || []);
+  // preencher a lista de ações (uma vez), preservando a escolha
+  const selA = document.getElementById('aud-accao');
+  if (selA.options.length <= 1 && (d.accoes || []).length){
+    d.accoes.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; selA.appendChild(o); });
+  }
+  document.getElementById('aud-total').textContent =
+    d.total + ' ação(ões)' + (audTemFiltro() ? ' (filtradas)' : '') + '.';
+  pintarAuditoria();
+  document.getElementById('aud-mais').style.display = d.ha_mais ? '' : 'none';
+}
+function audTemFiltro(){
+  return document.getElementById('aud-casamento').value !== 'todos'
+    || document.getElementById('aud-accao').value
+    || document.getElementById('aud-de').value || document.getElementById('aud-ate').value
+    || document.getElementById('aud-q').value.trim();
+}
+function auditarLimpar(){
+  document.getElementById('aud-casamento').value = 'todos';
+  document.getElementById('aud-accao').value = '';
+  document.getElementById('aud-de').value = ''; document.getElementById('aud-ate').value = '';
+  document.getElementById('aud-q').value = '';
+  auditarFiltrar();
+}
+function pintarAuditoria(){
+  const cx = document.getElementById('aud-resultado');
+  if (!AUD_ROWS.length){ cx.innerHTML = '<div class="dica">Sem ações para estes filtros.</div>'; return; }
+  const linhas = AUD_ROWS.map(r => {
+    const cas = +r.casamento_id === 0 ? '<i>Plataforma</i>' : (r.casamento ? esc(r.casamento) : ('#' + r.casamento_id));
+    const quem = esc(r.utilizador || '—') + (r.papel ? ' <small style="color:#8a8f88">(' + esc(r.papel) + ')</small>' : '');
+    const det = [r.alvo, r.detalhe].filter(Boolean).map(esc).join(' · ');
+    return `<tr><td class="a-quando">${esc((r.criado_em||'').replace('T',' ').slice(0,16))}</td>`
+         + `<td>${cas}</td><td class="a-accao">${esc(r.accao)}</td>`
+         + `<td>${quem}</td><td>${det}</td></tr>`;
+  }).join('');
+  cx.innerHTML = '<div style="overflow-x:auto"><table id="aud-tabela"><thead><tr>'
+    + '<th>Quando</th><th>Casamento</th><th>Ação</th><th>Quem</th><th>Detalhe</th>'
+    + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
 }
 
 // ---------- o formulário de novo casamento: licença e contas ----------
