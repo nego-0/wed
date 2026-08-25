@@ -29,17 +29,10 @@ function marcaNiras(string $classe = ''): void {
   <img class="marca-oficial" src="<?= asset($oficial) ?>" alt="NIRAS">
 </span>
 <?php return; } ?>
-<span class="marca-niras <?= escP($classe) ?>" role="img" aria-label="NIRAS">
-  <svg class="marca-simbolo" viewBox="0 0 120 100" width="58" height="48" aria-hidden="true">
-    <g fill="#6CB33F">
-      <path d="M2,88 L20,88 L2,70 Z"/>
-      <path d="M8,64 L24,80 L36,68 L20,52 Z"/>
-      <path d="M28,76 L70,34 L82,46 L40,88 Z"/>
-      <path d="M34,50 L64,20 L76,32 L46,62 Z"/>
-      <path d="M60,14 L84,14 L84,38 L74,28 L70,24 Z"/>
-      <path d="M92,10 L112,10 L92,30 Z"/>
-    </g>
-  </svg>
+<?php // Sem o ficheiro oficial, mostra-se APENAS a palavra (marcador neutro).
+      // Nenhum símbolo é reconstruído: o desenho da marca entra só com o
+      // ficheiro oficial em assets/logo-niras.svg (ou .png). ?>
+<span class="marca-niras sem-simbolo <?= escP($classe) ?>" role="img" aria-label="NIRAS">
   <span class="marca-wordmark">NIRAS</span>
 </span>
 <?php }
