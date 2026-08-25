@@ -325,6 +325,23 @@ function licencaRotulo(array $info): string {
 }
 
 /**
+ * A frase da licença para o cabeçalho: em DIAS e com a data de expiração entre
+ * parênteses — «Possui 92 dias de licença de uso (25/11/2026)». Vazia quando
+ * não há limite.
+ */
+function licencaFrase(array $info): string {
+    if ($info['ilimitada']) return '';
+    if (!$info['iniciada'])  return 'Licença de uso por iniciar';
+    $data  = $info['ate'] ? date('d/m/Y', strtotime($info['ate'])) : '';
+    $entre = $data !== '' ? " ($data)" : '';
+    $d = (int)$info['dias'];
+    if ($d < 0)   return 'Licença de uso expirada' . $entre;
+    if ($d === 0) return 'Último dia de licença de uso' . $entre;
+    $dia = $d === 1 ? 'dia' : 'dias';
+    return "Possui $d $dia de licença de uso" . $entre;
+}
+
+/**
  * Suspende os casamentos cuja licença expirou, e para as contas com eles.
  *
  * Corre nos pontos de entrada (login, página da plataforma): é barata quando

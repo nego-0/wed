@@ -78,13 +78,11 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
         // nomes, para o casal saber sempre com que prazo conta. Só quando há
         // casamento aberto e a licença tem limite.
         if (!$semCasamento && function_exists('licencaInfo') && isset($GLOBALS['conn'])):
-          $licInfo = licencaInfo($GLOBALS['conn'], casamentoAtual());
-          $licRot  = licencaRotulo($licInfo);
-          if ($licRot !== ''):
+          $licInfo   = licencaInfo($GLOBALS['conn'], casamentoAtual());
+          $licFrase  = licencaFrase($licInfo);
+          if ($licFrase !== ''):
             $licMau = !$licInfo['iniciada'] || (int)$licInfo['dias'] < 15; ?>
-        <div class="sub licenca-restante<?= $licMau ? ' aviso' : '' ?>">&#8987; <?= escP($licRot) ?><?php
-          if ($licInfo['iniciada'] && $licInfo['ate']):
-            ?> · até <?= escP(date('d/m/Y', strtotime($licInfo['ate']))) ?><?php endif; ?></div>
+        <div class="sub licenca-restante<?= $licMau ? ' aviso' : '' ?>"><?= escP($licFrase) ?></div>
       <?php endif; endif; ?>
       <?php if (!empty($variosCasamentos)):
         $nomeAberto = '';
