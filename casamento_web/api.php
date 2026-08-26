@@ -28,6 +28,52 @@ function listaCorpo($v): array {
 }
 
 /**
+ * Diagnostica um upload: devolve '' se está bom, ou uma mensagem clara do que
+ * correu mal.
+ *
+ * "Falha no envio do ficheiro." não dizia nada a ninguém — e a causa mais comum
+ * (a música do convite, alguns MB, contra um upload_max_filesize baixo no
+ * alojamento) ficava invisível. Aqui separa-se o limite do PHP
+ * (upload_max_filesize / post_max_size) do limite da própria aplicação, e diz-se
+ * qual foi atingido e qual é.
+ *
+ * $campo  = a chave em $_FILES (normalmente 'ficheiro').
+ * $maxApp = o tamanho máximo que a aplicação aceita, em bytes.
+ */
+function problemaUpload(string $campo, int $maxApp): string {
+    // Passar o post_max_size faz o PHP deitar fora $_POST e $_FILES inteiros
+    // ANTES de aqui chegarmos: fica um POST com corpo mas sem ficheiro nenhum.
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && empty($_FILES)
+        && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+        return 'O envio é maior do que o servidor aceita de uma vez (limite: '
+             . ini_get('post_max_size') . '). Escolha um ficheiro mais pequeno.';
+    }
+    if (empty($_FILES[$campo])) return 'Nenhum ficheiro foi recebido.';
+    switch ((int)($_FILES[$campo]['error'] ?? UPLOAD_ERR_NO_FILE)) {
+        case UPLOAD_ERR_OK: break;
+        case UPLOAD_ERR_INI_SIZE:
+            return 'O ficheiro é maior do que o servidor permite (limite: '
+                 . ini_get('upload_max_filesize') . '). Escolha um ficheiro mais pequeno.';
+        case UPLOAD_ERR_FORM_SIZE:
+            return 'O ficheiro é demasiado grande.';
+        case UPLOAD_ERR_PARTIAL:
+            return 'O envio foi interrompido a meio. Tente outra vez.';
+        case UPLOAD_ERR_NO_FILE:
+            return 'Nenhum ficheiro foi escolhido.';
+        case UPLOAD_ERR_NO_TMP_DIR:
+        case UPLOAD_ERR_CANT_WRITE:
+        case UPLOAD_ERR_EXTENSION:
+            return 'O servidor não conseguiu guardar o ficheiro. Tente outra vez.';
+        default:
+            return 'Falha no envio do ficheiro.';
+    }
+    if ((int)($_FILES[$campo]['size'] ?? 0) > $maxApp) {
+        return 'Ficheiro demasiado grande (máx. ' . (int)round($maxApp / 1048576) . ' MB).';
+    }
+    return '';
+}
+
+/**
  * Exige poder escrever no casamento aberto.
  *
  * A única situação em que não se pode é a visita de suporte com um código de
@@ -959,11 +1005,12 @@ if ($acao === 'def_upload') {
     $chave = $_POST['chave'] ?? '';
     $tiposImg = ['media.hero','media.historia','media.interludio','media.acesso'];
     $ehMusica = $chave === 'media.musica';
-    if (!$ehMusica && !in_array($chave, $tiposImg, true)) erro('Campo de ficheiro inválido.');
-    if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
-    $f = $_FILES['ficheiro'];
+    // Primeiro os limites (o post_max_size esvazia $_POST, por isso a mensagem
+    // do tamanho tem de vir antes da validação da chave, que ficaria vazia).
     $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
-    if ($f['size'] > $max) erro('Ficheiro demasiado grande (máx. ' . ($ehMusica ? '8' : '5') . ' MB).');
+    if ($p = problemaUpload('ficheiro', $max)) erro($p);
+    if (!$ehMusica && !in_array($chave, $tiposImg, true)) erro('Campo de ficheiro inválido.');
+    $f = $_FILES['ficheiro'];
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
     $extsOk = $ehMusica ? ['m4a','mp3'] : ['jpg','jpeg','png','webp'];
     if (!in_array($ext, $extsOk, true)) erro('Formato não suportado (' . implode('/', $extsOk) . ').');
@@ -3354,9 +3401,8 @@ if ($acao === 'orc_despesa_fatura') {
     $q->bind_param('i', $id); $q->execute();
     $desp = $q->get_result()->fetch_assoc();
     if (!$desp) erro('Despesa inválida.');
-    if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
+    if ($p = problemaUpload('ficheiro', 8*1024*1024)) erro($p);
     $f = $_FILES['ficheiro'];
-    if ($f['size'] > 8*1024*1024) erro('Ficheiro demasiado grande (máx. 8 MB).');
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
     $extsOk = ['jpg','jpeg','png','webp','pdf'];
     if (!in_array($ext, $extsOk, true)) erro('A fatura tem de ser uma imagem (JPG, PNG, WEBP) ou um PDF.');
@@ -3676,14 +3722,15 @@ if ($acao === 'modelo_exemplo_upload') {
     $ehMusica = $chave === 'media.musica';
     $categoria = $_POST['categoria'] ?? ($chave ? categoriaDaChave($chave) : 'sem');
     if (!isset(categoriasGaleria()[$categoria])) $categoria = 'sem';
+    // Os limites primeiro: o post_max_size esvazia $_POST, e a mensagem do
+    // tamanho tem de vir antes da validação da chave (que ficaria vazia).
+    $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
+    if ($p = problemaUpload('ficheiro', $max)) erro($p);
     if ($chave !== '' && !$ehMusica
         && !in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
         erro('Campo de ficheiro inválido.');
     }
-    if (empty($_FILES['ficheiro']) || $_FILES['ficheiro']['error'] !== UPLOAD_ERR_OK) erro('Falha no envio do ficheiro.');
     $f = $_FILES['ficheiro'];
-    $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
-    if ($f['size'] > $max) erro('Ficheiro demasiado grande (máx. ' . ($ehMusica ? '8' : '5') . ' MB).');
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
     $extsOk = $ehMusica ? ['m4a','mp3'] : ['jpg','jpeg','png','webp','svg'];
     if (!in_array($ext, $extsOk, true)) erro('Formato não suportado (' . implode('/', $extsOk) . ').');

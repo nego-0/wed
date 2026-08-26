@@ -1254,13 +1254,21 @@ async function enviarFicheiro(chave, input){
   const musica = chave==='media.musica';
   if (musica && f.size > 8*1024*1024) return msg('A música excede 8 MB.');
   msg('A enviar…');
-  const dados = musica ? f : await comprimir(f);
-  const fd = new FormData();
-  fd.append('chave',chave); fd.append('ts',agora());
-  fd.append('ficheiro', dados, musica ? f.name : 'foto.jpg');
-  const r = await fetch('api.php?action=def_upload',{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});
-  const d = await r.json();
-  if (!d.success) return msg(d.message||'Falha no envio.');
+  input.value = '';   // liberta o campo, para se poder reenviar o mesmo ficheiro
+  let d;
+  try {
+    const dados = musica ? f : await comprimir(f);
+    const fd = new FormData();
+    fd.append('chave',chave); fd.append('ts',agora());
+    fd.append('ficheiro', dados, musica ? f.name : 'foto.jpg');
+    const r = await fetch('api.php?action=def_upload',{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});
+    // Uma resposta que não é JSON (sessão expirada, erro do servidor) não pode
+    // deixar o "A enviar…" preso sem explicação.
+    d = await r.json();
+  } catch (e) {
+    return msg('Não foi possível enviar o ficheiro. Verifique a ligação e tente outra vez.');
+  }
+  if (!d || !d.success) return msg((d && d.message) || 'Falha no envio.');
   EST.val[chave] = d.path; ATUAIS[chave] = d.path;
   // A partir de agora há uma troca de foto por confirmar: se o casal sair sem
   // guardar uma versão, o servidor repõe a anterior (ver o pagehide, acima). A
