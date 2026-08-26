@@ -106,7 +106,7 @@ function correcoesEsperadas(): array {
         ['Arquivar, reabrir e apagar casamentos (apagar só depois de arquivar)',
          'plataforma.php', 'function apagar('],
         ['Arquivar um casamento para as contas que só existem por causa dele',
-         'api.php', "SET u.estado='inativo'"],
+         'auth.php', "SET u.estado='inativo'"],
         ['A lista principal da administração só mostra casamentos ativos',
          'plataforma.php', '$suspensos'],
         ['Convidados esperados, e as duas cerimónias, nos dados do evento',
@@ -216,7 +216,7 @@ function correcoesEsperadas(): array {
         ['O menu "⋯" dos modelos deixou de ser cortado pelo cartão',
          'modelos.php', 'era ele que cortava o menu'],
         ['Um modelo não tem versões: o seletor vazio saiu',
-         'editor-cartao.php', 'if (!MODELO) Versoes.montar('],
+         'editor-cartao.php', 'if (!MODELO) PAINEL_VERSOES = Versoes.montar('],
 
         // ---- Floreados ----
         ['Uma camada por mover não leva transformação nenhuma (nem a zero)',
@@ -328,7 +328,7 @@ function correcoesEsperadas(): array {
         ['O admin edita o casal, o evento e as imagens com que um modelo nasce',
          'personalizacao.php', 'function exemploModelo('],
         ['E fá-lo na página dos modelos, com as imagens à vista',
-         'modelos.php', 'id="d-exemplo"'],
+         'modelos.php', 'data-vista="exemplo"'],
         ['Os dados de exemplo são a identidade inteira, e não meia dúzia de campos',
          'personalizacao.php', 'Derivada, e não escrita à mão'],
         ['Cada um valida como sempre validou — sem uma segunda cópia das regras',

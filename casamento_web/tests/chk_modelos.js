@@ -39,6 +39,13 @@ const entrar = async (ctx, u, p) => {
   const admin = await entrar(await b.newContext(), 'admin', 'noivos2026');
   const api = admin._api;
 
+  // Os dados de exemplo são globais (linha 0), e outra prova pode tê-los deixado
+  // com uma imagem da galeria escolhida à mão — incluindo a de origem. Repô-los
+  // de fábrica aqui torna esta prova independente da ordem: um modelo criado a
+  // seguir nasce com as imagens de exemplo de fábrica, não com o que sobrou.
+  const exFabrica = (await api('modelo_exemplo')).fabrica || {};
+  if (Object.keys(exFabrica).length) await api('modelo_exemplo_guardar', exFabrica);
+
   // ---------- 1. o modelo faz-se de um convite a sério ----------
   const oficina = await api('casamento_criar', { nome: 'ZZ Oficina ' + marca, noiva: 'Olga', noivo: 'Otto' });
   await api('casamento_abrir&id=' + oficina.id);

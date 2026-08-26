@@ -141,6 +141,12 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.locator('.gal .gal-i .gal-esc').first().click(); await p.waitForTimeout(700);
   ok(await p.locator('#ov-modelo.aberto').count() === 0,
      'escolher uma fotografia aplica-a e fecha a galeria');
+  // Escolher aqui uma imagem da galeria muda os dados de exemplo, que são
+  // globais (linha 0). Repõe-se o de fábrica para não deixar essa escolha a
+  // pesar noutras provas — a de exemplo passava a ser a de origem, e um modelo
+  // criado a seguir nascia com ela.
+  const exFab = (await api('modelo_exemplo')).fabrica || {};
+  if (Object.keys(exFab).length) await api('modelo_exemplo_guardar', exFab);
   await p.click('#filtros [data-vista="digital"][data-ambito=""]'); await p.waitForTimeout(3000);
   ok(await p.locator('#lista .grelha .mod').count() >= 2, 'os modelos vêm numa grelha de cartões');
 
