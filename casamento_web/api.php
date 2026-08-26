@@ -2853,7 +2853,7 @@ function impOrcamento(mysqli $conn, int $cid, array $orc): array {
         $desc = mb_substr((string)$dsp['descricao'], 0, 160);
         $forn = isset($dsp['fornecedor']) && $dsp['fornecedor'] !== null ? mb_substr((string)$dsp['fornecedor'], 0, 120) : null;
         $val  = orcValor($dsp['valor'] ?? '0');
-        $estado = in_array($dsp['estado'] ?? '', ['previsto','contratado','pago'], true) ? $dsp['estado'] : 'previsto';
+        $estado = in_array($dsp['estado'] ?? '', ['previsto','pago'], true) ? $dsp['estado'] : 'previsto';
         $nota = isset($dsp['nota']) && $dsp['nota'] !== null ? mb_substr((string)$dsp['nota'], 0, 255) : null;
         $st = $conn->prepare("INSERT INTO {$P}orcamento_despesas (casamento_id,categoria_id,descricao,fornecedor,valor,estado,nota)
                               VALUES ($cid,?,?,?,?,?,?)");
@@ -3285,7 +3285,7 @@ if ($acao === 'orc_despesa_guardar') {
     if ($desc === '') erro('Descreva a despesa.');
     $forn = mb_substr(trim((string)($d['fornecedor'] ?? '')), 0, 120); $forn = $forn === '' ? null : $forn;
     $val  = orcValor($d['valor'] ?? '0');
-    $estado = in_array($d['estado'] ?? '', ['previsto','contratado','pago'], true) ? $d['estado'] : 'previsto';
+    $estado = in_array($d['estado'] ?? '', ['previsto','pago'], true) ? $d['estado'] : 'previsto';
     $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 255); $nota = $nota === '' ? null : $nota;
     // A categoria só vale se for deste casamento — senão fica sem gaveta.
     $catId = null;

@@ -90,7 +90,7 @@
 
     var kpis = [
       { n: r.base > 0 ? fmt(r.base) : 'sem teto', l: 'Orçamento', cls: '' },
-      { n: fmt(r.comprometido), l: 'Comprometido', cls: 'ouro' },
+      { n: fmt(r.previsto), l: 'Por pagar', cls: 'ouro' },
       { n: fmt(r.pago), l: 'Já pago', cls: 'pago' },
       { n: margemTxt, l: margemLbl, cls: 'margem' + (margemMau ? ' mau' : '') }
     ];
@@ -98,10 +98,10 @@
       return '<div class="kpi ' + k.cls + '"><div class="n">' + k.n + '</div><div class="l">' + esc(k.l) + '</div></div>';
     }).join('');
 
-    // A barra: pago + contratado + previsto sobre o maior de (teto, total gasto).
-    var totalDesp = r.pago + r.contratado + r.previsto;
+    // A barra: pago + previsto (por pagar) sobre o maior de (teto, total a gastar).
+    var totalDesp = r.pago + r.previsto;
     var denom = Math.max(r.base, totalDesp, 1);
-    var segs = [['g-pago', r.pago, 'Pago'], ['g-contr', r.contratado, 'Contratado'], ['g-prev', r.previsto, 'Previsto']];
+    var segs = [['g-pago', r.pago, 'Pago'], ['g-prev', r.previsto, 'Por pagar']];
     $('o-barra').innerHTML = segs.map(function (s) {
       if (s[1] <= 0) return '';
       var w = pct(s[1], denom);
@@ -110,8 +110,7 @@
     }).join('');
 
     var folga = r.base > 0 ? Math.max(0, r.base - totalDesp) : 0;
-    var leg = [['var(--o-pago)', 'Pago', r.pago], ['var(--o-contr)', 'Contratado', r.contratado],
-               ['var(--o-prev)', 'Previsto', r.previsto]];
+    var leg = [['var(--o-pago)', 'Pago', r.pago], ['var(--o-prev)', 'Por pagar', r.previsto]];
     if (r.base > 0) leg.push(['var(--o-track)', 'Folga até ao teto', folga]);
     $('o-legenda').innerHTML = leg.map(function (l) {
       return '<span><i style="background:' + l[0] + '"></i>' + esc(l[1]) + ' <b>' + esc(fmt(l[2])) + '</b></span>';

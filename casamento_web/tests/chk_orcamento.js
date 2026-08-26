@@ -53,18 +53,17 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ---------- teto, moeda e despesas ----------
   await api('orc_ajuste', { total: '2000000', moeda: 'AOA' });
   await api('orc_despesa_guardar', { descricao: 'Reportagem foto+vídeo', valor: '500000', estado: 'pago', categoria_id: catFoto });
-  const dContr = await api('orc_despesa_guardar', { descricao: 'Banda', valor: '300000', estado: 'contratado', categoria_id: catFoto });
+  const dContr = await api('orc_despesa_guardar', { descricao: 'Banda', valor: '300000', estado: 'previsto', categoria_id: catFoto });
   await api('orc_despesa_guardar', { descricao: 'Lembranças', valor: '200000', estado: 'previsto' });
 
   e1 = await api('orc_estado');
   const r = e1.resumo;
-  console.log('   resumo A:', JSON.stringify({ pago: r.pago, contratado: r.contratado, previsto: r.previsto, teto: r.teto, falta: r.falta }));
-  ok(N(r.pago) === 500000, 'o pago soma 500 000');
-  ok(N(r.contratado) === 300000, 'o contratado soma 300 000');
-  ok(N(r.previsto) === 200000, 'o previsto soma 200 000');
-  ok(N(r.comprometido) === 800000, 'o comprometido é contratado + pago = 800 000');
+  console.log('   resumo A:', JSON.stringify({ pago: r.pago, previsto: r.previsto, teto: r.teto, falta: r.falta }));
+  ok(N(r.pago) === 500000, 'o pago soma 500 000 (a despesa paga)');
+  ok(N(r.previsto) === 500000, 'o por pagar soma 500 000 (as duas despesas previstas)');
+  ok(N(r.comprometido) === 1000000, 'o comprometido é pago + por pagar = 1 000 000');
   ok(N(r.teto) === 2000000, 'o teto ficou nos 2 000 000');
-  ok(N(r.falta) === 1200000, 'a margem até ao teto é 1 200 000');
+  ok(N(r.falta) === 1000000, 'a margem até ao teto é 1 000 000');
   ok(e1.moeda === 'AOA', 'a moeda ficou em AOA');
   const catFotoReal = N((e1.categorias.find(c => c.id === catFoto) || {}).real_total);
   ok(catFotoReal === 800000, 'a gaveta "Fotografia e vídeo" soma o real das suas duas despesas');
@@ -77,6 +76,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await api('orc_pagamento_liquidar', { id: pagId, pago: 1 });
   e1 = await api('orc_estado');
   ok(!!(e1.pagamentos[0].pago_em), 'dar por paga marca a data de pagamento');
+
+  // A prestação paga de uma despesa PREVISTA conta no pago e sai do por pagar:
+  // pago 500 000 + 150 000 = 650 000; por pagar (300 000 − 150 000) + 200 000 = 350 000.
+  const rp = e1.resumo;
+  console.log('   resumo A com parcela paga:', JSON.stringify({ pago: rp.pago, previsto: rp.previsto }));
+  ok(N(rp.pago) === 650000, 'a prestação paga de uma despesa prevista soma-se ao pago (650 000)');
+  ok(N(rp.previsto) === 350000, 'e desconta-se do por pagar (350 000)');
+  ok(N(rp.comprometido) === 1000000, 'o total comprometido não muda com o pagamento de uma prestação');
 
   // ---------- isolamento: o B não vê nada do A ----------
   await abrir(w2.id);
@@ -108,7 +115,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await abrir(w3);
   const e3 = await api('orc_estado');
   ok((e3.despesas || []).length === 3, 'o casamento importado tem as três despesas');
-  ok(N(e3.resumo.comprometido) === 800000, 'com as mesmas contas (comprometido 800 000)');
+  ok(N(e3.resumo.comprometido) === 1000000, 'com as mesmas contas (comprometido 1 000 000)');
+  ok(N(e3.resumo.pago) === 650000, 'e a prestação paga continua a contar no pago (650 000)');
   ok(N(e3.resumo.teto) === 2000000, 'e com o teto que viajou nas definições');
   ok(e3.moeda === 'AOA', 'e com a moeda AOA');
   ok((e3.pagamentos || []).length === 1 && !!e3.pagamentos[0].pago_em, 'a parcela paga também atravessou');
@@ -158,10 +166,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.waitForTimeout(500);
   const kpis = await p.$$eval('#o-kpis .kpi', els => els.map(e => e.textContent));
   ok(kpis.length === 4, 'a saúde do orçamento mostra quatro indicadores');
-  ok(kpis.some(t => /Comprometido/.test(t) && !/^—/.test(t.trim())),
-     'entre eles o comprometido, com um valor e não um traço');
+  ok(kpis.some(t => /Por pagar/.test(t) && !/^—/.test(t.trim())),
+     'entre eles o por pagar, com um valor e não um traço');
   const segmentos = await p.$$eval('#o-barra span', els => els.length);
-  ok(segmentos >= 3, 'a barra do curso tem os três segmentos (pago, contratado, previsto)');
+  ok(segmentos >= 2, 'a barra do curso tem os dois segmentos (pago, por pagar)');
   // O teto já não se define aqui — mudou-se para a Gestão.
   ok(!(await p.$('#a-total')), 'a página do orçamento já não tem o campo do teto');
   const scroll = await p.$('.tabela-scroll');

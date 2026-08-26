@@ -30,12 +30,12 @@ $CAS  = casalInfo($DEFS);
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <style>
-  /* Os três estados do dinheiro, e o que passa do teto. Vêm sempre com rótulo
+  /* Os dois estados do dinheiro, e o que passa do teto. Vêm sempre com rótulo
      (legenda e valor em cada segmento), por isso a cor nunca conta sozinha. */
   :root{
     --o-pago:#2f7d4f;      /* já saiu          */
-    --o-contr:#B4864A;     /* contratado       */
-    --o-prev:#D9BC8C;      /* previsto         */
+    --o-contr:#B4864A;     /* acento ouro (KPI, medidor das gavetas) */
+    --o-prev:#D9BC8C;      /* previsto/por pagar */
     --o-over:#a5473f;      /* acima do teto    */
     --o-track:#efe8da;     /* o carril vazio   */
   }
@@ -68,7 +68,6 @@ $CAS  = casalInfo($DEFS);
                  color:#fff; white-space:nowrap; overflow:hidden; min-width:0; border-radius:5px;
                  transition:width .35s ease; }
   .o-barra .g-pago{ background:var(--o-pago); }
-  .o-barra .g-contr{ background:var(--o-contr); }
   .o-barra .g-prev{ background:var(--o-prev); color:var(--forest-deep); }
   .o-legenda{ display:flex; flex-wrap:wrap; gap:.4rem 1.1rem; margin-top:.8rem; font-size:.8rem; color:#6c7570; }
   .o-legenda span{ display:inline-flex; align-items:center; gap:.4rem; }
@@ -145,7 +144,6 @@ $CAS  = casalInfo($DEFS);
         padding:.12rem .6rem; border:1px solid var(--line); white-space:nowrap; display:inline-flex; align-items:center; gap:.3rem; }
   .est::before{ content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
   .est.previsto{ background:#fbf5e9; color:#9a7a3c; border-color:var(--gold-soft); }
-  .est.contratado{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .est.pago{ background:var(--ok-bg); color:var(--o-pago); border-color:var(--o-pago); }
 
   /* ---- Fatura (foto ou PDF) ---- */
@@ -289,7 +287,6 @@ $CAS  = casalInfo($DEFS);
         <label for="md-estado">Estado</label>
         <select id="md-estado">
           <option value="previsto">Previsto</option>
-          <option value="contratado">Contratado</option>
           <option value="pago">Pago</option>
         </select>
       </div>

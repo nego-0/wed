@@ -189,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 25;
+const ESQUEMA_VERSAO = 26;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -734,9 +734,11 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 INDEX idx_orccat_cas (casamento_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        // Cada compromisso, uma linha. O 'estado' é o que divide a barra do
-        // curso: previsto (estimado) -> contratado (comprometido) -> pago (saiu).
-        // A categoria some por SET NULL: apagar uma gaveta não apaga a despesa.
+        // Cada compromisso, uma linha. O 'estado' tem só dois valores: previsto
+        // (ainda por pagar) e pago (saiu por inteiro). Uma despesa prevista com
+        // prestações já pagas conta o que dessas saiu como pago — ver
+        // orcamentoResumo(). A categoria some por SET NULL: apagar uma gaveta
+        // não apaga a despesa.
         $conn->query("
             CREATE TABLE IF NOT EXISTS {$P}orcamento_despesas (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -745,7 +747,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 descricao VARCHAR(160) NOT NULL,
                 fornecedor VARCHAR(120) DEFAULT NULL,
                 valor DECIMAL(12,2) NOT NULL DEFAULT 0,
-                estado ENUM('previsto','contratado','pago') NOT NULL DEFAULT 'previsto',
+                estado ENUM('previsto','pago') NOT NULL DEFAULT 'previsto',
                 nota VARCHAR(255) DEFAULT NULL,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -870,6 +872,19 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // trocar, apagar — trata-se na API (ver orc_despesa_fatura).
     if ($versaoAtual < 25) {
         migColuna($conn, "{$P}orcamento_despesas", 'fatura', "VARCHAR(255) DEFAULT NULL");
+    }
+
+    // v26 — o orçamento passa a ter só dois estados: previsto e pago.
+    //
+    // O 'contratado' desapareceu: era um meio-termo que não dizia nada de novo à
+    // conta (o que importa é o que ainda falta pagar e o que já saiu). As
+    // despesas que estavam contratadas voltam a previstas, e o ENUM encolhe para
+    // os dois estados. As prestações já pagas de uma despesa prevista contam,
+    // daqui para a frente, como pago (ver orcamentoResumo).
+    if ($versaoAtual < 26) {
+        @$conn->query("UPDATE {$P}orcamento_despesas SET estado='previsto' WHERE estado='contratado'");
+        @$conn->query("ALTER TABLE {$P}orcamento_despesas
+                       MODIFY estado ENUM('previsto','pago') NOT NULL DEFAULT 'previsto'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
@@ -1284,14 +1299,24 @@ function orcamentoResumo(mysqli $conn): array {
     };
     $f = fn(array $a, string $k) => (float)($a[$k] ?? 0);
 
-    // Somas por estado, numa query.
+    // Dois estados, e a conta feita por despesa: uma despesa 'pago' saiu por
+    // inteiro; numa 'previsto', o que já saiu são as suas prestações liquidadas
+    // (pago_em preenchido), e o que falta é o valor menos essas. Assim as
+    // prestações pagas de uma despesa prevista contam no pago e descontam do
+    // previsto, sem o previsto ir a negativo (GREATEST).
     $d = $linha("SELECT
-        COALESCE(SUM(valor),0)                                   AS total,
-        COALESCE(SUM(CASE WHEN estado='previsto'   THEN valor END),0) AS previsto,
-        COALESCE(SUM(CASE WHEN estado='contratado' THEN valor END),0) AS contratado,
-        COALESCE(SUM(CASE WHEN estado='pago'       THEN valor END),0) AS pago,
-        COUNT(*)                                                 AS n
-        FROM {$P}orcamento_despesas WHERE casamento_id=$cid");
+        COALESCE(SUM(d.valor),0) AS total,
+        COALESCE(SUM(CASE WHEN d.estado='pago' THEN d.valor ELSE 0 END),0) AS pago_desp,
+        COALESCE(SUM(CASE WHEN d.estado='previsto' THEN COALESCE(pg.pagos,0) ELSE 0 END),0) AS pago_parc,
+        COALESCE(SUM(CASE WHEN d.estado='previsto'
+                          THEN GREATEST(d.valor - COALESCE(pg.pagos,0), 0) ELSE 0 END),0) AS previsto_liq,
+        COUNT(*) AS n
+        FROM {$P}orcamento_despesas d
+        LEFT JOIN (SELECT despesa_id, COALESCE(SUM(valor),0) AS pagos
+                   FROM {$P}orcamento_pagamentos
+                   WHERE casamento_id=$cid AND pago_em IS NOT NULL
+                   GROUP BY despesa_id) pg ON pg.despesa_id = d.id
+        WHERE d.casamento_id=$cid");
 
     // O teto, se o casal o definiu; senão fica a zero e a base passa a ser a
     // soma dos previstos das categorias.
@@ -1302,10 +1327,10 @@ function orcamentoResumo(mysqli $conn): array {
     $catPrev = $linha("SELECT COALESCE(SUM(previsto),0) AS s FROM {$P}orcamento_categorias WHERE casamento_id=$cid");
     $somaPrevisto = $f($catPrev, 's');
 
-    $contratado = $f($d,'contratado');
-    $pago       = $f($d,'pago');
-    $comprometido = $contratado + $pago;                 // o que já está preso
-    $base = $teto > 0 ? $teto : $somaPrevisto;           // o tal "teto" efetivo
+    $pago       = $f($d,'pago_desp') + $f($d,'pago_parc');   // o que já saiu
+    $previsto   = $f($d,'previsto_liq');                     // o que ainda falta pagar
+    $comprometido = $pago + $previsto;                       // tudo o que a festa vai custar
+    $base = $teto > 0 ? $teto : $somaPrevisto;               // o tal "teto" efetivo
 
     return [
         'moeda'         => orcamentoMoeda($conn),
@@ -1314,9 +1339,8 @@ function orcamentoResumo(mysqli $conn): array {
         'categorias_previsto' => $somaPrevisto,
         'despesas'      => (int)($d['n'] ?? 0),
         'total'         => $f($d,'total'),                 // soma de todas as despesas
-        'previsto'      => $f($d,'previsto'),              // só as ainda por contratar
-        'contratado'    => $contratado,
-        'pago'          => $pago,
+        'previsto'      => $previsto,                      // por pagar (previstos menos parcelas pagas)
+        'pago'          => $pago,                          // pago (despesas pagas + parcelas liquidadas)
         'comprometido'  => $comprometido,
         'falta'         => $base - $comprometido,          // margem (negativo = passou)
         'acima_do_teto' => $base > 0 && $comprometido > $base,
