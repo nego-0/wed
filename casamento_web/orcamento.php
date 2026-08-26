@@ -97,6 +97,38 @@ $CAS  = casalInfo($DEFS);
   .mini.perigo:hover{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
   .o-cat.semcat{ background:var(--gold-pale); border-style:dashed; }
 
+  /* ---- Barra por categoria (cor + tooltip) e pastilhas de filtro ---- */
+  .o-catbar{ height:26px; border-radius:8px; background:var(--o-track); display:flex; overflow:hidden;
+             border:1px solid var(--line); gap:2px; padding:2px; }
+  .o-catbar .seg{ display:block; min-width:6px; border-radius:5px; cursor:pointer; transition:filter .12s, width .35s ease; }
+  .o-catbar .seg:hover{ filter:brightness(1.08) saturate(1.1); }
+  .o-catbar-vazio{ color:#9aa09a; font-size:.85rem; padding:.2rem .3rem; }
+  .o-chips{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.8rem; }
+  .chip-cat{ display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--line);
+             background:var(--card); color:var(--ink); border-radius:50px; padding:.28rem .7rem;
+             font-size:.82rem; cursor:pointer; transition:.14s; font-family:var(--sans); }
+  .chip-cat:hover{ border-color:var(--gold-soft); }
+  .chip-cat.on{ border-color:var(--gold); box-shadow:0 0 0 2px var(--ring); background:var(--gold-pale); }
+  .chip-cat i{ width:11px; height:11px; border-radius:3px; display:inline-block; flex:none; border:1px solid rgba(0,0,0,.08); }
+  .chip-cat b{ font-variant-numeric:tabular-nums; }
+  .chip-cat .pc{ color:#8a8f88; font-variant-numeric:tabular-nums; font-size:.78rem; }
+  .chip-cat.on .pc{ color:var(--gold-deep); }
+
+  /* ---- Cabeçalho do filtro por cima da tabela de despesas ---- */
+  .o-filtro{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.7rem;
+             background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:.5rem .8rem; font-size:.86rem; }
+  .o-filtro .o-filtro-cat{ display:inline-flex; align-items:center; gap:.45rem; font-weight:600; color:var(--ink); }
+  .o-filtro .o-filtro-cat i{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .o-filtro b{ font-variant-numeric:tabular-nums; color:var(--ink); }
+  .o-filtro .mini{ margin-left:auto; }
+
+  /* ---- Categoria criada/editada dentro do form de despesa ---- */
+  .cat-linha{ display:flex; gap:.4rem; align-items:center; }
+  .cat-linha select{ flex:1; }
+  .cat-inline{ display:flex; gap:.4rem; align-items:center; margin-top:.5rem; flex-wrap:wrap; }
+  .cat-inline input{ flex:1; min-width:140px; }
+  .btn-sm{ padding:.4rem .8rem; font-size:.82rem; }
+
   /* ---- Despesas ---- */
   .tabela-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   table.desp{ width:100%; border-collapse:collapse; min-width:560px; }
@@ -201,19 +233,20 @@ $CAS  = casalInfo($DEFS);
     <div class="o-legenda" id="o-legenda"></div>
     <p class="dica" style="margin:.9rem 0 0">O <b>teto</b> e a <b>moeda</b> definem-se em
       <a href="gestao.php" style="color:var(--gold)">Gestão</a>. Sem teto, a barra mede-se pela soma
-      dos previstos das categorias.</p>
+      das despesas. As categorias são só gavetas com uma cor — não têm teto próprio.</p>
   </div>
 
-  <!-- Categorias -->
+  <!-- Categorias: distribuição por cor + filtro -->
   <div class="painel">
     <div class="painel-topo">
       <div>
-        <h3>Categorias</h3>
-        <p class="dica" style="margin-bottom:0">Onde pesa a festa. A barra de cada uma é o real sobre o previsto.</p>
+        <h3>Onde pesa a festa</h3>
+        <p class="dica" style="margin-bottom:0">Cada categoria com a sua cor. Passe o rato pela barra para ver o
+          nome e o valor; toque numa pastilha para ver só essas despesas. As categorias criam-se ao lançar uma despesa.</p>
       </div>
-      <button class="btn btn-fantasma" onclick="abrirCategoria()">+ Categoria</button>
     </div>
-    <div id="lista-categorias" style="margin-top:1rem"></div>
+    <div class="o-catbar" id="o-catbar" style="margin-top:1rem"></div>
+    <div class="o-chips" id="o-chips"></div>
   </div>
 
   <!-- Despesas -->
@@ -238,26 +271,6 @@ $CAS  = casalInfo($DEFS);
 
 </main>
 
-<!-- Modal categoria -->
-<div class="modal-fundo" id="m-cat">
-  <div class="modal">
-    <h3 id="m-cat-titulo">Categoria</h3>
-    <input type="hidden" id="mc-id">
-    <div class="campo">
-      <label for="mc-nome">Nome</label>
-      <input type="text" id="mc-nome" maxlength="80" placeholder="ex.: Decoração e flores">
-    </div>
-    <div class="campo">
-      <label for="mc-previsto">Previsto</label>
-      <input type="text" id="mc-previsto" class="campo-moeda" inputmode="decimal" placeholder="0,00">
-    </div>
-    <div class="fim">
-      <button class="btn btn-fantasma" onclick="fechar('m-cat')">Cancelar</button>
-      <button class="btn btn-ouro" onclick="guardarCategoria()">Guardar</button>
-    </div>
-  </div>
-</div>
-
 <!-- Modal despesa -->
 <div class="modal-fundo" id="m-desp">
   <div class="modal">
@@ -281,15 +294,23 @@ $CAS  = casalInfo($DEFS);
         </select>
       </div>
     </div>
-    <div class="lin2">
-      <div class="campo">
-        <label for="md-categoria">Categoria</label>
+    <div class="campo">
+      <label for="md-categoria">Categoria</label>
+      <div class="cat-linha">
         <select id="md-categoria"><option value="">— sem categoria —</option></select>
+        <button type="button" class="mini" onclick="catInline('nova')">+ nova</button>
+        <button type="button" class="mini" id="md-cat-editar" onclick="catInline('editar')" title="Editar a categoria escolhida">&#9998;</button>
       </div>
-      <div class="campo">
-        <label for="md-fornecedor">Fornecedor</label>
-        <input type="text" id="md-fornecedor" maxlength="120" placeholder="opcional">
+      <div class="cat-inline" id="md-cat-inline" style="display:none">
+        <input type="text" id="md-cat-nome" maxlength="80" placeholder="Nome da categoria">
+        <button type="button" class="btn btn-sm btn-ouro" onclick="catInlineGuardar()">Guardar</button>
+        <button type="button" class="mini" onclick="catInlineFechar()">Cancelar</button>
+        <button type="button" class="mini perigo" id="md-cat-apagar" style="display:none" onclick="catInlineApagar()">Apagar</button>
       </div>
+    </div>
+    <div class="campo">
+      <label for="md-fornecedor">Fornecedor</label>
+      <input type="text" id="md-fornecedor" maxlength="120" placeholder="opcional">
     </div>
     <div class="campo">
       <label for="md-nota">Nota</label>

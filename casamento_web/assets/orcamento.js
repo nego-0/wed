@@ -61,11 +61,23 @@
     render();
   }
 
+  var FILTRO_CAT = null;    // null = todas; 'sem' = sem categoria; senão o id (string)
+
   function render() {
     renderResumo(ORC.resumo);
-    renderCategorias(ORC.categorias, ORC.sem_categoria);
+    renderCatBar(ORC.categorias, ORC.sem_categoria);
+    renderChips(ORC.categorias, ORC.sem_categoria);
     renderDespesas(ORC.despesas, ORC.categorias);
     renderPagamentos(ORC.pagamentos);
+  }
+
+  // ---- cor estável por categoria (paleta de dados, boa em claro e escuro) ----
+  var PALETA_CAT = ['#4C8C1E', '#2E86C8', '#B4864A', '#A5473F', '#7A5CA8', '#2F9E8F',
+                    '#C98A2E', '#B24C7A', '#5B7BD6', '#6B8E23', '#8A5A2B', '#D0524B'];
+  function corCat(id) {
+    if (id == null || id === '' || id === 'sem') return '#b9c2bb';
+    var n = Math.abs(parseInt(id, 10)) || 0;
+    return PALETA_CAT[n % PALETA_CAT.length];
   }
 
   // ---- saúde do orçamento: KPIs + barra ----
@@ -106,39 +118,60 @@
     }).join('');
   }
 
-  // ---- categorias ----
-  function renderCategorias(cats, semCat) {
-    var box = $('lista-categorias');
-    if (!cats.length && (!semCat || semCat.n === 0)) {
-      box.innerHTML = '<div class="vazio">Ainda sem categorias.<br>Crie as que fizerem sentido para a vossa festa — nada vem imposto.'
-        + (PODE ? '<br><button class="btn btn-fantasma" onclick="abrirCategoria()">+ Criar a primeira</button>' : '') + '</div>';
+  // ---- distribuição por categoria: soma dos reais (categorias + sem categoria) ----
+  function itensCategoria(cats, semCat) {
+    var itens = (cats || []).map(function (c) {
+      return { id: String(c.id), nome: c.nome, val: num(c.real_total), cor: corCat(c.id) };
+    });
+    var semVal = semCat ? num(semCat.valor) : 0, semN = semCat ? +semCat.n : 0;
+    if (semN > 0) itens.push({ id: 'sem', nome: 'Sem categoria', val: semVal, cor: corCat('sem'), semcat: true });
+    var total = itens.reduce(function (s, x) { return s + x.val; }, 0);
+    return { itens: itens, total: total };
+  }
+
+  // ---- a barra colorida (passar o rato mostra nome + valor + %) ----
+  function renderCatBar(cats, semCat) {
+    var box = $('o-catbar'); if (!box) return;
+    var dd = itensCategoria(cats, semCat);
+    var comValor = dd.itens.filter(function (x) { return x.val > 0; });
+    if (dd.total <= 0) {
+      box.innerHTML = '<div class="o-catbar-vazio">Sem despesas ainda. Lance a primeira para ver aqui a distribuição.</div>';
       return;
     }
-    var h = '<div class="o-cats">';
-    cats.forEach(function (c) {
-      var prev = num(c.previsto), real = num(c.real_total);
-      var acima = prev > 0 && real > prev;
-      var p = prev > 0 ? pct(real, prev) : (real > 0 ? 100 : 0);
-      h += '<div class="o-cat' + (acima ? ' acima' : '') + '">'
-        + (prev > 0 ? '<span class="pct">' + Math.round(prev > 0 ? (real / prev) * 100 : 0) + '%</span>' : '')
-        + '<div class="nome">' + esc(c.nome) + '</div>'
-        + '<div class="vals"><b>' + fmt(real) + '</b>' + (prev > 0 ? ' de ' + fmt(prev) : ' · sem previsto') + '</div>'
-        + '<div class="meter"><i style="width:' + p + '%"></i></div>';
-      if (PODE) {
-        h += '<div class="acs">'
-          + '<button class="mini" onclick="orcEditarCategoria(' + c.id + ')">Editar</button>'
-          + '<button class="mini perigo" onclick="orcApagarCategoria(' + c.id + ',\'' + esc(c.nome).replace(/'/g, "\\'") + '\')">Apagar</button>'
-          + '</div>';
-      }
-      h += '</div>';
-    });
-    if (semCat && semCat.n > 0) {
-      h += '<div class="o-cat semcat"><div class="nome" style="color:#8a7a4e">Sem categoria</div>'
-        + '<div class="vals"><b>' + fmt(semCat.valor) + '</b> · ' + semCat.n + ' despesa(s)</div>'
-        + '<div class="dica" style="margin:.4rem 0 0">Abra cada uma e dê-lhe uma categoria.</div></div>';
-    }
-    box.innerHTML = h + '</div>';
+    box.innerHTML = comValor.map(function (x) {
+      var w = (x.val / dd.total) * 100, p = Math.round(w);
+      return '<span class="seg" style="width:' + w + '%;background:' + x.cor + '" data-cat="' + esc(x.id) + '"'
+        + ' title="' + esc(x.nome) + ': ' + esc(fmt(x.val)) + ' (' + p + '%)"'
+        + ' onclick="orcFiltrar(\'' + esc(x.id) + '\')"></span>';
+    }).join('');
   }
+
+  // ---- as pastilhas de filtro, com o valor percentual ----
+  function renderChips(cats, semCat) {
+    var box = $('o-chips'); if (!box) return;
+    var dd = itensCategoria(cats, semCat);
+    if (!dd.itens.length) {
+      box.innerHTML = '<div class="dica" style="margin:0">Ainda sem categorias — criam-se ao lançar uma despesa (botão «+ Despesa»).</div>';
+      return;
+    }
+    var chips = ['<button class="chip-cat' + (FILTRO_CAT == null ? ' on' : '')
+      + '" onclick="orcFiltrar(null)">Todas <b>' + esc(fmt(dd.total)) + '</b></button>'];
+    dd.itens.forEach(function (x) {
+      var p = dd.total > 0 ? Math.round((x.val / dd.total) * 100) : 0;
+      chips.push('<button class="chip-cat' + (FILTRO_CAT === x.id ? ' on' : '') + '" onclick="orcFiltrar(\'' + esc(x.id) + '\')">'
+        + '<i style="background:' + x.cor + '"></i>' + esc(x.nome) + ' <span class="pc">' + p + '%</span></button>');
+    });
+    box.innerHTML = chips.join('');
+  }
+
+  // ---- clicar numa cor/pastilha filtra as despesas e mostra o valor real ----
+  window.orcFiltrar = function (cat) {
+    FILTRO_CAT = (cat == null || cat === 'null') ? null : String(cat);
+    renderChips(ORC.categorias, ORC.sem_categoria);
+    renderDespesas(ORC.despesas, ORC.categorias);
+    var alvo = $('lista-despesas');
+    if (alvo && FILTRO_CAT != null) alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   // ---- despesas ----
   function celaFatura(d) {
@@ -162,17 +195,36 @@
     }
     var nomeCat = {};
     cats.forEach(function (c) { nomeCat[c.id] = c.nome; });
-    var h = '<div class="tabela-scroll"><table class="desp"><thead><tr>'
+
+    // O filtro por categoria: a lista encolhe, e o cabeçalho mostra o valor REAL.
+    var lista = desp, cab = '';
+    if (FILTRO_CAT != null) {
+      lista = (FILTRO_CAT === 'sem')
+        ? desp.filter(function (d) { return !d.categoria_id; })
+        : desp.filter(function (d) { return +d.categoria_id === +FILTRO_CAT; });
+      var nome = FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria');
+      var real = lista.reduce(function (s, d) { return s + num(d.valor); }, 0);
+      cab = '<div class="o-filtro"><span class="o-filtro-cat"><i style="background:' + corCat(FILTRO_CAT) + '"></i>'
+        + esc(nome) + '</span><b>' + esc(fmt(real)) + '</b> · ' + lista.length + ' despesa(s)'
+        + '<button class="mini" onclick="orcFiltrar(null)">&times; limpar filtro</button></div>';
+    }
+    if (!lista.length) { box.innerHTML = cab + '<div class="vazio">Sem despesas nesta categoria.</div>'; return; }
+
+    var h = cab + '<div class="tabela-scroll"><table class="desp"><thead><tr>'
       + '<th>Despesa</th><th>Categoria</th><th>Estado</th><th>Fatura</th>'
       + '<th style="text-align:right">Valor</th>' + (PODE ? '<th></th>' : '') + '</tr></thead><tbody>';
-    desp.forEach(function (d) {
+    lista.forEach(function (d) {
       var parc = num(d.n_parcelas) > 0
         ? '<div class="d-forn">' + fmt(d.pago_parcelas) + ' em ' + d.n_parcelas + ' parcela(s)</div>' : '';
+      var celaCat = (d.categoria_id && nomeCat[d.categoria_id])
+        ? '<span style="display:inline-flex;align-items:center;gap:.4rem"><i style="width:10px;height:10px;border-radius:3px;background:'
+          + corCat(d.categoria_id) + ';display:inline-block;flex:none"></i>' + esc(nomeCat[d.categoria_id]) + '</span>'
+        : '<span style="color:#b9beb6">—</span>';
       h += '<tr>'
         + '<td><div class="d-nome">' + esc(d.descricao) + '</div>'
         + (d.fornecedor ? '<div class="d-forn">' + esc(d.fornecedor) + '</div>' : '')
         + parc + '</td>'
-        + '<td>' + (d.categoria_id && nomeCat[d.categoria_id] ? esc(nomeCat[d.categoria_id]) : '<span style="color:#b9beb6">—</span>') + '</td>'
+        + '<td>' + celaCat + '</td>'
         + '<td><span class="est ' + d.estado + '">' + d.estado + '</span></td>'
         + '<td>' + celaFatura(d) + '</td>'
         + '<td class="d-val">' + fmt(d.valor) + '</td>';
@@ -209,7 +261,9 @@
         + '<span class="desc">' + esc(p.despesa) + (p.nota ? '<small>' + esc(p.nota) + '</small>' : '') + '</span>'
         + '<span class="mt">' + fmt(p.valor) + '</span>';
       if (PODE) {
-        h += '<span><button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
+        h += '<span style="display:inline-flex;gap:.35rem;justify-content:flex-end">'
+          + '<button class="mini" onclick="orcEditarParcela(' + p.id + ')">Editar</button>'
+          + '<button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
           + (pago ? 'Desmarcar' : 'Dar por pago') + '</button></span>';
       } else { h += '<span></span>'; }
       h += '</div>';
@@ -222,37 +276,51 @@
   function fechar(id) { $(id).classList.remove('aberto'); }
   window.fechar = fechar;
 
-  // ---- categorias ----
-  function abrirCategoria() {
-    $('m-cat-titulo').textContent = 'Nova categoria';
-    $('mc-id').value = ''; $('mc-nome').value = ''; $('mc-previsto').value = '';
-    abrir('m-cat'); setTimeout(function () { $('mc-nome').focus(); }, 50);
-  }
-  window.abrirCategoria = abrirCategoria;
+  // ---- categorias: criam-se e editam-se DENTRO do formulário de despesa ----
+  // (não têm teto — são só gavetas com uma cor). A escolha fica no select da
+  // despesa; «+ nova» acrescenta, «✎» renomeia (ou apaga) a que estiver escolhida.
+  var CAT_MODO = '';   // 'nova' | 'editar'
+  window.catInline = function (modo) {
+    var sel = $('md-categoria');
+    if (modo === 'editar') {
+      if (!sel.value) { toast('Escolha uma categoria para editar, ou use «+ nova».', true); return; }
+      CAT_MODO = 'editar';
+      $('md-cat-nome').value = sel.options[sel.selectedIndex].textContent;
+      $('md-cat-apagar').style.display = '';
+    } else {
+      CAT_MODO = 'nova';
+      $('md-cat-nome').value = '';
+      $('md-cat-apagar').style.display = 'none';
+    }
+    $('md-cat-inline').style.display = '';
+    setTimeout(function () { $('md-cat-nome').focus(); }, 40);
+  };
+  window.catInlineFechar = function () { $('md-cat-inline').style.display = 'none'; CAT_MODO = ''; };
 
-  window.orcEditarCategoria = function (id) {
-    var c = (ORC.categorias || []).find(function (x) { return +x.id === +id; });
-    if (!c) return;
-    $('m-cat-titulo').textContent = 'Editar categoria';
-    $('mc-id').value = c.id; $('mc-nome').value = c.nome;
-    $('mc-previsto').value = paraCampo(c.previsto);
-    abrir('m-cat');
+  window.catInlineGuardar = async function () {
+    var nome = $('md-cat-nome').value.trim();
+    if (!nome) { toast('Dê um nome à categoria.', true); return; }
+    var corpo = { nome: nome };
+    if (CAT_MODO === 'editar') corpo.id = $('md-categoria').value;
+    var d = await window.api('orc_categoria_guardar', { method: 'POST', body: JSON.stringify(corpo) });
+    if (!d || !d.success) return;
+    var novoId = d.id;
+    await carregar();                          // refresca a barra, as pastilhas e o estado
+    preencheCategorias('md-categoria', novoId); // repõe o select, já com a nova escolhida
+    catInlineFechar();
+    toast(corpo.id ? 'Categoria guardada.' : 'Categoria criada.');
   };
 
-  async function guardarCategoria() {
-    var d = await window.api('orc_categoria_guardar', {
-      method: 'POST', body: JSON.stringify({
-        id: $('mc-id').value, nome: $('mc-nome').value.trim(), previsto: $('mc-previsto').value.trim()
-      })
-    });
-    if (d && d.success) { fechar('m-cat'); toast('Categoria guardada.'); carregar(); }
-  }
-  window.guardarCategoria = guardarCategoria;
-
-  window.orcApagarCategoria = async function (id, nome) {
-    if (!confirm('Apagar a categoria "' + nome + '"?\n\nAs despesas ficam — passam a estar sem categoria.')) return;
+  window.catInlineApagar = async function () {
+    var id = $('md-categoria').value;
+    if (!id) return;
+    if (!confirm('Apagar esta categoria?\n\nAs despesas ficam — passam a «sem categoria».')) return;
     var d = await window.api('orc_categoria_apagar&id=' + id, { method: 'POST' });
-    if (d && d.success) { toast('Categoria apagada.'); carregar(); }
+    if (!d || !d.success) return;
+    await carregar();
+    preencheCategorias('md-categoria', '');
+    catInlineFechar();
+    toast('Categoria apagada.');
   };
 
   // ---- despesas ----
@@ -318,9 +386,22 @@
       return '<div class="pag"><span class="data ' + (p.pago_em ? 'pago' : '') + '">' + esc(estado) + '</span>'
         + '<span class="desc">' + (p.nota ? esc(p.nota) : '') + '</span>'
         + '<span class="mt">' + fmt(p.valor) + '</span>'
-        + '<span><button class="mini perigo" onclick="orcApagarParcela(' + p.id + ')">✕</button></span></div>';
+        + '<span><button class="mini" onclick="orcEditarParcela(' + p.id + ')">Editar</button> '
+        + '<button class="mini perigo" onclick="orcApagarParcela(' + p.id + ')">✕</button></span></div>';
     }).join('');
   }
+
+  window.orcEditarParcela = function (id) {
+    var p = (ORC.pagamentos || []).find(function (x) { return +x.id === +id; });
+    if (!p) return;
+    $('m-pag-titulo').textContent = 'Editar parcela';
+    $('mp-id').value = p.id; $('mp-despesa').value = p.despesa_id;
+    $('mp-valor').value = paraCampo(p.valor);
+    $('mp-data').value = p.data_prevista || '';
+    $('mp-pago').value = p.pago_em || '';
+    $('mp-nota').value = p.nota || '';
+    abrir('m-pag'); setTimeout(function () { $('mp-valor').focus(); }, 50);
+  };
 
   async function guardarDespesa() {
     var d = await window.api('orc_despesa_guardar', {
