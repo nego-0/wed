@@ -189,7 +189,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 26;
+const ESQUEMA_VERSAO = 27;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -730,6 +730,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 nome VARCHAR(80) NOT NULL,
                 previsto DECIMAL(12,2) NOT NULL DEFAULT 0,
                 ordem INT NOT NULL DEFAULT 0,
+                cor VARCHAR(7) DEFAULT NULL,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_orccat_cas (casamento_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -885,6 +886,13 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         @$conn->query("UPDATE {$P}orcamento_despesas SET estado='previsto' WHERE estado='contratado'");
         @$conn->query("ALTER TABLE {$P}orcamento_despesas
                        MODIFY estado ENUM('previsto','pago') NOT NULL DEFAULT 'previsto'");
+    }
+
+    // v27 — cada categoria pode guardar a sua cor. A cor continua a ser
+    // sugerida automaticamente (paleta estável por categoria, no ecrã); esta
+    // coluna guarda a escolha do casal quando ele a troca. NULL = a sugerida.
+    if ($versaoAtual < 27) {
+        migColuna($conn, "{$P}orcamento_categorias", 'cor', "VARCHAR(7) DEFAULT NULL");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

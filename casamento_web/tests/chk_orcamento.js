@@ -50,6 +50,23 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const catFoto = catId(e1, 'Fotografia e vídeo');
   ok(!!catFoto, 'e ela passa a existir');
 
+  // ---------- a cor: sugerida por defeito, mas o casal pode escolhê-la ----------
+  ok(!(e1.categorias.find(c => c.id === catFoto) || {}).cor,
+     'uma categoria nova nasce sem cor própria — fica com a sugerida');
+  const catCor = await api('orc_categoria_guardar', { nome: 'Flores', cor: '#8e44ad' });
+  ok(catCor && catCor.success, 'cria-se uma categoria já com uma cor escolhida');
+  e1 = await api('orc_estado');
+  ok((e1.categorias.find(c => c.nome === 'Flores') || {}).cor === '#8e44ad',
+     'e a cor escolhida fica guardada');
+  await api('orc_categoria_guardar', { id: catFoto, nome: 'Fotografia e vídeo', previsto: '900000', cor: '#e67e22' });
+  e1 = await api('orc_estado');
+  ok((e1.categorias.find(c => c.id === catFoto) || {}).cor === '#e67e22',
+     'e uma categoria que já existe aceita mudar de cor');
+  await api('orc_categoria_guardar', { id: catFoto, nome: 'Fotografia e vídeo', previsto: '900000', cor: 'não-é-cor' });
+  e1 = await api('orc_estado');
+  ok((e1.categorias.find(c => c.id === catFoto) || {}).cor == null,
+     'e uma cor inválida limpa a escolha — volta à sugerida');
+
   // ---------- teto, moeda e despesas ----------
   await api('orc_ajuste', { total: '2000000', moeda: 'AOA' });
   await api('orc_despesa_guardar', { descricao: 'Reportagem foto+vídeo', valor: '500000', estado: 'pago', categoria_id: catFoto });
@@ -103,6 +120,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const dumpBanda = (oA.orcamento.despesas || []).find(d => d.descricao === 'Banda') || {};
   ok((dumpBanda.pagamentos || []).length === 1, 'e leva a parcela dentro da sua despesa');
   ok(dumpBanda.categoria === 'Fotografia e vídeo', 'a despesa guarda o NOME da gaveta, não o número');
+  ok(((oA.orcamento.categorias || []).find(c => c.nome === 'Flores') || {}).cor === '#8e44ad',
+     'e a cor escolhida da categoria viaja no ficheiro');
   ok((oA.definicoes || {})['orcamento.total'] === '2000000.00', 'o teto viaja nas definições');
 
   // ---------- import para um casamento novo: chega tudo ----------
@@ -123,6 +142,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const impBanda = (e3.despesas || []).find(d => d.descricao === 'Banda') || {};
   const impCat = (e3.categorias.find(c => c.id === impBanda.categoria_id) || {}).nome;
   ok(impCat === 'Fotografia e vídeo', 'a despesa reencontrou a sua gaveta pelo nome');
+  ok((e3.categorias.find(c => c.nome === 'Flores') || {}).cor === '#8e44ad',
+     'e a cor da categoria atravessou o import');
 
   // ---------- o teto pelo formulário do admin (casamento_criar) ----------
   const wForm = await api('casamento_criar', { nome: 'PROVA Teto Admin', noiva: 'F', noivo: 'G', orcamento_total: '3 000 000,00' });

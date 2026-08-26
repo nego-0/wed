@@ -64,6 +64,10 @@
   var FILTRO_CAT = null;    // null = todas; 'sem' = sem categoria; senão o id (string)
 
   function render() {
+    CORES_CAT = {};
+    (ORC.categorias || []).forEach(function (c) {
+      if (c.cor) CORES_CAT[String(c.id)] = c.cor;
+    });
     renderResumo(ORC.resumo);
     renderCatBar(ORC.categorias, ORC.sem_categoria);
     renderChips(ORC.categorias, ORC.sem_categoria);
@@ -71,13 +75,20 @@
     renderPagamentos(ORC.pagamentos);
   }
 
-  // ---- cor estável por categoria (paleta de dados, boa em claro e escuro) ----
+  // ---- cor por categoria ----
+  // Sugere-se sempre uma (paleta de dados, boa em claro e escuro, estável por
+  // categoria); se o casal a trocou, é a dele que manda. CORES_CAT guarda as
+  // escolhidas (id -> #hex), refrescado a cada leitura.
   var PALETA_CAT = ['#4C8C1E', '#2E86C8', '#B4864A', '#A5473F', '#7A5CA8', '#2F9E8F',
                     '#C98A2E', '#B24C7A', '#5B7BD6', '#6B8E23', '#8A5A2B', '#D0524B'];
-  function corCat(id) {
-    if (id == null || id === '' || id === 'sem') return '#b9c2bb';
+  var CORES_CAT = {};
+  function corSugerida(id) {
     var n = Math.abs(parseInt(id, 10)) || 0;
     return PALETA_CAT[n % PALETA_CAT.length];
+  }
+  function corCat(id) {
+    if (id == null || id === '' || id === 'sem') return '#b9c2bb';
+    return CORES_CAT[String(id)] || corSugerida(id);
   }
 
   // ---- saúde do orçamento: KPIs + barra ----
@@ -279,27 +290,56 @@
   // (não têm teto — são só gavetas com uma cor). A escolha fica no select da
   // despesa; «+ nova» acrescenta, «✎» renomeia (ou apaga) a que estiver escolhida.
   var CAT_MODO = '';   // 'nova' | 'editar'
+  var CAT_COR = '';    // a cor escolhida no formulário (sugerida, ou a do casal)
+
+  // As pastilhas de cor sugeridas + a escolha atual em destaque.
+  function renderCatCores() {
+    var box = $('md-cat-cores'); if (!box) return;
+    box.innerHTML = PALETA_CAT.map(function (c) {
+      return '<button type="button" class="cat-cor-op" data-cor="' + c + '" style="background:' + c
+        + '" title="' + c + '" onclick="catCorEscolher(\'' + c + '\')"></button>';
+    }).join('');
+  }
+  function setCatCor(hex) {
+    CAT_COR = String(hex || '').toLowerCase();
+    var inp = $('md-cat-cor'); if (inp && CAT_COR) inp.value = CAT_COR;
+    var box = $('md-cat-cores');
+    if (box) [].forEach.call(box.children, function (b) {
+      b.classList.toggle('on', (b.dataset.cor || '').toLowerCase() === CAT_COR);
+    });
+  }
+  window.catCorEscolher = function (hex) { setCatCor(hex); };
+
   window.catInline = function (modo) {
     var sel = $('md-categoria');
+    renderCatCores();
     if (modo === 'editar') {
       if (!sel.value) { toast('Escolha uma categoria para editar, ou use «+ nova».', true); return; }
       CAT_MODO = 'editar';
       $('md-cat-nome').value = sel.options[sel.selectedIndex].textContent;
       $('md-cat-apagar').style.display = '';
+      setCatCor(corCat(sel.value));                 // a que tem em vigor (guardada ou sugerida)
     } else {
       CAT_MODO = 'nova';
       $('md-cat-nome').value = '';
       $('md-cat-apagar').style.display = 'none';
+      setCatCor(corSugerida((ORC.categorias || []).length)); // uma sugestão nova, variada
     }
     $('md-cat-inline').style.display = '';
     setTimeout(function () { $('md-cat-nome').focus(); }, 40);
   };
   window.catInlineFechar = function () { $('md-cat-inline').style.display = 'none'; CAT_MODO = ''; };
 
+  // Escolher uma cor à mão (o seletor nativo) também tira o destaque das sugeridas.
+  (function () {
+    var inp = $('md-cat-cor');
+    if (inp) inp.addEventListener('input', function () { setCatCor(this.value); });
+  })();
+
   window.catInlineGuardar = async function () {
     var nome = $('md-cat-nome').value.trim();
     if (!nome) { toast('Dê um nome à categoria.', true); return; }
-    var corpo = { nome: nome };
+    var corpo = { nome: nome, cor: CAT_COR || '' };
     if (CAT_MODO === 'editar') corpo.id = $('md-categoria').value;
     var d = await window.api('orc_categoria_guardar', { method: 'POST', body: JSON.stringify(corpo) });
     if (!d || !d.success) return;

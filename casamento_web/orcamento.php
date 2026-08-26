@@ -124,8 +124,19 @@ $CAS  = casalInfo($DEFS);
   /* ---- Categoria criada/editada dentro do form de despesa ---- */
   .cat-linha{ display:flex; gap:.4rem; align-items:center; }
   .cat-linha select{ flex:1; }
-  .cat-inline{ display:flex; gap:.4rem; align-items:center; margin-top:.5rem; flex-wrap:wrap; }
-  .cat-inline input{ flex:1; min-width:140px; }
+  .cat-inline{ margin-top:.5rem; }
+  .cat-inline-lin{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
+  .cat-inline-lin input[type=text]{ flex:1; min-width:140px; }
+  .cat-cores{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-top:.55rem; }
+  .cat-cores-lbl{ font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#8a8f88; }
+  .cat-cores-ops{ display:flex; gap:.3rem; flex-wrap:wrap; }
+  .cat-cor-op{ width:20px; height:20px; border-radius:50%; border:2px solid transparent; cursor:pointer;
+               padding:0; outline:none; box-shadow:0 0 0 1px rgba(0,0,0,.08) inset; transition:transform .1s; }
+  .cat-cor-op:hover{ transform:scale(1.12); }
+  .cat-cor-op.on{ border-color:var(--ink); }
+  .cat-cor-livre{ display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; color:#6c7570; cursor:pointer; }
+  .cat-cor-livre input[type=color]{ width:24px; height:24px; padding:0; border:1px solid var(--line);
+                                    border-radius:6px; background:none; cursor:pointer; }
   .btn-sm{ padding:.4rem .8rem; font-size:.82rem; }
 
   /* ---- Despesas ---- */
@@ -299,10 +310,20 @@ $CAS  = casalInfo($DEFS);
         <button type="button" class="mini" id="md-cat-editar" onclick="catInline('editar')" title="Editar a categoria escolhida">&#9998;</button>
       </div>
       <div class="cat-inline" id="md-cat-inline" style="display:none">
-        <input type="text" id="md-cat-nome" maxlength="80" placeholder="Nome da categoria">
-        <button type="button" class="btn btn-sm btn-ouro" onclick="catInlineGuardar()">Guardar</button>
-        <button type="button" class="mini" onclick="catInlineFechar()">Cancelar</button>
-        <button type="button" class="mini perigo" id="md-cat-apagar" style="display:none" onclick="catInlineApagar()">Apagar</button>
+        <div class="cat-inline-lin">
+          <input type="text" id="md-cat-nome" maxlength="80" placeholder="Nome da categoria">
+          <button type="button" class="btn btn-sm btn-ouro" onclick="catInlineGuardar()">Guardar</button>
+          <button type="button" class="mini" onclick="catInlineFechar()">Cancelar</button>
+          <button type="button" class="mini perigo" id="md-cat-apagar" style="display:none" onclick="catInlineApagar()">Apagar</button>
+        </div>
+        <div class="cat-cores">
+          <span class="cat-cores-lbl">Cor</span>
+          <div id="md-cat-cores" class="cat-cores-ops"></div>
+          <label class="cat-cor-livre" title="Escolher outra cor">
+            <input type="color" id="md-cat-cor" value="#4C8C1E">
+            <span>Outra…</span>
+          </label>
+        </div>
       </div>
     </div>
     <div class="campo">

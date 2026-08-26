@@ -2583,7 +2583,7 @@ function retratoCasamento(mysqli $conn, int $cid): array {
     // que pertencem (o número é desta base) e levam as suas parcelas dentro,
     // como os convites levam os integrantes. O teto e a moeda já vão em
     // 'definicoes', por isso não têm aqui tratamento à parte.
-    $orcCategorias = $um("SELECT nome, previsto, ordem FROM {$P}orcamento_categorias
+    $orcCategorias = $um("SELECT nome, previsto, ordem, cor FROM {$P}orcamento_categorias
                           WHERE casamento_id=$cid ORDER BY ordem, nome");
     $orcDespesas = $um("SELECT d.id, d.descricao, d.fornecedor, d.valor, d.estado, d.nota, d.criado_em,
                                c.nome AS categoria
@@ -2843,8 +2843,10 @@ function impOrcamento(mysqli $conn, int $cid, array $orc): array {
         $nm = mb_substr((string)$c['nome'], 0, 80);
         $prev = orcValor($c['previsto'] ?? '0');
         $ord = (int)($c['ordem'] ?? 0);
-        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,previsto,ordem) VALUES ($cid,?,?,?)");
-        $st->bind_param('ssi', $nm, $prev, $ord);
+        $cc = strtolower(trim((string)($c['cor'] ?? '')));
+        $cor = preg_match('/^#[0-9a-f]{6}$/', $cc) ? $cc : null;
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,previsto,ordem,cor) VALUES ($cid,?,?,?,?)");
+        $st->bind_param('ssis', $nm, $prev, $ord, $cor);
         if (@$st->execute()) { $idCat[$nm] = $conn->insert_id; $feito['orc_categorias']++; }
     }
     foreach ((array)($orc['despesas'] ?? []) as $dsp) {
@@ -3189,7 +3191,7 @@ if ($acao === 'orc_estado') {
     if ($cid <= 0) erro('Não há casamento aberto.');
 
     $cats = [];
-    $rc = @$conn->query("SELECT c.id, c.nome, c.previsto, c.ordem,
+    $rc = @$conn->query("SELECT c.id, c.nome, c.previsto, c.ordem, c.cor,
             COALESCE((SELECT SUM(valor) FROM {$P}orcamento_despesas d
                       WHERE d.casamento_id=$cid AND d.categoria_id=c.id),0) AS real_total,
             COALESCE((SELECT SUM(valor) FROM {$P}orcamento_despesas d
@@ -3252,13 +3254,29 @@ if ($acao === 'orc_categoria_guardar') {
     $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
     if ($nome === '') erro('Dê um nome à categoria.');
     $prev = orcValor($d['previsto'] ?? '0');
+    // A cor é escolha do casal. Vazio (ou ausente) = deixa a sugerida, que o
+    // ecrã calcula sozinho; só se guarda um #RRGGBB válido. Uma cor torta não
+    // é erro — ignora-se e a categoria fica com a sugestão.
+    $temCor = array_key_exists('cor', $d);
+    $cor = null;
+    if ($temCor) {
+        $c = strtolower(trim((string)$d['cor']));
+        if (preg_match('/^#[0-9a-f]{6}$/', $c)) $cor = $c;
+    }
     if ($id) {
-        $st = $conn->prepare("UPDATE {$P}orcamento_categorias SET nome=?, previsto=? WHERE casamento_id=$cid AND id=?");
-        $st->bind_param('ssi', $nome, $prev, $id); @$st->execute();
+        // Só se mexe na cor quando ela vem no pedido — guardar o nome não apaga
+        // a cor escolhida antes.
+        if ($temCor) {
+            $st = $conn->prepare("UPDATE {$P}orcamento_categorias SET nome=?, previsto=?, cor=? WHERE casamento_id=$cid AND id=?");
+            $st->bind_param('sssi', $nome, $prev, $cor, $id); @$st->execute();
+        } else {
+            $st = $conn->prepare("UPDATE {$P}orcamento_categorias SET nome=?, previsto=? WHERE casamento_id=$cid AND id=?");
+            $st->bind_param('ssi', $nome, $prev, $id); @$st->execute();
+        }
     } else {
         $ord = (int)(@$conn->query("SELECT COALESCE(MAX(ordem),-1)+1 AS o FROM {$P}orcamento_categorias WHERE casamento_id=$cid")->fetch_assoc()['o'] ?? 0);
-        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,previsto,ordem) VALUES ($cid,?,?,?)");
-        $st->bind_param('ssi', $nome, $prev, $ord); @$st->execute();
+        $st = $conn->prepare("INSERT INTO {$P}orcamento_categorias (casamento_id,nome,previsto,ordem,cor) VALUES ($cid,?,?,?,?)");
+        $st->bind_param('ssis', $nome, $prev, $ord, $cor); @$st->execute();
         $id = $conn->insert_id;
     }
     registar($conn, 'orcamento_categoria', $nome, $id ? ('id ' . $id) : 'nova');
