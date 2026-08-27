@@ -74,4 +74,55 @@
   }
 
   global.api = api;
+
+  /**
+   * Envia um ficheiro grande em pedaços de ~1 MB (ação 'upload_chunk') e devolve
+   * o token que o identifica no servidor. Serve para passar em alojamentos que
+   * limitam cada envio a poucos MB — a música do convite, sobretudo.
+   * onProgress(fração 0..1) é opcional. Lança em caso de falha.
+   */
+  async function enviarPorPedacos(file, onProgress) {
+    const TAM = 1024 * 1024;                       // 1 MB: passa mesmo num limite de 2 MB
+    const n = Math.max(1, Math.ceil(file.size / TAM));
+    let sessao = '';
+    for (let i = 0; i < n; i++) {
+      const pedaco = file.slice(i * TAM, Math.min((i + 1) * TAM, file.size));
+      const fd = new FormData();
+      fd.append('i', i); fd.append('n', n);
+      if (sessao) fd.append('token', sessao);
+      fd.append('ficheiro', pedaco, 'p');
+      const r = await fetch('api.php?action=upload_chunk',
+        { method: 'POST', headers: { 'X-CSRF-Token': token() }, body: fd });
+      let d; try { d = await r.json(); } catch (e) { d = null; }
+      if (!d || !d.success) throw new Error((d && d.message) || 'Falha ao enviar o ficheiro.');
+      sessao = d.token;
+      if (onProgress) onProgress((i + 1) / n);
+    }
+    return sessao;
+  }
+
+  /**
+   * Envia um ficheiro para uma ação que aceita $_FILES OU chunk_token, partindo-o
+   * em pedaços quando é grande. Devolve o mesmo que api(). `campos` são os
+   * campos extra do formulário (chave, categoria, …).
+   */
+  async function enviarFicheiroGrande(accao, campos, file, onProgress) {
+    const GRANDE = 1.4 * 1024 * 1024;              // acima disto, arrisca o limite do servidor
+    const fd = new FormData();
+    Object.keys(campos || {}).forEach(function (k) {
+      if (campos[k] !== undefined && campos[k] !== null) fd.append(k, campos[k]);
+    });
+    if (file.size > GRANDE) {
+      let sessao;
+      try { sessao = await enviarPorPedacos(file, onProgress); }
+      catch (e) { avisar(e.message || 'Falha no envio.', false); return { success: false, message: e.message }; }
+      fd.append('chunk_token', sessao); fd.append('nome', file.name);
+    } else {
+      fd.append('ficheiro', file, file.name);
+    }
+    return api(accao, { method: 'POST', body: fd });
+  }
+
+  global.enviarPorPedacos = enviarPorPedacos;
+  global.enviarFicheiroGrande = enviarFicheiroGrande;
 })(window);

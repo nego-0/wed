@@ -1257,14 +1257,23 @@ async function enviarFicheiro(chave, input){
   input.value = '';   // liberta o campo, para se poder reenviar o mesmo ficheiro
   let d;
   try {
-    const dados = musica ? f : await comprimir(f);
-    const fd = new FormData();
-    fd.append('chave',chave); fd.append('ts',agora());
-    fd.append('ficheiro', dados, musica ? f.name : 'foto.jpg');
-    const r = await fetch('api.php?action=def_upload',{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});
-    // Uma resposta que não é JSON (sessão expirada, erro do servidor) não pode
-    // deixar o "A enviar…" preso sem explicação.
-    d = await r.json();
+    if (musica) {
+      // A música vai por pedaços: não se comprime e pode passar o limite de
+      // envio de alojamentos apertados. enviarFicheiroGrande trata do envio e
+      // devolve o resultado da API (com aviso próprio em caso de falha).
+      d = await window.enviarFicheiroGrande('def_upload',
+            { chave: chave, ts: agora() }, f,
+            p => msg('A enviar música… ' + Math.round(p * 100) + '%'));
+    } else {
+      const dados = await comprimir(f);
+      const fd = new FormData();
+      fd.append('chave',chave); fd.append('ts',agora());
+      fd.append('ficheiro', dados, 'foto.jpg');
+      const r = await fetch('api.php?action=def_upload',{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});
+      // Uma resposta que não é JSON (sessão expirada, erro do servidor) não pode
+      // deixar o "A enviar…" preso sem explicação.
+      d = await r.json();
+    }
   } catch (e) {
     return msg('Não foi possível enviar o ficheiro. Verifique a ligação e tente outra vez.');
   }

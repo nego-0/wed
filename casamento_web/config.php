@@ -144,7 +144,7 @@ function acoesDaPlataforma(): array {
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
             'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica',
-            'sistema_tema_guardar'];
+            'sistema_tema_guardar','upload_chunk'];
 }
 
 function acoesDoCasamento(): array {

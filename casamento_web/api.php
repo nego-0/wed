@@ -74,6 +74,58 @@ function problemaUpload(string $campo, int $maxApp): string {
 }
 
 /**
+ * Pasta temporária dos envios por pedaços. Fica FORA da raiz do site (não é
+ * servível), e é limpa dos restos velhos a cada envio novo.
+ */
+function chunkDir(): string {
+    $d = sys_get_temp_dir() . '/cw_upload';
+    if (!is_dir($d)) @mkdir($d, 0755, true);
+    return $d;
+}
+
+/**
+ * A origem de um ficheiro que chega à API: um envio normal ($_FILES) OU um
+ * ficheiro montado por pedaços (campo 'chunk_token').
+ *
+ * O envio por pedaços existe porque há alojamentos que limitam CADA envio
+ * (upload_max_filesize) a poucos MB e não deixam mudar esse limite — a música do
+ * convite, maior do que isso, era recusada antes de chegar aqui. Parte-se em
+ * pedaços pequenos (ver a ação 'upload_chunk'), que passam, e junta-se num
+ * ficheiro temporário; aqui trata-se dos dois casos por igual.
+ *
+ * Devolve ['tmp'=>caminho, 'nome'=>nome do ficheiro, 'size'=>bytes,
+ * 'uploaded'=>bool]. Em erro, chama erro() e não regressa.
+ */
+function origemUpload(string $campo, int $maxApp): array {
+    $token = (string)($_POST['chunk_token'] ?? '');
+    if ($token !== '') {
+        if (!preg_match('/^[a-f0-9]{32}$/', $token)) erro('Sessão de envio inválida.');
+        $tmp  = chunkDir() . '/' . $token . '.part';
+        $size = is_file($tmp) ? (int)filesize($tmp) : 0;
+        if ($size <= 0) erro('O envio por partes não chegou completo. Tente outra vez.');
+        if ($size > $maxApp) {
+            @unlink($tmp);
+            erro('Ficheiro demasiado grande (máx. ' . (int)round($maxApp / 1048576) . ' MB).');
+        }
+        return ['tmp' => $tmp, 'nome' => basename((string)($_POST['nome'] ?? 'ficheiro')),
+                'size' => $size, 'uploaded' => false];
+    }
+    if ($p = problemaUpload($campo, $maxApp)) erro($p);
+    return ['tmp' => $_FILES[$campo]['tmp_name'], 'nome' => (string)$_FILES[$campo]['name'],
+            'size' => (int)$_FILES[$campo]['size'], 'uploaded' => true];
+}
+
+/** Move para o destino o ficheiro de origem (enviado ou montado por pedaços). */
+function moverUpload(array $src, string $dest): bool {
+    if (!empty($src['uploaded'])) return @move_uploaded_file($src['tmp'], $dest);
+    if (@rename($src['tmp'], $dest)) return true;
+    // rename falha entre sistemas de ficheiros diferentes (o tmp e o site podem
+    // estar em partições distintas): copia-se e apaga-se a origem.
+    if (@copy($src['tmp'], $dest)) { @unlink($src['tmp']); return true; }
+    return false;
+}
+
+/**
  * Exige poder escrever no casamento aberto.
  *
  * A única situação em que não se pode é a visita de suporte com um código de
@@ -1000,23 +1052,53 @@ if ($acao === 'versao_apagar') {
     ok(['fotos_apagadas' => $apagadas]);
 }
 
+if ($acao === 'upload_chunk') {
+    // Recebe um PEDAÇO de um ficheiro grande e junta-o ao que já veio, num
+    // ficheiro temporário. Cada pedaço é pequeno de propósito (o cliente parte
+    // em ~1 MB), para passar em alojamentos que limitam cada envio a 2 MB. O
+    // 'token' identifica o ficheiro em construção; devolve-se no primeiro pedaço
+    // e o cliente reenvia-o nos seguintes. Quando o último chega, o
+    // def_upload/modelo_exemplo_upload consome-o pelo mesmo token.
+    $dir = chunkDir();
+    foreach (glob($dir . '/*.part') ?: [] as $velho) {
+        if (@filemtime($velho) < time() - 3600) @unlink($velho);   // restos de +1h
+    }
+    if ($p = problemaUpload('ficheiro', 3 * 1024 * 1024)) erro($p);   // cada pedaço ≤ 3 MB
+    $i = (int)($_POST['i'] ?? -1);
+    $n = (int)($_POST['n'] ?? 0);
+    if ($n < 1 || $n > 64 || $i < 0 || $i >= $n) erro('Pedaço de envio inválido.');
+    $token = (string)($_POST['token'] ?? '');
+    if ($i === 0)                                    $token = bin2hex(random_bytes(16));
+    elseif (!preg_match('/^[a-f0-9]{32}$/', $token)) erro('Sessão de envio inválida.');
+    $part = $dir . '/' . $token . '.part';
+    if ($i === 0)              @unlink($part);        // recomeça do zero
+    elseif (!is_file($part))   erro('O envio por partes perdeu-se. Recomece.');
+    $ok = false;
+    if (($in = @fopen($_FILES['ficheiro']['tmp_name'], 'rb'))) {
+        if (($out = @fopen($part, 'ab'))) { stream_copy_to_stream($in, $out); fclose($out); $ok = true; }
+        fclose($in);
+    }
+    if (!$ok) erro('Não foi possível guardar o pedaço.');
+    if (@filesize($part) > 12 * 1024 * 1024) { @unlink($part); erro('Ficheiro demasiado grande.'); }
+    ok(['token' => $token, 'done' => ($i === $n - 1)]);
+}
+
 if ($acao === 'def_upload') {
-    // Upload de imagem/música do convite (grava o ficheiro e a definição).
+    // Upload de imagem/música do convite (grava o ficheiro e a definição). O
+    // ficheiro pode vir de uma vez ($_FILES) ou montado por pedaços (chunk_token,
+    // para a música passar em servidores com limite de envio baixo).
     $chave = $_POST['chave'] ?? '';
     $tiposImg = ['media.hero','media.historia','media.interludio','media.acesso'];
     $ehMusica = $chave === 'media.musica';
-    // Primeiro os limites (o post_max_size esvazia $_POST, por isso a mensagem
-    // do tamanho tem de vir antes da validação da chave, que ficaria vazia).
     $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
-    if ($p = problemaUpload('ficheiro', $max)) erro($p);
+    $src = origemUpload('ficheiro', $max);
     if (!$ehMusica && !in_array($chave, $tiposImg, true)) erro('Campo de ficheiro inválido.');
-    $f = $_FILES['ficheiro'];
-    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+    $ext = strtolower(pathinfo($src['nome'], PATHINFO_EXTENSION));
     $extsOk = $ehMusica ? ['m4a','mp3'] : ['jpg','jpeg','png','webp'];
     if (!in_array($ext, $extsOk, true)) erro('Formato não suportado (' . implode('/', $extsOk) . ').');
     if (function_exists('finfo_open')) {
         $fi = finfo_open(FILEINFO_MIME_TYPE);
-        $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
+        $mt = finfo_file($fi, $src['tmp']); finfo_close($fi);
         $mimesOk = $ehMusica ? ['audio/mp4','audio/x-m4a','audio/mpeg','video/mp4','audio/mp3']
                              : ['image/jpeg','image/png','image/webp'];
         if (!in_array($mt, $mimesOk, true)) erro('O conteúdo do ficheiro não corresponde ao formato.');
@@ -1024,7 +1106,7 @@ if ($acao === 'def_upload') {
     $dir = __DIR__ . '/assets/convite/custom';
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
     $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
-    if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
+    if (!moverUpload($src, "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
     $caminho = 'assets/convite/custom/' . $nomeFich;
     // A troca fica logo à vista na tela, mas é PROVISÓRIA: só fica mesmo se o
     // casal guardar/actualizar uma versão. Por isso não se apaga já o ficheiro
@@ -3722,21 +3804,21 @@ if ($acao === 'modelo_exemplo_upload') {
     $ehMusica = $chave === 'media.musica';
     $categoria = $_POST['categoria'] ?? ($chave ? categoriaDaChave($chave) : 'sem');
     if (!isset(categoriasGaleria()[$categoria])) $categoria = 'sem';
-    // Os limites primeiro: o post_max_size esvazia $_POST, e a mensagem do
-    // tamanho tem de vir antes da validação da chave (que ficaria vazia).
+    // O ficheiro pode vir de uma vez ($_FILES) ou montado por pedaços
+    // (chunk_token) — a música e as fotografias de exemplo, não comprimidas,
+    // podem passar o limite de envio do servidor.
     $max = $ehMusica ? 8*1024*1024 : 5*1024*1024;
-    if ($p = problemaUpload('ficheiro', $max)) erro($p);
+    $src = origemUpload('ficheiro', $max);
     if ($chave !== '' && !$ehMusica
         && !in_array($chave, ['media.hero','media.historia','media.interludio','media.acesso'], true)) {
         erro('Campo de ficheiro inválido.');
     }
-    $f = $_FILES['ficheiro'];
-    $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+    $ext = strtolower(pathinfo($src['nome'], PATHINFO_EXTENSION));
     $extsOk = $ehMusica ? ['m4a','mp3'] : ['jpg','jpeg','png','webp','svg'];
     if (!in_array($ext, $extsOk, true)) erro('Formato não suportado (' . implode('/', $extsOk) . ').');
     if (function_exists('finfo_open')) {
         $fi = finfo_open(FILEINFO_MIME_TYPE);
-        $mt = finfo_file($fi, $f['tmp_name']); finfo_close($fi);
+        $mt = finfo_file($fi, $src['tmp']); finfo_close($fi);
         $mimesOk = $ehMusica ? ['audio/mp4','audio/x-m4a','audio/mpeg','video/mp4','audio/mp3']
                              : ['image/jpeg','image/png','image/webp','image/svg+xml','text/plain','text/xml'];
         if (!in_array($mt, $mimesOk, true)) erro('O conteúdo do ficheiro não corresponde ao formato.');
@@ -3747,7 +3829,7 @@ if ($acao === 'modelo_exemplo_upload') {
     // O prefixo do nome é a categoria: é dele que ela se lê ao listar a galeria.
     $nomeFich = ($ehMusica ? 'musica' : $categoria) . '-' . time() . '-' . random_int(100, 999)
               . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
-    if (!move_uploaded_file($f['tmp_name'], "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
+    if (!moverUpload($src, "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
     // A anterior NÃO se apaga: as enviadas juntam-se à galeria desta secção, e
     // quem prepara vários modelos quer poder voltar a uma que já tinha enviado.
     // Para a tirar de vez há a ação modelo_exemplo_apagar.

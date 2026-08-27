@@ -914,13 +914,13 @@ document.addEventListener('keydown', e => {
 async function enviarParaGaleria(){
   const el = $('gal-env'), f = el && el.files[0];
   if (!f) return toast('Escolha o ficheiro primeiro.', true);
-  const fd = new FormData();
-  fd.append('ficheiro', f);
-  fd.append('categoria', $('gal-env-cat').value);
+  const campos = { categoria: $('gal-env-cat').value };
   // Só entra em vigor se a galeria tiver sido aberta a partir de uma secção E a
   // categoria escolhida for a dela; senão é só acervo.
-  if (GAL_CHAVE && EX_CAT_DA_CHAVE[GAL_CHAVE] === $('gal-env-cat').value) fd.append('chave', GAL_CHAVE);
-  const d = await api('modelo_exemplo_upload', { method:'POST', body: fd });
+  if (GAL_CHAVE && EX_CAT_DA_CHAVE[GAL_CHAVE] === $('gal-env-cat').value) campos.chave = GAL_CHAVE;
+  // Grande = por pedaços (a música e fotos de exemplo não são comprimidas e
+  // podem passar o limite de envio do servidor).
+  const d = await enviarFicheiroGrande('modelo_exemplo_upload', campos, f);
   el.value = '';
   if (!d || !d.success) return;
   aplicarGaleria(d);
@@ -967,9 +967,8 @@ function aplicarGaleria(d){
 async function enviarExemplo(chave, el){
   const f = el.files[0];
   if (!f) return;
-  const fd = new FormData();
-  fd.append('chave', chave); fd.append('ficheiro', f);
-  const d = await api('modelo_exemplo_upload', { method:'POST', body: fd });
+  toast('A enviar…');
+  const d = await enviarFicheiroGrande('modelo_exemplo_upload', { chave }, f);
   el.value = '';
   if (!d || !d.success) return;
   $('ex-img-' + chave).src = d.path + '?t=' + Date.now();
