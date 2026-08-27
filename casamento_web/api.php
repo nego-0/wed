@@ -3291,10 +3291,16 @@ if ($acao === 'casamento_repor_fabrica') {
     $cid = casamentoAtual();
     if ($cid <= 0) erro('Não há casamento aberto.');
     $d = corpo();
-    $partes = array_values(array_intersect(listaCorpo($d['partes'] ?? ''), array_keys(partesCasamento())));
+    // 'tudo' apaga o casamento inteiro (tudo o que é dele). É o que a gestão dos
+    // noivos pede: os dados são deles, e ou se levam/trazem/apagam por inteiro
+    // ou não se percebe o que ficou para trás. A lista de partes continua a
+    // servir quem chame a API com uma escolha.
+    $partes = !empty($d['tudo'])
+        ? array_keys(partesCasamento())
+        : array_values(array_intersect(listaCorpo($d['partes'] ?? ''), array_keys(partesCasamento())));
     if (!$partes) erro('Escolha o que quer repor de fábrica.');
     $feito = reporFabricaPartes($conn, $cid, $partes);
-    registar($conn, 'casamento_reposto', 'fábrica', implode('+', $partes));
+    registar($conn, 'casamento_reposto', 'fábrica', !empty($d['tudo']) ? 'tudo' : implode('+', $partes));
     ok(['partes' => $partes, 'feito' => $feito]);
 }
 
@@ -4299,6 +4305,22 @@ if ($acao === 'sistema_repor_fabrica') {
     exigirCorrecao();
     $d = corpo();
     $alvos = listaCorpo($d['alvos'] ?? '');
+    // 'tudo' = a casa inteira: os modelos personalizados, as contas (a própria
+    // nunca) e TODOS os casamentos, apagados por inteiro. É a limpeza completa,
+    // ao lado da escolhida — sem obrigar a assinalar tudo à mão e a arriscar
+    // deixar alguma coisa para trás.
+    $tudo = !empty($d['tudo']);
+    if ($tudo) {
+        $alvos = ['modelos', 'contas_casamento', 'contas_admin', 'casamentos'];
+        $todos = [];
+        $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
+        if ($r) while ($x = $r->fetch_row()) $todos[] = (int)$x[0];
+        $d['casamentos'] = $todos;
+        $d['casamentos_modo'] = 'apagar';
+        // Sem casamento nenhum, não há o que apagar por casamentos — mas as
+        // contas e os modelos ainda podem existir, e vão à mesma.
+        if (!$todos) $alvos = ['modelos', 'contas_casamento', 'contas_admin'];
+    }
     $res = [];
     if (in_array('modelos', $alvos, true)) {
         // Apaga os modelos que o admin criou; ficam os de origem da casa
@@ -4369,8 +4391,8 @@ if ($acao === 'sistema_repor_fabrica') {
         $res[$modo === 'apagar' ? 'casamentos_apagados' : 'casamentos'] = $n;
     }
     if (!$res) erro('Escolha o que quer apagar.');
-    registar($conn, 'sistema_dados_apagados', 'gestão', json_encode($res));
-    ok(['res' => $res]);
+    registar($conn, 'sistema_dados_apagados', $tudo ? 'tudo' : 'gestão', json_encode($res));
+    ok(['res' => $res] + ($tudo ? ['tudo' => true] : []));
 }
 
 erro('Ação desconhecida.');

@@ -309,29 +309,22 @@ $MAPA_LOCAL = [
   <?php if ($souAdmin): ?>
     <div class="painel">
       <h3>Os nossos dados</h3>
-      <div class="dica">Os dados deste casamento são seus. Escolha as partes e depois
-        <b>descarregue</b>-as para guardar, <b>traga</b>-as de um ficheiro, ou <b>reponha</b>-as
-        de fábrica. Cada operação mexe só no que estiver assinalado.</div>
-      <div class="dsel" id="dsel-noivos">
-        <?php foreach (['convidados'=>'Lista de convidados','mesas'=>'Mesas',
-                        'digital'=>'Versões do convite digital','impresso'=>'Versões do convite impresso',
-                        'orcamento'=>'Orçamento'] as $k => $rot): ?>
-          <label><input type="checkbox" value="<?= $k ?>" checked> <?= escP($rot) ?></label>
-        <?php endforeach; ?>
-      </div>
+      <div class="dica">Os dados deste casamento são seus, e mexem-se por inteiro:
+        <b>descarregue-os</b> para guardar, <b>traga-os</b> de um ficheiro, ou <b>apague-os</b>.
+        Vai sempre tudo — lista de convidados, mesas, versões dos convites e orçamento.</div>
       <div class="fim" style="margin-top:.2rem;flex-wrap:wrap">
-        <button class="btn" onclick="exportarSel()">Descarregar selecionados</button>
+        <button class="btn" onclick="exportarTudo()">Descarregar tudo</button>
         <?php if (!$soVer): ?>
         <button class="btn" onclick="document.getElementById('imp-ficheiro').click()">Trazer de um ficheiro…</button>
-        <input type="file" id="imp-ficheiro" accept=".json,application/json" style="display:none" onchange="importarSel()">
-        <button class="btn perigo" onclick="reporFabricaSel()">Apagar</button>
+        <input type="file" id="imp-ficheiro" accept=".json,application/json" style="display:none" onchange="importarTudo()">
+        <button class="btn perigo" onclick="apagarTudo()">Apagar tudo</button>
         <?php endif; ?>
         <span class="estado">Um ficheiro <code>.json</code>, legível.</span>
       </div>
       <?php if (!$soVer): ?>
-      <div class="nota-dados" style="margin-top:.9rem"><b>Trazer</b> substitui as partes escolhidas pelas do
-        ficheiro; <b>Apagar</b> esvazia-as. Nenhuma das duas é uma junção — e não se desfazem.
-        Descarregue primeiro, se quiser poder voltar atrás.</div>
+      <div class="nota-dados" style="margin-top:.9rem"><b>Trazer</b> substitui os seus dados pelos do
+        ficheiro; <b>Apagar tudo</b> deixa o casamento como acabado de criar. Nenhuma das duas é uma
+        junção — e não se desfazem. Descarregue primeiro, se quiser poder voltar atrás.</div>
       <?php endif; ?>
       <div class="segredo" id="imp-resultado" style="display:none"></div>
     </div>
@@ -554,22 +547,15 @@ async function mudarSenha(){
     toast('Senha mudada.');
   }
 }
-// ---------- os nossos dados: levar, trazer, repor — por partes ----------
-const ROT_PARTES = { convidados:'lista de convidados', mesas:'mesas',
-  digital:'versões do convite digital', impresso:'versões do convite impresso', orcamento:'orçamento' };
-function partesEscolhidas(){
-  return Array.from(document.querySelectorAll('#dsel-noivos input:checked')).map(i => i.value);
+// ---------- os nossos dados: levar, trazer, apagar — sempre por inteiro ----------
+// Os dados do casamento são um todo: uma escolha por partes deixava o casal com
+// metade de um retrato e sem forma de perceber o que ficara para trás.
+function exportarTudo(){
+  location.href = 'api.php?action=dados_exportar&ambito=casamento';
 }
-function exportarSel(){
-  const partes = partesEscolhidas();
-  if (!partes.length) return toast('Escolha ao menos uma parte.', true);
-  location.href = 'api.php?action=dados_exportar&ambito=casamento&partes=' + encodeURIComponent(partes.join(','));
-}
-async function importarSel(){
-  const partes = partesEscolhidas();
+async function importarTudo(){
   const inp = $('imp-ficheiro');
   const f = inp.files[0]; inp.value = '';   // permite reescolher o mesmo ficheiro
-  if (!partes.length) return toast('Escolha as partes a trazer.', true);
   if (!f) return;
   let dados;
   try { dados = JSON.parse(await f.text()); }
@@ -577,12 +563,11 @@ async function importarSel(){
   if (!dados || dados.formato !== 'casamento-web/1') {
     return toast('Este ficheiro não é uma exportação deste sistema.', true);
   }
-  const rot = partes.map(p => ROT_PARTES[p]).join(', ');
-  if (!confirm('Trazer do ficheiro: ' + rot + '?\n\n'
-    + 'Estas partes são substituídas pelas do ficheiro (as que ele tiver). Não é uma junção, '
-    + 'e não se desfaz.')) return;
+  if (!confirm('Trazer TODOS os dados deste ficheiro?\n\n'
+    + 'Os seus dados — lista de convidados, mesas, versões dos convites e orçamento — são '
+    + 'substituídos pelos do ficheiro. Não é uma junção, e não se desfaz.')) return;
   const d = await api('dados_importar', { method:'POST',
-    body: JSON.stringify({ modo:'substituir', partes, ficheiro: dados }) });
+    body: JSON.stringify({ modo:'substituir', ficheiro: dados }) });
   if (!d || !d.success) return;
   const r = (d.resumo || [])[0] || {};
   $('imp-resultado').style.display = '';
@@ -594,15 +579,13 @@ async function importarSel(){
   toast('Dados trazidos.');
   setTimeout(() => location.reload(), 1400);
 }
-async function reporFabricaSel(){
-  const partes = partesEscolhidas();
-  if (!partes.length) return toast('Escolha o que apagar.', true);
-  const rot = partes.map(p => ROT_PARTES[p]).join(', ');
-  if (!confirm('Apagar: ' + rot + '?\n\n'
-    + 'Estas partes ficam vazias, como um casamento acabado de criar. Não se desfaz.')) return;
-  const d = await api('casamento_repor_fabrica', { method:'POST', body: JSON.stringify({ partes }) });
+async function apagarTudo(){
+  if (!confirm('Apagar TODOS os dados deste casamento?\n\n'
+    + 'A lista de convidados, as mesas, as versões dos convites e o orçamento ficam vazios — '
+    + 'o casamento fica como acabado de criar. Não se desfaz.')) return;
+  const d = await api('casamento_repor_fabrica', { method:'POST', body: JSON.stringify({ tudo: true }) });
   if (!d || !d.success) return;
-  toast('Apagado: ' + rot + '.');
+  toast('Dados apagados.');
   setTimeout(() => location.reload(), 1400);
 }
 

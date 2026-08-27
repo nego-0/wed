@@ -585,10 +585,27 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <div class="painel">
       <h3>Gestão de Dados</h3>
       <div class="dica">Um sítio só para levar a casa num ficheiro, trazê-la de volta, ou
-        <b>apagar</b> — sempre <b>só o que assinalar</b>. Escolha os âmbitos e, para os casamentos,
-        quais; depois <b>Exportar</b>, <b>Importar</b> ou <b>Apagar</b>.</div>
+        <b>apagar</b>. Ou de uma vez — <b>tudo o que há no sistema</b> —, ou <b>só o que assinalar</b>
+        na escolha por âmbitos, logo a seguir.</div>
 
-      <h4 class="ed-sec">Âmbitos</h4>
+      <h4 class="ed-sec">Tudo o que há no sistema</h4>
+      <div class="dica">Sem escolher nada: os casamentos todos (com as suas listas, mesas, versões
+        e orçamentos), os modelos da casa e as contas.</div>
+      <div class="dsel" style="margin:.2rem 0 .5rem">
+        <label><input type="checkbox" id="dados-tudo-senhas"> Contas <b>com senhas</b>
+          <small style="color:#8a8f88">· só na exportação</small></label>
+      </div>
+      <div class="fim" style="flex-wrap:wrap;margin:.2rem 0 .4rem">
+        <button class="btn btn-ouro" onclick="exportarSistemaTudo()">Exportar tudo</button>
+        <button class="btn" onclick="document.getElementById('dados-ficheiro-tudo').click()">Importar tudo de ficheiro…</button>
+        <input type="file" id="dados-ficheiro-tudo" accept=".json,application/json" style="display:none" onchange="importarSistemaTudo()">
+        <button class="btn perigo" onclick="apagarSistemaTudo()">Apagar tudo</button>
+      </div>
+      <div class="porcima" style="margin:.2rem 0 1.2rem"><b>Apagar tudo</b> esvazia o sistema:
+        apaga TODOS os casamentos por inteiro, os modelos personalizados (ficam os de origem) e as
+        contas — a sua nunca. Não se desfaz: exporte primeiro.</div>
+
+      <h4 class="ed-sec">Ou só uma parte</h4>
       <div class="dsel" id="dados-inc">
         <label><input type="checkbox" value="casamentos" checked onchange="dadosCasToggle()"> Casamentos</label>
         <label><input type="checkbox" value="modelos"> Modelos da casa</label>
@@ -1209,6 +1226,45 @@ function incEscolhidos(){
 function casEscolhidos(){
   return Array.from(document.querySelectorAll('#dados-cas-lista input:checked')).map(i => i.value);
 }
+// ---------- tudo o que há no sistema (ao lado da escolha por âmbitos) ----------
+const INC_TUDO = ['casamentos','modelos','contas_casamento','contas_admin'];
+function exportarSistemaTudo(){
+  const q = ['ambito=sistema', 'inc=' + encodeURIComponent(INC_TUDO.join(','))];
+  if (document.getElementById('dados-tudo-senhas').checked) q.push('senhas=1');
+  location.href = 'api.php?action=dados_exportar&' + q.join('&');   // sem 'casamentos' = todos
+}
+async function importarSistemaTudo(){
+  const inp = document.getElementById('dados-ficheiro-tudo');
+  const f = inp.files[0]; inp.value = '';
+  if (!f) return;
+  let dados;
+  try { dados = JSON.parse(await f.text()); }
+  catch (e) { return toast('Esse ficheiro não é um JSON válido.', true); }
+  if (!dados || dados.formato !== 'casamento-web/1') {
+    return toast('Este ficheiro não é uma exportação deste sistema.', true);
+  }
+  if (!confirm('Importar TUDO o que o ficheiro traz?\n\n'
+    + 'Os casamentos entram como NOVOS; os modelos e as contas que já existam saltam-se. '
+    + 'Nada do que já cá está é substituído.')) return;
+  const d = await api('sistema_importar', { method:'POST',
+    body: JSON.stringify({ inc: INC_TUDO, ficheiro: dados }) });
+  if (!d || !d.success) return;
+  mostrarImportado(d);
+}
+async function apagarSistemaTudo(){
+  if (!confirm('APAGAR TUDO o que há no sistema?\n\n'
+    + '• Todos os casamentos, por inteiro (listas, mesas, versões, orçamentos)\n'
+    + '• Os modelos personalizados (ficam os de origem)\n'
+    + '• As contas de casamento e as administrativas — a sua nunca\n\n'
+    + 'Não se desfaz. Exporte primeiro, se quiser poder voltar atrás.')) return;
+  // Segunda confirmação, escrita: é a operação que não tem volta.
+  const resp = prompt('Para confirmar, escreva APAGAR TUDO:');
+  if ((resp || '').trim().toUpperCase() !== 'APAGAR TUDO') return toast('Apagar tudo cancelado.');
+  const d = await api('sistema_repor_fabrica', { method:'POST', body: JSON.stringify({ tudo: true }) });
+  if (!d || !d.success) return;
+  mostrarApagado(d);
+}
+
 function exportarDados(){
   const inc = incEscolhidos();
   if (!inc.length) return toast('Escolha ao menos um âmbito.', true);
@@ -1240,6 +1296,10 @@ async function importarDados(){
     + 'Nada do que já cá está é substituído.')) return;
   const d = await api('sistema_importar', { method:'POST', body: JSON.stringify({ inc, ficheiro: dados }) });
   if (!d || !d.success) return;
+  mostrarImportado(d);
+}
+/** O que a importação trouxe, dito no painel — igual para «tudo» e para a escolha. */
+function mostrarImportado(d){
   const r = d.res || {};
   const cx = document.getElementById('dados-resultado');
   cx.style.display = '';
@@ -1276,6 +1336,10 @@ async function apagarDados(){
   const d = await api('sistema_repor_fabrica', { method:'POST',
     body: JSON.stringify({ alvos, casamentos: ids, casamentos_modo: modo }) });
   if (!d || !d.success) return;
+  mostrarApagado(d);
+}
+/** O que a limpeza apagou, dito no painel — igual para «tudo» e para a escolha. */
+function mostrarApagado(d){
   const r = d.res || {};
   const p = [];
   if (r.modelos != null) p.push(`<b>${r.modelos}</b> modelo(s)`);
@@ -1285,7 +1349,7 @@ async function apagarDados(){
   if (r.casamentos_apagados != null) p.push(`<b>${r.casamentos_apagados}</b> casamento(s) apagado(s)`);
   const cx = document.getElementById('dados-resultado');
   cx.style.display = '';
-  cx.innerHTML = 'Apagado: ' + p.join(' · ') + '.';
+  cx.innerHTML = 'Apagado: ' + (p.join(' · ') || 'nada — já não havia o que apagar') + '.';
   toast('Dados apagados.');
   document.getElementById('dados-cas-lista').dataset.pronto = '';
   setTimeout(() => { carregarCasamentos(); carregarDadosCasamentos(); }, 300);

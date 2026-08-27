@@ -171,8 +171,50 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   ok(await p.locator('input[name="cas-modo"][value="esvaziar"]').count() === 1
      && await p.locator('input[name="cas-modo"][value="apagar"]').count() === 1,
      'e com a escolha de esvaziar ou apagar os casamentos');
-  ok(await p.locator('#vista-dados .btn.perigo').first().innerText().then(t => t.trim() === 'Apagar'),
+  ok(await p.locator('#vista-dados .btn.perigo').last().innerText().then(t => t.trim() === 'Apagar'),
      'o botão vermelho diz «Apagar» (já não «Repor de fábrica»)');
+
+  // ---------- e, ao lado da escolha, a casa INTEIRA de uma vez ----------
+  // A escolha por âmbitos serve para levar um bocado; mas quem quer a casa toda
+  // não tem de a assinalar peça a peça (e arriscar deixar alguma para trás).
+  ok(await p.evaluate(() => ['exportarSistemaTudo','importarSistemaTudo','apagarSistemaTudo']
+       .every(n => typeof window[n] === 'function')),
+     'o admin tem exportar/importar/apagar TUDO, além da escolha por âmbitos');
+  ok(await p.locator('#dados-tudo-senhas').count() === 1,
+     'e pode levar as senhas nessa exportação inteira');
+
+  // Exportar tudo leva mesmo tudo: casamentos, modelos e contas, sem escolher
+  // nada. (Das contas resta a do admin — a limpeza por famílias, acima, levou as
+  // outras; o que importa é que as três famílias venham no mesmo ficheiro.)
+  const tudo = await baixar('&ambito=sistema&inc=casamentos,modelos,contas_casamento,contas_admin');
+  ok((tudo.casamentos || []).length >= 2 && (tudo.modelos || []).length >= 1
+     && (tudo.contas || []).length >= 1,
+     `a exportação inteira leva casamentos, modelos e contas `
+     + `(${(tudo.casamentos||[]).length}/${(tudo.modelos||[]).length}/${(tudo.contas||[]).length})`);
+  // E sem 'inc' nenhum não é o mesmo: o de sempre deixa os modelos de fora.
+  const semInc = await baixar('&ambito=sistema');
+  ok(semInc.modelos === undefined && (tudo.modelos || []).length >= 1,
+     'e é mais do que a exportação de sempre, que não levava os modelos');
+
+  // ---------- os noivos: os seus dados mexem-se por inteiro ----------
+  // Sem escolha de partes — «tudo» apaga tudo o que é do casamento.
+  await api('casamento_abrir&id=' + w.id, {});
+  const cheio = await baixar('&ambito=casamento');
+  ok(cheio.partes === undefined,
+     'a exportação dos noivos é o retrato cheio — não declara partes');
+  const rfTudo = await api('casamento_repor_fabrica', { tudo: true }, 1);
+  ok(rfTudo.success && (rfTudo.partes || []).length === 5,
+     `«tudo» apaga as cinco partes de uma vez (${(rfTudo.partes||[]).join(', ')})`);
+  const vazio = (await baixar('&ambito=casamento')).casamentos[0] || {};
+  ok((vazio.convites || []).length === 0 && (vazio.mesas || []).length === 0
+     && ((vazio.orcamento || {}).categorias || []).length === 0,
+     'e o casamento fica sem convites, sem mesas e sem orçamento');
+  // E trazer de volta o retrato cheio, também sem escolher partes, repõe tudo.
+  const voltou = await api('dados_importar', { modo: 'substituir', ficheiro: cheio }, 1);
+  ok(voltou.success, 'trazer o retrato cheio de volta corre');
+  const reposto = (await baixar('&ambito=casamento')).casamentos[0] || {};
+  ok((reposto.convites || []).length === (cheio.casamentos[0].convites || []).length,
+     'e os convites voltam todos');
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1', {});

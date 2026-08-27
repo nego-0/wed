@@ -219,6 +219,20 @@ const entrar = async (ctx, user, pass) => {
   ok(seDespromove && seDespromove.success === false,
      'e o casal não se pode despromover a si próprio, deixando o casamento sem dono');
 
+  // Nem se apaga a si próprio: a conta com que se está dentro não se elimina de
+  // dentro dela. Quem ficasse a meio do gesto perdia a sessão e a casa ao mesmo
+  // tempo, sem forma de voltar. As três portas para a mesma coisa, todas fechadas.
+  const seApaga = await casal._api('conta_apagar_do_casamento&utilizador=' + equipa.eu);
+  ok(seApaga && seApaga.success === false,
+     'o casal não elimina a conta com que entrou (' + (seApaga && seApaga.message) + ')');
+  const seTira = await casal._api('acesso_tirar&utilizador=' + equipa.eu);
+  ok(seTira && seTira.success === false, 'nem se tira a si próprio do casamento');
+  const seApagaConta = await casal._api('utilizador_apagar&id=' + equipa.eu);
+  ok(seApagaConta && seApagaConta.success === false, 'nem pela porta das contas da plataforma');
+  const aindaLa = await casal._api('acesso_lista');
+  ok((aindaLa.acessos || []).some(a => +a.utilizador_id === +equipa.eu),
+     'e continua lá, com o seu lugar intacto');
+
   const tirou = await casal._api('acesso_tirar&utilizador=' + conv.utilizador);
   ok(tirou && tirou.success, 'tirar o acesso ao porteiro, isso pode');
 
