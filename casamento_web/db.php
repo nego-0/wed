@@ -407,9 +407,19 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
 
         // ---- o casamento que já existia passa a ser o nº 1 ----
+        // Só se HÁ um casamento anterior para preservar: uma instalação de
+        // casamento único a passar para multi-casamento tem convidados, mesas ou
+        // convites de quem já lá estava, e esses continuam a ser o casamento nº1.
+        // Uma instalação NOVA e vazia nasce sem casamento nenhum — o admin cria o
+        // primeiro; não se inventa um casal de origem que ninguém pediu.
         $r = @$conn->query("SELECT COUNT(*) FROM {$P}casamentos");
         $jaHa = $r ? (int)$r->fetch_row()[0] : 0;
-        if ($jaHa === 0) {
+        $temDadosAntigos = false;
+        foreach (['convites', 'convidados', 'mesas'] as $t) {
+            $rc = @$conn->query("SELECT 1 FROM {$P}$t LIMIT 1");
+            if ($rc && $rc->num_rows) { $temDadosAntigos = true; break; }
+        }
+        if ($jaHa === 0 && $temDadosAntigos) {
             $lerDef = function (string $chave, string $fallback) use ($conn, $P) {
                 $st = $conn->prepare("SELECT valor FROM {$P}definicoes WHERE chave=? LIMIT 1");
                 if (!$st) return $fallback;
@@ -471,13 +481,18 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 $st->bind_param('ssss', $email, $nomeU, $hash, $plat);
                 if (!@$st->execute()) continue;
                 $uid = $conn->insert_id;
-                // Quem era admin fica também dono do casamento nº 1; quem era
-                // porteiro fica porteiro dele.
-                $papel = $ehAdmin ? 'noivos' : 'porteiro';
-                $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel)
-                                      VALUES (?, 1, ?)");
-                $st->bind_param('is', $uid, $papel);
-                @$st->execute();
+                // Se o casamento nº1 existir (instalação antiga, com dados a
+                // preservar), o admin fica seu dono e o porteiro seu porteiro. Numa
+                // instalação nova não há casamento nenhum a que dar lugar — as
+                // contas nascem sem festa, e o admin abre a primeira quando quiser.
+                $r1 = @$conn->query("SELECT 1 FROM {$P}casamentos WHERE id=1 LIMIT 1");
+                if ($r1 && $r1->num_rows) {
+                    $papel = $ehAdmin ? 'noivos' : 'porteiro';
+                    $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel)
+                                          VALUES (?, 1, ?)");
+                    $st->bind_param('is', $uid, $papel);
+                    @$st->execute();
+                }
             }
         }
     }
@@ -898,6 +913,60 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
+}
+
+// ---- Semente de DEMONSTRAÇÃO (só desenvolvimento/testes) --------------------
+// A instalação de origem nasce sem casamento nenhum — é o admin que cria o
+// primeiro. Mas o ambiente de desenvolvimento e a suite de provas contam com um
+// casamento de trabalho (o nº1, «Isabel & Abednego», com a mesa dos noivos).
+// Liga-se com 'semear_demo' => true no config.local.php; nunca no produto (o
+// config.local.example.php não o traz). Idempotente: só cria se não houver
+// casamento nenhum.
+if (cfg_local('semear_demo', false)) {
+    $rq = @$conn->query("SELECT COUNT(*) FROM {$P}casamentos");
+    if ($rq && (int)$rq->fetch_row()[0] === 0) {
+        $noiva = EVENTO['noiva']; $noivo = EVENTO['noivo']; $data = EVENTO['data_iso'];
+        $nome  = trim($noiva . ' & ' . $noivo);
+        $st = @$conn->prepare("INSERT INTO {$P}casamentos (id, nome, noiva, noivo, data_evento, estado)
+                               VALUES (1, ?, ?, ?, ?, 'ativo')");
+        if ($st) { $st->bind_param('ssss', $nome, $noiva, $noivo, $data); @$st->execute(); }
+        // A mesa dos noivos, como qualquer casamento tem.
+        @$conn->query("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y)
+                       VALUES (1,'Noivos',2,'redonda','ouro','noivos',50,42)");
+        // Uma conta de porteiro do casamento de demonstração (a suite conta com
+        // ela; não existe no produto). Só se não houver já uma com este email.
+        $rp = @$conn->query("SELECT 1 FROM {$P}utilizadores WHERE email='porteiro@local' LIMIT 1");
+        if ($rp && $rp->num_rows === 0) {
+            $hash = password_hash('noivos2026', PASSWORD_DEFAULT);
+            $pu = @$conn->prepare("INSERT INTO {$P}utilizadores (email,nome,senha_hash,papel_plataforma,estado)
+                                   VALUES ('porteiro@local','Porteiro',?,NULL,'ativo')");
+            if ($pu) {
+                $pu->bind_param('s', $hash);
+                if (@$pu->execute()) {
+                    $puid = $conn->insert_id;
+                    @$conn->query("INSERT INTO {$P}acessos (utilizador_id,casamento_id,papel)
+                                   VALUES ($puid,1,'porteiro')");
+                }
+            }
+        }
+        // Um convite de exemplo com convidados (sem papel), para as provas que
+        // precisam de um convite a sério (código) ou de cobaias.
+        $cod = strtoupper(substr(bin2hex(random_bytes(6)), 0, 8));
+        $ci = @$conn->prepare("INSERT INTO {$P}convites (casamento_id,codigo,nome_exibicao,tipo,lado,lugares)
+                               VALUES (1,?,?,'ambos','noiva',3)");
+        if ($ci) {
+            $nomeConv = 'Família Exemplo';
+            $ci->bind_param('ss', $cod, $nomeConv); @$ci->execute();
+            $convId = $conn->insert_id;
+            $i = 0;
+            foreach (['Convidado Um', 'Convidada Dois', 'Convidado Três'] as $nm) {
+                $gi = @$conn->prepare("INSERT INTO {$P}convidados (casamento_id,convite_id,nome,principal)
+                                       VALUES (1,?,?,?)");
+                if ($gi) { $pr = $i === 0 ? 1 : 0; $gi->bind_param('isi', $convId, $nm, $pr); @$gi->execute(); }
+                $i++;
+            }
+        }
+    }
 }
 
 // A partir daqui o esquema está pronto e todo o dado tem dono: a ligação passa

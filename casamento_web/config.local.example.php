@@ -19,18 +19,25 @@ return [
         'online' => ['host' => 'sql300.infinityfree.com',   'user' => 'if0_40371922',  'pass' => 'ncm202605', 'db' => 'if0_40371922_wed'],
     ],
 
-    // ---- Utilizadores (nome de utilizador + senha) ---------
-    // 'papel': 'admin' (acede a tudo) ou 'porteiro' (só a página da porta).
+    // ---- Utilizador administrador (semente inicial) --------
+    // Uma instalação de origem nasce só com o administrador da plataforma — sem
+    // casamento nenhum e sem porteiros. Os casamentos criam-se depois na
+    // administração, e cada porteiro é convidado dentro do seu casamento.
     // Recomendado: 'senha_hash' (a senha nunca fica legível no ficheiro).
     // Gere o hash da sua senha com:
     //   php -r "echo password_hash('a-sua-senha', PASSWORD_DEFAULT), PHP_EOL;"
     // e cole o resultado em 'senha_hash'.
     'utilizadores' => [
-        ['utilizador' => 'admin',    'senha_hash' => '$2y$10$r/Jwoyuz8q8DGhXup6eLqO5hohSTRsY/szp1YqHWXRPP2wdn2poD.', 'papel' => 'admin'],
-        ['utilizador' => 'porteiro', 'senha_hash' => '$2y$10$r/Jwoyuz8q8DGhXup6eLqO5hohSTRsY/szp1YqHWXRPP2wdn2poD.', 'papel' => 'porteiro'],
+        ['utilizador' => 'admin', 'senha_hash' => '$2y$10$r/Jwoyuz8q8DGhXup6eLqO5hohSTRsY/szp1YqHWXRPP2wdn2poD.', 'papel' => 'admin'],
 
         // Alternativa mais simples (senha legível neste ficheiro):
         // ['utilizador' => 'admin', 'senha' => 'a-sua-senha', 'papel' => 'admin'],
     ],
+
+    // ---- Casamento de demonstração (só desenvolvimento) ----
+    // A instalação de origem nasce sem casamento nenhum. Para correr a suite de
+    // provas (tests/), descomente a linha abaixo: cria um casamento nº1 de
+    // trabalho. NÃO a use numa instalação a sério.
+    // 'semear_demo' => true,
 
 ];
