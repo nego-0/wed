@@ -361,6 +361,44 @@ function exigirPortaApi(): void {
         : 'Sessão terminada. Entre de novo.');
 }
 
+/**
+ * A porta de licença do lado da API.
+ *
+ * As páginas mandam quem não tem o módulo para a montra; aqui devolve-se um
+ * erro que diz o mesmo por outras palavras. É a segunda fechadura: esconder a
+ * entrada do menu não impede ninguém de chamar a ação à mão.
+ */
+function exigirModuloApi(string $chave): void {
+    if (podeModulo($chave)) return;
+    http_response_code(403);
+    erro('A licença deste casamento não inclui este módulo. '
+       . 'Veja os planos na página da Licença.');
+}
+
+/**
+ * Cabem mais tantas pessoas na lista deste casamento?
+ *
+ * O limite é do escalão de convidados. 0 = sem limite. Conta-se o que já lá
+ * está mais o que se quer acrescentar — recusar só quando já se passou era
+ * deixar passar sempre a última.
+ */
+function exigirCabidaConvidados(mysqli $conn, int $aAcrescentar): void {
+    if ($aAcrescentar <= 0) return;
+    $lim = limiteConvidados();
+    if ($lim === 0) return;                       // sem limite
+    if ($lim < 0) {
+        http_response_code(403);
+        erro('A licença deste casamento não inclui a lista de convidados.');
+    }
+    $tem = convidadosContados($conn, casamentoAtual());
+    if ($tem + $aAcrescentar <= $lim) return;
+    $livres = max(0, $lim - $tem);
+    erro("A sua licença chega a $lim convidados e já tem $tem. "
+       . ($livres > 0
+            ? "Ainda cabem $livres. Para mais, reforce a licença na página da Licença."
+            : 'Reforce a licença na página da Licença para convidar mais gente.'));
+}
+
 /** Exige um token CSRF válido nos pedidos autenticados que alteram dados. */
 function exigirCsrf(): void {
     if (!csrfValido()) {
@@ -506,10 +544,16 @@ if ($acao === 'registo_publico') {
     }
 
     // A conta primeiro: se o email já existir, não se cria casamento nenhum.
+    //
+    // Nasce ATIVA, ao contrário do casamento. O casal entra desde já — mas o
+    // casamento fica 'pendente' e sem módulos concedidos, e é isso que faz com
+    // que ele só encontre lá dentro a página da sua licença. Deixá-lo à porta
+    // até alguém aprovar era pedir-lhe que escolhesse um plano e depois
+    // fechar-lhe a porta na cara.
     $hash = password_hash($senha, PASSWORD_DEFAULT);
     $nomeConta = trim("$noiva & $noivo");
     $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
-                          VALUES (?,?,?, 'pendente')");
+                          VALUES (?,?,?, 'ativo')");
     $st->bind_param('sss', $email, $nomeConta, $hash);
     if (!$st->execute()) erro('Já existe uma conta com esse email. Tente entrar, ou use outro.');
     $uid = $conn->insert_id;
@@ -556,8 +600,729 @@ if ($acao === 'registo_publico') {
 
     $_SESSION['registo_feito'] = time();
     usarCasamento($cid);
+
+    // O plano que o casal escolheu vira pedido de licença, pendente. É o que o
+    // admin vai ver na página das licenças, e é o que o casal vê ao entrar.
+    $pedido = 0;
+    if (!empty($d['licenca'])) {
+        $pedido = licRegistarPedido($conn, $cid, (array)$d['licenca'], 'inicial');
+    }
+
     registar($conn, 'registo_publico', $nomeConta, $email);
-    ok(['casamento' => $cid, 'dados_do_evento' => $gravadas]);
+    ok(['casamento' => $cid, 'dados_do_evento' => $gravadas, 'pedido' => $pedido]);
+}
+
+// ============================================================
+// LICENÇAS — o preçário, os pedidos e o que cada casamento tem
+//
+// O preçário é da casa: módulos, os seus escalões (as medidas em que se vendem)
+// e os pacotes. O casal escolhe um pacote ou monta o seu, aceita as políticas e
+// submete; o admin aprova, recusa ou revoga. O que fica de pé são as concessões
+// — e são elas, e nunca o pedido, que abrem as portas (ver licencaModulos).
+// ============================================================
+
+/** O preçário inteiro, pronto para desenhar: módulos com escalões, e pacotes. */
+function licCatalogo(mysqli $conn): array {
+    global $P;
+    $mods = [];
+    $r = @$conn->query("SELECT id,chave,nome,resumo,beneficio,icone,ordem,ativo
+                        FROM {$P}lic_modulos ORDER BY ordem, id");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $x['id'] = (int)$x['id']; $x['ativo'] = (int)$x['ativo']; $x['ordem'] = (int)$x['ordem'];
+        $x['escaloes'] = [];
+        $mods[$x['id']] = $x;
+    }
+    $r = @$conn->query("SELECT id,modulo_id,chave,nome,resumo,preco,limite,editar,todos_modelos,ordem,ativo
+                        FROM {$P}lic_escaloes ORDER BY ordem, id");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $mid = (int)$x['modulo_id'];
+        if (!isset($mods[$mid])) continue;
+        $mods[$mid]['escaloes'][] = [
+            'id' => (int)$x['id'], 'chave' => $x['chave'], 'nome' => $x['nome'],
+            'resumo' => $x['resumo'], 'preco' => (float)$x['preco'],
+            'limite' => (int)$x['limite'], 'editar' => (int)$x['editar'],
+            'todos_modelos' => (int)$x['todos_modelos'],
+            'ordem' => (int)$x['ordem'], 'ativo' => (int)$x['ativo'],
+            'modulo' => $mods[$mid]['chave'], 'modulo_nome' => $mods[$mid]['nome'],
+        ];
+    }
+
+    $pacs = [];
+    $r = @$conn->query("SELECT id,chave,nome,promessa,resumo,preco,meses,etiqueta,destaque,ordem,ativo
+                        FROM {$P}lic_pacotes ORDER BY ordem, id");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $x['id'] = (int)$x['id']; $x['preco'] = (float)$x['preco'];
+        $x['meses'] = (int)$x['meses']; $x['destaque'] = (int)$x['destaque'];
+        $x['ordem'] = (int)$x['ordem']; $x['ativo'] = (int)$x['ativo'];
+        $x['itens'] = [];
+        $pacs[$x['id']] = $x;
+    }
+    $r = @$conn->query("SELECT pacote_id, escalao_id FROM {$P}lic_pacote_itens");
+    if ($r) while ($x = $r->fetch_row()) {
+        $p = (int)$x[0];
+        if (isset($pacs[$p])) $pacs[$p]['itens'][] = (int)$x[1];
+    }
+    // Quanto custariam, à peça, os escalões de cada pacote: é o que dá a
+    // poupança. Uma conta e não uma promessa — o número tem de bater certo.
+    $precoEsc = [];
+    foreach ($mods as $m) foreach ($m['escaloes'] as $e) $precoEsc[$e['id']] = $e['preco'];
+    foreach ($pacs as &$p) {
+        $avulso = 0.0;
+        foreach ($p['itens'] as $eid) $avulso += (float)($precoEsc[$eid] ?? 0);
+        $p['avulso'] = $avulso;
+        $p['poupanca'] = max(0, $avulso - $p['preco']);
+    }
+    unset($p);
+
+    return ['modulos' => array_values($mods), 'pacotes' => array_values($pacs)];
+}
+
+/** As políticas de utilização em vigor (a versão publicada mais alta). */
+function licPolitica(mysqli $conn): array {
+    global $P;
+    $r = @$conn->query("SELECT id,versao,titulo,corpo,atualizado_em FROM {$P}lic_politicas
+                        WHERE publicada=1 ORDER BY versao DESC LIMIT 1");
+    if ($r && ($x = $r->fetch_assoc())) {
+        $x['id'] = (int)$x['id']; $x['versao'] = (int)$x['versao'];
+        return $x;
+    }
+    return ['id' => 0, 'versao' => 0, 'titulo' => 'Políticas de Utilização',
+            'corpo' => '', 'atualizado_em' => null];
+}
+
+/** O pedido de licença de um casamento num certo estado, com os seus itens. */
+function licPedido(mysqli $conn, int $cid, string $estado = 'pendente'): ?array {
+    global $P;
+    if ($cid <= 0) return null;
+    $st = @$conn->prepare("SELECT * FROM {$P}lic_pedidos
+                           WHERE casamento_id=? AND estado=? ORDER BY id DESC LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('is', $cid, $estado);
+    if (!@$st->execute()) return null;
+    $p = $st->get_result()->fetch_assoc();
+    if (!$p) return null;
+    $p['id'] = (int)$p['id']; $p['total'] = (float)$p['total']; $p['meses'] = (int)$p['meses'];
+    $p['itens'] = [];
+    $r = @$conn->query("SELECT escalao_id,modulo_chave,escalao_nome,preco,limite,editar,todos_modelos
+                        FROM {$P}lic_pedido_itens WHERE pedido_id=" . (int)$p['id'] . " ORDER BY id");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $x['escalao_id'] = (int)$x['escalao_id']; $x['preco'] = (float)$x['preco'];
+        $x['limite'] = (int)$x['limite']; $x['editar'] = (int)$x['editar'];
+        $x['todos_modelos'] = (int)$x['todos_modelos'];
+        $p['itens'][] = $x;
+    }
+    return $p;
+}
+
+/**
+ * Grava (ou regrava) o pedido de licença pendente de um casamento.
+ *
+ * Um casamento tem, quando muito, um pedido pendente: mexer na escolha
+ * reescreve o que lá está em vez de abrir um segundo. Devolve o id, ou 0.
+ *
+ * O preço de cada escalão fica congelado no pedido. Um preçário que mude
+ * amanhã não pode reescrever aquilo com que o casal concordou hoje.
+ */
+function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int {
+    global $P;
+    if ($cid <= 0) return 0;
+    $tipo = $tipo === 'upgrade' ? 'upgrade' : 'inicial';
+
+    // Um pacote traz os seus escalões; sem pacote, vale a escolha à peça.
+    $pacoteId = (int)($d['pacote'] ?? 0);
+    $escIds = [];
+    $pacNome = ''; $meses = max(0, min(120, (int)($d['meses'] ?? 0)));
+    if ($pacoteId > 0) {
+        $st = @$conn->prepare("SELECT nome, meses FROM {$P}lic_pacotes WHERE id=? AND ativo=1");
+        if (!$st) return 0;
+        $st->bind_param('i', $pacoteId); @$st->execute();
+        $pa = $st->get_result()->fetch_assoc();
+        if (!$pa) return 0;
+        $pacNome = (string)$pa['nome'];
+        if ($meses <= 0) $meses = (int)$pa['meses'];
+        $r = @$conn->query("SELECT escalao_id FROM {$P}lic_pacote_itens WHERE pacote_id=$pacoteId");
+        if ($r) while ($x = $r->fetch_row()) $escIds[] = (int)$x[0];
+    } else {
+        foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escIds[] = $e; }
+    }
+    $escIds = array_values(array_unique($escIds));
+    if (!$escIds) return 0;
+
+    // Os escalões, tal como estão hoje. Só entram os que existem e estão de pé,
+    // e um módulo só conta uma vez: dois escalões do mesmo módulo era vender
+    // «até 80» e «sem limite» ao mesmo casamento.
+    $lista = implode(',', array_map('intval', $escIds));
+    $r = @$conn->query("SELECT e.id, e.nome, e.preco, e.limite, e.editar, e.todos_modelos, m.chave modulo
+                        FROM {$P}lic_escaloes e JOIN {$P}lic_modulos m ON m.id = e.modulo_id
+                        WHERE e.id IN ($lista) AND e.ativo=1 AND m.ativo=1
+                        ORDER BY m.ordem, e.ordem");
+    $itens = []; $total = 0.0;
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $mc = (string)$x['modulo'];
+        if (isset($itens[$mc])) continue;
+        $itens[$mc] = ['escalao_id' => (int)$x['id'], 'modulo_chave' => $mc,
+                       'escalao_nome' => (string)$x['nome'], 'preco' => (float)$x['preco'],
+                       'limite' => (int)$x['limite'], 'editar' => (int)$x['editar'],
+                       'todos_modelos' => (int)$x['todos_modelos']];
+        $total += (float)$x['preco'];
+    }
+    if (!$itens) return 0;
+    if ($pacoteId > 0) {
+        // O pacote tem preço próprio — é essa a vantagem de o levar.
+        $st = @$conn->prepare("SELECT preco FROM {$P}lic_pacotes WHERE id=?");
+        if ($st) { $st->bind_param('i', $pacoteId); @$st->execute();
+                   $pp = $st->get_result()->fetch_assoc();
+                   if ($pp) $total = (float)$pp['preco']; }
+    }
+    if ($meses <= 0) $meses = 12;
+
+    $pol   = licPolitica($conn);
+    $nota  = mb_substr(trim((string)($d['nota'] ?? '')), 0, 1000);
+    $ip    = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+    $moeda = 'Kz';
+
+    // Um pendente já existente é o mesmo pedido a mudar de ideias.
+    $antigo = licPedido($conn, $cid, 'pendente');
+    if ($antigo) {
+        $st = @$conn->prepare("UPDATE {$P}lic_pedidos
+            SET tipo=?, pacote_id=?, pacote_nome=?, meses=?, total=?, moeda=?, nota_casal=?,
+                politica_versao=?, aceite_em=NOW(), aceite_ip=?, criado_em=NOW()
+            WHERE id=? AND casamento_id=?");
+        if (!$st) return 0;
+        $pid0 = $pacoteId ?: null; $pv = (int)$pol['versao']; $pidRow = (int)$antigo['id'];
+        $st->bind_param('sisidsssiii', $tipo, $pid0, $pacNome, $meses, $total, $moeda,
+                        $nota, $pv, $ip, $pidRow, $cid);
+        if (!@$st->execute()) return 0;
+        $pedidoId = $pidRow;
+        @$conn->query("DELETE FROM {$P}lic_pedido_itens WHERE pedido_id=$pedidoId");
+    } else {
+        $st = @$conn->prepare("INSERT INTO {$P}lic_pedidos
+            (casamento_id, tipo, estado, pacote_id, pacote_nome, meses, total, moeda,
+             nota_casal, politica_versao, aceite_em, aceite_ip)
+            VALUES (?,?,'pendente',?,?,?,?,?,?,?,NOW(),?)");
+        if (!$st) return 0;
+        $pid0 = $pacoteId ?: null; $pv = (int)$pol['versao'];
+        $st->bind_param('isisidssis', $cid, $tipo, $pid0, $pacNome, $meses, $total, $moeda,
+                        $nota, $pv, $ip);
+        if (!@$st->execute()) return 0;
+        $pedidoId = $conn->insert_id;
+    }
+
+    $st = @$conn->prepare("INSERT INTO {$P}lic_pedido_itens
+        (pedido_id, escalao_id, modulo_chave, escalao_nome, preco, limite, editar, todos_modelos)
+        VALUES (?,?,?,?,?,?,?,?)");
+    if ($st) foreach ($itens as $it) {
+        $st->bind_param('iissdiii', $pedidoId, $it['escalao_id'], $it['modulo_chave'],
+                        $it['escalao_nome'], $it['preco'], $it['limite'],
+                        $it['editar'], $it['todos_modelos']);
+        @$st->execute();
+    }
+
+    // O casamento passa a dizer que tem um pedido em cima da mesa — excepto se
+    // já tem licença ativa e isto é um reforço: aí continua a valer o que tem.
+    $st = @$conn->prepare("UPDATE {$P}casamentos SET licenca_estado='pendente'
+                           WHERE id=? AND licenca_estado <> 'ativa'");
+    if ($st) { $st->bind_param('i', $cid); @$st->execute(); }
+    return $pedidoId;
+}
+
+/**
+ * Concede a um casamento o que um pedido aprovado lhe dá.
+ *
+ * Um reforço acrescenta e melhora, nunca tira: quem já tinha «sem limite» não
+ * fica com «até 200» por ter pedido outra coisa qualquer. Devolve os módulos
+ * que passaram a estar abertos ou que subiram de escalão.
+ */
+function licAplicarPedido(mysqli $conn, int $cid, array $pedido): array {
+    global $P;
+    $mudou = [];
+    $atual = [];
+    $r = @$conn->query("SELECT modulo_chave, limite, editar, todos_modelos
+                        FROM {$P}lic_concessoes WHERE casamento_id=" . (int)$cid);
+    if ($r) while ($x = $r->fetch_assoc()) $atual[(string)$x['modulo_chave']] = $x;
+
+    foreach ($pedido['itens'] as $it) {
+        $mc = (string)$it['modulo_chave'];
+        $lim = (int)$it['limite']; $ed = (int)$it['editar']; $tm = (int)$it['todos_modelos'];
+        if (isset($atual[$mc])) {
+            // Sem limite (0) ganha sempre a qualquer número; entre números, o maior.
+            $limA = (int)$atual[$mc]['limite'];
+            $lim = ($limA === 0 || $lim === 0) ? 0 : max($limA, $lim);
+            $ed  = max($ed, (int)$atual[$mc]['editar']);
+            $tm  = max($tm, (int)$atual[$mc]['todos_modelos']);
+            if ($lim === $limA && $ed === (int)$atual[$mc]['editar']
+                && $tm === (int)$atual[$mc]['todos_modelos']) {
+                continue;   // já tinha isto, ou melhor
+            }
+        }
+        $st = @$conn->prepare("INSERT INTO {$P}lic_concessoes
+            (casamento_id, modulo_chave, escalao_id, escalao_nome, limite, editar, todos_modelos, pedido_id, desde)
+            VALUES (?,?,?,?,?,?,?,?,NOW())
+            ON DUPLICATE KEY UPDATE escalao_id=VALUES(escalao_id), escalao_nome=VALUES(escalao_nome),
+                limite=VALUES(limite), editar=VALUES(editar), todos_modelos=VALUES(todos_modelos),
+                pedido_id=VALUES(pedido_id), desde=NOW()");
+        if (!$st) continue;
+        $eid = (int)$it['escalao_id']; $en = (string)$it['escalao_nome']; $pid = (int)$pedido['id'];
+        $st->bind_param('isisiiii', $cid, $mc, $eid, $en, $lim, $ed, $tm, $pid);
+        if (@$st->execute()) $mudou[] = $mc;
+    }
+    return $mudou;
+}
+
+/**
+ * Abre todos os módulos a um casamento, sem limites.
+ *
+ * É o que um casamento criado PELA ADMINISTRAÇÃO recebe: quem o criou fê-lo de
+ * propósito, e entregar-lhe uma casa sem portas nenhumas — obrigando-o a ir a
+ * seguir conceder cinco módulos à mão — era transformar um gesto em dois. Os
+ * pedidos de licença são para quem se inscreve de fora; aqui já houve decisão.
+ */
+function licConcederTudo(mysqli $conn, int $cid, string $rotulo = 'Concedido pela administração'): int {
+    global $P;
+    if ($cid <= 0) return 0;
+    $n = 0;
+    foreach (licencaModulosTudo() as $mc => $g) {
+        $st = @$conn->prepare("INSERT INTO {$P}lic_concessoes
+            (casamento_id, modulo_chave, escalao_nome, limite, editar, todos_modelos, desde)
+            VALUES (?,?,'Tudo incluído',0,?,?,NOW())
+            ON DUPLICATE KEY UPDATE limite=0, editar=VALUES(editar),
+                todos_modelos=VALUES(todos_modelos)");
+        if (!$st) continue;
+        $ed = (int)$g['editar']; $tm = (int)$g['todos_modelos'];
+        $st->bind_param('isii', $cid, $mc, $ed, $tm);
+        if (@$st->execute()) $n++;
+    }
+    $st = @$conn->prepare("UPDATE {$P}casamentos SET licenca_estado='ativa', licenca_pacote=?
+                           WHERE id=?");
+    if ($st) { $st->bind_param('si', $rotulo, $cid); @$st->execute(); }
+    return $n;
+}
+
+/** Tudo o que a página da licença do casal precisa de saber, num sítio só. */
+function licResumo(mysqli $conn, int $cid): array {
+    global $P;
+    $cas = ['nome' => '', 'estado' => '', 'licenca_estado' => 'sem', 'licenca_pacote' => '',
+            'revogada_em' => null, 'revogada_motivo' => ''];
+    if ($cid > 0) {
+        $r = @$conn->query("SELECT nome, estado, licenca_estado, licenca_pacote,
+                                   licenca_revogada_em, licenca_revogada_motivo
+                            FROM {$P}casamentos WHERE id=" . (int)$cid . " LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) {
+            $cas = ['nome' => (string)$x['nome'], 'estado' => (string)$x['estado'],
+                    'licenca_estado' => (string)($x['licenca_estado'] ?: 'sem'),
+                    'licenca_pacote' => (string)$x['licenca_pacote'],
+                    'revogada_em' => $x['licenca_revogada_em'],
+                    'revogada_motivo' => (string)$x['licenca_revogada_motivo']];
+        }
+    }
+    return [
+        'casamento'  => $cas,
+        'prazo'      => licencaInfo($conn, $cid),
+        'modulos'    => licencaModulos($conn, $cid),
+        'pendente'   => licPedido($conn, $cid, 'pendente'),
+        'recusado'   => licPedido($conn, $cid, 'recusado'),
+        'catalogo'   => licCatalogo($conn),
+        'politica'   => licPolitica($conn),
+        'convidados' => convidadosContados($conn, $cid),
+        'moeda'      => 'Kz',
+    ];
+}
+
+// ---- o preçário, à vista de todos (a montra) ----
+// É público de propósito: a página de inscrição precisa dele antes de haver
+// sessão nenhuma, e um preçário é para se ver.
+if ($acao === 'lic_catalogo') {
+    ok(['catalogo' => licCatalogo($conn), 'politica' => licPolitica($conn), 'moeda' => 'Kz']);
+}
+if ($acao === 'lic_politica') {
+    ok(['politica' => licPolitica($conn)]);
+}
+
+// ---- o que o casal tem, e o que pode pedir ----
+if ($acao === 'lic_estado') {
+    exigirAdminApi();
+    ok(['licenca' => licResumo($conn, casamentoAtual())]);
+}
+
+if ($acao === 'lic_pedir') {
+    // O casal pede — de novo, ou a reforçar o que já tem. Enquanto o admin não
+    // decidir, o pedido é dele: pode mexer-lhe as vezes que quiser.
+    exigirAdminApi(); exigirCsrf(); exigirCorrecao();
+    $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    $d = corpo();
+    if (empty($d['aceito'])) erro('É preciso aceitar as políticas de utilização para submeter o pedido.');
+    $tem = licencaEstado($conn, $cid) === 'ativa';
+    $pid = licRegistarPedido($conn, $cid, $d, $tem ? 'upgrade' : 'inicial');
+    if (!$pid) erro('Escolha pelo menos um módulo ou um pacote.');
+    $ped = licPedido($conn, $cid, 'pendente');
+    registar($conn, 'licenca_pedido', $ped['pacote_nome'] ?: 'à medida',
+             ($tem ? 'reforço' : 'inicial') . ' · ' . count($ped['itens'] ?? []) . ' módulo(s) · '
+             . number_format((float)$ped['total'], 2, ',', ' ') . ' Kz');
+    ok(['pedido' => $ped, 'licenca' => licResumo($conn, $cid)]);
+}
+
+if ($acao === 'lic_pedido_cancelar') {
+    exigirAdminApi(); exigirCsrf(); exigirCorrecao();
+    $cid = casamentoAtual();
+    $ped = licPedido($conn, $cid, 'pendente');
+    if (!$ped) erro('Não há nenhum pedido à espera.');
+    $st = $conn->prepare("UPDATE {$P}lic_pedidos SET estado='cancelado', decidido_em=NOW()
+                          WHERE id=? AND casamento_id=?");
+    $pid = (int)$ped['id'];
+    $st->bind_param('ii', $pid, $cid);
+    if (!$st->execute()) erro('Não foi possível cancelar o pedido.');
+    // Sem pedido e sem licença, o casamento volta ao ponto de partida.
+    $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado='sem'
+                          WHERE id=? AND licenca_estado='pendente'");
+    $st->bind_param('i', $cid); @$st->execute();
+    registar($conn, 'licenca_pedido_cancelar', $ped['pacote_nome'] ?: 'à medida');
+    ok(['licenca' => licResumo($conn, $cid)]);
+}
+
+// ---- do lado de quem decide ----
+if ($acao === 'lic_pedidos') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os pedidos de licença.');
+    $estado = (string)($_GET['estado'] ?? 'pendente');
+    if (!in_array($estado, ['pendente','aprovado','recusado','cancelado','todos'], true)) $estado = 'pendente';
+    $onde = $estado === 'todos' ? '1=1' : "p.estado='" . $conn->real_escape_string($estado) . "'";
+    $r = @$conn->query("SELECT p.*, c.nome casamento_nome, c.estado casamento_estado, c.data_evento
+                        FROM {$P}lic_pedidos p JOIN {$P}casamentos c ON c.id = p.casamento_id
+                        WHERE $onde AND p.casamento_id = p.casamento_id
+                        ORDER BY p.estado='pendente' DESC, p.criado_em DESC LIMIT 200");
+    $lista = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $x['id'] = (int)$x['id']; $x['casamento_id'] = (int)$x['casamento_id'];
+        $x['total'] = (float)$x['total']; $x['meses'] = (int)$x['meses'];
+        $x['itens'] = [];
+        $lista[(int)$x['id']] = $x;
+    }
+    if ($lista) {
+        $ids = implode(',', array_map('intval', array_keys($lista)));
+        $ri = @$conn->query("SELECT pedido_id, modulo_chave, escalao_nome, preco, limite, editar, todos_modelos
+                             FROM {$P}lic_pedido_itens WHERE pedido_id IN ($ids) ORDER BY id");
+        if ($ri) while ($x = $ri->fetch_assoc()) {
+            $p = (int)$x['pedido_id'];
+            if (!isset($lista[$p])) continue;
+            $x['preco'] = (float)$x['preco']; $x['limite'] = (int)$x['limite'];
+            $x['editar'] = (int)$x['editar']; $x['todos_modelos'] = (int)$x['todos_modelos'];
+            $lista[$p]['itens'][] = $x;
+        }
+    }
+    $n = @$conn->query("SELECT COUNT(*) FROM {$P}lic_pedidos WHERE estado='pendente' AND casamento_id>0");
+    ok(['pedidos' => array_values($lista),
+        'pendentes' => $n ? (int)$n->fetch_row()[0] : 0]);
+}
+
+if ($acao === 'lic_decidir') {
+    // Aprovar abre a porta às duas coisas: os módulos pedidos passam a estar
+    // concedidos E o casamento, se ainda estava à espera, fica ativo com o
+    // relógio da licença a contar. Aprovar só a licença deixava o casal a olhar
+    // para uma porta que continuava fechada.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma decide pedidos de licença.');
+    exigirCsrf();
+    $d = corpo();
+    $pid = (int)($d['id'] ?? 0);
+    $dec = (string)($d['decisao'] ?? '');
+    if (!in_array($dec, ['aprovar','recusar'], true)) erro('Decisão inválida.');
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 1000);
+
+    $st = $conn->prepare("SELECT p.*, c.nome casamento_nome FROM {$P}lic_pedidos p
+                          JOIN {$P}casamentos c ON c.id = p.casamento_id
+                          WHERE p.id=? AND p.casamento_id > 0");
+    $st->bind_param('i', $pid); $st->execute();
+    $ped = $st->get_result()->fetch_assoc();
+    if (!$ped) erro('Pedido não encontrado.');
+    if ($ped['estado'] !== 'pendente') erro('Este pedido já foi decidido.');
+    $cid = (int)$ped['casamento_id'];
+    $ped['id'] = $pid;
+    $ped['itens'] = licPedido($conn, $cid, 'pendente')['itens'] ?? [];
+
+    if ($dec === 'recusar') {
+        $st = $conn->prepare("UPDATE {$P}lic_pedidos SET estado='recusado', nota_admin=?,
+                              decidido_em=NOW(), decidido_por=? WHERE id=? AND casamento_id=?");
+        $uid = utilizadorId();
+        $st->bind_param('siii', $nota, $uid, $pid, $cid);
+        $st->execute();
+        // Recusar um pedido inicial deixa o casamento sem licença; recusar um
+        // reforço não mexe no que o casal já tinha.
+        $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado='sem'
+                              WHERE id=? AND licenca_estado='pendente'");
+        $st->bind_param('i', $cid); @$st->execute();
+        registar($conn, 'licenca_recusar', (string)$ped['casamento_nome'], $nota);
+        ok(['id' => $pid, 'estado' => 'recusado']);
+    }
+
+    // Aprovar.
+    $mudou = licAplicarPedido($conn, $cid, $ped);
+    $meses = (int)$ped['meses'];
+    $st = $conn->prepare("UPDATE {$P}lic_pedidos SET estado='aprovado', nota_admin=?,
+                          decidido_em=NOW(), decidido_por=? WHERE id=? AND casamento_id=?");
+    $uid = utilizadorId();
+    $st->bind_param('siii', $nota, $uid, $pid, $cid);
+    $st->execute();
+
+    $pacote = (string)($ped['pacote_nome'] ?: 'Plano à medida');
+    $st = $conn->prepare("UPDATE {$P}casamentos
+                          SET licenca_estado='ativa', licenca_pacote=?, licenca_meses=?,
+                              licenca_revogada_em=NULL, licenca_revogada_motivo=NULL
+                          WHERE id=?");
+    $st->bind_param('sii', $pacote, $meses, $cid);
+    $st->execute();
+
+    // Um casamento à espera passa a ativo, com as suas contas; um que já estava
+    // de pé fica como está — um reforço não é uma reabertura.
+    $contas = 0;
+    $r = @$conn->query("SELECT estado FROM {$P}casamentos WHERE id=$cid");
+    $estCas = ($r && ($x = $r->fetch_row())) ? (string)$x[0] : '';
+    if ($estCas === 'pendente' || $estCas === 'suspenso') {
+        @$conn->query("UPDATE {$P}casamentos SET estado='ativo' WHERE id=$cid");
+        $contas = retomarContasDoCasamento($conn, $cid);
+    }
+    iniciarLicenca($conn, $cid);
+
+    registar($conn, 'licenca_aprovar', (string)$ped['casamento_nome'],
+             $pacote . ' · ' . count($ped['itens']) . ' módulo(s) · ' . $meses . ' mês(es)'
+             . ($contas ? " · $contas conta(s) ativada(s)" : ''));
+    ok(['id' => $pid, 'estado' => 'aprovado', 'modulos' => $mudou,
+        'contas_ativadas' => $contas, 'licenca' => licencaInfo($conn, $cid)]);
+}
+
+if ($acao === 'lic_revogar') {
+    // A licença cai por incumprimento das políticas. Fecha-se tudo o que ela
+    // abria e diz-se porquê — a razão vai para o casal e fica no registo. Os
+    // dados ficam: o casal continua a poder exportá-los, como as políticas
+    // prometem (Lei n.º 22/11, artigos 26.º e 28.º).
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma revoga licenças.');
+    exigirCsrf();
+    $d = corpo();
+    $cid = (int)($d['casamento'] ?? 0);
+    $motivo = mb_substr(trim((string)($d['motivo'] ?? '')), 0, 1000);
+    if ($motivo === '') erro('Indique o motivo da revogação — o casal tem direito a sabê-lo.');
+    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $cid); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+
+    @$conn->query("DELETE FROM {$P}lic_concessoes WHERE casamento_id=" . (int)$cid);
+    $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado='revogada',
+                          licenca_revogada_em=NOW(), licenca_revogada_motivo=? WHERE id=?");
+    $st->bind_param('si', $motivo, $cid);
+    if (!$st->execute()) erro('Não foi possível revogar a licença.');
+    registar($conn, 'licenca_revogar', (string)$c['nome'], $motivo);
+    ok(['casamento' => $cid, 'estado' => 'revogada']);
+}
+
+if ($acao === 'lic_conceder') {
+    // A administração dá (ou tira) módulos a um casamento sem passar por pedido
+    // nenhum — é como se abre a porta a um casamento criado aqui dentro, e como
+    // se corrige um engano.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma concede módulos.');
+    exigirCsrf();
+    $d = corpo();
+    $cid = (int)($d['casamento'] ?? 0);
+    if ($cid <= 0) erro('Indique o casamento.');
+    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st->bind_param('i', $cid); $st->execute();
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) erro('Casamento não encontrado.');
+
+    $escIds = [];
+    foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escIds[] = $e; }
+    @$conn->query("DELETE FROM {$P}lic_concessoes WHERE casamento_id=" . (int)$cid);
+    $n = 0;
+    if ($escIds) {
+        $lista = implode(',', array_map('intval', array_unique($escIds)));
+        $r = @$conn->query("SELECT e.id, e.nome, e.limite, e.editar, e.todos_modelos, m.chave modulo
+                            FROM {$P}lic_escaloes e JOIN {$P}lic_modulos m ON m.id = e.modulo_id
+                            WHERE e.id IN ($lista) ORDER BY m.ordem, e.ordem");
+        $vistos = [];
+        if ($r) while ($x = $r->fetch_assoc()) {
+            $mc = (string)$x['modulo'];
+            if (isset($vistos[$mc])) continue;
+            $vistos[$mc] = true;
+            $st = $conn->prepare("INSERT INTO {$P}lic_concessoes
+                (casamento_id, modulo_chave, escalao_id, escalao_nome, limite, editar, todos_modelos, desde)
+                VALUES (?,?,?,?,?,?,?,NOW())");
+            if (!$st) continue;
+            $eid = (int)$x['id']; $en = (string)$x['nome']; $lim = (int)$x['limite'];
+            $ed = (int)$x['editar']; $tm = (int)$x['todos_modelos'];
+            $st->bind_param('isisiii', $cid, $mc, $eid, $en, $lim, $ed, $tm);
+            if (@$st->execute()) $n++;
+        }
+    }
+    $meses = max(0, min(120, (int)($d['meses'] ?? 0)));
+    $novoEstado = $n > 0 ? 'ativa' : 'sem';
+    $rotulo = $n > 0 ? 'Concedido pela administração' : '';
+    $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado=?, licenca_pacote=?,
+                          licenca_meses=?, licenca_revogada_em=NULL, licenca_revogada_motivo=NULL
+                          WHERE id=?");
+    $st->bind_param('ssii', $novoEstado, $rotulo, $meses, $cid);
+    @$st->execute();
+    if ($n > 0) iniciarLicenca($conn, $cid);
+    registar($conn, 'licenca_conceder', (string)$c['nome'], "$n módulo(s)");
+    ok(['casamento' => $cid, 'modulos' => $n, 'estado' => $novoEstado]);
+}
+
+// ---- o preçário, do lado de quem o define ----
+if ($acao === 'lic_modulo_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita o preçário.');
+    exigirCsrf();
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    if ($id <= 0) erro('Módulo não encontrado.');
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('O módulo precisa de um nome.');
+    $resumo = mb_substr(trim((string)($d['resumo'] ?? '')), 0, 180);
+    $benef  = mb_substr(trim((string)($d['beneficio'] ?? '')), 0, 180);
+    $icone  = mb_substr(trim((string)($d['icone'] ?? '')), 0, 8);
+    $ativo  = !empty($d['ativo']) ? 1 : 0;
+    $st = $conn->prepare("UPDATE {$P}lic_modulos SET nome=?, resumo=?, beneficio=?, icone=?, ativo=? WHERE id=?");
+    $st->bind_param('ssssii', $nome, $resumo, $benef, $icone, $ativo, $id);
+    if (!$st->execute()) erro('Não foi possível guardar o módulo.');
+    registar($conn, 'lic_modulo_guardar', $nome);
+    ok(['catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_escalao_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita o preçário.');
+    exigirCsrf();
+    $d = corpo();
+    $id  = (int)($d['id'] ?? 0);
+    $mid = (int)($d['modulo'] ?? 0);
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('O escalão precisa de um nome.');
+    $resumo = mb_substr(trim((string)($d['resumo'] ?? '')), 0, 180);
+    $preco  = max(0, min(999999999, (float)($d['preco'] ?? 0)));
+    $limite = max(0, min(100000, (int)($d['limite'] ?? 0)));
+    $editar = !empty($d['editar']) ? 1 : 0;
+    $todos  = !empty($d['todos_modelos']) ? 1 : 0;
+    $ordem  = max(0, min(9999, (int)($d['ordem'] ?? 0)));
+    $ativo  = !empty($d['ativo']) ? 1 : 0;
+
+    if ($id > 0) {
+        $st = $conn->prepare("UPDATE {$P}lic_escaloes SET nome=?, resumo=?, preco=?, limite=?,
+                              editar=?, todos_modelos=?, ordem=?, ativo=? WHERE id=?");
+        $st->bind_param('ssdiiiiii', $nome, $resumo, $preco, $limite, $editar, $todos, $ordem, $ativo, $id);
+        if (!$st->execute()) erro('Não foi possível guardar o escalão.');
+    } else {
+        $r = @$conn->query("SELECT chave FROM {$P}lic_modulos WHERE id=$mid");
+        if (!$r || !$r->num_rows) erro('Módulo não encontrado.');
+        $chave = (string)$r->fetch_row()[0] . '_' . substr(bin2hex(random_bytes(4)), 0, 6);
+        $st = $conn->prepare("INSERT INTO {$P}lic_escaloes
+            (modulo_id, chave, nome, resumo, preco, limite, editar, todos_modelos, ordem, ativo)
+            VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $st->bind_param('isssdiiiii', $mid, $chave, $nome, $resumo, $preco, $limite,
+                        $editar, $todos, $ordem, $ativo);
+        if (!$st->execute()) erro('Não foi possível criar o escalão.');
+        $id = $conn->insert_id;
+    }
+    registar($conn, 'lic_escalao_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz');
+    ok(['id' => $id, 'catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_escalao_apagar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita o preçário.');
+    exigirCsrf();
+    $id = (int)(corpo()['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome FROM {$P}lic_escaloes WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $e = $st->get_result()->fetch_assoc();
+    if (!$e) erro('Escalão não encontrado.');
+    // Um escalão que já foi concedido não desaparece: desliga-se. Apagá-lo era
+    // deixar sem chão as licenças que assentam nele.
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}lic_concessoes WHERE escalao_id=$id AND casamento_id>0");
+    $usos = $r ? (int)$r->fetch_row()[0] : 0;
+    if ($usos > 0) {
+        @$conn->query("UPDATE {$P}lic_escaloes SET ativo=0 WHERE id=$id");
+        registar($conn, 'lic_escalao_desligar', (string)$e['nome'], "$usos licença(s) assentam nele");
+        ok(['desligado' => true, 'usos' => $usos, 'catalogo' => licCatalogo($conn)]);
+    }
+    @$conn->query("DELETE FROM {$P}lic_pacote_itens WHERE escalao_id=$id");
+    @$conn->query("DELETE FROM {$P}lic_escaloes WHERE id=$id");
+    registar($conn, 'lic_escalao_apagar', (string)$e['nome']);
+    ok(['catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_pacote_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os pacotes.');
+    exigirCsrf();
+    $d = corpo();
+    $id   = (int)($d['id'] ?? 0);
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('O pacote precisa de um nome.');
+    $prom   = mb_substr(trim((string)($d['promessa'] ?? '')), 0, 180);
+    $resumo = mb_substr(trim((string)($d['resumo'] ?? '')), 0, 2000);
+    $preco  = max(0, min(999999999, (float)($d['preco'] ?? 0)));
+    $meses  = max(1, min(120, (int)($d['meses'] ?? 12)));
+    $etiq   = mb_substr(trim((string)($d['etiqueta'] ?? '')), 0, 40);
+    $dest   = !empty($d['destaque']) ? 1 : 0;
+    $ordem  = max(0, min(9999, (int)($d['ordem'] ?? 0)));
+    $ativo  = !empty($d['ativo']) ? 1 : 0;
+
+    if ($id > 0) {
+        $st = $conn->prepare("UPDATE {$P}lic_pacotes SET nome=?, promessa=?, resumo=?, preco=?,
+                              meses=?, etiqueta=?, destaque=?, ordem=?, ativo=? WHERE id=?");
+        $st->bind_param('sssdisiiii', $nome, $prom, $resumo, $preco, $meses, $etiq, $dest, $ordem, $ativo, $id);
+        if (!$st->execute()) erro('Não foi possível guardar o pacote.');
+    } else {
+        $chave = 'pacote_' . substr(bin2hex(random_bytes(4)), 0, 6);
+        $st = $conn->prepare("INSERT INTO {$P}lic_pacotes
+            (chave, nome, promessa, resumo, preco, meses, etiqueta, destaque, ordem, ativo)
+            VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $st->bind_param('ssssdisiii', $chave, $nome, $prom, $resumo, $preco, $meses, $etiq, $dest, $ordem, $ativo);
+        if (!$st->execute()) erro('Não foi possível criar o pacote.');
+        $id = $conn->insert_id;
+    }
+    // Só um pacote pode estar em destaque: dois «mais escolhidos» não escolhem nada.
+    if ($dest) @$conn->query("UPDATE {$P}lic_pacotes SET destaque=0 WHERE id <> $id");
+
+    if (array_key_exists('escaloes', $d)) {
+        @$conn->query("DELETE FROM {$P}lic_pacote_itens WHERE pacote_id=$id");
+        $vistos = [];
+        foreach ((array)$d['escaloes'] as $e) {
+            $e = (int)$e;
+            if ($e <= 0 || isset($vistos[$e])) continue;
+            $vistos[$e] = true;
+            @$conn->query("INSERT IGNORE INTO {$P}lic_pacote_itens (pacote_id, escalao_id) VALUES ($id, $e)");
+        }
+    }
+    registar($conn, 'lic_pacote_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz');
+    ok(['id' => $id, 'catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_pacote_apagar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os pacotes.');
+    exigirCsrf();
+    $id = (int)(corpo()['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome FROM {$P}lic_pacotes WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $p = $st->get_result()->fetch_assoc();
+    if (!$p) erro('Pacote não encontrado.');
+    @$conn->query("DELETE FROM {$P}lic_pacote_itens WHERE pacote_id=$id");
+    @$conn->query("DELETE FROM {$P}lic_pacotes WHERE id=$id");
+    registar($conn, 'lic_pacote_apagar', (string)$p['nome']);
+    ok(['catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_politica_guardar') {
+    // Editar as políticas publica uma versão NOVA. A anterior fica: é a prova
+    // do texto a que cada casal disse que sim, e essa não se reescreve.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita as políticas.');
+    exigirCsrf();
+    $d = corpo();
+    $titulo = mb_substr(trim((string)($d['titulo'] ?? '')), 0, 160);
+    $corpoT = trim((string)($d['corpo'] ?? ''));
+    if ($titulo === '') erro('As políticas precisam de um título.');
+    if (mb_strlen($corpoT) < 200) erro('O texto das políticas está demasiado curto.');
+    $r = @$conn->query("SELECT MAX(versao) FROM {$P}lic_politicas");
+    $nova = ($r ? (int)$r->fetch_row()[0] : 0) + 1;
+    $st = $conn->prepare("INSERT INTO {$P}lic_politicas (versao, titulo, corpo, publicada)
+                          VALUES (?,?,?,1)");
+    $st->bind_param('iss', $nova, $titulo, $corpoT);
+    if (!$st->execute()) erro('Não foi possível publicar as políticas.');
+    registar($conn, 'lic_politica_guardar', $titulo, "versão $nova");
+    ok(['politica' => licPolitica($conn)]);
 }
 
 // ============================================================
@@ -700,6 +1465,7 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
     }
 
     if ($acao === 'porta_checkin') {
+    exigirModuloApi('convidados');
         $d = corpo();
         $id   = (int)($d['convite_id'] ?? 0);
         $modo = $d['modo'] ?? 'todos';   // 'todos' | 'membro' | 'anular'
@@ -784,6 +1550,23 @@ if ($acao === 'defs_save') {
         $desenho = array_flip(chavesDesenho($amb));
         foreach (array_keys($defs) as $k) {
             if (isset($desenho[$k])) { $tocaDesenho[] = $amb; break; }
+        }
+    }
+
+    // Desenhar a peça é o que separa os escalões «com edição» dos outros. Os
+    // dados do casamento continuam a gravar-se — o que se recusa é mexer no
+    // DESENHO de uma peça que a licença dá só para usar como está.
+    foreach ($tocaDesenho as $amb) {
+        if (!podeModulo($amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$amb]['rotulo'] ?? $amb) . '.');
+        }
+        if (!podeEditarPeca($amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe o ' . (ambitosVersao()[$amb]['rotulo'] ?? $amb)
+               . ' no modelo padrão, sem edição. Para o desenhar à sua maneira, '
+               . 'reforce a licença na página da Licença.');
         }
     }
 
@@ -874,11 +1657,28 @@ function criarVersaoDaPeca(mysqli $conn, string $ambito, string $nome): int {
 }
 
 if ($acao === 'versao_criar') {
+
+    // Uma versão é um desenho guardado: quem leva a peça sem edição não tem
+    // desenhos seus para guardar, e por isso não chega aqui.
+    {
+        $_amb = ambitoPedido();
+        if (!podeModulo($_amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$_amb]['rotulo'] ?? $_amb) . '.');
+        }
+        if (!podeEditarPeca($_amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe esta peça no modelo padrão, sem edição. '
+               . 'Para guardar versões suas, reforce a licença na página da Licença.');
+        }
+    }
     $d = corpo();
     ok(['id' => criarVersaoDaPeca($conn, ambitoPedido(), (string)($d['nome'] ?? ''))]);
 }
 
 if ($acao === 'versao_lista') {
+    exigirModuloApi(ambitoPedido());
     $ambito = ambitoPedido();
     $st = $conn->prepare("SELECT id, nome, utilizador, criado_em, atualizado_em, predefinida, defs
                           FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY predefinida DESC, id DESC");
@@ -924,6 +1724,22 @@ if ($acao === 'versao_lista') {
 }
 
 if ($acao === 'versao_aplicar') {
+
+    // Uma versão é um desenho guardado: quem leva a peça sem edição não tem
+    // desenhos seus para guardar, e por isso não chega aqui.
+    {
+        $_amb = ambitoPedido();
+        if (!podeModulo($_amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$_amb]['rotulo'] ?? $_amb) . '.');
+        }
+        if (!podeEditarPeca($_amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe esta peça no modelo padrão, sem edição. '
+               . 'Para guardar versões suas, reforce a licença na página da Licença.');
+        }
+    }
     // Torna esta a versão em vigor: aplica as suas definições e marca-a.
     $id = (int)($_GET['id'] ?? 0);
 
@@ -975,6 +1791,22 @@ if ($acao === 'versao_aplicar') {
 }
 
 if ($acao === 'versao_atualizar') {
+
+    // Uma versão é um desenho guardado: quem leva a peça sem edição não tem
+    // desenhos seus para guardar, e por isso não chega aqui.
+    {
+        $_amb = ambitoPedido();
+        if (!podeModulo($_amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$_amb]['rotulo'] ?? $_amb) . '.');
+        }
+        if (!podeEditarPeca($_amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe esta peça no modelo padrão, sem edição. '
+               . 'Para guardar versões suas, reforce a licença na página da Licença.');
+        }
+    }
     // Reescreve o conteúdo da versão com o que está em vigor agora.
     $id = (int)($_GET['id'] ?? 0);
     // A peça de origem (o modelo da casa) não se reescreve.
@@ -994,6 +1826,22 @@ if ($acao === 'versao_atualizar') {
 }
 
 if ($acao === 'versao_renomear') {
+
+    // Uma versão é um desenho guardado: quem leva a peça sem edição não tem
+    // desenhos seus para guardar, e por isso não chega aqui.
+    {
+        $_amb = ambitoPedido();
+        if (!podeModulo($_amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$_amb]['rotulo'] ?? $_amb) . '.');
+        }
+        if (!podeEditarPeca($_amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe esta peça no modelo padrão, sem edição. '
+               . 'Para guardar versões suas, reforce a licença na página da Licença.');
+        }
+    }
     $d = corpo();
     $id = (int)($_GET['id'] ?? ($d['id'] ?? 0));
     $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
@@ -1008,6 +1856,22 @@ if ($acao === 'versao_renomear') {
 }
 
 if ($acao === 'versao_apagar') {
+
+    // Uma versão é um desenho guardado: quem leva a peça sem edição não tem
+    // desenhos seus para guardar, e por isso não chega aqui.
+    {
+        $_amb = ambitoPedido();
+        if (!podeModulo($_amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$_amb]['rotulo'] ?? $_amb) . '.');
+        }
+        if (!podeEditarPeca($_amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe esta peça no modelo padrão, sem edição. '
+               . 'Para guardar versões suas, reforce a licença na página da Licença.');
+        }
+    }
     $id = (int)($_GET['id'] ?? 0);
     // A peça de origem (o modelo da casa) não se apaga.
     if ($id === VERSAO_PADRAO_ID) erro('«'.nomeDaOrigem($conn, ambitoPedido()).'» é o desenho de origem da casa: não se apaga.');
@@ -1160,6 +2024,7 @@ if ($acao === 'def_media_repor') {
 }
 
 if ($acao === 'convite_list') {
+    exigirModuloApi('convidados');
     $tipo=$_GET['tipo']??''; $lado=$_GET['lado']??''; $estado=$_GET['estado']??'';
     $mesa=$_GET['mesa']??''; $busca=trim($_GET['busca']??'');
     $impresso=$_GET['impresso']??''; $enviado=$_GET['enviado']??'';
@@ -1276,11 +2141,13 @@ if ($acao === 'convite_list') {
 }
 
 if ($acao === 'convite_get') {
+    exigirModuloApi('convidados');
     $c = carregarConvite($conn, (int)($_GET['id']??0));
     $c ? ok(['convite'=>$c]) : erro('Convite não encontrado.');
 }
 
 if ($acao === 'convite_save') {
+    exigirModuloApi('convidados');
     $d = corpo();
     $id       = (int)($d['id'] ?? 0);
     $nome     = trim($d['nome_exibicao'] ?? '');
@@ -1302,6 +2169,18 @@ if ($acao === 'convite_save') {
     $nomeados = 0;
     foreach ($membros as $m) { if (trim(is_array($m) ? ($m['nome'] ?? '') : $m) !== '') $nomeados++; }
     $lugares = max(1, $nomeados);
+
+    // O escalão de convidados é um tecto de PESSOAS, e este convite reescreve
+    // as suas: o que conta é a diferença. Guardar um convite de cinco que já
+    // tinha cinco não gasta lugar nenhum, e é isso que faz com que corrigir um
+    // nome não bata com o nariz no limite.
+    $jaNeste = 0;
+    if ($id) {
+        $rq = @$conn->query("SELECT COUNT(*) FROM {$P}convidados
+                             WHERE " . doCasamento() . " AND convite_id=" . (int)$id);
+        if ($rq) $jaNeste = (int)$rq->fetch_row()[0];
+    }
+    exigirCabidaConvidados($conn, $nomeados - $jaNeste);
 
     $novoConvite = !$id;
     if ($id) {
@@ -1412,6 +2291,7 @@ if ($acao === 'convite_save') {
 }
 
 if ($acao === 'convite_delete') {
+    exigirModuloApi('convidados');
     // Eliminação REVERSÍVEL: o convite sai das listas mas fica recuperável.
     // (?definitivo=1 apaga mesmo, usado ao esvaziar a reciclagem.)
     $id  = (int)($_GET['id'] ?? 0);
@@ -1433,6 +2313,7 @@ if ($acao === 'convite_delete') {
 }
 
 if ($acao === 'convite_restaurar') {
+    exigirModuloApi('convidados');
     $id = (int)($_GET['id'] ?? 0);
     $st = $conn->prepare("UPDATE {$P}convites SET eliminado_em=NULL WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i',$id); $ok = $st->execute();
@@ -1487,6 +2368,36 @@ if ($acao === 'casamento_criar') {
     $novo = $conn->insert_id;
     $gravadas = guardarEventoDoRegisto($conn, $novo, $d);
     semearOrcamento($conn, $novo);   // começa com as gavetas de origem
+
+    // E a licença: um casamento criado aqui dentro nasce com tudo aberto. Quem
+    // o criou já decidiu — não há pedido nenhum a analisar. Se se quiser dar-lhe
+    // menos, é em «Módulos da licença…», ou mandando os escalões neste pedido.
+    $escPedidos = [];
+    foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escPedidos[] = $e; }
+    if ($escPedidos) {
+        $lista = implode(',', array_map('intval', array_unique($escPedidos)));
+        $rr = @$conn->query("SELECT e.id, e.nome, e.limite, e.editar, e.todos_modelos, m.chave modulo
+                             FROM {$P}lic_escaloes e JOIN {$P}lic_modulos m ON m.id = e.modulo_id
+                             WHERE e.id IN ($lista) ORDER BY m.ordem, e.ordem");
+        $vistos = [];
+        if ($rr) while ($x = $rr->fetch_assoc()) {
+            $mc = (string)$x['modulo'];
+            if (isset($vistos[$mc])) continue;
+            $vistos[$mc] = true;
+            $st2 = $conn->prepare("INSERT INTO {$P}lic_concessoes
+                (casamento_id, modulo_chave, escalao_id, escalao_nome, limite, editar, todos_modelos, desde)
+                VALUES (?,?,?,?,?,?,?,NOW())");
+            if (!$st2) continue;
+            $eid = (int)$x['id']; $en = (string)$x['nome']; $lim = (int)$x['limite'];
+            $ed = (int)$x['editar']; $tm = (int)$x['todos_modelos'];
+            $st2->bind_param('isisiii', $novo, $mc, $eid, $en, $lim, $ed, $tm);
+            @$st2->execute();
+        }
+        @$conn->query("UPDATE {$P}casamentos SET licenca_estado='ativa',
+                       licenca_pacote='Concedido pela administração' WHERE id=" . (int)$novo);
+    } else {
+        licConcederTudo($conn, $novo);
+    }
 
     // As contas, se vieram. Guardam-se as senhas geradas para as mostrar uma vez.
     $contas = [];
@@ -1897,8 +2808,15 @@ if ($acao === 'casamento_lista') {
         $onde .= " AND (c.nome LIKE '%$s%' OR c.noiva LIKE '%$s%' OR c.noivo LIKE '%$s%')";
     }
     $r = @$conn->query("SELECT c.id, c.nome, c.noiva, c.noivo, c.estado, c.data_evento, c.ultimo_acesso,
-                               c.licenca_meses, c.licenca_ate,
+                               c.licenca_meses, c.licenca_ate, c.licenca_estado, c.licenca_pacote,
                                DATEDIFF(c.licenca_ate, CURDATE()) licenca_dias,
+                               -- Quantos módulos a licença abre, e se há pedido
+                               -- à espera: a lista tem de dizer, num relance,
+                               -- qual é o casamento que está à porta.
+                               (SELECT COUNT(*) FROM {$P}lic_concessoes lc
+                                 WHERE lc.casamento_id = c.id) lic_modulos,
+                               (SELECT COUNT(*) FROM {$P}lic_pedidos lp
+                                 WHERE lp.casamento_id = c.id AND lp.estado='pendente') lic_pedidos,
                                (SELECT COUNT(*) FROM {$P}convites v
                                  WHERE v.casamento_id = c.id AND v.eliminado_em IS NULL) convites,
                                (SELECT COUNT(*) FROM {$P}convidados g
@@ -2133,7 +3051,9 @@ if ($acao === 'casamento_ficha') {
     // de o abrir: a identidade, os dados do evento e as contas ligadas a ele.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê a ficha completa.');
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("SELECT id, nome, noiva, noivo, data_evento, estado FROM {$P}casamentos WHERE id=?");
+    $st = $conn->prepare("SELECT id, nome, noiva, noivo, data_evento, estado,
+                                 licenca_meses, licenca_estado, licenca_pacote
+                          FROM {$P}casamentos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) erro('Casamento não encontrado.');
@@ -2160,7 +3080,11 @@ if ($acao === 'casamento_ficha') {
     $contas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
 
     ok(['casamento' => $c, 'evento' => $evento, 'contas' => $contas,
-        'licenca' => licencaInfo($conn, $id)]);
+        'licenca' => licencaInfo($conn, $id),
+        // Os módulos concedidos, para o painel poder marcar o que já lá está
+        // em vez de obrigar o admin a adivinhar de memória.
+        'licenca_modulos' => licencaModulos($conn, $id),
+        'licenca_pedido'  => licPedido($conn, $id, 'pendente')]);
 }
 
 if ($acao === 'casamento_editar') {
@@ -2438,6 +3362,7 @@ if ($acao === 'sistema_tema_guardar') {
 }
 
 if ($acao === 'convite_flag') {
+    exigirModuloApi('convidados');
     $id=(int)($_GET['id']??0); $campo=$_GET['campo']??''; $valor=!empty($_GET['valor'])?1:0;
     if (!in_array($campo,['impresso','enviado'],true)) erro('Campo inválido.');
     $st=$conn->prepare("UPDATE {$P}convites SET $campo=?, atualizado_em=$TS WHERE " . doCasamento() . " AND id=?");
@@ -2447,6 +3372,7 @@ if ($acao === 'convite_flag') {
 }
 
 if ($acao === 'convite_rsvp_manual') {
+    exigirModuloApi('convidados');
     $id=(int)($_GET['id']??0); $estado=$_GET['estado']??'';
     if (!in_array($estado,['pendente','confirmado','recusado','parcial'],true)) erro('Estado inválido.');
     $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_em=$TS WHERE " . doCasamento() . " AND id=?");
@@ -2461,8 +3387,10 @@ const CORES_MESA  = ['neutra','verde','ouro','terracota','azul','ameixa','rosa',
 
 const TAMANHOS_MESA = ['auto','p','m','g'];
 
-if ($acao === 'mesa_list') { ok(['mesas'=>listarMesas($conn), 'canvas'=>plantaConfig($conn)]); }
+if ($acao === 'mesa_list') { exigirModuloApi('mesas');
+    ok(['mesas'=>listarMesas($conn), 'canvas'=>plantaConfig($conn)]); }
 if ($acao === 'planta_size') {
+    exigirModuloApi('mesas');
     // Guarda as dimensões do canvas da planta (px), definidas ao arrastar as bordas.
     $d=corpo();
     $w = isset($d['largura']) && $d['largura']!=='' ? max(280, min(4000, (int)$d['largura'])) : null;
@@ -2476,6 +3404,7 @@ if ($acao === 'planta_size') {
     ok(['canvas'=>plantaConfig($conn)]);
 }
 if ($acao === 'planta_bloqueio') {
+    exigirModuloApi('mesas');
     // Trava/destrava o arrasto das mesas e o redimensionar do canvas.
     $d = corpo();
     foreach (['bloq_mesas' => 'planta.bloq_mesas', 'bloq_canvas' => 'planta.bloq_canvas'] as $campo => $chave) {
@@ -2487,6 +3416,7 @@ if ($acao === 'planta_bloqueio') {
     ok(['canvas' => plantaConfig($conn)]);
 }
 if ($acao === 'mesa_save') {
+    exigirModuloApi('mesas');
     $d=corpo(); $id=(int)($d['id']??0); $nome=trim($d['nome']??'');
     $cap=($d['capacidade']??'')!==''?max(1,(int)$d['capacidade']):null;
     $forma=in_array($d['forma']??'',FORMAS_MESA,true)?$d['forma']:'redonda';
@@ -2501,6 +3431,7 @@ if ($acao === 'mesa_save') {
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
 }
 if ($acao === 'mesa_noivos') {
+    exigirModuloApi('mesas');
     // Repõe a mesa (especial) dos noivos, se tiver sido eliminada. Se já existir, devolve-a.
     $ja = $conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND especial='noivos' LIMIT 1")->fetch_assoc();
     if ($ja) { ok(['mesas'=>listarMesas($conn),'id'=>(int)$ja['id'],'existia'=>true]); }
@@ -2512,6 +3443,7 @@ if ($acao === 'mesa_noivos') {
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
 }
 if ($acao === 'mesa_pos') {
+    exigirModuloApi('mesas');
     // Guarda a posição (e opcionalmente a forma) de uma mesa na planta.
     $d=corpo(); $id=(int)($d['id']??0);
     if (!$id) erro('Mesa inválida.');
@@ -2529,6 +3461,7 @@ if ($acao === 'mesa_pos') {
     ok();
 }
 if ($acao === 'mesa_delete') {
+    exigirModuloApi('mesas');
     $id=(int)($_GET['id']??0);
     $nm = $conn->query("SELECT nome FROM {$P}mesas WHERE " . doCasamento() . " AND id=$id");
     $nomeMesa = ($nm && $x=$nm->fetch_assoc()) ? $x['nome'] : '';
@@ -2539,6 +3472,7 @@ if ($acao === 'mesa_delete') {
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convite_mesa') {
+    exigirModuloApi('mesas');
     // Senta (mesa_id) ou retira (mesa_id vazio) um convite inteiro de uma mesa.
     // Define a mesa "padrão" do convite; os membros sem mesa própria seguem-na.
     $d=corpo(); $id=(int)($d['id']??0);
@@ -2551,6 +3485,7 @@ if ($acao === 'convite_mesa') {
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convidado_mesa') {
+    exigirModuloApi('mesas');
     // Atribui/retira a mesa individual de UMA pessoa (permite dividir um convite por mesas).
     // mesa_id vazio -> a pessoa volta a seguir a mesa do convite.
     $d=corpo(); $gid=(int)($d['id']??0);
@@ -2566,6 +3501,7 @@ if ($acao === 'convidado_mesa') {
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convidado_papel') {
+    exigirModuloApi('convidados');
     // Define o papel do convidado: 'padrinho' (ala esquerda), 'madrinha' (ala direita) ou '' (nenhum).
     // O papel deteta automaticamente as alas da mesa dos noivos.
     $d=corpo(); $gid=(int)($d['id']??0);
@@ -2578,6 +3514,7 @@ if ($acao === 'convidado_papel') {
     ok(['mesas'=>listarMesas($conn)]);
 }
 if ($acao === 'convidado_list') {
+    exigirModuloApi('convidados');
     // Todas as pessoas nomeadas, com a mesa efetiva (individual, senão a do convite).
     // Colunas opcionais protegidas (tolerante a esquema por migrar).
     $selGen = colunaExiste($conn, "{$P}convidados", 'genero') ? "g.genero" : "'' AS genero";
@@ -3320,6 +4257,7 @@ if ($acao === 'casamento_repor_fabrica') {
 // ============================================================
 
 if ($acao === 'orc_estado') {
+    exigirModuloApi('orcamento');
     // Uma leitura só: o retrato em números, as gavetas com o real de cada uma,
     // as despesas e as parcelas. É o que a página desenha.
     $cid = casamentoAtual();
@@ -3370,6 +4308,7 @@ if ($acao === 'orc_estado') {
 }
 
 if ($acao === 'orc_ajuste') {
+    exigirModuloApi('orcamento');
     // O teto e a moeda — geridos na Gestão, mas o mesmo endpoint serve. Vivem
     // em cw_definicoes para viajarem no retrato do casamento sem tratamento à
     // parte. Teto a zero (ou vazio) = sem teto: a barra mede-se então pela soma
@@ -3383,6 +4322,7 @@ if ($acao === 'orc_ajuste') {
 }
 
 if ($acao === 'orc_categoria_guardar') {
+    exigirModuloApi('orcamento');
     $d = corpo(); $cid = casamentoAtual();
     if ($cid <= 0) erro('Não há casamento aberto.');
     $id = (int)($d['id'] ?? 0);
@@ -3419,6 +4359,7 @@ if ($acao === 'orc_categoria_guardar') {
 }
 
 if ($acao === 'orc_categoria_apagar') {
+    exigirModuloApi('orcamento');
     $cid = casamentoAtual();
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
     if (!$id) erro('Categoria inválida.');
@@ -3431,6 +4372,7 @@ if ($acao === 'orc_categoria_apagar') {
 }
 
 if ($acao === 'orc_despesa_guardar') {
+    exigirModuloApi('orcamento');
     $d = corpo(); $cid = casamentoAtual();
     if ($cid <= 0) erro('Não há casamento aberto.');
     $id = (int)($d['id'] ?? 0);
@@ -3463,6 +4405,7 @@ if ($acao === 'orc_despesa_guardar') {
 }
 
 if ($acao === 'orc_despesa_apagar') {
+    exigirModuloApi('orcamento');
     $cid = casamentoAtual();
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
     if (!$id) erro('Despesa inválida.');
@@ -3479,6 +4422,7 @@ if ($acao === 'orc_despesa_apagar') {
 }
 
 if ($acao === 'orc_despesa_fatura') {
+    exigirModuloApi('orcamento');
     // Anexa (ou troca) a fatura/recibo de uma despesa — foto ou PDF. Guarda-se
     // por casamento, em assets/faturas/<cid>/, e o caminho fica na despesa.
     exigirCorrecao();
@@ -3513,6 +4457,7 @@ if ($acao === 'orc_despesa_fatura') {
 }
 
 if ($acao === 'orc_despesa_fatura_apagar') {
+    exigirModuloApi('orcamento');
     exigirCorrecao();
     $cid = casamentoAtual();
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
@@ -3528,6 +4473,7 @@ if ($acao === 'orc_despesa_fatura_apagar') {
 }
 
 if ($acao === 'orc_pagamento_guardar') {
+    exigirModuloApi('orcamento');
     $d = corpo(); $cid = casamentoAtual();
     if ($cid <= 0) erro('Não há casamento aberto.');
     $id = (int)($d['id'] ?? 0);
@@ -3555,6 +4501,7 @@ if ($acao === 'orc_pagamento_guardar') {
 }
 
 if ($acao === 'orc_pagamento_liquidar') {
+    exigirModuloApi('orcamento');
     // Dar por paga (ou desmarcar) uma parcela. Sem data explícita, fica hoje.
     $d = corpo(); $cid = casamentoAtual();
     $id = (int)($d['id'] ?? ($_GET['id'] ?? 0));
@@ -3573,6 +4520,7 @@ if ($acao === 'orc_pagamento_liquidar') {
 }
 
 if ($acao === 'orc_pagamento_apagar') {
+    exigirModuloApi('orcamento');
     $cid = casamentoAtual();
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
     if (!$id) erro('Pagamento inválido.');
@@ -3608,6 +4556,17 @@ if ($acao === 'modelo_lista') {
         $cid = casamentoAtual();
         $onde .= " AND visivel=1 AND (alcance='todos' OR id IN
                      (SELECT modelo_id FROM {$P}modelo_casamentos WHERE casamento_id=" . (int)$cid . "))";
+
+        // E a licença ainda pode apertar mais: um escalão «só ao padrão» vê um
+        // modelo apenas — o que a casa designou como peça de origem daquele
+        // âmbito. Mostrar-lhe a galeria toda para depois recusar a escolha era
+        // vender-lhe com os olhos o que a licença não lhe dá.
+        foreach (array_keys(ambitosVersao()) as $amb) {
+            if (!podeModulo($amb)) { $onde .= " AND ambito <> '" . $conn->real_escape_string($amb) . "'"; continue; }
+            if (podeTodosModelos($amb)) continue;
+            $onde .= " AND NOT (ambito='" . $conn->real_escape_string($amb) . "'
+                                AND id <> " . (int)padraoDoAmbito($conn, $amb) . ")";
+        }
     }
     $r = @$conn->query("SELECT id, nome, descricao, ambito, defs, visivel, alcance, criado_por, criado_em, atualizado_em
                         FROM {$P}modelos WHERE $onde ORDER BY ambito, nome");
@@ -4105,6 +5064,21 @@ if ($acao === 'modelo_aplicar') {
             $podeVer = (bool)$st->get_result()->fetch_row();
         }
         if (!$podeVer) erro('Esse modelo não está disponível.');
+
+        // E o que a licença deixa: sem o módulo não se aplica nada, e num
+        // escalão «só ao padrão» aplica-se o padrão — que é, afinal, o que ele
+        // já tem. Vale como reposição, e é para isso que continua a servir.
+        $amb = (string)$m['ambito'];
+        if (!podeModulo($amb)) {
+            http_response_code(403);
+            erro('A licença deste casamento não inclui o '
+               . (ambitosVersao()[$amb]['rotulo'] ?? $amb) . '.');
+        }
+        if (!podeTodosModelos($amb) && $id !== padraoDoAmbito($conn, $amb)) {
+            http_response_code(403);
+            erro('A sua licença dá-lhe o modelo padrão desta peça. Para escolher entre '
+               . 'todos os modelos, reforce a licença na página da Licença.');
+        }
     }
     $j = json_decode((string)$m['defs'], true);
     if (!is_array($j)) erro('Esse modelo está ilegível.');

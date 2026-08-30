@@ -39,6 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // sem casamento aberto (o suporte, à espera de um código) para a
             // página dos casamentos, que é onde o pode arranjar.
             $destino = ['porteiro' => 'porteiro.php', 'plataforma' => 'plataforma.php'][$papel] ?? $redir;
+            // Um casal cuja licença ainda não abriu nada vai direito à montra.
+            // Mandá-lo ao painel para o painel o mandar de volta era fazê-lo
+            // bater com o nariz numa porta antes de lhe dizermos onde é a que
+            // se abre — e a licença é, nesse momento, a única coisa que ele tem
+            // para fazer aqui.
+            if ($papel === 'admin' && function_exists('licencaPorAbrir')
+                && licencaPorAbrir($conn) && !ehPessoalPlataforma()) {
+                $destino = 'licenca.php';
+            }
             header('Location: ' . $destino);
             exit;
         }

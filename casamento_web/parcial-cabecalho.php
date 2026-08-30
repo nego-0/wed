@@ -16,10 +16,30 @@ function menuPrincipal(): array {
         'porta'   => ['porteiro.php',        'Porta'],
         'orcamento' => ['orcamento.php',     'Orçamento'],
         'gestao'  => ['gestao.php',          'Gestão'],
+        'licenca' => ['licenca.php',         'Licença'],
         // A entrada da plataforma só aparece a quem tem mais do que um
         // casamento à mão — para quem só tem o seu, seria uma porta para nada.
         'plataforma' => ['plataforma.php',   'Casamentos'],
         'modelos'    => ['modelos.php',      'Modelos'],
+    ];
+}
+
+/**
+ * O módulo de licença que comanda cada entrada do menu.
+ *
+ * As que não estão aqui não dependem de licença nenhuma: a Gestão é onde o
+ * casal exporta e apaga os seus dados, e essa porta fica aberta mesmo com a
+ * licença revogada — é o que as políticas lhe prometem (Lei n.º 22/11,
+ * artigos 26.º e 28.º).
+ */
+function menuModulos(): array {
+    return [
+        'painel'    => 'convidados',
+        'porta'     => 'convidados',
+        'mesas'     => 'mesas',
+        'orcamento' => 'orcamento',
+        'grafica'   => 'impresso',
+        'convite'   => 'digital',
     ];
 }
 
@@ -60,6 +80,19 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     if (!function_exists('ehAdmin') || !ehAdmin()) unset($itens['orcamento']);
     // Os modelos são da casa: quem não responde por ela não tem lá o que fazer.
     if (!function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) unset($itens['modelos']);
+
+    // ---- o que a licença abre ----
+    // Uma entrada para um módulo que este casamento não tem é uma porta que só
+    // sabe dizer "não". Tira-se do menu, e a página da Licença — que fica —
+    // é que conta o que lá havia e como o ter.
+    if (!$semCasamento && function_exists('podeModulo') && isset($GLOBALS['conn'])) {
+        foreach (menuModulos() as $chave => $modulo) {
+            if (!podeModulo($modulo)) unset($itens[$chave]);
+        }
+    }
+    // A Licença é do casal: o porteiro não pede planos nenhuns, e quem responde
+    // pela casa trata das licenças na página dos casamentos.
+    if (!function_exists('ehAdmin') || !ehAdmin() || ehPessoalPlataforma()) unset($itens['licenca']);
     // Sem casamento aberto, as entradas do menu levavam todas ao mesmo sítio:
     // de volta a esta página, porque não há casamento nenhum para mostrar. Um
     // menu que só sabe dizer "não" é pior do que um menu curto.

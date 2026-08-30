@@ -11,6 +11,7 @@ require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
 require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
+exigirModulo('impresso');
 
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);

@@ -13,6 +13,7 @@ require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
+exigirModulo('digital');
 
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);

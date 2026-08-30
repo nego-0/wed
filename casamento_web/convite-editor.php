@@ -16,6 +16,13 @@ require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 // responde pela plataforma chega aqui sem ter casamento aberto.
 [$DEFS_ED, $MODELO] = defsDoEditor($conn, 'digital');
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
+// Desenhar a peça é o que distingue os escalões «com edição» dos outros: quem
+// leva o modelo padrão sem edição vê a peça em toda a parte, mas não entra
+// aqui. (Um modelo da casa é outra coisa — esse é do admin da plataforma, e o
+// $MODELO acima já tratou disso.)
+if (!$MODELO && !podeEditarPeca('digital')) {
+    header('Location: licenca.php?quero=digital'); exit;
+}
 $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
                : casalInfo($DEFS_ED);
 ?>

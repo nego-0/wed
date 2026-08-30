@@ -24,11 +24,19 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <title>Inscrever o nosso casamento · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/planos.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:flex-start; justify-content:center; padding:1.5rem 1.25rem; }
-  .reg{ width:100%; max-width:560px; }
-  .reg .card{ padding:2.3rem 2.1rem; }
+  .reg{ width:100%; max-width:1040px; }
+  /* Duas larguras na mesma página: os dados do casal são uma conversa a dois e
+     ficam estreitos; a montra dos planos precisa de espaço para se ver. */
+  .reg .card{ padding:2.3rem 2.1rem; max-width:560px; margin-left:auto; margin-right:auto; }
+  .reg-planos{ margin-top:2.2rem; }
+  .reg-passo{ display:inline-flex; align-items:center; gap:.45rem; font-size:.72rem;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--gold);
+    background:var(--gold-pale); border-radius:50px; padding:.3rem .85rem; }
+  .reg-enviar{ max-width:560px; margin:1.4rem auto 0; }
   .brasao{ width:64px; height:64px; margin:0 auto .9rem; border:2px solid var(--gold-soft); border-radius:50%;
     display:flex; align-items:center; justify-content:center; color:var(--gold);
     font-family:var(--serif); font-weight:700; font-size:1.2rem; }
@@ -191,21 +199,6 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         </div>
       </details>
 
-      <div class="seccao">Período de licença de uso</div>
-      <div class="par">
-        <div class="campo"><label for="licenca">Quanto tempo pretendem usar</label>
-          <select id="licenca">
-            <option value="3">3 meses</option>
-            <option value="6" selected>6 meses</option>
-            <option value="12">12 meses</option>
-            <option value="outro">Outro…</option>
-          </select></div>
-        <div class="campo" id="licenca-outro" style="display:none"><label for="licenca_meses_custom">Meses <span class="req">*</span></label>
-          <input type="number" id="licenca_meses_custom" min="1" max="120" placeholder="ex.: 18">
-          <div class="err"></div></div>
-      </div>
-      <div class="nota" style="margin-top:-.5rem">O tempo começa a contar quando a inscrição for aprovada.</div>
-
       <details class="bloco">
         <summary><span class="chev">›</span>Conta do porteiro<span class="op">opcional</span></summary>
         <div class="bloco-corpo">
@@ -223,23 +216,50 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         </div>
       </details>
 
-      <button class="btn btn-verde btn-enviar" id="btn" type="submit" onclick="enviar()">Inscrever o nosso casamento</button>
-      <div class="entrar-nota">Já têm conta? <a href="login.php" style="color:var(--gold)">Entrar</a></div>
     </form>
+
+    <?php // ---- a montra: o que o casal vai levar ---- ?>
+    <section class="reg-planos" id="planos-sec">
+      <div class="pl-topo">
+        <span class="reg-passo">Passo 2 de 2</span>
+        <h2 style="margin-top:.7rem">Escolham o que querem levar</h2>
+        <p>Um pacote pronto, ou um plano à vossa medida. Podem reforçá-lo mais tarde
+           sem perder nada do que já tiverem feito.</p>
+      </div>
+
+      <div id="reg-planos"></div>
+
+      <div class="pl-aceite" id="reg-aceite-cx">
+        <input type="checkbox" id="reg-aceite">
+        <label for="reg-aceite">
+          Li e aceito as <a id="reg-ver-pol">políticas de utilização e protecção de dados</a>.
+          Comprometo-me a tratar os dados dos nossos convidados nos termos da
+          Lei n.º 22/11, de 17 de Junho, informando-os da recolha e recolhendo apenas
+          o necessário ao casamento.
+        </label>
+      </div>
+
+      <div class="reg-enviar">
+        <button class="btn btn-verde btn-enviar" id="btn" type="button" onclick="enviar()">Inscrever o nosso casamento</button>
+        <div class="entrar-nota">Já têm conta? <a href="login.php" style="color:var(--gold)">Entrar</a></div>
+      </div>
+    </section>
 
     <div class="card feito" id="obrigado" style="display:none">
       <div class="ico">&#10003;</div>
-      <div class="tit">Inscrição enviada</div>
+      <div class="tit">Está feito — podem entrar já</div>
       <p style="color:#6c7570;line-height:1.6;margin-top:.6rem">
-        Ficou na fila de aprovação. Assim que quem gere a plataforma a aprovar,
-        podem entrar com o email e a palavra-passe que acabaram de escolher.
+        A vossa conta está aberta. Entrem com o email e a palavra-passe que acabaram
+        de escolher: encontram lá o pedido de licença, e podem alterá-lo enquanto
+        a administração não o decidir.
       </p>
       <div class="cx" id="feito-email"></div>
-      <p class="nota">Até lá, a entrada recusa o acesso — não é engano.</p>
-      <a class="btn btn-verde" style="width:100%;justify-content:center" href="login.php">Ir para a entrada</a>
+      <p class="nota">Os módulos que pediram abrem assim que a licença for concedida.</p>
+      <a class="btn btn-verde" style="width:100%;justify-content:center" href="login.php">Entrar agora</a>
     </div>
   </div>
 
+<script src="<?= asset('assets/planos.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>
 <script>
@@ -279,11 +299,6 @@ function regra(id){
       if (/[a-z]/i.test(v)) return 'O contacto deve ter só números.';
       return digitos >= 8 && digitos <= 15 ? '' : 'Um número de telefone válido.';
     }
-    case 'licenca_meses_custom': {
-      if ($('licenca').value !== 'outro') return '';
-      const n = Number(v);
-      return (Number.isInteger(n) && n >= 1 && n <= 120) ? '' : 'Meses entre 1 e 120.';
-    }
     case 'porteiro_email':
       if (!v && !val('porteiro_senha')) return '';               // par vazio: opcional
       return EMAIL_RE.test(v) ? '' : 'Email do porteiro inválido.';
@@ -297,7 +312,7 @@ function validaCampo(id){ return marca(id, regra(id)); }
 
 // Os campos que se validam, e os que se acompanham em par (mexer num revê o outro).
 const CAMPOS = ['noiva','noivo','email','senha','confirmar','convidados','whatsapp',
-                'licenca_meses_custom','porteiro_email','porteiro_senha'];
+                'porteiro_email','porteiro_senha'];
 const PARES = { senha:['confirmar'], confirmar:['senha'],
                 porteiro_email:['porteiro_senha'], porteiro_senha:['porteiro_email'] };
 
@@ -338,15 +353,41 @@ $('data').addEventListener('change', () => {
   } else c.classList.remove('avisar');
 });
 
-// ---------- licença: «Outro…» revela o campo dos meses ----------
-$('licenca').addEventListener('change', () => {
-  $('licenca-outro').style.display = $('licenca').value === 'outro' ? '' : 'none';
-  if ($('licenca').value === 'outro') setTimeout(() => $('licenca_meses_custom').focus(), 30);
-});
-function licencaMeses(){
-  const v = $('licenca').value;
-  return v === 'outro' ? Math.max(0, parseInt(val('licenca_meses_custom') || '0', 10)) : parseInt(v, 10);
+// ---------- a montra dos planos ----------
+// O preçário vem do servidor: é ele que manda, e assim mexer nos preços não
+// obriga a tocar nesta página. Enquanto não chega, a secção fica escondida —
+// mais vale não ter montra nenhuma do que uma montra vazia.
+let POLITICA = null;
+
+async function carregarPlanos(){
+  try {
+    const r = await fetch('api.php?action=lic_catalogo');
+    const d = await r.json();
+    if (!d || !d.success) throw new Error('sem catálogo');
+    POLITICA = d.politica;
+    const temAlgo = (d.catalogo.pacotes || []).some(p => p.ativo)
+                 || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
+    if (!temAlgo) throw new Error('catálogo vazio');
+    Planos.montar('reg-planos', d.catalogo, { moeda: d.moeda });
+  } catch (e) {
+    // Sem preçário não se pode escolher plano nenhum, mas a inscrição não pode
+    // ficar refém disso: esconde-se a montra e o casal inscreve-se na mesma. A
+    // administração concede-lhe os módulos à mão.
+    $('planos-sec').querySelector('.pl-topo').style.display = 'none';
+    $('reg-planos').style.display = 'none';
+    $('reg-aceite-cx').style.display = 'none';
+  }
 }
+carregarPlanos();
+
+$('reg-ver-pol').addEventListener('click', () => {
+  if (!POLITICA) return;
+  Planos.politicas(POLITICA, () => {
+    $('reg-aceite').checked = true;
+    $('reg-aceite-cx').classList.remove('mau');
+  });
+});
+$('reg-aceite').addEventListener('change', () => $('reg-aceite-cx').classList.remove('mau'));
 
 // ---------- porteiro: sugestão de utilizador único, a partir dos nomes ----------
 function slug(s){
@@ -387,13 +428,34 @@ async function enviar(){
     return;
   }
 
+  // O plano: só se exige quando há montra. Sem preçário publicado, a inscrição
+  // segue sem plano nenhum e é a administração que concede os módulos.
+  const temMontra = $('reg-planos').style.display !== 'none';
+  let plano = null;
+  if (temMontra){
+    const c = Planos.escolha();
+    if (c.vazio){
+      erroGeral('Escolham um pacote, ou pelo menos um módulo do plano à medida.');
+      $('planos-sec').scrollIntoView({ behavior:'smooth', block:'start' });
+      return;
+    }
+    if (!$('reg-aceite').checked){
+      $('reg-aceite-cx').classList.add('mau');
+      erroGeral('É preciso aceitar as políticas de utilização.');
+      $('reg-aceite-cx').scrollIntoView({ behavior:'smooth', block:'center' });
+      return;
+    }
+    plano = { pacote: c.pacote, escaloes: c.escaloes, meses: c.meses, aceito: true };
+  }
+
   const dados = {
     noiva: val('noiva'), noivo: val('noivo'), data: val('data'),
     email: val('email'), senha: $('senha').value,
     hora: val('hora'), local: val('local'), cidade: val('cidade'), maps: val('maps'),
     convidados: val('convidados'), whatsapp: val('whatsapp'),
     orcamento_total: val('orcamento_total'),
-    licenca_meses: licencaMeses(),
+    licenca: plano,
+    licenca_meses: plano ? plano.meses : 0,
     porteiro_email: val('porteiro_email'), porteiro_senha: $('porteiro_senha').value,
     civil_hora: val('civil_hora'), civil_local: val('civil_local'), civil_maps: val('civil_maps'),
     religiosa_hora: val('religiosa_hora'), religiosa_local: val('religiosa_local'), religiosa_maps: val('religiosa_maps'),
@@ -407,6 +469,7 @@ async function enviar(){
     if (d && d.success){
       $('feito-email').innerHTML = 'A vossa entrada: <b>' + dados.email.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) + '</b>';
       $('formulario').style.display = 'none';
+      $('planos-sec').style.display = 'none';
       $('obrigado').style.display = '';
       window.scrollTo({ top:0, behavior:'smooth' });
       return;

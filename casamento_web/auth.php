@@ -341,6 +341,159 @@ function licencaFrase(array $info): string {
     return "Possui $d $dia de licença de uso" . $entre;
 }
 
+// ============================================================
+// O que a licença abre — os módulos
+//
+// A licença deixou de ser só um prazo: diz também O QUÊ. Cada casamento tem
+// concessões (uma por módulo) que dizem se o módulo está aberto e em que
+// medida — quantos convidados cabem, se a peça se pode editar, se o casal
+// chega a todos os modelos ou só ao padrão.
+//
+// Quem responde pela casa não tem licença nenhuma a cumprir: entra em todo o
+// lado, é essa a função. O que ele vê é o casamento como o casal o teria com
+// tudo aberto — não vale a pena esconder-lhe portas que ele tem de arranjar.
+// ============================================================
+
+/**
+ * As concessões de um casamento, por chave de módulo. Lê-se uma vez por pedido.
+ *
+ * Devolve, para cada uma das cinco chaves: ['ativo', 'limite', 'editar',
+ * 'todos_modelos', 'nome']. 'limite' 0 = sem limite.
+ */
+function licencaModulos(mysqli $conn, ?int $cid = null): array {
+    global $P;
+    $cid = $cid ?? casamentoAtual();
+    static $cache = [];
+    if (isset($cache[$cid])) return $cache[$cid];
+
+    $base = [];
+    foreach (array_keys(licencaModulosTudo()) as $k) {
+        $base[$k] = ['ativo' => false, 'limite' => 0, 'editar' => false,
+                     'todos_modelos' => false, 'nome' => ''];
+    }
+    if ($cid <= 0) return $cache[$cid] = $base;
+
+    $st = @$conn->prepare("SELECT modulo_chave, escalao_nome, limite, editar, todos_modelos
+                           FROM {$P}lic_concessoes WHERE casamento_id = ?");
+    if ($st) {
+        $st->bind_param('i', $cid);
+        if (@$st->execute()) {
+            $r = $st->get_result();
+            while ($x = $r->fetch_assoc()) {
+                $k = (string)$x['modulo_chave'];
+                if (!isset($base[$k])) continue;
+                $base[$k] = ['ativo' => true, 'limite' => (int)$x['limite'],
+                             'editar' => (bool)(int)$x['editar'],
+                             'todos_modelos' => (bool)(int)$x['todos_modelos'],
+                             'nome' => (string)$x['escalao_nome']];
+            }
+        }
+    }
+    return $cache[$cid] = $base;
+}
+
+/** Em que ponto está a licença deste casamento: sem, pendente, ativa, revogada. */
+function licencaEstado(mysqli $conn, ?int $cid = null): string {
+    global $P;
+    $cid = $cid ?? casamentoAtual();
+    if ($cid <= 0) return 'sem';
+    static $cache = [];
+    if (isset($cache[$cid])) return $cache[$cid];
+    $r = @$conn->query("SELECT licenca_estado FROM {$P}casamentos WHERE id=" . (int)$cid . " LIMIT 1");
+    $e = ($r && ($x = $r->fetch_row())) ? (string)$x[0] : 'sem';
+    return $cache[$cid] = ($e !== '' ? $e : 'sem');
+}
+
+/** Este casamento tem este módulo aberto? (Quem responde pela casa tem tudo.) */
+function podeModulo(string $chave): bool {
+    if (ehPessoalPlataforma()) return true;
+    $m = licencaModulos($GLOBALS['conn']);
+    return !empty($m[$chave]['ativo']);
+}
+
+/**
+ * Quantos convidados cabem nesta licença. 0 = sem limite.
+ *
+ * Sem o módulo, o limite é -1: não é "sem limite", é "nem um".
+ */
+function limiteConvidados(): int {
+    if (ehPessoalPlataforma()) return 0;
+    $m = licencaModulos($GLOBALS['conn']);
+    if (empty($m['convidados']['ativo'])) return -1;
+    return (int)$m['convidados']['limite'];
+}
+
+/** Quantas pessoas já estão na lista deste casamento. */
+function convidadosContados(mysqli $conn, ?int $cid = null): int {
+    global $P;
+    $cid = $cid ?? casamentoAtual();
+    if ($cid <= 0) return 0;
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}convidados WHERE casamento_id=" . (int)$cid);
+    return ($r && ($x = $r->fetch_row())) ? (int)$x[0] : 0;
+}
+
+/** Pode desenhar esta peça ('digital' | 'impresso'), ou só usá-la como está? */
+function podeEditarPeca(string $ambito): bool {
+    if (ehPessoalPlataforma()) return true;
+    $m = licencaModulos($GLOBALS['conn']);
+    return !empty($m[$ambito]['ativo']) && !empty($m[$ambito]['editar']);
+}
+
+/** Chega a toda a galeria de modelos desta peça, ou só ao padrão da casa? */
+function podeTodosModelos(string $ambito): bool {
+    if (ehPessoalPlataforma()) return true;
+    $m = licencaModulos($GLOBALS['conn']);
+    return !empty($m[$ambito]['ativo']) && !empty($m[$ambito]['todos_modelos']);
+}
+
+/**
+ * A licença deste casamento está à espera de decisão (ou nunca houve nenhuma)?
+ *
+ * É o estado em que o casal já entra — de propósito — mas só vê o seu pedido.
+ * Um casamento criado pela administração fica em 'sem' até lhe darem módulos:
+ * dá no mesmo, e a página da licença explica-lhe o que fazer.
+ */
+function licencaPorAbrir(mysqli $conn, ?int $cid = null): bool {
+    if (ehPessoalPlataforma()) return false;
+    return in_array(licencaEstado($conn, $cid), ['sem', 'pendente', 'revogada'], true);
+}
+
+/**
+ * A porta de cada página de módulo.
+ *
+ * Não devolve um "não pode": manda para a página da licença, que mostra ao
+ * casal o que aquele módulo faz e como o ter. Uma porta fechada que explica
+ * como se abre vale mais do que um erro.
+ */
+function exigirModulo(string $chave): void {
+    if (podeModulo($chave)) return;
+    // Os noivos vão para a montra — é lá que se resolve.
+    if (ehAdmin()) {
+        header('Location: licenca.php?quero=' . urlencode($chave));
+        exit;
+    }
+    // O porteiro não pede planos nenhuns: a licença é do casal, e mandá-lo para
+    // uma página que ele não pode ver era trocar uma porta fechada por outra.
+    // Diz-se-lhe o que se passa, e a quem falar.
+    http_response_code(403);
+    header('Content-Type: text/html; charset=utf-8');
+    $marca = defined('PLATAFORMA') ? (PLATAFORMA['nome'] ?? 'Casamento') : 'Casamento';
+    echo '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
+       . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+       . '<title>Sem acesso · ' . htmlspecialchars($marca, ENT_QUOTES, 'UTF-8') . '</title>'
+       . '<link href="assets/estilo.css" rel="stylesheet"></head><body>'
+       . '<div style="max-width:34rem;margin:14vh auto;padding:2rem 1.5rem;text-align:center">'
+       . '<div style="font-size:2.2rem;margin-bottom:.8rem">🔒</div>'
+       . '<h1 style="font-family:var(--serif);font-size:1.5rem;color:var(--ink);margin:0 0 .6rem">'
+       . 'Esta parte não está disponível</h1>'
+       . '<p style="color:#8a8f88;line-height:1.6;font-size:.92rem">A licença deste casamento não '
+       . 'inclui, neste momento, o que esta página faz. Fale com os noivos — são eles que gerem '
+       . 'a licença.</p>'
+       . '<p style="margin-top:1.4rem"><a class="btn btn-linha" href="logout.php">Sair</a></p>'
+       . '</div></body></html>';
+    exit;
+}
+
 /**
  * Suspende os casamentos cuja licença expirou, e para as contas com eles.
  *

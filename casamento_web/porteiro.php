@@ -4,6 +4,10 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 exigirPorta();
+// A porta trabalha sobre a lista de convidados: sem esse módulo não há quem
+// receber. (Ao porteiro, exigirModulo explica-o em página própria — a licença
+// é do casal, e não é ele que a resolve.)
+exigirModulo('convidados');
 $CAS = casalInfo(defsAtuais($conn));
 ?>
 <!DOCTYPE html>

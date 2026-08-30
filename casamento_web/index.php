@@ -4,6 +4,8 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
+// O painel é a lista de convidados: sem esse módulo não há nada para mostrar.
+exigirModulo('convidados');
 $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $dataExt = dataExtensa($DEFS['evento.data']);

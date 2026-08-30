@@ -16,7 +16,10 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `auth.php` | Autenticação por sessão, por **nome de utilizador + senha** (administrador e porteiro). |
 | `api.php` | Todos os pedidos JSON (gestão, RSVP público e porteiro) e exportação CSV. |
 | `login.php` / `logout.php` | Entrada e saída. |
-| `registo.php` | **Inscrição pública** de um casal: cria a conta e o casamento em espera, e não abre a porta a ninguém — quem aprova é o admin da plataforma. |
+| `registo.php` | **Inscrição pública** de um casal: os seus dados, e a escolha do plano. A conta abre de imediato; o casamento fica em espera até a administração conceder a licença. |
+| `licenca.php` | **A licença do casal:** o que tem, quanto falta do prazo, quantos convidados cabem — e onde pede, altera ou reforça o plano. É a única página que um casal recém-inscrito vê. |
+| `assets/planos.js` | O motor da montra dos planos, partilhado pela inscrição e pela área da licença: desenha os pacotes, deixa montar um plano à peça, soma a conta e recolhe a escolha. |
+| `assets/planos.css` | O visual da montra, dos cartões de escalão e da janela das políticas de utilização. |
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
@@ -56,9 +59,90 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 - **`cw_acessos`** — quem entra em que casamento, e como (`noivos` / `porteiro`).
 - **`cw_suporte_codigos`** — as chaves temporárias que o casal dá ao suporte.
 
+O preçário das licenças vive noutras oito, e divide-se em duas metades — o
+catálogo (o que a casa vende) e a circulação (o que cada casamento pediu e tem):
+
+- **`cw_lic_modulos`** — os cinco recursos que se vendem: `convidados`, `mesas`,
+  `orcamento`, `impresso`, `digital`. Cada um com o seu resumo, o benefício (a
+  frase que vende) e o ícone.
+- **`cw_lic_escaloes`** — as MEDIDAS em que cada módulo se vende, e é aqui que
+  vive o preço. Um escalão de convidados leva um `limite` (0 = sem limite); um
+  de peça leva `editar` e `todos_modelos`. É isto que permite vender o mesmo
+  recurso em tamanhos diferentes.
+- **`cw_lic_pacotes`** e **`cw_lic_pacote_itens`** — conjuntos de escalões com
+  preço próprio. A poupança que o casal vê é calculada (a soma dos escalões à
+  peça menos o preço do pacote), nunca escrita à mão.
+- **`cw_lic_politicas`** — as políticas de utilização, **versionadas**. Editá-las
+  publica uma versão nova e guarda a anterior: é a prova do texto a que cada
+  casal disse que sim.
+- **`cw_lic_pedidos`** e **`cw_lic_pedido_itens`** — o que um casal pediu
+  (`inicial` ou `upgrade`), com os preços **congelados no dia** e o registo do
+  consentimento (versão da política, data e IP).
+- **`cw_lic_concessoes`** — o que o casamento TEM, uma linha por módulo. É esta
+  tabela, e nunca o pedido, que abre as portas.
+
 Todas as tabelas de dados levam `casamento_id`. A ligação à base **audita cada
 instrução**: uma consulta que mexa nos dados de um casamento sem dizer de qual
 rebenta nas provas (`AMBITO_ESTRITO=1`) e fica no log em produção.
+
+---
+
+## Licenças: o que cada casamento pode fazer
+
+A licença deixou de ser só um prazo. Diz também **o quê**: que módulos o
+casamento tem, e **em que medida**.
+
+### O percurso
+
+1. **O casal inscreve-se** e escolhe, na mesma página, um pacote ou um plano à
+   medida. Aceita as políticas de utilização — o consentimento fica registado
+   com a versão do texto, a data e o IP.
+2. **Entra de imediato.** A conta abre no minuto da inscrição: pedir-lhe que
+   escolha um plano e fechar-lhe a porta a seguir não fazia sentido. Mas o
+   casamento fica `pendente` e sem módulos, e por isso só encontra lá dentro a
+   sua página de Licença — onde pode alterar o pedido as vezes que quiser.
+3. **A administração decide.** Aprovar concede os módulos pedidos, põe o
+   casamento ativo e arranca o relógio da licença. Recusar exige um motivo, e o
+   casal lê-o.
+4. **Depois, o casal pode pedir um reforço.** Um reforço acrescenta e nunca
+   tira: quem já tinha «sem limite» não fica com «até 200» por pedir outra
+   coisa. Enquanto o reforço espera, continua a trabalhar no que já tem.
+5. **A administração pode revogar**, a qualquer momento, por incumprimento das
+   políticas. Exige motivo. Fecha todos os módulos — **menos** a Gestão, onde o
+   casal continua a poder exportar e apagar os seus dados, como a lei manda
+   (Lei n.º 22/11, artigos 26.º e 28.º).
+
+### As duas fechaduras
+
+Esconder uma entrada do menu não impede ninguém de chamar a ação à mão. Por
+isso a licença fecha **duas vezes**:
+
+- **Nas páginas** — `exigirModulo('mesas')` manda os noivos para a montra, com
+  `?quero=mesas`, onde se explica o que aquele módulo faz e como o ter. (Ao
+  porteiro, que não gere licença nenhuma, mostra-se uma página própria.)
+- **Na API** — `exigirModuloApi()` recusa a ação com a mesma razão por outras
+  palavras.
+
+O tecto de convidados conta **pessoas**, e conta a **diferença**: reescrever os
+mesmos cinco nomes num convite não gasta lugar nenhum, e é isso que faz com que
+corrigir uma gralha não bata com o nariz no limite.
+
+Quem responde pela casa não tem licença a cumprir — `podeModulo()` deixa-o
+passar em todo o lado. E um casamento criado **pela administração** nasce com
+tudo aberto: quem o criou já decidiu, não há pedido nenhum a analisar.
+
+### Onde se mexe
+
+| Quem | Onde | O que faz |
+|---|---|---|
+| Casal | `licenca.php` | Vê o que tem, quanto falta do prazo e quantos convidados cabem; pede, altera e cancela |
+| Admin | `plataforma.php` → **Licenças** | Decide pedidos, edita o preçário e os pacotes, publica as políticas |
+| Admin | Casamento → «Módulos da licença…» | Concede ou tira módulos à mão, sem passar por pedido |
+| Admin | Casamento → «Revogar licença…» | Fecha tudo, com motivo |
+
+O preçário de origem (5 módulos, 12 escalões, 3 pacotes) e as políticas nascem
+com a instalação — ver `semearPrecario()` e `semearPoliticas()` em `db.php`. É
+um ponto de partida, não a lei: o que estiver na base é o que manda.
 
 ---
 

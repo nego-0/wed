@@ -348,6 +348,19 @@ function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
 }
 
 /**
+ * O «modelo padrão» de um âmbito, em número — o único que um casal com licença
+ * de escalão baixo pode ver e aplicar.
+ *
+ * É a peça de origem: primeiro a que o admin designou, e na falta dela a de
+ * fábrica. Devolve 0 quando não há nenhuma, e nesse caso quem filtra por ela
+ * não mostra modelo nenhum — o que é honesto, porque não há padrão a dar.
+ */
+function padraoDoAmbito(mysqli $conn, string $ambito): int {
+    $o = modeloDeOrigem($conn, $ambito);
+    return $o ? (int)$o['id'] : 0;
+}
+
+/**
  * Este modelo não se pode apagar por ser peça de origem? Devolve a razão (para
  * a mensagem), ou null se for apagável.
  *

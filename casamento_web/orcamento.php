@@ -16,6 +16,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 exigirAdmin();
+exigirModulo('orcamento');
 
 $visita = emVisitaDeSuporte();
 $soVer  = $visita && !podeCorrigir();

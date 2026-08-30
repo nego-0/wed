@@ -7,6 +7,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
 exigirAdmin();
+exigirModulo('mesas');
 $CAS = casalInfo(defsAtuais($conn));
 ?>
 <!DOCTYPE html>

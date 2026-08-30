@@ -9,6 +9,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
 exigirAdmin();
+exigirModulo('impresso');
 
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);

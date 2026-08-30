@@ -1,0 +1,195 @@
+/* ============================================================
+   planos.css — A montra dos planos
+   ------------------------------------------------------------
+   Onde o casal escolhe o que quer levar. Vive em dois sítios (a
+   inscrição e a área da licença) e por isso não assume página
+   nenhuma: só variáveis do tema, que já mudam com ele.
+
+   O desenho segue o que a montra tem de fazer: os pacotes primeiro
+   (é o que serve a maioria e é onde está a poupança), o plano à
+   medida a seguir, e a conta sempre à vista — ninguém escolhe às
+   escuras.
+   ============================================================ */
+
+/* ---------- cabeçalho da secção ---------- */
+.pl-topo{ text-align:center; max-width:62ch; margin:0 auto 1.8rem; }
+.pl-topo h2{ font-family:var(--serif); font-size:1.9rem; color:var(--ink);
+  line-height:1.15; margin:0 0 .5rem; }
+.pl-topo p{ color:#8a8f88; font-size:.94rem; line-height:1.6; margin:0; }
+.pl-selo{ display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--gold);
+  background:var(--gold-pale); border-radius:50px; padding:.3rem .8rem; margin-bottom:.8rem; }
+
+/* ---------- os pacotes ---------- */
+.pl-pacotes{ display:grid; gap:1.1rem; margin-bottom:2.4rem;
+  grid-template-columns:repeat(auto-fit, minmax(255px, 1fr)); align-items:stretch; }
+
+.pl-pac{ position:relative; display:flex; flex-direction:column;
+  background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius);
+  padding:1.5rem 1.35rem 1.35rem; cursor:pointer; text-align:left;
+  transition:border-color .18s, box-shadow .18s, transform .18s; }
+.pl-pac:hover{ border-color:var(--gold-soft); transform:translateY(-2px);
+  box-shadow:0 14px 34px rgba(0,0,0,.09); }
+.pl-pac.on{ border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
+
+/* O pacote em destaque cresce um pouco e ganha a fita. É o único que a leva:
+   dois «mais escolhidos» não escolhem nada. */
+.pl-pac.destaque{ border-color:var(--gold-soft); box-shadow:var(--shadow); }
+@media (min-width:900px){ .pl-pac.destaque{ transform:scale(1.035); }
+  .pl-pac.destaque:hover{ transform:scale(1.035) translateY(-2px); } }
+
+.pl-fita{ position:absolute; top:-.72rem; left:50%; transform:translateX(-50%);
+  background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep)); color:#fff;
+  font-size:.64rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  padding:.3rem .85rem; border-radius:50px; white-space:nowrap;
+  box-shadow:0 4px 12px rgba(0,0,0,.18); }
+
+.pl-pac h3{ font-family:var(--serif); font-size:1.4rem; color:var(--ink); margin:.2rem 0 .25rem; }
+.pl-promessa{ color:#8a8f88; font-size:.83rem; line-height:1.5; margin:0 0 1rem; min-height:2.5em; }
+
+.pl-preco{ display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap; margin-bottom:.15rem; }
+.pl-preco b{ font-family:var(--serif); font-size:2.1rem; color:var(--ink);
+  line-height:1; font-variant-numeric:tabular-nums; }
+.pl-preco .moeda{ font-size:.95rem; color:#8a8f88; font-weight:600; }
+.pl-antes{ font-size:.83rem; color:#a8ada6; text-decoration:line-through;
+  font-variant-numeric:tabular-nums; }
+.pl-poupa{ display:inline-block; font-size:.72rem; font-weight:700; color:var(--ok);
+  background:var(--ok-bg); border-radius:50px; padding:.16rem .55rem; margin-top:.4rem; }
+.pl-prazo{ font-size:.78rem; color:#8a8f88; margin-top:.5rem; }
+
+.pl-inclui{ list-style:none; padding:0; margin:1.1rem 0 1.2rem; flex:1; }
+.pl-inclui li{ display:flex; gap:.5rem; align-items:flex-start; font-size:.85rem;
+  color:var(--text); line-height:1.45; padding:.3rem 0; }
+.pl-inclui li::before{ content:'✓'; color:var(--gold); font-weight:800; flex:none;
+  font-size:.9rem; line-height:1.45; }
+.pl-inclui li.nao{ color:#b6bbb4; }
+.pl-inclui li.nao::before{ content:'—'; color:#cfd4cc; font-weight:600; }
+
+.pl-escolher{ width:100%; justify-content:center; }
+.pl-pac.on .pl-escolher{ pointer-events:none; }
+
+/* ---------- plano à medida ---------- */
+.pl-medida{ background:var(--card); border:1.5px solid var(--line);
+  border-radius:var(--radius); padding:1.5rem 1.4rem; }
+.pl-medida > h3{ font-family:var(--serif); font-size:1.35rem; color:var(--ink); margin:0 0 .3rem; }
+.pl-medida > .dica{ margin-bottom:1.3rem; }
+
+.pl-mod{ border-top:1px solid var(--line); padding:1.15rem 0; }
+.pl-mod:first-of-type{ border-top:none; padding-top:.3rem; }
+.pl-mod-cab{ display:flex; align-items:flex-start; gap:.75rem; margin-bottom:.85rem; }
+.pl-mod-ico{ width:38px; height:38px; flex:none; border-radius:11px; background:var(--gold-pale);
+  display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
+.pl-mod-nome{ font-weight:700; color:var(--ink); font-size:1rem; }
+.pl-mod-benef{ font-size:.81rem; color:var(--gold); font-weight:600; margin-top:.1rem; }
+.pl-mod-resumo{ font-size:.81rem; color:#8a8f88; line-height:1.5; margin-top:.15rem; }
+
+.pl-escs{ display:grid; gap:.55rem; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
+
+/* Um escalão é uma etiqueta (<label>), e o estilo.css veste TODAS as etiquetas
+   de maiúsculas pequenas — o que é certo num formulário e desastroso aqui. Estes
+   quatro valores desfazem essa herança; sem eles, o nome do escalão sai em
+   maiúsculas e o cartão perde a hierarquia toda. */
+.pl-esc{ display:flex; gap:.6rem; align-items:flex-start; border:1.5px solid var(--line);
+  border-radius:12px; padding:.7rem .8rem; cursor:pointer; margin:0;
+  font-size:1rem; font-weight:400; text-transform:none; letter-spacing:normal;
+  transition:border-color .15s, background .15s; }
+.pl-esc:hover{ border-color:var(--gold-soft); background:var(--gold-pale); }
+.pl-esc.on{ border-color:var(--gold); background:var(--gold-pale); }
+/* O estilo.css dá a QUALQUER input `width:100%` — o que é certo num campo de
+   texto e absurdo num botão de rádio: com `flex:none`, o rádio ficava com a
+   largura toda da etiqueta e o texto era espremido para zero. Daí a medida
+   explícita. */
+.pl-esc input{ margin:.2rem 0 0; flex:none; accent-color:var(--gold);
+  width:16px; height:16px; min-width:16px; padding:0; }
+/* O texto tem de poder encolher: um item de flex não desce abaixo do seu
+   conteúdo sem isto, e a linha comprida rasgava o cartão para fora da grelha. */
+.pl-esc > span{ flex:1; min-width:0; }
+/* E cada linha é mesmo uma linha — em <span> inline corriam todas juntas. */
+.pl-esc-nome, .pl-esc-res, .pl-esc-preco, .pl-esc-tem{ display:block; }
+.pl-esc-nome{ font-weight:600; font-size:.88rem; color:var(--ink); line-height:1.3; }
+.pl-esc-res{ font-size:.76rem; color:#8a8f88; line-height:1.4; margin-top:.12rem; }
+.pl-esc-preco{ font-size:.83rem; font-weight:700; color:var(--gold);
+  margin-top:.3rem; font-variant-numeric:tabular-nums; }
+.pl-esc.tem{ border-color:var(--ok); background:var(--ok-bg); }
+.pl-esc-tem{ font-size:.7rem; font-weight:700; color:var(--ok); text-transform:uppercase;
+  letter-spacing:.06em; margin-top:.3rem; }
+
+/* ---------- a conta, sempre à vista ---------- */
+.pl-conta{ position:sticky; bottom:0; z-index:5; margin-top:1.6rem;
+  background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
+  padding:1.1rem 1.3rem; box-shadow:0 -6px 24px rgba(0,0,0,.09);
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.pl-conta-txt{ flex:1; min-width:190px; }
+.pl-conta-rot{ font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color:#8a8f88; }
+.pl-conta-val{ font-family:var(--serif); font-size:1.75rem; color:var(--ink); line-height:1.1;
+  font-variant-numeric:tabular-nums; }
+.pl-conta-det{ font-size:.8rem; color:#8a8f88; margin-top:.2rem; line-height:1.45; }
+.pl-conta-poupa{ color:var(--ok); font-weight:700; }
+
+/* ---------- políticas ---------- */
+.pl-aceite{ display:flex; gap:.6rem; align-items:flex-start; margin-top:1.3rem;
+  background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:.9rem 1rem; }
+.pl-aceite input{ margin:.2rem 0 0; flex:none; accent-color:var(--gold);
+  width:17px; height:17px; min-width:17px; padding:0; }
+.pl-aceite label{ font-size:.85rem; line-height:1.55; color:var(--text);
+  text-transform:none; letter-spacing:normal; font-weight:400; margin:0; }
+.pl-aceite a{ color:var(--gold); font-weight:600; text-decoration:underline; cursor:pointer; }
+.pl-aceite.mau{ border-color:var(--danger); background:var(--danger-bg); }
+
+/* A janela das políticas: texto longo, por isso rola por dentro. */
+.pl-modal{ position:fixed; inset:0; z-index:2000; background:rgba(12,25,37,.55);
+  display:none; align-items:center; justify-content:center; padding:1.2rem; }
+.pl-modal.on{ display:flex; }
+.pl-modal-cx{ background:var(--card); border-radius:var(--radius); max-width:760px; width:100%;
+  max-height:88vh; display:flex; flex-direction:column; box-shadow:0 30px 70px rgba(0,0,0,.35); }
+.pl-modal-cab{ padding:1.2rem 1.4rem 1rem; border-bottom:1px solid var(--line);
+  display:flex; align-items:flex-start; gap:1rem; }
+.pl-modal-cab h3{ font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin:0; flex:1; }
+.pl-modal-corpo{ padding:1.2rem 1.4rem; overflow-y:auto; }
+.pl-modal-rodape{ padding:1rem 1.4rem; border-top:1px solid var(--line);
+  display:flex; gap:.6rem; justify-content:flex-end; flex-wrap:wrap; }
+
+/* O texto das políticas, com a marcação simples que o admin escreve. */
+.pl-texto{ font-size:.89rem; line-height:1.72; color:var(--text); }
+.pl-texto h4{ font-family:var(--serif); font-size:1.08rem; color:var(--ink);
+  margin:1.5rem 0 .5rem; padding-bottom:.3rem; border-bottom:1px solid var(--line); }
+.pl-texto h4:first-child{ margin-top:0; }
+.pl-texto p{ margin:0 0 .8rem; }
+.pl-texto ul{ margin:0 0 .9rem; padding-left:1.15rem; }
+.pl-texto li{ margin-bottom:.4rem; }
+.pl-texto .lei{ color:var(--gold-deep); font-weight:600; }
+
+/* ---------- o que já se tem (área da licença) ---------- */
+.pl-tenho{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fit, minmax(215px,1fr)); }
+.pl-tenho-c{ border:1.5px solid var(--line); border-radius:12px; padding:.85rem .95rem;
+  background:var(--card); display:flex; gap:.7rem; align-items:flex-start; }
+.pl-tenho-c.sim{ border-color:var(--ok); background:var(--ok-bg); }
+.pl-tenho-c.nao{ opacity:.72; border-style:dashed; }
+.pl-tenho-ico{ width:32px; height:32px; flex:none; border-radius:9px; background:rgba(255,255,255,.65);
+  display:flex; align-items:center; justify-content:center; font-size:1rem; }
+.pl-tenho-n{ font-weight:700; font-size:.88rem; color:var(--ink); }
+.pl-tenho-d{ font-size:.78rem; color:#8a8f88; line-height:1.4; margin-top:.1rem; }
+.pl-tenho-d b{ color:var(--ok); }
+
+/* ---------- medidor de uso (convidados) ---------- */
+.pl-medidor{ height:8px; border-radius:50px; background:var(--sand); overflow:hidden; margin-top:.5rem; }
+.pl-medidor i{ display:block; height:100%; border-radius:50px;
+  background:linear-gradient(90deg,var(--gold-soft),var(--gold-deep)); transition:width .4s; }
+.pl-medidor.cheio i{ background:linear-gradient(90deg,#d9a13c,var(--danger)); }
+
+/* ---------- porta fechada (upsell de um módulo) ---------- */
+.pl-porta{ text-align:center; max-width:60ch; margin:0 auto 2rem;
+  background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
+  padding:2rem 1.6rem; box-shadow:var(--shadow); }
+.pl-porta-ico{ width:62px; height:62px; margin:0 auto 1rem; border-radius:18px;
+  background:var(--gold-pale); display:flex; align-items:center; justify-content:center; font-size:1.7rem; }
+.pl-porta h2{ font-family:var(--serif); font-size:1.6rem; color:var(--ink); margin:0 0 .5rem; }
+.pl-porta p{ color:#8a8f88; font-size:.92rem; line-height:1.62; margin:0 auto .5rem; }
+.pl-porta .benef{ color:var(--gold); font-weight:600; font-size:1rem; }
+
+@media (max-width:640px){
+  .pl-topo h2{ font-size:1.5rem; }
+  .pl-conta{ padding:.9rem 1rem; }
+  .pl-conta-val{ font-size:1.45rem; }
+  .pl-escs{ grid-template-columns:1fr; }
+}

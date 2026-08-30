@@ -118,9 +118,10 @@ function ficheirosApp(): array {
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
-            'manifest.php','sw.js',
-            'assets/estilo.css','assets/editor.css','assets/pecas.css',
+            'licenca.php','manifest.php','sw.js',
+            'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
+            'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
             'assets/so-ver.js',
             'assets/convite-base.html'];
@@ -144,7 +145,11 @@ function acoesDaPlataforma(): array {
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
             'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica',
-            'sistema_tema_guardar','upload_chunk'];
+            'sistema_tema_guardar','upload_chunk',
+            // O preçário das licenças e as decisões sobre os pedidos.
+            'lic_decidir','lic_revogar','lic_conceder','lic_modulo_guardar',
+            'lic_escalao_guardar','lic_escalao_apagar','lic_pacote_guardar','lic_pacote_apagar',
+            'lic_politica_guardar'];
 }
 
 function acoesDoCasamento(): array {
@@ -160,7 +165,9 @@ function acoesDoCasamento(): array {
             'dados_importar','modelo_aplicar',
             'orc_ajuste','orc_categoria_guardar','orc_categoria_apagar',
             'orc_despesa_guardar','orc_despesa_apagar','orc_despesa_fatura','orc_despesa_fatura_apagar',
-            'orc_pagamento_guardar','orc_pagamento_apagar','orc_pagamento_liquidar'];
+            'orc_pagamento_guardar','orc_pagamento_apagar','orc_pagamento_liquidar',
+            // O casal pede a licença, e muda de ideias enquanto ninguém decidiu.
+            'lic_pedir','lic_pedido_cancelar'];
 }
 
 /**
@@ -179,7 +186,10 @@ function acoesSemCasamento(): array {
                                              'dados_exportar', 'dados_importar',
                                              'modelo_lista', 'modelo_defs', 'modelo_exemplo',
                                              'modelos_exportar', 'modelos_importar',
-                                             'registo_auditoria']);
+                                             'registo_auditoria',
+                                             'lic_pedidos', 'lic_decidir', 'lic_revogar', 'lic_conceder',
+                                             'lic_modulo_guardar', 'lic_escalao_guardar', 'lic_escalao_apagar',
+                                             'lic_pacote_guardar', 'lic_pacote_apagar', 'lic_politica_guardar']);
 }
 
 function acoesDeEscrita(): array {

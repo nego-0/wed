@@ -2,8 +2,9 @@
 //
 // Prova, de fora: sem dados obrigatórios não avança e assinala cada campo; um
 // email torto, uma palavra-passe curta e uma confirmação que não bate certo são
-// apanhados; a licença «Outro» exige os meses; a conta do porteiro exige as duas
-// coisas ou nenhuma; e, bem preenchido, a inscrição entra na fila.
+// apanhados; o plano tem de ser escolhido e as políticas aceites; a conta do
+// porteiro exige as duas coisas ou nenhuma; e, bem preenchido, a inscrição
+// entra na fila — com a conta já aberta, para o casal poder entrar de imediato.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -39,14 +40,33 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.fill('#senha', 'Segredo123!'); await p.dispatchEvent('#senha', 'input'); await p.waitForTimeout(120);
   ok(/f[34]/.test(await p.getAttribute('#pw-forca', 'class')), 'a força sobe com uma boa palavra-passe');
 
-  // ---------- 3. licença «Outro» exige os meses ----------
+  // ---------- 3. o plano: a montra, e as políticas por aceitar ----------
   await p.fill('#confirmar', 'Segredo123!');
   const email = 'reg.form.' + Date.now() + '@exemplo.ao';
   await p.fill('#email', email);
-  await p.selectOption('#licenca', 'outro'); await p.waitForTimeout(150);
-  await p.evaluate(() => enviar()); await p.waitForTimeout(200);
-  ok((await maus()).includes('licenca_meses_custom'), 'licença «Outro» sem número não passa');
-  await p.fill('#licenca_meses_custom', '18');
+
+  // A montra vem do preçário do servidor.
+  await p.waitForSelector('#reg-planos .pl-pac', { timeout: 8000 });
+  const pacs = await p.$$eval('#reg-planos .pl-pac', e => e.length);
+  ok(pacs > 0, `a montra mostra os pacotes do preçário (${pacs})`);
+  ok(await p.$$eval('#reg-planos .pl-pac.on', e => e.length) === 1,
+     'e um vem já escolhido — o que está em destaque');
+  ok(/\d/.test(await p.textContent('.pl-conta-val')), 'a conta do plano mostra um total');
+
+  // Sem aceitar as políticas não passa — é o consentimento informado.
+  await p.evaluate(() => enviar()); await p.waitForTimeout(250);
+  ok(await p.$eval('#reg-aceite-cx', e => e.classList.contains('mau')),
+     'sem aceitar as políticas, a inscrição não avança');
+  ok(!(await p.locator('#obrigado').isVisible()), 'e continua no formulário');
+
+  // A janela das políticas abre e traz o texto da lei.
+  await p.click('#reg-ver-pol'); await p.waitForTimeout(300);
+  ok(await p.locator('#pl-modal.on').isVisible(), 'a janela das políticas abre');
+  const txtPol = await p.textContent('#pl-modal .pl-texto');
+  ok(/22\/11/.test(txtPol), 'e o texto invoca a lei da protecção de dados');
+  // «Li e aceito» fecha a janela e marca a caixa.
+  await p.click('#pl-aceitar'); await p.waitForTimeout(250);
+  ok(await p.isChecked('#reg-aceite'), 'aceitar na janela marca a caixa do formulário');
 
   // ---------- 4. o porteiro: email sem palavra-passe não passa ----------
   await p.evaluate(() => document.querySelectorAll('details.bloco').forEach(d => d.open = true));
@@ -61,6 +81,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.evaluate(() => enviar()); await p.waitForTimeout(1500);
   ok(await p.locator('#obrigado').isVisible(), 'bem preenchido, a inscrição avança para o ecrã de sucesso');
   ok((await p.textContent('#feito-email')).includes(email), 'que confirma o email escolhido');
+  ok(!(await p.locator('#planos-sec').isVisible()), 'e a montra sai de cena');
 
   // ---------- limpeza: como admin, arquiva e apaga o que se criou ----------
   const a = await b.newContext().then(c => c.newPage());

@@ -3,8 +3,8 @@
 // A etapa 5 é sobre quem entra e com que chave. O que aqui se prova não é o
 // desenho das páginas: são as recusas.
 //
-//   1. quem se inscreve NÃO entra enquanto o admin não aprovar;
-//   2. aprovar o casamento abre também a conta de quem se inscreveu;
+//   1. quem se inscreve ENTRA já — mas só vê a sua licença, e mais nada;
+//   2. aprovar o pedido de licença é o que lhe abre os módulos;
 //   3. o suporte não chega a casamento nenhum sem um código do casal;
 //   4. um código de "ver" deixa ver e NÃO deixa mexer;
 //   5. revogar um código fecha a porta, mesmo a quem já lá estava;
@@ -69,38 +69,50 @@ const entrar = async (ctx, user, pass) => {
   const coordsReg = await anon.evaluate(() =>
     document.getElementById('religiosa_maps').nextElementSibling.querySelector('.mapa-coords').textContent);
   ok(/-12\.3456.*15\.6789/.test(coordsReg), 'e lê as coordenadas da ligação colada: ' + coordsReg);
+  // O plano vem escolhido (o pacote em destaque); falta aceitar as políticas.
+  await anon.waitForSelector('#reg-planos .pl-pac.on', { timeout: 8000 });
+  await anon.check('#reg-aceite');
   await anon.click('#btn'); await anon.waitForTimeout(900);
-  ok(await anon.locator('#obrigado').isVisible(), 'a inscrição confirma no ecrã que ficou à espera');
+  ok(await anon.locator('#obrigado').isVisible(), 'a inscrição confirma no ecrã que está feita');
 
-  // A conta existe — mas não entra.
-  const tenta = await entrar(await b.newContext(), emailCasal, SENHA);
-  ok(tenta.url().includes('login.php'), 'quem se inscreveu NÃO entra antes de ser aprovado');
+  // A conta abre-se já: o casal entra no minuto em que se inscreve.
+  const casal = await entrar(await b.newContext(), emailCasal, SENHA);
+  ok(!casal.url().includes('login.php'), 'quem se inscreveu entra de imediato');
+  ok(casal.url().includes('licenca.php'), 'e aterra na sua licença, que é o que tem para tratar');
 
-  // ---------- 2. o admin aprova, e a conta abre-se com o casamento ----------
+  // Mas só isso: sem licença concedida, os módulos estão fechados.
+  await casal.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+  ok(casal.url().includes('licenca.php'), 'o painel está fechado enquanto a licença não abrir');
+  await casal.goto(BASE + '/mesas.php', { waitUntil: 'networkidle' });
+  ok(casal.url().includes('licenca.php'), 'e as mesas também');
+
+  // ---------- 2. o admin aprova o pedido, e os módulos abrem ----------
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   const txtFila = await admin.locator('body').innerText();
   ok(txtFila.includes('Nadia' + marca), 'a inscrição aparece na fila de aprovação do admin');
 
   const contas = await api('utilizador_lista&q=' + marca);
   const conta = (contas.contas || []).find(c => c.email === emailCasal);
-  ok(conta && conta.estado === 'pendente', 'e a conta está mesmo "pendente" na lista de contas');
+  ok(conta && conta.estado === 'ativo', 'e a conta está "ativa" na lista de contas');
 
   const casamentos = await api('casamento_estado&id=0&estado=ativo');   // id inválido, só para ver que recusa
   ok(casamentos && casamentos.success === false, 'aprovar um casamento que não existe é recusado');
 
-  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
-  const idPend = await admin.evaluate((m) => {
-    const cx = [...document.querySelectorAll('.cas')].find(e => e.innerText.includes(m));
-    const b = cx && cx.querySelector('button');
-    return b ? b.getAttribute('onclick').match(/\d+/)[0] : null;
-  }, 'Nadia' + marca);
-  const apr = await api('casamento_estado&id=' + idPend + '&estado=ativo');
-  console.log('   aprovação:', JSON.stringify(apr));
-  ok(apr && apr.success && apr.contas_ativadas >= 1,
-     'aprovar o casamento ativa também a conta de quem se inscreveu');
+  // O pedido de licença deste casal está à espera, com o plano que escolheu.
+  const peds = await api('lic_pedidos&estado=pendente');
+  const ped = (peds.pedidos || []).find(x => (x.casamento_nome || '').includes(marca));
+  ok(ped && ped.itens.length > 0,
+     'o pedido de licença está na fila, com os módulos escolhidos (' + (ped ? ped.itens.length : 0) + ')');
 
-  const casal = await entrar(await b.newContext(), emailCasal, SENHA);
-  ok(!casal.url().includes('login.php'), 'e o casal passa a entrar');
+  const idPend = ped.casamento_id;    // o casamento deste casal, para as etapas seguintes
+  const apr = await api('lic_decidir', { id: ped.id, decisao: 'aprovar', nota: 'Prova.' });
+  console.log('   aprovação:', JSON.stringify(apr));
+  ok(apr && apr.success && (apr.modulos || []).length > 0,
+     'aprovar o pedido concede os módulos ao casamento');
+
+  // E agora o casal já entra no que pediu.
+  await casal.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+  ok(!casal.url().includes('licenca.php'), 'e o painel do casal abre-se');
 
   // E entra num casamento que já é o SEU: com o que escreveu na inscrição.
   await casal.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });

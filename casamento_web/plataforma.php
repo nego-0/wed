@@ -153,6 +153,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <title>Casamentos · Plataforma</title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/planos.css') ?>" rel="stylesheet"><?php // a montra e a janela das políticas ?>
 <style>
   .cas-lista{ display:grid; gap:.7rem; }
   .cas{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
@@ -214,6 +215,62 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
                margin-top:.45rem; max-width:260px; }
   .cas .barra i{ display:block; height:100%; background:var(--ok); }
   .cas .ac .btn{ white-space:nowrap; }
+  /* ---- Licenças: pedidos, preçário e pacotes ---- */
+  .lic-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px;
+    height:18px; padding:0 .3rem; margin-left:.4rem; border-radius:50px; background:var(--warn);
+    color:#fff; font-size:.7rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .lic-ped.pend{ border-left:4px solid var(--warn); }
+  .lic-ped-cab{ display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
+  .lic-ped-nome{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
+  .lic-ped-vl{ font-family:var(--serif); font-size:1.35rem; color:var(--ink);
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .lic-ped-selo{ font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .lic-ped-selo.pendente{ color:var(--warn); }
+  .lic-ped-selo.aprovado{ color:var(--ok); }
+  .lic-ped-selo.recusado{ color:var(--danger); }
+  .lic-ped-selo.cancelado{ color:#9aa09a; }
+  .lic-ped-nota{ background:var(--cream); border-left:3px solid var(--gold); border-radius:8px;
+    padding:.6rem .8rem; font-size:.85rem; line-height:1.55; margin-top:.7rem; }
+  .lic-itens{ list-style:none; margin:.7rem 0 0; padding:0; }
+  .lic-itens li{ display:flex; gap:.8rem; align-items:baseline; padding:.4rem 0;
+    font-size:.86rem; border-bottom:1px solid var(--line); }
+  .lic-itens li:last-child{ border-bottom:none; }
+  .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:8.5rem; }
+  .lic-itens .med{ flex:1; color:#8a8f88; }
+  .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold); font-weight:600; }
+
+  .lic-tab{ width:100%; border-collapse:collapse; margin-top:.9rem; }
+  .lic-tab td{ padding:.55rem .5rem; border-bottom:1px solid var(--line); vertical-align:top;
+    font-size:.87rem; }
+  .lic-tab tr:last-child td{ border-bottom:none; }
+  .lic-tab tr.off{ opacity:.5; }
+  .lic-tab .med{ color:#8a8f88; }
+  .lic-tab .pr{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
+    white-space:nowrap; text-align:right; }
+  .lic-tab .ac{ text-align:right; white-space:nowrap; }
+  .lic-tab .ac .btn{ margin-left:.3rem; }
+  .et.destaque{ background:var(--gold-pale); color:var(--gold-deep); }
+  .et.fita{ background:var(--gold); color:#fff; }
+
+  .lic-pi-mod{ border-top:1px solid var(--line); padding:.8rem 0; }
+  .lic-pi-mod:first-child{ border-top:none; }
+  .lic-pi-nome{ font-weight:700; color:var(--ink); margin-bottom:.45rem; }
+  .lic-pi{ display:flex; gap:.5rem; align-items:center; padding:.32rem .5rem; border-radius:8px;
+    cursor:pointer; font-size:.87rem; text-transform:none; letter-spacing:normal;
+    font-weight:400; margin:0; }
+  /* Pela mesma razão que na montra: `width:100%` num rádio come a linha toda. */
+  .lic-pi input{ width:16px; height:16px; min-width:16px; padding:0; margin:0;
+    flex:none; accent-color:var(--gold); }
+  .lic-pi > span{ flex:1; min-width:0; }
+  .lic-pi:hover{ background:var(--cream); }
+  .lic-pi small{ color:#8a8f88; }
+
+  @media (max-width:640px){
+    .lic-itens li{ flex-wrap:wrap; gap:.2rem .8rem; }
+    .lic-itens .mod{ min-width:0; }
+    .lic-tab td{ padding:.45rem .3rem; font-size:.83rem; }
+  }
+
   /* O menu "⋯" vive em assets/estilo.css: é de duas páginas. */
   .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.84rem; color:#8a8f88;
                margin-bottom:1.4rem; padding:0 .2rem; }
@@ -314,6 +371,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   <div class="toast" id="toast"></div>
   <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
   <script src="<?= asset('assets/api.js') ?>"></script>
+  <script src="<?= asset('assets/planos.js') ?>"></script><?php // Planos.politicas() na pré-visualização ?>
   <script>
   function toast(m, mau){
     const el = document.getElementById('toast');
@@ -353,6 +411,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <?php endif; ?>
     <?php if (ehAdminPlataforma()): ?>
       <button class="chip" data-vista="contas" onclick="verVista('contas')">Contas administrativas</button>
+      <button class="chip" data-vista="licencas" onclick="verVista('licencas')">Licenças<span id="lic-conta-badge" class="lic-badge" style="display:none"></span></button>
       <button class="chip" data-vista="dados" onclick="verVista('dados')">Gestão de Dados</button>
       <button class="chip" data-vista="registo" onclick="verVista('registo')">Registo de ações</button>
       <button class="chip" data-vista="definicoes" onclick="verVista('definicoes')">Definições</button>
@@ -580,6 +639,82 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="segredo" id="senha-reposta" style="display:none"></div>
     </div>
     </div><!-- /vista-contas -->
+
+    <div id="vista-licencas" style="display:none">
+    <div class="filtros" style="margin-bottom:1rem">
+      <button class="chip on" data-lic="pedidos" onclick="licVista('pedidos')">Pedidos</button>
+      <button class="chip" data-lic="precario" onclick="licVista('precario')">Preçário</button>
+      <button class="chip" data-lic="pacotes" onclick="licVista('pacotes')">Pacotes</button>
+      <button class="chip" data-lic="politicas" onclick="licVista('politicas')">Políticas</button>
+    </div>
+
+    <?php // ---- pedidos ---- ?>
+    <div id="lic-v-pedidos">
+      <div class="painel">
+        <h3>Pedidos de licença</h3>
+        <div class="dica">Um casal escolheu um plano e espera. Aprovar concede-lhe os módulos
+          pedidos e, se o casamento ainda estava à espera, abre-o com as suas contas.</div>
+        <div class="filtros" style="margin:.6rem 0 .2rem">
+          <button class="chip on" data-pest="pendente" onclick="licPedidos('pendente')">À espera</button>
+          <button class="chip" data-pest="aprovado" onclick="licPedidos('aprovado')">Aprovados</button>
+          <button class="chip" data-pest="recusado" onclick="licPedidos('recusado')">Recusados</button>
+          <button class="chip" data-pest="todos" onclick="licPedidos('todos')">Todos</button>
+        </div>
+      </div>
+      <div id="lic-pedidos-lista"><div class="dica">A carregar…</div></div>
+    </div>
+
+    <?php // ---- preçário: módulos e escalões ---- ?>
+    <div id="lic-v-precario" style="display:none">
+      <div class="painel">
+        <h3>Preçário</h3>
+        <div class="dica">Os módulos que se vendem, e as medidas em que se vendem. O preço é
+          sempre do <b>escalão</b> — é isso que permite vender o mesmo recurso em tamanhos
+          diferentes. Um escalão que já sustente licenças não se apaga: desliga-se.</div>
+      </div>
+      <div id="lic-precario"><div class="dica">A carregar…</div></div>
+    </div>
+
+    <?php // ---- pacotes ---- ?>
+    <div id="lic-v-pacotes" style="display:none">
+      <div class="painel">
+        <h3>Pacotes</h3>
+        <div class="dica">Conjuntos de escalões com preço próprio. A poupança que o casal vê é
+          calculada — a diferença entre o preço do pacote e a soma dos escalões à peça — por isso
+          um pacote mais caro do que as suas partes não engana ninguém: aparece sem poupança.</div>
+        <div class="fim" style="margin-top:.6rem">
+          <button class="btn btn-ouro btn-sm" onclick="licPacoteEditar(0)">&#43; Novo pacote</button>
+        </div>
+      </div>
+      <div id="lic-pacotes"><div class="dica">A carregar…</div></div>
+    </div>
+
+    <?php // ---- políticas ---- ?>
+    <div id="lic-v-politicas" style="display:none">
+      <div class="painel">
+        <h3>Políticas de utilização</h3>
+        <div class="dica">O texto que o casal lê e aceita ao pedir a licença. Guardar publica uma
+          <b>versão nova</b> e a anterior fica: é a prova do texto a que cada casal disse que sim
+          (Lei n.º 22/11, art. 5.º a) — consentimento informado). Marcação: <code>## </code> título,
+          <code>- </code> alínea, linha em branco separa parágrafos.</div>
+        <div class="campo" style="margin-top:.8rem">
+          <label for="lic-pol-titulo">Título</label>
+          <input type="text" id="lic-pol-titulo" maxlength="160">
+        </div>
+        <div class="campo">
+          <label for="lic-pol-corpo">Texto</label>
+          <textarea id="lic-pol-corpo" rows="22" style="width:100%;font-family:var(--mono,monospace);
+            font-size:.83rem;line-height:1.6;border:1.5px solid var(--line);border-radius:12px;
+            padding:.8rem;background:var(--card);color:var(--text);resize:vertical"></textarea>
+        </div>
+        <div class="fim" style="flex-wrap:wrap">
+          <span class="dica" style="flex:1;margin:0" id="lic-pol-versao"></span>
+          <button class="btn btn-sm" onclick="licPolPrever()">Pré-ver</button>
+          <button class="btn btn-ouro btn-sm" onclick="licPolGuardar()">Publicar versão nova</button>
+        </div>
+      </div>
+    </div>
+    </div>
 
     <div id="vista-dados" style="display:none">
     <div class="painel">
@@ -871,7 +1006,7 @@ function toast(m, mau){
 
 // ---------- as pastilhas: casamentos · novo · contas · dados · registo · definições ----------
 function verVista(v){
-  ['casamentos','novo','contas','dados','registo','definicoes'].forEach(id => {
+  ['casamentos','novo','contas','licencas','dados','registo','definicoes'].forEach(id => {
     const e = document.getElementById('vista-' + id);
     if (e) e.style.display = id === v ? '' : 'none';
   });
@@ -879,6 +1014,7 @@ function verVista(v){
     c.classList.toggle('on', c.dataset.vista === v));
   if (v === 'dados') carregarDadosCasamentos();
   if (v === 'registo') auditarPrimeiraVez();
+  if (v === 'licencas') licPrimeiraVez();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -899,6 +1035,480 @@ async function guardarTema(){
   // para o próprio admin passar a ver a base que acabou de definir.
   try { localStorage.removeItem('tema'); } catch (e) {}
   setTimeout(() => location.reload(), 700);
+}
+
+// ---------- Licenças: pedidos, preçário, pacotes e políticas ----------
+// Três coisas diferentes debaixo da mesma pastilha, porque respondem à mesma
+// pergunta: o que é que a casa vende, e a quem é que já o deu.
+let LIC_CAT = null, LIC_POL = null, LIC_PRONTO = false, LIC_PEST = 'pendente';
+
+function licPrimeiraVez(){
+  if (LIC_PRONTO) return; LIC_PRONTO = true;
+  licPedidos('pendente');
+  licCarregarCatalogo();
+}
+
+function licVista(v){
+  ['pedidos','precario','pacotes','politicas'].forEach(id => {
+    const e = document.getElementById('lic-v-' + id);
+    if (e) e.style.display = id === v ? '' : 'none';
+  });
+  document.querySelectorAll('#vista-licencas .chip[data-lic]').forEach(c =>
+    c.classList.toggle('on', c.dataset.lic === v));
+  if (v === 'precario' || v === 'pacotes') licCarregarCatalogo();
+  if (v === 'politicas') licCarregarPolitica();
+}
+
+function licKz(v){
+  v = Number(v) || 0;
+  const casas = Math.abs(v % 1) > 0.001 ? 2 : 0;
+  return v.toLocaleString('pt-PT', { minimumFractionDigits: casas, maximumFractionDigits: casas }) + ' Kz';
+}
+function licEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+/** A medida de um escalão, dita como o casal a lê. */
+function licMedida(it){
+  const m = it.modulo_chave || it.modulo;
+  if (m === 'convidados') return +it.limite > 0 ? 'até ' + it.limite + ' convidados' : 'sem limite';
+  if (m === 'impresso' || m === 'digital')
+    return +it.todos_modelos ? 'todos os modelos, com edição'
+         : (+it.editar ? 'modelo padrão, com edição' : 'modelo padrão, sem edição');
+  return 'incluído';
+}
+
+// ---- pedidos ----
+async function licPedidos(estado){
+  LIC_PEST = estado || LIC_PEST;
+  document.querySelectorAll('#vista-licencas .chip[data-pest]').forEach(c =>
+    c.classList.toggle('on', c.dataset.pest === LIC_PEST));
+  const cx = document.getElementById('lic-pedidos-lista');
+  cx.innerHTML = '<div class="dica">A carregar…</div>';
+  const d = await api('lic_pedidos&estado=' + encodeURIComponent(LIC_PEST));
+  if (!d || !d.success) { cx.innerHTML = '<div class="dica">Não foi possível ler os pedidos.</div>'; return; }
+  licBadge(d.pendentes);
+  if (!d.pedidos.length){
+    cx.innerHTML = '<div class="painel"><div class="dica">'
+      + (LIC_PEST === 'pendente' ? 'Nenhum pedido à espera. Está tudo tratado.'
+                                 : 'Nenhum pedido neste estado.') + '</div></div>';
+    return;
+  }
+  cx.innerHTML = d.pedidos.map(licCartaoPedido).join('');
+}
+
+function licBadge(n){
+  const b = document.getElementById('lic-conta-badge');
+  if (!b) return;
+  b.textContent = n > 0 ? n : '';
+  b.style.display = n > 0 ? '' : 'none';
+}
+
+function licCartaoPedido(p){
+  const itens = (p.itens || []).map(it => {
+    // «Até 80 convidados · até 80 convidados» não diz nada duas vezes: só se
+    // acrescenta a medida quando ela conta alguma coisa que o nome não conta.
+    const med = licMedida(it);
+    const nome = it.escalao_nome || '';
+    const extra = (med && med.toLowerCase() !== nome.toLowerCase()) ? ' · ' + med : '';
+    return '<li><span class="mod">' + licEsc(it.modulo_chave) + '</span>'
+      + '<span class="med">' + licEsc(nome) + licEsc(extra) + '</span>'
+      + '<span class="pr">' + licKz(it.preco) + '</span></li>';
+  }).join('');
+  const pend = p.estado === 'pendente';
+  const selo = { pendente:'⏳ à espera', aprovado:'✓ aprovado',
+                 recusado:'✕ recusado', cancelado:'— cancelado' }[p.estado] || p.estado;
+  return '<div class="painel lic-ped' + (pend ? ' pend' : '') + '">'
+    + '<div class="lic-ped-cab">'
+    +   '<div style="flex:1;min-width:200px">'
+    +     '<div class="lic-ped-nome">' + licEsc(p.casamento_nome) + '</div>'
+    +     '<div class="dica" style="margin:.15rem 0 0">'
+    +       (p.tipo === 'upgrade' ? 'Reforço da licença' : 'Pedido inicial')
+    +       ' · ' + licEsc(p.pacote_nome || 'plano à medida')
+    +       ' · ' + p.meses + ' meses · ' + licData(p.criado_em) + '</div>'
+    +   '</div>'
+    +   '<div style="text-align:right"><div class="lic-ped-vl">' + licKz(p.total) + '</div>'
+    +     '<div class="lic-ped-selo ' + p.estado + '">' + selo + '</div></div>'
+    + '</div>'
+    + '<ul class="lic-itens">' + itens + '</ul>'
+    + (p.nota_casal ? '<div class="lic-ped-nota"><b>O casal escreveu:</b> '
+        + licEsc(p.nota_casal) + '</div>' : '')
+    + (p.nota_admin ? '<div class="lic-ped-nota"><b>Decisão:</b> ' + licEsc(p.nota_admin) + '</div>' : '')
+    + '<div class="dica" style="margin:.7rem 0 0">Aceitou as políticas (versão '
+    +   (p.politica_versao || 1) + ') em ' + licData(p.aceite_em) + '.</div>'
+    + (pend
+        ? '<div class="fim" style="margin-top:.8rem;flex-wrap:wrap">'
+          + '<button class="btn btn-ouro btn-sm" onclick="licDecidir(' + p.id + ',\'aprovar\')">Aprovar</button>'
+          + '<button class="btn btn-sm" onclick="licDecidir(' + p.id + ',\'recusar\')">Recusar</button>'
+          + '</div>'
+        : '')
+    + '</div>';
+}
+
+function licData(s){
+  if (!s) return '—';
+  const d = new Date(String(s).replace(' ', 'T'));
+  return isNaN(d) ? String(s) : d.toLocaleDateString('pt-PT',
+    { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+async function licDecidir(id, decisao){
+  let nota = '';
+  if (decisao === 'recusar'){
+    nota = prompt('Motivo da recusa\n\nO casal vê-o na sua página da licença. Uma recusa sem '
+                + 'explicação deixa-o sem saber o que corrigir.');
+    if (nota === null) return;
+    if (!nota.trim()){ toast('Indique o motivo da recusa.', true); return; }
+  } else {
+    if (!confirm('Aprovar este pedido?\n\nOs módulos pedidos passam a estar concedidos, e o '
+               + 'casamento abre com as suas contas se ainda estava à espera.')) return;
+    nota = prompt('Alguma nota para o casal? (opcional)') || '';
+  }
+  const d = await api('lic_decidir', { method:'POST',
+    body: JSON.stringify({ id, decisao, nota }) });
+  if (!d || !d.success) return;
+  toast(decisao === 'aprovar'
+    ? 'Licença concedida.' + (d.contas_ativadas ? ' ' + d.contas_ativadas + ' conta(s) ativada(s).' : '')
+    : 'Pedido recusado.');
+  licPedidos();
+}
+
+// ---- preçário ----
+async function licCarregarCatalogo(){
+  const d = await api('lic_catalogo');
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo;
+  licPintarPrecario();
+  licPintarPacotes();
+}
+
+function licPintarPrecario(){
+  const cx = document.getElementById('lic-precario');
+  if (!cx || !LIC_CAT) return;
+  cx.innerHTML = LIC_CAT.modulos.map(m => {
+    const escs = m.escaloes.map(e =>
+        '<tr' + (e.ativo ? '' : ' class="off"') + '>'
+      + '<td><b>' + licEsc(e.nome) + '</b>'
+      +   (e.resumo ? '<div class="dica" style="margin:.1rem 0 0">' + licEsc(e.resumo) + '</div>' : '')
+      +   (e.ativo ? '' : '<span class="et">desligado</span>') + '</td>'
+      + '<td class="med">' + licMedida(Object.assign({ modulo_chave: m.chave }, e)) + '</td>'
+      + '<td class="pr">' + licKz(e.preco) + '</td>'
+      + '<td class="ac"><button class="btn btn-sm" onclick="licEscalaoEditar(' + m.id + ',' + e.id + ')">Editar</button>'
+      +   '<button class="btn btn-sm perigo" onclick="licEscalaoApagar(' + e.id + ')">Apagar</button></td>'
+      + '</tr>').join('');
+    return '<div class="painel">'
+      + '<div style="display:flex;gap:.8rem;align-items:flex-start;flex-wrap:wrap">'
+      +   '<div style="font-size:1.5rem">' + licEsc(m.icone || '•') + '</div>'
+      +   '<div style="flex:1;min-width:200px"><h3 style="margin:0">' + licEsc(m.nome)
+      +     (m.ativo ? '' : ' <span class="et">desligado</span>') + '</h3>'
+      +     '<div class="dica" style="margin:.15rem 0 0">' + licEsc(m.resumo) + '</div>'
+      +     '<div style="color:var(--gold);font-weight:600;font-size:.83rem;margin-top:.15rem">'
+      +       licEsc(m.beneficio) + '</div></div>'
+      +   '<div class="fim" style="margin:0">'
+      +     '<button class="btn btn-sm" onclick="licModuloEditar(' + m.id + ')">Editar módulo</button>'
+      +     '<button class="btn btn-ouro btn-sm" onclick="licEscalaoEditar(' + m.id + ',0)">&#43; Escalão</button>'
+      +   '</div>'
+      + '</div>'
+      + '<table class="lic-tab"><tbody>' + escs + '</tbody></table>'
+      + '</div>';
+  }).join('');
+}
+
+function licModulo(id){ return LIC_CAT.modulos.find(m => m.id === id); }
+function licEscalao(id){
+  for (const m of LIC_CAT.modulos){ const e = m.escaloes.find(x => x.id === id); if (e) return [m, e]; }
+  return [null, null];
+}
+
+async function licModuloEditar(id){
+  const m = licModulo(id); if (!m) return;
+  const nome = prompt('Nome do módulo', m.nome); if (nome === null) return;
+  const resumo = prompt('O que faz (uma linha)', m.resumo); if (resumo === null) return;
+  const benef = prompt('A frase que vende — o benefício, não a funcionalidade', m.beneficio);
+  if (benef === null) return;
+  const icone = prompt('Ícone (um emoji)', m.icone); if (icone === null) return;
+  const d = await api('lic_modulo_guardar', { method:'POST', body: JSON.stringify({
+    id, nome, resumo, beneficio: benef, icone, ativo: 1 }) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
+  toast('Módulo guardado.');
+}
+
+async function licEscalaoEditar(modId, escId){
+  const m = licModulo(modId); if (!m) return;
+  const e = escId ? licEscalao(escId)[1] : null;
+  const nome = prompt('Nome do escalão\n\nMódulo: ' + m.nome, e ? e.nome : '');
+  if (nome === null || !nome.trim()) return;
+  const resumo = prompt('Uma linha de apoio (opcional)', e ? e.resumo : '');
+  if (resumo === null) return;
+  const preco = prompt('Preço em Kz (só o número)', e ? e.preco : '0');
+  if (preco === null) return;
+  const corpo = { id: escId, modulo: modId, nome, resumo,
+                  preco: parseFloat(String(preco).replace(/\s/g,'').replace(',','.')) || 0,
+                  limite: 0, editar: 0, todos_modelos: 0,
+                  ordem: e ? e.ordem : 100, ativo: 1 };
+  // Cada módulo tem a sua medida: pedir «pode editar?» num escalão de
+  // convidados era pedir uma resposta que não quer dizer nada.
+  if (m.chave === 'convidados'){
+    const lim = prompt('Quantos convidados no máximo?\n\n0 = sem limite', e ? e.limite : '0');
+    if (lim === null) return;
+    corpo.limite = Math.max(0, parseInt(lim, 10) || 0);
+  } else if (m.chave === 'impresso' || m.chave === 'digital'){
+    const nivel = prompt('Que nível?\n\n1 = modelo padrão, sem edição\n'
+                       + '2 = modelo padrão, com edição\n3 = todos os modelos, com edição',
+                       e ? (e.todos_modelos ? '3' : (e.editar ? '2' : '1')) : '1');
+    if (nivel === null) return;
+    corpo.editar = (nivel === '2' || nivel === '3') ? 1 : 0;
+    corpo.todos_modelos = nivel === '3' ? 1 : 0;
+  }
+  const d = await api('lic_escalao_guardar', { method:'POST', body: JSON.stringify(corpo) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
+  toast('Escalão guardado.');
+}
+
+async function licEscalaoApagar(id){
+  const [m, e] = licEscalao(id); if (!e) return;
+  if (!confirm('Apagar o escalão «' + e.nome + '»?\n\nSe já houver licenças assentes nele, '
+             + 'não se apaga — desliga-se, e deixa de aparecer na montra.')) return;
+  const d = await api('lic_escalao_apagar', { method:'POST', body: JSON.stringify({ id }) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
+  toast(d.desligado
+    ? 'Escalão desligado — ' + d.usos + ' licença(s) assentam nele.'
+    : 'Escalão apagado.');
+}
+
+// ---- pacotes ----
+function licPintarPacotes(){
+  const cx = document.getElementById('lic-pacotes');
+  if (!cx || !LIC_CAT) return;
+  if (!LIC_CAT.pacotes.length){
+    cx.innerHTML = '<div class="painel"><div class="dica">Ainda não há pacotes. '
+      + 'Um preçário só com módulos à peça funciona — mas é nos pacotes que está a poupança '
+      + 'que faz o casal subir de plano.</div></div>';
+    return;
+  }
+  cx.innerHTML = LIC_CAT.pacotes.map(p => {
+    const itens = p.itens.map(id => {
+      const [m, e] = licEscalao(id);
+      return e ? '<li><span class="mod">' + licEsc(m.nome) + '</span>'
+               + '<span class="med">' + licEsc(e.nome) + '</span></li>' : '';
+    }).join('');
+    return '<div class="painel">'
+      + '<div class="lic-ped-cab">'
+      +   '<div style="flex:1;min-width:200px"><div class="lic-ped-nome">' + licEsc(p.nome)
+      +     (p.destaque ? ' <span class="et destaque">em destaque</span>' : '')
+      +     (p.ativo ? '' : ' <span class="et">desligado</span>')
+      +     (p.etiqueta ? ' <span class="et fita">' + licEsc(p.etiqueta) + '</span>' : '') + '</div>'
+      +     '<div class="dica" style="margin:.15rem 0 0">' + licEsc(p.promessa)
+      +       ' · ' + p.meses + ' meses</div></div>'
+      +   '<div style="text-align:right"><div class="lic-ped-vl">' + licKz(p.preco) + '</div>'
+      +     '<div class="dica" style="margin:0">à peça ' + licKz(p.avulso)
+      +       (p.poupanca > 0 ? ' · <b style="color:var(--ok)">poupa ' + licKz(p.poupanca) + '</b>'
+                              : ' · <b style="color:var(--warn)">sem poupança</b>') + '</div></div>'
+      + '</div>'
+      + '<ul class="lic-itens">' + itens + '</ul>'
+      + '<div class="fim" style="margin-top:.7rem">'
+      +   '<button class="btn btn-sm" onclick="licPacoteEditar(' + p.id + ')">Editar</button>'
+      +   '<button class="btn btn-sm" onclick="licPacoteItens(' + p.id + ')">Escolher módulos</button>'
+      +   '<button class="btn btn-sm perigo" onclick="licPacoteApagar(' + p.id + ')">Apagar</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function licPacoteEditar(id){
+  const p = id ? LIC_CAT.pacotes.find(x => x.id === id) : null;
+  const nome = prompt('Nome do pacote', p ? p.nome : ''); if (nome === null || !nome.trim()) return;
+  const prom = prompt('A promessa — uma linha', p ? p.promessa : ''); if (prom === null) return;
+  const preco = prompt('Preço em Kz', p ? p.preco : '0'); if (preco === null) return;
+  const meses = prompt('Meses de licença que o pacote inclui', p ? p.meses : '12');
+  if (meses === null) return;
+  const etiq = prompt('Fita de destaque (ex.: O MAIS ESCOLHIDO). Vazio = sem fita.',
+                      p ? p.etiqueta : ''); if (etiq === null) return;
+  const dest = confirm('Pôr este pacote em destaque?\n\nSó um pode estar — dois «mais escolhidos» '
+                     + 'não escolhem nada.\n\nOK = em destaque · Cancelar = normal');
+  const d = await api('lic_pacote_guardar', { method:'POST', body: JSON.stringify({
+    id: id || 0, nome, promessa: prom, resumo: p ? p.resumo : '',
+    preco: parseFloat(String(preco).replace(/\s/g,'').replace(',','.')) || 0,
+    meses: parseInt(meses, 10) || 12, etiqueta: etiq, destaque: dest ? 1 : 0,
+    ordem: p ? p.ordem : 100, ativo: 1 }) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPacotes();
+  toast('Pacote guardado.' + (id ? '' : ' Escolha agora os módulos que inclui.'));
+  if (!id) licPacoteItens(d.id);
+}
+
+/** Escolher os escalões de um pacote, numa janela com um por linha. */
+function licPacoteItens(id){
+  const p = LIC_CAT.pacotes.find(x => x.id === id); if (!p) return;
+  const dentro = new Set(p.itens);
+  const linhas = LIC_CAT.modulos.map(m =>
+    '<div class="lic-pi-mod"><div class="lic-pi-nome">' + licEsc(m.icone || '•') + ' '
+    + licEsc(m.nome) + '</div>'
+    + m.escaloes.map(e =>
+        '<label class="lic-pi"><input type="checkbox" value="' + e.id + '"'
+      + (dentro.has(e.id) ? ' checked' : '') + ' data-mod="' + licEsc(m.chave) + '">'
+      + '<span>' + licEsc(e.nome) + ' <small>' + licKz(e.preco) + '</small></span></label>').join('')
+    + '</div>').join('');
+  licJanela('Módulos de «' + licEsc(p.nome) + '»',
+    '<div class="dica">Um escalão por módulo. Marcar dois do mesmo módulo não faz sentido — '
+    + 'o pedido só guardaria o primeiro.</div><div id="lic-pi-lista">' + linhas + '</div>',
+    async () => {
+      const marc = [...document.querySelectorAll('#lic-pi-lista input:checked')].map(i => +i.value);
+      const d = await api('lic_pacote_guardar', { method:'POST',
+        body: JSON.stringify({ id, nome: p.nome, promessa: p.promessa, resumo: p.resumo,
+          preco: p.preco, meses: p.meses, etiqueta: p.etiqueta, destaque: p.destaque,
+          ordem: p.ordem, ativo: p.ativo, escaloes: marc }) });
+      if (!d || !d.success) return;
+      LIC_CAT = d.catalogo; licPintarPacotes(); toast('Módulos do pacote guardados.');
+    });
+  // Um módulo, um escalão: marcar outro do mesmo módulo desmarca o anterior.
+  document.querySelectorAll('#lic-pi-lista input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      if (!inp.checked) return;
+      document.querySelectorAll('#lic-pi-lista input[data-mod="' + inp.dataset.mod + '"]')
+        .forEach(o => { if (o !== inp) o.checked = false; });
+    });
+  });
+}
+
+async function licPacoteApagar(id){
+  const p = LIC_CAT.pacotes.find(x => x.id === id); if (!p) return;
+  if (!confirm('Apagar o pacote «' + p.nome + '»?\n\nAs licenças já concedidas por ele não se '
+             + 'alteram: o que foi concedido está concedido.')) return;
+  const d = await api('lic_pacote_apagar', { method:'POST', body: JSON.stringify({ id }) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPacotes(); toast('Pacote apagado.');
+}
+
+// ---- políticas ----
+async function licCarregarPolitica(){
+  if (LIC_POL) return;
+  const d = await api('lic_politica');
+  if (!d || !d.success) return;
+  LIC_POL = d.politica;
+  document.getElementById('lic-pol-titulo').value = LIC_POL.titulo || '';
+  document.getElementById('lic-pol-corpo').value = LIC_POL.corpo || '';
+  document.getElementById('lic-pol-versao').textContent =
+    'Em vigor: versão ' + (LIC_POL.versao || 1) + '.';
+}
+
+function licPolPrever(){
+  const corpo = document.getElementById('lic-pol-corpo').value;
+  const titulo = document.getElementById('lic-pol-titulo').value;
+  if (window.Planos) Planos.politicas({ titulo, corpo, versao: (LIC_POL ? LIC_POL.versao : 1) }, null);
+}
+
+async function licPolGuardar(){
+  const titulo = document.getElementById('lic-pol-titulo').value.trim();
+  const corpo = document.getElementById('lic-pol-corpo').value.trim();
+  if (!confirm('Publicar uma versão nova das políticas?\n\nA versão actual fica guardada — é a '
+             + 'prova do texto que os casais já aceitaram.')) return;
+  const d = await api('lic_politica_guardar', { method:'POST', body: JSON.stringify({ titulo, corpo }) });
+  if (!d || !d.success) return;
+  LIC_POL = d.politica;
+  document.getElementById('lic-pol-versao').textContent =
+    'Em vigor: versão ' + LIC_POL.versao + '.';
+  toast('Políticas publicadas — versão ' + LIC_POL.versao + '.');
+}
+
+/** Uma janela simples de OK/Cancelar, para as escolhas que não cabem num prompt. */
+function licJanela(titulo, html, aoConfirmar){
+  let m = document.getElementById('lic-janela');
+  if (!m){
+    m = document.createElement('div'); m.id = 'lic-janela'; m.className = 'pl-modal';
+    document.body.appendChild(m);
+    m.addEventListener('click', ev => { if (ev.target === m) m.classList.remove('on'); });
+  }
+  m.innerHTML = '<div class="pl-modal-cx"><div class="pl-modal-cab"><h3>' + titulo + '</h3></div>'
+    + '<div class="pl-modal-corpo">' + html + '</div>'
+    + '<div class="pl-modal-rodape">'
+    + '<button class="btn btn-fantasma btn-sm" id="lic-jc">Cancelar</button>'
+    + '<button class="btn btn-ouro btn-sm" id="lic-jo">Guardar</button></div></div>';
+  m.classList.add('on');
+  document.getElementById('lic-jc').onclick = () => m.classList.remove('on');
+  document.getElementById('lic-jo').onclick = async () => { m.classList.remove('on'); await aoConfirmar(); };
+}
+
+// A pastilha das licenças traz o número de pedidos à espera mal a página abre:
+// um pedido que ninguém vê é um casal que ficou à porta sem ninguém saber.
+(async () => {
+  const d = await api('lic_pedidos&estado=pendente', { silencioso: true });
+  if (d && d.success) licBadge(d.pendentes);
+})();
+
+/**
+ * Conceder módulos a um casamento à mão — sem passar por pedido nenhum.
+ *
+ * É como se abre a porta a um casamento criado aqui dentro (que nunca pediu
+ * nada), e como se corrige um engano. Marca-se um escalão por módulo; o que
+ * ficar por marcar deixa de estar concedido.
+ */
+async function licModulosDe(id, nome){
+  if (!LIC_CAT) await licCarregarCatalogo();
+  if (!LIC_CAT) { toast('Não foi possível ler o preçário.', true); return; }
+  const f = await api('casamento_ficha&id=' + id);
+  const tem = {};
+  if (f && f.success && f.licenca_modulos) Object.assign(tem, f.licenca_modulos);
+
+  const linhas = LIC_CAT.modulos.map(m => {
+    const g = tem[m.chave];
+    const escs = m.escaloes.map(e => {
+      // Marca-se o escalão que corresponde ao que o casamento já tem.
+      let igual = false;
+      if (g && g.ativo){
+        if (m.chave === 'convidados') igual = +e.limite === +g.limite;
+        else if (m.chave === 'impresso' || m.chave === 'digital')
+          igual = !!+e.editar === !!g.editar && !!+e.todos_modelos === !!g.todos_modelos;
+        else igual = true;
+      }
+      return '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="'
+        + e.id + '"' + (igual ? ' checked' : '') + '>'
+        + '<span>' + licEsc(e.nome) + ' <small>' + licKz(e.preco) + '</small></span></label>';
+    }).join('');
+    return '<div class="lic-pi-mod"><div class="lic-pi-nome">' + licEsc(m.icone || '•') + ' '
+      + licEsc(m.nome) + '</div>'
+      + '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="0"'
+      + (g && g.ativo ? '' : ' checked') + '><span>Não incluído</span></label>'
+      + escs + '</div>';
+  }).join('');
+
+  licJanela('Módulos de «' + licEsc(nome) + '»',
+    '<div class="dica">O que ficar em «não incluído» deixa de estar concedido — e o casal deixa '
+    + 'de ver a página desse módulo. Os dados não se apagam.</div>'
+    + '<div id="lic-lm-lista">' + linhas + '</div>'
+    + '<div class="campo" style="margin-top:1rem"><label for="lic-lm-meses">Prazo da licença '
+    + '(meses; 0 = sem limite)</label>'
+    + '<input type="number" id="lic-lm-meses" min="0" max="120" value="'
+    + (f && f.casamento ? (+f.casamento.licenca_meses || 0) : 0) + '"></div>',
+    async () => {
+      const marc = [...document.querySelectorAll('#lic-lm-lista input:checked')]
+                   .map(i => +i.value).filter(v => v > 0);
+      const meses = Math.max(0, Math.min(120, parseInt(
+        document.getElementById('lic-lm-meses').value || '0', 10)));
+      const d = await api('lic_conceder', { method:'POST',
+        body: JSON.stringify({ casamento: id, escaloes: marc, meses }) });
+      if (!d || !d.success) return;
+      toast(d.modulos ? d.modulos + ' módulo(s) concedido(s).' : 'Casamento ficou sem módulos.');
+      carregarCasamentos();
+    });
+}
+
+/** Revogar a licença por incumprimento. O motivo não é opcional: o casal vê-o. */
+async function licRevogarDe(id, nome){
+  const motivo = prompt('Revogar a licença de «' + nome + '»\n\n'
+    + 'Motivo (o casal vê-o na sua página da licença, e fica no registo):');
+  if (motivo === null) return;
+  if (!motivo.trim()){ toast('A revogação exige um motivo.', true); return; }
+  if (!confirm('Revogar a licença de «' + nome + '»?\n\nTodos os módulos fecham de imediato. '
+             + 'Os dados NÃO se apagam — o casal continua a poder exportá-los, como as políticas '
+             + 'lhe prometem.')) return;
+  const d = await api('lic_revogar', { method:'POST',
+    body: JSON.stringify({ casamento: id, motivo }) });
+  if (!d || !d.success) return;
+  toast('Licença revogada.');
+  carregarCasamentos();
 }
 
 // ---------- Registo de ações (auditoria do admin) ----------
@@ -1408,7 +2018,9 @@ async function carregarCasamentos(){
         mais.push(`<button class="perigo" onclick="apagar(${c.id},'${n}')">Apagar para sempre</button>`);
       } else {
         mais.push(`<button onclick="editarTudo(${c.id})">Editar todos os dados…</button>`);
-        mais.push(`<button onclick="gerirLicenca(${c.id})">Gerir licença…</button>`);
+        mais.push(`<button onclick="gerirLicenca(${c.id})">Prazo da licença…</button>`);
+        mais.push(`<button onclick="licModulosDe(${c.id},'${n}')">Módulos da licença…</button>`);
+        mais.push(`<button class="perigo" onclick="licRevogarDe(${c.id},'${n}')">Revogar licença…</button>`);
         mais.push('<hr>');
         mais.push(c.estado === 'suspenso'
           ? `<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
@@ -1439,6 +2051,7 @@ async function carregarCasamentos(){
           <span><b>${pes}</b> pessoas${pes ? ` · <b>${conf}</b> confirmaram` : ''}</span>
           <span>${esc(quando(c.ultimo_acesso))}</span>
           ${licencaMeta(c)}
+          ${modulosMeta(c)}
           ${+c.donos === 0 ? '<span class="falta">sem conta dos noivos</span>' : ''}
         </div>
         ${pes ? `<div class="barra" title="${conf} de ${pes} confirmaram (${pc}%)"><i style="width:${pc}%"></i></div>` : ''}
@@ -1446,6 +2059,25 @@ async function carregarCasamentos(){
       <div class="ac">${principal}${menu}</div>
     </div>`;
   }).join('');
+}
+
+/**
+ * Quantos módulos a licença abre — e, sobretudo, se há um pedido à espera.
+ *
+ * Um casamento parado à porta é a coisa mais urgente desta lista: sem isto, a
+ * única forma de o saber era ir à pastilha das Licenças procurar.
+ */
+function modulosMeta(c){
+  const n = +c.lic_modulos || 0;
+  const p = +c.lic_pedidos || 0;
+  const est = c.licenca_estado || 'sem';
+  let out = '';
+  if (est === 'revogada') out += '<span class="falta">licença revogada</span>';
+  else if (!n) out += '<span class="falta">sem módulos</span>';
+  else out += `<span class="conta">${n} módulo(s)`
+            + (c.licenca_pacote ? ` · ${esc(c.licenca_pacote)}` : '') + '</span>';
+  if (p) out += `<span class="falta">${p} pedido(s) à espera</span>`;
+  return out;
 }
 
 /** O que resta da licença, para a linha do casamento. */

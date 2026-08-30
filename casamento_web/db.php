@@ -25,7 +25,8 @@ mysqli_report(MYSQLI_REPORT_OFF);
 class LigacaoAmbito extends mysqli {
     /** Tabelas cujos dados pertencem a um casamento. */
     private const TABELAS = ['convites','convidados','mesas','versoes','registo','definicoes',
-                             'orcamento_categorias','orcamento_despesas','orcamento_pagamentos'];
+                             'orcamento_categorias','orcamento_despesas','orcamento_pagamentos',
+                             'lic_pedidos','lic_concessoes'];
     public static bool $vigiar = false;   // ligado só depois de o esquema estar pronto
 
     private function auditar(string $sql): void {
@@ -189,7 +190,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 27;
+const ESQUEMA_VERSAO = 28;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -205,6 +206,250 @@ function migIndice(mysqli $c, string $tabela, string $nome, string $colunas): vo
 function migLargarColuna(mysqli $c, string $tabela, string $coluna): void {
     $r = @$c->query("SHOW COLUMNS FROM `$tabela` LIKE '" . $c->real_escape_string($coluna) . "'");
     if ($r && $r->num_rows) @$c->query("ALTER TABLE `$tabela` DROP COLUMN `$coluna`");
+}
+
+// ============================================================
+// O preçário de origem — os módulos, as suas medidas e os pacotes
+//
+// Uma casa nova precisa de ter o que vender no primeiro dia. Isto é o ponto de
+// partida, não a lei: o admin muda nomes, medidas e preços na página das
+// licenças, e é o que estiver na base que manda daí para a frente.
+// ============================================================
+
+/** As cinco chaves de módulo que o sistema conhece, e o que cada uma comanda. */
+function licencaModulosTudo(): array {
+    return [
+        'convidados' => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
+        'mesas'      => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
+        'orcamento'  => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
+        'impresso'   => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
+        'digital'    => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
+    ];
+}
+
+/** Escreve o preçário de origem — só quando ainda não há nenhum. */
+function semearPrecario(mysqli $conn): void {
+    global $P;
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}lic_modulos");
+    if (!$r || (int)$r->fetch_row()[0] > 0) return;   // já há preçário: não se mexe
+
+    // [chave, nome, resumo, benefício (a frase que vende), ícone, escalões]
+    // Cada escalão: [chave, nome, resumo, preço, limite, editar, todos_modelos]
+    $catalogo = [
+        ['convidados', 'Lista de convidados',
+         'Convites, acompanhantes, confirmações e a porta no dia.',
+         'Saiba, ao minuto, quem vem — e quem já entrou.', '👤', [
+            ['convidados_80',  'Até 80 convidados',   'Uma festa de família.',            18000, 80,  0, 0],
+            ['convidados_200', 'Até 200 convidados',  'O tamanho da maioria dos casamentos.', 32000, 200, 0, 0],
+            ['convidados_400', 'Até 400 convidados',  'Casamentos grandes, com folga.',   48000, 400, 0, 0],
+            ['convidados_sem', 'Convidados sem limite', 'Não conte pessoas. Convide.',    65000, 0,   0, 0],
+         ]],
+        ['mesas', 'Planta de mesas',
+         'Desenhe o salão e sente cada convidado no seu lugar.',
+         'Acabe com a folha de papel riscada mil vezes.', '🪑', [
+            ['mesas_sim', 'Planta de mesas', 'Mesas, lugares e a planta a arrastar.', 25000, 0, 0, 0],
+         ]],
+        ['orcamento', 'Orçamento',
+         'Categorias, despesas, prestações e faturas num só sítio.',
+         'Saiba para onde foi cada kwanza — antes da conta chegar.', '💰', [
+            ['orcamento_sim', 'Orçamento', 'Teto, despesas, pagamentos e faturas.', 22000, 0, 0, 0],
+         ]],
+        ['impresso', 'Convite impresso',
+         'O convite em papel, pronto para a gráfica.',
+         'Leve à gráfica um ficheiro que já está certo.', '✉️', [
+            ['impresso_padrao',  'Modelo padrão',        'O desenho da casa, pronto a usar.',        12000, 0, 0, 0],
+            ['impresso_edicao',  'Padrão, com edição',   'O modelo padrão, seu para desenhar.',      28000, 0, 1, 0],
+            ['impresso_atelier', 'Todos os modelos',     'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
+         ]],
+        ['digital', 'Convite digital',
+         'A página do convite, com RSVP e código por convidado.',
+         'Envie por WhatsApp e receba as respostas sozinho.', '📱', [
+            ['digital_padrao',  'Modelo padrão',       'O desenho da casa, pronto a enviar.',       12000, 0, 0, 0],
+            ['digital_edicao',  'Padrão, com edição',  'O modelo padrão, seu para desenhar.',       28000, 0, 1, 0],
+            ['digital_atelier', 'Todos os modelos',    'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
+         ]],
+    ];
+
+    $esc = [];   // chave do escalão => id, para montar os pacotes a seguir
+    $om = 0;
+    foreach ($catalogo as [$chave, $nome, $resumo, $beneficio, $icone, $escaloes]) {
+        $om += 10;
+        $st = $conn->prepare("INSERT INTO {$P}lic_modulos (chave,nome,resumo,beneficio,icone,ordem)
+                              VALUES (?,?,?,?,?,?)");
+        if (!$st) return;
+        $st->bind_param('sssssi', $chave, $nome, $resumo, $beneficio, $icone, $om);
+        if (!@$st->execute()) continue;
+        $mid = $conn->insert_id;
+        $oe = 0;
+        foreach ($escaloes as [$ec, $en, $er, $ep, $el, $ed, $et]) {
+            $oe += 10;
+            $st = $conn->prepare("INSERT INTO {$P}lic_escaloes
+                (modulo_id,chave,nome,resumo,preco,limite,editar,todos_modelos,ordem)
+                VALUES (?,?,?,?,?,?,?,?,?)");
+            if (!$st) continue;
+            $st->bind_param('isssdiiii', $mid, $ec, $en, $er, $ep, $el, $ed, $et, $oe);
+            if (@$st->execute()) $esc[$ec] = $conn->insert_id;
+        }
+    }
+
+    // Os três pacotes de origem. O do meio é o que se destaca — é o desenho
+    // clássico, e é honesto: é mesmo o que serve a maioria dos casamentos.
+    $pacotes = [
+        ['essencial', 'Essencial', 'O necessário para convidar e receber.',
+         "Para quem quer o essencial bem feito: a lista de convidados sempre certa e os dois convites no desenho da casa.",
+         36000, 6, '', 0, 10,
+         ['convidados_80', 'impresso_padrao', 'digital_padrao']],
+        ['celebracao', 'Celebração', 'O casamento inteiro, de ponta a ponta.',
+         "Tudo o que se usa mesmo, do primeiro convite à última mesa: convidados, planta do salão, orçamento e os dois convites seus para desenhar.",
+         98000, 12, 'O MAIS ESCOLHIDO', 1, 20,
+         ['convidados_200', 'mesas_sim', 'orcamento_sim', 'impresso_edicao', 'digital_edicao']],
+        ['atelier', 'Atelier', 'Sem limites, sem esperar por ninguém.',
+         "Convidados sem limite, a galeria completa de modelos e o editor sem travões — para quem quer o casamento exactamente à sua maneira.",
+         145000, 18, 'TUDO INCLUÍDO', 0, 30,
+         ['convidados_sem', 'mesas_sim', 'orcamento_sim', 'impresso_atelier', 'digital_atelier']],
+    ];
+    foreach ($pacotes as [$ch, $nm, $pr, $rs, $pc, $ms, $et, $ds, $od, $itens]) {
+        $st = $conn->prepare("INSERT INTO {$P}lic_pacotes
+            (chave,nome,promessa,resumo,preco,meses,etiqueta,destaque,ordem)
+            VALUES (?,?,?,?,?,?,?,?,?)");
+        if (!$st) continue;
+        $st->bind_param('ssssdisii', $ch, $nm, $pr, $rs, $pc, $ms, $et, $ds, $od);
+        if (!@$st->execute()) continue;
+        $pid = $conn->insert_id;
+        foreach ($itens as $ic) {
+            if (!isset($esc[$ic])) continue;
+            @$conn->query("INSERT IGNORE INTO {$P}lic_pacote_itens (pacote_id, escalao_id)
+                           VALUES ($pid, " . (int)$esc[$ic] . ")");
+        }
+    }
+}
+
+/**
+ * As políticas de utilização de origem, versão 1.
+ *
+ * O texto assenta na lei angolana que rege uma plataforma como esta: a Lei
+ * n.º 22/11, de 17 de Junho (Protecção de Dados Pessoais), a Lei n.º 23/11, de
+ * 20 de Junho (Comunicações Electrónicas e Serviços da Sociedade da
+ * Informação) e a Lei n.º 7/17, de 16 de Fevereiro (Protecção das Redes e
+ * Sistemas Informáticos). O admin edita-o na página das licenças; cada edição
+ * publicada nasce como versão nova, para se saber sempre a que texto é que um
+ * casal disse que sim.
+ *
+ * Marcação simples: «## » título, «- » alínea, linha em branco = parágrafo.
+ */
+function semearPoliticas(mysqli $conn): void {
+    global $P;
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}lic_politicas");
+    if (!$r || (int)$r->fetch_row()[0] > 0) return;
+
+    $titulo = 'Políticas de Utilização e Protecção de Dados';
+    $corpo = <<<'TXT'
+Ao pedir uma licença, o casal aceita as condições abaixo. O serviço é prestado
+à distância, por via electrónica — é um serviço da sociedade da informação nos
+termos da alínea ff) do artigo 4.º da Lei n.º 7/17, de 16 de Fevereiro, e da
+Lei n.º 23/11, de 20 de Junho.
+
+## 1. O que o casal pode fazer com a plataforma
+
+- Usar os módulos que a sua licença inclui, no período contratado e para o seu
+  próprio casamento.
+- Convidar as pessoas da sua confiança (por exemplo, um porteiro) para a área
+  do seu casamento, respondendo pelo que elas aí fizerem.
+- Exportar, a qualquer momento, todos os seus dados, e apagá-los quando quiser.
+
+## 2. O que não é permitido
+
+- Partilhar as credenciais de acesso, ou ceder a licença a outro casamento.
+- Aceder, ou tentar aceder, a dados de outro casal, a áreas de administração ou
+  a qualquer parte do sistema que a licença não abranja.
+- Contornar os limites da licença, alterar o funcionamento da plataforma, ou
+  usar meios automáticos para a sobrecarregar.
+- Carregar conteúdo ilícito, ofensivo, ou sobre o qual não tenha direitos.
+- Usar os dados dos convidados para fins alheios ao casamento, designadamente
+  publicidade. O envio de mensagens publicitárias por via electrónica exige o
+  consentimento inequívoco e expresso do destinatário (artigo 19.º da Lei
+  n.º 22/11).
+
+O incumprimento destas regras permite à administração suspender ou revogar a
+licença, nos termos do ponto 7. Os actos praticados contra sistemas e dados
+informáticos são ainda puníveis nos termos da legislação penal, por remissão do
+artigo 44.º da Lei n.º 7/17.
+
+## 3. Os dados dos convidados
+
+O casal é o responsável pelo tratamento dos dados dos seus convidados; a
+plataforma é subcontratada e trata-os apenas por conta e segundo as instruções
+do casal (artigos 5.º, alíneas i) e m), e 23.º da Lei n.º 22/11).
+
+- Recolha apenas os dados de que precisa para o casamento — nomes, contactos e
+  o necessário à recepção. Os dados devem ser pertinentes, adequados e não
+  excessivos (artigo 8.º).
+- Informe os seus convidados de que os dados estão a ser tratados, para quê, e
+  de que podem aceder-lhes, corrigi-los, opor-se e pedir a sua eliminação
+  (artigos 25.º a 28.º).
+- Restrições alimentares, de saúde ou de mobilidade são dados sensíveis: só os
+  registe com o consentimento inequívoco, expresso e escrito do titular
+  (artigos 5.º, alínea c), 13.º e 14.º).
+- Os dados são conservados enquanto a licença estiver de pé e são eliminados a
+  pedido do casal, ou findo o período de conservação (artigo 11.º).
+
+## 4. Segurança
+
+A plataforma aplica as medidas técnicas e organizativas exigidas pelos artigos
+30.º e 31.º da Lei n.º 22/11 e pelos artigos 12.º, 14.º e 19.º da Lei n.º 7/17:
+senhas guardadas cifradas, separação estrita dos dados de cada casamento,
+registo das acções de administração e cópias de segurança.
+
+Cabe ao casal a parte que é sua: guardar a senha, não a partilhar, e avisar de
+imediato a administração se suspeitar de um acesso indevido. Comunicações em
+rede aberta não são absolutamente seguras — é o que o n.º 7 do artigo 25.º da
+Lei n.º 22/11 manda dizer.
+
+## 5. Registos de acesso
+
+Para segurança e prova, a plataforma guarda registo das acções de gestão (quem
+fez o quê e quando) e dos acessos. Estes registos são conservados pelo período
+necessário e nunca são usados para outra finalidade (artigos 9.º e 11.º da Lei
+n.º 22/11; artigo 20.º da Lei n.º 7/17).
+
+## 6. Os seus direitos
+
+O casal e os seus convidados podem, a todo o tempo, pedir à administração:
+informação sobre os dados tratados, acesso, rectificação, actualização,
+eliminação e oposição ao tratamento (artigos 25.º a 28.º da Lei n.º 22/11). Os
+pedidos são atendidos no prazo legal de sessenta dias úteis. A área de Gestão
+permite ao casal exportar e apagar todos os seus dados sem depender de ninguém.
+
+## 7. Licença: concessão, alteração e revogação
+
+- O pedido de licença fica pendente até ser aprovado pela administração. Até lá
+  o casal entra na plataforma, mas só vê e altera o seu pedido.
+- A licença é concedida pelo período contratado e abrange apenas os módulos
+  pedidos, nas medidas pedidas.
+- O casal pode pedir um reforço (upgrade) a qualquer momento; o pedido é
+  analisado pela administração, que o pode aceitar ou recusar.
+- A administração pode revogar a licença, a qualquer momento e com efeito
+  imediato, em caso de incumprimento destas políticas. A revogação é
+  fundamentada e comunicada ao casal, que mantém o direito de exportar os seus
+  dados.
+- Expirado o período contratado, o casamento é suspenso automaticamente.
+
+## 8. Preços
+
+Os preços apresentados são os que vigoram no momento do pedido e é esse o valor
+que fica registado. Uma alteração posterior do preçário não afecta pedidos já
+submetidos.
+
+## 9. Lei aplicável
+
+Aplica-se a lei angolana, designadamente a Lei n.º 22/11, de 17 de Junho, a Lei
+n.º 23/11, de 20 de Junho, e a Lei n.º 7/17, de 16 de Fevereiro. A autoridade
+de controlo em matéria de dados pessoais é a Agência de Protecção de Dados.
+TXT;
+
+    $st = @$conn->prepare("INSERT INTO {$P}lic_politicas (versao, titulo, corpo, publicada)
+                           VALUES (1, ?, ?, 1)");
+    if ($st) { $st->bind_param('ss', $titulo, $corpo); @$st->execute(); }
 }
 
 // A tabela de definições tem de existir antes de se poder ler a versão.
@@ -910,6 +1155,177 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}orcamento_categorias", 'cor', "VARCHAR(7) DEFAULT NULL");
     }
 
+    // v28 — o preçário das licenças: módulos, escalões, pacotes e pedidos.
+    //
+    // Até aqui a licença era só um prazo (quantos meses). Passa a dizer também
+    // O QUÊ: que módulos o casamento tem, e em que medida — quantos convidados
+    // cabem, se a peça se pode editar, se o casal chega a todos os modelos ou
+    // só ao padrão. O preçário vive na casa (sem casamento_id); o que cada
+    // casamento tem concedido vive por casamento.
+    //
+    // Cinco tabelas de catálogo (módulos, escalões, pacotes, itens do pacote,
+    // políticas) e três de circulação (pedidos, itens do pedido, concessões).
+    // O pedido guarda os preços do dia: mudar o preçário amanhã não reescreve o
+    // que alguém pediu ontem.
+    if ($versaoAtual < 28) {
+        // ---- catálogo: o que se vende ----
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_modulos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                chave VARCHAR(32) NOT NULL UNIQUE,
+                nome VARCHAR(80) NOT NULL,
+                resumo VARCHAR(180) DEFAULT '',
+                beneficio VARCHAR(180) DEFAULT '',
+                icone VARCHAR(8) DEFAULT '',
+                ordem INT NOT NULL DEFAULT 0,
+                ativo TINYINT(1) NOT NULL DEFAULT 1
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Um escalão é uma forma de ter o módulo: «até 200 convidados», «com
+        // edição e todos os modelos». O preço é do escalão, nunca do módulo —
+        // é isso que permite vender o mesmo recurso em medidas diferentes.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_escaloes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                modulo_id INT NOT NULL,
+                chave VARCHAR(48) NOT NULL UNIQUE,
+                nome VARCHAR(80) NOT NULL,
+                resumo VARCHAR(180) DEFAULT '',
+                preco DECIMAL(12,2) NOT NULL DEFAULT 0,
+                limite INT NOT NULL DEFAULT 0,          -- convidados; 0 = sem limite
+                editar TINYINT(1) NOT NULL DEFAULT 0,   -- peças: pode desenhar?
+                todos_modelos TINYINT(1) NOT NULL DEFAULT 0,
+                ordem INT NOT NULL DEFAULT 0,
+                ativo TINYINT(1) NOT NULL DEFAULT 1,
+                INDEX idx_esc_modulo (modulo_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_pacotes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                chave VARCHAR(32) NOT NULL UNIQUE,
+                nome VARCHAR(80) NOT NULL,
+                promessa VARCHAR(180) DEFAULT '',
+                resumo TEXT,
+                preco DECIMAL(12,2) NOT NULL DEFAULT 0,
+                meses INT NOT NULL DEFAULT 12,
+                etiqueta VARCHAR(40) DEFAULT '',
+                destaque TINYINT(1) NOT NULL DEFAULT 0,
+                ordem INT NOT NULL DEFAULT 0,
+                ativo TINYINT(1) NOT NULL DEFAULT 1
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_pacote_itens (
+                pacote_id INT NOT NULL,
+                escalao_id INT NOT NULL,
+                PRIMARY KEY (pacote_id, escalao_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // As políticas de utilização, com versão. A versão é o que fica no
+        // pedido: para saber, mais tarde, a que texto exactamente é que o casal
+        // disse que sim (Lei n.º 22/11, art. 5.º a) — consentimento informado).
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_politicas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                versao INT NOT NULL UNIQUE,
+                titulo VARCHAR(160) NOT NULL,
+                corpo MEDIUMTEXT,
+                publicada TINYINT(1) NOT NULL DEFAULT 1,
+                criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // ---- circulação: o que se pede e o que se concede ----
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_pedidos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                tipo ENUM('inicial','upgrade') NOT NULL DEFAULT 'inicial',
+                estado ENUM('pendente','aprovado','recusado','cancelado') NOT NULL DEFAULT 'pendente',
+                pacote_id INT DEFAULT NULL,
+                pacote_nome VARCHAR(80) DEFAULT '',
+                meses INT NOT NULL DEFAULT 0,
+                total DECIMAL(12,2) NOT NULL DEFAULT 0,
+                moeda VARCHAR(8) NOT NULL DEFAULT 'Kz',
+                nota_casal TEXT,
+                nota_admin TEXT,
+                politica_versao INT DEFAULT NULL,
+                aceite_em DATETIME DEFAULT NULL,
+                aceite_ip VARCHAR(45) DEFAULT '',
+                criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+                decidido_em DATETIME DEFAULT NULL,
+                decidido_por INT DEFAULT NULL,
+                INDEX idx_ped_cas (casamento_id, estado),
+                INDEX idx_ped_estado (estado, criado_em)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // O preço do dia, congelado. Sem isto, mexer no preçário reescrevia o
+        // passado e o casal via mudar aquilo com que já tinha concordado.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_pedido_itens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                pedido_id INT NOT NULL,
+                escalao_id INT NOT NULL,
+                modulo_chave VARCHAR(32) NOT NULL,
+                escalao_nome VARCHAR(80) NOT NULL,
+                preco DECIMAL(12,2) NOT NULL DEFAULT 0,
+                limite INT NOT NULL DEFAULT 0,
+                editar TINYINT(1) NOT NULL DEFAULT 0,
+                todos_modelos TINYINT(1) NOT NULL DEFAULT 0,
+                INDEX idx_pit_pedido (pedido_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // O que o casamento TEM, agora: uma linha por módulo concedido. É esta
+        // a tabela que manda nas portas — nunca o pedido.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_concessoes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                modulo_chave VARCHAR(32) NOT NULL,
+                escalao_id INT DEFAULT NULL,
+                escalao_nome VARCHAR(80) DEFAULT '',
+                limite INT NOT NULL DEFAULT 0,
+                editar TINYINT(1) NOT NULL DEFAULT 0,
+                todos_modelos TINYINT(1) NOT NULL DEFAULT 0,
+                pedido_id INT DEFAULT NULL,
+                desde DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_conc (casamento_id, modulo_chave)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // ---- o estado da licença, no próprio casamento ----
+        // 'sem' é o que um casamento criado pelo admin tem: sem pedido nenhum,
+        // e por isso sem módulos — até alguém lhos dar.
+        migColuna($conn, "{$P}casamentos", 'licenca_estado',
+                  "ENUM('sem','pendente','ativa','revogada') NOT NULL DEFAULT 'sem'");
+        migColuna($conn, "{$P}casamentos", 'licenca_pacote', "VARCHAR(80) DEFAULT ''");
+        migColuna($conn, "{$P}casamentos", 'licenca_revogada_em', "DATETIME DEFAULT NULL");
+        migColuna($conn, "{$P}casamentos", 'licenca_revogada_motivo', "TEXT");
+        migIndice($conn, "{$P}casamentos", 'idx_cas_lic_estado', 'licenca_estado');
+
+        semearPrecario($conn);
+        semearPoliticas($conn);
+
+        // Os casamentos que já existiam foram feitos num mundo sem módulos:
+        // tiram-se-lhes as portas de baixo dos pés se ficarem com a licença
+        // vazia. Dá-se-lhes tudo, sem limite — é o que já tinham.
+        $r = @$conn->query("SELECT id FROM {$P}casamentos");
+        if ($r) {
+            while ($x = $r->fetch_row()) {
+                $cid = (int)$x[0];
+                @$conn->query("UPDATE {$P}casamentos SET licenca_estado='ativa',
+                               licenca_pacote='Licença anterior à tabela de preços'
+                               WHERE id=$cid");
+                foreach (licencaModulosTudo() as $mc => $g) {
+                    @$conn->query("INSERT IGNORE INTO {$P}lic_concessoes
+                        (casamento_id, modulo_chave, escalao_nome, limite, editar, todos_modelos)
+                        VALUES ($cid, '" . $conn->real_escape_string($mc) . "', 'Tudo incluído',
+                                0, " . (int)$g['editar'] . ", " . (int)$g['todos_modelos'] . ")");
+                }
+            }
+        }
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -965,6 +1381,18 @@ if (cfg_local('semear_demo', false)) {
                 if ($gi) { $pr = $i === 0 ? 1 : 0; $gi->bind_param('isi', $convId, $nm, $pr); @$gi->execute(); }
                 $i++;
             }
+        }
+
+        // E a licença do casamento de trabalho: tudo aberto, sem limites. Um
+        // casamento de demonstração sem licença nenhuma não tem página nenhuma
+        // para mostrar — e a suite de provas mede o produto, não as portas.
+        @$conn->query("UPDATE {$P}casamentos SET licenca_estado='ativa',
+                       licenca_pacote='Demonstração — tudo incluído' WHERE id=1");
+        foreach (licencaModulosTudo() as $mc => $g) {
+            @$conn->query("INSERT IGNORE INTO {$P}lic_concessoes
+                (casamento_id, modulo_chave, escalao_nome, limite, editar, todos_modelos)
+                VALUES (1, '" . $conn->real_escape_string($mc) . "', 'Tudo incluído',
+                        0, " . (int)$g['editar'] . ", " . (int)$g['todos_modelos'] . ")");
         }
     }
 }

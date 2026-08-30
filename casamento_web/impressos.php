@@ -5,6 +5,7 @@ require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
+exigirModulo('impresso');
 $CAS = casalInfo(defsAtuais($conn));
 $res = $conn->query("SELECT c.*, m.nome AS mesa_nome,
                             GROUP_CONCAT(g.nome ORDER BY g.principal DESC, g.nome SEPARATOR ' · ') AS membros
