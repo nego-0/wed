@@ -111,6 +111,32 @@ foreach ($MODS as $m) if (!empty($m['ativo'])) { $temAlgum = true; break; }
     background:var(--card); resize:vertical; }
   .lic-msg textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
 
+  /* A ficha da licença: os factos, em pares rótulo/valor. */
+  .lic-ficha{ display:grid; gap:.9rem 1.6rem; background:var(--card); border:1.5px solid var(--line);
+    border-radius:var(--radius); padding:1.2rem 1.3rem;
+    grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
+  .lic-f{ display:flex; flex-direction:column; gap:.15rem; }
+  .lic-f .r{ font-size:.7rem; letter-spacing:.07em; text-transform:uppercase; color:#8a8f88; }
+  .lic-f .v{ font-size:1rem; color:var(--ink); font-weight:600; }
+  .lic-f .v.grande{ font-family:var(--serif); font-size:1.4rem; font-weight:400;
+    font-variant-numeric:tabular-nums; }
+  .lic-f .n{ font-size:.76rem; color:#8a8f88; }
+  .lic-f .v.aviso{ color:var(--warn); }
+
+  /* O extracto dos pedidos já decididos. */
+  .lic-h{ display:flex; gap:.9rem; align-items:flex-start; padding:.85rem 0;
+    border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .lic-h:last-child{ border-bottom:none; }
+  .lic-h-selo{ width:26px; height:26px; flex:none; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:.8rem; font-weight:700; }
+  .lic-h-selo.ok{ background:var(--ok-bg); color:var(--ok); }
+  .lic-h-selo.nao{ background:var(--danger-bg); color:var(--danger); }
+  .lic-h-txt{ flex:1; min-width:180px; }
+  .lic-h-tit{ font-weight:600; color:var(--ink); font-size:.9rem; }
+  .lic-h-det{ font-size:.79rem; color:#8a8f88; line-height:1.5; margin-top:.1rem; }
+  .lic-h-vl{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink);
+    white-space:nowrap; }
+
   @media (max-width:640px){
     .lic-wrap{ padding:1rem .8rem 3rem; }
     .lic-itens li{ flex-wrap:wrap; gap:.3rem .8rem; }
@@ -221,8 +247,14 @@ foreach ($MODS as $m) if (!empty($m['ativo'])) { $temAlgum = true; break; }
   </div>
 <?php endif; ?>
 
+<?php // ---- os detalhes da licença em vigor ---- ?>
+<div id="lic-detalhes" class="lic-sec" style="display:none"></div>
+
 <?php // ---- o pedido em cima da mesa ---- ?>
 <div id="lic-pedido-cx" class="lic-sec" style="display:none"></div>
+
+<?php // ---- o extracto: o que já foi pedido e decidido ---- ?>
+<div id="lic-hist" class="lic-sec" style="display:none"></div>
 
 <?php // ---- a montra ---- ?>
 <div class="lic-sec" id="lic-montra" style="display:none">
@@ -288,8 +320,87 @@ async function carregar(){
   const d = await api('lic_estado');
   if (!d || !d.success) return;
   LIC = d.licenca;
+  desenharDetalhes();
   desenharPedido();
+  desenharHistorico();
   desenharMontra();
+}
+
+// ---- os detalhes da licença em vigor ----
+// Não é decoração: é o extracto do que o casal contratou. Quem paga tem
+// direito a saber, sem perguntar a ninguém, o que comprou e até quando.
+function desenharDetalhes(){
+  const cx = document.getElementById('lic-detalhes');
+  const c = LIC.casamento, pr = LIC.prazo;
+  if (c.licenca_estado !== 'ativa'){ cx.style.display = 'none'; return; }
+
+  // Quanto já foi aprovado, ao todo — a soma do que o casal pagou pela licença.
+  const pago = (LIC.historico || [])
+    .filter(h => h.estado === 'aprovado')
+    .reduce((t, h) => t + (+h.total || 0), 0);
+
+  const campos = [];
+  campos.push(f('Plano', escapar(c.licenca_pacote || 'À medida')));
+  campos.push(f('Módulos abertos',
+    Object.values(LIC.modulos).filter(m => m.ativo).length + ' de '
+    + Object.keys(LIC.modulos).length));
+  if (pr.ilimitada){
+    campos.push(f('Prazo', 'Sem limite', 'A licença não expira.'));
+  } else if (!pr.iniciada){
+    campos.push(f('Prazo', pr.meses + ' meses', 'O relógio ainda não começou.', 'aviso'));
+  } else {
+    const dias = +pr.dias;
+    campos.push(f('Válida até', dataCurta(pr.ate),
+      dias >= 0 ? 'faltam ' + dias + ' dia(s)' : 'expirou há ' + Math.abs(dias) + ' dia(s)',
+      dias < 30 ? 'aviso' : ''));
+    campos.push(f('Período contratado', pr.meses + ' meses'));
+  }
+  const lim = LIC.modulos.convidados && LIC.modulos.convidados.ativo
+            ? +LIC.modulos.convidados.limite : null;
+  if (lim !== null){
+    campos.push(f('Convidados', LIC.convidados + (lim > 0 ? ' de ' + lim : ''),
+      lim > 0 ? (lim - LIC.convidados) + ' lugares por usar' : 'sem limite',
+      lim > 0 && LIC.convidados >= lim * 0.9 ? 'aviso' : ''));
+  }
+  if (pago > 0) campos.push(f('Total da licença', fmt(pago), 'aprovado até hoje', '', true));
+
+  cx.style.display = '';
+  cx.innerHTML = '<h2>Detalhes da licença em vigor</h2>'
+    + '<div class="dica">O que contratou, e até quando.</div>'
+    + '<div class="lic-ficha">' + campos.join('') + '</div>';
+
+  function f(rot, val, nota, cls, grande){
+    return '<div class="lic-f"><span class="r">' + rot + '</span>'
+      + '<span class="v' + (grande ? ' grande' : '') + (cls ? ' ' + cls : '') + '">' + val + '</span>'
+      + (nota ? '<span class="n">' + nota + '</span>' : '') + '</div>';
+  }
+}
+
+// ---- o extracto: o que já foi pedido e decidido ----
+function desenharHistorico(){
+  const cx = document.getElementById('lic-hist');
+  const h = LIC.historico || [];
+  if (!h.length){ cx.style.display = 'none'; cx.innerHTML = ''; return; }
+  cx.style.display = '';
+  cx.innerHTML = '<h2>Histórico da licença</h2>'
+    + '<div class="dica">Todos os pedidos já decididos, do mais recente para trás.</div>'
+    + '<div class="lic-pedido" style="padding:.3rem 1.3rem">'
+    + h.map(x => {
+        const ok = x.estado === 'aprovado';
+        const mods = (x.itens || []).map(i => escapar(nomeModulo(i.modulo_chave))).join(', ');
+        return '<div class="lic-h">'
+          + '<span class="lic-h-selo ' + (ok ? 'ok' : 'nao') + '">' + (ok ? '✓' : '✕') + '</span>'
+          + '<span class="lic-h-txt"><span class="lic-h-tit">'
+          +   (x.tipo === 'upgrade' ? 'Reforço' : 'Pedido inicial')
+          +   (x.pacote_nome ? ' · ' + escapar(x.pacote_nome) : '') + '</span>'
+          + '<span class="lic-h-det">' + dataCurta(x.decidido_em)
+          +   (mods ? ' · ' + mods : '')
+          +   (ok && x.meses ? ' · ' + x.meses + ' meses' : '')
+          +   (!ok && x.nota_admin ? ' · ' + escapar(x.nota_admin) : '') + '</span></span>'
+          + '<span class="lic-h-vl">' + (ok ? fmt(x.total) : '—') + '</span>'
+          + '</div>';
+      }).join('')
+    + '</div>';
 }
 
 // ---- o pedido em cima da mesa ----

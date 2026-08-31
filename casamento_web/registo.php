@@ -368,7 +368,8 @@ async function carregarPlanos(){
     const temAlgo = (d.catalogo.pacotes || []).some(p => p.ativo)
                  || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
     if (!temAlgo) throw new Error('catálogo vazio');
-    Planos.montar('reg-planos', d.catalogo, { moeda: d.moeda });
+    Planos.montar('reg-planos', d.catalogo,
+                  { moeda: d.moeda, seccoes: d.seccoes_foto || [] });
   } catch (e) {
     // Sem preçário não se pode escolher plano nenhum, mas a inscrição não pode
     // ficar refém disso: esconde-se a montra e o casal inscreve-se na mesma. A
@@ -445,7 +446,8 @@ async function enviar(){
       $('reg-aceite-cx').scrollIntoView({ behavior:'smooth', block:'center' });
       return;
     }
-    plano = { pacote: c.pacote, escaloes: c.escaloes, meses: c.meses, aceito: true };
+    plano = { pacote: c.pacote, escaloes: c.escaloes, meses: c.meses,
+              fotos: c.fotos || {}, aceito: true };
   }
 
   const dados = {

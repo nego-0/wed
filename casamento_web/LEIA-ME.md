@@ -64,9 +64,14 @@ catálogo (o que a casa vende) e a circulação (o que cada casamento pediu e te
 
 - **`cw_lic_modulos`** — os cinco recursos que se vendem: `convidados`, `mesas`,
   `orcamento`, `impresso`, `digital`. Cada um com o seu resumo, o benefício (a
-  frase que vende) e o ícone.
+  frase que vende), o ícone e a **imagem**: a captura do módulo a trabalhar,
+  que a montra mostra (ver `assets/montra/`).
+- **`cw_lic_prazos`** — os prazos de licença e o **factor** de preço de cada um.
+  O preçário está escrito no prazo de factor 1; os outros multiplicam-no. Os
+  factores são **sublineares** (12 meses a 1,8 e não a 2,0), o que faz o preço
+  por mês descer com o compromisso.
 - **`cw_lic_escaloes`** — as MEDIDAS em que cada módulo se vende, e é aqui que
-  vive o preço. Um escalão de convidados leva um `limite` (0 = sem limite); um
+  vive o preço (o do prazo base). Um escalão de convidados leva um `limite` (0 = sem limite); um
   de peça leva `editar` e `todos_modelos`. É isto que permite vender o mesmo
   recurso em tamanhos diferentes.
 - **`cw_lic_pacotes`** e **`cw_lic_pacote_itens`** — conjuntos de escalões com
@@ -76,8 +81,9 @@ catálogo (o que a casa vende) e a circulação (o que cada casamento pediu e te
   publica uma versão nova e guarda a anterior: é a prova do texto a que cada
   casal disse que sim.
 - **`cw_lic_pedidos`** e **`cw_lic_pedido_itens`** — o que um casal pediu
-  (`inicial` ou `upgrade`), com os preços **congelados no dia** e o registo do
-  consentimento (versão da política, data e IP).
+  (`inicial` ou `upgrade`), com os preços **congelados no dia**, o registo do
+  consentimento (versão da política, data e IP) e as **fotos** que ele escolheu
+  para cada secção do convite digital.
 - **`cw_lic_concessoes`** — o que o casamento TEM, uma linha por módulo. É esta
   tabela, e nunca o pedido, que abre as portas.
 
@@ -112,6 +118,78 @@ casamento tem, e **em que medida**.
    casal continua a poder exportar e apagar os seus dados, como a lei manda
    (Lei n.º 22/11, artigos 26.º e 28.º).
 
+### O que nenhum plano dispensa
+
+A **lista de convidados** é o coração da casa, e por isso está marcada
+`obrigatorio` em `cw_lic_modulos`. Um casamento com planta de mesas e sem lista
+de convidados não é meio produto — as mesas sentam quem? A porta recebe quem?
+
+A regra fecha-se em quatro sítios, porque o ecrã sozinho não chega:
+
+- na montra, o módulo obrigatório não tem opção «não levar» e nasce já escolhido
+  no escalão mais barato;
+- em `licRegistarPedido()`, um pedido sem ele é recusado com o nome do módulo em
+  falta (num **reforço** basta que o casamento já o tenha);
+- ao guardar um **pacote**, avisa-se o admin de que ninguém o poderá comprar;
+- em `lic_conceder`, dar módulos sem ele é recusado — tirar **todos** continua a
+  ser legítimo, que é como se fecha uma licença.
+
+### O prazo tem preço
+
+Seis meses e dois anos deixaram de custar o mesmo. Cada prazo tem um **factor**
+que multiplica todo o preçário — módulos e pacotes —, e a montra pergunta o
+prazo **antes** de mostrar preço nenhum: uma montra que só o revela no fim faz o
+casal escolher duas vezes.
+
+Os factores de origem — 6 meses ×1,0 · 12 ×1,8 · 18 ×2,5 · 24 ×3,0 — descem o
+preço por mês à medida que o prazo cresce (−10%, −17%, −25%), e a montra mostra
+essa percentagem em cada opção. O admin edita-os em **Licenças → Prazos**.
+
+O preço fica **congelado no pedido já multiplicado**, item a item: o pedido
+continua legível daqui a um ano sem depender de uma tabela de factores que
+entretanto pode ter mudado.
+
+### O tecto de convidados, do lado do casal
+
+Quem tem tecto vê-o no painel: «80 de 80 convidados da licença · sem lugares
+livres», a barra passa a vermelha e o botão **+ Novo convite** fecha-se, com o
+caminho para o reforço à vista. A cinco lugares do fim já aparece o aviso.
+
+Como sempre, duas fechaduras: o botão desactivado **e** `novoConvite()` a
+recusar — o botão pode ser contornado pelo teclado ou pela consola, a função
+não. E por trás de ambas, `exigirCabidaConvidados()` no servidor.
+
+### A montra: mostrar em vez de descrever
+
+O preçário público (`registo.php`) não descreve os módulos por palavras — mostra
+capturas do produto a sério, uma por módulo, ampliáveis num clique. Estão em
+`assets/montra/` e o caminho de cada uma vive na coluna `imagem` do módulo, para
+o admin as poder trocar.
+
+Duas notas de quem lá mexer:
+
+- A altura das capturas é **fixa** (`height`, não `max-height`). Uma imagem por
+  carregar não tem tamanho próprio: com `max-height` a moldura nascia com zero
+  de altura, nunca entrava no ecrã, e o `loading="lazy"` nunca a ia buscar.
+- Para as **regerar** depois de mudanças no produto: encha um casamento de
+  demonstração, capture `index.php`, `mesas.php`, `orcamento.php`,
+  `modelo-prova.php` (o cartão) e `convite.php?c=<código>` (o convite como o
+  convidado o vê), e reduza-as para JPEG (~80 KB cada). São as peças — o cartão
+  e o convite — que vendem os módulos de convite; as páginas de gestão vendem os
+  outros três.
+
+### As fotografias do convite, escolhidas na inscrição
+
+Quem leva o **convite digital** escolhe, já na inscrição, a fotografia de cada
+secção (capa, história, interlúdio, acesso). Ficam gravadas no convite no
+momento em que o pedido é guardado — não esperam pela aprovação, porque foi o
+casal que as escolheu.
+
+Importa sobretudo no escalão **sem edição**: aí é a única vez que ele as
+escolhe, e a montra di-lo com todas as letras antes de ele submeter. Com edição,
+a nota é outra: são as fotografias com que o convite nasce, e podem trocar-se
+depois.
+
 ### As duas fechaduras
 
 Esconder uma entrada do menu não impede ninguém de chamar a ação à mão. Por
@@ -135,9 +213,12 @@ tudo aberto: quem o criou já decidiu, não há pedido nenhum a analisar.
 
 | Quem | Onde | O que faz |
 |---|---|---|
-| Casal | `licenca.php` | Vê o que tem, quanto falta do prazo e quantos convidados cabem; pede, altera e cancela |
-| Admin | `plataforma.php` → **Licenças** | Decide pedidos, edita o preçário e os pacotes, publica as políticas |
-| Admin | Casamento → «Módulos da licença…» | Concede ou tira módulos à mão, sem passar por pedido |
+| Casal | `licenca.php` | **Detalhes da licença em vigor** (plano, prazo, módulos, convidados, total pago) e o **histórico** de todos os pedidos decididos; pede reforços pagando só a diferença |
+| Admin | `plataforma.php` → **Licenças** → Pedidos | Decide, com os pedidos separados em **Novos** e **Actualizações** |
+| Admin | → Preçário / Pacotes | Edita módulos e escalões; ao montar um pacote corrige os preços ali mesmo, com a poupança a acompanhar |
+| Admin | → **Prazos** | Os prazos de licença e o factor de preço de cada um |
+| Admin | → Políticas | Publica uma versão nova do texto |
+| Admin | Casamento → «Licença: módulos e prazo…» | Concede módulos e define o prazo **num só sítio** (eram dois) |
 | Admin | Casamento → «Revogar licença…» | Fecha tudo, com motivo |
 
 O preçário de origem (5 módulos, 12 escalões, 3 pacotes) e as políticas nascem

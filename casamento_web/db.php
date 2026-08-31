@@ -190,7 +190,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 28;
+const ESQUEMA_VERSAO = 30;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -216,6 +216,22 @@ function migLargarColuna(mysqli $c, string $tabela, string $coluna): void {
 // licenças, e é o que estiver na base que manda daí para a frente.
 // ============================================================
 
+/**
+ * O ecrã que mostra cada módulo a trabalhar, na montra.
+ *
+ * São capturas do produto a sério (ver assets/montra/), e não desenhos: o que
+ * se vende é isto. O admin pode trocá-las na página das licenças.
+ */
+function imagensDaMontra(): array {
+    return [
+        'convidados' => 'assets/montra/convidados.jpg',
+        'mesas'      => 'assets/montra/mesas.jpg',
+        'orcamento'  => 'assets/montra/orcamento.jpg',
+        'impresso'   => 'assets/montra/impresso.jpg',
+        'digital'    => 'assets/montra/digital.jpg',
+    ];
+}
+
 /** As cinco chaves de módulo que o sistema conhece, e o que cada uma comanda. */
 function licencaModulosTudo(): array {
     return [
@@ -233,12 +249,16 @@ function semearPrecario(mysqli $conn): void {
     $r = @$conn->query("SELECT COUNT(*) FROM {$P}lic_modulos");
     if (!$r || (int)$r->fetch_row()[0] > 0) return;   // já há preçário: não se mexe
 
-    // [chave, nome, resumo, benefício (a frase que vende), ícone, escalões]
+    // [chave, nome, resumo, benefício (a frase que vende), ícone, obrigatório, escalões]
     // Cada escalão: [chave, nome, resumo, preço, limite, editar, todos_modelos]
+    //
+    // A lista de convidados é OBRIGATÓRIA: é o coração da casa, e um plano sem
+    // ela não é meio produto — é nenhum. As mesas sentam quem? A porta recebe
+    // quem? O convite vai para quem? Todos os outros módulos assentam nela.
     $catalogo = [
         ['convidados', 'Lista de convidados',
          'Convites, acompanhantes, confirmações e a porta no dia.',
-         'Saiba, ao minuto, quem vem — e quem já entrou.', '👤', [
+         'Saiba, ao minuto, quem vem — e quem já entrou.', '👤', 1, [
             ['convidados_80',  'Até 80 convidados',   'Uma festa de família.',            18000, 80,  0, 0],
             ['convidados_200', 'Até 200 convidados',  'O tamanho da maioria dos casamentos.', 32000, 200, 0, 0],
             ['convidados_400', 'Até 400 convidados',  'Casamentos grandes, com folga.',   48000, 400, 0, 0],
@@ -246,24 +266,24 @@ function semearPrecario(mysqli $conn): void {
          ]],
         ['mesas', 'Planta de mesas',
          'Desenhe o salão e sente cada convidado no seu lugar.',
-         'Acabe com a folha de papel riscada mil vezes.', '🪑', [
+         'Acabe com a folha de papel riscada mil vezes.', '🪑', 0, [
             ['mesas_sim', 'Planta de mesas', 'Mesas, lugares e a planta a arrastar.', 25000, 0, 0, 0],
          ]],
         ['orcamento', 'Orçamento',
          'Categorias, despesas, prestações e faturas num só sítio.',
-         'Saiba para onde foi cada kwanza — antes da conta chegar.', '💰', [
+         'Saiba para onde foi cada kwanza — antes da conta chegar.', '💰', 0, [
             ['orcamento_sim', 'Orçamento', 'Teto, despesas, pagamentos e faturas.', 22000, 0, 0, 0],
          ]],
         ['impresso', 'Convite impresso',
          'O convite em papel, pronto para a gráfica.',
-         'Leve à gráfica um ficheiro que já está certo.', '✉️', [
+         'Leve à gráfica um ficheiro que já está certo.', '✉️', 0, [
             ['impresso_padrao',  'Modelo padrão',        'O desenho da casa, pronto a usar.',        12000, 0, 0, 0],
             ['impresso_edicao',  'Padrão, com edição',   'O modelo padrão, seu para desenhar.',      28000, 0, 1, 0],
             ['impresso_atelier', 'Todos os modelos',     'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
          ]],
         ['digital', 'Convite digital',
          'A página do convite, com RSVP e código por convidado.',
-         'Envie por WhatsApp e receba as respostas sozinho.', '📱', [
+         'Envie por WhatsApp e receba as respostas sozinho.', '📱', 0, [
             ['digital_padrao',  'Modelo padrão',       'O desenho da casa, pronto a enviar.',       12000, 0, 0, 0],
             ['digital_edicao',  'Padrão, com edição',  'O modelo padrão, seu para desenhar.',       28000, 0, 1, 0],
             ['digital_atelier', 'Todos os modelos',    'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
@@ -272,12 +292,14 @@ function semearPrecario(mysqli $conn): void {
 
     $esc = [];   // chave do escalão => id, para montar os pacotes a seguir
     $om = 0;
-    foreach ($catalogo as [$chave, $nome, $resumo, $beneficio, $icone, $escaloes]) {
+    foreach ($catalogo as [$chave, $nome, $resumo, $beneficio, $icone, $obrig, $escaloes]) {
         $om += 10;
-        $st = $conn->prepare("INSERT INTO {$P}lic_modulos (chave,nome,resumo,beneficio,icone,ordem)
-                              VALUES (?,?,?,?,?,?)");
+        $img = imagensDaMontra()[$chave] ?? '';
+        $st = $conn->prepare("INSERT INTO {$P}lic_modulos
+                              (chave,nome,resumo,beneficio,icone,ordem,imagem,obrigatorio)
+                              VALUES (?,?,?,?,?,?,?,?)");
         if (!$st) return;
-        $st->bind_param('sssssi', $chave, $nome, $resumo, $beneficio, $icone, $om);
+        $st->bind_param('sssssisi', $chave, $nome, $resumo, $beneficio, $icone, $om, $img, $obrig);
         if (!@$st->execute()) continue;
         $mid = $conn->insert_id;
         $oe = 0;
@@ -321,6 +343,35 @@ function semearPrecario(mysqli $conn): void {
             @$conn->query("INSERT IGNORE INTO {$P}lic_pacote_itens (pacote_id, escalao_id)
                            VALUES ($pid, " . (int)$esc[$ic] . ")");
         }
+    }
+}
+
+/**
+ * Os prazos de licença de origem, e o que cada um custa em relação ao base.
+ *
+ * O prazo BASE é o de factor 1.000 — é a ele que se referem os preços escritos
+ * no preçário. Os outros multiplicam-no. Os factores são sublineares (12 meses
+ * não custa o dobro de 6): quem se compromete por mais tempo paga menos por
+ * mês, e é assim que se recompensa o compromisso em vez de o penalizar.
+ */
+function semearPrazos(mysqli $conn): void {
+    global $P;
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}lic_prazos");
+    if (!$r || (int)$r->fetch_row()[0] > 0) return;
+
+    // [meses, nome, resumo, factor, etiqueta, ordem]
+    $prazos = [
+        [6,  '6 meses',  'Para quem já tem data marcada e perto.',        1.000, '',                10],
+        [12, '12 meses', 'Um ano inteiro — o tempo de um casamento.',     1.800, 'MELHOR ESCOLHA',  20],
+        [18, '18 meses', 'Com folga para preparar tudo com calma.',       2.500, '',                30],
+        [24, '24 meses', 'Dois anos, ao melhor preço por mês.',           3.000, 'MAIS ECONÓMICO',  40],
+    ];
+    foreach ($prazos as [$m, $n, $rs, $ft, $et, $od]) {
+        $st = $conn->prepare("INSERT INTO {$P}lic_prazos (meses,nome,resumo,fator,etiqueta,ordem)
+                              VALUES (?,?,?,?,?,?)");
+        if (!$st) continue;
+        $st->bind_param('issdsi', $m, $n, $rs, $ft, $et, $od);
+        @$st->execute();
     }
 }
 
@@ -1177,6 +1228,8 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 resumo VARCHAR(180) DEFAULT '',
                 beneficio VARCHAR(180) DEFAULT '',
                 icone VARCHAR(8) DEFAULT '',
+                imagem VARCHAR(255) DEFAULT '',
+                obrigatorio TINYINT(1) NOT NULL DEFAULT 0,
                 ordem INT NOT NULL DEFAULT 0,
                 ativo TINYINT(1) NOT NULL DEFAULT 1
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -1251,6 +1304,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 nota_casal TEXT,
                 nota_admin TEXT,
                 politica_versao INT DEFAULT NULL,
+                fotos TEXT,
                 aceite_em DATETIME DEFAULT NULL,
                 aceite_ip VARCHAR(45) DEFAULT '',
                 criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -1304,6 +1358,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migIndice($conn, "{$P}casamentos", 'idx_cas_lic_estado', 'licenca_estado');
 
         semearPrecario($conn);
+        semearPrazos($conn);
         semearPoliticas($conn);
 
         // Os casamentos que já existiam foram feitos num mundo sem módulos:
@@ -1324,6 +1379,62 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 }
             }
         }
+    }
+
+    // v29 — a montra ganha imagem, e o pedido ganha as fotos do convite.
+    //
+    // Duas coisas que faltavam para a inscrição contar a história toda:
+    //
+    // 'imagem' em cada módulo é o ecrã que o mostra a trabalhar. Um preçário que
+    // descreve por palavras aquilo que se pode simplesmente MOSTRAR está a
+    // pedir ao casal um acto de fé; e o que se vende aqui é, literalmente,
+    // aquilo que se vê.
+    //
+    // 'fotos' no pedido guarda as fotografias que o casal escolheu para cada
+    // secção do convite digital, ainda antes de haver casamento aberto. Importa
+    // sobretudo no escalão SEM edição: aí é a única vez que ele as escolhe, e
+    // essa escolha tem de viajar com o pedido até à aprovação.
+    if ($versaoAtual < 29) {
+        migColuna($conn, "{$P}lic_modulos", 'imagem', "VARCHAR(255) DEFAULT ''");
+        migColuna($conn, "{$P}lic_pedidos", 'fotos',  "TEXT");
+        // As imagens de origem, para quem já tinha o preçário instalado.
+        foreach (imagensDaMontra() as $chave => $img) {
+            $st = @$conn->prepare("UPDATE {$P}lic_modulos SET imagem=?
+                                   WHERE chave=? AND (imagem IS NULL OR imagem='')");
+            if ($st) { $st->bind_param('ss', $img, $chave); @$st->execute(); }
+        }
+    }
+
+    // v30 — o módulo obrigatório, e o preço em função do prazo.
+    //
+    // Duas correcções ao modelo de venda:
+    //
+    // 'obrigatorio' marca o módulo sem o qual não há plano nenhum. A gestão de
+    // convidados é o coração da casa: um casamento com planta de mesas e sem
+    // lista de convidados não é meio produto, é nenhum — as mesas sentam quem?
+    //
+    // E o preço passa a depender do PRAZO. Um casal que precisa da plataforma
+    // seis meses e outro que a quer dois anos não estavam a comprar a mesma
+    // coisa, e pagavam o mesmo. Cada prazo tem o seu factor, e é o factor que
+    // multiplica os preços do preçário — que passam a ser «preços do prazo
+    // base». Factores sublineares, de propósito: quem se compromete por mais
+    // tempo paga menos por mês, que é como se recompensa um compromisso.
+    if ($versaoAtual < 30) {
+        migColuna($conn, "{$P}lic_modulos", 'obrigatorio', "TINYINT(1) NOT NULL DEFAULT 0");
+        @$conn->query("UPDATE {$P}lic_modulos SET obrigatorio=1 WHERE chave='convidados'");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}lic_prazos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                meses INT NOT NULL UNIQUE,
+                nome VARCHAR(60) NOT NULL,
+                resumo VARCHAR(160) DEFAULT '',
+                fator DECIMAL(6,3) NOT NULL DEFAULT 1.000,
+                etiqueta VARCHAR(40) DEFAULT '',
+                ordem INT NOT NULL DEFAULT 0,
+                ativo TINYINT(1) NOT NULL DEFAULT 1
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        semearPrazos($conn);
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -11,7 +11,9 @@
 //   5. «só ao padrão» mostra um modelo; «todos os modelos» mostra a galeria;
 //   6. «sem edição» fecha o editor e recusa guardar versões;
 //   7. um reforço acrescenta e nunca tira;
-//   8. revogar fecha tudo — menos o direito de levar os dados.
+//   8. revogar fecha tudo — menos o direito de levar os dados;
+//   9. nenhum plano dispensa a lista de convidados;
+//  10. o prazo tem preço, e o preço acompanha-o.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -65,6 +67,36 @@ const entrar = async (ctx, user, pass) => {
 
   // Um só pacote em destaque — dois «mais escolhidos» não escolhem nada.
   ok(cat.catalogo.pacotes.filter(p => p.destaque).length <= 1, 'quando muito um pacote em destaque');
+
+  // ---------- 9. o módulo que nenhum plano dispensa ----------
+  const obrig = cat.catalogo.modulos.filter(m => m.obrigatorio).map(m => m.chave);
+  ok(obrig.includes('convidados'),
+     'a lista de convidados está marcada obrigatória: ' + obrig.join(', '));
+  // E todo o pacote de origem a inclui — senão ninguém o poderia comprar.
+  const semBase = cat.catalogo.pacotes.filter(p => {
+    const mods = p.itens.map(id => {
+      for (const m of cat.catalogo.modulos)
+        for (const e of m.escaloes) if (e.id === id) return m.chave;
+      return '';
+    });
+    return !mods.includes('convidados');
+  });
+  ok(semBase.length === 0,
+     'e todos os pacotes a incluem' + (semBase.length ? ' (falha: ' + semBase.map(p => p.nome) + ')' : ''));
+
+  // ---------- 10. o prazo tem preço ----------
+  const prazos = cat.catalogo.prazos || [];
+  ok(prazos.length >= 2, `há mais do que um prazo à escolha (${prazos.length})`);
+  const base = prazos.reduce((a, x) => (x.fator < a.fator ? x : a), prazos[0]);
+  ok(Math.abs(base.fator - 1) < 0.001, 'o prazo mais barato é o preço base (factor 1)');
+  // Sublinear: o dobro dos meses não custa o dobro — é o que faz o compromisso
+  // compensar em vez de castigar.
+  const longos = prazos.filter(p => p.meses > base.meses);
+  const sublinear = longos.every(p =>
+    (p.fator / p.meses) < (base.fator / base.meses) + 0.0001);
+  ok(longos.length > 0 && sublinear,
+     'e os prazos longos custam menos por mês: '
+     + prazos.map(p => p.meses + 'm×' + p.fator).join(' · '));
 
   // ---------- 2. inscrever com um plano à medida ----------
   // Escolhe-se de propósito um plano APERTADO, para as portas terem o que fechar:
@@ -214,6 +246,33 @@ const entrar = async (ctx, user, pass) => {
   const exp = await casal._api('dados_exportar');
   ok(exp && (exp.resumo || exp.convites || exp.formato),
      'e o casal continua a poder exportar os seus dados, como as políticas prometem');
+
+  // ---------- 9b/10b. as duas regras, exercidas de verdade ----------
+  // Um pedido sem a lista de convidados é recusado — e diz porquê.
+  const soMesas = cat.catalogo.modulos.find(m => m.chave === 'mesas').escaloes[0].id;
+  const semConv = await casal._api('lic_pedir',
+    { pacote: 0, escaloes: [soMesas], meses: 6, aceito: true });
+  ok(semConv.success === false && /convidados/i.test(semConv.message || ''),
+     'um plano sem a lista de convidados é recusado: ' + (semConv.message || '').slice(0, 70));
+
+  // O mesmo plano, em prazos diferentes, custa proporcionalmente ao factor.
+  const p6  = prazos.find(p => Math.abs(p.fator - 1) < 0.001);
+  const pL  = prazos.find(p => p.fator > 1.4) || prazos[prazos.length - 1];
+  const eConv = cat.catalogo.modulos.find(m => m.chave === 'convidados').escaloes[0].id;
+
+  const r6 = await casal._api('lic_pedir',
+    { pacote: 0, escaloes: [eConv], meses: p6.meses, aceito: true });
+  const t6 = r6.success ? +r6.pedido.total : 0;
+  const rL = await casal._api('lic_pedir',
+    { pacote: 0, escaloes: [eConv], meses: pL.meses, aceito: true });
+  const tL = rL.success ? +rL.pedido.total : 0;
+  ok(t6 > 0 && tL > 0, `o mesmo módulo custa ${t6} a ${p6.meses}m e ${tL} a ${pL.meses}m`);
+  ok(Math.abs(tL - t6 * (pL.fator / p6.fator)) < 1,
+     `e a diferença é exactamente o factor do prazo (×${pL.fator})`);
+
+  // O pedido guarda o prazo escolhido, não um qualquer.
+  ok(+rL.pedido.meses === pL.meses, 'o pedido fica com o prazo que o casal escolheu');
+  await casal._api('lic_pedido_cancelar', {});
 
   // ---------- limpeza ----------
   await api('casamento_estado&id=' + cid + '&estado=arquivado');

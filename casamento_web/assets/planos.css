@@ -20,6 +20,36 @@
   letter-spacing:.1em; text-transform:uppercase; color:var(--gold);
   background:var(--gold-pale); border-radius:50px; padding:.3rem .8rem; margin-bottom:.8rem; }
 
+/* ---------- o prazo, primeiro de tudo ---------- */
+/* O preço depende dele; por isso pergunta-se antes de se mostrar preço nenhum. */
+.pl-prazos{ background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
+  padding:1.2rem 1.3rem; margin-bottom:1.8rem; }
+.pl-prazos-cab{ margin-bottom:.9rem; }
+.pl-prazos-cab b{ display:block; font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
+.pl-prazos-cab span{ display:block; font-size:.83rem; color:#8a8f88; margin-top:.15rem; line-height:1.5; }
+.pl-prazos-op{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); }
+.pl-prazo-op{ position:relative; display:block; border:1.5px solid var(--line); border-radius:12px;
+  padding:.85rem .9rem; cursor:pointer; margin:0; text-transform:none; letter-spacing:normal;
+  font-weight:400; font-size:1rem; transition:border-color .15s, background .15s; }
+.pl-prazo-op:hover{ border-color:var(--gold-soft); background:var(--gold-pale); }
+.pl-prazo-op.on{ border-color:var(--gold); background:var(--gold-pale);
+  box-shadow:0 0 0 2px var(--ring); }
+.pl-prazo-op input{ position:absolute; opacity:0; width:1px; height:1px; padding:0; margin:0; }
+.pl-prazo-fita{ display:inline-block; font-size:.6rem; font-weight:800; letter-spacing:.1em;
+  text-transform:uppercase; color:#fff; background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep));
+  border-radius:50px; padding:.14rem .5rem; margin-bottom:.35rem; }
+.pl-prazo-nome{ display:block; font-weight:700; color:var(--ink); font-size:1rem; }
+.pl-prazo-res{ display:block; font-size:.76rem; color:#8a8f88; line-height:1.4; margin-top:.1rem; }
+.pl-prazo-poupa{ display:inline-block; font-size:.72rem; font-weight:700; color:var(--ok);
+  background:var(--ok-bg); border-radius:50px; padding:.12rem .5rem; margin-top:.4rem; }
+
+/* ---------- o módulo que nenhum plano dispensa ---------- */
+.pl-mod-obrig{ font-size:.62rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--gold-deep); background:var(--gold-pale); border-radius:50px;
+  padding:.12rem .45rem; vertical-align:middle; }
+.pl-obrig{ grid-column:1/-1; font-size:.8rem; color:var(--gold-deep); background:var(--gold-pale);
+  border-radius:10px; padding:.5rem .7rem; margin-bottom:.15rem; line-height:1.45; }
+
 /* ---------- os pacotes ---------- */
 .pl-pacotes{ display:grid; gap:1.1rem; margin-bottom:2.4rem;
   grid-template-columns:repeat(auto-fit, minmax(255px, 1fr)); align-items:stretch; }
@@ -114,6 +144,72 @@
 .pl-esc-tem{ font-size:.7rem; font-weight:700; color:var(--ok); text-transform:uppercase;
   letter-spacing:.06em; margin-top:.3rem; }
 
+/* ---------- o retrato do módulo (a captura do produto) ---------- */
+.pl-retrato{ margin:0 0 .95rem; border:1px solid var(--line); border-radius:12px;
+  overflow:hidden; background:var(--cream); cursor:zoom-in; position:relative;
+  transition:border-color .18s, box-shadow .18s; }
+.pl-retrato:hover{ border-color:var(--gold-soft); box-shadow:0 10px 26px rgba(0,0,0,.10); }
+.pl-retrato:focus-visible{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
+/* A captura é larga; corta-se em cima para caber sem se tornar uma tira fina —
+   o que interessa é o topo do ecrã, que é onde está o que se vende.
+   A altura é FIXA e não um máximo: uma imagem por carregar não tem tamanho
+   próprio, e com `max-height` a moldura nascia com zero de altura — nunca
+   chegava a entrar no ecrã, e por isso o `loading="lazy"` nunca a ia buscar.
+   Reservar o espaço resolve as duas coisas, e ainda tira o salto do texto. */
+.pl-retrato img{ display:block; width:100%; height:230px; object-fit:cover;
+  object-position:top center; background:var(--sand); }
+.pl-retrato figcaption{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+  padding:.5rem .75rem; font-size:.76rem; color:#8a8f88; background:var(--card);
+  border-top:1px solid var(--line); }
+.pl-lupa{ margin-left:auto; font-size:.7rem; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--gold); background:var(--gold-pale);
+  border-radius:50px; padding:.15rem .55rem; }
+/* Uma peça (o cartão, o convite) é alta e estreita: mostra-se inteira. */
+.pl-mod[data-chave="impresso"] .pl-retrato img,
+.pl-mod[data-chave="digital"]  .pl-retrato img{ height:340px; object-fit:contain; }
+
+/* A imagem em grande. */
+.pl-modal-img .pl-lupa-cx{ margin:0; max-width:min(1100px,94vw); max-height:92vh;
+  display:flex; flex-direction:column; gap:.6rem; cursor:zoom-out; }
+.pl-modal-img img{ display:block; max-width:100%; max-height:84vh; object-fit:contain;
+  border-radius:12px; box-shadow:0 30px 70px rgba(0,0,0,.45); background:var(--card); }
+.pl-modal-img figcaption{ text-align:center; color:#fff; font-size:.85rem; }
+.pl-modal-img figcaption span{ opacity:.7; font-size:.78rem; }
+
+/* ---------- as fotografias do convite digital ---------- */
+.pl-fotos{ margin-top:1rem; border:1.5px solid var(--gold-soft); border-radius:12px;
+  background:var(--gold-pale); padding:1rem 1.05rem; }
+.pl-fotos-cab{ margin-bottom:.7rem; }
+.pl-fotos-cab b{ display:block; color:var(--ink); font-size:.95rem; }
+.pl-fotos-cab span{ display:block; font-size:.8rem; color:#8a8f88; margin-top:.1rem; }
+.pl-fotos-nota{ font-size:.82rem; line-height:1.55; border-radius:10px;
+  padding:.65rem .8rem; margin-bottom:.95rem; }
+.pl-fotos-nota.boa{ background:var(--ok-bg); color:var(--text); border-left:3px solid var(--ok); }
+.pl-fotos-nota.aviso{ background:var(--warn-bg); color:var(--text); border-left:3px solid var(--warn); }
+
+.pl-sec{ margin-bottom:.9rem; }
+.pl-sec:last-child{ margin-bottom:0; }
+.pl-sec-cab{ display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap; margin-bottom:.4rem; }
+.pl-sec-cab b{ font-size:.85rem; color:var(--ink); }
+.pl-sec-cab span{ font-size:.77rem; color:#8a8f88; }
+/* As miniaturas correm na horizontal: são muitas, e empilhá-las fazia da
+   escolha de uma foto uma página inteira. */
+.pl-sec-tiras{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.35rem;
+  scrollbar-width:thin; }
+.pl-ft{ position:relative; flex:none; width:96px; height:72px; border-radius:9px;
+  overflow:hidden; cursor:pointer; border:2px solid transparent; margin:0; padding:0;
+  transition:border-color .15s, transform .15s; }
+.pl-ft:hover{ transform:translateY(-2px); border-color:var(--gold-soft); }
+.pl-ft.on{ border-color:var(--gold); }
+.pl-ft img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* O rádio comanda mas não se vê: o que se escolhe é a fotografia. */
+.pl-ft input{ position:absolute; opacity:0; width:1px; height:1px; padding:0; margin:0; }
+.pl-ft-visto{ position:absolute; inset:0; display:none; align-items:center;
+  justify-content:center; background:rgba(76,140,30,.45); color:#fff;
+  font-size:1.4rem; font-weight:800; }
+.pl-ft.on .pl-ft-visto{ display:flex; }
+.pl-ft input:focus-visible + img{ outline:2px solid var(--gold); outline-offset:-2px; }
+
 /* ---------- a conta, sempre à vista ---------- */
 .pl-conta{ position:sticky; bottom:0; z-index:5; margin-top:1.6rem;
   background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
@@ -189,7 +285,12 @@
 
 @media (max-width:640px){
   .pl-topo h2{ font-size:1.5rem; }
+  .pl-retrato img{ height:170px; }
+  .pl-mod[data-chave="impresso"] .pl-retrato img,
+  .pl-mod[data-chave="digital"]  .pl-retrato img{ height:250px; }
+  .pl-ft{ width:82px; height:62px; }
   .pl-conta{ padding:.9rem 1rem; }
   .pl-conta-val{ font-size:1.45rem; }
   .pl-escs{ grid-template-columns:1fr; }
+  .pl-prazos-op{ grid-template-columns:1fr 1fr; }
 }

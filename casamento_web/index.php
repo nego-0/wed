@@ -182,6 +182,17 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   /* Cartão selecionado (fundo verde): os símbolos ♂/♀ herdam o tom claro. */
   .stat-f.ativo .ss .gi{ color:inherit; }
 
+  /* O tecto da licença: o aviso e o botão que se fecha. */
+  .pc-aviso{ margin-top:.6rem; font-size:.84rem; line-height:1.5; color:var(--text);
+    background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px;
+    padding:.55rem .75rem; }
+  .pc-aviso.cheio{ background:var(--danger-bg); border-left-color:var(--danger); }
+  .pc-aviso a{ color:var(--gold-deep); font-weight:600; text-decoration:underline; }
+  .pc-nums .v-falta{ color:var(--danger); }
+  .pc-barra.cheia .pc-conv{ background:var(--danger); }
+  .btn.travado, .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.travado:hover{ transform:none; box-shadow:none; }
+
   /* Barra de progresso de capacidade */
   .progresso-cap{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1rem 1.15rem; }
   .pc-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; flex-wrap:wrap; margin-bottom:.6rem; }
@@ -481,6 +492,11 @@ const CASAL = <?= json_encode($CAS['casal']) ?>;
 const DATA_EXT = <?= json_encode($dataExt) ?>;
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
+// O tecto da LICENÇA, que é outra coisa da «capacidade» do salão: aquela é uma
+// intenção do casal, esta é um limite que o servidor faz cumprir. 0 = sem
+// limite; -1 = nem um (o módulo não está na licença, mas então esta página nem
+// abre). É ele que fecha o botão de novo convite quando não cabe mais ninguém.
+const LIC_LIMITE = <?= (int)limiteConvidados() ?>;
 let CONVITES = [], MESAS = [], STATS = {}, timer = null;
 // O nome a exibir ainda é o proposto automaticamente (ninguém lhe mexeu à mão).
 let NOME_AUTO = true;
@@ -604,20 +620,66 @@ let STATS_ABERTO = false;
 function alternarStats(){ STATS_ABERTO = !STATS_ABERTO; carregar(); }
 
 // Barra de progresso: preenchimento do número de convidados face à capacidade
+let ULTIMAS_STATS = null;
 function renderProgresso(s){
+  ULTIMAS_STATS = s;
   const cap=+s.capacidade||CAP||0;
   const conv=+s.lugares||0, conf=+s.pes_confirmados||0;
-  const pConv=cap?Math.min(100,Math.round(conv/cap*100)):0;
-  const pConf=cap?Math.min(100,Math.round(conf/cap*100)):0;
+  // Quando a licença tem tecto, é ELE que a barra mede: é o número que trava.
+  // A «capacidade» do salão continua a ver-se, mas como intenção — não é ela
+  // que impede ninguém de entrar na lista.
+  const temTeto = LIC_LIMITE > 0;
+  const base = temTeto ? LIC_LIMITE : cap;
+  const pConv=base?Math.min(100,Math.round(conv/base*100)):0;
+  const pConf=base?Math.min(100,Math.round(conf/base*100)):0;
+  const restam = temTeto ? Math.max(0, LIC_LIMITE-conv) : null;
+
+  const nums = temTeto
+    ? `<b>${conv}</b> de <b>${LIC_LIMITE}</b> convidados da licença · `
+      + (restam>0 ? `<b class="${restam<=5?'v-falta':''}">${restam}</b> por usar`
+                  : '<b class="v-falta">sem lugares livres</b>')
+      + ` · <b class="v-conf">${conf}</b> confirmados`
+    : `<b>${conv}</b> convidados · <b class="v-conf">${conf}</b> confirmados · capacidade <b>${cap}</b>`;
+
   $('progresso').innerHTML = `
     <div class="pc-topo">
       <span class="pc-tit">Convidados</span>
-      <span class="pc-nums"><b>${conv}</b> convidados · <b class="v-conf">${conf}</b> confirmados · capacidade <b>${cap}</b></span>
+      <span class="pc-nums">${nums}</span>
     </div>
-    <div class="pc-barra" title="${conv} de ${cap} lugares (${pConv}%)">
+    <div class="pc-barra${temTeto&&restam===0?' cheia':''}" title="${conv} de ${base} lugares (${pConv}%)">
       <div class="pc-conv" style="width:${pConv}%"></div>
       <div class="pc-conf" style="width:${pConf}%"></div>
-    </div>`;
+    </div>` + (temTeto && restam<=5 ? avisoTeto(restam) : '');
+  travarNovoConvite(restam);
+}
+
+/** O aviso de que o tecto está à vista — com a saída, que é reforçar a licença. */
+function avisoTeto(restam){
+  return `<div class="pc-aviso${restam===0?' cheio':''}">`
+    + (restam===0
+        ? 'Chegou ao limite de convidados da sua licença. Para convidar mais gente, '
+        : `Faltam-lhe ${restam} lugar(es) na licença. Quando acabarem, `)
+    + '<a href="licenca.php?quero=convidados">reforce a licença</a> — '
+    + 'nada do que já fez se perde.</div>';
+}
+
+/**
+ * Fecha o botão de novo convite quando a licença não dá para mais ninguém.
+ *
+ * Deixá-lo aberto para o servidor recusar a seguir é fazer o casal escrever um
+ * convite inteiro para lho recusarem no fim. A porta fecha-se antes, e diz
+ * porquê. (Editar os convites que já existem continua a poder fazer-se: não
+ * gasta lugar nenhum.)
+ */
+function travarNovoConvite(restam){
+  const b = document.querySelector('[onclick="novoConvite()"]');
+  if (!b) return;
+  const cheio = restam === 0;
+  b.disabled = cheio;
+  b.classList.toggle('travado', cheio);
+  b.title = cheio
+    ? 'A sua licença chegou ao limite de convidados. Reforce-a para convidar mais gente.'
+    : '';
 }
 
 // Filtros a partir dos cartões (alternam ligado/desligado e recarregam)
@@ -827,7 +889,18 @@ function renderFiltroMesas(){
 function renderDatalistMesas(){ $('lista-mesas').innerHTML=MESAS.map(m=>`<option value="${esc(m.nome)}">`).join(''); }
 
 // ---------- modal convite ----------
-function novoConvite(){ abrirConvite(null); }
+function novoConvite(){
+  // Segunda fechadura: o botão pode estar desactivado, mas a função continua
+  // a poder ser chamada (pelo teclado, por um atalho, pela consola). Aqui
+  // fecha-se de vez, e diz-se onde se resolve.
+  const s = ULTIMAS_STATS || {};
+  if (LIC_LIMITE > 0 && (+s.lugares || 0) >= LIC_LIMITE) {
+    toast('A sua licença chega a ' + LIC_LIMITE + ' convidados e já os tem todos. '
+        + 'Reforce a licença para convidar mais gente.', true);
+    return;
+  }
+  abrirConvite(null);
+}
 async function editar(id){ const d=await api('convite_get&id='+id); if(d.success) abrirConvite(d.convite); }
 
 function abrirConvite(c){

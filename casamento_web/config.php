@@ -119,6 +119,9 @@ function ficheirosApp(): array {
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
             'licenca.php','manifest.php','sw.js',
+            'assets/montra/convidados.jpg','assets/montra/mesas.jpg',
+            'assets/montra/orcamento.jpg','assets/montra/impresso.jpg',
+            'assets/montra/digital.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/planos.js',
@@ -149,7 +152,7 @@ function acoesDaPlataforma(): array {
             // O preçário das licenças e as decisões sobre os pedidos.
             'lic_decidir','lic_revogar','lic_conceder','lic_modulo_guardar',
             'lic_escalao_guardar','lic_escalao_apagar','lic_pacote_guardar','lic_pacote_apagar',
-            'lic_politica_guardar'];
+            'lic_politica_guardar','lic_prazo_guardar','lic_prazo_apagar'];
 }
 
 function acoesDoCasamento(): array {
@@ -189,7 +192,8 @@ function acoesSemCasamento(): array {
                                              'registo_auditoria',
                                              'lic_pedidos', 'lic_decidir', 'lic_revogar', 'lic_conceder',
                                              'lic_modulo_guardar', 'lic_escalao_guardar', 'lic_escalao_apagar',
-                                             'lic_pacote_guardar', 'lic_pacote_apagar', 'lic_politica_guardar']);
+                                             'lic_pacote_guardar', 'lic_pacote_apagar', 'lic_politica_guardar',
+                                             'lic_prazo_guardar', 'lic_prazo_apagar']);
 }
 
 function acoesDeEscrita(): array {

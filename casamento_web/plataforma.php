@@ -219,6 +219,11 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px;
     height:18px; padding:0 .3rem; margin-left:.4rem; border-radius:50px; background:var(--warn);
     color:#fff; font-size:.7rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .lic-grupo{ font-family:var(--serif); font-size:1.15rem; color:var(--ink);
+    margin:1.6rem 0 .8rem; display:flex; align-items:center; gap:.55rem; }
+  .lic-grupo:first-child{ margin-top:.2rem; }
+  .lic-grupo span{ font-family:var(--sans); font-size:.72rem; font-weight:700;
+    background:var(--gold-pale); color:var(--gold-deep); border-radius:50px; padding:.12rem .5rem; }
   .lic-ped.pend{ border-left:4px solid var(--warn); }
   .lic-ped-cab{ display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
   .lic-ped-nome{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
@@ -261,7 +266,21 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   /* Pela mesma razão que na montra: `width:100%` num rádio come a linha toda. */
   .lic-pi input{ width:16px; height:16px; min-width:16px; padding:0; margin:0;
     flex:none; accent-color:var(--gold); }
-  .lic-pi > span{ flex:1; min-width:0; }
+  .lic-pi-txt{ flex:1; min-width:0; }
+  /* O preço vive na própria linha do escalão: é ali que se olha para ele. */
+  .lic-pi-preco{ display:flex; align-items:center; gap:.25rem; flex:none; }
+  .lic-pi-preco input{ width:6.5rem; padding:.25rem .45rem; font-size:.85rem; text-align:right;
+    font-variant-numeric:tabular-nums; border:1px solid var(--line); border-radius:8px;
+    background:var(--card); }
+  .lic-pi-preco input:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 2px var(--ring); }
+  .lic-pi-preco small{ color:#8a8f88; font-size:.75rem; }
+  .lic-pi-conta{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-top:1rem; padding-top:.9rem;
+    border-top:1px solid var(--line); }
+  .lic-pi-conta > div{ display:flex; flex-direction:column; }
+  .lic-pi-conta .r{ font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:#8a8f88; }
+  .lic-pi-conta b{ font-size:1.05rem; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .lic-pi-conta .bom b{ color:var(--ok); }
+  .lic-pi-conta .mau b{ color:var(--warn); }
   .lic-pi:hover{ background:var(--cream); }
   .lic-pi small{ color:#8a8f88; }
 
@@ -412,6 +431,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <?php if (ehAdminPlataforma()): ?>
       <button class="chip" data-vista="contas" onclick="verVista('contas')">Contas administrativas</button>
       <button class="chip" data-vista="licencas" onclick="verVista('licencas')">Licenças<span id="lic-conta-badge" class="lic-badge" style="display:none"></span></button>
+      <?php // A pastilha traz o número de pedidos à espera: um casal parado à
+            // porta é a coisa mais urgente desta página, e tem de se ver daqui. ?>
       <button class="chip" data-vista="dados" onclick="verVista('dados')">Gestão de Dados</button>
       <button class="chip" data-vista="registo" onclick="verVista('registo')">Registo de ações</button>
       <button class="chip" data-vista="definicoes" onclick="verVista('definicoes')">Definições</button>
@@ -645,6 +666,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <button class="chip on" data-lic="pedidos" onclick="licVista('pedidos')">Pedidos</button>
       <button class="chip" data-lic="precario" onclick="licVista('precario')">Preçário</button>
       <button class="chip" data-lic="pacotes" onclick="licVista('pacotes')">Pacotes</button>
+      <button class="chip" data-lic="prazos" onclick="licVista('prazos')">Prazos</button>
       <button class="chip" data-lic="politicas" onclick="licVista('politicas')">Políticas</button>
     </div>
 
@@ -652,8 +674,10 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     <div id="lic-v-pedidos">
       <div class="painel">
         <h3>Pedidos de licença</h3>
-        <div class="dica">Um casal escolheu um plano e espera. Aprovar concede-lhe os módulos
-          pedidos e, se o casamento ainda estava à espera, abre-o com as suas contas.</div>
+        <div class="dica">Chegam em duas famílias, e não se leem da mesma maneira: um
+          <b>pedido inicial</b> é um casal à porta, que ainda não entrou em lado nenhum; uma
+          <b>actualização</b> é um casal que já trabalha aqui e quer mais. Aprovar concede os
+          módulos pedidos e, se o casamento ainda estava à espera, abre-o com as suas contas.</div>
         <div class="filtros" style="margin:.6rem 0 .2rem">
           <button class="chip on" data-pest="pendente" onclick="licPedidos('pendente')">À espera</button>
           <button class="chip" data-pest="aprovado" onclick="licPedidos('aprovado')">Aprovados</button>
@@ -687,6 +711,21 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         </div>
       </div>
       <div id="lic-pacotes"><div class="dica">A carregar…</div></div>
+    </div>
+
+    <?php // ---- prazos ---- ?>
+    <div id="lic-v-prazos" style="display:none">
+      <div class="painel">
+        <h3>Prazos de licença</h3>
+        <div class="dica">O preço depende de <b>quanto tempo</b> o casal quer a plataforma. Os
+          preços escritos no preçário são os do prazo de <b>factor 1</b>; os outros multiplicam-nos.
+          Factores <b>sublineares</b> (12 meses a 1,8 e não a 2,0) fazem o preço por mês descer com
+          o compromisso — é o que torna o prazo longo um bom negócio, e não um castigo.</div>
+        <div class="fim" style="margin-top:.6rem">
+          <button class="btn btn-ouro btn-sm" onclick="licPrazoEditar(0)">&#43; Novo prazo</button>
+        </div>
+      </div>
+      <div id="lic-prazos"><div class="dica">A carregar…</div></div>
     </div>
 
     <?php // ---- políticas ---- ?>
@@ -873,6 +912,15 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     </div>
     <div class="modal-corpo">
       <div class="segredo lic-estado" id="lic-estado" style="margin-top:0"></div>
+
+      <?php // ---- o QUÊ: os módulos que a licença abre ---- ?>
+      <h4 class="ed-sec" style="margin-top:1.1rem">O que a licença abre</h4>
+      <div class="dica">Um escalão por módulo. O que ficar em «não incluído» fecha-se ao casal —
+        os dados não se apagam, só deixam de ter porta.</div>
+      <div id="lic-mods"><div class="dica">A carregar…</div></div>
+
+      <?php // ---- o ATÉ QUANDO: o prazo ---- ?>
+      <h4 class="ed-sec" style="margin-top:1.3rem">Até quando</h4>
       <div class="dica">Quanto tempo o casamento fica disponível. Expirada, é suspenso sozinho —
         e as contas que só dele dependem param com ele.</div>
       <div class="lf" style="grid-template-columns:1fr 1fr">
@@ -895,6 +943,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="fim" style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem">
         <button class="btn" onclick="fecharModal('ov-licenca')">Cancelar</button>
         <button class="btn btn-ouro" onclick="guardarLicenca()">Guardar licença</button>
+      </div>
+      <div class="dica" style="margin-top:.8rem">Para <b>revogar</b> a licença por incumprimento
+        das políticas, use «Revogar licença…» no menu do casamento: pede um motivo, que o casal lê.
       </div>
     </div>
   </div>
@@ -1049,13 +1100,13 @@ function licPrimeiraVez(){
 }
 
 function licVista(v){
-  ['pedidos','precario','pacotes','politicas'].forEach(id => {
+  ['pedidos','precario','pacotes','prazos','politicas'].forEach(id => {
     const e = document.getElementById('lic-v-' + id);
     if (e) e.style.display = id === v ? '' : 'none';
   });
   document.querySelectorAll('#vista-licencas .chip[data-lic]').forEach(c =>
     c.classList.toggle('on', c.dataset.lic === v));
-  if (v === 'precario' || v === 'pacotes') licCarregarCatalogo();
+  if (v === 'precario' || v === 'pacotes' || v === 'prazos') licCarregarCatalogo();
   if (v === 'politicas') licCarregarPolitica();
 }
 
@@ -1075,7 +1126,9 @@ function licMedida(it){
   if (m === 'impresso' || m === 'digital')
     return +it.todos_modelos ? 'todos os modelos, com edição'
          : (+it.editar ? 'modelo padrão, com edição' : 'modelo padrão, sem edição');
-  return 'incluído';
+  // Um módulo simples não tem medida: ou se leva ou não. Vazio, e quem o
+  // escreve não põe travessão para nada.
+  return '';
 }
 
 // ---- pedidos ----
@@ -1094,7 +1147,23 @@ async function licPedidos(estado){
                                  : 'Nenhum pedido neste estado.') + '</div></div>';
     return;
   }
-  cx.innerHTML = d.pedidos.map(licCartaoPedido).join('');
+
+  // Os dois grupos aparecem separados, e por esta ordem: um casal à porta
+  // espera pior do que um casal que já está lá dentro a trabalhar.
+  const novos = d.pedidos.filter(p => p.tipo !== 'upgrade');
+  const upg   = d.pedidos.filter(p => p.tipo === 'upgrade');
+  let h = '';
+  if (novos.length){
+    h += '<h3 class="lic-grupo">Novos pedidos de licença <span>' + novos.length + '</span></h3>'
+       + novos.map(licCartaoPedido).join('');
+  }
+  if (upg.length){
+    h += '<h3 class="lic-grupo">Actualizações de pedidos de licença <span>' + upg.length + '</span></h3>'
+       + '<div class="dica" style="margin:-.4rem 0 .8rem">Casamentos já a trabalhar que querem '
+       + 'juntar módulos. Aprovar acrescenta ao que têm — nunca lhes tira nada.</div>'
+       + upg.map(licCartaoPedido).join('');
+  }
+  cx.innerHTML = h;
 }
 
 function licBadge(n){
@@ -1180,6 +1249,75 @@ async function licCarregarCatalogo(){
   LIC_CAT = d.catalogo;
   licPintarPrecario();
   licPintarPacotes();
+  licPintarPrazos();
+}
+
+// ---- prazos ----
+function licPintarPrazos(){
+  const cx = document.getElementById('lic-prazos');
+  if (!cx || !LIC_CAT) return;
+  const ps = LIC_CAT.prazos || [];
+  if (!ps.length){
+    cx.innerHTML = '<div class="painel"><div class="dica">Sem prazos, não há preço: o preçário '
+      + 'fica a valer tal como está escrito. Crie pelo menos um.</div></div>';
+    return;
+  }
+  // O prazo mais curto é a referência de «preço por mês»: é contra ele que se
+  // mede se um prazo maior compensa mesmo.
+  const base = ps.reduce((a, x) => (x.meses < a.meses ? x : a), ps[0]);
+  cx.innerHTML = '<div class="painel"><table class="lic-tab"><tbody>'
+    + ps.map(p => {
+        const porMes = (p.fator / p.meses) / (base.fator / base.meses);
+        const desconto = Math.round((1 - porMes) * 100);
+        return '<tr>'
+          + '<td><b>' + licEsc(p.nome) + '</b>'
+          +   (p.etiqueta ? ' <span class="et fita">' + licEsc(p.etiqueta) + '</span>' : '')
+          +   (Math.abs(p.fator - 1) < 0.0001 ? ' <span class="et">preço base</span>' : '')
+          +   (p.resumo ? '<div class="dica" style="margin:.1rem 0 0">' + licEsc(p.resumo) + '</div>' : '')
+          + '</td>'
+          + '<td class="med">' + p.meses + ' meses</td>'
+          + '<td class="pr">× ' + (+p.fator).toFixed(3) + '</td>'
+          + '<td class="med" style="text-align:right">'
+          +   (desconto > 0 ? '<b style="color:var(--ok)">−' + desconto + '%</b> por mês'
+              : (desconto < 0 ? '<b style="color:var(--warn)">+' + Math.abs(desconto) + '%</b> por mês'
+                              : 'referência')) + '</td>'
+          + '<td class="ac"><button class="btn btn-sm" onclick="licPrazoEditar(' + p.id + ')">Editar</button>'
+          +   '<button class="btn btn-sm perigo" onclick="licPrazoApagar(' + p.id + ')">Apagar</button></td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
+}
+
+async function licPrazoEditar(id){
+  const p = id ? (LIC_CAT.prazos || []).find(x => x.id === id) : null;
+  const meses = prompt('Quantos meses?', p ? p.meses : '12');
+  if (meses === null) return;
+  const nome = prompt('Nome do prazo', p ? p.nome : (meses + ' meses'));
+  if (nome === null) return;
+  const resumo = prompt('Uma linha de apoio (opcional)', p ? p.resumo : '');
+  if (resumo === null) return;
+  const fator = prompt('Factor de preço\n\nMultiplica os preços do preçário. 1 = preço base.\n'
+    + 'Para o prazo longo compensar, use um factor abaixo do proporcional\n'
+    + '(ex.: o dobro dos meses a 1,8 e não a 2,0).', p ? p.fator : '1.8');
+  if (fator === null) return;
+  const etiq = prompt('Fita de destaque (ex.: MELHOR ESCOLHA). Vazio = sem fita.',
+                      p ? p.etiqueta : '');
+  if (etiq === null) return;
+  const d = await api('lic_prazo_guardar', { method:'POST', body: JSON.stringify({
+    id: id || 0, meses: parseInt(meses, 10) || 12, nome, resumo,
+    fator: parseFloat(String(fator).replace(',', '.')) || 1,
+    etiqueta: etiq, ordem: p ? p.ordem : (parseInt(meses, 10) || 12), ativo: 1 }) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPrazos(); toast('Prazo guardado.');
+}
+
+async function licPrazoApagar(id){
+  const p = (LIC_CAT.prazos || []).find(x => x.id === id); if (!p) return;
+  if (!confirm('Apagar o prazo «' + p.nome + '»?\n\nAs licenças já concedidas com ele não se '
+             + 'alteram: o prazo delas está guardado no casamento.')) return;
+  const d = await api('lic_prazo_apagar', { method:'POST', body: JSON.stringify({ id }) });
+  if (!d || !d.success) return;
+  LIC_CAT = d.catalogo; licPintarPrazos(); toast('Prazo apagado.');
 }
 
 function licPintarPrecario(){
@@ -1339,7 +1477,15 @@ async function licPacoteEditar(id){
   if (!id) licPacoteItens(d.id);
 }
 
-/** Escolher os escalões de um pacote, numa janela com um por linha. */
+/**
+ * Escolher os escalões de um pacote — e corrigir-lhes o preço ali mesmo.
+ *
+ * Montar um pacote é o momento em que se olha para os preços à peça: é deles
+ * que sai a poupança que o pacote anuncia. Ter de sair daqui, ir ao preçário,
+ * mudar um número e voltar era partir em três um gesto que é um só. A conta em
+ * baixo acompanha o que se vai mexendo, para não se anunciar uma poupança que
+ * não existe.
+ */
 function licPacoteItens(id){
   const p = LIC_CAT.pacotes.find(x => x.id === id); if (!p) return;
   const dentro = new Set(p.itens);
@@ -1349,28 +1495,74 @@ function licPacoteItens(id){
     + m.escaloes.map(e =>
         '<label class="lic-pi"><input type="checkbox" value="' + e.id + '"'
       + (dentro.has(e.id) ? ' checked' : '') + ' data-mod="' + licEsc(m.chave) + '">'
-      + '<span>' + licEsc(e.nome) + ' <small>' + licKz(e.preco) + '</small></span></label>').join('')
+      + '<span class="lic-pi-txt">' + licEsc(e.nome) + '</span>'
+      + '<span class="lic-pi-preco"><input type="number" min="0" step="500" '
+      + 'value="' + (+e.preco) + '" data-preco="' + e.id + '" '
+      + 'aria-label="Preço de ' + licEsc(e.nome) + '"><small>Kz</small></span>'
+      + '</label>').join('')
     + '</div>').join('');
-  licJanela('Módulos de «' + licEsc(p.nome) + '»',
-    '<div class="dica">Um escalão por módulo. Marcar dois do mesmo módulo não faz sentido — '
-    + 'o pedido só guardaria o primeiro.</div><div id="lic-pi-lista">' + linhas + '</div>',
+
+  licJanela('Módulos e preços de «' + licEsc(p.nome) + '»',
+    '<div class="dica">Um escalão por módulo — marcar dois do mesmo não faz sentido, e o pedido '
+    + 'só guardaria o primeiro. Os preços que mudar aqui valem para <b>todo o preçário</b>, e não '
+    + 'só para este pacote.</div>'
+    + '<div id="lic-pi-lista">' + linhas + '</div>'
+    + '<div class="lic-pi-conta" id="lic-pi-conta"></div>',
     async () => {
-      const marc = [...document.querySelectorAll('#lic-pi-lista input:checked')].map(i => +i.value);
+      const marc = [...document.querySelectorAll('#lic-pi-lista input[type=checkbox]:checked')]
+                   .map(i => +i.value);
+      const precos = {};
+      document.querySelectorAll('#lic-pi-lista input[data-preco]').forEach(i => {
+        precos[i.dataset.preco] = parseFloat(i.value) || 0;
+      });
       const d = await api('lic_pacote_guardar', { method:'POST',
         body: JSON.stringify({ id, nome: p.nome, promessa: p.promessa, resumo: p.resumo,
           preco: p.preco, meses: p.meses, etiqueta: p.etiqueta, destaque: p.destaque,
-          ordem: p.ordem, ativo: p.ativo, escaloes: marc }) });
+          ordem: p.ordem, ativo: p.ativo, escaloes: marc, precos }) });
       if (!d || !d.success) return;
-      LIC_CAT = d.catalogo; licPintarPacotes(); toast('Módulos do pacote guardados.');
+      LIC_CAT = d.catalogo; licPintarPacotes(); licPintarPrecario();
+      if (d.faltam && d.faltam.length){
+        toast('Guardado, MAS este pacote não inclui ' + d.faltam.join(', ')
+            + ' — nenhum casal o poderá comprar assim.', true);
+      } else {
+        toast('Pacote guardado.' + (d.precos_mudados
+          ? ' ' + d.precos_mudados + ' preço(s) de módulo actualizado(s).' : ''));
+      }
     });
+
+  // A conta ao vivo: quanto valem, à peça, os escalões marcados.
+  const recontar = () => {
+    let soma = 0;
+    document.querySelectorAll('#lic-pi-lista input[type=checkbox]:checked').forEach(c => {
+      const pr = document.querySelector('#lic-pi-lista input[data-preco="' + c.value + '"]');
+      soma += parseFloat(pr && pr.value) || 0;
+    });
+    const poupa = soma - (+p.preco);
+    const cx = document.getElementById('lic-pi-conta');
+    if (!cx) return;
+    cx.innerHTML = '<div><span class="r">À peça</span><b>' + licKz(soma) + '</b></div>'
+      + '<div><span class="r">Preço do pacote</span><b>' + licKz(p.preco) + '</b></div>'
+      + '<div class="' + (poupa > 0 ? 'bom' : 'mau') + '"><span class="r">'
+      + (poupa > 0 ? 'O casal poupa' : 'Sem poupança') + '</span><b>'
+      + (poupa > 0 ? licKz(poupa) : licKz(Math.abs(poupa)) + ' acima') + '</b></div>';
+  };
+
   // Um módulo, um escalão: marcar outro do mesmo módulo desmarca o anterior.
-  document.querySelectorAll('#lic-pi-lista input').forEach(inp => {
+  document.querySelectorAll('#lic-pi-lista input[type=checkbox]').forEach(inp => {
     inp.addEventListener('change', () => {
-      if (!inp.checked) return;
-      document.querySelectorAll('#lic-pi-lista input[data-mod="' + inp.dataset.mod + '"]')
-        .forEach(o => { if (o !== inp) o.checked = false; });
+      if (inp.checked) {
+        document.querySelectorAll('#lic-pi-lista input[data-mod="' + inp.dataset.mod + '"]')
+          .forEach(o => { if (o !== inp) o.checked = false; });
+      }
+      recontar();
     });
   });
+  document.querySelectorAll('#lic-pi-lista input[data-preco]').forEach(i => {
+    i.addEventListener('input', recontar);
+    // Clicar no preço não deve marcar/desmarcar a etiqueta que o contém.
+    i.addEventListener('click', ev => ev.preventDefault());
+  });
+  recontar();
 }
 
 async function licPacoteApagar(id){
@@ -1437,63 +1629,6 @@ function licJanela(titulo, html, aoConfirmar){
   const d = await api('lic_pedidos&estado=pendente', { silencioso: true });
   if (d && d.success) licBadge(d.pendentes);
 })();
-
-/**
- * Conceder módulos a um casamento à mão — sem passar por pedido nenhum.
- *
- * É como se abre a porta a um casamento criado aqui dentro (que nunca pediu
- * nada), e como se corrige um engano. Marca-se um escalão por módulo; o que
- * ficar por marcar deixa de estar concedido.
- */
-async function licModulosDe(id, nome){
-  if (!LIC_CAT) await licCarregarCatalogo();
-  if (!LIC_CAT) { toast('Não foi possível ler o preçário.', true); return; }
-  const f = await api('casamento_ficha&id=' + id);
-  const tem = {};
-  if (f && f.success && f.licenca_modulos) Object.assign(tem, f.licenca_modulos);
-
-  const linhas = LIC_CAT.modulos.map(m => {
-    const g = tem[m.chave];
-    const escs = m.escaloes.map(e => {
-      // Marca-se o escalão que corresponde ao que o casamento já tem.
-      let igual = false;
-      if (g && g.ativo){
-        if (m.chave === 'convidados') igual = +e.limite === +g.limite;
-        else if (m.chave === 'impresso' || m.chave === 'digital')
-          igual = !!+e.editar === !!g.editar && !!+e.todos_modelos === !!g.todos_modelos;
-        else igual = true;
-      }
-      return '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="'
-        + e.id + '"' + (igual ? ' checked' : '') + '>'
-        + '<span>' + licEsc(e.nome) + ' <small>' + licKz(e.preco) + '</small></span></label>';
-    }).join('');
-    return '<div class="lic-pi-mod"><div class="lic-pi-nome">' + licEsc(m.icone || '•') + ' '
-      + licEsc(m.nome) + '</div>'
-      + '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="0"'
-      + (g && g.ativo ? '' : ' checked') + '><span>Não incluído</span></label>'
-      + escs + '</div>';
-  }).join('');
-
-  licJanela('Módulos de «' + licEsc(nome) + '»',
-    '<div class="dica">O que ficar em «não incluído» deixa de estar concedido — e o casal deixa '
-    + 'de ver a página desse módulo. Os dados não se apagam.</div>'
-    + '<div id="lic-lm-lista">' + linhas + '</div>'
-    + '<div class="campo" style="margin-top:1rem"><label for="lic-lm-meses">Prazo da licença '
-    + '(meses; 0 = sem limite)</label>'
-    + '<input type="number" id="lic-lm-meses" min="0" max="120" value="'
-    + (f && f.casamento ? (+f.casamento.licenca_meses || 0) : 0) + '"></div>',
-    async () => {
-      const marc = [...document.querySelectorAll('#lic-lm-lista input:checked')]
-                   .map(i => +i.value).filter(v => v > 0);
-      const meses = Math.max(0, Math.min(120, parseInt(
-        document.getElementById('lic-lm-meses').value || '0', 10)));
-      const d = await api('lic_conceder', { method:'POST',
-        body: JSON.stringify({ casamento: id, escaloes: marc, meses }) });
-      if (!d || !d.success) return;
-      toast(d.modulos ? d.modulos + ' módulo(s) concedido(s).' : 'Casamento ficou sem módulos.');
-      carregarCasamentos();
-    });
-}
 
 /** Revogar a licença por incumprimento. O motivo não é opcional: o casal vê-o. */
 async function licRevogarDe(id, nome){
@@ -2018,8 +2153,7 @@ async function carregarCasamentos(){
         mais.push(`<button class="perigo" onclick="apagar(${c.id},'${n}')">Apagar para sempre</button>`);
       } else {
         mais.push(`<button onclick="editarTudo(${c.id})">Editar todos os dados…</button>`);
-        mais.push(`<button onclick="gerirLicenca(${c.id})">Prazo da licença…</button>`);
-        mais.push(`<button onclick="licModulosDe(${c.id},'${n}')">Módulos da licença…</button>`);
+        mais.push(`<button onclick="gerirLicenca(${c.id})">Licença: módulos e prazo…</button>`);
         mais.push(`<button class="perigo" onclick="licRevogarDe(${c.id},'${n}')">Revogar licença…</button>`);
         mais.push('<hr>');
         mais.push(c.estado === 'suspenso'
@@ -2107,13 +2241,18 @@ function licencaEstado(c){
 
 /** Gerir a licença de um casamento: um modal completo em vez de um prompt seco. */
 let LICENCA_ALVO = 0;
-function gerirLicenca(id){
+async function gerirLicenca(id){
   const c = CASAMENTOS[id]; if (!c) return;
   LICENCA_ALVO = id;
   const est = licencaEstado(c);
   const m = +c.licenca_meses || 0;
   const jaIniciada = m > 0 && !!c.licenca_ate;
   $('lic-nome').textContent = c.nome || 'Casamento';
+  // Os módulos vão buscar-se ao preçário e à ficha: a licença é uma coisa só —
+  // o QUE se abre e ATÉ QUANDO —, e separá-las em dois sítios obrigava a
+  // fazer duas vezes o mesmo caminho para tratar do mesmo assunto.
+  $('lic-mods').innerHTML = '<div class="dica">A carregar…</div>';
+  licDesenharModulos(id);
   $('lic-estado').className = 'segredo lic-estado ' + (est.cls || '');
   $('lic-estado').innerHTML = est.txt;
   // O período começa no que está definido; «Outro…» abre a caixa dos meses.
@@ -2128,6 +2267,40 @@ function gerirLicenca(id){
     ? 'Reiniciar o relógio a contar de hoje' : 'Iniciar já o relógio (a contar de hoje)';
   abrirModal('ov-licenca');
 }
+/** Os módulos deste casamento, dentro do modal da licença. */
+async function licDesenharModulos(id){
+  if (!LIC_CAT) await licCarregarCatalogo();
+  const f = await api('casamento_ficha&id=' + id);
+  const tem = (f && f.success && f.licenca_modulos) ? f.licenca_modulos : {};
+  const cx = $('lic-mods');
+  if (!cx) return;
+  if (!LIC_CAT){ cx.innerHTML = '<div class="dica">Não foi possível ler o preçário.</div>'; return; }
+
+  cx.innerHTML = LIC_CAT.modulos.map(m => {
+    const g = tem[m.chave];
+    const escs = m.escaloes.map(e => {
+      // Marca-se o escalão que corresponde ao que o casamento já tem.
+      let igual = false;
+      if (g && g.ativo){
+        if (m.chave === 'convidados') igual = +e.limite === +g.limite;
+        else if (m.chave === 'impresso' || m.chave === 'digital')
+          igual = !!+e.editar === !!g.editar && !!+e.todos_modelos === !!g.todos_modelos;
+        else igual = true;
+      }
+      return '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="'
+        + e.id + '"' + (igual ? ' checked' : '') + '>'
+        + '<span class="lic-pi-txt">' + licEsc(e.nome) + '</span>'
+        + '<span class="lic-pi-preco"><small>' + licKz(e.preco) + '</small></span></label>';
+    }).join('');
+    return '<div class="lic-pi-mod"><div class="lic-pi-nome">' + licEsc(m.icone || '•') + ' '
+      + licEsc(m.nome) + '</div>'
+      + '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="0"'
+      + (g && g.ativo ? '' : ' checked') + '>'
+      + '<span class="lic-pi-txt">Não incluído</span></label>'
+      + escs + '</div>';
+  }).join('');
+}
+
 function licPeriodoMudou(){
   const v = $('lic-periodo').value;
   $('lic-outro').style.display = v === 'outro' ? '' : 'none';
@@ -2140,13 +2313,16 @@ function licMesesEscolhidos(){
 async function guardarLicenca(){
   const meses = licMesesEscolhidos();
   const reiniciar = meses > 0 && $('lic-reiniciar').checked;
-  const d = await api('casamento_licenca', { method:'POST',
-    body: JSON.stringify({ id: LICENCA_ALVO, licenca_meses: meses, iniciar: reiniciar, reiniciar }) });
+  const marc = [...document.querySelectorAll('#lic-mods input:checked')]
+               .map(i => +i.value).filter(v => v > 0);
+  // Um só gesto: os módulos e o prazo vão juntos, porque são a mesma licença.
+  const d = await api('lic_conceder', { method:'POST',
+    body: JSON.stringify({ casamento: LICENCA_ALVO, escaloes: marc, meses, reiniciar }) });
   if (!d || !d.success) return;
   fecharModal('ov-licenca');
-  toast(meses
-    ? 'Licença: ' + meses + ' mês(es)' + (reiniciar ? ', a contar de hoje.' : ' (guardada).')
-    : 'Licença sem limite.');
+  toast(d.modulos
+    ? d.modulos + ' módulo(s) · ' + (meses ? meses + ' mês(es)' : 'sem limite de tempo') + '.'
+    : 'Casamento ficou sem módulos.');
   carregarCasamentos();
 }
 

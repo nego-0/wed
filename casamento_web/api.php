@@ -625,10 +625,11 @@ if ($acao === 'registo_publico') {
 function licCatalogo(mysqli $conn): array {
     global $P;
     $mods = [];
-    $r = @$conn->query("SELECT id,chave,nome,resumo,beneficio,icone,ordem,ativo
+    $r = @$conn->query("SELECT id,chave,nome,resumo,beneficio,icone,imagem,obrigatorio,ordem,ativo
                         FROM {$P}lic_modulos ORDER BY ordem, id");
     if ($r) while ($x = $r->fetch_assoc()) {
         $x['id'] = (int)$x['id']; $x['ativo'] = (int)$x['ativo']; $x['ordem'] = (int)$x['ordem'];
+        $x['obrigatorio'] = (int)$x['obrigatorio'];
         $x['escaloes'] = [];
         $mods[$x['id']] = $x;
     }
@@ -674,7 +675,75 @@ function licCatalogo(mysqli $conn): array {
     }
     unset($p);
 
-    return ['modulos' => array_values($mods), 'pacotes' => array_values($pacs)];
+    return ['modulos' => array_values($mods), 'pacotes' => array_values($pacs),
+            'prazos' => licPrazos($conn)];
+}
+
+/**
+ * Os prazos de licença, e o factor de preço de cada um.
+ *
+ * Os preços do preçário são os do prazo BASE (factor 1.000). Escolher outro
+ * prazo multiplica-os — é assim que seis meses e dois anos deixam de custar o
+ * mesmo, que é o que acontecia enquanto o prazo não tinha preço nenhum.
+ */
+function licPrazos(mysqli $conn): array {
+    global $P;
+    $out = [];
+    $r = @$conn->query("SELECT id,meses,nome,resumo,fator,etiqueta,ordem,ativo
+                        FROM {$P}lic_prazos WHERE ativo=1 ORDER BY ordem, meses");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $out[] = ['id' => (int)$x['id'], 'meses' => (int)$x['meses'], 'nome' => $x['nome'],
+                  'resumo' => $x['resumo'], 'fator' => (float)$x['fator'],
+                  'etiqueta' => $x['etiqueta'], 'ordem' => (int)$x['ordem']];
+    }
+    return $out;
+}
+
+/** O factor de preço de um prazo. Sem prazo conhecido, não se multiplica nada. */
+function licFator(mysqli $conn, int $meses): float {
+    foreach (licPrazos($conn) as $p) if ($p['meses'] === $meses) return (float)$p['fator'];
+    return 1.0;
+}
+
+/** As chaves de módulo que nenhum plano pode dispensar. */
+function licObrigatorios(mysqli $conn): array {
+    global $P;
+    $out = [];
+    $r = @$conn->query("SELECT chave FROM {$P}lic_modulos WHERE obrigatorio=1 AND ativo=1");
+    if ($r) while ($x = $r->fetch_row()) $out[] = (string)$x[0];
+    return $out;
+}
+
+/**
+ * As secções do convite digital que levam fotografia, e a galeria de cada uma.
+ *
+ * É isto que a inscrição oferece a quem escolhe o convite digital: escolher já
+ * a fotografia de cada secção. No escalão SEM edição é a única vez que o casal
+ * as escolhe — daí serem oferecidas aqui, e não só dentro do editor.
+ */
+function licSeccoesFoto(mysqli $conn): array {
+    $gal = galeriaCompleta($conn);
+    $out = [];
+    foreach (['capa' => 'Capa', 'historia' => 'História',
+              'interludio' => 'Interlúdio', 'acesso' => 'Acesso (QR)'] as $cat => $rotulo) {
+        $chave = chaveDaCategoria($cat);
+        if (!$chave) continue;
+        $fotos = [];
+        foreach ($gal as $g) {
+            if (($g['categoria'] ?? '') !== $cat) continue;
+            $fotos[] = ['src' => $g['src'], 'nome' => $g['nome']];
+        }
+        if (!$fotos) continue;
+        $out[] = ['cat' => $cat, 'chave' => $chave, 'rotulo' => $rotulo,
+                  'descricao' => [
+                      'capa'       => 'A primeira imagem, atrás dos vossos nomes.',
+                      'historia'   => 'A que acompanha a vossa história.',
+                      'interludio' => 'A pausa a meio do convite.',
+                      'acesso'     => 'A que fica junto ao código de entrada.',
+                  ][$cat] ?? '',
+                  'fotos' => $fotos];
+    }
+    return $out;
 }
 
 /** As políticas de utilização em vigor (a versão publicada mais alta). */
@@ -702,6 +771,8 @@ function licPedido(mysqli $conn, int $cid, string $estado = 'pendente'): ?array 
     $p = $st->get_result()->fetch_assoc();
     if (!$p) return null;
     $p['id'] = (int)$p['id']; $p['total'] = (float)$p['total']; $p['meses'] = (int)$p['meses'];
+    $j = json_decode((string)($p['fotos'] ?? ''), true);
+    $p['fotos'] = is_array($j) ? $j : [];
     $p['itens'] = [];
     $r = @$conn->query("SELECT escalao_id,modulo_chave,escalao_nome,preco,limite,editar,todos_modelos
                         FROM {$P}lic_pedido_itens WHERE pedido_id=" . (int)$p['id'] . " ORDER BY id");
@@ -723,8 +794,10 @@ function licPedido(mysqli $conn, int $cid, string $estado = 'pendente'): ?array 
  * O preço de cada escalão fica congelado no pedido. Um preçário que mude
  * amanhã não pode reescrever aquilo com que o casal concordou hoje.
  */
-function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int {
+function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
+                           ?string &$porque = null): int {
     global $P;
+    $porque = null;
     if ($cid <= 0) return 0;
     $tipo = $tipo === 'upgrade' ? 'upgrade' : 'inicial';
 
@@ -746,7 +819,7 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int 
         foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escIds[] = $e; }
     }
     $escIds = array_values(array_unique($escIds));
-    if (!$escIds) return 0;
+    if (!$escIds) { $porque = 'Escolha um pacote, ou pelo menos um módulo.'; return 0; }
 
     // Os escalões, tal como estão hoje. Só entram os que existem e estão de pé,
     // e um módulo só conta uma vez: dois escalões do mesmo módulo era vender
@@ -767,6 +840,26 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int 
         $total += (float)$x['preco'];
     }
     if (!$itens) return 0;
+
+    // Nenhum plano dispensa os módulos obrigatórios. A lista de convidados é o
+    // coração da casa: sem ela, as mesas sentam quem? A porta recebe quem?
+    // Recusa-se aqui, e não só no ecrã — o ecrã esconde o botão, mas a ação
+    // continua a poder ser chamada à mão.
+    foreach (licObrigatorios($conn) as $ob) {
+        if (isset($itens[$ob])) continue;
+        // Num reforço basta que o casamento JÁ o tenha: quem já tem a lista de
+        // convidados não a compra outra vez para poder juntar as mesas.
+        $g = licencaModulos($conn, $cid);
+        if (!empty($g[$ob]['ativo'])) continue;
+        $nome = $ob;
+        $rn = @$conn->query("SELECT nome FROM {$P}lic_modulos WHERE chave='"
+                            . $conn->real_escape_string($ob) . "' LIMIT 1");
+        if ($rn && ($x = $rn->fetch_row())) $nome = (string)$x[0];
+        $porque = "Todos os planos incluem «{$nome}» — é a base de que o resto depende. "
+                . 'Escolha um escalão desse módulo.';
+        return 0;
+    }
+
     if ($pacoteId > 0) {
         // O pacote tem preço próprio — é essa a vantagem de o levar.
         $st = @$conn->prepare("SELECT preco FROM {$P}lic_pacotes WHERE id=?");
@@ -775,6 +868,33 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int 
                    if ($pp) $total = (float)$pp['preco']; }
     }
     if ($meses <= 0) $meses = 12;
+
+    // E o prazo tem preço: os valores do preçário são os do prazo base, e o
+    // factor do prazo escolhido multiplica-os. Guarda-se o preço já
+    // multiplicado, item a item, para o pedido continuar a poder ser lido
+    // sozinho daqui a um ano — sem depender de uma tabela de factores que
+    // entretanto pode ter mudado.
+    $fator = licFator($conn, $meses);
+    if ($fator > 0 && abs($fator - 1.0) > 0.0001) {
+        foreach ($itens as $k => $it) $itens[$k]['preco'] = round($it['preco'] * $fator, 2);
+        $total = round($total * $fator, 2);
+    }
+
+    // As fotografias de cada secção do convite digital. Só se guardam as que
+    // são mesmo da galeria: o casal escolhe de uma lista, e um caminho vindo de
+    // fora não é uma escolha — é outra coisa qualquer.
+    $fotosOk = [];
+    if (!empty($d['fotos']) && is_array($d['fotos'])) {
+        $validas = [];
+        foreach (licSeccoesFoto($conn) as $sc) {
+            foreach ($sc['fotos'] as $ft) $validas[$sc['chave']][$ft['src']] = true;
+        }
+        foreach ($d['fotos'] as $chave => $src) {
+            $chave = (string)$chave; $src = (string)$src;
+            if (isset($validas[$chave][$src])) $fotosOk[$chave] = $src;
+        }
+    }
+    $fotosJson = $fotosOk ? json_encode($fotosOk, JSON_UNESCAPED_SLASHES) : null;
 
     $pol   = licPolitica($conn);
     $nota  = mb_substr(trim((string)($d['nota'] ?? '')), 0, 1000);
@@ -786,24 +906,25 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int 
     if ($antigo) {
         $st = @$conn->prepare("UPDATE {$P}lic_pedidos
             SET tipo=?, pacote_id=?, pacote_nome=?, meses=?, total=?, moeda=?, nota_casal=?,
-                politica_versao=?, aceite_em=NOW(), aceite_ip=?, criado_em=NOW()
+                politica_versao=?, fotos=?, aceite_em=NOW(), aceite_ip=?, criado_em=NOW()
             WHERE id=? AND casamento_id=?");
         if (!$st) return 0;
         $pid0 = $pacoteId ?: null; $pv = (int)$pol['versao']; $pidRow = (int)$antigo['id'];
-        $st->bind_param('sisidsssiii', $tipo, $pid0, $pacNome, $meses, $total, $moeda,
-                        $nota, $pv, $ip, $pidRow, $cid);
+        // s i s i d s s i s s i i — doze tipos para doze variáveis.
+        $st->bind_param('sisidssissii', $tipo, $pid0, $pacNome, $meses, $total, $moeda,
+                        $nota, $pv, $fotosJson, $ip, $pidRow, $cid);
         if (!@$st->execute()) return 0;
         $pedidoId = $pidRow;
         @$conn->query("DELETE FROM {$P}lic_pedido_itens WHERE pedido_id=$pedidoId");
     } else {
         $st = @$conn->prepare("INSERT INTO {$P}lic_pedidos
             (casamento_id, tipo, estado, pacote_id, pacote_nome, meses, total, moeda,
-             nota_casal, politica_versao, aceite_em, aceite_ip)
-            VALUES (?,?,'pendente',?,?,?,?,?,?,?,NOW(),?)");
+             nota_casal, politica_versao, fotos, aceite_em, aceite_ip)
+            VALUES (?,?,'pendente',?,?,?,?,?,?,?,?,NOW(),?)");
         if (!$st) return 0;
         $pid0 = $pacoteId ?: null; $pv = (int)$pol['versao'];
-        $st->bind_param('isisidssis', $cid, $tipo, $pid0, $pacNome, $meses, $total, $moeda,
-                        $nota, $pv, $ip);
+        $st->bind_param('isisidssiss', $cid, $tipo, $pid0, $pacNome, $meses, $total, $moeda,
+                        $nota, $pv, $fotosJson, $ip);
         if (!@$st->execute()) return 0;
         $pedidoId = $conn->insert_id;
     }
@@ -818,12 +939,34 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo): int 
         @$st->execute();
     }
 
+    // As fotografias que ele escolheu vão já para o convite.
+    if ($fotosOk) licAplicarFotos($conn, $cid, $fotosOk);
+
     // O casamento passa a dizer que tem um pedido em cima da mesa — excepto se
     // já tem licença ativa e isto é um reforço: aí continua a valer o que tem.
     $st = @$conn->prepare("UPDATE {$P}casamentos SET licenca_estado='pendente'
                            WHERE id=? AND licenca_estado <> 'ativa'");
     if ($st) { $st->bind_param('i', $cid); @$st->execute(); }
     return $pedidoId;
+}
+
+/**
+ * Escreve no convite do casamento as fotografias escolhidas no pedido.
+ *
+ * Faz-se logo à inscrição (e outra vez a cada alteração do pedido) e não só na
+ * aprovação: o casal escolheu-as, são dele, e não há razão para o convite
+ * esperar por uma decisão administrativa para ficar com a cara que ele quis.
+ * Devolve quantas ficaram gravadas.
+ */
+function licAplicarFotos(mysqli $conn, int $cid, array $fotos): int {
+    if ($cid <= 0 || !$fotos) return 0;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+    $defs = [];
+    foreach ($fotos as $chave => $src) $defs[(string)$chave] = (string)$src;
+    $r = guardarDefinicoes($conn, $defs);
+    usarCasamento($anterior > 0 ? $anterior : $cid);
+    return (int)($r['gravadas'] ?? 0);
 }
 
 /**
@@ -898,6 +1041,45 @@ function licConcederTudo(mysqli $conn, int $cid, string $rotulo = 'Concedido pel
     return $n;
 }
 
+/**
+ * Os pedidos já decididos deste casamento, do mais recente para trás.
+ *
+ * É o extracto da licença: o que foi pedido, quando, quanto custou e o que a
+ * administração respondeu. Sem isto, o casal que reforçou a licença três vezes
+ * não tinha onde confirmar o que pagou de cada vez.
+ */
+function licHistorico(mysqli $conn, int $cid): array {
+    global $P;
+    if ($cid <= 0) return [];
+    $st = @$conn->prepare("SELECT id, tipo, estado, pacote_nome, meses, total, moeda,
+                                  nota_admin, criado_em, decidido_em
+                           FROM {$P}lic_pedidos
+                           WHERE casamento_id = ? AND estado IN ('aprovado','recusado')
+                           ORDER BY decidido_em DESC, id DESC LIMIT 30");
+    if (!$st) return [];
+    $st->bind_param('i', $cid);
+    if (!@$st->execute()) return [];
+    $r = $st->get_result();
+    $out = [];
+    while ($x = $r->fetch_assoc()) {
+        $x['id'] = (int)$x['id']; $x['total'] = (float)$x['total']; $x['meses'] = (int)$x['meses'];
+        $x['itens'] = [];
+        $out[(int)$x['id']] = $x;
+    }
+    if ($out) {
+        $ids = implode(',', array_map('intval', array_keys($out)));
+        $ri = @$conn->query("SELECT pedido_id, modulo_chave, escalao_nome, preco
+                             FROM {$P}lic_pedido_itens WHERE pedido_id IN ($ids) ORDER BY id");
+        if ($ri) while ($x = $ri->fetch_assoc()) {
+            $p = (int)$x['pedido_id'];
+            if (!isset($out[$p])) continue;
+            $x['preco'] = (float)$x['preco'];
+            $out[$p]['itens'][] = $x;
+        }
+    }
+    return array_values($out);
+}
+
 /** Tudo o que a página da licença do casal precisa de saber, num sítio só. */
 function licResumo(mysqli $conn, int $cid): array {
     global $P;
@@ -921,6 +1103,7 @@ function licResumo(mysqli $conn, int $cid): array {
         'modulos'    => licencaModulos($conn, $cid),
         'pendente'   => licPedido($conn, $cid, 'pendente'),
         'recusado'   => licPedido($conn, $cid, 'recusado'),
+        'historico'  => licHistorico($conn, $cid),
         'catalogo'   => licCatalogo($conn),
         'politica'   => licPolitica($conn),
         'convidados' => convidadosContados($conn, $cid),
@@ -932,7 +1115,8 @@ function licResumo(mysqli $conn, int $cid): array {
 // É público de propósito: a página de inscrição precisa dele antes de haver
 // sessão nenhuma, e um preçário é para se ver.
 if ($acao === 'lic_catalogo') {
-    ok(['catalogo' => licCatalogo($conn), 'politica' => licPolitica($conn), 'moeda' => 'Kz']);
+    ok(['catalogo' => licCatalogo($conn), 'politica' => licPolitica($conn), 'moeda' => 'Kz',
+        'seccoes_foto' => licSeccoesFoto($conn)]);
 }
 if ($acao === 'lic_politica') {
     ok(['politica' => licPolitica($conn)]);
@@ -953,8 +1137,9 @@ if ($acao === 'lic_pedir') {
     $d = corpo();
     if (empty($d['aceito'])) erro('É preciso aceitar as políticas de utilização para submeter o pedido.');
     $tem = licencaEstado($conn, $cid) === 'ativa';
-    $pid = licRegistarPedido($conn, $cid, $d, $tem ? 'upgrade' : 'inicial');
-    if (!$pid) erro('Escolha pelo menos um módulo ou um pacote.');
+    $porque = null;
+    $pid = licRegistarPedido($conn, $cid, $d, $tem ? 'upgrade' : 'inicial', $porque);
+    if (!$pid) erro($porque ?: 'Escolha pelo menos um módulo ou um pacote.');
     $ped = licPedido($conn, $cid, 'pendente');
     registar($conn, 'licenca_pedido', $ped['pacote_nome'] ?: 'à medida',
              ($tem ? 'reforço' : 'inicial') . ' · ' . count($ped['itens'] ?? []) . ' módulo(s) · '
@@ -1151,17 +1336,39 @@ if ($acao === 'lic_conceder') {
             if (@$st->execute()) $n++;
         }
     }
+    // Dar mesas sem lista de convidados é entregar uma casa sem chão: as mesas
+    // sentam quem? Tirar TUDO continua a ser legítimo (é como se fecha uma
+    // licença); o que se recusa é o meio-termo que não funciona.
+    if ($n > 0) {
+        $atualG = licencaModulos($conn, $cid);
+        foreach (licObrigatorios($conn) as $ob) {
+            if (!empty($atualG[$ob]['ativo'])) continue;
+            $rn = @$conn->query("SELECT nome FROM {$P}lic_modulos WHERE chave='"
+                                . $conn->real_escape_string($ob) . "' LIMIT 1");
+            $nm = ($rn && ($x = $rn->fetch_row())) ? (string)$x[0] : $ob;
+            erro("Um casamento com módulos tem de ter «{$nm}» — é a base de que o resto "
+               . 'depende. Escolha um escalão desse módulo, ou tire-lhe todos os módulos.');
+        }
+    }
+
     $meses = max(0, min(120, (int)($d['meses'] ?? 0)));
     $novoEstado = $n > 0 ? 'ativa' : 'sem';
     $rotulo = $n > 0 ? 'Concedido pela administração' : '';
+    // Reiniciar o relógio é uma decisão à parte de mudar o número de meses:
+    // corrigir um prazo mal escrito não pode dar tempo novo por acidente.
+    $reiniciar = !empty($d['reiniciar']);
     $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado=?, licenca_pacote=?,
-                          licenca_meses=?, licenca_revogada_em=NULL, licenca_revogada_motivo=NULL
+                          licenca_meses=?" . ($reiniciar ? ", licenca_ate=NULL" : "") . ",
+                          licenca_revogada_em=NULL, licenca_revogada_motivo=NULL
                           WHERE id=?");
     $st->bind_param('ssii', $novoEstado, $rotulo, $meses, $cid);
     @$st->execute();
     if ($n > 0) iniciarLicenca($conn, $cid);
-    registar($conn, 'licenca_conceder', (string)$c['nome'], "$n módulo(s)");
-    ok(['casamento' => $cid, 'modulos' => $n, 'estado' => $novoEstado]);
+    registar($conn, 'licenca_conceder', (string)$c['nome'],
+             "$n módulo(s) · " . ($meses ? "$meses mês(es)" : 'sem limite')
+             . ($reiniciar ? ' · relógio a contar de hoje' : ''));
+    ok(['casamento' => $cid, 'modulos' => $n, 'estado' => $novoEstado,
+        'licenca' => licencaInfo($conn, $cid)]);
 }
 
 // ---- o preçário, do lado de quem o define ----
@@ -1287,8 +1494,49 @@ if ($acao === 'lic_pacote_guardar') {
             @$conn->query("INSERT IGNORE INTO {$P}lic_pacote_itens (pacote_id, escalao_id) VALUES ($id, $e)");
         }
     }
-    registar($conn, 'lic_pacote_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz');
-    ok(['id' => $id, 'catalogo' => licCatalogo($conn)]);
+
+    // Um pacote sem os módulos obrigatórios é um pacote que ninguém pode
+    // comprar: o pedido seria recusado à chegada. Avisa-se aqui, onde ainda se
+    // pode corrigir, em vez de deixar o casal descobrir no fim.
+    $faltam = [];
+    if (array_key_exists('escaloes', $d)) {
+        $temMod = [];
+        $r = @$conn->query("SELECT m.chave FROM {$P}lic_pacote_itens pi
+                            JOIN {$P}lic_escaloes e ON e.id = pi.escalao_id
+                            JOIN {$P}lic_modulos  m ON m.id = e.modulo_id
+                            WHERE pi.pacote_id = $id");
+        if ($r) while ($x = $r->fetch_row()) $temMod[(string)$x[0]] = true;
+        foreach (licObrigatorios($conn) as $ob) {
+            if (isset($temMod[$ob])) continue;
+            $rn = @$conn->query("SELECT nome FROM {$P}lic_modulos WHERE chave='"
+                                . $conn->real_escape_string($ob) . "' LIMIT 1");
+            $faltam[] = ($rn && ($x = $rn->fetch_row())) ? (string)$x[0] : $ob;
+        }
+    }
+
+    // Os preços dos módulos, mexidos aqui mesmo.
+    //
+    // Montar um pacote é o momento em que se olha para os preços à peça — é
+    // deles que sai a poupança que o pacote anuncia. Obrigar a sair daqui,
+    // ir ao preçário, corrigir um número e voltar era partir em três um gesto
+    // que é um só.
+    $precos = 0;
+    if (!empty($d['precos']) && is_array($d['precos'])) {
+        $st = $conn->prepare("UPDATE {$P}lic_escaloes SET preco=? WHERE id=?");
+        if ($st) foreach ($d['precos'] as $eid => $pv) {
+            $eid = (int)$eid;
+            $pv  = max(0, min(999999999, (float)$pv));
+            if ($eid <= 0) continue;
+            $st->bind_param('di', $pv, $eid);
+            if (@$st->execute() && $conn->affected_rows > 0) $precos++;
+        }
+    }
+
+    registar($conn, 'lic_pacote_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz'
+             . ($precos ? " · $precos preço(s) de módulo alterado(s)" : '')
+             . ($faltam ? ' · SEM ' . implode(', ', $faltam) : ''));
+    ok(['id' => $id, 'precos_mudados' => $precos, 'faltam' => $faltam,
+        'catalogo' => licCatalogo($conn)]);
 }
 
 if ($acao === 'lic_pacote_apagar') {
@@ -1302,6 +1550,54 @@ if ($acao === 'lic_pacote_apagar') {
     @$conn->query("DELETE FROM {$P}lic_pacote_itens WHERE pacote_id=$id");
     @$conn->query("DELETE FROM {$P}lic_pacotes WHERE id=$id");
     registar($conn, 'lic_pacote_apagar', (string)$p['nome']);
+    ok(['catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_prazo_guardar') {
+    // Os prazos e os seus factores. O factor é o que multiplica os preços do
+    // preçário — que são, por definição, os do prazo de factor 1.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os prazos.');
+    exigirCsrf();
+    $d = corpo();
+    $id    = (int)($d['id'] ?? 0);
+    $meses = max(1, min(120, (int)($d['meses'] ?? 0)));
+    $nome  = mb_substr(trim((string)($d['nome'] ?? '')), 0, 60);
+    if ($nome === '') $nome = $meses . ' meses';
+    $resumo = mb_substr(trim((string)($d['resumo'] ?? '')), 0, 160);
+    $fator  = max(0.001, min(999, (float)($d['fator'] ?? 1)));
+    $etiq   = mb_substr(trim((string)($d['etiqueta'] ?? '')), 0, 40);
+    $ordem  = max(0, min(9999, (int)($d['ordem'] ?? 0)));
+    $ativo  = !empty($d['ativo']) ? 1 : 0;
+
+    if ($id > 0) {
+        $st = $conn->prepare("UPDATE {$P}lic_prazos SET meses=?, nome=?, resumo=?, fator=?,
+                              etiqueta=?, ordem=?, ativo=? WHERE id=?");
+        $st->bind_param('issdsiii', $meses, $nome, $resumo, $fator, $etiq, $ordem, $ativo, $id);
+        if (!$st->execute()) erro('Já existe um prazo com esse número de meses.');
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}lic_prazos (meses,nome,resumo,fator,etiqueta,ordem,ativo)
+                              VALUES (?,?,?,?,?,?,?)");
+        $st->bind_param('issdsii', $meses, $nome, $resumo, $fator, $etiq, $ordem, $ativo);
+        if (!$st->execute()) erro('Já existe um prazo com esse número de meses.');
+        $id = $conn->insert_id;
+    }
+    registar($conn, 'lic_prazo_guardar', $nome, "$meses meses · factor $fator");
+    ok(['id' => $id, 'catalogo' => licCatalogo($conn)]);
+}
+
+if ($acao === 'lic_prazo_apagar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os prazos.');
+    exigirCsrf();
+    $id = (int)(corpo()['id'] ?? 0);
+    $st = $conn->prepare("SELECT nome FROM {$P}lic_prazos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $p = $st->get_result()->fetch_assoc();
+    if (!$p) erro('Prazo não encontrado.');
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}lic_prazos WHERE ativo=1");
+    if ($r && (int)$r->fetch_row()[0] <= 1)
+        erro('Tem de ficar pelo menos um prazo: é ele que dá o preço.');
+    @$conn->query("DELETE FROM {$P}lic_prazos WHERE id=$id");
+    registar($conn, 'lic_prazo_apagar', (string)$p['nome']);
     ok(['catalogo' => licCatalogo($conn)]);
 }
 
