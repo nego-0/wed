@@ -211,7 +211,27 @@ async function autoPosicionar(){
   await Promise.all(semPos.map(m=>salvarPos(m.id,m.pos_x,m.pos_y)));
 }
 
-function renderTudo(){ renderStats(); renderPlanta(); renderTabs(); renderTabBody(); atualizarBtnNoivos(); }
+function renderTudo(){ renderStats(); renderLegenda(); renderPlanta(); renderTabs(); renderTabBody(); atualizarBtnNoivos(); }
+
+// A legenda diz o que o sinal quer dizer — e quantas mesas estão assim. Dizer
+// só «Vazia» obriga a contar as bolinhas à mão para saber quantas faltam
+// encher, que é a pergunta que se faz a seguir.
+const LEGENDA=[
+  ['vazia',   'Vazia',    'ninguém sentado'],
+  ['parcial', 'A encher', 'já tem gente, ainda cabe'],
+  ['cheia',   'Completa', 'não cabe mais ninguém'],
+  ['excede',  'Excede',   'há mais gente do que lugares'],
+];
+function renderLegenda(){
+  const cx=$('legenda'); if(!cx) return;
+  const conta={};
+  MESAS.forEach(m=>{ const e=estadoOcup(m); conta[e]=(conta[e]||0)+1; });
+  cx.innerHTML=LEGENDA.map(([k,rot,expl])=>{
+    const n=conta[k]||0;
+    return `<span class="lg lg-${k}${n?'':' zero'}" title="${esc(rot)}: ${esc(expl)}">`
+         + `<i></i><b>${esc(rot)}</b><span class="n">${n}</span></span>`;
+  }).join('');
+}
 function atualizarBtnNoivos(){
   const b=$('btn-noivos'); if(!b) return;
   b.style.display = MESAS.some(ehNoivos) ? 'none' : ''; // só surge para repor, se tiver sido eliminada
@@ -277,7 +297,7 @@ function renderPlanta(){
         const gente=CONVIDADOS.filter(g=>g.papel===pap);
         if(!gente.length) return;
         const ala=document.createElement('div');
-        ala.className='noivos-ala '+lado; ala.style.setProperty('--dbase', d+'px');
+        ala.className='noivos-ala '+lado; ala.style.setProperty('--dbase', (d*CAIXA)+'px');
         ala.style.left=px+'%'; ala.style.top=py+'%';
         ala.innerHTML=`<div class="ala-tit">${tit}</div>`+gente.map(g=>{
           const prim=(g.nome||'').split(' ')[0];
@@ -294,7 +314,7 @@ function renderPlanta(){
       if(pessoas.length){
         const cl=document.createElement('div');
         cl.className='mesa-membros'+(py>62?' acima':'');
-        cl.style.setProperty('--dbase', d+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
+        cl.style.setProperty('--dbase', (d*CAIXA)+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
         cl.innerHTML=pessoas.map(g=>{ const prim=(g.nome||'').split(' ')[0];
           return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${genIco(g.genero)}${esc(prim)}</span>`;
         }).join('');
@@ -322,7 +342,7 @@ $('planta').addEventListener('pointerdown', e=>{
     const sx=e.clientX, sy=e.clientY, id=+node.dataset.id;
     window.addEventListener('pointerup', ev=>{
       const parado = Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4;
-      if(parado) return selecionar(id);
+      if(parado) return alternar(id);
       // Foi mesmo uma tentativa de arrastar. Se as mesas estão fixas por ser
       // uma visita de leitura, diz-se — a trava da planta é do casal e essa
       // fala por si na nota, mas esta não.
@@ -362,7 +382,7 @@ function onUp(){
   if(d.moved){
     const m=MESAS.find(x=>x.id===d.id); if(m){ m.pos_x=d.x; m.pos_y=d.y; }
     salvarPos(d.id, d.x, d.y); renderPlanta();
-  } else { selecionar(d.id); }
+  } else { alternar(d.id); }
 }
 async function salvarPos(id,x,y,forma){
   const body={id, x:+x.toFixed(2), y:+y.toFixed(2)}; if(forma) body.forma=forma;
@@ -370,7 +390,14 @@ async function salvarPos(id,x,y,forma){
 }
 
 // ---------- abas ----------
-function selecionar(id){ SEL=id; activeTab='mesa'; renderPlanta(); renderTabs(); renderTabBody(); }
+// O id guarda-se sempre como número. Vindo de um data-attribute é texto, e
+// «"29" === 29» é falso: bastava isso para a mesa escolhida deixar de se
+// reconhecer a si própria e o segundo toque voltar a abri-la.
+function selecionar(id){ SEL=+id||null; activeTab='mesa'; renderPlanta(); renderTabs(); renderTabBody(); }
+// Tocar na mesa que já está escolhida fecha-a. Para largar a mesa era preciso
+// acertar no fundo do canvas — e num salão cheio quase não há fundo por onde
+// acertar. O gesto que abre é o mesmo que fecha.
+function alternar(id){ if(SEL===(+id||null)) desselecionar(); else selecionar(id); }
 function desselecionar(){ if(SEL===null) return; SEL=null; if(activeTab==='mesa') activeTab='pessoas'; renderPlanta(); renderTabs(); renderTabBody(); }
 function irTab(k){ if(k==='mesa'&&!SEL) return; activeTab=k; renderTabs(); renderTabBody(); }
 

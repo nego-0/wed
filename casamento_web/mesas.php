@@ -63,10 +63,24 @@ $CAS = casalInfo(defsAtuais($conn));
   .planta-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem; }
   .planta-topo{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
   .planta-topo .titulo{ font-family:var(--serif); font-size:1.2rem; color:var(--ink); font-weight:600; flex:1; }
-  .legenda{ display:flex; gap:.8rem; flex-wrap:wrap; font-size:.76rem; color:#7a8078; }
-  .legenda i{ width:10px; height:10px; border-radius:50%; display:inline-block; vertical-align:-1px; margin-right:.3rem; }
+  /* A legenda era uma fila de bolinhas cinzentas com letra de 12px: dizia-se
+     o nome do estado e mais nada. Agora cada pastilha traz o sinal na cor com
+     que ele aparece na planta, o que quer dizer, e QUANTAS mesas estão assim —
+     que é a pergunta a seguir a «o que é isto». */
+  .legenda{ display:flex; gap:.45rem; flex-wrap:wrap; margin-bottom:.8rem; }
+  .legenda .lg{ display:inline-flex; align-items:center; gap:.4rem;
+    background:var(--cream); border:1px solid var(--line); border-radius:50px;
+    padding:.22rem .6rem .22rem .45rem; font-size:.82rem; color:var(--ink); line-height:1.2; }
+  .legenda .lg i{ width:11px; height:11px; border-radius:50%; flex:none;
+    box-shadow:0 0 0 2px rgba(255,255,255,.8) inset; }
+  .legenda .lg b{ font-weight:600; }
+  .legenda .lg .n{ font-variant-numeric:tabular-nums; font-weight:700;
+    background:#fff; border:1px solid var(--line); border-radius:50px;
+    padding:0 .38rem; font-size:.78rem; }
+  .legenda .lg.zero{ opacity:.5; }
   .lg-vazia i{ background:#b7bbb5; } .lg-parcial i{ background:var(--gold); }
   .lg-cheia i{ background:#1f7a3d; } .lg-excede i{ background:var(--danger); }
+  .legenda .lg-excede{ border-color:var(--danger); }
 
   /* Canvas de tamanho FIXO (a moldura não muda com o zoom): é a janela de scroll.
      O tamanho é definido pelo utilizador (arrastar as bordas) e guardado na BD.
@@ -168,8 +182,11 @@ $CAS = casalInfo(defsAtuais($conn));
   .mesa-node .mesa-ico.cheia .mi-t{ fill:var(--mt-linha); stroke:var(--mt-linha); }
   .mesa-node .mesa-ico.cheia .mi-c{ fill:var(--mt-linha); stroke:var(--mt-linha); }
   .mesa-node .mesa-ico.cheia .mi-n{ fill:#fff; }
-  .mesa-node .mesa-ico.vazia .mi-t{ fill:none; }
-  .mesa-node .mesa-ico.vazia .mi-n{ fill:var(--mt-linha); }
+  /* Uma mesa VAZIA continua a mostrar a sua cor. O ícone pequeno da lista
+     deixa-a por preencher — ali a cor não é escolha de ninguém —, mas na planta
+     a cor foi escolhida à mão, e uma mesa que não a mostra parece que não a
+     recebeu. Quem diz que está vazia é o sinal ao canto e o número. */
+  .mesa-node .mesa-ico.vazia .mi-t{ fill:var(--mt-fundo); }
 
   /* Alas de padrinhos (esq.) e madrinhas (dir.) junto à mesa dos noivos */
   .noivos-ala{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); z-index:16;
@@ -186,14 +203,18 @@ $CAS = casalInfo(defsAtuais($conn));
   .mesa-node.a-arrastar{ cursor:grabbing; filter:drop-shadow(0 10px 18px rgba(22,38,30,.30)); z-index:20; }
   .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:1px; z-index:15; }
   /* O nome vive por baixo do desenho: dentro dele bateria nas cadeiras. Fora,
-     pode calhar por cima da mesa do lado — daí o fundo, que o mantém legível
-     sem lhe dar peso. */
-  .mesa-node .mn-nome{ position:absolute; top:100%; left:50%; transform:translate(-50%,-6%);
-    font-family:var(--serif); font-weight:600; font-size:calc(var(--d)*0.105); line-height:1.05;
-    max-width:calc(var(--d)*1.25); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    background:rgba(253,251,246,.82); border-radius:6px; padding:0 .3em; pointer-events:none; }
+     pode calhar por cima da mesa do lado — daí a placa, que o mantém legível.
+     O tamanho tem um chão em pixéis: a 50% de zoom, uma letra proporcional ao
+     desenho ficava por ler, e um nome que não se lê não serve para nada. */
+  .mesa-node .mn-nome{ position:absolute; top:100%; left:50%; transform:translate(-50%,2px);
+    font-family:var(--serif); font-weight:700;
+    font-size:clamp(13px, calc(var(--d)*0.115), 17px); line-height:1.15; color:var(--ink);
+    max-width:calc(var(--d)*1.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    background:#fff; border:1px solid var(--line); border-radius:7px;
+    padding:.05em .4em; box-shadow:0 1px 4px rgba(22,38,30,.10); pointer-events:none; }
+  .mesa-node.sel .mn-nome{ border-color:var(--forest); box-shadow:0 1px 6px rgba(22,38,30,.20); }
   .mesa-node .mn-ocup{ position:absolute; top:100%; left:50%;
-    transform:translate(-50%, calc(var(--d)*0.10)); font-size:calc(var(--d)*0.095);
+    transform:translate(-50%, calc(var(--d)*0.16 + 6px)); font-size:max(11px, calc(var(--d)*0.1));
     font-variant-numeric:tabular-nums; pointer-events:none; }
   .mesa-node .mn-dot{ position:absolute; top:calc(var(--d)*0.15); right:calc(var(--d)*0.15);
     width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
@@ -201,15 +222,18 @@ $CAS = casalInfo(defsAtuais($conn));
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:2px; z-index:18; }
 
   /* Pastilhas de pessoas (mesa selecionada) — arrastáveis entre mesas */
-  /* Descem o suficiente para não taparem o nome da mesa, que agora fica
-     debaixo do desenho. */
+  /* Descem o suficiente para não taparem o nome da mesa, que fica debaixo do
+     desenho. O nome de quem se senta lê-se em pixéis, não em proporção do
+     desenho: era o que fazia com que, numa mesa pequena, os convidados
+     ficassem escritos a 8px. */
   .mesa-membros{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
-    transform:translate(-50%, calc(var(--d)/2 + var(--d)*0.16 + 8px)); z-index:17;
-    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; width:calc(var(--d)*1.35); pointer-events:none; }
-  .mesa-membros.acima{ transform:translate(-50%, calc(-100% - var(--d)/2 - 8px)); }
-  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:calc(var(--d)*0.09); line-height:1.1;
-    padding:.18rem .55rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
-    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:calc(var(--d)*1.0); overflow:hidden; text-overflow:ellipsis; }
+    transform:translate(-50%, calc(var(--d)/2 + var(--d)*0.16 + 26px)); z-index:17;
+    display:flex; flex-wrap:wrap; gap:.28rem; justify-content:center; width:calc(var(--d)*1.6); pointer-events:none; }
+  .mesa-membros.acima{ transform:translate(-50%, calc(-100% - var(--d)/2 - 10px)); }
+  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff;
+    font-size:clamp(12.5px, calc(var(--d)*0.105), 15px); line-height:1.15; font-weight:500;
+    padding:.22rem .6rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
+    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:calc(var(--d)*1.5); overflow:hidden; text-overflow:ellipsis; }
   .mesa-membros .mp:hover{ background:var(--forest-deep); }
   body.a-arrastar-item .mp{ pointer-events:none; }
 
@@ -331,12 +355,9 @@ $CAS = casalInfo(defsAtuais($conn));
           </button>
         </div>
       </div>
-      <div class="legenda" style="margin-bottom:.7rem">
-        <span class="lg-vazia"><i></i>Vazia</span>
-        <span class="lg-parcial"><i></i>A encher</span>
-        <span class="lg-cheia"><i></i>Completa</span>
-        <span class="lg-excede"><i></i>Excede</span>
-      </div>
+      <!-- Preenchida por renderLegenda(): quatro pastilhas com o sinal, o que
+           ele quer dizer, e quantas mesas estão assim neste momento. -->
+      <div class="legenda" id="legenda"></div>
       <div class="canvas-wrap" id="canvas-wrap">
         <div class="planta-viewport" id="planta-viewport">
           <div class="planta" id="planta">
