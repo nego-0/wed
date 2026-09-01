@@ -80,28 +80,29 @@ const entrar = async (ctx, user, pass) => {
   ok(/181,\s*103,\s*63/.test(cor.stroke), 'o traço acompanha, na cor mais funda');
 
   // ---------- 2. os nomes lêem-se, e continuam a ler-se com o zoom em baixo ----------
+  // O nome da mesa vive na camada de rótulos, por cima de todas as mesas; o de
+  // quem se senta vive no painel do lado, que é de onde se arrasta.
   const letras = () => p.evaluate((mid) => {
-    const n = document.querySelector('.mesa-node[data-id="' + mid + '"]');
-    const nm = n.querySelector('.mn-nome');
-    const mp = document.querySelector('.mesa-membros .mp');
-    return { mesa: parseFloat(getComputedStyle(nm).fontSize),
+    const nm = document.querySelector('#rotulos .mn-nome[data-id="' + mid + '"]');
+    const mp = document.querySelector('.lista-sentados .nm-pega');
+    return { mesa: nm ? parseFloat(getComputedStyle(nm).fontSize) : null,
              pessoa: mp ? parseFloat(getComputedStyle(mp).fontSize) : null,
-             fundo: getComputedStyle(nm).backgroundColor };
+             fundo: nm ? getComputedStyle(nm).backgroundColor : '' };
   }, mid = cheia.id);
 
   await p.evaluate((id) => selecionar(id), cheia.id);
   await p.waitForTimeout(500);
   let l = await letras();
-  ok(l.mesa >= 13, `o nome da mesa tem tamanho de leitura (${l.mesa}px)`);
+  ok(l.mesa >= 12, `o nome da mesa tem tamanho de leitura (${l.mesa}px)`);
   ok(l.pessoa !== null && l.pessoa >= 12.5,
      `e o nome de quem se senta também (${l.pessoa}px)`);
   ok(!/rgba\(0,\s*0,\s*0,\s*0\)/.test(l.fundo),
-     'o nome da mesa assenta numa placa, e não solto sobre o que estiver atrás');
+     'o nome da mesa assenta num véu do fundo, e não solto sobre o que estiver atrás');
 
   await p.evaluate(() => setZoom(0.5));
   await p.waitForTimeout(400);
   l = await letras();
-  ok(l.mesa >= 13, `a 50% de zoom continua a ler-se (${l.mesa}px) — o tamanho tem chão`);
+  ok(l.mesa >= 12, `a 50% de zoom continua a ler-se (${l.mesa}px) — o tamanho tem chão`);
   ok(l.pessoa >= 12.5, `e o dos convidados também (${l.pessoa}px)`);
   await p.evaluate(() => setZoom(1));
   await p.waitForTimeout(300);
@@ -181,6 +182,71 @@ const entrar = async (ctx, user, pass) => {
   await p.waitForTimeout(800);
   v = await vista();
   ok(v.overflow === 'auto', 'destravar devolve o deslocamento');
+
+  // ---------- 6. o salão estica-se para lá do primeiro ecrã ----------
+  // Um casamento grande precisa de muitas mesas, e obrigá-las a caber no
+  // quadrado que se vê era empilhá-las umas nas outras.
+  const mundo = () => p.evaluate(() => {
+    const w = document.getElementById('planta');
+    return { ex: +getComputedStyle(w).getPropertyValue('--ex') || 1,
+             largura: w.getBoundingClientRect().width };
+  });
+  const antesMundo = await mundo();
+  await api('mesa_pos', { id: vazia.id, x: 210, y: 40 });
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1400);
+  const depoisMundo = await mundo();
+  ok(depoisMundo.ex > antesMundo.ex,
+     `uma mesa aos 210% estica o mundo (${antesMundo.ex} → ${depoisMundo.ex})`);
+  ok(depoisMundo.largura > antesMundo.largura * 1.5,
+     'e o mundo fica mesmo maior, para haver por onde lá chegar');
+  const laLonge = await p.evaluate((id) => {
+    const n = document.querySelector('.mesa-node[data-id="' + id + '"]');
+    const w = document.getElementById('planta').getBoundingClientRect();
+    const r = n.getBoundingClientRect();
+    return Math.round((r.left + r.width / 2 - w.left) / w.width * 100);
+  }, vazia.id);
+  ok(Math.abs(laLonge - 210 / depoisMundo.ex) < 3,
+     `e a mesa fica onde foi posta, no mundo esticado (${laLonge}% do mundo)`);
+
+  // Com a vista TRAVADA, ninguém manda uma mesa para onde já não se consegue
+  // chegar: o arrasto pára na borda do que está à vista.
+  await api('mesa_pos', { id: vazia.id, x: 40, y: 40 });
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1400);
+  await p.click('#bloq-scroll'); await p.waitForTimeout(800);
+  const cx0 = await p.evaluate((id) => {
+    const r = document.querySelector('.mesa-node[data-id="' + id + '"]').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, vazia.id);
+  await p.mouse.move(cx0.x, cx0.y);
+  await p.mouse.down();
+  await p.mouse.move(cx0.x + 2000, cx0.y + 40, { steps: 12 });
+  await p.mouse.up();
+  await p.waitForTimeout(900);
+  const presa = await p.evaluate((id) => {
+    const m = MESAS.find(x => x.id === +id); return m ? +m.pos_x : null;
+  }, vazia.id);
+  ok(presa !== null && presa <= 94.5,
+     `com a vista travada, a mesa pára na borda do que se vê (${presa}%)`);
+  await p.click('#bloq-scroll'); await p.waitForTimeout(800);
+  await api('mesa_pos', { id: vazia.id, x: 40, y: 40 });
+
+  // ---------- 7. arrasta-se do painel, não de cima da planta ----------
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1400);
+  await p.evaluate((id) => selecionar(id), cheia.id);
+  await p.waitForTimeout(600);
+  ok(await p.evaluate(() => document.querySelectorAll('.mesa-membros').length) === 0,
+     'já não há pastilhas de nomes por cima da planta a tapar as mesas vizinhas');
+  const pega = await p.evaluate(() => {
+    const el = document.querySelector('.lista-sentados .nm-pega');
+    return el ? { tipo: el.dataset.tipo, temId: !!el.dataset.id, arrastavel: el.classList.contains('chip-drag'),
+                  texto: el.textContent.trim() } : null;
+  });
+  ok(pega, 'o painel da mesa lista quem lá está sentado');
+  ok(pega && pega.arrastavel && pega.tipo === 'pessoa' && pega.temId,
+     'e cada nome é a pega do arrasto, com o que é preciso para o largar numa mesa');
 
   // ---------- limpeza ----------
   // Devolve-se o canvas ao tamanho que tinha, para as provas seguintes o

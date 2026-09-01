@@ -93,8 +93,12 @@ $CAS = casalInfo(defsAtuais($conn));
      o salão inteiro na largura que houvesse, e as mesas passavam uma por cima
      da outra. Agora o mundo mantém-se e é a VISTA que se desloca: é para isso
      que serve o scroll, e é por isso que ele tem de haver nos dois eixos. */
-  .planta{ position:relative; width:calc(max(1, var(--z))*100%); height:calc(max(1, var(--z))*100%);
-    min-width:calc(var(--z)*640px); min-height:calc(var(--z)*420px);
+  /* --ex/--ey esticam o mundo quando há mesas para lá do primeiro ecrã: um
+     casamento grande precisa de muitas mesas, e obrigá-las a caber no quadrado
+     que se vê era empilhá-las umas nas outras. Quem estica é o renderPlanta. */
+  .planta{ position:relative;
+    width:calc(max(1, var(--z))*var(--ex, 1)*100%); height:calc(max(1, var(--z))*var(--ey, 1)*100%);
+    min-width:calc(var(--z)*var(--ex, 1)*640px); min-height:calc(var(--z)*var(--ey, 1)*420px);
     border-radius:14px; transition:width .18s ease, height .18s ease; touch-action:none; user-select:none;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
@@ -147,11 +151,16 @@ $CAS = casalInfo(defsAtuais($conn));
      a arrastar sem querer — e é por isso que trava o scroll, não o zoom. */
   body.bloq-scroll .planta-viewport{ overflow:hidden !important; }
   /* Barras discretas, para não roubarem espaço à planta. */
-  .planta-viewport::-webkit-scrollbar{ width:10px; height:10px; }
+  /* Barras finas e translúcidas: estão ali para se poder chegar ao resto do
+     salão, não para se olhar para elas. Ganham corpo quando o rato entra no
+     canvas — que é quando se vai precisar delas. */
+  .planta-viewport{ scrollbar-width:thin; scrollbar-color:rgba(44,69,54,.16) transparent; }
+  .planta-viewport:hover{ scrollbar-color:rgba(44,69,54,.34) transparent; }
+  .planta-viewport::-webkit-scrollbar{ width:7px; height:7px; }
   .planta-viewport::-webkit-scrollbar-track{ background:transparent; }
-  .planta-viewport::-webkit-scrollbar-thumb{ background:var(--gold-soft); border-radius:50px;
-    border:2px solid var(--ivory); }
-  .planta-viewport::-webkit-scrollbar-thumb:hover{ background:var(--gold); }
+  .planta-viewport::-webkit-scrollbar-thumb{ background:rgba(44,69,54,.16); border-radius:50px; }
+  .planta-viewport:hover::-webkit-scrollbar-thumb{ background:rgba(44,69,54,.34); }
+  .planta-viewport::-webkit-scrollbar-thumb:hover{ background:rgba(44,69,54,.5); }
   .planta-viewport::-webkit-scrollbar-corner{ background:transparent; }
 
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
@@ -218,40 +227,47 @@ $CAS = casalInfo(defsAtuais($conn));
 
   .mesa-node.a-arrastar{ cursor:grabbing; filter:drop-shadow(0 10px 18px rgba(22,38,30,.30)); z-index:20; }
   .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:1px; z-index:15; }
-  /* O nome vive por baixo do desenho: dentro dele bateria nas cadeiras. Fora,
-     pode calhar por cima da mesa do lado — daí a placa, que o mantém legível.
-     O tamanho tem um chão em pixéis: a 50% de zoom, uma letra proporcional ao
-     desenho ficava por ler, e um nome que não se lê não serve para nada. */
-  .mesa-node .mn-nome{ position:absolute; top:100%; left:50%; transform:translate(-50%,2px);
-    font-family:var(--serif); font-weight:700;
-    font-size:clamp(13px, calc(var(--d)*0.115), 17px); line-height:1.15; color:var(--ink);
-    max-width:calc(var(--d)*1.7); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    background:#fff; border:1px solid var(--line); border-radius:7px;
-    padding:.05em .4em; box-shadow:0 1px 4px rgba(22,38,30,.10); pointer-events:none; }
-  .mesa-node.sel .mn-nome{ border-color:var(--forest); box-shadow:0 1px 6px rgba(22,38,30,.20); }
-  .mesa-node .mn-ocup{ position:absolute; top:100%; left:50%;
-    transform:translate(-50%, calc(var(--d)*0.16 + 6px)); font-size:max(11px, calc(var(--d)*0.1));
-    font-variant-numeric:tabular-nums; pointer-events:none; }
+  /* Os NOMES DAS MESAS, na sua própria camada, por cima de todas elas.
+     Dentro do nó, o nome de uma mesa ficava tapado pela mesa desenhada a
+     seguir — e um nome tapado não serve para nada, por muito bem escrito que
+     esteja. Aqui não há quem lhe passe por cima.
+     Discretos: sem caixa nem sombra pesada, só o texto sobre um véu do fundo,
+     que é o que o mantém legível por cima de uma cadeira ou de uma linha da
+     grelha. E com chão em pixéis, para a 50% de zoom continuar a ler-se. */
+  .planta-rotulos{ position:absolute; inset:0; z-index:19; pointer-events:none; }
+  .planta-rotulos .mn-nome{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
+    transform:translate(-50%, calc(var(--d)/2 + 2px));
+    font-family:var(--serif); font-weight:600;
+    font-size:clamp(12px, calc(var(--d)*0.105), 15px); line-height:1.2; color:var(--ink);
+    max-width:calc(var(--d)*1.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    text-align:center;
+    background:color-mix(in srgb, var(--ivory) 88%, transparent);
+    border-radius:6px; padding:0 .35em;
+    text-shadow:0 1px 0 var(--ivory), 0 -1px 0 var(--ivory), 1px 0 0 var(--ivory), -1px 0 0 var(--ivory); }
+  /* Sem color-mix (navegadores antigos), fica o marfim cheio: legível na mesma. */
+  @supports not (background:color-mix(in srgb, red 50%, transparent)){
+    .planta-rotulos .mn-nome{ background:var(--ivory); }
+  }
+  .planta-rotulos .mn-nome.sel{ color:var(--forest-deep); font-weight:700;
+    box-shadow:0 0 0 1.5px var(--forest); background:var(--ivory); }
   .mesa-node .mn-dot{ position:absolute; top:calc(var(--d)*0.15); right:calc(var(--d)*0.15);
     width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
   .dot-vazia{ background:#b7bbb5; } .dot-parcial{ background:var(--gold); } .dot-cheia{ background:#1f7a3d; } .dot-excede{ background:var(--danger); }
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:2px; z-index:18; }
 
-  /* Pastilhas de pessoas (mesa selecionada) — arrastáveis entre mesas */
-  /* Descem o suficiente para não taparem o nome da mesa, que fica debaixo do
-     desenho. O nome de quem se senta lê-se em pixéis, não em proporção do
-     desenho: era o que fazia com que, numa mesa pequena, os convidados
-     ficassem escritos a 8px. */
-  .mesa-membros{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
-    transform:translate(-50%, calc(var(--d)/2 + var(--d)*0.16 + 26px)); z-index:17;
-    display:flex; flex-wrap:wrap; gap:.28rem; justify-content:center; width:calc(var(--d)*1.6); pointer-events:none; }
-  .mesa-membros.acima{ transform:translate(-50%, calc(-100% - var(--d)/2 - 10px)); }
-  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff;
-    font-size:clamp(12.5px, calc(var(--d)*0.105), 15px); line-height:1.15; font-weight:500;
-    padding:.22rem .6rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
-    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:calc(var(--d)*1.5); overflow:hidden; text-overflow:ellipsis; }
-  .mesa-membros .mp:hover{ background:var(--forest-deep); }
-  body.a-arrastar-item .mp{ pointer-events:none; }
+  /* Quem se senta na mesa escolhida lê-se AO LADO, no painel, e já não em
+     pastilhas por cima da planta. As pastilhas tapavam as mesas vizinhas — e
+     eram justamente essas o destino de quem se queria mudar de lugar. Cada
+     nome é a pega do arrasto: leva-se dali para a mesa que se quiser. */
+  .lista-sentados .nm-pega{ flex:1; min-width:0; display:inline-block;
+    background:var(--forest); color:#fff; border-radius:50px;
+    padding:.24rem .7rem; font-size:.86rem; line-height:1.25; font-weight:500;
+    cursor:grab; touch-action:none; user-select:none;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lista-sentados .nm-pega:hover{ background:var(--forest-deep); }
+  .lista-sentados .nm-pega:active{ cursor:grabbing; }
+  .lista-sentados .nm-pega .gi-m, .lista-sentados .nm-pega .gi-f{ color:#eef3ee; }
+  .dica-mini{ font-size:.76rem; color:#9aa09a; margin:-.2rem 0 .4rem; }
 
   /* Painel direito: conjunto de abas */
   .painel-mesas{ display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
@@ -303,7 +319,6 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Ícones de género / brinde nas pastilhas com nomes */
   .gi{ font-weight:700; line-height:1; }
   .gi-m{ color:#4a6b7a; } .gi-f{ color:#b56b78; } .gi-b{ font-weight:400; }
-  .mp .gi-m, .mp .gi-f{ color:#eef3ee; } /* pastilhas verdes: ícone claro (a forma ♂/♀ distingue) */
 
   /* Dropdown de pesquisa (substitui os <select> de listas longas) */
   .combo{ position:relative; display:block; width:100%; }
@@ -382,6 +397,10 @@ $CAS = casalInfo(defsAtuais($conn));
           <div class="planta" id="planta">
             <div class="guia gv" id="guia-v"></div>
             <div class="guia gh" id="guia-h"></div>
+            <?php // Os nomes das mesas vivem numa camada por cima de todas
+                  // elas: dentro do nó, o nome de uma mesa ficava tapado pela
+                  // mesa desenhada a seguir. ?>
+            <div class="planta-rotulos" id="rotulos"></div>
             <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
           </div>
         </div>

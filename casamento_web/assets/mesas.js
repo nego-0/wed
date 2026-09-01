@@ -276,10 +276,34 @@ function estadoOcup(m){
   return 'vazia';
 }
 
+// ---------- o mundo, e o quanto ele se estende ----------
+//
+// As posições guardam-se em percentagem de um mundo BASE — o que cabe no canvas
+// a 100%. Um casamento grande não cabe nesse quadrado, e obrigá-lo a caber era
+// empilhar mesas umas em cima das outras. Por isso o mundo ESTICA: se houver
+// uma mesa aos 180%, ele passa a ter 1.9 vezes a largura base, e é o scroll que
+// leva lá. Com a vista travada não estica — quem a travou quer a planta quieta.
+let EXT={x:1,y:1};
+function calcularExtensao(){
+  let mx=100, my=100;
+  MESAS.forEach(m=>{ mx=Math.max(mx,(+m.pos_x||50)+6); my=Math.max(my,(+m.pos_y||50)+8); });
+  EXT={ x: Math.min(6, mx/100), y: Math.min(6, my/100) };
+  const planta=$('planta');
+  planta.style.setProperty('--ex', EXT.x);
+  planta.style.setProperty('--ey', EXT.y);
+}
+// Da percentagem guardada (do mundo base) para a percentagem do mundo esticado.
+const posCss = (v, eixo) => (v / (eixo === 'x' ? EXT.x : EXT.y)) + '%';
+
 // ---------- planta ----------
 function renderPlanta(){
   const planta=$('planta');
-  planta.querySelectorAll('.mesa-node, .mesa-membros, .noivos-ala').forEach(n=>n.remove());
+  planta.querySelectorAll('.mesa-node, .noivos-ala').forEach(n=>n.remove());
+  calcularExtensao();
+  // Os nomes vivem numa camada por CIMA de todas as mesas. Dentro do nó, o nome
+  // de uma mesa ficava tapado pela mesa desenhada a seguir — e um nome tapado
+  // não serve para nada, por muito bem escrito que esteja.
+  const rotulos=$('rotulos'); rotulos.innerHTML='';
   $('dica-vazia').style.display = MESAS.length ? 'none' : 'flex';
   MESAS.forEach(m=>{
     const cap=+m.capacidade||0, oc=+m.ocupacao||0, st=estadoOcup(m);
@@ -300,13 +324,20 @@ function renderPlanta(){
     // tudo o que se mede a partir dela — as pastilhas dos convidados, as alas
     // dos padrinhos — continue a bater certo.
     node.style.setProperty('--dbase', (d*CAIXA)+'px');
-    node.style.left=px+'%'; node.style.top=py+'%';
+    node.style.left=posCss(px,'x'); node.style.top=posCss(py,'y');
     node.innerHTML=`<span class="mn-dot dot-${st}"></span>`
       + mesaIcone({ forma, capacidade:cap, ocupacao:oc, nome:m.nome },
-                  { tam: Math.round(d*CAIXA) })
-      + `<span class="mn-nome">${esc(m.nome)}</span>`
-      + (noivos && oc ? `<span class="mn-ocup">${oc}</span>` : '');
+                  { tam: Math.round(d*CAIXA) });
     planta.appendChild(node);
+
+    // O rótulo, na camada de cima.
+    const rot=document.createElement('span');
+    rot.className='mn-nome'+(SEL===m.id?' sel':'');
+    rot.dataset.id=m.id;
+    rot.style.setProperty('--dbase', (d*CAIXA)+'px');
+    rot.style.left=posCss(px,'x'); rot.style.top=posCss(py,'y');
+    rot.textContent = m.nome + (noivos && oc ? ' · ' + oc : '');
+    rotulos.appendChild(rot);
 
     if(noivos){
       // Alas de padrinhos (esquerda) e madrinhas (direita) — detetadas pelo papel do convidado.
@@ -315,7 +346,7 @@ function renderPlanta(){
         if(!gente.length) return;
         const ala=document.createElement('div');
         ala.className='noivos-ala '+lado; ala.style.setProperty('--dbase', (d*CAIXA)+'px');
-        ala.style.left=px+'%'; ala.style.top=py+'%';
+        ala.style.left=posCss(px,'x'); ala.style.top=posCss(py,'y');
         ala.innerHTML=`<div class="ala-tit">${tit}</div>`+gente.map(g=>{
           const prim=(g.nome||'').split(' ')[0];
           return `<div class="ala-p" data-id="${g.id}" title="${esc(g.nome)} — ${tit}">${genIco(g.genero)}${esc(prim)}</div>`;
@@ -324,20 +355,9 @@ function renderPlanta(){
       });
       return; // a mesa dos noivos só tem padrinhos/madrinhas, nas alas
     }
-
-    // Pastilhas de integrantes da mesa selecionada.
-    if(SEL===m.id){
-      const pessoas=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id);
-      if(pessoas.length){
-        const cl=document.createElement('div');
-        cl.className='mesa-membros'+(py>62?' acima':'');
-        cl.style.setProperty('--dbase', (d*CAIXA)+'px'); cl.style.left=px+'%'; cl.style.top=py+'%';
-        cl.innerHTML=pessoas.map(g=>{ const prim=(g.nome||'').split(' ')[0];
-          return `<span class="mp" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}" title="${esc(g.nome)} — arraste para outra mesa">${genIco(g.genero)}${esc(prim)}</span>`;
-        }).join('');
-        planta.appendChild(cl);
-      }
-    }
+    // Quem se senta na mesa escolhida lê-se AO LADO, no painel, e não por cima
+    // da planta. As pastilhas ficavam a tapar as mesas vizinhas — e era
+    // justamente para essas que se queria arrastar alguém. Ver detalheMesa().
   });
 }
 
@@ -346,8 +366,8 @@ let drag=null;
 $('planta').addEventListener('pointerdown', e=>{
   const node=e.target.closest('.mesa-node');
   if(!node){
-    // Clique no fundo do canvas (nem mesa nem pastilha): sem arrastar, limpa a seleção.
-    if(e.target.closest('.mp')) return;
+    // Clique no fundo do canvas, fora de qualquer mesa: sem arrastar, larga a
+    // que estivesse escolhida.
     const sx=e.clientX, sy=e.clientY;
     window.addEventListener('pointerup', ev=>{
       if(Math.abs(ev.clientX-sx)<4 && Math.abs(ev.clientY-sy)<4) desselecionar();
@@ -377,9 +397,18 @@ $('planta').addEventListener('pointerdown', e=>{
 function onMove(e){
   if(!drag) return;
   if(Math.abs(e.clientX-drag.sx)>3||Math.abs(e.clientY-drag.sy)>3) drag.moved=true;
-  let x=(e.clientX-drag.rect.left)/drag.rect.width*100;
-  let y=(e.clientY-drag.rect.top)/drag.rect.height*100;
-  x=Math.max(6,Math.min(94,x)); y=Math.max(8,Math.min(92,y));
+  // O rect é o do MUNDO inteiro (já esticado): divide-se por ele e volta-se à
+  // percentagem base multiplicando pela extensão.
+  let x=(e.clientX-drag.rect.left)/drag.rect.width*100*EXT.x;
+  let y=(e.clientY-drag.rect.top)/drag.rect.height*100*EXT.y;
+  // Com a vista destravada, uma mesa pode sair do quadrado que se vê: o mundo
+  // estica atrás dela. Um casamento grande precisa de muitas mesas, e cabê-las
+  // todas no primeiro ecrã era empilhá-las. Travada a vista, a mesa fica dentro
+  // do que está à vista — senão largava-se uma mesa num sítio onde já não se
+  // consegue chegar.
+  const tecto = vistaFixa() ? 94 : 560;
+  const tectoY = vistaFixa() ? 92 : 560;
+  x=Math.max(6,Math.min(tecto,x)); y=Math.max(8,Math.min(tectoY,y));
   const SNAP=1.6; let snapX=null, snapY=null;
   const alvosX=[50], alvosY=[50];
   MESAS.forEach(o=>{ if(o.id!==drag.id){ if(o.pos_x!=null)alvosX.push(o.pos_x); if(o.pos_y!=null)alvosY.push(o.pos_y); } });
@@ -387,9 +416,12 @@ function onMove(e){
   alvosY.forEach(vy=>{ if(Math.abs(vy-y)<SNAP && (snapY===null||Math.abs(vy-y)<Math.abs(snapY-y))) snapY=vy; });
   if(snapX!==null) x=snapX; if(snapY!==null) y=snapY;
   const gv=$('guia-v'), gh=$('guia-h');
-  if(snapX!==null){ gv.style.left=snapX+'%'; gv.classList.add('on'); } else gv.classList.remove('on');
-  if(snapY!==null){ gh.style.top=snapY+'%'; gh.classList.add('on'); } else gh.classList.remove('on');
-  drag.node.style.left=x+'%'; drag.node.style.top=y+'%'; drag.x=x; drag.y=y;
+  if(snapX!==null){ gv.style.left=posCss(snapX,'x'); gv.classList.add('on'); } else gv.classList.remove('on');
+  if(snapY!==null){ gh.style.top=posCss(snapY,'y'); gh.classList.add('on'); } else gh.classList.remove('on');
+  drag.node.style.left=posCss(x,'x'); drag.node.style.top=posCss(y,'y'); drag.x=x; drag.y=y;
+  // O rótulo acompanha a mesa enquanto ela vai a caminho.
+  const rot=$('rotulos').querySelector('.mn-nome[data-id="'+drag.id+'"]');
+  if(rot){ rot.style.left=drag.node.style.left; rot.style.top=drag.node.style.top; }
 }
 function onUp(){
   window.removeEventListener('pointermove', onMove);
@@ -594,10 +626,12 @@ function detalheHTML(){
     </div>
 
     <div class="rot">Pessoas nesta mesa (${pessoas.length})</div>
+    ${pessoas.length ? '<div class="dica-mini">Arraste um nome para outra mesa da planta.</div>' : ''}
     <div class="lista-sentados">
       ${pessoas.length ? pessoas.map(g=>`
         <div class="sentado">
-          <span class="nm">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+          <span class="nm-pega chip-drag" data-tipo="pessoa" data-id="${g.id}" data-label="${esc(g.nome)}"
+                title="${esc(g.nome)}${g.convite_nome?' · '+esc(g.convite_nome):''} — arraste para outra mesa">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}</span>
           ${comboHTML('mesa-pessoa', g.id, labelMesaPessoa(g), 'combo-inline')}
         </div>`).join('') : '<div class="vazio-mini">Ainda ninguém sentado nesta mesa.</div>'}
       ${notas.map(n=>`<div class="vazio-mini">+ ${n.extra} lugar(es) sem nome · ${esc(n.nome)}</div>`).join('')}
@@ -741,8 +775,10 @@ function iniciarArrasteDe(e, el){
   window.addEventListener('pointermove', talvezArrastar);
   window.addEventListener('pointerup', cancelarArme, {once:true});
 }
+// Tudo o que se arrasta para uma mesa sai do painel do lado: os cartões das
+// listas e os nomes de quem já está sentado na mesa escolhida. Já não há nada
+// a arrastar de cima da planta — era o que tapava as mesas vizinhas.
 $('tab-body').addEventListener('pointerdown', e=>{ const chip=e.target.closest('.chip-drag'); if(chip) iniciarArrasteDe(e, chip); });
-$('planta').addEventListener('pointerdown', e=>{ const mp=e.target.closest('.mp'); if(mp) iniciarArrasteDe(e, mp); });
 function talvezArrastar(e){
   if(!pend) return;
   if(Math.abs(e.clientX-pend.sx)>5 || Math.abs(e.clientY-pend.sy)>5){
@@ -779,7 +815,7 @@ async function largarArraste(e){
   document.body.classList.remove('a-arrastar-item');
   const node=mesaSob(e);
   document.querySelectorAll('.mesa-node.drop-alvo').forEach(n=>n.classList.remove('drop-alvo'));
-  document.querySelectorAll('.chip-drag.arrastando, .mp.arrastando').forEach(c=>c.classList.remove('arrastando'));
+  document.querySelectorAll('.chip-drag.arrastando').forEach(c=>c.classList.remove('arrastando'));
   if(ghost){ ghost.remove(); ghost=null; }
   const item=arrItem; arrItem=null;
   if(!node || !item) return;

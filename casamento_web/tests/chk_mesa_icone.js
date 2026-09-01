@@ -119,7 +119,9 @@ const entrar = async (ctx, user, pass) => {
     return { temSvg: !!svg,
              cadeiras: svg ? svg.querySelectorAll('.mi-c').length : 0,
              numero: svg ? (svg.querySelector('.mi-n') || {}).textContent : '',
-             nome: (n.querySelector('.mn-nome') || {}).textContent || '',
+             // O nome vive na camada de rótulos, por cima de todas as mesas:
+             // dentro do nó, ficava tapado pela mesa desenhada a seguir.
+             nome: (document.querySelector('#rotulos .mn-nome[data-id="' + id + '"]') || {}).textContent || '',
              nos: document.querySelectorAll('.mesa-node').length,
              comIcone: document.querySelectorAll('.mesa-node > svg.mesa-ico').length };
   }, nova.mesa ? nova.mesa.id : nova.id);
@@ -128,7 +130,8 @@ const entrar = async (ctx, user, pass) => {
      `com uma cadeira por lugar (${naPlanta && naPlanta.cadeiras})`);
   ok(naPlanta && naPlanta.numero === '9',
      `e a capacidade lá dentro, que a planta antes não dizia (${naPlanta && naPlanta.numero})`);
-  ok(naPlanta && naPlanta.nome.includes('ZZ Planta'), 'o nome fica ao pé dela');
+  ok(naPlanta && naPlanta.nome.includes('ZZ Planta'),
+     'o nome fica ao pé dela, na camada que nenhuma mesa tapa');
   ok(naPlanta && naPlanta.nos === naPlanta.comIcone,
      `nenhuma mesa da planta ficou por converter (${naPlanta && naPlanta.comIcone}/${naPlanta && naPlanta.nos})`);
   // A mesa dos noivos também: é a que tem desenho próprio, e por isso era a que
