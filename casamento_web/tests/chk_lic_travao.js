@@ -74,13 +74,13 @@ const entrar = async (ctx, user, pass) => {
     const pop = document.getElementById('mm-' + id);
     if (!pop) return null;
     return { accoes: [...pop.querySelectorAll('button')].map(x => x.textContent.trim()),
-             nota: (pop.querySelector('.mm-nota') || {}).textContent || '' };
+             riscas: pop.querySelectorAll('hr').length };
   }, cid);
   ok(menu, 'a linha do casamento tem o seu menu de ações');
   ok(!menu.accoes.some(x => /^Suspender$|^Arquivar$/.test(x)),
      `suspender e arquivar não estão no menu (${menu.accoes.join(', ')})`);
-  ok(/licen/i.test(menu.nota) && /revogue/i.test(menu.nota),
-     'e no lugar delas está a explicação, com o caminho');
+  ok(menu.riscas === 0,
+     'e sem elas não fica uma risca a separar coisa nenhuma');
   ok(menu.accoes.some(x => /Revogar licença/.test(x)),
      'a revogação — que é o que se faz primeiro — continua à mão');
 

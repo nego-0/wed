@@ -177,6 +177,10 @@ const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>
 const ehNoivos=m=>m&&m.especial==='noivos';
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
 // A mesa dos noivos tem a dimensão de uma mesa comum (tamanho geral).
+// Quanto é que a caixa do nó é maior do que o tampo. O desenho da mesa põe as
+// cadeiras à volta dela, e o tampo fica a ocupar cerca de dois terços do
+// quadrado: 1.6 devolve à mesa, no ecrã, o tamanho que ela tinha antes.
+const CAIXA = 1.6;
 function baseMesa(m){
   if(ehNoivos(m)) return 78;
   const t=m.tamanho;
@@ -248,14 +252,23 @@ function renderPlanta(){
     const node=document.createElement('div');
     const forma = noivos ? 'noivos' : (m.forma||'redonda');
     node.className='mesa-node forma-'+forma+' cor-'+(noivos?'noivos':(m.cor||'neutra'))+(SEL===m.id?' sel':'');
-    node.dataset.id=m.id; node.style.setProperty('--dbase', d+'px');
+    node.dataset.id=m.id;
+    // A planta passa a desenhar a MESMA mesa que a lista e o escolhedor: o
+    // tampo, uma cadeira por lugar e a lotação lá dentro. Antes eram dois
+    // desenhos da mesma coisa — um rectângulo de cor aqui, o ícone ali — e só
+    // um deles dizia quantos lugares havia.
+    //
+    // O ícone traz as cadeiras POR FORA do tampo, e por isso ocupa mais do que
+    // o tampo ocupava: a caixa do nó cresce com ele (o CAIXA abaixo), para que
+    // tudo o que se mede a partir dela — as pastilhas dos convidados, as alas
+    // dos padrinhos — continue a bater certo.
+    node.style.setProperty('--dbase', (d*CAIXA)+'px');
     node.style.left=px+'%'; node.style.top=py+'%';
-    if(noivos){
-      node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="noivos-rings"><i></i><i></i></span>`+
-        `<span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc||''}</span>`;
-    } else {
-      node.innerHTML=`<span class="mn-dot dot-${st}"></span><span class="mn-nome">${esc(m.nome)}</span><span class="mn-ocup">${oc}${cap?'/'+cap:''}</span>`;
-    }
+    node.innerHTML=`<span class="mn-dot dot-${st}"></span>`
+      + mesaIcone({ forma, capacidade:cap, ocupacao:oc, nome:m.nome },
+                  { tam: Math.round(d*CAIXA) })
+      + `<span class="mn-nome">${esc(m.nome)}</span>`
+      + (noivos && oc ? `<span class="mn-ocup">${oc}</span>` : '');
     planta.appendChild(node);
 
     if(noivos){

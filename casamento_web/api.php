@@ -1172,7 +1172,8 @@ function licResumo(mysqli $conn, int $cid): array {
         'prazo'      => licencaInfo($conn, $cid),
         'modulos'    => licencaModulos($conn, $cid),
         'pendente'   => licPedido($conn, $cid, 'pendente'),
-        'recusado'   => licPedido($conn, $cid, 'recusado'),
+        // O último recusado vinha à parte, para um cartão próprio na página. O
+        // histórico já traz as recusas, com data e motivo — deixou de ser preciso.
         'historico'  => licHistorico($conn, $cid),
         'catalogo'   => licCatalogo($conn),
         'politica'   => licPolitica($conn),

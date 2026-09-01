@@ -138,66 +138,78 @@ $CAS = casalInfo(defsAtuais($conn));
   .guia.gh{ left:-4px; right:-4px; height:1.5px; transform:translateY(-50%); }
   .guia.on{ opacity:.75; }
 
-  .mesa-node{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); transform:translate(-50%,-50%); cursor:grab;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
-    border:3px solid var(--gold-soft); background:var(--cream); color:var(--ink);
-    box-shadow:0 4px 12px rgba(22,38,30,.12); transition:box-shadow .15s; }
-  /* Formas */
-  .forma-redonda{ width:var(--d); height:var(--d); border-radius:50%; }
-  .forma-oval{ width:calc(var(--d)*1.5); height:calc(var(--d)*.78); border-radius:50%; }
-  .forma-quadrada{ width:var(--d); height:var(--d); border-radius:14px; }
-  .forma-retangular{ width:calc(var(--d)*1.5); height:calc(var(--d)*.72); border-radius:12px; }
-  .forma-comprida{ width:calc(var(--d)*2.1); height:calc(var(--d)*.5); border-radius:10px; }
-  .forma-ferradura{ width:calc(var(--d)*1.6); height:calc(var(--d)*1.05); border-radius:16px 16px 8px 8px;
-    clip-path:polygon(0 0,30% 0,30% 42%,70% 42%,70% 0,100% 0,100% 100%,0 100%);
-    justify-content:flex-end; padding-bottom:calc(var(--d)*0.14); }
-  /* Mesa dos noivos — ilustração simbólica (alianças entrelaçadas), compacta */
-  .forma-noivos{ width:calc(var(--d)*1.08); height:calc(var(--d)*1.0); border-radius:16px;
-    justify-content:flex-end; padding-bottom:calc(var(--d)*0.12); }
-  .cor-noivos, .forma-noivos{ background:linear-gradient(150deg,#faf1db,#f0dcae);
-    border-color:#B4864A; color:#5c4321; box-shadow:0 6px 20px rgba(180,134,74,.38); }
-  .noivos-rings{ position:absolute; top:calc(var(--d)*0.13); left:50%; transform:translateX(-50%); display:flex; }
-  .noivos-rings i{ width:calc(var(--d)*0.32); height:calc(var(--d)*0.32); border-radius:50%;
-    border:calc(var(--d)*0.058) solid #B4864A; background:transparent; box-sizing:border-box; }
-  .noivos-rings i:last-child{ margin-left:calc(var(--d)*-0.13); border-color:#d0a75f; }
+  /* O nó é a CAIXA do desenho, e mais nada: quem dá a forma é o ícone de
+     assets/mesa-icone.js — o mesmo que a lista de mesas e o escolhedor usam.
+     Havia aqui um segundo desenho da mesma mesa, feito de border-radius e
+     clip-path, e ele não sabia dizer quantos lugares a mesa tinha. */
+  .mesa-node{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
+    width:var(--d); height:var(--d); transform:translate(-50%,-50%); cursor:grab;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--ink); border-radius:14px; transition:filter .15s; }
+  .mesa-node .mesa-ico{ width:100%; height:100%; pointer-events:none; }
+
+  /* A paleta deixa de pintar uma caixa e passa a pintar o desenho: o tampo, o
+     traço das cadeiras e o número. */
+  .mesa-node{ --mt-fundo:var(--cream); --mt-linha:var(--gold-soft); --mt-tinta:var(--ink); }
+  .cor-neutra   { --mt-fundo:var(--cream); --mt-linha:var(--gold-soft); --mt-tinta:var(--ink); }
+  .cor-verde    { --mt-fundo:#e4f0e8; --mt-linha:#2C4536; --mt-tinta:#17311f; }
+  .cor-ouro     { --mt-fundo:#f6ecd6; --mt-linha:#B4864A; --mt-tinta:#5c4321; }
+  .cor-terracota{ --mt-fundo:#f5e2d9; --mt-linha:#b5673f; --mt-tinta:#6e3a25; }
+  .cor-azul     { --mt-fundo:#dfe9ed; --mt-linha:#4a6b7a; --mt-tinta:#2e4650; }
+  .cor-ameixa   { --mt-fundo:#ece1ea; --mt-linha:#7a4a6b; --mt-tinta:#4e2f45; }
+  .cor-rosa     { --mt-fundo:#f5e3e6; --mt-linha:#b56b78; --mt-tinta:#6e3844; }
+  .cor-salva    { --mt-fundo:#e8ede1; --mt-linha:#6b7a53; --mt-tinta:#3f4a30; }
+  .cor-noivos   { --mt-fundo:#f0dcae; --mt-linha:#B4864A; --mt-tinta:#5c4321; }
+  .mesa-node .mesa-ico .mi-t{ fill:var(--mt-fundo); stroke:var(--mt-linha); }
+  .mesa-node .mesa-ico .mi-c{ fill:none; stroke:var(--mt-linha); }
+  .mesa-node .mesa-ico .mi-n{ fill:var(--mt-tinta); }
+  /* Cheia: tampo cheio da cor da mesa e número ao contrário — lê-se de longe,
+     e sem depender de a cor ser verde ou não. */
+  .mesa-node .mesa-ico.cheia .mi-t{ fill:var(--mt-linha); stroke:var(--mt-linha); }
+  .mesa-node .mesa-ico.cheia .mi-c{ fill:var(--mt-linha); stroke:var(--mt-linha); }
+  .mesa-node .mesa-ico.cheia .mi-n{ fill:#fff; }
+  .mesa-node .mesa-ico.vazia .mi-t{ fill:none; }
+  .mesa-node .mesa-ico.vazia .mi-n{ fill:var(--mt-linha); }
 
   /* Alas de padrinhos (esq.) e madrinhas (dir.) junto à mesa dos noivos */
   .noivos-ala{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); z-index:16;
-    display:flex; flex-direction:column; gap:calc(var(--d)*0.06); width:calc(var(--d)*1.0); }
-  .noivos-ala.esq{ transform:translate(calc(-100% - var(--d)*0.98), -50%); }
-  .noivos-ala.dir{ transform:translate(calc(var(--d)*0.98), -50%); }
-  .noivos-ala .ala-tit{ font-size:calc(var(--d)*0.13); text-transform:uppercase; letter-spacing:.5px;
+    display:flex; flex-direction:column; gap:calc(var(--d)*0.04); width:calc(var(--d)*0.62); }
+  .noivos-ala.esq{ transform:translate(calc(-100% - var(--d)*0.5), -50%); }
+  .noivos-ala.dir{ transform:translate(calc(var(--d)*0.5), -50%); }
+  .noivos-ala .ala-tit{ font-size:calc(var(--d)*0.081); text-transform:uppercase; letter-spacing:.5px;
     color:#8a6a2f; text-align:center; font-weight:700; }
   .noivos-ala .ala-p{ background:#fff; border:1px solid #d8c193; border-radius:50px;
-    font-size:calc(var(--d)*0.14); padding:calc(var(--d)*0.05) calc(var(--d)*0.15); line-height:1.15;
+    font-size:calc(var(--d)*0.088); padding:calc(var(--d)*0.03) calc(var(--d)*0.09); line-height:1.15;
     text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#5c4321;
     user-select:none; box-shadow:0 2px 6px rgba(180,134,74,.18); }
-  /* Cores (paleta) */
-  .cor-neutra{ background:var(--cream); border-color:var(--gold-soft); color:var(--ink); }
-  .cor-verde{ background:#e4f0e8; border-color:#2C4536; color:#17311f; }
-  .cor-ouro{ background:#f6ecd6; border-color:#B4864A; color:#5c4321; }
-  .cor-terracota{ background:#f5e2d9; border-color:#b5673f; color:#6e3a25; }
-  .cor-azul{ background:#dfe9ed; border-color:#4a6b7a; color:#2e4650; }
-  .cor-ameixa{ background:#ece1ea; border-color:#7a4a6b; color:#4e2f45; }
-  .cor-rosa{ background:#f5e3e6; border-color:#b56b78; color:#6e3844; }
-  .cor-salva{ background:#e8ede1; border-color:#6b7a53; color:#3f4a30; }
 
-  .mesa-node.a-arrastar{ cursor:grabbing; box-shadow:0 10px 26px rgba(22,38,30,.28); z-index:20; }
-  .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:3px; z-index:15; }
-  .mesa-node .mn-nome{ font-family:var(--serif); font-weight:600; font-size:calc(var(--d)*0.165); line-height:1.05; flex:none;
-    max-width:92%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .mesa-node .mn-ocup{ font-size:calc(var(--d)*0.15); margin-top:.1rem; font-variant-numeric:tabular-nums; flex:none; }
-  .mesa-node .mn-dot{ position:absolute; top:6px; right:8px; width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
+  .mesa-node.a-arrastar{ cursor:grabbing; filter:drop-shadow(0 10px 18px rgba(22,38,30,.30)); z-index:20; }
+  .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:1px; z-index:15; }
+  /* O nome vive por baixo do desenho: dentro dele bateria nas cadeiras. Fora,
+     pode calhar por cima da mesa do lado — daí o fundo, que o mantém legível
+     sem lhe dar peso. */
+  .mesa-node .mn-nome{ position:absolute; top:100%; left:50%; transform:translate(-50%,-6%);
+    font-family:var(--serif); font-weight:600; font-size:calc(var(--d)*0.105); line-height:1.05;
+    max-width:calc(var(--d)*1.25); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    background:rgba(253,251,246,.82); border-radius:6px; padding:0 .3em; pointer-events:none; }
+  .mesa-node .mn-ocup{ position:absolute; top:100%; left:50%;
+    transform:translate(-50%, calc(var(--d)*0.10)); font-size:calc(var(--d)*0.095);
+    font-variant-numeric:tabular-nums; pointer-events:none; }
+  .mesa-node .mn-dot{ position:absolute; top:calc(var(--d)*0.15); right:calc(var(--d)*0.15);
+    width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
   .dot-vazia{ background:#b7bbb5; } .dot-parcial{ background:var(--gold); } .dot-cheia{ background:#1f7a3d; } .dot-excede{ background:var(--danger); }
-  .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:4px; box-shadow:0 0 0 6px rgba(180,134,74,.18); z-index:18; }
+  .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:2px; z-index:18; }
 
   /* Pastilhas de pessoas (mesa selecionada) — arrastáveis entre mesas */
-  .mesa-membros{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1)); transform:translate(-50%, calc(var(--d)/2 + 8px)); z-index:17;
-    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; width:calc(var(--d)*2.1); pointer-events:none; }
+  /* Descem o suficiente para não taparem o nome da mesa, que agora fica
+     debaixo do desenho. */
+  .mesa-membros{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
+    transform:translate(-50%, calc(var(--d)/2 + var(--d)*0.16 + 8px)); z-index:17;
+    display:flex; flex-wrap:wrap; gap:.25rem; justify-content:center; width:calc(var(--d)*1.35); pointer-events:none; }
   .mesa-membros.acima{ transform:translate(-50%, calc(-100% - var(--d)/2 - 8px)); }
-  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:calc(var(--d)*0.145); line-height:1.1;
+  .mesa-membros .mp{ pointer-events:auto; background:var(--forest); color:#fff; font-size:calc(var(--d)*0.09); line-height:1.1;
     padding:.18rem .55rem; border-radius:50px; cursor:grab; touch-action:none; user-select:none; white-space:nowrap;
-    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:calc(var(--d)*1.6); overflow:hidden; text-overflow:ellipsis; }
+    box-shadow:0 2px 6px rgba(22,38,30,.25); max-width:calc(var(--d)*1.0); overflow:hidden; text-overflow:ellipsis; }
   .mesa-membros .mp:hover{ background:var(--forest-deep); }
   body.a-arrastar-item .mp{ pointer-events:none; }
 

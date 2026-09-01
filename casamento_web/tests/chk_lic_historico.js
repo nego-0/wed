@@ -141,6 +141,32 @@ const entrar = async (ctx, user, pass) => {
   ok(det.includes(MOTIVO), 'e o motivo por inteiro');
   ok(/continua revogada/i.test(det), 'e diz que a licença ainda está revogada');
 
+  // ---------- 4. uma recusa diz-se UMA vez ----------
+  // Havia um cartão «O seu pedido anterior não foi aceite» por cima do
+  // histórico, a repetir o que a linha da recusa já diz. Duas vezes a mesma
+  // coisa, uma por cima da outra, fazia parecer que eram duas decisões.
+  const MOTIVO_NAO = 'Faltam os dados de facturação.';
+  d = await apiC('lic_pedir', { pacote: 0, escaloes: [conv80.id], meses: prazo.meses, aceito: true });
+  ok(d && d.success, 'o casal pede outra vez');
+  peds = await api('lic_pedidos&estado=pendente');
+  pid = (peds.pedidos || []).find(p => +p.casamento_id === cid).id;
+  d = await api('lic_decidir', { id: pid, decisao: 'recusar', nota: MOTIVO_NAO });
+  ok(d && d.success, 'e a administração recusa, com o motivo escrito');
+
+  await casal.goto(BASE + '/licenca.php', { waitUntil: 'networkidle' });
+  await casal.waitForSelector('#lic-hist .lic-h', { timeout: 8000 });
+  const cartao = await casal.evaluate(() => {
+    const cx = document.getElementById('lic-pedido-cx');
+    return { texto: (cx.textContent || '').trim(),
+             visivel: !!cx && cx.offsetParent !== null };
+  });
+  ok(!cartao.visivel && cartao.texto === '',
+     'não há cartão nenhum a repetir a recusa por cima do histórico');
+  const pagina = await casal.textContent('body');
+  ok(pagina.includes(MOTIVO_NAO), 'o motivo da recusa lê-se no histórico');
+  ok((pagina.match(/Faltam os dados de facturação/g) || []).length === 1,
+     'e uma só vez em toda a página — a recusa é uma decisão, não duas');
+
   // ---------- limpeza ----------
   await api('lic_conceder', { casamento: cid, escaloes: [], meses: 0 });
   await api('casamento_estado&id=' + cid + '&estado=arquivado', {});

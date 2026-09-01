@@ -104,6 +104,46 @@ const entrar = async (ctx, user, pass) => {
     document.querySelectorAll('#nova-forma button svg .mi-n').length);
   ok(semNumero === 0, 'e sem números: ali escolhe-se a forma, não a lotação');
 
+  // ---------- na PLANTA, que é onde se trabalha ----------
+  // O ícone chegou à lista e ao escolhedor e ficou-se por aí: a planta continuou
+  // a desenhar a mesa à sua maneira, com border-radius e clip-path, e essa não
+  // sabia dizer quantos lugares havia. Eram dois desenhos da mesma mesa, e só um
+  // deles respondia à pergunta.
+  const nova = await api('mesa_save', { id:0, nome:'ZZ Planta', capacidade:9, forma:'oval' });
+  await p.goto(BASE + '/mesas.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1200);
+  const naPlanta = await p.evaluate((id) => {
+    const n = document.querySelector('.mesa-node[data-id="' + id + '"]');
+    if (!n) return null;
+    const svg = n.querySelector('svg.mesa-ico');
+    return { temSvg: !!svg,
+             cadeiras: svg ? svg.querySelectorAll('.mi-c').length : 0,
+             numero: svg ? (svg.querySelector('.mi-n') || {}).textContent : '',
+             nome: (n.querySelector('.mn-nome') || {}).textContent || '',
+             nos: document.querySelectorAll('.mesa-node').length,
+             comIcone: document.querySelectorAll('.mesa-node > svg.mesa-ico').length };
+  }, nova.mesa ? nova.mesa.id : nova.id);
+  ok(naPlanta && naPlanta.temSvg, 'a mesa na planta é desenhada pelo mesmo ícone');
+  ok(naPlanta && naPlanta.cadeiras === 9,
+     `com uma cadeira por lugar (${naPlanta && naPlanta.cadeiras})`);
+  ok(naPlanta && naPlanta.numero === '9',
+     `e a capacidade lá dentro, que a planta antes não dizia (${naPlanta && naPlanta.numero})`);
+  ok(naPlanta && naPlanta.nome.includes('ZZ Planta'), 'o nome fica ao pé dela');
+  ok(naPlanta && naPlanta.nos === naPlanta.comIcone,
+     `nenhuma mesa da planta ficou por converter (${naPlanta && naPlanta.comIcone}/${naPlanta && naPlanta.nos})`);
+  // A mesa dos noivos também: é a que tem desenho próprio, e por isso era a que
+  // mais facilmente ficava para trás.
+  const noivos = await p.evaluate(() => {
+    const n = document.querySelector('.mesa-node.forma-noivos');
+    return n ? { temSvg: !!n.querySelector('svg.mesa-ico.f-noivos'),
+                 semNumero: !n.querySelector('.mi-n') } : null;
+  });
+  ok(noivos && noivos.temSvg, 'a mesa dos noivos também, com o desenho que é dela');
+  ok(noivos && noivos.semNumero, 'e sem lotação: ali não se conta, reserva-se');
+
+  const alvoP = (await api('mesa_list')).mesas.find(m => m.nome === 'ZZ Planta');
+  if (alvoP) await api('mesa_delete&id=' + alvoP.id);
+
   // ---------- na lista de mesas do painel ----------
   await api('mesa_save', { id:0, nome:'ZZ Ícone', capacidade:8, forma:'retangular' });
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });

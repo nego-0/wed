@@ -2467,24 +2467,22 @@ async function carregarCasamentos(){
         mais.push(`<button onclick="editarTudo(${c.id})">Editar todos os dados…</button>`);
         mais.push(`<button onclick="gerirLicenca(${c.id})">Licença: módulos e prazo…</button>`);
         mais.push(`<button class="perigo" onclick="licRevogarDe(${c.id},'${n}')">Revogar licença…</button>`);
-        mais.push('<hr>');
-        mais.push(c.estado === 'suspenso'
-          ? `<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
-          : '');
         // Fechar a casa a um casal que tem licença EM VIGOR é tirar-lhe uma
         // coisa por que pagou, e sem lhe dizer porquê: a licença continuaria a
         // dizer «ativa» enquanto ele não conseguia entrar. Primeiro decide-se
         // a licença — revogar (com motivo, que o casal lê) ou deixá-la
         // expirar —, e só então se fecha. Uma licença já expirada não trava
         // nada: aí não há nada a tirar.
-        if (licencaPrende(c)) {
-          mais.push('<div class="mm-nota">Suspender e arquivar ficam fora enquanto a licença '
-                  + 'estiver em vigor. <b>Revogue-a acima</b>, ou espere que expire.</div>');
-        } else {
+        const fecho = [];
+        if (c.estado === 'suspenso')
+          fecho.push(`<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`);
+        if (!licencaPrende(c)) {
           if (c.estado !== 'suspenso')
-            mais.push(`<button class="perigo" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
-          mais.push(`<button class="perigo" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
+            fecho.push(`<button class="perigo" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
+          fecho.push(`<button class="perigo" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
         }
+        // O risco separa-se do resto — mas só há risca se houver o que separar.
+        if (fecho.length) mais.push('<hr>', ...fecho);
       }
     }
     const menu = mais.length

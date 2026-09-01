@@ -572,7 +572,7 @@ function cortar(s, n){ s = String(s || ''); return s.length > n ? s.slice(0, n -
 function desenharPedido(){
   const cx = document.getElementById('lic-pedido-cx');
   const p  = LIC.pendente;
-  if (!p){ cx.style.display = 'none'; cx.innerHTML = ''; mostrarRecusa(); return; }
+  if (!p){ cx.style.display = 'none'; cx.innerHTML = ''; return; }
 
   const itens = p.itens.map(it => {
     const e = { modulo: it.modulo_chave, limite: +it.limite, editar: +it.editar,
@@ -605,23 +605,10 @@ function desenharPedido(){
     + '</div>';
 }
 
-// Um pedido recusado tem de ser dito — e tem de se poder tentar de novo.
-function mostrarRecusa(){
-  const r = LIC.recusado;
-  if (!r || LIC.casamento.licenca_estado === 'ativa') return;
-  const cx = document.getElementById('lic-pedido-cx');
-  cx.style.display = '';
-  cx.innerHTML = '<h2>O seu pedido anterior não foi aceite</h2>'
-    + '<div class="lic-pedido"><div class="lic-pedido-cab">'
-    +   '<span class="nm">' + (r.pacote_nome ? escapar(r.pacote_nome) : 'Plano à medida') + '</span>'
-    +   '<span class="dica" style="margin:0">' + dataCurta(r.decidido_em) + '</span></div>'
-    + (r.nota_admin
-        ? '<div style="padding:1rem 1.3rem"><div class="lic-nota"><b>Motivo:</b> '
-          + escapar(r.nota_admin) + '</div></div>'
-        : '<div style="padding:1rem 1.3rem"><div class="dica" style="margin:0">'
-          + 'A administração não indicou um motivo. Pode submeter um novo pedido.</div></div>')
-    + '</div>';
-}
+// O pedido recusado tinha aqui um cartão só para ele. Deixou de ser preciso: o
+// histórico passou a mostrar todas as decisões com a sua data e o motivo que a
+// administração escreveu, e a recusa é uma delas. Duas vezes a mesma coisa, uma
+// por cima da outra, fazia parecer que eram duas.
 
 // ---- a montra ----
 function desenharMontra(){
