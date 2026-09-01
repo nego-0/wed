@@ -113,10 +113,15 @@ const entrar = async (ctx, user, pass) => {
   const port = (ficha.contas || []).find(c => c.email === portEmail && c.papel === 'porteiro');
   ok(!!port, 'adicionar uma conta de porteiro liga-a ao casamento');
 
-  // tirar-lhe o acesso pelo editor (o confirm aceita-se automaticamente)
-  admin.on('dialog', d => d.accept());
-  await admin.evaluate((uid) => tirarContaLigada(uid, 'porteiro'), port.utilizador_id);
-  await admin.waitForTimeout(400);
+  // tirar-lhe o acesso pelo editor: a pergunta já não é um confirm() do
+  // browser, é a janela da casa — abre-se, e confirma-se carregando no botão.
+  // (sem await: licConfirmar só volta depois de se responder)
+  await admin.evaluate((uid) => { tirarContaLigada(uid, 'porteiro'); }, port.utilizador_id);
+  await admin.waitForSelector('#lic-janela.on', { timeout: 4000 });
+  ok(await admin.locator('#lic-janela.on').isVisible(),
+     'tirar a conta pergunta numa janela, e não num confirm() do browser');
+  await admin.click('#lic-jo');
+  await admin.waitForTimeout(500);
   ficha = await api('casamento_ficha&id=' + w.id);
   ok(!(ficha.contas || []).some(c => c.email === portEmail), 'e tirar o acesso desliga-a do casamento');
 

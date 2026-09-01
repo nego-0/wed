@@ -123,6 +123,7 @@ function ficheirosApp(): array {
             'assets/montra/orcamento.jpg','assets/montra/impresso.jpg',
             'assets/montra/digital.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
+            'assets/janela.css','assets/janela.js',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',

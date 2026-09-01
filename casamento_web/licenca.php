@@ -58,6 +58,7 @@ foreach ($MODS as $m) if (!empty($m['ativo'])) { $temAlgum = true; break; }
 <title>Licença · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet">
 <style>
   .lic-wrap{ max-width:1080px; margin:0 auto; padding:1.5rem 1.1rem 4rem; }

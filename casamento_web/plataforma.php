@@ -153,6 +153,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <title>Casamentos · Plataforma</title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet"><?php // a montra e a janela das políticas ?>
 <style>
   .cas-lista{ display:grid; gap:.7rem; }
@@ -257,48 +258,6 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .et.destaque{ background:var(--gold-pale); color:var(--gold-deep); }
   .et.fita{ background:var(--gold); color:#fff; }
 
-  /* ---- as janelas de edição: formulários, e não filas de prompt() ---- */
-  .pl-modal-cx.largo{ max-width:900px; }
-  .pl-modal-cab{ position:relative; }
-  .pl-modal-x{ background:none; border:0; color:#8a8f88; font-size:1.5rem; line-height:1;
-    cursor:pointer; padding:0 .2rem; flex:none; }
-  .pl-modal-x:hover{ color:var(--ink); }
-  .pl-modal-rodape{ align-items:center; }
-  .lic-j-erro{ flex:1; color:var(--danger); font-size:.83rem; line-height:1.4; text-align:left; }
-
-  .lic-form{ display:grid; gap:.9rem 1rem; grid-template-columns:repeat(3, 1fr); }
-  .lic-f-c{ display:flex; flex-direction:column; gap:.28rem; min-width:0; }
-  .lic-f-c label{ font-size:.72rem; letter-spacing:.05em; text-transform:uppercase;
-    color:#8a8f88; font-weight:600; margin:0; }
-  .lic-f-c input, .lic-f-c select, .lic-f-c textarea{ width:100%; padding:.5rem .7rem;
-    border:1.5px solid var(--line); border-radius:10px; background:var(--card);
-    font-family:var(--sans); font-size:.9rem; color:var(--text); }
-  .lic-f-c input[type=number]{ font-variant-numeric:tabular-nums; }
-  .lic-f-c input:focus, .lic-f-c select:focus, .lic-f-c textarea:focus{ outline:none;
-    border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
-  .lic-f-c textarea{ resize:vertical; line-height:1.5; }
-  .lic-f-d{ font-size:.75rem; color:#8a8f88; line-height:1.45; }
-  .lic-f-d b{ color:var(--ink); }
-  .lic-f-sim{ display:flex; align-items:center; gap:.5rem; margin:0; padding:.5rem 0;
-    text-transform:none; letter-spacing:normal; font-weight:500; font-size:.88rem;
-    color:var(--ink); cursor:pointer; }
-  .lic-f-sim input{ width:17px; height:17px; min-width:17px; padding:0; margin:0;
-    accent-color:var(--gold); flex:none; }
-
-  /* ---- a pergunta de sim/não, com o que está em jogo à vista ---- */
-  .lic-conf{ display:flex; gap:1rem; align-items:flex-start; }
-  .lic-conf-ico{ width:42px; height:42px; flex:none; border-radius:12px; background:var(--gold-pale);
-    display:flex; align-items:center; justify-content:center; font-size:1.25rem; }
-  .lic-conf.perigo .lic-conf-ico{ background:var(--danger-bg); }
-  .lic-conf-txt{ flex:1; font-size:.9rem; line-height:1.6; color:var(--text); }
-  .lic-conf-txt p{ margin:.7rem 0 0; }
-  .lic-conf-itens{ list-style:none; margin:.8rem 0 0; padding:0; }
-  .lic-conf-itens li{ display:flex; gap:.6rem; align-items:baseline; padding:.35rem 0;
-    border-bottom:1px solid var(--line); font-size:.85rem; }
-  .lic-conf-itens li:last-child{ border-bottom:none; }
-  .lic-conf-itens span{ flex:1; color:#8a8f88; font-size:.78rem; }
-  .lic-conf-itens em{ font-style:normal; font-variant-numeric:tabular-nums; color:var(--gold);
-    font-weight:600; }
 
   /* ---- a prova do factor: o que ele faz, em números ---- */
   .lic-fator-prova:empty{ display:none; }
@@ -1134,6 +1093,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>
@@ -1209,10 +1169,6 @@ function licKz(v){
   v = Number(v) || 0;
   const casas = Math.abs(v % 1) > 0.001 ? 2 : 0;
   return v.toLocaleString('pt-PT', { minimumFractionDigits: casas, maximumFractionDigits: casas }) + ' Kz';
-}
-function licEsc(s){
-  return String(s == null ? '' : s).replace(/[&<>"']/g,
-    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 /** A medida de um escalão, dita como o casal a lê. */
 function licMedida(it){
@@ -1902,171 +1858,6 @@ async function licPolGuardar(){
   toast('Políticas publicadas — versão ' + LIC_POL.versao + '.');
 }
 
-/** Uma janela simples de OK/Cancelar, para as escolhas que não cabem num prompt. */
-function licJanela(titulo, html, aoConfirmar, opcoes){
-  opcoes = opcoes || {};
-  let m = document.getElementById('lic-janela');
-  if (!m){
-    m = document.createElement('div'); m.id = 'lic-janela'; m.className = 'pl-modal';
-    document.body.appendChild(m);
-    m.addEventListener('click', ev => { if (ev.target === m) licFecharJanela(); });
-  }
-  m.innerHTML = '<div class="pl-modal-cx' + (opcoes.largo ? ' largo' : '') + '">'
-    + '<div class="pl-modal-cab"><h3>' + titulo + '</h3>'
-    + '<button type="button" class="pl-modal-x" id="lic-jx" aria-label="Fechar">×</button></div>'
-    + '<div class="pl-modal-corpo">' + html + '</div>'
-    + '<div class="pl-modal-rodape">'
-    + '<span class="lic-j-erro" id="lic-jerro"></span>'
-    + '<button class="btn btn-fantasma btn-sm" id="lic-jc">' + (opcoes.cancelar || 'Cancelar') + '</button>'
-    + (aoConfirmar
-        ? '<button class="btn ' + (opcoes.perigo ? 'perigo' : 'btn-ouro') + ' btn-sm" id="lic-jo">'
-          + (opcoes.guardar || 'Guardar') + '</button>'
-        : '')
-    + '</div></div>';
-  m.classList.add('on');
-  document.getElementById('lic-jx').onclick = licFecharJanela;
-  document.getElementById('lic-jc').onclick = licFecharJanela;
-  const ok = document.getElementById('lic-jo');
-  if (ok) ok.onclick = async () => {
-    // Guardar pode recusar: devolver false deixa a janela aberta, com o aviso,
-    // para se corrigir ali mesmo em vez de recomeçar tudo.
-    ok.disabled = true; const rot = ok.textContent; ok.textContent = 'A guardar…';
-    let r;
-    try { r = await aoConfirmar(); } finally { ok.disabled = false; ok.textContent = rot; }
-    if (r === false) return;
-    licFecharJanela();
-  };
-  document.addEventListener('keydown', licTeclaJanela);
-  // O primeiro campo fica pronto a escrever: quem abre uma janela de edição
-  // quer escrever, não procurar onde carregar.
-  const p1 = m.querySelector('.pl-modal-corpo input:not([type=hidden]):not([disabled]), '
-                           + '.pl-modal-corpo textarea, .pl-modal-corpo select');
-  if (p1) setTimeout(() => { try { p1.focus(); p1.select && p1.select(); } catch(e){} }, 60);
-}
-function licFecharJanela(){
-  const m = document.getElementById('lic-janela');
-  if (m) m.classList.remove('on');
-  document.removeEventListener('keydown', licTeclaJanela);
-}
-function licTeclaJanela(ev){
-  if (ev.key === 'Escape'){ licFecharJanela(); return; }
-  // Enter guarda — excepto numa área de texto, onde Enter é mudar de linha.
-  if (ev.key === 'Enter' && !ev.shiftKey && ev.target && ev.target.tagName !== 'TEXTAREA'){
-    const ok = document.getElementById('lic-jo');
-    if (ok && !ok.disabled){ ev.preventDefault(); ok.click(); }
-  }
-}
-/** Um aviso dentro da janela, sem a fechar. */
-function licJanelaErro(txt){
-  const e = document.getElementById('lic-jerro');
-  if (e) e.textContent = txt || '';
-}
-
-/**
- * Um formulário em janela, em vez de uma fila de prompt().
- *
- * Uma sequência de prompt() obriga a responder às perguntas às cegas, uma de
- * cada vez, sem se ver o conjunto nem poder voltar atrás — e um Cancelar a
- * meio deita fora o que já se escreveu. Aqui vê-se tudo, corrige-se tudo, e o
- * que se escreve fica à vista até se guardar.
- *
- * campos: [{ id, rot, tipo, valor, dica, opcoes, min, max, passo, largura }]
- *   tipo: 'texto' (omissão) | 'numero' | 'preco' | 'area' | 'sim' | 'escolha'
- */
-function licFormulario(cfg){
-  const campos = cfg.campos || [];
-  const html = (cfg.dica ? '<div class="dica">' + cfg.dica + '</div>' : '')
-    + '<div class="lic-form">'
-    + campos.map(c => {
-        const v = c.valor === undefined || c.valor === null ? '' : String(c.valor);
-        const larg = c.largura ? ' style="grid-column:span ' + c.largura + '"' : '';
-        let campo;
-        if (c.tipo === 'area'){
-          campo = '<textarea id="lf-' + c.id + '" rows="' + (c.linhas || 3) + '">'
-                + licEsc(v) + '</textarea>';
-        } else if (c.tipo === 'sim'){
-          campo = '<label class="lic-f-sim"><input type="checkbox" id="lf-' + c.id + '"'
-                + (c.valor ? ' checked' : '') + '><span>' + licEsc(c.aoLado || 'Sim') + '</span></label>';
-        } else if (c.tipo === 'escolha'){
-          campo = '<select id="lf-' + c.id + '">'
-                + (c.opcoes || []).map(o =>
-                    '<option value="' + licEsc(o.v) + '"' + (String(o.v) === v ? ' selected' : '') + '>'
-                    + licEsc(o.r) + '</option>').join('')
-                + '</select>';
-        } else {
-          const t = (c.tipo === 'numero' || c.tipo === 'preco') ? 'number' : 'text';
-          campo = '<input type="' + t + '" id="lf-' + c.id + '" value="' + licEsc(v) + '"'
-                + (c.min !== undefined ? ' min="' + c.min + '"' : '')
-                + (c.max !== undefined ? ' max="' + c.max + '"' : '')
-                + (c.passo ? ' step="' + c.passo + '"' : '')
-                + (c.dica2 ? ' placeholder="' + licEsc(c.dica2) + '"' : '') + '>';
-        }
-        return '<div class="lic-f-c"' + larg + '>'
-          + (c.tipo === 'sim' ? '' : '<label for="lf-' + c.id + '">' + licEsc(c.rot) + '</label>')
-          + campo
-          + (c.dica ? '<span class="lic-f-d">' + c.dica + '</span>' : '')
-          + '</div>';
-      }).join('')
-    + '</div>' + (cfg.extra || '');
-
-  licJanela(cfg.titulo, html, async () => {
-    const vals = {};
-    campos.forEach(c => {
-      const el = document.getElementById('lf-' + c.id);
-      if (!el) return;
-      if (c.tipo === 'sim') vals[c.id] = el.checked ? 1 : 0;
-      else if (c.tipo === 'numero' || c.tipo === 'preco')
-        vals[c.id] = parseFloat(String(el.value).replace(',', '.')) || 0;
-      else vals[c.id] = el.value.trim();
-    });
-    licJanelaErro('');
-    return await cfg.aoGuardar(vals);
-  }, { guardar: cfg.guardar, perigo: cfg.perigo, largo: cfg.largo });
-}
-
-/**
- * Uma pergunta de sim/não em janela, em vez de window.confirm().
- *
- * Devolve uma promessa: true se confirmou, false se não. Aceita 'motivo' para
- * as decisões que exigem uma razão escrita — e aí não deixa confirmar sem ela.
- */
-function licConfirmar(cfg){
-  return new Promise(resolve => {
-    const temMotivo = !!cfg.motivo;
-    const html = '<div class="lic-conf' + (cfg.perigo ? ' perigo' : '') + '">'
-      + (cfg.icone ? '<div class="lic-conf-ico">' + cfg.icone + '</div>' : '')
-      + '<div class="lic-conf-txt">' + cfg.texto + '</div></div>'
-      + (temMotivo
-          ? '<div class="lic-f-c" style="margin-top:1rem">'
-            + '<label for="lf-motivo">' + licEsc(cfg.motivo.rot) + '</label>'
-            + '<textarea id="lf-motivo" rows="3" placeholder="'
-            + licEsc(cfg.motivo.dica2 || '') + '"></textarea>'
-            + (cfg.motivo.dica ? '<span class="lic-f-d">' + cfg.motivo.dica + '</span>' : '')
-            + '</div>'
-          : '');
-    let respondeu = false;
-    licJanela(cfg.titulo, html, async () => {
-      const el = document.getElementById('lf-motivo');
-      const txt = el ? el.value.trim() : '';
-      if (temMotivo && cfg.motivo.exigido && !txt){
-        licJanelaErro(cfg.motivo.falta || 'Escreva o motivo.');
-        if (el) el.focus();
-        return false;
-      }
-      respondeu = true;
-      resolve({ sim: true, motivo: txt });
-    }, { guardar: cfg.confirmar || 'Confirmar', perigo: cfg.perigo, cancelar: cfg.cancelar });
-    // Fechar sem confirmar é responder que não.
-    const m = document.getElementById('lic-janela');
-    const obs = new MutationObserver(() => {
-      if (!m.classList.contains('on') && !respondeu){
-        obs.disconnect(); resolve({ sim: false, motivo: '' });
-      }
-      if (respondeu) obs.disconnect();
-    });
-    obs.observe(m, { attributes: true, attributeFilter: ['class'] });
-  });
-}
 
 // A pastilha das licenças traz o número de pedidos à espera mal a página abre:
 // um pedido que ninguém vê é um casal que ficou à porta sem ninguém saber.
@@ -2361,22 +2152,38 @@ async function aprovar(id){
   if (d && d.success) location.reload();
 }
 async function recusar(id){
-  if (!confirm('Recusar este registo?\n\nO casal deixa de poder entrar. Nada se apaga.')) return;
+  const r = await licConfirmar({
+    titulo: 'Recusar este registo?',
+    icone: '🚫', confirmar: 'Recusar registo',
+    texto: 'O casal <b>deixa de poder entrar</b>. <b>Nada se apaga</b> — pode reabrir o '
+         + 'registo mais tarde se for engano.'
+  });
+  if (!r.sim) return;
   const d = await api('casamento_estado&id=' + id + '&estado=suspenso', { method:'POST' });
   if (d && d.success) location.reload();
 }
 
 // ---------- arquivar, reabrir, apagar ----------
+// Cada mudança de estado diz o que muda para as pessoas, e não só para a ficha.
 const AVISO_ESTADO = {
-  arquivado: 'Arquivar «%s»?\n\nSai das listas de trabalho, e as contas que só existem '
-           + 'por causa dele ficam paradas — o casal deixa de entrar. Nada se apaga: '
-           + 'reabrir devolve o casamento e as contas.',
-  suspenso:  'Suspender «%s»?\n\nO casal deixa de entrar, e os convites deixam de abrir '
-           + 'para os convidados. Nada se apaga.',
-  ativo:     'Reabrir «%s»?\n\nVolta às listas e o casal volta a entrar.',
+  arquivado: { titulo: 'Arquivar «%s»?', icone: '📦', botao: 'Arquivar',
+    texto: 'Sai das listas de trabalho, e as contas que só existem por causa dele '
+         + '<b>ficam paradas</b> — o casal deixa de entrar.<br><br>'
+         + '<b>Nada se apaga</b>: reabrir devolve o casamento e as contas.' },
+  suspenso:  { titulo: 'Suspender «%s»?', icone: '⏸️', botao: 'Suspender', perigo: true,
+    texto: 'O casal deixa de entrar, e os <b>convites deixam de abrir</b> para os '
+         + 'convidados.<br><br><b>Nada se apaga.</b>' },
+  ativo:     { titulo: 'Reabrir «%s»?', icone: '✅', botao: 'Reabrir',
+    texto: 'Volta às listas de trabalho e o casal volta a entrar. As contas que ficaram '
+         + 'paradas com ele voltam também.' },
 };
 async function mudarEstado(id, estado, nome){
-  if (!confirm(AVISO_ESTADO[estado].replace('%s', nome))) return;
+  const a = AVISO_ESTADO[estado];
+  const r = await licConfirmar({
+    titulo: a.titulo.replace('%s', licEsc(nome)), icone: a.icone,
+    perigo: !!a.perigo, confirmar: a.botao, texto: a.texto
+  });
+  if (!r.sim) return;
   const d = await api('casamento_estado&id=' + id + '&estado=' + estado, { method:'POST' });
   if (!d || !d.success) return;
   // Dizer quantas contas foram atrás: quem arquiva tem de saber que fechou a
@@ -2388,12 +2195,16 @@ async function mudarEstado(id, estado, nome){
 async function apagar(id, nome){
   // Escrever o nome, e não só carregar em "OK": é a única coisa aqui que não
   // se desfaz, e um clique distraído não deve chegar para a fazer.
-  const escrito = prompt('Apagar «' + nome + '» DE VEZ?\n\n'
-    + 'Vão-se os convites, as pessoas, as mesas, o desenho e o histórico. Não se desfaz.\n'
-    + 'Se ainda quiser os dados, cancele e use «Levar os dados» primeiro.\n\n'
-    + 'Para confirmar, escreva o nome do casamento:');
-  if (escrito === null) return;
-  if (escrito.trim() !== nome.trim()) return toast('O nome não confere. Nada foi apagado.', true);
+  const r = await licConfirmar({
+    titulo: 'Apagar «' + licEsc(nome) + '» de vez?',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar de vez',
+    texto: 'Vão-se os <b>convites</b>, as <b>pessoas</b>, as <b>mesas</b>, o <b>desenho</b> '
+         + 'e o <b>histórico</b>. Não se desfaz.<br><br>'
+         + 'Se ainda quiser os dados, cancele e use «Levar os dados» primeiro.',
+    escrever: { rot: 'Nome do casamento', valor: nome,
+                falta: 'O nome não confere. Nada foi apagado.' }
+  });
+  if (!r.sim) return;
   const d = await api('casamento_apagar&id=' + id, { method:'POST' });
   if (!d || !d.success) return;
   toast('Apagado: ' + (d.levou ? `${d.levou.convites} convite(s), ${d.levou.pessoas} pessoa(s).` : ''));
@@ -2442,23 +2253,33 @@ async function importarSistemaTudo(){
   if (!dados || dados.formato !== 'casamento-web/1') {
     return toast('Este ficheiro não é uma exportação deste sistema.', true);
   }
-  if (!confirm('Importar TUDO o que o ficheiro traz?\n\n'
-    + 'Os casamentos entram como NOVOS; os modelos e as contas que já existam saltam-se. '
-    + 'Nada do que já cá está é substituído.')) return;
+  const r = await licConfirmar({
+    titulo: 'Importar tudo o que o ficheiro traz?',
+    icone: '📥', confirmar: 'Importar tudo',
+    texto: 'Os casamentos entram como <b>novos</b>; os modelos e as contas que já existam '
+         + '<b>saltam-se</b>.<br><br><b>Nada do que já cá está é substituído.</b>'
+  });
+  if (!r.sim) return;
   const d = await api('sistema_importar', { method:'POST',
     body: JSON.stringify({ inc: INC_TUDO, ficheiro: dados }) });
   if (!d || !d.success) return;
   mostrarImportado(d);
 }
 async function apagarSistemaTudo(){
-  if (!confirm('APAGAR TUDO o que há no sistema?\n\n'
-    + '• Todos os casamentos, por inteiro (listas, mesas, versões, orçamentos)\n'
-    + '• Os modelos personalizados (ficam os de origem)\n'
-    + '• As contas de casamento e as administrativas — a sua nunca\n\n'
-    + 'Não se desfaz. Exporte primeiro, se quiser poder voltar atrás.')) return;
-  // Segunda confirmação, escrita: é a operação que não tem volta.
-  const resp = prompt('Para confirmar, escreva APAGAR TUDO:');
-  if ((resp || '').trim().toUpperCase() !== 'APAGAR TUDO') return toast('Apagar tudo cancelado.');
+  // Aviso e confirmação escrita na mesma janela: quem lê a lista do que se vai
+  // perder é quem escreve as palavras, sem um "OK" pelo meio a interromper.
+  const r = await licConfirmar({
+    titulo: 'Apagar tudo o que há no sistema?',
+    icone: '☢️', perigo: true, confirmar: 'Apagar tudo',
+    texto: '<ul class="lic-conf-lista">'
+         + '<li>Todos os <b>casamentos</b>, por inteiro (listas, mesas, versões, orçamentos)</li>'
+         + '<li>Os <b>modelos personalizados</b> (ficam os de origem)</li>'
+         + '<li>As <b>contas</b> de casamento e as administrativas — a sua nunca</li></ul>'
+         + '<br><b>Não se desfaz.</b> Exporte primeiro, se quiser poder voltar atrás.',
+    escrever: { rot: 'Confirmação escrita', valor: 'APAGAR TUDO',
+                falta: 'O texto não confere. Nada foi apagado.' }
+  });
+  if (!r.sim) return;
   const d = await api('sistema_repor_fabrica', { method:'POST', body: JSON.stringify({ tudo: true }) });
   if (!d || !d.success) return;
   mostrarApagado(d);
@@ -2490,9 +2311,15 @@ async function importarDados(){
   }
   const rot = { casamentos:'casamentos (como novos)', modelos:'modelos',
                 contas_casamento:'contas de casamento', contas_admin:'contas administrativas' };
-  if (!confirm('Trazer do ficheiro: ' + inc.map(i => rot[i]).join(', ') + '?\n\n'
-    + 'Os casamentos entram como NOVOS; modelos e contas que já existam saltam-se. '
-    + 'Nada do que já cá está é substituído.')) return;
+  const r = await licConfirmar({
+    titulo: 'Trazer do ficheiro?',
+    icone: '📥', confirmar: 'Trazer',
+    texto: '<ul class="lic-conf-lista">'
+         + inc.map(i => '<li>' + licEsc(rot[i]) + '</li>').join('') + '</ul><br>'
+         + 'Os casamentos entram como <b>novos</b>; modelos e contas que já existam '
+         + '<b>saltam-se</b>. Nada do que já cá está é substituído.'
+  });
+  if (!r.sim) return;
   const d = await api('sistema_importar', { method:'POST', body: JSON.stringify({ inc, ficheiro: dados }) });
   if (!d || !d.success) return;
   mostrarImportado(d);
@@ -2531,7 +2358,14 @@ async function apagarDados(){
   if (!alvos.length) {
     return toast('Assinale contas, modelos e/ou casamentos (com casamentos escolhidos) para apagar.', true);
   }
-  if (!confirm('Apagar — isto elimina dados:\n\n• ' + linhas.join('\n• ') + '\n\nNão se desfaz.')) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar — isto elimina dados',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar',
+    texto: '<ul class="lic-conf-lista">'
+         + linhas.map(l => '<li>' + licEsc(l) + '</li>').join('') + '</ul>'
+         + '<br><b>Não se desfaz.</b>'
+  });
+  if (!r.sim) return;
   const d = await api('sistema_repor_fabrica', { method:'POST',
     body: JSON.stringify({ alvos, casamentos: ids, casamentos_modo: modo }) });
   if (!d || !d.success) return;
@@ -2891,8 +2725,18 @@ async function guardarContaLigada(uid){
   }) });
   if (d && d.success){ toast('Conta guardada.'); carregarCasamentos(); }
 }
+/** A pergunta é a mesma nos dois sítios onde se repõe uma senha — vive aqui. */
+async function pedirReporSenha(email){
+  const r = await licConfirmar({
+    titulo: 'Repor a senha de «' + licEsc(email) + '»?',
+    icone: '🔑', confirmar: 'Repor senha',
+    texto: 'A senha atual <b>deixa de servir</b> de imediato. A nova aparece aqui '
+         + '<b>uma vez</b> — copie-a antes de fechar.'
+  });
+  return r.sim;
+}
 async function reporSenhaLigada(uid, email){
-  if (!confirm('Repor a senha de ' + email + '?\n\nA senha atual deixa de servir. A nova aparece aqui, uma vez.')) return;
+  if (!await pedirReporSenha(email)) return;
   const d = await api('utilizador_repor_senha&id=' + uid, { method:'POST' });
   if (!d || !d.success) return;
   const cx = $('ed-segredo');
@@ -2901,8 +2745,13 @@ async function reporSenhaLigada(uid, email){
     <small>Entregue-a agora — não volta a aparecer.</small>`;
 }
 async function tirarContaLigada(uid, nome){
-  if (!confirm('Eliminar a conta de ' + nome + '?\n\nA conta é apagada e deixa de entrar. '
-    + 'Não se desfaz. O email fica livre para uma conta nova.')) return;
+  const r = await licConfirmar({
+    titulo: 'Eliminar a conta de «' + licEsc(nome) + '»?',
+    icone: '🗑️', perigo: true, confirmar: 'Eliminar conta',
+    texto: 'A conta é <b>apagada</b> e deixa de entrar. <b>Não se desfaz.</b><br><br>'
+         + 'O email fica livre para uma conta nova.'
+  });
+  if (!r.sim) return;
   const d = await api('conta_apagar_do_casamento&utilizador=' + uid + '&casamento=' + EDITAR_ALVO, { method:'POST' });
   if (d && d.success){ toast('Conta eliminada.'); editarTudoRecarregar(); carregarCasamentos(); }
 }
@@ -3058,18 +2907,30 @@ async function guardarConta(id){
   if (d && d.success){ toast('Conta guardada.'); carregarContas(); }
 }
 async function apagarConta(id, email){
-  if (!confirm('Apagar a conta de ' + email + '?\n\nNão se desfaz. Se ela ainda tiver lugar '
-    + 'nalgum casamento, tire-lho primeiro em Editar.')) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar a conta de «' + licEsc(email) + '»?',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar conta',
+    texto: '<b>Não se desfaz.</b><br><br>Se ela ainda tiver lugar nalgum casamento, '
+         + 'tire-lho primeiro em <b>Editar</b>.'
+  });
+  if (!r.sim) return;
   const d = await api('utilizador_apagar&id=' + id, { method:'POST' });
   if (d && d.success){ toast('Conta apagada.'); carregarContas(); }
 }
 async function estadoConta(id, estado){
-  if (estado === 'suspenso' && !confirm('Suspender esta conta?\n\nDeixa de entrar até ser reativada.')) return;
+  if (estado === 'suspenso'){
+    const r = await licConfirmar({
+      titulo: 'Suspender esta conta?',
+      icone: '⏸️', confirmar: 'Suspender',
+      texto: 'Deixa de entrar <b>até ser reativada</b>. Nada se apaga.'
+    });
+    if (!r.sim) return;
+  }
   const d = await api('utilizador_estado&id=' + id + '&estado=' + estado, { method:'POST' });
   if (d && d.success) carregarContas();
 }
 async function reporSenha(id, email){
-  if (!confirm('Repor a senha de ' + email + '?\n\nA senha atual deixa de servir. A nova aparece aqui, uma vez.')) return;
+  if (!await pedirReporSenha(email)) return;
   const d = await api('utilizador_repor_senha&id=' + id, { method:'POST' });
   if (!d || !d.success) return;
   const cx = document.getElementById('senha-reposta');

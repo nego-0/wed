@@ -252,18 +252,6 @@
 .pl-aceite a{ color:var(--gold); font-weight:600; text-decoration:underline; cursor:pointer; }
 .pl-aceite.mau{ border-color:var(--danger); background:var(--danger-bg); }
 
-/* A janela das políticas: texto longo, por isso rola por dentro. */
-.pl-modal{ position:fixed; inset:0; z-index:2000; background:rgba(12,25,37,.55);
-  display:none; align-items:center; justify-content:center; padding:1.2rem; }
-.pl-modal.on{ display:flex; }
-.pl-modal-cx{ background:var(--card); border-radius:var(--radius); max-width:760px; width:100%;
-  max-height:88vh; display:flex; flex-direction:column; box-shadow:0 30px 70px rgba(0,0,0,.35); }
-.pl-modal-cab{ padding:1.2rem 1.4rem 1rem; border-bottom:1px solid var(--line);
-  display:flex; align-items:flex-start; gap:1rem; }
-.pl-modal-cab h3{ font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin:0; flex:1; }
-.pl-modal-corpo{ padding:1.2rem 1.4rem; overflow-y:auto; }
-.pl-modal-rodape{ padding:1rem 1.4rem; border-top:1px solid var(--line);
-  display:flex; gap:.6rem; justify-content:flex-end; flex-wrap:wrap; }
 
 /* O texto das políticas, com a marcação simples que o admin escreve. */
 .pl-texto{ font-size:.89rem; line-height:1.72; color:var(--text); }

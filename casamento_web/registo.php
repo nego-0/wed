@@ -24,6 +24,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <title>Inscrever o nosso casamento · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>

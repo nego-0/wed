@@ -90,6 +90,7 @@ $MAPA_LOCAL = [
 <title>Gestão · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
@@ -354,6 +355,7 @@ $MAPA_LOCAL = [
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>
 <script>
@@ -484,8 +486,13 @@ async function trocarPapel(uid, papel){
   if (d && d.success) carregarAcessos();
 }
 async function tirar(uid, nome){
-  if (!confirm('Eliminar a conta de ' + nome + '?\n\nA conta é apagada e deixa de entrar. '
-    + 'Não se desfaz. O email fica livre para uma conta nova.')) return;
+  const r = await licConfirmar({
+    titulo: 'Eliminar a conta de «' + licEsc(nome) + '»?',
+    icone: '🗑️', perigo: true, confirmar: 'Eliminar conta',
+    texto: 'A conta é <b>apagada</b> e deixa de entrar. <b>Não se desfaz.</b><br><br>'
+         + 'O email fica livre para uma conta nova.'
+  });
+  if (!r.sim) return;
   const d = await api('conta_apagar_do_casamento&utilizador=' + uid, { method:'POST' });
   if (d && d.success){ toast('Conta eliminada.'); carregarAcessos(); }
 }
@@ -524,7 +531,14 @@ async function gerarCodigo(){
   carregarCodigos();
 }
 async function revogar(id){
-  if (!confirm('Revogar este código?\n\nQuem o tiver deixa de entrar, já.')) return;
+  const r = await licConfirmar({
+    titulo: 'Revogar este código?',
+    icone: '⛔', perigo: true, confirmar: 'Revogar código',
+    texto: 'Quem o tiver <b>deixa de entrar, já</b>. Se essa pessoa estiver a trabalhar '
+         + 'no seu casamento neste momento, é posta fora.<br><br>'
+         + 'Pode gerar outro código a qualquer altura.'
+  });
+  if (!r.sim) return;
   const d = await api('suporte_codigo_revogar&id=' + id, { method:'POST' });
   if (d && d.success) carregarCodigos();
 }
@@ -563,9 +577,15 @@ async function importarTudo(){
   if (!dados || dados.formato !== 'casamento-web/1') {
     return toast('Este ficheiro não é uma exportação deste sistema.', true);
   }
-  if (!confirm('Trazer TODOS os dados deste ficheiro?\n\n'
-    + 'Os seus dados — lista de convidados, mesas, versões dos convites e orçamento — são '
-    + 'substituídos pelos do ficheiro. Não é uma junção, e não se desfaz.')) return;
+  const resp = await licConfirmar({
+    titulo: 'Trazer todos os dados deste ficheiro?',
+    icone: '📥', perigo: true, confirmar: 'Trazer e substituir',
+    texto: 'Os seus dados — <b>lista de convidados</b>, <b>mesas</b>, <b>versões dos '
+         + 'convites</b> e <b>orçamento</b> — são substituídos pelos do ficheiro.<br><br>'
+         + '<b>Não é uma junção, e não se desfaz.</b> Se quiser guardar o que tem agora, '
+         + 'cancele e use «Levar os dados» primeiro.'
+  });
+  if (!resp.sim) return;
   const d = await api('dados_importar', { method:'POST',
     body: JSON.stringify({ modo:'substituir', ficheiro: dados }) });
   if (!d || !d.success) return;
@@ -580,9 +600,21 @@ async function importarTudo(){
   setTimeout(() => location.reload(), 1400);
 }
 async function apagarTudo(){
-  if (!confirm('Apagar TODOS os dados deste casamento?\n\n'
-    + 'A lista de convidados, as mesas, as versões dos convites e o orçamento ficam vazios — '
-    + 'o casamento fica como acabado de criar. Não se desfaz.')) return;
+  // Escrever «APAGAR» antes de esvaziar meses de trabalho. Um clique distraído
+  // não deve chegar para deitar fora a lista inteira de convidados.
+  const r = await licConfirmar({
+    titulo: 'Apagar todos os dados deste casamento?',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar tudo',
+    texto: '<ul class="lic-conf-lista">'
+         + '<li>A <b>lista de convidados</b></li>'
+         + '<li>As <b>mesas</b> e o seu desenho</li>'
+         + '<li>As <b>versões dos convites</b></li>'
+         + '<li>O <b>orçamento</b></li></ul>'
+         + '<br>O casamento fica como acabado de criar. <b>Não se desfaz.</b>',
+    escrever: { rot: 'Confirmação escrita', valor: 'APAGAR',
+                falta: 'O texto não confere. Nada foi apagado.' }
+  });
+  if (!r.sim) return;
   const d = await api('casamento_repor_fabrica', { method:'POST', body: JSON.stringify({ tudo: true }) });
   if (!d || !d.success) return;
   toast('Dados apagados.');
