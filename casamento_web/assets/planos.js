@@ -26,7 +26,10 @@
   var SECCOES = [];                        // secções de foto do convite digital
   var PRAZOS = [];                         // prazos de licença, com o seu factor
   // 'prazo' são os meses escolhidos; é ele que multiplica todos os preços.
-  var sel = { pacote: 0, escaloes: {}, fotos: {}, prazo: 0 };
+  // 'aMedida' diz se o casal abriu a secção dos módulos avulso. Fechada por
+  // omissão: a maioria leva um pacote, e cinco módulos abertos à partida faziam
+  // da página um rolo de cinco mil pixéis onde o botão de submeter se perdia.
+  var sel = { pacote: 0, escaloes: {}, fotos: {}, prazo: 0, aMedida: false };
 
   // ---------- utilitários ----------
   function esc(s) {
@@ -55,6 +58,50 @@
 
   /** Um preço do preçário (que é do prazo base) no prazo que está escolhido. */
   function comPrazo(v) { return Math.round((Number(v) || 0) * fator() * 100) / 100; }
+
+  /**
+   * O que o mesmo plano custaria SEM desconto de prazo — a conta a régua e
+   * esquadro: o preço do prazo mais curto, vezes quantas vezes ele cabe no
+   * prazo escolhido.
+   *
+   * É este o número que se risca. E é um número honesto: 24 meses ao preço de
+   * 6 meses seriam mesmo quatro vezes o preço de 6 meses. O que o casal poupa
+   * é a diferença entre isso e o que paga.
+   */
+  function precoPadrao(v) {
+    var p = prazoAtual(), base = prazoBase();
+    if (!p || !base || p.meses === base.meses) return null;
+    return Math.round((Number(v) || 0) * (base.fator * p.meses / base.meses) * 100) / 100;
+  }
+
+  /** O prazo de referência: o mais curto, que é onde o preçário está escrito. */
+  function prazoBase() {
+    if (!PRAZOS.length) return null;
+    return PRAZOS.reduce(function (a, x) { return x.meses < a.meses ? x : a; }, PRAZOS[0]);
+  }
+
+  /** Quanto por cento se poupa, neste prazo, por não pagar o proporcional. */
+  function descontoPct() {
+    var p = prazoAtual(), base = prazoBase();
+    if (!p || !base || p.meses === base.meses) return 0;
+    var proporcional = base.fator * p.meses / base.meses;
+    return Math.round((1 - p.fator / proporcional) * 100);
+  }
+
+  /**
+   * Um preço, com o proporcional riscado ao lado quando há desconto de prazo.
+   * Sem desconto (prazo base), sai só o preço — riscar um número igual ao que
+   * está ao lado não é uma promoção, é ruído.
+   */
+  function precoComDesconto(v, cls) {
+    var pad = precoPadrao(v);
+    var agora = comPrazo(v);
+    var h = '<span class="' + (cls || 'pl-esc-preco') + '">' + esc(moeda(agora)) + '</span>';
+    if (pad !== null && pad > agora + 0.5) {
+      h = '<span class="pl-riscado">' + esc(moeda(pad)) + '</span>' + h;
+    }
+    return h;
+  }
 
   function modulo(chave) {
     for (var i = 0; i < CAT.modulos.length; i++) if (CAT.modulos[i].chave === chave) return CAT.modulos[i];
@@ -94,6 +141,24 @@
           && (t.todos_modelos ? 1 : 0) >= (e.todos_modelos ? 1 : 0);
     }
     return true;
+  }
+
+  /**
+   * Marca os módulos obrigatórios que ainda faltam, no escalão mais barato.
+   *
+   * Corre ao montar a página e sempre que a secção à medida se abre: escolher
+   * um pacote limpa a escolha à peça, e sem isto quem voltasse aos módulos
+   * encontrava o obrigatório por marcar — um plano que o servidor ia recusar.
+   */
+  function preSelecionarObrigatorios() {
+    CAT.modulos.forEach(function (m) {
+      if (!m.ativo || !m.obrigatorio) return;
+      if (sel.escaloes[m.chave]) return;
+      var t = TENHO[m.chave];
+      if (t && t.ativo) return;
+      var livres = m.escaloes.filter(function (e) { return e.ativo && !jaTem(e); });
+      if (livres.length) sel.escaloes[m.chave] = livres[0].id;
+    });
   }
 
   // ---------- desenho ----------
@@ -163,23 +228,62 @@
         + '<p class="pl-promessa">' + esc(p.promessa) + '</p>'
         + '<div class="pl-preco"><b>' + esc(moeda(comPrazo(p.preco)).replace(' ' + MOEDA, '')) + '</b>'
         +   '<span class="moeda">' + esc(MOEDA) + '</span>'
-        +   (p.poupanca > 0 ? '<span class="pl-antes">' + esc(moeda(comPrazo(p.avulso))) + '</span>' : '')
+        // Riscado: o que este mesmo pacote custaria sem o desconto do prazo.
+        // (A poupança de comprar em pacote, em vez de à peça, vem a seguir.)
+        +   (precoPadrao(p.preco) !== null && precoPadrao(p.preco) > comPrazo(p.preco) + 0.5
+              ? '<span class="pl-antes">' + esc(moeda(precoPadrao(p.preco))) + '</span>' : '')
         + '</div>'
         + (p.poupanca > 0
-            ? '<span class="pl-poupa">Poupa ' + esc(moeda(comPrazo(p.poupanca))) + '</span>' : '')
+            ? '<span class="pl-poupa">Poupa ' + esc(moeda(comPrazo(p.poupanca)))
+              + ' face à compra à peça</span>' : '')
         + '<div class="pl-prazo">' + (prazoAtual() ? prazoAtual().meses : p.meses)
         +   ' meses de licença</div>'
         + '<ul class="pl-inclui">' + linhas.join('') + '</ul>'
-        + '<button type="button" class="btn ' + (sel.pacote === p.id ? 'btn-ouro' : 'btn-linha') + ' pl-escolher">'
-        +   (sel.pacote === p.id ? '✓ Escolhido' : 'Escolher ' + esc(p.nome)) + '</button>'
+        + '<div class="pl-pac-ac">'
+        +   '<button type="button" class="btn ' + (sel.pacote === p.id ? 'btn-ouro' : 'btn-linha') + ' pl-escolher">'
+        +     (sel.pacote === p.id ? '✓ Escolhido' : 'Escolher ' + esc(p.nome)) + '</button>'
+        // Ver o que este pacote traz, em imagens — uma por módulo incluído.
+        +   '<button type="button" class="pl-exemplo-lig" data-exemplo-pac="' + p.id + '">'
+        +     'Ver exemplo</button>'
+        + '</div>'
         + '</div>';
     });
     return h + '</div>';
   }
 
+  /**
+   * A porta para o plano à medida.
+   *
+   * Fechada por omissão. Os módulos todos abertos faziam da inscrição uma
+   * página de cinco mil pixéis, com o botão de submeter perdido no fundo — e um
+   * formulário que não se vê é um formulário que não avança. Quem quer montar o
+   * seu plano abre-a; quem leva um pacote nem dá por ela.
+   */
+  function desenharAbrirMedida() {
+    var n = 0;
+    CAT.modulos.forEach(function (m) { if (m.ativo && m.escaloes.some(function (e) { return e.ativo; })) n++; });
+    if (!n) return '';
+    if (sel.aMedida) return '';
+    return '<div class="pl-medida-porta">'
+      + '<div class="pl-medida-porta-txt">'
+      +   '<b>Nenhum destes serve? Monte o seu.</b>'
+      +   '<span>Escolha módulo a módulo e pague só o que levar. '
+      +   'São ' + n + ' módulos à escolha, e pode reforçar mais tarde sem perder nada.</span>'
+      + '</div>'
+      + '<button type="button" class="btn btn-linha" id="pl-abrir-medida">'
+      +   'Montar o meu pacote</button>'
+      + '</div>';
+  }
+
   function desenharMedida() {
-    var h = '<div class="pl-medida"><h3>Ou monte o plano à sua medida</h3>'
-          + '<div class="dica">Leve só o que precisa. Pode reforçar mais tarde, sem perder nada do que já fez.</div>';
+    // Só se desenha depois de aberta — ver desenharAbrirMedida().
+    if (!sel.aMedida) return '';
+    var h = '<div class="pl-medida"><div class="pl-medida-cab">'
+          + '<div><h3>O seu pacote, à medida</h3>'
+          + '<div class="dica">Leve só o que precisa. Pode reforçar mais tarde, sem perder nada do que já fez.</div></div>'
+          + (COM_PACOTES ? '<button type="button" class="btn btn-fantasma btn-sm" id="pl-fechar-medida">'
+             + 'Voltar aos pacotes</button>' : '')
+          + '</div>';
     CAT.modulos.forEach(function (m) {
       if (!m.ativo) return;
       var escs = m.escaloes.filter(function (e) { return e.ativo; });
@@ -190,19 +294,15 @@
          + (m.obrigatorio ? ' <span class="pl-mod-obrig">obrigatório</span>' : '') + '</div>'
          + (m.beneficio ? '<div class="pl-mod-benef">' + esc(m.beneficio) + '</div>' : '')
          + '<div class="pl-mod-resumo">' + esc(m.resumo) + '</div>'
-         + '</div></div>';
-      // O módulo a trabalhar, em imagem. Descrever por palavras o que se pode
-      // MOSTRAR é pedir ao casal um acto de fé — e o que se vende aqui é,
-      // literalmente, aquilo que ele vai ver todos os dias.
-      if (m.imagem) {
-        h += '<figure class="pl-retrato" data-ampliar="' + esc(m.imagem) + '"'
-           + ' data-titulo="' + esc(m.nome) + '" role="button" tabindex="0"'
-           + ' aria-label="Ver «' + esc(m.nome) + '» em tamanho grande">'
-           + '<img src="' + esc(m.imagem) + '" alt="' + esc(m.nome) + ' na plataforma"'
-           + ' loading="lazy" decoding="async">'
-           + '<figcaption>' + esc(m.nome) + ' — como fica no seu casamento'
-           + '<span class="pl-lupa">ampliar</span></figcaption></figure>';
-      }
+         + '</div>'
+         // A captura do módulo a trabalhar, atrás de um botão. Mostrada de
+         // enfiada, empurrava tudo para baixo; escondida atrás de um botão,
+         // continua a um clique de quem a quer ver — e não estorva quem não.
+         + (m.imagem
+             ? '<button type="button" class="btn btn-linha btn-sm pl-exemplo"'
+               + ' data-exemplo="' + esc(m.chave) + '">Ver exemplo</button>'
+             : '')
+         + '</div>';
       h += '<div class="pl-escs">';
 
       // «Não levar» é uma escolha como as outras — excepto num módulo obrigatório,
@@ -227,8 +327,7 @@
            +   (on ? ' checked' : '') + (tem ? ' disabled' : '') + '>'
            + '<span><span class="pl-esc-nome">' + esc(e.nome) + '</span>'
            + (e.resumo ? '<span class="pl-esc-res">' + esc(e.resumo) + '</span>' : '')
-           + (tem ? '<span class="pl-esc-tem">✓ Já tem</span>'
-                  : '<span class="pl-esc-preco">' + esc(moeda(comPrazo(e.preco))) + '</span>')
+           + (tem ? '<span class="pl-esc-tem">✓ Já tem</span>' : precoComDesconto(e.preco))
            + '</span></label>';
       });
       h += '</div>';
@@ -316,7 +415,8 @@
 
   function pintar() {
     if (!ALVO) return;
-    ALVO.innerHTML = desenharPrazos() + desenharPacotes() + desenharMedida() + desenharConta();
+    ALVO.innerHTML = desenharPrazos() + desenharPacotes()
+                   + desenharAbrirMedida() + desenharMedida() + desenharConta();
     ligar();
     if (typeof AO_MUDAR === 'function') AO_MUDAR(Planos.escolha());
   }
@@ -328,7 +428,7 @@
         // Clicar no que já está escolhido desfaz: é a única forma de voltar
         // ao plano à medida sem recarregar a página.
         sel.pacote = (sel.pacote === id) ? 0 : id;
-        if (sel.pacote) sel.escaloes = {};
+        if (sel.pacote) { sel.escaloes = {}; sel.aMedida = false; }
         pintar();
       }
       el.addEventListener('click', tocar);
@@ -364,36 +464,109 @@
         if (typeof AO_MUDAR === 'function') AO_MUDAR(Planos.escolha());
       });
     });
-    ALVO.querySelectorAll('[data-ampliar]').forEach(function (el) {
-      function abrir() { ampliar(el.dataset.ampliar, el.dataset.titulo); }
-      el.addEventListener('click', abrir);
-      el.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(); }
+    // A porta do plano à medida, nos dois sentidos.
+    var abrir = ALVO.querySelector('#pl-abrir-medida');
+    if (abrir) abrir.addEventListener('click', function () {
+      sel.aMedida = true; sel.pacote = 0;   // à medida e pacote não coexistem
+      preSelecionarObrigatorios();          // o pacote tinha limpado a escolha
+      pintar();
+      var cx = ALVO.querySelector('.pl-medida');
+      if (cx) cx.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    var fechar = ALVO.querySelector('#pl-fechar-medida');
+    if (fechar) fechar.addEventListener('click', function () {
+      sel.aMedida = false;
+      pintar();
+      var cx = ALVO.querySelector('.pl-pacotes');
+      if (cx) cx.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // «Ver exemplo» de um módulo, e de um pacote (a galeria dos seus módulos).
+    ALVO.querySelectorAll('[data-exemplo]').forEach(function (el) {
+      el.addEventListener('click', function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        var m = modulo(el.dataset.exemplo);
+        if (m && m.imagem) galeria([{ src: m.imagem, titulo: m.nome, nota: m.resumo }], 0);
+      });
+    });
+    ALVO.querySelectorAll('[data-exemplo-pac]').forEach(function (el) {
+      el.addEventListener('click', function (ev) {
+        ev.preventDefault(); ev.stopPropagation();   // não escolhe o pacote
+        var id = parseInt(el.dataset.exemploPac, 10);
+        var p = null;
+        CAT.pacotes.forEach(function (x) { if (x.id === id) p = x; });
+        if (!p) return;
+        var vistos = {}, imgs = [];
+        p.itens.forEach(function (eid) {
+          var e = escalao(eid);
+          if (!e || vistos[e.modulo]) return;
+          vistos[e.modulo] = true;
+          var m = modulo(e.modulo);
+          if (m && m.imagem) imgs.push({ src: m.imagem, titulo: m.nome, nota: medida(e) || m.resumo });
+        });
+        if (imgs.length) galeria(imgs, 0, 'Pacote ' + p.nome);
       });
     });
   }
 
-  /** A imagem de um módulo em grande, para se ver mesmo o que se está a comprar. */
-  function ampliar(src, titulo) {
+  /**
+   * As imagens em grande — uma, ou a galeria de um pacote inteiro.
+   *
+   * É o que está por trás de cada «Ver exemplo»: o casal vê exactamente o que
+   * vai comprar, sem que as capturas ocupem a página toda enquanto ele decide.
+   */
+  var GAL = { imgs: [], i: 0, titulo: '' };
+  function galeria(imgs, i, titulo) {
+    GAL = { imgs: imgs || [], i: i || 0, titulo: titulo || '' };
     var m = document.getElementById('pl-lupa');
     if (!m) {
       m = document.createElement('div');
       m.id = 'pl-lupa'; m.className = 'pl-modal pl-modal-img';
       m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
       document.body.appendChild(m);
-      m.addEventListener('click', function () { m.classList.remove('on'); });
+      m.addEventListener('click', function (ev) {
+        if (ev.target === m) fecharGaleria();
+      });
     }
-    m.innerHTML = '<figure class="pl-lupa-cx">'
-      + '<img src="' + esc(src) + '" alt="' + esc(titulo || '') + '">'
-      + '<figcaption>' + esc(titulo || '') + ' <span>toque para fechar</span></figcaption>'
-      + '</figure>';
+    pintarGaleria();
     m.classList.add('on');
-    function fecha(ev) {
-      if (ev.key !== 'Escape') return;
-      m.classList.remove('on');
-      document.removeEventListener('keydown', fecha);
-    }
-    document.addEventListener('keydown', fecha);
+    document.addEventListener('keydown', teclaGaleria);
+  }
+  function pintarGaleria() {
+    var m = document.getElementById('pl-lupa');
+    if (!m || !GAL.imgs.length) return;
+    var it = GAL.imgs[GAL.i], varias = GAL.imgs.length > 1;
+    m.innerHTML = '<figure class="pl-lupa-cx">'
+      + '<div class="pl-lupa-topo">'
+      +   '<span>' + esc(GAL.titulo || it.titulo)
+      +   (varias ? ' <small>' + (GAL.i + 1) + ' de ' + GAL.imgs.length + '</small>' : '') + '</span>'
+      +   '<button type="button" class="pl-lupa-x" id="pl-lupa-fechar" aria-label="Fechar">×</button>'
+      + '</div>'
+      + '<img src="' + esc(it.src) + '" alt="' + esc(it.titulo) + '">'
+      + '<figcaption><b>' + esc(it.titulo) + '</b>'
+      +   (it.nota ? ' — ' + esc(it.nota) : '') + '</figcaption>'
+      + (varias
+          ? '<div class="pl-lupa-nav">'
+            + '<button type="button" id="pl-lupa-ant" aria-label="Anterior">‹ Anterior</button>'
+            + '<button type="button" id="pl-lupa-seg" aria-label="Seguinte">Seguinte ›</button>'
+            + '</div>'
+          : '')
+      + '</figure>';
+    m.querySelector('#pl-lupa-fechar').onclick = fecharGaleria;
+    var a = m.querySelector('#pl-lupa-ant'), b2 = m.querySelector('#pl-lupa-seg');
+    if (a) a.onclick = function () { GAL.i = (GAL.i - 1 + GAL.imgs.length) % GAL.imgs.length; pintarGaleria(); };
+    if (b2) b2.onclick = function () { GAL.i = (GAL.i + 1) % GAL.imgs.length; pintarGaleria(); };
+  }
+  function teclaGaleria(ev) {
+    if (ev.key === 'Escape') { fecharGaleria(); return; }
+    if (!GAL.imgs.length || GAL.imgs.length < 2) return;
+    if (ev.key === 'ArrowLeft')  { GAL.i = (GAL.i - 1 + GAL.imgs.length) % GAL.imgs.length; pintarGaleria(); }
+    if (ev.key === 'ArrowRight') { GAL.i = (GAL.i + 1) % GAL.imgs.length; pintarGaleria(); }
+  }
+  function fecharGaleria() {
+    var m = document.getElementById('pl-lupa');
+    if (m) m.classList.remove('on');
+    document.removeEventListener('keydown', teclaGaleria);
   }
 
   // ---------- políticas ----------
@@ -478,21 +651,15 @@
       PRAZOS  = (CAT.prazos || []).slice();
       sel = { pacote: 0, escaloes: {}, fotos: {}, prazo: opcoes.prazo || 0 };
 
-      // Um módulo obrigatório que o casamento ainda não tenha nasce escolhido —
-      // no escalão mais barato, que é o ponto de entrada. Deixá-lo por marcar
-      // era mostrar um plano impossível e só o dizer no fim.
-      CAT.modulos.forEach(function (m) {
-        if (!m.ativo || !m.obrigatorio) return;
-        var t = TENHO[m.chave];
-        if (t && t.ativo) return;
-        var livres = m.escaloes.filter(function (e) { return e.ativo && !jaTem(e); });
-        if (livres.length) sel.escaloes[m.chave] = livres[0].id;
-      });
+      preSelecionarObrigatorios();
       // Sem nada escolhido, começa-se pelo pacote em destaque: é o que serve a
       // maioria, e uma montra que não sugere nada obriga a decidir do zero.
       if (opcoes.sugerir !== false && COM_PACOTES) {
         CAT.pacotes.forEach(function (p) { if (p.ativo && p.destaque) sel.pacote = p.id; });
       }
+      // Sem pacotes (um reforço, ou um preçário só de módulos) não há porta a
+      // abrir: os módulos são a única coisa que há, e mostram-se logo.
+      if (!COM_PACOTES || !CAT.pacotes.some(function (p) { return p.ativo; })) sel.aMedida = true;
       pintar();
       return Planos;
     },
@@ -539,7 +706,10 @@
 
     /** Marca uma escolha vinda de fora (um pedido já submetido, a reabrir). */
     repor: function (pacoteId, escalaoIds, fotos, meses) {
-      sel = { pacote: 0, escaloes: {}, fotos: fotos || {}, prazo: meses || 0 };
+      sel = { pacote: 0, escaloes: {}, fotos: fotos || {}, prazo: meses || 0,
+              // A reabrir um pedido à medida, a secção abre-se com ele: senão
+              // o casal via um plano «à medida» sem nada à vista.
+              aMedida: !pacoteId };
       if (pacoteId) {
         sel.pacote = pacoteId;
       } else {

@@ -159,24 +159,69 @@ Como sempre, duas fechaduras: o botão desactivado **e** `novoConvite()` a
 recusar — o botão pode ser contornado pelo teclado ou pela consola, a função
 não. E por trás de ambas, `exigirCabidaConvidados()` no servidor.
 
-### A montra: mostrar em vez de descrever
+### A montra: mostrar em vez de descrever, sem enterrar o botão
 
 O preçário público (`registo.php`) não descreve os módulos por palavras — mostra
-capturas do produto a sério, uma por módulo, ampliáveis num clique. Estão em
-`assets/montra/` e o caminho de cada uma vive na coluna `imagem` do módulo, para
-o admin as poder trocar.
+capturas do produto a sério, em `assets/montra/`, com o caminho de cada uma na
+coluna `imagem` do módulo.
 
-Duas notas de quem lá mexer:
+A montra está organizada em **três degraus**, e a razão é aritmética:
 
-- A altura das capturas é **fixa** (`height`, não `max-height`). Uma imagem por
-  carregar não tem tamanho próprio: com `max-height` a moldura nascia com zero
-  de altura, nunca entrava no ecrã, e o `loading="lazy"` nunca a ia buscar.
-- Para as **regerar** depois de mudanças no produto: encha um casamento de
-  demonstração, capture `index.php`, `mesas.php`, `orcamento.php`,
-  `modelo-prova.php` (o cartão) e `convite.php?c=<código>` (o convite como o
-  convidado o vê), e reduza-as para JPEG (~80 KB cada). São as peças — o cartão
-  e o convite — que vendem os módulos de convite; as páginas de gestão vendem os
-  outros três.
+1. **o prazo** (o preço depende dele, logo pergunta-se primeiro);
+2. **os pacotes** — o que serve a maioria;
+3. **uma porta**: «Monte o seu pacote», que só então revela os módulos avulso.
+
+As capturas vivem atrás de um botão **Ver exemplo** — um por módulo, e um por
+pacote (que abre a galeria dos módulos que ele traz, com setas e `Escape`).
+
+Isto não é gosto: com as cinco capturas de enfiada e os módulos todos abertos, a
+página media **5500 px**. O botão de submeter ficava a cinco mil pixéis do
+início, e um erro de validação atirava o casal de volta ao topo — do outro lado
+da página, longe do botão em que acabara de carregar. O formulário parecia
+avariado. Fechada, a montra mede agora **~2800 px**, e o aviso de erro aparece
+**nas duas pontas**: no topo do formulário e junto ao botão, rolando para a que
+estiver mais perto de quem carregou.
+
+Para **regerar** as capturas depois de mudanças no produto: encha um casamento de
+demonstração, capture `index.php`, `mesas.php`, `orcamento.php`,
+`modelo-prova.php` (o cartão) e `convite.php?c=<código>` (o convite como o
+convidado o vê), e reduza-as para JPEG (~80 KB cada). São as peças — o cartão e
+o convite — que vendem os módulos de convite; as páginas de gestão vendem os
+outros três.
+
+### O desconto do prazo, à vista
+
+Cada preço da montra mostra **dois números**: o que o casal paga, e — riscado por
+cima — o que pagaria se o preço fosse proporcional (o preço do prazo curto,
+vezes as vezes que ele cabe no prazo escolhido). A diferença é o desconto.
+
+O número riscado é real, e só aparece quando há mesmo desconto: riscar um valor
+igual ao que está ao lado não é uma promoção, é ruído — e riscar um valor
+**menor** diria o contrário do que se passa.
+
+Do lado do admin, **Licenças → Prazos** mostra cada prazo com a barra do **preço
+por mês** (mais curta = melhor negócio), o total, o proporcional riscado e a
+percentagem poupada. E ao editar um factor, um painel ao vivo faz a conta sobre
+um preço real do preçário e **avisa a vermelho** quando o factor escolhido torna
+o prazo longo mais caro por mês — que é o erro fácil de cometer e difícil de ver.
+
+### As janelas do admin
+
+A área das licenças não usa `window.confirm()` nem `prompt()`. Uma fila de
+`prompt()` obriga a responder às perguntas às cegas, uma de cada vez, sem se ver
+o conjunto — e um Cancelar a meio deita fora o que já se escreveu.
+
+Em vez disso há dois ajudantes, em `plataforma.php`:
+
+- `licFormulario({titulo, dica, campos, aoGuardar})` — um formulário em janela,
+  com os campos todos à vista. `aoGuardar` devolver `false` **mantém a janela
+  aberta** com o aviso, para se corrigir ali mesmo.
+- `licConfirmar({titulo, texto, motivo})` — uma pergunta de sim/não que devolve
+  uma promessa, e que sabe exigir um motivo escrito (a revogação não passa sem
+  ele).
+
+Ambas fecham com `Escape`, guardam com `Enter` (excepto em áreas de texto) e
+põem o foco no primeiro campo.
 
 ### As fotografias do convite, escolhidas na inscrição
 

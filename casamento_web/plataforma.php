@@ -257,6 +257,98 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .et.destaque{ background:var(--gold-pale); color:var(--gold-deep); }
   .et.fita{ background:var(--gold); color:#fff; }
 
+  /* ---- as janelas de edição: formulários, e não filas de prompt() ---- */
+  .pl-modal-cx.largo{ max-width:900px; }
+  .pl-modal-cab{ position:relative; }
+  .pl-modal-x{ background:none; border:0; color:#8a8f88; font-size:1.5rem; line-height:1;
+    cursor:pointer; padding:0 .2rem; flex:none; }
+  .pl-modal-x:hover{ color:var(--ink); }
+  .pl-modal-rodape{ align-items:center; }
+  .lic-j-erro{ flex:1; color:var(--danger); font-size:.83rem; line-height:1.4; text-align:left; }
+
+  .lic-form{ display:grid; gap:.9rem 1rem; grid-template-columns:repeat(3, 1fr); }
+  .lic-f-c{ display:flex; flex-direction:column; gap:.28rem; min-width:0; }
+  .lic-f-c label{ font-size:.72rem; letter-spacing:.05em; text-transform:uppercase;
+    color:#8a8f88; font-weight:600; margin:0; }
+  .lic-f-c input, .lic-f-c select, .lic-f-c textarea{ width:100%; padding:.5rem .7rem;
+    border:1.5px solid var(--line); border-radius:10px; background:var(--card);
+    font-family:var(--sans); font-size:.9rem; color:var(--text); }
+  .lic-f-c input[type=number]{ font-variant-numeric:tabular-nums; }
+  .lic-f-c input:focus, .lic-f-c select:focus, .lic-f-c textarea:focus{ outline:none;
+    border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
+  .lic-f-c textarea{ resize:vertical; line-height:1.5; }
+  .lic-f-d{ font-size:.75rem; color:#8a8f88; line-height:1.45; }
+  .lic-f-d b{ color:var(--ink); }
+  .lic-f-sim{ display:flex; align-items:center; gap:.5rem; margin:0; padding:.5rem 0;
+    text-transform:none; letter-spacing:normal; font-weight:500; font-size:.88rem;
+    color:var(--ink); cursor:pointer; }
+  .lic-f-sim input{ width:17px; height:17px; min-width:17px; padding:0; margin:0;
+    accent-color:var(--gold); flex:none; }
+
+  /* ---- a pergunta de sim/não, com o que está em jogo à vista ---- */
+  .lic-conf{ display:flex; gap:1rem; align-items:flex-start; }
+  .lic-conf-ico{ width:42px; height:42px; flex:none; border-radius:12px; background:var(--gold-pale);
+    display:flex; align-items:center; justify-content:center; font-size:1.25rem; }
+  .lic-conf.perigo .lic-conf-ico{ background:var(--danger-bg); }
+  .lic-conf-txt{ flex:1; font-size:.9rem; line-height:1.6; color:var(--text); }
+  .lic-conf-txt p{ margin:.7rem 0 0; }
+  .lic-conf-itens{ list-style:none; margin:.8rem 0 0; padding:0; }
+  .lic-conf-itens li{ display:flex; gap:.6rem; align-items:baseline; padding:.35rem 0;
+    border-bottom:1px solid var(--line); font-size:.85rem; }
+  .lic-conf-itens li:last-child{ border-bottom:none; }
+  .lic-conf-itens span{ flex:1; color:#8a8f88; font-size:.78rem; }
+  .lic-conf-itens em{ font-style:normal; font-variant-numeric:tabular-nums; color:var(--gold);
+    font-weight:600; }
+
+  /* ---- a prova do factor: o que ele faz, em números ---- */
+  .lic-fator-prova:empty{ display:none; }
+  .lic-fator-prova{ margin-top:1.1rem; border:1.5px solid var(--gold-soft); border-radius:12px;
+    background:var(--gold-pale); padding:.9rem 1rem; }
+  .lic-fp-tit{ font-weight:700; color:var(--ink); font-size:.88rem; }
+  .lic-fp-sub{ font-size:.76rem; color:#8a8f88; margin-top:.1rem; }
+  .lic-fp-linhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin:.7rem 0 .6rem; }
+  .lic-fp-l{ display:flex; flex-direction:column; }
+  .lic-fp-l span{ font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:#8a8f88; }
+  .lic-fp-l b{ font-size:1.05rem; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .lic-fp-l b.risca{ text-decoration:line-through; color:#a8ada6; font-weight:500; }
+  /* Sem desconto não se risca nada: o proporcional passa a ser só a referência. */
+  .lic-fp-l b.ref{ color:#8a8f88; font-weight:500; }
+  .lic-fp-veredito{ font-size:.83rem; line-height:1.5; border-radius:8px; padding:.5rem .7rem; }
+  .lic-fp-veredito.bom{ background:var(--ok-bg); color:var(--text); }
+  .lic-fp-veredito.mau{ background:var(--danger-bg); color:var(--text); }
+  .lic-fp-veredito.igual{ background:var(--warn-bg); color:var(--text); }
+
+  @media (max-width:700px){
+    .lic-form{ grid-template-columns:1fr; }
+    .lic-f-c{ grid-column:span 1 !important; }
+  }
+
+  /* ---- os prazos, com o efeito do factor à vista ---- */
+  .lic-prazos-lista{ display:grid; gap:.8rem;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); }
+  .lic-pz{ border:1.5px solid var(--line); border-radius:12px; padding:.9rem 1rem;
+    background:var(--card); }
+  .lic-pz.base{ border-color:var(--gold-soft); background:var(--gold-pale); }
+  .lic-pz-cab{ display:flex; align-items:baseline; gap:.6rem; }
+  .lic-pz-nome{ flex:1; font-weight:700; color:var(--ink); font-size:.98rem; }
+  .lic-pz-fator{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
+    font-size:.9rem; }
+  .lic-pz-res{ font-size:.78rem; color:#8a8f88; margin-top:.15rem; line-height:1.4; }
+  /* A barra é o preço POR MÊS: mais curta é melhor negócio. É a única forma de
+     ver, de relance, se um factor faz o que se queria que fizesse. */
+  .lic-pz-barra{ position:relative; height:26px; border-radius:6px; background:var(--sand);
+    margin:.6rem 0 .5rem; overflow:hidden; display:flex; align-items:center; }
+  .lic-pz-barra i{ position:absolute; inset:0 auto 0 0; border-radius:6px;
+    background:linear-gradient(90deg,var(--gold-soft),var(--gold-deep)); }
+  .lic-pz-barra span{ position:relative; padding:0 .6rem; font-size:.78rem; font-weight:700;
+    color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); font-variant-numeric:tabular-nums; }
+  .lic-pz-nums{ display:flex; gap:.9rem; flex-wrap:wrap; font-size:.76rem; color:#8a8f88; }
+  .lic-pz-nums b{ color:var(--ink); font-variant-numeric:tabular-nums; }
+  .lic-pz-nums b.risca{ text-decoration:line-through; color:#a8ada6; }
+  .lic-pz-nums .poupa b{ color:var(--ok); }
+  .lic-pz-nums .caro b{ color:var(--danger); }
+  .lic-pz-ac{ display:flex; gap:.4rem; margin-top:.7rem; }
+
   .lic-pi-mod{ border-top:1px solid var(--line); padding:.8rem 0; }
   .lic-pi-mod:first-child{ border-top:none; }
   .lic-pi-nome{ font-weight:700; color:var(--ink); margin-bottom:.45rem; }
@@ -1092,6 +1184,9 @@ async function guardarTema(){
 // Três coisas diferentes debaixo da mesma pastilha, porque respondem à mesma
 // pergunta: o que é que a casa vende, e a quem é que já o deu.
 let LIC_CAT = null, LIC_POL = null, LIC_PRONTO = false, LIC_PEST = 'pendente';
+// Os pedidos que estão em lista, para a janela de decisão poder mostrar o que
+// se está a aprovar — decidir às cegas sobre um número é decidir mal.
+let LIC_PEDIDOS = [];
 
 function licPrimeiraVez(){
   if (LIC_PRONTO) return; LIC_PRONTO = true;
@@ -1141,6 +1236,7 @@ async function licPedidos(estado){
   const d = await api('lic_pedidos&estado=' + encodeURIComponent(LIC_PEST));
   if (!d || !d.success) { cx.innerHTML = '<div class="dica">Não foi possível ler os pedidos.</div>'; return; }
   licBadge(d.pendentes);
+  LIC_PEDIDOS = d.pedidos || [];
   if (!d.pedidos.length){
     cx.innerHTML = '<div class="painel"><div class="dica">'
       + (LIC_PEST === 'pendente' ? 'Nenhum pedido à espera. Está tudo tratado.'
@@ -1222,19 +1318,37 @@ function licData(s){
 }
 
 async function licDecidir(id, decisao){
-  let nota = '';
-  if (decisao === 'recusar'){
-    nota = prompt('Motivo da recusa\n\nO casal vê-o na sua página da licença. Uma recusa sem '
-                + 'explicação deixa-o sem saber o que corrigir.');
-    if (nota === null) return;
-    if (!nota.trim()){ toast('Indique o motivo da recusa.', true); return; }
-  } else {
-    if (!confirm('Aprovar este pedido?\n\nOs módulos pedidos passam a estar concedidos, e o '
-               + 'casamento abre com as suas contas se ainda estava à espera.')) return;
-    nota = prompt('Alguma nota para o casal? (opcional)') || '';
-  }
+  const p = (LIC_PEDIDOS || []).find(x => x.id === id);
+  const quem = p ? licEsc(p.casamento_nome) : 'este casamento';
+  const itens = p ? '<ul class="lic-conf-itens">' + (p.itens || []).map(it =>
+      '<li><b>' + licEsc(it.escalao_nome) + '</b> <span>' + licEsc(it.modulo_chave) + '</span>'
+    + '<em>' + licKz(it.preco) + '</em></li>').join('') + '</ul>' : '';
+
+  const r = await licConfirmar({
+    titulo: (decisao === 'aprovar' ? 'Aprovar' : 'Recusar') + ' o pedido de ' + quem,
+    icone: decisao === 'aprovar' ? '✓' : '✕',
+    perigo: decisao === 'recusar',
+    confirmar: decisao === 'aprovar' ? 'Conceder licença' : 'Recusar pedido',
+    texto: (decisao === 'aprovar'
+      ? '<b>' + (p ? licKz(p.total) : '') + '</b> · ' + (p ? p.meses : '?') + ' meses'
+        + (p && p.pacote_nome ? ' · pacote ' + licEsc(p.pacote_nome) : ' · plano à medida')
+        + itens
+        + '<p>Os módulos acima passam a estar concedidos. Se o casamento ainda estava à espera, '
+        + 'abre-se com as suas contas.</p>'
+      : itens
+        + '<p>O casal deixa de ter o que pediu. Se era o pedido <b>inicial</b>, fica sem licença '
+        + 'nenhuma; se era um reforço, mantém o que já tinha.</p>'),
+    motivo: {
+      rot: decisao === 'aprovar' ? 'Nota para o casal (opcional)' : 'Motivo da recusa',
+      exigido: decisao === 'recusar',
+      dica: 'O casal lê-o na sua página da licença.',
+      falta: 'Uma recusa sem explicação deixa o casal sem saber o que corrigir.',
+      dica2: decisao === 'aprovar' ? 'Ex.: Bem-vindos!' : 'Ex.: falta confirmar o pagamento.'
+    }
+  });
+  if (!r.sim) return;
   const d = await api('lic_decidir', { method:'POST',
-    body: JSON.stringify({ id, decisao, nota }) });
+    body: JSON.stringify({ id, decisao, nota: r.motivo }) });
   if (!d || !d.success) return;
   toast(decisao === 'aprovar'
     ? 'Licença concedida.' + (d.contas_ativadas ? ' ' + d.contas_ativadas + ' conta(s) ativada(s).' : '')
@@ -1262,59 +1376,179 @@ function licPintarPrazos(){
       + 'fica a valer tal como está escrito. Crie pelo menos um.</div></div>';
     return;
   }
-  // O prazo mais curto é a referência de «preço por mês»: é contra ele que se
-  // mede se um prazo maior compensa mesmo.
+  // O prazo mais curto é a referência: é contra ele que se mede se um prazo
+  // maior compensa. Uma amostra real do preçário torna a conta concreta —
+  // «×1,8» não diz nada a ninguém; «57 600 em vez de 64 000» diz tudo.
   const base = ps.reduce((a, x) => (x.meses < a.meses ? x : a), ps[0]);
-  cx.innerHTML = '<div class="painel"><table class="lic-tab"><tbody>'
+  let amostra = 0, amostraNome = '';
+  (LIC_CAT.modulos || []).forEach(m => m.escaloes.forEach(e => {
+    if (!amostra && e.ativo){ amostra = e.preco; amostraNome = m.nome + ' · ' + e.nome; }
+  }));
+  // A escala das barras: o maior preço por mês é a régua.
+  const porMesDe = p => (amostra * p.fator) / p.meses;
+  const maxMes = Math.max.apply(null, ps.map(porMesDe));
+
+  cx.innerHTML = '<div class="painel">'
+    + (amostra
+        ? '<div class="dica" style="margin-bottom:.9rem">A conta abaixo é feita sobre '
+          + '<b>' + licEsc(amostraNome) + '</b> (' + licKz(amostra) + ' a ' + base.meses
+          + ' meses). A barra é o <b>preço por mês</b>: quanto mais curta, melhor negócio para '
+          + 'o casal.</div>'
+        : '')
+    + '<div class="lic-prazos-lista">'
     + ps.map(p => {
-        const porMes = (p.fator / p.meses) / (base.fator / base.meses);
-        const desconto = Math.round((1 - porMes) * 100);
-        return '<tr>'
-          + '<td><b>' + licEsc(p.nome) + '</b>'
-          +   (p.etiqueta ? ' <span class="et fita">' + licEsc(p.etiqueta) + '</span>' : '')
-          +   (Math.abs(p.fator - 1) < 0.0001 ? ' <span class="et">preço base</span>' : '')
-          +   (p.resumo ? '<div class="dica" style="margin:.1rem 0 0">' + licEsc(p.resumo) + '</div>' : '')
-          + '</td>'
-          + '<td class="med">' + p.meses + ' meses</td>'
-          + '<td class="pr">× ' + (+p.fator).toFixed(3) + '</td>'
-          + '<td class="med" style="text-align:right">'
-          +   (desconto > 0 ? '<b style="color:var(--ok)">−' + desconto + '%</b> por mês'
-              : (desconto < 0 ? '<b style="color:var(--warn)">+' + Math.abs(desconto) + '%</b> por mês'
-                              : 'referência')) + '</td>'
-          + '<td class="ac"><button class="btn btn-sm" onclick="licPrazoEditar(' + p.id + ')">Editar</button>'
-          +   '<button class="btn btn-sm perigo" onclick="licPrazoApagar(' + p.id + ')">Apagar</button></td>'
-          + '</tr>';
+        const mes = porMesDe(p);
+        const total = amostra * p.fator;
+        const proporcional = amostra * (base.fator * p.meses / base.meses);
+        const descMes = Math.round((1 - mes / porMesDe(base)) * 100);
+        const larg = maxMes > 0 ? Math.round(mes / maxMes * 100) : 0;
+        const ehBase = p.meses === base.meses;
+        return '<div class="lic-pz' + (ehBase ? ' base' : '') + '">'
+          + '<div class="lic-pz-cab">'
+          +   '<span class="lic-pz-nome">' + licEsc(p.nome)
+          +     (p.etiqueta ? ' <span class="et fita">' + licEsc(p.etiqueta) + '</span>' : '')
+          +     (ehBase ? ' <span class="et">preço base</span>' : '')
+          +   '</span>'
+          +   '<span class="lic-pz-fator">×' + (+p.fator).toFixed(2) + '</span>'
+          + '</div>'
+          + (p.resumo ? '<div class="lic-pz-res">' + licEsc(p.resumo) + '</div>' : '')
+          + '<div class="lic-pz-barra"><i style="width:' + larg + '%"></i>'
+          +   '<span>' + licKz(mes) + ' / mês</span></div>'
+          + '<div class="lic-pz-nums">'
+          +   '<span>Total <b>' + licKz(total) + '</b></span>'
+          +   (!ehBase && proporcional > total + 0.5
+                ? '<span>Proporcional <b class="risca">' + licKz(proporcional) + '</b></span>'
+                  + '<span class="poupa">Poupa <b>' + licKz(proporcional - total) + '</b></span>'
+                : '')
+          +   (descMes !== 0
+                ? '<span class="' + (descMes > 0 ? 'poupa' : 'caro') + '"><b>'
+                  + (descMes > 0 ? '−' : '+') + Math.abs(descMes) + '%</b> por mês</span>'
+                : '')
+          + '</div>'
+          + '<div class="lic-pz-ac">'
+          +   '<button class="btn btn-sm" onclick="licPrazoEditar(' + p.id + ')">Editar</button>'
+          +   '<button class="btn btn-sm perigo" onclick="licPrazoApagar(' + p.id + ')">Apagar</button>'
+          + '</div></div>';
       }).join('')
-    + '</tbody></table></div>';
+    + '</div></div>';
 }
 
-async function licPrazoEditar(id){
+function licPrazoEditar(id){
   const p = id ? (LIC_CAT.prazos || []).find(x => x.id === id) : null;
-  const meses = prompt('Quantos meses?', p ? p.meses : '12');
-  if (meses === null) return;
-  const nome = prompt('Nome do prazo', p ? p.nome : (meses + ' meses'));
-  if (nome === null) return;
-  const resumo = prompt('Uma linha de apoio (opcional)', p ? p.resumo : '');
-  if (resumo === null) return;
-  const fator = prompt('Factor de preço\n\nMultiplica os preços do preçário. 1 = preço base.\n'
-    + 'Para o prazo longo compensar, use um factor abaixo do proporcional\n'
-    + '(ex.: o dobro dos meses a 1,8 e não a 2,0).', p ? p.fator : '1.8');
-  if (fator === null) return;
-  const etiq = prompt('Fita de destaque (ex.: MELHOR ESCOLHA). Vazio = sem fita.',
-                      p ? p.etiqueta : '');
-  if (etiq === null) return;
-  const d = await api('lic_prazo_guardar', { method:'POST', body: JSON.stringify({
-    id: id || 0, meses: parseInt(meses, 10) || 12, nome, resumo,
-    fator: parseFloat(String(fator).replace(',', '.')) || 1,
-    etiqueta: etiq, ordem: p ? p.ordem : (parseInt(meses, 10) || 12), ativo: 1 }) });
-  if (!d || !d.success) return;
-  LIC_CAT = d.catalogo; licPintarPrazos(); toast('Prazo guardado.');
+  const base = licPrazoBase();
+  licFormulario({
+    titulo: id ? 'Prazo · ' + licEsc(p.nome) : 'Novo prazo',
+    dica: 'O <b>factor</b> multiplica todo o preçário. O prazo de factor <b>1</b> é aquele em que '
+        + 'os preços estão escritos.'
+        + (base ? ' Hoje é o de <b>' + base.meses + ' meses</b>.' : ''),
+    campos: [
+      { id:'meses', rot:'Meses', tipo:'numero', valor:p ? p.meses : 12, min:1, max:120 },
+      { id:'nome',  rot:'Nome',  valor:p ? p.nome : '', largura:2,
+        dica2:'Vazio = «N meses».' },
+      { id:'fator', rot:'Factor de preço', tipo:'numero', valor:p ? p.fator : 1.8,
+        min:0.001, passo:0.05 },
+      { id:'etiqueta', rot:'Fita de destaque', valor:p ? p.etiqueta : '', largura:2,
+        dica2:'ex.: MELHOR ESCOLHA' },
+      { id:'resumo', rot:'Uma linha de apoio', valor:p ? p.resumo : '', largura:3,
+        dica2:'Opcional — aparece por baixo do nome, na montra.' },
+      { id:'ordem', rot:'Ordem', tipo:'numero', valor:p ? p.ordem : (p ? p.meses : 12), min:0 },
+      { id:'ativo', rot:'', tipo:'sim', valor:p ? 1 : 1, aoLado:'À escolha do casal', largura:2 },
+    ],
+    // A conta ao vivo: escrever um factor às cegas é adivinhar. Aqui vê-se, ao
+    // lado, o que ele faz ao preço e ao preço POR MÊS — que é o que decide se
+    // um prazo longo compensa ou castiga.
+    extra: '<div class="lic-fator-prova" id="lic-fator-prova"></div>',
+    aoGuardar: async v => {
+      const d = await api('lic_prazo_guardar', { method:'POST', body: JSON.stringify({
+        id: id || 0, meses:v.meses, nome:v.nome, resumo:v.resumo, fator:v.fator,
+        etiqueta:v.etiqueta, ordem:v.ordem || v.meses, ativo:v.ativo }) });
+      if (!d || !d.success) return false;
+      LIC_CAT = d.catalogo; licPintarPrazos(); toast('Prazo guardado.');
+    }
+  });
+  // Liga a prova em directo aos dois campos que a determinam.
+  const rever = () => licProvaFator(
+    parseInt(document.getElementById('lf-meses').value, 10) || 0,
+    parseFloat(String(document.getElementById('lf-fator').value).replace(',', '.')) || 0);
+  ['lf-meses','lf-fator'].forEach(i => {
+    const el = document.getElementById(i);
+    if (el) el.addEventListener('input', rever);
+  });
+  rever();
+}
+
+/** O prazo de referência: o de factor 1, onde o preçário está escrito. */
+function licPrazoBase(){
+  const ps = (LIC_CAT && LIC_CAT.prazos) || [];
+  if (!ps.length) return null;
+  return ps.reduce((a, x) => (x.fator < a.fator ? x : a), ps[0]);
+}
+
+/**
+ * O que um factor faz, em números — para não se escrever um às cegas.
+ *
+ * Mostra, sobre um preço real do preçário, o que o casal pagaria, o que pagaria
+ * se fosse proporcional, e a diferença por mês. É a diferença por mês que
+ * decide se o prazo longo é um bom negócio ou um castigo.
+ */
+function licProvaFator(meses, fator){
+  const cx = document.getElementById('lic-fator-prova');
+  if (!cx) return;
+  const base = licPrazoBase();
+  if (!base || !meses || !fator){ cx.innerHTML = ''; return; }
+  // Um preço real, para a conta não ser abstracta.
+  let amostra = 0, nome = '';
+  (LIC_CAT.modulos || []).forEach(m => m.escaloes.forEach(e => {
+    if (!amostra && e.ativo){ amostra = e.preco; nome = m.nome + ' · ' + e.nome; }
+  }));
+  if (!amostra) { cx.innerHTML = ''; return; }
+
+  const paga = amostra * fator;
+  const proporcional = amostra * (base.fator * meses / base.meses);
+  const desc = proporcional > 0 ? Math.round((1 - paga / proporcional) * 100) : 0;
+  const mesBase = (amostra * base.fator) / base.meses;
+  const mesAgora = paga / meses;
+  const descMes = mesBase > 0 ? Math.round((1 - mesAgora / mesBase) * 100) : 0;
+
+  // Só se risca o proporcional quando ele é MAIOR do que o que se paga — isto
+  // é, quando há mesmo desconto. Riscar um número menor do que o preço final
+  // dizia o contrário do que se passa.
+  const haDesconto = proporcional > paga + 0.5;
+  cx.innerHTML = '<div class="lic-fp-tit">O que este factor faz</div>'
+    + '<div class="lic-fp-sub">Sobre <b>' + licEsc(nome) + '</b> (' + licKz(amostra)
+    + ' a ' + base.meses + ' meses)</div>'
+    + '<div class="lic-fp-linhas">'
+    +   licFpLinha('O casal paga', licKz(paga), '')
+    +   licFpLinha(haDesconto ? 'Se fosse proporcional' : 'Proporcional seria',
+                   licKz(proporcional), haDesconto ? 'risca' : 'ref')
+    +   licFpLinha('Por mês', licKz(mesAgora), '')
+    + '</div>'
+    + '<div class="lic-fp-veredito ' + (descMes > 0 ? 'bom' : (descMes < 0 ? 'mau' : 'igual')) + '">'
+    +   (descMes > 0
+        ? '<b>−' + descMes + '% por mês</b> face aos ' + base.meses + ' meses. '
+          + 'O casal poupa ' + licKz(proporcional - paga) + ' por levar ' + meses + ' meses.'
+        : (descMes < 0
+            ? '<b>+' + Math.abs(descMes) + '% por mês</b> — este prazo sai <b>mais caro</b> por mês '
+              + 'do que o de ' + base.meses + '. Um prazo longo assim castiga quem se compromete.'
+            : 'Custa o mesmo por mês que ' + base.meses + ' meses — não há vantagem em escolhê-lo.'))
+    + '</div>'
+    + (desc !== descMes ? '' : '');
+}
+function licFpLinha(rot, val, cls){
+  return '<div class="lic-fp-l"><span>' + rot + '</span><b class="' + (cls || '') + '">'
+       + val + '</b></div>';
 }
 
 async function licPrazoApagar(id){
   const p = (LIC_CAT.prazos || []).find(x => x.id === id); if (!p) return;
-  if (!confirm('Apagar o prazo «' + p.nome + '»?\n\nAs licenças já concedidas com ele não se '
-             + 'alteram: o prazo delas está guardado no casamento.')) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar o prazo «' + licEsc(p.nome) + '»?',
+    icone: '🗑', perigo: true, confirmar: 'Apagar prazo',
+    texto: 'Deixa de estar à escolha na montra.<br><br>'
+         + 'As licenças <b>já concedidas</b> com ele não se alteram: o prazo de cada casamento '
+         + 'está guardado nele próprio.'
+  });
+  if (!r.sim) return;
   const d = await api('lic_prazo_apagar', { method:'POST', body: JSON.stringify({ id }) });
   if (!d || !d.success) return;
   LIC_CAT = d.catalogo; licPintarPrazos(); toast('Prazo apagado.');
@@ -1358,57 +1592,93 @@ function licEscalao(id){
   return [null, null];
 }
 
-async function licModuloEditar(id){
+function licModuloEditar(id){
   const m = licModulo(id); if (!m) return;
-  const nome = prompt('Nome do módulo', m.nome); if (nome === null) return;
-  const resumo = prompt('O que faz (uma linha)', m.resumo); if (resumo === null) return;
-  const benef = prompt('A frase que vende — o benefício, não a funcionalidade', m.beneficio);
-  if (benef === null) return;
-  const icone = prompt('Ícone (um emoji)', m.icone); if (icone === null) return;
-  const d = await api('lic_modulo_guardar', { method:'POST', body: JSON.stringify({
-    id, nome, resumo, beneficio: benef, icone, ativo: 1 }) });
-  if (!d || !d.success) return;
-  LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
-  toast('Módulo guardado.');
+  licFormulario({
+    titulo: 'Módulo · ' + licEsc(m.nome),
+    dica: 'O que este módulo é, e como se apresenta na montra da inscrição.',
+    campos: [
+      { id:'nome',   rot:'Nome',   valor:m.nome, largura:2 },
+      { id:'icone',  rot:'Ícone',  valor:m.icone, dica:'Um emoji.' },
+      { id:'ativo',  rot:'',       tipo:'sim', valor:m.ativo, aoLado:'À venda' },
+      { id:'resumo', rot:'O que faz', valor:m.resumo, largura:3, tipo:'area', linhas:2,
+        dica:'Uma linha, em linguagem de casamento.' },
+      { id:'beneficio', rot:'A frase que vende', valor:m.beneficio, largura:3, tipo:'area', linhas:2,
+        dica:'O <b>benefício</b>, não a funcionalidade: «Saiba quem vem» e não «lista de convidados».' },
+    ],
+    aoGuardar: async v => {
+      if (!v.nome){ licJanelaErro('O módulo precisa de um nome.'); return false; }
+      const d = await api('lic_modulo_guardar', { method:'POST', body: JSON.stringify({
+        id, nome:v.nome, resumo:v.resumo, beneficio:v.beneficio, icone:v.icone, ativo:v.ativo }) });
+      if (!d || !d.success) return false;
+      LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
+      toast('Módulo guardado.');
+    }
+  });
 }
 
-async function licEscalaoEditar(modId, escId){
+function licEscalaoEditar(modId, escId){
   const m = licModulo(modId); if (!m) return;
   const e = escId ? licEscalao(escId)[1] : null;
-  const nome = prompt('Nome do escalão\n\nMódulo: ' + m.nome, e ? e.nome : '');
-  if (nome === null || !nome.trim()) return;
-  const resumo = prompt('Uma linha de apoio (opcional)', e ? e.resumo : '');
-  if (resumo === null) return;
-  const preco = prompt('Preço em Kz (só o número)', e ? e.preco : '0');
-  if (preco === null) return;
-  const corpo = { id: escId, modulo: modId, nome, resumo,
-                  preco: parseFloat(String(preco).replace(/\s/g,'').replace(',','.')) || 0,
-                  limite: 0, editar: 0, todos_modelos: 0,
-                  ordem: e ? e.ordem : 100, ativo: 1 };
-  // Cada módulo tem a sua medida: pedir «pode editar?» num escalão de
-  // convidados era pedir uma resposta que não quer dizer nada.
+
+  // Cada módulo tem a sua medida. Perguntar «pode editar?» num escalão de
+  // convidados era pedir uma resposta que não quer dizer nada — por isso o
+  // formulário muda com o módulo, e mostra só o que ali faz sentido.
+  const campos = [
+    { id:'nome',   rot:'Nome do escalão', valor:e ? e.nome : '', largura:2 },
+    { id:'preco',  rot:'Preço (prazo base)', tipo:'preco', valor:e ? e.preco : 0,
+      min:0, passo:500, dica:'Em Kz. Os prazos longos multiplicam-no.' },
+    { id:'resumo', rot:'Uma linha de apoio', valor:e ? e.resumo : '', largura:3,
+      dica2:'Opcional — aparece por baixo do nome, na montra.' },
+  ];
   if (m.chave === 'convidados'){
-    const lim = prompt('Quantos convidados no máximo?\n\n0 = sem limite', e ? e.limite : '0');
-    if (lim === null) return;
-    corpo.limite = Math.max(0, parseInt(lim, 10) || 0);
+    campos.push({ id:'limite', rot:'Tecto de convidados', tipo:'numero',
+                  valor:e ? e.limite : 0, min:0, max:100000,
+                  dica:'<b>0</b> = sem limite.' });
   } else if (m.chave === 'impresso' || m.chave === 'digital'){
-    const nivel = prompt('Que nível?\n\n1 = modelo padrão, sem edição\n'
-                       + '2 = modelo padrão, com edição\n3 = todos os modelos, com edição',
-                       e ? (e.todos_modelos ? '3' : (e.editar ? '2' : '1')) : '1');
-    if (nivel === null) return;
-    corpo.editar = (nivel === '2' || nivel === '3') ? 1 : 0;
-    corpo.todos_modelos = nivel === '3' ? 1 : 0;
+    campos.push({ id:'nivel', rot:'O que dá', tipo:'escolha', largura:2,
+      valor: e ? (e.todos_modelos ? '3' : (e.editar ? '2' : '1')) : '1',
+      opcoes:[{v:'1',r:'Modelo padrão, sem edição'},
+              {v:'2',r:'Modelo padrão, com edição'},
+              {v:'3',r:'Todos os modelos, com edição'}] });
   }
-  const d = await api('lic_escalao_guardar', { method:'POST', body: JSON.stringify(corpo) });
-  if (!d || !d.success) return;
-  LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
-  toast('Escalão guardado.');
+  campos.push({ id:'ordem', rot:'Ordem', tipo:'numero', valor:e ? e.ordem : 100, min:0,
+                dica:'Menor aparece primeiro.' });
+  campos.push({ id:'ativo', rot:'', tipo:'sim', valor:e ? e.ativo : 1, aoLado:'À venda' });
+
+  licFormulario({
+    titulo: (escId ? 'Escalão' : 'Novo escalão') + ' · ' + licEsc(m.nome),
+    dica: 'Um escalão é uma <b>medida</b> em que o módulo se vende. É aqui que vive o preço.',
+    campos,
+    aoGuardar: async v => {
+      if (!v.nome){ licJanelaErro('O escalão precisa de um nome.'); return false; }
+      const corpo = { id: escId, modulo: modId, nome:v.nome, resumo:v.resumo,
+                      preco: v.preco, limite: 0, editar: 0, todos_modelos: 0,
+                      ordem: v.ordem, ativo: v.ativo };
+      if (m.chave === 'convidados') corpo.limite = Math.max(0, v.limite | 0);
+      if (m.chave === 'impresso' || m.chave === 'digital'){
+        corpo.editar = (v.nivel === '2' || v.nivel === '3') ? 1 : 0;
+        corpo.todos_modelos = v.nivel === '3' ? 1 : 0;
+      }
+      const d = await api('lic_escalao_guardar', { method:'POST', body: JSON.stringify(corpo) });
+      if (!d || !d.success) return false;
+      LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
+      toast('Escalão guardado.');
+    }
+  });
 }
 
 async function licEscalaoApagar(id){
   const [m, e] = licEscalao(id); if (!e) return;
-  if (!confirm('Apagar o escalão «' + e.nome + '»?\n\nSe já houver licenças assentes nele, '
-             + 'não se apaga — desliga-se, e deixa de aparecer na montra.')) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar o escalão «' + licEsc(e.nome) + '»?',
+    icone: '🗑',
+    perigo: true, confirmar: 'Apagar escalão',
+    texto: 'Deixa de estar à venda em <b>' + licEsc(m.nome) + '</b>.<br><br>'
+         + 'Se já houver licenças assentes nele, <b>não se apaga</b>: desliga-se, e deixa apenas '
+         + 'de aparecer na montra. As licenças que dele dependem ficam intactas.'
+  });
+  if (!r.sim) return;
   const d = await api('lic_escalao_apagar', { method:'POST', body: JSON.stringify({ id }) });
   if (!d || !d.success) return;
   LIC_CAT = d.catalogo; licPintarPrecario(); licPintarPacotes();
@@ -1455,26 +1725,40 @@ function licPintarPacotes(){
   }).join('');
 }
 
-async function licPacoteEditar(id){
+function licPacoteEditar(id){
   const p = id ? LIC_CAT.pacotes.find(x => x.id === id) : null;
-  const nome = prompt('Nome do pacote', p ? p.nome : ''); if (nome === null || !nome.trim()) return;
-  const prom = prompt('A promessa — uma linha', p ? p.promessa : ''); if (prom === null) return;
-  const preco = prompt('Preço em Kz', p ? p.preco : '0'); if (preco === null) return;
-  const meses = prompt('Meses de licença que o pacote inclui', p ? p.meses : '12');
-  if (meses === null) return;
-  const etiq = prompt('Fita de destaque (ex.: O MAIS ESCOLHIDO). Vazio = sem fita.',
-                      p ? p.etiqueta : ''); if (etiq === null) return;
-  const dest = confirm('Pôr este pacote em destaque?\n\nSó um pode estar — dois «mais escolhidos» '
-                     + 'não escolhem nada.\n\nOK = em destaque · Cancelar = normal');
-  const d = await api('lic_pacote_guardar', { method:'POST', body: JSON.stringify({
-    id: id || 0, nome, promessa: prom, resumo: p ? p.resumo : '',
-    preco: parseFloat(String(preco).replace(/\s/g,'').replace(',','.')) || 0,
-    meses: parseInt(meses, 10) || 12, etiqueta: etiq, destaque: dest ? 1 : 0,
-    ordem: p ? p.ordem : 100, ativo: 1 }) });
-  if (!d || !d.success) return;
-  LIC_CAT = d.catalogo; licPintarPacotes();
-  toast('Pacote guardado.' + (id ? '' : ' Escolha agora os módulos que inclui.'));
-  if (!id) licPacoteItens(d.id);
+  licFormulario({
+    titulo: id ? 'Pacote · ' + licEsc(p.nome) : 'Novo pacote',
+    dica: 'Um conjunto de escalões com preço próprio. A <b>poupança</b> que o casal vê é '
+        + 'calculada — a diferença entre este preço e a soma dos escalões à peça.',
+    campos: [
+      { id:'nome',  rot:'Nome',  valor:p ? p.nome : '', largura:2 },
+      { id:'preco', rot:'Preço (prazo base)', tipo:'preco', valor:p ? p.preco : 0, min:0, passo:1000 },
+      { id:'promessa', rot:'A promessa', valor:p ? p.promessa : '', largura:3,
+        dica2:'Uma linha: o que este pacote resolve.' },
+      { id:'resumo', rot:'Descrição', tipo:'area', linhas:2, valor:p ? p.resumo : '', largura:3,
+        dica2:'Opcional — o parágrafo mais longo, para quem quer ler mais.' },
+      { id:'meses', rot:'Prazo sugerido', tipo:'numero', valor:p ? p.meses : 12, min:1, max:120,
+        dica:'Meses. O casal pode escolher outro.' },
+      { id:'etiqueta', rot:'Fita de destaque', valor:p ? p.etiqueta : '',
+        dica2:'ex.: O MAIS ESCOLHIDO' },
+      { id:'ordem', rot:'Ordem', tipo:'numero', valor:p ? p.ordem : 100, min:0 },
+      { id:'destaque', rot:'', tipo:'sim', valor:p ? p.destaque : 0, largura:2,
+        aoLado:'Em destaque na montra',
+        dica:'Só um pacote pode estar — dois «mais escolhidos» não escolhem nada.' },
+      { id:'ativo', rot:'', tipo:'sim', valor:p ? p.ativo : 1, aoLado:'À venda' },
+    ],
+    aoGuardar: async v => {
+      if (!v.nome){ licJanelaErro('O pacote precisa de um nome.'); return false; }
+      const d = await api('lic_pacote_guardar', { method:'POST', body: JSON.stringify({
+        id: id || 0, nome:v.nome, promessa:v.promessa, resumo:v.resumo, preco:v.preco,
+        meses:v.meses, etiqueta:v.etiqueta, destaque:v.destaque, ordem:v.ordem, ativo:v.ativo }) });
+      if (!d || !d.success) return false;
+      LIC_CAT = d.catalogo; licPintarPacotes();
+      toast('Pacote guardado.' + (id ? '' : ' Escolha agora os módulos que inclui.'));
+      if (!id) setTimeout(() => licPacoteItens(d.id), 350);
+    }
+  });
 }
 
 /**
@@ -1567,8 +1851,14 @@ function licPacoteItens(id){
 
 async function licPacoteApagar(id){
   const p = LIC_CAT.pacotes.find(x => x.id === id); if (!p) return;
-  if (!confirm('Apagar o pacote «' + p.nome + '»?\n\nAs licenças já concedidas por ele não se '
-             + 'alteram: o que foi concedido está concedido.')) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar o pacote «' + licEsc(p.nome) + '»?',
+    icone: '🗑', perigo: true, confirmar: 'Apagar pacote',
+    texto: 'Deixa de aparecer na montra da inscrição.<br><br>'
+         + 'As licenças <b>já concedidas</b> por ele não se alteram: o que foi concedido está '
+         + 'concedido, e os casamentos que o levaram continuam com os seus módulos.'
+  });
+  if (!r.sim) return;
   const d = await api('lic_pacote_apagar', { method:'POST', body: JSON.stringify({ id }) });
   if (!d || !d.success) return;
   LIC_CAT = d.catalogo; licPintarPacotes(); toast('Pacote apagado.');
@@ -1595,8 +1885,15 @@ function licPolPrever(){
 async function licPolGuardar(){
   const titulo = document.getElementById('lic-pol-titulo').value.trim();
   const corpo = document.getElementById('lic-pol-corpo').value.trim();
-  if (!confirm('Publicar uma versão nova das políticas?\n\nA versão actual fica guardada — é a '
-             + 'prova do texto que os casais já aceitaram.')) return;
+  const r = await licConfirmar({
+    titulo: 'Publicar uma versão nova das políticas?',
+    icone: '📄', confirmar: 'Publicar versão ' + ((LIC_POL ? LIC_POL.versao : 0) + 1),
+    texto: 'A versão <b>' + (LIC_POL ? LIC_POL.versao : 1) + '</b> fica guardada — é a prova do '
+         + 'texto que os casais já aceitaram, e essa não se reescreve.<br><br>'
+         + 'Os pedidos <b>novos</b> passam a apontar para a versão nova; os antigos continuam a '
+         + 'apontar para aquela a que cada casal disse que sim.'
+  });
+  if (!r.sim) return;
   const d = await api('lic_politica_guardar', { method:'POST', body: JSON.stringify({ titulo, corpo }) });
   if (!d || !d.success) return;
   LIC_POL = d.politica;
@@ -1606,21 +1903,169 @@ async function licPolGuardar(){
 }
 
 /** Uma janela simples de OK/Cancelar, para as escolhas que não cabem num prompt. */
-function licJanela(titulo, html, aoConfirmar){
+function licJanela(titulo, html, aoConfirmar, opcoes){
+  opcoes = opcoes || {};
   let m = document.getElementById('lic-janela');
   if (!m){
     m = document.createElement('div'); m.id = 'lic-janela'; m.className = 'pl-modal';
     document.body.appendChild(m);
-    m.addEventListener('click', ev => { if (ev.target === m) m.classList.remove('on'); });
+    m.addEventListener('click', ev => { if (ev.target === m) licFecharJanela(); });
   }
-  m.innerHTML = '<div class="pl-modal-cx"><div class="pl-modal-cab"><h3>' + titulo + '</h3></div>'
+  m.innerHTML = '<div class="pl-modal-cx' + (opcoes.largo ? ' largo' : '') + '">'
+    + '<div class="pl-modal-cab"><h3>' + titulo + '</h3>'
+    + '<button type="button" class="pl-modal-x" id="lic-jx" aria-label="Fechar">×</button></div>'
     + '<div class="pl-modal-corpo">' + html + '</div>'
     + '<div class="pl-modal-rodape">'
-    + '<button class="btn btn-fantasma btn-sm" id="lic-jc">Cancelar</button>'
-    + '<button class="btn btn-ouro btn-sm" id="lic-jo">Guardar</button></div></div>';
+    + '<span class="lic-j-erro" id="lic-jerro"></span>'
+    + '<button class="btn btn-fantasma btn-sm" id="lic-jc">' + (opcoes.cancelar || 'Cancelar') + '</button>'
+    + (aoConfirmar
+        ? '<button class="btn ' + (opcoes.perigo ? 'perigo' : 'btn-ouro') + ' btn-sm" id="lic-jo">'
+          + (opcoes.guardar || 'Guardar') + '</button>'
+        : '')
+    + '</div></div>';
   m.classList.add('on');
-  document.getElementById('lic-jc').onclick = () => m.classList.remove('on');
-  document.getElementById('lic-jo').onclick = async () => { m.classList.remove('on'); await aoConfirmar(); };
+  document.getElementById('lic-jx').onclick = licFecharJanela;
+  document.getElementById('lic-jc').onclick = licFecharJanela;
+  const ok = document.getElementById('lic-jo');
+  if (ok) ok.onclick = async () => {
+    // Guardar pode recusar: devolver false deixa a janela aberta, com o aviso,
+    // para se corrigir ali mesmo em vez de recomeçar tudo.
+    ok.disabled = true; const rot = ok.textContent; ok.textContent = 'A guardar…';
+    let r;
+    try { r = await aoConfirmar(); } finally { ok.disabled = false; ok.textContent = rot; }
+    if (r === false) return;
+    licFecharJanela();
+  };
+  document.addEventListener('keydown', licTeclaJanela);
+  // O primeiro campo fica pronto a escrever: quem abre uma janela de edição
+  // quer escrever, não procurar onde carregar.
+  const p1 = m.querySelector('.pl-modal-corpo input:not([type=hidden]):not([disabled]), '
+                           + '.pl-modal-corpo textarea, .pl-modal-corpo select');
+  if (p1) setTimeout(() => { try { p1.focus(); p1.select && p1.select(); } catch(e){} }, 60);
+}
+function licFecharJanela(){
+  const m = document.getElementById('lic-janela');
+  if (m) m.classList.remove('on');
+  document.removeEventListener('keydown', licTeclaJanela);
+}
+function licTeclaJanela(ev){
+  if (ev.key === 'Escape'){ licFecharJanela(); return; }
+  // Enter guarda — excepto numa área de texto, onde Enter é mudar de linha.
+  if (ev.key === 'Enter' && !ev.shiftKey && ev.target && ev.target.tagName !== 'TEXTAREA'){
+    const ok = document.getElementById('lic-jo');
+    if (ok && !ok.disabled){ ev.preventDefault(); ok.click(); }
+  }
+}
+/** Um aviso dentro da janela, sem a fechar. */
+function licJanelaErro(txt){
+  const e = document.getElementById('lic-jerro');
+  if (e) e.textContent = txt || '';
+}
+
+/**
+ * Um formulário em janela, em vez de uma fila de prompt().
+ *
+ * Uma sequência de prompt() obriga a responder às perguntas às cegas, uma de
+ * cada vez, sem se ver o conjunto nem poder voltar atrás — e um Cancelar a
+ * meio deita fora o que já se escreveu. Aqui vê-se tudo, corrige-se tudo, e o
+ * que se escreve fica à vista até se guardar.
+ *
+ * campos: [{ id, rot, tipo, valor, dica, opcoes, min, max, passo, largura }]
+ *   tipo: 'texto' (omissão) | 'numero' | 'preco' | 'area' | 'sim' | 'escolha'
+ */
+function licFormulario(cfg){
+  const campos = cfg.campos || [];
+  const html = (cfg.dica ? '<div class="dica">' + cfg.dica + '</div>' : '')
+    + '<div class="lic-form">'
+    + campos.map(c => {
+        const v = c.valor === undefined || c.valor === null ? '' : String(c.valor);
+        const larg = c.largura ? ' style="grid-column:span ' + c.largura + '"' : '';
+        let campo;
+        if (c.tipo === 'area'){
+          campo = '<textarea id="lf-' + c.id + '" rows="' + (c.linhas || 3) + '">'
+                + licEsc(v) + '</textarea>';
+        } else if (c.tipo === 'sim'){
+          campo = '<label class="lic-f-sim"><input type="checkbox" id="lf-' + c.id + '"'
+                + (c.valor ? ' checked' : '') + '><span>' + licEsc(c.aoLado || 'Sim') + '</span></label>';
+        } else if (c.tipo === 'escolha'){
+          campo = '<select id="lf-' + c.id + '">'
+                + (c.opcoes || []).map(o =>
+                    '<option value="' + licEsc(o.v) + '"' + (String(o.v) === v ? ' selected' : '') + '>'
+                    + licEsc(o.r) + '</option>').join('')
+                + '</select>';
+        } else {
+          const t = (c.tipo === 'numero' || c.tipo === 'preco') ? 'number' : 'text';
+          campo = '<input type="' + t + '" id="lf-' + c.id + '" value="' + licEsc(v) + '"'
+                + (c.min !== undefined ? ' min="' + c.min + '"' : '')
+                + (c.max !== undefined ? ' max="' + c.max + '"' : '')
+                + (c.passo ? ' step="' + c.passo + '"' : '')
+                + (c.dica2 ? ' placeholder="' + licEsc(c.dica2) + '"' : '') + '>';
+        }
+        return '<div class="lic-f-c"' + larg + '>'
+          + (c.tipo === 'sim' ? '' : '<label for="lf-' + c.id + '">' + licEsc(c.rot) + '</label>')
+          + campo
+          + (c.dica ? '<span class="lic-f-d">' + c.dica + '</span>' : '')
+          + '</div>';
+      }).join('')
+    + '</div>' + (cfg.extra || '');
+
+  licJanela(cfg.titulo, html, async () => {
+    const vals = {};
+    campos.forEach(c => {
+      const el = document.getElementById('lf-' + c.id);
+      if (!el) return;
+      if (c.tipo === 'sim') vals[c.id] = el.checked ? 1 : 0;
+      else if (c.tipo === 'numero' || c.tipo === 'preco')
+        vals[c.id] = parseFloat(String(el.value).replace(',', '.')) || 0;
+      else vals[c.id] = el.value.trim();
+    });
+    licJanelaErro('');
+    return await cfg.aoGuardar(vals);
+  }, { guardar: cfg.guardar, perigo: cfg.perigo, largo: cfg.largo });
+}
+
+/**
+ * Uma pergunta de sim/não em janela, em vez de window.confirm().
+ *
+ * Devolve uma promessa: true se confirmou, false se não. Aceita 'motivo' para
+ * as decisões que exigem uma razão escrita — e aí não deixa confirmar sem ela.
+ */
+function licConfirmar(cfg){
+  return new Promise(resolve => {
+    const temMotivo = !!cfg.motivo;
+    const html = '<div class="lic-conf' + (cfg.perigo ? ' perigo' : '') + '">'
+      + (cfg.icone ? '<div class="lic-conf-ico">' + cfg.icone + '</div>' : '')
+      + '<div class="lic-conf-txt">' + cfg.texto + '</div></div>'
+      + (temMotivo
+          ? '<div class="lic-f-c" style="margin-top:1rem">'
+            + '<label for="lf-motivo">' + licEsc(cfg.motivo.rot) + '</label>'
+            + '<textarea id="lf-motivo" rows="3" placeholder="'
+            + licEsc(cfg.motivo.dica2 || '') + '"></textarea>'
+            + (cfg.motivo.dica ? '<span class="lic-f-d">' + cfg.motivo.dica + '</span>' : '')
+            + '</div>'
+          : '');
+    let respondeu = false;
+    licJanela(cfg.titulo, html, async () => {
+      const el = document.getElementById('lf-motivo');
+      const txt = el ? el.value.trim() : '';
+      if (temMotivo && cfg.motivo.exigido && !txt){
+        licJanelaErro(cfg.motivo.falta || 'Escreva o motivo.');
+        if (el) el.focus();
+        return false;
+      }
+      respondeu = true;
+      resolve({ sim: true, motivo: txt });
+    }, { guardar: cfg.confirmar || 'Confirmar', perigo: cfg.perigo, cancelar: cfg.cancelar });
+    // Fechar sem confirmar é responder que não.
+    const m = document.getElementById('lic-janela');
+    const obs = new MutationObserver(() => {
+      if (!m.classList.contains('on') && !respondeu){
+        obs.disconnect(); resolve({ sim: false, motivo: '' });
+      }
+      if (respondeu) obs.disconnect();
+    });
+    obs.observe(m, { attributes: true, attributeFilter: ['class'] });
+  });
 }
 
 // A pastilha das licenças traz o número de pedidos à espera mal a página abre:
@@ -1632,15 +2077,24 @@ function licJanela(titulo, html, aoConfirmar){
 
 /** Revogar a licença por incumprimento. O motivo não é opcional: o casal vê-o. */
 async function licRevogarDe(id, nome){
-  const motivo = prompt('Revogar a licença de «' + nome + '»\n\n'
-    + 'Motivo (o casal vê-o na sua página da licença, e fica no registo):');
-  if (motivo === null) return;
-  if (!motivo.trim()){ toast('A revogação exige um motivo.', true); return; }
-  if (!confirm('Revogar a licença de «' + nome + '»?\n\nTodos os módulos fecham de imediato. '
-             + 'Os dados NÃO se apagam — o casal continua a poder exportá-los, como as políticas '
-             + 'lhe prometem.')) return;
+  const r = await licConfirmar({
+    titulo: 'Revogar a licença de «' + licEsc(nome) + '»?',
+    icone: '⚠️', perigo: true, confirmar: 'Revogar licença',
+    texto: '<b>Todos os módulos fecham de imediato.</b> O casal deixa de poder entrar no painel, '
+         + 'nas mesas, no orçamento e nos convites.<br><br>'
+         + 'Os dados <b>não</b> se apagam, e a Gestão fica aberta: o casal continua a poder '
+         + 'exportá-los, como as políticas lhe prometem (Lei n.º 22/11, artigos 26.º e 28.º).',
+    motivo: {
+      rot: 'Motivo da revogação',
+      exigido: true,
+      dica: 'O casal lê-o na sua página da licença, e fica no registo de ações.',
+      falta: 'A revogação exige um motivo — o casal tem direito a sabê-lo.',
+      dica2: 'Ex.: partilha de credenciais com terceiros (ponto 2 das políticas).'
+    }
+  });
+  if (!r.sim) return;
   const d = await api('lic_revogar', { method:'POST',
-    body: JSON.stringify({ casamento: id, motivo }) });
+    body: JSON.stringify({ casamento: id, motivo: r.motivo }) });
   if (!d || !d.success) return;
   toast('Licença revogada.');
   carregarCasamentos();

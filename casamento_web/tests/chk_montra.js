@@ -41,6 +41,11 @@ const entrar = async (ctx, user, pass) => {
 
   const admin = await entrar(await b.newContext(), 'admin', 'noivos2026');
   const api = admin._api;
+  // Uma janela nativa é um beco: não se estiliza, não se valida e um Cancelar a
+  // meio deita fora o que já se escreveu. Conta-se quantas aparecem — devem ser
+  // zero em toda a área das licenças.
+  let nativos = 0;
+  admin.on('dialog', d => { nativos++; d.dismiss(); });
 
   // ---------- 1. as capturas de cada módulo ----------
   const anon = await b.newContext({ viewport: { width: 1280, height: 1000 } })
@@ -49,27 +54,55 @@ const entrar = async (ctx, user, pass) => {
   await anon.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
   await anon.waitForSelector('#reg-planos .pl-pac', { timeout: 10000 });
 
-  const retratos = await anon.$$eval('.pl-retrato img', e => e.length);
-  ok(retratos >= 3, `a montra mostra os módulos em imagem (${retratos})`);
+  // A página tem de caber numa leitura. Com as cinco capturas de enfiada e os
+  // módulos todos abertos chegava aos 5500px — e o botão de submeter perdia-se
+  // no fundo, o que fazia a inscrição parecer avariada.
+  const altura = await anon.evaluate(() => document.body.scrollHeight);
+  ok(altura < 3600, `a montra fechada cabe numa leitura (${altura}px)`);
+  ok(await anon.$$eval('.pl-mod', e => e.length) === 0,
+     'os módulos avulso não se mostram à partida');
+  ok(await anon.locator('.pl-medida-porta').isVisible(),
+     'e há uma porta visível para quem quer montar o seu pacote');
 
-  // Percorre-se a página para o lazy-load ir buscar tudo. Uma imagem que não
-  // carrega é pior do que imagem nenhuma: fica um buraco cinzento na montra.
-  await anon.evaluate(async () => {
-    for (let y = 0; y < document.body.scrollHeight; y += 450) {
-      window.scrollTo(0, y); await new Promise(r => setTimeout(r, 110));
-    }
-    window.scrollTo(0, 0);
-  });
-  await anon.waitForTimeout(1600);
-  const largs = await anon.$$eval('.pl-retrato img', e => e.map(i => i.naturalWidth || 0));
-  ok(largs.every(w => w > 0), 'e todas carregam mesmo (' + largs.join(', ') + ')');
-
-  // A lupa abre a imagem em grande.
-  await anon.click('.pl-mod[data-chave="convidados"] .pl-retrato');
-  await anon.waitForTimeout(500);
-  ok(await anon.locator('#pl-lupa.on').isVisible(), 'e clicar numa amplia-a');
+  // As capturas estão atrás de «Ver exemplo» — e a galeria de um pacote mostra
+  // uma imagem por módulo incluído.
+  ok(await anon.$$eval('[data-exemplo-pac]', e => e.length) > 0,
+     'cada pacote tem o seu «Ver exemplo»');
+  await anon.click('[data-exemplo-pac]');
+  await anon.waitForTimeout(700);
+  ok(await anon.locator('#pl-lupa.on').isVisible(), 'que abre a galeria do pacote');
+  const larg1 = await anon.$eval('#pl-lupa img', i => i.naturalWidth || 0);
+  ok(larg1 > 0, `e a imagem carrega mesmo (${larg1}px)`);
+  const n1 = await anon.$$eval('.pl-lupa-nav button', e => e.length);
+  ok(n1 === 2, 'com navegação entre os módulos do pacote');
+  const antes = await anon.$eval('#pl-lupa img', i => i.getAttribute('src'));
+  await anon.click('#pl-lupa-seg'); await anon.waitForTimeout(400);
+  ok(antes !== await anon.$eval('#pl-lupa img', i => i.getAttribute('src')),
+     'e «seguinte» muda mesmo de imagem');
   await anon.keyboard.press('Escape'); await anon.waitForTimeout(300);
-  ok(!(await anon.locator('#pl-lupa.on').isVisible()), 'e Escape fecha-a');
+  ok(!(await anon.locator('#pl-lupa.on').isVisible()), 'Escape fecha a galeria');
+  // Ver o exemplo não pode escolher o pacote por engano.
+  ok(await anon.evaluate(() => Planos.escolha().pacote) !== 0,
+     'e ver o exemplo não mexeu na escolha');
+
+  // Abre-se o plano à medida: é aí que vivem os módulos.
+  await anon.click('#pl-abrir-medida'); await anon.waitForTimeout(800);
+  ok(await anon.$$eval('.pl-mod', e => e.length) >= 3, 'aberta a porta, aparecem os módulos');
+  ok(await anon.$$eval('.pl-exemplo', e => e.length) > 0,
+     'cada módulo com o seu botão «Ver exemplo»');
+  await anon.click('.pl-mod[data-chave="convidados"] .pl-exemplo');
+  await anon.waitForTimeout(600);
+  ok(await anon.locator('#pl-lupa.on').isVisible(), 'que abre a captura desse módulo');
+  await anon.keyboard.press('Escape'); await anon.waitForTimeout(300);
+
+  // E os preços mostram o desconto do prazo, com o proporcional riscado.
+  const riscados = await anon.$$eval('.pl-riscado', e => e.length);
+  ok(riscados > 0, `os preços mostram o valor padrão riscado (${riscados})`);
+  const par = await anon.$eval('.pl-mod[data-chave="convidados"] .pl-esc:not(.on) .pl-riscado',
+    el => ({ risc: el.textContent, agora: el.nextElementSibling.textContent }));
+  const num = t => parseFloat(String(t).replace(/[^\d,]/g, '').replace(',', '.'));
+  ok(num(par.risc) > num(par.agora),
+     `e o riscado é MAIOR do que o que se paga (${par.risc.trim()} → ${par.agora.trim()})`);
 
   // ---------- 2 e 3. as fotos do convite, e o aviso ----------
   const escolher = (mod, rx) => anon.evaluate(({ mod, rx }) => {
@@ -81,6 +114,7 @@ const entrar = async (ctx, user, pass) => {
 
   ok(!(await anon.locator('.pl-fotos').isVisible()),
      'sem o convite digital escolhido, não se pedem fotografias');
+
 
   await escolher('digital', 'Modelo padrão');
   await anon.waitForTimeout(600);
@@ -154,6 +188,7 @@ const entrar = async (ctx, user, pass) => {
   const pid = await admin.evaluate(() => LIC_CAT.pacotes[0].id);
   await admin.evaluate(id => licPacoteItens(id), pid);
   await admin.waitForTimeout(800);
+  ok(nativos === 0, 'abrir o pacote não usa janelas nativas');
   ok(await admin.locator('#lic-janela.on').isVisible(), 'a janela do pacote abre');
   const campos = await admin.$$eval('#lic-pi-lista input[data-preco]', e => e.length);
   ok(campos > 0, `e traz o preço de cada escalão, editável ali mesmo (${campos})`);
@@ -262,6 +297,45 @@ const entrar = async (ctx, user, pass) => {
   ok(!(await casal.locator('#ov-convite').isVisible()),
      'chamar novoConvite() à mão não abre o formulário — a segunda fechadura');
 
+  // ---------- 9. as janelas do admin: formulários, e não prompt() ----------
+  await admin.evaluate(() => verVista('licencas')); await admin.waitForTimeout(1200);
+  await admin.evaluate(() => licVista('prazos'));   await admin.waitForTimeout(1200);
+  ok(await admin.$$eval('.lic-pz', e => e.length) >= 2,
+     'os prazos mostram-se em cartões, com o efeito do factor');
+  ok(await admin.$$eval('.lic-pz-barra i', e => e.length) >= 2,
+     'e cada um com a barra do preço POR MÊS — que é o que mostra se compensa');
+
+  const pzId = await admin.evaluate(() => LIC_CAT.prazos[1].id);
+  await admin.evaluate(id => licPrazoEditar(id), pzId);
+  await admin.waitForTimeout(700);
+  ok(await admin.locator('#lic-janela.on').isVisible(), 'editar um prazo abre um formulário');
+  ok(await admin.$$eval('.lic-form .lic-f-c', e => e.length) >= 5,
+     'com todos os campos à vista de uma vez');
+  const provaAntes = await admin.$eval('#lic-fator-prova', e => e.textContent);
+  ok(/factor/i.test(provaAntes), 'e a prova em números do que o factor faz');
+  await admin.fill('#lf-fator', '3.0'); await admin.waitForTimeout(400);
+  ok(provaAntes !== await admin.$eval('#lic-fator-prova', e => e.textContent),
+     'que acompanha o que se escreve');
+  ok(/mau/.test(await admin.$eval('.lic-fp-veredito', e => e.className)),
+     'e avisa quando o factor torna o prazo longo mais caro por mês');
+  await admin.keyboard.press('Escape'); await admin.waitForTimeout(400);
+  ok(!(await admin.locator('#lic-janela.on').isVisible()), 'Escape fecha sem guardar');
+
+  // Revogar exige um motivo, e di-lo dentro da própria janela.
+  await admin.evaluate(() => verVista('casamentos')); await admin.waitForTimeout(800);
+  await admin.evaluate(() => filtrarCasamentos('todos', 1)); await admin.waitForTimeout(1500);
+  await admin.evaluate(id => { licRevogarDe(id, 'Prova'); }, cid);
+  await admin.waitForTimeout(700);
+  ok(await admin.locator('#lf-motivo').isVisible(), 'revogar pede o motivo num campo próprio');
+  await admin.click('#lic-jo'); await admin.waitForTimeout(600);
+  ok(await admin.locator('#lic-janela.on').isVisible(),
+     'e sem motivo não fecha — corrige-se ali mesmo');
+  ok(/motivo/i.test(await admin.$eval('#lic-jerro', e => e.textContent)),
+     'com o aviso dentro da janela: '
+     + (await admin.$eval('#lic-jerro', e => e.textContent)).trim().slice(0, 50));
+  await admin.keyboard.press('Escape'); await admin.waitForTimeout(400);
+
+  ok(nativos === 0, `nenhuma janela nativa em toda a área das licenças (${nativos})`);
   ok(errs.length === 0, 'sem erros de JavaScript na inscrição: ' + (errs.join(' | ') || 'nenhum'));
 
   // ---------- limpeza ----------

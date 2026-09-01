@@ -240,6 +240,11 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
       </div>
 
       <div class="reg-enviar">
+        <?php // O mesmo aviso, aqui em baixo. O botão de submeter está a uma
+              // página inteira de distância do topo do formulário: mandar o
+              // casal procurar lá em cima a razão por que não avançou é fazê-lo
+              // concluir que a página está avariada. ?>
+        <div class="msg mau" id="erro-fim" style="display:none" role="alert"></div>
         <button class="btn btn-verde btn-enviar" id="btn" type="button" onclick="enviar()">Inscrever o nosso casamento</button>
         <div class="entrar-nota">Já têm conta? <a href="login.php" style="color:var(--gold)">Entrar</a></div>
       </div>
@@ -411,10 +416,28 @@ $('noiva').addEventListener('input', sugerirPorteiro);
 $('noivo').addEventListener('input', sugerirPorteiro);
 
 // ---------- envio ----------
-function erroGeral(txt){
-  const e = $('erro');
-  if (txt){ e.textContent = txt; e.style.display = ''; e.scrollIntoView({ behavior:'smooth', block:'center' }); }
-  else e.style.display = 'none';
+/**
+ * O aviso geral, nas duas caixas — a do topo do formulário e a do pé, junto ao
+ * botão. Rola-se para a que estiver mais perto de onde a pessoa está, e não
+ * sempre para a de cima: quem carrega no botão lá em baixo não quer ser
+ * atirado cinco mil pixéis para o início da página.
+ */
+function erroGeral(txt, perto){
+  const caixas = [$('erro'), $('erro-fim')].filter(Boolean);
+  if (!txt){ caixas.forEach(e => e.style.display = 'none'); return; }
+  caixas.forEach(e => { e.textContent = txt; e.style.display = ''; });
+  // 'perto' é o elemento junto ao qual o erro interessa. Sem ele, escolhe-se a
+  // caixa que já está mais próxima do que se vê.
+  let alvo = perto;
+  if (!alvo){
+    const meio = window.scrollY + window.innerHeight / 2;
+    alvo = caixas.reduce((a, e) => {
+      const y = e.getBoundingClientRect().top + window.scrollY;
+      const ya = a.getBoundingClientRect().top + window.scrollY;
+      return Math.abs(y - meio) < Math.abs(ya - meio) ? e : a;
+    }, caixas[0]);
+  }
+  if (alvo) alvo.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
 async function enviar(){
@@ -424,8 +447,8 @@ async function enviar(){
   CAMPOS.forEach(id => { if (!validaCampo(id) && !primeiro) primeiro = id; });
   if (primeiro){
     const c = $(primeiro).closest('details.bloco'); if (c) c.open = true;
+    erroGeral('Faltam alguns dados — veja os campos assinalados a vermelho.', $('erro'));
     $(primeiro).focus(); $(primeiro).closest('.campo').scrollIntoView({ behavior:'smooth', block:'center' });
-    erroGeral('Faltam alguns dados — veja os campos assinalados a vermelho.');
     return;
   }
 
@@ -436,14 +459,12 @@ async function enviar(){
   if (temMontra){
     const c = Planos.escolha();
     if (c.vazio){
-      erroGeral('Escolham um pacote, ou pelo menos um módulo do plano à medida.');
-      $('planos-sec').scrollIntoView({ behavior:'smooth', block:'start' });
+      erroGeral('Escolham um pacote, ou montem o vosso plano à medida.', $('erro-fim'));
       return;
     }
     if (!$('reg-aceite').checked){
       $('reg-aceite-cx').classList.add('mau');
-      erroGeral('É preciso aceitar as políticas de utilização.');
-      $('reg-aceite-cx').scrollIntoView({ behavior:'smooth', block:'center' });
+      erroGeral('É preciso aceitar as políticas de utilização.', $('reg-aceite-cx'));
       return;
     }
     plano = { pacote: c.pacote, escaloes: c.escaloes, meses: c.meses,
@@ -478,10 +499,15 @@ async function enviar(){
     }
     // Erro do servidor: se for do email (já existe / inválido), aponta-o ao campo.
     const m = (d && d.message) || 'Não foi possível inscrever.';
-    if (/email/i.test(m)){ marca('email', m); $('email').focus(); }
-    erroGeral(m);
+    if (/email/i.test(m)){
+      marca('email', m);
+      erroGeral(m, $('erro'));      // é um campo lá em cima: leva-se lá
+      $('email').focus();
+    } else {
+      erroGeral(m, $('erro-fim'));  // o resto responde-se onde se carregou
+    }
   } catch (e){
-    erroGeral('Não foi possível falar com o servidor. Tente de novo, por favor.');
+    erroGeral('Não foi possível falar com o servidor. Tente de novo, por favor.', $('erro-fim'));
   }
   btn.disabled = false; btn.textContent = rot;
 }
