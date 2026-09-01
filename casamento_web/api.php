@@ -1628,10 +1628,16 @@ if ($acao === 'lic_revogar') {
     $cid = (int)($d['casamento'] ?? 0);
     $motivo = mb_substr(trim((string)($d['motivo'] ?? '')), 0, 1000);
     if ($motivo === '') erro('Indique o motivo da revogação — o casal tem direito a sabê-lo.');
-    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, licenca_estado FROM {$P}casamentos WHERE id=?");
     $st->bind_param('i', $cid); $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) erro('Casamento não encontrado.');
+    // Revogar o que já está revogado não tira nada a ninguém: só reescreve por
+    // cima do motivo que o casal já leu e apaga a data em que aconteceu. O
+    // caminho de volta é conceder a licença de novo.
+    if ((string)$c['licenca_estado'] === 'revogada')
+        erro('A licença deste casamento já está revogada. Para lhe dar acesso outra vez, '
+           . 'conceda-lhe a licença em «Licença: módulos e prazo…».');
 
     @$conn->query("DELETE FROM {$P}lic_concessoes WHERE casamento_id=" . (int)$cid);
     $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado='revogada',
@@ -4153,8 +4159,12 @@ if ($acao === 'mesa_pos') {
     // Guarda a posição (e opcionalmente a forma) de uma mesa na planta.
     $d=corpo(); $id=(int)($d['id']??0);
     if (!$id) erro('Mesa inválida.');
-    $x = isset($d['x']) && $d['x']!=='' ? max(0.0, min(100.0, (float)$d['x'])) : null;
-    $y = isset($d['y']) && $d['y']!=='' ? max(0.0, min(100.0, (float)$d['y'])) : null;
+    // A percentagem é do mundo BASE — o que cabe no canvas a 100%. Um salão
+    // grande passa dos 100: o mundo estica e é o scroll que lá leva. O tecto
+    // (600) é só para uma posição estragada não pôr o mundo em seis mil por
+    // cento e deixar a planta inutilizável.
+    $x = isset($d['x']) && $d['x']!=='' ? max(0.0, min(600.0, (float)$d['x'])) : null;
+    $y = isset($d['y']) && $d['y']!=='' ? max(0.0, min(600.0, (float)$d['y'])) : null;
     $forma = in_array($d['forma']??'',FORMAS_MESA,true) ? $d['forma'] : null;
     if ($forma !== null) {
         $st=$conn->prepare("UPDATE {$P}mesas SET pos_x=?,pos_y=?,forma=? WHERE " . doCasamento() . " AND id=?");

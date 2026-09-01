@@ -17,7 +17,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const { execSync } = require('child_process');
 const SOCK = process.env.DB_SOCK || '/run/mysqld/mysqld.sock';
 const DB   = process.env.DB_NAME || 'wedding_guests';
-const sql  = q => execSync(`mysql -uroot --socket=${SOCK} ${DB} -N -e ${JSON.stringify(q)}`).toString().trim();
+// --default-character-set: sem ele, o cliente devolve os acentos baralhados e
+// uma comparação com texto português falha por razão nenhuma.
+const sql  = q => execSync(`mysql -uroot --socket=${SOCK} --default-character-set=utf8mb4 ${DB} -N -e ${JSON.stringify(q)}`).toString().trim();
 
 const entrar = async (ctx, user, pass) => {
   const p = await ctx.newPage();
@@ -84,9 +86,33 @@ const entrar = async (ctx, user, pass) => {
   ok(menu.accoes.some(x => /Revogar licença/.test(x)),
      'a revogação — que é o que se faz primeiro — continua à mão');
 
+  // ---------- 2b. revogar o que já está revogado não é acção nenhuma ----------
+  // Reescreveria por cima do motivo que o casal já leu e apagaria a data em que
+  // aconteceu, sem tirar nada a ninguém — porque já não há nada para tirar.
+  d = await api('lic_revogar', { casamento: cid, motivo: 'Primeira revogação ' + marca });
+  ok(d && d.success, 'revoga-se uma vez');
+  d = await api('lic_revogar', { casamento: cid, motivo: 'Segunda, à mão' });
+  ok(d && d.success === false, 'e a segunda vez é recusada');
+  ok(/já está revogada/i.test(d.message || ''),
+     'dizendo que já está: ' + (d.message || '').slice(0, 60));
+  ok(sql(`SELECT licenca_revogada_motivo FROM cw_casamentos WHERE id=${cid}`)
+       .includes('Primeira revogação'),
+     'e o motivo que o casal leu fica intacto');
+
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  await admin.waitForTimeout(900);
+  await admin.evaluate(() => filtrarCasamentos('todos', 1));
+  await admin.waitForTimeout(700);
+  const menu2 = await admin.evaluate((id) => {
+    const pop = document.getElementById('mm-' + id);
+    return pop ? [...pop.querySelectorAll('button')].map(x => x.textContent.trim()) : null;
+  }, cid);
+  ok(menu2 && !menu2.some(x => /Revogar licença/.test(x)),
+     `com a licença já revogada, a acção sai do menu (${(menu2 || []).join(', ')})`);
+  ok(menu2 && menu2.some(x => /Licença: módulos e prazo/.test(x)),
+     'e fica o caminho de volta: conceder-lhe a licença outra vez');
+
   // ---------- 3. revogada, a casa já se fecha ----------
-  d = await api('lic_revogar', { casamento: cid, motivo: 'Prova do travão ' + marca });
-  ok(d && d.success, 'revoga-se a licença, com motivo');
   d = await api('casamento_estado&id=' + cid + '&estado=arquivado', {});
   ok(d && d.success, 'e agora o casamento já se arquiva');
   ok(sql(`SELECT estado FROM cw_casamentos WHERE id=${cid}`) === 'arquivado',

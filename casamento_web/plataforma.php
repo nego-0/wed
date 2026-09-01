@@ -2767,7 +2767,11 @@ async function carregarCasamentos(){
       } else {
         mais.push(`<button onclick="editarTudo(${c.id})">Editar todos os dados…</button>`);
         mais.push(`<button onclick="gerirLicenca(${c.id})">Licença: módulos e prazo…</button>`);
-        mais.push(`<button class="perigo" onclick="licRevogarDe(${c.id},'${n}')">Revogar licença…</button>`);
+        // Revogar o que já está revogado não faz nada — só reescreve o motivo
+        // por cima do que o casal já leu, e apaga a data em que aconteceu. Uma
+        // licença revogada volta pelo caminho de sempre: concedendo-a de novo.
+        if ((c.licenca_estado || 'sem') !== 'revogada')
+          mais.push(`<button class="perigo" onclick="licRevogarDe(${c.id},'${n}')">Revogar licença…</button>`);
         // Fechar a casa a um casal que tem licença EM VIGOR é tirar-lhe uma
         // coisa por que pagou, e sem lhe dizer porquê: a licença continuaria a
         // dizer «ativa» enquanto ele não conseguia entrar. Primeiro decide-se
