@@ -107,6 +107,7 @@ $camposPorCamada = [
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 </head>
 <body class="editor">
 <?php if ($MODELO): ?>
@@ -241,6 +242,7 @@ $camposPorCamada = [
 <script src="<?= asset('assets/editor-diag.js') ?>"></script>
 <?php endif; ?>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
 <script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?> };</script>
@@ -821,9 +823,16 @@ function reporPosicao(k){
   definirPos(k, 0, 0, 0); marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
   msg(`"${CAMADAS[k]}" voltou ao sítio e à posição de origem.`);
 }
-function reporPosicoes(){
+async function reporPosicoes(){
   if (!Object.keys(est.pos).length) return msg('Nenhuma camada foi movida.');
-  if (!confirm('Repor TODAS as camadas no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
+  const r = await licConfirmar({
+    titulo: 'Repor todas as camadas?',
+    icone: '↩️', confirmar: 'Repor composição',
+    texto: 'Todas as camadas voltam ao sítio que o design lhes deu — as '
+         + '<b>' + Object.keys(est.pos).length + '</b> que moveu incluídas.'
+         + '<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado até guardar.'
+  });
+  if (!r.sim) return;
   Object.keys(CAMADAS).forEach(k => definirPos(k, 0, 0, 0));
   marcarSujo(true); registarPasso(); renderProps(); renderCamadas();
   msg('Composição de origem reposta — por guardar.');
@@ -970,8 +979,14 @@ function acrescentarCerimonia(k, horaPadrao){
   pintarLogistica(); marcarSujo(true); registarPasso(); renderProps();
   msg('Cerimónia acrescentada — ajuste a hora e o local.');
 }
-function removerCerimonia(k, rot){
-  if (!confirm(`Tirar a ${rot.toLowerCase()} do cartão?\n\nA hora e o local são apagados. Ctrl+Z desfaz.`)) return;
+async function removerCerimonia(k, rot){
+  const r = await licConfirmar({
+    titulo: 'Tirar a ' + licEsc(rot.toLowerCase()) + ' do cartão?',
+    icone: '⛪', confirmar: 'Tirar do cartão',
+    texto: 'A <b>hora</b> e o <b>local</b> desta cerimónia são apagados, e ela deixa de se '
+         + 'anunciar no cartão.<br><br><b>Ctrl+Z desfaz.</b>'
+  });
+  if (!r.sim) return;
   est.textos['evento.' + k + '_hora'] = '';
   est.textos['evento.' + k + '_local'] = '';
   pintarLogistica(); marcarSujo(true); registarPasso(); renderProps();
@@ -1186,19 +1201,49 @@ async function guardar(opcoes){
   return await guardarComo(defs);
 }
 
-async function guardarComo(defs){
-  const nome = (prompt('Guardar como uma versão vossa — dê-lhe um nome:\n\n'
-    + 'Fica só para o vosso casamento; o desenho da casa não se toca.', '') || '').trim();
-  if (!nome){ msg('Por guardar: a vossa versão precisa de um nome.'); return false; }
-  $('bt-guardar').disabled = true; msg('A guardar…');
-  const d = await gravarDefs(defs, false);
-  if (d && !d.success){ $('bt-guardar').disabled = false; msg((d && d.message) || 'Não foi possível guardar.'); return false; }
-  const c = await api('versao_criar&ambito=impresso', {method:'POST', body: JSON.stringify({nome, ambito:'impresso'})});
-  $('bt-guardar').disabled = false;
-  if (!c || !c.success){ msg((c && c.message) || 'Não foi possível guardar a versão.'); return false; }
-  msg(`Guardado na vossa versão «${nome}».`);
-  if (PAINEL_VERSOES) PAINEL_VERSOES.recarregar();
-  return true;
+function guardarComo(defs){
+  // Promessa: quem chama isto está a meio de «guardar» e precisa de saber se
+  // guardou mesmo — a janela é assíncrona, o resultado não pode ser adivinhado.
+  return new Promise(resolve => {
+    let respondeu = false;
+    licFormulario({
+      titulo: 'Guardar como uma versão vossa',
+      dica: 'Fica só para o vosso casamento — o desenho da casa não se toca.',
+      guardar: 'Guardar versão',
+      campos: [{ id: 'nome', rot: 'Nome desta versão', largura: 3,
+                 dica2: 'Ex.: a nossa, com a moldura dourada' }],
+      aoGuardar: async function (v) {
+        if (!v.nome){ licJanelaErro('A vossa versão precisa de um nome.'); return false; }
+        $('bt-guardar').disabled = true;
+        const d = await gravarDefs(defs, false);
+        if (d && !d.success){
+          $('bt-guardar').disabled = false;
+          licJanelaErro((d && d.message) || 'Não foi possível guardar.');
+          return false;
+        }
+        const c = await api('versao_criar&ambito=impresso',
+                            {method:'POST', body: JSON.stringify({nome: v.nome, ambito:'impresso'})});
+        $('bt-guardar').disabled = false;
+        if (!c || !c.success){
+          licJanelaErro((c && c.message) || 'Não foi possível guardar a versão.');
+          return false;
+        }
+        msg(`Guardado na vossa versão «${v.nome}».`);
+        if (PAINEL_VERSOES) PAINEL_VERSOES.recarregar();
+        respondeu = true; resolve(true);
+      }
+    });
+    const m = document.getElementById('lic-janela');
+    const obs = new MutationObserver(() => {
+      if (!m.classList.contains('on') && !respondeu){
+        obs.disconnect();
+        msg('Por guardar: a vossa versão precisa de um nome.');
+        resolve(false);
+      }
+      if (respondeu) obs.disconnect();
+    });
+    obs.observe(m, { attributes: true, attributeFilter: ['class'] });
+  });
 }
 function marcarInvalidos(inv){
   document.querySelectorAll('#props .campo').forEach(c => c.classList.remove('invalido'));
@@ -1207,16 +1252,29 @@ function marcarInvalidos(inv){
     if (el) el.closest('.campo').classList.add('invalido');
   });
 }
-function repor(){
-  if (!confirm('Repor todos os valores como estavam ao abrir o editor?')) return;
+async function repor(){
+  const r = await licConfirmar({
+    titulo: 'Repor tudo como estava ao abrir?',
+    icone: '↩️', confirmar: 'Repor tudo',
+    texto: 'Todos os valores voltam ao que eram quando abriu o editor — textos, estilos, '
+         + 'ornamentos e composição.<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado '
+         + 'até guardar.'
+  });
+  if (!r.sim) return;
   est = JSON.parse(JSON.stringify(original));
   repintarTudo(); marcarSujo(true); registarPasso();
   msg('Reposto — por guardar. Ctrl+Z desfaz.');
 }
 /** Devolve o feitio de origem de uma camada decorativa. */
-function reporOrnamento(){
+async function reporOrnamento(){
   const k = selecionada;
-  if (!confirm(`Repor o feitio original de "${CAMADAS[k]}"?\n\nPode desfazer com Ctrl+Z.`)) return;
+  const r = await licConfirmar({
+    titulo: 'Repor o feitio de «' + licEsc(CAMADAS[k]) + '»?',
+    icone: '✨', confirmar: 'Repor feitio',
+    texto: 'Esta camada decorativa volta ao desenho de origem.'
+         + '<br><br><b>Ctrl+Z desfaz.</b>'
+  });
+  if (!r.sim) return;
   if (k === 'moldura'){
     est.deco['cartao.moldura_estilo'] = PADRAO['cartao.moldura_estilo'];
     est.deco['cartao.moldura_margem'] = PADRAO['cartao.moldura_margem'];
@@ -1230,12 +1288,18 @@ function reporOrnamento(){
 }
 
 /** Repõe os textos de origem só da camada escolhida. */
-function reporCamada(){
+async function reporCamada(){
   if (!selecionada) return msg('Escolha primeiro uma camada, na lista ou no cartão.');
   if (ORNAMENTOS.includes(selecionada)) return reporOrnamento();
   const campos = CAMPOS[selecionada];
   if (!campos) return msg('"' + CAMADAS[selecionada] + '" mostra as mesas de cada convidado: altera-se na Planta de Mesas.');
-  if (!confirm(`Repor os textos originais de "${CAMADAS[selecionada]}"?\n\nPode desfazer com Ctrl+Z.`)) return;
+  const r = await licConfirmar({
+    titulo: 'Repor os textos de «' + licEsc(CAMADAS[selecionada]) + '»?',
+    icone: '↩️', confirmar: 'Repor textos',
+    texto: 'Os textos desta camada voltam aos do modelo de origem. O resto do cartão '
+         + 'fica como está.<br><br><b>Ctrl+Z desfaz.</b>'
+  });
+  if (!r.sim) return;
   campos.forEach(([chave]) => {
     if (!(chave in PADRAO)) return;
     est.textos[chave] = PADRAO[chave];

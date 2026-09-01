@@ -144,6 +144,11 @@
 .pl-esc.tem{ border-color:var(--ok); background:var(--ok-bg); }
 .pl-esc-tem{ font-size:.7rem; font-weight:700; color:var(--ok); text-transform:uppercase;
   letter-spacing:.06em; margin-top:.3rem; }
+/* De onde vem o desconto de um reforço. Sem esta linha, um preço mais baixo do
+   que o do preçário parece um erro; com ela, é a promessa a cumprir-se. */
+.pl-esc-credito{ display:block; font-size:.72rem; color:var(--ok); line-height:1.35;
+  margin-top:.15rem; }
+.pl-esc-credito b{ font-variant-numeric:tabular-nums; }
 
 /* ---------- «Ver exemplo»: a captura, atrás de um botão ---------- */
 /* Mostradas de enfiada, as cinco capturas faziam da inscrição um rolo de cinco

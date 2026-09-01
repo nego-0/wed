@@ -2,6 +2,7 @@
 // editor do convite digital: mostra-se, edita-se o monograma e a dica, e o que
 // se grava chega ao convite dos convidados.
 const { chromium } = require('playwright-core');
+const janela = require('./_janela');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const OUT = process.env.TEST_OUT || require('os').tmpdir();
@@ -13,7 +14,11 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   p.on('pageerror', e => errs.push(e.message));
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   // Guardar num casamento sem versão sua é agora «Guardar Como»: pede um nome.
-  p.on('dialog', d => d.accept(d.type() === 'prompt' ? 'Prova capa' : undefined));
+  // As janelas dos editores já não são do browser: são as da casa. O
+  // auto-responder faz o que o on('dialog') fazia — responde-lhes sozinho,
+  // por dentro da página, para esta prova poder continuar a olhar só para
+  // aquilo que veio provar. (Ver tests/_janela.js.)
+  await janela.autoResponder(p, 'Prova capa');
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });

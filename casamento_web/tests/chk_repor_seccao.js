@@ -5,6 +5,7 @@
 // visibilidade), a composição (posição dos blocos) e a fotografia. A foto que o
 // casal tenha enviado à mão é mesmo APAGADA do servidor.
 const { chromium } = require('playwright-core');
+const janela = require('./_janela');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
@@ -12,7 +13,11 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const p = await b.newContext().then(c => c.newPage());
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  p.on('dialog', d => d.accept());
+  // As janelas dos editores já não são do browser: são as da casa. O
+  // auto-responder faz o que o on('dialog') fazia — responde-lhes sozinho,
+  // por dentro da página, para esta prova poder continuar a olhar só para
+  // aquilo que veio provar. (Ver tests/_janela.js.)
+  await janela.autoResponder(p, 'Prova');
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });

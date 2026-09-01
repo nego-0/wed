@@ -317,7 +317,14 @@
     async function garantirGravado() {
       if (!sujo()) return true;
       if (op.gravar) { var ok = await op.gravar(); return ok !== false; }
-      return confirm('Tem alterações por gravar.\n\nA versão guarda a peça como está gravada, sem elas. Continuar?');
+      var r = await licConfirmar({
+        titulo: 'Tem alterações por gravar',
+        icone: '⚠️', confirmar: 'Guardar assim mesmo',
+        texto: 'A versão fotografa a peça <b>como está gravada</b> — as alterações que ainda '
+             + 'não gravou <b>não entram nela</b>.<br><br>Cancele, grave, e volte aqui se as '
+             + 'quiser dentro da versão.'
+      });
+      return r.sim;
     }
 
     function depoisDeAplicar(texto) {
@@ -327,16 +334,32 @@
       else setTimeout(function () { global.location.reload(); }, 700);
     }
 
-    async function criarNova() {
-      var nome = (prompt('Nome para a nova versão — fotografa o convite tal como está:', '') || '').trim();
-      if (!nome) return;
-      if (!(await garantirGravado())) return;
-      var d = await correr(function () {
-        return api(q('versao_criar'), { method: 'POST', body: JSON.stringify({ nome: nome, ambito: ambito }) });
+    function criarNova() {
+      // O nome pede-se num campo com rótulo e dica, e não num prompt() cego: é
+      // por ele que a versão se reconhece daqui a três meses, e «Sem título 2»
+      // não diz nada a ninguém.
+      licFormulario({
+        titulo: 'Guardar uma versão',
+        dica: 'Fotografa a peça tal como está gravada. Pode voltar a ela quando quiser.',
+        guardar: 'Guardar versão',
+        campos: [{ id: 'nome', rot: 'Nome desta versão', largura: 3,
+                   dica2: 'Ex.: com as fotos da praia',
+                   dica: 'Um nome que se perceba daqui a uns meses.' }],
+        aoGuardar: async function (v) {
+          if (!v.nome) { licJanelaErro('Dê um nome à versão.'); return false; }
+          if (!(await garantirGravado())) return false;
+          var d = await correr(function () {
+            return api(q('versao_criar'), { method: 'POST',
+                                            body: JSON.stringify({ nome: v.nome, ambito: ambito }) });
+          });
+          if (!d || !d.success) {
+            licJanelaErro((d && d.message) || 'Não foi possível guardar a versão.');
+            return false;
+          }
+          await recarregar();
+          dizer('Versão guardada: ' + v.nome);
+        }
       });
-      if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível guardar a versão.');
-      await recarregar();
-      dizer('Versão guardada: ' + nome);
     }
 
     async function aplicar(id) {
@@ -344,10 +367,13 @@
       var oQueFica = v.padrao
         ? 'A peça volta a ser como veio de origem — é o que os convidados passam a receber. As versões que guardou não se perdem.'
         : 'A peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.';
-      var aviso = sujo()
-        ? 'Tem alterações por gravar.\n\nPôr «' + v.nome + '» em vigor descarta-as. Continuar?'
-        : 'Pôr «' + v.nome + '» em vigor?\n\n' + oQueFica;
-      if (!confirm(aviso)) return;
+      var r = await licConfirmar({
+        titulo: 'Pôr «' + licEsc(v.nome) + '» em vigor?',
+        icone: '↩️', perigo: sujo(), confirmar: 'Pôr em vigor',
+        texto: oQueFica
+             + (sujo() ? '<br><br><b>Tem alterações por gravar, e elas perdem-se.</b>' : '')
+      });
+      if (!r.sim) return;
       var d = await correr(function () { return api(q('versao_aplicar', '&id=' + id)); });
       if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível aplicar a versão.');
       depoisDeAplicar('Versão em vigor: ' + v.nome + '. A recarregar…');
@@ -355,7 +381,14 @@
 
     async function atualizar(id) {
       var v = porId(id); if (!v) return;
-      if (!confirm('Atualizar «' + v.nome + '» com o convite tal como está agora?\n\nO conteúdo antigo da versão perde-se.')) return;
+      var r = await licConfirmar({
+        titulo: 'Atualizar «' + licEsc(v.nome) + '»?',
+        icone: '🔄', perigo: true, confirmar: 'Atualizar versão',
+        texto: 'A versão passa a guardar a peça <b>tal como está agora</b>.<br><br>'
+             + 'O conteúdo antigo desta versão <b>perde-se</b> — se o quiser manter, '
+             + 'cancele e guarde antes uma versão nova.'
+      });
+      if (!r.sim) return;
       if (!(await garantirGravado())) return;
       var d = await correr(function () { return api(q('versao_atualizar', '&id=' + id)); });
       if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível atualizar a versão.');
@@ -363,26 +396,39 @@
       dizer('Versão atualizada: ' + v.nome);
     }
 
-    async function renomear(id) {
+    function renomear(id) {
       var v = porId(id); if (!v) return;
-      var novo = prompt('Novo nome para a versão:', v.nome);
-      if (novo === null) return;
-      novo = novo.trim();
-      if (!novo) return dizer('O nome não pode ficar vazio.');
-      var d = await correr(function () {
-        return api(q('versao_renomear', '&id=' + id), { method: 'POST', body: JSON.stringify({ nome: novo }) });
+      licFormulario({
+        titulo: 'Mudar o nome da versão',
+        guardar: 'Mudar o nome',
+        campos: [{ id: 'nome', rot: 'Nome', valor: v.nome, largura: 3 }],
+        aoGuardar: async function (val) {
+          if (!val.nome) { licJanelaErro('O nome não pode ficar vazio.'); return false; }
+          var d = await correr(function () {
+            return api(q('versao_renomear', '&id=' + id), { method: 'POST',
+                                                            body: JSON.stringify({ nome: val.nome }) });
+          });
+          if (!d || !d.success) {
+            licJanelaErro((d && d.message) || 'Não foi possível mudar o nome.');
+            return false;
+          }
+          await recarregar();
+          dizer('Versão renomeada: ' + val.nome);
+        }
       });
-      if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível mudar o nome.');
-      await recarregar();
-      dizer('Versão renomeada: ' + novo);
     }
 
     async function apagar(id) {
       var v = porId(id); if (!v) return;
-      var extra = v.em_vigor
-        ? '\n\nÉ a versão que está em vigor. A peça não muda — perde-se só o registo de que este era o estado guardado.'
-        : '\n\nA peça não muda; perde-se apenas este ponto de regresso.';
-      if (!confirm('Apagar a versão «' + v.nome + '»?' + extra)) return;
+      var r = await licConfirmar({
+        titulo: 'Apagar a versão «' + licEsc(v.nome) + '»?',
+        icone: '🗑️', perigo: true, confirmar: 'Apagar versão',
+        texto: v.em_vigor
+          ? 'É a versão que está <b>em vigor</b>. A peça <b>não muda</b> — perde-se só o '
+            + 'registo de que este era o estado guardado.'
+          : 'A peça <b>não muda</b>; perde-se apenas este <b>ponto de regresso</b>.'
+      });
+      if (!r.sim) return;
       var d = await correr(function () { return api(q('versao_apagar', '&id=' + id)); });
       if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível apagar a versão.');
       await recarregar();
@@ -392,10 +438,15 @@
     async function aplicarModelo(id) {
       var m = modelos.filter(function (x) { return String(x.id) === String(id); })[0];
       if (!m) return;
-      if (!confirm('Pôr o modelo «' + m.nome + '» em vigor?\n\n'
-        + 'O desenho da peça passa a ser o dele — é o que os convidados passam a receber. '
-        + 'Os seus nomes, datas e fotografias ficam como estão, e as versões que guardou não se perdem.'
-        + (sujo() ? '\n\nAs alterações por gravar perdem-se.' : ''))) return;
+      var r = await licConfirmar({
+        titulo: 'Pôr o modelo «' + licEsc(m.nome) + '» em vigor?',
+        icone: '🎨', perigo: sujo(), confirmar: 'Pôr em vigor',
+        texto: 'O desenho da peça passa a ser o dele — é o que os <b>convidados passam a '
+             + 'receber</b>.<br><br>Os seus <b>nomes, datas e fotografias ficam como estão</b>, '
+             + 'e as versões que guardou não se perdem.'
+             + (sujo() ? '<br><br><b>As alterações por gravar perdem-se.</b>' : '')
+      });
+      if (!r.sim) return;
       var d = await correr(function () { return api('modelo_aplicar&id=' + id, { method: 'POST' }); });
       if (!d || !d.success) return dizer((d && d.message) || 'Não foi possível pôr o modelo em vigor.');
       // Quando o desenho não muda (o modelo era igual ao que já lá estava),

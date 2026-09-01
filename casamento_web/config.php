@@ -121,7 +121,7 @@ function ficheirosApp(): array {
             'licenca.php','manifest.php','sw.js',
             'assets/montra/convidados.jpg','assets/montra/mesas.jpg',
             'assets/montra/orcamento.jpg','assets/montra/impresso.jpg',
-            'assets/montra/digital.jpg',
+            'assets/montra/digital.jpg','assets/montra/porta.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
             'assets/janela.css','assets/janela.js',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',

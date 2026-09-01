@@ -198,6 +198,34 @@ const entrar = async (ctx, user, pass) => {
   await casal.click('#lic-jc'); await casal.waitForTimeout(200);
   ok(natCasal === 0, `a Gestão também não abre janelas nativas (${natCasal})`);
 
+  // ---------- 8. os editores de convite ----------
+  // Eram a última área com janelas do browser. A prova é a mesma: carregar no
+  // que pergunta, e ver que quem responde é a casa.
+  await api('casamento_abrir&id=' + cid2);
+  await admin.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await admin.waitForTimeout(1800);
+
+  // «Guardar Como» pede o nome da versão. Era um prompt() de uma linha; passou
+  // a ser um formulário — e um formulário sabe recusar o vazio, coisa que um
+  // prompt() nunca soube. (Mexe-se primeiro no convite: sem nada por gravar,
+  // não há o que guardar.)
+  await admin.evaluate(() => {
+    EST.val['textos.kicker'] = 'PROVA ' + Date.now(); marcarSujo(true);
+  });
+  await admin.evaluate(() => { guardar(); });
+  await admin.waitForSelector('#lic-janela.on', { timeout: 6000 });
+  ok(await admin.locator('#lf-nome').isVisible(),
+     'o editor do convite pede o nome da versão num campo, e não num prompt()');
+  await admin.click('#lic-jo'); await admin.waitForTimeout(400);
+  ok(await admin.locator('#lic-janela.on').isVisible(),
+     'e sem nome não guarda — a janela fica, a dizer o que falta');
+  ok(/nome/i.test(await admin.textContent('#lic-jerro')), 'com o aviso à vista');
+  await admin.fill('#lf-nome', 'Versão da prova');
+  await admin.click('#lic-jo'); await admin.waitForTimeout(1500);
+  const vs = await api('versao_lista&ambito=digital');
+  ok((vs.versoes || []).some(v => v.nome === 'Versão da prova'),
+     'e com nome guarda mesmo a versão');
+
   // ---------- limpeza ----------
   await api('utilizador_apagar&id=' + uid, {});
   await api('casamento_estado&id=' + cid2 + '&estado=arquivado', {});

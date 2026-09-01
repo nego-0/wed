@@ -3,6 +3,7 @@
 // isto, a versão saía sem as últimas edições — "as alterações nas versões não
 // estão a ser guardadas".
 const { chromium } = require('playwright-core');
+const janela = require('./_janela');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
@@ -39,7 +40,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // aceitar sempre os diálogos (prompt do nome, confirmações)
   let nomeDlg = 'Versão com edição';
-  p.on('dialog', async dlg => { await dlg.accept(dlg.type() === 'prompt' ? nomeDlg : undefined); });
+  await janela.autoResponder(p, nomeDlg);
 
   await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1500);

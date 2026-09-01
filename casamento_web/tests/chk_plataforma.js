@@ -134,15 +134,32 @@ const entrar = async (ctx, user, pass) => {
   ok(!txtA.includes('ZZ Casamento B ' + marca), 'a página de casamentos não lhes mostra o casamento alheio');
   ok(!txtA.includes('Novo casamento'), 'nem o painel de criar casamentos');
 
-  // ---------- aprovar um registo pendente ----------
+  // ---------- um registo pendente abre-se pela licença, e só por ela ----------
+  // Eram duas decisões para a mesma coisa, e nada as obrigava a concordar: um
+  // casamento aprovado sem licença nenhuma é um casal que entra e não pode
+  // fazer nada. Agora a aprovação É a decisão da licença.
   const pend = await api('casamento_criar', { nome: 'ZZ Pendente ' + marca });
   await api('casamento_estado&id=' + pend.id + '&estado=pendente');
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
-  ok((await admin.locator('body').innerText()).includes('à espera de aprovação'),
-     'um registo pendente aparece na fila de aprovação');
+  const txtPend = await admin.locator('body').innerText();
+  ok(txtPend.includes('à espera'), 'um registo pendente aparece na fila');
+  ok(/decidindo o pedido de licen/i.test(txtPend),
+     'e a fila diz onde é que se lhe abre a porta: no pedido de licença');
+
   const apr = await api('casamento_estado&id=' + pend.id + '&estado=ativo');
-  console.log('   aprovação:', JSON.stringify(apr), '| id pendente:', pend.id);
-  ok(apr && apr.success, 'o admin aprova-o');
+  console.log('   aprovação directa:', JSON.stringify(apr));
+  ok(apr && apr.success === false, 'aprová-lo à mão pelo estado já não passa');
+  ok(/licen/i.test(apr.message || ''), 'e a recusa manda-o para as Licenças');
+  ok((await api('casamento_ficha&id=' + pend.id)).casamento.estado === 'pendente',
+     'o casamento continua à espera — a recusa não foi só uma mensagem');
+
+  // Conceder-lhe licença abre-lhe a casa no mesmo gesto.
+  const catP = await api('lic_catalogo');
+  const escConv = catP.catalogo.modulos.find(m => m.chave === 'convidados').escaloes[0].id;
+  const conc = await api('lic_conceder', { casamento: pend.id, escaloes: [escConv], meses: 12 });
+  ok(conc && conc.success, 'a administração concede-lhe a licença');
+  ok((await api('casamento_ficha&id=' + pend.id)).casamento.estado === 'ativo',
+     'e o casamento fica ativo por causa disso — dar licença é abrir a casa');
 
   // ---------- o cabeçalho diz sempre onde se está ----------
   await api('casamento_abrir&id=' + casA.id);

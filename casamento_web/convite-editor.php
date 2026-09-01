@@ -33,6 +33,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 <title><?= $MODELO ? 'Modelo · ' : 'Convite digital · ' ?><?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/editor.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   /* Só para as amostras do painel de tipografia mostrarem a letra certa. */
   @font-face{font-family:'Alex Brush';src:url(assets/convite/fonts/alex-brush-latin-400-normal.woff2) format('woff2');font-display:swap}
@@ -225,6 +226,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 <script src="<?= asset('assets/editor-diag.js') ?>"></script>
 <?php endif; ?>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
 <script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?> };</script>
@@ -555,11 +557,17 @@ function reporLivre(id){
   marcarSujo(true); registarPasso(); renderProps();
   msg(`"${bl.rotulo}" voltou ao sítio de origem.`);
 }
-function reporLivresDa(sec){
+async function reporLivresDa(sec){
   const L = livresTodos();
   const ids = Object.keys(L).filter(id => L[id].sec === sec && EST.pos[id]);
   if (!ids.length) return msg('Nada foi movido nesta camada.');
-  if (!confirm('Repor todos os blocos desta camada no sítio que o design lhes deu?\n\nPode desfazer com Ctrl+Z.')) return;
+  const r = await licConfirmar({
+    titulo: 'Repor a composição desta camada?',
+    icone: '↩️', confirmar: 'Repor composição',
+    texto: '<b>' + ids.length + '</b> bloco(s) voltam ao sítio que o design lhes deu.'
+         + '<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado até guardar.'
+  });
+  if (!r.sim) return;
   ids.forEach(id => moverLivre(id, 0, 0, 0));
   marcarSujo(true); registarPasso(); renderProps();
   msg('Composição de origem reposta — por guardar.');
@@ -661,8 +669,14 @@ function acrescentarCerimonia(k, horaPadrao){
   marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
   msg('Cerimónia acrescentada — ajuste a hora e o local.');
 }
-function removerCerimonia(k, rot){
-  if (!confirm(`Tirar a ${rot.toLowerCase()} do convite?\n\nA hora e o local são apagados. Ctrl+Z desfaz.`)) return;
+async function removerCerimonia(k, rot){
+  const r = await licConfirmar({
+    titulo: 'Tirar a ' + licEsc(rot.toLowerCase()) + ' do convite?',
+    icone: '⛪', confirmar: 'Tirar do convite',
+    texto: 'A <b>hora</b> e o <b>local</b> desta cerimónia são apagados, e ela deixa de se '
+         + 'anunciar aos convidados.<br><br><b>Ctrl+Z desfaz.</b>'
+  });
+  if (!r.sim) return;
   EST.val['evento.' + k + '_hora'] = '';
   EST.val['evento.' + k + '_local'] = '';
   marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
@@ -829,9 +843,15 @@ function juntarBloco(){
   renderCamadas(); renderProps(); recarregarTela();
   msg('Secção acrescentada: ' + (b.titulo||'nova secção') + '. Arraste-a na lista para a mudar de sítio.');
 }
-function apagarBloco(id){
+async function apagarBloco(id){
   const b = blocoLivre(id); if (!b) return;
-  if (!confirm(`Apagar a secção "${b.titulo||'livre'}"?\n\nPode desfazer com Ctrl+Z.`)) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar a secção «' + licEsc(b.titulo || 'livre') + '»?',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar secção',
+    texto: 'A secção sai do convite, com o que tem lá dentro.'
+         + '<br><br><b>Ctrl+Z devolve-a</b>, e nada fica gravado até guardar.'
+  });
+  if (!r.sim) return;
   EST.blocos = EST.blocos.filter(x=>x.id!==id);
   EST.ordem  = EST.ordem.filter(x=>x!==id);
   SEC = PRIMEIRO; DEF = null;
@@ -1554,17 +1574,45 @@ async function guardar(opcoes){
   return await guardarComo(defs);
 }
 
-async function guardarComo(defs){
-  const nome = (prompt('Guardar como uma versão vossa — dê-lhe um nome:\n\n'
-    + 'Fica só para o vosso casamento; o desenho da casa não se toca.', '') || '').trim();
-  if (!nome){ msg('Por guardar: a vossa versão precisa de um nome.'); return false; }
-  const d = await gravarDefs(defs, false);       // persiste; a versão a seguir fotografa-a
-  if (d && !d.success){ msg((d && d.message) || 'Erro ao guardar.'); return false; }
-  const c = await api('versao_criar&ambito=digital', {method:'POST', body:JSON.stringify({nome, ambito:'digital'})});
-  if (!c || !c.success){ msg((c && c.message) || 'Não foi possível guardar a versão.'); return false; }
-  msg(`Guardado na vossa versão «${nome}».`);
-  if (PAINEL_VERSOES) PAINEL_VERSOES.recarregar();
-  recarregarTela(); return true;
+function guardarComo(defs){
+  // Devolve uma promessa que só resolve quando a janela fecha: quem chama isto
+  // está a meio de «guardar», e precisa de saber se guardou mesmo.
+  return new Promise(resolve => {
+    let respondeu = false;
+    licFormulario({
+      titulo: 'Guardar como uma versão vossa',
+      dica: 'Fica só para o vosso casamento — o desenho da casa não se toca.',
+      guardar: 'Guardar versão',
+      campos: [{ id: 'nome', rot: 'Nome desta versão', largura: 3,
+                 dica2: 'Ex.: a nossa, com a foto da praia' }],
+      aoGuardar: async function (v) {
+        if (!v.nome){ licJanelaErro('A vossa versão precisa de um nome.'); return false; }
+        const d = await gravarDefs(defs, false);   // persiste; a versão a seguir fotografa-a
+        if (d && !d.success){ licJanelaErro((d && d.message) || 'Erro ao guardar.'); return false; }
+        const c = await api('versao_criar&ambito=digital',
+                            {method:'POST', body:JSON.stringify({nome: v.nome, ambito:'digital'})});
+        if (!c || !c.success){
+          licJanelaErro((c && c.message) || 'Não foi possível guardar a versão.');
+          return false;
+        }
+        msg(`Guardado na vossa versão «${v.nome}».`);
+        if (PAINEL_VERSOES) PAINEL_VERSOES.recarregar();
+        recarregarTela();
+        respondeu = true; resolve(true);
+      }
+    });
+    // Fechar sem guardar é não ter guardado.
+    const m = document.getElementById('lic-janela');
+    const obs = new MutationObserver(() => {
+      if (!m.classList.contains('on') && !respondeu){
+        obs.disconnect();
+        msg('Por guardar: a vossa versão precisa de um nome.');
+        resolve(false);
+      }
+      if (respondeu) obs.disconnect();
+    });
+    obs.observe(m, { attributes: true, attributeFilter: ['class'] });
+  });
 }
 function marcarInvalidos(inv){
   document.querySelectorAll('#props .campo').forEach(c=>c.classList.remove('invalido'));
@@ -1595,13 +1643,17 @@ async function reporSeccao(){
   const fotos   = (MEDIA_SEC[SEC] || []).filter(k => k.startsWith('media.'));
   const blocos  = Object.keys(livresTodos()).filter(id => (livresTodos()[id]||{}).sec === SEC && EST.pos[id]);
 
-  const aviso = fotos.length
-    ? `Repor TUDO em "${rotulo}" no modelo de origem?\n\n`
-      + `Voltam os textos, os estilos, a composição e a fotografia — e a foto que `
-      + `tenha posto à mão nesta secção é apagada, já e sem desfazer.`
-    : `Repor tudo em "${rotulo}" no modelo de origem?\n\n`
-      + `Voltam os textos, os estilos e a composição desta secção. Pode desfazer com Ctrl+Z.`;
-  if (!confirm(aviso)) return;
+  const r = await licConfirmar({
+    titulo: 'Repor «' + licEsc(rotulo) + '» no modelo de origem?',
+    icone: '↩️', perigo: !!fotos.length, confirmar: 'Repor secção',
+    texto: fotos.length
+      ? 'Voltam os <b>textos</b>, os <b>estilos</b>, a <b>composição</b> e a '
+        + '<b>fotografia</b> de origem.<br><br>A foto que tenha posto à mão nesta secção é '
+        + '<b>apagada já, e isso não se desfaz</b> — o resto desfaz-se com Ctrl+Z.'
+      : 'Voltam os <b>textos</b>, os <b>estilos</b> e a <b>composição</b> desta secção.'
+        + '<br><br><b>Ctrl+Z desfaz.</b>'
+  });
+  if (!r.sim) return;
 
   // 1) Os valores da secção (menos as fotos, que se gravam à parte).
   chaves.forEach(k => { if (!k.startsWith('media.') && k in PADRAO) EST.val[k] = PADRAO[k]; });

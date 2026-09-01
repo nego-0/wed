@@ -132,11 +132,21 @@ foreach ($meus as $id => $c) {
     }
 }
 
-// Registos à espera de aprovação (só o admin da plataforma os despacha).
+// Registos à espera (só o admin da plataforma os despacha).
+//
+// Já não se aprovam aqui: um casamento abre-se ao decidir o seu PEDIDO DE
+// LICENÇA, e não por um botão à parte. Eram duas decisões para a mesma coisa —
+// e nada impedia que ficassem em desacordo (um casamento aprovado sem licença
+// nenhuma é um casal que entra e não pode fazer nada). Esta lista passou a ser
+// o que sempre devia ter sido: um aviso de que há gente à porta, com o caminho
+// para o sítio onde se lhe abre.
 $pendentes = [];
 if (ehAdminPlataforma()) {
-    $r = @$conn->query("SELECT id, nome, noiva, noivo, criado_em FROM {$P}casamentos
-                        WHERE estado='pendente' ORDER BY criado_em");
+    $r = @$conn->query("SELECT c.id, c.nome, c.noiva, c.noivo, c.criado_em,
+                               (SELECT COUNT(*) FROM {$P}lic_pedidos p
+                                 WHERE p.casamento_id = c.id AND p.estado='pendente') tem_pedido
+                        FROM {$P}casamentos c
+                        WHERE c.estado='pendente' ORDER BY c.criado_em");
     if ($r) $pendentes = $r->fetch_all(MYSQLI_ASSOC);
 }
 
@@ -535,19 +545,29 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
   <?php if ($pendentes): ?>
     <div class="painel" style="border-color:var(--warn); border-left:4px solid var(--warn)">
-      <h3><?= count($pendentes) ?> registo(s) à espera de aprovação</h3>
-      <div class="dica">Um casal inscreveu-se e aguarda que lhe abram a porta. Até ser aprovado, não entra.</div>
+      <h3><?= count($pendentes) ?> registo(s) à espera</h3>
+      <div class="dica">Estes casais já entram — mas só veem a sua licença, e mais nada.
+        <b>Abre-se-lhes a casa decidindo o pedido de licença</b>, em
+        <a href="#" onclick="verVista('licencas');return false"><b>Licenças</b></a>: aprovar o
+        pedido activa o casamento e as suas contas, no mesmo gesto.</div>
       <div class="cas-lista">
         <?php foreach ($pendentes as $p): ?>
           <div class="cas">
             <div class="selo">?</div>
             <div>
               <div class="nm"><?= escP($p['nome']) ?></div>
-              <div class="meta"><span>Inscrito em <?= escP(date('d/m/Y', strtotime($p['criado_em']))) ?></span></div>
+              <div class="meta"><span>Inscrito em <?= escP(date('d/m/Y', strtotime($p['criado_em']))) ?></span>
+                <?php if ((int)$p['tem_pedido']): ?>
+                  <span class="et pendente">pedido à espera</span>
+                <?php else: ?>
+                  <span class="et">sem pedido — o casal ainda não escolheu plano</span>
+                <?php endif; ?>
+              </div>
             </div>
             <div class="ac">
-              <button class="btn btn-ouro btn-sm" onclick="aprovar(<?= (int)$p['id'] ?>)">Aprovar</button>
-              <button class="btn btn-sm" onclick="recusar(<?= (int)$p['id'] ?>)">Recusar</button>
+              <?php if ((int)$p['tem_pedido']): ?>
+                <button class="btn btn-ouro btn-sm" onclick="verVista('licencas')">Ver o pedido</button>
+              <?php endif; ?>
             </div>
           </div>
         <?php endforeach; ?>
@@ -1276,8 +1296,12 @@ function licData(s){
 async function licDecidir(id, decisao){
   const p = (LIC_PEDIDOS || []).find(x => x.id === id);
   const quem = p ? licEsc(p.casamento_nome) : 'este casamento';
+  // Num reforço, o preço da linha é o DEGRAU: o escalão novo menos o que o
+  // casal já tem pago naquele módulo. Diz-se de onde vem — um «16 000» ao lado
+  // de um preçário que diz «28 000» parece um erro se ninguém o explicar.
   const itens = p ? '<ul class="lic-conf-itens">' + (p.itens || []).map(it =>
-      '<li><b>' + licEsc(it.escalao_nome) + '</b> <span>' + licEsc(it.modulo_chave) + '</span>'
+      '<li><b>' + licEsc(it.escalao_nome) + '</b> <span>' + licEsc(it.modulo_chave)
+    + (+it.credito > 0 ? ' · já pagos ' + licKz(it.credito) : '') + '</span>'
     + '<em>' + licKz(it.preco) + '</em></li>').join('') + '</ul>' : '';
 
   const r = await licConfirmar({
@@ -2147,21 +2171,9 @@ async function criar(){
   PORT_TOCADO = false;
   toast('Casamento criado.');
 }
-async function aprovar(id){
-  const d = await api('casamento_estado&id=' + id + '&estado=ativo', { method:'POST' });
-  if (d && d.success) location.reload();
-}
-async function recusar(id){
-  const r = await licConfirmar({
-    titulo: 'Recusar este registo?',
-    icone: '🚫', confirmar: 'Recusar registo',
-    texto: 'O casal <b>deixa de poder entrar</b>. <b>Nada se apaga</b> — pode reabrir o '
-         + 'registo mais tarde se for engano.'
-  });
-  if (!r.sim) return;
-  const d = await api('casamento_estado&id=' + id + '&estado=suspenso', { method:'POST' });
-  if (d && d.success) location.reload();
-}
+// Aprovar e recusar um registo viviam aqui. Agora é uma decisão só, e é a do
+// pedido de licença: ver licDecidir(), em Licenças. Um casamento aprovado sem
+// licença nenhuma era um casal que entrava e não podia fazer nada.
 
 // ---------- arquivar, reabrir, apagar ----------
 // Cada mudança de estado diz o que muda para as pessoas, e não só para a ficha.

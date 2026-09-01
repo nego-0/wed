@@ -369,12 +369,21 @@ function licencaModulos(mysqli $conn, ?int $cid = null): array {
     $base = [];
     foreach (array_keys(licencaModulosTudo()) as $k) {
         $base[$k] = ['ativo' => false, 'limite' => 0, 'editar' => false,
-                     'todos_modelos' => false, 'nome' => ''];
+                     'todos_modelos' => false, 'nome' => '', 'credito' => 0.0];
     }
     if ($cid <= 0) return $cache[$cid] = $base;
 
-    $st = @$conn->prepare("SELECT modulo_chave, escalao_nome, limite, editar, todos_modelos
-                           FROM {$P}lic_concessoes WHERE casamento_id = ?");
+    // 'credito' é quanto vale, no preçário de hoje, o escalão em vigor. É o que
+    // se desconta num reforço: subir de escalão paga o degrau, e não o módulo
+    // inteiro outra vez. Vem daqui para o ecrã poder mostrar a MESMA conta que
+    // o servidor vai fazer — um número na montra diferente do cobrado é pior
+    // do que não mostrar número nenhum.
+    $st = @$conn->prepare("SELECT c.modulo_chave, c.escalao_nome, c.escalao_id,
+                                  c.limite, c.editar, c.todos_modelos,
+                                  IFNULL(e.preco, 0) preco
+                           FROM {$P}lic_concessoes c
+                           LEFT JOIN {$P}lic_escaloes e ON e.id = c.escalao_id
+                           WHERE c.casamento_id = ?");
     if ($st) {
         $st->bind_param('i', $cid);
         if (@$st->execute()) {
@@ -385,7 +394,8 @@ function licencaModulos(mysqli $conn, ?int $cid = null): array {
                 $base[$k] = ['ativo' => true, 'limite' => (int)$x['limite'],
                              'editar' => (bool)(int)$x['editar'],
                              'todos_modelos' => (bool)(int)$x['todos_modelos'],
-                             'nome' => (string)$x['escalao_nome']];
+                             'nome' => (string)$x['escalao_nome'],
+                             'credito' => (float)$x['preco']];
             }
         }
     }

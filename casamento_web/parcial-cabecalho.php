@@ -35,7 +35,7 @@ function menuPrincipal(): array {
 function menuModulos(): array {
     return [
         'painel'    => 'convidados',
-        'porta'     => 'convidados',
+        'porta'     => 'porta',
         'mesas'     => 'mesas',
         'orcamento' => 'orcamento',
         'grafica'   => 'impresso',

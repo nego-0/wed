@@ -131,6 +131,23 @@
     return '';
   }
 
+  /**
+   * Quanto se desconta a este escalão pelo que já se tem no mesmo módulo.
+   *
+   * Subir de «até 80 convidados» para «até 200» é pagar o degrau — não é
+   * comprar a lista outra vez. O servidor faz esta mesma conta ao registar o
+   * pedido; aqui repete-se para o número que o casal vê ser o que vai pagar.
+   * (Nunca passa do preço do escalão: descer não devolve dinheiro.)
+   */
+  function credito(e) {
+    var t = TENHO[e.modulo];
+    if (!t || !t.ativo) return 0;
+    return Math.min(+e.preco || 0, +t.credito || 0);
+  }
+
+  /** O que este escalão custa a ESTE casamento, já com o que ele tem descontado. */
+  function precoLiquido(e) { return (+e.preco || 0) - credito(e); }
+
   /** Este escalão já está coberto pelo que o casamento tem? */
   function jaTem(e) {
     var t = TENHO[e.modulo];
@@ -305,29 +322,49 @@
          + '</div>';
       h += '<div class="pl-escs">';
 
-      // «Não levar» é uma escolha como as outras — excepto num módulo obrigatório,
-      // onde não é escolha nenhuma: oferecer uma opção que o servidor vai
-      // recusar é convidar ao erro. Nesses, diz-se porquê e passa-se à frente.
-      if (m.obrigatorio) {
+      // «Não levar» é uma escolha como as outras — excepto num módulo
+      // obrigatório que ainda não se tem, onde não é escolha nenhuma: oferecer
+      // uma opção que o servidor vai recusar é convidar ao erro.
+      //
+      // Num reforço a coisa inverte-se: o módulo obrigatório JÁ está na
+      // licença, o servidor aceita um pedido sem ele, e o casal tem de o poder
+      // deixar de fora — senão marca-o por engano, não tem como desmarcar, e
+      // fica a pagar um degrau que não queria. Aqui, «Não levar» quer dizer
+      // «fica como está».
+      var tenhoJa = TENHO[m.chave] && TENHO[m.chave].ativo;
+      if (m.obrigatorio && !tenhoJa) {
         h += '<div class="pl-obrig">Incluído em todos os planos — é a base de que o '
            + 'resto depende. Escolha a medida.</div>';
       } else {
         var nada = !sel.escaloes[m.chave];
         h += '<label class="pl-esc' + (nada ? ' on' : '') + '">'
            + '<input type="radio" name="pl-' + esc(m.chave) + '" value="0"' + (nada ? ' checked' : '') + '>'
-           + '<span><span class="pl-esc-nome">Não levar</span>'
-           + '<span class="pl-esc-res">Fica de fora deste plano.</span></span></label>';
+           + '<span><span class="pl-esc-nome">'
+           + (tenhoJa ? 'Deixar como está' : 'Não levar') + '</span>'
+           + '<span class="pl-esc-res">'
+           + (tenhoJa ? 'Não mexe no que já tem, e não entra na conta.'
+                      : 'Fica de fora deste plano.')
+           + '</span></span></label>';
       }
 
       escs.forEach(function (e) {
         var tem = jaTem(e);
         var on = sel.escaloes[m.chave] === e.id;
+        // Com crédito, o preço que se mostra é o degrau — e diz-se de onde vem.
+        // Um «16 000» sem explicação ao lado de um preçário que diz «28 000»
+        // parece um erro; com a linha, é a promessa a cumprir-se à vista.
+        var cr = credito(e);
+        var preco = cr > 0
+          ? precoComDesconto(e.preco - cr)
+            + '<span class="pl-esc-credito">já tem <b>' + esc(moeda(comPrazo(cr)))
+            + '</b> pagos neste módulo</span>'
+          : precoComDesconto(e.preco);
         h += '<label class="pl-esc' + (on ? ' on' : '') + (tem ? ' tem' : '') + '">'
            + '<input type="radio" name="pl-' + esc(m.chave) + '" value="' + e.id + '"'
            +   (on ? ' checked' : '') + (tem ? ' disabled' : '') + '>'
            + '<span><span class="pl-esc-nome">' + esc(e.nome) + '</span>'
            + (e.resumo ? '<span class="pl-esc-res">' + esc(e.resumo) + '</span>' : '')
-           + (tem ? '<span class="pl-esc-tem">✓ Já tem</span>' : precoComDesconto(e.preco))
+           + (tem ? '<span class="pl-esc-tem">✓ Já tem</span>' : preco)
            + '</span></label>';
       });
       h += '</div>';
@@ -698,7 +735,7 @@
       Object.keys(sel.escaloes).forEach(function (m) {
         var e = escalao(sel.escaloes[m]);
         if (!e) return;
-        ids.push(e.id); total += comPrazo(e.preco);
+        ids.push(e.id); total += comPrazo(precoLiquido(e));
       });
       return { pacote: 0, escaloes: ids, meses: meses, total: total, fotos: fotos,
                vazio: ids.length === 0 };

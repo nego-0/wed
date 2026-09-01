@@ -117,9 +117,15 @@ const entrar = async (ctx, u, s) => {
   const portReg = sql(`SELECT estado FROM cw_utilizadores WHERE email='${regPort}'`);
   ok(portReg === 'pendente', 'a conta do porteiro fica pendente com o casamento');
 
-  // Aprovar arranca a licença e ativa as contas.
-  const apr = await api('casamento_estado&id=' + regCid + '&estado=ativo', {});
-  ok(apr && apr.success, 'o admin aprova o registo');
+  // Aprovar é conceder-lhe a licença: é a licença que abre a casa, e não um
+  // botão à parte. Passar o estado à mão já não serve.
+  const direto = await api('casamento_estado&id=' + regCid + '&estado=ativo', {});
+  ok(direto && direto.success === false, 'passar o estado a ativo à mão já não aprova');
+
+  const cat = await api('lic_catalogo');
+  const esc1 = cat.catalogo.modulos.find(m => m.chave === 'convidados').escaloes[0].id;
+  const apr = await api('lic_conceder', { casamento: regCid, escaloes: [esc1], meses: 12 });
+  ok(apr && apr.success, 'conceder-lhe a licença aprova o registo');
   const linha2 = sql(`SELECT CONCAT(estado,'|',IF(licenca_ate IS NULL,'NULL','set')) FROM cw_casamentos WHERE id=${regCid}`);
   ok(linha2 === 'ativo|set', 'aprovado, o casamento fica ativo e a licença começa a contar');
   ok(sql(`SELECT estado FROM cw_utilizadores WHERE email='${regEmail}'`) === 'ativo',

@@ -190,7 +190,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 30;
+const ESQUEMA_VERSAO = 31;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -225,6 +225,7 @@ function migLargarColuna(mysqli $c, string $tabela, string $coluna): void {
 function imagensDaMontra(): array {
     return [
         'convidados' => 'assets/montra/convidados.jpg',
+        'porta'      => 'assets/montra/porta.jpg',
         'mesas'      => 'assets/montra/mesas.jpg',
         'orcamento'  => 'assets/montra/orcamento.jpg',
         'impresso'   => 'assets/montra/impresso.jpg',
@@ -232,10 +233,14 @@ function imagensDaMontra(): array {
     ];
 }
 
-/** As cinco chaves de módulo que o sistema conhece, e o que cada uma comanda. */
+/** As chaves de módulo que o sistema conhece, e o que cada uma comanda. */
 function licencaModulosTudo(): array {
     return [
         'convidados' => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
+        // A porta é o dia do casamento: o QR, quem já entrou, quem falta. Vive
+        // à parte da lista porque é outro trabalho, feito por outra pessoa (o
+        // porteiro), noutro dia — e há casamentos que a querem sem mais nada.
+        'porta'      => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
         'mesas'      => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
         'orcamento'  => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
         'impresso'   => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
@@ -257,12 +262,17 @@ function semearPrecario(mysqli $conn): void {
     // quem? O convite vai para quem? Todos os outros módulos assentam nela.
     $catalogo = [
         ['convidados', 'Lista de convidados',
-         'Convites, acompanhantes, confirmações e a porta no dia.',
-         'Saiba, ao minuto, quem vem — e quem já entrou.', '👤', 1, [
+         'Convites, acompanhantes e confirmações de presença.',
+         'Saiba quem vem, sem contar nomes numa folha.', '👤', 1, [
             ['convidados_80',  'Até 80 convidados',   'Uma festa de família.',            18000, 80,  0, 0],
             ['convidados_200', 'Até 200 convidados',  'O tamanho da maioria dos casamentos.', 32000, 200, 0, 0],
             ['convidados_400', 'Até 400 convidados',  'Casamentos grandes, com folga.',   48000, 400, 0, 0],
             ['convidados_sem', 'Convidados sem limite', 'Não conte pessoas. Convide.',    65000, 0,   0, 0],
+         ]],
+        ['porta', 'Controlo à porta',
+         'O posto do porteiro: lê o QR e marca quem entrou.',
+         'Ninguém entra a mais, ninguém fica à porta por engano.', '🎟️', 0, [
+            ['porta_sim', 'Controlo à porta', 'Leitor de QR, entradas ao minuto e quem falta.', 20000, 0, 0, 0],
          ]],
         ['mesas', 'Planta de mesas',
          'Desenhe o salão e sente cada convidado no seu lugar.',
@@ -317,18 +327,18 @@ function semearPrecario(mysqli $conn): void {
     // Os três pacotes de origem. O do meio é o que se destaca — é o desenho
     // clássico, e é honesto: é mesmo o que serve a maioria dos casamentos.
     $pacotes = [
-        ['essencial', 'Essencial', 'O necessário para convidar e receber.',
-         "Para quem quer o essencial bem feito: a lista de convidados sempre certa e os dois convites no desenho da casa.",
+        ['essencial', 'Essencial', 'O necessário para convidar bem.',
+         "Para quem quer o essencial bem feito: a lista de convidados sempre certa e os dois convites no desenho da casa. O controlo à porta junta-se depois, se quiser.",
          36000, 6, '', 0, 10,
          ['convidados_80', 'impresso_padrao', 'digital_padrao']],
-        ['celebracao', 'Celebração', 'O casamento inteiro, de ponta a ponta.',
-         "Tudo o que se usa mesmo, do primeiro convite à última mesa: convidados, planta do salão, orçamento e os dois convites seus para desenhar.",
-         98000, 12, 'O MAIS ESCOLHIDO', 1, 20,
-         ['convidados_200', 'mesas_sim', 'orcamento_sim', 'impresso_edicao', 'digital_edicao']],
+        ['celebracao', 'Celebração', 'Do primeiro convite à porta do salão.',
+         "Tudo o que se usa mesmo: convidados, planta do salão, orçamento, os dois convites seus para desenhar — e o posto do porteiro a marcar quem entra no dia.",
+         112000, 12, 'O MAIS ESCOLHIDO', 1, 20,
+         ['convidados_200', 'porta_sim', 'mesas_sim', 'orcamento_sim', 'impresso_edicao', 'digital_edicao']],
         ['atelier', 'Atelier', 'Sem limites, sem esperar por ninguém.',
          "Convidados sem limite, a galeria completa de modelos e o editor sem travões — para quem quer o casamento exactamente à sua maneira.",
-         145000, 18, 'TUDO INCLUÍDO', 0, 30,
-         ['convidados_sem', 'mesas_sim', 'orcamento_sim', 'impresso_atelier', 'digital_atelier']],
+         159000, 18, 'TUDO INCLUÍDO', 0, 30,
+         ['convidados_sem', 'porta_sim', 'mesas_sim', 'orcamento_sim', 'impresso_atelier', 'digital_atelier']],
     ];
     foreach ($pacotes as [$ch, $nm, $pr, $rs, $pc, $ms, $et, $ds, $od, $itens]) {
         $st = $conn->prepare("INSERT INTO {$P}lic_pacotes
@@ -1324,6 +1334,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 modulo_chave VARCHAR(32) NOT NULL,
                 escalao_nome VARCHAR(80) NOT NULL,
                 preco DECIMAL(12,2) NOT NULL DEFAULT 0,
+                credito DECIMAL(12,2) NOT NULL DEFAULT 0,
                 limite INT NOT NULL DEFAULT 0,
                 editar TINYINT(1) NOT NULL DEFAULT 0,
                 todos_modelos TINYINT(1) NOT NULL DEFAULT 0,
@@ -1435,6 +1446,60 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 ativo TINYINT(1) NOT NULL DEFAULT 1
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         semearPrazos($conn);
+    }
+
+    // v31 — a porta sai de dentro da lista de convidados e passa a módulo.
+    //
+    // Eram dois trabalhos numa só linha do preçário: fazer a lista (meses
+    // antes, à secretária, pelos noivos) e receber as pessoas (uma noite, à
+    // entrada, pelo porteiro). Há casamentos que querem a lista e tratam da
+    // porta à mão, e há quem já tenha a lista feita noutro lado e só queira o
+    // leitor. Separá-los deixa cada um pagar o que usa.
+    //
+    // Quem já cá estava não perde nada: a porta estava incluída no que
+    // comprou, e por isso quem tem a lista de convidados recebe-a concedida.
+    // Tirar-lhe uma funcionalidade que já pagou seria a leitura errada desta
+    // mudança — o módulo novo é para quem vier a seguir.
+    if ($versaoAtual < 31) {
+        // Num reforço, subir de escalão dentro de um módulo que já se tem passa
+        // a descontar o que já está pago. Guarda-se o desconto ao lado do preço
+        // para o pedido se explicar sozinho: «28 000 menos os 12 000 que já
+        // tinha». Sem esta coluna, o admin via só o número final e não sabia de
+        // onde vinha.
+        migColuna($conn, "{$P}lic_pedido_itens", 'credito',
+                  "DECIMAL(12,2) NOT NULL DEFAULT 0");
+
+        $img = imagensDaMontra()['porta'] ?? '';
+        $st = @$conn->prepare("INSERT IGNORE INTO {$P}lic_modulos
+                               (chave,nome,resumo,beneficio,icone,ordem,imagem,obrigatorio,ativo)
+                               VALUES ('porta',?,?,?,'🎟️',15,?,0,1)");
+        if ($st) {
+            $nm = 'Controlo à porta';
+            $rs = 'O posto do porteiro: lê o QR e marca quem entrou.';
+            $bf = 'Ninguém entra a mais, ninguém fica à porta por engano.';
+            $st->bind_param('ssss', $nm, $rs, $bf, $img);
+            @$st->execute();
+        }
+        $r = @$conn->query("SELECT id FROM {$P}lic_modulos WHERE chave='porta' LIMIT 1");
+        $mid = ($r && ($x = $r->fetch_row())) ? (int)$x[0] : 0;
+        if ($mid > 0) {
+            @$conn->query("INSERT IGNORE INTO {$P}lic_escaloes
+                (modulo_id,chave,nome,resumo,preco,limite,editar,todos_modelos,ordem,ativo)
+                VALUES ($mid,'porta_sim','Controlo à porta',
+                        'Leitor de QR, entradas ao minuto e quem falta.',20000,0,0,0,10,1)");
+        }
+        // O texto de «convidados» já não promete a porta — deixaria a montra a
+        // vender duas vezes a mesma coisa.
+        @$conn->query("UPDATE {$P}lic_modulos
+                       SET resumo='Convites, acompanhantes e confirmações de presença.',
+                           beneficio='Saiba quem vem, sem contar nomes numa folha.'
+                       WHERE chave='convidados'
+                         AND resumo='Convites, acompanhantes, confirmações e a porta no dia.'");
+        // E quem já tem a lista fica com a porta, que era o que tinha comprado.
+        @$conn->query("INSERT IGNORE INTO {$P}lic_concessoes
+            (casamento_id, modulo_chave, escalao_id, escalao_nome, limite, editar, todos_modelos)
+            SELECT casamento_id, 'porta', NULL, 'Incluído na licença anterior', 0, 0, 0
+              FROM {$P}lic_concessoes WHERE modulo_chave='convidados'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

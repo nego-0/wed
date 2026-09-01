@@ -1,12 +1,17 @@
 // Arrastar mesmo com o rato: faixas de tamanho e seletores de cor.
 const { chromium } = require('playwright-core');
+const janela = require('./_janela');
 const EXE=process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', BASE=process.env.BASE_URL || 'http://127.0.0.1:8920';
 (async()=>{
   const b=await chromium.launch({executablePath:EXE,args:['--no-sandbox']});
   const p=await (await b.newContext({viewport:{width:1440,height:950}})).newPage();
   const errs=[]; p.on('pageerror',e=>errs.push(e.message));
   p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
-  p.on('dialog',d=>d.accept());
+  // As janelas dos editores já não são do browser: são as da casa. O
+  // auto-responder faz o que o on('dialog') fazia — responde-lhes sozinho,
+  // por dentro da página, para esta prova poder continuar a olhar só para
+  // aquilo que veio provar. (Ver tests/_janela.js.)
+  await janela.autoResponder(p, 'Prova');
   let f=0; const ok=(c,m)=>{console.log((c?'PASS':'FAIL')+':',m); if(!c)f++;};
   await p.goto(BASE+'/login.php',{waitUntil:'networkidle'});
   await p.fill('input[name=utilizador]','admin'); await p.fill('input[name=senha]','noivos2026');

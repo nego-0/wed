@@ -40,6 +40,7 @@ if ($aberto > 0) {
 <title>Modelos de convite · Plataforma</title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
@@ -300,6 +301,7 @@ if ($aberto > 0) {
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -382,8 +384,13 @@ function pintarNumFerramentas(){
 }
 
 async function reporDesenhoDeOrigem(){
-  if (!confirm('Devolver ao desenho de origem os modelos da casa que ainda têm o nome de origem?\n\n'
-    + 'Os modelos que criou não são tocados — só os da casa voltam ao que o sistema traz.')) return;
+  const r = await licConfirmar({
+    titulo: 'Repor os modelos da casa?',
+    icone: '↩️', confirmar: 'Repor os da casa',
+    texto: 'Os modelos <b>da casa</b> que ainda têm o nome de origem voltam ao desenho que o '
+         + 'sistema traz.<br><br>Os modelos que <b>criou não são tocados</b>.'
+  });
+  if (!r.sim) return;
   const d = await api('modelos_restaurar', { method:'POST', body: JSON.stringify({ repor: true }) });
   if (!d || !d.success) return;
   const n = (d.criados || []).length + (d.repostos || []).length;
@@ -590,8 +597,13 @@ async function guardar(id, recapturar){
   if (d && d.success){ fechar('ov-modelo'); toast('Modelo guardado.'); carregar(); }
 }
 async function recapturar(id){
-  if (!confirm('Trazer o desenho do casamento aberto para este modelo?\n\n'
-    + 'O desenho que o modelo tinha perde-se. Quem já o aplicou fica como está.')) return;
+  const r = await licConfirmar({
+    titulo: 'Trazer o desenho do casamento aberto?',
+    icone: '📸', perigo: true, confirmar: 'Trazer desenho',
+    texto: 'O modelo passa a ter o desenho do casamento que está aberto.<br><br>'
+         + 'O desenho que o modelo tinha <b>perde-se</b>. Quem já o aplicou fica como está.'
+  });
+  if (!r.sim) return;
   guardar(id, true);
 }
 async function publicar(id, visivel){
@@ -661,8 +673,13 @@ async function guardarVisibilidade(id){
   }
 }
 async function apagar(id, nome){
-  if (!confirm('Apagar o modelo "' + nome + '"?\n\n'
-    + 'Os casais que já o usaram ficam como estão — o desenho passou a ser deles.')) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar o modelo «' + licEsc(nome) + '»?',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar modelo',
+    texto: 'O modelo sai da galeria e <b>não se desfaz</b>.<br><br>'
+         + 'Os casais que já o usaram <b>ficam como estão</b> — o desenho passou a ser deles.'
+  });
+  if (!r.sim) return;
   const d = await api('modelo_apagar&id=' + id, { method:'POST' });
   if (d && d.success){ toast('Modelo apagado.'); carregar(); }
 }
@@ -673,10 +690,16 @@ async function apagar(id, nome){
    Só um modelo publicado e disponível a todos pode sê-la. */
 async function definirOrigem(id, on){
   const m = MODELOS[id] || {};
-  if (on && !confirm('Passar «' + (m.nome||'') + '» a peça de origem'
-      + (m.ambito === 'impresso' ? ' do cartão impresso' : ' do convite digital') + '?\n\n'
-      + 'Passa a ser o ponto de regresso desta peça, e o nome por que ela se dá a '
-      + 'conhecer quando o casal ainda não escolheu nada.')) return;
+  if (on){
+    const r = await licConfirmar({
+      titulo: 'Passar «' + licEsc(m.nome || '') + '» a peça de origem?',
+      icone: '⭐', confirmar: 'Passar a peça de origem',
+      texto: 'Do ' + (m.ambito === 'impresso' ? '<b>cartão impresso</b>' : '<b>convite digital</b>')
+           + '.<br><br>Passa a ser o <b>ponto de regresso</b> desta peça, e o nome por que ela '
+           + 'se dá a conhecer quando o casal ainda não escolheu nada.'
+    });
+    if (!r.sim) return;
+  }
   const d = await api('modelo_pecaorigem&ambito=' + encodeURIComponent(m.ambito) + '&id=' + (on ? id : 0),
                       { method:'POST' });
   if (!d || !d.success) return;
@@ -944,12 +967,17 @@ async function reporGaleria(){
 }
 
 async function apagarDaGaleria(src, daCasa){
-  const aviso = daCasa
-    ? 'Tirar esta fotografia da galeria?\n\nÉ da casa: o ficheiro fica no servidor e pode repô-la '
-      + 'a qualquer momento em «Repor as da casa».'
-    : 'Apagar esta fotografia da galeria?\n\nO ficheiro é apagado. Os modelos já criados com ela '
-      + 'ficam como estão.';
-  if (!confirm(aviso)) return;
+  const r = await licConfirmar({
+    titulo: daCasa ? 'Tirar esta fotografia da galeria?' : 'Apagar esta fotografia?',
+    icone: '🖼️', perigo: !daCasa,
+    confirmar: daCasa ? 'Tirar da galeria' : 'Apagar fotografia',
+    texto: daCasa
+      ? 'É <b>da casa</b>: o ficheiro fica no servidor e pode repô-la a qualquer momento '
+        + 'em «Repor as da casa».'
+      : 'O ficheiro é <b>apagado</b>.<br><br>Os modelos já criados com ela <b>ficam como '
+        + 'estão</b> — a fotografia já lá está copiada.'
+  });
+  if (!r.sim) return;
   const d = await api('modelo_exemplo_apagar', { method:'POST', body: JSON.stringify({ src }) });
   if (!d || !d.success) return;
   aplicarGaleria(d);
@@ -997,7 +1025,14 @@ async function guardarExemplo(){
 }
 
 async function exemploFabrica(){
-  if (!confirm('Repor o casal, o evento, as imagens e o som de exemplo tal como vêm de fábrica?')) return;
+  const r = await licConfirmar({
+    titulo: 'Repor os dados de exemplo de fábrica?',
+    icone: '↩️', confirmar: 'Repor de fábrica',
+    texto: 'O <b>casal</b>, o <b>evento</b>, as <b>imagens</b> e o <b>som</b> de exemplo voltam '
+         + 'aos que o sistema traz.<br><br>São só os dados com que um modelo novo nasce — '
+         + 'nenhum casamento é tocado.'
+  });
+  if (!r.sim) return;
   const corpo = {};
   EX_CHAVES.forEach(k => corpo[k] = EX_FABRICA[k] ?? '');
   const d = await api('modelo_exemplo_guardar', { method:'POST', body: JSON.stringify(corpo) });

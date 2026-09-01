@@ -705,6 +705,29 @@ function licFator(mysqli $conn, int $meses): float {
     return 1.0;
 }
 
+/**
+ * Quanto vale, hoje, o que este casamento já tem — módulo a módulo.
+ *
+ * É o desconto de um reforço: quem tem «até 80 convidados» e quer «até 200»
+ * paga o degrau, e não a lista toda outra vez. Só conta o que se sabe medir —
+ * uma concessão dada à mão não tem escalão, e nesses casos não há número
+ * nenhum a descontar (mas também não há upgrade a fazer: um módulo concedido
+ * sem escalão vem sempre sem limites, e por isso já cobre tudo).
+ *
+ * Devolve [chave_do_modulo => preço de catálogo do escalão em vigor].
+ */
+function licCreditosEmVigor(mysqli $conn, int $cid): array {
+    global $P;
+    if ($cid <= 0) return [];
+    $out = [];
+    $r = @$conn->query("SELECT c.modulo_chave, e.preco
+                        FROM {$P}lic_concessoes c
+                        JOIN {$P}lic_escaloes e ON e.id = c.escalao_id
+                        WHERE c.casamento_id = " . (int)$cid);
+    if ($r) while ($x = $r->fetch_assoc()) $out[(string)$x['modulo_chave']] = (float)$x['preco'];
+    return $out;
+}
+
 /** As chaves de módulo que nenhum plano pode dispensar. */
 function licObrigatorios(mysqli $conn): array {
     global $P;
@@ -774,10 +797,11 @@ function licPedido(mysqli $conn, int $cid, string $estado = 'pendente'): ?array 
     $j = json_decode((string)($p['fotos'] ?? ''), true);
     $p['fotos'] = is_array($j) ? $j : [];
     $p['itens'] = [];
-    $r = @$conn->query("SELECT escalao_id,modulo_chave,escalao_nome,preco,limite,editar,todos_modelos
+    $r = @$conn->query("SELECT escalao_id,modulo_chave,escalao_nome,preco,credito,limite,editar,todos_modelos
                         FROM {$P}lic_pedido_itens WHERE pedido_id=" . (int)$p['id'] . " ORDER BY id");
     if ($r) while ($x = $r->fetch_assoc()) {
         $x['escalao_id'] = (int)$x['escalao_id']; $x['preco'] = (float)$x['preco'];
+        $x['credito'] = (float)$x['credito'];
         $x['limite'] = (int)$x['limite']; $x['editar'] = (int)$x['editar'];
         $x['todos_modelos'] = (int)$x['todos_modelos'];
         $p['itens'][] = $x;
@@ -829,15 +853,30 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
                         FROM {$P}lic_escaloes e JOIN {$P}lic_modulos m ON m.id = e.modulo_id
                         WHERE e.id IN ($lista) AND e.ativo=1 AND m.ativo=1
                         ORDER BY m.ordem, e.ordem");
+    // O que já está pago desconta-se. Subir de «até 80 convidados» para «até
+    // 200» não é comprar a lista outra vez: é pagar o degrau. Cobrar o escalão
+    // novo por inteiro fazia o reforço custar mais do que o plano inteiro tinha
+    // custado — e desmentia a promessa, escrita na própria página, de que se
+    // paga só a diferença.
+    //
+    // Credita-se pelo preço de HOJE do escalão em vigor, e não pelo que foi
+    // pago na altura: é o único número que se pode comparar com o de hoje sem
+    // misturar duas tabelas de preços. Nunca desce abaixo de zero — descer de
+    // escalão não devolve dinheiro, dá o escalão mais baixo.
+    $creditos = licCreditosEmVigor($conn, $cid);
+
     $itens = []; $total = 0.0;
     if ($r) while ($x = $r->fetch_assoc()) {
         $mc = (string)$x['modulo'];
         if (isset($itens[$mc])) continue;
+        $cheio  = (float)$x['preco'];
+        $credito = min($cheio, (float)($creditos[$mc] ?? 0));
         $itens[$mc] = ['escalao_id' => (int)$x['id'], 'modulo_chave' => $mc,
-                       'escalao_nome' => (string)$x['nome'], 'preco' => (float)$x['preco'],
+                       'escalao_nome' => (string)$x['nome'], 'preco' => $cheio - $credito,
+                       'credito' => $credito,
                        'limite' => (int)$x['limite'], 'editar' => (int)$x['editar'],
                        'todos_modelos' => (int)$x['todos_modelos']];
-        $total += (float)$x['preco'];
+        $total += $cheio - $credito;
     }
     if (!$itens) return 0;
 
@@ -876,7 +915,10 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
     // entretanto pode ter mudado.
     $fator = licFator($conn, $meses);
     if ($fator > 0 && abs($fator - 1.0) > 0.0001) {
-        foreach ($itens as $k => $it) $itens[$k]['preco'] = round($it['preco'] * $fator, 2);
+        foreach ($itens as $k => $it) {
+            $itens[$k]['preco']   = round($it['preco'] * $fator, 2);
+            $itens[$k]['credito'] = round($it['credito'] * $fator, 2);
+        }
         $total = round($total * $fator, 2);
     }
 
@@ -930,11 +972,11 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
     }
 
     $st = @$conn->prepare("INSERT INTO {$P}lic_pedido_itens
-        (pedido_id, escalao_id, modulo_chave, escalao_nome, preco, limite, editar, todos_modelos)
-        VALUES (?,?,?,?,?,?,?,?)");
+        (pedido_id, escalao_id, modulo_chave, escalao_nome, preco, credito, limite, editar, todos_modelos)
+        VALUES (?,?,?,?,?,?,?,?,?)");
     if ($st) foreach ($itens as $it) {
-        $st->bind_param('iissdiii', $pedidoId, $it['escalao_id'], $it['modulo_chave'],
-                        $it['escalao_nome'], $it['preco'], $it['limite'],
+        $st->bind_param('iissddiii', $pedidoId, $it['escalao_id'], $it['modulo_chave'],
+                        $it['escalao_nome'], $it['preco'], $it['credito'], $it['limite'],
                         $it['editar'], $it['todos_modelos']);
         @$st->execute();
     }
@@ -1068,7 +1110,7 @@ function licHistorico(mysqli $conn, int $cid): array {
     }
     if ($out) {
         $ids = implode(',', array_map('intval', array_keys($out)));
-        $ri = @$conn->query("SELECT pedido_id, modulo_chave, escalao_nome, preco
+        $ri = @$conn->query("SELECT pedido_id, modulo_chave, escalao_nome, preco, credito
                              FROM {$P}lic_pedido_itens WHERE pedido_id IN ($ids) ORDER BY id");
         if ($ri) while ($x = $ri->fetch_assoc()) {
             $p = (int)$x['pedido_id'];
@@ -1184,7 +1226,7 @@ if ($acao === 'lic_pedidos') {
     }
     if ($lista) {
         $ids = implode(',', array_map('intval', array_keys($lista)));
-        $ri = @$conn->query("SELECT pedido_id, modulo_chave, escalao_nome, preco, limite, editar, todos_modelos
+        $ri = @$conn->query("SELECT pedido_id, modulo_chave, escalao_nome, preco, credito, limite, editar, todos_modelos
                              FROM {$P}lic_pedido_itens WHERE pedido_id IN ($ids) ORDER BY id");
         if ($ri) while ($x = $ri->fetch_assoc()) {
             $p = (int)$x['pedido_id'];
@@ -1363,12 +1405,25 @@ if ($acao === 'lic_conceder') {
                           WHERE id=?");
     $st->bind_param('ssii', $novoEstado, $rotulo, $meses, $cid);
     @$st->execute();
-    if ($n > 0) iniciarLicenca($conn, $cid);
+    $contas = 0;
+    if ($n > 0) {
+        iniciarLicenca($conn, $cid);
+        // Dar licença a um registo que ainda esperava é abrir-lhe a casa: a
+        // aprovação de um casamento é a decisão da sua licença, e esta é a outra
+        // forma de a tomar (a administração concede à mão, sem pedido). Sem
+        // isto, um casal a quem se desse licença ficava na mesma à porta.
+        $rr = @$conn->query("SELECT estado FROM {$P}casamentos WHERE id=$cid");
+        if ($rr && ($xx = $rr->fetch_row()) && (string)$xx[0] === 'pendente') {
+            @$conn->query("UPDATE {$P}casamentos SET estado='ativo' WHERE id=$cid");
+            $contas = retomarContasDoCasamento($conn, $cid);
+        }
+    }
     registar($conn, 'licenca_conceder', (string)$c['nome'],
              "$n módulo(s) · " . ($meses ? "$meses mês(es)" : 'sem limite')
-             . ($reiniciar ? ' · relógio a contar de hoje' : ''));
+             . ($reiniciar ? ' · relógio a contar de hoje' : '')
+             . ($contas ? " · casamento aberto, $contas conta(s) ativada(s)" : ''));
     ok(['casamento' => $cid, 'modulos' => $n, 'estado' => $novoEstado,
-        'licenca' => licencaInfo($conn, $cid)]);
+        'contas_ativadas' => $contas, 'licenca' => licencaInfo($conn, $cid)]);
 }
 
 // ---- o preçário, do lado de quem o define ----
@@ -1689,6 +1744,10 @@ if (in_array($acao, ['suporte_entrar','senha_mudar'], true)) {
 // ---- Porteiro (admin ou porteiro) --------------------------
 if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entradas','porta_dados'], true)) {
     exigirPortaApi();
+    // O segundo trinco: esconder o posto da porta no menu não impede ninguém de
+    // chamar a ação à mão. A lista faz falta na mesma — é sobre ela que se lê.
+    exigirModuloApi('convidados');
+    exigirModuloApi('porta');
     if ($acao === 'porta_checkin') { exigirCsrf(); exigirCorrecao(); }  // altera dados
 
     if ($acao === 'porta_stats') {
@@ -1761,7 +1820,6 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
     }
 
     if ($acao === 'porta_checkin') {
-    exigirModuloApi('convidados');
         $d = corpo();
         $id   = (int)($d['convite_id'] ?? 0);
         $modo = $d['modo'] ?? 'todos';   // 'todos' | 'membro' | 'anular'
@@ -3261,15 +3319,28 @@ if ($acao === 'conta_apagar_do_casamento') {
 }
 
 if ($acao === 'casamento_estado') {
-    // Aprovar um registo (pendente → ativo), suspender ou arquivar.
+    // Suspender, arquivar, reabrir. Já NÃO serve para aprovar um registo novo.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o estado de um casamento.');
     $id = (int)($_GET['id'] ?? 0);
     $novo = (string)($_GET['estado'] ?? '');
     if (!in_array($novo, ['pendente','ativo','suspenso','arquivado'], true)) erro('Estado inválido.');
-    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, estado FROM {$P}casamentos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $c = $st->get_result()->fetch_assoc();
     if (!$c) erro('Casamento não encontrado.');
+
+    // Um registo que nunca foi aprovado abre-se pelo PEDIDO DE LICENÇA, e não
+    // por aqui. São a mesma decisão — que plano é que este casal leva — e ter
+    // dois caminhos para ela deixava-os desalinhados: um casamento ativo sem
+    // licença nenhuma é um casal que entra e não pode fazer nada.
+    //
+    // Reabrir um casamento suspenso ou arquivado continua a passar por aqui:
+    // esse já foi aprovado uma vez, e o que se decide é outra coisa.
+    if ($novo === 'ativo' && (string)$c['estado'] === 'pendente') {
+        erro('Um registo novo abre-se aprovando o seu pedido de licença, em Licenças. '
+           . 'É lá que se decide o que este casal leva — e aprovar o pedido activa '
+           . 'o casamento e as suas contas no mesmo gesto.');
+    }
     $st = $conn->prepare("UPDATE {$P}casamentos SET estado=? WHERE id=?");
     $st->bind_param('si', $novo, $id);
     if (!$st->execute()) erro('Não foi possível mudar o estado.');

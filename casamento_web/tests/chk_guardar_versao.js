@@ -5,6 +5,7 @@
 // • Só o admin, no editor de um MODELO da casa, é que vê «Guardar» (grava direto).
 // Vale para o convite digital e para o cartão impresso.
 const { chromium } = require('playwright-core');
+const janela = require('./_janela');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
@@ -13,7 +14,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const p = await b.newContext().then(c => c.newPage());
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   let NOME = 'Nossa versão';
-  p.on('dialog', d => d.accept(d.type() === 'prompt' ? NOME : undefined));
+  // O «Guardar Como» já não é um prompt() do browser: é a janela da casa.
+  // Responde-se-lhe por dentro da página, para o evaluate(() => guardar())
+  // continuar a resolver. (Ver tests/_janela.js.)
+  await janela.autoResponder(p, NOME);
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
