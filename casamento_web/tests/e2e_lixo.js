@@ -3,6 +3,7 @@ const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const OUT = process.env.TEST_OUT || require('os').tmpdir();
+const { confirmar } = require('./_janela');
 
 (async () => {
   const browser = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -164,8 +165,11 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   // ---------- eliminar pela UI, com "Anular" ----------
   const c2 = await api('convite_save', { nome_exibicao: 'Teste Anular', tipo: 'digital', lado: 'ambos', lugares: 1, membros: [], ts: '2026-08-03 10:00:00' });
   await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(900);
-  page.on('dialog', d => d.accept());
-  await page.evaluate(id => eliminar(id), c2.convite.id);
+  // A pergunta é agora a janela da casa: responde-se-lhe no botão. E o
+  // evaluate não pode esperar por eliminar() — quem responde é a prova, e ela
+  // só chega ao botão depois de o evaluate voltar.
+  await page.evaluate(id => { eliminar(id); }, c2.convite.id);
+  await confirmar(page);
   await page.waitForTimeout(900);
   const t = await page.evaluate(() => {
     const el = document.getElementById('toast');

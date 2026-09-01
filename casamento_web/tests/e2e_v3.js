@@ -5,6 +5,7 @@ const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const OUT = process.env.TEST_OUT || require('os').tmpdir();
+const { confirmar } = require('./_janela');
 
 (async () => {
   const browser = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -100,8 +101,10 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
      'o painel dos noivos separa as duas alas');
 
   // 7) eliminar e repor a mesa dos noivos
-  page.once('dialog', d => d.accept());
+  // A pergunta deixou de ser um confirm() do browser: é a janela da casa, e
+  // responde-se-lhe carregando no botão, como o utilizador faz.
   await page.evaluate(() => { const N = MESAS.find(m => m.especial === 'noivos'); eliminar(N.id); });
+  await confirmar(page);
   await page.waitForTimeout(1200);
   ok(await page.locator('.mesa-node.forma-noivos').count() === 0, 'a mesa dos noivos pode ser eliminada');
   ok(await page.locator('#btn-noivos').isVisible(), 'sem ela, aparece o botão de a repor');

@@ -278,7 +278,15 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 @media (max-width:640px){
   .convite-row{ grid-template-columns:auto auto 1fr; }
   .convite-row .acoes{ grid-column:1 / -1; justify-content:flex-start; }
-  .topo .nav{ margin-left:0; width:100%; }
+  /* O menu deixa de dobrar em três filas e passa a uma fila que desliza.
+     A dobrar, cada entrada nova roubava 46px ao primeiro ecrã do telemóvel —
+     e o menu cresce (a Licença foi a última). Numa fila só, cresce para o
+     lado, que é espaço que não custa nada a quem está a trabalhar. */
+  .topo .nav{ margin-left:0; width:100%;
+              flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain;
+              scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .topo .nav::-webkit-scrollbar{ display:none; }
+  .topo .nav > *{ flex:0 0 auto; }
   /* Cabeçalho mais compacto no telemóvel — deixa o essencial (e a caixa de
      procura) caber no primeiro ecrã. */
   .topo{ padding:1.05rem 1.1rem; }
