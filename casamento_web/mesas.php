@@ -88,7 +88,13 @@ $CAS = casalInfo(defsAtuais($conn));
   .canvas-wrap{ position:relative; display:inline-block; max-width:100%; }
   .planta-viewport{ position:relative; box-sizing:border-box; overflow:auto; width:100%; height:56vh; --z:1;
     border-radius:14px; border:1px dashed var(--gold-soft); background:var(--ivory); }
+  /* O «mundo» nunca encolhe abaixo destes mínimos. Sem eles, um canvas
+     estreito — o de um telemóvel, ou um que se arrastou para menor — esmagava
+     o salão inteiro na largura que houvesse, e as mesas passavam uma por cima
+     da outra. Agora o mundo mantém-se e é a VISTA que se desloca: é para isso
+     que serve o scroll, e é por isso que ele tem de haver nos dois eixos. */
   .planta{ position:relative; width:calc(max(1, var(--z))*100%); height:calc(max(1, var(--z))*100%);
+    min-width:calc(var(--z)*640px); min-height:calc(var(--z)*420px);
     border-radius:14px; transition:width .18s ease, height .18s ease; touch-action:none; user-select:none;
     background:
       linear-gradient(var(--ivory),var(--ivory)),
@@ -137,6 +143,16 @@ $CAS = casalInfo(defsAtuais($conn));
   body.bloq-mesas .mesa-node{ cursor:pointer; }
   /* Com o canvas fixo, as pegas de redimensionar desaparecem */
   body.bloq-canvas .rz{ display:none; }
+  /* Vista fixa: a planta fica onde está. Serve para pousar o dedo na tela sem
+     a arrastar sem querer — e é por isso que trava o scroll, não o zoom. */
+  body.bloq-scroll .planta-viewport{ overflow:hidden !important; }
+  /* Barras discretas, para não roubarem espaço à planta. */
+  .planta-viewport::-webkit-scrollbar{ width:10px; height:10px; }
+  .planta-viewport::-webkit-scrollbar-track{ background:transparent; }
+  .planta-viewport::-webkit-scrollbar-thumb{ background:var(--gold-soft); border-radius:50px;
+    border:2px solid var(--ivory); }
+  .planta-viewport::-webkit-scrollbar-thumb:hover{ background:var(--gold); }
+  .planta-viewport::-webkit-scrollbar-corner{ background:transparent; }
 
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
   .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:.78rem;
@@ -342,6 +358,9 @@ $CAS = casalInfo(defsAtuais($conn));
             </label>
             <label title="Impede redimensionar o canvas pelas bordas">
               <input type="checkbox" id="bloq-canvas" onchange="guardarBloqueio()"> Fixar canvas
+            </label>
+            <label title="Impede deslocar a vista dentro do canvas (a planta fica onde está)">
+              <input type="checkbox" id="bloq-scroll" onchange="guardarBloqueio()"> Fixar vista
             </label>
           </div>
           <div class="zoombar" id="zoombar" title="Nível de zoom">

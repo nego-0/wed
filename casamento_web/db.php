@@ -190,7 +190,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 32;
+const ESQUEMA_VERSAO = 33;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -397,6 +397,16 @@ function semearPrazos(mysqli $conn): void {
  * Tudo isto — o nome e a foto de quem atende, a saudação, as perguntas e os
  * contactos — é do admin, e edita-se em Casamentos → Atendimento.
  */
+// A pergunta sobre falar com a equipa vive aqui em cima porque é usada em dois
+// sítios: na semente de uma casa nova e na migração v33, que a leva a quem já
+// cá estava. A resposta não repete os números — eles estão logo a seguir, na
+// própria caixa, e escritos duas vezes ficavam a mentir mal um mudasse.
+const PERGUNTA_CONTACTOS = 'Como falo com uma pessoa?';
+const RESPOSTA_CONTACTOS =
+    'Os contactos da nossa equipa estão aqui no fim desta caixa — telefone, WhatsApp e email, '
+  . 'com o horário em que atendemos. É por aí que se fala connosco antes de haver conta nenhuma. '
+  . 'Depois de entrarem, temos também a vossa área para tratar do que for do vosso casamento.';
+
 function semearAtendimento(mysqli $conn): void {
     global $P;
     // As definições vivem no casamento 0: são da casa, não de um casal.
@@ -412,6 +422,11 @@ function semearAtendimento(mysqli $conn): void {
         'atendimento.whatsapp'  => '',
         'atendimento.email'     => '',
         'atendimento.horario'   => 'Segunda a sexta, das 9h às 17h',
+        // O encaixe para um chat ao vivo, pronto e desligado. Enquanto o modo
+        // for 'nenhum', as páginas públicas não carregam script nenhum de fora.
+        'atendimento.chat_modo'   => 'nenhum',
+        'atendimento.chat_script' => '',
+        'atendimento.chat_rotulo' => 'Falar com uma pessoa',
     ];
     foreach ($base as $ch => $vl) {
         $st = @$conn->prepare("INSERT IGNORE INTO {$P}definicoes (casamento_id,chave,valor)
@@ -445,6 +460,7 @@ function semearAtendimento(mysqli $conn): void {
         ['O que acontece aos nossos dados?',
          'São vossos. Podem exportá-los quando quiserem, e continuam a poder fazê-lo mesmo '
        . 'depois de a licença acabar, como as políticas de utilização prometem.', 60],
+        [PERGUNTA_CONTACTOS, RESPOSTA_CONTACTOS, 70],
     ];
     foreach ($faq as [$p, $rp, $od]) {
         $st = @$conn->prepare("INSERT INTO {$P}atendimento_faq (pergunta,resposta,ordem)
@@ -1592,6 +1608,31 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         semearAtendimento($conn);
     }
 
+    // v33 — o encaixe para um chat ao vivo no atendimento.
+    //
+    // Três definições novas, todas com valor de origem que deixa tudo como
+    // estava: a ferramenta em 'nenhum'. Quem já esteja na v32 recebe-as aqui;
+    // o semearAtendimento é INSERT IGNORE, por isso não mexe no que já lá está.
+    if ($versaoAtual < 33) {
+        semearAtendimento($conn);
+        // E a pergunta sobre falar com a equipa, que faltava: numa casa que já
+        // tem perguntas, o semearAtendimento não lhe toca (e ainda bem — não
+        // repõe o que o admin tenha apagado), por isso vem aqui à mão. Uma vez
+        // só: se a apagarem depois, fica apagada.
+        $pq = PERGUNTA_CONTACTOS; $rs = RESPOSTA_CONTACTOS;
+        $st = @$conn->prepare("SELECT COUNT(*) FROM {$P}atendimento_faq WHERE pergunta=?");
+        $jaLa = true;
+        if ($st) { $st->bind_param('s', $pq); @$st->execute();
+                   $jaLa = (int)($st->get_result()->fetch_row()[0] ?? 1) > 0; }
+        if (!$jaLa) {
+            $r = @$conn->query("SELECT COALESCE(MAX(ordem),0)+10 FROM {$P}atendimento_faq");
+            $od = ($r && ($x = $r->fetch_row())) ? (int)$x[0] : 10;
+            $st = @$conn->prepare("INSERT INTO {$P}atendimento_faq (pergunta,resposta,ordem)
+                                   VALUES (?,?,?)");
+            if ($st) { $st->bind_param('ssi', $pq, $rs, $od); @$st->execute(); }
+        }
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2194,17 +2235,23 @@ function mesaEhNoivos(mysqli $conn, int $id): bool {
  */
 function plantaConfig(mysqli $conn): array {
     global $P;
-    // bloq_* travam o arrasto (mesas) e o redimensionar (canvas), contra arrastos acidentais.
-    $cfg = ['largura' => null, 'altura' => null, 'bloq_mesas' => 0, 'bloq_canvas' => 0];
+    // bloq_* travam o arrasto (mesas), o redimensionar (canvas) e o deslocar da
+    // vista (scroll), contra gestos acidentais. O scroll nasce DESTRAVADO: é
+    // como se chega ao que está fora do ecrã, e trancá-lo por omissão era
+    // esconder metade da planta a quem tem um monitor pequeno.
+    $cfg = ['largura' => null, 'altura' => null,
+            'bloq_mesas' => 0, 'bloq_canvas' => 0, 'bloq_scroll' => 0];
     $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes
                         WHERE " . doCasamento() . "
-                          AND chave IN ('planta.largura','planta.altura','planta.bloq_mesas','planta.bloq_canvas')");
+                          AND chave IN ('planta.largura','planta.altura','planta.bloq_mesas',
+                                        'planta.bloq_canvas','planta.bloq_scroll')");
     if ($r) while ($x = $r->fetch_assoc()) {
         $v = (int)$x['valor'];
         if ($x['chave'] === 'planta.largura'     && $v > 0) $cfg['largura'] = $v;
         if ($x['chave'] === 'planta.altura'      && $v > 0) $cfg['altura']  = $v;
         if ($x['chave'] === 'planta.bloq_mesas')            $cfg['bloq_mesas']  = $v === 1 ? 1 : 0;
         if ($x['chave'] === 'planta.bloq_canvas')           $cfg['bloq_canvas'] = $v === 1 ? 1 : 0;
+        if ($x['chave'] === 'planta.bloq_scroll')           $cfg['bloq_scroll'] = $v === 1 ? 1 : 0;
     }
     return $cfg;
 }

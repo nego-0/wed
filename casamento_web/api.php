@@ -643,7 +643,35 @@ function atendimentoDefs(mysqli $conn): array {
     if ($r) while ($x = $r->fetch_row()) $d[substr((string)$x[0], 12)] = (string)$x[1];
     return $d + ['ativo' => '0', 'nome' => 'Atendimento', 'cargo' => '', 'foto' => '',
                  'saudacao' => '', 'telefone' => '', 'whatsapp' => '', 'email' => '',
-                 'horario' => ''];
+                 'horario' => '',
+                 // O chat AO VIVO, para quando houver um. Ver licAoVivo().
+                 'chat_modo' => 'nenhum', 'chat_script' => '', 'chat_rotulo' => ''];
+}
+
+/**
+ * A ligação a um chat ao vivo — a costura, não o pano.
+ *
+ * A caixa de perguntas responde ao que se repete, e isso resolve a maioria. O
+ * que ela não faz é falar com uma pessoa em tempo real, e mais tarde ou mais
+ * cedo vai querer-se lá uma ferramenta dessas (Tawk, Crisp, Chatwoot, o que
+ * for). Fica aqui o encaixe pronto, e DESLIGADO: enquanto ninguém configurar
+ * nada, a página pública não carrega script nenhum de fora nem mostra botão
+ * nenhum a prometer o que não existe.
+ *
+ * O contrato com a página está escrito em assets/atendimento.js.
+ *
+ * Só se aceita https://. Um script de terceiros corre nas páginas de entrada e
+ * de inscrição com todos os poderes da página: quem o põe aqui está a confiar
+ * nesse fornecedor, e ao menos que a ligação até ele não seja em claro.
+ */
+function atendimentoAoVivo(array $d): array {
+    $modo = (string)($d['chat_modo'] ?? 'nenhum');
+    $src  = trim((string)($d['chat_script'] ?? ''));
+    if ($modo !== 'script' || $src === '' || !preg_match('~^https://~i', $src)) {
+        return ['modo' => 'nenhum'];
+    }
+    return ['modo' => 'script', 'script' => $src,
+            'rotulo' => trim((string)($d['chat_rotulo'] ?? '')) ?: 'Falar com uma pessoa'];
 }
 
 /** As perguntas. $todas inclui as desligadas — é a vista do admin. */
@@ -670,7 +698,10 @@ if ($acao === 'atendimento_publico') {
         'saudacao'  => $d['saudacao'],
         'contactos' => ['telefone' => $d['telefone'], 'whatsapp' => $d['whatsapp'],
                         'email' => $d['email'], 'horario' => $d['horario']],
-        'perguntas' => atendimentoFaq($conn, false)]);
+        'perguntas' => atendimentoFaq($conn, false),
+        // Sem chat ao vivo configurado, sai só {modo:'nenhum'}: nem o endereço
+        // do script viaja para quem não vai precisar dele.
+        'ao_vivo'   => atendimentoAoVivo($d)]);
 }
 
 if ($acao === 'atendimento_ler') {
@@ -691,10 +722,23 @@ if ($acao === 'atendimento_guardar') {
         'whatsapp' => mb_substr(trim((string)($d['whatsapp'] ?? '')), 0, 40),
         'email'    => mb_substr(trim((string)($d['email'] ?? '')), 0, 120),
         'horario'  => mb_substr(trim((string)($d['horario'] ?? '')), 0, 120),
+        // O encaixe do chat ao vivo (ver atendimentoAoVivo).
+        'chat_modo'   => (($d['chat_modo'] ?? '') === 'script') ? 'script' : 'nenhum',
+        'chat_script' => mb_substr(trim((string)($d['chat_script'] ?? '')), 0, 400),
+        'chat_rotulo' => mb_substr(trim((string)($d['chat_rotulo'] ?? '')), 0, 60),
     ];
     if ($campos['nome'] === '') erro('Dê um nome a quem atende — é o que aparece na caixa.');
     if ($campos['email'] !== '' && !filter_var($campos['email'], FILTER_VALIDATE_EMAIL))
         erro('O email de contacto é inválido.');
+    // Um script de terceiros corre nas páginas públicas com todos os poderes
+    // delas. Exige-se https:// — não para o tornar seguro, que isso depende de
+    // em quem se confia, mas para a ligação até ele não ser em claro.
+    if ($campos['chat_modo'] === 'script') {
+        if ($campos['chat_script'] === '')
+            erro('Indique o endereço do script do chat, ou deixe o chat ao vivo em «nenhum».');
+        if (!preg_match('~^https://~i', $campos['chat_script']))
+            erro('O endereço do script tem de começar por https:// — não se carrega código de fora em claro.');
+    }
     foreach ($campos as $ch => $vl) {
         $chave = 'atendimento.' . $ch;
         $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,?,?)
@@ -4064,9 +4108,12 @@ if ($acao === 'planta_size') {
 }
 if ($acao === 'planta_bloqueio') {
     exigirModuloApi('mesas');
-    // Trava/destrava o arrasto das mesas e o redimensionar do canvas.
+    // Trava/destrava o arrasto das mesas, o redimensionar do canvas e o
+    // deslocar da vista lá dentro.
     $d = corpo();
-    foreach (['bloq_mesas' => 'planta.bloq_mesas', 'bloq_canvas' => 'planta.bloq_canvas'] as $campo => $chave) {
+    foreach (['bloq_mesas'  => 'planta.bloq_mesas',
+              'bloq_canvas' => 'planta.bloq_canvas',
+              'bloq_scroll' => 'planta.bloq_scroll'] as $campo => $chave) {
         if (!array_key_exists($campo, $d)) continue;
         $val = !empty($d[$campo]) ? '1' : '0';
         $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (" . casamentoAtual() . ",?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");

@@ -18,7 +18,7 @@ let zoom=1;
 // Dimensões guardadas do canvas (px). null = automático.
 let CANVAS={largura:null, altura:null};
 // Travas contra arrastos acidentais (guardadas na base de dados).
-let BLOQ={mesas:false, canvas:false};
+let BLOQ={mesas:false, canvas:false, scroll:false};
 
 // ---------- visita de suporte com código de leitura ----------
 // Aqui quase nada se faz por botões: arrasta-se uma mesa, larga-se uma pastilha
@@ -37,12 +37,18 @@ function travaLeitura(){
 // coisas dava a quem vem ajudar uma leitura errada da planta do casal.
 const mesasFixas = () => BLOQ.mesas  || SO_VER;
 const canvasFixo = () => BLOQ.canvas || SO_VER;
+// A vista, essa, NÃO se fecha a quem vem ajudar: deslocar o olhar não muda
+// nada na planta do casal, e sem isso quem visita via só o pedaço que coubesse.
+const vistaFixa  = () => BLOQ.scroll;
 function aplicarBloqueios(){
   document.body.classList.toggle('bloq-mesas',  mesasFixas());
   document.body.classList.toggle('bloq-canvas', canvasFixo());
-  const a=$('bloq-mesas'), b=$('bloq-canvas');
+  document.body.classList.toggle('bloq-scroll', vistaFixa());
+  const a=$('bloq-mesas'), b=$('bloq-canvas'), c=$('bloq-scroll');
   if(a) a.checked=BLOQ.mesas;
   if(b) b.checked=BLOQ.canvas;
+  if(c) c.checked=BLOQ.scroll;
+  ajustarScrollCanvas();
   // A nota de ajuda acompanha o que está (ou não) bloqueado.
   const dica=$('dica-planta'); if(!dica) return;
   const partes=[];
@@ -57,15 +63,20 @@ function aplicarBloqueios(){
   partes.push(BLOQ.canvas
     ? 'O canvas está <b>fixo</b>.'
     : 'Arraste as <b>bordas do canvas</b> para o redimensionar.');
+  partes.push(BLOQ.scroll
+    ? 'A <b>vista está fixa</b>: a planta não se desloca.'
+    : 'Se o salão não couber, <b>desloque a vista</b> — as barras aparecem do lado que precisar.');
   dica.innerHTML=partes.join(' ');
 }
 async function guardarBloqueio(){
   BLOQ.mesas  = $('bloq-mesas').checked;
   BLOQ.canvas = $('bloq-canvas').checked;
+  BLOQ.scroll = $('bloq-scroll').checked;
   aplicarBloqueios();
-  const d=await api('planta_bloqueio',{method:'POST',body:JSON.stringify({bloq_mesas:BLOQ.mesas?1:0, bloq_canvas:BLOQ.canvas?1:0})});
+  const d=await api('planta_bloqueio',{method:'POST',body:JSON.stringify({
+    bloq_mesas:BLOQ.mesas?1:0, bloq_canvas:BLOQ.canvas?1:0, bloq_scroll:BLOQ.scroll?1:0})});
   if(!d||!d.success) return toast((d&&d.message)||'Erro ao guardar.',true);
-  toast(BLOQ.mesas||BLOQ.canvas ? 'Bloqueio guardado.' : 'Bloqueios removidos.');
+  toast(BLOQ.mesas||BLOQ.canvas||BLOQ.scroll ? 'Bloqueio guardado.' : 'Bloqueios removidos.');
 }
 let maximizado=false;
 
@@ -75,10 +86,15 @@ function setZoom(z){
   document.querySelectorAll('#zoombar button').forEach(b=>b.classList.toggle('on', +b.dataset.zoom===zoom));
   aplicarCanvas(); ajustarScrollCanvas();
 }
-// Só mostra os scrolls do canvas quando o conteúdo excede o espaço visível.
-// Como o "mundo" preenche sempre o canvas, só transborda quando o zoom é > 1.
+// A vista desloca-se nos dois eixos sempre que o mundo for maior do que o
+// espaço visível — com o zoom em cima, ou com um canvas mais estreito do que o
+// salão. «auto» mostra a barra só do lado que precisa dela.
+//
+// Travada, fica 'hidden': a planta não foge do sítio a quem lhe pousar o dedo
+// em cima. O CSS repete-o em body.bloq-scroll, para a trava valer mesmo que
+// alguém mexa neste estilo pelo caminho.
 function ajustarScrollCanvas(){
-  $('planta-viewport').style.overflow = zoom > 1 ? 'auto' : 'hidden';
+  $('planta-viewport').style.overflow = vistaFixa() ? 'hidden' : 'auto';
 }
 
 // Largura de conteúdo disponível no cartão (limite máximo do canvas).
@@ -194,7 +210,8 @@ async function carregar(){
   if(!dm.success){ toast('Erro ao carregar mesas.',true); return; }
   MESAS=normMesas(dm.mesas); CONVITES=normConvites(dc&&dc.convites); CONVIDADOS=normConvidados(dg&&dg.convidados);
   if(dm.canvas){ CANVAS={largura:numOuNull(dm.canvas.largura), altura:numOuNull(dm.canvas.altura)};
-    BLOQ={mesas:+dm.canvas.bloq_mesas===1, canvas:+dm.canvas.bloq_canvas===1}; aplicarBloqueios(); }
+    BLOQ={mesas:+dm.canvas.bloq_mesas===1, canvas:+dm.canvas.bloq_canvas===1,
+          scroll:+dm.canvas.bloq_scroll===1}; aplicarBloqueios(); }
   aplicarCanvas(); aplicarTamanhoCanvas(); ajustarScrollCanvas();
   await autoPosicionar();
   renderTudo();

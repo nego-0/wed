@@ -54,9 +54,11 @@ const { confirmar } = require('./_janela');
     await page.click(`#zoombar button[data-zoom="${f}"]`);
     await page.waitForTimeout(250);
     ok(parseFloat(await zLer()) === parseFloat(f), `escolher ${rot} põe --z a ${f}`);
+    // O deslocamento da vista já não depende do zoom: depende da trava, e ela
+    // está aberta. Antes escondia-se abaixo dos 100%, e num canvas estreito
+    // isso deixava metade do salão fora do alcance (ver chk_planta.js).
     const ov = await page.locator('#planta-viewport').evaluate(el => getComputedStyle(el).overflow);
-    ok(f === '1.5' ? ov !== 'hidden' : ov === 'hidden',
-       `aos ${rot} os scrolls do canvas ${f === '1.5' ? 'aparecem' : 'ficam escondidos'}`);
+    ok(ov !== 'hidden', `aos ${rot} a vista continua a poder deslocar-se (${ov})`);
   }
   await page.click('#zoombar button[data-zoom="1"]'); await page.waitForTimeout(250);
 

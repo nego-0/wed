@@ -131,7 +131,63 @@ const entrar = async (ctx, user, pass) => {
   const vaziaLg = lg.find(x => /Vazia/.test(x.txt));
   ok(vaziaLg && vaziaLg.n >= 1, 'a mesa vazia que se criou está contada nas vazias');
 
+  // ---------- 5. a vista desloca-se nos dois eixos, e pode ser travada ----------
+  // O canvas mostrava só o que coubesse: num monitor pequeno, ou com o canvas
+  // arrastado para mais estreito, o salão era esmagado na largura que houvesse
+  // e as mesas passavam umas por cima das outras. O mundo passa a ter um
+  // mínimo e é a VISTA que se desloca — nos dois eixos, porque um salão é
+  // largo e fundo.
+  const vista = () => p.evaluate(() => {
+    const v = document.getElementById('planta-viewport');
+    return { overflow: getComputedStyle(v).overflow,
+             podeH: v.scrollWidth  > v.clientWidth  + 1,
+             podeV: v.scrollHeight > v.clientHeight + 1,
+             x: v.scrollLeft, y: v.scrollTop };
+  });
+  // Encolhe-se o canvas de propósito: é o caso em que isto interessa, e é o que
+  // acontece a quem tem pouco ecrã. Antes, encolher esmagava o salão.
+  const canvasAntes = await api('mesa_list');
+  await api('planta_size', { largura: 420, altura: 300 });
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1400);
+  let v = await vista();
+  ok(v.overflow === 'auto', `por omissão a vista desloca-se (${v.overflow})`);
+  ok(v.podeH, 'e há para onde ir na horizontal');
+  ok(v.podeV, 'e na vertical também');
+
+  await p.evaluate(() => { const el = document.getElementById('planta-viewport');
+                           el.scrollLeft = 90; el.scrollTop = 60; });
+  await p.waitForTimeout(250);
+  v = await vista();
+  ok(v.x >= 60 && v.y >= 40,
+     `e desloca-se mesmo, com folga nos dois sentidos (${v.x}, ${v.y})`);
+
+  await p.click('#bloq-scroll');
+  await p.waitForTimeout(800);
+  v = await vista();
+  ok(v.overflow === 'hidden', 'travada a vista, a planta deixa de se deslocar');
+  ok(await p.evaluate(() => document.body.classList.contains('bloq-scroll')),
+     'e a página inteira sabe disso — a trava não vive só num estilo em linha');
+
+  // A trava é do casal, e por isso fica guardada: recarregar não a perde.
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1400);
+  ok(await p.evaluate(() => document.getElementById('bloq-scroll').checked),
+     'a trava sobrevive a recarregar a página — ficou guardada');
+  v = await vista();
+  ok(v.overflow === 'hidden', 'e continua a valer');
+
+  await p.click('#bloq-scroll');
+  await p.waitForTimeout(800);
+  v = await vista();
+  ok(v.overflow === 'auto', 'destravar devolve o deslocamento');
+
   // ---------- limpeza ----------
+  // Devolve-se o canvas ao tamanho que tinha, para as provas seguintes o
+  // encontrarem como estava.
+  // Vazio devolve o canvas ao automático, que é como ele estava.
+  const cA = (canvasAntes.canvas || {});
+  await api('planta_size', { largura: +cA.largura || '', altura: +cA.altura || '' });
   for (const m of [vazia, cheia]) await api('mesa_delete&id=' + m.id);
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');
