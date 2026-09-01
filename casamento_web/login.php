@@ -66,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Entrar · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:center; justify-content:center; padding:1.25rem; }
@@ -136,9 +137,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (id === 'senha')      return $(id).value ? '' : 'Escreva a sua palavra-passe.';
     return '';
   }
+  // Um campo em que ainda não se escreveu nada não se marca de errado ao perder
+  // o foco. O primeiro campo tem autofocus: bastava carregar noutro sítio da
+  // página — no atendimento, por exemplo — para o formulário ficar a vermelho
+  // sem que ninguém tenha errado coisa nenhuma. Marca-se ao sair de um campo em
+  // que se mexeu, e ao submeter.
+  const TOCADO = {};
   ['utilizador','senha'].forEach(id => {
-    $(id).addEventListener('blur', () => marca(id, regra(id)));
-    $(id).addEventListener('input', () => { if ($(id).closest('.campo').classList.contains('mau')) marca(id, regra(id)); });
+    $(id).addEventListener('input', () => {
+      TOCADO[id] = true;
+      if ($(id).closest('.campo').classList.contains('mau')) marca(id, regra(id));
+    });
+    $(id).addEventListener('blur', () => { if (TOCADO[id]) marca(id, regra(id)); });
   });
   $('form-login').addEventListener('submit', e => {
     let primeiro = null;
@@ -152,5 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 </script>
 <?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
+<script src="<?= asset('assets/atendimento.js') ?>"></script>
 </body>
 </html>

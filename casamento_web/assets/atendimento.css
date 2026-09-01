@@ -1,0 +1,85 @@
+/* ============================================================
+   atendimento.css — a caixa de perguntas das páginas públicas
+   ------------------------------------------------------------
+   Vive no canto, por cima da pastilha do tema (que está em
+   bottom:18px). Fechada é um botão; aberta é um cartão que não
+   tapa o formulário em ecrãs grandes e que se ajusta no
+   telemóvel. Só variáveis do tema — muda com ele.
+   ============================================================ */
+
+.at-cx{ position:fixed; right:18px; bottom:74px; z-index:80;
+  display:flex; flex-direction:column; align-items:flex-end; gap:.55rem; }
+
+/* ---------- o botão ---------- */
+.at-botao{ display:inline-flex; align-items:center; gap:.45rem;
+  background:var(--forest); color:#fff; border:0; border-radius:50px;
+  padding:.6rem .95rem .6rem .75rem; font-family:var(--sans); font-size:.9rem; font-weight:600;
+  cursor:pointer; box-shadow:0 6px 18px rgba(22,38,30,.28); transition:transform .14s, box-shadow .14s; }
+.at-botao:hover{ transform:translateY(-2px); box-shadow:0 10px 24px rgba(22,38,30,.34); }
+.at-botao:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+.at-bolha-ico svg{ width:20px; height:20px; display:block; }
+.at-cx.on .at-botao-txt{ display:none; }
+.at-cx.on .at-botao{ padding:.6rem; }
+
+/* ---------- o cartão ---------- */
+.at-painel{ width:min(340px, calc(100vw - 36px)); background:var(--card);
+  border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  box-shadow:0 18px 44px rgba(22,38,30,.24); }
+.at-painel[hidden]{ display:none; }
+
+.at-cab{ display:flex; align-items:center; gap:.6rem; padding:.75rem .8rem;
+  background:var(--forest); color:#fff; }
+.at-quem{ display:flex; flex-direction:column; line-height:1.2; flex:1; min-width:0; }
+.at-quem b{ font-family:var(--serif); font-size:1rem; font-weight:600; }
+.at-quem span{ font-size:.76rem; opacity:.82; }
+.at-x{ background:none; border:0; color:#fff; font-size:1.5rem; line-height:1;
+  cursor:pointer; padding:0 .2rem; opacity:.85; }
+.at-x:hover{ opacity:1; }
+
+/* A cara de quem atende — ou a inicial, quando não há fotografia. */
+.at-av{ flex:none; border-radius:50%; overflow:hidden; display:inline-flex;
+  align-items:center; justify-content:center; background:var(--gold-pale);
+  color:var(--forest-deep); font-family:var(--serif); font-weight:700; }
+.at-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+.at-av-letra{ border:1px solid var(--gold-soft); }
+.at-av-g{ width:38px; height:38px; font-size:1rem; }
+.at-av-p{ width:26px; height:26px; font-size:.8rem; align-self:flex-end; }
+
+.at-corpo{ padding:.85rem .8rem 1rem; max-height:min(60vh, 430px); overflow-y:auto; }
+
+/* ---------- o fio ---------- */
+.at-fio{ display:flex; flex-direction:column; gap:.5rem; }
+.at-resp{ display:flex; gap:.4rem; align-items:flex-end; }
+.at-b{ border-radius:14px; padding:.55rem .75rem; font-size:.86rem; line-height:1.5; max-width:88%; }
+.at-b-dela{ background:var(--cream); color:var(--ink); border:1px solid var(--line);
+  border-bottom-left-radius:5px; }
+.at-b-minha{ background:var(--forest); color:#fff; align-self:flex-end;
+  border-bottom-right-radius:5px; }
+
+/* ---------- as perguntas sugeridas ---------- */
+.at-sug{ margin-top:.9rem; display:flex; flex-direction:column; gap:.35rem; }
+.at-sug-tit, .at-ct-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.6px;
+  color:#8a8f88; font-weight:700; }
+.at-q{ text-align:left; background:none; border:1px solid var(--gold-soft); border-radius:12px;
+  padding:.5rem .7rem; font-family:var(--sans); font-size:.84rem; line-height:1.35;
+  color:var(--ink); cursor:pointer; transition:background .12s, border-color .12s; }
+.at-q:hover{ background:var(--gold-pale); border-color:var(--gold); }
+.at-q:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+/* Uma pergunta já feita continua ali — pode querer-se reler —, mas de lado:
+   o que interessa a seguir é o que ainda não se perguntou. */
+.at-q-feita{ opacity:.55; border-style:dashed; }
+
+/* ---------- contactos ---------- */
+.at-contactos{ margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--line);
+  display:flex; flex-direction:column; gap:.3rem; }
+.at-ct{ display:inline-flex; align-items:center; gap:.45rem; font-size:.84rem;
+  color:var(--forest); text-decoration:none; }
+.at-ct:hover{ text-decoration:underline; }
+.at-ct-ic{ width:18px; text-align:center; opacity:.7; }
+.at-horario{ font-size:.76rem; color:#8a8f88; margin-top:.15rem; }
+
+@media (max-width:520px){
+  .at-cx{ right:12px; left:12px; bottom:70px; align-items:stretch; }
+  .at-painel{ width:auto; }
+  .at-botao{ align-self:flex-end; }
+}

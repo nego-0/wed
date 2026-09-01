@@ -190,7 +190,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 31;
+const ESQUEMA_VERSAO = 32;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -381,6 +381,76 @@ function semearPrazos(mysqli $conn): void {
                               VALUES (?,?,?,?,?,?)");
         if (!$st) continue;
         $st->bind_param('issdsi', $m, $n, $rs, $ft, $et, $od);
+        @$st->execute();
+    }
+}
+
+/**
+ * O atendimento das páginas públicas: quem responde, e a quê.
+ *
+ * Quem chega ao login ou à inscrição não tem por onde perguntar nada — e as
+ * perguntas são sempre as mesmas meia dúzia. Em vez de um formulário que
+ * ninguém lê e a que ninguém responde, uma caixa ao canto com as perguntas já
+ * feitas e as respostas já escritas: quem quiser saber o preço sabe-o em dois
+ * toques, e quem precisar mesmo de falar com alguém encontra o contacto.
+ *
+ * Tudo isto — o nome e a foto de quem atende, a saudação, as perguntas e os
+ * contactos — é do admin, e edita-se em Casamentos → Atendimento.
+ */
+function semearAtendimento(mysqli $conn): void {
+    global $P;
+    // As definições vivem no casamento 0: são da casa, não de um casal.
+    $base = [
+        'atendimento.ativo'     => '1',
+        'atendimento.nome'      => 'Atendimento',
+        'atendimento.cargo'     => 'Gestão de Convidados',
+        'atendimento.foto'      => '',
+        'atendimento.saudacao'  => 'Olá! Bem-vindos. Aqui respondemos às perguntas mais '
+                                 . 'frequentes de quem está a pensar inscrever-se. '
+                                 . 'Escolha uma abaixo — ou fale connosco pelos contactos.',
+        'atendimento.telefone'  => '',
+        'atendimento.whatsapp'  => '',
+        'atendimento.email'     => '',
+        'atendimento.horario'   => 'Segunda a sexta, das 9h às 17h',
+    ];
+    foreach ($base as $ch => $vl) {
+        $st = @$conn->prepare("INSERT IGNORE INTO {$P}definicoes (casamento_id,chave,valor)
+                               VALUES (0,?,?)");
+        if (!$st) continue;
+        $st->bind_param('ss', $ch, $vl);
+        @$st->execute();
+    }
+
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}atendimento_faq");
+    if (!$r || (int)$r->fetch_row()[0] > 0) return;
+    // [pergunta, resposta, ordem]
+    $faq = [
+        ['Como funciona?',
+         'Inscrevem-se aqui, escolhem o plano que querem e nós aprovamos. A partir daí têm a '
+       . 'vossa área: lista de convidados, convites, planta de mesas e orçamento, tudo no mesmo '
+       . 'sítio e sempre acessível.', 10],
+        ['Quanto custa?',
+         'Depende do que levarem e por quanto tempo. Há pacotes prontos e a possibilidade de '
+       . 'montar o vosso, módulo a módulo, pagando só o que usam. Os preços estão todos na '
+       . 'página de inscrição, sem letra pequena.', 20],
+        ['Preciso de pagar já para me inscrever?',
+         'Não. A inscrição é gratuita e fica à espera da nossa aprovação. Só depois de '
+       . 'conversarmos convosco e de a licença ser concedida é que há alguma coisa a pagar.', 30],
+        ['Os convidados precisam de instalar alguma coisa?',
+         'Não. O convite é uma página que abre em qualquer telemóvel, e a confirmação de '
+       . 'presença faz-se ali mesmo. Não há aplicação nenhuma para instalar.', 40],
+        ['Posso mudar de plano depois?',
+         'Sim, e paga só a diferença. O que já pagou num módulo desconta quando sobe de '
+       . 'escalão — nunca se paga duas vezes pela mesma coisa.', 50],
+        ['O que acontece aos nossos dados?',
+         'São vossos. Podem exportá-los quando quiserem, e continuam a poder fazê-lo mesmo '
+       . 'depois de a licença acabar, como as políticas de utilização prometem.', 60],
+    ];
+    foreach ($faq as [$p, $rp, $od]) {
+        $st = @$conn->prepare("INSERT INTO {$P}atendimento_faq (pergunta,resposta,ordem)
+                               VALUES (?,?,?)");
+        if (!$st) continue;
+        $st->bind_param('ssi', $p, $rp, $od);
         @$st->execute();
     }
 }
@@ -1500,6 +1570,26 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             (casamento_id, modulo_chave, escalao_id, escalao_nome, limite, editar, todos_modelos)
             SELECT casamento_id, 'porta', NULL, 'Incluído na licença anterior', 0, 0, 0
               FROM {$P}lic_concessoes WHERE modulo_chave='convidados'");
+    }
+
+    // v32 — o atendimento das páginas públicas.
+    //
+    // Quem chega ao login ou à inscrição e tem uma dúvida não tem por onde a
+    // pôr: fecha a página e vai-se embora, e nunca se fica a saber porquê. As
+    // perguntas são sempre as mesmas meia dúzia — quanto custa, como funciona,
+    // se é preciso pagar já —, por isso não é preciso ninguém do outro lado a
+    // teclar: basta terem as respostas já escritas, ao alcance de um toque, e
+    // os contactos para quem precise mesmo de falar com uma pessoa.
+    if ($versaoAtual < 32) {
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}atendimento_faq (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                pergunta VARCHAR(200) NOT NULL,
+                resposta TEXT NOT NULL,
+                ordem INT NOT NULL DEFAULT 0,
+                ativo TINYINT(1) NOT NULL DEFAULT 1
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        semearAtendimento($conn);
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -165,6 +165,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet"><?php // a montra e a janela das políticas ?>
+<link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet"><?php // a cara de quem atende, no painel do atendimento ?>
 <style>
   .cas-lista{ display:grid; gap:.7rem; }
   .cas{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
@@ -397,6 +398,17 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .ed-conta{ border:1px solid var(--line); border-radius:12px; padding:.7rem .8rem; margin-bottom:.6rem; }
   .ed-conta .cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
   .ed-conta .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
+  /* Atendimento — a cara de quem atende e a lista de perguntas. */
+  .at-foto-ed{ display:flex; align-items:center; gap:.6rem; }
+  .at-foto-bts{ display:flex; flex-direction:column; gap:.3rem; }
+  .at-item{ border:1px solid var(--line); border-radius:12px; padding:.7rem .85rem; margin-bottom:.55rem; }
+  .at-item.off{ opacity:.62; border-style:dashed; }
+  .at-item-cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; flex-wrap:wrap; }
+  .at-item-cab b{ font-family:var(--serif); font-size:1rem; color:var(--ink); }
+  .at-item .at-ord{ margin-left:auto; font-size:.74rem; color:#8a8f88; font-variant-numeric:tabular-nums; }
+  .at-item-resp{ font-size:.86rem; color:#6c7570; line-height:1.55; margin-bottom:.55rem;
+    white-space:pre-wrap; }
+  .at-item .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
   /* As caixas de seleção do painel de dados (âmbitos e casamentos). */
   .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.35rem .9rem; margin:.4rem 0 .9rem; }
   .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:.9rem; color:var(--ink); cursor:pointer; }
@@ -496,6 +508,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             // porta é a coisa mais urgente desta página, e tem de se ver daqui. ?>
       <button class="chip" data-vista="dados" onclick="verVista('dados')">Gestão de Dados</button>
       <button class="chip" data-vista="registo" onclick="verVista('registo')">Registo de ações</button>
+      <button class="chip" data-vista="atendimento" onclick="verVista('atendimento')">Atendimento</button>
       <button class="chip" data-vista="definicoes" onclick="verVista('definicoes')">Definições</button>
     <?php endif; ?>
   </div>
@@ -971,6 +984,84 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         entrada, inscrição e área de gestão. A mudança fica visível no carregamento seguinte de cada página.</div>
     </div>
     </div><!-- /vista-definicoes -->
+
+    <?php // ---- Atendimento: a caixa de perguntas das páginas públicas ---- ?>
+    <div id="vista-atendimento" style="display:none">
+    <div class="painel">
+      <h3>Atendimento das páginas públicas</h3>
+      <div class="dica">Quem chega à <b>entrada</b> ou à <b>inscrição</b> com uma dúvida não tem
+        por onde a pôr: fecha a página e vai-se embora, e nunca se fica a saber porquê. Esta caixa
+        aparece ao canto dessas duas páginas com as perguntas já feitas e as respostas já escritas
+        — não é uma conversa a sério, e não finge sê-lo.</div>
+
+      <label style="margin:.9rem 0 .2rem;display:inline-flex;align-items:center;gap:.5rem;
+                    font-weight:600;text-transform:none;letter-spacing:0;font-size:.95rem">
+        <input type="checkbox" id="at-ativo" style="width:auto;margin:0">
+        Mostrar a caixa nas páginas públicas
+      </label>
+      <div class="porcima" style="margin:0 0 1rem">Desligada, não aparece botão nenhum — e a
+        página não pede sequer estes dados ao servidor.</div>
+
+      <h4 class="ed-sec">Quem atende</h4>
+      <div class="dica">O nome e a cara que aparecem na caixa. Pode ser uma pessoa da equipa ou
+        simplesmente «Atendimento» — o que não pode é prometer alguém que não existe do outro lado.</div>
+      <div class="lf" style="grid-template-columns:auto 1.4fr 1.4fr">
+        <div>
+          <label>Fotografia</label>
+          <div class="at-foto-ed">
+            <span class="at-av at-av-g" id="at-foto-pre"></span>
+            <div class="at-foto-bts">
+              <input type="file" id="at-foto-f" accept="image/jpeg,image/png,image/webp" hidden
+                     onchange="atFotoEnviar()">
+              <button class="btn btn-sm" type="button" onclick="document.getElementById('at-foto-f').click()">Escolher…</button>
+              <button class="btn btn-sm" type="button" id="at-foto-tirar" onclick="atFotoTirar()">Tirar</button>
+            </div>
+          </div>
+        </div>
+        <div class="campo"><label for="at-nome">Nome <span class="req">*</span></label>
+          <input type="text" id="at-nome" maxlength="80" placeholder="Ex: Atendimento">
+          <div class="err"></div></div>
+        <div><label for="at-cargo">Função <small style="color:#8a8f88">· opcional</small></label>
+          <input type="text" id="at-cargo" maxlength="80" placeholder="Ex: Gestão de Convidados"></div>
+      </div>
+
+      <div style="margin-top:.9rem"><label for="at-saudacao">Mensagem de boas-vindas</label>
+        <textarea id="at-saudacao" rows="3" maxlength="600"
+                  placeholder="A primeira coisa que se lê ao abrir a caixa."></textarea></div>
+
+      <h4 class="ed-sec" style="margin-top:1.4rem">Formas de contacto</h4>
+      <div class="dica">Aparecem no fim da caixa. O que ficar em branco não aparece — não se
+        inventa um contacto que não existe.</div>
+      <div class="lf" style="grid-template-columns:1fr 1fr">
+        <div><label for="at-telefone">Telefone</label>
+          <input type="text" id="at-telefone" maxlength="40" placeholder="+244 …"></div>
+        <div><label for="at-whatsapp">WhatsApp</label>
+          <input type="text" id="at-whatsapp" maxlength="40" placeholder="+244 …"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 1fr;margin-top:.6rem">
+        <div class="campo"><label for="at-email">Email</label>
+          <input type="email" id="at-email" maxlength="120" autocapitalize="none" spellcheck="false">
+          <div class="err"></div></div>
+        <div><label for="at-horario">Horário</label>
+          <input type="text" id="at-horario" maxlength="120" placeholder="Segunda a sexta, das 9h às 17h"></div>
+      </div>
+
+      <div class="fim" style="margin-top:1.1rem">
+        <button class="btn btn-ouro" onclick="atGuardar()">Guardar atendimento</button>
+        <span class="estado" id="at-estado"></span>
+      </div>
+    </div>
+
+    <div class="painel">
+      <h3>Perguntas e respostas</h3>
+      <div class="dica">São estas que a caixa oferece, por esta ordem. Uma pergunta <b>desligada</b>
+        fica guardada mas não aparece a ninguém.</div>
+      <div id="at-lista"><div class="dica">A carregar…</div></div>
+      <div class="fim" style="margin-top:1rem">
+        <button class="btn" onclick="atNovaPergunta()">&#43; Nova pergunta</button>
+      </div>
+    </div>
+    </div><!-- /vista-atendimento -->
   <?php endif; ?>
 </main>
 
@@ -1098,6 +1189,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             <div class="err"></div></div>
           <div><label aria-hidden="true" class="sp-label">&nbsp;</label>
             <button class="btn btn-ouro btn-sm" onclick="adicionarConta()">Adicionar</button></div>
+          <div class="dica" id="ed-np-sem-porta" style="display:none;grid-column:1/-1;margin:.2rem 0 0">
+            Sem o módulo <b>Controlo à porta</b> na licença deste casamento não há porteiro a
+            criar. Junte-o em <b>Licença: módulos e prazo…</b>.</div>
         </div>
       </details>
 
@@ -1129,7 +1223,7 @@ function toast(m, mau){
 
 // ---------- as pastilhas: casamentos · novo · contas · dados · registo · definições ----------
 function verVista(v){
-  ['casamentos','novo','contas','licencas','dados','registo','definicoes'].forEach(id => {
+  ['casamentos','novo','contas','licencas','dados','registo','atendimento','definicoes'].forEach(id => {
     const e = document.getElementById('vista-' + id);
     if (e) e.style.display = id === v ? '' : 'none';
   });
@@ -1138,7 +1232,165 @@ function verVista(v){
   if (v === 'dados') carregarDadosCasamentos();
   if (v === 'registo') auditarPrimeiraVez();
   if (v === 'licencas') licPrimeiraVez();
+  if (v === 'atendimento') atPrimeiraVez();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+// Atendimento — a caixa de perguntas das páginas públicas
+//
+// O que se edita aqui vê-se em login.php e registo.php, ao canto. As respostas
+// são escritas de antemão de propósito: é uma lista de perguntas frequentes com
+// cara de conversa, e não uma promessa de que há alguém do outro lado a teclar.
+// ============================================================
+let AT_CARREGADO = false, AT_PERGUNTAS = [], AT_FOTO = '';
+
+function atPrimeiraVez(){ if (!AT_CARREGADO){ AT_CARREGADO = true; atCarregar(); } }
+
+async function atCarregar(){
+  const d = await api('atendimento_ler');
+  if (!d || !d.success) return;
+  const c = d.def || {};
+  $('at-ativo').checked = String(c.ativo) === '1';
+  const pv = (id, v) => { const e = $(id); if (e) e.value = v || ''; };
+  pv('at-nome', c.nome); pv('at-cargo', c.cargo); pv('at-saudacao', c.saudacao);
+  pv('at-telefone', c.telefone); pv('at-whatsapp', c.whatsapp);
+  pv('at-email', c.email); pv('at-horario', c.horario);
+  AT_FOTO = c.foto || '';
+  atPintarFoto();
+  AT_PERGUNTAS = d.perguntas || [];
+  atPintarLista();
+}
+
+function atPintarFoto(){
+  const pre = $('at-foto-pre'); if (!pre) return;
+  const nome = ($('at-nome').value || 'A').trim();
+  if (AT_FOTO){
+    pre.className = 'at-av at-av-g';
+    pre.innerHTML = '<img src="' + esc(AT_FOTO) + '?v=' + Date.now() + '" alt="">';
+  } else {
+    pre.className = 'at-av at-av-g at-av-letra';
+    pre.textContent = nome.charAt(0).toUpperCase() || 'A';
+  }
+  const bt = $('at-foto-tirar'); if (bt) bt.style.display = AT_FOTO ? '' : 'none';
+}
+
+async function atFotoEnviar(){
+  const f = $('at-foto-f').files[0]; if (!f) return;
+  const fd = new FormData(); fd.append('ficheiro', f);
+  const r = await fetch('api.php?action=atendimento_foto',
+    { method:'POST', headers:{ 'X-CSRF-Token': window.CSRF }, body: fd });
+  const d = await r.json();
+  $('at-foto-f').value = '';
+  if (!d || !d.success){ toast((d && d.message) || 'Não foi possível guardar a imagem.', true); return; }
+  AT_FOTO = d.path; atPintarFoto(); toast('Fotografia guardada.');
+}
+
+async function atFotoTirar(){
+  const r = await licConfirmar({
+    titulo: 'Tirar a fotografia?', icone: '🖼️', confirmar: 'Tirar a fotografia',
+    texto: 'A caixa passa a mostrar a inicial do nome. O ficheiro é apagado — para o ter de '
+         + 'volta, envie-o outra vez.'
+  });
+  if (!r.sim) return;
+  const d = await api('atendimento_foto_tirar', { method:'POST' });
+  if (!d || !d.success) return;
+  AT_FOTO = ''; atPintarFoto(); toast('Fotografia removida.');
+}
+
+async function atGuardar(){
+  const nome = ($('at-nome').value || '').trim();
+  const email = ($('at-email').value || '').trim();
+  const emailMau = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  marca('at-nome', nome ? '' : 'Dê um nome a quem atende — é o que aparece na caixa.');
+  marca('at-email', emailMau ? 'Email inválido.' : '');
+  if (!nome || emailMau) return;
+  const d = await api('atendimento_guardar', { method:'POST', body: JSON.stringify({
+    ativo: $('at-ativo').checked ? 1 : 0,
+    nome, cargo: ($('at-cargo').value || '').trim(),
+    saudacao: ($('at-saudacao').value || '').trim(),
+    telefone: ($('at-telefone').value || '').trim(),
+    whatsapp: ($('at-whatsapp').value || '').trim(),
+    email, horario: ($('at-horario').value || '').trim() }) });
+  if (!d || !d.success) return;
+  const est = $('at-estado');
+  est.textContent = $('at-ativo').checked ? 'Guardado — a caixa está a aparecer.'
+                                          : 'Guardado — a caixa está desligada.';
+  setTimeout(() => { est.textContent = ''; }, 4000);
+  atPintarFoto();
+}
+
+function atPintarLista(){
+  const cx = $('at-lista');
+  if (!AT_PERGUNTAS.length){
+    cx.innerHTML = '<div class="dica">Ainda não há perguntas. A caixa só aparece com pelo menos uma.</div>';
+    return;
+  }
+  cx.innerHTML = AT_PERGUNTAS.map(p => `
+    <div class="at-item${p.ativo ? '' : ' off'}" id="atq-${p.id}">
+      <div class="at-item-cab">
+        <span class="et ${p.ativo ? 'agora' : ''}">${p.ativo ? 'visível' : 'desligada'}</span>
+        <b>${esc(p.pergunta)}</b>
+        <span class="at-ord">ordem ${p.ordem}</span>
+      </div>
+      <div class="at-item-resp">${esc(p.resposta)}</div>
+      <div class="ac">
+        <button class="btn btn-sm" onclick="atEditar(${p.id})">Editar…</button>
+        <button class="btn btn-sm" onclick="atAlternar(${p.id})">${p.ativo ? 'Desligar' : 'Ligar'}</button>
+        <button class="btn btn-sm perigo" onclick="atApagar(${p.id})">Apagar</button>
+      </div>
+    </div>`).join('');
+}
+
+function atFormulario(p){
+  return licFormulario({
+    titulo: p.id ? 'Editar a pergunta' : 'Nova pergunta',
+    icone: '💬', guardar: 'Guardar pergunta',
+    campos: [
+      { id:'pergunta', rot:'Pergunta', tipo:'texto', valor:p.pergunta || '', largura:3,
+        dica:'Como o casal a faria. «Quanto custa?» vale mais do que «Tabela de preços».' },
+      { id:'resposta', rot:'Resposta', tipo:'area', linhas:6, valor:p.resposta || '', largura:3,
+        dica:'Escreva-a como a diria a alguém à frente. Sem letra pequena.' },
+      { id:'ordem', rot:'Ordem', tipo:'numero', valor:p.ordem || 0, min:0, max:9999,
+        dica:'Menor primeiro. Deixe 0 numa pergunta nova para ela entrar no fim.' },
+      { id:'ativo', rot:'Mostrar na caixa', tipo:'sim', valor:p.id ? !!p.ativo : true,
+        largura:2, aoLado:'Aparece na caixa das páginas públicas' },
+    ],
+    aoGuardar: async (v) => {
+      const d = await api('atendimento_faq_guardar', { method:'POST', body: JSON.stringify({
+        id: p.id || 0, pergunta: v.pergunta, resposta: v.resposta,
+        ordem: v.ordem, ativo: v.ativo ? 1 : 0 }) });
+      if (!d || !d.success) return false;
+      AT_PERGUNTAS = d.perguntas || []; atPintarLista();
+      toast(p.id ? 'Pergunta guardada.' : 'Pergunta criada.');
+      return true;
+    }
+  });
+}
+function atNovaPergunta(){ atFormulario({ id:0, ordem:0, ativo:1 }); }
+function atEditar(id){
+  const p = AT_PERGUNTAS.find(x => x.id === id); if (p) atFormulario(p);
+}
+async function atAlternar(id){
+  const p = AT_PERGUNTAS.find(x => x.id === id); if (!p) return;
+  const d = await api('atendimento_faq_guardar', { method:'POST', body: JSON.stringify({
+    id: p.id, pergunta: p.pergunta, resposta: p.resposta, ordem: p.ordem,
+    ativo: p.ativo ? 0 : 1 }) });
+  if (!d || !d.success) return;
+  AT_PERGUNTAS = d.perguntas || []; atPintarLista();
+}
+async function atApagar(id){
+  const p = AT_PERGUNTAS.find(x => x.id === id); if (!p) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar esta pergunta?', icone: '💬', perigo: true, confirmar: 'Apagar pergunta',
+    texto: '<b>' + licEsc(p.pergunta) + '</b><br><br>Apaga-se a pergunta e a resposta. Para a '
+         + 'esconder sem a perder, use antes <b>Desligar</b>.'
+  });
+  if (!r.sim) return;
+  const d = await api('atendimento_faq_apagar&id=' + id, { method:'POST' });
+  if (!d || !d.success) return;
+  AT_PERGUNTAS = d.perguntas || []; atPintarLista();
+  toast('Pergunta apagada.');
 }
 
 // ---------- Definições: o tema do sistema ----------
@@ -2680,6 +2932,18 @@ async function editarTudo(id){
   if (orc){ orc.value = ev['orcamento.total'] || '';
     if (window.Moeda && orc.value) orc.value = window.Moeda.paraCampo(orc.value); }
   pintarContasEd(d.contas || []);
+  // A opção «Porteiro» só se oferece a quem tem a porta na licença: sem o
+  // módulo, a conta entrava e não encontrava nada — e a API recusa-a na mesma.
+  const mods = d.licenca_modulos || {};
+  const temPorta = !!(mods.porta && mods.porta.ativo);
+  const selPapel = $('ed-np-papel');
+  if (selPapel){
+    const opPorta = [...selPapel.options].find(o => o.value === 'porteiro');
+    if (opPorta) opPorta.hidden = !temPorta;
+    if (!temPorta) selPapel.value = 'noivos';
+    const nota = $('ed-np-sem-porta');
+    if (nota) nota.style.display = temPorta ? 'none' : '';
+  }
 }
 function pintarContasEd(contas){
   const alvo = $('ed-contas');
