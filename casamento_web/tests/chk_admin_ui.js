@@ -75,13 +75,14 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      `só a ação principal está à vista (${(linha && linha.principais).join(', ')})`);
   // O «⋯» guarda o que não é do dia-a-dia. Fechar a casa só lá está quando
   // PODE lá estar: um casamento com licença em vigor não se suspende nem
-  // arquiva — decide-se a licença primeiro (ver chk_lic_travao.js). Nesse caso
-  // fica no lugar uma nota a dizer porquê, que é o que a prova aqui procura.
+  // arquiva — decide-se a licença primeiro (ver chk_lic_travao.js). Quando não
+  // pode, não aparece, e o que aparece no lugar é o passo que vem antes.
   const fecharAtras = linha && linha.escondidas.some(x => /Arquivar|Suspender/.test(x));
-  const notaTrava   = await p.evaluate(() =>
-    !!document.querySelector('#lista-casamentos .cas .mm-pop .mm-nota'));
-  ok(fecharAtras || notaTrava,
-     'e o que fecha a casa está atrás do "⋯" — ou explicado, quando a licença o trava');
+  const revogaAtras = linha && linha.escondidas.some(x => /Revogar licença/.test(x));
+  ok(fecharAtras || revogaAtras,
+     'e o "⋯" guarda o que fecha a casa — ou, se a licença o trava, o que se faz primeiro');
+  ok(linha && !linha.principais.some(x => /Arquivar|Suspender|Revogar/.test(x)),
+     'nada disso anda à solta na linha, ao lado do botão de abrir');
   ok(linha && linha.escondidas.some(x => /Editar todos os dados/.test(x)),
      'com as ações menos usadas todas lá dentro');
 
