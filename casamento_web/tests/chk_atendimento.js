@@ -76,10 +76,24 @@ const entrar = async (ctx, user, pass) => {
   ok(!txt.includes(RESP), 'mas ainda sem a resposta — pergunta-se primeiro');
 
   await publica.click('#at-sug .at-q');
-  await publica.waitForTimeout(400);
+  await publica.waitForTimeout(1000);
   txt = await publica.textContent('#at-fio');
   ok(txt.includes(PERG) && txt.includes(RESP),
      'tocar na pergunta escreve-a e responde-lhe, pela ordem em que se lê');
+
+  // A vista sobe até à RESPOSTA. A pergunta está lá em baixo, na lista, e a
+  // resposta nasce lá em cima, no fio: sem isto, quem carregava não via nada
+  // acontecer e carregava outra vez.
+  const naVista = await publica.evaluate(() => {
+    const corpo = document.getElementById('at-corpo');
+    const r = document.querySelector('#at-fio .at-resp:last-child');
+    if (!r) return null;
+    const cr = corpo.getBoundingClientRect(), rr = r.getBoundingClientRect();
+    return { dentro: rr.top >= cr.top - 2 && rr.top < cr.bottom,
+             topo: Math.round(rr.top - cr.top) };
+  });
+  ok(naVista && naVista.dentro,
+     `a resposta fica à vista, e no cimo dela (${naVista && naVista.topo}px do topo)`);
 
   // Os contactos: os que existem, e só esses.
   const ct = await publica.evaluate(() => {
@@ -110,6 +124,13 @@ const entrar = async (ctx, user, pass) => {
   const soAdmin = await api('atendimento_ler');
   ok((soAdmin.perguntas || []).some(p => p.pergunta === PERG),
      'mas continua guardada, para o admin a voltar a ligar');
+
+  // ---------- a casa nasce a saber dizer como se fala com ela ----------
+  ok((soAdmin.perguntas || []).some(p => /falo com uma pessoa/i.test(p.pergunta)),
+     'entre as perguntas de origem está a de como falar com a equipa');
+  const pContacto = (soAdmin.perguntas || []).find(p => /falo com uma pessoa/i.test(p.pergunta));
+  ok(pContacto && /telefone/i.test(pContacto.resposta) && /email/i.test(pContacto.resposta),
+     'e a resposta encaminha para os contactos — sem repetir os números, que envelheceriam');
 
   // ---------- 3. desligado, não há caixa nenhuma ----------
   await api('atendimento_guardar', { ativo: 0, nome: 'Sofia ' + marca });
@@ -153,13 +174,89 @@ const entrar = async (ctx, user, pass) => {
   mau = await api('atendimento_guardar', { ativo: 1, nome: '' });
   ok(mau && mau.success === false, 'e o atendimento sem nome de quem atende também');
 
+  // ---------- 6. o encaixe do chat ao vivo ----------
+  // Não há ferramenta nenhuma ligada — o que se prova é a COSTURA: desligada,
+  // não sai nada para a página; ligada, o botão aparece e o script só se
+  // carrega a pedido; e um endereço em claro é recusado.
+  await api('atendimento_guardar', { ativo: 1, nome: 'Sofia ' + marca,
+    saudacao: 'Bem-vindos ' + marca, chat_modo: 'nenhum' });
+  let pub2 = await admin.evaluate(async () =>
+    (await fetch('api.php?action=atendimento_publico')).json());
+  ok(pub2.ao_vivo && pub2.ao_vivo.modo === 'nenhum',
+     'sem ferramenta escolhida, a página só sabe que não há chat ao vivo');
+  ok(!pub2.ao_vivo.script,
+     'e nem o endereço de script nenhum viaja para quem não vai precisar dele');
+
+  mau = await api('atendimento_guardar', { ativo: 1, nome: 'Sofia ' + marca,
+    chat_modo: 'script', chat_script: 'http://chat.exemplo/loader.js' });
+  ok(mau && mau.success === false, 'um script em http:// é recusado');
+  ok(/https/i.test(mau.message || ''), 'e diz porquê: ' + (mau.message || '').slice(0, 70));
+  mau = await api('atendimento_guardar', { ativo: 1, nome: 'Sofia ' + marca,
+    chat_modo: 'script', chat_script: '' });
+  ok(mau && mau.success === false, 'e escolher a ferramenta sem dizer qual também');
+
+  const SCRIPT = 'https://chat.exemplo.invalido/loader.js';
+  d = await api('atendimento_guardar', { ativo: 1, nome: 'Sofia ' + marca,
+    saudacao: 'Bem-vindos ' + marca, chat_modo: 'script', chat_script: SCRIPT,
+    chat_rotulo: 'Falar agora ' + marca });
+  ok(d && d.success, 'com um endereço https, guarda-se');
+
+  const comChat = await (await b.newContext()).newPage();
+  comChat.on('pageerror', e => errs.push('chat: ' + e.message));
+  await comChat.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  await comChat.waitForSelector('#at-botao', { timeout: 8000 });
+  // O script do fornecedor NÃO se carrega à entrada: fazer toda a gente pagar
+  // o peso de uma coisa que a maioria não usa era o defeito a evitar.
+  const antesDeAbrir = await comChat.evaluate((s) =>
+    [...document.scripts].some(x => x.src === s), SCRIPT);
+  ok(!antesDeAbrir, 'ao carregar a página, o script do fornecedor ainda não entrou');
+
+  await comChat.click('#at-botao');
+  await comChat.waitForTimeout(400);
+  ok(await comChat.locator('#at-vivo').count() === 1, 'a caixa mostra o botão de falar ao vivo');
+  ok((await comChat.textContent('#at-vivo')).includes('Falar agora'),
+     'com o texto que o admin escolheu');
+  ok(await comChat.evaluate(() => typeof Atendimento.registarAoVivo === 'function'),
+     'e o contrato para o fornecedor está exposto (Atendimento.registarAoVivo)');
+
+  // Um fornecedor de mentira, registado como o verdadeiro se registaria.
+  await comChat.evaluate(() => {
+    window.__abriu = 0;
+    Atendimento.registarAoVivo({ nome: 'prova',
+      pronto: () => true, abrir: () => { window.__abriu++; } });
+  });
+  await comChat.click('#at-vivo');
+  await comChat.waitForTimeout(500);
+  ok(await comChat.evaluate(() => window.__abriu) === 1,
+     'carregar no botão manda abrir a janela do fornecedor');
+  ok(await comChat.evaluate((s) => [...document.scripts].some(x => x.src === s), SCRIPT),
+     'e é só aí que o script do fornecedor entra na página');
+
+  // Sem ninguém registado, o botão não fica mudo: diz o que se passa.
+  const sozinho = await (await b.newContext()).newPage();
+  await sozinho.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  await sozinho.waitForSelector('#at-botao', { timeout: 8000 });
+  await sozinho.click('#at-botao'); await sozinho.waitForTimeout(300);
+  await sozinho.click('#at-vivo');
+  await sozinho.waitForTimeout(600);
+  // O script aponta para um domínio que não existe, por isso ou ele ainda está
+  // a ser esperado, ou já falhou — as duas coisas se dizem, e é isso que conta:
+  // o botão não fica mudo a fingir que abriu alguma coisa.
+  const estado = await sozinho.textContent('#at-vivo-estado');
+  ok(/A abrir|não chegou a carregar|não está disponível/i.test(estado),
+     'sem fornecedor do outro lado, o botão diz o que se passa: «' + estado.trim() + '»');
+  await sozinho.context().close();
+  await comChat.context().close();
+
   // ---------- limpeza: repor a casa como estava ----------
   await api('atendimento_faq_apagar&id=' + pid);
   await api('atendimento_guardar', {
     ativo: String(antes.ativo) === '1' ? 1 : 0, nome: antes.nome || 'Atendimento',
     cargo: antes.cargo || '', saudacao: antes.saudacao || '',
     telefone: antes.telefone || '', whatsapp: antes.whatsapp || '',
-    email: antes.email || '', horario: antes.horario || '' });
+    email: antes.email || '', horario: antes.horario || '',
+    chat_modo: antes.chat_modo || 'nenhum', chat_script: antes.chat_script || '',
+    chat_rotulo: antes.chat_rotulo || '' });
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');
   ok(errs.length === 0, 'nenhum erro de JavaScript');

@@ -56,8 +56,21 @@
 .at-b-minha{ background:var(--forest); color:#fff; align-self:flex-end;
   border-bottom-right-radius:5px; }
 
+/* A resposta que acabou de chegar acende por um momento: é o que a distingue
+   das que já lá estavam, depois de a vista ter subido até ela. */
+.at-resp.at-nova .at-b-dela{ animation:at-acende 1.6s ease-out; }
+@keyframes at-acende{
+  0%   { background:var(--gold-pale); border-color:var(--gold); }
+  60%  { background:var(--gold-pale); border-color:var(--gold); }
+  100% { background:var(--cream);     border-color:var(--line); }
+}
+@media (prefers-reduced-motion:reduce){
+  .at-resp.at-nova .at-b-dela{ animation:none; background:var(--gold-pale); border-color:var(--gold); }
+}
+
 /* ---------- as perguntas sugeridas ---------- */
 .at-sug{ margin-top:.9rem; display:flex; flex-direction:column; gap:.35rem; }
+.at-vivo + .at-sug{ margin-top:0; }
 .at-sug-tit, .at-ct-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.6px;
   color:#8a8f88; font-weight:700; }
 .at-q{ text-align:left; background:none; border:1px solid var(--gold-soft); border-radius:12px;
@@ -68,6 +81,18 @@
 /* Uma pergunta já feita continua ali — pode querer-se reler —, mas de lado:
    o que interessa a seguir é o que ainda não se perguntou. */
 .at-q-feita{ opacity:.55; border-style:dashed; }
+
+/* ---------- chat ao vivo ---------- */
+/* Só aparece quando a casa configurou uma ferramenta. Destaca-se das perguntas
+   porque é outra coisa: ali fala-se com alguém. */
+.at-vivo{ margin:.9rem 0 1rem; padding-bottom:.9rem; border-bottom:1px solid var(--line); }
+.at-vivo-bt{ width:100%; background:var(--gold); color:var(--forest-deep); border:0;
+  border-radius:12px; padding:.6rem .8rem; font-family:var(--sans); font-size:.88rem;
+  font-weight:700; cursor:pointer; transition:filter .12s; }
+.at-vivo-bt:hover{ filter:brightness(1.06); }
+.at-vivo-bt:focus-visible{ outline:2px solid var(--forest); outline-offset:2px; }
+.at-vivo-estado{ font-size:.78rem; color:#8a8f88; margin-top:.3rem; text-align:center; }
+.at-vivo-estado:empty{ display:none; }
 
 /* ---------- contactos ---------- */
 .at-contactos{ margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--line);

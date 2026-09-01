@@ -1046,6 +1046,36 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <input type="text" id="at-horario" maxlength="120" placeholder="Segunda a sexta, das 9h às 17h"></div>
       </div>
 
+      <h4 class="ed-sec" style="margin-top:1.4rem">Chat ao vivo <small style="color:#8a8f88">· encaixe pronto</small></h4>
+      <div class="dica">A caixa responde ao que se repete, e isso resolve a maioria — mas não fala
+        com ninguém em tempo real. Quando quiserem uma ferramenta dessas (Tawk, Crisp, Chatwoot, o
+        que for), é aqui que ela entra. Enquanto estiver em <b>nenhum</b>, as páginas públicas não
+        carregam nada de fora e não aparece botão nenhum.</div>
+      <div class="lf" style="grid-template-columns:1fr 2fr">
+        <div><label for="at-chat-modo">Ferramenta</label>
+          <select id="at-chat-modo" onchange="atChatModo()">
+            <option value="nenhum">Nenhuma — só as perguntas frequentes</option>
+            <option value="script">Script de um fornecedor</option>
+          </select></div>
+        <div class="campo"><label for="at-chat-script">Endereço do script</label>
+          <input type="url" id="at-chat-script" maxlength="400" autocapitalize="none" spellcheck="false"
+                 placeholder="https://…">
+          <div class="err"></div></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr 2fr;margin-top:.6rem" id="at-chat-extra">
+        <div><label for="at-chat-rotulo">Texto do botão</label>
+          <input type="text" id="at-chat-rotulo" maxlength="60" placeholder="Falar com uma pessoa"></div>
+        <div class="porcima" style="align-self:end;margin:0">
+          <b>Um script de fora corre nas vossas páginas de entrada e de inscrição com todos os
+          poderes delas.</b> Ponha aqui só o de um fornecedor em que confie. Tem de ser
+          <code>https://</code>, e só se carrega quando alguém abrir a caixa.
+        </div>
+      </div>
+      <div class="porcima" style="margin-top:.6rem">Falta a cola que diz à caixa como abrir a
+        janela do fornecedor — está documentada no topo de <code>assets/atendimento.js</code>
+        (<code>Atendimento.registarAoVivo</code>). Sem ela, o botão avisa que o chat não está
+        disponível e deixa os contactos, em vez de prometer o que não cumpre.</div>
+
       <div class="fim" style="margin-top:1.1rem">
         <button class="btn btn-ouro" onclick="atGuardar()">Guardar atendimento</button>
         <span class="estado" id="at-estado"></span>
@@ -1256,6 +1286,9 @@ async function atCarregar(){
   pv('at-nome', c.nome); pv('at-cargo', c.cargo); pv('at-saudacao', c.saudacao);
   pv('at-telefone', c.telefone); pv('at-whatsapp', c.whatsapp);
   pv('at-email', c.email); pv('at-horario', c.horario);
+  $('at-chat-modo').value = c.chat_modo === 'script' ? 'script' : 'nenhum';
+  pv('at-chat-script', c.chat_script); pv('at-chat-rotulo', c.chat_rotulo);
+  atChatModo();
   AT_FOTO = c.foto || '';
   atPintarFoto();
   AT_PERGUNTAS = d.perguntas || [];
@@ -1298,20 +1331,36 @@ async function atFotoTirar(){
   AT_FOTO = ''; atPintarFoto(); toast('Fotografia removida.');
 }
 
+// Os campos do chat ao vivo só interessam com uma ferramenta escolhida.
+function atChatModo(){
+  const modo = $('at-chat-modo').value;
+  const com = modo === 'script';
+  $('at-chat-script').closest('.campo').style.display = com ? '' : 'none';
+  $('at-chat-extra').style.display = com ? '' : 'none';
+}
+
 async function atGuardar(){
   const nome = ($('at-nome').value || '').trim();
   const email = ($('at-email').value || '').trim();
   const emailMau = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const modo = $('at-chat-modo').value;
+  const script = ($('at-chat-script').value || '').trim();
+  const scriptMau = modo === 'script' && !/^https:\/\//i.test(script);
   marca('at-nome', nome ? '' : 'Dê um nome a quem atende — é o que aparece na caixa.');
   marca('at-email', emailMau ? 'Email inválido.' : '');
-  if (!nome || emailMau) return;
+  marca('at-chat-script', scriptMau
+    ? (script ? 'Tem de começar por https:// — não se carrega código de fora em claro.'
+              : 'Indique o endereço do script, ou escolha «nenhuma».') : '');
+  if (!nome || emailMau || scriptMau) return;
   const d = await api('atendimento_guardar', { method:'POST', body: JSON.stringify({
     ativo: $('at-ativo').checked ? 1 : 0,
     nome, cargo: ($('at-cargo').value || '').trim(),
     saudacao: ($('at-saudacao').value || '').trim(),
     telefone: ($('at-telefone').value || '').trim(),
     whatsapp: ($('at-whatsapp').value || '').trim(),
-    email, horario: ($('at-horario').value || '').trim() }) });
+    email, horario: ($('at-horario').value || '').trim(),
+    chat_modo: modo, chat_script: script,
+    chat_rotulo: ($('at-chat-rotulo').value || '').trim() }) });
   if (!d || !d.success) return;
   const est = $('at-estado');
   est.textContent = $('at-ativo').checked ? 'Guardado — a caixa está a aparecer.'
