@@ -17,6 +17,8 @@ $CAS = casalInfo(defsAtuais($conn));
 <title>Mesas · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/mesa-icone.css') ?>" rel="stylesheet">
 <style>
   .layout{ display:grid; grid-template-columns:1fr 380px; gap:1.1rem; align-items:start; }
   @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
@@ -273,6 +275,8 @@ $CAS = casalInfo(defsAtuais($conn));
   .combo-vazio{ color:#9aa09a; font-size:.82rem; padding:.4rem .5rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
+<script src="<?= asset('assets/mesa-icone.js') ?>"></script>
 </head>
 <body>
 <?php cabecalho('Planta de Mesas', $CAS['casal'].' · posição, capacidade e ocupação', 'mesas'); ?>

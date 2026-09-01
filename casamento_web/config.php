@@ -124,6 +124,7 @@ function ficheirosApp(): array {
             'assets/montra/digital.jpg','assets/montra/porta.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
             'assets/janela.css','assets/janela.js',
+            'assets/mesa-icone.css','assets/mesa-icone.js',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',

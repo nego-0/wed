@@ -2189,6 +2189,18 @@ const AVISO_ESTADO = {
     texto: 'Volta às listas de trabalho e o casal volta a entrar. As contas que ficaram '
          + 'paradas com ele voltam também.' },
 };
+/**
+ * A licença deste casamento está EM VIGOR, e por isso prende a casa?
+ *
+ * Em vigor é: concedida e ainda dentro do prazo. Uma licença sem prazo
+ * (licenca_dias nulo) é ilimitada — está em vigor sempre. Uma que já expirou
+ * não prende nada: o que ela dava, já não dá.
+ */
+function licencaPrende(c){
+  if ((c.licenca_estado || 'sem') !== 'ativa') return false;
+  return c.licenca_dias === null || c.licenca_dias === undefined || +c.licenca_dias >= 0;
+}
+
 async function mudarEstado(id, estado, nome){
   const a = AVISO_ESTADO[estado];
   const r = await licConfirmar({
@@ -2458,8 +2470,21 @@ async function carregarCasamentos(){
         mais.push('<hr>');
         mais.push(c.estado === 'suspenso'
           ? `<button onclick="mudarEstado(${c.id},'ativo','${n}')">Reativar</button>`
-          : `<button class="perigo" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
-        mais.push(`<button class="perigo" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
+          : '');
+        // Fechar a casa a um casal que tem licença EM VIGOR é tirar-lhe uma
+        // coisa por que pagou, e sem lhe dizer porquê: a licença continuaria a
+        // dizer «ativa» enquanto ele não conseguia entrar. Primeiro decide-se
+        // a licença — revogar (com motivo, que o casal lê) ou deixá-la
+        // expirar —, e só então se fecha. Uma licença já expirada não trava
+        // nada: aí não há nada a tirar.
+        if (licencaPrende(c)) {
+          mais.push('<div class="mm-nota">Suspender e arquivar ficam fora enquanto a licença '
+                  + 'estiver em vigor. <b>Revogue-a acima</b>, ou espere que expire.</div>');
+        } else {
+          if (c.estado !== 'suspenso')
+            mais.push(`<button class="perigo" onclick="mudarEstado(${c.id},'suspenso','${n}')">Suspender</button>`);
+          mais.push(`<button class="perigo" onclick="mudarEstado(${c.id},'arquivado','${n}')">Arquivar</button>`);
+        }
       }
     }
     const menu = mais.length

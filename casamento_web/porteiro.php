@@ -19,6 +19,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <title>Porta · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <script src="<?= asset('assets/html5-qrcode.min.js') ?>"></script>
 <style>
@@ -99,6 +100,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <link rel="manifest" href="manifest.php" crossorigin="use-credentials">
 <meta name="theme-color" content="#16261E">
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 </head>
 <body>
 <?php tiraSuporte(true); ?>
@@ -452,10 +454,20 @@ async function checkin(id,modo,membroId=0,excecao=false){
   aplicarLocal(id, modo, membroId);
 }
 function excecaoMembro(id,mid){
-  if(confirm('Esta pessoa não confirmou presença.\n\nAutorizar a entrada em caráter excecional?')) checkin(id,'membro',mid,true);
+  licConfirmar({
+    titulo: 'Autorizar a entrada?',
+    icone: '🎟️', confirmar: 'Autorizar entrada',
+    texto: '<b>Esta pessoa não confirmou presença.</b><br><br>Pode deixá-la entrar em '
+         + 'carácter excepcional — a entrada fica registada como autorizada por si.'
+  }).then(r => { if (r.sim) checkin(id,'membro',mid,true); });
 }
 function excecaoTodos(id){
-  if(confirm('Este convite não tem presença confirmada.\n\nAutorizar a entrada em caráter excecional?')) checkin(id,'todos',0,true);
+  licConfirmar({
+    titulo: 'Autorizar a entrada?',
+    icone: '🎟️', confirmar: 'Autorizar entrada',
+    texto: '<b>Este convite não tem presença confirmada.</b><br><br>Pode deixá-lo entrar em '
+         + 'carácter excepcional — a entrada fica registada como autorizada por si.'
+  }).then(r => { if (r.sim) checkin(id,'todos',0,true); });
 }
 
 // ---------- próximo / abas / entradas ----------

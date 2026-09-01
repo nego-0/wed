@@ -18,6 +18,8 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <title>Painel · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/mesa-icone.css') ?>" rel="stylesheet">
 <script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
   .barra-acoes{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
@@ -307,6 +309,8 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .vazio-hist{ color:#9aa09a; text-align:center; padding:1.4rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
+<script src="<?= asset('assets/mesa-icone.js') ?>"></script>
 </head>
 <body>
 <?php cabecalho('Gestão de Convidados', $CAS['casal'].' · '.$dataExt, 'painel'); ?>
@@ -767,22 +771,37 @@ async function massaFlag(campo, valor){
   toast(`${feitos} de ${ids.length} convite(s) atualizados.`);
   limparSelecao(); carregar();
 }
-async function massaMesa(){
+function massaMesa(){
   const ids = [...SELEC]; if(!ids.length) return;
-  const nomes = (MESAS||[]).filter(m=>m.especial!=='noivos').map(m=>m.nome);
-  if(!nomes.length) return toast('Ainda não há mesas criadas.', true);
-  const escolha = prompt('Atribuir estes convites a que mesa?\n\nMesas: ' + nomes.join(', ') + '\n\n(deixe vazio para retirar da mesa)');
-  if(escolha === null) return;
-  const mesa = (MESAS||[]).find(m=>m.nome.toLowerCase() === escolha.trim().toLowerCase());
-  if(escolha.trim() !== '' && !mesa) return toast('Não existe uma mesa com esse nome.', true);
-  let feitos = 0;
-  for(const id of ids){
-    const d = await api('convite_mesa', {method:'POST', silencioso:true,
-      body: JSON.stringify({id, mesa_id: mesa ? mesa.id : ''})});
-    if(d && d.success) feitos++;
-  }
-  toast(`${feitos} de ${ids.length} convite(s) ${mesa ? 'atribuídos a '+mesa.nome : 'retirados da mesa'}.`);
-  limparSelecao(); carregar();
+  const livres = (MESAS||[]).filter(m=>m.especial!=='noivos');
+  if(!livres.length) return toast('Ainda não há mesas criadas.', true);
+
+  // Escolher de uma lista, e não escrever o nome à mão.
+  //
+  // O prompt() dava a lista das mesas no seu próprio texto e depois pedia que
+  // se copiasse uma delas — de cor, sem a poder ver enquanto se escrevia, e
+  // com um engano numa letra a valer «não existe uma mesa com esse nome».
+  // Uma escolha entre coisas que já existem não é uma pergunta aberta.
+  licFormulario({
+    titulo: 'Atribuir ' + ids.length + ' convite(s) a uma mesa',
+    dica: 'Os convites escolhidos passam todos para a mesma mesa.',
+    guardar: 'Atribuir',
+    campos: [{ id:'mesa', rot:'Mesa', tipo:'escolha', largura:3, valor:'',
+               opcoes: [{ v:'', r:'— Retirar da mesa —' }]
+                 .concat(livres.map(m => ({ v:String(m.id),
+                   r: m.nome + (m.lugares ? ' · ' + m.lugares + ' lugares' : '') }))) }],
+    aoGuardar: async (v) => {
+      const mesa = livres.find(m => String(m.id) === String(v.mesa));
+      let feitos = 0;
+      for(const id of ids){
+        const d = await api('convite_mesa', {method:'POST', silencioso:true,
+          body: JSON.stringify({id, mesa_id: mesa ? mesa.id : ''})});
+        if(d && d.success) feitos++;
+      }
+      toast(`${feitos} de ${ids.length} convite(s) ${mesa ? 'atribuídos a '+mesa.nome : 'retirados da mesa'}.`);
+      limparSelecao(); carregar();
+    }
+  });
 }
 
 function renderConvites(){
@@ -1118,7 +1137,13 @@ async function guardarConvite(){
 // ---------- ações de linha ----------
 async function flag(id,campo,valor){ const d=await api(`convite_flag&id=${id}&campo=${campo}&valor=${valor}`); if(d.success){toast('Atualizado.');carregar();} }
 async function eliminar(id){ const c=CONVITES.find(x=>x.id==id); const nome=c?c.nome_final:'este convite';
-  if(!confirm(`Eliminar o convite "${nome}"?\n\nVai para a reciclagem — pode repô-lo em Histórico.`))return;
+  const r = await licConfirmar({
+    titulo: 'Eliminar o convite «' + licEsc(nome) + '»?',
+    icone: '🗑️', confirmar: 'Eliminar convite',
+    texto: 'Vai para a <b>reciclagem</b>, e as pessoas dele vão com ele.<br><br>'
+         + 'Pode <b>repô-lo</b> a qualquer momento, em Histórico.'
+  });
+  if (!r.sim) return;
   const d=await api('convite_delete&id='+id);
   if(d.success){ toastAnular(`"${nome}" foi para a reciclagem.`, ()=>repor(id)); carregar(); } }
 
@@ -1227,7 +1252,10 @@ async function renderMesasGestao(){
   const d=await api('mesa_list'); MESAS=d.mesas;
   $('lista-mesas-gestao').innerHTML = MESAS.length? MESAS.map(m=>{
     const cap=m.capacidade||0; const perc=cap?Math.min(100,Math.round(m.ocupacao/cap*100)):0;
+    // O ícone diz, sem se ler, o que a linha diz por palavras: a forma da
+    // mesa, quantas cadeiras tem, e se já está cheia.
     return `<div class="mesa-item">
+      ${mesaIcone(m, {tam:42})}
       <div class="info"><strong>${esc(m.nome)}</strong>
         <div class="ocup">${m.ocupacao} lugar(es)${cap?(' de '+cap):''} · ${m.convites} convite(s)</div>
         ${cap?`<div class="barra-ocup"><span class="${perc>=100?'cheio':''}" style="width:${perc}%"></span></div>`:''}
@@ -1245,7 +1273,17 @@ async function guardarMesa(){
   $('m-id').value='';$('m-nome').value='';$('m-cap').value=''; MESAS=d.mesas; renderMesasGestao(); renderFiltroMesas(); renderDatalistMesas(); toast('Mesa guardada.');
 }
 async function eliminarMesa(id){ const m=MESAS.find(x=>x.id==id); const nome=m?m.nome:'esta mesa';
-  if(!confirm(`Eliminar a mesa "${nome}"? Os convites ficam sem mesa.`))return;
+  const sentados = (CONVITES||[]).filter(c => String(c.mesa_id||'') === String(id)).length;
+  const r = await licConfirmar({
+    titulo: 'Eliminar a mesa «' + licEsc(nome) + '»?',
+    icone: '🪑', perigo: true, confirmar: 'Eliminar mesa',
+    texto: (sentados
+        ? '<b>' + sentados + '</b> convite(s) estão sentados nesta mesa e <b>ficam sem mesa</b>. '
+        : 'Não há convites sentados nesta mesa. ')
+         + 'Ninguém é apagado — só perdem o lugar.<br><br>'
+         + 'A mesa em si não se recupera: para a ter de volta, cria-se outra.'
+  });
+  if (!r.sim) return;
   const d=await api('mesa_delete&id='+id); if(d.success){MESAS=d.mesas;renderMesasGestao();renderFiltroMesas();carregar();toast('Mesa eliminada.');} }
 
 // ---------- modais base ----------
@@ -1327,7 +1365,13 @@ async function carregarLixo(){
 }
 
 async function apagarDeVez(id, nome){
-  if(!confirm(`Apagar "${nome}" DEFINITIVAMENTE?\n\nJá não poderá ser reposto.`)) return;
+  const r = await licConfirmar({
+    titulo: 'Apagar «' + licEsc(nome) + '» de vez?',
+    icone: '🗑️', perigo: true, confirmar: 'Apagar de vez',
+    texto: 'Sai da reciclagem e <b>deixa de poder ser reposto</b>. As pessoas deste convite '
+         + 'vão com ele.<br><br><b>Isto não se desfaz.</b>'
+  });
+  if (!r.sim) return;
   const d=await api('convite_delete&definitivo=1&id='+id);
   if(d.success){ toast('Convite apagado definitivamente.'); carregarLixo(); carregar(); }
 }

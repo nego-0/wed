@@ -262,6 +262,8 @@ const entrar = async (ctx, user, pass) => {
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1');
+  // Arquivar exige a licença fora do caminho: decide-se a licença primeiro.
+  await api('lic_revogar', { casamento: idPend, motivo: 'Fim da prova ' + marca });
   await api('casamento_estado&id=' + idPend + '&estado=arquivado');
   await api('casamento_apagar&id=' + idPend);
   for (const email of [emailCasal, emailSup, emailPorteiro]) {

@@ -74,6 +74,14 @@ const entrar = async (ctx, u, s) => {
      'as contas do casamento aparecem na lista de casamento');
 
   // ---------- 3. suspender o casamento fecha a porta às contas ----------
+  // Primeiro a licença, depois a porta: suspender um casamento que ainda tem
+  // licença em vigor seria tirar ao casal, sem lhe dizer nada, o que ele pagou.
+  // A revogação deixa-lhe o motivo escrito; só então a casa se fecha.
+  const trava = await api('casamento_estado&id=' + cid + '&estado=suspenso', {});
+  ok(trava && trava.success === false,
+     'com licença em vigor, suspender é recusado — decide-se a licença primeiro');
+  const rev = await api('lic_revogar', { casamento: cid, motivo: 'Prova: fim do acordo' });
+  ok(rev && rev.success, 'revoga-se a licença, com motivo');
   const susp = await api('casamento_estado&id=' + cid + '&estado=suspenso', {});
   ok(susp && susp.success && susp.contas_paradas >= 2,
      'suspender o casamento para as contas dele (' + (susp && susp.contas_paradas) + ')');
@@ -133,6 +141,7 @@ const entrar = async (ctx, u, s) => {
 
   // ---------- limpeza ----------
   for (const x of [cid, regCid]) {
+    await api('lic_revogar', { casamento: x, motivo: 'Fim da prova ' + marca });
     await api('casamento_estado&id=' + x + '&estado=arquivado', {});
     await api('casamento_apagar&id=' + x, {});
   }

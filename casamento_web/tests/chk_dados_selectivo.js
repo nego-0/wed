@@ -152,6 +152,8 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   const emailC = 'apc.porta.' + mk + '@ex.pt';
   await api('acesso_convidar', { email: emailC, papel: 'porteiro' }, 1);
   await api('casamento_abrir&id=1', {});
+  // A licença sai primeiro: com ela em vigor, a casa não se fecha.
+  await api('lic_revogar', { casamento: wc.id, motivo: 'Fim da prova ' + mk }, 1);
   await api('casamento_estado&id=' + wc.id + '&estado=arquivado', {});
   const delc = await api('casamento_apagar&id=' + wc.id, {});
   ok(delc.success && delc.levou && delc.levou.contas >= 1, 'casamento_apagar diz quantas contas levou');
@@ -218,10 +220,11 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1', {});
-  await api('casamento_estado&id=' + w.id + '&estado=arquivado', {});
-  await api('casamento_apagar&id=' + w.id, {});
-  await api('casamento_estado&id=' + w2.id + '&estado=arquivado', {});
-  await api('casamento_apagar&id=' + w2.id, {});
+  for (const id of [w.id, w2.id]) {
+    await api('lic_revogar', { casamento: id, motivo: 'Fim da prova ' + mk });
+    await api('casamento_estado&id=' + id + '&estado=arquivado', {});
+    await api('casamento_apagar&id=' + id, {});
+  }
   // Apagar contas por família esvaziou o pool da base — inclusive o porteiro que
   // o casamento nº1 tinha de origem. Repõe-se esse estado (um porteiro no nº1, e
   // uma conta administrativa), para as provas seguintes encontrarem o que

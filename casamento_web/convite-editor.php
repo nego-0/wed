@@ -21,7 +21,7 @@ if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 // aqui. (Um modelo da casa é outra coisa — esse é do admin da plataforma, e o
 // $MODELO acima já tratou disso.)
 if (!$MODELO && !podeEditarPeca('digital')) {
-    header('Location: licenca.php?quero=digital'); exit;
+    header('Location: licenca.php?quero=digital&preciso=editar'); exit;
 }
 $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
                : casalInfo($DEFS_ED);

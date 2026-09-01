@@ -30,6 +30,7 @@ $CAS  = casalInfo($DEFS);
 <title>Orçamento · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   /* Os dois estados do dinheiro, e o que passa do teto. Vêm sempre com rótulo
      (legenda e valor em cada segmento), por isso a cor nunca conta sozinha. */
@@ -399,6 +400,7 @@ $CAS  = casalInfo($DEFS);
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script>window.SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>
 <script src="<?= asset('assets/orcamento.js') ?>"></script>
 </body>

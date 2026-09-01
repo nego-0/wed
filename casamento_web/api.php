@@ -1116,10 +1116,38 @@ function licHistorico(mysqli $conn, int $cid): array {
             $p = (int)$x['pedido_id'];
             if (!isset($out[$p])) continue;
             $x['preco'] = (float)$x['preco'];
+            $x['credito'] = (float)$x['credito'];
             $out[$p]['itens'][] = $x;
         }
     }
-    return array_values($out);
+    $lista = array_values($out);
+
+    // A revogação também é história — e é a que mais importa contar.
+    //
+    // Não é um pedido, e por isso não estava em lado nenhum desta lista: o
+    // casal via a licença fechada e um histórico que acabava no dia em que ela
+    // lhe fora concedida, como se nada tivesse acontecido depois. Entra aqui,
+    // com a data e o motivo que o admin escreveu, porque a pergunta que o
+    // casal faz primeiro é «o que é que aconteceu, e quando».
+    $rv = @$conn->query("SELECT licenca_revogada_em, licenca_revogada_motivo, licenca_estado
+                         FROM {$P}casamentos WHERE id=" . (int)$cid . " LIMIT 1");
+    if ($rv && ($x = $rv->fetch_assoc()) && !empty($x['licenca_revogada_em'])) {
+        array_unshift($lista, [
+            'id'           => 0,
+            'tipo'         => 'revogacao',
+            'estado'       => 'revogado',
+            'pacote_nome'  => '',
+            'meses'        => 0,
+            'total'        => 0.0,
+            'moeda'        => 'Kz',
+            'nota_admin'   => (string)$x['licenca_revogada_motivo'],
+            'criado_em'    => $x['licenca_revogada_em'],
+            'decidido_em'  => $x['licenca_revogada_em'],
+            'em_vigor'     => ((string)$x['licenca_estado'] === 'revogada'),
+            'itens'        => [],
+        ]);
+    }
+    return $lista;
 }
 
 /** Tudo o que a página da licença do casal precisa de saber, num sítio só. */
@@ -3340,6 +3368,24 @@ if ($acao === 'casamento_estado') {
         erro('Um registo novo abre-se aprovando o seu pedido de licença, em Licenças. '
            . 'É lá que se decide o que este casal leva — e aprovar o pedido activa '
            . 'o casamento e as suas contas no mesmo gesto.');
+    }
+
+    // E fechar a casa a quem tem licença EM VIGOR também não se faz por aqui.
+    //
+    // Suspender ou arquivar tira ao casal o que ele comprou, sem o dizer: a
+    // página da licença continuaria a mostrar-lha activa enquanto ele não
+    // conseguia entrar. A licença decide-se primeiro — revogar deixa motivo
+    // escrito, que o casal lê — e só depois se fecha a porta. Uma licença
+    // expirada não trava nada, porque já não está a dar nada.
+    if (in_array($novo, ['suspenso','arquivado'], true)) {
+        $lic  = licencaEstado($conn, $id);
+        $info = licencaInfo($conn, $id);
+        if ($lic === 'ativa' && empty($info['expirada'])) {
+            erro('Este casamento tem licença em vigor. Suspendê-lo ou arquivá-lo agora '
+               . 'tirava ao casal o que ele pagou sem lhe dizer porquê — a licença '
+               . 'continuaria a dizer-lhe que está activa. Revogue a licença primeiro '
+               . '(o motivo fica escrito, e o casal lê-o), ou espere que expire.');
+        }
     }
     $st = $conn->prepare("UPDATE {$P}casamentos SET estado=? WHERE id=?");
     $st->bind_param('si', $novo, $id);

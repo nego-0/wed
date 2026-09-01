@@ -1,0 +1,48 @@
+/* ============================================================
+   mesa-icone.css — o vestuário do ícone de assets/mesa-icone.js
+   ------------------------------------------------------------
+   Traço fino e tampo cheio, como nas plantas de sala: as cadeiras
+   ficam em segundo plano e o tampo — com o número lá dentro — é o
+   que se lê primeiro. Só variáveis do tema.
+   ============================================================ */
+
+.mesa-ico{ display:block; flex:none; overflow:visible; }
+
+/* O tampo. Cheio, para o número assentar sobre alguma coisa. */
+.mesa-ico .mi-t{ fill:var(--gold-pale); stroke:var(--gold); stroke-width:2.2; }
+
+/* As cadeiras: presentes, mas caladas. */
+.mesa-ico .mi-c{ fill:none; stroke:var(--gold-soft); stroke-width:2; }
+
+/* O número: a lotação, ou a capacidade quando ainda não há ninguém. */
+.mesa-ico .mi-n{ fill:var(--gold-deep); font-family:var(--sans);
+  font-weight:700; font-variant-numeric:tabular-nums; }
+
+/* Uma mesa CHEIA vê-se de longe — é a informação que faz mudar de plano.
+   Distingue-se pelo PREENCHIMENTO, e não pela cor: em temas onde o ouro já é
+   verde, trocar um verde por outro não distinguia coisa nenhuma. Tampo cheio,
+   número ao contrário: lê-se num relance, em qualquer tema. */
+.mesa-ico.cheia .mi-t{ fill:var(--ok); stroke:var(--ok); }
+.mesa-ico.cheia .mi-c{ stroke:var(--ok); fill:var(--ok); }
+.mesa-ico.cheia .mi-n{ fill:#fff; }
+
+/* E uma mesa VAZIA fica de traço leve: ainda não é notícia nenhuma. */
+.mesa-ico.vazia .mi-t{ fill:none; }
+.mesa-ico.vazia .mi-n{ fill:#8a8f88; }
+
+/* A dos noivos não tem número nem lotação: tem lugar. */
+.mesa-ico.f-noivos .mi-t{ fill:var(--gold); stroke:var(--gold-deep); }
+.mesa-ico.f-noivos .mi-c{ stroke:var(--gold-deep); }
+
+/* ---------- o escolhedor de forma ---------- */
+/* Era um quadrado de cor por forma, e obrigava a adivinhar qual era qual.
+   Com o desenho da mesa, escolhe-se pelo que se vê. */
+.formas{ display:flex; gap:.3rem; flex-wrap:wrap; }
+.formas button{ background:none; border:1.5px solid var(--line); border-radius:10px;
+  padding:.15rem; cursor:pointer; line-height:0; transition:border-color .12s, background .12s; }
+.formas button:hover{ border-color:var(--gold-soft); background:var(--gold-pale); }
+.formas button.on{ border-color:var(--gold); background:var(--gold-pale);
+  box-shadow:0 0 0 2px var(--ring); }
+
+/* ---------- na lista de mesas ---------- */
+.mesa-item .mesa-ico{ margin-right:.2rem; }

@@ -78,6 +78,11 @@ const entrar = async (ctx, user, pass) => {
   ok(d && d.success, 'criou a conta de prova');
   const uid = d.id;
 
+  // Um casamento criado aqui dentro nasce com licença em vigor, e essa licença
+  // trava o arquivo — e tira-o do menu. A janela que se quer provar é a de
+  // arquivar, por isso decide-se primeiro a licença, que é a ordem nova.
+  await api('lic_revogar', { casamento: cid, motivo: 'Prova das janelas ' + marca });
+
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   await admin.waitForTimeout(600);
 
@@ -228,6 +233,7 @@ const entrar = async (ctx, user, pass) => {
 
   // ---------- limpeza ----------
   await api('utilizador_apagar&id=' + uid, {});
+  await api('lic_revogar', { casamento: cid2, motivo: 'Fim da prova ' + marca });
   await api('casamento_estado&id=' + cid2 + '&estado=arquivado', {});
   await api('casamento_apagar&id=' + cid2, {});
 

@@ -353,7 +353,13 @@
   window.catInlineApagar = async function () {
     var id = $('md-categoria').value;
     if (!id) return;
-    if (!confirm('Apagar esta categoria?\n\nAs despesas ficam — passam a «sem categoria».')) return;
+    const r = await licConfirmar({
+      titulo: 'Apagar esta categoria?',
+      icone: '🏷️', confirmar: 'Apagar categoria',
+      texto: 'As <b>despesas ficam</b> — passam a «sem categoria», e os valores não mudam.'
+           + '<br><br>Só se perde a arrumação.'
+    });
+    if (!r.sim) return;
     var d = await window.api('orc_categoria_apagar&id=' + id, { method: 'POST' });
     if (!d || !d.success) return;
     await carregar();
@@ -468,7 +474,13 @@
   window.guardarDespesa = guardarDespesa;
 
   window.orcApagarDespesa = async function (id) {
-    if (!confirm('Apagar esta despesa?\n\nAs suas parcelas e a fatura vão com ela. Isto não se desfaz.')) return;
+    const r = await licConfirmar({
+      titulo: 'Apagar esta despesa?',
+      icone: '🗑️', perigo: true, confirmar: 'Apagar despesa',
+      texto: 'As <b>prestações</b> já registadas e a <b>fatura</b> vão com ela.'
+           + '<br><br><b>Isto não se desfaz.</b>'
+    });
+    if (!r.sim) return;
     var d = await window.api('orc_despesa_apagar&id=' + id, { method: 'POST' });
     if (d && d.success) { toast('Despesa apagada.'); carregar(); }
   };
@@ -495,7 +507,13 @@
   });
 
   window.orcApagarFatura = async function (id) {
-    if (!confirm('Remover a fatura desta despesa?')) return;
+    const r = await licConfirmar({
+      titulo: 'Remover a fatura desta despesa?',
+      icone: '📄', confirmar: 'Remover fatura',
+      texto: 'O ficheiro é <b>apagado do servidor</b>. A despesa e os pagamentos ficam '
+           + 'como estão.<br><br>Pode anexar outra fatura depois.'
+    });
+    if (!r.sim) return;
     var d = await window.api('orc_despesa_fatura_apagar&id=' + id, { method: 'POST' });
     if (!d || !d.success) return;
     toast('Fatura removida.');

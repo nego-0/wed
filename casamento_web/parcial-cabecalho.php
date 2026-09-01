@@ -90,9 +90,14 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
             if (!podeModulo($modulo)) unset($itens[$chave]);
         }
     }
-    // A Licença é do casal: o porteiro não pede planos nenhuns, e quem responde
-    // pela casa trata das licenças na página dos casamentos.
-    if (!function_exists('ehAdmin') || !ehAdmin() || ehPessoalPlataforma()) unset($itens['licenca']);
+    // A Licença é do casal — o porteiro não pede planos nenhuns.
+    //
+    // Quem responde pela casa também a vê, mas só quando tem um casamento
+    // aberto: é a forma de ir ver, do lado de dentro, exactamente o que o casal
+    // vê. A decisão continua a tomar-se em Casamentos → Licenças; esta página,
+    // para o pessoal da plataforma, é de leitura (ver $soVer em licenca.php).
+    if (!function_exists('ehAdmin') || !ehAdmin()) unset($itens['licenca']);
+    elseif (ehPessoalPlataforma() && $semCasamento) unset($itens['licenca']);
     // Sem casamento aberto, as entradas do menu levavam todas ao mesmo sítio:
     // de volta a esta página, porque não há casamento nenhum para mostrar. Um
     // menu que só sabe dizer "não" é pior do que um menu curto.

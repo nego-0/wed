@@ -29,6 +29,10 @@ const entrar = async (ctx, user, pass) => {
   // ---------- o admin da plataforma prepara o terreno ----------
   const admin = await entrar(await b.newContext(), 'admin', 'noivos2026');
   const api = admin._api;
+  // Um casamento criado aqui dentro nasce com licença em vigor, e uma licença em
+  // vigor trava a suspensão e o arquivo — é a ordem nova: decide-se a licença
+  // primeiro. Onde a prova quer fechar a casa, revoga-se antes, como o admin faz.
+  const semLicenca = (id) => api('lic_revogar', { casamento: id, motivo: 'Fim da prova ' + marca });
 
   const casA = await api('casamento_criar', { nome: 'ZZ Casamento A ' + marca, noiva: 'Ana', noivo: 'Alberto' });
   const casB = await api('casamento_criar', { nome: 'ZZ Casamento B ' + marca, noiva: 'Bia', noivo: 'Bruno' });
@@ -97,6 +101,7 @@ const entrar = async (ctx, user, pass) => {
   const criaSemCasa = await recem._api('casamento_criar', { nome: 'ZZ Sem casa ' + marca });
   ok(criaSemCasa && criaSemCasa.success,
      'e, sem casamento aberto, ainda cria casamentos — que é como abre o primeiro');
+  await semLicenca(criaSemCasa.id);
   await api('casamento_estado&id=' + criaSemCasa.id + '&estado=arquivado');
   await api('casamento_apagar&id=' + criaSemCasa.id);
 
@@ -227,6 +232,7 @@ const entrar = async (ctx, user, pass) => {
   // A lista principal é a das casas em funcionamento. Um suspenso sai dela e vai
   // para a sua secção: misturados, a lista deixava de responder à pergunta que
   // se lhe faz de manhã — em quantos casamentos estamos a trabalhar.
+  await semLicenca(alvo.id);
   await api('casamento_estado&id=' + alvo.id + '&estado=suspenso');
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   await admin.waitForTimeout(900);
@@ -389,7 +395,9 @@ const entrar = async (ctx, user, pass) => {
   // apagar os casamentos: as contas do casal e do porteiro vão atrás.
   await api('casamento_abrir&id=1');
   for (const id of [casA.id, casB.id, pend.id]) {
-    // Apagar exige arquivar antes — o mesmo caminho que a página faz.
+    // Apagar exige arquivar antes, e arquivar exige a licença fora do caminho —
+    // o mesmo caminho que a página faz.
+    await semLicenca(id);
     await api('casamento_estado&id=' + id + '&estado=arquivado');
     await api('casamento_apagar&id=' + id);
   }

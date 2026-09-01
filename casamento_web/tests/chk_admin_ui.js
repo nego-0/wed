@@ -73,8 +73,17 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(linha && linha.barra, 'com a barra de confirmações a dar a proporção de relance');
   ok(linha && linha.principais.length === 1 && /Abrir|Continuar/.test(linha.principais[0]),
      `só a ação principal está à vista (${(linha && linha.principais).join(', ')})`);
-  ok(linha && linha.escondidas.some(x => /Arquivar|Suspender/.test(x)),
-     'e arquivar/suspender ficaram atrás do "⋯"');
+  // O «⋯» guarda o que não é do dia-a-dia. Fechar a casa só lá está quando
+  // PODE lá estar: um casamento com licença em vigor não se suspende nem
+  // arquiva — decide-se a licença primeiro (ver chk_lic_travao.js). Nesse caso
+  // fica no lugar uma nota a dizer porquê, que é o que a prova aqui procura.
+  const fecharAtras = linha && linha.escondidas.some(x => /Arquivar|Suspender/.test(x));
+  const notaTrava   = await p.evaluate(() =>
+    !!document.querySelector('#lista-casamentos .cas .mm-pop .mm-nota'));
+  ok(fecharAtras || notaTrava,
+     'e o que fecha a casa está atrás do "⋯" — ou explicado, quando a licença o trava');
+  ok(linha && linha.escondidas.some(x => /Editar todos os dados/.test(x)),
+     'com as ações menos usadas todas lá dentro');
 
   // O botão dos três pontos leva um SVG centrado, e não o glifo "⋯" — esse
   // desenhava-se caído para o fundo do botão redondo, seja qual for o tipo de

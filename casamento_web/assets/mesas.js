@@ -150,7 +150,12 @@ const ESTADOS={
   pessoas:[['','Todos os estados'],['confirmado','Confirmados'],['pendente','Pendentes'],['recusado','Recusados']],
   convites:[['','Todos os estados'],['confirmado','Confirmados'],['parcial','Parciais'],['pendente','Pendentes'],['recusado','Recusados']]
 };
-const htmlFormas=sel=>FORMAS.map(([v,l])=>`<button type="button" data-forma="${v}" class="${v===sel?'on':''}" title="${l}"><span class="fsw fsw-${v}"></span></button>`).join('');
+// O escolhedor de forma mostra a MESA, e não um quadrado de cor: cada botão é
+// o desenho da planta, com as cadeiras à volta. Escolhe-se pelo que se vê, e
+// não por adivinhar qual dos rectângulos é a «comprida».
+const htmlFormas=sel=>FORMAS.map(([v,l])=>`<button type="button" data-forma="${v}" class="${v===sel?'on':''}" title="${l}">`
+  + mesaIcone({forma:v, capacidade:v==='comprida'?10:v==='ferradura'?12:v==='oval'?8:6,
+               rotulo:l}, {tam:30, numero:false}) + `</button>`).join('');
 const htmlCores=sel=>CORES.map(([v,l])=>`<button type="button" data-cor="${v}" class="${v===sel?'on':''}" title="${l}"><span class="csw csw-${v}"></span></button>`).join('');
 function ligarPicker(container, attr, cb){
   container.addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return;
@@ -637,7 +642,13 @@ async function guardarMesaEd(){
 }
 async function eliminar(id){
   const m=MESAS.find(x=>x.id===id); const nome=m?m.nome:'esta mesa';
-  if(!confirm(`Eliminar a mesa "${nome}"? Os convites e pessoas sentados ficam sem mesa.`)) return;
+  const r = await licConfirmar({
+    titulo: 'Eliminar a mesa «' + licEsc(nome) + '»?',
+    icone: '🪑', perigo: true, confirmar: 'Eliminar mesa',
+    texto: 'Os <b>convites e pessoas sentados ficam sem mesa</b> — ninguém é apagado, só '
+         + 'perdem o lugar.<br><br>A mesa sai da planta, e para a ter de volta cria-se outra.'
+  });
+  if (!r.sim) return;
   const d=await api('mesa_delete&id='+id);
   if(!d.success) return toast(d.message||'Erro.',true);
   MESAS=normMesas(d.mesas); if(SEL===id){ SEL=null; activeTab='pessoas'; }
