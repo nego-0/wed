@@ -260,12 +260,24 @@ $MAPA_LOCAL = [
 
     <div class="painel">
       <h3>Quem entra neste casamento</h3>
-      <div class="dica">Além de vós, podem convidar <b>porteiros</b>. O porteiro só vê a porta:
-        procura convites e regista entradas, e mais nada. Convide-o pelo email — se ainda não
-        tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.</div>
+      <?php // Convidar um porteiro só faz sentido com o «Controlo à porta» na
+            // licença: sem esse módulo, a conta entrava e não encontrava porta
+            // nenhuma para guardar. A API recusa pelo mesmo motivo. ?>
+      <?php $temPorta = podeModulo('porta'); ?>
+      <div class="dica"><?= $temPorta
+        ? 'Além de vós, podem convidar <b>porteiros</b>. O porteiro só vê a porta:
+           procura convites e regista entradas, e mais nada. Convide-o pelo email — se ainda não
+           tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.'
+        : 'Aqui vê-se quem tem acesso a este casamento.' ?></div>
       <div id="lista-acessos"><div class="dica">A carregar…</div></div>
 
-      <?php if (!$soVer): ?>
+      <?php if (!$temPorta): ?>
+      <div class="dica" style="margin:.9rem 0 0">O <b>Controlo à porta</b> não faz parte da vossa
+        licença, por isso não há porteiro a convidar. <a href="licenca.php?quero=porta">Ver o que
+        inclui</a>.</div>
+      <?php endif; ?>
+
+      <?php if (!$soVer && $temPorta): ?>
       <div class="dica" style="margin:.9rem 0 .3rem"><b>Convidar um porteiro</b></div>
       <div class="lf" style="grid-template-columns:1.4fr 1.4fr auto;align-items:start">
         <div class="campo"><label for="a-email">Email do porteiro</label>

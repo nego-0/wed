@@ -110,12 +110,18 @@ const entrar = async (ctx, u, s) => {
   // ---------- 6. registo público com licença desejada e porteiro ----------
   const regEmail = 'reg' + marca + '@ex.pt';
   const regPort  = 'regporta' + marca + '@ex.pt';
+  // O plano tem de trazer o «Controlo à porta»: sem esse módulo não se cria
+  // conta de porteiro nenhuma (ver chk_porteiro_licenca.js).
+  const catReg = (await api('lic_catalogo')).catalogo;
+  const escPorta = catReg.modulos.find(m => m.chave === 'porta').escaloes[0].id;
+  const escConvR = catReg.modulos.find(m => m.chave === 'convidados').escaloes[0].id;
   const pub = await admin.evaluate(async (d) => {
     const r = await fetch('api.php?action=registo_publico', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
     return r.json();
   }, { noiva: 'Rosa', noivo: 'Rui', email: regEmail, senha: 'segredo12345',
-       licenca_meses: 12, porteiro_email: regPort, porteiro_senha: 'segredo12345' });
+       licenca_meses: 12, porteiro_email: regPort, porteiro_senha: 'segredo12345',
+       licenca: { pacote: 0, escaloes: [escConvR, escPorta], meses: 12, aceito: true } });
   ok(pub && pub.success, 'o registo público entra na fila');
   const regCid = pub.casamento;
   const linha = sql(`SELECT CONCAT(estado,'|',licenca_meses,'|',IFNULL(licenca_ate,'NULL')) FROM cw_casamentos WHERE id=${regCid}`);

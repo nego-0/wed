@@ -577,8 +577,16 @@ if ($acao === 'registo_publico') {
 
     // A conta do porteiro, se o casal a quis já indicar. Entra 'pendente' como o
     // casamento: passa a ativa quando o admin aprovar (retomarContasDoCasamento).
+    //
+    // Mas só se o plano escolhido trouxer o «Controlo à porta». Sem esse
+    // módulo, o porteiro entrava e não tinha porta nenhuma para guardar: uma
+    // conta a mais na equipa, com uma senha a circular, para não fazer nada. O
+    // formulário já esconde estes campos quando o plano não o inclui; isto é a
+    // segunda tranca, para quem chame a API à mão.
+    $portaNaLicenca = licPlanoTemModulo($conn, (array)($d['licenca'] ?? []), 'porta');
     $portEmail = mb_strtolower(trim((string)($d['porteiro_email'] ?? '')));
-    if ($portEmail !== '' && filter_var($portEmail, FILTER_VALIDATE_EMAIL) && $portEmail !== $email) {
+    $porteiroIgnorado = ($portEmail !== '' && !$portaNaLicenca);
+    if ($portaNaLicenca && $portEmail !== '' && filter_var($portEmail, FILTER_VALIDATE_EMAIL) && $portEmail !== $email) {
         $portSenha = (string)($d['porteiro_senha'] ?? '');
         if (mb_strlen($portSenha) >= 8) {
             $ph = password_hash($portSenha, PASSWORD_DEFAULT);
@@ -609,7 +617,182 @@ if ($acao === 'registo_publico') {
     }
 
     registar($conn, 'registo_publico', $nomeConta, $email);
-    ok(['casamento' => $cid, 'dados_do_evento' => $gravadas, 'pedido' => $pedido]);
+    ok(['casamento' => $cid, 'dados_do_evento' => $gravadas, 'pedido' => $pedido,
+        // Se vieram dados de porteiro sem o módulo que os justifica, a conta não
+        // se criou — e diz-se, para o casal não ficar à espera dela.
+        'porteiro_ignorado' => $porteiroIgnorado]);
+}
+
+// ============================================================
+// ATENDIMENTO — a caixa de perguntas das páginas públicas
+//
+// Quem chega ao login ou à inscrição com uma dúvida não tinha por onde a pôr:
+// fechava a página e ia-se embora, e nunca se ficava a saber porquê. As
+// perguntas são sempre as mesmas meia dúzia — quanto custa, como funciona, se
+// é preciso pagar já —, e por isso não é preciso ninguém do outro lado a
+// teclar: chegam as respostas já escritas, e os contactos para quem precise
+// mesmo de falar com uma pessoa.
+// ============================================================
+
+/** As definições do atendimento (vivem no casamento 0: são da casa). */
+function atendimentoDefs(mysqli $conn): array {
+    global $P;
+    $d = [];
+    $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes
+                        WHERE casamento_id=0 AND chave LIKE 'atendimento.%'");
+    if ($r) while ($x = $r->fetch_row()) $d[substr((string)$x[0], 12)] = (string)$x[1];
+    return $d + ['ativo' => '0', 'nome' => 'Atendimento', 'cargo' => '', 'foto' => '',
+                 'saudacao' => '', 'telefone' => '', 'whatsapp' => '', 'email' => '',
+                 'horario' => ''];
+}
+
+/** As perguntas. $todas inclui as desligadas — é a vista do admin. */
+function atendimentoFaq(mysqli $conn, bool $todas = false): array {
+    global $P;
+    $onde = $todas ? '' : 'WHERE ativo=1';
+    $r = @$conn->query("SELECT id, pergunta, resposta, ordem, ativo FROM {$P}atendimento_faq
+                        $onde ORDER BY ordem, id");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $x['id'] = (int)$x['id']; $x['ordem'] = (int)$x['ordem']; $x['ativo'] = (int)$x['ativo'];
+        $out[] = $x;
+    }
+    return $out;
+}
+
+if ($acao === 'atendimento_publico') {
+    // Sem sessão nenhuma: é para quem ainda não entrou. Devolve só o que se
+    // mostra, e nada mais — desligado, não devolve sequer as perguntas.
+    $d = atendimentoDefs($conn);
+    if ((string)$d['ativo'] !== '1') { ok(['ativo' => false]); }
+    ok(['ativo' => true,
+        'atendente' => ['nome' => $d['nome'], 'cargo' => $d['cargo'], 'foto' => $d['foto']],
+        'saudacao'  => $d['saudacao'],
+        'contactos' => ['telefone' => $d['telefone'], 'whatsapp' => $d['whatsapp'],
+                        'email' => $d['email'], 'horario' => $d['horario']],
+        'perguntas' => atendimentoFaq($conn, false)]);
+}
+
+if ($acao === 'atendimento_ler') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê o atendimento.');
+    ok(['def' => atendimentoDefs($conn), 'perguntas' => atendimentoFaq($conn, true)]);
+}
+
+if ($acao === 'atendimento_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita o atendimento.');
+    exigirCsrf();
+    $d = corpo();
+    $campos = [
+        'ativo'    => !empty($d['ativo']) ? '1' : '0',
+        'nome'     => mb_substr(trim((string)($d['nome'] ?? '')), 0, 80),
+        'cargo'    => mb_substr(trim((string)($d['cargo'] ?? '')), 0, 80),
+        'saudacao' => mb_substr(trim((string)($d['saudacao'] ?? '')), 0, 600),
+        'telefone' => mb_substr(trim((string)($d['telefone'] ?? '')), 0, 40),
+        'whatsapp' => mb_substr(trim((string)($d['whatsapp'] ?? '')), 0, 40),
+        'email'    => mb_substr(trim((string)($d['email'] ?? '')), 0, 120),
+        'horario'  => mb_substr(trim((string)($d['horario'] ?? '')), 0, 120),
+    ];
+    if ($campos['nome'] === '') erro('Dê um nome a quem atende — é o que aparece na caixa.');
+    if ($campos['email'] !== '' && !filter_var($campos['email'], FILTER_VALIDATE_EMAIL))
+        erro('O email de contacto é inválido.');
+    foreach ($campos as $ch => $vl) {
+        $chave = 'atendimento.' . $ch;
+        $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,?,?)
+                              ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        if (!$st) continue;
+        $st->bind_param('ss', $chave, $vl);
+        @$st->execute();
+    }
+    registar($conn, 'atendimento_guardar', $campos['nome'],
+             $campos['ativo'] === '1' ? 'ligado' : 'desligado');
+    ok(['def' => atendimentoDefs($conn)]);
+}
+
+if ($acao === 'atendimento_faq_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita as perguntas.');
+    exigirCsrf();
+    $d = corpo();
+    $id  = (int)($d['id'] ?? 0);
+    $per = mb_substr(trim((string)($d['pergunta'] ?? '')), 0, 200);
+    $res = mb_substr(trim((string)($d['resposta'] ?? '')), 0, 4000);
+    $ord = max(0, min(9999, (int)($d['ordem'] ?? 0)));
+    $atv = !empty($d['ativo']) ? 1 : 0;
+    if ($per === '') erro('Escreva a pergunta.');
+    if ($res === '') erro('Escreva a resposta — uma pergunta sem resposta não serve de nada.');
+    if ($id > 0) {
+        $st = $conn->prepare("UPDATE {$P}atendimento_faq
+                              SET pergunta=?, resposta=?, ordem=?, ativo=? WHERE id=?");
+        $st->bind_param('ssiii', $per, $res, $ord, $atv, $id);
+        if (!$st->execute()) erro('Não foi possível guardar a pergunta.');
+    } else {
+        // Sem ordem indicada, entra no fim: é onde uma pergunta nova pertence.
+        if ($ord === 0) {
+            $r = @$conn->query("SELECT COALESCE(MAX(ordem),0)+10 FROM {$P}atendimento_faq");
+            $ord = ($r && ($x = $r->fetch_row())) ? (int)$x[0] : 10;
+        }
+        $st = $conn->prepare("INSERT INTO {$P}atendimento_faq (pergunta,resposta,ordem,ativo)
+                              VALUES (?,?,?,?)");
+        $st->bind_param('ssii', $per, $res, $ord, $atv);
+        if (!$st->execute()) erro('Não foi possível criar a pergunta.');
+        $id = $conn->insert_id;
+    }
+    registar($conn, 'atendimento_pergunta', $per, 'id ' . $id);
+    ok(['id' => $id, 'perguntas' => atendimentoFaq($conn, true)]);
+}
+
+if ($acao === 'atendimento_faq_apagar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma apaga perguntas.');
+    exigirCsrf();
+    $id = (int)($_GET['id'] ?? 0);
+    $st = $conn->prepare("SELECT pergunta FROM {$P}atendimento_faq WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $x = $st->get_result()->fetch_assoc();
+    if (!$x) erro('Pergunta não encontrada.');
+    $st = $conn->prepare("DELETE FROM {$P}atendimento_faq WHERE id=?");
+    $st->bind_param('i', $id);
+    if (!$st->execute()) erro('Não foi possível apagar a pergunta.');
+    registar($conn, 'atendimento_pergunta_apagar', (string)$x['pergunta'], 'id ' . $id);
+    ok(['perguntas' => atendimentoFaq($conn, true)]);
+}
+
+if ($acao === 'atendimento_foto') {
+    // A cara de quem atende. Fica em assets/atendimento/, fora do que é de um
+    // casamento: é da casa, e vê-se antes de haver casamento nenhum.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda a foto.');
+    exigirCsrf();
+    $src = origemUpload('ficheiro', 3 * 1024 * 1024);
+    $ext = strtolower(pathinfo($src['nome'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) erro('Use JPG, PNG ou WEBP.');
+    if (function_exists('finfo_open')) {
+        $fi = finfo_open(FILEINFO_MIME_TYPE);
+        $mt = finfo_file($fi, $src['tmp']); finfo_close($fi);
+        if (!in_array($mt, ['image/jpeg','image/png','image/webp'], true))
+            erro('O conteúdo do ficheiro não corresponde a uma imagem.');
+    }
+    $dir = __DIR__ . '/assets/atendimento';
+    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $nomeFich = 'atendente-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+    if (!moverUpload($src, "$dir/$nomeFich")) erro('Não foi possível guardar a imagem.');
+    $caminho = 'assets/atendimento/' . $nomeFich;
+
+    // A anterior sai: era só desta caixa, e ninguém mais lhe pega.
+    $antiga = (string)(atendimentoDefs($conn)['foto'] ?? '');
+    if ($antiga !== '' && str_starts_with($antiga, 'assets/atendimento/')) @unlink(__DIR__ . '/' . $antiga);
+
+    $chave = 'atendimento.foto';
+    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,?,?)
+                          ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('ss', $chave, $caminho); @$st->execute();
+    ok(['path' => $caminho]);
+}
+
+if ($acao === 'atendimento_foto_tirar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda a foto.');
+    exigirCsrf();
+    $antiga = (string)(atendimentoDefs($conn)['foto'] ?? '');
+    if ($antiga !== '' && str_starts_with($antiga, 'assets/atendimento/')) @unlink(__DIR__ . '/' . $antiga);
+    @$conn->query("UPDATE {$P}definicoes SET valor='' WHERE casamento_id=0 AND chave='atendimento.foto'");
+    ok(['path' => '']);
 }
 
 // ============================================================
@@ -818,6 +1001,52 @@ function licPedido(mysqli $conn, int $cid, string $estado = 'pendente'): ?array 
  * O preço de cada escalão fica congelado no pedido. Um preçário que mude
  * amanhã não pode reescrever aquilo com que o casal concordou hoje.
  */
+/**
+ * O plano PEDIDO inclui este módulo?
+ *
+ * Serve para não criar aquilo que a licença não abre. A conta do porteiro é o
+ * caso: sem o módulo «Controlo à porta», é uma conta que entra e não encontra
+ * nada — e que fica na lista da equipa a dizer que alguém tem um lugar que
+ * afinal não tem. Lê-se o mesmo plano que o pedido vai registar: um pacote traz
+ * os seus escalões, e sem pacote vale a escolha à peça.
+ */
+function licPlanoTemModulo(mysqli $conn, array $d, string $modulo): bool {
+    global $P;
+    $escIds = [];
+    $pacoteId = (int)($d['pacote'] ?? 0);
+    if ($pacoteId > 0) {
+        $r = @$conn->query("SELECT escalao_id FROM {$P}lic_pacote_itens WHERE pacote_id=$pacoteId");
+        if ($r) while ($x = $r->fetch_row()) $escIds[] = (int)$x[0];
+    } else {
+        foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escIds[] = $e; }
+    }
+    if (!$escIds) return false;
+    return licEscaloesTemModulo($conn, $escIds, $modulo);
+}
+
+/** Algum destes escalões é do módulo indicado? */
+function licEscaloesTemModulo(mysqli $conn, array $escIds, string $modulo): bool {
+    global $P;
+    $ids = array_values(array_unique(array_filter(array_map('intval', $escIds))));
+    if (!$ids) return false;
+    $lista = implode(',', $ids);
+    $mod = $conn->real_escape_string($modulo);
+    $r = @$conn->query("SELECT COUNT(*) n FROM {$P}lic_escaloes e
+                        JOIN {$P}lic_modulos m ON m.id = e.modulo_id
+                        WHERE e.id IN ($lista) AND m.chave='$mod' AND e.ativo=1 AND m.ativo=1");
+    return $r && (int)$r->fetch_assoc()['n'] > 0;
+}
+
+/** O casamento JÁ TEM este módulo concedido? */
+function licCasamentoTemModulo(mysqli $conn, int $cid, string $modulo): bool {
+    global $P;
+    if ($cid <= 0) return false;
+    $mod = $conn->real_escape_string($modulo);
+    $r = @$conn->query("SELECT COUNT(*) n FROM {$P}lic_concessoes
+                        WHERE casamento_id=" . (int)$cid . " AND modulo_chave='$mod'");
+    return $r && (int)$r->fetch_assoc()['n'] > 0;
+}
+
 function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
                            ?string &$porque = null): int {
     global $P;
@@ -2738,6 +2967,15 @@ if ($acao === 'casamento_criar') {
         erro('O email da conta do porteiro é inválido.');
     if ($noivosEmail !== '' && $noivosEmail === $porteiroEmail)
         erro('A conta dos noivos e a do porteiro não podem ter o mesmo email.');
+    // Um porteiro sem o módulo «Controlo à porta» é uma conta que entra e não
+    // encontra nada. Diz-se AQUI, antes de se criar o que quer que seja, para o
+    // casamento não ficar a meio. Sem escalões indicados a licença nasce
+    // completa (licConcederTudo, abaixo) e a porta vem lá dentro.
+    $escPedidos = [];
+    foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escPedidos[] = $e; }
+    if ($porteiroEmail !== '' && $escPedidos && !licEscaloesTemModulo($conn, $escPedidos, 'porta'))
+        erro('A licença escolhida não inclui o «Controlo à porta»: sem esse módulo '
+           . 'não há conta de porteiro para criar. Junte o módulo, ou deixe o email em branco.');
 
     // Nasce ativo quando é o admin a criá-lo. O registo público entra como
     // 'pendente' e é o admin que o faz passar a ativo (etapa 5).
@@ -2755,8 +2993,6 @@ if ($acao === 'casamento_criar') {
     // E a licença: um casamento criado aqui dentro nasce com tudo aberto. Quem
     // o criou já decidiu — não há pedido nenhum a analisar. Se se quiser dar-lhe
     // menos, é em «Módulos da licença…», ou mandando os escalões neste pedido.
-    $escPedidos = [];
-    foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escPedidos[] = $e; }
     if ($escPedidos) {
         $lista = implode(',', array_map('intval', array_unique($escPedidos)));
         $rr = @$conn->query("SELECT e.id, e.nome, e.limite, e.editar, e.todos_modelos, m.chave modulo
@@ -3016,6 +3252,11 @@ if ($acao === 'acesso_convidar') {
     // um convite mal dirigido para o casamento passar a ser de outra pessoa.
     if (!ehAdminPlataforma()) $papelCas = 'porteiro';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
+    // A mesma regra do registo: sem o módulo «Controlo à porta», não há porta
+    // para guardar — e a conta entraria para não encontrar nada.
+    if ($papelCas === 'porteiro' && !licCasamentoTemModulo($conn, $cid, 'porta'))
+        erro('A vossa licença não inclui o «Controlo à porta». Junte esse módulo à licença '
+           . 'e depois convide o porteiro.');
 
     // Um email já em uso não se realoca: cada email serve uma só conta.
     $st = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
@@ -3532,6 +3773,10 @@ if ($acao === 'casamento_editar') {
         erro('O email da conta do porteiro é inválido.');
     if ($noivosEmail !== '' && $noivosEmail === $porteiroEmail)
         erro('A conta dos noivos e a do porteiro não podem ter o mesmo email.');
+    // A mesma regra da criação: o porteiro só existe onde há porta para guardar.
+    if ($porteiroEmail !== '' && !licCasamentoTemModulo($conn, $id, 'porta'))
+        erro('A licença deste casamento não inclui o «Controlo à porta»: sem esse módulo '
+           . 'não há conta de porteiro para criar. Junte o módulo à licença primeiro.');
 
     $st = $conn->prepare("UPDATE {$P}casamentos SET nome=?, noiva=?, noivo=?, data_evento=? WHERE id=?");
     $dataOuNulo = $data !== '' ? $data : null;

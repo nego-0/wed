@@ -701,6 +701,21 @@
       return Planos;
     },
 
+    /**
+     * A escolha actual inclui este módulo?
+     *
+     * Quem pergunta é a página que tem campos a depender dele — o registo
+     * esconde a conta do porteiro enquanto o plano não trouxer a «porta». Serve
+     * tanto o pacote como a escolha à peça, porque escolha() já resolve os dois.
+     */
+    temModulo: function (chave) {
+      var tem = false;
+      (this.escolha().escaloes || []).forEach(function (id) {
+        var e = escalao(id); if (e && e.modulo === chave) tem = true;
+      });
+      return tem;
+    },
+
     /** A escolha actual, pronta a enviar à API. */
     escolha: function () {
       // As fotografias só contam se o convite digital for mesmo levado — e, num

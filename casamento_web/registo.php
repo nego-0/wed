@@ -26,6 +26,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:flex-start; justify-content:center; padding:1.5rem 1.25rem; }
@@ -200,7 +201,10 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         </div>
       </details>
 
-      <details class="bloco">
+      <!-- Só aparece quando o plano escolhido trouxer o «Controlo à porta»:
+           uma conta de porteiro sem esse módulo entra e não encontra porta
+           nenhuma para guardar. Ver aoMudar(), mais abaixo. -->
+      <details class="bloco" id="bloco-porteiro" hidden>
         <summary><span class="chev">›</span>Conta do porteiro<span class="op">opcional</span></summary>
         <div class="bloco-corpo">
           <div class="nota" style="margin:0 0 .8rem">Quem regista as entradas à porta. Se a criarem, precisa das duas coisas —
@@ -375,7 +379,8 @@ async function carregarPlanos(){
                  || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
     if (!temAlgo) throw new Error('catálogo vazio');
     Planos.montar('reg-planos', d.catalogo,
-                  { moeda: d.moeda, seccoes: d.seccoes_foto || [] });
+                  { moeda: d.moeda, seccoes: d.seccoes_foto || [], aoMudar: porteiroConformePlano });
+    porteiroConformePlano();
   } catch (e) {
     // Sem preçário não se pode escolher plano nenhum, mas a inscrição não pode
     // ficar refém disso: esconde-se a montra e o casal inscreve-se na mesma. A
@@ -396,6 +401,24 @@ $('reg-ver-pol').addEventListener('click', () => {
 });
 $('reg-aceite').addEventListener('change', () => $('reg-aceite-cx').classList.remove('mau'));
 
+// ---------- porteiro: só quando a licença abre a porta ----------
+// Pedir a conta do porteiro a quem não leva o «Controlo à porta» é pedir uma
+// senha para uma porta que não existe: a conta entrava e não encontrava nada.
+// O bloco aparece e desaparece conforme o plano, e, ao desaparecer, leva
+// consigo o que lá estivesse escrito — senão ficava a viajar escondido no
+// pedido e a ser recusado do outro lado, sem ninguém perceber porquê.
+function porteiroConformePlano(){
+  const bloco = $('bloco-porteiro'); if (!bloco) return;
+  const tem = !!(window.Planos && Planos.temModulo && Planos.temModulo('porta'));
+  bloco.hidden = !tem;
+  if (!tem){
+    bloco.open = false;
+    $('porteiro_email').value = ''; $('porteiro_senha').value = '';
+    PORT_TOCADO = false;
+    marca('porteiro_email', ''); marca('porteiro_senha', '');
+  }
+}
+
 // ---------- porteiro: sugestão de utilizador único, a partir dos nomes ----------
 function slug(s){
   return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -405,6 +428,7 @@ let PORT_TOCADO = false;
 $('porteiro_email').addEventListener('input', () => { PORT_TOCADO = true; });
 function sugerirPorteiro(){
   if (PORT_TOCADO) return;
+  const bloco = $('bloco-porteiro'); if (bloco && bloco.hidden) return;   // sem porta, sem porteiro
   const base = [slug(val('noiva')), slug(val('noivo'))].filter(Boolean).join('-') || 'casamento';
   const suf = Math.random().toString(36).slice(2, 5);
   const host = (location.hostname || 'convite.local').replace(/^www\./, '');
@@ -514,5 +538,6 @@ async function enviar(){
 }
 </script>
 <?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
+<script src="<?= asset('assets/atendimento.js') ?>"></script>
 </body>
 </html>
