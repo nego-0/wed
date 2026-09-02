@@ -71,16 +71,33 @@ $CAS = casalInfo(defsAtuais($conn));
   .legenda .lg{ display:inline-flex; align-items:center; gap:.4rem;
     background:var(--cream); border:1px solid var(--line); border-radius:50px;
     padding:.22rem .6rem .22rem .45rem; font-size:.82rem; color:var(--ink); line-height:1.2; }
-  .legenda .lg i{ width:11px; height:11px; border-radius:50%; flex:none;
-    box-shadow:0 0 0 2px rgba(255,255,255,.8) inset; }
   .legenda .lg b{ font-weight:600; }
   .legenda .lg .n{ font-variant-numeric:tabular-nums; font-weight:700;
     background:#fff; border:1px solid var(--line); border-radius:50px;
     padding:0 .38rem; font-size:.78rem; }
-  .legenda .lg.zero{ opacity:.5; }
-  .lg-vazia i{ background:#b7bbb5; } .lg-parcial i{ background:var(--gold); }
-  .lg-cheia i{ background:#1f7a3d; } .lg-excede i{ background:var(--danger); }
-  .legenda .lg-excede{ border-color:var(--danger); }
+  .legenda .lg.zero{ opacity:.45; }
+
+  /* ------------------------------------------------------------
+     AS QUATRO CORES DO ESTADO
+     ------------------------------------------------------------
+     Eram quatro tons que se confundiam — e um deles era var(--gold),
+     que em alguns temas sai VERDE: «a encher» e «completa» ficavam da
+     mesma cor, que é precisamente a distinção que interessa. Passam a
+     ser quatro cores fixas, escolhidas para se separarem à primeira:
+     cinza, âmbar, verde, vermelho. E não é só a cor a dizê-lo — o
+     sinal muda de FEITIO conforme o estado, para quem não distingue
+     cores continuar a ler a planta. */
+  body{ --est-vazia:#8E9A94; --est-parcial:#E08A1E; --est-cheia:#1F7A3D; --est-excede:#C0392B; }
+  .dot-vazia,   .lg-vazia  { --est:var(--est-vazia); }
+  .dot-parcial, .lg-parcial{ --est:var(--est-parcial); }
+  .dot-cheia,   .lg-cheia  { --est:var(--est-cheia); }
+  .dot-excede,  .lg-excede { --est:var(--est-excede); }
+  .legenda .lg i{ width:14px; height:14px; border-radius:50%; flex:none; box-sizing:border-box;
+    border:2px solid var(--est); background:#fff; }
+  .legenda .lg-parcial i{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
+  .legenda .lg-cheia i, .legenda .lg-excede i{ background:var(--est); }
+  .legenda .lg:not(.zero){ border-color:var(--est); }
+  .legenda .lg-excede:not(.zero){ background:#fdf1ef; }
 
   /* Canvas de tamanho FIXO (a moldura não muda com o zoom): é a janela de scroll.
      O tamanho é definido pelo utilizador (arrastar as bordas) e guardado na BD.
@@ -128,17 +145,41 @@ $CAS = casalInfo(defsAtuais($conn));
   body.mesas-max .icon-btn .i-exp{ display:none; }
   body.mesas-max .icon-btn .i-comp{ display:inline-flex; }
 
-  /* Modo maximizado: a planta ocupa o ecrã, mantendo o conjunto de abas ao lado */
+  /* ------------------------------------------------------------
+     MODO MAXIMIZADO — o ecrã inteiro para a planta
+     ------------------------------------------------------------
+     «Maximizar» dava uma planta um pouco maior dentro da mesma página:
+     continuava a haver cabeçalho do navegador, margens largas, e o
+     painel do lado a ocupar 380px que ninguém podia dispensar. Agora
+     pede-se ECRÃ INTEIRO ao navegador, aperta-se tudo o que não é a
+     planta, e o painel do lado abre e fecha — com ele fechado, o
+     salão fica com o ecrã todo. */
   body.mesas-max{ overflow:hidden; }
   body.mesas-max .container{ position:fixed; inset:0; z-index:1000; max-width:none; width:100%; margin:0;
-    padding:1rem 1.2rem; overflow:hidden;
+    padding:.55rem .7rem; overflow:hidden;
     background:linear-gradient(160deg,var(--ivory) 0%, var(--cream) 100%); }
   body.mesas-max .topo, body.mesas-max .stats-mesa, body.mesas-max .barra-add{ display:none; }
   body.mesas-max .rz{ display:none; }
-  body.mesas-max .painel-mesas{ position:static; }
-  body.mesas-max .tab-body{ max-height:calc(100vh - 9rem); }
+  body.mesas-max #dica-planta{ display:none; }
+  body.mesas-max .layout{ grid-template-columns:1fr 340px; gap:.7rem;
+    height:calc(100vh - 1.1rem); align-items:stretch; }
+  body.mesas-max .planta-cartao{ display:flex; flex-direction:column; min-height:0;
+    padding:.6rem .7rem; box-sizing:border-box; }
+  body.mesas-max .planta-topo, body.mesas-max .legenda{ margin-bottom:.5rem; }
+  body.mesas-max .canvas-wrap{ flex:1 1 auto; min-height:0; display:block; }
+  body.mesas-max .painel-mesas{ position:static; min-height:0; }
+  body.mesas-max .tabset{ height:100%; min-height:0; box-sizing:border-box; }
+  body.mesas-max .tab-body{ flex:1 1 auto; max-height:none; min-height:0; }
+  /* Painel fechado: o canvas fica com a largura toda. O botão que o fecha é o
+     mesmo que o abre — está sempre na barra, e por isso nunca se perde. */
+  body.mesas-max.painel-fechado .layout{ grid-template-columns:1fr; }
+  body.mesas-max.painel-fechado .painel-mesas{ display:none; }
+  #btn-painel{ display:none; }
+  body.mesas-max #btn-painel{ display:inline-flex; }
+  body.mesas-max.painel-fechado #btn-painel{ border-color:var(--forest); color:var(--forest); background:var(--cream); }
   /* Travas contra arrastos acidentais (ficam à esquerda do zoom) */
-  .bloqueios{ display:inline-flex; gap:.7rem; align-items:center; margin-right:.2rem; }
+  .bloqueios{ display:inline-flex; gap:.5rem; align-items:center; margin-right:.2rem; }
+  .bloqueios .blq-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; }
   .bloqueios label{ display:inline-flex; align-items:center; gap:.3rem; font-size:.78rem;
                     color:#7a8078; cursor:pointer; white-space:nowrap; }
   .bloqueios input{ width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
@@ -168,6 +209,17 @@ $CAS = casalInfo(defsAtuais($conn));
     padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
   .zoombar button:first-child{ border-left:0; }
   .zoombar button.on{ background:var(--forest); color:#fff; }
+  .zoombar button:hover{ background:var(--cream); }
+  .zoombar button.on:hover{ background:var(--forest-deep); }
+  /* Tamanho do nome das mesas: menos / valor / mais. Carregar no valor repõe o
+     tamanho de origem — é o gesto que se procura depois de exagerar. */
+  #rotbar .rt-val{ font-variant-numeric:tabular-nums; min-width:2.4em; }
+  /* Arrastar o FUNDO do canvas desloca a vista, como num mapa. Antes só as
+     barras de scroll o faziam, e para chegar a uma zona vazia — que é onde a
+     mesa nova vai — havia que caçar a barra com o rato. */
+  .planta{ cursor:grab; }
+  body.bloq-scroll .planta{ cursor:default; }
+  body.a-panorar, body.a-panorar .planta, body.a-panorar .mesa-node{ cursor:grabbing; }
   .planta .dica-vazia{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     color:#a7ad9f; font-size:.9rem; text-align:center; padding:1rem; }
 
@@ -182,7 +234,8 @@ $CAS = casalInfo(defsAtuais($conn));
      Havia aqui um segundo desenho da mesma mesa, feito de border-radius e
      clip-path, e ele não sabia dizer quantos lugares a mesa tinha. */
   .mesa-node{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
-    width:var(--d); height:var(--d); transform:translate(-50%,-50%); cursor:grab;
+    width:var(--d); height:var(--d);
+    transform:translate(-50%,-50%) rotate(var(--rot, 0deg)); cursor:grab;
     display:flex; align-items:center; justify-content:center; text-align:center;
     color:var(--ink); border-radius:14px; transition:filter .15s; }
   .mesa-node .mesa-ico{ width:100%; height:100%; pointer-events:none; }
@@ -248,11 +301,19 @@ $CAS = casalInfo(defsAtuais($conn));
   .planta-rotulos .mn-nome, .planta-rotulos-topo .mn-nome{
     position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
     /* Encosta-se ao desenho: --fundo diz onde a forma acaba (mesaIcone.fundo),
-       e daí para baixo são só três pixéis de respiração. */
-    transform:translate(-50%, calc((var(--fundo, 81) - 50) * var(--d) / 100 + 3px));
+       e daí para baixo são só três pixéis de respiração. E acompanha a mesa
+       quando ela roda: a origem do transform é o CENTRO da mesa (o ponto onde
+       o rótulo está ancorado), de modo que rodar o faz orbitar à volta dela em
+       vez de o deixar para trás. Uma mesa rodada com o nome direito por baixo
+       é meia rotação. */
+    transform-origin:0 0;
+    transform:rotate(var(--rot, 0deg)) translate(-50%, calc((var(--fundo, 81) - 50) * var(--d) / 100 + 3px));
     font-family:var(--serif); font-weight:600;
-    font-size:clamp(12px, calc(var(--d)*0.105), 15px); line-height:1.2; color:var(--ink);
-    max-width:calc(var(--d)*1.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    /* O tamanho da letra é ESCOLHIDO, e não herdado da mesa: numa planta com
+       mesas de dimensões diferentes, os nomes saíam todos de tamanhos
+       diferentes — e o da mesa pequena era o que menos se lia. */
+    font-size:var(--rot-tam, 13px); line-height:1.2; color:var(--ink);
+    max-width:calc(var(--d)*1.9 + 4em); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     text-align:center;
     background:color-mix(in srgb, var(--ivory) 88%, transparent);
     border-radius:6px; padding:0 .35em;
@@ -263,9 +324,25 @@ $CAS = casalInfo(defsAtuais($conn));
   }
   .planta-rotulos-topo .mn-nome.sel{ color:var(--forest-deep); font-weight:700;
     box-shadow:0 0 0 1.5px var(--forest); background:var(--ivory); }
-  .mesa-node .mn-dot{ position:absolute; top:calc(var(--d)*0.15); right:calc(var(--d)*0.15);
-    width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
-  .dot-vazia{ background:#b7bbb5; } .dot-parcial{ background:var(--gold); } .dot-cheia{ background:#1f7a3d; } .dot-excede{ background:var(--danger); }
+  /* O SINAL DE ESTADO, no canto da mesa.
+     Era um ponto de 9px numa cor que quase não se via. Passa a ser uma
+     medalha: cresce com a mesa (com um chão de 16px, para se ver a 50%
+     de zoom), traz o traço na cor do estado — e o recheio DESENHA a
+     lotação, como um relógio que se enche: vazia é um anel oco, a
+     encher é a fatia proporcional, completa fecha o círculo com um ✓ e
+     excede fecha-o a vermelho com um !. Cor e feitio dizem o mesmo, e
+     por isso um deles pode faltar a quem o lê. */
+  /* Encostada ao TAMPO, e não ao canto da caixa: a caixa do nó é 1.6× o tampo
+     (é onde cabem as cadeiras), e um sinal no canto dela ficava a pairar no
+     vazio, longe da mesa a que pertence. */
+  .mesa-node .mn-dot{ position:absolute; top:calc(var(--d)*0.19); right:calc(var(--d)*0.19);
+    width:max(15px, calc(var(--d)*0.16)); height:max(15px, calc(var(--d)*0.16));
+    box-sizing:border-box; border-radius:50%; border:2px solid var(--est);
+    background:conic-gradient(var(--est) 0 calc(var(--fr, 0) * 1%), #fff 0);
+    box-shadow:0 1px 3px rgba(22,38,30,.3), 0 0 0 1.5px rgba(255,255,255,.9);
+    display:flex; align-items:center; justify-content:center; z-index:2;
+    font-size:max(10px, calc(var(--d)*0.13)); font-weight:700; line-height:1; color:#fff; }
+  .mesa-node .dot-cheia, .mesa-node .dot-excede{ background:var(--est); }
   .mesa-node.drop-alvo{ outline:3px dashed var(--gold); outline-offset:2px; z-index:18; }
 
   /* Quem se senta na mesa escolhida lê-se AO LADO, no painel, e já não em
@@ -326,12 +403,12 @@ $CAS = casalInfo(defsAtuais($conn));
   .btn-gir.larga{ width:auto; padding:0 .45rem; font-size:.72rem; }
   .gir-val{ font-size:.78rem; color:#8a8f88; min-width:2.6em; text-align:center;
     font-variant-numeric:tabular-nums; }
-  /* A rotação é do desenho, não da caixa. E o NÚMERO desanda outro tanto, para
-     ficar direito: um «12» de lado lê-se «21», e uma lotação que se lê ao
-     contrário é pior do que lotação nenhuma. */
-  .mesa-node .mesa-ico{ transition:transform .15s ease; }
-  .mesa-node .mesa-ico .mi-n{ transform:rotate(calc(-1 * var(--rot, 0deg)));
-    transform-box:fill-box; transform-origin:center; }
+  /* Rodar a mesa roda a MESA INTEIRA — o tampo, as cadeiras, a lotação, o
+     sinal de estado e o nome. Antes rodava só o tampo e o resto ficava
+     direito, e o que saía não era uma mesa virada: era um tampo torto com
+     etiquetas espetadas a direito por cima. No salão, quando se roda uma
+     mesa, roda tudo o que está em cima dela. */
+  .mesa-node{ transition:transform .15s ease; }
 
   /* Painel direito: conjunto de abas */
   .painel-mesas{ display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
@@ -359,6 +436,29 @@ $CAS = casalInfo(defsAtuais($conn));
   .chip-drag .cd-meta{ font-size:.72rem; color:#8a8f88; }
   .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
   .roster-vazio{ color:#9aa09a; font-size:.86rem; padding:.4rem 0; }
+
+  /* ------------------------------------------------------------
+     A LISTA DAS MESAS — a primeira pastilha do painel
+     ------------------------------------------------------------
+     Num salão de trinta mesas, achar «a Mesa dos Primos» era percorrer
+     a planta com os olhos. A lista diz-as todas por nome, com o
+     desenho, a lotação e o estado; carregar numa leva a vista até ela.
+     É o índice do salão. */
+  .lista-plantas{ display:flex; flex-direction:column; gap:.35rem; }
+  .lm-linha{ display:flex; align-items:center; gap:.55rem; width:100%; text-align:left;
+    border:1px solid var(--line); background:#fff; border-radius:12px; padding:.38rem .55rem;
+    cursor:pointer; font-family:inherit; color:var(--ink); }
+  .lm-linha:hover{ border-color:var(--gold-soft); background:var(--cream); }
+  .lm-linha.on{ border-color:var(--forest); box-shadow:0 0 0 1.5px var(--forest); background:var(--cream); }
+  .lm-ico{ flex:none; display:flex; align-items:center; }
+  .lm-txt{ flex:1; min-width:0; }
+  .lm-nome{ display:block; font-size:.9rem; font-weight:600; line-height:1.25;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lm-meta{ display:block; font-size:.73rem; color:#8a8f88; line-height:1.2; }
+  .lm-est{ flex:none; width:14px; height:14px; border-radius:50%; box-sizing:border-box;
+    border:2px solid var(--est); background:#fff; }
+  .lm-est.dot-parcial{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
+  .lm-est.dot-cheia, .lm-est.dot-excede{ background:var(--est); }
   .ghost-drag{ position:fixed; z-index:1000; transform:translate(-50%,-50%); pointer-events:none;
     background:var(--forest); color:#fff; font-size:.85rem; padding:.4rem .7rem; border-radius:10px;
     box-shadow:0 10px 26px rgba(0,0,0,.3); white-space:nowrap; }
@@ -432,14 +532,15 @@ $CAS = casalInfo(defsAtuais($conn));
         <span class="titulo">Disposição do salão</span>
         <div class="planta-ctrls">
           <div class="bloqueios">
+            <span class="blq-tit">Fixar</span>
             <label title="Impede arrastar as mesas (continua a poder selecioná-las)">
-              <input type="checkbox" id="bloq-mesas" onchange="guardarBloqueio()"> Fixar mesas
+              <input type="checkbox" id="bloq-mesas" onchange="guardarBloqueio()"> mesas
             </label>
             <label title="Impede redimensionar o canvas pelas bordas">
-              <input type="checkbox" id="bloq-canvas" onchange="guardarBloqueio()"> Fixar canvas
+              <input type="checkbox" id="bloq-canvas" onchange="guardarBloqueio()"> canvas
             </label>
             <label title="Impede deslocar a vista dentro do canvas (a planta fica onde está)">
-              <input type="checkbox" id="bloq-scroll" onchange="guardarBloqueio()"> Fixar vista
+              <input type="checkbox" id="bloq-scroll" onchange="guardarBloqueio()"> vista
             </label>
           </div>
           <div class="zoombar" id="zoombar" title="Nível de zoom">
@@ -447,6 +548,20 @@ $CAS = casalInfo(defsAtuais($conn));
             <button data-zoom="1" class="on" title="100% · vista panorâmica (canvas completo)">100%</button>
             <button data-zoom="1.5" title="150% · vista de área">150%</button>
           </div>
+          <div class="zoombar" id="rotbar" title="Tamanho do nome das mesas">
+            <button type="button" data-rot="-1" title="Diminuir o nome das mesas" aria-label="Diminuir o nome das mesas">A−</button>
+            <button type="button" class="rt-val" id="rot-val" data-rot="0"
+                    title="Tamanho do nome das mesas (carregue para repor)">13</button>
+            <button type="button" data-rot="1" title="Aumentar o nome das mesas" aria-label="Aumentar o nome das mesas">A+</button>
+          </div>
+          <button class="icon-btn" id="btn-centrar" onclick="centrarMesas()"
+                  title="Ir ao centro das mesas" aria-label="Ir ao centro das mesas">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-painel" onclick="togglePainel()"
+                  title="Fechar o painel do lado" aria-label="Fechar o painel do lado">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+          </button>
           <button class="icon-btn" id="btn-max" onclick="toggleMax()" title="Maximizar a planta" aria-label="Maximizar a planta">
             <svg class="i-exp" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
             <svg class="i-comp" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>

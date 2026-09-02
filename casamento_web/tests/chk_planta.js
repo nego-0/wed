@@ -280,17 +280,29 @@ const entrar = async (ctx, user, pass) => {
   await p.waitForTimeout(700);
   ok(await p.evaluate((id) => (MESAS.find(m => m.id === +id) || {}).rotacao, vazia.id) === 15,
      'carregar em ↻ roda a mesa 15°');
+  // Rodar a mesa roda a MESA INTEIRA. Rodar só o tampo e deixar o número, o
+  // sinal de estado e o nome direitos não dava uma mesa virada: dava um tampo
+  // torto com etiquetas espetadas a direito por cima dele. No salão, quando se
+  // vira uma mesa, vira tudo o que está em cima dela.
   const desenho = await p.evaluate((id) => {
+    // Quanto é que uma transformação roda: o segundo termo da matriz (o seno
+    // do ângulo). Zero = está a direito.
+    const seno = (t) => { const m = /matrix\(([^)]+)\)/.exec(t || '');
+      return m ? Math.abs(+m[1].split(',')[1]) : 0; };
     const n = document.querySelector('.mesa-node[data-id="' + id + '"]');
-    return { svg: n.querySelector('svg.mesa-ico').style.transform,
-             caixa: getComputedStyle(n).transform,
-             numero: getComputedStyle(n.querySelector('.mi-n')).transform };
+    const nm = document.querySelector('.mn-nome[data-id="' + id + '"]');
+    return { caixa: seno(getComputedStyle(n).transform),
+             nome:  nm ? seno(getComputedStyle(nm).transform) : 0,
+             sinal: !!n.querySelector('.mn-dot'),
+             numeroSozinho: getComputedStyle(n.querySelector('.mi-n')).transform };
   }, vazia.id);
-  ok(/rotate\(15deg\)/.test(desenho.svg), 'quem roda é o desenho');
-  ok(!/matrix\(0/.test(desenho.caixa),
-     'e não a caixa que se arrasta — senão o que se lhe larga em cima caía torto');
-  ok(desenho.numero !== 'none',
-     'e o número desanda outro tanto, para a lotação se ler direita');
+  const sen15 = Math.sin(15 * Math.PI / 180);
+  ok(Math.abs(desenho.caixa - sen15) < 0.02,
+     `roda a mesa inteira — tampo, cadeiras, lotação e sinal (seno ${desenho.caixa.toFixed(3)})`);
+  ok(Math.abs(desenho.nome - sen15) < 0.02,
+     `e o nome vira com ela, em vez de ficar a direito por baixo (seno ${desenho.nome.toFixed(3)})`);
+  ok(desenho.numeroSozinho === 'none',
+     'o número não se desanda por sua conta: roda porque a mesa rodou, e mais nada');
 
   // A rotação fica guardada: é como a mesa vai estar no salão, não um efeito.
   await p.reload({ waitUntil: 'networkidle' });
@@ -331,7 +343,177 @@ const entrar = async (ctx, user, pass) => {
     CONVIDADOS.filter(g => g.mesa_efetiva_id != null).length);
   ok(folha.sentados === quantosSentados,
      `e a lista nomeia quem se senta em cada mesa (${folha.sentados} de ${quantosSentados})`);
-  await p.evaluate(() => { document.body.classList.remove('a-imprimir-planta'); });
+  // O espaço à volta das mesas não é folha branca desperdiçada: é o salão — a
+  // pista, a distância à parede, o vão da entrada. Recortar ao conjunto das
+  // mesas tirava justamente essa medida a quem monta a sala.
+  const mapa = await p.evaluate(() => {
+    const c = document.querySelector('#folha-planta .folha-mapa');
+    const cl = c.firstElementChild, mundo = document.getElementById('planta');
+    const e = /scale\(([\d.]+)\)/.exec(cl.style.transform || '');
+    return { recorta: /translate/.test(cl.style.transform || ''),
+             largura: parseFloat(c.style.width), escala: e ? +e[1] : 0,
+             mundoW: mundo.scrollWidth };
+  });
+  ok(!mapa.recorta, 'a folha leva o canvas TODO — não recorta ao conjunto das mesas');
+  ok(mapa.escala > 0 && Math.abs(mapa.largura - mapa.mundoW * mapa.escala) < 3,
+     `e o mapa no papel tem a largura do mundo à escala (${mapa.largura} ≈ ${Math.round(mapa.mundoW*mapa.escala)})`);
+  await p.evaluate(() => { document.body.classList.remove('a-imprimir-planta');
+                           document.getElementById('folha-planta').hidden = true; });
+
+  // ---------- 11. o tamanho do nome escolhe-se, e não segue a mesa ----------
+  // O nome era escrito em proporção do desenho: numa planta com mesas de
+  // dimensões diferentes, saíam nomes de tamanhos diferentes — e o da mesa
+  // pequena era sempre o que menos se lia.
+  const tamNomes = () => p.evaluate((ids) => ids.map(id => {
+    const n = document.querySelector('.mn-nome[data-id="' + id + '"]');
+    return n ? parseFloat(getComputedStyle(n).fontSize) : null;
+  }), [vazia.id, cheia.id]);
+  let t0 = await tamNomes();
+  ok(t0[0] !== null && t0[0] === t0[1],
+     `mesas de dimensões diferentes, nomes do mesmo tamanho (${t0[0]}px e ${t0[1]}px)`);
+  await p.click('#rotbar button[data-rot="1"]'); await p.waitForTimeout(300);
+  await p.click('#rotbar button[data-rot="1"]'); await p.waitForTimeout(600);
+  let t1 = await tamNomes();
+  ok(t1[0] === t0[0] + 2, `«A+» aumenta o nome das mesas (${t0[0]} → ${t1[0]}px)`);
+  ok(await p.evaluate(() => document.getElementById('rot-val').textContent) === String(t1[0]),
+     'e a barra mostra o tamanho a que se chegou');
+  await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(1400);
+  ok((await tamNomes())[0] === t1[0],
+     'o tamanho sobrevive a recarregar — é uma escolha da planta, não do momento');
+  await p.click('#rotbar button[data-rot="-1"]'); await p.waitForTimeout(500);
+  ok((await tamNomes())[0] === t1[0] - 1, '«A−» diminui-o');
+  await p.click('#rotbar button[data-rot="0"]'); await p.waitForTimeout(600);
+  ok((await tamNomes())[0] === t0[0], 'e carregar no valor repõe o tamanho de origem');
+
+  // ---------- 12. a primeira pastilha é «Mesas», e leva a vista à mesa ----------
+  // Num salão de trinta mesas, achar «a Mesa dos Primos» era percorrer a planta
+  // com os olhos — e uma mesa fora da vista não se achava de todo.
+  const primeira = await p.evaluate(() => {
+    const b = document.querySelector('.tabset-tabs .rt');
+    return b ? b.textContent.replace(/\d+$/, '').trim() : '';
+  });
+  ok(primeira === 'Mesas', `a primeira pastilha do painel é «Mesas» (${primeira})`);
+  await p.evaluate(() => irTab('mesas')); await p.waitForTimeout(500);
+  const naLista = await p.evaluate(() => ({
+    linhas: document.querySelectorAll('#lista-mesas-planta .lm-linha').length,
+    mesas: MESAS.length,
+    comIcone: document.querySelectorAll('#lista-mesas-planta .lm-linha svg.mesa-ico').length }));
+  ok(naLista.linhas === naLista.mesas,
+     `e lista todas as mesas criadas (${naLista.linhas} de ${naLista.mesas})`);
+  ok(naLista.comIcone === naLista.mesas, 'cada uma com o seu desenho, para se reconhecer sem ler');
+  await p.click('#lista-mesas-planta .lm-linha[data-id="' + vazia.id + '"]');
+  await p.waitForTimeout(1200);
+  const centrada = await p.evaluate((id) => {
+    const v = document.getElementById('planta-viewport');
+    const r = v.getBoundingClientRect();
+    const n = document.querySelector('.mesa-node[data-id="' + id + '"]').getBoundingClientRect();
+    return { dx: Math.abs((n.left + n.width / 2) - (r.left + r.width / 2)),
+             dy: Math.abs((n.top + n.height / 2) - (r.top + r.height / 2)),
+             sel: SEL, aba: activeTab };
+  }, vazia.id);
+  ok(centrada.sel === +vazia.id, 'carregar numa linha escolhe a mesa');
+  ok(centrada.aba === 'mesas',
+     'sem sair da lista — quem percorre o salão mesa a mesa não quer mudar de página a cada passo');
+  ok(centrada.dx < 45 && centrada.dy < 45,
+     `e a vista vai ter com ela, ao centro do canvas (${Math.round(centrada.dx)}, ${Math.round(centrada.dy)} px)`);
+
+  // ---------- 13. arrastar o fundo desloca a vista ----------
+  // Para chegar a uma zona vazia — que é onde a mesa seguinte vai — havia que
+  // caçar a barra de scroll com o rato.
+  // Um ponto do canvas onde não haja mesa nenhuma: é o FUNDO que se arrasta.
+  const fundo = await p.evaluate(() => {
+    const v = document.getElementById('planta-viewport'), r = v.getBoundingClientRect();
+    for (let gx = 0.85; gx >= 0.5; gx -= 0.05)
+      for (let gy = 0.85; gy >= 0.5; gy -= 0.05) {
+        const x = r.left + r.width * gx, y = r.top + r.height * gy;
+        const el = document.elementFromPoint(x, y);
+        if (el && v.contains(el) && !el.closest('.mesa-node')) return { x, y };
+      }
+    return null;
+  });
+  ok(!!fundo, 'há fundo de canvas onde pegar');
+  const antesPan = await p.evaluate(() => {
+    const v = document.getElementById('planta-viewport'); return { l: v.scrollLeft, t: v.scrollTop }; });
+  await p.mouse.move(fundo.x, fundo.y);
+  await p.mouse.down();
+  await p.mouse.move(fundo.x - 100, fundo.y - 80, { steps: 10 });
+  await p.mouse.up();
+  await p.waitForTimeout(500);
+  const depoisPan = await p.evaluate(() => {
+    const v = document.getElementById('planta-viewport'); return { l: v.scrollLeft, t: v.scrollTop }; });
+  ok(depoisPan.l > antesPan.l + 30 && depoisPan.t > antesPan.t + 20,
+     `arrastar o fundo desloca a vista, como num mapa (${antesPan.l}→${depoisPan.l}, ${antesPan.t}→${depoisPan.t})`);
+  ok(await p.evaluate(() => SEL) !== null,
+     'e um arrasto não é um clique: a mesa escolhida não se larga por se ter deslocado a vista');
+  // Há para onde ir: o mundo tem folga para lá da última mesa, e é nessa folga
+  // que a mesa seguinte se põe.
+  ok(await p.evaluate(() => {
+    const c = MESAS.filter(m => m.pos_x != null).map(m => +m.pos_x);
+    return (+getComputedStyle(document.getElementById('planta')).getPropertyValue('--ex') * 100)
+           > Math.max(...c) + 6;
+  }), 'e o mundo sobra para lá da última mesa, para haver área vazia onde pousar a próxima');
+
+  // ---------- 14. o botão do alvo volta ao centro das mesas ----------
+  await p.click('#btn-centrar');
+  await p.waitForTimeout(1200);
+  const aoCentro = await p.evaluate(() => {
+    const v = document.getElementById('planta-viewport'), r = v.getBoundingClientRect();
+    const xs = [], ys = [];
+    document.querySelectorAll('.mesa-node').forEach(n => {
+      const b = n.getBoundingClientRect(); xs.push(b.left + b.width / 2); ys.push(b.top + b.height / 2); });
+    return { dx: Math.abs((Math.min(...xs) + Math.max(...xs)) / 2 - (r.left + r.width / 2)),
+             dy: Math.abs((Math.min(...ys) + Math.max(...ys)) / 2 - (r.top + r.height / 2)) };
+  });
+  ok(aoCentro.dx < 45 && aoCentro.dy < 45,
+     `o alvo põe o conjunto das mesas no meio da vista (${Math.round(aoCentro.dx)}, ${Math.round(aoCentro.dy)} px)`);
+
+  // ---------- 15. a mesa nova nasce à vista ----------
+  // Nascia sempre no canto de cima do mundo: com o salão esticado, quem estava
+  // a trabalhar do outro lado criava uma mesa que não via.
+  await p.evaluate(() => { const v = document.getElementById('planta-viewport');
+                           v.scrollLeft = v.scrollWidth; v.scrollTop = v.scrollHeight; });
+  await p.waitForTimeout(400);
+  const alvoVista = await p.evaluate(() => centroVista());
+  const nomeNova = 'ZZ Nova ' + marca;
+  await p.fill('#nova-nome', nomeNova);
+  await p.fill('#nova-cap', '6');
+  await p.click('.barra-add .btn-ouro');
+  await p.waitForTimeout(1400);
+  const nova = await p.evaluate((n) => {
+    const m = MESAS.find(x => x.nome === n); return m ? { x: +m.pos_x, y: +m.pos_y, id: m.id } : null;
+  }, nomeNova);
+  ok(nova && Math.abs(nova.x - alvoVista.x) < 30 && Math.abs(nova.y - alvoVista.y) < 30,
+     `a mesa nova nasce onde se está a olhar (${nova && Math.round(nova.x)},${nova && Math.round(nova.y)}`
+     + ` para uma vista em ${Math.round(alvoVista.x)},${Math.round(alvoVista.y)})`);
+  if (nova) await api('mesa_delete&id=' + nova.id);
+
+  // ---------- 16. a vista maximizada usa mesmo o ecrã ----------
+  // «Maximizar» dava uma planta um pouco maior dentro da mesma página, com o
+  // painel do lado a comer 380px que ninguém podia dispensar.
+  await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(1400);
+  const larguraCanvas = () => p.evaluate(() =>
+    document.getElementById('planta-viewport').getBoundingClientRect().width);
+  const wNormal = await larguraCanvas();
+  await p.click('#btn-max'); await p.waitForTimeout(800);
+  ok(await p.evaluate(() => document.body.classList.contains('mesas-max')),
+     'maximizar dá o ecrã à planta');
+  const wMax = await larguraCanvas();
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('btn-painel')).display) !== 'none',
+     'e aparece o botão que fecha o painel do lado');
+  await p.click('#btn-painel'); await p.waitForTimeout(800);
+  const wSemPainel = await larguraCanvas();
+  ok(await p.evaluate(() =>
+       getComputedStyle(document.querySelector('.painel-mesas')).display) === 'none',
+     'fechar o painel tira-o mesmo do caminho');
+  ok(wSemPainel > wMax + 200,
+     `e o canvas fica com o espaço dele (${Math.round(wMax)} → ${Math.round(wSemPainel)}px)`);
+  await p.click('#btn-max'); await p.waitForTimeout(800);
+  ok(!await p.evaluate(() => document.body.classList.contains('mesas-max')),
+     'restaurar volta à página normal');
+  ok(await p.evaluate(() =>
+       getComputedStyle(document.querySelector('.painel-mesas')).display) !== 'none',
+     'e traz o painel de volta — escondê-lo fora do modo maximizado era perder as listas');
+  ok(Math.abs(await larguraCanvas() - wNormal) < 3, 'com o canvas do tamanho que tinha');
 
   // ---------- limpeza ----------
   // Devolve-se o canvas ao tamanho que tinha, para as provas seguintes o

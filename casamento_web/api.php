@@ -4112,6 +4112,19 @@ if ($acao === 'planta_size') {
     }
     ok(['canvas'=>plantaConfig($conn)]);
 }
+if ($acao === 'planta_rotulo') {
+    exigirModuloApi('mesas');
+    // Tamanho (px) do nome das mesas. Não segue o tamanho da mesa: é escolha de
+    // quem desenha o salão, e a mesma para todas — senão o nome da mesa pequena
+    // era sempre o que menos se lia.
+    $d = corpo();
+    $v = plantaRotulo($d['rotulo'] ?? PLANTA_ROTULO_PADRAO);
+    $cid = casamentoAtual(); $chave = 'planta.rotulo'; $sv = (string)$v;
+    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (?,?,?)
+                          ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('iss', $cid, $chave, $sv); $st->execute();
+    ok(['canvas' => plantaConfig($conn)]);
+}
 if ($acao === 'planta_bloqueio') {
     exigirModuloApi('mesas');
     // Trava/destrava o arrasto das mesas, o redimensionar do canvas e o

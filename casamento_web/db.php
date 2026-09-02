@@ -2242,6 +2242,17 @@ function mesaEhNoivos(mysqli $conn, int $id): bool {
 }
 
 /**
+ * Tamanho (px) do nome das mesas na planta, dentro de limites que se leem:
+ * abaixo de 9px não se lê, acima de 28px o nome tapa a mesa do lado.
+ */
+const PLANTA_ROTULO_PADRAO = 13;
+const PLANTA_ROTULO_MIN    = 9;
+const PLANTA_ROTULO_MAX    = 28;
+function plantaRotulo($v): int {
+    return max(PLANTA_ROTULO_MIN, min(PLANTA_ROTULO_MAX, (int)$v));
+}
+
+/**
  * Dimensões guardadas do canvas da planta (largura/altura em px), definidas
  * pelo utilizador ao arrastar as bordas. NULL = automático (por defeito).
  */
@@ -2251,16 +2262,20 @@ function plantaConfig(mysqli $conn): array {
     // vista (scroll), contra gestos acidentais. O scroll nasce DESTRAVADO: é
     // como se chega ao que está fora do ecrã, e trancá-lo por omissão era
     // esconder metade da planta a quem tem um monitor pequeno.
-    $cfg = ['largura' => null, 'altura' => null,
+    // rotulo = tamanho (px) do nome das mesas na planta. É escolha de quem
+    // desenha o salão, e não consequência do tamanho da mesa: numa planta com
+    // mesas de dimensões diferentes, os nomes saíam todos diferentes.
+    $cfg = ['largura' => null, 'altura' => null, 'rotulo' => PLANTA_ROTULO_PADRAO,
             'bloq_mesas' => 0, 'bloq_canvas' => 0, 'bloq_scroll' => 0];
     $r = @$conn->query("SELECT chave, valor FROM {$P}definicoes
                         WHERE " . doCasamento() . "
-                          AND chave IN ('planta.largura','planta.altura','planta.bloq_mesas',
-                                        'planta.bloq_canvas','planta.bloq_scroll')");
+                          AND chave IN ('planta.largura','planta.altura','planta.rotulo',
+                                        'planta.bloq_mesas','planta.bloq_canvas','planta.bloq_scroll')");
     if ($r) while ($x = $r->fetch_assoc()) {
         $v = (int)$x['valor'];
         if ($x['chave'] === 'planta.largura'     && $v > 0) $cfg['largura'] = $v;
         if ($x['chave'] === 'planta.altura'      && $v > 0) $cfg['altura']  = $v;
+        if ($x['chave'] === 'planta.rotulo'      && $v > 0) $cfg['rotulo']  = plantaRotulo($v);
         if ($x['chave'] === 'planta.bloq_mesas')            $cfg['bloq_mesas']  = $v === 1 ? 1 : 0;
         if ($x['chave'] === 'planta.bloq_canvas')           $cfg['bloq_canvas'] = $v === 1 ? 1 : 0;
         if ($x['chave'] === 'planta.bloq_scroll')           $cfg['bloq_scroll'] = $v === 1 ? 1 : 0;
