@@ -138,6 +138,7 @@ $conn->query("
         pos_y DECIMAL(6,2) DEFAULT NULL,          -- posição na planta (% vertical, 0-100)
         forma VARCHAR(20) DEFAULT 'redonda',      -- redonda/oval/quadrada/retangular/comprida/ferradura
         cor VARCHAR(20) DEFAULT NULL,             -- cor da mesa (chave da paleta), NULL = marfim
+        rotacao SMALLINT NOT NULL DEFAULT 0,      -- graus (0-359): como a mesa está posta no salão
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -190,7 +191,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 33;
+const ESQUEMA_VERSAO = 34;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1633,6 +1634,17 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
     }
 
+    // v34 — a rotação de cada mesa.
+    //
+    // Um salão real não tem as mesas todas alinhadas com as paredes: uma
+    // comprida encostada à parede do lado fica de pé, uma ferradura abre-se
+    // para o palco. Sem rotação, a planta desenhava sempre tudo ao direito e
+    // deixava de descrever o salão que se ia montar. Graus, 0 = como sempre
+    // esteve — por isso a coluna nasce a zero e nada muda para quem já cá está.
+    if ($versaoAtual < 34) {
+        migColuna($conn, "{$P}mesas", 'rotacao', "SMALLINT NOT NULL DEFAULT 0");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2168,7 +2180,7 @@ function orcamentoResumo(mysqli $conn): array {
  */
 function listarMesas(mysqli $conn): array {
     global $P;
-    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho
+    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho, rotacao
                            FROM {$P}mesas WHERE " . doCasamento() . " ORDER BY (especial='noivos') DESC, nome")->fetch_all(MYSQLI_ASSOC);
     $idx = [];
     $noivosId = 0;

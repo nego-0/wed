@@ -83,7 +83,9 @@ const entrar = async (ctx, user, pass) => {
   // O nome da mesa vive na camada de rótulos, por cima de todas as mesas; o de
   // quem se senta vive no painel do lado, que é de onde se arrasta.
   const letras = () => p.evaluate((mid) => {
-    const nm = document.querySelector('#rotulos .mn-nome[data-id="' + mid + '"]');
+    // Sem prender ao contentor: o rótulo da mesa ESCOLHIDA vive na camada de
+    // cima (#rotulos-topo), para não ficar por baixo de uma mesa vizinha.
+    const nm = document.querySelector('.mn-nome[data-id="' + mid + '"]');
     const mp = document.querySelector('.lista-sentados .nm-pega');
     return { mesa: nm ? parseFloat(getComputedStyle(nm).fontSize) : null,
              pessoa: mp ? parseFloat(getComputedStyle(mp).fontSize) : null,
@@ -247,6 +249,89 @@ const entrar = async (ctx, user, pass) => {
   ok(pega, 'o painel da mesa lista quem lá está sentado');
   ok(pega && pega.arrastavel && pega.tipo === 'pessoa' && pega.temId,
      'e cada nome é a pega do arrasto, com o que é preciso para o largar numa mesa');
+
+  // ---------- 8. o marfim é marfim, e não a cor do tema ----------
+  // As oito cores são as das TOALHAS, e uma toalha não muda de cor porque
+  // alguém trocou o tema do ecrã. O marfim seguia var(--cream): no tema escuro
+  // saía cinzento-escuro, que de marfim não tem nada.
+  await api('mesa_save', { id: vazia.id, nome: nomeVazia, capacidade: 10,
+                           forma: 'redonda', cor: 'neutra' });
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1300);
+  const marfim = await pinta(vazia.id);
+  ok(/251,\s*248,\s*241/.test(marfim.fill),
+     `o marfim é sempre o mesmo marfim (${marfim.fill})`);
+  const noEscuro = await p.evaluate((mid) => {
+    document.documentElement.dataset.tema = 'escuro';
+    const t = document.querySelector('.mesa-node[data-id="' + mid + '"] .mi-t');
+    const f = getComputedStyle(t).fill;
+    delete document.documentElement.dataset.tema;
+    return f;
+  }, vazia.id);
+  ok(/251,\s*248,\s*241/.test(noEscuro),
+     `e continua marfim mesmo com o tema escuro (${noEscuro})`);
+
+  // ---------- 9. rodar a mesa ----------
+  // Um salão real não tem tudo alinhado com as paredes: uma comprida encostada
+  // à parede do lado fica de pé, uma ferradura abre-se para o palco.
+  await p.evaluate((id) => selecionar(id), vazia.id);
+  await p.waitForTimeout(500);
+  await p.click('.rodar .btn-gir[title*="direita"]');
+  await p.waitForTimeout(700);
+  ok(await p.evaluate((id) => (MESAS.find(m => m.id === +id) || {}).rotacao, vazia.id) === 15,
+     'carregar em ↻ roda a mesa 15°');
+  const desenho = await p.evaluate((id) => {
+    const n = document.querySelector('.mesa-node[data-id="' + id + '"]');
+    return { svg: n.querySelector('svg.mesa-ico').style.transform,
+             caixa: getComputedStyle(n).transform,
+             numero: getComputedStyle(n.querySelector('.mi-n')).transform };
+  }, vazia.id);
+  ok(/rotate\(15deg\)/.test(desenho.svg), 'quem roda é o desenho');
+  ok(!/matrix\(0/.test(desenho.caixa),
+     'e não a caixa que se arrasta — senão o que se lhe larga em cima caía torto');
+  ok(desenho.numero !== 'none',
+     'e o número desanda outro tanto, para a lotação se ler direita');
+
+  // A rotação fica guardada: é como a mesa vai estar no salão, não um efeito.
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1300);
+  ok(await p.evaluate((id) => (MESAS.find(m => m.id === +id) || {}).rotacao, vazia.id) === 15,
+     'e a rotação sobrevive a recarregar — ficou guardada');
+  await p.evaluate((id) => selecionar(id), vazia.id);
+  await p.waitForTimeout(500);
+  await p.click('.rodar .btn-gir.larga');
+  await p.waitForTimeout(700);
+  ok(await p.evaluate((id) => (MESAS.find(m => m.id === +id) || {}).rotacao, vazia.id) === 0,
+     '«repor» põe a mesa outra vez ao direito');
+
+  // ---------- 10. o esquema para o papel ----------
+  // No dia, quem monta a sala tem uma folha na mão, não o ecrã à frente.
+  await p.evaluate(() => { window.print = () => { window.__imprimiu = true; }; imprimirPlanta(); });
+  await p.waitForTimeout(500);
+  const folha = await p.evaluate(() => {
+    const f = document.getElementById('folha-planta');
+    return { chamouPrint: !!window.__imprimiu,
+             marcouCorpo: document.body.classList.contains('a-imprimir-planta'),
+             mesasNoMapa: f.querySelectorAll('.folha-mapa .mesa-node').length,
+             nomesNoMapa: f.querySelectorAll('.folha-mapa .mn-nome').length,
+             blocos: f.querySelectorAll('.folha-mesa').length,
+             titulo: (f.querySelector('.folha-cab h1') || {}).textContent || '',
+             guias: f.querySelectorAll('.folha-mapa .guia').length,
+             sentados: f.querySelectorAll('.folha-mesa ol li').length };
+  });
+  ok(folha.chamouPrint && folha.marcouCorpo, 'imprimir manda a folha para a impressora');
+  const quantasMesas = await p.evaluate(() => MESAS.length);
+  ok(folha.mesasNoMapa === quantasMesas,
+     `a folha leva o salão INTEIRO, e não só o que estava à vista (${folha.mesasNoMapa} de ${quantasMesas})`);
+  ok(folha.nomesNoMapa === quantasMesas, 'com o nome de cada mesa');
+  ok(folha.blocos === quantasMesas, 'e, por baixo, um bloco por mesa');
+  ok(folha.guias === 0, 'sem as linhas-guia do arrasto, que no papel não servem para nada');
+  ok(folha.titulo.length > 0, 'com o nome do casal no cabeçalho — uma planta anónima não serve');
+  const quantosSentados = await p.evaluate(() =>
+    CONVIDADOS.filter(g => g.mesa_efetiva_id != null).length);
+  ok(folha.sentados === quantosSentados,
+     `e a lista nomeia quem se senta em cada mesa (${folha.sentados} de ${quantosSentados})`);
+  await p.evaluate(() => { document.body.classList.remove('a-imprimir-planta'); });
 
   // ---------- limpeza ----------
   // Devolve-se o canvas ao tamanho que tinha, para as provas seguintes o

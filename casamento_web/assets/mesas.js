@@ -131,6 +131,97 @@ function toggleMax(){
   $('btn-max').title = maximizado ? 'Restaurar a planta' : 'Maximizar a planta';
   aplicarTamanhoCanvas(); ajustarScrollCanvas(); renderPlanta();
 }
+/**
+ * O esquema de mesas, para o papel.
+ *
+ * No dia, quem monta a sala não tem o ecrã à frente: tem uma folha na mão. E
+ * quem recebe à porta precisa de saber, sem perguntar a ninguém, em que mesa se
+ * senta a família Nunes. A folha leva as duas coisas — o desenho do salão
+ * INTEIRO (mesmo a parte que estava fora da vista, e sem a grelha de fundo, que
+ * só gastaria tinta) e a lista de quem se senta em cada mesa.
+ *
+ * O desenho é o mesmo que está no ecrã: clona-se e encolhe-se até caber na
+ * folha. Redesenhá-lo à parte era arriscar que o papel dissesse uma coisa e o
+ * ecrã outra.
+ */
+function imprimirPlanta(){
+  const folha=$('folha-planta'); if(!folha) return;
+  const mundo=$('planta');
+  const largura=mundo.scrollWidth, altura=mundo.scrollHeight;
+  // A4 deitada com 10mm de margem: ~1030x670 pontos de CSS a 96dpi.
+  // Aproveita-se a folha: uma planta pequena AUMENTA até encher a página, uma
+  // grande encolhe até caber. O tecto de 2.2 é para um salão de duas mesas não
+  // sair impresso do tamanho de um prato.
+  //
+  // Antes disso, recorta-se ao que HÁ. O mundo tem sempre margem de sobra à
+  // volta das mesas — no ecrã é espaço para as arrastar; no papel é folha
+  // branca. Sem o recorte, um salão encostado a um canto saía impresso pequeno
+  // e a um canto.
+  const cx=mundo.getBoundingClientRect();
+  let x0=largura, y0=altura, x1=0, y1=0;
+  mundo.querySelectorAll('.mesa-node, .mn-nome, .noivos-ala').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    x0=Math.min(x0, r.left-cx.left); y0=Math.min(y0, r.top-cx.top);
+    x1=Math.max(x1, r.right-cx.left); y1=Math.max(y1, r.bottom-cx.top);
+  });
+  if(x1<=x0){ x0=0; y0=0; x1=largura; y1=altura; }   // planta vazia: leva-se tudo
+  const M=28;
+  x0=Math.max(0,x0-M); y0=Math.max(0,y0-M);
+  x1=Math.min(largura,x1+M); y1=Math.min(altura,y1+M);
+  const cw=x1-x0, ch=y1-y0;
+  const escala=Math.min(2.2, 1030/cw, 470/ch);
+
+  const clone=mundo.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.style.setProperty('--z', 1);
+  clone.style.width=largura+'px'; clone.style.height=altura+'px';
+  clone.style.transform='scale('+escala.toFixed(4)+') translate('+(-x0)+'px,'+(-y0)+'px)';
+  clone.querySelectorAll('.guia').forEach(g=>g.remove());
+  clone.querySelectorAll('.mesa-node').forEach(n=>n.classList.remove('sel','a-arrastar'));
+  // Os nomes da mesa escolhida vivem noutra camada; na folha não há escolhida.
+  clone.querySelectorAll('.mn-nome').forEach(n=>n.classList.remove('sel'));
+
+  const quando=new Date().toLocaleDateString('pt-PT',{day:'2-digit',month:'long',year:'numeric'});
+  // A data do casamento vem em ISO da base; no papel escreve-se por extenso.
+  const dataFesta=(()=>{ const v=String(window.DATA_EVENTO||'');
+    if(!/^\d{4}-\d{2}-\d{2}/.test(v)) return v;
+    const d=new Date(v+'T12:00:00');
+    return isNaN(d) ? v : d.toLocaleDateString('pt-PT',{day:'2-digit',month:'long',year:'numeric'}); })();
+  const semNoivos=MESAS.filter(m=>!ehNoivos(m)).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const noivos=MESAS.filter(ehNoivos);
+  const lista=noivos.concat(semNoivos).map(m=>{
+    const gente=CONVIDADOS.filter(g=>g.mesa_efetiva_id===m.id)
+                          .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    const cap=+m.capacidade||0;
+    return `<div class="folha-mesa">
+      <h3>${esc(m.nome)}</h3>
+      <div class="meta">${gente.length}${cap?' de '+cap+' lugares':' pessoas'}${m.rotacao?' · rodada '+m.rotacao+'°':''}</div>
+      ${gente.length
+        ? '<ol>'+gente.map(g=>`<li>${esc(g.nome)}</li>`).join('')+'</ol>'
+        : '<div class="ninguem">Ainda ninguém sentado.</div>'}
+    </div>`;
+  }).join('');
+
+  folha.innerHTML=`
+    <div class="folha-cab">
+      <h1>${esc(window.CASAL||'Esquema de mesas')}</h1>
+      <span class="sub">Esquema de mesas${dataFesta?' · '+esc(dataFesta):''}</span>
+      <span class="quando">Impresso a ${esc(quando)}</span>
+    </div>
+    <div class="folha-mapa" style="height:${Math.ceil(ch*escala)}px;width:${Math.ceil(cw*escala)}px"></div>
+    <div class="folha-lista">${lista}</div>`;
+  folha.querySelector('.folha-mapa').appendChild(clone);
+  folha.hidden=false;
+
+  document.body.classList.add('a-imprimir-planta');
+  const limpar=()=>{ document.body.classList.remove('a-imprimir-planta');
+                     folha.hidden=true; folha.innerHTML=''; };
+  window.addEventListener('afterprint', limpar, {once:true});
+  window.print();
+  // Alguns navegadores não disparam afterprint: a rede de segurança.
+  setTimeout(()=>{ if(document.body.classList.contains('a-imprimir-planta')) limpar(); }, 3000);
+}
+
 // Redimensionar arrastando as bordas do canvas.
 let rz=null;
 function iniciarRz(e, dir){
@@ -182,7 +273,8 @@ function ligarPicker(container, attr, cb){
 const numOuNull=v=>(v===null||v===undefined||v==='')?null:+v;
 const normMesas=a=>(a||[]).map(m=>({...m, id:+m.id, capacidade:numOuNull(m.capacidade),
   pos_x:numOuNull(m.pos_x), pos_y:numOuNull(m.pos_y), ocupacao:+m.ocupacao||0, convites:+m.convites||0,
-  forma:m.forma||'redonda', cor:m.cor||'neutra', especial:m.especial||null, tamanho:m.tamanho||null}));
+  forma:m.forma||'redonda', cor:m.cor||'neutra', especial:m.especial||null, tamanho:m.tamanho||null,
+  rotacao:+m.rotacao||0}));
 const normConvites=a=>(a||[]).map(c=>({...c, id:+c.id, mesa_id:numOuNull(c.mesa_id), lugares:+c.lugares||0}));
 const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_id,
   mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id),
@@ -304,6 +396,7 @@ function renderPlanta(){
   // de uma mesa ficava tapado pela mesa desenhada a seguir — e um nome tapado
   // não serve para nada, por muito bem escrito que esteja.
   const rotulos=$('rotulos'); rotulos.innerHTML='';
+  const rotulosTopo=$('rotulos-topo'); rotulosTopo.innerHTML='';
   $('dica-vazia').style.display = MESAS.length ? 'none' : 'flex';
   MESAS.forEach(m=>{
     const cap=+m.capacidade||0, oc=+m.ocupacao||0, st=estadoOcup(m);
@@ -328,16 +421,30 @@ function renderPlanta(){
     node.innerHTML=`<span class="mn-dot dot-${st}"></span>`
       + mesaIcone({ forma, capacidade:cap, ocupacao:oc, nome:m.nome },
                   { tam: Math.round(d*CAIXA) });
+    // A rotação é do DESENHO, não do nó: a caixa que se arrasta e que recebe o
+    // que se lhe larga fica quieta, e o número lá dentro fica direito — uma
+    // lotação de cabeça para baixo não se lê.
+    const rota=+m.rotacao||0;
+    if(rota){
+      const svg=node.querySelector('svg.mesa-ico');
+      if(svg) svg.style.transform='rotate('+rota+'deg)';
+      // O --rot serve ao CSS para desandar o NÚMERO na mesma medida: a mesa
+      // roda, a lotação fica direita. Um «12» de lado lê-se «21».
+      node.style.setProperty('--rot', rota+'deg');
+    }
     planta.appendChild(node);
 
-    // O rótulo, na camada de cima.
+    // O rótulo, na camada de cima. O da mesa escolhida vai para a camada mais
+    // alta de todas, para não ficar por baixo de uma mesa vizinha.
     const rot=document.createElement('span');
     rot.className='mn-nome'+(SEL===m.id?' sel':'');
     rot.dataset.id=m.id;
     rot.style.setProperty('--dbase', (d*CAIXA)+'px');
+    // Onde a forma acaba, para o nome se encostar a ela e não pairar longe.
+    rot.style.setProperty('--fundo', mesaIcone.fundo(forma));
     rot.style.left=posCss(px,'x'); rot.style.top=posCss(py,'y');
     rot.textContent = m.nome + (noivos && oc ? ' · ' + oc : '');
-    rotulos.appendChild(rot);
+    (SEL===m.id ? rotulosTopo : rotulos).appendChild(rot);
 
     if(noivos){
       // Alas de padrinhos (esquerda) e madrinhas (direita) — detetadas pelo papel do convidado.
@@ -420,7 +527,7 @@ function onMove(e){
   if(snapY!==null){ gh.style.top=posCss(snapY,'y'); gh.classList.add('on'); } else gh.classList.remove('on');
   drag.node.style.left=posCss(x,'x'); drag.node.style.top=posCss(y,'y'); drag.x=x; drag.y=y;
   // O rótulo acompanha a mesa enquanto ela vai a caminho.
-  const rot=$('rotulos').querySelector('.mn-nome[data-id="'+drag.id+'"]');
+  const rot=document.querySelector('.mn-nome[data-id="'+drag.id+'"]');
   if(rot){ rot.style.left=drag.node.style.left; rot.style.top=drag.node.style.top; }
 }
 function onUp(){
@@ -615,6 +722,11 @@ function detalheHTML(){
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Cor</span><div class="cores" id="ed-cor">${htmlCores(m.cor||'neutra')}</div></div>
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Dimensão</span>
         <select id="ed-tam" class="sel-mini" title="Dimensão da mesa" onchange="guardarMesaEd()">${optTam(m.tamanho)}</select></div>
+      <div class="grp rodar" style="display:flex;align-items:center;gap:.35rem"><span class="rot" style="margin:0">Rodar</span>
+        <button class="btn-gir" type="button" title="Rodar 15° para a esquerda" onclick="rodarMesa(-15)">↺</button>
+        <span class="gir-val" id="ed-rot-val">${(+m.rotacao||0)}°</span>
+        <button class="btn-gir" type="button" title="Rodar 15° para a direita" onclick="rodarMesa(15)">↻</button>
+        ${(+m.rotacao||0) ? '<button class="btn-gir larga" type="button" title="Voltar a pôr a mesa ao direito" onclick="rodarMesa(null)">repor</button>' : ''}</div>
     </div>
 
     <div style="margin-top:1rem">
@@ -727,9 +839,39 @@ async function guardarMesaEd(){
   const fb=document.querySelector('#ed-forma button.on'), cb=document.querySelector('#ed-cor button.on');
   const forma=fb?fb.dataset.forma:'redonda', cor=cb?cb.dataset.cor:'neutra';
   const tamanho=$('ed-tam')?$('ed-tam').value:'';
-  const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:m.id,nome,capacidade:cap,forma,cor,tamanho})});
+  const d=await api('mesa_save',{method:'POST',body:JSON.stringify({
+    id:m.id,nome,capacidade:cap,forma,cor,tamanho,rotacao:+m.rotacao||0})});
   if(!d.success) return toast(d.message||'Erro ao guardar.',true);
   MESAS=normMesas(d.mesas); renderTudo(); toast('Mesa atualizada.');
+}
+
+/**
+ * Roda a mesa escolhida. `null` volta a pô-la ao direito.
+ *
+ * Um salão real não tem as mesas todas alinhadas com as paredes: uma comprida
+ * encostada à parede do lado fica de pé, e uma ferradura abre-se para o palco.
+ * Roda-se em degraus de 15° — é o que a mão acerta, e poupa a que duas mesas a
+ * par fiquem tortas uma para a outra.
+ *
+ * Quem roda é o DESENHO: a caixa que se arrasta fica quieta, o número da
+ * lotação fica direito, e o nome também. Uma lotação de cabeça para baixo não
+ * se lê, e um nome torto muito menos.
+ */
+async function rodarMesa(passo){
+  const m=MESAS.find(x=>x.id===SEL); if(!m) return;
+  if(travaLeitura()) return;
+  const antes=+m.rotacao||0;
+  const nova = passo===null ? 0 : ((antes+passo)%360+360)%360;
+  if(nova===antes) return;
+  m.rotacao=nova;                 // à vista já, para a mão sentir a resposta
+  const alvo=$('ed-rot-val'); if(alvo) alvo.textContent=nova+'°';
+  const svg=document.querySelector('.mesa-node[data-id="'+m.id+'"] svg.mesa-ico');
+  if(svg) svg.style.transform = nova ? 'rotate('+nova+'deg)' : '';
+  const d=await api('mesa_save',{method:'POST',body:JSON.stringify({
+    id:m.id, nome:m.nome, capacidade:m.capacidade||'', forma:m.forma,
+    cor:m.cor, tamanho:m.tamanho||'', rotacao:nova})});
+  if(!d||!d.success){ m.rotacao=antes; renderTudo(); return toast((d&&d.message)||'Erro ao guardar.',true); }
+  MESAS=normMesas(d.mesas); renderPlanta();
 }
 async function eliminar(id){
   const m=MESAS.find(x=>x.id===id); const nome=m?m.nome:'esta mesa';

@@ -121,7 +121,7 @@ const entrar = async (ctx, user, pass) => {
              numero: svg ? (svg.querySelector('.mi-n') || {}).textContent : '',
              // O nome vive na camada de rótulos, por cima de todas as mesas:
              // dentro do nó, ficava tapado pela mesa desenhada a seguir.
-             nome: (document.querySelector('#rotulos .mn-nome[data-id="' + id + '"]') || {}).textContent || '',
+             nome: (document.querySelector('.mn-nome[data-id="' + id + '"]') || {}).textContent || '',
              nos: document.querySelectorAll('.mesa-node').length,
              comIcone: document.querySelectorAll('.mesa-node > svg.mesa-ico').length };
   }, nova.mesa ? nova.mesa.id : nova.id);

@@ -55,7 +55,7 @@ $CAS = casalInfo(defsAtuais($conn));
     display:inline-flex; align-items:center; justify-content:center; }
   .cores button.on{ box-shadow:0 0 0 2px var(--forest); border-color:var(--forest); }
   .csw{ display:block; width:18px; height:18px; border-radius:50%; border:1px solid rgba(0,0,0,.12); }
-  .csw-neutra{ background:var(--cream); } .csw-verde{ background:#2C4536; } .csw-ouro{ background:#B4864A; }
+  .csw-neutra{ background:#FBF8F1; } .csw-verde{ background:#2C4536; } .csw-ouro{ background:#B4864A; }
   .csw-terracota{ background:#b5673f; } .csw-azul{ background:#4a6b7a; } .csw-ameixa{ background:#7a4a6b; }
   .csw-rosa{ background:#b56b78; } .csw-salva{ background:#6b7a53; }
 
@@ -189,8 +189,12 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* A paleta deixa de pintar uma caixa e passa a pintar o desenho: o tampo, o
      traço das cadeiras e o número. */
-  .mesa-node{ --mt-fundo:var(--cream); --mt-linha:var(--gold-soft); --mt-tinta:var(--ink); }
-  .cor-neutra   { --mt-fundo:var(--cream); --mt-linha:var(--gold-soft); --mt-tinta:var(--ink); }
+  /* As oito cores são as das TOALHAS, e uma toalha não muda de cor porque
+     alguém trocou o tema do ecrã. O marfim seguia o tema — e no tema escuro
+     ficava cinzento-escuro, que de marfim não tem nada. Tem agora cor própria,
+     como as outras sete sempre tiveram. */
+  .mesa-node{ --mt-fundo:#FBF8F1; --mt-linha:#cbbb96; --mt-tinta:#4c4a41; }
+  .cor-neutra   { --mt-fundo:#FBF8F1; --mt-linha:#cbbb96; --mt-tinta:#4c4a41; }
   .cor-verde    { --mt-fundo:#e4f0e8; --mt-linha:#2C4536; --mt-tinta:#17311f; }
   .cor-ouro     { --mt-fundo:#f6ecd6; --mt-linha:#B4864A; --mt-tinta:#5c4321; }
   .cor-terracota{ --mt-fundo:#f5e2d9; --mt-linha:#b5673f; --mt-tinta:#6e3a25; }
@@ -225,8 +229,10 @@ $CAS = casalInfo(defsAtuais($conn));
     text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#5c4321;
     user-select:none; box-shadow:0 2px 6px rgba(180,134,74,.18); }
 
-  .mesa-node.a-arrastar{ cursor:grabbing; filter:drop-shadow(0 10px 18px rgba(22,38,30,.30)); z-index:20; }
-  .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:1px; z-index:15; }
+  .mesa-node.a-arrastar{ cursor:grabbing; filter:drop-shadow(0 10px 18px rgba(22,38,30,.30)); z-index:23; }
+  /* Acima da camada dos nomes (19): a mesa que se está a arrumar não fica
+     escondida por baixo do nome da vizinha. */
+  .mesa-node.sel{ outline:3px solid var(--forest); outline-offset:1px; z-index:21; }
   /* Os NOMES DAS MESAS, na sua própria camada, por cima de todas elas.
      Dentro do nó, o nome de uma mesa ficava tapado pela mesa desenhada a
      seguir — e um nome tapado não serve para nada, por muito bem escrito que
@@ -235,8 +241,15 @@ $CAS = casalInfo(defsAtuais($conn));
      que é o que o mantém legível por cima de uma cadeira ou de uma linha da
      grelha. E com chão em pixéis, para a 50% de zoom continuar a ler-se. */
   .planta-rotulos{ position:absolute; inset:0; z-index:19; pointer-events:none; }
-  .planta-rotulos .mn-nome{ position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
-    transform:translate(-50%, calc(var(--d)/2 + 2px));
+  /* A mesa ESCOLHIDA e o seu nome sobem acima de tudo — das outras mesas e dos
+     nomes delas. É a que se está a arrumar: tapada por uma vizinha, obrigava a
+     adivinhar onde ia. */
+  .planta-rotulos-topo{ position:absolute; inset:0; z-index:22; pointer-events:none; }
+  .planta-rotulos .mn-nome, .planta-rotulos-topo .mn-nome{
+    position:absolute; --d:calc(var(--dbase,80px)*var(--z,1));
+    /* Encosta-se ao desenho: --fundo diz onde a forma acaba (mesaIcone.fundo),
+       e daí para baixo são só três pixéis de respiração. */
+    transform:translate(-50%, calc((var(--fundo, 81) - 50) * var(--d) / 100 + 3px));
     font-family:var(--serif); font-weight:600;
     font-size:clamp(12px, calc(var(--d)*0.105), 15px); line-height:1.2; color:var(--ink);
     max-width:calc(var(--d)*1.8); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -246,9 +259,9 @@ $CAS = casalInfo(defsAtuais($conn));
     text-shadow:0 1px 0 var(--ivory), 0 -1px 0 var(--ivory), 1px 0 0 var(--ivory), -1px 0 0 var(--ivory); }
   /* Sem color-mix (navegadores antigos), fica o marfim cheio: legível na mesma. */
   @supports not (background:color-mix(in srgb, red 50%, transparent)){
-    .planta-rotulos .mn-nome{ background:var(--ivory); }
+    .planta-rotulos .mn-nome, .planta-rotulos-topo .mn-nome{ background:var(--ivory); }
   }
-  .planta-rotulos .mn-nome.sel{ color:var(--forest-deep); font-weight:700;
+  .planta-rotulos-topo .mn-nome.sel{ color:var(--forest-deep); font-weight:700;
     box-shadow:0 0 0 1.5px var(--forest); background:var(--ivory); }
   .mesa-node .mn-dot{ position:absolute; top:calc(var(--d)*0.15); right:calc(var(--d)*0.15);
     width:9px; height:9px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.75); }
@@ -268,6 +281,57 @@ $CAS = casalInfo(defsAtuais($conn));
   .lista-sentados .nm-pega:active{ cursor:grabbing; }
   .lista-sentados .nm-pega .gi-m, .lista-sentados .nm-pega .gi-f{ color:#eef3ee; }
   .dica-mini{ font-size:.76rem; color:#9aa09a; margin:-.2rem 0 .4rem; }
+
+  /* ============================================================
+     A FOLHA: o esquema de mesas para levar para o salão
+     ------------------------------------------------------------
+     No dia, quem monta a sala não tem o ecrã à frente — tem um papel
+     na mão. A folha leva a planta inteira à escala (mesmo a parte
+     que estava fora da vista) e, por baixo, quem se senta em cada
+     mesa, que é a pergunta que se faz à porta do salão.
+     ============================================================ */
+  .folha-planta{ display:none; }
+  .folha-cab{ display:flex; align-items:baseline; gap:.6rem; border-bottom:2px solid #333;
+    padding-bottom:.4rem; margin-bottom:.8rem; }
+  .folha-cab h1{ font-family:var(--serif); font-size:1.35rem; margin:0; }
+  .folha-cab .sub{ font-size:.85rem; color:#555; }
+  .folha-cab .quando{ margin-left:auto; font-size:.78rem; color:#777; }
+  .folha-mapa{ overflow:hidden; margin-bottom:1rem; }
+  .folha-mapa .planta{ transform-origin:top left; }
+  .folha-lista{ column-count:3; column-gap:1.2rem; font-size:.8rem; }
+  .folha-mesa{ break-inside:avoid; margin-bottom:.7rem; }
+  .folha-mesa h3{ font-family:var(--serif); font-size:.92rem; margin:0 0 .12rem;
+    border-bottom:1px solid #ccc; padding-bottom:.1rem; }
+  .folha-mesa .meta{ font-size:.72rem; color:#777; }
+  .folha-mesa ol{ margin:.2rem 0 0; padding-left:1.15rem; }
+  .folha-mesa li{ line-height:1.45; }
+  .folha-mesa .ninguem{ color:#999; font-style:italic; }
+
+  @media print{
+    @page{ size:A4 landscape; margin:10mm; }
+    body.a-imprimir-planta > *{ display:none !important; }
+    body.a-imprimir-planta .folha-planta{ display:block !important; }
+    body.a-imprimir-planta{ background:#fff; }
+    /* A grelha de fundo do canvas não se imprime: gasta tinta e não diz nada. */
+    .folha-mapa .planta{ background:#fff !important; border:1px solid #ddd; }
+    .folha-mapa .mesa-node{ outline:0 !important; }
+    .folha-mapa .mn-dot{ display:none; }
+  }
+
+  /* Rodar a mesa: um salão real não tem tudo alinhado com as paredes. */
+  .btn-gir{ border:1.5px solid var(--line); background:#fff; border-radius:8px; cursor:pointer;
+    width:28px; height:28px; padding:0; font-size:.95rem; line-height:1; color:var(--ink);
+    display:inline-flex; align-items:center; justify-content:center; }
+  .btn-gir:hover{ border-color:var(--forest); background:var(--cream); }
+  .btn-gir.larga{ width:auto; padding:0 .45rem; font-size:.72rem; }
+  .gir-val{ font-size:.78rem; color:#8a8f88; min-width:2.6em; text-align:center;
+    font-variant-numeric:tabular-nums; }
+  /* A rotação é do desenho, não da caixa. E o NÚMERO desanda outro tanto, para
+     ficar direito: um «12» de lado lê-se «21», e uma lotação que se lê ao
+     contrário é pior do que lotação nenhuma. */
+  .mesa-node .mesa-ico{ transition:transform .15s ease; }
+  .mesa-node .mesa-ico .mi-n{ transform:rotate(calc(-1 * var(--rot, 0deg)));
+    transform-box:fill-box; transform-origin:center; }
 
   /* Painel direito: conjunto de abas */
   .painel-mesas{ display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
@@ -387,6 +451,10 @@ $CAS = casalInfo(defsAtuais($conn));
             <svg class="i-exp" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
             <svg class="i-comp" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
           </button>
+          <button class="icon-btn" id="btn-imprimir" onclick="imprimirPlanta()"
+                  title="Imprimir o esquema de mesas" aria-label="Imprimir o esquema de mesas">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>
+          </button>
         </div>
       </div>
       <!-- Preenchida por renderLegenda(): quatro pastilhas com o sinal, o que
@@ -401,6 +469,7 @@ $CAS = casalInfo(defsAtuais($conn));
                   // elas: dentro do nó, o nome de uma mesa ficava tapado pela
                   // mesa desenhada a seguir. ?>
             <div class="planta-rotulos" id="rotulos"></div>
+            <div class="planta-rotulos-topo" id="rotulos-topo"></div>
             <div class="dica-vazia" id="dica-vazia">Ainda não há mesas. Crie a primeira acima e arraste-a para a posição.</div>
           </div>
         </div>
@@ -421,10 +490,17 @@ $CAS = casalInfo(defsAtuais($conn));
   </div>
 </div>
 
+<?php // A folha de impressão: montada por imprimirPlanta(), vazia no ecrã. ?>
+<div class="folha-planta" id="folha-planta" hidden></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
+// Para o cabeçalho da folha de impressão: no papel, o esquema tem de dizer de
+// que casamento é. Uma planta anónima em cima de uma mesa não serve a ninguém.
+window.CASAL = <?= json_encode($CAS['casal']) ?>;
+window.DATA_EVENTO = <?= json_encode((string)(defsAtuais($conn)['evento.data'] ?? '')) ?>;
 </script>
 <script src="<?= asset('assets/mesas.js') ?>"></script>
 </body>

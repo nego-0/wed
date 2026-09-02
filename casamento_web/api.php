@@ -4134,9 +4134,12 @@ if ($acao === 'mesa_save') {
     $forma=in_array($d['forma']??'',FORMAS_MESA,true)?$d['forma']:'redonda';
     $cor=in_array($d['cor']??'',CORES_MESA,true)?$d['cor']:null; // NULL = marfim
     $tam=in_array($d['tamanho']??'',['p','m','g'],true)?$d['tamanho']:null; // NULL = automático
+    // A rotação em graus, arrumada em degraus de 15: é o que a mão acerta, e
+    // poupa a que duas mesas a par fiquem tortas uma para a outra.
+    $rot=((int)round(((int)($d['rotacao'] ?? 0)) / 15) * 15) % 360; if ($rot < 0) $rot += 360;
     if ($nome==='') erro('Nome da mesa obrigatório.');
-    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=? WHERE " . doCasamento() . " AND id=?"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho) VALUES (" . casamentoAtual() . ",?,?,?,?,?)"); $st->bind_param('sisss',$nome,$cap,$forma,$cor,$tam); }
+    if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=?,rotacao=? WHERE " . doCasamento() . " AND id=?"); $st->bind_param('sisssii',$nome,$cap,$forma,$cor,$tam,$rot,$id); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho,rotacao) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?)"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$rot); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;

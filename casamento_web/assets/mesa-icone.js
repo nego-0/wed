@@ -157,5 +157,18 @@
   }
 
   mesaIcone.formas = Object.keys(FORMAS).filter(function (k) { return k !== 'noivos'; });
+
+  /**
+   * Onde acaba o desenho, em unidades do viewBox (0..100).
+   *
+   * Quem escreve o nome da mesa por baixo dela precisa de saber onde ela acaba
+   * — e cada forma acaba num sítio diferente. Um valor único deixava o nome
+   * colado à redonda e a pairar longe da comprida, que é mais achatada. Conta o
+   * tampo, a folga das cadeiras (8) e meia cadeira (2.7).
+   */
+  var FUNDOS = { redonda:80.7, oval:76.7, quadrada:76.7, retangular:74.7,
+                 comprida:70.7, ferradura:84.7, noivos:60 };
+  mesaIcone.fundo = function (forma) { return FUNDOS[forma] || 80.7; };
+
   global.mesaIcone = mesaIcone;
 })(window);
