@@ -322,8 +322,12 @@ $CAS = casalInfo(defsAtuais($conn));
   @supports not (background:color-mix(in srgb, red 50%, transparent)){
     .planta-rotulos .mn-nome, .planta-rotulos-topo .mn-nome{ background:var(--ivory); }
   }
+  /* O nome da mesa escolhida distingue-se pela tinta, e não por uma moldura:
+     quem já vê a mesa contornada de verde não precisa de um segundo contorno
+     por baixo dela — eram dois avisos para a mesma coisa, e o de baixo só
+     engrossava o nome. */
   .planta-rotulos-topo .mn-nome.sel{ color:var(--forest-deep); font-weight:700;
-    box-shadow:0 0 0 1.5px var(--forest); background:var(--ivory); }
+    background:var(--ivory); }
   /* O SINAL DE ESTADO, no canto da mesa.
      Era um ponto de 9px numa cor que quase não se via. Passa a ser uma
      medalha: cresce com a mesa (com um chão de 16px, para se ver a 50%
