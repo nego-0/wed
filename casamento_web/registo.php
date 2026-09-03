@@ -379,7 +379,9 @@ async function carregarPlanos(){
                  || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
     if (!temAlgo) throw new Error('catálogo vazio');
     Planos.montar('reg-planos', d.catalogo,
-                  { moeda: d.moeda, seccoes: d.seccoes_foto || [], aoMudar: porteiroConformePlano });
+                  { moeda: d.moeda, seccoes: d.seccoes_foto || [],
+                    pecaOrigem: d.peca_origem || '', fotoMaxMb: d.foto_max_mb || 5,
+                    aoMudar: porteiroConformePlano });
     porteiroConformePlano();
   } catch (e) {
     // Sem preçário não se pode escolher plano nenhum, mas a inscrição não pode
@@ -485,6 +487,16 @@ async function enviar(){
     const c = Planos.escolha();
     if (c.vazio){
       erroGeral('Escolham um pacote, ou montem o vosso plano à medida.', $('erro-fim'));
+      return;
+    }
+    // O convite digital sem edição fixa as fotografias para sempre: sem elas, o
+    // convite nascia com as de outro casal e assim ficava. Diz-se aqui, junto à
+    // montra, e não com um erro do servidor depois de tudo preenchido.
+    const faltaFoto = Planos.faltamFotos();
+    if (faltaFoto){
+      erroGeral(faltaFoto, $('erro-fim'));
+      const cx = document.querySelector('.pl-fotos');
+      if (cx) cx.scrollIntoView({ behavior:'smooth', block:'center' });
       return;
     }
     if (!$('reg-aceite').checked){

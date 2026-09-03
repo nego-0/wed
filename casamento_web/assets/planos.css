@@ -235,6 +235,51 @@
 .pl-ft.on .pl-ft-visto{ display:flex; }
 .pl-ft input:focus-visible + img{ outline:2px solid var(--gold); outline-offset:-2px; }
 
+/* ---------- a fotografia do casal ----------
+   O convite é dele: a primeira coisa que a secção oferece é mandar a SUA
+   fotografia, e a galeria da casa vem a seguir, como alternativa. No escalão
+   sem edição não há alternativa nenhuma — é esta a única vez que ele escolhe. */
+.pl-envio{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.pl-btn-env{ border:1.5px dashed var(--gold); background:var(--card); color:var(--forest);
+  font-family:inherit; font-size:.84rem; font-weight:600; border-radius:10px;
+  padding:.5rem .85rem; cursor:pointer; line-height:1.2; }
+.pl-btn-env:hover{ background:var(--gold-pale); border-style:solid; }
+.pl-btn-env[disabled]{ opacity:.6; cursor:progress; }
+.pl-envio-nota{ font-size:.76rem; color:#8a8f88; }
+.pl-envio-erro{ flex-basis:100%; font-size:.78rem; color:var(--danger); margin-top:.35rem; }
+.pl-sec-falta{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--danger); border:1px solid currentColor; border-radius:50px; padding:0 .4rem; }
+.pl-sec-ou{ font-size:.75rem; color:#8a8f88; margin:.55rem 0 .3rem; }
+
+.pl-minha{ display:flex; align-items:center; gap:.7rem; background:var(--card);
+  border:1.5px solid var(--gold-soft); border-radius:10px; padding:.5rem .6rem; }
+.pl-minha img{ flex:none; width:104px; height:72px; object-fit:cover; border-radius:8px; display:block; }
+.pl-minha-txt{ flex:1; min-width:0; }
+.pl-minha-txt b{ display:block; font-size:.84rem; color:var(--ink); }
+.pl-minha-txt span{ display:block; font-size:.74rem; color:#8a8f88;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pl-minha-acoes{ display:flex; flex-direction:column; gap:.3rem; flex:none; }
+.pl-minha-acoes button{ border:1px solid var(--line); background:var(--card); color:var(--text);
+  font-family:inherit; font-size:.76rem; border-radius:8px; padding:.28rem .55rem; cursor:pointer; }
+.pl-minha-acoes button:hover{ border-color:var(--gold); color:var(--forest); }
+
+/* A prova em grande. A marca de água vem nos pixéis, do servidor: aqui só se
+   mostra o que ele carimbou. */
+.pl-prova{ position:fixed; inset:0; z-index:1300; display:none;
+  align-items:center; justify-content:center; padding:1.2rem;
+  background:rgba(12,20,16,.72); }
+.pl-prova.on{ display:flex; }
+.pl-prova-cx{ background:var(--card); border-radius:14px; padding:.9rem;
+  max-width:min(720px, 92vw); max-height:90vh; overflow:auto; text-align:center; }
+.pl-prova-cx img{ max-width:100%; max-height:66vh; border-radius:10px; display:block; margin:0 auto; }
+.pl-prova-cx p{ font-size:.8rem; color:#8a8f88; line-height:1.5; margin:.7rem auto .8rem; max-width:52ch; }
+
+@media (max-width:520px){
+  .pl-minha{ flex-wrap:wrap; }
+  .pl-minha-acoes{ flex-direction:row; width:100%; }
+  .pl-minha-acoes button{ flex:1; }
+}
+
 /* ---------- a conta, sempre à vista ---------- */
 .pl-conta{ position:sticky; bottom:0; z-index:5; margin-top:1.6rem;
   background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);

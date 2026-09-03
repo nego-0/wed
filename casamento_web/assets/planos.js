@@ -24,6 +24,8 @@
   var ALVO = null;
   var COM_PACOTES = true;
   var SECCOES = [];                        // secções de foto do convite digital
+  var PECA_ORIGEM = '';                    // o modelo de onde as secções vêm
+  var FOTO_MAX_MB = 5;                     // o que o servidor aceita por fotografia
   var PRAZOS = [];                         // prazos de licença, com o seu factor
   // 'prazo' são os meses escolhidos; é ele que multiplica todos os preços.
   // 'aMedida' diz se o casal abriu a secção dos módulos avulso. Fechada por
@@ -375,49 +377,190 @@
   }
 
   /**
+   * O escalão de convite digital que o plano actual traz, ou null.
+   *
+   * Num pacote é o pacote que o traz; à peça, é a escolha do módulo. As duas
+   * respostas contam, porque as fotografias pedem-se em ambos os casos.
+   */
+  function escalaoDigital() {
+    var achado = null;
+    if (sel.pacote) {
+      var pk = null;
+      CAT.pacotes.forEach(function (x) { if (x.id === sel.pacote) pk = x; });
+      if (pk) pk.itens.forEach(function (id) {
+        var e = escalao(id); if (e && e.modulo === 'digital') achado = e;
+      });
+      return achado;
+    }
+    var id = sel.escaloes['digital'];
+    return id ? escalao(id) : null;
+  }
+
+  /**
    * As fotografias de cada secção do convite digital.
    *
-   * Só aparecem quando o casal leva o convite digital — e são particularmente
-   * importantes no escalão SEM edição, onde esta é a única vez que ele as
-   * escolhe. Dizê-lo aqui, e não depois, é a diferença entre uma escolha
-   * informada e uma surpresa.
+   * Só aparecem quando o casal leva o convite digital, e as secções são as da
+   * PEÇA DE ORIGEM — o desenho com que o convite dele vai nascer.
+   *
+   * Duas escolhas por secção: uma da galeria da casa, ou uma FOTOGRAFIA SUA. E
+   * a diferença entre os escalões está aqui, inteira: com edição, isto é um
+   * adianto e troca-se depois; SEM edição, é a única vez que o casal escolhe, e
+   * por isso a fotografia própria passa de comodidade a obrigação — um convite
+   * que não se pode editar, feito com a fotografia de outro casal, fica assim
+   * para sempre.
    */
   function desenharFotos() {
-    var escId = sel.escaloes['digital'];
-    if (!escId || !SECCOES.length) return '';
-    var e = escalao(escId);
-    if (!e) return '';
+    var e = escalaoDigital();
+    if (!e || !SECCOES.length) return '';
     var podeEditar = !!e.editar;
 
-    var h = '<div class="pl-fotos">'
+    var h = '<div class="pl-fotos"' + (podeEditar ? '' : ' data-exige="1"') + '>'
       + '<div class="pl-fotos-cab"><b>As fotografias do vosso convite</b>'
-      + '<span>Escolham a imagem de cada secção. Ficam já no convite.</span></div>';
+      + '<span>Uma por secção d' + (PECA_ORIGEM ? 'o modelo «' + esc(PECA_ORIGEM) + '»'
+                                                : 'o convite')
+      + '. Da galeria da casa, ou vossas.</span></div>';
 
     h += podeEditar
       ? '<div class="pl-fotos-nota boa">Com <b>edição</b>: estas são as fotografias com que '
-        + 'o convite nasce, e podem trocá-las por outras — ou pelas vossas — sempre que quiserem.</div>'
+        + 'o convite nasce, e podem trocá-las por outras — ou pelas vossas — sempre que '
+        + 'quiserem. Enviar as vossas agora é só adiantar trabalho.</div>'
       : '<div class="pl-fotos-nota aviso"><b>Atenção:</b> o escalão «' + esc(e.nome) + '» é '
         + '<b>sem edição</b>. Estas fotografias ficam fixas no vosso convite e <b>não poderão '
-        + 'ser alteradas</b> depois. Para as poder trocar mais tarde — ou usar fotografias '
-        + 'vossas — escolham um escalão com edição.</div>';
+        + 'ser alteradas</b> depois — por isso é preciso <b>enviarem já as vossas</b>, uma '
+        + 'para cada secção. Para as poder trocar mais tarde, escolham um escalão com edição.</div>';
 
     SECCOES.forEach(function (sc) {
+      var minha = MINHAS[sc.chave];
       var escolhida = sel.fotos[sc.chave] || (sc.fotos[0] && sc.fotos[0].src);
-      h += '<div class="pl-sec"><div class="pl-sec-cab">'
-         + '<b>' + esc(sc.rotulo) + '</b><span>' + esc(sc.descricao) + '</span></div>'
-         + '<div class="pl-sec-tiras">';
-      sc.fotos.forEach(function (ft) {
-        h += '<label class="pl-ft' + (ft.src === escolhida ? ' on' : '') + '"'
-           + ' title="' + esc(ft.nome) + '">'
-           + '<input type="radio" name="ft-' + esc(sc.chave) + '" value="' + esc(ft.src) + '"'
-           + (ft.src === escolhida ? ' checked' : '') + '>'
-           + '<img src="' + esc(ft.src) + '" alt="' + esc(ft.nome) + '"'
-           + ' loading="lazy" decoding="async">'
-           + '<span class="pl-ft-visto">✓</span></label>';
-      });
-      h += '</div></div>';
+      h += '<div class="pl-sec" data-sec="' + esc(sc.chave) + '"><div class="pl-sec-cab">'
+         + '<b>' + esc(sc.rotulo) + '</b><span>' + esc(sc.descricao) + '</span>'
+         + (!podeEditar && !minha ? '<span class="pl-sec-falta">falta a vossa</span>' : '')
+         + '</div>';
+
+      // A fotografia do casal, quando já foi enviada: a prova com marca de água.
+      if (minha) {
+        h += '<div class="pl-minha">'
+           + '<img src="' + esc(minha.prova) + '" alt="A vossa fotografia, em prova">'
+           + '<div class="pl-minha-txt"><b>A vossa fotografia</b>'
+           + '<span>' + esc(minha.nome) + '</span></div>'
+           + '<div class="pl-minha-acoes">'
+           + '<button type="button" class="pl-btn-ver" data-sec="' + esc(sc.chave) + '">Ver maior</button>'
+           + '<button type="button" class="pl-btn-tirar" data-sec="' + esc(sc.chave) + '">Trocar</button>'
+           + '</div></div>';
+      } else {
+        h += '<div class="pl-envio">'
+           + '<button type="button" class="pl-btn-env" data-sec="' + esc(sc.chave) + '">'
+           + '＋ Enviar a nossa fotografia</button>'
+           + '<span class="pl-envio-nota">jpg, png ou webp · até ' + FOTO_MAX_MB + ' MB'
+           + (podeEditar ? ' · opcional' : '') + '</span>'
+           + '</div>';
+        // A galeria da casa é a ALTERNATIVA a mandar a sua — e por isso só
+        // aparece onde há alternativa. No escalão sem edição a fotografia do
+        // casal é obrigatória: oferecer-lhe ali uma da casa era oferecer-lhe
+        // uma escolha que ele não tem.
+        if (sc.fotos.length && podeEditar) {
+          h += '<div class="pl-sec-ou">ou uma da galeria da casa</div><div class="pl-sec-tiras">';
+          sc.fotos.forEach(function (ft) {
+            h += '<label class="pl-ft' + (ft.src === escolhida ? ' on' : '') + '"'
+               + ' title="' + esc(ft.nome) + '">'
+               + '<input type="radio" name="ft-' + esc(sc.chave) + '" value="' + esc(ft.src) + '"'
+               + (ft.src === escolhida ? ' checked' : '') + '>'
+               + '<img src="' + esc(ft.src) + '" alt="' + esc(ft.nome) + '"'
+               + ' loading="lazy" decoding="async">'
+               + '<span class="pl-ft-visto">✓</span></label>';
+          });
+          h += '</div>';
+        }
+      }
+      h += '</div>';
     });
     return h + '</div>';
+  }
+
+  // ---------- as fotografias do casal ----------
+  //
+  // Ficam do lado do servidor (presas à sessão) e aqui guarda-se só o que é
+  // preciso para as mostrar: o nome do ficheiro e o endereço da PROVA — a
+  // fotografia encolhida e atravessada pela marca de água. O ficheiro em si
+  // nunca volta: antes de a licença estar fechada, quem enviou vê o
+  // enquadramento e não recebe de volta uma fotografia pronta a usar.
+  var MINHAS = {};
+
+  /** Um aviso junto ao próprio botão: é onde o olho está quando ele falha. */
+  function avisoFoto(botao, texto) {
+    var sec = botao.closest('.pl-sec'); if (!sec) return;
+    var av = sec.querySelector('.pl-envio-erro');
+    if (!av) {
+      av = document.createElement('div');
+      av.className = 'pl-envio-erro';
+      (sec.querySelector('.pl-envio') || sec).appendChild(av);
+    }
+    av.textContent = texto;
+  }
+
+  /** Pede um ficheiro ao utilizador e envia-o para a secção indicada. */
+  function enviarFoto(chave, aoFim) {
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/jpeg,image/png,image/webp';
+    inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.addEventListener('change', function () {
+      var f = inp.files && inp.files[0];
+      document.body.removeChild(inp);
+      if (!f) return;
+      if (f.size > FOTO_MAX_MB * 1048576) {
+        aoFim('A fotografia tem mais de ' + FOTO_MAX_MB + ' MB. Escolham uma mais leve.');
+        return;
+      }
+      var fd = new FormData();
+      fd.append('chave', chave);
+      fd.append('ficheiro', f);
+      fetch('api.php?action=registo_foto', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.success) { aoFim((d && d.message) || 'Não foi possível enviar a fotografia.'); return; }
+          MINHAS[chave] = { nome: d.nome, prova: d.prova };
+          aoFim(null);
+        })
+        .catch(function () { aoFim('Não foi possível falar com o servidor.'); });
+    });
+    inp.click();
+  }
+
+  /** Larga uma fotografia enviada (ou todas, sem chave). */
+  function tirarFoto(chave, aoFim) {
+    fetch('api.php?action=registo_foto_tirar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chave: chave || '' })
+    }).then(function () {
+      if (chave) delete MINHAS[chave]; else MINHAS = {};
+      if (aoFim) aoFim();
+    }).catch(function () { if (aoFim) aoFim(); });
+  }
+
+  /** A prova em grande, para o casal ver o que enviou. */
+  function verProva(chave) {
+    var m = MINHAS[chave]; if (!m) return;
+    var cx = document.getElementById('pl-prova');
+    if (!cx) {
+      cx = document.createElement('div');
+      cx.id = 'pl-prova'; cx.className = 'pl-prova';
+      cx.innerHTML = '<div class="pl-prova-cx" role="dialog" aria-modal="true" aria-label="A vossa fotografia">'
+        + '<img alt="A vossa fotografia, com marca de água">'
+        + '<p>É assim que a fotografia entra no convite. A marca de água é só desta '
+        + 'pré-visualização — o convite sai sem ela.</p>'
+        + '<button type="button" class="btn btn-fantasma btn-sm">Fechar</button></div>';
+      document.body.appendChild(cx);
+      cx.addEventListener('click', function (ev) {
+        if (ev.target === cx || ev.target.tagName === 'BUTTON') cx.classList.remove('on');
+      });
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape') cx.classList.remove('on');
+      });
+    }
+    cx.querySelector('img').src = m.prova;
+    cx.classList.add('on');
   }
 
   function desenharConta() {
@@ -455,7 +598,21 @@
     ALVO.innerHTML = desenharPrazos() + desenharPacotes()
                    + desenharAbrirMedida() + desenharMedida() + desenharConta();
     ligar();
+    conferirFotos();
     if (typeof AO_MUDAR === 'function') AO_MUDAR(Planos.escolha());
+  }
+
+  /**
+   * O plano deixou de trazer o convite digital: as fotografias que o casal
+   * mandou para ele ficam sem destino, e largam-se já — do ecrã e do servidor.
+   * Guardá-las à espera de que ele mude outra vez de ideias era guardar
+   * fotografias de alguém sem razão nenhuma para o fazer.
+   */
+  function conferirFotos() {
+    var tem = false;
+    for (var k in MINHAS) if (Object.prototype.hasOwnProperty.call(MINHAS, k)) { tem = true; break; }
+    if (!tem || escalaoDigital()) return;
+    tirarFoto('', pintar);   // MINHAS fica vazio: a repintura não volta aqui
   }
 
   function ligar() {
@@ -501,6 +658,33 @@
         if (typeof AO_MUDAR === 'function') AO_MUDAR(Planos.escolha());
       });
     });
+    // Enviar, ver e trocar a fotografia do casal. Repinta-se só no fim: durante
+    // o envio o botão diz o que está a fazer, para não parecer que não fez nada.
+    ALVO.querySelectorAll('.pl-btn-env').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var rot = b.textContent;
+        b.disabled = true; b.textContent = 'A enviar…';
+        enviarFoto(b.dataset.sec, function (erro) {
+          b.disabled = false; b.textContent = rot;
+          if (erro) { avisoFoto(b, erro); return; }
+          pintar();
+          if (typeof AO_MUDAR === 'function') AO_MUDAR(Planos.escolha());
+        });
+      });
+    });
+    ALVO.querySelectorAll('.pl-btn-ver').forEach(function (b) {
+      b.addEventListener('click', function () { verProva(b.dataset.sec); });
+    });
+    ALVO.querySelectorAll('.pl-btn-tirar').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        tirarFoto(b.dataset.sec, function () {
+          pintar();
+          if (typeof AO_MUDAR === 'function') AO_MUDAR(Planos.escolha());
+        });
+      });
+    });
+
     // A porta do plano à medida, nos dois sentidos.
     var abrir = ALVO.querySelector('#pl-abrir-medida');
     if (abrir) abrir.addEventListener('click', function () {
@@ -685,8 +869,13 @@
       AO_MUDAR = opcoes.aoMudar || null;
       COM_PACOTES = opcoes.pacotes !== false;
       SECCOES = opcoes.seccoes || [];
+      PECA_ORIGEM = opcoes.pecaOrigem || '';
+      FOTO_MAX_MB = opcoes.fotoMaxMb || 5;
       PRAZOS  = (CAT.prazos || []).slice();
       sel = { pacote: 0, escaloes: {}, fotos: {}, prazo: opcoes.prazo || 0 };
+      // Uma montra nova começa sem fotografias: as da anterior já foram
+      // entregues ao casamento que se criou, ou largadas com ele.
+      MINHAS = {};
 
       preSelecionarObrigatorios();
       // Sem nada escolhido, começa-se pelo pacote em destaque: é o que serve a
@@ -715,6 +904,34 @@
       });
       return tem;
     },
+
+    /**
+     * O que falta em fotografias, ou null quando está tudo bem.
+     *
+     * Só o escalão SEM edição as exige: é a única vez em que o casal as
+     * escolhe, e um convite que não se pode editar feito com a fotografia de
+     * outro casal fica assim para sempre. Com edição não falta nada — as que
+     * não vierem ficam com o desenho da casa e trocam-se depois.
+     *
+     * O servidor faz a mesma pergunta antes de criar o que quer que seja: isto
+     * é para se responder ANTES de submeter, e não com um erro no fim.
+     */
+    faltamFotos: function () {
+      var e = escalaoDigital();
+      if (!e || e.editar) return null;
+      var faltam = [];
+      SECCOES.forEach(function (sc) { if (!MINHAS[sc.chave]) faltam.push(sc.rotulo); });
+      if (!faltam.length) return null;
+      return 'O escalão «' + e.nome + '» é sem edição: as fotografias ficam fixas no convite. '
+           + 'Envie' + (faltam.length > 1 ? ' as' : ' a') + ' que falta'
+           + (faltam.length > 1 ? 'm' : '') + ': ' + faltam.join(', ') + '.';
+    },
+
+    /** As secções para que o casal já enviou fotografia sua. */
+    fotosProprias: function () { return Object.keys(MINHAS); },
+
+    /** Larga todas as fotografias enviadas (o formulário foi submetido, ou desistiu-se). */
+    largarFotos: function (aoFim) { tirarFoto('', aoFim); },
 
     /** A escolha actual, pronta a enviar à API. */
     escolha: function () {

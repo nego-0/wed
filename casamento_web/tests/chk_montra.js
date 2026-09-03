@@ -122,12 +122,16 @@ const entrar = async (ctx, user, pass) => {
      'escolhido o convite digital, aparece a escolha das fotografias');
   const secs = await anon.$$eval('.pl-sec', e => e.length);
   ok(secs >= 3, `uma secção do convite de cada vez (${secs})`);
-  ok(await anon.$$eval('.pl-ft', e => e.length) > 0, 'e cada uma com as suas miniaturas');
 
   const aviso = await anon.$eval('.pl-fotos-nota', e => ({ c: e.className, t: e.textContent }));
   ok(/aviso/.test(aviso.c), 'no escalão SEM edição, o aviso é de aviso');
   ok(/não poder(ão|á) ser alterada/i.test(aviso.t),
      'e diz, por palavras, que as fotos não poderão ser alteradas');
+  // Sem edição, a galeria da casa não é oferta nenhuma: o convite fica assim
+  // para sempre, e por isso a fotografia tem de ser DELES. Quem prova o envio é
+  // o chk_registo_fotos; aqui prova-se que a alternativa não se oferece.
+  ok(await anon.$$eval('.pl-ft', e => e.length) === 0,
+     'e a galeria da casa não se oferece: sem edição, a fotografia tem de ser do casal');
 
   await escolher('digital', 'com edição');
   await anon.waitForTimeout(600);
@@ -135,9 +139,11 @@ const entrar = async (ctx, user, pass) => {
      'com edição, o aviso passa a nota tranquila');
   ok(/trocá-las|sempre que quiserem/i.test(await anon.$eval('.pl-fotos-nota', e => e.textContent)),
      'e diz que as podem trocar quando quiserem');
+  ok(await anon.$$eval('.pl-ft', e => e.length) > 0,
+     'e aí sim, cada secção mostra as miniaturas da casa — que se trocam depois');
 
-  // Volta ao SEM edição: é o caso que interessa provar até ao fim.
-  await escolher('digital', 'Modelo padrão');
+  // O resto prova-se COM edição: é o escalão em que a galeria da casa é uma
+  // escolha a sério, e é essa escolha que tem de chegar ao convite.
   await escolher('convidados', 'Até 80');
   await anon.waitForTimeout(500);
 

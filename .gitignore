@@ -15,6 +15,14 @@ casamento_web/assets/convite/custom/*
 casamento_web/assets/convite/exemplo/*
 !casamento_web/assets/convite/exemplo/.htaccess
 
+# Fotografias enviadas na inscrição, à espera do casamento que ainda não existe
+casamento_web/assets/convite/espera/*
+!casamento_web/assets/convite/espera/.htaccess
+
+# Fotografias que entraram no convite com a licença — só o .htaccess é versionado
+casamento_web/assets/convite/licenca/*
+!casamento_web/assets/convite/licenca/.htaccess
+
 # Faturas/recibos das despesas do orçamento, enviados pelos noivos — nunca versionados
 casamento_web/assets/faturas/
 

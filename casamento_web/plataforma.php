@@ -652,9 +652,18 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <input type="url" id="n-religiosa-maps" data-mapa data-mapa-local="n-religiosa-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
 
-      <div class="dica" style="margin:1.1rem 0 .4rem"><b>A licença de uso.</b> Quanto tempo o casamento
-        fica disponível. Expirada, é suspenso sozinho.</div>
-      <div class="lf" style="grid-template-columns:1fr 1fr auto;align-items:center">
+      <?php // A LICENÇA. O admin escolhe-a na mesma montra que o casal vê no
+            // formulário público — os mesmos pacotes, os mesmos módulos, os
+            // mesmos prazos e as mesmas fotografias do convite digital. Um
+            // casamento aberto aqui dentro deixa de nascer com tudo por
+            // omissão e passa a nascer com o que se lhe vendeu. ?>
+      <div class="dica" style="margin:1.1rem 0 .4rem"><b>A licença de uso.</b> O que o casamento
+        leva, e por quanto tempo — a mesma montra que o casal vê ao inscrever-se. Expirada,
+        o casamento é suspenso sozinho.</div>
+      <div id="n-planos-cx"><div id="n-planos"></div></div>
+      <?php // Sem preçário publicado não há montra: fica o prazo à mão, que é
+            // como isto funcionava antes de haver preçário nenhum. ?>
+      <div class="lf" id="n-licenca-manual" style="grid-template-columns:1fr 1fr;align-items:center">
         <div><label>Período de licença</label>
           <select id="n-licenca" onchange="licencaMudou()">
             <option value="0">Sem limite</option>
@@ -665,6 +674,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           </select></div>
         <div id="n-licenca-outro" style="display:none"><label>Meses</label>
           <input type="number" id="n-licenca-meses" min="1" max="120" placeholder="ex.: 18"></div>
+      </div>
+      <div class="lf" style="grid-template-columns:1fr;align-items:center">
         <div><label style="display:inline-flex;gap:.4rem;align-items:center;font-weight:400">
           <input type="checkbox" id="n-licenca-ativa" checked style="width:auto;margin:0">
           Iniciar com a licença já ativa</label></div>
@@ -685,8 +696,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             <button type="button" class="pw-olho" id="olho-nc" onclick="verSenha('n-noivos-confirmar','olho-nc')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
           <div class="err"></div></div>
       </div>
-      <div class="dica" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
-      <div class="lf" style="grid-template-columns:2fr 1fr 1fr;align-items:start">
+      <div class="dica bloco-porteiro" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
+      <div class="lf bloco-porteiro" style="grid-template-columns:2fr 1fr 1fr;align-items:start">
         <div class="campo"><label for="n-porteiro-email">Email (utilizador) do porteiro</label>
           <input type="email" id="n-porteiro-email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="porta-…">
           <div class="err"></div></div>
@@ -1241,6 +1252,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>
+<?php // A montra dos planos: o formulário «Novo casamento» escolhe a licença
+      // na mesma montra que o casal vê ao inscrever-se. ?>
+<script src="<?= asset('assets/planos.js') ?>"></script>
 <script>
 if (window.Moeda) window.Moeda.ligar('.campo-moeda');
 // Esta página chamava toast() sem o ter: as mensagens de erro rebentavam em
@@ -1259,6 +1273,7 @@ function verVista(v){
   });
   document.querySelectorAll('#vista-chips .chip').forEach(c =>
     c.classList.toggle('on', c.dataset.vista === v));
+  if (v === 'novo') carregarPlanosNovo();
   if (v === 'dados') carregarDadosCasamentos();
   if (v === 'registo') auditarPrimeiraVez();
   if (v === 'licencas') licPrimeiraVez();
@@ -2293,10 +2308,64 @@ function licencaMudou(){
   if (el) el.style.display = document.getElementById('n-licenca').value === 'outro' ? '' : 'none';
 }
 function licencaMesesNovo(){
+  // Com montra, o prazo é o do plano escolhido: é ele que multiplica os preços,
+  // e ter dois prazos na mesma página — um na montra, outro num select ao lado —
+  // era deixar o admin a vender um e a conceder outro.
+  if (PLANOS_NOVO) return Planos.escolha().meses || 0;
   const v = document.getElementById('n-licenca').value;
   return v === 'outro'
     ? Math.max(0, parseInt(document.getElementById('n-licenca-meses').value || '0', 10))
     : parseInt(v, 10);
+}
+
+// ---------- a montra da licença, no formulário do admin ----------
+//
+// O formulário público mostra ao casal o que ele leva: pacotes, módulos, prazos
+// e as fotografias do convite digital. O do admin não mostrava nada disso — dava
+// um prazo em meses e uma licença completa —, e por isso um casamento aberto
+// aqui dentro nascia com tudo, mesmo quando se lhe tinha vendido metade. Passa a
+// ser a mesma montra, com o mesmo motor.
+let PLANOS_NOVO = false;
+async function carregarPlanosNovo(){
+  const cx = document.getElementById('n-planos-cx');
+  if (!cx || PLANOS_NOVO || cx.dataset.tentado) return;
+  cx.dataset.tentado = '1';
+  try {
+    const r = await fetch('api.php?action=lic_catalogo');
+    const d = await r.json();
+    if (!d || !d.success) throw new Error('sem catálogo');
+    const temAlgo = (d.catalogo.pacotes || []).some(p => p.ativo)
+                 || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
+    if (!temAlgo) throw new Error('catálogo vazio');
+    Planos.montar('n-planos', d.catalogo, {
+      moeda: d.moeda, seccoes: d.seccoes_foto || [],
+      pecaOrigem: d.peca_origem || '', fotoMaxMb: d.foto_max_mb || 5,
+      aoMudar: porteiroConformePlanoNovo });
+    PLANOS_NOVO = true;
+    const manual = document.getElementById('n-licenca-manual');
+    if (manual) manual.style.display = 'none';
+    porteiroConformePlanoNovo();
+  } catch (e) {
+    // Sem preçário, o formulário fica como estava: prazo à mão e licença
+    // completa. É melhor do que uma montra vazia a ocupar meio ecrã.
+    cx.style.display = 'none';
+  }
+}
+/**
+ * A conta do porteiro só faz sentido com o «Controlo à porta» no plano — sem
+ * ele, a API recusa a criação inteira. Esconde-se o bloco e limpa-se o que lá
+ * estivesse, para não viajar escondido no pedido.
+ */
+function porteiroConformePlanoNovo(){
+  if (!PLANOS_NOVO) return;
+  const tem = !!(window.Planos && Planos.temModulo && Planos.temModulo('porta'));
+  document.querySelectorAll('#vista-novo .bloco-porteiro').forEach(b => {
+    b.style.display = tem ? '' : 'none';
+  });
+  if (!tem) ['n-porteiro-email','n-porteiro-senha','n-porteiro-confirmar'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e){ e.value = ''; const c = e.closest('.campo'); if (c) c.classList.remove('mau','ok'); }
+  });
 }
 // Sugere um utilizador único para o porteiro, a partir dos nomes. Só enquanto
 // ninguém lhe tocar — quem escrever o seu próprio manda.
@@ -2429,11 +2498,25 @@ async function criar(){
     el.focus(); el.closest('.campo').scrollIntoView({ behavior:'smooth', block:'center' });
     return toast('Reveja os dados das contas assinalados a vermelho.', true);
   }
+  // O convite digital sem edição fixa as fotografias para sempre. Diz-se aqui,
+  // e não com um erro do servidor depois de o formulário estar todo preenchido.
+  if (PLANOS_NOVO){
+    const falta = Planos.faltamFotos();
+    if (falta){
+      const cx = document.querySelector('#n-planos .pl-fotos');
+      if (cx) cx.scrollIntoView({ behavior:'smooth', block:'center' });
+      return toast(falta, true);
+    }
+  }
+  const plano = PLANOS_NOVO ? Planos.escolha() : null;
   const d = await api('casamento_criar', { method:'POST', body: JSON.stringify({
     nome: v('n-nome'), noiva: v('n-noiva'), noivo: v('n-noivo'), data: v('n-data'),
     hora: v('n-hora'), local: v('n-local'), cidade: v('n-cidade'), maps: v('n-maps'),
     convidados: v('n-convidados'), whatsapp: v('n-whatsapp'),
     orcamento_total: v('n-orcamento'),
+    // Sem montra não vão escalões nenhuns, e a licença nasce completa — que é
+    // como isto funcionava antes de haver preçário.
+    escaloes: (plano && !plano.vazio) ? plano.escaloes : [],
     licenca_meses: licencaMesesNovo(),
     licenca_ativa: document.getElementById('n-licenca-ativa').checked,
     noivos_email: v('n-noivos-email'), noivos_senha: v('n-noivos-senha'),
@@ -2470,6 +2553,14 @@ async function criar(){
   document.querySelectorAll('#vista-novo .campo').forEach(c => c.classList.remove('mau','ok'));
   ['forca-ne','forca-pe'].forEach(i => { const e = document.getElementById(i); if (e) e.className = 'pw-forca'; });
   PORT_TOCADO = false;
+  // A montra recomeça: as fotografias já foram entregues a este casamento, e o
+  // plano do próximo não é o deste.
+  if (PLANOS_NOVO){
+    PLANOS_NOVO = false;
+    const pcx = document.getElementById('n-planos-cx');
+    if (pcx) pcx.dataset.tentado = '';
+    carregarPlanosNovo();
+  }
   toast('Casamento criado.');
 }
 // Aprovar e recusar um registo viviam aqui. Agora é uma decisão só, e é a do
