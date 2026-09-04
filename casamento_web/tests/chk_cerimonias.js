@@ -135,39 +135,60 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'o editor digital já não deixa mudar a ligação do Google Maps');
   ok(campos.includes('evento.local') && campos.includes('evento.cidade'),
      'mas continua a editar o local e a cidade do evento');
+  // Cada cerimónia é um CARTÃO: emblema em cima, moldura desenhada à volta, e
+  // por dentro o que é, a que horas e onde. Eram três linhas de texto.
   const tela = p.frameLocator('#tela');
-  ok(await tela.locator('#grande-dia .cerimonias .cer').count() === 2,
-     'e o convite passa a anunciá-las — antes só existiam no papel');
+  ok(await tela.locator('#grande-dia .cerimonias .cer-item:not(.wide)').count() === 2,
+     'e o convite passa a anunciá-las em cartões — antes só existiam no papel');
   const txtTela = await tela.locator('#grande-dia .cerimonias').innerText();
   ok(/Registo Civil/i.test(txtTela) && /Igreja da S/i.test(txtTela),
      'com o nome e o local que se escreveu: ' + txtTela.replace(/\n/g, ' · '));
-  ok(/Às /.test(txtTela) && !/Ás /.test(txtTela),
-     'e "Às", com o acento certo — era "Ás" à vista dos convidados');
+  ok(/\d{1,2}H\d{2}/.test(txtTela),
+     'e a hora à maneira do cartão: ' + (txtTela.match(/\d{1,2}H\d{2}/) || [''])[0]);
+  // O copo d'água entra no mesmo conjunto, em cartão largo: era um bloco à
+  // parte, a dizer a mesma coisa por outras palavras.
+  ok(await tela.locator('#grande-dia .cerimonias .cer-item.wide').count() === 1,
+     'e o copo d’água fecha o conjunto, num cartão largo');
+  ok(await tela.locator('#grande-dia .venue').count() === 0,
+     'já não há bloco de receção à parte');
+  ok(/e depois, o copo/i.test(txtTela),
+     'com a linha que costura as cerimónias à festa: ' + (txtTela.match(/e depois[^\n]*/i) || [''])[0]);
 
   await p.evaluate(() => removerCerimonia('religiosa', 'Cerimónia religiosa'));
   await p.waitForTimeout(3000);
-  ok(await tela.locator('#grande-dia .cerimonias .cer').count() === 1,
+  ok(await tela.locator('#grande-dia .cerimonias .cer-item:not(.wide)').count() === 1,
      'remover no digital tira-a da tela');
 
-  // ============ 4b. o local com Google Maps vira ligação no convite ============
+  // ============ 4b. o local com Google Maps vira botão no cartão ============
   // A ligação do mapa marca-se nos formulários do casamento (gestão e registo),
-  // não no editor; o convite lê-a e faz do local um "ver no mapa".
+  // não no editor; o convite lê-a e põe no cartão o botão «Ver no mapa».
   await api('defs_save', { defs: {
     'evento.civil_hora': '10:30', 'evento.civil_local': 'Conservatória do Namibe',
     'evento.civil_maps': 'https://maps.app.goo.gl/provaCer' } });
   const htmlConvite = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
-  // A ligação é uma pastilha (.cer-mapa) — o mesmo feitio do botão do local do
-  // evento —, com o pino e o nome do local lá dentro.
-  const temElo = /class="cerimonias[^]*?<a class="cer-mapa" href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^]*?<span>Conservatória do Namibe<\/span>/.test(htmlConvite);
-  ok(temElo, 'a cerimónia com mapa mostra o local numa pastilha "ver no mapa"');
-  const temPino = /<a class="cer-mapa"[^>]*>\s*<svg class="pino"/.test(htmlConvite);
-  ok(temPino, 'a pastilha leva o ícone de localização do Google Maps');
+  ok(/<p class="cer-place">Conservatória do Namibe<\/p>/.test(htmlConvite),
+     'o cartão mostra o local da cerimónia');
+  ok(/<a class="cer-map" href="https:\/\/maps\.app\.goo\.gl\/provaCer"[^]*?<span>Ver no mapa<\/span>/.test(htmlConvite),
+     'e, com ligação, o botão «Ver no mapa»');
+  // O copo d'água tem sempre o seu botão; com a ligação da cerimónia passam a
+  // ser dois. É assim que se conta, e não pela ausência da classe.
+  ok((htmlConvite.match(/class="cer-map"/g) || []).length === 2,
+     'a cerimónia com mapa acrescenta o seu botão ao do copo d’água');
   await api('defs_save', { defs: { 'evento.civil_maps': '' } });
   const semElo = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
-  ok(/<div class="l">Conservatória do Namibe<\/div>/.test(semElo),
-     'e sem mapa fica texto simples, sem ligação');
+  ok(/<p class="cer-place">Conservatória do Namibe<\/p>/.test(semElo)
+     && (semElo.match(/class="cer-map"/g) || []).length === 1,
+     'e sem mapa fica o local sozinho, sem botão');
+  // O cronograma abre com as cerimónias, com o selo do cartão em vez do ícone.
+  ok(/<div class="node cer"><img src="assets\/convite\/selo-civil\.png"/.test(semElo),
+     'o cronograma abre com a cerimónia, e traz o selo dela');
+  // O título vai por extenso — e o que o casal escreveu manda: «Registo Civil»
+  // não vira «Cerimónia registo civil».
+  ok(/<div class="tt">Registo Civil<em>O sim perante a lei<\/em><span class="loc">Conservatória do Namibe<\/span>/
+       .test(semElo),
+     'com o que ela é, e onde — pelo nome que o casal lhe deu');
 
   // ============ 5. o cronograma rearranja-se ============
   const ordem = () => p.evaluate(() => EST.listas['cronograma.itens'].map(x => x.t));

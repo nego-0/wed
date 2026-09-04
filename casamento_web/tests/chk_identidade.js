@@ -141,7 +141,10 @@ const entrar = async (ctx, u, p) => {
   await admin.waitForTimeout(1000);
   await publico.goto(BASE + '/convite-digital.php?c=' + codigo, { waitUntil: 'networkidle' });
   const txtDig = await publico.locator('body').innerText();
-  ok(txtDig.includes('Quinta ' + marca) && txtDig.includes('Lobito'),
+  // A cidade lê-se em versaletes no cartão do copo d'água, e o que innerText
+  // devolve é o texto COMO SE VÊ — «LOBITO». Compara-se sem olhar à caixa: o
+  // que se está a provar é que o dado chega ao convite, não como ele é composto.
+  ok(txtDig.includes('Quinta ' + marca) && /lobito/i.test(txtDig),
      'o local e a cidade escritos na gestão aparecem no convite digital');
 
   // ---------- 4b. os dados do evento entram no primeiro registo ----------

@@ -291,12 +291,18 @@ function correcoesEsperadas(): array {
          'personalizacao.php', "\$maps !== ''"],
         ['O form "Novo casamento" do admin também traz os campos de mapa',
          'plataforma.php', 'id="n-civil-maps"'],
-        ['O local com mapa leva o pino de localização no convite',
-         'personalizacao.php', 'function iconePino('],
         ['A ligação do mapa deixou de se editar no editor do convite digital',
          'convite-editor.php', "'grande-dia':['evento.local','evento.cidade']"],
-        ['O local da cerimónia com mapa é uma pastilha, como o botão da receção',
-         'personalizacao.php', 'class="cer-mapa"'],
+
+        // ---- «Onde nos casamos»: as cerimónias em cartões ----
+        ['As cerimónias e o copo d’água são cartões com emblema e moldura desenhada',
+         'personalizacao.php', 'function seloCerimonia('],
+        ['A moldura refaz-se à medida do cartão (festão nos lados, abóbada no copo d’água)',
+         'assets/convite-base.html', 'function abobada('],
+        ['Cada cartão leva o seu botão «Ver no mapa»',
+         'personalizacao.php', 'class="cer-map"'],
+        ['O cronograma do dia abre com as cerimónias, com o seu selo e o local',
+         'personalizacao.php', 'function cerimoniasDoCronograma('],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

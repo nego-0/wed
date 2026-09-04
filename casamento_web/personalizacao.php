@@ -1621,45 +1621,169 @@ function cssPosicoes(array $defs): string {
     return $css;
 }
 
+// ============================================================
+// ONDE NOS CASAMOS — as cerimónias e o copo d'água, em cartões
+//
+// Eram três linhas de texto e um botão, com a receção num bloco à parte a
+// dizer a mesma coisa por outras palavras. Passam a ser cartões do mesmo
+// conjunto: cada um com o seu emblema em cima, a moldura desenhada à volta e,
+// por dentro, o que se precisa de saber — que cerimónia é, a que horas, onde,
+// e o caminho para o mapa.
+// ============================================================
+
 /**
- * As duas cerimónias, para o convite digital.
+ * O selo de pássaros que pousa no pé de cada cartão de cerimónia.
  *
- * São opcionais e é a HORA que decide: sem hora não há cerimónia a anunciar,
- * e o bloco não sai de todo. Era o que o cartão já fazia; o convite digital
- * nem sequer as mostrava, e um casal que tivesse marcado a igreja no registo
- * via essa informação só no papel.
+ * Um par de aves com um raminho, espelhado ao meio — o mesmo desenho dos
+ * dois lados. Vive aqui, e não no modelo, porque o modelo e as cerimónias
+ * geradas precisam ambos dele: escrito em dois sítios, mudava num e não no
+ * outro.
  */
-/** O pino de localização (estilo Google Maps), para marcar um local que se abre
- *  no mapa. Herda a cor por currentColor. */
-function iconePino(): string {
-    return '<svg class="pino" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-         . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-         . '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+function seloCerimonia(): string {
+    $meia = '<g fill="currentColor" stroke="none">'
+          . '<path d="M22.6 7C21.1 4.6 18.7 3.3 15.8 3.5c1.2 2.4 3.8 3.7 6.8 3.5Z"/>'
+          . '<path d="M24.7 7.7c-2.1 1.2-4.1 3-5.3 5.2 2.6-.2 5-2.2 5.3-5.2Z"/>'
+          . '<circle cx="9.4" cy="8.5" r="1"/></g>'
+          . '<g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">'
+          . '<path d="M27.6 7C22 7 17 5.4 12 3.6"/>'
+          . '<path d="M12 3.6C8.6 2.4 5.3 2.6 3.3 4.7 2.3 5.7 2.8 7.1 4.2 7.1c1 0 1.5-.8 1.1-1.5"/></g>';
+    return '<span class="cer-badge bt"><svg viewBox="0 0 64 20" aria-hidden="true">'
+         . '<g fill="currentColor" stroke="none"><path d="M32 1l3.4 6-3.4 6-3.4-6Z"/>'
+         . '<circle cx="32" cy="16.2" r="1.5"/></g>'
+         . $meia
+         . '<g transform="translate(64,0) scale(-1,1)">' . $meia . '</g>'
+         . '</svg></span>';
 }
 
-function cerimoniasHtml(array $defs): string {
-    $out = '';
-    foreach ([['civil', 'Civil'], ['religiosa', 'Religiosa']] as [$k, $_]) {
+/** O ramo florido que separa o nome da hora, dentro do cartão. */
+function ornamentoCerimonia(): string {
+    $ramo = '<path d="M47.6 23.6C49 12.4 57 10 57.6 17.2 58 22 52.2 25 47.6 23.6Z"/>'
+          . '<path d="M49.6 24.6C61 17.2 72 18.6 81 24.6 72 23 60 22.6 49.6 24.6Z"/>'
+          . '<circle cx="63" cy="9.4" r="1.4"/><path d="M83 24.6H96"/>';
+    return '<div class="cer-orn"><span class="l"></span>'
+         . '<svg class="fl fl-svg" viewBox="0 0 96 44" aria-hidden="true" fill="none" stroke="currentColor"'
+         . ' stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+         . '<path d="M48 5C44.6 12 44.6 19 48 24.5 51.4 19 51.4 12 48 5Z"/><path d="M48 8.5V21"/>'
+         . '<path d="M48 30C45.8 32.2 45.8 35.4 48 37.6 50.2 35.4 50.2 32.2 48 30Z"/><circle cx="48" cy="41" r="1"/>'
+         . '<g>' . $ramo . '</g><g transform="matrix(-1 0 0 1 96 0)">' . $ramo . '</g>'
+         . '</svg><span class="l"></span></div>';
+}
+
+/**
+ * O título de uma cerimónia, partido em duas linhas: o que é, e qual.
+ *
+ * O cartão diz «Cerimónia» em versaletes por cima e «Civil» em grande por
+ * baixo. Os casais escrevem o título todo num campo só — «Cerimónia Civil» —,
+ * e é daí que se tira a divisão. Quem escrever outra coisa qualquer fica com
+ * ela inteira no nome, que é o que se lê em grande: mais vale um cartão sem
+ * versaletes do que um cartão com metade do título cortado.
+ */
+function tituloCerimonia(string $titulo, string $porOmissao): array {
+    $titulo = trim($titulo) !== '' ? trim($titulo) : $porOmissao;
+    if (preg_match('/^(cerim[óo]nia)\s+(.+)$/iu', $titulo, $m)) {
+        return [mb_convert_case($m[1], MB_CASE_TITLE, 'UTF-8'), $m[2]];
+    }
+    return ['', $titulo];
+}
+
+/** A hora à maneira do cartão: 10H00, e não «Às 10h00». */
+function horaCartao(string $hora): string {
+    return strtoupper(str_replace(':', 'H', substr(trim($hora), 0, 5)));
+}
+
+/**
+ * As cerimónias como linhas do cronograma — as primeiras do dia.
+ *
+ * Cada uma traz o selo redondo do seu emblema, o período tirado da hora
+ * (manhã, tarde, noite) e o local por baixo. A frase que as acompanha é a do
+ * desenho: é o que aquela cerimónia É, e não algo que o casal tenha de
+ * escrever outra vez.
+ */
+function cerimoniasDoCronograma(array $defs): array {
+    $fixos = [
+        'civil'     => ['selo' => 'selo-civil.png',     'sub' => 'O sim perante a lei'],
+        'religiosa' => ['selo' => 'selo-religiosa.png', 'sub' => 'A bênção do matrimónio'],
+    ];
+    $out = [];
+    foreach ($fixos as $k => $f) {
         $hora = trim((string)($defs['evento.'.$k.'_hora'] ?? ''));
         if ($hora === '') continue;
+        $h = (int)substr($hora, 0, 2);
+        // Na linha do cronograma o título vai por extenso, e não partido como
+        // no cartão: «Cerimónia civil». Quem escreveu outra coisa — «Registo
+        // Civil» — fica com o que escreveu: acrescentar-lhe «Cerimónia» à
+        // frente dava «Cerimónia registo civil», que ninguém escreveu.
+        [$tipo, $nome] = tituloCerimonia((string)($defs['evento.'.$k.'_titulo'] ?? ''), 'Cerimónia');
+        $out[] = [
+            'h'    => horaCartao($hora),
+            'p'    => $h < 12 ? 'Manhã' : ($h < 19 ? 'Tarde' : 'Noite'),
+            'selo' => 'assets/convite/' . $f['selo'],
+            't'    => $tipo !== '' ? $tipo . ' ' . mb_strtolower($nome, 'UTF-8') : $nome,
+            's'    => $f['sub'],
+            'loc'  => trim((string)($defs['evento.'.$k.'_local'] ?? '')),
+        ];
+    }
+    // Pela hora: um casal que case pela igreja de manhã não fica com a linha
+    // do registo à frente dela só por ser a primeira na lista.
+    usort($out, fn($a, $b) => strcmp($a['h'], $b['h']));
+    return $out;
+}
+
+/**
+ * As cerimónias, em cartões.
+ *
+ * São opcionais e é a HORA que decide: sem hora não há cerimónia a anunciar.
+ * Sem nenhuma, isto devolve vazio e o conjunto fica só com o copo d'água — que
+ * o modelo põe sempre, porque festa há sempre.
+ *
+ * Devolve o miolo do bloco `.cerimonias`: o título, a grelha dos cartões e a
+ * linha que costura as cerimónias à festa. O invólucro e o cartão do copo
+ * d'água são do modelo.
+ */
+function cerimoniasHtml(array $defs): string {
+    $emblemas = ['civil' => 'emblema-civil.png', 'religiosa' => 'emblema-religiosa.png'];
+    $cartoes = '';
+    foreach ([['civil', 'Cerimónia Civil'], ['religiosa', 'Cerimónia Religiosa']] as [$k, $porOmissao]) {
+        $hora = trim((string)($defs['evento.'.$k.'_hora'] ?? ''));
+        if ($hora === '') continue;
+        [$tipo, $nome] = tituloCerimonia((string)($defs['evento.'.$k.'_titulo'] ?? ''), $porOmissao);
         $local = trim((string)($defs['evento.'.$k.'_local'] ?? ''));
         $maps  = trim((string)($defs['evento.'.$k.'_maps'] ?? ''));
-        $localHtml = '';
-        if ($local !== '') {
-            // Com ligação, o local é uma pastilha "ver no mapa" com o pino de
-            // localização — o mesmo feitio do botão da receção; sem ela, é texto
-            // simples. O pino diz, à vista, que aquilo se abre no mapa.
-            $localHtml = $maps !== ''
-                ? '<div class="l"><a class="cer-mapa" href="' . escP($maps) . '" target="_blank" rel="noopener" title="Ver no Google Maps">'
-                    . iconePino() . '<span>' . escP($local) . '</span></a></div>'
-                : '<div class="l">' . escP($local) . '</div>';
-        }
-        $out .= '<div class="cer"><h3>' . escP($defs['evento.'.$k.'_titulo']) . '</h3>'
-              . '<div class="h">' . escP(horaTexto($hora)) . '</div>'
-              . $localHtml
-              . '</div>';
+        $cartoes .= '<div class="cer-item"><div class="cer-medal">'
+          . '<img src="assets/convite/' . $emblemas[$k] . '" alt="" loading="lazy" decoding="async"></div>'
+          . '<div class="cer-card">'
+          . '<svg class="cf" data-arch="0" aria-hidden="true"><path class="out"></path><path class="in"></path></svg>'
+          . seloCerimonia()
+          . '<div class="cer-body">'
+          . ($tipo !== '' ? '<div class="cer-kind">' . escP($tipo) . '</div>' : '')
+          . '<div class="cer-name">' . escP($nome) . '</div>'
+          . ornamentoCerimonia()
+          . '<div class="cer-hour"><i></i>' . escP(horaCartao($hora)) . '<i></i></div>'
+          . ($local !== '' ? '<p class="cer-place">' . escP($local) . '</p>' : '')
+          . '<div class="cer-city">' . escP($defs['evento.cidade'] ?? '') . '</div>'
+          . ($maps !== ''
+              ? '<a class="cer-map" href="' . escP($maps) . '" target="_blank" rel="noopener">'
+                . '<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/>'
+                . '<circle cx="12" cy="10" r="2.6"/></svg><span>Ver no mapa</span></a>'
+              : '')
+          . '</div></div></div>';
     }
-    return $out === '' ? '' : '    <div class="cerimonias rv d2">' . $out . '</div>';
+    if ($cartoes === '') return '';
+
+    // A costura: depois das cerimónias vem a festa, e diz-se a que horas.
+    $festa = trim((string)($defs['evento.hora'] ?? ''));
+    $copo  = mb_strtolower(trim((string)($defs['evento.venue_titulo'] ?? '')), 'UTF-8');
+    $folha = '<img class="fl" src="assets/convite/folha-par.png" alt="" loading="lazy" decoding="async">';
+    $depois = '';
+    if ($copo !== '') {
+        $depois = '<div class="cer-after"><span class="l"></span>' . $folha
+                . '<span class="t">e depois, o ' . escP($copo)
+                . ($festa !== '' ? ' ' . escP(mb_strtolower(horaTexto($festa), 'UTF-8')) : '') . '</span>'
+                . str_replace('class="fl"', 'class="fl r"', $folha) . '<span class="l"></span></div>';
+    }
+    return '      <h2>Onde nos casamos</h2>' . "\n"
+         . '      <div class="cer-grid">' . $cartoes . '</div>' . "\n"
+         . ($depois !== '' ? '      ' . $depois . "\n" : '');
 }
 
 /** Secções livres gravadas, já validadas. */
@@ -2126,14 +2250,30 @@ function convitePlaceholders(array $defs): array {
             . '<h3>'.escP($c['t'] ?? '').'</h3>'
             . '<p>'.$texto.'</p></div>'."\n";
     }
-    $crono = json_decode($defs['cronograma.itens'], true) ?: [];
+    // O dia começa nas CERIMÓNIAS, e o cronograma abre com elas — com o selo
+    // do cartão em vez do ícone de traço, e com o local por baixo. Não vêm da
+    // lista do casal: essa é da festa, e a hora da igreja já está dita noutro
+    // sítio. Escrevê-las duas vezes era pedir que ele as mantivesse iguais.
     $htmlCrono = '';
+    foreach (cerimoniasDoCronograma($defs) as $c) {
+        $htmlCrono .= '<div class="t-item">'
+            . '<div class="half time"><div class="hh">'.escP($c['h']).'<small>'.escP($c['p']).'</small></div></div>'
+            . '<div class="node cer"><img src="'.escP($c['selo']).'" alt="" loading="lazy" decoding="async"></div>'
+            . '<div class="half desc"><div class="tt">'.escP($c['t']).'<em>'.escP($c['s']).'</em>'
+            . ($c['loc'] !== '' ? '<span class="loc">'.escP($c['loc']).'</span>' : '')
+            . '</div></div>'
+            . '</div>'."\n";
+    }
+    $crono = json_decode($defs['cronograma.itens'], true) ?: [];
     foreach ($crono as $c) {
         $ic = $icones[$c['i'] ?? ''] ?? $icones['coracao'];
+        $loc = trim((string)($c['l'] ?? ''));
         $htmlCrono .= '<div class="t-item">'
             . '<div class="half time"><div class="hh">'.escP($c['h'] ?? '').'<small>'.escP($c['p'] ?? '').'</small></div></div>'
             . '<div class="node"><svg viewBox="0 0 24 24">'.$ic.'</svg></div>'
-            . '<div class="half desc"><div class="tt">'.escP($c['t'] ?? '').'<em>'.escP($c['s'] ?? '').'</em></div></div>'
+            . '<div class="half desc"><div class="tt">'.escP($c['t'] ?? '').'<em>'.escP($c['s'] ?? '').'</em>'
+            . ($loc !== '' ? '<span class="loc">'.escP($loc).'</span>' : '')
+            . '</div></div>'
             . '</div>'."\n";
     }
     $man = json_decode($defs['manual.itens'], true) ?: [];
@@ -2197,7 +2337,12 @@ function convitePlaceholders(array $defs): array {
         '{{CRONO_ITENS}}' => $htmlCrono,
         '{{CERIMONIAS}}' => cerimoniasHtml($defs),
         '{{VENUE_TITULO}}' => escP($defs['evento.venue_titulo']),
-        '{{VENUE_LINHAS}}' => escP($defs['evento.local']).'<br>'.escP($defs['evento.cidade']),
+        // O local e a cidade em linhas próprias: no cartão do copo d'água têm
+        // tratamento diferente — um em itálico grande, o outro em versaletes.
+        '{{VENUE_LOCAL}}'  => escP($defs['evento.local']),
+        '{{VENUE_CIDADE}}' => escP($defs['evento.cidade']),
+        '{{CER_SELO}}'      => seloCerimonia(),
+        '{{CER_ORNAMENTO}}' => ornamentoCerimonia(),
         '{{MAPS_URL}}' => escP($defs['evento.maps']),
         '{{ACESSO_EYEBROW}}' => escP($defs['acesso.eyebrow']),
         '{{ACESSO_TITULO}}' => escP($defs['acesso.titulo']),

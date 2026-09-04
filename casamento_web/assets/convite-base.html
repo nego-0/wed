@@ -217,22 +217,81 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .cal-btn{display:inline-flex;align-items:center;gap:9px;margin-bottom:46px;padding:10px 22px;border-radius:50px;border:1px solid rgba(217,188,140,.35);background:transparent;color:var(--gold-pale);font-family:var(--f-sans);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:background .3s ease,transform .3s ease}
 .cal-btn:hover{background:rgba(217,188,140,.1);transform:translateY(-2px)}
 .cal-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6}
-#grande-dia .venue{max-width:420px;margin:0 auto 56px}
-.cerimonias{display:flex;flex-wrap:wrap;justify-content:center;gap:34px;max-width:460px;margin:0 auto 46px}
-.cerimonias .cer{flex:1 1 180px}
-.cerimonias h3{font-family:var(--f-sans);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:8px;font-weight:500}
-.cerimonias .h{font-family:var(--f-serif);font-size:26px;color:var(--ivory);line-height:1}
-.cerimonias .l{font-size:13px;line-height:1.6;color:var(--gold-pale);margin-top:6px}
-/* Com ligação, o local é uma pastilha de contorno com o pino — o mesmo feitio
-   do botão "Local do evento" da receção, à escala das cerimónias. */
-.cerimonias .l a.cer-mapa{display:inline-flex;align-items:center;gap:7px;margin-top:2px;
-  padding:7px 15px;border-radius:60px;border:1px solid var(--gold-soft);color:var(--gold-pale);
-  background:transparent;text-decoration:none;font-size:12px;line-height:1.3;letter-spacing:.02em;
-  transition:background .3s ease,transform .3s ease,border-color .3s ease}
-.cerimonias .l a.cer-mapa:hover{background:rgba(217,188,140,.12);border-color:var(--gold);transform:translateY(-2px)}
-.cerimonias .l a.cer-mapa .pino{width:14px;height:14px;flex:none;color:var(--gold)}
-#grande-dia .venue h3{font-family:var(--f-serif);font-weight:600;font-size:24px;color:var(--ivory);margin-bottom:8px;letter-spacing:.04em}
-#grande-dia .venue p{color:var(--gold-pale);font-size:15px;line-height:1.7;font-family:var(--f-serif);font-style:italic}
+/* ---- ONDE NOS CASAMOS: as cerimónias e o copo d'água ----
+   Eram três linhas de texto e um botão. Passam a ser CARTÕES: cada
+   um com o seu emblema em cima, a moldura desenhada em festão (ou em
+   arco, no do copo d'água), e por dentro o que se precisa de saber —
+   que cerimónia é, a que horas, onde, e o caminho para o mapa. O
+   copo d'água entra no mesmo conjunto, num cartão largo: era um
+   bloco à parte que dizia a mesma coisa por outras palavras. */
+.cerimonias{position:relative;margin:0 auto 64px;max-width:660px}
+.cerimonias h2{position:relative;z-index:1;font-family:var(--f-script);font-weight:400;
+  font-size:clamp(38px,9vw,50px);color:var(--gold-soft);margin-bottom:46px}
+.cer-grid{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;gap:26px}
+.cer-item{position:relative;flex:1 1 0;min-width:0;max-width:290px;padding-top:66px}
+.cer-item.wide{flex:1 1 100%;max-width:520px;padding-top:74px}
+.cer-card{position:relative;padding:60px 22px 34px;color:var(--gold-soft)}
+.cer-item.wide .cer-card{padding:74px 26px 38px}
+/* A moldura é desenhada em SVG e não em border-radius: os cantos são
+   arcos CÔNCAVOS (um festão), e o arco de cima do cartão largo é uma
+   abóbada. O caminho vem do guião no fim da página, que o refaz
+   sempre que o cartão muda de tamanho. */
+.cf{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;display:block}
+.cf path{fill:none;stroke:var(--gold-soft);stroke-width:1;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.cf path.in{stroke:rgba(217,188,140,.5)}
+/* O emblema encavalita-se na moldura: o ::before é o pedaço de fundo
+   que abre a boca por onde ele entra. */
+.cer-medal{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:auto;
+  display:flex;align-items:center;justify-content:center;z-index:5}
+.cer-medal::before{content:"";position:absolute;top:4%;left:6%;right:6%;bottom:8%;
+  background:var(--forest-deep);border-radius:46%;z-index:-1}
+.cer-medal img{width:100%;height:auto;object-fit:contain;
+  filter:saturate(.8) drop-shadow(0 6px 14px rgba(0,0,0,.5));opacity:.95}
+.cer-item.wide .cer-medal{width:172px}
+.cer-body{position:relative;z-index:1;text-align:center}
+.cer-kind{font-size:10.5px;letter-spacing:.42em;text-indent:.42em;text-transform:uppercase;
+  color:var(--gold-soft);margin-bottom:6px}
+.cer-name{font-family:var(--f-serif);font-weight:500;font-size:clamp(24px,5.6vw,32px);
+  letter-spacing:.1em;text-indent:.1em;text-transform:uppercase;color:var(--ivory);line-height:1.05}
+.cer-item.wide .cer-name{font-size:clamp(29px,6.6vw,40px)}
+.cer-orn{display:flex;align-items:center;justify-content:center;gap:11px;margin:14px 0 15px}
+.cer-orn .l{height:1px;width:40px;background:rgba(217,188,140,.42)}
+.cer-hour{display:flex;align-items:center;justify-content:center;gap:14px;font-family:var(--f-serif);
+  font-size:31px;font-weight:600;color:var(--gold-soft);line-height:1}
+.cer-hour i{width:5px;height:5px;background:var(--gold-soft);transform:rotate(45deg);flex:none}
+.cer-place{font-family:var(--f-serif);font-style:italic;font-size:17px;color:var(--ivory);
+  margin-top:16px;line-height:1.5}
+.cer-item.wide .cer-place{font-size:19px;margin-top:10px}
+.cer-city{font-size:10px;letter-spacing:.3em;text-indent:.3em;text-transform:uppercase;
+  color:var(--gold-soft);margin-top:11px;opacity:.88}
+.cer-map{display:inline-flex;align-items:center;white-space:nowrap;gap:10px;margin-top:20px;
+  padding:11px 22px;border-radius:50px;border:1px solid rgba(217,188,140,.55);color:var(--gold-pale);
+  font-size:10.5px;letter-spacing:.2em;text-indent:.2em;text-transform:uppercase;text-decoration:none;
+  transition:background .3s ease,transform .3s ease}
+.cer-map:hover{background:rgba(217,188,140,.12);transform:translateY(-2px)}
+.cer-map svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;flex:none}
+/* O selo de pássaros pousa em cima da linha de baixo da moldura, e
+   abre-lhe o rasgo com o próprio fundo. */
+.cer-badge{position:absolute;left:50%;transform:translateX(-50%);width:66px;z-index:3;
+  background:var(--forest-deep);padding:0 6px;line-height:0;color:var(--gold-soft)}
+.cer-badge.bt{bottom:-10px}
+.cer-badge svg{width:100%;height:auto;display:block;overflow:visible}
+/* «e depois, o copo d'água às…» — a costura entre as cerimónias e a festa. */
+.cer-after{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
+  gap:14px;margin:40px auto 30px;max-width:560px}
+.cer-after .l{height:1px;flex:1 1 30px;background:linear-gradient(90deg,transparent,rgba(217,188,140,.5))}
+.cer-after .l:last-child{background:linear-gradient(90deg,rgba(217,188,140,.5),transparent)}
+.cer-after .t{font-family:var(--f-serif);font-style:italic;font-size:17px;color:var(--gold-pale);white-space:nowrap}
+.cerimonias .fl{flex:none;display:block;height:auto}
+.cerimonias .fl-svg{color:var(--gold-soft)}
+.cer-orn .fl{width:38px}
+.cer-after .fl{width:26px}
+.cer-after .fl.r{transform:scaleX(-1)}
+@media(max-width:560px){
+  .cer-grid{gap:34px}
+  .cer-item{flex:1 1 100%;max-width:330px}
+  .cer-after .t{font-size:15px}
+}
 .btn{display:inline-flex;align-items:center;gap:10px;margin-top:24px;padding:15px 34px;border-radius:60px;text-decoration:none;font-size:12px;letter-spacing:.24em;text-transform:uppercase;font-weight:500;transition:transform .35s ease,box-shadow .35s ease}
 .btn svg{width:16px;height:16px;flex:none}
 .btn-gold{background:linear-gradient(135deg,var(--gold-soft),var(--gold));color:var(--forest-deep);box-shadow:0 10px 30px rgba(180,134,74,.35)}
@@ -259,6 +318,12 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .t-item .hh small{display:block;font-size:11px;font-family:var(--f-sans);font-weight:300;letter-spacing:.24em;text-transform:uppercase;color:rgba(239,227,203,.6);margin-top:6px;text-indent:.24em}
 .t-item .tt{font-family:var(--f-serif);font-size:18px;font-weight:600;color:var(--ivory);line-height:1.35;letter-spacing:.03em}
 .t-item .tt em{display:block;font-family:var(--f-sans);font-style:normal;font-weight:300;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,227,203,.55);margin-top:5px}
+/* As cerimónias abrem o cronograma, e trazem o seu selo em vez do
+   ícone de traço: é o mesmo emblema do cartão, aqui em pequeno, para
+   se reconhecer a linha sem a ler. O losango endireita-se por dentro. */
+.t-item .node.cer{border-radius:50%;overflow:hidden;padding:0}
+.t-item .node.cer img{width:100%;height:100%;object-fit:contain;transform:rotate(-45deg);filter:saturate(.8)}
+.t-item .tt .loc{display:block;font-family:var(--f-serif);font-style:italic;font-weight:500;font-size:14px;color:var(--gold-pale);margin-top:5px;line-height:1.4}
 
 /* ============ PAGE 4 · ACESSO / QR ============ */
 #acesso{background:var(--forest-deep);color:var(--ivory)}
@@ -454,14 +519,30 @@ footer .fnote{margin-top:26px;font-family:var(--f-serif);font-style:italic;font-
       <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4M12 12v5M9.5 14.5h5"/></svg>
       Adicionar ao calendário
     </a>
+    <div class="cerimonias rv d2">
 {{CERIMONIAS}}
-    <div class="venue rv d3">
-      <h3>{{VENUE_TITULO}}</h3>
-      <p>{{VENUE_LINHAS}}</p>
-      <a class="btn btn-line" href="{{MAPS_URL}}" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
-        Local do evento
-      </a>
+      <!-- O copo d'água, em cartão largo de abóbada. Fica aqui e não no PHP
+           das cerimónias: os seus campos são marcadores que o editor reescreve
+           ao vivo, e dentro de HTML gerado deixavam de o ser. -->
+      <div class="cer-grid">
+        <div class="cer-item wide">
+          <div class="cer-medal"><img src="assets/convite/emblema-copo.png" alt="" loading="lazy" decoding="async"></div>
+          <div class="cer-card">
+            <svg class="cf" data-arch="1" aria-hidden="true"><path class="out"></path><path class="in"></path></svg>
+            {{CER_SELO}}
+            <div class="cer-body">
+              <div class="cer-name">{{VENUE_TITULO}}</div>
+              {{CER_ORNAMENTO}}
+              <p class="cer-place">{{VENUE_LOCAL}}</p>
+              <div class="cer-city">{{VENUE_CIDADE}}</div>
+              <a class="cer-map" href="{{MAPS_URL}}" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+                <span>Local do evento</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 <!--SEC:cronograma-->
     <div class="timeline-wrap rv">
@@ -612,6 +693,53 @@ footer .fnote{margin-top:26px;font-family:var(--f-serif);font-style:italic;font-
 </script>
 <a id="dlBtn" href="{{DOWNLOAD_URL}}" aria-label="Descarregar o convite para ver sem internet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span>Descarregar convite</span></a>
 <style>#dlBtn{position:fixed;left:18px;bottom:18px;z-index:1200;display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.2rem;border-radius:50px;cursor:pointer;text-decoration:none;font-family:var(--f-sans);font-weight:500;font-size:14px;color:#fff;background:linear-gradient(135deg,#B4864A,#8A6031);box-shadow:0 10px 26px rgba(22,38,30,.35)}#dlBtn svg{width:17px;height:17px}#dlBtn:active{transform:translateY(1px)}@media print{#dlBtn{display:none}}</style>
+<script>
+/* A moldura dos cartões das cerimónias.
+   Não se faz com border-radius: os cantos são CÔNCAVOS — um festão —,
+   e o cartão do copo d'água fecha em abóbada por cima. São dois
+   traços concêntricos, e para o afastamento entre eles ser o mesmo em
+   toda a volta o raio de cada canto cresce com o recuo (r = R + recuo).
+   Redesenha-se a cada mudança de tamanho: o caminho é em pixéis, e um
+   viewBox esticado deformava os cantos. */
+(function(){
+  var R=26, IN=9, ARCH=104;
+  function k(i,r){ return Math.round(Math.sqrt(r*r - i*i)*100)/100; }
+  function festao(w,h,i){
+    var r=R+i, t=k(i,r), x1=w-i, y1=h-i;
+    return 'M'+t+' '+i+'H'+(w-t)+'A'+r+' '+r+' 0 0 0 '+x1+' '+t+
+           'V'+(h-t)+'A'+r+' '+r+' 0 0 0 '+(w-t)+' '+y1+
+           'H'+t+'A'+r+' '+r+' 0 0 0 '+i+' '+(h-t)+
+           'V'+t+'A'+r+' '+r+' 0 0 0 '+t+' '+i+'Z';
+  }
+  function abobada(w,h,i,a){
+    var r=R+i, t=k(i,r), x1=w-i, y1=h-i, rx=(x1-i)/2, ry=a-i;
+    return 'M'+i+' '+a+'A'+rx+' '+ry+' 0 0 1 '+x1+' '+a+
+           'V'+(h-t)+'A'+r+' '+r+' 0 0 0 '+(w-t)+' '+y1+
+           'H'+t+'A'+r+' '+r+' 0 0 0 '+i+' '+(h-t)+'Z';
+  }
+  function desenhar(){
+    document.querySelectorAll('.cer-card').forEach(function(cartao){
+      var svg=cartao.querySelector('.cf'); if(!svg) return;
+      var w=Math.round(cartao.offsetWidth), h=Math.round(cartao.offsetHeight);
+      if(!w||!h) return;
+      svg.setAttribute('viewBox','0 0 '+w+' '+h);
+      svg.setAttribute('preserveAspectRatio','none');
+      var arco=svg.getAttribute('data-arch')==='1';
+      svg.querySelector('.out').setAttribute('d', arco?abobada(w,h,0,ARCH):festao(w,h,0));
+      svg.querySelector('.in').setAttribute('d', arco?abobada(w,h,IN,ARCH):festao(w,h,IN));
+    });
+  }
+  desenhar();
+  window.addEventListener('load', desenhar);
+  window.addEventListener('resize', desenhar);
+  // As letras chegam depois do HTML e mudam a altura do cartão.
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(desenhar);
+  if(window.ResizeObserver){
+    var ro=new ResizeObserver(desenhar);
+    document.querySelectorAll('.cer-card').forEach(function(c){ ro.observe(c); });
+  }
+})();
+</script>
 <script src="assets/qrious.min.js"></script>
 <script>try{new QRious({element:document.getElementById("qrCanvas"),value:"{{QR_VALUE}}",size:320,level:"M",foreground:"{{QR_FG}}",background:"{{QR_BG}}"});}catch(e){}</script>
 </body>
