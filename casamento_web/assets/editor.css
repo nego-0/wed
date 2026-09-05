@@ -1,0 +1,472 @@
+/* ============================================================
+   editor.css — Ambiente de edição ao estilo de um editor de
+   imagem: barra de ferramentas à esquerda, mesa de trabalho ao
+   centro e painéis (propriedades / camadas) à direita.
+   Usado por editor-cartao.php e convite-editor.php.
+   ============================================================ */
+
+:root{
+  --ed-fundo:#1e1f1c;      /* fundo da aplicação */
+  --ed-painel:#2a2c28;     /* painéis e barras */
+  --ed-painel-2:#323430;   /* cabeçalhos de painel */
+  --ed-mesa:#141511;       /* mesa de trabalho */
+  --ed-linha:#3b3e39;
+  --ed-texto:#d6d3c9;
+  --ed-texto-2:#8f938a;
+  --ed-ouro:#b4864a;
+  --ed-ouro-claro:#d9bc8c;
+  --ed-sel:#4a7a5e;
+}
+
+body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
+             font-family:'Jost',system-ui,sans-serif; font-size:13px;
+             height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+
+/* ---- Barra de menu ---------------------------------------- */
+.ed-menu{ display:flex; align-items:center; gap:.9rem; background:var(--ed-painel);
+          border-bottom:1px solid var(--ed-linha); padding:.45rem .8rem; flex:0 0 auto; }
+.ed-menu .marca{ display:flex; align-items:center; gap:.55rem; font-family:'Cormorant Garamond',serif;
+                 font-size:1.02rem; color:var(--ed-ouro-claro); }
+.ed-menu .ed-mono{ width:26px; height:26px; border:1px solid var(--ed-ouro); border-radius:50%;
+                display:flex; align-items:center; justify-content:center; font-size:.7rem; }
+.ed-menu .doc{ color:var(--ed-texto-2); }
+.ed-menu .doc b{ color:var(--ed-texto); font-weight:500; }
+.ed-menu .cresce{ flex:1; }
+.ed-menu a{ color:var(--ed-texto-2); text-decoration:none; }
+.ed-menu a:hover{ color:var(--ed-ouro-claro); }
+/* Assinatura do que está instalado. Confirma num relance que o servidor tem
+   mesmo a versão que se julga — sem isto, uma correção entregue e não
+   instalada é indistinguível de uma correção que não funciona. */
+.ed-menu .versao-app{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.7rem;
+  color:#63665e; border:1px solid var(--ed-linha); border-radius:5px; padding:.1rem .35rem; }
+
+/* ---- Barra de opções (por baixo do menu) ------------------- */
+.ed-opcoes{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap;
+            background:var(--ed-painel-2); border-bottom:1px solid var(--ed-linha);
+            padding:.4rem .8rem; flex:0 0 auto; }
+.ed-opcoes .rot{ color:var(--ed-texto-2); font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; }
+
+/* O seletor de largura (e qualquer outro nesta barra) veste-se como os botões:
+   caído no escuro da barra, com a sua própria seta — o <select> de fábrica
+   abria uma caixa branca que destoava de tudo à volta. */
+.ed-opcoes select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  background-color:#3a3d37;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238f938a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right .55rem center; background-size:11px;
+  border:1px solid var(--ed-linha); color:var(--ed-texto); border-radius:6px;
+  padding:.35rem 1.7rem .35rem .7rem; font-family:inherit; font-size:.8rem;
+  line-height:1.2; cursor:pointer; transition:border-color .15s ease; }
+.ed-opcoes select:hover{ border-color:var(--ed-ouro); }
+.ed-opcoes select:focus-visible{ outline:none; border-color:var(--ed-ouro);
+  box-shadow:0 0 0 2px rgba(180,134,74,.28); }
+/* A lista aberta segue o mesmo escuro (onde o navegador deixa). */
+.ed-opcoes select option{ background:var(--ed-painel); color:var(--ed-texto); }
+
+.ed-sep{ width:1px; height:20px; background:var(--ed-linha); }
+
+/* Seletor de versões na barra: a versão em vigor aparece escolhida. Cabe ao
+   pé do "Guardar"; as opções longas de gerir não podem esticar a barra. */
+/* ---- Versões e modelos ----------------------------------------------
+   O botão da barra diz o ESTADO da peça, e é só isso: quem quer mexer abre o
+   painel. Antes era um <select> com versões, modelos e ações de gerir todos
+   lá dentro — e escolher um modelo parecia escolher uma versão. */
+.btn-versao{ display:inline-flex; flex-direction:column; align-items:flex-start; gap:0;
+             max-width:16rem; padding:.24rem .7rem; line-height:1.15; cursor:pointer;
+             background:var(--ed-painel-2); color:var(--ed-texto);
+             border:1px solid var(--ed-linha); border-radius:8px;
+             font-family:inherit; text-align:left; }
+.btn-versao:hover{ border-color:var(--ed-ouro); }
+.btn-versao b{ font-weight:500; font-size:.84rem; max-width:14.6rem;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.btn-versao i{ font-style:normal; font-size:.68rem; color:var(--ed-texto-2);
+               text-transform:uppercase; letter-spacing:.05em; }
+.btn-versao.alterado{ border-color:var(--ed-ouro); }
+.btn-versao.modelo{ border-color:var(--ed-sel); }
+.btn-versao.modelo b{ color:#8fc0a4; }
+.btn-versao.alterado b{ color:var(--ed-ouro-claro); }
+
+.vs-jan{ position:fixed; inset:0; z-index:8000; display:none;
+         background:rgba(10,11,9,.72); padding:2.4vh 1rem; overflow:auto; }
+.vs-jan.aberta{ display:block; }
+.vs-jan.ocupado{ cursor:progress; }
+.vs-jan.ocupado .vs-caixa{ opacity:.6; pointer-events:none; }
+.vs-caixa{ max-width:min(900px,94vw); margin:0 auto; background:var(--ed-painel);
+           border:1px solid var(--ed-linha); border-radius:14px; overflow:hidden;
+           box-shadow:0 24px 60px rgba(0,0,0,.5); }
+.vs-topo{ display:flex; align-items:center; justify-content:space-between;
+          padding:.7rem 1rem; background:var(--ed-painel-2);
+          border-bottom:1px solid var(--ed-linha); }
+.vs-topo h3{ margin:0; font-size:1rem; font-weight:500; color:var(--ed-ouro-claro); }
+.vs-x{ background:none; border:0; color:var(--ed-texto-2); font-size:1.5rem;
+       line-height:1; cursor:pointer; padding:0 .2rem; }
+.vs-x:hover{ color:var(--ed-texto); }
+.vs-abas{ display:flex; gap:.3rem; padding:.6rem 1rem 0; }
+.vs-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
+         color:var(--ed-texto-2); font-family:inherit; font-size:.86rem;
+         padding:.4rem .6rem .5rem; }
+.vs-aba b{ font-weight:500; opacity:.6; }
+.vs-aba.on{ color:var(--ed-ouro-claro); border-bottom-color:var(--ed-ouro); }
+.vs-corpo{ padding:.9rem 1rem 1.1rem; }
+
+.vs-estado{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+            font-size:.88rem; margin-bottom:.9rem; padding:.55rem .8rem;
+            background:var(--ed-mesa); border:1px solid var(--ed-linha); border-radius:10px; }
+.vs-estado b{ color:var(--ed-texto); font-weight:500; }
+.vs-estado em{ font-style:normal; color:var(--ed-texto-2); font-size:.8rem;
+               flex-basis:100%; }
+.vs-pt{ width:8px; height:8px; border-radius:50%; background:var(--ed-ouro); flex:none; }
+.vs-pt.ok{ background:var(--ed-sel); }
+
+.vs-lista{ display:flex; flex-direction:column; }
+.vs-it{ display:flex; align-items:center; justify-content:space-between; gap:.8rem;
+        flex-wrap:wrap; padding:.6rem .2rem; border-bottom:1px solid var(--ed-linha); }
+.vs-it:last-child{ border-bottom:0; }
+.vs-it.em-vigor .vs-it-nm{ color:var(--ed-ouro-claro); }
+.vs-it-nm{ font-size:.92rem; display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.vs-q{ color:var(--ed-texto-2); font-size:.76rem; }
+.vs-et{ font-size:.66rem; text-transform:uppercase; letter-spacing:.05em;
+        border:1px solid var(--ed-linha); border-radius:50px; padding:.05rem .45rem;
+        color:var(--ed-texto-2); }
+.vs-et.ok{ border-color:var(--ed-sel); color:#8fc0a4; }
+.vs-it-ac{ display:flex; gap:.35rem; flex-wrap:wrap; }
+.vs-b{ background:var(--ed-painel-2); color:var(--ed-texto); border:1px solid var(--ed-linha);
+       border-radius:7px; padding:.28rem .6rem; font-size:.78rem; font-family:inherit;
+       cursor:pointer; }
+.vs-b:hover{ border-color:var(--ed-ouro); }
+.vs-b.prim{ background:var(--ed-ouro); border-color:var(--ed-ouro); color:#1e1f1c; }
+.vs-b.prim:hover{ background:var(--ed-ouro-claro); }
+.vs-b.perigo:hover{ border-color:#b4564a; color:#e0938a; }
+.vs-fim{ display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
+         border-top:1px solid var(--ed-linha); margin-top:.8rem; padding-top:.9rem; }
+.vs-nota{ font-size:.8rem; color:var(--ed-texto-2); line-height:1.5; }
+.vs-nota-topo{ margin-bottom:.9rem; }
+.vs-vazio{ text-align:center; color:var(--ed-texto-2); padding:2rem 1rem;
+           border:1px dashed var(--ed-linha); border-radius:12px; line-height:1.7; }
+
+/* As miniaturas dos modelos: desenhadas a sério e encolhidas para caber. Um
+   modelo é um desenho — escolhê-lo por uma linha de texto era às cegas. */
+.vs-grelha{ display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); }
+.vs-mod{ border:1px solid var(--ed-linha); border-radius:12px; overflow:hidden;
+         background:var(--ed-mesa); display:flex; flex-direction:column; }
+.vs-mod:hover{ border-color:var(--ed-ouro); }
+.vs-mod.em-vigor{ border-color:var(--ed-sel); box-shadow:0 0 0 1px var(--ed-sel); }
+.vs-cara{ position:relative; width:100%; overflow:hidden; background:#111; }
+.vs-cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left;
+                 pointer-events:none; }
+.vs-mod-pe{ padding:.55rem .65rem; display:flex; flex-direction:column; gap:.35rem;
+            flex:1; }
+.vs-mod-nm{ font-size:.86rem; color:var(--ed-texto); }
+.vs-mod-ds{ font-size:.75rem; color:var(--ed-texto-2); line-height:1.45; flex:1; }
+
+/* ---- Corpo: ferramentas | mesa | painéis ------------------- */
+.ed-corpo{ flex:1; display:flex; min-height:0; }
+
+.ed-ferramentas{ width:46px; background:var(--ed-painel); border-right:1px solid var(--ed-linha);
+                 display:flex; flex-direction:column; align-items:center; gap:.25rem; padding:.5rem 0; flex:0 0 auto; }
+.ferr{ width:34px; height:34px; border:1px solid transparent; border-radius:7px; background:none;
+       color:var(--ed-texto-2); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.ferr:hover{ background:#34362f; color:var(--ed-texto); }
+.ferr.on{ background:var(--ed-ouro); border-color:var(--ed-ouro-claro); color:#1e1f1c; }
+.ferr svg{ width:17px; height:17px; }
+
+.ed-mesa{ flex:1; background:var(--ed-mesa); overflow:auto; position:relative;
+          display:flex; align-items:flex-start; justify-content:center; padding:26px; min-width:0; }
+.ed-mesa.mao{ cursor:grab; }
+.ed-mesa.mao:active{ cursor:grabbing; }
+/* Sombra de "papel" em volta da peça */
+.ed-arte{ position:relative; box-shadow:0 18px 50px rgba(0,0,0,.6); flex:0 0 auto; }
+
+/* A coluna desliza como um todo: com vários painéis abertos o conteúdo passa
+   da altura do ecrã, e antes o overflow:hidden cortava o último cabeçalho. */
+.ed-paineis{ width:288px; background:var(--ed-painel); border-left:1px solid var(--ed-linha);
+             display:flex; flex-direction:column; flex:0 0 auto;
+             overflow-y:auto; overflow-x:hidden; position:relative; }
+/* Pega para mudar a largura da coluna. Fica FORA da coluna (é irmã dela na
+   linha do corpo): dentro, deslizava com o conteúdo e saía de vista. */
+.ed-redim-col{ width:5px; flex:0 0 auto; cursor:col-resize; background:transparent;
+               border-left:1px solid var(--ed-linha); }
+.ed-redim-col:hover, .ed-redim-col.ativo{ background:var(--ed-ouro); }
+
+/* Altura natural: assim nenhum painel é espremido pelos outros. */
+.ed-painel{ border-bottom:1px solid var(--ed-linha); display:flex; flex-direction:column;
+            flex:0 0 auto; min-height:0; }
+.ed-painel > h3{ margin:0; background:var(--ed-painel-2); padding:.45rem .7rem; font-size:.72rem;
+              text-transform:uppercase; letter-spacing:.12em; color:var(--ed-texto-2); font-weight:500;
+              display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;
+              position:sticky; top:0; z-index:2; }
+.ed-painel > h3 .chev{ transition:transform .15s; }
+.ed-painel.fechado > h3 .chev{ transform:rotate(-90deg); }
+.ed-painel.fechado .ed-painel-corpo,
+.ed-painel.fechado .ed-redim{ display:none; }
+/* Um painel muito comprido não empurra os outros para fora do ecrã. */
+.ed-painel-corpo{ padding:.6rem .7rem; overflow:auto; max-height:220px; }
+/* Depois de o utilizador escolher a altura, manda ela — max-height só limita,
+   nunca faz crescer, e arrastar para baixo não teria efeito nenhum. */
+.ed-painel.redimensionado > .ed-painel-corpo{ height:var(--alt-painel); max-height:none; }
+/* Pega para mudar a altura de cada painel. */
+.ed-redim{ height:6px; cursor:row-resize; background:transparent; flex:0 0 auto; position:relative; }
+.ed-redim::after{ content:''; position:absolute; left:50%; top:2px; width:26px; height:2px; margin-left:-13px;
+                  border-radius:2px; background:var(--ed-linha); }
+.ed-redim:hover::after, .ed-redim.ativo::after{ background:var(--ed-ouro); }
+/* Ocupa o espaço que sobrar, mas nunca encolhe abaixo do seu conteúdo: numa
+   coluna que desliza não há espaço livre, e o flex-shrink esmagava-o a nada. */
+.ed-painel.cresce{ flex:1 0 auto; min-height:0; }
+.ed-painel.cresce .ed-painel-corpo{ max-height:none; }
+/* As propriedades são o painel mais fundo dos três: uma camada com texto,
+   cerimónias, posição e volta não cabia nos 220px de todos, e o que ficava de
+   fora era justamente o que se tinha vindo fazer. Continua a poder puxar-se
+   pela pega; isto é só um ponto de partida honesto. */
+#p-props > .ed-painel-corpo{ max-height:min(42vh, 400px); }
+
+/* Sombra que aparece só quando há mais conteúdo acima ou abaixo. As barras
+   deste sistema são de sobreposição e não ocupam espaço, por isso um campo
+   cortado a meio lia-se como falha em vez de "continua". As camadas "local"
+   tapam a sombra quando se chega ao fim — sem uma linha de JavaScript. */
+.ed-painel-corpo{
+  background:
+    linear-gradient(var(--ed-painel), transparent) local top / 100% 18px no-repeat,
+    linear-gradient(transparent, var(--ed-painel)) local bottom / 100% 18px no-repeat,
+    radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.5), transparent) scroll top / 100% 9px no-repeat,
+    radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.5), transparent) scroll bottom / 100% 9px no-repeat;
+}
+
+/* Barras de deslocamento visíveis: no fundo escuro as do sistema quase não se
+   viam, e um campo cortado a meio lia-se como falha em vez de "há mais abaixo". */
+.ed-paineis, .ed-painel-corpo, .ed-mesa{ scrollbar-width:thin; scrollbar-color:#55594f transparent; }
+.ed-paineis::-webkit-scrollbar, .ed-painel-corpo::-webkit-scrollbar, .ed-mesa::-webkit-scrollbar{ width:9px; height:9px; }
+.ed-paineis::-webkit-scrollbar-track, .ed-painel-corpo::-webkit-scrollbar-track,
+.ed-mesa::-webkit-scrollbar-track{ background:transparent; }
+.ed-paineis::-webkit-scrollbar-thumb, .ed-painel-corpo::-webkit-scrollbar-thumb,
+.ed-mesa::-webkit-scrollbar-thumb{ background:#55594f; border-radius:5px; border:2px solid transparent; background-clip:content-box; }
+.ed-paineis::-webkit-scrollbar-thumb:hover, .ed-painel-corpo::-webkit-scrollbar-thumb:hover,
+.ed-mesa::-webkit-scrollbar-thumb:hover{ background:var(--ed-ouro); background-clip:content-box; }
+
+/* ---- Camadas ---------------------------------------------- */
+.camada{ display:flex; align-items:center; gap:.5rem; padding:.32rem .4rem; border-radius:6px;
+         cursor:pointer; border:1px solid transparent; }
+.camada:hover{ background:#34362f; }
+.camada.sel{ background:#3d4a41; border-color:var(--ed-sel); }
+.camada .olho{ background:none; border:0; padding:0; cursor:pointer; color:var(--ed-texto-2);
+               display:flex; width:18px; }
+.camada .olho:hover{ color:var(--ed-texto); }
+.camada.oculta .nome{ color:#63665e; text-decoration:line-through; }
+.camada .olho svg{ width:15px; height:15px; }
+.camada .nome{ flex:1; }
+.camada .mini{ width:22px; height:16px; border:1px solid var(--ed-linha); border-radius:3px;
+               background:#1a1b17; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+               font-size:.66rem; color:var(--ed-texto-2); }
+
+/* ---- Campos ------------------------------------------------ */
+.campo{ margin-bottom:.7rem; }
+.campo label{ display:block; font-size:.72rem; color:var(--ed-texto-2); margin-bottom:.22rem;
+              text-transform:uppercase; letter-spacing:.07em; }
+/* Sem isto, num ecrã tátil ou num rato de precisão o navegador entende o
+   arrasto horizontal como um gesto de deslocar a página e fica com ele: o
+   toque punha o valor por baixo do dedo e mais nada, como se a barra fosse um
+   botão. pan-y deixa continuar a rolar o painel na vertical.
+   O resto do editor — nós das mesas, pegas, enquadramento da foto — já o
+   fazia; as barras e os seletores de cor tinham ficado de fora. */
+.ed-paineis input[type=range]{ touch-action:pan-y; }
+.ed-paineis input[type=color]{ touch-action:none; }
+
+.campo input[type=text], .campo input[type=number], .campo textarea, .campo select{
+  width:100%; box-sizing:border-box; background:#191a16; border:1px solid var(--ed-linha);
+  color:var(--ed-texto); border-radius:6px; padding:.4rem .55rem; font-family:inherit; font-size:.85rem; }
+/* Os seletores dos painéis vestem-se como o da barra: seta própria em vez da
+   de fábrica, que trazia consigo a caixa clara do sistema. Vale para os dois
+   editores — o do convite digital e o do cartão impresso. */
+.campo select{
+  appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238f938a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right .5rem center; background-size:11px;
+  padding-right:1.6rem; cursor:pointer; }
+.campo select:hover{ border-color:var(--ed-ouro); }
+.campo select option{ background:var(--ed-painel); color:var(--ed-texto); }
+.campo textarea{ resize:vertical; min-height:66px; line-height:1.45; }
+.campo input:focus, .campo textarea:focus, .campo select:focus{
+  outline:none; border-color:var(--ed-ouro); box-shadow:0 0 0 2px rgba(180,134,74,.18); }
+.campo .ajuda{ font-size:.72rem; color:var(--ed-texto-2); margin-top:.25rem; }
+.vazio-painel{ color:var(--ed-texto-2); font-size:.8rem; line-height:1.5; }
+
+/* ---- Botões ------------------------------------------------ */
+.bt{ background:#3a3d37; border:1px solid var(--ed-linha); color:var(--ed-texto); border-radius:6px;
+     padding:.35rem .7rem; font-family:inherit; font-size:.8rem; cursor:pointer; }
+.bt:hover{ background:#454941; }
+.bt.primario{ background:var(--ed-ouro); border-color:var(--ed-ouro); color:#1a1b17; font-weight:500; }
+.bt.primario:hover{ background:var(--ed-ouro-claro); }
+.bt:disabled{ opacity:.45; cursor:default; }
+.bt-min{ padding:.2rem .45rem; font-size:.75rem; }
+
+/* ---- Amostras de paleta ------------------------------------ */
+.amostras{ display:flex; gap:.35rem; align-items:center; }
+.amostra{ width:24px; height:24px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
+.amostra.on{ border-color:var(--ed-ouro-claro); box-shadow:0 0 0 2px rgba(0,0,0,.5) inset; }
+
+/* ---- Zoom -------------------------------------------------- */
+.zoom{ display:inline-flex; align-items:center; gap:.3rem; }
+.zoom .val{ min-width:44px; text-align:center; color:var(--ed-texto-2); }
+
+/* ---- Seleção na mesa (marca de elemento escolhido) --------- */
+/* Nada de position:relative aqui. Havia-o, e esmagava a moldura do cartão:
+   ela é posicionada em absoluto pelo desenho, e passar a relativa punha-lhe a
+   altura a zero — as duas linhas colavam-se no topo. O realce usa outline,
+   que não precisa de contexto de posicionamento nenhum. */
+.ed-arte.marcar [data-camada]:hover{ outline:1px dashed rgba(217,188,140,.55); outline-offset:2px; }
+.ed-arte [data-camada].sel-camada{ outline:1.5px solid var(--ed-ouro-claro); outline-offset:2px; }
+
+/* ---- Cadeado das camadas ----------------------------------- */
+/* Só se vê ao passar por cima, ou quando está fechado: uma coluna de cadeados
+   abertos em todas as linhas é ruído, não informação. */
+.camada .cadeado{ margin-left:auto; width:26px; height:22px; padding:2px 4px; border:0;
+                  background:none; color:var(--ed-texto-2); cursor:pointer; opacity:0;
+                  transition:opacity .12s; }
+.camada:hover .cadeado, .camada.trancada .cadeado{ opacity:.85; }
+.camada .cadeado svg{ width:14px; height:14px; display:block; }
+.camada.trancada{ border-left:2px solid var(--ed-ouro, #C9A862); }
+.camada.trancada .nome{ opacity:.75; }
+
+/* ---- Tela de posicionamento livre -------------------------- */
+/* Cada camada arrasta-se pela própria peça. O cursor é o que anuncia que
+   isto é agarrável — sem ele, ninguém descobre que pode mexer. */
+/* Com a ferramenta de mover não se seleciona texto: arrastar uma frase
+   pintava-a de azul e o gesto ficava a parecer outra coisa. */
+.ed-arte.livre{ user-select:none; -webkit-user-select:none; }
+.ed-arte.livre [data-camada]{ cursor:grab; }
+.ed-arte.livre [data-camada].trancada-camada{ cursor:not-allowed; }
+.ed-arte.livre.a-mover [data-camada]{ cursor:grabbing; }
+.ed-arte [data-camada].movida{ outline:1px dashed rgba(201,168,98,.35); outline-offset:2px; }
+
+/* As guias vivem por cima da peça e não apanham o rato. Estão sempre no
+   sítio; o que muda é a opacidade — acendem só quando o bloco está mesmo
+   colado, senão o olho aprende a ignorá-las. */
+.tela-guias{ position:absolute; inset:0; pointer-events:none; z-index:60; }
+.tela-guias::before, .tela-guias::after{ content:''; position:absolute; opacity:0;
+  background:var(--ed-ouro-claro,#D9BC8C); box-shadow:0 0 3px rgba(217,188,140,.7);
+  transition:opacity .08s; }
+.tela-guias::before{ top:0; bottom:0; left:var(--gx,50%); width:1px; }
+.tela-guias::after{ left:0; right:0; top:var(--gy,50%); height:1px; }
+.tela-guias.v::before{ opacity:.95; }
+.tela-guias.h::after{ opacity:.95; }
+
+/* Leitura e reposição do deslocamento, no painel de propriedades. */
+.pos-linha{ display:flex; align-items:center; gap:.4rem; }
+.pos-linha .val{ flex:1; color:var(--ed-texto-2); font-size:.74rem; font-variant-numeric:tabular-nums; }
+/* Um grupo dentro do painel de propriedades: a posição dos blocos é outro
+   assunto que não os textos, e sem a linha de cima lia-se como continuação. */
+.ed-painel-corpo .grupo{ margin-top:.7rem; padding-top:.55rem; border-top:1px solid var(--ed-linha); }
+.ed-painel-corpo .grupo h4{ margin:0 0 .45rem; font-size:.7rem; font-weight:600; letter-spacing:.09em;
+                            text-transform:uppercase; color:var(--ed-texto-2); }
+.ed-painel-corpo .grupo h4 .op{ margin-left:.35rem; text-transform:none; letter-spacing:0;
+                                border:1px solid var(--ed-linha); border-radius:4px; padding:0 .25rem; }
+
+/* ---- Barra de estado --------------------------------------- */
+/* Uma linha só, sempre: se esta barra crescesse, o corpo do editor encolhia
+   por baixo do rato. */
+.ed-estado{ background:var(--ed-painel); border-top:1px solid var(--ed-linha); padding:.3rem .8rem;
+            font-size:.74rem; color:var(--ed-texto-2); display:flex; gap:1rem; align-items:center;
+            flex:0 0 auto; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; }
+.ed-estado > span{ overflow:hidden; text-overflow:ellipsis; }
+/* O aviso de "por guardar" vivia na barra de opções. Quando aparecia, a barra
+   passava a duas linhas e todo o editor descia 45px — a meio de um arrasto, o
+   controlo fugia de baixo do rato e o gesto morria, como se fosse um botão.
+   Aqui não empurra nada, e o lugar fica reservado mesmo quando está apagado. */
+.marca-sujo{ color:var(--ed-ouro-claro); visibility:hidden; }
+.marca-sujo.on{ visibility:visible; }
+.ed-estado .cresce{ flex:1; }
+.sujo{ color:var(--ed-ouro-claro); }
+
+/* ---- Aviso / totais ---------------------------------------- */
+.aviso{ border-radius:6px; padding:.45rem .6rem; font-size:.78rem; line-height:1.45; margin-bottom:.6rem; }
+.aviso.ok{ background:rgba(74,122,94,.18); border:1px solid rgba(74,122,94,.5); color:#bfe0cd; }
+.aviso.alerta{ background:rgba(180,134,74,.16); border:1px solid rgba(180,134,74,.5); color:var(--ed-ouro-claro); }
+
+/* ---- Partilhado pelos dois editores: contadores, cores, tipografia ----
+   Estava só no editor do convite digital; o do impresso passou a usar o
+   mesmo, e uma definição só evita que os dois se desencontrem. */
+.contador{ float:right; font-variant-numeric:tabular-nums; }
+.contador.perto{ color:var(--ed-ouro-claro); }
+.contador.cheio{ color:#e08a7d; }
+.campo.invalido input, .campo.invalido textarea{ border-color:#e08a7d; box-shadow:0 0 0 2px rgba(224,138,125,.2); }
+
+.cor-linha{ display:flex; align-items:center; gap:.4rem; margin-bottom:.3rem; }
+.cor-linha input[type=color]{ width:28px; height:22px; border:none; background:none; padding:0; cursor:pointer; flex:none; }
+.cor-linha span{ flex:1; min-width:0; font-size:.75rem; color:var(--ed-texto); }
+/* O ↺ ocupa sempre o seu lugar: se nascesse ao mudar a cor, a linha mudava de
+   tamanho e o painel de cores do navegador fechava-se a meio da escolha. */
+.repor-cor{ flex:none; }
+.repor-cor.vazio{ visibility:hidden; pointer-events:none; }
+.cor-onde{ font-size:.66rem; color:var(--ed-texto-2); line-height:1.35; margin:-.15rem 0 .5rem 2.2rem; }
+
+.amostra-f{ margin-top:.3rem; padding:.3rem .45rem; background:#191a16; border:1px solid var(--ed-linha);
+  border-radius:5px; font-size:1.15rem; color:var(--ed-ouro-claro); text-align:center;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ed-estado .aviso-txt{ color:var(--ed-ouro-claro); }
+
+/* ---- Painel de versões (assets/versoes.js) ------------------ */
+.vs-lin{ display:flex; gap:.35rem; align-items:center; }
+.vs-lin input[type=text]{ flex:1; min-width:0; box-sizing:border-box; background:#191a16;
+  border:1px solid var(--ed-linha); color:var(--ed-texto); border-radius:5px;
+  padding:.32rem .45rem; font-family:inherit; font-size:.8rem; }
+.vs-lin input[type=text]:focus{ outline:none; border-color:var(--ed-ouro); }
+.vs-dica{ font-size:.71rem; color:var(--ed-texto-2); line-height:1.45; margin-top:.25rem; }
+.vs-dica b{ color:var(--ed-texto); font-weight:500; }
+
+.vs-item{ border:1px solid var(--ed-linha); border-radius:7px; padding:.45rem .5rem; margin-bottom:.45rem; }
+.vs-item.vs-em-vigor{ border-color:var(--ed-sel); background:rgba(74,122,94,.10); }
+.vs-topo{ display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap; }
+.vs-nome{ font-size:.85rem; color:var(--ed-texto); word-break:break-word; }
+.vs-selo{ font-size:.63rem; text-transform:uppercase; letter-spacing:.06em;
+          border-radius:9px; padding:.08rem .38rem; white-space:normal; }
+.vs-selo.vs-vigor{ background:rgba(74,122,94,.28); color:#bfe0cd; }
+.vs-selo.vs-mudou{ background:rgba(180,134,74,.22); color:var(--ed-ouro-claro); }
+.vs-selo.vs-igual{ background:#34362f; color:var(--ed-texto-2); }
+.vs-acoes{ display:flex; gap:.3rem; flex-wrap:wrap; margin-top:.4rem; }
+.vs-conta{ text-align:right; }
+/* A peça mudou e essas mudanças não estão em versão nenhuma — é o que os
+   convidados recebem se o convite seguir agora. */
+.vs-aviso{ background:rgba(180,134,74,.16); border:1px solid rgba(180,134,74,.5);
+  color:var(--ed-ouro-claro); border-radius:7px; padding:.45rem .55rem; margin-bottom:.5rem;
+  font-size:.72rem; line-height:1.45; }
+.vs-ocupado{ opacity:.55; pointer-events:none; }
+
+@media (max-width:900px){
+  .ed-paineis{ width:230px; }
+  .ed-mesa{ padding:12px; }
+}
+
+/* ---- Aviso de ecrã apertado (assets/editor-espaco.js) ------ */
+/* Não é uma porta fechada: é um aviso de trabalho, com saída para quem
+   quiser continuar mesmo assim. Ver o comentário no topo do script. */
+.esp-aviso{ position:fixed; inset:0; z-index:9000; display:none;
+            align-items:center; justify-content:center; padding:1.2rem;
+            background:rgba(12,13,11,.86); backdrop-filter:blur(3px); }
+.esp-aviso.on{ display:flex; }
+.esp-cartao{ max-width:460px; background:var(--ed-painel,#26281f); color:var(--ed-texto,#e8e7df);
+             border:1px solid var(--ed-linha,#3a3d33); border-radius:12px; padding:1.3rem 1.4rem;
+             box-shadow:0 20px 60px rgba(0,0,0,.6); font-size:.86rem; line-height:1.6; }
+.esp-cartao h2{ margin:0 0 .5rem; font-size:1.02rem; color:var(--ed-ouro-claro,#D9BC8C); font-weight:600; }
+.esp-cartao p{ margin:0 0 .7rem; }
+.esp-cartao .esp-med{ color:var(--ed-ouro-claro,#D9BC8C); font-variant-numeric:tabular-nums; }
+.esp-cartao .esp-sug{ color:var(--ed-texto-2,#9aa094); }
+.esp-bt{ display:flex; gap:.6rem; align-items:center; margin-top:.9rem; }
+.esp-ok{ background:var(--ed-ouro,#C9A862); color:#1b1c17; border:0; border-radius:7px;
+         padding:.45rem .9rem; font:inherit; font-weight:600; cursor:pointer; }
+.esp-volta{ color:var(--ed-texto-2,#9aa094); font-size:.8rem; }
+/* Enquanto o aviso está à frente, nada se arrasta por baixo dele. */
+body.esp-travado .ed-corpo{ pointer-events:none; }
+
+.esp-chip{ display:none; color:var(--ed-ouro-claro,#D9BC8C); cursor:pointer;
+           border:1px solid rgba(201,168,98,.45); border-radius:5px; padding:0 .35rem; }
+.esp-chip.on{ display:inline-block; }
+
+/* ---- Cerimónias opcionais, no painel de propriedades ------- */
+/* Uma que existe mostra-se dentro de uma caixa; uma que não existe é só o
+   botão de a acrescentar. Ver ficarem diferentes é o que diz, sem ler, quais
+   é que o convite anuncia. */
+.cer-dentro{ background:#2b2d26; border:1px solid var(--ed-linha); border-radius:9px;
+             padding:.55rem .6rem; margin-bottom:.5rem; }
+.cer-dentro > label{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.cer-dentro > label .bt{ text-transform:none; letter-spacing:0; font-size:.7rem; padding:.15rem .45rem; }
+.cer-fora{ margin-bottom:.5rem; }
+.cer-fora .bt{ border-style:dashed; }

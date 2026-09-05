@@ -1,0 +1,182 @@
+/* ============================================================
+   pecas.css — Estilos das peças de design, partilhados
+   Usado por cartoes.php e graficas.php
+   (e pelas futuras áreas de edição). Aqui só entra o que
+   desenha a PEÇA; o cromo de cada página fica na página.
+   ============================================================ */
+
+/* ---- Escalador genérico ----------------------------------- */
+/* A peça é desenhada no seu tamanho real (px) e reduzida por
+   transform: scale(), preservando a proporção para impressão. */
+.escala{ transform-origin:top left; }
+
+/* ============================================================
+   CARTÃO DE CONVITE 10×15 (720×1080 px = 100×150 mm)
+   ============================================================ */
+.cartao{ width:720px; height:1080px; position:relative; overflow:hidden; background:transparent;
+         font-family:var(--cf-sans);
+         /* Paleta como variáveis: o editor troca-a sem voltar ao servidor. */
+         --ct-accent:#a1854e; --ct-name:#c9a862; --ct-sub:#b39a72; --ct-head:#cfae68; --ct-soft:#dcc79c;
+         /* Letra e escala do texto, pelos mesmos meios (ver cartaoEstiloVars()). */
+         --cf-script:'Alex Brush',cursive; --cf-serif:'Cormorant Garamond',serif;
+         --cf-sans:'Montserrat',sans-serif; --ct-esc:1;
+         /* Alternativas das camadas decorativas (ver cartaoEstiloVars()). */
+         --ct-mold-margem:28px; --ct-mold-linha:1.4px; --ct-esc-ramos:1; --ct-esc-volutas:1; --ct-esc-floreados:1; }
+/* Camada desligada no painel de camadas */
+.cartao .ct-oculta{ display:none !important; }
+
+/* Posicionamento livre: cada camada pode afastar-se do sítio que o design lhe
+   deu, e virar-se. O deslocamento vem em % do cartão (--px/--py) e converte-se
+   aqui, que o cartão tem 720×1080 px fixos: 1% = 7,2 px na largura e 10,8 px
+   na altura; a volta vem em graus (--pa), à volta do centro do próprio bloco.
+   Usam-se `translate` e `rotate` (propriedades por sua conta) e não
+   `transform`, para não apagar as rotações que o desenho já faz (a trepadeira
+   de baixo, a voluta oposta). Sem variáveis o valor é zero e a camada fica
+   exatamente onde e como sempre esteve. */
+/* CUIDADO com o valor de origem: tem de ser `none`, e não zero.
+   Um elemento com translate/rotate — mesmo a zero — passa a ser o bloco
+   contentor dos descendentes em posição absoluta. Com `calc(0 * 7.2px)` aqui,
+   TODAS as camadas do cartão passaram a sê-lo, e os floreados (que se colocam
+   contra .ct-nomes) foram parar a uma caixa de altura zero: o da esquerda
+   atravessava o primeiro nome e o da direita saltava para fora do bloco.
+   Com `none`, quem não foi movido não muda nada — que é o que se prometeu. */
+.cartao [data-camada]{ translate:var(--mv, none); rotate:var(--rt, none); }
+
+/* A cor do cartão É a peça, não enfeite da página: ao imprimir, o navegador
+   descarta fundos por omissão (só os desenha se quem imprime se lembrar de
+   ligar "Gráficos de fundo"), e a gráfica recebia cartões sem cor nenhuma.
+   Aqui pede-se que sejam impressos tal como se veem. */
+.cartao, .cartao *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+/* Os SVG herdam a cor de acento por currentColor */
+/* Cada invólucro de camada TEM DE SER uma caixa com a mesma medida daquilo
+   contra que os seus ornamentos se posicionam — o cartão, para os ramos e as
+   volutas; o bloco dos nomes, para os floreados.
+
+   Eram caixas estáticas de altura zero. Enquanto ninguém lhes tocava não fazia
+   diferença, porque quem mandava era o antepassado posicionado. Mas o editor
+   põe-lhes `translate`/`rotate` para as arrastar, e isso faz delas o bloco
+   contentor dos descendentes em posição absoluta: de repente o `left:-26px` do
+   floreado esquerdo deixava de contar a partir da caixa dos nomes e passava a
+   contar da caixa de CONTEÚDO do invólucro — 30 px mais para dentro, que é a
+   entrada do bloco dos nomes. Ao primeiro toque, e ainda antes de se ter
+   arrastado nada, o par saltava.
+   Com `inset:0` o invólucro coincide com aquilo que substitui, e passar a ser
+   bloco contentor deixa de mudar seja o que for: arrastar move o conjunto sem
+   o deformar. */
+.ct-ramos, .ct-volutas, .ct-floreados{ color:var(--ct-accent);
+   position:absolute; inset:0; pointer-events:none; }
+/* O invólucro não apanha o ponteiro (senão tapava o cartão todo); os
+   ornamentos apanham-no, como sempre apanharam. */
+.ct-ramo, .ct-floreado{ pointer-events:auto; }
+.ct-ramo{ position:absolute; width:calc(132px*var(--ct-esc-ramos)); height:calc(270px*var(--ct-esc-ramos)); z-index:2; }
+.ct-ramo-sd{ top:24px; right:24px; }
+.ct-ramo-ie{ bottom:24px; left:24px; transform:rotate(180deg); }
+
+/* ---- Moldura: quatro feitios à escolha ---------------------
+   Era uma linha só, sem alternativa a não ser desligá-la. O feitio vem
+   todo de variáveis, para o editor o trocar ao vivo e as páginas de
+   impressão o receberem já resolvido. */
+.ct-moldura{ position:absolute; inset:var(--ct-mold-margem); z-index:2; pointer-events:none;
+             border:var(--ct-mold-larg,1.4px) var(--ct-mold-tipo,solid) var(--ct-accent);
+             border-radius:var(--ct-mold-raio,0); }
+/* As quatro esquadrias: dois pseudo-elementos e dois <i>, escondidos
+   enquanto o feitio não for "só os cantos". */
+.ct-moldura::before, .ct-moldura::after,
+.ct-moldura i:nth-of-type(1), .ct-moldura i:nth-of-type(2){
+  content:''; position:absolute; display:var(--ct-mold-cantos,none);
+  width:74px; height:74px; box-sizing:border-box; }
+/* Os anéis de dentro e de fora da moldura (feitios "dupla" e "tripla").
+   Têm de ser elementos: uma sombra transparente não abre intervalo nenhum, e
+   o cartão é transparente — não há cor de fundo com que o desenhar. */
+.ct-moldura i:nth-of-type(3), .ct-moldura i:nth-of-type(4){
+  content:''; position:absolute; box-sizing:border-box;
+  border-radius:var(--ct-mold-raio,0); border-style:var(--ct-mold-tipo,solid);
+  border-color:var(--ct-accent); }
+.ct-moldura i:nth-of-type(3){ display:var(--ct-mold-a1,none); inset:var(--ct-mold-i1,6px);
+                              border-width:var(--ct-mold-w1,1px); }
+.ct-moldura i:nth-of-type(4){ display:var(--ct-mold-a2,none); inset:var(--ct-mold-i2,-6px);
+                              border-width:var(--ct-mold-w2,1px); }
+.ct-moldura::before{ top:-1.4px; left:-1.4px;
+  border-top:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-left:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
+.ct-moldura::after{ bottom:-1.4px; right:-1.4px;
+  border-bottom:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-right:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
+.ct-moldura i:nth-of-type(1){ top:-1.4px; right:-1.4px;
+  border-top:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-right:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
+.ct-moldura i:nth-of-type(2){ bottom:-1.4px; left:-1.4px;
+  border-bottom:var(--ct-mold-linha,1.4px) solid var(--ct-accent); border-left:var(--ct-mold-linha,1.4px) solid var(--ct-accent); }
+
+.ct-voluta{ position:absolute; width:calc(178px*var(--ct-esc-volutas)); height:calc(178px*var(--ct-esc-volutas));
+            z-index:2; pointer-events:none; }
+.ct-voluta-se{ top:24px; left:24px; }
+.ct-voluta-id{ bottom:24px; right:24px; transform:rotate(180deg); }
+
+.ct-conteudo{ position:relative; z-index:3; height:100%; box-sizing:border-box; padding:58px 58px 78px;
+              display:flex; flex-direction:column; align-items:center; justify-content:space-between; text-align:center; }
+.ct-topo{ display:flex; flex-direction:column; align-items:center; }
+.ct-abertura{ font-size:calc(13px*var(--ct-esc)); font-weight:500; letter-spacing:.3em; line-height:2.05; text-transform:uppercase;
+              color:var(--ct-soft); }
+.ct-nomes{ position:relative; margin:22px 0 6px; padding:0 30px; }
+/* Os floreados abraçam o par de nomes em simetria ROTACIONAL: o da esquerda
+   com o gancho em cima e a volta a descer para o coração, o da direita igual
+   e rodado meia volta. É o desenho de origem, e é a mesma ideia das volutas e
+   das trepadeiras (cantos opostos, 180° entre si).
+   Estiveram desalinhados por uma razão que não era o desenho: a regra do
+   posicionamento livre punha um translate a zero em todas as camadas, e um
+   translate — mesmo a zero — faz do elemento o bloco contentor de quem lá
+   dentro se posiciona em absoluto. O invólucro .ct-floreados, que tem altura
+   zero, passou a ser esse bloco. Corrigido isso (ver a regra data-camada
+   acima), estas coordenadas voltam a ser as certas. */
+.ct-floreado{ position:absolute; z-index:0; opacity:.85;
+              width:calc(150px*var(--ct-esc-floreados)); height:calc(104px*var(--ct-esc-floreados)); }
+.ct-floreado-e{ left:-26px; top:-4px; }
+.ct-floreado-d{ right:-26px; bottom:-4px; rotate:180deg; }
+.ct-nome{ position:relative; z-index:1; font-family:var(--cf-script); font-size:75px; line-height:.9;
+          color:var(--ct-name); }
+/* A entrelinha do coração é 1,2 e não 1. O desenho de origem não a declara, e
+   `normal` dá 24 px em corpo 20; com 1 dava 20, os dois nomes fechavam-se
+   quatro píxeis, e o nome de baixo subia até tocar na volta do floreado. O
+   floreado está no sítio que o desenho lhe deu (left:-26px / top:-4px, iguais
+   aos do ficheiro de referência) — quem tinha saído do sítio era o nome. */
+.ct-coracao{ position:relative; z-index:1; font-size:20px; margin:2px 0; color:var(--ct-accent); line-height:1.2; }
+/* O que liga os dois nomes. Cada feitio pede a sua letra e o seu tamanho: um
+   & na caligrafia dos nomes fica ilegível, e um coração em corpo 36 come a
+   linha toda. Ver cartaoElos(). Estes pedem entrelinha 1: em corpo 34 ou 36 a
+   entrelinha do coração afastaria os nomes de mais. */
+.ct-elo-amp{ font-family:var(--cf-serif); font-style:italic; font-size:36px; color:var(--ct-name); margin:-2px 0 0; line-height:1; }
+.ct-elo-e{ font-family:var(--cf-script); font-size:34px; color:var(--ct-name); margin:-4px 0 -2px; line-height:1; }
+.ct-elo-los{ font-size:11px; margin:6px 0; line-height:1; }
+/* O filete é o único elo que não é texto, e por isso não lhe chega o
+   text-align do bloco dos nomes: com margem lateral a zero encostava à
+   esquerda. As margens laterais são `auto` de propósito. */
+.ct-elo-fil{ width:54px; height:1px; margin:12px auto; opacity:.7;
+             background:linear-gradient(90deg,transparent,var(--ct-accent),transparent); }
+.ct-frase{ margin:14px 0 0; max-width:400px; font-family:var(--cf-serif); font-style:italic;
+           font-size:calc(20px*var(--ct-esc)); line-height:1.55; color:var(--ct-sub); }
+
+.ct-centro{ display:flex; flex-direction:column; align-items:center; gap:12px; }
+.ct-filete{ width:120px; height:1px; opacity:.6;
+            background:linear-gradient(90deg,transparent,var(--ct-accent),transparent); }
+.ct-reservado{ font-size:12px; font-weight:500; letter-spacing:.28em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-convidado{ font-family:var(--cf-script); font-size:48px; line-height:.9; color:var(--ct-name); }
+.ct-mesas{ display:flex; gap:34px; align-items:stretch; margin-top:2px; }
+.ct-mesa{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+.ct-mesa-n{ font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--ct-head); }
+.ct-mesa-l{ font-size:12px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-div-v{ width:1px; opacity:.35; background:var(--ct-accent); }
+
+.ct-base{ display:flex; flex-direction:column; align-items:center; width:449px; }
+.ct-data{ font-family:var(--cf-serif); font-style:italic; font-size:40px; line-height:1; color:var(--ct-head); }
+.ct-dia{ margin-top:14px; font-size:12px; font-weight:500; letter-spacing:.32em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-tracinho{ width:44px; height:1px; opacity:.5; margin:30px 0; background:var(--ct-accent); }
+.ct-tracinho-2{ margin:26px 0 16px; }
+.ct-seccao{ font-size:14px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--ct-head); }
+.ct-seccao-2{ margin-top:26px; }
+.ct-detalhe{ margin-top:9px; font-size:calc(13px*var(--ct-esc)); font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--ct-soft); }
+.ct-detalhe-2{ line-height:1.9; }
+.ct-fecho{ margin:0; max-width:450px; font-family:var(--cf-serif); font-style:italic;
+           font-size:calc(19px*var(--ct-esc)); line-height:1.6; color:var(--ct-sub); }
+
+/* O acrílico é transparente: mostra-se sobre fundo escuro, como no design. */
+.folha{ background:radial-gradient(120% 100% at 50% 15%,#2a2b26 0%,#191a16 55%,#0e0f0c 100%);
+        border-radius:14px; overflow:hidden; }

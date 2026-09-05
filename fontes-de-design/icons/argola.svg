@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 46" width="368" height="368"><title>Argola metálica — Ø 46 px (≈8 mm), furo interno Ø ~20,5 px</title>
+  <path d="M23 0 A23 23 0 1 1 22.99 0 Z M23 12.75 A10.25 10.25 0 1 0 23.01 12.75 Z" fill="#b9c0c7" fill-rule="evenodd"></path>
+  <circle cx="23" cy="23" r="22.6" fill="none" stroke="#8d959d" stroke-width="0.8"></circle>
+  <circle cx="23" cy="23" r="10.6" fill="none" stroke="#8d959d" stroke-width="0.8"></circle>
+</svg>

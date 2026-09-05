@@ -1,0 +1,30 @@
+# Segredos locais — NUNCA versionar
+config.local.php
+casamento_web/config.local.php
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+*.log
+
+# Uploads do convite digital (personalização) — só o .htaccess é versionado
+casamento_web/assets/convite/custom/*
+!casamento_web/assets/convite/custom/.htaccess
+
+# Imagens de exemplo dos modelos, enviadas pelo admin — só o .htaccess é versionado
+casamento_web/assets/convite/exemplo/*
+!casamento_web/assets/convite/exemplo/.htaccess
+
+# Fotografias enviadas na inscrição, à espera do casamento que ainda não existe
+casamento_web/assets/convite/espera/*
+!casamento_web/assets/convite/espera/.htaccess
+
+# Fotografias que entraram no convite com a licença — só o .htaccess é versionado
+casamento_web/assets/convite/licenca/*
+!casamento_web/assets/convite/licenca/.htaccess
+
+# Faturas/recibos das despesas do orçamento, enviados pelos noivos — nunca versionados
+casamento_web/assets/faturas/
+
+# Cache do Python do gerador das imagens de exemplo
+__pycache__/

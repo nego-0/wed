@@ -1,0 +1,1095 @@
+# Gestão de Convidados — Isabel & Abednego
+
+Sistema em PHP + MySQL para gerir os convidados do casamento: criação de convites (digitais e físicos), geração dos nomes a exibir, confirmação de presença (RSVP), código QR de entrada e página do porteiro para validar convites à porta do evento.
+
+O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas novas com o prefixo `cw_` e não altera as tabelas antigas (`guests`, `invite_groups`, `mesas`). Pode, num clique, importar a lista existente para o novo formato.
+
+---
+
+## Ficheiros
+
+| Ficheiro | Função |
+|---|---|
+| `config.php` | Configuração do evento (data, hora, local, WhatsApp). **Não contém segredos** — pode ir para o Git. |
+| `config.local.php` | **Segredos:** ligação à base de dados e utilizadores (nome + senha). **Não é versionado** (ver `.gitignore`). Crie-o a partir de `config.local.example.php`. |
+| `db.php` | Ligação, criação automática das tabelas e funções partilhadas. |
+| `auth.php` | Autenticação por sessão, por **nome de utilizador + senha** (administrador e porteiro). |
+| `api.php` | Todos os pedidos JSON (gestão, RSVP público e porteiro) e exportação CSV. |
+| `login.php` / `logout.php` | Entrada e saída. |
+| `registo.php` | **Inscrição pública** de um casal: os seus dados, e a escolha do plano. A conta abre de imediato; o casamento fica em espera até a administração conceder a licença. |
+| `licenca.php` | **A licença do casal:** o que tem, quanto falta do prazo, quantos convidados cabem — e onde pede, altera ou reforça o plano. É a única página que um casal recém-inscrito vê. |
+| `assets/planos.js` | O motor da montra dos planos, partilhado pela inscrição e pela área da licença: desenha os pacotes, deixa montar um plano à peça, soma a conta e recolhe a escolha. |
+| `assets/planos.css` | O visual da montra, dos cartões de escalão e da janela das políticas de utilização. |
+| `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
+| `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
+| `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
+| `modelo-prova.php` | A cara de um modelo do convite impresso, sozinha numa folha — é o que a grelha dos modelos encolhe para miniatura. |
+| `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
+| `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |
+| `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
+| `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
+| `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
+| `convite-editor.php` | **Personalização completa do convite digital**: textos, história, cronograma, manual, fotos, música, cores e efeitos — com pré-visualização ao vivo. |
+| `personalizacao.php` | Motor da personalização: valores originais, validação e composição do convite. |
+| `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
+| `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
+| `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir (acessível a partir de *Gráfica*). |
+| `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico (acessível a partir de *Gráfica*). |
+| `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso (acessível a partir de *Gráfica*). |
+| `graficas.php` | **Entregáveis à gráfica**: lista de produção dos convites físicos, brindes por género e manuais de impressão. |
+| `editor-cartao.php` | **Editor do convite físico**, ao estilo de um editor de imagem: camadas, propriedades e pré-visualização ao vivo. |
+| `editor-brindes.php` | **Editor dos brindes**: peça por género, variações disponíveis à gráfica e quantidade de cada uma. |
+| `assets/editor.css` | Ambiente dos editores (barra de ferramentas, mesa de trabalho e painéis). |
+| `manual.php` | **Manual de impressão gerado** (cartão e porta-chaves): reflete a configuração atual, imprimível em A4. |
+| `pecas.php` | Biblioteca das peças de design: paletas, geradores de SVG (folhagem, volutas, floreados), monograma, faces do porta-chaves e modelo dos brindes. |
+| `assets/pecas.css` | Estilos das peças (cartão e porta-chaves), partilhados pelas páginas que as desenham. |
+| `assets/pecas/` | Biblioteca vetorial das peças (ícones SVG recoloráveis) e a imagem dos corações entrelaçados. |
+| `assets/estilo.css` | Estilo visual, alinhado com o convite (verde-floresta, dourado e marfim). |
+| `assets/maps-campo.js` | O campo da ligação do Google Maps: abre o Maps para escolher o sítio e lê-lhe as coordenadas, sem embutir mapa nenhum nem depender da API do Google. |
+
+---
+
+## Estrutura da base de dados (tabelas novas)
+
+- **`cw_convites`** — o convite é a unidade central: código único, nome a exibir, sufixo opcional, tipo (`digital`/`fisico`/`ambos`), lado, número de lugares, mesa, telefone, estados de RSVP e de entrada, mensagens e observações.
+- **`cw_convidados`** — as pessoas nominais de cada convite (com RSVP e presença individuais).
+- **`cw_mesas`** — mesas com capacidade e ocupação.
+- **`cw_casamentos`** — quem é quem: nome, noivos, data, estado (`pendente`/`ativo`/`suspenso`/`arquivado`) e o endereço público por onde os convidados chegam.
+- **`cw_utilizadores`** — as contas (email, senha cifrada, papel na plataforma, estado).
+- **`cw_acessos`** — quem entra em que casamento, e como (`noivos` / `porteiro`).
+- **`cw_suporte_codigos`** — as chaves temporárias que o casal dá ao suporte.
+
+O preçário das licenças vive noutras oito, e divide-se em duas metades — o
+catálogo (o que a casa vende) e a circulação (o que cada casamento pediu e tem):
+
+- **`cw_lic_modulos`** — os cinco recursos que se vendem: `convidados`, `mesas`,
+  `orcamento`, `impresso`, `digital`. Cada um com o seu resumo, o benefício (a
+  frase que vende), o ícone e a **imagem**: a captura do módulo a trabalhar,
+  que a montra mostra (ver `assets/montra/`).
+- **`cw_lic_prazos`** — os prazos de licença e o **factor** de preço de cada um.
+  O preçário está escrito no prazo de factor 1; os outros multiplicam-no. Os
+  factores são **sublineares** (12 meses a 1,8 e não a 2,0), o que faz o preço
+  por mês descer com o compromisso.
+- **`cw_lic_escaloes`** — as MEDIDAS em que cada módulo se vende, e é aqui que
+  vive o preço (o do prazo base). Um escalão de convidados leva um `limite` (0 = sem limite); um
+  de peça leva `editar` e `todos_modelos`. É isto que permite vender o mesmo
+  recurso em tamanhos diferentes.
+- **`cw_lic_pacotes`** e **`cw_lic_pacote_itens`** — conjuntos de escalões com
+  preço próprio. A poupança que o casal vê é calculada (a soma dos escalões à
+  peça menos o preço do pacote), nunca escrita à mão.
+- **`cw_lic_politicas`** — as políticas de utilização, **versionadas**. Editá-las
+  publica uma versão nova e guarda a anterior: é a prova do texto a que cada
+  casal disse que sim.
+- **`cw_lic_pedidos`** e **`cw_lic_pedido_itens`** — o que um casal pediu
+  (`inicial` ou `upgrade`), com os preços **congelados no dia**, o registo do
+  consentimento (versão da política, data e IP) e as **fotos** que ele escolheu
+  para cada secção do convite digital.
+- **`cw_lic_concessoes`** — o que o casamento TEM, uma linha por módulo. É esta
+  tabela, e nunca o pedido, que abre as portas.
+
+Todas as tabelas de dados levam `casamento_id`. A ligação à base **audita cada
+instrução**: uma consulta que mexa nos dados de um casamento sem dizer de qual
+rebenta nas provas (`AMBITO_ESTRITO=1`) e fica no log em produção.
+
+---
+
+## Licenças: o que cada casamento pode fazer
+
+A licença deixou de ser só um prazo. Diz também **o quê**: que módulos o
+casamento tem, e **em que medida**.
+
+### O percurso
+
+1. **O casal inscreve-se** e escolhe, na mesma página, um pacote ou um plano à
+   medida. Aceita as políticas de utilização — o consentimento fica registado
+   com a versão do texto, a data e o IP.
+2. **Entra de imediato.** A conta abre no minuto da inscrição: pedir-lhe que
+   escolha um plano e fechar-lhe a porta a seguir não fazia sentido. Mas o
+   casamento fica `pendente` e sem módulos, e por isso só encontra lá dentro a
+   sua página de Licença — onde pode alterar o pedido as vezes que quiser.
+3. **A administração decide.** Aprovar concede os módulos pedidos, põe o
+   casamento ativo e arranca o relógio da licença. Recusar exige um motivo, e o
+   casal lê-o.
+4. **Depois, o casal pode pedir um reforço.** Um reforço acrescenta e nunca
+   tira: quem já tinha «sem limite» não fica com «até 200» por pedir outra
+   coisa. Enquanto o reforço espera, continua a trabalhar no que já tem.
+5. **A administração pode revogar**, a qualquer momento, por incumprimento das
+   políticas. Exige motivo. Fecha todos os módulos — **menos** a Gestão, onde o
+   casal continua a poder exportar e apagar os seus dados, como a lei manda
+   (Lei n.º 22/11, artigos 26.º e 28.º).
+
+### O que nenhum plano dispensa
+
+A **lista de convidados** é o coração da casa, e por isso está marcada
+`obrigatorio` em `cw_lic_modulos`. Um casamento com planta de mesas e sem lista
+de convidados não é meio produto — as mesas sentam quem? A porta recebe quem?
+
+A regra fecha-se em quatro sítios, porque o ecrã sozinho não chega:
+
+- na montra, o módulo obrigatório não tem opção «não levar» e nasce já escolhido
+  no escalão mais barato;
+- em `licRegistarPedido()`, um pedido sem ele é recusado com o nome do módulo em
+  falta (num **reforço** basta que o casamento já o tenha);
+- ao guardar um **pacote**, avisa-se o admin de que ninguém o poderá comprar;
+- em `lic_conceder`, dar módulos sem ele é recusado — tirar **todos** continua a
+  ser legítimo, que é como se fecha uma licença.
+
+### O prazo tem preço
+
+Seis meses e dois anos deixaram de custar o mesmo. Cada prazo tem um **factor**
+que multiplica todo o preçário — módulos e pacotes —, e a montra pergunta o
+prazo **antes** de mostrar preço nenhum: uma montra que só o revela no fim faz o
+casal escolher duas vezes.
+
+Os factores de origem — 6 meses ×1,0 · 12 ×1,8 · 18 ×2,5 · 24 ×3,0 — descem o
+preço por mês à medida que o prazo cresce (−10%, −17%, −25%), e a montra mostra
+essa percentagem em cada opção. O admin edita-os em **Licenças → Prazos**.
+
+O preço fica **congelado no pedido já multiplicado**, item a item: o pedido
+continua legível daqui a um ano sem depender de uma tabela de factores que
+entretanto pode ter mudado.
+
+### O tecto de convidados, do lado do casal
+
+Quem tem tecto vê-o no painel: «80 de 80 convidados da licença · sem lugares
+livres», a barra passa a vermelha e o botão **+ Novo convite** fecha-se, com o
+caminho para o reforço à vista. A cinco lugares do fim já aparece o aviso.
+
+Como sempre, duas fechaduras: o botão desactivado **e** `novoConvite()` a
+recusar — o botão pode ser contornado pelo teclado ou pela consola, a função
+não. E por trás de ambas, `exigirCabidaConvidados()` no servidor.
+
+### A montra: mostrar em vez de descrever, sem enterrar o botão
+
+O preçário público (`registo.php`) não descreve os módulos por palavras — mostra
+capturas do produto a sério, em `assets/montra/`, com o caminho de cada uma na
+coluna `imagem` do módulo.
+
+A montra está organizada em **três degraus**, e a razão é aritmética:
+
+1. **o prazo** (o preço depende dele, logo pergunta-se primeiro);
+2. **os pacotes** — o que serve a maioria;
+3. **uma porta**: «Monte o seu pacote», que só então revela os módulos avulso.
+
+As capturas vivem atrás de um botão **Ver exemplo** — um por módulo, e um por
+pacote (que abre a galeria dos módulos que ele traz, com setas e `Escape`).
+
+Isto não é gosto: com as cinco capturas de enfiada e os módulos todos abertos, a
+página media **5500 px**. O botão de submeter ficava a cinco mil pixéis do
+início, e um erro de validação atirava o casal de volta ao topo — do outro lado
+da página, longe do botão em que acabara de carregar. O formulário parecia
+avariado. Fechada, a montra mede agora **~2800 px**, e o aviso de erro aparece
+**nas duas pontas**: no topo do formulário e junto ao botão, rolando para a que
+estiver mais perto de quem carregou.
+
+Para **regerar** as capturas depois de mudanças no produto: encha um casamento de
+demonstração, capture `index.php`, `mesas.php`, `orcamento.php`,
+`modelo-prova.php` (o cartão) e `convite.php?c=<código>` (o convite como o
+convidado o vê), e reduza-as para JPEG (~80 KB cada). São as peças — o cartão e
+o convite — que vendem os módulos de convite; as páginas de gestão vendem os
+outros três.
+
+### O desconto do prazo, à vista
+
+Cada preço da montra mostra **dois números**: o que o casal paga, e — riscado por
+cima — o que pagaria se o preço fosse proporcional (o preço do prazo curto,
+vezes as vezes que ele cabe no prazo escolhido). A diferença é o desconto.
+
+O número riscado é real, e só aparece quando há mesmo desconto: riscar um valor
+igual ao que está ao lado não é uma promoção, é ruído — e riscar um valor
+**menor** diria o contrário do que se passa.
+
+Do lado do admin, **Licenças → Prazos** mostra cada prazo com a barra do **preço
+por mês** (mais curta = melhor negócio), o total, o proporcional riscado e a
+percentagem poupada. E ao editar um factor, um painel ao vivo faz a conta sobre
+um preço real do preçário e **avisa a vermelho** quando o factor escolhido torna
+o prazo longo mais caro por mês — que é o erro fácil de cometer e difícil de ver.
+
+### As janelas do admin
+
+A área das licenças não usa `window.confirm()` nem `prompt()`. Uma fila de
+`prompt()` obriga a responder às perguntas às cegas, uma de cada vez, sem se ver
+o conjunto — e um Cancelar a meio deita fora o que já se escreveu.
+
+Em vez disso há dois ajudantes, em `plataforma.php`:
+
+- `licFormulario({titulo, dica, campos, aoGuardar})` — um formulário em janela,
+  com os campos todos à vista. `aoGuardar` devolver `false` **mantém a janela
+  aberta** com o aviso, para se corrigir ali mesmo.
+- `licConfirmar({titulo, texto, motivo})` — uma pergunta de sim/não que devolve
+  uma promessa, e que sabe exigir um motivo escrito (a revogação não passa sem
+  ele).
+
+Ambas fecham com `Escape`, guardam com `Enter` (excepto em áreas de texto) e
+põem o foco no primeiro campo.
+
+### As fotografias do convite, escolhidas na inscrição
+
+Quem leva o **convite digital** escolhe, já na inscrição, a fotografia de cada
+secção (capa, história, interlúdio, acesso). Ficam gravadas no convite no
+momento em que o pedido é guardado — não esperam pela aprovação, porque foi o
+casal que as escolheu.
+
+Importa sobretudo no escalão **sem edição**: aí é a única vez que ele as
+escolhe, e a montra di-lo com todas as letras antes de ele submeter. Com edição,
+a nota é outra: são as fotografias com que o convite nasce, e podem trocar-se
+depois.
+
+### As duas fechaduras
+
+Esconder uma entrada do menu não impede ninguém de chamar a ação à mão. Por
+isso a licença fecha **duas vezes**:
+
+- **Nas páginas** — `exigirModulo('mesas')` manda os noivos para a montra, com
+  `?quero=mesas`, onde se explica o que aquele módulo faz e como o ter. (Ao
+  porteiro, que não gere licença nenhuma, mostra-se uma página própria.)
+- **Na API** — `exigirModuloApi()` recusa a ação com a mesma razão por outras
+  palavras.
+
+O tecto de convidados conta **pessoas**, e conta a **diferença**: reescrever os
+mesmos cinco nomes num convite não gasta lugar nenhum, e é isso que faz com que
+corrigir uma gralha não bata com o nariz no limite.
+
+Quem responde pela casa não tem licença a cumprir — `podeModulo()` deixa-o
+passar em todo o lado. E um casamento criado **pela administração** nasce com
+tudo aberto: quem o criou já decidiu, não há pedido nenhum a analisar.
+
+### Onde se mexe
+
+| Quem | Onde | O que faz |
+|---|---|---|
+| Casal | `licenca.php` | **Detalhes da licença em vigor** (plano, prazo, módulos, convidados, total pago) e o **histórico** de todos os pedidos decididos; pede reforços pagando só a diferença |
+| Admin | `plataforma.php` → **Licenças** → Pedidos | Decide, com os pedidos separados em **Novos** e **Actualizações** |
+| Admin | → Preçário / Pacotes | Edita módulos e escalões; ao montar um pacote corrige os preços ali mesmo, com a poupança a acompanhar |
+| Admin | → **Prazos** | Os prazos de licença e o factor de preço de cada um |
+| Admin | → Políticas | Publica uma versão nova do texto |
+| Admin | Casamento → «Licença: módulos e prazo…» | Concede módulos e define o prazo **num só sítio** (eram dois) |
+| Admin | Casamento → «Revogar licença…» | Fecha tudo, com motivo |
+
+O preçário de origem (5 módulos, 12 escalões, 3 pacotes) e as políticas nascem
+com a instalação — ver `semearPrecario()` e `semearPoliticas()` em `db.php`. É
+um ponto de partida, não a lei: o que estiver na base é o que manda.
+
+---
+
+## Vários casamentos, várias contas
+
+A casa serve vários casais ao mesmo tempo. Há dois níveis de papéis, e convém
+não os confundir:
+
+| Nível | Papéis | O que pode |
+|---|---|---|
+| No casamento | `noivos` | gere tudo o que é desse casamento |
+| No casamento | `porteiro` | só a porta: procurar convites e registar entradas |
+| Na plataforma | `admin` | vê todos os casamentos, aprova inscrições, gere contas |
+| Na plataforma | `suporte` | **nada, por direito próprio** — só entra com um código que o casal lhe der |
+
+**O admin não é nenhum dos casais.** Entra em qualquer casamento porque
+responde pela casa, e o sistema di-lo em vez de o disfarçar: nos casamentos
+onde não tem lugar próprio o seu papel é `plataforma`, não aparece na equipa do
+casal, a lista de casamentos diz com que título lá entra, e uma tira no
+cabeçalho lembra-o de que está na festa de outras pessoas. Se alguém lhe der um
+lugar de verdade num casamento (uma linha em `cw_acessos`), é esse que manda —
+o que é verdade continua a ser dito.
+
+O `admin` herdado do `config.local.php` tinha, desde a migração v7, um lugar de
+noivos no casamento nº 1: nesse mundo de um casamento só, ele *era* o casal. A
+**v9** tira esse lugar (e o de qualquer outro admin de plataforma). Não lhe
+tira acesso nenhum — chega lá pelo papel que tem —, tira-lhe o título que não
+era dele. Um casamento pode assim ficar **sem conta de noivos**, e isso passou
+a ver-se: a lista de casamentos marca-o e a Gestão explica-o, com o campo de
+convidar logo por baixo.
+
+**Os floreados.** O par que ladeia os nomes atravessava o primeiro deles, e o
+da direita ia parar acima do bloco. A causa não estava à vista: a regra do
+posicionamento livre punha `translate: calc(0 * 7.2px)` em **todas** as
+camadas, e um translate a zero **continua a ser um translate** — o que faz do
+elemento o bloco contentor dos descendentes em posição absoluta. Os floreados
+posicionam-se contra o bloco dos nomes; passaram a posicionar-se contra um
+invólucro de altura zero. O valor de origem passou a ser `none`, e quem não foi
+movido volta a não mudar nada — que é o que se tinha prometido.
+
+Isso resolvia a camada **parada**. Faltava a camada **em movimento**: o editor
+põe-lhe `translate`/`rotate` para a arrastar, e aí o invólucro *torna-se mesmo*
+o bloco contentor. Se ele não tiver a medida daquilo contra que os ornamentos
+se posicionam, saltam ao primeiro toque — antes ainda de se ter arrastado
+nada. Era o que se via: pegar no floreado atirava-o 30 px para dentro (a
+entrada do bloco dos nomes), e o mesmo valia para as volutas e as trepadeiras.
+Os três invólucros passaram a `position:absolute; inset:0`, coincidindo com o
+que substituem; ser ou não bloco contentor deixou de fazer diferença nenhuma.
+
+**O ar entre os nomes e o floreado.** O floreado nunca saiu do sítio —
+`left:-26px` / `top:-4px` são os do ficheiro de referência, conferidos. Quem
+tinha saído era o nome de baixo: `.ct-coracao` levava `line-height:1`, e o
+desenho de origem não declara entrelinha nenhuma no coração — `normal` dá
+24 px em corpo 20. Com 1 dava 20, os dois nomes fechavam-se quatro píxeis e o
+de baixo subia até encostar à volta do floreado. Agora são 1,2 (as mesmas
+24 px), e os feitios de elo alternativos — que em corpo 34 ou 36 precisam de
+entrelinha curta — pedem `line-height:1` cada um por si.
+
+De caminho, **arrastar passou a mover a camada escolhida** e não a que estiver
+por dentro dela. A regra era "o mais interior ganha", com a nota de que para
+mover o conjunto se escolhe na lista e se arrasta "pelo que ele tem de seu" —
+só que os nomes quase não têm orla que o floreado não cubra, e pegar-lhes pela
+beira arrastava o floreado.
+
+Ganharam também **cinco feitios** (`cartao.floreado`), à escolha na camada
+*Floreados*: **Clássico** (a volta longa com o gancho), **Voluta**, **Raminho**
+(haste com folhas, a condizer com as trepadeiras), **Filete** (o mesmo gesto
+mais fino, a fechar num losango — o mais discreto dos cinco) e **Gota**. O
+clássico é o traço do desenho de origem **ponto por ponto**, conferido contra o
+ficheiro de referência; os outros quatro é que se desenharam a partir dele.
+Todos partilham a mesma caixa e a **mesma âncora** — a ponta grossa sai em
+(148, 98) —, para trocar de feitio ser uma escolha de desenho e não um
+desalinhamento. Só traço: o cartão é gravado a um só dourado, e uma mancha
+cheia não se imprime a foil sem virar borrão. O manual de impressão nomeia o
+que estiver escolhido.
+
+**Cantos, molduras e o que liga os nomes.** As volutas dos cantos passaram a
+ter **cinco feitios** (`cartao.voluta`): **Caracol** (o de origem), **Folha**,
+**Arco**, **Esquadria** e **Leque**. Cada uma é desenhada uma vez e espelhada
+pela diagonal do canto com `matrix(0 1 1 0 0 0)`.
+
+A moldura passou de quatro feitios a **sete** (`cartao.moldura_estilo`), com
+**Três linhas**, **Pontilhada** e **Cantos redondos** a juntarem-se às
+anteriores. E a **Linha dupla** passou a ser mesmo duas linhas: era
+`inset 0 0 0 4px transparent, inset 0 0 0 5.4px accent`, e **uma sombra
+transparente não apaga o que tem por baixo** — o anel de 5,4 px ficava maciço e
+o que se via era uma banda dourada grossa. Sobre um cartão transparente não há
+cor de fundo com que abrir o intervalo, por isso cada linha é agora um
+**elemento seu**.
+
+Entre os dois nomes havia um coração e mais nada. Há agora **seis elos**
+(`cartao.elo`): **Coração**, **&**, **e**, **Losango**, **Filete** e **Nada**.
+
+Os feitios de moldura são escritos **uma vez só**, em `cartaoMolduraVars()`; o
+editor recebe-os do servidor já resolvidos. Chegou a tê-los copiados num `if`
+seu, e a cópia ficou para trás quando nasceram os três feitios novos — a folha
+de cartões saía com o feitio certo e o editor mostrava sempre a linha simples.
+
+Nem tudo isto se apanha com provas. `tests/amostras.js` desenha um cartão por
+cada feitio, inteiro e de perto, para se poderem ver lado a lado: foi assim que
+se viu que o floreado *Filete* era feito de retas e lia-se como um risco em
+diagonal por cima dos nomes, e que a voluta *Leque* eram três curvas que o
+espelho cruzava com outras três. Nenhum dos dois dava erro nenhum.
+
+**As duas cerimónias são opcionais — e agora dizem-no.** A civil e a religiosa
+acrescentam-se e removem-se por inteiro, nos **dois** editores, com um botão
+para cada. É a **hora** que decide se existem — remover é limpá-la —, mas fazer
+isso à mão num campo de hora não se descobre, e deixava o casal a apagar
+dígitos à espera que a linha desaparecesse. O título de cada uma passou para o
+âmbito do evento (`evento.civil_titulo`, `evento.religiosa_titulo`, esquema
+**v14**): as duas peças anunciam a mesma cerimónia, e um título que só o
+impresso soubesse acabaria com cada peça a dizer o seu. O **convite digital**,
+que nem sequer as mostrava, passa a anunciá-las na página do grande dia — um
+casal que tivesse marcado a igreja no registo via essa informação só no papel.
+
+Havia aqui um defeito à vista de toda a gente: `horaTexto('')` dava **"0h"** —
+`explode(':','')` devolve `['']` e `(int)''` é `0`. Todos os cartões anunciavam
+uma «Cerimónia Religiosa às 0h» que ninguém marcou, e o teste que a devia
+esconder (*sem hora não se anuncia*) nunca chegava a ser verdade. A cópia em
+JavaScript do editor tinha o mesmo. Hora por preencher não é meia-noite.
+
+E outro, mais fundo: o editor do cartão mostrava o local da festa, a hora, os
+nomes dos noivos e a data — e a gravação **deitava-os fora em silêncio**,
+porque só enviava as chaves do âmbito `cartao.`. Os campos estavam lá e não
+guardavam nada. Passa a governar também as chaves do evento que mostra.
+
+**As cerimónias, também no editor do admin.** O admin desenha os modelos do
+cartão sem entrar na casa de nenhum casal, e a camada *Cerimónias e receção*
+ficava-lhe bloqueada — «um modelo é o desenho, não a festa». Só que desenhar um
+cartão sem poder pôr lá uma cerimónia a sério é desenhar às cegas. Agora
+marcam-se na mesma, com os mesmos controlos do editor do casal. A diferença
+está no que acontece a seguir: um modelo do cartão **guarda** as cerimónias
+(para a prova e a miniatura ficarem realistas), mas **não as impõe**. Quando um
+casal aplica o modelo, aplica-se o desenho (`cartao.*`) e as cerimónias dele
+ficam intactas — o servidor filtra por `chavesDoAmbito` ao aplicar, e não por
+`chavesModelo`. É a distinção entre o que um modelo *guarda* e o que um modelo
+*escreve no convite de quem o usa*. O painel di-lo, para não haver enganos: as
+cerimónias do modelo são «de exemplo… não passam para o casal».
+
+**O cronograma rearranja-se.** É uma linha do tempo — a ordem é o assunto dele
+— e até aqui só se acertava apagando e voltando a escrever. Cada momento ganhou
+setas para subir e descer, e valem para todas as listas: os capítulos da
+história também se contam por ordem.
+
+**O painel, arrumado por quem o usa.** O que se faz todos os dias — ver e abrir
+casamentos — estava a 800px do topo, por baixo de um formulário de catorze
+campos que se usa uma vez por mês. Os formulários (novo casamento, nova conta,
+cópia de segurança) passaram a **painéis que dobram**: uma linha fechada, tudo
+lá dentro a um clique. A lista subiu para os 550px e a página encolheu de
+1900px para 1130px.
+
+Cada casamento diz agora **quando é e quanto falta** («19/12/2026 · faltam 130
+dias»), quantas pessoas já confirmaram, e mostra a proporção numa barra. E as
+ações separaram-se: **abrir** fica sozinho e à vista, porque é o que se faz nove
+em cada dez vezes; suspender, arquivar e apagar foram para um «⋯». Ao mesmo
+peso, um clique distraído arquivava a festa de alguém. A lista de contas segue a
+mesma regra — editar à frente, repor a senha e apagar atrás. Os números do topo
+que levam a algum lado passaram a botões e levam mesmo lá.
+
+O próprio botão do «⋯» leva agora **três pontos em SVG** e não o glifo `⋯`: esse
+desenha-se encostado ao fundo da linha na maioria dos tipos de letra, e ficava
+caído dentro do botão redondo por muito que se centrasse a caixa. O ícone tem a
+sua própria caixa e centra-se sempre, nas três listas (casamentos, contas e
+modelos) e na lista de convites.
+
+**Os modelos mostram a cara.** `modelos.php` é uma página sobre desenhos e não
+mostrava desenho nenhum: escolher um modelo pelo nome é escolher às cegas. Cada
+modelo passa a trazer a sua **miniatura desenhada a sério** — o convite digital
+por `convite-digital.php?…&modelo=N`, o cartão por `modelo-prova.php?modelo=N`
+—, encolhida por `transform` a partir da largura real da moldura, para a grelha
+poder mudar de colunas sem cortar a peça. Um modelo por publicar distingue-se à
+vista, e o estado vazio deixou de mandar abrir um casamento à toa (deixou de ser
+preciso quando os modelos passaram a nascer sem casa emprestada).
+
+**Onde o admin aterra.** Ao entrar, o pessoal da casa vai para `plataforma.php`
+— a administração, com os números de todo o sistema: casamentos ativos e à
+espera, convites, pessoas, confirmações, entradas, contas, e quantos códigos de
+suporte estão de pé neste momento. E **não fica com casamento nenhum aberto**:
+abrir-lhe o primeiro da lista era pô-lo dentro da festa de um casal ao acaso,
+com poderes de gestão e sem ter pedido nada. Escolhe um na lista, e o menu das
+páginas do casamento só aparece depois disso.
+
+**Os dados do evento pedem-se à nascença.** A inscrição pública e a criação
+pelo admin perguntam tudo: nomes, data, hora e local da festa, cidade,
+**quantos convidados se espera**, WhatsApp, e — opcionalmente — a hora e o
+local da **cerimónia civil** e da **cerimónia religiosa**. Um casamento que
+nasce vazio fica com os valores de origem do `config.php` à espera de que
+alguém se lembre, e o casal manda convites com a morada de outra pessoa.
+
+**Cada local tem a sua ligação do Google Maps.** A festa já tinha uma; agora as
+duas cerimónias também (`evento.civil_maps`, `evento.religiosa_maps`), nos **três**
+sítios onde um casamento se preenche: o registo público (`registo.php`), a
+gestão do casal (`gestao.php`) e o **Novo casamento** do admin (`plataforma.php`).
+Cada campo traz um botão **Escolher no Google Maps** — abre o Maps a procurar o
+sítio pelo nome que já se escreveu no campo do local — e, assim que se cola uma
+ligação, **lê-lhe as coordenadas** e mostra-as por baixo, prontas a copiar. Não
+se embute mapa nenhum na página: isso pedia uma chave da API do Google e rede
+aberta; abrir o Maps numa aba e trazer de lá a ligação faz o mesmo e funciona
+em qualquer lado (ver `assets/maps-campo.js`, que também sabe extrair as
+coordenadas dos vários feitios de endereço do Maps: `@lat,lng`, `!3d…!4d…`,
+`?q=lat,lng`). No convite digital, um local com ligação passa a ser uma
+**pastilha «ver no mapa»** com o **pino de localização** (o ícone do Google
+Maps) — o mesmo feitio do botão *Local do evento* da receção, à escala das
+cerimónias; sem ligação, fica texto simples.
+
+As ligações são **dado do evento**, não desenho: mudam-se só onde o casamento
+se preenche (os três formulários acima), e **não nos editores**. O editor do
+convite digital mostra a ligação no convite mas deixou de a deixar editar — lá
+mexe-se no local e na cidade, a ligação do mapa é assunto da *Gestão*. É a mesma
+regra que separa o que a peça mostra do que é dado do casamento.
+
+O número de convidados é o teto da barra de capacidade do painel (era
+`MAX_LUGARES_TOTAL`, o mesmo 150 para toda a gente). As cerimónias só se
+anunciam se tiverem hora: sem ela, a secção nem sai no cartão. E a hora da
+cerimónia deixou de viver em `cartao.civil_hora` — estava no âmbito do desenho
+impresso, e por isso **repor uma versão antiga do cartão mudava a hora a que as
+pessoas se apresentam na igreja**. Agora é `evento.civil_hora`, um facto do
+casamento que o desenho lê (esquema v11).
+
+**Arquivar e apagar.** Na Administração, cada casamento pode ser **suspenso**
+(o casal deixa de entrar e os convites deixam de abrir para os convidados),
+**arquivado** (sai das listas de trabalho, inteiro) ou **apagado**. Apagar só é
+possível depois de arquivar: a trava antiga era o número — *"o nº 1 não se
+apaga"* —, o que protegia um casamento por acaso de ter sido o primeiro e
+deixava todos os outros à mão de um clique. Arquivar primeiro protege-os a
+todos, e pela razão certa. Os arquivados têm secção própria, com **reabrir**,
+**apagar** e **levar os dados** — arquivar não é perder de vista. Apagar pede
+que se escreva o nome do casamento, e diz depois quantos convites e pessoas
+levou.
+
+Arquivar **para também as contas** que só existem por causa daquele casamento:
+ficam em `inativo` e deixam de entrar. Só essas — quem for porteiro de outro
+casamento de pé não é fechado por tabela, e o pessoal da plataforma nunca é
+tocado. `inativo` é um estado à parte de `suspenso` de propósito: um é o
+casamento que acabou, o outro é uma decisão sobre a pessoa — e ao reabrir
+voltam as primeiras, não as segundas.
+
+A lista de casamentos da Administração é servida por `casamento_lista`,
+procurável e filtrada por estado — e ordenada pelo **último em que se
+trabalhou** (`cw_casamentos.ultimo_acesso`, esquema v12). O número é a ordem
+por que foram criados, a menos útil de todas: quem abre a página de manhã quer
+ver em cima aquilo em que andou ontem. Abre nos **ativos**; os por aprovar
+também têm a sua fila em cima.
+
+**Modelos de convite.** As versões (`cw_versoes`) são de cada casamento: o
+desenho que *aquele* casal guardou. Os **modelos** (`cw_modelos`, esquema v13)
+são o outro lado — convites prontos, feitos pela casa, para um casal começar de
+qualquer coisa bonita em vez de uma folha em branco. Aparecem no seletor de
+versões dos dois editores, num grupo «Modelos da casa».
+
+Um modelo cria-se em `modelos.php` e **desenha-se no editor de sempre**, que
+abre em modo de modelo (`convite-editor.php?modelo=N`, `editor-cartao.php?modelo=N`)
+— sem casamento nenhum pelo meio. Pedir emprestada a casa de um casal para fazer
+um modelo da casa era pedir o que não é preciso, e arriscar deixar lá o rascunho.
+Uma tira no topo do editor não deixa esquecer que o que se está a desenhar é da
+casa e não de um casal.
+
+Aplicar um modelo é **ficar com ele**: parte-se do desenho de origem da peça e
+põe-se o modelo por cima, para o casal ficar exatamente com o modelo e não com
+uma mistura do que tinha. A partir daí o desenho é do casal: mexer no modelo
+depois disso não lhe toca, e apagar o modelo também não. É a diferença entre dar
+uma receita e cozinhar em casa alheia — e é o que evita que um casal acorde com
+o convite mudado porque a casa mexeu numa coisa dela.
+
+**As fotografias são do casal, mas o modelo empresta as suas a quem ainda não
+pôs as próprias.** O desenho que um modelo impõe (`chavesDesenho`) deixa de fora
+os nomes, o evento e as fotografias — senão aplicar um modelo rebatizava o casal
+e trocava-lhe os retratos. Só que as fotos de exemplo que o admin define para os
+modelos (a capa, a história, o interlúdio, o passe) nunca chegavam ao casal, e um
+casal sem fotos suas ficava com as de origem em vez das do modelo que escolheu.
+A regra, secção a secção (só no convite digital — no cartão as imagens já são
+`cartao.*`, que é desenho): se a foto do casal naquela secção **ainda é a de
+origem** (não lhe mexeu), aplicar o modelo empresta-lhe a foto do modelo e o seu
+enquadramento; uma foto que o casal **já trocou** fica intocada. Nunca se apaga
+uma fotografia do casal — só se preenche o que ele deixou por preencher. Ver
+`fotosDeModelo()` e `modelo_aplicar` em `api.php`; a prova é `tests/probe_fotos.js`.
+
+**Os modelos de origem da casa** (esquema v15). A lista começava vazia: o
+desenho que o sistema traz — o convite impresso e o digital tal como são de
+origem — não constava dela, e para o ter o admin tinha de fazer um «novo modelo
+do zero». Passam a estar lá desde o início, um por peça («Convite impresso
+(modelo da casa)» e «Convite digital (modelo da casa)»), publicados. Guardam
+`defs` vazio de propósito: um modelo assenta no desenho de origem e guarda só o
+que muda, por isso um modelo vazio **é** o desenho de origem, e acompanha-o se
+ele mudar. Aplicá-los devolve a peça à origem, mesmo já customizada — que é o
+que se espera de «aplicar o modelo da casa». São normais no resto: o admin pode
+desenhá-los (e aí passam a um modelo seu), publicá-los ou apagá-los.
+
+**Quem vê cada modelo** (esquema v16). Um modelo era de todos (publicado) ou de
+ninguém (rascunho). Passa a poder ser **de alguns**: no painel dos modelos,
+o «⋯ → Quem vê este modelo» escolhe entre **todos os casais** ou **só os
+casamentos escolhidos**, com uma lista pesquisável dos casamentos ativos a
+marcar. A coluna `cw_modelos.alcance` guarda a escolha e a tabela de junção
+`cw_modelo_casamentos` diz quais — apagada por si mesma quando o modelo ou o
+casamento desaparece (`ON DELETE CASCADE`). Um casal só **vê e aplica** um
+modelo publicado que lhe seja destinado (de todos, ou dos escolhidos com ele
+entre eles); o cartão de cada modelo mostra o alcance à vista («todos os casais»
+ou «N casamentos»). Escolher «só os escolhidos» sem escolher ninguém não faz
+sentido — seria um modelo que ninguém vê, que já é o rascunho —, por isso
+normaliza-se de volta para «todos», e o painel avisa. As opções de um modelo (mudar o nome,
+quem o vê) abrem numa **janela** e não dentro do cartão: um cartão da grelha
+tem ~260 px de largura, e uma lista de casamentos com procura espremida nessa
+coluna era ilegível — além de esticar a linha inteira da grelha e desalinhar os
+cartões vizinhos.
+
+**Um modelo é um desenho, não um casal.** Um modelo era um
+retrato inteiro da peça onde foi composto — e isso incluía o nome dos noivos, a
+data, o local, o WhatsApp e as fotografias. Aplicá-lo **renomeava o casal**:
+a Sara e o Tomás carregavam no modelo da casa e passavam a chamar-se Isabel e
+Abednego. Era esta a razão por que «os noivos não conseguem colocar em vigor
+outros modelos padrão» — conseguiam, mas o resultado era inaceitável, por isso
+não servia.
+
+Separam-se agora duas coisas que estavam misturadas:
+
+- **o que um modelo guarda** (`chavesModelo`) — tudo o que o editor compõe, para
+  a pré-visualização do modelo fazer sentido;
+- **o que um modelo impõe** (`chavesDesenho`) — só o desenho: tipos de letra,
+  cores, molduras, ornamentos, disposição. Nada de `casal.`, `evento.`, `media.`
+  ou `foto.`.
+
+Aplicar um modelo escreve o desenho dele e devolve o resto ao de origem; o nome,
+a data, o local, os links e as fotografias do casal ficam onde estavam. O
+inverso também: **criar** um modelo já não copia a identidade de quem o compôs.
+`instantaneoModelo()` troca-a pelos **dados de exemplo** (a seguir), e é essa
+identidade que fica guardada no modelo e aparece na sua prova e na sua
+miniatura. Um modelo do cartão guarda também o casal e a data, apesar de nunca
+os impor: são o corpo do cartão, e sem eles a prova caía nos valores de origem.
+
+Isto vale para os modelos que se criarem **a partir de agora**. Um modelo já
+feito é o trabalho de alguém e não se reescreve por baixo dele: `defsDoEditor()`
+mostra o que o modelo guardou, e nada lhe é sobreposto.
+
+**Os dados de exemplo** (esquema v19). Editam-se na página dos modelos, em
+«Dados de exemplo dos modelos», e são a **identidade inteira** de um convite:
+`chavesExemplo()` é derivada de `chavesDoAmbito('digital')` e não escrita à mão,
+justamente porque uma lista à mão fica para trás — à primeira versão faltava
+metade dos campos. São 26: o casal, a data, a hora, os lugares, o WhatsApp, o
+título/local/cidade/mapa da festa, as duas cerimónias por inteiro (título, hora,
+local, mapa), as quatro imagens, a música, e o enquadramento das três imagens
+que o têm. O painel agrupa-os pela ordem por que se lê um convite.
+
+De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das Acácias, Luanda, sem
+contacto nem mapas (não há telefone de exemplo que se possa inventar sem mandar
+alguém a lado nenhum) — e, como imagens, quatro fotografias da galeria da casa.
+
+**A galeria da casa.** Um modelo tem de parecer um convite a sério, e desenhos
+no lugar das fotografias não pareciam. A instalação traz **24 fotografias** em
+`assets/convite/galeria/`, seis por secção, já recortadas para a moldura de cada
+uma (a capa 1000×1247, as restantes 1300×812 ou 1200×750) e o interlúdio já
+convertido a preto e branco. São do Pexels, sob licença livre para uso
+comercial; a proveniência de cada uma está em `galeria/CREDITOS.md`, e a lista
+que o painel lê é `galeriaExemplo()`.
+
+O acervo é variado de propósito, e com mais casais de pele escura do que
+qualquer outra coisa — é quem este sistema serve. Há também casamentos indianos
+e europeus, porque um exemplo que só mostra um tipo de casamento diz ao resto
+que o produto não é para eles.
+
+**Uma lista só, com separadores.** A galeria abre de dois sítios: do botão de
+cada imagem do painel — e aí escolher aplica àquela secção —, ou de **«Gerir a
+galeria»**, que a abre só para arrumar. Em qualquer dos casos mostra **tudo**,
+com separadores por categoria (Todas · Capa · História · Interlúdio · Acesso ·
+Sem categoria) e a conta de cada um. Quatro gavetas fechadas escondiam o óbvio:
+uma fotografia enviada a pensar no interlúdio pode muito bem servir a capa. As
+categorias arrumam e filtram; não separam. Aberta a partir de uma secção, a
+galeria começa no separador dela — mas os outros continuam a um clique.
+
+Escolher uma fotografia põe-na em vigor e **centra o enquadramento**, já que os
+ficheiros da casa vêm cortados à medida da sua categoria. As que estão em uso
+aparecem marcadas.
+
+**O admin acrescenta as suas, e arruma-as.** O campo de envio pede a categoria —
+ou **«sem categoria»**, que guarda a fotografia à mesma para lhe decidir o lugar
+depois. Uma fotografia enviada sem categoria fica só no acervo: não entra em
+vigor em secção nenhuma. Depois arruma-se, num seletor por baixo de cada
+miniatura; a categoria vive no prefixo do nome do ficheiro, por isso mudá-la
+renomeia-o — e quem estivesse a apontar para o nome antigo passa a apontar para
+o novo.
+
+O que sobe **junta-se** à galeria em vez de substituir o que lá estava: uma
+imagem de exemplo não é uma definição que se troca, é um acervo que cresce. As
+enviadas vivem em `assets/convite/exemplo/`, fora do versionamento.
+
+**Tirar da galeria** vale para todas — inclusive as da casa. Só que as duas
+coisas não são a mesma: uma fotografia enviada **apaga-se** (o ficheiro é do
+admin, e some), e uma da casa **esconde-se**. O ficheiro dessa vem com a
+instalação e um deploy trá-lo-ia de volta, por isso o que se guarda é a decisão
+de não a querer — numa lista em `modelo.galeria.ocultas`. É também o que permite
+o botão **«Repor as da casa»**, que um apagar irreversível não daria. Em qualquer
+dos casos, tirar uma que estivesse em vigor devolve essa secção ao valor de
+fábrica, em vez de a deixar a apontar para o que já não se vê.
+
+As quatro fotografias do **convite de origem** (`assets/convite/hero.jpg` e
+companhia) também aparecem na galeria, na categoria da sua secção. São
+fotografias como as outras, e não havia razão para não se poderem pôr num
+modelo — o que faz disso uma escolha do admin, e não uma herança automática.
+
+Cada campo é validado por `validarDefinicao()`, a mesma de sempre — uma segunda
+cópia das regras aqui ficava para trás à primeira mudança. Deixar um campo em
+branco volta ao valor de fábrica, **exceto** onde branco é uma resposta
+(`podeSerVazio()`: mapas, WhatsApp, lugares, e as horas e locais das cerimónias —
+uma cerimónia sem hora é uma cerimónia que não se anuncia).
+
+Vivem na linha 0 das definições — a do sistema —, sob o prefixo
+`modelo.exemplo.`, e um valor igual ao de fábrica apaga a linha, como em
+qualquer definição. As imagens e a música que o admin envie vão para
+`assets/convite/exemplo/` (fora do versionamento, como os uploads do convite). A
+miniatura de cada imagem recorta como a secção recorta no convite — `cover` com
+o foco e o zoom do enquadramento —, senão os três números ao lado não queriam
+dizer nada.
+
+Nada disto toca no **convite de origem**: as suas quatro imagens continuam a ser
+as fotografias de sempre em `assets/convite/`, e é com elas que um casamento
+novo nasce. Trocá-las por desenho genérico chegou a ser feito (esquemas 17 e 18)
+e foi desfeito: era mudar o produto quando o que estava errado eram os modelos.
+A v19 limpa o que a v18 tinha deixado escrito.
+
+**O menu «⋯».** Estava copiado linha por linha em `modelos.php` e em
+`plataforma.php`, e uma correção feita num sítio não chegava ao outro. Passa a
+viver em `assets/menu-mais.js`, e aproveitou-se para lhe dar o que faltava:
+**vira-se para cima** quando não há espaço em baixo. Abria sempre para baixo, e
+o menu do último cartão de uma grelha caía fora do ecrã — parecia não fazer nada.
+
+**Versões e modelos: um painel, e não um `<select>` de tudo.** Cabia tudo no
+mesmo menu suspenso da barra — as versões do casal, os modelos da casa e as
+ações de gerir. Três consequências, todas más: escolher um modelo parecia
+escolher uma versão (e não é a mesma coisa: uma é o que **este** casal guardou,
+a outra é um desenho da casa); os modelos escolhiam-se pelo **nome**, às cegas,
+quando um modelo é precisamente um desenho; e aplicar um modelo que já era o
+desenho em vigor recarregava a página sem nada mudar, em silêncio.
+
+Era esta a queixa de que «os noivos não conseguem pôr modelos em vigor». A ação
+corria bem — verifiquei-a — e não dizia nada. Três correções, e as três são de
+fundo:
+
+- a barra passa a ter um **botão que diz o estado** («Original — em vigor», ou
+  «Alterado — de Original»), e abre um painel com duas abas: **Versões
+  guardadas** (com o que se faz a cada uma, linha a linha) e **Modelos da casa**;
+- os modelos aparecem em **miniaturas desenhadas a sério** — a mesma prova que a
+  página dos modelos usa, composta em tamanho real e encolhida para caber;
+- `modelo_aplicar` passa a comparar a peça **antes e depois** e a devolver
+  `mudou`. Quando não mudou nada, o painel di-lo em vez de recarregar uma página
+  igual: *«já era o desenho em vigor — não havia nada para mudar»*.
+
+**A casa tinha de ter mesmo outros desenhos** (esquema v20). Aqui estava a raiz
+da queixa, e ela era literal. A v15 semeou dois modelos da casa — «Convite
+digital (modelo da casa)» e o impresso — ambos com `defs` **vazio**. E um modelo
+vazio *é* o desenho de origem: aplicá-lo devolve a peça à origem, que passa a
+coincidir com a versão «Original». Um casal via dois modelos, escolhia um, e
+ficava sempre com **«Original em vigor»** — em todos os casos, porque não havia
+outro modelo. Havia a origem, com dois nomes.
+
+A v20 semeia variações a sério, uma por paleta que o sistema já tinha: no
+digital **Borgonha**, **Meia-noite** e **Terracota** (de `temasPredef()`); no
+impresso **Sálvia**, **Terracota** e **Rosa velho** (paleta e folhagem, que é o
+que ali se vê). E os dois de origem passam a chamar-se **«Desenho de origem»**,
+que é o que são — o ponto de partida e o caminho de volta. A migração usa
+`temasPredef()` em vez de copiar as cores: `personalizacao.php` só depende do
+`config.php`, e por isso entra numa migração sem circularidade.
+
+Duas correções de honestidade no painel, pela mesma razão:
+
+- `modelo_lista` passa a dizer, para cada modelo, se ele **já é** o desenho da
+  peça (a mesma conta de `modelo_aplicar`, feita sem gravar nada). O painel
+  marca-o e **não lhe oferece «Pôr em vigor»** — oferecer uma ação que não faz
+  nada foi metade do problema;
+- quando a peça tem exatamente o desenho de um modelo e nenhuma versão guardada
+  bate certo, a barra passa a dizer **«Borgonha — modelo em vigor»** em vez de
+  «Alterado». Dizer «Alterado» a quem acabou de pôr um modelo em vigor é
+  contradizê-lo.
+
+Uma versão guardada tem prioridade sobre um modelo na barra: a versão é do
+casal, o modelo é da casa.
+
+**«Em vigor» é o modelo aplicado, não todos os de igual desenho.** A primeira
+versão desta marca partia-se: `em_vigor` significava «aplicar isto não mudaria
+nada», e como o mais comum é vários modelos terem o **mesmo desenho** (todos
+iguais à origem — por exemplo, criados a partir do convite de um casal sem lhe
+mexer no desenho), davam-se **todos** como em vigor ao mesmo tempo. Três cartões
+com a etiqueta «EM VIGOR» de uma vez, e aplicar qualquer um deles não mudava
+nada visível — donde a queixa de que «não dá para pôr outro em vigor».
+
+Passa a guardar-se qual modelo foi **mesmo aplicado** (`modelo.vigor.<âmbito>`,
+por casamento). `modeloEmVigorId()` lê-o; `marcarModeloEmVigor()` grava-o ao
+aplicar; e ele **esquece-se** quando o desenho passa a vir de outro lado — uma
+versão aplicada, ou uma edição à mão. A lista distingue então duas coisas:
+**`mesmo_desenho`** (aplicar seria um não-fazer-nada — pode ser de vários) e
+**`em_vigor`** (é este o modelo aplicado, e o desenho continua o dele — um só, ou
+nenhum). Aplicar um modelo de desenho idêntico deixou de parecer inútil: a
+etiqueta «em vigor» **muda-se para ele** e a barra passa a dizer o seu nome, que
+é o feedback que faltava.
+
+**A prova de um modelo mostra o resultado, e não o modelo.** `defsDoEditor()`
+passou a responder a três coisas em vez de duas: as definições, o modelo **em
+edição** (só para o admin, que é quem o cura) e o modelo **visto**. Antes, só o
+admin é que podia ver a prova de um modelo — e por isso as miniaturas no painel
+do casal desenhavam todas o convite *dele*, todas iguais. Agora um casal vê
+qualquer modelo que lhe seja destinado (a mesma regra de o poder aplicar), e vê
+o desenho **com o seu próprio nome, data e fotografias** — que é exatamente o
+que aplicar produz. A miniatura não promete nada que a aplicação não cumpra.
+
+**O editor: trancar e colar.** As secções do convite reordenam-se a arrastar —
+e um gesto distraído desfazia meia hora de composição. Cada camada tem agora um
+**cadeado**: trancada não se arrasta nem se esconde, e a tranca viaja com o
+desenho (`layout.trancados`). O cadeado só se vê ao passar por cima, ou quando
+está fechado: uma coluna de cadeados abertos em todas as linhas é ruído.
+
+O ponto focal das fotografias **cola-se ao centro e aos terços**, com guias que
+acendem só no instante em que ele lá encosta. Com **Shift** arrasta livre, para
+quem quer mesmo 47%.
+
+**A tela de posicionamento livre.** Havia duas maneiras de compor uma peça:
+aceitar o sítio que o design deu a cada bloco, ou não a ter. Agora há a
+terceira — **arrastar o bloco na própria peça**. Vale no cartão impresso (cada
+camada: os nomes, a data, a logística, os ornamentos) e em **todas** as páginas
+do convite digital — o envelope, a capa de entrada, cada uma das secções de
+origem e também as **secções livres** que o casal acrescente, que se deixam
+compor mal nascem, sem recarregar a página.
+
+O deslocamento guarda-se em **percentagem da tela**, nunca em píxeis
+(`cartao.posicoes`, `layout.posicoes`, JSON `{"bloco":"x y"}`). É isto que faz
+uma composição feita a 33% de zoom sair igual nos 720×1080 que vão para a
+gráfica, e o envelope composto no computador chegar inteiro ao telemóvel. Um
+par a zeros nunca chega a gravar-se: uma peça que ninguém arrastou continua a
+ser, ao píxel, a que o design desenhou — e é por isso que nada disto mexeu nos
+convites que já estavam feitos.
+
+**Que percentagem, de quê.** O envelope enche o ecrã e a capa de entrada tem
+altura calculada: nessas duas, a vertical é mesmo percentagem da **altura**.
+As páginas do corpo do convite não têm altura própria — têm o texto que lá
+está, e esse reflui (três linhas no computador, seis no telemóvel). Dizer "10%
+para baixo" de uma coisa que muda de tamanho não quer dizer nada, por isso aí
+**os dois eixos se medem em percentagem da largura da página**
+(`min(100vw,640px)`, que é o que `main{max-width:640px}` deixa) — a única
+medida que se mantém quando o parágrafo de cima cresce. O painel do editor
+di-lo, na secção onde isso é verdade.
+
+Um bloco movido **flutua**: deixa o lugar aberto e passa por cima dos vizinhos,
+em vez de os empurrar (é `translate`, não layout). Numa página que corre, isso
+significa que uma composição arrojada pode sobrepor-se noutro ecrã — é o preço
+de compor à mão sobre texto que reflui, e por isso cada secção tem o seu
+**Repor a composição desta camada**, à mão de semear.
+
+**Virar.** O mesmo bloco também se vira, à volta do próprio centro: **Alt +
+arrastar** na peça (encosta de 15 em 15 graus, e o **Shift** solta-a),
+**Alt + setas** para afinar um grau de cada vez, ou a barra no painel. A volta
+viaja no mesmo valor gravado, como terceiro número (`"x y ângulo"`) — e um
+bloco que só foi movido continua a gravar-se com dois, para ocupar exatamente
+o que ocupava antes de haver rotação. No CSS é a propriedade `rotate`, irmã da
+`translate` e pela mesma razão: compõe-se com os transforms do design em vez
+de os apagar.
+
+**Mesa mínima.** Os editores têm três colunas — ferramentas, peça e painéis — e
+uma barra de opções que não deve passar a duas linhas. Abaixo de
+`EDITOR_MIN_L × EDITOR_MIN_A` (**1200 × 700**, em `config.php`) deixam de caber:
+os painéis comem a peça, a barra quebra, e o editor salta por baixo do rato a
+meio de um gesto. Isso não se descobre a olho — descobre-se depois de meia hora
+de trabalho, quando um arrasto sai torto e não se percebe porquê. Daí o aviso
+(`assets/editor-espaco.js`): diz a medida que se tem, a que falta e qual dos
+lados é que falta. **Não é uma porta fechada**: há «continuar mesmo assim», que
+vale para a sessão de trabalho e deixa uma marca na barra de estado — clicar
+nela traz o aviso de volta.
+
+**O manual de impressão acompanha.** É gerado, não escrito: a prova visual é o
+cartão a sério, com a composição aplicada, e as tabelas de especificação dizem
+o feitio da moldura, a distância à aresta e o tamanho de cada ornamento **como
+estão agora** — estavam escritos à mão e diziam sempre o mesmo enquanto o
+cartão mudava por baixo, que é um manual a mentir com toda a confiança. Quando
+há camadas fora do sítio, nasce uma tabela **«Composição»** com o deslocamento
+e a volta de cada uma, em percentagem e em milímetros de papel, e um aviso de
+que não é erro de montagem — a arte já segue assim, e quem confere a prova
+precisa de saber contra o quê a conferir. Pôr outra versão em vigor muda a peça
+e o manual acompanha, sem lhe tocar.
+
+Os ids das posições levam **dois pontos** (`convite:cartao`, `capa:nomes`): as
+definições usam o ponto, e um id igualzinho a uma chave de definição era um
+engano à espera de acontecer. Os das secções livres seguem o feitio
+`bl…:elemento` e passam por padrão, porque a validação corre sem saber que
+secções aquele casal criou; um id de uma secção que já não existe escreve uma
+regra CSS sem dono e a página fica exatamente igual.
+
+O íman não é uma grelha: são as linhas que a peça já tem — o centro, os terços
+e as bordas da tela, as bordas e os centros dos **outros** blocos, e o sítio de
+origem do próprio bloco (voltar atrás tem de ser fácil). As guias acendem só
+quando ele está mesmo colado. **Shift** desliga o íman; as **setas** afinam
+ponto a ponto (0,25% da tela, ou 2% com Shift).
+
+O cartão ganhou o mesmo **cadeado** das secções (`cartao.trancados`): camada
+trancada não se arrasta nem se esconde. O motor do gesto é um só —
+`assets/tela-livre.js` —, usado tal e qual pelos dois editores; no convite
+digital corre **dentro da tela**, que é um iframe, porque quem manda no gesto é
+o documento onde o rato está. De lá sai só o resultado: que bloco, e para onde.
+
+**Levar os dados, e trazê-los de volta.** Os dados de um casamento são do
+casal: em **Gestão** descarrega-se um ficheiro `.json` com a ficha, o desenho
+dos convites, as mesas, os convites e as pessoas — e traz-se de volta por ali
+mesmo, o que **substitui** o que lá está (a página di-lo, com as contas do que
+entra e do que sai, antes de perguntar). O admin leva a casa inteira em
+`plataforma.php`, com ou sem as senhas cifradas das contas, e traz casamentos
+de um ficheiro **como novos**, sem tocar no que já cá está.
+
+As mesas viajam pelo **nome**, não pelo número — um id desta base não quer
+dizer nada noutra. Os códigos dos convites tentam manter-se; quando já estão em
+uso, geram-se outros e diz-se **quantos**, porque um código que muda é um QR já
+impresso que deixa de servir.
+
+**A entrada não é de casamento nenhum.** `login.php` e `registo.php` mostram a
+casa (`PLATAFORMA`, em `config.php`), e não um casal: com vários casamentos,
+quem chegava para entrar no seu era recebido pelo nome de outras pessoas.
+
+**A ficha manda nas peças.** Os nomes e a data que o casal deu ao inscrever-se
+(ou que o admin escreveu ao criar o casamento) vivem em `cw_casamentos` e
+entram como **valor de origem** de `defsPadrao()` — não como definições
+gravadas. Daí seguem sozinhos para tudo o que delas sai: o monograma, o
+cabeçalho, o convite digital, o cartão impresso, a página de confirmação, a
+contagem decrescente, o manifesto da porta e o nome do ficheiro CSV. A versão
+"Original" de cada casamento passa também a ser a dele.
+
+O editor do convite continua a poder escrever um nome diferente por cima — é
+para isso que serve. Quando isso acontece, a página de gestão di-lo, e guardar
+a ficha retira essa cópia: sem isso, mudar o nome na ficha não mudava nada no
+convite e ninguém percebia porquê.
+
+**Onde o casal gere isto.** `gestao.php` junta o que é do casamento e não do
+desenho de uma peça: a ficha, os dados do evento (hora, sítio, mapa,
+contacto), o endereço público, quem entra e com que papel, as contas dos
+porteiros, os códigos de suporte e a mudança da própria senha. A última secção
+é para toda a gente — era a única forma de um porteiro poder mudar a sua.
+
+**Como entra um casal novo.** Inscreve-se em `registo.php`. A conta e o
+casamento ficam `pendente`, e a entrada recusa-lhe o acesso — de propósito. O
+admin da plataforma vê a inscrição na fila em `plataforma.php` e aprova-a;
+aprovar o casamento ativa, no mesmo gesto, a conta de quem se inscreveu.
+
+**Como o suporte ajuda.** O casal gera, em `gestao.php`, um código que diz se
+dá para **ver** ou para **ver e corrigir**, e por quantos dias. Entrega-o. O
+suporte escreve-o em `plataforma.php` e passa a acompanhar aquele casamento,
+com uma tira no cabeçalho que não deixa esquecer em casa de quem está. Um
+código de leitura recusa qualquer escrita, no servidor. Revogar fecha a porta
+**já** — inclusive a quem estava lá dentro nesse momento.
+
+Num código de leitura o ecrã acompanha a fechadura: `assets/so-ver.js` desliga
+os controlos que iriam bater com o nariz na porta e deixa vivos os que só
+mostram. Descobre-os lendo o próprio código da página, contra a mesma lista de
+ações que o servidor usa (`acoesDoCasamento()`, em `config.php`) — não há como
+uma ficar para trás da outra. Uma página pode desmentir a descoberta com
+`data-escrita="0"` (só abre coisas que escrevem, como o menu "…") ou
+`data-escrita="1"` (a leitura do código não lá chega). O que escapar continua
+a ser recusado, com mensagem, antes de sair do navegador.
+
+Os **gestos** não têm botão que se apague — arrastar uma mesa, largar uma
+pastilha noutra, escolher numa lista que se abre. Aí é a própria página que
+sabe quais deles escrevem: `assets/mesas.js` pergunta antes de armar o gesto, e
+a planta apresenta-se fixa (o mesmo caminho que já tinha para "mesas fixas"),
+com tudo à vista e tudo tocável. As caixas do bloqueio continuam a mostrar o
+que o **casal** configurou — trocá-las pela nossa trava dava a quem vem ajudar
+uma leitura errada da planta alheia.
+
+**Senhas.** Cada pessoa muda a sua em `gestao.php`. Não há envio de correio
+configurado, e prometer um email que nunca chega seria pior: quando alguém
+perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma
+senha temporária para lha entregar.
+
+**O endereço público.** Os QR e os links dos convites são absolutos e, uma vez
+impressos, são para sempre. Cada casamento tem o seu endereço, fixado na barra
+que aparece nas páginas que geram links e QR — que avisa, antes de imprimir,
+quando o endereço só existe na máquina de quem o está a ver.
+
+---
+
+## Ao mexer no código: a página de versão
+
+`versao.php` responde à pergunta que por telefone é impossível — *"o servidor
+já tem a correção X?"*. Só responde se for alimentada: **quem mexe na aplicação
+acrescenta lá uma linha** em `correcoesEsperadas()`, com o nome da alteração, o
+ficheiro e um pedaço de texto que só exista depois dela.
+
+Sem isso a página envelhece em silêncio: continua a dizer "está tudo cá"
+enquanto o servidor corre código de há meses — exatamente a mentira que ela
+existe para evitar. A página mostra também a versão do esquema da base, que é a
+outra metade da pergunta: os ficheiros podem estar todos lá e a migração não ter
+corrido.
+
+---
+
+## Instalação no InfinityFree (ou outro alojamento)
+
+1. Carregue todos os ficheiros (incluindo a pasta `assets/`) para a pasta pública do site (`htdocs`).
+2. **Crie o `config.local.php`** (é o único ficheiro com segredos): copie o modelo e preencha-o —
+   `cp config.local.example.php config.local.php`. Indique lá os dados de ligação à base de dados
+   em `db['online']` e os utilizadores. Faça upload do `config.local.php` para o servidor, a par do `config.php`.
+3. Abra o site no navegador. As tabelas `cw_` são criadas sozinhas na primeira visita.
+
+O sistema tenta primeiro a ligação `local` (útil para testes em XAMPP/Wamp) e, se falhar, usa a `online`.
+
+> **Porque é que os segredos estão separados?** Assim o código (incluindo o `config.php`) pode ir para
+> o Git/GitHub sem expor palavras-passe. O `config.local.php` está listado no `.gitignore` e nunca é
+> versionado — existe apenas no seu computador e no servidor.
+
+---
+
+## Antes de publicar — ajustes
+
+Em `config.local.php` (segredos):
+
+- **Utilizadores:** defina `utilizador` e `senha` (ou `senha_hash`) para as contas `admin` e `porteiro`.
+  O administrador acede a tudo; o porteiro só acede à página de entrada. **Mude as senhas por defeito.**
+  Para uma senha em hash (recomendado): `php -r "echo password_hash('a-sua-senha', PASSWORD_DEFAULT), PHP_EOL;"`
+- **Base de dados:** confirme `db['online']` (host, utilizador, palavra-passe, base).
+
+Em `config.php` (não sensível):
+
+- **Hora da cerimónia:** o campo `EVENTO['hora']` está como `16:00` — ajuste para a hora real.
+- **WhatsApp de contacto:** `EVENTO['whatsapp']` está com um número de exemplo — coloque o número real (formato internacional, só dígitos, ex.: `244923000000`).
+
+---
+
+## Primeira utilização
+
+1. Entre com o **nome de utilizador e a senha** de administrador (definidos em `config.local.php`).
+2. Se a lista antiga for detetada, aparece um aviso **“Importar a sua lista atual”**. Ao importar:
+   - cada grupo de convite (ex.: *Família Agostinho*) torna-se um convite físico com os seus membros;
+   - cada convidado sem grupo torna-se um convite digital individual;
+   - confirmações, telefones e mesas são preservados.
+
+---
+
+## Como funciona
+
+**Criar um convite.** Indique os nomes reais dos convidados; o sistema sugere automaticamente o nome a exibir (ex.: *Família Agostinho*, *Ana e Bruno*). Esse nome pode ser diferente dos nomes reais.
+
+**Género e brinde.** Cada integrante pode ter um **género** (masculino/feminino) e a opção **"Recebe Brinde"** 🎁, definidos no editor do convite. No painel há **cartões de estatística** para *Masculino*, *Feminino* e *Brindes* (com a contagem de convidados), que também servem de **filtro** ao clicar. As **pastilhas com os nomes** (no painel e na gestão de mesas) mostram **ícones sugestivos**: ♂ (masculino), ♀ (feminino) e 🎁 para quem recebe brinde.
+
+**Regra do número entre parênteses.** Se o convite for para **um só lugar**, mostra apenas o nome. Para mais do que um, acrescenta *(N)* lugares — ou o texto que escrever no campo **Sufixo** (ex.: *e acompanhante*).
+
+**Tipo do convite.** *Digital*, *Físico* ou *Ambos*. Todos os convites têm sempre um link e um QR; o tipo serve para organizar a produção (marcar como *impresso* / *enviado*).
+
+**Fixar mesas e canvas.** Por cima da planta, à esquerda dos botões de zoom, há duas opções — **Fixar mesas** e **Fixar canvas** — que travam o arrasto das mesas e o redimensionar do canvas, para evitar deslocações acidentais depois de a disposição estar definida. Ficam **guardadas na base de dados**, pelo que se mantêm entre sessões. Com as mesas fixas continua a poder **tocar numa mesa para ver os detalhes**; só o arrasto é que fica travado.
+
+**Mesas.** Na página *Mesas* tem uma **planta visual do salão**: crie mesas com capacidade, escolha a **forma** (redonda, oval, quadrada, retangular, comprida ou em ferradura), uma **cor** de uma paleta e a **dimensão** (automática, pequena, média ou grande), **arraste-as** para a sua posição real e veja a ocupação através de um ponto de estado (vazia, a encher, completa, excede a capacidade). O formulário de adicionar mesa fica por cima do canvas; ao selecionar uma mesa, a sua aba abre um formulário de edição compacto. As posições ficam guardadas.
+
+**Mesa dos noivos.** A planta tem, por padrão, uma **pastilha especial** dos noivos — com uma ilustração própria (as alianças entrelaçadas) — para representar o casal, com a **mesma dimensão** das restantes mesas. Só existe uma. Pode **eliminá-la** (no painel da mesa) e, se quiser, **repô-la** no botão *Mesa dos noivos* que surge por cima do canvas. As suas **alas laterais** (padrinhos à esquerda, madrinhas à direita) são preenchidas **automaticamente pelo papel de cada convidado**: quem tiver o papel *Padrinho* entra na ala esquerda e quem tiver *Madrinha* na ala direita, sem atribuição manual. O papel define-se no **formulário do convite** ou diretamente no painel da mesa dos noivos.
+
+No formulário, cada pessoa ocupa **duas linhas de colunas alinhadas**: em cima
+o nome (metade da largura), a mesa e os brindes (um quarto cada); em baixo as
+quatro pastilhas do género e do papel, um quarto cada, debaixo dos campos de
+cima. Estiveram atrás de um «⋯» porque seis controlos lado a lado não cabiam
+sem quebrar; alinhados em grelha cabem, e uma pessoa lê-se toda de uma vez, sem
+abrir nada. Em ecrã estreito as colunas colapsam em vez de cortarem palavras.
+
+Cada pessoa tem duas pastilhas de duas respostas — o **género**
+(*♂ Masculino* / *♀ Feminino*) e o **papel** (*Convidado* / *Padrinho* ou
+*Madrinha*), com *Convidado* aceso de origem. Eram duas caixas de escolha, e
+numa pergunta de duas respostas o menu que abre e fecha esconde metade da
+resposta para pedir um clique a mais. O papel é **gendrado**: chama-se padrinho
+ou madrinha conforme quem o tem, e por isso a segunda pastilha só se escreve
+depois de o género estar dito — até lá anuncia as duas hipóteses e não se deixa
+carregar. Escolhido o género, passa a dizer a palavra certa; trocar de género
+depois disso troca também o papel, sem ser preciso repetir a escolha. Tirar o
+género devolve o papel a *Convidado*, que sem género não tem nome. **Só padrinhos e madrinhas** podem ficar nesta mesa — nenhum outro convidado lhe pode ser atribuído.
+
+**Zoom.** A **barra de zoom** tem três níveis: **50%** (vista ampla), **100%** (vista panorâmica padrão) e **150%** (vista de área). O **canvas mantém sempre o mesmo tamanho** — o zoom não altera o canvas, apenas amplia ou reduz o conteúdo dentro dele: a 50% as mesas ficam mais pequenas no mesmo espaço, a 100% preenchem-no e a 150% ficam ampliadas, com deslocamento (scroll) para percorrer o salão.
+
+**Dimensões do canvas.** Pode **redimensionar o canvas arrastando as suas bordas** — a borda direita (largura), a inferior (altura) ou o canto inferior direito (ambas). O tamanho escolhido é **guardado na base de dados** e reposto nas visitas seguintes. As **barras de deslocamento só aparecem quando o conteúdo não cabe** (por exemplo, ao ampliar para 150%); quando tudo está visível, ficam ocultas.
+
+**Maximizar a planta.** O ícone de **maximizar** (junto à barra de zoom) expande a tela de disposições ao ecrã inteiro, **mantendo o conjunto de abas ao lado**. Toque novamente no ícone (ou prima **Esc**) para restaurar.
+
+**Dividir um convite por várias mesas.** Cada pessoa de um convite pode ficar numa mesa diferente. Há várias formas de o fazer: no painel de uma mesa (cada pessoa tem um seletor de mesa), **arrastando** um cartão da lista *Pessoas* (abaixo da planta) para uma mesa, **arrastando uma pessoa de uma mesa para outra diretamente na planta** (ao selecionar uma mesa, as suas pessoas surgem como pastilhas arrastáveis), ou no **editor do convite** (no painel principal, cada integrante tem um seletor de mesa — *"Mesa do convite"* por omissão). A mesa do convite continua a ser o padrão (para quem não tem mesa própria e para os lugares sem nome). A ocupação de cada mesa conta as pessoas pela sua mesa efetiva. No painel principal, um convite dividido aparece marcado como *"Dividido · N mesas"*.
+
+**Mesas no convite.** O convite (digital, físico e a página de confirmação) menciona **todas as mesas** dos seus integrantes, com o número de lugares em cada uma — ex.: *"Mesas: A (1 lugar) e B (4 lugares)"*. No editor há a opção *"Mostrar o número de lugares por mesa no convite"*, que liga/desliga o *(N lugares)* junto a cada mesa **tanto no convite digital como no físico** (cartões).
+
+**Painel de abas.** Ao lado do canvas há um conjunto de abas — *Pessoas*, *Convites*, *Sem mesa* e (ao selecionar uma mesa) a aba dessa mesa com os seus detalhes e convidados. As abas *Pessoas*/*Convites* têm pesquisa e filtro por estado de RSVP; cada cartão pode ser arrastado para uma mesa da planta. A criação de mesas fica num formulário compacto por cima das abas. As listas longas do painel de uma mesa (mudar de mesa, trazer uma pessoa, sentar um convite, nomear padrinho/madrinha) são **dropdowns de pesquisa**: abrem uma caixa com campo de procura e resultados filtrados à medida que escreve.
+
+**Ao posicionar as mesas** surgem **linhas-guia magnéticas** que alinham a mesa que arrasta com o centro das outras (ou do salão). Ao selecionar uma mesa, as suas pessoas aparecem como pastilhas na planta que se arrastam para outra mesa.
+
+**Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantos lugares e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
+
+**Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real.
+
+**Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
+
+**Impressão.** Ao imprimir os cartões, cada convite sai numa página de **100 × 150 mm**, sem fundo (o acrílico é transparente: só o dourado é impresso) e sem o cromo da aplicação. *Imprimir só este* dá uma única página. A vista de um só cartão mostra-o em grande no ecrã.
+
+**Cartões 10×15.** A página *Cartões 10×15* gera o **convite propriamente dito**, um por convidado, no formato 100×150 mm concebido para **impressão UV a dourado sobre acrílico transparente** (sem fundo impresso). Cada cartão é personalizado a partir da base de dados: o **nome tal como aparece no convite** e as **mesas do convidado com o número de lugares** — respeitando as opções “mostrar o número” e “mostrar o nº de lugares” de cada convite. Um convite dividido por várias mesas mostra uma coluna por mesa. Pode escolher a **paleta** (ouro quente, verde sálvia, terracota, rosa antigo) e a **folhagem** das trepadeiras (eucalipto, oliveira, feto, florido); o botão *Guardar estilo* fixa a escolha como predefinição. A folhagem, as volutas de canto e os floreados são **desenhados por código** (SVG gerado no servidor), pelo que acompanham a cor da paleta. Ao imprimir, cada cartão sai numa página de 100×150 mm.
+
+**Entregáveis à gráfica.** A página *Gráfica* reúne, em três separadores, tudo o que a gráfica precisa de receber. É a **porta de entrada única** para as peças: os cartões 10×15, as etiquetas e o porta-chaves deixaram de ter menu próprio e chegam-se a partir daqui.
+
+- **Convites físicos** — lista de produção simplificada: nome do convite tal como é impresso, mesas com o nº de lugares, código e **QR**. **Ao clicar numa linha, o modelo do cartão abre expandido** (ampliado até caber no ecrã), com ligação para o imprimir; *Esc* fecha. A lista é pesquisável e imprimível, e dá acesso a todos os modelos e às etiquetas para envelopes.
+- **Brindes** — o brinde **atribuído a cada género** e as suas **variações**. De origem, o género masculino recebe o **porta-chaves**, cujas variações são as **frases do verso**: cada variação é mostrada tal como será produzida. Segue o **plano de tiragem do handoff** — **70 unidades** repartidas em 6 lotes de 9 e 2 de 8 —, ajustável no editor. Indica quantos convidados recebem o brinde (dos que estão marcados como *Recebe brinde*), quantas variações existem e como se distribuem. Convidados marcados para receber brinde mas **sem género definido** são assinalados à parte, para não passarem despercebidos. O género feminino fica como *por definir* até lhe ser atribuída uma peça.
+- **Manuais** — os manuais de impressão de cada peça, **gerados a partir da configuração atual**: acompanham as edições. Levam as especificações de produção (formato, sangria, tinta, linhas mínimas), a **paleta em uso com os códigos de cor**, a tipografia convertida em mm e pt, **quais os elementos a imprimir** (assinalando os que foram desligados nos editores), os textos tal como estão, e — no porta-chaves — o acabamento e a **tabela das variações escolhidas com a quantidade de cada uma**, mais provas visuais da peça. São imprimíveis em A4. Os manuais ilustrados que vieram com o design continuam acessíveis à parte, como referência do original.
+
+**Editar o convite físico.** Em *Gráfica → Convites físicos → Editar o cartão* abre-se um editor ao estilo de um editor de imagem: barra de ferramentas à esquerda, o cartão numa mesa de trabalho ao centro e, à direita, os painéis de **Propriedades** e **Camadas**.
+
+- **Camadas** — as doze partes do cartão (trepadeiras, volutas, moldura, floreados, abertura, nomes, frase, bloco do convidado, mesas, data, **cerimónias e receção** e frase final). O **olho** mostra ou oculta cada uma; a lista distingue camadas de texto (T) das decorativas (◈).
+- **Selecionar** — clicar numa camada, ou **diretamente no cartão**, marca-a e abre as suas propriedades.
+- **Propriedades** — os textos dessa camada. O que se escreve aparece **imediatamente no cartão**.
+- Na camada **Cerimónias e receção** marcam-se a **hora e o local** das cerimónias **civil** e **religiosa** — cada uma opcional, com um botão para a acrescentar e outro para a tirar — e ainda a receção (o copo d'água). As cerimónias vêm à cabeça do painel, que é o que a maioria vem cá procurar. Chamava-se «Logística», nome que ninguém associava a marcar uma cerimónia; passou a dizer o que lá se faz.
+- No **bloco do convidado** há ainda a opção **mostrar o “(N)” de lugares no nome**. Por omissão segue o convite, mas pode desligar-se: no cartão os lugares já aparecem por baixo de cada mesa, pelo que o número no nome é opcional.
+- **Barra de opções** — paleta, folhagem e zoom (com *Ajustar à janela*). A troca de paleta e de folhagem é instantânea, sem ir ao servidor: as cores são variáveis CSS e as trepadeiras já vêm todas carregadas.
+- **Ferramentas** — selecionar (V), texto (T), mão para arrastar a vista (H) e zoom (Z); `0` ajusta à janela.
+- A prova usa um convite real, para se ver o resultado com nomes e mesas verdadeiros. *Guardar* grava; *Repor originais* devolve tudo ao estado inicial. Sair com alterações por guardar pede confirmação.
+
+**Editar os brindes.** Em *Gráfica → Brindes → Editar brindes*, no mesmo ambiente:
+
+- Cada **género** é um documento (separadores em cima) e tem uma **peça** atribuída, escolhida de um catálogo. O sistema está **aberto a novas peças**: uma peça nova encaixa em três pontos, todos em `pecas.php` — a entrada no catálogo (`brindesPecas()`), a fonte das suas variações (`pecaVariacoes()`) e o seu desenho (`pecaPreVisualizacao()`). O editor pede a pré-visualização ao servidor, pelo que qualquer peça registada aparece aqui sem mais alterações.
+- **Variações disponíveis** — a lista das variações da peça (no porta-chaves, as frases do verso). O visto define **quais ficam disponíveis para a gráfica** e o campo ao lado **quantas produzir de cada uma**. Clicar numa variação mostra-a na mesa de trabalho.
+- **Produção** — resume a peça, quantos convidados recebem o brinde, quantas variações estão ativas e o total a produzir, avisando se **faltam** peças ou se há **reserva** a mais. *Repartir pelos convidados* distribui automaticamente o total pelas variações ativas.
+- Só as variações ativas (e as suas quantidades) chegam à página da gráfica.
+
+**Porta-chaves.** A página *Porta-chaves* apresenta a lembrança em acrílico de dois lados (45×60 mm) com o monograma do casal: a peça **inclina-se com o cursor** e **vira ao clique**. Pode escolher o **acabamento** (ouro sobre ébano, floresta, marfim) e a **quadra** do verso (8 à escolha, com as coordenadas do local por baixo). O monograma, o anel guilhoché e os ornamentos são gerados a partir das iniciais e da data do evento.
+
+**Personalizar o convite digital.** Na página *Convite digital* pode alterar **tudo** o que aparece no convite, sem tocar em código: nomes do casal, data e hora (que passam a valer também na página de confirmação), local e cidade do evento, todos os textos (pode usar `{noiva}`/`{noivo}`, `**negrito**` e `*itálico*`), os capítulos da história, os momentos do cronograma e as regras do manual (com escolha de ícones), a visibilidade de secções inteiras (história, interlúdio, cronograma, manual), as **fotografias e a música** (enviadas do computador; as imagens são comprimidas automaticamente), a **paleta de cores** (4 paletas prontas + ajuste fino de cada cor; o QR acompanha) e os efeitos (pétalas, música automática). A pré-visualização ao lado atualiza ao guardar. Campos repostos ao valor original deixam de ocupar espaço na base de dados. Cada convite pode ainda ter uma **mensagem pessoal** (campo no editor de convites do painel).
+
+---
+
+## Notas importantes
+
+- **Funciona sem internet.** As bibliotecas (leitor de QR e gerador de QR) e os tipos de letra são servidos localmente a partir da pasta `assets/` — não há dependências de CDN. Assim, a página do porteiro continua a funcionar mesmo que a ligação à internet falhe no local do evento.
+- A leitura de QR por câmara exige **HTTPS** (regra do navegador, não do sistema). No InfinityFree, ative o certificado SSL grátis e aceda por `https://`. Em rede local de testes, `localhost` também é aceite.
+- Editar um convite preserva as confirmações e presenças já registadas.
+- O check-in à entrada só altera a presença — nunca apaga a confirmação feita pelo convidado.
+- O código QR aponta para o link do convite, pelo que serve tanto ao convidado (abre o seu convite) como ao porteiro (identifica-o à entrada).
+- O sistema não depende de extensões opcionais (mbstring, gd, intl), pelo que funciona em alojamento partilhado simples.

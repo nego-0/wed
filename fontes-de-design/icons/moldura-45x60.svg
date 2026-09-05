@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 283" width="660" height="849"><title>Moldura da área impressa — 220×283 px = 39,6×50,9 mm (exato ao modelo)</title>
+  <rect x="9.5" y="9.5" width="201" height="264" rx="5" fill="none" stroke="#C9A24A" stroke-width="1"></rect>
+  <rect x="13.5" y="13.5" width="193" height="256" rx="3" fill="none" stroke="rgba(201,162,74,.40)" stroke-width="1"></rect>
+  <path d="M5 20 L5 8 A3 3 0 0 1 8 5 L20 5" fill="none" stroke="#C9A24A" stroke-width="1"></path> <path d="M215 20 L215 8 A3 3 0 0 0 212 5 L200 5" fill="none" stroke="#C9A24A" stroke-width="1"></path> <path d="M5 263 L5 275 A3 3 0 0 0 8 278 L20 278" fill="none" stroke="#C9A24A" stroke-width="1"></path> <path d="M215 263 L215 275 A3 3 0 0 1 212 278 L200 278" fill="none" stroke="#C9A24A" stroke-width="1"></path>
+  <rect x="16" y="16" width="4" height="4" transform="rotate(45 18 18)" fill="#C9A24A"></rect> <rect x="200" y="16" width="4" height="4" transform="rotate(45 202 18)" fill="#C9A24A"></rect> <rect x="16" y="263" width="4" height="4" transform="rotate(45 18 265)" fill="#C9A24A"></rect> <rect x="200" y="263" width="4" height="4" transform="rotate(45 202 265)" fill="#C9A24A"></rect>
+</svg>

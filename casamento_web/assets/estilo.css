@@ -1,0 +1,432 @@
+/* ============================================================
+   estilo.css — Sistema de design
+   ------------------------------------------------------------
+   DOIS TEMAS, um só conjunto de tokens:
+   • Tema 1 (padrão) — NIRAS: azul-noite + verde institucional.
+     A identidade da entidade que gere o sistema.
+   • Tema 2 — Clássico: verde-floresta + dourado + marfim.
+     A identidade botânica de origem, guardada em [data-tema="classico"].
+   Troca-se em <html data-tema="..."> (ver parcial-tema.php). Todo o
+   sistema já lê por tokens, por isso retematizar é só trocar os valores.
+   ============================================================ */
+:root{
+  /* ---- Tema 1 · NIRAS (padrão) ---- */
+  --ink:#12222F; --forest:#16283A; --forest-deep:#0C1925;
+  --ivory:#F6F8F4; --cream:#EEF2EA; --sand:#E1E8DB; --card:#FFFFFF;
+  --gold:#4C8C1E; --gold-soft:#63B22B; --gold-pale:#E7F3DA; --gold-deep:#3C7517;
+  --blush:#E1E8DB; --text:#28323B;
+  --ok:#3E8E3E; --ok-bg:#E7F2E2;
+  --warn:#9C7413; --warn-bg:#F6EDD6;
+  --danger:#B4443C; --danger-bg:#F6E4E1;
+  --line:rgba(18,34,47,.12);
+  --shadow:0 10px 30px rgba(18,34,47,.09);
+  --ring:rgba(99,178,43,.28);
+  --radius:14px;
+  --serif:'Archivo','Segoe UI Semibold','Segoe UI',system-ui,sans-serif;
+  --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --script:'Archivo','Segoe UI',system-ui,sans-serif;
+  --app-bg:
+    radial-gradient(1000px 560px at 90% -10%, rgba(99,178,43,.10), transparent 60%),
+    radial-gradient(760px 480px at -8% 108%, rgba(18,34,47,.06), transparent 55%),
+    linear-gradient(165deg,#F8FAF6 0%, #EDF2EA 100%);
+}
+:root[data-tema="classico"]{
+  /* ---- Tema 2 · Clássico (botânico de origem) ---- */
+  --ink:#20342A; --forest:#2C4536; --forest-deep:#16261E;
+  --ivory:#FBF8F1; --cream:#F5EEDF; --sand:#E9DFC9; --card:#FFFFFF;
+  --gold:#B4864A; --gold-soft:#D9BC8C; --gold-pale:#EFE3CB; --gold-deep:#8A6031;
+  --blush:#E4CDBB; --text:#3B4A40;
+  --ok:#2f7d4f; --ok-bg:#e7f1ea;
+  --warn:#a8792f; --warn-bg:#f6ecd8;
+  --danger:#a5473f; --danger-bg:#f4e2df;
+  --line:rgba(44,69,54,.12);
+  --shadow:0 12px 34px rgba(22,38,30,.10);
+  --ring:rgba(180,134,74,.18);
+  --radius:16px;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Jost',system-ui,-apple-system,sans-serif;
+  --script:'Pinyon Script',cursive;
+  --app-bg:
+    radial-gradient(900px 500px at 88% -8%, rgba(217,188,140,.30), transparent 60%),
+    radial-gradient(700px 460px at -6% 108%, rgba(44,69,54,.10), transparent 55%),
+    linear-gradient(160deg,var(--ivory) 0%, var(--cream) 100%);
+}
+:root[data-tema="azul"]{
+  /* ---- Tema 3 · Azul (corporativo, claro) ---- */
+  --ink:#0F2A43; --forest:#123C63; --forest-deep:#0C2740;
+  --ivory:#F4F7FB; --cream:#E9F1F9; --sand:#D9E6F2; --card:#FFFFFF;
+  --gold:#1F6FB2; --gold-soft:#2E86C8; --gold-pale:#E4EFF9; --gold-deep:#175A94;
+  --blush:#D9E6F2; --text:#26384A;
+  --ok:#2f7d4f; --ok-bg:#e6f1ea;
+  --warn:#9a781f; --warn-bg:#f5edd6;
+  --danger:#b1443c; --danger-bg:#f6e3e0;
+  --line:rgba(15,42,67,.13);
+  --shadow:0 10px 30px rgba(15,42,67,.10);
+  --ring:rgba(46,134,200,.28);
+  --radius:14px;
+  --serif:'Archivo','Segoe UI Semibold','Segoe UI',system-ui,sans-serif;
+  --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --script:'Archivo','Segoe UI',system-ui,sans-serif;
+  --app-bg:
+    radial-gradient(1000px 560px at 90% -10%, rgba(46,134,200,.12), transparent 60%),
+    radial-gradient(760px 480px at -8% 108%, rgba(15,42,67,.06), transparent 55%),
+    linear-gradient(165deg,#F5F8FC 0%, #E8F0F8 100%);
+}
+:root[data-tema="escuro"]{
+  /* ---- Tema 4 · Escuro (grafite, com acento verde) ----
+     --ivory mantém-se CLARO (é o texto sobre o cabeçalho/modais escuros);
+     as superfícies do corpo vêm de --card (escuro). */
+  --ink:#EBF1F3; --forest:#0E1B25; --forest-deep:#080F16;
+  --ivory:#EEF3F0; --cream:#1E2A33; --sand:#28353E; --card:#17232C;
+  --gold:#8AD24A; --gold-soft:#6FBE33; --gold-pale:#1E3016; --gold-deep:#57A027;
+  --blush:#28353E; --text:#C6D2D8;
+  --ok:#63C56E; --ok-bg:#173020;
+  --warn:#D9AC46; --warn-bg:#332811;
+  --danger:#E58177; --danger-bg:#3A1F1C;
+  --line:rgba(255,255,255,.13);
+  --shadow:0 12px 34px rgba(0,0,0,.45);
+  --ring:rgba(120,190,64,.4);
+  --radius:14px;
+  --serif:'Archivo','Segoe UI Semibold','Segoe UI',system-ui,sans-serif;
+  --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --script:'Archivo','Segoe UI',system-ui,sans-serif;
+  --app-bg:
+    radial-gradient(1000px 560px at 90% -10%, rgba(111,190,51,.12), transparent 60%),
+    radial-gradient(760px 480px at -8% 108%, rgba(0,0,0,.35), transparent 55%),
+    linear-gradient(165deg,#0E1A22 0%, #0A141B 100%);
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body{
+  margin:0; font-family:var(--sans); color:var(--text); font-weight:300;
+  background:var(--app-bg);
+  min-height:100vh;
+}
+h1,h2,h3,h4{ font-family:var(--serif); color:var(--ink); font-weight:600; margin:0; }
+a{ color:var(--gold); text-decoration:none; }
+a:hover{ text-decoration:underline; }
+
+/* ---------- Cabeçalho de aplicação ---------- */
+.topo{
+  background:linear-gradient(135deg,var(--forest),var(--forest-deep));
+  color:var(--ivory); padding:1.4rem 1.25rem; position:relative; overflow:hidden;
+}
+.topo::after{ /* textura botânica subtil */
+  content:''; position:absolute; inset:0; opacity:.10; pointer-events:none;
+  background-image:
+    radial-gradient(circle at 12% 30%, var(--gold-soft) 0 2px, transparent 3px),
+    radial-gradient(circle at 82% 66%, var(--gold-soft) 0 2px, transparent 3px),
+    radial-gradient(circle at 60% 18%, var(--gold-soft) 0 1.5px, transparent 2.5px);
+  background-size:130px 130px,110px 110px,90px 90px;
+}
+.topo .wrap{ position:relative; z-index:1; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.monograma{
+  width:52px; height:52px; flex:none; border:2px solid var(--gold-soft); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; color:var(--gold-soft);
+  font-family:var(--serif); font-weight:700; font-size:1.05rem; letter-spacing:.5px;
+}
+.topo h1{ color:var(--ivory); font-size:1.35rem; line-height:1.1; }
+.topo .sub{ font-family:var(--serif); font-style:italic; color:var(--gold-pale); font-size:1rem; margin-top:.1rem; }
+.topo .sub.licenca-restante{ font-family:var(--sans); font-style:normal; font-size:.82rem; opacity:.9; }
+.topo .sub.licenca-restante.aviso{ color:#f4c9a0; opacity:1; font-weight:600; }
+.topo .nav{ margin-left:auto; display:flex; gap:.4rem; flex-wrap:wrap; }
+.topo .nav a{
+  color:var(--ivory); border:1px solid rgba(233,223,201,.35); border-radius:50px;
+  padding:.4rem .85rem; font-size:.82rem; font-weight:400; display:inline-flex; gap:.4rem; align-items:center;
+}
+.topo .nav a:hover{ background:rgba(233,223,201,.15); text-decoration:none; }
+.topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--forest-deep); font-weight:500; }
+
+/* ---------- Layout ---------- */
+.container{ max-width:1180px; margin:0 auto; padding:1.25rem; }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
+.p-4{ padding:1.5rem; } .p-3{ padding:1.1rem; } .mb-4{ margin-bottom:1.5rem; } .mb-3{ margin-bottom:1.1rem; }
+
+/* ---------- Estatísticas ---------- */
+.grelha-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.85rem; }
+.stat{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; position:relative; overflow:hidden; }
+.stat::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--gold-soft); }
+.stat .n{ font-family:var(--serif); font-size:2rem; font-weight:700; color:var(--ink); line-height:1; }
+.stat .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:1px; color:#8a8f88; margin-top:.35rem; }
+.stat.verde::before{ background:var(--ok); } .stat.verde .n{ color:var(--ok); }
+.stat.ouro::before{ background:var(--gold); } .stat.ouro .n{ color:var(--gold); }
+.stat.rosa::before{ background:var(--danger); } .stat.rosa .n{ color:var(--danger); }
+
+/* ---------- Botões ---------- */
+.btn{ font-family:var(--sans); font-weight:500; border:none; border-radius:50px; padding:.6rem 1.25rem;
+  cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-size:.9rem; transition:.18s; }
+.btn:hover{ transform:translateY(-1px); }
+.btn-ouro{ background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep)); color:#fff; }
+.btn-ouro:hover{ box-shadow:0 8px 22px rgba(180,134,74,.4); }
+.btn-verde{ background:linear-gradient(135deg,var(--forest),var(--forest-deep)); color:var(--ivory); }
+.btn-linha{ background:transparent; border:1.5px solid var(--gold); color:var(--gold); }
+.btn-linha:hover{ background:var(--gold); color:#fff; }
+.btn-fantasma{ background:transparent; border:1.5px solid var(--line); color:var(--text); }
+.btn-sm{ padding:.38rem .8rem; font-size:.82rem; }
+/* O ícone tem de caber no botão: sem medida, o SVG do WhatsApp desenhava-se a
+   47px e esticava a linha do convite para o dobro da altura das outras. */
+.btn-ico{ display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .6rem; border-radius:10px;
+  background:transparent; border:1px solid var(--line); color:var(--text); cursor:pointer; line-height:1.2; }
+.btn-ico svg{ width:16px; height:16px; flex:none; }
+.btn-ico:hover{ background:var(--cream); }
+
+/* ---------- Formulários ---------- */
+label{ font-size:.78rem; font-weight:500; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:.35rem; }
+input,select,textarea{ font-family:var(--sans); font-weight:300; width:100%; padding:.6rem .8rem;
+  border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); font-size:.95rem; }
+input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
+.linha-form{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.9rem; }
+.check{ display:flex; align-items:center; gap:.5rem; }
+.check input{ width:auto; }
+
+/* ---------- Etiquetas de estado ---------- */
+.tag{ font-size:.72rem; font-weight:500; padding:.2rem .6rem; border-radius:50px; display:inline-flex; align-items:center; gap:.3rem; }
+.tag.ok{ background:var(--ok-bg); color:var(--ok); }
+.tag.pend{ background:var(--warn-bg); color:var(--warn); }
+.tag.rec{ background:var(--danger-bg); color:var(--danger); }
+.tag.parc{ background:#eae6f0; color:#6b5b8e; }
+.tag.neutra{ background:var(--cream); color:var(--ink); }
+.ponto{ width:7px; height:7px; border-radius:50%; display:inline-block; }
+.ponto.ok{background:var(--ok);} .ponto.pend{background:var(--warn);} .ponto.rec{background:var(--danger);}
+
+/* ---------- Tabela / lista de convites ---------- */
+.filtros{ display:flex; flex-wrap:wrap; gap:.6rem; align-items:end; }
+.filtros .campo{ flex:1 1 150px; min-width:140px; }
+.lista{ display:grid; gap:.5rem; }
+/* Quatro colunas para os quatro filhos: escolher, selo do tipo, o convite e as
+   ações. Faltava a primeira desde que a caixa de seleção em massa entrou: com
+   três colunas, o selo herdava o 1fr e esticava-se, o nome era empurrado para a
+   direita e as ações caíam para uma segunda linha. */
+.convite-row{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:.6rem .8rem;
+  display:grid; grid-template-columns:auto auto 1fr auto; gap:.7rem; align-items:center; transition:.18s; }
+.convite-row:hover{ border-color:var(--gold-soft); box-shadow:0 6px 18px rgba(180,134,74,.12); }
+.selo-tipo{ width:32px; height:32px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center;
+  font-size:1rem; background:var(--cream); color:var(--forest); border:1px solid var(--line); }
+.selo-tipo svg{ width:16px; height:16px; }
+.selo-tipo.digital{ background:var(--gold-pale); color:var(--gold-deep); }
+.selo-tipo.fisico{ background:var(--sand); color:var(--forest); }
+.selo-tipo.ambos{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); }
+.convite-nome{ font-family:var(--serif); font-size:1.05rem; font-weight:600; color:var(--ink); line-height:1.2; }
+/* Em ecrã largo o cartão é sempre de uma linha: nome, estado e pessoas
+   encolhem com reticências em vez de quebrarem. Antes, um convite com seis
+   convidados ocupava o dobro da altura de um com dois — numa lista longa é
+   essa irregularidade que a faz parecer pesada. O que ficar cortado está no
+   título (passar o rato) e na edição. */
+@media (min-width:900px){
+  .convite-row .convite-corpo{ flex-wrap:nowrap; }
+  .convite-row .convite-nome, .convite-row .convite-meta{ min-width:0; }
+  /* O nome cede primeiro: é o que se reconhece por metade. */
+  .convite-row .convite-nome{ flex:0 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* O estado corta de uma vez, sem partir "Sem mesa" ao meio. */
+  .convite-row .convite-meta{ flex:0 1 auto; overflow:hidden; flex-wrap:nowrap; }
+  .convite-row .convite-meta > span{ white-space:nowrap; }
+  /* Cortado a meio, um telefone lê-se como outro número. O esbatido diz
+     "continua" em vez de mentir. A marca é posta por JS, que sabe medir. */
+  .convite-row .convite-meta.cortado{
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);
+            mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent); }
+  /* As pastilhas nunca encolhem: uma pastilha esmagada a "A…" não diz nada. */
+  .convite-row .membros-mini{ flex:none; }
+  .convite-row .membro-chip{ flex:none; }
+  /* Aberta, a tira passa para uma linha só dela, com todos os nomes. */
+  .convite-row.pessoas-abertas .convite-corpo{ flex-wrap:wrap; }
+  .convite-row.pessoas-abertas .membros-mini{ flex:1 1 100%; }
+}
+/* Nome, estado e pessoas na mesma linha enquanto houver largura: em ecrãs
+   largos cada convite passa a caber numa linha só, em vez de três. */
+.convite-corpo{ display:flex; align-items:center; gap:.55rem .9rem; flex-wrap:wrap; min-width:0; }
+.convite-meta{ font-size:.78rem; color:#8a8f88; display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
+/* A tira de pessoas nunca quebra para uma segunda linha: são poucos nomes e
+   um contador do resto, para o cartão manter a mesma altura com dois ou com
+   vinte convidados. */
+.membros-mini{ display:flex; gap:.28rem; flex-wrap:nowrap; min-width:0; }
+.membro-chip{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.12rem .55rem;
+  font-family:inherit; font-size:.76rem; color:var(--ink); white-space:nowrap;
+  max-width:14ch; overflow:hidden; text-overflow:ellipsis; }
+/* A conta dos que não cabem é um botão: abre a lista toda no próprio cartão. */
+.membro-chip.mais{ background:transparent; color:#8a8f88; border-style:dashed; cursor:pointer; }
+.membro-chip.mais:hover{ background:var(--gold-pale); border-color:var(--gold-soft); color:var(--ink); }
+/* Aberta a lista, os nomes vêm por inteiro e a tira ocupa a sua própria linha:
+   aqui o cartão cresce porque foi o utilizador que pediu para o ver. */
+.convite-row.pessoas-abertas .membros-mini{ flex-wrap:wrap; }
+.convite-row.pessoas-abertas .membro-chip{ max-width:none; }
+.acoes{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+
+/* ---------- Modal ---------- */
+.overlay{ position:fixed; inset:0; background:rgba(22,38,30,.55); display:none; align-items:center; justify-content:center; z-index:60; padding:1rem; }
+.overlay.aberto{ display:flex; }
+.modal{ background:var(--card); border-radius:20px; width:100%; max-width:640px; max-height:92vh; overflow:auto; box-shadow:0 30px 60px rgba(0,0,0,.3); }
+.modal-topo{ background:linear-gradient(135deg,var(--forest),var(--forest-deep)); color:var(--ivory); padding:1.1rem 1.4rem; display:flex; align-items:center; justify-content:space-between; }
+.modal-topo h3{ color:var(--ivory); }
+.modal-corpo{ padding:1.4rem; }
+.fechar{ background:transparent; border:none; color:var(--ivory); font-size:1.3rem; cursor:pointer; }
+
+/* ---------- Toast ---------- */
+.toast{ position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+  background:var(--forest-deep); color:var(--ivory); padding:.8rem 1.3rem; border-radius:50px; font-size:.9rem;
+  box-shadow:0 10px 30px rgba(0,0,0,.3); z-index:90; transition:.25s; pointer-events:none; }
+.toast.mostrar{ opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.erro{ background:var(--danger); }
+/* Toast com ação (ex.: "Anular") — tem de receber cliques. */
+.toast.accao{ pointer-events:auto; display:inline-flex; align-items:center; gap:1rem; }
+.toast .anular{ background:none; border:0; padding:0; cursor:pointer; font-family:inherit; font-size:.88rem;
+  font-weight:600; color:var(--gold-soft); text-decoration:underline; white-space:nowrap; }
+.toast .anular:hover{ color:var(--ivory); }
+
+.vazio{ text-align:center; padding:3rem 1rem; color:#9aa09a; }
+.vazio .ico{ font-size:2.4rem; opacity:.5; }
+
+@media (max-width:640px){
+  .convite-row{ grid-template-columns:auto auto 1fr; }
+  .convite-row .acoes{ grid-column:1 / -1; justify-content:flex-start; }
+  /* O menu deixa de dobrar em três filas e passa a uma fila que desliza.
+     A dobrar, cada entrada nova roubava 46px ao primeiro ecrã do telemóvel —
+     e o menu cresce (a Licença foi a última). Numa fila só, cresce para o
+     lado, que é espaço que não custa nada a quem está a trabalhar. */
+  .topo .nav{ margin-left:0; width:100%;
+              flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain;
+              scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .topo .nav::-webkit-scrollbar{ display:none; }
+  .topo .nav > *{ flex:0 0 auto; }
+  /* Cabeçalho mais compacto no telemóvel — deixa o essencial (e a caixa de
+     procura) caber no primeiro ecrã. */
+  .topo{ padding:1.05rem 1.1rem; }
+  .topo .wrap{ gap:.7rem; }
+}
+
+/* ============================================================
+   Painéis que dobram (<details class="painel dobra">)
+   Formulários que se usam uma vez por mês ocupavam o ecrã por
+   cima daquilo que se vem cá fazer todos os dias. Agora pedem
+   um clique e devolvem o espaço a quem só quer trabalhar.
+   ============================================================ */
+/* Dois nomes de classe de propósito: o .painel de cada página é declarado no
+   <style> da própria página, que vem DEPOIS desta folha — com um só nome, o
+   padding do painel ganhava e a dobra fechada ficava 35px mais alta do que a
+   linha que mostra. */
+.dobra, .painel.dobra{ padding:0; }
+.dobra > summary{ list-style:none; cursor:pointer; padding:.95rem 1.2rem; display:flex;
+                  align-items:baseline; gap:.5rem; font-family:var(--serif); font-size:1.05rem;
+                  color:var(--ink); border-radius:14px; }
+.dobra > summary::-webkit-details-marker{ display:none; }
+.dobra > summary:hover{ background:var(--cream); }
+.dobra > summary small{ font-family:var(--sans); font-size:.82rem; color:#8a8f88; font-weight:400; }
+.dobra > summary .mais{ display:inline-flex; align-items:center; justify-content:center;
+                        width:22px; height:22px; flex:none; border-radius:7px; background:var(--cream);
+                        border:1px solid var(--line); color:var(--forest); font-family:var(--sans);
+                        font-size:.95rem; line-height:1; align-self:center; transition:.15s; }
+.dobra[open] > summary{ border-bottom:1px solid var(--line); border-radius:14px 14px 0 0; }
+.dobra[open] > summary .mais{ background:var(--gold-pale); border-color:var(--gold-soft); transform:rotate(45deg); }
+/* As margens do conteúdo só valem com ele à vista: fechadas, deixavam o
+   painel 35px mais alto do que a linha que mostra — espaço em branco a fingir
+   que ali estava alguma coisa. */
+.dobra[open] > *:not(summary){ margin-left:1.2rem; margin-right:1.2rem; }
+.dobra[open] > *:last-child{ margin-bottom:1.1rem; }
+.dobra[open] > .dica:first-of-type{ margin-top:.9rem; }
+/* Uma dobra dentro de um painel não repete a moldura do painel. */
+.dobra-dentro{ border:1px solid var(--line); border-radius:12px; margin:0 0 .2rem; }
+.dobra-dentro > summary{ padding:.6rem .8rem; font-size:.95rem; }
+.dobra-dentro[open] > *:not(summary){ margin-left:.8rem; margin-right:.8rem; }
+
+/* ============================================================
+   Menu "⋯" de uma linha de lista
+   A ação que se faz nove em cada dez vezes fica sozinha e à
+   vista; o que estraga fica atrás de um clique. Ao mesmo peso,
+   um gesto distraído arquivava a festa de alguém.
+   ============================================================ */
+.mm{ position:relative; display:inline-block; }
+/* O botão dos três pontos leva um SVG, e não o glifo "⋯": esse desenha-se
+   encostado ao fundo da linha na maioria dos tipos de letra, e ficava caído
+   dentro do botão redondo por muito que se centrasse a caixa. O ícone tem a
+   sua própria caixa e centra-se sempre. justify-content é preciso porque o
+   botão tem 32px de largura e o ícone só 16. */
+.mm > button{ width:32px; padding-left:0; padding-right:0; justify-content:center; }
+.ico-mais{ width:16px; height:16px; fill:currentColor; display:block; flex:none; }
+/* Por baixo do botão; para cima quando não há espaço em baixo (ver
+   assets/menu-mais.js) — senão o menu do último cartão abria fora do ecrã. */
+.mm-pop.acima{ top:auto; bottom:calc(100% + 4px); }
+.mm-pop{ position:absolute; right:0; top:calc(100% + 4px); z-index:60; width:180px; background:var(--card);
+         border:1px solid var(--line); border-radius:12px; padding:.3rem;
+         box-shadow:0 12px 32px rgba(32,52,42,.18); text-align:left; }
+.mm-pop button, .mm-pop a{ display:block; width:100%; text-align:left; background:none; border:0;
+         cursor:pointer; padding:.45rem .6rem; border-radius:8px; font-family:var(--sans);
+         font-size:.85rem; color:var(--text); text-decoration:none; }
+.mm-pop button:hover, .mm-pop a:hover{ background:var(--cream); }
+.mm-pop button.perigo{ color:var(--danger); }
+.mm-pop button.perigo:hover{ background:var(--danger-bg); }
+.mm-pop hr{ border:0; border-top:1px solid var(--line); margin:.25rem 0; }
+
+/* ============================================================
+   Marca NIRAS (logótipo) e alternador de tema
+   ============================================================ */
+.marca-niras{ display:inline-flex; align-items:center; gap:.6rem; line-height:1; }
+.marca-niras .marca-simbolo{ flex:none; display:block; }
+/* Logótipo oficial (ficheiro em assets/logo-niras.*), quando presente. */
+.marca-oficial{ display:block; height:2.3rem; width:auto; max-width:100%; }
+.marca-niras.grande .marca-oficial{ height:3.2rem; }
+/* Duas variantes, a certa por tema: escura nos claros, branca no escuro. */
+.marca-escuro{ display:none; }
+:root[data-tema="escuro"] .marca-claro{ display:none; }
+:root[data-tema="escuro"] .marca-escuro{ display:block; }
+
+/* ---------- Pastilha circular de tema (escolha pessoal) ---------- */
+.tema-fab{ position:fixed; right:18px; bottom:18px; z-index:75; }
+.tema-fab-btn{ width:44px; height:44px; border-radius:50%; border:1px solid var(--line);
+  background:var(--card); color:var(--gold); cursor:pointer; box-shadow:var(--shadow);
+  display:flex; align-items:center; justify-content:center; transition:transform .15s, box-shadow .15s; }
+.tema-fab-btn:hover{ transform:translateY(-2px); }
+.tema-fab-btn svg{ width:20px; height:20px; }
+.tema-fab-pop{ position:absolute; right:0; bottom:54px; width:216px; background:var(--card);
+  border:1px solid var(--line); border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,.22);
+  padding:.5rem; display:none; }
+.tema-fab-pop.aberto{ display:block; }
+.tema-fab-tit{ font-size:.68rem; text-transform:uppercase; letter-spacing:.12em; color:#8a8f88; padding:.3rem .5rem .45rem; }
+.tema-fab-op{ display:flex; align-items:center; gap:.6rem; width:100%; border:0; background:transparent;
+  cursor:pointer; padding:.5rem; border-radius:9px; font:inherit; color:var(--ink); text-align:left; }
+.tema-fab-op:hover{ background:var(--cream); }
+.tema-fab-op.on{ background:var(--gold-pale); }
+.tema-fab-dots{ display:flex; gap:3px; flex:none; }
+.tema-fab-dots i{ width:16px; height:16px; border-radius:4px; display:block; border:1px solid rgba(0,0,0,.12); }
+.tema-fab-nome{ flex:1; font-size:.86rem; }
+.tema-fab-check{ opacity:0; color:var(--gold); font-weight:700; }
+.tema-fab-op.on .tema-fab-check{ opacity:1; }
+.tema-fab-reset{ display:block; width:100%; border:0; background:transparent; cursor:pointer; color:#8a8f88;
+  font:inherit; font-size:.78rem; padding:.5rem; margin-top:.2rem; border-top:1px solid var(--line); text-align:center; }
+.tema-fab-reset:hover{ color:var(--gold); }
+@media print{ .tema-fab{ display:none !important; } }
+.marca-wordmark{
+  font-family:var(--serif); font-weight:800; letter-spacing:.13em;
+  font-size:1.55rem; color:var(--ink);
+}
+/* Na entrada e na inscrição o logótipo é grande e centrado. */
+.marca-niras.grande{ justify-content:center; gap:.8rem; margin-bottom:.4rem; }
+.marca-niras.grande .marca-wordmark{ font-size:2rem; }
+
+/* O símbolo é sempre o verde institucional; a palavra segue a tinta do tema
+   (azul-noite no NIRAS, verde-floresta no clássico) — legível nos dois. */
+
+/* Mostrar a marca certa conforme o tema: NIRAS por defeito, brasão no clássico.
+   O !important é para vencer o .brasao{display:flex} que o <style> de cada
+   página (login/registo) declara depois desta folha. */
+.so-classico{ display:none !important; }
+:root[data-tema="classico"] .so-niras{ display:none !important; }
+:root[data-tema="classico"] .so-classico{ display:revert !important; }
+
+/* Alternador de tema na barra de navegação (mesma pele dos links do topo). */
+.nav-tema{
+  color:var(--ivory); background:transparent; cursor:pointer;
+  border:1px solid rgba(255,255,255,.35); border-radius:50px;
+  padding:.4rem .85rem; font-size:.82rem; font-family:var(--sans); font-weight:400;
+  display:inline-flex; gap:.4rem; align-items:center;
+}
+.nav-tema:hover{ background:rgba(255,255,255,.14); }
+.nav-tema .glf{ font-size:.95rem; line-height:1; }
+/* No telemóvel, o menu já é comprido: o alternador sai daqui (a entrada e a
+   inscrição têm-no no rodapé, esse fica sempre à mão). */
+@media (max-width:640px){ .nav-tema{ display:none; } }
+
+/* Alternador discreto no rodapé da entrada/inscrição. */
+.tema-rodape{ margin-top:1.2rem; font-size:.76rem; color:#9aa09a; }
+.tema-rodape button{
+  border:0; background:none; cursor:pointer; color:var(--gold);
+  font:inherit; text-decoration:underline; padding:0;
+}

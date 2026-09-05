@@ -1,0 +1,570 @@
+// Modelos de convite: os desenhos que a casa oferece a todos.
+//
+// Um modelo é uma FOTOGRAFIA de um convite a sério — abre-se um casamento,
+// desenha-se lá, e guarda-se. Aplicá-lo COPIA-O para o casamento do casal, e é
+// aí que está o que interessa provar:
+//
+//   1. o modelo nasce do que o casamento aberto mostra agora;
+//   2. um casal aplica-o e o seu convite passa a ser assim;
+//   3. depois disso o desenho é DELE — mexer no modelo não lhe toca, e apagar
+//      o modelo também não;
+//   4. um modelo do cartão não mexe no convite digital, nem o contrário;
+//   5. por publicar, não se vê nem se aplica;
+//   6. os modelos levam-se e trazem-se num ficheiro;
+//   7. só quem responde pela casa os faz.
+const { chromium } = require('playwright-core');
+const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+
+const entrar = async (ctx, u, p) => {
+  const g = await ctx.newPage();
+  await g.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  await g.fill('input[name=utilizador]', u); await g.fill('input[name=senha]', p);
+  await g.click('button[type=submit]'); await g.waitForLoadState('networkidle');
+  g._api = (a, c) => g.evaluate(async ({ a, c }) => {
+    const r = await fetch('api.php?action=' + a, { method: 'POST',
+      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+      body: c ? JSON.stringify(c) : undefined });
+    return r.json();
+  }, { a, c });
+  g._baixar = (q) => g.evaluate(async (q) => (await fetch('api.php?action=' + q)).json(), q);
+  return g;
+};
+
+(async () => {
+  const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
+  let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
+  const marca = 'zz' + String(Date.now()).slice(-6);
+
+  const admin = await entrar(await b.newContext(), 'admin', 'noivos2026');
+  const api = admin._api;
+
+  // Os dados de exemplo são globais (linha 0), e outra prova pode tê-los deixado
+  // com uma imagem da galeria escolhida à mão — incluindo a de origem. Repô-los
+  // de fábrica aqui torna esta prova independente da ordem: um modelo criado a
+  // seguir nasce com as imagens de exemplo de fábrica, não com o que sobrou.
+  const exFabrica = (await api('modelo_exemplo')).fabrica || {};
+  if (Object.keys(exFabrica).length) await api('modelo_exemplo_guardar', exFabrica);
+
+  // ---------- 1. o modelo faz-se de um convite a sério ----------
+  const oficina = await api('casamento_criar', { nome: 'ZZ Oficina ' + marca, noiva: 'Olga', noivo: 'Otto' });
+  await api('casamento_abrir&id=' + oficina.id);
+  await api('defs_save', { defs: { 'textos.kicker': 'Marca do modelo ' + marca,
+                                   'textos.hero_sub': 'Sub do modelo ' + marca,
+                                   'cartao.abertura': 'Cartao do modelo ' + marca } });
+
+  const mod = await api('modelo_criar', { nome: 'ZZ Modelo digital ' + marca,
+                                          descricao: 'Feito na prova', ambito: 'digital', visivel: true });
+  console.log('   modelo:', JSON.stringify(mod));
+  ok(mod && mod.success && mod.definicoes > 10,
+     'o modelo nasce do convite do casamento aberto, com as suas definições');
+
+  const modCartao = await api('modelo_criar', { nome: 'ZZ Modelo impresso ' + marca,
+                                                ambito: 'impresso', visivel: true });
+  ok(modCartao && modCartao.success, 'e faz-se o mesmo para o convite impresso');
+
+  // ---------- 2. um casal aplica-o ----------
+  const casal = await api('casamento_criar', { nome: 'ZZ Casal ' + marca, noiva: 'Pia', noivo: 'Pedro' });
+  await api('casamento_abrir&id=' + casal.id);
+  const antes = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(!antes['textos.kicker'], 'o casal começa sem desenho próprio nenhum');
+
+  const aplicou = await api('modelo_aplicar&id=' + mod.id);
+  console.log('   aplicar:', JSON.stringify(aplicou).slice(0, 120));
+  ok(aplicou && aplicou.success, 'o casal aplica o modelo');
+
+  // ---------- 11. o modelo é o DESENHO, não a identidade de quem o compôs ----
+  // A oficina chama-se Olga & Otto. Um modelo feito lá levava o nome deles, a
+  // data, a morada e as fotografias — e aplicá-lo rebatizava o casal que o
+  // usasse. Era por isso que os modelos da casa não serviam a ninguém.
+  const semDono = ((await admin._baixar('modelos_exportar')).modelos || [])
+                     .find(x => x.nome === 'ZZ Modelo digital ' + marca) || { defs: {} };
+  ok(semDono.defs['casal.noiva'] !== 'Olga' && semDono.defs['casal.noivo'] !== 'Otto',
+     `o modelo não guarda o nome do casal onde foi composto (${semDono.defs['casal.noiva']} & ${semDono.defs['casal.noivo']})`);
+  ok(/galeria\//.test(String(semDono.defs['media.hero'] || '')),
+     `nem as fotografias dele: nasce com a imagem de exemplo (${semDono.defs['media.hero']})`);
+  // O mesmo para o cartão: o casal e a data são o corpo dele, e sem os guardar
+  // a sua prova caía no casal de origem.
+  const semDonoCartao = ((await admin._baixar('modelos_exportar')).modelos || [])
+                     .find(x => x.nome === 'ZZ Modelo impresso ' + marca) || { defs: {} };
+  ok(semDonoCartao.defs['casal.noiva'] === 'Ana' && semDonoCartao.defs['casal.noivo'] === 'Bruno',
+     `e o modelo do cartão também nasce com o casal de exemplo (${semDonoCartao.defs['casal.noiva']} & ${semDonoCartao.defs['casal.noivo']})`);
+
+  const idApos = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(!idApos['casal.noiva'] && !idApos['casal.noivo'],
+     'e aplicá-lo não escreve nome nenhum no casal que o usou');
+  // As fotografias são outra história: o casal ainda não tinha mexido nas suas,
+  // por isso o modelo empresta-lhe as de exemplo (da galeria). Uma foto que o
+  // casal já tivesse trocado ficaria intocada — ver tests/probe_fotos.js.
+  ok(/galeria\//.test(String(idApos['media.hero'] || '')),
+     `mas as fotos, que o casal não mexeu, passam a ser as do modelo (${idApos['media.hero']})`);
+
+  // A prova do modelo mostra um casal de exemplo, e não o da oficina.
+  const provaHtml = await admin.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), mod.id);
+  ok(!/Olga/.test(provaHtml) && /Ana/.test(provaHtml),
+     'a prova do modelo mostra o casal de exemplo, não o da oficina');
+  ok(/galeria\//.test(provaHtml) && !/convite\/hero\.jpg/.test(provaHtml),
+     'e as imagens dela são as da galeria, não as fotografias do casal de origem');
+
+  const depois = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(depois['textos.kicker'] === 'Marca do modelo ' + marca,
+     'e o seu convite passa a ser o do modelo');
+
+  // ---------- 4. cada peça no seu lugar ----------
+  ok(!depois['cartao.abertura'],
+     'um modelo do convite digital não mexe no cartão impresso');
+  await api('modelo_aplicar&id=' + modCartao.id);
+  const comCartao = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(comCartao['cartao.abertura'] === 'Cartao do modelo ' + marca, 'e o do cartão mexe no cartão');
+
+  // ---------- 8. cerimónias no modelo do cartão: só para desenhar ----------
+  // O admin pode marcar cerimónias no modelo do cartão (é o que dá corpo à
+  // prova), mas são de EXEMPLO: aplicar o modelo aplica o desenho e NÃO reescreve
+  // as cerimónias que o casal já tenha. É o pedido — o recurso em todos os
+  // editores, incluindo o do admin —, sem apagar dados de ninguém.
+  // modelo_defs GRAVA o conjunto que recebe: mantém-se o desenho do cartão
+  // (cartao.abertura) além das cerimónias, senão apagava-se o que a secção 1
+  // lhe pôs — e a secção 6 conta com ele no ficheiro exportado.
+  await api('modelo_defs&id=' + modCartao.id, { defs: {
+    'cartao.abertura': 'Cartao do modelo ' + marca,
+    'evento.civil_hora': '11:45', 'evento.civil_local': 'Sala do Modelo',
+    'evento.religiosa_hora': '16:00', 'evento.religiosa_local': 'Igreja do Modelo' } });
+  const fichCer = await admin._baixar('modelos_exportar');
+  const guardado = (fichCer.modelos || []).find(m => m.nome === 'ZZ Modelo impresso ' + marca);
+  ok(guardado && guardado.defs && guardado.defs['evento.civil_hora'] === '11:45'
+       && guardado.defs['evento.religiosa_local'] === 'Igreja do Modelo',
+     'o modelo do cartão guarda mesmo as cerimónias que o admin lhe põe');
+
+  await api('casamento_abrir&id=' + casal.id);
+  await api('defs_save', { defs: { 'evento.civil_hora': '09:15', 'evento.civil_local': 'Casa do Casal' } });
+  await api('modelo_aplicar&id=' + modCartao.id);
+  const cerCasal = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  console.log('   cerimónias do casal após aplicar o modelo:',
+    cerCasal['evento.civil_hora'], '/', cerCasal['evento.civil_local']);
+  ok(cerCasal['evento.civil_hora'] === '09:15' && cerCasal['evento.civil_local'] === 'Casa do Casal',
+     'aplicar o modelo NÃO reescreve as cerimónias do casal — o desenho aplica-se, a festa é dele');
+  ok(cerCasal['evento.religiosa_local'] !== 'Igreja do Modelo',
+     'e a cerimónia de exemplo do modelo não passou para o casal');
+
+  // ---------- 3. depois de aplicado, o desenho é do casal ----------
+  await api('casamento_abrir&id=' + oficina.id);
+  await api('defs_save', { defs: { 'textos.kicker': 'MUDOU na oficina ' + marca } });
+  await api('modelo_editar', { id: mod.id, nome: 'ZZ Modelo digital ' + marca, recapturar: true });
+  await api('casamento_abrir&id=' + casal.id);
+  const intocado = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  console.log('   no casal depois de mexer no modelo:', intocado['textos.kicker']);
+  ok(intocado['textos.kicker'] === 'Marca do modelo ' + marca,
+     'mexer no modelo NÃO toca em quem já o aplicou — o desenho passou a ser dele');
+
+  await api('modelo_apagar&id=' + mod.id);
+  const semModelo = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(semModelo['textos.kicker'] === 'Marca do modelo ' + marca,
+     'e apagar o modelo também não — quem o usou fica como está');
+
+  // ---------- 5. por publicar, não se vê nem se aplica ----------
+  await api('casamento_abrir&id=' + oficina.id);
+  const rascunho = await api('modelo_criar', { nome: 'ZZ Rascunho ' + marca,
+                                               ambito: 'digital', visivel: false });
+  const emailC = 'modelos.' + marca + '@exemplo.pt';
+  await api('utilizador_criar', { email: emailC, nome: 'Casal Modelos', senha: 'segredo12345',
+                                  casamento_id: casal.id, papel: 'noivos' });
+  const noivos = await entrar(await b.newContext(), emailC, 'segredo12345');
+  const vistos = (await noivos._api('modelo_lista&ambito=digital')).modelos || [];
+  const nomes = vistos.map(m => m.nome);
+  console.log('   modelos que o casal vê:', JSON.stringify(nomes));
+  ok(!nomes.includes('ZZ Rascunho ' + marca), 'um modelo por publicar não aparece ao casal');
+  const tentaRascunho = await noivos._api('modelo_aplicar&id=' + rascunho.id);
+  ok(tentaRascunho && tentaRascunho.success === false, 'nem se aplica escrevendo-lhe o número');
+
+  // ---------- 7. só a casa faz modelos ----------
+  const tentaCriar = await noivos._api('modelo_criar', { nome: 'ZZ Do casal', ambito: 'digital' });
+  ok(tentaCriar && tentaCriar.success === false, 'um casal não faz modelos');
+  const tentaApagar = await noivos._api('modelo_apagar&id=' + modCartao.id);
+  ok(tentaApagar && tentaApagar.success === false, 'nem os apaga');
+
+  // Mas usa os publicados — que é a razão de existirem.
+  const usa = await noivos._api('modelo_aplicar&id=' + modCartao.id);
+  ok(usa && usa.success, 'e usa os que estão publicados');
+
+  // ---------- 10. um modelo pode ver-se só em certos casamentos ----------
+  // Restrito a OUTRO casamento: este casal deixa de o ver e de o aplicar.
+  await api('modelo_visibilidade', { id: modCartao.id, alcance: 'selecionados', casamentos: [oficina.id] });
+  const soOutro = ((await noivos._api('modelo_lista&ambito=impresso')).modelos || []).map(m => +m.id);
+  ok(!soOutro.includes(+modCartao.id),
+     'um modelo destinado a outro casamento não aparece a este casal');
+  const negado = await noivos._api('modelo_aplicar&id=' + modCartao.id);
+  ok(negado && negado.success === false,
+     'e o casal não o aplica, mesmo escrevendo-lhe o número');
+
+  // Destinado a ELE: volta a vê-lo e a poder aplicá-lo.
+  await api('modelo_visibilidade', { id: modCartao.id, alcance: 'selecionados', casamentos: [casal.id] });
+  const comEle = ((await noivos._api('modelo_lista&ambito=impresso')).modelos || []).map(m => +m.id);
+  ok(comEle.includes(+modCartao.id), 'destinado a este casamento, o casal já o vê');
+  ok((await noivos._api('modelo_aplicar&id=' + modCartao.id)).success, 'e aplica-o');
+
+  // Escolhidos sem escolher ninguém não faz sentido: normaliza-se para "todos".
+  const semNinguem = await api('modelo_visibilidade', { id: modCartao.id, alcance: 'selecionados', casamentos: [] });
+  ok(semNinguem && semNinguem.alcance === 'todos',
+     'escolhidos sem ninguém escolhido volta a ser "todos"');
+
+  // ---------- 6. levar e trazer ----------
+  const fich = await admin._baixar('modelos_exportar');
+  console.log('   ficheiro de modelos:', fich.formato, '·', (fich.modelos || []).length, 'modelo(s)');
+  ok(fich.formato === 'casamento-web/modelos/1' && fich.modelos.length >= 2,
+     'os modelos levam-se num ficheiro');
+  ok(fich.modelos.some(m => m.defs && m.defs['cartao.abertura']),
+     'e o ficheiro leva mesmo os desenhos, não só os nomes');
+
+  const idsAntes = new Set(((await api('modelo_lista')).modelos || []).map(m => +m.id));
+  const trazidos = await api('modelos_importar', { ficheiro: fich });
+  console.log('   importação:', JSON.stringify(trazidos));
+  ok(trazidos && trazidos.success && trazidos.entraram >= 2, 'e trazem-se de volta');
+  const mau = await api('modelos_importar', { ficheiro: { formato: 'outra-coisa' } });
+  ok(mau && mau.success === false, 'um ficheiro que não é de modelos é recusado');
+  // Trazer ACRESCENTA — e o que entrou agora sao copias de tudo, modelos da casa
+  // incluidos (desde que estes deixaram de ter defs vazio, ja nao sao saltados).
+  // Se ficassem, acumulavam-se a cada corrida da prova.
+  for (const m of (await api('modelo_lista')).modelos || []) {
+    if (!idsAntes.has(+m.id)) await api('modelo_apagar&id=' + m.id);
+  }
+
+  // ---------- a página do admin ----------
+  await admin.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
+  await admin.waitForTimeout(900);
+  const txt = await admin.locator('#lista').innerText();
+  ok(txt.includes('ZZ Modelo impresso ' + marca), 'a página lista os modelos');
+  // innerText devolve o texto RENDERIZADO, e as etiquetas são maiúsculas por CSS.
+  ok(/por publicar/i.test(txt), 'e distingue os que ainda não estão publicados');
+
+  // As opções de um modelo abrem numa JANELA, e não dentro do cartão: um cartão
+  // da grelha tem ~260px, e a lista de casamentos espremida nessa coluna era
+  // ilegível — e esticava a linha inteira, desalinhando os cartões vizinhos.
+  const antesAlt = await admin.evaluate(() => document.documentElement.scrollHeight);
+  const algum = await admin.evaluate(() => +Object.keys(MODELOS)[0]);
+  await admin.evaluate((id) => quemVe(id), algum);
+  await admin.waitForTimeout(800);
+  const jan = await admin.evaluate(() => {
+    const o = document.getElementById('ov-modelo');
+    const corpo = document.getElementById('ov-corpo');
+    return { aberta: o.classList.contains('aberto'),
+             largura: Math.round(corpo.getBoundingClientRect().width),
+             alt: document.documentElement.scrollHeight };
+  });
+  ok(jan.aberta, 'as opções do modelo abrem numa janela própria');
+  ok(jan.largura > 400, `com largura para se ler (${jan.largura}px, e não a coluna do cartão)`);
+  ok(jan.alt === antesAlt, 'e a grelha dos modelos não se mexe por baixo dela');
+  await admin.evaluate(() => fechar('ov-modelo'));
+
+  // ---------- 9. os modelos de origem da casa constam da lista ----------
+  // O desenho que o sistema traz — o impresso e o digital — está na lista desde
+  // o início, um por peça, sem o admin ter de o criar. (No fim, porque aplicar
+  // o de origem mexe no casal, e as secções acima contam com o que ele tinha.)
+  const listaCasa = (await api('modelo_lista')).modelos || [];
+  const daCasa = listaCasa.filter(m => m.criado_por === 'sistema');
+  ok(daCasa.some(m => m.ambito === 'impresso') && daCasa.some(m => m.ambito === 'digital'),
+     'a lista traz o modelo de origem do impresso e do digital (' + daCasa.map(m => m.ambito).join(', ') + ')');
+  ok(daCasa.every(m => +m.visivel === 1), 'e vêm publicados, prontos a usar');
+  const origDig = daCasa.find(m => m.ambito === 'digital');
+  await api('casamento_abrir&id=' + casal.id);
+  await api('defs_save', { defs: { 'textos.kicker': 'CUSTOM ' + marca } });
+  await api('modelo_aplicar&id=' + origDig.id);
+  const voltou = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(!voltou['textos.kicker'],
+     'aplicar o modelo de origem devolve a peça ao desenho da casa, mesmo já customizada');
+
+  // ---------- 12. os dados de exemplo dos modelos novos ----------
+  // O admin escolhe com que casal e que imagens um modelo NOVO nasce. Mexer
+  // neles não pode tocar num modelo já feito — nem no convite de origem, que é
+  // o produto e não um exemplo.
+  const exAntes = await api('modelo_exemplo');
+  ok(exAntes && exAntes.success && exAntes.exemplo['casal.noiva'],
+     `os dados de exemplo leem-se (${exAntes.exemplo['casal.noiva']} & ${exAntes.exemplo['casal.noivo']})`);
+  ok(/galeria\//.test(exAntes.fabrica['media.hero']),
+     'e de fábrica as imagens vêm da galeria da casa');
+  // A galeria e UMA lista com categorias, e nao quatro gavetas fechadas: uma
+  // fotografia enviada para o interludio pode muito bem servir a capa.
+  const gal = exAntes.galeria || [];
+  ok(Array.isArray(gal) && gal.length >= 20,
+     `a galeria vem numa lista so, com tudo dentro (${gal.length} fotografias)`);
+  const porCat = {};
+  gal.forEach(f => porCat[f.categoria] = (porCat[f.categoria] || 0) + 1);
+  const semCat = ['capa','historia','interludio','acesso'].filter(c => (porCat[c] || 0) < 3);
+  ok(!semCat.length,
+     'cada categoria tem por onde escolher' + (semCat.length ? ' — falta ' + semCat.join(', ') : ''));
+  ok(Object.keys(exAntes.categorias || {}).includes('sem'),
+     'e ha uma categoria para as que ainda nao tem lugar decidido');
+  ok(gal.every(f => f.da_casa), 'as que a casa traz vem marcadas como suas');
+
+  // Enviar sem categoria guarda na mesma, e NAO poe nada em vigor.
+  const antesAcesso = exAntes.exemplo['media.acesso'];
+  const env = await admin.evaluate(async () => {
+    const r = await fetch('assets/convite/galeria/acesso-38708859.jpg');
+    const fd = new FormData();
+    fd.append('ficheiro', new File([await r.blob()], 'prova.jpg', { type: 'image/jpeg' }));
+    fd.append('categoria', 'sem');
+    return (await (await fetch('api.php?action=modelo_exemplo_upload',
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF }, body: fd })).json());
+  });
+  ok(env && env.success && /exemplo\/sem-/.test(env.path || ''),
+     `uma fotografia sem categoria guarda-se a mesma (${env && env.path})`);
+  ok(env.exemplo['media.acesso'] === antesAcesso,
+     'e nao entra em vigor em seccao nenhuma — fica so no acervo');
+  ok((env.galeria || []).some(f => f.src === env.path && f.categoria === 'sem' && !f.da_casa),
+     'aparece na galeria, marcada como enviada e sem categoria');
+
+  // Arrumar depois: a categoria muda, e o ficheiro muda de nome com ela.
+  const arr = await api('modelo_exemplo_categoria', { src: env.path, categoria: 'capa' });
+  ok(arr && arr.success && /exemplo\/capa-/.test(arr.src || ''),
+     `e arruma-se depois numa categoria (${arr && arr.src})`);
+  const apg = await api('modelo_exemplo_apagar', { src: arr.src });
+  ok(apg && apg.success && !(apg.galeria || []).some(f => !f.da_casa),
+     'as enviadas apagam-se; as da casa nao');
+  // As fotografias do convite de origem (Isabel & Abednego) vivem na galeria,
+  // ao lado das outras — sem tratamento a parte.
+  ok(gal.some(f => f.src === 'assets/convite/galeria/capa-isabel-abednego.jpg' && f.categoria === 'capa'),
+     'as fotografias do convite de origem estao na galeria, com as restantes');
+
+  // Uma da casa tira-se da galeria - mas escondendo, nao apagando: o ficheiro
+  // vem com a instalacao e um deploy tra-lo-ia de volta.
+  const alvoCasa = 'assets/convite/galeria/capa-34371787.jpg';
+  const tirou = await api('modelo_exemplo_apagar', { src: alvoCasa });
+  ok(tirou && tirou.success && !(tirou.galeria || []).some(f => f.src === alvoCasa),
+     'tambem se tiram da galeria as que a casa traz');
+  const aindaLa = await admin.evaluate(async () =>
+    (await fetch('assets/convite/galeria/capa-34371787.jpg')).ok);
+  ok(aindaLa, 'e o ficheiro fica no servidor — esconde-se a decisao, nao se destroi o que veio na instalacao');
+  ok((tirou.ocultas || 0) === 1, 'a galeria diz quantas estao escondidas');
+  const reps = await api('modelo_exemplo_repor');
+  ok(reps && reps.success && (reps.galeria || []).some(f => f.src === alvoCasa),
+     'e repoem-se todas de uma vez');
+
+  // A identidade INTEIRA está lá para preencher. Metade dos campos faltava.
+  const faltam = ['casal.noiva','casal.noivo','evento.data','evento.hora','evento.convidados',
+                  'evento.whatsapp','evento.venue_titulo','evento.local','evento.cidade','evento.maps',
+                  'evento.civil_titulo','evento.civil_hora','evento.civil_local','evento.civil_maps',
+                  'evento.religiosa_titulo','evento.religiosa_hora','evento.religiosa_local',
+                  'evento.religiosa_maps','media.hero','media.historia','media.interludio',
+                  'media.acesso','media.musica','foto.hero','foto.interludio','foto.acesso']
+                 .filter(k => !(exAntes.chaves || []).includes(k));
+  ok(!faltam.length, 'e são a identidade inteira do convite' + (faltam.length ? ' — falta ' + faltam.join(', ') : ''));
+
+  // A página mostra um campo por cada uma delas — não bastam existir no servidor.
+  // Os dados de exemplo estão agora na sua pastilha, e carregam ao abri-la.
+  await admin.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
+  await admin.click('#filtros [data-vista="exemplo"]');
+  await admin.waitForFunction(() => document.querySelector('#ex-corpo .ex') !== null, { timeout: 8000 });
+  const semCampo = await admin.evaluate(() => EX_CHAVES.filter(k =>
+    k.startsWith('media.') ? !document.getElementById('ex-img-' + k)
+    : k.startsWith('foto.') ? !document.getElementById('ex-' + k + '-x')
+    : !document.getElementById('ex-' + k)));
+  ok(Array.isArray(semCampo) && !semCampo.length,
+     'e o painel tem um campo para cada uma' + (semCampo && semCampo.length ? ' — falta ' + semCampo.join(', ') : ''));
+
+  // Guardam-se e voltam: as horas, os mapas, o contacto e o enquadramento.
+  const cheio = { 'evento.civil_local':'Conservatória de Exemplo',
+                  'evento.civil_maps':'https://maps.app.goo.gl/exemplo',
+                  'evento.religiosa_hora':'16:00', 'evento.whatsapp':'244 900 000 000',
+                  'foto.hero':'40 30 120' };
+  await api('modelo_exemplo_guardar', cheio);
+  const lido = (await api('modelo_exemplo')).exemplo || {};
+  ok(lido['evento.civil_local'] === cheio['evento.civil_local']
+     && lido['evento.civil_maps'] === cheio['evento.civil_maps']
+     && lido['evento.religiosa_hora'] === '16:00' && lido['foto.hero'] === '40 30 120',
+     'e guardam-se todas, enquadramento incluído (' + lido['foto.hero'] + ')');
+  ok(lido['evento.whatsapp'] === '244900000000',
+     'com a mesma limpeza de sempre — o WhatsApp fica só em dígitos');
+  const mapaMau = await api('modelo_exemplo_guardar', { 'evento.civil_maps': 'javascript:alert(1)' });
+  ok(mapaMau && mapaMau.success === false, 'e uma ligação que não é https é recusada');
+  // Em branco onde branco não é resposta volta ao de fábrica, e não dá erro.
+  await api('modelo_exemplo_guardar', { 'casal.noiva': '', 'evento.data': '' });
+  const reposto = (await api('modelo_exemplo')).exemplo || {};
+  ok(reposto['casal.noiva'] === exAntes.fabrica['casal.noiva']
+     && reposto['evento.data'] === exAntes.fabrica['evento.data'],
+     'um campo obrigatório deixado em branco volta ao de fábrica');
+
+  // Um modelo feito ANTES da mudança e outro DEPOIS: só o segundo a apanha.
+  await api('casamento_abrir&id=' + oficina.id);
+  const exAntesMod = await api('modelo_criar', { nome: 'ZZ Exemplo antes ' + marca, ambito: 'digital' });
+  await api('modelo_exemplo_guardar', { 'casal.noiva': 'Zita ' + marca, 'casal.noivo': 'Zeca',
+                                        'evento.local': 'Salão ' + marca });
+  const exDepoisMod = await api('modelo_criar', { nome: 'ZZ Exemplo depois ' + marca, ambito: 'digital' });
+
+  const fichEx = (await admin._baixar('modelos_exportar')).modelos || [];
+  const nascido = fichEx.find(x => x.nome === 'ZZ Exemplo depois ' + marca) || { defs: {} };
+  ok(nascido.defs['casal.noiva'] === 'Zita ' + marca && nascido.defs['evento.local'] === 'Salão ' + marca,
+     `um modelo criado agora nasce com os dados de exemplo em vigor (${nascido.defs['casal.noiva']})`);
+
+  // Do ZERO, e nao do convite do casamento aberto: o desenho de origem e o do
+  // primeiro casal, e sem a troca o modelo nascia com o nome e as fotos dele.
+  const doZero = await api('modelo_criar', { nome: 'ZZ Exemplo do zero ' + marca,
+                                             ambito: 'digital', do_zero: true });
+  const nascidoZero = ((await admin._baixar('modelos_exportar')).modelos || [])
+                        .find(x => x.nome === 'ZZ Exemplo do zero ' + marca) || { defs: {} };
+  ok(nascidoZero.defs['casal.noiva'] === 'Zita ' + marca
+     && /galeria\//.test(String(nascidoZero.defs['media.hero'] || '')),
+     `um modelo feito do zero tambem (${nascidoZero.defs['casal.noiva']}, ${nascidoZero.defs['media.hero']})`);
+  await api('modelo_apagar&id=' + doZero.id);
+
+  const jaFeito = fichEx.find(x => x.nome === 'ZZ Exemplo antes ' + marca) || { defs: {} };
+  ok(jaFeito.defs['casal.noiva'] === exAntes.exemplo['casal.noiva'],
+     `e o modelo feito ANTES fica exatamente como estava (${jaFeito.defs['casal.noiva']})`);
+  const provaAntes = await admin.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), exAntesMod.id);
+  ok(!new RegExp('Zita ' + marca).test(provaAntes),
+     'e a prova dele também — um modelo já feito não se reescreve por baixo de quem o desenhou');
+
+  // O convite de origem é o produto, não um exemplo: continua com as suas imagens.
+  const origem = await admin.evaluate(async () =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1')).text());
+  ok(/galeria\/capa-isabel-abednego\.jpg/.test(origem),
+     'e o convite de origem mantém as imagens de sempre — mexeu-se nos modelos, não no produto');
+
+  await api('modelo_exemplo_guardar', exAntes.fabrica);
+  const exReposto = await api('modelo_exemplo');
+  ok(exReposto.exemplo['casal.noiva'] === exAntes.fabrica['casal.noiva'],
+     'e repõem-se os de fábrica');
+  for (const m of [exAntesMod, exDepoisMod]) await api('modelo_apagar&id=' + m.id);
+
+  // ---------- 13. o casal ve os modelos, e ve o que vai receber ----------
+  // A queixa era "os noivos nao conseguem por em vigor outros modelos". A acao
+  // corria bem; o que falhava era o ecra. Duas coisas de fundo:
+  //  - a prova de um modelo so o admin a via, e por isso as miniaturas do casal
+  //    desenhavam todas o convite DELE — escolher entre imagens iguais;
+  //  - aplicar um modelo que ja era o desenho em vigor recarregava a pagina em
+  //    silencio, e quem o fez concluia que nao tinha funcionado.
+  await api('casamento_abrir&id=' + oficina.id);
+  await api('defs_save', { defs: { 'capa.dica': 'ABRA COM CARINHO ' + marca } });
+  const modVer = await api('modelo_criar', { nome: 'ZZ Para o casal ' + marca,
+                                             ambito: 'digital', visivel: true });
+  await api('casamento_abrir&id=' + casal.id);
+
+  const provaCasal = await noivos.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), modVer.id);
+  ok(/ABRA COM CARINHO/.test(provaCasal),
+     'o casal ve a prova de um modelo que lhe e destinado — o desenho DELE, e nao o seu convite');
+  ok(/Pia/.test(provaCasal) || /PIA/i.test(provaCasal),
+     'e ve-o com o SEU nome: a miniatura mostra o resultado, nao o modelo');
+
+  const rascunho2 = await api('modelo_criar', { nome: 'ZZ Escondido ' + marca,
+                                                ambito: 'digital', visivel: false });
+  const provaProibida = await noivos.evaluate(async (id) =>
+    await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), rascunho2.id);
+  ok(!/ABRA COM CARINHO/.test(provaProibida),
+     'mas nao espreita um modelo por publicar — ver e poder aplicar andam juntos');
+  await api('modelo_apagar&id=' + rascunho2.id);
+
+  const posto = await noivos._api('modelo_aplicar&id=' + modVer.id);
+  ok(posto && posto.success && posto.mudou === true,
+     'o casal poe o modelo em vigor, e a resposta diz que mudou mesmo');
+  const outraVez = await noivos._api('modelo_aplicar&id=' + modVer.id);
+  ok(outraVez && outraVez.success && outraVez.mudou === false,
+     'aplicar o mesmo outra vez diz que nao havia nada para mudar, em vez de fingir');
+  await api('modelo_apagar&id=' + modVer.id);
+
+  // ---------- 14. a casa oferece mesmo OUTROS desenhos ----------
+  // A raiz de "os noivos nao conseguem por em vigor outros modelos": os dois
+  // unicos modelos que um casal via tinham defs vazio, ou seja ERAM o desenho de
+  // origem. Aplicar qualquer deles devolvia a peca a origem, que passa a
+  // coincidir com a versao "Original" — e por isso, em TODOS os casos, ficava
+  // "Original em vigor". Nao havia outro modelo: havia a origem, com dois nomes.
+  const daCasaTodos = ((await api('modelo_lista')).modelos || [])
+                        .filter(m => m.criado_por === 'sistema');
+  for (const amb of ['digital', 'impresso']) {
+    const n = daCasaTodos.filter(m => m.ambito === amb).length;
+    ok(n >= 3, `a casa traz mais do que a origem no ${amb} (${n} modelos)`);
+  }
+  ok(daCasaTodos.some(m => m.nome === 'Isabel & Abednego'),
+     'o desenho de origem e um modelo normal, com nome proprio (Isabel & Abednego)');
+  ok(!daCasaTodos.some(m => /Desenho de origem|modelo da casa/.test(m.nome)),
+     'e ja nao ha nenhum modelo tratado a parte ("Desenho de origem"/"modelo da casa")');
+
+  // Cada um deles e um desenho DIFERENTE: aplicados, dao pecas diferentes.
+  await api('casamento_abrir&id=' + casal.id);
+  const digitais = daCasaTodos.filter(m => m.ambito === 'digital' && m.nome !== 'Isabel & Abednego');
+  const paletas = new Set();
+  for (const m of digitais) {
+    await api('modelo_aplicar&id=' + m.id);
+    const d = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+    paletas.add(String(d['tema.paleta'] || ''));
+  }
+  ok(paletas.size === digitais.length && !paletas.has(''),
+     `e cada um deixa a peca diferente da anterior (${paletas.size} de ${digitais.length})`);
+
+  // A lista diz qual e JA o desenho da peca — sem isso o painel oferecia "por
+  // em vigor" a um modelo que ja estava em vigor, e nada mudava.
+  const ultimo = digitais[digitais.length - 1];
+  const marcados = ((await api('modelo_lista&ambito=digital')).modelos || []).filter(m => m.em_vigor);
+  ok(marcados.length === 1 && +marcados[0].id === +ultimo.id,
+     `a lista assinala o modelo que esta em vigor, e so esse (${marcados.map(m => m.nome).join(', ')})`);
+
+  // Voltar a origem: o modelo de origem (agora "Isabel & Abednego") passa a ser o assinalado.
+  const origemDig = daCasaTodos.filter(m => m.ambito === 'digital' && m.nome === 'Isabel & Abednego')[0];
+  await api('modelo_aplicar&id=' + origemDig.id);
+  const naOrigem = ((await api('modelo_lista&ambito=digital')).modelos || []).filter(m => m.em_vigor);
+  ok(naOrigem.length === 1 && +naOrigem[0].id === +origemDig.id,
+     'de volta a origem, e o modelo de origem que aparece em vigor');
+
+  // E as cerimonias que o casal marcou continuam la: aplicar um modelo mexe no
+  // DESENHO, e por isso a peca nao volta a coincidir com a versao "Original" —
+  // que e um retrato do convite inteiro, cerimonias incluidas.
+  const cerAinda = (await admin._baixar('dados_exportar&ambito=casamento')).casamentos[0].definicoes;
+  ok(cerAinda['evento.civil_local'] === 'Casa do Casal',
+     'e as cerimonias do casal atravessaram tudo isto sem se mexerem');
+
+  // ---------- 15. UM em vigor, e nao todos os de igual desenho ----------
+  // A queixa com a imagem: tres modelos marcados "EM VIGOR" ao mesmo tempo. Sao
+  // modelos criados do convite do casal sem lhe mexer no desenho — por isso
+  // ficaram iguais a origem, e a conta "aplicar isto nao mudava nada" dava-os a
+  // todos como em vigor. "Em vigor" e o modelo que foi MESMO aplicado, um so.
+  // De um casamento LIMPO (desenho na origem), para os modelos saírem iguais à
+  // origem — que é o caso da queixa. A oficina já tem o desenho mexido acima.
+  const limpo = await api('casamento_criar', { nome: 'ZZ Limpo ' + marca, noiva: 'Lia', noivo: 'Leo' });
+  await api('casamento_abrir&id=' + limpo.id);
+  const ig1 = await api('modelo_criar', { nome: 'ZZ Igual A ' + marca, ambito: 'digital', visivel: true });
+  const ig2 = await api('modelo_criar', { nome: 'ZZ Igual B ' + marca, ambito: 'digital', visivel: true });
+  await api('casamento_abrir&id=' + casal.id);
+  await api('modelo_aplicar&id=' + origemDig.id);   // peca na origem; ig1/ig2 sao iguais a origem
+
+  const iguais = (await api('modelo_lista&ambito=digital')).modelos || [];
+  const mesmoDesenho = iguais.filter(m => m.mesmo_desenho).length;
+  ok(mesmoDesenho >= 3,
+     `varios modelos tem o mesmo desenho da peca (${mesmoDesenho}) — e o cenario da queixa`);
+  ok(iguais.filter(m => m.em_vigor).length <= 1,
+     `mas no maximo UM se diz em vigor (${iguais.filter(m => m.em_vigor).map(m => m.nome).join(', ') || 'nenhum'})`);
+
+  // Aplicar um deles — sem mudar o desenho — passa a marca-LO a ele, e so a ele.
+  const apIg = await api('modelo_aplicar&id=' + ig1.id);
+  ok(apIg && apIg.success, 'aplicar um modelo de desenho igual responde bem');
+  const depoisIg = (await api('modelo_lista&ambito=digital')).modelos || [];
+  const marcadosIg = depoisIg.filter(m => m.em_vigor);
+  ok(marcadosIg.length === 1 && +marcadosIg[0].id === +ig1.id,
+     `e passa a ser esse o unico em vigor, mesmo com desenho igual aos outros (${marcadosIg.map(m => m.nome).join(', ')})`);
+
+  // Mexer no desenho a mao tira o modelo de vigor.
+  await api('defs_save', { defs: { 'textos.kicker': 'A MINHA MARCA ' + marca } });
+  const aposMao = (await api('modelo_lista&ambito=digital')).modelos || [];
+  ok(!aposMao.some(m => m.em_vigor),
+     'e editar a peca a mao tira o modelo de vigor — o desenho passou a ser do casal');
+  await api('modelo_aplicar&id=' + origemDig.id);
+  await api('modelo_apagar&id=' + ig1.id); await api('modelo_apagar&id=' + ig2.id);
+  await api('casamento_estado&id=' + limpo.id + '&estado=arquivado');
+  await api('casamento_apagar&id=' + limpo.id);
+
+  // ---------- limpeza ----------
+  const todos = (await api('modelo_lista')).modelos || [];
+  for (const m of todos) if (m.nome.includes(marca)) await api('modelo_apagar&id=' + m.id);
+  await api('casamento_abrir&id=1');
+  for (const id of [oficina.id, casal.id]) {
+    await api('casamento_estado&id=' + id + '&estado=arquivado');
+    await api('casamento_apagar&id=' + id);
+  }
+  for (const c of (await api('utilizador_lista&q=' + marca)).contas || []) {
+    await api('utilizador_apagar&id=' + c.id);
+  }
+  ok(((await api('modelo_lista')).modelos || []).filter(m => m.nome.includes(marca)).length === 0,
+     'a prova não deixa modelos de mentira na base');
+
+  console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
+  await b.close(); process.exit(f ? 1 : 0);
+})().catch(e => { console.error('FATAL', e); process.exit(1); });

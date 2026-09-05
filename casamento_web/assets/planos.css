@@ -1,0 +1,353 @@
+/* ============================================================
+   planos.css — A montra dos planos
+   ------------------------------------------------------------
+   Onde o casal escolhe o que quer levar. Vive em dois sítios (a
+   inscrição e a área da licença) e por isso não assume página
+   nenhuma: só variáveis do tema, que já mudam com ele.
+
+   O desenho segue o que a montra tem de fazer: os pacotes primeiro
+   (é o que serve a maioria e é onde está a poupança), o plano à
+   medida a seguir, e a conta sempre à vista — ninguém escolhe às
+   escuras.
+   ============================================================ */
+
+/* ---------- cabeçalho da secção ---------- */
+.pl-topo{ text-align:center; max-width:62ch; margin:0 auto 1.8rem; }
+.pl-topo h2{ font-family:var(--serif); font-size:1.9rem; color:var(--ink);
+  line-height:1.15; margin:0 0 .5rem; }
+.pl-topo p{ color:#8a8f88; font-size:.94rem; line-height:1.6; margin:0; }
+.pl-selo{ display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--gold);
+  background:var(--gold-pale); border-radius:50px; padding:.3rem .8rem; margin-bottom:.8rem; }
+
+/* ---------- o prazo, primeiro de tudo ---------- */
+/* O preço depende dele; por isso pergunta-se antes de se mostrar preço nenhum. */
+.pl-prazos{ background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
+  padding:1.2rem 1.3rem; margin-bottom:1.8rem; }
+.pl-prazos-cab{ margin-bottom:.9rem; }
+.pl-prazos-cab b{ display:block; font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
+.pl-prazos-cab span{ display:block; font-size:.83rem; color:#8a8f88; margin-top:.15rem; line-height:1.5; }
+.pl-prazos-op{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); }
+.pl-prazo-op{ position:relative; display:block; border:1.5px solid var(--line); border-radius:12px;
+  padding:.85rem .9rem; cursor:pointer; margin:0; text-transform:none; letter-spacing:normal;
+  font-weight:400; font-size:1rem; transition:border-color .15s, background .15s; }
+.pl-prazo-op:hover{ border-color:var(--gold-soft); background:var(--gold-pale); }
+.pl-prazo-op.on{ border-color:var(--gold); background:var(--gold-pale);
+  box-shadow:0 0 0 2px var(--ring); }
+.pl-prazo-op input{ position:absolute; opacity:0; width:1px; height:1px; padding:0; margin:0; }
+.pl-prazo-fita{ display:inline-block; font-size:.6rem; font-weight:800; letter-spacing:.1em;
+  text-transform:uppercase; color:#fff; background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep));
+  border-radius:50px; padding:.14rem .5rem; margin-bottom:.35rem; }
+.pl-prazo-nome{ display:block; font-weight:700; color:var(--ink); font-size:1rem; }
+.pl-prazo-res{ display:block; font-size:.76rem; color:#8a8f88; line-height:1.4; margin-top:.1rem; }
+.pl-prazo-poupa{ display:inline-block; font-size:.72rem; font-weight:700; color:var(--ok);
+  background:var(--ok-bg); border-radius:50px; padding:.12rem .5rem; margin-top:.4rem; }
+
+/* ---------- o módulo que nenhum plano dispensa ---------- */
+.pl-mod-obrig{ font-size:.62rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--gold-deep); background:var(--gold-pale); border-radius:50px;
+  padding:.12rem .45rem; vertical-align:middle; }
+.pl-obrig{ grid-column:1/-1; font-size:.8rem; color:var(--gold-deep); background:var(--gold-pale);
+  border-radius:10px; padding:.5rem .7rem; margin-bottom:.15rem; line-height:1.45; }
+
+/* ---------- os pacotes ---------- */
+.pl-pacotes{ display:grid; gap:1.1rem; margin-bottom:2.4rem;
+  grid-template-columns:repeat(auto-fit, minmax(255px, 1fr)); align-items:stretch; }
+
+.pl-pac{ position:relative; display:flex; flex-direction:column;
+  background:var(--card); border:1.5px solid var(--line); border-radius:var(--radius);
+  padding:1.5rem 1.35rem 1.35rem; cursor:pointer; text-align:left;
+  transition:border-color .18s, box-shadow .18s, transform .18s; }
+.pl-pac:hover{ border-color:var(--gold-soft); transform:translateY(-2px);
+  box-shadow:0 14px 34px rgba(0,0,0,.09); }
+.pl-pac.on{ border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
+
+/* O pacote em destaque cresce um pouco e ganha a fita. É o único que a leva:
+   dois «mais escolhidos» não escolhem nada. */
+.pl-pac.destaque{ border-color:var(--gold-soft); box-shadow:var(--shadow); }
+@media (min-width:900px){ .pl-pac.destaque{ transform:scale(1.035); }
+  .pl-pac.destaque:hover{ transform:scale(1.035) translateY(-2px); } }
+
+.pl-fita{ position:absolute; top:-.72rem; left:50%; transform:translateX(-50%);
+  background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep)); color:#fff;
+  font-size:.64rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  padding:.3rem .85rem; border-radius:50px; white-space:nowrap;
+  box-shadow:0 4px 12px rgba(0,0,0,.18); }
+
+.pl-pac h3{ font-family:var(--serif); font-size:1.4rem; color:var(--ink); margin:.2rem 0 .25rem; }
+.pl-promessa{ color:#8a8f88; font-size:.83rem; line-height:1.5; margin:0 0 1rem; min-height:2.5em; }
+
+.pl-preco{ display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap; margin-bottom:.15rem; }
+.pl-preco b{ font-family:var(--serif); font-size:2.1rem; color:var(--ink);
+  line-height:1; font-variant-numeric:tabular-nums; }
+.pl-preco .moeda{ font-size:.95rem; color:#8a8f88; font-weight:600; }
+.pl-antes{ font-size:.83rem; color:#a8ada6; text-decoration:line-through;
+  font-variant-numeric:tabular-nums; }
+.pl-poupa{ display:inline-block; font-size:.72rem; font-weight:700; color:var(--ok);
+  background:var(--ok-bg); border-radius:50px; padding:.16rem .55rem; margin-top:.4rem; }
+.pl-prazo{ font-size:.78rem; color:#8a8f88; margin-top:.5rem; }
+
+.pl-inclui{ list-style:none; padding:0; margin:1.1rem 0 1.2rem; flex:1; }
+.pl-inclui li{ display:flex; gap:.5rem; align-items:flex-start; font-size:.85rem;
+  color:var(--text); line-height:1.45; padding:.3rem 0; }
+.pl-inclui li::before{ content:'✓'; color:var(--gold); font-weight:800; flex:none;
+  font-size:.9rem; line-height:1.45; }
+.pl-inclui li.nao{ color:#b6bbb4; }
+.pl-inclui li.nao::before{ content:'—'; color:#cfd4cc; font-weight:600; }
+
+.pl-escolher{ width:100%; justify-content:center; }
+.pl-pac.on .pl-escolher{ pointer-events:none; }
+
+/* ---------- plano à medida ---------- */
+.pl-medida{ background:var(--card); border:1.5px solid var(--line);
+  border-radius:var(--radius); padding:1.5rem 1.4rem; }
+.pl-medida > h3{ font-family:var(--serif); font-size:1.35rem; color:var(--ink); margin:0 0 .3rem; }
+.pl-medida > .dica{ margin-bottom:1.3rem; }
+
+.pl-mod{ border-top:1px solid var(--line); padding:1.15rem 0; }
+.pl-mod:first-of-type{ border-top:none; padding-top:.3rem; }
+.pl-mod-cab{ display:flex; align-items:flex-start; gap:.75rem; margin-bottom:.85rem; }
+.pl-mod-cab > div:nth-child(2){ flex:1; min-width:0; }
+.pl-mod-ico{ width:38px; height:38px; flex:none; border-radius:11px; background:var(--gold-pale);
+  display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
+.pl-mod-nome{ font-weight:700; color:var(--ink); font-size:1rem; }
+.pl-mod-benef{ font-size:.81rem; color:var(--gold); font-weight:600; margin-top:.1rem; }
+.pl-mod-resumo{ font-size:.81rem; color:#8a8f88; line-height:1.5; margin-top:.15rem; }
+
+.pl-escs{ display:grid; gap:.55rem; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
+
+/* Um escalão é uma etiqueta (<label>), e o estilo.css veste TODAS as etiquetas
+   de maiúsculas pequenas — o que é certo num formulário e desastroso aqui. Estes
+   quatro valores desfazem essa herança; sem eles, o nome do escalão sai em
+   maiúsculas e o cartão perde a hierarquia toda. */
+.pl-esc{ display:flex; gap:.6rem; align-items:flex-start; border:1.5px solid var(--line);
+  border-radius:12px; padding:.7rem .8rem; cursor:pointer; margin:0;
+  font-size:1rem; font-weight:400; text-transform:none; letter-spacing:normal;
+  transition:border-color .15s, background .15s; }
+.pl-esc:hover{ border-color:var(--gold-soft); background:var(--gold-pale); }
+.pl-esc.on{ border-color:var(--gold); background:var(--gold-pale); }
+/* O estilo.css dá a QUALQUER input `width:100%` — o que é certo num campo de
+   texto e absurdo num botão de rádio: com `flex:none`, o rádio ficava com a
+   largura toda da etiqueta e o texto era espremido para zero. Daí a medida
+   explícita. */
+.pl-esc input{ margin:.2rem 0 0; flex:none; accent-color:var(--gold);
+  width:16px; height:16px; min-width:16px; padding:0; }
+/* O texto tem de poder encolher: um item de flex não desce abaixo do seu
+   conteúdo sem isto, e a linha comprida rasgava o cartão para fora da grelha. */
+.pl-esc > span{ flex:1; min-width:0; }
+/* E cada linha é mesmo uma linha — em <span> inline corriam todas juntas. */
+.pl-esc-nome, .pl-esc-res, .pl-esc-preco, .pl-esc-tem{ display:block; }
+.pl-esc-nome{ font-weight:600; font-size:.88rem; color:var(--ink); line-height:1.3; }
+.pl-esc-res{ font-size:.76rem; color:#8a8f88; line-height:1.4; margin-top:.12rem; }
+.pl-esc-preco{ font-size:.83rem; font-weight:700; color:var(--gold);
+  margin-top:.3rem; font-variant-numeric:tabular-nums; }
+.pl-esc.tem{ border-color:var(--ok); background:var(--ok-bg); }
+.pl-esc-tem{ font-size:.7rem; font-weight:700; color:var(--ok); text-transform:uppercase;
+  letter-spacing:.06em; margin-top:.3rem; }
+/* De onde vem o desconto de um reforço. Sem esta linha, um preço mais baixo do
+   que o do preçário parece um erro; com ela, é a promessa a cumprir-se. */
+.pl-esc-credito{ display:block; font-size:.72rem; color:var(--ok); line-height:1.35;
+  margin-top:.15rem; }
+.pl-esc-credito b{ font-variant-numeric:tabular-nums; }
+
+/* ---------- «Ver exemplo»: a captura, atrás de um botão ---------- */
+/* Mostradas de enfiada, as cinco capturas faziam da inscrição um rolo de cinco
+   mil pixéis — e o botão de submeter perdia-se no fundo. Atrás de um botão,
+   continuam a um clique de quem as quer ver. */
+.pl-exemplo{ flex:none; align-self:flex-start; white-space:nowrap; }
+.pl-exemplo-lig{ display:block; width:100%; margin-top:.5rem; background:none; border:0;
+  color:var(--gold); font-family:var(--sans); font-size:.8rem; font-weight:600;
+  text-decoration:underline; cursor:pointer; padding:.2rem; }
+.pl-exemplo-lig:hover{ color:var(--gold-deep); }
+.pl-pac-ac{ margin-top:auto; }
+
+/* A janela das capturas — uma, ou a galeria de um pacote. */
+.pl-modal-img{ align-items:center; }
+.pl-modal-img .pl-lupa-cx{ margin:0; max-width:min(1100px,94vw); max-height:92vh;
+  display:flex; flex-direction:column; gap:.55rem; }
+.pl-lupa-topo{ display:flex; align-items:center; gap:1rem; color:#fff; font-size:.92rem;
+  font-weight:600; }
+.pl-lupa-topo span{ flex:1; }
+.pl-lupa-topo small{ opacity:.65; font-weight:400; }
+.pl-lupa-x{ background:rgba(255,255,255,.15); border:0; color:#fff; width:32px; height:32px;
+  border-radius:50%; font-size:1.3rem; line-height:1; cursor:pointer; flex:none; }
+.pl-lupa-x:hover{ background:rgba(255,255,255,.3); }
+.pl-modal-img img{ display:block; max-width:100%; max-height:74vh; object-fit:contain;
+  border-radius:12px; box-shadow:0 30px 70px rgba(0,0,0,.45); background:var(--card); }
+.pl-modal-img figcaption{ text-align:center; color:#fff; font-size:.85rem; opacity:.9; }
+.pl-lupa-nav{ display:flex; gap:.6rem; justify-content:center; }
+.pl-lupa-nav button{ background:rgba(255,255,255,.15); border:0; color:#fff; cursor:pointer;
+  border-radius:50px; padding:.4rem 1rem; font-family:var(--sans); font-size:.84rem; }
+.pl-lupa-nav button:hover{ background:rgba(255,255,255,.3); }
+
+/* ---------- a porta do plano à medida ---------- */
+.pl-medida-porta{ display:flex; align-items:center; gap:1.2rem; flex-wrap:wrap;
+  background:var(--card); border:1.5px dashed var(--gold-soft); border-radius:var(--radius);
+  padding:1.2rem 1.35rem; }
+.pl-medida-porta-txt{ flex:1; min-width:230px; }
+.pl-medida-porta-txt b{ display:block; font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
+.pl-medida-porta-txt span{ display:block; font-size:.84rem; color:#8a8f88; line-height:1.5;
+  margin-top:.2rem; }
+.pl-medida-cab{ display:flex; align-items:flex-start; gap:1rem; flex-wrap:wrap;
+  margin-bottom:1.2rem; }
+.pl-medida-cab > div{ flex:1; min-width:220px; }
+.pl-medida-cab h3{ font-family:var(--serif); font-size:1.35rem; color:var(--ink); margin:0 0 .25rem; }
+.pl-medida-cab .dica{ margin:0; }
+
+/* ---------- o preço padrão, riscado ao meio ---------- */
+/* O que se risca é o proporcional: o preço do prazo curto vezes as vezes que
+   ele cabe no prazo escolhido. É um número real, e a diferença é o desconto. */
+.pl-riscado{ display:block; font-size:.76rem; color:#a8ada6; text-decoration:line-through;
+  font-variant-numeric:tabular-nums; margin-top:.3rem; }
+.pl-riscado + .pl-esc-preco{ margin-top:.05rem; }
+
+/* ---------- as fotografias do convite digital ---------- */
+.pl-fotos{ margin-top:1rem; border:1.5px solid var(--gold-soft); border-radius:12px;
+  background:var(--gold-pale); padding:1rem 1.05rem; }
+.pl-fotos-cab{ margin-bottom:.7rem; }
+.pl-fotos-cab b{ display:block; color:var(--ink); font-size:.95rem; }
+.pl-fotos-cab span{ display:block; font-size:.8rem; color:#8a8f88; margin-top:.1rem; }
+.pl-fotos-nota{ font-size:.82rem; line-height:1.55; border-radius:10px;
+  padding:.65rem .8rem; margin-bottom:.95rem; }
+.pl-fotos-nota.boa{ background:var(--ok-bg); color:var(--text); border-left:3px solid var(--ok); }
+.pl-fotos-nota.aviso{ background:var(--warn-bg); color:var(--text); border-left:3px solid var(--warn); }
+
+.pl-sec{ margin-bottom:.9rem; }
+.pl-sec:last-child{ margin-bottom:0; }
+.pl-sec-cab{ display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap; margin-bottom:.4rem; }
+.pl-sec-cab b{ font-size:.85rem; color:var(--ink); }
+.pl-sec-cab span{ font-size:.77rem; color:#8a8f88; }
+/* As miniaturas correm na horizontal: são muitas, e empilhá-las fazia da
+   escolha de uma foto uma página inteira. */
+.pl-sec-tiras{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.35rem;
+  scrollbar-width:thin; }
+.pl-ft{ position:relative; flex:none; width:96px; height:72px; border-radius:9px;
+  overflow:hidden; cursor:pointer; border:2px solid transparent; margin:0; padding:0;
+  transition:border-color .15s, transform .15s; }
+.pl-ft:hover{ transform:translateY(-2px); border-color:var(--gold-soft); }
+.pl-ft.on{ border-color:var(--gold); }
+.pl-ft img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* O rádio comanda mas não se vê: o que se escolhe é a fotografia. */
+.pl-ft input{ position:absolute; opacity:0; width:1px; height:1px; padding:0; margin:0; }
+.pl-ft-visto{ position:absolute; inset:0; display:none; align-items:center;
+  justify-content:center; background:rgba(76,140,30,.45); color:#fff;
+  font-size:1.4rem; font-weight:800; }
+.pl-ft.on .pl-ft-visto{ display:flex; }
+.pl-ft input:focus-visible + img{ outline:2px solid var(--gold); outline-offset:-2px; }
+
+/* ---------- a fotografia do casal ----------
+   O convite é dele: a primeira coisa que a secção oferece é mandar a SUA
+   fotografia, e a galeria da casa vem a seguir, como alternativa. No escalão
+   sem edição não há alternativa nenhuma — é esta a única vez que ele escolhe. */
+.pl-envio{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.pl-btn-env{ border:1.5px dashed var(--gold); background:var(--card); color:var(--forest);
+  font-family:inherit; font-size:.84rem; font-weight:600; border-radius:10px;
+  padding:.5rem .85rem; cursor:pointer; line-height:1.2; }
+.pl-btn-env:hover{ background:var(--gold-pale); border-style:solid; }
+.pl-btn-env[disabled]{ opacity:.6; cursor:progress; }
+.pl-envio-nota{ font-size:.76rem; color:#8a8f88; }
+.pl-envio-erro{ flex-basis:100%; font-size:.78rem; color:var(--danger); margin-top:.35rem; }
+.pl-sec-falta{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--danger); border:1px solid currentColor; border-radius:50px; padding:0 .4rem; }
+.pl-sec-ou{ font-size:.75rem; color:#8a8f88; margin:.55rem 0 .3rem; }
+
+.pl-minha{ display:flex; align-items:center; gap:.7rem; background:var(--card);
+  border:1.5px solid var(--gold-soft); border-radius:10px; padding:.5rem .6rem; }
+.pl-minha img{ flex:none; width:104px; height:72px; object-fit:cover; border-radius:8px; display:block; }
+.pl-minha-txt{ flex:1; min-width:0; }
+.pl-minha-txt b{ display:block; font-size:.84rem; color:var(--ink); }
+.pl-minha-txt span{ display:block; font-size:.74rem; color:#8a8f88;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pl-minha-acoes{ display:flex; flex-direction:column; gap:.3rem; flex:none; }
+.pl-minha-acoes button{ border:1px solid var(--line); background:var(--card); color:var(--text);
+  font-family:inherit; font-size:.76rem; border-radius:8px; padding:.28rem .55rem; cursor:pointer; }
+.pl-minha-acoes button:hover{ border-color:var(--gold); color:var(--forest); }
+
+/* A prova em grande. A marca de água vem nos pixéis, do servidor: aqui só se
+   mostra o que ele carimbou. */
+.pl-prova{ position:fixed; inset:0; z-index:1300; display:none;
+  align-items:center; justify-content:center; padding:1.2rem;
+  background:rgba(12,20,16,.72); }
+.pl-prova.on{ display:flex; }
+.pl-prova-cx{ background:var(--card); border-radius:14px; padding:.9rem;
+  max-width:min(720px, 92vw); max-height:90vh; overflow:auto; text-align:center; }
+.pl-prova-cx img{ max-width:100%; max-height:66vh; border-radius:10px; display:block; margin:0 auto; }
+.pl-prova-cx p{ font-size:.8rem; color:#8a8f88; line-height:1.5; margin:.7rem auto .8rem; max-width:52ch; }
+
+@media (max-width:520px){
+  .pl-minha{ flex-wrap:wrap; }
+  .pl-minha-acoes{ flex-direction:row; width:100%; }
+  .pl-minha-acoes button{ flex:1; }
+}
+
+/* ---------- a conta, sempre à vista ---------- */
+.pl-conta{ position:sticky; bottom:0; z-index:5; margin-top:1.6rem;
+  background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
+  padding:1.1rem 1.3rem; box-shadow:0 -6px 24px rgba(0,0,0,.09);
+  display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.pl-conta-txt{ flex:1; min-width:190px; }
+.pl-conta-rot{ font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color:#8a8f88; }
+.pl-conta-val{ font-family:var(--serif); font-size:1.75rem; color:var(--ink); line-height:1.1;
+  font-variant-numeric:tabular-nums; }
+.pl-conta-det{ font-size:.8rem; color:#8a8f88; margin-top:.2rem; line-height:1.45; }
+.pl-conta-poupa{ color:var(--ok); font-weight:700; }
+
+/* ---------- políticas ---------- */
+.pl-aceite{ display:flex; gap:.6rem; align-items:flex-start; margin-top:1.3rem;
+  background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:.9rem 1rem; }
+.pl-aceite input{ margin:.2rem 0 0; flex:none; accent-color:var(--gold);
+  width:17px; height:17px; min-width:17px; padding:0; }
+.pl-aceite label{ font-size:.85rem; line-height:1.55; color:var(--text);
+  text-transform:none; letter-spacing:normal; font-weight:400; margin:0; }
+.pl-aceite a{ color:var(--gold); font-weight:600; text-decoration:underline; cursor:pointer; }
+.pl-aceite.mau{ border-color:var(--danger); background:var(--danger-bg); }
+
+
+/* O texto das políticas, com a marcação simples que o admin escreve. */
+.pl-texto{ font-size:.89rem; line-height:1.72; color:var(--text); }
+.pl-texto h4{ font-family:var(--serif); font-size:1.08rem; color:var(--ink);
+  margin:1.5rem 0 .5rem; padding-bottom:.3rem; border-bottom:1px solid var(--line); }
+.pl-texto h4:first-child{ margin-top:0; }
+.pl-texto p{ margin:0 0 .8rem; }
+.pl-texto ul{ margin:0 0 .9rem; padding-left:1.15rem; }
+.pl-texto li{ margin-bottom:.4rem; }
+.pl-texto .lei{ color:var(--gold-deep); font-weight:600; }
+
+/* ---------- o que já se tem (área da licença) ---------- */
+.pl-tenho{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fit, minmax(215px,1fr)); }
+.pl-tenho-c{ border:1.5px solid var(--line); border-radius:12px; padding:.85rem .95rem;
+  background:var(--card); display:flex; gap:.7rem; align-items:flex-start; }
+.pl-tenho-c.sim{ border-color:var(--ok); background:var(--ok-bg); }
+.pl-tenho-c.nao{ opacity:.72; border-style:dashed; }
+.pl-tenho-ico{ width:32px; height:32px; flex:none; border-radius:9px; background:rgba(255,255,255,.65);
+  display:flex; align-items:center; justify-content:center; font-size:1rem; }
+.pl-tenho-n{ font-weight:700; font-size:.88rem; color:var(--ink); }
+.pl-tenho-d{ font-size:.78rem; color:#8a8f88; line-height:1.4; margin-top:.1rem; }
+.pl-tenho-d b{ color:var(--ok); }
+
+/* ---------- medidor de uso (convidados) ---------- */
+.pl-medidor{ height:8px; border-radius:50px; background:var(--sand); overflow:hidden; margin-top:.5rem; }
+.pl-medidor i{ display:block; height:100%; border-radius:50px;
+  background:linear-gradient(90deg,var(--gold-soft),var(--gold-deep)); transition:width .4s; }
+.pl-medidor.cheio i{ background:linear-gradient(90deg,#d9a13c,var(--danger)); }
+
+/* ---------- porta fechada (upsell de um módulo) ---------- */
+.pl-porta{ text-align:center; max-width:60ch; margin:0 auto 2rem;
+  background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
+  padding:2rem 1.6rem; box-shadow:var(--shadow); }
+.pl-porta-ico{ width:62px; height:62px; margin:0 auto 1rem; border-radius:18px;
+  background:var(--gold-pale); display:flex; align-items:center; justify-content:center; font-size:1.7rem; }
+.pl-porta h2{ font-family:var(--serif); font-size:1.6rem; color:var(--ink); margin:0 0 .5rem; }
+.pl-porta p{ color:#8a8f88; font-size:.92rem; line-height:1.62; margin:0 auto .5rem; }
+.pl-porta .benef{ color:var(--gold); font-weight:600; font-size:1rem; }
+
+@media (max-width:640px){
+  .pl-topo h2{ font-size:1.5rem; }
+  .pl-ft{ width:82px; height:62px; }
+  .pl-mod-cab{ flex-wrap:wrap; }
+  .pl-exemplo{ width:100%; }
+  .pl-conta{ padding:.9rem 1rem; }
+  .pl-conta-val{ font-size:1.45rem; }
+  .pl-escs{ grid-template-columns:1fr; }
+  .pl-prazos-op{ grid-template-columns:1fr 1fr; }
+}
