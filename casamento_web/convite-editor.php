@@ -25,6 +25,9 @@ if (!$MODELO && !podeEditarPeca('digital')) {
 }
 $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
                : casalInfo($DEFS_ED);
+// A contagem também aqui — é a mesma casa. A desenhar um MODELO não há dia
+// nenhum a contar: o modelo não é de casamento nenhum.
+[$DATA_EV, $HORA_EV] = $MODELO ? ['', ''] : diaDoCasamento();
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -144,6 +147,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
   <span class="doc">Convite digital · <b><?= escP($CAS['casal']) ?></b></span>
   <div class="cresce"></div>
+  <?php contagem($DATA_EV, $HORA_EV); ?>
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
   <a href="digital.php">← Convite digital</a>
   <span class="ed-sep"></span>

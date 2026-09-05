@@ -514,7 +514,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <script src="<?= asset('assets/mesa-icone.js') ?>"></script>
 </head>
 <body>
-<?php cabecalho('Planta de Mesas', $CAS['casal'].' · posição, capacidade e ocupação', 'mesas'); ?>
+<?php cabecalho('Planta de Mesas', 'Posição, capacidade e ocupação de cada mesa', 'mesas'); ?>
 
 <div class="container">
   <div class="stats-mesa" id="stats"></div>

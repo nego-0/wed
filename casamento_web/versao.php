@@ -327,6 +327,10 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'function seccoesDeFoto('],
         ['A peça de origem que o casal viu ao pedir a licença fica a ser a dele',
          'personalizacao.php', 'function fixarPecaOrigemDoCasal('],
+        ['O cabeçalho conta os dias que faltam, em todas as páginas da casa',
+         'parcial-cabecalho.php', 'function contagem('],
+        ['E diz sempre de quem é a festa: casal e data no mesmo sítio, em toda a parte',
+         'parcial-cabecalho.php', 'topo-casal'],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

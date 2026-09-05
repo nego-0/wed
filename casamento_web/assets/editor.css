@@ -40,6 +40,19 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .ed-menu .versao-app{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.7rem;
   color:#63665e; border:1px solid var(--ed-linha); border-radius:5px; padding:.1rem .35rem; }
 
+/* A contagem decrescente, na barra do editor.
+   A mesma que o cabeçalho da casa mostra (parcial-cabecalho.php), aqui numa
+   linha só: a barra é estreita e o editor não é sítio para um número enorme.
+   As cores são as do editor — estilo.css, que traz a versão grande, não entra
+   cá dentro. */
+.ed-menu .contagem{ display:inline-flex; align-items:baseline; gap:.35rem; margin-left:.2rem; }
+.ed-menu .contagem .cg-n{ font-family:'Cormorant Garamond',Georgia,serif; font-size:.95rem;
+  font-weight:700; color:var(--ed-ouro-claro); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ed-menu .contagem .cg-l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--ed-texto-2); white-space:nowrap; }
+.ed-menu .contagem.hoje .cg-n{ color:#e8c98f; }
+.ed-menu .contagem.passou .cg-n{ opacity:.75; }
+
 /* ---- Barra de opções (por baixo do menu) ------------------- */
 .ed-opcoes{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap;
             background:var(--ed-painel-2); border-bottom:1px solid var(--ed-linha);

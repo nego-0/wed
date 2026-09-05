@@ -103,14 +103,28 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     // menu que só sabe dizer "não" é pior do que um menu curto.
     if ($semCasamento) $itens = array_intersect_key($itens, ['plataforma' => 1, 'modelos' => 1]);
     $semPapel = !empty($opcoes['no_print']) ? ' no-print' : '';
+
+    // O dia e a hora do casamento: dão a linha de identidade e a contagem.
+    [$dataDoEvento, $horaDoEvento] = $semCasamento ? ['', ''] : diaDoCasamento();
     ?>
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <header class="topo<?= $semPapel ?>">
   <div class="wrap">
     <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div>
+    <div class="topo-txt">
       <h1><?= escP($titulo) ?></h1>
       <?php if ($sub !== ''): ?><div class="sub"><?= escP($sub) ?></div><?php endif; ?>
+      <?php
+        // Quem é o casal e quando é o dia — em todas as páginas, no mesmo
+        // sítio. Andava misturado na linha de apoio de algumas (o painel, as
+        // mesas) e ausente das outras: em metade da casa não se sabia de quem
+        // era a festa que se estava a mexer.
+        if (!$semCasamento && $dataDoEvento !== ''): ?>
+        <div class="sub topo-casal"><?= escP($CAS['casal']) ?>
+          · <?= escP(dataExtensa($dataDoEvento)) ?></div>
+      <?php elseif (!$semCasamento): ?>
+        <div class="sub topo-casal"><?= escP($CAS['casal']) ?></div>
+      <?php endif; ?>
       <?php
         // Quanto tempo de licença resta a este casamento — logo abaixo dos
         // nomes, para o casal saber sempre com que prazo conta. Só quando há
@@ -132,6 +146,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
           · <a href="plataforma.php" style="color:inherit;text-decoration:underline">trocar</a></div>
       <?php endif; endif; ?>
     </div>
+    <?php contagem($dataDoEvento, $horaDoEvento, !empty($opcoes['no_print'])); ?>
     <nav class="nav<?= $semPapel ?>">
       <?php foreach ($itens as $chave => [$url, $rotulo]): ?>
       <a href="<?= $url ?>"<?= $chave === $ativo ? ' class="ativo" aria-current="page"' : '' ?>><?= $rotulo ?></a>
@@ -145,6 +160,115 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     // A pastilha circular do tema — discreta, no canto. Só onde há cabeçalho
     // (páginas com estilo.css); nunca no papel.
     if (empty($opcoes['no_print'])) include __DIR__ . '/parcial-seletor-tema.php';
+}
+
+/**
+ * O dia e a hora do casamento aberto, como [data, hora] — '' quando não há.
+ *
+ * A página pode já ter as definições em $DEFS (quase todas têm), e nesse caso
+ * não se pergunta duas vezes à base. O formato confere-se aqui: uma data
+ * estragada não vai fazer contas erradas no browser.
+ */
+function diaDoCasamento(): array {
+    $d = $GLOBALS['DEFS'] ?? null;
+    if (!is_array($d) && isset($GLOBALS['conn'])) $d = defsAtuais($GLOBALS['conn']);
+    if (!is_array($d)) return ['', ''];
+    $data = (string)($d['evento.data'] ?? '');
+    $hora = (string)($d['evento.hora'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) $data = '';
+    if (!preg_match('/^\d{2}:\d{2}$/', $hora))       $hora = '';
+    return [$data, $hora];
+}
+
+/**
+ * A contagem decrescente, onde quer que haja um cabeçalho.
+ *
+ * É a pergunta que o casal faz todos os dias, e que até aqui só o convite
+ * respondia — a casa onde ele trabalha ficava calada. Vai com a data no
+ * atributo: quem conta é o browser, e não uma página que já ficou velha ao ser
+ * servida. Sem data marcada, não sai nada: uma contagem para o nada não é uma
+ * contagem.
+ */
+function contagem(string $data, string $hora, bool $noPrint = false): void {
+    if ($data === '') return;
+    ?>
+    <div class="contagem<?= $noPrint ? ' no-print' : '' ?>" id="topo-contagem"
+         data-dia="<?= escP($data) ?>" data-hora="<?= escP($hora) ?>" aria-live="polite">
+      <div class="cg-n">—</div><div class="cg-l">para o grande dia</div>
+    </div>
+    <?php
+    contagemScript();
+}
+
+/**
+ * A contagem decrescente do cabeçalho.
+ *
+ * Quem conta é o browser: uma contagem calculada no servidor fica velha no
+ * instante em que a página é servida, e o casal deixa a página aberta a tarde
+ * inteira. Corre uma vez por minuto — mais do que isso não muda nada à vista,
+ * e no último dia é o que separa 3h11 de 3h10.
+ *
+ * O dia do casamento não é um número: é «É HOJE». E o dia seguinte também não
+ * conta para trás — passa a contar para a frente, que é o que um casal quer
+ * ver depois de casar.
+ *
+ * Sai uma vez por página (o cabeçalho também só sai uma).
+ */
+function contagemScript(): void {
+    static $jaSaiu = false;
+    if ($jaSaiu) return;
+    $jaSaiu = true;
+    ?>
+<script>
+(function(){
+  var cx = document.getElementById('topo-contagem');
+  if (!cx) return;
+  var n = cx.querySelector('.cg-n'), rot = cx.querySelector('.cg-l');
+  var dia = cx.dataset.dia || '', hora = cx.dataset.hora || '';
+  var p = dia.split('-'), h = (hora || '00:00').split(':');
+  // Meia-noite local quando não há hora: o dia conta desde que começa.
+  var alvo = new Date(+p[0], +p[1] - 1, +p[2], +h[0] || 0, +h[1] || 0, 0, 0);
+  // O dia seguinte ao casamento, para saber quando a festa já passou.
+  var fim = new Date(+p[0], +p[1] - 1, +p[2] + 1, 0, 0, 0, 0);
+
+  function plural(v, um, muitos){ return v + ' ' + (v === 1 ? um : muitos); }
+
+  function pintar(){
+    var agora = new Date();
+    if (agora >= fim){
+      var dias = Math.floor((agora - fim) / 86400000) + 1;
+      cx.classList.add('passou');
+      n.textContent = plural(dias, 'dia', 'dias');
+      rot.textContent = 'desde o grande dia';
+      return;
+    }
+    if (agora >= alvo || (agora.getFullYear() === alvo.getFullYear()
+        && agora.getMonth() === alvo.getMonth() && agora.getDate() === alvo.getDate())){
+      cx.classList.add('hoje');
+      n.textContent = 'É HOJE';
+      rot.textContent = agora < alvo ? horasAte(alvo, agora) : 'que a festa é vossa';
+      return;
+    }
+    var ms = alvo - agora;
+    var dias2 = Math.floor(ms / 86400000);
+    if (dias2 >= 1){
+      n.textContent = plural(dias2, 'dia', 'dias');
+      rot.textContent = 'para o grande dia';
+    } else {
+      n.textContent = horasAte(alvo, agora);
+      rot.textContent = 'para o grande dia';
+    }
+  }
+  function horasAte(a, agora){
+    var ms = Math.max(0, a - agora);
+    var hs = Math.floor(ms / 3600000), mi = Math.floor((ms % 3600000) / 60000);
+    return hs > 0 ? (hs + 'h' + (mi < 10 ? '0' : '') + mi) : plural(mi, 'minuto', 'minutos');
+  }
+  pintar();
+  setInterval(pintar, 60000);
+})();
+</script>
+<?php
 }
 
 /**

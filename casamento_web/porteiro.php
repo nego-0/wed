@@ -10,7 +10,10 @@ exigirPorta();
 // que a resolve.)
 exigirModulo('convidados');
 exigirModulo('porta');
-$CAS = casalInfo(defsAtuais($conn));
+$DEFS = defsAtuais($conn);
+$CAS  = casalInfo($DEFS);
+// O dia da festa: é hoje que este posto trabalha, e a contagem diz-lho.
+[$DATA_EV, $HORA_EV] = diaDoCasamento();
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -30,12 +33,13 @@ $CAS = casalInfo(defsAtuais($conn));
   .barra-offline.sync{ background:var(--gold); color:#1a1b17; }
 
   body{ background:linear-gradient(175deg,#16261E,#20342A); color:var(--ivory); min-height:100vh; }
-  .porta-topo{ padding:1.1rem 1.25rem; display:flex; align-items:center; gap:.8rem; }
-  .porta-topo .mono{ width:44px;height:44px;border:2px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold-soft);font-family:var(--serif);font-weight:700; }
-  .porta-topo h1{ color:var(--ivory); font-size:1.15rem; }
-  .porta-topo .sub{ color:var(--gold-pale); font-family:var(--serif); font-style:italic; font-size:.9rem; }
-  .porta-topo .nav{ margin-left:auto; display:flex; gap:.4rem; }
-  .porta-topo .nav a{ color:var(--gold-pale); border:1px solid rgba(217,188,140,.3); border-radius:50px; padding:.35rem .8rem; font-size:.8rem; }
+  /* O cabeçalho é o da casa (.topo, em estilo.css): mesmo monograma, mesmos
+     nomes, mesma contagem, mesmas pastilhas no menu. O que muda é só a
+     moldura — aqui o fundo já é o verde da página, e a barra não precisa de
+     desenhar o seu. Antes era uma barra à parte, parecida mas não igual: quem
+     abre a porta abre a mesma casa. */
+  .topo{ background:none; padding:1.1rem 1.25rem; }
+  .topo::after{ display:none; }
   .contentor{ max-width:560px; margin:0 auto; padding:1rem 1.1rem 3rem; }
 
   .contador-porta{ display:flex; gap:.7rem; margin-bottom:1.1rem; }
@@ -104,17 +108,22 @@ $CAS = casalInfo(defsAtuais($conn));
 </head>
 <body>
 <?php tiraSuporte(true); ?>
-<div class="porta-topo">
-  <div class="mono"><?= escP($CAS['mono']) ?></div>
-  <div>
-    <h1>Entrada do evento</h1>
-    <div class="sub"><?= escP($CAS['casal']) ?></div>
+<header class="topo">
+  <div class="wrap">
+    <div class="monograma"><?= escP($CAS['mono']) ?></div>
+    <div class="topo-txt">
+      <h1>Entrada do evento</h1>
+      <div class="sub">Quem chega, quem já entrou, quem falta</div>
+      <div class="sub topo-casal"><?= escP($CAS['casal']) ?>
+        <?php if ($DATA_EV !== ''): ?>· <?= escP(dataExtensa($DATA_EV)) ?><?php endif; ?></div>
+    </div>
+    <?php contagem($DATA_EV, $HORA_EV); ?>
+    <nav class="nav">
+      <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>
+      <a href="logout.php">Sair</a>
+    </nav>
   </div>
-  <div class="nav">
-    <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>
-    <a href="logout.php">Sair</a>
-  </div>
-</div>
+</header>
 
 <div class="contentor">
   <div class="contador-porta" id="contador">

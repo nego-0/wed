@@ -21,6 +21,9 @@ if (!$MODELO && !podeEditarPeca('impresso')) {
 }
 $CAS  = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
                 : casalInfo($defs);
+// A contagem também aqui — é a mesma casa. A desenhar um MODELO não há dia
+// nenhum a contar: o modelo não é de casamento nenhum.
+[$DATA_EV, $HORA_EV] = $MODELO ? ['', ''] : diaDoCasamento();
 
 $pal      = cartaoPaletaEfetiva($defs);
 $estilo   = cartaoEstiloVars($defs);
@@ -125,8 +128,9 @@ $camposPorCamada = [
 
 <div class="ed-menu">
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
-  <span class="doc">Convite impresso · <b>Cartão 10 × 15 cm</b></span>
+  <span class="doc">Convite impresso · <b><?= escP($CAS['casal']) ?></b></span>
   <div class="cresce"></div>
+  <?php contagem($DATA_EV, $HORA_EV); ?>
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
   <a href="graficas.php">← Entregáveis à gráfica</a>
   <span class="ed-sep"></span>
