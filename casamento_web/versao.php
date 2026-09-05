@@ -315,6 +315,8 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'function nomesIcones('],
         ['Retocar uma propriedade não mexe a tela: ela fica no ponto onde se estava a ler',
          'convite-editor.php', 'function ancoraTela('],
+        ['E entra em fundido: a tela nova compõe-se por baixo e só depois se troca',
+         'convite-editor.php', 'function trocarTela('],
         ['O emblema desenhado tem as medidas dos da casa: o anel não muda, só sai o louro',
          'assets/convite-base.html', '.cerimonias.sem-ramos .cer-medal'],
 

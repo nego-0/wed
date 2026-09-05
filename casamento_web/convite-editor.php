@@ -42,9 +42,14 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 </style>
 <style>
   /* ---- Tela ---- */
-  .cv-palco{ background:#0e0f0c; border-radius:10px; overflow:hidden; box-shadow:0 18px 50px rgba(0,0,0,.6);
-             transition:width .18s ease; }
-  #tela{ display:block; width:100%; border:0; background:#16261E; }
+  .cv-palco{ position:relative; background:#16261E; border-radius:10px; overflow:hidden;
+             box-shadow:0 18px 50px rgba(0,0,0,.6); transition:width .18s ease; }
+  /* Duas telas sobrepostas. A nova compõe-se por baixo, invisível; quando fica
+     pronta, trocam-se com um fundido. Sem isto via-se o convite desaparecer e
+     voltar — um piscar a cada retoque. */
+  .tela{ position:absolute; inset:0; display:block; width:100%; height:100%; border:0;
+         background:#16261E; transition:opacity .22s ease; }
+  .tela.em-espera{ opacity:0; pointer-events:none; }
   .ed-mesa{ align-items:flex-start; }
 
   /* ---- Camadas (secções) ---- */
@@ -186,9 +191,14 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 
   <div class="ed-mesa" id="mesa">
     <div class="cv-palco" id="palco" style="width:640px">
-      <iframe id="tela" name="tela" title="Convite"></iframe>
-      <!-- A tela é servida por POST para poder receber o rascunho por gravar. -->
-      <form id="f-tela" method="post" target="tela" action="convite-digital.php?demo=1&editor=1" hidden>
+      <!-- A que está à vista tem sempre o id "tela"; o id troca de elemento
+           quando as duas se trocam. -->
+      <iframe class="tela" id="tela" name="telaA" title="Convite"></iframe>
+      <iframe class="tela em-espera" id="tela-b" name="telaB" title="Convite"
+              aria-hidden="true" tabindex="-1"></iframe>
+      <!-- A tela é servida por POST para poder receber o rascunho por gravar.
+           O alvo é sempre a tela que NÃO está à vista. -->
+      <form id="f-tela" method="post" target="telaB" action="convite-digital.php?demo=1&editor=1" hidden>
         <input type="hidden" name="rascunho" id="rascunho">
         <!-- Onde a tela estava a ser lida, para lá voltar sem se dar por isso. -->
         <input type="hidden" name="tela_y" id="tela-y" value="0">
@@ -772,20 +782,59 @@ async function removerCerimonia(k, rot){
 }
 
 // ---------- comunicação com a tela ----------
-function enviarTela(m){
-  const f = $('tela'); if (!f || !f.contentWindow) return;
-  f.contentWindow.postMessage(Object.assign({fonte:'editor'}, m), '*');
+/** A tela que está à vista, e a que se está a compor por baixo. */
+function telaVista(){ return $('tela'); }
+function telaEmEspera(){ return $('tela-b'); }
+/**
+ * Fala com uma tela. Por omissão, com a que está à vista — é essa que mostra
+ * o que se está a mexer. A que se compõe por baixo recebe as suas ordens de
+ * arranque pela resposta ao «pronta», que diz quem as pediu.
+ */
+function enviarTela(m, alvo){
+  const w = alvo || (telaVista() && telaVista().contentWindow);
+  if (!w) return;
+  w.postMessage(Object.assign({fonte:'editor'}, m), '*');
+}
+/**
+ * Troca as duas telas com um fundido.
+ *
+ * A que estava à vista desvanece-se enquanto a nova aparece — em vez de o
+ * convite desaparecer e voltar. O id "tela" acompanha sempre a que está à
+ * vista, para todo o resto (e as provas) continuar a falar com uma só.
+ */
+function trocarTela(){
+  const antiga = telaVista(), nova = telaEmEspera();
+  if (!antiga || !nova) return;
+  antiga.id = 'tela-b'; nova.id = 'tela';
+  nova.classList.remove('em-espera');  nova.removeAttribute('aria-hidden');
+  nova.removeAttribute('tabindex');
+  antiga.classList.add('em-espera');   antiga.setAttribute('aria-hidden', 'true');
+  antiga.setAttribute('tabindex', '-1');
+  $('f-tela').target = antiga.name;    // a próxima recomposição vai para esta
+  aplicarFerramenta();                 // a tela nova nasce sempre com as marcas
+  ajustarAltura();
+  // Passado o fundido, larga-se o documento que saiu: dois convites a correr
+  // ao mesmo tempo são duas contagens decrescentes e duas animações.
+  clearTimeout(trocarTela._t);
+  trocarTela._t = setTimeout(() => {
+    if (antiga.id === 'tela-b' && antiga.contentWindow) antiga.src = 'about:blank';
+  }, 500);
 }
 window.addEventListener('message', e=>{
   const d = e.data||{}; if (d.fonte !== 'tela') return;
   if (d.tipo === 'pronta'){
     telaPronta = true;
-    enviarTela({tipo:'tema', vars:EST.paleta});
-    enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});   // a tela recarrega escondida
-    enviarTela({tipo:'livres', mapa:livresTodos(), pos:mapaPos()});
+    const daEspera = telaEmEspera() && e.source === telaEmEspera().contentWindow;
+    // As ordens de arranque vão para quem avisou que está pronta — que, numa
+    // recomposição, é a tela de baixo e não a que está à vista.
+    enviarTela({tipo:'tema', vars:EST.paleta}, e.source);
+    enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID}, e.source);
+    enviarTela({tipo:'livres', mapa:livresTodos(), pos:mapaPos()}, e.source);
     // Assinala a secção, mas SEM a ir buscar: a tela acabou de repor o ponto
     // onde estava. Rolar aqui era o segundo tempo do salto.
-    if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF, rolar:false});
+    if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF, rolar:false}, e.source);
+    // Só agora se mostra: composta, marcada e no sítio certo.
+    if (daEspera) requestAnimationFrame(trocarTela);
     return;
   }
   // Arrasto na tela: o gesto correu lá dentro, aqui só chega o resultado.
@@ -1627,7 +1676,8 @@ function aplicarLargura(){
 }
 function ajustarAltura(){
   const h = $('mesa').clientHeight - 52;
-  $('tela').style.height = Math.max(420, h/zoom) + 'px';
+  // A altura é do palco: as duas telas ocupam-no por inteiro, sobrepostas.
+  $('palco').style.height = Math.max(420, h/zoom) + 'px';
 }
 window.addEventListener('resize', ajustarAltura);
 
@@ -1858,7 +1908,9 @@ async function reporSeccao(){
 // ---------- arranque ----------
 renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia(); renderVersoes();
 aplicarZoom(); ajustarAltura(); marcarBotoes(); rotularBotaoRepor();
-$('tela').addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); });
+// As duas telas: o «load» é de cada elemento, e o id anda de uma para a outra.
+[$('tela'), $('tela-b')].forEach(f =>
+  f.addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); }));
 recarregarTela();                       // primeira pintura da tela
 msg('Clique num texto do convite para o editar.');
 </script>

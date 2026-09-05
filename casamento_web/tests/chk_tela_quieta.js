@@ -88,6 +88,37 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(/\.rv\{opacity:0/.test(paraConvidados) && !/opacity:1 !important/.test(paraConvidados),
      'e o convite dos convidados continua a trazer a entrada das secções');
 
+  // ============ 3b. a mudança entra em fundido, sem piscar ============
+  // São duas telas sobrepostas: a nova compõe-se por baixo, invisível, e só
+  // quando está pronta é que trocam. Antes havia uma só, e o convite
+  // desaparecia enquanto a nova não chegava — um piscar a cada retoque.
+  const telas = () => p.evaluate(() => [...document.querySelectorAll('.tela')].map(
+    x => ({ id: x.id, op: +(+getComputedStyle(x).opacity).toFixed(2),
+            vazia: !x.contentDocument || !x.contentDocument.body
+                   || x.contentDocument.body.children.length === 0 })));
+  const duas = await telas();
+  ok(duas.length === 2, 'há duas telas para se trocarem uma pela outra');
+  ok(duas.filter(x => x.op === 1).length === 1 && duas.filter(x => x.id === 'tela').length === 1,
+     'só uma está à vista, e é essa que atende pelo nome «tela»');
+  ok(duas.some(x => x.op === 0 && x.vazia),
+     'e a outra está à espera, vazia — não fica um convite a trabalhar por trás');
+
+  // Durante a recomposição, uma some enquanto a outra aparece: em nenhum
+  // instante as duas estão apagadas, que é o que se via como um piscar.
+  const curva = await p.evaluate(async () => {
+    const fs = [...document.querySelectorAll('.tela')], amostras = [];
+    const v = setInterval(() => amostras.push(fs.map(f => +getComputedStyle(f).opacity)), 25);
+    EST.val['gd.eyebrow'] = 'Guarde o nosso dia'; marcarSujo(true); recarregarTela();
+    await new Promise(r => setTimeout(r, 2500));
+    clearInterval(v);
+    return amostras;
+  });
+  ok(curva.every(([a, b]) => a + b > 0.85),
+     'em nenhum instante a tela fica às escuras: a soma das duas nunca baixa ('
+       + Math.min(...curva.map(([a, b]) => +(a + b).toFixed(2))) + ')');
+  ok(curva.some(([a, b]) => a > 0.05 && a < 0.95 && b > 0.05 && b < 0.95),
+     'e apanha-se mesmo o fundido a meio, com as duas à vista');
+
   // ============ 4. clicar na tela não a faz saltar ============
   const antesClique = await rolagem();
   await p.evaluate(() => { const w = document.getElementById('tela').contentWindow;
