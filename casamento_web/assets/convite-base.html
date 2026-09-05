@@ -260,6 +260,15 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .cer-item.wide .cer-medal{width:calc(172px * var(--cer-tam,1))}
 .cer-card{padding-top:calc(60px * var(--cer-tam,1))}
 .cer-item.wide .cer-card{padding-top:calc(74px * var(--cer-tam,1))}
+/* Sem louro, o emblema é a peça em anel — outra imagem, e mais pequena: o
+   anel fica do mesmo tamanho no ecrã e é só o louro que desaparece à volta.
+   Daí 104 em vez de 150. O recorte do fundo passa a redondo, e o cartão sobe
+   o que o emblema encolheu. */
+.cerimonias.sem-ramos .cer-medal{width:calc(104px * var(--cer-tam,1))}
+.cerimonias.sem-ramos .cer-item.wide .cer-medal{width:calc(118px * var(--cer-tam,1))}
+.cerimonias.sem-ramos .cer-medal::before{top:2%;left:2%;right:2%;bottom:2%;border-radius:50%}
+.cerimonias.sem-ramos .cer-item{padding-top:calc(58px * var(--cer-tam,1))}
+.cerimonias.sem-ramos .cer-item.wide{padding-top:calc(64px * var(--cer-tam,1))}
 /* Sem moldura, o cartão é só o que lá está escrito: sem traço à volta e sem o
    recuo que existia para o não encostar a ele. */
 .cer-card:not(:has(.cf)){padding-left:6px;padding-right:6px;padding-bottom:8px}
@@ -536,7 +545,7 @@ footer .fnote{margin-top:26px;font-family:var(--f-serif);font-style:italic;font-
       <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4M12 12v5M9.5 14.5h5"/></svg>
       Adicionar ao calendário
     </a>
-    <div class="cerimonias rv d2" style="--cer-tam:{{CER_TAM}}">
+    <div class="cerimonias rv d2{{CER_SEM_RAMOS}}" style="--cer-tam:{{CER_TAM}}">
 {{CERIMONIAS}}
       <!-- O copo d'água, em cartão largo de abóbada. Fica aqui e não no PHP
            das cerimónias: os seus campos são marcadores que o editor reescreve

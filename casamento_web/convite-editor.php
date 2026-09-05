@@ -261,6 +261,18 @@ const PAPEIS     = <?= json_encode(papeisTipo(), JSON_UNESCAPED_UNICODE) ?>;
 const CASAL_NOME = <?= json_encode($CAS['casal']) ?>;
 const MARKDOWN = <?= json_encode(camposMarkdown()) ?>;
 const ICONES   = <?= json_encode(iconesConvite()) ?>;
+// O nome por que cada ícone se chama nas listas. As chaves são de
+// programador; ninguém escolhe uma «crianca».
+const NOMES_ICONE   = <?= json_encode(nomesIcones(), JSON_UNESCAPED_UNICODE) ?>;
+const NOMES_EMBLEMA = <?= json_encode(nomesEmblemasCasa(), JSON_UNESCAPED_UNICODE) ?>;
+const nomeIcone = n => NOMES_ICONE[n] || n;
+/** As opções de um selector de ícone, já com nome e por ordem alfabética. */
+function opcoesIcone(atual){
+  return Object.keys(ICONES)
+    .map(n => [n, nomeIcone(n)])
+    .sort((a,b) => a[1].localeCompare(b[1], 'pt'))
+    .map(([n,r]) => `<option value="${n}"${n===atual?' selected':''}>${esc(r)}</option>`).join('');
+}
 // Fotografias recortadas: têm ponto focal e aproximação (as outras mostram-se inteiras).
 const FOTOS_LISTA = <?= json_encode(array_map(fn($id,$f)=>$f+['id'=>$id], array_keys(fotosEnquadraveis()), fotosEnquadraveis()), JSON_UNESCAPED_UNICODE) ?>;
 const FOTOS = {}, FOTOS_POR_ID = {};
@@ -682,15 +694,18 @@ function blocoCerimonias(){
 const EMBLEMAS_CER = [['civil','Cerimónia civil'],['religiosa','Cerimónia religiosa'],
                       ['copo','Copo d’água']];
 function blocoAspetoCerimonias(){
-  const ops = (atual) => `<option value="original"${atual==='original'?' selected':''}>Desenho da casa</option>`
-    + Object.keys(ICONES).map(n=>`<option value="${n}"${n===atual?' selected':''}>${n}</option>`).join('');
+  // O primeiro da lista é o emblema que a casa desenhou para aquele cartão, e
+  // chama-se pelo que é: «Igreja», «Pergaminho e pena», «Taças em brinde».
+  const ops = (k, atual) =>
+    `<option value="original"${atual==='original'?' selected':''}>${esc(NOMES_EMBLEMA[k]||'Emblema da casa')}</option>`
+    + opcoesIcone(atual);
   const tam = parseInt(EST.val['cer.tamanho']||'100',10) || 100;
   return `<div class="grupo"><h4>Emblemas e molduras</h4>
     <div class="ajuda">O emblema que encima cada cartão, e como o conjunto se apresenta.
       Cada escolha aparece na tela ao lado.</div>
     ${EMBLEMAS_CER.map(([k,rot])=>`<div class="campo">
       <label>Emblema · ${rot}</label>
-      <select onchange="mudarEmblema('${k}',this.value)">${ops(EST.val['cer.emblema_'+k]||'original')}</select>
+      <select onchange="mudarEmblema('${k}',this.value)">${ops(k, EST.val['cer.emblema_'+k]||'original')}</select>
     </div>`).join('')}
     <div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
       <input type="checkbox" ${EST.val['cer.ramos']!=='0'?'checked':''} onchange="alternarCer('cer.ramos')"
@@ -1066,7 +1081,7 @@ function renderPropsLivre(b){
     itens.map((it,i)=>`<div class="it">
         <div class="it-topo"><span class="n">${i+1}</span>
           <select onchange="editarItemBloco('${b.id}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
-            ${Object.keys(ICONES).map(n=>`<option value="${n}" ${n===it.i?'selected':''}>${n}</option>`).join('')}</select>
+            ${opcoesIcone(it.i)}</select>
           <button class="bt bt-min" onclick="removerItemBloco('${b.id}',${i})" title="Remover">✕</button>
         </div>
         <input type="text" placeholder="Título" value="${esc(it.t||'')}" oninput="editarItemBloco('${b.id}',${i},'t',this.value)">
@@ -1138,8 +1153,13 @@ function linhasCerimoniaCrono(){
   if (!linhas.length) return '';
   return linhas.map(l=>{
     const ic = EST.val['cronograma.icone_' + l.k] || 'selo';
-    const ops = `<option value="selo"${ic==='selo'?' selected':''}>emblema do cartão</option>`
-      + Object.keys(ICONES).map(n=>`<option value="${n}"${n===ic?' selected':''}>${n}</option>`).join('');
+    // A primeira opção é o selo — o emblema do cartão em pequeno —, e diz de
+    // qual se trata: «Selo · Igreja». As outras são os ícones de traço, com o
+    // mesmo nome que têm nas restantes linhas do dia.
+    const emb = EST.val['cer.emblema_' + l.k] || 'original';
+    const nomeSelo = emb === 'original' ? (NOMES_EMBLEMA[l.k] || 'emblema do cartão') : nomeIcone(emb);
+    const ops = `<option value="selo"${ic==='selo'?' selected':''}>Selo · ${esc(nomeSelo)}</option>`
+      + opcoesIcone(ic);
     return `<div class="it it-fixo">
       <div class="it-topo"><span class="n">⛪</span>
         <select onchange="mudarIconeCerimonia('${l.k}',this.value)" style="width:auto;margin:0;flex:1">${ops}</select>
@@ -1163,7 +1183,7 @@ function listaHTML(lk){
   h += itens.map((it,i)=>`<div class="it">
       <div class="it-topo"><span class="n">${i+1}</span>
         ${cfg.icone?`<select onchange="editarItem('${lk}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
-          ${Object.keys(ICONES).map(n=>`<option value="${n}" ${n===it.i?'selected':''}>${n}</option>`).join('')}</select>`:'<span class="cresce"></span>'}
+          ${opcoesIcone(it.i)}</select>`:'<span class="cresce"></span>'}
         <button class="bt bt-min" onclick="moverItem('${lk}',${i},-1)" ${i===0?'disabled':''}
                 title="Subir">↑</button>
         <button class="bt bt-min" onclick="moverItem('${lk}',${i},1)" ${i===itens.length-1?'disabled':''}

@@ -311,6 +311,10 @@ function correcoesEsperadas(): array {
          'convite-editor.php', "alternarCer('cer.moldura')"],
         ['No editor, o cronograma abre com as cerimónias, por hora, com ícone à escolha',
          'convite-editor.php', 'function linhasCerimoniaCrono('],
+        ['Cada ícone e cada emblema chama-se pelo nome, e não pela chave de programador',
+         'personalizacao.php', 'function nomesIcones('],
+        ['O emblema desenhado tem as medidas dos da casa: o anel não muda, só sai o louro',
+         'assets/convite-base.html', '.cerimonias.sem-ramos .cer-medal'],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

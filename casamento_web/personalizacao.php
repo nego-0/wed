@@ -113,6 +113,48 @@ function iconesConvite(): array {
 }
 
 /**
+ * O nome de cada ícone, para quem escolhe.
+ *
+ * As chaves são de programador — 'aneis', 'taca', 'crianca' — e apareciam tal
+ * e qual nas listas do editor: sem acentos, no singular, e algumas a dizer
+ * pouco ('casal' são os noivos, 'brinde' são duas flutes). Quem escolhe um
+ * ícone escolhe uma coisa, e a coisa tem nome.
+ */
+function nomesIcones(): array {
+    return [
+        'aneis'     => 'Alianças',
+        'bolo'      => 'Bolo dos noivos',
+        'musica'    => 'Música',
+        'buffet'    => 'Buffet',
+        'envelope'  => 'Envelope',
+        'relogio'   => 'Relógio',
+        'casal'     => 'Os noivos',
+        'telemovel' => 'Telemóvel',
+        'crianca'   => 'Crianças',
+        'taca'      => 'Taça',
+        'brinde'    => 'Champanhe',
+        'coracao'   => 'Coração',
+        'estrela'   => 'Estrela',
+        'camera'    => 'Fotografia',
+    ];
+}
+
+/**
+ * O nome do emblema que a casa desenhou para cada cerimónia.
+ *
+ * São desenhos com assunto — um pergaminho, uma igreja, duas taças —, e é
+ * assim que se chamam na lista. «Desenho da casa» dizia de onde vinham, não o
+ * que eram: com três cartões à frente, os três diziam o mesmo.
+ */
+function nomesEmblemasCasa(): array {
+    return [
+        'civil'     => 'Pergaminho e pena',
+        'religiosa' => 'Igreja',
+        'copo'      => 'Taças em brinde',
+    ];
+}
+
+/**
  * Quem é este casamento, segundo a sua própria ficha.
  *
  * Os nomes e a data que o casal escreveu ao inscrever-se (ou que o admin
@@ -1664,46 +1706,142 @@ function emblemasDeCasa(): array {
 }
 
 /**
- * Um emblema DESENHADO: o anel duplo, os ramos (se os houver) e um símbolo
- * ao centro.
+ * As medidas dos emblemas da casa, tiradas dos próprios ficheiros.
+ *
+ * Um emblema com louro é uma imagem de 360×247 com o anel de raio 118 ao
+ * centro; o mesmo emblema em anel é uma de 242×242 com o MESMO raio 118. É
+ * por isso que o CSS os mostra a larguras diferentes (150 e 104 pixéis): o
+ * anel fica do mesmo tamanho no ecrã, e o louro acrescenta-se à volta em vez
+ * de encolher o que está dentro. Um desenho nosso que não respeite estas
+ * medidas salta à vista ao lado de um da casa.
+ */
+function medidasEmblema(bool $comRamos): array {
+    return $comRamos
+        ? ['w' => 360.0, 'h' => 247.0, 'r' => 118.0, 'ri' => 107.5, 'traco' => 5.0, 'glifo' => 162.0]
+        : ['w' => 242.0, 'h' => 242.0, 'r' => 118.0, 'ri' => 107.5, 'traco' => 5.0, 'glifo' => 162.0];
+}
+
+/**
+ * Um ramo de louro — o da esquerda; o da direita é este espelhado.
+ *
+ * A haste NÃO é concêntrica com o anel: nasce junto ao fundo dele, encosta-se
+ * a meio e vai-se afastando ao subir. É esse afastamento que faz a coroa
+ * abrir-se; uma haste concêntrica dava uma cinta à volta do anel, e as folhas
+ * soltas ao lado dela liam-se como espigas.
+ *
+ * As folhas são lanceoladas (bico dos dois lados, como as do louro) e nascem
+ * em pares desencontrados: as de fora, maiores, viradas para fora e para
+ * cima; as de dentro, menores, encostadas à haste. Todas afinam para a ponta
+ * do ramo.
+ */
+function ramoLouro(float $cx, float $cy, float $r): string {
+    // A haste, em fracções do raio do anel — assim o ramo acompanha-o. Vai das
+    // 7 às 10 horas, encostada ao anel em baixo e a afastar-se ao subir: são
+    // as medidas tiradas do emblema da casa. Passar por baixo do fundo punha
+    // os dois ramos cruzados um sobre o outro; ficar concêntrica dava uma
+    // cinta em vez de uma coroa aberta.
+    $p = [[$cx - 0.68 * $r, $cy + 0.81 * $r], [$cx - 1.00 * $r, $cy + 0.66 * $r],
+          [$cx - 1.22 * $r, $cy + 0.30 * $r], [$cx - 1.25 * $r, $cy - 0.24 * $r]];
+    $emT = function (float $t) use ($p) {          // ponto da haste
+        $u = 1 - $t;
+        return [$u*$u*$u*$p[0][0] + 3*$u*$u*$t*$p[1][0] + 3*$u*$t*$t*$p[2][0] + $t*$t*$t*$p[3][0],
+                $u*$u*$u*$p[0][1] + 3*$u*$u*$t*$p[1][1] + 3*$u*$t*$t*$p[2][1] + $t*$t*$t*$p[3][1]];
+    };
+    $tangente = function (float $t) use ($p) {     // para onde a haste segue
+        $u = 1 - $t;
+        $x = 3*$u*$u*($p[1][0]-$p[0][0]) + 6*$u*$t*($p[2][0]-$p[1][0]) + 3*$t*$t*($p[3][0]-$p[2][0]);
+        $y = 3*$u*$u*($p[1][1]-$p[0][1]) + 6*$u*$t*($p[2][1]-$p[1][1]) + 3*$t*$t*($p[3][1]-$p[2][1]);
+        $n = sqrt($x*$x + $y*$y) ?: 1;
+        return [$x/$n, $y/$n];
+    };
+    $ar = fn(float $v) => round($v, 1);
+    // A folha sai da haste com um ângulo certo — não apontada ao centro nem
+    // para fora dele: é a haste que manda, e a folha abre-se dela para o lado
+    // de fora. Rodar a tangente é o que faz o leque fechar-se ao subir, como
+    // num ramo a sério; apontar todas para fora dava um sol.
+    $abre = function (array $tg, array $fora, float $g) {
+        $a = deg2rad($g);
+        $u = [$tg[0]*cos($a) - $tg[1]*sin($a), $tg[0]*sin($a) + $tg[1]*cos($a)];
+        $v = [$tg[0]*cos(-$a) - $tg[1]*sin(-$a), $tg[0]*sin(-$a) + $tg[1]*cos(-$a)];
+        return ($u[0]*$fora[0] + $u[1]*$fora[1]) > ($v[0]*$fora[0] + $v[1]*$fora[1]) ? $u : $v;
+    };
+
+    // Uma folha: dois arcos que se encontram na base e no bico, e a nervura
+    // pelo meio. Desenhada a partir da base, na direcção dada.
+    $folha = function (array $base, array $dir, float $comp, float $larg) use ($ar) {
+        [$bx, $by] = $base; [$dx, $dy] = $dir;
+        $px = -$dy; $py = $dx;                                   // perpendicular
+        $tx = $bx + $dx*$comp;         $ty = $by + $dy*$comp;    // bico
+        $ax = $bx + $dx*$comp*0.46;    $ay = $by + $dy*$comp*0.46;
+        return '<path d="M' . $ar($bx) . ' ' . $ar($by)
+             . 'Q' . $ar($ax + $px*$larg) . ' ' . $ar($ay + $py*$larg) . ' ' . $ar($tx) . ' ' . $ar($ty)
+             . 'Q' . $ar($ax - $px*$larg) . ' ' . $ar($ay - $py*$larg) . ' ' . $ar($bx) . ' ' . $ar($by)
+             . 'Z"/>'
+             . '<path d="M' . $ar($bx + $dx*$comp*0.12) . ' ' . $ar($by + $dy*$comp*0.12)
+             . 'L' . $ar($bx + $dx*$comp*0.88) . ' ' . $ar($by + $dy*$comp*0.88) . '"'
+             . ' fill="none" stroke="' . 'var(--forest-deep, #16241c)" stroke-width="' . $ar($larg*0.22) . '"'
+             . ' opacity=".45"/>';
+    };
+
+    $haste = '<path d="M' . $ar($p[0][0]) . ' ' . $ar($p[0][1])
+           . 'C' . $ar($p[1][0]) . ' ' . $ar($p[1][1]) . ' ' . $ar($p[2][0]) . ' ' . $ar($p[2][1])
+           . ' ' . $ar($p[3][0]) . ' ' . $ar($p[3][1]) . '"'
+           . ' fill="none" stroke="currentColor" stroke-width="' . $ar($r*0.035) . '" stroke-linecap="round"/>';
+
+    $folhas = '';
+    foreach ([[0.04, 1.00], [0.28, 0.98], [0.52, 0.90], [0.76, 0.78], [0.95, 0.62]] as [$t, $k]) {
+        $b = $emT($t); $tg = $tangente($t);
+        $d = sqrt(($b[0]-$cx)**2 + ($b[1]-$cy)**2) ?: 1;
+        $folhas .= $folha($b, $abre($tg, [($b[0]-$cx)/$d, ($b[1]-$cy)/$d], 44),
+                          $r*0.54*$k, $r*0.145*$k);
+    }
+    foreach ([[0.17, 0.80], [0.41, 0.74], [0.65, 0.64], [0.86, 0.52]] as [$t, $k]) {
+        $b = $emT($t); $tg = $tangente($t);
+        $d = sqrt(($b[0]-$cx)**2 + ($b[1]-$cy)**2) ?: 1;
+        $folhas .= $folha($b, $abre($tg, [($cx-$b[0])/$d, ($cy-$b[1])/$d], 26),
+                          $r*0.38*$k, $r*0.112*$k);
+    }
+    return $haste . '<g fill="currentColor" stroke="none">' . $folhas . '</g>';
+}
+
+/**
+ * Um emblema DESENHADO: o anel duplo, o louro (se o houver) e um símbolo ao
+ * centro.
  *
  * Serve as alternativas ao desenho de casa. O símbolo sai do mesmo conjunto
  * que o cronograma usa nas outras linhas — quem escolhe as taças aqui vê as
  * mesmas taças ali, e não há um segundo alfabeto de ícones para aprender. É
  * SVG e não imagem: cresce com o tamanho escolhido sem perder o traço.
+ *
+ * As medidas são as dos emblemas da casa (ver medidasEmblema): as duas
+ * versões trocam-se uma pela outra sem nada saltar de sítio.
  */
 function emblemaDesenhado(string $simbolo, bool $comRamos): string {
     $ic = iconesConvite()[$simbolo] ?? iconesConvite()['coracao'];
-    $cx = 100.0; $cy = 76.0; $rr = 65.0;      // centro do anel, e o raio da haste
+    $m  = medidasEmblema($comRamos);
+    $cx = $m['w'] / 2; $cy = $m['h'] / 2;
 
-    // O ramo ABRAÇA o anel: a haste é um arco concêntrico com ele, e as folhas
-    // pousam ao longo dela, viradas para fora e a afinar para a ponta. Folhas
-    // soltas ao lado do anel liam-se como espigas, e não como louro.
-    $folhas = '';
-    for ($i = 0; $i <= 5; $i++) {
-        $g = 142 + $i * 17.0;                  // do fundo à esquerda até ao alto
-        $a = deg2rad($g);
-        $x = round($cx + cos($a) * $rr, 1);
-        $y = round($cy + sin($a) * $rr, 1);
-        $largura = round(10.2 - $i * 0.75, 1); // afina para a ponta do ramo
-        $folhas .= '<ellipse cx="' . $x . '" cy="' . $y . '" rx="' . $largura . '" ry="4.3"'
-                 . ' transform="rotate(' . round($g + 118, 1) . ' ' . $x . ' ' . $y . ')"/>';
+    $louro = '';
+    if ($comRamos) {
+        $ramo  = ramoLouro($cx, $cy, $m['r']);
+        $louro = '<g class="ramo">' . $ramo . '</g>'
+               . '<g class="ramo" transform="matrix(-1 0 0 1 ' . $m['w'] . ' 0)">' . $ramo . '</g>';
     }
-    $x1 = round($cx + cos(deg2rad(138)) * $rr, 1); $y1 = round($cy + sin(deg2rad(138)) * $rr, 1);
-    $x2 = round($cx + cos(deg2rad(231)) * $rr, 1); $y2 = round($cy + sin(deg2rad(231)) * $rr, 1);
-    $ramo = '<path d="M' . $x1 . ' ' . $y1 . 'A' . $rr . ' ' . $rr . ' 0 0 1 ' . $x2 . ' ' . $y2 . '"'
-          . ' fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
-          . '<g fill="currentColor" stroke="none" opacity=".92">' . $folhas . '</g>';
-    $ramos = $comRamos
-        ? '<g class="ramo">' . $ramo . '</g>'
-        . '<g class="ramo" transform="matrix(-1 0 0 1 200 0)">' . $ramo . '</g>'
-        : '';
-    return '<svg class="cer-emb" viewBox="0 0 200 150" aria-hidden="true">'
-         . $ramos
-         . '<g fill="none" stroke="currentColor" stroke-width="2.2">'
-         . '<circle cx="100" cy="76" r="54"/><circle cx="100" cy="76" r="47" opacity=".6"/></g>'
-         . '<g transform="translate(64,40) scale(3)" fill="none" stroke="currentColor"'
-         . ' stroke-width="1.5" stroke-linecap="round">' . $ic . '</g>'
+    // O símbolo entra numa caixa quadrada inscrita no anel de dentro. O traço
+    // afina-se na mesma proporção: à escala a que o símbolo cresce, o traço
+    // de 1.5 do ícone ficava um garrote.
+    $g = $m['glifo']; $e = $g / 24;
+    $glifo = '<g transform="translate(' . round($cx - $g/2, 1) . ',' . round($cy - $g/2, 1) . ')'
+           . ' scale(' . round($e, 3) . ')" fill="none" stroke="currentColor"'
+           . ' stroke-width="' . round($m['traco'] * 0.84 / $e, 3) . '"'
+           . ' stroke-linecap="round" stroke-linejoin="round">' . $ic . '</g>';
+
+    return '<svg class="cer-emb" viewBox="0 0 ' . $m['w'] . ' ' . $m['h'] . '" aria-hidden="true">'
+         . $louro
+         . '<g fill="none" stroke="currentColor" stroke-width="' . $m['traco'] . '">'
+         . '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $m['r'] . '"/>'
+         . '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $m['ri'] . '"/></g>'
+         . $glifo
          . '</svg>';
 }
 
@@ -2489,6 +2627,10 @@ function convitePlaceholders(array $defs): array {
               . '<path class="in"></path></svg>' . seloCerimonia()
             : '',
         '{{CER_TAM}}' => number_format(max(60, min(160, (int)($defs['cer.tamanho'] ?? 100))) / 100, 2, '.', ''),
+        // Sem louro o emblema é OUTRA peça, mais pequena: 104 pixéis em vez de
+        // 150, para o anel ficar do mesmo tamanho no ecrã (ver medidasEmblema).
+        // As medidas estão no CSS; aqui só se diz em que estado se está.
+        '{{CER_SEM_RAMOS}}' => (string)($defs['cer.ramos'] ?? '1') !== '0' ? '' : ' sem-ramos',
         '{{MAPS_URL}}' => escP($defs['evento.maps']),
         '{{ACESSO_EYEBROW}}' => escP($defs['acesso.eyebrow']),
         '{{ACESSO_TITULO}}' => escP($defs['acesso.titulo']),

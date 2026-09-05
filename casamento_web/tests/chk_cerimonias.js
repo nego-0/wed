@@ -237,7 +237,9 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const s = [...g.querySelectorAll('select')];
     return { selects: s.length, caixas: g.querySelectorAll('input[type=checkbox]').length,
              cursor: g.querySelectorAll('input[type=range]').length,
-             opcoes: s[0] ? [...s[0].options].map(o => o.value) : [] };
+             opcoes: s[0] ? [...s[0].options].map(o => o.value) : [],
+             // O que lá está ESCRITO — é isso que quem escolhe lê.
+             rotulos: s.map(x => [...x.options].map(o => o.textContent.trim())) };
   });
   ok(painel !== null, 'o editor do casal ganha o painel «Emblemas e molduras»');
   ok(painel && painel.selects === 3,
@@ -247,6 +249,20 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
        + (painel ? painel.opcoes.slice(0, 4).join(', ') : ''));
   ok(painel && painel.caixas === 2, 'e as duas escolhas de sim ou não: ramos e molduras');
   ok(painel && painel.cursor === 1, 'e o cursor do tamanho');
+
+  // Cada emblema e cada ícone tem NOME. As chaves — 'aneis', 'crianca',
+  // 'original' — eram o que lá aparecia escrito, e ninguém escolhe uma
+  // «crianca».
+  const rot = painel ? painel.rotulos : [[], [], []];
+  ok(rot[0][0] === 'Pergaminho e pena' && rot[1][0] === 'Igreja' && rot[2][0] === 'Taças em brinde',
+     'o emblema da casa chama-se pelo que é em cada cartão: '
+       + rot.map(x => x[0]).join(' · '));
+  ok(rot[0].includes('Alianças') && rot[0].includes('Crianças') && rot[0].includes('Champanhe'),
+     'e os símbolos também: Alianças, Crianças, Champanhe');
+  ok(!rot[0].some(x => /^(aneis|crianca|taca|camera|casal|brinde|original)$/.test(x)),
+     'já não aparece uma única chave de programador na lista');
+  ok(rot[0].slice(1).join('|') === rot[0].slice(1).slice().sort((a, b) => a.localeCompare(b, 'pt')).join('|'),
+     'e a lista vem por ordem alfabética, para se encontrar o que se procura');
 
   // A tela do editor mostra o rascunho; o convite enviado mostra o que está
   // gravado. As duas coisas provam-se, e por isso cada escolha se grava antes
@@ -269,15 +285,41 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(!/<img src="assets\/convite\/emblema-civil\.png"/.test(h),
      'e o emblema da casa sai desse cartão');
 
-  // Sem ramos: o desenhado perde-os, e o da casa troca-se pela versão em anel.
+  // As medidas são as do modelo: 150 pixéis de emblema com louro, 172 no
+  // cartão largo. Não são um palpite — vêm do ficheiro que a casa desenhou.
+  const medida = (sel) => tela.locator(sel).first().evaluate(
+    e => [Math.round(e.getBoundingClientRect().width), getComputedStyle(e).paddingTop]);
+  const larg = (await medida('#grande-dia .cer-item:not(.wide) .cer-medal'))[0];
+  ok(larg === 150, 'o emblema com louro mede os 150 pixéis do modelo (' + larg + ')');
+  ok((await medida('#grande-dia .cer-item.wide .cer-medal'))[0] === 172,
+     'e 172 no cartão largo do copo d’água');
+  ok((await medida('#grande-dia .cer-item:not(.wide)'))[1] === '66px',
+     'e o cartão abre-lhe em cima os 66 pixéis do modelo');
+
+  // Sem louro, o emblema é a peça em anel: mais pequena (104), para o ANEL
+  // ficar do mesmo tamanho no ecrã. É a troca que o modelo faz, ao pixel.
   await p.evaluate(() => alternarCer('cer.ramos')); await p.waitForTimeout(2600);
+  ok((await medida('#grande-dia .cer-item:not(.wide) .cer-medal'))[0] === 104,
+     'sem louro passa aos 104 do modelo — o anel não muda, só sai o louro');
+  ok((await medida('#grande-dia .cer-item.wide .cer-medal'))[0] === 118,
+     'e a 118 no cartão largo');
+  ok((await medida('#grande-dia .cer-item:not(.wide)'))[1] === '58px',
+     'e o cartão sobe para os 58, que é o que o emblema encolheu');
   await gravar();
   h = await convite();
   ok(!/class="ramo"/.test(h), 'desligar os ramos deixa o emblema desenhado só com o anel');
   ok(/<img src="assets\/convite\/selo-religiosa\.png"/.test(h),
      'e o emblema da casa passa à sua versão em anel, que é a mesma peça mais discreta');
+  ok(/class="cerimonias rv d2 sem-ramos"/.test(h),
+     'o convite gravado assinala o estado, para o CSS lhe dar as medidas certas');
+  // O anel desenhado tem o mesmo raio nas duas versões — é isso que faz a
+  // troca passar despercebida. As caixas é que mudam: 360×247 e 242×242.
+  ok(/viewBox="0 0 242 242"[^]*?r="118"/.test(h),
+     'e o desenho em anel traz a caixa e o raio do emblema da casa');
   await p.evaluate(() => alternarCer('cer.ramos')); await p.waitForTimeout(2600);
   await gravar();
+  ok(/viewBox="0 0 360 247"[^]*?r="118"/.test(await convite()),
+     'com louro muda a caixa para 360×247, e o anel fica no mesmo raio');
 
   // Sem moldura: sai o desenho à volta, e o selo que pousava nele.
   ok(((await convite()).match(/class="cf"/g) || []).length === 3,
@@ -303,7 +345,8 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   const fixas = await p.evaluate(() =>
     [...document.querySelectorAll('#props .it-fixo')].map(e => ({
       txt: e.innerText.replace(/\s+/g, ' ').trim(),
-      op1: e.querySelector('select') ? e.querySelector('select').options[0].value : null })));
+      op1: e.querySelector('select') ? e.querySelector('select').options[0].value : null,
+      rot1: e.querySelector('select') ? e.querySelector('select').options[0].textContent.trim() : '' })));
   ok(fixas.length === 2, 'o cronograma do editor abre com as duas cerimónias');
   ok(/10H30/.test(fixas[0].txt) && /16H00/.test(fixas[1].txt),
      'pela ordem das horas: '
@@ -312,6 +355,10 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'e dizem onde se mudam — não se editam duas vezes');
   ok(fixas.every(x => x.op1 === 'selo'),
      'cada uma escolhe o seu ícone, começando pelo emblema do cartão');
+  // E o emblema do cartão diz qual é: a civil está com as alianças (foi o que
+  // se escolheu acima), a religiosa continua com a igreja da casa.
+  ok(/^Selo · Alianças$/.test(fixas[0].rot1) && /^Selo · Igreja$/.test(fixas[1].rot1),
+     'e a primeira opção diz de que selo se trata: ' + fixas.map(x => x.rot1).join(' | '));
 
   ok(((await convite()).match(/class="node cer/g) || []).length === 2,
      'no cronograma, cada cerimónia abre com o emblema do seu cartão');
