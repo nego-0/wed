@@ -74,6 +74,14 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
     font-family:inherit; font-size:.8rem; margin-bottom:.3rem; }
   .it textarea{ min-height:46px; resize:vertical; }
   .it .lin{ display:flex; gap:.3rem; }
+  /* Linhas que a lista mostra mas não governa — as cerimónias, que se escrevem
+     acima. Traço a tracejado para se ver, à vista, que ali não se escreve. */
+  .it-fixo{ border-style:dashed; background:#1f211c; }
+  .it-fixo .sel-nada{ font-size:.72rem; }
+  /* O cursor do tamanho, na cor da casa — o azul do sistema destoava de tudo
+     o resto do painel. */
+  .campo input[type=range]{ width:100%; accent-color:var(--ed-ouro); background:transparent;
+    height:20px; cursor:pointer; }
 
   /* ---- Cores ---- */
   .temas{ display:flex; gap:.3rem; flex-wrap:wrap; margin-bottom:.6rem; }
@@ -345,7 +353,7 @@ const SEC_DONO = {
   'convite':    k => ['textos.convite_eyebrow','textos.lead','textos.guest_label','textos.closing'].includes(k),
   'historia':   k => /^historia\./.test(k) || k === 'media.historia',
   'interludio': k => /^interludio\./.test(k) || k === 'media.interludio' || k === 'foto.interludio',
-  'grande-dia': k => /^(gd|evento|cronograma)\./.test(k),
+  'grande-dia': k => /^(gd|evento|cronograma|cer)\./.test(k),
   'acesso':     k => /^acesso\./.test(k) || k === 'media.acesso' || k === 'foto.acesso',
   'final':      k => /^(rsvp|manual|footer)\./.test(k),
   'capa':       k => /^capa\./.test(k),
@@ -663,6 +671,62 @@ function blocoCerimonias(){
     }).join('')}
   </div>`;
 }
+/**
+ * O aspeto dos cartões: o emblema de cada um, os ramos, o tamanho e a moldura.
+ *
+ * O emblema escolhe-se por cartão — há quem queira a igreja na religiosa e as
+ * alianças na civil —, mas os ramos, o tamanho e a moldura valem para os três:
+ * são o aspeto do CONJUNTO, e três cartões com molduras diferentes não são um
+ * conjunto, são três cartões.
+ */
+const EMBLEMAS_CER = [['civil','Cerimónia civil'],['religiosa','Cerimónia religiosa'],
+                      ['copo','Copo d’água']];
+function blocoAspetoCerimonias(){
+  const ops = (atual) => `<option value="original"${atual==='original'?' selected':''}>Desenho da casa</option>`
+    + Object.keys(ICONES).map(n=>`<option value="${n}"${n===atual?' selected':''}>${n}</option>`).join('');
+  const tam = parseInt(EST.val['cer.tamanho']||'100',10) || 100;
+  return `<div class="grupo"><h4>Emblemas e molduras</h4>
+    <div class="ajuda">O emblema que encima cada cartão, e como o conjunto se apresenta.
+      Cada escolha aparece na tela ao lado.</div>
+    ${EMBLEMAS_CER.map(([k,rot])=>`<div class="campo">
+      <label>Emblema · ${rot}</label>
+      <select onchange="mudarEmblema('${k}',this.value)">${ops(EST.val['cer.emblema_'+k]||'original')}</select>
+    </div>`).join('')}
+    <div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
+      <input type="checkbox" ${EST.val['cer.ramos']!=='0'?'checked':''} onchange="alternarCer('cer.ramos')"
+             style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> Com ramos à volta do emblema</label>
+      <div class="dica-md">Sem ramos, fica só o anel — o mesmo desenho, mais discreto.</div></div>
+    <div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
+      <input type="checkbox" ${EST.val['cer.moldura']!=='0'?'checked':''} onchange="alternarCer('cer.moldura')"
+             style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> Mostrar as molduras dos cartões</label>
+      <div class="dica-md">Sem moldura, os cartões ficam só com o que lá está escrito.</div></div>
+    <div class="campo"><label>Tamanho do emblema<span class="contador">${tam}%</span></label>
+      <input type="range" min="60" max="160" step="10" value="${tam}"
+             oninput="mudarTamanhoEmblema(this.value)" style="width:100%">
+    </div>
+  </div>`;
+}
+function mudarEmblema(k, v){
+  if (v !== 'original' && !(v in ICONES)) v = 'original';
+  EST.val['cer.emblema_' + k] = v;
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+}
+function alternarCer(chave){
+  EST.val[chave] = EST.val[chave] === '0' ? '1' : '0';
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+}
+let tTamEmb = null;
+function mudarTamanhoEmblema(v){
+  v = String(Math.max(60, Math.min(160, parseInt(v,10) || 100)));
+  EST.val['cer.tamanho'] = v;
+  const c = document.querySelector('#props input[type=range]');
+  if (c){ const lbl = c.closest('.campo').querySelector('.contador'); if (lbl) lbl.textContent = v + '%'; }
+  marcarSujo(true);
+  // Arrastar um cursor dispara dezenas de vezes: recarrega-se a tela quando a
+  // mão pára, e não a cada pixel.
+  clearTimeout(tTamEmb);
+  tTamEmb = setTimeout(()=>{ registarPasso(); recarregarTela(); }, 320);
+}
 function acrescentarCerimonia(k, horaPadrao){
   EST.val['evento.' + k + '_hora'] = horaPadrao;
   if (!EST.val['evento.' + k + '_titulo']) EST.val['evento.' + k + '_titulo'] = PADRAO['evento.' + k + '_titulo'];
@@ -915,7 +979,7 @@ function renderPropsJa(){
              style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> ${rot}</label></div>`;
   });
   h += chaves.map(c=>campoHTML(c)).join('');
-  if (SEC === 'grande-dia') h += blocoCerimonias();
+  if (SEC === 'grande-dia') h += blocoCerimonias() + blocoAspetoCerimonias();
   const lk = LISTAS_SEC[SEC];
   if (lk) h += listaHTML(lk);
   h += painelLivre(SEC);
@@ -1048,9 +1112,54 @@ function alternarSub(chave){
 }
 
 // ---------- listas ----------
+/**
+ * As cerimónias, como linhas do cronograma.
+ *
+ * Elas ABREM o dia — é lá que estão no convite —, e por isso têm de estar aqui
+ * também, na mesma ordem: quem olha para a lista quer ver o dia como ele vai
+ * sair. A hora e o nome não se escrevem aqui, porque já se escreveram em
+ * «Cerimónias»: mostram-se, e diz-se onde se mudam. O que se escolhe é o
+ * ícone, como em qualquer outra linha.
+ */
+function horaCartaoJS(h){ return String(h||'').slice(0,5).replace(':','H').toUpperCase(); }
+function nomeCerimonia(k){
+  const t = (EST.val['evento.'+k+'_titulo'] || PADRAO['evento.'+k+'_titulo'] || 'Cerimónia').trim();
+  const m = /^(cerim[óo]nia)\s+(.+)$/i.exec(t);
+  return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() + ' ' + m[2].toLowerCase() : t;
+}
+function linhasCerimoniaCrono(){
+  const linhas = [];
+  [['civil','Manhã'],['religiosa','Tarde']].forEach(([k])=>{
+    const hora = EST.val['evento.' + k + '_hora'] || '';
+    if (!hora) return;
+    linhas.push({ k, hora, h: horaCartaoJS(hora), nome: nomeCerimonia(k) });
+  });
+  linhas.sort((a,b)=>a.h.localeCompare(b.h));
+  if (!linhas.length) return '';
+  return linhas.map(l=>{
+    const ic = EST.val['cronograma.icone_' + l.k] || 'selo';
+    const ops = `<option value="selo"${ic==='selo'?' selected':''}>emblema do cartão</option>`
+      + Object.keys(ICONES).map(n=>`<option value="${n}"${n===ic?' selected':''}>${n}</option>`).join('');
+    return `<div class="it it-fixo">
+      <div class="it-topo"><span class="n">⛪</span>
+        <select onchange="mudarIconeCerimonia('${l.k}',this.value)" style="width:auto;margin:0;flex:1">${ops}</select>
+      </div>
+      <div class="sel-nada" style="text-align:left;padding:.1rem 0 0">
+        <b>${esc(l.h)}</b> · ${esc(l.nome)} — a hora e o nome mudam-se em <b>Cerimónias</b>, aqui em cima.</div>
+    </div>`;
+  }).join('');
+}
+function mudarIconeCerimonia(k, v){
+  if (v !== 'selo' && !(v in ICONES)) v = 'selo';
+  EST.val['cronograma.icone_' + k] = v;
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+}
+
 function listaHTML(lk){
   const cfg = LISTA_CAMPOS[lk], itens = EST.listas[lk]||[];
   let h = `<div class="campo"><label>${cfg.rot}<span class="contador ${classeCont(itens.length,cfg.max)}">${itens.length}/${cfg.max}</span></label></div>`;
+  // As cerimónias vêm à cabeça, como no convite.
+  if (lk === 'cronograma.itens') h += linhasCerimoniaCrono();
   h += itens.map((it,i)=>`<div class="it">
       <div class="it-topo"><span class="n">${i+1}</span>
         ${cfg.icone?`<select onchange="editarItem('${lk}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">

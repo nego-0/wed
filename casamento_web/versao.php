@@ -303,6 +303,14 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'class="cer-map"'],
         ['O cronograma do dia abre com as cerimónias, com o seu selo e o local',
          'personalizacao.php', 'function cerimoniasDoCronograma('],
+        ['O emblema de cada cerimónia escolhe-se: o da casa, ou um símbolo desenhado',
+         'personalizacao.php', 'function emblemaDesenhado('],
+        ['Os emblemas mostram-se com ou sem ramos, e o conjunto cresce ou diminui',
+         'convite-editor.php', 'function mudarTamanhoEmblema('],
+        ['As molduras dos cartões podem mostrar-se ou esconder-se',
+         'convite-editor.php', "alternarCer('cer.moldura')"],
+        ['No editor, o cronograma abre com as cerimónias, por hora, com ícone à escolha',
+         'convite-editor.php', 'function linhasCerimoniaCrono('],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

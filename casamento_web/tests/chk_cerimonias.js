@@ -174,7 +174,8 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   // O copo d'água tem sempre o seu botão; com a ligação da cerimónia passam a
   // ser dois. É assim que se conta, e não pela ausência da classe.
   ok((htmlConvite.match(/class="cer-map"/g) || []).length === 2,
-     'a cerimónia com mapa acrescenta o seu botão ao do copo d’água');
+     'a cerimónia com mapa acrescenta o seu botão ao do copo d’água: '
+       + (htmlConvite.match(/class="cer-map"/g) || []).length + ' botão(ões)');
   await api('defs_save', { defs: { 'evento.civil_maps': '' } });
   const semElo = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
@@ -216,7 +217,162 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForTimeout(2600);
   await p.evaluate(() => guardar());   // deixar como estava
 
-  // ============ 6. o menu "⋯" dos modelos não fica cortado ============
+  // ============ 6. o emblema, os ramos, a moldura e o tamanho ============
+  // O casal escolhe o que encima cada cartão, se o emblema leva ramos à volta,
+  // se os cartões levam moldura, e o tamanho do conjunto. Antes não havia
+  // escolha nenhuma: o desenho era o que era.
+  await api('defs_save', { defs: {
+    'evento.civil_hora': '10:30', 'evento.civil_titulo': 'Cerimónia Civil',
+    'evento.civil_local': 'Conservatória do Namibe',
+    'evento.religiosa_hora': '16:00', 'evento.religiosa_titulo': 'Cerimónia Religiosa',
+    'evento.religiosa_local': 'Igreja da Sé' } });
+  await p.goto(BASE + '/convite-editor.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(3200);
+  await p.evaluate(() => irCamada('grande-dia')); await p.waitForTimeout(900);
+
+  const painel = await p.evaluate(() => {
+    const g = [...document.querySelectorAll('#props .grupo')]
+      .find(x => /Emblemas e molduras/i.test(x.querySelector('h4') ? x.querySelector('h4').textContent : ''));
+    if (!g) return null;
+    const s = [...g.querySelectorAll('select')];
+    return { selects: s.length, caixas: g.querySelectorAll('input[type=checkbox]').length,
+             cursor: g.querySelectorAll('input[type=range]').length,
+             opcoes: s[0] ? [...s[0].options].map(o => o.value) : [] };
+  });
+  ok(painel !== null, 'o editor do casal ganha o painel «Emblemas e molduras»');
+  ok(painel && painel.selects === 3,
+     'com um emblema à escolha para a civil, a religiosa e o copo d’água');
+  ok(painel && painel.opcoes[0] === 'original' && painel.opcoes.length > 5,
+     'a primeira opção é o desenho da casa, e há alternativas a seguir: '
+       + (painel ? painel.opcoes.slice(0, 4).join(', ') : ''));
+  ok(painel && painel.caixas === 2, 'e as duas escolhas de sim ou não: ramos e molduras');
+  ok(painel && painel.cursor === 1, 'e o cursor do tamanho');
+
+  // A tela do editor mostra o rascunho; o convite enviado mostra o que está
+  // gravado. As duas coisas provam-se, e por isso cada escolha se grava antes
+  // de se ir buscar o convite.
+  const convite = () => p.evaluate(async () =>
+    await (await fetch('convite-digital.php?demo=1')).text());
+  const gravar = async () => { await p.evaluate(() => guardar()); await p.waitForTimeout(900); };
+  let h = await convite();
+  ok(/<img src="assets\/convite\/emblema-civil\.png"/.test(h),
+     'de origem, o cartão traz o emblema da casa, com ramos');
+
+  // Trocar o emblema da civil por um símbolo desenhado.
+  await p.evaluate(() => mudarEmblema('civil', 'aneis')); await p.waitForTimeout(2600);
+  ok(await tela.locator('#grande-dia .cerimonias .cer-item svg.cer-emb').count() === 1,
+     'escolher outro emblema desenha-o já na tela, no lugar do da casa');
+  await gravar();
+  h = await convite();
+  ok(/<svg class="cer-emb"[^]*?class="ramo"/.test(h),
+     'e o convite gravado passa a trazê-lo, com os seus ramos');
+  ok(!/<img src="assets\/convite\/emblema-civil\.png"/.test(h),
+     'e o emblema da casa sai desse cartão');
+
+  // Sem ramos: o desenhado perde-os, e o da casa troca-se pela versão em anel.
+  await p.evaluate(() => alternarCer('cer.ramos')); await p.waitForTimeout(2600);
+  await gravar();
+  h = await convite();
+  ok(!/class="ramo"/.test(h), 'desligar os ramos deixa o emblema desenhado só com o anel');
+  ok(/<img src="assets\/convite\/selo-religiosa\.png"/.test(h),
+     'e o emblema da casa passa à sua versão em anel, que é a mesma peça mais discreta');
+  await p.evaluate(() => alternarCer('cer.ramos')); await p.waitForTimeout(2600);
+  await gravar();
+
+  // Sem moldura: sai o desenho à volta, e o selo que pousava nele.
+  ok(((await convite()).match(/class="cf"/g) || []).length === 3,
+     'com moldura, cada cartão tem a sua — as duas cerimónias e o copo d’água');
+  await p.evaluate(() => alternarCer('cer.moldura')); await p.waitForTimeout(2600);
+  ok(await tela.locator('#grande-dia .cerimonias .cf').count() === 0,
+     'desligar as molduras tira-as logo da tela do editor');
+  await gravar();
+  ok(!/class="cf"/.test(await convite()), 'e do convite, em todos os cartões');
+  await p.evaluate(() => alternarCer('cer.moldura')); await p.waitForTimeout(2600);
+  await gravar();
+
+  // O tamanho é um só, para o conjunto todo — vai em --cer-tam.
+  await p.evaluate(() => mudarTamanhoEmblema(140)); await p.waitForTimeout(2800);
+  ok(await tela.locator('#grande-dia .cerimonias[style*="1.40"]').count() === 1,
+     'o cursor do tamanho chega à tela do editor');
+  await gravar();
+  ok(/--cer-tam:1\.40/.test(await convite()), 'e ao convite');
+  await p.evaluate(() => mudarTamanhoEmblema(100)); await p.waitForTimeout(2800);
+  await gravar();
+
+  // ============ 6b. as cerimónias no cronograma, e o ícone delas ============
+  const fixas = await p.evaluate(() =>
+    [...document.querySelectorAll('#props .it-fixo')].map(e => ({
+      txt: e.innerText.replace(/\s+/g, ' ').trim(),
+      op1: e.querySelector('select') ? e.querySelector('select').options[0].value : null })));
+  ok(fixas.length === 2, 'o cronograma do editor abre com as duas cerimónias');
+  ok(/10H30/.test(fixas[0].txt) && /16H00/.test(fixas[1].txt),
+     'pela ordem das horas: '
+       + fixas.map(x => (x.txt.match(/\d{1,2}H\d{2}[^—]*/) || [x.txt])[0].trim()).join(' | '));
+  ok(fixas.every(x => /a hora e o nome mudam-se em Cerimónias/i.test(x.txt)),
+     'e dizem onde se mudam — não se editam duas vezes');
+  ok(fixas.every(x => x.op1 === 'selo'),
+     'cada uma escolhe o seu ícone, começando pelo emblema do cartão');
+
+  ok(((await convite()).match(/class="node cer/g) || []).length === 2,
+     'no cronograma, cada cerimónia abre com o emblema do seu cartão');
+  await p.evaluate(() => mudarIconeCerimonia('religiosa', 'coracao'));
+  await p.waitForTimeout(2600);
+  await gravar();
+  h = await convite();
+  ok(!/<div class="node cer"><img src="assets\/convite\/selo-religiosa\.png"/.test(h),
+     'escolher um ícone tira o selo daquele momento do cronograma');
+  ok((h.match(/class="node cer/g) || []).length === 1,
+     'e a outra cerimónia fica com o seu — a escolha é de cada uma');
+  await p.evaluate(() => mudarIconeCerimonia('religiosa', 'selo'));
+  await p.waitForTimeout(2600);
+
+  // ============ 6c. as escolhas viajam no modelo e na versão ============
+  ok(await p.evaluate(() => guardar()), 'as escolhas gravam-se');
+  const v = await api('versao_criar&ambito=digital', { nome: 'Prova dos emblemas' });
+  ok(v && v.id > 0, 'e guardam-se numa versão');
+  // Desfazer no convite e voltar pela versão: se a escolha não viajasse com o
+  // desenho, voltaria o emblema da casa.
+  await api('defs_save', { defs: { 'cer.emblema_civil': 'original' } });
+  ok(/<img src="assets\/convite\/emblema-civil\.png"/.test(await convite()),
+     'desfazer a escolha devolve o emblema da casa');
+  await api('versao_aplicar&ambito=digital&id=' + v.id);
+  ok(/<svg class="cer-emb"/.test(await convite()),
+     'e aplicar a versão traz a escolha de volta — viaja com o desenho');
+
+  // O admin desenha o mesmo no modelo, e o modelo leva-o consigo. O modelo é
+  // um de propósito para a prova: desenhar por cima do modelo de origem da
+  // casa deixava-o mudado, e as provas que o vigiam davam-no por adulterado.
+  const md = await api('modelo_criar',
+    { nome: 'ZZ prova dos emblemas', ambito: 'digital', visivel: false });
+  if (md && md.id) {
+    await p.goto(BASE + '/convite-editor.php?modelo=' + md.id, { waitUntil: 'networkidle' });
+    await p.waitForTimeout(3200);
+    await p.evaluate(() => irCamada('grande-dia')); await p.waitForTimeout(900);
+    ok(await p.evaluate(() => !!document.querySelector('#props .grupo h4') &&
+         [...document.querySelectorAll('#props .grupo h4')].some(x => /Emblemas e molduras/i.test(x.textContent))),
+       'o editor do admin traz o mesmo painel — as escolhas são as mesmas dos dois lados');
+    ok(await p.locator('#props .it-fixo').count() >= 1,
+       'e o cronograma do modelo abre também com as cerimónias');
+    await p.evaluate(() => { mudarEmblema('religiosa', 'bolo'); alternarCer('cer.moldura'); });
+    await p.waitForTimeout(1200);
+    ok(await p.evaluate(() => guardar()), 'o admin grava o desenho no modelo');
+    // Reabrir é a prova: o modelo guardou-as, e leva-as a quem o escolher.
+    await p.goto(BASE + '/convite-editor.php?modelo=' + md.id, { waitUntil: 'networkidle' });
+    await p.waitForTimeout(3200);
+    const noModelo = await p.evaluate(() =>
+      ({ emb: EST.val['cer.emblema_religiosa'], mol: EST.val['cer.moldura'] }));
+    ok(noModelo.emb === 'bolo' && noModelo.mol === '0',
+       'e o modelo guarda-as: reabre com o emblema e a moldura que o admin escolheu ('
+         + noModelo.emb + ', moldura=' + noModelo.mol + ')');
+  }
+  await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+  if (md && md.id) await api('modelo_apagar&id=' + md.id);   // o modelo era só para isto
+  await api('defs_save', { defs: { 'cer.emblema_civil': 'original', 'cer.emblema_religiosa': 'original',
+                                   'cer.emblema_copo': 'original', 'cer.ramos': '1',
+                                   'cer.moldura': '1', 'cer.tamanho': '100',
+                                   'cronograma.icone_civil': 'selo', 'cronograma.icone_religiosa': 'selo' } });
+
+  // ============ 7. o menu "⋯" dos modelos não fica cortado ============
   const L = await api('modelo_lista');
   if (!(L.modelos || []).length) await api('modelo_criar', { nome: 'ZZ prova', ambito: 'impresso', visivel: true });
   await p.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
@@ -233,7 +389,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(pop && pop.alt > 40, `o menu abre com altura a sério (${pop && pop.alt}px)`);
   ok(pop && pop.clicavel, 'e não fica cortado pela borda do cartão — clica-se nele');
 
-  // ============ 7. o modelo do cartão, no editor ============
+  // ============ 8. o modelo do cartão, no editor ============
   const imp = (await api('modelo_lista')).modelos.find(m => m.ambito === 'impresso');
   if (imp) {
     await p.goto(BASE + '/editor-cartao.php?modelo=' + imp.id, { waitUntil: 'networkidle' });
@@ -257,6 +413,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
 
   // Deixar a casa como se encontrou.
   await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
+  if (v && v.id) await api('versao_apagar&ambito=digital&id=' + v.id);
   await api('defs_save', { defs: { 'evento.civil_titulo': 'Cerimónia Civil',
                                    'evento.civil_hora': '10:30', 'evento.civil_local': '', 'evento.civil_maps': '',
                                    'evento.religiosa_titulo': 'Cerimónia Religiosa',

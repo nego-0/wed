@@ -650,6 +650,18 @@ function defsPadrao(): array {
         'textos.guest_label' => 'Convite reservado a',
         'textos.closing' => 'A vossa presença será o mais belo dos presentes — a luz e a música que tornarão eterno o mais feliz dos nossos dias.',
         'gd.eyebrow' => 'Guarde esta data',
+        // ---- «Onde nos casamos»: o aspeto dos cartões ----
+        // O emblema de cada um: 'original' é o desenho de casa (o pergaminho, a
+        // igreja, os cálices); qualquer outro valor é um símbolo do mesmo
+        // conjunto que o cronograma usa, desenhado dentro do anel. Os ramos, o
+        // tamanho e a moldura valem para os três — são o aspeto do conjunto, e
+        // não de um cartão só.
+        'cer.emblema_civil'     => 'original',
+        'cer.emblema_religiosa' => 'original',
+        'cer.emblema_copo'      => 'original',
+        'cer.ramos'   => '1',
+        'cer.tamanho' => '100',
+        'cer.moldura' => '1',
         'historia.visivel' => '1',
         'historia.eyebrow' => 'A nossa história',
         'historia.titulo'  => 'Dois olhares, um caminho',
@@ -666,6 +678,11 @@ function defsPadrao(): array {
         'interludio.fecho' => "Duas vidas, um só caminho —\ne todo o tempo do mundo pela frente.",
         'cronograma.visivel' => '1',
         'cronograma.titulo' => 'Cronograma do dia',
+        // O ícone das linhas das cerimónias: 'selo' é o emblema do cartão em
+        // pequeno; qualquer outro valor é um dos ícones de traço, como nas
+        // restantes linhas do dia.
+        'cronograma.icone_civil'     => 'selo',
+        'cronograma.icone_religiosa' => 'selo',
         'cronograma.itens' => json_encode([
             ['h'=>'20H30','p'=>'Noite','t'=>'Chegada dos noivos','s'=>'O grande momento','i'=>'aneis'],
             ['h'=>'21H00','p'=>'Noite','t'=>'Corte do bolo','s'=>'Doçura partilhada','i'=>'bolo'],
@@ -1632,6 +1649,101 @@ function cssPosicoes(array $defs): string {
 // ============================================================
 
 /**
+ * Os emblemas de origem — os desenhos que a casa traz, com e sem ramos.
+ *
+ * A versão com ramos é a que encima o cartão; a sem ramos é a mesma peça
+ * dentro do anel, e é ela que serve de selo no cronograma, onde o espaço é
+ * redondo e pequeno.
+ */
+function emblemasDeCasa(): array {
+    return [
+        'civil'     => ['ramos' => 'emblema-civil.png',     'anel' => 'selo-civil.png'],
+        'religiosa' => ['ramos' => 'emblema-religiosa.png', 'anel' => 'selo-religiosa.png'],
+        'copo'      => ['ramos' => 'emblema-copo.png',      'anel' => 'selo-copo.png'],
+    ];
+}
+
+/**
+ * Um emblema DESENHADO: o anel duplo, os ramos (se os houver) e um símbolo
+ * ao centro.
+ *
+ * Serve as alternativas ao desenho de casa. O símbolo sai do mesmo conjunto
+ * que o cronograma usa nas outras linhas — quem escolhe as taças aqui vê as
+ * mesmas taças ali, e não há um segundo alfabeto de ícones para aprender. É
+ * SVG e não imagem: cresce com o tamanho escolhido sem perder o traço.
+ */
+function emblemaDesenhado(string $simbolo, bool $comRamos): string {
+    $ic = iconesConvite()[$simbolo] ?? iconesConvite()['coracao'];
+    $cx = 100.0; $cy = 76.0; $rr = 65.0;      // centro do anel, e o raio da haste
+
+    // O ramo ABRAÇA o anel: a haste é um arco concêntrico com ele, e as folhas
+    // pousam ao longo dela, viradas para fora e a afinar para a ponta. Folhas
+    // soltas ao lado do anel liam-se como espigas, e não como louro.
+    $folhas = '';
+    for ($i = 0; $i <= 5; $i++) {
+        $g = 142 + $i * 17.0;                  // do fundo à esquerda até ao alto
+        $a = deg2rad($g);
+        $x = round($cx + cos($a) * $rr, 1);
+        $y = round($cy + sin($a) * $rr, 1);
+        $largura = round(10.2 - $i * 0.75, 1); // afina para a ponta do ramo
+        $folhas .= '<ellipse cx="' . $x . '" cy="' . $y . '" rx="' . $largura . '" ry="4.3"'
+                 . ' transform="rotate(' . round($g + 118, 1) . ' ' . $x . ' ' . $y . ')"/>';
+    }
+    $x1 = round($cx + cos(deg2rad(138)) * $rr, 1); $y1 = round($cy + sin(deg2rad(138)) * $rr, 1);
+    $x2 = round($cx + cos(deg2rad(231)) * $rr, 1); $y2 = round($cy + sin(deg2rad(231)) * $rr, 1);
+    $ramo = '<path d="M' . $x1 . ' ' . $y1 . 'A' . $rr . ' ' . $rr . ' 0 0 1 ' . $x2 . ' ' . $y2 . '"'
+          . ' fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+          . '<g fill="currentColor" stroke="none" opacity=".92">' . $folhas . '</g>';
+    $ramos = $comRamos
+        ? '<g class="ramo">' . $ramo . '</g>'
+        . '<g class="ramo" transform="matrix(-1 0 0 1 200 0)">' . $ramo . '</g>'
+        : '';
+    return '<svg class="cer-emb" viewBox="0 0 200 150" aria-hidden="true">'
+         . $ramos
+         . '<g fill="none" stroke="currentColor" stroke-width="2.2">'
+         . '<circle cx="100" cy="76" r="54"/><circle cx="100" cy="76" r="47" opacity=".6"/></g>'
+         . '<g transform="translate(64,40) scale(3)" fill="none" stroke="currentColor"'
+         . ' stroke-width="1.5" stroke-linecap="round">' . $ic . '</g>'
+         . '</svg>';
+}
+
+/**
+ * O emblema de um cartão, seja ele o de casa ou um desenhado.
+ *
+ * $qual é 'civil', 'religiosa' ou 'copo'; $escolha é 'original' ou o nome de
+ * um símbolo. Sem ramos, o desenho de casa troca-se pela sua versão em anel —
+ * é a mesma peça, e não uma peça a menos.
+ */
+function emblemaCerimonia(string $qual, string $escolha, bool $comRamos): string {
+    if ($escolha === 'original') {
+        $f = emblemasDeCasa()[$qual] ?? emblemasDeCasa()['copo'];
+        $ficheiro = $comRamos ? $f['ramos'] : $f['anel'];
+        return '<img src="assets/convite/' . $ficheiro . '" alt="" loading="lazy" decoding="async">';
+    }
+    return emblemaDesenhado($escolha, $comRamos);
+}
+
+/**
+ * O selo redondo de uma cerimónia no cronograma.
+ *
+ * Por omissão é o emblema do cartão em pequeno — sempre a versão em anel, que
+ * é a que cabe num círculo. Escolhido um ícone de traço, vale esse, como nas
+ * restantes linhas do dia.
+ */
+function seloCronograma(string $qual, string $emblema, string $icone): string {
+    if ($icone !== 'selo') {
+        $ic = iconesConvite()[$icone] ?? iconesConvite()['coracao'];
+        return '<div class="node"><svg viewBox="0 0 24 24">' . $ic . '</svg></div>';
+    }
+    if ($emblema === 'original') {
+        $f = emblemasDeCasa()[$qual] ?? emblemasDeCasa()['copo'];
+        return '<div class="node cer"><img src="assets/convite/' . $f['anel'] . '"'
+             . ' alt="" loading="lazy" decoding="async"></div>';
+    }
+    return '<div class="node cer cer-svg">' . emblemaDesenhado($emblema, false) . '</div>';
+}
+
+/**
  * O selo de pássaros que pousa no pé de cada cartão de cerimónia.
  *
  * Um par de aves com um raminho, espelhado ao meio — o mesmo desenho dos
@@ -1701,8 +1813,8 @@ function horaCartao(string $hora): string {
  */
 function cerimoniasDoCronograma(array $defs): array {
     $fixos = [
-        'civil'     => ['selo' => 'selo-civil.png',     'sub' => 'O sim perante a lei'],
-        'religiosa' => ['selo' => 'selo-religiosa.png', 'sub' => 'A bênção do matrimónio'],
+        'civil'     => ['sub' => 'O sim perante a lei'],
+        'religiosa' => ['sub' => 'A bênção do matrimónio'],
     ];
     $out = [];
     foreach ($fixos as $k => $f) {
@@ -1717,7 +1829,8 @@ function cerimoniasDoCronograma(array $defs): array {
         $out[] = [
             'h'    => horaCartao($hora),
             'p'    => $h < 12 ? 'Manhã' : ($h < 19 ? 'Tarde' : 'Noite'),
-            'selo' => 'assets/convite/' . $f['selo'],
+            'selo' => seloCronograma($k, (string)($defs['cer.emblema_'.$k] ?? 'original'),
+                                     (string)($defs['cronograma.icone_'.$k] ?? 'selo')),
             't'    => $tipo !== '' ? $tipo . ' ' . mb_strtolower($nome, 'UTF-8') : $nome,
             's'    => $f['sub'],
             'loc'  => trim((string)($defs['evento.'.$k.'_local'] ?? '')),
@@ -1741,7 +1854,8 @@ function cerimoniasDoCronograma(array $defs): array {
  * d'água são do modelo.
  */
 function cerimoniasHtml(array $defs): string {
-    $emblemas = ['civil' => 'emblema-civil.png', 'religiosa' => 'emblema-religiosa.png'];
+    $ramos   = (string)($defs['cer.ramos'] ?? '1') !== '0';
+    $moldura = (string)($defs['cer.moldura'] ?? '1') !== '0';
     $cartoes = '';
     foreach ([['civil', 'Cerimónia Civil'], ['religiosa', 'Cerimónia Religiosa']] as [$k, $porOmissao]) {
         $hora = trim((string)($defs['evento.'.$k.'_hora'] ?? ''));
@@ -1749,11 +1863,15 @@ function cerimoniasHtml(array $defs): string {
         [$tipo, $nome] = tituloCerimonia((string)($defs['evento.'.$k.'_titulo'] ?? ''), $porOmissao);
         $local = trim((string)($defs['evento.'.$k.'_local'] ?? ''));
         $maps  = trim((string)($defs['evento.'.$k.'_maps'] ?? ''));
+        $emb   = (string)($defs['cer.emblema_'.$k] ?? 'original');
         $cartoes .= '<div class="cer-item"><div class="cer-medal">'
-          . '<img src="assets/convite/' . $emblemas[$k] . '" alt="" loading="lazy" decoding="async"></div>'
+          . emblemaCerimonia($k, $emb, $ramos) . '</div>'
           . '<div class="cer-card">'
-          . '<svg class="cf" data-arch="0" aria-hidden="true"><path class="out"></path><path class="in"></path></svg>'
-          . seloCerimonia()
+          // Sem moldura, o desenho sai — e sai também o selo que pousava nela.
+          . ($moldura
+              ? '<svg class="cf" data-arch="0" aria-hidden="true"><path class="out"></path><path class="in"></path></svg>'
+                . seloCerimonia()
+              : '')
           . '<div class="cer-body">'
           . ($tipo !== '' ? '<div class="cer-kind">' . escP($tipo) . '</div>' : '')
           . '<div class="cer-name">' . escP($nome) . '</div>'
@@ -1983,6 +2101,24 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'capa.selo':
             // O feitio do selo. Desconhecido volta ao de origem (cera).
             return in_array($valor, ['cera','anel','camafeu','liso'], true) ? $valor : 'cera';
+        case 'cer.emblema_civil':
+        case 'cer.emblema_religiosa':
+        case 'cer.emblema_copo':
+            // 'original' é o desenho de casa; o resto vem do conjunto de
+            // símbolos do cronograma. Um nome que não exista volta ao de casa —
+            // um cartão sem emblema nenhum ficaria com a moldura decapitada.
+            return ($valor === 'original' || isset(iconesConvite()[$valor])) ? $valor : 'original';
+        case 'cer.ramos':
+        case 'cer.moldura':
+            return $valor === '0' ? '0' : '1';
+        case 'cer.tamanho':
+            // Em percentagem do tamanho de origem. Abaixo de 60 o emblema não
+            // se lê; acima de 160 come o cartão por dentro.
+            if (!preg_match('/^\d{1,3}$/', $valor)) return '100';
+            return (string)max(60, min(160, (int)$valor));
+        case 'cronograma.icone_civil':
+        case 'cronograma.icone_religiosa':
+            return ($valor === 'selo' || isset(iconesConvite()[$valor])) ? $valor : 'selo';
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
@@ -2258,7 +2394,7 @@ function convitePlaceholders(array $defs): array {
     foreach (cerimoniasDoCronograma($defs) as $c) {
         $htmlCrono .= '<div class="t-item">'
             . '<div class="half time"><div class="hh">'.escP($c['h']).'<small>'.escP($c['p']).'</small></div></div>'
-            . '<div class="node cer"><img src="'.escP($c['selo']).'" alt="" loading="lazy" decoding="async"></div>'
+            . $c['selo']
             . '<div class="half desc"><div class="tt">'.escP($c['t']).'<em>'.escP($c['s']).'</em>'
             . ($c['loc'] !== '' ? '<span class="loc">'.escP($c['loc']).'</span>' : '')
             . '</div></div>'
@@ -2341,8 +2477,18 @@ function convitePlaceholders(array $defs): array {
         // tratamento diferente — um em itálico grande, o outro em versaletes.
         '{{VENUE_LOCAL}}'  => escP($defs['evento.local']),
         '{{VENUE_CIDADE}}' => escP($defs['evento.cidade']),
-        '{{CER_SELO}}'      => seloCerimonia(),
         '{{CER_ORNAMENTO}}' => ornamentoCerimonia(),
+        // O cartão do copo d'água vive no modelo (os seus campos são
+        // marcadores que o editor reescreve ao vivo), mas obedece às mesmas
+        // escolhas dos outros: o emblema, os ramos, a moldura e o tamanho.
+        '{{CER_EMBLEMA_COPO}}' => emblemaCerimonia('copo',
+            (string)($defs['cer.emblema_copo'] ?? 'original'),
+            (string)($defs['cer.ramos'] ?? '1') !== '0'),
+        '{{CER_MOLDURA_ARCO}}' => (string)($defs['cer.moldura'] ?? '1') !== '0'
+            ? '<svg class="cf" data-arch="1" aria-hidden="true"><path class="out"></path>'
+              . '<path class="in"></path></svg>' . seloCerimonia()
+            : '',
+        '{{CER_TAM}}' => number_format(max(60, min(160, (int)($defs['cer.tamanho'] ?? 100))) / 100, 2, '.', ''),
         '{{MAPS_URL}}' => escP($defs['evento.maps']),
         '{{ACESSO_EYEBROW}}' => escP($defs['acesso.eyebrow']),
         '{{ACESSO_TITULO}}' => escP($defs['acesso.titulo']),
