@@ -54,6 +54,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
 <title>Convite digital · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
@@ -123,6 +124,46 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .prod canvas{ display:block; background:#fff; }
   .prod .ac{ white-space:nowrap; }
   .prod .ac a{ font-size:.82rem; margin-right:.6rem; }
+
+  /* ---- As fotografias do convite ----------------------------
+     Uma linha por secção: a fotografia que lá está, o que ela é, e o que se
+     pode fazer com ela. Nada de camadas nem de réguas — quem vem aqui quer
+     pôr uma fotografia sua, e é só isso que a área faz. */
+  .ft-secs{ display:grid; gap:.9rem; margin-top:1rem; }
+  .ft-sec{ display:grid; grid-template-columns:132px 1fr; gap:1rem; align-items:start;
+           border:1px solid var(--line); border-radius:12px; padding:.75rem .85rem; background:#fff; }
+  @media (max-width:560px){ .ft-sec{ grid-template-columns:96px 1fr; gap:.75rem; } }
+  .ft-agora{ position:relative; border-radius:9px; overflow:hidden; background:var(--cream);
+             aspect-ratio:4/3; }
+  .ft-agora img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ft-agora .et{ position:absolute; left:0; bottom:0; right:0; text-align:center;
+                 font-size:.66rem; letter-spacing:.05em; text-transform:uppercase;
+                 padding:.18rem; background:rgba(14,15,12,.72); color:#fff; }
+  .ft-sec.nossa .ft-agora{ outline:2px solid var(--gold); outline-offset:-2px; }
+  .ft-cab b{ font-size:.95rem; color:var(--ink); }
+  .ft-cab span{ display:block; font-size:.8rem; color:#8a8f88; margin-top:.1rem; }
+  .ft-acoes{ display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.6rem; }
+  .ft-nota{ font-size:.75rem; color:#a3a8a1; align-self:center; }
+  .ft-erro{ flex-basis:100%; font-size:.78rem; color:var(--danger); margin-top:.15rem; }
+  .ft-erro:empty{ display:none; }
+  /* A galeria da casa abre debaixo da secção, e não numa janela: escolher uma
+     fotografia é comparar, e comparar quer as duas à vista. */
+  .ft-galeria{ display:none; margin-top:.65rem; }
+  .ft-sec.aberta .ft-galeria{ display:block; }
+  .ft-galeria .rot{ font-size:.75rem; color:#8a8f88; margin-bottom:.35rem; }
+  .ft-tiras{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.35rem; scrollbar-width:thin; }
+  .ft-op{ position:relative; flex:none; width:98px; height:74px; border-radius:9px;
+          overflow:hidden; cursor:pointer; border:2px solid transparent; padding:0;
+          background:none; transition:border-color .15s, transform .15s; }
+  .ft-op:hover{ transform:translateY(-2px); border-color:var(--gold-soft); }
+  .ft-op.on{ border-color:var(--gold); }
+  .ft-op img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ft-op .visto{ position:absolute; inset:0; display:none; align-items:center;
+                 justify-content:center; background:rgba(76,140,30,.45); color:#fff;
+                 font-size:1.3rem; font-weight:800; }
+  .ft-op.on .visto{ display:flex; }
+  .ft-op:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .ft-vazio{ font-size:.85rem; color:#8a8f88; line-height:1.55; }
 
 </style>
 </head>
@@ -194,6 +235,18 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
     </div>
   </div>
 
+  <!-- As fotografias do convite: aqui, e não no editor -->
+  <div class="painel">
+    <div class="painel-topo">
+      <div>
+        <h3>As fotografias do convite</h3>
+        <p class="dica" style="margin-bottom:0">Uma por secção. Mandem as vossas — ou escolham
+          da galeria da casa. Não é preciso entrar no editor, e a troca fica feita na hora.</p>
+      </div>
+    </div>
+    <div class="ft-secs" id="ft-secs"><p class="ft-vazio">A carregar…</p></div>
+  </div>
+
   <?php barraEndereco('os links e os QR dos convites digitais'); ?>
 
   <div class="barra no-print">
@@ -233,7 +286,10 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
 </main>
 
 <div class="toast" id="toast"></div>
+<script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 <script>
+window.CSRF = <?= json_encode(csrfToken()) ?>;
 // A prova encolhe para caber na caixa, seja qual for a largura da coluna.
 (function ajustarProva(){
   const cx = document.querySelector('.peca-prova');
@@ -264,6 +320,143 @@ function toast(m){
   t.textContent = m; t.classList.add('mostrar');
   setTimeout(() => t.classList.remove('mostrar'), 2200);
 }
+
+// ============================================================
+// As fotografias do convite
+//
+// O editor é uma oficina — camadas, réguas, painéis. Trocar uma fotografia não
+// pede nada disso, e obrigar a lá entrar (ou, pior, a comprar o escalão que
+// deixa lá entrar) para pôr a fotografia dos próprios noivos era vender-lhes
+// um convite com a cara de outra pessoa. Aqui é uma secção, uma fotografia.
+// ============================================================
+let FT_SECS = [], FT_MAX = 5, FT_ABERTA = '';
+
+function ftEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function ftCarregar(){
+  const d = await api('convite_fotos', { method:'GET' });
+  if (!d || !d.success) return;
+  FT_SECS = d.seccoes || []; FT_MAX = d.max_mb || 5;
+  ftPintar();
+}
+
+function ftPintar(){
+  const cx = document.getElementById('ft-secs'); if (!cx) return;
+  if (!FT_SECS.length){
+    cx.innerHTML = '<p class="ft-vazio">Este convite não mostra nenhuma secção com fotografia.</p>';
+    return;
+  }
+  cx.innerHTML = FT_SECS.map(sc => {
+    const aberta = FT_ABERTA === sc.chave;
+    const tiras = (sc.fotos || []).map(f =>
+        '<button type="button" class="ft-op' + (f.src === sc.atual ? ' on' : '') + '"'
+      + ' title="' + ftEsc(f.nome) + '" data-sec="' + ftEsc(sc.chave) + '"'
+      + ' data-src="' + ftEsc(f.src) + '">'
+      + '<img src="' + ftEsc(f.src) + '" alt="' + ftEsc(f.nome) + '" loading="lazy" decoding="async">'
+      + '<span class="visto">✓</span></button>').join('');
+    return '<div class="ft-sec' + (sc.nossa ? ' nossa' : '') + (aberta ? ' aberta' : '') + '"'
+      + ' data-sec="' + ftEsc(sc.chave) + '">'
+      + '<div class="ft-agora">'
+      +   (sc.atual ? '<img src="' + ftEsc(sc.atual) + '" alt="A fotografia da secção ' + ftEsc(sc.rotulo) + '">' : '')
+      +   '<span class="et">' + (sc.nossa ? 'vossa' : 'da casa') + '</span>'
+      + '</div>'
+      + '<div>'
+      +   '<div class="ft-cab"><b>' + ftEsc(sc.rotulo) + '</b>'
+      +     '<span>' + ftEsc(sc.descricao) + '</span></div>'
+      +   '<div class="ft-acoes">'
+      +     '<button class="btn btn-sm btn-ouro" data-ft="enviar">'
+      +       (sc.nossa ? 'Trocar por outra nossa' : '＋ Enviar a nossa') + '</button>'
+      +     (tiras ? '<button class="btn btn-sm" data-ft="galeria">'
+                     + (aberta ? 'Fechar a galeria' : 'Da galeria da casa') + '</button>' : '')
+      +     (sc.nossa ? '<button class="btn btn-sm btn-fantasma" data-ft="repor">Voltar à de origem</button>' : '')
+      +     '<span class="ft-nota">jpg, png ou webp · até ' + FT_MAX + ' MB</span>'
+      +     '<span class="ft-erro"></span>'
+      +   '</div>'
+      +   (tiras ? '<div class="ft-galeria"><div class="rot">Ou uma da galeria da casa:</div>'
+                   + '<div class="ft-tiras">' + tiras + '</div></div>' : '')
+      + '</div></div>';
+  }).join('');
+}
+
+/** Um aviso junto ao botão que falhou: é aí que o olho está. */
+function ftErro(sec, txt){
+  const el = document.querySelector('.ft-sec[data-sec="' + sec + '"] .ft-erro');
+  if (el) el.textContent = txt || '';
+}
+
+/** Depois de qualquer troca: a lista nova, e a prova a mostrar o que mudou. */
+function ftAplicar(d){
+  FT_SECS = d.seccoes || FT_SECS;
+  ftPintar();
+  const pv = document.querySelector('.peca-prova iframe');
+  if (pv) pv.src = pv.src.split('#')[0] + '&r=' + Date.now();
+}
+
+function ftEnviar(sec){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/jpeg,image/png,image/webp';
+  inp.style.display = 'none'; document.body.appendChild(inp);
+  inp.addEventListener('change', async () => {
+    const f = inp.files && inp.files[0];
+    inp.remove();
+    if (!f) return;
+    if (f.size > FT_MAX * 1048576){
+      ftErro(sec, 'A fotografia tem mais de ' + FT_MAX + ' MB. Escolham uma mais leve.');
+      return;
+    }
+    ftErro(sec, '');
+    const bt = document.querySelector('.ft-sec[data-sec="' + sec + '"] [data-ft="enviar"]');
+    const rot = bt ? bt.textContent : '';
+    if (bt){ bt.disabled = true; bt.textContent = 'A enviar…'; }
+    const fd = new FormData();
+    fd.append('chave', sec); fd.append('ficheiro', f);
+    const d = await api('convite_foto_enviar', { method:'POST', body: fd });
+    if (bt){ bt.disabled = false; bt.textContent = rot; }
+    if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível enviar.'); return; }
+    ftAplicar(d);
+    toast('Fotografia trocada. O convite já a mostra.');
+  });
+  inp.click();
+}
+
+async function ftDaGaleria(sec, src){
+  const d = await api('convite_foto_galeria',
+                      { method:'POST', body: JSON.stringify({ chave: sec, src }) });
+  if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível trocar.'); return; }
+  ftAplicar(d);
+  toast('Fotografia trocada. O convite já a mostra.');
+}
+
+async function ftRepor(sec){
+  const sc = FT_SECS.find(x => x.chave === sec) || {};
+  const r = await licConfirmar({
+    titulo: 'Voltar à fotografia de origem em «' + licEsc(sc.rotulo || '') + '»?',
+    icone: '↩️', perigo: true, confirmar: 'Voltar à de origem',
+    texto: 'A secção volta a mostrar a fotografia com que o convite nasceu, e a '
+         + 'vossa é <b>apagada</b>.<br><br>Se ela estiver guardada numa das vossas '
+         + 'versões, o ficheiro fica — é essa versão que o segura.'
+  });
+  if (!r.sim) return;
+  const d = await api('convite_foto_repor', { method:'POST', body: JSON.stringify({ chave: sec }) });
+  if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível repor.'); return; }
+  ftAplicar(d);
+  toast('Secção de volta à fotografia de origem.');
+}
+
+document.getElementById('ft-secs').addEventListener('click', ev => {
+  const op = ev.target.closest('.ft-op');
+  if (op){ ftDaGaleria(op.dataset.sec, op.dataset.src); return; }
+  const bt = ev.target.closest('[data-ft]');
+  if (!bt) return;
+  const sec = bt.closest('.ft-sec').dataset.sec;
+  if (bt.dataset.ft === 'enviar')  return ftEnviar(sec);
+  if (bt.dataset.ft === 'repor')   return ftRepor(sec);
+  if (bt.dataset.ft === 'galeria'){ FT_ABERTA = FT_ABERTA === sec ? '' : sec; ftPintar(); }
+});
+ftCarregar();
 </script>
 </body>
 </html>

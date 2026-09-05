@@ -109,26 +109,8 @@ const entrar = async (ctx, user, pass) => {
   const escConv = esc('convidados_80'), escDig = esc('digital_padrao');
   ok(escConv > 0 && escDig > 0, 'o preçário de origem traz os escalões que a prova usa');
 
-  // O convite digital SEM edição fixa as fotografias para sempre, e por isso
-  // exige-as agora: é a única vez em que o casal as escolhe. Mandam-se antes da
-  // inscrição, como o formulário faz — sem elas, a inscrição é recusada.
-  const fotos = await anon.evaluate(async () => {
-    const d = await (await fetch('api.php?action=lic_catalogo')).json();
-    const out = [];
-    for (const sc of (d.seccoes_foto || [])) {
-      const src = (sc.fotos && sc.fotos[0]) ? sc.fotos[0].src : sc.origem;
-      const blob = await (await fetch(src)).blob();
-      const fd = new FormData();
-      fd.append('chave', sc.chave);
-      fd.append('ficheiro', new File([blob], 'nossa.jpg', { type: 'image/jpeg' }));
-      const r = await (await fetch('api.php?action=registo_foto', { method: 'POST', body: fd })).json();
-      out.push(!!(r && r.success));
-    }
-    return out;
-  });
-  ok(fotos.length > 0 && fotos.every(Boolean),
-     `as fotografias que o escalão sem edição exige seguem primeiro (${fotos.length})`);
-
+  // A inscrição já não pede fotografia nenhuma: as do convite carregam-se
+  // depois, na página do convite digital, e não dependem do escalão.
   const reg = await anon.evaluate(async ({ email, SENHA, marca, escConv, escDig }) => {
     const r = await fetch('api.php?action=registo_publico', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

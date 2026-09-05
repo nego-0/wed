@@ -319,6 +319,12 @@ function correcoesEsperadas(): array {
          'convite-editor.php', 'function trocarTela('],
         ['O emblema desenhado tem as medidas dos da casa: o anel não muda, só sai o louro',
          'assets/convite-base.html', '.cerimonias.sem-ramos .cer-medal'],
+        ['As janelas de confirmação vestem-se sozinhas — também dentro dos editores',
+         'assets/janela.css', 'body.editor .pl-modal'],
+        ['As fotografias do convite carregam-se na página do convite digital, sem editor',
+         'api.php', "if (\$acao === 'convite_foto_enviar')"],
+        ['E a inscrição deixou de as pedir: a fotografia é do casal, não da licença',
+         'personalizacao.php', 'function seccoesDeFoto('],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

@@ -23,6 +23,9 @@ function licEsc(s){
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/** Onde estava o foco antes de a janela abrir, para lho devolver ao fechar. */
+let LIC_FOCO_ANTES = null;
+
 /** Uma janela simples de OK/Cancelar, para as escolhas que não cabem num prompt. */
 function licJanela(titulo, html, aoConfirmar, opcoes){
   opcoes = opcoes || {};
@@ -32,19 +35,30 @@ function licJanela(titulo, html, aoConfirmar, opcoes){
     document.body.appendChild(m);
     m.addEventListener('click', ev => { if (ev.target === m) licFecharJanela(); });
   }
-  m.innerHTML = '<div class="pl-modal-cx' + (opcoes.largo ? ' largo' : '') + '">'
-    + '<div class="pl-modal-cab"><h3>' + titulo + '</h3>'
+  // Quem abriu a janela volta a ter o foco quando ela fechar. Sem isto, o
+  // teclado ficava no princípio da página e quem navega sem rato perdia o
+  // sítio a cada pergunta.
+  if (!m.classList.contains('on')) LIC_FOCO_ANTES = document.activeElement;
+  // Os botões são da janela e não da página: os editores não carregam
+  // estilo.css, e as classes .btn de lá não existem lá dentro.
+  m.innerHTML = '<div class="pl-modal-cx' + (opcoes.largo ? ' largo' : '') + '" tabindex="-1"'
+    + ' role="dialog" aria-modal="true" aria-labelledby="lic-jt">'
+    + '<div class="pl-modal-cab"><h3 id="lic-jt">' + titulo + '</h3>'
     + '<button type="button" class="pl-modal-x" id="lic-jx" aria-label="Fechar">×</button></div>'
     + '<div class="pl-modal-corpo">' + html + '</div>'
     + '<div class="pl-modal-rodape">'
-    + '<span class="lic-j-erro" id="lic-jerro"></span>'
-    + '<button class="btn btn-fantasma btn-sm" id="lic-jc">' + (opcoes.cancelar || 'Cancelar') + '</button>'
+    + '<span class="lic-j-erro" id="lic-jerro" role="alert"></span>'
+    + '<button type="button" class="j-bt j-bt-nao" id="lic-jc">'
+    + (opcoes.cancelar || 'Cancelar') + '</button>'
     + (aoConfirmar
-        ? '<button class="btn ' + (opcoes.perigo ? 'perigo' : 'btn-ouro') + ' btn-sm" id="lic-jo">'
-          + (opcoes.guardar || 'Guardar') + '</button>'
+        ? '<button type="button" class="j-bt ' + (opcoes.perigo ? 'j-bt-perigo' : 'j-bt-sim')
+          + '" id="lic-jo">' + (opcoes.guardar || 'Guardar') + '</button>'
         : '')
     + '</div></div>';
   m.classList.add('on');
+  // A página por trás não rola enquanto a janela está aberta: rolar o que não
+  // se pode tocar é desorientador, e no telemóvel leva a janela com ele.
+  document.documentElement.style.overflow = 'hidden';
   document.getElementById('lic-jx').onclick = licFecharJanela;
   document.getElementById('lic-jc').onclick = licFecharJanela;
   const ok = document.getElementById('lic-jo');
@@ -62,15 +76,41 @@ function licJanela(titulo, html, aoConfirmar, opcoes){
   // quer escrever, não procurar onde carregar.
   const p1 = m.querySelector('.pl-modal-corpo input:not([type=hidden]):not([disabled]), '
                            + '.pl-modal-corpo textarea, .pl-modal-corpo select');
-  if (p1) setTimeout(() => { try { p1.focus(); p1.select && p1.select(); } catch(e){} }, 60);
+  // Sem campo nenhum, o foco vai para a própria janela — e não para um dos
+  // botões: prende o Tab cá dentro e faz o leitor de ecrã anunciá-la, sem
+  // deixar o dedo pousado em «Apagar» à espera de um Enter distraído.
+  const primeiro = p1 || m.querySelector('.pl-modal-cx');
+  if (primeiro) setTimeout(() => {
+    try { primeiro.focus(); primeiro.select && primeiro.select(); } catch(e){}
+  }, 60);
 }
 function licFecharJanela(){
   const m = document.getElementById('lic-janela');
   if (m) m.classList.remove('on');
   document.removeEventListener('keydown', licTeclaJanela);
+  document.documentElement.style.overflow = '';
+  if (LIC_FOCO_ANTES && LIC_FOCO_ANTES.focus){
+    try { LIC_FOCO_ANTES.focus(); } catch(e){}
+  }
+  LIC_FOCO_ANTES = null;
 }
 function licTeclaJanela(ev){
   if (ev.key === 'Escape'){ licFecharJanela(); return; }
+  // O Tab não sai da janela: por trás dela está uma página inteira de botões
+  // que não se podem usar, e passar por eles às cegas é perder-se.
+  if (ev.key === 'Tab'){
+    const cx = document.querySelector('#lic-janela.on .pl-modal-cx');
+    if (!cx) return;
+    const focaveis = [...cx.querySelectorAll(
+      'button:not([disabled]), input:not([type=hidden]):not([disabled]), '
+      + 'select:not([disabled]), textarea:not([disabled]), a[href]')]
+      .filter(el => el.offsetParent !== null);
+    if (!focaveis.length) return;
+    const primeiro = focaveis[0], ultimo = focaveis[focaveis.length - 1];
+    if (ev.shiftKey && document.activeElement === primeiro){ ev.preventDefault(); ultimo.focus(); }
+    else if (!ev.shiftKey && document.activeElement === ultimo){ ev.preventDefault(); primeiro.focus(); }
+    return;
+  }
   // Enter guarda — excepto numa área de texto, onde Enter é mudar de linha.
   if (ev.key === 'Enter' && !ev.shiftKey && ev.target && ev.target.tagName !== 'TEXTAREA'){
     const ok = document.getElementById('lic-jo');

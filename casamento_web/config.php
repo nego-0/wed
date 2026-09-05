@@ -163,6 +163,8 @@ function acoesDoCasamento(): array {
             'mesa_save','mesa_delete','mesa_pos','mesa_noivos','convite_mesa','convidado_mesa',
             'convidado_papel','planta_size','planta_bloqueio','planta_rotulo',
             'defs_save','def_upload','def_media_repor','media_descartar','porta_checkin',
+            // As fotografias do convite, fora do editor.
+            'convite_foto_enviar','convite_foto_galeria','convite_foto_repor',
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
             'casamento_identidade','casamento_endereco',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel','conta_apagar_do_casamento',

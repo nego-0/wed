@@ -379,9 +379,7 @@ async function carregarPlanos(){
                  || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
     if (!temAlgo) throw new Error('catálogo vazio');
     Planos.montar('reg-planos', d.catalogo,
-                  { moeda: d.moeda, seccoes: d.seccoes_foto || [],
-                    pecaOrigem: d.peca_origem || '', fotoMaxMb: d.foto_max_mb || 5,
-                    aoMudar: porteiroConformePlano });
+                  { moeda: d.moeda, aoMudar: porteiroConformePlano });
     porteiroConformePlano();
   } catch (e) {
     // Sem preçário não se pode escolher plano nenhum, mas a inscrição não pode
@@ -489,23 +487,12 @@ async function enviar(){
       erroGeral('Escolham um pacote, ou montem o vosso plano à medida.', $('erro-fim'));
       return;
     }
-    // O convite digital sem edição fixa as fotografias para sempre: sem elas, o
-    // convite nascia com as de outro casal e assim ficava. Diz-se aqui, junto à
-    // montra, e não com um erro do servidor depois de tudo preenchido.
-    const faltaFoto = Planos.faltamFotos();
-    if (faltaFoto){
-      erroGeral(faltaFoto, $('erro-fim'));
-      const cx = document.querySelector('.pl-fotos');
-      if (cx) cx.scrollIntoView({ behavior:'smooth', block:'center' });
-      return;
-    }
     if (!$('reg-aceite').checked){
       $('reg-aceite-cx').classList.add('mau');
       erroGeral('É preciso aceitar as políticas de utilização.', $('reg-aceite-cx'));
       return;
     }
-    plano = { pacote: c.pacote, escaloes: c.escaloes, meses: c.meses,
-              fotos: c.fotos || {}, aceito: true };
+    plano = { pacote: c.pacote, escaloes: c.escaloes, meses: c.meses, aceito: true };
   }
 
   const dados = {

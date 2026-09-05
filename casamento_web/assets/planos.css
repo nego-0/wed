@@ -201,85 +201,6 @@
   font-variant-numeric:tabular-nums; margin-top:.3rem; }
 .pl-riscado + .pl-esc-preco{ margin-top:.05rem; }
 
-/* ---------- as fotografias do convite digital ---------- */
-.pl-fotos{ margin-top:1rem; border:1.5px solid var(--gold-soft); border-radius:12px;
-  background:var(--gold-pale); padding:1rem 1.05rem; }
-.pl-fotos-cab{ margin-bottom:.7rem; }
-.pl-fotos-cab b{ display:block; color:var(--ink); font-size:.95rem; }
-.pl-fotos-cab span{ display:block; font-size:.8rem; color:#8a8f88; margin-top:.1rem; }
-.pl-fotos-nota{ font-size:.82rem; line-height:1.55; border-radius:10px;
-  padding:.65rem .8rem; margin-bottom:.95rem; }
-.pl-fotos-nota.boa{ background:var(--ok-bg); color:var(--text); border-left:3px solid var(--ok); }
-.pl-fotos-nota.aviso{ background:var(--warn-bg); color:var(--text); border-left:3px solid var(--warn); }
-
-.pl-sec{ margin-bottom:.9rem; }
-.pl-sec:last-child{ margin-bottom:0; }
-.pl-sec-cab{ display:flex; align-items:baseline; gap:.5rem; flex-wrap:wrap; margin-bottom:.4rem; }
-.pl-sec-cab b{ font-size:.85rem; color:var(--ink); }
-.pl-sec-cab span{ font-size:.77rem; color:#8a8f88; }
-/* As miniaturas correm na horizontal: são muitas, e empilhá-las fazia da
-   escolha de uma foto uma página inteira. */
-.pl-sec-tiras{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.35rem;
-  scrollbar-width:thin; }
-.pl-ft{ position:relative; flex:none; width:96px; height:72px; border-radius:9px;
-  overflow:hidden; cursor:pointer; border:2px solid transparent; margin:0; padding:0;
-  transition:border-color .15s, transform .15s; }
-.pl-ft:hover{ transform:translateY(-2px); border-color:var(--gold-soft); }
-.pl-ft.on{ border-color:var(--gold); }
-.pl-ft img{ width:100%; height:100%; object-fit:cover; display:block; }
-/* O rádio comanda mas não se vê: o que se escolhe é a fotografia. */
-.pl-ft input{ position:absolute; opacity:0; width:1px; height:1px; padding:0; margin:0; }
-.pl-ft-visto{ position:absolute; inset:0; display:none; align-items:center;
-  justify-content:center; background:rgba(76,140,30,.45); color:#fff;
-  font-size:1.4rem; font-weight:800; }
-.pl-ft.on .pl-ft-visto{ display:flex; }
-.pl-ft input:focus-visible + img{ outline:2px solid var(--gold); outline-offset:-2px; }
-
-/* ---------- a fotografia do casal ----------
-   O convite é dele: a primeira coisa que a secção oferece é mandar a SUA
-   fotografia, e a galeria da casa vem a seguir, como alternativa. No escalão
-   sem edição não há alternativa nenhuma — é esta a única vez que ele escolhe. */
-.pl-envio{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
-.pl-btn-env{ border:1.5px dashed var(--gold); background:var(--card); color:var(--forest);
-  font-family:inherit; font-size:.84rem; font-weight:600; border-radius:10px;
-  padding:.5rem .85rem; cursor:pointer; line-height:1.2; }
-.pl-btn-env:hover{ background:var(--gold-pale); border-style:solid; }
-.pl-btn-env[disabled]{ opacity:.6; cursor:progress; }
-.pl-envio-nota{ font-size:.76rem; color:#8a8f88; }
-.pl-envio-erro{ flex-basis:100%; font-size:.78rem; color:var(--danger); margin-top:.35rem; }
-.pl-sec-falta{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
-  color:var(--danger); border:1px solid currentColor; border-radius:50px; padding:0 .4rem; }
-.pl-sec-ou{ font-size:.75rem; color:#8a8f88; margin:.55rem 0 .3rem; }
-
-.pl-minha{ display:flex; align-items:center; gap:.7rem; background:var(--card);
-  border:1.5px solid var(--gold-soft); border-radius:10px; padding:.5rem .6rem; }
-.pl-minha img{ flex:none; width:104px; height:72px; object-fit:cover; border-radius:8px; display:block; }
-.pl-minha-txt{ flex:1; min-width:0; }
-.pl-minha-txt b{ display:block; font-size:.84rem; color:var(--ink); }
-.pl-minha-txt span{ display:block; font-size:.74rem; color:#8a8f88;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pl-minha-acoes{ display:flex; flex-direction:column; gap:.3rem; flex:none; }
-.pl-minha-acoes button{ border:1px solid var(--line); background:var(--card); color:var(--text);
-  font-family:inherit; font-size:.76rem; border-radius:8px; padding:.28rem .55rem; cursor:pointer; }
-.pl-minha-acoes button:hover{ border-color:var(--gold); color:var(--forest); }
-
-/* A prova em grande. A marca de água vem nos pixéis, do servidor: aqui só se
-   mostra o que ele carimbou. */
-.pl-prova{ position:fixed; inset:0; z-index:1300; display:none;
-  align-items:center; justify-content:center; padding:1.2rem;
-  background:rgba(12,20,16,.72); }
-.pl-prova.on{ display:flex; }
-.pl-prova-cx{ background:var(--card); border-radius:14px; padding:.9rem;
-  max-width:min(720px, 92vw); max-height:90vh; overflow:auto; text-align:center; }
-.pl-prova-cx img{ max-width:100%; max-height:66vh; border-radius:10px; display:block; margin:0 auto; }
-.pl-prova-cx p{ font-size:.8rem; color:#8a8f88; line-height:1.5; margin:.7rem auto .8rem; max-width:52ch; }
-
-@media (max-width:520px){
-  .pl-minha{ flex-wrap:wrap; }
-  .pl-minha-acoes{ flex-direction:row; width:100%; }
-  .pl-minha-acoes button{ flex:1; }
-}
-
 /* ---------- a conta, sempre à vista ---------- */
 .pl-conta{ position:sticky; bottom:0; z-index:5; margin-top:1.6rem;
   background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
@@ -343,7 +264,6 @@
 
 @media (max-width:640px){
   .pl-topo h2{ font-size:1.5rem; }
-  .pl-ft{ width:82px; height:62px; }
   .pl-mod-cab{ flex-wrap:wrap; }
   .pl-exemplo{ width:100%; }
   .pl-conta{ padding:.9rem 1rem; }

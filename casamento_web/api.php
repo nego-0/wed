@@ -126,17 +126,16 @@ function moverUpload(array $src, string $dest): bool {
 }
 
 // ============================================================
-// AS FOTOGRAFIAS DA INSCRIÇÃO — antes de haver casamento
+// OS FICHEIROS QUE OS CASAIS ENVIAM
 // ------------------------------------------------------------
-// Quem se inscreve com o convite digital escolhe já a fotografia de cada
-// secção, e pode mandar as SUAS. Mas na inscrição ainda não há casamento
-// nenhum onde as pôr: ficam numa área de espera, presas à sessão de quem as
-// mandou, e só entram no convite quando o casamento nasce. O que ficar por
-// reclamar apaga-se sozinho — uma inscrição abandonada não deixa lixo no disco.
+// As fotografias do convite entram pela página do convite digital, já dentro
+// da casa e com o casal identificado. Houve um tempo em que entravam antes
+// disso, na própria inscrição, para uma área de espera presa à sessão: era
+// preciso porque o escalão sem edição fixava as fotografias no acto da compra
+// e nunca mais as deixava trocar. Deixou de ser assim — as fotografias são do
+// casal, não da licença —, e a área de espera foi-se com essa regra.
 // ============================================================
-const REG_FOTO_MAX   = 5 * 1024 * 1024;          // 5 MB por fotografia
-const REG_FOTO_DIR   = 'assets/convite/espera';  // dentro de assets/convite: é lá que os media podem viver
-const REG_FOTO_HORAS = 6;                        // quanto tempo uma espera dura
+const FOTO_CONVITE_MAX = 5 * 1024 * 1024;   // o que se aceita por fotografia
 
 /**
  * Uma pasta de ficheiros enviados, criada já trancada.
@@ -161,208 +160,14 @@ function pastaDeEnvios(string $rel): string {
     return $d;
 }
 
-function regFotoDir(): string { return pastaDeEnvios(REG_FOTO_DIR); }
+// Onde ficam as fotografias que o casal envia — do editor, ou da área de
+// fotografias da página do convite digital.
+const CUSTOM_FOTO_DIR = 'assets/convite/custom';
 
-/** Varre a área de espera e apaga o que lá ficou esquecido. */
-function regFotoVarrer(): void {
-    $limite = time() - REG_FOTO_HORAS * 3600;
-    foreach (glob(regFotoDir() . '/*') ?: [] as $f) {
-        if (is_file($f) && @filemtime($f) < $limite) @unlink($f);
-    }
-}
-
-/** As fotos que esta sessão tem em espera: chave da secção => nome do ficheiro. */
-function regFotoLista(): array {
-    $l = $_SESSION['reg_fotos'] ?? null;
-    return is_array($l) ? $l : [];
-}
-
-/** Larga uma foto em espera (apaga o ficheiro e esquece-a). */
-function regFotoLargar(string $chave): bool {
-    $l = regFotoLista();
-    if (!isset($l[$chave])) return false;
-    $f = regFotoDir() . '/' . basename((string)$l[$chave]['ficheiro']);
-    if (is_file($f)) @unlink($f);
-    unset($l[$chave]);
-    $_SESSION['reg_fotos'] = $l;
-    return true;
-}
-
-/** Larga TODAS as fotos em espera desta sessão. */
-function regFotoLargarTudo(): int {
-    $n = 0;
-    foreach (array_keys(regFotoLista()) as $k) if (regFotoLargar($k)) $n++;
-    return $n;
-}
-
-// Onde ficam, já dentro do casamento, as fotografias que vieram com a licença.
-// Pasta própria — e não a 'custom/' do editor — para se saber, sem adivinhar,
-// quais são as que a licença trouxe: são essas que se apagam se a licença
-// deixar de incluir o convite digital.
+// A pasta das que, noutro tempo, entravam com a licença. Já não entra lá nada,
+// mas as que lá estão continuam a ser de alguém: o nome fica para elas se
+// reconhecerem e se poderem largar quando a peça deixar de as mostrar.
 const LIC_FOTO_DIR = 'assets/convite/licenca';
-
-/**
- * Entrega ao casamento as fotografias que estavam em espera.
- *
- * Devolve o mapa chave => caminho das que passaram, pronto para licAplicarFotos.
- * A espera fica vazia: uma fotografia entregue não se entrega duas vezes.
- */
-function regFotoEntregar(int $cid): array {
-    $lista = regFotoLista();
-    if ($cid <= 0 || !$lista) return [];
-    $dir = pastaDeEnvios(LIC_FOTO_DIR);
-    $out = [];
-    foreach ($lista as $chave => $it) {
-        $de = regFotoDir() . '/' . basename((string)($it['ficheiro'] ?? ''));
-        if (!is_file($de)) continue;
-        $ext = strtolower(pathinfo($de, PATHINFO_EXTENSION)) ?: 'jpg';
-        $nome = $cid . '-' . str_replace('media.', '', (string)$chave)
-              . '-' . time() . '-' . random_int(100, 999) . '.' . $ext;
-        if (@rename($de, "$dir/$nome") || (@copy($de, "$dir/$nome") && @unlink($de))) {
-            $out[(string)$chave] = LIC_FOTO_DIR . '/' . $nome;
-        }
-    }
-    $_SESSION['reg_fotos'] = [];
-    return $out;
-}
-
-/**
- * Apaga as fotografias que este casamento recebeu com a licença, e devolve
- * essas secções ao desenho de origem.
- *
- * Chama-se quando o convite digital sai da licença: as fotografias foram
- * enviadas para um convite que o casal ia ter, e sem esse convite não há razão
- * para a casa continuar a guardar fotografias de ninguém.
- *
- * Um ficheiro que uma VERSÃO guardada ainda use não se apaga do disco — apagá-lo
- * era estragar uma versão que o casal gravou. É a mesma regra do editor
- * (def_media_repor). A definição, essa, volta sempre à origem.
- */
-function licFotosApagar(mysqli $conn, int $cid): int {
-    if ($cid <= 0) return 0;
-    $anterior = casamentoAtual();
-    usarCasamento($cid);
-    $padrao = defsPadrao();
-    $atuais = defsAtuais($conn);
-    $repor = []; $n = 0;
-    foreach ($atuais as $chave => $valor) {
-        if (!is_string($chave) || !str_starts_with($chave, 'media.')) continue;
-        $valor = (string)$valor;
-        if (!str_starts_with($valor, LIC_FOTO_DIR . '/') || str_contains($valor, '..')) continue;
-        if (!ficheiroEmVersao($conn, $valor)) @unlink(__DIR__ . '/' . $valor);
-        $repor[$chave] = (string)($padrao[$chave] ?? '');
-        $n++;
-    }
-    if ($repor) guardarDefinicoes($conn, $repor);
-    usarCasamento($anterior > 0 ? $anterior : $cid);
-    return $n;
-}
-
-/**
- * O casamento ainda tem razão para guardar as fotografias que a licença lhe
- * trouxe? Sem convite digital — nem concedido, nem sequer pedido —, não tem:
- * apagam-se.
- *
- * Note-se o que NÃO é caso disto: uma licença revogada. Revogar fecha o que a
- * licença abria, mas as políticas prometem ao casal que os dados dele ficam e
- * que os pode exportar. Apagar-lhe as fotografias por castigo seria quebrar
- * essa promessa; o que aqui se apaga é o que deixou de ter destino.
- */
-function licFotosConferir(mysqli $conn, int $cid, bool $contarPedido = true): int {
-    if ($cid <= 0) return 0;
-    if (licCasamentoTemModulo($conn, $cid, 'digital')) return 0;
-    // Um pedido por decidir também conta: entre inscrever-se e ser aprovado, o
-    // casal não tem concessão nenhuma, e apagar-lhe as fotografias nesse
-    // intervalo era apagá-las a toda a gente. Quem concede à mão é que dispensa
-    // esta pergunta — acabou de decidir, e a decisão dele manda sobre o pedido.
-    if ($contarPedido) {
-        $p = licPedido($conn, $cid, 'pendente');
-        if ($p) foreach ((array)$p['itens'] as $it) {
-            if ((string)($it['modulo_chave'] ?? '') === 'digital') return 0;
-        }
-    }
-    return licFotosApagar($conn, $cid);
-}
-
-/**
- * Carimba uma fotografia com a marca de água da casa e devolve o JPEG.
- *
- * A pré-visualização é para o casal VER o que enviou — não para levar o
- * ficheiro. Por isso sai encolhida e atravessada pela marca: quem ainda não
- * fechou a licença vê o enquadramento, e não recebe uma fotografia pronta a
- * usar. A marca vai nos PIXÉIS, e não numa camada de CSS por cima: uma marca
- * que se tira com o botão direito não é marca nenhuma.
- *
- * Sem GD, devolve null — e quem chama mostra a foto sem prova, ou nenhuma.
- */
-function marcaDeAgua(string $caminho, int $maxLargura = 900): ?string {
-    if (!function_exists('imagecreatetruecolor')) return null;
-    $inf = @getimagesize($caminho);
-    if (!$inf) return null;
-    [$w0, $h0, $tipo] = $inf;
-    $orig = match ((int)$tipo) {
-        IMAGETYPE_JPEG => @imagecreatefromjpeg($caminho),
-        IMAGETYPE_PNG  => @imagecreatefrompng($caminho),
-        IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($caminho) : null,
-        default        => null,
-    };
-    if (!$orig) return null;
-
-    $f = min(1, $maxLargura / max(1, $w0));
-    $w = max(1, (int)round($w0 * $f));
-    $h = max(1, (int)round($h0 * $f));
-    $img = imagecreatetruecolor($w, $h);
-    imagecopyresampled($img, $orig, 0, 0, 0, 0, $w, $h, $w0, $h0);
-    imagedestroy($orig);
-
-    // A etiqueta. As fontes embutidas do GD só desenham ASCII — e as do convite
-    // são woff2, que o GD não lê —, por isso o nome da casa vai sem acentos.
-    $marca = (string)(PLATAFORMA['nome'] ?? '');
-    $marca = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $marca) ?: '';
-    $marca = strtoupper(preg_replace('/[^A-Za-z0-9 ]+/', '', $marca));
-    $etiqueta = '  ' . trim($marca . ' PROVA') . '  ';
-
-    $fonte = 5;
-    $tw = imagefontwidth($fonte) * strlen($etiqueta);
-    $th = imagefontheight($fonte);
-    $tira = imagecreatetruecolor($tw, $th);
-    imagealphablending($tira, false); imagesavealpha($tira, true);
-    imagefill($tira, 0, 0, imagecolorallocatealpha($tira, 0, 0, 0, 127));
-    // Duas passagens: uma sombra escura por baixo, para a marca se ler tanto
-    // sobre um céu claro como sobre um fato escuro.
-    imagestring($tira, $fonte, 1, 1, $etiqueta, imagecolorallocatealpha($tira, 0, 0, 0, 92));
-    imagestring($tira, $fonte, 0, 0, $etiqueta, imagecolorallocatealpha($tira, 255, 255, 255, 62));
-
-    // Ampliada e inclinada: na diagonal não se recorta fora com um corte recto.
-    $z = max(2, (int)round($w / 430));
-    $g = imagecreatetruecolor($tw * $z, $th * $z);
-    imagealphablending($g, false); imagesavealpha($g, true);
-    imagefill($g, 0, 0, imagecolorallocatealpha($g, 0, 0, 0, 127));
-    imagecopyresized($g, $tira, 0, 0, 0, 0, $tw * $z, $th * $z, $tw, $th);
-    imagedestroy($tira);
-    $rot = @imagerotate($g, 30, imagecolorallocatealpha($g, 0, 0, 0, 127));
-    imagedestroy($g);
-    if ($rot) { imagealphablending($rot, false); imagesavealpha($rot, true); }
-
-    if ($rot) {
-        $rw = imagesx($rot); $rh = imagesy($rot);
-        imagealphablending($img, true);
-        $passoY = max(34, (int)round($rh * 0.72));
-        for ($y = -$rh; $y < $h + $rh; $y += $passoY) {
-            $desvio = (int)(($y / $passoY) % 2) * (int)round($rw / 2);
-            for ($x = -$rw - $desvio; $x < $w + $rw; $x += $rw) {
-                imagecopy($img, $rot, $x + $desvio, $y, 0, 0, $rw, $rh);
-            }
-        }
-        imagedestroy($rot);
-    }
-
-    ob_start();
-    imagejpeg($img, null, 82);
-    $bytes = (string)ob_get_clean();
-    imagedestroy($img);
-    return $bytes !== '' ? $bytes : null;
-}
 
 /**
  * Exige poder escrever no casamento aberto.
@@ -445,16 +250,16 @@ function apagarFaturaFich(string $caminho): void {
 /**
  * Um caminho é uma fotografia ENVIADA por alguém, e não um asset de origem?
  *
- * São duas as portas por onde uma fotografia entra: o editor do convite
- * (custom/) e a inscrição, com a licença (licenca/). O que se segue é igual
- * para as duas — repor uma secção, apagar uma versão, voltar à origem: tudo
- * isso pode largar o ficheiro, desde que mais ninguém o use. Distingui-las aqui
- * era deixar as da licença a acumular no disco depois de a peça já não as
- * mostrar.
+ * As que os casais enviam vivem em custom/ — venham do editor ou da área de
+ * fotografias da página do convite digital. A pasta licenca/ é do tempo em que
+ * elas entravam pela inscrição: já não entra lá nada, mas as que lá estão
+ * continuam a ser de alguém, e o que se segue tem de valer para elas também —
+ * repor uma secção, apagar uma versão, voltar à origem: tudo isso pode largar
+ * o ficheiro, desde que mais ninguém o use.
  */
 function ehFotoCustom(string $caminho): bool {
     return $caminho !== '' && !str_contains($caminho, '..')
-        && (str_starts_with($caminho, 'assets/convite/custom/')
+        && (str_starts_with($caminho, CUSTOM_FOTO_DIR . '/')
          || str_starts_with($caminho, LIC_FOTO_DIR . '/'));
 }
 
@@ -780,16 +585,6 @@ if ($acao === 'registo_publico') {
     if (mb_strlen($senha) < 8)                    erro('A senha precisa de pelo menos 8 caracteres.');
     if ($data !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) erro('Data inválida.');
 
-    // As fotografias do convite digital. Com edição são um adianto — o casal
-    // troca-as depois; SEM edição são a única vez em que ele as escolhe, e por
-    // isso exigem-se AGORA, antes de se criar seja o que for. Um casamento
-    // criado e logo travado por causa de uma fotografia deixava conta e
-    // casamento a meio.
-    $planoPedido = (array)($d['licenca'] ?? []);
-    $digitalPedido = $planoPedido
-        ? licEscaloesDigital($conn, licPlanoEscaloes($conn, $planoPedido)) : null;
-    if ($falta = licFaltamFotos($conn, $digitalPedido, regFotoLista())) erro($falta);
-
     // Trava contra enchentes: um registo de cada vez por visitante, e um teto
     // global por hora. Sem isto, um guião automático enchia a fila de
     // aprovação de lixo e o admin deixava de ver os pedidos verdadeiros.
@@ -875,102 +670,11 @@ if ($acao === 'registo_publico') {
         $pedido = licRegistarPedido($conn, $cid, (array)$d['licenca'], 'inicial');
     }
 
-    // E as fotografias que estavam em espera passam a ser deste casamento —
-    // depois do pedido, porque uma fotografia enviada pelo casal manda sobre a
-    // que ele tinha escolhido da galeria da casa. Sem convite digital no plano,
-    // largam-se: foram enviadas para um convite que não vai existir.
-    $fotosSuas = $digitalPedido ? regFotoEntregar($cid) : [];
-    if (!$digitalPedido) regFotoLargarTudo();
-    if ($fotosSuas) {
-        licAplicarFotos($conn, $cid, $fotosSuas);
-        licPedidoJuntarFotos($conn, $pedido, $fotosSuas);
-    }
-
     registar($conn, 'registo_publico', $nomeConta, $email);
     ok(['casamento' => $cid, 'dados_do_evento' => $gravadas, 'pedido' => $pedido,
-        'fotos_enviadas' => count($fotosSuas),
         // Se vieram dados de porteiro sem o módulo que os justifica, a conta não
         // se criou — e diz-se, para o casal não ficar à espera dela.
         'porteiro_ignorado' => $porteiroIgnorado]);
-}
-
-// ============================================================
-// AS FOTOGRAFIAS DA INSCRIÇÃO
-//
-// Quem se inscreve com o convite digital pode mandar as SUAS fotografias para
-// cada secção do convite. Ainda não há casamento nenhum onde as pôr: ficam em
-// espera, presas à sessão, e entram no convite quando o casamento nasce.
-//
-// É um envio SEM conta — e por isso tem trela curta: uma fotografia por secção,
-// tamanho tapado, formatos contados, e um teto de envios por sessão. O que se
-// devolve nunca é o ficheiro: é a prova com marca de água. Antes de a licença
-// estar fechada, ninguém recebe de volta uma fotografia pronta a usar — nem
-// sequer quem a enviou.
-// ============================================================
-if ($acao === 'registo_foto') {
-    regFotoVarrer();
-    $chave = (string)($_POST['chave'] ?? '');
-    $secs = [];
-    foreach (licSeccoesFoto($conn) as $sc) $secs[$sc['chave']] = $sc['rotulo'];
-    if (!isset($secs[$chave])) erro('Secção de fotografia desconhecida.');
-
-    // Trela: um teto de envios por sessão, e um teto de ficheiros à espera na
-    // casa inteira. Sem eles, um guião automático enchia o disco com fotografias
-    // que nunca chegariam a ser de casamento nenhum.
-    $_SESSION['reg_fotos_n'] = (int)($_SESSION['reg_fotos_n'] ?? 0) + 1;
-    if ($_SESSION['reg_fotos_n'] > 40) erro('Demasiados envios. Recarregue a página, por favor.');
-    if (count(glob(regFotoDir() . '/*') ?: []) > 400) {
-        erro('A casa está a receber muitos envios neste momento. Tente daqui a pouco.');
-    }
-
-    $src = origemUpload('ficheiro', REG_FOTO_MAX);
-    $ext = strtolower(pathinfo($src['nome'], PATHINFO_EXTENSION));
-    if ($ext === 'jpeg') $ext = 'jpg';
-    if (!in_array($ext, ['jpg', 'png', 'webp'], true)) erro('Formato não suportado (jpg/png/webp).');
-    // O nome do ficheiro não prova nada: o que manda é o conteúdo.
-    $inf = @getimagesize($src['tmp']);
-    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
-    if (!$inf || !isset($tipos[(int)$inf[2]])) erro('O ficheiro não é uma imagem que saibamos ler.');
-    $ext = $tipos[(int)$inf[2]];
-    if ((int)$inf[0] < 400 || (int)$inf[1] < 400) {
-        erro('A fotografia é pequena de mais para o convite (mínimo 400×400).');
-    }
-
-    regFotoLargar($chave);                       // a anterior desta secção sai do disco
-    $nome = bin2hex(random_bytes(16)) . '.' . $ext;
-    if (!moverUpload($src, regFotoDir() . '/' . $nome)) erro('Não foi possível guardar a fotografia.');
-    $lista = regFotoLista();
-    $lista[$chave] = ['ficheiro' => $nome,
-                      'nome' => mb_substr(basename((string)$src['nome']), 0, 120)];
-    $_SESSION['reg_fotos'] = $lista;
-    ok(['chave' => $chave, 'nome' => $lista[$chave]['nome'],
-        'prova' => 'api.php?action=registo_foto_ver&chave=' . rawurlencode($chave) . '&t=' . time()]);
-}
-
-if ($acao === 'registo_foto_ver') {
-    // A prova: a fotografia encolhida e atravessada pela marca de água. É o que
-    // o casal vê depois de a enviar — e é tudo o que sai daqui até a licença
-    // estar fechada.
-    $chave = (string)($_GET['chave'] ?? '');
-    $lista = regFotoLista();
-    $f = isset($lista[$chave]) ? regFotoDir() . '/' . basename((string)$lista[$chave]['ficheiro']) : '';
-    if ($f === '' || !is_file($f)) { http_response_code(404); exit; }
-    $bytes = marcaDeAgua($f);
-    if ($bytes === null) { http_response_code(500); exit; }
-    header('Content-Type: image/jpeg');
-    header('Content-Length: ' . strlen($bytes));
-    header('Cache-Control: private, max-age=60');
-    echo $bytes; exit;
-}
-
-if ($acao === 'registo_foto_tirar') {
-    // Largar uma fotografia — a que se escolheu por engano, ou todas de uma vez
-    // quando o convite digital sai do plano. Sem convite digital não há secções
-    // nenhumas: guardar as fotografias era guardá-las para nada.
-    $d = corpo();
-    $chave = (string)($d['chave'] ?? '');
-    $n = $chave === '' ? regFotoLargarTudo() : (regFotoLargar($chave) ? 1 : 0);
-    ok(['largadas' => $n]);
 }
 
 // ============================================================
@@ -1314,70 +1018,6 @@ function licObrigatorios(mysqli $conn): array {
     return $out;
 }
 
-/**
- * As secções do convite digital que levam fotografia, e a galeria de cada uma.
- *
- * É isto que a inscrição oferece a quem escolhe o convite digital: escolher já
- * a fotografia de cada secção — da galeria da casa, ou uma sua. No escalão SEM
- * edição é a única vez que o casal as escolhe, daí serem oferecidas aqui e não
- * só dentro do editor.
- *
- * As secções são as da PEÇA DE ORIGEM do convite digital: é esse o desenho com
- * que o convite do casal vai nascer, e é dele que a lista tem de sair. Um
- * modelo de origem que não mostre o «Interlúdio» não tem interlúdio nenhum para
- * fotografar — pedir essa fotografia era pedir uma imagem para uma página que
- * não existe, e obrigá-la (no escalão sem edição) era travar a inscrição por
- * causa dela.
- */
-function licSeccoesFoto(mysqli $conn): array {
-    $gal = galeriaCompleta($conn);
-    $padrao = defsPadrao();
-
-    // O desenho da peça de origem: diz que secções o convite mostra. Sem peça
-    // de origem, valem as de fábrica — que é o desenho por que o convite nasce
-    // à mesma.
-    $origem = modeloDeOrigem($conn, 'digital');
-    $desenho = $origem ? desenhoDoModeloId($conn, 'digital', (int)$origem['id']) : null;
-    if (!is_array($desenho)) $desenho = [];
-    $mostra = function (string $sec) use ($desenho, $padrao): bool {
-        $v = $desenho[$sec . '.visivel'] ?? $padrao[$sec . '.visivel'] ?? '1';
-        return (string)$v === '1';
-    };
-
-    $out = [];
-    foreach (['capa' => 'Capa', 'historia' => 'História',
-              'interludio' => 'Interlúdio', 'acesso' => 'Acesso (QR)'] as $cat => $rotulo) {
-        $chave = chaveDaCategoria($cat);
-        if (!$chave) continue;
-        // A capa e o acesso existem sempre (não se podem esconder); a história e
-        // o interlúdio só quando a peça de origem as mostra.
-        if (in_array($cat, ['historia', 'interludio'], true) && !$mostra($cat)) continue;
-        $fotos = [];
-        foreach ($gal as $g) {
-            if (($g['categoria'] ?? '') !== $cat) continue;
-            $fotos[] = ['src' => $g['src'], 'nome' => $g['nome']];
-        }
-        $out[] = ['cat' => $cat, 'chave' => $chave, 'rotulo' => $rotulo,
-                  'descricao' => [
-                      'capa'       => 'A primeira imagem, atrás dos vossos nomes.',
-                      'historia'   => 'A que acompanha a vossa história.',
-                      'interludio' => 'A pausa a meio do convite.',
-                      'acesso'     => 'A que fica junto ao código de entrada.',
-                  ][$cat] ?? '',
-                  // A fotografia com que a secção nasce, para o casal ver o que
-                  // está a substituir.
-                  'origem' => (string)($padrao[$chave] ?? ''),
-                  'fotos' => $fotos];
-    }
-    return $out;
-}
-
-/** O nome da peça de origem do convite digital (para a montra o dizer). */
-function licPecaOrigemNome(mysqli $conn): string {
-    $m = modeloDeOrigem($conn, 'digital');
-    return $m ? (string)$m['nome'] : '';
-}
-
 /** As políticas de utilização em vigor (a versão publicada mais alta). */
 function licPolitica(mysqli $conn): array {
     global $P;
@@ -1461,82 +1101,6 @@ function licEscaloesTemModulo(mysqli $conn, array $escIds, string $modulo): bool
                         JOIN {$P}lic_modulos m ON m.id = e.modulo_id
                         WHERE e.id IN ($lista) AND m.chave='$mod' AND e.ativo=1 AND m.ativo=1");
     return $r && (int)$r->fetch_assoc()['n'] > 0;
-}
-
-/**
- * Os escalões de um plano pedido (pacote ou escolha à peça), em ids.
- */
-function licPlanoEscaloes(mysqli $conn, array $d): array {
-    global $P;
-    $escIds = [];
-    $pacoteId = (int)($d['pacote'] ?? 0);
-    if ($pacoteId > 0) {
-        $r = @$conn->query("SELECT escalao_id FROM {$P}lic_pacote_itens WHERE pacote_id=$pacoteId");
-        if ($r) while ($x = $r->fetch_row()) $escIds[] = (int)$x[0];
-    } else {
-        foreach ((array)($d['escaloes'] ?? []) as $e) { $e = (int)$e; if ($e > 0) $escIds[] = $e; }
-    }
-    return array_values(array_unique(array_filter($escIds)));
-}
-
-/**
- * O que estes escalões dão no convite digital: null se não o trazem, senão
- * ['editar' => 0|1, 'nome' => …].
- *
- * É esta a pergunta que decide se as fotografias do casal são um extra ou uma
- * obrigação. COM edição, o convite nasce com as fotografias da casa e o casal
- * troca-as quando quiser — mandar as suas agora é uma comodidade. SEM edição,
- * esta é a única vez em que ele as escolhe: um convite sem edição feito com as
- * fotografias de outro casal fica assim para sempre.
- */
-function licEscaloesDigital(mysqli $conn, array $escIds): ?array {
-    global $P;
-    $ids = array_values(array_unique(array_filter(array_map('intval', $escIds))));
-    if (!$ids) return null;
-    $lista = implode(',', $ids);
-    $r = @$conn->query("SELECT e.nome, e.editar, e.todos_modelos FROM {$P}lic_escaloes e
-                        JOIN {$P}lic_modulos m ON m.id = e.modulo_id
-                        WHERE e.id IN ($lista) AND m.chave='digital' AND e.ativo=1 AND m.ativo=1
-                        ORDER BY e.editar DESC, e.ordem LIMIT 1");
-    if (!$r || !($x = $r->fetch_assoc())) return null;
-    return ['nome' => (string)$x['nome'], 'editar' => (int)$x['editar'],
-            'todos_modelos' => (int)$x['todos_modelos']];
-}
-
-/**
- * As fotografias em espera chegam para o que a licença exige?
- *
- * Devolve a mensagem do que falta, ou null quando está bem. Sem convite digital
- * não há nada a exigir; com edição, também não — as que faltarem ficam com o
- * desenho da casa e trocam-se depois.
- */
-function licFaltamFotos(mysqli $conn, ?array $digital, array $emEspera): ?string {
-    if (!$digital || (int)$digital['editar'] === 1) return null;
-    $faltam = [];
-    foreach (licSeccoesFoto($conn) as $sc) {
-        if (empty($emEspera[$sc['chave']])) $faltam[] = $sc['rotulo'];
-    }
-    if (!$faltam) return null;
-    return 'O escalão «' . $digital['nome'] . '» é sem edição: as fotografias ficam fixas no '
-         . 'convite e não se podem trocar depois. Por isso é preciso enviá-las agora — '
-         . 'falta' . (count($faltam) > 1 ? 'm' : '') . ': ' . implode(', ', $faltam) . '.';
-}
-
-/**
- * Junta ao pedido as fotografias que o casal enviou.
- *
- * O pedido guarda o que o casal escolheu; se ele mandou as suas, é isso que
- * está no convite, e é isso que o pedido tem de dizer.
- */
-function licPedidoJuntarFotos(mysqli $conn, int $pedidoId, array $fotos): void {
-    global $P;
-    if ($pedidoId <= 0 || !$fotos) return;
-    $r = @$conn->query("SELECT fotos FROM {$P}lic_pedidos WHERE id=" . (int)$pedidoId);
-    $j = ($r && ($x = $r->fetch_row())) ? json_decode((string)$x[0], true) : [];
-    if (!is_array($j)) $j = [];
-    $sv = json_encode(array_merge($j, $fotos), JSON_UNESCAPED_SLASHES);
-    $st = @$conn->prepare("UPDATE {$P}lic_pedidos SET fotos=? WHERE id=?");
-    if ($st) { $st->bind_param('si', $sv, $pedidoId); @$st->execute(); }
 }
 
 /** O casamento JÁ TEM este módulo concedido? */
@@ -1653,22 +1217,10 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
         $total = round($total * $fator, 2);
     }
 
-    // As fotografias de cada secção do convite digital. Só se guardam as que
-    // são mesmo da galeria: o casal escolhe de uma lista, e um caminho vindo de
-    // fora não é uma escolha — é outra coisa qualquer.
-    $fotosOk = [];
-    if (!empty($d['fotos']) && is_array($d['fotos'])) {
-        $validas = [];
-        foreach (licSeccoesFoto($conn) as $sc) {
-            foreach ($sc['fotos'] as $ft) $validas[$sc['chave']][$ft['src']] = true;
-        }
-        foreach ($d['fotos'] as $chave => $src) {
-            $chave = (string)$chave; $src = (string)$src;
-            if (isset($validas[$chave][$src])) $fotosOk[$chave] = $src;
-        }
-    }
-    $fotosJson = $fotosOk ? json_encode($fotosOk, JSON_UNESCAPED_SLASHES) : null;
-
+    // A coluna 'fotos' do pedido é do tempo em que o casal escolhia as
+    // fotografias do convite ao comprar a licença. Continua a guardar o que os
+    // pedidos antigos lá puseram; novos não põem nada.
+    $fotosJson = null;
     $pol   = licPolitica($conn);
     $nota  = mb_substr(trim((string)($d['nota'] ?? '')), 0, 1000);
     $ip    = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
@@ -1712,38 +1264,12 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
         @$st->execute();
     }
 
-    // As fotografias que ele escolheu vão já para o convite.
-    if ($fotosOk) licAplicarFotos($conn, $cid, $fotosOk);
-
     // O casamento passa a dizer que tem um pedido em cima da mesa — excepto se
     // já tem licença ativa e isto é um reforço: aí continua a valer o que tem.
     $st = @$conn->prepare("UPDATE {$P}casamentos SET licenca_estado='pendente'
                            WHERE id=? AND licenca_estado <> 'ativa'");
     if ($st) { $st->bind_param('i', $cid); @$st->execute(); }
-
-    // O casal mudou de ideias e tirou o convite digital do pedido: as
-    // fotografias que tinha mandado para ele deixam de ter destino.
-    licFotosConferir($conn, $cid);
     return $pedidoId;
-}
-
-/**
- * Escreve no convite do casamento as fotografias escolhidas no pedido.
- *
- * Faz-se logo à inscrição (e outra vez a cada alteração do pedido) e não só na
- * aprovação: o casal escolheu-as, são dele, e não há razão para o convite
- * esperar por uma decisão administrativa para ficar com a cara que ele quis.
- * Devolve quantas ficaram gravadas.
- */
-function licAplicarFotos(mysqli $conn, int $cid, array $fotos): int {
-    if ($cid <= 0 || !$fotos) return 0;
-    $anterior = casamentoAtual();
-    usarCasamento($cid);
-    $defs = [];
-    foreach ($fotos as $chave => $src) $defs[(string)$chave] = (string)$src;
-    $r = guardarDefinicoes($conn, $defs);
-    usarCasamento($anterior > 0 ? $anterior : $cid);
-    return (int)($r['gravadas'] ?? 0);
 }
 
 /**
@@ -1921,9 +1447,7 @@ function licResumo(mysqli $conn, int $cid): array {
 // É público de propósito: a página de inscrição precisa dele antes de haver
 // sessão nenhuma, e um preçário é para se ver.
 if ($acao === 'lic_catalogo') {
-    ok(['catalogo' => licCatalogo($conn), 'politica' => licPolitica($conn), 'moeda' => 'Kz',
-        'seccoes_foto' => licSeccoesFoto($conn), 'peca_origem' => licPecaOrigemNome($conn),
-        'foto_max_mb' => (int)round(REG_FOTO_MAX / 1048576)]);
+    ok(['catalogo' => licCatalogo($conn), 'politica' => licPolitica($conn), 'moeda' => 'Kz']);
 }
 if ($acao === 'lic_politica') {
     ok(['politica' => licPolitica($conn)]);
@@ -2189,13 +1713,8 @@ if ($acao === 'lic_conceder') {
             $contas = retomarContasDoCasamento($conn, $cid);
         }
     }
-    // Tirou-se o convite digital da licença: as fotografias que o casal mandou
-    // para ele ficaram sem convite onde entrar, e saem do disco. Aqui a decisão
-    // é do admin e vale sobre o que estivesse pedido.
-    $fotosFora = licFotosConferir($conn, $cid, false);
     registar($conn, 'licenca_conceder', (string)$c['nome'],
              "$n módulo(s) · " . ($meses ? "$meses mês(es)" : 'sem limite')
-             . ($fotosFora ? " · $fotosFora fotografia(s) do convite digital apagada(s)" : '')
              . ($reiniciar ? ' · relógio a contar de hoje' : '')
              . ($contas ? " · casamento aberto, $contas conta(s) ativada(s)" : ''));
     ok(['casamento' => $cid, 'modulos' => $n, 'estado' => $novoEstado,
@@ -3097,11 +2616,10 @@ if ($acao === 'def_upload') {
                              : ['image/jpeg','image/png','image/webp'];
         if (!in_array($mt, $mimesOk, true)) erro('O conteúdo do ficheiro não corresponde ao formato.');
     }
-    $dir = __DIR__ . '/assets/convite/custom';
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    $dir = pastaDeEnvios(CUSTOM_FOTO_DIR);
     $nomeFich = str_replace('media.', '', $chave) . '-' . time() . '-' . random_int(100, 999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
     if (!moverUpload($src, "$dir/$nomeFich")) erro('Não foi possível guardar o ficheiro.');
-    $caminho = 'assets/convite/custom/' . $nomeFich;
+    $caminho = CUSTOM_FOTO_DIR . '/' . $nomeFich;
     // A troca fica logo à vista na tela, mas é PROVISÓRIA: só fica mesmo se o
     // casal guardar/actualizar uma versão. Por isso não se apaga já o ficheiro
     // anterior — pode ser preciso repô-lo se o casal sair sem guardar. Guarda-se
@@ -3150,6 +2668,111 @@ if ($acao === 'def_media_repor') {
     if ($novos) guardarDefinicoes($conn, $novos);
     registar($conn, 'media_reposta', implode(', ', array_keys($novos)), count($limpos) . ' ficheiro(s) apagado(s)');
     ok(['repostas' => array_keys($novos), 'apagados' => count($limpos)]);
+}
+
+// ============================================================
+// AS FOTOGRAFIAS DO CONVITE, FORA DO EDITOR
+//
+// As fotografias são do casal — não do desenho, nem da licença. Pediam-se na
+// inscrição, uma vez, porque o escalão sem edição as fixava para sempre; e
+// quem tinha edição trocava-as no editor, entre camadas, réguas e painéis, que
+// é uma oficina para quem só quer pôr uma fotografia sua.
+//
+// Passam a ter área própria na página do convite digital: uma secção, uma
+// fotografia, e pronto. Vale para qualquer licença que traga o convite —
+// incluindo a que não deixa editar o desenho, porque trocar a fotografia não é
+// mexer no desenho.
+//
+// O que se grava aqui é DEFINITIVO: não passa pelo jogo do «pendente» do
+// editor (marcarMediaPendente), que existe para se poder sair sem guardar.
+// Aqui não há sair sem guardar — carregou, ficou.
+// ============================================================
+
+/** A secção de fotografia com esta chave, ou null. */
+function fotoSeccao(mysqli $conn, string $chave): ?array {
+    foreach (seccoesDeFoto($conn, defsAtuais($conn)) as $sc) {
+        if ($sc['chave'] === $chave) return $sc;
+    }
+    return null;
+}
+
+/**
+ * Põe uma fotografia numa secção e larga a que lá estava.
+ *
+ * O ficheiro anterior só sai do disco se for de envio (custom/, ou a antiga
+ * licenca/) e se nenhuma VERSÃO guardada ainda o usar — apagá-lo aí era
+ * estragar uma versão que o casal gravou. É a mesma regra do editor.
+ */
+function fotoTrocar(mysqli $conn, string $chave, string $novo): void {
+    $antigo = (string)(defsAtuais($conn)[$chave] ?? '');
+    guardarDefinicoes($conn, [$chave => $novo]);
+    if ($antigo !== '' && $antigo !== $novo
+        && ehFotoCustom($antigo) && !ficheiroEmVersao($conn, $antigo)) {
+        @unlink(__DIR__ . '/' . $antigo);
+    }
+}
+
+if ($acao === 'convite_fotos') {
+    exigirModuloApi('digital');
+    ok(['seccoes' => seccoesDeFoto($conn, defsAtuais($conn)),
+        'max_mb'  => (int)round(FOTO_CONVITE_MAX / 1048576)]);
+}
+
+if ($acao === 'convite_foto_enviar') {
+    exigirModuloApi('digital');
+    $chave = (string)($_POST['chave'] ?? '');
+    if (!fotoSeccao($conn, $chave)) erro('Essa secção não tem fotografia no vosso convite.');
+
+    $src = origemUpload('ficheiro', FOTO_CONVITE_MAX);
+    // O nome do ficheiro não prova nada: o que manda é o conteúdo.
+    $inf = @getimagesize($src['tmp']);
+    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!$inf || !isset($tipos[(int)$inf[2]])) {
+        erro('O ficheiro não é uma imagem que saibamos ler (jpg, png ou webp).');
+    }
+    if ((int)$inf[0] < 400 || (int)$inf[1] < 400) {
+        erro('A fotografia é pequena de mais para o convite (mínimo 400×400).');
+    }
+    $ext = $tipos[(int)$inf[2]];
+    $dir = pastaDeEnvios(CUSTOM_FOTO_DIR);
+    $nomeFich = str_replace('media.', '', $chave) . '-' . time()
+              . '-' . random_int(100, 999) . '.' . $ext;
+    if (!moverUpload($src, "$dir/$nomeFich")) erro('Não foi possível guardar a fotografia.');
+    $caminho = CUSTOM_FOTO_DIR . '/' . $nomeFich;
+    fotoTrocar($conn, $chave, $caminho);
+    registar($conn, 'convite_foto', $chave, basename((string)$src['nome']));
+    ok(['chave' => $chave, 'src' => $caminho,
+        'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
+}
+
+if ($acao === 'convite_foto_galeria') {
+    exigirModuloApi('digital');
+    $d = corpo();
+    $chave = (string)($d['chave'] ?? '');
+    $src   = (string)($d['src'] ?? '');
+    $sc = fotoSeccao($conn, $chave);
+    if (!$sc) erro('Essa secção não tem fotografia no vosso convite.');
+    // Só o que a galeria desta secção oferece — ou a de origem. Um caminho
+    // vindo de fora não é uma escolha: é outra coisa qualquer.
+    $validas = [$sc['origem'] => true];
+    foreach ($sc['fotos'] as $ft) $validas[$ft['src']] = true;
+    if (!isset($validas[$src])) erro('Essa fotografia não é da galeria desta secção.');
+    fotoTrocar($conn, $chave, $src);
+    registar($conn, 'convite_foto', $chave, 'da galeria da casa');
+    ok(['chave' => $chave, 'src' => $src,
+        'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
+}
+
+if ($acao === 'convite_foto_repor') {
+    exigirModuloApi('digital');
+    $d = corpo();
+    $chave = (string)($d['chave'] ?? '');
+    $sc = fotoSeccao($conn, $chave);
+    if (!$sc) erro('Essa secção não tem fotografia no vosso convite.');
+    fotoTrocar($conn, $chave, (string)$sc['origem']);
+    registar($conn, 'convite_foto_reposta', $chave, 'voltou à fotografia de origem');
+    ok(['chave' => $chave, 'src' => $sc['origem'],
+        'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
 }
 
 if ($acao === 'convite_list') {
@@ -3494,12 +3117,6 @@ if ($acao === 'casamento_criar') {
         erro('A licença escolhida não inclui o «Controlo à porta»: sem esse módulo '
            . 'não há conta de porteiro para criar. Junte o módulo, ou deixe o email em branco.');
 
-    // O convite digital, e o que ele exige em fotografias. Sem escalões
-    // indicados a licença nasce completa — e completa quer dizer com edição, em
-    // que as fotografias do casal são um adianto e não uma obrigação.
-    $digitalNovo = $escPedidos ? licEscaloesDigital($conn, $escPedidos) : null;
-    if ($falta = licFaltamFotos($conn, $digitalNovo, regFotoLista())) erro($falta);
-
     // Nasce ativo quando é o admin a criá-lo. O registo público entra como
     // 'pendente' e é o admin que o faz passar a ativo (etapa 5).
     $ate = ($meses > 0 && $licencaAtiva)
@@ -3540,13 +3157,6 @@ if ($acao === 'casamento_criar') {
     } else {
         licConcederTudo($conn, $novo);
     }
-
-    // As fotografias que o admin pôs na montra passam a ser deste casamento.
-    // Sem convite digital na licença, largam-se — não há convite onde as pôr.
-    $comDigital = !$escPedidos || $digitalNovo !== null;   // sem escalões, a licença traz tudo
-    $fotosNovas = $comDigital ? regFotoEntregar($novo) : [];
-    if (!$comDigital) regFotoLargarTudo();
-    if ($fotosNovas) licAplicarFotos($conn, $novo, $fotosNovas);
 
     // As contas, se vieram. Guardam-se as senhas geradas para as mostrar uma vez.
     $contas = [];

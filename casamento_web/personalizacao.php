@@ -1086,6 +1086,52 @@ function galeriaCompleta(mysqli $conn): array {
 }
 
 /**
+ * As secções do convite digital que levam fotografia, tal como ESTE convite as
+ * mostra — com a fotografia que lá está agora, a de origem e a galeria da casa.
+ *
+ * É o que a área de fotografias da página do convite digital serve. As secções
+ * saem do convite do casal, e não de um modelo: uma que ele tenha escondido não
+ * tem fotografia nenhuma para pedir, e pedi-la era pedir uma imagem para uma
+ * página que ninguém vai ver. A capa e o acesso existem sempre — não se
+ * escondem —, a história e o interlúdio só quando estão à vista.
+ *
+ * Cada secção diz também se a fotografia que lá está foi ENVIADA pelo casal
+ * (nossa) ou é a que o desenho lhe deu: é isso que distingue «trocar» de
+ * «voltar à de origem».
+ */
+function seccoesDeFoto(mysqli $conn, array $defs): array {
+    $gal = galeriaCompleta($conn);
+    $padrao = defsPadrao();
+    $descricoes = [
+        'capa'       => 'A primeira imagem, atrás dos vossos nomes.',
+        'historia'   => 'A que acompanha a vossa história.',
+        'interludio' => 'A pausa a meio do convite.',
+        'acesso'     => 'A que fica junto ao código de entrada.',
+    ];
+    $out = [];
+    foreach (['capa' => 'Capa', 'historia' => 'História',
+              'interludio' => 'Interlúdio', 'acesso' => 'Acesso (QR)'] as $cat => $rotulo) {
+        $chave = chaveDaCategoria($cat);
+        if (!$chave) continue;
+        if (in_array($cat, ['historia', 'interludio'], true)
+            && (string)($defs[$cat . '.visivel'] ?? $padrao[$cat . '.visivel'] ?? '1') !== '1') continue;
+        $origem = (string)($padrao[$chave] ?? '');
+        $atual  = (string)($defs[$chave] ?? $origem);
+        $fotos = [];
+        foreach ($gal as $g) {
+            if (($g['categoria'] ?? '') !== $cat) continue;
+            $fotos[] = ['src' => $g['src'], 'nome' => $g['nome']];
+        }
+        $out[] = ['cat' => $cat, 'chave' => $chave, 'rotulo' => $rotulo,
+                  'descricao' => $descricoes[$cat] ?? '',
+                  'origem' => $origem, 'atual' => $atual,
+                  'nossa' => $atual !== '' && $atual !== $origem,
+                  'fotos' => $fotos];
+    }
+    return $out;
+}
+
+/**
  * Os valores de fábrica desses dados: um casal e um evento que não são de
  * ninguém, e quatro imagens que são desenho da casa e não fotografias.
  */

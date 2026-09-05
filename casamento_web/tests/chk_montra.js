@@ -1,11 +1,12 @@
-// A montra da inscrição: as capturas, as fotos do convite e os preços do admin.
+// A montra da inscrição: as capturas, os planos e os preços do admin.
 //
 // O que aqui se prova é o que a montra promete e o que dela resulta:
 //
 //   1. cada módulo mostra-se em imagem, e a imagem é servida mesmo;
-//   2. escolher o convite digital abre a escolha das fotografias de cada secção;
-//   3. o escalão SEM edição avisa que as fotos ficam fixas — e o COM edição não;
-//   4. as fotografias escolhidas ficam mesmo no convite do casal;
+//   2. a montra vende planos e mais nada — as fotografias do convite deixaram
+//      de se pedir aqui (carregam-se depois; ver chk_convite_fotos);
+//   3. a inscrição passa e o pedido chega à administração;
+//   4. o casal entra e vê a licença que pediu;
 //   5. o admin corrige os preços dos módulos ao montar um pacote, e a poupança
 //      que o pacote anuncia acompanha o que ele mexe;
 //   6. os pedidos chegam-lhe separados: os novos e as actualizações;
@@ -104,7 +105,11 @@ const entrar = async (ctx, user, pass) => {
   ok(num(par.risc) > num(par.agora),
      `e o riscado é MAIOR do que o que se paga (${par.risc.trim()} → ${par.agora.trim()})`);
 
-  // ---------- 2 e 3. as fotos do convite, e o aviso ----------
+  // ---------- 2 e 3. a montra vende planos, e mais nada ----------
+  // Houve aqui um bloco de fotografias: o escalão sem edição fixava-as no acto
+  // da compra, e por isso pedia-as antes de haver casamento. As fotografias
+  // passaram a carregar-se na página do convite digital, quando o casal quiser
+  // e as vezes que quiser — ver chk_convite_fotos. A montra não lhes toca.
   const escolher = (mod, rx) => anon.evaluate(({ mod, rx }) => {
     const l = [...document.querySelectorAll('.pl-mod[data-chave="' + mod + '"] .pl-esc')]
               .find(x => new RegExp(rx).test(x.textContent));
@@ -112,81 +117,32 @@ const entrar = async (ctx, user, pass) => {
     return false;
   }, { mod, rx });
 
-  ok(!(await anon.locator('.pl-fotos').isVisible()),
-     'sem o convite digital escolhido, não se pedem fotografias');
-
-
-  await escolher('digital', 'Modelo padrão');
-  await anon.waitForTimeout(600);
-  ok(await anon.locator('.pl-fotos').isVisible(),
-     'escolhido o convite digital, aparece a escolha das fotografias');
-  const secs = await anon.$$eval('.pl-sec', e => e.length);
-  ok(secs >= 3, `uma secção do convite de cada vez (${secs})`);
-
-  const aviso = await anon.$eval('.pl-fotos-nota', e => ({ c: e.className, t: e.textContent }));
-  ok(/aviso/.test(aviso.c), 'no escalão SEM edição, o aviso é de aviso');
-  ok(/não poder(ão|á) ser alterada/i.test(aviso.t),
-     'e diz, por palavras, que as fotos não poderão ser alteradas');
-  // Sem edição, a galeria da casa não é oferta nenhuma: o convite fica assim
-  // para sempre, e por isso a fotografia tem de ser DELES. Quem prova o envio é
-  // o chk_registo_fotos; aqui prova-se que a alternativa não se oferece.
-  ok(await anon.$$eval('.pl-ft', e => e.length) === 0,
-     'e a galeria da casa não se oferece: sem edição, a fotografia tem de ser do casal');
-
   await escolher('digital', 'com edição');
   await anon.waitForTimeout(600);
-  ok(/boa/.test(await anon.$eval('.pl-fotos-nota', e => e.className)),
-     'com edição, o aviso passa a nota tranquila');
-  ok(/trocá-las|sempre que quiserem/i.test(await anon.$eval('.pl-fotos-nota', e => e.textContent)),
-     'e diz que as podem trocar quando quiserem');
-  ok(await anon.$$eval('.pl-ft', e => e.length) > 0,
-     'e aí sim, cada secção mostra as miniaturas da casa — que se trocam depois');
+  ok(await anon.$$eval('.pl-fotos, .pl-sec, .pl-ft', e => e.length) === 0,
+     'escolhido o convite digital, a montra não pede fotografia nenhuma');
 
-  // O resto prova-se COM edição: é o escalão em que a galeria da casa é uma
-  // escolha a sério, e é essa escolha que tem de chegar ao convite.
   await escolher('convidados', 'Até 80');
   await anon.waitForTimeout(500);
 
-  // ---------- 4. as fotos escolhidas ficam no convite ----------
+  // ---------- 4. a inscrição passa, e o pedido chega ----------
   await anon.fill('#noiva', 'Nara' + marca); await anon.fill('#noivo', 'Kito' + marca);
   await anon.fill('#email', email);
   await anon.fill('#senha', SENHA); await anon.fill('#confirmar', SENHA);
   await anon.fill('#data', '2027-10-09');
 
-  // A terceira fotografia de cada secção — para não ser a que já vinha marcada.
-  const escolhidas = await anon.evaluate(() => {
-    const out = {};
-    document.querySelectorAll('.pl-sec').forEach(sc => {
-      const fs = [...sc.querySelectorAll('.pl-ft input')];
-      const alvo = fs[2] || fs[fs.length - 1];
-      alvo.click(); out[alvo.name.replace(/^ft-/, '')] = alvo.value;
-    });
-    return out;
-  });
-  ok(Object.keys(escolhidas).length >= 3, 'escolhem-se fotografias diferentes das sugeridas');
-
   await anon.check('#reg-aceite');
   await anon.click('#btn'); await anon.waitForTimeout(1800);
-  ok(await anon.locator('#obrigado').isVisible(), 'a inscrição passa com as fotografias escolhidas');
+  ok(await anon.locator('#obrigado').isVisible(), 'a inscrição passa');
 
   const peds = await api('lic_pedidos&estado=pendente');
   const ped = (peds.pedidos || []).find(x => (x.casamento_nome || '').includes(marca));
   ok(!!ped, 'o pedido chega à administração');
   const cid = ped.casamento_id;
 
-  // As fotografias já estão no convite do casal — antes mesmo de a licença ser
-  // concedida. Foi ele que as escolheu; são dele.
-  const ficha = await api('casamento_ficha&id=' + cid);
   const casal = await entrar(await b.newContext(), email, SENHA);
   const defs = await casal._api('lic_estado');
   ok(defs.success, 'o casal entra e vê a sua licença');
-
-  const noConvite = await api('dados_exportar&ambito=casamento&id=' + cid);
-  const gravadas = JSON.stringify(noConvite || {});
-  let batem = 0;
-  Object.values(escolhidas).forEach(src => { if (gravadas.includes(src)) batem++; });
-  ok(batem === Object.keys(escolhidas).length,
-     `as ${Object.keys(escolhidas).length} fotografias escolhidas estão no convite (${batem})`);
 
   // ---------- 5. o admin mexe nos preços ao montar um pacote ----------
   await admin.evaluate(() => verVista('licencas')); await admin.waitForTimeout(1400);

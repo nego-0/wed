@@ -2337,10 +2337,8 @@ async function carregarPlanosNovo(){
     const temAlgo = (d.catalogo.pacotes || []).some(p => p.ativo)
                  || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
     if (!temAlgo) throw new Error('catálogo vazio');
-    Planos.montar('n-planos', d.catalogo, {
-      moeda: d.moeda, seccoes: d.seccoes_foto || [],
-      pecaOrigem: d.peca_origem || '', fotoMaxMb: d.foto_max_mb || 5,
-      aoMudar: porteiroConformePlanoNovo });
+    Planos.montar('n-planos', d.catalogo,
+                  { moeda: d.moeda, aoMudar: porteiroConformePlanoNovo });
     PLANOS_NOVO = true;
     const manual = document.getElementById('n-licenca-manual');
     if (manual) manual.style.display = 'none';
@@ -2497,16 +2495,6 @@ async function criar(){
     const el = document.getElementById(primeiro);
     el.focus(); el.closest('.campo').scrollIntoView({ behavior:'smooth', block:'center' });
     return toast('Reveja os dados das contas assinalados a vermelho.', true);
-  }
-  // O convite digital sem edição fixa as fotografias para sempre. Diz-se aqui,
-  // e não com um erro do servidor depois de o formulário estar todo preenchido.
-  if (PLANOS_NOVO){
-    const falta = Planos.faltamFotos();
-    if (falta){
-      const cx = document.querySelector('#n-planos .pl-fotos');
-      if (cx) cx.scrollIntoView({ behavior:'smooth', block:'center' });
-      return toast(falta, true);
-    }
   }
   const plano = PLANOS_NOVO ? Planos.escolha() : null;
   const d = await api('casamento_criar', { method:'POST', body: JSON.stringify({
