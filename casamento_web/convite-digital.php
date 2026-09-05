@@ -179,8 +179,18 @@ if ($modoProva) {
 // O motor de arrasto entra na própria tela: quem manda no gesto é o documento
 // onde o rato está, e a tela é um iframe. A janela de edição só recebe o
 // resultado (ver pontelEditor()).
-if ($modoEditor) $out = str_replace('</body>',
-    '<script src="assets/tela-livre.js"></script>' . pontelEditor() . '</body>', $out);
+if ($modoEditor) {
+    // A que altura a tela estava a ser lida quando o editor a mandou recompor.
+    // Vem no próprio pedido para a reposição poder acontecer já na primeira
+    // pintura — uma volta pelo postMessage chegaria tarde, e via-se o salto.
+    $rolo = ['y'   => max(0, (int)($_POST['tela_y'] ?? 0)),
+             'sec' => preg_replace('/[^a-z0-9_-]/i', '', (string)($_POST['tela_sec'] ?? '')),
+             'dy'  => max(-20000, min(20000, (int)($_POST['tela_dy'] ?? 0)))];
+    $out = str_replace('</body>',
+        '<script src="assets/tela-livre.js"></script>'
+      . '<script>window.EDITOR_ROLO=' . json_encode($rolo) . ';</script>'
+      . pontelEditor() . '</body>', $out);
+}
 
 // ---- Visualização normal (recursos externos) -----------------
 header('Content-Type: text/html; charset=utf-8');
@@ -196,6 +206,11 @@ function pontelEditor(): string {
 <style id="ed-marcas">
   /* Controlos destinados aos convidados não fazem parte da peça a editar. */
   #dlBtn, #audioBtn{ display:none !important; }
+  /* A tela é para editar, não para assistir. As secções entram com um fade e
+     um deslize de 34 pixéis, e a tela recompõe-se a cada retoque: o que se
+     estava a olhar tornava a deslizar para o lugar a cada tecla. Quem recebe o
+     convite continua a vê-las entrar. */
+  .rv{ opacity:1 !important; transform:none !important; transition:none !important; }
   [data-def]{ outline:1px dashed transparent; outline-offset:3px; transition:outline-color .12s; cursor:text; }
   body.ed-marcar [data-def]:hover{ outline-color:rgba(217,188,140,.75); }
   [data-def].ed-sel{ outline:1.5px solid #D9BC8C !important; outline-offset:3px; }
@@ -225,6 +240,46 @@ function pontelEditor(): string {
   // Os convidados continuam a recebê-la fechada e por abrir.
   var capa = document.getElementById('cover');
   if (capa){ capa.classList.remove('open'); document.body.classList.add('opened'); capa.style.display = 'none'; }
+
+  // ---- Voltar ao ponto onde se estava a ler ----------------------
+  // A tela recompõe-se de raiz a cada retoque (é o servidor que monta as
+  // secções), e um documento novo começa no princípio. A janela de edição diz,
+  // no pedido, a que altura estava — e volta-se lá antes de se ver o contrário.
+  // Sem animação: o html tem scroll-behavior:smooth, e até um scrollTo direito
+  // saía a descer devagar, que é justamente o que se quer deixar de ver.
+  (function(){
+    var onde = window.EDITOR_ROLO || {};
+    if (!onde.y && !onde.sec) return;
+    var raiz = document.documentElement, suave = raiz.style.scrollBehavior;
+    raiz.style.scrollBehavior = 'auto';
+    var mexeu = false;
+    ['wheel','touchstart','keydown'].forEach(function(ev){
+      window.addEventListener(ev, function(){ mexeu = true; }, {passive:true, once:true});
+    });
+    // O alvo recalcula-se de cada vez: a secção pode mudar de sítio enquanto a
+    // página assenta, e é a ELA que se quer voltar, não a um pixel qualquer.
+    function alvoAgora(){
+      var s = onde.sec ? document.querySelector('[data-sec="' + onde.sec + '"]') : null;
+      if (!s) return Math.max(0, onde.y || 0);
+      return Math.max(0, Math.round(s.getBoundingClientRect().top + window.scrollY - (onde.dy || 0)));
+    }
+    function repor(){
+      if (mexeu) return;
+      var alvo = alvoAgora();
+      if (Math.abs(window.scrollY - alvo) > 1) window.scrollTo(0, alvo);
+    }
+    repor();
+    // A página ainda cresce enquanto as imagens e os tipos de letra chegam, e
+    // uma página mais curta trava a rolagem a meio. Insiste-se até assentar —
+    // e larga-se à primeira vez que alguém mexe.
+    var fim = Date.now() + 1500;
+    var t = setInterval(function(){
+      repor();
+      if (mexeu || Date.now() > fim){ clearInterval(t); raiz.style.scrollBehavior = suave; }
+    }, 60);
+    window.addEventListener('load', repor);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(repor);
+  })();
   function mostrarCapa(sim){ if (capa) capa.style.display = sim ? '' : 'none'; }
   function envia(m){ pai.postMessage(Object.assign({fonte:'tela'}, m), '*'); }
 
@@ -249,6 +304,36 @@ function pontelEditor(): string {
     }
   });
 
+  /**
+   * Ir a uma secção — e chegar lá.
+   *
+   * A rolagem suave calcula o destino no instante em que arranca, e a página
+   * ainda está a crescer (fotografias, tipos de letra): o que se pediu ficava
+   * uns trezentos pixéis acima do que se via. Depois de a animação assentar,
+   * confere-se e corrige-se de uma vez — a não ser que a pessoa já tenha
+   * mexido, que então o lugar é dela.
+   */
+  function irA(el, bloco){
+    if (!el) return;
+    el.scrollIntoView({block: bloco, behavior: 'smooth'});
+    var mexeu = false, larga = function(){ mexeu = true; };
+    ['wheel','touchstart','keydown'].forEach(function(ev){
+      window.addEventListener(ev, larga, {passive:true, once:true}); });
+    clearTimeout(irA._t);
+    irA._t = setTimeout(function(){
+      ['wheel','touchstart','keydown'].forEach(function(ev){
+        window.removeEventListener(ev, larga); });
+      if (mexeu) return;
+      var r = el.getBoundingClientRect();
+      var falta = bloco === 'center' ? r.top - (window.innerHeight - r.height) / 2 : r.top;
+      if (Math.abs(falta) <= 4) return;
+      var raiz = document.documentElement, suave = raiz.style.scrollBehavior;
+      raiz.style.scrollBehavior = 'auto';
+      window.scrollBy(0, falta);
+      raiz.style.scrollBehavior = suave;
+    }, 900);
+  }
+
   window.addEventListener('message', function(e){
     var d = e.data || {}; if (d.fonte !== 'editor') return;
     if (d.tipo === 'texto'){
@@ -258,15 +343,19 @@ function pontelEditor(): string {
     if (d.tipo === 'marcar'){
       document.querySelectorAll('.ed-sel').forEach(function(x){ x.classList.remove('ed-sel'); });
       document.querySelectorAll('.ed-sec-sel').forEach(function(x){ x.classList.remove('ed-sec-sel'); });
+      // Assinalar e IR VER são duas coisas: quem marca diz qual quer. Marcar a
+      // secção a cada recomposição da tela — que é a cada retoque — punha o
+      // convite a subir e a descer sozinho enquanto se escrevia.
+      var rolar = d.rolar === true;
       if (d.def){ document.querySelectorAll('[data-def="' + d.def + '"]').forEach(function(x){ x.classList.add('ed-sel'); });
                   var a = document.querySelector('[data-def="' + d.def + '"]');
-                  if (a) a.scrollIntoView({block:'center', behavior:'smooth'}); }
+                  if (a && rolar) irA(a, 'center'); }
       if (d.sec){ var s = document.querySelector('[data-sec="' + d.sec + '"]');
-                  if (s){ s.classList.add('ed-sec-sel'); if(!d.def) s.scrollIntoView({block:'start', behavior:'smooth'}); } }
+                  if (s){ s.classList.add('ed-sec-sel');
+                          if (rolar && !d.def) irA(s, 'start'); } }
     }
     if (d.tipo === 'irPara'){
-      var s2 = document.querySelector('[data-sec="' + d.sec + '"]');
-      if (s2) s2.scrollIntoView({block:'start', behavior:'smooth'});
+      irA(document.querySelector('[data-sec="' + d.sec + '"]'), 'start');
     }
     // Mostrar ou esconder a capa que abre, conforme a camada escolhida.
     if (d.tipo === 'capa'){ mostrarCapa(!!d.mostrar); }
@@ -297,8 +386,7 @@ function pontelEditor(): string {
     if (d.tipo === 'pos'){ pintarPos(d.id, d.x, d.y, d.a); }
     if (d.tipo === 'livre-sel'){
       marcarLivre(d.id);
-      var alvo = elDe(d.id);
-      if (alvo) alvo.scrollIntoView({block:'center', behavior:'smooth'});
+      irA(elDe(d.id), 'center');
     }
   });
 

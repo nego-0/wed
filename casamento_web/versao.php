@@ -313,6 +313,8 @@ function correcoesEsperadas(): array {
          'convite-editor.php', 'function linhasCerimoniaCrono('],
         ['Cada ícone e cada emblema chama-se pelo nome, e não pela chave de programador',
          'personalizacao.php', 'function nomesIcones('],
+        ['Retocar uma propriedade não mexe a tela: ela fica no ponto onde se estava a ler',
+         'convite-editor.php', 'function ancoraTela('],
         ['O emblema desenhado tem as medidas dos da casa: o anel não muda, só sai o louro',
          'assets/convite-base.html', '.cerimonias.sem-ramos .cer-medal'],
 

@@ -190,6 +190,10 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
       <!-- A tela é servida por POST para poder receber o rascunho por gravar. -->
       <form id="f-tela" method="post" target="tela" action="convite-digital.php?demo=1&editor=1" hidden>
         <input type="hidden" name="rascunho" id="rascunho">
+        <!-- Onde a tela estava a ser lida, para lá voltar sem se dar por isso. -->
+        <input type="hidden" name="tela_y" id="tela-y" value="0">
+        <input type="hidden" name="tela_sec" id="tela-sec" value="">
+        <input type="hidden" name="tela_dy" id="tela-dy" value="0">
       </form>
     </div>
   </div>
@@ -456,6 +460,11 @@ let SEC = CAPA_ID;     // camada selecionada — abre no Envelope, a porta de en
 let DEF = null;        // texto selecionado dentro dela
 let SUJO = false;
 let telaPronta = false;
+// Verdadeiro enquanto é o EDITOR a pôr o cursor num campo, e não a pessoa.
+// Sem esta distinção, clicar num texto dentro da tela dava duas ordens: uma a
+// marcar o que se clicou (sem mexer) e outra, vinda do foco automático do
+// campo, a ir buscá-lo — e a tela saltava logo a seguir ao clique.
+let focoAutomatico = false;
 
 // ---------- histórico (desfazer / refazer) ----------
 // Um editor sem desfazer obriga a pensar duas vezes antes de cada gesto.
@@ -774,7 +783,9 @@ window.addEventListener('message', e=>{
     enviarTela({tipo:'tema', vars:EST.paleta});
     enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});   // a tela recarrega escondida
     enviarTela({tipo:'livres', mapa:livresTodos(), pos:mapaPos()});
-    if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF});
+    // Assinala a secção, mas SEM a ir buscar: a tela acabou de repor o ponto
+    // onde estava. Rolar aqui era o segundo tempo do salto.
+    if (SEC) enviarTela({tipo:'marcar', sec:SEC, def:DEF, rolar:false});
     return;
   }
   // Arrasto na tela: o gesto correu lá dentro, aqui só chega o resultado.
@@ -798,10 +809,13 @@ window.addEventListener('message', e=>{
     DEF = (d.def && CAMPOS[d.def]) ? d.def : null;
     renderCamadas(); renderProps();
     enviarTela({tipo:'capa', mostrar: SEC===CAPA_ID});
-    enviarTela({tipo:'marcar', sec:SEC, def:DEF});
+    // Clicou-se DENTRO da tela: o que se escolheu já está à vista.
+    enviarTela({tipo:'marcar', sec:SEC, def:DEF, rolar:false});
     if (DEF){ msg('A editar: ' + CAMPOS[DEF][0]);
               const el = document.querySelector('#props [data-chave="'+DEF+'"]');
-              if (el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+              if (el){ focoAutomatico = true;
+                       el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+                       focoAutomatico = false; } }
     else msg('Camada: ' + rotuloCamada(SEC));
   }
 });
@@ -813,8 +827,38 @@ window.addEventListener('message', e=>{
  */
 function recarregarTela(){
   telaPronta = false;
+  // A tela vai ser recomposta de raiz, e um documento novo começa no princípio.
+  // Leva consigo o sítio onde estava a ser lida: sem isto, cada retoque punha o
+  // convite no topo e mandava-o descer outra vez até à secção — a maquete
+  // andava para cima e para baixo a cada tecla.
+  const a = ancoraTela();
+  $('tela-y').value   = String(a.y);
+  $('tela-sec').value = a.sec;
+  $('tela-dy').value  = String(a.dy);
   $('rascunho').value = JSON.stringify(serializar());
   $('f-tela').submit();
+}
+/**
+ * Onde a tela está a ser lida — e não só a que altura.
+ *
+ * Um número de pixéis não resiste: a página recomposta raramente tem a altura
+ * exacta da anterior (uma linha a mais no texto, uma fotografia que ainda não
+ * chegou), e voltar ao mesmo pixel deixava a secção uns 300 mais acima ou mais
+ * abaixo. Guarda-se a secção que ocupa o topo da vista e a que distância dele
+ * está: isso reencontra-se em qualquer altura de página.
+ */
+function ancoraTela(){
+  try {
+    const w = $('tela').contentWindow; if (!w) return {y:0, sec:'', dy:0};
+    const y = Math.max(0, Math.round(w.scrollY || 0));
+    let sec = '', dy = 0, achou = false;
+    w.document.querySelectorAll('[data-sec]').forEach(el => {
+      const t = el.getBoundingClientRect().top;
+      if (t <= 4) { sec = el.dataset.sec; dy = Math.round(t); achou = true; }   // a última já passada
+      else if (!achou && !sec) { sec = el.dataset.sec; dy = Math.round(t); }    // ainda nenhuma: a primeira à vista
+    });
+    return {y, sec, dy};
+  } catch (e) { return {y:0, sec:'', dy:0}; }
 }
 
 // Os redesenhos de painel passam pelo guarda de assets/editor-adiar.js: se
@@ -968,7 +1012,8 @@ function irCamada(k){
   SEC = k; DEF = null;
   renderCamadas(); renderProps(); rotularBotaoRepor();
   enviarTela({tipo:'capa', mostrar: k===CAPA_ID});   // revela ou esconde o envelope
-  enviarTela({tipo:'marcar', sec:k, def:null});
+  // Escolher uma camada é pedir para a ver: esta é a única marcação que rola.
+  enviarTela({tipo:'marcar', sec:k, def:null, rolar:true});
   msg('Camada: ' + rotuloCamada(k));
 }
 function alternarSec(k){
@@ -1099,7 +1144,8 @@ function contarAqui(el, max){
 
 function focar(chave){
   DEF = chave;
-  enviarTela({tipo:'marcar', sec:SEC, def:chave});
+  // Pôr o cursor num campo é perguntar onde ele está: aí vale a pena rolar.
+  enviarTela({tipo:'marcar', sec:SEC, def:chave, rolar:!focoAutomatico});
   msg('A editar: ' + CAMPOS[chave][0]);
 }
 function editar(el){
