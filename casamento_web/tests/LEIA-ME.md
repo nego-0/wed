@@ -22,6 +22,16 @@ recorte de perto — para se poderem pôr lado a lado e decidir se são bonitos.
 Foi assim que se apanhou o floreado "filete" feito de retas e o "leque" com
 seis riscos cruzados: nenhum dos dois dava erro, só ficavam feios.
 
+`montra.js` também não é prova: é a ferramenta que refaz as capturas de
+`assets/montra/`, as que a montra dos planos mostra a quem se vem inscrever.
+Semeia o casamento de demonstração com uma festa a sério (convidados, mesas,
+orçamento com parcelas, entradas à porta), abre cada página com uma conta de
+noivos criada só para isso — com a do admin, a tira amarela da visita de
+suporte entrava em todas as imagens — e escreve os JPEG por cima dos que lá
+estão. Corre-se quando o produto muda de cara: uma montra que mostra o ecrã
+de há seis meses vende uma coisa que já não existe. `node montra.js` faz
+todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
+
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js
 ```
