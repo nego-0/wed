@@ -687,7 +687,11 @@ async function apagar(id, nome){
 /* A peça de origem: o ponto de regresso de uma peça, e o nome por que ela se dá
    a conhecer quando o casal não tem versão nem outro modelo aplicado. É uma só
    por peça (digital e impresso), e uma escolha da casa — não de um casamento.
-   Só um modelo publicado e disponível a todos pode sê-la. */
+   Só um modelo publicado e disponível a todos pode sê-la.
+
+   Vale para quem vier a seguir. Cada casamento fica com o modelo que lhe foi
+   preso quando pediu a licença: é o que ele viu nas capturas da montra, e um
+   casal que comprou um convite não pode acordar com outro. */
 async function definirOrigem(id, on){
   const m = MODELOS[id] || {};
   if (on){
@@ -697,14 +701,18 @@ async function definirOrigem(id, on){
       texto: 'Do ' + (m.ambito === 'impresso' ? '<b>cartão impresso</b>' : '<b>convite digital</b>')
            + '.<br><br>Passa a ser o <b>ponto de regresso</b> desta peça, e o nome por que ela '
            + 'se dá a conhecer quando o casal ainda não escolheu nada.'
+           + '<br><br>Vale para <b>quem vier a seguir</b>: os casamentos que já existem '
+           + 'ficam com o modelo que viram ao pedir a licença.'
     });
     if (!r.sim) return;
   }
   const d = await api('modelo_pecaorigem&ambito=' + encodeURIComponent(m.ambito) + '&id=' + (on ? id : 0),
                       { method:'POST' });
   if (!d || !d.success) return;
-  toast(on ? 'Passou a ser a peça de origem: ' + (d.nome || m.nome)
-           : 'Deixou de ser a peça de origem (volta ao automático).');
+  const guardam = d.presos
+    ? ' · ' + d.presos + ' casamento(s) ficam com o que já tinham' : '';
+  toast((on ? 'Passou a ser a peça de origem: ' + (d.nome || m.nome)
+            : 'Deixou de ser a peça de origem (volta ao automático).') + guardam);
   carregar();
 }
 

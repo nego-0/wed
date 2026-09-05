@@ -663,6 +663,11 @@ if ($acao === 'registo_publico') {
     $_SESSION['registo_feito'] = time();
     usarCasamento($cid);
 
+    // A peça de origem que a casa tem HOJE fica a ser a deste casamento. Foi
+    // este o modelo que o casal viu nas capturas da montra ao inscrever-se; se
+    // o admin designar outro amanhã, é para quem vier a seguir.
+    fixarPecaOrigemDoCasal($conn, $cid);
+
     // O plano que o casal escolheu vira pedido de licença, pendente. É o que o
     // admin vai ver na página das licenças, e é o que o casal vê ao entrar.
     $pedido = 0;
@@ -1263,6 +1268,11 @@ function licRegistarPedido(mysqli $conn, int $cid, array $d, string $tipo,
                         $it['editar'], $it['todos_modelos']);
         @$st->execute();
     }
+
+    // A peça de origem que a casa tem HOJE passa a ser a deste casamento. Foi
+    // este o modelo que ele viu nas capturas ao escolher o plano; se o admin
+    // designar outro amanhã, é para quem vier a seguir.
+    fixarPecaOrigemDoCasal($conn, $cid);
 
     // O casamento passa a dizer que tem um pedido em cima da mesa — excepto se
     // já tem licença ativa e isto é um reforço: aí continua a valer o que tem.
@@ -3157,6 +3167,10 @@ if ($acao === 'casamento_criar') {
     } else {
         licConcederTudo($conn, $novo);
     }
+
+    // E a peça de origem de hoje fica a ser a dele, como no registo público:
+    // um casamento aberto pela casa também nasce com um convite à vista.
+    fixarPecaOrigemDoCasal($conn, $novo);
 
     // As contas, se vieram. Guardam-se as senhas geradas para as mostrar uma vez.
     $contas = [];
@@ -5398,11 +5412,22 @@ if ($acao === 'modelo_lista') {
     // vigor" a um modelo que já estava em vigor — e o casal carregava, nada
     // mudava, e concluía que a função não funcionava. Compara-se o que aplicar
     // produziria com o que a peça mostra: é a mesma conta de modelo_aplicar.
-    // Qual modelo é a peça de origem de cada âmbito é uma verdade da CASA (a
-    // designação vive no 0), independente de haver casamento aberto — o admin
-    // tem de a ver na página dos modelos mesmo sem um casamento à frente.
-    $atual = []; $vigorId = []; $origemId = []; $naOrigem = []; $fabricaId = []; $designadaId = [];
+    // Duas perguntas parecidas, e não são a mesma:
+    //
+    //   $origemCasaId  qual modelo a CASA designou — é o que a página dos
+    //                  modelos assinala, e é uma verdade da casa, que o admin
+    //                  tem de ver mesmo sem casamento aberto;
+    //   $origemId      qual é a peça de origem DESTE casamento — a que lhe
+    //                  ficou presa quando pediu a licença. É esta que diz em
+    //                  que modelo a peça dele repousa.
+    //
+    // Confundi-las fazia a página dizer que o casal estava no modelo novo da
+    // casa quando ele continua, muito bem, no que comprou.
+    $atual = []; $vigorId = []; $origemId = []; $origemCasaId = [];
+    $naOrigem = []; $fabricaId = []; $designadaId = [];
     foreach (array_keys(ambitosVersao()) as $amb) {
+        $oc = modeloDeOrigem($conn, $amb, 0);
+        $origemCasaId[$amb] = $oc ? (int)$oc['id'] : 0;
         $o = modeloDeOrigem($conn, $amb);
         $origemId[$amb] = $o ? (int)$o['id'] : 0;
         $fab = modeloDeFabrica($conn, $amb);
@@ -5420,8 +5445,11 @@ if ($acao === 'modelo_lista') {
         $amb = $m['ambito'];
         $m['em_vigor'] = false;
         $m['mesmo_desenho'] = false;
-        // Este modelo é a peça de origem deste âmbito? (Assinala-o no painel.)
-        $m['de_origem'] = isset($origemId[$amb]) && (int)$m['id'] === $origemId[$amb];
+        // Este modelo é a peça de origem que a CASA designou? (Assinala-o no painel.)
+        $m['de_origem'] = isset($origemCasaId[$amb]) && (int)$m['id'] === $origemCasaId[$amb];
+        // E é a deste casamento? Pode ser outro: a peça de origem de um casal
+        // é a que ele viu ao pedir a licença, não a que a casa tem hoje.
+        $m['de_origem_minha'] = isset($origemId[$amb]) && (int)$m['id'] === $origemId[$amb];
         // É o ficheiro de origem de fábrica (a rede de segurança de sempre)?
         $m['de_fabrica'] = isset($fabricaId[$amb]) && (int)$m['id'] === $fabricaId[$amb];
         // Protegido de apagar: o de fábrica, ou o designado como origem.
@@ -5843,6 +5871,10 @@ if ($acao === 'modelo_pecaorigem') {
     // tem versão nem outro modelo aplicado. É uma escolha da casa (global), não
     // de um casamento. id=0 devolve a designação ao automático (o de fábrica,
     // achado pelo desenho).
+    //
+    // Vale para quem VIER A SEGUIR. Os casamentos que já existem ficam com o
+    // modelo que lhes prendemos quando pediram a licença — foi esse que eles
+    // viram nas capturas da montra, e é esse que compraram.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma define a peça de origem.');
     exigirCorrecao();
     $ambito = ambitoPedido();
@@ -5861,8 +5893,19 @@ if ($acao === 'modelo_pecaorigem') {
         $nome = (string)$m['nome'];
     }
     definirPecaOrigem($conn, $ambito, $id);
-    registar($conn, 'peca_origem_definida', $nome ?? '(automático)', $ambito);
-    ok(['ambito' => $ambito, 'id' => $id, 'nome' => $nome ?? nomeDaOrigem($conn, $ambito)]);
+    // Quantos casamentos ficam com o que tinham: é o que o admin precisa de
+    // saber para não julgar que acabou de mudar o convite a toda a gente.
+    global $P;
+    $chave = 'modelo.pecaorigem.' . $ambito;
+    $stp = @$conn->prepare("SELECT COUNT(*) FROM {$P}definicoes
+                            WHERE casamento_id > 0 AND chave=?");
+    $presos = 0;
+    if ($stp) { $stp->bind_param('s', $chave); $stp->execute();
+                $presos = (int)$stp->get_result()->fetch_row()[0]; }
+    registar($conn, 'peca_origem_definida', $nome ?? '(automático)',
+             $ambito . ($presos ? " · $presos casamento(s) mantêm o que tinham" : ''));
+    ok(['ambito' => $ambito, 'id' => $id, 'nome' => $nome ?? nomeDaOrigem($conn, $ambito, 0),
+        'presos' => $presos]);
 }
 
 if ($acao === 'modelo_aplicar') {

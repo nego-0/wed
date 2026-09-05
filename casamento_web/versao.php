@@ -325,6 +325,8 @@ function correcoesEsperadas(): array {
          'api.php', "if (\$acao === 'convite_foto_enviar')"],
         ['E a inscrição deixou de as pedir: a fotografia é do casal, não da licença',
          'personalizacao.php', 'function seccoesDeFoto('],
+        ['A peça de origem que o casal viu ao pedir a licença fica a ser a dele',
+         'personalizacao.php', 'function fixarPecaOrigemDoCasal('],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

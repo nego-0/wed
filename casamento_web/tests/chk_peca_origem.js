@@ -34,8 +34,19 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   };
 
   const marca = 'zz' + Date.now().toString().slice(-6);
-  const casal = await api('casamento_criar', { nome: 'ZZ Origem ' + marca, noiva: 'Iris', noivo: 'Ivo' });
-  await api('casamento_abrir&id=' + casal.id, {});
+  // Um casamento aberto abre-se AQUI, e outro mais à frente. A razão é o que
+  // a prova tem para dizer: a peça de origem de um casal é a que a casa tinha
+  // quando ele nasceu, e não muda quando o admin designa outra. Para ver a
+  // designação nova a valer, é preciso um casal nascido depois dela.
+  const casais = [];
+  async function abrirCasalNovo(sufixo) {
+    const c = await api('casamento_criar',
+                        { nome: 'ZZ Origem ' + marca + sufixo, noiva: 'Iris', noivo: 'Ivo' });
+    casais.push(c.id);
+    await api('casamento_abrir&id=' + c.id, {});
+    return c.id;
+  }
+  await abrirCasalNovo('a');
 
   const listaDig = () => api('modelo_lista&ambito=digital').then(d => d.modelos || []);
   const nomeOrigem = () => api('versao_lista&ambito=digital').then(d =>
@@ -71,8 +82,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(mods.find(m => m.id === isabel.id).de_origem === false,
      'e o «Isabel & Abednego» deixa de o estar');
   ok(mods.filter(m => m.de_origem).length === 1, 'continua a ser um só');
+
+  // O casal que já cá estava fica com o que tinha: foi esse convite que ele
+  // viu, e é esse que compra. A designação nova é para quem vier a seguir.
+  ok((await nomeOrigem()).nome === 'Isabel & Abednego',
+     'o casal que já cá estava continua com «Isabel & Abednego» — o que viu ao nascer');
+  ok(mods.find(m => m.id === isabel.id).de_origem_minha === true,
+     'e a lista assinala-lhe essa como a SUA peça de origem');
+
+  // Um casal nascido depois leva a designação nova.
+  await abrirCasalNovo('b');
   ok((await nomeOrigem()).nome === 'Borgonha',
-     'a linha de origem das versões passa a dar «Borgonha»');
+     'um casal nascido depois leva «Borgonha» — a linha de origem passa a dá-la');
   // Designado, «Borgonha» fica protegido; e o ficheiro de fábrica continua protegido.
   const bMarc = mods.find(m => m.id === borgonha.id);
   const iMarc = mods.find(m => m.id === isabel.id);
@@ -121,8 +142,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ---------- limpeza: repor a designação semeada e apagar o casal ----------
   await api('modelo_pecaorigem&ambito=digital&id=' + isabel.id, {});   // repõe o estado semeado
   await api('modelo_apagar&id=' + priv.id, {});
-  await api('casamento_estado&id=' + casal.id + '&estado=arquivado', {});
-  await api('casamento_apagar&id=' + casal.id, {});
+  // Um casamento criado pela casa nasce com licença: revoga-se primeiro, que é
+  // a ordem que o sistema exige, e só depois se arquiva e se apaga. Sem isto os
+  // casais da prova ficavam para trás — e um casamento que fica agarra a peça
+  // de origem que levou, e ela deixa de se poder apagar.
+  for (const id of casais) {
+    await api('lic_revogar', { casamento: id, motivo: 'fim da prova automática' });
+    await api('casamento_estado&id=' + id + '&estado=arquivado', {});
+    await api('casamento_apagar&id=' + id, {});
+  }
+  const sobrou = (await api('casamento_lista&estado=todos')).casamentos || [];
+  ok(!sobrou.some(c => casais.includes(c.id)),
+     'a prova leva consigo os casamentos que abriu');
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');
   ok(errs.length === 0, 'nenhum erro de JavaScript');

@@ -313,15 +313,53 @@ function modeloDaPeca(mysqli $conn, string $ambito): ?array {
             'exato' => modeloIgualAPeca($ambito, (string)$m['defs'], instantaneoAmbito($conn, $ambito))];
 }
 
-/** O modelo que o admin designou como peça de origem deste âmbito (id ou 0). */
-function pecaOrigemId(mysqli $conn, string $ambito): int {
+/**
+ * O modelo designado como peça de origem deste âmbito (id ou 0).
+ *
+ * Com $cid = 0 responde pela CASA: é a escolha do admin, a que vale para quem
+ * ainda não tem casamento. Com um casamento, responde por ele: é o modelo que
+ * lhe ficou preso quando pediu a licença.
+ */
+function pecaOrigemId(mysqli $conn, string $ambito, int $cid = 0): int {
     global $P;
     $chave = 'modelo.pecaorigem.' . $ambito;
-    $st = @$conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=0 AND chave=? LIMIT 1");
+    $st = @$conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=? AND chave=? LIMIT 1");
     if (!$st) return 0;
-    $st->bind_param('s', $chave); $st->execute();
+    $st->bind_param('is', $cid, $chave); $st->execute();
     $r = $st->get_result()->fetch_row();
     return $r ? (int)$r[0] : 0;
+}
+
+/**
+ * Prende a este casamento a peça de origem que a casa tem HOJE.
+ *
+ * Chama-se quando o casal pede a licença — é o momento em que ele viu o
+ * modelo, nas capturas da montra, e disse que sim àquilo. Se o admin passar
+ * depois outro modelo a peça de origem, é para quem vier a seguir: um casal
+ * que comprou um convite não pode acordar com outro. Devolve o que ficou
+ * preso, âmbito => id.
+ *
+ * Não reescreve o que já estiver preso: um reforço de licença é a mesma casa a
+ * comprar mais módulos, não uma casa nova.
+ */
+function fixarPecaOrigemDoCasal(mysqli $conn, int $cid): array {
+    global $P;
+    if ($cid <= 0) return [];
+    $preso = [];
+    foreach (['digital', 'impresso'] as $ambito) {
+        if (pecaOrigemId($conn, $ambito, $cid) > 0) continue;   // já tem a sua
+        $m = modeloDeOrigem($conn, $ambito, 0);                 // a da casa, hoje
+        if (!$m) continue;
+        $chave = 'modelo.pecaorigem.' . $ambito;
+        $v = (string)$m['id'];
+        $st = @$conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor)
+                               VALUES (?,?,?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+        if (!$st) continue;
+        $st->bind_param('iss', $cid, $chave, $v);
+        if (@$st->execute()) $preso[$ambito] = (int)$m['id'];
+    }
+    if ($preso) $GLOBALS['__origem_cache'] = [];   // a resposta mudou
+    return $preso;
 }
 
 /** Guarda (ou limpa, com 0) o modelo que é a peça de origem deste âmbito. */
@@ -365,28 +403,52 @@ function modeloDeFabrica(mysqli $conn, string $ambito): ?array {
 }
 
 /**
- * O modelo da casa que É a peça de origem deste âmbito.
+ * A peça de origem deste âmbito — a do casamento aberto, se ele tiver a sua.
  *
- * Primeiro, o que o admin escolheu (modelo.pecaorigem.<ambito>). Se não
- * escolheu nenhum — ou o que escolheu já não existe —, cai no modelo de
- * fábrica (o ficheiro de origem). Null se não houver nenhum.
+ * Por ordem:
+ *   1) o modelo que ficou PRESO a este casamento quando ele pediu a licença;
+ *   2) o que o admin designou para a casa (modelo.pecaorigem.<ambito>);
+ *   3) o modelo de fábrica, achado pelo desenho de origem.
+ *
+ * A primeira é o que faz o casal ficar com o convite que comprou. Ele escolheu
+ * o plano a olhar para as capturas de um modelo; se o admin designar outro
+ * amanhã, é para quem vier a seguir. Um casamento sem nada preso — os que já cá
+ * estavam, ou o pessoal da casa a trabalhar sem casamento aberto — cai na
+ * escolha da casa, como sempre caiu.
+ *
+ * Passar $cid = 0 pergunta explicitamente pela da CASA (é o que
+ * fixarPecaOrigemDoCasal precisa de saber para prender a certa).
  */
-function modeloDeOrigem(mysqli $conn, string $ambito): ?array {
+function modeloDeOrigem(mysqli $conn, string $ambito, ?int $cid = null): ?array {
     global $P;
-    static $cache = [];
-    if (array_key_exists($ambito, $cache)) return $cache[$ambito];
+    // A memória vive no global e não num static, para fixarPecaOrigemDoCasal a
+    // poder esquecer: prender a peça a um casamento muda a resposta a meio do
+    // mesmo pedido, e uma memória que não se limpa devolvia a de antes.
+    $cache = &$GLOBALS['__origem_cache'];
+    if (!is_array($cache)) $cache = [];
+    if ($cid === null) $cid = function_exists('casamentoAtual') ? max(0, casamentoAtual()) : 0;
+    $sinal = $ambito . '|' . $cid;
+    if (array_key_exists($sinal, $cache)) return $cache[$sinal];
 
-    // 1) A escolha do admin.
-    $esc = pecaOrigemId($conn, $ambito);
-    if ($esc > 0) {
+    $porId = function (int $id) use ($conn, $ambito, $P): ?array {
+        if ($id <= 0) return null;
         $st = $conn->prepare("SELECT id, nome FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
-        $st->bind_param('is', $esc, $ambito); $st->execute();
-        if ($m = $st->get_result()->fetch_assoc()) {
-            return $cache[$ambito] = ['id' => (int)$m['id'], 'nome' => (string)$m['nome']];
-        }
+        if (!$st) return null;
+        $st->bind_param('is', $id, $ambito); $st->execute();
+        $m = $st->get_result()->fetch_assoc();
+        return $m ? ['id' => (int)$m['id'], 'nome' => (string)$m['nome']] : null;
+    };
+
+    // 1) A que ficou presa a este casamento.
+    if ($cid > 0 && ($m = $porId(pecaOrigemId($conn, $ambito, $cid)))) {
+        return $cache[$sinal] = $m;
     }
-    // 2) O modelo de fábrica, pelo desenho de origem.
-    return $cache[$ambito] = modeloDeFabrica($conn, $ambito);
+    // 2) A escolha do admin, para a casa.
+    if ($m = $porId(pecaOrigemId($conn, $ambito, 0))) {
+        return $cache[$sinal] = $m;
+    }
+    // 3) O modelo de fábrica, pelo desenho de origem.
+    return $cache[$sinal] = modeloDeFabrica($conn, $ambito);
 }
 
 /**
@@ -416,7 +478,26 @@ function razaoProtecaoOrigem(mysqli $conn, int $id, string $ambito): ?string {
         return 'é a peça de origem de fábrica — o ponto de regresso que existe sempre e não se apaga';
     if (pecaOrigemId($conn, $ambito) === $id)
         return 'está definido como peça de origem — retire-lhe essa designação para o poder apagar';
+    // E os casamentos que o levaram consigo: apagar-lhes a peça de origem era
+    // deixá-los sem o convite que compraram, sem ninguém dar por isso.
+    $n = casamentosComPecaOrigem($conn, $ambito, $id);
+    if ($n > 0)
+        return 'é a peça de origem de ' . $n . ' casamento' . ($n > 1 ? 's' : '')
+             . ' — foi o convite que eles compraram, e não se lhes tira';
     return null;
+}
+
+/** Quantos casamentos têm este modelo preso como a SUA peça de origem. */
+function casamentosComPecaOrigem(mysqli $conn, string $ambito, int $id): int {
+    global $P;
+    if ($id <= 0) return 0;
+    $chave = 'modelo.pecaorigem.' . $ambito;
+    $v = (string)$id;
+    $st = @$conn->prepare("SELECT COUNT(*) FROM {$P}definicoes
+                           WHERE casamento_id > 0 AND chave=? AND valor=?");
+    if (!$st) return 0;
+    $st->bind_param('ss', $chave, $v); $st->execute();
+    return (int)$st->get_result()->fetch_row()[0];
 }
 
 /**
@@ -575,8 +656,8 @@ function naOrigem(mysqli $conn, string $ambito): bool {
  * origem), e é o nome dele que aparece — não «Original», que não é modelo
  * nenhum. Só quando esse modelo já não existe é que se cai no nome de recurso.
  */
-function nomeDaOrigem(mysqli $conn, string $ambito): string {
-    $m = modeloDeOrigem($conn, $ambito);
+function nomeDaOrigem(mysqli $conn, string $ambito, ?int $cid = null): string {
+    $m = modeloDeOrigem($conn, $ambito, $cid);
     return $m ? $m['nome'] : VERSAO_PADRAO_NOME;
 }
 
