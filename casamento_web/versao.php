@@ -331,6 +331,8 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'function contagem('],
         ['E diz sempre de quem é a festa: casal e data no mesmo sítio, em toda a parte',
          'parcial-cabecalho.php', 'topo-casal'],
+        ['Os cartões do orçamento filtram as despesas e o calendário',
+         'assets/orcamento.js', 'window.orcFiltrarEstado'],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

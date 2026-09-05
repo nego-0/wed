@@ -53,16 +53,28 @@ $CAS  = casalInfo($DEFS);
   .o-hero{ background:linear-gradient(158deg,#fff 0%, #fffdf8 100%);
            border-color:var(--gold-soft); }
   .o-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.7rem; margin-bottom:1.15rem; }
-  .kpi{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.85rem .95rem; position:relative; overflow:hidden; }
+  /* Os cartões SÃO o filtro: cada um é uma fatia das despesas, e clicar nele
+     mostra só essa fatia — na lista e no calendário. Por isso são botões, e
+     não caixas: têm de se ver como coisa em que se carrega. */
+  .kpi{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.85rem .95rem;
+        position:relative; overflow:hidden; text-align:left; font-family:inherit; cursor:pointer;
+        display:block; width:100%; transition:border-color .15s, box-shadow .15s, transform .15s; }
+  .kpi:hover:not([disabled]){ border-color:var(--gold-soft); transform:translateY(-1px);
+        box-shadow:0 6px 18px rgba(180,134,74,.14); }
+  .kpi:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--ring); }
+  .kpi.on{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset; background:#fffdf6; }
+  /* O que não tem nada para mostrar não convida a carregar. */
+  .kpi.morto{ cursor:default; opacity:.6; }
   .kpi::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--gold-soft); }
+  .kpi.on::before{ width:5px; }
   .kpi .n{ font-family:var(--serif); font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1.05;
            font-variant-numeric:tabular-nums; }
   .kpi .n small{ font-size:.9rem; color:#9aa09a; font-weight:400; }
   .kpi .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#8a8f88; margin-top:.3rem; }
   .kpi.pago::before{ background:var(--o-pago); }   .kpi.pago .n{ color:var(--o-pago); }
   .kpi.ouro::before{ background:var(--o-contr); }
-  .kpi.margem::before{ background:var(--o-pago); } .kpi.margem .n{ color:var(--o-pago); }
-  .kpi.margem.mau::before{ background:var(--o-over); } .kpi.margem.mau .n{ color:var(--o-over); }
+  .kpi.atraso::before{ background:#b9c2bb; }
+  .kpi.atraso.mau::before{ background:var(--o-over); } .kpi.atraso.mau .n{ color:var(--o-over); }
 
   .o-barra{ height:30px; border-radius:8px; background:var(--o-track); display:flex; overflow:hidden;
             border:1px solid var(--line); gap:2px; padding:2px; }
@@ -75,6 +87,9 @@ $CAS  = casalInfo($DEFS);
   .o-legenda span{ display:inline-flex; align-items:center; gap:.4rem; }
   .o-legenda i{ width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.05); }
   .o-legenda b{ color:var(--ink); font-variant-numeric:tabular-nums; }
+  /* Acima do teto: a leitura que não é fatia de nada, e por isso não é cartão. */
+  .o-legenda span.mau{ color:var(--o-over); font-weight:600; }
+  .o-legenda span.mau b{ color:var(--o-over); }
 
   /* ---- Categorias: onde pesa a festa ---- */
   .o-cats{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.8rem; }
@@ -122,6 +137,13 @@ $CAS  = casalInfo($DEFS);
   .o-filtro .o-filtro-cat i{ width:12px; height:12px; border-radius:3px; display:inline-block; }
   .o-filtro b{ font-variant-numeric:tabular-nums; color:var(--ink); }
   .o-filtro .mini{ margin-left:auto; }
+  /* A pastilha do estado, ao lado da da categoria: os dois filtros cruzam-se,
+     e a tira tem de dizer os dois. */
+  .o-filtro .o-filtro-est{ font-weight:600; border-radius:50px; padding:.1rem .6rem;
+        font-size:.78rem; background:var(--cream); color:var(--ink); }
+  .o-filtro .o-filtro-est.pago{ background:var(--ok-bg); color:var(--ok); }
+  .o-filtro .o-filtro-est.previsto{ background:var(--warn-bg); color:var(--warn); }
+  .o-filtro .o-filtro-est.atraso{ background:var(--danger-bg); color:var(--danger); }
 
   /* ---- Categoria criada/editada dentro do form de despesa ---- */
   .cat-linha{ display:flex; gap:.4rem; align-items:center; }
@@ -242,7 +264,8 @@ $CAS  = casalInfo($DEFS);
     <div class="o-kpis" id="o-kpis"></div>
     <div class="o-barra" id="o-barra"></div>
     <div class="o-legenda" id="o-legenda"></div>
-    <p class="dica" style="margin:.9rem 0 0">O <b>teto</b> e a <b>moeda</b> definem-se em
+    <p class="dica" style="margin:.9rem 0 0">Toque num dos números acima para ver só essa parte —
+      nas despesas e no calendário. O <b>teto</b> e a <b>moeda</b> definem-se em
       <a href="gestao.php" style="color:var(--gold)">Gestão</a>. Sem teto, a barra mede-se pela soma
       das despesas. As categorias são só gavetas com uma cor — não têm teto próprio.</p>
   </div>

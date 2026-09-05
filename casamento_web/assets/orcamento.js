@@ -61,7 +61,57 @@
     render();
   }
 
+  // Dois filtros, e cruzam-se: a gaveta (categoria) e o estado do dinheiro.
+  // «Sem categoria» diz-se 'sem'; nos estados, null é tudo.
   var FILTRO_CAT = null;    // null = todas; 'sem' = sem categoria; senão o id (string)
+  var FILTRO_EST = null;    // null = tudo; 'previsto' | 'pago' | 'atraso'
+
+  /** Hoje, em ISO — é assim que as datas vêm do servidor. */
+  function hojeISO() { return new Date().toISOString().slice(0, 10); }
+
+  /** Uma parcela por liquidar cuja data já passou. */
+  function emAtraso(p) {
+    return !p.pago_em && p.data_prevista && p.data_prevista < hojeISO();
+  }
+
+  /** As despesas que têm parcelas em atraso — é por elas que o filtro pega. */
+  function despesasEmAtraso() {
+    var ids = {};
+    (ORC.pagamentos || []).forEach(function (p) { if (emAtraso(p)) ids[p.despesa_id] = true; });
+    return ids;
+  }
+
+  /** As despesas que passam pelos dois filtros. */
+  function despesasFiltradas() {
+    var atraso = FILTRO_EST === 'atraso' ? despesasEmAtraso() : null;
+    return (ORC.despesas || []).filter(function (d) {
+      if (FILTRO_CAT === 'sem' && d.categoria_id) return false;
+      if (FILTRO_CAT != null && FILTRO_CAT !== 'sem' && +d.categoria_id !== +FILTRO_CAT) return false;
+      if (FILTRO_EST === 'atraso') return !!atraso[d.id];
+      if (FILTRO_EST != null && d.estado !== FILTRO_EST) return false;
+      return true;
+    });
+  }
+
+  /** E as parcelas — pelo estado delas, e pela gaveta da despesa a que pertencem. */
+  function pagamentosFiltrados() {
+    var cat = {};
+    (ORC.despesas || []).forEach(function (d) { cat[d.id] = d.categoria_id; });
+    return (ORC.pagamentos || []).filter(function (p) {
+      if (FILTRO_CAT === 'sem' && cat[p.despesa_id]) return false;
+      if (FILTRO_CAT != null && FILTRO_CAT !== 'sem'
+          && +cat[p.despesa_id] !== +FILTRO_CAT) return false;
+      if (FILTRO_EST === 'pago')     return !!p.pago_em;
+      if (FILTRO_EST === 'previsto') return !p.pago_em;
+      if (FILTRO_EST === 'atraso')   return emAtraso(p);
+      return true;
+    });
+  }
+
+  /** O nome do filtro em vigor, para o cabeçalho da lista dizer o que mostra. */
+  function nomeDoEstado() {
+    return { previsto: 'Por pagar', pago: 'Já pago', atraso: 'Em atraso' }[FILTRO_EST] || '';
+  }
 
   function render() {
     CORES_CAT = {};
@@ -91,22 +141,42 @@
     return CORES_CAT[String(id)] || corSugerida(id);
   }
 
-  // ---- saúde do orçamento: KPIs + barra ----
+  // ---- saúde do orçamento: os cartões (que são o filtro) + a barra ----
+  //
+  // Os cartões não são só leitura: cada um é uma fatia das despesas, e clicar
+  // nele mostra só essa fatia — na lista e no calendário. Os números diziam
+  // «tem 40 000 por pagar» e deixavam a pessoa a procurar quais, à mão, numa
+  // lista de trinta linhas.
+  //
+  // A margem até ao teto não é uma fatia de nada — é a diferença entre dois
+  // números —, e por isso não está aqui: seria o único cartão que não filtrava.
+  // Vive por baixo da barra, onde a folga já se lia na legenda.
   function renderResumo(r) {
-    var margemMau = r.acima_do_teto;
-    var margemTxt = r.base <= 0 ? '—'
-      : (r.falta >= 0 ? fmt(r.falta) : fmt(Math.abs(r.falta)));
-    var margemLbl = r.base <= 0 ? 'Defina um teto ou previstos'
-      : (r.falta >= 0 ? 'Margem até ao teto' : 'Acima do teto');
+    var atraso = despesasEmAtraso();
+    var totalAtraso = (ORC.pagamentos || []).reduce(
+      function (s, p) { return s + (emAtraso(p) ? num(p.valor) : 0); }, 0);
+    var nAtraso = Object.keys(atraso).length;
 
     var kpis = [
-      { n: r.base > 0 ? fmt(r.base) : 'sem teto', l: 'Orçamento', cls: '' },
-      { n: fmt(r.previsto), l: 'Por pagar', cls: 'ouro' },
-      { n: fmt(r.pago), l: 'Já pago', cls: 'pago' },
-      { n: margemTxt, l: margemLbl, cls: 'margem' + (margemMau ? ' mau' : '') }
+      { est: null, n: r.base > 0 ? fmt(r.base) : 'sem teto', l: 'Orçamento', cls: '',
+        dica: 'Ver todas as despesas' },
+      { est: 'previsto', n: fmt(r.previsto), l: 'Por pagar', cls: 'ouro',
+        dica: 'Ver só o que falta pagar' },
+      { est: 'pago', n: fmt(r.pago), l: 'Já pago', cls: 'pago',
+        dica: 'Ver só o que já saiu' },
+      { est: 'atraso', n: fmt(totalAtraso), l: 'Em atraso', cls: 'atraso' + (nAtraso ? ' mau' : ''),
+        dica: nAtraso ? 'Ver as ' + nAtraso + ' despesa(s) com parcelas vencidas'
+                      : 'Nada vencido — nada para ver' }
     ];
     $('o-kpis').innerHTML = kpis.map(function (k) {
-      return '<div class="kpi ' + k.cls + '"><div class="n">' + k.n + '</div><div class="l">' + esc(k.l) + '</div></div>';
+      var on = FILTRO_EST === k.est;
+      var morto = k.est === 'atraso' && !nAtraso;
+      return '<button type="button" class="kpi ' + k.cls + (on ? ' on' : '')
+        + (morto ? ' morto' : '') + '" title="' + esc(k.dica) + '"'
+        + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+        + (morto ? ' disabled' : '')
+        + ' onclick="orcFiltrarEstado(' + (k.est ? "'" + k.est + "'" : 'null') + ')">'
+        + '<div class="n">' + k.n + '</div><div class="l">' + esc(k.l) + '</div></button>';
     }).join('');
 
     // A barra: pago + previsto (por pagar) sobre o maior de (teto, total a gastar).
@@ -120,11 +190,18 @@
         + (w > 14 ? esc(fmt(s[1])) : '') + '</span>';
     }).join('');
 
-    var folga = r.base > 0 ? Math.max(0, r.base - totalDesp) : 0;
     var leg = [['var(--o-pago)', 'Pago', r.pago], ['var(--o-prev)', 'Por pagar', r.previsto]];
-    if (r.base > 0) leg.push(['var(--o-track)', 'Folga até ao teto', folga]);
+    // A margem: uma leitura, e não uma gaveta — por isso não é cartão. Fica
+    // aqui, ao pé da barra que a desenha, e é a mesma coisa que a folga que o
+    // carril vazio mostra: dizê-la duas vezes era enchimento.
+    if (r.base > 0) {
+      leg.push(['var(--o-track)', r.falta >= 0 ? 'Margem até ao teto' : 'Acima do teto',
+                Math.abs(r.falta), r.acima_do_teto]);
+    }
     $('o-legenda').innerHTML = leg.map(function (l) {
-      return '<span><i style="background:' + l[0] + '"></i>' + esc(l[1]) + ' <b>' + esc(fmt(l[2])) + '</b></span>';
+      return '<span' + (l[3] ? ' class="mau"' : '') + '>'
+        + (l[0] ? '<i style="background:' + l[0] + '"></i>' : '')
+        + esc(l[1]) + ' <b>' + esc(fmt(l[2])) + '</b></span>';
     }).join('');
   }
 
@@ -174,14 +251,59 @@
     box.innerHTML = chips.join('');
   }
 
-  // ---- clicar numa cor/pastilha filtra as despesas e mostra o valor real ----
-  window.orcFiltrar = function (cat) {
-    FILTRO_CAT = (cat == null || cat === 'null') ? null : String(cat);
+  // ---- clicar filtra: a gaveta pelas pastilhas, o estado pelos cartões ----
+  // Os dois cruzam-se, e ambos repintam as duas listas: quem escolheu «Por
+  // pagar» quer ver as despesas por pagar E as parcelas por liquidar.
+  function repintarFiltrado(rolarPara) {
+    renderResumo(ORC.resumo);
     renderChips(ORC.categorias, ORC.sem_categoria);
     renderDespesas(ORC.despesas, ORC.categorias);
-    var alvo = $('lista-despesas');
-    if (alvo && FILTRO_CAT != null) alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    renderPagamentos(ORC.pagamentos);
+    var alvo = rolarPara && $(rolarPara);
+    if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  window.orcFiltrar = function (cat) {
+    FILTRO_CAT = (cat == null || cat === 'null') ? null : String(cat);
+    repintarFiltrado(FILTRO_CAT != null ? 'lista-despesas' : null);
   };
+
+  /** Um cartão de estatística escolhido — ou o mesmo outra vez, que desfaz. */
+  window.orcFiltrarEstado = function (est) {
+    FILTRO_EST = (est == null || FILTRO_EST === est) ? null : String(est);
+    // «Em atraso» é sobre datas, e as datas vivem no calendário: é para lá que
+    // se olha primeiro. Os outros dois são sobre despesas.
+    repintarFiltrado(FILTRO_EST === 'atraso' ? 'lista-pagamentos'
+                   : (FILTRO_EST ? 'lista-despesas' : null));
+  };
+
+  /** Larga tudo o que estiver a filtrar. */
+  window.orcLimparFiltros = function () {
+    FILTRO_CAT = null; FILTRO_EST = null;
+    repintarFiltrado(null);
+  };
+
+  /**
+   * A tira que diz o que a lista está a mostrar, e como sair dela.
+   *
+   * Uma lista encolhida sem dizer porquê é uma lista avariada: quem chega e vê
+   * três despesas onde tinha trinta precisa de ler o motivo na própria lista, e
+   * não de se lembrar do cartão em que carregou.
+   */
+  function tiraFiltro(quantos, valor, nomeCat) {
+    if (FILTRO_CAT == null && FILTRO_EST == null) return '';
+    var partes = [];
+    if (FILTRO_CAT != null) {
+      partes.push('<span class="o-filtro-cat"><i style="background:' + corCat(FILTRO_CAT)
+        + '"></i>' + esc(nomeCat) + '</span>');
+    }
+    if (FILTRO_EST != null) {
+      partes.push('<span class="o-filtro-est ' + FILTRO_EST + '">' + esc(nomeDoEstado()) + '</span>');
+    }
+    return '<div class="o-filtro">' + partes.join('')
+      + '<b>' + esc(fmt(valor)) + '</b> · ' + quantos
+      + '<button class="mini" onclick="orcLimparFiltros()">&times; limpar</button></div>';
+  }
 
   // ---- despesas ----
   function celaFatura(d) {
@@ -206,19 +328,16 @@
     var nomeCat = {};
     cats.forEach(function (c) { nomeCat[c.id] = c.nome; });
 
-    // O filtro por categoria: a lista encolhe, e o cabeçalho mostra o valor REAL.
-    var lista = desp, cab = '';
-    if (FILTRO_CAT != null) {
-      lista = (FILTRO_CAT === 'sem')
-        ? desp.filter(function (d) { return !d.categoria_id; })
-        : desp.filter(function (d) { return +d.categoria_id === +FILTRO_CAT; });
-      var nome = FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria');
-      var real = lista.reduce(function (s, d) { return s + num(d.valor); }, 0);
-      cab = '<div class="o-filtro"><span class="o-filtro-cat"><i style="background:' + corCat(FILTRO_CAT) + '"></i>'
-        + esc(nome) + '</span><b>' + esc(fmt(real)) + '</b> · ' + lista.length + ' despesa(s)'
-        + '<button class="mini" onclick="orcFiltrar(null)">&times; limpar filtro</button></div>';
+    // Os filtros: a lista encolhe, e o cabeçalho diz o que ficou — quantas
+    // despesas e quanto valem, que é a pergunta a seguir.
+    var lista = despesasFiltradas();
+    var real = lista.reduce(function (s, d) { return s + num(d.valor); }, 0);
+    var nome = FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria');
+    var cab = tiraFiltro(lista.length + ' despesa(s)', real, nome);
+    if (!lista.length) {
+      box.innerHTML = cab + '<div class="vazio">Nenhuma despesa responde a este filtro.</div>';
+      return;
     }
-    if (!lista.length) { box.innerHTML = cab + '<div class="vazio">Sem despesas nesta categoria.</div>'; return; }
 
     var h = cab + '<div class="tabela-scroll"><table class="desp"><thead><tr>'
       + '<th>Despesa</th><th>Categoria</th><th>Estado</th><th>Fatura</th>'
@@ -256,10 +375,22 @@
       box.innerHTML = '<div class="vazio">Sem parcelas marcadas. Abra uma despesa para lhe juntar sinais e prestações.</div>';
       return;
     }
+    // O calendário obedece aos mesmos filtros da lista: escolher «Por pagar»
+    // e ver o calendário inteiro por baixo era responder a metade da pergunta.
+    var nomeCat = {};
+    (ORC.categorias || []).forEach(function (c) { nomeCat[c.id] = c.nome; });
+    var lista = pagamentosFiltrados();
+    var soma = lista.reduce(function (s, p) { return s + num(p.valor); }, 0);
+    var cab = tiraFiltro(lista.length + ' parcela(s)', soma,
+                         FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria'));
+    if (!lista.length) {
+      box.innerHTML = cab + '<div class="vazio">Nenhuma parcela responde a este filtro.</div>';
+      return;
+    }
     var hoje = new Date().toISOString().slice(0, 10);
     var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    var h = '', mesAtual = '';
-    pags.forEach(function (p) {
+    var h = cab, mesAtual = '';
+    lista.forEach(function (p) {
       var pago = !!p.pago_em;
       var chaveData = pago ? p.pago_em : p.data_prevista;
       var mes = chaveData ? (function () { var d = chaveData.split('-'); return meses[(+d[1] || 1) - 1] + ' de ' + d[0]; })() : 'Sem data';
