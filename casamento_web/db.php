@@ -191,7 +191,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 34;
+const ESQUEMA_VERSAO = 35;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1645,6 +1645,17 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}mesas", 'rotacao', "SMALLINT NOT NULL DEFAULT 0");
     }
 
+    // v35 — de onde partiu cada ação.
+    //
+    // O histórico dizia quem, o quê e quando. Faltava o «de onde» — e é a
+    // pergunta que se faz quando uma ação não se explica: foi mesmo o casal, ou
+    // foi alguém com a senha dele? Sem ela, o registo servia para recordar e
+    // não para averiguar. As linhas antigas ficam sem morada, que é honesto:
+    // não se sabia, e não se inventa.
+    if ($versaoAtual < 35) {
+        migColuna($conn, "{$P}registo", 'ip', "VARCHAR(45) DEFAULT NULL");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -1747,11 +1758,132 @@ function registar(mysqli $conn, string $accao, string $alvo = '', string $detalh
     global $P;
     $u = function_exists('utilizadorAtual') ? (utilizadorAtual() ?? '') : '';
     $p = function_exists('papel') ? (papel() ?? '') : '';
-    $st = @$conn->prepare("INSERT INTO {$P}registo (casamento_id,utilizador,papel,accao,alvo,detalhe) VALUES (" . casamentoAtual() . ",?,?,?,?,?)");
+    $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+    $st = @$conn->prepare("INSERT INTO {$P}registo (casamento_id,utilizador,papel,accao,alvo,detalhe,ip)
+                           VALUES (" . casamentoAtual() . ",?,?,?,?,?,?)");
     if (!$st) return;
     $alvo = substr($alvo, 0, 120); $detalhe = substr($detalhe, 0, 255);
-    $st->bind_param('sssss', $u, $p, $accao, $alvo, $detalhe);
+    $st->bind_param('ssssss', $u, $p, $accao, $alvo, $detalhe, $ip);
     @$st->execute();
+}
+
+/**
+ * O nome de cada ação, por extenso, e a família a que pertence.
+ *
+ * O histórico mostrava a chave de programador — «lic_escalao_guardar»,
+ * «def_media_repor» — a quem nunca vai ler código. Uma dúzia delas tinha
+ * tradução no painel dos noivos; as outras sessenta e tal apareciam em cru.
+ *
+ * Cada entrada é [frase, família]. A frase completa «Fulano …»: escreve-se no
+ * passado e na terceira pessoa, para a linha se ler de uma vez. A família dá a
+ * cor e serve para agrupar: convites, mesas, porta, orçamento, peças, licença,
+ * contas, casa, dados.
+ */
+function nomesDeAcao(): array {
+    return [
+        // ---- os convidados e os convites ----
+        'convite_criado'    => ['criou um convite', 'convites'],
+        'convite_editado'   => ['editou um convite', 'convites'],
+        'convite_eliminado' => ['pôs um convite na reciclagem', 'convites'],
+        'convite_reposto'   => ['tirou um convite da reciclagem', 'convites'],
+        'convite_apagado'   => ['apagou um convite definitivamente', 'convites'],
+        'rsvp_manual'       => ['alterou a presença de alguém', 'convites'],
+        'impresso_sim'      => ['marcou um convite como impresso', 'convites'],
+        'impresso_nao'      => ['desmarcou o impresso de um convite', 'convites'],
+        'enviado_sim'       => ['marcou um convite como enviado', 'convites'],
+        'enviado_nao'       => ['desmarcou o envio de um convite', 'convites'],
+        // ---- as mesas ----
+        'mesa_eliminada'    => ['eliminou uma mesa', 'mesas'],
+        // ---- a porta ----
+        'checkin'           => ['registou uma entrada', 'porta'],
+        // ---- o orçamento ----
+        'orcamento_ajuste'           => ['acertou o teto ou a moeda do orçamento', 'orcamento'],
+        'orcamento_categoria'        => ['guardou uma categoria de despesa', 'orcamento'],
+        'orcamento_categoria_apagada'=> ['apagou uma categoria de despesa', 'orcamento'],
+        'orcamento_despesa'          => ['lançou ou alterou uma despesa', 'orcamento'],
+        'orcamento_despesa_apagada'  => ['apagou uma despesa', 'orcamento'],
+        'orcamento_fatura'           => ['juntou ou tirou uma fatura', 'orcamento'],
+        'orcamento_pagamento'        => ['mexeu numa parcela de pagamento', 'orcamento'],
+        // ---- as peças (convite digital e impresso) ----
+        'convite_editado_defs' => ['guardou alterações na peça', 'pecas'],
+        'convite_foto'         => ['trocou uma fotografia do convite', 'pecas'],
+        'convite_foto_reposta' => ['devolveu uma fotografia à de origem', 'pecas'],
+        'media_reposta'        => ['repôs fotografias de origem', 'pecas'],
+        'versao_guardada'      => ['guardou uma versão da peça', 'pecas'],
+        'versao_aplicada'      => ['pôs uma versão em vigor', 'pecas'],
+        'versao_atualizada'    => ['actualizou uma versão guardada', 'pecas'],
+        'versao_renomeada'     => ['mudou o nome a uma versão', 'pecas'],
+        'versao_apagada'       => ['apagou uma versão', 'pecas'],
+        'modelo_aplicado'      => ['aplicou um modelo da casa', 'pecas'],
+        'convite_reposto_peca' => ['repôs a peça', 'pecas'],
+        // ---- os modelos da casa ----
+        'modelo_criado'       => ['criou um modelo da casa', 'casa'],
+        'modelo_editado'      => ['editou um modelo da casa', 'casa'],
+        'modelo_desenhado'    => ['desenhou um modelo da casa', 'casa'],
+        'modelo_apagado'      => ['apagou um modelo da casa', 'casa'],
+        'modelo_visibilidade' => ['mudou quem vê um modelo', 'casa'],
+        'modelo_exemplo'      => ['mexeu nos dados de exemplo dos modelos', 'casa'],
+        'modelos_exportados'  => ['levou os modelos da casa', 'casa'],
+        'modelos_importados'  => ['trouxe modelos para a casa', 'casa'],
+        'modelos_restaurados' => ['restaurou os modelos de origem', 'casa'],
+        'peca_origem_definida'=> ['designou a peça de origem', 'casa'],
+        'tema_sistema'        => ['mudou o tema do sistema', 'casa'],
+        'atendimento_guardar'        => ['mexeu no atendimento', 'casa'],
+        'atendimento_pergunta'       => ['guardou uma pergunta do atendimento', 'casa'],
+        'atendimento_pergunta_apagar'=> ['apagou uma pergunta do atendimento', 'casa'],
+        // ---- a licença ----
+        'licenca_pedido'          => ['pediu uma licença', 'licenca'],
+        'licenca_pedido_cancelar' => ['cancelou o pedido de licença', 'licenca'],
+        'licenca_aprovar'         => ['aprovou um pedido de licença', 'licenca'],
+        'licenca_recusar'         => ['recusou um pedido de licença', 'licenca'],
+        'licenca_conceder'        => ['concedeu módulos de licença', 'licenca'],
+        'licenca_revogar'         => ['revogou uma licença', 'licenca'],
+        'casamento_licenca'       => ['alterou a licença de um casamento', 'licenca'],
+        'lic_modulo_guardar'   => ['guardou um módulo do preçário', 'licenca'],
+        'lic_escalao_guardar'  => ['guardou um escalão do preçário', 'licenca'],
+        'lic_escalao_apagar'   => ['apagou um escalão do preçário', 'licenca'],
+        'lic_escalao_desligar' => ['desligou um escalão do preçário', 'licenca'],
+        'lic_pacote_guardar'   => ['guardou um pacote do preçário', 'licenca'],
+        'lic_pacote_apagar'    => ['apagou um pacote do preçário', 'licenca'],
+        'lic_prazo_guardar'    => ['guardou um prazo do preçário', 'licenca'],
+        'lic_prazo_apagar'     => ['apagou um prazo do preçário', 'licenca'],
+        'lic_politica_guardar' => ['publicou as políticas de utilização', 'licenca'],
+        // ---- as contas e quem entra ----
+        'conta_criada'      => ['criou uma conta', 'contas'],
+        'conta_editada'     => ['editou uma conta', 'contas'],
+        'conta_estado'      => ['mudou o estado de uma conta', 'contas'],
+        'conta_apagada'     => ['apagou uma conta', 'contas'],
+        'utilizador_apagado'=> ['apagou um utilizador', 'contas'],
+        'senha_mudada'      => ['mudou a sua senha', 'contas'],
+        'senha_reposta'     => ['repôs a senha de alguém', 'contas'],
+        'acesso_dado'       => ['deu acesso a alguém', 'contas'],
+        'acesso_tirado'     => ['tirou o acesso a alguém', 'contas'],
+        'acesso_papel'      => ['mudou o papel de alguém', 'contas'],
+        'suporte_codigo'         => ['criou um código de suporte', 'contas'],
+        'suporte_codigo_revogado'=> ['revogou um código de suporte', 'contas'],
+        'suporte_entrou'         => ['entrou com um código de suporte', 'contas'],
+        // ---- o casamento em si ----
+        'registo_publico'   => ['inscreveu-se na plataforma', 'casamento'],
+        'casamento_criado'  => ['criou um casamento', 'casamento'],
+        'casamento_ficha'   => ['alterou a ficha do casamento', 'casamento'],
+        'casamento_estado'  => ['mudou o estado de um casamento', 'casamento'],
+        'casamento_apagado' => ['apagou um casamento', 'casamento'],
+        'casamento_aberto'  => ['abriu um casamento', 'casamento'],
+        'casamento_fechado' => ['fechou o casamento', 'casamento'],
+        'casamento_reposto' => ['repôs o casamento de fábrica', 'casamento'],
+        'endereco_publico'  => ['mudou o endereço público', 'casamento'],
+        // ---- levar e trazer dados ----
+        'dados_exportados'       => ['exportou dados', 'dados'],
+        'dados_importados'       => ['importou dados', 'dados'],
+        'sistema_importado'      => ['importou o sistema inteiro', 'dados'],
+        'sistema_dados_apagados' => ['apagou dados do sistema', 'dados'],
+    ];
+}
+
+/** A ação por extenso, e a sua família. Uma chave desconhecida diz-se por si. */
+function nomeDaAcao(string $chave): array {
+    $m = nomesDeAcao()[$chave] ?? null;
+    return $m ?: [str_replace('_', ' ', $chave), 'outra'];
 }
 
 /** Os temas que o sistema oferece (chave => rótulo). O 1.º é o padrão. */

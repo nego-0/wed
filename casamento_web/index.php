@@ -301,11 +301,38 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .lixo-item strong{ font-family:var(--serif); font-size:1.05rem; color:var(--ink); display:block;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .lixo-item small{ color:#9aa09a; font-size:.8rem; }
-  .reg-linha{ display:flex; gap:.6rem; align-items:baseline; padding:.45rem .2rem; border-bottom:1px solid var(--line); font-size:.86rem; }
+  /* Cada ação abre. Fechada é uma linha; aberta conta tudo o que dela se
+     sabe — quem, com que papel, o que fez ao certo, sobre o quê, quando e de
+     onde. Um <details> e não um clique nosso: abre com o teclado, imprime
+     aberto, e não precisa de JavaScript nenhum para o fazer. */
+  .reg-linha{ border-bottom:1px solid var(--line); font-size:.86rem; }
   .reg-linha:last-child{ border-bottom:0; }
+  .reg-linha > summary{ display:flex; gap:.6rem; align-items:baseline; padding:.45rem .2rem;
+                        cursor:pointer; list-style:none; border-radius:8px; }
+  .reg-linha > summary::-webkit-details-marker{ display:none; }
+  .reg-linha > summary:hover{ background:var(--cream); }
+  .reg-linha[open] > summary{ background:var(--cream); }
   .reg-quando{ color:#9aa09a; font-size:.78rem; white-space:nowrap; flex:none; width:92px; }
   .reg-quem{ color:var(--forest); font-weight:600; white-space:nowrap; flex:none; }
-  .reg-que{ color:var(--text); min-width:0; overflow-wrap:anywhere; }
+  .reg-que{ color:var(--text); min-width:0; overflow-wrap:anywhere; flex:1; }
+  /* A família da ação, numa pastilha: dá a ler o assunto antes da frase. */
+  .reg-fam{ flex:none; font-size:.66rem; text-transform:uppercase; letter-spacing:.06em;
+            padding:.1rem .45rem; border-radius:50px; background:var(--cream); color:#7a8078;
+            border:1px solid var(--line); }
+  .reg-fam.convites{ background:var(--gold-pale); color:var(--gold-deep); border-color:var(--gold-soft); }
+  .reg-fam.pecas{ background:#eae6f0; color:#6b5b8e; border-color:#d6cfe4; }
+  .reg-fam.orcamento{ background:var(--ok-bg); color:var(--ok); border-color:transparent; }
+  .reg-fam.licenca{ background:var(--warn-bg); color:var(--warn); border-color:transparent; }
+  .reg-fam.contas, .reg-fam.casamento{ background:var(--sand); color:var(--forest); border-color:transparent; }
+  .reg-detalhe{ padding:.15rem .2rem .8rem 92px; }
+  @media (max-width:640px){ .reg-detalhe{ padding-left:.2rem; } }
+  .reg-detalhe dl{ display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; margin:0; }
+  .reg-detalhe dt{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:#9aa09a;
+                   white-space:nowrap; }
+  .reg-detalhe dd{ margin:0; font-size:.84rem; color:var(--text); overflow-wrap:anywhere; }
+  .reg-detalhe dd b{ color:var(--ink); }
+  .reg-detalhe code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem;
+                     background:var(--cream); border-radius:5px; padding:.05rem .35rem; color:#7a8078; }
   .vazio-hist{ color:#9aa09a; text-align:center; padding:1.4rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
@@ -1376,16 +1403,31 @@ async function apagarDeVez(id, nome){
   if(d.success){ toast('Convite apagado definitivamente.'); carregarLixo(); carregar(); }
 }
 
-const ACCOES = {
-  convite_criado:'criou o convite',      convite_editado:'editou o convite',
-  convite_eliminado:'enviou para a reciclagem', convite_reposto:'repôs o convite',
-  convite_apagado:'apagou definitivamente',     mesa_eliminada:'eliminou a mesa',
-  checkin:'registou entrada',            rsvp_manual:'alterou a presença',
-  impresso_sim:'marcou como impresso',   impresso_nao:'desmarcou impresso',
-  enviado_sim:'marcou como enviado',     enviado_nao:'desmarcou enviado',
-};
-
+// O nome de cada ação por extenso vem do servidor (nomesDeAcao(), em db.php):
+// são setenta e tal, e mantê-las aqui em duplicado era garantir que uma das
+// duas listas ficava para trás.
 let REGISTOS=[], REG_PAGINA=1, REG_MAIS=false, REG_TOTAL=0;
+
+/** Quanto tempo faz. É a leitura que o olho quer primeiro; a data exacta fica ao lado. */
+function haQuanto(sql){
+  const d=new Date((''+sql).replace(' ','T'));
+  if(isNaN(d)) return '';
+  const seg=Math.max(0,(Date.now()-d.getTime())/1000);
+  if(seg<90)   return 'agora mesmo';
+  if(seg<5400) return 'há ' + Math.round(seg/60) + ' min';
+  const h=Math.round(seg/3600);
+  if(h<36)     return 'há ' + h + ' hora' + (h===1?'':'s');
+  const dias=Math.round(seg/86400);
+  if(dias<45)  return 'há ' + dias + ' dia' + (dias===1?'':'s');
+  const m=Math.round(dias/30);
+  return 'há ' + m + ' mês' + (m===1?'':'es');
+}
+/** A data por inteiro, para quando «há 3 dias» não chega. */
+function dataInteira(sql){
+  const d=new Date((''+sql).replace(' ','T'));
+  return isNaN(d)?'':d.toLocaleString('pt-PT',
+    {weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
 
 async function carregarRegisto(mais=false){
   const el=$('hist-registo');
@@ -1399,14 +1441,28 @@ async function carregarRegisto(mais=false){
   if(!rs.length){ el.innerHTML='<p class="vazio-hist">Ainda não há atividade registada.</p>'; return; }
   el.innerHTML=`<p class="msg-conta">${REG_TOTAL} ação(ões) registadas · a ver as ${rs.length} mais recentes</p>`
     + rs.map(r=>{
-    const que=ACCOES[r.accao]||esc(r.accao);
+    // Fechada, a linha diz o essencial. Aberta, diz tudo o que se sabe dela —
+    // e é aí que se responde a «quem foi, e a partir de onde».
     const alvo=r.alvo?` <b>${esc(r.alvo)}</b>`:'';
     const det=r.detalhe?` <span style="color:#9aa09a">· ${esc(r.detalhe)}</span>`:'';
-    return `<div class="reg-linha">
-      <span class="reg-quando">${fmtHora(r.criado_em)}</span>
-      <span class="reg-quem">${esc(r.utilizador||'—')}</span>
-      <span class="reg-que">${que}${alvo}${det}</span>
-    </div>`;
+    const campo=(rot,val)=> val ? `<dt>${rot}</dt><dd>${val}</dd>` : '';
+    return `<details class="reg-linha">
+      <summary>
+        <span class="reg-quando" title="${esc(dataInteira(r.criado_em))}">${fmtHora(r.criado_em)}</span>
+        <span class="reg-quem">${esc(r.utilizador||'—')}</span>
+        <span class="reg-que">${esc(r.frase||r.accao)}${alvo}${det}</span>
+        <span class="reg-fam ${esc(r.familia||'outra')}">${esc(r.familia||'outra')}</span>
+      </summary>
+      <div class="reg-detalhe"><dl>
+        ${campo('Quem', `<b>${esc(r.utilizador||'—')}</b>`
+                        + (r.papel?` <span style="color:#9aa09a">(${esc(r.papel)})</span>`:''))}
+        ${campo('O que fez', esc(r.frase||r.accao) + ` <code>${esc(r.accao)}</code>`)}
+        ${campo('Sobre', esc(r.alvo))}
+        ${campo('Ao certo', esc(r.detalhe))}
+        ${campo('Quando', esc(dataInteira(r.criado_em)) + ` <span style="color:#9aa09a">· ${esc(haQuanto(r.criado_em))}</span>`)}
+        ${campo('De onde', r.ip ? `<code>${esc(r.ip)}</code>` : '')}
+      </dl></div>
+    </details>`;
   }).join('')
     + (REG_MAIS ? `<button class="btn-mais-lista" onclick="carregarRegisto(true)">
         Mostrar mais <span class="conta-extra">${REG_TOTAL-rs.length}</span></button>` : '');

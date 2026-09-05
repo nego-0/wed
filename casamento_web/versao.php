@@ -333,6 +333,10 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'topo-casal'],
         ['Os cartões do orçamento filtram as despesas e o calendário',
          'assets/orcamento.js', 'window.orcFiltrarEstado'],
+        ['Cada ação do registo tem nome por extenso, e a linha abre com tudo o que se sabe',
+         'db.php', 'function nomesDeAcao('],
+        ['E o registo passa a guardar de onde partiu cada ação (esquema v35)',
+         'db.php', "migColuna(\$conn, \"{\$P}registo\", 'ip'"],
 
         // ---- Os modelos de origem da casa (esquema v15) ----
         ['O impresso e o digital de origem constam da lista de modelos',

@@ -958,8 +958,24 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       #aud-tabela th{ text-align:left; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase;
         color:#8a8f88; padding:.5rem .6rem; border-bottom:1px solid var(--line); }
       #aud-tabela td{ padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
-      #aud-tabela .a-accao{ font-family:var(--mono,monospace); font-weight:600; color:var(--gold); white-space:nowrap; }
+      #aud-tabela .a-accao{ font-weight:600; color:var(--gold); }
       #aud-tabela .a-quando{ white-space:nowrap; color:#8a8f88; }
+      /* Cada linha abre: é preciso que se veja que se pode carregar nela. */
+      #aud-tabela .a-linha{ cursor:pointer; }
+      #aud-tabela .a-linha:hover td{ background:var(--cream); }
+      #aud-tabela .a-linha:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+      #aud-tabela .a-abre{ color:#b9beb6; width:1.4rem; text-align:center; transition:transform .15s; }
+      #aud-tabela .a-linha.aberta .a-abre{ transform:rotate(90deg); display:inline-block; }
+      #aud-tabela .a-linha.aberta td{ background:var(--cream); }
+      #aud-tabela .a-detalhe td{ background:var(--cream); padding:.7rem 1rem 1rem; }
+      #aud-tabela .a-detalhe dl{ display:grid; grid-template-columns:auto 1fr;
+        gap:.3rem .9rem; margin:0; max-width:64rem; }
+      #aud-tabela .a-detalhe dt{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+        color:#8a8f88; white-space:nowrap; }
+      #aud-tabela .a-detalhe dd{ margin:0; font-size:.86rem; color:var(--text); overflow-wrap:anywhere; }
+      #aud-tabela .a-detalhe code{ font-family:var(--mono,ui-monospace,Menlo,Consolas,monospace);
+        font-size:.78rem; background:var(--card); border:1px solid var(--line);
+        border-radius:5px; padding:.05rem .35rem; color:#7a8078; }
     </style>
     <div id="vista-definicoes" style="display:none">
     <div class="painel">
@@ -2266,7 +2282,10 @@ async function auditarCarregar(concat){
   // preencher a lista de ações (uma vez), preservando a escolha
   const selA = document.getElementById('aud-accao');
   if (selA.options.length <= 1 && (d.accoes || []).length){
-    d.accoes.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; selA.appendChild(o); });
+    // Por extenso, e por ordem alfabética do nome: escolhe-se «apagou um
+    // convite», e não «convite_apagado».
+    d.accoes.forEach(a => { const o = document.createElement('option');
+      o.value = a.chave; o.textContent = a.nome; selA.appendChild(o); });
   }
   document.getElementById('aud-total').textContent =
     d.total + ' ação(ões)' + (audTemFiltro() ? ' (filtradas)' : '') + '.';
@@ -2286,20 +2305,60 @@ function auditarLimpar(){
   document.getElementById('aud-q').value = '';
   auditarFiltrar();
 }
+/** A data por inteiro — a que se lê quando «13/04 09:12» não chega. */
+function audDataInteira(sql){
+  const d = new Date((''+sql).replace(' ', 'T'));
+  return isNaN(d) ? esc(sql || '') : d.toLocaleString('pt-PT',
+    { weekday:'long', day:'2-digit', month:'long', year:'numeric',
+      hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
 function pintarAuditoria(){
   const cx = document.getElementById('aud-resultado');
   if (!AUD_ROWS.length){ cx.innerHTML = '<div class="dica">Sem ações para estes filtros.</div>'; return; }
-  const linhas = AUD_ROWS.map(r => {
-    const cas = +r.casamento_id === 0 ? '<i>Plataforma</i>' : (r.casamento ? esc(r.casamento) : ('#' + r.casamento_id));
-    const quem = esc(r.utilizador || '—') + (r.papel ? ' <small style="color:#8a8f88">(' + esc(r.papel) + ')</small>' : '');
-    const det = [r.alvo, r.detalhe].filter(Boolean).map(esc).join(' · ');
-    return `<tr><td class="a-quando">${esc((r.criado_em||'').replace('T',' ').slice(0,16))}</td>`
-         + `<td>${cas}</td><td class="a-accao">${esc(r.accao)}</td>`
-         + `<td>${quem}</td><td>${det}</td></tr>`;
+  // Cada linha abre e conta tudo o que dela se sabe. Uma tabela de cinco
+  // colunas só cabia se o detalhe fosse cortado — e é no detalhe que está a
+  // resposta às perguntas que trazem alguém a esta página.
+  const linhas = AUD_ROWS.map((r, i) => {
+    const cas = +r.casamento_id === 0 ? '<i>Plataforma</i>'
+              : (r.casamento ? esc(r.casamento) : ('#' + r.casamento_id));
+    const quem = esc(r.utilizador || '—')
+      + (r.papel ? ' <small style="color:#8a8f88">(' + esc(r.papel) + ')</small>' : '');
+    const resumo = [r.alvo, r.detalhe].filter(Boolean).map(esc).join(' · ');
+    const campo = (rot, val) => val ? `<dt>${rot}</dt><dd>${val}</dd>` : '';
+    return `<tr class="a-linha" onclick="audAbrir(${i})" tabindex="0"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();audAbrir(${i})}">
+        <td class="a-quando">${esc((r.criado_em||'').replace('T',' ').slice(0,16))}</td>
+        <td>${cas}</td>
+        <td class="a-accao">${esc(r.frase || r.accao)}</td>
+        <td>${quem}</td>
+        <td>${resumo}</td>
+        <td class="a-abre" aria-hidden="true">▸</td>
+      </tr>
+      <tr class="a-detalhe" id="aud-det-${i}" hidden><td colspan="6"><dl>
+        ${campo('Quem', `<b>${esc(r.utilizador || '—')}</b>`
+                        + (r.papel ? ` <span style="color:#8a8f88">(${esc(r.papel)})</span>` : ''))}
+        ${campo('O que fez', esc(r.frase || r.accao) + ` <code>${esc(r.accao)}</code>`)}
+        ${campo('Casamento', cas)}
+        ${campo('Sobre', esc(r.alvo))}
+        ${campo('Ao certo', esc(r.detalhe))}
+        ${campo('Quando', audDataInteira(r.criado_em))}
+        ${campo('De onde', r.ip ? `<code>${esc(r.ip)}</code>` : '')}
+        ${campo('Nº de registo', r.id ? `<code>#${r.id}</code>` : '')}
+      </dl></td></tr>`;
   }).join('');
   cx.innerHTML = '<div style="overflow-x:auto"><table id="aud-tabela"><thead><tr>'
-    + '<th>Quando</th><th>Casamento</th><th>Ação</th><th>Quem</th><th>Detalhe</th>'
+    + '<th>Quando</th><th>Casamento</th><th>Ação</th><th>Quem</th><th>Detalhe</th><th></th>'
     + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+}
+
+/** Abre (ou fecha) o detalhe de uma linha da auditoria. */
+function audAbrir(i){
+  const det = document.getElementById('aud-det-' + i);
+  if (!det) return;
+  det.hidden = !det.hidden;
+  const linha = det.previousElementSibling;
+  if (linha) linha.classList.toggle('aberta', !det.hidden);
 }
 
 // ---------- o formulário de novo casamento: licença e contas ----------

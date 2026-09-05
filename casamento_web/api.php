@@ -4101,16 +4101,42 @@ if ($acao === 'reciclagem') {
     ok(['convites' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [], 'dias' => RECICLAGEM_DIAS]);
 }
 
+/**
+ * Uma linha do registo, com tudo o que dela se sabe.
+ *
+ * O ecrã mostrava a chave de programador («lic_escalao_guardar») e escondia
+ * metade dos campos. Aqui sai tudo — quem, com que papel, o quê (por extenso e
+ * em cru), sobre o quê, o detalhe, quando e de onde — para a linha se poder
+ * abrir e responder sem se ir buscar mais nada ao servidor.
+ */
+function registoLinha(array $x): array {
+    [$frase, $familia] = nomeDaAcao((string)$x['accao']);
+    return [
+        'id'         => isset($x['id']) ? (int)$x['id'] : 0,
+        'utilizador' => (string)($x['utilizador'] ?? ''),
+        'papel'      => (string)($x['papel'] ?? ''),
+        'accao'      => (string)$x['accao'],
+        'frase'      => $frase,
+        'familia'    => $familia,
+        'alvo'       => (string)($x['alvo'] ?? ''),
+        'detalhe'    => (string)($x['detalhe'] ?? ''),
+        'ip'         => (string)($x['ip'] ?? ''),
+        'criado_em'  => (string)($x['criado_em'] ?? ''),
+    ];
+}
+
 if ($acao === 'registo_lista') {
     // O histórico só cresce: se mandássemos tudo, ao fim de um mês eram
     // milhares de linhas em cada abertura da janela. Vai por pedaços.
     $porPag = max(10, min(500, (int)($_GET['por_pagina'] ?? 100)));
     $pagina = max(1, (int)($_GET['pagina'] ?? 1));
     $total  = (int)(@$conn->query("SELECT COUNT(*) FROM {$P}registo WHERE " . doCasamento() . "")?->fetch_row()[0] ?? 0);
-    $r = $conn->query("SELECT utilizador, papel, accao, alvo, detalhe, criado_em
+    $r = $conn->query("SELECT id, utilizador, papel, accao, alvo, detalhe, ip, criado_em
                        FROM {$P}registo WHERE " . doCasamento() . " ORDER BY id DESC
                        LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag));
-    ok(['registos' => $r ? $r->fetch_all(MYSQLI_ASSOC) : [],
+    $linhas = [];
+    if ($r) while ($x = $r->fetch_assoc()) $linhas[] = registoLinha($x);
+    ok(['registos' => $linhas,
         'total' => $total, 'pagina' => $pagina, 'ha_mais' => ($pagina * $porPag) < $total]);
 }
 
@@ -4143,17 +4169,30 @@ if ($acao === 'registo_auditoria') {
         if ($par) $stc->bind_param($tipos, ...$par);
         $stc->execute(); $total = (int)$stc->get_result()->fetch_row()[0];
 
-        $sql = "SELECT r.casamento_id, c.nome AS casamento, r.utilizador, r.papel,
-                       r.accao, r.alvo, r.detalhe, r.criado_em
+        $sql = "SELECT r.id, r.casamento_id, c.nome AS casamento, r.utilizador, r.papel,
+                       r.accao, r.alvo, r.detalhe, r.ip, r.criado_em
                 FROM {$P}registo r LEFT JOIN {$P}casamentos c ON c.id = r.casamento_id
                 WHERE $where ORDER BY r.id DESC LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag);
         $st = $conn->prepare($sql);
         if ($par) $st->bind_param($tipos, ...$par);
-        $st->execute(); $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+        $st->execute();
+        $rows = [];
+        foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $x) {
+            $rows[] = registoLinha($x) + [
+                'casamento_id' => (int)$x['casamento_id'],
+                'casamento'    => (string)($x['casamento'] ?? ''),
+            ];
+        }
 
+        // A lista de ações para o filtro: com o nome por extenso, para o admin
+        // escolher «apagou um convite» e não «convite_apagado».
         $accoes = [];
         $ra = $conn->query("SELECT DISTINCT accao FROM {$P}registo ORDER BY accao");
-        if ($ra) while ($x = $ra->fetch_row()) $accoes[] = $x[0];
+        if ($ra) while ($x = $ra->fetch_row()) {
+            [$frase] = nomeDaAcao((string)$x[0]);
+            $accoes[] = ['chave' => (string)$x[0], 'nome' => $frase];
+        }
+        usort($accoes, fn($a, $b) => strcoll($a['nome'], $b['nome']));
     } finally {
         LigacaoAmbito::$vigiar = $prev;
     }
