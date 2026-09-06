@@ -47,12 +47,17 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     const d1 = await desp('ZZ Menu para 120', 900000, 'previsto', buffet.id);
     const d2 = await desp('ZZ Bolo',          180000, 'pago',     buffet.id);
     const d3 = await desp('ZZ Arranjos',      240000, 'previsto', flores.id);
-    const parc = (despesa_id, valor, data_prevista) => window.api('orc_pagamento_guardar',
-      { method: 'POST', body: JSON.stringify({ despesa_id, valor, data_prevista }) });
+    const parc = (despesa_id, valor, data_prevista, pago_em) => window.api('orc_pagamento_guardar',
+      { method: 'POST', body: JSON.stringify({ despesa_id, valor, data_prevista, pago_em }) });
     await parc(d1, 300000, iso(-10));    // vencida
     await parc(d1, 600000, iso(30));     // por vencer
     await parc(d3, 240000, iso(-3));     // vencida
-    return { buffet: buffet.id, flores: flores.id, d1, d2, d3 };
+    // Uma despesa prevista com metade já liquidada: é o caso em que o valor
+    // cheio e o que ainda se deve deixam de ser o mesmo número.
+    const d4 = await desp('ZZ Fotógrafo', 400000, 'previsto', flores.id);
+    await parc(d4, 150000, iso(-20), iso(-20));   // já paga
+    await parc(d4, 250000, iso(45));              // por vencer
+    return { buffet: buffet.id, flores: flores.id, d1, d2, d3, d4 };
   });
   await p.reload({ waitUntil: 'networkidle' });
   await p.waitForTimeout(1200);
@@ -94,26 +99,28 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
 
   // ============ 2. «Por pagar» encolhe as duas listas ============
   const tudo = await listas();
-  ok(tudo.despesas.length === 3 && tudo.parcelas.length === 3 && tudo.tiras === 0,
+  ok(tudo.despesas.length === 4 && tudo.parcelas.length === 5 && tudo.tiras === 0,
      'sem filtro, as listas estão inteiras e não há tira nenhuma a explicar-se');
 
   await carregar('Por pagar');
   const porPagar = await listas();
-  ok(porPagar.despesas.length === 2 && !porPagar.despesas.some(d => /Bolo/.test(d)),
+  ok(porPagar.despesas.length === 3 && !porPagar.despesas.some(d => /Bolo/.test(d)),
      'escolher «Por pagar» tira o que já foi pago da lista: '
        + porPagar.despesas.join(', '));
-  ok(porPagar.parcelas.length === 3,
-     'e no calendário ficam as parcelas por liquidar — que aqui são todas ('
-       + porPagar.parcelas.length + ')');
+  ok(porPagar.parcelas.length === 4,
+     'e no calendário ficam as parcelas por liquidar ('
+       + porPagar.parcelas.length + ' das 5)');
   ok(porPagar.tiras === 2 && porPagar.estados.every(e => e === 'Por pagar'),
      'as duas listas dizem, cada uma na sua tira, o que estão a mostrar');
 
   await carregar('Já pago');
   const pago = await listas();
-  ok(pago.despesas.length === 1 && /Bolo/.test(pago.despesas[0]),
-     '«Já pago» mostra só o que saiu: ' + pago.despesas.join(', '));
-  ok(pago.parcelas.length === 0,
-     'e nenhuma parcela, porque nenhuma foi dada por paga');
+  ok(pago.despesas.length === 2 && pago.despesas.some(d => /Bolo/.test(d))
+       && pago.despesas.some(d => /Fotógrafo/.test(d)),
+     '«Já pago» mostra aquelas de que saiu dinheiro — incluindo a prevista com '
+       + 'uma prestação liquidada: ' + pago.despesas.join(', '));
+  ok(pago.parcelas.length === 1,
+     'e a parcela que foi dada por paga (' + pago.parcelas.length + ')');
 
   // ============ 3. «Em atraso» é sobre datas ============
   await carregar('Em atraso');
@@ -141,19 +148,56 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   // ============ 5. desfazer ============
   await carregar('Em atraso');           // o mesmo cartão outra vez
   const semEstado = await listas();
-  ok(semEstado.despesas.length === 1 && semEstado.estados.length === 0,
+  ok(semEstado.despesas.length === 2 && semEstado.estados.length === 0,
      'carregar no mesmo cartão desfaz o estado e deixa só a gaveta');
   ok((await cartoes())[0].on, 'e o «Orçamento» volta a estar escolhido');
 
   await p.evaluate(() => orcLimparFiltros());
   await p.waitForTimeout(500);
   const limpo = await listas();
-  ok(limpo.despesas.length === 3 && limpo.parcelas.length === 3 && limpo.tiras === 0,
+  ok(limpo.despesas.length === 4 && limpo.parcelas.length === 5 && limpo.tiras === 0,
      'e «limpar» devolve as listas inteiras');
 
-  // ============ 6. arrumar ============
+  // ============ 6. o previsto desconta o que já se pagou ============
+  //
+  // O «ZZ Fotógrafo» custa 400 000 e tem 150 000 liquidados. O cartão «Por
+  // pagar» já fazia essa conta (é o servidor que a faz); a lista por baixo dele
+  // somava o valor cheio das despesas por pagar, e os dois números não batiam
+  // certo — a mesma pergunta com duas respostas, na mesma página.
+  const porPagarCartao = (await cartoes())[1].valor.replace(/\s/g, ' ');
+  ok(/1\s*390\s*000/.test(porPagarCartao),
+     'o cartão desconta as prestações liquidadas: ' + porPagarCartao
+       + ' (900 000 + 240 000 + 250 000)');
+
+  await carregar('Por pagar');
+  const tiraPrev = await p.evaluate(() =>
+    document.querySelector('#lista-despesas .o-filtro b').textContent.replace(/\s/g, ' '));
+  ok(/1\s*390\s*000/.test(tiraPrev),
+     'e a lista diz o mesmo número, e não a soma dos valores cheios: ' + tiraPrev);
+
+  const linhaFoto = await p.evaluate(() => {
+    const tr = [...document.querySelectorAll('#lista-despesas tbody tr')]
+      .find(x => /Fotógrafo/.test(x.textContent));
+    return tr ? tr.textContent.replace(/\s+/g, ' ').trim() : '';
+  });
+  ok(/faltam/.test(linhaFoto) && /250\s*000/.test(linhaFoto.replace(/\s/g, ' ')),
+     'e a própria linha diz quanto lhe falta: ' + linhaFoto);
+  ok(/150\s*000 Kz liquidados/.test(linhaFoto.replace(/\s/g, ' ')),
+     'com o que já saiu ao lado das prestações');
+  await p.screenshot({ path: OUT + '/orc-por-pagar.png' });
+
+  await carregar('Já pago');
+  const tiraPago = await p.evaluate(() =>
+    document.querySelector('#lista-despesas .o-filtro b').textContent.replace(/\s/g, ' '));
+  ok(/330\s*000/.test(tiraPago),
+     'e em «Já pago» soma o que saiu por cada uma, e não o que elas custam: '
+       + tiraPago + ' (180 000 + 150 000)');
+  await p.evaluate(() => orcLimparFiltros());
+  await p.waitForTimeout(400);
+
+  // ============ 7. arrumar ============
   await p.evaluate(async (f) => {
-    for (const id of [f.d1, f.d2, f.d3])
+    for (const id of [f.d1, f.d2, f.d3, f.d4])
       await window.api('orc_despesa_apagar&id=' + id, { method: 'POST' });
     for (const id of [f.buffet, f.flores])
       await window.api('orc_categoria_apagar&id=' + id, { method: 'POST' });

@@ -174,6 +174,10 @@ $CAS  = casalInfo($DEFS);
   .d-nome{ color:var(--ink); font-weight:500; }
   .d-forn{ font-size:.77rem; color:#8a8f88; }
   .d-val{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; }
+  /* O que ainda falta pagar, por baixo do valor — só aparece quando as duas
+     contas dão números diferentes, isto é, quando já se liquidou alguma
+     prestação. */
+  .d-falta{ font-size:.75rem; font-weight:400; color:#9a7a3c; }
   .d-ac{ text-align:right; white-space:nowrap; }
   .est{ font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; border-radius:50px;
         padding:.12rem .6rem; border:1px solid var(--line); white-space:nowrap; display:inline-flex; align-items:center; gap:.3rem; }

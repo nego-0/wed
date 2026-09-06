@@ -341,6 +341,8 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'setInterval(todas, 1000)'],
         ['Os cartões do orçamento filtram as despesas e o calendário',
          'assets/orcamento.js', 'window.orcFiltrarEstado'],
+        ['E o que falta pagar desconta as prestações já liquidadas, na lista como no cartão',
+         'assets/orcamento.js', 'function porPagar('],
         ['Cada ação do registo tem nome por extenso, e a linha abre com tudo o que se sabe',
          'db.php', 'function nomesDeAcao('],
         ['E o registo passa a guardar de onde partiu cada ação (esquema v35)',

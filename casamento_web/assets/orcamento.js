@@ -74,6 +74,22 @@
     return !p.pago_em && p.data_prevista && p.data_prevista < hojeISO();
   }
 
+  /**
+   * O que uma despesa ainda deve — e o que já saiu por ela.
+   *
+   * Uma despesa repartida em prestações não deve, hoje, o seu valor inteiro:
+   * deve o que falta liquidar. Somar o valor cheio das despesas «previsto» era
+   * cobrar duas vezes as prestações já pagas — o cartão «Por pagar» descontava-
+   * -as (o servidor faz-lhe a conta), mas a lista por baixo dele não, e os dois
+   * números não batiam certo.
+   */
+  function porPagar(d) {
+    return d.estado === 'pago' ? 0 : Math.max(0, num(d.valor) - num(d.liquidado));
+  }
+  function jaSaiu(d) {
+    return d.estado === 'pago' ? num(d.valor) : num(d.liquidado);
+  }
+
   /** As despesas que têm parcelas em atraso — é por elas que o filtro pega. */
   function despesasEmAtraso() {
     var ids = {};
@@ -81,14 +97,23 @@
     return ids;
   }
 
-  /** As despesas que passam pelos dois filtros. */
+  /**
+   * As despesas que passam pelos dois filtros.
+   *
+   * Pelo dinheiro, e não pela etiqueta: em «Por pagar» entram as que ainda
+   * devem alguma coisa, em «Já pago» as de que já saiu alguma — e uma despesa
+   * prevista com metade liquidada entra nas duas, porque é verdade nas duas.
+   * Pela etiqueta, essa metade já paga não aparecia em lado nenhum, e a soma
+   * da lista nunca chegava ao número do cartão em que se tinha carregado.
+   */
   function despesasFiltradas() {
     var atraso = FILTRO_EST === 'atraso' ? despesasEmAtraso() : null;
     return (ORC.despesas || []).filter(function (d) {
       if (FILTRO_CAT === 'sem' && d.categoria_id) return false;
       if (FILTRO_CAT != null && FILTRO_CAT !== 'sem' && +d.categoria_id !== +FILTRO_CAT) return false;
-      if (FILTRO_EST === 'atraso') return !!atraso[d.id];
-      if (FILTRO_EST != null && d.estado !== FILTRO_EST) return false;
+      if (FILTRO_EST === 'atraso')   return !!atraso[d.id];
+      if (FILTRO_EST === 'previsto') return porPagar(d) > 0;
+      if (FILTRO_EST === 'pago')     return jaSaiu(d) > 0;
       return true;
     });
   }
@@ -330,8 +355,16 @@
 
     // Os filtros: a lista encolhe, e o cabeçalho diz o que ficou — quantas
     // despesas e quanto valem, que é a pergunta a seguir.
+    //
+    // «Quanto valem» depende do filtro. Sem filtro é o custo delas; em «Por
+    // pagar» é o que ainda falta sair, já descontadas as prestações liquidadas;
+    // em «Já pago», o que saiu. É assim que este número passa a bater certo com
+    // o cartão em que se carregou para chegar aqui.
     var lista = despesasFiltradas();
-    var real = lista.reduce(function (s, d) { return s + num(d.valor); }, 0);
+    var conta = FILTRO_EST === 'pago' ? jaSaiu
+              : (FILTRO_EST === 'previsto' || FILTRO_EST === 'atraso') ? porPagar
+              : function (d) { return num(d.valor); };
+    var real = lista.reduce(function (s, d) { return s + conta(d); }, 0);
     var nome = FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria');
     var cab = tiraFiltro(lista.length + ' despesa(s)', real, nome);
     if (!lista.length) {
@@ -343,8 +376,18 @@
       + '<th>Despesa</th><th>Categoria</th><th>Estado</th><th>Fatura</th>'
       + '<th style="text-align:right">Valor</th>' + (PODE ? '<th></th>' : '') + '</tr></thead><tbody>';
     lista.forEach(function (d) {
+      // Quanto está repartido, e quanto desse já saiu: sem a segunda metade, a
+      // linha dizia «300 000 em 2 parcelas» e deixava por responder a única
+      // pergunta que importa, que é se já se pagou alguma.
       var parc = num(d.n_parcelas) > 0
-        ? '<div class="d-forn">' + fmt(d.pago_parcelas) + ' em ' + d.n_parcelas + ' parcela(s)</div>' : '';
+        ? '<div class="d-forn">' + fmt(d.parcelado) + ' em ' + d.n_parcelas + ' parcela(s)'
+          + (num(d.liquidado) > 0 ? ' · ' + fmt(d.liquidado) + ' liquidados' : '')
+          + '</div>' : '';
+      // O valor é o valor; o que ainda falta pagar vai por baixo, quando são
+      // números diferentes.
+      var falta = porPagar(d);
+      var restante = (d.estado !== 'pago' && falta < num(d.valor))
+        ? '<div class="d-falta">faltam ' + fmt(falta) + '</div>' : '';
       var celaCat = (d.categoria_id && nomeCat[d.categoria_id])
         ? '<span style="display:inline-flex;align-items:center;gap:.4rem"><i style="width:10px;height:10px;border-radius:3px;background:'
           + corCat(d.categoria_id) + ';display:inline-block;flex:none"></i>' + esc(nomeCat[d.categoria_id]) + '</span>'
@@ -356,7 +399,7 @@
         + '<td>' + celaCat + '</td>'
         + '<td><span class="est ' + d.estado + '">' + d.estado + '</span></td>'
         + '<td>' + celaFatura(d) + '</td>'
-        + '<td class="d-val">' + fmt(d.valor) + '</td>';
+        + '<td class="d-val">' + fmt(d.valor) + restante + '</td>';
       if (PODE) {
         h += '<td class="d-ac">'
           + '<button class="mini" onclick="orcEditarDespesa(' + d.id + ')">Abrir</button>'
