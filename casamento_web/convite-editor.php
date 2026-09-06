@@ -370,7 +370,7 @@ const LISTAS_SEC = { 'historia':'historia.capitulos', 'grande-dia':'cronograma.i
 // tenha posto à mão é largada. A música de fundo não é de secção nenhuma.
 const MEDIA_SEC = {
   'hero':       ['media.hero', 'foto.hero'],
-  'historia':   ['media.historia'],
+  'historia':   ['media.historia', 'foto.historia'],
   'interludio': ['media.interludio', 'foto.interludio'],
   'acesso':     ['media.acesso', 'foto.acesso'],
 };
@@ -382,7 +382,7 @@ const MEDIA_SEC = {
 const SEC_DONO = {
   'hero':       k => ['textos.kicker','textos.hero_sub','casal.noiva','casal.noivo','media.hero','foto.hero'].includes(k),
   'convite':    k => ['textos.convite_eyebrow','textos.lead','textos.guest_label','textos.closing'].includes(k),
-  'historia':   k => /^historia\./.test(k) || k === 'media.historia',
+  'historia':   k => /^historia\./.test(k) || k === 'media.historia' || k === 'foto.historia',
   'interludio': k => /^interludio\./.test(k) || k === 'media.interludio' || k === 'foto.interludio',
   'grande-dia': k => /^(gd|evento|cronograma|cer)\./.test(k),
   'acesso':     k => /^acesso\./.test(k) || k === 'media.acesso' || k === 'foto.acesso',

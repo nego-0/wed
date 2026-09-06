@@ -228,19 +228,25 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   // fotografia inteira com a moldura da secção por cima: o que fica de fora
   // escurece, e arrasta-se a moldura até ela conter o que interessa.
   agora = (await secs()).find(s => s.chave === 'media.hero');
-  ok(agora.enq === 'foto.hero' && agora.proporcao === '9/16',
-     'a capa diz que recorta, e em que forma: ' + agora.proporcao);
+  ok(agora.enq === 'foto.hero' && agora.proporcao === '390/844',
+     'a capa diz que recorta, e em que forma — a da janela do convite: '
+       + agora.proporcao);
   ok(agora.pos && agora.pos.x === 50 && agora.pos.y === 50,
      'e ao receber uma fotografia nova o enquadramento voltou ao centro — o '
        + 'anterior tinha sido escolhido para outra imagem ('
        + (agora.pos ? agora.pos.x + '/' + agora.pos.y : '—') + ')');
 
-  const semRecorte = (await secs()).find(s => s.chave === 'media.historia');
-  ok(semRecorte && semRecorte.enq === '' && semRecorte.pos === null,
-     'a história mostra a fotografia inteira, e por isso não tem o que enquadrar');
+  // A história também recorta. Mostrava a fotografia inteira — cada casal via a
+  // secção com a altura que a sua imagem tivesse, e não havia nada para
+  // enquadrar porque não havia recorte. Passa a ser uma janela deitada, como
+  // as outras têm a sua.
+  const historia = (await secs()).find(s => s.chave === 'media.historia');
+  ok(historia && historia.enq === 'foto.historia' && historia.proporcao === '3/2',
+     'a história tem a sua janela, e por isso tem o que enquadrar: '
+       + (historia ? historia.proporcao : '—'));
   ok(await p.evaluate(() =>
-       !document.querySelector('.ft-sec[data-sec="media.historia"] [data-ft="lupa"].btn')),
-     'e a ficha dela não oferece «Enquadrar»');
+       !!document.querySelector('.ft-sec[data-sec="media.historia"] [data-ft="lupa"].btn')),
+     'e a ficha dela oferece «Enquadrar», como as outras');
 
   await p.click('.ft-sec[data-sec="media.hero"] .ft-lupa');
   await p.waitForTimeout(700);
@@ -263,8 +269,8 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'a lupa abre a fotografia inteira, em ponto grande: ' + lente.src);
   ok(/Capa/.test(lente.leg) && /vossa/.test(lente.leg),
      'e diz de que secção é: ' + lente.leg);
-  ok(lente.moldura && Math.abs(lente.prop - 9 / 16) < 0.02,
-     'por cima dela, a moldura com a forma da secção (9/16 = 0.563): ' + lente.prop);
+  ok(lente.moldura && Math.abs(lente.prop - 390 / 844) < 0.02,
+     'por cima dela, a moldura com a forma da secção (390/844 = 0.462): ' + lente.prop);
   ok(lente.cabe, 'e do tamanho do recorte verdadeiro, dentro da fotografia');
   ok(/9999px/.test(lente.veu),
      'o que fica de fora da moldura escurece: ' + lente.veu.slice(0, 46) + '…');
@@ -397,7 +403,103 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(ficheiroFora === 404,
      'o ficheiro que tinha sido enviado sai do disco (resposta ' + ficheiroFora + ')');
 
-  // ============ 9. sem o módulo do convite digital, a porta está fechada ============
+  // ============ 9. a moldura promete o recorte que o convite cumpre ============
+  //
+  // Era aqui que estava a mentira: a moldura desenhava-se por três palpites
+  // (9/16 para a capa, 9/16 para o interlúdio, 16/11 para o passe) e o convite
+  // recortava por outras janelas — a do passe estava até ao contrário, deitada
+  // onde o convite a tem em pé. Quem enquadrava por elas enquadrava para um
+  // recorte que não existia; daí a queixa de que «não afecta a capa».
+  //
+  // As proporções passam a ser as janelas medidas no convite, num telemóvel de
+  // 390 de largura. É contra o convite verdadeiro que se conferem.
+  const CAIXAS = {
+    hero:       '#hero .frame',
+    historia:   '.story-photo',
+    interludio: '#interludio',
+    acesso:     '.acesso-photo',
+  };
+  const tel = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await tel.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  await tel.fill('input[name=utilizador]', 'admin'); await tel.fill('input[name=senha]', 'noivos2026');
+  await tel.click('button[type=submit]'); await tel.waitForLoadState('networkidle');
+  await tel.evaluate(async () => {
+    await fetch('api.php?action=casamento_abrir&id=1',
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
+  });
+  await tel.goto(BASE + '/convite-digital.php?demo=1', { waitUntil: 'networkidle' });
+  // A história carrega em lazy: rola-se até lá para ela existir e medir.
+  await tel.evaluate(() => { const e = document.querySelector('.story-photo');
+                             if (e) e.scrollIntoView(); });
+  await tel.waitForTimeout(1800);
+
+  const medidas = await tel.evaluate((caixas) => {
+    const out = {};
+    for (const id in caixas) {
+      const e = document.querySelector(caixas[id]);
+      const im = e && e.querySelector('img');
+      if (!e) { out[id] = null; continue; }
+      const r = e.getBoundingClientRect();
+      out[id] = { prop: r.width / r.height,
+                  medida: Math.round(r.width) + '×' + Math.round(r.height),
+                  recorta: im ? getComputedStyle(im).objectFit === 'cover' : false,
+                  ponto: im ? getComputedStyle(im).objectPosition : '' };
+    }
+    return out;
+  }, CAIXAS);
+
+  const todas = await secs();
+  const fora = [];
+  for (const sc of todas) {
+    const m = medidas[sc.seccao];
+    if (!sc.enq){ if (m && m.recorta) fora.push(sc.seccao + ': recorta e não tem enquadramento'); continue; }
+    if (!m){ fora.push(sc.seccao + ': não encontrei a caixa no convite'); continue; }
+    const p = (() => { const q = sc.proporcao.split('/'); return +q[0] / +q[1]; })();
+    const erro = Math.abs(p - m.prop) / m.prop;
+    if (!m.recorta) fora.push(sc.seccao + ': o convite não recorta esta secção');
+    else if (erro > 0.03) fora.push(sc.seccao + ': moldura ' + p.toFixed(3)
+                                    + ' contra caixa ' + m.prop.toFixed(3) + ' (' + m.medida + ')');
+  }
+  ok(fora.length === 0,
+     'a moldura de cada secção tem a forma da janela do convite'
+       + (fora.length ? ':\n     ' + fora.join('\n     ')
+                      : ': ' + todas.filter(s => s.enq)
+                                   .map(s => s.seccao + ' ' + s.proporcao).join(', ')));
+
+  // E o ponto guardado é o ponto que o convite usa — nas quatro secções.
+  // O convite dos convidados não carrega o api.js — quem grava é a página do
+  // casal, que é de onde isto se faz de verdade.
+  await p.evaluate(async () => {
+    await window.api('defs_save', { method: 'POST', body: JSON.stringify({ defs: {
+      'foto.hero': '10 20 100', 'foto.historia': '30 40 100',
+      'foto.interludio': '60 70 100', 'foto.acesso': '80 90 100' } }) });
+  });
+  await tel.goto(BASE + '/convite-digital.php?demo=1', { waitUntil: 'networkidle' });
+  await tel.evaluate(() => { const e = document.querySelector('.story-photo');
+                             if (e) e.scrollIntoView(); });
+  await tel.waitForTimeout(1500);
+  const pontos = await tel.evaluate((caixas) => {
+    const out = {};
+    for (const id in caixas) {
+      const im = document.querySelector(caixas[id] + ' img');
+      out[id] = im ? getComputedStyle(im).objectPosition : null;
+    }
+    return out;
+  }, CAIXAS);
+  const esperado = { hero: '10% 20%', historia: '30% 40%',
+                     interludio: '60% 70%', acesso: '80% 90%' };
+  const erradas = Object.keys(esperado).filter(k => pontos[k] !== esperado[k]);
+  ok(erradas.length === 0,
+     'e o que se guarda é o que o convite recorta, secção a secção: '
+       + JSON.stringify(pontos) + (erradas.length ? ' — falha em ' + erradas.join(', ') : ''));
+  await tel.screenshot({ path: OUT + '/convite-recorte.png' });
+  await p.evaluate(async () => {
+    await window.api('defs_save', { method: 'POST', body: JSON.stringify({ defs: {
+      'foto.hero': '50 8 100', 'foto.historia': '50 50 100',
+      'foto.interludio': '50 26 100', 'foto.acesso': '50 32 100' } }) });
+  });
+
+  // ============ 10. sem o módulo do convite digital, a porta está fechada ============
   // (A licença de origem traz tudo; o que se prova é que a acção o exige.)
   ok(await p.evaluate(async () => {
     const d = await (await fetch('api.php?action=convite_fotos')).json();

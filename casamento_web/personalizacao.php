@@ -879,6 +879,7 @@ function defsPadrao(): array {
         // e quanto se aproxima (100 = sem aproximação). Os valores de origem são
         // os que o design trazia calibrados para as fotografias originais.
         'foto.hero'       => '50 8 100',
+        'foto.historia'   => '50 50 100',
         'foto.interludio' => '50 26 100',
         'foto.acesso'     => '50 32 100',
         // ---- Estrutura do convite ----
@@ -1265,8 +1266,8 @@ function exemploDeFabrica(): array {
         'media.interludio' => 'assets/convite/galeria/interludio-30679260.jpg',
         'media.acesso'     => 'assets/convite/galeria/acesso-32895248.jpg',
         // Vêm já cortadas à medida da secção: o enquadramento é o centro.
-        'foto.hero' => '50 50 100', 'foto.interludio' => '50 50 100',
-        'foto.acesso' => '50 50 100',
+        'foto.hero' => '50 50 100', 'foto.historia' => '50 50 100',
+        'foto.interludio' => '50 50 100', 'foto.acesso' => '50 50 100',
     ];
     $out = [];
     foreach (chavesExemplo() as $k) $out[$k] = $proprio[$k] ?? (string)($p[$k] ?? '');
@@ -2287,7 +2288,7 @@ function ordenarBlocos(string $html, array $defs, array $tokens = [], bool $edit
 function fotosDeModelo(): array {
     return [
         'media.hero'       => 'foto.hero',
-        'media.historia'   => null,
+        'media.historia'   => 'foto.historia',
         'media.interludio' => 'foto.interludio',
         'media.acesso'     => 'foto.acesso',
     ];
@@ -2301,10 +2302,17 @@ function fotosDeModelo(): array {
  * acrescenta aqui a sua linha; sem ela, seccoesDeFoto() assume retrato.
  */
 function fotosEnquadraveis(): array {
+    // As proporções são as janelas MEDIDAS no convite, num telemóvel de 390 de
+    // largura (ver assets/convite-base.html): a capa é #hero .frame, alta como
+    // o ecrã; o interlúdio tem 560 de altura mínima; o passe tem 440. Estavam
+    // aqui três palpites — 9/16, 9/16 e 16/11 —, e o do passe estava ao
+    // contrário: mostrava-se uma janela deitada onde o convite tem uma em pé.
+    // Quem enquadrasse por eles enquadrava para um recorte que não existia.
     return [
-        'hero'       => ['chave'=>'foto.hero',       'media'=>'media.hero',       'rotulo'=>'Capa',              'proporcao'=>'9/16'],
-        'interludio' => ['chave'=>'foto.interludio', 'media'=>'media.interludio', 'rotulo'=>'Interlúdio',        'proporcao'=>'9/16'],
-        'acesso'     => ['chave'=>'foto.acesso',     'media'=>'media.acesso',     'rotulo'=>'Passe de entrada',  'proporcao'=>'16/11'],
+        'hero'       => ['chave'=>'foto.hero',       'media'=>'media.hero',       'rotulo'=>'Capa',              'proporcao'=>'390/844'],
+        'historia'   => ['chave'=>'foto.historia',   'media'=>'media.historia',   'rotulo'=>'História',          'proporcao'=>'3/2'],
+        'interludio' => ['chave'=>'foto.interludio', 'media'=>'media.interludio', 'rotulo'=>'Interlúdio',        'proporcao'=>'390/560'],
+        'acesso'     => ['chave'=>'foto.acesso',     'media'=>'media.acesso',     'rotulo'=>'Passe de entrada',  'proporcao'=>'390/440'],
     ];
 }
 
@@ -2446,6 +2454,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'cartao.elo':
             return in_array($valor, ['coracao','comercial','letra','losango','filete','nada'], true) ? $valor : null;
         case 'foto.hero':
+        case 'foto.historia':
         case 'foto.interludio':
         case 'foto.acesso': {
             // "x y zoom" — posição do ponto que fica no centro do recorte, e aproximação.

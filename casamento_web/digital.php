@@ -289,8 +289,9 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       <!-- As fotografias do convite: aqui, e não no editor -->
       <div class="p-painel" id="pn-fotos" role="tabpanel" aria-labelledby="ab-fotos" hidden>
         <p class="dica ft-cab">Uma por secção, as vossas. A lupa abre a fotografia em
-          ponto grande e mostra a moldura da secção — é aí que se escolhe o que fica no
-          convite. <span class="ft-formatos">jpg, png ou webp, até <b id="ft-max">5</b> MB.</span></p>
+          ponto grande e mostra a moldura da secção — a janela por onde o convite a
+          mostra num telemóvel, e é aí que se escolhe o que lá fica.
+          <span class="ft-formatos">jpg, png ou webp, até <b id="ft-max">5</b> MB.</span></p>
         <div class="ft-secs" id="ft-secs"><p class="ft-vazio">A carregar…</p></div>
       </div>
     </div>
