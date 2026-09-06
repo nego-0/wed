@@ -70,7 +70,9 @@
     sinal.className = 'b-sinal on';
     sinal.textContent = 'ligado';
     pintarBarra();
-    pintarFila();
+    // Com os números à vista é a eles que a volta serve: pintarFila() sai
+    // pela porta do lado para não os apagar por baixo de quem os está a ler.
+    if (filtro === 'num') pintarNumeros(); else pintarFila();
     pintarStock();
     pintarBandeiras();
   }
@@ -108,11 +110,11 @@
 
   window.copaFiltro = function (qual) {
     filtro = qual;
-    ['analise', 'espera', 'fim'].forEach(function (k) {
+    ['analise', 'espera', 'fim', 'num'].forEach(function (k) {
       $('fa-' + k).classList.toggle('on', k === qual);
       $('fa-' + k).setAttribute('aria-selected', k === qual ? 'true' : 'false');
     });
-    pintarFila();
+    if (qual === 'num') pintarNumeros(); else pintarFila();
   };
 
   function pedidosDoFiltro() {
@@ -126,8 +128,94 @@
     return EST.resolvidos || [];
   }
 
+  /**
+   * Os números da noite.
+   *
+   * A pergunta que a copa faz de verdade não é «quantas saíram» — é «chega até
+   * ao fim?». Por isso a previsão de rutura vem primeiro, e o que saiu vem
+   * depois: um é uma decisão a tomar agora, o outro é a história da festa.
+   */
+  async function pintarNumeros() {
+    var cx = $('b-fila');
+    cx.innerHTML = '<div class="b-cartao b-esq" style="height:120px"></div>';
+    var d = await window.api('bar_numeros', { method: 'GET', silencioso: true });
+    if (!d || !d.success) { cx.innerHTML = '<div class="b-cartao b-vazio">Não deu.</div>'; return; }
+    if (filtro !== 'num') return;         // a copa mudou de aba entretanto
+
+    // Só o que já teve saída: uma bebida parada não «acaba nunca», simplesmente
+    // não se sabe — e um número inventado aqui mandava alguém à cidade em vão.
+    var acabam = d.rutura.filter(function (x) { return x.acaba_em_min !== null; });
+    var html = '<div class="b-cartao"><div class="b-tit">Chega até ao fim?'
+      + '<small>ao ritmo dos últimos 20 minutos</small></div>';
+    html += acabam.length
+      ? '<div class="b-stock">' + acabam.slice(0, 8).map(function (x) {
+          var luz = x.acaba_em_min < 30 ? 'mau' : (x.acaba_em_min < 90 ? 'meio' : 'bom');
+          return '<div class="b-item"><span></span>'
+            + '<div><div class="nm"><span class="b-semaforo ' + luz + '"></span>'
+            +   esc(x.nome) + '</div>'
+            + '<div class="sub">' + x.disponivel + ' disponíveis · ' + x.por_hora
+            +   ' por hora</div></div>'
+            + '<div class="qt">' + hhmm(x.acaba_em_min) + '</div></div>';
+        }).join('') + '</div>'
+      : '<p class="dica" style="color:var(--gold-pale)">Ainda não saiu nada — '
+        + 'sem saída não há ritmo, e sem ritmo não há previsão que se respeite.</p>';
+    html += '</div>';
+
+    // O que a festa bebeu.
+    var top = d.consumo.filter(function (x) { return x.servidas > 0 || x.a_sair > 0; });
+    html += '<div class="b-cartao"><div class="b-tit">O que a festa bebeu</div>'
+      + (top.length
+          ? '<div class="b-stock">' + top.slice(0, 12).map(function (x) {
+              return '<div class="b-item"><span></span>'
+                + '<div><div class="nm">' + esc(x.nome) + '</div>'
+                + '<div class="sub">' + esc(x.gaveta || 'sem gaveta')
+                +   (x.a_sair ? ' · ' + x.a_sair + ' por sair' : '') + '</div></div>'
+                + '<div class="qt">' + x.servidas + '</div></div>';
+            }).join('') + '</div>'
+          : '<p class="dica" style="color:var(--gold-pale)">Nada servido ainda.</p>')
+      + '</div>';
+
+    // Os tempos, e as recusas — o que correu mal, dito sem rodeios.
+    var t = d.tempos || {};
+    html += '<div class="b-cartao"><div class="b-tit">Os tempos</div>'
+      + '<div class="b-tempos" style="margin:0;padding:0;border:0">'
+      +   caixa('Análise', t.analise) + caixa('Recolha', t.recolha)
+      +   caixa('Percurso', t.percurso) + caixa('Do pedido à mesa', t.total)
+      + '</div></div>';
+
+    if (d.recusas.length) {
+      html += '<div class="b-cartao"><div class="b-tit">Recusas'
+        + '<small>o que correu mal</small></div><div class="b-stock">'
+        + d.recusas.map(function (r) {
+            return '<div class="b-item"><span></span><div><div class="nm">'
+              + esc(r.motivo) + '</div></div><div class="qt">' + r.n + '</div></div>';
+          }).join('') + '</div></div>';
+    }
+    if (d.mesas.length) {
+      html += '<div class="b-cartao"><div class="b-tit">Por mesa</div><div class="b-stock">'
+        + d.mesas.map(function (m) {
+            return '<div class="b-item"><span></span><div><div class="nm">'
+              + esc(m.mesa) + '</div></div><div class="qt">' + m.n + '</div></div>';
+          }).join('') + '</div></div>';
+    }
+    cx.innerHTML = html;
+  }
+
+  function caixa(rot, s) {
+    return '<div><div class="n">' + (s === null || s === undefined ? '–'
+      : (s < 90 ? Math.round(s) + ' s' : Math.round(s / 60) + ' min'))
+      + '</div><div class="l">' + esc(rot) + '</div></div>';
+  }
+
+  /** Minutos em «1h20» ou «40 min» — o que a copa lê de relance. */
+  function hhmm(m) {
+    if (m < 60) return m + ' min';
+    return Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
+  }
+
   function pintarFila() {
     var cx = $('b-fila');
+    if (filtro === 'num') return;
     var ps = pedidosDoFiltro();
     if (!ps.length) {
       cx.innerHTML = '<div class="b-cartao b-vazio"><span class="ico">'

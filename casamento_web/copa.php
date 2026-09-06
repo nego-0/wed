@@ -98,6 +98,7 @@ $CAS  = casalInfo($DEFS);
         <button id="fa-espera" onclick="copaFiltro('espera')" role="tab">
           Por entregar <span class="cnt" id="c-espera"></span></button>
         <button id="fa-fim" onclick="copaFiltro('fim')" role="tab">Já resolvidos</button>
+        <button id="fa-num" onclick="copaFiltro('num')" role="tab">Os números</button>
       </div>
       <div class="b-fila" id="b-fila">
         <div class="b-cartao b-esq" style="height:96px"></div>

@@ -474,3 +474,22 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   border:0; background:none; cursor:pointer; color:var(--gold);
   font:inherit; text-decoration:underline; padding:0;
 }
+
+/* ---- O bar, no dia --------------------------------------------
+   Uma tira e não um cartão: os cartões do painel são todos filtros da lista
+   de convidados, e um que não filtrasse nada era uma promessa falsa. Só
+   aparece com o bar a trabalhar — um zero a zero numa terça-feira de Outubro
+   é ruído. Ver index.php e docs/modulo-bar.md §13. */
+/* O display de classe ganha à regra [hidden] do browser — a mesma armadilha
+   que já mordeu na barra do cesto do bar. Diz-se aqui, para esta tira, em vez
+   de um [hidden] global que mexeria com o resto da casa. */
+.tira-bar[hidden]{ display:none; }
+.tira-bar{ display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
+           background:var(--gold-pale); color:var(--gold-deep);
+           border:1px solid var(--gold-soft); border-radius:var(--radius);
+           padding:.7rem 1rem; margin-bottom:1rem; font-size:.9rem;
+           text-decoration:none; }
+.tira-bar:hover{ filter:brightness(.97); }
+.tira-bar .urg{ background:var(--warn-bg); color:var(--warn);
+                border-radius:50px; padding:.1rem .55rem; font-weight:600; }
+.tira-bar .ir{ margin-left:auto; font-size:.82rem; text-decoration:underline; }

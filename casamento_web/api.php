@@ -3038,6 +3038,129 @@ function barTempos(mysqli $conn): array {
             'percurso' => $s('percurso'), 'total' => $s('total'), 'n' => (int)($x['n'] ?? 0)];
 }
 
+// ============================================================
+// A ESTATÍSTICA — o que saiu, a que ritmo, e quanto falta
+//
+// Serve três perguntas diferentes, e é por isso que não é um número só:
+// a copa quer saber se chega até ao fim; os noivos querem saber o que a festa
+// bebeu; e o convidado quer saber o que JÁ pediu — e só o dele.
+// ============================================================
+
+/** O que saiu, por bebida e por gaveta. */
+function barConsumoGeral(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT i.id, i.nome, i.stock, i.reservado,
+                               c.nome AS gaveta,
+                               COALESCE(SUM(CASE WHEN p.estado='entregue' THEN pi.quantidade END),0) servidas,
+                               COALESCE(SUM(CASE WHEN p.estado IN ('em_analise','aprovado','a_caminho')
+                                                 THEN pi.quantidade END),0) a_sair
+                        FROM {$P}bar_itens i
+                        LEFT JOIN {$P}bar_categorias c ON c.id=i.categoria_id AND c.casamento_id=i.casamento_id
+                        LEFT JOIN {$P}bar_pedido_itens pi ON pi.item_id=i.id AND pi.casamento_id=i.casamento_id
+                        LEFT JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                        WHERE i.casamento_id=$cid
+                        GROUP BY i.id ORDER BY servidas DESC, i.nome");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $out[] = ['id' => (int)$x['id'], 'nome' => $x['nome'], 'gaveta' => $x['gaveta'],
+                  'servidas' => (int)$x['servidas'], 'a_sair' => (int)$x['a_sair'],
+                  'stock' => (int)$x['stock'],
+                  'disponivel' => max(0, (int)$x['stock'] - (int)$x['reservado'])];
+    }
+    return $out;
+}
+
+/**
+ * Quanto tempo falta até acabar, ao ritmo dos últimos vinte minutos.
+ *
+ * Não é adivinhação: é uma regra de três com o que saiu há pouco. Vale para
+ * decidir se se manda buscar mais gelo ou se se põe um limite — e é por isso
+ * que só se calcula para o que já teve saída. Uma bebida parada não «acaba
+ * nunca»: simplesmente não se sabe, e diz-se null em vez de um número
+ * bonito que ninguém devia acreditar.
+ */
+function barRutura(mysqli $conn, int $minutos = 20): array {
+    global $P;
+    $cid = casamentoAtual();
+    $m = max(5, min(120, $minutos));
+    $r = @$conn->query("SELECT pi.item_id, SUM(pi.quantidade) n
+                        FROM {$P}bar_pedido_itens pi
+                        JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                        WHERE pi.casamento_id=$cid
+                          AND p.estado IN ('em_analise','aprovado','a_caminho','entregue')
+                          AND p.criado_em >= (NOW() - INTERVAL $m MINUTE)
+                        GROUP BY pi.item_id");
+    $ritmo = [];
+    if ($r) while ($x = $r->fetch_assoc()) $ritmo[(int)$x['item_id']] = (int)$x['n'];
+
+    $out = [];
+    foreach (barItens($conn, true) as $i) {
+        $porMin = ($ritmo[$i['id']] ?? 0) / $m;
+        $out[] = ['id' => $i['id'], 'nome' => $i['nome'],
+                  'disponivel' => $i['disponivel'],
+                  'por_hora' => round($porMin * 60, 1),
+                  // Minutos até zero. Null quando não há saída: não se sabe.
+                  'acaba_em_min' => $porMin > 0 ? (int)floor($i['disponivel'] / $porMin) : null];
+    }
+    // As que acabam primeiro à frente — é o que a copa precisa de ver.
+    usort($out, function ($a, $b) {
+        if ($a['acaba_em_min'] === null) return $b['acaba_em_min'] === null ? 0 : 1;
+        if ($b['acaba_em_min'] === null) return -1;
+        return $a['acaba_em_min'] <=> $b['acaba_em_min'];
+    });
+    return $out;
+}
+
+/** As recusas por motivo: a lista do que correu mal na festa. */
+function barRecusas(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT COALESCE(mo.texto, p.motivo_texto, 'sem motivo') motivo, COUNT(*) n
+                        FROM {$P}bar_pedidos p
+                        LEFT JOIN {$P}bar_motivos mo ON mo.id=p.motivo_id AND mo.casamento_id=p.casamento_id
+                        WHERE p.casamento_id=$cid AND p.estado='recusado'
+                        GROUP BY motivo ORDER BY n DESC LIMIT 12");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) $out[] = ['motivo' => $x['motivo'], 'n' => (int)$x['n']];
+    return $out;
+}
+
+/** As bebidas que saíram em cada intervalo de dez minutos, para ver o ritmo. */
+function barRitmoHistorico(mysqli $conn, int $horas = 4): array {
+    global $P;
+    $cid = casamentoAtual();
+    $h = max(1, min(12, $horas));
+    $r = @$conn->query("SELECT FLOOR(UNIX_TIMESTAMP(p.criado_em)/600)*600 t,
+                               SUM(pi.quantidade) n
+                        FROM {$P}bar_pedido_itens pi
+                        JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                        WHERE pi.casamento_id=$cid
+                          AND p.estado IN ('em_analise','aprovado','a_caminho','entregue')
+                          AND p.criado_em >= (NOW() - INTERVAL $h HOUR)
+                        GROUP BY t ORDER BY t");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $out[] = ['t' => (int)$x['t'], 'n' => (int)$x['n']];
+    }
+    return $out;
+}
+
+/** As mesas que mais pediram — serve para o ano seguinte e para a conta. */
+function barPorMesa(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT COALESCE(m.nome,'sem mesa') mesa, SUM(pi.quantidade) n
+                        FROM {$P}bar_pedido_itens pi
+                        JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                        LEFT JOIN {$P}mesas m ON m.id=p.mesa_id AND m.casamento_id=p.casamento_id
+                        WHERE pi.casamento_id=$cid AND p.estado='entregue'
+                        GROUP BY mesa ORDER BY n DESC LIMIT 12");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) $out[] = ['mesa' => $x['mesa'], 'n' => (int)$x['n']];
+    return $out;
+}
+
 /** O estado do bar, para qualquer ecrã do pessoal. */
 function barEstadoGeral(mysqli $conn): array {
     global $P;
@@ -3682,6 +3805,46 @@ if ($acao === 'bar_regra_apagar') {
     registar($conn, 'bar_regra_fora', '', $antes ? barRegraFrase($conn, $antes) : '#' . $id);
     ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimites($conn)),
         'fila' => barFilaContraRegras($conn)]);
+}
+
+if ($acao === 'bar_numeros') {
+    // Os números da noite. Uma leitura só, porque quem os abre quer ver a
+    // festa toda de uma vez e não coleccionar separadores.
+    barCid();
+    if (!podeCopa()) erro('Só a copa e os noivos.');
+    ok(['estado'  => barEstadoGeral($conn),
+        'tempos'  => barTempos($conn),
+        'consumo' => barConsumoGeral($conn),
+        'rutura'  => barRutura($conn),
+        'recusas' => barRecusas($conn),
+        'ritmo'   => barRitmoHistorico($conn),
+        'mesas'   => barPorMesa($conn),
+        'caudal'  => barCaudal($conn),
+        'agora'   => date('c')]);
+}
+
+if ($acao === 'bar_meu_consumo') {
+    // O convidado vê SÓ o seu — o da pessoa a que este telemóvel está preso, e
+    // nem sequer o do resto da família. Não há aqui parâmetro nenhum a dizer
+    // de quem é: é sempre de quem está do outro lado do testemunho, e é por
+    // isso que não se pode pedir o de outro.
+    barPortaPublica($conn);
+    $eu = barQuemSou($conn);
+    if (!$eu) ok(['levou' => [], 'limites' => []]);
+    $g = barConvidado($conn, $eu);
+    if (!$g) ok(['levou' => [], 'limites' => []]);
+
+    // Quanto lhe falta de cada limite que lhe diga respeito.
+    $faltas = [];
+    $ritmo = barRitmoDaCasa($conn);
+    foreach (barItensPara($conn, $eu, (int)$g['convite_id']) as $i) {
+        if ($i['travao'] === null && $i['pode_pedir'] >= $i['max_por_pedido']) continue;
+        $faltas[] = ['nome' => $i['nome'], 'pode' => $i['pode_pedir'],
+                     'travao' => $i['travao'], 'espera_s' => $i['espera_s']];
+    }
+    ok(['levou'   => barConsumoPessoal($conn, $eu),
+        'limites' => $faltas,
+        'ritmo'   => $ritmo ? ['espera_s' => $ritmo['segundos']] : null]);
 }
 
 if ($acao === 'bar_soltar') {

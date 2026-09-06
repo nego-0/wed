@@ -344,6 +344,15 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
 <div class="container">
 
+  <?php if (podeModulo('bar')): ?>
+  <!-- O BAR, NO DIA -->
+  <!-- Uma tira e não um cartão de estatística: os cartões ali em baixo são
+       todos filtros da lista de convidados, e um que não filtrasse nada seria
+       uma promessa falsa. Só aparece quando o bar está mesmo a trabalhar —
+       nos meses antes da festa não há nada para dizer. -->
+  <a class="tira-bar" id="tira-bar" href="copa.php" hidden></a>
+  <?php endif; ?>
+
   <!-- PROGRESSO DE CAPACIDADE -->
   <div id="progresso" class="progresso-cap mb-4"></div>
 
@@ -570,6 +579,7 @@ async function carregar(mais=false){
   CONVITES = mais ? CONVITES.concat(d.convites) : d.convites;
   MESAS=d.mesas; STATS=d.stats||{}; TOTAL=+d.total||CONVITES.length; HA_MAIS=!!d.ha_mais;
   renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
+  tiraDoBar();
 }
 
 // Conjunto de ícones (SVG inline, traço fino)
@@ -648,6 +658,26 @@ function renderStats(s){
     : `Mais filtros <span class="conta-extra">${cartoes.length-CARTOES_BASE}</span>`;
 }
 let STATS_ABERTO = false;
+
+// ---- O bar, no dia ------------------------------------------
+// Só se mostra com o bar aberto ou com pedidos por decidir: um zero a zero
+// numa terça-feira de Outubro é ruído. Quem gere a festa quer saber duas
+// coisas de relance — se há alguém à espera, e quanto já saiu.
+async function tiraDoBar(){
+  const el = $('tira-bar');
+  if (!el) return;
+  const d = await api('bar_estado', { silencioso: true, semAviso: true });
+  if (!d || !d.success) return;
+  const e = d.estado || {};
+  const porFazer = (e.em_analise||0) + (e.aprovados||0) + (e.a_caminho||0);
+  if (!e.aberto && !porFazer) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<b>O bar está ${e.aberto ? 'aberto' : 'fechado'}</b>`
+    + (e.em_analise ? ` · <span class="urg">${e.em_analise} por decidir</span>` : '')
+    + (e.aprovados||e.a_caminho ? ` · ${(e.aprovados||0)+(e.a_caminho||0)} por entregar` : '')
+    + ` · ${e.bebidas_entregues||0} servidas`
+    + `<span class="ir">ir à copa →</span>`;
+}
 function alternarStats(){ STATS_ABERTO = !STATS_ABERTO; carregar(); }
 
 // Barra de progresso: preenchimento do número de convidados face à capacidade

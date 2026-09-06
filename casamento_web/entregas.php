@@ -50,15 +50,6 @@ $CAS  = casalInfo($DEFS);
   .b-ped .b-acoes .btn{ flex:1 1 100%; }
   .b-ped.minha{ border-color:var(--gold-soft); }
 
-  /* Os tempos da noite, em rodapé: são a única estatística que interessa a
-     quem anda a pé — e dizem, sem acusar ninguém, se a sala é grande de mais. */
-  .b-tempos{ display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:1.6rem;
-             padding-top:1rem; border-top:1px solid rgba(233,223,201,.16); }
-  .b-tempos div{ min-width:88px; }
-  .b-tempos .n{ font-family:var(--serif); font-size:1.3rem; color:var(--gold-soft);
-                font-variant-numeric:tabular-nums; line-height:1.1; }
-  .b-tempos .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em;
-                color:var(--gold-pale); }
 </style>
 </head>
 <body class="b-noite">

@@ -162,6 +162,19 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
 .b-regra span{ flex:1; }
 .b-regra small{ color:#8a8f88; font-size:.78rem; }
 
+/* ---- os tempos da noite ------------------------------------
+   Vivem nos DOIS postos: em rodapé nas entregas, dentro dos números na copa.
+   Estavam só no <style> de entregas.php, e na copa a classe não tinha estilo
+   nenhum — os quatro tempos empilhavam-se numa lista com o número por cima
+   do rótulo. Uma classe partilhada por duas páginas pertence à folha. */
+.b-tempos{ display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:1.6rem;
+           padding-top:1rem; border-top:1px solid rgba(233,223,201,.16); }
+.b-tempos div{ min-width:88px; }
+.b-tempos .n{ font-family:var(--serif); font-size:1.3rem; color:var(--gold-soft);
+              font-variant-numeric:tabular-nums; line-height:1.1; }
+.b-tempos .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em;
+              color:var(--gold-pale); }
+
 /* ---- o stock, em tempo real -------------------------------- */
 .b-stock{ display:grid; gap:.4rem; }
 .b-item{ display:grid; grid-template-columns:44px 1fr auto; gap:.7rem; align-items:center;
@@ -256,6 +269,11 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-ajuda{ margin-top:1.2rem; font-size:.82rem; color:rgba(0,0,0,.55); line-height:1.5; }
 
 /* Os meus pedidos, no fim do menu */
+/* O que esta pessoa já pediu — só esta. É a resposta a «quantas já levei?»,
+   que é a pergunta que se faz antes de pedir a seguinte. */
+.b-conta-minha{ font-size:.85rem; color:rgba(0,0,0,.6); margin:-.2rem 0 .6rem;
+                line-height:1.5; }
+.b-conta-minha b{ font-variant-numeric:tabular-nums; color:var(--c-verde); }
 .b-meus{ margin-top:2rem; }
 .b-meu{ display:flex; align-items:center; gap:.6rem; background:var(--c-cartao, #fff);
         border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:.6rem .8rem; margin-bottom:.5rem; }

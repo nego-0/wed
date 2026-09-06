@@ -517,6 +517,18 @@ function correcoesEsperadas(): array {
          'api.php', 'function barBandeiras('],
         ['Bar: a copa solta um telemóvel quando a vida dá um nó',
          'api.php', "\$acao === 'bar_soltar'"],
+
+        // ---- Fase 7: os números ----
+        ['Bar: a previsão de rutura, e o silêncio honesto do que não tem saída',
+         'api.php', 'function barRutura('],
+        ['Bar: as recusas agrupam-se por motivo — o que correu mal na festa',
+         'api.php', 'function barRecusas('],
+        ['Bar: os números da noite numa leitura só, na aba da copa',
+         'assets/bar-copa.js', 'Chega até ao fim?'],
+        ['Bar: o convidado vê só o SEU consumo, sem parâmetro por onde espreitar',
+         'api.php', "\$acao === 'bar_meu_consumo'"],
+        ['Bar: o painel dos noivos ganha a tira do bar, só quando ele trabalha',
+         'index.php', 'async function tiraDoBar('],
     ];
 }
 

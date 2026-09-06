@@ -285,7 +285,24 @@
 
   function pintarMeus() {
     if (!meus.length) return '';
-    return '<div class="b-meus"><div class="b-gaveta">Os meus pedidos</div>'
+    // O que ELE levou, e só ele: nem o resto da família. Não há aqui
+    // parâmetro nenhum a dizer de quem é — é sempre de quem está do outro
+    // lado do testemunho, e é por isso que não se pode espreitar o de outro.
+    var totais = {};
+    meus.forEach(function (p) {
+      if (p.estado === 'recusado' || p.estado === 'cancelado') return;
+      (p.itens || []).forEach(function (l) {
+        totais[l.nome] = (totais[l.nome] || 0) + l.quantidade;
+      });
+    });
+    var nomes = Object.keys(totais);
+    var conta = nomes.length
+      ? '<div class="b-conta-minha">Já pediu ' + nomes.map(function (n) {
+          return '<b>' + totais[n] + '×</b> ' + esc(n);
+        }).join(' · ') + '</div>'
+      : '';
+
+    return '<div class="b-meus"><div class="b-gaveta">Os meus pedidos</div>' + conta
       + meus.map(function (p) {
           var oq = p.itens.map(function (l) { return l.quantidade + '× ' + l.nome; }).join(', ');
           return '<div class="b-meu">'
