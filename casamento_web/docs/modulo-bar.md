@@ -29,7 +29,7 @@ documento é detalhe desses três ecrãs e das regras que os ligam.
 | Quem | Ecrã | Como entra | O que faz |
 |---|---|---|---|
 | **Convidado** | `bebidas.php` | Sem conta: pelo QR (ou link) da mesa, e escolhendo o seu nome numa caixa de procura | Vê o menu, escolhe a mesa de entrega, pede, acompanha o pedido, vê quanto falta para poder pedir outra vez |
-| **Copeiro** | `copa.php` | Conta com papel `copeiro` | Triagem dos pedidos, stock em tempo real, limites, motivos de recusa, estatística |
+| **Copeiro** | `copa.php` | Conta com papel `copeiro` | Triagem dos pedidos, stock em tempo real, limites da casa e **regras de cada convidado**, motivos de recusa, estatística |
 | **Entregador** | `entregas.php` | Conta com papel `entregador` | Apanha pedidos aprovados, entrega, marca falhas, pede por conta de quem não tem rede |
 | **Noivos** | `bar.php` | Conta de noivos (`admin`) | Monta o menu (categorias, itens, fotografias), abre e fecha o bar, imprime os QR das mesas, vê a estatística |
 
@@ -346,8 +346,12 @@ Uma tabela só, `cw_bar_limites`, com quatro eixos: **o quê**, **de quem**,
 | `alvo_convidado_id` | id de uma pessoa, ou vazio | a quem se aplica: vazio = a todos |
 | `alvo_convite_id` | id de um convite, ou vazio | idem, para uma família inteira |
 | `unidade` | `bebidas` \| `pedidos` | o que se conta |
-| `quantidade` | inteiro | |
-| `janela_min` | 0 = o evento inteiro | |
+| `quantidade` | inteiro; **0 = proibido** | |
+| `janela_min` | 0 = o evento inteiro | de quanto em quanto tempo se renova |
+| `mensagem` | texto, ou vazio | o que o convidado lê quando bate na regra |
+| `nota` | texto, ou vazio | porquê — só o pessoal vê |
+| `expira_em` | data/hora, ou vazio | regras que valem só por um bocado |
+| `criado_por`, `criado_em` | | quem a pôs, e quando |
 
 Exemplos que a copa vai querer no primeiro dia:
 
@@ -398,6 +402,64 @@ está a tentar fazer.
 Os limites de sujeito `casa` (§8.2) correm sempre por cima, e nenhum limite
 individual os levanta: são o caudal da copa, e o caudal é de todos.
 
+### 8.0.1 As regras de um convidado, na prática
+
+É a mesma tabela, mas merece um ecrã próprio, porque é uma coisa que se faz a
+correr, no meio da festa, com uma pessoa à frente — «este senhor já vai no
+quinto whisky», «esta senhora está grávida», «aquele rapaz conduz».
+
+**Três números dizem tudo.** A gramática das regras é pequena de propósito:
+
+| O que se quer | quantidade | janela | Lê-se |
+|---|---|---|---|
+| **Proibir** | `0` | — | «não pode pedir *isto*» |
+| **Um tecto para a noite** | `N` | `0` | «no máximo *N*, ao todo» |
+| **Um intervalo entre pedidos** | `N` | `M` | «*N* a cada *M* minutos» |
+
+Cruzadas com o **escopo** — um item, uma categoria, ou tudo — e com a
+**unidade** — bebidas ou pedidos —, estas três formas cobrem tudo o que foi
+pedido: o que pode pedir, em que quantidade, e de quanto em quanto tempo, por
+bebida ou em geral.
+
+**O ecrã: uma frase, não um formulário.** Na ficha do convidado (§10), as
+regras escrevem-se como quem fala, com listas em vez de campos:
+
+```
+Álvaro Bento
+├── já levou:  3 cervejas · 1 whisky · 2 águas          [ver o histórico]
+├── regras desta pessoa
+│   ⦿ pode pedir  [Whisky      ▾]  no máximo [1 ▾]  a cada [2 horas   ▾]
+│   ⦿ não pode pedir            [Destilados ▾]
+│   ⦿ pode fazer  [1 ▾] pedido  a cada [30 minutos ▾]
+│   ⦿ pode pedir  [Água        ▾]  sem limite
+│   [ + regra ]
+├── porquê (só nós vemos):  «pediu-nos para o travarmos»
+└── telemóveis em nome dele:  1   [soltar]
+```
+
+Cada linha da lista é uma linha da tabela, e lê-se em voz alta sem tradução.
+A última coluna de cada regra tem um ✕ que a levanta.
+
+**Uma regra vale de imediato** — inclusive para os pedidos que já estejam na
+fila por decidir. Um pedido que deixou de caber aparece ao copeiro com um aviso
+(«já não cabe nas regras de Álvaro Bento») e um botão para o recusar com o
+motivo certo já escolhido. Não se recusa sozinho: quem pôs a regra pode muito
+bem querer servir o copo que já estava pedido.
+
+**Quem pode pôr regras:** o copeiro e os noivos. O entregador não — ele serve,
+não julga. Toda a regra fica no registo de ações com o nome de quem a pôs
+(`bar_regra`), para que ninguém ande a perguntar de onde veio.
+
+**Regras que passam.** `expira_em` serve o «só até à hora do bolo» e o «meia
+hora sem nada». Vazio, a regra dura o que a festa durar.
+
+**O que o convidado lê.** Nunca o motivo — esse é assunto de quem o escreveu.
+Ou a `mensagem` que a copa tenha escrito para ele, ou o texto de origem (§9).
+Uma proibição diz que a bebida não está disponível para ele; um intervalo
+mostra a contagem, como qualquer outra espera. A diferença entre «a casa
+limita» e «limitámos-lhe a si» não aparece no ecrã dele — e é de propósito:
+essa conversa faz-se de pessoa para pessoa, não por um telemóvel.
+
 ### 8.1 Como se calcula a espera
 
 Para um limite `L` atingido, a espera é o tempo que falta até o evento mais
@@ -438,10 +500,15 @@ torniquete.
 > Já pediu as suas 2 caipirinhas. Há mais para provar — a **água de coco** e o
 > **sumo de maracujá** saem já.
 
-**Limite posto só a esta pessoa** (ver §8.0) — o texto não denuncia o motivo,
-que é assunto de quem o pôs:
+**Regra posta só a esta pessoa** (§8.0.1) — o texto nunca denuncia o motivo,
+que é assunto de quem a pôs. Ou a mensagem que a copa escreveu, ou esta:
 > Esta bebida não está disponível para si esta noite. Fale com um empregado se
 > achar que é engano.
+
+**Regra pessoal com intervalo** — indistinguível, no ecrã do convidado, de
+qualquer outra espera:
+> O próximo **whisky** abre em **01:12:40**. Entretanto, saem já a **água de
+> coco** e o **sumo de maracujá**.
 
 **Limite pessoal de tempo:**
 > Fica bem assim por uns minutos. O próximo pedido abre em **08:32**.
@@ -488,9 +555,12 @@ bandeiras que houver:
 Dois botões grandes: **Aprovar** e **Recusar**. Recusar abre os motivos.
 
 **A ficha de um convidado.** A mesma caixa de procura de §5.1, agora do lado da
-copa: escrevem-se quatro letras, abre-se a ficha, e ali está o que a pessoa já
-levou, o que lhe falta de cada limite, os telemóveis presos ao nome dela — e os
-tectos próprios que se lhe queiram pôr (§8.0).
+copa — sem o mínimo de quatro letras, que aqui quem procura tem conta e é o seu
+trabalho. Abre-se a ficha e ali está: o que a pessoa já levou, o que lhe falta
+de cada limite, os telemóveis presos ao nome dela, e **as regras dela** —
+o que pode pedir, quanto, e de quanto em quanto tempo, escritas como frases e
+levantadas com um ✕ (§8.0.1). É deste ecrã que sai o «este senhor fica-se por
+aqui» sem que ninguém tenha de o dizer à mesa.
 
 **Motivos de recusa** — predefinidos, editáveis, mais um campo livre. Semeados:
 
@@ -686,8 +756,13 @@ CREATE TABLE cw_bar_limites (
   alvo_convidado_id INT DEFAULT NULL,          -- só para esta pessoa (§8.0)
   alvo_convite_id INT DEFAULT NULL,            -- só para este convite
   unidade ENUM('bebidas','pedidos') NOT NULL DEFAULT 'bebidas',
-  quantidade INT NOT NULL,
-  janela_min INT NOT NULL DEFAULT 0,
+  quantidade INT NOT NULL,                     -- 0 = proibido (§8.0.1)
+  janela_min INT NOT NULL DEFAULT 0,           -- 0 = a noite inteira
+  mensagem VARCHAR(160) DEFAULT NULL,          -- o que o convidado lê
+  nota VARCHAR(160) DEFAULT NULL,              -- o porquê, só para o pessoal
+  expira_em DATETIME DEFAULT NULL,
+  criado_por VARCHAR(80) DEFAULT NULL,
+  criado_em DATETIME NOT NULL,
   ativo TINYINT(1) NOT NULL DEFAULT 1,
   KEY (casamento_id, ativo),
   KEY (casamento_id, alvo_convidado_id)
@@ -760,7 +835,8 @@ Todas exigem um telemóvel já identificado, menos `bar_mesa`, `bar_procurar` e
 | `bar_stock_repor` / `bar_stock_acerto` | Movimento + nota |
 | `bar_item_guardar` / `bar_item_foto` / `bar_item_apagar` | O menu |
 | `bar_categoria_guardar` / `bar_categoria_apagar` | |
-| `bar_limite_guardar` / `bar_limite_apagar` | §8 |
+| `bar_limite_guardar` / `bar_limite_apagar` | §8 — os limites da casa e os de uma pessoa são a mesma acção, com ou sem `alvo_convidado_id` |
+| `bar_regras_do_convidado` | As regras de uma pessoa, para a ficha (§8.0.1) |
 | `bar_motivo_guardar` / `bar_motivo_apagar` | |
 | `bar_abrir` / `bar_fechar` | O interruptor do bar |
 | `bar_dispositivo_soltar` | Desprende um telemóvel de um nome |
@@ -912,6 +988,7 @@ Nomes por extenso em `nomesDeAcao()`, família `bar`:
 | `bar_stock` | mexeu no stock do bar |
 | `bar_item` | criou ou alterou uma bebida |
 | `bar_limite` | mudou um limite de pedidos |
+| `bar_regra` | pôs ou levantou uma regra a um convidado |
 | `bar_abriu` / `bar_fechou` | abriu / fechou o bar |
 | `bar_dispositivo_solto` | desprendeu um telemóvel de um nome |
 | `bar_nome_trocado` | um telemóvel passou a pedir por outra pessoa |
@@ -936,6 +1013,7 @@ desenvolvimento, a contar o que se prova e porquê).
 | `chk_bar_recusa.js` | Recusa com motivo predefinido e com motivo escrito; a reserva volta; o convidado vê o motivo |
 | `chk_bar_limites.js` | Limite por item, por tempo e da casa; a espera calculada bate certo; a contagem anda; as alternativas só sugerem o que passa |
 | `chk_bar_limite_pessoa.js` | Um tecto posto a uma pessoa substitui o geral e não o soma; a precedência das sete regras; a pessoa ao lado não é afectada |
+| `chk_bar_regras.js` | As três formas — proibir (0), tecto (N, 0) e intervalo (N, M) — por item, por categoria e de tudo; a regra pega de imediato e assinala o pedido que já estava na fila; expira à hora marcada; o convidado lê a mensagem e nunca o motivo; o entregador não a pode pôr |
 | `chk_bar_identidade.js` | Telemóvel preso ao nome; trocar dentro do convite é livre; trocar para outro convite levanta bandeira (e o modo fechado recusa); IP gravado; modo estrito bloqueia e modo registo não; o copeiro solta o telemóvel |
 | `chk_bar_entregas.js` | Apanhar tira da fila dos outros; falhar devolve à copa; os tempos batem certo |
 | `chk_bar_garcon.js` | Pedido por conta de outro conta para os limites do convidado e fica marcado |
@@ -958,12 +1036,12 @@ minhas e grosseiras — dias de trabalho, não promessas.
 | 2 | **O menu** | `bar.php`: categorias, itens, fotografias, stock inicial, abrir/fechar | Os noivos montam o bar e vêem-no montado | 2–3 d |
 | 3 | **O pedido** | `bebidas.php` (procura do nome, escolha da mesa, menu, pedido) + `copa.php` (fila, aprovar, recusar com motivo) | Um convidado escolhe-se na lista, escolhe a mesa e pede; a copa decide | 4–5 d |
 | 4 | **A entrega** | `entregas.php`, reserva e baixa de stock, tempos | O ciclo fecha-se e o stock diz a verdade | 2–3 d |
-| 5 | **Os limites** | Limites gerais e por pessoa, ritmo da casa, contagem, alternativas, ficha do convidado na copa | A espera é justa e explica-se; um tecto individual pega | 4–5 d |
+| 5 | **Os limites e as regras** | Limites gerais, ritmo da casa, contagem, alternativas, e a ficha do convidado na copa com as regras dele (proibir, tecto, intervalo — por bebida, por categoria ou de tudo) | A espera é justa e explica-se; o copeiro põe uma regra a uma pessoa em dez segundos, no meio da festa | 5–6 d |
 | 6 | **A identidade** | Prender o telemóvel, as regras de troca, IP nos três modos, pedido pelo garçon | O telemóvel é de uma pessoa, e quem não tem rede é servido | 2–3 d |
 | 7 | **A estatística** | Números da copa, tempos, previsão de rutura, o resumo no painel | A copa sabe o que se passa sem perguntar | 2–3 d |
 | 8 | **As folhas das mesas** | `bar-qr.php`, os tokens em `mesas.php`, LEIA-ME | As folhas saem da impressora prontas a pousar | 1–2 d |
 
-**Total: 18 a 27 dias de trabalho**, mais a folga de sempre. As fases 1–4 já
+**Total: 19 a 28 dias de trabalho**, mais a folga de sempre. As fases 1–4 já
 são um produto: um bar com pedidos, decisão e entrega. As 5–7 é que o tornam
 governável numa festa de 200 pessoas.
 
@@ -1092,8 +1170,9 @@ não para inventar durante a implementação.
 
 ---
 
-*Última revisão: setembro de 2026 — segunda volta, com o link a viver só na
-mesa, o nome a sair de uma caixa de procura, a mesa de entrega à escolha e os
-limites a poderem ser de uma pessoa só. Enquanto o módulo não existir, este
+*Última revisão: setembro de 2026 — terceira volta, com o link a viver só na
+mesa, o nome a sair de uma caixa de procura, a mesa de entrega à escolha, e as
+regras de cada convidado (o que pode pedir, quanto, e de quanto em quanto
+tempo) a escreverem-se na ficha dele, no meio da festa. Enquanto o módulo não existir, este
 documento é a única coisa que existe dele — se algo aqui mudar de ideia, muda
 aqui primeiro.*
