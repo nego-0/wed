@@ -1086,7 +1086,7 @@ que está mesmo instalado.
 >   testemunho em cookie. Falta a troca de nome e os três modos de IP.
 > * **O pedido pelo empregado** (fase 6) está nos dois postos, copa e entregas.
 >
-> E duas coisas de percurso, que valem para quem vier a seguir:
+> E quatro coisas de percurso, que valem para quem vier a seguir:
 >
 > * As definições do bar **não** cabem em `guardarDefinicoes()`. Essa função só
 >   conhece `defsPadrao()`, o vocabulário do convite, e deita fora em silêncio
@@ -1096,6 +1096,18 @@ que está mesmo instalado.
 >   porque o bar tem gente que não é admin (o copeiro, o empregado) e gente que
 >   não tem sessão nenhuma (o convidado). O CSRF das ações do pessoal é
 >   conferido ali mesmo, contra a mesma lista de `config.php`.
+> * Três coisas nestes ecrãs aparecem e desaparecem por atributo `hidden` — a
+>   barra do cesto, a pastilha da mesa, os tempos da noite — e as três têm
+>   `display` de classe. **Uma classe ganha à regra `[hidden]` do browser**: a
+>   barra do cesto ficava a dizer «2 bebidas» depois de o pedido já ter
+>   seguido, e a pessoa carregava outra vez a contar que o primeiro se perdera.
+>   `bar.css` abre com um `[hidden]{display:none!important}` para toda a folha.
+> * `barCategorias()` devolvia os `id` como texto (é o que o MySQL dá) enquanto
+>   as bebidas já vinham com o seu `categoria_id` em inteiro. A comparação
+>   estrita no browser não juntava bebida nenhuma à sua gaveta e **o menu do
+>   convidado aparecia vazio, sem erro nenhum**. Os ids saem agora convertidos,
+>   e o agrupamento deixa em «Outras» o que sobre — um menu que esconde metade
+>   das bebidas em silêncio é pior do que um menu feio.
 
 Cada fase é entregável sozinha e deixa a casa a funcionar. As estimativas são
 minhas e grosseiras — dias de trabalho, não promessas — e **já contam com o
@@ -1245,10 +1257,20 @@ excepção.
 **As regras:**
 
 1. **Zero hexadecimais** em `assets/bar.css` e nos `<style>` das quatro páginas,
-   com uma excepção declarada: os pretos e brancos translúcidos de véus e
-   sombras (`rgba(0,0,0,.5)`), que não são cor de marca.
+   com três excepções declaradas: os pretos e brancos translúcidos de véus e
+   sombras (`rgba(0,0,0,.5)`), que não são cor de marca; o cinzento de apoio
+   `#8a8f88`, que é o da casa inteira (132 usos, `estilo.css` incluído) e que
+   inventar de novo aqui seria a verdadeira incoerência; e o `#fff` sobre a
+   cor de uma gaveta, que é dado e não desenho (ver a regra 4).
 2. Uma cor que falte **acrescenta-se como token** em `estilo.css`, nos quatro
-   temas, e não se escreve no módulo.
+   temas, e não se escreve no módulo. **Feito:** a família `--sala-*` — o
+   escuro de `copa.php` e `entregas.php`. Essa fica só no `:root` e **nenhum
+   tema a redefine**, de propósito: aqueles dois ecrãs são escuros porque é
+   meia-noite no salão, não porque o casal escolheu uma paleta escura. Com os
+   tokens normais, o tema «escuro» virava-os ao contrário (`--gold-pale` passa
+   de verde claro a quase preto) e os rótulos desapareciam contra o próprio
+   fundo. `bar.css` limita-se a dar-lhes, dentro de `body.b-noite`, os nomes
+   por que o resto da folha os conhece.
 3. **Nunca** `color: #fff` sobre `--gold`: o dourado do tema `niras` é verde e
    o do `classico` é castanho, e o contraste não é o mesmo. Usa-se
    `--gold-deep` para texto sobre claro e `#fff` só sobre `--gold-deep`.

@@ -71,19 +71,20 @@
 body.b-noite{ background:linear-gradient(175deg, var(--forest-deep), var(--forest));
               color:var(--ivory); min-height:100vh;
   /* O salão é escuro nos quatro temas — não é o tema do casal que manda aqui,
-     é a hora da noite. Mas os tokens SÃO do tema, e no tema «escuro» viram-se
-     ao contrário: --gold-pale passa de um verde claro a #1E3016, e os rótulos
-     da barra desapareciam contra o fundo. Fixam-se aqui os poucos que este
-     ecrã usa, para a copa ser a mesma em qualquer tema.
+     é a hora da noite. Os tokens normais SÃO do tema e no «escuro» viram-se
+     ao contrário (--gold-pale passa de verde claro a quase preto), o que
+     apagava os rótulos deste ecrã contra o próprio fundo. Por isso o salão
+     tem tokens seus em estilo.css — os --sala-* —, que nenhum tema redefine;
+     aqui só se lhes dá os nomes por que o resto da folha os conhece.
 
-     Os de estado (ok/warn/danger) também: as pastilhas precisam de fundo
-     claro e texto escuro, e no tema escuro vinham ao contrário — uma
-     pastilha escura sobre um salão escuro é uma pastilha que não se vê. */
-  --forest:#16283A; --forest-deep:#0C1925; --ivory:#F6F8F4;
-  --gold:#63B22B; --gold-soft:#8CD24A; --gold-pale:#C4D9B3; --gold-deep:#3C7517;
-  --ok:#2C6B2C;     --ok-bg:#DCEFD6;
-  --warn:#7E5D0C;   --warn-bg:#F6EDD6;
-  --danger:#8E322B; --danger-bg:#F6E0DC;
+     Os de estado também: as pastilhas precisam de fundo claro e texto
+     escuro, e uma pastilha escura sobre um salão escuro não se vê. */
+  --forest:var(--sala); --forest-deep:var(--sala-fundo); --ivory:var(--sala-tinta);
+  --gold:var(--sala-ouro); --gold-soft:var(--sala-ouro-claro);
+  --gold-pale:var(--sala-ouro-pale); --gold-deep:var(--sala-ouro-fundo);
+  --ok:var(--sala-ok);       --ok-bg:var(--sala-ok-bg);
+  --warn:var(--sala-aviso);  --warn-bg:var(--sala-aviso-bg);
+  --danger:var(--sala-mau);  --danger-bg:var(--sala-mau-bg);
   /* --line, --card, --ink e --text ficam DO TEMA de propósito: as janelas
      (janela.css) abrem-se por cima deste ecrã e são cartões à parte, com as
      cores da casa. Fixá-las aqui deixava-as sem contornos. */

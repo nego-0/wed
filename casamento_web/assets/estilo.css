@@ -25,6 +25,22 @@
   --serif:'Archivo','Segoe UI Semibold','Segoe UI',system-ui,sans-serif;
   --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
   --script:'Archivo','Segoe UI',system-ui,sans-serif;
+
+  /* ---- O salão do bar (copa.php e entregas.php, ver assets/bar.css) ----
+     Estes NÃO se redefinem em tema nenhum, e é de propósito: aqueles dois
+     ecrãs ficam cinco horas ligados num canto do salão, à meia-luz, e são
+     escuros porque é essa a hora — não porque o casal escolheu uma paleta
+     escura. No tema «escuro» os tokens normais viram-se ao contrário
+     (--gold-pale passa de um verde claro a quase preto) e os rótulos daqueles
+     ecrãs desapareciam contra o próprio fundo. Ficando só aqui, no :root,
+     sobrevivem aos quatro temas por construção. */
+  --sala:#16283A;          --sala-fundo:#0C1925;      --sala-tinta:#F6F8F4;
+  --sala-ouro:#63B22B;     --sala-ouro-claro:#8CD24A; --sala-ouro-pale:#C4D9B3;
+  --sala-ouro-fundo:#3C7517;
+  --sala-ok:#2C6B2C;       --sala-ok-bg:#DCEFD6;
+  --sala-aviso:#7E5D0C;    --sala-aviso-bg:#F6EDD6;
+  --sala-mau:#8E322B;      --sala-mau-bg:#F6E0DC;
+
   --app-bg:
     radial-gradient(1000px 560px at 90% -10%, rgba(99,178,43,.10), transparent 60%),
     radial-gradient(760px 480px at -8% 108%, rgba(18,34,47,.06), transparent 55%),
