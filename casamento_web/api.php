@@ -2562,22 +2562,37 @@ function barRegraLinha(mysqli $conn, array $l): array {
     ];
 }
 
-/** O que uma pessoa já levou esta noite, por bebida. */
+/**
+ * O que uma pessoa já levou esta noite, por bebida.
+ *
+ * Conta o mesmo que os limites contam — tudo o que a copa aceitou fazer, o que
+ * ainda está por decidir incluído. Se contasse só o entregue, a ficha dizia
+ * «ainda não levou nada» com dois copos na fila, e não explicava o veredicto
+ * que ela própria mostra. O que está por servir vai à parte, porque para quem
+ * está a decidir a diferença importa: uma pessoa com três na fila ainda não
+ * bebeu nada.
+ */
 function barConsumoPessoal(mysqli $conn, int $convidadoId): array {
     global $P;
     $cid = casamentoAtual();
-    $st = $conn->prepare("SELECT pi.nome_no_momento nome, SUM(pi.quantidade) n
+    $st = $conn->prepare("SELECT pi.nome_no_momento nome,
+                                 SUM(pi.quantidade) n,
+                                 SUM(CASE WHEN p.estado='entregue' THEN pi.quantidade ELSE 0 END) servidas
                           FROM {$P}bar_pedido_itens pi
                           JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
                           WHERE pi.casamento_id=? AND p.convidado_id=?
-                            AND p.estado IN ('aprovado','a_caminho','entregue')
+                            AND p.estado IN ('em_analise','aprovado','a_caminho','entregue','falhou')
                           GROUP BY pi.nome_no_momento ORDER BY n DESC, nome");
     if (!$st) return [];
     $st->bind_param('ii', $cid, $convidadoId);
     if (!$st->execute()) return [];
     $out = [];
     $r = $st->get_result();
-    while ($x = $r->fetch_assoc()) $out[] = ['nome' => $x['nome'], 'n' => (int)$x['n']];
+    while ($x = $r->fetch_assoc()) {
+        $out[] = ['nome' => $x['nome'], 'n' => (int)$x['n'],
+                  'servidas' => (int)$x['servidas'],
+                  'por_servir' => (int)$x['n'] - (int)$x['servidas']];
+    }
     return $out;
 }
 
@@ -2876,6 +2891,7 @@ function barPedidoLinha(mysqli $conn, array $p, bool $paraPessoal = false): arra
         // trabalho andar. O convidado não precisa de saber quem decidiu.
         $out += [
             'convidado'   => $p['convidado_nome'] ?? null,
+            'convidado_id' => $p['convidado_id'] === null ? null : (int)$p['convidado_id'],
             'convite'     => $p['convite_nome'] ?? null,
             'mesa_qr'     => $p['mesa_qr_nome'] ?? null,
             'criado_por'  => $p['criado_por'],

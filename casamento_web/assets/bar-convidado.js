@@ -23,6 +23,8 @@
   var aberto = false, msgFechado = window.BAR.fechado || '';
   var procuraMin = 4;
   var menu = { categorias: [], itens: [] };
+  var ritmo = null;          // o caudal da copa, quando está cheio
+  var travaoPedido = null;   // «o próximo pedido abre em…»
   var cesto = {};                       // item_id -> quantidade
   var meus = [];
   var relogio = null, procuraEspera = null;
@@ -168,6 +170,26 @@
         + '</div>';
     }
 
+    // O caudal da copa: não é a pessoa que pediu de mais, é a casa que está
+    // cheia — e o texto tem de dizer isso, não repreender ninguém.
+    if (ritmo) {
+      html += '<div class="b-nota">' + esc(ritmo.mensagem
+        || 'A copa está a dar vazão a muitos pedidos neste momento.')
+        + (ritmo.espera_s > 0
+            ? '<br>O seu abre em <b class="b-conta" data-ate="'
+              + (Date.now() + ritmo.espera_s * 1000) + '">' + esc(hms(ritmo.espera_s))
+              + '</b> — e fica na frente quando abrir.' : '')
+        + '</div>';
+    } else if (travaoPedido) {
+      // O travão do acto de pedir é da pessoa, e trava a página inteira.
+      html += '<div class="b-nota">' + esc(travaoPedido.texto)
+        + (travaoPedido.espera_s > 0
+            ? ' <b class="b-conta" data-ate="'
+              + (Date.now() + travaoPedido.espera_s * 1000) + '">'
+              + esc(hms(travaoPedido.espera_s)) + '</b>' : '')
+        + '</div>';
+    }
+
     if (!menu.itens.length) {
       html += '<div class="b-vazio"><span class="ico">🍹</span>O menu ainda não tem bebidas.</div>';
     } else {
@@ -197,18 +219,41 @@
 
   function cartao(i) {
     var n = cesto[i.id] || 0;
-    var esgotada = i.pode_pedir <= 0;
+    var travada = i.pode_pedir <= 0;
+
     // O que se diz sobre a quantidade muda com o que ela é: um número exacto
     // quando é pouco (é uma decisão a tomar já), e silêncio quando é muito.
-    var qtd = esgotada ? 'Esgotada por agora'
-      : (i.disponivel <= 6 ? 'Só ' + i.disponivel + ' — últimas' : '');
-    return '<div class="b-bebida' + (esgotada ? ' esgotada' : '') + '">'
+    var qtd = '';
+    if (!travada) qtd = i.disponivel <= 6 ? 'Só ' + i.disponivel + ' — últimas' : '';
+    else if (i.travao === 'stock') qtd = 'Acabou';
+    else if (i.travao === 'proibido') qtd = 'Não disponível para si';
+    // Um relógio sozinho por baixo de um nome não diz que é uma espera: sem a
+    // palavra, «1:29:55» tanto pode ser a hora a que abre como o que já passou.
+    else if (i.espera_s > 0) qtd = 'Abre em ';
+    else qtd = 'Já levou o que a casa serve';
+
+    // A espera vive num relógio que anda no browser, ao segundo — como a do
+    // cabeçalho, e pela mesma razão: uma contagem calculada no servidor nasce
+    // velha. O data-ate é o instante em que abre; o tique trata do resto.
+    var relogio = (travada && i.espera_s > 0)
+      ? '<span class="b-conta" data-ate="' + (Date.now() + i.espera_s * 1000) + '">'
+        + esc(hms(i.espera_s)) + '</span>' : '';
+
+    // As alternativas são o que transforma uma porta fechada numa sugestão.
+    var alt = (travada && i.alternativas && i.alternativas.length)
+      ? '<div class="b-alt">Saem já: ' + i.alternativas.map(function (a) {
+          return '<button type="button" onclick="barSaltar(' + a.id + ')">'
+               + esc(a.nome) + '</button>';
+        }).join(' ') + '</div>' : '';
+
+    return '<div class="b-bebida' + (travada ? ' esgotada' : '') + '" id="bb-' + i.id + '">'
       + foto(i)
       + '<div class="nm">' + esc(i.nome) + '</div>'
       + (i.descricao ? '<div class="ds">' + esc(i.descricao) + '</div>' : '')
+      + (travada && i.aviso ? '<div class="ds">' + esc(i.aviso) + '</div>' : '')
       + '<div class="pe">'
-      +   '<span class="qtd">' + esc(qtd) + '</span>'
-      +   (esgotada || !aberto ? '' :
+      +   '<span class="qtd">' + esc(qtd) + relogio + '</span>'
+      +   (travada || !aberto ? '' :
             '<span class="b-mais">'
           + '<button type="button" onclick="barMenos(' + i.id + ')"' + (n ? '' : ' disabled')
           +   ' aria-label="Menos um ' + esc(i.nome) + '">−</button>'
@@ -217,8 +262,26 @@
           +   (n >= i.pode_pedir ? ' disabled' : '')
           +   ' aria-label="Mais um ' + esc(i.nome) + '">+</button>'
           + '</span>')
-      + '</div></div>';
+      + '</div>' + alt + '</div>';
   }
+
+  /** hh:mm:ss, ou mm:ss quando não chega a uma hora. */
+  function hms(s) {
+    s = Math.max(0, Math.round(s));
+    var h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, g = s % 60;
+    var dd = function (v) { return (v < 10 ? '0' : '') + v; };
+    return (h ? h + ':' + dd(m) : m) + ':' + dd(g);
+  }
+
+  // Levar a pessoa à alternativa que ela escolheu, em vez de a deixar à
+  // procura dela no meio do menu.
+  window.barSaltar = function (id) {
+    var el = $('bb-' + id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('b-aponta');
+    setTimeout(function () { el.classList.remove('b-aponta'); }, 1600);
+  };
 
   function pintarMeus() {
     if (!meus.length) return '';
@@ -311,7 +374,11 @@
     if (!d.success) { janelaAviso('Não deu para pedir', esc(d.error)); return; }
     cesto = {};
     recibo(d.pedido);
-    await recarregarMeus();
+    // O menu inteiro, e não só «os meus pedidos»: pedir é o momento em que os
+    // limites mudam, e um cartão que ficou sem quota tem de perder o «+» já.
+    // A cadência normal levaria meio minuto — meio minuto em que a pessoa
+    // carrega no botão e leva com uma recusa que a página já sabia.
+    await carregarMenu();
   };
 
   // Um recado de uma só saída: sem aoConfirmar, licJanela desenha só o botão
@@ -347,6 +414,8 @@
     if (!d.success) { $('b-corpo').innerHTML = falhou(d); return; }
     menu = { categorias: d.categorias, itens: d.itens };
     aberto = !!d.aberto;
+    ritmo = d.ritmo || null;
+    travaoPedido = d.pedido || null;
     // Uma bebida que desapareceu do menu não pode ficar no cesto.
     Object.keys(cesto).forEach(function (k) {
       var i = menu.itens.filter(function (x) { return String(x.id) === k; })[0];
@@ -388,6 +457,27 @@
 
   // O relógio: enquanto a página estiver à vista, vai vendo se a copa decidiu.
   // Escondida, cala-se — a bateria de um telemóvel numa festa é o que é.
+  /**
+   * Os relógios das esperas, ao segundo.
+   *
+   * Correm no browser pela mesma razão que o do cabeçalho: uma contagem
+   * calculada no servidor nasce velha. Quando um chega a zero, o menu
+   * recarrega-se sozinho — a pessoa não tem de adivinhar que já pode.
+   */
+  function tique() {
+    var contas = document.querySelectorAll('.b-conta[data-ate]');
+    if (!contas.length) return;
+    var acabou = false;
+    for (var k = 0; k < contas.length; k++) {
+      var falta = (parseInt(contas[k].dataset.ate, 10) - Date.now()) / 1000;
+      if (falta <= 0) { acabou = true; contas[k].textContent = '00'; }
+      else contas[k].textContent = hms(falta);
+    }
+    // Uma vez só por volta: recarregar por cada relógio que chega a zero seria
+    // pedir o menu três vezes no mesmo segundo.
+    if (acabou && !document.hidden) carregarMenu();
+  }
+
   var batidas = 0;
   function bater() {
     if (document.hidden || !eu) return;
@@ -401,4 +491,5 @@
 
   arrancar();
   relogio = setInterval(bater, 10000);
+  setInterval(tique, 1000);
 })();

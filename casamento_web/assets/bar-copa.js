@@ -140,16 +140,25 @@
     if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) onde += ' · pediu na ' + esc(p.mesa_qr);
     if (p.criado_por) onde += ' · lançado por ' + esc(p.criado_por);
 
-    return '<div class="b-cartao b-ped' + classe + '">'
+    // Um pedido que deixou de caber numa regra posta depois de ele entrar.
+    // Não se recusa sozinho: assinala-se, e a copa decide.
+    var fora = (EST.fora || []).filter(function (x) { return x.id === p.id; })[0];
+
+    return '<div class="b-cartao b-ped' + classe + (fora ? ' fora' : '') + '">'
       + '<div class="b-ped-topo">'
       +   '<span class="cod">' + esc(p.codigo) + '</span>'
-      +   '<span class="quem">' + esc(p.convidado || 'Sem nome') + '</span>'
+      +   (p.convidado_id
+            ? '<button type="button" class="quem quem-bt" onclick="copaFicha('
+              + p.convidado_id + ')" title="Ficha e regras desta pessoa">'
+              + esc(p.convidado || 'Sem nome') + '</button>'
+            : '<span class="quem">Sem nome</span>')
       +   '<span class="b-est ' + esc(p.estado) + '">' + esc(p.estado_nome) + '</span>'
       +   '<span class="ha">' + esc(ha(p.criado_em)) + '</span>'
       + '</div>'
       + '<div class="onde">' + onde + '</div>'
       + '<div class="b-linhas">' + linhas + '</div>'
       + (p.motivo ? '<div class="onde">Motivo: ' + esc(p.motivo) + '</div>' : '')
+      + (fora ? '<div class="b-bandeira">⚠ ' + esc(fora.porque) + '</div>' : '')
       + (PODE ? acoes(p) : '')
       + '</div>';
   }
@@ -342,6 +351,101 @@
     licFecharJanela();
     copaMotivos();
   };
+
+  // ---- a ficha de um convidado, com as regras dele ---------------
+  // É uma coisa que se faz a correr, no meio da festa, com a pessoa à frente:
+  // «este senhor já vai no quinto whisky», «esta senhora está grávida».
+  window.copaFicha = async function (id) {
+    var d = await window.api('bar_ficha&convidado=' + id, { method: 'GET' });
+    if (!d || !d.success) return;
+    // «2× whisky (1 por servir)» — para quem está a decidir, a diferença entre
+    // o que já bebeu e o que ainda está na fila é a informação toda.
+    var levou = d.levou.length
+      ? d.levou.map(function (l) {
+          return l.n + '× ' + esc(l.nome)
+            + (l.por_servir ? ' <small>(' + l.por_servir + ' por servir)</small>' : '');
+        }).join(' · ')
+      : 'ainda não pediu nada';
+    var regras = d.regras.length
+      ? d.regras.map(function (r) {
+          return '<div class="b-regra"><span>' + esc(r.frase) + '</span>'
+            + (r.nota ? '<small>' + esc(r.nota) + '</small>' : '')
+            + '<button type="button" class="j-bt j-bt-nao" onclick="copaRegraFora('
+            + r.id + ',' + id + ')">✕</button></div>';
+        }).join('')
+      : '<p class="dica">Sem regras próprias — valem-lhe as da casa.</p>';
+
+    licJanela('Ficha de ' + esc(d.convidado.nome),
+      '<div class="dica">' + esc(d.convidado.convite) + '</div>'
+      + '<p style="margin:.6rem 0"><b>Já levou:</b> ' + levou + '</p>'
+      + '<div class="b-tit" style="font-size:.95rem;margin:.9rem 0 .4rem">Regras desta pessoa</div>'
+      + regras
+      + '<div style="margin-top:.9rem;display:flex;gap:.5rem;flex-wrap:wrap">'
+      +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
+      +     '+ Regra</button>'
+      + '</div>'
+      + '<p class="dica" style="margin-top:1rem">Telemóveis em nome dele: '
+      +   d.dispositivos.length + '</p>', null, { cancelar: 'Fechar' });
+  };
+
+  /** Uma regra escreve-se como quem fala, com listas em vez de campos. */
+  window.copaRegraNova = function (convidadoId) {
+    var itens = (EST.itens || []).map(function (i) { return { v: 'i' + i.id, r: i.nome }; });
+    var cats  = (EST.categorias || []).map(function (c) { return { v: 'c' + c.id, r: c.nome }; });
+    var sobre = [{ v: 'tudo', r: 'qualquer bebida' }].concat(cats, itens);
+    licFormulario({
+      titulo: 'Regra para esta pessoa',
+      guardar: 'Pôr a regra',
+      largo: true,
+      dica: 'Três números dizem tudo: <b>0</b> proíbe; <b>N</b> sem intervalo é um '
+          + 'tecto para a noite; <b>N</b> com intervalo é «N de cada vez».',
+      campos: [
+        { id: 'sobre', rot: 'Pode pedir', tipo: 'escolha', valor: 'tudo', opcoes: sobre },
+        { id: 'quantidade', rot: 'No máximo', tipo: 'numero', valor: 1, min: 0, max: 99,
+          dica: '0 = não pode pedir isto.' },
+        { id: 'janela_min', rot: 'A cada (minutos)', tipo: 'numero', valor: 0, min: 0, max: 1440,
+          dica: '0 = é um tecto para a noite inteira.' },
+        { id: 'mensagem', rot: 'O que ele lê', tipo: 'text', valor: '', largura: 2,
+          dica: 'Vazio, lê o texto de sempre. Nunca lê a nota.' },
+        { id: 'nota', rot: 'Porquê (só nós vemos)', tipo: 'text', valor: '', largura: 2,
+          dica: 'Ex.: «pediu-nos para o travarmos», «conduz».' }
+      ],
+      aoGuardar: async function (v) {
+        var escopo = 'tudo', alvo = 0;
+        if (v.sobre.charAt(0) === 'i') { escopo = 'item';      alvo = parseInt(v.sobre.slice(1), 10); }
+        else if (v.sobre.charAt(0) === 'c') { escopo = 'categoria'; alvo = parseInt(v.sobre.slice(1), 10); }
+        var d = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify({
+          escopo: escopo, alvo_id: alvo, sujeito: 'convidado', alvo_convidado_id: convidadoId,
+          unidade: 'bebidas', quantidade: parseInt(v.quantidade, 10) || 0,
+          janela_min: parseInt(v.janela_min, 10) || 0,
+          mensagem: v.mensagem, nota: v.nota }) });
+        if (!d || !d.success) return false;
+        toast('Regra posta. Vale já.');
+        await carregar(true);
+        avisarFora(d.fora);
+        licFecharJanela();
+        copaFicha(convidadoId);
+        return false;
+      }
+    });
+  };
+
+  window.copaRegraFora = async function (id, convidadoId) {
+    var d = await window.api('bar_regra_apagar', { method: 'POST', body: JSON.stringify({ id: id }) });
+    if (!d || !d.success) return;
+    await carregar(true);
+    licFecharJanela();
+    if (convidadoId) copaFicha(convidadoId);
+  };
+
+  /** Uma regra vale de imediato, mas não recusa nada sozinha: quem a pôs pode
+      muito bem querer servir o copo que já estava pedido (§8.0.1). */
+  function avisarFora(fora) {
+    if (!fora || !fora.length) return;
+    toast(fora.length === 1
+      ? 'O pedido ' + fora[0].codigo + ' já não cabe nas regras — está assinalado na fila.'
+      : fora.length + ' pedidos na fila já não cabem nas regras.', true);
+  }
 
   // ---- as regras da casa ---------------------------------------
   window.copaRegras = function () {

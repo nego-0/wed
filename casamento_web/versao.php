@@ -489,6 +489,22 @@ function correcoesEsperadas(): array {
          'gestao.php', "\$postos['copeiro']"],
         ['Bar: cada posto tem a sua porta — copa e entregas',
          'auth.php', 'function exigirCopa('],
+
+        // ---- Fase 5: os limites ----
+        ['Bar: o limite mais específico substitui o geral, e não se soma a ele',
+         'api.php', 'function barLimiteQueManda('],
+        ['Bar: as regras de «pedidos» travam o acto de pedir, não uma bebida',
+         'api.php', 'function barVeredictoPedido('],
+        ['Bar: o caudal da casa corre por cima de todos os limites individuais',
+         'api.php', 'function barRitmoDaCasa('],
+        ['Bar: a espera explica-se e sugere o que sai já, em vez de fechar a porta',
+         'api.php', 'function barAlternativas('],
+        ['Bar: a regra lê-se em voz alta, escrita no servidor e não no ecrã',
+         'api.php', 'function barRegraFrase('],
+        ['Bar: uma regra nova assinala a fila, mas não recusa nada sozinha',
+         'api.php', 'function barFilaContraRegras('],
+        ['Bar: a ficha do convidado, com o que levou e as regras dele',
+         'assets/bar-copa.js', 'window.copaFicha ='],
     ];
 }
 

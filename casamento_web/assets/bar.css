@@ -141,6 +141,21 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
 .b-acoes .btn{ flex:1 1 140px; justify-content:center; min-height:56px; }
 .b-bandeira{ display:inline-flex; align-items:center; gap:.3rem; font-size:.72rem;
              background:var(--warn-bg); color:var(--warn); border-radius:50px; padding:.15rem .55rem; }
+/* Um pedido que deixou de caber numa regra posta depois de ele entrar. Fica
+   assinalado, não recusado: quem pôs a regra pode querer servir o copo que já
+   estava pedido. */
+.b-ped.fora{ border-color:var(--warn); }
+/* O nome de quem pediu é a porta para a ficha dele — é ali que a copa lhe põe
+   uma regra, com a pessoa à frente e sem sair do ecrã. */
+.quem-bt{ background:none; border:0; padding:0; font:inherit; color:inherit;
+          cursor:pointer; text-align:left; border-bottom:1px dotted rgba(233,223,201,.5); }
+.quem-bt:hover{ border-bottom-style:solid; }
+.quem-bt:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
+/* Uma regra, na ficha: a frase, o porquê que só nós vemos, e o ✕ que a levanta. */
+.b-regra{ display:flex; align-items:center; gap:.6rem; padding:.45rem 0;
+          border-bottom:1px solid var(--line); }
+.b-regra span{ flex:1; }
+.b-regra small{ color:#8a8f88; font-size:.78rem; }
 
 /* ---- o stock, em tempo real -------------------------------- */
 .b-stock{ display:grid; gap:.4rem; }
@@ -194,6 +209,17 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
                padding:.4rem .55rem .55rem; }
 .b-bebida .qtd{ font-size:.74rem; color:rgba(0,0,0,.5); }
 .b-bebida.esgotada{ opacity:.55; }
+/* Uma bebida travada não fica cinzenta e muda: diz quanto falta, e o que sai
+   já em vez dela. É a diferença entre uma porta fechada e uma sugestão. */
+.b-conta{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--c-verde); }
+.b-alt{ padding:.1rem .55rem .6rem; display:flex; gap:.3rem; flex-wrap:wrap;
+        align-items:center; font-size:.74rem; color:rgba(0,0,0,.55); }
+.b-alt button{ background:transparent; border:1px solid var(--c-ouro, #B4864A);
+               color:var(--c-verde); border-radius:50px; padding:.25rem .6rem;
+               font:inherit; font-size:.74rem; cursor:pointer; min-height:34px; }
+/* Saltar para a alternativa acende-a por um instante — senão a pessoa chega
+   lá e não sabe a qual das dez é que carregou. */
+.b-bebida.b-aponta{ outline:2px solid var(--c-ouro, #B4864A); outline-offset:2px; }
 .b-mais{ margin-left:auto; display:flex; align-items:center; gap:.3rem; }
 .b-mais button{ width:38px; height:38px; border-radius:50%; border:1px solid rgba(0,0,0,.15);
                 background:var(--c-cartao, #fff); font-size:1.15rem; line-height:1; cursor:pointer;
