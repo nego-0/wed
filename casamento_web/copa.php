@@ -114,6 +114,8 @@ $CAS  = casalInfo($DEFS);
         O stock só desce quando a bebida é entregue. O que está prometido
         aparece à parte — é bebida que ainda está na copa mas já tem dono.
       </p>
+      <div id="b-bandeiras" class="b-flags" hidden></div>
+
       <div style="margin-top:.9rem;display:flex;gap:.5rem;flex-wrap:wrap">
         <button class="btn btn-fantasma" onclick="copaPedirPor()">Pedir por um convidado</button>
         <button class="btn btn-fantasma" onclick="copaMotivos()">Motivos de recusa</button>

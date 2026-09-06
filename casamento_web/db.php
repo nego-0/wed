@@ -2048,6 +2048,8 @@ function nomesDeAcao(): array {
         'bar_regras'        => ['mudou as regras do bar', 'bar'],
         'bar_regra'         => ['pôs uma regra no bar', 'bar'],
         'bar_regra_fora'    => ['levantou uma regra do bar', 'bar'],
+        'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],
+        'bar_soltou'        => ['soltou um telemóvel do bar', 'bar'],
         'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
         'bar_dispositivo_solto' => ['desprendeu um telemóvel de um nome', 'bar'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],

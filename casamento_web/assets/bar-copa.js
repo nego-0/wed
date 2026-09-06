@@ -72,6 +72,23 @@
     pintarBarra();
     pintarFila();
     pintarStock();
+    pintarBandeiras();
+  }
+
+  /** Telemóveis que valem uma segunda vista. Não acusam ninguém — a copa
+      conhece a sala e decide; isto limita-se a apontar (§5.3). */
+  function pintarBandeiras() {
+    var cx = $('b-bandeiras');
+    if (!cx) return;
+    var bs = EST.bandeiras || [];
+    cx.hidden = !bs.length;
+    if (!bs.length) return;
+    cx.innerHTML = '<div class="b-tit">A olhar duas vezes <small>não é acusação: '
+      + 'é o que dá nas vistas</small></div>'
+      + bs.map(function (x) {
+          return '<div class="b-cartao"><b>' + esc(x.nome) + '</b><br>'
+            + '<span class="onde">' + esc(x.texto) + '</span></div>';
+        }).join('');
   }
 
   function pintarBarra() {
@@ -384,8 +401,18 @@
       +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
       +     '+ Regra</button>'
       + '</div>'
-      + '<p class="dica" style="margin-top:1rem">Telemóveis em nome dele: '
-      +   d.dispositivos.length + '</p>', null, { cancelar: 'Fechar' });
+      + '<div class="b-tit" style="font-size:.95rem;margin:1rem 0 .4rem">Telemóveis</div>'
+      + (d.dispositivos.length
+          ? d.dispositivos.map(function (t) {
+              return '<div class="b-regra"><span>um telemóvel'
+                + (t.trocas ? ' <small>(já pediu por ' + (t.trocas + 1) + ' pessoas)</small>' : '')
+                + '</span><button type="button" class="j-bt j-bt-nao" onclick="copaSoltar('
+                + t.id + ',' + id + ')">Soltar</button></div>';
+            }).join('')
+          : '<p class="dica">Nenhum — ainda ninguém se escolheu neste nome.</p>')
+      + '<p class="dica">Soltar serve quando a vida dá um nó: um telemóvel '
+      +   'emprestado, um nome escolhido por engano. O próximo a abrir a página '
+      +   'volta a escolher-se.</p>', null, { cancelar: 'Fechar' });
   };
 
   /** Uma regra escreve-se como quem fala, com listas em vez de campos. */
@@ -428,6 +455,14 @@
         return false;
       }
     });
+  };
+
+  window.copaSoltar = async function (id, convidadoId) {
+    var d = await window.api('bar_soltar', { method: 'POST', body: JSON.stringify({ id: id }) });
+    if (!d || !d.success) return;
+    toast('Telemóvel solto.');
+    licFecharJanela();
+    copaFicha(convidadoId);
   };
 
   window.copaRegraFora = async function (id, convidadoId) {

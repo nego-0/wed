@@ -2255,10 +2255,83 @@ function barPrender(mysqli $conn, int $convidadoId, int $conviteId): void {
             (casamento_id, token_hash, convidado_id, convite_id, primeiro_ip, ultimo_ip, criado_em, ultimo_em)
             VALUES (?,?,?,?,?,?,NOW(),NOW())
             ON DUPLICATE KEY UPDATE
-              convidado_id=VALUES(convidado_id), convite_id=VALUES(convite_id),
+              -- A CONTA DAS TROCAS VEM PRIMEIRO, e não é estilo: as atribuições
+              -- de um ON DUPLICATE correm da esquerda para a direita, e com
+              -- convidado_id já reescrito a comparação dava sempre falso — o
+              -- contador ficava eternamente a zero e a copa nunca via bandeira
+              -- nenhuma. Compara-se enquanto o valor antigo ainda lá está.
               trocas=trocas + (convidado_id <> VALUES(convidado_id)),
+              convidado_id=VALUES(convidado_id), convite_id=VALUES(convite_id),
               ultimo_ip=VALUES(ultimo_ip), ultimo_em=NOW()");
     if ($st) { $st->bind_param('isiiss', $cid, $h, $convidadoId, $conviteId, $ip, $ip); @$st->execute(); }
+}
+
+/**
+ * Neste IP já anda outro nome? Devolve-o, ou null.
+ *
+ * Só o modo `estrito` chama isto. Nos outros o IP grava-se e não tranca nada,
+ * porque num salão com wi-fi partilhado todos os convidados saem pelo mesmo
+ * endereço: «um IP, um convidado» trancava a festa ao primeiro que pedisse, e
+ * «um IP, muitos» não impedia coisa nenhuma. É o pior de dois mundos, e a
+ * culpa não é da regra — é de NAT (§5.4).
+ */
+function barIpDeOutrem(mysqli $conn, int $convidadoId): ?string {
+    global $P;
+    $cid = casamentoAtual();
+    $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+    if ($ip === '') return null;
+    $h = hash('sha256', (string)($_COOKIE['bar_disp'] ?? ''));
+    $st = $conn->prepare("SELECT g.nome FROM {$P}bar_dispositivos d
+                          JOIN {$P}convidados g ON g.id = d.convidado_id AND g.casamento_id = d.casamento_id
+                          WHERE d.casamento_id=? AND d.ultimo_ip=? AND d.bloqueado=0
+                            AND d.convidado_id <> ? AND d.token_hash <> ?
+                            AND d.ultimo_em > (NOW() - INTERVAL 4 HOUR)
+                          LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('isis', $cid, $ip, $convidadoId, $h);
+    if (!$st->execute()) return null;
+    $x = $st->get_result()->fetch_assoc();
+    return $x ? (string)$x['nome'] : null;
+}
+
+/**
+ * Os telemóveis que a copa deve olhar duas vezes.
+ *
+ * Duas bandeiras, e nenhuma delas acusa ninguém: um telemóvel que já trocou de
+ * nome entre convites, e — no modo `aviso` — vários nomes a sair do mesmo
+ * endereço em pouco tempo. A copa conhece a sala e decide; o sistema
+ * limita-se a apontar.
+ */
+function barBandeiras(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $out = [];
+
+    $r = @$conn->query("SELECT d.trocas, d.ultimo_ip, g.nome
+                        FROM {$P}bar_dispositivos d
+                        JOIN {$P}convidados g ON g.id = d.convidado_id AND g.casamento_id = d.casamento_id
+                        WHERE d.casamento_id=$cid AND d.bloqueado=0 AND d.trocas > 0
+                        ORDER BY d.trocas DESC LIMIT 20");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $out[] = ['tipo' => 'trocas', 'nome' => $x['nome'], 'n' => (int)$x['trocas'],
+                  'texto' => 'este telemóvel já pediu por ' . ((int)$x['trocas'] + 1) . ' pessoas'];
+    }
+
+    if (barDef($conn, 'bar.ip_modo') === 'aviso') {
+        $r2 = @$conn->query("SELECT d.ultimo_ip, COUNT(DISTINCT d.convidado_id) n,
+                                    GROUP_CONCAT(DISTINCT g.nome ORDER BY g.nome SEPARATOR ', ') nomes
+                             FROM {$P}bar_dispositivos d
+                             JOIN {$P}convidados g ON g.id = d.convidado_id AND g.casamento_id = d.casamento_id
+                             WHERE d.casamento_id=$cid AND d.bloqueado=0
+                               AND d.ultimo_em > (NOW() - INTERVAL 30 MINUTE)
+                               AND d.ultimo_ip IS NOT NULL AND d.ultimo_ip <> ''
+                             GROUP BY d.ultimo_ip HAVING n >= 3 ORDER BY n DESC LIMIT 10");
+        if ($r2) while ($x = $r2->fetch_assoc()) {
+            $out[] = ['tipo' => 'ip', 'nome' => $x['nomes'], 'n' => (int)$x['n'],
+                      'texto' => (int)$x['n'] . ' nomes da mesma ligação nos últimos 30 minutos'];
+        }
+    }
+    return $out;
 }
 
 /** A pessoa, com o seu convite e a sua mesa. Null se não for deste casamento. */
@@ -3030,12 +3103,52 @@ if ($acao === 'bar_procurar') {
 
 if ($acao === 'bar_sou') {
     // «Sou eu» — o telemóvel fica preso a este nome.
+    //
+    // É a única barreira real contra pedir em nome de outro, e é honesto dizer
+    // porquê: sem link no convite, o nome deixou de ser segredo (§5.2). O que
+    // fica de pé é que quem quiser pedir por outro tem de o fazer do SEU
+    // telemóvel, o que deixa rasto e a copa vê.
     barPortaPublica($conn);
     $d = corpo();
     $id = (int)($d['convidado_id'] ?? 0);
     $g = barConvidado($conn, $id);
     if (!$g) erro('Não encontrámos esse nome.');
-    barPrender($conn, $id, (int)$g['convite_id']);
+
+    $antes = barQuemSou($conn);
+    $conviteNovo = (int)$g['convite_id'];
+    $troca = null;
+    if ($antes && $antes !== $id) {
+        $ga = barConvidado($conn, $antes);
+        // Trocar para outro nome do MESMO convite é uso normal e não se
+        // comenta: o telemóvel da família é um só, e a mãe pede pelo filho.
+        // Para outro convite é onde a fraude vive — e também o telemóvel
+        // emprestado a quem ficou sem bateria.
+        $mesmoConvite = $ga && (int)$ga['convite_id'] === $conviteNovo;
+        if (!$mesmoConvite) {
+            if (barDef($conn, 'bar.trocar_nome') !== '1') {
+                erro('Este telemóvel já está a pedir por ' . ($ga['nome'] ?? 'outra pessoa')
+                   . '. Chame um empregado — ele resolve isto num instante.');
+            }
+            $troca = ['de' => $ga['nome'] ?? '?', 'para' => $g['nome']];
+        }
+    }
+
+    // O IP no modo estrito: um endereço serve um nome de cada vez. Só serve a
+    // eventos em que cada pessoa usa dados móveis — num salão com wi-fi
+    // partilhado, o primeiro a pedir trancava a festa inteira (§5.4).
+    if (barDef($conn, 'bar.ip_modo') === 'estrito') {
+        $outro = barIpDeOutrem($conn, $id);
+        if ($outro) {
+            erro('Já há um pedido em nome de ' . $outro . ' desta ligação. '
+               . 'Peça ao empregado de mesa.');
+        }
+    }
+
+    barPrender($conn, $id, $conviteNovo);
+    if ($troca) {
+        registar($conn, 'bar_trocou_nome', $troca['para'],
+                 'este telemóvel pedia por ' . $troca['de']);
+    }
     ok(['eu' => ['id' => $id, 'nome' => $g['nome'], 'convite' => $g['nome_exibicao'],
                  'mesa_id' => $g['mesa_id'] === null ? null : (int)$g['mesa_id']]]);
 }
@@ -3204,6 +3317,9 @@ if ($acao === 'bar_estado') {
         // que já estava pedido.
         'fora'       => barFilaContraRegras($conn),
         'caudal'     => barCaudal($conn),
+        // Telemóveis que valem uma segunda vista. Não acusam ninguém: a copa
+        // conhece a sala e decide — o sistema limita-se a apontar (§5.3).
+        'bandeiras'  => barBandeiras($conn),
         'fila'       => array_map(fn($p) => barPedidoLinha($conn, $p, true), $vivos),
         'resolvidos' => array_map(fn($p) => barPedidoLinha($conn, $p, true), $fim)]);
 }
@@ -3566,6 +3682,27 @@ if ($acao === 'bar_regra_apagar') {
     registar($conn, 'bar_regra_fora', '', $antes ? barRegraFrase($conn, $antes) : '#' . $id);
     ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimites($conn)),
         'fila' => barFilaContraRegras($conn)]);
+}
+
+if ($acao === 'bar_soltar') {
+    // Soltar um telemóvel: a vida dá nós — um telemóvel emprestado, uma
+    // pessoa que se escolheu mal na lista, um aparelho que mudou de dono a
+    // meio da festa. É um clique, e o próximo a abrir a página volta a
+    // escolher-se.
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $id = (int)(corpo()['id'] ?? 0);
+    $st = $conn->prepare("SELECT d.convidado_id, g.nome FROM {$P}bar_dispositivos d
+                          LEFT JOIN {$P}convidados g ON g.id=d.convidado_id AND g.casamento_id=d.casamento_id
+                          WHERE d.casamento_id=? AND d.id=? LIMIT 1");
+    $st->bind_param('ii', $cid, $id);
+    @$st->execute();
+    $x = $st->get_result()->fetch_assoc();
+    if (!$x) erro('Esse telemóvel não é deste casamento.');
+    @$conn->query("DELETE FROM {$P}bar_dispositivos WHERE casamento_id=$cid AND id=$id");
+    registar($conn, 'bar_soltou', $x['nome'] ?? '', 'telemóvel solto');
+    ok(['dispositivos' => barDispositivosDe($conn, (int)$x['convidado_id'])]);
 }
 
 if ($acao === 'bar_ficha') {

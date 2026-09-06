@@ -505,6 +505,18 @@ function correcoesEsperadas(): array {
          'api.php', 'function barFilaContraRegras('],
         ['Bar: a ficha do convidado, com o que levou e as regras dele',
          'assets/bar-copa.js', 'window.copaFicha ='],
+
+        // ---- Fase 6: um telemóvel, uma pessoa ----
+        ['Bar: trocar de nome é livre no convite, assinalado fora dele',
+         'api.php', "barDef(\$conn, 'bar.trocar_nome')"],
+        ['Bar: a conta das trocas faz-se ANTES de o nome ser reescrito',
+         'api.php', 'trocas=trocas + (convidado_id <> VALUES(convidado_id)),'],
+        ['Bar: o IP tranca só no modo estrito — num salão, NAT junta toda a gente',
+         'api.php', 'function barIpDeOutrem('],
+        ['Bar: as bandeiras apontam sem acusar, e a copa decide',
+         'api.php', 'function barBandeiras('],
+        ['Bar: a copa solta um telemóvel quando a vida dá um nó',
+         'api.php', "\$acao === 'bar_soltar'"],
     ];
 }
 

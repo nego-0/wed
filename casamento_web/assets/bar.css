@@ -151,6 +151,11 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
           cursor:pointer; text-align:left; border-bottom:1px dotted rgba(233,223,201,.5); }
 .quem-bt:hover{ border-bottom-style:solid; }
 .quem-bt:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
+/* As bandeiras: telemóveis que valem uma segunda vista. Ficam por baixo do
+   stock e não em cima da fila — não são urgentes, são para reparar. */
+.b-flags{ margin-top:1.2rem; }
+.b-flags .b-cartao{ border-color:var(--warn); }
+
 /* Uma regra, na ficha: a frase, o porquê que só nós vemos, e o ✕ que a levanta. */
 .b-regra{ display:flex; align-items:center; gap:.6rem; padding:.45rem 0;
           border-bottom:1px solid var(--line); }

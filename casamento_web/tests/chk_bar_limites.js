@@ -151,11 +151,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // ============ 4. as regras de PEDIDOS travam o acto de pedir ============
   await limparRegras();
+  // Sem regra nenhuma, um pedido passa — e é a partir DELE que a janela conta.
+  // Pôr a regra primeiro e contar a seguir dava um resultado diferente
+  // conforme o que outra prova tivesse deixado nos últimos trinta minutos.
+  ok((await pedir(cA, base.ids.gin, 1)).success === true, 'sem regras, um pedido passa');
   await regra({ escopo: 'tudo', sujeito: 'convidado', unidade: 'pedidos',
                 quantidade: 1, janela_min: 30 });
   ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 5,
      'uma regra de pedidos não mexe na conta de cada bebida');
-  ok((await pedir(cA, base.ids.gin, 1)).success === true, 'o primeiro pedido passa');
   const t2 = await pedir(cA, base.ids.whisky, 1);
   ok(t2.success === false, 'e o segundo é travado — a regra é sobre o ACTO de pedir');
   ok(/próximo pedido abre/i.test(t2.message || ''), 'dizendo quando abre: «' + t2.message + '»');
