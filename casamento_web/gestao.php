@@ -263,32 +263,53 @@ $MAPA_LOCAL = [
       <?php // Convidar um porteiro só faz sentido com o «Controlo à porta» na
             // licença: sem esse módulo, a conta entrava e não encontrava porta
             // nenhuma para guardar. A API recusa pelo mesmo motivo. ?>
-      <?php $temPorta = podeModulo('porta'); ?>
-      <div class="dica"><?= $temPorta
-        ? 'Além de vós, podem convidar <b>porteiros</b>. O porteiro só vê a porta:
-           procura convites e regista entradas, e mais nada. Convide-o pelo email — se ainda não
-           tiver conta, ela é criada aqui e recebe uma senha temporária para lhe entregar.'
+      <?php
+        // Cada posto vem com o seu módulo: uma conta de copeiro num casamento
+        // sem bar entrava para não encontrar nada que fazer. A API recusa pelo
+        // mesmo motivo — isto aqui é só não oferecer o que não serve.
+        $postos = [];
+        if (podeModulo('porta')) {
+            $postos['porteiro'] = ['Porteiro', 'só vê a porta: procura convites e regista entradas'];
+        }
+        if (podeModulo('bar')) {
+            $postos['copeiro']    = ['Copeiro', 'decide os pedidos de bebidas e trata do stock'];
+            $postos['entregador'] = ['Empregado de sala', 'leva as bebidas às mesas'];
+        }
+        $temPostos = (bool)$postos;
+      ?>
+      <div class="dica"><?= $temPostos
+        ? 'Além de vós, podem convidar quem vos ajuda na festa. Cada um vê só o seu posto,
+           e mais nada. Convide-o pelo email — se ainda não tiver conta, ela é criada aqui
+           e recebe uma senha temporária para lhe entregar.'
         : 'Aqui vê-se quem tem acesso a este casamento.' ?></div>
       <div id="lista-acessos"><div class="dica">A carregar…</div></div>
 
-      <?php if (!$temPorta): ?>
-      <div class="dica" style="margin:.9rem 0 0">O <b>Controlo à porta</b> não faz parte da vossa
-        licença, por isso não há porteiro a convidar. <a href="licenca.php?quero=porta">Ver o que
-        inclui</a>.</div>
+      <?php if (!$temPostos): ?>
+      <div class="dica" style="margin:.9rem 0 0">Nem o <b>Controlo à porta</b> nem o
+        <b>Bar da festa</b> fazem parte da vossa licença, por isso não há ninguém a convidar.
+        <a href="licenca.php">Ver o que incluem</a>.</div>
       <?php endif; ?>
 
-      <?php if (!$soVer && $temPorta): ?>
-      <div class="dica" style="margin:.9rem 0 .3rem"><b>Convidar um porteiro</b></div>
-      <div class="lf" style="grid-template-columns:1.4fr 1.4fr auto;align-items:start">
-        <div class="campo"><label for="a-email">Email do porteiro</label>
-          <input type="email" id="a-email" placeholder="porteiro@exemplo.pt" autocapitalize="none" spellcheck="false"
+      <?php if (!$soVer && $temPostos): ?>
+      <div class="dica" style="margin:.9rem 0 .3rem"><b>Convidar alguém para um posto</b></div>
+      <div class="lf" style="grid-template-columns:1fr 1.3fr 1.2fr auto;align-items:start">
+        <div class="campo"><label for="a-papel">Posto</label>
+          <select id="a-papel" onchange="postoMudou()">
+            <?php foreach ($postos as $k => [$rot, $oq]): ?>
+            <option value="<?= escP($k) ?>"><?= escP($rot) ?></option>
+            <?php endforeach; ?>
+          </select></div>
+        <div class="campo"><label for="a-email">Email</label>
+          <input type="email" id="a-email" placeholder="pessoa@exemplo.pt" autocapitalize="none" spellcheck="false"
                  onkeydown="if(event.key==='Enter')convidar()">
           <div class="err"></div></div>
         <div class="campo"><label for="a-nome">Nome <small style="color:#8a8f88">· opcional</small></label>
           <input type="text" id="a-nome" placeholder="Como o quer identificar"></div>
-        <div style="align-self:start;margin-top:1.55rem"><button class="btn btn-ouro" onclick="convidar()">Convidar porteiro</button></div>
+        <div style="align-self:start;margin-top:1.55rem"><button class="btn btn-ouro" onclick="convidar()">Convidar</button></div>
       </div>
+      <div class="dica" id="a-oque" style="margin:.2rem 0 0"></div>
       <div class="segredo" id="senha-nova" style="display:none"></div>
+      <script>window.POSTOS = <?= json_encode($postos, JSON_UNESCAPED_UNICODE) ?>;</script>
       <?php endif; ?>
     </div>
 
@@ -416,6 +437,15 @@ async function guardarOrcamento(){
 if (window.Moeda) window.Moeda.ligar('.campo-moeda');
 
 // ---------- quem entra ----------
+// O que cada papel é, em português. Sem isto, um copeiro aparecia na lista
+// como «só a porta» — que era o que lá estava quando só havia porteiros.
+const PAPEL_DIZ = {
+  noivos:     'gere o casamento',
+  porteiro:   'só a porta',
+  copeiro:    'só a copa do bar',
+  entregador: 'só as entregas do bar'
+};
+
 async function carregarAcessos(){
   const d = await api('acesso_lista');
   if (!d || !d.success) return;
@@ -448,7 +478,7 @@ async function carregarAcessos(){
       <div>
         <div class="nm">${esc(nome)} ${eu ? '<span class="et">é você</span>' : ''}
           <span class="et ${esc(a.estado)}">${esc(a.estado)}</span> ${daCasa}</div>
-        <div class="mt">${esc(a.email)} · ${a.papel === 'noivos' ? 'gere o casamento' : 'só a porta'}
+        <div class="mt">${esc(a.email)} · ${PAPEL_DIZ[a.papel] || esc(a.papel)}
           ${a.ultimo_acesso ? '· último acesso ' + esc(a.ultimo_acesso.slice(0,10)) : '· nunca entrou'}</div>
       </div>
       <div class="ac">${acoes}</div>
@@ -473,14 +503,25 @@ if ($('a-email')) $('a-email').addEventListener('input', () => {
   if ($('a-email').closest('.campo').classList.contains('mau'))
     marca('a-email', EMAIL_RE.test($('a-email').value.trim()) ? '' : 'Esse email não parece válido.');
 });
+// O que cada posto vê, dito por baixo da escolha: quem convida tem de saber o
+// que está a dar antes de dar, e não depois de a pessoa entrar.
+function postoMudou(){
+  const sel = $('a-papel'), oq = $('a-oque');
+  if (!sel || !oq || !window.POSTOS) return;
+  const p = window.POSTOS[sel.value];
+  oq.innerHTML = p ? `O <b>${esc(p[0].toLowerCase())}</b> ${esc(p[1])} — e mais nada.` : '';
+}
+postoMudou();
+
 async function convidar(){
   const email = $('a-email').value.trim();
   const nome  = ($('a-nome') ? $('a-nome').value.trim() : '');
-  const erroEmail = !email ? 'Indique o email do porteiro.'
+  const papel = ($('a-papel') ? $('a-papel').value : 'porteiro');
+  const erroEmail = !email ? 'Indique o email de quem quer convidar.'
                   : (EMAIL_RE.test(email) ? '' : 'Esse email não parece válido.');
   if (!marca('a-email', erroEmail)) { $('a-email').focus(); return; }
   const d = await api('acesso_convidar', { method:'POST',
-    body: JSON.stringify({ email, nome, papel: 'porteiro' }) });
+    body: JSON.stringify({ email, nome, papel }) });
   if (!d || !d.success) return;
   $('a-email').value = ''; if ($('a-nome')) $('a-nome').value = '';
   if (d.senha){

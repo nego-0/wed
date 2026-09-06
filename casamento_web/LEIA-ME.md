@@ -33,6 +33,13 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `personalizacao.php` | Motor da personalização: valores originais, validação e composição do convite. |
 | `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
 | `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
+| `bar.php` | **A montagem do bar**, para os noivos: as gavetas do menu, as bebidas com fotografia e stock, e as folhas de QR para pousar em cima das mesas. |
+| `bebidas.php` | **O menu do convidado**, aberto pelo código da mesa (`?m=…`) — sem sessão e sem link no convite. Escolhe-se numa lista de nomes, escolhe a mesa de entrega e pede. Veste as cores do convite do casal. |
+| `copa.php` | **O posto do copeiro:** a fila por decidir, aprovar ou recusar com motivo, o stock em tempo real e as regras da casa. Escuro de salão. |
+| `entregas.php` | **O posto do empregado de sala:** apanhar, entregar (é aqui, e só aqui, que o stock real desce), devolver à copa, e os tempos da noite. |
+| `assets/bar.css` | Os três registos do bar: a montagem clara, o escuro dos dois postos, e o menu que veste o convite. |
+| `assets/bar-montagem.js`, `assets/bar-copa.js`, `assets/bar-entrega.js`, `assets/bar-convidado.js` | Um por ecrã. |
+| `docs/modulo-bar.md` | O desenho inteiro do módulo, e o que dele está feito. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir (acessível a partir de *Gráfica*). |
 | `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico (acessível a partir de *Gráfica*). |
 | `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso (acessível a partir de *Gráfica*). |
@@ -56,16 +63,41 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 - **`cw_mesas`** — mesas com capacidade e ocupação.
 - **`cw_casamentos`** — quem é quem: nome, noivos, data, estado (`pendente`/`ativo`/`suspenso`/`arquivado`) e o endereço público por onde os convidados chegam.
 - **`cw_utilizadores`** — as contas (email, senha cifrada, papel na plataforma, estado).
-- **`cw_acessos`** — quem entra em que casamento, e como (`noivos` / `porteiro`).
+- **`cw_acessos`** — quem entra em que casamento, e como (`noivos` / `porteiro` /
+  `copeiro` / `entregador`). Os três últimos são postos: cada um vê o seu ecrã e
+  mais nada.
 - **`cw_suporte_codigos`** — as chaves temporárias que o casal dá ao suporte.
+
+O bar da festa vive em oito, e a coluna `cw_mesas.bar_token` é a porta por onde
+os convidados lá entram (é o que vai no QR pousado em cada mesa):
+
+- **`cw_bar_categorias`** — as gavetas do menu, com cor e ordem.
+- **`cw_bar_itens`** — as bebidas: fotografia, `stock` (o que existe),
+  `reservado` (o que já está prometido) e o tecto por pedido. O disponível é a
+  diferença, e é só ele que se oferece.
+- **`cw_bar_pedidos`** e **`cw_bar_pedido_itens`** — cada pedido com o seu
+  código curto, quem pediu, a mesa do QR e a mesa de entrega (podem ser
+  diferentes: as pessoas trocam de lugar), o estado, quem decidiu e quando.
+- **`cw_bar_motivos`** — os motivos de recusa que a copa tem à mão, para não ter
+  de os escrever a meio da noite.
+- **`cw_bar_stock_mov`** — o livro-razão do stock: nunca se mexe na coluna sem
+  escrever aqui porquê. É contra ele que se confere uma noite que não bateu certo.
+- **`cw_bar_dispositivos`** — que telemóvel é que pessoa, para ninguém pedir em
+  nome de outro por distração.
+- **`cw_bar_limites`** — as regras de quanto e de quando (fase 5).
+
+**O stock só desce na entrega.** Aprovar um pedido promete a bebida
+(`reservado`), não a gasta; é o empregado, ao dar por entregue, que a tira do
+armazém. É esta separação que impede vender a última garrafa duas vezes — e é
+o que a prova `tests/chk_bar.js` mais defende.
 
 O preçário das licenças vive noutras oito, e divide-se em duas metades — o
 catálogo (o que a casa vende) e a circulação (o que cada casamento pediu e tem):
 
-- **`cw_lic_modulos`** — os cinco recursos que se vendem: `convidados`, `mesas`,
-  `orcamento`, `impresso`, `digital`. Cada um com o seu resumo, o benefício (a
-  frase que vende), o ícone e a **imagem**: a captura do módulo a trabalhar,
-  que a montra mostra (ver `assets/montra/`).
+- **`cw_lic_modulos`** — os sete recursos que se vendem: `convidados`, `porta`,
+  `mesas`, `orcamento`, `impresso`, `digital` e `bar`. Cada um com o seu resumo,
+  o benefício (a frase que vende), o ícone e a **imagem**: a captura do módulo a
+  trabalhar, que a montra mostra (ver `assets/montra/`).
 - **`cw_lic_prazos`** — os prazos de licença e o **factor** de preço de cada um.
   O preçário está escrito no prazo de factor 1; os outros multiplicam-no. Os
   factores são **sublineares** (12 meses a 1,8 e não a 2,0), o que faz o preço

@@ -120,29 +120,42 @@ const PAGINAS = [
      'e lê-se ao passar o rato pela contagem: «' + dias.titulo + '»');
 
   // Quantos são: a conta tem de bater com a data, e não ser um número qualquer.
-  const conferida = await p.evaluate((data) => {
-    const p = data.split('-');
-    const alvo = new Date(+p[0], +p[1] - 1, +p[2]);
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    return Math.round((alvo - hoje) / 86400000);
-  }, casal.data);
+  //
+  // A contagem é uma DURAÇÃO, não um número de folhas de calendário: os dias
+  // que mostra são os que sobram depois de descontado o hh:mm:ss que está ao
+  // lado. Contar de meia-noite a meia-noite dava um a mais sempre que a hora
+  // do dia já passasse a hora do casamento — e o par «104 dias 22:26:22»
+  // estaria a prometer um dia que não existe.
+  const conferida = await p.evaluate(() => {
+    const cx = document.getElementById('topo-contagem');
+    const d = (cx.dataset.dia || '').split('-'), h = (cx.dataset.hora || '00:00').split(':');
+    const alvo = new Date(+d[0], +d[1] - 1, +d[2], +h[0] || 0, +h[1] || 0, 0, 0);
+    return Math.floor((alvo - new Date()) / 86400000);
+  });
   ok(dias.n === conferida + (conferida === 1 ? ' dia' : ' dias'),
      'e são os dias certos até lá (' + conferida + ')');
 
   // ============ 3. o próprio dia, e o dia seguinte ============
   // Muda-se a data no atributo e volta-se a correr a contagem — é a forma de
   // ver o que só se veria uma vez, no dia do casamento de alguém.
-  const comData = (quando) => p.evaluate((q) => {
+  const comData = (quando, hora) => p.evaluate(([q, h]) => {
     const cx = document.getElementById('topo-contagem');
     cx.dataset.dia = q; cx.className = 'contagem';
+    if (h) cx.dataset.hora = h;
     // O guião do cabeçalho já correu; corre-se outra vez, agora com a data nova.
     const s = [...document.scripts].find(x => /\.contagem\[data-dia\]/.test(x.textContent));
     (0, eval)(s.textContent);
     return { n: cx.querySelector('.cg-n').textContent.trim(),
              l: cx.querySelector('.cg-l').textContent.trim(),
              t: cx.querySelector('.cg-t').textContent.trim(), cls: cx.className };
-  }, quando);
-  const iso = (d) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
+  }, [quando, hora]);
+  const iso = (d) => {
+    // Data LOCAL: toISOString() passa por UTC, e à noite num fuso a leste isso
+    // devolve o dia seguinte — «hoje» deixava de ser hoje.
+    const x = new Date(Date.now() + d * 86400000);
+    return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0')
+         + '-' + String(x.getDate()).padStart(2, '0');
+  };
 
   const hoje = await comData(iso(0));
   ok(hoje.n === 'É HOJE' && /hoje/.test(hoje.cls),
@@ -152,8 +165,32 @@ const PAGINAS = [
   ok(ontem.l === 'há' && /passou/.test(ontem.cls) && ontem.t === '',
      'e depois conta para a frente, sem relógio: ' + ontem.l + ' ' + ontem.n);
 
-  const amanha = await comData(iso(1));
-  ok(amanha.n === '1 dia', 'a véspera diz «1 dia», no singular: ' + amanha.n);
+  // A véspera, com a hora do casamento uma hora à frente do relógio de agora:
+  // é aí que falta mesmo um dia. Marcada para uma hora que hoje já passou,
+  // faltariam menos de 24 horas — e então o que se quer ver é o relógio, não
+  // um «1 dia» que estaria a arredondar para cima.
+  const daquiA25h = new Date(Date.now() + 25 * 3600000);
+  const amanha = await comData(iso(1), String(daquiA25h.getHours()).padStart(2, '0') + ':00');
+  ok(amanha.n === '1 dia' && amanha.l === 'falta',
+     'a véspera diz «falta 1 dia», no singular: ' + amanha.l + ' ' + amanha.n);
+
+  // E dentro das últimas 24 horas o número desaparece: fica só o relógio, que
+  // é a verdade — «1 dia 16:56:12» seria um dia a mais.
+  //
+  // O alvo tem de estar a menos de 24 horas E já noutro dia do calendário.
+  // Vinte e três horas a partir de agora servem sempre, excepto na primeira
+  // hora da madrugada, em que ainda caem hoje — e aí é o caso «É HOJE», que
+  // já está provado acima.
+  const daqui23h = new Date(Date.now() + 23 * 3600000);
+  if (daqui23h.getDate() !== new Date().getDate()) {
+    const ultimas = await comData(
+      iso(1), String(daqui23h.getHours()).padStart(2, '0') + ':'
+            + String(daqui23h.getMinutes()).padStart(2, '0'));
+    ok(ultimas.n === '' && /^\d\d:\d\d:\d\d$/.test(ultimas.t),
+       'e nas últimas horas fica só o relógio, sem dia nenhum: ' + ultimas.t);
+  } else {
+    console.log('(saltado: à uma da manhã as 23 horas seguintes ainda são hoje)');
+  }
 
   // ============ 4. sem casamento aberto, não há contagem ============
   // Quem responde pela casa entra sem casamento nenhum, de propósito. Uma

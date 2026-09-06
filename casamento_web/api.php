@@ -163,6 +163,7 @@ function pastaDeEnvios(string $rel): string {
 // Onde ficam as fotografias que o casal envia — do editor, ou da área de
 // fotografias da página do convite digital.
 const CUSTOM_FOTO_DIR = 'assets/convite/custom';
+const BAR_FOTO_DIR = 'assets/bar';         // as fotografias das bebidas
 
 // A pasta das que, noutro tempo, entravam com a licença. Já não entra lá nada,
 // mas as que lá estão continuam a ser de alguém: o nome fica para elas se
@@ -659,6 +660,7 @@ if ($acao === 'registo_publico') {
 
     $gravadas = guardarEventoDoRegisto($conn, $cid, $d);
     semearOrcamento($conn, $cid);   // começa com as gavetas de origem, como os do admin
+    semearBar($conn, $cid);
 
     $_SESSION['registo_feito'] = time();
     usarCasamento($cid);
@@ -2178,6 +2180,939 @@ if (in_array($acao, ['porta_buscar','porta_checkin','porta_stats','porta_entrada
     }
 }
 
+// ============================================================
+// O BAR — o menu de bebidas que os convidados pedem da mesa
+//
+// O desenho inteiro está em docs/modulo-bar.md. Em resumo: em cada mesa há um
+// QR; o convidado abre-o, escolhe-se numa lista de nomes, e pede. O pedido cai
+// na copa, que aprova ou recusa; aprovado, aparece ao entregador, que o leva.
+//
+// Duas contas por bebida, e é o que evita vender a última garrafa duas vezes:
+//   stock      — o que existe. Só desce na ENTREGA.
+//   reservado  — o que está prometido a pedidos já aprovados.
+//   disponível — a diferença, e é isso que se oferece.
+//
+// As ações públicas (do convidado) não têm sessão: o token da mesa diz de que
+// casamento se trata, tal como o código do convite o diz em convite.php. A
+// identidade da pessoa vive num testemunho no telemóvel — um telemóvel, uma
+// pessoa.
+// ============================================================
+
+/** Exige o módulo e um casamento aberto. Devolve o id do casamento. */
+function barCid(): int {
+    exigirModuloApi('bar');
+    $cid = casamentoAtual();
+    if ($cid <= 0) erro('Não há casamento aberto.');
+    return $cid;
+}
+
+/** A porta pública: sem token válido não se entra, e sem módulo também não. */
+function barPortaPublica(mysqli $conn): array {
+    $token = strtoupper(trim((string)($_GET['m'] ?? (corpo()['m'] ?? ''))));
+    $mesa = barMesaDoToken($conn, $token);
+    if (!$mesa) erro('Este código de mesa não serve. Chame um empregado.');
+    if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
+    return $mesa;
+}
+
+// ---- o telemóvel, e a pessoa a que ele pertence -------------
+
+/** O testemunho que vive no telemóvel. Novo, se ainda não houver. */
+function barTestemunho(): string {
+    $t = (string)($_COOKIE['bar_disp'] ?? '');
+    if (preg_match('/^[a-f0-9]{32}$/', $t)) return $t;
+    $t = bin2hex(random_bytes(16));
+    // Até ao fim do evento; a festa não dura mais do que isto.
+    setcookie('bar_disp', $t, ['expires' => time() + 60 * 60 * 24 * 30, 'path' => '/',
+                               'httponly' => true, 'samesite' => 'Lax']);
+    $_COOKIE['bar_disp'] = $t;
+    return $t;
+}
+
+/** Quem é este telemóvel, neste casamento? 0 = ainda ninguém. */
+function barQuemSou(mysqli $conn): int {
+    global $P;
+    $t = (string)($_COOKIE['bar_disp'] ?? '');
+    if (!preg_match('/^[a-f0-9]{32}$/', $t)) return 0;
+    $h = hash('sha256', $t);
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT convidado_id FROM {$P}bar_dispositivos
+                          WHERE casamento_id=? AND token_hash=? AND bloqueado=0 LIMIT 1");
+    if (!$st) return 0;
+    $st->bind_param('is', $cid, $h);
+    if (!$st->execute()) return 0;
+    $r = $st->get_result()->fetch_assoc();
+    return $r ? (int)$r['convidado_id'] : 0;
+}
+
+/** Prende este telemóvel a uma pessoa. */
+function barPrender(mysqli $conn, int $convidadoId, int $conviteId): void {
+    global $P;
+    $cid = casamentoAtual();
+    $h = hash('sha256', barTestemunho());
+    $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+    $st = $conn->prepare("INSERT INTO {$P}bar_dispositivos
+            (casamento_id, token_hash, convidado_id, convite_id, primeiro_ip, ultimo_ip, criado_em, ultimo_em)
+            VALUES (?,?,?,?,?,?,NOW(),NOW())
+            ON DUPLICATE KEY UPDATE
+              convidado_id=VALUES(convidado_id), convite_id=VALUES(convite_id),
+              trocas=trocas + (convidado_id <> VALUES(convidado_id)),
+              ultimo_ip=VALUES(ultimo_ip), ultimo_em=NOW()");
+    if ($st) { $st->bind_param('isiiss', $cid, $h, $convidadoId, $conviteId, $ip, $ip); @$st->execute(); }
+}
+
+/** A pessoa, com o seu convite e a sua mesa. Null se não for deste casamento. */
+function barConvidado(mysqli $conn, int $id): ?array {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT g.id, g.nome, g.convite_id, c.nome_exibicao, c.mesa_id
+                          FROM {$P}convidados g
+                          JOIN {$P}convites c ON c.id = g.convite_id AND c.casamento_id = g.casamento_id
+                          WHERE g.casamento_id=? AND g.id=? LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('ii', $cid, $id);
+    if (!$st->execute()) return null;
+    return $st->get_result()->fetch_assoc() ?: null;
+}
+
+// ---- o menu e o stock ---------------------------------------
+
+/** As gavetas do menu. */
+function barCategorias(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT id, nome, ordem, cor FROM {$P}bar_categorias
+                        WHERE casamento_id=$cid ORDER BY ordem, nome");
+    $out = [];
+    // Os números saem do MySQL como texto. As bebidas já vêm com o seu
+    // categoria_id em inteiro, e uma comparação estrita entre "1" e 1 no
+    // browser não junta bebida nenhuma à sua gaveta — o menu ficava vazio.
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $out[] = ['id' => (int)$x['id'], 'nome' => $x['nome'],
+                  'ordem' => (int)$x['ordem'], 'cor' => $x['cor']];
+    }
+    return $out;
+}
+
+/**
+ * As bebidas, com as três contas feitas.
+ *
+ * $tudo=true traz também as escondidas — é o que a montagem e a copa querem
+ * ver; o convidado só vê o que está no menu e com que se possa contar.
+ */
+function barItens(mysqli $conn, bool $tudo = false): array {
+    global $P;
+    $cid = casamentoAtual();
+    $onde = $tudo ? '' : " AND i.estado='ativo'";
+    $r = @$conn->query("SELECT i.*, c.nome AS categoria, c.cor AS categoria_cor, c.ordem AS cat_ordem
+                        FROM {$P}bar_itens i
+                        LEFT JOIN {$P}bar_categorias c ON c.id = i.categoria_id AND c.casamento_id = i.casamento_id
+                        WHERE i.casamento_id=$cid$onde
+                        ORDER BY COALESCE(c.ordem, 9999), c.nome, i.ordem, i.nome");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $x['id'] = (int)$x['id'];
+        $x['categoria_id'] = $x['categoria_id'] === null ? null : (int)$x['categoria_id'];
+        $x['stock'] = (int)$x['stock'];
+        $x['reservado'] = (int)$x['reservado'];
+        $x['disponivel'] = max(0, $x['stock'] - $x['reservado']);
+        $x['max_por_pedido'] = max(1, (int)$x['max_por_pedido']);
+        $x['alcoolico'] = (int)$x['alcoolico'];
+        // Quanto é que um convidado pode pedir DESTE item, agora. Os limites
+        // por pessoa entram aqui na fase 5; para já é o que há e o que cabe
+        // num pedido.
+        $x['pode_pedir'] = min($x['disponivel'], $x['max_por_pedido']);
+        $out[] = $x;
+    }
+    return $out;
+}
+
+/** Uma bebida, ou null. */
+function barItem(mysqli $conn, int $id): ?array {
+    foreach (barItens($conn, true) as $i) if ((int)$i['id'] === $id) return $i;
+    return null;
+}
+
+/**
+ * Mexe no stock e escreve porquê.
+ *
+ * A coluna é a leitura barata; o livro-razão é a verdade contra a qual se
+ * confere. Nunca se mexe numa sem escrever no outro.
+ */
+function barMoverStock(mysqli $conn, int $itemId, int $delta, string $motivo,
+                       ?int $pedidoId = null, string $nota = ''): void {
+    global $P;
+    $cid = casamentoAtual();
+    if ($delta !== 0) {
+        $st = $conn->prepare("UPDATE {$P}bar_itens SET stock = GREATEST(0, stock + ?)
+                              WHERE casamento_id=? AND id=?");
+        if ($st) { $st->bind_param('iii', $delta, $cid, $itemId); @$st->execute(); }
+    }
+    $quem = (string)(utilizadorAtual() ?? '');
+    $st = $conn->prepare("INSERT INTO {$P}bar_stock_mov
+            (casamento_id,item_id,delta,motivo,pedido_id,utilizador,nota,criado_em)
+            VALUES (?,?,?,?,?,?,?,NOW())");
+    if ($st) {
+        $st->bind_param('iiisiss', $cid, $itemId, $delta, $motivo, $pedidoId, $quem, $nota);
+        @$st->execute();
+    }
+}
+
+/** Reserva (ou liberta, com sinal negativo) unidades prometidas. */
+function barReservar(mysqli $conn, int $itemId, int $q): void {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("UPDATE {$P}bar_itens SET reservado = GREATEST(0, reservado + ?)
+                          WHERE casamento_id=? AND id=?");
+    if ($st) { $st->bind_param('iii', $q, $cid, $itemId); @$st->execute(); }
+}
+
+// ---- os pedidos ---------------------------------------------
+
+/** Os itens de um pedido. */
+function barItensDoPedido(mysqli $conn, int $pedidoId): array {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT pi.item_id, pi.nome_no_momento, pi.quantidade, i.foto
+                          FROM {$P}bar_pedido_itens pi
+                          LEFT JOIN {$P}bar_itens i ON i.id = pi.item_id AND i.casamento_id = pi.casamento_id
+                          WHERE pi.casamento_id=? AND pi.pedido_id=? ORDER BY pi.id");
+    if (!$st) return [];
+    $st->bind_param('ii', $cid, $pedidoId);
+    if (!$st->execute()) return [];
+    $out = [];
+    $r = $st->get_result();
+    while ($x = $r->fetch_assoc()) {
+        $out[] = ['item_id' => (int)$x['item_id'], 'nome' => $x['nome_no_momento'],
+                  'quantidade' => (int)$x['quantidade'], 'foto' => $x['foto']];
+    }
+    return $out;
+}
+
+/** Um pedido, tal como os três ecrãs o querem ver. */
+function barPedidoLinha(mysqli $conn, array $p, bool $paraPessoal = false): array {
+    $itens = barItensDoPedido($conn, (int)$p['id']);
+    $total = 0; foreach ($itens as $i) $total += $i['quantidade'];
+    $out = [
+        'id'        => (int)$p['id'],
+        'codigo'    => $p['codigo_curto'],
+        'estado'    => $p['estado'],
+        'estado_nome' => barEstados()[$p['estado']] ?? $p['estado'],
+        'itens'     => $itens,
+        'total'     => $total,
+        'mesa'      => $p['mesa_nome'] ?? null,
+        'mesa_id'   => $p['mesa_id'] === null ? null : (int)$p['mesa_id'],
+        'criado_em' => $p['criado_em'],
+        'decidido_em' => $p['decidido_em'],
+        'apanhado_em' => $p['apanhado_em'],
+        'entregue_em' => $p['entregue_em'],
+        'motivo'    => $p['motivo_texto'] ?: ($p['motivo_nome'] ?? null),
+    ];
+    if ($paraPessoal) {
+        // Do lado do pessoal, quem pediu e de onde — que é o que faz o
+        // trabalho andar. O convidado não precisa de saber quem decidiu.
+        $out += [
+            'convidado'   => $p['convidado_nome'] ?? null,
+            'convite'     => $p['convite_nome'] ?? null,
+            'mesa_qr'     => $p['mesa_qr_nome'] ?? null,
+            'criado_por'  => $p['criado_por'],
+            'decidido_por' => $p['decidido_por'],
+            'entregue_por' => $p['entregue_por'],
+            'ip'          => $p['ip'],
+        ];
+    }
+    return $out;
+}
+
+/** A consulta de pedidos, com tudo o que os ecrãs mostram. */
+function barPedidos(mysqli $conn, string $onde, array $tipos = [], array $vals = []): array {
+    global $P;
+    $cid = casamentoAtual();
+    $sql = "SELECT p.*, m.nome AS mesa_nome, mq.nome AS mesa_qr_nome,
+                   g.nome AS convidado_nome, c.nome_exibicao AS convite_nome,
+                   mo.texto AS motivo_nome
+            FROM {$P}bar_pedidos p
+            LEFT JOIN {$P}mesas m  ON m.id  = p.mesa_id    AND m.casamento_id = p.casamento_id
+            LEFT JOIN {$P}mesas mq ON mq.id = p.mesa_qr_id AND mq.casamento_id = p.casamento_id
+            LEFT JOIN {$P}convidados g ON g.id = p.convidado_id AND g.casamento_id = p.casamento_id
+            LEFT JOIN {$P}convites c   ON c.id = p.convite_id   AND c.casamento_id = p.casamento_id
+            LEFT JOIN {$P}bar_motivos mo ON mo.id = p.motivo_id AND mo.casamento_id = p.casamento_id
+            WHERE p.casamento_id=$cid AND $onde";
+    $st = $conn->prepare($sql);
+    if (!$st) return [];
+    if ($tipos) $st->bind_param(implode('', $tipos), ...$vals);
+    if (!$st->execute()) return [];
+    return $st->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+/** Um pedido pelo id, ou null. */
+function barPedido(mysqli $conn, int $id): ?array {
+    $r = barPedidos($conn, 'p.id=? ORDER BY p.id LIMIT 1', ['i'], [$id]);
+    return $r[0] ?? null;
+}
+
+/** Os motivos de recusa que a copa tem à mão. */
+function barMotivos(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT id, texto, ordem FROM {$P}bar_motivos
+                        WHERE casamento_id=$cid AND ativo=1 ORDER BY ordem, id");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) $out[] = ['id' => (int)$x['id'], 'texto' => $x['texto']];
+    return $out;
+}
+
+/**
+ * Os tempos da noite, em segundos.
+ *
+ * Quatro contas, e cada uma diz outra coisa: a análise diz se a copa está a
+ * acompanhar; a espera de recolha, se faltam empregados; o percurso, se o
+ * salão é grande; e o total é o único que o convidado conhece.
+ */
+function barTempos(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT
+            AVG(TIMESTAMPDIFF(SECOND, criado_em, decidido_em))   AS analise,
+            AVG(TIMESTAMPDIFF(SECOND, decidido_em, apanhado_em)) AS recolha,
+            AVG(TIMESTAMPDIFF(SECOND, apanhado_em, entregue_em)) AS percurso,
+            AVG(TIMESTAMPDIFF(SECOND, criado_em, entregue_em))   AS total,
+            COUNT(*) AS n
+          FROM {$P}bar_pedidos
+          WHERE casamento_id=$cid AND estado='entregue' AND entregue_em IS NOT NULL");
+    $x = $r ? $r->fetch_assoc() : [];
+    $s = fn($k) => isset($x[$k]) && $x[$k] !== null ? (int)round((float)$x[$k]) : null;
+    return ['analise' => $s('analise'), 'recolha' => $s('recolha'),
+            'percurso' => $s('percurso'), 'total' => $s('total'), 'n' => (int)($x['n'] ?? 0)];
+}
+
+/** O estado do bar, para qualquer ecrã do pessoal. */
+function barEstadoGeral(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $n = fn(string $sql) => (int)(@$conn->query($sql)->fetch_row()[0] ?? 0);
+    return [
+        'aberto'     => barAberto($conn),
+        'em_analise' => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='em_analise'"),
+        'aprovados'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='aprovado'"),
+        'a_caminho'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='a_caminho'"),
+        'entregues'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='entregue'"),
+        'bebidas_entregues' => $n("SELECT COALESCE(SUM(pi.quantidade),0)
+                                   FROM {$P}bar_pedido_itens pi
+                                   JOIN {$P}bar_pedidos p ON p.id = pi.pedido_id AND p.casamento_id = pi.casamento_id
+                                   WHERE pi.casamento_id=$cid AND p.estado='entregue'"),
+    ];
+}
+
+// ============================================================
+// O CONVIDADO — sem sessão, pelo token da mesa
+// ============================================================
+
+if ($acao === 'bar_mesa') {
+    // A porta: que mesa é esta, se o bar está aberto, e quem este telemóvel já
+    // é (se já é alguém).
+    $mesa = barPortaPublica($conn);
+    $eu = barQuemSou($conn);
+    $quem = $eu ? barConvidado($conn, $eu) : null;
+    ok(['mesa' => ['id' => (int)$mesa['id'], 'nome' => $mesa['nome']],
+        'aberto' => barAberto($conn),
+        'mensagem_fechado' => barDef($conn, 'bar.mensagem_fechado'),
+        'procura_min' => max(1, (int)barDef($conn, 'bar.procura_min')),
+        'eu' => $quem ? ['id' => (int)$quem['id'], 'nome' => $quem['nome'],
+                         'convite' => $quem['nome_exibicao'],
+                         'mesa_id' => $quem['mesa_id'] === null ? null : (int)$quem['mesa_id']] : null]);
+}
+
+if ($acao === 'bar_procurar') {
+    // A caixa de procura. A partir de quatro letras, até oito nomes — nem
+    // menos (a caixa seria um índice da festa) nem mais (uma lista para
+    // folhear). Nunca diz onde a pessoa está sentada.
+    barPortaPublica($conn);
+    $cid = casamentoAtual();
+    $q = barChave((string)($_GET['q'] ?? ''));
+    $min = max(1, (int)barDef($conn, 'bar.procura_min'));
+    if (mb_strlen($q) < $min) {
+        erro('Escreva pelo menos ' . $min . ' letras do seu nome.');
+    }
+    $r = @$conn->query("SELECT g.id, g.nome, c.nome_exibicao
+                        FROM {$P}convidados g
+                        JOIN {$P}convites c ON c.id = g.convite_id AND c.casamento_id = g.casamento_id
+                        WHERE g.casamento_id=$cid AND " . soVivos($conn, 'c') . "
+                        ORDER BY g.nome LIMIT 2000");
+    $achados = [];
+    if ($r) while ($g = $r->fetch_assoc()) {
+        if (strpos(barChave((string)$g['nome']), $q) === false) continue;
+        $achados[] = ['id' => (int)$g['id'], 'nome' => $g['nome'],
+                      'convite' => $g['nome_exibicao']];
+        if (count($achados) >= 8) break;
+    }
+    ok(['nomes' => $achados]);
+}
+
+if ($acao === 'bar_sou') {
+    // «Sou eu» — o telemóvel fica preso a este nome.
+    barPortaPublica($conn);
+    $d = corpo();
+    $id = (int)($d['convidado_id'] ?? 0);
+    $g = barConvidado($conn, $id);
+    if (!$g) erro('Não encontrámos esse nome.');
+    barPrender($conn, $id, (int)$g['convite_id']);
+    ok(['eu' => ['id' => $id, 'nome' => $g['nome'], 'convite' => $g['nome_exibicao'],
+                 'mesa_id' => $g['mesa_id'] === null ? null : (int)$g['mesa_id']]]);
+}
+
+if ($acao === 'bar_mesas') {
+    // As mesas, para escolher onde entregar: as pessoas trocam de lugar.
+    barPortaPublica($conn);
+    $cid = casamentoAtual();
+    barGarantirTokens($conn, $cid);
+    $r = @$conn->query("SELECT id, nome FROM {$P}mesas WHERE casamento_id=$cid
+                        ORDER BY (especial='noivos') DESC, nome");
+    $out = [];
+    if ($r) while ($m = $r->fetch_assoc()) $out[] = ['id' => (int)$m['id'], 'nome' => $m['nome']];
+    ok(['mesas' => $out]);
+}
+
+if ($acao === 'bar_menu') {
+    // O menu, como o convidado o vê.
+    barPortaPublica($conn);
+    $eu = barQuemSou($conn);
+    if (!$eu) erro('Diga-nos primeiro quem é.');
+    ok(['categorias' => barCategorias($conn),
+        'itens'  => array_map(fn($i) => [
+            'id' => $i['id'], 'nome' => $i['nome'], 'descricao' => $i['descricao'],
+            'foto' => $i['foto'], 'foto_pos' => $i['foto_pos'],
+            'categoria_id' => $i['categoria_id'], 'categoria' => $i['categoria'],
+            'categoria_cor' => $i['categoria_cor'], 'alcoolico' => $i['alcoolico'],
+            'disponivel' => $i['disponivel'], 'pode_pedir' => $i['pode_pedir'],
+        ], barItens($conn)),
+        'aberto' => barAberto($conn)]);
+}
+
+if ($acao === 'bar_pedir') {
+    // O pedido. O que a página mostrou é uma promessa; o que aqui se calcula é
+    // a decisão — a disponibilidade volta a conferir-se no momento.
+    barPortaPublica($conn);
+    $cid = casamentoAtual();
+    if (!barAberto($conn)) erro('A copa está fechada neste momento.');
+    $eu = barQuemSou($conn);
+    if (!$eu) erro('Diga-nos primeiro quem é.');
+    $g = barConvidado($conn, $eu);
+    if (!$g) erro('Não encontrámos o seu nome.');
+
+    $d = corpo();
+    $pedidos = is_array($d['itens'] ?? null) ? $d['itens'] : [];
+    $mesaId  = (int)($d['mesa_id'] ?? 0);
+    $mesaQr  = (int)($d['mesa_qr_id'] ?? 0);
+
+    $linhas = [];
+    foreach ($pedidos as $li) {
+        $iid = (int)($li['item_id'] ?? 0);
+        $q   = (int)($li['quantidade'] ?? 0);
+        if ($iid <= 0 || $q <= 0) continue;
+        $item = barItem($conn, $iid);
+        if (!$item || $item['estado'] !== 'ativo') erro('Uma das bebidas já não está no menu.');
+        if ($q > $item['pode_pedir']) {
+            erro('De «' . $item['nome'] . '» só podemos servir '
+                 . $item['pode_pedir'] . ' neste momento.');
+        }
+        $linhas[] = [$item, $q];
+    }
+    if (!$linhas) erro('Escolha pelo menos uma bebida.');
+
+    $codigo = barCodigoCurto();
+    $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+    $disp = hash('sha256', (string)($_COOKIE['bar_disp'] ?? ''));
+    $st = $conn->prepare("INSERT INTO {$P}bar_pedidos
+            (casamento_id,codigo_curto,convidado_id,convite_id,mesa_id,mesa_qr_id,
+             estado,dispositivo,ip,criado_em)
+            VALUES (?,?,?,?,?,?,'em_analise',?,?,NOW())");
+    $conviteId = (int)$g['convite_id'];
+    $mesaN = $mesaId ?: null; $mesaQrN = $mesaQr ?: null;
+    $st->bind_param('isiiiiss', $cid, $codigo, $eu, $conviteId, $mesaN, $mesaQrN, $disp, $ip);
+    if (!@$st->execute()) erro('Não foi possível enviar o pedido.');
+    $pid = $conn->insert_id;
+
+    foreach ($linhas as [$item, $q]) {
+        $si = $conn->prepare("INSERT INTO {$P}bar_pedido_itens
+                (casamento_id,pedido_id,item_id,nome_no_momento,quantidade) VALUES (?,?,?,?,?)");
+        $iid = (int)$item['id']; $nome = (string)$item['nome'];
+        $si->bind_param('iiisi', $cid, $pid, $iid, $nome, $q);
+        @$si->execute();
+    }
+    $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
+    registar($conn, 'bar_pedido', $g['nome'], '#' . $codigo . ' · ' . $resumo);
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $pid))]);
+}
+
+if ($acao === 'bar_meus_pedidos') {
+    barPortaPublica($conn);
+    $eu = barQuemSou($conn);
+    if (!$eu) ok(['pedidos' => []]);
+    $ps = barPedidos($conn, 'p.convidado_id=? ORDER BY p.id DESC LIMIT 20', ['i'], [$eu]);
+    ok(['pedidos' => array_map(fn($p) => barPedidoLinha($conn, $p), $ps),
+        'aberto' => barAberto($conn)]);
+}
+
+if ($acao === 'bar_cancelar') {
+    // Desistir, enquanto ninguém decidiu.
+    barPortaPublica($conn);
+    $cid = casamentoAtual();
+    $eu = barQuemSou($conn);
+    $id = (int)(corpo()['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p || (int)$p['convidado_id'] !== $eu) erro('Esse pedido não é seu.');
+    if ($p['estado'] !== 'em_analise') erro('Esse pedido já foi decidido.');
+    @$conn->query("UPDATE {$P}bar_pedidos SET estado='cancelado' WHERE casamento_id=$cid AND id=$id");
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id))]);
+}
+
+// ============================================================
+// A COPA — a fila, a decisão, o stock e a montagem do menu
+// ============================================================
+
+if ($acao === 'bar_estado') {
+    // Tudo o que a copa e a montagem desenham, numa leitura só. Um ecrã que
+    // se refresca de dez em dez segundos não pode pedir cinco coisas de cada
+    // vez — e a copa quer ver a fila e o stock lado a lado.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    // Os que estão vivos primeiro, e depois os últimos resolvidos: a copa
+    // precisa de poder voltar atrás a um que acabou de recusar.
+    $vivos = barPedidos($conn, "p.estado IN ('em_analise','aprovado','a_caminho','falhou')
+                                ORDER BY FIELD(p.estado,'em_analise','falhou','a_caminho','aprovado'),
+                                         p.criado_em, p.id");
+    $fim = barPedidos($conn, "p.estado IN ('entregue','recusado','cancelado')
+                              ORDER BY p.id DESC LIMIT 40");
+    ok(['estado'     => barEstadoGeral($conn),
+        'defs'       => barDefsAtuais($conn),
+        'categorias' => barCategorias($conn),
+        'itens'      => barItens($conn, true),
+        'motivos'    => barMotivos($conn),
+        'tempos'     => barTempos($conn),
+        'agora'      => date('c'),
+        'fila'       => array_map(fn($p) => barPedidoLinha($conn, $p, true), $vivos),
+        'resolvidos' => array_map(fn($p) => barPedidoLinha($conn, $p, true), $fim)]);
+}
+
+if ($acao === 'bar_decidir') {
+    // Aprovar (e reservar) ou recusar (com motivo).
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    if ($p['estado'] !== 'em_analise') erro('Esse pedido já foi decidido.');
+    $quem = (string)(utilizadorAtual() ?? '');
+    $itens = barItensDoPedido($conn, $id);
+
+    if (($d['decisao'] ?? '') === 'aprovar') {
+        // Se entretanto faltar stock, não se aprova o que não se pode servir.
+        foreach ($itens as $li) {
+            $item = barItem($conn, $li['item_id']);
+            if (!$item || $item['disponivel'] < $li['quantidade']) {
+                erro('Já não há «' . $li['nome'] . '» que chegue para este pedido.');
+            }
+        }
+        foreach ($itens as $li) barReservar($conn, $li['item_id'], $li['quantidade']);
+        $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='aprovado', decidido_por=?, decidido_em=NOW()
+                              WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('si', $quem, $id); @$st->execute();
+        registar($conn, 'bar_aprovado', $p['convidado_nome'] ?? '', '#' . $p['codigo_curto']);
+    } else {
+        $mid = (int)($d['motivo_id'] ?? 0) ?: null;
+        $txt = mb_substr(trim((string)($d['motivo_texto'] ?? '')), 0, 200);
+        if (!$mid && $txt === '') erro('Diga porquê: escolha um motivo ou escreva um.');
+        $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='recusado', motivo_id=?, motivo_texto=?,
+                              decidido_por=?, decidido_em=NOW() WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('issi', $mid, $txt, $quem, $id); @$st->execute();
+        registar($conn, 'bar_recusado', $p['convidado_nome'] ?? '',
+                 '#' . $p['codigo_curto'] . ' · ' . ($txt ?: 'motivo da lista'));
+    }
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id), true),
+        'estado' => barEstadoGeral($conn), 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_cancelar_copa') {
+    // Cancelar um pedido já aprovado — a reserva volta ao stock disponível.
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $id = (int)(corpo()['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    if (!in_array($p['estado'], ['aprovado', 'a_caminho', 'falhou'], true)) {
+        erro('Só se cancela um pedido que esteja por entregar.');
+    }
+    if ($p['estado'] !== 'falhou') {
+        foreach (barItensDoPedido($conn, $id) as $li) barReservar($conn, $li['item_id'], -$li['quantidade']);
+    }
+    @$conn->query("UPDATE {$P}bar_pedidos SET estado='cancelado' WHERE casamento_id=$cid AND id=$id");
+    registar($conn, 'bar_cancelado', $p['convidado_nome'] ?? '', '#' . $p['codigo_curto']);
+    ok(['estado' => barEstadoGeral($conn), 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_abrir' || $acao === 'bar_fechar') {
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $abrir = $acao === 'bar_abrir';
+    barGuardarDefs($conn, ['bar.aberto' => $abrir ? '1' : '0']);
+    registar($conn, $abrir ? 'bar_abriu' : 'bar_fechou', '', '');
+    ok(['aberto' => $abrir]);
+}
+
+if ($acao === 'bar_defs') {
+    // As regras da casa: como se trata o IP, quantas letras a procura pede, se
+    // os empregados pedem por quem não tem rede, e o que diz o menu fechado.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $d = corpo();
+    $q = [];
+    foreach (array_keys(barDefsPadrao()) as $k) {
+        // 'bar.aberto' abre-se pelo interruptor, não por aqui.
+        if ($k === 'bar.aberto') continue;
+        if (array_key_exists($k, $d)) $q[$k] = (string)$d[$k];
+    }
+    barGuardarDefs($conn, $q);
+    registar($conn, 'bar_regras', '', implode(', ', array_keys($q)));
+    ok(['defs' => barDefsAtuais($conn)]);
+}
+
+if ($acao === 'bar_stock_repor' || $acao === 'bar_stock_acerto') {
+    // Repor é somar o que chegou; acertar é dizer a verdade sobre o que há.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $d = corpo();
+    $iid = (int)($d['item_id'] ?? 0);
+    $item = $iid ? barItem($conn, $iid) : null;
+    if (!$item) erro('Bebida não encontrada.');
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 160);
+    if ($acao === 'bar_stock_repor') {
+        $q = (int)($d['quantidade'] ?? 0);
+        if ($q === 0) erro('Diga quantas entraram.');
+        barMoverStock($conn, $iid, $q, $q > 0 ? 'entrada' : 'quebra', null, $nota);
+    } else {
+        $novo = max(0, (int)($d['stock'] ?? 0));
+        if ($nota === '') erro('Um acerto explica-se: escreva uma nota.');
+        barMoverStock($conn, $iid, $novo - (int)$item['stock'], 'acerto', null, $nota);
+    }
+    registar($conn, 'bar_stock', $item['nome'], $nota);
+    ok(['itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_categoria_guardar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual(); $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 60);
+    if ($nome === '') erro('A gaveta precisa de um nome.');
+    $cor = preg_match('/^#[0-9A-Fa-f]{6}$/', (string)($d['cor'] ?? '')) ? strtoupper($d['cor']) : null;
+    $ordem = (int)($d['ordem'] ?? 0);
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}bar_categorias SET nome=?, cor=?, ordem=? WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('ssii', $nome, $cor, $ordem, $id);
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}bar_categorias (casamento_id,nome,cor,ordem) VALUES (?,?,?,?)");
+        $st->bind_param('issi', $cid, $nome, $cor, $ordem);
+    }
+    @$st->execute();
+    if (!$id) $id = $conn->insert_id;
+    registar($conn, 'bar_categoria', $nome, '');
+    ok(['id' => $id, 'categorias' => barCategorias($conn), 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_categoria_apagar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    if (!$id) erro('Gaveta inválida.');
+    // As bebidas não se perdem com a gaveta: ficam sem gaveta.
+    @$conn->query("UPDATE {$P}bar_itens SET categoria_id=NULL WHERE casamento_id=$cid AND categoria_id=$id");
+    @$conn->query("DELETE FROM {$P}bar_categorias WHERE casamento_id=$cid AND id=$id");
+    registar($conn, 'bar_categoria', '#' . $id, 'apagada');
+    ok(['categorias' => barCategorias($conn), 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_item_guardar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual(); $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $nome = mb_substr(trim((string)($d['nome'] ?? '')), 0, 80);
+    if ($nome === '') erro('A bebida precisa de um nome.');
+    $desc = mb_substr(trim((string)($d['descricao'] ?? '')), 0, 200);
+    $cat  = (int)($d['categoria_id'] ?? 0) ?: null;
+    $alc  = !empty($d['alcoolico']) ? 1 : 0;
+    $vol  = (int)($d['volume_ml'] ?? 0) ?: null;
+    $maxp = max(1, min(20, (int)($d['max_por_pedido'] ?? 2)));
+    $est  = ($d['estado'] ?? 'ativo') === 'oculto' ? 'oculto' : 'ativo';
+    $ord  = (int)($d['ordem'] ?? 0);
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}bar_itens SET categoria_id=?, nome=?, descricao=?, alcoolico=?,
+                              volume_ml=?, max_por_pedido=?, estado=?, ordem=?
+                              WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('issiiisii', $cat, $nome, $desc, $alc, $vol, $maxp, $est, $ord, $id);
+        @$st->execute();
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}bar_itens
+                (casamento_id,categoria_id,nome,descricao,alcoolico,volume_ml,max_por_pedido,estado,ordem,stock)
+                VALUES (?,?,?,?,?,?,?,?,?,0)");
+        $st->bind_param('iissiiisi', $cid, $cat, $nome, $desc, $alc, $vol, $maxp, $est, $ord);
+        @$st->execute();
+        $id = $conn->insert_id;
+        // O stock inicial, quando vem junto: entra como entrada, com razão.
+        $q0 = (int)($d['stock'] ?? 0);
+        if ($q0 > 0) barMoverStock($conn, $id, $q0, 'entrada', null, 'stock inicial');
+    }
+    registar($conn, 'bar_item', $nome, '');
+    ok(['id' => $id, 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_item_apagar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    $item = $id ? barItem($conn, $id) : null;
+    if (!$item) erro('Bebida não encontrada.');
+    // Um item com pedidos por entregar não se apaga: o pedido ficaria sem
+    // nome. Esconde-se, que é o que quem pergunta quer dizer.
+    $porEntregar = (int)(@$conn->query("SELECT COUNT(*) FROM {$P}bar_pedido_itens pi
+                                        JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                                        WHERE pi.casamento_id=$cid AND pi.item_id=$id
+                                          AND p.estado IN ('em_analise','aprovado','a_caminho')")->fetch_row()[0] ?? 0);
+    if ($porEntregar > 0) erro('Esta bebida está em ' . $porEntregar . ' pedido(s) por entregar. Esconda-a, em vez de a apagar.');
+    if ($item['foto'] && str_starts_with((string)$item['foto'], BAR_FOTO_DIR)) {
+        @unlink(__DIR__ . '/' . $item['foto']);
+    }
+    @$conn->query("DELETE FROM {$P}bar_itens WHERE casamento_id=$cid AND id=$id");
+    registar($conn, 'bar_item_apagado', $item['nome'], '');
+    ok(['itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_item_foto') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)($_POST['id'] ?? 0);
+    $item = $id ? barItem($conn, $id) : null;
+    if (!$item) erro('Bebida não encontrada.');
+    $src = origemUpload('ficheiro', FOTO_CONVITE_MAX);
+    $inf = @getimagesize($src['tmp']);
+    $tipos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!$inf || !isset($tipos[(int)$inf[2]])) erro('O ficheiro não é uma imagem que saibamos ler (jpg, png ou webp).');
+    if ((int)$inf[0] < 200 || (int)$inf[1] < 200) erro('A fotografia é pequena de mais (mínimo 200×200).');
+    $dir = pastaDeEnvios(BAR_FOTO_DIR);
+    $nomeF = 'b' . $cid . '-' . $id . '-' . time() . '-' . random_int(100, 999) . '.' . $tipos[(int)$inf[2]];
+    if (!moverUpload($src, "$dir/$nomeF")) erro('Não foi possível guardar a fotografia.');
+    $antiga = (string)$item['foto'];
+    $caminho = BAR_FOTO_DIR . '/' . $nomeF;
+    $st = $conn->prepare("UPDATE {$P}bar_itens SET foto=? WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('si', $caminho, $id); @$st->execute();
+    if ($antiga !== '' && str_starts_with($antiga, BAR_FOTO_DIR)) @unlink(__DIR__ . '/' . $antiga);
+    registar($conn, 'bar_item', $item['nome'], 'fotografia');
+    ok(['foto' => $caminho, 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_item_foto_tirar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)(corpo()['id'] ?? 0);
+    $item = $id ? barItem($conn, $id) : null;
+    if (!$item) erro('Bebida não encontrada.');
+    if ($item['foto'] && str_starts_with((string)$item['foto'], BAR_FOTO_DIR)) {
+        @unlink(__DIR__ . '/' . $item['foto']);
+    }
+    @$conn->query("UPDATE {$P}bar_itens SET foto=NULL WHERE casamento_id=$cid AND id=$id");
+    ok(['itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_motivo_guardar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual(); $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $txt = mb_substr(trim((string)($d['texto'] ?? '')), 0, 120);
+    if ($txt === '') erro('Escreva o motivo.');
+    $ord = (int)($d['ordem'] ?? 0);
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}bar_motivos SET texto=?, ordem=? WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('sii', $txt, $ord, $id);
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}bar_motivos (casamento_id,texto,ordem) VALUES (?,?,?)");
+        $st->bind_param('isi', $cid, $txt, $ord);
+    }
+    @$st->execute();
+    registar($conn, 'bar_motivo', $txt, '');
+    ok(['motivos' => barMotivos($conn)]);
+}
+
+if ($acao === 'bar_motivo_apagar') {
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    @$conn->query("UPDATE {$P}bar_motivos SET ativo=0 WHERE casamento_id=$cid AND id=" . (int)$id);
+    ok(['motivos' => barMotivos($conn)]);
+}
+
+if ($acao === 'bar_mesa_token') {
+    // Gerar (ou regerar) o código da mesa. Regerar invalida a folha que já
+    // esteja pousada — por isso é um gesto explícito.
+    barCid(); if (!ehAdmin()) erro('Só os noivos.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)(corpo()['mesa_id'] ?? 0);
+    $t = barTokenNovo();
+    $st = $conn->prepare("UPDATE {$P}mesas SET bar_token=? WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('si', $t, $id); @$st->execute();
+    ok(['token' => $t]);
+}
+
+// ============================================================
+// AS ENTREGAS — apanhar, entregar, e o stock a descer
+// ============================================================
+
+if ($acao === 'bar_entrega_lista') {
+    barCid();
+    if (!podeEntregar()) erro('Só as entregas.');
+    $ps = barPedidos($conn, "p.estado IN ('aprovado','a_caminho','falhou')
+                             ORDER BY FIELD(p.estado,'a_caminho','falhou','aprovado'), p.decidido_em, p.id");
+    ok(['pedidos' => array_map(fn($p) => barPedidoLinha($conn, $p, true), $ps),
+        'estado'  => barEstadoGeral($conn),
+        'eu'      => utilizadorAtual(),
+        'tempos'  => barTempos($conn)]);
+}
+
+if ($acao === 'bar_apanhar') {
+    barCid(); if (!podeEntregar()) erro('Só as entregas.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)(corpo()['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    if (!in_array($p['estado'], ['aprovado', 'falhou'], true)) erro('Esse pedido já não está por apanhar.');
+    $quem = (string)(utilizadorAtual() ?? '');
+    $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='a_caminho', entregue_por=?, apanhado_em=NOW()
+                          WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('si', $quem, $id); @$st->execute();
+    registar($conn, 'bar_apanhado', $p['convidado_nome'] ?? '', '#' . $p['codigo_curto']);
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id), true), 'estado' => barEstadoGeral($conn)]);
+}
+
+if ($acao === 'bar_entregue') {
+    // É aqui, e só aqui, que o stock real desce.
+    barCid(); if (!podeEntregar()) erro('Só as entregas.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $id = (int)(corpo()['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    if (!in_array($p['estado'], ['a_caminho', 'aprovado'], true)) erro('Esse pedido não está por entregar.');
+    foreach (barItensDoPedido($conn, $id) as $li) {
+        barMoverStock($conn, $li['item_id'], -$li['quantidade'], 'entrega', $id, '');
+        barReservar($conn, $li['item_id'], -$li['quantidade']);
+    }
+    $quem = (string)(utilizadorAtual() ?? '');
+    $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='entregue', entregue_por=?,
+                          apanhado_em=COALESCE(apanhado_em, NOW()), entregue_em=NOW()
+                          WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('si', $quem, $id); @$st->execute();
+    registar($conn, 'bar_entregue', $p['convidado_nome'] ?? '',
+             '#' . $p['codigo_curto'] . ($p['mesa_nome'] ? ' · mesa ' . $p['mesa_nome'] : ''));
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id), true),
+        'estado' => barEstadoGeral($conn), 'tempos' => barTempos($conn)]);
+}
+
+if ($acao === 'bar_falhou') {
+    // Não estava na mesa. A reserva volta, e o pedido volta à copa.
+    barCid(); if (!podeEntregar()) erro('Só as entregas.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    if (!in_array($p['estado'], ['a_caminho', 'aprovado'], true)) erro('Esse pedido não está a caminho.');
+    foreach (barItensDoPedido($conn, $id) as $li) barReservar($conn, $li['item_id'], -$li['quantidade']);
+    $txt = mb_substr(trim((string)($d['motivo_texto'] ?? '')), 0, 200);
+    $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='falhou', motivo_texto=? WHERE casamento_id=$cid AND id=?");
+    $st->bind_param('si', $txt, $id); @$st->execute();
+    registar($conn, 'bar_falhou', $p['convidado_nome'] ?? '', '#' . $p['codigo_curto'] . ' · ' . $txt);
+    ok(['estado' => barEstadoGeral($conn), 'itens' => barItens($conn, true)]);
+}
+
+if ($acao === 'bar_pedir_por') {
+    // O pedido de quem não tem rede: o empregado lança-o por ele.
+    $cid = barCid();
+    if (!podeEntregar() && !podeCopa()) erro('Só o pessoal do bar.');
+    exigirCorrecao();
+    if (!barAberto($conn)) erro('A copa está fechada neste momento.');
+    $d = corpo();
+    $gid = (int)($d['convidado_id'] ?? 0);
+    $g = $gid ? barConvidado($conn, $gid) : null;
+    if (!$g) erro('Escolha o convidado.');
+    $mesaId = (int)($d['mesa_id'] ?? 0) ?: null;
+    $linhas = [];
+    foreach ((is_array($d['itens'] ?? null) ? $d['itens'] : []) as $li) {
+        $iid = (int)($li['item_id'] ?? 0); $q = (int)($li['quantidade'] ?? 0);
+        if ($iid <= 0 || $q <= 0) continue;
+        $item = barItem($conn, $iid);
+        if (!$item) continue;
+        $linhas[] = [$item, $q];
+    }
+    if (!$linhas) erro('Escolha pelo menos uma bebida.');
+    $codigo = barCodigoCurto();
+    $quem = (string)(utilizadorAtual() ?? '');
+    $conviteId = (int)$g['convite_id'];
+    $st = $conn->prepare("INSERT INTO {$P}bar_pedidos
+            (casamento_id,codigo_curto,convidado_id,convite_id,mesa_id,estado,criado_por,criado_em)
+            VALUES (?,?,?,?,?,'em_analise',?,NOW())");
+    $st->bind_param('isiiis', $cid, $codigo, $gid, $conviteId, $mesaId, $quem);
+    if (!@$st->execute()) erro('Não foi possível lançar o pedido.');
+    $pid = $conn->insert_id;
+    foreach ($linhas as [$item, $q]) {
+        $si = $conn->prepare("INSERT INTO {$P}bar_pedido_itens
+                (casamento_id,pedido_id,item_id,nome_no_momento,quantidade) VALUES (?,?,?,?,?)");
+        $iid = (int)$item['id']; $nome = (string)$item['nome'];
+        $si->bind_param('iiisi', $cid, $pid, $iid, $nome, $q);
+        @$si->execute();
+    }
+    $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
+    registar($conn, 'bar_pedido_por', $g['nome'], '#' . $codigo . ' · ' . $resumo);
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $pid), true)]);
+}
+
+if ($acao === 'bar_procurar_pessoal') {
+    // A mesma procura, do lado de dentro: sem mínimo de letras nem tecto, que
+    // aqui quem procura tem conta e é o seu trabalho.
+    barCid();
+    if (!podeEntregar() && !podeCopa()) erro('Só o pessoal do bar.');
+    $cid = casamentoAtual();
+    $q = barChave((string)($_GET['q'] ?? ''));
+    $r = @$conn->query("SELECT g.id, g.nome, c.nome_exibicao, c.mesa_id, m.nome AS mesa
+                        FROM {$P}convidados g
+                        JOIN {$P}convites c ON c.id = g.convite_id AND c.casamento_id = g.casamento_id
+                        LEFT JOIN {$P}mesas m ON m.id = c.mesa_id AND m.casamento_id = c.casamento_id
+                        WHERE g.casamento_id=$cid AND " . soVivos($conn, 'c') . "
+                        ORDER BY g.nome LIMIT 2000");
+    $out = [];
+    if ($r) while ($g = $r->fetch_assoc()) {
+        if ($q !== '' && strpos(barChave((string)$g['nome']), $q) === false) continue;
+        $out[] = ['id' => (int)$g['id'], 'nome' => $g['nome'], 'convite' => $g['nome_exibicao'],
+                  'mesa_id' => $g['mesa_id'] === null ? null : (int)$g['mesa_id'], 'mesa' => $g['mesa']];
+        if (count($out) >= 30) break;
+    }
+    ok(['nomes' => $out]);
+}
+
+// O CSRF das ações do pessoal do bar.
+//
+// A barreira geral (exigirCsrf, logo a seguir a exigirAdminApi) fica abaixo
+// desta secção, porque o bar tem gente que não é admin: o copeiro e o
+// empregado. Confere-se aqui, contra a mesma lista de config.php — as ações
+// públicas do convidado não estão nela, e é por isso que passam sem token:
+// não há sessão nenhuma para roubar, e a chave é o código da mesa.
+if (str_starts_with($acao, 'bar_') && in_array($acao, acoesDeEscrita(), true)) {
+    exigirCsrf();
+}
+
 // ---- Admin --------------------------------------------------
 exigirAdminApi();
 
@@ -3167,6 +4102,7 @@ if ($acao === 'casamento_criar') {
     $novo = $conn->insert_id;
     $gravadas = guardarEventoDoRegisto($conn, $novo, $d);
     semearOrcamento($conn, $novo);   // começa com as gavetas de origem
+    semearBar($conn, $novo);         // e com as gavetas do bar e os motivos de recusa
 
     // E a licença: um casamento criado aqui dentro nasce com tudo aberto. Quem
     // o criou já decidiu — não há pedido nenhum a analisar. Se se quiser dar-lhe
@@ -3428,17 +4364,27 @@ if ($acao === 'acesso_convidar') {
     if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
     $d = corpo();
     $email = mb_strtolower(trim((string)($d['email'] ?? '')));
-    $papelCas = in_array($d['papel'] ?? '', ['noivos','porteiro'], true) ? $d['papel'] : 'porteiro';
-    // Os noivos convidam PORTEIROS. Passar a gestão do casamento a outra conta
+    // Os postos que o casal pode convidar: a porta, e os dois do bar.
+    $postos = ['porteiro', 'copeiro', 'entregador'];
+    $papelCas = in_array($d['papel'] ?? '', array_merge(['noivos'], $postos), true)
+              ? $d['papel'] : 'porteiro';
+    // Os noivos convidam POSTOS. Passar a gestão do casamento a outra conta
     // é coisa que se faz com quem responde pela casa presente — senão bastava
     // um convite mal dirigido para o casamento passar a ser de outra pessoa.
-    if (!ehAdminPlataforma()) $papelCas = 'porteiro';
+    if (!ehAdminPlataforma() && !in_array($papelCas, $postos, true)) $papelCas = 'porteiro';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) erro('Indique um email válido.');
-    // A mesma regra do registo: sem o módulo «Controlo à porta», não há porta
-    // para guardar — e a conta entraria para não encontrar nada.
-    if ($papelCas === 'porteiro' && !licCasamentoTemModulo($conn, $cid, 'porta'))
-        erro('A vossa licença não inclui o «Controlo à porta». Junte esse módulo à licença '
-           . 'e depois convide o porteiro.');
+    // A mesma regra do registo: sem o módulo, o posto não existe — e a conta
+    // entrava para não encontrar nada que fazer.
+    $exige = ['porteiro' => ['porta', 'o «Controlo à porta»', 'o porteiro'],
+              'copeiro'  => ['bar',   'o «Bar da festa»',     'o copeiro'],
+              'entregador' => ['bar', 'o «Bar da festa»',     'o empregado']];
+    if (isset($exige[$papelCas])) {
+        [$mod, $nome, $quem] = $exige[$papelCas];
+        if (!licCasamentoTemModulo($conn, $cid, $mod)) {
+            erro('A vossa licença não inclui ' . $nome . '. Junte esse módulo à licença '
+               . 'e depois convide ' . $quem . '.');
+        }
+    }
 
     // Um email já em uso não se realoca: cada email serve uma só conta.
     $st = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
@@ -3469,11 +4415,12 @@ if ($acao === 'acesso_papel') {
     $cid = casamentoAtual();
     if (!mandaNosAcessos($cid)) erro('Não gere este casamento.');
     $uid = (int)($_GET['utilizador'] ?? 0);
-    $papelCas = in_array($_GET['papel'] ?? '', ['noivos','porteiro'], true) ? $_GET['papel'] : '';
+    $papelCas = in_array($_GET['papel'] ?? '', ['noivos','porteiro','copeiro','entregador'], true)
+              ? $_GET['papel'] : '';
     if ($uid <= 0 || $papelCas === '') erro('Indique a conta e o papel.');
     // Ninguém se despromove a si próprio: o casamento ficaria sem quem o gere.
     if ($uid === utilizadorId() && $papelCas !== 'noivos') erro('Não pode tirar-se a si próprio a gestão.');
-    if ($papelCas === 'porteiro' && contaNoivos($conn, $cid, $uid) === 0) {
+    if ($papelCas !== 'noivos' && contaNoivos($conn, $cid, $uid) === 0) {
         erro('Este casamento ficaria sem ninguém a geri-lo.');
     }
     $st = $conn->prepare("UPDATE {$P}acessos SET papel=? WHERE utilizador_id=? AND casamento_id=?");
@@ -4323,7 +5270,7 @@ if ($acao === 'mesa_save') {
     $rot=((int)round(((int)($d['rotacao'] ?? 0)) / 15) * 15) % 360; if ($rot < 0) $rot += 360;
     if ($nome==='') erro('Nome da mesa obrigatório.');
     if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=?,rotacao=? WHERE " . doCasamento() . " AND id=?"); $st->bind_param('sisssii',$nome,$cap,$forma,$cor,$tam,$rot,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho,rotacao) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?)"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$rot); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho,rotacao,bar_token) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,'" . barTokenNovo() . "')"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$rot); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;

@@ -26,7 +26,9 @@ class LigacaoAmbito extends mysqli {
     /** Tabelas cujos dados pertencem a um casamento. */
     private const TABELAS = ['convites','convidados','mesas','versoes','registo','definicoes',
                              'orcamento_categorias','orcamento_despesas','orcamento_pagamentos',
-                             'lic_pedidos','lic_concessoes'];
+                             'lic_pedidos','lic_concessoes',
+                             'bar_categorias','bar_itens','bar_stock_mov','bar_pedidos',
+                             'bar_pedido_itens','bar_motivos','bar_limites','bar_dispositivos'];
     public static bool $vigiar = false;   // ligado só depois de o esquema estar pronto
 
     private function auditar(string $sql): void {
@@ -191,7 +193,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 35;
+const ESQUEMA_VERSAO = 36;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -231,6 +233,7 @@ function imagensDaMontra(): array {
         'orcamento'  => 'assets/montra/orcamento.jpg',
         'impresso'   => 'assets/montra/impresso.jpg',
         'digital'    => 'assets/montra/digital.jpg',
+        'bar'        => 'assets/montra/bar.jpg',
     ];
 }
 
@@ -246,6 +249,11 @@ function licencaModulosTudo(): array {
         'orcamento'  => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
         'impresso'   => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
         'digital'    => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
+        // O bar é a noite: o menu de bebidas que os convidados abrem na mesa, a
+        // copa que decide e os empregados que entregam. Vive à parte porque é
+        // outro trabalho, feito por outras pessoas, e há casamentos que o não
+        // querem de todo.
+        'bar'        => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
     ];
 }
 
@@ -298,6 +306,12 @@ function semearPrecario(mysqli $conn): void {
             ['digital_padrao',  'Modelo padrão',       'O desenho da casa, pronto a enviar.',       12000, 0, 0, 0],
             ['digital_edicao',  'Padrão, com edição',  'O modelo padrão, seu para desenhar.',       28000, 0, 1, 0],
             ['digital_atelier', 'Todos os modelos',    'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
+         ]],
+        ['bar', 'Bar da festa',
+         'O menu de bebidas na mesa: o convidado pede, a copa decide, o empregado entrega.',
+         'Ninguém fica de copo vazio à espera de quem passe.', '🍹', 0, [
+            ['bar_basico',   'Pedidos e entregas', 'O menu, a copa e os empregados.',       22000, 0, 0, 0],
+            ['bar_completo', 'Bar governado',      'Mais os limites, o ritmo e a estatística.', 38000, 0, 0, 0],
          ]],
     ];
 
@@ -770,7 +784,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 utilizador_id INT NOT NULL,
                 casamento_id INT NOT NULL,
-                papel ENUM('noivos','porteiro') NOT NULL DEFAULT 'noivos',
+                papel ENUM('noivos','porteiro','copeiro','entregador') NOT NULL DEFAULT 'noivos',
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY uq_acesso (utilizador_id, casamento_id),
                 INDEX idx_acesso_cas (casamento_id)
@@ -1656,6 +1670,212 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}registo", 'ip', "VARCHAR(45) DEFAULT NULL");
     }
 
+    // v36 — o bar: o menu de bebidas que os convidados pedem da mesa.
+    //
+    // Oito tabelas, todas com dono (casamento_id) e todas vigiadas como as
+    // outras. O desenho está em docs/modulo-bar.md; o que aqui interessa é que
+    // nascem vazias — um casamento sem o módulo nunca lhes toca — e que o
+    // stock tem duas contas: o que existe (stock) e o que está prometido a
+    // pedidos já aprovados (reservado). O stock real só desce na ENTREGA.
+    if ($versaoAtual < 36) {
+        // As gavetas do menu: espumantes, sem álcool, o que a casa quiser.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_categorias (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                nome VARCHAR(60) NOT NULL,
+                ordem INT NOT NULL DEFAULT 0,
+                cor VARCHAR(7) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_barcat_cas (casamento_id, ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Cada bebida: a fotografia (com o seu enquadramento, como as do
+        // convite), o que há, o que está prometido, e quanto cabe num pedido.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_itens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                categoria_id INT DEFAULT NULL,
+                nome VARCHAR(80) NOT NULL,
+                descricao VARCHAR(200) DEFAULT NULL,
+                foto VARCHAR(255) DEFAULT NULL,
+                foto_pos VARCHAR(20) DEFAULT '50 50 100',
+                alcoolico TINYINT(1) NOT NULL DEFAULT 0,
+                volume_ml INT DEFAULT NULL,
+                stock INT NOT NULL DEFAULT 0,
+                reservado INT NOT NULL DEFAULT 0,
+                max_por_pedido INT NOT NULL DEFAULT 2,
+                estado ENUM('ativo','oculto') NOT NULL DEFAULT 'ativo',
+                ordem INT NOT NULL DEFAULT 0,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_baritem_cas (casamento_id, estado, ordem),
+                INDEX idx_baritem_cat (categoria_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // O livro-razão do stock: cada alteração com o seu porquê. A coluna
+        // stock é a leitura barata; isto é a verdade contra a qual se confere.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_stock_mov (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                item_id INT NOT NULL,
+                delta INT NOT NULL,
+                motivo ENUM('entrada','entrega','acerto','quebra','devolucao') NOT NULL,
+                pedido_id BIGINT DEFAULT NULL,
+                utilizador VARCHAR(80) DEFAULT NULL,
+                nota VARCHAR(160) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_barmov_cas (casamento_id, item_id),
+                INDEX idx_barmov_ped (pedido_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // O pedido é de uma PESSOA (o nome escolhe-se numa lista), e vai para a
+        // mesa que ela disser — que pode não ser a do QR nem a do convite.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_pedidos (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                codigo_curto VARCHAR(6) NOT NULL,
+                convidado_id INT DEFAULT NULL,
+                convite_id INT DEFAULT NULL,
+                mesa_id INT DEFAULT NULL,
+                mesa_qr_id INT DEFAULT NULL,
+                estado ENUM('em_analise','aprovado','a_caminho','entregue',
+                            'recusado','cancelado','falhou') NOT NULL DEFAULT 'em_analise',
+                motivo_id INT DEFAULT NULL,
+                motivo_texto VARCHAR(200) DEFAULT NULL,
+                dispositivo CHAR(64) DEFAULT NULL,
+                ip VARCHAR(45) DEFAULT NULL,
+                criado_por VARCHAR(80) DEFAULT NULL,
+                criado_em DATETIME NOT NULL,
+                decidido_por VARCHAR(80) DEFAULT NULL,
+                decidido_em DATETIME DEFAULT NULL,
+                entregue_por VARCHAR(80) DEFAULT NULL,
+                apanhado_em DATETIME DEFAULT NULL,
+                entregue_em DATETIME DEFAULT NULL,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_barped_cas (casamento_id, estado, criado_em),
+                INDEX idx_barped_quem (casamento_id, convidado_id, criado_em),
+                INDEX idx_barped_pulso (casamento_id, atualizado_em)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // O menu muda; o pedido não. Guarda-se o nome como estava na altura.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_pedido_itens (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                pedido_id BIGINT NOT NULL,
+                item_id INT NOT NULL,
+                nome_no_momento VARCHAR(80) NOT NULL,
+                quantidade INT NOT NULL DEFAULT 1,
+                INDEX idx_barpi_ped (pedido_id),
+                INDEX idx_barpi_cas (casamento_id, item_id),
+                FOREIGN KEY (pedido_id) REFERENCES {$P}bar_pedidos(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Os motivos de recusa, para o copeiro não ter de escrever a mesma
+        // frase quarenta vezes numa noite.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_motivos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                texto VARCHAR(120) NOT NULL,
+                ordem INT NOT NULL DEFAULT 0,
+                ativo TINYINT(1) NOT NULL DEFAULT 1,
+                INDEX idx_barmot_cas (casamento_id, ativo, ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Os limites, numa tabela só: quantidade 0 = proibido; janela 0 = a
+        // noite inteira; alvo_convidado_id preenchido = regra de uma pessoa.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_limites (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                escopo ENUM('item','categoria','tudo') NOT NULL DEFAULT 'tudo',
+                alvo_id INT NOT NULL DEFAULT 0,
+                sujeito ENUM('convidado','casa') NOT NULL DEFAULT 'convidado',
+                alvo_convidado_id INT DEFAULT NULL,
+                alvo_convite_id INT DEFAULT NULL,
+                unidade ENUM('bebidas','pedidos') NOT NULL DEFAULT 'bebidas',
+                quantidade INT NOT NULL DEFAULT 0,
+                janela_min INT NOT NULL DEFAULT 0,
+                mensagem VARCHAR(160) DEFAULT NULL,
+                nota VARCHAR(160) DEFAULT NULL,
+                expira_em DATETIME DEFAULT NULL,
+                criado_por VARCHAR(80) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ativo TINYINT(1) NOT NULL DEFAULT 1,
+                INDEX idx_barlim_cas (casamento_id, ativo),
+                INDEX idx_barlim_quem (casamento_id, alvo_convidado_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Um telemóvel, uma pessoa. É a única barreira real contra pedir em
+        // nome de outro — ver docs/modulo-bar.md §5.
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_dispositivos (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                token_hash CHAR(64) NOT NULL,
+                convidado_id INT NOT NULL,
+                convite_id INT DEFAULT NULL,
+                trocas INT NOT NULL DEFAULT 0,
+                primeiro_ip VARCHAR(45) DEFAULT NULL,
+                ultimo_ip VARCHAR(45) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ultimo_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                bloqueado TINYINT(1) NOT NULL DEFAULT 0,
+                UNIQUE KEY uq_bardisp (token_hash),
+                INDEX idx_bardisp_cas (casamento_id, convidado_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // A mesa ganha o seu código: é o que vai no QR pousado em cima dela.
+        migColuna($conn, "{$P}mesas", 'bar_token', "VARCHAR(12) DEFAULT NULL");
+        migIndice($conn, "{$P}mesas", 'idx_mesa_bartoken', 'bar_token');
+        $r = @$conn->query("SELECT id FROM {$P}mesas WHERE casamento_id > 0 AND (bar_token IS NULL OR bar_token='')");
+        if ($r) while ($m = $r->fetch_assoc()) {
+            $t = barTokenNovo();
+            @$conn->query("UPDATE {$P}mesas SET bar_token='$t' WHERE casamento_id > 0 AND id=" . (int)$m['id']);
+        }
+
+        // Os papéis novos: quem serve à copa e quem leva à mesa.
+        @$conn->query("ALTER TABLE {$P}acessos MODIFY papel
+                       ENUM('noivos','porteiro','copeiro','entregador') NOT NULL DEFAULT 'noivos'");
+
+        // Um bar de origem para o casamento que já existe, para não se começar
+        // numa folha em branco. Os novos recebem-no ao serem criados.
+        semearBar($conn, 1);
+
+        // O preçário já semeado não conhece o módulo novo: acrescenta-se aqui,
+        // com os mesmos escalões do catálogo de origem. Quem instalar de raiz
+        // recebe-o pelo semearPrecario e este bloco não encontra nada a fazer.
+        $temBar = @$conn->query("SELECT id FROM {$P}lic_modulos WHERE chave='bar' LIMIT 1");
+        if ($temBar && $temBar->num_rows === 0) {
+            $om = (int)(@$conn->query("SELECT COALESCE(MAX(ordem),0) FROM {$P}lic_modulos")->fetch_row()[0] ?? 0) + 10;
+            $img = imagensDaMontra()['bar'] ?? '';
+            $st = @$conn->prepare("INSERT INTO {$P}lic_modulos
+                                   (chave,nome,resumo,beneficio,icone,ordem,imagem,obrigatorio)
+                                   VALUES ('bar','Bar da festa',?,?,'🍹',?,?,0)");
+            if ($st) {
+                $res = 'O menu de bebidas na mesa: o convidado pede, a copa decide, o empregado entrega.';
+                $ben = 'Ninguém fica de copo vazio à espera de quem passe.';
+                $st->bind_param('ssis', $res, $ben, $om, $img);
+                if (@$st->execute()) {
+                    $mid = $conn->insert_id; $oe = 0;
+                    foreach ([['bar_basico', 'Pedidos e entregas', 'O menu, a copa e os empregados.', 22000],
+                              ['bar_completo', 'Bar governado', 'Mais os limites, o ritmo e a estatística.', 38000]] as [$ec,$en,$er,$ep]) {
+                        $oe += 10;
+                        $se = @$conn->prepare("INSERT INTO {$P}lic_escaloes
+                            (modulo_id,chave,nome,resumo,preco,limite,editar,todos_modelos,ordem)
+                            VALUES (?,?,?,?,?,0,0,0,?)");
+                        if ($se) { $se->bind_param('isssdi', $mid, $ec, $en, $er, $ep, $oe); @$se->execute(); }
+                    }
+                }
+            }
+        }
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -1677,8 +1897,8 @@ if (cfg_local('semear_demo', false)) {
                                VALUES (1, ?, ?, ?, ?, 'ativo')");
         if ($st) { $st->bind_param('ssss', $nome, $noiva, $noivo, $data); @$st->execute(); }
         // A mesa dos noivos, como qualquer casamento tem.
-        @$conn->query("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y)
-                       VALUES (1,'Noivos',2,'redonda','ouro','noivos',50,42)");
+        @$conn->query("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y,bar_token)
+                       VALUES (1,'Noivos',2,'redonda','ouro','noivos',50,42,'" . barTokenNovo() . "')");
         // Uma conta de porteiro do casamento de demonstração (a suite conta com
         // ela; não existe no produto). Só se não houver já uma com este email.
         $rp = @$conn->query("SELECT 1 FROM {$P}utilizadores WHERE email='porteiro@local' LIMIT 1");
@@ -1809,6 +2029,25 @@ function nomesDeAcao(): array {
         'convite_foto'         => ['trocou uma fotografia do convite', 'pecas'],
         'convite_foto_reposta' => ['devolveu uma fotografia à de origem', 'pecas'],
         'convite_foto_posicao' => ['enquadrou uma fotografia do convite', 'pecas'],
+        // ---- o bar ----
+        'bar_pedido'        => ['fez um pedido de bebidas', 'bar'],
+        'bar_pedido_por'    => ['fez um pedido por conta de um convidado', 'bar'],
+        'bar_aprovado'      => ['aprovou um pedido de bebidas', 'bar'],
+        'bar_recusado'      => ['recusou um pedido de bebidas', 'bar'],
+        'bar_cancelado'     => ['cancelou um pedido de bebidas', 'bar'],
+        'bar_apanhado'      => ['apanhou um pedido para entregar', 'bar'],
+        'bar_entregue'      => ['entregou um pedido de bebidas', 'bar'],
+        'bar_falhou'        => ['não conseguiu entregar um pedido', 'bar'],
+        'bar_stock'         => ['mexeu no stock do bar', 'bar'],
+        'bar_item'          => ['criou ou alterou uma bebida', 'bar'],
+        'bar_item_apagado'  => ['tirou uma bebida do menu', 'bar'],
+        'bar_categoria'     => ['mexeu nas gavetas do menu', 'bar'],
+        'bar_motivo'        => ['mexeu nos motivos de recusa', 'bar'],
+        'bar_abriu'         => ['abriu o bar', 'bar'],
+        'bar_fechou'        => ['fechou o bar', 'bar'],
+        'bar_regras'        => ['mudou as regras do bar', 'bar'],
+        'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
+        'bar_dispositivo_solto' => ['desprendeu um telemóvel de um nome', 'bar'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],
         'versao_guardada'      => ['guardou uma versão da peça', 'pecas'],
         'versao_aplicada'      => ['pôs uma versão em vigor', 'pecas'],
@@ -2228,6 +2467,211 @@ function orcamentoDefinirMoeda(mysqli $conn, int $cid, $valor): void {
  */
 function semearOrcamento(mysqli $conn, int $cid): void {
     // Sem gavetas de origem. (Ver a nota acima.)
+}
+
+// ============================================================
+// O BAR — ajudantes partilhados
+//
+// O desenho inteiro do módulo está em docs/modulo-bar.md. Aqui ficam só as
+// peças que a base de dados e as quatro páginas partilham.
+// ============================================================
+
+/** O código que vai no QR pousado em cima da mesa. Não é segredo: só diz qual. */
+function barTokenNovo(): string {
+    // Sem vogais nem caracteres que se confundam à mão (0/O, 1/l): o token
+    // também se escreve, quando o telemóvel não lê o código.
+    $abc = '23456789BCDFGHJKMNPQRSTVWXYZ';
+    $t = '';
+    for ($i = 0; $i < 10; $i++) $t .= $abc[random_int(0, strlen($abc) - 1)];
+    return $t;
+}
+
+/** O código curto que se diz em voz alta: «o A47 é para a mesa 3». */
+function barCodigoCurto(): string {
+    $l = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    return $l[random_int(0, strlen($l) - 1)] . random_int(10, 99);
+}
+
+/** Os estados de um pedido, e o que cada um se chama à frente de gente. */
+function barEstados(): array {
+    return [
+        'em_analise' => 'em análise',
+        'aprovado'   => 'a aguardar entrega',
+        'a_caminho'  => 'a caminho',
+        'entregue'   => 'entregue',
+        'recusado'   => 'não servido',
+        'cancelado'  => 'cancelado',
+        'falhou'     => 'não entregue',
+    ];
+}
+
+/** As definições do bar, com os valores de origem. */
+function barDefsPadrao(): array {
+    return [
+        'bar.aberto'        => '0',
+        'bar.ip_modo'       => 'registo',     // registo | aviso | estrito
+        'bar.garcon_direto' => '0',
+        'bar.trocar_nome'   => '1',           // trocar para outro convite: 1 avisa, 0 recusa
+        'bar.procura_min'   => '4',
+        'bar.mensagem_fechado' => '',
+    ];
+}
+
+/** Uma definição do bar deste casamento. */
+function barDef(mysqli $conn, string $chave, int $cid = 0): string {
+    global $P;
+    $cid = $cid ?: casamentoAtual();
+    $st = @$conn->prepare("SELECT valor FROM {$P}definicoes WHERE casamento_id=? AND chave=? LIMIT 1");
+    if ($st) {
+        $st->bind_param('is', $cid, $chave);
+        if ($st->execute() && ($x = $st->get_result()->fetch_assoc())) return (string)$x['valor'];
+    }
+    return (string)(barDefsPadrao()[$chave] ?? '');
+}
+
+/**
+ * Guardar definições do bar.
+ *
+ * Partilham a tabela das definições do convite, mas não a lista: guardarDefinicoes()
+ * só conhece defsPadrao(), que é o vocabulário do convite, e deita fora em silêncio
+ * tudo o que lá não esteja. O bar tem o seu vocabulário — barDefsPadrao() — e é
+ * contra ele que se valida aqui. Chaves de fora não entram.
+ *
+ * Devolve quantas ficaram gravadas.
+ */
+function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
+    global $P;
+    $cid = $cid ?: casamentoAtual();
+    $padrao = barDefsPadrao();
+    $n = 0;
+    foreach ($novos as $chave => $valor) {
+        if (!array_key_exists($chave, $padrao)) continue;
+        $v = trim((string)$valor);
+        // Cada chave tem a sua forma; o que não couber toma o valor de fábrica.
+        if ($chave === 'bar.ip_modo' && !in_array($v, ['registo', 'aviso', 'estrito'], true)) continue;
+        if (in_array($chave, ['bar.aberto', 'bar.garcon_direto', 'bar.trocar_nome'], true)) {
+            $v = $v === '1' ? '1' : '0';
+        }
+        if ($chave === 'bar.procura_min')      $v = (string)max(1, min(8, (int)$v));
+        if ($chave === 'bar.mensagem_fechado') $v = mb_substr($v, 0, 200);
+
+        if ($v === $padrao[$chave]) {
+            // Igual ao de fábrica não se guarda: a ausência já diz isso.
+            $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=? AND chave=?");
+            if ($st) { $st->bind_param('is', $cid, $chave); @$st->execute(); }
+        } else {
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (?,?,?)
+                                  ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+            if ($st) { $st->bind_param('iss', $cid, $chave, $v); @$st->execute(); }
+        }
+        $n++;
+    }
+    return $n;
+}
+
+/**
+ * Abre o casamento a partir do token da mesa (ação pública).
+ *
+ * O token está impresso em cima da mesa e não é segredo nenhum: só diz qual é
+ * a mesa. Como não há sessão, é ele que fixa o âmbito de tudo o que vier a
+ * seguir no pedido — o mesmo que carregarConvite() faz com o código.
+ */
+function barMesaDoToken(mysqli $conn, string $token): ?array {
+    global $P;
+    if (!preg_match('/^[A-Z0-9]{6,16}$/', $token)) return null;
+    $st = $conn->prepare("SELECT m.id, m.nome, m.casamento_id
+                          FROM {$P}mesas m
+                          JOIN {$P}casamentos w ON w.id = m.casamento_id AND w.estado='ativo'
+                          WHERE m.bar_token=? AND m.casamento_id > 0 LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('s', $token);
+    if (!$st->execute()) return null;
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) return null;
+    usarCasamento((int)$m['casamento_id']);
+    return $m;
+}
+
+/** Sem acentos e sem maiúsculas: é assim que se procura um nome. */
+function barChave(string $s): string {
+    $s = mb_strtolower(trim($s), 'UTF-8');
+    $t = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+    return preg_replace('/[^a-z0-9 ]+/', '', $t === false ? $s : $t) ?? '';
+}
+
+/** Todas as definições do bar deste casamento, com os valores de fábrica por baixo. */
+function barDefsAtuais(mysqli $conn, int $cid = 0): array {
+    global $P;
+    $cid = $cid ?: casamentoAtual();
+    $out = barDefsPadrao();
+    $st = @$conn->prepare("SELECT chave, valor FROM {$P}definicoes
+                            WHERE casamento_id=? AND chave LIKE 'bar.%'");
+    if ($st) {
+        $st->bind_param('i', $cid);
+        if ($st->execute()) {
+            $r = $st->get_result();
+            while ($x = $r->fetch_assoc()) {
+                if (array_key_exists($x['chave'], $out)) $out[$x['chave']] = (string)$x['valor'];
+            }
+        }
+    }
+    return $out;
+}
+
+/** O bar está a servir? */
+function barAberto(mysqli $conn, int $cid = 0): bool {
+    return barDef($conn, 'bar.aberto', $cid) === '1';
+}
+
+/**
+ * Toda a mesa deste casamento tem o seu código.
+ *
+ * As mesas nascem em três sítios (a semente, o painel, a planta) e uma que
+ * nasça sem código é uma mesa sem QR — uma folha em branco pousada em cima
+ * dela. Em vez de andar atrás de cada sítio, confere-se aqui, que é barato e
+ * corre quando alguém vai imprimir ou listar as mesas.
+ */
+function barGarantirTokens(mysqli $conn, int $cid = 0): void {
+    global $P;
+    $cid = $cid ?: casamentoAtual();
+    if ($cid <= 0) return;
+    $r = @$conn->query("SELECT id FROM {$P}mesas
+                        WHERE casamento_id=$cid AND (bar_token IS NULL OR bar_token='')");
+    if (!$r) return;
+    while ($m = $r->fetch_assoc()) {
+        $t = barTokenNovo();
+        @$conn->query("UPDATE {$P}mesas SET bar_token='$t' WHERE casamento_id=$cid AND id=" . (int)$m['id']);
+    }
+}
+
+/**
+ * Um bar de origem: as gavetas e os motivos de recusa, para a copa não começar
+ * numa folha em branco. Sem bebidas — essas são de cada casa.
+ */
+function semearBar(mysqli $conn, int $cid): void {
+    global $P;
+    $r = @$conn->query("SELECT COUNT(*) FROM {$P}bar_categorias WHERE casamento_id=" . (int)$cid);
+    if (!$r || (int)$r->fetch_row()[0] > 0) return;
+    $cats = [['Espumantes e vinhos', '#B24C7A'], ['Cervejas', '#C98A2E'],
+             ['Destilados', '#8A5A2B'], ['Sem álcool', '#2F9E8F']];
+    $o = 0;
+    foreach ($cats as [$nome, $cor]) {
+        $o += 10;
+        $st = @$conn->prepare("INSERT INTO {$P}bar_categorias (casamento_id,nome,ordem,cor) VALUES (?,?,?,?)");
+        if ($st) { $st->bind_param('isis', $cid, $nome, $o, $cor); @$st->execute(); }
+    }
+    $motivos = ['Esta bebida acabou',
+                'Já chegou ao limite desta bebida',
+                'A copa está sem capacidade neste momento',
+                'Pedido repetido',
+                'Não conseguimos identificar quem pediu',
+                'Não servimos esta bebida a menores'];
+    $o = 0;
+    foreach ($motivos as $m) {
+        $o += 10;
+        $st = @$conn->prepare("INSERT INTO {$P}bar_motivos (casamento_id,texto,ordem) VALUES (?,?,?)");
+        if ($st) { $st->bind_param('isi', $cid, $m, $o); @$st->execute(); }
+    }
 }
 
 /** A moeda do casamento (símbolo curto). Vazio volta ao Kwanza. */

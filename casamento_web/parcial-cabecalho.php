@@ -14,6 +14,7 @@ function menuPrincipal(): array {
         'grafica' => ['graficas.php',        'Convite impresso'],
         'convite' => ['digital.php',         'Convite digital'],
         'porta'   => ['porteiro.php',        'Porta'],
+        'bar'     => ['bar.php',             'Bar'],
         'orcamento' => ['orcamento.php',     'Orçamento'],
         'gestao'  => ['gestao.php',          'Gestão'],
         'licenca' => ['licenca.php',         'Licença'],
@@ -40,6 +41,7 @@ function menuModulos(): array {
         'orcamento' => 'orcamento',
         'grafica'   => 'impresso',
         'convite'   => 'digital',
+        'bar'       => 'bar',
     ];
 }
 
@@ -77,7 +79,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     // O orçamento é dos noivos: o porteiro, que trabalha à porta, não tem lá
     // contas nenhumas. (Numa visita de suporte, o papel continua 'admin' e a
     // entrada fica — vê-se, mas em leitura, como o resto da página.)
-    if (!function_exists('ehAdmin') || !ehAdmin()) unset($itens['orcamento']);
+    if (!function_exists('ehAdmin') || !ehAdmin()) { unset($itens['orcamento']); unset($itens['bar']); }
     // Os modelos são da casa: quem não responde por ela não tem lá o que fazer.
     if (!function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) unset($itens['modelos']);
 

@@ -38,7 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Cada um para onde lhe serve: a porta para a porta, e quem entrou
             // sem casamento aberto (o suporte, à espera de um código) para a
             // página dos casamentos, que é onde o pode arranjar.
-            $destino = ['porteiro' => 'porteiro.php', 'plataforma' => 'plataforma.php'][$papel] ?? $redir;
+            $destino = ['porteiro' => 'porteiro.php', 'copeiro' => 'copa.php',
+                        'entregador' => 'entregas.php',
+                        'plataforma' => 'plataforma.php'][$papel] ?? $redir;
             // Um casal cuja licença ainda não abriu nada vai direito à montra.
             // Mandá-lo ao painel para o painel o mandar de volta era fazê-lo
             // bater com o nariz numa porta antes de lhe dizermos onde é a que

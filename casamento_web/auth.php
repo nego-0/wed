@@ -35,6 +35,10 @@ function utilizadorAtual(): ?string  { return $_SESSION['utilizador'] ?? null; }
 function utilizadorId(): int         { return (int)($_SESSION['utilizador_id'] ?? 0); }
 function ehAdmin(): bool             { return papel() === 'admin'; }
 function podeEntrar(): bool          { return in_array(papel(), ['admin', 'porteiro'], true); }
+// O bar tem dois postos, e são trabalhos diferentes: quem decide à copa e quem
+// leva à mesa. Os noivos (e quem da casa os acompanhe) chegam aos dois.
+function podeCopa(): bool            { return in_array(papel(), ['admin', 'copeiro'], true); }
+function podeEntregar(): bool        { return in_array(papel(), ['admin', 'entregador'], true); }
 
 function papelPlataforma(): ?string  { return $_SESSION['papel_plataforma'] ?? null; }
 function ehAdminPlataforma(): bool   { return papelPlataforma() === 'admin'; }
@@ -185,7 +189,9 @@ function abrirCasamento(mysqli $conn, int $casamentoId): bool {
     // 'noivos' é quem gere a peça — as páginas conhecem-no por 'admin'. O
     // pessoal da casa entra com os mesmos poderes, mas fica registado que é
     // ISSO que ele é: as páginas dizem-no, e a equipa do casal não o inclui.
-    $_SESSION['papel'] = $p === 'porteiro' ? 'porteiro' : 'admin';
+    // 'porteiro', 'copeiro' e 'entregador' são postos com um ecrã só; todo o
+    // resto (noivos, e a casa a acompanhar) é 'admin'.
+    $_SESSION['papel'] = in_array($p, ['porteiro', 'copeiro', 'entregador'], true) ? $p : 'admin';
     $_SESSION['como_plataforma'] = ($p === 'plataforma');
     usarCasamento($casamentoId);
     // Fica o rasto de quando se trabalhou nele pela última vez: é o que põe a
@@ -645,6 +651,18 @@ function exigirAdmin(): void {
 function exigirPorta(): void {
     if (podeEntrar()) return;
     header('Location: ' . portaFechada('porteiro.php')); exit;
+}
+
+/** Exige admin ou copeiro — o posto da copa. */
+function exigirCopa(): void {
+    if (podeCopa()) return;
+    header('Location: ' . portaFechada('copa.php')); exit;
+}
+
+/** Exige admin ou entregador — o posto das entregas. */
+function exigirEntregas(): void {
+    if (podeEntregar()) return;
+    header('Location: ' . portaFechada('entregas.php')); exit;
 }
 
 /**

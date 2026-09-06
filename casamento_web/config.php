@@ -119,9 +119,15 @@ function ficheirosApp(): array {
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
             'licenca.php','manifest.php','sw.js',
+            // O bar: a montagem, o posto da copa, o do empregado, e o menu que
+            // o convidado abre na mesa.
+            'bar.php','copa.php','entregas.php','bebidas.php',
+            'assets/bar.css','assets/bar-montagem.js','assets/bar-copa.js',
+            'assets/bar-entrega.js','assets/bar-convidado.js',
             'assets/montra/convidados.jpg','assets/montra/mesas.jpg',
             'assets/montra/orcamento.jpg','assets/montra/impresso.jpg',
             'assets/montra/digital.jpg','assets/montra/porta.jpg',
+            'assets/montra/bar.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
             'assets/janela.css','assets/janela.js',
             'assets/mesa-icone.css','assets/mesa-icone.js',
@@ -174,6 +180,14 @@ function acoesDoCasamento(): array {
             'orc_ajuste','orc_categoria_guardar','orc_categoria_apagar',
             'orc_despesa_guardar','orc_despesa_apagar','orc_despesa_fatura','orc_despesa_fatura_apagar',
             'orc_pagamento_guardar','orc_pagamento_apagar','orc_pagamento_liquidar',
+            // O bar: a montagem é dos noivos, a copa e as entregas são de quem
+            // lá trabalha — mas todos correm dentro de um casamento.
+            'bar_categoria_guardar','bar_categoria_apagar',
+            'bar_item_guardar','bar_item_apagar','bar_item_foto','bar_item_foto_tirar',
+            'bar_stock_repor','bar_stock_acerto','bar_abrir','bar_fechar','bar_defs',
+            'bar_motivo_guardar','bar_motivo_apagar','bar_mesa_token',
+            'bar_decidir','bar_cancelar_copa',
+            'bar_apanhar','bar_entregue','bar_falhou','bar_pedir_por',
             // O casal pede a licença, e muda de ideias enquanto ninguém decidiu.
             'lic_pedir','lic_pedido_cancelar'];
 }

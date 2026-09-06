@@ -881,12 +881,13 @@ Reaproveitam as da copa (o papel `admin` do casamento tem-nas todas) mais
 | `copa.php` | O posto do copeiro |
 | `entregas.php` | O posto do entregador |
 | `bar.php` | A montagem do bar, para os noivos |
-| `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar |
+| `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar — *por ora vive na aba «Mesas e QR» de `bar.php`* |
 | `assets/bar.css` | Estilo dos quatro ecrãs |
-| `assets/bar-convidado.js` | Menu, pedido, contagem, alternativas |
-| `assets/bar-copa.js` | Fila, decisão, stock, ritmo |
-| `assets/bar-entrega.js` | Fila, apanhar, entregar, tempos |
-| `tests/chk_bar_*.js` | As provas (§22) |
+| `assets/bar-montagem.js` | Gavetas, bebidas, fotografias, stock, folhas de QR |
+| `assets/bar-convidado.js` | Procura do nome, mesa, menu, pedido, os meus pedidos |
+| `assets/bar-copa.js` | Fila, decisão, stock, motivos, regras da casa |
+| `assets/bar-entrega.js` | Fila, apanhar, entregar, devolver, tempos |
+| `tests/chk_bar.js` | A volta completa: montar, pedir, decidir, entregar (§22) |
 | `docs/modulo-bar.md` | Este documento |
 
 **Que mudam**
@@ -927,6 +928,13 @@ noivos (`admin`) chegam aos dois mais `bar.php`. O pessoal da plataforma vê
 tudo, como já vê, e em visita de leitura os botões que escrevem ficam apagados
 (o `so-ver.js` já trata disso, bastando registar as acções novas).
 
+E — o passo que quase ficou esquecido — **os dois postos têm de poder existir**.
+A Gestão só sabia convidar porteiros, e sem isso `copa.php` e `entregas.php`
+eram dois ecrãs que ninguém a não ser o casal podia abrir. O formulário de
+convite passa a ter a escolha do posto (só os que a licença abre), a lista de
+acessos chama cada um pelo seu nome, e `acesso_convidar`/`acesso_papel` aceitam
+os três — cada um exigindo o módulo que lhe dá trabalho.
+
 ---
 
 ## 18. Tempo real sem WebSockets
@@ -938,6 +946,19 @@ Não há servidor de eventos nem vontade de o haver. Sondagem, curta e barata:
 | Copa | 4 s | `bar_pulso_copa?desde=<carimbo>` |
 | Entregas | 5 s | `bar_pulso_entrega?desde=<carimbo>` |
 | Convidado | 15 s, e ao voltar ao separador | `bar_pulso?desde=<carimbo>` |
+
+> **O que está feito é mais simples do que isto.** As fases 1–4 sondam a
+> leitura inteira — `bar_estado` de 8 em 8 segundos na copa e nas entregas,
+> `bar_meus_pedidos` de 10 em 10 no telemóvel (e o menu completo a cada
+> terceira volta). Não há acções de pulso nem carimbos: numa festa de 200
+> pessoas a leitura inteira são poucos kilobytes, e um só caminho de código
+> é menos coisa para estar errada. As acções de pulso ficam para quando
+> houver uma festa que as peça — e a tabela acima é o desenho para esse dia.
+>
+> Duas coisas ficaram na mesma: as sondagens param com o separador escondido,
+> e o relógio da copa acerta-se pelo `agora` que o servidor manda, porque um
+> tablet com a hora errada mostrava «há 40 minutos» a pedidos acabados de
+> chegar.
 
 O carimbo é `atualizado_em` (TIMESTAMP(3)), com 2 segundos de folga para o
 desvio de relógio. A resposta traz só o que mudou; sem mudanças, é um JSON de
@@ -1013,6 +1034,19 @@ Cada linha leva o IP, que a v35 já grava, e o detalhe legível («2 × Caipirin
 Uma por fase, no estilo das que existem (Playwright contra o servidor de
 desenvolvimento, a contar o que se prova e porquê).
 
+> **Feito:** `tests/chk_bar.js` cobre as quatro primeiras fases numa volta só
+> — montar, a porta pública, a procura do nome, o pedido, a decisão, a
+> entrega, a recusa com motivo, e os dois postos a existirem de facto na
+> Gestão. Ficou uma prova em vez das cinco previstas porque o ciclo do bar
+> não se parte: um pedido sem menu montado não existe, e uma entrega sem
+> aprovação também não. As linhas que ela mais defende são as três contas do
+> stock — que aprovar promete e só entregar desconta.
+>
+> As provas em falta abaixo são das fases que faltam (5 a 8), com uma
+> excepção que vale a pena dizer: `chk_bar_desenho.js`. Os alvos de toque, o
+> esqueleto, os quatro temas e o não-transbordo em 360/390/430 px estão
+> escritos na folha, mas não estão medidos por prova nenhuma.
+
 | Prova | O que fecha |
 |---|---|
 | `chk_bar_esquema.js` | v36 sobe, tabelas nascem, a vigia de âmbito não reclama, o módulo aparece na montra |
@@ -1037,6 +1071,31 @@ que está mesmo instalado.
 ---
 
 ## 23. Fases de entrega
+
+> **Estado da obra — fases 1 a 4 feitas.** O ciclo fecha: os noivos montam o
+> menu, o convidado escolhe-se numa lista e pede da mesa, a copa decide, o
+> empregado entrega, e o stock diz a verdade. A prova `tests/chk_bar.js`
+> percorre a volta inteira e é sobre as três contas do stock que ela insiste.
+>
+> Três coisas vieram mais cedo do que este plano dizia, porque sem elas não
+> havia nada a experimentar em sala:
+>
+> * **As folhas das mesas** (fase 8) entraram na aba «Mesas e QR» de `bar.php`.
+>   Falta-lhes a página própria e o LEIA-ME; o QR já sai da impressora.
+> * **O telemóvel preso a um nome** (fase 6) está feito — `barPrender()` e o
+>   testemunho em cookie. Falta a troca de nome e os três modos de IP.
+> * **O pedido pelo empregado** (fase 6) está nos dois postos, copa e entregas.
+>
+> E duas coisas de percurso, que valem para quem vier a seguir:
+>
+> * As definições do bar **não** cabem em `guardarDefinicoes()`. Essa função só
+>   conhece `defsPadrao()`, o vocabulário do convite, e deita fora em silêncio
+>   tudo o que lá não esteja — o interruptor do bar parecia funcionar e não
+>   guardava nada. O bar tem `barGuardarDefs()`, contra `barDefsPadrao()`.
+> * As ações do bar vivem **acima** da barreira `exigirAdminApi()` em `api.php`,
+>   porque o bar tem gente que não é admin (o copeiro, o empregado) e gente que
+>   não tem sessão nenhuma (o convidado). O CSRF das ações do pessoal é
+>   conferido ali mesmo, contra a mesma lista de `config.php`.
 
 Cada fase é entregável sozinha e deixa a casa a funcionar. As estimativas são
 minhas e grosseiras — dias de trabalho, não promessas — e **já contam com o
