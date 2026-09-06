@@ -9,6 +9,11 @@
 // que a área nova existe e troca de verdade, que a galeria da casa é a única
 // origem aceite quando se escolhe de lá, e que voltar à de origem devolve o
 // desenho e larga o ficheiro.
+//
+// A área vive numa aba da própria peça — tomou o lugar do link «Painel de
+// convidados», que era uma porta para fora daquilo que se veio cá fazer. E
+// traz as duas coisas que só o editor tinha: ver a fotografia em ponto grande,
+// e escolher que pedaço dela fica à vista nas secções que recortam.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -60,9 +65,40 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
     await p.goto(BASE + '/digital.php', { waitUntil: 'networkidle' });
     await p.waitForFunction(() => document.querySelectorAll('.ft-sec').length > 0,
                             null, { timeout: 15000 });
+    await p.click('#ab-fotos');
+    await p.waitForTimeout(300);
   };
   const secs = () => p.evaluate(async () =>
     (await (await fetch('api.php?action=convite_fotos')).json()).seccoes);
+
+  // A aba: as fotografias são desta peça, e é aqui que estão.
+  await p.goto(BASE + '/digital.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(900);
+  const abas = await p.evaluate(() => ({
+    nomes: [...document.querySelectorAll('.p-aba')].map(b => b.textContent.trim()),
+    estadoAVista: !document.getElementById('pn-estado').hidden,
+    fotosAVista: !document.getElementById('pn-fotos').hidden,
+    // O link que a aba substituiu não pode continuar ao lado dela.
+    paraOPainel: [...document.querySelectorAll('.peca-acoes a')]
+                   .filter(a => /Painel de convidados/.test(a.textContent)).length
+  }));
+  ok(abas.nomes.length === 2 && /fotografias/i.test(abas.nomes[1]),
+     'a peça abre em duas abas: ' + abas.nomes.join(' · '));
+  ok(abas.estadoAVista && !abas.fotosAVista,
+     'e abre pelo estado, que é o que a página é');
+  ok(abas.paraOPainel === 0,
+     'o link «Painel de convidados» deu o lugar à aba — o painel está no menu');
+  await p.click('#ab-fotos');
+  await p.waitForTimeout(300);
+  const trocou = await p.evaluate(() => ({
+    fotos: !document.getElementById('pn-fotos').hidden,
+    estado: !document.getElementById('pn-estado').hidden,
+    larga: document.querySelector('.peca').classList.contains('fotos'),
+    prova: !!document.querySelector('.peca-prova iframe') }));
+  ok(trocou.fotos && !trocou.estado, 'carregar na aba mostra as fotografias');
+  ok(trocou.larga && trocou.prova,
+     'que ficam com a largura toda do cartão, e com a prova ainda ao lado');
+  await p.screenshot({ path: OUT + '/convite-fotos-aba.png' });
 
   await abrir();
   const lista = await secs();
@@ -150,7 +186,76 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'e ganha o botão de voltar à de origem, que só faz sentido agora');
   await p.screenshot({ path: OUT + '/convite-fotos.png' });
 
-  // ============ 6. voltar à de origem ============
+  // ============ 6. enquadrar: que pedaço da fotografia fica à vista ============
+  //
+  // A capa é uma janela 9/16 sobre uma fotografia larga. Qual pedaço lá cabe
+  // era coisa que só o editor sabia dizer — e uma fotografia cortada pelo meio
+  // da cara não se resolve escolhendo outra fotografia.
+  agora = (await secs()).find(s => s.chave === 'media.hero');
+  ok(agora.enq === 'foto.hero' && agora.proporcao === '9/16',
+     'a capa diz que recorta, e em que forma: ' + agora.proporcao);
+  ok(agora.pos && agora.pos.x === 50 && agora.pos.y === 50,
+     'e ao receber uma fotografia nova o enquadramento voltou ao centro — o '
+       + 'anterior tinha sido escolhido para outra imagem ('
+       + (agora.pos ? agora.pos.x + '/' + agora.pos.y : '—') + ')');
+
+  const semRecorte = (await secs()).find(s => s.chave === 'media.historia');
+  ok(semRecorte && semRecorte.enq === '' && semRecorte.pos === null,
+     'a história mostra a fotografia inteira, e por isso não tem o que enquadrar');
+  ok(await p.evaluate(() =>
+       !document.querySelector('.ft-sec[data-sec="media.historia"] .ft-agora')
+                .classList.contains('move')),
+     'e a caixa dela não se arrasta');
+
+  // Arrastar de verdade, no ecrã: é o gesto que o casal faz.
+  const cx = await p.$('.ft-sec[data-sec="media.hero"] .ft-agora');
+  const cxr = await cx.boundingBox();
+  await p.mouse.move(cxr.x + cxr.width * 0.5, cxr.y + cxr.height * 0.5);
+  await p.mouse.down();
+  await p.mouse.move(cxr.x + cxr.width * 0.5, cxr.y + cxr.height * 0.85, { steps: 8 });
+  await p.mouse.up();
+  await p.waitForTimeout(700);
+  const enquadrada = (await secs()).find(s => s.chave === 'media.hero');
+  ok(enquadrada.pos.y > 60,
+     'arrastar para baixo desce o ponto que fica à vista: y = ' + enquadrada.pos.y);
+  ok(enquadrada.pos.zoom === 100,
+     'e a aproximação fica como estava — aqui mexe-se no ponto, e mais nada');
+
+  const noConvite = await p.evaluate(async () =>
+    await (await fetch('convite-digital.php?demo=1')).text());
+  ok(noConvite.includes('--foco-hero:50% ' + enquadrada.pos.y + '%'),
+     'e o convite que os convidados abrem recorta por esse ponto');
+
+  // As setas, para quem não usa rato.
+  await p.focus('.ft-sec[data-sec="media.hero"] .ft-agora');
+  await p.keyboard.press('ArrowUp');
+  await p.waitForTimeout(900);
+  const comTeclado = (await secs()).find(s => s.chave === 'media.hero');
+  ok(comTeclado.pos.y === enquadrada.pos.y - 2,
+     'as setas mexem 2% de cada vez: ' + enquadrada.pos.y + ' → ' + comTeclado.pos.y);
+
+  // ============ 7. ver em ponto grande ============
+  await p.click('.ft-sec[data-sec="media.hero"] .ft-lupa');
+  await p.waitForTimeout(400);
+  const lente = await p.evaluate(() => {
+    const lt = document.getElementById('ft-lente');
+    return { aberta: lt.classList.contains('on'),
+             src: lt.querySelector('img').getAttribute('src'),
+             leg: lt.querySelector('.leg').textContent.trim(),
+             // A lente mostra a fotografia inteira, e não o recorte.
+             recorta: !!lt.querySelector('img').style.objectPosition };
+  });
+  ok(lente.aberta && lente.src === enviado.src && !lente.recorta,
+     'a lupa abre a fotografia inteira, em ponto grande: ' + lente.src);
+  ok(/Capa/.test(lente.leg) && /vossa/.test(lente.leg),
+     'e diz de que secção é: ' + lente.leg);
+  await p.screenshot({ path: OUT + '/convite-fotos-lente.png' });
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(300);
+  ok(await p.evaluate(() => !document.getElementById('ft-lente').classList.contains('on')),
+     'e o Escape fecha-a');
+
+  // ============ 8. voltar à de origem ============
   const reposto = await p.evaluate(async () =>
     await window.api('convite_foto_repor', { method: 'POST',
       body: JSON.stringify({ chave: 'media.hero' }) }));
@@ -158,12 +263,15 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'repor devolve a fotografia de origem: ' + reposto.src);
   agora = (await secs()).find(s => s.chave === 'media.hero');
   ok(!agora.nossa && agora.atual === capa.origem, 'e a secção volta a dizer que é da casa');
+  ok(agora.pos.x === 50 && agora.pos.y === 8,
+     'de origem é de origem: o enquadramento também volta ao do desenho ('
+       + agora.pos.x + '/' + agora.pos.y + ')');
   const ficheiroFora = await p.evaluate(async (src) =>
     (await fetch(src)).status, enviado.src);
   ok(ficheiroFora === 404,
      'o ficheiro que tinha sido enviado sai do disco (resposta ' + ficheiroFora + ')');
 
-  // ============ 7. sem o módulo do convite digital, a porta está fechada ============
+  // ============ 9. sem o módulo do convite digital, a porta está fechada ============
   // (A licença de origem traz tudo; o que se prova é que a acção o exige.)
   ok(await p.evaluate(async () => {
     const d = await (await fetch('api.php?action=convite_fotos')).json();

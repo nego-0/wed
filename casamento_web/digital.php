@@ -125,34 +125,71 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .prod .ac{ white-space:nowrap; }
   .prod .ac a{ font-size:.82rem; margin-right:.6rem; }
 
+  /* ---- As abas da peça --------------------------------------
+     O estado e as fotografias são a mesma peça vista de dois lados. Numa aba,
+     e não numa página à parte: trocar uma fotografia com a prova ao lado é ver
+     a troca acontecer. */
+  .peca-corpo{ min-width:0; }
+  .peca-abas{ display:flex; gap:.25rem; border-bottom:1px solid var(--line); margin:.5rem 0 .9rem; }
+  .p-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
+          padding:.42rem .1rem; margin-right:1.1rem; font:inherit; font-size:.86rem;
+          color:#8a8f88; }
+  .p-aba:hover{ color:var(--ink); }
+  .p-aba.on{ color:var(--ink); border-bottom-color:var(--gold); font-weight:600; }
+  .p-aba:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:4px; }
+  /* Com as fotografias à vista, a coluna das versões sai e o corpo fica com a
+     largura toda: quatro secções em 300px era uma escada. */
+  .peca.fotos .peca-vs{ display:none; }
+  .peca.fotos .peca-corpo{ grid-column:2 / -1; }
+  /* Numa coluna só (telemóvel), a linha 2 já é o fim da grelha: aí o corpo
+     ocupa-a inteira, como tudo o resto. */
+  @media (max-width:560px){ .peca.fotos .peca-corpo{ grid-column:1 / -1; } }
+
   /* ---- As fotografias do convite ----------------------------
-     Uma linha por secção: a fotografia que lá está, o que ela é, e o que se
-     pode fazer com ela. Nada de camadas nem de réguas — quem vem aqui quer
-     pôr uma fotografia sua, e é só isso que a área faz. */
-  .ft-secs{ display:grid; gap:.9rem; margin-top:1rem; }
-  .ft-sec{ display:grid; grid-template-columns:132px 1fr; gap:1rem; align-items:start;
-           border:1px solid var(--line); border-radius:12px; padding:.75rem .85rem; background:#fff; }
-  @media (max-width:560px){ .ft-sec{ grid-template-columns:96px 1fr; gap:.75rem; } }
+     Uma ficha por secção, lado a lado: a fotografia como o convite a mostra
+     (recorte incluído), e ao lado o que se pode fazer com ela. Nada de camadas
+     nem de réguas — quem vem aqui quer pôr uma fotografia sua. */
+  .ft-cab{ margin:-.2rem 0 .8rem; }
+  .ft-secs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.7rem; }
+  .ft-sec{ display:grid; grid-template-columns:auto 1fr; gap:.75rem; align-items:start;
+           border:1px solid var(--line); border-radius:12px; padding:.6rem .7rem; background:#fff; }
+  /* A janela por onde o convite vê a fotografia: a mesma forma, e o mesmo ponto
+     ao centro. Fixa-se a altura e a forma dá a largura — uma capa 9/16 e um
+     passe 16/11 nunca teriam a mesma. */
   .ft-agora{ position:relative; border-radius:9px; overflow:hidden; background:var(--cream);
-             aspect-ratio:4/3; }
+             height:92px; }
   .ft-agora img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ft-agora.move{ cursor:grab; touch-action:none; }
+  .ft-agora.move:active{ cursor:grabbing; }
   .ft-agora .et{ position:absolute; left:0; bottom:0; right:0; text-align:center;
-                 font-size:.66rem; letter-spacing:.05em; text-transform:uppercase;
-                 padding:.18rem; background:rgba(14,15,12,.72); color:#fff; }
+                 font-size:.58rem; letter-spacing:.03em; text-transform:uppercase;
+                 white-space:nowrap; padding:.15rem; background:rgba(14,15,12,.72); color:#fff; }
   .ft-sec.nossa .ft-agora{ outline:2px solid var(--gold); outline-offset:-2px; }
-  .ft-cab b{ font-size:.95rem; color:var(--ink); }
-  .ft-cab span{ display:block; font-size:.8rem; color:#8a8f88; margin-top:.1rem; }
-  .ft-acoes{ display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.6rem; }
-  .ft-nota{ font-size:.75rem; color:#a3a8a1; align-self:center; }
-  .ft-erro{ flex-basis:100%; font-size:.78rem; color:var(--danger); margin-top:.15rem; }
+  /* A lupa, por cima da fotografia: vê-se pequena, e às vezes é preciso vê-la
+     grande antes de decidir. */
+  .ft-lupa{ position:absolute; top:.25rem; right:.25rem; width:24px; height:24px; padding:0;
+            border:0; border-radius:7px; background:rgba(14,15,12,.6); color:#fff;
+            font-size:.85rem; line-height:1; cursor:pointer; display:flex;
+            align-items:center; justify-content:center; }
+  .ft-lupa:hover{ background:rgba(14,15,12,.9); }
+  .ft-lupa:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  /* A mira só aparece enquanto se arrasta: uma cruz sempre acesa é decoração. */
+  .ft-mira{ position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+            border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.45); display:none;
+            pointer-events:none; }
+  .ft-agora.a-mover .ft-mira{ display:block; }
+  .ft-nome{ font-size:.9rem; color:var(--ink); font-weight:600; }
+  .ft-desc{ font-size:.76rem; color:#8a8f88; margin-top:.05rem; line-height:1.35; }
+  .ft-acoes{ display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem; }
+  .ft-acoes .btn{ font-size:.76rem; padding:.28rem .6rem; }
+  .ft-erro{ flex-basis:100%; font-size:.76rem; color:var(--danger); margin-top:.1rem; }
   .ft-erro:empty{ display:none; }
   /* A galeria da casa abre debaixo da secção, e não numa janela: escolher uma
      fotografia é comparar, e comparar quer as duas à vista. */
-  .ft-galeria{ display:none; margin-top:.65rem; }
+  .ft-galeria{ display:none; grid-column:1 / -1; margin-top:.5rem; }
   .ft-sec.aberta .ft-galeria{ display:block; }
-  .ft-galeria .rot{ font-size:.75rem; color:#8a8f88; margin-bottom:.35rem; }
-  .ft-tiras{ display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.35rem; scrollbar-width:thin; }
-  .ft-op{ position:relative; flex:none; width:98px; height:74px; border-radius:9px;
+  .ft-tiras{ display:flex; gap:.4rem; overflow-x:auto; padding-bottom:.3rem; scrollbar-width:thin; }
+  .ft-op{ position:relative; flex:none; width:76px; height:58px; border-radius:8px;
           overflow:hidden; cursor:pointer; border:2px solid transparent; padding:0;
           background:none; transition:border-color .15s, transform .15s; }
   .ft-op:hover{ transform:translateY(-2px); border-color:var(--gold-soft); }
@@ -160,10 +197,23 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-op img{ width:100%; height:100%; object-fit:cover; display:block; }
   .ft-op .visto{ position:absolute; inset:0; display:none; align-items:center;
                  justify-content:center; background:rgba(76,140,30,.45); color:#fff;
-                 font-size:1.3rem; font-weight:800; }
+                 font-size:1.1rem; font-weight:800; }
   .ft-op.on .visto{ display:flex; }
   .ft-op:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
   .ft-vazio{ font-size:.85rem; color:#8a8f88; line-height:1.55; }
+
+  /* ---- Ver em ponto grande ---- */
+  .ft-lente{ position:fixed; inset:0; z-index:80; display:none; flex-direction:column;
+             align-items:center; justify-content:center; gap:.7rem; padding:2rem;
+             background:rgba(10,14,10,.86); backdrop-filter:blur(2px); }
+  .ft-lente.on{ display:flex; }
+  /* A legenda por baixo, e não por cima: uma legenda em cima da fotografia
+     tapa-lhe justamente o pedaço que se veio aqui ver. */
+  .ft-lente img{ min-height:0; max-width:100%; max-height:100%; border-radius:10px;
+                 box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .ft-lente .leg{ flex:none; text-align:center; color:var(--ivory); font-size:.85rem; }
+  .ft-lente .fechar{ position:absolute; top:.8rem; right:1rem; background:none; border:0;
+                     color:#fff; font-size:1.8rem; line-height:1; cursor:pointer; }
 
 </style>
 </head>
@@ -177,8 +227,20 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       <iframe src="convite-digital.php?demo=1&amp;prova=1" title="Prova do convite" loading="lazy" scrolling="no"></iframe>
       <a class="lupa" href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir em tamanho real</a>
     </div>
-    <div>
+    <div class="peca-corpo">
       <h2><?= escP($CAS['casal']) ?></h2>
+      <!-- Duas abas, e não duas páginas: as fotografias são desta peça, e
+           trocá-las com a prova ao lado é ver a troca acontecer. -->
+      <div class="peca-abas" role="tablist" aria-label="A peça">
+        <button type="button" class="p-aba on" role="tab" id="ab-estado"
+                aria-selected="true" aria-controls="pn-estado"
+                onclick="pecaAba('estado')">Estado da peça</button>
+        <button type="button" class="p-aba" role="tab" id="ab-fotos"
+                aria-selected="false" aria-controls="pn-fotos"
+                onclick="pecaAba('fotos')">As fotografias</button>
+      </div>
+
+      <div class="p-painel" id="pn-estado" role="tabpanel" aria-labelledby="ab-estado">
       <div class="estado-linha">
         <?php if ($estadoVs['estado'] === 'vigor'): ?>
           <span class="selo-v ok">✓ Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span><br>
@@ -205,7 +267,15 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       <div class="peca-acoes">
         <a class="btn btn-ouro" href="convite-editor.php">Editar o convite</a>
         <a class="btn" href="convite-digital.php?demo=1" target="_blank" rel="noopener">Ver como um convidado</a>
-        <a class="btn" href="index.php">Painel de convidados</a>
+      </div>
+      </div><!-- /pn-estado -->
+
+      <!-- As fotografias do convite: aqui, e não no editor -->
+      <div class="p-painel" id="pn-fotos" role="tabpanel" aria-labelledby="ab-fotos" hidden>
+        <p class="dica ft-cab">Uma por secção — as vossas, ou da galeria da casa. Arrastem
+          sobre a fotografia para escolher o que fica à vista; a lupa mostra-a em grande.
+          <span class="ft-formatos">jpg, png ou webp, até <b id="ft-max">5</b> MB.</span></p>
+        <div class="ft-secs" id="ft-secs"><p class="ft-vazio">A carregar…</p></div>
       </div>
     </div>
 
@@ -233,18 +303,6 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
         <?php endif; ?>
       <?php endif; ?>
     </div>
-  </div>
-
-  <!-- As fotografias do convite: aqui, e não no editor -->
-  <div class="painel">
-    <div class="painel-topo">
-      <div>
-        <h3>As fotografias do convite</h3>
-        <p class="dica" style="margin-bottom:0">Uma por secção. Mandem as vossas — ou escolham
-          da galeria da casa. Não é preciso entrar no editor, e a troca fica feita na hora.</p>
-      </div>
-    </div>
-    <div class="ft-secs" id="ft-secs"><p class="ft-vazio">A carregar…</p></div>
   </div>
 
   <?php barraEndereco('os links e os QR dos convites digitais'); ?>
@@ -285,6 +343,13 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   <?php endif; ?>
 </main>
 
+<!-- A fotografia em ponto grande: inteira, e não pelo recorte -->
+<div class="ft-lente" id="ft-lente" role="dialog" aria-modal="true" aria-label="Fotografia em ponto grande">
+  <button type="button" class="fechar" onclick="ftLenteFechar()" aria-label="Fechar">&times;</button>
+  <img src="" alt="">
+  <div class="leg"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
@@ -322,12 +387,37 @@ function toast(m){
 }
 
 // ============================================================
+// As abas da peça
+//
+// O estado e as fotografias são a mesma peça vista de dois lados. A aba das
+// fotografias tomou o lugar do link «Painel de convidados», que era uma porta
+// para fora daquilo que se veio cá fazer — e o painel está no menu, a dois
+// centímetros dali.
+// ============================================================
+function pecaAba(qual){
+  document.querySelectorAll('.p-aba').forEach(b => {
+    const on = b.id === 'ab-' + qual;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  document.getElementById('pn-estado').hidden = qual !== 'estado';
+  document.getElementById('pn-fotos').hidden  = qual !== 'fotos';
+  // Com as fotografias à vista, a coluna das versões sai e o corpo fica com a
+  // largura toda — quatro secções espremidas em 300px eram uma escada.
+  document.querySelector('.peca').classList.toggle('fotos', qual === 'fotos');
+}
+
+// ============================================================
 // As fotografias do convite
 //
 // O editor é uma oficina — camadas, réguas, painéis. Trocar uma fotografia não
 // pede nada disso, e obrigar a lá entrar (ou, pior, a comprar o escalão que
 // deixa lá entrar) para pôr a fotografia dos próprios noivos era vender-lhes
 // um convite com a cara de outra pessoa. Aqui é uma secção, uma fotografia.
+//
+// Duas coisas que o editor tinha e faziam falta cá fora: ver a fotografia em
+// ponto grande antes de decidir, e escolher que pedaço dela fica à vista. Uma
+// fotografia cortada pelo meio da cara não se resolve escolhendo outra.
 // ============================================================
 let FT_SECS = [], FT_MAX = 5, FT_ABERTA = '';
 
@@ -336,11 +426,23 @@ function ftEsc(s){
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/** A secção com esta chave, tal como o servidor a descreveu. */
+function ftSec(sec){ return FT_SECS.find(x => x.chave === sec) || null; }
+
 async function ftCarregar(){
   const d = await api('convite_fotos', { method:'GET' });
   if (!d || !d.success) return;
   FT_SECS = d.seccoes || []; FT_MAX = d.max_mb || 5;
+  const mx = document.getElementById('ft-max');
+  if (mx) mx.textContent = FT_MAX;
   ftPintar();
+}
+
+/** O estilo que põe a miniatura a recortar como o convite recorta. */
+function ftRecorte(sc){
+  if (!sc.pos) return '';
+  return ' style="object-position:' + sc.pos.x + '% ' + sc.pos.y + '%'
+       + ';transform:scale(' + (sc.pos.zoom / 100) + ')"';
 }
 
 function ftPintar(){
@@ -351,6 +453,7 @@ function ftPintar(){
   }
   cx.innerHTML = FT_SECS.map(sc => {
     const aberta = FT_ABERTA === sc.chave;
+    const move = !!sc.enq;
     const tiras = (sc.fotos || []).map(f =>
         '<button type="button" class="ft-op' + (f.src === sc.atual ? ' on' : '') + '"'
       + ' title="' + ftEsc(f.nome) + '" data-sec="' + ftEsc(sc.chave) + '"'
@@ -359,26 +462,118 @@ function ftPintar(){
       + '<span class="visto">✓</span></button>').join('');
     return '<div class="ft-sec' + (sc.nossa ? ' nossa' : '') + (aberta ? ' aberta' : '') + '"'
       + ' data-sec="' + ftEsc(sc.chave) + '">'
-      + '<div class="ft-agora">'
-      +   (sc.atual ? '<img src="' + ftEsc(sc.atual) + '" alt="A fotografia da secção ' + ftEsc(sc.rotulo) + '">' : '')
+      + '<div class="ft-agora' + (move ? ' move' : '') + '"'
+      +      ' style="aspect-ratio:' + ftEsc(sc.proporcao || '4/3') + '"'
+      +      (move ? ' tabindex="0" role="application"'
+                     + ' aria-label="Enquadramento da fotografia: arraste, ou use as setas"' : '') + '>'
+      +   (sc.atual ? '<img src="' + ftEsc(sc.atual) + '"' + ftRecorte(sc)
+                      + ' alt="A fotografia da secção ' + ftEsc(sc.rotulo) + '">' : '')
+      +   (move && sc.pos ? '<span class="ft-mira" style="left:' + sc.pos.x + '%;top:'
+                            + sc.pos.y + '%"></span>' : '')
+      +   '<button type="button" class="ft-lupa" data-ft="lupa"'
+      +     ' title="Ver em ponto grande" aria-label="Ver em ponto grande">⤢</button>'
       +   '<span class="et">' + (sc.nossa ? 'vossa' : 'da casa') + '</span>'
       + '</div>'
       + '<div>'
-      +   '<div class="ft-cab"><b>' + ftEsc(sc.rotulo) + '</b>'
-      +     '<span>' + ftEsc(sc.descricao) + '</span></div>'
+      +   '<div class="ft-nome">' + ftEsc(sc.rotulo) + '</div>'
+      +   '<div class="ft-desc">' + ftEsc(sc.descricao) + '</div>'
       +   '<div class="ft-acoes">'
       +     '<button class="btn btn-sm btn-ouro" data-ft="enviar">'
-      +       (sc.nossa ? 'Trocar por outra nossa' : '＋ Enviar a nossa') + '</button>'
+      +       (sc.nossa ? 'Trocar' : '＋ A nossa') + '</button>'
       +     (tiras ? '<button class="btn btn-sm" data-ft="galeria">'
-                     + (aberta ? 'Fechar a galeria' : 'Da galeria da casa') + '</button>' : '')
-      +     (sc.nossa ? '<button class="btn btn-sm btn-fantasma" data-ft="repor">Voltar à de origem</button>' : '')
-      +     '<span class="ft-nota">jpg, png ou webp · até ' + FT_MAX + ' MB</span>'
+                     + (aberta ? 'Fechar' : 'Galeria') + '</button>' : '')
+      +     (sc.nossa ? '<button class="btn btn-sm btn-fantasma" data-ft="repor">De origem</button>' : '')
       +     '<span class="ft-erro"></span>'
       +   '</div>'
-      +   (tiras ? '<div class="ft-galeria"><div class="rot">Ou uma da galeria da casa:</div>'
-                   + '<div class="ft-tiras">' + tiras + '</div></div>' : '')
-      + '</div></div>';
+      + '</div>'
+      + (tiras ? '<div class="ft-galeria"><div class="ft-tiras">' + tiras + '</div></div>' : '')
+      + '</div>';
   }).join('');
+  // O arrasto é da caixa, e a caixa nasce outra vez a cada pintura.
+  cx.querySelectorAll('.ft-agora.move').forEach(c => {
+    c.addEventListener('pointerdown', ftArrastar);
+    c.addEventListener('keydown', ftTecla);
+  });
+}
+
+// ---------- ver em ponto grande ----------
+function ftLente(sec){
+  const sc = ftSec(sec); if (!sc || !sc.atual) return;
+  const lt = document.getElementById('ft-lente');
+  lt.querySelector('img').src = sc.atual;
+  lt.querySelector('img').alt = 'A fotografia da secção ' + sc.rotulo;
+  lt.querySelector('.leg').textContent = sc.rotulo + ' · '
+    + (sc.nossa ? 'vossa' : 'da galeria da casa');
+  lt.classList.add('on');
+  lt.querySelector('.fechar').focus();
+}
+function ftLenteFechar(){ document.getElementById('ft-lente').classList.remove('on'); }
+
+// ---------- enquadrar: que ponto da fotografia fica à vista ----------
+// Cola-se ao centro e aos terços — são as posições que de facto se procuram
+// (um rosto ao centro, o horizonte num terço) e acertar nelas à mão, num
+// retângulo de 70px, era trabalho de paciência. Com Shift arrasta-se livre.
+const FT_IMAS = [33.333, 50, 66.667];
+function ftColar(v){
+  for (const a of FT_IMAS) if (Math.abs(v - a) < 4) return a;
+  return Math.round(v * 10) / 10;
+}
+/** Mostra já o novo ponto, sem esperar pelo servidor. */
+function ftPor(caixa, sec, x, y){
+  const sc = ftSec(sec); if (!sc || !sc.pos) return;
+  sc.pos.x = x; sc.pos.y = y;
+  const im = caixa.querySelector('img');
+  if (im){ im.style.objectPosition = x + '% ' + y + '%'; }
+  const mira = caixa.querySelector('.ft-mira');
+  if (mira){ mira.style.left = x + '%'; mira.style.top = y + '%'; }
+}
+async function ftGuardarPos(sec){
+  const sc = ftSec(sec); if (!sc || !sc.pos) return;
+  const d = await api('convite_foto_posicao',
+    { method:'POST', body: JSON.stringify({ chave: sec, x: sc.pos.x, y: sc.pos.y }) });
+  if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível enquadrar.'); return; }
+  ftAplicar(d);
+}
+function ftArrastar(ev){
+  const caixa = ev.currentTarget;
+  if (ev.target.closest('.ft-lupa')) return;      // a lupa é um botão, não um arrasto
+  const sec = caixa.closest('.ft-sec').dataset.sec;
+  caixa.setPointerCapture(ev.pointerId);
+  caixa.classList.add('a-mover');
+  const mover = e2 => {
+    const r = caixa.getBoundingClientRect();
+    let x = (e2.clientX - r.left) / r.width * 100, y = (e2.clientY - r.top) / r.height * 100;
+    x = Math.max(0, Math.min(100, x)); y = Math.max(0, Math.min(100, y));
+    if (!e2.shiftKey){ x = ftColar(x); y = ftColar(y); }
+    ftPor(caixa, sec, x, y);
+  };
+  const largar = () => {
+    caixa.classList.remove('a-mover');
+    caixa.removeEventListener('pointermove', mover);
+    caixa.removeEventListener('pointerup', largar);
+    caixa.removeEventListener('pointercancel', largar);
+    ftGuardarPos(sec);
+  };
+  mover(ev);
+  caixa.addEventListener('pointermove', mover);
+  caixa.addEventListener('pointerup', largar);
+  caixa.addEventListener('pointercancel', largar);
+  ev.preventDefault();
+}
+// Com o teclado: as setas mexem 2% de cada vez. Quem não usa rato também tem
+// uma fotografia para enquadrar.
+let FT_TECLA = 0;
+function ftTecla(ev){
+  const passos = { ArrowLeft:[-2,0], ArrowRight:[2,0], ArrowUp:[0,-2], ArrowDown:[0,2] };
+  const p = passos[ev.key]; if (!p) return;
+  const caixa = ev.currentTarget, sec = caixa.closest('.ft-sec').dataset.sec;
+  const sc = ftSec(sec); if (!sc || !sc.pos) return;
+  ev.preventDefault();
+  caixa.classList.add('a-mover');
+  ftPor(caixa, sec, Math.max(0, Math.min(100, sc.pos.x + p[0])),
+                    Math.max(0, Math.min(100, sc.pos.y + p[1])));
+  clearTimeout(FT_TECLA);
+  FT_TECLA = setTimeout(() => { caixa.classList.remove('a-mover'); ftGuardarPos(sec); }, 500);
 }
 
 /** Um aviso junto ao botão que falhou: é aí que o olho está. */
@@ -454,7 +649,15 @@ document.getElementById('ft-secs').addEventListener('click', ev => {
   const sec = bt.closest('.ft-sec').dataset.sec;
   if (bt.dataset.ft === 'enviar')  return ftEnviar(sec);
   if (bt.dataset.ft === 'repor')   return ftRepor(sec);
+  if (bt.dataset.ft === 'lupa')    return ftLente(sec);
   if (bt.dataset.ft === 'galeria'){ FT_ABERTA = FT_ABERTA === sec ? '' : sec; ftPintar(); }
+});
+document.getElementById('ft-lente').addEventListener('click', ev => {
+  if (ev.target.closest('img')) return;     // carregar na fotografia não a fecha
+  ftLenteFechar();
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape') ftLenteFechar();
 });
 ftCarregar();
 </script>

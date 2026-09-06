@@ -2712,10 +2712,25 @@ function fotoSeccao(mysqli $conn, string $chave): ?array {
  * O ficheiro anterior só sai do disco se for de envio (custom/, ou a antiga
  * licenca/) e se nenhuma VERSÃO guardada ainda o usar — apagá-lo aí era
  * estragar uma versão que o casal gravou. É a mesma regra do editor.
+ *
+ * Nas secções que recortam, o enquadramento vai junto: o que lá estava tinha
+ * sido escolhido para a fotografia anterior e, numa composição nova, corta no
+ * sítio errado. Sem $enqValor volta ao centro (é o que o editor faz); com ele,
+ * fica exatamente esse — é assim que «voltar à de origem» devolve também o
+ * enquadramento de origem.
  */
-function fotoTrocar(mysqli $conn, string $chave, string $novo): void {
-    $antigo = (string)(defsAtuais($conn)[$chave] ?? '');
-    guardarDefinicoes($conn, [$chave => $novo]);
+function fotoTrocar(mysqli $conn, string $chave, string $novo,
+                    string $enqChave = '', ?string $enqValor = null): void {
+    $antigo  = (string)(defsAtuais($conn)[$chave] ?? '');
+    $guardar = [$chave => $novo];
+    if ($enqChave !== '') {
+        if ($enqValor === null) {
+            $e = lerEnquadramento((string)(defsAtuais($conn)[$enqChave] ?? ''));
+            $enqValor = '50 50 ' . (int)$e['zoom'];
+        }
+        $guardar[$enqChave] = $enqValor;
+    }
+    guardarDefinicoes($conn, $guardar);
     if ($antigo !== '' && $antigo !== $novo
         && ehFotoCustom($antigo) && !ficheiroEmVersao($conn, $antigo)) {
         @unlink(__DIR__ . '/' . $antigo);
@@ -2731,7 +2746,8 @@ if ($acao === 'convite_fotos') {
 if ($acao === 'convite_foto_enviar') {
     exigirModuloApi('digital');
     $chave = (string)($_POST['chave'] ?? '');
-    if (!fotoSeccao($conn, $chave)) erro('Essa secção não tem fotografia no vosso convite.');
+    $sc = fotoSeccao($conn, $chave);
+    if (!$sc) erro('Essa secção não tem fotografia no vosso convite.');
 
     $src = origemUpload('ficheiro', FOTO_CONVITE_MAX);
     // O nome do ficheiro não prova nada: o que manda é o conteúdo.
@@ -2749,7 +2765,7 @@ if ($acao === 'convite_foto_enviar') {
               . '-' . random_int(100, 999) . '.' . $ext;
     if (!moverUpload($src, "$dir/$nomeFich")) erro('Não foi possível guardar a fotografia.');
     $caminho = CUSTOM_FOTO_DIR . '/' . $nomeFich;
-    fotoTrocar($conn, $chave, $caminho);
+    fotoTrocar($conn, $chave, $caminho, (string)$sc['enq']);
     registar($conn, 'convite_foto', $chave, basename((string)$src['nome']));
     ok(['chave' => $chave, 'src' => $caminho,
         'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
@@ -2767,7 +2783,7 @@ if ($acao === 'convite_foto_galeria') {
     $validas = [$sc['origem'] => true];
     foreach ($sc['fotos'] as $ft) $validas[$ft['src']] = true;
     if (!isset($validas[$src])) erro('Essa fotografia não é da galeria desta secção.');
-    fotoTrocar($conn, $chave, $src);
+    fotoTrocar($conn, $chave, $src, (string)$sc['enq']);
     registar($conn, 'convite_foto', $chave, 'da galeria da casa');
     ok(['chave' => $chave, 'src' => $src,
         'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
@@ -2779,10 +2795,36 @@ if ($acao === 'convite_foto_repor') {
     $chave = (string)($d['chave'] ?? '');
     $sc = fotoSeccao($conn, $chave);
     if (!$sc) erro('Essa secção não tem fotografia no vosso convite.');
-    fotoTrocar($conn, $chave, (string)$sc['origem']);
+    // De origem é de origem: a fotografia e o enquadramento com que ela nasceu.
+    $enq = (string)$sc['enq'];
+    fotoTrocar($conn, $chave, (string)$sc['origem'], $enq,
+               $enq !== '' ? (string)(defsPadrao()[$enq] ?? '50 50 100') : null);
     registar($conn, 'convite_foto_reposta', $chave, 'voltou à fotografia de origem');
     ok(['chave' => $chave, 'src' => $sc['origem'],
         'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
+}
+
+/**
+ * O enquadramento de uma secção: que ponto da fotografia fica à vista.
+ *
+ * As secções que recortam mostram uma janela estreita de uma fotografia larga;
+ * qual pedaço lá cabe era coisa que só o editor sabia ajustar. Uma fotografia
+ * cortada pelo meio da cara não se resolve escolhendo outra fotografia.
+ */
+if ($acao === 'convite_foto_posicao') {
+    exigirModuloApi('digital');
+    $d = corpo();
+    $chave = (string)($d['chave'] ?? '');
+    $sc = fotoSeccao($conn, $chave);
+    if (!$sc) erro('Essa secção não tem fotografia no vosso convite.');
+    if ((string)$sc['enq'] === '') erro('Esta fotografia aparece inteira — não há o que enquadrar.');
+    $x = max(0.0, min(100.0, (float)($d['x'] ?? 50)));
+    $y = max(0.0, min(100.0, (float)($d['y'] ?? 50)));
+    // A aproximação é do editor; aqui mexe-se no ponto, e ela fica como estava.
+    $zoom = (int)lerEnquadramento((string)(defsAtuais($conn)[$sc['enq']] ?? ''))['zoom'];
+    guardarDefinicoes($conn, [$sc['enq'] => round($x, 1) . ' ' . round($y, 1) . ' ' . $zoom]);
+    registar($conn, 'convite_foto_posicao', $chave, round($x) . '% ' . round($y) . '%');
+    ok(['chave' => $chave, 'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
 }
 
 if ($acao === 'convite_list') {
@@ -5154,9 +5196,16 @@ if ($acao === 'orc_estado') {
             FROM {$P}orcamento_despesas WHERE casamento_id=$cid AND categoria_id IS NULL")->fetch_assoc();
 
     $desp = [];
+    // Duas somas por despesa, e não uma: o que está repartido em prestações
+    // (paguem-se ou não) e o que dessas já foi liquidado. Andavam confundidas
+    // numa só, chamada 'pago_parcelas', que somava tudo — e assim ninguém podia
+    // descontar do previsto o que já tinha saído.
     $rd = @$conn->query("SELECT dd.id, dd.categoria_id, dd.descricao, dd.fornecedor, dd.valor, dd.estado, dd.nota, dd.fatura,
             COALESCE((SELECT SUM(valor) FROM {$P}orcamento_pagamentos p
-                      WHERE p.casamento_id=$cid AND p.despesa_id=dd.id),0) AS pago_parcelas,
+                      WHERE p.casamento_id=$cid AND p.despesa_id=dd.id),0) AS parcelado,
+            COALESCE((SELECT SUM(valor) FROM {$P}orcamento_pagamentos p
+                      WHERE p.casamento_id=$cid AND p.despesa_id=dd.id
+                        AND p.pago_em IS NOT NULL),0) AS liquidado,
             (SELECT COUNT(*) FROM {$P}orcamento_pagamentos p
                       WHERE p.casamento_id=$cid AND p.despesa_id=dd.id) AS n_parcelas
             FROM {$P}orcamento_despesas dd WHERE dd.casamento_id=$cid

@@ -1179,10 +1179,18 @@ function galeriaCompleta(mysqli $conn): array {
  * Cada secção diz também se a fotografia que lá está foi ENVIADA pelo casal
  * (nossa) ou é a que o desenho lhe deu: é isso que distingue «trocar» de
  * «voltar à de origem».
+ *
+ * E diz o enquadramento, quando a secção recorta a fotografia: que ponto dela
+ * fica à vista. Sem isso, o casal punha uma fotografia sua e via-a cortada pelo
+ * meio da cara, sem nada que pudesse fazer — só entrando no editor, que é onde
+ * este ajuste vivia.
  */
 function seccoesDeFoto(mysqli $conn, array $defs): array {
     $gal = galeriaCompleta($conn);
     $padrao = defsPadrao();
+    // As secções que recortam, pela chave da fotografia (media.hero → …).
+    $recorta = [];
+    foreach (fotosEnquadraveis() as $f) $recorta[$f['media']] = $f;
     $descricoes = [
         'capa'       => 'A primeira imagem, atrás dos vossos nomes.',
         'historia'   => 'A que acompanha a vossa história.',
@@ -1203,10 +1211,17 @@ function seccoesDeFoto(mysqli $conn, array $defs): array {
             if (($g['categoria'] ?? '') !== $cat) continue;
             $fotos[] = ['src' => $g['src'], 'nome' => $g['nome']];
         }
+        $rec = $recorta[$chave] ?? null;
         $out[] = ['cat' => $cat, 'chave' => $chave, 'rotulo' => $rotulo,
                   'descricao' => $descricoes[$cat] ?? '',
                   'origem' => $origem, 'atual' => $atual,
                   'nossa' => $atual !== '' && $atual !== $origem,
+                  // Onde a secção recorta: a chave do enquadramento, a forma da
+                  // janela por onde se vê, e o ponto que lá está ao centro.
+                  'enq'       => $rec ? $rec['chave'] : '',
+                  'proporcao' => $rec ? $rec['proporcao'] : '4/3',
+                  'pos'       => $rec ? lerEnquadramento((string)($defs[$rec['chave']]
+                                          ?? $padrao[$rec['chave']] ?? '')) : null,
                   'fotos' => $fotos];
     }
     return $out;

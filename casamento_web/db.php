@@ -1808,6 +1808,7 @@ function nomesDeAcao(): array {
         'convite_editado_defs' => ['guardou alterações na peça', 'pecas'],
         'convite_foto'         => ['trocou uma fotografia do convite', 'pecas'],
         'convite_foto_reposta' => ['devolveu uma fotografia à de origem', 'pecas'],
+        'convite_foto_posicao' => ['enquadrou uma fotografia do convite', 'pecas'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],
         'versao_guardada'      => ['guardou uma versão da peça', 'pecas'],
         'versao_aplicada'      => ['pôs uma versão em vigor', 'pecas'],
