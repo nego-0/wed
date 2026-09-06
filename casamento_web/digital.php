@@ -146,74 +146,79 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   @media (max-width:560px){ .peca.fotos .peca-corpo{ grid-column:1 / -1; } }
 
   /* ---- As fotografias do convite ----------------------------
-     Uma ficha por secção, lado a lado: a fotografia como o convite a mostra
-     (recorte incluído), e ao lado o que se pode fazer com ela. Nada de camadas
-     nem de réguas — quem vem aqui quer pôr uma fotografia sua. */
+     Uma ficha por secção, lado a lado: a fotografia que lá está e o que se
+     pode fazer com ela. Nada de camadas nem de réguas — quem vem aqui quer pôr
+     uma fotografia sua. */
   .ft-cab{ margin:-.2rem 0 .8rem; }
   .ft-secs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.7rem; }
   .ft-sec{ display:grid; grid-template-columns:auto 1fr; gap:.75rem; align-items:start;
            border:1px solid var(--line); border-radius:12px; padding:.6rem .7rem; background:#fff; }
-  /* A janela por onde o convite vê a fotografia: a mesma forma, e o mesmo ponto
-     ao centro. Fixa-se a altura e a forma dá a largura — uma capa 9/16 e um
-     passe 16/11 nunca teriam a mesma. */
+  /* A mesma caixa para todas as secções. As janelas do convite têm feitios
+     diferentes — uma capa a toda a altura do ecrã não é um passe de entrada —,
+     mas uma grelha de miniaturas com quatro feitios era uma escada. O feitio
+     de cada uma, e o que lá cabe, vê-se em ponto grande. */
   .ft-agora{ position:relative; border-radius:9px; overflow:hidden; background:var(--cream);
-             height:92px; }
+             width:124px; aspect-ratio:4/3; }
   .ft-agora img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .ft-agora.move{ cursor:grab; touch-action:none; }
-  .ft-agora.move:active{ cursor:grabbing; }
   .ft-agora .et{ position:absolute; left:0; bottom:0; right:0; text-align:center;
                  font-size:.58rem; letter-spacing:.03em; text-transform:uppercase;
                  white-space:nowrap; padding:.15rem; background:rgba(14,15,12,.72); color:#fff; }
   .ft-sec.nossa .ft-agora{ outline:2px solid var(--gold); outline-offset:-2px; }
-  /* A lupa, por cima da fotografia: vê-se pequena, e às vezes é preciso vê-la
-     grande antes de decidir. */
+  /* A lupa, por cima da fotografia: vê-se pequena, e é em grande que se decide. */
   .ft-lupa{ position:absolute; top:.25rem; right:.25rem; width:24px; height:24px; padding:0;
             border:0; border-radius:7px; background:rgba(14,15,12,.6); color:#fff;
             font-size:.85rem; line-height:1; cursor:pointer; display:flex;
             align-items:center; justify-content:center; }
   .ft-lupa:hover{ background:rgba(14,15,12,.9); }
   .ft-lupa:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
-  /* A mira só aparece enquanto se arrasta: uma cruz sempre acesa é decoração. */
-  .ft-mira{ position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
-            border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.45); display:none;
-            pointer-events:none; }
-  .ft-agora.a-mover .ft-mira{ display:block; }
   .ft-nome{ font-size:.9rem; color:var(--ink); font-weight:600; }
   .ft-desc{ font-size:.76rem; color:#8a8f88; margin-top:.05rem; line-height:1.35; }
   .ft-acoes{ display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem; }
   .ft-acoes .btn{ font-size:.76rem; padding:.28rem .6rem; }
   .ft-erro{ flex-basis:100%; font-size:.76rem; color:var(--danger); margin-top:.1rem; }
   .ft-erro:empty{ display:none; }
-  /* A galeria da casa abre debaixo da secção, e não numa janela: escolher uma
-     fotografia é comparar, e comparar quer as duas à vista. */
-  .ft-galeria{ display:none; grid-column:1 / -1; margin-top:.5rem; }
-  .ft-sec.aberta .ft-galeria{ display:block; }
-  .ft-tiras{ display:flex; gap:.4rem; overflow-x:auto; padding-bottom:.3rem; scrollbar-width:thin; }
-  .ft-op{ position:relative; flex:none; width:76px; height:58px; border-radius:8px;
-          overflow:hidden; cursor:pointer; border:2px solid transparent; padding:0;
-          background:none; transition:border-color .15s, transform .15s; }
-  .ft-op:hover{ transform:translateY(-2px); border-color:var(--gold-soft); }
-  .ft-op.on{ border-color:var(--gold); }
-  .ft-op img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .ft-op .visto{ position:absolute; inset:0; display:none; align-items:center;
-                 justify-content:center; background:rgba(76,140,30,.45); color:#fff;
-                 font-size:1.1rem; font-weight:800; }
-  .ft-op.on .visto{ display:flex; }
-  .ft-op:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
   .ft-vazio{ font-size:.85rem; color:#8a8f88; line-height:1.55; }
 
-  /* ---- Ver em ponto grande ---- */
+  /* ---- Em ponto grande, com a moldura da secção ----
+     A fotografia inteira, e por cima a janela por onde a secção a mostra: o
+     que fica de fora escurece. É a pergunta e a resposta no mesmo sítio. */
   .ft-lente{ position:fixed; inset:0; z-index:80; display:none; flex-direction:column;
-             align-items:center; justify-content:center; gap:.7rem; padding:2rem;
+             align-items:center; justify-content:center; gap:.7rem; padding:2rem 2rem 1.2rem;
              background:rgba(10,14,10,.86); backdrop-filter:blur(2px); }
   .ft-lente.on{ display:flex; }
+  .ft-palco{ position:relative; display:flex; min-height:0; touch-action:none; }
+  .ft-palco img{ min-height:0; max-width:100%; max-height:100%; border-radius:10px;
+                 box-shadow:0 20px 60px rgba(0,0,0,.5); display:block; }
+  /* O de fora escurece com uma sombra enorme à volta da moldura: é uma caixa
+     só, e o buraco é sempre exatamente o recorte. */
+  .ft-janela{ position:absolute; border:1px solid rgba(255,255,255,.9); cursor:grab;
+              box-shadow:0 0 0 9999px rgba(10,14,10,.62); }
+  .ft-janela:active, .ft-janela.a-mover{ cursor:grabbing; }
+  .ft-janela:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  /* Os terços, para se enquadrar por eles. */
+  .ft-janela::before, .ft-janela::after{ content:''; position:absolute; inset:0;
+                                         pointer-events:none; opacity:.45; }
+  .ft-janela::before{ background:
+      linear-gradient(to right, transparent 33.2%, rgba(255,255,255,.7) 33.2% 33.5%,
+                      transparent 33.5% 66.4%, rgba(255,255,255,.7) 66.4% 66.7%, transparent 66.7%); }
+  .ft-janela::after{ background:
+      linear-gradient(to bottom, transparent 33.2%, rgba(255,255,255,.7) 33.2% 33.5%,
+                      transparent 33.5% 66.4%, rgba(255,255,255,.7) 66.4% 66.7%, transparent 66.7%); }
   /* A legenda por baixo, e não por cima: uma legenda em cima da fotografia
      tapa-lhe justamente o pedaço que se veio aqui ver. */
-  .ft-lente img{ min-height:0; max-width:100%; max-height:100%; border-radius:10px;
-                 box-shadow:0 20px 60px rgba(0,0,0,.5); }
-  .ft-lente .leg{ flex:none; text-align:center; color:var(--ivory); font-size:.85rem; }
+  .ft-lente-pe{ flex:none; z-index:1; display:flex; align-items:center; gap:.8rem;
+                flex-wrap:wrap; justify-content:center; text-align:center; }
+  .ft-lente-pe .leg{ color:var(--ivory); font-size:.85rem; }
+  .ft-lente-ac{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+                justify-content:center; }
+  .ft-lente-dica{ color:#c9cfc6; font-size:.78rem; }
+  /* Os botões do pé vivem sobre o escuro: os da casa são para fundo claro e
+     desapareciam aqui. */
+  .ft-lente-ac .btn{ font-size:.76rem; padding:.28rem .7rem; background:rgba(255,255,255,.1);
+                     border:1px solid rgba(233,223,201,.42); color:var(--ivory); }
+  .ft-lente-ac .btn:hover{ background:rgba(255,255,255,.2); }
   .ft-lente .fechar{ position:absolute; top:.8rem; right:1rem; background:none; border:0;
-                     color:#fff; font-size:1.8rem; line-height:1; cursor:pointer; }
+                     color:#fff; font-size:1.8rem; line-height:1; cursor:pointer; z-index:2; }
 
 </style>
 </head>
@@ -272,9 +277,9 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
 
       <!-- As fotografias do convite: aqui, e não no editor -->
       <div class="p-painel" id="pn-fotos" role="tabpanel" aria-labelledby="ab-fotos" hidden>
-        <p class="dica ft-cab">Uma por secção — as vossas, ou da galeria da casa. Arrastem
-          sobre a fotografia para escolher o que fica à vista; a lupa mostra-a em grande.
-          <span class="ft-formatos">jpg, png ou webp, até <b id="ft-max">5</b> MB.</span></p>
+        <p class="dica ft-cab">Uma por secção, as vossas. A lupa abre a fotografia em
+          ponto grande e mostra a moldura da secção — é aí que se escolhe o que fica no
+          convite. <span class="ft-formatos">jpg, png ou webp, até <b id="ft-max">5</b> MB.</span></p>
         <div class="ft-secs" id="ft-secs"><p class="ft-vazio">A carregar…</p></div>
       </div>
     </div>
@@ -343,11 +348,19 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   <?php endif; ?>
 </main>
 
-<!-- A fotografia em ponto grande: inteira, e não pelo recorte -->
+<!-- A fotografia em ponto grande, e a janela por onde a secção a mostra -->
 <div class="ft-lente" id="ft-lente" role="dialog" aria-modal="true" aria-label="Fotografia em ponto grande">
-  <button type="button" class="fechar" onclick="ftLenteFechar()" aria-label="Fechar">&times;</button>
-  <img src="" alt="">
-  <div class="leg"></div>
+  <button type="button" class="fechar" id="ft-lente-fechar" onclick="ftLenteFechar()"
+          aria-label="Fechar">&times;</button>
+  <div class="ft-palco" id="ft-palco">
+    <img id="ft-lente-img" src="" alt="">
+    <div class="ft-janela" id="ft-janela" hidden tabindex="0" role="application"
+         aria-label="Enquadramento: arraste a moldura, ou use as setas"></div>
+  </div>
+  <div class="ft-lente-pe">
+    <span class="leg" id="ft-lente-leg"></span>
+    <span class="ft-lente-ac" id="ft-lente-ac"></span>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -419,12 +432,13 @@ function pecaAba(qual){
 // ponto grande antes de decidir, e escolher que pedaço dela fica à vista. Uma
 // fotografia cortada pelo meio da cara não se resolve escolhendo outra.
 // ============================================================
-let FT_SECS = [], FT_MAX = 5, FT_ABERTA = '';
+let FT_SECS = [], FT_MAX = 5;
 
 function ftEsc(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g,
     c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function ftEl(id){ return document.getElementById(id); }
 
 /** A secção com esta chave, tal como o servidor a descreveu. */
 function ftSec(sec){ return FT_SECS.find(x => x.chave === sec) || null; }
@@ -433,147 +447,42 @@ async function ftCarregar(){
   const d = await api('convite_fotos', { method:'GET' });
   if (!d || !d.success) return;
   FT_SECS = d.seccoes || []; FT_MAX = d.max_mb || 5;
-  const mx = document.getElementById('ft-max');
+  const mx = ftEl('ft-max');
   if (mx) mx.textContent = FT_MAX;
   ftPintar();
 }
 
-/** O estilo que põe a miniatura a recortar como o convite recorta. */
-function ftRecorte(sc){
-  if (!sc.pos) return '';
-  return ' style="object-position:' + sc.pos.x + '% ' + sc.pos.y + '%'
-       + ';transform:scale(' + (sc.pos.zoom / 100) + ')"';
-}
-
 function ftPintar(){
-  const cx = document.getElementById('ft-secs'); if (!cx) return;
+  const cx = ftEl('ft-secs'); if (!cx) return;
   if (!FT_SECS.length){
     cx.innerHTML = '<p class="ft-vazio">Este convite não mostra nenhuma secção com fotografia.</p>';
     return;
   }
-  cx.innerHTML = FT_SECS.map(sc => {
-    const aberta = FT_ABERTA === sc.chave;
-    const move = !!sc.enq;
-    const tiras = (sc.fotos || []).map(f =>
-        '<button type="button" class="ft-op' + (f.src === sc.atual ? ' on' : '') + '"'
-      + ' title="' + ftEsc(f.nome) + '" data-sec="' + ftEsc(sc.chave) + '"'
-      + ' data-src="' + ftEsc(f.src) + '">'
-      + '<img src="' + ftEsc(f.src) + '" alt="' + ftEsc(f.nome) + '" loading="lazy" decoding="async">'
-      + '<span class="visto">✓</span></button>').join('');
-    return '<div class="ft-sec' + (sc.nossa ? ' nossa' : '') + (aberta ? ' aberta' : '') + '"'
-      + ' data-sec="' + ftEsc(sc.chave) + '">'
-      + '<div class="ft-agora' + (move ? ' move' : '') + '"'
-      +      ' style="aspect-ratio:' + ftEsc(sc.proporcao || '4/3') + '"'
-      +      (move ? ' tabindex="0" role="application"'
-                     + ' aria-label="Enquadramento da fotografia: arraste, ou use as setas"' : '') + '>'
-      +   (sc.atual ? '<img src="' + ftEsc(sc.atual) + '"' + ftRecorte(sc)
-                      + ' alt="A fotografia da secção ' + ftEsc(sc.rotulo) + '">' : '')
-      +   (move && sc.pos ? '<span class="ft-mira" style="left:' + sc.pos.x + '%;top:'
-                            + sc.pos.y + '%"></span>' : '')
-      +   '<button type="button" class="ft-lupa" data-ft="lupa"'
-      +     ' title="Ver em ponto grande" aria-label="Ver em ponto grande">⤢</button>'
-      +   '<span class="et">' + (sc.nossa ? 'vossa' : 'da casa') + '</span>'
-      + '</div>'
-      + '<div>'
-      +   '<div class="ft-nome">' + ftEsc(sc.rotulo) + '</div>'
-      +   '<div class="ft-desc">' + ftEsc(sc.descricao) + '</div>'
-      +   '<div class="ft-acoes">'
-      +     '<button class="btn btn-sm btn-ouro" data-ft="enviar">'
-      +       (sc.nossa ? 'Trocar' : '＋ A nossa') + '</button>'
-      +     (tiras ? '<button class="btn btn-sm" data-ft="galeria">'
-                     + (aberta ? 'Fechar' : 'Galeria') + '</button>' : '')
-      +     (sc.nossa ? '<button class="btn btn-sm btn-fantasma" data-ft="repor">De origem</button>' : '')
-      +     '<span class="ft-erro"></span>'
-      +   '</div>'
-      + '</div>'
-      + (tiras ? '<div class="ft-galeria"><div class="ft-tiras">' + tiras + '</div></div>' : '')
-      + '</div>';
-  }).join('');
-  // O arrasto é da caixa, e a caixa nasce outra vez a cada pintura.
-  cx.querySelectorAll('.ft-agora.move').forEach(c => {
-    c.addEventListener('pointerdown', ftArrastar);
-    c.addEventListener('keydown', ftTecla);
-  });
-}
-
-// ---------- ver em ponto grande ----------
-function ftLente(sec){
-  const sc = ftSec(sec); if (!sc || !sc.atual) return;
-  const lt = document.getElementById('ft-lente');
-  lt.querySelector('img').src = sc.atual;
-  lt.querySelector('img').alt = 'A fotografia da secção ' + sc.rotulo;
-  lt.querySelector('.leg').textContent = sc.rotulo + ' · '
-    + (sc.nossa ? 'vossa' : 'da galeria da casa');
-  lt.classList.add('on');
-  lt.querySelector('.fechar').focus();
-}
-function ftLenteFechar(){ document.getElementById('ft-lente').classList.remove('on'); }
-
-// ---------- enquadrar: que ponto da fotografia fica à vista ----------
-// Cola-se ao centro e aos terços — são as posições que de facto se procuram
-// (um rosto ao centro, o horizonte num terço) e acertar nelas à mão, num
-// retângulo de 70px, era trabalho de paciência. Com Shift arrasta-se livre.
-const FT_IMAS = [33.333, 50, 66.667];
-function ftColar(v){
-  for (const a of FT_IMAS) if (Math.abs(v - a) < 4) return a;
-  return Math.round(v * 10) / 10;
-}
-/** Mostra já o novo ponto, sem esperar pelo servidor. */
-function ftPor(caixa, sec, x, y){
-  const sc = ftSec(sec); if (!sc || !sc.pos) return;
-  sc.pos.x = x; sc.pos.y = y;
-  const im = caixa.querySelector('img');
-  if (im){ im.style.objectPosition = x + '% ' + y + '%'; }
-  const mira = caixa.querySelector('.ft-mira');
-  if (mira){ mira.style.left = x + '%'; mira.style.top = y + '%'; }
-}
-async function ftGuardarPos(sec){
-  const sc = ftSec(sec); if (!sc || !sc.pos) return;
-  const d = await api('convite_foto_posicao',
-    { method:'POST', body: JSON.stringify({ chave: sec, x: sc.pos.x, y: sc.pos.y }) });
-  if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível enquadrar.'); return; }
-  ftAplicar(d);
-}
-function ftArrastar(ev){
-  const caixa = ev.currentTarget;
-  if (ev.target.closest('.ft-lupa')) return;      // a lupa é um botão, não um arrasto
-  const sec = caixa.closest('.ft-sec').dataset.sec;
-  caixa.setPointerCapture(ev.pointerId);
-  caixa.classList.add('a-mover');
-  const mover = e2 => {
-    const r = caixa.getBoundingClientRect();
-    let x = (e2.clientX - r.left) / r.width * 100, y = (e2.clientY - r.top) / r.height * 100;
-    x = Math.max(0, Math.min(100, x)); y = Math.max(0, Math.min(100, y));
-    if (!e2.shiftKey){ x = ftColar(x); y = ftColar(y); }
-    ftPor(caixa, sec, x, y);
-  };
-  const largar = () => {
-    caixa.classList.remove('a-mover');
-    caixa.removeEventListener('pointermove', mover);
-    caixa.removeEventListener('pointerup', largar);
-    caixa.removeEventListener('pointercancel', largar);
-    ftGuardarPos(sec);
-  };
-  mover(ev);
-  caixa.addEventListener('pointermove', mover);
-  caixa.addEventListener('pointerup', largar);
-  caixa.addEventListener('pointercancel', largar);
-  ev.preventDefault();
-}
-// Com o teclado: as setas mexem 2% de cada vez. Quem não usa rato também tem
-// uma fotografia para enquadrar.
-let FT_TECLA = 0;
-function ftTecla(ev){
-  const passos = { ArrowLeft:[-2,0], ArrowRight:[2,0], ArrowUp:[0,-2], ArrowDown:[0,2] };
-  const p = passos[ev.key]; if (!p) return;
-  const caixa = ev.currentTarget, sec = caixa.closest('.ft-sec').dataset.sec;
-  const sc = ftSec(sec); if (!sc || !sc.pos) return;
-  ev.preventDefault();
-  caixa.classList.add('a-mover');
-  ftPor(caixa, sec, Math.max(0, Math.min(100, sc.pos.x + p[0])),
-                    Math.max(0, Math.min(100, sc.pos.y + p[1])));
-  clearTimeout(FT_TECLA);
-  FT_TECLA = setTimeout(() => { caixa.classList.remove('a-mover'); ftGuardarPos(sec); }, 500);
+  // A caixa é a mesma para todas — quatro janelas de feitios diferentes numa
+  // grelha davam uma escada. Qual é o feitio de cada secção, e o que lá cabe,
+  // vê-se em ponto grande, que é onde isso se decide.
+  cx.innerHTML = FT_SECS.map(sc =>
+      '<div class="ft-sec' + (sc.nossa ? ' nossa' : '') + '"'
+    + ' data-sec="' + ftEsc(sc.chave) + '">'
+    + '<div class="ft-agora">'
+    +   (sc.atual ? '<img src="' + ftEsc(sc.atual) + '"'
+                    + (sc.pos ? ' style="object-position:' + sc.pos.x + '% ' + sc.pos.y + '%"' : '')
+                    + ' alt="A fotografia da secção ' + ftEsc(sc.rotulo) + '">' : '')
+    +   '<button type="button" class="ft-lupa" data-ft="lupa"'
+    +     ' title="Ver em ponto grande" aria-label="Ver em ponto grande">⤢</button>'
+    +   '<span class="et">' + (sc.nossa ? 'vossa' : 'do modelo') + '</span>'
+    + '</div>'
+    + '<div>'
+    +   '<div class="ft-nome">' + ftEsc(sc.rotulo) + '</div>'
+    +   '<div class="ft-desc">' + ftEsc(sc.descricao) + '</div>'
+    +   '<div class="ft-acoes">'
+    +     '<button class="btn btn-sm btn-ouro" data-ft="enviar">'
+    +       (sc.nossa ? 'Trocar' : '＋ A nossa') + '</button>'
+    +     (sc.enq ? '<button class="btn btn-sm" data-ft="lupa">Enquadrar</button>' : '')
+    +     (sc.nossa ? '<button class="btn btn-sm btn-fantasma" data-ft="repor">De origem</button>' : '')
+    +     '<span class="ft-erro"></span>'
+    +   '</div>'
+    + '</div></div>').join('');
 }
 
 /** Um aviso junto ao botão que falhou: é aí que o olho está. */
@@ -590,6 +499,173 @@ function ftAplicar(d){
   if (pv) pv.src = pv.src.split('#')[0] + '&r=' + Date.now();
 }
 
+// ============================================================
+// Em ponto grande — e é aqui que se enquadra
+//
+// A miniatura mostra que fotografia está em cada secção; não dá para decidir
+// nela o que fica no convite. Em grande, vê-se a fotografia inteira e, por
+// cima, a janela por onde a secção a mostra: o que fica de fora escurece. É a
+// pergunta e a resposta no mesmo sítio — arrasta-se a moldura até ela conter o
+// que interessa.
+// ============================================================
+let FT_LENTE = null;      // a secção aberta
+let FT_MOLDURA = true;    // a moldura está à vista?
+
+function ftLente(sec){
+  const sc = ftSec(sec); if (!sc || !sc.atual) return;
+  FT_LENTE = sc; FT_MOLDURA = true;
+  const im = ftEl('ft-lente-img');
+  im.onload = ftJanelaPintar;
+  im.src = sc.atual;
+  im.alt = 'A fotografia da secção ' + sc.rotulo;
+  ftEl('ft-lente-leg').textContent = sc.rotulo + ' · ' + (sc.nossa ? 'vossa' : 'do modelo');
+  ftLentePe();
+  ftEl('ft-lente').classList.add('on');
+  ftJanelaPintar();
+  if (sc.enq) ftEl('ft-janela').focus(); else ftEl('ft-lente-fechar').focus();
+}
+function ftLenteFechar(){
+  ftEl('ft-lente').classList.remove('on');
+  FT_LENTE = null;
+}
+
+/** Os botões do pé: só existem quando a secção recorta. */
+function ftLentePe(){
+  const pe = ftEl('ft-lente-ac'), sc = FT_LENTE;
+  if (!sc || !sc.enq){ pe.innerHTML = ''; return; }
+  pe.innerHTML =
+      '<span class="ft-lente-dica">' + (FT_MOLDURA
+        ? 'Arraste a moldura para escolher o que fica no convite.'
+        : 'A fotografia inteira, sem moldura.') + '</span>'
+    + '<button type="button" class="btn btn-sm" data-lt="moldura">'
+    +   (FT_MOLDURA ? 'Ver sem moldura' : 'Enquadrar') + '</button>'
+    + (FT_MOLDURA ? '<button type="button" class="btn btn-sm btn-fantasma" data-lt="centrar">Centrar</button>' : '');
+}
+
+/** "9/16" -> 0.5625 (largura a dividir pela altura). */
+function ftProporcao(p){
+  const m = String(p || '').split('/');
+  const a = parseFloat(m[0]), b = parseFloat(m[1]);
+  return (a > 0 && b > 0) ? a / b : 1;
+}
+
+/**
+ * A janela por onde a secção vê a fotografia, em píxeis do ecrã.
+ *
+ * É a mesma conta que o browser faz com object-fit:cover — a maior área com a
+ * forma da secção que cabe na fotografia (dividida pela aproximação) — e o
+ * ponto guardado diz onde ela está. Sem isto, a moldura seria um desenho
+ * bonito que não corresponderia ao recorte verdadeiro.
+ */
+function ftJanelaMedidas(){
+  const sc = FT_LENTE, im = ftEl('ft-lente-img');
+  if (!sc || !sc.enq || !sc.pos || !im.naturalWidth) return null;
+  const iw = im.naturalWidth, ih = im.naturalHeight;
+  const A = ftProporcao(sc.proporcao), z = Math.max(1, (sc.pos.zoom || 100) / 100);
+  const w = Math.min(iw, ih * A) / z, h = Math.min(ih, iw / A) / z;
+  const r = im.getBoundingClientRect();
+  const pr = ftEl('ft-palco').getBoundingClientRect();
+  const s = r.width / iw;                       // do tamanho real para o ecrã
+  return { iw, ih, w, h, s,
+           dx: r.left - pr.left, dy: r.top - pr.top };
+}
+
+function ftJanelaPintar(){
+  const jan = ftEl('ft-janela'), sc = FT_LENTE;
+  const m = ftJanelaMedidas();
+  if (!m || !FT_MOLDURA){ jan.hidden = true; return; }
+  jan.hidden = false;
+  jan.style.left   = (m.dx + (sc.pos.x / 100) * (m.iw - m.w) * m.s) + 'px';
+  jan.style.top    = (m.dy + (sc.pos.y / 100) * (m.ih - m.h) * m.s) + 'px';
+  jan.style.width  = (m.w * m.s) + 'px';
+  jan.style.height = (m.h * m.s) + 'px';
+}
+
+/** Põe o ponto (em %) e repinta, sem esperar pelo servidor. */
+function ftPor(x, y){
+  const sc = FT_LENTE; if (!sc || !sc.pos) return;
+  sc.pos.x = Math.round(Math.max(0, Math.min(100, x)) * 10) / 10;
+  sc.pos.y = Math.round(Math.max(0, Math.min(100, y)) * 10) / 10;
+  ftJanelaPintar();
+}
+async function ftGuardarPos(){
+  const sc = FT_LENTE; if (!sc || !sc.pos) return;
+  const d = await api('convite_foto_posicao',
+    { method:'POST', body: JSON.stringify({ chave: sc.chave, x: sc.pos.x, y: sc.pos.y }) });
+  if (!d || !d.success){ toast((d && d.message) || 'Não foi possível enquadrar.', true); return; }
+  const guardada = { chave: sc.chave, x: sc.pos.x, y: sc.pos.y };
+  ftAplicar(d);
+  // A lista foi refeita: a lente tem de voltar a apontar para a secção nova.
+  FT_LENTE = ftSec(guardada.chave) || FT_LENTE;
+  ftJanelaPintar();
+}
+
+// Cola-se ao centro e aos terços — são as posições que de facto se procuram
+// (um rosto ao centro, o horizonte num terço). Com Shift arrasta-se livre.
+const FT_IMAS = [0, 33.333, 50, 66.667, 100];
+function ftColar(v){
+  for (const a of FT_IMAS) if (Math.abs(v - a) < 2.5) return a;
+  return v;
+}
+
+function ftArrastar(ev){
+  const sc = FT_LENTE;
+  if (!sc || !sc.enq || !FT_MOLDURA) return;
+  const m = ftJanelaMedidas(); if (!m) return;
+  const palco = ftEl('ft-palco');
+  const jan = ftEl('ft-janela');
+  const jr = jan.getBoundingClientRect();
+  // Agarrar a moldura mantém o ponto onde se lhe pegou; carregar fora dela
+  // traz-lhe o centro, que é o gesto de quem aponta ao que quer ver.
+  const dentro = ev.clientX >= jr.left && ev.clientX <= jr.right
+              && ev.clientY >= jr.top  && ev.clientY <= jr.bottom;
+  const pega = dentro ? { x: ev.clientX - jr.left, y: ev.clientY - jr.top }
+                      : { x: jr.width / 2, y: jr.height / 2 };
+  palco.setPointerCapture(ev.pointerId);
+  jan.classList.add('a-mover');
+  const mover = e2 => {
+    const pr = palco.getBoundingClientRect();
+    // Canto superior esquerdo da moldura, em píxeis da fotografia real.
+    const px = ((e2.clientX - pr.left - pega.x) - m.dx) / m.s;
+    const py = ((e2.clientY - pr.top  - pega.y) - m.dy) / m.s;
+    // Um eixo sem folga (a moldura cobre a fotografia toda nessa direção) não
+    // se mexe — e o valor guardado fica como está, que volta a fazer sentido se
+    // a fotografia for trocada por outra de outro feitio.
+    const livreX = m.iw - m.w, livreY = m.ih - m.h;
+    let x = livreX > 0.5 ? (px / livreX) * 100 : sc.pos.x;
+    let y = livreY > 0.5 ? (py / livreY) * 100 : sc.pos.y;
+    if (!e2.shiftKey){ x = ftColar(x); y = ftColar(y); }
+    ftPor(x, y);
+  };
+  const largar = () => {
+    jan.classList.remove('a-mover');
+    palco.removeEventListener('pointermove', mover);
+    palco.removeEventListener('pointerup', largar);
+    palco.removeEventListener('pointercancel', largar);
+    ftGuardarPos();
+  };
+  mover(ev);
+  palco.addEventListener('pointermove', mover);
+  palco.addEventListener('pointerup', largar);
+  palco.addEventListener('pointercancel', largar);
+  ev.preventDefault();
+}
+
+// Com o teclado: as setas mexem 2% de cada vez. Quem não usa rato também tem
+// uma fotografia para enquadrar.
+let FT_TECLA = 0;
+function ftTecla(ev){
+  const passos = { ArrowLeft:[-2,0], ArrowRight:[2,0], ArrowUp:[0,-2], ArrowDown:[0,2] };
+  const p = passos[ev.key];
+  const sc = FT_LENTE;
+  if (!p || !sc || !sc.pos || !FT_MOLDURA) return;
+  ev.preventDefault(); ev.stopPropagation();
+  ftPor(sc.pos.x + p[0], sc.pos.y + p[1]);
+  clearTimeout(FT_TECLA);
+  FT_TECLA = setTimeout(ftGuardarPos, 500);
+}
+
+// ---------- trocar e repor ----------
 function ftEnviar(sec){
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = 'image/jpeg,image/png,image/webp';
@@ -613,20 +689,16 @@ function ftEnviar(sec){
     if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível enviar.'); return; }
     ftAplicar(d);
     toast('Fotografia trocada. O convite já a mostra.');
+    // Uma fotografia nova chega ao centro: é agora que se enquadra, e é para
+    // isso que a lente abre sozinha.
+    const nova = ftSec(sec);
+    if (nova && nova.enq) ftLente(sec);
   });
   inp.click();
 }
 
-async function ftDaGaleria(sec, src){
-  const d = await api('convite_foto_galeria',
-                      { method:'POST', body: JSON.stringify({ chave: sec, src }) });
-  if (!d || !d.success){ ftErro(sec, (d && d.message) || 'Não foi possível trocar.'); return; }
-  ftAplicar(d);
-  toast('Fotografia trocada. O convite já a mostra.');
-}
-
 async function ftRepor(sec){
-  const sc = FT_SECS.find(x => x.chave === sec) || {};
+  const sc = ftSec(sec) || {};
   const r = await licConfirmar({
     titulo: 'Voltar à fotografia de origem em «' + licEsc(sc.rotulo || '') + '»?',
     icone: '↩️', perigo: true, confirmar: 'Voltar à de origem',
@@ -641,24 +713,33 @@ async function ftRepor(sec){
   toast('Secção de volta à fotografia de origem.');
 }
 
-document.getElementById('ft-secs').addEventListener('click', ev => {
-  const op = ev.target.closest('.ft-op');
-  if (op){ ftDaGaleria(op.dataset.sec, op.dataset.src); return; }
+// ---------- os gestos ----------
+ftEl('ft-secs').addEventListener('click', ev => {
   const bt = ev.target.closest('[data-ft]');
   if (!bt) return;
   const sec = bt.closest('.ft-sec').dataset.sec;
-  if (bt.dataset.ft === 'enviar')  return ftEnviar(sec);
-  if (bt.dataset.ft === 'repor')   return ftRepor(sec);
-  if (bt.dataset.ft === 'lupa')    return ftLente(sec);
-  if (bt.dataset.ft === 'galeria'){ FT_ABERTA = FT_ABERTA === sec ? '' : sec; ftPintar(); }
+  if (bt.dataset.ft === 'enviar') return ftEnviar(sec);
+  if (bt.dataset.ft === 'repor')  return ftRepor(sec);
+  if (bt.dataset.ft === 'lupa')   return ftLente(sec);
 });
-document.getElementById('ft-lente').addEventListener('click', ev => {
-  if (ev.target.closest('img')) return;     // carregar na fotografia não a fecha
-  ftLenteFechar();
+ftEl('ft-lente-ac').addEventListener('click', ev => {
+  const bt = ev.target.closest('[data-lt]');
+  if (!bt) return;
+  if (bt.dataset.lt === 'moldura'){ FT_MOLDURA = !FT_MOLDURA; ftLentePe(); ftJanelaPintar(); }
+  if (bt.dataset.lt === 'centrar'){ ftPor(50, 50); ftGuardarPos(); }
+});
+ftEl('ft-palco').addEventListener('pointerdown', ftArrastar);
+ftEl('ft-janela').addEventListener('keydown', ftTecla);
+ftEl('ft-lente').addEventListener('click', ev => {
+  // Só o fundo fecha — e mede-se por o alvo SER o fundo, e não por ele estar
+  // fora do palco: um botão do pé que se redesenha a si próprio já não está na
+  // página quando o clique chega aqui, e fechava a lente ao ser carregado.
+  if (ev.target === ev.currentTarget) ftLenteFechar();
 });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape') ftLenteFechar();
 });
+window.addEventListener('resize', ftJanelaPintar);
 ftCarregar();
 </script>
 </body>

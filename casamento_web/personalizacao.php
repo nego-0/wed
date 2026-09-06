@@ -1168,61 +1168,71 @@ function galeriaCompleta(mysqli $conn): array {
 
 /**
  * As secções do convite digital que levam fotografia, tal como ESTE convite as
- * mostra — com a fotografia que lá está agora, a de origem e a galeria da casa.
+ * mostra — com a fotografia que lá está agora e a de origem.
  *
  * É o que a área de fotografias da página do convite digital serve. As secções
- * saem do convite do casal, e não de um modelo: uma que ele tenha escondido não
- * tem fotografia nenhuma para pedir, e pedi-la era pedir uma imagem para uma
- * página que ninguém vai ver. A capa e o acesso existem sempre — não se
- * escondem —, a história e o interlúdio só quando estão à vista.
+ * saem do convite do casal, e não de uma lista escrita à mão: pergunta-se ao
+ * próprio convite quais são, pela ordem em que ele as mostra. Uma secção que o
+ * casal tenha escondido não tem fotografia nenhuma para pedir, e pedi-la era
+ * pedir uma imagem para uma página que ninguém vai ver.
+ *
+ * ---- COMO SE ACRESCENTA UMA SECÇÃO COM FOTOGRAFIA ----
+ * A convenção é o nome: a secção «x» do convite (ver seccoesConvite() e
+ * blocosBase()) leva fotografia se houver uma definição 'media.x', e recorta-a
+ * se houver também 'foto.x'. Declaradas essas chaves em defsPadrao(), a secção
+ * aparece aqui sozinha, na sua ordem, com o rótulo que o editor já lhe dá — não
+ * há segunda lista para manter. A forma da janela por onde se vê vem de
+ * fotosEnquadraveis(); sem entrada lá, assume-se retrato.
+ *
+ * E é por isso que trocar de modelo troca esta lista: o modelo escreve as
+ * definições do casal — as fotografias, a ordem das secções e quais estão à
+ * vista —, e é delas que esta lista sai. As secções que ficam a valer são
+ * sempre as do convite que o casal tem agora.
  *
  * Cada secção diz também se a fotografia que lá está foi ENVIADA pelo casal
  * (nossa) ou é a que o desenho lhe deu: é isso que distingue «trocar» de
- * «voltar à de origem».
+ * «voltar à de origem». E diz o enquadramento — que ponto da fotografia fica à
+ * vista —, sem o qual o casal punha uma fotografia sua e via-a cortada pelo
+ * meio da cara, sem nada que pudesse fazer.
  *
- * E diz o enquadramento, quando a secção recorta a fotografia: que ponto dela
- * fica à vista. Sem isso, o casal punha uma fotografia sua e via-a cortada pelo
- * meio da cara, sem nada que pudesse fazer — só entrando no editor, que é onde
- * este ajuste vivia.
+ * A galeria da casa não vem: é material de modelo, do lado de quem os desenha.
+ * O casal manda a sua fotografia, ou fica com a que o modelo lhe deu.
  */
 function seccoesDeFoto(mysqli $conn, array $defs): array {
-    $gal = galeriaCompleta($conn);
-    $padrao = defsPadrao();
-    // As secções que recortam, pela chave da fotografia (media.hero → …).
+    $padrao  = defsPadrao();
+    $secs    = seccoesConvite();
+    // A forma da janela de cada secção que recorta, pela chave da fotografia.
     $recorta = [];
     foreach (fotosEnquadraveis() as $f) $recorta[$f['media']] = $f;
     $descricoes = [
-        'capa'       => 'A primeira imagem, atrás dos vossos nomes.',
+        'hero'       => 'A primeira imagem, atrás dos vossos nomes.',
         'historia'   => 'A que acompanha a vossa história.',
         'interludio' => 'A pausa a meio do convite.',
         'acesso'     => 'A que fica junto ao código de entrada.',
     ];
     $out = [];
-    foreach (['capa' => 'Capa', 'historia' => 'História',
-              'interludio' => 'Interlúdio', 'acesso' => 'Acesso (QR)'] as $cat => $rotulo) {
-        $chave = chaveDaCategoria($cat);
-        if (!$chave) continue;
-        if (in_array($cat, ['historia', 'interludio'], true)
-            && (string)($defs[$cat . '.visivel'] ?? $padrao[$cat . '.visivel'] ?? '1') !== '1') continue;
+    foreach (ordemBlocos($defs) as $id) {
+        $chave = 'media.' . $id;
+        if (!array_key_exists($chave, $padrao)) continue;
+        // Escondida não conta: seccoesConvite() diz quais se podem esconder, e
+        // a definição '<id>.visivel' diz se esta o está.
+        if (!empty($secs[$id]['opcional'])
+            && (string)($defs[$id . '.visivel'] ?? $padrao[$id . '.visivel'] ?? '1') !== '1') continue;
         $origem = (string)($padrao[$chave] ?? '');
         $atual  = (string)($defs[$chave] ?? $origem);
-        $fotos = [];
-        foreach ($gal as $g) {
-            if (($g['categoria'] ?? '') !== $cat) continue;
-            $fotos[] = ['src' => $g['src'], 'nome' => $g['nome']];
-        }
-        $rec = $recorta[$chave] ?? null;
-        $out[] = ['cat' => $cat, 'chave' => $chave, 'rotulo' => $rotulo,
-                  'descricao' => $descricoes[$cat] ?? '',
+        $enq    = array_key_exists('foto.' . $id, $padrao) ? 'foto.' . $id : '';
+        $rec    = $recorta[$chave] ?? null;
+        $out[] = ['chave' => $chave, 'seccao' => $id,
+                  'rotulo' => (string)($secs[$id]['rotulo'] ?? ucfirst($id)),
+                  'descricao' => $descricoes[$id] ?? 'A fotografia desta secção.',
                   'origem' => $origem, 'atual' => $atual,
                   'nossa' => $atual !== '' && $atual !== $origem,
                   // Onde a secção recorta: a chave do enquadramento, a forma da
                   // janela por onde se vê, e o ponto que lá está ao centro.
-                  'enq'       => $rec ? $rec['chave'] : '',
-                  'proporcao' => $rec ? $rec['proporcao'] : '4/3',
-                  'pos'       => $rec ? lerEnquadramento((string)($defs[$rec['chave']]
-                                          ?? $padrao[$rec['chave']] ?? '')) : null,
-                  'fotos' => $fotos];
+                  'enq'       => $enq,
+                  'proporcao' => $rec ? $rec['proporcao'] : ($enq !== '' ? '9/16' : ''),
+                  'pos'       => $enq !== '' ? lerEnquadramento((string)($defs[$enq]
+                                          ?? $padrao[$enq] ?? '')) : null];
     }
     return $out;
 }
@@ -2283,7 +2293,13 @@ function fotosDeModelo(): array {
     ];
 }
 
-/** As fotografias que são recortadas e por isso precisam de enquadramento. */
+/**
+ * As fotografias que são recortadas e por isso precisam de enquadramento.
+ *
+ * A janela de cada secção tem a forma que o desenho lhe deu — uma capa a toda
+ * a altura do ecrã não é um passe de entrada. Uma secção nova com fotografia
+ * acrescenta aqui a sua linha; sem ela, seccoesDeFoto() assume retrato.
+ */
 function fotosEnquadraveis(): array {
     return [
         'hero'       => ['chave'=>'foto.hero',       'media'=>'media.hero',       'rotulo'=>'Capa',              'proporcao'=>'9/16'],

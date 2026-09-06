@@ -113,25 +113,56 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   const capa = lista.find(s => s.chave === 'media.hero');
   ok(capa && !capa.nossa && capa.atual === capa.origem,
      'à partida, a capa mostra a fotografia com que o convite nasceu');
-  ok(capa && capa.fotos.length > 0,
-     'e a galeria da casa oferece alternativas para ela (' + (capa ? capa.fotos.length : 0) + ')');
 
-  // ============ 3. escolher da galeria da casa ============
-  const outra = capa.fotos.find(x => x.src !== capa.atual) || capa.fotos[0];
-  await p.evaluate(async (src) => {
-    await window.api('convite_foto_galeria',
-      { method: 'POST', body: JSON.stringify({ chave: 'media.hero', src }) });
-  }, outra.src);
-  let agora = (await secs()).find(s => s.chave === 'media.hero');
-  ok(agora.atual === outra.src, 'escolher da galeria troca mesmo a fotografia da capa');
-  ok(agora.nossa === true, 'e a secção passa a dizer que a fotografia já não é a de origem');
+  // A caixa é a mesma para todas: quatro janelas de feitios diferentes numa
+  // grelha davam uma escada. O feitio de cada secção vê-se em ponto grande.
+  const caixas = await p.evaluate(() =>
+    [...document.querySelectorAll('.ft-agora')].map(c => {
+      const r = c.getBoundingClientRect();
+      return Math.round(r.width) + '×' + Math.round(r.height);
+    }));
+  ok(new Set(caixas).size === 1,
+     'todas as secções mostram a fotografia na mesma caixa: ' + caixas.join(' '));
 
-  // Um caminho que não é da galeria desta secção não passa.
-  const intruso = await p.evaluate(async () =>
+  // ============ 3. a galeria da casa não é do casal ============
+  //
+  // É material de modelo, do lado de quem os desenha; chega ao casal já
+  // escolhida, dentro do modelo que ele tem. Ao casal cabe a fotografia dele.
+  ok(lista.every(s => s.fotos === undefined),
+     'as secções já não trazem galeria nenhuma para o casal escolher');
+  ok(await p.evaluate(() =>
+       document.querySelectorAll('.ft-op, .ft-galeria, [data-ft="galeria"]').length) === 0,
+     'e a página não tem por onde a abrir');
+  const galeria = await p.evaluate(async (src) =>
     await window.api('convite_foto_galeria',
-      { method: 'POST', body: JSON.stringify({ chave: 'media.hero', src: '../config.php' }),
-        semAviso: true }));
-  ok(!intruso.success, 'um caminho vindo de fora é recusado: ' + intruso.message);
+      { method: 'POST', body: JSON.stringify({ chave: 'media.hero', src }),
+        semAviso: true }), capa.origem);
+  ok(!galeria.success, 'o ponto de escolha da galeria já não existe: ' + galeria.message);
+
+  // ============ 3b. as secções são as do convite, e não uma lista à parte ==
+  //
+  // Esconder a história no convite tira-a daqui: pedir uma fotografia para uma
+  // página que ninguém vai ver era pedi-la para nada. É o mesmo mecanismo que
+  // faz um modelo com outras secções trazer outra lista — as secções saem
+  // sempre do convite que o casal tem agora.
+  ok(lista.some(s => s.chave === 'media.historia'),
+     'com a história à vista, ela está na lista');
+  const ordemConvite = lista.map(s => s.seccao).join(',');
+  ok(/hero.*historia.*interludio.*acesso/.test(ordemConvite),
+     'e a lista sai pela ordem em que o convite as mostra: ' + ordemConvite);
+
+  await p.evaluate(async () =>
+    await window.api('defs_save', { method: 'POST',
+      body: JSON.stringify({ defs: { 'historia.visivel': '0' } }) }));
+  const semHistoria = await secs();
+  ok(!semHistoria.some(s => s.chave === 'media.historia'),
+     'escondida a secção, ela deixa de pedir fotografia ('
+       + semHistoria.map(s => s.seccao).join(', ') + ')');
+  await p.evaluate(async () =>
+    await window.api('defs_save', { method: 'POST',
+      body: JSON.stringify({ defs: { 'historia.visivel': '1' } }) }));
+  ok((await secs()).some(s => s.chave === 'media.historia'),
+     'e volta assim que ela volta');
 
   // ============ 4. enviar uma fotografia nossa ============
   // Uma imagem verdadeira, feita aqui: o servidor lê o conteúdo, não o nome.
@@ -186,11 +217,13 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'e ganha o botão de voltar à de origem, que só faz sentido agora');
   await p.screenshot({ path: OUT + '/convite-fotos.png' });
 
-  // ============ 6. enquadrar: que pedaço da fotografia fica à vista ============
+  // ============ 6. em ponto grande — e é aí que se enquadra ============
   //
   // A capa é uma janela 9/16 sobre uma fotografia larga. Qual pedaço lá cabe
-  // era coisa que só o editor sabia dizer — e uma fotografia cortada pelo meio
-  // da cara não se resolve escolhendo outra fotografia.
+  // decidia-se no editor, entre camadas e réguas; e uma fotografia cortada
+  // pelo meio da cara não se resolve escolhendo outra. Agora vê-se a
+  // fotografia inteira com a moldura da secção por cima: o que fica de fora
+  // escurece, e arrasta-se a moldura até ela conter o que interessa.
   agora = (await secs()).find(s => s.chave === 'media.hero');
   ok(agora.enq === 'foto.hero' && agora.proporcao === '9/16',
      'a capa diz que recorta, e em que forma: ' + agora.proporcao);
@@ -203,57 +236,79 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(semRecorte && semRecorte.enq === '' && semRecorte.pos === null,
      'a história mostra a fotografia inteira, e por isso não tem o que enquadrar');
   ok(await p.evaluate(() =>
-       !document.querySelector('.ft-sec[data-sec="media.historia"] .ft-agora')
-                .classList.contains('move')),
-     'e a caixa dela não se arrasta');
+       !document.querySelector('.ft-sec[data-sec="media.historia"] [data-ft="lupa"].btn')),
+     'e a ficha dela não oferece «Enquadrar»');
 
-  // Arrastar de verdade, no ecrã: é o gesto que o casal faz.
-  const cx = await p.$('.ft-sec[data-sec="media.hero"] .ft-agora');
-  const cxr = await cx.boundingBox();
-  await p.mouse.move(cxr.x + cxr.width * 0.5, cxr.y + cxr.height * 0.5);
-  await p.mouse.down();
-  await p.mouse.move(cxr.x + cxr.width * 0.5, cxr.y + cxr.height * 0.85, { steps: 8 });
-  await p.mouse.up();
-  await p.waitForTimeout(700);
-  const enquadrada = (await secs()).find(s => s.chave === 'media.hero');
-  ok(enquadrada.pos.y > 60,
-     'arrastar para baixo desce o ponto que fica à vista: y = ' + enquadrada.pos.y);
-  ok(enquadrada.pos.zoom === 100,
-     'e a aproximação fica como estava — aqui mexe-se no ponto, e mais nada');
-
-  const noConvite = await p.evaluate(async () =>
-    await (await fetch('convite-digital.php?demo=1')).text());
-  ok(noConvite.includes('--foco-hero:50% ' + enquadrada.pos.y + '%'),
-     'e o convite que os convidados abrem recorta por esse ponto');
-
-  // As setas, para quem não usa rato.
-  await p.focus('.ft-sec[data-sec="media.hero"] .ft-agora');
-  await p.keyboard.press('ArrowUp');
-  await p.waitForTimeout(900);
-  const comTeclado = (await secs()).find(s => s.chave === 'media.hero');
-  ok(comTeclado.pos.y === enquadrada.pos.y - 2,
-     'as setas mexem 2% de cada vez: ' + enquadrada.pos.y + ' → ' + comTeclado.pos.y);
-
-  // ============ 7. ver em ponto grande ============
   await p.click('.ft-sec[data-sec="media.hero"] .ft-lupa');
-  await p.waitForTimeout(400);
+  await p.waitForTimeout(700);
   const lente = await p.evaluate(() => {
     const lt = document.getElementById('ft-lente');
+    const im = document.getElementById('ft-lente-img');
+    const j  = document.getElementById('ft-janela');
+    const jr = j.getBoundingClientRect(), ir = im.getBoundingClientRect();
     return { aberta: lt.classList.contains('on'),
-             src: lt.querySelector('img').getAttribute('src'),
-             leg: lt.querySelector('.leg').textContent.trim(),
-             // A lente mostra a fotografia inteira, e não o recorte.
-             recorta: !!lt.querySelector('img').style.objectPosition };
+             src: im.getAttribute('src'),
+             leg: document.getElementById('ft-lente-leg').textContent.trim(),
+             // Em grande é a fotografia inteira: o recorte é o que a moldura diz.
+             recorta: !!im.style.objectPosition,
+             moldura: !j.hidden,
+             prop: +(jr.width / jr.height).toFixed(3),
+             cabe: jr.width <= ir.width + 1 && jr.height <= ir.height + 1,
+             veu: getComputedStyle(j).boxShadow };
   });
   ok(lente.aberta && lente.src === enviado.src && !lente.recorta,
      'a lupa abre a fotografia inteira, em ponto grande: ' + lente.src);
   ok(/Capa/.test(lente.leg) && /vossa/.test(lente.leg),
      'e diz de que secção é: ' + lente.leg);
+  ok(lente.moldura && Math.abs(lente.prop - 9 / 16) < 0.02,
+     'por cima dela, a moldura com a forma da secção (9/16 = 0.563): ' + lente.prop);
+  ok(lente.cabe, 'e do tamanho do recorte verdadeiro, dentro da fotografia');
+  ok(/9999px/.test(lente.veu),
+     'o que fica de fora da moldura escurece: ' + lente.veu.slice(0, 46) + '…');
   await p.screenshot({ path: OUT + '/convite-fotos-lente.png' });
+
+  // Arrastar a moldura: é o gesto que o casal faz. A fotografia de prova é
+  // larga (900×600) e a janela é estreita — a folga é horizontal.
+  const jb = await (await p.$('#ft-janela')).boundingBox();
+  await p.mouse.move(jb.x + jb.width / 2, jb.y + jb.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(jb.x + jb.width, jb.y + jb.height / 2, { steps: 10 });
+  await p.mouse.up();
+  await p.waitForTimeout(800);
+  const enquadrada = (await secs()).find(s => s.chave === 'media.hero');
+  ok(enquadrada.pos.x > 50,
+     'arrastar a moldura para a direita corre o que fica à vista: x = '
+       + enquadrada.pos.x);
+  ok(enquadrada.pos.zoom === 100,
+     'e a aproximação fica como estava — aqui mexe-se no ponto, e mais nada');
+
+  const noConvite = await p.evaluate(async () =>
+    await (await fetch('convite-digital.php?demo=1')).text());
+  ok(noConvite.includes('--foco-hero:' + enquadrada.pos.x + '% '),
+     'e o convite que os convidados abrem recorta por esse ponto');
+
+  // As setas, para quem não usa rato.
+  await p.focus('#ft-janela');
+  await p.keyboard.press('ArrowLeft');
+  await p.waitForTimeout(900);
+  const comTeclado = (await secs()).find(s => s.chave === 'media.hero');
+  ok(comTeclado.pos.x === enquadrada.pos.x - 2,
+     'as setas mexem 2% de cada vez: ' + enquadrada.pos.x + ' → ' + comTeclado.pos.x);
+
+  // ============ 7. a moldura tira-se, e a lente fecha-se ============
+  await p.click('#ft-lente-ac [data-lt="moldura"]');
+  await p.waitForTimeout(300);
+  ok(await p.evaluate(() => document.getElementById('ft-janela').hidden),
+     'quem só quer ver a fotografia tira a moldura');
+  await p.click('#ft-lente-ac [data-lt="moldura"]');
+  await p.waitForTimeout(300);
+  ok(await p.evaluate(() => !document.getElementById('ft-janela').hidden),
+     'e volta a pô-la');
+
   await p.keyboard.press('Escape');
   await p.waitForTimeout(300);
   ok(await p.evaluate(() => !document.getElementById('ft-lente').classList.contains('on')),
-     'e o Escape fecha-a');
+     'o Escape fecha a lente');
 
   // ============ 8. voltar à de origem ============
   const reposto = await p.evaluate(async () =>

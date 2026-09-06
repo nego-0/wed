@@ -2771,23 +2771,9 @@ if ($acao === 'convite_foto_enviar') {
         'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
 }
 
-if ($acao === 'convite_foto_galeria') {
-    exigirModuloApi('digital');
-    $d = corpo();
-    $chave = (string)($d['chave'] ?? '');
-    $src   = (string)($d['src'] ?? '');
-    $sc = fotoSeccao($conn, $chave);
-    if (!$sc) erro('Essa secção não tem fotografia no vosso convite.');
-    // Só o que a galeria desta secção oferece — ou a de origem. Um caminho
-    // vindo de fora não é uma escolha: é outra coisa qualquer.
-    $validas = [$sc['origem'] => true];
-    foreach ($sc['fotos'] as $ft) $validas[$ft['src']] = true;
-    if (!isset($validas[$src])) erro('Essa fotografia não é da galeria desta secção.');
-    fotoTrocar($conn, $chave, $src, (string)$sc['enq']);
-    registar($conn, 'convite_foto', $chave, 'da galeria da casa');
-    ok(['chave' => $chave, 'src' => $src,
-        'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
-}
+// A galeria da casa não se abre aqui. É material de modelo — está lá para quem
+// os desenha, e chega ao casal já escolhida, dentro do modelo que ele tem. Ao
+// casal cabe a fotografia dele: manda a sua, ou fica com a que o modelo deu.
 
 if ($acao === 'convite_foto_repor') {
     exigirModuloApi('digital');
