@@ -2275,6 +2275,441 @@ function barConvidado(mysqli $conn, int $id): ?array {
     return $st->get_result()->fetch_assoc() ?: null;
 }
 
+// ============================================================
+// OS LIMITES — quanto, de quem, e de quanto em quanto tempo
+//
+// Uma tabela só (cw_bar_limites) com quatro eixos: o QUÊ (um item, uma
+// categoria, ou tudo), de QUEM (uma pessoa, uma família, ou toda a gente),
+// QUANTO, e EM QUANTO TEMPO. Ver docs/modulo-bar.md §8.
+//
+// A gramática é de três formas, e é pequena de propósito:
+//   quantidade 0            → proibido
+//   quantidade N, janela 0  → N ao todo, a noite inteira
+//   quantidade N, janela M  → N a cada M minutos
+//
+// E a regra que dá sentido a tudo: o limite mais específico SUBSTITUI o mais
+// geral, não se soma a ele. Somar seria o contrário do que quem escreve a
+// regra está a tentar fazer — dar um tecto a alguém passaria a aumentar-lhe a
+// quota.
+// ============================================================
+
+/** Os limites vivos deste casamento. Os expirados não contam. */
+function barLimites(mysqli $conn): array {
+    global $P;
+    // Lê-se uma vez por pedido: o veredicto de um menu de vinte bebidas
+    // consulta-os vinte vezes, e são sempre os mesmos.
+    if (isset($GLOBALS['__bar_limites'])) return $GLOBALS['__bar_limites'];
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT * FROM {$P}bar_limites
+                        WHERE casamento_id=$cid AND ativo=1
+                          AND (expira_em IS NULL OR expira_em > NOW())
+                        ORDER BY id");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        foreach (['id','alvo_id','quantidade','janela_min','alvo_convidado_id','alvo_convite_id'] as $k) {
+            $x[$k] = $x[$k] === null ? null : (int)$x[$k];
+        }
+        $out[] = $x;
+    }
+    return $GLOBALS['__bar_limites'] = $out;
+}
+
+/** Esquecer os limites lidos. Uma regra acabada de pôr vale de IMEDIATO —
+    inclusive para os pedidos que já estavam na fila por decidir (§8.0.1). */
+function barLimitesEsquecer(): void {
+    unset($GLOBALS['__bar_limites']);
+}
+
+/**
+ * O limite que manda sobre esta pessoa e esta bebida.
+ *
+ * Sete degraus, do mais específico para o mais geral (§8.0). O primeiro que
+ * existir é o que vale — os outros nem se olham.
+ */
+function barLimiteQueManda(array $limites, array $item, int $convidadoId, int $conviteId): ?array {
+    $cat = (int)($item['categoria_id'] ?? 0);
+    $iid = (int)$item['id'];
+    $degraus = [
+        ['item',      $iid, 'convidado', $convidadoId, null],
+        ['item',      $iid, 'convidado', null,         $conviteId],
+        ['categoria', $cat, 'convidado', $convidadoId, null],
+        ['categoria', $cat, 'convidado', null,         $conviteId],
+        ['item',      $iid, 'convidado', null,         null],
+        ['categoria', $cat, 'convidado', null,         null],
+        ['tudo',      0,    'convidado', null,         null],
+    ];
+    foreach ($degraus as [$escopo, $alvo, $suj, $pessoa, $convite]) {
+        if ($escopo === 'categoria' && $cat === 0) continue;
+        foreach ($limites as $l) {
+            if ($l['sujeito'] !== $suj || $l['escopo'] !== $escopo) continue;
+            if ($l['unidade'] !== 'bebidas') continue;
+            if ($escopo !== 'tudo' && $l['alvo_id'] !== $alvo) continue;
+            if ($l['alvo_convidado_id'] !== $pessoa) continue;
+            if ($l['alvo_convite_id'] !== $convite) continue;
+            return $l;
+        }
+    }
+    return null;
+}
+
+/**
+ * Quanto é que já foi consumido dentro da janela de um limite.
+ *
+ * Conta o que a copa aceitou fazer — nem recusados nem cancelados. Um pedido
+ * recusado não gasta a quota de ninguém: seria castigar duas vezes.
+ */
+function barConsumo(mysqli $conn, array $l, int $convidadoId, int $conviteId): array {
+    global $P;
+    $cid = casamentoAtual();
+    $bons = "p.estado IN ('em_analise','aprovado','a_caminho','entregue','falhou')";
+    $janela = $l['janela_min'] > 0
+        ? " AND p.criado_em >= (NOW() - INTERVAL " . (int)$l['janela_min'] . " MINUTE)" : '';
+
+    // De quem: a pessoa, a família, ou a casa inteira.
+    if ($l['sujeito'] === 'casa')            $quem = '';
+    elseif ($l['alvo_convite_id'] !== null)  $quem = ' AND p.convite_id=' . (int)$l['alvo_convite_id'];
+    else                                     $quem = ' AND p.convidado_id=' . $convidadoId;
+    // Um limite geral (sem alvo) conta por pessoa: «2 caipirinhas por convidado».
+    if ($l['sujeito'] === 'convidado' && $l['alvo_convite_id'] === null) {
+        $quem = ' AND p.convidado_id=' . $convidadoId;
+    }
+
+    // Sobre o quê: um item, uma categoria, ou tudo.
+    $sobre = '';
+    if ($l['escopo'] === 'item')           $sobre = ' AND pi.item_id=' . (int)$l['alvo_id'];
+    elseif ($l['escopo'] === 'categoria')  $sobre = ' AND i.categoria_id=' . (int)$l['alvo_id'];
+
+    if ($l['unidade'] === 'pedidos') {
+        $sql = "SELECT COUNT(DISTINCT p.id) n, MIN(p.criado_em) velho
+                FROM {$P}bar_pedidos p
+                WHERE p.casamento_id=$cid AND $bons$janela$quem";
+        if ($sobre !== '') {
+            $sql = "SELECT COUNT(DISTINCT p.id) n, MIN(p.criado_em) velho
+                    FROM {$P}bar_pedidos p
+                    JOIN {$P}bar_pedido_itens pi ON pi.pedido_id=p.id AND pi.casamento_id=p.casamento_id
+                    LEFT JOIN {$P}bar_itens i ON i.id=pi.item_id AND i.casamento_id=pi.casamento_id
+                    WHERE p.casamento_id=$cid AND $bons$janela$quem$sobre";
+        }
+    } else {
+        $sql = "SELECT COALESCE(SUM(pi.quantidade),0) n, MIN(p.criado_em) velho
+                FROM {$P}bar_pedido_itens pi
+                JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                LEFT JOIN {$P}bar_itens i ON i.id=pi.item_id AND i.casamento_id=pi.casamento_id
+                WHERE pi.casamento_id=$cid AND $bons$janela$quem$sobre";
+    }
+    $x = @$conn->query($sql);
+    $r = $x ? $x->fetch_assoc() : null;
+    return ['usado' => (int)($r['n'] ?? 0), 'mais_velho' => $r['velho'] ?? null];
+}
+
+/** Quantos segundos faltam até este limite voltar a abrir. 0 = nunca abre hoje. */
+function barEspera(array $l, ?string $maisVelho): int {
+    if ($l['janela_min'] <= 0) return 0;      // tecto da noite: não renova
+    if (!$maisVelho) return 0;
+    $t = strtotime($maisVelho);
+    if ($t === false) return 0;
+    return max(0, ($t + $l['janela_min'] * 60) - time());
+}
+
+/**
+ * O que trava a casa toda, agora. Devolve null quando a copa está com folga.
+ *
+ * É o caudal (§8.2): enquanto a copa estiver dentro dele, ninguém dá por ele;
+ * quando o ultrapassa, a espera sobe para toda a gente ao mesmo tempo — e a
+ * mensagem muda de tom, porque não é o convidado que pediu de mais.
+ */
+function barRitmoDaCasa(mysqli $conn): ?array {
+    $pior = null;
+    foreach (barLimites($conn) as $l) {
+        if ($l['sujeito'] !== 'casa') continue;
+        $c = barConsumo($conn, $l, 0, 0);
+        if ($c['usado'] < $l['quantidade']) continue;
+        $s = barEspera($l, $c['mais_velho']);
+        if ($pior === null || $s > $pior['segundos']) {
+            $pior = ['segundos' => $s, 'limite' => $l,
+                     'mensagem' => $l['mensagem'] ?: ''];
+        }
+    }
+    return $pior;
+}
+
+/**
+ * O veredicto sobre uma bebida, para uma pessoa, agora.
+ *
+ * Devolve quantas pode levar (`pode`), e — quando é zero — porquê e por quanto
+ * tempo. O convidado nunca lê a `nota`: essa é de quem escreveu a regra.
+ */
+function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteId, ?array $ritmo): array {
+    $out = ['pode' => min((int)$item['disponivel'], (int)$item['max_por_pedido']),
+            'travao' => null, 'espera_s' => 0, 'mensagem' => ''];
+
+    if ((int)$item['disponivel'] <= 0) {
+        return ['pode' => 0, 'travao' => 'stock', 'espera_s' => 0, 'mensagem' => ''];
+    }
+    // O caudal da casa corre por cima de tudo, e nenhum limite individual o
+    // levanta: é o ritmo da copa, e a copa é de todos.
+    if ($ritmo) {
+        return ['pode' => 0, 'travao' => 'casa', 'espera_s' => $ritmo['segundos'],
+                'mensagem' => $ritmo['mensagem']];
+    }
+    $l = barLimiteQueManda(barLimites($conn), $item, $convidadoId, $conviteId);
+    if (!$l) return $out;
+
+    if ($l['quantidade'] <= 0) {
+        return ['pode' => 0, 'travao' => 'proibido', 'espera_s' => 0,
+                'mensagem' => $l['mensagem'] ?: ''];
+    }
+    $c = barConsumo($conn, $l, $convidadoId, $conviteId);
+    $sobra = $l['quantidade'] - $c['usado'];
+    if ($sobra <= 0) {
+        return ['pode' => 0, 'travao' => $l['janela_min'] > 0 ? 'intervalo' : 'tecto',
+                'espera_s' => barEspera($l, $c['mais_velho']),
+                'mensagem' => $l['mensagem'] ?: ''];
+    }
+    $out['pode'] = min($out['pode'], $sobra);
+    return $out;
+}
+
+/**
+ * O que se diz a quem não pode pedir agora (§9).
+ *
+ * Os textos fazem parte do módulo: são eles que decidem se isto parece uma
+ * casa que cuida ou um torniquete. Três coisas nunca aparecem aqui — a `nota`
+ * da regra (é de quem a escreveu), a diferença entre «a casa limita» e
+ * «limitámos-lhe a si» (essa conversa faz-se de pessoa para pessoa), e a
+ * palavra «limite».
+ */
+function barTextoTravao(array $item, array $v, int $pedidas = 0): string {
+    if ($v['mensagem'] !== '') return $v['mensagem'];
+    $nome = '«' . $item['nome'] . '»';
+    switch ($v['travao']) {
+        case 'stock':
+            return 'A ' . $nome . ' acabou. Escolha outra — a copa tem mais para provar.';
+        case 'casa':
+            return 'A copa está a dar vazão a muitos pedidos neste momento. '
+                 . 'O seu abre daqui a ' . barRelogio($v['espera_s'])
+                 . ' — e fica na frente quando abrir.';
+        case 'proibido':
+            return 'A ' . $nome . ' não está disponível para si esta noite. '
+                 . 'Fale com um empregado se achar que é engano.';
+        case 'intervalo':
+            return 'A próxima ' . $nome . ' abre daqui a ' . barRelogio($v['espera_s']) . '.';
+        case 'tecto':
+            return 'Já levou o que a casa serve de ' . $nome . ' esta noite. '
+                 . 'Há mais para provar.';
+    }
+    // Cabe alguma coisa, mas menos do que pediu.
+    return 'De ' . $nome . ' podemos servir-lhe ' . $v['pode']
+         . ($v['pode'] === 1 ? ' neste momento.' : ' neste momento.');
+}
+
+/**
+ * Uma regra dita em voz alta.
+ *
+ * O ecrã não recompõe a frase a partir dos campos: lê-a como o servidor a
+ * escreveu. Duas gramáticas para a mesma regra é como se chega a um ecrã que
+ * diz uma coisa e a um servidor que faz outra.
+ */
+function barRegraFrase(mysqli $conn, array $l): string {
+    $sobre = 'tudo';
+    if ($l['escopo'] === 'item') {
+        $i = barItem($conn, (int)$l['alvo_id']);
+        $sobre = $i ? '«' . $i['nome'] . '»' : 'uma bebida que já não existe';
+    } elseif ($l['escopo'] === 'categoria') {
+        $c = null;
+        foreach (barCategorias($conn) as $x) if ((int)$x['id'] === (int)$l['alvo_id']) $c = $x;
+        $sobre = $c ? $c['nome'] : 'uma gaveta que já não existe';
+    }
+    $unid = $l['unidade'] === 'pedidos' ? 'pedido' : 'bebida';
+    if ((int)$l['quantidade'] === 0) {
+        return 'não pode pedir ' . $sobre;
+    }
+    $q = (int)$l['quantidade'];
+    $quanto = $q . ' ' . $unid . ($q === 1 ? '' : 's');
+    if ((int)$l['janela_min'] === 0) {
+        return 'no máximo ' . $quanto . ' de ' . $sobre . ', ao todo';
+    }
+    return $quanto . ' de ' . $sobre . ' a cada ' . barRelogio((int)$l['janela_min'] * 60);
+}
+
+/** Uma regra como o ecrã da copa a quer: a frase, e o que a identifica. */
+function barRegraLinha(mysqli $conn, array $l): array {
+    $quem = 'toda a gente';
+    if ($l['sujeito'] === 'casa') {
+        $quem = 'a copa (o caudal da casa)';
+    } elseif ($l['alvo_convidado_id']) {
+        $g = barConvidado($conn, (int)$l['alvo_convidado_id']);
+        $quem = $g ? $g['nome'] : 'alguém que já não está na lista';
+    } elseif ($l['alvo_convite_id']) {
+        $quem = 'o convite inteiro';
+    }
+    return [
+        'id' => (int)$l['id'],
+        'frase' => barRegraFrase($conn, $l),
+        'quem' => $quem,
+        'sujeito' => $l['sujeito'],
+        'escopo' => $l['escopo'],
+        'alvo_id' => (int)$l['alvo_id'],
+        'unidade' => $l['unidade'],
+        'quantidade' => (int)$l['quantidade'],
+        'janela_min' => (int)$l['janela_min'],
+        'alvo_convidado_id' => $l['alvo_convidado_id'],
+        'alvo_convite_id' => $l['alvo_convite_id'],
+        'mensagem' => $l['mensagem'],
+        'nota' => $l['nota'],                 // só o pessoal vê
+        'expira_em' => $l['expira_em'],
+        'criado_por' => $l['criado_por'],
+    ];
+}
+
+/** O que uma pessoa já levou esta noite, por bebida. */
+function barConsumoPessoal(mysqli $conn, int $convidadoId): array {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT pi.nome_no_momento nome, SUM(pi.quantidade) n
+                          FROM {$P}bar_pedido_itens pi
+                          JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                          WHERE pi.casamento_id=? AND p.convidado_id=?
+                            AND p.estado IN ('aprovado','a_caminho','entregue')
+                          GROUP BY pi.nome_no_momento ORDER BY n DESC, nome");
+    if (!$st) return [];
+    $st->bind_param('ii', $cid, $convidadoId);
+    if (!$st->execute()) return [];
+    $out = [];
+    $r = $st->get_result();
+    while ($x = $r->fetch_assoc()) $out[] = ['nome' => $x['nome'], 'n' => (int)$x['n']];
+    return $out;
+}
+
+/** Os telemóveis presos a esta pessoa. */
+function barDispositivosDe(mysqli $conn, int $convidadoId): array {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT id, trocas, ultimo_ip, ultimo_em FROM {$P}bar_dispositivos
+                          WHERE casamento_id=? AND convidado_id=? AND bloqueado=0 ORDER BY ultimo_em DESC");
+    if (!$st) return [];
+    $st->bind_param('ii', $cid, $convidadoId);
+    if (!$st->execute()) return [];
+    $out = [];
+    $r = $st->get_result();
+    while ($x = $r->fetch_assoc()) {
+        $out[] = ['id' => (int)$x['id'], 'trocas' => (int)$x['trocas'],
+                  'ip' => $x['ultimo_ip'], 'visto' => $x['ultimo_em']];
+    }
+    return $out;
+}
+
+/**
+ * Os pedidos por decidir que deixaram de caber nas regras.
+ *
+ * Uma regra vale de imediato, mas não recusa nada sozinha: quem a pôs pode
+ * muito bem querer servir o copo que já estava pedido. Assinala-se, e a copa
+ * decide (§8.0.1).
+ */
+function barFilaContraRegras(mysqli $conn): array {
+    $fora = [];
+    $ritmo = barRitmoDaCasa($conn);
+    foreach (barPedidos($conn, "p.estado='em_analise' ORDER BY p.id") as $p) {
+        $gid = (int)$p['convidado_id']; $conv = (int)$p['convite_id'];
+        foreach (barItensDoPedido($conn, (int)$p['id']) as $li) {
+            $item = barItem($conn, $li['item_id']);
+            if (!$item) continue;
+            $v = barVeredicto($conn, $item, $gid, $conv, $ritmo);
+            if ($li['quantidade'] > $v['pode']) {
+                $fora[] = ['id' => (int)$p['id'], 'codigo' => $p['codigo_curto'],
+                           'porque' => barTextoTravao($item, $v, $li['quantidade'])];
+                break;
+            }
+        }
+    }
+    return $fora;
+}
+
+/**
+ * O caudal da copa, para ela se ver a si própria (§8.2).
+ *
+ * Enquanto estiver dentro do caudal ninguém dá por ele; a copa vê-o a subir e
+ * pode afrouxá-lo ou apertá-lo antes de a espera chegar às mesas.
+ */
+function barCaudal(mysqli $conn): ?array {
+    foreach (barLimites($conn) as $l) {
+        if ($l['sujeito'] !== 'casa' || $l['janela_min'] <= 0) continue;
+        $c = barConsumo($conn, $l, 0, 0);
+        return ['id' => (int)$l['id'], 'usado' => $c['usado'],
+                'limite' => (int)$l['quantidade'], 'janela_min' => (int)$l['janela_min'],
+                'unidade' => $l['unidade'],
+                'cheio' => $c['usado'] >= (int)$l['quantidade']];
+    }
+    return null;
+}
+
+/** Segundos em palavras: «3 minutos», «1h20», «40 segundos». */
+function barRelogio(int $s): string {
+    if ($s <= 0)   return 'um instante';
+    if ($s < 60)   return $s . ' segundos';
+    $m = (int)round($s / 60);
+    if ($m < 60)   return $m . ($m === 1 ? ' minuto' : ' minutos');
+    $h = intdiv($m, 60); $r = $m % 60;
+    return $h . 'h' . str_pad((string)$r, 2, '0', STR_PAD_LEFT);
+}
+
+/**
+ * Pode esta pessoa fazer um pedido, agora?
+ *
+ * Os limites de unidade `pedidos` não são de bebida nenhuma — são sobre o ACTO
+ * de pedir («um pedido de 20 em 20 minutos»), e por isso não cabem no veredicto
+ * de um item: travam a página inteira, e é assim que se mostram. Sem isto, uma
+ * regra de pedidos ficava escrita e não travava coisa nenhuma.
+ *
+ * Devolve null quando a pessoa pode pedir.
+ */
+function barVeredictoPedido(mysqli $conn, int $convidadoId, int $conviteId): ?array {
+    $pior = null;
+    foreach (barLimites($conn) as $l) {
+        if ($l['unidade'] !== 'pedidos' || $l['sujeito'] !== 'convidado') continue;
+        // A quem se aplica: a esta pessoa, ao convite dela, ou a toda a gente.
+        if ($l['alvo_convidado_id'] !== null && $l['alvo_convidado_id'] !== $convidadoId) continue;
+        if ($l['alvo_convite_id'] !== null && $l['alvo_convite_id'] !== $conviteId) continue;
+
+        $c = barConsumo($conn, $l, $convidadoId, $conviteId);
+        if ((int)$l['quantidade'] > 0 && $c['usado'] < (int)$l['quantidade']) continue;
+        $s = barEspera($l, $c['mais_velho']);
+        if ($pior === null || $s > $pior['espera_s']) {
+            $pior = ['espera_s' => $s, 'mensagem' => $l['mensagem'] ?: '',
+                     'travao' => (int)$l['quantidade'] === 0 ? 'proibido' : 'ritmo'];
+        }
+    }
+    return $pior;
+}
+
+/** O que se diz a quem já pediu há pouco (§9). */
+function barTextoPedido(array $v): string {
+    if ($v['mensagem'] !== '') return $v['mensagem'];
+    if ($v['travao'] === 'proibido') {
+        return 'Os seus pedidos passam agora por um empregado. Chame um — ele trata disso.';
+    }
+    return 'Fica bem assim por uns minutos. O próximo pedido abre daqui a '
+         . barRelogio($v['espera_s']) . '.';
+}
+
+/**
+ * Até três alternativas da mesma gaveta que passem TODOS os testes agora.
+ *
+ * Sugerir o que também está travado é pior do que não sugerir nada — manda a
+ * pessoa bater com o nariz numa segunda porta fechada.
+ */
+function barAlternativas(array $itens, array $travada): array {
+    $out = [];
+    foreach ($itens as $i) {
+        if ((int)$i['id'] === (int)$travada['id']) continue;
+        if ((int)($i['categoria_id'] ?? 0) !== (int)($travada['categoria_id'] ?? 0)) continue;
+        if ((int)$i['pode_pedir'] <= 0) continue;
+        $out[] = ['id' => (int)$i['id'], 'nome' => $i['nome']];
+        if (count($out) >= 3) break;
+    }
+    return $out;
+}
+
 // ---- o menu e o stock ---------------------------------------
 
 /** As gavetas do menu. */
@@ -2318,13 +2753,41 @@ function barItens(mysqli $conn, bool $tudo = false): array {
         $x['disponivel'] = max(0, $x['stock'] - $x['reservado']);
         $x['max_por_pedido'] = max(1, (int)$x['max_por_pedido']);
         $x['alcoolico'] = (int)$x['alcoolico'];
-        // Quanto é que um convidado pode pedir DESTE item, agora. Os limites
-        // por pessoa entram aqui na fase 5; para já é o que há e o que cabe
-        // num pedido.
+        // Quanto é que se pode pedir DESTE item, agora, sem olhar a ninguém:
+        // o que há e o que cabe num pedido. É o que a copa e a montagem veem.
         $x['pode_pedir'] = min($x['disponivel'], $x['max_por_pedido']);
         $out[] = $x;
     }
     return $out;
+}
+
+/**
+ * O mesmo menu, mas visto POR ALGUÉM: com os limites aplicados.
+ *
+ * `pode_pedir` deixa de ser «o que há» e passa a ser «o que esta pessoa pode
+ * levar agora». Quando é zero, vem também o porquê (`travao`), quanto falta
+ * (`espera_s`) e o que se pode beber entretanto (`alternativas`) — que é o que
+ * transforma uma porta fechada numa sugestão (§9).
+ */
+function barItensPara(mysqli $conn, int $convidadoId, int $conviteId): array {
+    $itens = barItens($conn);
+    $ritmo = barRitmoDaCasa($conn);
+    foreach ($itens as &$i) {
+        $v = barVeredicto($conn, $i, $convidadoId, $conviteId, $ritmo);
+        $i['pode_pedir'] = $v['pode'];
+        $i['travao']     = $v['travao'];
+        $i['espera_s']   = $v['espera_s'];
+        $i['aviso']      = $v['mensagem'];
+    }
+    unset($i);
+    // As alternativas só se calculam depois de todos terem veredicto: sugerir
+    // uma bebida que também está travada é pior do que não sugerir nada.
+    foreach ($itens as &$i) {
+        $i['alternativas'] = $i['pode_pedir'] > 0 || $i['travao'] === 'casa'
+            ? [] : barAlternativas($itens, $i);
+    }
+    unset($i);
+    return $itens;
 }
 
 /** Uma bebida, ou null. */
@@ -2574,10 +3037,13 @@ if ($acao === 'bar_mesas') {
 }
 
 if ($acao === 'bar_menu') {
-    // O menu, como o convidado o vê.
+    // O menu, como ESTE convidado o vê: com os limites dele já aplicados.
     barPortaPublica($conn);
     $eu = barQuemSou($conn);
     if (!$eu) erro('Diga-nos primeiro quem é.');
+    $g = barConvidado($conn, $eu);
+    if (!$g) erro('Não encontrámos o seu nome.');
+    $ritmo = barRitmoDaCasa($conn);
     ok(['categorias' => barCategorias($conn),
         'itens'  => array_map(fn($i) => [
             'id' => $i['id'], 'nome' => $i['nome'], 'descricao' => $i['descricao'],
@@ -2585,7 +3051,21 @@ if ($acao === 'bar_menu') {
             'categoria_id' => $i['categoria_id'], 'categoria' => $i['categoria'],
             'categoria_cor' => $i['categoria_cor'], 'alcoolico' => $i['alcoolico'],
             'disponivel' => $i['disponivel'], 'pode_pedir' => $i['pode_pedir'],
-        ], barItens($conn)),
+            // Porque não pode, quanto falta, e o que sai já em vez disto.
+            'travao' => $i['travao'], 'espera_s' => $i['espera_s'],
+            'aviso' => $i['aviso'], 'alternativas' => $i['alternativas'],
+        ], barItensPara($conn, $eu, (int)$g['convite_id'])),
+        // O ritmo da casa é de todos, e diz-se à parte: a mensagem que o
+        // convidado lê muda de tom quando é a copa que está cheia, e não ele
+        // que pediu de mais (§8.2).
+        'ritmo' => $ritmo ? ['espera_s' => $ritmo['segundos'],
+                             'mensagem' => $ritmo['mensagem']] : null,
+        // E o travão do acto de pedir, que não é de bebida nenhuma: trava a
+        // página inteira, e é assim que se mostra.
+        'pedido' => (function () use ($conn, $eu, $g) {
+            $v = barVeredictoPedido($conn, $eu, (int)$g['convite_id']);
+            return $v ? ['espera_s' => $v['espera_s'], 'texto' => barTextoPedido($v)] : null;
+        })(),
         'aberto' => barAberto($conn)]);
 }
 
@@ -2605,6 +3085,15 @@ if ($acao === 'bar_pedir') {
     $mesaId  = (int)($d['mesa_id'] ?? 0);
     $mesaQr  = (int)($d['mesa_qr_id'] ?? 0);
 
+    // Os limites voltam a conferir-se aqui, um a um, contra o estado deste
+    // instante. O menu que a pessoa tem aberto pode ter dois minutos, e nesses
+    // dois minutos a copa pode ter-lhe posto uma regra ou o caudal ter enchido.
+    $ritmo = barRitmoDaCasa($conn);
+    $conviteId = (int)$g['convite_id'];
+    // Primeiro o travão do ACTO de pedir («um pedido de 20 em 20 minutos»),
+    // que é da pessoa e não de bebida nenhuma.
+    $vp = barVeredictoPedido($conn, $eu, $conviteId);
+    if ($vp) erro(barTextoPedido($vp));
     $linhas = [];
     foreach ($pedidos as $li) {
         $iid = (int)($li['item_id'] ?? 0);
@@ -2612,9 +3101,11 @@ if ($acao === 'bar_pedir') {
         if ($iid <= 0 || $q <= 0) continue;
         $item = barItem($conn, $iid);
         if (!$item || $item['estado'] !== 'ativo') erro('Uma das bebidas já não está no menu.');
-        if ($q > $item['pode_pedir']) {
-            erro('De «' . $item['nome'] . '» só podemos servir '
-                 . $item['pode_pedir'] . ' neste momento.');
+        $v = barVeredicto($conn, $item, $eu, $conviteId, $ritmo);
+        if ($q > $v['pode']) {
+            // A recusa fala como a página fala: diz o que se passa e quanto
+            // falta, e não «limite excedido».
+            erro(barTextoTravao($item, $v, $q));
         }
         $linhas[] = [$item, $q];
     }
@@ -2691,6 +3182,12 @@ if ($acao === 'bar_estado') {
         'motivos'    => barMotivos($conn),
         'tempos'     => barTempos($conn),
         'agora'      => date('c'),
+        'regras'     => array_map(fn($l) => barRegraLinha($conn, $l), barLimites($conn)),
+        // Os que deixaram de caber numa regra posta depois de terem entrado.
+        // Não se recusam sozinhos: quem pôs a regra pode querer servir o copo
+        // que já estava pedido.
+        'fora'       => barFilaContraRegras($conn),
+        'caudal'     => barCaudal($conn),
         'fila'       => array_map(fn($p) => barPedidoLinha($conn, $p, true), $vivos),
         'resolvidos' => array_map(fn($p) => barPedidoLinha($conn, $p, true), $fim)]);
 }
@@ -2966,6 +3463,112 @@ if ($acao === 'bar_mesa_token') {
     $st = $conn->prepare("UPDATE {$P}mesas SET bar_token=? WHERE casamento_id=$cid AND id=?");
     $st->bind_param('si', $t, $id); @$st->execute();
     ok(['token' => $t]);
+}
+
+// ---- as regras: quanto, de quem, de quanto em quanto tempo ----
+
+if ($acao === 'bar_regras') {
+    // As regras em vigor, ditas em português. O ecrã não recompõe a frase:
+    // lê-a como o servidor a escreveu, para não haver duas gramáticas.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    ok(['regras' => array_map(fn($l) => barRegraLinha($conn, $l), barLimites($conn)),
+        'itens'  => array_map(fn($i) => ['id' => $i['id'], 'nome' => $i['nome'],
+                                         'categoria_id' => $i['categoria_id']], barItens($conn, true)),
+        'categorias' => barCategorias($conn)]);
+}
+
+if ($acao === 'bar_regra_guardar') {
+    // Pôr (ou mudar) uma regra. Vale de imediato — inclusive para os pedidos
+    // que já estejam na fila por decidir (§8.0.1).
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa põe regras.');   // o entregador serve, não julga
+    exigirCorrecao();
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+
+    $escopo = in_array($d['escopo'] ?? '', ['item','categoria','tudo'], true) ? $d['escopo'] : 'tudo';
+    $alvo   = $escopo === 'tudo' ? 0 : (int)($d['alvo_id'] ?? 0);
+    if ($escopo !== 'tudo' && $alvo <= 0) erro('Diga sobre o quê é a regra.');
+    $sujeito = ($d['sujeito'] ?? '') === 'casa' ? 'casa' : 'convidado';
+    $unidade = ($d['unidade'] ?? '') === 'pedidos' ? 'pedidos' : 'bebidas';
+    // Uma regra da casa é o caudal da copa: não se põe a uma pessoa.
+    $pessoa  = $sujeito === 'casa' ? null : ((int)($d['alvo_convidado_id'] ?? 0) ?: null);
+    $convite = $sujeito === 'casa' ? null : ((int)($d['alvo_convite_id'] ?? 0) ?: null);
+    if ($pessoa && $convite) erro('Uma regra é de uma pessoa ou de um convite, não das duas.');
+    if ($pessoa && !barConvidado($conn, $pessoa)) erro('Não encontrámos esse convidado.');
+
+    $qtd    = max(0, min(999, (int)($d['quantidade'] ?? 0)));
+    $janela = max(0, min(1440, (int)($d['janela_min'] ?? 0)));
+    // «Pedidos» só faz sentido sobre tudo: contar pedidos de uma bebida é
+    // contar bebidas por outro nome, e daria dois caminhos para a mesma coisa.
+    if ($unidade === 'pedidos' && $escopo !== 'tudo') erro('Contar pedidos só se faz sobre tudo.');
+
+    $msg  = mb_substr(trim((string)($d['mensagem'] ?? '')), 0, 160) ?: null;
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 160) ?: null;
+    $expira = preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', (string)($d['expira_em'] ?? ''))
+            ? str_replace('T', ' ', substr($d['expira_em'], 0, 16)) . ':00' : null;
+    $quem = (string)(utilizadorAtual() ?? '');
+
+    if ($id) {
+        $st = $conn->prepare("UPDATE {$P}bar_limites SET escopo=?, alvo_id=?, sujeito=?,
+                 alvo_convidado_id=?, alvo_convite_id=?, unidade=?, quantidade=?, janela_min=?,
+                 mensagem=?, nota=?, expira_em=? WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('sisiisiisssi', $escopo, $alvo, $sujeito, $pessoa, $convite,
+                        $unidade, $qtd, $janela, $msg, $nota, $expira, $id);
+    } else {
+        $st = $conn->prepare("INSERT INTO {$P}bar_limites
+                 (casamento_id,escopo,alvo_id,sujeito,alvo_convidado_id,alvo_convite_id,
+                  unidade,quantidade,janela_min,mensagem,nota,expira_em,criado_por)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $st->bind_param('isisiisiissss', $cid, $escopo, $alvo, $sujeito, $pessoa, $convite,
+                        $unidade, $qtd, $janela, $msg, $nota, $expira, $quem);
+    }
+    if (!@$st->execute()) erro('Não foi possível guardar a regra.');
+    if (!$id) $id = $conn->insert_id;
+    barLimitesEsquecer();
+
+    $l = null;
+    foreach (barLimites($conn) as $x) if ((int)$x['id'] === $id) $l = $x;
+    registar($conn, 'bar_regra', $pessoa ? (barConvidado($conn, $pessoa)['nome'] ?? '') : '',
+             $l ? barRegraFrase($conn, $l) : '');
+    ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimites($conn)),
+        'fila' => barFilaContraRegras($conn)]);
+}
+
+if ($acao === 'bar_regra_apagar') {
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa põe regras.');
+    exigirCorrecao();
+    $id = (int)(corpo()['id'] ?? 0);
+    $antes = null;
+    foreach (barLimites($conn) as $x) if ((int)$x['id'] === $id) $antes = $x;
+    // Levanta-se, não se apaga: o registo de ações fica a poder dizer o que
+    // esteve em vigor durante a noite.
+    @$conn->query("UPDATE {$P}bar_limites SET ativo=0 WHERE casamento_id=$cid AND id=$id");
+    barLimitesEsquecer();
+    registar($conn, 'bar_regra_fora', '', $antes ? barRegraFrase($conn, $antes) : '#' . $id);
+    ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimites($conn)),
+        'fila' => barFilaContraRegras($conn)]);
+}
+
+if ($acao === 'bar_ficha') {
+    // A ficha de um convidado: o que já levou, as regras dele, e os telemóveis
+    // em nome dele. É o ecrã que se abre com a pessoa à frente.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    $gid = (int)($_GET['convidado'] ?? 0);
+    $g = $gid ? barConvidado($conn, $gid) : null;
+    if (!$g) erro('Não encontrámos esse convidado.');
+    ok(['convidado' => ['id' => $gid, 'nome' => $g['nome'],
+                        'convite' => $g['nome_exibicao'],
+                        'convite_id' => (int)$g['convite_id']],
+        'levou'  => barConsumoPessoal($conn, $gid),
+        'regras' => array_values(array_filter(
+            array_map(fn($l) => barRegraLinha($conn, $l), barLimites($conn)),
+            fn($r) => $r['alvo_convidado_id'] === $gid
+                   || $r['alvo_convite_id'] === (int)$g['convite_id'])),
+        'dispositivos' => barDispositivosDe($conn, $gid)]);
 }
 
 // ============================================================

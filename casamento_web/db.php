@@ -2046,6 +2046,8 @@ function nomesDeAcao(): array {
         'bar_abriu'         => ['abriu o bar', 'bar'],
         'bar_fechou'        => ['fechou o bar', 'bar'],
         'bar_regras'        => ['mudou as regras do bar', 'bar'],
+        'bar_regra'         => ['pôs uma regra no bar', 'bar'],
+        'bar_regra_fora'    => ['levantou uma regra do bar', 'bar'],
         'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
         'bar_dispositivo_solto' => ['desprendeu um telemóvel de um nome', 'bar'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],
