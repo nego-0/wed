@@ -331,6 +331,8 @@ function correcoesEsperadas(): array {
          'api.php', "if (\$acao === 'convite_foto_posicao')"],
         ['A lupa mostra cada fotografia inteira, com a moldura da secção por cima',
          'digital.php', 'function ftJanelaMedidas('],
+        ['E o enquadramento guarda-se num botão — arrastar é rascunho até lá',
+         'digital.php', 'function ftSujo('],
         ['As secções com fotografia saem do convite do casal, e não de uma lista à parte',
          'personalizacao.php', 'foreach (ordemBlocos($defs) as $id)'],
         ['A galeria da casa é material de modelo: o casal não escolhe de lá',

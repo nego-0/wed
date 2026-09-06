@@ -212,11 +212,22 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-lente-ac{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
                 justify-content:center; }
   .ft-lente-dica{ color:#c9cfc6; font-size:.78rem; }
+  /* Por guardar: o aviso é discreto, mas não passa por dizer nada. */
+  .ft-lente-dica.aviso{ color:var(--gold-pale); }
+  .ft-lente-dica.aviso::before{ content:'●'; font-size:.6em; vertical-align:.25em;
+                                margin-right:.35rem; color:var(--gold); }
   /* Os botões do pé vivem sobre o escuro: os da casa são para fundo claro e
      desapareciam aqui. */
   .ft-lente-ac .btn{ font-size:.76rem; padding:.28rem .7rem; background:rgba(255,255,255,.1);
                      border:1px solid rgba(233,223,201,.42); color:var(--ivory); }
   .ft-lente-ac .btn:hover{ background:rgba(255,255,255,.2); }
+  /* O «Guardar» é o que se veio aqui fazer: veste-se como tal enquanto houver
+     o que guardar, e apaga-se quando não houver. */
+  .ft-lente-ac .btn-ouro{ background:var(--gold); border-color:var(--gold);
+                          color:var(--forest-deep); font-weight:600; }
+  .ft-lente-ac .btn-ouro:hover{ background:var(--gold-soft); border-color:var(--gold-soft); }
+  .ft-lente-ac .btn-ouro[disabled]{ background:none; border-color:rgba(233,223,201,.25);
+                                    color:#9aa196; font-weight:400; cursor:default; }
   .ft-lente .fechar{ position:absolute; top:.8rem; right:1rem; background:none; border:0;
                      color:#fff; font-size:1.8rem; line-height:1; cursor:pointer; z-index:2; }
 
@@ -510,36 +521,98 @@ function ftAplicar(d){
 // ============================================================
 let FT_LENTE = null;      // a secção aberta
 let FT_MOLDURA = true;    // a moldura está à vista?
+let FT_GRAVADO = null;    // o enquadramento como está no servidor
+let FT_DITO = '';         // o que o pé está a dizer, para não o repintar em vão
 
 function ftLente(sec){
   const sc = ftSec(sec); if (!sc || !sc.atual) return;
   FT_LENTE = sc; FT_MOLDURA = true;
+  FT_GRAVADO = sc.pos ? { x: sc.pos.x, y: sc.pos.y } : null;
   const im = ftEl('ft-lente-img');
-  im.onload = ftJanelaPintar;
+  im.onload = () => { ftJanelaPintar(); ftLentePe(); };
   im.src = sc.atual;
   im.alt = 'A fotografia da secção ' + sc.rotulo;
   ftEl('ft-lente-leg').textContent = sc.rotulo + ' · ' + (sc.nossa ? 'vossa' : 'do modelo');
+  FT_DITO = '';
   ftLentePe();
   ftEl('ft-lente').classList.add('on');
   ftJanelaPintar();
   if (sc.enq) ftEl('ft-janela').focus(); else ftEl('ft-lente-fechar').focus();
 }
-function ftLenteFechar(){
-  ftEl('ft-lente').classList.remove('on');
-  FT_LENTE = null;
+
+/** Há enquadramento por guardar? */
+function ftSujo(){
+  return !!(FT_LENTE && FT_LENTE.pos && FT_GRAVADO
+            && (FT_LENTE.pos.x !== FT_GRAVADO.x || FT_LENTE.pos.y !== FT_GRAVADO.y));
 }
 
-/** Os botões do pé: só existem quando a secção recorta. */
+/**
+ * Fechar não é desistir.
+ *
+ * Um enquadramento a meio é trabalho, e trabalho não se perde por se carregar
+ * no ✕. Havendo o que guardar, pergunta-se — e quem descarta volta ao que
+ * estava gravado, e não a nada.
+ */
+async function ftLenteFechar(){
+  if (ftSujo()){
+    const r = await licConfirmar({
+      titulo: 'Guardar o enquadramento?', icone: '🖼️', confirmar: 'Guardar',
+      cancelar: 'Descartar',
+      texto: 'Mexeu na moldura de «' + licEsc(FT_LENTE.rotulo) + '» e ainda não guardou. '
+           + 'Se descartar, a secção fica com o enquadramento que tinha.'
+    });
+    if (r.sim){ await ftGuardarPos(); }
+    else { FT_LENTE.pos.x = FT_GRAVADO.x; FT_LENTE.pos.y = FT_GRAVADO.y; }
+  }
+  ftEl('ft-lente').classList.remove('on');
+  FT_LENTE = null; FT_GRAVADO = null; FT_DITO = '';
+}
+
+/**
+ * O pé da lente: o que se pode fazer, e o que falta fazer.
+ *
+ * O «Guardar» está aqui porque tem de estar: sem ele, ninguém sabe se o que
+ * arrastou ficou. Enquanto não houver nada por guardar, está apagado — e diz
+ * «Guardado», que é a outra metade da mesma resposta.
+ */
 function ftLentePe(){
   const pe = ftEl('ft-lente-ac'), sc = FT_LENTE;
-  if (!sc || !sc.enq){ pe.innerHTML = ''; return; }
+  if (!sc || !sc.enq){ pe.innerHTML = ''; FT_DITO = ''; return; }
+  const sujo = ftSujo();
+  const dica = !FT_MOLDURA ? 'A fotografia inteira, sem moldura.'
+             : sujo        ? 'Enquadramento por guardar.'
+             : ftPresa();
+  const chave = (FT_MOLDURA ? 'm' : '-') + (sujo ? 's' : '-') + dica;
+  if (chave === FT_DITO) return;          // nada mudou: não se repinta
+  FT_DITO = chave;
   pe.innerHTML =
-      '<span class="ft-lente-dica">' + (FT_MOLDURA
-        ? 'Arraste a moldura para escolher o que fica no convite.'
-        : 'A fotografia inteira, sem moldura.') + '</span>'
+      '<span class="ft-lente-dica' + (sujo ? ' aviso' : '') + '">' + ftEsc(dica) + '</span>'
+    + (FT_MOLDURA
+        ? '<button type="button" class="btn btn-sm btn-ouro" data-lt="guardar"'
+          + (sujo ? '' : ' disabled') + '>'
+          + (sujo ? 'Guardar enquadramento' : 'Guardado') + '</button>'
+          + (sujo ? '<button type="button" class="btn btn-sm btn-fantasma" data-lt="desfazer">Desfazer</button>'
+                  : '<button type="button" class="btn btn-sm btn-fantasma" data-lt="centrar">Centrar</button>')
+        : '')
     + '<button type="button" class="btn btn-sm" data-lt="moldura">'
-    +   (FT_MOLDURA ? 'Ver sem moldura' : 'Enquadrar') + '</button>'
-    + (FT_MOLDURA ? '<button type="button" class="btn btn-sm btn-fantasma" data-lt="centrar">Centrar</button>' : '');
+    +   (FT_MOLDURA ? 'Ver sem moldura' : 'Enquadrar') + '</button>';
+}
+
+/**
+ * Que lado desta fotografia é que não se mexe.
+ *
+ * Uma fotografia larga numa janela estreita já cabe inteira em altura: puxá-la
+ * para cima ou para baixo não faz nada, e quem tenta fica a pensar que a coisa
+ * está avariada. Mais vale dizê-lo.
+ */
+function ftPresa(){
+  const m = ftJanelaMedidas();
+  if (!m) return 'Arraste a moldura para escolher o que fica no convite.';
+  const soX = (m.ih - m.h) < 0.5, soY = (m.iw - m.w) < 0.5;
+  if (soX && soY) return 'Esta fotografia cabe inteira na moldura — não há nada para correr.';
+  if (soX) return 'Arraste a moldura na horizontal: em altura, a fotografia já cabe inteira.';
+  if (soY) return 'Arraste a moldura na vertical: em largura, a fotografia já cabe inteira.';
+  return 'Arraste a moldura para escolher o que fica no convite.';
 }
 
 /** "9/16" -> 0.5625 (largura a dividir pela altura). */
@@ -581,23 +654,30 @@ function ftJanelaPintar(){
   jan.style.height = (m.h * m.s) + 'px';
 }
 
-/** Põe o ponto (em %) e repinta, sem esperar pelo servidor. */
+/** Põe o ponto (em %) e repinta. É rascunho: só o «Guardar» o torna real. */
 function ftPor(x, y){
   const sc = FT_LENTE; if (!sc || !sc.pos) return;
   sc.pos.x = Math.round(Math.max(0, Math.min(100, x)) * 10) / 10;
   sc.pos.y = Math.round(Math.max(0, Math.min(100, y)) * 10) / 10;
   ftJanelaPintar();
+  ftLentePe();
 }
+
+/** Guarda o enquadramento — e diz que guardou, que é metade do trabalho. */
 async function ftGuardarPos(){
   const sc = FT_LENTE; if (!sc || !sc.pos) return;
+  const alvo = { chave: sc.chave, x: sc.pos.x, y: sc.pos.y };
   const d = await api('convite_foto_posicao',
-    { method:'POST', body: JSON.stringify({ chave: sc.chave, x: sc.pos.x, y: sc.pos.y }) });
-  if (!d || !d.success){ toast((d && d.message) || 'Não foi possível enquadrar.', true); return; }
-  const guardada = { chave: sc.chave, x: sc.pos.x, y: sc.pos.y };
+    { method:'POST', body: JSON.stringify(alvo) });
+  if (!d || !d.success){ toast((d && d.message) || 'Não foi possível guardar.', true); return; }
   ftAplicar(d);
   // A lista foi refeita: a lente tem de voltar a apontar para a secção nova.
-  FT_LENTE = ftSec(guardada.chave) || FT_LENTE;
+  FT_LENTE = ftSec(alvo.chave) || FT_LENTE;
+  FT_GRAVADO = { x: alvo.x, y: alvo.y };
+  if (FT_LENTE.pos){ FT_LENTE.pos.x = alvo.x; FT_LENTE.pos.y = alvo.y; }
   ftJanelaPintar();
+  ftLentePe();
+  toast('Enquadramento guardado. O convite já mostra este pedaço.');
 }
 
 // Cola-se ao centro e aos terços — são as posições que de facto se procuram
@@ -642,7 +722,7 @@ function ftArrastar(ev){
     palco.removeEventListener('pointermove', mover);
     palco.removeEventListener('pointerup', largar);
     palco.removeEventListener('pointercancel', largar);
-    ftGuardarPos();
+    ftLentePe();          // o «Guardar» acende-se; gravar é decisão de quem arrastou
   };
   mover(ev);
   palco.addEventListener('pointermove', mover);
@@ -651,18 +731,17 @@ function ftArrastar(ev){
   ev.preventDefault();
 }
 
-// Com o teclado: as setas mexem 2% de cada vez. Quem não usa rato também tem
-// uma fotografia para enquadrar.
-let FT_TECLA = 0;
+// Com o teclado: as setas mexem 2% de cada vez, e Enter guarda. Quem não usa
+// rato também tem uma fotografia para enquadrar.
 function ftTecla(ev){
+  const sc = FT_LENTE;
+  if (!sc || !sc.pos || !FT_MOLDURA) return;
+  if (ev.key === 'Enter'){ ev.preventDefault(); if (ftSujo()) ftGuardarPos(); return; }
   const passos = { ArrowLeft:[-2,0], ArrowRight:[2,0], ArrowUp:[0,-2], ArrowDown:[0,2] };
   const p = passos[ev.key];
-  const sc = FT_LENTE;
-  if (!p || !sc || !sc.pos || !FT_MOLDURA) return;
+  if (!p) return;
   ev.preventDefault(); ev.stopPropagation();
   ftPor(sc.pos.x + p[0], sc.pos.y + p[1]);
-  clearTimeout(FT_TECLA);
-  FT_TECLA = setTimeout(ftGuardarPos, 500);
 }
 
 // ---------- trocar e repor ----------
@@ -725,8 +804,13 @@ ftEl('ft-secs').addEventListener('click', ev => {
 ftEl('ft-lente-ac').addEventListener('click', ev => {
   const bt = ev.target.closest('[data-lt]');
   if (!bt) return;
+  if (bt.dataset.lt === 'guardar')  return ftGuardarPos();
+  if (bt.dataset.lt === 'centrar')  return ftPor(50, 50);
+  if (bt.dataset.lt === 'desfazer'){
+    if (FT_GRAVADO) ftPor(FT_GRAVADO.x, FT_GRAVADO.y);
+    return;
+  }
   if (bt.dataset.lt === 'moldura'){ FT_MOLDURA = !FT_MOLDURA; ftLentePe(); ftJanelaPintar(); }
-  if (bt.dataset.lt === 'centrar'){ ftPor(50, 50); ftGuardarPos(); }
 });
 ftEl('ft-palco').addEventListener('pointerdown', ftArrastar);
 ftEl('ft-janela').addEventListener('keydown', ftTecla);

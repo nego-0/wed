@@ -6,14 +6,17 @@
 // licença, e pôr uma fotografia não é desenhar um convite.
 //
 // Prova-se aqui: que a inscrição já não pede nem aceita fotografia nenhuma,
-// que a área nova existe e troca de verdade, que a galeria da casa é a única
-// origem aceite quando se escolhe de lá, e que voltar à de origem devolve o
-// desenho e larga o ficheiro.
+// que a área nova existe e troca de verdade, e que voltar à de origem devolve
+// o desenho e larga o ficheiro.
 //
 // A área vive numa aba da própria peça — tomou o lugar do link «Painel de
-// convidados», que era uma porta para fora daquilo que se veio cá fazer. E
-// traz as duas coisas que só o editor tinha: ver a fotografia em ponto grande,
-// e escolher que pedaço dela fica à vista nas secções que recortam.
+// convidados», que era uma porta para fora daquilo que se veio cá fazer. As
+// secções saem do convite do casal, e não de uma lista escrita à mão; a
+// galeria da casa não entra, que é material de modelo.
+//
+// E traz o que só o editor tinha: a fotografia em ponto grande, com a moldura
+// da secção por cima. Arrastar é rascunho — guardar é um botão, e fechar com
+// coisa por guardar pergunta antes de a deitar fora.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -267,33 +270,101 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'o que fica de fora da moldura escurece: ' + lente.veu.slice(0, 46) + '…');
   await p.screenshot({ path: OUT + '/convite-fotos-lente.png' });
 
+  // O pé diz o que se pode fazer — e, nesta fotografia, o que não se pode: uma
+  // imagem larga numa janela estreita já cabe inteira em altura, e puxá-la para
+  // cima não faz nada. Dizê-lo poupa quem julgaria a coisa avariada.
+  const pe = () => p.evaluate(() =>
+    document.getElementById('ft-lente-ac').textContent.replace(/\s+/g, ' ').trim());
+  const peLimpo = await pe();
+  ok(/horizontal/.test(peLimpo) && /em altura, a fotografia já cabe/.test(peLimpo),
+     'o pé diz de que lado é que esta fotografia corre: ' + peLimpo.slice(0, 68));
+  ok(/Guardado/.test(peLimpo) && await p.evaluate(() =>
+       document.querySelector('#ft-lente-ac [data-lt="guardar"]').disabled),
+     'e o «Guardar» está apagado — não há nada por guardar');
+
   // Arrastar a moldura: é o gesto que o casal faz. A fotografia de prova é
   // larga (900×600) e a janela é estreita — a folga é horizontal.
+  const antesDeArrastar = (await secs()).find(s => s.chave === 'media.hero').pos.x;
   const jb = await (await p.$('#ft-janela')).boundingBox();
   await p.mouse.move(jb.x + jb.width / 2, jb.y + jb.height / 2);
   await p.mouse.down();
   await p.mouse.move(jb.x + jb.width, jb.y + jb.height / 2, { steps: 10 });
   await p.mouse.up();
-  await p.waitForTimeout(800);
+  await p.waitForTimeout(500);
+
+  // Arrastar é rascunho: nada foi guardado ainda, e o pé diz isso.
+  const peSujo = await pe();
+  ok(/por guardar/.test(peSujo) && /Guardar enquadramento/.test(peSujo),
+     'arrastar acende o «Guardar enquadramento»: ' + peSujo.slice(0, 60));
+  ok((await secs()).find(s => s.chave === 'media.hero').pos.x === antesDeArrastar,
+     'e o servidor ainda tem o enquadramento antigo — arrastar não é decidir');
+  const rascunho = await p.evaluate(() => FT_LENTE.pos.x);
+  ok(rascunho > 50, 'a moldura, essa, já lá foi: x = ' + rascunho);
+
+  // «Desfazer» devolve o que estava guardado.
+  await p.click('#ft-lente-ac [data-lt="desfazer"]');
+  await p.waitForTimeout(300);
+  ok(await p.evaluate(() => FT_LENTE.pos.x) === antesDeArrastar
+       && /Guardado/.test(await pe()),
+     'desfazer devolve a moldura ao que está guardado');
+
+  // E agora a sério: arrastar e guardar.
+  await p.mouse.move(jb.x + jb.width / 2, jb.y + jb.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(jb.x + jb.width, jb.y + jb.height / 2, { steps: 10 });
+  await p.mouse.up();
+  await p.waitForTimeout(300);
+  await p.click('#ft-lente-ac [data-lt="guardar"]');
+  await p.waitForTimeout(900);
   const enquadrada = (await secs()).find(s => s.chave === 'media.hero');
   ok(enquadrada.pos.x > 50,
-     'arrastar a moldura para a direita corre o que fica à vista: x = '
-       + enquadrada.pos.x);
+     'carregar em «Guardar» é que o guarda: x = ' + enquadrada.pos.x);
+  ok(/Guardado/.test(await pe()),
+     'e o pé passa a dizê-lo, que é a pergunta seguinte de quem arrastou');
   ok(enquadrada.pos.zoom === 100,
-     'e a aproximação fica como estava — aqui mexe-se no ponto, e mais nada');
+     'a aproximação fica como estava — aqui mexe-se no ponto, e mais nada');
 
   const noConvite = await p.evaluate(async () =>
     await (await fetch('convite-digital.php?demo=1')).text());
   ok(noConvite.includes('--foco-hero:' + enquadrada.pos.x + '% '),
      'e o convite que os convidados abrem recorta por esse ponto');
 
-  // As setas, para quem não usa rato.
+  // As setas, para quem não usa rato; Enter guarda.
   await p.focus('#ft-janela');
   await p.keyboard.press('ArrowLeft');
+  await p.waitForTimeout(200);
+  await p.keyboard.press('Enter');
   await p.waitForTimeout(900);
   const comTeclado = (await secs()).find(s => s.chave === 'media.hero');
   ok(comTeclado.pos.x === enquadrada.pos.x - 2,
-     'as setas mexem 2% de cada vez: ' + enquadrada.pos.x + ' → ' + comTeclado.pos.x);
+     'as setas mexem 2% de cada vez, e o Enter guarda: '
+       + enquadrada.pos.x + ' → ' + comTeclado.pos.x);
+
+  // Fechar com coisa por guardar não deita fora o trabalho: pergunta.
+  await p.mouse.move(jb.x + jb.width / 2, jb.y + jb.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(jb.x + 10, jb.y + jb.height / 2, { steps: 8 });
+  await p.mouse.up();
+  await p.waitForTimeout(300);
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(600);
+  const pergunta = await p.evaluate(() => {
+    const m = document.querySelector('.pl-modal');
+    return m ? m.textContent.replace(/\s+/g, ' ').trim() : '';
+  });
+  ok(/Guardar o enquadramento\?/.test(pergunta) && /Descartar/.test(pergunta),
+     'fechar com a moldura mexida pergunta antes de perder o trabalho');
+  await p.click('.pl-modal .j-bt-sim');
+  await p.waitForTimeout(900);
+  const aoFechar = (await secs()).find(s => s.chave === 'media.hero');
+  ok(aoFechar.pos.x < comTeclado.pos.x,
+     'e «Guardar» ali guarda mesmo: x = ' + aoFechar.pos.x);
+  ok(await p.evaluate(() => !document.getElementById('ft-lente').classList.contains('on')),
+     'a lente fecha-se a seguir');
+
+  // Reabrir, para as provas seguintes continuarem com a lente aberta.
+  await p.click('.ft-sec[data-sec="media.hero"] .ft-lupa');
+  await p.waitForTimeout(700);
 
   // ============ 7. a moldura tira-se, e a lente fecha-se ============
   await p.click('#ft-lente-ac [data-lt="moldura"]');
@@ -306,9 +377,9 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'e volta a pô-la');
 
   await p.keyboard.press('Escape');
-  await p.waitForTimeout(300);
+  await p.waitForTimeout(400);
   ok(await p.evaluate(() => !document.getElementById('ft-lente').classList.contains('on')),
-     'o Escape fecha a lente');
+     'e o Escape fecha a lente, sem perguntar nada quando não há o que guardar');
 
   // ============ 8. voltar à de origem ============
   const reposto = await p.evaluate(async () =>
