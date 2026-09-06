@@ -7,6 +7,11 @@
 > antes disso. Onde tomei uma decisão que o pedido não fixava, está marcada
 > com **[decisão]**; onde vejo um problema no que foi pedido, está marcado com
 > **[reparo]**, com a alternativa ao lado.
+>
+> **§25 é o desenho**, e é para cumprir como o resto: tokens, tipografia,
+> medidas de toque, estados, movimento, acessibilidade — e a prova que os
+> verifica. Lê-se antes de abrir o primeiro ficheiro, não depois de o ecrã
+> estar feito.
 
 ---
 
@@ -35,6 +40,11 @@ documento é detalhe desses três ecrãs e das regras que os ligam.
 
 O entregador é o «garçon» / empregado de mesa. Uso *entregador* no código e
 *garçon* nos textos que o convidado lê, que é a palavra dele.
+
+Estes ecrãs não se parecem uns com os outros de propósito: são três registos
+diferentes, e **§25 diz exactamente como cada um se desenha** — tokens,
+tipografia, alvos de toque, estados, e a prova que os verifica. Quem for
+implementar lê essa secção antes de abrir o primeiro ficheiro.
 
 **[decisão]** Papéis novos, e não um papel só. O copeiro decide e o entregador
 transporta: são responsabilidades diferentes e, num casamento grande, pessoas
@@ -1019,6 +1029,7 @@ desenvolvimento, a contar o que se prova e porquê).
 | `chk_bar_garcon.js` | Pedido por conta de outro conta para os limites do convidado e fica marcado |
 | `chk_bar_stats.js` | Os números da copa batem com os pedidos lançados; o convidado só vê o seu |
 | `chk_bar_dados.js` | Exportar e importar o casamento leva o bar inteiro; apagar o casamento não deixa órfãos |
+| `chk_bar_desenho.js` | O desenho cumpre-se: zero hexadecimais fora dos tokens, os quatro temas, alvos de toque medidos, sem transbordo em 360/390/430 px, esqueleto e vazio, foco visível, números tabulares, o menu a vestir o convite do casal, movimento reduzido respeitado (§25.14) |
 
 E a linha de sempre em `versao.php`, uma por fase, para se saber por telefone o
 que está mesmo instalado.
@@ -1028,7 +1039,11 @@ que está mesmo instalado.
 ## 23. Fases de entrega
 
 Cada fase é entregável sozinha e deixa a casa a funcionar. As estimativas são
-minhas e grosseiras — dias de trabalho, não promessas.
+minhas e grosseiras — dias de trabalho, não promessas — e **já contam com o
+desenho de §25**: os tokens, os alvos de toque, os quatro estados de cada
+lista e as capturas de ecrã de cada fase não são um acabamento no fim, são
+parte de cada ecrã enquanto ele se faz. Deixá-los para o fim é como se sabe que
+não vão ser feitos.
 
 | # | Fase | Entrega | Pronto quando | ~ |
 |---|---|---|---|---|
@@ -1111,7 +1126,337 @@ antes do dia («quero uma garrafa reservada»); notificações push.
 
 ---
 
-## 25. Apêndice: os textos
+## 25. O desenho: elegante, profissional e intuitivo
+
+Esta secção é para ser cumprida, e não admirada. O que aqui está são medidas,
+tokens e regras verificáveis — e no fim (§25.14) a prova que as verifica. Um
+módulo que se serve a convidados numa festa não pode ser bonito por acidente.
+
+### 25.1 Três registos, e nenhum deles é «genérico»
+
+O módulo tem quatro ecrãs, mas só três maneiras de se apresentar. Confundi-las
+é o erro que estraga tudo o resto.
+
+| | **O convidado** (`bebidas.php`) | **O pessoal** (`copa.php`, `entregas.php`) | **A casa** (`bar.php`) |
+|---|---|---|---|
+| O que é | Parte da festa | Uma ferramenta, de noite, à pressa | O painel de sempre |
+| Quem o vê | Alguém que nunca viu este sistema e nunca mais o verá | Quem trabalha nele cinco horas seguidas | Os noivos, com tempo |
+| Fundo | O do convite deles (§25.2) | Escuro de salão | `--app-bg`, como as outras páginas |
+| Tipografia | `--serif` no que se lê, generosa | `--sans`, `--serif` só nos números | A da casa |
+| Densidade | Larga: uma mão, um polegar, pouca luz | Compacta mas com alvos grandes: muita informação, decisões rápidas | Normal |
+| Alvo mínimo | 56 px | 56 px (48 nos secundários) | 44 px |
+| Movimento | Discreto e caloroso | Nenhum que atrase | O da casa |
+| Erro típico a evitar | Parecer um formulário de encomendas | Parecer um site bonito e ilegível a meia-luz | Inventar um estilo novo |
+
+### 25.2 **[decisão]** A página do convidado veste o convite do casal
+
+É a decisão de desenho mais importante do módulo, e a mais barata de cumprir:
+`bebidas.php` **não tem paleta própria**. Lê as definições do casamento e emite
+as mesmas variáveis que o convite digital já emite (`cssTema($defs)` em
+`personalizacao.php`) — as cores que o casal escolheu, as fontes que escolheu,
+o monograma que escolheu.
+
+Consequência prática: o menu de bebidas de cada casamento é diferente, e
+parece-se com o convite que os convidados receberam. Um convidado que veja um
+verde-floresta no convite e um azul de aplicação no bar percebe imediatamente
+que uma das duas coisas foi comprada em separado — e é justamente o contrário
+do que se está a vender.
+
+O que a página acrescenta por cima disso é só estrutura: cartões, grelha,
+botões. Nunca cor.
+
+### 25.3 Os tokens, e a proibição de inventar cor
+
+Tudo o que se pinta sai de `assets/estilo.css`. Existem **quatro temas** —
+`niras` (o de origem), `classico`, `azul` e `escuro` —, trocados em
+`<html data-tema>`; o módulo tem de sobreviver aos quatro sem uma linha de
+excepção.
+
+| Token | Serve para |
+|---|---|
+| `--ink`, `--text` | Texto principal e corrente |
+| `--forest`, `--forest-deep` | Superfícies escuras, cabeçalhos |
+| `--ivory`, `--cream`, `--sand` | Fundos claros, faixas |
+| `--card` | O papel de um cartão |
+| `--gold`, `--gold-soft`, `--gold-pale`, `--gold-deep` | A acção, o destaque, o realce |
+| `--ok`, `--ok-bg` · `--warn`, `--warn-bg` · `--danger`, `--danger-bg` | Estado |
+| `--line`, `--shadow`, `--ring`, `--radius` | Traço, relevo, foco, canto |
+| `--serif`, `--sans`, `--script` | Tipografia |
+
+**As regras:**
+
+1. **Zero hexadecimais** em `assets/bar.css` e nos `<style>` das quatro páginas,
+   com uma excepção declarada: os pretos e brancos translúcidos de véus e
+   sombras (`rgba(0,0,0,.5)`), que não são cor de marca.
+2. Uma cor que falte **acrescenta-se como token** em `estilo.css`, nos quatro
+   temas, e não se escreve no módulo.
+3. **Nunca** `color: #fff` sobre `--gold`: o dourado do tema `niras` é verde e
+   o do `classico` é castanho, e o contraste não é o mesmo. Usa-se
+   `--gold-deep` para texto sobre claro e `#fff` só sobre `--gold-deep`.
+4. As cores das categorias de bebida (§14, `cw_bar_categorias.cor`) são
+   **dados**, não desenho: escolhidas de uma paleta fixa de doze, como as
+   categorias do orçamento já fazem, e usadas só em pastilhas e barras — nunca
+   como fundo de texto.
+
+### 25.4 Tipografia
+
+Uma escala, e nada fora dela.
+
+| Papel | Tamanho | Família | Onde |
+|---|---|---|---|
+| Número grande | `2rem`/`1.9rem` | `--serif` 700 | Contagens, stock, tempos médios |
+| Título de ecrã | `1.35rem` | `--serif` 600 | «As bebidas», «A copa» |
+| Nome de bebida | `1.05rem` | `--serif` 600 | No cartão do item |
+| Texto de interface | `.9rem` | `--sans` 400 | Botões, listas, formulários |
+| Apoio | `.8rem` | `--sans` 400, `#8a8f88` | Descrições, ajudas |
+| Etiqueta | `.72rem`, maiúsculas, `letter-spacing:.06em` | `--sans` 600 | Cabeçalhos de coluna, estados |
+
+- Números que mudam sozinhos (contagens, stock, tempos) levam
+  **`font-variant-numeric: tabular-nums`**, sem excepção: sem isso a contagem
+  «salta» a cada segundo, e é o pormenor que faz uma interface parecer amadora.
+- Nada abaixo de `.72rem`. No escuro e a meia-luz, `.68rem` não se lê.
+- A serif é para nomes e números, nunca para parágrafos: o convite tem tempo,
+  a copa não.
+
+### 25.5 Espaço, grelha e forma
+
+- **Base 4 px.** Espaçamentos de `.25rem` em `.25rem`; nada de `7px` nem de
+  `13px`.
+- **Cantos:** `var(--radius)` nos cartões, `10px` nas miniaturas, `50px` nos
+  botões (é a forma da casa).
+- **Larguras máximas:** `560px` no convidado e no entregador (é um telemóvel
+  ao alto, e a página do porteiro já usa esta medida), `1180px` na copa e na
+  montagem (é o `.container` da casa).
+- **Sombra:** só `var(--shadow)`, e só em cartões que se levantam do fundo.
+  Duas sombras diferentes na mesma página são duas casas diferentes.
+- **Uma linha ou uma sombra, nunca as duas** no mesmo elemento.
+
+### 25.6 O toque, que é como isto se usa
+
+Ninguém vai usar isto com um rato. Um convidado tem um copo na outra mão; um
+entregador tem um tabuleiro.
+
+- **56 × 56 px** o alvo mínimo das acções principais (pedir, aprovar, entregar),
+  **48 × 48** as secundárias. Medido na caixa clicável, não no ícone.
+- **12 px** de folga entre um botão principal e um destrutivo. «Aprovar» e
+  «Recusar» nunca ficam encostados.
+- **A acção principal vive em baixo**, na zona do polegar: no convidado, o
+  botão «Pedir» é fixo no rodapé com o resumo do carrinho; no entregador, o
+  «Entregue» é a linha inteira do fundo do cartão.
+- **Nada de importante nos cantos de cima** num telemóvel: são os cantos que
+  não se alcançam.
+- **`touch-action`** declarado em tudo o que arrasta; nada de gestos escondidos
+  sem um botão equivalente.
+
+### 25.7 A cor diz o estado — e nunca sozinha
+
+Um mapa só, cumprido nos três ecrãs. Quem vir um pedido âmbar na copa e âmbar
+no ecrã do convidado sabe que é a mesma coisa.
+
+| Estado | Token | Palavra | Forma |
+|---|---|---|---|
+| `em_analise` | `--warn` / `--warn-bg` | «em análise» | Pastilha com ponto a pulsar |
+| `aprovado` | `--gold` / `--gold-pale` | «a aguardar entrega» | Pastilha cheia |
+| `a_caminho` | `--gold-deep` | «a caminho» | Pastilha com seta |
+| `entregue` | `--ok` / `--ok-bg` | «entregue» | Visto |
+| `recusado` | `--danger` / `--danger-bg` | «não servido» | Traço |
+| `cancelado` | `--line`, texto esbatido | «cancelado» | — |
+| `falhou` | `--danger` | «não entregue» | Seta de volta |
+
+**Nunca só a cor.** Cada estado tem palavra e forma, porque há daltónicos na
+festa, porque a luz do salão é âmbar, e porque um ecrã ao sol não distingue
+verdes. A mesma regra vale para o semáforo do stock: verde/âmbar/vermelho
+**mais** «dá para ~40 min».
+
+### 25.8 A fotografia manda
+
+O menu do convidado é uma montra, não uma lista de texto.
+
+- **Grelha de dois** num telemóvel (`repeat(auto-fill, minmax(150px, 1fr))`),
+  de quatro numa copa em ecrã largo.
+- **Proporção fixa 4/3** em todas as miniaturas, com `object-fit: cover` e o
+  ponto de enquadramento do item — a mesma solução das fotografias do convite,
+  já feita e provada.
+- **Miniatura servida a 400 px**, nunca o original. Numa rede de salão, trinta
+  originais são um menu que não abre.
+- **`loading="lazy"` e `decoding="async"`** em tudo o que não está no primeiro
+  ecrã.
+- **Esqueleto, não roda.** Enquanto a fotografia não chega, o cartão mostra o
+  seu próprio lugar em `--cream`, com o nome já legível. A página nunca salta
+  quando as imagens chegam: o espaço está reservado desde o primeiro pixel.
+- **Sem fotografia**, o cartão mostra uma placa na cor da categoria com a
+  inicial da bebida em `--serif`. Um quadrado cinzento com um ícone de máquina
+  fotográfica é a confissão de que ninguém tratou do menu.
+
+### 25.9 Movimento
+
+- **120–220 ms**, `cubic-bezier(.2,.6,.2,1)`, e só `opacity` e `transform`.
+- Um pedido que entra na fila **desliza e esbate-se para dentro**; um que sai
+  **encolhe**. É como se percebe que a lista mexeu sem se estar a olhar para
+  ela.
+- **`@media (prefers-reduced-motion: reduce)`** desliga tudo isto. Sem
+  excepções.
+- **Nada de animação de sucesso que atrase o trabalho.** O «Entregue» responde
+  no instante do toque; a confirmação é a linha a sair da lista, não meio
+  segundo de visto a desenhar-se.
+
+### 25.10 O escuro do salão
+
+`copa.php` e `entregas.php` usam-se numa sala às escuras, cinco horas seguidas.
+
+- Fundo escuro do tema (`--forest-deep` → `--forest`), como a página do
+  porteiro já faz.
+- **Sem branco puro.** O texto mais claro é `--ivory`; `#fff` só em áreas
+  minúsculas. Um cartão branco a 100 % de brilho, às onze da noite, cega quem o
+  segura.
+- **Sem preto puro** também: o `--forest-deep` tem cor, e é o que impede a
+  interface de parecer uma consola.
+- Contraste **acima do mínimo**, não à justa: no escuro, 4.5:1 lê-se pior do
+  que no claro. Alvo prático: **7:1** no texto corrente do pessoal.
+- O ecrã do convidado **não** escurece sozinho: veste o convite (§25.2), e o
+  convite é como é.
+
+### 25.11 Os quatro estados de cada lista
+
+Toda a lista, sem excepção, tem quatro desenhos — e o terceiro é o que
+distingue um produto de um protótipo.
+
+| Estado | O que se mostra |
+|---|---|
+| **A carregar** | Esqueleto com a forma do conteúdo (três cartões cinzentos), nunca uma roda |
+| **Com conteúdo** | O normal |
+| **Vazio** | Ícone discreto, uma frase que diz porquê, e — se houver — o botão que a resolve. «Ainda sem pedidos. Quando alguém pedir, aparece aqui.» |
+| **Em erro** | O que falhou, em linguagem de gente, e **um botão de tentar outra vez**. Nunca um `toast` que desaparece: um erro que exige acção não se esconde ao fim de três segundos |
+
+### 25.12 As janelas, e o `window.confirm` que não volta
+
+Confirmações são as de `assets/janela.css` (`licConfirmar`), que já se vestem
+sozinhas e já foram afinadas. **`window.confirm`, `alert` e `prompt` não entram
+neste módulo** — é uma batalha que esta casa já travou.
+
+E confirma-se pouco, que é o que faz a confirmação valer alguma coisa:
+
+| Confirma | Não confirma |
+|---|---|
+| Recusar um pedido (é a decisão que o convidado sente) | Aprovar (é o gesto normal, e é reversível) |
+| Cancelar um pedido já aprovado | Apanhar |
+| Apagar uma bebida do menu | Entregar (é o gesto normal, cem vezes por noite) |
+| Fechar o bar | Pôr ou levantar uma regra |
+| Acerto de stock com nota | Repor stock |
+
+### 25.13 Acessibilidade — o mínimo que não se negoceia
+
+- **Contraste** 4.5:1 no texto, 3:1 em ícones e limites de campos; 7:1 no
+  pessoal (§25.10).
+- **`:focus-visible` em tudo o que se toca**, com `--ring`. A copa vai ser usada
+  com teclado por quem tem o telemóvel apoiado e um teclado à frente.
+- **Rótulo em todos os ícones** (`aria-label`), e nunca um ícone sozinho a
+  carregar uma acção destrutiva.
+- **`aria-live="polite"`** no número de pedidos em fila e no estado do meu
+  pedido; **nunca** na contagem decrescente, que mudaria de segundo a segundo e
+  transformaria um leitor de ecrã num relógio falante — a contagem leva
+  `aria-hidden` e o tempo que falta diz-se uma vez, em texto.
+- **Ordem de tabulação** que segue a leitura, e o foco a entrar na janela
+  quando ela abre e a voltar ao botão quando ela fecha (o `janela.js` já o faz).
+- **Nada só por cor** (§25.7), nada só por passar o rato, nada só por gesto.
+
+### 25.14 A prova do desenho
+
+Isto verifica-se, como o resto. `chk_bar_desenho.js`:
+
+| Verifica | Como |
+|---|---|
+| Zero hexadecimais fora dos tokens | Lê `assets/bar.css` e os `<style>` das páginas e falha em `#rrggbb` que não seja `rgba` de véu |
+| Os quatro temas | Carrega cada ecrã com `data-tema` nos quatro valores e confirma que o texto tem contraste e que nada fica invisível |
+| Alvos de toque | Mede a caixa de todos os botões em 390 px e falha abaixo de 48 (56 nos principais) |
+| Sem transbordo lateral | `scrollWidth <= innerWidth` em 360, 390 e 430 px |
+| Esqueleto e vazio | Intercepta a resposta, força lenta e vazia, e confirma que há esqueleto e que há frase |
+| Foco | Percorre com Tab e confirma anel visível em cada paragem |
+| Números tabulares | Confirma `font-variant-numeric` nos elementos de contagem |
+| A página do convidado veste o casal | Muda a cor do convite e confirma que o menu mudou com ela |
+| Movimento reduzido | Com `prefers-reduced-motion`, nenhuma transição acima de 0 ms |
+
+E, como em todas as mudanças visuais desta casa, **capturas de ecrã** dos
+quatro ecrãs em cada fase — no telemóvel e no escritório —, que é o que apanha
+o que nenhuma asserção apanha.
+
+### 25.15 Os quatro ecrãs, em traço grosso
+
+**`bebidas.php` — o convidado**
+
+```
+┌──────────────────────────────┐
+│  ℐ&A            Mesa 7 ▾     │  ← veste o convite; a mesa troca-se aqui
+│  Boa noite, Álvaro           │
+├──────────────────────────────┤
+│  ● Pode pedir mais 1 bebida  │  ← ou a contagem, quando não pode
+├──────────────────────────────┤
+│  ESPUMANTES                  │
+│  ┌────────┐  ┌────────┐      │
+│  │ [foto] │  │ [foto] │      │  ← 4/3, dois por linha
+│  │ Moscatel│  │ Cidra  │      │
+│  │ pode 2 │  │ pode 1 │      │
+│  └────────┘  └────────┘      │
+│  SEM ÁLCOOL                  │
+│  …                           │
+├──────────────────────────────┤
+│  2 bebidas      [  PEDIR  ]  │  ← fixo no rodapé, zona do polegar
+└──────────────────────────────┘
+```
+
+**`copa.php` — o copeiro** (escuro, ecrã largo ou telemóvel ao alto)
+
+```
+┌────────────────────────────────────────────────────────┐
+│  A COPA   ● aberta      ritmo 28/40 por 10 min   ▮▮▮▯  │
+├───────────────────────────┬────────────────────────────┤
+│  FILA (4)                 │  STOCK                     │
+│  ┌──────────────────────┐ │  Cerveja      42  ~2h  🟢  │
+│  │ #A47 · há 2 min      │ │  Caipirinha   11  ~40m 🟠  │
+│  │ Álvaro Bento         │ │  Whisky        3  ~15m 🔴  │
+│  │ da 7 · entregar na 3 │ │  [ repor ] [ acerto ]      │
+│  │ 2× Caipirinha        │ ├────────────────────────────┤
+│  │ ⚑ trocou de nome     │ │  PROCURAR CONVIDADO        │
+│  │ [ APROVAR ][ Recusar]│ │  [____________]            │
+│  └──────────────────────┘ │                            │
+└───────────────────────────┴────────────────────────────┘
+```
+
+**`entregas.php` — o entregador** (uma coluna, alvos enormes)
+
+```
+┌──────────────────────────────┐
+│  ENTREGAS   3 por levar      │
+├──────────────────────────────┤
+│  MESA 3                      │  ← o que a pessoa procura, em grande
+│  Álvaro Bento                │
+│  2× Caipirinha               │
+│  aprovado há 1 min           │
+│  [        APANHAR         ]  │
+├──────────────────────────────┤
+│  MESA 12  ·  a caminho (eu)  │
+│  [ ENTREGUE ] [ não entregue]│
+└──────────────────────────────┘
+│  [ + pedir por um convidado ]│
+└──────────────────────────────┘
+```
+
+**`bar.php` — os noivos** (o painel de sempre, com abas)
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Bar                     Isabel & Abednego · faltam …  │
+│  [ O menu ] [ Stock ] [ Limites ] [ Mesas e QR ] [ … ] │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ 6 bebidas · 3 categorias · bar fechado  [abrir]  │  │
+│  └──────────────────────────────────────────────────┘  │
+│  … a grelha das bebidas, como a das fotografias …      │
+└────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 26. Apêndice: os textos
 
 Reunidos aqui de propósito — são para rever com quem recebe os convidados,
 não para inventar durante a implementação.
