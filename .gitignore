@@ -26,5 +26,9 @@ casamento_web/assets/convite/licenca/*
 # Faturas/recibos das despesas do orçamento, enviados pelos noivos — nunca versionados
 casamento_web/assets/faturas/
 
+# Fotografias das bebidas do bar — só o .htaccess é versionado
+casamento_web/assets/bar/*
+!casamento_web/assets/bar/.htaccess
+
 # Cache do Python do gerador das imagens de exemplo
 __pycache__/

@@ -44,6 +44,23 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await noivos.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
   await noivos.waitForTimeout(700);
 
+  // ---- o que ficou de trás ----
+  // Uma corrida que morra a meio deixa bebidas «ZZ» e pedidos por decidir, e
+  // esses impedem apagar as bebidas na corrida seguinte — a prova passava a
+  // falhar por causa de si própria. Limpa-se à entrada, não só à saída.
+  await noivos.evaluate(async () => {
+    const e = await window.api('bar_estado');
+    for (const p of e.fila) {
+      await window.api(p.estado === 'em_analise' ? 'bar_decidir' : 'bar_cancelar_copa',
+        { method: 'POST', body: JSON.stringify({ id: p.id, decisao: 'recusar',
+                                                 motivo_texto: 'arrumar a prova' }) });
+    }
+    const e2 = await window.api('bar_estado');
+    for (const i of e2.itens.filter(x => /^ZZ /.test(x.nome))) {
+      await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
+    }
+  });
+
   ok((await noivos.locator('.b-aba').allTextContents()).join('|') === 'O menu|Gavetas|Mesas e QR',
      'a montagem tem as três abas: o menu, as gavetas e as folhas de QR');
   ok((await noivos.locator('.b-cat').count()) >= 4,
@@ -75,6 +92,34 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await noivos.waitForTimeout(400);
   ok((await noivos.locator('.b-folha canvas').count()) >= 1,
      'e a folha da mesa traz o QR desenhado, pronto a imprimir');
+
+  // ============ 1b. a fotografia de uma bebida ============
+  // «Uma fotografia a sério vende melhor do que um nome», diz a própria
+  // página — e é o único caminho da montagem que não passa por JSON, por isso
+  // é o que mais facilmente se parte sem ninguém dar por isso.
+  const png = await noivos.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 300; c.height = 300;
+    const x = c.getContext('2d');
+    x.fillStyle = '#B24C7A'; x.fillRect(0, 0, 300, 300);
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  const fich = require('path').join(require('os').tmpdir(), 'zz-bebida.png');
+  require('fs').writeFileSync(fich, Buffer.from(png, 'base64'));
+
+  // As bebidas nasceram pela API; a grelha só as tem depois de repintar.
+  await noivos.reload({ waitUntil: 'networkidle' });
+  await noivos.waitForTimeout(800);
+  ok((await noivos.locator('.b-cart .b-foto .letra').count()) >= 1,
+     'sem fotografia, o cartão põe a inicial na cor da gaveta — e não um quadrado cinzento');
+
+  const escolher = noivos.waitForEvent('filechooser');
+  await noivos.locator('.b-cart:has-text("ZZ Espumante") button:has-text("Fotografia")').first().click();
+  await (await escolher).setFiles(fich);
+  await noivos.waitForTimeout(2200);
+  const foto = await noivos.locator('.b-cart:has-text("ZZ Espumante") .b-foto img')
+                           .getAttribute('src').catch(() => null);
+  ok(!!foto && foto.startsWith('assets/bar/'), 'a fotografia sobe e fica arrumada: ' + foto);
+  ok((await noivos.request.get(BASE + '/' + foto)).ok(), 'e serve-se pela web');
 
   // ============ 2. a porta pública ============
   const salao = await b.newContext({ viewport: { width: 390, height: 844 } });
@@ -116,6 +161,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'a mesa de entrega fica à vista e muda-se: as pessoas trocam de lugar');
   ok((await conv.locator('.b-bebida').count()) >= 2,
      'e o menu abre com as bebidas nas suas gavetas');
+  ok((await conv.locator('.b-bebida:has-text("ZZ Espumante") .b-foto img')
+                .getAttribute('src').catch(() => null)) === foto,
+     'com a fotografia que a copa lá pôs, e não outra');
 
   // ============ 4. o pedido ============
   const mais = conv.locator('.b-bebida .b-mais button:last-child').first();
@@ -133,7 +181,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'o pedido devolve um código curto para se dizer em voz alta: ' + codigo);
   await conv.click('#lic-jc');
   await conv.waitForTimeout(700);
-  ok(/análise/i.test(await conv.locator('.b-meu .b-est').innerText()),
+  // A lista vem do mais novo para o mais velho, e o histórico da pessoa
+  // sobrevive entre corridas — é o pedido de agora que se confere.
+  ok(/análise/i.test(await conv.locator('.b-meu .b-est').first().innerText()),
      'e fica em «Os meus pedidos», em análise');
   // A barra tem display:flex de classe, que ganha à regra [hidden] do browser:
   // sem o !important da folha, ficava a dizer «2 bebidas» com o cesto vazio,
@@ -154,7 +204,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const antes = await copa.evaluate(async () => {
     const e = await window.api('bar_estado');
     const i = e.itens.find(x => x.nome === 'ZZ Cerveja');
-    return { stock: i.stock, reservado: i.reservado, disponivel: i.disponivel };
+    return { stock: i.stock, reservado: i.reservado, disponivel: i.disponivel,
+             // As contas da noite são de toda a noite, e a prova pode correr
+             // duas vezes seguidas: mede-se a diferença, não o total.
+             entregues: e.estado.entregues, bebidas: e.estado.bebidas_entregues };
   });
   await copa.locator('.b-ped .btn-ouro').first().click();
   await copa.waitForTimeout(1000);
@@ -199,7 +252,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(fim.reservado === antes.reservado,
      'e a promessa é libertada, em vez de ficar presa para sempre');
   ok(fim.disponivel === antes.disponivel - 2, 'as três contas fecham entre si');
-  ok(fim.entregues === 1 && fim.bebidas === 2, 'as contas da noite: 1 pedido, 2 bebidas');
+  ok(fim.entregues === antes.entregues + 1 && fim.bebidas === antes.bebidas + 2,
+     'as contas da noite sobem com a entrega: mais 1 pedido, mais 2 bebidas');
   ok(await ent.locator('#b-tempos').isVisible(),
      'e os tempos da noite aparecem depois da primeira entrega');
 
@@ -230,6 +284,45 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(/não servido/i.test(meu),
      'o telemóvel actualiza-se sozinho, e diz «não servido» — não «RECUSADO»');
   ok(meu.includes(recusa), 'e mostra o motivo, para a pessoa saber o que pedir a seguir');
+
+  // ============ 8b. a copa é a mesma nos quatro temas ============
+  // Ela é escura porque é meia-noite no salão, não porque o casal escolheu
+  // uma paleta escura. Com os tokens normais, o tema «escuro» virava-os ao
+  // contrário — --gold-pale passa de verde claro a quase preto — e os rótulos
+  // da barra desapareciam contra o próprio fundo. Daí os --sala-*, que tema
+  // nenhum redefine. Mede-se, em vez de se confiar.
+  const luz = (rgb) => {
+    const c = (String(rgb).match(/\d+/g) || [0, 0, 0]).slice(0, 3).map(v => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const contraste = (a, b) => {
+    const [x, y] = [luz(a), luz(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+  const medidas = {};
+  for (const tema of ['niras', 'classico', 'azul', 'escuro']) {
+    await copa.evaluate(t => { try { localStorage.setItem('tema', t); } catch (e) {} }, tema);
+    await copa.reload({ waitUntil: 'networkidle' });
+    await copa.waitForTimeout(700);
+    const m = await copa.evaluate(() => ({
+      rotulo: getComputedStyle(document.querySelector('.b-barra .l')).color,
+      numero: getComputedStyle(document.querySelector('.b-barra .n')).color,
+      texto:  getComputedStyle(document.body).color,
+      fundo:  getComputedStyle(document.body).backgroundImage.slice(0, 48)
+    }));
+    medidas[tema] = m;
+    const pior = Math.min(contraste(m.rotulo, 'rgb(12,25,37)'),
+                          contraste(m.numero, 'rgb(12,25,37)'),
+                          contraste(m.texto,  'rgb(12,25,37)'));
+    ok(pior >= 4.5, `[${tema}] tudo se lê no escuro do salão (o pior é ${pior.toFixed(1)}:1)`);
+  }
+  const iguais = ['classico', 'azul', 'escuro'].every(t =>
+    JSON.stringify(medidas[t]) === JSON.stringify(medidas.niras));
+  ok(iguais, 'e a copa é exactamente a mesma nos quatro: o tema não lhe toca');
+  await copa.evaluate(() => { try { localStorage.removeItem('tema'); } catch (e) {} });
 
   // ============ 9. os dois postos existem mesmo ============
   // Sem isto o bar tinha dois ecrãs que ninguém podia abrir: a Gestão só sabia
@@ -282,10 +375,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       await window.api('bar_cancelar_copa', { method: 'POST', body: JSON.stringify({ id: p.id }) });
     }
     for (const i of e.itens.filter(x => /^ZZ /.test(x.nome))) {
+      // Apagar a bebida leva a fotografia com ela; confere-se logo a seguir.
       await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
     }
     await window.api('bar_fechar', { method: 'POST', body: '{}' });
   });
+  ok((await noivos.request.get(BASE + '/' + foto)).status() === 404,
+     'apagar a bebida leva a fotografia do disco: não ficam órfãs em assets/bar/');
   await ges.evaluate(async () => {
     const d = await window.api('acesso_lista');
     const zz = (d.acessos || []).find(a => a.email === 'zz.copeiro@exemplo.pt');
