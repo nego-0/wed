@@ -115,15 +115,15 @@ $CAS  = casalInfo($DEFS);
       <h1>Entrada do evento</h1>
       <div class="sub">Quem chega, quem já entrou, quem falta</div>
       <div class="sub topo-casal"><?= escP($CAS['casal']) ?>
-        <?php if ($DATA_EV !== ''): ?>· <?= escP(dataExtensa($DATA_EV)) ?><?php endif; ?></div>
+        <?php if ($DATA_EV !== ''): ?>· <?php contagem($DATA_EV, $HORA_EV); ?><?php endif; ?></div>
     </div>
-    <?php contagem($DATA_EV, $HORA_EV); ?>
     <nav class="nav">
       <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>
       <a href="logout.php">Sair</a>
     </nav>
   </div>
 </header>
+<?php contagemScript(); ?>
 
 <div class="contentor">
   <div class="contador-porta" id="contador">

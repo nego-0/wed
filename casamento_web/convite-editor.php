@@ -153,6 +153,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
   <span class="ed-sep"></span>
   <a href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir o convite</a>
 </div>
+<?php contagemScript(); ?>
 
 <div class="ed-opcoes">
   <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled>↶ Desfazer</button>

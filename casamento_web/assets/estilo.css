@@ -135,17 +135,21 @@ a:hover{ text-decoration:underline; }
 
 /* ---------- A contagem decrescente ----------
    A pergunta que o casal faz todos os dias, e que até aqui só o convite
-   respondia. Fica entre o título e o menu: à vista em todas as páginas, e sem
-   roubar o lugar a nada. */
-.contagem{ flex:none; text-align:right; padding-left:.4rem; line-height:1.15; }
-.contagem .cg-n{ font-family:var(--serif); font-size:1.7rem; font-weight:700;
-                 color:var(--gold-soft); white-space:nowrap; font-variant-numeric:tabular-nums; }
-.contagem .cg-l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
-                 color:var(--gold-pale); opacity:.85; margin-top:.15rem; white-space:nowrap; }
+   respondia. Está no lugar onde estava a data — a data lê-se uma vez e nunca
+   mais muda; o que se quer saber ao abrir a página é quanto falta. (A data
+   continua à mão, no title da contagem.) */
+.contagem{ display:inline-flex; align-items:baseline; gap:.32rem; white-space:nowrap;
+           font-variant-numeric:tabular-nums; }
+.contagem .cg-l{ opacity:.8; }
+.contagem .cg-n{ font-family:var(--serif); font-size:1.05rem; font-weight:700;
+                 color:var(--gold-soft); line-height:1; }
+.contagem .cg-t{ letter-spacing:.02em; color:var(--gold-pale); opacity:.9; }
+/* Os pedaços que não se aplicam saem de cena — senão deixavam o espaço deles. */
+.contagem span:empty{ display:none; }
 /* No próprio dia, deixa de ser um número e passa a ser um anúncio. */
 .contagem.hoje .cg-n{ color:var(--ivory); letter-spacing:.04em; }
 /* Depois, conta para a frente — e recolhe, que já não é o assunto. */
-.contagem.passou .cg-n{ font-size:1.25rem; opacity:.85; }
+.contagem.passou .cg-n{ font-size:.95rem; opacity:.85; }
 
 .topo .nav{ margin-left:auto; display:flex; gap:.4rem; flex-wrap:wrap; }
 .topo .nav a{
@@ -310,12 +314,11 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
      procura) caber no primeiro ecrã. */
   .topo{ padding:1.05rem 1.1rem; }
   .topo .wrap{ gap:.7rem; }
-  /* A contagem passa para o pé do monograma, à esquerda: encostada à direita
-     num ecrã estreito ficava sozinha numa linha, com o título a espremer-se. */
-  .contagem{ text-align:left; padding-left:0; order:3; width:100%;
-             border-top:1px solid rgba(233,223,201,.18); padding-top:.6rem; }
-  .contagem .cg-n{ font-size:1.35rem; display:inline; }
-  .contagem .cg-l{ display:inline; margin-left:.4rem; }
+  /* A contagem vai no fio do texto, com o nome do casal: num ecrã estreito a
+     linha dobra, e é a contagem que passa para a segunda — daí o nome do casal
+     poder quebrar sem levar a contagem consigo. */
+  .topo .sub.topo-casal{ white-space:normal; }
+  .contagem .cg-n{ font-size:1rem; }
 }
 
 /* ============================================================

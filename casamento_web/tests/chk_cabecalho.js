@@ -9,6 +9,10 @@
 // A segunda: a contagem decrescente. É a pergunta que o casal faz todos os
 // dias, e que até aqui só o convite respondia. Conta no browser, porque uma
 // contagem feita no servidor fica velha no instante em que é servida.
+//
+// E conta ao segundo, no lugar onde estava a data. A data lê-se uma vez e
+// nunca mais muda — quem trabalha aqui já a sabe de cor; fica no title, para
+// quem a for procurar. O que se quer ao abrir a página é quanto falta.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -87,15 +91,33 @@ const PAGINAS = [
   ok(linhas.filter(l => l.includes('&')).length <= 2,
      'o nome do casal não se repete na linha de apoio: ' + JSON.stringify(linhas.slice(0, 3)));
 
-  // ============ 2. a contagem conta mesmo ============
+  // ============ 2. a contagem conta mesmo, e ao segundo ============
   const cg = () => p.evaluate(() => {
     const c = document.getElementById('topo-contagem');
     return { n: c.querySelector('.cg-n').textContent.trim(),
-             l: c.querySelector('.cg-l').textContent.trim(), cls: c.className };
+             l: c.querySelector('.cg-l').textContent.trim(),
+             t: c.querySelector('.cg-t').textContent.trim(),
+             titulo: c.getAttribute('title') || '', cls: c.className };
   });
   const dias = await cg();
-  ok(/^\d+ dias?$/.test(dias.n) && /para o grande dia/i.test(dias.l),
-     'a contagem dá os dias que faltam: ' + dias.n + ' ' + dias.l);
+  ok(/^\d+ dias?$/.test(dias.n) && /^faltam?$/.test(dias.l),
+     'a contagem dá os dias que faltam: ' + dias.l + ' ' + dias.n);
+  ok(/^\d\d:\d\d:\d\d$/.test(dias.t),
+     'e as horas, os minutos e os segundos até lá: ' + dias.t);
+
+  // Os segundos mexem: uma contagem parada é a data escrita de outra maneira.
+  await p.waitForTimeout(2100);
+  const depois = await cg();
+  ok(depois.t !== dias.t, 'e o relógio anda sozinho: ' + dias.t + ' → ' + depois.t);
+
+  // A contagem está no lugar da data — e a data continua à mão, no title.
+  const linha = await p.evaluate(() =>
+    document.querySelector('.topo-casal').textContent.replace(/\s+/g, ' ').trim());
+  ok(!/de janeiro|de fevereiro|de março|de abril|de maio|de junho|de julho|de agosto|de setembro|de outubro|de novembro|de dezembro/i
+       .test(linha),
+     'a data por extenso saiu da linha, que agora é do casal e da contagem: ' + linha);
+  ok(/de \w+ de \d{4}/i.test(dias.titulo),
+     'e lê-se ao passar o rato pela contagem: «' + dias.titulo + '»');
 
   // Quantos são: a conta tem de bater com a data, e não ser um número qualquer.
   const conferida = await p.evaluate((data) => {
@@ -114,20 +136,21 @@ const PAGINAS = [
     const cx = document.getElementById('topo-contagem');
     cx.dataset.dia = q; cx.className = 'contagem';
     // O guião do cabeçalho já correu; corre-se outra vez, agora com a data nova.
-    const s = [...document.scripts].find(x => /topo-contagem/.test(x.textContent));
+    const s = [...document.scripts].find(x => /\.contagem\[data-dia\]/.test(x.textContent));
     (0, eval)(s.textContent);
     return { n: cx.querySelector('.cg-n').textContent.trim(),
-             l: cx.querySelector('.cg-l').textContent.trim(), cls: cx.className };
+             l: cx.querySelector('.cg-l').textContent.trim(),
+             t: cx.querySelector('.cg-t').textContent.trim(), cls: cx.className };
   }, quando);
   const iso = (d) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
 
   const hoje = await comData(iso(0));
   ok(hoje.n === 'É HOJE' && /hoje/.test(hoje.cls),
-     'no próprio dia deixa de ser um número: ' + hoje.n + ' · ' + hoje.l);
+     'no próprio dia deixa de ser um número: ' + hoje.n + ' · ' + hoje.t);
 
   const ontem = await comData(iso(-2));
-  ok(/desde o grande dia/.test(ontem.l) && /passou/.test(ontem.cls),
-     'e depois conta para a frente: ' + ontem.n + ' ' + ontem.l);
+  ok(ontem.l === 'há' && /passou/.test(ontem.cls) && ontem.t === '',
+     'e depois conta para a frente, sem relógio: ' + ontem.l + ' ' + ontem.n);
 
   const amanha = await comData(iso(1));
   ok(amanha.n === '1 dia', 'a véspera diz «1 dia», no singular: ' + amanha.n);
@@ -161,12 +184,13 @@ const PAGINAS = [
     const c = document.getElementById('topo-contagem');
     const t = document.querySelector('.topo h1');
     const rc = c.getBoundingClientRect(), rt = t.getBoundingClientRect();
-    return { largura: Math.round(rc.width), janela: innerWidth,
+    return { direita: Math.round(rc.right), janela: innerWidth,
+             naLinha: !!c.closest('.topo-casal'),
              abaixo: rc.top > rt.bottom, texto: c.textContent.replace(/\s+/g, ' ').trim() };
   });
-  ok(mob.abaixo && mob.largura > mob.janela * 0.8,
-     'no telemóvel a contagem passa para baixo do título, a toda a largura ('
-       + mob.largura + 'px em ' + mob.janela + ')');
+  ok(mob.naLinha && mob.abaixo && mob.direita <= mob.janela,
+     'no telemóvel a contagem segue na linha do casal, sem transbordar ('
+       + mob.direita + 'px em ' + mob.janela + '): ' + mob.texto);
   await tel.screenshot({ path: OUT + '/cabecalho-telemovel.png', clip: { x: 0, y: 0, width: 390, height: 260 } });
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));

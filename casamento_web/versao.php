@@ -331,6 +331,8 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'function contagem('],
         ['E diz sempre de quem é a festa: casal e data no mesmo sítio, em toda a parte',
          'parcial-cabecalho.php', 'topo-casal'],
+        ['A contagem ficou no lugar da data, e conta ao segundo',
+         'parcial-cabecalho.php', 'setInterval(todas, 1000)'],
         ['Os cartões do orçamento filtram as despesas e o calendário',
          'assets/orcamento.js', 'window.orcFiltrarEstado'],
         ['Cada ação do registo tem nome por extenso, e a linha abre com tudo o que se sabe',

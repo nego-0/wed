@@ -136,6 +136,7 @@ $camposPorCamada = [
   <span class="ed-sep"></span>
   <a href="cartoes.php">Ver todos os cartões</a>
 </div>
+<?php contagemScript(); ?>
 
 <div class="ed-opcoes">
   <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled>↶ Desfazer</button>

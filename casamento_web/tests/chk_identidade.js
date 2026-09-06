@@ -97,7 +97,16 @@ const entrar = async (ctx, u, p) => {
   const depois = await admin.locator('.topo').innerText();
   console.log('   cabeçalho depois de mudar a ficha:', depois.replace(/\s+/g, ' ').slice(0, 80));
   ok(depois.includes(NOVA), 'mudar o nome na gestão muda o cabeçalho');
-  ok(depois.includes('8 de Maio de 2027'), 'e mudar a data muda a data por extenso');
+  // A data por extenso saiu da linha e passou para o title da contagem — que é
+  // o que ficou no lugar dela. Continua a ser a mesma pergunta: mudar a ficha
+  // muda o que o cabeçalho diz da data.
+  const quando = await admin.evaluate(() => {
+    const c = document.getElementById('topo-contagem');
+    return { titulo: c ? c.getAttribute('title') : '', dia: c ? c.dataset.dia : '' };
+  });
+  ok(quando.dia === '2027-05-08' && /8 de Maio de 2027/.test(quando.titulo),
+     'e mudar a data muda a contagem e a data por extenso que ela guarda: '
+       + quando.titulo);
 
   await publico.goto(BASE + '/convite.php?c=' + codigo, { waitUntil: 'networkidle' });
   ok((await publico.locator('body').innerText()).includes(NOVA),

@@ -45,11 +45,14 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
    linha só: a barra é estreita e o editor não é sítio para um número enorme.
    As cores são as do editor — estilo.css, que traz a versão grande, não entra
    cá dentro. */
-.ed-menu .contagem{ display:inline-flex; align-items:baseline; gap:.35rem; margin-left:.2rem; }
+.ed-menu .contagem{ display:inline-flex; align-items:baseline; gap:.3rem; margin-left:.2rem;
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ed-menu .contagem .cg-n{ font-family:'Cormorant Garamond',Georgia,serif; font-size:.95rem;
-  font-weight:700; color:var(--ed-ouro-claro); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  font-weight:700; color:var(--ed-ouro-claro); }
 .ed-menu .contagem .cg-l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
-  color:var(--ed-texto-2); white-space:nowrap; }
+  color:var(--ed-texto-2); }
+.ed-menu .contagem .cg-t{ font-size:.78rem; color:var(--ed-texto-2); }
+.ed-menu .contagem span:empty{ display:none; }
 .ed-menu .contagem.hoje .cg-n{ color:#e8c98f; }
 .ed-menu .contagem.passou .cg-n{ opacity:.75; }
 
