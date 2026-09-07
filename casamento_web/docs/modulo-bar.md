@@ -881,13 +881,16 @@ Reaproveitam as da copa (o papel `admin` do casamento tem-nas todas) mais
 | `copa.php` | O posto do copeiro |
 | `entregas.php` | O posto do entregador |
 | `bar.php` | A montagem do bar, para os noivos |
-| `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar — *por ora vive na aba «Mesas e QR» de `bar.php`* |
+| `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar. `?mesa=N` reimprime só uma |
 | `assets/bar.css` | Estilo dos quatro ecrãs |
 | `assets/bar-montagem.js` | Gavetas, bebidas, fotografias, stock, folhas de QR |
 | `assets/bar-convidado.js` | Procura do nome, mesa, menu, pedido, os meus pedidos |
 | `assets/bar-copa.js` | Fila, decisão, stock, motivos, regras da casa |
 | `assets/bar-entrega.js` | Fila, apanhar, entregar, devolver, tempos |
 | `tests/chk_bar.js` | A volta completa: montar, pedir, decidir, entregar (§22) |
+| `tests/chk_bar_limites.js` | A precedência das regras, o caudal, a espera e as alternativas |
+| `tests/chk_bar_identidade.js` | Um telemóvel uma pessoa; os três modos de IP |
+| `tests/chk_bar_numeros.js` | A previsão de rutura, e o que o convidado não vê |
 | `docs/modulo-bar.md` | Este documento |
 
 **Que mudam**
@@ -1072,19 +1075,29 @@ que está mesmo instalado.
 
 ## 23. Fases de entrega
 
-> **Estado da obra — fases 1 a 4 feitas.** O ciclo fecha: os noivos montam o
-> menu, o convidado escolhe-se numa lista e pede da mesa, a copa decide, o
-> empregado entrega, e o stock diz a verdade. A prova `tests/chk_bar.js`
-> percorre a volta inteira e é sobre as três contas do stock que ela insiste.
+> **Estado da obra — as oito fases feitas.** O bar serve bebidas do princípio
+> ao fim: os noivos montam o menu, o convidado escolhe-se numa lista e pede da
+> mesa, a copa decide dentro das regras que ela própria pôs, o empregado
+> entrega, o stock diz a verdade, e no fim há números para saber o que a festa
+> bebeu.
 >
-> Três coisas vieram mais cedo do que este plano dizia, porque sem elas não
-> havia nada a experimentar em sala:
+> Quatro provas, e cada uma defende uma ideia: `chk_bar.js` o ciclo e as três
+> contas do stock; `chk_bar_limites.js` a precedência das regras;
+> `chk_bar_identidade.js` o telemóvel preso a um nome e a decisão sobre o IP;
+> `chk_bar_numeros.js` a previsão de rutura e o que o convidado NÃO pode ver.
 >
-> * **As folhas das mesas** (fase 8) entraram na aba «Mesas e QR» de `bar.php`.
->   Falta-lhes a página própria e o LEIA-ME; o QR já sai da impressora.
-> * **O telemóvel preso a um nome** (fase 6) está feito — `barPrender()` e o
->   testemunho em cookie. Falta a troca de nome e os três modos de IP.
-> * **O pedido pelo empregado** (fase 6) está nos dois postos, copa e entregas.
+> O que ficou por fazer, e é honesto listar:
+>
+> * **O PIN opcional** (§5.2, ponto 5) não existe. Estava marcado como decisão
+>   em aberto e continua a fazer sentido deixá-lo assim: devolve o atrito que
+>   se quis tirar, e nenhuma festa o pediu ainda.
+> * **A janela horária** («nada de destilados antes das 21h», §8.2, última
+>   linha da tabela) não está: as regras têm `expira_em`, que resolve o «só
+>   até à hora do bolo», mas não o «só a partir de». Falta-lhe o campo
+>   simétrico.
+> * **`chk_bar_desenho.js`** — os alvos de toque, o esqueleto e o não-transbordo
+>   em 360/390/430 px estão escritos na folha mas só os quatro temas estão
+>   medidos por prova.
 >
 > E quatro coisas de percurso, que valem para quem vier a seguir:
 >

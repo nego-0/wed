@@ -38,6 +38,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `copa.php` | **O posto do copeiro:** a fila por decidir, aprovar ou recusar com motivo, o stock em tempo real e as regras da casa. Escuro de salão. |
 | `entregas.php` | **O posto do empregado de sala:** apanhar, entregar (é aqui, e só aqui, que o stock real desce), devolver à copa, e os tempos da noite. |
 | `assets/bar.css` | Os três registos do bar: a montagem clara, o escuro dos dois postos, e o menu que veste o convite. |
+| `bar-qr.php` | **A folha das mesas:** um cartão por mesa em A4, com o nome em grande, o QR e o endereço escrito, pronto a recortar e pousar. `?mesa=N` reimprime só uma. |
 | `assets/bar-montagem.js`, `assets/bar-copa.js`, `assets/bar-entrega.js`, `assets/bar-convidado.js` | Um por ecrã. |
 | `docs/modulo-bar.md` | O desenho inteiro do módulo, e o que dele está feito. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir (acessível a partir de *Gráfica*). |
@@ -84,7 +85,11 @@ os convidados lá entram (é o que vai no QR pousado em cada mesa):
   escrever aqui porquê. É contra ele que se confere uma noite que não bateu certo.
 - **`cw_bar_dispositivos`** — que telemóvel é que pessoa, para ninguém pedir em
   nome de outro por distração.
-- **`cw_bar_limites`** — as regras de quanto e de quando (fase 5).
+- **`cw_bar_limites`** — as regras de quanto e de quando: por bebida, por
+  gaveta ou de tudo; para toda a gente, para um convite ou para uma pessoa; e
+  também o caudal da própria copa. O limite mais específico **substitui** o
+  mais geral e não se soma a ele — somar faria de um tecto individual um
+  aumento de quota, que é o contrário do que quem o escreve quer.
 
 **O stock só desce na entrega.** Aprovar um pedido promete a bebida
 (`reservado`), não a gasta; é o empregado, ao dar por entregue, que a tira do

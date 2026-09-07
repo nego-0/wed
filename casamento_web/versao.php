@@ -529,6 +529,12 @@ function correcoesEsperadas(): array {
          'api.php', "\$acao === 'bar_meu_consumo'"],
         ['Bar: o painel dos noivos ganha a tira do bar, só quando ele trabalha',
          'index.php', 'async function tiraDoBar('],
+
+        // ---- Fase 8: as folhas das mesas ----
+        ['Bar: a folha A4 com um cartão por mesa, para recortar e pousar',
+         'bar-qr.php', 'Sem rede? Chame um empregado'],
+        ['Bar: o código e a folha de cada mesa, na ficha dela na planta',
+         'assets/mesas.js', 'bar-qr.php?mesa='],
     ];
 }
 

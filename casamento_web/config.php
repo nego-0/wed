@@ -121,7 +121,7 @@ function ficheirosApp(): array {
             'licenca.php','manifest.php','sw.js',
             // O bar: a montagem, o posto da copa, o do empregado, e o menu que
             // o convidado abre na mesa.
-            'bar.php','copa.php','entregas.php','bebidas.php',
+            'bar.php','copa.php','entregas.php','bebidas.php','bar-qr.php',
             'assets/bar.css','assets/bar-montagem.js','assets/bar-copa.js',
             'assets/bar-entrega.js','assets/bar-convidado.js',
             'assets/montra/convidados.jpg','assets/montra/mesas.jpg',

@@ -475,6 +475,15 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   font:inherit; text-decoration:underline; padding:0;
 }
 
+/* A linha do bar na ficha de uma mesa: o código que vai no QR, e a folha
+   para reimprimir só esta. Ver assets/mesas.js e bar-qr.php. */
+.mesa-bar{ display:flex; align-items:center; gap:.5rem; margin-top:.8rem;
+           padding-top:.7rem; border-top:1px solid var(--line); flex-wrap:wrap; }
+.mesa-bar code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem;
+                background:var(--cream); border-radius:6px; padding:.2rem .5rem;
+                letter-spacing:.06em; }
+.mesa-bar .btn{ margin-left:auto; }
+
 /* ---- O bar, no dia --------------------------------------------
    Uma tira e não um cartão: os cartões do painel são todos filtros da lista
    de convidados, e um que não filtrasse nada era uma promessa falsa. Só

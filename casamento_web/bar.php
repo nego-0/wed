@@ -144,7 +144,11 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
       convidados entram no menu — não há link no convite, porque um convite é de
       uma família e o bar precisa de saber qual das pessoas está a pedir.</p>
     <div class="acoes no-print" style="justify-content:flex-start;margin-bottom:1rem">
-      <button class="btn" onclick="window.print()">Imprimir as folhas</button>
+      <?php // A impressão vive em bar-qr.php: uma folha para a tesoura e um
+            // ecrã para trabalhar querem coisas contrárias, e a folha não quer
+            // cabeçalho nem menu nenhum. Aqui é só a pré-visualização. ?>
+      <a class="btn btn-ouro" href="bar-qr.php" target="_blank" rel="noopener">
+        Abrir as folhas para imprimir</a>
     </div>
     <div class="b-folhas" id="b-folhas"></div>
   </section>

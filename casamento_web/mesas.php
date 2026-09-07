@@ -620,6 +620,9 @@ window.CSRF = <?= json_encode(csrfToken()) ?>;
 // que casamento é. Uma planta anónima em cima de uma mesa não serve a ninguém.
 window.CASAL = <?= json_encode($CAS['casal']) ?>;
 window.DATA_EVENTO = <?= json_encode((string)(defsAtuais($conn)['evento.data'] ?? '')) ?>;
+// Com o bar na licença, cada mesa mostra o seu código e a folha para
+// reimprimir — é aqui que se vem quando uma se estraga a meio da festa.
+window.BAR_LIGADO = <?= podeModulo('bar') ? 'true' : 'false' ?>;
 </script>
 <script src="<?= asset('assets/mesas.js') ?>"></script>
 </body>

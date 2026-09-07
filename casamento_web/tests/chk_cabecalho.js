@@ -149,13 +149,14 @@ const PAGINAS = [
              l: cx.querySelector('.cg-l').textContent.trim(),
              t: cx.querySelector('.cg-t').textContent.trim(), cls: cx.className };
   }, [quando, hora]);
-  const iso = (d) => {
-    // Data LOCAL: toISOString() passa por UTC, e à noite num fuso a leste isso
-    // devolve o dia seguinte — «hoje» deixava de ser hoje.
-    const x = new Date(Date.now() + d * 86400000);
-    return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0')
-         + '-' + String(x.getDate()).padStart(2, '0');
-  };
+  // Data LOCAL: toISOString() passa por UTC, e à noite num fuso a leste isso
+  // devolve o dia seguinte — «hoje» deixava de ser hoje.
+  const isoDe = (x) =>
+    x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0')
+    + '-' + String(x.getDate()).padStart(2, '0');
+  const iso = (d) => isoDe(new Date(Date.now() + d * 86400000));
+  const hhmm = (x) => String(x.getHours()).padStart(2, '0') + ':'
+                    + String(x.getMinutes()).padStart(2, '0');
 
   const hoje = await comData(iso(0));
   ok(hoje.n === 'É HOJE' && /hoje/.test(hoje.cls),
@@ -165,12 +166,18 @@ const PAGINAS = [
   ok(ontem.l === 'há' && /passou/.test(ontem.cls) && ontem.t === '',
      'e depois conta para a frente, sem relógio: ' + ontem.l + ' ' + ontem.n);
 
-  // A véspera, com a hora do casamento uma hora à frente do relógio de agora:
-  // é aí que falta mesmo um dia. Marcada para uma hora que hoje já passou,
-  // faltariam menos de 24 horas — e então o que se quer ver é o relógio, não
-  // um «1 dia» que estaria a arredondar para cima.
+  // A véspera, com o casamento a vinte e tal horas de distância: é aí que falta
+  // mesmo um dia. A menos de 24 horas o que se quer ver é o relógio, não um
+  // «1 dia» que estaria a arredondar para cima.
+  //
+  // O dia sai do próprio instante, e não de um iso(1) fixo: às onze da noite,
+  // daqui a 25 horas já é depois de amanhã, e casar essa hora com a data de
+  // amanhã dava um alvo a meia hora de distância — a página fazia bem em
+  // mostrar só o relógio, e era a prova que estava errada. Cortadas as horas
+  // à hora certa, o alvo fica sempre entre as 24 e as 25 horas.
   const daquiA25h = new Date(Date.now() + 25 * 3600000);
-  const amanha = await comData(iso(1), String(daquiA25h.getHours()).padStart(2, '0') + ':00');
+  const amanha = await comData(isoDe(daquiA25h),
+                               String(daquiA25h.getHours()).padStart(2, '0') + ':00');
   ok(amanha.n === '1 dia' && amanha.l === 'falta',
      'a véspera diz «falta 1 dia», no singular: ' + amanha.l + ' ' + amanha.n);
 
@@ -183,9 +190,7 @@ const PAGINAS = [
   // já está provado acima.
   const daqui23h = new Date(Date.now() + 23 * 3600000);
   if (daqui23h.getDate() !== new Date().getDate()) {
-    const ultimas = await comData(
-      iso(1), String(daqui23h.getHours()).padStart(2, '0') + ':'
-            + String(daqui23h.getMinutes()).padStart(2, '0'));
+    const ultimas = await comData(isoDe(daqui23h), hhmm(daqui23h));
     ok(ultimas.n === '' && /^\d\d:\d\d:\d\d$/.test(ultimas.t),
        'e nas últimas horas fica só o relógio, sem dia nenhum: ' + ultimas.t);
   } else {

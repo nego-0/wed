@@ -2761,7 +2761,11 @@ function orcamentoResumo(mysqli $conn): array {
  */
 function listarMesas(mysqli $conn): array {
     global $P;
-    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho, rotacao
+    // O bar_token vem com a mesa: é o código que vai no QR pousado em cima
+    // dela, e a ficha da mesa mostra-o para se poder reimprimir a folha de uma
+    // que se estrague a meio da festa. Não é segredo — está impresso ali a
+    // noite inteira, e só diz qual é a mesa.
+    $mesas = $conn->query("SELECT id, nome, capacidade, pos_x, pos_y, forma, cor, especial, tamanho, rotacao, bar_token
                            FROM {$P}mesas WHERE " . doCasamento() . " ORDER BY (especial='noivos') DESC, nome")->fetch_all(MYSQLI_ASSOC);
     $idx = [];
     $noivosId = 0;

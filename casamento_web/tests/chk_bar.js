@@ -93,6 +93,23 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok((await noivos.locator('.b-folha canvas').count()) >= 1,
      'e a folha da mesa traz o QR desenhado, pronto a imprimir');
 
+  // ---- as folhas para a tesoura ----
+  // Vivem numa página à parte porque uma folha para imprimir e um ecrã para
+  // trabalhar querem coisas contrárias: aquela não quer cabeçalho, nem menu,
+  // nem botões — só papel.
+  const folha = await casa.newPage();
+  vigiar(folha, 'bar-qr.php');
+  await folha.goto(BASE + '/bar-qr.php', { waitUntil: 'networkidle' });
+  await folha.waitForTimeout(800);
+  ok((await folha.locator('.cartao').count()) >= 1, 'bar-qr.php dá um cartão por mesa');
+  const cartaoQr = await folha.locator('.cartao').first().innerText();
+  ok(/Sem rede\?/.test(cartaoQr),
+     'com o rodapé que diz o que fazer sem rede — é a saída de sempre');
+  ok(/bebidas\.php\?m=/.test(cartaoQr),
+     'e o endereço escrito, para quem prefira escrever a apontar a câmara');
+  const urlDoQr = await folha.locator('.cartao canvas').first().getAttribute('data-url');
+  await folha.close();
+
   // ============ 1b. a fotografia de uma bebida ============
   // «Uma fotografia a sério vende melhor do que um nome», diz a própria
   // página — e é o único caminho da montagem que não passa por JSON, por isso
@@ -128,6 +145,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(/não serve/i.test(await mau.locator('h1').innerText()),
      'um código de mesa inventado bate com a porta');
   await mau.close();
+
+  const impressa = await salao.newPage();
+  await impressa.goto(urlDoQr, { waitUntil: 'networkidle' });
+  await impressa.waitForTimeout(700);
+  ok(await impressa.locator('.b-procura h1').isVisible(),
+     'o endereço impresso no cartão abre mesmo o menu — é a única porta que há');
+  await impressa.close();
 
   const conv = await salao.newPage();
   vigiar(conv, 'bebidas.php');

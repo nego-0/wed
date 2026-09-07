@@ -15,6 +15,9 @@ function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
 // A primeira pastilha do painel é a das MESAS: é o índice do salão, e é por
 // ele que se começa quando se abre a planta.
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='mesas';
+// O bar só existe para quem o comprou: sem o módulo, a linha do código e da
+// folha não aparece na ficha da mesa. A página diz-nos se ele está ligado.
+const BAR_LIGADO = !!window.BAR_LIGADO;
 // Nível de zoom (fator aplicado ao canvas). A vista 100% usa todo o espaço do canvas (fator 1).
 let zoom=1;
 // Dimensões guardadas do canvas (px). null = automático.
@@ -963,6 +966,15 @@ function detalheHTML(){
         <button class="btn-gir" type="button" title="Rodar 15° para a direita" onclick="rodarMesa(15)">↻</button>
         ${(+m.rotacao||0) ? '<button class="btn-gir larga" type="button" title="Voltar a pôr a mesa ao direito" onclick="rodarMesa(null)">repor</button>' : ''}</div>
     </div>
+
+    ${BAR_LIGADO ? `
+    <div class="mesa-bar">
+      <span class="rot" style="margin:0">Bar</span>
+      <code title="O código que vai no QR desta mesa. Não é segredo — está
+impresso em cima dela a noite inteira; só diz qual é a mesa.">${esc(m.bar_token||'—')}</code>
+      <a class="btn btn-fantasma btn-sm" href="bar-qr.php?mesa=${m.id}" target="_blank"
+         rel="noopener" title="Reimprimir só a folha desta mesa">Folha</a>
+    </div>` : ''}
 
     <div style="margin-top:1rem">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
