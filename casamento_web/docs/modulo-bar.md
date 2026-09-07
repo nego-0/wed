@@ -1021,6 +1021,8 @@ com um `desde` não pagava o cuidado de o manter certo (§18).
 | `tests/chk_bar_pin.js` | Os quatro dígitos do convite, o travão, e o empregado a servir mesmo assim |
 | `tests/chk_bar_desenho.js` | O dedo, a fuga lateral, o anel de foco, o vazio e as cores inventadas (§25.14) |
 | `tests/chk_bar_por_outro.js` | Pedir por outro convidado: a quota é de quem bebe, os dois nomes ficam, e o código do convite continua a valer (§5.2.1) |
+| `tests/chk_bar_importar.js` | O retrato leva o bar, e o ficheiro de exemplo carrega um bar que serve (§19.1) |
+| `docs/exemplos/bar-exemplo.json` | Um casamento inteiro pronto a importar, para experimentar o bar sem montar nada |
 | `docs/modulo-bar.md` | Este documento |
 
 **Que mudam**
@@ -1123,6 +1125,40 @@ menu aberto a tarde inteira.
 O QR da mesa **não** é credencial: quem o fotografar de longe só consegue
 escolher a mesa. É de propósito — está pousado em cima de uma mesa a noite
 inteira.
+
+---
+
+## 19.1 Um casamento de exemplo, para experimentar
+
+`docs/exemplos/bar-exemplo.json` é um casamento inteiro pronto a importar, feito
+para se poder mexer no bar sem montar nada à mão: 10 convites (25 pessoas), 7
+mesas, 16 bebidas em 4 gavetas, 5 motivos de recusa e 10 regras — uma de cada
+forma que o motor de §8 conhece, incluindo a janela horária, uma regra de uma
+pessoa e uma de um convite inteiro. Traz de propósito uma bebida **oculta** e
+uma quase esgotada, para o menu do convidado e a previsão de rutura terem o que
+mostrar.
+
+Importa-se pela Gestão → Dados. Duas maneiras, e a diferença importa:
+
+* **«substituir»** põe-no por cima do casamento aberto. É o caminho rápido, e o
+  bar fica logo a funcionar, porque a licença é a que esse casamento já tem.
+* **«novo»** (só o admin) cria uma festa à parte. Mais limpo, mas o bar não
+  abre até alguém lhe dar a licença: o ficheiro **não traz licenças**, e não
+  deve trazer — um ficheiro que se auto-licenciasse era uma porta aberta ao
+  lado da porta.
+
+O que ele **não** traz são pedidos e telemóveis, e é uma decisão e não um
+esquecimento: o `reservado` de cada bebida é a soma dos pedidos aprovados por
+entregar, e importar uma fila de outra base punha as duas contas do stock a
+divergir logo à entrada — que é exactamente a avaria que o módulo inteiro
+existe para impedir (§6.1). Um bar importado está **por abrir**; a noite
+faz-se usando-o.
+
+`tests/chk_bar_importar.js` prova as duas metades: que o retrato leva o bar, e
+que o ficheiro carrega um bar que serve mesmo uma bebida — importa como festa
+nova, dá-lhe licença, abre o menu pelo QR de uma mesa, faz um pedido, e no fim
+apaga a festa de exemplo pela escada que o sistema exige (revogar → arquivar →
+apagar).
 
 ---
 

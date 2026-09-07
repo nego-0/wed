@@ -6243,7 +6243,15 @@ if ($acao === 'casamento_apagar') {
     $levou['contas'] = apagarContasDoCasamento($conn, $id);
     // Pela ordem certa: os convidados dependem dos convites, e as parcelas das
     // despesas, e estas das categorias.
-    foreach (['convidados','convites','mesas','versoes','registo','definicoes',
+    //
+    // As oito tabelas do bar entram nesta lista, e primeiro: apagar um
+    // casamento deixava-as para trás, com pedidos e telemóveis a apontar para
+    // convidados que já não existiam. Órfãos numa base que ninguém volta a
+    // olhar são a pior espécie — não dão erro nenhum, só ocupam e confundem
+    // quem um dia for contar linhas.
+    foreach (['bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_limites',
+              'bar_motivos','bar_dispositivos','bar_itens','bar_categorias',
+              'convidados','convites','mesas','versoes','registo','definicoes',
               'acessos','suporte_codigos',
               'orcamento_pagamentos','orcamento_despesas','orcamento_categorias'] as $t) {
         $st = $conn->prepare("DELETE FROM {$P}$t WHERE casamento_id=?");
@@ -6661,11 +6669,12 @@ if ($acao === 'convidado_list') {
 function resumoExportacao(array $saida): array {
     $r = ['casamentos' => count($saida['casamentos'] ?? []),
           'convites' => 0, 'pessoas' => 0, 'mesas' => 0, 'versoes' => 0,
-          'orcamento_despesas' => 0];
+          'orcamento_despesas' => 0, 'bar_itens' => 0];
     foreach ((array)($saida['casamentos'] ?? []) as $c) {
         $r['mesas']   += count((array)($c['mesas'] ?? []));
         $r['versoes'] += count((array)($c['versoes'] ?? []));
         $r['orcamento_despesas'] += count((array)($c['orcamento']['despesas'] ?? []));
+        $r['bar_itens'] += count((array)($c['bar']['itens'] ?? []));
         foreach ((array)($c['convites'] ?? []) as $cv) {
             $r['convites']++;
             $r['pessoas'] += count((array)($cv['membros'] ?? []));
@@ -6763,10 +6772,48 @@ function retratoCasamento(mysqli $conn, int $cid): array {
     foreach ($orcDespesas as &$d) unset($d['id']);   // o id é desta base
     unset($d);
 
+    // ---- o bar ----
+    // Viaja a MONTAGEM do bar, e não a noite: as gavetas, as bebidas com o que
+    // há delas, os motivos de recusa e as regras. Os pedidos e os telemóveis
+    // ficam de fora de propósito — são o estado de uma festa a decorrer, e
+    // trazê-los de outra base punha o stock a mentir (o «reservado» é a soma
+    // dos pedidos aprovados por entregar, e reconstruí-lo a partir de um
+    // ficheiro é convidar a que as duas contas deixem de bater).
+    //
+    // Tudo o que aponta para outra coisa aponta por NOME: o número é desta
+    // base e não sobrevive a uma importação.
+    $barCategorias = $um("SELECT nome, ordem, cor FROM {$P}bar_categorias
+                          WHERE casamento_id=$cid ORDER BY ordem, nome");
+    $barItens = $um("SELECT i.nome, i.descricao, i.alcoolico, i.volume_ml,
+                            i.max_por_pedido, i.estado, i.ordem, i.stock,
+                            c.nome AS categoria
+                     FROM {$P}bar_itens i
+                     LEFT JOIN {$P}bar_categorias c ON c.id = i.categoria_id
+                                                   AND c.casamento_id = i.casamento_id
+                     WHERE i.casamento_id=$cid ORDER BY i.ordem, i.nome");
+    $barMotivos = $um("SELECT texto, ordem, ativo FROM {$P}bar_motivos
+                       WHERE casamento_id=$cid ORDER BY ordem, id");
+    $barLimites = $um("SELECT l.escopo, l.sujeito, l.unidade, l.quantidade, l.janela_min,
+                              l.mensagem, l.nota, l.vigora_em, l.expira_em, l.ativo,
+                              it.nome AS alvo_item, ct.nome AS alvo_categoria,
+                              g.nome AS alvo_convidado, cv.nome_exibicao AS alvo_convite
+                       FROM {$P}bar_limites l
+                       LEFT JOIN {$P}bar_itens it ON it.id = l.alvo_id AND l.escopo='item'
+                                                 AND it.casamento_id = l.casamento_id
+                       LEFT JOIN {$P}bar_categorias ct ON ct.id = l.alvo_id AND l.escopo='categoria'
+                                                      AND ct.casamento_id = l.casamento_id
+                       LEFT JOIN {$P}convidados g ON g.id = l.alvo_convidado_id
+                                                 AND g.casamento_id = l.casamento_id
+                       LEFT JOIN {$P}convites cv ON cv.id = l.alvo_convite_id
+                                                AND cv.casamento_id = l.casamento_id
+                       WHERE l.casamento_id=$cid ORDER BY l.id");
+
     usarCasamento($anterior > 0 ? $anterior : 1);
     return ['ficha' => $ficha, 'definicoes' => $defs, 'mesas' => $mesas,
             'convites' => $convites, 'versoes' => $versoes, 'acessos' => $acessos,
-            'orcamento' => ['categorias' => $orcCategorias, 'despesas' => $orcDespesas]];
+            'orcamento' => ['categorias' => $orcCategorias, 'despesas' => $orcDespesas],
+            'bar' => ['categorias' => $barCategorias, 'itens' => $barItens,
+                      'motivos' => $barMotivos, 'limites' => $barLimites]];
 }
 
 if ($acao === 'dados_exportar') {
@@ -6995,6 +7042,123 @@ function impVersoes(mysqli $conn, int $cid, array $versoes): int {
     return $n;
 }
 
+/**
+ * Escreve a montagem do bar: gavetas, bebidas, motivos e regras.
+ *
+ * As gavetas primeiro, para as bebidas as reencontrarem pelo NOME; as bebidas
+ * antes das regras, pela mesma razão. Tudo o que aponta para outra coisa
+ * aponta por nome — o número era da outra base.
+ *
+ * O que NÃO entra aqui: pedidos e telemóveis. São o estado de uma noite a
+ * decorrer, e o `reservado` de cada bebida é a soma dos pedidos aprovados por
+ * entregar — trazê-los de um ficheiro punha as duas contas do stock a divergir
+ * logo à entrada, que é exactamente o que o módulo inteiro existe para evitar.
+ * Por isso o stock entra com `reservado = 0`: um bar que se importa está por
+ * abrir.
+ */
+function impBar(mysqli $conn, int $cid, array $bar): array {
+    global $P;
+    $feito = ['bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0, 'bar_regras' => 0];
+
+    $idCat = [];
+    foreach ((array)($bar['categorias'] ?? []) as $c) {
+        if (!is_array($c) || trim((string)($c['nome'] ?? '')) === '') continue;
+        $nm = mb_substr((string)$c['nome'], 0, 60);
+        $ord = (int)($c['ordem'] ?? 0);
+        $cc = strtolower(trim((string)($c['cor'] ?? '')));
+        $cor = preg_match('/^#[0-9a-f]{6}$/', $cc) ? $cc : null;
+        $st = $conn->prepare("INSERT INTO {$P}bar_categorias (casamento_id,nome,ordem,cor)
+                              VALUES ($cid,?,?,?)");
+        $st->bind_param('sis', $nm, $ord, $cor);
+        if (@$st->execute()) { $idCat[$nm] = $conn->insert_id; $feito['bar_categorias']++; }
+    }
+
+    $idItem = [];
+    foreach ((array)($bar['itens'] ?? []) as $i) {
+        if (!is_array($i) || trim((string)($i['nome'] ?? '')) === '') continue;
+        $nm = mb_substr((string)$i['nome'], 0, 80);
+        $catId = $idCat[(string)($i['categoria'] ?? '')] ?? null;
+        $desc = isset($i['descricao']) && $i['descricao'] !== null
+              ? mb_substr((string)$i['descricao'], 0, 200) : null;
+        $alc = (int)!empty($i['alcoolico']);
+        $vol = (int)($i['volume_ml'] ?? 0) ?: null;
+        $maxp = max(1, min(20, (int)($i['max_por_pedido'] ?? 2)));
+        $est = ($i['estado'] ?? 'ativo') === 'oculto' ? 'oculto' : 'ativo';
+        $ord = (int)($i['ordem'] ?? 0);
+        $stk = max(0, (int)($i['stock'] ?? 0));
+        // A bebida nasce a ZERO e o stock entra pelo livro-razão, como qualquer
+        // outra entrada. Escrevê-lo aqui E lançar o movimento a seguir dava o
+        // dobro das garrafas — foi o que aconteceu à primeira, e é o erro que
+        // a regra de ouro do módulo existe para impedir: a coluna e o
+        // livro-razão têm de contar a mesma história, e só contam se houver um
+        // caminho por onde o stock se mexe.
+        $st = $conn->prepare("INSERT INTO {$P}bar_itens
+                (casamento_id,categoria_id,nome,descricao,alcoolico,volume_ml,
+                 max_por_pedido,estado,ordem,stock,reservado)
+                VALUES ($cid,?,?,?,?,?,?,?,?,0,0)");
+        $st->bind_param('issiiisi', $catId, $nm, $desc, $alc, $vol, $maxp, $est, $ord);
+        if (!@$st->execute()) continue;
+        $idItem[$nm] = $conn->insert_id;
+        $feito['bar_itens']++;
+        if ($stk > 0) barMoverStock($conn, $idItem[$nm], $stk, 'importacao', null, 'stock importado');
+    }
+
+    foreach ((array)($bar['motivos'] ?? []) as $m) {
+        if (!is_array($m) || trim((string)($m['texto'] ?? '')) === '') continue;
+        $tx = mb_substr((string)$m['texto'], 0, 120);
+        $ord = (int)($m['ordem'] ?? 0);
+        $at = isset($m['ativo']) ? (int)!empty($m['ativo']) : 1;
+        $st = $conn->prepare("INSERT INTO {$P}bar_motivos (casamento_id,texto,ordem,ativo)
+                              VALUES ($cid,?,?,?)");
+        $st->bind_param('sii', $tx, $ord, $at);
+        if (@$st->execute()) $feito['bar_motivos']++;
+    }
+
+    // As regras por último: precisam das bebidas, das gavetas, das pessoas e
+    // dos convites já escritos para os reencontrar pelo nome.
+    $idPessoa = []; $idConvite = [];
+    $r = @$conn->query("SELECT id, nome FROM {$P}convidados WHERE casamento_id=$cid");
+    if ($r) while ($x = $r->fetch_assoc()) $idPessoa[$x['nome']] = (int)$x['id'];
+    $r = @$conn->query("SELECT id, nome_exibicao FROM {$P}convites WHERE casamento_id=$cid");
+    if ($r) while ($x = $r->fetch_assoc()) $idConvite[$x['nome_exibicao']] = (int)$x['id'];
+
+    foreach ((array)($bar['limites'] ?? []) as $l) {
+        if (!is_array($l)) continue;
+        $escopo = in_array($l['escopo'] ?? '', ['item','categoria','tudo'], true) ? $l['escopo'] : 'tudo';
+        $alvo = 0;
+        if ($escopo === 'item')      $alvo = $idItem[(string)($l['alvo_item'] ?? '')] ?? 0;
+        if ($escopo === 'categoria') $alvo = $idCat[(string)($l['alvo_categoria'] ?? '')] ?? 0;
+        // Uma regra sobre uma bebida que não veio no ficheiro não se inventa
+        // como regra de TUDO: isso alargava-a a coisas que ninguém quis travar.
+        if ($escopo !== 'tudo' && $alvo <= 0) continue;
+        $suj = ($l['sujeito'] ?? '') === 'casa' ? 'casa' : 'convidado';
+        $uni = ($l['unidade'] ?? '') === 'pedidos' ? 'pedidos' : 'bebidas';
+        $pessoa  = $suj === 'casa' ? null : ($idPessoa[(string)($l['alvo_convidado'] ?? '')] ?? null);
+        $convite = $suj === 'casa' ? null : ($idConvite[(string)($l['alvo_convite'] ?? '')] ?? null);
+        if ($pessoa && $convite) $convite = null;         // é de uma ou de outro
+        $qtd = max(0, min(999, (int)($l['quantidade'] ?? 0)));
+        $jan = max(0, min(1440, (int)($l['janela_min'] ?? 0)));
+        if ($uni === 'pedidos' && $escopo !== 'tudo') continue;   // como na API
+        $msg = isset($l['mensagem']) && $l['mensagem'] !== null
+             ? mb_substr((string)$l['mensagem'], 0, 160) : null;
+        $nota = isset($l['nota']) && $l['nota'] !== null
+              ? mb_substr((string)$l['nota'], 0, 160) : null;
+        $hora = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', (string)$v)
+                        ? str_replace('T', ' ', substr((string)$v, 0, 16)) . ':00' : null;
+        $vig = $hora($l['vigora_em'] ?? '');
+        $exp = $hora($l['expira_em'] ?? '');
+        $at = isset($l['ativo']) ? (int)!empty($l['ativo']) : 1;
+        $st = $conn->prepare("INSERT INTO {$P}bar_limites
+                (casamento_id,escopo,alvo_id,sujeito,alvo_convidado_id,alvo_convite_id,
+                 unidade,quantidade,janela_min,mensagem,nota,vigora_em,expira_em,ativo,criado_por)
+                VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,'importado')");
+        $st->bind_param('sisiisiissssi', $escopo, $alvo, $suj, $pessoa, $convite,
+                        $uni, $qtd, $jan, $msg, $nota, $vig, $exp, $at);
+        if (@$st->execute()) $feito['bar_regras']++;
+    }
+    return $feito;
+}
+
 /** Escreve o orçamento: gavetas, despesas e parcelas. Devolve os três totais. */
 function impOrcamento(mysqli $conn, int $cid, array $orc): array {
     global $P;
@@ -7080,14 +7244,20 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
     // Fora o que lá estava. É o que "substituir" quer dizer, e a página di-lo
     // antes de chegar aqui. As parcelas antes das despesas, e estas antes das
     // categorias, para as chaves estrangeiras não travarem.
-    foreach (['convidados', 'convites', 'mesas', 'versoes', 'definicoes',
+    // O bar sai primeiro, e de dentro para fora: as suas linhas apontam para
+    // convidados e mesas, e apagar essas antes deixava a fila a apontar para
+    // gente que já não existe.
+    foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_limites',
+              'bar_motivos', 'bar_dispositivos', 'bar_itens', 'bar_categorias',
+              'convidados', 'convites', 'mesas', 'versoes', 'definicoes',
               'orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
         $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
     }
 
     $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
               'definicoes' => 0, 'codigos_trocados' => 0,
-              'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0];
+              'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0,
+              'bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0, 'bar_regras' => 0];
     $feito['definicoes'] = impFichaDefs($conn, $cid, $r, $comFicha);
     $feito['mesas']      = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
     $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
@@ -7095,6 +7265,10 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
     $feito['codigos_trocados'] = $cv['codigos_trocados'];
     $feito['versoes'] = impVersoes($conn, $cid, (array)($r['versoes'] ?? []));
     foreach (impOrcamento($conn, $cid, (array)($r['orcamento'] ?? [])) as $k => $v) $feito[$k] = $v;
+    // O bar por último: as regras dele apontam para bebidas, gavetas, pessoas
+    // e convites, e todos esses têm de estar escritos para se reencontrarem
+    // pelo nome.
+    foreach (impBar($conn, $cid, (array)($r['bar'] ?? [])) as $k => $v) $feito[$k] = $v;
 
     usarCasamento($anterior > 0 ? $anterior : $cid);
     return $feito;
@@ -7104,7 +7278,7 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
 function partesCasamento(): array {
     return ['convidados' => 'Lista de convidados', 'mesas' => 'Mesas',
             'digital' => 'Versões do convite digital', 'impresso' => 'Versões do convite impresso',
-            'orcamento' => 'Orçamento'];
+            'orcamento' => 'Orçamento', 'bar' => 'Bar (menu, stock e regras)'];
 }
 
 /** Um retrato ficando só com as secções pedidas (a ficha vai sempre, para nomear). */
@@ -7121,6 +7295,15 @@ function retratoParcial(array $r, array $partes): array {
         $out['orcamento'] = $r['orcamento'] ?? [];
         $out['definicoes'] = array_intersect_key((array)($r['definicoes'] ?? []),
             array_flip(['orcamento.total', 'orcamento.moeda']));
+    }
+    if (in_array('bar', $partes, true)) {
+        $out['bar'] = $r['bar'] ?? [];
+        // As definições do bar viajam com ele: sem elas o bar chegava montado
+        // mas com as regras da casa de fábrica — e o interruptor a dizer que
+        // está fechado, que é o de origem.
+        $out['definicoes'] = ($out['definicoes'] ?? []) + array_filter(
+            (array)($r['definicoes'] ?? []),
+            fn($k) => str_starts_with($k, 'bar.'), ARRAY_FILTER_USE_KEY);
     }
     return $out;
 }
@@ -7169,6 +7352,24 @@ function reporCasamentoPartes(mysqli $conn, int $cid, array $r, array $partes): 
                 $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,?,?)");
                 $st->bind_param('ss', $k, $val); @$st->execute();
             }
+        }
+        esquecerDefinicoes($conn);
+    }
+    if (in_array('bar', $partes, true)) {
+        // Pela ordem inversa das dependências, para não deixar órfãos: os
+        // movimentos e as linhas de pedido antes das bebidas, e assim adiante.
+        // Os PEDIDOS também caem — um bar novo não pode ficar com a fila do
+        // antigo, que apontaria para bebidas que já não existem.
+        foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_limites',
+                  'bar_motivos', 'bar_itens', 'bar_categorias'] as $t) {
+            $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+        }
+        $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave LIKE 'bar.%'");
+        foreach (impBar($conn, $cid, (array)($r['bar'] ?? [])) as $k => $v) $feito[$k] = $v;
+        foreach ((array)($r['definicoes'] ?? []) as $k => $val) {
+            if (!str_starts_with((string)$k, 'bar.') || !is_string($val) || $val === '') continue;
+            $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES ($cid,?,?)");
+            $st->bind_param('ss', $k, $val); @$st->execute();
         }
         esquecerDefinicoes($conn);
     }
@@ -7248,6 +7449,19 @@ function reporFabricaPartes(mysqli $conn, int $cid, array $partes): array {
         }
         $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave IN ('orcamento.total','orcamento.moeda')");
         esquecerDefinicoes($conn);
+    }
+    if (in_array('bar', $partes, true)) {
+        // Reposição de fábrica do bar: sai tudo, e volta a semente — as gavetas
+        // e os motivos de recusa, para a copa não recomeçar numa folha em
+        // branco. É o mesmo bar de origem que um casamento novo recebe.
+        $feito['bar_itens'] = $um("SELECT COUNT(*) FROM {$P}bar_itens WHERE casamento_id=$cid");
+        foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_limites',
+                  'bar_motivos', 'bar_dispositivos', 'bar_itens', 'bar_categorias'] as $t) {
+            $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
+        }
+        $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave LIKE 'bar.%'");
+        esquecerDefinicoes($conn);
+        semearBar($conn, $cid);
     }
 
     usarCasamento($anterior > 0 ? $anterior : $cid);

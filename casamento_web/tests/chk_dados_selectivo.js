@@ -204,9 +204,20 @@ const existe = fp => { try { return fs.existsSync(ROOT + fp); } catch (e) { retu
   const cheio = await baixar('&ambito=casamento');
   ok(cheio.partes === undefined,
      'a exportação dos noivos é o retrato cheio — não declara partes');
+  // A lista escreve-se por extenso, e não se conta apenas. Contar dizia
+  // «esperava 5, vieram 6» e a correcção fácil era trocar o número; assim,
+  // quando a casa ganha uma secção de dados, esta prova falha a dizer QUAL
+  // falta — e acrescentá-la aqui é uma decisão de quem a criou, que é o que
+  // se quer numa prova que guarda apagar dados.
+  const ESPERADAS = ['convidados', 'mesas', 'digital', 'impresso', 'orcamento', 'bar'];
   const rfTudo = await api('casamento_repor_fabrica', { tudo: true }, 1);
-  ok(rfTudo.success && (rfTudo.partes || []).length === 5,
-     `«tudo» apaga as cinco partes de uma vez (${(rfTudo.partes||[]).join(', ')})`);
+  const vieram = (rfTudo.partes || []).slice().sort();
+  const faltam = ESPERADAS.filter(x => !vieram.includes(x));
+  const aMais  = vieram.filter(x => !ESPERADAS.includes(x));
+  ok(rfTudo.success && !faltam.length && !aMais.length,
+     `«tudo» apaga as ${ESPERADAS.length} partes de uma vez (${vieram.join(', ')})`
+     + (faltam.length ? ` — falta: ${faltam.join(', ')}` : '')
+     + (aMais.length ? ` — a mais: ${aMais.join(', ')}` : ''));
   const vazio = (await baixar('&ambito=casamento')).casamentos[0] || {};
   ok((vazio.convites || []).length === 0 && (vazio.mesas || []).length === 0
      && ((vazio.orcamento || {}).categorias || []).length === 0,

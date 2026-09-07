@@ -41,6 +41,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `bar-qr.php` | **A folha das mesas:** um cartão por mesa em A4, com o nome em grande, o QR e o endereço escrito, pronto a recortar e pousar. `?mesa=N` reimprime só uma. |
 | `assets/bar-montagem.js`, `assets/bar-copa.js`, `assets/bar-entrega.js`, `assets/bar-convidado.js` | Um por ecrã. |
 | `docs/modulo-bar.md` | O desenho inteiro do módulo, e o que dele está feito. |
+| `docs/exemplos/bar-exemplo.json` | **Um casamento pronto a importar**, para experimentar o bar sem montar nada: 10 convites, 7 mesas, 16 bebidas e 10 regras. Entra pela Gestão → Dados. Não traz licenças nem pedidos — a licença é um facto comercial daquele casamento, e uma fila importada punha as duas contas do stock a divergir. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir (acessível a partir de *Gráfica*). |
 | `cartoes.php` | **Cartão de convite 10×15 cm** (um por convidado), para impressão a dourado sobre acrílico (acessível a partir de *Gráfica*). |
 | `porta-chaves.php` | **Porta-chaves comemorativo** 45×60 mm: peça 3D virável, com escolha de acabamento e da quadra do verso (acessível a partir de *Gráfica*). |

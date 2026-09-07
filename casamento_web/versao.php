@@ -567,6 +567,14 @@ function correcoesEsperadas(): array {
          'assets/bar-convidado.js', 'window.barParaMim'],
         ['Bar: o código do convite viaja com a exportação',
          'api.php', 'c.bar_pin'],
+
+        // ---- O bar viaja no retrato ----
+        ['Bar: o retrato leva o menu, o stock, os motivos e as regras',
+         'api.php', 'function impBar('],
+        ['Bar: apagar ou substituir um casamento já não deixa órfãos do bar',
+         'api.php', "'bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_limites',"],
+        ['Bar: um casamento de exemplo, pronto a importar',
+         'docs/exemplos/bar-exemplo.json', '"bar"'],
     ];
 }
 
