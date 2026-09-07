@@ -156,7 +156,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e acende, porque é um estado que se pode esquecer');
 
   const antesA = await levou(A.id), antesB = await levou(B.id);
-  await cA.locator('.b-bebida:has-text("ZZO Cerveja") button:has-text("+")').first().click();
+  await cA.locator('.b-bebida:has-text("ZZO Cerveja") .b-mais button.up').first().click();
   await cA.waitForTimeout(400);
   ok(/Pedir para/.test(await cA.locator('#b-pedir').innerText()),
      'o botão do rodapé passa a dizer o nome — o último sítio onde se repara');

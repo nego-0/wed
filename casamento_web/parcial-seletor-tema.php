@@ -25,7 +25,12 @@ $__amostras = function_exists('temasAmostras') ? temasAmostras() : [];
             onclick="temaEscolher('<?= $chave ?>')">
       <span class="tema-fab-dots"><i style="background:<?= $c[0] ?>"></i><i style="background:<?= $c[1] ?>"></i><i style="background:<?= $c[2] ?>"></i></span>
       <span class="tema-fab-nome"><?= escP($rot) ?></span>
-      <span class="tema-fab-check" aria-hidden="true">&#10003;</span>
+      <?php // Um visto desenhado, e não o carácter &#10003;: nas fontes que não
+            // o têm sai o quadrado do «não sei desenhar isto», e o que ficava
+            // sem sinal era justamente o tema escolhido. ?>
+      <span class="tema-fab-check" aria-hidden="true"><svg viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+        stroke-linejoin="round"><path d="M20 6.5 9.2 17.3 4 12.1"/></svg></span>
     </button>
     <?php endforeach; ?>
     <button type="button" class="tema-fab-reset" onclick="temaRepor()">Usar o tema da casa</button>

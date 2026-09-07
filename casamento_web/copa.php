@@ -41,20 +41,13 @@ $CAS  = casalInfo($DEFS);
   .b-duas{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:1.2rem;
            align-items:start; }
   @media (max-width:900px){ .b-duas{ grid-template-columns:1fr; } }
+  /* O título de uma coluna: o sinal, a palavra, e a nota do lado. O ícone
+     ancora a coluna quando o olho volta a ela pela vigésima vez. */
   .b-tit{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-soft);
-          margin:0 0 .6rem; display:flex; align-items:baseline; gap:.5rem; }
-  .b-tit small{ font-size:.75rem; color:var(--gold-pale); font-family:var(--sans); }
-  .b-abas-n{ display:flex; gap:.4rem; margin:0 0 .9rem; flex-wrap:wrap; }
-  .b-abas-n button{ background:rgba(255,255,255,.06); border:1px solid rgba(233,223,201,.2);
-                    color:var(--ivory); border-radius:50px; padding:.45rem 1rem; cursor:pointer;
-                    /* 48, e não 44: são o que se toca a toda a hora, com o
-                       telemóvel apoiado no balcão e um dedo só. 44 é a medida
-                       de um rato, e aqui não há rato nenhum (§25.6). */
-                    font:inherit; font-size:.85rem; min-height:48px; }
-  .b-abas-n button.on{ background:var(--gold-soft); border-color:var(--gold-soft); color:var(--forest-deep);
-                       font-weight:600; }
-  .b-abas-n button:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
-  .b-abas-n .cnt{ font-variant-numeric:tabular-nums; opacity:.75; }
+          margin:0 0 .6rem; display:flex; align-items:center; gap:.5rem; }
+  .b-tit .ico{ width:18px; height:18px; opacity:.8; }
+  .b-tit small{ font-size:.75rem; color:var(--gold-pale); font-family:var(--sans);
+                margin-left:auto; font-variant-numeric:tabular-nums; }
 
   /* O cabeçalho é próprio, como o da porta: quem trabalha na copa não anda
      pelo menu do casal, e uma barra com «Convite impresso» aqui era ruído. */
@@ -64,6 +57,18 @@ $CAS  = casalInfo($DEFS);
   body.b-noite .topo .sub{ font-size:.8rem; color:var(--gold-pale); }
   body.b-noite .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
   body.b-noite .topo .nav a{ color:var(--gold-pale); font-size:.88rem; }
+
+  /* Os três atalhos da coluna do stock. Empilhados e alinhados à esquerda,
+     com o ícone sempre na mesma coluna: lidos de cima a baixo são uma lista
+     de coisas que se pode fazer, e não três botões espalhados. */
+  .b-atalhos{ margin-top:1rem; display:grid; gap:.4rem; }
+  .b-atalhos .btn{ justify-content:flex-start; gap:.6rem; width:100%; }
+
+  /* A nota de rodapé de uma coluna. Explica uma regra do módulo e lê-se uma
+     vez na vida — por isso é pequena e discreta, e não uma frase em corpo de
+     texto a competir com os números que estão por cima dela. */
+  .b-nota{ margin:.7rem 0 0; font-size:.78rem; line-height:1.55;
+           color:var(--gold-pale); opacity:.85; }
 </style>
 </head>
 <body class="b-noite">
@@ -83,26 +88,26 @@ $CAS  = casalInfo($DEFS);
 </header>
 
 <div class="b-sala">
-  <div class="b-barra">
-    <div><div class="n" id="k-analise">–</div><div class="l">por decidir</div></div>
-    <div><div class="n" id="k-aprovados">–</div><div class="l">por entregar</div></div>
-    <div><div class="n" id="k-caminho">–</div><div class="l">a caminho</div></div>
-    <div><div class="n" id="k-bebidas">–</div><div class="l">servidas</div></div>
-    <span class="cresce"></span>
+  <?php // O mesmo interruptor da montagem, com o mesmo farol: a pergunta
+        // «está aberto?» responde-se com um sinal a piscar e uma palavra,
+        // e não só com o rótulo do botão. As contagens da FILA não estão
+        // aqui — vivem nas pastilhas, que é onde se carrega para lá ir. ?>
+  <div class="b-chave" id="b-chave">
+    <span class="farol" id="b-farol"></span>
+    <div>
+      <div class="est" id="b-est">A ligar…</div>
+      <p class="dica" id="b-dica">A ler a fila da noite.</p>
+    </div>
+    <div class="numeros" id="b-numeros"></div>
     <span class="b-sinal" id="b-sinal">a ligar…</span>
     <button class="btn btn-fantasma" id="b-chave-bt" onclick="copaChave()">…</button>
   </div>
 
   <div class="b-duas">
     <section>
-      <div class="b-abas-n" role="tablist">
-        <button class="on" id="fa-analise" onclick="copaFiltro('analise')" role="tab">
-          Por decidir <span class="cnt" id="c-analise"></span></button>
-        <button id="fa-espera" onclick="copaFiltro('espera')" role="tab">
-          Por entregar <span class="cnt" id="c-espera"></span></button>
-        <button id="fa-fim" onclick="copaFiltro('fim')" role="tab">Já resolvidos</button>
-        <button id="fa-num" onclick="copaFiltro('num')" role="tab">Os números</button>
-      </div>
+      <?php // As quatro vistas da fila e a procura dentro dela. Vêm de JS
+            // porque levam ícones e contagens — o HTML fica com a estrutura. ?>
+      <div class="b-fer" id="b-fer-fila" role="tablist"></div>
       <div class="b-fila" id="b-fila">
         <div class="b-cartao b-esq" style="height:96px"></div>
         <div class="b-cartao b-esq" style="height:96px"></div>
@@ -110,21 +115,18 @@ $CAS  = casalInfo($DEFS);
     </section>
 
     <aside>
-      <h2 class="b-tit">Stock <small id="b-stock-nota"></small></h2>
+      <h2 class="b-tit" id="b-tit-stock">Stock <small id="b-stock-nota"></small></h2>
+      <div class="b-fer" id="b-fer-stock"></div>
       <div class="b-cartao"><div class="b-stock" id="b-stock">
         <div class="b-esq" style="height:44px"></div>
       </div></div>
-      <p class="dica" style="color:var(--gold-pale);margin-top:.7rem">
+      <p class="b-nota">
         O stock só desce quando a bebida é entregue. O que está prometido
         aparece à parte — é bebida que ainda está na copa mas já tem dono.
       </p>
       <div id="b-bandeiras" class="b-flags" hidden></div>
 
-      <div style="margin-top:.9rem;display:flex;gap:.5rem;flex-wrap:wrap">
-        <button class="btn btn-fantasma" onclick="copaPedirPor()">Pedir por um convidado</button>
-        <button class="btn btn-fantasma" onclick="copaMotivos()">Motivos de recusa</button>
-        <button class="btn btn-fantasma" onclick="copaRegras()">Regras da casa</button>
-      </div>
+      <div class="b-atalhos" id="b-atalhos"></div>
     </aside>
   </div>
 </div>
@@ -133,6 +135,10 @@ $CAS  = casalInfo($DEFS);
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script>window.SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;</script>
+<?php // Os ícones e as peças comuns vêm antes de tudo: o resto do módulo
+      // desenha-se com eles e não sabe fazê-lo sem. ?>
+<script src="<?= asset('assets/icones.js') ?>"></script>
+<script src="<?= asset('assets/bar-pecas.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/bar-copa.js') ?>"></script>

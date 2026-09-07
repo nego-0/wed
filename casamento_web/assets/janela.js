@@ -26,6 +26,20 @@ function licEsc(s){
 /** Onde estava o foco antes de a janela abrir, para lho devolver ao fechar. */
 let LIC_FOCO_ANTES = null;
 
+/**
+ * As doze cores que o campo `tipo:'cor'` oferece.
+ *
+ * Não são as do tema, e é de propósito: servem para DISTINGUIR coisas umas das
+ * outras — gavetas de um menu, categorias de um orçamento — e para isso o que
+ * importa é que se afastem entre si. Escolhidas com saturação e luminosidade
+ * parecidas, ficam bem lado a lado na mesma grelha, que é onde vão parar, e
+ * nenhuma delas berra sobre o creme ou sobre o escuro do salão.
+ */
+const LIC_CORES = [
+  '#B24C7A', '#C0524B', '#C98A2E', '#A8871F', '#6F9E2B', '#2F9E8F',
+  '#2E86C8', '#5A6FC0', '#8A5A2B', '#7A5AA8', '#4E7A5E', '#6E7C87'
+];
+
 /** Uma janela simples de OK/Cancelar, para as escolhas que não cabem num prompt. */
 function licJanela(titulo, html, aoConfirmar, opcoes){
   opcoes = opcoes || {};
@@ -154,6 +168,23 @@ function licFormulario(cfg){
                     '<option value="' + licEsc(o.v) + '"' + (String(o.v) === v ? ' selected' : '') + '>'
                     + licEsc(o.r) + '</option>').join('')
                 + '</select>';
+        } else if (c.tipo === 'cor'){
+          // Doze escolhas boas, e a porta para o resto. Um campo a pedir
+          // «#rrggbb» é um teste de conhecimentos: ninguém escolhe uma cor
+          // assim. As doze têm saturação e luminosidade parecidas, e por isso
+          // ficam bem umas ao lado das outras — que é onde vão parar.
+          const paleta = c.paleta || LIC_CORES;
+          const v0 = String(v || paleta[0]).toLowerCase();
+          campo = '<div class="b-cores" data-cor-de="' + c.id + '">'
+            + paleta.map(p => '<button type="button" class="b-cor'
+                + (p.toLowerCase() === v0 ? ' on' : '') + '" style="--c:' + p + '" '
+                + 'data-cor="' + p + '" title="' + p + '" aria-label="Cor ' + p + '"></button>').join('')
+            + '<label class="b-cor-mais" title="Outra cor">'
+            +   '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            +   'stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+            +   '<input type="color" value="' + licEsc(v0) + '"></label>'
+            + '<input type="hidden" id="lf-' + c.id + '" value="' + licEsc(v0) + '">'
+            + '</div>';
         } else {
           // 'hora' dá o relógio do telemóvel, que é o que se quer quando a
           // pergunta é «a partir de que horas» no meio de uma festa.
@@ -165,13 +196,40 @@ function licFormulario(cfg){
                 + (c.passo ? ' step="' + c.passo + '"' : '')
                 + (c.dica2 ? ' placeholder="' + licEsc(c.dica2) + '"' : '') + '>';
         }
+        // O rótulo aparece SEMPRE, e o sim/não não é excepção. Era: e o que se
+        // via numa janela de definições eram duas caixas a dizer «SIM, PARA
+        // QUEM NÃO TEM REDE» e «DEIXAR, AVISANDO A COPA», sem em lado nenhum
+        // dizer sim a QUÊ — a pergunta ficava só no código. A frase ao lado
+        // (aoLado) é a resposta; o rótulo é a pergunta, e as duas precisam
+        // uma da outra.
         return '<div class="lic-f-c"' + larg + '>'
-          + (c.tipo === 'sim' ? '' : '<label for="lf-' + c.id + '">' + licEsc(c.rot) + '</label>')
+          + '<label for="lf-' + c.id + '">' + licEsc(c.rot) + '</label>'
           + campo
           + (c.dica ? '<span class="lic-f-d">' + c.dica + '</span>' : '')
           + '</div>';
       }).join('')
     + '</div>' + (cfg.extra || '');
+
+  // O selector de cor precisa de vida: as amostras escolhem, e a que fica
+  // escolhida marca-se com um visto — nunca só pela moldura, que a quem
+  // distingue mal as cores não diz nada (§25.7).
+  const ligarCores = () => {
+    document.querySelectorAll('#lic-janela .b-cores').forEach(cx => {
+      const guardado = cx.querySelector('input[type=hidden]');
+      const custom = cx.querySelector('input[type=color]');
+      const marcar = (valor) => {
+        guardado.value = valor;
+        cx.querySelectorAll('.b-cor').forEach(b => {
+          b.classList.toggle('on', b.dataset.cor.toLowerCase() === valor.toLowerCase());
+        });
+        if (custom) custom.value = valor;
+      };
+      cx.querySelectorAll('.b-cor').forEach(b => {
+        b.addEventListener('click', () => marcar(b.dataset.cor));
+      });
+      if (custom) custom.addEventListener('input', () => marcar(custom.value));
+    });
+  };
 
   licJanela(cfg.titulo, html, async () => {
     const vals = {};
@@ -179,6 +237,7 @@ function licFormulario(cfg){
       const el = document.getElementById('lf-' + c.id);
       if (!el) return;
       if (c.tipo === 'sim') vals[c.id] = el.checked ? 1 : 0;
+      else if (c.tipo === 'cor') vals[c.id] = el.value;
       else if (c.tipo === 'numero' || c.tipo === 'preco')
         vals[c.id] = parseFloat(String(el.value).replace(',', '.')) || 0;
       else vals[c.id] = el.value.trim();
@@ -186,6 +245,7 @@ function licFormulario(cfg){
     licJanelaErro('');
     return await cfg.aoGuardar(vals);
   }, { guardar: cfg.guardar, perigo: cfg.perigo, largo: cfg.largo });
+  ligarCores();
 }
 
 /**
@@ -207,7 +267,13 @@ function licConfirmar(cfg){
     // desfaz: um clique distraído não deve chegar para apagar uma casa.
     const temEscrever = !!cfg.escrever;
     const html = '<div class="lic-conf' + (cfg.perigo ? ' perigo' : '') + '">'
-      + (cfg.icone ? '<div class="lic-conf-ico">' + cfg.icone + '</div>' : '')
+      // O ícone pode ser o NOME de um sinal desenhado (assets/icones.js) ou
+      // markup à medida. O nome é o caminho novo: um emoji numa janela de
+      // confirmação muda de desenho conforme o sistema e não obedece ao tema.
+      + (cfg.icone
+          ? '<div class="lic-conf-ico">'
+            + ((window.ICO && window.ICO.ico(cfg.icone)) || cfg.icone) + '</div>'
+          : '')
       + '<div class="lic-conf-txt">' + cfg.texto + '</div></div>'
       + (temMotivo
           ? '<div class="lic-f-c" style="margin-top:1rem">'

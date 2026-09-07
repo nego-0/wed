@@ -42,14 +42,21 @@ $CAS  = casalInfo($DEFS);
   body.b-noite .topo .nav a{ color:var(--gold-pale); font-size:.88rem; }
 
   /* As três filas: a minha, a que espera, e a que voltou. Cabeçalhos em vez
-     de abas — num só ecrã, rolar é mais rápido do que escolher. */
+     de abas — num só ecrã, rolar é mais rápido do que escolher. O sinal à
+     esquerda dá a cada fila uma cara, para se saber onde se está a meio de
+     um rolar rápido com o telemóvel na mão. */
   .b-secao{ margin:1.4rem 0 .6rem; font-family:var(--serif); font-size:1.05rem;
-            color:var(--gold-soft); display:flex; align-items:baseline; gap:.5rem; }
+            color:var(--gold-soft); display:flex; align-items:center; gap:.5rem; }
+  .b-secao .ico{ width:17px; height:17px; opacity:.85; }
+  .b-secao .n{ font-family:var(--sans); font-size:.72rem; font-weight:700;
+               background:rgba(255,255,255,.1); border-radius:50px; padding:.1rem .5rem;
+               font-variant-numeric:tabular-nums; }
   .b-secao small{ font-family:var(--sans); font-size:.74rem; color:var(--gold-pale);
-                  font-weight:400; }
+                  font-weight:400; margin-left:auto; text-align:right; }
   .b-ped .b-acoes .btn{ flex:1 1 100%; }
-  .b-ped.minha{ border-color:var(--gold-soft); }
-
+  /* O que está nas MINHAS mãos distingue-se do resto: no meio de três filas
+     empilhadas, é o único grupo em que a próxima acção é minha. */
+  .b-ped.minha{ border-color:var(--gold-soft); background:rgba(233,223,201,.055); }
 </style>
 </head>
 <body class="b-noite">
@@ -68,16 +75,19 @@ $CAS  = casalInfo($DEFS);
 </header>
 
 <div class="b-sala estreita">
+  <?php // «Comigo» e «por apanhar» já estão escritos no cabeçalho de cada
+        // fila, a dois dedos dos cartões que contam — repeti-los aqui era
+        // dizer o mesmo número duas vezes no mesmo ecrã. Fica o que nenhuma
+        // fila diz: quantas já foram servidas, e se a ligação está de pé. ?>
   <div class="b-barra">
-    <div><div class="n" id="k-minhas">–</div><div class="l">comigo</div></div>
-    <div><div class="n" id="k-espera">–</div><div class="l">por apanhar</div></div>
-    <div><div class="n" id="k-entregues">–</div><div class="l">servidas</div></div>
+    <div><div class="n" id="k-entregues">–</div><div class="l">servidas esta noite</div></div>
     <span class="cresce"></span>
     <span class="b-sinal" id="b-sinal">a ligar…</span>
   </div>
 
-  <button class="btn btn-fantasma b-bt-grande" onclick="entPedirPor()">
-    Pedir por um convidado sem rede</button>
+  <?php // A procura, e o atalho de quem pede sem rede. Vêm de JS porque levam
+        // ícones — o HTML fica só com o sítio onde eles moram. ?>
+  <div class="b-fer" id="b-fer"></div>
 
   <div id="b-listas">
     <div class="b-cartao b-esq" style="height:110px"></div>
@@ -91,6 +101,8 @@ $CAS  = casalInfo($DEFS);
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script>window.SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;</script>
+<script src="<?= asset('assets/icones.js') ?>"></script>
+<script src="<?= asset('assets/bar-pecas.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/bar-entrega.js') ?>"></script>

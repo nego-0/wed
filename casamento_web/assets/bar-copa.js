@@ -13,39 +13,24 @@
   var $ = function (id) { return document.getElementById(id); };
   var PODE = !window.SO_VER_UI;
   var EST = null;
-  var filtro = 'analise';
   var desvio = 0;            // relógio do servidor menos o do browser, em ms
   var relogio = null, tique = null;
 
-  function esc(s) {
-    return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (m) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m];
-    });
-  }
-  function toast(m, mau) {
-    var t = $('toast'); if (!t) return;
-    t.textContent = m; t.className = 'toast mostrar' + (mau ? ' erro' : '');
-    setTimeout(function () { t.className = 'toast'; }, 2600);
-  }
-  window.toast = toast;
+  // As peças comuns aos quatro ecrãs do bar (assets/bar-pecas.js). São as
+  // mesmas em todo o módulo de propósito: quem aprende a procurar na
+  // montagem já sabe procurar aqui.
+  var ico = window.ICO, BP = window.BP;
+  var esc = BP.esc, toast = BP.toast, chave = BP.chave, foto = BP.foto;
+  var campoBusca = BP.campoBusca, ligarBusca = BP.ligarBusca;
+  var btIco = BP.btIco, vazio = BP.vazio;
+  function ha(quando) { return BP.ha(quando, desvio); }
 
-  function foto(i) {
-    if (i.foto) return '<div class="b-foto"><img src="' + esc(i.foto) + '" alt="" loading="lazy"></div>';
-    return '<div class="b-foto"><span class="letra">'
-      + esc((i.nome || '?').trim().charAt(0).toUpperCase()) + '</span></div>';
-  }
+  /* ---- o que quem está a olhar está a perguntar ----------------
+     Vive fora de EST porque não vem do servidor. Sobrevive às voltas de oito
+     segundos: nada seria pior do que uma procura escrita a meio a desfazer-se
+     sozinha enquanto a copa lê o resultado. */
+  var VER = { aba: 'analise', busca: '', buscaStock: '' };
 
-  /** Há quanto tempo, em português curto. É a conta que ordena a noite. */
-  function ha(quando) {
-    if (!quando) return '';
-    var t = Date.parse(String(quando).replace(' ', 'T'));
-    if (isNaN(t)) return '';
-    var s = Math.max(0, Math.round((Date.now() + desvio - t) / 1000));
-    if (s < 60) return 'agora mesmo';
-    var m = Math.round(s / 60);
-    if (m < 60) return 'há ' + m + ' min';
-    return 'há ' + Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
-  }
   function minutos(quando) {
     var t = Date.parse(String(quando || '').replace(' ', 'T'));
     return isNaN(t) ? 0 : (Date.now() + desvio - t) / 60000;
@@ -69,10 +54,11 @@
     EST = d;
     sinal.className = 'b-sinal on';
     sinal.textContent = 'ligado';
-    pintarBarra();
+    pintarChave();
+    pintarFerramentas();
     // Com os números à vista é a eles que a volta serve: pintarFila() sai
     // pela porta do lado para não os apagar por baixo de quem os está a ler.
-    if (filtro === 'num') pintarNumeros(); else pintarFila();
+    if (VER.aba === 'num') pintarNumeros(); else pintarFila();
     pintarStock();
     pintarBandeiras();
   }
@@ -85,7 +71,7 @@
     var bs = EST.bandeiras || [];
     cx.hidden = !bs.length;
     if (!bs.length) return;
-    cx.innerHTML = '<div class="b-tit">A olhar duas vezes <small>não é acusação: '
+    cx.innerHTML = '<div class="b-tit">' + ico.ico('olho') + 'A olhar duas vezes <small>não é acusação: '
       + 'é o que dá nas vistas</small></div>'
       + bs.map(function (x) {
           return '<div class="b-cartao"><b>' + esc(x.nome) + '</b><br>'
@@ -93,39 +79,118 @@
         }).join('');
   }
 
-  function pintarBarra() {
+  /**
+   * O interruptor do bar, no topo.
+   *
+   * É o mesmo componente da montagem (§25.2 quer um módulo, não quatro): o
+   * farol que pisca devagar quando está aberto, a palavra ao lado, e só
+   * depois o botão. Um ecrã que responde «está aberto?» pelo rótulo do botão
+   * obriga a ler ao contrário — «Fechar o bar» significa que está aberto — e
+   * é exactamente a leitura que se engana à uma da manhã.
+   *
+   * As contagens aqui são as da NOITE (o que já saiu, o que anda na sala). As
+   * da fila vivem nas pastilhas, ao pé do sítio onde se carrega para lá ir.
+   */
+  function pintarChave() {
     var e = EST.estado || {};
-    $('k-analise').textContent  = e.em_analise || 0;
-    $('k-aprovados').textContent = e.aprovados || 0;
-    $('k-caminho').textContent  = e.a_caminho || 0;
-    $('k-bebidas').textContent  = e.bebidas_entregues || 0;
+    var cx = $('b-chave');
+    cx.classList.toggle('on', !!e.aberto);
+    $('b-farol').innerHTML = ico.ico(e.aberto ? 'aberto' : 'trancado');
+    $('b-est').textContent = e.aberto ? 'Bar aberto' : 'Bar fechado';
+    $('b-dica').textContent = e.aberto
+      ? 'Os pedidos entram na fila assim que alguém carrega no telemóvel.'
+      : 'Ninguém consegue pedir. O que já está na fila mantém-se.';
+    $('b-numeros').innerHTML =
+        num(e.a_caminho || 0, 'na sala')
+      + num(e.bebidas_entregues || 0, 'servidas');
     var bt = $('b-chave-bt');
-    bt.textContent = e.aberto ? 'Fechar o bar' : 'Abrir o bar';
+    bt.innerHTML = ico.ico(e.aberto ? 'trancado' : 'aberto')
+      + (e.aberto ? 'Fechar o bar' : 'Abrir o bar');
     bt.className = 'btn ' + (e.aberto ? 'btn-fantasma' : 'btn-ouro');
     bt.disabled = !PODE;
-    $('c-analise').textContent = e.em_analise ? '(' + e.em_analise + ')' : '';
-    var espera = (e.aprovados || 0) + (e.a_caminho || 0);
-    $('c-espera').textContent = espera ? '(' + espera + ')' : '';
+  }
+  function num(v, rot) {
+    return '<div><b>' + v + '</b><small>' + esc(rot) + '</small></div>';
+  }
+
+  /* ---- as quatro vistas da fila --------------------------------
+     Ícone, palavra e contagem na mesma pastilha: o ícone acha-se de relance
+     na vigésima vez, a palavra desfaz a dúvida na primeira, e o número diz
+     se vale a pena lá ir antes de se lá ir. */
+  var ABAS = [
+    ['analise', 'Por decidir',   'analise'],
+    ['espera',  'Por entregar',  'tabuleiro'],
+    ['fim',     'Já resolvidos', 'visto'],
+    ['num',     'Os números',    'grafico']
+  ];
+
+  function pintarFerramentas() {
+    var e = EST.estado || {};
+    var conta = { analise: e.em_analise || 0,
+                  espera: (e.aprovados || 0) + (e.a_caminho || 0),
+                  fim: '', num: '' };
+    var fer = $('b-fer-fila');
+    // A procura só se redesenha quando ainda não existe: repintá-la a cada
+    // volta de oito segundos roubava o cursor a quem estava a escrever.
+    var jaHa = !!$('q-fila');
+    fer.innerHTML = '<div class="b-pastilhas">'
+      + ABAS.map(function (a) {
+          return BP.pilula({ rot: a[1], icone: a[2], n: conta[a[0]],
+                             ligada: VER.aba === a[0],
+                             accao: 'copaFiltro(\'' + a[0] + '\')' });
+        }).join('')
+      + '</div>'
+      + (VER.aba === 'num' ? ''
+         : campoBusca('q-fila', 'Procurar código, nome ou mesa', VER.busca));
+    // As pastilhas SÃO as abas: o papel tem de acompanhar o desenho.
+    Array.prototype.forEach.call(fer.querySelectorAll('.b-pilula'), function (b, n) {
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', VER.aba === ABAS[n][0] ? 'true' : 'false');
+    });
+    if (VER.aba !== 'num') {
+      ligarBusca('q-fila', function (v) { VER.busca = v; pintarFila(); });
+      // Quem estava a escrever continua a escrever: só se devolve o foco se
+      // ele já cá estava, e nunca na primeira pintura da página.
+      if (jaHa && document.activeElement === document.body && VER.busca) {
+        var el = $('q-fila');
+        el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+      }
+    }
   }
 
   window.copaFiltro = function (qual) {
-    filtro = qual;
-    ['analise', 'espera', 'fim', 'num'].forEach(function (k) {
-      $('fa-' + k).classList.toggle('on', k === qual);
-      $('fa-' + k).setAttribute('aria-selected', k === qual ? 'true' : 'false');
-    });
+    VER.aba = qual;
+    pintarFerramentas();
     if (qual === 'num') pintarNumeros(); else pintarFila();
   };
 
-  function pedidosDoFiltro() {
+  function pedidosDaAba() {
     var fila = EST.fila || [];
-    if (filtro === 'analise') {
+    if (VER.aba === 'analise') {
       return fila.filter(function (p) { return p.estado === 'em_analise'; });
     }
-    if (filtro === 'espera') {
+    if (VER.aba === 'espera') {
       return fila.filter(function (p) { return p.estado !== 'em_analise'; });
     }
     return EST.resolvidos || [];
+  }
+
+  /**
+   * A procura da fila.
+   *
+   * Uma noite cheia são trinta pedidos na lista e um convidado à frente do
+   * balcão a dizer «o meu era o B-14» — ou, mais provável, «sou o Manuel da
+   * mesa 7». Por isso a procura apanha o código, o nome, a mesa E as bebidas:
+   * qualquer uma dessas coisas é o que a pessoa tem para dar.
+   */
+  function peneira(ps) {
+    var q = chave(VER.busca);
+    if (!q) return ps;
+    return ps.filter(function (p) {
+      var saco = [p.codigo, p.convidado, p.mesa, p.mesa_qr, p.pedido_por, p.criado_por]
+        .concat((p.itens || []).map(function (l) { return l.nome; }));
+      return chave(saco.join(' ')).indexOf(q) >= 0;
+    });
   }
 
   /**
@@ -140,17 +205,17 @@
     cx.innerHTML = '<div class="b-cartao b-esq" style="height:120px"></div>';
     var d = await window.api('bar_numeros', { method: 'GET', silencioso: true });
     if (!d || !d.success) { cx.innerHTML = '<div class="b-cartao b-vazio">Não deu.</div>'; return; }
-    if (filtro !== 'num') return;         // a copa mudou de aba entretanto
+    if (VER.aba !== 'num') return;        // a copa mudou de aba entretanto
 
     // Só o que já teve saída: uma bebida parada não «acaba nunca», simplesmente
     // não se sabe — e um número inventado aqui mandava alguém à cidade em vão.
     var acabam = d.rutura.filter(function (x) { return x.acaba_em_min !== null; });
-    var html = '<div class="b-cartao"><div class="b-tit">Chega até ao fim?'
+    var html = '<div class="b-cartao"><div class="b-tit">' + ico.ico('raio') + 'Chega até ao fim?'
       + '<small>ao ritmo dos últimos 20 minutos</small></div>';
     html += acabam.length
-      ? '<div class="b-stock">' + acabam.slice(0, 8).map(function (x) {
+      ? '<div class="b-stock lista">' + acabam.slice(0, 8).map(function (x) {
           var luz = x.acaba_em_min < 30 ? 'mau' : (x.acaba_em_min < 90 ? 'meio' : 'bom');
-          return '<div class="b-item"><span></span>'
+          return '<div class="b-item">'
             + '<div><div class="nm"><span class="b-semaforo ' + luz + '"></span>'
             +   esc(x.nome) + '</div>'
             + '<div class="sub">' + x.disponivel + ' disponíveis · ' + x.por_hora
@@ -163,10 +228,10 @@
 
     // O que a festa bebeu.
     var top = d.consumo.filter(function (x) { return x.servidas > 0 || x.a_sair > 0; });
-    html += '<div class="b-cartao"><div class="b-tit">O que a festa bebeu</div>'
+    html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('grafico') + 'O que a festa bebeu</div>'
       + (top.length
-          ? '<div class="b-stock">' + top.slice(0, 12).map(function (x) {
-              return '<div class="b-item"><span></span>'
+          ? '<div class="b-stock lista">' + top.slice(0, 12).map(function (x) {
+              return '<div class="b-item">'
                 + '<div><div class="nm">' + esc(x.nome) + '</div>'
                 + '<div class="sub">' + esc(x.gaveta || 'sem gaveta')
                 +   (x.a_sair ? ' · ' + x.a_sair + ' por sair' : '') + '</div></div>'
@@ -177,24 +242,24 @@
 
     // Os tempos, e as recusas — o que correu mal, dito sem rodeios.
     var t = d.tempos || {};
-    html += '<div class="b-cartao"><div class="b-tit">Os tempos</div>'
+    html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('relogio') + 'Os tempos</div>'
       + '<div class="b-tempos" style="margin:0;padding:0;border:0">'
       +   caixa('Análise', t.analise) + caixa('Recolha', t.recolha)
       +   caixa('Percurso', t.percurso) + caixa('Do pedido à mesa', t.total)
       + '</div></div>';
 
     if (d.recusas.length) {
-      html += '<div class="b-cartao"><div class="b-tit">Recusas'
-        + '<small>o que correu mal</small></div><div class="b-stock">'
+      html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('traco') + 'Recusas'
+        + '<small>o que correu mal</small></div><div class="b-stock lista">'
         + d.recusas.map(function (r) {
-            return '<div class="b-item"><span></span><div><div class="nm">'
+            return '<div class="b-item"><div><div class="nm">'
               + esc(r.motivo) + '</div></div><div class="qt">' + r.n + '</div></div>';
           }).join('') + '</div></div>';
     }
     if (d.mesas.length) {
-      html += '<div class="b-cartao"><div class="b-tit">Por mesa</div><div class="b-stock">'
+      html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('mesa') + 'Por mesa</div><div class="b-stock lista">'
         + d.mesas.map(function (m) {
-            return '<div class="b-item"><span></span><div><div class="nm">'
+            return '<div class="b-item"><div><div class="nm">'
               + esc(m.mesa) + '</div></div><div class="qt">' + m.n + '</div></div>';
           }).join('') + '</div></div>';
     }
@@ -213,20 +278,51 @@
     return Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
   }
 
+  /* O vazio de cada aba diz o que ali não está E porquê — «nada por decidir»
+     numa copa em dia é uma boa notícia, e deve ler-se como tal. */
+  var VAZIOS = {
+    analise: ['chavena', 'A copa está em dia',
+              'Nada por decidir. Aproveite: é o único momento da noite em que isto acontece.'],
+    espera:  ['tabuleiro', 'Nada por entregar',
+              'Tudo o que foi aprovado já chegou à mesa.'],
+    fim:     ['relogio', 'A noite ainda agora começou',
+              'Ainda não há pedidos resolvidos para mostrar aqui.']
+  };
+
   function pintarFila() {
     var cx = $('b-fila');
-    if (filtro === 'num') return;
-    var ps = pedidosDoFiltro();
-    if (!ps.length) {
-      cx.innerHTML = '<div class="b-cartao b-vazio"><span class="ico">'
-        + (filtro === 'analise' ? '☕' : '🍸') + '</span>'
-        + (filtro === 'analise' ? 'Nada por decidir. A copa está em dia.'
-           : filtro === 'espera' ? 'Nada por entregar.'
-           : 'Ainda não há nada resolvido esta noite.') + '</div>';
+    if (VER.aba === 'num') return;
+    var todos = pedidosDaAba();
+    if (!todos.length) {
+      var v = VAZIOS[VER.aba] || VAZIOS.fim;
+      cx.innerHTML = '<div class="b-cartao">' + vazio(v[0], v[1], v[2]) + '</div>';
       return;
     }
-    cx.innerHTML = ps.map(cartao).join('');
+    var ps = peneira(todos);
+    if (!ps.length) {
+      // Um vazio por causa da procura tem de o confessar: senão lê-se como
+      // «a fila está vazia» e a copa deixa de olhar para trinta pedidos.
+      cx.innerHTML = '<div class="b-cartao">'
+        + vazio('procurar', 'Nada com «' + VER.busca + '»',
+                'São ' + todos.length + (todos.length === 1 ? ' pedido' : ' pedidos')
+                + ' nesta vista; nenhum responde ao que procura.',
+                '<button class="btn btn-fantasma" onclick="copaLimparBusca()">'
+                + ico.ico('volta') + 'Ver todos</button>')
+        + '</div>';
+      return;
+    }
+    cx.innerHTML = ps.map(cartao).join('')
+      + (ps.length < todos.length
+          ? '<p class="dica" style="color:var(--gold-pale);text-align:center">'
+            + ps.length + ' de ' + todos.length + ' pedidos</p>'
+          : '');
   }
+
+  window.copaLimparBusca = function () {
+    VER.busca = '';
+    pintarFerramentas();
+    pintarFila();
+  };
 
   function cartao(p) {
     // A cor da moldura conta o tempo: um pedido de dez minutos por decidir já
@@ -263,27 +359,34 @@
               + p.convidado_id + ')" title="Ficha e regras desta pessoa">'
               + esc(p.convidado || 'Sem nome') + '</button>'
             : '<span class="quem">Sem nome</span>')
-      +   '<span class="b-est ' + esc(p.estado) + '">' + esc(p.estado_nome) + '</span>'
+      +   BP.estado(p.estado, p.estado_nome)
       +   '<span class="ha">' + esc(ha(p.criado_em)) + '</span>'
       + '</div>'
       + '<div class="onde">' + onde + '</div>'
       + '<div class="b-linhas">' + linhas + '</div>'
       + (p.motivo ? '<div class="onde">Motivo: ' + esc(p.motivo) + '</div>' : '')
-      + (fora ? '<div class="b-bandeira">⚠ ' + esc(fora.porque) + '</div>' : '')
+      + (fora ? '<div class="b-bandeira">' + ico.ico('aviso')
+                + esc(fora.porque) + '</div>' : '')
       + (PODE ? acoes(p) : '')
       + '</div>';
   }
 
   function acoes(p) {
     if (p.estado === 'em_analise') {
+      // Aprovar é o gesto de sempre e Recusar é a excepção: por isso um leva o
+      // peso e o outro o contorno. Mas ambos são botões inteiros, com ícone e
+      // palavra — a decisão que o convidado sente não se toma num ícone só.
       return '<div class="b-acoes">'
-        + '<button class="btn btn-ouro" onclick="copaAprovar(' + p.id + ')">Aprovar</button>'
-        + '<button class="btn btn-fantasma" onclick="copaRecusar(' + p.id + ')">Recusar</button>'
+        + '<button class="btn btn-ouro" onclick="copaAprovar(' + p.id + ')">'
+        +   ico.ico('visto') + 'Aprovar</button>'
+        + '<button class="btn btn-fantasma" onclick="copaRecusar(' + p.id + ')">'
+        +   ico.ico('xis') + 'Recusar</button>'
         + '</div>';
     }
     if (p.estado === 'aprovado' || p.estado === 'a_caminho' || p.estado === 'falhou') {
       return '<div class="b-acoes">'
-        + '<button class="btn btn-fantasma" onclick="copaCancelar(' + p.id + ')">Cancelar</button>'
+        + '<button class="btn btn-fantasma" onclick="copaCancelar(' + p.id + ')">'
+        +   ico.ico('volta') + 'Cancelar</button>'
         + '</div>';
     }
     return '';
@@ -333,7 +436,7 @@
   };
 
   window.copaCancelar = async function (id) {
-    var r = await licConfirmar({ titulo: 'Cancelar o pedido', icone: '🍹', perigo: true,
+    var r = await licConfirmar({ titulo: 'Cancelar o pedido', icone: 'volta', perigo: true,
       texto: 'O que estava prometido volta ao stock disponível. Use isto quando o '
            + 'pedido já não faz sentido — a pessoa foi-se embora, ou desistiu em voz alta.',
       confirmar: 'Cancelar o pedido', cancelar: 'Deixar estar' });
@@ -348,7 +451,7 @@
   window.copaChave = async function () {
     var aberto = !!(EST && EST.estado && EST.estado.aberto);
     if (aberto) {
-      var r = await licConfirmar({ titulo: 'Fechar o bar', icone: '🍹',
+      var r = await licConfirmar({ titulo: 'Fechar o bar', icone: 'trancado',
         texto: 'Ninguém consegue pedir enquanto estiver fechado. Os pedidos que já '
              + 'estão na fila mantêm-se — fechar não é apagar.',
         confirmar: 'Fechar', cancelar: 'Continuar aberto' });
@@ -361,16 +464,46 @@
   };
 
   // ---- o stock -------------------------------------------------
+  /**
+   * A coluna do stock, e a procura dentro dela.
+   *
+   * Um menu bem montado são vinte ou trinta bebidas, e a pergunta que a copa
+   * faz é sempre sobre UMA: «ainda há gin?». Percorrer trinta linhas com o
+   * olho, a meia-luz e com pressa, para responder a isso, é trabalho que a
+   * máquina devia estar a fazer.
+   */
   function pintarStock() {
-    var itens = (EST.itens || []).filter(function (i) { return i.estado === 'ativo'; });
+    var todos = (EST.itens || []).filter(function (i) { return i.estado === 'ativo'; });
     var cx = $('b-stock');
-    if (!itens.length) {
-      cx.innerHTML = '<div class="b-vazio">O menu está vazio.</div>';
+    var tit = $('b-tit-stock');
+    // O título ganha o seu sinal uma vez, e não a cada volta de oito segundos.
+    if (tit && !tit.querySelector('.ico')) tit.insertAdjacentHTML('afterbegin', ico.ico('caixa'));
+    if (!todos.length) {
+      cx.innerHTML = vazio('caixa', 'O armazém está vazio',
+        'Sem bebidas no menu não há stock que contar.');
       $('b-stock-nota').textContent = '';
+      $('b-fer-stock').innerHTML = '';
       return;
     }
-    var acabar = itens.filter(function (i) { return i.disponivel <= 5; }).length;
-    $('b-stock-nota').textContent = acabar ? acabar + ' a acabar' : 'tudo com folga';
+    // A procura só se monta uma vez: repintá-la a cada volta roubava o cursor
+    // a quem estava a escrever «tóni…».
+    if (!$('q-stock')) {
+      $('b-fer-stock').innerHTML = campoBusca('q-stock', 'Procurar no armazém', VER.buscaStock);
+      ligarBusca('q-stock', function (v) { VER.buscaStock = v; pintarStock(); });
+    }
+    var acabar = todos.filter(function (i) { return i.disponivel <= 5; }).length;
+    $('b-stock-nota').textContent = acabar
+      ? acabar + (acabar === 1 ? ' a acabar' : ' a acabar')
+      : 'tudo com folga';
+    var q = chave(VER.buscaStock);
+    var itens = q ? todos.filter(function (i) {
+      return chave(i.nome + ' ' + (i.categoria || '')).indexOf(q) >= 0;
+    }) : todos;
+    if (!itens.length) {
+      cx.innerHTML = vazio('procurar', 'Nada com esse nome',
+        'São ' + todos.length + ' bebidas no armazém.');
+      return;
+    }
     cx.innerHTML = itens.map(function (i) {
       // Três cores e nada mais: com folga, a acabar, acabou. Um número
       // sozinho não diz se 8 é muito ou pouco.
@@ -430,10 +563,10 @@
   // ---- os motivos de recusa ------------------------------------
   window.copaMotivos = function () {
     var lista = (EST.motivos || []).map(function (m) {
-      return '<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;'
-        + 'border-bottom:1px solid var(--line)"><span style="flex:1">' + esc(m.texto) + '</span>'
-        + '<button type="button" class="j-bt j-bt-nao" style="min-height:36px;padding:.2rem .7rem"'
-        + ' onclick="copaMotivoApagar(' + m.id + ')">Tirar</button></div>';
+      return '<div class="j-linha"><span>' + esc(m.texto) + '</span>'
+        + '<button type="button" class="j-x" title="Tirar este motivo" '
+        + 'aria-label="Tirar este motivo" onclick="copaMotivoApagar(' + m.id + ')">'
+        + ico.ico('lixo') + '</button></div>';
     }).join('') || '<p class="dica">Ainda não há motivos guardados.</p>';
     licFormulario({
       titulo: 'Motivos de recusa',
@@ -442,7 +575,7 @@
           + 'Escreva-os como os diria a quem pediu.',
       campos: [{ id: 'texto', rot: 'Motivo novo', tipo: 'text', valor: '',
                  dica: 'Ex.: «Acabou o espumante — temos vinho branco fresco.»' }],
-      extra: '<div style="margin-top:1rem">' + lista + '</div>',
+      extra: '<div class="j-sec">' + ico.ico('nota') + 'Os que já lá estão</div>' + lista,
       aoGuardar: async function (v) {
         if (!v.texto) { licJanelaErro('Escreva o motivo.'); return false; }
         var d = await window.api('bar_motivo_guardar', { method: 'POST',
@@ -481,39 +614,41 @@
       ? d.regras.map(function (r) {
           // Uma regra marcada para as 2h está escrita mas ainda não trava
           // nada, e o ecrã tem de o dizer — senão parece que já vale.
-          return '<div class="b-regra' + (r.vigor === 'agora' ? '' : ' espera') + '">'
+          return '<div class="j-linha' + (r.vigor === 'agora' ? '' : ' espera') + '">'
             + '<span>' + esc(r.frase)
             + (r.vigor === 'ainda' ? ' <small>— ainda não são horas</small>' : '')
             + (r.vigor === 'passou' ? ' <small>— já passou a hora</small>' : '')
+            + (r.nota ? '<br><small>' + esc(r.nota) + '</small>' : '')
             + '</span>'
-            + (r.nota ? '<small>' + esc(r.nota) + '</small>' : '')
-            + '<button type="button" class="j-bt j-bt-nao" aria-label="Levantar esta regra" '
-            + 'onclick="copaRegraFora(' + r.id + ',' + id + ')">✕</button></div>';
+            + '<button type="button" class="j-x" title="Levantar esta regra" '
+            + 'aria-label="Levantar esta regra" onclick="copaRegraFora('
+            + r.id + ',' + id + ')">' + ico.ico('xis') + '</button></div>';
         }).join('')
       : '<p class="dica">Sem regras próprias — valem-lhe as da casa.</p>';
 
     licJanela('Ficha de ' + esc(d.convidado.nome),
       '<div class="dica">' + esc(d.convidado.convite) + '</div>'
       + '<p style="margin:.6rem 0"><b>Já levou:</b> ' + levou + '</p>'
-      + '<div class="b-tit" style="font-size:.95rem;margin:.9rem 0 .4rem">Regras desta pessoa</div>'
+      + '<div class="j-sec">' + ico.ico('trancado') + 'Regras desta pessoa</div>'
       + regras
-      + '<div style="margin-top:.9rem;display:flex;gap:.5rem;flex-wrap:wrap">'
+      + '<div style="margin-top:.7rem">'
       +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
-      +     '+ Regra</button>'
+      +     ico.ico('mais') + 'Regra nova</button>'
       + '</div>'
       + (d.pin_travado
-          ? '<div class="b-regra"><span>O código do convite está travado — '
-            + 'foram cinco enganos seguidos.</span>'
-            + '<button type="button" class="j-bt j-bt-sim" onclick="copaPinSoltar('
-            + id + ')">Levantar</button></div>'
+          ? '<div class="j-sec">' + ico.ico('aviso') + 'Código travado</div>'
+            + '<div class="j-linha"><span>Foram cinco enganos seguidos no código '
+            + 'do convite.</span><button type="button" class="j-bt j-bt-sim" '
+            + 'onclick="copaPinSoltar(' + id + ')">Levantar</button></div>'
           : '')
-      + '<div class="b-tit" style="font-size:.95rem;margin:1rem 0 .4rem">Telemóveis</div>'
+      + '<div class="j-sec">' + ico.ico('pessoas') + 'Telemóveis</div>'
       + (d.dispositivos.length
           ? d.dispositivos.map(function (t) {
-              return '<div class="b-regra"><span>um telemóvel'
+              return '<div class="j-linha"><span>um telemóvel'
                 + (t.trocas ? ' <small>(já pediu por ' + (t.trocas + 1) + ' pessoas)</small>' : '')
-                + '</span><button type="button" class="j-bt j-bt-nao" onclick="copaSoltar('
-                + t.id + ',' + id + ')">Soltar</button></div>';
+                + '</span><button type="button" class="j-x" title="Soltar este telemóvel" '
+                + 'aria-label="Soltar este telemóvel" onclick="copaSoltar('
+                + t.id + ',' + id + ')">' + ico.ico('mudar') + '</button></div>';
             }).join('')
           : '<p class="dica">Nenhum — ainda ninguém se escolheu neste nome.</p>')
       + '<p class="dica">Soltar serve quando a vida dá um nó: um telemóvel '
@@ -733,7 +868,26 @@
       + (n.mesa ? ' — entrega na ' + esc(n.mesa) : ' — sem mesa marcada');
   };
 
+  /* ---- os atalhos da coluna do stock ---------------------------
+     Três coisas que se fazem a meio da noite e que não pertencem à fila: pedir
+     por quem não tem rede, arrumar os motivos de recusa, e mudar as regras da
+     casa quando a festa muda de feição. Empilhados e com o ícone na mesma
+     coluna leem-se como uma lista do que se pode fazer — e não como três
+     botões cinzentos ao acaso. */
+  function pintarAtalhos() {
+    var cx = $('b-atalhos');
+    if (!cx || !PODE) { if (cx) cx.innerHTML = ''; return; }
+    cx.innerHTML =
+        '<button class="btn btn-fantasma" onclick="copaPedirPor()">'
+      +   ico.ico('mao') + 'Pedir por um convidado</button>'
+      + '<button class="btn btn-fantasma" onclick="copaMotivos()">'
+      +   ico.ico('nota') + 'Motivos de recusa</button>'
+      + '<button class="btn btn-fantasma" onclick="copaRegras()">'
+      +   ico.ico('trancado') + 'Regras da casa</button>';
+  }
+
   // ---- o relógio ------------------------------------------------
+  pintarAtalhos();
   carregar();
   relogio = setInterval(function () { if (!document.hidden) carregar(true); }, 8000);
   // Os «há N min» envelhecem sozinhos entre leituras: sem isto, um pedido

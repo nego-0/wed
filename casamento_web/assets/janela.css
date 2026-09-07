@@ -144,17 +144,93 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-f-c textarea{ resize:vertical; line-height:1.5; }
 .lic-f-d{ font-size:.75rem; color:var(--j-fraco); line-height:1.45; }
 .lic-f-d b{ color:var(--j-ink); }
-.lic-f-sim{ display:flex; align-items:center; gap:.5rem; margin:0; padding:.5rem 0;
+/* O sim/não é um CAMPO, e num formulário em grelha tem de pesar como os
+   outros. Solto no branco, ao lado de três caixas com contorno, lia-se como
+   uma nota de rodapé — e era uma definição que muda o comportamento da casa.
+   Ligado, enche-se: quem não distingue as duas cores tem na mesma o visto da
+   caixa, e quem distingue vê de relance quais estão ligadas. */
+.lic-f-sim{ display:flex; align-items:center; gap:.55rem; margin:0;
+  padding:.55rem .7rem; min-height:42px;
+  border:1.5px solid var(--j-linha); border-radius:9px; background:var(--j-campo);
   text-transform:none; letter-spacing:normal; font-weight:500; font-size:.88rem;
-  color:var(--j-ink); cursor:pointer; }
+  color:var(--j-ink); cursor:pointer; transition:border-color .15s, background .15s; }
+.lic-f-sim:hover{ border-color:var(--j-ouro); }
+.lic-f-sim:has(input:checked){ border-color:var(--j-ouro); background:var(--j-ouro-pal); }
+.lic-f-sim:focus-within{ border-color:var(--j-ouro); box-shadow:0 0 0 3px var(--j-anel); }
 .lic-f-sim input{ width:17px; height:17px; min-width:17px; padding:0; margin:0;
   accent-color:var(--j-ouro); flex:none; }
+
+/* ---- o selector de cor -------------------------------------
+   Vive AQUI e não na folha de quem o usa: a janela veste-se sozinha, e nos
+   editores não há estilo.css nenhum — um selector desenhado lá fora aparecia
+   sem medidas nenhumas.
+
+   Doze escolhas boas, e a porta para o resto. Um campo a pedir «#rrggbb» é um
+   teste de conhecimentos: ninguém escolhe uma cor assim, e quem tentar acaba
+   com um roxo que berra ao lado do verde da casa. */
+.b-cores{ display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; }
+.b-cor{ width:32px; height:32px; border-radius:9px; border:2px solid transparent;
+  cursor:pointer; background:var(--c); position:relative; padding:0;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.14); transition:transform .12s ease; }
+.b-cor:hover{ transform:scale(1.08); }
+/* A escolhida ganha moldura E visto: só a moldura não chega a quem distingue
+   mal as cores, que é justamente quem mais precisa de saber qual escolheu. */
+.b-cor.on{ border-color:var(--j-ink); }
+.b-cor.on::after{ content:''; position:absolute; inset:0;
+  background:no-repeat center/14px url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6.5 9.2 17.3 4 12.1'/%3E%3C/svg%3E");
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.b-cor:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
+.b-cor-mais{ width:32px; height:32px; border-radius:9px; border:1.5px dashed var(--j-linha);
+  background:var(--j-campo); cursor:pointer; padding:0; position:relative;
+  display:inline-flex; align-items:center; justify-content:center; color:var(--j-fraco); }
+.b-cor-mais:hover{ border-color:var(--j-ouro); color:var(--j-ouro); }
+.b-cor-mais .ico{ width:16px; height:16px; }
+.b-cor-mais input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+/* ---- secções e listas DENTRO de uma janela -------------------
+   Uma janela grande — a ficha de um convidado, uma lista de motivos — precisa
+   de títulos e de linhas, e as páginas andavam a emprestar-lhe os seus: a
+   copa dava-lhe o .b-tit dela, que é dourado-claro porque foi feito para um
+   salão escuro. Sobre o cartão claro de uma janela isso lê-se mal, e o cinza
+   fraco do salão sobre creme lê-se ainda pior.
+   A janela veste-se sozinha (é a regra desta folha) e agora também por dentro:
+   estas peças saem dos --j-*, e por isso acertam nos quatro temas e nas duas
+   luzes sem que nenhuma página tenha de saber disso. */
+.j-sec{ font-family:var(--j-serif); font-size:.98rem; font-weight:600; color:var(--j-ink);
+        margin:1.1rem 0 .45rem; display:flex; align-items:center; gap:.45rem; }
+.j-sec:first-child{ margin-top:.2rem; }
+.j-sec .ico{ width:16px; height:16px; color:var(--j-ouro); }
+.j-sec small{ margin-left:auto; font-family:var(--j-sans); font-size:.75rem;
+              font-weight:400; color:var(--j-fraco); }
+
+/* Uma linha de lista: a frase à esquerda, a nota discreta, o gesto à direita.
+   É a forma de todas as listas em janela — regras, motivos, telemóveis. */
+.j-linha{ display:flex; align-items:center; gap:.6rem; padding:.5rem 0;
+          border-bottom:1px solid var(--j-linha); font-size:.9rem; }
+.j-linha:last-child{ border-bottom:0; }
+.j-linha > span{ flex:1; min-width:0; }
+.j-linha small{ color:var(--j-fraco); font-size:.78rem; }
+/* Esbatida, mas nunca SÓ esbatida: a frase ao lado diz porquê, em palavras. */
+.j-linha.espera{ opacity:.62; }
+/* O gesto de tirar uma linha é pequeno e discreto — mas tem 34px de alvo e um
+   nome acessível, que é o mínimo de um botão a sério. */
+.j-linha .j-x{ width:34px; height:34px; flex:none; display:inline-flex; align-items:center;
+               justify-content:center; border:1px solid var(--j-linha); border-radius:9px;
+               background:none; color:var(--j-fraco); cursor:pointer; }
+.j-linha .j-x .ico{ width:15px; height:15px; }
+.j-linha .j-x:hover{ border-color:var(--j-perigo); color:var(--j-perigo);
+                     background:var(--j-perigo-bg); }
+.j-linha .j-x:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
 
 /* ---- a pergunta de sim/não, com o que está em jogo à vista ---- */
 .lic-conf{ display:flex; gap:1rem; align-items:flex-start; }
 .lic-conf-ico{ width:42px; height:42px; flex:none; border-radius:12px; background:var(--j-ouro-pal);
-  display:flex; align-items:center; justify-content:center; font-size:1.25rem; line-height:1; }
-.lic-conf.perigo .lic-conf-ico{ background:var(--j-perigo-bg); }
+  display:flex; align-items:center; justify-content:center; font-size:1.25rem; line-height:1;
+  color:var(--j-ouro); }
+/* Um sinal desenhado, quando o há: o emoji continua a caber, para as janelas
+   da casa que ainda não passaram por aqui. */
+.lic-conf-ico .ico{ width:22px; height:22px; }
+.lic-conf.perigo .lic-conf-ico{ background:var(--j-perigo-bg); color:var(--j-perigo); }
 .lic-conf-txt{ flex:1; font-size:.9rem; line-height:1.6; color:var(--j-texto); }
 .lic-conf-txt p{ margin:.7rem 0 0; }
 .lic-conf-itens{ list-style:none; margin:.8rem 0 0; padding:0; }

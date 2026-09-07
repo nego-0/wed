@@ -575,6 +575,32 @@ function correcoesEsperadas(): array {
          'api.php', "'bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_limites',"],
         ['Bar: um casamento de exemplo, pronto a importar',
          'docs/exemplos/bar-exemplo.json', '"bar"'],
+
+        // ---- O desenho do bar: peças, ícones, procura ----
+        ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',
+         'assets/icones.js', 'function copoDe('],
+        ['Bar: uma caixa de ferramentas para os quatro ecrãs, e não quatro',
+         'assets/bar-pecas.js', 'window.BP = {'],
+        ['Bar: a chapa desenhada substitui a inicial em corpo grande',
+         'assets/bar.css', '.b-chapa{'],
+        ['Bar: a chapa vê-se no escuro do salão (cor no fundo, copo a marfim)',
+         'assets/bar.css', 'body.b-noite .b-chapa{'],
+        ['Bar: procurar na fila da copa por código, nome, mesa ou bebida',
+         'assets/bar-copa.js', "campoBusca('q-fila'"],
+        ['Bar: procurar no armazém da copa',
+         'assets/bar-copa.js', "campoBusca('q-stock'"],
+        ['Bar: procurar nas entregas por mesa, nome ou bebida',
+         'assets/bar-entrega.js', "campoBusca('q-ent'"],
+        ['Bar: o convidado procura a bebida e filtra por gaveta',
+         'assets/bar-convidado.js', 'window.barGaveta = function'],
+        ['Bar: a mesa é o título do cartão de quem entrega',
+         'assets/bar.css', '.b-destino .mesa{'],
+        ['Bar: as listas em janela vestem-se com as cores da janela',
+         'assets/janela.css', '.j-linha{'],
+        ['Bar: um sim/não em janela mostra a pergunta, e não só a resposta',
+         'assets/janela.js', "+ '<label for=\"lf-' + c.id + '\">' + licEsc(c.rot) + '</label>'"],
+        ['Bar: nem um emoji nas quatro páginas — o visto do tema também saiu',
+         'parcial-seletor-tema.php', 'M20 6.5 9.2 17.3 4 12.1'],
     ];
 }
 

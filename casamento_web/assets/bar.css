@@ -24,35 +24,59 @@
    já ter seguido. Fecha-se aqui, uma vez, para toda a folha. */
 [hidden]{ display:none !important; }
 
+/* ---- os sinais desenhados ------------------------------------
+   Os SVG de assets/icones.js herdam a cor do texto ao lado, e por isso
+   atravessam os quatro temas e o escuro do salão sem uma regra a mais. Aqui
+   fica só a medida: 1em acompanha a letra, e as variantes fixas servem os
+   sítios onde o ícone é o conteúdo e não um adorno. */
+.ico{ width:1.15em; height:1.15em; flex:none; vertical-align:-.2em; }
+.ico-14{ width:14px; height:14px; }
+.ico-18{ width:18px; height:18px; }
+.ico-22{ width:22px; height:22px; }
+.ico-28{ width:28px; height:28px; }
+
 /* ---- a mesma caixa para todas as fotografias ---------------- */
 .b-foto{ position:relative; border-radius:10px; overflow:hidden; background:var(--cream);
          aspect-ratio:4/3; }
 .b-foto img{ width:100%; height:100%; object-fit:cover; display:block; }
-/* Sem fotografia, a inicial na cor da gaveta — e não um quadrado cinzento,
-   que é a confissão de que ninguém tratou do menu. */
-.b-foto .letra{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-                font-family:var(--serif); font-size:2rem; font-weight:700;
-                /* Tinta clara sobre o ouro FUNDO, e não sobre o claro: no
-                   clássico o ouro claro é areia, e um branco por cima dela
-                   ficava a 1,6:1 — uma inicial que não se lê. */
-                color:var(--ivory); background:var(--gold-deep); }
+
+/* ---- a chapa: o lugar da fotografia que ainda não existe -----
+   Um menu por montar tem quase tudo sem fotografia, e o que lá estava era um
+   rectângulo de cor cheia com a inicial em corpo 32 — dezasseis desses numa
+   grelha são uma parede de tinta que grita mais alto do que as fotografias a
+   sério quando elas chegam.
+   Isto é o contrário: um véu da cor da gaveta, uma linha diagonal de luz, e o
+   COPO da gaveta desenhado a traço. Diz mais (aquilo é uma cerveja) e pesa
+   muito menos. A cor entra por --tinta, que o cartão define. */
+.b-chapa{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          color:var(--tinta, var(--gold-deep));
+          background:
+            /* Um brilho oblíquo muito ténue: dá vidro à chapa sem a fazer
+               parecer um botão de plástico. */
+            linear-gradient(114deg, transparent 44%, rgba(255,255,255,.28) 50%, transparent 56%),
+            linear-gradient(160deg,
+              color-mix(in srgb, var(--tinta, var(--gold-soft)) 13%, transparent),
+              color-mix(in srgb, var(--tinta, var(--gold-soft)) 26%, transparent)); }
+.b-chapa .ico{ width:auto; height:74%; opacity:.72; stroke-width:1.05; }
+/* Sem color-mix (browsers antigos) o véu não se calcula e a chapa ficaria
+   transparente sobre o creme do cartão — que continua legível, mas apagado.
+   O fundo de recurso garante que se vê sempre alguma coisa. */
+@supports not (background: color-mix(in srgb, red 10%, transparent)){
+  .b-chapa{ background:var(--cream); }
+}
 
 /* ---- estado de um pedido: cor, palavra e forma -------------- */
 .b-est{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
         padding:.18rem .6rem; font-size:.74rem; font-weight:600; white-space:nowrap;
         text-transform:uppercase; letter-spacing:.04em; }
-.b-est::before{ font-size:.9em; }
+/* A forma vem de um SVG e já não de um content:'◔'. Um carácter tipográfico
+   depende da fonte instalada — e nos que faltam sai o quadrado do «não sei
+   desenhar isto», que num ecrã de serviço é pior do que não ter sinal nenhum. */
+.b-est .ico{ width:13px; height:13px; stroke-width:2; }
 .b-est.em_analise{ background:var(--warn-bg); color:var(--warn); }
-.b-est.em_analise::before{ content:'◔'; }
-.b-est.aprovado{ background:var(--gold-pale); color:var(--gold-deep); }
-.b-est.aprovado::before{ content:'●'; }
-.b-est.a_caminho{ background:var(--gold-pale); color:var(--gold-deep); }
-.b-est.a_caminho::before{ content:'→'; }
+.b-est.aprovado, .b-est.a_caminho{ background:var(--gold-pale); color:var(--gold-deep); }
 .b-est.entregue{ background:var(--ok-bg); color:var(--ok); }
-.b-est.entregue::before{ content:'✓'; }
 .b-est.recusado, .b-est.falhou{ background:var(--danger-bg); color:var(--danger); }
-.b-est.recusado::before{ content:'—'; }
-.b-est.falhou::before{ content:'↩'; }
 .b-est.cancelado{ background:var(--cream); color:var(--ink-fraco); }
 
 /* ---- esqueleto: o lugar do conteúdo antes de ele chegar ----- */
@@ -60,8 +84,15 @@
 @keyframes b-pulso{ 0%,100%{ opacity:.55 } 50%{ opacity:.9 } }
 
 /* ---- vazio e erro ------------------------------------------- */
-.b-vazio{ text-align:center; padding:2rem 1rem; color:var(--ink-fraco); line-height:1.6; }
-.b-vazio .ico{ font-size:1.8rem; opacity:.5; display:block; margin-bottom:.4rem; }
+.b-vazio{ text-align:center; padding:2.6rem 1rem; color:var(--ink-fraco); line-height:1.6; }
+.b-vazio .ico{ width:38px; height:38px; opacity:.4; display:block; margin:0 auto .7rem;
+               stroke-width:1.2; }
+.b-vazio b{ display:block; font-family:var(--serif); font-size:1.15rem; color:var(--ink);
+            font-weight:400; margin-bottom:.25rem; }
+.b-vazio .btn{ margin-top:1rem; }
+/* Um vazio dentro de uma grelha ocupa a grelha toda — senão fica encolhido
+   numa coluna de 250px, a pedir desculpa a um canto. */
+.b-grelha > .b-vazio, .b-cats > .b-vazio, .b-menu > .b-vazio{ grid-column:1/-1; }
 .b-erro{ background:var(--danger-bg); color:var(--danger); border-radius:12px;
          padding:.9rem 1rem; display:flex; align-items:center; gap:.8rem; flex-wrap:wrap; }
 .b-erro .btn{ margin-left:auto; }
@@ -104,6 +135,25 @@ body.b-noite .topo::after{ display:none; }
 body.b-noite .b-vazio{ color:var(--gold-pale); }
 body.b-noite .b-esq{ background:rgba(255,255,255,.08); }
 body.b-noite .b-foto{ background:rgba(255,255,255,.08); }
+
+/* A chapa, no escuro. Sobre creme a receita é «véu leve, copo da cor da
+   gaveta»: a cor tem tinta que chegue para se ver. Sobre o quase-preto do
+   salão essa mesma receita dá um borrão — um bordô a 72% sobre preto é preto.
+   Aqui inverte-se quem faz o quê: a COR passa para o fundo, com força a
+   dobrar, e o copo desenha-se a marfim por cima. O sinal continua a ser o
+   mesmo (a gaveta pela cor, a bebida pela forma), e vê-se com o ecrã no
+   mínimo de brilho, que é como ele está às onze da noite. */
+body.b-noite .b-chapa{
+  color:var(--ivory);
+  background:
+    linear-gradient(114deg, transparent 44%, rgba(255,255,255,.10) 50%, transparent 56%),
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--tinta, var(--gold-soft)) 32%, transparent),
+      color-mix(in srgb, var(--tinta, var(--gold-soft)) 58%, transparent)); }
+body.b-noite .b-chapa .ico{ opacity:.88; stroke-width:1.3; }
+@supports not (background: color-mix(in srgb, red 10%, transparent)){
+  body.b-noite .b-chapa{ background:rgba(255,255,255,.1); }
+}
 
 /* Os botões, no escuro: os da casa são para fundo claro. */
 body.b-noite .btn{ min-height:48px; }
@@ -175,14 +225,33 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
 .b-flags{ margin-top:1.2rem; }
 .b-flags .b-cartao{ border-color:var(--warn); }
 
-/* Uma regra, na ficha: a frase, o porquê que só nós vemos, e o ✕ que a levanta. */
-.b-regra{ display:flex; align-items:center; gap:.6rem; padding:.45rem 0;
-          border-bottom:1px solid var(--line); }
-.b-regra span{ flex:1; }
-.b-regra small{ color:var(--ink-fraco); font-size:.78rem; }
-/* Uma regra fora da sua hora está escrita e não trava nada. Esbate-se, mas
-   nunca SÓ se esbate: a frase ao lado diz porquê, em palavras (§25.7). */
-.b-regra.espera{ opacity:.62; }
+/* As listas da ficha de um convidado — regras, telemóveis, motivos — viviam
+   aqui, num .b-regra que esta folha vestia com as cores do SALÃO. Só que elas
+   aparecem dentro de uma janela, que é um cartão claro da casa: o cinza fraco
+   do escuro sobre creme era quase invisível. Passaram para .j-linha, em
+   janela.css, que é a folha que sabe de janelas. */
+
+/* ---- o cartão do empregado ----------------------------------
+   Na copa o que manda é o CÓDIGO: decide-se um pedido de cada vez, olhando
+   para a lista. Na sala o que manda é a MESA — é ela que faz andar, e era
+   ela que estava em corpo 13 numa linha de notas, por baixo do código que
+   ninguém usa a atravessar o salão com um tabuleiro.
+   Aqui a mesa é o título, com o seu sinal ao lado; o código e o nome de quem
+   bebe descem para a segunda linha, que é onde se confirma à chegada. */
+.b-destino{ display:flex; align-items:center; gap:.6rem; }
+.b-destino .ico{ width:20px; height:20px; color:var(--gold-soft); flex:none; }
+.b-destino .mesa{ font-family:var(--serif); font-size:1.35rem; line-height:1.15;
+                  color:var(--ivory); min-width:0; overflow:hidden;
+                  text-overflow:ellipsis; white-space:nowrap; }
+.b-destino .mesa.sem{ color:var(--warn); font-size:1.05rem; }
+.b-destino .ha{ margin-left:auto; font-size:.78rem; color:var(--gold-pale);
+                font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* A segunda linha: quem bebe, e o código para confirmar à mesa. */
+.b-quem2{ font-size:.85rem; color:var(--gold-pale); display:flex; align-items:baseline;
+          gap:.5rem; flex-wrap:wrap; }
+.b-quem2 .cod{ font-family:var(--serif); font-weight:700; color:var(--gold-soft);
+               font-variant-numeric:tabular-nums; letter-spacing:.03em; }
+.b-quem2 .nm{ color:var(--ivory); }
 
 /* ---- os tempos da noite ------------------------------------
    Vivem nos DOIS postos: em rodapé nas entregas, dentro dos números na copa.
@@ -202,7 +271,18 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
 .b-item{ display:grid; grid-template-columns:44px 1fr auto; gap:.7rem; align-items:center;
          padding:.45rem .2rem; border-bottom:1px solid rgba(233,223,201,.12); }
 .b-item:last-child{ border-bottom:0; }
+/* Uma linha que se pode carregar tem de o dizer antes de se lhe carregar. Sem
+   isto era um role="button" invisível: trinta linhas iguais, e a única maneira
+   de descobrir que uma delas abre o acerto do stock era tentar. */
+.b-item[role="button"]{ cursor:pointer; border-radius:9px; padding-left:.45rem;
+                        padding-right:.45rem; transition:background .12s; }
+.b-item[role="button"]:hover{ background:rgba(255,255,255,.07); }
+.b-item[role="button"]:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:1px; }
 .b-item .b-foto{ width:44px; aspect-ratio:1; border-radius:8px; }
+/* Uma lista sem miniaturas — as contas da noite, as recusas, as mesas — não
+   deixa uma coluna de 44px vazia à esquerda a fingir que ali havia alguma
+   coisa. É a mesma linha, com uma coluna a menos. */
+.b-stock.lista .b-item{ grid-template-columns:1fr auto; }
 .b-item .nm{ font-size:.95rem; }
 .b-item .sub{ font-size:.74rem; color:var(--gold-pale); }
 .b-item .qt{ font-family:var(--serif); font-size:1.3rem; font-weight:700; line-height:1;
@@ -235,20 +315,66 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-pastilhas{ display:flex; gap:.4rem; flex-wrap:wrap; }
 .b-mesa{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.35rem;
          background:rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.1); border-radius:50px;
-         padding:.35rem .85rem; font-size:.85rem; cursor:pointer; min-height:40px; }
+         padding:.35rem .85rem; font-size:.85rem; cursor:pointer; min-height:40px;
+         color:inherit; font-family:inherit; }
+.b-mesa .ico{ width:15px; height:15px; opacity:.75; }
+.b-mesa .seta{ width:13px; height:13px; opacity:.5; margin-left:.1rem; }
+.b-para.on .ico{ opacity:1; }
 /* «A pedir para outra pessoa» é um estado, e um estado que se esquece dá uma
    ronda inteira lançada em nome do vizinho. Enquanto está ligado a pastilha
    deixa de ser discreta: cor cheia, e o nome dentro dela. */
 .b-para.on{ background:var(--c-ouro, #B4864A); border-color:var(--c-ouro, #B4864A);
             color:var(--c-fundo, #FBF8F1); font-weight:600; }
 .b-corpo{ max-width:560px; margin:0 auto; padding:1rem 1.1rem; }
+
+/* ---- a ferramentaria, na paleta do casal --------------------
+   A procura e as pastilhas são as mesmas peças dos ecrãs de serviço, mas aqui
+   não podem sair da folha da casa: esta página veste o convite deles, e um
+   campo com o verde da plataforma no meio de um convite cor de vinho é a
+   costura a aparecer. Os --c-* são as cores do casal; o desenho é o mesmo. */
+.b-festa .b-fer{ margin:0 0 .9rem; }
+.b-festa .b-foto{ background:var(--c-creme, #F3EEE3); }
+.b-festa .b-busca input{ border-color:rgba(0,0,0,.15); background:var(--c-cartao, #fff);
+                         color:var(--c-tinta, #20342A); min-height:48px; }
+.b-festa .b-busca > .ico, .b-festa .b-busca .limpar{ color:rgba(0,0,0,.45); }
+.b-festa .b-busca input::placeholder{ color:rgba(0,0,0,.4); }
+.b-festa .b-busca input:focus{ border-color:var(--c-ouro, #B4864A);
+                               box-shadow:0 0 0 3px rgba(0,0,0,.06); }
+.b-festa .b-busca .limpar:hover{ background:var(--c-creme, #F3EEE3); }
+.b-festa .b-pilula{ background:var(--c-cartao, #fff); border-color:rgba(0,0,0,.12);
+                    color:var(--c-tinta, #20342A); min-height:42px; }
+.b-festa .b-pilula .n{ color:rgba(0,0,0,.45); }
+.b-festa .b-pilula.on{ background:var(--c-verde, #20342A); border-color:var(--c-verde, #20342A);
+                       color:var(--c-fundo, #FBF8F1); }
+.b-festa .b-pilula.on .n{ color:var(--c-fundo, #FBF8F1); }
+.b-festa .b-pilula:focus-visible{ outline:2px solid var(--c-ouro, #B4864A); outline-offset:2px; }
+/* As gavetas rolam de lado em vez de embrulharem para uma segunda e terceira
+   linha: num telemóvel, quatro linhas de pastilhas empurram o menu para fora
+   do ecrã antes de se ver uma bebida. */
+.b-festa .b-pastilhas.rolo{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:.2rem;
+                            scrollbar-width:none; }
+.b-festa .b-pastilhas.rolo::-webkit-scrollbar{ display:none; }
+.b-festa .b-vazio{ color:rgba(0,0,0,.55); }
+.b-festa .b-vazio b{ color:var(--c-verde, #20342A); font-family:var(--c-serif, Georgia, serif); }
+
 .b-gaveta{ font-family:var(--c-serif, Georgia, serif); font-size:.78rem; letter-spacing:.16em;
-           text-transform:uppercase; color:var(--c-ouro, #B4864A); margin:1.4rem 0 .6rem; }
+           text-transform:uppercase; color:var(--c-ouro, #B4864A); margin:1.4rem 0 .6rem;
+           display:flex; align-items:center; gap:.45rem; scroll-margin-top:9rem; }
+.b-gaveta .ico{ width:15px; height:15px; }
+/* A cor da gaveta, do lado de fora do nome: é o mesmo sinal que o convidado
+   volta a ver no canto de cada bebida daquela gaveta. */
+.b-gaveta i{ width:7px; height:7px; border-radius:2px; flex:none;
+             background:var(--tinta, currentColor); }
 .b-gaveta:first-child{ margin-top:.2rem; }
 .b-menu{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:.8rem; }
 .b-bebida{ background:var(--c-cartao, #fff); border:1px solid rgba(0,0,0,.08); border-radius:14px;
            overflow:hidden; display:flex; flex-direction:column; }
 .b-bebida .b-foto{ border-radius:0; }
+/* Sem fotografia, a chapa é uma FAIXA. Em painel de 4:3, dezasseis bebidas
+   sem fotografia davam cinco ecrãs de rolar num telemóvel — e o que se rolava
+   era cor, não informação. A fotografia, quando existe, fica com o painel
+   inteiro: é ela que merece o espaço. */
+.b-bebida .b-foto.sem-foto{ aspect-ratio:auto; height:84px; }
 .b-bebida .nm{ font-family:var(--c-serif, Georgia, serif); font-size:1.05rem; padding:.55rem .7rem 0; }
 .b-bebida .ds{ font-size:.76rem; color:rgba(0,0,0,.55); padding:.1rem .7rem .4rem; line-height:1.35; }
 .b-bebida .pe{ margin-top:auto; display:flex; align-items:center; gap:.5rem;
@@ -266,11 +392,19 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 /* Saltar para a alternativa acende-a por um instante — senão a pessoa chega
    lá e não sabe a qual das dez é que carregou. */
 .b-bebida.b-aponta{ outline:2px solid var(--c-ouro, #B4864A); outline-offset:2px; }
-.b-mais{ margin-left:auto; display:flex; align-items:center; gap:.3rem; }
-.b-mais button{ width:38px; height:38px; border-radius:50%; border:1px solid rgba(0,0,0,.15);
-                background:var(--c-cartao, #fff); font-size:1.15rem; line-height:1; cursor:pointer;
-                color:inherit; }
+/* O contador de uma bebida: menos, quantas, mais. Os 40px são o mínimo de um
+   alvo tocado com o polegar, de pé e com um copo na outra mão. */
+.b-mais{ margin-left:auto; display:flex; align-items:center; gap:.25rem; }
+.b-mais button{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(0,0,0,.15);
+                background:var(--c-cartao, #fff); line-height:1; cursor:pointer;
+                color:inherit; display:inline-flex; align-items:center; justify-content:center; }
+.b-mais button .ico{ width:16px; height:16px; }
 .b-mais button:disabled{ opacity:.35; cursor:default; }
+/* Com alguma coisa no cesto, o «mais» ganha a cor do casal: numa grelha de
+   doze cartões, é assim que se vê onde já se carregou sem contar os números. */
+.b-bebida.no-cesto .b-mais .up{ background:var(--c-verde, #20342A);
+                                border-color:var(--c-verde, #20342A); color:var(--c-fundo, #FBF8F1); }
+.b-bebida.no-cesto{ border-color:var(--c-verde, #20342A); }
 .b-mais .v{ min-width:1.4rem; text-align:center; font-variant-numeric:tabular-nums; font-weight:600; }
 
 /* A acção principal vive em baixo, na zona do polegar. */
@@ -323,3 +457,245 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{ animation-duration:0s !important; transition-duration:0s !important; }
 }
+
+/* ============================================================
+   A FERRAMENTARIA — a barra que se repete nos ecrãs de trabalho
+
+   Três ecrãs deste módulo têm o mesmo problema: uma lista que cresce (um menu
+   de vinte bebidas, uma fila de trinta pedidos, um armazém) e nenhuma maneira
+   de lá chegar sem percorrer tudo com o olho. A barra resolve-o sempre da
+   mesma forma — procurar, filtrar, e dizer quantos ficaram —, e por ser sempre
+   a mesma aprende-se uma vez.
+   ============================================================ */
+.b-fer{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin:0 0 1.1rem; }
+.b-fer .cresce{ flex:1 1 auto; }
+.b-fer .conta{ font-size:.8rem; color:var(--ink-fraco); font-variant-numeric:tabular-nums;
+               white-space:nowrap; }
+
+/* ---- a caixa de procura -------------------------------------
+   A lupa vive DENTRO do campo, e o ✕ só aparece quando há o que limpar: um
+   botão de limpar sempre visível é um botão que pisca a dizer «carrega em
+   mim» quando não há nada para fazer. */
+.b-busca{ position:relative; flex:1 1 15rem; min-width:12rem; max-width:26rem; }
+.b-busca > .ico{ position:absolute; left:.75rem; top:50%; transform:translateY(-50%);
+                 width:17px; height:17px; color:var(--ink-fraco); pointer-events:none; }
+.b-busca input{ width:100%; min-height:44px; padding:.5rem 2.4rem .5rem 2.4rem;
+                border:1px solid var(--line); border-radius:50px; background:var(--card);
+                font:inherit; font-size:.92rem; color:var(--ink); }
+.b-busca input::-webkit-search-cancel-button{ display:none; }
+.b-busca input:focus{ outline:none; border-color:var(--gold);
+                      box-shadow:0 0 0 3px var(--ring); }
+.b-busca input::placeholder{ color:var(--ink-fraco); }
+.b-busca .limpar{ position:absolute; right:.35rem; top:50%; transform:translateY(-50%);
+                  width:32px; height:32px; border:0; border-radius:50%; background:none;
+                  color:var(--ink-fraco); cursor:pointer; display:none;
+                  align-items:center; justify-content:center; }
+.b-busca .limpar:hover{ background:var(--cream); color:var(--ink); }
+.b-busca.tem .limpar{ display:flex; }
+
+/* ---- pastilhas de filtro ------------------------------------
+   Uma pastilha ligada não muda só de cor: ganha peso e um visto. Quem não
+   distingue as duas cores continua a ver qual está escolhida (§25.7). */
+.b-pastilhas{ display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; }
+.b-pilula{ display:inline-flex; align-items:center; gap:.4rem; background:var(--card);
+           border:1px solid var(--line); border-radius:50px; padding:.42rem .85rem;
+           font:inherit; font-size:.83rem; color:var(--text); cursor:pointer;
+           min-height:40px; white-space:nowrap; transition:.15s; }
+.b-pilula:hover{ border-color:var(--gold-soft); }
+.b-pilula .ico{ width:15px; height:15px; }
+.b-pilula .pt{ width:9px; height:9px; border-radius:3px; flex:none;
+               background:var(--pt, var(--gold-soft)); }
+.b-pilula .n{ font-size:.76rem; color:var(--ink-fraco); font-variant-numeric:tabular-nums; }
+.b-pilula.on{ background:var(--gold-pale); border-color:var(--gold); color:var(--gold-deep);
+              font-weight:600; }
+.b-pilula.on .n{ color:var(--gold-deep); }
+.b-pilula:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+/* ---- botão de ícone -----------------------------------------
+   Onde havia três pastilhas de texto e um ✕ perdido numa segunda linha. O
+   rótulo mora no title e no aria-label: o desenho é reconhecível, e quem
+   precisar da palavra tem-na. */
+.b-bt-ico{ width:40px; height:40px; display:inline-flex; align-items:center;
+           justify-content:center; border:1px solid var(--line); border-radius:11px;
+           background:var(--card); color:var(--text); cursor:pointer; transition:.15s; }
+.b-bt-ico .ico{ width:18px; height:18px; }
+.b-bt-ico:hover{ border-color:var(--gold); color:var(--gold-deep); background:var(--gold-pale); }
+.b-bt-ico:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.b-bt-ico.perigo:hover{ border-color:var(--danger); color:var(--danger);
+                        background:var(--danger-bg); }
+.b-bt-ico[disabled]{ opacity:.4; cursor:default; }
+
+/* ---- a mesma ferramentaria, no escuro -----------------------
+   As peças de cima nascem para fundo claro: --card e --cream são DO TEMA e
+   no salão continuam claros de propósito (as janelas abrem-se por cima e são
+   cartões da casa). Sem isto, uma caixa de procura branca no meio de um ecrã
+   escuro é a lanterna que ninguém pediu, às onze da noite.
+   O que muda é a luz, não a peça: o mesmo vidro fosco do .b-cartao. E os
+   alvos crescem para 48 — no salão trabalha-se de pé e com um dedo (§25.6). */
+body.b-noite .b-busca input,
+body.b-noite .b-pilula,
+body.b-noite .b-bt-ico{ background:rgba(255,255,255,.06);
+                        border-color:rgba(233,223,201,.2); color:var(--ivory); }
+body.b-noite .b-busca input,
+body.b-noite .b-pilula{ min-height:48px; }
+body.b-noite .b-bt-ico{ width:48px; height:48px; }
+body.b-noite .b-busca > .ico,
+body.b-noite .b-busca .limpar,
+body.b-noite .b-pilula .n,
+body.b-noite .b-fer .conta{ color:var(--gold-pale); }
+body.b-noite .b-busca input::placeholder{ color:var(--gold-pale); }
+body.b-noite .b-busca input:focus{ border-color:var(--gold-soft);
+                                   box-shadow:0 0 0 3px rgba(233,223,201,.18); }
+body.b-noite .b-busca .limpar:hover,
+body.b-noite .b-pilula:hover,
+body.b-noite .b-bt-ico:hover{ background:rgba(255,255,255,.13);
+                              border-color:var(--gold-soft); color:var(--ivory); }
+body.b-noite .b-pilula.on{ background:var(--gold-soft); border-color:var(--gold-soft);
+                           color:var(--forest-deep); }
+body.b-noite .b-pilula.on .n{ color:var(--forest-deep); }
+
+/* ============================================================
+   O CARTÃO DE UMA BEBIDA — bar.php
+   ============================================================ */
+.b-grelha{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));
+           gap:1rem; }
+.b-cart{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+         overflow:hidden; display:flex; flex-direction:column; transition:.18s;
+         box-shadow:0 1px 2px rgba(0,0,0,.03); }
+.b-cart:hover{ box-shadow:var(--shadow); border-color:var(--sand); }
+.b-cart .capa{ position:relative; aspect-ratio:16/10; background:var(--cream); overflow:hidden; }
+/* Sem fotografia a capa é uma FAIXA, e não um painel: chega para dizer de que
+   gaveta é a bebida, e não rouba metade do cartão a um sítio que ainda não
+   tem nada para mostrar. Quando a fotografia chegar, ela fica com o painel
+   inteiro — que é o que §25.8 promete. */
+.b-cart .capa.faixa{ aspect-ratio:auto; height:76px; }
+.b-cart .capa img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* As marcas ficam POR CIMA da capa, no canto: não roubam linha ao corpo, e é
+   onde o olho já vai quando percorre uma grelha. */
+.b-cart .marcas{ position:absolute; top:.5rem; right:.5rem; display:flex; gap:.3rem;
+                 flex-direction:column; align-items:flex-end; }
+/* A marca do álcool, no canto oposto ao das outras: é um facto da bebida e não
+   um aviso, e por isso vive discreta e não numa pastilha de cor. */
+.b-cart .capa .alc{ position:absolute; left:.5rem; bottom:.5rem; width:22px; height:22px;
+                    border-radius:50%; display:flex; align-items:center; justify-content:center;
+                    background:var(--card); color:var(--tinta, var(--gold-deep));
+                    box-shadow:0 1px 3px rgba(0,0,0,.16); }
+.b-cart .capa .alc .ico{ width:12px; height:12px; }
+.b-marca{ display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem;
+          border-radius:50px; font-size:.68rem; font-weight:600; letter-spacing:.03em;
+          text-transform:uppercase; background:var(--card); color:var(--text);
+          box-shadow:0 1px 3px rgba(0,0,0,.18); }
+.b-marca .ico{ width:12px; height:12px; stroke-width:2; }
+.b-marca.oculta{ background:var(--ink); color:var(--ivory); }
+.b-marca.pouca{ background:var(--warn-bg); color:var(--warn); }
+.b-marca.zero{ background:var(--danger-bg); color:var(--danger); }
+
+.b-cart .corpo{ padding:.8rem .9rem .9rem; display:flex; flex-direction:column; gap:.35rem;
+                flex:1; }
+.b-cart .gav{ display:inline-flex; align-items:center; gap:.4rem; font-size:.7rem;
+              text-transform:uppercase; letter-spacing:.07em; color:var(--ink-fraco); }
+.b-cart .gav i{ width:8px; height:8px; border-radius:2px; flex:none;
+                background:var(--tinta, var(--gold-soft)); }
+.b-cart .nm{ font-family:var(--serif); font-size:1.12rem; color:var(--ink); line-height:1.25;
+             display:flex; align-items:center; gap:.4rem; }
+.b-cart .nm .ico{ width:15px; height:15px; color:var(--ink-fraco); }
+.b-cart .ds{ font-size:.8rem; color:var(--ink-fraco); line-height:1.45; }
+
+/* ---- o medidor do stock -------------------------------------
+   Três números lado a lado, todos do mesmo tamanho, não dizem nada: era
+   preciso ler para saber se 6 é pouco ou muito. A barra responde antes da
+   leitura — e o que está PROMETIDO desenha-se à parte, porque é bebida que
+   ainda está na copa mas já tem dono. */
+.b-medidor{ margin-top:auto; padding-top:.6rem; }
+.b-medidor .linha{ display:flex; align-items:baseline; gap:.4rem; font-size:.76rem;
+                   color:var(--ink-fraco); }
+.b-medidor .linha b{ font-family:var(--serif); font-size:1.3rem; color:var(--ink);
+                     font-variant-numeric:tabular-nums; line-height:1; }
+.b-medidor .linha .dir{ margin-left:auto; }
+.b-medidor .barra{ height:5px; border-radius:50px; background:var(--sand); overflow:hidden;
+                   margin-top:.4rem; display:flex; }
+.b-medidor .barra .livre{ background:var(--gold); }
+.b-medidor .barra .preso{ background:var(--gold-pale); }
+.b-medidor.pouca .barra .livre{ background:var(--warn); }
+.b-medidor.zero  .barra .livre{ background:var(--danger); }
+
+.b-cart .acs{ display:flex; gap:.35rem; margin-top:.7rem; }
+.b-cart .acs .fim{ margin-left:auto; }
+.b-cart.oculta .capa{ filter:grayscale(.6); opacity:.75; }
+
+/* ============================================================
+   AS GAVETAS, E O SELECTOR DE COR
+   ============================================================ */
+.b-cats{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+         gap:.7rem; margin-bottom:1.2rem; }
+.b-cat{ display:flex; align-items:center; gap:.7rem; background:var(--card);
+        border:1px solid var(--line); border-radius:var(--radius); padding:.7rem .8rem; }
+.b-cat .sinal{ width:40px; height:40px; border-radius:11px; display:flex; align-items:center;
+               justify-content:center; flex:none; color:var(--tinta, var(--gold-deep));
+               background:color-mix(in srgb, var(--tinta, var(--gold-soft)) 18%, transparent); }
+.b-cat .sinal .ico{ width:21px; height:21px; }
+.b-cat .txt{ flex:1 1 auto; min-width:0; }
+.b-cat .txt b{ display:block; font-family:var(--serif); font-size:1rem; font-weight:400;
+               color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.b-cat .txt small{ font-size:.75rem; color:var(--ink-fraco); }
+.b-cat .b-bt-ico{ width:34px; height:34px; border-radius:9px; }
+.b-cat .b-bt-ico .ico{ width:16px; height:16px; }
+
+/* ============================================================
+   AS ABAS DA MONTAGEM
+   ============================================================ */
+.b-abas{ display:flex; gap:.2rem; border-bottom:1px solid var(--line); margin:0 0 1.3rem;
+         overflow-x:auto; }
+.b-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
+        padding:.7rem .2rem; margin-right:1.5rem; font:inherit; font-size:.92rem;
+        color:var(--ink-fraco); display:inline-flex; align-items:center; gap:.45rem;
+        white-space:nowrap; min-height:46px; }
+.b-aba .ico{ width:17px; height:17px; }
+.b-aba:hover{ color:var(--ink); }
+.b-aba.on{ color:var(--ink); border-bottom-color:var(--gold); font-weight:600; }
+.b-aba.on .ico{ color:var(--gold-deep); }
+.b-aba:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; border-radius:4px; }
+
+/* ---- o interruptor do bar -----------------------------------
+   A pergunta mais importante da página («está aberto?») responde-se com um
+   sinal a piscar devagar e uma palavra, e não só com o rótulo de um botão. */
+.b-chave{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+          background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+          padding:1rem 1.2rem; margin-bottom:1.3rem; }
+/* O position:relative é o que segura o anel do ::after. Sem ele, o anel
+   procura o ascendente posicionado mais próximo — que é a página — e a onda
+   ia pulsar no canto superior esquerdo do ecrã, longe do farol. */
+.b-chave .farol{ position:relative; width:44px; height:44px; border-radius:50%; flex:none;
+                 display:flex; align-items:center; justify-content:center; background:var(--cream);
+                 color:var(--ink-fraco); }
+.b-chave .farol .ico{ width:22px; height:22px; }
+.b-chave.on .farol{ background:var(--ok-bg); color:var(--ok); }
+.b-chave.on .farol::after{ content:''; position:absolute; width:44px; height:44px;
+                           border-radius:50%; border:2px solid var(--ok); opacity:.5;
+                           animation:b-farol 2.4s ease-out infinite; }
+@keyframes b-farol{ 0%{ transform:scale(1); opacity:.5 } 70%,100%{ transform:scale(1.5); opacity:0 } }
+.b-chave .est{ font-family:var(--serif); font-size:1.25rem; color:var(--ink); }
+.b-chave .dica{ margin:0; }
+.b-chave > div:nth-child(2){ flex:1 1 14rem; min-width:0; }
+.b-chave .btn{ min-height:48px; flex:none; }
+.b-chave .numeros{ display:flex; gap:1.4rem; flex:none; }
+.b-chave .numeros div{ text-align:right; }
+.b-chave .numeros b{ display:block; font-family:var(--serif); font-size:1.4rem; color:var(--ink);
+                     line-height:1; font-variant-numeric:tabular-nums; }
+.b-chave .numeros small{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+                         color:var(--ink-fraco); }
+@media (max-width:640px){
+  .b-chave .numeros{ margin-left:0; order:3; width:100%; justify-content:space-between; }
+  .b-chave .btn{ order:4; margin-left:0; width:100%; justify-content:center; }
+}
+
+/* O mesmo interruptor, no escuro. A copa faz a pergunta «está aberto?» tantas
+   vezes por noite como os noivos a fazem por mês — e merece a mesma resposta,
+   com o mesmo desenho, para não haver duas linguagens no mesmo módulo. */
+body.b-noite .b-chave{ background:rgba(255,255,255,.06);
+                       border-color:rgba(233,223,201,.16); }
+body.b-noite .b-chave .est,
+body.b-noite .b-chave .numeros b{ color:var(--ivory); }
+body.b-noite .b-chave .numeros small,
+body.b-noite .b-chave .dica{ color:var(--gold-pale); }
+body.b-noite .b-chave .farol{ background:rgba(255,255,255,.09); color:var(--gold-pale); }

@@ -224,7 +224,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(/1 bebida de «ZZ Whisky» a cada/.test(ficha) || /ZZ Whisky/.test(ficha),
      'com a regra dela escrita por extenso');
 
-  await p.click('button:has-text("+ Regra")');
+  await p.click('button:has-text("Regra nova")');
   await p.waitForTimeout(600);
   await p.selectOption('#lf-sobre', { label: 'ZZ Gin' });
   await p.fill('#lf-quantidade', '0');
@@ -257,23 +257,82 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.waitForTimeout(700);
   await limparRegras();
 
-  const hora = (d) => {
-    const x = new Date(Date.now() + d * 3600000);
-    return String(x.getHours()).padStart(2, '0') + ':00';
+  // `vigora_hora` é uma HORA DO DIA, não um instante — e a casa decidiu que
+  // uma hora de início já passada quer dizer «já começou» (barHoraMomento só
+  // salta para o dia seguinte no FIM). É a leitura certa: quem escreve «nada
+  // de destilados a partir das 21h» às 22h quer que trave já.
+  //
+  // Duas armadilhas, e as duas fizeram esta prova mentir:
+  //
+  //  1. **O relógio é o do SERVIDOR.** A casa corre em Africa/Luanda
+  //     (config.php), e a máquina que corre as provas quase nunca está nesse
+  //     fuso — aqui está uma hora atrás. Uma hora calculada no browser ficava
+  //     uma hora ao lado, e a regra que devia estar «à espera» já tinha
+  //     passado. `bar_estado` devolve `agora` exactamente por isto: é o mesmo
+  //     desvio que a copa aplica aos «há 7 min».
+  //  2. **Não pode passar da meia-noite.** «Daqui a duas horas», às 22h30, dá
+  //     `00:00` — que o servidor lê, e bem, como uma hora que já passou.
+  //
+  // Por isso: a hora vem do servidor, e escolhe-se uma que ainda caiba HOJE.
+  // Na única hora do dia em que nenhuma cabe (as 23h), diz-se isso em voz
+  // alta em vez de fingir um resultado.
+  // «2026-09-07T23:31:22+01:00» — date('c'), com o fuso da casa colado ao fim.
+  const agoraTxt = await p.evaluate(async () =>
+    String((await window.api('bar_estado')).agora || ''));
+  const agoraH = parseInt(agoraTxt.slice(11, 13), 10);
+  /**
+   * Um momento inteiro, N horas à frente do relógio DE PAREDE do servidor.
+   *
+   * O deslocamento vem do próprio texto e não do browser: é o fuso da casa
+   * que manda, e é nele que a regra vai ser lida do outro lado.
+   */
+  const servidorMais = (n) => {
+    const off = /([+-])(\d{2}):(\d{2})$/.exec(agoraTxt);
+    const offMin = off ? (off[1] === '-' ? -1 : 1) * (+off[2] * 60 + +off[3]) : 0;
+    const t = Date.parse(agoraTxt) + n * 3600000 + offMin * 60000;
+    return new Date(t).toISOString().slice(0, 16).replace('T', ' ');
   };
-  const daquiADuas = await p.evaluate(async ([h, q]) => {
+  const futuraH = agoraH <= 21 ? String(agoraH + 2).padStart(2, '0') + ':00'
+                : agoraH === 22 ? '23:00' : null;
+  if (!futuraH) {
+    console.log('SALTA: são 23h — não há hora de início que ainda caiba hoje, '
+              + 'e uma hora do dia não sabe dizer «amanhã». As três verificações '
+              + 'da janela horária ficam por fazer nesta corrida.');
+  }
+  const daquiADuas = !futuraH ? null : await p.evaluate(async ([h, q]) => {
     const r = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
       { escopo: 'tudo', sujeito: 'convidado', alvo_convidado_id: q,
         unidade: 'bebidas', quantidade: 0,
         janela_min: 0, vigora_hora: h, nota: 'ZZ ainda não são horas' }) });
     return (r.regras || []).filter(x => x.nota === 'ZZ ainda não são horas')[0];
-  }, [hora(2), A.id]);
-  ok(!!daquiADuas && daquiADuas.vigor === 'ainda',
-     'uma regra marcada para daqui a duas horas fica escrita, à espera da hora');
-  ok(daquiADuas && /a partir das/.test(daquiADuas.frase),
-     'e a frase diz a partir de quando: «' + (daquiADuas || {}).frase + '»');
+  }, [futuraH, A.id]);
+  if (futuraH) {
+    ok(!!daquiADuas && daquiADuas.vigor === 'ainda',
+       'uma regra marcada para mais logo (' + futuraH + ') fica escrita, à espera da hora');
+    ok(daquiADuas && /a partir das/.test(daquiADuas.frase),
+       'e a frase diz a partir de quando: «' + (daquiADuas || {}).frase + '»');
+    ok((await bebida(cA, 'ZZ Whisky')).pode_pedir > 0,
+       'e não trava nada até lá — uma proibição fora de horas não fecha o bar');
+    await limparRegras();
+  }
+
+  // O mesmo, mas por momento inteiro em vez de hora do dia — que é a outra
+  // porta da API (`vigora_em`), e a única que sabe dizer «amanhã». Vale por
+  // duas razões: é o caminho de quem chame isto à mão, e é a verificação que
+  // corre SEMPRE, mesmo às 23h, quando a hora do dia não chega para exprimir
+  // «mais logo». O que se defende é o mesmo: escrita fica, mas não morde.
+  const daquiADuasExacto = await p.evaluate(async ([h, q]) => {
+    const r = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { escopo: 'tudo', sujeito: 'convidado', alvo_convidado_id: q,
+        unidade: 'bebidas', quantidade: 0,
+        janela_min: 0, vigora_em: h, nota: 'ZZ momento exacto' }) });
+    return (r.regras || []).filter(x => x.nota === 'ZZ momento exacto')[0];
+  }, [servidorMais(2), A.id]);
+  ok(!!daquiADuasExacto && daquiADuasExacto.vigor === 'ainda',
+     'com um momento inteiro (' + servidorMais(2) + '), a regra fica à espera da hora');
   ok((await bebida(cA, 'ZZ Whisky')).pode_pedir > 0,
-     'e não trava nada até lá — uma proibição fora de horas não fecha o bar');
+     'e continua a não travar nada até lá');
+  await limparRegras();
 
   // A mesma regra, com uma hora que já passou: essa vale já. Um princípio no
   // passado quer dizer «já começou», e não «amanhã».
@@ -283,7 +342,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
         unidade: 'bebidas', quantidade: 0,
         janela_min: 0, vigora_hora: h, nota: 'ZZ já são horas' }) });
     return (r.regras || []).filter(x => x.nota === 'ZZ já são horas')[0];
-  }, [hora(-2), A.id]);
+  }, [String(Math.max(0, agoraH - 2)).padStart(2, '0') + ':00', A.id]);
   ok(!!jaComecou && jaComecou.vigor === 'agora',
      'uma marcada para uma hora que já passou vale desde já');
   ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 0,
@@ -297,7 +356,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     const d = await window.api('bar_ficha&convidado=' + id, { method: 'GET' });
     return (d.regras || []).map(r => r.vigor + '|' + r.frase);
   }, A.id);
-  ok(fichaHoras.some(x => /^ainda\|/.test(x)),
+  if (futuraH) ok(fichaHoras.some(x => /^ainda\|/.test(x)),
      'e a copa vê a que ainda não é hora, sem a perder de vista: '
      + (fichaHoras.filter(x => /^ainda/.test(x))[0] || '—'));
 

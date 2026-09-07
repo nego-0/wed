@@ -40,6 +40,8 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `assets/bar.css` | Os três registos do bar: a montagem clara, o escuro dos dois postos, e o menu que veste o convite. |
 | `bar-qr.php` | **A folha das mesas:** um cartão por mesa em A4, com o nome em grande, o QR e o endereço escrito, pronto a recortar e pousar. `?mesa=N` reimprime só uma. |
 | `assets/bar-montagem.js`, `assets/bar-copa.js`, `assets/bar-entrega.js`, `assets/bar-convidado.js` | Um por ecrã. |
+| `assets/icones.js` | **Os desenhos da casa**, num sítio só: seis copos (taça, flute, caneca, copo baixo, copo alto, chávena) e ~30 sinais de interface, todos 24×24 a traço e em `currentColor` — atravessam os quatro temas e o escuro do salão sem uma regra a mais. `ICO.copo('Café', 'Sem álcool')` escolhe o copo pelo nome da bebida, e só depois pela gaveta. Zero emojis no módulo. |
+| `assets/bar-pecas.js` | **As peças comuns aos quatro ecrãs do bar**: escapar texto, o rodapé de aviso, a procura sem acentos, a caixa de procura, a pastilha de filtro, o botão de ícone, o estado vazio, a miniatura de uma bebida e o estado de um pedido. Estavam escritas quatro vezes, com quatro pequenas diferenças que ninguém escolheu. |
 | `docs/modulo-bar.md` | O desenho inteiro do módulo, e o que dele está feito. |
 | `docs/exemplos/bar-exemplo.json` | **Um casamento pronto a importar**, para experimentar o bar sem montar nada: 10 convites, 7 mesas, 16 bebidas e 10 regras. Entra pela Gestão → Dados. Não traz licenças nem pedidos — a licença é um facto comercial daquele casamento, e uma fila importada punha as duas contas do stock a divergir. |
 | `impressos.php` | Etiquetas dos convites físicos com QR, prontas a imprimir (acessível a partir de *Gráfica*). |

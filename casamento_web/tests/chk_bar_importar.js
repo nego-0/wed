@@ -142,7 +142,7 @@ const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++;
   ok(!/Licor Beirão/.test(menu), 'sem a que a copa deixou escondida');
   console.log('   menu (início): ' + menu.replace(/\n+/g, ' · ').slice(0, 200));
 
-  await tel.locator('.b-bebida:has-text("Água") button:has-text("+")').first().click();
+  await tel.locator('.b-bebida:has-text("Água") .b-mais button.up').first().click();
   await tel.waitForTimeout(400);
   await tel.click('#b-pedir');
   await tel.waitForTimeout(1600);

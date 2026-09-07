@@ -1010,6 +1010,8 @@ com um `desde` não pagava o cuidado de o manter certo (§18).
 | `bar.php` | A montagem do bar, para os noivos |
 | `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar. `?mesa=N` reimprime só uma. Com o PIN ligado, uma segunda folha com os códigos dos convites |
 | `assets/bar.css` | Estilo dos quatro ecrãs |
+| `assets/icones.js` | Os desenhos da casa: seis copos e ~30 sinais de interface, 24×24 a traço, em `currentColor` (§25.17) |
+| `assets/bar-pecas.js` | As peças comuns aos quatro ecrãs: escape, rodapé, procura sem acentos, pastilha, botão de ícone, vazio, miniatura, estado (§25.16) |
 | `assets/bar-montagem.js` | Gavetas, bebidas, fotografias, stock, folhas de QR |
 | `assets/bar-convidado.js` | Procura do nome, mesa, menu, pedido, os meus pedidos |
 | `assets/bar-copa.js` | Fila, decisão, stock, motivos, regras da casa |
@@ -1019,7 +1021,7 @@ com um `desde` não pagava o cuidado de o manter certo (§18).
 | `tests/chk_bar_identidade.js` | Um telemóvel uma pessoa; os três modos de IP |
 | `tests/chk_bar_numeros.js` | A previsão de rutura, e o que o convidado não vê |
 | `tests/chk_bar_pin.js` | Os quatro dígitos do convite, o travão, e o empregado a servir mesmo assim |
-| `tests/chk_bar_desenho.js` | O dedo, a fuga lateral, o anel de foco, o vazio e as cores inventadas (§25.14) |
+| `tests/chk_bar_desenho.js` | O dedo, a fuga lateral, o anel de foco, o vazio, as cores inventadas (§25.14), as peças partilhadas (§25.16), a caça ao emoji (§25.17) e a procura (§25.18) |
 | `tests/chk_bar_por_outro.js` | Pedir por outro convidado: a quota é de quem bebe, os dois nomes ficam, e o código do convite continua a valer (§5.2.1) |
 | `tests/chk_bar_importar.js` | O retrato leva o bar, e o ficheiro de exemplo carrega um bar que serve (§19.1) |
 | `docs/exemplos/bar-exemplo.json` | Um casamento inteiro pronto a importar, para experimentar o bar sem montar nada |
@@ -1243,7 +1245,7 @@ desenvolvimento, a contar o que se prova e porquê).
 | `chk_bar_garcon.js` | Pedido por conta de outro conta para os limites do convidado e fica marcado |
 | `chk_bar_stats.js` | Os números da copa batem com os pedidos lançados; o convidado só vê o seu |
 | `chk_bar_dados.js` | Exportar e importar o casamento leva o bar inteiro; apagar o casamento não deixa órfãos |
-| `chk_bar_desenho.js` | O desenho cumpre-se: zero hexadecimais fora dos tokens, os quatro temas, alvos de toque medidos, sem transbordo em 360/390/430 px, esqueleto e vazio, foco visível, números tabulares, o menu a vestir o convite do casal, movimento reduzido respeitado (§25.14) |
+| `chk_bar_desenho.js` | O desenho cumpre-se: zero hexadecimais fora dos tokens, os quatro temas, alvos de toque medidos, sem transbordo em 360/390/430 px, esqueleto e vazio, foco visível, números tabulares, o menu a vestir o convite do casal, movimento reduzido respeitado (§25.14); e ainda: as quatro páginas com as peças da casa (§25.16), nem um emoji (§25.17), nenhum botão de ícone mudo, e a procura a cortar a lista sem acentos (§25.18) |
 
 E a linha de sempre em `versao.php`, uma por fase, para se saber por telefone o
 que está mesmo instalado.
@@ -1770,6 +1772,153 @@ o que nenhuma asserção apanha.
 ```
 
 ---
+
+### 25.16 **[decisão]** Uma caixa de ferramentas, e não quatro
+
+O módulo tem quatro páginas, e as quatro faziam as mesmas seis coisas: escapar
+texto, dizer «feito» num rodapé, procurar sem acentos, desenhar uma caixa de
+procura, uma pastilha de filtro e um estado vazio.
+
+Estavam escritas **quatro vezes**, e as cópias já tinham divergido: uma procura
+que ignorava acentos aqui e não ali, um vazio com botão numa página e sem botão
+na outra, um `toast()` que não limpava o temporizador anterior. Nada disto foi
+decidido — foi o que sobra de copiar um ficheiro para começar o seguinte. É o
+que faz um módulo parecer o trabalho de quatro pessoas diferentes.
+
+Passaram para **`assets/icones.js`** (os desenhos) e **`assets/bar-pecas.js`**
+(as peças), por esta ordem, antes de tudo o resto:
+
+| Peça | O que resolve |
+|---|---|
+| `BP.esc` / `BP.apo` | Texto que vai para dentro de HTML, e para dentro de um `onclick` |
+| `BP.toast` | O rodapé de 2,6 s, com o temporizador anterior cancelado |
+| `BP.chave` | A chave de procura: sem acentos, sem maiúsculas |
+| `BP.campoBusca` / `BP.ligarBusca` | A caixa com a lupa dentro, o ✕ que só aparece quando há o que limpar, e a espera de 160 ms |
+| `BP.pilula` | A pastilha de filtro: ícone, palavra, contagem, e ponto de cor quando é uma gaveta |
+| `BP.btIco` | Um botão que é só ícone — com `title` **e** `aria-label`, sempre |
+| `BP.vazio` | O vazio que diz o que falta, porquê, e o gesto que o resolve |
+| `BP.foto` | A miniatura: a fotografia com o seu enquadramento, ou o copo da gaveta a traço |
+| `BP.sinal` / `BP.estado` | O estado de um pedido em cor, palavra **e** forma (§25.7) |
+| `BP.ha` | «há 7 min», já corrigido pelo desvio do relógio do servidor |
+
+O que isto compra, além de menos linhas: uma correcção de acessibilidade feita
+neste ficheiro chega às quatro páginas no mesmo instante, e quem aprende a
+procurar na montagem já sabe procurar na copa. É a mesma peça, com outra luz —
+`body.b-noite` dá-lhe o vidro fosco do salão e alvos de 48 px; `.b-festa`
+dá-lhe a paleta do convite do casal.
+
+**A prova prende-o**: `chk_bar_desenho.js` abre as quatro páginas e exige
+`window.ICO` e `window.BP` em todas. Uma página que volte a escrever a sua
+própria procura falha aí.
+
+### 25.17 **[decisão]** Nem um emoji, nas quatro páginas
+
+Um emoji é o desenho de **outra gente**: muda de forma em cada sistema
+operativo, sai a cores no meio de uma página feita a traço, e nas fontes que
+não o têm sai o quadrado do «não sei desenhar isto». Num ecrã de serviço, às
+onze da noite, isso é pior do que não ter sinal nenhum.
+
+Saíram todos — 🍹 🍽 🙋 ☕ 🍸, o `◔` das pastilhas de estado, o `✕` dos botões
+de tirar, o `−`/`+` dos contadores, o `▾` das pastilhas do convidado, e o `✓`
+do selector de tema da casa, que aparece em cima de todas estas páginas. No
+lugar deles ficaram os desenhos de `assets/icones.js`: 24×24, traço de 1,6,
+`currentColor` — atravessam os quatro temas e o escuro do salão sem uma regra
+a mais.
+
+Seis desses desenhos são **copos**: taça, flute, caneca, copo baixo, copo alto
+e chávena. `ICO.copo(nome, gaveta)` escolhe um por palavras do nome da bebida
+primeiro e da gaveta depois — o nome manda, senão um café dentro da gaveta
+«Sem álcool» saía com um copo alto. É este copo que preenche a chapa das
+bebidas sem fotografia (§25.8).
+
+`chk_bar_desenho.js` varre os nós de texto das quatro páginas — mais a página
+do código errado, que não carrega folha de estilo nenhuma — e falha em
+qualquer emoji.
+
+### 25.18 A procura, em todo o lado onde há lista
+
+Três dos quatro ecrãs têm uma lista que cresce, e nenhum tinha maneira de lá
+chegar sem a percorrer com o olho:
+
+| Onde | Procura por | Porque é essa a pergunta |
+|---|---|---|
+| Montagem, no menu | nome, descrição, gaveta | «já pus a água?» |
+| Montagem, nas gavetas | nome | |
+| Copa, na fila | código, nome, mesa, quem lançou, bebidas | o convidado ao balcão diz «sou o Manuel da mesa 7» — ou «o meu era o B-14» |
+| Copa, no stock | nome, gaveta | «ainda há gin?» |
+| Entregas | mesa, nome, código, bebidas | com o tabuleiro cheio: «qual é o da Laranjeira?» |
+| Menu do convidado | nome, descrição, gaveta | vinte bebidas são cinco ecrãs de rolar |
+
+Duas regras que valem para as seis:
+
+* **Sem acentos.** Quem escreve de pé, num teclado de telemóvel e com um copo
+  na outra mão, escreve «agua». Uma procura que exija o acento não serve o
+  sítio onde é usada. `chk_bar_desenho.js` prova-o com «agua com acento» a
+  achar «ZZD Água com acento».
+* **Um vazio de procura confessa-se.** «Nada com «laranjeira»» e não «a fila
+  está vazia» — senão a copa deixa de olhar para trinta pedidos que lá estão,
+  e a montagem cria uma bebida que já existe. Vem sempre com o botão que
+  levanta o filtro.
+
+E a procura **não se repinta** nas voltas de oito segundos dos ecrãs de
+serviço: repintá-la roubava o cursor a quem estava a meio de escrever.
+
+### 25.19 O que mais mudou, ecrã a ecrã
+
+**Copa.** O topo passou a ser o **mesmo interruptor da montagem** — farol a
+pulsar, a palavra «Bar aberto», e só depois o botão. Um ecrã que responde a
+«está aberto?» pelo rótulo do botão obriga a ler ao contrário («Fechar o bar»
+significa que está aberto), e é essa a leitura que se engana à uma da manhã.
+As contagens da fila saíram da barra do topo e foram para dentro das pastilhas
+que lá levam — o mesmo número em dois sítios do mesmo ecrã é ruído. As quatro
+abas passaram a ser as pastilhas de filtro da casa.
+
+**Entregas.** A **mesa passou a ser o título** do cartão, com o seu sinal ao
+lado. Estava em corpo 13 numa linha de notas, por baixo do código — e o código
+não serve para nada a quem atravessa o salão: serve à chegada, para confirmar.
+Trocaram de lugar. Os cabeçalhos das filas ganharam sinal e contagem, e a barra
+do topo ficou só com o que nenhuma fila diz: quantas foram servidas.
+
+**Menu do convidado.** As iniciais em corpo 32 sobre cor cheia deram lugar à
+chapa com o copo da gaveta — e, **sem fotografia, em faixa e não em painel**:
+em 4:3, dezasseis bebidas sem fotografia eram cinco ecrãs de rolar, e o que se
+rolava era cor. Ganhou procura e pastilhas de gaveta (que rolam de lado, para
+não empurrarem o menu para fora do ecrã), e o `+` acende-se na cor do casal
+quando há alguma coisa no cesto.
+
+**As janelas.** Um formulário em janela mostrava os sim/não **sem o rótulo**:
+via-se «SIM, PARA QUEM NÃO TEM REDE» sem em lado nenhum dizer sim a *quê* — a
+pergunta ficava só no código. Agora o rótulo aparece sempre, e a caixa tem
+contorno como os outros campos, enchendo-se de cor quando está ligada. As
+listas dentro de janelas (regras, motivos, telemóveis) saíram de `bar.css`
+para `janela.css`, com `.j-sec` e `.j-linha`: vestiam-se com as cores do
+**salão** e apareciam sobre o cartão claro de uma janela, onde o cinzento fraco
+do escuro era quase invisível.
+
+### 25.20 Sobre frameworks de terceiros
+
+Bootstrap, Tailwind e afins ficaram **de fora, de propósito**, e a razão é
+concreta e não ideológica.
+
+Esta casa já tem o que um framework traria: uma grelha, uma tipografia, botões,
+campos, janelas — tudo saído de tokens que existem em **quatro temas** e que o
+casal pode mudar da página de definições. Bootstrap traz consigo um `reset`, um
+sistema de cor próprio (`$primary`, `$body-bg`) e uma escala de espaçamento que
+não é a nossa. Adoptá-lo aqui daria uma de duas coisas: ou se reescreve o
+sistema de cor dele para apontar aos nossos tokens — que é fazer o trabalho
+duas vezes e ficar a dever a manutenção das duas —, ou o bar deixa de mudar
+com o tema, e passa a ser a única parte do sistema que não obedece ao casal.
+
+Há ainda a folha `janela.css`, que se veste sozinha (`--j-*`) porque as janelas
+abrem-se por cima de páginas que **não carregam** `estilo.css` — os editores de
+convite. Um reset global de terceiros passava por cima disso.
+
+O que se fez em vez disso foi o que um framework dá de bom, mas em casa e à
+medida: **um conjunto de peças com um nome** (§25.16), **um conjunto de
+desenhos com uma regra** (§25.17), e uma prova que impede as duas coisas de se
+desfazerem. Se um dia isto crescer para lá do que a casa aguenta, a conversa
+faz-se — mas então será uma decisão tomada, e não uma dependência que entrou
+para resolver um botão.
 
 ## 26. Apêndice: os textos
 

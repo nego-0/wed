@@ -63,8 +63,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     for (const i of (e.itens || []).filter(i => /^ZZD /.test(i.nome))) {
       await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
     }
+    // Duas bebidas, e não uma: com uma só no armazém, uma procura que não
+    // filtrasse nada dava o mesmo resultado que uma que filtrasse bem — e o
+    // teste passava sem provar coisa nenhuma.
     await window.api('bar_item_guardar', { method: 'POST', body: JSON.stringify(
       { nome: 'ZZD Cerveja', categoria_id: e.categorias[0].id, stock: 40,
+        visivel: 1, max_por_pedido: 3 }) });
+    await window.api('bar_item_guardar', { method: 'POST', body: JSON.stringify(
+      { nome: 'ZZD Água com acento', categoria_id: e.categorias[0].id, stock: 25,
         visivel: 1, max_por_pedido: 3 }) });
     await window.api('bar_abrir', { method: 'POST', body: '{}' });
     return { token: window.BAR_MESAS[0].token };
@@ -295,7 +301,104 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   }, antesPaleta);
   ok(await corDe() === ouroAntes, 'e volta ao que era quando se repõe a paleta');
 
-  // ============ 8. movimento reduzido ============
+  // ============ 8. os quatro ecrãs falam a mesma língua ============
+  // O módulo tem quatro páginas e uma só caixa de ferramentas (assets/
+  // bar-pecas.js). Antes, cada página trazia a sua cópia de esc(), toast() e
+  // da procura — e as cópias divergiam: uma ignorava acentos, a outra não.
+  // Isto prende as quatro ao mesmo módulo, para a divergência não voltar.
+  for (const [pag, quem] of [['/bar.php', 'a montagem'], ['/copa.php', 'a copa'],
+                             ['/entregas.php', 'as entregas'],
+                             ['/bebidas.php?m=' + token, 'o menu do convidado']]) {
+    const q = await casa.newPage();
+    vigiar(q, 'peças ' + pag);
+    await q.goto(BASE + pag, { waitUntil: 'networkidle' });
+    await q.waitForTimeout(900);
+    const tem = await q.evaluate(() => ({
+      ico: !!(window.ICO && window.ICO.ico && window.ICO.copo),
+      bp:  !!(window.BP && window.BP.campoBusca && window.BP.chave && window.BP.foto)
+    }));
+    ok(tem.ico && tem.bp, quem + ' desenha-se com os ícones e as peças da casa');
+    await q.close();
+  }
+
+  // ============ 9. nem um emoji ============
+  // Um emoji é o desenho de OUTRA gente: muda de forma em cada sistema, sai a
+  // cores no meio de uma página a traço, e nas fontes que não o têm sai o
+  // quadrado do «não sei desenhar isto». Num ecrã de serviço isso é pior do
+  // que não ter sinal nenhum — e por isso o módulo não tem nenhum.
+  const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+  for (const [pag, quem] of [['/bar.php', 'a montagem'], ['/copa.php', 'a copa'],
+                             ['/entregas.php', 'as entregas'],
+                             ['/bebidas.php?m=' + token, 'o menu do convidado'],
+                             ['/bebidas.php?m=NAO-EXISTE', 'a página do código errado']]) {
+    const q = await casa.newPage();
+    await q.goto(BASE + pag, { waitUntil: 'networkidle' });
+    await q.waitForTimeout(900);
+    const achados = await q.evaluate((re) => {
+      const rx = new RegExp(re, 'u');
+      const maus = [];
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const t = n.nodeValue || '';
+        if (rx.test(t)) maus.push(t.trim().slice(0, 40));
+      }
+      return maus;
+    }, EMOJI.source);
+    ok(achados.length === 0, quem + ' não usa um único emoji'
+       + (achados.length ? ': ' + achados.slice(0, 3).join(' · ') : ''));
+    await q.close();
+  }
+
+  // ============ 10. um botão de ícone tem nome ============
+  // O desenho reconhece-se de relance, mas um ícone sozinho é mudo para quem
+  // ouve a página em vez de a ver — e para quem pára o rato à espera da
+  // palavra. Todo o botão sem texto tem de ter aria-label ou title.
+  for (const [pag, quem] of [['/bar.php', 'a montagem'], ['/copa.php', 'a copa'],
+                             ['/entregas.php', 'as entregas']]) {
+    const q = await casa.newPage();
+    await q.goto(BASE + pag, { waitUntil: 'networkidle' });
+    await q.waitForTimeout(1100);
+    const mudos = await q.evaluate(() => {
+      const maus = [];
+      document.querySelectorAll('button, [role=button]').forEach(el => {
+        if (el.offsetParent === null) return;              // escondido, não conta
+        if ((el.textContent || '').trim()) return;         // tem palavra
+        if (el.getAttribute('aria-label') || el.getAttribute('title')) return;
+        maus.push(el.className || el.tagName);
+      });
+      return maus;
+    });
+    ok(mudos.length === 0, 'em ' + quem + ', nenhum botão de ícone é mudo'
+       + (mudos.length ? ': ' + [...new Set(mudos)].slice(0, 3).join(' · ') : ''));
+    await q.close();
+  }
+
+  // ============ 11. a procura procura ============
+  // Uma caixa de procura que não filtra é um enfeite. Escreve-se um nome que
+  // só uma bebida tem, e a lista tem de encolher — e sem acentos, porque quem
+  // escreve de pé num teclado de telemóvel não os põe.
+  const proc = await casa.newPage();
+  vigiar(proc, 'procura');
+  await proc.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
+  await proc.waitForTimeout(1200);
+  const stock = await proc.evaluate(() => document.querySelectorAll('#b-stock .b-item').length);
+  // «agua» sem acento tem de achar «Água»: quem escreve de pé, num teclado de
+  // telemóvel e com um copo na outra mão, não põe acentos nenhuns.
+  await proc.fill('#q-stock', 'agua com acento');
+  await proc.waitForTimeout(500);
+  const depois = await proc.evaluate(() => document.querySelectorAll('#b-stock .b-item').length);
+  ok(stock > depois && depois === 1,
+     'a procura do stock corta a lista, e sem acentos: ' + stock + ' → ' + depois);
+  await proc.fill('#q-stock', 'zzzznaoexiste');
+  await proc.waitForTimeout(500);
+  const nada = await proc.evaluate(() =>
+    (document.querySelector('#b-stock .b-vazio b') || {}).textContent || '');
+  ok(/nada com esse nome/i.test(nada),
+     'e quando não acha nada di-lo por palavras: «' + nada + '»');
+  await proc.close();
+
+  // ============ 12. movimento reduzido ============
   // Quem pediu ao sistema para parar o movimento pediu-o a sério: numa festa
   // com luzes a piscar, uma pastilha a pulsar é o que faltava.
   const parado = await casa.newPage();     // com sessão, e com o movimento cortado

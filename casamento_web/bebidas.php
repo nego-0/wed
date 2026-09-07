@@ -34,7 +34,13 @@ if (!$mesa || !podeModulo('bar')) {
        . '<title>Bar</title></head>'
        . '<body style="font:16px/1.6 system-ui,sans-serif;background:#FBF8F1;color:#20342A;margin:0">'
        . '<div style="max-width:24rem;margin:18vh auto;padding:0 1.5rem;text-align:center">'
-       . '<div style="font-size:2.4rem">🍹</div>'
+       // Uma taça a traço, e não um emoji: numa página de erro sem folhas de
+       // estilo nem ícones carregados, o emoji sai como o desenho de outro
+       // sistema operativo — ou como o quadrado do «não sei desenhar isto».
+       . '<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="#B4864A" '
+       . 'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+       . '<path d="M7.6 3.2h8.8l-.5 5.1a4.4 4.4 0 0 1-7.8 0z"/><path d="M12 12.7V20"/>'
+       . '<path d="M8.4 20.6h7.2"/></svg>'
        . '<h1 style="font-weight:400;font-size:1.3rem">Este código não serve</h1>'
        . '<p style="color:#6b7268">Talvez a folha seja de outra festa, ou o bar ainda não '
        . 'esteja montado. Chame um empregado — ele resolve isto num instante.</p>'
@@ -133,6 +139,8 @@ window.BAR = {
   fechado: <?= json_encode($mensagemFechada) ?>
 };
 </script>
+<script src="<?= asset('assets/icones.js') ?>"></script>
+<script src="<?= asset('assets/bar-pecas.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/bar-convidado.js') ?>"></script>
 </body>

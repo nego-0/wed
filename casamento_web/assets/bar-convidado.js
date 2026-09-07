@@ -36,10 +36,18 @@
   var relogio = null, procuraEspera = null;
 
   function $(id) { return document.getElementById(id); }
-  function esc(s) {
-    return String(s === null || s === undefined ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+
+  // As peças comuns do módulo (assets/bar-pecas.js). O convidado usa as
+  // mesmas: a mesma procura, o mesmo copo desenhado, o mesmo estado com
+  // forma. O que muda é a paleta, que aqui é a do convite do casal.
+  var ico = window.ICO, BP = window.BP;
+  var esc = BP.esc, chave = BP.chave, foto = BP.foto;
+  var campoBusca = BP.campoBusca, ligarBusca = BP.ligarBusca, vazio = BP.vazio;
+
+  /* O que o convidado está a pedir ao menu: uma palavra escrita, ou uma
+     gaveta escolhida. Um menu de vinte bebidas num telemóvel é muito rolar
+     para achar a água. */
+  var busca = '', gaveta = 0;
 
   // ---- a conversa com o servidor ----------------------------
   // O token vai sempre: é ele que diz de que casamento se trata.
@@ -198,26 +206,18 @@
   }
 
   // ---- 2. o menu --------------------------------------------
-  function foto(i) {
-    if (i.foto) {
-      return '<div class="b-foto"><img src="' + esc(i.foto) + '" alt="' + esc(i.nome) + '"'
-        + (i.foto_pos ? ' style="object-position:' + esc(i.foto_pos) + '"' : '')
-        + ' loading="lazy"></div>';
-    }
-    return '<div class="b-foto"><span class="letra" aria-hidden="true"'
-      + (i.categoria_cor ? ' style="background:' + esc(i.categoria_cor) + '"' : '')
-      + '>' + esc((i.nome || '?').charAt(0).toUpperCase()) + '</span></div>';
-  }
-
   function pintarTopo() {
     $('b-eu').textContent = eu ? eu.nome : 'Bar';
+    var seta = '<svg class="ico seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg>';
     var bp = $('b-para');
     if (bp) {
       bp.hidden = !eu;
       bp.classList.toggle('on', !!para);
-      bp.innerHTML = para
-        ? '🙋 A pedir para <b>' + esc(para.nome) + '</b> <span aria-hidden="true">▾</span>'
-        : '🙋 Pedir por outra pessoa <span aria-hidden="true">▾</span>';
+      bp.innerHTML = ico.ico('pessoas')
+        + (para ? 'A pedir para <b>' + esc(para.nome) + '</b>' : 'Pedir por outra pessoa')
+        + seta;
       bp.setAttribute('aria-label', para
         ? 'A pedir para ' + para.nome + '. Tocar para mudar ou voltar a si.'
         : 'Pedir por outra pessoa que esteja consigo à mesa.');
@@ -227,7 +227,7 @@
     bm.hidden = false;
     // «Entregar em X» e não «na X»: as mesas chamam-se «Noivos», «Padrinhos»,
     // «7» — e metade delas não casa com artigo nenhum.
-    bm.innerHTML = '🍽 Entregar em <b>' + esc(nomeDaMesa()) + '</b> <span aria-hidden="true">▾</span>';
+    bm.innerHTML = ico.ico('mesa') + 'Entregar em <b>' + esc(nomeDaMesa()) + '</b>' + seta;
     bm.setAttribute('aria-label', 'Entregar na mesa ' + nomeDaMesa() + '. Tocar para mudar.');
   }
 
@@ -268,31 +268,98 @@
     }
 
     if (!menu.itens.length) {
-      html += '<div class="b-vazio"><span class="ico">🍹</span>O menu ainda não tem bebidas.</div>';
+      html += vazio('taca', 'O menu ainda não tem bebidas',
+                    'A copa está a acabar de o montar. Volte daqui a pouco.');
     } else {
-      // Por gaveta, na ordem em que a copa as arrumou. Nenhuma bebida se
-      // perde pelo caminho: o que não coube em gaveta nenhuma cai em
-      // «Outras» — um menu que esconde metade das bebidas em silêncio é pior
-      // do que um menu feio.
-      var porMostrar = menu.itens.slice();
-      menu.categorias.forEach(function (c) {
-        var dela = porMostrar.filter(function (i) { return Number(i.categoria_id) === Number(c.id); });
-        if (!dela.length) return;
-        porMostrar = porMostrar.filter(function (i) { return dela.indexOf(i) < 0; });
-        html += '<div class="b-gaveta">' + esc(c.nome) + '</div><div class="b-menu">'
-          + dela.map(cartao).join('') + '</div>';
-      });
-      if (porMostrar.length) {
-        html += '<div class="b-gaveta">Outras</div><div class="b-menu">'
-          + porMostrar.map(cartao).join('') + '</div>';
+      html += ferramentas();
+      var vistos = peneira(menu.itens);
+      if (!vistos.length) {
+        html += vazio('procurar', 'Nada com esse nome',
+          'São ' + menu.itens.length + ' bebidas no menu; nenhuma responde ao que procura.',
+          '<button class="btn btn-claro" onclick="barLimpar()">' + ico.ico('volta')
+          + 'Ver o menu todo</button>');
+      } else {
+        // Por gaveta, na ordem em que a copa as arrumou. Nenhuma bebida se
+        // perde pelo caminho: o que não coube em gaveta nenhuma cai em
+        // «Outras» — um menu que esconde metade das bebidas em silêncio é pior
+        // do que um menu feio.
+        var porMostrar = vistos.slice();
+        menu.categorias.forEach(function (c) {
+          var dela = porMostrar.filter(function (i) { return Number(i.categoria_id) === Number(c.id); });
+          if (!dela.length) return;
+          porMostrar = porMostrar.filter(function (i) { return dela.indexOf(i) < 0; });
+          html += tituloGaveta(c) + '<div class="b-menu">' + dela.map(cartao).join('') + '</div>';
+        });
+        if (porMostrar.length) {
+          html += tituloGaveta({ id: 0, nome: 'Outras' })
+            + '<div class="b-menu">' + porMostrar.map(cartao).join('') + '</div>';
+        }
       }
     }
 
     html += pintarMeus();
     $('b-corpo').innerHTML = html;
+    if (menu.itens.length) ligarBusca('q-menu', function (v) { busca = v; pintarMenu(); });
     pintarTopo();
     pintarRodape();
   }
+
+  /** O título de uma gaveta: o copo dela, a sua cor, e o nome. */
+  function tituloGaveta(c) {
+    return '<div class="b-gaveta" id="gav-' + c.id + '"'
+      + (c.cor ? ' style="--tinta:' + esc(c.cor) + '"' : '') + '>'
+      + ico.copo(c.nome) + (c.cor ? '<i></i>' : '') + esc(c.nome) + '</div>';
+  }
+
+  /**
+   * A procura e as gavetas, por cima do menu.
+   *
+   * Vinte bebidas num telemóvel são cinco ecrãs de rolar, e quem tem sede
+   * sabe o que quer: escreve «agua» ou toca em «Sem álcool». As pastilhas
+   * rolam de lado — quatro linhas delas empurravam o menu para fora do ecrã
+   * antes de se ver a primeira bebida.
+   *
+   * Só aparece quando há menu que chegue para justificar uma ferramenta: com
+   * seis bebidas, procurar é mais trabalho do que olhar.
+   */
+  function ferramentas() {
+    if (menu.itens.length < 8) return '';
+    var chips = [{ id: 0, nome: 'Tudo', cor: '' }].concat(
+      menu.categorias.filter(function (c) {
+        return menu.itens.some(function (i) { return Number(i.categoria_id) === Number(c.id); });
+      }));
+    return '<div class="b-fer">' + campoBusca('q-menu', 'Procurar uma bebida', busca) + '</div>'
+      + '<div class="b-pastilhas rolo">'
+      + chips.map(function (c) {
+          var n = c.id
+            ? menu.itens.filter(function (i) { return Number(i.categoria_id) === Number(c.id); }).length
+            : menu.itens.length;
+          return BP.pilula({ rot: c.nome, cor: c.cor || '', n: n,
+                             ligada: Number(gaveta) === Number(c.id),
+                             accao: 'barGaveta(' + c.id + ')' });
+        }).join('')
+      + '</div>';
+  }
+
+  /** O menu, já passado pelo que a procura e a gaveta escolheram. */
+  function peneira(itens) {
+    var q = chave(busca);
+    return itens.filter(function (i) {
+      if (gaveta && Number(i.categoria_id) !== Number(gaveta)) return false;
+      if (q && chave(i.nome + ' ' + (i.descricao || '') + ' ' + (i.categoria || '')).indexOf(q) < 0) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  window.barGaveta = function (id) {
+    // Tocar outra vez na gaveta escolhida desliga-a: é o gesto que toda a
+    // gente tenta, e sem ele a única saída era achar o «Tudo».
+    gaveta = (Number(gaveta) === Number(id)) ? 0 : Number(id);
+    pintarMenu();
+  };
+  window.barLimpar = function () { busca = ''; gaveta = 0; pintarMenu(); };
 
   function cartao(i) {
     var n = cesto[i.id] || 0;
@@ -323,7 +390,8 @@
                + esc(a.nome) + '</button>';
         }).join(' ') + '</div>' : '';
 
-    return '<div class="b-bebida' + (travada ? ' esgotada' : '') + '" id="bb-' + i.id + '">'
+    return '<div class="b-bebida' + (travada ? ' esgotada' : '') + (n ? ' no-cesto' : '')
+      + '" id="bb-' + i.id + '" style="--tinta:' + esc(i.categoria_cor || 'transparent') + '">'
       + foto(i)
       + '<div class="nm">' + esc(i.nome) + '</div>'
       + (i.descricao ? '<div class="ds">' + esc(i.descricao) + '</div>' : '')
@@ -332,12 +400,12 @@
       +   '<span class="qtd">' + esc(qtd) + relogio + '</span>'
       +   (travada || !aberto ? '' :
             '<span class="b-mais">'
-          + '<button type="button" onclick="barMenos(' + i.id + ')"' + (n ? '' : ' disabled')
-          +   ' aria-label="Menos um ' + esc(i.nome) + '">−</button>'
+          + '<button type="button" class="dn" onclick="barMenos(' + i.id + ')"' + (n ? '' : ' disabled')
+          +   ' aria-label="Menos um ' + esc(i.nome) + '">' + ico.ico('menos') + '</button>'
           + '<span class="v" aria-live="polite">' + n + '</span>'
-          + '<button type="button" onclick="barMais(' + i.id + ')"'
+          + '<button type="button" class="up" onclick="barMais(' + i.id + ')"'
           +   (n >= i.pode_pedir ? ' disabled' : '')
-          +   ' aria-label="Mais um ' + esc(i.nome) + '">+</button>'
+          +   ' aria-label="Mais um ' + esc(i.nome) + '">' + ico.ico('mais') + '</button>'
           + '</span>')
       + '</div>' + alt + '</div>';
   }
@@ -383,7 +451,8 @@
         }).join(' · ') + '</div>'
       : '';
 
-    return '<div class="b-meus"><div class="b-gaveta">Os meus pedidos</div>' + conta
+    return '<div class="b-meus"><div class="b-gaveta">' + ico.ico('nota')
+      + 'Os meus pedidos</div>' + conta
       + meus.map(function (p) {
           var oq = p.itens.map(function (l) { return l.quantidade + '× ' + l.nome; }).join(', ');
           // De quem é esta: a que lancei por outro, e a que outro lançou por
@@ -399,10 +468,11 @@
             + '<span class="cod">' + esc(p.codigo) + '</span>'
             + '<span class="oq">' + esc(oq) + dequem
             +   (p.motivo ? '<br><small>' + esc(p.motivo) + '</small>' : '') + '</span>'
-            + '<span class="b-est ' + esc(p.estado) + '">' + esc(p.estado_nome) + '</span>'
+            + BP.estado(p.estado, p.estado_nome)
             + (p.estado === 'em_analise'
                 ? '<button class="btn btn-claro" style="min-height:40px;padding:.3rem .8rem;'
-                  + 'font-size:.8rem" onclick="barDesistir(' + p.id + ')">Desistir</button>' : '')
+                  + 'font-size:.8rem" onclick="barDesistir(' + p.id + ')">'
+                  + ico.ico('xis') + 'Desistir</button>' : '')
             + '</div>';
         }).join('')
       + '</div>';
@@ -636,8 +706,9 @@
 
   // Um recado de uma só saída: sem aoConfirmar, licJanela desenha só o botão
   // de fechar — dois botões para «já percebi» seriam uma escolha a fingir.
-  function janelaAviso(titulo, html, botao) {
-    licJanela(titulo, '<div class="lic-conf"><div class="lic-conf-ico">🍹</div>'
+  function janelaAviso(titulo, html, botao, icone) {
+    licJanela(titulo, '<div class="lic-conf"><div class="lic-conf-ico">'
+      + ico.ico(icone || 'taca') + '</div>'
       + '<div class="lic-conf-txt">' + html + '</div></div>', null,
       { cancelar: botao || 'Está bem' });
   }
@@ -654,11 +725,11 @@
             + 'dessa pessoa. Voltámos a pôr os seus pedidos em seu nome.'
           : '')
       + '</p></div>',
-      'Voltar ao menu');
+      'Voltar ao menu', 'visto');
   }
 
   window.barDesistir = async function (id) {
-    var r = await licConfirmar({ titulo: 'Desistir do pedido', icone: '🍹',
+    var r = await licConfirmar({ titulo: 'Desistir do pedido', icone: 'volta',
       texto: 'Ainda ninguém o preparou, por isso pode desistir sem incomodar ninguém.',
       confirmar: 'Desistir', cancelar: 'Manter' });
     if (!r.sim) return;

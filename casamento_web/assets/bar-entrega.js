@@ -17,34 +17,18 @@
   var EST = null, EU = '';
   var desvio = 0;
 
-  function esc(s) {
-    return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (m) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m];
-    });
-  }
-  function toast(m, mau) {
-    var t = $('toast'); if (!t) return;
-    t.textContent = m; t.className = 'toast mostrar' + (mau ? ' erro' : '');
-    setTimeout(function () { t.className = 'toast'; }, 2600);
-  }
-  window.toast = toast;
+  // As peças comuns do módulo (assets/bar-pecas.js): a mesma procura, o mesmo
+  // vazio, a mesma miniatura que a copa e a montagem usam.
+  var ico = window.ICO, BP = window.BP;
+  var esc = BP.esc, toast = BP.toast, chave = BP.chave, foto = BP.foto;
+  var campoBusca = BP.campoBusca, ligarBusca = BP.ligarBusca, vazio = BP.vazio;
+  function ha(quando) { return BP.ha(quando, desvio); }
 
-  function foto(i) {
-    if (i.foto) return '<div class="b-foto"><img src="' + esc(i.foto) + '" alt="" loading="lazy"></div>';
-    return '<div class="b-foto"><span class="letra">'
-      + esc((i.nome || '?').trim().charAt(0).toUpperCase()) + '</span></div>';
-  }
-
-  function ha(quando) {
-    if (!quando) return '';
-    var t = Date.parse(String(quando).replace(' ', 'T'));
-    if (isNaN(t)) return '';
-    var s = Math.max(0, Math.round((Date.now() + desvio - t) / 1000));
-    if (s < 60) return 'agora mesmo';
-    var m = Math.round(s / 60);
-    if (m < 60) return 'há ' + m + ' min';
-    return 'há ' + Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
-  }
+  /* Um tabuleiro cheio são seis ou oito cartões na lista, e a pergunta de quem
+     o segura é sempre a mesma: «qual é o da Laranjeira?». A procura apanha a
+     mesa, o nome, o código e as bebidas — o que quer que a pessoa tenha na
+     cabeça nesse momento. */
+  var busca = '';
 
   /** Segundos em palavras curtas: «2 min», «45 s». */
   function tempo(s) {
@@ -66,6 +50,28 @@
     pintar();
   }
 
+  /** A barra: a procura, e o atalho de quem pede sem rede. */
+  function pintarFerramentas() {
+    var fer = $('b-fer');
+    if ($('q-ent')) return;             // já lá está; não se rouba o cursor
+    fer.innerHTML = campoBusca('q-ent', 'Procurar mesa, nome ou bebida', busca)
+      + (PODE ? '<button class="btn btn-fantasma" onclick="entPedirPor()" '
+              + 'title="Lançar um pedido por quem não tem rede">'
+              + ico.ico('mao') + 'Pedir por alguém</button>' : '');
+    ligarBusca('q-ent', function (v) { busca = v; pintar(); });
+  }
+
+  /** O que a procura deixa passar. Sem procura, passa tudo. */
+  function peneira(ps) {
+    var q = chave(busca);
+    if (!q) return ps;
+    return ps.filter(function (p) {
+      var saco = [p.codigo, p.convidado, p.mesa, p.mesa_qr, p.pedido_por]
+        .concat((p.itens || []).map(function (l) { return l.nome; }));
+      return chave(saco.join(' ')).indexOf(q) >= 0;
+    });
+  }
+
   function pintar() {
     var ps = EST.pedidos || [];
     // «Meu» é o que eu apanhei: dois empregados no mesmo salão não podem
@@ -75,37 +81,72 @@
     var espera   = ps.filter(function (p) { return p.estado === 'aprovado'; });
     var voltaram = ps.filter(function (p) { return p.estado === 'falhou'; });
 
-    $('k-minhas').textContent = minhas.length;
-    $('k-espera').textContent = espera.length;
     $('k-entregues').textContent = (EST.estado && EST.estado.entregues) || 0;
+    pintarFerramentas();
+
+    // A procura corta as quatro filas de uma vez: quem escreve «laranjeira»
+    // quer o pedido da Laranjeira, esteja ele em que fila estiver.
+    var mF = peneira(minhas), eF = peneira(espera),
+        vF = peneira(voltaram), oF = peneira(doOutro);
+    if (busca && !(mF.length + eF.length + vF.length + oF.length)) {
+      $('b-listas').innerHTML = '<div class="b-cartao">'
+        + vazio('procurar', 'Nada com «' + busca + '»',
+                'Nenhum dos ' + ps.length + ' pedidos em curso responde ao que procura.',
+                '<button class="btn btn-fantasma" onclick="entLimpar()">'
+                + ico.ico('volta') + 'Ver todos</button>') + '</div>';
+      pintarTempos();
+      return;
+    }
 
     var html = '';
     // A nota da secção só faz sentido quando há lá alguma coisa: «pouse-os e
     // carregue em Entregue» por cima de «nada nas mãos» é uma ordem sem objecto.
-    html += seccao('Comigo', minhas, 'Nada nas mãos. Apanhe um da fila de baixo.',
-                   minhas.length ? 'pouse-os e carregue em Entregue' : '');
-    html += seccao('Por apanhar', espera, 'A copa não tem nada aprovado à espera.',
-                   espera.length ? 'os mais antigos primeiro' : '');
-    if (voltaram.length) {
-      html += seccao('Voltaram', voltaram, '',
+    html += seccao('mao', 'Comigo', mF,
+                   ['tabuleiro', 'Nada nas mãos',
+                    'Apanhe um da fila de baixo e ele passa para aqui.'],
+                   mF.length ? 'pouse-os e carregue em Entregue' : '');
+    html += seccao('sino', 'Por apanhar', eF,
+                   ['visto', 'A copa está em dia',
+                    'Não há nada aprovado à espera de quem o leve.'],
+                   eF.length ? 'os mais antigos primeiro' : '');
+    if (vF.length) {
+      html += seccao('volta', 'Voltaram', vF, null,
                      'ninguém estava na mesa — tente outra vez ou devolva à copa');
     }
-    if (doOutro.length) {
-      html += '<div class="b-secao">Com outros<small>' + doOutro.length
-        + (doOutro.length === 1 ? ' pedido' : ' pedidos') + ' a caminho</small></div>'
-        + doOutro.map(function (p) { return cartao(p, true); }).join('');
+    if (oF.length) {
+      html += seccao('pessoas', 'Com outros', oF, null,
+                     oF.length === 1 ? '1 pedido a caminho' : oF.length + ' pedidos a caminho');
     }
     $('b-listas').innerHTML = html;
     pintarTempos();
   }
 
-  function seccao(titulo, ps, vazio, nota) {
-    var h = '<div class="b-secao">' + esc(titulo)
+  window.entLimpar = function () {
+    busca = '';
+    var el = $('q-ent');
+    if (el) { el.value = ''; el.parentNode.classList.remove('tem'); }
+    pintar();
+  };
+
+  /**
+   * Um cabeçalho de fila: o sinal, o nome, quantos são, e a nota do lado.
+   *
+   * A contagem vive no cabeçalho e não numa pastilha, porque aqui não há abas:
+   * rola-se. E numa lista que se rola, saber quantos faltam ANTES de os contar
+   * com o olho é o que evita a segunda passagem.
+   */
+  function seccao(icone, titulo, ps, semNada, nota) {
+    var h = '<div class="b-secao">' + ico.ico(icone) + esc(titulo)
+      + (ps.length ? '<span class="n">' + ps.length + '</span>' : '')
       + (nota ? '<small>' + esc(nota) + '</small>' : '') + '</div>';
     if (!ps.length) {
-      return vazio ? h + '<div class="b-cartao b-vazio">' + esc(vazio) + '</div>' : '';
+      // Com procura escrita, um vazio de fila não é notícia nenhuma — o que
+      // ali falta é o que a procura cortou, e dizê-lo em cada fila seria
+      // repetir a mesma frase quatro vezes.
+      if (!semNada || busca) return '';
+      return h + '<div class="b-cartao">' + vazio(semNada[0], semNada[1], semNada[2]) + '</div>';
     }
-    return h + ps.map(function (p) { return cartao(p, false); }).join('');
+    return h + ps.map(function (p) { return cartao(p, p.estado === 'a_caminho' && p.entregue_por !== EU); }).join('');
   }
 
   function cartao(p, deOutro) {
@@ -113,28 +154,29 @@
       return '<span class="b-linha">' + foto(l) + '<b>' + l.quantidade + '×</b> '
         + esc(l.nome) + '</span>';
     }).join('');
-    // A mesa é a informação que faz andar: primeiro grande, depois o resto.
-    var onde = p.mesa ? 'Mesa ' + esc(p.mesa) : '<b>Sem mesa</b> — pergunte na copa';
-    if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) {
-      onde += ' <span style="opacity:.7">(pediu na ' + esc(p.mesa_qr) + ')</span>';
-    }
-    // Quem entrega precisa de saber que a bebida é de outra pessoa: bate-se à
-    // mesa e diz-se o nome de quem a vai beber, não o de quem a pediu.
-    if (p.pedido_por) {
-      onde += ' <span style="opacity:.7">(pedido por ' + esc(p.pedido_por) + ')</span>';
-    }
+
+    // Notas de percurso: são a excepção, e por isso ficam por baixo e em
+    // corpo pequeno. Uma pessoa que mudou de mesa, ou uma bebida que outro
+    // pediu — o empregado bate à mesa e diz o nome de quem a vai BEBER.
+    var notas = [];
+    if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) notas.push('pediu na ' + esc(p.mesa_qr));
+    if (p.pedido_por) notas.push('pedido por ' + esc(p.pedido_por));
+    if (deOutro) notas.push('vai com ' + esc(p.entregue_por || 'outra pessoa'));
+
     return '<div class="b-cartao b-ped' + (p.estado === 'a_caminho' && !deOutro ? ' minha' : '') + '">'
-      + '<div class="b-ped-topo">'
-      +   '<span class="cod">' + esc(p.codigo) + '</span>'
-      +   '<span class="quem">' + esc(p.convidado || 'Sem nome') + '</span>'
+      + '<div class="b-destino">' + ico.ico('mesa')
+      +   (p.mesa
+            ? '<span class="mesa">' + esc(p.mesa) + '</span>'
+            : '<span class="mesa sem">Sem mesa — pergunte na copa</span>')
       +   '<span class="ha">' + esc(ha(p.decidido_em || p.criado_em)) + '</span>'
       + '</div>'
-      + '<div class="onde">' + onde + '</div>'
+      + '<div class="b-quem2"><span class="cod">' + esc(p.codigo) + '</span>'
+      +   '<span class="nm">' + esc(p.convidado || 'Sem nome') + '</span></div>'
       + '<div class="b-linhas">' + linhas + '</div>'
-      + (p.motivo ? '<div class="onde">Da última vez: ' + esc(p.motivo) + '</div>' : '')
-      + (deOutro
-          ? '<div class="onde">Com ' + esc(p.entregue_por || 'alguém') + '</div>'
-          : (PODE ? acoes(p) : ''))
+      + (notas.length ? '<div class="onde">' + notas.join(' · ') + '</div>' : '')
+      + (p.motivo ? '<div class="b-bandeira">' + ico.ico('aviso')
+                  + 'Da última vez: ' + esc(p.motivo) + '</div>' : '')
+      + (deOutro ? '' : (PODE ? acoes(p) : ''))
       + '</div>';
   }
 
@@ -142,15 +184,17 @@
     if (p.estado === 'a_caminho') {
       return '<div class="b-acoes">'
         + '<button class="btn btn-ouro b-bt-grande" onclick="entEntregue(' + p.id + ')">'
-        +   'Entregue</button>'
+        +   ico.ico('visto') + 'Entregue</button>'
         + '<button class="btn btn-fantasma" onclick="entFalhou(' + p.id + ')">'
-        +   'Não estava na mesa</button></div>';
+        +   ico.ico('volta') + 'Não estava na mesa</button></div>';
     }
     // Aprovado ou de volta: apanhar é o passo seguinte, e entregar directo
     // existe para quem já tem a bebida na mão quando carrega.
     return '<div class="b-acoes">'
-      + '<button class="btn btn-ouro b-bt-grande" onclick="entApanhar(' + p.id + ')">Apanhar</button>'
-      + '<button class="btn btn-fantasma" onclick="entEntregue(' + p.id + ')">Já entreguei</button>'
+      + '<button class="btn btn-ouro b-bt-grande" onclick="entApanhar(' + p.id + ')">'
+      +   ico.ico('mao') + 'Apanhar</button>'
+      + '<button class="btn btn-fantasma" onclick="entEntregue(' + p.id + ')">'
+      +   ico.ico('visto') + 'Já entreguei</button>'
       + '</div>';
   }
 

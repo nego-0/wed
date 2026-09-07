@@ -143,7 +143,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ============ 4. o ecrã da copa ============
   await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1000);
-  await p.click('#fa-num');
+  await p.click('.b-pilula:has-text("Os números")');
   await p.waitForTimeout(1400);
   const ecra = await p.locator('#b-fila').innerText();
   ok(/Chega até ao fim\?/.test(ecra), 'a copa abre nos números pela pergunta que faz de verdade');

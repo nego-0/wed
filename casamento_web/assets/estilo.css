@@ -439,7 +439,8 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 .tema-fab-dots{ display:flex; gap:3px; flex:none; }
 .tema-fab-dots i{ width:16px; height:16px; border-radius:4px; display:block; border:1px solid rgba(0,0,0,.12); }
 .tema-fab-nome{ flex:1; font-size:.86rem; }
-.tema-fab-check{ opacity:0; color:var(--gold); font-weight:700; }
+.tema-fab-check{ opacity:0; color:var(--gold); display:inline-flex; align-items:center; }
+.tema-fab-check svg{ width:15px; height:15px; }
 .tema-fab-op.on .tema-fab-check{ opacity:1; }
 .tema-fab-reset{ display:block; width:100%; border:0; background:transparent; cursor:pointer; color:#8a8f88;
   font:inherit; font-size:.78rem; padding:.5rem; margin-top:.2rem; border-top:1px solid var(--line); text-align:center; }

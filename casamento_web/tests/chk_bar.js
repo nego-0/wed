@@ -126,14 +126,22 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // As bebidas nasceram pela API; a grelha só as tem depois de repintar.
   await noivos.reload({ waitUntil: 'networkidle' });
   await noivos.waitForTimeout(800);
-  ok((await noivos.locator('.b-cart .b-foto .letra').count()) >= 1,
-     'sem fotografia, o cartão põe a inicial na cor da gaveta — e não um quadrado cinzento');
+  // Sem fotografia, o cartão põe a CHAPA: um véu da cor da gaveta com o copo
+  // dela desenhado a traço (§25.8). Era uma inicial em corpo 32 sobre cor
+  // cheia — dezasseis dessas numa grelha eram uma parede de tinta, e a
+  // primeira fotografia a sério ficava a parecer o intruso.
+  ok((await noivos.locator('.b-cart .capa .b-chapa svg').count()) >= 1,
+     'sem fotografia, o cartão desenha o copo da gaveta — e não uma inicial em corpo grande');
 
   const escolher = noivos.waitForEvent('filechooser');
-  await noivos.locator('.b-cart:has-text("ZZ Espumante") button:has-text("Fotografia")').first().click();
+  // O botão da fotografia passou a ser só o ícone: o rótulo vive no
+  // aria-label (e no title), que é o que o torna acessível e o que se procura
+  // aqui — se um dia deixar de ter nome, esta linha falha, e é isso que se quer.
+  await noivos.locator('.b-cart:has-text("ZZ Espumante") button[aria-label*="fotografia"]')
+    .first().click();
   await (await escolher).setFiles(fich);
   await noivos.waitForTimeout(2200);
-  const foto = await noivos.locator('.b-cart:has-text("ZZ Espumante") .b-foto img')
+  const foto = await noivos.locator('.b-cart:has-text("ZZ Espumante") .capa img')
                            .getAttribute('src').catch(() => null);
   ok(!!foto && foto.startsWith('assets/bar/'), 'a fotografia sobe e fica arrumada: ' + foto);
   ok((await noivos.request.get(BASE + '/' + foto)).ok(), 'e serve-se pela web');
@@ -220,7 +228,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   vigiar(copa, 'copa.php');
   await copa.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
   await copa.waitForTimeout(1000);
-  ok((await copa.locator('#k-analise').innerText()) === '1', 'a copa vê o pedido na fila');
+  // A contagem mudou de sítio no desenho novo: vive dentro da pastilha que
+  // leva à vista, e não numa barra no topo a repetir o mesmo número (§25.19).
+  ok((await copa.locator('.b-pilula:has-text("Por decidir") .n').innerText()) === '1',
+     'a copa vê o pedido na fila');
   const naFila = await copa.locator('.b-ped').first().innerText();
   ok(naFila.includes(codigo) && /Mesa /.test(naFila),
      'com o código e a mesa — que é o que faz o trabalho andar');
@@ -254,12 +265,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   vigiar(ent, 'entregas.php');
   await ent.goto(BASE + '/entregas.php', { waitUntil: 'networkidle' });
   await ent.waitForTimeout(1000);
-  ok((await ent.locator('#k-espera').innerText()) === '1', 'o empregado vê um por apanhar');
+  // O mesmo nas entregas: a contagem vive no cabeçalho da fila a que pertence.
+  ok((await ent.locator('.b-secao:has-text("Por apanhar") .n').innerText()) === '1',
+     'o empregado vê um por apanhar');
   ok((await ent.locator('.b-ped').first().innerText()).includes(codigo), 'com o mesmo código');
 
   await ent.locator('.b-ped .btn-ouro').first().click();          // Apanhar
   await ent.waitForTimeout(900);
-  ok((await ent.locator('#k-minhas').innerText()) === '1',
+  ok((await ent.locator('.b-secao:has-text("Comigo") .n').innerText()) === '1',
      'apanhar marca-o como seu — dois empregados não tropeçam no mesmo pedido');
 
   await ent.locator('.b-ped.minha .btn-ouro').first().click();    // Entregue
