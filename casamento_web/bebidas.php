@@ -83,7 +83,10 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
 /* O botão principal, na paleta do casal: a folha da casa não chega aqui. */
 .b-festa .btn{ display:inline-flex; align-items:center; justify-content:center;
                border-radius:50px; border:1px solid var(--c-verde); cursor:pointer;
-               background:var(--c-verde); color:#fff; font:inherit; font-size:.95rem;
+               /* A tinta clara do CASAL, e não um branco inventado: quem
+                  escolher um verde pálido para o convite fica com um botão
+                  legível na mesma. */
+               background:var(--c-verde); color:var(--c-fundo); font:inherit; font-size:.95rem;
                padding:.6rem 1.2rem; min-height:48px; }
 .b-festa .btn[disabled]{ opacity:.4; cursor:default; }
 .b-festa .btn-claro{ background:transparent; color:var(--c-verde); }

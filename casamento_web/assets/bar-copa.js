@@ -473,10 +473,16 @@
       : 'ainda não pediu nada';
     var regras = d.regras.length
       ? d.regras.map(function (r) {
-          return '<div class="b-regra"><span>' + esc(r.frase) + '</span>'
+          // Uma regra marcada para as 2h está escrita mas ainda não trava
+          // nada, e o ecrã tem de o dizer — senão parece que já vale.
+          return '<div class="b-regra' + (r.vigor === 'agora' ? '' : ' espera') + '">'
+            + '<span>' + esc(r.frase)
+            + (r.vigor === 'ainda' ? ' <small>— ainda não são horas</small>' : '')
+            + (r.vigor === 'passou' ? ' <small>— já passou a hora</small>' : '')
+            + '</span>'
             + (r.nota ? '<small>' + esc(r.nota) + '</small>' : '')
-            + '<button type="button" class="j-bt j-bt-nao" onclick="copaRegraFora('
-            + r.id + ',' + id + ')">✕</button></div>';
+            + '<button type="button" class="j-bt j-bt-nao" aria-label="Levantar esta regra" '
+            + 'onclick="copaRegraFora(' + r.id + ',' + id + ')">✕</button></div>';
         }).join('')
       : '<p class="dica">Sem regras próprias — valem-lhe as da casa.</p>';
 
@@ -489,6 +495,12 @@
       +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
       +     '+ Regra</button>'
       + '</div>'
+      + (d.pin_travado
+          ? '<div class="b-regra"><span>O código do convite está travado — '
+            + 'foram cinco enganos seguidos.</span>'
+            + '<button type="button" class="j-bt j-bt-sim" onclick="copaPinSoltar('
+            + id + ')">Levantar</button></div>'
+          : '')
       + '<div class="b-tit" style="font-size:.95rem;margin:1rem 0 .4rem">Telemóveis</div>'
       + (d.dispositivos.length
           ? d.dispositivos.map(function (t) {
@@ -520,6 +532,12 @@
           dica: '0 = não pode pedir isto.' },
         { id: 'janela_min', rot: 'A cada (minutos)', tipo: 'numero', valor: 0, min: 0, max: 1440,
           dica: '0 = é um tecto para a noite inteira.' },
+        // As horas são a última linha da tabela de §8: «nada de destilados
+        // antes das 21h» é a regra que SAI às 21h. Vazias, vale a noite toda.
+        { id: 'vigora_hora', rot: 'A partir das', tipo: 'hora', valor: '',
+          dica: 'Vazio, vale já.' },
+        { id: 'expira_hora', rot: 'Até às', tipo: 'hora', valor: '',
+          dica: 'Vazio, vale até ao fim. Uma hora já passada é a madrugada seguinte.' },
         { id: 'mensagem', rot: 'O que ele lê', tipo: 'text', valor: '', largura: 2,
           dica: 'Vazio, lê o texto de sempre. Nunca lê a nota.' },
         { id: 'nota', rot: 'Porquê (só nós vemos)', tipo: 'text', valor: '', largura: 2,
@@ -533,6 +551,7 @@
           escopo: escopo, alvo_id: alvo, sujeito: 'convidado', alvo_convidado_id: convidadoId,
           unidade: 'bebidas', quantidade: parseInt(v.quantidade, 10) || 0,
           janela_min: parseInt(v.janela_min, 10) || 0,
+          vigora_hora: v.vigora_hora, expira_hora: v.expira_hora,
           mensagem: v.mensagem, nota: v.nota }) });
         if (!d || !d.success) return false;
         toast('Regra posta. Vale já.');
@@ -543,6 +562,16 @@
         return false;
       }
     });
+  };
+
+  /** O travão do código levanta-se num clique: a pessoa está ali à frente. */
+  window.copaPinSoltar = async function (convidadoId) {
+    var d = await window.api('bar_pin_soltar', { method: 'POST',
+      body: JSON.stringify({ convidado_id: convidadoId }) });
+    if (!d || !d.success) return;
+    toast('Travão levantado. Já pode voltar a escrever o código.');
+    licFecharJanela();
+    copaFicha(convidadoId);
   };
 
   window.copaSoltar = async function (id, convidadoId) {
@@ -595,12 +624,19 @@
         { id: 'bar.garcon_direto', rot: 'Empregado lança pedidos', tipo: 'sim',
           valor: f['bar.garcon_direto'] === '1', aoLado: 'Sim, para quem não tem rede' },
         { id: 'bar.trocar_nome', rot: 'Trocar de nome no mesmo telemóvel', tipo: 'sim',
-          valor: f['bar.trocar_nome'] === '1', aoLado: 'Deixar, avisando a copa' }
+          valor: f['bar.trocar_nome'] === '1', aoLado: 'Deixar, avisando a copa' },
+        { id: 'bar.pedir_pin', rot: 'Pedir o código do convite', tipo: 'sim',
+          valor: f['bar.pedir_pin'] === '1', aoLado: 'Sim, quatro dígitos ao escolher o nome',
+          largura: 2,
+          dica: 'Devolve o segredo que se perdeu ao tirar o link do convite — e '
+              + 'devolve também o atrito. Os códigos saem em bar-qr.php, para '
+              + 'irem no convite de cada família.' }
       ],
       aoGuardar: async function (v) {
         var env = {};
         Object.keys(v).forEach(function (k) {
-          env[k] = (k === 'bar.garcon_direto' || k === 'bar.trocar_nome')
+          env[k] = (k === 'bar.garcon_direto' || k === 'bar.trocar_nome'
+                 || k === 'bar.pedir_pin')
             ? (v[k] ? '1' : '0') : String(v[k]);
         });
         var d = await window.api('bar_defs', { method: 'POST', body: JSON.stringify(env) });

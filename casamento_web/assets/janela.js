@@ -155,7 +155,10 @@ function licFormulario(cfg){
                     + licEsc(o.r) + '</option>').join('')
                 + '</select>';
         } else {
-          const t = (c.tipo === 'numero' || c.tipo === 'preco') ? 'number' : 'text';
+          // 'hora' dá o relógio do telemóvel, que é o que se quer quando a
+          // pergunta é «a partir de que horas» no meio de uma festa.
+          const t = (c.tipo === 'numero' || c.tipo === 'preco') ? 'number'
+                  : (c.tipo === 'hora' ? 'time' : 'text');
           campo = '<input type="' + t + '" id="lf-' + c.id + '" value="' + licEsc(v) + '"'
                 + (c.min !== undefined ? ' min="' + c.min + '"' : '')
                 + (c.max !== undefined ? ' max="' + c.max + '"' : '')

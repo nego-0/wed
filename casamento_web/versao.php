@@ -535,6 +535,26 @@ function correcoesEsperadas(): array {
          'bar-qr.php', 'Sem rede? Chame um empregado'],
         ['Bar: o código e a folha de cada mesa, na ficha dela na planta',
          'assets/mesas.js', 'bar-qr.php?mesa='],
+
+        // ---- Fase 9: o que ficara por fazer ----
+        ['Bar: uma regra pode ter hora de entrada, e não só de saída',
+         'api.php', 'function barHoraMomento('],
+        ['Bar: a copa continua a ver a regra que ainda não é hora de valer',
+         'api.php', 'function barLimitesTodos('],
+        ['Bar: uma regra de UMA PESSOA sobre tudo passa a morder',
+         'api.php', "['tudo',      0,    'convidado', \$convidadoId, null],"],
+        ['Bar: o código de quatro dígitos do convite, quando a casa o pede',
+         'api.php', 'function barPinFalha('],
+        ['Bar: cinco enganos travam o convite, e a copa levanta-o num clique',
+         'api.php', "\$acao === 'bar_pin_soltar'"],
+        ['Bar: os códigos saem na folha, para irem no convite de cada família',
+         'bar-qr.php', 'Os códigos dos convites'],
+        ['Bar: o erro do convidado diz o que é, em vez de «Não deu.»',
+         'assets/bar-convidado.js', 'function porque('],
+        ['Bar: a tinta de segunda voz é um token, e não um cinzento inventado',
+         'assets/estilo.css', '--ink-fraco:'],
+        ['Bar: o anel de foco existe no escuro do salão',
+         'assets/bar.css', 'body.b-noite button:focus-visible'],
     ];
 }
 

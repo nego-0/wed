@@ -245,6 +245,64 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(!/travarmos/.test(oQueEleVe),
      'e NUNCA lê o porquê: essa conversa faz-se de pessoa para pessoa');
 
+  // ============ 8. as horas de uma regra ============
+  // A última linha da tabela de §8: «nada de destilados antes das 21h». As
+  // regras já sabiam ACABAR (expira_em); o que faltava era saberem COMEÇAR.
+  //
+  // O que aqui se defende é que uma regra fora da sua hora não trava nada — e
+  // que mesmo assim aparece escrita a quem a pôs. As duas metades importam:
+  // uma regra que morde antes de tempo fecha o bar cedo, e uma que desaparece
+  // do ecrã lê-se como «não guardou», e escreve-se outra vez.
+  await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(700);
+  await limparRegras();
+
+  const hora = (d) => {
+    const x = new Date(Date.now() + d * 3600000);
+    return String(x.getHours()).padStart(2, '0') + ':00';
+  };
+  const daquiADuas = await p.evaluate(async ([h, q]) => {
+    const r = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { escopo: 'tudo', sujeito: 'convidado', alvo_convidado_id: q,
+        unidade: 'bebidas', quantidade: 0,
+        janela_min: 0, vigora_hora: h, nota: 'ZZ ainda não são horas' }) });
+    return (r.regras || []).filter(x => x.nota === 'ZZ ainda não são horas')[0];
+  }, [hora(2), A.id]);
+  ok(!!daquiADuas && daquiADuas.vigor === 'ainda',
+     'uma regra marcada para daqui a duas horas fica escrita, à espera da hora');
+  ok(daquiADuas && /a partir das/.test(daquiADuas.frase),
+     'e a frase diz a partir de quando: «' + (daquiADuas || {}).frase + '»');
+  ok((await bebida(cA, 'ZZ Whisky')).pode_pedir > 0,
+     'e não trava nada até lá — uma proibição fora de horas não fecha o bar');
+
+  // A mesma regra, com uma hora que já passou: essa vale já. Um princípio no
+  // passado quer dizer «já começou», e não «amanhã».
+  const jaComecou = await p.evaluate(async ([h, q]) => {
+    const r = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { escopo: 'tudo', sujeito: 'convidado', alvo_convidado_id: q,
+        unidade: 'bebidas', quantidade: 0,
+        janela_min: 0, vigora_hora: h, nota: 'ZZ já são horas' }) });
+    return (r.regras || []).filter(x => x.nota === 'ZZ já são horas')[0];
+  }, [hora(-2), A.id]);
+  ok(!!jaComecou && jaComecou.vigor === 'agora',
+     'uma marcada para uma hora que já passou vale desde já');
+  ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 0,
+     'e essa fecha mesmo o bar a quem lhe diz respeito');
+
+  // Na ficha da copa, a que ainda não é hora está lá — esbatida, e dito por
+  // palavras, que é o que §25.7 exige: nunca só a cor.
+  await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1100);
+  const fichaHoras = await p.evaluate(async (id) => {
+    const d = await window.api('bar_ficha&convidado=' + id, { method: 'GET' });
+    return (d.regras || []).map(r => r.vigor + '|' + r.frase);
+  }, A.id);
+  ok(fichaHoras.some(x => /^ainda\|/.test(x)),
+     'e a copa vê a que ainda não é hora, sem a perder de vista: '
+     + (fichaHoras.filter(x => /^ainda/.test(x))[0] || '—'));
+
+  await limparRegras();
+
   // ============ arrumar ============
   await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(600);

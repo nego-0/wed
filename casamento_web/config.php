@@ -186,7 +186,7 @@ function acoesDoCasamento(): array {
             'bar_item_guardar','bar_item_apagar','bar_item_foto','bar_item_foto_tirar',
             'bar_stock_repor','bar_stock_acerto','bar_abrir','bar_fechar','bar_defs',
             'bar_motivo_guardar','bar_motivo_apagar','bar_mesa_token',
-            'bar_regra_guardar','bar_regra_apagar','bar_soltar',
+            'bar_regra_guardar','bar_regra_apagar','bar_soltar','bar_pin_soltar',
             'bar_decidir','bar_cancelar_copa',
             'bar_apanhar','bar_entregue','bar_falhou','bar_pedir_por',
             // O casal pede a licença, e muda de ideias enquanto ninguém decidiu.

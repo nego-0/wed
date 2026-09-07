@@ -47,7 +47,10 @@ $CAS  = casalInfo($DEFS);
   .b-abas-n{ display:flex; gap:.4rem; margin:0 0 .9rem; flex-wrap:wrap; }
   .b-abas-n button{ background:rgba(255,255,255,.06); border:1px solid rgba(233,223,201,.2);
                     color:var(--ivory); border-radius:50px; padding:.45rem 1rem; cursor:pointer;
-                    font:inherit; font-size:.85rem; min-height:44px; }
+                    /* 48, e não 44: são o que se toca a toda a hora, com o
+                       telemóvel apoiado no balcão e um dedo só. 44 é a medida
+                       de um rato, e aqui não há rato nenhum (§25.6). */
+                    font:inherit; font-size:.85rem; min-height:48px; }
   .b-abas-n button.on{ background:var(--gold-soft); border-color:var(--gold-soft); color:var(--forest-deep);
                        font-weight:600; }
   .b-abas-n button:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }

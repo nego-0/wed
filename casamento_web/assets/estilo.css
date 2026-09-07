@@ -18,6 +18,10 @@
   --ok:#3E8E3E; --ok-bg:#E7F2E2;
   --warn:#9C7413; --warn-bg:#F6EDD6;
   --danger:#B4443C; --danger-bg:#F6E4E1;
+  /* A tinta de segunda voz — datas, notas, o que acompanha sem mandar.
+     Existe para que ninguém tenha de inventar um cinzento: um #8a8f88 solto
+     numa folha é a mesma cor nos quatro temas, e no escuro desaparece. */
+  --ink-fraco:#525F6A;
   --line:rgba(18,34,47,.12);
   --shadow:0 10px 30px rgba(18,34,47,.09);
   --ring:rgba(99,178,43,.28);
@@ -40,6 +44,7 @@
   --sala-ok:#2C6B2C;       --sala-ok-bg:#DCEFD6;
   --sala-aviso:#7E5D0C;    --sala-aviso-bg:#F6EDD6;
   --sala-mau:#8E322B;      --sala-mau-bg:#F6E0DC;
+  --sala-fraco:#A6B4BF;    /* 7:1 sobre os dois fundos do salão (§25.13) */
 
   --app-bg:
     radial-gradient(1000px 560px at 90% -10%, rgba(99,178,43,.10), transparent 60%),
@@ -55,6 +60,7 @@
   --ok:#2f7d4f; --ok-bg:#e7f1ea;
   --warn:#a8792f; --warn-bg:#f6ecd8;
   --danger:#a5473f; --danger-bg:#f4e2df;
+  --ink-fraco:#57634F;
   --line:rgba(44,69,54,.12);
   --shadow:0 12px 34px rgba(22,38,30,.10);
   --ring:rgba(180,134,74,.18);
@@ -76,6 +82,7 @@
   --ok:#2f7d4f; --ok-bg:#e6f1ea;
   --warn:#9a781f; --warn-bg:#f5edd6;
   --danger:#b1443c; --danger-bg:#f6e3e0;
+  --ink-fraco:#526273;
   --line:rgba(15,42,67,.13);
   --shadow:0 10px 30px rgba(15,42,67,.10);
   --ring:rgba(46,134,200,.28);
@@ -99,6 +106,7 @@
   --ok:#63C56E; --ok-bg:#173020;
   --warn:#D9AC46; --warn-bg:#332811;
   --danger:#E58177; --danger-bg:#3A1F1C;
+  --ink-fraco:#A8B8C4;
   --line:rgba(255,255,255,.13);
   --shadow:0 12px 34px rgba(0,0,0,.45);
   --ring:rgba(120,190,64,.4);

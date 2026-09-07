@@ -201,10 +201,34 @@ O que fica de pé, por ordem de força:
 4. **A copa vê a sala.** O copeiro conhece a festa e tem as bandeiras (§10);
    um convidado com três pedidos em dez minutos, vindos de telemóveis
    diferentes, salta à vista.
-5. **[decisão] Um PIN, se a casa quiser.** Uma definição (`bar.pedir_pin`)
-   acrescenta quatro dígitos ao passe de entrada, pedidos depois de escolher o
-   nome. **Desligado por omissão**, porque devolve o atrito que se quis tirar —
-   mas fica lá para o casamento que faça questão.
+5. **Um PIN, se a casa quiser.** A definição `bar.pedir_pin` acrescenta quatro
+   dígitos, pedidos depois de escolher o nome. **Desligado por omissão**,
+   porque devolve o atrito que se quis tirar — mas fica lá para o casamento que
+   faça questão.
+
+   **O código é do CONVITE, não da pessoa**, e isso não é uma economia: o
+   telemóvel da família já pode pedir por qualquer um dos seus (§5.3, primeira
+   linha da tabela), portanto um segredo por pessoa fechava uma porta que está
+   aberta de propósito. Um por convite devolve exactamente o segredo que se
+   perdeu quando o link saiu do convite — quem sabe o nome do padrinho não
+   sabe, por isso, o código do convite dele — e é uma linha a mais no convite
+   que já se imprime. Os códigos saem em `bar-qr.php`, numa folha à parte que
+   começa em página nova, porque não é para andar à vista de ninguém.
+
+   **Há travão, porque quatro dígitos sem travão são teatro:** dez mil
+   tentativas são uma tarde de trabalho para um guião. Cinco erros seguidos
+   fecham *aquele convite* por cinco minutos. Conta-se contra o convite atacado
+   e não contra o telemóvel de quem tenta — um contador no telemóvel apaga-se
+   com o testemunho, e um contador no IP tranca a sala inteira (§5.4). O preço
+   é que se pode trancar uma família de propósito; paga-se de bom grado, porque
+   é curto, porque a copa levanta o travão num clique a partir da ficha dela, e
+   porque com o convite travado **o empregado continua a pedir por eles**
+   (§5.5). Nunca se perde uma bebida por causa de um código.
+
+   Um guião determinado, com muitos convites e tempo, ainda assim adivinha um
+   código. Diz-se aqui em vez de se fingir o contrário: a barreira que este
+   módulo cumpre com verdade é a do telemóvel, e o PIN é uma segunda tranca,
+   não um cofre.
 
 ### 5.3 O telemóvel prende-se ao nome
 
@@ -360,7 +384,8 @@ Uma tabela só, `cw_bar_limites`, com quatro eixos: **o quê**, **de quem**,
 | `janela_min` | 0 = o evento inteiro | de quanto em quanto tempo se renova |
 | `mensagem` | texto, ou vazio | o que o convidado lê quando bate na regra |
 | `nota` | texto, ou vazio | porquê — só o pessoal vê |
-| `expira_em` | data/hora, ou vazio | regras que valem só por um bocado |
+| `vigora_em` | data/hora, ou vazio | a partir de quando a regra vale |
+| `expira_em` | data/hora, ou vazio | até quando — as duas juntas fazem uma janela |
 | `criado_por`, `criado_em` | | quem a pôs, e quando |
 
 Exemplos que a copa vai querer no primeiro dia:
@@ -372,7 +397,8 @@ Exemplos que a copa vai querer no primeiro dia:
 | «1 pedido de 20 em 20 minutos» | tudo | — | convidado | pedidos | 1 | 20 |
 | «no máximo 3 bebidas de cada vez» | tudo | — | convidado | bebidas | 3 | 0 (por pedido) |
 | «a copa serve 40 bebidas por 10 minutos» | tudo | — | casa | bebidas | 40 | 10 |
-| «nada de destilados antes das 21h» | categoria | Destilados | casa | — | — | (janela horária, §8.2) |
+| «nada de destilados antes das 21h» | categoria | Destilados | casa | bebidas | 0 | 0, `expira_em` às 21h |
+| «a partir das 2h, uma bebida por hora» | tudo | — | convidado | bebidas | 1 | 60, `vigora_em` às 2h |
 
 ### 8.0 O limite de uma bebida, e o limite de uma pessoa
 
@@ -396,14 +422,22 @@ soma a ele. Para uma pessoa e uma bebida, procura-se por esta ordem, e a
 primeira que existir é a que manda:
 
 ```
-1. limite da PESSOA para o ITEM          → «o padrinho: 1 whisky»
+1. limite da PESSOA para o ITEM           → «o padrinho: 1 whisky»
 2. limite do CONVITE para o ITEM          → «a mesa dos jovens: 2 shots»
 3. limite da PESSOA para a CATEGORIA      → «a Rita: 0 destilados»
 4. limite do CONVITE para a CATEGORIA
 5. limite geral para o ITEM               → «2 caipirinhas por convidado»
 6. limite geral para a CATEGORIA
-7. limite geral de TUDO                   → «6 bebidas por convidado»
+7. limite da PESSOA para TUDO             → «a Rita: 3 bebidas, ao todo»
+8. limite do CONVITE para TUDO
+9. limite geral de TUDO                   → «6 bebidas por convidado»
 ```
+
+A ordem tem duas chaves, e por esta ordem: primeiro quão específica é a regra
+sobre a **bebida** (uma bebida > uma gaveta > tudo), e só depois sobre **quem**
+(uma pessoa > um convite > toda a gente). É o que faz «2 caipirinhas por
+convidado» ganhar a «a Rita: 6 bebidas ao todo» quando o que está em causa é
+uma caipirinha: a regra que fala da bebida é a que sabe do assunto.
 
 Somar era a alternativa, e é pior: dar um tecto individual a alguém passaria a
 aumentar-lhe a quota em vez de a fixar, que é o contrário do que quem o escreve
@@ -460,8 +494,23 @@ bem querer servir o copo que já estava pedido.
 não julga. Toda a regra fica no registo de ações com o nome de quem a pôs
 (`bar_regra`), para que ninguém ande a perguntar de onde veio.
 
-**Regras que passam.** `expira_em` serve o «só até à hora do bolo» e o «meia
-hora sem nada». Vazio, a regra dura o que a festa durar.
+**Regras que passam, e regras que ainda não chegaram.** `expira_em` serve o «só
+até à hora do bolo» e o «meia hora sem nada»; `vigora_em` é o campo simétrico,
+e serve o «nada de destilados antes das 21h» e o «a partir das 2h, uma bebida
+por hora». Vazios os dois, a regra dura o que a festa durar.
+
+No ecrã são duas horas, «a partir das» e «até às», porque é assim que se pensa
+no meio de uma festa. Uma festa atravessa a meia-noite, o que torna «às 2h»
+ambíguo, e resolve-se com uma assimetria que é a leitura certa dos dois casos:
+um **princípio** que já passou hoje quer dizer que a regra já começou
+(empurrá-lo para amanhã calava-a a noite inteira); um **fim** que já passou
+hoje quer dizer a madrugada seguinte (deixá-lo hoje matava a regra no instante
+em que se escrevesse).
+
+Uma regra fora da sua hora **não é levantada** — está escrita, à espera. Não
+conta para o veredicto, mas continua à vista na ficha, esbatida e com a frase
+«ainda não são horas» ao lado. Desaparecer do ecrã lia-se como «não guardou», e
+escrevia-se outra vez.
 
 **O que o convidado lê.** Nunca o motivo — esse é assunto de quem o escreveu.
 Ou a `mensagem` que a copa tenha escrito para ele, ou o texto de origem (§9).
@@ -659,7 +708,7 @@ trabalho dele), escolhe a mesa de entrega e as bebidas, e lança. O pedido:
 
 ---
 
-## 14. O esquema (v36)
+## 14. O esquema (v36, e v37 para o resto)
 
 Tudo com `casamento_id` à cabeça e índice por ele: a vigia de âmbito
 (`LigacaoAmbito`) reclama de qualquer consulta a uma tabela do casamento que
@@ -795,6 +844,13 @@ CREATE TABLE cw_bar_dispositivos (
 );
 
 ALTER TABLE cw_mesas ADD COLUMN bar_token CHAR(12) DEFAULT NULL;
+
+-- v37: a hora a que uma regra entra, e os quatro dígitos do convite.
+ALTER TABLE cw_bar_limites ADD COLUMN vigora_em DATETIME DEFAULT NULL;
+ALTER TABLE cw_convites ADD COLUMN bar_pin CHAR(4) DEFAULT NULL;
+ALTER TABLE cw_convites ADD COLUMN bar_pin_falhas TINYINT NOT NULL DEFAULT 0;
+ALTER TABLE cw_convites ADD COLUMN bar_pin_ate DATETIME DEFAULT NULL;
+
 ALTER TABLE cw_acessos MODIFY papel
   ENUM('noivos','porteiro','copeiro','entregador') NOT NULL DEFAULT 'noivos';
 ```
@@ -807,6 +863,12 @@ Definições novas em `cw_definicoes` (por casamento): `bar.aberto`,
 **Migração** com os ajudantes que já existem (`migColuna`, `migIndice`), e a
 `ESQUEMA_VERSAO` a subir para 36. As tabelas criam-se vazias: um casamento sem
 o módulo nunca lhes toca.
+
+**v37**, depois, para o que faltava: `bar_limites.vigora_em` (a hora a que uma
+regra entra, simétrica de `expira_em`) e três colunas em `cw_convites` —
+`bar_pin`, `bar_pin_falhas` e `bar_pin_ate`. O código vive no convite e não na
+pessoa pela razão de §5.2; as duas ao lado são o travão, e contam-se contra o
+convite atacado e não contra quem tenta.
 
 ---
 
@@ -869,6 +931,29 @@ Todas exigem um telemóvel já identificado, menos `bar_mesa`, `bar_procurar` e
 Reaproveitam as da copa (o papel `admin` do casamento tem-nas todas) mais
 `bar_qr_mesas` (folha de impressão) e `bar_resumo` (o cartão do painel).
 
+### O que ficou, e onde os nomes mudaram
+
+As tabelas acima são o desenho, e ficam como estavam. Ao construir, algumas
+acções juntaram-se e outras trocaram de nome; a lista curta das diferenças,
+para quem vier procurar por elas:
+
+| No desenho | No `api.php` |
+|---|---|
+| `bar_limite_guardar` / `bar_limite_apagar` | `bar_regra_guardar` / `bar_regra_apagar` |
+| `bar_regras_do_convidado`, `bar_convidado_ficha` | `bar_ficha` (uma só: o que levou, as regras e os telemóveis) |
+| `bar_fila`, `bar_pulso_copa` | `bar_estado` (a copa lê tudo de uma vez, de 8 em 8 segundos) |
+| `bar_dispositivo_soltar` | `bar_soltar` |
+| `bar_stats` | `bar_numeros` (copa) e `bar_meu_consumo` (convidado) |
+| `bar_qr_mesas` | a página `bar-qr.php`, que desenha os QR no cliente |
+
+E duas que o desenho não previa: `bar_defs` (as regras da casa num sítio só) e
+`bar_pin_soltar` (levantar o travão do código a um convite, §5.2).
+
+O `bar_pulso*` incremental não existe: a copa e as entregas relêem o estado
+inteiro de 8 em 8 segundos, e o convidado de 10 em 10. Numa festa de 200
+pessoas isso é uma resposta pequena a cada poucos segundos, e o que se poupava
+com um `desde` não pagava o cuidado de o manter certo (§18).
+
 ---
 
 ## 16. Ficheiros
@@ -881,7 +966,7 @@ Reaproveitam as da copa (o papel `admin` do casamento tem-nas todas) mais
 | `copa.php` | O posto do copeiro |
 | `entregas.php` | O posto do entregador |
 | `bar.php` | A montagem do bar, para os noivos |
-| `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar. `?mesa=N` reimprime só uma |
+| `bar-qr.php` | Folha A4 com um cartão por mesa (nome, QR, endereço escrito), para imprimir e recortar. `?mesa=N` reimprime só uma. Com o PIN ligado, uma segunda folha com os códigos dos convites |
 | `assets/bar.css` | Estilo dos quatro ecrãs |
 | `assets/bar-montagem.js` | Gavetas, bebidas, fotografias, stock, folhas de QR |
 | `assets/bar-convidado.js` | Procura do nome, mesa, menu, pedido, os meus pedidos |
@@ -891,13 +976,17 @@ Reaproveitam as da copa (o papel `admin` do casamento tem-nas todas) mais
 | `tests/chk_bar_limites.js` | A precedência das regras, o caudal, a espera e as alternativas |
 | `tests/chk_bar_identidade.js` | Um telemóvel uma pessoa; os três modos de IP |
 | `tests/chk_bar_numeros.js` | A previsão de rutura, e o que o convidado não vê |
+| `tests/chk_bar_pin.js` | Os quatro dígitos do convite, o travão, e o empregado a servir mesmo assim |
+| `tests/chk_bar_desenho.js` | O dedo, a fuga lateral, o anel de foco, o vazio e as cores inventadas (§25.14) |
 | `docs/modulo-bar.md` | Este documento |
 
 **Que mudam**
 
 | Ficheiro | Mudança |
 |---|---|
-| `db.php` | Migração v36; `licencaModulosTudo()` + `imagensDaMontra()` + `semearPrecario()` com o módulo `bar`; `nomesDeAcao()` com as acções novas; a vigia de âmbito com as tabelas novas |
+| `db.php` | Migrações v36 e v37; `licencaModulosTudo()` + `imagensDaMontra()` + `semearPrecario()` com o módulo `bar`; `nomesDeAcao()` com as acções novas; a vigia de âmbito com as tabelas novas; `barGarantirPins()` |
+| `assets/estilo.css` | Os tokens `--sala-*` do salão e o `--ink-fraco` de cada tema |
+| `assets/janela.js` | O campo `tipo:'hora'`, para as horas de uma regra |
 | `config.php` | `acoesDoCasamento()` e `acoesDeEscrita()` com as acções `bar_*` |
 | `auth.php` | Papéis `copeiro` e `entregador`; `podeCopa()`, `podeEntregar()`; `casamentosDoUtilizador` a contá-los |
 | `parcial-cabecalho.php` | Entrada «Bar» no menu, comandada pelo módulo; a barra dos postos |
@@ -1037,18 +1126,27 @@ Cada linha leva o IP, que a v35 já grava, e o detalhe legível («2 × Caipirin
 Uma por fase, no estilo das que existem (Playwright contra o servidor de
 desenvolvimento, a contar o que se prova e porquê).
 
-> **Feito:** `tests/chk_bar.js` cobre as quatro primeiras fases numa volta só
-> — montar, a porta pública, a procura do nome, o pedido, a decisão, a
-> entrega, a recusa com motivo, e os dois postos a existirem de facto na
-> Gestão. Ficou uma prova em vez das cinco previstas porque o ciclo do bar
-> não se parte: um pedido sem menu montado não existe, e uma entrega sem
-> aprovação também não. As linhas que ela mais defende são as três contas do
-> stock — que aprovar promete e só entregar desconta.
+> **Feito, em seis provas e não nas dezasseis previstas.** O ciclo do bar não
+> se parte — um pedido sem menu montado não existe, e uma entrega sem aprovação
+> também não —, e uma prova por acção obrigava cada uma a remontar o bar
+> inteiro para verificar uma linha. Juntaram-se por ASSUNTO:
 >
-> As provas em falta abaixo são das fases que faltam (5 a 8), com uma
-> excepção que vale a pena dizer: `chk_bar_desenho.js`. Os alvos de toque, o
-> esqueleto, os quatro temas e o não-transbordo em 360/390/430 px estão
-> escritos na folha, mas não estão medidos por prova nenhuma.
+> * `chk_bar.js` — a volta completa: montar, a porta pública, a procura do
+>   nome, o pedido, a decisão, a entrega, a recusa com motivo, os dois postos
+>   na Gestão, os quatro temas do salão e as folhas das mesas. As linhas que
+>   mais defende são as três contas do stock: aprovar promete, só entregar
+>   desconta.
+> * `chk_bar_limites.js` — a precedência (com um número fixo: 2 gerais mais 1
+>   pessoal dá 1, e não 3), o caudal da casa, a espera, as alternativas e as
+>   horas de uma regra.
+> * `chk_bar_identidade.js` — um telemóvel uma pessoa, e os três modos de IP.
+> * `chk_bar_numeros.js` — a previsão de rutura, e o que o convidado NÃO vê.
+> * `chk_bar_pin.js` — os quatro dígitos: desligado nada muda, o código é do
+>   convite, errado não entra, cinco erros travam, e o empregado serve à mesma.
+> * `chk_bar_desenho.js` — §25.14.
+>
+> A tabela abaixo é o desenho original, e fica como estava para se poder ver o
+> que se juntou a quê.
 
 | Prova | O que fecha |
 |---|---|
@@ -1075,31 +1173,22 @@ que está mesmo instalado.
 
 ## 23. Fases de entrega
 
-> **Estado da obra — as oito fases feitas.** O bar serve bebidas do princípio
-> ao fim: os noivos montam o menu, o convidado escolhe-se numa lista e pede da
-> mesa, a copa decide dentro das regras que ela própria pôs, o empregado
-> entrega, o stock diz a verdade, e no fim há números para saber o que a festa
-> bebeu.
+> **Estado da obra — feito, e sem lista de faltas.** O bar serve bebidas do
+> princípio ao fim: os noivos montam o menu, o convidado escolhe-se numa lista
+> e pede da mesa, a copa decide dentro das regras que ela própria pôs, o
+> empregado entrega, o stock diz a verdade, e no fim há números para saber o
+> que a festa bebeu. As três coisas que ficaram de fora das oito primeiras
+> fases — o PIN, a hora de entrada de uma regra e a prova do desenho — foram
+> feitas na nona.
 >
-> Quatro provas, e cada uma defende uma ideia: `chk_bar.js` o ciclo e as três
-> contas do stock; `chk_bar_limites.js` a precedência das regras;
-> `chk_bar_identidade.js` o telemóvel preso a um nome e a decisão sobre o IP;
-> `chk_bar_numeros.js` a previsão de rutura e o que o convidado NÃO pode ver.
+> Seis provas, e cada uma defende uma ideia: `chk_bar.js` o ciclo e as três
+> contas do stock; `chk_bar_limites.js` a precedência das regras e as horas
+> delas; `chk_bar_identidade.js` o telemóvel preso a um nome e a decisão sobre
+> o IP; `chk_bar_numeros.js` a previsão de rutura e o que o convidado NÃO pode
+> ver; `chk_bar_pin.js` os quatro dígitos e o seu travão; `chk_bar_desenho.js`
+> o dedo, a fuga lateral, o anel de foco e as cores inventadas.
 >
-> O que ficou por fazer, e é honesto listar:
->
-> * **O PIN opcional** (§5.2, ponto 5) não existe. Estava marcado como decisão
->   em aberto e continua a fazer sentido deixá-lo assim: devolve o atrito que
->   se quis tirar, e nenhuma festa o pediu ainda.
-> * **A janela horária** («nada de destilados antes das 21h», §8.2, última
->   linha da tabela) não está: as regras têm `expira_em`, que resolve o «só
->   até à hora do bolo», mas não o «só a partir de». Falta-lhe o campo
->   simétrico.
-> * **`chk_bar_desenho.js`** — os alvos de toque, o esqueleto e o não-transbordo
->   em 360/390/430 px estão escritos na folha mas só os quatro temas estão
->   medidos por prova.
->
-> E quatro coisas de percurso, que valem para quem vier a seguir:
+> E oito coisas de percurso, que valem para quem vier a seguir:
 >
 > * As definições do bar **não** cabem em `guardarDefinicoes()`. Essa função só
 >   conhece `defsPadrao()`, o vocabulário do convite, e deita fora em silêncio
@@ -1121,6 +1210,25 @@ que está mesmo instalado.
 >   convidado aparecia vazio, sem erro nenhum**. Os ids saem agora convertidos,
 >   e o agrupamento deixa em «Outras» o que sobre — um menu que esconde metade
 >   das bebidas em silêncio é pior do que um menu feio.
+> * A escada de precedência de §8.0 tinha **sete degraus e faltavam-lhe dois**:
+>   não havia degrau para uma regra de UMA PESSOA sobre TUDO. E «qualquer
+>   bebida» é a primeira opção da lista no ecrã da copa, ou seja, a que sai se
+>   ninguém mexer — a regra gravava-se, lia-se na ficha, e não travava nada.
+>   Uma regra que parece cumprir-se e não se cumpre é a pior avaria possível
+>   num travão. São nove degraus, e a ordem tem duas chaves: primeiro quão
+>   específica é sobre a BEBIDA, depois sobre QUEM.
+> * `assets/bar-convidado.js` lia `d.error` numa API que responde `message`.
+>   Todos os erros do ecrã do convidado saíam como «Não deu.» — incluindo a
+>   frase que explica porque é que um pedido foi travado, que é exactamente o
+>   que a pessoa precisa de ler.
+> * O `.b-bt-grande` — o «Entregue» do empregado, o alvo mais tocado da noite —
+>   estava a **48 px e não a 56**: `body.b-noite .btn{min-height:48px}` é mais
+>   específico do que um `.b-bt-grande` sozinho, e encolhia justamente o botão
+>   que existe para ser grande. Uma medida escrita na folha de desenho não é a
+>   medida que o dedo encontra; foi preciso medi-la.
+> * No escuro do salão **não havia anel de foco**: os `.btn` da casa ficavam com
+>   um contorno de 0 px branco e os links do cabeçalho com o anel do browser, de
+>   1 px quase preto. Num ecrã escuro, os dois são o mesmo que nada.
 
 Cada fase é entregável sozinha e deixa a casa a funcionar. As estimativas são
 minhas e grosseiras — dias de trabalho, não promessas — e **já contam com o
@@ -1139,6 +1247,7 @@ não vão ser feitos.
 | 6 | **A identidade** | Prender o telemóvel, as regras de troca, IP nos três modos, pedido pelo garçon | O telemóvel é de uma pessoa, e quem não tem rede é servido | 2–3 d |
 | 7 | **A estatística** | Números da copa, tempos, previsão de rutura, o resumo no painel | A copa sabe o que se passa sem perguntar | 2–3 d |
 | 8 | **As folhas das mesas** | `bar-qr.php`, os tokens em `mesas.php`, LEIA-ME | As folhas saem da impressora prontas a pousar | 1–2 d |
+| 9 | **O que ficou por fazer** | O PIN do convite, a hora de entrada de uma regra, e `chk_bar_desenho.js` | A lista de faltas do fim de §23 fica vazia | 2–3 d |
 
 **Total: 19 a 28 dias de trabalho**, mais a folga de sempre. As fases 1–4 já
 são um produto: um bar com pedidos, decisão e entrega. As 5–7 é que o tornam
@@ -1469,6 +1578,34 @@ Isto verifica-se, como o resto. `chk_bar_desenho.js`:
 | Números tabulares | Confirma `font-variant-numeric` nos elementos de contagem |
 | A página do convidado veste o casal | Muda a cor do convite e confirma que o menu mudou com ela |
 | Movimento reduzido | Com `prefers-reduced-motion`, nenhuma transição acima de 0 ms |
+
+**Feito**, com duas diferenças em relação ao que está escrito acima, e ambas
+por boa razão:
+
+* **Os quatro temas ficaram em `chk_bar.js`**, na secção 8b, ao lado dos
+  `--sala-*` que os resolvem. Uma verificação em dois sítios é uma verificação
+  que se corrige num só.
+* **O esqueleto não se prova interceptando a resposta**, prova-se lendo o HTML:
+  em `bebidas.php` e em `entregas.php` ele vem escrito na página, antes de o
+  guião correr. É melhor do que o desenho pedia — um esqueleto que espera pelo
+  JavaScript aparece exactamente quando a rede do salão está pior, que é o
+  momento em que ele existe para servir.
+
+O que a prova encontrou, e que estava escrito na folha e não no ecrã:
+
+* o **`.b-bt-grande` a 48 px** — a acção principal do empregado, com a medida
+  das secundárias, porque `body.b-noite .btn` é mais específico;
+* **nenhum anel de foco no escuro**: os `.btn` com um contorno de 0 px branco,
+  os links do cabeçalho com o anel do browser de 1 px quase preto;
+* as **quatro abas da copa a 44 px**, que é a medida de um rato;
+* três **cinzentos inventados** em `bar.css` e dois brancos literais, que
+  viraram `--ink-fraco` (um por tema, mais um para o salão) e `--ivory`.
+
+Uma nota sobre medir: os `.btn` desta casa têm `transition:.18s`, que vale para
+todas as propriedades. Ler o anel de foco no instante do `Tab` dá sempre «sem
+anel» — o contorno ainda está a crescer de zero. A prova espera 260 ms antes de
+medir, e isso não é um remendo: é a diferença entre medir o estado e medir o
+caminho até ele.
 
 E, como em todas as mudanças visuais desta casa, **capturas de ecrã** dos
 quatro ecrãs em cada fase — no telemóvel e no escritório —, que é o que apanha

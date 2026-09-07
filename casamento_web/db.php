@@ -167,6 +167,9 @@ $conn->query("
         checkin_em TIMESTAMP NULL DEFAULT NULL,
         observacoes TEXT DEFAULT NULL,
         msg_pessoal TEXT DEFAULT NULL,               -- mensagem pessoal mostrada no convite digital
+        bar_pin CHAR(4) DEFAULT NULL,                -- quatro dígitos do bar, quando a casa os pede
+        bar_pin_falhas TINYINT NOT NULL DEFAULT 0,   -- tentativas falhadas seguidas contra ESTE convite
+        bar_pin_ate DATETIME DEFAULT NULL,           -- até quando este convite está travado
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -193,7 +196,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 36;
+const ESQUEMA_VERSAO = 37;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1803,6 +1806,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 janela_min INT NOT NULL DEFAULT 0,
                 mensagem VARCHAR(160) DEFAULT NULL,
                 nota VARCHAR(160) DEFAULT NULL,
+                vigora_em DATETIME DEFAULT NULL,
                 expira_em DATETIME DEFAULT NULL,
                 criado_por VARCHAR(80) DEFAULT NULL,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1874,6 +1878,31 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 }
             }
         }
+    }
+
+    // v37 — as horas de uma regra, e os quatro dígitos do bar.
+    //
+    // As regras já sabiam acabar (`expira_em`, o «só até à hora do bolo») mas
+    // não sabiam COMEÇAR, e faltava por isso a última linha da tabela de §8:
+    // «nada de destilados antes das 21h». `vigora_em` é o campo simétrico, e
+    // com os dois faz-se uma janela: das 21h às 2h, e nem antes nem depois.
+    //
+    // O PIN é a decisão de §5.2, ponto 5, e é do CONVITE, não da pessoa: o
+    // telemóvel da família já pode pedir por qualquer um dos seus (§5.3,
+    // primeira linha), portanto um segredo por pessoa defendia uma porta que
+    // está aberta de propósito. Um por convite é uma linha a mais no convite
+    // que já se imprime, e devolve exactamente o segredo que se perdeu ao
+    // tirar o link do convite — nem mais.
+    //
+    // As duas colunas ao lado são o travão: quatro dígitos sem travão são
+    // teatro. Contam-se as falhas contra o CONVITE atacado e não contra o
+    // telemóvel de quem tenta, porque um contador no telemóvel apaga-se com o
+    // testemunho e não trava nada.
+    if ($versaoAtual < 37) {
+        migColuna($conn, "{$P}bar_limites", 'vigora_em', "DATETIME DEFAULT NULL");
+        migColuna($conn, "{$P}convites", 'bar_pin', "CHAR(4) DEFAULT NULL");
+        migColuna($conn, "{$P}convites", 'bar_pin_falhas', "TINYINT NOT NULL DEFAULT 0");
+        migColuna($conn, "{$P}convites", 'bar_pin_ate', "DATETIME DEFAULT NULL");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
@@ -2050,6 +2079,8 @@ function nomesDeAcao(): array {
         'bar_regra_fora'    => ['levantou uma regra do bar', 'bar'],
         'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],
         'bar_soltou'        => ['soltou um telemóvel do bar', 'bar'],
+        'bar_pin_errado'    => ['errou o código do bar', 'bar'],
+        'bar_pin_soltou'    => ['levantou o travão do código', 'bar'],
         'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
         'bar_dispositivo_solto' => ['desprendeu um telemóvel de um nome', 'bar'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],
@@ -2516,6 +2547,7 @@ function barDefsPadrao(): array {
         'bar.ip_modo'       => 'registo',     // registo | aviso | estrito
         'bar.garcon_direto' => '0',
         'bar.trocar_nome'   => '1',           // trocar para outro convite: 1 avisa, 0 recusa
+        'bar.pedir_pin'     => '0',           // quatro dígitos por convite — desligado de origem
         'bar.procura_min'   => '4',
         'bar.mensagem_fechado' => '',
     ];
@@ -2553,7 +2585,8 @@ function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
         $v = trim((string)$valor);
         // Cada chave tem a sua forma; o que não couber toma o valor de fábrica.
         if ($chave === 'bar.ip_modo' && !in_array($v, ['registo', 'aviso', 'estrito'], true)) continue;
-        if (in_array($chave, ['bar.aberto', 'bar.garcon_direto', 'bar.trocar_nome'], true)) {
+        if (in_array($chave, ['bar.aberto', 'bar.garcon_direto', 'bar.trocar_nome',
+                              'bar.pedir_pin'], true)) {
             $v = $v === '1' ? '1' : '0';
         }
         if ($chave === 'bar.procura_min')      $v = (string)max(1, min(8, (int)$v));
@@ -2645,6 +2678,29 @@ function barGarantirTokens(mysqli $conn, int $cid = 0): void {
     while ($m = $r->fetch_assoc()) {
         $t = barTokenNovo();
         @$conn->query("UPDATE {$P}mesas SET bar_token='$t' WHERE casamento_id=$cid AND id=" . (int)$m['id']);
+    }
+}
+
+/**
+ * Os quatro dígitos de cada convite, para quem os pedir (§5.2, ponto 5).
+ *
+ * Nascem só quando a casa liga o PIN, e por convite — o telemóvel da família
+ * já pode pedir por qualquer um dos seus, portanto um segredo por pessoa
+ * defendia uma porta que está aberta de propósito.
+ *
+ * `0000` fica de fora: é o que as pessoas escrevem quando não sabem o código.
+ */
+function barGarantirPins(mysqli $conn, int $cid = 0): void {
+    global $P;
+    $cid = $cid ?: casamentoAtual();
+    if ($cid <= 0) return;
+    $r = @$conn->query("SELECT id FROM {$P}convites
+                        WHERE casamento_id=$cid AND (bar_pin IS NULL OR bar_pin='')");
+    if (!$r) return;
+    while ($c = $r->fetch_assoc()) {
+        $pin = str_pad((string)random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+        @$conn->query("UPDATE {$P}convites SET bar_pin='$pin'
+                       WHERE casamento_id=$cid AND id=" . (int)$c['id']);
     }
 }
 

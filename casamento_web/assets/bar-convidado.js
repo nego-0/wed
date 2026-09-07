@@ -22,6 +22,8 @@
   var mesaEntrega = MESA;               // para onde vai a bebida (pode mudar-se)
   var aberto = false, msgFechado = window.BAR.fechado || '';
   var procuraMin = 4;
+  var pedePin = false;                  // a casa pede os quatro dígitos do convite
+  var achados = {};                     // id -> nome, para o ecrã do código
   var menu = { categorias: [], itens: [] };
   var ritmo = null;          // o caudal da copa, quando está cheio
   var travaoPedido = null;   // «o próximo pedido abre em…»
@@ -53,14 +55,24 @@
     }
     var r, d;
     try { r = await fetch(url, opc); d = await r.json(); }
-    catch (e) { return { success: false, error: 'Sem rede. Tente outra vez daqui a pouco.' }; }
-    return d || { success: false, error: 'Resposta estranha do servidor.' };
+    // `message`, e não `error`: é a palavra que a API inteira usa (erro() em
+    // api.php escreve `message`). Este ficheiro lia `error`, que nunca existe,
+    // e por isso TODOS os erros do ecrã do convidado saíam como «Não deu.» —
+    // incluindo o que explica porque é que um pedido foi travado por uma
+    // regra, que é justamente o que a pessoa precisa de ler.
+    catch (e) { return { success: false, message: 'Sem rede. Tente outra vez daqui a pouco.' }; }
+    return d || { success: false, message: 'Resposta estranha do servidor.' };
+  }
+
+  /** O que o servidor disse, ou uma frase de recurso. Nunca vazio. */
+  function porque(d) {
+    return (d && d.message) || 'Não deu.';
   }
 
   function falhou(d) {
     // Um erro do bar não é uma catástrofe: diz-se o que é e deixa-se tentar
     // outra vez. Chamar um empregado é sempre a saída que resta.
-    return '<div class="b-erro"><span>' + esc(d && d.error ? d.error : 'Não deu.') + '</span>'
+    return '<div class="b-erro"><span>' + esc(porque(d)) + '</span>'
       + '<button class="btn btn-claro" onclick="barRecarregar()">Tentar de novo</button></div>';
   }
 
@@ -106,21 +118,71 @@
         + 'Experimente o apelido, ou chame um empregado.</div>';
       return;
     }
+    achados = {};
+    d.nomes.forEach(function (n) { achados[n.id] = n; });
     cx.innerHTML = d.nomes.map(function (n) {
       return '<button class="b-nome" type="button" role="option" onclick="barSou(' + n.id + ')">'
         + '<b>' + esc(n.nome) + '</b><span>' + esc(n.convite) + '</span></button>';
     }).join('');
   }
 
-  window.barSou = async function (id) {
-    var d = await chamar('bar_sou', { convidado_id: id });
-    if (!d.success) { $('b-nomes').innerHTML = falhou(d); return; }
+  /**
+   * Os quatro dígitos, quando a casa os pede.
+   *
+   * Vem depois de escolher o nome e não antes: só quem já se escolheu sabe de
+   * que convite é o código que lhe estão a pedir. O código é do CONVITE — a
+   * família tem um só —, e é por isso que o ecrã diz de quem é.
+   */
+  function ecraPin(n, aviso) {
+    $('b-corpo').innerHTML =
+      '<div class="b-procura">'
+      + '<h1>O código do convite</h1>'
+      + '<p>Quatro dígitos, no convite de <b>' + esc(n.convite) + '</b>. '
+      +   'É o mesmo para a família toda.</p>'
+      + '<input id="b-pin" type="text" inputmode="numeric" autocomplete="off" '
+      +   'maxlength="4" pattern="[0-9]*" class="b-pin" placeholder="0000" '
+      +   'aria-label="Os quatro dígitos do convite">'
+      + '<div class="b-pin-erro" id="b-pin-erro" role="alert" aria-live="polite">'
+      +   (aviso ? esc(aviso) : '') + '</div>'
+      + '<button class="btn btn-ouro b-pin-bt" type="button" onclick="barPin('
+      +   n.id + ')">Entrar</button>'
+      + '<button class="btn btn-claro b-pin-bt" type="button" onclick="barRecarregar()">'
+      +   'Afinal não sou eu</button>'
+      + '<div class="b-ajuda">Sem o código, chame um empregado — ele pede por si, '
+      +   'e a bebida é a mesma.</div>'
+      + '</div>';
+    var c = $('b-pin');
+    c.addEventListener('keydown', function (e) { if (e.key === 'Enter') window.barPin(n.id); });
+    c.focus();
+  }
+
+  window.barPin = function (id) {
+    var c = $('b-pin');
+    entrar(id, c ? c.value : '');
+  };
+
+  window.barSou = function (id) {
+    // Com código, pergunta-se primeiro; sem ele, entra-se já.
+    if (pedePin && achados[id]) { ecraPin(achados[id], ''); return; }
+    return entrar(id, '');
+  };
+
+  async function entrar(id, pin) {
+    var d = await chamar('bar_sou', { convidado_id: id, pin: pin });
+    if (!d.success) {
+      // Com o código à frente, o erro fica NO ecrã do código: mandar a pessoa
+      // de volta à procura obrigava-a a escrever o nome outra vez por causa de
+      // um dígito trocado.
+      if (pedePin && achados[id]) { ecraPin(achados[id], porque(d)); return; }
+      if ($('b-nomes')) $('b-nomes').innerHTML = falhou(d);
+      return;
+    }
     eu = d.eu;
     // Se a pessoa tem mesa marcada e não é a do QR, é dela que se parte: quem
     // se levantou para ir buscar o menu quer a bebida no seu lugar.
     if (eu.mesa_id && eu.mesa_id !== MESA.id) mesaEntrega = await mesaPorId(eu.mesa_id);
     await carregarMenu();
-  };
+  }
 
   /** A mesa com o seu nome. Um «mesa 7» no ecrã é um número sem sentido para
       quem está sentado à «Mesa dos Padrinhos». */
@@ -388,7 +450,7 @@
       itens: itens, mesa_id: mesaEntrega ? mesaEntrega.id : MESA.id, mesa_qr_id: MESA.id
     });
     bt.disabled = false; bt.textContent = 'Pedir';
-    if (!d.success) { janelaAviso('Não deu para pedir', esc(d.error)); return; }
+    if (!d.success) { janelaAviso('Não deu para pedir', esc(porque(d))); return; }
     cesto = {};
     recibo(d.pedido);
     // O menu inteiro, e não só «os meus pedidos»: pedir é o momento em que os
@@ -421,7 +483,7 @@
       confirmar: 'Desistir', cancelar: 'Manter' });
     if (!r.sim) return;
     var d = await chamar('bar_cancelar', { id: id });
-    if (!d.success) { janelaAviso('Não deu', esc(d.error)); return; }
+    if (!d.success) { janelaAviso('Não deu', esc(porque(d))); return; }
     await recarregarMeus();
   };
 
@@ -459,6 +521,7 @@
     aberto = !!d.aberto;
     msgFechado = d.mensagem_fechado || msgFechado;
     procuraMin = d.procura_min || 4;
+    pedePin = !!d.pedir_pin;
     if (d.mesa) MESA = d.mesa;
     if (d.eu) {
       eu = d.eu;

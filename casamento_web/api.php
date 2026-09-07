@@ -2267,6 +2267,59 @@ function barPrender(mysqli $conn, int $convidadoId, int $conviteId): void {
 }
 
 /**
+ * Os quatro dígitos, quando a casa os pede (§5.2, ponto 5).
+ *
+ * O PIN é do CONVITE e não da pessoa, e isso não é preguiça: o telemóvel da
+ * família já pode pedir por qualquer um dos seus (§5.3), portanto um segredo
+ * por pessoa fechava uma porta que está aberta de propósito. O que ele devolve
+ * é exactamente o segredo que se perdeu quando o link saiu do convite — quem
+ * sabe o nome do padrinho não sabe, por isso, o código do convite dele.
+ *
+ * O travão conta-se contra o CONVITE atacado, e não contra o telemóvel de quem
+ * tenta: um contador no telemóvel apaga-se com o testemunho, e um contador no
+ * IP tranca a sala inteira num salão com wi-fi partilhado (§5.4). Cinco erros
+ * seguidos fecham aquele convite por cinco minutos — o suficiente para que
+ * ninguém adivinhe dez mil códigos a tocar num ecrã, e pouco o bastante para
+ * que uma família que se enganou não fique sem bar. E enquanto está fechado, o
+ * empregado continua a poder pedir por eles (§5.5) — nunca se perde a bebida
+ * por causa de um código.
+ *
+ * Devolve o texto do erro, ou null quando passa.
+ */
+function barPinFalha(mysqli $conn, array $convidado, string $pin): ?string {
+    global $P;
+    if (barDef($conn, 'bar.pedir_pin') !== '1') return null;
+    $cid = casamentoAtual();
+    barGarantirPins($conn, $cid);
+    $conviteId = (int)$convidado['convite_id'];
+    $st = $conn->prepare("SELECT bar_pin, bar_pin_falhas, bar_pin_ate FROM {$P}convites
+                          WHERE casamento_id=? AND id=? LIMIT 1");
+    if (!$st) return 'Não foi possível confirmar o código.';
+    $st->bind_param('ii', $cid, $conviteId);
+    if (!$st->execute()) return 'Não foi possível confirmar o código.';
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c || !$c['bar_pin']) return null;   // sem código gravado não se tranca ninguém
+
+    if ($c['bar_pin_ate'] && strtotime($c['bar_pin_ate']) > time()) {
+        return 'Foram muitas tentativas. Chame um empregado — ele pede por si.';
+    }
+    if (preg_replace('/\D/', '', $pin) === (string)$c['bar_pin']) {
+        @$conn->query("UPDATE {$P}convites SET bar_pin_falhas=0, bar_pin_ate=NULL
+                       WHERE casamento_id=$cid AND id=$conviteId");
+        return null;
+    }
+    $n = (int)$c['bar_pin_falhas'] + 1;
+    $ate = $n >= 5 ? "DATE_ADD(NOW(), INTERVAL 5 MINUTE)" : 'NULL';
+    @$conn->query("UPDATE {$P}convites SET bar_pin_falhas=" . ($n >= 5 ? 0 : $n)
+                . ", bar_pin_ate=$ate WHERE casamento_id=$cid AND id=$conviteId");
+    registar($conn, 'bar_pin_errado', (string)$convidado['nome'],
+             $n >= 5 ? 'cinco erros seguidos — convite travado 5 minutos' : $n . '.ª tentativa');
+    return $n >= 5
+        ? 'Foram muitas tentativas. Chame um empregado — ele pede por si.'
+        : 'Esse código não é o do seu convite. Está no convite, ao lado do nome.';
+}
+
+/**
  * Neste IP já anda outro nome? Devolve-o, ou null.
  *
  * Só o modo `estrito` chama isto. Nos outros o IP grava-se e não tranca nada,
@@ -2366,7 +2419,15 @@ function barConvidado(mysqli $conn, int $id): ?array {
 // quota.
 // ============================================================
 
-/** Os limites vivos deste casamento. Os expirados não contam. */
+/**
+ * Os limites vivos deste casamento — os que valem AGORA.
+ *
+ * Uma regra pode ter hora de entrada e hora de saída, e as duas juntas fazem
+ * uma janela: «nada de destilados antes das 21h» é a regra que sai às 21h, e
+ * «a partir das 2h, uma bebida por hora» é a que entra às 2h. Fora da sua
+ * janela a regra não é levantada — está lá, escrita, à espera da hora; o que
+ * ela não faz é contar para o veredicto.
+ */
 function barLimites(mysqli $conn): array {
     global $P;
     // Lê-se uma vez por pedido: o veredicto de um menu de vinte bebidas
@@ -2375,6 +2436,7 @@ function barLimites(mysqli $conn): array {
     $cid = casamentoAtual();
     $r = @$conn->query("SELECT * FROM {$P}bar_limites
                         WHERE casamento_id=$cid AND ativo=1
+                          AND (vigora_em IS NULL OR vigora_em <= NOW())
                           AND (expira_em IS NULL OR expira_em > NOW())
                         ORDER BY id");
     $out = [];
@@ -2390,14 +2452,49 @@ function barLimites(mysqli $conn): array {
 /** Esquecer os limites lidos. Uma regra acabada de pôr vale de IMEDIATO —
     inclusive para os pedidos que já estavam na fila por decidir (§8.0.1). */
 function barLimitesEsquecer(): void {
-    unset($GLOBALS['__bar_limites']);
+    unset($GLOBALS['__bar_limites'], $GLOBALS['__bar_limites_todos']);
+}
+
+/**
+ * Todas as regras escritas, incluindo as que ainda não são horas de valer.
+ *
+ * O veredicto usa `barLimites()`, que só conhece as que valem agora. Mas o
+ * ecrã da copa tem de ver a regra que marcou para as 2h — senão escrevia-a e
+ * ela desaparecia, e a única leitura possível seria «não guardou». Cada linha
+ * traz um `vigor`: `agora`, `ainda` (à espera da hora) ou `passou`.
+ */
+function barLimitesTodos(mysqli $conn): array {
+    global $P;
+    if (isset($GLOBALS['__bar_limites_todos'])) return $GLOBALS['__bar_limites_todos'];
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT * FROM {$P}bar_limites
+                        WHERE casamento_id=$cid AND ativo=1 ORDER BY id");
+    $agora = time();
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        foreach (['id','alvo_id','quantidade','janela_min','alvo_convidado_id','alvo_convite_id'] as $k) {
+            $x[$k] = $x[$k] === null ? null : (int)$x[$k];
+        }
+        $de  = $x['vigora_em'] ? strtotime($x['vigora_em']) : null;
+        $ate = $x['expira_em'] ? strtotime($x['expira_em']) : null;
+        $x['vigor'] = ($de !== null && $de > $agora) ? 'ainda'
+                    : (($ate !== null && $ate <= $agora) ? 'passou' : 'agora');
+        $out[] = $x;
+    }
+    return $GLOBALS['__bar_limites_todos'] = $out;
 }
 
 /**
  * O limite que manda sobre esta pessoa e esta bebida.
  *
- * Sete degraus, do mais específico para o mais geral (§8.0). O primeiro que
+ * Nove degraus, do mais específico para o mais geral (§8.0). O primeiro que
  * existir é o que vale — os outros nem se olham.
+ *
+ * A ordem tem duas chaves, e por esta ordem: primeiro quão específica é a
+ * regra sobre a BEBIDA (uma bebida > uma gaveta > tudo), e só depois sobre
+ * QUEM (uma pessoa > um convite > toda a gente). É o que faz «2 caipirinhas
+ * por convidado» ganhar a «a Rita: 6 bebidas ao todo» quando o que está em
+ * causa é uma caipirinha — a regra que fala da bebida é a que sabe do assunto.
  */
 function barLimiteQueManda(array $limites, array $item, int $convidadoId, int $conviteId): ?array {
     $cat = (int)($item['categoria_id'] ?? 0);
@@ -2409,6 +2506,15 @@ function barLimiteQueManda(array $limites, array $item, int $convidadoId, int $c
         ['categoria', $cat, 'convidado', null,         $conviteId],
         ['item',      $iid, 'convidado', null,         null],
         ['categoria', $cat, 'convidado', null,         null],
+        // «A Rita: no máximo três bebidas, ao todo.» Uma regra de uma pessoa
+        // sobre TUDO faltava aqui, e o ecrã da copa oferecia-a — «qualquer
+        // bebida» é a primeira opção da lista, e portanto era a que saía se
+        // ninguém mexesse. A regra gravava-se, lia-se na ficha, e não travava
+        // coisa nenhuma: a pessoa continuava a pedir, e quem a escreveu ficava
+        // convencida de que o bar a estava a cumprir. É o pior tipo de falha
+        // que uma regra pode ter.
+        ['tudo',      0,    'convidado', $convidadoId, null],
+        ['tudo',      0,    'convidado', null,         $conviteId],
         ['tudo',      0,    'convidado', null,         null],
     ];
     foreach ($degraus as [$escopo, $alvo, $suj, $pessoa, $convite]) {
@@ -2595,14 +2701,52 @@ function barRegraFrase(mysqli $conn, array $l): string {
     }
     $unid = $l['unidade'] === 'pedidos' ? 'pedido' : 'bebida';
     if ((int)$l['quantidade'] === 0) {
-        return 'não pode pedir ' . $sobre;
+        return 'não pode pedir ' . $sobre . barHorasFrase($l);
     }
     $q = (int)$l['quantidade'];
     $quanto = $q . ' ' . $unid . ($q === 1 ? '' : 's');
     if ((int)$l['janela_min'] === 0) {
-        return 'no máximo ' . $quanto . ' de ' . $sobre . ', ao todo';
+        return 'no máximo ' . $quanto . ' de ' . $sobre . ', ao todo' . barHorasFrase($l);
     }
-    return $quanto . ' de ' . $sobre . ' a cada ' . barRelogio((int)$l['janela_min'] * 60);
+    return $quanto . ' de ' . $sobre . ' a cada ' . barRelogio((int)$l['janela_min'] * 60)
+         . barHorasFrase($l);
+}
+
+/**
+ * Uma hora escrita («21:00») no momento que ela quer dizer.
+ *
+ * Quem põe uma regra no meio de uma festa pensa em horas, não em datas — e uma
+ * festa atravessa a meia-noite, o que torna «às 2h» ambíguo. Resolve-se com
+ * uma assimetria que é a leitura certa dos dois casos:
+ *
+ *   • o PRINCÍPIO («a partir das 21h») que já passou hoje quer dizer que a
+ *     regra já começou. Empurrá-lo para amanhã calava-a a noite inteira.
+ *   • o FIM («até às 2h») que já passou hoje quer dizer a madrugada seguinte.
+ *     Deixá-lo hoje matava a regra no instante em que se escrevesse.
+ *
+ * Devolve null se a hora não for hora.
+ */
+function barHoraMomento(string $hhmm, bool $fim): ?string {
+    if (!preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', trim($hhmm), $m)) return null;
+    $hoje = mktime((int)$m[1], (int)$m[2], 0);
+    if ($fim && $hoje <= time()) $hoje += 86400;
+    return date('Y-m-d H:i:s', $hoje);
+}
+
+/**
+ * O rabo da frase quando a regra tem horas: «, das 21h às 2h».
+ *
+ * Vazio quando não as tem, que é o caso comum — uma regra sem horas vale o que
+ * a festa durar, e dizê-lo em cada linha seria ruído.
+ */
+function barHorasFrase(array $l): string {
+    $h = fn($v) => date((int)date('i', strtotime($v)) ? 'H\hi' : 'H\h', strtotime($v));
+    $de  = !empty($l['vigora_em']) ? $h($l['vigora_em']) : '';
+    $ate = !empty($l['expira_em']) ? $h($l['expira_em']) : '';
+    if ($de !== '' && $ate !== '') return ', das ' . $de . ' às ' . $ate;
+    if ($de !== '')  return ', a partir das ' . $de;
+    if ($ate !== '') return ', até às ' . $ate;
+    return '';
 }
 
 /** Uma regra como o ecrã da copa a quer: a frase, e o que a identifica. */
@@ -2630,7 +2774,11 @@ function barRegraLinha(mysqli $conn, array $l): array {
         'alvo_convite_id' => $l['alvo_convite_id'],
         'mensagem' => $l['mensagem'],
         'nota' => $l['nota'],                 // só o pessoal vê
+        'vigora_em' => $l['vigora_em'] ?? null,
         'expira_em' => $l['expira_em'],
+        // `agora`, `ainda` (à espera da hora) ou `passou`. As regras lidas por
+        // barLimites() valem todas agora, e por isso vêm sem marca nenhuma.
+        'vigor' => $l['vigor'] ?? 'agora',
         'criado_por' => $l['criado_por'],
     ];
 }
@@ -3193,6 +3341,7 @@ if ($acao === 'bar_mesa') {
         'aberto' => barAberto($conn),
         'mensagem_fechado' => barDef($conn, 'bar.mensagem_fechado'),
         'procura_min' => max(1, (int)barDef($conn, 'bar.procura_min')),
+        'pedir_pin' => barDef($conn, 'bar.pedir_pin') === '1',
         'eu' => $quem ? ['id' => (int)$quem['id'], 'nome' => $quem['nome'],
                          'convite' => $quem['nome_exibicao'],
                          'mesa_id' => $quem['mesa_id'] === null ? null : (int)$quem['mesa_id']] : null]);
@@ -3236,6 +3385,10 @@ if ($acao === 'bar_sou') {
     $id = (int)($d['convidado_id'] ?? 0);
     $g = barConvidado($conn, $id);
     if (!$g) erro('Não encontrámos esse nome.');
+
+    // Os quatro dígitos, quando a casa os pede. Vêm antes de tudo o resto: um
+    // código errado não deve sequer chegar a contar como troca de nome.
+    if (($falha = barPinFalha($conn, $g, (string)($d['pin'] ?? '')))) erro($falha);
 
     $antes = barQuemSou($conn);
     $conviteNovo = (int)$g['convite_id'];
@@ -3727,7 +3880,7 @@ if ($acao === 'bar_regras') {
     // lê-a como o servidor a escreveu, para não haver duas gramáticas.
     barCid();
     if (!podeCopa()) erro('Só a copa.');
-    ok(['regras' => array_map(fn($l) => barRegraLinha($conn, $l), barLimites($conn)),
+    ok(['regras' => array_map(fn($l) => barRegraLinha($conn, $l), barLimitesTodos($conn)),
         'itens'  => array_map(fn($i) => ['id' => $i['id'], 'nome' => $i['nome'],
                                          'categoria_id' => $i['categoria_id']], barItens($conn, true)),
         'categorias' => barCategorias($conn)]);
@@ -3761,33 +3914,52 @@ if ($acao === 'bar_regra_guardar') {
 
     $msg  = mb_substr(trim((string)($d['mensagem'] ?? '')), 0, 160) ?: null;
     $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 160) ?: null;
-    $expira = preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', (string)($d['expira_em'] ?? ''))
-            ? str_replace('T', ' ', substr($d['expira_em'], 0, 16)) . ':00' : null;
+
+    // As horas chegam como o ecrã as pede — «21:00» —, ou como um momento
+    // inteiro para quem chame a API à mão. Vazias, a regra vale o que a festa
+    // durar, que é o caso comum.
+    $momento = function ($v, bool $fim) {
+        $v = trim((string)$v);
+        if ($v === '') return null;
+        if (preg_match('/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/', $v)) {
+            return str_replace('T', ' ', substr($v, 0, 16)) . ':00';
+        }
+        return barHoraMomento($v, $fim);
+    };
+    $vigora = $momento($d['vigora_hora'] ?? ($d['vigora_em'] ?? ''), false);
+    $expira = $momento($d['expira_hora'] ?? ($d['expira_em'] ?? ''), true);
+    // Uma janela ao contrário não é uma janela: das 21h às 2h é a madrugada
+    // seguinte, e é isso que quem a escreve quer dizer.
+    if ($vigora && $expira && strtotime($expira) <= strtotime($vigora)) {
+        $expira = date('Y-m-d H:i:s', strtotime($expira) + 86400);
+    }
     $quem = (string)(utilizadorAtual() ?? '');
 
     if ($id) {
         $st = $conn->prepare("UPDATE {$P}bar_limites SET escopo=?, alvo_id=?, sujeito=?,
                  alvo_convidado_id=?, alvo_convite_id=?, unidade=?, quantidade=?, janela_min=?,
-                 mensagem=?, nota=?, expira_em=? WHERE casamento_id=$cid AND id=?");
-        $st->bind_param('sisiisiisssi', $escopo, $alvo, $sujeito, $pessoa, $convite,
-                        $unidade, $qtd, $janela, $msg, $nota, $expira, $id);
+                 mensagem=?, nota=?, vigora_em=?, expira_em=? WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('sisiisiissssi', $escopo, $alvo, $sujeito, $pessoa, $convite,
+                        $unidade, $qtd, $janela, $msg, $nota, $vigora, $expira, $id);
     } else {
         $st = $conn->prepare("INSERT INTO {$P}bar_limites
                  (casamento_id,escopo,alvo_id,sujeito,alvo_convidado_id,alvo_convite_id,
-                  unidade,quantidade,janela_min,mensagem,nota,expira_em,criado_por)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $st->bind_param('isisiisiissss', $cid, $escopo, $alvo, $sujeito, $pessoa, $convite,
-                        $unidade, $qtd, $janela, $msg, $nota, $expira, $quem);
+                  unidade,quantidade,janela_min,mensagem,nota,vigora_em,expira_em,criado_por)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $st->bind_param('isisiisiisssss', $cid, $escopo, $alvo, $sujeito, $pessoa, $convite,
+                        $unidade, $qtd, $janela, $msg, $nota, $vigora, $expira, $quem);
     }
     if (!@$st->execute()) erro('Não foi possível guardar a regra.');
     if (!$id) $id = $conn->insert_id;
     barLimitesEsquecer();
 
+    // Pela lista TODA, e não pelas que valem agora: uma regra marcada para as
+    // 2h ainda não vale, e mesmo assim tem de aparecer escrita a quem a pôs.
     $l = null;
-    foreach (barLimites($conn) as $x) if ((int)$x['id'] === $id) $l = $x;
+    foreach (barLimitesTodos($conn) as $x) if ((int)$x['id'] === $id) $l = $x;
     registar($conn, 'bar_regra', $pessoa ? (barConvidado($conn, $pessoa)['nome'] ?? '') : '',
              $l ? barRegraFrase($conn, $l) : '');
-    ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimites($conn)),
+    ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimitesTodos($conn)),
         'fila' => barFilaContraRegras($conn)]);
 }
 
@@ -3797,13 +3969,13 @@ if ($acao === 'bar_regra_apagar') {
     exigirCorrecao();
     $id = (int)(corpo()['id'] ?? 0);
     $antes = null;
-    foreach (barLimites($conn) as $x) if ((int)$x['id'] === $id) $antes = $x;
+    foreach (barLimitesTodos($conn) as $x) if ((int)$x['id'] === $id) $antes = $x;
     // Levanta-se, não se apaga: o registo de ações fica a poder dizer o que
     // esteve em vigor durante a noite.
     @$conn->query("UPDATE {$P}bar_limites SET ativo=0 WHERE casamento_id=$cid AND id=$id");
     barLimitesEsquecer();
     registar($conn, 'bar_regra_fora', '', $antes ? barRegraFrase($conn, $antes) : '#' . $id);
-    ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimites($conn)),
+    ok(['regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimitesTodos($conn)),
         'fila' => barFilaContraRegras($conn)]);
 }
 
@@ -3868,6 +4040,27 @@ if ($acao === 'bar_soltar') {
     ok(['dispositivos' => barDispositivosDe($conn, (int)$x['convidado_id'])]);
 }
 
+if ($acao === 'bar_pin_soltar') {
+    // Levantar o travão do código a um convite.
+    //
+    // Cinco enganos seguidos fecham um convite por cinco minutos, e sem isto o
+    // único remédio era esperar — com uma família de pé à frente do copeiro, a
+    // olhar para um telemóvel que diz «chame um empregado». O empregado veio;
+    // agora resolve. É o mesmo gesto do «soltar» de um telemóvel, e pela mesma
+    // razão: a vida dá nós, e alguém tem de os poder desatar.
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $gid = (int)(corpo()['convidado_id'] ?? 0);
+    $g = $gid ? barConvidado($conn, $gid) : null;
+    if (!$g) erro('Não encontrámos esse convidado.');
+    $conviteId = (int)$g['convite_id'];
+    @$conn->query("UPDATE {$P}convites SET bar_pin_falhas=0, bar_pin_ate=NULL
+                   WHERE casamento_id=$cid AND id=$conviteId");
+    registar($conn, 'bar_pin_soltou', (string)$g['nome'], 'travão do código levantado');
+    ok(['travado' => false]);
+}
+
 if ($acao === 'bar_ficha') {
     // A ficha de um convidado: o que já levou, as regras dele, e os telemóveis
     // em nome dele. É o ecrã que se abre com a pessoa à frente.
@@ -3876,12 +4069,27 @@ if ($acao === 'bar_ficha') {
     $gid = (int)($_GET['convidado'] ?? 0);
     $g = $gid ? barConvidado($conn, $gid) : null;
     if (!$g) erro('Não encontrámos esse convidado.');
-    ok(['convidado' => ['id' => $gid, 'nome' => $g['nome'],
+    // O travão do código, se este convite o tiver: é o que explica por que é
+    // que a pessoa está à frente do copeiro em vez de estar a pedir sozinha.
+    $travado = false;
+    if (barDef($conn, 'bar.pedir_pin') === '1') {
+        $st = $conn->prepare("SELECT bar_pin_ate FROM {$P}convites
+                              WHERE casamento_id=? AND id=? LIMIT 1");
+        if ($st) {
+            $cidF = casamentoAtual(); $cvF = (int)$g['convite_id'];
+            $st->bind_param('ii', $cidF, $cvF);
+            if ($st->execute() && ($x = $st->get_result()->fetch_assoc())) {
+                $travado = !empty($x['bar_pin_ate']) && strtotime($x['bar_pin_ate']) > time();
+            }
+        }
+    }
+    ok(['pin_travado' => $travado,
+        'convidado' => ['id' => $gid, 'nome' => $g['nome'],
                         'convite' => $g['nome_exibicao'],
                         'convite_id' => (int)$g['convite_id']],
         'levou'  => barConsumoPessoal($conn, $gid),
         'regras' => array_values(array_filter(
-            array_map(fn($l) => barRegraLinha($conn, $l), barLimites($conn)),
+            array_map(fn($l) => barRegraLinha($conn, $l), barLimitesTodos($conn)),
             fn($r) => $r['alvo_convidado_id'] === $gid
                    || $r['alvo_convite_id'] === (int)$g['convite_id'])),
         'dispositivos' => barDispositivosDe($conn, $gid)]);

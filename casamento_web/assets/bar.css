@@ -31,8 +31,11 @@
 /* Sem fotografia, a inicial na cor da gaveta — e não um quadrado cinzento,
    que é a confissão de que ninguém tratou do menu. */
 .b-foto .letra{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-                font-family:var(--serif); font-size:2rem; font-weight:700; color:#fff;
-                background:var(--gold-soft); }
+                font-family:var(--serif); font-size:2rem; font-weight:700;
+                /* Tinta clara sobre o ouro FUNDO, e não sobre o claro: no
+                   clássico o ouro claro é areia, e um branco por cima dela
+                   ficava a 1,6:1 — uma inicial que não se lê. */
+                color:var(--ivory); background:var(--gold-deep); }
 
 /* ---- estado de um pedido: cor, palavra e forma -------------- */
 .b-est{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
@@ -50,14 +53,14 @@
 .b-est.recusado, .b-est.falhou{ background:var(--danger-bg); color:var(--danger); }
 .b-est.recusado::before{ content:'—'; }
 .b-est.falhou::before{ content:'↩'; }
-.b-est.cancelado{ background:var(--cream); color:#8a8f88; }
+.b-est.cancelado{ background:var(--cream); color:var(--ink-fraco); }
 
 /* ---- esqueleto: o lugar do conteúdo antes de ele chegar ----- */
 .b-esq{ border-radius:10px; background:var(--cream); animation:b-pulso 1.4s ease-in-out infinite; }
 @keyframes b-pulso{ 0%,100%{ opacity:.55 } 50%{ opacity:.9 } }
 
 /* ---- vazio e erro ------------------------------------------- */
-.b-vazio{ text-align:center; padding:2rem 1rem; color:#8a8f88; line-height:1.6; }
+.b-vazio{ text-align:center; padding:2rem 1rem; color:var(--ink-fraco); line-height:1.6; }
 .b-vazio .ico{ font-size:1.8rem; opacity:.5; display:block; margin-bottom:.4rem; }
 .b-erro{ background:var(--danger-bg); color:var(--danger); border-radius:12px;
          padding:.9rem 1rem; display:flex; align-items:center; gap:.8rem; flex-wrap:wrap; }
@@ -85,6 +88,7 @@ body.b-noite{ background:linear-gradient(175deg, var(--forest-deep), var(--fores
   --ok:var(--sala-ok);       --ok-bg:var(--sala-ok-bg);
   --warn:var(--sala-aviso);  --warn-bg:var(--sala-aviso-bg);
   --danger:var(--sala-mau);  --danger-bg:var(--sala-mau-bg);
+  --ink-fraco:var(--sala-fraco);
   /* --line, --card, --ink e --text ficam DO TEMA de propósito: as janelas
      (janela.css) abrem-se por cima deste ecrã e são cartões à parte, com as
      cores da casa. Fixá-las aqui deixava-as sem contornos. */
@@ -103,10 +107,25 @@ body.b-noite .b-foto{ background:rgba(255,255,255,.08); }
 
 /* Os botões, no escuro: os da casa são para fundo claro. */
 body.b-noite .btn{ min-height:48px; }
+/* E o anel de foco, que no escuro não existia: os botões da casa ficavam com
+   o anel do browser — 1px, quase preto — e o .btn com um contorno de 0px
+   branco, o que é o mesmo que nenhum. A copa é usada com o telemóvel apoiado
+   e um teclado à frente (§25.13), e quem tabula tem de ver onde está. */
+body.b-noite a:focus-visible,
+body.b-noite button:focus-visible,
+body.b-noite input:focus-visible,
+body.b-noite select:focus-visible,
+body.b-noite [tabindex]:focus-visible{
+  outline:2px solid var(--gold-soft); outline-offset:3px; border-radius:6px; }
 body.b-noite .btn-fantasma{ border-color:rgba(233,223,201,.4); color:var(--ivory); }
 body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
-/* A acção principal é grande porque é a que se faz cem vezes por noite. */
-.b-bt-grande{ min-height:56px; font-size:1rem; width:100%; justify-content:center; }
+/* A acção principal é grande porque é a que se faz cem vezes por noite.
+   O selector leva o body.b-noite à frente por necessidade, não por gosto: a
+   regra de cima — body.b-noite .btn — é mais específica do que um .b-bt-grande
+   sozinho, e estava a encolher para 48 exactamente o botão que existe para ter
+   56. O «Entregue» do empregado é o alvo mais tocado da noite inteira. */
+.b-bt-grande, body.b-noite .b-bt-grande{
+  min-height:56px; font-size:1rem; width:100%; justify-content:center; }
 
 /* A barra de estado, sempre à vista */
 .b-barra{ display:flex; align-items:center; gap:.9rem; flex-wrap:wrap;
@@ -160,7 +179,10 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
 .b-regra{ display:flex; align-items:center; gap:.6rem; padding:.45rem 0;
           border-bottom:1px solid var(--line); }
 .b-regra span{ flex:1; }
-.b-regra small{ color:#8a8f88; font-size:.78rem; }
+.b-regra small{ color:var(--ink-fraco); font-size:.78rem; }
+/* Uma regra fora da sua hora está escrita e não trava nada. Esbate-se, mas
+   nunca SÓ se esbate: a frase ao lado diz porquê, em palavras (§25.7). */
+.b-regra.espera{ opacity:.62; }
 
 /* ---- os tempos da noite ------------------------------------
    Vivem nos DOIS postos: em rodapé nas entregas, dentro dos números na copa.
@@ -267,6 +289,17 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-nome b{ font-family:var(--c-serif, Georgia, serif); font-size:1.05rem; display:block; }
 .b-nome span{ font-size:.78rem; color:rgba(0,0,0,.55); }
 .b-ajuda{ margin-top:1.2rem; font-size:.82rem; color:rgba(0,0,0,.55); line-height:1.5; }
+
+/* Os quatro dígitos do convite, quando a casa os pede.
+   Grandes e espaçados: escrevem-se de pé, com um copo na outra mão, e a
+   pessoa tem de ver de relance que já lá pôs os quatro. */
+.b-pin{ text-align:center; font-size:1.8rem !important; letter-spacing:.5em;
+        text-indent:.5em; font-variant-numeric:tabular-nums; }
+.b-pin-bt{ width:100%; min-height:56px; margin-top:.7rem; }
+/* O erro fica à vista e não desaparece sozinho: um código trocado exige uma
+   acção, e uma mensagem que se apaga ao fim de três segundos não a pede (§25.11). */
+.b-pin-erro{ min-height:1.2rem; margin-top:.6rem; font-size:.85rem; color:var(--danger, #A2483F); }
+.b-pin-erro:empty{ min-height:0; }
 
 /* Os meus pedidos, no fim do menu */
 /* O que esta pessoa já pediu — só esta. É a resposta a «quantas já levei?»,

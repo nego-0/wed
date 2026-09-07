@@ -89,12 +89,23 @@ os convidados lá entram (é o que vai no QR pousado em cada mesa):
   gaveta ou de tudo; para toda a gente, para um convite ou para uma pessoa; e
   também o caudal da própria copa. O limite mais específico **substitui** o
   mais geral e não se soma a ele — somar faria de um tecto individual um
-  aumento de quota, que é o contrário do que quem o escreve quer.
+  aumento de quota, que é o contrário do que quem o escreve quer. Cada regra
+  pode ter hora de entrada e de saída (`vigora_em`, `expira_em`): «nada de
+  destilados antes das 21h» é a regra que sai às 21h, e fora da sua hora ela
+  fica escrita e não trava nada.
 
 **O stock só desce na entrega.** Aprovar um pedido promete a bebida
 (`reservado`), não a gasta; é o empregado, ao dar por entregue, que a tira do
 armazém. É esta separação que impede vender a última garrafa duas vezes — e é
 o que a prova `tests/chk_bar.js` mais defende.
+
+**Os quatro dígitos do convite** (`bar_pin` em `cw_convites`) são opcionais e
+vêm desligados. Com o link fora do convite, o nome de um convidado deixou de
+ser segredo; o código devolve-o, e é do convite e não da pessoa, porque o
+telemóvel da família já podia pedir por qualquer um dos seus. Cinco enganos
+seguidos travam aquele convite por cinco minutos — e mesmo travado o empregado
+continua a pedir por eles, que é o que garante que ninguém fica sem bebida por
+causa de um código.
 
 O preçário das licenças vive noutras oito, e divide-se em duas metades — o
 catálogo (o que a casa vende) e a circulação (o que cada casamento pediu e tem):
