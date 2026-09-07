@@ -243,7 +243,13 @@
     // precisa de saber as duas coisas.
     var onde = p.mesa ? 'Mesa ' + esc(p.mesa) : 'Sem mesa indicada';
     if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) onde += ' · pediu na ' + esc(p.mesa_qr);
+    // Quem lançou o pedido, quando não foi quem o bebe. São dois casos e a
+    // copa tem de os distinguir: um empregado ao balcão é serviço normal; um
+    // convidado a pedir por outro é o vizinho de mesa a dar uma ajuda — e é
+    // também o sítio por onde alguém tentaria beber à conta de outrem, por
+    // isso diz-se o nome e não se esconde num ícone.
     if (p.criado_por) onde += ' · lançado por ' + esc(p.criado_por);
+    if (p.pedido_por) onde += ' · pedido por <b>' + esc(p.pedido_por) + '</b>';
 
     // Um pedido que deixou de caber numa regra posta depois de ele entrar.
     // Não se recusa sozinho: assinala-se, e a copa decide.

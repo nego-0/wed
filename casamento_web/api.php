@@ -2314,9 +2314,55 @@ function barPinFalha(mysqli $conn, array $convidado, string $pin): ?string {
                 . ", bar_pin_ate=$ate WHERE casamento_id=$cid AND id=$conviteId");
     registar($conn, 'bar_pin_errado', (string)$convidado['nome'],
              $n >= 5 ? 'cinco erros seguidos — convite travado 5 minutos' : $n . '.ª tentativa');
+    // «Esse convite», e não «o seu»: o mesmo código também se pede quando
+    // alguém age por outra família (§5.2), e aí «o seu» estava simplesmente
+    // errado — mandava a pessoa procurar no convite dela.
     return $n >= 5
         ? 'Foram muitas tentativas. Chame um empregado — ele pede por si.'
-        : 'Esse código não é o do seu convite. Está no convite, ao lado do nome.';
+        : 'Esse código não confere. Está no convite, ao lado do nome.';
+}
+
+/**
+ * Por quem é este pedido — por mim, ou por outra pessoa que mo pediu?
+ *
+ * Numa mesa há sempre quem não tenha telemóvel à mão, quem o tenha sem bateria
+ * e quem não queira lidar com aquilo: pede ao vizinho. Isso já era possível,
+ * mas só pela porta errada — trocando o nome do telemóvel (§5.3) —, e essa
+ * troca REBINDA o aparelho: o pedido passava a dizer que quem pediu foi a
+ * outra pessoa, e quem pediu de facto desaparecia do registo. Pedir «por» é a
+ * porta certa, e deixa MELHOR rasto do que a que substitui: o pedido guarda os
+ * dois nomes, e o meu telemóvel continua meu.
+ *
+ * O que não muda: **a quota é de quem bebe**. Os limites contam-se contra a
+ * pessoa nomeada, e por isso pedir por outro não é maneira de contornar um
+ * tecto — é maneira de gastar o dela.
+ *
+ * As barreiras são as que já existiam, e nenhuma nova:
+ *   • dentro do MESMO convite é livre e não se comenta, como já era: a família
+ *     é a unidade doméstica em todo este módulo;
+ *   • para OUTRO convite obedece a `bar.trocar_nome`, o mesmo interruptor que
+ *     governa a troca de nome, porque é a mesma pergunta — este telemóvel pode
+ *     agir por outra família?
+ *   • e, com o PIN ligado, pedir por outro convite exige o código DESSE
+ *     convite. Sem isto o PIN não valia nada: bastava não trocar de nome e
+ *     pedir «pelo padrinho» para o contornar por inteiro.
+ *
+ * Devolve [id, convidado, porOutro].
+ */
+function barParaQuem(mysqli $conn, int $eu, array $g, array $d): array {
+    $porId = (int)($d['por_id'] ?? 0);
+    if ($porId <= 0 || $porId === $eu) return [$eu, $g, false];
+
+    $alvo = barConvidado($conn, $porId);
+    if (!$alvo) erro('Não encontrámos essa pessoa na lista.');
+    if ((int)$alvo['convite_id'] !== (int)$g['convite_id']) {
+        if (barDef($conn, 'bar.trocar_nome') !== '1') {
+            erro('Neste casamento só se pede pelas pessoas do seu convite. '
+               . 'Chame um empregado — ele pede por ' . $alvo['nome'] . '.');
+        }
+        if (($falha = barPinFalha($conn, $alvo, (string)($d['pin'] ?? '')))) erro($falha);
+    }
+    return [$porId, $alvo, true];
 }
 
 /**
@@ -3106,6 +3152,13 @@ function barPedidoLinha(mysqli $conn, array $p, bool $paraPessoal = false): arra
         'apanhado_em' => $p['apanhado_em'],
         'entregue_em' => $p['entregue_em'],
         'motivo'    => $p['motivo_texto'] ?: ($p['motivo_nome'] ?? null),
+        // De quem é a bebida, e quem a pediu — os dois nomes, quando são dois.
+        // O convidado também os vê: é a resposta a «esta é a minha?».
+        'para'       => $p['convidado_nome'] ?? null,
+        'para_id'    => $p['convidado_id'] === null ? null : (int)$p['convidado_id'],
+        'pedido_por' => $p['lancou_nome'] ?? null,
+        'pedido_por_id' => $p['criado_por_convidado_id'] === null
+                         ? null : (int)$p['criado_por_convidado_id'],
     ];
     if ($paraPessoal) {
         // Do lado do pessoal, quem pediu e de onde — que é o que faz o
@@ -3130,12 +3183,15 @@ function barPedidos(mysqli $conn, string $onde, array $tipos = [], array $vals =
     $cid = casamentoAtual();
     $sql = "SELECT p.*, m.nome AS mesa_nome, mq.nome AS mesa_qr_nome,
                    g.nome AS convidado_nome, c.nome_exibicao AS convite_nome,
+                   lc.nome AS lancou_nome,
                    mo.texto AS motivo_nome
             FROM {$P}bar_pedidos p
             LEFT JOIN {$P}mesas m  ON m.id  = p.mesa_id    AND m.casamento_id = p.casamento_id
             LEFT JOIN {$P}mesas mq ON mq.id = p.mesa_qr_id AND mq.casamento_id = p.casamento_id
             LEFT JOIN {$P}convidados g ON g.id = p.convidado_id AND g.casamento_id = p.casamento_id
             LEFT JOIN {$P}convites c   ON c.id = p.convite_id   AND c.casamento_id = p.casamento_id
+            LEFT JOIN {$P}convidados lc ON lc.id = p.criado_por_convidado_id
+                                       AND lc.casamento_id = p.casamento_id
             LEFT JOIN {$P}bar_motivos mo ON mo.id = p.motivo_id AND mo.casamento_id = p.casamento_id
             WHERE p.casamento_id=$cid AND $onde";
     $st = $conn->prepare($sql);
@@ -3441,15 +3497,51 @@ if ($acao === 'bar_mesas') {
     ok(['mesas' => $out]);
 }
 
-if ($acao === 'bar_menu') {
-    // O menu, como ESTE convidado o vê: com os limites dele já aplicados.
+if ($acao === 'bar_por_quem') {
+    // «Vou pedir por esta pessoa» — confirma-se ANTES de escolher as bebidas.
+    //
+    // Existe para não haver duas más soluções: confirmar o código com um
+    // pedido vazio gastaria uma tentativa do travão por cada pedido de
+    // verdade (cinco erros trancam o convite, e assim bastavam dois enganos),
+    // e deixar a conferência para o fim mandava a pessoa escolher as bebidas
+    // todas para só então descobrir que não pode pedir por aquele nome.
     barPortaPublica($conn);
     $eu = barQuemSou($conn);
     if (!$eu) erro('Diga-nos primeiro quem é.');
+    $mim = barConvidado($conn, $eu);
+    if (!$mim) erro('Não encontrámos o seu nome.');
+    [$paraId, $g, $porOutro] = barParaQuem($conn, $eu, $mim, corpo());
+    ok(['para' => ['id' => $paraId, 'nome' => $g['nome'], 'convite' => $g['nome_exibicao'],
+                   'eu' => !$porOutro,
+                   'mesa_id' => $g['mesa_id'] === null ? null : (int)$g['mesa_id']]]);
+}
+
+if ($acao === 'bar_menu') {
+    // O menu, como ESTE convidado o vê: com os limites dele já aplicados.
+    //
+    // Ou como o vê a pessoa POR QUEM ele está a pedir: com `por`, o menu é o
+    // de quem vai beber — os tectos dessa pessoa, as esperas dessa pessoa, as
+    // bebidas que ela não pode. Um menu que mostrasse as MINHAS quotas e
+    // depois recusasse o pedido no fim seria uma promessa a fingir, e a recusa
+    // chegaria com a bebida já escolhida (§9).
+    barPortaPublica($conn);
+    $eu = barQuemSou($conn);
+    if (!$eu) erro('Diga-nos primeiro quem é.');
+    $mim = barConvidado($conn, $eu);
+    if (!$mim) erro('Não encontrámos o seu nome.');
+    // Aqui não se pede o código: o menu não é um pedido, e trancar a leitura
+    // com o PIN dava uma janela para o adivinhar sem gastar tentativas. O que
+    // o PIN guarda é o acto de pedir, e é lá que ele é conferido.
+    $por = (int)($_GET['por'] ?? 0);
+    if ($por > 0) $eu = $por;
     $g = barConvidado($conn, $eu);
-    if (!$g) erro('Não encontrámos o seu nome.');
+    if (!$g) erro('Não encontrámos essa pessoa na lista.');
+    $porOutro = (int)$g['id'] !== (int)$mim['id'];
     $ritmo = barRitmoDaCasa($conn);
-    ok(['categorias' => barCategorias($conn),
+    ok(['para' => ['id' => (int)$g['id'], 'nome' => $g['nome'],
+                   'convite' => $g['nome_exibicao'], 'eu' => !$porOutro,
+                   'mesa_id' => $g['mesa_id'] === null ? null : (int)$g['mesa_id']],
+        'categorias' => barCategorias($conn),
         'itens'  => array_map(fn($i) => [
             'id' => $i['id'], 'nome' => $i['nome'], 'descricao' => $i['descricao'],
             'foto' => $i['foto'], 'foto_pos' => $i['foto_pos'],
@@ -3482,10 +3574,12 @@ if ($acao === 'bar_pedir') {
     if (!barAberto($conn)) erro('A copa está fechada neste momento.');
     $eu = barQuemSou($conn);
     if (!$eu) erro('Diga-nos primeiro quem é.');
-    $g = barConvidado($conn, $eu);
-    if (!$g) erro('Não encontrámos o seu nome.');
+    $mim = barConvidado($conn, $eu);
+    if (!$mim) erro('Não encontrámos o seu nome.');
 
     $d = corpo();
+    // Por mim, ou por quem mo pediu à mesa. A quota é sempre de quem bebe.
+    [$paraId, $g, $porOutro] = barParaQuem($conn, $eu, $mim, $d);
     $pedidos = is_array($d['itens'] ?? null) ? $d['itens'] : [];
     $mesaId  = (int)($d['mesa_id'] ?? 0);
     $mesaQr  = (int)($d['mesa_qr_id'] ?? 0);
@@ -3497,7 +3591,7 @@ if ($acao === 'bar_pedir') {
     $conviteId = (int)$g['convite_id'];
     // Primeiro o travão do ACTO de pedir («um pedido de 20 em 20 minutos»),
     // que é da pessoa e não de bebida nenhuma.
-    $vp = barVeredictoPedido($conn, $eu, $conviteId);
+    $vp = barVeredictoPedido($conn, $paraId, $conviteId);
     if ($vp) erro(barTextoPedido($vp));
     $linhas = [];
     foreach ($pedidos as $li) {
@@ -3506,7 +3600,7 @@ if ($acao === 'bar_pedir') {
         if ($iid <= 0 || $q <= 0) continue;
         $item = barItem($conn, $iid);
         if (!$item || $item['estado'] !== 'ativo') erro('Uma das bebidas já não está no menu.');
-        $v = barVeredicto($conn, $item, $eu, $conviteId, $ritmo);
+        $v = barVeredicto($conn, $item, $paraId, $conviteId, $ritmo);
         if ($q > $v['pode']) {
             // A recusa fala como a página fala: diz o que se passa e quanto
             // falta, e não «limite excedido».
@@ -3519,13 +3613,17 @@ if ($acao === 'bar_pedir') {
     $codigo = barCodigoCurto();
     $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
     $disp = hash('sha256', (string)($_COOKIE['bar_disp'] ?? ''));
+    // O dispositivo e o IP são os de QUEM LANÇOU, e não os de quem bebe: são a
+    // prova de onde o pedido partiu, e trocá-los apagava-a. Quem bebe está no
+    // convidado_id; quem lançou, quando não é a mesma pessoa, na coluna nova.
     $st = $conn->prepare("INSERT INTO {$P}bar_pedidos
             (casamento_id,codigo_curto,convidado_id,convite_id,mesa_id,mesa_qr_id,
-             estado,dispositivo,ip,criado_em)
-            VALUES (?,?,?,?,?,?,'em_analise',?,?,NOW())");
-    $conviteId = (int)$g['convite_id'];
+             estado,dispositivo,ip,criado_por_convidado_id,criado_em)
+            VALUES (?,?,?,?,?,?,'em_analise',?,?,?,NOW())");
     $mesaN = $mesaId ?: null; $mesaQrN = $mesaQr ?: null;
-    $st->bind_param('isiiiiss', $cid, $codigo, $eu, $conviteId, $mesaN, $mesaQrN, $disp, $ip);
+    $lancou = $porOutro ? $eu : null;
+    $st->bind_param('isiiiissi', $cid, $codigo, $paraId, $conviteId, $mesaN, $mesaQrN,
+                    $disp, $ip, $lancou);
     if (!@$st->execute()) erro('Não foi possível enviar o pedido.');
     $pid = $conn->insert_id;
 
@@ -3537,15 +3635,24 @@ if ($acao === 'bar_pedir') {
         @$si->execute();
     }
     $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
-    registar($conn, 'bar_pedido', $g['nome'], '#' . $codigo . ' · ' . $resumo);
+    if ($porOutro) {
+        registar($conn, 'bar_pedido_amigo', $g['nome'],
+                 '#' . $codigo . ' · ' . $resumo . ' · lançado por ' . $mim['nome']);
+    } else {
+        registar($conn, 'bar_pedido', $g['nome'], '#' . $codigo . ' · ' . $resumo);
+    }
     ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $pid))]);
 }
 
 if ($acao === 'bar_meus_pedidos') {
+    // Os meus, e também os que lancei por outros: quem pediu a cerveja pela
+    // mãe é quem vai querer saber se ela já chegou. Ela vê-o na mesma, no
+    // telemóvel dela — o pedido é dela.
     barPortaPublica($conn);
     $eu = barQuemSou($conn);
     if (!$eu) ok(['pedidos' => []]);
-    $ps = barPedidos($conn, 'p.convidado_id=? ORDER BY p.id DESC LIMIT 20', ['i'], [$eu]);
+    $ps = barPedidos($conn, '(p.convidado_id=? OR p.criado_por_convidado_id=?)
+                             ORDER BY p.id DESC LIMIT 20', ['i', 'i'], [$eu, $eu]);
     ok(['pedidos' => array_map(fn($p) => barPedidoLinha($conn, $p), $ps),
         'aberto' => barAberto($conn)]);
 }
@@ -3557,7 +3664,12 @@ if ($acao === 'bar_cancelar') {
     $eu = barQuemSou($conn);
     $id = (int)(corpo()['id'] ?? 0);
     $p = $id ? barPedido($conn, $id) : null;
-    if (!$p || (int)$p['convidado_id'] !== $eu) erro('Esse pedido não é seu.');
+    // Meu, ou lançado por mim: quem pediu pelo vizinho e se enganou na bebida
+    // tem de o poder desfazer — a alternativa era pedir ao vizinho que
+    // desistisse de um pedido que ele não fez.
+    $meu = (int)$p['convidado_id'] === $eu
+        || (int)($p['criado_por_convidado_id'] ?? 0) === $eu;
+    if (!$p || !$meu) erro('Esse pedido não é seu.');
     if ($p['estado'] !== 'em_analise') erro('Esse pedido já foi decidido.');
     @$conn->query("UPDATE {$P}bar_pedidos SET estado='cancelado' WHERE casamento_id=$cid AND id=$id");
     ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id))]);
@@ -6597,7 +6709,12 @@ function retratoCasamento(mysqli $conn, int $cid): array {
                             m.nome AS mesa, c.telefone, c.msg_pessoal, c.observacoes,
                             c.rsvp_estado, c.rsvp_confirmados, c.rsvp_mensagem,
                             c.checkin_estado, c.checkin_presentes,
-                            c.enviado, c.impresso, c.mostrar_num_mesa, c.eliminado_em
+                            c.enviado, c.impresso, c.mostrar_num_mesa, c.eliminado_em,
+                            -- Os quatro dígitos do bar viajam com o convite: sem eles,
+                            -- levar os dados e trazê-los de volta invalidava em silêncio
+                            -- todos os códigos já impressos (§5.2). O travão fica de
+                            -- fora — é o estado de um minuto, não um dado do casal.
+                            c.bar_pin
                      FROM {$P}convites c LEFT JOIN {$P}mesas m ON m.id = c.mesa_id
                      WHERE c.casamento_id=$cid ORDER BY c.id");
     $porCodigo = [];
@@ -6809,8 +6926,9 @@ function impConvites(mysqli $conn, int $cid, array $convites): array {
         $st = $conn->prepare("INSERT INTO {$P}convites
               (casamento_id, codigo, nome_exibicao, sufixo, tipo, lado, lugares, mesa_id, telefone,
                msg_pessoal, observacoes, rsvp_estado, rsvp_confirmados, rsvp_mensagem,
-               checkin_estado, checkin_presentes, enviado, impresso, mostrar_num_mesa, eliminado_em)
-              VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+               checkin_estado, checkin_presentes, enviado, impresso, mostrar_num_mesa, eliminado_em,
+               bar_pin)
+              VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
         $vals = [
             $codigo,
             mb_substr((string)$c['nome_exibicao'], 0, 160),
@@ -6831,8 +6949,11 @@ function impConvites(mysqli $conn, int $cid, array $convites): array {
             (int)!empty($c['impresso']),
             isset($c['mostrar_num_mesa']) ? (int)$c['mostrar_num_mesa'] : 1,
             isset($c['eliminado_em']) && $c['eliminado_em'] !== null ? (string)$c['eliminado_em'] : null,
+            // Quatro dígitos, ou nada: um retrato de antes do bar não os traz,
+            // e nesse caso barGarantirPins() dá-lhes um quando forem precisos.
+            preg_match('/^\d{4}$/', (string)($c['bar_pin'] ?? '')) ? (string)$c['bar_pin'] : null,
         ];
-        $st->bind_param('sssssiissssissiiiis', ...$vals);   // 19 colunas, pela ordem acima
+        $st->bind_param('sssssiissssissiiiiss', ...$vals);  // 20 colunas, pela ordem acima
         if (!@$st->execute()) continue;
         $convId = $conn->insert_id; $feito['convites']++;
 

@@ -24,6 +24,10 @@
   var procuraMin = 4;
   var pedePin = false;                  // a casa pede os quatro dígitos do convite
   var achados = {};                     // id -> nome, para o ecrã do código
+  // Por quem estou a pedir. null = por mim, que é o estado normal e aquele a
+  // que a página volta sozinha depois de cada pedido: um «para outro» que se
+  // esquecesse ligado dava uma ronda inteira em nome do vizinho.
+  var para = null;                      // {id, nome, convite, mesa_id, pin}
   var menu = { categorias: [], itens: [] };
   var ritmo = null;          // o caudal da copa, quando está cheio
   var travaoPedido = null;   // «o próximo pedido abre em…»
@@ -207,6 +211,17 @@
 
   function pintarTopo() {
     $('b-eu').textContent = eu ? eu.nome : 'Bar';
+    var bp = $('b-para');
+    if (bp) {
+      bp.hidden = !eu;
+      bp.classList.toggle('on', !!para);
+      bp.innerHTML = para
+        ? '🙋 A pedir para <b>' + esc(para.nome) + '</b> <span aria-hidden="true">▾</span>'
+        : '🙋 Pedir por outra pessoa <span aria-hidden="true">▾</span>';
+      bp.setAttribute('aria-label', para
+        ? 'A pedir para ' + para.nome + '. Tocar para mudar ou voltar a si.'
+        : 'Pedir por outra pessoa que esteja consigo à mesa.');
+    }
     var bm = $('b-mesa');
     if (!eu) { bm.hidden = true; return; }
     bm.hidden = false;
@@ -353,6 +368,10 @@
     var totais = {};
     meus.forEach(function (p) {
       if (p.estado === 'recusado' || p.estado === 'cancelado') return;
+      // Só o que é MEU. A lista mostra também o que lancei por outros — para
+      // eu poder dizer «já vem» a quem mo pediu —, mas a conta de quantas
+      // levei é minha: a bebida da minha mãe não me pode aparecer na conta.
+      if (eu && p.para_id && p.para_id !== eu.id) return;
       (p.itens || []).forEach(function (l) {
         totais[l.nome] = (totais[l.nome] || 0) + l.quantidade;
       });
@@ -367,9 +386,18 @@
     return '<div class="b-meus"><div class="b-gaveta">Os meus pedidos</div>' + conta
       + meus.map(function (p) {
           var oq = p.itens.map(function (l) { return l.quantidade + '× ' + l.nome; }).join(', ');
+          // De quem é esta: a que lancei por outro, e a que outro lançou por
+          // mim. Sem estas duas linhas a lista misturava as bebidas da mesa
+          // toda sem dizer de quem eram.
+          var dequem = '';
+          if (eu && p.para_id && p.para_id !== eu.id) {
+            dequem = '<br><small>para ' + esc(p.para || 'outra pessoa') + '</small>';
+          } else if (p.pedido_por) {
+            dequem = '<br><small>pedido por ' + esc(p.pedido_por) + '</small>';
+          }
           return '<div class="b-meu">'
             + '<span class="cod">' + esc(p.codigo) + '</span>'
-            + '<span class="oq">' + esc(oq)
+            + '<span class="oq">' + esc(oq) + dequem
             +   (p.motivo ? '<br><small>' + esc(p.motivo) + '</small>' : '') + '</span>'
             + '<span class="b-est ' + esc(p.estado) + '">' + esc(p.estado_nome) + '</span>'
             + (p.estado === 'em_analise'
@@ -387,7 +415,10 @@
     rod.hidden = total === 0;
     if (!total) return;
     $('b-resumo').textContent = total + (total === 1 ? ' bebida' : ' bebidas')
-      + ' · ' + nomeDaMesa();
+      + (para ? ' para ' + para.nome : '') + ' · ' + nomeDaMesa();
+    // O botão diz o nome quando o pedido é de outra pessoa: é o último sítio
+    // onde alguém repara que se esqueceu de voltar a si.
+    $('b-pedir').textContent = para ? 'Pedir para ' + para.nome : 'Pedir';
     $('b-pedir').disabled = !aberto;
   }
 
@@ -438,6 +469,140 @@
     });
   };
 
+  // ---- pedir por outra pessoa -------------------------------
+  /**
+   * A mesma caixa de procura da entrada, agora dentro de uma janela.
+   *
+   * Numa mesa há sempre quem não tenha o telemóvel à mão, quem o tenha sem
+   * bateria, e quem simplesmente não queira lidar com aquilo — e pede ao
+   * vizinho. Isto já era possível pela porta errada: trocar de nome no
+   * telemóvel. Só que essa troca PRENDE o aparelho à outra pessoa, e a seguir
+   * as minhas bebidas passavam a contar na conta dela.
+   *
+   * Aqui o telemóvel continua meu. O que muda é de quem é a bebida — e, com
+   * ela, de quem é a quota: os limites que a página passa a mostrar são os de
+   * quem a vai beber.
+   */
+  window.barPara = async function () {
+    var lista = null;
+    licJanela('Pedir por outra pessoa',
+      '<p class="dica" style="margin:0 0 .7rem">Para quem está consigo à mesa e '
+      + 'não tem o telemóvel à mão. A bebida fica no nome dessa pessoa — e conta '
+      + 'para as bebidas dela, não para as suas.</p>'
+      + '<input id="b-pq" type="search" autocomplete="off" autocapitalize="words" '
+      +   'spellcheck="false" placeholder="O nome dessa pessoa" '
+      +   'aria-label="Procurar a pessoa por quem vai pedir" '
+      +   'style="width:100%;font-size:1.05rem;padding:.8rem .9rem;border-radius:12px;'
+      +   'border:1px solid rgba(0,0,0,.2)">'
+      + '<div class="b-nomes" id="b-pq-lista" role="listbox" style="margin-top:.7rem"></div>'
+      + (para
+          ? '<button type="button" class="btn btn-claro" style="width:100%;margin-top:.8rem" '
+            + 'onclick="barParaMim()">Voltar a pedir para mim</button>'
+          : ''),
+      null, { cancelar: 'Fechar' });
+
+    var cx = document.getElementById('b-pq-lista');
+    var cq = document.getElementById('b-pq');
+    if (!cq) return;
+    cq.focus();
+    var espera = null;
+    cq.addEventListener('input', function () {
+      clearTimeout(espera);
+      espera = setTimeout(async function () {
+        var termo = cq.value.trim();
+        if (termo.length < procuraMin) {
+          var faltam = procuraMin - termo.length;
+          cx.innerHTML = termo.length
+            ? '<div class="b-ajuda" style="margin:0">Falta' + (faltam > 1 ? 'm ' : ' ')
+              + faltam + (faltam > 1 ? ' letras.' : ' letra.') + '</div>'
+            : '';
+          return;
+        }
+        var d = await chamar('bar_procurar', undefined, { q: termo });
+        if (!d.success) { cx.innerHTML = '<div class="b-ajuda" style="margin:0">'
+          + esc(porque(d)) + '</div>'; return; }
+        if (!d.nomes.length) {
+          cx.innerHTML = '<div class="b-ajuda" style="margin:0">Ninguém com esse nome.</div>';
+          return;
+        }
+        lista = {};
+        d.nomes.forEach(function (n) { lista[n.id] = n; });
+        cx.innerHTML = d.nomes.map(function (n) {
+          // Eu próprio não entro na lista: para voltar a mim há o botão, que
+          // diz o que faz. Um nome meu ali seria a mesma coisa por um caminho
+          // que se lê pior.
+          if (eu && n.id === eu.id) return '';
+          return '<button class="b-nome" type="button" role="option" '
+            + 'onclick="barParaEste(' + n.id + ')"><b>' + esc(n.nome) + '</b>'
+            + '<span>' + esc(n.convite) + '</span></button>';
+        }).join('');
+      }, 220);
+    });
+    window.__barParaLista = function (id) { return lista ? lista[id] : null; };
+  };
+
+  window.barParaEste = async function (id) {
+    var n = window.__barParaLista ? window.__barParaLista(id) : null;
+    if (!n) return;
+    // O código do convite, quando a casa o pede E a pessoa é de outra família:
+    // agir por outro convite exige o segredo desse convite, senão o código não
+    // valia nada — bastava pedir «pelo padrinho» para o contornar.
+    if (pedePin && eu && n.convite !== eu.convite) {
+      licFecharJanela();
+      ecraPinPara(n, '');
+      return;
+    }
+    licFecharJanela();
+    await fixarPara({ id: n.id, nome: n.nome, convite: n.convite, pin: '' });
+  };
+
+  window.barParaMim = async function () {
+    licFecharJanela();
+    para = null;
+    cesto = {};
+    mesaEntrega = eu && eu.mesa_id ? await mesaPorId(eu.mesa_id) : MESA;
+    await carregarMenu();
+  };
+
+  /** Fixa por quem se está a pedir, e passa a ver o menu com os limites dela. */
+  async function fixarPara(p) {
+    para = p;
+    // O cesto era meu e passa a ser dela: as quantidades que lá estavam foram
+    // medidas contra as MINHAS quotas, e levá-las para o nome dela era pedir
+    // pela pessoa errada com a conta da outra.
+    cesto = {};
+    var d = await chamar('bar_menu', undefined, { por: p.id });
+    if (d.success && d.para && d.para.mesa_id) mesaEntrega = await mesaPorId(d.para.mesa_id);
+    await carregarMenu();
+  }
+
+  /** O código do convite de quem NÃO é da minha família. */
+  function ecraPinPara(n, aviso) {
+    licJanela('O código do convite de ' + esc(n.nome),
+      '<p class="dica" style="margin:0 0 .7rem">Quatro dígitos, no convite de '
+      + '<b>' + esc(n.convite) + '</b>. Sem ele não se pede por quem é de outra '
+      + 'família — e um empregado pede na mesma, se for preciso.</p>'
+      + '<input id="b-pq-pin" type="text" inputmode="numeric" autocomplete="off" '
+      +   'maxlength="4" pattern="[0-9]*" class="b-pin" placeholder="0000" '
+      +   'aria-label="Os quatro dígitos desse convite" '
+      +   'style="width:100%;padding:.8rem .9rem;border-radius:12px;'
+      +   'border:1px solid rgba(0,0,0,.2)">'
+      + '<div class="b-pin-erro" role="alert" aria-live="polite">' + esc(aviso) + '</div>',
+      async function () {
+        var c = document.getElementById('b-pq-pin');
+        var pin = c ? c.value : '';
+        // Confere-se aqui, e não no fim: descobrir que o código está errado só
+        // ao carregar em «Pedir», com as bebidas todas escolhidas, seria mandar
+        // a pessoa fazer o trabalho duas vezes.
+        var d = await chamar('bar_por_quem', { por_id: n.id, pin: pin });
+        if (!d.success) { licJanelaErro(porque(d)); return false; }
+        await fixarPara({ id: n.id, nome: n.nome, convite: n.convite, pin: pin });
+        return true;
+      }, { guardar: 'Confirmar' });
+    var c = document.getElementById('b-pq-pin');
+    if (c) c.focus();
+  }
+
   // ---- o pedido ---------------------------------------------
   window.barEnviar = async function () {
     var itens = Object.keys(cesto).map(function (k) {
@@ -445,14 +610,23 @@
     });
     if (!itens.length) return;
     var bt = $('b-pedir');
+    var rotulo = bt.textContent;
     bt.disabled = true; bt.textContent = 'A enviar…';
-    var d = await chamar('bar_pedir', {
-      itens: itens, mesa_id: mesaEntrega ? mesaEntrega.id : MESA.id, mesa_qr_id: MESA.id
-    });
-    bt.disabled = false; bt.textContent = 'Pedir';
+    var corpo = { itens: itens, mesa_id: mesaEntrega ? mesaEntrega.id : MESA.id,
+                  mesa_qr_id: MESA.id };
+    if (para) { corpo.por_id = para.id; corpo.pin = para.pin || ''; }
+    var d = await chamar('bar_pedir', corpo);
+    bt.disabled = false; bt.textContent = rotulo;
     if (!d.success) { janelaAviso('Não deu para pedir', esc(porque(d))); return; }
     cesto = {};
     recibo(d.pedido);
+    // Volta-se a mim, sempre. Deixar o «para outro» ligado depois de o pedido
+    // seguir era o erro fácil de cometer e caro de desfazer: a ronda seguinte
+    // saía toda em nome do vizinho, e a quota dele é que pagava.
+    if (para) {
+      para = null;
+      mesaEntrega = eu && eu.mesa_id ? await mesaPorId(eu.mesa_id) : MESA;
+    }
     // O menu inteiro, e não só «os meus pedidos»: pedir é o momento em que os
     // limites mudam, e um cartão que ficou sem quota tem de perder o «+» já.
     // A cadência normal levaria meio minuto — meio minuto em que a pessoa
@@ -471,9 +645,15 @@
   function recibo(p) {
     // O número curto é o que se diz em voz alta quando o empregado chega. É a
     // única coisa desta página que alguém tem de decorar por dois minutos.
+    var deOutro = eu && p.para_id && p.para_id !== eu.id;
     janelaAviso('Pedido enviado',
       '<div class="b-recibo"><div class="cod">' + esc(p.codigo) + '</div>'
-      + '<p>A copa está a ver. Diga este número a quem entregar.</p></div>',
+      + '<p>A copa está a ver. Diga este número a quem entregar.'
+      + (deOutro
+          ? '<br>Vai no nome de <b>' + esc(p.para) + '</b>, e conta para as bebidas '
+            + 'dessa pessoa. Voltámos a pôr os seus pedidos em seu nome.'
+          : '')
+      + '</p></div>',
       'Voltar ao menu');
   }
 
@@ -489,7 +669,10 @@
 
   // ---- carregar e refrescar ---------------------------------
   async function carregarMenu() {
-    var d = await chamar('bar_menu');
+    // Com «por», o menu vem com os limites de quem vai beber. É o que faz o
+    // «+» desaparecer numa bebida que essa pessoa já não pode pedir — mostrar
+    // as minhas quotas e recusar no fim seria uma promessa a fingir.
+    var d = await chamar('bar_menu', undefined, para ? { por: para.id } : null);
     if (!d.success) { $('b-corpo').innerHTML = falhou(d); return; }
     menu = { categorias: d.categorias, itens: d.itens };
     aberto = !!d.aberto;

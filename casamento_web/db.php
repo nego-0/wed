@@ -196,7 +196,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 37;
+const ESQUEMA_VERSAO = 38;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1751,7 +1751,8 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 motivo_texto VARCHAR(200) DEFAULT NULL,
                 dispositivo CHAR(64) DEFAULT NULL,
                 ip VARCHAR(45) DEFAULT NULL,
-                criado_por VARCHAR(80) DEFAULT NULL,
+                criado_por VARCHAR(80) DEFAULT NULL,        -- a conta do pessoal, quando foi o pessoal
+                criado_por_convidado_id INT DEFAULT NULL,   -- o convidado, quando pediu por outro
                 criado_em DATETIME NOT NULL,
                 decidido_por VARCHAR(80) DEFAULT NULL,
                 decidido_em DATETIME DEFAULT NULL,
@@ -1903,6 +1904,23 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}convites", 'bar_pin', "CHAR(4) DEFAULT NULL");
         migColuna($conn, "{$P}convites", 'bar_pin_falhas', "TINYINT NOT NULL DEFAULT 0");
         migColuna($conn, "{$P}convites", 'bar_pin_ate', "DATETIME DEFAULT NULL");
+    }
+
+    // v38 — o convidado que pede por outro convidado.
+    //
+    // Já se podia pedir por outra pessoa, mas só trocando o nome do telemóvel
+    // (§5.3) — e essa troca REBINDA o aparelho: o pedido ficava a dizer que
+    // quem pediu foi a outra pessoa, e quem pediu de facto desaparecia. Uma
+    // coluna resolve-o, e o rasto fica melhor do que estava.
+    //
+    // Não se aproveitou o `criado_por` que já existe: esse é a conta do
+    // pessoal (uma string de login), e um nome de convidado lá dentro ficava
+    // indistinguível de um empregado — a copa deixava de saber se o pedido
+    // veio do balcão ou da mesa 12, que é justamente o que ela precisa de ver.
+    if ($versaoAtual < 38) {
+        migColuna($conn, "{$P}bar_pedidos", 'criado_por_convidado_id', "INT DEFAULT NULL");
+        migIndice($conn, "{$P}bar_pedidos", 'idx_barped_porquem',
+                  'casamento_id, criado_por_convidado_id');
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
@@ -2081,6 +2099,7 @@ function nomesDeAcao(): array {
         'bar_soltou'        => ['soltou um telemóvel do bar', 'bar'],
         'bar_pin_errado'    => ['errou o código do bar', 'bar'],
         'bar_pin_soltou'    => ['levantou o travão do código', 'bar'],
+        'bar_pedido_amigo'  => ['pediu no bar por outro convidado', 'bar'],
         'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
         'bar_dispositivo_solto' => ['desprendeu um telemóvel de um nome', 'bar'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],

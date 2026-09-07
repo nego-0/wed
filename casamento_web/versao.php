@@ -555,6 +555,18 @@ function correcoesEsperadas(): array {
          'assets/estilo.css', '--ink-fraco:'],
         ['Bar: o anel de foco existe no escuro do salão',
          'assets/bar.css', 'body.b-noite button:focus-visible'],
+
+        // ---- O convidado pede por outro convidado ----
+        ['Bar: um convidado pede por outro sem trocar o nome do telemóvel',
+         'api.php', 'function barParaQuem('],
+        ['Bar: a quota é de quem bebe, e não de quem pede',
+         'api.php', '$vp = barVeredictoPedido($conn, $paraId, $conviteId);'],
+        ['Bar: o pedido guarda os dois nomes, e a copa vê-os',
+         'assets/bar-copa.js', 'p.pedido_por'],
+        ['Bar: a pastilha «a pedir para» apaga-se sozinha depois de cada pedido',
+         'assets/bar-convidado.js', 'window.barParaMim'],
+        ['Bar: o código do convite viaja com a exportação',
+         'api.php', 'c.bar_pin'],
     ];
 }
 

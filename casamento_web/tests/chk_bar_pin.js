@@ -141,7 +141,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await t.fill('#b-pin', errado);
   await t.click('.b-pin-bt');
   await t.waitForTimeout(800);
-  ok(/não é o do seu convite/i.test(await t.locator('#b-pin-erro').innerText()),
+  ok(/não confere/i.test(await t.locator('#b-pin-erro').innerText()),
      'um código errado não entra: ' + (await t.locator('#b-pin-erro').innerText()));
   ok(await t.locator('#b-pin').count() === 1,
      'e a pessoa fica no ecrã do código — não volta a escrever o nome por um dígito');
@@ -173,7 +173,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     }
     return { quem: um, ditos: out };
   }, [token, alvo.convite]);
-  ok(bater.ditos.slice(0, 4).every(m => /não é o do seu convite/i.test(m)),
+  ok(bater.ditos.slice(0, 4).every(m => /não confere/i.test(m)),
      'as primeiras tentativas dizem só que o código está errado');
   ok(/muitas tentativas/i.test(bater.ditos[4] || ''),
      'à quinta, o convite fecha-se: «' + bater.ditos[4] + '»');

@@ -110,7 +110,10 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
 <header class="b-festa-topo">
   <div class="mono"><?= escP($CAS['casal']) ?></div>
   <div class="eu" id="b-eu">Bar</div>
-  <button class="b-mesa" id="b-mesa" type="button" onclick="barMesa()" hidden></button>
+  <div class="b-pastilhas">
+    <button class="b-mesa" id="b-mesa" type="button" onclick="barMesa()" hidden></button>
+    <button class="b-mesa b-para" id="b-para" type="button" onclick="barPara()" hidden></button>
+  </div>
 </header>
 
 <main class="b-corpo" id="b-corpo">

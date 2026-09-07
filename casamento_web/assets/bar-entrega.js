@@ -118,6 +118,11 @@
     if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) {
       onde += ' <span style="opacity:.7">(pediu na ' + esc(p.mesa_qr) + ')</span>';
     }
+    // Quem entrega precisa de saber que a bebida é de outra pessoa: bate-se à
+    // mesa e diz-se o nome de quem a vai beber, não o de quem a pediu.
+    if (p.pedido_por) {
+      onde += ' <span style="opacity:.7">(pedido por ' + esc(p.pedido_por) + ')</span>';
+    }
     return '<div class="b-cartao b-ped' + (p.estado === 'a_caminho' && !deOutro ? ' minha' : '') + '">'
       + '<div class="b-ped-topo">'
       +   '<span class="cod">' + esc(p.codigo) + '</span>'

@@ -230,6 +230,38 @@ O que fica de pé, por ordem de força:
    módulo cumpre com verdade é a do telemóvel, e o PIN é uma segunda tranca,
    não um cofre.
 
+### 5.2.1 Pedir por outro convidado, da própria página
+
+Numa mesa há sempre quem não tenha o telemóvel à mão, quem o tenha sem bateria,
+e quem simplesmente não queira lidar com aquilo — e pede ao vizinho. A página
+do convidado tem por isso uma pastilha **«pedir por outra pessoa»**: procura-se
+o nome, escolhe-se, e o pedido segue no nome dela.
+
+**Isto não abre uma porta nova.** Já se podia pedir por outra pessoa antes, e
+pela porta pior: trocando de nome no telemóvel (§5.3). Só que essa troca
+**prende o aparelho** à outra pessoa, e a partir daí o pedido dizia que quem
+pediu foi ela — quem pediu de facto desaparecia, e as bebidas seguintes saíam
+todas no nome errado até alguém reparar. Pedir «por» deixa **melhor** rasto do
+que a porta que substitui: o pedido guarda os dois nomes, e o telemóvel
+continua de quem é.
+
+O que se manteve, e é o que faz a coisa não ser um buraco:
+
+| | |
+|---|---|
+| **A quota é de quem bebe** | Os limites (§8) contam-se contra a pessoa nomeada. Pedir por outro não é maneira de furar um tecto — é maneira de gastar o dela. Uma regra que a proíba trava o pedido, tenha-o feito quem o tiver feito |
+| **O menu é o dela** | Com «por», o menu vem com os tectos e as esperas de quem vai beber. Mostrar as minhas quotas e recusar no fim seria uma promessa a fingir |
+| **Dentro do convite é livre** | Como já era: a família é a unidade doméstica de todo o módulo |
+| **Para outro convite obedece a `bar.trocar_nome`** | O mesmo interruptor que governa a troca de nome, porque é a mesma pergunta: este telemóvel pode agir por outra família? |
+| **Com o PIN ligado, outro convite exige o código dele** | Sem isto o PIN não valia nada — bastava não trocar de nome e pedir «pelo padrinho» para o contornar por inteiro |
+| **A copa vê os dois nomes** | «Convidado Três · pedido por Convidada Dois», na fila e no ecrã das entregas |
+| **Volta-se a si sozinho** | Depois de cada pedido a pastilha apaga-se. Um «a pedir para outro» esquecido ligado dava a ronda seguinte inteira em nome do vizinho, à conta dele — e é o erro fácil de cometer e caro de desfazer |
+
+Quem lançou o pedido também o pode cancelar, e vê-o na sua lista marcado «para
+X»: quem pediu pela mãe é quem vai querer saber se já chegou. A conta pessoal
+— o «já pediu 3 cervejas» — continua a ser só a dele: a bebida da mãe não lhe
+entra na conta.
+
 ### 5.3 O telemóvel prende-se ao nome
 
 No momento em que alguém se escolhe na lista, o browser recebe um testemunho
@@ -845,6 +877,12 @@ CREATE TABLE cw_bar_dispositivos (
 
 ALTER TABLE cw_mesas ADD COLUMN bar_token CHAR(12) DEFAULT NULL;
 
+-- v38: o convidado que pede por outro convidado. Não se aproveita o
+-- criado_por que já existe: esse é a conta do PESSOAL, e um nome de convidado
+-- lá dentro ficava indistinguível de um empregado — a copa deixava de saber se
+-- o pedido veio do balcão ou da mesa 12.
+ALTER TABLE cw_bar_pedidos ADD COLUMN criado_por_convidado_id INT DEFAULT NULL;
+
 -- v37: a hora a que uma regra entra, e os quatro dígitos do convite.
 ALTER TABLE cw_bar_limites ADD COLUMN vigora_em DATETIME DEFAULT NULL;
 ALTER TABLE cw_convites ADD COLUMN bar_pin CHAR(4) DEFAULT NULL;
@@ -864,7 +902,10 @@ Definições novas em `cw_definicoes` (por casamento): `bar.aberto`,
 `ESQUEMA_VERSAO` a subir para 36. As tabelas criam-se vazias: um casamento sem
 o módulo nunca lhes toca.
 
-**v37**, depois, para o que faltava: `bar_limites.vigora_em` (a hora a que uma
+**v38** é uma coluna só, `bar_pedidos.criado_por_convidado_id`: o convidado que
+lançou o pedido, quando não é quem o bebe (§5.2.1).
+
+**v37**, antes disso, para o que faltava: `bar_limites.vigora_em` (a hora a que uma
 regra entra, simétrica de `expira_em`) e três colunas em `cw_convites` —
 `bar_pin`, `bar_pin_falhas` e `bar_pin_ate`. O código vive no convite e não na
 pessoa pela razão de §5.2; as duas ao lado são o travão, e contam-se contra o
@@ -886,10 +927,11 @@ com o módulo `bar` na licença.
 |---|---|---|
 | `bar_mesa` | `m` (token) | A mesa, o estado do bar, e quem este telemóvel já é (se já é alguém) |
 | `bar_procurar` | `q` (≥ 4 letras) | Até 8 nomes, cada um com o seu convite. Menos de 4 letras: erro pedagógico, não lista vazia |
-| `bar_sou` | `convidado_id` | Prende o telemóvel a essa pessoa; devolve o testemunho e, se for troca, a bandeira que a copa vai ver |
+| `bar_sou` | `convidado_id`, `pin?` | Prende o telemóvel a essa pessoa; devolve o testemunho e, se for troca, a bandeira que a copa vai ver |
+| `bar_por_quem` | `por_id`, `pin?` | «Vou pedir por esta pessoa» — confirma-se ANTES de escolher as bebidas (§5.2.1) |
 | `bar_mesas` | — | As mesas, para escolher a de entrega (§4.2) |
-| `bar_menu` | — | Categorias, itens (foto, disponível, quanto pode pedir), espera, limites |
-| `bar_pedir` | `itens[]`, `mesa_id?` | Pedido criado, ou a recusa com o motivo e as alternativas |
+| `bar_menu` | `por?` | Categorias, itens (foto, disponível, quanto pode pedir), espera, limites. Com `por`, os limites são os de quem vai beber |
+| `bar_pedir` | `itens[]`, `mesa_id?`, `por_id?`, `pin?` | Pedido criado, ou a recusa com o motivo e as alternativas |
 | `bar_meus_pedidos` | — | Os pedidos desta pessoa, com estado e tempos |
 | `bar_cancelar` | `pedido_id` | Só enquanto `em_analise` |
 | `bar_pulso` | `desde` | O que mudou nos pedidos dela + a espera actual |
@@ -978,6 +1020,7 @@ com um `desde` não pagava o cuidado de o manter certo (§18).
 | `tests/chk_bar_numeros.js` | A previsão de rutura, e o que o convidado não vê |
 | `tests/chk_bar_pin.js` | Os quatro dígitos do convite, o travão, e o empregado a servir mesmo assim |
 | `tests/chk_bar_desenho.js` | O dedo, a fuga lateral, o anel de foco, o vazio e as cores inventadas (§25.14) |
+| `tests/chk_bar_por_outro.js` | Pedir por outro convidado: a quota é de quem bebe, os dois nomes ficam, e o código do convite continua a valer (§5.2.1) |
 | `docs/modulo-bar.md` | Este documento |
 
 **Que mudam**
@@ -1229,6 +1272,11 @@ que está mesmo instalado.
 > * No escuro do salão **não havia anel de foco**: os `.btn` da casa ficavam com
 >   um contorno de 0 px branco e os links do cabeçalho com o anel do browser, de
 >   1 px quase preto. Num ecrã escuro, os dois são o mesmo que nada.
+> * A exportação do casamento **não levava o `bar_pin`**. Levar os dados e
+>   trazê-los de volta invalidava em silêncio todos os códigos já impressos — e
+>   em silêncio é o pior modo de falhar, porque só se dá por isso na festa, com
+>   as folhas na mão. O travão fica de fora de propósito: é o estado de um
+>   minuto, e não um dado do casal.
 
 Cada fase é entregável sozinha e deixa a casa a funcionar. As estimativas são
 minhas e grosseiras — dias de trabalho, não promessas — e **já contam com o

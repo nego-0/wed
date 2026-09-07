@@ -99,6 +99,14 @@ os convidados lá entram (é o que vai no QR pousado em cada mesa):
 armazém. É esta separação que impede vender a última garrafa duas vezes — e é
 o que a prova `tests/chk_bar.js` mais defende.
 
+**Um convidado pode pedir por outro** — para quem está à mesa sem o telemóvel
+à mão. A bebida fica no nome de quem a vai beber, e conta para as bebidas dela:
+pedir por outro é gastar a quota dessa pessoa, não furar a própria. O pedido
+guarda os dois nomes, e a copa vê-os. Isto já era possível antes trocando de
+nome no telemóvel, mas essa troca prendia o aparelho à outra pessoa e apagava
+quem tinha pedido de facto — a porta nova deixa melhor rasto do que a que
+substitui.
+
 **Os quatro dígitos do convite** (`bar_pin` em `cw_convites`) são opcionais e
 vêm desligados. Com o link fora do convite, o nome de um convidado deixou de
 ser segredo; o código devolve-o, e é do convite e não da pessoa, porque o
