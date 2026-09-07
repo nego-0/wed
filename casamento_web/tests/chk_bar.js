@@ -344,9 +344,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     await copa.evaluate(t => { try { localStorage.setItem('tema', t); } catch (e) {} }, tema);
     await copa.reload({ waitUntil: 'networkidle' });
     await copa.waitForTimeout(700);
+    // O par medido é o mesmo de sempre — um rótulo apagado e um número claro
+    // sobre o fundo escuro —, mas mudou de casa: a barra de contagens do topo
+    // deu lugar ao interruptor (§25.19), porque repetia números que já viviam
+    // nas pastilhas. Se um dia o interruptor sair também, isto rebenta com um
+    // «não é um Element», que é a maneira de a prova dizer que perdeu o pé.
     const m = await copa.evaluate(() => ({
-      rotulo: getComputedStyle(document.querySelector('.b-barra .l')).color,
-      numero: getComputedStyle(document.querySelector('.b-barra .n')).color,
+      rotulo: getComputedStyle(document.querySelector('.b-chave .numeros small')).color,
+      numero: getComputedStyle(document.querySelector('.b-chave .numeros b')).color,
       texto:  getComputedStyle(document.body).color,
       fundo:  getComputedStyle(document.body).backgroundImage.slice(0, 48)
     }));
