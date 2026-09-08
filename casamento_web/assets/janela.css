@@ -58,29 +58,13 @@ body.editor .pl-modal{
   --j-sans:     'Jost', system-ui, -apple-system, sans-serif;
 }
 
-/* No salão do bar — a copa e as entregas — passa-se o mesmo que nos editores,
-   e por uma razão ainda mais forte: quem abre uma janela ali está no escuro
-   há cinco horas, com o ecrã no mínimo de brilho, e um cartão branco no meio
-   é uma lanterna na cara. A janela segue o salão.
-
-   As cores saem dos --sala-*, que nenhum tema redefine (é a hora da noite que
-   manda no salão, não a paleta do casal), e por isso a janela fica igual nos
-   quatro temas — tal como o ecrã por baixo dela. */
-body.b-noite .pl-modal{
-  --j-veu:      rgba(4, 10, 16, .72);
-  --j-card:     var(--sala-carta, #1B2E42);
-  --j-ink:      var(--sala-tinta, #F6F8F4);
-  --j-texto:    #DCE4EA;
-  --j-fraco:    var(--sala-fraco, #A6B4BF);
-  --j-linha:    rgba(233,223,201,.20);
-  --j-campo:    rgba(0,0,0,.28);
-  --j-ouro:     var(--sala-ouro-claro, #8CD24A);
-  --j-ouro-tx:  #0C1925;
-  --j-ouro-pal: rgba(140,210,74,.20);
-  --j-perigo:   #E8938A;
-  --j-perigo-bg:rgba(232,147,138,.18);
-  --j-anel:     rgba(140,210,74,.32);
-}
+/* Os ecrãs do bar tiveram aqui uma paleta própria, de salão escuro, porque a
+   página por baixo era escura em qualquer tema e um cartão branco no meio
+   dela é uma lanterna na cara. Já não é o caso: a copa e as entregas seguem o
+   tema como o resto da casa (ver assets/bar.css), e o bloco de cima — o que
+   dá os --j-* a partir dos tokens do tema — chega para as vestir a todas. Uma
+   janela escura passa a ser o que sempre devia ter sido: o que se vê quando o
+   tema escolhido é o escuro. */
 
 /* ---------- o corpo da janela ---------- */
 /* Rola por dentro: há textos longos aqui (as políticas, por exemplo)
@@ -168,6 +152,53 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-f-c textarea{ resize:vertical; line-height:1.5; }
 .lic-f-d{ font-size:.75rem; color:var(--j-fraco); line-height:1.45; }
 .lic-f-d b{ color:var(--j-ink); }
+
+/* ---- a escolha com procura (ver assets/janela.js) ----
+   Veste-se como um campo, porque é um campo: quem olha para o formulário não
+   tem de descobrir que aquela caixa é de outra família. O que muda é o que ela
+   abre — uma lista com uma caixa de procura em cima. */
+.lic-sel{ position:relative; }
+.lic-sel-bt{ width:100%; display:flex; align-items:center; gap:.5rem; cursor:pointer;
+  padding:.55rem .7rem; border:1.5px solid var(--j-linha); border-radius:9px;
+  background:var(--j-campo); font-family:var(--j-sans); font-size:.9rem;
+  color:var(--j-ink); text-align:left; min-height:42px;
+  transition:border-color .15s ease, box-shadow .15s ease; }
+.lic-sel-bt .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; }
+.lic-sel-bt .ico{ width:16px; height:16px; flex:none; color:var(--j-fraco);
+  transition:transform .15s ease; }
+.lic-sel-bt[aria-expanded="true"] .ico{ transform:rotate(180deg); }
+.lic-sel-bt:hover{ border-color:var(--j-ouro); }
+.lic-sel-bt:focus-visible{ outline:none; border-color:var(--j-ouro);
+  box-shadow:0 0 0 3px var(--j-anel); }
+/* Por cima de tudo o que a janela tenha por baixo, e nunca a empurrar o
+   formulário: uma lista que empurrasse os campos fazia o botão «Guardar»
+   fugir para fora do ecrã a meio de uma escolha. */
+.lic-sel-pop{ position:absolute; z-index:5; left:0; right:0; top:calc(100% + 4px);
+  background:var(--j-card); border:1.5px solid var(--j-linha); border-radius:11px;
+  box-shadow:0 14px 34px rgba(0,0,0,.28); overflow:hidden; }
+.lic-sel-q{ display:flex; align-items:center; gap:.45rem; padding:.5rem .6rem;
+  border-bottom:1px solid var(--j-linha); }
+.lic-sel-q .ico{ width:15px; height:15px; flex:none; color:var(--j-fraco); }
+.lic-sel-q input{ flex:1; min-width:0; border:0; background:none; padding:.15rem 0;
+  font-family:var(--j-sans); font-size:.88rem; color:var(--j-ink); }
+.lic-sel-q input:focus{ outline:none; }
+.lic-sel-lista{ max-height:230px; overflow-y:auto; padding:.25rem; }
+.lic-sel-op{ display:flex; align-items:center; gap:.5rem; width:100%; text-align:left;
+  border:0; background:none; cursor:pointer; padding:.5rem .55rem; border-radius:7px;
+  font:inherit; font-size:.88rem; color:var(--j-ink); min-height:38px; }
+.lic-sel-op > span{ flex:1; min-width:0; }
+/* O visto é desenhado, e não o carácter ✓: nas fontes que não o têm sai o
+   quadrado do «não sei desenhar isto», e o que ficava sem sinal era
+   justamente a linha escolhida. É a mesma razão do visto do selector de tema. */
+.lic-sel-op .ico{ width:15px; height:15px; flex:none; opacity:0; color:var(--j-ouro); }
+/* `sob` é onde as setas estão; `on` é o que está escolhido. São duas coisas
+   diferentes e por isso têm duas marcas: sem isso, andar com o teclado parecia
+   estar a escolher a cada tecla. */
+.lic-sel-op.sob{ background:var(--j-ouro-pal); }
+.lic-sel-op.on{ color:var(--j-ouro); font-weight:600; }
+.lic-sel-op.on .ico{ opacity:1; }
+.lic-sel-nada{ padding:.8rem .7rem; font-size:.82rem; color:var(--j-fraco); }
 /* O sim/não é um CAMPO, e num formulário em grelha tem de pesar como os
    outros. Solto no branco, ao lado de três caixas com contorno, lia-se como
    uma nota de rodapé — e era uma definição que muda o comportamento da casa.

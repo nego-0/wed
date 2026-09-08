@@ -163,7 +163,15 @@ function licFormulario(cfg){
           campo = '<label class="lic-f-sim"><input type="checkbox" id="lf-' + c.id + '"'
                 + (c.valor ? ' checked' : '') + '><span>' + licEsc(c.aoLado || 'Sim') + '</span></label>';
         } else if (c.tipo === 'escolha'){
-          campo = '<select id="lf-' + c.id + '">'
+          // Uma lista curta é melhor como <select>: é o que o telemóvel sabe
+          // desenhar em roda, e ninguém procura entre três coisas. A partir de
+          // uma dúzia o <select> passa a ser uma parede — dezasseis bebidas,
+          // duzentos convidados — e aí a procura deixa de ser um luxo.
+          // `procura: true` força-a; `procura: false` proíbe-a.
+          const muitas = (c.opcoes || []).length > LIC_SEL_MUITAS;
+          const comProcura = c.procura === undefined ? muitas : !!c.procura;
+          campo = comProcura ? licSelProcuraHtml(c, v)
+                : '<select id="lf-' + c.id + '">'
                 + (c.opcoes || []).map(o =>
                     '<option value="' + licEsc(o.v) + '"' + (String(o.v) === v ? ' selected' : '') + '>'
                     + licEsc(o.r) + '</option>').join('')
@@ -246,6 +254,183 @@ function licFormulario(cfg){
     return await cfg.aoGuardar(vals);
   }, { guardar: cfg.guardar, perigo: cfg.perigo, largo: cfg.largo });
   ligarCores();
+  // A escolha com procura guarda o valor num <input type=hidden> com o mesmo
+  // id de sempre — por isso o leitor acima não sabe que ela existe, e não
+  // precisa de saber.
+  licSelProcuraLigar();
+  // A última palavra é de quem montou o formulário: há campos que só fazem
+  // sentido consoante a resposta de outro, e essa regra é do formulário e não
+  // desta função. Recebe uma ajuda para esconder e mostrar linhas, que é o
+  // caso comum e o único que valia a pena poupar a quem chama.
+  if (cfg.aoMontar) cfg.aoMontar({
+    campo: (id) => document.getElementById('lf-' + id),
+    linha: (id) => {
+      const el = document.getElementById('lf-' + id);
+      return el ? el.closest('.lic-f-c') : null;
+    },
+    mostrar: (id, sim) => {
+      const el = document.getElementById('lf-' + id);
+      const linha = el ? el.closest('.lic-f-c') : null;
+      if (linha) linha.hidden = !sim;
+    }
+  });
+}
+
+/* ============================================================
+   A ESCOLHA COM PROCURA
+
+   Uma lista de dezasseis bebidas ou de duzentos convidados dentro de um
+   <select> é uma parede: rola-se à procura do nome, passa-se ao lado, e
+   recomeça-se. O que se quer é escrever três letras.
+
+   É nativo, e não Select2. O Select2 faz exactamente isto e fá-lo bem, mas
+   traz o jQuery atrás (são ~160KB para uma caixa de procura), e traz a sua
+   própria linguagem de cores — que teria de ser reescrita nos quatro temas da
+   casa, mais o modo de leitura, mais as janelas dos editores, que se vestem
+   por --j-*. É a mesma conta que se fez ao Bootstrap (docs §25.20) e dá o
+   mesmo resultado: o que aqui falta não é uma biblioteca, é um componente, e
+   o componente são setenta linhas que já falam a língua da casa.
+
+   O que faz: abre, filtra sem olhar a acentos, anda com as setas, escolhe com
+   Enter, fecha com Escape ou com um clique fora. O valor vive num campo
+   escondido com o id de sempre (`lf-<id>`), e por isso tudo o que lê
+   formulários continua a ler este como lia um <select>.
+   ============================================================ */
+const LIC_SEL_MUITAS = 8;
+
+/** Sem acentos e em minúsculas: quem escreve de pé não põe acentos nenhuns. */
+function licChave(s){
+  return String(s == null ? '' : s)
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+function licSelProcuraHtml(c, v){
+  const ops = c.opcoes || [];
+  const esc = ops.find(o => String(o.v) === String(v)) || ops[0] || { v: '', r: '—' };
+  return '<div class="lic-sel" data-sel="' + licEsc(c.id) + '">'
+    + '<input type="hidden" id="lf-' + licEsc(c.id) + '" value="' + licEsc(esc.v) + '">'
+    + '<button type="button" class="lic-sel-bt" aria-haspopup="listbox" aria-expanded="false">'
+    +   '<span class="txt">' + licEsc(esc.r) + '</span>'
+    +   '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    +   'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    +   '<path d="m6 9 6 6 6-6"/></svg>'
+    + '</button>'
+    + '<div class="lic-sel-pop" hidden>'
+    +   '<div class="lic-sel-q">'
+    +     '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    +     'stroke-width="1.8" stroke-linecap="round" aria-hidden="true">'
+    +     '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
+    +     '<input type="search" autocomplete="off" placeholder="'
+    +       licEsc(c.dicaProcura || 'Escreva para procurar') + '" '
+    +       'aria-label="Procurar em ' + licEsc(c.rot) + '">'
+    +   '</div>'
+    +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(c.rot) + '">'
+    +     ops.map(o => licSelOpcaoHtml(o, esc.v)).join('')
+    +   '</div>'
+    +   '<div class="lic-sel-nada" hidden>Nada com esse nome.</div>'
+    + '</div></div>';
+}
+
+/**
+ * Uma linha da lista.
+ *
+ * Vive numa função sua, e não numa `.map()` embutida na de cima, por uma razão
+ * que já custou uma tarde: esta folha alinha as cadeias de texto pondo o `+`
+ * no princípio da linha, e dentro de uma arrow function isso encontra-se com o
+ * `+` do operador. `'texto' + + (x ? ' on' : '')` é uma soma com um MAIS
+ * UNÁRIO à frente — que converte ' on' em número, dá NaN, e cola «NaNNaNNaN»
+ * ao fim de cada opção. O ecrã mostrava «Cervejas NaNNaNNaN» e a procura não
+ * filtrava nada, porque os atributos do meio também se tinham desfeito.
+ * Separada, a linha é uma expressão normal e a armadilha não existe.
+ */
+function licSelOpcaoHtml(o, escolhido){
+  const on = String(o.v) === String(escolhido) ? ' on' : '';
+  return '<button type="button" role="option" class="lic-sel-op' + on + '"'
+       + ' data-v="' + licEsc(o.v) + '"'
+       + ' data-k="' + licEsc(licChave(o.r)) + '">'
+       + '<span>' + licEsc(o.r) + '</span>'
+       + '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+       + ' stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"'
+       + ' aria-hidden="true"><path d="M20 6.5 9.2 17.3 4 12.1"/></svg>'
+       + '</button>';
+}
+
+function licSelProcuraLigar(){
+  document.querySelectorAll('#lic-janela .lic-sel').forEach(cx => {
+    if (cx.dataset.ligado) return;
+    cx.dataset.ligado = '1';
+    const guardado = cx.querySelector('input[type=hidden]');
+    const bt   = cx.querySelector('.lic-sel-bt');
+    const pop  = cx.querySelector('.lic-sel-pop');
+    const q    = cx.querySelector('.lic-sel-q input');
+    const nada = cx.querySelector('.lic-sel-nada');
+    const ops  = () => Array.from(cx.querySelectorAll('.lic-sel-op'));
+    const vivas = () => ops().filter(o => !o.hidden);
+
+    const abrir = (sim) => {
+      // Abrir uma fecha as outras. O clique no botão pára a propagação (senão
+      // o ouvinte de «clicar fora» fechava-a no mesmo gesto que a abriu), e
+      // sem isto duas listas ficavam abertas por cima uma da outra.
+      if (sim){
+        document.querySelectorAll('#lic-janela .lic-sel').forEach(outra => {
+          if (outra === cx) return;
+          const p = outra.querySelector('.lic-sel-pop');
+          const b = outra.querySelector('.lic-sel-bt');
+          if (p) p.hidden = true;
+          if (b) b.setAttribute('aria-expanded', 'false');
+        });
+      }
+      pop.hidden = !sim;
+      bt.setAttribute('aria-expanded', sim ? 'true' : 'false');
+      if (sim){ q.value = ''; filtrar(); q.focus(); }
+    };
+    const escolher = (op) => {
+      guardado.value = op.dataset.v;
+      bt.querySelector('.txt').textContent = op.querySelector('span').textContent;
+      ops().forEach(o => o.classList.toggle('on', o === op));
+      abrir(false); bt.focus();
+      // Quem montou o formulário pode querer reagir à escolha (mostrar outro
+      // campo, por exemplo). Um evento, e não um callback: assim o campo não
+      // precisa de saber quem está a ouvir.
+      guardado.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const filtrar = () => {
+      const k = licChave(q.value);
+      ops().forEach(o => { o.hidden = k !== '' && o.dataset.k.indexOf(k) < 0; });
+      const n = vivas().length;
+      nada.hidden = n > 0;
+      ops().forEach(o => o.classList.remove('sob'));
+      if (n) vivas()[0].classList.add('sob');
+    };
+    const andar = (passo) => {
+      const lista = vivas();
+      if (!lista.length) return;
+      let i = lista.findIndex(o => o.classList.contains('sob'));
+      i = i < 0 ? 0 : Math.min(lista.length - 1, Math.max(0, i + passo));
+      lista.forEach(o => o.classList.remove('sob'));
+      lista[i].classList.add('sob');
+      lista[i].scrollIntoView({ block: 'nearest' });
+    };
+
+    bt.addEventListener('click', (e) => { e.stopPropagation(); abrir(pop.hidden); });
+    q.addEventListener('input', filtrar);
+    q.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown'){ e.preventDefault(); andar(1); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); andar(-1); }
+      else if (e.key === 'Enter'){
+        e.preventDefault();
+        const sob = cx.querySelector('.lic-sel-op.sob');
+        if (sob) escolher(sob);
+      } else if (e.key === 'Escape'){ e.stopPropagation(); abrir(false); bt.focus(); }
+    });
+    cx.querySelectorAll('.lic-sel-op').forEach(o => {
+      o.addEventListener('click', (e) => { e.stopPropagation(); escolher(o); });
+    });
+    // Um clique fora fecha. O ouvinte vive na janela e morre com ela.
+    (document.getElementById('lic-janela') || document).addEventListener('click', (e) => {
+      if (!cx.contains(e.target)) abrir(false);
+    });
+  });
 }
 
 /**

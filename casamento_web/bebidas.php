@@ -113,14 +113,33 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
 </head>
 <body class="b-festa">
 
-<header class="b-festa-topo">
+<?php // ---- A abertura -------------------------------------------------
+      // Não é colante, e é de propósito: aparece uma vez, ao chegar, e depois
+      // sai da frente. Esta página é a única do módulo que um CONVIDADO vê, e
+      // durante muito tempo abria como um formulário — o nome do casal em
+      // corpo pequeno e logo os botões. Um bar de casamento não se apresenta
+      // assim: dá-se o nome da casa, e só depois o balcão. ?>
+<header class="b-festa-capa">
+  <div class="marca">O bar da festa</div>
   <div class="mono"><?= escP($CAS['casal']) ?></div>
+  <?php // O filete: dois traços e um losango, desenhados em CSS. Um ornamento
+        // que fosse imagem tinha de ser servido, e esta página abre-se com a
+        // rede do salão; que fosse um carácter (❦, ◆) saía como o quadrado do
+        // «não sei desenhar isto» nas fontes que não o têm. ?>
+  <div class="filete" aria-hidden="true"><i></i><span></span><i></i></div>
+  <div class="lema" id="b-lema">Escolha o que lhe apetece — um garçom leva à mesa.</div>
+</header>
+
+<?php // ---- A barra de trabalho ------------------------------------------
+      // Esta sim é colante: quem está a rolar o menu precisa de ver sempre em
+      // nome de quem está a pedir e para que mesa vai. ?>
+<div class="b-festa-topo">
   <div class="eu" id="b-eu">Bar</div>
   <div class="b-pastilhas">
     <button class="b-mesa" id="b-mesa" type="button" onclick="barMesa()" hidden></button>
     <button class="b-mesa b-para" id="b-para" type="button" onclick="barPara()" hidden></button>
   </div>
-</header>
+</div>
 
 <main class="b-corpo" id="b-corpo">
   <div class="b-esq" style="height:120px;margin-bottom:.8rem"></div>

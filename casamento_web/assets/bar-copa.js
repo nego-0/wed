@@ -58,7 +58,9 @@
     pintarFerramentas();
     // Com os números à vista é a eles que a volta serve: pintarFila() sai
     // pela porta do lado para não os apagar por baixo de quem os está a ler.
-    if (VER.aba === 'num') pintarNumeros(); else pintarFila();
+    if (VER.aba === 'num') pintarNumeros();
+    else if (VER.aba === 'regras') pintarRegras();
+    else pintarFila();
     pintarStock();
     pintarBandeiras();
   }
@@ -121,8 +123,14 @@
     ['analise', 'Por decidir',   'analise'],
     ['espera',  'Por entregar',  'tabuleiro'],
     ['fim',     'Já resolvidos', 'visto'],
-    ['num',     'Os números',    'grafico']
+    ['num',     'Os números',    'grafico'],
+    // As regras entram aqui, a seguir aos números, e não como um link para
+    // bar.php: bar.php é dos noivos, e o copeiro que lá carregasse aterrava na
+    // página de entrada — o atalho mandava-o para fora do próprio posto.
+    ['regras',  'Regras do Bar', 'trancado']
   ];
+  /** As abas que não são a fila: têm painel próprio e não usam a procura. */
+  function abaDePainel(a) { return a === 'num' || a === 'regras'; }
 
   function pintarFerramentas() {
     var e = EST.estado || {};
@@ -140,14 +148,14 @@
                              accao: 'copaFiltro(\'' + a[0] + '\')' });
         }).join('')
       + '</div>'
-      + (VER.aba === 'num' ? ''
+      + (abaDePainel(VER.aba) ? ''
          : campoBusca('q-fila', 'Procurar código, nome ou mesa', VER.busca));
     // As pastilhas SÃO as abas: o papel tem de acompanhar o desenho.
     Array.prototype.forEach.call(fer.querySelectorAll('.b-pilula'), function (b, n) {
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', VER.aba === ABAS[n][0] ? 'true' : 'false');
     });
-    if (VER.aba !== 'num') {
+    if (!abaDePainel(VER.aba)) {
       ligarBusca('q-fila', function (v) { VER.busca = v; pintarFila(); });
       // Quem estava a escrever continua a escrever: só se devolve o foco se
       // ele já cá estava, e nunca na primeira pintura da página.
@@ -164,7 +172,9 @@
     // não os de há dez minutos enquanto a leitura nova não chega.
     if (qual !== 'num') numAmarrado = false;
     pintarFerramentas();
-    if (qual === 'num') pintarNumeros(); else pintarFila();
+    if (qual === 'num') pintarNumeros();
+    else if (qual === 'regras') pintarRegras();
+    else pintarFila();
   };
 
   function pedidosDaAba() {
@@ -388,9 +398,34 @@
       + ico.ico('seta') + '</button>';
   }
 
+  /* ---- as Regras do Bar, dentro da copa -------------------------
+     O MESMO painel da montagem (assets/bar-regras.js), montado no mesmo sítio
+     onde vive a fila. Antes havia aqui um atalho para bar.php#regras — e
+     bar.php é dos noivos: o copeiro que lhe carregasse era mandado para a
+     página de entrada, a meio de uma noite de trabalho. */
+  var regrasMontadas = false;
+  function pintarRegras() {
+    var cx = $('b-fila');
+    if (VER.aba !== 'regras') return;
+    if (!regrasMontadas) {
+      regrasMontadas = true;
+      cx.innerHTML = '<div id="pn-regras-cx"></div>';
+      window.BR.montar({ alvo: 'pn-regras-cx' });
+    } else if (!document.getElementById('pn-regras-cx')) {
+      // A fila esteve cá pelo meio e levou o painel: volta a montar-se.
+      regrasMontadas = false;
+      pintarRegras();
+    } else {
+      window.BR.pintar();
+    }
+  }
+
   function pintarFila() {
     var cx = $('b-fila');
-    if (VER.aba === 'num') return;
+    if (abaDePainel(VER.aba)) return;
+    // A fila e os painéis dividem o mesmo espaço; ao voltar a ela, o painel
+    // que lá estava sai — e o próximo regresso volta a montá-lo.
+    regrasMontadas = false;
     var todos = pedidosDaAba();
     if (!todos.length) {
       var v = VAZIOS[VER.aba] || VAZIOS.fim;
@@ -772,9 +807,11 @@
   // ---- a ficha de um convidado, com as regras dele ---------------
   // É uma coisa que se faz a correr, no meio da festa, com a pessoa à frente:
   // «este senhor já vai no quinto whisky», «esta senhora está grávida».
+  var fichaAberta = null;
   window.copaFicha = async function (id) {
     var d = await window.api('bar_ficha&convidado=' + id, { method: 'GET' });
     if (!d || !d.success) return;
+    fichaAberta = { id: id, nome: d.convidado.nome };
     // «2× whisky (1 por servir)» — para quem está a decidir, a diferença entre
     // o que já bebeu e o que ainda está na fila é a informação toda.
     var levou = d.levou.length
@@ -807,77 +844,30 @@
       + '<div style="margin-top:.7rem">'
       +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
       +     ico.ico('mais') + 'Regra nova</button>'
-      + '</div>'
-      + '<div class="j-sec">' + ico.ico('pessoas') + 'Telemóveis</div>'
-      + (d.dispositivos.length
-          ? d.dispositivos.map(function (t) {
-              return '<div class="j-linha"><span>um telemóvel'
-                + (t.trocas ? ' <small>(já pediu por ' + (t.trocas + 1) + ' pessoas)</small>' : '')
-                + '</span><button type="button" class="j-x" title="Soltar este telemóvel" '
-                + 'aria-label="Soltar este telemóvel" onclick="copaSoltar('
-                + t.id + ',' + id + ')">' + ico.ico('mudar') + '</button></div>';
-            }).join('')
-          : '<p class="dica">Nenhum — ainda ninguém se escolheu neste nome.</p>')
-      + '<p class="dica">Soltar serve quando a vida dá um nó: um telemóvel '
-      +   'emprestado, um nome escolhido por engano. O próximo a abrir a página '
-      +   'volta a escolher-se.</p>', null, { cancelar: 'Fechar' });
+      + '</div>', null, { cancelar: 'Fechar' });
+    // A lista dos telemóveis e o «Soltar» saíram daqui. Eram a manutenção de
+    // uma coisa que a ficha não é: a ficha existe para decidir o que esta
+    // pessoa pode beber, e três linhas sobre que aparelho se escolheu em que
+    // nome só tiravam espaço à única pergunta que se faz a meio de uma festa.
   };
 
-  /** Uma regra escreve-se como quem fala, com listas em vez de campos. */
+  /* ---- a regra de uma pessoa -----------------------------------
+     Já não é um formulário à parte. É a janela das Regras do Bar
+     (assets/bar-regras.js) com o «a quem» já respondido: uma regra de pessoa é
+     uma EXTENSÃO das regras da casa, e não uma segunda espécie de regra com a
+     sua própria gramática. Havia duas janelas parecidas, com campos
+     diferentes, e era por aí que as duas telas começavam a discordar. */
   window.copaRegraNova = function (convidadoId) {
-    var itens = (EST.itens || []).map(function (i) { return { v: 'i' + i.id, r: i.nome }; });
-    var cats  = (EST.categorias || []).map(function (c) { return { v: 'c' + c.id, r: c.nome }; });
-    var sobre = [{ v: 'tudo', r: 'qualquer bebida' }].concat(cats, itens);
-    licFormulario({
-      titulo: 'Regra para esta pessoa',
-      guardar: 'Pôr a regra',
-      largo: true,
-      dica: 'Três números dizem tudo: <b>0</b> proíbe; <b>N</b> sem intervalo é um '
-          + 'tecto para a noite; <b>N</b> com intervalo é «N de cada vez».',
-      campos: [
-        { id: 'sobre', rot: 'Pode pedir', tipo: 'escolha', valor: 'tudo', opcoes: sobre },
-        { id: 'quantidade', rot: 'No máximo', tipo: 'numero', valor: 1, min: 0, max: 99,
-          dica: '0 = não pode pedir isto.' },
-        { id: 'janela_min', rot: 'A cada (minutos)', tipo: 'numero', valor: 0, min: 0, max: 1440,
-          dica: '0 = é um tecto para a noite inteira.' },
-        // As horas são a última linha da tabela de §8: «nada de destilados
-        // antes das 21h» é a regra que SAI às 21h. Vazias, vale a noite toda.
-        { id: 'vigora_hora', rot: 'A partir das', tipo: 'hora', valor: '',
-          dica: 'Vazio, vale já.' },
-        { id: 'expira_hora', rot: 'Até às', tipo: 'hora', valor: '',
-          dica: 'Vazio, vale até ao fim. Uma hora já passada é a madrugada seguinte.' },
-        { id: 'mensagem', rot: 'O que ele lê', tipo: 'text', valor: '', largura: 2,
-          dica: 'Vazio, lê o texto de sempre. Nunca lê a nota.' },
-        { id: 'nota', rot: 'Porquê (só nós vemos)', tipo: 'text', valor: '', largura: 2,
-          dica: 'Ex.: «pediu-nos para o travarmos», «conduz».' }
-      ],
-      aoGuardar: async function (v) {
-        var escopo = 'tudo', alvo = 0;
-        if (v.sobre.charAt(0) === 'i') { escopo = 'item';      alvo = parseInt(v.sobre.slice(1), 10); }
-        else if (v.sobre.charAt(0) === 'c') { escopo = 'categoria'; alvo = parseInt(v.sobre.slice(1), 10); }
-        var d = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify({
-          escopo: escopo, alvo_id: alvo, sujeito: 'convidado', alvo_convidado_id: convidadoId,
-          unidade: 'bebidas', quantidade: parseInt(v.quantidade, 10) || 0,
-          janela_min: parseInt(v.janela_min, 10) || 0,
-          vigora_hora: v.vigora_hora, expira_hora: v.expira_hora,
-          mensagem: v.mensagem, nota: v.nota }) });
-        if (!d || !d.success) return false;
-        toast('Regra posta. Vale já.');
-        await carregar(true);
-        avisarFora(d.fora);
-        licFecharJanela();
-        copaFicha(convidadoId);
-        return false;
-      }
-    });
+    var nome = (fichaAberta && fichaAberta.nome) || '';
+    licFecharJanela();
+    window.barRegraNova({ convidado_id: convidadoId, nome: nome });
   };
 
-  window.copaSoltar = async function (id, convidadoId) {
-    var d = await window.api('bar_soltar', { method: 'POST', body: JSON.stringify({ id: id }) });
-    if (!d || !d.success) return;
-    toast('Telemóvel solto.');
-    licFecharJanela();
-    copaFicha(convidadoId);
+  /** Depois de pôr ou levantar uma regra pela janela partilhada: a copa
+      recarrega, avisa do que deixou de caber, e volta à ficha de onde saiu. */
+  window.barRegraPosta = function (r, pre) {
+    avisarFora(r && r.fora);
+    if (pre && pre.convidado_id) copaFicha(pre.convidado_id);
   };
 
   window.copaRegraFora = async function (id, convidadoId) {
@@ -996,26 +986,23 @@
       + (n.mesa ? ' — entrega na ' + esc(n.mesa) : ' — sem mesa marcada');
   };
 
-  /* ---- os atalhos da coluna do stock ---------------------------
-     Três coisas que se fazem a meio da noite e que não pertencem à fila: pedir
-     por quem não tem rede, arrumar os motivos de recusa, e mudar as regras da
-     casa quando a festa muda de feição. Empilhados e com o ícone na mesma
-     coluna leem-se como uma lista do que se pode fazer — e não como três
-     botões cinzentos ao acaso. */
-  function pintarAtalhos() {
-    var cx = $('b-atalhos');
-    if (!cx || !PODE) { if (cx) cx.innerHTML = ''; return; }
-    // «Pedir por um convidado» subiu para o topo da fila, que é onde o gesto
-    // acontece. Os motivos e as regras foram para a montagem: são decisões do
-    // casal, e tomam-se antes da festa (§27). Fica a porta para lá, para quem
-    // precisar de as ver a meio da noite.
-    cx.innerHTML =
-        '<a class="btn btn-fantasma" href="bar.php#regras">'
-      +   ico.ico('trancado') + 'Ver as regras da casa</a>';
-  }
+  /* A coluna do stock teve aqui uma lista de atalhos. Ficou vazia: «pedir por
+     um convidado» subiu para o topo da fila, que é onde o gesto acontece, e as
+     regras passaram a ser uma aba desta mesma página. O que restava era um
+     botão a mandar o copeiro para bar.php — uma página a que ele não tem
+     acesso, e que portanto o punha na tela de entrada. Um atalho que expulsa
+     quem lhe carrega é pior do que atalho nenhum. */
 
   // ---- o relógio ------------------------------------------------
-  pintarAtalhos();
+  // O módulo das regras liga-se ANTES da primeira leitura, e não quando o
+  // separador se abre: a janela de uma regra de pessoa sai da ficha, e a ficha
+  // abre-se da fila — sem isto, quem nunca tivesse ido ao separador das regras
+  // abria a janela com o «Sobre o quê» vazio.
+  window.BR.ligar({
+    estado: function () { return EST || {}; },
+    pode: PODE,
+    recarregar: function () { return carregar(true); }
+  });
   carregar();
   relogio = setInterval(function () { if (!document.hidden) carregar(true); }, 8000);
   // Os «há N min» envelhecem sozinhos entre leituras: sem isto, um pedido

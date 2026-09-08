@@ -251,6 +251,7 @@
     }
 
     html += pintarMeus();
+    html += rodapeDaCasa();
     $('b-corpo').innerHTML = html;
     if (menu.itens.length) ligarBusca('q-menu', function (v) { busca = v; pintarMenu(); });
     pintarTopo();
@@ -343,9 +344,24 @@
                + esc(a.nome) + '</button>';
         }).join(' ') + '</div>' : '';
 
+    // Duas marcas de canto na fotografia, que o convidado não tinha e a copa
+    // sempre teve: o que leva álcool, e o que está quase a acabar. A segunda
+    // é uma cortesia — quem sabe que restam três escolhe agora em vez de
+    // descobrir daqui a meia hora que ficou sem.
+    var marcas = '';
+    if (i.alcoolico) {
+      marcas += '<span class="b-selo alc" title="Com álcool" aria-label="Com álcool">'
+              + ico.ico('gota') + '</span>';
+    }
+    if (!travada && i.disponivel > 0 && i.disponivel <= 6) {
+      marcas += '<span class="b-selo pouca">' + ico.ico('aviso')
+              + 'Restam ' + i.disponivel + '</span>';
+    }
+
     return '<div class="b-bebida' + (travada ? ' esgotada' : '') + (n ? ' no-cesto' : '')
       + '" id="bb-' + i.id + '" style="--tinta:' + esc(i.categoria_cor || 'transparent') + '">'
-      + foto(i)
+      + '<div class="cx-foto">' + foto(i)
+      +   (marcas ? '<div class="selos">' + marcas + '</div>' : '') + '</div>'
       + '<div class="nm">' + esc(i.nome) + '</div>'
       + (i.descricao ? '<div class="ds">' + esc(i.descricao) + '</div>' : '')
       + (travada && i.aviso ? '<div class="ds">' + esc(i.aviso) + '</div>' : '')
@@ -380,6 +396,26 @@
     el.classList.add('b-aponta');
     setTimeout(function () { el.classList.remove('b-aponta'); }, 1600);
   };
+
+  /**
+   * O fecho da página.
+   *
+   * Não é enfeite: a página acabava no ar, e o que ficava por dizer era
+   * justamente o que a pessoa pergunta ao garçom — «e agora?». Três linhas
+   * respondem: o pedido vai à copa, alguém o traz, e é este o sítio onde ele
+   * é entregue. O nome da mesa repete-se aqui de propósito: quem chega ao fim
+   * do menu já rolou para longe da barra onde ele estava.
+   */
+  function rodapeDaCasa() {
+    var onde = nomeDaMesa();
+    return '<footer class="b-festa-pe">'
+      + '<div class="filete" aria-hidden="true"><i></i><span></span><i></i></div>'
+      + '<p>O pedido segue para a copa e um garçom leva-o'
+      +   (onde ? ' à <b>' + esc(onde) + '</b>' : ' à sua mesa') + '.</p>'
+      + '<p class="fraco">Pode fechar a página — quando voltar a abri-la, está '
+      +   'tudo onde estava.</p>'
+      + '</footer>';
+  }
 
   function pintarMeus() {
     if (!meus.length) return '';

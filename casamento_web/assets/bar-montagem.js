@@ -255,7 +255,7 @@
   var ABAS = { menu:   ['taca',     'O menu'],
                gav:    ['caixa',    'Gavetas'],
                mesas:  ['qr',       'Mesas e QR'],
-               regras: ['trancado', 'Regras da casa'],
+               regras: ['trancado', 'Regras do Bar'],
                gente:  ['pessoas',  'A equipa'] };
   Object.keys(ABAS).forEach(function (k) {
     var el = $('ab-' + k); if (!el) return;
@@ -274,163 +274,34 @@
   };
 
   /* ============================================================
-     AS REGRAS DA CASA, E OS MOTIVOS DE RECUSA
+     AS REGRAS DO BAR
 
-     Vinham da copa, em duas janelas de atalho. Estavam no sítio errado por
-     duas razões: são decisões do CASAL (o que a casa serve, e como fala com
-     quem recusa), e tomam-se ANTES da festa, com tempo — não às onze da noite
-     entre dois pedidos, num tablet à meia-luz.
+     Vinham da copa, em duas janelas de atalho, e passaram por aqui: são
+     decisões do CASAL — o que a casa serve, e como fala com quem recusa — e
+     tomam-se antes da festa, com tempo.
 
-     O que fica na copa é o que lá tem de estar: escrever um motivo à mão em
-     cada recusa. A lista poupa a escrita; nunca a proíbe.
+     Só que o painel deixou de ser daqui. Chamava-se «Regras da casa», tinha as
+     definições e os motivos, e não tinha os LIMITES — os tectos e os
+     intervalos, que é o que mesmo trava um pedido. Esses só se punham pela
+     ficha de uma pessoa, na copa, e portanto só existiam por pessoa: o
+     convidado esbarrava num intervalo da casa que ecrã nenhum sabia mostrar.
+
+     Agora o painel vive em assets/bar-regras.js e é montado nos DOIS sítios —
+     aqui e na copa. O mesmo ficheiro, e não duas cópias parecidas: era assim
+     que voltavam a divergir.
      ============================================================ */
-  var DEFINICOES = [
-    ['bar.mensagem_fechado', 'O que dizer quando está fechado', 'area',
-     'Aparece no menu do convidado enquanto a copa não abre. '
-   + 'Ex.: «O bar abre depois do brinde, por volta das 21h.»'],
-    ['bar.procura_min', 'Letras para procurar o nome', 'numero',
-     'Quantas letras o convidado escreve antes de a lista aparecer. '
-   + 'Menos letras, mais nomes de cada vez.'],
-    ['bar.ip_modo', 'Pedidos da mesma rede', 'escolha',
-     'Numa festa quase todos partilham o mesmo wi-fi: «estrito» é para salas '
-   + 'onde cada mesa tem a sua rede.'],
-    ['bar.trocar_nome', 'Trocar de nome no mesmo telemóvel', 'sim',
-     'Um telemóvel por pessoa é a regra. Isto abre a excepção — e avisa a copa '
-   + 'sempre que acontece.']
-  ];
-  var IP_MODOS = { registo: 'Registar, sem incomodar',
-                   aviso:   'Registar e avisar a copa',
-                   estrito: 'Recusar o segundo nome' };
-
+  var regrasMontadas = false;
   function pintarRegras() {
-    var f = (EST && EST.defs) || {};
-    var tits = document.querySelectorAll('#pn-regras .b-sec');
-    if (tits[0]) tits[0].innerHTML = ico.ico('trancado') + 'Como o bar se porta';
-    if (tits[1]) tits[1].innerHTML = ico.ico('nota') + 'Motivos de recusa';
-
-    $('b-defs').innerHTML = DEFINICOES.map(function (d) {
-      var v = f[d[0]];
-      var lido, fraco = false;
-      if (d[2] === 'sim')      { lido = v === '1' ? 'Sim' : 'Não'; fraco = v !== '1'; }
-      else if (d[2] === 'escolha') lido = IP_MODOS[v] || IP_MODOS.registo;
-      else if (d[0] === 'bar.procura_min') lido = (v || '4') + ' letras';
-      else { lido = v ? '«' + v + '»' : 'sem texto'; fraco = !v; }
-      return '<div class="b-def"><span class="txt"><b>' + esc(d[1]) + '</b>'
-        + '<small>' + esc(d[3]) + '</small></span>'
-        + '<span class="val' + (fraco ? ' nao' : '') + '">' + esc(lido) + '</span></div>';
-    }).join('')
-      + (PODE ? '<div style="margin-top:1rem"><button class="btn btn-ouro" '
-              + 'onclick="barRegrasEditar()">' + ico.ico('lapis') + 'Mudar as regras</button></div>'
-              : '');
-
-    // A procura só se monta uma vez; a lista repinta-se sempre.
-    if (!$('q-mot') && PODE) {
-      $('b-fer-mot').innerHTML = campoBusca('q-mot', 'Procurar um motivo', VER.buscaMot || '')
-        + '<button class="btn btn-ouro" onclick="barMotivoNovo()">'
-        + ico.ico('mais') + 'Motivo</button>';
-      ligarBusca('q-mot', function (v) { VER.buscaMot = v; pintarMotivos(); });
+    // Montar uma vez, repintar sempre. Voltar a montar a cada visita ao
+    // separador limpava as caixas de procura — e quem escreveu «whisky» para
+    // achar uma regra não espera que o separador ao lado lhe apague a procura.
+    if (!regrasMontadas) {
+      regrasMontadas = true;
+      window.BR.montar({ alvo: 'pn-regras-cx' });
+    } else {
+      window.BR.pintar();
     }
-    pintarMotivos();
   }
-
-  function pintarMotivos() {
-    var cx = $('b-motivos'); if (!cx) return;
-    var todos = (EST.motivos || []);
-    if (!todos.length) {
-      cx.innerHTML = vazio('nota', 'Ainda sem motivos guardados',
-        'Sem lista, o copeiro escreve tudo à mão — o que a meio da noite '
-      + 'quer dizer que escreve pouco.',
-        PODE ? '<button class="btn btn-ouro" onclick="barMotivoNovo()">'
-             + ico.ico('mais') + 'Primeiro motivo</button>' : '');
-      return;
-    }
-    var q = chave(VER.buscaMot || '');
-    var lista = q ? todos.filter(function (m) { return chave(m.texto).indexOf(q) >= 0; }) : todos;
-    if (!lista.length) {
-      cx.innerHTML = vazio('procurar', 'Nada com esse nome', 'São ' + todos.length + ' motivos.');
-      return;
-    }
-    cx.innerHTML = lista.map(function (m) {
-      return '<div class="b-mot"><span>' + esc(m.texto) + '</span>'
-        + (PODE ? btIco('lixo', 'Tirar este motivo', 'barMotivoApagar(' + m.id + ')', 'perigo') : '')
-        + '</div>';
-    }).join('');
-  }
-
-  window.barMotivoNovo = function () {
-    licFormulario({
-      titulo: 'Motivo de recusa',
-      guardar: 'Guardar',
-      dica: 'O convidado lê isto no telemóvel. Escreva-o como o diria em pessoa — '
-          + 'e diga o que HÁ, não só o que falta.',
-      campos: [{ id: 'texto', rot: 'O motivo', valor: '', largura: 2,
-                 dica: 'Ex.: «Acabou o espumante — temos vinho branco fresco.»' }],
-      aoGuardar: async function (v) {
-        if (!v.texto) { licJanelaErro('Escreva o motivo.'); return false; }
-        var d = await window.api('bar_motivo_guardar', { method: 'POST',
-          body: JSON.stringify({ texto: v.texto }) });
-        if (!d || !d.success) return false;
-        toast('Motivo guardado.');
-        await carregar();
-        pintarRegras();
-        return true;
-      }
-    });
-  };
-
-  window.barMotivoApagar = async function (id) {
-    var m = (EST.motivos || []).filter(function (x) { return +x.id === +id; })[0];
-    var r = await licConfirmar({ titulo: 'Tirar este motivo?', icone: 'lixo', perigo: true,
-      texto: m ? '«' + m.texto + '» deixa de aparecer na lista do copeiro. As recusas que '
-                 + 'já o usaram ficam como estão.' : '',
-      confirmar: 'Tirar', cancelar: 'Deixar' });
-    if (!r.sim) return;
-    var d = await window.api('bar_motivo_apagar', { method: 'POST', body: JSON.stringify({ id: id }) });
-    if (!d || !d.success) return;
-    toast('Fora da lista.');
-    await carregar();
-    pintarRegras();
-  };
-
-  window.barRegrasEditar = function () {
-    var f = (EST && EST.defs) || {};
-    licFormulario({
-      titulo: 'Regras da casa',
-      guardar: 'Guardar',
-      largo: true,
-      dica: 'Como o bar se porta com quem pede. Pode mudar-se a meio da noite, '
-          + 'e vale a partir do instante seguinte.',
-      campos: [
-        { id: 'bar.mensagem_fechado', rot: 'O que dizer quando está fechado', tipo: 'area',
-          linhas: 2, valor: f['bar.mensagem_fechado'] || '', largura: 2,
-          dica: 'Ex.: «O bar abre depois do brinde, por volta das 21h.»' },
-        { id: 'bar.procura_min', rot: 'Letras para procurar o nome', tipo: 'numero',
-          valor: f['bar.procura_min'] || '4', min: 1, max: 8,
-          dica: 'Menos letras, mais nomes de cada vez na lista.' },
-        { id: 'bar.ip_modo', rot: 'Pedidos da mesma rede', tipo: 'escolha',
-          valor: f['bar.ip_modo'] || 'registo',
-          opcoes: Object.keys(IP_MODOS).map(function (k) { return { v: k, r: IP_MODOS[k] }; }),
-          dica: 'Numa festa quase todos partilham o mesmo wi-fi: «estrito» é '
-              + 'para salas onde cada mesa tem a sua rede.' },
-        { id: 'bar.trocar_nome', rot: 'Trocar de nome no mesmo telemóvel', tipo: 'sim',
-          valor: f['bar.trocar_nome'] === '1', aoLado: 'Deixar, avisando a copa', largura: 2,
-          dica: 'Um telemóvel por pessoa é a regra da casa (§5.3). Isto abre a '
-              + 'excepção — e a copa fica a saber de cada vez que acontece.' }
-      ],
-      aoGuardar: async function (v) {
-        var env = {};
-        Object.keys(v).forEach(function (k) {
-          env[k] = (k === 'bar.trocar_nome') ? (v[k] ? '1' : '0') : String(v[k]);
-        });
-        var d = await window.api('bar_defs', { method: 'POST', body: JSON.stringify(env) });
-        if (!d || !d.success) return false;
-        toast('Regras guardadas.');
-        await carregar();
-        pintarRegras();
-        return true;
-      }
-    });
-  };
 
   /* ============================================================
      A EQUIPA DO BAR
@@ -762,5 +633,12 @@
     inp.click();
   };
 
+  // O módulo das regras liga-se ao arrancar, e não quando o separador se abre:
+  // é dele que sai a janela de uma regra, e essa pode ser aberta de fora.
+  window.BR.ligar({
+    estado: function () { return EST || {}; },
+    pode: PODE,
+    recarregar: carregar
+  });
   carregar();
 })();

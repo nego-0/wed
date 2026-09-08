@@ -55,6 +55,12 @@
    * procura que não serve o sítio onde é usada.
    */
   function chave(s) {
+    // Uma implementação só. A mesma conta vive em janela.js (licChave), porque
+    // a escolha com procura precisa dela em páginas que não carregam esta
+    // folha — e duas cópias da mesma regra são duas cópias que divergem: já
+    // aconteceu neste módulo, quando cada ecrã trazia a sua procura e uma
+    // ignorava acentos e a outra não. Aqui prefere-se a de lá quando existe.
+    if (typeof window.licChave === 'function') return window.licChave(s);
     return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   }
 

@@ -1593,6 +1593,13 @@ O menu do convidado é uma montra, não uma lista de texto.
 
 ### 25.10 O escuro do salão
 
+> **Revogado em §28.1.** O que se segue descreve o desenho como esteve de pé
+> até à terceira passagem, e fica escrito porque o raciocínio continua certo —
+> aqueles dois ecrãs *querem* ser escuros. O que estava errado era o modo: em
+> vez de o impor com uma paleta imune ao tema, o escuro passou a ser o **tema
+> «escuro»**, escolhido por quem lá trabalha. Ler §28.1 antes de tomar isto
+> por descrição do que está instalado.
+
 `copa.php` e `entregas.php` usam-se numa sala às escuras, cinco horas seguidas.
 
 - Fundo escuro do tema (`--forest-deep` → `--forest`), como a página do
@@ -2214,3 +2221,206 @@ ecrã, que se lia através dele.
 
 `chk_bar_pin.js` foi apagada: provava uma coisa que deixou de existir, e uma
 prova que sobrevive à funcionalidade é uma prova que passa a mentir.
+
+---
+
+## 28. A terceira passagem: o módulo entra no sistema
+
+A segunda passagem tratou do que o uso mostrou. Esta trata de uma coisa mais
+funda: o bar estava a portar-se como um produto à parte dentro da casa. Tinha
+paleta própria, tinha regras que só ele sabia onde guardar, e tinha um ecrã
+que mandava quem lá trabalha para a porta da rua.
+
+### 28.1 **[decisão]** O salão escuro sai; o tema entra
+
+Durante três fases a copa e as entregas foram escuras **por decreto**. O
+argumento era bom e continua a ser verdade: aqueles dois ecrãs ficam cinco
+horas ligados num canto do salão, à meia-luz, e um cartão a 100% de brilho
+cega quem o segura. Para o garantir existia uma família de tokens — os
+`--sala-*` — que tema nenhum redefinia, e uma prova (`chk_bar.js` §8b) que
+media exactamente isso: que a copa fosse **igual nos quatro temas**.
+
+Saiu tudo. A razão é de uma linha: **um módulo que não obedece ao tema não
+pertence ao sistema.** Quem escolhe um tema escolhe-o para a casa toda, e ter
+um canto a ignorá-lo é a definição de remendo — por muito bem fundamentado que
+o remendo seja.
+
+O escuro não se perdeu; mudou de dono. Estes ecrãs já têm o botão do tema
+(§27.11), e quem for passar a noite na copa escolhe «escuro» uma vez. Passou a
+ser uma escolha de quem lá está em vez de uma imposição de quem escreveu a
+folha — que é a mesma resposta, dada pela pessoa certa.
+
+O que ficou da história é a **medida**, que nunca foi cor: a classe passou a
+chamar-se `b-servico` e só diz que ali os alvos são de 48 e 56px, porque ali
+se trabalha de pé com um tabuleiro na outra mão.
+
+A prova virou-se ao contrário e passou a defender duas coisas: que a copa
+**muda** com o tema, e que em qualquer dos quatro se continua a ler (o pior
+par mede 6.0:1, contra o mínimo de 4.5 que §25.13 exige).
+
+| Saiu | Onde estava |
+|---|---|
+| A família `--sala-*` inteira | `assets/estilo.css` |
+| 56 regras `body.b-noite` de cor | `assets/bar.css` |
+| A paleta de salão das janelas | `assets/janela.css` |
+
+### 28.2 As Regras do Bar são uma aba da copa
+
+A copa tinha um botão «Ver as regras da casa» que apontava para
+`bar.php#regras`. `bar.php` é dos noivos: um copeiro que lhe carregasse era
+mandado para a tela de entrada, a meio de uma noite de trabalho. Um atalho que
+expulsa quem lhe carrega é pior do que atalho nenhum.
+
+Agora é uma **aba da própria copa**, a seguir a «Os números». E não é uma
+segunda versão do painel — é o **mesmo ficheiro** (`assets/bar-regras.js`)
+montado nos dois sítios. Duas cópias parecidas do mesmo ecrã foi exactamente
+como as regras começaram a divergir.
+
+### 28.3 **[decisão]** Os limites passam a ter ecrã
+
+Aqui estava o buraco que dava o sintoma que se via de fora — «os intervalos
+parecem diferentes na página de pedidos e na copa».
+
+O painel «Regras da casa» tinha as **definições** (como se procura um nome, o
+que dizer quando está fechado) e os **motivos de recusa**. Não tinha os
+**limites** — os tectos e os intervalos, que é o que realmente trava um
+pedido. Esses só se punham pela ficha de uma pessoa, na copa, e portanto só
+existiam **por pessoa**. A API sempre soube guardar uma regra da casa; não
+havia era por onde a escrever.
+
+O resultado: o convidado esbarrava em travões que ecrã nenhum sabia mostrar, e
+a copa mostrava-lhe outros. As Regras do Bar passaram a ter as três coisas, e
+os limites aparecem agrupados por alcance:
+
+| Grupo | O que conta |
+|---|---|
+| O caudal da copa | Quantas bebidas a copa serve por período, seja quem for que peça |
+| Para toda a gente | O que vale para cada convidado, um a um |
+| Para um convite | A mesma conta, partilhada pela família |
+| Para uma pessoa | A extensão, com nome — a que se abre clicando na fila |
+
+### 28.4 **[correcção]** A mesma regra lida de duas maneiras
+
+E havia uma divergência a sério, no motor, por baixo do sintoma.
+
+Uma regra da casa contada em **pedidos** («a copa aceita 30 pedidos de 5 em 5
+minutos») era avaliada por dois caminhos que discordavam:
+
+- `barRitmoDaCasa()` apanhava-a — não filtrava por unidade — e fechava **todas
+  as bebidas, uma a uma**, com a mensagem do caudal;
+- `barVeredictoPedido()` ignorava-a, porque só olhava para regras «de
+  convidado».
+
+A mesma linha da base de dados fazia coisas diferentes consoante quem a lesse.
+Agora tem um dono só: o caudal conta **bebidas**, e o que se conta em
+**pedidos** trava o acto de pedir e diz-se na faixa que fecha a página — com o
+tom certo, porque quem esbarra no caudal da copa não pediu de mais e não se
+lhe fala como se tivesse pedido.
+
+### 28.5 O garçom volta a poder pedir
+
+`entPedirPor()` — a janela «Pedir por alguém», que existe porque há sempre
+quem não tenha rede — lia a lista de bebidas de `bar_estado`. `bar_estado` é a
+leitura da **copa**: a fila, o stock, as regras, as notas. O garçom não tem
+acesso a ela, e bem. O que chegava ao ecrã era um `403` disfarçado de lista
+vazia, e a janela dizia «Não há nada disponível para pedir» com a copa cheia
+de garrafas.
+
+Ficou com porta própria — `bar_itens_pedir` —, aberta aos dois postos e com só
+o que a janela precisa.
+
+### 28.6 As regras de pessoa são uma extensão, não uma espécie
+
+Havia duas janelas parecidas com campos diferentes: a das regras da casa e a
+da ficha de uma pessoa. É assim que duas telas começam a dizer coisas
+diferentes sobre a mesma noite.
+
+Agora é **uma** janela. A ficha abre-a com o «a quem» já respondido. O copeiro
+continua a clicar no nome na fila para lá chegar — o gesto não mudou; mudou o
+que se abre.
+
+### 28.7 A escolha com procura, e porque não é o Select2
+
+Uma lista de dezasseis bebidas ou de duzentos convidados dentro de um
+`<select>` é uma parede: rola-se à procura do nome, passa-se ao lado, e
+recomeça-se.
+
+Foi pedido o Select2, e o Select2 faz isto e fá-lo bem. Ficou de fora, pela
+mesma conta que deixou o Bootstrap de fora (§25.20):
+
+- traz o **jQuery** atrás — ~160KB para uma caixa de procura, numa página que
+  se abre com a rede de um salão;
+- traz a **sua** linguagem de cores, que teria de ser reescrita nos quatro
+  temas, mais o modo de leitura, mais as janelas dos editores, que se vestem
+  por `--j-*`.
+
+O que faltava não era uma biblioteca — era um componente, e o componente são
+setenta linhas em `janela.js` que já falam a língua da casa. Abre, filtra sem
+olhar a acentos, anda com as setas, escolhe com Enter, fecha com Escape. O
+valor vive num campo escondido com o id de sempre, e por isso **tudo o que lê
+formulários continua a ler este como lia um `<select>`**.
+
+Aparece sozinha a partir de oito opções; `procura: true/false` força a mão.
+
+> **A armadilha que custou uma tarde.** Esta folha alinha as cadeias de texto
+> pondo o `+` no princípio da linha. Dentro de uma arrow function isso
+> encontra-se com o `+` do operador, e `'texto' + + (x ? ' on' : '')` é uma
+> soma com um **mais unário** à frente: converte `' on'` em número, dá `NaN`, e
+> cola «NaNNaNNaN» ao fim de cada opção. O ecrã mostrava «Cervejas NaNNaNNaN» e
+> a procura não filtrava nada. A linha vive agora numa função sua
+> (`licSelOpcaoHtml`), onde a armadilha não existe.
+
+### 28.8 O «Soltar» sai da ficha
+
+A ficha de uma pessoa listava os telemóveis em nome dela e deixava largá-los.
+Saiu — a ficha existe para decidir o que alguém pode beber, e a manutenção de
+aparelhos só lhe roubava espaço. O nó que ela desatava (um telemóvel
+emprestado, um nome escolhido por engano) desata-se sozinho por
+`bar.trocar_nome`, que já existia.
+
+A acção `bar_soltar` foi com ela, e não ficou de porta entreaberta: uma acção
+de API que ecrã nenhum alcança é uma coisa em que alguém volta a confiar um
+dia. Saiu também o `bar_pin_soltar`, que estava na lista de acções de escrita
+desde que o PIN saiu na segunda passagem.
+
+### 28.9 A página do convidado abre e fecha
+
+É a única página do módulo que um **convidado** vê, e abria como um
+formulário: o nome do casal em corpo pequeno e logo os botões.
+
+Ganhou uma **abertura** — o nome da casa, os nomes do casal, um filete
+desenhado — que não é colante de propósito: aparece uma vez, ao chegar, e sai
+da frente. A barra de trabalho (em nome de quem se pede, para que mesa) essa
+sim continua colada ao topo, que é o que se precisa de ver a rolar.
+
+E ganhou um **fecho**, que responde ao que a pessoa perguntaria ao garçom: o
+pedido vai à copa, alguém o traz, e é a esta mesa. A página acabava no ar.
+
+Os cartões passaram a mostrar duas marcas que a copa sempre teve e o convidado
+nunca viu: o que **leva álcool**, e o que está **quase a acabar** — que é uma
+cortesia, porque quem sabe que restam três escolhe agora em vez de descobrir
+daqui a meia hora que ficou sem.
+
+O filete é desenhado em CSS e não é uma imagem nem um carácter (`❦`, `◆`): uma
+imagem tinha de ser servida por aquela rede, e um carácter sai como o quadrado
+do «não sei desenhar isto» nas fontes que não o têm.
+
+### 28.10 A prova
+
+`tests/chk_bar_terceira.js`, e o que ela defende:
+
+| Verifica | Porque é que se parte |
+|---|---|
+| Não há paleta paralela nem `b-noite` | Um token imune ao tema é o princípio de um módulo desligado outra vez |
+| «Regras do Bar» é aba da copa, depois de «Os números» | Um atalho para `bar.php` expulsa o copeiro para a tela de entrada |
+| O garçom lê a lista de bebidas e lança o pedido | Era um 403 disfarçado de lista vazia |
+| Uma regra da casa em pedidos trava o gesto, e não as bebidas | A mesma linha lida de duas maneiras é como as telas discordam |
+| Com o tom certo — a copa está cheia, a pessoa não pediu de mais | §8.2 |
+| A ficha não traz telemóveis | A ficha é sobre o que se bebe |
+| Os selects grandes filtram, e sem acentos | Quem escreve de pé não põe acentos |
+| E o rótulo é o nome, e não «NaNNaNNaN» | §28.7 |
+| A regra de pessoa abre a mesma janela, preenchida | Duas gramáticas para a mesma regra |
+| A página do convidado tem abertura e fecho, e a abertura não é colante | Uma abertura que segue a pessoa rouba-lhe o ecrã |
+
+`chk_bar.js` §8b foi invertida: defendia que a copa **não** mudasse com o
+tema, e passou a defender que muda — e que se lê nos quatro.

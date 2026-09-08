@@ -30,26 +30,13 @@
   --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
   --script:'Archivo','Segoe UI',system-ui,sans-serif;
 
-  /* ---- O salão do bar (copa.php e entregas.php, ver assets/bar.css) ----
-     Estes NÃO se redefinem em tema nenhum, e é de propósito: aqueles dois
-     ecrãs ficam cinco horas ligados num canto do salão, à meia-luz, e são
-     escuros porque é essa a hora — não porque o casal escolheu uma paleta
-     escura. No tema «escuro» os tokens normais viram-se ao contrário
-     (--gold-pale passa de um verde claro a quase preto) e os rótulos daqueles
-     ecrãs desapareciam contra o próprio fundo. Ficando só aqui, no :root,
-     sobrevivem aos quatro temas por construção. */
-  --sala:#16283A;          --sala-fundo:#0C1925;      --sala-tinta:#F6F8F4;
-  /* Opaco de propósito: a folha do salão levanta as superfícies com brancos
-     translúcidos, que servem enquanto houver página por baixo. Uma janela e
-     um menu suspenso não têm página por baixo — têm o que estava no ecrã — e
-     um branco a 6% deixava ler o texto de trás através deles. */
-  --sala-carta:#1B2E42;
-  --sala-ouro:#63B22B;     --sala-ouro-claro:#8CD24A; --sala-ouro-pale:#C4D9B3;
-  --sala-ouro-fundo:#3C7517;
-  --sala-ok:#2C6B2C;       --sala-ok-bg:#DCEFD6;
-  --sala-aviso:#7E5D0C;    --sala-aviso-bg:#F6EDD6;
-  --sala-mau:#8E322B;      --sala-mau-bg:#F6E0DC;
-  --sala-fraco:#A6B4BF;    /* 7:1 sobre os dois fundos do salão (§25.13) */
+  /* Viveu aqui, durante um tempo, uma família --sala-*: uma paleta escura que
+     tema nenhum redefinia, para a copa e as entregas serem escuras a qualquer
+     hora e em qualquer tema. Saiu com a terceira passagem do bar — um módulo
+     que não obedece ao tema não pertence ao sistema —, e o escuro passou a ser
+     o que é para toda a gente: o tema «escuro», escolhido por quem lá está.
+     Se um dia voltar a fazer falta uma paleta imune ao tema, é aqui que ela
+     se põe, e é este comentário que explica porquê não há nenhuma. */
 
   --app-bg:
     radial-gradient(1000px 560px at 90% -10%, rgba(99,178,43,.10), transparent 60%),

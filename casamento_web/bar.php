@@ -114,27 +114,12 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
     <div class="b-folhas" id="b-folhas"></div>
   </section>
 
-  <?php // ---- As regras da casa, e os motivos de recusa ----------------
-        // Vivem AQUI e já não na copa. São decisões do casal — «quantas por
-        // pessoa», «o que dizer a quem se recusa» —, e tomam-se com tempo,
-        // antes da festa, e não às onze da noite entre dois pedidos. O
-        // copeiro continua a poder escrever um motivo à mão em cada recusa:
-        // o que sai da copa é a ADMINISTRAÇÃO da lista, não a liberdade de
-        // dizer o que se passa naquele caso. ?>
+  <?php // ---- As Regras do Bar ----------------------------------------
+        // O painel é desenhado por assets/bar-regras.js, e o MESMO painel é
+        // montado na copa. Aqui fica só o sítio onde ele entra: duas cópias
+        // parecidas do mesmo ecrã foi como as regras começaram a divergir. ?>
   <section id="pn-regras" hidden>
-    <div class="b-duas-largo">
-      <div>
-        <h2 class="b-sec"></h2>
-        <div class="b-cartao-claro" id="b-defs"></div>
-      </div>
-      <div>
-        <h2 class="b-sec"></h2>
-        <p class="dica">Os motivos poupam a escrita a meio da noite. O copeiro
-          escolhe um da lista — ou escreve outro, sempre que o caso for outro.</p>
-        <div class="b-fer" id="b-fer-mot"></div>
-        <div class="b-cartao-claro" id="b-motivos"></div>
-      </div>
-    </div>
+    <div id="pn-regras-cx"></div>
   </section>
 
   <?php // ---- A equipa do bar ---------------------------------------
@@ -164,6 +149,7 @@ window.BAR_ENDERECO = <?= json_encode($ENDERECO) ?>;
 <script src="<?= asset('assets/bar-pecas.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
+<script src="<?= asset('assets/bar-regras.js') ?>"></script>
 <script src="<?= asset('assets/bar-montagem.js') ?>"></script>
 </body>
 </html>

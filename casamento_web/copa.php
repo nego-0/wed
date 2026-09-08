@@ -46,32 +46,26 @@ $CAS  = casalInfo($DEFS);
   .b-tit{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-soft);
           margin:0 0 .6rem; display:flex; align-items:center; gap:.5rem; }
   .b-tit .ico{ width:18px; height:18px; opacity:.8; }
-  .b-tit small{ font-size:.75rem; color:var(--gold-pale); font-family:var(--sans);
+  .b-tit small{ font-size:.75rem; color:var(--ink-fraco); font-family:var(--sans);
                 margin-left:auto; font-variant-numeric:tabular-nums; }
 
   /* O cabeçalho é próprio, como o da porta: quem trabalha na copa não anda
      pelo menu do casal, e uma barra com «Convite impresso» aqui era ruído. */
-  body.b-noite .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+  body.b-servico .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
                             max-width:1180px; margin:0 auto; padding:0 .15rem; }
-  body.b-noite .topo h1{ font-family:var(--serif); font-size:1.5rem; margin:0; color:var(--ivory); }
-  body.b-noite .topo .sub{ font-size:.8rem; color:var(--gold-pale); }
-  body.b-noite .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
-  body.b-noite .topo .nav a{ color:var(--gold-pale); font-size:.88rem; }
-
-  /* Os três atalhos da coluna do stock. Empilhados e alinhados à esquerda,
-     com o ícone sempre na mesma coluna: lidos de cima a baixo são uma lista
-     de coisas que se pode fazer, e não três botões espalhados. */
-  .b-atalhos{ margin-top:1rem; display:grid; gap:.4rem; }
-  .b-atalhos .btn{ justify-content:flex-start; gap:.6rem; width:100%; }
+  body.b-servico .topo h1{ font-family:var(--serif); font-size:1.5rem; margin:0; color:var(--ink); }
+  body.b-servico .topo .sub{ font-size:.8rem; color:var(--ink-fraco); }
+  body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
+  body.b-servico .topo .nav a{ color:var(--gold); font-size:.88rem; }
 
   /* A nota de rodapé de uma coluna. Explica uma regra do módulo e lê-se uma
      vez na vida — por isso é pequena e discreta, e não uma frase em corpo de
      texto a competir com os números que estão por cima dela. */
   .b-nota{ margin:.7rem 0 0; font-size:.78rem; line-height:1.55;
-           color:var(--gold-pale); opacity:.85; }
+           color:var(--ink-fraco); opacity:.85; }
 </style>
 </head>
-<body class="b-noite">
+<body class="b-servico">
 <?php tiraSuporte(true); ?>
 <header class="topo">
   <div class="wrap">
@@ -126,7 +120,6 @@ $CAS  = casalInfo($DEFS);
       </p>
       <div id="b-bandeiras" class="b-flags" hidden></div>
 
-      <div class="b-atalhos" id="b-atalhos"></div>
     </aside>
   </div>
 </div>
@@ -148,6 +141,7 @@ $CAS  = casalInfo($DEFS);
 <script src="<?= asset('assets/bar-pecas.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
+<script src="<?= asset('assets/bar-regras.js') ?>"></script>
 <script src="<?= asset('assets/bar-copa.js') ?>"></script>
 </body>
 </html>

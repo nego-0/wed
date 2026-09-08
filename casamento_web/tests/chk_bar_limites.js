@@ -16,6 +16,23 @@ const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
+/**
+ * Escolher numa «escolha com procura» (assets/janela.js).
+ *
+ * Abre a lista, escreve o nome, e carrega na linha. Não se pode usar
+ * selectOption(): o campo com o id `lf-<que>` é um <input type=hidden>, e o
+ * que se vê é o componente à volta dele.
+ */
+async function escolherComProcura(p, que, nome) {
+  const cx = p.locator('.lic-sel[data-sel="' + que + '"]');
+  await cx.locator('.lic-sel-bt').click();
+  await p.waitForTimeout(250);
+  await cx.locator('.lic-sel-q input').fill(nome);
+  await p.waitForTimeout(350);
+  await cx.locator('.lic-sel-op:visible').first().click();
+  await p.waitForTimeout(250);
+}
+
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const errs = [];
@@ -225,8 +242,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'com a regra dela escrita por extenso');
 
   await p.click('button:has-text("Regra nova")');
-  await p.waitForTimeout(600);
-  await p.selectOption('#lf-sobre', { label: 'ZZ Gin' });
+  // A janela é agora a das Regras do Bar, partilhada com a montagem (§28.6), e
+  // vai buscar a lista de convidados antes de se desenhar: dá-se-lhe tempo.
+  await p.waitForTimeout(1600);
+  // «Sobre o quê» deixou de ser um <select> e passou a ser a escolha com
+  // procura (§28.7): o valor vive num campo escondido com o id de sempre, e
+  // por isso escolhe-se pelo componente e não pelo campo.
+  await escolherComProcura(p, 'sobre', 'ZZ Gin');
   await p.fill('#lf-quantidade', '0');
   await p.fill('#lf-nota', 'pediu-nos para o travarmos');
   await p.click('#lic-jo');

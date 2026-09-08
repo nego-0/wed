@@ -130,25 +130,27 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e a saída é humana: «' + terceiro.message + '»');
   await defs({ 'bar.ip_modo': 'registo' });
 
-  // ============ 6. a copa solta um telemóvel ============
-  await sou(A.id);                       // o telemóvel volta a ser de A
+  // ============ 6. a ficha é sobre a BEBIDA, e não sobre o aparelho =====
+  // Aqui provava-se o «Soltar»: a copa largava o telemóvel de uma pessoa, e a
+  // lista da ficha encolhia. Saiu na terceira passagem — a ficha existe para
+  // decidir o que alguém pode beber, e a manutenção de aparelhos só lhe
+  // roubava espaço. O nó que ela desatava desata-se sozinho por
+  // `bar.trocar_nome`, que já estava provado no bloco 2.
+  //
+  // O que fica é a guarda: a ficha não volta a trazer aparelhos, e a acção
+  // não volta a existir sem alguém reparar.
+  await sou(A.id);
   await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(900);
-  const antes = await p.evaluate(async (id) =>
-    (await window.api('bar_ficha&convidado=' + id)).dispositivos.length, A.id);
-  ok(antes >= 1, 'a ficha da pessoa lista os telemóveis em nome dela (' + antes + ')');
-  const depois = await p.evaluate(async (id) => {
-    const d = await window.api('bar_ficha&convidado=' + id);
-    const r = await window.api('bar_soltar', { method: 'POST',
-      body: JSON.stringify({ id: d.dispositivos[0].id }) });
-    return r.dispositivos.length;
-  }, A.id);
-  ok(depois === antes - 1, 'e soltar um tira-o: ' + antes + ' → ' + depois);
-
-  const perdido = await c.evaluate(async (t) =>
-    await (await fetch('api.php?action=bar_mesa&m=' + t)).json(), token);
-  ok(perdido.eu === null,
-     'o telemóvel solto volta ao princípio — quem o abrir escolhe-se de novo');
+  const ficha = await p.evaluate(async (id) =>
+    await window.api('bar_ficha&convidado=' + id), A.id);
+  ok(ficha && ficha.success === true && ficha.dispositivos === undefined,
+     'a ficha traz o que se bebeu e as regras — e nenhuma lista de telemóveis');
+  const morta = await p.evaluate(async () =>
+    await window.api('bar_soltar', { method: 'POST', silencioso: true,
+                                     body: JSON.stringify({ id: 1 }) }));
+  ok(!morta || morta.success !== true,
+     'e «soltar» já não é uma acção da API: uma porta que ninguém abre fecha-se');
 
   // ============ arrumar ============
   await p.evaluate(async () => {

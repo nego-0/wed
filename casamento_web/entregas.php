@@ -34,12 +34,12 @@ $CAS  = casalInfo($DEFS);
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/bar.css') ?>" rel="stylesheet">
 <style>
-  body.b-noite .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+  body.b-servico .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
                             max-width:560px; margin:0 auto; padding:0 .15rem; }
-  body.b-noite .topo h1{ font-family:var(--serif); font-size:1.5rem; margin:0; color:var(--ivory); }
-  body.b-noite .topo .sub{ font-size:.8rem; color:var(--gold-pale); }
-  body.b-noite .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
-  body.b-noite .topo .nav a{ color:var(--gold-pale); font-size:.88rem; }
+  body.b-servico .topo h1{ font-family:var(--serif); font-size:1.5rem; margin:0; color:var(--ink); }
+  body.b-servico .topo .sub{ font-size:.8rem; color:var(--ink-fraco); }
+  body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
+  body.b-servico .topo .nav a{ color:var(--gold); font-size:.88rem; }
 
   /* As três filas: a minha, a que espera, e a que voltou. Cabeçalhos em vez
      de abas — num só ecrã, rolar é mais rápido do que escolher. O sinal à
@@ -51,7 +51,7 @@ $CAS  = casalInfo($DEFS);
   .b-secao .n{ font-family:var(--sans); font-size:.72rem; font-weight:700;
                background:rgba(255,255,255,.1); border-radius:50px; padding:.1rem .5rem;
                font-variant-numeric:tabular-nums; }
-  .b-secao small{ font-family:var(--sans); font-size:.74rem; color:var(--gold-pale);
+  .b-secao small{ font-family:var(--sans); font-size:.74rem; color:var(--ink-fraco);
                   font-weight:400; margin-left:auto; text-align:right; }
   .b-ped .b-acoes .btn{ flex:1 1 100%; }
   /* O que está nas MINHAS mãos distingue-se do resto: no meio de três filas
@@ -59,7 +59,7 @@ $CAS  = casalInfo($DEFS);
   .b-ped.minha{ border-color:var(--gold-soft); background:rgba(233,223,201,.055); }
 </style>
 </head>
-<body class="b-noite">
+<body class="b-servico">
 <?php tiraSuporte(true); ?>
 <header class="topo">
   <div class="wrap">

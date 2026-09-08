@@ -298,11 +298,13 @@
   var ppEscolhido = null, ppEspera = null;
 
   window.entPedirPor = async function () {
-    // O menu não vem nesta leitura: pede-se só quando é preciso, que é raro.
-    var e = await window.api('bar_estado', { method: 'GET', silencioso: true });
-    var itens = (e && e.success ? e.itens : []).filter(function (i) {
-      return i.estado === 'ativo' && i.disponivel > 0;
-    });
+    // A lista das bebidas pede-se só quando é preciso, que é raro. E pede-se a
+    // `bar_itens_pedir`, e não a `bar_estado`: aquela é a leitura da copa, o
+    // garçom não tem acesso a ela, e o que chegava aqui era um 403 disfarçado
+    // de lista vazia — a janela dizia «Não há nada disponível para pedir» com
+    // a copa cheia, e o garçom ficava sem poder lançar um pedido.
+    var e = await window.api('bar_itens_pedir', { method: 'GET', silencioso: true });
+    var itens = (e && e.success ? e.itens : []);
     if (!itens.length) { toast('Não há nada disponível para pedir.', true); return; }
     licFormulario({
       titulo: 'Pedir por um convidado',

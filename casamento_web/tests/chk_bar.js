@@ -65,7 +65,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // copa (§27): são decisões do casal, tomadas com tempo e antes da festa; e
   // a equipa criava-se na Gestão, longe do ecrã onde ela vai trabalhar.
   ok((await noivos.locator('.b-aba').allTextContents()).join('|')
-       === 'O menu|Gavetas|Mesas e QR|Regras da casa|A equipa',
+       === 'O menu|Gavetas|Mesas e QR|Regras do Bar|A equipa',
      'a montagem tem os cinco separadores');
   ok((await noivos.locator('.b-cat').count()) >= 4,
      'o bar nasce com gavetas semeadas, e não com um menu em branco');
@@ -171,8 +171,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await conv.waitForTimeout(800);
   ok(await conv.locator('.b-procura h1').isVisible(),
      'o código certo abre no «Quem está a pedir?» — o nome vem antes do menu');
-  ok((await conv.locator('.b-festa-topo .mono').innerText()).trim().length > 0,
-     'e a página veste o nome do casal, não a marca da casa');
+  ok((await conv.locator('.b-festa-capa .mono').innerText()).trim().length > 0,
+     'e a página abre com o nome do casal, não com a marca da casa');
 
   // ============ 3. a procura do nome ============
   await conv.fill('#b-q', 'con');
@@ -326,12 +326,19 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'o telemóvel actualiza-se sozinho, e diz «não servido» — não «RECUSADO»');
   ok(meu.includes(recusa), 'e mostra o motivo, para a pessoa saber o que pedir a seguir');
 
-  // ============ 8b. a copa é a mesma nos quatro temas ============
-  // Ela é escura porque é meia-noite no salão, não porque o casal escolheu
-  // uma paleta escura. Com os tokens normais, o tema «escuro» virava-os ao
-  // contrário — --gold-pale passa de verde claro a quase preto — e os rótulos
-  // da barra desapareciam contra o próprio fundo. Daí os --sala-*, que tema
-  // nenhum redefine. Mede-se, em vez de se confiar.
+  // ============ 8b. a copa OBEDECE aos quatro temas ============
+  // Durante muito tempo esta prova defendia o contrário: a copa era escura em
+  // qualquer tema, e o que aqui se media era que ela NÃO mudasse. Era uma
+  // decisão defensável — um salão à meia-luz não pede um ecrã a 100% de brilho
+  // — e estava errada à mesma, porque um módulo que ignora o tema não pertence
+  // ao sistema. O escuro continua a existir; passou a ser o tema «escuro»,
+  // escolhido por quem lá trabalha, e não uma imposição da folha de estilo.
+  //
+  // Por isso a prova virou-se ao contrário, e passou a defender duas coisas:
+  //   1. a copa MUDA com o tema (senão a mudança não chegou lá);
+  //   2. e em qualquer dos quatro continua a ler-se — que é a razão pela qual
+  //      os --sala-* existiam. O contraste mede-se agora contra o fundo REAL
+  //      de cada tema, e não contra um quase-preto fixo que já não existe.
   const luz = (rgb) => {
     const c = (String(rgb).match(/\d+/g) || [0, 0, 0]).slice(0, 3).map(v => {
       const s = v / 255;
@@ -353,21 +360,41 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     // deu lugar ao interruptor (§25.19), porque repetia números que já viviam
     // nas pastilhas. Se um dia o interruptor sair também, isto rebenta com um
     // «não é um Element», que é a maneira de a prova dizer que perdeu o pé.
-    const m = await copa.evaluate(() => ({
-      rotulo: getComputedStyle(document.querySelector('.b-chave .numeros small')).color,
-      numero: getComputedStyle(document.querySelector('.b-chave .numeros b')).color,
-      texto:  getComputedStyle(document.body).color,
-      fundo:  getComputedStyle(document.body).backgroundImage.slice(0, 48)
-    }));
+    // O fundo real deste tema. O <body> pinta-se com --app-bg, que é um
+    // gradiente e não uma cor — e um gradiente não se mede. Mede-se contra a
+    // cor sólida por baixo dele, que é o que fica quando as camadas
+    // translúcidas do gradiente não tapam nada.
+    const m = await copa.evaluate(() => {
+      const cs = getComputedStyle(document.body);
+      const chave = document.querySelector('.b-chave');
+      return {
+        rotulo: getComputedStyle(document.querySelector('.b-chave .numeros small')).color,
+        numero: getComputedStyle(document.querySelector('.b-chave .numeros b')).color,
+        texto:  cs.color,
+        fundo:  cs.backgroundColor,
+        cartao: getComputedStyle(chave).backgroundColor,
+        gradiente: cs.backgroundImage.slice(0, 48)
+      };
+    });
     medidas[tema] = m;
-    const pior = Math.min(contraste(m.rotulo, 'rgb(12,25,37)'),
-                          contraste(m.numero, 'rgb(12,25,37)'),
-                          contraste(m.texto,  'rgb(12,25,37)'));
-    ok(pior >= 4.5, `[${tema}] tudo se lê no escuro do salão (o pior é ${pior.toFixed(1)}:1)`);
+    // O cartão do interruptor é translúcido sobre o fundo da página; para uma
+    // conta honesta usa-se o fundo da página, que é o que está por baixo.
+    const chao = /rgba\(0, 0, 0, 0\)/.test(m.fundo)
+      ? (tema === 'escuro' ? 'rgb(14,26,34)' : 'rgb(248,250,246)') : m.fundo;
+    const pior = Math.min(contraste(m.rotulo, chao),
+                          contraste(m.numero, chao),
+                          contraste(m.texto,  chao));
+    ok(pior >= 4.5, `[${tema}] a copa lê-se neste tema (o pior é ${pior.toFixed(1)}:1)`);
   }
-  const iguais = ['classico', 'azul', 'escuro'].every(t =>
-    JSON.stringify(medidas[t]) === JSON.stringify(medidas.niras));
-  ok(iguais, 'e a copa é exactamente a mesma nos quatro: o tema não lhe toca');
+  // E muda mesmo: se os quatro dessem a mesma medida, o tema não estaria a
+  // chegar cá — que era exactamente o estado que esta prova defendia antes.
+  const distintos = new Set(['niras', 'classico', 'azul', 'escuro']
+    .map(t => JSON.stringify(medidas[t]))).size;
+  ok(distintos > 1,
+     'e a copa obedece ao tema, em vez de o ignorar: '
+     + distintos + ' aspectos distintos em quatro temas');
+  ok(JSON.stringify(medidas.escuro) !== JSON.stringify(medidas.niras),
+     'o «escuro» dá mesmo um ecrã escuro — que é como o salão o quer à meia-noite');
   await copa.evaluate(() => { try { localStorage.removeItem('tema'); } catch (e) {} });
 
   // ============ 9. os dois postos existem mesmo ============
