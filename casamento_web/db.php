@@ -167,9 +167,6 @@ $conn->query("
         checkin_em TIMESTAMP NULL DEFAULT NULL,
         observacoes TEXT DEFAULT NULL,
         msg_pessoal TEXT DEFAULT NULL,               -- mensagem pessoal mostrada no convite digital
-        bar_pin CHAR(4) DEFAULT NULL,                -- quatro dígitos do bar, quando a casa os pede
-        bar_pin_falhas TINYINT NOT NULL DEFAULT 0,   -- tentativas falhadas seguidas contra ESTE convite
-        bar_pin_ate DATETIME DEFAULT NULL,           -- até quando este convite está travado
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
@@ -196,7 +193,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 38;
+const ESQUEMA_VERSAO = 39;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -253,7 +250,7 @@ function licencaModulosTudo(): array {
         'impresso'   => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
         'digital'    => ['limite' => 0, 'editar' => 1, 'todos_modelos' => 1],
         // O bar é a noite: o menu de bebidas que os convidados abrem na mesa, a
-        // copa que decide e os empregados que entregam. Vive à parte porque é
+        // copa que decide e os garçons que entregam. Vive à parte porque é
         // outro trabalho, feito por outras pessoas, e há casamentos que o não
         // querem de todo.
         'bar'        => ['limite' => 0, 'editar' => 0, 'todos_modelos' => 0],
@@ -311,9 +308,9 @@ function semearPrecario(mysqli $conn): void {
             ['digital_atelier', 'Todos os modelos',    'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
          ]],
         ['bar', 'Bar da festa',
-         'O menu de bebidas na mesa: o convidado pede, a copa decide, o empregado entrega.',
+         'O menu de bebidas na mesa: o convidado pede, a copa decide, o garçom entrega.',
          'Ninguém fica de copo vazio à espera de quem passe.', '🍹', 0, [
-            ['bar_basico',   'Pedidos e entregas', 'O menu, a copa e os empregados.',       22000, 0, 0, 0],
+            ['bar_basico',   'Pedidos e entregas', 'O menu, a copa e os garçons.',       22000, 0, 0, 0],
             ['bar_completo', 'Bar governado',      'Mais os limites, o ritmo e a estatística.', 38000, 0, 0, 0],
          ]],
     ];
@@ -1708,6 +1705,9 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 volume_ml INT DEFAULT NULL,
                 stock INT NOT NULL DEFAULT 0,
                 reservado INT NOT NULL DEFAULT 0,
+                -- A partir de quantas se diz «a acabar». Por bebida, porque 5
+                -- garrafas de whisky é uma emergência e 5 águas não é nada.
+                stock_minimo INT NOT NULL DEFAULT 8,
                 max_por_pedido INT NOT NULL DEFAULT 2,
                 estado ENUM('ativo','oculto') NOT NULL DEFAULT 'ativo',
                 ordem INT NOT NULL DEFAULT 0,
@@ -1759,6 +1759,10 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 entregue_por VARCHAR(80) DEFAULT NULL,
                 apanhado_em DATETIME DEFAULT NULL,
                 entregue_em DATETIME DEFAULT NULL,
+                -- O que o garçom viu à mesa. É o único que fala com o
+                -- convidado, e a copa lê isto ao decidir o pedido seguinte
+                -- dessa pessoa (§27).
+                nota_entrega VARCHAR(240) DEFAULT NULL,
                 atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_barped_cas (casamento_id, estado, criado_em),
                 INDEX idx_barped_quem (casamento_id, convidado_id, criado_em),
@@ -1863,12 +1867,12 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                                    (chave,nome,resumo,beneficio,icone,ordem,imagem,obrigatorio)
                                    VALUES ('bar','Bar da festa',?,?,'🍹',?,?,0)");
             if ($st) {
-                $res = 'O menu de bebidas na mesa: o convidado pede, a copa decide, o empregado entrega.';
+                $res = 'O menu de bebidas na mesa: o convidado pede, a copa decide, o garçom entrega.';
                 $ben = 'Ninguém fica de copo vazio à espera de quem passe.';
                 $st->bind_param('ssis', $res, $ben, $om, $img);
                 if (@$st->execute()) {
                     $mid = $conn->insert_id; $oe = 0;
-                    foreach ([['bar_basico', 'Pedidos e entregas', 'O menu, a copa e os empregados.', 22000],
+                    foreach ([['bar_basico', 'Pedidos e entregas', 'O menu, a copa e os garçons.', 22000],
                               ['bar_completo', 'Bar governado', 'Mais os limites, o ritmo e a estatística.', 38000]] as [$ec,$en,$er,$ep]) {
                         $oe += 10;
                         $se = @$conn->prepare("INSERT INTO {$P}lic_escaloes
@@ -1915,12 +1919,42 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     //
     // Não se aproveitou o `criado_por` que já existe: esse é a conta do
     // pessoal (uma string de login), e um nome de convidado lá dentro ficava
-    // indistinguível de um empregado — a copa deixava de saber se o pedido
+    // indistinguível de um garçom — a copa deixava de saber se o pedido
     // veio do balcão ou da mesa 12, que é justamente o que ela precisa de ver.
     if ($versaoAtual < 38) {
         migColuna($conn, "{$P}bar_pedidos", 'criado_por_convidado_id', "INT DEFAULT NULL");
         migIndice($conn, "{$P}bar_pedidos", 'idx_barped_porquem',
                   'casamento_id, criado_por_convidado_id');
+    }
+
+    // v39 — o bar cresce numa direcção e encolhe noutra.
+    //
+    // SAI o código do convite. Foram quatro dígitos a mais numa página que
+    // existe para se pedir uma cerveja de pé, com o telemóvel numa mão: o
+    // atrito era certo e a segurança que dava era a de um número de quatro
+    // algarismos escrito no mesmo papel que está pousado na mesa. O que trava
+    // o abuso continua a ser o que sempre travou — o telemóvel fica preso ao
+    // nome, e a copa vê quem pediu o quê (§5.3). As colunas largam-se: dados
+    // que ninguém lê são dados que alguém um dia acredita.
+    //
+    // ENTRA o limiar de «a acabar», por bebida. Era 5 na copa e 8 na
+    // montagem, os dois inventados e os dois errados: 5 garrafas de whisky é
+    // uma emergência, 5 águas não é nada. Quem monta o menu sabe a diferença.
+    //
+    // ENTRA a nota do garçom. Ele é o único que fala com o convidado à mesa, e
+    // o que traz de lá — «pediu para não lhe servirem mais», «está com os
+    // miúdos» — não tinha onde ficar. Agora fica no pedido, e a copa lê-a
+    // quando decidir o próximo pedido dessa pessoa.
+    if ($versaoAtual < 39) {
+        migLargarColuna($conn, "{$P}convites", 'bar_pin');
+        migLargarColuna($conn, "{$P}convites", 'bar_pin_falhas');
+        migLargarColuna($conn, "{$P}convites", 'bar_pin_ate');
+        @$conn->query("DELETE FROM {$P}definicoes
+                       WHERE chave IN ('bar.pedir_pin','bar.garcon_direto')");
+        // 8 é o que a montagem já usava para a marca «Resta pouco»: quem não
+        // mexer no campo fica exactamente com o que tinha.
+        migColuna($conn, "{$P}bar_itens", 'stock_minimo', "INT NOT NULL DEFAULT 8");
+        migColuna($conn, "{$P}bar_pedidos", 'nota_entrega', "VARCHAR(240) DEFAULT NULL");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
@@ -2079,6 +2113,7 @@ function nomesDeAcao(): array {
         // ---- o bar ----
         'bar_pedido'        => ['fez um pedido de bebidas', 'bar'],
         'bar_pedido_por'    => ['fez um pedido por conta de um convidado', 'bar'],
+        'bar_aprovado_parte'=> ['aprovou em parte um pedido do bar', 'bar'],
         'bar_aprovado'      => ['aprovou um pedido de bebidas', 'bar'],
         'bar_recusado'      => ['recusou um pedido de bebidas', 'bar'],
         'bar_cancelado'     => ['cancelou um pedido de bebidas', 'bar'],
@@ -2097,8 +2132,6 @@ function nomesDeAcao(): array {
         'bar_regra_fora'    => ['levantou uma regra do bar', 'bar'],
         'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],
         'bar_soltou'        => ['soltou um telemóvel do bar', 'bar'],
-        'bar_pin_errado'    => ['errou o código do bar', 'bar'],
-        'bar_pin_soltou'    => ['levantou o travão do código', 'bar'],
         'bar_pedido_amigo'  => ['pediu no bar por outro convidado', 'bar'],
         'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
         'bar_dispositivo_solto' => ['desprendeu um telemóvel de um nome', 'bar'],
@@ -2564,9 +2597,7 @@ function barDefsPadrao(): array {
     return [
         'bar.aberto'        => '0',
         'bar.ip_modo'       => 'registo',     // registo | aviso | estrito
-        'bar.garcon_direto' => '0',
         'bar.trocar_nome'   => '1',           // trocar para outro convite: 1 avisa, 0 recusa
-        'bar.pedir_pin'     => '0',           // quatro dígitos por convite — desligado de origem
         'bar.procura_min'   => '4',
         'bar.mensagem_fechado' => '',
     ];
@@ -2604,8 +2635,7 @@ function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
         $v = trim((string)$valor);
         // Cada chave tem a sua forma; o que não couber toma o valor de fábrica.
         if ($chave === 'bar.ip_modo' && !in_array($v, ['registo', 'aviso', 'estrito'], true)) continue;
-        if (in_array($chave, ['bar.aberto', 'bar.garcon_direto', 'bar.trocar_nome',
-                              'bar.pedir_pin'], true)) {
+        if (in_array($chave, ['bar.aberto', 'bar.trocar_nome'], true)) {
             $v = $v === '1' ? '1' : '0';
         }
         if ($chave === 'bar.procura_min')      $v = (string)max(1, min(8, (int)$v));
@@ -2700,28 +2730,6 @@ function barGarantirTokens(mysqli $conn, int $cid = 0): void {
     }
 }
 
-/**
- * Os quatro dígitos de cada convite, para quem os pedir (§5.2, ponto 5).
- *
- * Nascem só quando a casa liga o PIN, e por convite — o telemóvel da família
- * já pode pedir por qualquer um dos seus, portanto um segredo por pessoa
- * defendia uma porta que está aberta de propósito.
- *
- * `0000` fica de fora: é o que as pessoas escrevem quando não sabem o código.
- */
-function barGarantirPins(mysqli $conn, int $cid = 0): void {
-    global $P;
-    $cid = $cid ?: casamentoAtual();
-    if ($cid <= 0) return;
-    $r = @$conn->query("SELECT id FROM {$P}convites
-                        WHERE casamento_id=$cid AND (bar_pin IS NULL OR bar_pin='')");
-    if (!$r) return;
-    while ($c = $r->fetch_assoc()) {
-        $pin = str_pad((string)random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-        @$conn->query("UPDATE {$P}convites SET bar_pin='$pin'
-                       WHERE casamento_id=$cid AND id=" . (int)$c['id']);
-    }
-}
 
 /**
  * Um bar de origem: as gavetas e os motivos de recusa, para a copa não começar

@@ -1,5 +1,5 @@
 /* ============================================================
-   bar-entrega.js — O posto do empregado (entregas.php)
+   bar-entrega.js — O posto do garçom (entregas.php)
 
    Uma coluna, três filas e um botão por pedido. Quem usa isto atravessa o
    salão com um tabuleiro: cada acção tem de caber num polegar e não pode
@@ -74,7 +74,7 @@
 
   function pintar() {
     var ps = EST.pedidos || [];
-    // «Meu» é o que eu apanhei: dois empregados no mesmo salão não podem
+    // «Meu» é o que eu apanhei: dois garçons no mesmo salão não podem
     // estar a ver a mesma lista como se fosse de ambos.
     var minhas   = ps.filter(function (p) { return p.estado === 'a_caminho' && p.entregue_por === EU; });
     var doOutro  = ps.filter(function (p) { return p.estado === 'a_caminho' && p.entregue_por !== EU; });
@@ -157,21 +157,27 @@
 
     // Notas de percurso: são a excepção, e por isso ficam por baixo e em
     // corpo pequeno. Uma pessoa que mudou de mesa, ou uma bebida que outro
-    // pediu — o empregado bate à mesa e diz o nome de quem a vai BEBER.
+    // pediu — o garçom bate à mesa e diz o nome de quem a vai BEBER.
     var notas = [];
     if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) notas.push('pediu na ' + esc(p.mesa_qr));
     if (p.pedido_por) notas.push('pedido por ' + esc(p.pedido_por));
     if (deOutro) notas.push('vai com ' + esc(p.entregue_por || 'outra pessoa'));
 
+    // O título é o que faz ANDAR. Quase sempre é a mesa; quando ela falta, é
+    // o nome — porque é por ele que se pergunta no salão. Deixar «Sem mesa»
+    // como título era pôr uma ausência em corpo grande e empurrar para letra
+    // miúda a única coisa que ali serve para achar a pessoa.
+    var temMesa = !!p.mesa;
     return '<div class="b-cartao b-ped' + (p.estado === 'a_caminho' && !deOutro ? ' minha' : '') + '">'
-      + '<div class="b-destino">' + ico.ico('mesa')
-      +   (p.mesa
-            ? '<span class="mesa">' + esc(p.mesa) + '</span>'
-            : '<span class="mesa sem">Sem mesa — pergunte na copa</span>')
+      + '<div class="b-destino">' + ico.ico(temMesa ? 'mesa' : 'pessoa')
+      +   '<span class="mesa">' + esc(temMesa ? p.mesa : (p.convidado || 'Sem nome')) + '</span>'
       +   '<span class="ha">' + esc(ha(p.decidido_em || p.criado_em)) + '</span>'
       + '</div>'
       + '<div class="b-quem2"><span class="cod">' + esc(p.codigo) + '</span>'
-      +   '<span class="nm">' + esc(p.convidado || 'Sem nome') + '</span></div>'
+      +   (temMesa
+            ? '<span class="nm">' + esc(p.convidado || 'Sem nome') + '</span>'
+            : '<span class="sem">' + ico.ico('aviso') + 'Sem mesa — pergunte na copa</span>')
+      + '</div>'
       + '<div class="b-linhas">' + linhas + '</div>'
       + (notas.length ? '<div class="onde">' + notas.join(' · ') + '</div>' : '')
       + (p.motivo ? '<div class="b-bandeira">' + ico.ico('aviso')
@@ -185,8 +191,12 @@
       return '<div class="b-acoes">'
         + '<button class="btn btn-ouro b-bt-grande" onclick="entEntregue(' + p.id + ')">'
         +   ico.ico('visto') + 'Entregue</button>'
-        + '<button class="btn btn-fantasma" onclick="entFalhou(' + p.id + ')">'
-        +   ico.ico('volta') + 'Não estava na mesa</button></div>';
+        + '<div class="b-acoes-menor">'
+        +   '<button class="btn btn-fantasma" onclick="entEntregueNota(' + p.id + ')">'
+        +     ico.ico('nota') + 'Entregue, com nota</button>'
+        +   '<button class="btn btn-fantasma" onclick="entFalhou(' + p.id + ')">'
+        +     ico.ico('volta') + 'Não estava na mesa</button>'
+        + '</div></div>';
     }
     // Aprovado ou de volta: apanhar é o passo seguinte, e entregar directo
     // existe para quem já tem a bebida na mão quando carrega.
@@ -206,13 +216,46 @@
     await carregar(true);
   };
 
-  window.entEntregue = async function (id) {
+  window.entEntregue = async function (id, nota) {
     // Sem confirmação: é a acção que se faz cem vezes por noite, e uma
-    // pergunta a meio do salão com um tabuleiro na mão é um pedido caído.
-    var d = await window.api('bar_entregue', { method: 'POST', body: JSON.stringify({ id: id }) });
+    // pergunta a meio do salão com um tabuleiro na mão é um pedido caído. A
+    // nota é o caminho À PARTE, no botão do lado — nunca no do meio.
+    var d = await window.api('bar_entregue', { method: 'POST',
+      body: JSON.stringify({ id: id, nota: nota || '' }) });
     if (!d || !d.success) return;
-    toast('Entregue. O stock já desceu.');
+    toast(nota ? 'Entregue, com a nota para a copa.' : 'Entregue. O stock já desceu.');
     await carregar(true);
+  };
+
+  /**
+   * Entregar, e dizer o que se viu.
+   *
+   * O garçom é o único do bar que fala com o convidado. O que ele traz da
+   * mesa — «pediu para não lhe servirem mais», «está com os miúdos», «não era
+   * para ele» — não tinha onde ficar, e por isso morria ali. Aqui fica no
+   * pedido, e a copa lê-o quando essa pessoa pedir a seguir.
+   *
+   * É um caminho à parte de propósito. Entregar tem de continuar a ser um
+   * toque; pedir uma frase escrita cem vezes por noite era garantir que
+   * ninguém escrevia nenhuma.
+   */
+  window.entEntregueNota = function (id) {
+    var p = (EST.pedidos || []).filter(function (x) { return x.id === id; })[0];
+    licFormulario({
+      titulo: 'Entregue — com uma nota',
+      guardar: 'Entregue',
+      dica: p ? 'Sobre <b>' + esc(p.convidado || 'o convidado') + '</b>, na '
+                + esc(p.mesa || 'mesa') + '. Só a copa lê isto.' : '',
+      campos: [{ id: 'nota', rot: 'O que aconteceu à mesa', tipo: 'area', linhas: 2,
+                 valor: '', largura: 2,
+                 dica: 'Ex.: «Pediu para não lhe servirem mais nada.» · '
+                     + '«Levou duas, mas era para a mãe.»' }],
+      aoGuardar: async function (v) {
+        if (!v.nota) { licJanelaErro('Escreva a nota — ou use o botão «Entregue», sem ela.'); return false; }
+        await window.entEntregue(id, v.nota);
+        return true;
+      }
+    });
   };
 
   window.entFalhou = function (id) {

@@ -131,6 +131,13 @@ $CAS  = casalInfo($DEFS);
   </div>
 </div>
 
+<?php // O mesmo botão de tema do resto da casa. A copa e as entregas são
+      // escuras à mesma nos quatro temas — é a hora da noite que manda —,
+      // mas as janelas que se abrem aqui e o tema que o resto do sistema
+      // usa são os mesmos, e quem trabalha nestes ecrãs há-de poder
+      // trocá-lo sem ir procurar outra página. ?>
+<?php include __DIR__ . '/parcial-seletor-tema.php'; ?>
+
 <div class="toast" id="toast"></div>
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>

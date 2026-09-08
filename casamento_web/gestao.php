@@ -273,7 +273,7 @@ $MAPA_LOCAL = [
         }
         if (podeModulo('bar')) {
             $postos['copeiro']    = ['Copeiro', 'decide os pedidos de bebidas e trata do stock'];
-            $postos['entregador'] = ['Empregado de sala', 'leva as bebidas às mesas'];
+            $postos['entregador'] = ['Garçom', 'leva as bebidas às mesas'];
         }
         $temPostos = (bool)$postos;
       ?>

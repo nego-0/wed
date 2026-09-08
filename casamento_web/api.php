@@ -2210,7 +2210,7 @@ function barCid(): int {
 function barPortaPublica(mysqli $conn): array {
     $token = strtoupper(trim((string)($_GET['m'] ?? (corpo()['m'] ?? ''))));
     $mesa = barMesaDoToken($conn, $token);
-    if (!$mesa) erro('Este código de mesa não serve. Chame um empregado.');
+    if (!$mesa) erro('Este código de mesa não serve. Chame um garçom.');
     if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
     return $mesa;
 }
@@ -2267,62 +2267,6 @@ function barPrender(mysqli $conn, int $convidadoId, int $conviteId): void {
 }
 
 /**
- * Os quatro dígitos, quando a casa os pede (§5.2, ponto 5).
- *
- * O PIN é do CONVITE e não da pessoa, e isso não é preguiça: o telemóvel da
- * família já pode pedir por qualquer um dos seus (§5.3), portanto um segredo
- * por pessoa fechava uma porta que está aberta de propósito. O que ele devolve
- * é exactamente o segredo que se perdeu quando o link saiu do convite — quem
- * sabe o nome do padrinho não sabe, por isso, o código do convite dele.
- *
- * O travão conta-se contra o CONVITE atacado, e não contra o telemóvel de quem
- * tenta: um contador no telemóvel apaga-se com o testemunho, e um contador no
- * IP tranca a sala inteira num salão com wi-fi partilhado (§5.4). Cinco erros
- * seguidos fecham aquele convite por cinco minutos — o suficiente para que
- * ninguém adivinhe dez mil códigos a tocar num ecrã, e pouco o bastante para
- * que uma família que se enganou não fique sem bar. E enquanto está fechado, o
- * empregado continua a poder pedir por eles (§5.5) — nunca se perde a bebida
- * por causa de um código.
- *
- * Devolve o texto do erro, ou null quando passa.
- */
-function barPinFalha(mysqli $conn, array $convidado, string $pin): ?string {
-    global $P;
-    if (barDef($conn, 'bar.pedir_pin') !== '1') return null;
-    $cid = casamentoAtual();
-    barGarantirPins($conn, $cid);
-    $conviteId = (int)$convidado['convite_id'];
-    $st = $conn->prepare("SELECT bar_pin, bar_pin_falhas, bar_pin_ate FROM {$P}convites
-                          WHERE casamento_id=? AND id=? LIMIT 1");
-    if (!$st) return 'Não foi possível confirmar o código.';
-    $st->bind_param('ii', $cid, $conviteId);
-    if (!$st->execute()) return 'Não foi possível confirmar o código.';
-    $c = $st->get_result()->fetch_assoc();
-    if (!$c || !$c['bar_pin']) return null;   // sem código gravado não se tranca ninguém
-
-    if ($c['bar_pin_ate'] && strtotime($c['bar_pin_ate']) > time()) {
-        return 'Foram muitas tentativas. Chame um empregado — ele pede por si.';
-    }
-    if (preg_replace('/\D/', '', $pin) === (string)$c['bar_pin']) {
-        @$conn->query("UPDATE {$P}convites SET bar_pin_falhas=0, bar_pin_ate=NULL
-                       WHERE casamento_id=$cid AND id=$conviteId");
-        return null;
-    }
-    $n = (int)$c['bar_pin_falhas'] + 1;
-    $ate = $n >= 5 ? "DATE_ADD(NOW(), INTERVAL 5 MINUTE)" : 'NULL';
-    @$conn->query("UPDATE {$P}convites SET bar_pin_falhas=" . ($n >= 5 ? 0 : $n)
-                . ", bar_pin_ate=$ate WHERE casamento_id=$cid AND id=$conviteId");
-    registar($conn, 'bar_pin_errado', (string)$convidado['nome'],
-             $n >= 5 ? 'cinco erros seguidos — convite travado 5 minutos' : $n . '.ª tentativa');
-    // «Esse convite», e não «o seu»: o mesmo código também se pede quando
-    // alguém age por outra família (§5.2), e aí «o seu» estava simplesmente
-    // errado — mandava a pessoa procurar no convite dela.
-    return $n >= 5
-        ? 'Foram muitas tentativas. Chame um empregado — ele pede por si.'
-        : 'Esse código não confere. Está no convite, ao lado do nome.';
-}
-
-/**
  * Por quem é este pedido — por mim, ou por outra pessoa que mo pediu?
  *
  * Numa mesa há sempre quem não tenha telemóvel à mão, quem o tenha sem bateria
@@ -2358,9 +2302,8 @@ function barParaQuem(mysqli $conn, int $eu, array $g, array $d): array {
     if ((int)$alvo['convite_id'] !== (int)$g['convite_id']) {
         if (barDef($conn, 'bar.trocar_nome') !== '1') {
             erro('Neste casamento só se pede pelas pessoas do seu convite. '
-               . 'Chame um empregado — ele pede por ' . $alvo['nome'] . '.');
+               . 'Chame um garçom — ele pede por ' . $alvo['nome'] . '.');
         }
-        if (($falha = barPinFalha($conn, $alvo, (string)($d['pin'] ?? '')))) erro($falha);
     }
     return [$porId, $alvo, true];
 }
@@ -2716,7 +2659,7 @@ function barTextoTravao(array $item, array $v, int $pedidas = 0): string {
                  . ' — e fica na frente quando abrir.';
         case 'proibido':
             return 'A ' . $nome . ' não está disponível para si esta noite. '
-                 . 'Fale com um empregado se achar que é engano.';
+                 . 'Fale com um garçom se achar que é engano.';
         case 'intervalo':
             return 'A próxima ' . $nome . ' abre daqui a ' . barRelogio($v['espera_s']) . '.';
         case 'tecto':
@@ -2968,7 +2911,7 @@ function barVeredictoPedido(mysqli $conn, int $convidadoId, int $conviteId): ?ar
 function barTextoPedido(array $v): string {
     if ($v['mensagem'] !== '') return $v['mensagem'];
     if ($v['travao'] === 'proibido') {
-        return 'Os seus pedidos passam agora por um empregado. Chame um — ele trata disso.';
+        return 'Os seus pedidos passam agora por um garçom. Chame um — ele trata disso.';
     }
     return 'Fica bem assim por uns minutos. O próximo pedido abre daqui a '
          . barRelogio($v['espera_s']) . '.';
@@ -3034,6 +2977,11 @@ function barItens(mysqli $conn, bool $tudo = false): array {
         $x['reservado'] = (int)$x['reservado'];
         $x['disponivel'] = max(0, $x['stock'] - $x['reservado']);
         $x['max_por_pedido'] = max(1, (int)$x['max_por_pedido']);
+        // O limiar de «a acabar» é da BEBIDA, e vai com ela para todos os
+        // ecrãs: a montagem põe a marca, a copa pinta o semáforo, e os dois
+        // dizem a mesma coisa porque leem o mesmo número.
+        $x['stock_minimo'] = max(0, (int)($x['stock_minimo'] ?? 8));
+        $x['a_acabar'] = $x['disponivel'] <= $x['stock_minimo'];
         $x['alcoolico'] = (int)$x['alcoolico'];
         // Quanto é que se pode pedir DESTE item, agora, sem olhar a ninguém:
         // o que há e o que cabe num pedido. É o que a copa e a montagem veem.
@@ -3171,6 +3119,9 @@ function barPedidoLinha(mysqli $conn, array $p, bool $paraPessoal = false): arra
             'criado_por'  => $p['criado_por'],
             'decidido_por' => $p['decidido_por'],
             'entregue_por' => $p['entregue_por'],
+            // O que o garçom viu à mesa. Só o pessoal a lê: é uma observação
+            // sobre uma pessoa, e mostrá-la a essa pessoa era outra coisa.
+            'nota_entrega' => $p['nota_entrega'] ?? null,
             'ip'          => $p['ip'],
         ];
     }
@@ -3222,7 +3173,7 @@ function barMotivos(mysqli $conn): array {
  * Os tempos da noite, em segundos.
  *
  * Quatro contas, e cada uma diz outra coisa: a análise diz se a copa está a
- * acompanhar; a espera de recolha, se faltam empregados; o percurso, se o
+ * acompanhar; a espera de recolha, se faltam garçons; o percurso, se o
  * salão é grande; e o total é o único que o convidado conhece.
  */
 function barTempos(mysqli $conn): array {
@@ -3365,6 +3316,34 @@ function barPorMesa(mysqli $conn): array {
     return $out;
 }
 
+/**
+ * O que cada convidado bebeu, do mais para o menos.
+ *
+ * A pergunta a que isto responde não é curiosidade: é «quem é que preciso de
+ * ir ver?». Numa festa de cem pessoas há sempre três ou quatro que se
+ * destacam, e o resto é uma linha plana — e é justamente o destaque que a copa
+ * quer ver, cedo, para poder falar com alguém antes de ser tarde.
+ *
+ * Conta o ENTREGUE, e não o pedido: uma pessoa que pediu seis e recebeu duas
+ * bebeu duas. Doze chegam: a partir daí é uma lista, não é um gráfico.
+ */
+function barPorConvidado(mysqli $conn, int $limite = 12): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT g.id, g.nome, SUM(pi.quantidade) n
+                        FROM {$P}bar_pedido_itens pi
+                        JOIN {$P}bar_pedidos p ON p.id=pi.pedido_id AND p.casamento_id=pi.casamento_id
+                        JOIN {$P}convidados g ON g.id=p.convidado_id
+                        WHERE pi.casamento_id=$cid AND p.estado='entregue'
+                        GROUP BY g.id, g.nome
+                        ORDER BY n DESC, g.nome LIMIT " . max(1, min(50, $limite)));
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $out[] = ['id' => (int)$x['id'], 'nome' => $x['nome'], 'n' => (int)$x['n']];
+    }
+    return $out;
+}
+
 /** O estado do bar, para qualquer ecrã do pessoal. */
 function barEstadoGeral(mysqli $conn): array {
     global $P;
@@ -3397,7 +3376,6 @@ if ($acao === 'bar_mesa') {
         'aberto' => barAberto($conn),
         'mensagem_fechado' => barDef($conn, 'bar.mensagem_fechado'),
         'procura_min' => max(1, (int)barDef($conn, 'bar.procura_min')),
-        'pedir_pin' => barDef($conn, 'bar.pedir_pin') === '1',
         'eu' => $quem ? ['id' => (int)$quem['id'], 'nome' => $quem['nome'],
                          'convite' => $quem['nome_exibicao'],
                          'mesa_id' => $quem['mesa_id'] === null ? null : (int)$quem['mesa_id']] : null]);
@@ -3442,10 +3420,6 @@ if ($acao === 'bar_sou') {
     $g = barConvidado($conn, $id);
     if (!$g) erro('Não encontrámos esse nome.');
 
-    // Os quatro dígitos, quando a casa os pede. Vêm antes de tudo o resto: um
-    // código errado não deve sequer chegar a contar como troca de nome.
-    if (($falha = barPinFalha($conn, $g, (string)($d['pin'] ?? '')))) erro($falha);
-
     $antes = barQuemSou($conn);
     $conviteNovo = (int)$g['convite_id'];
     $troca = null;
@@ -3459,7 +3433,7 @@ if ($acao === 'bar_sou') {
         if (!$mesmoConvite) {
             if (barDef($conn, 'bar.trocar_nome') !== '1') {
                 erro('Este telemóvel já está a pedir por ' . ($ga['nome'] ?? 'outra pessoa')
-                   . '. Chame um empregado — ele resolve isto num instante.');
+                   . '. Chame um garçom — ele resolve isto num instante.');
             }
             $troca = ['de' => $ga['nome'] ?? '?', 'para' => $g['nome']];
         }
@@ -3472,7 +3446,7 @@ if ($acao === 'bar_sou') {
         $outro = barIpDeOutrem($conn, $id);
         if ($outro) {
             erro('Já há um pedido em nome de ' . $outro . ' desta ligação. '
-               . 'Peça ao empregado de mesa.');
+               . 'Peça ao garçom.');
         }
     }
 
@@ -3679,6 +3653,42 @@ if ($acao === 'bar_cancelar') {
 // A COPA — a fila, a decisão, o stock e a montagem do menu
 // ============================================================
 
+/**
+ * As notas que os garçons escreveram, por convidado.
+ *
+ * O garçom é o único do bar que fala com o convidado. O que ele traz da mesa
+ * — «pediu para não lhe servirem mais», «está com os miúdos», «não era para
+ * ele, era para a mãe» — não tinha onde ficar, e portanto morria ali. Agora
+ * fica no pedido, e a copa lê-o no momento em que serve: quando essa pessoa
+ * pede outra vez.
+ *
+ * Só as últimas três de cada um: uma nota de há quatro horas já não descreve
+ * a mesma noite, e uma lista comprida por cima de um pedido deixa de se ler.
+ */
+function barNotasDeEntrega(mysqli $conn): array {
+    global $P;
+    $cid = casamentoAtual();
+    $r = @$conn->query("SELECT p.convidado_id, p.codigo_curto, p.nota_entrega,
+                               p.entregue_por, p.entregue_em
+                        FROM {$P}bar_pedidos p
+                        WHERE p.casamento_id=$cid AND p.convidado_id IS NOT NULL
+                          AND p.nota_entrega IS NOT NULL AND p.nota_entrega <> ''
+                        ORDER BY p.entregue_em DESC, p.id DESC");
+    $out = [];
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $g = (int)$x['convidado_id'];
+        if (!isset($out[$g])) $out[$g] = [];
+        if (count($out[$g]) >= 3) continue;
+        $out[$g][] = ['codigo' => $x['codigo_curto'], 'texto' => $x['nota_entrega'],
+                      'quem' => $x['entregue_por'], 'quando' => $x['entregue_em']];
+    }
+    // Chaves em texto: um objecto JSON com chaves numéricas volta como array
+    // no JavaScript, e a copa procura por id.
+    $txt = [];
+    foreach ($out as $k => $v) $txt[(string)$k] = $v;
+    return $txt;
+}
+
 if ($acao === 'bar_estado') {
     // Tudo o que a copa e a montagem desenham, numa leitura só. Um ecrã que
     // se refresca de dez em dez segundos não pode pedir cinco coisas de cada
@@ -3708,6 +3718,10 @@ if ($acao === 'bar_estado') {
         // Telemóveis que valem uma segunda vista. Não acusam ninguém: a copa
         // conhece a sala e decide — o sistema limita-se a apontar (§5.3).
         'bandeiras'  => barBandeiras($conn),
+        // O que os garçons trouxeram da mesa, por convidado. A copa vê-o
+        // colado ao pedido seguinte dessa pessoa — que é o momento em que a
+        // observação vale alguma coisa (§27).
+        'notas'      => barNotasDeEntrega($conn),
         'fila'       => array_map(fn($p) => barPedidoLinha($conn, $p, true), $vivos),
         'resolvidos' => array_map(fn($p) => barPedidoLinha($conn, $p, true), $fim)]);
 }
@@ -3726,18 +3740,91 @@ if ($acao === 'bar_decidir') {
     $itens = barItensDoPedido($conn, $id);
 
     if (($d['decisao'] ?? '') === 'aprovar') {
-        // Se entretanto faltar stock, não se aprova o que não se pode servir.
-        foreach ($itens as $li) {
-            $item = barItem($conn, $li['item_id']);
-            if (!$item || $item['disponivel'] < $li['quantidade']) {
-                erro('Já não há «' . $li['nome'] . '» que chegue para este pedido.');
+        /* ---- aprovar, inteiro ou em parte ------------------------
+           Havia duas portas, e a vida do bar tem três. «Pediu quatro cervejas
+           e só há duas» não era nem aprovar (não se serve o que não há) nem
+           recusar (recusar quatro por causa de duas é servir zero, e a pessoa
+           volta a pedir daí a um minuto). A terceira é a que se faz sempre ao
+           balcão: serve-se o que se pode e diz-se porquê.
+
+           O `cortes` chega como {item_id: quantidade nova}, e a quantidade
+           nova pode ser 0 — que é tirar a linha do pedido. Um corte pede
+           motivo pela mesma razão que uma recusa: quem recebe menos do que
+           pediu tem direito a saber porquê, e sem essa frase pede outra vez. */
+        $cortes = is_array($d['cortes'] ?? null) ? $d['cortes'] : [];
+        $mudou = [];
+        if ($cortes) {
+            foreach ($itens as $li) {
+                $k = (string)$li['item_id'];
+                if (!array_key_exists($k, $cortes)) continue;
+                $nova = max(0, min((int)$li['quantidade'], (int)$cortes[$k]));
+                if ($nova === (int)$li['quantidade']) continue;
+                $mudou[] = ['linha' => $li, 'nova' => $nova];
             }
         }
-        foreach ($itens as $li) barReservar($conn, $li['item_id'], $li['quantidade']);
-        $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='aprovado', decidido_por=?, decidido_em=NOW()
-                              WHERE casamento_id=$cid AND id=?");
-        $st->bind_param('si', $quem, $id); @$st->execute();
-        registar($conn, 'bar_aprovado', $p['convidado_nome'] ?? '', '#' . $p['codigo_curto']);
+        if ($mudou) {
+            $mid = (int)($d['motivo_id'] ?? 0) ?: null;
+            $txt = mb_substr(trim((string)($d['motivo_texto'] ?? '')), 0, 200);
+            if (!$mid && $txt === '') {
+                erro('Servir menos do que se pediu explica-se: escolha um motivo ou escreva um.');
+            }
+        }
+        // O pedido depois do corte. Se ficar vazio, isto já não é uma
+        // aprovação parcial — é uma recusa, e trata-se como tal.
+        $finais = [];
+        foreach ($itens as $li) {
+            $nova = (int)$li['quantidade'];
+            foreach ($mudou as $m) if ($m['linha']['item_id'] === $li['item_id']) $nova = $m['nova'];
+            if ($nova > 0) $finais[] = ['li' => $li, 'q' => $nova];
+        }
+        if (!$finais) erro('Cortou tudo. Se não há nada para servir, recuse o pedido — '
+                         . 'a pessoa fica a saber, e o pedido não fica a meio.');
+
+        // Se entretanto faltar stock, não se aprova o que não se pode servir.
+        foreach ($finais as $f) {
+            $item = barItem($conn, $f['li']['item_id']);
+            if (!$item || $item['disponivel'] < $f['q']) {
+                erro('Já não há «' . $f['li']['nome'] . '» que chegue para este pedido.');
+            }
+        }
+        // Grava-se o corte ANTES de reservar: o que se reserva é o que fica.
+        foreach ($mudou as $m) {
+            $li = $m['linha'];
+            if ($m['nova'] > 0) {
+                $q = $conn->prepare("UPDATE {$P}bar_pedido_itens SET quantidade=?
+                                     WHERE casamento_id=$cid AND pedido_id=? AND item_id=?");
+                $q->bind_param('iii', $m['nova'], $id, $li['item_id']);
+            } else {
+                $q = $conn->prepare("DELETE FROM {$P}bar_pedido_itens
+                                     WHERE casamento_id=$cid AND pedido_id=? AND item_id=?");
+                $q->bind_param('ii', $id, $li['item_id']);
+            }
+            @$q->execute();
+        }
+        foreach ($finais as $f) barReservar($conn, $f['li']['item_id'], $f['q']);
+
+        // Numa aprovação parcial o motivo fica GUARDADO no pedido: é o que o
+        // convidado lê no telemóvel quando o pedido dele encolhe, e é o que a
+        // copa relê daqui a meia hora sem ter de se lembrar.
+        if ($mudou) {
+            $mid = (int)($d['motivo_id'] ?? 0) ?: null;
+            $txt = mb_substr(trim((string)($d['motivo_texto'] ?? '')), 0, 200);
+            $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='aprovado', motivo_id=?,
+                                  motivo_texto=?, decidido_por=?, decidido_em=NOW()
+                                  WHERE casamento_id=$cid AND id=?");
+            $st->bind_param('issi', $mid, $txt, $quem, $id);
+        } else {
+            $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='aprovado', decidido_por=?, decidido_em=NOW()
+                                  WHERE casamento_id=$cid AND id=?");
+            $st->bind_param('si', $quem, $id);
+        }
+        @$st->execute();
+        $conta = [];
+        foreach ($mudou as $m) {
+            $conta[] = $m['linha']['nome'] . ': ' . $m['linha']['quantidade'] . '→' . $m['nova'];
+        }
+        registar($conn, $mudou ? 'bar_aprovado_parte' : 'bar_aprovado', $p['convidado_nome'] ?? '',
+                 '#' . $p['codigo_curto'] . ($conta ? ' · ' . implode(', ', $conta) : ''));
     } else {
         $mid = (int)($d['motivo_id'] ?? 0) ?: null;
         $txt = mb_substr(trim((string)($d['motivo_texto'] ?? '')), 0, 200);
@@ -3783,7 +3870,7 @@ if ($acao === 'bar_abrir' || $acao === 'bar_fechar') {
 
 if ($acao === 'bar_defs') {
     // As regras da casa: como se trata o IP, quantas letras a procura pede, se
-    // os empregados pedem por quem não tem rede, e o que diz o menu fechado.
+    // os garçons pedem por quem não tem rede, e o que diz o menu fechado.
     barCid();
     if (!podeCopa()) erro('Só a copa.');
     exigirCorrecao();
@@ -3868,17 +3955,22 @@ if ($acao === 'bar_item_guardar') {
     $maxp = max(1, min(20, (int)($d['max_por_pedido'] ?? 2)));
     $est  = ($d['estado'] ?? 'ativo') === 'oculto' ? 'oculto' : 'ativo';
     $ord  = (int)($d['ordem'] ?? 0);
+    // A partir de quantas se diz «a acabar». É por bebida porque cinco
+    // garrafas de whisky é uma emergência e cinco águas não é nada — e era
+    // exactamente isso que um número fixo para todas não sabia distinguir.
+    $min  = max(0, min(9999, (int)($d['stock_minimo'] ?? 8)));
     if ($id) {
         $st = $conn->prepare("UPDATE {$P}bar_itens SET categoria_id=?, nome=?, descricao=?, alcoolico=?,
-                              volume_ml=?, max_por_pedido=?, estado=?, ordem=?
+                              volume_ml=?, max_por_pedido=?, stock_minimo=?, estado=?, ordem=?
                               WHERE casamento_id=$cid AND id=?");
-        $st->bind_param('issiiisii', $cat, $nome, $desc, $alc, $vol, $maxp, $est, $ord, $id);
+        $st->bind_param('issiiiisii', $cat, $nome, $desc, $alc, $vol, $maxp, $min, $est, $ord, $id);
         @$st->execute();
     } else {
         $st = $conn->prepare("INSERT INTO {$P}bar_itens
-                (casamento_id,categoria_id,nome,descricao,alcoolico,volume_ml,max_por_pedido,estado,ordem,stock)
-                VALUES (?,?,?,?,?,?,?,?,?,0)");
-        $st->bind_param('iissiiisi', $cid, $cat, $nome, $desc, $alc, $vol, $maxp, $est, $ord);
+                (casamento_id,categoria_id,nome,descricao,alcoolico,volume_ml,max_por_pedido,
+                 stock_minimo,estado,ordem,stock)
+                VALUES (?,?,?,?,?,?,?,?,?,?,0)");
+        $st->bind_param('iissiiiisi', $cid, $cat, $nome, $desc, $alc, $vol, $maxp, $min, $est, $ord);
         @$st->execute();
         $id = $conn->insert_id;
         // O stock inicial, quando vem junto: entra como entrada, com razão.
@@ -4103,6 +4195,9 @@ if ($acao === 'bar_numeros') {
         'recusas' => barRecusas($conn),
         'ritmo'   => barRitmoHistorico($conn),
         'mesas'   => barPorMesa($conn),
+        // Quem bebeu o quê. É o gráfico que responde a «com quem é que preciso
+        // de falar antes de ser tarde» (§27).
+        'pessoas' => barPorConvidado($conn),
         'caudal'  => barCaudal($conn),
         'agora'   => date('c')]);
 }
@@ -4152,27 +4247,6 @@ if ($acao === 'bar_soltar') {
     ok(['dispositivos' => barDispositivosDe($conn, (int)$x['convidado_id'])]);
 }
 
-if ($acao === 'bar_pin_soltar') {
-    // Levantar o travão do código a um convite.
-    //
-    // Cinco enganos seguidos fecham um convite por cinco minutos, e sem isto o
-    // único remédio era esperar — com uma família de pé à frente do copeiro, a
-    // olhar para um telemóvel que diz «chame um empregado». O empregado veio;
-    // agora resolve. É o mesmo gesto do «soltar» de um telemóvel, e pela mesma
-    // razão: a vida dá nós, e alguém tem de os poder desatar.
-    $cid = barCid();
-    if (!podeCopa()) erro('Só a copa.');
-    exigirCorrecao();
-    $gid = (int)(corpo()['convidado_id'] ?? 0);
-    $g = $gid ? barConvidado($conn, $gid) : null;
-    if (!$g) erro('Não encontrámos esse convidado.');
-    $conviteId = (int)$g['convite_id'];
-    @$conn->query("UPDATE {$P}convites SET bar_pin_falhas=0, bar_pin_ate=NULL
-                   WHERE casamento_id=$cid AND id=$conviteId");
-    registar($conn, 'bar_pin_soltou', (string)$g['nome'], 'travão do código levantado');
-    ok(['travado' => false]);
-}
-
 if ($acao === 'bar_ficha') {
     // A ficha de um convidado: o que já levou, as regras dele, e os telemóveis
     // em nome dele. É o ecrã que se abre com a pessoa à frente.
@@ -4181,22 +4255,7 @@ if ($acao === 'bar_ficha') {
     $gid = (int)($_GET['convidado'] ?? 0);
     $g = $gid ? barConvidado($conn, $gid) : null;
     if (!$g) erro('Não encontrámos esse convidado.');
-    // O travão do código, se este convite o tiver: é o que explica por que é
-    // que a pessoa está à frente do copeiro em vez de estar a pedir sozinha.
-    $travado = false;
-    if (barDef($conn, 'bar.pedir_pin') === '1') {
-        $st = $conn->prepare("SELECT bar_pin_ate FROM {$P}convites
-                              WHERE casamento_id=? AND id=? LIMIT 1");
-        if ($st) {
-            $cidF = casamentoAtual(); $cvF = (int)$g['convite_id'];
-            $st->bind_param('ii', $cidF, $cvF);
-            if ($st->execute() && ($x = $st->get_result()->fetch_assoc())) {
-                $travado = !empty($x['bar_pin_ate']) && strtotime($x['bar_pin_ate']) > time();
-            }
-        }
-    }
-    ok(['pin_travado' => $travado,
-        'convidado' => ['id' => $gid, 'nome' => $g['nome'],
+    ok(['convidado' => ['id' => $gid, 'nome' => $g['nome'],
                         'convite' => $g['nome_exibicao'],
                         'convite_id' => (int)$g['convite_id']],
         'levou'  => barConsumoPessoal($conn, $gid),
@@ -4250,12 +4309,18 @@ if ($acao === 'bar_entregue') {
         barReservar($conn, $li['item_id'], -$li['quantidade']);
     }
     $quem = (string)(utilizadorAtual() ?? '');
+    // A nota do garçom, se ele a escreveu. É opcional de propósito: a acção
+    // que se faz cem vezes por noite não pode exigir escrita, e a nota vale
+    // justamente por ser a excepção — «pediu para não lhe servirem mais»,
+    // «está com os miúdos». A copa lê-a ao decidir o pedido seguinte.
+    $nota = mb_substr(trim((string)(corpo()['nota'] ?? '')), 0, 240) ?: null;
     $st = $conn->prepare("UPDATE {$P}bar_pedidos SET estado='entregue', entregue_por=?,
-                          apanhado_em=COALESCE(apanhado_em, NOW()), entregue_em=NOW()
+                          nota_entrega=?, apanhado_em=COALESCE(apanhado_em, NOW()), entregue_em=NOW()
                           WHERE casamento_id=$cid AND id=?");
-    $st->bind_param('si', $quem, $id); @$st->execute();
+    $st->bind_param('ssi', $quem, $nota, $id); @$st->execute();
     registar($conn, 'bar_entregue', $p['convidado_nome'] ?? '',
-             '#' . $p['codigo_curto'] . ($p['mesa_nome'] ? ' · mesa ' . $p['mesa_nome'] : ''));
+             '#' . $p['codigo_curto'] . ($p['mesa_nome'] ? ' · mesa ' . $p['mesa_nome'] : '')
+           . ($nota ? ' · nota: ' . $nota : ''));
     ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id), true),
         'estado' => barEstadoGeral($conn), 'tempos' => barTempos($conn)]);
 }
@@ -4278,7 +4343,7 @@ if ($acao === 'bar_falhou') {
 }
 
 if ($acao === 'bar_pedir_por') {
-    // O pedido de quem não tem rede: o empregado lança-o por ele.
+    // O pedido de quem não tem rede: o garçom lança-o por ele.
     $cid = barCid();
     if (!podeEntregar() && !podeCopa()) erro('Só o pessoal do bar.');
     exigirCorrecao();
@@ -4297,13 +4362,35 @@ if ($acao === 'bar_pedir_por') {
         $linhas[] = [$item, $q];
     }
     if (!$linhas) erro('Escolha pelo menos uma bebida.');
+
+    /* ---- em que estado nasce este pedido ----------------------
+       Quem lança um pedido pelo balcão JÁ o decidiu — está a olhar para a
+       pessoa e para as garrafas. Fazê-lo nascer «em análise» era pô-lo a
+       aprovar aquilo que acabou de escrever, e a fila enchia-se de pedidos
+       que só esperavam por quem os tinha criado.
+
+       Duas saídas, portanto: nasce APROVADO (fica prometido, e um garçom
+       leva-o), ou nasce ENTREGUE quando o copo já foi na mão — o caso do
+       balcão, que é o mais comum de todos e não passa por entrega nenhuma. */
+    $jaEntregue = !empty($d['entregue']);
+    $estado = $jaEntregue ? 'entregue' : 'aprovado';
+    foreach ($linhas as [$item, $q]) {
+        if ((int)$item['disponivel'] < $q) {
+            erro('Já não há «' . $item['nome'] . '» que chegue: restam '
+               . (int)$item['disponivel'] . '.');
+        }
+    }
     $codigo = barCodigoCurto();
     $quem = (string)(utilizadorAtual() ?? '');
     $conviteId = (int)$g['convite_id'];
+    $entregueEm = $jaEntregue ? 'NOW()' : 'NULL';
     $st = $conn->prepare("INSERT INTO {$P}bar_pedidos
-            (casamento_id,codigo_curto,convidado_id,convite_id,mesa_id,estado,criado_por,criado_em)
-            VALUES (?,?,?,?,?,'em_analise',?,NOW())");
-    $st->bind_param('isiiis', $cid, $codigo, $gid, $conviteId, $mesaId, $quem);
+            (casamento_id,codigo_curto,convidado_id,convite_id,mesa_id,estado,criado_por,criado_em,
+             decidido_por,decidido_em,entregue_por,apanhado_em,entregue_em)
+            VALUES (?,?,?,?,?,'$estado',?,NOW(),?,NOW(),"
+          . ($jaEntregue ? "?,$entregueEm,$entregueEm" : "NULL,NULL,NULL") . ")");
+    if ($jaEntregue) $st->bind_param('isiiisss', $cid, $codigo, $gid, $conviteId, $mesaId, $quem, $quem, $quem);
+    else             $st->bind_param('isiiiss',  $cid, $codigo, $gid, $conviteId, $mesaId, $quem, $quem);
     if (!@$st->execute()) erro('Não foi possível lançar o pedido.');
     $pid = $conn->insert_id;
     foreach ($linhas as [$item, $q]) {
@@ -4313,9 +4400,18 @@ if ($acao === 'bar_pedir_por') {
         $si->bind_param('iiisi', $cid, $pid, $iid, $nome, $q);
         @$si->execute();
     }
+    // O stock segue a mesma regra de sempre (§4): aprovar PROMETE, entregar
+    // BAIXA. Um pedido que nasce entregue faz as duas coisas de uma vez, e a
+    // conta fica exactamente onde ficaria se tivesse passado pelos dois ecrãs.
+    foreach ($linhas as [$item, $q]) {
+        if ($jaEntregue) barMoverStock($conn, (int)$item['id'], -$q, 'entrega', $pid, 'lançado ao balcão');
+        else             barReservar($conn, (int)$item['id'], $q);
+    }
     $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
-    registar($conn, 'bar_pedido_por', $g['nome'], '#' . $codigo . ' · ' . $resumo);
-    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $pid), true)]);
+    registar($conn, 'bar_pedido_por', $g['nome'],
+             '#' . $codigo . ' · ' . $resumo . ($jaEntregue ? ' · entregue no acto' : ' · por entregar'));
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $pid), true),
+        'estado' => barEstadoGeral($conn), 'itens' => barItens($conn, true)]);
 }
 
 if ($acao === 'bar_procurar_pessoal') {
@@ -4345,7 +4441,7 @@ if ($acao === 'bar_procurar_pessoal') {
 //
 // A barreira geral (exigirCsrf, logo a seguir a exigirAdminApi) fica abaixo
 // desta secção, porque o bar tem gente que não é admin: o copeiro e o
-// empregado. Confere-se aqui, contra a mesma lista de config.php — as ações
+// garçom. Confere-se aqui, contra a mesma lista de config.php — as ações
 // públicas do convidado não estão nela, e é por isso que passam sem token:
 // não há sessão nenhuma para roubar, e a chave é o código da mesa.
 if (str_starts_with($acao, 'bar_') && in_array($acao, acoesDeEscrita(), true)) {
@@ -5616,7 +5712,7 @@ if ($acao === 'acesso_convidar') {
     // entrava para não encontrar nada que fazer.
     $exige = ['porteiro' => ['porta', 'o «Controlo à porta»', 'o porteiro'],
               'copeiro'  => ['bar',   'o «Bar da festa»',     'o copeiro'],
-              'entregador' => ['bar', 'o «Bar da festa»',     'o empregado']];
+              'entregador' => ['bar', 'o «Bar da festa»',     'o garçom']];
     if (isset($exige[$papelCas])) {
         [$mod, $nome, $quem] = $exige[$papelCas];
         if (!licCasamentoTemModulo($conn, $cid, $mod)) {
@@ -6718,12 +6814,7 @@ function retratoCasamento(mysqli $conn, int $cid): array {
                             m.nome AS mesa, c.telefone, c.msg_pessoal, c.observacoes,
                             c.rsvp_estado, c.rsvp_confirmados, c.rsvp_mensagem,
                             c.checkin_estado, c.checkin_presentes,
-                            c.enviado, c.impresso, c.mostrar_num_mesa, c.eliminado_em,
-                            -- Os quatro dígitos do bar viajam com o convite: sem eles,
-                            -- levar os dados e trazê-los de volta invalidava em silêncio
-                            -- todos os códigos já impressos (§5.2). O travão fica de
-                            -- fora — é o estado de um minuto, não um dado do casal.
-                            c.bar_pin
+                            c.enviado, c.impresso, c.mostrar_num_mesa, c.eliminado_em
                      FROM {$P}convites c LEFT JOIN {$P}mesas m ON m.id = c.mesa_id
                      WHERE c.casamento_id=$cid ORDER BY c.id");
     $porCodigo = [];
@@ -6973,9 +7064,8 @@ function impConvites(mysqli $conn, int $cid, array $convites): array {
         $st = $conn->prepare("INSERT INTO {$P}convites
               (casamento_id, codigo, nome_exibicao, sufixo, tipo, lado, lugares, mesa_id, telefone,
                msg_pessoal, observacoes, rsvp_estado, rsvp_confirmados, rsvp_mensagem,
-               checkin_estado, checkin_presentes, enviado, impresso, mostrar_num_mesa, eliminado_em,
-               bar_pin)
-              VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+               checkin_estado, checkin_presentes, enviado, impresso, mostrar_num_mesa, eliminado_em)
+              VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
         $vals = [
             $codigo,
             mb_substr((string)$c['nome_exibicao'], 0, 160),
@@ -6996,11 +7086,8 @@ function impConvites(mysqli $conn, int $cid, array $convites): array {
             (int)!empty($c['impresso']),
             isset($c['mostrar_num_mesa']) ? (int)$c['mostrar_num_mesa'] : 1,
             isset($c['eliminado_em']) && $c['eliminado_em'] !== null ? (string)$c['eliminado_em'] : null,
-            // Quatro dígitos, ou nada: um retrato de antes do bar não os traz,
-            // e nesse caso barGarantirPins() dá-lhes um quando forem precisos.
-            preg_match('/^\d{4}$/', (string)($c['bar_pin'] ?? '')) ? (string)$c['bar_pin'] : null,
         ];
-        $st->bind_param('sssssiissssissiiiiss', ...$vals);  // 20 colunas, pela ordem acima
+        $st->bind_param('sssssiissssissiiiis', ...$vals);   // 19 colunas, pela ordem acima
         if (!@$st->execute()) continue;
         $convId = $conn->insert_id; $feito['convites']++;
 

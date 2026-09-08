@@ -16,12 +16,11 @@
 //      copa vê-os. É a vantagem sobre a troca de nome, que apagava um deles.
 //   3. **Volta-se a si sozinho.** Um «a pedir para outro» esquecido ligado
 //      dava a ronda seguinte inteira em nome do vizinho, à conta dele.
-//   4. **O código do convite continua a valer.** Com o PIN ligado, pedir por
-//      quem é de OUTRO convite exige o código desse convite — senão bastava
-//      não trocar de nome e pedir «pelo padrinho» para o contornar por
-//      inteiro, e o PIN não guardava nada.
-//   5. **Dentro do mesmo convite não se pede código nenhum**, porque a família
-//      é a unidade doméstica de todo o módulo (§5.3, primeira linha).
+//   4. **O código do convite já não existe.** Saiu do módulo (§27): eram
+//      quatro dígitos a mais numa página que serve para pedir uma cerveja de
+//      pé, e o segredo que davam estava escrito no mesmo papel pousado na
+//      mesa. O que trava o abuso é o que sempre travou — o telemóvel fica
+//      preso ao nome, e a copa vê os dois nomes de cada pedido.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -75,8 +74,6 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       for (const i of (e.itens || []).filter(i => /^ZZO /.test(i.nome))) {
         await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
       }
-      await window.api('bar_defs', { method: 'POST',
-        body: JSON.stringify({ 'bar.pedir_pin': '0' }) });
       const d = await window.api('convite_list&busca=ZZO', { silencioso: true });
       for (const c of ((d && d.convites) || [])) {
         if (/^ZZO /.test(c.nome_exibicao)) {
@@ -211,58 +208,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(minha.success === true, 'e não trava quem pediu: a regra é de uma pessoa, não da mesa');
   await limparFila();
 
-  // ============ 7. o código do convite ============
-  if (!C) {
-    console.log('(saltado: não há um segundo convite para provar o código)');
-  } else {
-    const pin = await p.evaluate(async () => {
-      await window.api('bar_defs', { method: 'POST',
-        body: JSON.stringify({ 'bar.pedir_pin': '1' }) });
-      return true;
-    });
-    // Dentro do MESMO convite, nada muda: a família é a unidade doméstica.
-    const semCodigo = await cA.evaluate(async ([t, bid]) =>
-      await (await fetch('api.php?action=bar_por_quem&m=' + t, { method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ m: t, por_id: bid }) })).json(), [token, B.id]);
-    ok(semCodigo.success === true,
-       'com o código ligado, pedir por alguém do MEU convite não pede código nenhum');
-
-    // Para outro convite, sem código, não passa.
-    const semPin = await cA.evaluate(async ([t, cid]) =>
-      await (await fetch('api.php?action=bar_por_quem&m=' + t, { method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ m: t, por_id: cid, pin: '' }) })).json(), [token, C.id]);
-    ok(semPin.success === false,
-       'e por alguém de OUTRO convite exige-o: «' + (semPin.message || '') + '»');
-
-    // O código vem da exportação, e é ela própria uma verificação: os quatro
-    // dígitos viajam com o convite. Sem isso, levar os dados e trazê-los de
-    // volta invalidava em silêncio todos os códigos já impressos.
-    // O retrato identifica os convites pelo NOME, e não por id — o id é desta
-    // base de dados e não sobrevive a uma importação.
-    const oPin = await p.evaluate(async (nome) => {
-      const r = await fetch('api.php?action=dados_exportar&ambito=casamento',
-                            { headers: { 'X-CSRF-Token': window.CSRF } });
-      const d = await r.json();
-      const c = ((d.casamentos || [])[0].convites || [])
-                  .filter(x => x.nome_exibicao === nome)[0];
-      return c ? (c.bar_pin || null) : null;
-    }, C.convite);
-    ok(!!oPin && /^\d{4}$/.test(oPin),
-       'a exportação leva o código do convite — senão importar de volta '
-       + 'invalidava em silêncio tudo o que já estava impresso');
-    const comPin = await cA.evaluate(async ([t, cid, pn]) =>
-      await (await fetch('api.php?action=bar_por_quem&m=' + t, { method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ m: t, por_id: cid, pin: pn || '' }) })).json(),
-      [token, C.id, oPin]);
-    ok(comPin.success === true, 'e com o código certo passa — é o segredo daquela família');
-    await p.evaluate(async () => {
-      await window.api('bar_defs', { method: 'POST',
-        body: JSON.stringify({ 'bar.pedir_pin': '0' }) });
-    });
-  }
+  // ============ 7. sem código do convite ============
+  // Havia aqui uma secção inteira sobre os quatro dígitos: pedir por alguém
+  // de OUTRO convite exigia o segredo desse convite. O código saiu do módulo
+  // (§27) — eram quatro dígitos a mais numa página que existe para se pedir
+  // uma cerveja de pé, e o segredo que davam estava escrito no mesmo papel
+  // pousado na mesa. O que trava o abuso é o que sempre travou, e é o que
+  // esta prova defende nas secções de cima: o telemóvel fica preso ao nome, e
+  // a copa vê os dois nomes de cada pedido.
+  ok(!/pedir_pin|bar_pin/.test(await (await fetch(BASE + '/assets/bar-convidado.js')).text()),
+     'o menu do convidado já não sabe o que é um código de convite');
 
   // ============ arrumar ============
   await limparTudo();

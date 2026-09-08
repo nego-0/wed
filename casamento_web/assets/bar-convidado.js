@@ -22,12 +22,10 @@
   var mesaEntrega = MESA;               // para onde vai a bebida (pode mudar-se)
   var aberto = false, msgFechado = window.BAR.fechado || '';
   var procuraMin = 4;
-  var pedePin = false;                  // a casa pede os quatro dígitos do convite
-  var achados = {};                     // id -> nome, para o ecrã do código
   // Por quem estou a pedir. null = por mim, que é o estado normal e aquele a
   // que a página volta sozinha depois de cada pedido: um «para outro» que se
   // esquecesse ligado dava uma ronda inteira em nome do vizinho.
-  var para = null;                      // {id, nome, convite, mesa_id, pin}
+  var para = null;                      // {id, nome, convite, mesa_id}
   var menu = { categorias: [], itens: [] };
   var ritmo = null;          // o caudal da copa, quando está cheio
   var travaoPedido = null;   // «o próximo pedido abre em…»
@@ -83,7 +81,7 @@
 
   function falhou(d) {
     // Um erro do bar não é uma catástrofe: diz-se o que é e deixa-se tentar
-    // outra vez. Chamar um empregado é sempre a saída que resta.
+    // outra vez. Chamar um garçom é sempre a saída que resta.
     return '<div class="b-erro"><span>' + esc(porque(d)) + '</span>'
       + '<button class="btn btn-claro" onclick="barRecarregar()">Tentar de novo</button></div>';
   }
@@ -100,7 +98,7 @@
       + '<div class="b-nomes" id="b-nomes" role="listbox" aria-label="Nomes encontrados"></div>'
       + (aviso ? '<div class="b-ajuda">' + esc(aviso) + '</div>' : '')
       + '<div class="b-ajuda">O bar precisa de saber a quem entregar. '
-      +   'Se não se encontrar na lista, chame um empregado — ele pede por si.</div>'
+      +   'Se não se encontrar na lista, chame um garçom — ele pede por si.</div>'
       + '</div>';
     var q = $('b-q');
     q.addEventListener('input', function () {
@@ -127,65 +125,20 @@
     if (!d.success) { cx.innerHTML = falhou(d); return; }
     if (!d.nomes.length) {
       cx.innerHTML = '<div class="b-ajuda" style="margin:0">Ninguém com esse nome. '
-        + 'Experimente o apelido, ou chame um empregado.</div>';
+        + 'Experimente o apelido, ou chame um garçom.</div>';
       return;
     }
-    achados = {};
-    d.nomes.forEach(function (n) { achados[n.id] = n; });
     cx.innerHTML = d.nomes.map(function (n) {
       return '<button class="b-nome" type="button" role="option" onclick="barSou(' + n.id + ')">'
         + '<b>' + esc(n.nome) + '</b><span>' + esc(n.convite) + '</span></button>';
     }).join('');
   }
 
-  /**
-   * Os quatro dígitos, quando a casa os pede.
-   *
-   * Vem depois de escolher o nome e não antes: só quem já se escolheu sabe de
-   * que convite é o código que lhe estão a pedir. O código é do CONVITE — a
-   * família tem um só —, e é por isso que o ecrã diz de quem é.
-   */
-  function ecraPin(n, aviso) {
-    $('b-corpo').innerHTML =
-      '<div class="b-procura">'
-      + '<h1>O código do convite</h1>'
-      + '<p>Quatro dígitos, no convite de <b>' + esc(n.convite) + '</b>. '
-      +   'É o mesmo para a família toda.</p>'
-      + '<input id="b-pin" type="text" inputmode="numeric" autocomplete="off" '
-      +   'maxlength="4" pattern="[0-9]*" class="b-pin" placeholder="0000" '
-      +   'aria-label="Os quatro dígitos do convite">'
-      + '<div class="b-pin-erro" id="b-pin-erro" role="alert" aria-live="polite">'
-      +   (aviso ? esc(aviso) : '') + '</div>'
-      + '<button class="btn btn-ouro b-pin-bt" type="button" onclick="barPin('
-      +   n.id + ')">Entrar</button>'
-      + '<button class="btn btn-claro b-pin-bt" type="button" onclick="barRecarregar()">'
-      +   'Afinal não sou eu</button>'
-      + '<div class="b-ajuda">Sem o código, chame um empregado — ele pede por si, '
-      +   'e a bebida é a mesma.</div>'
-      + '</div>';
-    var c = $('b-pin');
-    c.addEventListener('keydown', function (e) { if (e.key === 'Enter') window.barPin(n.id); });
-    c.focus();
-  }
+  window.barSou = function (id) { return entrar(id); };
 
-  window.barPin = function (id) {
-    var c = $('b-pin');
-    entrar(id, c ? c.value : '');
-  };
-
-  window.barSou = function (id) {
-    // Com código, pergunta-se primeiro; sem ele, entra-se já.
-    if (pedePin && achados[id]) { ecraPin(achados[id], ''); return; }
-    return entrar(id, '');
-  };
-
-  async function entrar(id, pin) {
-    var d = await chamar('bar_sou', { convidado_id: id, pin: pin });
+  async function entrar(id) {
+    var d = await chamar('bar_sou', { convidado_id: id });
     if (!d.success) {
-      // Com o código à frente, o erro fica NO ecrã do código: mandar a pessoa
-      // de volta à procura obrigava-a a escrever o nome outra vez por causa de
-      // um dígito trocado.
-      if (pedePin && achados[id]) { ecraPin(achados[id], porque(d)); return; }
       if ($('b-nomes')) $('b-nomes').innerHTML = falhou(d);
       return;
     }
@@ -614,16 +567,8 @@
   window.barParaEste = async function (id) {
     var n = window.__barParaLista ? window.__barParaLista(id) : null;
     if (!n) return;
-    // O código do convite, quando a casa o pede E a pessoa é de outra família:
-    // agir por outro convite exige o segredo desse convite, senão o código não
-    // valia nada — bastava pedir «pelo padrinho» para o contornar.
-    if (pedePin && eu && n.convite !== eu.convite) {
-      licFecharJanela();
-      ecraPinPara(n, '');
-      return;
-    }
     licFecharJanela();
-    await fixarPara({ id: n.id, nome: n.nome, convite: n.convite, pin: '' });
+    await fixarPara({ id: n.id, nome: n.nome, convite: n.convite });
   };
 
   window.barParaMim = async function () {
@@ -646,34 +591,6 @@
     await carregarMenu();
   }
 
-  /** O código do convite de quem NÃO é da minha família. */
-  function ecraPinPara(n, aviso) {
-    licJanela('O código do convite de ' + esc(n.nome),
-      '<p class="dica" style="margin:0 0 .7rem">Quatro dígitos, no convite de '
-      + '<b>' + esc(n.convite) + '</b>. Sem ele não se pede por quem é de outra '
-      + 'família — e um empregado pede na mesma, se for preciso.</p>'
-      + '<input id="b-pq-pin" type="text" inputmode="numeric" autocomplete="off" '
-      +   'maxlength="4" pattern="[0-9]*" class="b-pin" placeholder="0000" '
-      +   'aria-label="Os quatro dígitos desse convite" '
-      +   'style="width:100%;padding:.8rem .9rem;border-radius:12px;'
-      +   'border:1px solid rgba(0,0,0,.2)">'
-      + '<div class="b-pin-erro" role="alert" aria-live="polite">' + esc(aviso) + '</div>',
-      async function () {
-        var c = document.getElementById('b-pq-pin');
-        var pin = c ? c.value : '';
-        // Confere-se aqui, e não no fim: descobrir que o código está errado só
-        // ao carregar em «Pedir», com as bebidas todas escolhidas, seria mandar
-        // a pessoa fazer o trabalho duas vezes.
-        var d = await chamar('bar_por_quem', { por_id: n.id, pin: pin });
-        if (!d.success) { licJanelaErro(porque(d)); return false; }
-        await fixarPara({ id: n.id, nome: n.nome, convite: n.convite, pin: pin });
-        return true;
-      }, { guardar: 'Confirmar' });
-    var c = document.getElementById('b-pq-pin');
-    if (c) c.focus();
-  }
-
-  // ---- o pedido ---------------------------------------------
   window.barEnviar = async function () {
     var itens = Object.keys(cesto).map(function (k) {
       return { item_id: parseInt(k, 10), quantidade: cesto[k] };
@@ -684,7 +601,7 @@
     bt.disabled = true; bt.textContent = 'A enviar…';
     var corpo = { itens: itens, mesa_id: mesaEntrega ? mesaEntrega.id : MESA.id,
                   mesa_qr_id: MESA.id };
-    if (para) { corpo.por_id = para.id; corpo.pin = para.pin || ''; }
+    if (para) corpo.por_id = para.id;
     var d = await chamar('bar_pedir', corpo);
     bt.disabled = false; bt.textContent = rotulo;
     if (!d.success) { janelaAviso('Não deu para pedir', esc(porque(d))); return; }
@@ -714,7 +631,7 @@
   }
 
   function recibo(p) {
-    // O número curto é o que se diz em voz alta quando o empregado chega. É a
+    // O número curto é o que se diz em voz alta quando o garçom chega. É a
     // única coisa desta página que alguém tem de decorar por dois minutos.
     var deOutro = eu && p.para_id && p.para_id !== eu.id;
     janelaAviso('Pedido enviado',
@@ -775,7 +692,6 @@
     aberto = !!d.aberto;
     msgFechado = d.mensagem_fechado || msgFechado;
     procuraMin = d.procura_min || 4;
-    pedePin = !!d.pedir_pin;
     if (d.mesa) MESA = d.mesa;
     if (d.eu) {
       eu = d.eu;

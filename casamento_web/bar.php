@@ -76,9 +76,11 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
   </div>
 
   <div class="b-abas" role="tablist">
-    <button class="b-aba on" role="tab" id="ab-menu"  onclick="barAba('menu')"></button>
-    <button class="b-aba"    role="tab" id="ab-gav"   onclick="barAba('gav')"></button>
-    <button class="b-aba"    role="tab" id="ab-mesas" onclick="barAba('mesas')"></button>
+    <button class="b-aba on" role="tab" id="ab-menu"   onclick="barAba('menu')"></button>
+    <button class="b-aba"    role="tab" id="ab-gav"    onclick="barAba('gav')"></button>
+    <button class="b-aba"    role="tab" id="ab-mesas"  onclick="barAba('mesas')"></button>
+    <button class="b-aba"    role="tab" id="ab-regras" onclick="barAba('regras')"></button>
+    <button class="b-aba"    role="tab" id="ab-gente"  onclick="barAba('gente')"></button>
   </div>
 
   <section id="pn-menu">
@@ -110,6 +112,42 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
         Abrir as folhas para imprimir</a>
     </div>
     <div class="b-folhas" id="b-folhas"></div>
+  </section>
+
+  <?php // ---- As regras da casa, e os motivos de recusa ----------------
+        // Vivem AQUI e já não na copa. São decisões do casal — «quantas por
+        // pessoa», «o que dizer a quem se recusa» —, e tomam-se com tempo,
+        // antes da festa, e não às onze da noite entre dois pedidos. O
+        // copeiro continua a poder escrever um motivo à mão em cada recusa:
+        // o que sai da copa é a ADMINISTRAÇÃO da lista, não a liberdade de
+        // dizer o que se passa naquele caso. ?>
+  <section id="pn-regras" hidden>
+    <div class="b-duas-largo">
+      <div>
+        <h2 class="b-sec"></h2>
+        <div class="b-cartao-claro" id="b-defs"></div>
+      </div>
+      <div>
+        <h2 class="b-sec"></h2>
+        <p class="dica">Os motivos poupam a escrita a meio da noite. O copeiro
+          escolhe um da lista — ou escreve outro, sempre que o caso for outro.</p>
+        <div class="b-fer" id="b-fer-mot"></div>
+        <div class="b-cartao-claro" id="b-motivos"></div>
+      </div>
+    </div>
+  </section>
+
+  <?php // ---- A equipa do bar ---------------------------------------
+        // Os noivos criam e tiram as contas do bar sem passar pela Gestão, e
+        // entram nos dois postos com todos os recursos: são a casa, e a casa
+        // tem de poder servir uma mesa quando falta alguém. ?>
+  <section id="pn-gente" hidden>
+    <div class="b-postos" id="b-postos"></div>
+    <div class="b-fer" id="b-fer-gente"></div>
+    <div class="b-cartao-claro" id="b-equipa"></div>
+    <p class="dica">Cada conta serve um posto. A senha aparece uma vez, ao
+      criar — copie-a e entregue-a em mão; não há correio configurado, e
+      inventar um envio que não acontece era pior do que dizer isto.</p>
   </section>
 </main>
 

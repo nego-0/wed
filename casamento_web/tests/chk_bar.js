@@ -2,7 +2,7 @@
 //
 // Quatro ecrãs e uma volta completa: os noivos montam o menu (bar.php), o
 // convidado escolhe-se numa lista e pede da mesa (bebidas.php), a copa aprova
-// ou recusa (copa.php), e o empregado entrega (entregas.php).
+// ou recusa (copa.php), e o garçom entrega (entregas.php).
 //
 // O que esta prova defende, acima de tudo, são as três contas do stock. Uma
 // bebida tem o que existe, o que está prometido e o que sobra para oferecer —
@@ -61,8 +61,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     }
   });
 
-  ok((await noivos.locator('.b-aba').allTextContents()).join('|') === 'O menu|Gavetas|Mesas e QR',
-     'a montagem tem as três abas: o menu, as gavetas e as folhas de QR');
+  // Cinco separadores. As regras da casa e os motivos de recusa vieram da
+  // copa (§27): são decisões do casal, tomadas com tempo e antes da festa; e
+  // a equipa criava-se na Gestão, longe do ecrã onde ela vai trabalhar.
+  ok((await noivos.locator('.b-aba').allTextContents()).join('|')
+       === 'O menu|Gavetas|Mesas e QR|Regras da casa|A equipa',
+     'a montagem tem os cinco separadores');
   ok((await noivos.locator('.b-cat').count()) >= 4,
      'o bar nasce com gavetas semeadas, e não com um menu em branco');
 
@@ -374,7 +378,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await ges.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
   await ges.waitForTimeout(900);
   ok((await ges.locator('#a-papel option').allTextContents()).join('|')
-       === 'Porteiro|Copeiro|Empregado de sala',
+       === 'Porteiro|Copeiro|Garçom',
      'a Gestão convida para os três postos, e não só para a porta');
 
   await ges.selectOption('#a-papel', 'copeiro');

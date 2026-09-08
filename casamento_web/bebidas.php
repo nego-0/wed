@@ -43,7 +43,7 @@ if (!$mesa || !podeModulo('bar')) {
        . '<path d="M8.4 20.6h7.2"/></svg>'
        . '<h1 style="font-weight:400;font-size:1.3rem">Este código não serve</h1>'
        . '<p style="color:#6b7268">Talvez a folha seja de outra festa, ou o bar ainda não '
-       . 'esteja montado. Chame um empregado — ele resolve isto num instante.</p>'
+       . 'esteja montado. Chame um garçom — ele resolve isto num instante.</p>'
        . '</div></body></html>';
     exit;
 }
@@ -105,7 +105,7 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
          padding:.85rem 1rem; margin-bottom:1rem; font-size:.9rem; line-height:1.5; }
 .b-nota b{ font-family:var(--c-serif); }
 
-/* O recibo depois de pedir: o número que se diz ao empregado. */
+/* O recibo depois de pedir: o número que se diz ao garçom. */
 .b-recibo{ text-align:center; padding:.5rem 0 1rem; }
 .b-recibo .cod{ font-family:var(--c-serif); font-size:2.6rem; color:var(--c-ouro);
                 line-height:1.1; letter-spacing:.04em; }
@@ -126,6 +126,11 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
   <div class="b-esq" style="height:120px;margin-bottom:.8rem"></div>
   <div class="b-esq" style="height:220px"></div>
 </main>
+
+<?php // O botão de tema da casa. Aqui não muda o menu — este veste o convite
+      // do casal (§25.2) —, mas muda as JANELAS, que são cartões da casa e
+      // são o que o convidado lê quando algo corre mal. ?>
+<?php include __DIR__ . '/parcial-seletor-tema.php'; ?>
 
 <div class="b-rodape" id="b-rodape" hidden>
   <span class="resumo" id="b-resumo"></span>

@@ -160,6 +160,9 @@
 
   window.copaFiltro = function (qual) {
     VER.aba = qual;
+    // Sair dos números larga a moldura: quem volta quer ver os de AGORA, e
+    // não os de há dez minutos enquanto a leitura nova não chega.
+    if (qual !== 'num') numAmarrado = false;
     pintarFerramentas();
     if (qual === 'num') pintarNumeros(); else pintarFila();
   };
@@ -193,26 +196,102 @@
     });
   }
 
-  /**
-   * Os números da noite.
-   *
-   * A pergunta que a copa faz de verdade não é «quantas saíram» — é «chega até
-   * ao fim?». Por isso a previsão de rutura vem primeiro, e o que saiu vem
-   * depois: um é uma decisão a tomar agora, o outro é a história da festa.
-   */
-  async function pintarNumeros() {
-    var cx = $('b-fila');
-    cx.innerHTML = '<div class="b-cartao b-esq" style="height:120px"></div>';
-    var d = await window.api('bar_numeros', { method: 'GET', silencioso: true });
-    if (!d || !d.success) { cx.innerHTML = '<div class="b-cartao b-vazio">Não deu.</div>'; return; }
-    if (VER.aba !== 'num') return;        // a copa mudou de aba entretanto
+  /* ============================================================
+     OS NÚMEROS DA NOITE
 
+     Duas mudanças em relação ao que era:
+
+     1. **Actualiza-se sozinho, e sem piscar.** Antes, cada volta apagava o
+        painel inteiro e punha um esqueleto no lugar — e quem estava a ler uma
+        linha via-a desaparecer debaixo dos olhos. Agora a leitura é
+        assíncrona e o que muda é o CONTEÚDO de cada cartão; o esqueleto só
+        aparece à primeira vez, quando de facto ainda não há nada.
+
+     2. **Dois gráficos.** «Chega até ao fim?» já respondia à pergunta urgente;
+        faltava a forma da noite — que bebidas é que a festa está a beber, e
+        quem é que se destaca. Uma coluna de números não mostra uma forma: o
+        olho vê comprimentos, não lê doze linhas de dígitos.
+
+     Os gráficos são barras horizontais desenhadas à mão, com os tokens da
+     casa. Barras horizontais e não colunas porque o que varia são NOMES —
+     «Espumante da casa», «Maria Fernandes» — e um nome deitado de lado numa
+     coluna de 40px não se lê.
+     ============================================================ */
+  var NUM = null;            // a última leitura dos números
+  var numAmarrado = false;   // a moldura dos cartões já está montada?
+
+  /**
+   * Uma barra horizontal, numa lista ordenada.
+   *
+   * A largura é sobre o MAIOR e não sobre o total: com doze bebidas, a
+   * percentagem do total dá doze tracinhos indistinguíveis. Sobre o maior,
+   * a primeira enche a barra e as outras leem-se contra ela — que é a
+   * comparação que se está a fazer.
+   */
+  function barras(linhas, maximo, opc) {
+    opc = opc || {};
+    var max = Math.max(1, maximo);
+    return '<div class="b-graf">' + linhas.map(function (l) {
+      var pc = Math.round(l.n / max * 100);
+      return '<div class="b-graf-l' + (l.classe ? ' ' + l.classe : '') + '"'
+        + (l.cor ? ' style="--tinta:' + esc(l.cor) + '"' : '')
+        + (l.accao ? ' role="button" tabindex="0" onclick="' + l.accao + '"'
+                   + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();' + l.accao + '}"'
+                   + ' title="' + esc(l.titulo || l.nome) + '"' : '') + '>'
+        + '<span class="nm">' + esc(l.nome) + '</span>'
+        + '<span class="tr"><i style="width:' + Math.max(pc, 2) + '%"></i></span>'
+        + '<span class="v">' + l.n + esc(opc.sufixo || '') + '</span>'
+        + '</div>';
+    }).join('') + '</div>';
+  }
+
+  /** O molde dos cartões. Desenha-se uma vez; depois só o miolo muda. */
+  function molduraNumeros() {
+    var cartao = function (id, icone, tit, nota) {
+      return '<div class="b-cartao"><div class="b-tit">' + ico.ico(icone) + tit
+        + (nota ? '<small>' + nota + '</small>' : '') + '</div>'
+        + '<div id="' + id + '"></div></div>';
+    };
+    $('b-fila').innerHTML =
+        cartao('nm-rutura',  'raio',    'Chega até ao fim?', 'ao ritmo dos últimos 20 minutos')
+      + cartao('nm-bebidas', 'grafico', 'O que a festa bebeu', 'entregues')
+      + cartao('nm-pessoas', 'pessoas', 'Quem bebeu mais', 'entregues, por pessoa')
+      + cartao('nm-tempos',  'relogio', 'Os tempos', '')
+      + '<div id="nm-extra"></div>';
+    numAmarrado = true;
+  }
+
+  async function pintarNumeros(silencioso) {
+    var cx = $('b-fila');
+    // O esqueleto só na PRIMEIRA vez. Numa volta de rotina, apagar o painel
+    // para o voltar a escrever é fazer piscar o que a pessoa está a ler.
+    if (!numAmarrado) {
+      cx.innerHTML = '<div class="b-cartao b-esq" style="height:120px"></div>'
+                   + '<div class="b-cartao b-esq" style="height:180px;margin-top:.7rem"></div>';
+    }
+    var d = await window.api('bar_numeros', { method: 'GET', silencioso: true });
+    if (VER.aba !== 'num') return;        // a copa mudou de aba entretanto
+    if (!d || !d.success) {
+      // Sem ligação, o que estava fica: um painel de números em branco vale
+      // menos do que números de há dez segundos, e a barra do topo já diz
+      // que a ligação caiu.
+      if (!numAmarrado) cx.innerHTML = '<div class="b-cartao">'
+        + vazio('aviso', 'Não deu para ler os números', 'A página tenta outra vez sozinha.') + '</div>';
+      return;
+    }
+    NUM = d;
+    if (!numAmarrado) molduraNumeros();
+    desenharNumeros();
+  }
+
+  function desenharNumeros() {
+    var d = NUM; if (!d) return;
+
+    // ---- chega até ao fim? -------------------------------------
     // Só o que já teve saída: uma bebida parada não «acaba nunca», simplesmente
     // não se sabe — e um número inventado aqui mandava alguém à cidade em vão.
-    var acabam = d.rutura.filter(function (x) { return x.acaba_em_min !== null; });
-    var html = '<div class="b-cartao"><div class="b-tit">' + ico.ico('raio') + 'Chega até ao fim?'
-      + '<small>ao ritmo dos últimos 20 minutos</small></div>';
-    html += acabam.length
+    var acabam = (d.rutura || []).filter(function (x) { return x.acaba_em_min !== null; });
+    $('nm-rutura').innerHTML = acabam.length
       ? '<div class="b-stock lista">' + acabam.slice(0, 8).map(function (x) {
           var luz = x.acaba_em_min < 30 ? 'mau' : (x.acaba_em_min < 90 ? 'meio' : 'bom');
           return '<div class="b-item">'
@@ -222,48 +301,53 @@
             +   ' por hora</div></div>'
             + '<div class="qt">' + hhmm(x.acaba_em_min) + '</div></div>';
         }).join('') + '</div>'
-      : '<p class="dica" style="color:var(--gold-pale)">Ainda não saiu nada — '
-        + 'sem saída não há ritmo, e sem ritmo não há previsão que se respeite.</p>';
-    html += '</div>';
+      : '<p class="b-nota">Ainda não saiu nada — sem saída não há ritmo, e sem '
+        + 'ritmo não há previsão que se respeite.</p>';
 
-    // O que a festa bebeu.
-    var top = d.consumo.filter(function (x) { return x.servidas > 0 || x.a_sair > 0; });
-    html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('grafico') + 'O que a festa bebeu</div>'
-      + (top.length
-          ? '<div class="b-stock lista">' + top.slice(0, 12).map(function (x) {
-              return '<div class="b-item">'
-                + '<div><div class="nm">' + esc(x.nome) + '</div>'
-                + '<div class="sub">' + esc(x.gaveta || 'sem gaveta')
-                +   (x.a_sair ? ' · ' + x.a_sair + ' por sair' : '') + '</div></div>'
-                + '<div class="qt">' + x.servidas + '</div></div>';
-            }).join('') + '</div>'
-          : '<p class="dica" style="color:var(--gold-pale)">Nada servido ainda.</p>')
+    // ---- o que a festa bebeu, em barras ------------------------
+    var top = (d.consumo || []).filter(function (x) { return x.servidas > 0; })
+                               .sort(function (a, b) { return b.servidas - a.servidas; });
+    var maxB = top.length ? top[0].servidas : 1;
+    $('nm-bebidas').innerHTML = top.length
+      ? barras(top.slice(0, 12).map(function (x) {
+          var i = (EST.itens || []).filter(function (y) { return y.nome === x.nome; })[0];
+          return { nome: x.nome, n: x.servidas, cor: i && i.categoria_cor };
+        }), maxB)
+        + (top.length > 12 ? '<p class="b-nota">e mais ' + (top.length - 12) + '.</p>' : '')
+      : '<p class="b-nota">Nada servido ainda.</p>';
+
+    // ---- quem bebeu mais ---------------------------------------
+    // Clicar abre a ficha: o gráfico aponta a pessoa, e a ficha é onde se faz
+    // alguma coisa a respeito dela. Sem isso, era um gráfico bonito e mudo.
+    var gente = d.pessoas || [];
+    $('nm-pessoas').innerHTML = gente.length
+      ? barras(gente.map(function (g) {
+          return { nome: g.nome, n: g.n, accao: 'copaFicha(' + g.id + ')',
+                   titulo: 'Abrir a ficha de ' + g.nome, classe: 'toca' };
+        }), gente[0].n)
+      : '<p class="b-nota">Ninguém levou nada ainda.</p>';
+
+    // ---- os tempos ---------------------------------------------
+    var t = d.tempos || {};
+    $('nm-tempos').innerHTML = '<div class="b-tempos" style="margin:0;padding:0;border:0">'
+      + caixa('Análise', t.analise) + caixa('Recolha', t.recolha)
+      + caixa('Percurso', t.percurso) + caixa('Do pedido à mesa', t.total)
       + '</div>';
 
-    // Os tempos, e as recusas — o que correu mal, dito sem rodeios.
-    var t = d.tempos || {};
-    html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('relogio') + 'Os tempos</div>'
-      + '<div class="b-tempos" style="margin:0;padding:0;border:0">'
-      +   caixa('Análise', t.analise) + caixa('Recolha', t.recolha)
-      +   caixa('Percurso', t.percurso) + caixa('Do pedido à mesa', t.total)
-      + '</div></div>';
-
-    if (d.recusas.length) {
-      html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('traco') + 'Recusas'
-        + '<small>o que correu mal</small></div><div class="b-stock lista">'
-        + d.recusas.map(function (r) {
-            return '<div class="b-item"><div><div class="nm">'
-              + esc(r.motivo) + '</div></div><div class="qt">' + r.n + '</div></div>';
-          }).join('') + '</div></div>';
+    // ---- recusas e mesas, quando as há -------------------------
+    var extra = '';
+    if ((d.recusas || []).length) {
+      extra += '<div class="b-cartao"><div class="b-tit">' + ico.ico('traco') + 'Recusas'
+        + '<small>o que correu mal</small></div>'
+        + barras(d.recusas.map(function (r) { return { nome: r.motivo, n: r.n }; }),
+                 d.recusas[0].n) + '</div>';
     }
-    if (d.mesas.length) {
-      html += '<div class="b-cartao"><div class="b-tit">' + ico.ico('mesa') + 'Por mesa</div><div class="b-stock lista">'
-        + d.mesas.map(function (m) {
-            return '<div class="b-item"><div><div class="nm">'
-              + esc(m.mesa) + '</div></div><div class="qt">' + m.n + '</div></div>';
-          }).join('') + '</div></div>';
+    if ((d.mesas || []).length) {
+      extra += '<div class="b-cartao"><div class="b-tit">' + ico.ico('mesa') + 'Por mesa</div>'
+        + barras(d.mesas.map(function (m) { return { nome: m.mesa, n: m.n }; }),
+                 d.mesas[0].n) + '</div>';
     }
-    cx.innerHTML = html;
+    $('nm-extra').innerHTML = extra;
   }
 
   function caixa(rot, s) {
@@ -289,20 +373,35 @@
               'Ainda não há pedidos resolvidos para mostrar aqui.']
   };
 
+  /* O lançador ao balcão, no TOPO da fila por decidir.
+     Estava numa coluna lateral, ao pé do stock, com o nome de outra coisa
+     («pedir por um convidado»). Mas o gesto é este: alguém está à frente do
+     copeiro, e o que ele vai fazer é aprovar um pedido. Fica onde o gesto
+     acontece, e com o nome do gesto. */
+  function lancador() {
+    if (!PODE || VER.aba !== 'analise') return '';
+    return '<button class="b-lancar" onclick="copaPedirPor()">'
+      + '<span class="sinal">' + ico.ico('mais') + '</span>'
+      + '<span class="txt"><b>Aprovar pedido</b>'
+      +   '<small>Alguém pediu ao balcão — entra já aprovado, e pode sair '
+      +   'como entregue no acto.</small></span>'
+      + ico.ico('seta') + '</button>';
+  }
+
   function pintarFila() {
     var cx = $('b-fila');
     if (VER.aba === 'num') return;
     var todos = pedidosDaAba();
     if (!todos.length) {
       var v = VAZIOS[VER.aba] || VAZIOS.fim;
-      cx.innerHTML = '<div class="b-cartao">' + vazio(v[0], v[1], v[2]) + '</div>';
+      cx.innerHTML = lancador() + '<div class="b-cartao">' + vazio(v[0], v[1], v[2]) + '</div>';
       return;
     }
     var ps = peneira(todos);
     if (!ps.length) {
       // Um vazio por causa da procura tem de o confessar: senão lê-se como
       // «a fila está vazia» e a copa deixa de olhar para trinta pedidos.
-      cx.innerHTML = '<div class="b-cartao">'
+      cx.innerHTML = lancador() + '<div class="b-cartao">'
         + vazio('procurar', 'Nada com «' + VER.busca + '»',
                 'São ' + todos.length + (todos.length === 1 ? ' pedido' : ' pedidos')
                 + ' nesta vista; nenhum responde ao que procura.',
@@ -311,7 +410,7 @@
         + '</div>';
       return;
     }
-    cx.innerHTML = ps.map(cartao).join('')
+    cx.innerHTML = lancador() + ps.map(cartao).join('')
       + (ps.length < todos.length
           ? '<p class="dica" style="color:var(--gold-pale);text-align:center">'
             + ps.length + ' de ' + todos.length + ' pedidos</p>'
@@ -340,7 +439,7 @@
     var onde = p.mesa ? 'Mesa ' + esc(p.mesa) : 'Sem mesa indicada';
     if (p.mesa_qr && p.mesa && p.mesa_qr !== p.mesa) onde += ' · pediu na ' + esc(p.mesa_qr);
     // Quem lançou o pedido, quando não foi quem o bebe. São dois casos e a
-    // copa tem de os distinguir: um empregado ao balcão é serviço normal; um
+    // copa tem de os distinguir: um garçom ao balcão é serviço normal; um
     // convidado a pedir por outro é o vizinho de mesa a dar uma ajuda — e é
     // também o sítio por onde alguém tentaria beber à conta de outrem, por
     // isso diz-se o nome e não se esconde num ícone.
@@ -367,7 +466,33 @@
       + (p.motivo ? '<div class="onde">Motivo: ' + esc(p.motivo) + '</div>' : '')
       + (fora ? '<div class="b-bandeira">' + ico.ico('aviso')
                 + esc(fora.porque) + '</div>' : '')
+      + notasDe(p)
       + (PODE ? acoes(p) : '')
+      + '</div>';
+  }
+
+  /**
+   * O que os garçons trouxeram da mesa sobre ESTA pessoa.
+   *
+   * O garçom é o único do bar que fala com o convidado, e o que ele ouve —
+   * «pediu para não lhe servirem mais», «está com os miúdos» — morria à mesa.
+   * Agora aparece aqui, colado ao pedido seguinte dessa pessoa, que é o único
+   * momento em que a informação serve para alguma coisa.
+   *
+   * Só na fila por decidir: num pedido já aprovado seria uma observação sem
+   * decisão pela frente.
+   */
+  function notasDe(p) {
+    if (p.estado !== 'em_analise' || !p.convidado_id) return '';
+    var ns = ((EST.notas || {})[String(p.convidado_id)]) || [];
+    if (!ns.length) return '';
+    return '<div class="b-notas">'
+      + '<span class="tit">' + ico.ico('nota')
+      +   (ns.length === 1 ? 'Da mesa' : 'Da mesa (' + ns.length + ')') + '</span>'
+      + ns.map(function (n) {
+          return '<span class="n">' + esc(n.texto)
+            + '<em>' + esc(n.quem || 'garçom') + ' · ' + esc(ha(n.quando)) + '</em></span>';
+        }).join('')
       + '</div>';
   }
 
@@ -376,9 +501,19 @@
       // Aprovar é o gesto de sempre e Recusar é a excepção: por isso um leva o
       // peso e o outro o contorno. Mas ambos são botões inteiros, com ícone e
       // palavra — a decisão que o convidado sente não se toma num ícone só.
+      // Três portas, e não duas: «servir menos» é o que se faz ao balcão
+      // quando há duas e pediram quatro. Recusar quatro por causa de duas é
+      // servir zero, e a pessoa volta a pedir daí a um minuto (§27).
+      // A do meio só aparece quando há o que cortar — com uma linha de uma
+      // bebida só, cortar é recusar, e há um botão para isso ao lado.
+      var podeCortar = (p.itens || []).length > 1
+                    || ((p.itens || [])[0] && p.itens[0].quantidade > 1);
       return '<div class="b-acoes">'
         + '<button class="btn btn-ouro" onclick="copaAprovar(' + p.id + ')">'
         +   ico.ico('visto') + 'Aprovar</button>'
+        + (podeCortar
+            ? '<button class="btn btn-fantasma" onclick="copaParcial(' + p.id + ')">'
+              + ico.ico('menos') + 'Servir menos</button>' : '')
         + '<button class="btn btn-fantasma" onclick="copaRecusar(' + p.id + ')">'
         +   ico.ico('xis') + 'Recusar</button>'
         + '</div>';
@@ -399,6 +534,77 @@
     if (!d || !d.success) return;
     toast('Aprovado. Fica prometido até sair.');
     await carregar(true);
+  };
+
+  /**
+   * Servir menos do que se pediu.
+   *
+   * Cada linha do pedido ganha um número que se pode baixar — até zero, que é
+   * tirar a bebida do pedido. Quem corta diz porquê, da mesma lista que serve
+   * as recusas ou por palavras suas: alguém vai receber menos do que pediu, e
+   * uma quantidade que encolhe em silêncio faz a pessoa pedir outra vez.
+   */
+  window.copaParcial = function (id) {
+    var p = (EST.fila || []).filter(function (x) { return x.id === id; })[0];
+    if (!p) return;
+    var motivos = (EST.motivos || []).map(function (m) {
+      return { v: String(m.id), r: m.texto };
+    });
+    motivos.push({ v: '0', r: 'Outro — escrevo eu' });
+
+    var campos = (p.itens || []).map(function (l) {
+      var i = (EST.itens || []).filter(function (x) { return x.id === l.item_id; })[0];
+      var ha = i ? i.disponivel : null;
+      return { id: 'q' + l.item_id, rot: l.nome, tipo: 'numero',
+               valor: l.quantidade, min: 0, max: l.quantidade,
+               dica: 'Pediu ' + l.quantidade
+                   + (ha !== null ? ' · há ' + ha + ' por servir' : '')
+                   + '. Zero tira a bebida do pedido.' };
+    });
+    campos.push({ id: 'motivo_id', rot: 'Porquê', tipo: 'escolha',
+                  valor: motivos.length > 1 ? motivos[0].v : '0', opcoes: motivos });
+    campos.push({ id: 'motivo_texto', rot: 'Ou escreva', tipo: 'text', valor: '',
+                  dica: 'Ex.: «Só restam duas — guardo-lhe as próximas.»' });
+
+    licFormulario({
+      titulo: 'Servir menos — ' + esc(p.codigo),
+      guardar: 'Aprovar assim',
+      largo: true,
+      dica: 'Baixe o que não pode servir. O convidado vê o novo número <b>e</b> '
+          + 'o motivo — é isso que o impede de voltar a pedir já a seguir.',
+      campos: campos,
+      aoGuardar: async function (v) {
+        var cortes = {}, mexeu = false;
+        (p.itens || []).forEach(function (l) {
+          var q = parseInt(v['q' + l.item_id], 10);
+          if (isNaN(q)) q = l.quantidade;
+          cortes[String(l.item_id)] = q;
+          if (q !== l.quantidade) mexeu = true;
+        });
+        if (!mexeu) {
+          licJanelaErro('Não baixou nada. Para servir o pedido inteiro há o botão «Aprovar».');
+          return false;
+        }
+        var todosZero = Object.keys(cortes).every(function (k) { return cortes[k] === 0; });
+        if (todosZero) {
+          licJanelaErro('Cortou tudo. Se não há nada para servir, use «Recusar» — '
+                      + 'a pessoa fica a saber, e o pedido não fica a meio.');
+          return false;
+        }
+        var mid = parseInt(v.motivo_id, 10) || 0;
+        if (!mid && !v.motivo_texto) {
+          licJanelaErro('Diga porquê: escolha um motivo ou escreva um.');
+          return false;
+        }
+        var d = await window.api('bar_decidir', { method: 'POST',
+          body: JSON.stringify({ id: id, decisao: 'aprovar', cortes: cortes,
+                                 motivo_id: mid, motivo_texto: v.motivo_texto }) });
+        if (!d || !d.success) return false;
+        toast('Aprovado em parte, com o motivo.');
+        await carregar(true);
+        return true;
+      }
+    });
   };
 
   window.copaRecusar = function (id) {
@@ -491,7 +697,9 @@
       $('b-fer-stock').innerHTML = campoBusca('q-stock', 'Procurar no armazém', VER.buscaStock);
       ligarBusca('q-stock', function (v) { VER.buscaStock = v; pintarStock(); });
     }
-    var acabar = todos.filter(function (i) { return i.disponivel <= 5; }).length;
+    // O limiar é da BEBIDA e vem do servidor (§27): a copa deixou de ter um
+    // número inventado seu, e passou a dizer o mesmo que a montagem diz.
+    var acabar = todos.filter(function (i) { return i.a_acabar; }).length;
     $('b-stock-nota').textContent = acabar
       ? acabar + (acabar === 1 ? ' a acabar' : ' a acabar')
       : 'tudo com folga';
@@ -507,7 +715,7 @@
     cx.innerHTML = itens.map(function (i) {
       // Três cores e nada mais: com folga, a acabar, acabou. Um número
       // sozinho não diz se 8 é muito ou pouco.
-      var luz = i.disponivel <= 0 ? 'mau' : (i.disponivel <= 5 ? 'meio' : 'bom');
+      var luz = i.disponivel <= 0 ? 'mau' : (i.a_acabar ? 'meio' : 'bom');
       return '<div class="b-item"' + (PODE ? ' role="button" tabindex="0"'
         + ' onclick="copaAcerto(' + i.id + ')"'
         + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();copaAcerto('
@@ -515,7 +723,8 @@
         + foto(i)
         + '<div><div class="nm"><span class="b-semaforo ' + luz + '"></span>' + esc(i.nome) + '</div>'
         +   '<div class="sub">' + i.stock + ' na copa'
-        +   (i.reservado ? ' · ' + i.reservado + ' prometidas' : '') + '</div></div>'
+        +   (i.reservado ? ' · ' + i.reservado + ' prometidas' : '')
+        +   (i.a_acabar ? ' · avisa aos ' + i.stock_minimo : '') + '</div></div>'
         + '<div class="qt">' + i.disponivel + '</div>'
         + '</div>';
     }).join('');
@@ -560,42 +769,6 @@
     });
   };
 
-  // ---- os motivos de recusa ------------------------------------
-  window.copaMotivos = function () {
-    var lista = (EST.motivos || []).map(function (m) {
-      return '<div class="j-linha"><span>' + esc(m.texto) + '</span>'
-        + '<button type="button" class="j-x" title="Tirar este motivo" '
-        + 'aria-label="Tirar este motivo" onclick="copaMotivoApagar(' + m.id + ')">'
-        + ico.ico('lixo') + '</button></div>';
-    }).join('') || '<p class="dica">Ainda não há motivos guardados.</p>';
-    licFormulario({
-      titulo: 'Motivos de recusa',
-      guardar: 'Acrescentar',
-      dica: 'Os motivos da lista poupam a escrita a meio da noite. '
-          + 'Escreva-os como os diria a quem pediu.',
-      campos: [{ id: 'texto', rot: 'Motivo novo', tipo: 'text', valor: '',
-                 dica: 'Ex.: «Acabou o espumante — temos vinho branco fresco.»' }],
-      extra: '<div class="j-sec">' + ico.ico('nota') + 'Os que já lá estão</div>' + lista,
-      aoGuardar: async function (v) {
-        if (!v.texto) { licJanelaErro('Escreva o motivo.'); return false; }
-        var d = await window.api('bar_motivo_guardar', { method: 'POST',
-          body: JSON.stringify({ texto: v.texto }) });
-        if (!d || !d.success) return false;
-        await carregar(true);
-        copaMotivos();
-        return false;   // a janela fica, para se acrescentar outro
-      }
-    });
-  };
-
-  window.copaMotivoApagar = async function (id) {
-    var d = await window.api('bar_motivo_apagar', { method: 'POST', body: JSON.stringify({ id: id }) });
-    if (!d || !d.success) return;
-    await carregar(true);
-    licFecharJanela();
-    copaMotivos();
-  };
-
   // ---- a ficha de um convidado, com as regras dele ---------------
   // É uma coisa que se faz a correr, no meio da festa, com a pessoa à frente:
   // «este senhor já vai no quinto whisky», «esta senhora está grávida».
@@ -635,12 +808,6 @@
       +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
       +     ico.ico('mais') + 'Regra nova</button>'
       + '</div>'
-      + (d.pin_travado
-          ? '<div class="j-sec">' + ico.ico('aviso') + 'Código travado</div>'
-            + '<div class="j-linha"><span>Foram cinco enganos seguidos no código '
-            + 'do convite.</span><button type="button" class="j-bt j-bt-sim" '
-            + 'onclick="copaPinSoltar(' + id + ')">Levantar</button></div>'
-          : '')
       + '<div class="j-sec">' + ico.ico('pessoas') + 'Telemóveis</div>'
       + (d.dispositivos.length
           ? d.dispositivos.map(function (t) {
@@ -705,16 +872,6 @@
     });
   };
 
-  /** O travão do código levanta-se num clique: a pessoa está ali à frente. */
-  window.copaPinSoltar = async function (convidadoId) {
-    var d = await window.api('bar_pin_soltar', { method: 'POST',
-      body: JSON.stringify({ convidado_id: convidadoId }) });
-    if (!d || !d.success) return;
-    toast('Travão levantado. Já pode voltar a escrever o código.');
-    licFecharJanela();
-    copaFicha(convidadoId);
-  };
-
   window.copaSoltar = async function (id, convidadoId) {
     var d = await window.api('bar_soltar', { method: 'POST', body: JSON.stringify({ id: id }) });
     if (!d || !d.success) return;
@@ -740,69 +897,33 @@
       : fora.length + ' pedidos na fila já não cabem nas regras.', true);
   }
 
-  // ---- as regras da casa ---------------------------------------
-  window.copaRegras = function () {
-    var f = (EST && EST.defs) || {};
-    licFormulario({
-      titulo: 'Regras da casa',
-      guardar: 'Guardar',
-      largo: true,
-      dica: 'Como o bar se porta com quem pede. Muda a meio da noite se for preciso.',
-      campos: [
-        { id: 'bar.mensagem_fechado', rot: 'O que dizer quando está fechado', tipo: 'area',
-          linhas: 2, valor: f['bar.mensagem_fechado'] || '', largura: 2,
-          dica: 'Ex.: «O bar abre depois do brinde, por volta das 21h.»' },
-        { id: 'bar.procura_min', rot: 'Letras para procurar o nome', tipo: 'numero',
-          valor: f['bar.procura_min'] || '4', min: 1, max: 8,
-          dica: 'Menos letras, mais nomes de cada vez na lista.' },
-        { id: 'bar.ip_modo', rot: 'Pedidos da mesma rede', tipo: 'escolha',
-          valor: f['bar.ip_modo'] || 'registo',
-          opcoes: [{ v: 'registo', r: 'Registar, sem incomodar' },
-                   { v: 'aviso',   r: 'Registar e avisar a copa' },
-                   { v: 'estrito', r: 'Recusar o segundo nome' }],
-          dica: 'Numa festa quase todos partilham o mesmo wi-fi: «estrito» é '
-              + 'para salas onde cada mesa tem a sua rede.' },
-        { id: 'bar.garcon_direto', rot: 'Empregado lança pedidos', tipo: 'sim',
-          valor: f['bar.garcon_direto'] === '1', aoLado: 'Sim, para quem não tem rede' },
-        { id: 'bar.trocar_nome', rot: 'Trocar de nome no mesmo telemóvel', tipo: 'sim',
-          valor: f['bar.trocar_nome'] === '1', aoLado: 'Deixar, avisando a copa' },
-        { id: 'bar.pedir_pin', rot: 'Pedir o código do convite', tipo: 'sim',
-          valor: f['bar.pedir_pin'] === '1', aoLado: 'Sim, quatro dígitos ao escolher o nome',
-          largura: 2,
-          dica: 'Devolve o segredo que se perdeu ao tirar o link do convite — e '
-              + 'devolve também o atrito. Os códigos saem em bar-qr.php, para '
-              + 'irem no convite de cada família.' }
-      ],
-      aoGuardar: async function (v) {
-        var env = {};
-        Object.keys(v).forEach(function (k) {
-          env[k] = (k === 'bar.garcon_direto' || k === 'bar.trocar_nome'
-                 || k === 'bar.pedir_pin')
-            ? (v[k] ? '1' : '0') : String(v[k]);
-        });
-        var d = await window.api('bar_defs', { method: 'POST', body: JSON.stringify(env) });
-        if (!d || !d.success) return false;
-        toast('Regras guardadas.');
-        await carregar(true);
-        return true;
-      }
-    });
-  };
+  /* ============================================================
+     APROVAR UM PEDIDO AO BALCÃO
 
-  // ---- pedir por um convidado ----------------------------------
-  // Sem rede, o convidado pede em voz alta e a copa lança por ele. É o mesmo
-  // pedido, com o nome de quem o lançou colado — para não haver dúvidas de
-  // quem serviu o quê.
+     Chamava-se «pedir por um convidado» e estava numa coluna lateral, ao pé
+     do stock. Mas quem lança um pedido daqui JÁ o decidiu — está a olhar para
+     a pessoa e para as garrafas —, e por isso ele nasce aprovado e não em
+     análise: pô-lo a esperar por quem acabou de o escrever era encher a fila
+     de trabalho imaginário.
+
+     Duas saídas, e a segunda é a mais comum: o copo já foi na mão, e o pedido
+     nasce ENTREGUE, sem passar por entrega nenhuma. Sem isso, vai para «por
+     entregar» como um aprovado qualquer, e um garçom leva-o.
+
+     Por isso subiu para o topo da fila por decidir, com o nome do gesto:
+     «Aprovar pedido».
+     ============================================================ */
   window.copaPedirPor = function () {
     var itens = (EST.itens || []).filter(function (i) {
       return i.estado === 'ativo' && i.disponivel > 0;
     });
     if (!itens.length) { toast('Não há nada disponível para pedir.', true); return; }
     licFormulario({
-      titulo: 'Pedir por um convidado',
-      guardar: 'Lançar o pedido',
+      titulo: 'Aprovar um pedido',
+      guardar: 'Aprovar',
       largo: true,
-      dica: 'Escreva parte do nome, escolha a pessoa, e depois a bebida.',
+      dica: 'É um pedido feito ao balcão: entra já aprovado, porque quem o '
+          + 'escreve é quem o decide.',
       campos: [
         { id: 'nome', rot: 'Nome do convidado', tipo: 'text', valor: '', largura: 2,
           dica: '<span id="pp-achados"></span>' },
@@ -810,17 +931,24 @@
           opcoes: itens.map(function (i) {
             return { v: String(i.id), r: i.nome + ' (' + i.disponivel + ')' };
           }) },
-        { id: 'quantidade', rot: 'Quantas', tipo: 'numero', valor: 1, min: 1, max: 12 }
+        { id: 'quantidade', rot: 'Quantas', tipo: 'numero', valor: 1, min: 1, max: 12 },
+        { id: 'entregue', rot: 'Já foi entregue?', tipo: 'sim', valor: true, largura: 2,
+          aoLado: 'Sim, o copo já seguiu com a pessoa',
+          dica: 'Desligue se a bebida ainda tem de ir à mesa: o pedido passa '
+              + 'para «por entregar» e um garçom leva-o.' }
       ],
       aoGuardar: async function (v) {
         if (!ppEscolhido) { licJanelaErro('Escolha o convidado na lista.'); return false; }
         var d = await window.api('bar_pedir_por', { method: 'POST',
           body: JSON.stringify({ convidado_id: ppEscolhido.id,
                                  mesa_id: ppEscolhido.mesa_id,
+                                 entregue: !!v.entregue,
                                  itens: [{ item_id: parseInt(v.item, 10),
                                            quantidade: parseInt(v.quantidade, 10) || 1 }] }) });
         if (!d || !d.success) return false;
-        toast('Pedido ' + d.pedido.codigo + ' lançado.');
+        toast(v.entregue
+          ? 'Pedido ' + d.pedido.codigo + ' servido. O stock já desceu.'
+          : 'Pedido ' + d.pedido.codigo + ' aprovado — está por entregar.');
         await carregar(true);
         return true;
       }
@@ -877,13 +1005,13 @@
   function pintarAtalhos() {
     var cx = $('b-atalhos');
     if (!cx || !PODE) { if (cx) cx.innerHTML = ''; return; }
+    // «Pedir por um convidado» subiu para o topo da fila, que é onde o gesto
+    // acontece. Os motivos e as regras foram para a montagem: são decisões do
+    // casal, e tomam-se antes da festa (§27). Fica a porta para lá, para quem
+    // precisar de as ver a meio da noite.
     cx.innerHTML =
-        '<button class="btn btn-fantasma" onclick="copaPedirPor()">'
-      +   ico.ico('mao') + 'Pedir por um convidado</button>'
-      + '<button class="btn btn-fantasma" onclick="copaMotivos()">'
-      +   ico.ico('nota') + 'Motivos de recusa</button>'
-      + '<button class="btn btn-fantasma" onclick="copaRegras()">'
-      +   ico.ico('trancado') + 'Regras da casa</button>';
+        '<a class="btn btn-fantasma" href="bar.php#regras">'
+      +   ico.ico('trancado') + 'Ver as regras da casa</a>';
   }
 
   // ---- o relógio ------------------------------------------------

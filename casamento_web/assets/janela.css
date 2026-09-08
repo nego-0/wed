@@ -58,6 +58,30 @@ body.editor .pl-modal{
   --j-sans:     'Jost', system-ui, -apple-system, sans-serif;
 }
 
+/* No salão do bar — a copa e as entregas — passa-se o mesmo que nos editores,
+   e por uma razão ainda mais forte: quem abre uma janela ali está no escuro
+   há cinco horas, com o ecrã no mínimo de brilho, e um cartão branco no meio
+   é uma lanterna na cara. A janela segue o salão.
+
+   As cores saem dos --sala-*, que nenhum tema redefine (é a hora da noite que
+   manda no salão, não a paleta do casal), e por isso a janela fica igual nos
+   quatro temas — tal como o ecrã por baixo dela. */
+body.b-noite .pl-modal{
+  --j-veu:      rgba(4, 10, 16, .72);
+  --j-card:     #1B2E42;
+  --j-ink:      var(--sala-tinta, #F6F8F4);
+  --j-texto:    #DCE4EA;
+  --j-fraco:    var(--sala-fraco, #A6B4BF);
+  --j-linha:    rgba(233,223,201,.20);
+  --j-campo:    rgba(0,0,0,.28);
+  --j-ouro:     var(--sala-ouro-claro, #8CD24A);
+  --j-ouro-tx:  #0C1925;
+  --j-ouro-pal: rgba(140,210,74,.20);
+  --j-perigo:   #E8938A;
+  --j-perigo-bg:rgba(232,147,138,.18);
+  --j-anel:     rgba(140,210,74,.32);
+}
+
 /* ---------- o corpo da janela ---------- */
 /* Rola por dentro: há textos longos aqui (as políticas, por exemplo)
    e o que rola tem de ser o miolo, nunca a página por trás. */

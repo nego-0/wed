@@ -36,10 +36,10 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `bar.php` | **A montagem do bar**, para os noivos: as gavetas do menu, as bebidas com fotografia e stock, e as folhas de QR para pousar em cima das mesas. |
 | `bebidas.php` | **O menu do convidado**, aberto pelo código da mesa (`?m=…`) — sem sessão e sem link no convite. Escolhe-se numa lista de nomes, escolhe a mesa de entrega e pede. Veste as cores do convite do casal. |
 | `copa.php` | **O posto do copeiro:** a fila por decidir, aprovar ou recusar com motivo, o stock em tempo real e as regras da casa. Escuro de salão. |
-| `entregas.php` | **O posto do empregado de sala:** apanhar, entregar (é aqui, e só aqui, que o stock real desce), devolver à copa, e os tempos da noite. |
+| `entregas.php` | **O posto do garçom:** apanhar, entregar (é aqui, e só aqui, que o stock real desce), devolver à copa, e os tempos da noite. |
 | `assets/bar.css` | Os três registos do bar: a montagem clara, o escuro dos dois postos, e o menu que veste o convite. |
 | `bar-qr.php` | **A folha das mesas:** um cartão por mesa em A4, com o nome em grande, o QR e o endereço escrito, pronto a recortar e pousar. `?mesa=N` reimprime só uma. |
-| `assets/bar-montagem.js`, `assets/bar-copa.js`, `assets/bar-entrega.js`, `assets/bar-convidado.js` | Um por ecrã. |
+| `assets/bar-montagem.js`, `assets/bar-copa.js`, `assets/bar-entrega.js`, `assets/bar-convidado.js` | Um por ecrã. A montagem tem cinco separadores: o menu, as gavetas, as folhas de QR, **as regras da casa** (com os motivos de recusa) e **a equipa** — as contas de copeiro e de garçom criam-se ali, ao lado do ecrã onde vão trabalhar. |
 | `assets/icones.js` | **Os desenhos da casa**, num sítio só: seis copos (taça, flute, caneca, copo baixo, copo alto, chávena) e ~30 sinais de interface, todos 24×24 a traço e em `currentColor` — atravessam os quatro temas e o escuro do salão sem uma regra a mais. `ICO.copo('Café', 'Sem álcool')` escolhe o copo pelo nome da bebida, e só depois pela gaveta. Zero emojis no módulo. |
 | `assets/bar-pecas.js` | **As peças comuns aos quatro ecrãs do bar**: escapar texto, o rodapé de aviso, a procura sem acentos, a caixa de procura, a pastilha de filtro, o botão de ícone, o estado vazio, a miniatura de uma bebida e o estado de um pedido. Estavam escritas quatro vezes, com quatro pequenas diferenças que ninguém escolheu. |
 | `docs/modulo-bar.md` | O desenho inteiro do módulo, e o que dele está feito. |
@@ -98,7 +98,7 @@ os convidados lá entram (é o que vai no QR pousado em cada mesa):
   fica escrita e não trava nada.
 
 **O stock só desce na entrega.** Aprovar um pedido promete a bebida
-(`reservado`), não a gasta; é o empregado, ao dar por entregue, que a tira do
+(`reservado`), não a gasta; é o garçom, ao dar por entregue, que a tira do
 armazém. É esta separação que impede vender a última garrafa duas vezes — e é
 o que a prova `tests/chk_bar.js` mais defende.
 
@@ -114,7 +114,7 @@ substitui.
 vêm desligados. Com o link fora do convite, o nome de um convidado deixou de
 ser segredo; o código devolve-o, e é do convite e não da pessoa, porque o
 telemóvel da família já podia pedir por qualquer um dos seus. Cinco enganos
-seguidos travam aquele convite por cinco minutos — e mesmo travado o empregado
+seguidos travam aquele convite por cinco minutos — e mesmo travado o garçom
 continua a pedir por eles, que é o que garante que ninguém fica sem bebida por
 causa de um código.
 

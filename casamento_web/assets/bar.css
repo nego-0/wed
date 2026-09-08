@@ -89,6 +89,7 @@
                stroke-width:1.2; }
 .b-vazio b{ display:block; font-family:var(--serif); font-size:1.15rem; color:var(--ink);
             font-weight:400; margin-bottom:.25rem; }
+.b-vazio p{ margin:0; max-width:34rem; margin-inline:auto; }
 .b-vazio .btn{ margin-top:1rem; }
 /* Um vazio dentro de uma grelha ocupa a grelha toda — senão fica encolhido
    numa coluna de 250px, a pedir desculpa a um canto. */
@@ -120,10 +121,44 @@ body.b-noite{ background:linear-gradient(175deg, var(--forest-deep), var(--fores
   --warn:var(--sala-aviso);  --warn-bg:var(--sala-aviso-bg);
   --danger:var(--sala-mau);  --danger-bg:var(--sala-mau-bg);
   --ink-fraco:var(--sala-fraco);
-  /* --line, --card, --ink e --text ficam DO TEMA de propósito: as janelas
-     (janela.css) abrem-se por cima deste ecrã e são cartões à parte, com as
-     cores da casa. Fixá-las aqui deixava-as sem contornos. */
+  /* --line, --card, --ink, --text, --cream e --sand ficavam DO TEMA porque as
+     janelas se vestiam por eles: um cartão claro por cima do salão. Só que
+     quem abre uma janela na copa está no escuro há cinco horas, e um
+     rectângulo branco a meio do ecrã é uma lanterna na cara — e, pior, era
+     também a fonte de uma classe inteira de avarias: tudo o que na página
+     usasse --ink escrevia tinta escura sobre fundo escuro («A copa está em
+     dia», «Nada nas mãos», e mais alguns que ninguém tinha visto).
+     As janelas passaram a seguir o salão pelos seus próprios --j-* (ver
+     janela.css), e com isso estes seis podem finalmente virar-se também. */
+  --ink:var(--sala-tinta); --text:var(--sala-tinta);
+  --line:rgba(233,223,201,.18);
+  --card:rgba(255,255,255,.06);
+  --cream:rgba(255,255,255,.09);
+  --sand:rgba(255,255,255,.14);
 }
+/* O botão do tema, no escuro. Vem da folha da casa e é feito para fundo
+   claro: no salão ficava um disco branco a brilhar no canto do ecrã — que é
+   exactamente o contrário do que este ecrã existe para ser. */
+body.b-noite .tema-fab-btn{ background:rgba(255,255,255,.08);
+                            border-color:rgba(233,223,201,.22);
+                            color:var(--gold-soft); }
+body.b-noite .tema-fab-btn:hover{ background:rgba(255,255,255,.15); }
+body.b-noite .tema-fab-pop{ background:#1B2E42; border-color:rgba(233,223,201,.2);
+                            color:var(--ivory); }
+body.b-noite .tema-fab-tit,
+body.b-noite .tema-fab-reset{ color:var(--gold-pale); }
+body.b-noite .tema-fab-op{ color:var(--ivory); }
+body.b-noite .tema-fab-op:hover{ background:rgba(255,255,255,.09); }
+body.b-noite .tema-fab-reset{ border-top-color:rgba(233,223,201,.18); }
+
+/* A tira do suporte é da casa e escreve-se a --ink sobre --warn-bg. Os dois
+   vêm de famílias diferentes, e no salão isso parte-se: o fundo é o creme do
+   aviso (--sala-aviso-bg) e a tinta passou a ser marfim — claro sobre claro,
+   e a tira ficava a dizer nada. Aqui a tinta vem do PAR do fundo, que é o que
+   nunca se separa dele. */
+body.b-noite .tira-suporte{ color:var(--warn); }
+body.b-noite .tira-suporte b{ color:var(--warn); }
+
 body.b-noite .topo{ background:none; padding:1rem 1.15rem; }
 body.b-noite .topo::after{ display:none; }
 .b-sala{ max-width:1180px; margin:0 auto; padding:0 1rem 4rem; }
@@ -243,7 +278,11 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
 .b-destino .mesa{ font-family:var(--serif); font-size:1.35rem; line-height:1.15;
                   color:var(--ivory); min-width:0; overflow:hidden;
                   text-overflow:ellipsis; white-space:nowrap; }
-.b-destino .mesa.sem{ color:var(--warn); font-size:1.05rem; }
+/* Sem mesa, o título é o NOME de quem bebe — e o aviso desce para a segunda
+   linha, onde as excepções vivem. Uma ausência em corpo grande não ajuda
+   ninguém a achar uma pessoa num salão. */
+.b-quem2 .sem{ display:inline-flex; align-items:center; gap:.3rem; color:var(--warn); }
+.b-quem2 .sem .ico{ width:13px; height:13px; }
 .b-destino .ha{ margin-left:auto; font-size:.78rem; color:var(--gold-pale);
                 font-variant-numeric:tabular-nums; white-space:nowrap; }
 /* A segunda linha: quem bebe, e o código para confirmar à mesa. */
@@ -699,3 +738,151 @@ body.b-noite .b-chave .numeros b{ color:var(--ivory); }
 body.b-noite .b-chave .numeros small,
 body.b-noite .b-chave .dica{ color:var(--gold-pale); }
 body.b-noite .b-chave .farol{ background:rgba(255,255,255,.09); color:var(--gold-pale); }
+
+/* ============================================================
+   AS REGRAS E A EQUIPA — bar.php
+   Dois separadores novos na montagem. As regras da casa e os motivos de
+   recusa vinham da copa: são decisões do casal, tomadas com tempo e antes
+   da festa, e não às onze da noite entre dois pedidos (§27).
+   ============================================================ */
+.b-duas-largo{ display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+               gap:1.6rem; align-items:start; }
+@media (max-width:860px){ .b-duas-largo{ grid-template-columns:1fr; } }
+
+/* O título de uma secção da montagem: serif, com o seu sinal. */
+.b-sec{ font-family:var(--serif); font-size:1.1rem; font-weight:400; color:var(--ink);
+        margin:0 0 .5rem; display:flex; align-items:center; gap:.5rem; }
+.b-sec .ico{ width:18px; height:18px; color:var(--gold-deep); }
+
+.b-cartao-claro{ background:var(--card); border:1px solid var(--line);
+                 border-radius:var(--radius); padding:1rem 1.1rem; }
+.b-cartao-claro .b-vazio{ padding:1.6rem 1rem; }
+
+/* Uma definição da casa: a pergunta, o que está escolhido, e o gesto que a
+   muda. Lê-se de cima a baixo como uma lista do que a casa decidiu. */
+.b-def{ display:flex; align-items:flex-start; gap:.8rem; padding:.75rem 0;
+        border-bottom:1px solid var(--line); }
+.b-def:last-child{ border-bottom:0; padding-bottom:0; }
+.b-def:first-child{ padding-top:0; }
+.b-def .txt{ flex:1 1 auto; min-width:0; }
+.b-def .txt b{ display:block; font-size:.92rem; color:var(--ink); font-weight:600; }
+.b-def .txt small{ display:block; font-size:.79rem; color:var(--ink-fraco); line-height:1.5;
+                   margin-top:.15rem; }
+/* O valor em vigor, à direita: é o que se lê de relance ao passar os olhos. */
+.b-def .val{ flex:none; max-width:12rem; text-align:right; font-size:.85rem;
+             color:var(--gold-deep); font-weight:600; }
+.b-def .val.nao{ color:var(--ink-fraco); font-weight:400; }
+
+/* Um motivo de recusa, na lista. */
+.b-mot{ display:flex; align-items:center; gap:.7rem; padding:.55rem 0;
+        border-bottom:1px solid var(--line); font-size:.9rem; }
+.b-mot:last-child{ border-bottom:0; }
+.b-mot span{ flex:1; min-width:0; }
+
+/* Os dois postos do bar, com o atalho para o ecrã de cada um. Os noivos
+   entram lá com tudo: são a casa, e a casa tem de poder servir uma mesa
+   quando falta alguém. */
+.b-postos{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+           gap:.9rem; margin-bottom:1.4rem; }
+.b-posto{ display:flex; align-items:center; gap:.9rem; background:var(--card);
+          border:1px solid var(--line); border-radius:var(--radius); padding:.9rem 1rem; }
+.b-posto .sinal{ width:44px; height:44px; border-radius:12px; flex:none; display:flex;
+                 align-items:center; justify-content:center; background:var(--gold-pale);
+                 color:var(--gold-deep); }
+.b-posto .sinal .ico{ width:22px; height:22px; }
+.b-posto .txt{ flex:1 1 auto; min-width:0; }
+.b-posto .txt b{ display:block; font-family:var(--serif); font-size:1.05rem;
+                 font-weight:400; color:var(--ink); }
+.b-posto .txt small{ font-size:.78rem; color:var(--ink-fraco); }
+.b-posto .btn{ flex:none; }
+
+/* Uma conta da equipa. */
+.b-conta{ display:flex; align-items:center; gap:.7rem; padding:.65rem 0;
+          border-bottom:1px solid var(--line); }
+.b-conta:last-child{ border-bottom:0; }
+.b-conta .quem{ flex:1 1 auto; min-width:0; }
+.b-conta .quem b{ display:block; font-size:.92rem; color:var(--ink);
+                  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.b-conta .quem small{ font-size:.78rem; color:var(--ink-fraco); }
+.b-conta .papel{ flex:none; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;
+                 background:var(--gold-pale); color:var(--gold-deep); border-radius:50px;
+                 padding:.2rem .6rem; font-weight:600; }
+.b-conta .papel.fora{ background:var(--cream); color:var(--ink-fraco); }
+
+/* A senha nova, para se copiar de uma vez. Grande e em mono: escreve-se num
+   papel e entrega-se em mão, e um erro de leitura aqui custa uma noite. */
+.b-senha{ font-family:var(--mono); font-size:1.5rem; letter-spacing:.08em;
+          background:var(--cream); border:1px dashed var(--gold); border-radius:10px;
+          padding:.7rem 1rem; text-align:center; color:var(--ink); user-select:all;
+          margin:.4rem 0 .2rem; }
+
+/* ---- o lançador de pedidos, no topo da fila ------------------
+   O gesto do balcão: alguém está à frente do copeiro, e o que ele vai fazer é
+   aprovar um pedido. Estava numa coluna lateral com outro nome. Aqui é a
+   primeira coisa da fila, e lê-se como uma linha por preencher. */
+.b-lancar{ display:flex; align-items:center; gap:.9rem; width:100%; text-align:left;
+           background:rgba(255,255,255,.05); border:1px dashed rgba(233,223,201,.28);
+           border-radius:var(--radius); padding:.85rem 1rem; margin-bottom:.7rem;
+           color:var(--ivory); font:inherit; cursor:pointer; transition:.15s; min-height:64px; }
+.b-lancar:hover{ background:rgba(255,255,255,.09); border-color:var(--gold-soft);
+                 border-style:solid; }
+.b-lancar:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
+.b-lancar .sinal{ width:38px; height:38px; border-radius:11px; flex:none; display:flex;
+                  align-items:center; justify-content:center;
+                  background:var(--gold-soft); color:var(--forest-deep); }
+.b-lancar .sinal .ico{ width:20px; height:20px; stroke-width:2.2; }
+.b-lancar .txt{ flex:1 1 auto; min-width:0; }
+.b-lancar .txt b{ display:block; font-family:var(--serif); font-size:1.08rem; font-weight:400; }
+.b-lancar .txt small{ display:block; font-size:.78rem; color:var(--gold-pale); line-height:1.45;
+                      margin-top:.1rem; }
+.b-lancar > .ico:last-child{ width:18px; height:18px; color:var(--gold-pale); flex:none; }
+
+/* ---- o que o garçom trouxe da mesa ---------------------------
+   Aparece colado ao pedido SEGUINTE da mesma pessoa, que é o único momento em
+   que a observação serve para decidir alguma coisa. Não é um aviso: é o que
+   se soube, e por isso não tem a cor de um aviso. */
+.b-notas{ display:grid; gap:.35rem; background:rgba(0,0,0,.2);
+          border-left:2px solid var(--gold-soft); border-radius:0 9px 9px 0;
+          padding:.55rem .7rem; }
+.b-notas .tit{ display:flex; align-items:center; gap:.35rem; font-size:.7rem;
+               text-transform:uppercase; letter-spacing:.07em; color:var(--gold-soft); }
+.b-notas .tit .ico{ width:13px; height:13px; }
+.b-notas .n{ font-size:.85rem; line-height:1.45; color:var(--ivory); }
+.b-notas .n em{ display:block; font-style:normal; font-size:.72rem; color:var(--gold-pale);
+                margin-top:.1rem; }
+
+/* A segunda fila de acções de um cartão de entrega. «Entregue» fica sozinho
+   em cima, do tamanho todo: é o que se toca cem vezes por noite, a andar. As
+   outras duas — a nota, e o «não estava na mesa» — são a excepção, e ficam
+   por baixo, mais pequenas e lado a lado. */
+.b-acoes-menor{ display:flex; gap:.5rem; flex:1 1 100%; }
+.b-acoes-menor .btn{ flex:1 1 0; min-height:48px; font-size:.85rem; padding:.4rem .7rem; }
+
+/* ---- o gráfico de barras ------------------------------------
+   Doze linhas de dígitos não têm forma nenhuma: o olho compara comprimentos,
+   não lê números em coluna. As barras são horizontais porque o que varia são
+   NOMES — «Espumante da casa», «Maria Fernandes» —, e um nome deitado de lado
+   numa coluna de 40px não se lê.
+
+   A largura é sobre o MAIOR e não sobre o total: com doze bebidas, a
+   percentagem do total dá doze tracinhos indistinguíveis. */
+.b-graf{ display:grid; gap:.3rem; }
+.b-graf-l{ display:grid; grid-template-columns:minmax(5.5rem, 9rem) 1fr auto;
+           align-items:center; gap:.6rem; padding:.25rem .35rem; border-radius:8px; }
+.b-graf-l .nm{ font-size:.85rem; overflow:hidden; text-overflow:ellipsis;
+               white-space:nowrap; color:var(--ivory); }
+.b-graf-l .tr{ height:11px; border-radius:50px; background:rgba(255,255,255,.07);
+               overflow:hidden; display:block; }
+.b-graf-l .tr i{ display:block; height:100%; border-radius:50px;
+                 background:var(--tinta, var(--gold-soft));
+                 transition:width .45s cubic-bezier(.22,.61,.36,1); }
+.b-graf-l .v{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-soft);
+              font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
+/* Uma barra que se pode tocar leva à ficha da pessoa: o gráfico aponta, e a
+   ficha é onde se faz alguma coisa a respeito. Sem isto era um desenho mudo. */
+.b-graf-l.toca{ cursor:pointer; }
+.b-graf-l.toca:hover{ background:rgba(255,255,255,.07); }
+.b-graf-l.toca:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:1px; }
+@media (max-width:520px){
+  .b-graf-l{ grid-template-columns:minmax(4.5rem, 7rem) 1fr auto; gap:.45rem; }
+}

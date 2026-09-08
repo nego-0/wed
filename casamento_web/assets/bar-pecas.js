@@ -139,8 +139,12 @@
    * já lá está.
    */
   function vazio(icone, titulo, texto, botao) {
+    // O texto vai num <p> seu: sem ele, o botão é um irmão inline do texto e
+    // encosta-se ao fim da última linha em vez de ficar por baixo, centrado.
+    // Só se via com frases longas — que são precisamente as que explicam bem.
     return '<div class="b-vazio">' + ico.ico(icone)
-      + '<b>' + esc(titulo) + '</b>' + esc(texto) + (botao || '') + '</div>';
+      + '<b>' + esc(titulo) + '</b>'
+      + '<p>' + esc(texto) + '</p>' + (botao || '') + '</div>';
   }
 
   /**

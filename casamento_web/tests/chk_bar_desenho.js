@@ -128,7 +128,6 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
         const cs = getComputedStyle(el);
         if (cs.visibility === 'hidden' || cs.display === 'none') return;
         const principal = el.classList.contains('b-bt-grande')
-                       || el.classList.contains('b-pin-bt')
                        || el.id === 'b-pedir';
         const min = principal ? 56 : 48;
         if (r.height < min - 0.5) {

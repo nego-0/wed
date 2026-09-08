@@ -38,7 +38,7 @@ documento é detalhe desses três ecrãs e das regras que os ligam.
 | **Entregador** | `entregas.php` | Conta com papel `entregador` | Apanha pedidos aprovados, entrega, marca falhas, pede por conta de quem não tem rede |
 | **Noivos** | `bar.php` | Conta de noivos (`admin`) | Monta o menu (categorias, itens, fotografias), abre e fecha o bar, imprime os QR das mesas, vê a estatística |
 
-O entregador é o «garçon» / empregado de mesa. Uso *entregador* no código e
+O entregador é o «garçon» / garçom. Uso *entregador* no código e
 *garçon* nos textos que o convidado lê, que é a palavra dele.
 
 Estes ecrãs não se parecem uns com os outros de propósito: são três registos
@@ -111,7 +111,7 @@ lido — e pode ser trocada (§4.2).
 - o nome da mesa em grande («Mesa 7»), que é o que o entregador vai procurar;
 - o QR;
 - o endereço escrito, curto, para quem prefere escrever;
-- uma linha de rodapé: *sem rede? chame um empregado — ele faz o pedido por si*.
+- uma linha de rodapé: *sem rede? chame um garçom — ele faz o pedido por si*.
 
 **Onde vive o token da mesa:** coluna nova `bar_token CHAR(12)` em `cw_mesas`,
 gerada na migração para as mesas que já existem e ao criar uma mesa nova. Não é
@@ -134,7 +134,7 @@ o que acontece a partir do segundo copo. Por isso a mesa do QR é apenas a
   dizer outra vez em cada pedido;
 - há uma entrada final na lista, «**não sei o número da mesa**», que manda o
   pedido sem mesa e obriga o entregador a procurar a pessoa pelo nome — melhor
-  do que uma mesa errada, que faz o empregado dar duas voltas;
+  do que uma mesa errada, que faz o garçom dar duas voltas;
 - o pedido guarda a mesa escolhida, e a copa vê as duas quando forem diferentes
   («pediu da mesa 7 · entregar na 3»), que é informação e não suspeita.
 
@@ -170,7 +170,7 @@ Regras da procura:
 
 E uma saída, sempre visível por baixo dos resultados:
 
-> **Não encontro o meu nome** → *Chame um empregado: ele faz o pedido por si e
+> **Não encontro o meu nome** → *Chame um garçom: ele faz o pedido por si e
 > avisa a copa.*
 
 É a porta para quem chegou como acompanhante de última hora, para quem está na
@@ -201,7 +201,7 @@ O que fica de pé, por ordem de força:
 4. **A copa vê a sala.** O copeiro conhece a festa e tem as bandeiras (§10);
    um convidado com três pedidos em dez minutos, vindos de telemóveis
    diferentes, salta à vista.
-5. **Um PIN, se a casa quiser.** A definição `bar.pedir_pin` acrescenta quatro
+5. ~~**Um PIN, se a casa quiser.**~~ *Saiu do módulo — ver §27.1.* A definição `bar.pedir_pin` acrescentava quatro
    dígitos, pedidos depois de escolher o nome. **Desligado por omissão**,
    porque devolve o atrito que se quis tirar — mas fica lá para o casamento que
    faça questão.
@@ -222,7 +222,7 @@ O que fica de pé, por ordem de força:
    com o testemunho, e um contador no IP tranca a sala inteira (§5.4). O preço
    é que se pode trancar uma família de propósito; paga-se de bom grado, porque
    é curto, porque a copa levanta o travão num clique a partir da ficha dela, e
-   porque com o convite travado **o empregado continua a pedir por eles**
+   porque com o convite travado **o garçom continua a pedir por eles**
    (§5.5). Nunca se perde uma bebida por causa de um código.
 
    Um guião determinado, com muitos convites e tempo, ainda assim adivinha um
@@ -295,7 +295,7 @@ Por isso o IP entra com três modos numa definição (`bar.ip_modo`):
 |---|---|---|
 | `registo` **(origem)** | Grava o IP em tudo. Não bloqueia nada. | Salão com Wi-Fi partilhado — o caso comum |
 | `aviso` | Além de gravar, marca na copa os pedidos em que N nomes diferentes usam o mesmo IP em pouco tempo | Quando se quer vigiar sem travar |
-| `estrito` | Um IP serve um nome de cada vez; um segundo é recusado com «peça ao empregado de mesa» | Eventos em que cada convidado usa dados móveis, ou testes |
+| `estrito` | Um IP serve um nome de cada vez; um segundo é recusado com «peça ao garçom» | Eventos em que cada convidado usa dados móveis, ou testes |
 
 A promessa que o sistema pode cumprir com verdade é a do **dispositivo**, não a
 do IP: um telemóvel, uma pessoa. É essa que a interface explica ao convidado.
@@ -593,7 +593,7 @@ torniquete.
 
 **Regra posta só a esta pessoa** (§8.0.1) — o texto nunca denuncia o motivo,
 que é assunto de quem a pôs. Ou a mensagem que a copa escreveu, ou esta:
-> Esta bebida não está disponível para si esta noite. Fale com um empregado se
+> Esta bebida não está disponível para si esta noite. Fale com um garçom se
 > achar que é engano.
 
 **Regra pessoal com intervalo** — indistinguível, no ecrã do convidado, de
@@ -879,15 +879,19 @@ ALTER TABLE cw_mesas ADD COLUMN bar_token CHAR(12) DEFAULT NULL;
 
 -- v38: o convidado que pede por outro convidado. Não se aproveita o
 -- criado_por que já existe: esse é a conta do PESSOAL, e um nome de convidado
--- lá dentro ficava indistinguível de um empregado — a copa deixava de saber se
+-- lá dentro ficava indistinguível de um garçom — a copa deixava de saber se
 -- o pedido veio do balcão ou da mesa 12.
 ALTER TABLE cw_bar_pedidos ADD COLUMN criado_por_convidado_id INT DEFAULT NULL;
 
 -- v37: a hora a que uma regra entra, e os quatro dígitos do convite.
 ALTER TABLE cw_bar_limites ADD COLUMN vigora_em DATETIME DEFAULT NULL;
-ALTER TABLE cw_convites ADD COLUMN bar_pin CHAR(4) DEFAULT NULL;
-ALTER TABLE cw_convites ADD COLUMN bar_pin_falhas TINYINT NOT NULL DEFAULT 0;
-ALTER TABLE cw_convites ADD COLUMN bar_pin_ate DATETIME DEFAULT NULL;
+-- v39: o código do convite saiu do módulo (§27.1) e as colunas com ele.
+ALTER TABLE cw_convites DROP COLUMN bar_pin;
+ALTER TABLE cw_convites DROP COLUMN bar_pin_falhas;
+ALTER TABLE cw_convites DROP COLUMN bar_pin_ate;
+-- v39: o limiar de «a acabar», por bebida (§27.5), e a nota do garçom (§27.7).
+ALTER TABLE cw_bar_itens   ADD COLUMN stock_minimo INT NOT NULL DEFAULT 8;
+ALTER TABLE cw_bar_pedidos ADD COLUMN nota_entrega VARCHAR(240) DEFAULT NULL;
 
 ALTER TABLE cw_acessos MODIFY papel
   ENUM('noivos','porteiro','copeiro','entregador') NOT NULL DEFAULT 'noivos';
@@ -895,7 +899,7 @@ ALTER TABLE cw_acessos MODIFY papel
 
 Definições novas em `cw_definicoes` (por casamento): `bar.aberto`,
 `bar.abre_as`, `bar.fecha_as`, `bar.ip_modo`, `bar.garcon_direto`,
-`bar.mensagem_fechado`, `bar.so_maiores_aviso`, `bar.pedir_pin`,
+`bar.mensagem_fechado`, `bar.so_maiores_aviso`,
 `bar.trocar_nome`, `bar.procura_min` (4, por omissão).
 
 **Migração** com os ajudantes que já existem (`migColuna`, `migIndice`), e a
@@ -907,7 +911,7 @@ lançou o pedido, quando não é quem o bebe (§5.2.1).
 
 **v37**, antes disso, para o que faltava: `bar_limites.vigora_em` (a hora a que uma
 regra entra, simétrica de `expira_em`) e três colunas em `cw_convites` —
-`bar_pin`, `bar_pin_falhas` e `bar_pin_ate`. O código vive no convite e não na
+~~`bar_pin`, `bar_pin_falhas` e `bar_pin_ate`~~ *(largados na v39 — §27.1)*. O código vivia no convite e não na
 pessoa pela razão de §5.2; as duas ao lado são o travão, e contam-se contra o
 convite atacado e não contra quem tenta.
 
@@ -989,7 +993,7 @@ para quem vier procurar por elas:
 | `bar_qr_mesas` | a página `bar-qr.php`, que desenha os QR no cliente |
 
 E duas que o desenho não previa: `bar_defs` (as regras da casa num sítio só) e
-`bar_pin_soltar` (levantar o travão do código a um convite, §5.2).
+`bar_pin_soltar` já não existe: o código do convite saiu do módulo (§27.1).
 
 O `bar_pulso*` incremental não existe: a copa e as entregas relêem o estado
 inteiro de 8 em 8 segundos, e o convidado de 10 em 10. Numa festa de 200
@@ -1020,7 +1024,7 @@ com um `desde` não pagava o cuidado de o manter certo (§18).
 | `tests/chk_bar_limites.js` | A precedência das regras, o caudal, a espera e as alternativas |
 | `tests/chk_bar_identidade.js` | Um telemóvel uma pessoa; os três modos de IP |
 | `tests/chk_bar_numeros.js` | A previsão de rutura, e o que o convidado não vê |
-| `tests/chk_bar_pin.js` | Os quatro dígitos do convite, o travão, e o empregado a servir mesmo assim |
+| `tests/chk_bar_parcial.js` | Servir menos com motivo, o limiar de cada bebida, a nota do garçom, e o pedido do balcão que nasce decidido (§27.12) |
 | `tests/chk_bar_desenho.js` | O dedo, a fuga lateral, o anel de foco, o vazio, as cores inventadas (§25.14), as peças partilhadas (§25.16), a caça ao emoji (§25.17) e a procura (§25.18) |
 | `tests/chk_bar_por_outro.js` | Pedir por outro convidado: a quota é de quem bebe, os dois nomes ficam, e o código do convite continua a valer (§5.2.1) |
 | `tests/chk_bar_importar.js` | O retrato leva o bar, e o ficheiro de exemplo carrega um bar que serve (§19.1) |
@@ -1222,8 +1226,6 @@ desenvolvimento, a contar o que se prova e porquê).
 >   horas de uma regra.
 > * `chk_bar_identidade.js` — um telemóvel uma pessoa, e os três modos de IP.
 > * `chk_bar_numeros.js` — a previsão de rutura, e o que o convidado NÃO vê.
-> * `chk_bar_pin.js` — os quatro dígitos: desligado nada muda, o código é do
->   convite, errado não entra, cinco erros travam, e o empregado serve à mesma.
 > * `chk_bar_desenho.js` — §25.14.
 >
 > A tabela abaixo é o desenho original, e fica como estava para se poder ver o
@@ -1257,7 +1259,7 @@ que está mesmo instalado.
 > **Estado da obra — feito, e sem lista de faltas.** O bar serve bebidas do
 > princípio ao fim: os noivos montam o menu, o convidado escolhe-se numa lista
 > e pede da mesa, a copa decide dentro das regras que ela própria pôs, o
-> empregado entrega, o stock diz a verdade, e no fim há números para saber o
+> garçom entrega, o stock diz a verdade, e no fim há números para saber o
 > que a festa bebeu. As três coisas que ficaram de fora das oito primeiras
 > fases — o PIN, a hora de entrada de uma regra e a prova do desenho — foram
 > feitas na nona.
@@ -1266,7 +1268,7 @@ que está mesmo instalado.
 > contas do stock; `chk_bar_limites.js` a precedência das regras e as horas
 > delas; `chk_bar_identidade.js` o telemóvel preso a um nome e a decisão sobre
 > o IP; `chk_bar_numeros.js` a previsão de rutura e o que o convidado NÃO pode
-> ver; `chk_bar_pin.js` os quatro dígitos e o seu travão; `chk_bar_desenho.js`
+> ver; `chk_bar_desenho.js`
 > o dedo, a fuga lateral, o anel de foco e as cores inventadas.
 >
 > E oito coisas de percurso, que valem para quem vier a seguir:
@@ -1276,7 +1278,7 @@ que está mesmo instalado.
 >   tudo o que lá não esteja — o interruptor do bar parecia funcionar e não
 >   guardava nada. O bar tem `barGuardarDefs()`, contra `barDefsPadrao()`.
 > * As ações do bar vivem **acima** da barreira `exigirAdminApi()` em `api.php`,
->   porque o bar tem gente que não é admin (o copeiro, o empregado) e gente que
+>   porque o bar tem gente que não é admin (o copeiro, o garçom) e gente que
 >   não tem sessão nenhuma (o convidado). O CSRF das ações do pessoal é
 >   conferido ali mesmo, contra a mesma lista de `config.php`.
 > * Três coisas nestes ecrãs aparecem e desaparecem por atributo `hidden` — a
@@ -1302,7 +1304,7 @@ que está mesmo instalado.
 >   Todos os erros do ecrã do convidado saíam como «Não deu.» — incluindo a
 >   frase que explica porque é que um pedido foi travado, que é exactamente o
 >   que a pessoa precisa de ler.
-> * O `.b-bt-grande` — o «Entregue» do empregado, o alvo mais tocado da noite —
+> * O `.b-bt-grande` — o «Entregue» do garçom, o alvo mais tocado da noite —
 >   estava a **48 px e não a 56**: `body.b-noite .btn{min-height:48px}` é mais
 >   específico do que um `.b-bt-grande` sozinho, e encolhia justamente o botão
 >   que existe para ser grande. Uma medida escrita na folha de desenho não é a
@@ -1310,7 +1312,7 @@ que está mesmo instalado.
 > * No escuro do salão **não havia anel de foco**: os `.btn` da casa ficavam com
 >   um contorno de 0 px branco e os links do cabeçalho com o anel do browser, de
 >   1 px quase preto. Num ecrã escuro, os dois são o mesmo que nada.
-> * A exportação do casamento **não levava o `bar_pin`**. Levar os dados e
+> * A exportação do casamento **não levava o `bar_pin`** *(sem efeito desde a v39 — §27.1)*. Levar os dados e
 >   trazê-los de volta invalidava em silêncio todos os códigos já impressos — e
 >   em silêncio é o pior modo de falhar, porque só se dá por isso na festa, com
 >   as folhas na mão. O travão fica de fora de propósito: é o estado de um
@@ -1357,7 +1359,7 @@ lista, isso é um toque, não uma invasão.
 1. **A rede do salão.** Todo o módulo assenta em haver Wi-Fi ou dados. Se a
    rede cair, cai o bar. Mitigação: `entregas.php` guarda os pedidos apanhados
    em `localStorage` e sincroniza quando voltar — o mesmo que a porta já faz —,
-   e o cartaz da mesa diz «sem rede? chame o empregado».
+   e o cartaz da mesa diz «sem rede? chame o garçom».
 2. **O stock nunca bate certo.** Alguém serve directamente no balcão, uma
    garrafa parte-se, uma caixa aparece. Por isso há acerto com nota e um
    livro-razão: o objectivo não é exactidão contabilística, é a copa saber se
@@ -1679,7 +1681,7 @@ por boa razão:
 
 O que a prova encontrou, e que estava escrito na folha e não no ecrã:
 
-* o **`.b-bt-grande` a 48 px** — a acção principal do empregado, com a medida
+* o **`.b-bt-grande` a 48 px** — a acção principal do garçom, com a medida
   das secundárias, porque `body.b-noite .btn` é mais específico;
 * **nenhum anel de foco no escuro**: os `.btn` com um contorno de 0 px branco,
   os links do cabeçalho com o anel do browser de 1 px quase preto;
@@ -1934,7 +1936,7 @@ não para inventar durante a implementação.
 
 **Sem resultados:**
 > Não encontrámos ninguém com «xpto». Veja se está bem escrito — ou chame um
-> empregado, que faz o pedido por si.
+> garçom, que faz o pedido por si.
 
 **Depois de se escolher:**
 > Boa noite, **Álvaro**. Este telemóvel fica a pedir em seu nome.
@@ -1946,13 +1948,13 @@ não para inventar durante a implementação.
 > Passámos a entregar na **mesa 3**. Fica assim até dizer o contrário.
 
 **Sem número de mesa:**
-> Sem mesa: o empregado vai procurá-lo pelo nome. Pode demorar um pouco mais.
+> Sem mesa: o garçom vai procurá-lo pelo nome. Pode demorar um pouco mais.
 
 **Bar fechado:**
 > A copa está fechada neste momento. Abre às 20h30 — e o bolo é às 23h.
 
 **Pedido feito:**
-> Pedido **#A47** enviado à copa. Assim que for aprovado, um empregado leva-o à
+> Pedido **#A47** enviado à copa. Assim que for aprovado, um garçom leva-o à
 > mesa 7.
 
 **Aprovado:**
@@ -1962,7 +1964,7 @@ não para inventar durante a implementação.
 > Entregue. Bom proveito.
 
 **Recusado:**
-> **#A47** não pôde ser servido: _{motivo}_. Fale com um empregado se precisar.
+> **#A47** não pôde ser servido: _{motivo}_. Fale com um garçom se precisar.
 
 **Limite pessoal, com alternativas** — §9.
 **Ritmo da casa** — §9.
@@ -1975,7 +1977,7 @@ não para inventar durante a implementação.
 
 **Trocar para um nome de outro convite (modo fechado):**
 > Este telemóvel já está a pedir por **{anterior}**. Se o telemóvel é
-> emprestado, peça a um empregado — ele lança o pedido por si.
+> emprestado, peça a um garçom — ele lança o pedido por si.
 
 ---
 
@@ -1985,3 +1987,193 @@ regras de cada convidado (o que pode pedir, quanto, e de quanto em quanto
 tempo) a escreverem-se na ficha dele, no meio da festa. Enquanto o módulo não existir, este
 documento é a única coisa que existe dele — se algo aqui mudar de ideia, muda
 aqui primeiro.*
+
+## 27. A segunda passagem: o que o uso mostrou
+
+O módulo estava inteiro e funcionava. Uma segunda leitura, com o desenho já
+feito, mostrou seis coisas que estavam no sítio errado — e uma que não devia
+sequer existir. Estão aqui pela mesma razão que o resto: para se poder
+discordar delas com os factos à frente.
+
+### 27.1 **[decisão]** O código do convite sai do módulo
+
+§5.2 dava à casa a opção de pedir quatro dígitos ao convidado depois de ele
+escolher o nome. Saiu, e com ele as três colunas (`bar_pin`, `bar_pin_falhas`,
+`bar_pin_ate`), o travão dos cinco enganos, a folha impressa e a definição
+`bar.pedir_pin`.
+
+Porquê: **o segredo que dava estava escrito no mesmo papel pousado na mesa**.
+O código era do convite; quem se senta àquela mesa lê o QR e, com ele, tem o
+menu — e a única coisa que o PIN acrescentava era saber quatro dígitos que iam
+impressos no convite de uma família que está ali, na mesma sala. Contra um
+impostor decidido não fazia nada; contra o engano distraído, o telemóvel preso
+ao nome (§5.3) já faz. O que ficou foi o atrito, numa página cuja razão de ser
+é pedir uma cerveja de pé, com uma mão.
+
+As colunas largam-se, e isso é de propósito: **dados que ninguém lê são dados
+que alguém, um dia, volta a acreditar**.
+
+### 27.2 «Empregado» passa a «Garçom»
+
+Uma palavra, em toda a parte: o papel na Gestão, os textos das quatro páginas,
+o QR, a documentação e as provas. O valor guardado na base continua a ser
+`entregador` — é uma chave interna, e mudá-la só partia migrações antigas sem
+mudar nada do que se lê.
+
+### 27.3 **[decisão]** As regras da casa mudam-se para a montagem
+
+As regras da casa e os motivos de recusa viviam em duas janelas de atalho na
+copa. Estavam no sítio errado por duas razões, e nenhuma delas é de arrumação:
+
+* são **decisões do casal** — o que a casa serve, e como fala com quem recusa;
+* tomam-se **antes da festa**, com tempo, e não às onze da noite entre dois
+  pedidos, num tablet à meia-luz.
+
+Passaram para dois separadores novos de `bar.php`. O que fica na copa é o que
+lá tem de estar: **escrever um motivo à mão em cada recusa**. A lista poupa a
+escrita; nunca a proíbe — e é isso que a torna útil em vez de uma gaiola.
+
+### 27.4 **[decisão]** A terceira porta: servir menos
+
+A copa tinha duas portas — aprovar e recusar — e a vida do balcão tem três.
+«Pediu quatro cervejas e só há duas» não é nem uma nem outra: **recusar quatro
+por causa de duas é servir zero**, e a pessoa volta a pedir daí a um minuto.
+
+`bar_decidir` passou a aceitar `cortes` — `{item_id: quantidade nova}`, com
+zero a significar «tira a bebida do pedido». As regras à volta disso não são
+decorativas:
+
+| Regra | Porquê |
+|---|---|
+| Um corte **exige motivo** (da lista ou escrito) | Quem recebe menos do que pediu tem direito a saber porquê. Uma quantidade que encolhe em silêncio faz pedir outra vez. |
+| Cortar **tudo** é recusado como aprovação | Um pedido a zero não é «aprovado e vazio»: é uma recusa, e faz-se como recusa — senão fica um pedido a meio que ninguém entende. |
+| Reserva-se o que **fica**, não o que se pediu | É a regra de ouro do módulo (§4). Reservar as quantidades originais depois de as cortar prometia bebida que não ia sair, e a conta partia-se em silêncio. |
+| O motivo fica **guardado no pedido** | É o que o convidado lê no telemóvel quando o pedido dele encolhe, e o que a copa relê daqui a meia hora sem se ter de lembrar. |
+
+### 27.5 **[decisão]** O limiar de «a acabar» é de cada bebida
+
+Era 5 na copa e 8 na montagem — os dois inventados, e os dois errados. **Cinco
+garrafas de whisky é uma emergência; cinco águas não é nada.** Quem monta o
+menu sabe a diferença e agora escreve-a: `stock_minimo`, um campo por bebida.
+
+O servidor devolve o limiar E o veredicto (`a_acabar`), e os dois ecrãs leem o
+mesmo — a marca «Resta pouco» na montagem e o semáforo da copa deixaram de
+poder discordar um do outro.
+
+### 27.6 **[decisão]** «Aprovar pedido» sobe para o topo da fila
+
+Chamava-se «pedir por um convidado» e vivia numa coluna lateral, ao pé do
+stock. Mas o gesto é outro: alguém está à frente do copeiro, e o que ele vai
+fazer é **aprovar um pedido**. Mudou de nome e de sítio — é a primeira coisa da
+fila por decidir.
+
+E mudou de comportamento, que é o que importa: **nasce aprovado, e não em
+análise**. Quem o escreve está a olhar para a pessoa e para as garrafas; pô-lo
+a esperar por quem acabou de o escrever era encher a fila de trabalho
+imaginário. Com o interruptor «já foi entregue» — o caso mais comum, o copo que
+seguiu na mão — nasce **entregue**, e faz de uma vez o que faria pelos dois
+ecrãs: promete e baixa.
+
+### 27.7 O garçom: sempre pode pedir, e agora fala
+
+`bar.garcon_direto` desapareceu. Era um interruptor para desligar a única saída
+que existe quando um convidado não tem rede — e desligá-lo não protegia nada,
+só criava uma festa onde essa pessoa fica sem bar.
+
+Em troca, o garçom ganhou voz. **É o único do bar que fala com o convidado**, e
+o que ele traz da mesa — «pediu para não lhe servirem mais», «está com os
+miúdos», «não era para ele, era para a mãe» — morria ali. Agora escreve-se ao
+entregar (num botão à parte: entregar tem de continuar a ser um toque) e fica
+no pedido. A copa lê-a **colada ao pedido seguinte dessa pessoa**, que é o
+único momento em que a observação serve para decidir alguma coisa.
+
+Só as três últimas de cada pessoa: uma nota de há quatro horas já não descreve
+a mesma noite.
+
+### 27.8 A equipa do bar, na página do bar
+
+Os dois postos criavam-se na Gestão, no meio das contas da casa. Quem monta o
+bar é quem depois precisa de um copeiro — e mandá-lo a outra página, procurar
+entre porteiros e noivos, para criar a conta de alguém que vai trabalhar
+*naquele* ecrã, é fazer o caminho todo ao contrário.
+
+O separador novo cria, troca de posto e tira contas, e tem a porta para os dois
+ecrãs. Os noivos entram lá com tudo — `podeCopa()` e `podeEntregar()` já
+incluíam o admin do casamento —, e é como tem de ser: **são a casa, e a casa
+tem de poder decidir um pedido ou levar uma bebida quando falta alguém**.
+
+### 27.9 «Os números»: sem piscar, e com forma
+
+Duas mudanças.
+
+**Actualiza-se sozinho, e sem piscar.** Cada volta apagava o painel inteiro e
+punha um esqueleto no lugar; quem estava a ler uma linha via-a desaparecer
+debaixo dos olhos. Agora a moldura desenha-se uma vez e o que muda é o miolo de
+cada cartão. O esqueleto só aparece à primeira leitura, quando de facto ainda
+não há nada. E quando a rede cai, **o que estava fica**: números de há dez
+segundos valem mais do que um painel em branco, e a barra do topo já diz que a
+ligação caiu.
+
+**Dois gráficos.** «Chega até ao fim?» já respondia à pergunta urgente; faltava
+a forma da noite. Uma coluna de doze números não tem forma nenhuma — o olho
+compara comprimentos, não lê dígitos em coluna:
+
+* **o que a festa bebeu**, cada barra na cor da gaveta da bebida;
+* **quem bebeu mais**, e cada barra abre a ficha da pessoa. Sem isso era um
+  desenho mudo: o gráfico aponta, e a ficha é onde se faz alguma coisa a
+  respeito.
+
+Barras horizontais, e não colunas, porque o que varia são **nomes** — «Espumante
+da casa», «Maria Fernandes» — e um nome deitado de lado numa coluna de 40 px não
+se lê. A largura é sobre o **maior** e não sobre o total: com doze bebidas, a
+percentagem do total dá doze tracinhos indistinguíveis.
+
+### 27.10 **[decisão]** As janelas seguem o escuro do salão
+
+`janela.css` vestia-se pelos tokens do tema, e no salão isso dava um **cartão
+branco no meio de um ecrã escuro** — uma lanterna na cara de quem está àquela
+luz há cinco horas.
+
+Agora `body.b-noite .pl-modal` redefine os `--j-*` pela paleta do salão. E isso
+destrancou uma correcção maior: os tokens `--ink`, `--text`, `--card`, `--line`,
+`--cream` e `--sand` ficavam **do tema** precisamente porque as janelas se
+vestiam por eles. Com as janelas independentes, o salão pôde finalmente
+virá-los também — e com isso morreu uma **classe inteira de avarias**: tudo o
+que na página usasse `--ink` escrevia tinta escura sobre fundo escuro. «A copa
+está em dia» e «Nada nas mãos» eram dois casos; havia mais que ninguém tinha
+visto.
+
+Uma sobrou, e vale a pena registá-la: a tira do suporte escreve-se a `--ink`
+sobre `--warn-bg`, **dois tokens de famílias diferentes**. No salão isso
+separa-se. A tinta passou a vir do par do próprio fundo (`--warn`), que é o que
+nunca se separa dele.
+
+### 27.11 O botão do tema, nos quatro ecrãs
+
+`bar.php` já o tinha pelo cabeçalho da casa. A copa, as entregas e o menu do
+convidado passaram a tê-lo também. No salão ele veste-se de escuro — um disco
+branco a brilhar no canto era o contrário do que aqueles ecrãs existem para
+ser.
+
+Na página do convidado o tema **não muda o menu** (esse veste o convite do
+casal, §25.2): muda as **janelas**, que são cartões da casa e são o que ele lê
+quando alguma coisa corre mal.
+
+### 27.12 A prova
+
+`tests/chk_bar_parcial.js`, e o que ela defende:
+
+| Verifica | Porque é que se parte |
+|---|---|
+| O corte muda as quantidades E o que fica reservado | Reservar o original depois de cortar promete bebida que não sai |
+| Um corte sem motivo é recusado | Sem a frase, a pessoa pede outra vez |
+| Cortar tudo não é aprovar | Ficava um pedido a meio que ninguém entende |
+| O convidado vê o pedido cortado e o motivo | Uma quantidade que encolhe em silêncio é uma promessa quebrada |
+| O limiar é de cada bebida, e os dois ecrãs leem-no | Um número na copa e outro na montagem discordam à vista de todos |
+| A nota do garçom chega à copa, e ao ECRÃ | Uma nota que fica nos dados é uma nota que não existe |
+| O pedido do balcão nasce aprovado, ou entregue | Senão a fila enche-se de trabalho imaginário |
+| Um pedido que nasce entregue baixa o stock na hora | É a regra de ouro do módulo (§4) |
+| As regras da casa já não têm o PIN nem o `garcon_direto` | Uma definição órfã volta um dia a ser lida |
+
+`chk_bar_pin.js` foi apagada: provava uma coisa que deixou de existir, e uma
+prova que sobrevive à funcionalidade é uma prova que passa a mentir.

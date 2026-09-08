@@ -119,7 +119,7 @@ function ficheirosApp(): array {
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
             'licenca.php','manifest.php','sw.js',
-            // O bar: a montagem, o posto da copa, o do empregado, e o menu que
+            // O bar: a montagem, o posto da copa, o do garçom, e o menu que
             // o convidado abre na mesa.
             'bar.php','copa.php','entregas.php','bebidas.php','bar-qr.php',
             'assets/bar.css','assets/bar-montagem.js','assets/bar-copa.js',

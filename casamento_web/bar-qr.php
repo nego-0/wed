@@ -9,7 +9,7 @@
 // um bar que só existe em Dezembro.
 //
 // Cada cartão leva quatro coisas, por esta ordem de tamanho:
-//   • o nome da mesa em grande — é o que o empregado procura no salão;
+//   • o nome da mesa em grande — é o que o garçom procura no salão;
 //   • o QR, que é como quase toda a gente entra;
 //   • o endereço escrito, para quem prefira escrever ou tenha a câmara estragada;
 //   • e o rodapé que diz o que fazer sem rede, que é a saída de sempre.
@@ -29,18 +29,6 @@ $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $ENDERECO = rtrim(enderecoPublico(), '/');
 barGarantirTokens($conn);
-
-// Os quatro dígitos, quando a casa os pede. Vivem aqui e não numa página só
-// deles porque são a mesma tarefa: o que se imprime antes da festa.
-$PEDE_PIN = barDef($conn, 'bar.pedir_pin') === '1';
-$pins = [];
-if ($PEDE_PIN) {
-    barGarantirPins($conn);
-    $rp = $conn->query("SELECT id, nome_exibicao, bar_pin FROM {$P}convites
-                        WHERE " . doCasamento() . " AND " . soVivos($conn, '')
-                     . " ORDER BY nome_exibicao");
-    if ($rp) $pins = $rp->fetch_all(MYSQLI_ASSOC);
-}
 
 // Uma mesa só, quando se vem reimprimir a folha de uma que se estragou.
 $soEsta = (int)($_GET['mesa'] ?? 0);
@@ -71,7 +59,7 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
            padding:1.4rem 1rem 1rem; text-align:center; break-inside:avoid; }
   .cartao .mono{ font-family:var(--serif); font-size:.78rem; letter-spacing:.18em;
                  text-transform:uppercase; color:var(--gold-deep); }
-  /* O nome da mesa é a maior coisa do cartão: é o que o empregado lê de longe
+  /* O nome da mesa é a maior coisa do cartão: é o que o garçom lê de longe
      quando anda com um tabuleiro à procura dela. */
   .cartao .mesa{ font-family:var(--serif); font-size:2.1rem; color:var(--ink);
                  line-height:1.1; margin:.25rem 0 .1rem; }
@@ -86,18 +74,10 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
   /* A lista dos códigos: uma folha de trabalho, não um cartão de mesa. Duas
      colunas, para caber uma festa de 200 pessoas em duas ou três páginas. */
   .corte{ max-width:900px; margin:2rem auto 0; border-top:1px solid var(--line); }
-  .pins{ max-width:900px; margin:0 auto 3rem; padding:0 1rem;
-         columns:2; column-gap:2rem; }
-  .pin-l{ display:flex; justify-content:space-between; align-items:baseline; gap:1rem;
-          padding:.35rem 0; border-bottom:1px dotted var(--line);
-          break-inside:avoid; }
-  .pin-l b{ font-family:var(--serif); font-size:1.1rem; letter-spacing:.12em;
-            font-variant-numeric:tabular-nums; color:var(--gold-deep); }
 
   @media print{
     /* Os códigos começam em folha nova: pousa-se a folha das mesas na mesa e
        guarda-se esta, que não é para andar à vista de ninguém. */
-    .pins{ break-before:page; }
     /* No papel não há barra, nem fundo, nem tinta desperdiçada em molduras
        cheias: o tracejado é para a tesoura. */
     .barra, .no-print{ display:none !important; }
@@ -132,27 +112,12 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
     <div class="conv">Aponte a câmara para pedir as suas bebidas</div>
     <canvas class="qr" data-url="<?= escP($url) ?>"></canvas>
     <div class="lnk">ou escreva<br><b><?= escP($url) ?></b></div>
-    <div class="rod">Sem rede? Chame um empregado — ele faz o pedido por si.</div>
+    <div class="rod">Sem rede? Chame um garçom — ele faz o pedido por si.</div>
   </div>
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
 
-<?php if ($PEDE_PIN && $pins): ?>
-<div class="corte no-print"></div>
-<div class="barra">
-  <p class="dica"><b>Os códigos dos convites.</b> A casa está a pedir quatro
-    dígitos ao convidado depois de ele escolher o nome. O código é do convite
-    — a família tem um só —, e vai no convite de cada uma, escrito ou impresso.
-    Sem ele ninguém pede pelo telemóvel; com um empregado, pede-se à mesma.</p>
-</div>
-<div class="pins">
-  <?php foreach ($pins as $c): ?>
-  <div class="pin-l"><span><?= escP($c['nome_exibicao']) ?></span>
-    <b><?= escP($c['bar_pin']) ?></b></div>
-  <?php endforeach; ?>
-</div>
-<?php endif; ?>
 
 <script>
 // O QR desenha-se no cliente: são poucos, e assim a folha não depende de
