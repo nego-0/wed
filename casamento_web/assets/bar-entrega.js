@@ -194,6 +194,12 @@
         + '<div class="b-acoes-menor">'
         +   '<button class="btn btn-fantasma" onclick="entEntregueNota(' + p.id + ')">'
         +     ico.ico('nota') + 'Entregue, com nota</button>'
+        // Mudar a mesa antes de dizer que ela estava vazia: a pessoa pediu
+        // sentada e levantou-se para dançar, e isso acontece a toda a hora.
+        // «Não estava na mesa» manda o pedido de volta à copa e faz esperar
+        // outra vez por uma bebida que já estava pronta.
+        +   '<button class="btn btn-fantasma" onclick="entMudarMesa(' + p.id + ')">'
+        +     ico.ico('mesa') + 'Mudar de mesa</button>'
         +   '<button class="btn btn-fantasma" onclick="entFalhou(' + p.id + ')">'
         +     ico.ico('volta') + 'Não estava na mesa</button>'
         + '</div></div>';
@@ -253,6 +259,40 @@
       aoGuardar: async function (v) {
         if (!v.nota) { licJanelaErro('Escreva a nota — ou use o botão «Entregue», sem ela.'); return false; }
         await window.entEntregue(id, v.nota);
+        return true;
+      }
+    });
+  };
+
+  /* ---- mudar a mesa de um pedido -------------------------------
+     A lista das mesas pede-se uma vez e fica: num salão são vinte ou trinta,
+     não mudam durante a festa, e pedi-las a cada janela era uma ida ao
+     servidor de cada vez que alguém se levanta. */
+  var MESAS = null;
+  window.entMudarMesa = async function (id) {
+    if (!MESAS) {
+      var d = await window.api('bar_mesas', { method: 'GET', silencioso: true });
+      MESAS = (d && d.success) ? (d.mesas || []) : [];
+    }
+    if (!MESAS.length) { toast('Não há mesas marcadas neste casamento.', true); return; }
+    var p = ((EST && EST.pedidos) || []).filter(function (x) { return x.id === id; })[0] || {};
+    var opcoes = [{ v: '0', r: 'Sem mesa — ao balcão' }].concat(
+      MESAS.map(function (m) { return { v: String(m.id), r: m.nome }; }));
+    licFormulario({
+      titulo: 'Mudar a mesa do ' + (p.codigo || 'pedido'),
+      guardar: 'Mudar',
+      dica: 'A pessoa mudou de sítio. O pedido segue-a — e não volta à copa.',
+      campos: [
+        { id: 'mesa', rot: 'Entregar em', tipo: 'escolha',
+          valor: String(p.mesa_id || 0), opcoes: opcoes,
+          procura: true, dicaProcura: 'Nome da mesa', largura: 3 }
+      ],
+      aoGuardar: async function (v) {
+        var d = await window.api('bar_mudar_mesa', { method: 'POST', body: JSON.stringify(
+          { id: id, mesa_id: parseInt(v.mesa, 10) || 0 }) });
+        if (!d || !d.success) return false;
+        toast('Mesa mudada.');
+        await carregar(true);
         return true;
       }
     });

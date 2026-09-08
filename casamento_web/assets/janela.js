@@ -309,6 +309,22 @@ function licSelProcuraHtml(c, v){
   const esc = ops.find(o => String(o.v) === String(v)) || ops[0] || { v: '', r: '—' };
   return '<div class="lic-sel" data-sel="' + licEsc(c.id) + '">'
     + '<input type="hidden" id="lf-' + licEsc(c.id) + '" value="' + licEsc(esc.v) + '">'
+    + licSelCorpoHtml(ops, esc.v, c.rot, c.dicaProcura)
+    + '</div>';
+}
+
+/**
+ * O botão e a lista — a parte que é igual nos dois usos.
+ *
+ * Escrita uma vez porque é usada de dois sítios (a janela e o <select> vestido
+ * por fora), e duas cópias de um componente são duas cópias que divergem: já
+ * aconteceu neste projecto com a procura, que numa página ignorava acentos e
+ * na outra não.
+ */
+function licSelCorpoHtml(ops, escolhido, rot, dicaProcura){
+  const esc = ops.filter(o => String(o.v) === String(escolhido))[0]
+           || ops[0] || { v: '', r: '—' };
+  return ''
     + '<button type="button" class="lic-sel-bt" aria-haspopup="listbox" aria-expanded="false">'
     +   '<span class="txt">' + licEsc(esc.r) + '</span>'
     +   '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -321,14 +337,14 @@ function licSelProcuraHtml(c, v){
     +     'stroke-width="1.8" stroke-linecap="round" aria-hidden="true">'
     +     '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
     +     '<input type="search" autocomplete="off" placeholder="'
-    +       licEsc(c.dicaProcura || 'Escreva para procurar') + '" '
-    +       'aria-label="Procurar em ' + licEsc(c.rot) + '">'
+    +       licEsc(dicaProcura || 'Escreva para procurar') + '" '
+    +       'aria-label="Procurar em ' + licEsc(rot || 'lista') + '">'
     +   '</div>'
-    +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(c.rot) + '">'
+    +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(rot || 'lista') + '">'
     +     ops.map(o => licSelOpcaoHtml(o, esc.v)).join('')
     +   '</div>'
     +   '<div class="lic-sel-nada" hidden>Nada com esse nome.</div>'
-    + '</div></div>';
+    + '</div>';
 }
 
 /**
@@ -355,11 +371,24 @@ function licSelOpcaoHtml(o, escolhido){
        + '</button>';
 }
 
-function licSelProcuraLigar(){
-  document.querySelectorAll('#lic-janela .lic-sel').forEach(cx => {
+function licSelProcuraLigar(raiz){
+  (raiz || document.getElementById('lic-janela') || document)
+    .querySelectorAll('.lic-sel').forEach(cx => licSelLigarUm(cx));
+}
+
+/**
+ * Dar vida a uma escolha com procura.
+ *
+ * Onde o valor mora é a única coisa que muda entre os dois usos: numa janela
+ * é um <input type=hidden> com o id do campo; sobre um <select> existente é o
+ * próprio <select>, que fica escondido mas continua a ser a verdade — e é por
+ * isso que o código que já lá estava (`sel.value`, `sel.options`,
+ * `sel.disabled`) continua a funcionar sem saber que isto existe.
+ */
+function licSelLigarUm(cx){
     if (cx.dataset.ligado) return;
     cx.dataset.ligado = '1';
-    const guardado = cx.querySelector('input[type=hidden]');
+    const guardado = cx.querySelector('input[type=hidden]') || cx.querySelector('select');
     const bt   = cx.querySelector('.lic-sel-bt');
     const pop  = cx.querySelector('.lic-sel-pop');
     const q    = cx.querySelector('.lic-sel-q input');
@@ -372,7 +401,7 @@ function licSelProcuraLigar(){
       // o ouvinte de «clicar fora» fechava-a no mesmo gesto que a abriu), e
       // sem isto duas listas ficavam abertas por cima uma da outra.
       if (sim){
-        document.querySelectorAll('#lic-janela .lic-sel').forEach(outra => {
+        document.querySelectorAll('.lic-sel').forEach(outra => {
           if (outra === cx) return;
           const p = outra.querySelector('.lic-sel-pop');
           const b = outra.querySelector('.lic-sel-bt');
@@ -426,11 +455,79 @@ function licSelProcuraLigar(){
     cx.querySelectorAll('.lic-sel-op').forEach(o => {
       o.addEventListener('click', (e) => { e.stopPropagation(); escolher(o); });
     });
-    // Um clique fora fecha. O ouvinte vive na janela e morre com ela.
-    (document.getElementById('lic-janela') || document).addEventListener('click', (e) => {
+    // Um clique fora fecha.
+    document.addEventListener('click', (e) => {
+      if (!cx.isConnected) return;      // a janela fechou-se e levou-a
       if (!cx.contains(e.target)) abrir(false);
     });
+}
+
+/**
+ * Vestir um <select> que já existe na página com a procura por dentro.
+ *
+ * É melhoria progressiva, e não substituição: o <select> continua lá, continua
+ * a ser quem guarda o valor, e continua a disparar `change`. Quem o manipulava
+ * antes — a acrescentar opções, a mudar `value`, a desactivá-lo — continua a
+ * fazê-lo sem saber de nada; basta disparar `change` (ou chamar
+ * `licSelRefrescar`) para a caixa se voltar a sincronizar.
+ *
+ * Um <select> nativo é melhor em telemóvel — abre a roda do sistema — e por
+ * isso isto só se põe onde a lista é longa a ponto de a roda deixar de servir.
+ */
+function licSelUpgrade(sel, opc){
+  if (!sel || sel.dataset.licSel) return null;
+  opc = opc || {};
+  const ops = Array.from(sel.options).map(o => ({ v: o.value, r: o.textContent }));
+  if (ops.length <= (opc.minimo || LIC_SEL_MUITAS)) return null;
+  sel.dataset.licSel = '1';
+
+  const cx = document.createElement('div');
+  // `lic-sel-pagina` diz-lhe para se vestir pelos tokens da página: fora de um
+  // modal não há --j-* nenhuns a herdar.
+  cx.className = 'lic-sel'
+    + (cx.closest && sel.closest('.pl-modal') ? '' : ' lic-sel-pagina')
+    + (opc.classe ? ' ' + opc.classe : '');
+  cx.dataset.sel = sel.className || sel.name || 'sel';
+  const rot = opc.rotulo || sel.getAttribute('title') || 'lista';
+  cx.innerHTML = licSelCorpoHtml(ops, sel.value, rot, opc.dicaProcura);
+  sel.parentNode.insertBefore(cx, sel);
+  cx.insertBefore(sel, cx.firstChild);
+  sel.classList.add('lic-sel-nativo');
+
+  licSelLigarUm(cx);
+  // O <select> pode mudar por fora: quem o mexia continua a mexê-lo.
+  sel.addEventListener('change', () => licSelRefrescar(cx));
+  licSelRefrescar(cx);
+  return cx;
+}
+
+/** Voltar a pôr a caixa de acordo com o <select> que está por baixo dela. */
+function licSelRefrescar(cx){
+  const sel = cx.querySelector('select');
+  if (!sel) return;
+  const bt = cx.querySelector('.lic-sel-bt');
+  const lista = cx.querySelector('.lic-sel-lista');
+  // As opções podem ter mudado (o editor de convites acrescenta e tira uma).
+  const ops = Array.from(sel.options).map(o => ({ v: o.value, r: o.textContent }));
+  if (lista) lista.innerHTML = ops.map(o => licSelOpcaoHtml(o, sel.value)).join('');
+  cx.querySelectorAll('.lic-sel-op').forEach(o => {
+    if (o.dataset.ligado) return;
+    o.dataset.ligado = '1';
+    o.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sel.value = o.dataset.v;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      const pop = cx.querySelector('.lic-sel-pop');
+      if (pop) pop.hidden = true;
+      if (bt) { bt.setAttribute('aria-expanded', 'false'); bt.focus(); }
+    });
   });
+  const esc = Array.from(sel.options).filter(o => o.value === sel.value)[0];
+  if (bt) {
+    bt.querySelector('.txt').textContent = esc ? esc.textContent : '—';
+    bt.disabled = sel.disabled;
+  }
+  cx.classList.toggle('desligada', sel.disabled);
 }
 
 /**

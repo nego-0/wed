@@ -554,7 +554,12 @@
         + '</div>';
     }
     if (p.estado === 'aprovado' || p.estado === 'a_caminho' || p.estado === 'falhou') {
+      // Dar por entregue daqui: serviu-se ao balcão, ou o garçom levou-a e
+      // esqueceu-se de marcar. Sem isto o pedido ficava «por entregar» a noite
+      // inteira e a bebida reservada por nada — e o stock da copa a mentir.
       return '<div class="b-acoes">'
+        + '<button class="btn btn-ouro" onclick="copaEntregue(' + p.id + ')">'
+        +   ico.ico('visto') + 'Dar por entregue</button>'
         + '<button class="btn btn-fantasma" onclick="copaCancelar(' + p.id + ')">'
         +   ico.ico('volta') + 'Cancelar</button>'
         + '</div>';
@@ -807,6 +812,23 @@
   // ---- a ficha de um convidado, com as regras dele ---------------
   // É uma coisa que se faz a correr, no meio da festa, com a pessoa à frente:
   // «este senhor já vai no quinto whisky», «esta senhora está grávida».
+  /** As notas de entrega desta pessoa, todas, da mais recente para trás. */
+  function notasDaFicha(ns) {
+    ns = ns || [];
+    if (!ns.length) {
+      return '<div class="j-sec">' + ico.ico('nota') + 'Notas dos garçons</div>'
+           + '<p class="dica">Nenhuma. Os garçons escrevem-nas ao entregar, e '
+           + 'só quando há alguma coisa a dizer.</p>';
+    }
+    return '<div class="j-sec">' + ico.ico('nota') + 'Notas dos garçons '
+      +   '<small>' + ns.length + '</small></div>'
+      + ns.map(function (n) {
+          return '<div class="b-nota-ficha"><span>' + esc(n.texto) + '</span>'
+            + '<em>' + esc(n.codigo || '') + (n.quando ? ' · ' + ha(n.quando) : '')
+            + '</em></div>';
+        }).join('');
+  }
+
   var fichaAberta = null;
   window.copaFicha = async function (id) {
     var d = await window.api('bar_ficha&convidado=' + id, { method: 'GET' });
@@ -844,7 +866,13 @@
       + '<div style="margin-top:.7rem">'
       +   '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraNova(' + id + ')">'
       +     ico.ico('mais') + 'Regra nova</button>'
-      + '</div>', null, { cancelar: 'Fechar' });
+      + '</div>'
+      // As notas dos garçons. A fila mostra as três últimas ao decidir, que
+      // chegam para o gesto de um minuto; a ficha é o outro momento — o de
+      // perceber a noite de alguém —, e aí três não chegam. Uma nota escrita
+      // às 23h («pediu para não lhe servirem mais») é o que explica o que se
+      // está a ver à uma da manhã.
+      + notasDaFicha(d.notas), null, { cancelar: 'Fechar' });
     // A lista dos telemóveis e o «Soltar» saíram daqui. Eram a manutenção de
     // uma coisa que a ficha não é: a ficha existe para decidir o que esta
     // pessoa pode beber, e três linhas sobre que aparelho se escolheu em que
@@ -868,6 +896,28 @@
   window.barRegraPosta = function (r, pre) {
     avisarFora(r && r.fora);
     if (pre && pre.convidado_id) copaFicha(pre.convidado_id);
+  };
+
+  /**
+   * Fechar um pedido que está por entregar, a partir da copa.
+   *
+   * Pergunta-se antes: é o gesto que baixa o stock a sério (§4), e feito por
+   * engano tira do armazém uma bebida que ainda lá está.
+   */
+  window.copaEntregue = async function (id) {
+    var p = (EST.fila || []).filter(function (x) { return x.id === id; })[0] || {};
+    var r = await licConfirmar({
+      titulo: 'Dar por entregue?',
+      texto: 'O pedido ' + esc(p.codigo || '') + ' fecha, e as bebidas saem do '
+           + 'armazém. Faça-o quando ele estiver mesmo na mão de quem o pediu.',
+      confirmar: 'Sim, foi entregue', icone: 'visto'
+    });
+    if (!r || !r.sim) return;
+    var d = await window.api('bar_entregue', { method: 'POST',
+                                               body: JSON.stringify({ id: id }) });
+    if (!d || !d.success) return;
+    toast('Pedido entregue.');
+    await carregar(true);
   };
 
   window.copaRegraFora = async function (id, convidadoId) {

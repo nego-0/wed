@@ -1047,6 +1047,14 @@ function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=fa
                'Padrinhos e madrinhas sentam-se nas alas da mesa dos noivos']])}
     </div>`;
   $('membros').appendChild(div);
+  // Num casamento com trinta mesas, o <select> de fábrica é uma lista para
+  // rolar às cegas: escreve-se «padrinhos» e acha-se. Abaixo de nove mesas
+  // fica o <select> nativo, que no telemóvel abre a roda do sistema e é
+  // melhor do que qualquer coisa que se desenhe.
+  if (window.licSelUpgrade) {
+    licSelUpgrade(div.querySelector('.m-mesa'),
+                  { rotulo: 'Mesa desta pessoa', dicaProcura: 'Nome da mesa' });
+  }
   sincroPapelGenero(div);
   sincroMesaPapel(div);
   contarPessoas();
@@ -1116,6 +1124,10 @@ function sincroMesaPapel(row){
   if(!row) return;
   const mesaSel=row.querySelector('.m-mesa');
   if(!row.querySelector('.m-papel')||!mesaSel) return;
+  // A caixa com procura, se ela existir, tem de acompanhar o <select> — que
+  // continua a ser quem manda. É por isso que ela se pendura POR CIMA de um
+  // select a sério e não o substitui: este código não teve de mudar.
+  const cxSel = mesaSel.closest('.lic-sel');
   const ehPapel = !!segValor(row, 'm-papel');
   let opt=mesaSel.querySelector('option[data-noivos]');
   if(ehPapel){
@@ -1126,6 +1138,7 @@ function sincroMesaPapel(row){
     if(opt) opt.remove();
     mesaSel.disabled=false;
   }
+  if(cxSel && window.licSelRefrescar) licSelRefrescar(cxSel);
 }
 function nomesMembros(){ return [...$('membros').querySelectorAll('input[type=text]')].map(i=>i.value.trim()).filter(Boolean); }
 function membrosComPresenca(){

@@ -302,7 +302,13 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 /* ---- a abertura do bar do convidado ----
    Aparece uma vez, ao chegar. Dá o nome da casa antes de dar o balcão: é a
    única página do módulo que um convidado vê, e abria como um formulário. */
-.b-festa-capa{ text-align:center; padding:1.9rem 1.2rem 1.4rem; }
+/* A MESMA coluna do corpo (560px), e não a largura do ecrã.
+   Sem isto, a abertura centrava-se no viewport e tudo o que vem por baixo
+   numa coluna estreita: num portátil, o nome do casal ficava a flutuar por
+   cima de um corpo alinhado noutro sítio, e a página lia-se como duas peças
+   de dois desenhos diferentes. Uma página, uma coluna. */
+.b-festa-capa{ text-align:center; padding:1.9rem 1.2rem 1.4rem;
+               max-width:560px; margin-inline:auto; }
 .b-festa-capa .marca{ font-size:.68rem; text-transform:uppercase; letter-spacing:.22em;
                       color:var(--c-ouro, #B4864A); opacity:.85; }
 .b-festa-capa .mono{ font-family:var(--c-serif, Georgia, serif); font-size:1.75rem;
@@ -324,7 +330,8 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 
 /* O fecho da página, com o mesmo filete da abertura: as duas pontas rimam, e
    o menu deixa de acabar no ar a meio do ecrã. */
-.b-festa-pe{ text-align:center; padding:2.2rem 1rem 1rem; }
+.b-festa-pe{ text-align:center; padding:2.2rem 1rem 1rem;
+             max-width:560px; margin-inline:auto; }
 .b-festa-pe p{ margin:.5rem 0 0; font-size:.82rem; line-height:1.6;
                color:var(--c-tinta, #20342A); opacity:.72; }
 .b-festa-pe p.fraco{ font-size:.76rem; opacity:.5; }
@@ -788,18 +795,47 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                    color:var(--ink-fraco); }
 .b-regras .b-fer{ margin-bottom:.8rem; }
 
-/* Um grupo de limites: quem, quantos, e a explicação por baixo. O título com
-   a contagem diz de relance se há alguma coisa ali antes de se ler a lista. */
-.b-grupo + .b-grupo{ margin-top:1.3rem; padding-top:1.1rem;
-                     border-top:1px solid var(--line); }
-.b-grupo-t{ display:flex; align-items:center; gap:.5rem; font-family:var(--serif);
-            font-size:.98rem; color:var(--ink); }
-.b-grupo-t .ico{ width:17px; height:17px; color:var(--gold-deep); flex:none; }
-.b-grupo-t .n{ margin-left:auto; font-size:.75rem; font-weight:700;
-               font-variant-numeric:tabular-nums; color:var(--gold-deep);
-               background:var(--gold-pale); border-radius:50px; padding:.1rem .5rem; }
-.b-grupo-d{ margin:.3rem 0 .7rem; font-size:.78rem; line-height:1.55;
+/* ---- as duas famílias de regras ----
+   As gerais são da copa e valem para a sala; as específicas contam por
+   convidado. São duas conversas diferentes, e por isso duas caixas — numa
+   lista só, o caudal da copa aparecia ao lado de «o senhor da mesa 4 não pode
+   destilados» como se fossem a mesma espécie de coisa. */
+.b-fam{ border:1px solid var(--line); border-radius:var(--radius);
+        padding:.9rem 1rem; }
+.b-fam + .b-fam{ margin-top:1rem; }
+.b-fam.vazia{ border-style:dashed; }
+.b-fam-t{ display:flex; align-items:center; gap:.5rem; font-family:var(--serif);
+          font-size:1.02rem; color:var(--ink); }
+.b-fam-t .ico{ width:18px; height:18px; color:var(--gold-deep); flex:none; }
+.b-fam-t .n{ margin-left:auto; font-size:.75rem; font-weight:700;
+             font-variant-numeric:tabular-nums; color:var(--gold-deep);
+             background:var(--gold-pale); border-radius:50px; padding:.1rem .5rem; }
+.b-fam-d{ margin:.35rem 0 .2rem; font-size:.79rem; line-height:1.6;
+          color:var(--ink-fraco); }
+.b-fam-nada{ margin:.6rem 0 .1rem; font-size:.82rem; color:var(--ink-fraco);
+             font-style:italic; }
+
+/* Um grupo de limites: o nome, a contagem, e a explicação por baixo. O título
+   com a contagem diz de relance se há alguma coisa ali antes de se ler. */
+.b-grupo{ margin-top:1rem; }
+.b-grupo-t{ display:flex; align-items:center; gap:.5rem;
+            font-size:.8rem; text-transform:uppercase; letter-spacing:.06em;
             color:var(--ink-fraco); }
+.b-grupo-t .n{ margin-left:auto; font-size:.72rem; font-weight:700;
+               font-variant-numeric:tabular-nums; color:var(--ink-fraco); }
+.b-grupo-d{ margin:.25rem 0 .5rem; font-size:.77rem; line-height:1.55;
+            color:var(--ink-fraco); opacity:.85; }
+
+/* Os dois gestos de uma regra: editar e levantar. Juntos, e à direita. */
+.b-reg-bt{ display:flex; gap:.25rem; flex:none; }
+
+/* A frase que a regra vai ser, escrita por cima do formulário e reescrita a
+   cada campo que se toca. Um formulário de três números pede que se imagine o
+   resultado; isto mostra-o. */
+.b-frase{ background:var(--j-ouro-pal, var(--gold-pale)); border-radius:10px;
+          padding:.7rem .85rem; font-size:.92rem; line-height:1.5;
+          color:var(--j-ink, var(--ink)); }
+.b-frase b{ font-weight:700; }
 
 /* Uma regra escrita. A frase vem do servidor — é a mesma que o convidado
    esbarra no telemóvel —, e por cima dela vai a quem se aplica. */

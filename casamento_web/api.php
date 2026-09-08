@@ -2308,41 +2308,18 @@ function barParaQuem(mysqli $conn, int $eu, array $g, array $d): array {
     return [$porId, $alvo, true];
 }
 
-/**
- * Neste IP já anda outro nome? Devolve-o, ou null.
- *
- * Só o modo `estrito` chama isto. Nos outros o IP grava-se e não tranca nada,
- * porque num salão com wi-fi partilhado todos os convidados saem pelo mesmo
- * endereço: «um IP, um convidado» trancava a festa ao primeiro que pedisse, e
- * «um IP, muitos» não impedia coisa nenhuma. É o pior de dois mundos, e a
- * culpa não é da regra — é de NAT (§5.4).
- */
-function barIpDeOutrem(mysqli $conn, int $convidadoId): ?string {
-    global $P;
-    $cid = casamentoAtual();
-    $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
-    if ($ip === '') return null;
-    $h = hash('sha256', (string)($_COOKIE['bar_disp'] ?? ''));
-    $st = $conn->prepare("SELECT g.nome FROM {$P}bar_dispositivos d
-                          JOIN {$P}convidados g ON g.id = d.convidado_id AND g.casamento_id = d.casamento_id
-                          WHERE d.casamento_id=? AND d.ultimo_ip=? AND d.bloqueado=0
-                            AND d.convidado_id <> ? AND d.token_hash <> ?
-                            AND d.ultimo_em > (NOW() - INTERVAL 4 HOUR)
-                          LIMIT 1");
-    if (!$st) return null;
-    $st->bind_param('isis', $cid, $ip, $convidadoId, $h);
-    if (!$st->execute()) return null;
-    $x = $st->get_result()->fetch_assoc();
-    return $x ? (string)$x['nome'] : null;
-}
+/* `barIpDeOutrem()` viveu aqui: procurava outro nome a pedir do mesmo endereço,
+   para o modo «estrito» recusar o segundo. Saiu na quarta passagem, com o resto
+   da conversa do wi-fi partilhado — os convidados pedem pela rede dos próprios
+   telemóveis, e um endereço deixou de dizer alguma coisa sobre quem está a
+   pedir. O que restava era um travão que nunca acertava: com NAT trancava a
+   festa ao primeiro que pedisse; sem NAT não impedia nada. */
 
 /**
  * Os telemóveis que a copa deve olhar duas vezes.
  *
- * Duas bandeiras, e nenhuma delas acusa ninguém: um telemóvel que já trocou de
- * nome entre convites, e — no modo `aviso` — vários nomes a sair do mesmo
- * endereço em pouco tempo. A copa conhece a sala e decide; o sistema
- * limita-se a apontar.
+ * Uma bandeira, e não acusa ninguém: um telemóvel que já trocou de nome entre
+ * convites. A copa conhece a sala e decide; o sistema limita-se a apontar.
  */
 function barBandeiras(mysqli $conn): array {
     global $P;
@@ -2359,20 +2336,9 @@ function barBandeiras(mysqli $conn): array {
                   'texto' => 'este telemóvel já pediu por ' . ((int)$x['trocas'] + 1) . ' pessoas'];
     }
 
-    if (barDef($conn, 'bar.ip_modo') === 'aviso') {
-        $r2 = @$conn->query("SELECT d.ultimo_ip, COUNT(DISTINCT d.convidado_id) n,
-                                    GROUP_CONCAT(DISTINCT g.nome ORDER BY g.nome SEPARATOR ', ') nomes
-                             FROM {$P}bar_dispositivos d
-                             JOIN {$P}convidados g ON g.id = d.convidado_id AND g.casamento_id = d.casamento_id
-                             WHERE d.casamento_id=$cid AND d.bloqueado=0
-                               AND d.ultimo_em > (NOW() - INTERVAL 30 MINUTE)
-                               AND d.ultimo_ip IS NOT NULL AND d.ultimo_ip <> ''
-                             GROUP BY d.ultimo_ip HAVING n >= 3 ORDER BY n DESC LIMIT 10");
-        if ($r2) while ($x = $r2->fetch_assoc()) {
-            $out[] = ['tipo' => 'ip', 'nome' => $x['nomes'], 'n' => (int)$x['n'],
-                      'texto' => (int)$x['n'] . ' nomes da mesma ligação nos últimos 30 minutos'];
-        }
-    }
+    // A segunda bandeira — «N nomes da mesma ligação» — saiu com a lógica do
+    // wi-fi partilhado: numa festa em que cada um usa os seus dados, dois nomes
+    // do mesmo endereço não querem dizer nada um sobre o outro.
     return $out;
 }
 
@@ -2526,10 +2492,17 @@ function barLimiteQueManda(array $limites, array $item, int $convidadoId, int $c
  * Conta o que a copa aceitou fazer — nem recusados nem cancelados. Um pedido
  * recusado não gasta a quota de ninguém: seria castigar duas vezes.
  */
-function barConsumo(mysqli $conn, array $l, int $convidadoId, int $conviteId): array {
+function barConsumo(mysqli $conn, array $l, int $convidadoId, int $conviteId,
+                    int $excluir = 0): array {
     global $P;
     $cid = casamentoAtual();
     $bons = "p.estado IN ('em_analise','aprovado','a_caminho','entregue','falhou')";
+    // Um pedido pode pedir para não se contar a si próprio. Serve a quem está
+    // a DECIDIR um pedido que já está na fila: ele conta como consumo (está em
+    // análise, e a quota é gasta desde que entra), e sem isto um pedido de
+    // duas bebidas com um tecto de duas media-se contra si mesmo e nunca podia
+    // ser aprovado.
+    if ($excluir > 0) $bons .= ' AND p.id <> ' . $excluir;
     $janela = $l['janela_min'] > 0
         ? " AND p.criado_em >= (NOW() - INTERVAL " . (int)$l['janela_min'] . " MINUTE)" : '';
 
@@ -2594,12 +2567,12 @@ function barEspera(array $l, ?string $maisVelho): int {
  * Duas leituras da mesma linha é como um ecrã diz uma coisa e o servidor faz
  * outra — que é exactamente o que se via entre a página do convidado e a copa.
  */
-function barRitmoDaCasa(mysqli $conn): ?array {
+function barRitmoDaCasa(mysqli $conn, int $excluir = 0): ?array {
     $pior = null;
     foreach (barLimites($conn) as $l) {
         if ($l['sujeito'] !== 'casa') continue;
         if ($l['unidade'] !== 'bebidas') continue;
-        $c = barConsumo($conn, $l, 0, 0);
+        $c = barConsumo($conn, $l, 0, 0, $excluir);
         if ($c['usado'] < $l['quantidade']) continue;
         $s = barEspera($l, $c['mais_velho']);
         if ($pior === null || $s > $pior['segundos']) {
@@ -2616,7 +2589,8 @@ function barRitmoDaCasa(mysqli $conn): ?array {
  * Devolve quantas pode levar (`pode`), e — quando é zero — porquê e por quanto
  * tempo. O convidado nunca lê a `nota`: essa é de quem escreveu a regra.
  */
-function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteId, ?array $ritmo): array {
+function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteId,
+                      ?array $ritmo, int $excluir = 0): array {
     $out = ['pode' => min((int)$item['disponivel'], (int)$item['max_por_pedido']),
             'travao' => null, 'espera_s' => 0, 'mensagem' => ''];
 
@@ -2636,7 +2610,7 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
         return ['pode' => 0, 'travao' => 'proibido', 'espera_s' => 0,
                 'mensagem' => $l['mensagem'] ?: ''];
     }
-    $c = barConsumo($conn, $l, $convidadoId, $conviteId);
+    $c = barConsumo($conn, $l, $convidadoId, $conviteId, $excluir);
     $sobra = $l['quantidade'] - $c['usado'];
     if ($sobra <= 0) {
         return ['pode' => 0, 'travao' => $l['janela_min'] > 0 ? 'intervalo' : 'tecto',
@@ -2823,6 +2797,37 @@ function barConsumoPessoal(mysqli $conn, int $convidadoId): array {
  * muito bem querer servir o copo que já estava pedido. Assinala-se, e a copa
  * decide (§8.0.1).
  */
+/**
+ * O que impede servir este pedido, agora. Null quando nada impede.
+ *
+ * Corre as mesmas contas que o convidado viu no telemóvel, mas para as
+ * quantidades que a copa está mesmo a aprovar. É a guarda que faltava: a fila
+ * assinalava os pedidos fora das regras e o botão aprovava-os à mesma.
+ *
+ * O próprio pedido desconta-se da conta (`$excluir`): ele já está na fila com
+ * o estado `em_analise`, e barConsumo() conta o que a copa aceitou fazer —
+ * incluindo-o. Sem isto, um pedido de duas bebidas com um tecto de duas
+ * media-se contra si próprio e nunca podia ser aprovado.
+ *
+ * `$finais` são as linhas depois do corte: [['li' => linha, 'q' => quantidade]].
+ */
+function barTravaoDe(mysqli $conn, int $convidadoId, int $conviteId,
+                     array $finais, int $excluir = 0): ?string {
+    barLimitesEsquecer();
+    $ritmo = barRitmoDaCasa($conn, $excluir);
+    foreach ($finais as $f) {
+        $item = barItem($conn, (int)$f['li']['item_id']);
+        if (!$item) continue;
+        $v = barVeredicto($conn, $item, $convidadoId, $conviteId, $ritmo, $excluir);
+        if ((int)$f['q'] > (int)$v['pode']) {
+            return 'As regras do bar não deixam servir isto: '
+                 . barTextoTravao($item, $v, (int)$f['q'])
+                 . ' Corte a quantidade, ou levante a regra em «Regras do Bar».';
+        }
+    }
+    return null;
+}
+
 function barFilaContraRegras(mysqli $conn): array {
     $fora = [];
     $ritmo = barRitmoDaCasa($conn);
@@ -3447,17 +3452,6 @@ if ($acao === 'bar_sou') {
         }
     }
 
-    // O IP no modo estrito: um endereço serve um nome de cada vez. Só serve a
-    // eventos em que cada pessoa usa dados móveis — num salão com wi-fi
-    // partilhado, o primeiro a pedir trancava a festa inteira (§5.4).
-    if (barDef($conn, 'bar.ip_modo') === 'estrito') {
-        $outro = barIpDeOutrem($conn, $id);
-        if ($outro) {
-            erro('Já há um pedido em nome de ' . $outro . ' desta ligação. '
-               . 'Peça ao garçom.');
-        }
-    }
-
     barPrender($conn, $id, $conviteNovo);
     if ($troca) {
         registar($conn, 'bar_trocou_nome', $troca['para'],
@@ -3469,7 +3463,12 @@ if ($acao === 'bar_sou') {
 
 if ($acao === 'bar_mesas') {
     // As mesas, para escolher onde entregar: as pessoas trocam de lugar.
-    barPortaPublica($conn);
+    //
+    // Duas portas para a mesma lista. O convidado entra pela pública, com o
+    // código da mesa; o pessoal do bar entra pela sessão — precisa dela para
+    // mudar a mesa de um pedido, e não tem código nenhum na mão.
+    if (podeCopa() || podeEntregar()) { barCid(); }
+    else { barPortaPublica($conn); }
     $cid = casamentoAtual();
     barGarantirTokens($conn, $cid);
     $r = @$conn->query("SELECT id, nome FROM {$P}mesas WHERE casamento_id=$cid
@@ -3661,6 +3660,29 @@ if ($acao === 'bar_cancelar') {
 // A COPA — a fila, a decisão, o stock e a montagem do menu
 // ============================================================
 
+/** Todas as notas de entrega de uma pessoa, da mais recente para trás. */
+function barNotasDe(mysqli $conn, int $convidadoId): array {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT p.nota_entrega, p.codigo_curto, p.entregue_em, p.entregue_por
+                          FROM {$P}bar_pedidos p
+                          WHERE p.casamento_id=? AND p.convidado_id=?
+                            AND p.nota_entrega IS NOT NULL AND p.nota_entrega <> ''
+                          ORDER BY p.entregue_em DESC, p.id DESC LIMIT 50");
+    if (!$st) return [];
+    $st->bind_param('ii', $cid, $convidadoId);
+    if (!$st->execute()) return [];
+    $out = [];
+    $r = $st->get_result();
+    while ($x = $r->fetch_assoc()) {
+        $out[] = ['texto' => (string)$x['nota_entrega'],
+                  'codigo' => (string)$x['codigo_curto'],
+                  'quando' => $x['entregue_em'],
+                  'quem' => (string)($x['entregue_por'] ?? '')];
+    }
+    return $out;
+}
+
 /**
  * As notas que os garçons escreveram, por convidado.
  *
@@ -3799,6 +3821,18 @@ if ($acao === 'bar_decidir') {
                 erro('Já não há «' . $f['li']['nome'] . '» que chegue para este pedido.');
             }
         }
+        /* E as REGRAS. A fila já assinalava os pedidos que deixaram de caber
+           numa regra posta depois de eles entrarem — mas assinalar era tudo o
+           que fazia: o botão «Aprovar» continuava a aprovar. Uma regra que a
+           copa pode saltar com um clique não é uma regra; é um aviso. Agora o
+           servidor recusa, seja quem for que carregue.
+
+           A conta faz-se sobre o que FICA depois do corte, e não sobre o que
+           foi pedido: é essa a razão de a terceira porta existir. Quem pediu
+           quatro e só pode duas continua a poder levar duas. */
+        $travado = barTravaoDe($conn, (int)$p['convidado_id'], (int)$p['convite_id'],
+                               $finais, $id);
+        if ($travado !== null) erro($travado);
         // Grava-se o corte ANTES de reservar: o que se reserva é o que fica.
         foreach ($mudou as $m) {
             $li = $m['linha'];
@@ -4261,7 +4295,13 @@ if ($acao === 'bar_ficha') {
         'regras' => array_values(array_filter(
             array_map(fn($l) => barRegraLinha($conn, $l), barLimitesTodos($conn)),
             fn($r) => $r['alvo_convidado_id'] === $gid
-                   || $r['alvo_convite_id'] === (int)$g['convite_id']))]);
+                   || $r['alvo_convite_id'] === (int)$g['convite_id'])),
+        // TODAS as notas que os garçons escreveram nas entregas desta pessoa.
+        // A fila mostra as três últimas ao decidir — chegam para o gesto de um
+        // minuto. A ficha é o outro momento, o de perceber a noite de alguém, e
+        // aí três não chegam: «pediu para não lhe servirem mais» escrito às 23h
+        // é o que explica o que se está a ver à uma da manhã.
+        'notas'  => barNotasDe($conn, $gid)]);
 }
 
 // ============================================================
@@ -4296,7 +4336,13 @@ if ($acao === 'bar_apanhar') {
 
 if ($acao === 'bar_entregue') {
     // É aqui, e só aqui, que o stock real desce.
-    barCid(); if (!podeEntregar()) erro('Só as entregas.'); exigirCorrecao();
+    //
+    // A copa também fecha um pedido, e não só as entregas: serviu-se ao balcão,
+    // ou o garçom levou-o e esqueceu-se de marcar. Ficar à espera de um gesto
+    // que já não vem deixava o pedido «por entregar» a noite inteira e a bebida
+    // reservada por nada.
+    barCid(); if (!podeEntregar() && !podeCopa()) erro('Só o pessoal do bar.');
+    exigirCorrecao();
     $cid = casamentoAtual();
     $id = (int)(corpo()['id'] ?? 0);
     $p = $id ? barPedido($conn, $id) : null;
@@ -4321,6 +4367,44 @@ if ($acao === 'bar_entregue') {
            . ($nota ? ' · nota: ' . $nota : ''));
     ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id), true),
         'estado' => barEstadoGeral($conn), 'tempos' => barTempos($conn)]);
+}
+
+if ($acao === 'bar_mudar_mesa') {
+    // A pessoa mudou de sítio. O pedido segue-a.
+    //
+    // Acontece a toda a hora numa festa: pede-se sentado e levanta-se para
+    // dançar. Sem isto, o garçom levava a bebida a uma mesa vazia e voltava com
+    // ela — ou marcava «não estava na mesa», que manda o pedido de volta à copa
+    // e faz a pessoa esperar outra vez por uma coisa que já estava pronta.
+    $cid = barCid();
+    if (!podeEntregar() && !podeCopa()) erro('Só o pessoal do bar.');
+    exigirCorrecao();
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $p = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    if (in_array($p['estado'], ['entregue', 'recusado', 'cancelado'], true)) {
+        erro('Esse pedido já está fechado.');
+    }
+    // 0 é uma resposta legítima: «sem mesa» — quem está de pé ao balcão.
+    $mesa = (int)($d['mesa_id'] ?? 0);
+    $nome = null;
+    if ($mesa > 0) {
+        $st = $conn->prepare("SELECT nome FROM {$P}mesas WHERE casamento_id=? AND id=? LIMIT 1");
+        $st->bind_param('ii', $cid, $mesa);
+        @$st->execute();
+        $x = $st->get_result()->fetch_assoc();
+        if (!$x) erro('Essa mesa não é deste casamento.');
+        $nome = (string)$x['nome'];
+    }
+    $novo = $mesa > 0 ? $mesa : null;
+    $st2 = $conn->prepare("UPDATE {$P}bar_pedidos SET mesa_id=? WHERE casamento_id=? AND id=?");
+    $st2->bind_param('iii', $novo, $cid, $id);
+    if (!@$st2->execute()) erro('Não foi possível mudar a mesa.');
+    registar($conn, 'bar_mudou_mesa', $p['convidado_nome'] ?? '',
+             '#' . $p['codigo_curto'] . ' · ' . ($p['mesa_nome'] ?: 'sem mesa')
+           . ' → ' . ($nome ?: 'sem mesa'));
+    ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $id), true)]);
 }
 
 if ($acao === 'bar_falhou') {

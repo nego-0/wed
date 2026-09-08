@@ -183,10 +183,20 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel-q input{ flex:1; min-width:0; border:0; background:none; padding:.15rem 0;
   font-family:var(--j-sans); font-size:.88rem; color:var(--j-ink); }
 .lic-sel-q input:focus{ outline:none; }
-.lic-sel-lista{ max-height:230px; overflow-y:auto; padding:.25rem; }
+/* Mais alta do que era. A 230px cabiam cinco linhas e meia, e meia linha
+   cortada em baixo é a lista a dizer «há mais» sem dizer quanto — rolava-se às
+   cegas. A 340 cabem oito inteiras, que é o tamanho a partir do qual esta
+   caixa sequer aparece: quem a abre vê a lista toda de uma vez, ou vê o
+   suficiente para saber que vale a pena escrever em vez de rolar. */
+.lic-sel-lista{ max-height:340px; overflow-y:auto; padding:.3rem;
+                overscroll-behavior:contain; }
+/* Uma barra de rolagem fina, para a lista não parecer uma janela dentro da
+   janela. */
+.lic-sel-lista{ scrollbar-width:thin; }
 .lic-sel-op{ display:flex; align-items:center; gap:.5rem; width:100%; text-align:left;
-  border:0; background:none; cursor:pointer; padding:.5rem .55rem; border-radius:7px;
-  font:inherit; font-size:.88rem; color:var(--j-ink); min-height:38px; }
+  border:0; background:none; cursor:pointer; padding:.55rem .6rem; border-radius:8px;
+  font:inherit; font-size:.9rem; color:var(--j-ink); min-height:42px; line-height:1.35; }
+.lic-sel-op:hover{ background:var(--j-campo); }
 .lic-sel-op > span{ flex:1; min-width:0; }
 /* O visto é desenhado, e não o carácter ✓: nas fontes que não o têm sai o
    quadrado do «não sei desenhar isto», e o que ficava sem sinal era
@@ -198,7 +208,28 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel-op.sob{ background:var(--j-ouro-pal); }
 .lic-sel-op.on{ color:var(--j-ouro); font-weight:600; }
 .lic-sel-op.on .ico{ opacity:1; }
-.lic-sel-nada{ padding:.8rem .7rem; font-size:.82rem; color:var(--j-fraco); }
+.lic-sel-nada{ padding:.9rem .7rem; font-size:.84rem; color:var(--j-fraco);
+               text-align:center; }
+
+/* ---- a mesma caixa, por cima de um <select> que já existia ----
+   O <select> fica lá, escondido, a guardar o valor: quem o manipulava antes
+   continua a manipulá-lo. Escondê-lo com display:none tirava-o da ordem de
+   tabulação e do formulário; assim fica invisível e continua a contar. */
+.lic-sel-nativo{ position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+                 overflow:hidden; clip-path:inset(50%); border:0; }
+.lic-sel.desligada{ opacity:.55; pointer-events:none; }
+
+/* Fora de uma janela, a caixa veste-se pelos tokens da PÁGINA: os --j-* são
+   dos modais, e um formulário no meio de uma página não é um modal. A classe é
+   posta por licSelUpgrade() e não por um :not() com descendente — esse ia
+   sobrepor-se também DENTRO do modal, e nos editores, onde a paleta da janela
+   é outra, dava uma caixa vestida da página por cima de um cartão escuro. */
+.lic-sel-pagina{
+  --j-card:var(--card); --j-ink:var(--ink); --j-fraco:var(--ink-fraco);
+  --j-linha:var(--line); --j-campo:var(--cream); --j-ouro:var(--gold);
+  --j-ouro-pal:var(--gold-pale); --j-anel:var(--ring);
+  --j-sans:var(--sans);
+}
 /* O sim/não é um CAMPO, e num formulário em grelha tem de pesar como os
    outros. Solto no branco, ao lado de três caixas com contorno, lia-se como
    uma nota de rodapé — e era uma definição que muda o comportamento da casa.

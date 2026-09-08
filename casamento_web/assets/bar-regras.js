@@ -41,42 +41,66 @@
     ['bar.procura_min', 'Letras para procurar o nome', 'numero',
      'Quantas letras o convidado escreve antes de a lista aparecer. '
    + 'Menos letras, mais nomes de cada vez.'],
-    ['bar.ip_modo', 'Pedidos da mesma rede', 'escolha',
-     'Numa festa quase todos partilham o mesmo wi-fi: «estrito» é para salas '
-   + 'onde cada mesa tem a sua rede.'],
     ['bar.trocar_nome', 'Trocar de nome no mesmo telemóvel', 'sim',
      'Um telemóvel por pessoa é a regra. Isto abre a excepção — e avisa a copa '
    + 'sempre que acontece.']
   ];
-  var IP_MODOS = { registo: 'Registar, sem incomodar',
-                   aviso:   'Registar e avisar a copa',
-                   estrito: 'Recusar o segundo nome' };
 
-  /* ---- os quatro grupos de limites ------------------------------
-     A ordem é a do alcance: o que trava toda a gente primeiro, o que trava uma
-     pessoa por último. Quem abre este painel a meio de uma festa quer saber o
-     que está a travar a sala, e não o que está a travar o senhor da mesa 4. */
-  var GRUPOS = [
-    ['casa',   'O caudal da copa', 'raio',
-     'Quantas bebidas a copa serve por período, seja quem for que peça. '
-   + 'É o travão da COZINHA, não o de ninguém: quando pega, a espera sobe '
-   + 'para todos ao mesmo tempo e o convidado lê que a copa está a dar vazão.'],
-    ['todos',  'Para toda a gente', 'pessoas',
-     'O que vale para cada convidado, um a um. «2 bebidas a cada 20 min» é '
-   + 'duas por pessoa, e não duas na sala.'],
-    ['convite', 'Para um convite', 'mesa',
-     'A mesma conta, partilhada pela família toda do convite.'],
-    ['pessoa', 'Para uma pessoa', 'pessoa',
-     'A extensão: a mesma regra, com nome. É a que se põe a meio da noite, com '
-   + 'a pessoa à frente — e a que se abre clicando no nome dela na fila.']
+  /* ---- as duas famílias de regras -------------------------------
+     A separação é a que se faz em voz alta ao explicar o bar a alguém:
+
+     • as GERAIS são da COPA. Dizem o que a cozinha aguenta, seja quem for que
+       peça, e quando pegam a espera sobe para toda a gente ao mesmo tempo.
+       Não são de ninguém, e por isso o convidado que esbarra numa delas lê que
+       a copa está a dar vazão — não que pediu de mais.
+
+     • as ESPECÍFICAS são de alguma coisa: de uma bebida, do acto de pedir, de
+       uma pessoa. Essas sim contam por convidado.
+
+     Andaram muito tempo misturadas numa lista só, ordenada por «alcance», e o
+     que isso dava era um painel onde o caudal da copa aparecia ao lado de «o
+     senhor da mesa 4 não pode destilados» como se fossem a mesma espécie de
+     coisa. São duas conversas diferentes e passaram a ter dois sítios. */
+  var FAMILIAS = [
+    { id: 'gerais', rot: 'Regras gerais', icone: 'raio',
+      dica: 'São da COPA, e valem para a sala toda. Dizem o que a cozinha '
+          + 'aguenta por período, seja quem for que peça — quando pegam, a '
+          + 'espera sobe para todos ao mesmo tempo.',
+      grupos: [
+        ['g-bebidas', 'O caudal de bebidas',
+         'Quantas bebidas a copa serve por período. É o travão do que sai.'],
+        ['g-pedidos', 'O caudal de pedidos',
+         'Quantos pedidos a copa aceita por período. É o travão do que entra — '
+       + 'trava o gesto de pedir, e não uma bebida em particular.']
+      ] },
+    { id: 'especificas', rot: 'Regras específicas', icone: 'filtro',
+      dica: 'São de alguma coisa — de uma bebida, do acto de pedir, de uma '
+          + 'pessoa — e contam sempre POR CONVIDADO. «2 a cada 20 min» é duas '
+          + 'por pessoa, e não duas na sala.',
+      grupos: [
+        ['e-bebida', 'De uma bebida ou gaveta',
+         'O tecto ou o intervalo de uma bebida, ou de uma gaveta inteira.'],
+        ['e-pedidos', 'Do acto de pedir',
+         'Quantos pedidos cada convidado pode fazer por período, seja o que for '
+       + 'que peça.'],
+        ['e-quem', 'De uma pessoa ou de um convite',
+         'A mesma regra, com nome. É a que se põe a meio da noite, com a pessoa '
+       + 'à frente — e a que se abre clicando no nome dela na fila.'],
+        ['e-todos', 'De toda a gente',
+         'O que vale para cada convidado, um a um, sobre qualquer bebida.']
+      ] }
   ];
 
-  /** Em que grupo cai uma regra. */
+  /** A que família pertence uma regra. */
+  function familiaDe(r) { return r.sujeito === 'casa' ? 'gerais' : 'especificas'; }
+
+  /** E em que grupo, dentro dela. */
   function grupoDe(r) {
-    if (r.sujeito === 'casa') return 'casa';
-    if (r.alvo_convidado_id) return 'pessoa';
-    if (r.alvo_convite_id) return 'convite';
-    return 'todos';
+    if (r.sujeito === 'casa') return r.unidade === 'pedidos' ? 'g-pedidos' : 'g-bebidas';
+    if (r.alvo_convidado_id || r.alvo_convite_id) return 'e-quem';
+    if (r.escopo !== 'tudo') return 'e-bebida';
+    if (r.unidade === 'pedidos') return 'e-pedidos';
+    return 'e-todos';
   }
 
   /* ---- o contexto: quem nos montou, e onde ----------------------
@@ -150,7 +174,6 @@
       var v = f[d[0]];
       var lido, fraco = false;
       if (d[2] === 'sim')          { lido = v === '1' ? 'Sim' : 'Não'; fraco = v !== '1'; }
-      else if (d[2] === 'escolha') { lido = IP_MODOS[v] || IP_MODOS.registo; }
       else if (d[0] === 'bar.procura_min') { lido = (v || '4') + ' letras'; }
       else { lido = v ? '«' + v + '»' : 'sem texto'; fraco = !v; }
       return '<div class="b-def"><span class="txt"><b>' + esc(d[1]) + '</b>'
@@ -172,32 +195,41 @@
                   + ico.ico('mais') + 'Regra nova</button>' : '');
       ligarBusca('q-lim', function (v) { VER.buscaLim = v; pintarLimites(); });
     }
+    // As duas caixas aparecem SEMPRE, cheias ou vazias. Um painel que só
+    // mostra a estrutura depois de já haver regras obriga quem chega a
+    // descobrir que ela existe — e a distinção entre o que trava a copa e o
+    // que trava um convidado é justamente o que é preciso perceber ANTES de
+    // escrever a primeira.
     var todas = EST().regras || [];
-    if (!todas.length) {
-      cx.innerHTML = vazio('relogio', 'Sem limites nenhuns',
-        'O bar serve o que houver, a quem pedir, à velocidade a que pedirem. '
-      + 'É uma escolha legítima — e é a que está feita enquanto isto estiver vazio.',
-        PODE() ? '<button class="btn btn-ouro" onclick="barRegraNova()">'
-               + ico.ico('mais') + 'Primeira regra</button>' : '');
-      return;
-    }
     var q = chave(VER.buscaLim || '');
     var lista = q ? todas.filter(function (r) {
       return chave(r.frase + ' ' + r.quem + ' ' + (r.nota || '')).indexOf(q) >= 0;
     }) : todas;
-    if (!lista.length) {
+    if (todas.length && !lista.length) {
       cx.innerHTML = vazio('procurar', 'Nada com esse nome',
                            'São ' + todas.length + ' regras.');
       return;
     }
-    cx.innerHTML = GRUPOS.map(function (g) {
-      var dele = lista.filter(function (r) { return grupoDe(r) === g[0]; });
-      if (!dele.length) return '';
-      return '<div class="b-grupo">'
-        + '<div class="b-grupo-t">' + ico.ico(g[2]) + '<b>' + esc(g[1]) + '</b>'
-        +   '<span class="n">' + dele.length + '</span></div>'
-        + '<p class="b-grupo-d">' + esc(g[3]) + '</p>'
-        + dele.map(linhaRegra).join('')
+    cx.innerHTML = FAMILIAS.map(function (fam) {
+      var dela = lista.filter(function (r) { return familiaDe(r) === fam.id; });
+      return '<div class="b-fam' + (dela.length ? '' : ' vazia') + '">'
+        + '<div class="b-fam-t">' + ico.ico(fam.icone) + '<b>' + esc(fam.rot) + '</b>'
+        +   '<span class="n">' + dela.length + '</span></div>'
+        + '<p class="b-fam-d">' + esc(fam.dica) + '</p>'
+        + (dela.length
+            ? fam.grupos.map(function (g) {
+                var seus = dela.filter(function (r) { return grupoDe(r) === g[0]; });
+                if (!seus.length) return '';
+                return '<div class="b-grupo">'
+                  + '<div class="b-grupo-t"><b>' + esc(g[1]) + '</b>'
+                  +   '<span class="n">' + seus.length + '</span></div>'
+                  + '<p class="b-grupo-d">' + esc(g[2]) + '</p>'
+                  + seus.map(linhaRegra).join('')
+                  + '</div>';
+              }).join('')
+            : '<p class="b-fam-nada">Nenhuma. ' + (fam.id === 'gerais'
+                ? 'A copa serve à velocidade a que lhe pedirem.'
+                : 'Cada convidado pede o que quiser, à hora que quiser.') + '</p>')
         + '</div>';
     }).join('');
   }
@@ -214,8 +246,10 @@
       +   (r.mensagem ? '<small>lê: «' + esc(r.mensagem) + '»</small>' : '')
       +   (r.nota ? '<small class="so-nos">' + ico.ico('olho') + esc(r.nota) + '</small>' : '')
       + '</span>'
-      + (PODE() ? btIco('lixo', 'Levantar esta regra',
-                        'barRegraFora(' + r.id + ')', 'perigo') : '')
+      + (PODE() ? '<span class="b-reg-bt">'
+                + btIco('lapis', 'Editar esta regra', 'barRegraEditar(' + r.id + ')')
+                + btIco('lixo', 'Levantar esta regra',
+                        'barRegraFora(' + r.id + ')', 'perigo') + '</span>' : '')
       + '</div>';
   }
 
@@ -272,17 +306,13 @@
       guardar: 'Guardar',
       largo: true,
       dica: 'São as regras que não se contam em bebidas: o que o convidado lê, '
-          + 'como se procura um nome, e o que fazer com dois telemóveis na mesma rede.',
+          + 'como se procura um nome, e o que fazer quando um telemóvel muda de mão.',
       campos: [
         { id: 'bar.mensagem_fechado', rot: 'O que dizer quando está fechado', tipo: 'area',
           valor: f['bar.mensagem_fechado'] || '', largura: 3, linhas: 2,
           dica: 'Vazio, o menu diz só que ainda não abriu.' },
         { id: 'bar.procura_min', rot: 'Letras para procurar', tipo: 'numero',
           valor: parseInt(f['bar.procura_min'] || '4', 10), min: 1, max: 10 },
-        { id: 'bar.ip_modo', rot: 'Pedidos da mesma rede', tipo: 'escolha',
-          valor: f['bar.ip_modo'] || 'registo',
-          opcoes: Object.keys(IP_MODOS).map(function (k) { return { v: k, r: IP_MODOS[k] }; }),
-          dica: 'Num salão com um wi-fi só, «estrito» tranca a festa inteira.' },
         { id: 'bar.trocar_nome', rot: 'Trocar de nome no mesmo telemóvel', tipo: 'sim',
           valor: f['bar.trocar_nome'] === '1', aoLado: 'Deixar, avisando a copa' }
       ],
@@ -290,7 +320,6 @@
         var d = await window.api('bar_defs', { method: 'POST', body: JSON.stringify({
           'bar.mensagem_fechado': v['bar.mensagem_fechado'],
           'bar.procura_min': String(v['bar.procura_min'] || 4),
-          'bar.ip_modo': v['bar.ip_modo'],
           'bar.trocar_nome': v['bar.trocar_nome'] ? '1' : '0'
         }) });
         if (!d || !d.success) return false;
@@ -302,120 +331,223 @@
   };
 
   /**
-   * A janela de uma regra. É UMA, e é esta.
+   * A janela de uma regra. É UMA, e é esta — para pôr e para editar.
    *
-   * `pre` pré-preenche o «a quem»: a ficha de uma pessoa abre-a já com o nome
-   * dela escolhido, e por isso a regra individual deixou de ser um formulário
-   * à parte — é esta janela, com um campo já respondido.
+   * `pre` pré-preenche o que já se souber:
+   *   { convidado_id, nome }  — a ficha de uma pessoa abre-a com o nome posto;
+   *   { regra }               — editar uma que já existe.
+   *
+   * O formulário estava denso: dez campos seguidos, e três deles só faziam
+   * sentido consoante a resposta de outro. Agora começa pela pergunta que
+   * separa as duas conversas — geral ou específica —, esconde o que não vem ao
+   * caso, e mostra em cima, por palavras, a frase que a regra vai passar a
+   * ser. Quem escreve uma regra a meio de uma festa não devia ter de a
+   * imaginar a partir de três números.
    */
   window.barRegraNova = async function (pre) {
     pre = pre || {};
+    var r = pre.regra || null;
     var est = EST();
     var itens = (est.itens || []).map(function (i) { return { v: 'i' + i.id, r: i.nome }; });
     var cats  = (est.categorias || []).map(function (c) { return { v: 'c' + c.id, r: c.nome }; });
-    var sobre = [{ v: 'tudo', r: 'qualquer bebida' }].concat(cats, itens);
+    var sobre = [{ v: 'tudo', r: 'Qualquer bebida' }].concat(cats, itens);
 
-    // A lista de convidados só se pede se for precisa — e pede-se inteira, que
-    // é o que a escolha com procura quer: filtra por dentro, sem voltar ao
-    // servidor a cada letra.
+    // A lista de convidados só se pede quando é precisa, e pede-se inteira:
+    // a escolha com procura filtra por dentro, sem voltar ao servidor.
     var pessoas = [];
-    var d = await window.api('bar_procurar_pessoal&limite=500', { method: 'GET', silencioso: true });
-    if (d && d.success) {
-      pessoas = (d.nomes || []).map(function (n) {
-        return { v: String(n.id), r: n.nome + (n.mesa ? ' · ' + n.mesa : '') };
-      });
+    var precisaPessoas = !!(pre.convidado_id || (r && r.alvo_convidado_id));
+    if (precisaPessoas || !r) {
+      var d = await window.api('bar_procurar_pessoal&limite=500',
+                               { method: 'GET', silencioso: true });
+      if (d && d.success) {
+        pessoas = (d.nomes || []).map(function (n) {
+          return { v: String(n.id), r: n.nome + (n.mesa ? ' · ' + n.mesa : '') };
+        });
+      }
     }
 
-    var quem = pre.convidado_id ? 'pessoa' : 'todos';
-    var aQuem = [
-      { v: 'todos',  r: 'Toda a gente (por convidado)' },
-      { v: 'casa',   r: 'A copa — o caudal da casa' },
-      { v: 'pessoa', r: 'Uma pessoa' }
-    ];
+    // ---- o que já está escrito, quando se edita --------------------
+    var hora = function (t) {
+      // «2026-09-08 21:00:00» → «21:00». Vazio fica vazio.
+      var m = /(\d{2}):(\d{2})/.exec(String(t || '').slice(10));
+      return m ? m[1] + ':' + m[2] : '';
+    };
+    var familia = r ? (r.sujeito === 'casa' ? 'gerais' : 'especificas') : 'especificas';
+    var alcance = 'todos';
+    if (pre.convidado_id) alcance = 'pessoa';
+    else if (r && r.alvo_convidado_id) alcance = 'pessoa';
+    else if (r && r.alvo_convite_id) alcance = 'convite';
+    var sobreV = 'tudo';
+    if (r && r.escopo === 'item') sobreV = 'i' + r.alvo_id;
+    else if (r && r.escopo === 'categoria') sobreV = 'c' + r.alvo_id;
+    else if (pre.sobre) sobreV = pre.sobre;
 
     licFormulario({
-      titulo: pre.nome ? 'Regra para ' + pre.nome : 'Regra do bar',
-      guardar: 'Pôr a regra',
+      titulo: r ? 'Editar a regra'
+            : (pre.nome ? 'Regra para ' + pre.nome : 'Regra nova do bar'),
+      guardar: r ? 'Guardar' : 'Pôr a regra',
       largo: true,
-      dica: '<b>0</b> proíbe. <b>N</b> sem intervalo é um tecto para a noite. '
-          + '<b>N</b> com intervalo é «N de cada vez».',
+      dica: '<div class="b-frase" id="br-frase">…</div>',
       campos: [
-        { id: 'quem', rot: 'A quem', tipo: 'escolha', valor: quem, opcoes: aQuem,
+        { id: 'familia', rot: 'Que espécie de regra', tipo: 'escolha', valor: familia,
+          procura: false, largura: 3,
+          opcoes: [
+            { v: 'especificas', r: 'Específica — conta por convidado' },
+            { v: 'gerais',      r: 'Geral — o caudal da copa, para a sala toda' }
+          ],
+          dica: 'A geral diz o que a COPA aguenta, seja quem for que peça. '
+              + 'A específica conta por pessoa.' },
+
+        { id: 'conta', rot: 'Contar', tipo: 'escolha',
+          valor: (r && r.unidade) || 'bebidas', procura: false,
+          opcoes: [{ v: 'bebidas', r: 'Bebidas servidas' },
+                   { v: 'pedidos', r: 'Pedidos feitos' }],
+          dica: '«Pedidos» trava o gesto de pedir, e não uma bebida.' },
+        { id: 'sobre', rot: 'De que bebida', tipo: 'escolha', valor: sobreV,
+          opcoes: sobre, procura: true, dicaProcura: 'Bebida ou gaveta',
+          dica: 'Uma bebida, uma gaveta inteira, ou tudo.' },
+        { id: 'alcance', rot: 'A quem se aplica', tipo: 'escolha', valor: alcance,
           procura: false,
-          dica: 'O caudal da copa conta a sala toda; os outros contam por pessoa.' },
+          opcoes: [{ v: 'todos',   r: 'A cada convidado' },
+                   { v: 'pessoa',  r: 'Só a uma pessoa' },
+                   { v: 'convite', r: 'A um convite inteiro' }] },
         { id: 'pessoa', rot: 'Qual pessoa', tipo: 'escolha',
-          valor: pre.convidado_id ? String(pre.convidado_id) : (pessoas[0] || {}).v,
+          valor: String(pre.convidado_id || (r && r.alvo_convidado_id) || ''),
           opcoes: pessoas.length ? pessoas : [{ v: '', r: 'Ninguém na lista' }],
-          procura: true, dicaProcura: 'Escreva parte do nome',
-          dica: 'Só conta quando «a quem» for «uma pessoa».' },
-        { id: 'sobre', rot: 'Sobre o quê', tipo: 'escolha', valor: pre.sobre || 'tudo',
-          opcoes: sobre, procura: true, dicaProcura: 'Bebida ou gaveta' },
-        { id: 'conta', rot: 'Contado em', tipo: 'escolha', valor: 'bebidas',
-          procura: false,
-          opcoes: [{ v: 'bebidas', r: 'Bebidas' }, { v: 'pedidos', r: 'Pedidos' }],
-          dica: '«Pedidos» trava o acto de pedir, e só se faz sobre qualquer bebida.' },
-        { id: 'quantidade', rot: 'No máximo', tipo: 'numero', valor: 2, min: 0, max: 99,
-          dica: '0 = não pode pedir isto.' },
-        { id: 'janela_min', rot: 'A cada (minutos)', tipo: 'numero', valor: 0, min: 0, max: 1440,
-          dica: '0 = é um tecto para a noite inteira.' },
-        { id: 'vigora_hora', rot: 'A partir das', tipo: 'hora', valor: '',
-          dica: 'Vazio, vale já.' },
-        { id: 'expira_hora', rot: 'Até às', tipo: 'hora', valor: '',
+          procura: true, dicaProcura: 'Escreva parte do nome' },
+
+        { id: 'quantidade', rot: 'No máximo', tipo: 'numero',
+          valor: r ? r.quantidade : 2, min: 0, max: 99,
+          dica: '<b>0</b> proíbe por completo.' },
+        { id: 'janela_min', rot: 'A cada (minutos)', tipo: 'numero',
+          valor: r ? r.janela_min : 0, min: 0, max: 1440,
+          dica: '<b>0</b> é um tecto para a noite inteira.' },
+
+        { id: 'vigora_hora', rot: 'A partir das', tipo: 'hora',
+          valor: r ? hora(r.vigora_em) : '', dica: 'Vazio, vale já.' },
+        { id: 'expira_hora', rot: 'Até às', tipo: 'hora',
+          valor: r ? hora(r.expira_em) : '',
           dica: 'Vazio, vale até ao fim. Uma hora já passada é a madrugada seguinte.' },
-        { id: 'mensagem', rot: 'O que ele lê', tipo: 'text', valor: '', largura: 3,
+
+        { id: 'mensagem', rot: 'O que o convidado lê', tipo: 'text',
+          valor: (r && r.mensagem) || '', largura: 3,
           dica: 'Vazio, lê o texto de sempre. Nunca lê a nota.' },
-        { id: 'nota', rot: 'Porquê (só nós vemos)', tipo: 'text', valor: '', largura: 3,
+        { id: 'nota', rot: 'Porquê (só nós vemos)', tipo: 'text',
+          valor: (r && r.nota) || '', largura: 3,
           dica: 'Ex.: «pediu-nos para o travarmos», «conduz».' }
       ],
-      // «Qual pessoa» só faz sentido quando a regra é de uma pessoa, e «sobre o
-      // quê» só faz sentido quando se contam bebidas — contar PEDIDOS de uma
-      // bebida é contar bebidas por outro nome, e o servidor recusa-o. Em vez
-      // de deixar a pessoa escrever uma regra impossível e só depois lhe dizer
-      // que não, os campos aparecem e desaparecem com a resposta que os torna
-      // relevantes.
+
+      /* Os campos que só fazem sentido consoante outros, e a frase em cima.
+         Em vez de deixar escrever uma regra impossível e só depois dizer que
+         não, o que não vem ao caso desaparece — e o que fica lê-se de uma vez
+         na linha de cima. */
       aoMontar: function (f) {
-        var quemEl  = f.campo('quem');
-        var contaEl = f.campo('conta');
-        var ajustar = function () {
-          f.mostrar('pessoa', quemEl.value === 'pessoa');
-          f.mostrar('sobre',  contaEl.value !== 'pedidos');
+        var fam = f.campo('familia'), conta = f.campo('conta');
+        var alc = f.campo('alcance'), qtd = f.campo('quantidade');
+        var jan = f.campo('janela_min'), sob = f.campo('sobre');
+        var pes = f.campo('pessoa');
+        var frase = document.getElementById('br-frase');
+
+        var nomeDe = function (sel) {
+          var op = sel && sel.closest('.lic-sel');
+          var bt = op && op.querySelector('.lic-sel-bt .txt');
+          return bt ? bt.textContent : (sel ? sel.value : '');
         };
-        quemEl.addEventListener('change', ajustar);
-        contaEl.addEventListener('change', ajustar);
+
+        var ajustar = function () {
+          var geral = fam.value === 'gerais';
+          var porPedidos = conta.value === 'pedidos';
+          // Uma regra de PEDIDOS não é de bebida nenhuma: contar pedidos de uma
+          // bebida é contar bebidas por outro nome, e o servidor recusa-o.
+          f.mostrar('sobre', !porPedidos);
+          // O caudal da copa é de todos por definição: não tem «a quem».
+          f.mostrar('alcance', !geral);
+          f.mostrar('pessoa', !geral && alc.value === 'pessoa');
+          if (frase) frase.innerHTML = escrever(geral, porPedidos);
+        };
+
+        /** A frase que a regra vai ser, escrita como o servidor a escreveria. */
+        var escrever = function (geral, porPedidos) {
+          var n = parseInt(qtd.value, 10);
+          var m = parseInt(jan.value, 10) || 0;
+          var unid = porPedidos ? 'pedido' : 'bebida';
+          // «60 bebidas de qualquer bebida» é uma frase a dizer duas vezes a
+          // mesma coisa: quando a regra é sobre tudo, o «de quê» cala-se.
+          var nomeSob = porPedidos ? '' : (nomeDe(sob) || '');
+          var oQue = (!nomeSob || /^qualquer bebida$/i.test(nomeSob))
+                   ? '' : ' de ' + nomeSob;
+          var quem = geral ? 'A copa'
+                   : alc.value === 'pessoa' ? (nomeDe(pes) || 'essa pessoa').split(' · ')[0]
+                   : alc.value === 'convite' ? 'Cada convite'
+                   : 'Cada convidado';
+          if (!(n >= 0)) return '…';
+          if (n === 0) {
+            return '<b>' + esc(quem) + '</b> não pode pedir'
+                 + esc(oQue || (porPedidos ? ' nada' : ' bebida nenhuma')) + '.';
+          }
+          var quanto = n + ' ' + unid + (n === 1 ? '' : 's');
+          return '<b>' + esc(quem) + '</b>: no máximo <b>' + esc(quanto) + '</b>'
+               + esc(oQue) + (m ? ' <b>a cada ' + m + ' min</b>' : ', ao todo')
+               + '.';
+        };
+
+        [fam, conta, alc, qtd, jan, sob, pes].forEach(function (el) {
+          if (!el) return;
+          el.addEventListener('change', ajustar);
+          el.addEventListener('input', ajustar);
+        });
         ajustar();
       },
+
       aoGuardar: async function (v) {
+        var geral = v.familia === 'gerais';
+        var porPedidos = v.conta === 'pedidos';
         var escopo = 'tudo', alvo = 0;
-        if (v.conta === 'pedidos') v.sobre = 'tudo';
-        if (v.sobre.charAt(0) === 'i') { escopo = 'item'; alvo = parseInt(v.sobre.slice(1), 10); }
-        else if (v.sobre.charAt(0) === 'c') { escopo = 'categoria'; alvo = parseInt(v.sobre.slice(1), 10); }
-        if (v.conta === 'pedidos' && escopo !== 'tudo') {
-          licJanelaErro('Contar pedidos só se faz sobre qualquer bebida: contar '
-                      + 'pedidos de UMA bebida é contar bebidas por outro nome.');
-          return false;
+        if (!porPedidos) {
+          if (v.sobre.charAt(0) === 'i') { escopo = 'item'; alvo = parseInt(v.sobre.slice(1), 10); }
+          else if (v.sobre.charAt(0) === 'c') { escopo = 'categoria'; alvo = parseInt(v.sobre.slice(1), 10); }
         }
-        var pessoaId = 0;
-        if (v.quem === 'pessoa') {
+        var pessoaId = 0, conviteId = 0;
+        if (!geral && v.alcance === 'pessoa') {
           pessoaId = parseInt(v.pessoa, 10) || 0;
           if (!pessoaId) { licJanelaErro('Escolha a pessoa.'); return false; }
         }
-        var r = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify({
+        if (!geral && v.alcance === 'convite') {
+          // O convite vem da pessoa escolhida: é a família dela.
+          conviteId = (r && r.alvo_convite_id) || 0;
+          if (!conviteId) {
+            licJanelaErro('Uma regra de convite põe-se pela ficha de alguém desse convite.');
+            return false;
+          }
+        }
+        var env = {
           escopo: escopo, alvo_id: alvo,
-          sujeito: v.quem === 'casa' ? 'casa' : 'convidado',
+          sujeito: geral ? 'casa' : 'convidado',
           alvo_convidado_id: pessoaId,
+          alvo_convite_id: conviteId,
           unidade: v.conta,
           quantidade: parseInt(v.quantidade, 10) || 0,
           janela_min: parseInt(v.janela_min, 10) || 0,
           vigora_hora: v.vigora_hora, expira_hora: v.expira_hora,
           mensagem: v.mensagem, nota: v.nota
-        }) });
-        if (!r || !r.success) return false;
-        toast('Regra posta. Vale já.');
+        };
+        if (r) env.id = r.id;
+        var d = await window.api('bar_regra_guardar', { method: 'POST',
+                                                       body: JSON.stringify(env) });
+        if (!d || !d.success) return false;
+        toast(r ? 'Regra guardada.' : 'Regra posta. Vale já.');
         await refrescar();
-        if (typeof window.barRegraPosta === 'function') window.barRegraPosta(r, pre);
+        if (typeof window.barRegraPosta === 'function') window.barRegraPosta(d, pre);
         return true;
       }
     });
+  };
+
+  /** Editar uma regra que já existe. A janela é a mesma, preenchida. */
+  window.barRegraEditar = function (id) {
+    var r = (EST().regras || []).filter(function (x) { return x.id === id; })[0];
+    if (!r) { toast('Essa regra já não está aqui.', true); return; }
+    window.barRegraNova({ regra: r });
   };
 
   window.barRegraFora = async function (id) {
@@ -462,5 +594,5 @@
     await refrescar();
   };
 
-  window.BR = { ligar: ligar, montar: montar, pintar: pintar, DEFINICOES: DEFINICOES, IP_MODOS: IP_MODOS };
+  window.BR = { ligar: ligar, montar: montar, pintar: pintar, DEFINICOES: DEFINICOES };
 })();

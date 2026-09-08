@@ -133,9 +133,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   const cA = await abrir(A);
 
   // ============ 1. a pastilha ============
+  const paraDiz = async () =>
+    (await cA.locator('#b-para').innerText()).replace(/\s+/g, ' ').trim();
+
   ok(await cA.locator('#b-para').isVisible(), 'a página oferece pedir por outra pessoa');
-  ok(!/A pedir para/.test(await cA.locator('#b-para').innerText()),
-     'e começa por si, que é o caso normal');
+  // O botão diz sempre EM NOME DE QUEM se pede — e por omissão isso é a própria
+  // pessoa (§29.5). Já não é o texto que distingue os dois estados, é o aceso.
+  ok((await paraDiz()).includes(A.nome),
+     'e começa por dizer o nome de quem entrou: ' + (await paraDiz()));
+  ok(await cA.locator('#b-para.on').count() === 0,
+     'apagado, porque pedir para si não é estado nenhum de que haja que sair');
 
   // ============ 2. escolher, e pedir ============
   const escolher = async (c, quem) => {
@@ -147,8 +154,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     await c.waitForTimeout(1300);
   };
   await escolher(cA, B);
-  ok(/A pedir para/.test(await cA.locator('#b-para').innerText()),
-     'escolhida a pessoa, a pastilha di-lo: ' + (await cA.locator('#b-para').innerText()).trim());
+  ok((await paraDiz()).includes(B.nome),
+     'escolhida a pessoa, a pastilha di-lo: ' + (await paraDiz()));
   ok(await cA.locator('#b-para.on').count() === 1,
      'e acende, porque é um estado que se pode esquecer');
 
@@ -169,8 +176,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e NÃO para quem a pediu — senão pedir por outro era a maneira de furar um tecto');
 
   // ============ 4. volta-se a si sozinho ============
-  ok(!/A pedir para/.test(await cA.locator('#b-para').innerText()),
-     'enviado o pedido, a página volta a pedir para si');
+  ok((await paraDiz()).includes(A.nome) && await cA.locator('#b-para.on').count() === 0,
+     'enviado o pedido, a página volta a pedir para si: ' + (await paraDiz()));
 
   // ============ 5. a copa vê os dois nomes ============
   const fila = await p.evaluate(async () => {

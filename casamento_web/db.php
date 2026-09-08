@@ -2131,6 +2131,7 @@ function nomesDeAcao(): array {
         'bar_regra'         => ['pôs uma regra no bar', 'bar'],
         'bar_regra_fora'    => ['levantou uma regra do bar', 'bar'],
         'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],
+        'bar_mudou_mesa'    => ['mudou a mesa de um pedido do bar', 'bar'],
         'bar_pedido_amigo'  => ['pediu no bar por outro convidado', 'bar'],
         'bar_nome_trocado'  => ['um telemóvel passou a pedir por outra pessoa', 'bar'],
         'media_reposta'        => ['repôs fotografias de origem', 'pecas'],
@@ -2594,7 +2595,6 @@ function barEstados(): array {
 function barDefsPadrao(): array {
     return [
         'bar.aberto'        => '0',
-        'bar.ip_modo'       => 'registo',     // registo | aviso | estrito
         'bar.trocar_nome'   => '1',           // trocar para outro convite: 1 avisa, 0 recusa
         'bar.procura_min'   => '4',
         'bar.mensagem_fechado' => '',
@@ -2632,7 +2632,6 @@ function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
         if (!array_key_exists($chave, $padrao)) continue;
         $v = trim((string)$valor);
         // Cada chave tem a sua forma; o que não couber toma o valor de fábrica.
-        if ($chave === 'bar.ip_modo' && !in_array($v, ['registo', 'aviso', 'estrito'], true)) continue;
         if (in_array($chave, ['bar.aberto', 'bar.trocar_nome'], true)) {
             $v = $v === '1' ? '1' : '0';
         }

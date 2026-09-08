@@ -281,6 +281,13 @@ O copeiro solta um dispositivo num clique quando a vida der um nó.
 
 ### 5.4 O IP: registo, aviso ou tranca
 
+> **Revogado em §29.1.** Isto descreve os três modos que existiram até à quarta
+> passagem. Saíram todos: os convidados pedem pela rede dos próprios telemóveis,
+> e um endereço deixou de dizer alguma coisa sobre quem está a pedir. O
+> raciocínio abaixo continua certo — é por isso que fica escrito —, mas já não
+> descreve o que está instalado.
+
+
 Foi pedido que os IP sejam rastreados. Rastrear, sim — em cada pedido e em cada
 ligação do dispositivo; o registo de ações já guarda o IP desde a v35. Mas
 usá-lo como identidade parte-se num casamento real: **os convidados que estejam
@@ -2424,3 +2431,154 @@ do «não sei desenhar isto» nas fontes que não o têm.
 
 `chk_bar.js` §8b foi invertida: defendia que a copa **não** mudasse com o
 tema, e passou a defender que muda — e que se lê nos quatro.
+
+---
+
+## 29. A quarta passagem: o que ficou por afinar
+
+### 29.1 **[decisão]** O wi-fi partilhado sai do módulo
+
+O bar nasceu a desconfiar do endereço de onde o pedido saía. Havia três modos
+(`registo`, `aviso`, `estrito`), uma função que procurava outro nome no mesmo
+IP, e uma bandeira que avisava a copa quando três nomes saíam da mesma ligação
+em meia hora. §5.4 explicava porque é que aquilo nunca podia funcionar bem:
+num salão atrás de um router, «um IP, um convidado» tranca a festa ao primeiro
+que pedir; sem NAT, não impede nada.
+
+Saiu tudo. A razão é mais simples do que o raciocínio de §5.4: **os convidados
+pedem pela rede dos próprios telemóveis.** Um endereço deixou de dizer o que
+quer que seja sobre quem está a pedir, e o que restava era código a decidir
+sobre um facto que já não existe.
+
+O que fica de pé é a barreira que sempre valeu: um telemóvel, uma pessoa, com
+`bar.trocar_nome` a decidir se ele pode passar para outro convite (§5.2).
+
+### 29.2 **[correcção]** Ninguém serve o que as regras travam
+
+Este era o mais grave. A fila **assinalava** os pedidos que deixaram de caber
+numa regra posta depois de eles entrarem — e assinalar era tudo o que fazia. O
+botão «Aprovar» continuava a aprovar.
+
+Uma regra que a copa salta com um clique não é uma regra: é um aviso. Agora é
+o servidor que recusa, seja quem for que carregue.
+
+E a terceira porta (§27.4) não se fechou, porque a conta se faz sobre o que
+**fica depois do corte** e não sobre o que foi pedido: quem pediu quatro e só
+pode levar duas continua a poder levar duas. É exactamente para isso que
+«servir menos» existe.
+
+> Uma subtileza que custou uma leitura: o pedido tem de se **descontar a si
+> próprio**. Ele já está na fila em `em_analise`, e `barConsumo()` conta tudo
+> o que a copa aceitou fazer — incluindo-o. Sem o desconto, um pedido de duas
+> bebidas com um tecto de duas media-se contra si mesmo e nunca podia ser
+> aprovado. Daí o parâmetro `$excluir`.
+
+### 29.3 As regras têm duas famílias
+
+Andavam numa lista só, ordenada por «alcance», e o resultado era um painel
+onde o caudal da copa aparecia ao lado de «o senhor da mesa 4 não pode
+destilados» como se fossem a mesma espécie de coisa. São duas conversas:
+
+| Família | O que é | Conta |
+|---|---|---|
+| **Gerais** | O que a COPA aguenta, seja quem for que peça | a sala toda |
+| **Específicas** | De uma bebida, do acto de pedir, de uma pessoa | por convidado |
+
+Dentro das específicas há quatro grupos — de uma bebida ou gaveta, do acto de
+pedir, de uma pessoa ou convite, de toda a gente. As duas caixas aparecem
+sempre, cheias ou vazias: quem chega precisa de perceber a distinção **antes**
+de escrever a primeira regra, e um painel que só mostra a estrutura depois de
+já haver regras obriga a descobri-la.
+
+### 29.4 O formulário mostra a frase que vai escrever
+
+Eram dez campos seguidos, três deles só relevantes consoante a resposta de
+outro. Agora começa pela pergunta que separa as duas conversas, esconde o que
+não vem ao caso — «qual pessoa» só existe se a regra for de uma pessoa; «de
+que bebida» desaparece quando se contam pedidos — e mostra em cima, por
+palavras, a frase que a regra vai passar a ser:
+
+> **A copa**: no máximo **60 bebidas** **a cada 10 min**.
+
+Reescreve-se a cada campo que se toca. Quem escreve uma regra a meio de uma
+festa não devia ter de a imaginar a partir de três números.
+
+### 29.5 Editar, e não levantar e voltar a escrever
+
+A API sempre aceitou um `id`; faltava o caminho no ecrã. Cada regra tem agora
+o seu lápis, e a janela é a mesma — preenchida.
+
+### 29.6 A copa fecha um pedido; o garçom muda-lhe a mesa
+
+Duas coisas que a noite pedia e não havia:
+
+- **A copa dá por entregue.** Serviu-se ao balcão, ou o garçom levou-a e
+  esqueceu-se de marcar. Sem isto o pedido ficava «por entregar» a noite
+  inteira e a bebida reservada por nada — com o stock a mentir. Pergunta-se
+  antes de fechar: é o gesto que baixa o stock a sério (§4).
+- **O garçom muda a mesa.** A pessoa pediu sentada e levantou-se para dançar.
+  A única saída era «não estava na mesa», que devolve o pedido à copa e faz
+  esperar outra vez por uma bebida que já estava pronta.
+
+### 29.7 A ficha traz todas as notas
+
+A fila mostra as três últimas ao decidir, que chegam para um gesto de um
+minuto. A ficha é o outro momento — o de perceber a noite de alguém — e aí
+três não chegam: uma nota escrita às 23h («pediu para não lhe servirem mais»)
+é o que explica o que se está a ver à uma da manhã.
+
+### 29.8 A escolha com procura cresce, e sai das janelas
+
+Duas mudanças:
+
+**Vê-se mais.** A lista era de 230px — cinco linhas e meia, com a última
+cortada a meio, que é a lista a dizer «há mais» sem dizer quanto. Passou a 340
+(oito inteiras, que é o número a partir do qual esta caixa sequer aparece), com
+linhas mais altas e uma barra de rolagem fina.
+
+**Serve qualquer `<select>` da casa.** Era só dos formulários em janela. Agora
+`licSelUpgrade(sel)` veste um `<select>` que já exista na página — e é
+**melhoria progressiva**, não substituição: o `<select>` continua lá, escondido
+mas presente, e continua a ser quem guarda o valor. Quem o manipulava antes
+(a acrescentar opções, a mudar `value`, a desactivá-lo) continua a fazê-lo sem
+saber que isto existe; basta disparar `change`.
+
+Foi assim, e não por gosto: o selector de mesa do formulário de convite é
+manipulado por código que insere e remove uma opção «Mesa dos noivos» conforme
+o papel da pessoa. Trocá-lo por um componente novo era reescrever esse código
+e arriscar um ecrã central; vestido por fora, ele não deu por nada.
+
+Onde está: a mesa de cada pessoa no formulário de convite, a mesa de entrega, a
+bebida e a pessoa das regras. Abaixo de nove opções fica o `<select>` nativo —
+no telemóvel abre a roda do sistema, que é melhor do que qualquer coisa que se
+desenhe.
+
+### 29.9 A página do convidado: três correcções
+
+- **Diz em nome de quem se pede.** O botão dizia «Pedir por outra pessoa», que
+  é o que ele FAZ e não o que MOSTRA. Agora lê-se «A pedir para Ana» — ela, por
+  omissão, ou outra pessoa quando for o caso.
+- **É uma coluna só.** A abertura centrava-se no ecrã inteiro e o corpo numa
+  coluna de 560px: num portátil, o nome do casal ficava a flutuar por cima de
+  um corpo alinhado noutro sítio.
+- **O cursor deixa de fugir.** Escrever na procura repintava o corpo inteiro —
+  a própria caixa incluída. O elemento onde se estava a escrever deixava de
+  existir a cada letra, o foco caía para o `<body>`, e a letra seguinte ia para
+  lado nenhum: escrevia-se «a», e depois nada.
+
+### 29.10 A prova
+
+`tests/chk_bar_quarta.js`:
+
+| Verifica | Porque é que se parte |
+|---|---|
+| A definição da rede e o `IP_MODOS` desapareceram | Uma definição órfã volta um dia a ser lida |
+| As regras estão em duas famílias | Misturadas, o caudal da copa lê-se como uma regra de pessoa |
+| Uma regra edita-se no sítio, sem nascer uma segunda | §29.5 |
+| A copa NÃO aprova o que as regras travam | Uma regra que se salta com um clique é um aviso |
+| Mas cortar para o que cabe passa | A terceira porta é o que evita servir zero (§27.4) |
+| A copa dá por entregue, e é aí que o stock desce | A regra de ouro do módulo (§4) |
+| O garçom muda a mesa em vez de devolver o pedido | §29.6 |
+| A ficha traz as notas dos garçons | §29.7 |
+| O botão do convidado diz o nome dele | §29.9 |
+| A abertura e o corpo são a mesma coluna | §29.9 |

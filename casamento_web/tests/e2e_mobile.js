@@ -28,9 +28,16 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
     const vis = el => el && el.offsetParent!==null;
     const cards=[...document.querySelectorAll('.stat-f')].filter(vis);
     const busca=document.getElementById('busca');
+    // A tira amarela «está a ver como administração da plataforma» é do ecrã
+    // desta PROVA e não do ecrã dos noivos: quem entra na sua própria festa
+    // nunca a vê. Ela pesa ~75px no telemóvel, e contá-la era medir a página
+    // do casal com um aviso que só existe porque a prova entra por admin.
+    const tira=document.querySelector('.tira-suporte');
+    const suporte=tira?Math.round(tira.getBoundingClientRect().height):0;
     return {
       visiveis:cards.length, total:document.querySelectorAll('.stat-f').length,
-      buscaTopo:Math.round(busca.getBoundingClientRect().top+window.scrollY),
+      suporte,
+      buscaTopo:Math.round(busca.getBoundingClientRect().top+window.scrollY)-suporte,
       botao:(document.getElementById('stats-mais')||{}).textContent,
       botaoVisivel:vis(document.getElementById('stats-mais')),
       scrollH:document.documentElement.scrollWidth>document.documentElement.clientWidth,
@@ -41,7 +48,8 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   log('fechado:', JSON.stringify(antes));
   ok(antes.visiveis===4, 'no telemóvel só se veem os 4 cartões essenciais');
   ok(antes.total===12, 'os 12 continuam na página (só escondidos)');
-  ok(antes.buscaTopo < 844, 'a caixa de procura cabe no primeiro ecrã (antes começava a 1228px)');
+  ok(antes.buscaTopo < 844, 'a caixa de procura cabe no primeiro ecrã do casal '
+     + '(antes começava a 1228px; agora a ' + antes.buscaTopo + ', sem a tira de suporte)');
   ok(antes.botaoVisivel && /Mais filtros/.test(antes.botao), 'há um botão para ver os restantes');
   ok(!antes.scrollH, 'a página não anda para o lado');
   await p.screenshot({path:OUT+'/mob_fechado.png'});

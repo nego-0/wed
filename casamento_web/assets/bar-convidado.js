@@ -168,11 +168,18 @@
     if (bp) {
       bp.hidden = !eu;
       bp.classList.toggle('on', !!para);
+      // O botão diz sempre EM NOME DE QUEM se está a pedir — e por omissão
+      // isso é a própria pessoa. Dizia «Pedir por outra pessoa», que é o que o
+      // botão FAZ e não o que ele MOSTRA: quem olhava para a barra via o nome
+      // do casal e um convite a pedir por outrem, e não via em nome de quem
+      // estava a pedir. Agora lê-se de uma vez: «A pedir para Ana» — ela, ou
+      // outra pessoa, se for o caso.
+      var quem = para ? para.nome : (eu ? eu.nome : '');
       bp.innerHTML = ico.ico('pessoas')
-        + (para ? 'A pedir para <b>' + esc(para.nome) + '</b>' : 'Pedir por outra pessoa')
+        + (quem ? 'A pedir para <b>' + esc(quem) + '</b>' : 'Pedir por outra pessoa')
         + seta;
-      bp.setAttribute('aria-label', para
-        ? 'A pedir para ' + para.nome + '. Tocar para mudar ou voltar a si.'
+      bp.setAttribute('aria-label', quem
+        ? 'A pedir para ' + quem + '. Tocar para pedir por outra pessoa da mesa.'
         : 'Pedir por outra pessoa que esteja consigo à mesa.');
     }
     var bm = $('b-mesa');
@@ -252,8 +259,27 @@
 
     html += pintarMeus();
     html += rodapeDaCasa();
+
+    /* O cursor não se perde a meio de uma palavra.
+       Escrever na procura chama isto outra vez, e isto reescreve o corpo
+       INTEIRO — a caixa de procura incluída. O elemento onde a pessoa estava a
+       escrever deixa de existir a cada letra, o foco cai para o <body>, e a
+       letra seguinte vai para lado nenhum: escrevia-se «a», e depois nada.
+       Guarda-se onde o cursor estava e devolve-se ao sítio. */
+    var antes = document.activeElement;
+    var escrevia = antes && antes.id === 'q-menu';
+    var caret = escrevia ? antes.selectionStart : 0;
+
     $('b-corpo').innerHTML = html;
     if (menu.itens.length) ligarBusca('q-menu', function (v) { busca = v; pintarMenu(); });
+
+    if (escrevia) {
+      var novo = $('q-menu');
+      if (novo) {
+        novo.focus();
+        try { novo.setSelectionRange(caret, caret); } catch (e) {}
+      }
+    }
     pintarTopo();
     pintarRodape();
   }

@@ -7,10 +7,12 @@
 //
 // O que fica de pé é o telemóvel: quem quiser pedir por outro tem de o fazer
 // do SEU aparelho, o que deixa rasto. Esta prova defende as três regras dessa
-// barreira — livre dentro do convite, assinalado entre convites, fechável de
-// vez — e defende sobretudo a decisão sobre o IP: em `registo` e `aviso` ele
-// NÃO tranca nada. Num salão com wi-fi partilhado, «um IP, um convidado»
-// trancaria a festa ao primeiro que pedisse. A culpa não é da regra, é de NAT.
+// barreira: livre dentro do convite, assinalado entre convites, fechável de
+// vez.
+//
+// Houve aqui uma quarta regra, sobre o ENDEREÇO de onde o pedido sai, com três
+// modos. Saiu na quarta passagem: os convidados pedem pela rede dos próprios
+// telemóveis, e um endereço deixou de dizer alguma coisa sobre quem pede.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -95,11 +97,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     console.log('(saltado: a lista de prova só tem um convite)');
   }
 
-  // ============ 4. o IP não tranca nos modos brandos ============
-  // Este é o coração da decisão de §5.4, e por isso prova-se com dois
-  // telemóveis a sair do MESMO endereço — que é o que acontece a um salão
-  // inteiro atrás de um router.
-  await defs({ 'bar.ip_modo': 'registo' });
+  // ============ 4. o endereço não tranca ninguém ============
+  // Aqui viviam dois blocos sobre o wi-fi partilhado: os modos «registo» e
+  // «aviso», que não trancavam, e o «estrito», que recusava o segundo nome do
+  // mesmo endereço. Saíram na quarta passagem — os convidados pedem pela rede
+  // dos próprios telemóveis, e um endereço deixou de dizer o que quer que seja
+  // sobre quem está a pedir.
+  //
+  // O que fica é a guarda: dois telemóveis, dois nomes, e nada no meio. Se um
+  // dia voltar a haver um travão por endereço, esta linha cai — que é
+  // exactamente o aviso que se quer.
   const tel2 = await b.newContext({ viewport: { width: 390, height: 844 } });
   const c2 = await tel2.newPage();
   await c2.goto(BASE + '/bebidas.php?m=' + token, { waitUntil: 'networkidle' });
@@ -109,26 +116,19 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ m: t, convidado_id: id }) })).json(), [token, id]);
   ok((await sou2(B.id)).success === true,
-     'em «registo», dois telemóveis do mesmo IP servem dois nomes — é o caso comum');
-
-  await defs({ 'bar.ip_modo': 'aviso' });
-  ok((await sou2(B.id)).success === true, 'em «aviso» também passa: vigia, não trava');
-
-  // ============ 5. e tranca no modo estrito ============
-  await defs({ 'bar.ip_modo': 'estrito' });
-  const tel3 = await b.newContext({ viewport: { width: 390, height: 844 } });
-  const c3 = await tel3.newPage();
-  await c3.goto(BASE + '/bebidas.php?m=' + token, { waitUntil: 'networkidle' });
-  await c3.waitForTimeout(500);
-  const terceiro = await c3.evaluate(async ([t, id]) =>
+     'dois telemóveis do mesmo endereço servem dois nomes, sem definição nenhuma pelo meio');
+  const terceiro = await c2.evaluate(async ([t, id]) =>
     await (await fetch('api.php?action=bar_sou&m=' + t, { method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ m: t, convidado_id: id }) })).json(),
     [token, doOutro ? doOutro.id : A.id]);
-  ok(terceiro.success === false, 'em «estrito», o segundo nome do mesmo IP é recusado');
-  ok(/garçom/i.test(terceiro.message || ''),
-     'e a saída é humana: «' + terceiro.message + '»');
-  await defs({ 'bar.ip_modo': 'registo' });
+  ok(terceiro.success === true || /garçom/i.test(terceiro.message || ''),
+     'e o terceiro nome não esbarra em travão de endereço nenhum');
+  // E a definição desapareceu mesmo: uma que fique órfã volta um dia a ser lida.
+  const defsAgora = await p.evaluate(async () =>
+    (await window.api('bar_estado')).defs || {});
+  ok(defsAgora['bar.ip_modo'] === undefined,
+     'a definição «pedidos da mesma rede» já não existe');
 
   // ============ 6. a ficha é sobre a BEBIDA, e não sobre o aparelho =====
   // Aqui provava-se o «Soltar»: a copa largava o telemóvel de uma pessoa, e a
@@ -155,7 +155,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ============ arrumar ============
   await p.evaluate(async () => {
     await window.api('bar_defs', { method: 'POST',
-      body: JSON.stringify({ 'bar.ip_modo': 'registo', 'bar.trocar_nome': '1' }) });
+      body: JSON.stringify({ 'bar.trocar_nome': '1' }) });
     await window.api('bar_fechar', { method: 'POST', body: '{}' });
     const d = await window.api('convite_list&busca=ZZ%20Vizinhos', { silencioso: true });
     for (const cv of ((d && d.convites) || [])) {

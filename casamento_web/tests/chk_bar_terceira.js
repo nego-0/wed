@@ -193,7 +193,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(comProcura >= 2,
      'a janela de uma regra tem escolhas com procura por dentro (' + comProcura + ')');
   // E a procura procura — sem acentos, que é como se escreve de pé.
-  const sobre = copa.locator('#lic-janela .lic-sel').nth(1);
+  // Pelo NOME do campo e não pela posição: a ordem dos campos mudou na quarta
+  // passagem (§29.4) e um índice fixo apanhou a caixa errada — a de «qual
+  // pessoa», que está escondida enquanto a regra não for de ninguém.
+  const sobre = copa.locator('#lic-janela .lic-sel[data-sel="sobre"]');
   await sobre.locator('.lic-sel-bt').click();
   await copa.waitForTimeout(300);
   const antes = await sobre.locator('.lic-sel-op:visible').count();
