@@ -436,6 +436,12 @@
     Object.keys(cesto).forEach(function (k) { total += cesto[k]; });
     var rod = $('b-rodape');
     rod.hidden = total === 0;
+    // A barra tapa o canto de baixo à direita, onde mora o botão do tema. Quem
+    // se desvia é ele, e é daqui que sabe quando: a folha podia perguntá-lo
+    // sozinha com :has(), mas um telemóvel que não o entenda ficava com o
+    // «Pedir» por baixo do botão flutuante — sem poder pedir, que é a única
+    // coisa que aquela página faz. Uma classe entende-a toda a gente.
+    document.body.classList.toggle('com-rodape', total > 0);
     if (!total) return;
     $('b-resumo').textContent = total + (total === 1 ? ' bebida' : ' bebidas')
       + (para ? ' para ' + para.nome : '') + ' · ' + nomeDaMesa();

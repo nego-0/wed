@@ -599,6 +599,10 @@ function correcoesEsperadas(): array {
          'assets/janela.css', 'body.b-noite .pl-modal{'],
         ['Bar: o botão do tema existe nos ecrãs do bar, como no resto da casa',
          'copa.php', "include __DIR__ . '/parcial-seletor-tema.php'"],
+        ['Bar: o botão do tema sobe quando o cesto enche — deixava de se poder tocar no «Pedir»',
+         'assets/bar.css', 'body.com-rodape .tema-fab{'],
+        ['Bar: e é do tamanho do módulo (48px), que se toca de pé e à meia-luz',
+         'assets/bar.css', 'body.b-noite .tema-fab-btn,'],
 
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',

@@ -350,6 +350,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // Na ficha da copa, a que ainda não é hora está lá — esbatida, e dito por
   // palavras, que é o que §25.7 exige: nunca só a cor.
+  //
+  // A regra à espera tem de se semear OUTRA VEZ: o bloco que a criou lá em
+  // cima limpou-a ao sair, e os dois blocos seguintes limparam o que criaram
+  // também. Sem isto a ficha só traz a regra que já vigora, e a prova acusava
+  // a copa de esconder uma regra que o próprio teste tinha apagado — a falha
+  // era daqui, não do produto.
+  if (futuraH) await p.evaluate(async ([h, q]) => {
+    await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { escopo: 'tudo', sujeito: 'convidado', alvo_convidado_id: q,
+        unidade: 'bebidas', quantidade: 0,
+        janela_min: 0, vigora_hora: h, nota: 'ZZ ainda não são horas' }) });
+  }, [futuraH, A.id]);
   await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1100);
   const fichaHoras = await p.evaluate(async (id) => {

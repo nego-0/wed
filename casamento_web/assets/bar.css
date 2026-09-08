@@ -7,7 +7,7 @@
    • bar.php      — a montagem, para os noivos. O painel de sempre.
    • copa.php     — o posto do copeiro. Escuro de salão: cinco horas
                     seguidas, à meia-luz, com decisões a cada minuto.
-   • entregas.php — o posto do empregado. O mesmo escuro, uma coluna,
+   • entregas.php — o posto do garçom. O mesmo escuro, uma coluna,
                     alvos enormes: anda-se com ele na mão.
    • bebidas.php  — o convidado. Veste o convite do casal e por isso não
                     tem paleta própria; o que está aqui é só estrutura.
@@ -136,6 +136,17 @@ body.b-noite{ background:linear-gradient(175deg, var(--forest-deep), var(--fores
   --cream:rgba(255,255,255,.09);
   --sand:rgba(255,255,255,.14);
 }
+/* O botão do tema vem da folha da casa com 44px, que é a medida de quem o usa
+   sentado e com um rato à frente. Nestes ecrãs ninguém está sentado: a regra
+   do módulo é 48 (§25.14), e vale para tudo o que aqui se toca — incluindo o
+   que veio de fora. */
+body.b-noite .tema-fab-btn,
+body.b-festa .tema-fab-btn{ width:48px; height:48px; }
+body.b-noite .tema-fab-op,
+body.b-festa .tema-fab-op,
+body.b-noite .tema-fab-reset,
+body.b-festa .tema-fab-reset{ min-height:48px; }
+
 /* O botão do tema, no escuro. Vem da folha da casa e é feito para fundo
    claro: no salão ficava um disco branco a brilhar no canto do ecrã — que é
    exactamente o contrário do que este ecrã existe para ser. */
@@ -143,7 +154,8 @@ body.b-noite .tema-fab-btn{ background:rgba(255,255,255,.08);
                             border-color:rgba(233,223,201,.22);
                             color:var(--gold-soft); }
 body.b-noite .tema-fab-btn:hover{ background:rgba(255,255,255,.15); }
-body.b-noite .tema-fab-pop{ background:#1B2E42; border-color:rgba(233,223,201,.2);
+body.b-noite .tema-fab-pop{ background:var(--sala-carta);
+                            border-color:rgba(233,223,201,.2);
                             color:var(--ivory); }
 body.b-noite .tema-fab-tit,
 body.b-noite .tema-fab-reset{ color:var(--gold-pale); }
@@ -208,7 +220,7 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
    O selector leva o body.b-noite à frente por necessidade, não por gosto: a
    regra de cima — body.b-noite .btn — é mais específica do que um .b-bt-grande
    sozinho, e estava a encolher para 48 exactamente o botão que existe para ter
-   56. O «Entregue» do empregado é o alvo mais tocado da noite inteira. */
+   56. O «Entregue» do garçom é o alvo mais tocado da noite inteira. */
 .b-bt-grande, body.b-noite .b-bt-grande{
   min-height:56px; font-size:1rem; width:100%; justify-content:center; }
 
@@ -266,7 +278,7 @@ body.b-noite .btn-fantasma:hover{ background:rgba(255,255,255,.12); }
    do escuro sobre creme era quase invisível. Passaram para .j-linha, em
    janela.css, que é a folha que sabe de janelas. */
 
-/* ---- o cartão do empregado ----------------------------------
+/* ---- o cartão do garçom ----------------------------------
    Na copa o que manda é o CÓDIGO: decide-se um pedido de cada vez, olhando
    para a lista. Na sala o que manda é a MESA — é ela que faz andar, e era
    ela que estava em corpo 13 numa linha de notas, por baixo do código que
@@ -446,13 +458,34 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-bebida.no-cesto{ border-color:var(--c-verde, #20342A); }
 .b-mais .v{ min-width:1.4rem; text-align:center; font-variant-numeric:tabular-nums; font-weight:600; }
 
-/* A acção principal vive em baixo, na zona do polegar. */
+/* A acção principal vive em baixo, na zona do polegar.
+
+   As três medidas da barra vivem em :root e não nas regras, porque há quem
+   precise de as saber de fora — o botão do tema, aqui em baixo. Assim a altura
+   é CALCULADA a partir do que a barra realmente usa, em vez de ser um número
+   copiado à mão que fica errado no dia em que se mexer no botão. */
+:root{ --b-rodape-p:.7rem; --b-rodape-bt:56px;
+       --b-rodape-alt:calc(var(--b-rodape-bt) + var(--b-rodape-p) * 2 + 1px); }
 .b-rodape{ position:fixed; left:0; right:0; bottom:0; z-index:30;
            background:var(--c-fundo, #FBF8F1); border-top:1px solid rgba(0,0,0,.1);
-           padding:.7rem 1.1rem calc(.7rem + env(safe-area-inset-bottom));
+           padding:var(--b-rodape-p) 1.1rem
+                   calc(var(--b-rodape-p) + env(safe-area-inset-bottom));
            display:flex; align-items:center; gap:.8rem; }
 .b-rodape .resumo{ font-size:.9rem; }
-.b-rodape .btn{ margin-left:auto; min-height:56px; padding:0 1.6rem; font-size:1rem; }
+.b-rodape .btn{ margin-left:auto; min-height:var(--b-rodape-bt);
+                padding:0 1.6rem; font-size:1rem; }
+
+/* E o botão do tema sai-lhe da frente. A barra só aparece quando há bebidas no
+   cesto — e é exactamente aí que o canto de baixo à direita deixa de ser um
+   canto vazio para ser o «Pedir». Tê-lo por cima não era um desalinho: o botão
+   flutuante apanhava o toque e o pedido não seguia. Sobe enquanto ela lá está,
+   e volta ao canto quando o cesto se esvazia.
+
+   A classe vem do guião (bar-convidado.js, pintarRodape) e não de um :has()
+   nesta folha, de propósito: um :has() que o telemóvel não perceba deixa o
+   «Pedir» debaixo do botão — e é a única coisa que aquela página faz. */
+body.com-rodape .tema-fab{
+  bottom:calc(var(--b-rodape-alt) + env(safe-area-inset-bottom) + 14px); }
 
 /* A procura do nome */
 .b-procura{ max-width:460px; margin:2.4rem auto; padding:0 1.2rem; text-align:center; }

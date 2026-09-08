@@ -68,7 +68,7 @@ body.editor .pl-modal{
    quatro temas — tal como o ecrã por baixo dela. */
 body.b-noite .pl-modal{
   --j-veu:      rgba(4, 10, 16, .72);
-  --j-card:     #1B2E42;
+  --j-card:     var(--sala-carta, #1B2E42);
   --j-ink:      var(--sala-tinta, #F6F8F4);
   --j-texto:    #DCE4EA;
   --j-fraco:    var(--sala-fraco, #A6B4BF);

@@ -87,7 +87,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     await defs({ 'bar.trocar_nome': '0' });
     const barrado = await sou(A.id);
     ok(barrado.success === false, 'com bar.trocar_nome desligado, a troca é recusada');
-    ok(/Chame um empregado/i.test(barrado.message || ''),
+    ok(/Chame um garçom/i.test(barrado.message || ''),
        'e manda chamar quem resolve: «' + barrado.message + '»');
     await defs({ 'bar.trocar_nome': '1' });
     ok((await sou(A.id)).success === true, 'religado, volta a passar');
@@ -126,7 +126,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       body: JSON.stringify({ m: t, convidado_id: id }) })).json(),
     [token, doOutro ? doOutro.id : A.id]);
   ok(terceiro.success === false, 'em «estrito», o segundo nome do mesmo IP é recusado');
-  ok(/empregado de mesa/i.test(terceiro.message || ''),
+  ok(/garçom/i.test(terceiro.message || ''),
      'e a saída é humana: «' + terceiro.message + '»');
   await defs({ 'bar.ip_modo': 'registo' });
 

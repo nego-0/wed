@@ -39,6 +39,11 @@
      ecrãs desapareciam contra o próprio fundo. Ficando só aqui, no :root,
      sobrevivem aos quatro temas por construção. */
   --sala:#16283A;          --sala-fundo:#0C1925;      --sala-tinta:#F6F8F4;
+  /* Opaco de propósito: a folha do salão levanta as superfícies com brancos
+     translúcidos, que servem enquanto houver página por baixo. Uma janela e
+     um menu suspenso não têm página por baixo — têm o que estava no ecrã — e
+     um branco a 6% deixava ler o texto de trás através deles. */
+  --sala-carta:#1B2E42;
   --sala-ouro:#63B22B;     --sala-ouro-claro:#8CD24A; --sala-ouro-pale:#C4D9B3;
   --sala-ouro-fundo:#3C7517;
   --sala-ok:#2C6B2C;       --sala-ok-bg:#DCEFD6;

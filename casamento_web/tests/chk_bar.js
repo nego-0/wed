@@ -271,13 +271,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await ent.waitForTimeout(1000);
   // O mesmo nas entregas: a contagem vive no cabeçalho da fila a que pertence.
   ok((await ent.locator('.b-secao:has-text("Por apanhar") .n').innerText()) === '1',
-     'o empregado vê um por apanhar');
+     'o garçom vê um por apanhar');
   ok((await ent.locator('.b-ped').first().innerText()).includes(codigo), 'com o mesmo código');
 
   await ent.locator('.b-ped .btn-ouro').first().click();          // Apanhar
   await ent.waitForTimeout(900);
   ok((await ent.locator('.b-secao:has-text("Comigo") .n').innerText()) === '1',
-     'apanhar marca-o como seu — dois empregados não tropeçam no mesmo pedido');
+     'apanhar marca-o como seu — dois garçons não tropeçam no mesmo pedido');
 
   await ent.locator('.b-ped.minha .btn-ouro').first().click();    // Entregue
   await ent.waitForTimeout(1100);

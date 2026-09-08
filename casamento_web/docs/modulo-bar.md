@@ -2159,6 +2159,43 @@ Na página do convidado o tema **não muda o menu** (esse veste o convite do
 casal, §25.2): muda as **janelas**, que são cartões da casa e são o que ele lê
 quando alguma coisa corre mal.
 
+Trazê-lo para cá custou duas correcções, e nenhuma delas era de gosto:
+
+**Estava por cima do «Pedir».** O botão da casa é `position:fixed` no canto de
+baixo à direita; a barra do pedido (`.b-rodape`) é fixa em baixo e o «Pedir»
+vive-lhe à direita. Os dois no mesmo canto, e o flutuante por cima
+(`z-index:75` contra `30`): o toque ia todo para o botão do tema e **o pedido
+não seguia**. Não era um desalinho — era a página do convidado sem a sua única
+acção. A barra só aparece quando há bebidas no cesto, e é exactamente aí que
+aquele canto deixa de estar vago; por isso o botão sobe enquanto ela lá está e
+volta ao canto quando o cesto se esvazia:
+
+```css
+body.com-rodape .tema-fab{
+  bottom:calc(var(--b-rodape-alt) + env(safe-area-inset-bottom) + 14px); }
+```
+
+A altura não é um número copiado à mão: `--b-rodape-alt` sai das medidas que a
+própria barra usa (`--b-rodape-bt` + `--b-rodape-p` × 2 + a borda), para não
+ficar errada no dia em que alguém mexer no botão.
+
+A classe `com-rodape` vem do guião — `pintarRodape()`, que é quem já decide
+mostrar a barra. A folha sabia perguntá-lo sozinha, com
+`body:has(.b-rodape:not([hidden]))`, e ficou escrito assim durante uma tarde.
+Só que `:has()` é de 2022 para cá, e num telemóvel que não o perceba a regra
+desaparece inteira — o «Pedir» volta para debaixo do botão flutuante, e a
+página do convidado deixa de fazer a única coisa que faz. Numa festa há
+telemóveis de todas as idades. Uma classe entende-a toda a gente.
+
+**Tinha 44px.** É a medida da casa, pensada para quem está sentado com um rato
+à frente. Nestes ecrãs ninguém está sentado, e a regra do módulo é 48 (§25.14)
+— vale para tudo o que aqui se toca, incluindo o que veio de fora.
+
+E a cor do menu suspenso passou a `--sala-carta`, um token novo da família do
+salão: opaco de propósito, porque a folha do salão levanta as superfícies com
+brancos translúcidos e um menu não tem página por baixo — tem o que estava no
+ecrã, que se lia através dele.
+
 ### 27.12 A prova
 
 `tests/chk_bar_parcial.js`, e o que ela defende:
