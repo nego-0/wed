@@ -350,8 +350,12 @@
       titulo: 'Pedir por um convidado',
       guardar: 'Lançar o pedido',
       largo: true,
+      // Quem lança daqui SUBMETE, e não serve. O pedido entra na fila por
+      // decidir como o de qualquer convidado — é a copa que o aprova. Dizê-lo
+      // no formulário evita a única leitura errada possível: a de que carregar
+      // no botão põe a bebida no tabuleiro.
       dica: 'Escreva parte do nome, escolha a pessoa, e depois a bebida. '
-          + 'O pedido vai à copa como qualquer outro.',
+          + 'O pedido entra na fila por decidir — quem o aprova é a copa.',
       campos: [
         { id: 'nome', rot: 'Nome do convidado', tipo: 'text', valor: '', largura: 2,
           dica: '<span id="pp-achados"></span>' },
@@ -363,13 +367,18 @@
       ],
       aoGuardar: async function (v) {
         if (!ppEscolhido) { licJanelaErro('Escolha o convidado na lista.'); return false; }
-        var d = await window.api('bar_pedir_por', { method: 'POST',
+        // Silencioso: se forem as regras a travar, a razão lê-se dentro da
+        // janela, ao pé do campo que a há-de resolver.
+        var d = await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
           body: JSON.stringify({ convidado_id: ppEscolhido.id,
                                  mesa_id: ppEscolhido.mesa_id,
                                  itens: [{ item_id: parseInt(v.item, 10),
                                            quantidade: parseInt(v.quantidade, 10) || 1 }] }) });
-        if (!d || !d.success) return false;
-        toast('Pedido ' + d.pedido.codigo + ' na fila da copa.');
+        if (!d || !d.success) {
+          licJanelaErro((d && d.message) || 'Não foi possível lançar o pedido.');
+          return false;
+        }
+        toast('Pedido ' + d.pedido.codigo + ' na fila da copa, por decidir.');
         await carregar(true);
         return true;
       }

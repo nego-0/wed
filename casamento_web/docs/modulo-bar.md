@@ -2582,3 +2582,145 @@ desenhe.
 | A ficha traz as notas dos garçons | §29.7 |
 | O botão do convidado diz o nome dele | §29.9 |
 | A abertura e o corpo são a mesma coluna | §29.9 |
+
+---
+
+## 30. A quinta passagem: a porta de serviço, e a bebida que se fecha
+
+Quatro passagens depois, o módulo tinha um buraco do tamanho de um posto: o
+pessoal do bar podia tudo. Não por decisão nenhuma — por omissão, que é como os
+buracos deste tipo aparecem. E tinha uma peça em falta que a copa pedia todas as
+noites: fechar uma bebida por um bocado.
+
+### 30.1 O garçom submete; a copa decide
+
+`bar_pedir_por` fazia nascer o pedido **aprovado**, fosse quem fosse a
+lançá-lo. Para o copeiro isso é a leitura certa e continua a ser: quem escreve o
+pedido está a olhar para a pessoa e para as garrafas, e pô-lo a aprovar o que
+acabou de escrever era encher a fila de trabalho imaginário (§27.6).
+
+Para o garçom não é. O que ele tinha à mão era a única porta do bar que não
+passava por ninguém: escrevia o pedido e ele estava servido. Não é falta de
+confiança — é que **decidir é um posto**, e um posto não se exerce por acidente
+de onde se está a escrever. O pedido do garçom nasce agora `em_analise` e entra
+na fila por decidir como o de qualquer convidado.
+
+Três coisas mudam com o estado, e todas por consequência:
+
+- **`decidido_por` e `decidido_em` ficam vazios.** Assinar por ele uma decisão
+  que ele não tomou dava, além do resto, tempos de análise a contar zeros que
+  ninguém gastou.
+- **Não se reserva stock.** Quem promete é a aprovação (§4). Reservar aqui
+  contava a mesma garrafa duas vezes quando ela chegasse.
+- **O formulário diz o que faz.** «O pedido entra na fila por decidir — quem o
+  aprova é a copa», em vez de deixar acreditar que carregar no botão põe a
+  bebida no tabuleiro.
+
+### 30.2 As regras não têm porta de serviço
+
+`bar_pedir_por` não consultava as regras. Nenhuma. O resultado era a pior falha
+que uma regra pode ter, e é a mesma que já se tinha corrigido uma vez noutro
+sítio (§29.3, §8.0): escrevia-se «uma cerveja de hora a hora», via-se escrita no
+painel, e o bar servia dez — bastava que o pedido entrasse pelo balcão. Quem a
+pôs ficava convencido de que a casa a estava a cumprir, e o aviso que explica a
+espera nunca chegava a aparecer a ninguém.
+
+`barTravaoDe()` passa a correr também aqui, para os dois postos. **O alcance de
+uma regra é absoluto ou não é regra nenhuma**; o balcão não é excepção, é só
+outra maneira de entrar. A recusa lê-se dentro da janela, ao pé do campo que a
+há-de resolver, e não numa nota que passa no canto.
+
+### 30.3 Suspender uma bebida, e ela volta sozinha
+
+O gesto do meio da noite: o copeiro olha para «Os números», vê o gin a sair a
+três por minuto, e quer fechá-lo por meia hora.
+
+Não se levanta o menu nem se apaga a bebida. Põe-se-lhe uma regra de escopo
+`item` com `quantidade = 0` e **hora de saída** (`expira_em`), e ela volta
+sozinha quando o tempo passar — `barLimites()` já filtrava por `expira_em`, o
+que faltava era o gesto e o texto. Ninguém tem de se lembrar de a levantar, que
+é a parte que sempre corre mal: uma pausa esquecida é uma bebida fechada a noite
+inteira.
+
+Duas afinações no motor:
+
+- `barVeredicto()` distingue **`proibido`** de **`suspensa`**. Uma proibição sem
+  hora é «esta noite não»; com hora é «agora não», e a diferença é a única coisa
+  que a pessoa quer saber. A espera calcula-se do `expira_em`.
+- O texto novo: *«A «X» está indisponível de momento. Volte a tentar daqui a
+  Y.»* O motivo não vai lá — «está a sair depressa de mais» dito ao convidado
+  lê-se como uma acusação a quem a pediu (§9).
+
+Os minutos contam-se **no servidor** (`expira_min`). Se fosse o ecrã a converter
+«meia hora» numa hora concreta, convertia-a pelo relógio do telemóvel: a casa
+corre em `Africa/Luanda`, o aparelho de quem trabalha corre no que quiser, e uma
+pausa de dez minutos podia nascer expirada ou durar uma hora.
+
+### 30.4 As regras de uma bebida, por onde se vê o problema
+
+A ficha de uma pessoa mostra as regras dela desde a terceira passagem. A de uma
+bebida não existia: para saber o que travava o gin era preciso ir às Regras do
+Bar e ler a lista toda à procura da palavra «gin».
+
+Passa a haver-lhe uma janela — as regras escritas sobre aquela bebida, com
+editar e levantar, mais «suspender» e «regra nova» — e chega-se-lhe pelos dois
+sítios onde o problema se vê:
+
+- **a coluna do stock**, por baixo do acerto de garrafas (é a mesma janela: quem
+  carrega numa bebida quer uma das duas coisas, e as duas estão lá);
+- **o gráfico de «Os números»**, carregando na barra. É o mesmo princípio de
+  «Quem bebeu mais» (§28): o gráfico aponta, e o que se abre é o sítio onde se
+  faz alguma coisa a respeito do que ele aponta. É ali que o copeiro vê o gin a
+  subir; é dali que o há-de poder travar, sem atravessar dois separadores para
+  chegar à mesma bebida.
+
+Uma regra escrita a partir de uma bebida devolve à bebida — quem entrou por «Os
+números» quer ver a regra escrita ali, e não ser largado no ecrã de trás como se
+nada tivesse acontecido.
+
+### 30.5 O nome uma vez só, e a lista que cabe
+
+Duas correcções de desenho, ambas da mesma família: coisas que ocupavam espaço
+sem dizer nada de novo.
+
+**O nome escrito duas vezes.** A barra de trabalho do convidado tinha, por cima
+das pastilhas, uma linha com o nome de quem tinha entrado. Desde que a pastilha
+passou a dizer «A pedir para Ana» (§29.9), o nome ficou escrito duas vezes, uma
+por baixo da outra. Repetir não é sublinhar: é ocupar a linha que a barra tem
+para dizer o que **muda**, e empurrar o menu para fora do primeiro ecrã de um
+telemóvel. A linha saiu, e a barra apertou-se com ela.
+
+**A lista cortada.** A escolha com procura é absoluta dentro do campo, e o campo
+vive no corpo de uma janela que **rola**. Uma caixa absoluta não pinta para fora
+de um antepassado com `overflow`: num campo perto do fundo, a lista saía cortada
+a meio de uma linha — e meia linha cortada é a lista a dizer «há mais» sem dizer
+quanto, que é exactamente o que esta caixa existe para evitar (§29.1).
+
+`assentar()` resolve-o com três gestos, por esta ordem: **rolar** o que rola
+para ganhar espaço (quase sempre chega, e a lista fica onde a pessoa espera —
+debaixo do campo que carregou); **virar para cima** se o espaço estiver todo lá;
+e, em último, **apertar a altura** ao que sobrar — sempre em linhas inteiras,
+porque cortar a meio de uma linha era a queixa de origem por outra via.
+
+De caminho, `.j-bt` deixou de estar preso ao rodapé da janela. Um botão dentro
+do **corpo** — «Regra nova» na ficha de uma pessoa, «Suspender» na de uma
+bebida — apanhava só a cor e nada da forma: saía um rectângulo de canto vivo no
+meio de uma janela onde tudo o resto tem raio e respiro.
+
+### 30.6 A prova
+
+`tests/chk_bar_quinta.js`:
+
+| Verifica | Porque é que se parte |
+|---|---|
+| O pedido do garçom nasce `em_analise` | §30.1 — decidir é um posto |
+| E não promete stock antes de a copa o aprovar | Contava a garrafa duas vezes |
+| Aprovado pela copa, aí sim | A regra de ouro do módulo (§4) |
+| O copeiro NÃO serve pelo balcão o que as regras travam | §30.2 — era a porta de serviço |
+| Nem o garçom o submete | A regra é a mesma nas duas portas |
+| Suspender põe hora de saída | §30.3 |
+| O convidado lê «indisponível de momento» e quanto falta | O texto de `suspensa`, e não o de `proibido` |
+| Passada a hora, a bebida volta sozinha | Uma pausa esquecida fechava a bebida a noite toda |
+| A janela de uma bebida traz as regras dela | §30.4 |
+| A barra de «Os números» abre-as | §30.4 |
+| O nome do convidado lê-se uma vez só | §30.5 |

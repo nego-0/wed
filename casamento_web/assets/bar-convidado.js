@@ -160,8 +160,10 @@
 
   // ---- 2. o menu --------------------------------------------
   function pintarTopo() {
-    $('b-eu').textContent = eu ? eu.nome : 'Bar';
-    var seta = '<svg class="ico seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    // O nome de quem entrou já não se escreve à parte: vive dentro da pastilha
+    // («A pedir para Ana»), que é onde ele quer dizer alguma coisa. Ver o
+    // comentário da barra em bebidas.php.
+    var seta ='<svg class="ico seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
       + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
       + '<path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></svg>';
     var bp = $('b-para');

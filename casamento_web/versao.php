@@ -575,8 +575,9 @@ function correcoesEsperadas(): array {
          'api.php', "\$cortes = is_array(\$d['cortes'] ?? null)"],
         ['Bar: e o corte exige um porquê — quem recebe menos tem direito a sabê-lo',
          'api.php', 'Servir menos do que se pediu explica-se'],
-        ['Bar: um pedido lançado ao balcão nasce aprovado, não em análise',
-         'api.php', "\$estado = \$jaEntregue ? 'entregue' : 'aprovado';"],
+        // «Nasce aprovado» deixou de valer para toda a gente na quinta
+        // passagem (§30.1): vale para a copa, e o garçom submete. A linha que
+        // guardava a versão antiga está mais abaixo, com o resto dessa passagem.
         ['Bar: e pode nascer entregue, quando o copo já seguiu na mão',
          'assets/bar-copa.js', "rot: 'Já foi entregue?'"],
         ['Bar: o garçom escreve o que viu à mesa, e a copa lê-o',
@@ -659,6 +660,34 @@ function correcoesEsperadas(): array {
          'assets/janela.js', 'function licSelUpgrade('],
         ['E o formulário de convite escolhe a mesa por procura',
          'index.php', "licSelUpgrade(div.querySelector('.m-mesa')"],
+
+        // ---- A quinta passagem: a porta de serviço, e a bebida que se fecha (§30) ----
+        ['Bar: o garçom submete à copa; decidir continua a ser um posto',
+         'api.php', "\$estado = \$jaEntregue ? 'entregue' : (\$daCopa ? 'aprovado' : 'em_analise')"],
+        ['Bar: e um pedido por decidir não promete stock nenhum',
+         'api.php', 'elseif ($daCopa)   barReservar('],
+        ['Bar: as regras valem também no balcão — não há porta de serviço',
+         'api.php', 'if ($travao = barTravaoDe($conn, $gid'],
+        ['Bar: uma bebida suspende-se por um bocado e volta sozinha',
+         'assets/bar-copa.js', 'window.copaSuspender = function'],
+        ['Bar: e os minutos contam-se no relógio da casa, não no do telemóvel',
+         'api.php', "\$daqui = (int)(\$d['expira_min'] ?? 0)"],
+        ['Bar: «agora não» não é «esta noite não» — a proibição com hora tem espera',
+         'api.php', "'travao' => \$falta > 0 ? 'suspensa' : 'proibido'"],
+        ['Bar: e o convidado lê quanto falta, e não que a bebida acabou',
+         'api.php', "case 'suspensa':"],
+        ['Bar: uma bebida tem ficha de regras, como uma pessoa tem',
+         'assets/bar-copa.js', 'window.copaRegrasDaBebida = function'],
+        ['Bar: e chega-se-lhe pela barra de «Os números», onde o problema se vê',
+         'assets/bar-copa.js', "accao: i ? 'copaRegrasDaBebida('"],
+        ['Bar: o nome de quem entrou lê-se uma vez só, dentro da pastilha',
+         'bebidas.php', 'Duas pastilhas e mais nada.'],
+        ['Escolha com procura: a lista assenta onde cabe, em linhas inteiras',
+         'assets/janela.js', 'const assentar = () =>'],
+        ['E vira-se para cima quando o espaço está todo lá',
+         'assets/janela.css', '.lic-sel-pop.acima{'],
+        ['Janela: um botão do CORPO tem a forma dos do rodapé, e não só a cor',
+         'assets/janela.css', '.j-bt{ font-family:inherit;'],
 
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',

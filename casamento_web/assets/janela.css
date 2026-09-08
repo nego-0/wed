@@ -117,13 +117,25 @@ body.editor .pl-modal{
 
 /* ---- os botões da janela ----
    Próprios, e não os da página: nos editores as classes de estilo.css não
-   existem, e o rodapé aparecia com os botões cinzentos de fábrica. */
-.pl-modal-rodape .j-bt{ font-family:inherit; font-size:.86rem; font-weight:600;
+   existem, e o rodapé aparecia com os botões cinzentos de fábrica.
+
+   Sem prender ao rodapé, que era onde isto vivia. Um botão dentro do CORPO de
+   uma janela — «Regra nova» na ficha de uma pessoa, «Suspender» na de uma
+   bebida — apanhava só a cor de `.j-bt-sim` e nada da forma: saía um
+   rectângulo de canto vivo, colado ao texto, no meio de uma janela onde tudo
+   o resto tem raio e respiro. */
+.j-bt{ font-family:inherit; font-size:.86rem; font-weight:600;
   line-height:1.2; padding:.58rem 1.1rem; border-radius:9px; border:1px solid transparent;
   cursor:pointer; transition:background .15s ease, border-color .15s ease,
   color .15s ease, box-shadow .15s ease; }
-.pl-modal-rodape .j-bt:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
-.pl-modal-rodape .j-bt[disabled]{ opacity:.55; cursor:default; }
+.j-bt:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
+.j-bt[disabled]{ opacity:.55; cursor:default; }
+/* Dentro do corpo, um botão sem variante é discreto: contorno e nada mais.
+   No rodapé continua a não haver nenhum sem variante. */
+.j-bt:not(.j-bt-sim):not(.j-bt-nao):not(.j-bt-perigo){
+  background:transparent; border-color:var(--j-linha); color:var(--j-texto); }
+.j-bt:not(.j-bt-sim):not(.j-bt-nao):not(.j-bt-perigo):hover{ border-color:var(--j-ouro); }
+.j-bt .ico{ width:15px; height:15px; vertical-align:-2px; margin-right:.35rem; }
 
 .j-bt-nao{ background:transparent; border-color:var(--j-linha); color:var(--j-texto); }
 .j-bt-nao:hover:not([disabled]){ background:var(--j-linha); color:var(--j-ink); }
@@ -177,6 +189,11 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel-pop{ position:absolute; z-index:5; left:0; right:0; top:calc(100% + 4px);
   background:var(--j-card); border:1.5px solid var(--j-linha); border-radius:11px;
   box-shadow:0 14px 34px rgba(0,0,0,.28); overflow:hidden; }
+/* Virada para cima, quando o espaço está todo lá (ver `assentar` em
+   janela.js): um campo no fundo de uma janela que rola não tem por baixo de si
+   onde abrir, e a lista saía cortada a meio de uma linha. */
+.lic-sel-pop.acima{ top:auto; bottom:calc(100% + 4px);
+  box-shadow:0 -14px 34px rgba(0,0,0,.28); }
 .lic-sel-q{ display:flex; align-items:center; gap:.45rem; padding:.5rem .6rem;
   border-bottom:1px solid var(--j-linha); }
 .lic-sel-q .ico{ width:15px; height:15px; flex:none; color:var(--j-fraco); }

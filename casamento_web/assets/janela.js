@@ -396,6 +396,76 @@ function licSelLigarUm(cx){
     const ops  = () => Array.from(cx.querySelectorAll('.lic-sel-op'));
     const vivas = () => ops().filter(o => !o.hidden);
 
+    /* Quem é que rola por baixo deste campo.
+       O corpo de uma janela rola; a página, também. É contra esse que a lista
+       tem de caber — e não contra o ecrã. */
+    const rolador = () => {
+      let n = cx.parentElement;
+      while (n && n !== document.body){
+        const s = getComputedStyle(n);
+        if (/(auto|scroll)/.test(s.overflowY) && n.scrollHeight > n.clientHeight) return n;
+        n = n.parentElement;
+      }
+      return null;
+    };
+
+    /**
+     * Pôr a lista onde ela caiba.
+     *
+     * A lista é absoluta dentro do campo, e o campo vive no corpo de uma janela
+     * que rola. Uma caixa absoluta não pinta para fora de um antepassado com
+     * overflow: a lista saía CORTADA a meio de uma linha, e meia linha cortada
+     * é a lista a dizer «há mais» sem dizer quanto — que é exactamente o que
+     * esta caixa existe para evitar.
+     *
+     * Três gestos, por esta ordem: rolar o que rola para ganhar espaço (quase
+     * sempre chega, e a lista fica onde a pessoa espera — debaixo do campo que
+     * carregou); virá-la para cima se o espaço estiver todo lá; e, em último,
+     * apertar a altura ao que sobrar. Nunca fica cortada.
+     */
+    const FRESTA = 160;      // menos do que isto não é uma lista, é uma fresta
+    const assentar = () => {
+      const lista = pop.querySelector('.lic-sel-lista');
+      if (!lista) return;
+      pop.classList.remove('acima');
+      lista.style.maxHeight = '';
+      const cai = rolador();
+      const medir = () => {
+        const j = cai ? cai.getBoundingClientRect()
+                      : { top: 0, bottom: window.innerHeight };
+        const b = bt.getBoundingClientRect();
+        return { abaixo: j.bottom - b.bottom - 14, acima: b.top - j.top - 14 };
+      };
+      let m = medir();
+      if (m.abaixo < FRESTA && cai){
+        const podeRolar = cai.scrollHeight - cai.clientHeight - cai.scrollTop;
+        if (podeRolar > 0){
+          cai.scrollTop += Math.min(podeRolar, FRESTA - m.abaixo);
+          m = medir();
+        }
+      }
+      // O alto da lista é a caixa de procura mais as linhas; o que se aperta
+      // são as linhas, para a procura nunca desaparecer com elas.
+      const fora = pop.getBoundingClientRect().height - lista.getBoundingClientRect().height;
+      const alta = lista.getBoundingClientRect().height;
+      // Em linhas INTEIRAS. Uma altura cortada a meio de uma linha é a mesma
+      // queixa por outra via: vê-se meia palavra e não se sabe se há mais duas
+      // ou mais vinte. Cortada no fim de uma linha, a lista diz «há mais» com
+      // a barra de rolagem, que é como se diz isso.
+      const linha = (lista.querySelector('.lic-sel-op') || {}).offsetHeight || 0;
+      const forro = lista.clientHeight - lista.scrollHeight > 0 ? 0
+                  : (parseFloat(getComputedStyle(lista).paddingTop) || 0) * 2;
+      const inteiras = (h) => (linha > 0
+        ? Math.max(linha, Math.floor((h - forro) / linha) * linha + forro)
+        : Math.max(80, h));
+      if (m.acima > m.abaixo && m.acima >= FRESTA){
+        pop.classList.add('acima');
+        lista.style.maxHeight = Math.floor(inteiras(m.acima - fora)) + 'px';
+      } else if (m.abaixo < alta + fora){
+        lista.style.maxHeight = Math.floor(inteiras(Math.max(80, m.abaixo - fora))) + 'px';
+      }
+    };
+
     const abrir = (sim) => {
       // Abrir uma fecha as outras. O clique no botão pára a propagação (senão
       // o ouvinte de «clicar fora» fechava-a no mesmo gesto que a abriu), e
@@ -411,7 +481,7 @@ function licSelLigarUm(cx){
       }
       pop.hidden = !sim;
       bt.setAttribute('aria-expanded', sim ? 'true' : 'false');
-      if (sim){ q.value = ''; filtrar(); q.focus(); }
+      if (sim){ q.value = ''; filtrar(); assentar(); q.focus(); }
     };
     const escolher = (op) => {
       guardado.value = op.dataset.v;
@@ -442,7 +512,13 @@ function licSelLigarUm(cx){
     };
 
     bt.addEventListener('click', (e) => { e.stopPropagation(); abrir(pop.hidden); });
-    q.addEventListener('input', filtrar);
+    q.addEventListener('input', () => { filtrar(); assentar(); });
+    // Enquanto está aberta, a lista acompanha o que se mexe por baixo dela: uma
+    // janela que role com a lista aberta punha-a outra vez a meio da parede.
+    window.addEventListener('scroll', () => { if (!pop.hidden) assentar(); },
+                            { passive: true, capture: true });
+    window.addEventListener('resize', () => { if (!pop.hidden) assentar(); },
+                            { passive: true });
     q.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown'){ e.preventDefault(); andar(1); }
       else if (e.key === 'ArrowUp'){ e.preventDefault(); andar(-1); }

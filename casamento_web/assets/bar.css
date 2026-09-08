@@ -344,7 +344,7 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-festa-pe .filete span{ width:5px; height:5px; flex:none; rotate:45deg;
                           background:var(--c-ouro, #B4864A); }
 
-.b-festa-topo{ position:sticky; top:0; z-index:20; padding:.9rem 1.1rem .7rem;
+.b-festa-topo{ position:sticky; top:0; z-index:20; padding:.55rem 1.1rem;
                background:var(--c-fundo, #FBF8F1); border-bottom:1px solid rgba(0,0,0,.08); }
 /* A página é de telemóvel, mas abre-se num portátil (o casal a experimentar,
    nós a provar). O topo e o rodapé alinham-se com a coluna do meio, em vez de
@@ -355,12 +355,12 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
     padding-right:calc(50% - 280px + 1.1rem);
   }
 }
-/* O nome do casal saiu daqui para a abertura (.b-festa-capa): repetido na
-   barra colante, seguia a pessoa página abaixo a ocupar a linha onde ela
-   precisa de ver em nome de QUEM está a pedir. */
-.b-festa-topo .eu{ font-family:var(--c-serif, Georgia, serif); font-size:1.3rem; }
+/* Nem o nome do casal (que é da abertura) nem o de quem entrou (que é da
+   pastilha) se escrevem nesta barra. Ela tem duas pastilhas e é tudo: é a
+   linha que a pessoa vê sempre, e o que se põe aqui rouba menu ao primeiro
+   ecrã de um telemóvel. */
 .b-pastilhas{ display:flex; gap:.4rem; flex-wrap:wrap; }
-.b-mesa{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.35rem;
+.b-mesa{ display:inline-flex; align-items:center; gap:.4rem;
          background:rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.1); border-radius:50px;
          padding:.35rem .85rem; font-size:.85rem; cursor:pointer; min-height:40px;
          color:inherit; font-family:inherit; }
@@ -373,6 +373,10 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-para.on{ background:var(--c-ouro, #B4864A); border-color:var(--c-ouro, #B4864A);
             color:var(--c-fundo, #FBF8F1); font-weight:600; }
 .b-corpo{ max-width:560px; margin:0 auto; padding:1rem 1.1rem; }
+/* No menu do convidado, o corpo cola-se à barra. A folga de cima somava-se ao
+   respiro da própria barra e abria uma banda de nada entre a pastilha e a
+   caixa de procura — a primeira coisa que a pessoa vê ao chegar era branco. */
+.b-festa .b-corpo{ padding-top:.7rem; }
 /* A barra do pedido é fixa e tapa o fim da página. Enquanto ela lá estiver, o
    corpo faz-se mais alto pela altura dela — senão o fecho («um garçom leva-o
    à mesa 4») fica debaixo do botão «Pedir», e o que se esconde é justamente a
@@ -385,7 +389,7 @@ body.com-rodape .b-corpo{
    não podem sair da folha da casa: esta página veste o convite deles, e um
    campo com o verde da plataforma no meio de um convite cor de vinho é a
    costura a aparecer. Os --c-* são as cores do casal; o desenho é o mesmo. */
-.b-festa .b-fer{ margin:0 0 .9rem; }
+.b-festa .b-fer{ margin:0 0 .6rem; }
 .b-festa .b-foto{ background:var(--c-creme, #F3EEE3); }
 .b-festa .b-busca input{ border-color:rgba(0,0,0,.15); background:var(--c-cartao, #fff);
                          color:var(--c-tinta, #20342A); min-height:48px; }
@@ -828,6 +832,11 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 
 /* Os dois gestos de uma regra: editar e levantar. Juntos, e à direita. */
 .b-reg-bt{ display:flex; gap:.25rem; flex:none; }
+
+/* Uma fila de gestos ao fundo de uma secção de janela — «suspender» e «regra
+   nova» debaixo das regras de uma bebida. Embrulha em telemóvel, que é onde a
+   copa trabalha: dois botões lado a lado num ecrã de 390px saem cortados. */
+.b-bt-fila{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.8rem; }
 
 /* A frase que a regra vai ser, escrita por cima do formulário e reescrita a
    cada campo que se toca. Um formulário de três números pede que se imagine o

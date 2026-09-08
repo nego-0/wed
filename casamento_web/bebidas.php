@@ -132,9 +132,14 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
 
 <?php // ---- A barra de trabalho ------------------------------------------
       // Esta sim é colante: quem está a rolar o menu precisa de ver sempre em
-      // nome de quem está a pedir e para que mesa vai. ?>
+      // nome de quem está a pedir e para que mesa vai.
+      //
+      // Duas pastilhas e mais nada. Havia aqui, por cima delas, uma linha com o
+      // nome de quem tinha entrado — e desde que a pastilha passou a dizer «A
+      // pedir para Ana» (§29.5) o nome ficou escrito duas vezes, uma por baixo
+      // da outra. Repetir não é sublinhar: é ocupar a linha que a barra tem
+      // para dizer o que MUDA, e empurrar o menu para fora do primeiro ecrã. ?>
 <div class="b-festa-topo">
-  <div class="eu" id="b-eu">Bar</div>
   <div class="b-pastilhas">
     <button class="b-mesa" id="b-mesa" type="button" onclick="barMesa()" hidden></button>
     <button class="b-mesa b-para" id="b-para" type="button" onclick="barPara()" hidden></button>

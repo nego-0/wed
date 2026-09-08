@@ -191,8 +191,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   await conv.locator('.b-nome').first().click();
   await conv.waitForTimeout(900);
-  ok((await conv.locator('#b-eu').innerText()).trim().length > 3,
-     'escolher-se prende o telemóvel a esse nome');
+  // O nome de quem entrou lê-se na pastilha — «A pedir para Ana». A linha à
+  // parte (#b-eu) saiu na quinta passagem (§30.5): escrevia o mesmo nome duas
+  // vezes, uma por baixo da outra, e roubava menu ao primeiro ecrã.
+  ok((await conv.locator('#b-para').innerText()).replace(/\s+/g, ' ').trim().length > 15,
+     'escolher-se prende o telemóvel a esse nome, e a pastilha di-lo: «'
+     + (await conv.locator('#b-para').innerText()).replace(/\s+/g, ' ').trim() + '»');
   ok(await conv.locator('#b-mesa').isVisible(),
      'a mesa de entrega fica à vista e muda-se: as pessoas trocam de lugar');
   ok((await conv.locator('.b-bebida').count()) >= 2,

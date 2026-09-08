@@ -2607,8 +2607,16 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
     if (!$l) return $out;
 
     if ($l['quantidade'] <= 0) {
-        return ['pode' => 0, 'travao' => 'proibido', 'espera_s' => 0,
-                'mensagem' => $l['mensagem'] ?: ''];
+        // Uma proibição pode ter hora de saída — é o que a copa põe quando
+        // suspende uma bebida que está a sair depressa de mais (§30.4). Nesse
+        // caso não é «esta noite não»: é «agora não», e a diferença é a única
+        // coisa que a pessoa quer saber. A regra deixa de valer sozinha quando
+        // a hora chega (barLimites filtra por expira_em), e por isso não há
+        // nada para levantar depois — a bebida volta ao menu por si.
+        $ate = !empty($l['expira_em']) ? strtotime($l['expira_em']) : false;
+        $falta = $ate ? max(0, $ate - time()) : 0;
+        return ['pode' => 0, 'travao' => $falta > 0 ? 'suspensa' : 'proibido',
+                'espera_s' => $falta, 'mensagem' => $l['mensagem'] ?: ''];
     }
     $c = barConsumo($conn, $l, $convidadoId, $conviteId, $excluir);
     $sobra = $l['quantidade'] - $c['usado'];
@@ -2643,6 +2651,12 @@ function barTextoTravao(array $item, array $v, int $pedidas = 0): string {
         case 'proibido':
             return 'A ' . $nome . ' não está disponível para si esta noite. '
                  . 'Fale com um garçom se achar que é engano.';
+        case 'suspensa':
+            // A copa fechou esta bebida por um bocado. Diz-se quanto falta e
+            // mais nada: o motivo é da casa, e «está a sair depressa de mais»
+            // dito ao convidado lê-se como uma acusação a quem a pediu.
+            return 'A ' . $nome . ' está indisponível de momento. '
+                 . 'Volte a tentar daqui a ' . barRelogio($v['espera_s']) . '.';
         case 'intervalo':
             return 'A próxima ' . $nome . ' abre daqui a ' . barRelogio($v['espera_s']) . '.';
         case 'tecto':
@@ -4178,6 +4192,14 @@ if ($acao === 'bar_regra_guardar') {
     };
     $vigora = $momento($d['vigora_hora'] ?? ($d['vigora_em'] ?? ''), false);
     $expira = $momento($d['expira_hora'] ?? ($d['expira_em'] ?? ''), true);
+    // «Daqui a N minutos», contado pelo relógio DO SERVIDOR. Quem suspende uma
+    // bebida a meio de uma festa não pensa numa hora, pensa num bocado — e se
+    // fosse o ecrã a converter esse bocado numa hora, converteria-o pelo
+    // relógio do telemóvel: a casa corre em Africa/Luanda, o aparelho de quem
+    // está a trabalhar corre no que quiser, e uma pausa de dez minutos podia
+    // nascer expirada ou durar uma hora.
+    $daqui = (int)($d['expira_min'] ?? 0);
+    if ($daqui > 0) $expira = date('Y-m-d H:i:s', time() + min(1440, $daqui) * 60);
     // Uma janela ao contrário não é uma janela: das 21h às 2h é a madrugada
     // seguinte, e é isso que quem a escreve quer dizer.
     if ($vigora && $expira && strtotime($expira) <= strtotime($vigora)) {
@@ -4446,33 +4468,58 @@ if ($acao === 'bar_pedir_por') {
     if (!$linhas) erro('Escolha pelo menos uma bebida.');
 
     /* ---- em que estado nasce este pedido ----------------------
-       Quem lança um pedido pelo balcão JÁ o decidiu — está a olhar para a
-       pessoa e para as garrafas. Fazê-lo nascer «em análise» era pô-lo a
-       aprovar aquilo que acabou de escrever, e a fila enchia-se de pedidos
-       que só esperavam por quem os tinha criado.
+       Depende de QUEM o lança, e a diferença é a mesma que separa os dois
+       postos: a copa decide, o garçom serve.
 
-       Duas saídas, portanto: nasce APROVADO (fica prometido, e um garçom
-       leva-o), ou nasce ENTREGUE quando o copo já foi na mão — o caso do
-       balcão, que é o mais comum de todos e não passa por entrega nenhuma. */
-    $jaEntregue = !empty($d['entregue']);
-    $estado = $jaEntregue ? 'entregue' : 'aprovado';
+       O COPEIRO que lança um pedido pelo balcão já o decidiu — está a olhar
+       para a pessoa e para as garrafas. Fazê-lo nascer «em análise» era pô-lo
+       a aprovar aquilo que acabou de escrever, e a fila enchia-se de pedidos
+       que só esperavam por quem os tinha criado. Nasce APROVADO (fica
+       prometido, e alguém o leva), ou ENTREGUE quando o copo já foi na mão.
+
+       O GARÇOM não decide nada. Enquanto o pedido dele nascia aprovado, quem
+       anda na sala tinha à mão a única porta do bar que não passava por
+       ninguém: escrevia o pedido e ele estava servido. Não é falta de
+       confiança — é que a decisão é um posto, e um posto não se exerce por
+       acidente de onde se está a escrever. O que ele lança SUBMETE-SE: entra
+       na fila por decidir, como o de qualquer convidado. */
+    $daCopa = podeCopa();
+    $jaEntregue = $daCopa && !empty($d['entregue']);
+    $estado = $jaEntregue ? 'entregue' : ($daCopa ? 'aprovado' : 'em_analise');
     foreach ($linhas as [$item, $q]) {
         if ((int)$item['disponivel'] < $q) {
             erro('Já não há «' . $item['nome'] . '» que chegue: restam '
                . (int)$item['disponivel'] . '.');
         }
     }
+    /* ---- e as regras valem aqui como valem em todo o lado ----
+       Esta porta não as consultava. O resultado era o pior que uma regra pode
+       ter: escrevia-se «uma cerveja de hora a hora», via-se escrita no painel,
+       e o bar servia dez — bastava que o pedido entrasse pelo balcão. Quem a
+       pôs ficava convencido de que a casa a estava a cumprir, e o aviso que
+       explica a espera nunca chegava a aparecer a ninguém.
+
+       O alcance de uma regra é absoluto ou não é regra nenhuma. O balcão não é
+       excepção: é só outra maneira de entrar. */
+    $finais = array_map(fn($l) => ['li' => ['item_id' => (int)$l[0]['id']], 'q' => $l[1]], $linhas);
+    if ($travao = barTravaoDe($conn, $gid, (int)$g['convite_id'], $finais)) erro($travao);
     $codigo = barCodigoCurto();
     $quem = (string)(utilizadorAtual() ?? '');
     $conviteId = (int)$g['convite_id'];
-    $entregueEm = $jaEntregue ? 'NOW()' : 'NULL';
+    // Quem decidiu só se escreve quando alguém decidiu. Um pedido submetido
+    // pelo garçom nasce por decidir, e pôr-lhe aqui um nome e uma hora de
+    // decisão era assinar por ele uma coisa que ele não fez — e os tempos da
+    // copa («quanto demora a analisar») passavam a contar zeros que ninguém
+    // gastou.
+    $decidiu   = $daCopa ? '?,NOW()' : 'NULL,NULL';
+    $entregou  = $jaEntregue ? '?,NOW(),NOW()' : 'NULL,NULL,NULL';
     $st = $conn->prepare("INSERT INTO {$P}bar_pedidos
             (casamento_id,codigo_curto,convidado_id,convite_id,mesa_id,estado,criado_por,criado_em,
              decidido_por,decidido_em,entregue_por,apanhado_em,entregue_em)
-            VALUES (?,?,?,?,?,'$estado',?,NOW(),?,NOW(),"
-          . ($jaEntregue ? "?,$entregueEm,$entregueEm" : "NULL,NULL,NULL") . ")");
-    if ($jaEntregue) $st->bind_param('isiiisss', $cid, $codigo, $gid, $conviteId, $mesaId, $quem, $quem, $quem);
-    else             $st->bind_param('isiiiss',  $cid, $codigo, $gid, $conviteId, $mesaId, $quem, $quem);
+            VALUES (?,?,?,?,?,'$estado',?,NOW(),$decidiu,$entregou)");
+    if ($jaEntregue)      $st->bind_param('isiiisss', $cid, $codigo, $gid, $conviteId, $mesaId, $quem, $quem, $quem);
+    elseif ($daCopa)      $st->bind_param('isiiiss',  $cid, $codigo, $gid, $conviteId, $mesaId, $quem, $quem);
+    else                  $st->bind_param('isiiis',   $cid, $codigo, $gid, $conviteId, $mesaId, $quem);
     if (!@$st->execute()) erro('Não foi possível lançar o pedido.');
     $pid = $conn->insert_id;
     foreach ($linhas as [$item, $q]) {
@@ -4485,13 +4532,17 @@ if ($acao === 'bar_pedir_por') {
     // O stock segue a mesma regra de sempre (§4): aprovar PROMETE, entregar
     // BAIXA. Um pedido que nasce entregue faz as duas coisas de uma vez, e a
     // conta fica exactamente onde ficaria se tivesse passado pelos dois ecrãs.
+    // Um que nasce POR DECIDIR não promete nada: quem promete é a aprovação, e
+    // reservar aqui contaria a mesma garrafa duas vezes quando ela chegasse.
     foreach ($linhas as [$item, $q]) {
-        if ($jaEntregue) barMoverStock($conn, (int)$item['id'], -$q, 'entrega', $pid, 'lançado ao balcão');
-        else             barReservar($conn, (int)$item['id'], $q);
+        if ($jaEntregue)   barMoverStock($conn, (int)$item['id'], -$q, 'entrega', $pid, 'lançado ao balcão');
+        elseif ($daCopa)   barReservar($conn, (int)$item['id'], $q);
     }
     $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
     registar($conn, 'bar_pedido_por', $g['nome'],
-             '#' . $codigo . ' · ' . $resumo . ($jaEntregue ? ' · entregue no acto' : ' · por entregar'));
+             '#' . $codigo . ' · ' . $resumo
+           . ($jaEntregue ? ' · entregue no acto'
+                          : ($daCopa ? ' · por entregar' : ' · à espera da copa')));
     ok(['pedido' => barPedidoLinha($conn, barPedido($conn, $pid), true),
         'estado' => barEstadoGeral($conn), 'itens' => barItens($conn, true)]);
 }

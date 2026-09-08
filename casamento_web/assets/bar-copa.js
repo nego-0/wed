@@ -315,13 +315,21 @@
         + 'ritmo não há previsão que se respeite.</p>';
 
     // ---- o que a festa bebeu, em barras ------------------------
+    // Clicar abre as regras daquela bebida — é o mesmo princípio de «Quem bebeu
+    // mais»: o gráfico aponta, e o que se abre é o sítio onde se faz alguma
+    // coisa a respeito do que ele aponta. É AQUI que o copeiro vê o gin a sair
+    // depressa de mais, e por isso é daqui que ele o há-de poder travar, sem
+    // atravessar dois separadores para chegar à mesma bebida.
     var top = (d.consumo || []).filter(function (x) { return x.servidas > 0; })
                                .sort(function (a, b) { return b.servidas - a.servidas; });
     var maxB = top.length ? top[0].servidas : 1;
     $('nm-bebidas').innerHTML = top.length
       ? barras(top.slice(0, 12).map(function (x) {
           var i = (EST.itens || []).filter(function (y) { return y.nome === x.nome; })[0];
-          return { nome: x.nome, n: x.servidas, cor: i && i.categoria_cor };
+          return { nome: x.nome, n: x.servidas, cor: i && i.categoria_cor,
+                   accao: i ? 'copaRegrasDaBebida(' + i.id + ')' : '',
+                   titulo: i ? 'Ver e pôr regras de ' + x.nome : '',
+                   classe: i ? 'toca' : '' };
         }), maxB)
         + (top.length > 12 ? '<p class="b-nota">e mais ' + (top.length - 12) + '.</p>' : '')
       : '<p class="b-nota">Nada servido ainda.</p>';
@@ -773,11 +781,28 @@
   window.copaAcerto = function (id) {
     var i = (EST.itens || []).filter(function (x) { return x.id === id; })[0];
     if (!i) return;
+    // Duas coisas se fazem a uma bebida a meio de uma noite, e só uma delas é
+    // contar garrafas. A outra é TRAVÁ-LA: o copeiro olha para «Os números»,
+    // vê o gin a sair a três por minuto, e quer fechá-lo por meia hora. Isso
+    // vivia noutro ecrã, noutro separador, a três gestos de distância — e a
+    // meio de uma festa três gestos é o mesmo que não existir.
+    var regras = regrasDaBebida(id);
     licFormulario({
       titulo: esc(i.nome),
       guardar: 'Guardar',
       dica: 'Há <b>' + i.stock + '</b> lançadas, <b>' + i.reservado + '</b> prometidas. '
           + 'Some o que chegou, ou acerte para o que realmente há na copa.',
+      extra: PODE
+        ? '<div class="j-sec">' + ico.ico('trancado') + 'Quanto a esta bebida'
+          + (regras.length ? ' <small>' + regras.length + '</small>' : '') + '</div>'
+          + linhasDeRegra(regras, id)
+          + '<div class="b-bt-fila">'
+          +   '<button type="button" class="j-bt" onclick="copaSuspender(' + id + ')">'
+          +     ico.ico('relogio') + 'Suspender por um bocado</button>'
+          +   '<button type="button" class="j-bt" onclick="copaRegraDeBebida(' + id + ')">'
+          +     ico.ico('mais') + 'Regra desta bebida</button>'
+          + '</div>'
+        : '',
       campos: [
         { id: 'entrou', rot: 'Chegaram agora', tipo: 'numero', valor: 0, min: 0,
           dica: 'Somam-se ao que já lá estava.' },
@@ -803,6 +828,152 @@
         }
         if (!d || !d.success) return false;
         toast('Stock actualizado.');
+        await carregar(true);
+        return true;
+      }
+    });
+  };
+
+  /* ---- as regras DE UMA BEBIDA ---------------------------------
+     A ficha de uma pessoa mostra as regras dela desde sempre. A de uma bebida
+     não existia: para saber o que travava o gin era preciso ir às Regras do
+     Bar e ler a lista toda à procura da palavra «gin». */
+
+  /** As regras escritas sobre esta bebida — só as dela, não as que a apanham
+      por serem de toda a gente. É por essas que se pergunta ao carregar-lhe. */
+  function regrasDaBebida(id) {
+    return (EST.regras || []).filter(function (r) {
+      return r.escopo === 'item' && Number(r.alvo_id) === Number(id);
+    });
+  }
+
+  /** As mesmas linhas da ficha de uma pessoa: a frase, o vigor, editar, tirar. */
+  function linhasDeRegra(regras, itemId) {
+    if (!regras.length) {
+      return '<p class="dica">Nenhuma. Valem-lhe as regras gerais da casa.</p>';
+    }
+    return regras.map(function (r) {
+      return '<div class="j-linha' + (r.vigor === 'agora' ? '' : ' espera') + '">'
+        + '<span>' + esc(r.frase)
+        + (r.vigor === 'ainda' ? ' <small>— ainda não são horas</small>' : '')
+        + (r.vigor === 'passou' ? ' <small>— já passou a hora</small>' : '')
+        + (r.nota ? '<br><small>' + esc(r.nota) + '</small>' : '')
+        + '</span>'
+        // Os mesmos dois botões do painel das Regras do Bar, e pela mesma
+        // ordem: quem aprendeu a editar uma regra lá não tem de reaprender aqui.
+        + (PODE ? '<span class="b-reg-bt">'
+                + btIco('lapis', 'Editar esta regra',
+                        'copaRegraEditar(' + r.id + ',' + itemId + ')')
+                + btIco('lixo', 'Levantar esta regra',
+                        'copaRegraForaDaBebida(' + r.id + ',' + itemId + ')', 'perigo')
+                + '</span>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  /**
+   * A janela de uma bebida vista pelas suas regras.
+   *
+   * É a mesma coisa que `copaAcerto` mostra em baixo, mas por si só: é aqui
+   * que «Os números» aterra quando se carrega numa barra do gráfico. Quem
+   * chega por ali não quer contar garrafas — viu um número a subir depressa e
+   * quer fazer alguma coisa a respeito dele.
+   */
+  window.copaRegrasDaBebida = function (id) {
+    var i = (EST.itens || []).filter(function (x) { return x.id === id; })[0];
+    if (!i) { toast('Essa bebida já não está no menu.', true); return; }
+    var regras = regrasDaBebida(id);
+    licJanela('Regras de ' + esc(i.nome),
+      '<div class="dica">' + i.disponivel + ' disponíveis'
+      + (i.reservado ? ' · ' + i.reservado + ' prometidas' : '') + '.</div>'
+      + '<div class="j-sec">' + ico.ico('trancado') + 'Quanto a esta bebida'
+      + (regras.length ? ' <small>' + regras.length + '</small>' : '') + '</div>'
+      + linhasDeRegra(regras, id)
+      + (PODE
+          ? '<div class="b-bt-fila">'
+            + '<button type="button" class="j-bt" onclick="copaSuspender(' + id + ')">'
+            +   ico.ico('relogio') + 'Suspender por um bocado</button>'
+            + '<button type="button" class="j-bt j-bt-sim" onclick="copaRegraDeBebida(' + id + ')">'
+            +   ico.ico('mais') + 'Regra nova</button>'
+            + '</div>'
+          : ''),
+      null, { cancelar: 'Fechar' });
+  };
+
+  /** Uma regra desta bebida, na janela partilhada das Regras do Bar. */
+  window.copaRegraDeBebida = function (id) {
+    licFecharJanela();
+    window.barRegraNova({ sobre: 'i' + id });
+  };
+
+  /* De que bebida se saiu para ir editar uma regra.
+     A janela partilhada só recebe a regra — não sabe de onde se veio, nem tem
+     de saber. Sem esta lembrança, quem editasse uma regra do gin era largado
+     no ecrã de trás como se nada tivesse acontecido. Vale para UMA volta: põe
+     -se ao sair, gasta-se ao voltar. Guardá-la mais tempo dava o efeito
+     contrário — editar depois uma regra geral abria a janela do gin. */
+  var voltarABebida = 0;
+
+  window.copaRegraEditar = function (id, itemId) {
+    voltarABebida = itemId || 0;
+    licFecharJanela();
+    window.barRegraEditar(id);
+  };
+
+  window.copaRegraForaDaBebida = async function (id, itemId) {
+    var d = await window.api('bar_regra_apagar', { method: 'POST',
+                                                   body: JSON.stringify({ id: id }) });
+    if (!d || !d.success) return;
+    await carregar(true);
+    licFecharJanela();
+    copaRegrasDaBebida(itemId);
+  };
+
+  /**
+   * Fechar uma bebida por um bocado.
+   *
+   * É o gesto do meio da noite: o gin está a sair a três por minuto e a copa
+   * não tem mãos a medi-lo. Não se levanta o menu, não se apaga a bebida — põe
+   * -se-lhe uma regra com hora de saída, e ela VOLTA SOZINHA quando o tempo
+   * passar. Ninguém tem de se lembrar de a levantar, que é a parte que sempre
+   * corre mal: uma pausa esquecida é uma bebida que ficou fechada a noite toda.
+   *
+   * Os minutos contam-se no servidor (expira_min): a casa corre numa hora e o
+   * telemóvel de quem trabalha corre noutra.
+   */
+  window.copaSuspender = function (id) {
+    var i = (EST.itens || []).filter(function (x) { return x.id === id; })[0];
+    if (!i) return;
+    licFecharJanela();
+    licFormulario({
+      titulo: 'Suspender ' + esc(i.nome),
+      guardar: 'Suspender',
+      dica: 'A bebida sai do menu de toda a gente e volta sozinha quando o '
+          + 'tempo acabar. Quem a pedir entretanto lê quanto falta.',
+      campos: [
+        { id: 'minutos', rot: 'Por quanto tempo', tipo: 'escolha', valor: '30',
+          procura: false,
+          opcoes: [{ v: '10', r: '10 minutos' }, { v: '15', r: '15 minutos' },
+                   { v: '30', r: 'Meia hora' },  { v: '60', r: 'Uma hora' },
+                   { v: '120', r: 'Duas horas' }] },
+        { id: 'mensagem', rot: 'O que se diz a quem a pedir', tipo: 'text', valor: '',
+          largura: 2,
+          dica: 'Em branco, a casa diz «está indisponível de momento» e conta '
+              + 'o tempo que falta — que é o que a pessoa quer saber.' }
+      ],
+      aoGuardar: async function (v) {
+        var min = parseInt(v.minutos, 10) || 30;
+        var d = await window.api('bar_regra_guardar', { method: 'POST', silencioso: true,
+          body: JSON.stringify({ escopo: 'item', alvo_id: id, sujeito: 'convidado',
+                                 unidade: 'bebidas', quantidade: 0, janela_min: 0,
+                                 expira_min: min, mensagem: v.mensagem,
+                                 nota: 'Suspensa pela copa por ' + min + ' min' }) });
+        if (!d || !d.success) {
+          licJanelaErro((d && d.message) || 'Não foi possível suspender.');
+          return false;
+        }
+        avisarFora(d.fora);
+        toast(i.nome + ' suspensa por ' + min + ' min. Volta sozinha.');
         await carregar(true);
         return true;
       }
@@ -895,7 +1066,17 @@
       recarrega, avisa do que deixou de caber, e volta à ficha de onde saiu. */
   window.barRegraPosta = function (r, pre) {
     avisarFora(r && r.fora);
-    if (pre && pre.convidado_id) copaFicha(pre.convidado_id);
+    var volta = voltarABebida; voltarABebida = 0;
+    if (pre && pre.convidado_id) { copaFicha(pre.convidado_id); return; }
+    // Uma regra escrita a partir de uma bebida devolve à bebida: quem entrou
+    // por «Os números» a ver o gin a subir quer ver a regra escrita ali, e não
+    // ser deixado no ecrã de onde saiu como se nada tivesse acontecido.
+    var sobre = pre && pre.sobre;
+    if (typeof sobre === 'string' && sobre.charAt(0) === 'i') {
+      copaRegrasDaBebida(parseInt(sobre.slice(1), 10));
+    } else if (volta) {
+      copaRegrasDaBebida(volta);
+    }
   };
 
   /**
@@ -962,8 +1143,12 @@
       titulo: 'Aprovar um pedido',
       guardar: 'Aprovar',
       largo: true,
+      // «Entra já aprovado» é verdade quanto à FILA, e não quanto às regras.
+      // As regras do bar valem aqui como valem em qualquer outra porta: se uma
+      // delas travar esta bebida, o pedido não passa — e é assim que tem de
+      // ser, senão bastava lançar pelo balcão para as furar todas.
       dica: 'É um pedido feito ao balcão: entra já aprovado, porque quem o '
-          + 'escreve é quem o decide.',
+          + 'escreve é quem o decide. As regras do bar valem à mesma.',
       campos: [
         { id: 'nome', rot: 'Nome do convidado', tipo: 'text', valor: '', largura: 2,
           dica: '<span id="pp-achados"></span>' },
@@ -979,13 +1164,18 @@
       ],
       aoGuardar: async function (v) {
         if (!ppEscolhido) { licJanelaErro('Escolha o convidado na lista.'); return false; }
-        var d = await window.api('bar_pedir_por', { method: 'POST',
+        // Silencioso, para a recusa das regras se ler DENTRO da janela, ao pé
+        // do campo que a há-de resolver, e não numa nota que passa no canto.
+        var d = await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
           body: JSON.stringify({ convidado_id: ppEscolhido.id,
                                  mesa_id: ppEscolhido.mesa_id,
                                  entregue: !!v.entregue,
                                  itens: [{ item_id: parseInt(v.item, 10),
                                            quantidade: parseInt(v.quantidade, 10) || 1 }] }) });
-        if (!d || !d.success) return false;
+        if (!d || !d.success) {
+          licJanelaErro((d && d.message) || 'Não foi possível lançar o pedido.');
+          return false;
+        }
         toast(v.entregue
           ? 'Pedido ' + d.pedido.codigo + ' servido. O stock já desceu.'
           : 'Pedido ' + d.pedido.codigo + ' aprovado — está por entregar.');
