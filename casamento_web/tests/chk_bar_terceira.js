@@ -108,6 +108,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   vigiar(ges, 'gestao');
   await ges.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
   await ges.waitForTimeout(900);
+  // A conta de uma corrida anterior fica na base. Um email por conta: convidar
+  // outra vez não passa, a senha nova nunca sai, e a prova seguia em frente a
+  // pedir «window.api» numa página de login. Tira-se primeiro.
+  await ges.evaluate(async () => {
+    const d = await window.api('acesso_lista', { method: 'GET', silencioso: true });
+    for (const a of ((d && d.acessos) || [])) {
+      if (a.email === 'zt.garcom@exemplo.pt') {
+        await window.api('conta_apagar_do_casamento&utilizador=' + a.utilizador_id,
+                         { method: 'POST', silencioso: true });
+      }
+    }
+  });
   await ges.selectOption('#a-papel', 'entregador');
   await ges.fill('#a-email', 'zt.garcom@exemplo.pt');
   await ges.fill('#a-nome', 'ZT Garçom');
@@ -222,7 +234,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     window.barRegraNova({ convidado_id: id, nome: 'ZT alguém' });
     await new Promise(r => setTimeout(r, 1400));
     const t = document.querySelector('#lic-janela h3, #lic-janela .lic-tit');
-    const quem = document.getElementById('lf-quem');
+    // O campo chamava-se «quem» e passou a «alcance» na quarta passagem
+    // (§29.6), quando a janela ganhou a pergunta da família por cima.
+    const quem = document.getElementById('lf-alcance');
     const pessoa = document.getElementById('lf-pessoa');
     return { titulo: t ? t.textContent : '', quem: quem ? quem.value : '',
              pessoa: pessoa ? pessoa.value : '' };
