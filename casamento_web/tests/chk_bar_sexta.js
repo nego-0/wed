@@ -1,13 +1,20 @@
 // A prova da sexta passagem do bar (docs/bar-motor-assistido.md).
 //
-// FASE 1 — o esquema v40. O motor ainda não propõe nada: o que aqui se
-// defende é que o sítio onde ele vai escrever existe, está com âmbito, viaja
-// no retrato, e — a parte que mais importa — que abrir o esquema **não mexeu
-// em nada do que já lá estava**.
+// FASE 1 — o esquema v40. Que o sítio onde o motor vai escrever existe, está
+// com âmbito, viaja no retrato, e — a parte que mais importa — que abrir o
+// esquema **não mexeu em nada do que já lá estava**. Uma migração que muda o
+// comportamento de uma regra já escrita é a pior espécie de migração: ninguém
+// a vê acontecer, e o bar passa a fazer outra coisa a meio de uma festa.
 //
-// Uma migração que muda o comportamento de uma regra já escrita é a pior
-// espécie de migração: ninguém a vê acontecer, e o bar passa a fazer outra
-// coisa a meio de uma festa.
+// FASE 2 — o motor mede e propõe. A fronteira toda desta passagem cabe em duas
+// linhas, e são as primeiras que aqui se defendem:
+//
+//     uma regra em `sugere` NÃO trava o pedido, e LEVANTA o alerta;
+//     a mesma regra em `trava` recusa, e não levanta alerta nenhum.
+//
+// Se isto cair, ou o módulo ganhou um modo que não faz nada — e uma regra
+// desligada que continua escrita no painel é a pior coisa que este módulo pode
+// ter —, ou ganhou um modo que trava à mesma, e aí mentiu a quem o escolheu.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -107,14 +114,168 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // `versao.php`, que é a ferramenta desta casa para «esta linha tem de estar
   // neste ficheiro», e é `chk_versao.js` que a cobra.
 
+  // ==================================================================
+  // FASE 2 — o motor mede e propõe
+  // ==================================================================
+
+  // O mundo desta parte: gente só nossa e uma bebida só nossa, para os tectos
+  // «ao todo» não se medirem contra o que as outras provas já beberam.
+  const cen = await p.evaluate(async () => {
+    // Os degraus voltam aos de fábrica: a secção 4 mexeu-lhes para provar que
+    // se arrumam, e daqui para baixo mede-se contra 50,30,15,5.
+    await window.api('bar_defs', { method: 'POST',
+      body: JSON.stringify({ 'bar.degraus_stock': '50,30,15,5' }) });
+    const e = await window.api('bar_estado');
+    for (const x of (e.fila || [])) {
+      await window.api(x.estado === 'em_analise' ? 'bar_decidir' : 'bar_cancelar_copa',
+        { method: 'POST', body: JSON.stringify({ id: x.id, decisao: 'recusar',
+                                                 motivo_texto: 'arrumar a prova' }) });
+    }
+    for (const x of (e.regras || [])) {
+      await window.api('bar_regra_apagar', { method: 'POST', body: JSON.stringify({ id: x.id }) });
+    }
+    for (const i of (e.itens || []).filter(i => /^ZS /.test(i.nome))) {
+      await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
+    }
+    const cv = await window.api('convite_list&busca=ZS%20Prova', { silencioso: true });
+    for (const c of ((cv && cv.convites) || [])) {
+      if (c.nome_exibicao === 'ZS Prova') {
+        await window.api('convite_delete&definitivo=1&id=' + c.id, { method: 'POST' });
+      }
+    }
+    await window.api('convite_save', { method: 'POST', body: JSON.stringify({
+      nome_exibicao: 'ZS Prova', tipo: 'digital', lado: 'noivo',
+      membros: [{ nome: 'ZS Bebedor' }] }) });
+    const d = await window.api('bar_item_guardar', { method: 'POST', body: JSON.stringify(
+      { nome: 'ZS Gin', categoria_id: e.categorias[0].id, stock: 20,
+        visivel: 1, max_por_pedido: 4 }) });
+    await window.api('bar_abrir', { method: 'POST', body: '{}' });
+    const n = await window.api('bar_procurar_pessoal&limite=500', { method: 'GET' });
+    return { item: d.id, token: window.BAR_MESAS[0].token,
+             quem: (n.nomes || []).filter(x => x.nome === 'ZS Bebedor')[0] };
+  });
+  ok(!!cen.item && !!cen.quem, 'há uma bebida e uma pessoa só desta parte da prova');
+
+  const pedir = (q) => p.evaluate(async ([t, g, it, n]) => {
+    await fetch('api.php?action=bar_sou&m=' + t, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ m: t, convidado_id: g }) });
+    return await (await fetch('api.php?action=bar_pedir&m=' + t, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ m: t, mesa_id: 1, itens: [{ item_id: it, quantidade: n }] }) })).json();
+  }, [cen.token, cen.quem.id, cen.item, q]);
+
+  const alertasDe = (regraId) => p.evaluate(async (rid) => {
+    const e = await window.api('bar_estado');
+    return (e.alertas || []).filter(a => a.regra_id === rid && a.estado === 'aberto');
+  }, regraId);
+
+  // ============ 6. a fronteira: travar contra sugerir ============
+  // Uma regra apertada: uma bebida por pessoa, ao todo.
+  const porRegra = (modo) => p.evaluate(async ([m, id]) => {
+    const d = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { id: id || 0, escopo: 'tudo', sujeito: 'convidado', unidade: 'bebidas',
+        quantidade: 1, janela_min: 0, modo: m, nota: 'ZS tecto' }) });
+    return (d.regras || []).filter(r => r.nota === 'ZS tecto')[0];
+  }, [modo, 0]);
+
+  const rTrava = await porRegra('trava');
+  ok(rTrava && rTrava.modo === 'trava', 'põe-se a regra em modo «trava»');
+  const um = await pedir(1);
+  ok(um && um.success === true, 'a primeira bebida passa — ainda cabe no tecto');
+  const dois = await pedir(1);
+  ok(dois && dois.success === false,
+     'a segunda esbarra: em «trava», a regra RECUSA — «' + (dois.message || '') + '»');
+  const semAlerta = await alertasDe(rTrava.id);
+  ok(semAlerta.length === 0,
+     'e não levanta alerta nenhum: quem trava não tem nada a propor ('
+     + semAlerta.length + ')');
+
+  // A MESMA regra, o MESMO tecto já ultrapassado, só o modo muda.
+  const rSugere = await p.evaluate(async ([id]) => {
+    const d = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { id: id, escopo: 'tudo', sujeito: 'convidado', unidade: 'bebidas',
+        quantidade: 1, janela_min: 0, modo: 'sugere', nota: 'ZS tecto' }) });
+    return (d.regras || []).filter(r => r.nota === 'ZS tecto')[0];
+  }, [rTrava.id]);
+  ok(rSugere && rSugere.modo === 'sugere', 'passa-se a mesma regra a «sugere»');
+  const passou = await pedir(1);
+  ok(passou && passou.success === true,
+     'e agora o pedido PASSA — em «sugere» a regra não recusa nada a ninguém');
+  const comAlerta = await alertasDe(rSugere.id);
+  ok(comAlerta.length >= 1,
+     'mas o motor tocou a campainha: ' + comAlerta.length + ' alerta(s) por decidir');
+  const a = comAlerta[0] || {};
+  ok(a.tipo === 'regra_pessoa' && (a.situacao || {}).nome === 'ZS Bebedor',
+     'e o alerta diz de QUEM se trata, e não «alguém»: «'
+     + ((a.situacao || {}).nome || '—') + '»');
+  ok((a.sugestao || {}).accao === 'travar_convidado',
+     'com uma acção proposta, e não só um lamento: ' + ((a.sugestao || {}).accao || '—'));
+
+  // ============ 7. um degrau, um alerta ============
+  const degrau = await p.evaluate(async (it) => {
+    // 5 de 20 são 25%: cruza o degrau dos 30 e não o dos 15.
+    await window.api('bar_stock_acerto', { method: 'POST', body: JSON.stringify(
+      { item_id: it, stock: 5, nota: 'ZS a descer' }) });
+    const e1 = await window.api('bar_estado');
+    const i = (e1.itens || []).filter(x => x.id === it)[0];
+    const um = (e1.alertas || []).filter(x => x.tipo === 'stock_degrau'
+                                         && (x.situacao || {}).item_id === it);
+    // Segunda leitura, oito segundos depois: não pode nascer outro igual.
+    const e2 = await window.api('bar_estado');
+    const dois = (e2.alertas || []).filter(x => x.tipo === 'stock_degrau'
+                                           && (x.situacao || {}).item_id === it);
+    return { pc: i.percentagem, base: i.base_noite, um: um.length, dois: dois.length,
+             degrau: (um[0] || {}).situacao ? um[0].situacao.degrau : null,
+             nivel: (um[0] || {}).nivel };
+  }, cen.item);
+  ok(degrau.base === 20 && degrau.pc === 25,
+     'a base da noite fixou-se em 20, e 5 disso são 25%: ' + degrau.pc + '%');
+  ok(degrau.um === 1 && degrau.degrau === 30,
+     'cruzar os 25% levanta UM alerta, o do degrau mais apertado (30) e não três');
+  ok(degrau.dois === 1,
+     'e a leitura seguinte não levanta outro igual — senão o painel enchia-se '
+     + 'de cópias de oito em oito segundos');
+
+  // A bebida volta a subir: a chave liberta-se, e o alerta caduca.
+  const subiu = await p.evaluate(async (it) => {
+    await window.api('bar_stock_repor', { method: 'POST', body: JSON.stringify(
+      { item_id: it, quantidade: 30, nota: 'ZS chegaram caixas' }) });
+    const e = await window.api('bar_estado');
+    const i = (e.itens || []).filter(x => x.id === it)[0];
+    return { pc: i.percentagem, base: i.base_noite,
+             abertos: (e.alertas || []).filter(x => x.tipo === 'stock_degrau'
+                        && (x.situacao || {}).item_id === it && x.estado === 'aberto').length };
+  }, cen.item);
+  ok(subiu.base === 35 && subiu.pc === 100,
+     'chegaram mais caixas e a base sobe com elas — sem isto a percentagem '
+     + 'passava dos 100%: base ' + subiu.base + ', ' + subiu.pc + '%');
+  ok(subiu.abertos === 0,
+     'e o alerta do degrau caduca sozinho: a condição passou, a chave liberta-se');
+
   // ============ arrumar ============
   await p.evaluate(async () => {
     const e = await window.api('bar_estado');
+    for (const x of (e.fila || [])) {
+      await window.api(x.estado === 'em_analise' ? 'bar_decidir' : 'bar_cancelar_copa',
+        { method: 'POST', body: JSON.stringify({ id: x.id, decisao: 'recusar',
+                                                 motivo_texto: 'arrumar a prova' }) });
+    }
     for (const x of (e.regras || []).filter(x => /^ZS /.test(x.nota || ''))) {
       await window.api('bar_regra_apagar', { method: 'POST', body: JSON.stringify({ id: x.id }) });
     }
+    for (const i of (e.itens || []).filter(i => /^ZS /.test(i.nome))) {
+      await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
+    }
+    const cv = await window.api('convite_list&busca=ZS%20Prova', { silencioso: true });
+    for (const c of ((cv && cv.convites) || [])) {
+      if (c.nome_exibicao === 'ZS Prova') {
+        await window.api('convite_delete&definitivo=1&id=' + c.id, { method: 'POST' });
+      }
+    }
     await window.api('bar_defs', { method: 'POST',
       body: JSON.stringify({ 'bar.degraus_stock': '50,30,15,5' }) });
+    await window.api('bar_fechar', { method: 'POST', body: '{}' });
   });
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));

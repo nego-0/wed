@@ -2803,3 +2803,74 @@ A vigia de âmbito das duas tabelas novas não se prova daqui: ela só
 um dia, uma consulta sem âmbito que ninguém apanhou. Fica pinada em
 `versao.php`, que é a ferramenta desta casa para «esta linha tem de estar neste
 ficheiro».
+
+### 31.3 Fase 2 — o motor mede e propõe
+
+A fronteira desta fase cabe em duas linhas, e são as duas que a prova defende
+primeiro:
+
+> uma regra em `sugere` **não trava** o pedido, e **levanta** o alerta;
+> a mesma regra em `trava` recusa, e não levanta alerta nenhum.
+
+Se isto cair, ou o módulo ganhou um modo que não faz nada — e uma regra
+desligada que continua escrita no painel é a pior coisa que este módulo pode
+ter (§8.0) —, ou ganhou um modo que trava à mesma, e aí mentiu a quem o
+escolheu.
+
+**O filtro está num sítio só.** `barLimites()` passou a querer dizer *as regras
+que travam agora*: as que valem E estão em `trava`. `barLimitesVivos()` é a
+outra pergunta — *as que valem, seja qual for o modo* — e é contra essa que o
+motor mede. Filtrar à saída, e não em cada sítio que decide, é deliberado: são
+quatro os consumidores (o veredicto de uma bebida, o do acto de pedir, o caudal
+da casa, e o que a página do convidado mostra do caudal), e filtrar em quatro
+sítios é esquecer num — sendo que o que se esquecia era uma regra a recusar
+bebidas num modo em que prometeu não recusar nenhuma.
+
+**Onde o motor corre.** Em `bar_estado`, a leitura que a copa já faz de oito em
+oito segundos. Não há processo à parte: um processo a correr sozinho numa noite
+de festa é uma peça a mais para falhar, e ninguém a estaria a ver falhar. O
+motor não aplica nada — escreve alertas, e a fase 3 dá-lhes botões.
+
+**A chave, e porque é que ela é o coração disto.** Cada alerta tem uma
+identidade — «gin, degrau 30». Enquanto houver um alerta vivo com essa chave,
+não nasce outro; sem isto, o painel enchia-se de cópias do mesmo aviso de oito
+em oito segundos e deixava de se poder ler, que é o mesmo que não haver painel.
+«Vivo» inclui o que já foi **respondido**: um alerta ignorado foi ouvido, e
+repetir a pergunta é não ter ouvido a resposta. A chave só se liberta quando a
+**condição passa** — a bebida sobe acima dos 30% e o alerta fica `caducado`,
+livre para a próxima descida. Caducar não apaga: o alerta fica no histórico da
+noite, que é metade da razão de ele existir.
+
+**O que o motor mede**, e nada mais do que isto:
+
+- **Os degraus da percentagem.** Só fala o degrau **mais apertado** que a bebida
+  cruzou — sem isso, uma bebida a 12% levantava três alertas de uma vez (50, 30
+  e 15) a dizerem a mesma coisa por números diferentes. O que se propõe sobe de
+  tom com o degrau: primeiro cortar o que cada pedido leva, e só no último
+  fechar a bebida. E se ela já está em 1 por pedido, propõe-se `nenhuma` —
+  dizer «baixe para 1» a quem já está em 1 é o sistema a não saber o que está a
+  ver.
+- **O esgotamento iminente.** O degrau diz *quanto* resta; isto diz *quanto
+  tempo* resta, que é a conta que manda alguém à cidade buscar mais — ou não
+  manda, se já não houver tempo.
+- **As regras que não travam.** A da casa conta-se de uma vez. A de uma pessoa
+  conta-se contra essa pessoa. A de toda a gente conta-se **por cabeça, numa
+  consulta agrupada** — varrer convidado a convidado seria uma consulta por
+  pessoa a cada oito segundos, e a diferença entre um número e trezentos é a
+  diferença entre isto correr e isto não poder existir. Uma chave por pessoa:
+  duas pessoas a passar o mesmo tecto são duas conversas, e juntá-las num
+  alerta só dava um painel que diz «alguém».
+
+**A base da noite.** Fixa-se ao abrir o bar, e não à primeira venda: a pergunta
+que a percentagem responde é «quanto é que já se bebeu **desta** noite», e a
+noite começa quando a copa abre. Reabrir a meio não volta a fixar nada — refazer
+a base punha tudo a 100% com metade do armazém na rua. E nunca fica abaixo do
+que há: se o stock sobe acima dela, ela sobe atrás, senão a percentagem passava
+dos 100%, que é um número que ninguém sabe ler. Para baixo nunca desce — menos
+garrafas do que a noite tinha é exactamente a notícia que a percentagem existe
+para dar.
+
+**Uma coisa que a prova apanhou pelo caminho:** apagar uma bebida deixava os
+alertas dela para trás. Um alerta sobre uma garrafa que já não está no menu é
+ruído que o copeiro não pode resolver — as acções propostas não têm sobre o que
+agir. Vão com ela.
