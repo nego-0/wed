@@ -1,0 +1,8 @@
+# Dependências das provas: instalam-se localmente, não se versionam.
+# Sem a segunda linha, um *symlink* chamado node_modules escapava à regra
+# (a barra final só casa com diretórios) e chegou a ser versionado a apontar
+# para uma pasta temporária que só existia na máquina de quem o criou.
+node_modules/
+node_modules
+# Capturas de ecrã das provas: geram-se ao correr, não se versionam.
+_*.png

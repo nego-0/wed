@@ -1,0 +1,372 @@
+/* ============================================================
+   janela.css — o vestuário das janelas de assets/janela.js
+   ------------------------------------------------------------
+   O corpo do modal (.pl-modal*) vive aqui e não em planos.css:
+   a janela passou a servir o painel do admin, a Gestão dos noivos
+   e a montra, e quem só quer perguntar «tem a certeza?» não tem
+   de arrastar consigo a folha inteira da montra.
+
+   VESTE-SE SOZINHA. Foi a lição dos editores: lá dentro não há
+   estilo.css nenhum — nem as variáveis do tema, nem as classes
+   dos botões —, e a janela aparecia sem fundo, com o convite a
+   ver-se através dela e os botões de fábrica do browser. Por
+   isso tudo o que ela precisa está aqui, em variáveis próprias
+   (--j-*) que ADOPTAM as do tema quando as há e têm um valor de
+   recurso quando não há. Uma página nova não tem de fazer nada;
+   um ambiente escuro só tem de dizer qual é a sua paleta.
+   ============================================================ */
+
+/* ---------- a paleta da janela ---------- */
+/* Adopta o tema da página; onde não houver tema, vale o recurso. */
+.pl-modal{
+  --j-veu:      rgba(10, 18, 26, .58);
+  --j-card:     var(--card, #ffffff);
+  --j-ink:      var(--ink, #12222f);
+  --j-texto:    var(--text, #28323b);
+  --j-fraco:    color-mix(in srgb, var(--j-texto) 58%, transparent);
+  --j-linha:    var(--line, rgba(18,34,47,.12));
+  --j-campo:    var(--card, #ffffff);
+  --j-ouro:     var(--gold, #4c8c1e);
+  --j-ouro-tx:  #ffffff;
+  --j-ouro-pal: var(--gold-pale, #e7f3da);
+  --j-perigo:   var(--danger, #b4443c);
+  --j-perigo-bg:var(--danger-bg, #f6e4e1);
+  --j-anel:     var(--ring, rgba(99,178,43,.28));
+  --j-raio:     var(--radius, 14px);
+  --j-serif:    var(--serif, 'Archivo', 'Segoe UI', system-ui, sans-serif);
+  --j-sans:     var(--sans, 'Segoe UI', system-ui, -apple-system, Arial, sans-serif);
+  --j-mono:     var(--mono, ui-monospace, Menlo, Consolas, monospace);
+}
+/* Nos dois editores não há tema nenhum a adoptar, e o ambiente é escuro: uma
+   janela branca ali era um clarão. Veste-se com a paleta do próprio editor. */
+body.editor .pl-modal{
+  --j-veu:      rgba(8, 9, 7, .66);
+  --j-card:     #2f312c;
+  --j-ink:      #ece7db;
+  --j-texto:    #d6d3c9;
+  --j-fraco:    #979c90;
+  --j-linha:    #43463f;
+  --j-campo:    #23241f;
+  --j-ouro:     #b4864a;
+  --j-ouro-tx:  #16170f;
+  --j-ouro-pal: #3b3327;
+  --j-perigo:   #e0857b;
+  --j-perigo-bg:#3d2724;
+  --j-anel:     rgba(217,188,140,.28);
+  --j-raio:     12px;
+  --j-serif:    'Cormorant Garamond', Georgia, serif;
+  --j-sans:     'Jost', system-ui, -apple-system, sans-serif;
+}
+
+/* Os ecrãs do bar tiveram aqui uma paleta própria, de salão escuro, porque a
+   página por baixo era escura em qualquer tema e um cartão branco no meio
+   dela é uma lanterna na cara. Já não é o caso: a copa e as entregas seguem o
+   tema como o resto da casa (ver assets/bar.css), e o bloco de cima — o que
+   dá os --j-* a partir dos tokens do tema — chega para as vestir a todas. Uma
+   janela escura passa a ser o que sempre devia ter sido: o que se vê quando o
+   tema escolhido é o escuro. */
+
+/* ---------- o corpo da janela ---------- */
+/* Rola por dentro: há textos longos aqui (as políticas, por exemplo)
+   e o que rola tem de ser o miolo, nunca a página por trás. */
+.pl-modal{ position:fixed; inset:0; z-index:2000; background:var(--j-veu);
+  -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  display:none; align-items:center; justify-content:center; padding:1.2rem;
+  font-family:var(--j-sans); color:var(--j-texto); }
+.pl-modal.on{ display:flex; animation:j-veu-entra .16s ease-out; }
+@keyframes j-veu-entra{ from{ opacity:0 } to{ opacity:1 } }
+
+.pl-modal-cx{ background:var(--j-card); color:var(--j-texto);
+  border:1px solid var(--j-linha); border-radius:var(--j-raio);
+  max-width:760px; width:100%; max-height:88vh; display:flex; flex-direction:column;
+  box-shadow:0 24px 60px rgba(0,0,0,.32), 0 2px 8px rgba(0,0,0,.12);
+  animation:j-cx-entra .18s cubic-bezier(.2,.8,.3,1); }
+@keyframes j-cx-entra{ from{ opacity:0; transform:translateY(10px) scale(.985) } }
+.pl-modal-cx.largo{ max-width:900px; }
+@media (prefers-reduced-motion:reduce){
+  .pl-modal.on, .pl-modal-cx{ animation:none; }
+}
+
+.pl-modal-cab{ position:relative; padding:1.15rem 1.4rem 1rem; border-bottom:1px solid var(--j-linha);
+  display:flex; align-items:flex-start; gap:1rem; flex:none; }
+.pl-modal-cab h3{ font-family:var(--j-serif); font-size:1.3rem; line-height:1.25;
+  color:var(--j-ink); margin:0; flex:1; font-weight:600; }
+.pl-modal-x{ background:none; border:0; color:var(--j-fraco); font-size:1.4rem; line-height:1;
+  cursor:pointer; padding:.1rem .35rem; margin:-.2rem -.35rem 0 0; flex:none;
+  border-radius:8px; transition:background .15s ease, color .15s ease; }
+.pl-modal-x:hover{ color:var(--j-ink); background:var(--j-linha); }
+.pl-modal-x:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
+
+.pl-modal-corpo{ padding:1.2rem 1.4rem; overflow-y:auto; font-size:.9rem; line-height:1.6; }
+.pl-modal-corpo > :first-child{ margin-top:0; }
+.pl-modal-corpo > :last-child{ margin-bottom:0; }
+.pl-modal-corpo b, .pl-modal-corpo strong{ color:var(--j-ink); }
+.pl-modal-corpo a{ color:var(--j-ouro); }
+/* A nota de contexto de um formulário em janela (cfg.dica). Vinha de
+   estilo.css, que os editores não carregam — e lá ficava sem cor nenhuma. */
+.pl-modal-corpo .dica{ font-size:.82rem; line-height:1.55; color:var(--j-fraco);
+  margin:0 0 1rem; }
+
+.pl-modal-rodape{ padding:.9rem 1.4rem; border-top:1px solid var(--j-linha); align-items:center;
+  display:flex; gap:.6rem; justify-content:flex-end; flex-wrap:wrap; flex:none; }
+/* O aviso fica no rodapé, ao lado do botão que o provocou — e não num toast
+   que passa: quem errou um campo tem de o ler enquanto o corrige. */
+.lic-j-erro{ flex:1; min-width:12rem; color:var(--j-perigo); font-size:.83rem;
+  line-height:1.4; text-align:left; }
+.lic-j-erro:empty{ display:none; }
+
+/* ---- os botões da janela ----
+   Próprios, e não os da página: nos editores as classes de estilo.css não
+   existem, e o rodapé aparecia com os botões cinzentos de fábrica.
+
+   Sem prender ao rodapé, que era onde isto vivia. Um botão dentro do CORPO de
+   uma janela — «Regra nova» na ficha de uma pessoa, «Suspender» na de uma
+   bebida — apanhava só a cor de `.j-bt-sim` e nada da forma: saía um
+   rectângulo de canto vivo, colado ao texto, no meio de uma janela onde tudo
+   o resto tem raio e respiro. */
+.j-bt{ font-family:inherit; font-size:.86rem; font-weight:600;
+  line-height:1.2; padding:.58rem 1.1rem; border-radius:9px; border:1px solid transparent;
+  cursor:pointer; transition:background .15s ease, border-color .15s ease,
+  color .15s ease, box-shadow .15s ease; }
+.j-bt:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
+.j-bt[disabled]{ opacity:.55; cursor:default; }
+/* Dentro do corpo, um botão sem variante é discreto: contorno e nada mais.
+   No rodapé continua a não haver nenhum sem variante. */
+.j-bt:not(.j-bt-sim):not(.j-bt-nao):not(.j-bt-perigo){
+  background:transparent; border-color:var(--j-linha); color:var(--j-texto); }
+.j-bt:not(.j-bt-sim):not(.j-bt-nao):not(.j-bt-perigo):hover{ border-color:var(--j-ouro); }
+.j-bt .ico{ width:15px; height:15px; vertical-align:-2px; margin-right:.35rem; }
+
+.j-bt-nao{ background:transparent; border-color:var(--j-linha); color:var(--j-texto); }
+.j-bt-nao:hover:not([disabled]){ background:var(--j-linha); color:var(--j-ink); }
+
+.j-bt-sim{ background:var(--j-ouro); border-color:var(--j-ouro); color:var(--j-ouro-tx); }
+.j-bt-sim:hover:not([disabled]){ filter:brightness(1.08); }
+
+.j-bt-perigo{ background:var(--j-perigo); border-color:var(--j-perigo); color:#fff; }
+.j-bt-perigo:hover:not([disabled]){ filter:brightness(1.08); }
+body.editor .j-bt-perigo{ color:#2a1512; }
+
+/* ---- os formulários em janela, e não filas de prompt() ---- */
+
+.lic-form{ display:grid; gap:.9rem 1rem; grid-template-columns:repeat(3, 1fr); }
+.lic-f-c{ display:flex; flex-direction:column; gap:.3rem; min-width:0; }
+.lic-f-c label{ font-size:.7rem; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--j-fraco); font-weight:700; margin:0; }
+.lic-f-c input, .lic-f-c select, .lic-f-c textarea{ width:100%; padding:.55rem .7rem;
+  border:1.5px solid var(--j-linha); border-radius:9px; background:var(--j-campo);
+  font-family:var(--j-sans); font-size:.9rem; color:var(--j-ink);
+  transition:border-color .15s ease, box-shadow .15s ease; }
+.lic-f-c input::placeholder, .lic-f-c textarea::placeholder{ color:var(--j-fraco); opacity:.75; }
+.lic-f-c input[type=number]{ font-variant-numeric:tabular-nums; }
+.lic-f-c input:focus, .lic-f-c select:focus, .lic-f-c textarea:focus{ outline:none;
+  border-color:var(--j-ouro); box-shadow:0 0 0 3px var(--j-anel); }
+.lic-f-c textarea{ resize:vertical; line-height:1.5; }
+.lic-f-d{ font-size:.75rem; color:var(--j-fraco); line-height:1.45; }
+.lic-f-d b{ color:var(--j-ink); }
+
+/* ---- a escolha com procura (ver assets/janela.js) ----
+   Veste-se como um campo, porque é um campo: quem olha para o formulário não
+   tem de descobrir que aquela caixa é de outra família. O que muda é o que ela
+   abre — uma lista com uma caixa de procura em cima. */
+.lic-sel{ position:relative; }
+.lic-sel-bt{ width:100%; display:flex; align-items:center; gap:.5rem; cursor:pointer;
+  padding:.55rem .7rem; border:1.5px solid var(--j-linha); border-radius:9px;
+  background:var(--j-campo); font-family:var(--j-sans); font-size:.9rem;
+  color:var(--j-ink); text-align:left; min-height:42px;
+  transition:border-color .15s ease, box-shadow .15s ease; }
+.lic-sel-bt .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; }
+.lic-sel-bt .ico{ width:16px; height:16px; flex:none; color:var(--j-fraco);
+  transition:transform .15s ease; }
+.lic-sel-bt[aria-expanded="true"] .ico{ transform:rotate(180deg); }
+.lic-sel-bt:hover{ border-color:var(--j-ouro); }
+.lic-sel-bt:focus-visible{ outline:none; border-color:var(--j-ouro);
+  box-shadow:0 0 0 3px var(--j-anel); }
+/* Por cima de tudo o que a janela tenha por baixo, e nunca a empurrar o
+   formulário: uma lista que empurrasse os campos fazia o botão «Guardar»
+   fugir para fora do ecrã a meio de uma escolha. */
+.lic-sel-pop{ position:absolute; z-index:5; left:0; right:0; top:calc(100% + 4px);
+  background:var(--j-card); border:1.5px solid var(--j-linha); border-radius:11px;
+  box-shadow:0 14px 34px rgba(0,0,0,.28); overflow:hidden; }
+/* Virada para cima, quando o espaço está todo lá (ver `assentar` em
+   janela.js): um campo no fundo de uma janela que rola não tem por baixo de si
+   onde abrir, e a lista saía cortada a meio de uma linha. */
+.lic-sel-pop.acima{ top:auto; bottom:calc(100% + 4px);
+  box-shadow:0 -14px 34px rgba(0,0,0,.28); }
+.lic-sel-q{ display:flex; align-items:center; gap:.45rem; padding:.5rem .6rem;
+  border-bottom:1px solid var(--j-linha); }
+.lic-sel-q .ico{ width:15px; height:15px; flex:none; color:var(--j-fraco); }
+.lic-sel-q input{ flex:1; min-width:0; border:0; background:none; padding:.15rem 0;
+  font-family:var(--j-sans); font-size:.88rem; color:var(--j-ink); }
+.lic-sel-q input:focus{ outline:none; }
+/* Mais alta do que era. A 230px cabiam cinco linhas e meia, e meia linha
+   cortada em baixo é a lista a dizer «há mais» sem dizer quanto — rolava-se às
+   cegas. A 340 cabem oito inteiras, que é o tamanho a partir do qual esta
+   caixa sequer aparece: quem a abre vê a lista toda de uma vez, ou vê o
+   suficiente para saber que vale a pena escrever em vez de rolar. */
+.lic-sel-lista{ max-height:340px; overflow-y:auto; padding:.3rem;
+                overscroll-behavior:contain; }
+/* Uma barra de rolagem fina, para a lista não parecer uma janela dentro da
+   janela. */
+.lic-sel-lista{ scrollbar-width:thin; }
+.lic-sel-op{ display:flex; align-items:center; gap:.5rem; width:100%; text-align:left;
+  border:0; background:none; cursor:pointer; padding:.55rem .6rem; border-radius:8px;
+  font:inherit; font-size:.9rem; color:var(--j-ink); min-height:42px; line-height:1.35; }
+.lic-sel-op:hover{ background:var(--j-campo); }
+.lic-sel-op > span{ flex:1; min-width:0; }
+/* O visto é desenhado, e não o carácter ✓: nas fontes que não o têm sai o
+   quadrado do «não sei desenhar isto», e o que ficava sem sinal era
+   justamente a linha escolhida. É a mesma razão do visto do selector de tema. */
+.lic-sel-op .ico{ width:15px; height:15px; flex:none; opacity:0; color:var(--j-ouro); }
+/* `sob` é onde as setas estão; `on` é o que está escolhido. São duas coisas
+   diferentes e por isso têm duas marcas: sem isso, andar com o teclado parecia
+   estar a escolher a cada tecla. */
+.lic-sel-op.sob{ background:var(--j-ouro-pal); }
+.lic-sel-op.on{ color:var(--j-ouro); font-weight:600; }
+.lic-sel-op.on .ico{ opacity:1; }
+.lic-sel-nada{ padding:.9rem .7rem; font-size:.84rem; color:var(--j-fraco);
+               text-align:center; }
+
+/* ---- a mesma caixa, por cima de um <select> que já existia ----
+   O <select> fica lá, escondido, a guardar o valor: quem o manipulava antes
+   continua a manipulá-lo. Escondê-lo com display:none tirava-o da ordem de
+   tabulação e do formulário; assim fica invisível e continua a contar. */
+.lic-sel-nativo{ position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+                 overflow:hidden; clip-path:inset(50%); border:0; }
+.lic-sel.desligada{ opacity:.55; pointer-events:none; }
+
+/* Fora de uma janela, a caixa veste-se pelos tokens da PÁGINA: os --j-* são
+   dos modais, e um formulário no meio de uma página não é um modal. A classe é
+   posta por licSelUpgrade() e não por um :not() com descendente — esse ia
+   sobrepor-se também DENTRO do modal, e nos editores, onde a paleta da janela
+   é outra, dava uma caixa vestida da página por cima de um cartão escuro. */
+.lic-sel-pagina{
+  --j-card:var(--card); --j-ink:var(--ink); --j-fraco:var(--ink-fraco);
+  --j-linha:var(--line); --j-campo:var(--cream); --j-ouro:var(--gold);
+  --j-ouro-pal:var(--gold-pale); --j-anel:var(--ring);
+  --j-sans:var(--sans);
+}
+/* O sim/não é um CAMPO, e num formulário em grelha tem de pesar como os
+   outros. Solto no branco, ao lado de três caixas com contorno, lia-se como
+   uma nota de rodapé — e era uma definição que muda o comportamento da casa.
+   Ligado, enche-se: quem não distingue as duas cores tem na mesma o visto da
+   caixa, e quem distingue vê de relance quais estão ligadas. */
+.lic-f-sim{ display:flex; align-items:center; gap:.55rem; margin:0;
+  padding:.55rem .7rem; min-height:42px;
+  border:1.5px solid var(--j-linha); border-radius:9px; background:var(--j-campo);
+  text-transform:none; letter-spacing:normal; font-weight:500; font-size:.88rem;
+  color:var(--j-ink); cursor:pointer; transition:border-color .15s, background .15s; }
+.lic-f-sim:hover{ border-color:var(--j-ouro); }
+.lic-f-sim:has(input:checked){ border-color:var(--j-ouro); background:var(--j-ouro-pal); }
+.lic-f-sim:focus-within{ border-color:var(--j-ouro); box-shadow:0 0 0 3px var(--j-anel); }
+.lic-f-sim input{ width:17px; height:17px; min-width:17px; padding:0; margin:0;
+  accent-color:var(--j-ouro); flex:none; }
+
+/* ---- o selector de cor -------------------------------------
+   Vive AQUI e não na folha de quem o usa: a janela veste-se sozinha, e nos
+   editores não há estilo.css nenhum — um selector desenhado lá fora aparecia
+   sem medidas nenhumas.
+
+   Doze escolhas boas, e a porta para o resto. Um campo a pedir «#rrggbb» é um
+   teste de conhecimentos: ninguém escolhe uma cor assim, e quem tentar acaba
+   com um roxo que berra ao lado do verde da casa. */
+.b-cores{ display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; }
+.b-cor{ width:32px; height:32px; border-radius:9px; border:2px solid transparent;
+  cursor:pointer; background:var(--c); position:relative; padding:0;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.14); transition:transform .12s ease; }
+.b-cor:hover{ transform:scale(1.08); }
+/* A escolhida ganha moldura E visto: só a moldura não chega a quem distingue
+   mal as cores, que é justamente quem mais precisa de saber qual escolheu. */
+.b-cor.on{ border-color:var(--j-ink); }
+.b-cor.on::after{ content:''; position:absolute; inset:0;
+  background:no-repeat center/14px url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6.5 9.2 17.3 4 12.1'/%3E%3C/svg%3E");
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.b-cor:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
+.b-cor-mais{ width:32px; height:32px; border-radius:9px; border:1.5px dashed var(--j-linha);
+  background:var(--j-campo); cursor:pointer; padding:0; position:relative;
+  display:inline-flex; align-items:center; justify-content:center; color:var(--j-fraco); }
+.b-cor-mais:hover{ border-color:var(--j-ouro); color:var(--j-ouro); }
+.b-cor-mais .ico{ width:16px; height:16px; }
+.b-cor-mais input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+/* ---- secções e listas DENTRO de uma janela -------------------
+   Uma janela grande — a ficha de um convidado, uma lista de motivos — precisa
+   de títulos e de linhas, e as páginas andavam a emprestar-lhe os seus: a
+   copa dava-lhe o .b-tit dela, que é dourado-claro porque foi feito para um
+   salão escuro. Sobre o cartão claro de uma janela isso lê-se mal, e o cinza
+   fraco do salão sobre creme lê-se ainda pior.
+   A janela veste-se sozinha (é a regra desta folha) e agora também por dentro:
+   estas peças saem dos --j-*, e por isso acertam nos quatro temas e nas duas
+   luzes sem que nenhuma página tenha de saber disso. */
+.j-sec{ font-family:var(--j-serif); font-size:.98rem; font-weight:600; color:var(--j-ink);
+        margin:1.1rem 0 .45rem; display:flex; align-items:center; gap:.45rem; }
+.j-sec:first-child{ margin-top:.2rem; }
+.j-sec .ico{ width:16px; height:16px; color:var(--j-ouro); }
+.j-sec small{ margin-left:auto; font-family:var(--j-sans); font-size:.75rem;
+              font-weight:400; color:var(--j-fraco); }
+
+/* Uma linha de lista: a frase à esquerda, a nota discreta, o gesto à direita.
+   É a forma de todas as listas em janela — regras, motivos, telemóveis. */
+.j-linha{ display:flex; align-items:center; gap:.6rem; padding:.5rem 0;
+          border-bottom:1px solid var(--j-linha); font-size:.9rem; }
+.j-linha:last-child{ border-bottom:0; }
+.j-linha > span{ flex:1; min-width:0; }
+.j-linha small{ color:var(--j-fraco); font-size:.78rem; }
+/* Esbatida, mas nunca SÓ esbatida: a frase ao lado diz porquê, em palavras. */
+.j-linha.espera{ opacity:.62; }
+/* O gesto de tirar uma linha é pequeno e discreto — mas tem 34px de alvo e um
+   nome acessível, que é o mínimo de um botão a sério. */
+.j-linha .j-x{ width:34px; height:34px; flex:none; display:inline-flex; align-items:center;
+               justify-content:center; border:1px solid var(--j-linha); border-radius:9px;
+               background:none; color:var(--j-fraco); cursor:pointer; }
+.j-linha .j-x .ico{ width:15px; height:15px; }
+.j-linha .j-x:hover{ border-color:var(--j-perigo); color:var(--j-perigo);
+                     background:var(--j-perigo-bg); }
+.j-linha .j-x:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
+
+/* ---- a pergunta de sim/não, com o que está em jogo à vista ---- */
+.lic-conf{ display:flex; gap:1rem; align-items:flex-start; }
+.lic-conf-ico{ width:42px; height:42px; flex:none; border-radius:12px; background:var(--j-ouro-pal);
+  display:flex; align-items:center; justify-content:center; font-size:1.25rem; line-height:1;
+  color:var(--j-ouro); }
+/* Um sinal desenhado, quando o há: o emoji continua a caber, para as janelas
+   da casa que ainda não passaram por aqui. */
+.lic-conf-ico .ico{ width:22px; height:22px; }
+.lic-conf.perigo .lic-conf-ico{ background:var(--j-perigo-bg); color:var(--j-perigo); }
+.lic-conf-txt{ flex:1; font-size:.9rem; line-height:1.6; color:var(--j-texto); }
+.lic-conf-txt p{ margin:.7rem 0 0; }
+.lic-conf-itens{ list-style:none; margin:.8rem 0 0; padding:0; }
+.lic-conf-itens li{ display:flex; gap:.6rem; align-items:baseline; padding:.35rem 0;
+  border-bottom:1px solid var(--j-linha); font-size:.85rem; }
+.lic-conf-itens li:last-child{ border-bottom:none; }
+.lic-conf-itens span{ flex:1; color:var(--j-fraco); font-size:.78rem; }
+.lic-conf-itens em{ font-style:normal; font-variant-numeric:tabular-nums; color:var(--j-ouro);
+  font-weight:600; }
+/* A lista do que a ação vai levar (ou trazer). Uma linha por coisa, com
+   espaço entre elas: um parágrafo corrido esconde o terceiro item, e é
+   sempre o terceiro item que a pessoa não queria apagar. */
+.lic-conf-lista{ margin:.2rem 0 0; padding:0 0 0 1.1rem; line-height:1.7; }
+.lic-conf-lista li{ padding:.1rem 0; }
+/* O campo de copiar-para-confirmar: monoespaçado, para se ver letra a letra. */
+.lic-escrever input{ font-family:var(--j-mono); letter-spacing:.02em; }
+.lic-escrever .lic-f-d b{ font-family:var(--j-mono); color:var(--j-perigo); }
+
+/* ---- no telemóvel ---- */
+/* A janela deixa de ser um cartão ao centro e passa a ocupar o ecrã de baixo
+   para cima: é onde o polegar chega. Os botões alargam-se e trocam de ordem —
+   o que confirma fica em cima, longe de quem só queria fechar. */
+@media (max-width:560px){
+  .pl-modal{ padding:0; align-items:flex-end; }
+  .pl-modal-cx{ max-height:92vh; border-radius:var(--j-raio) var(--j-raio) 0 0;
+    border-width:1px 0 0; }
+  .pl-modal-cab{ padding:1rem 1.1rem .85rem; }
+  .pl-modal-cab h3{ font-size:1.15rem; }
+  .pl-modal-corpo{ padding:1rem 1.1rem; }
+  .pl-modal-rodape{ padding:.85rem 1.1rem calc(.85rem + env(safe-area-inset-bottom));
+    flex-direction:column-reverse; align-items:stretch; }
+  .pl-modal-rodape .j-bt{ width:100%; padding:.7rem 1rem; }
+  .lic-j-erro{ text-align:center; min-width:0; padding-bottom:.2rem; }
+  .lic-form{ grid-template-columns:1fr; }
+  .lic-f-c[style*="span"]{ grid-column:span 1 !important; }
+}

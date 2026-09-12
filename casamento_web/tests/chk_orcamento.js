@@ -1,0 +1,243 @@
+// Orçamento — o curso das despesas.
+//
+// Prova o módulo de ponta a ponta: as contas do resumo, o isolamento entre
+// casamentos (um casal não vê o orçamento de outro) e — o que mais importa —
+// a ida e volta no export/import: um casamento levado para um ficheiro e
+// trazido para outro tem de chegar com as gavetas, as despesas, as parcelas E
+// o teto (que vive nas definições).
+//
+// Corre com AMBITO_ESTRITO=1: qualquer consulta ao orçamento sem dizer de que
+// casamento é rebenta a página, e a prova apanha-a.
+const { chromium } = require('playwright-core');
+const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+
+(async () => {
+  const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
+  const p = await (await b.newContext()).newPage();
+  const errs = []; p.on('pageerror', e => errs.push(e.message));
+  let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
+  const N = v => Number(v) || 0;
+
+  await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+  await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', 'noivos2026');
+  await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
+
+  const api = (accao, corpo) => p.evaluate(async ({ a, c }) => {
+    const r = await fetch('api.php?action=' + a, {
+      method: c ? 'POST' : 'GET',
+      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+      body: c ? JSON.stringify(c) : undefined });
+    return r.json();
+  }, { a: accao, c: corpo });
+  const abrir = (id) => api('casamento_abrir&id=' + id, {});
+  const catId = (estado, nome) => (estado.categorias.find(c => c.nome === nome) || {}).id;
+
+  // ---------- terreno: dois casamentos frescos ----------
+  const w1 = await api('casamento_criar', { nome: 'PROVA Orçamento A', noiva: 'Ana', noivo: 'Bento' });
+  const w2 = await api('casamento_criar', { nome: 'PROVA Orçamento B', noiva: 'Rita', noivo: 'Zé' });
+  if (!w1.success || !w2.success) { console.log('FAIL: não criou os casamentos'); await b.close(); process.exit(1); }
+  console.log('   casamentos:', w1.id, w2.id);
+
+  // ---------- nasce SEM categorias; o casal cria as suas ----------
+  await abrir(w1.id);
+  let e1 = await api('orc_estado');
+  ok(e1 && e1.success, 'orc_estado responde num casamento novo');
+  ok((e1.categorias || []).length === 0, 'um casamento novo nasce SEM categorias impostas');
+  const catNova = await api('orc_categoria_guardar', { nome: 'Fotografia e vídeo', previsto: '900000' });
+  ok(catNova && catNova.success, 'o casal cria a categoria que quer');
+  e1 = await api('orc_estado');
+  const catFoto = catId(e1, 'Fotografia e vídeo');
+  ok(!!catFoto, 'e ela passa a existir');
+
+  // ---------- a cor: sugerida por defeito, mas o casal pode escolhê-la ----------
+  ok(!(e1.categorias.find(c => c.id === catFoto) || {}).cor,
+     'uma categoria nova nasce sem cor própria — fica com a sugerida');
+  const catCor = await api('orc_categoria_guardar', { nome: 'Flores', cor: '#8e44ad' });
+  ok(catCor && catCor.success, 'cria-se uma categoria já com uma cor escolhida');
+  e1 = await api('orc_estado');
+  ok((e1.categorias.find(c => c.nome === 'Flores') || {}).cor === '#8e44ad',
+     'e a cor escolhida fica guardada');
+  await api('orc_categoria_guardar', { id: catFoto, nome: 'Fotografia e vídeo', previsto: '900000', cor: '#e67e22' });
+  e1 = await api('orc_estado');
+  ok((e1.categorias.find(c => c.id === catFoto) || {}).cor === '#e67e22',
+     'e uma categoria que já existe aceita mudar de cor');
+  await api('orc_categoria_guardar', { id: catFoto, nome: 'Fotografia e vídeo', previsto: '900000', cor: 'não-é-cor' });
+  e1 = await api('orc_estado');
+  ok((e1.categorias.find(c => c.id === catFoto) || {}).cor == null,
+     'e uma cor inválida limpa a escolha — volta à sugerida');
+
+  // ---------- teto, moeda e despesas ----------
+  await api('orc_ajuste', { total: '2000000', moeda: 'AOA' });
+  await api('orc_despesa_guardar', { descricao: 'Reportagem foto+vídeo', valor: '500000', estado: 'pago', categoria_id: catFoto });
+  const dContr = await api('orc_despesa_guardar', { descricao: 'Banda', valor: '300000', estado: 'previsto', categoria_id: catFoto });
+  await api('orc_despesa_guardar', { descricao: 'Lembranças', valor: '200000', estado: 'previsto' });
+
+  e1 = await api('orc_estado');
+  const r = e1.resumo;
+  console.log('   resumo A:', JSON.stringify({ pago: r.pago, previsto: r.previsto, teto: r.teto, falta: r.falta }));
+  ok(N(r.pago) === 500000, 'o pago soma 500 000 (a despesa paga)');
+  ok(N(r.previsto) === 500000, 'o por pagar soma 500 000 (as duas despesas previstas)');
+  ok(N(r.comprometido) === 1000000, 'o comprometido é pago + por pagar = 1 000 000');
+  ok(N(r.teto) === 2000000, 'o teto ficou nos 2 000 000');
+  ok(N(r.falta) === 1000000, 'a margem até ao teto é 1 000 000');
+  ok(e1.moeda === 'AOA', 'a moeda ficou em AOA');
+  const catFotoReal = N((e1.categorias.find(c => c.id === catFoto) || {}).real_total);
+  ok(catFotoReal === 800000, 'a gaveta "Fotografia e vídeo" soma o real das suas duas despesas');
+
+  // ---------- uma parcela, e dá-se por paga ----------
+  await api('orc_pagamento_guardar', { despesa_id: dContr.id, valor: '150000', data_prevista: '2026-10-01' });
+  e1 = await api('orc_estado');
+  ok((e1.pagamentos || []).length === 1, 'a parcela aparece no calendário');
+  const pagId = e1.pagamentos[0].id;
+  await api('orc_pagamento_liquidar', { id: pagId, pago: 1 });
+  e1 = await api('orc_estado');
+  ok(!!(e1.pagamentos[0].pago_em), 'dar por paga marca a data de pagamento');
+
+  // A prestação paga de uma despesa PREVISTA conta no pago e sai do por pagar:
+  // pago 500 000 + 150 000 = 650 000; por pagar (300 000 − 150 000) + 200 000 = 350 000.
+  const rp = e1.resumo;
+  console.log('   resumo A com parcela paga:', JSON.stringify({ pago: rp.pago, previsto: rp.previsto }));
+  ok(N(rp.pago) === 650000, 'a prestação paga de uma despesa prevista soma-se ao pago (650 000)');
+  ok(N(rp.previsto) === 350000, 'e desconta-se do por pagar (350 000)');
+  ok(N(rp.comprometido) === 1000000, 'o total comprometido não muda com o pagamento de uma prestação');
+
+  // ---------- isolamento: o B não vê nada do A ----------
+  await abrir(w2.id);
+  const e2 = await api('orc_estado');
+  ok((e2.despesas || []).length === 0, 'o casamento B não vê despesa nenhuma do A');
+  ok(N(e2.resumo.comprometido) === 0, 'e o comprometido do B é zero');
+
+  // ---------- export do A: o orçamento vai no retrato ----------
+  await abrir(w1.id);
+  const dump = await p.evaluate(async () => {
+    const r = await fetch('api.php?action=dados_exportar', { headers: { 'X-CSRF-Token': window.CSRF } });
+    return r.json();
+  });
+  const oA = (dump.casamentos || [])[0] || {};
+  ok(oA.orcamento && (oA.orcamento.categorias || []).length >= 1, 'o export leva as categorias criadas');
+  ok((oA.orcamento.despesas || []).length === 3, 'o export leva as três despesas');
+  const dumpBanda = (oA.orcamento.despesas || []).find(d => d.descricao === 'Banda') || {};
+  ok((dumpBanda.pagamentos || []).length === 1, 'e leva a parcela dentro da sua despesa');
+  ok(dumpBanda.categoria === 'Fotografia e vídeo', 'a despesa guarda o NOME da gaveta, não o número');
+  ok(((oA.orcamento.categorias || []).find(c => c.nome === 'Flores') || {}).cor === '#8e44ad',
+     'e a cor escolhida da categoria viaja no ficheiro');
+  ok((oA.definicoes || {})['orcamento.total'] === '2000000.00', 'o teto viaja nas definições');
+
+  // ---------- import para um casamento novo: chega tudo ----------
+  const imp = await api('dados_importar', { modo: 'novo', ficheiro: dump });
+  ok(imp && imp.success, 'o import cria um casamento novo a partir do ficheiro');
+  const w3 = ((imp.resumo || [])[0] || {}).id;
+  ok(!!w3, 'e devolve o id do casamento criado');
+  console.log('   casamento importado:', w3);
+
+  await abrir(w3);
+  const e3 = await api('orc_estado');
+  ok((e3.despesas || []).length === 3, 'o casamento importado tem as três despesas');
+  ok(N(e3.resumo.comprometido) === 1000000, 'com as mesmas contas (comprometido 1 000 000)');
+  ok(N(e3.resumo.pago) === 650000, 'e a prestação paga continua a contar no pago (650 000)');
+  ok(N(e3.resumo.teto) === 2000000, 'e com o teto que viajou nas definições');
+  ok(e3.moeda === 'AOA', 'e com a moeda AOA');
+  ok((e3.pagamentos || []).length === 1 && !!e3.pagamentos[0].pago_em, 'a parcela paga também atravessou');
+  const impBanda = (e3.despesas || []).find(d => d.descricao === 'Banda') || {};
+  const impCat = (e3.categorias.find(c => c.id === impBanda.categoria_id) || {}).nome;
+  ok(impCat === 'Fotografia e vídeo', 'a despesa reencontrou a sua gaveta pelo nome');
+  ok((e3.categorias.find(c => c.nome === 'Flores') || {}).cor === '#8e44ad',
+     'e a cor da categoria atravessou o import');
+
+  // ---------- o teto pelo formulário do admin (casamento_criar) ----------
+  const wForm = await api('casamento_criar', { nome: 'PROVA Teto Admin', noiva: 'F', noivo: 'G', orcamento_total: '3 000 000,00' });
+  ok(wForm && wForm.success, 'o admin cria um casamento com orçamento total');
+  await abrir(wForm.id);
+  const eForm = await api('orc_estado');
+  ok(N(eForm.resumo.teto) === 3000000, 'o orçamento total do formulário do admin fica gravado como teto');
+  ok((eForm.categorias || []).length === 0, 'e o casamento criado à mão nasce sem categorias impostas');
+
+  // ---------- o teto pelo registo público ----------
+  const anon = await (await b.newContext()).newPage();
+  await anon.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
+  const emailPub = 'prova.orc.' + Date.now() + '@exemplo.ao';
+  const reg = await anon.evaluate(async (email) => {
+    const r = await fetch('api.php?action=registo_publico', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noiva: 'Púb', noivo: 'Lica', email: email, senha: '12345678', orcamento_total: '1 800 000,00' }) });
+    return r.json();
+  }, emailPub);
+  ok(reg && reg.success, 'o registo público aceita o orçamento total');
+  const cidPub = reg.casamento;
+  await anon.close();
+  await abrir(cidPub);
+  const ePub = await api('orc_estado');
+  ok(N(ePub.resumo.teto) === 1800000, 'o teto indicado no registo público fica gravado');
+  ok((ePub.categorias || []).length === 0, 'e o casamento do registo público nasce sem categorias impostas');
+
+  // ---------- o teto define-se na Gestão ----------
+  await abrir(w1.id);
+  await p.goto(BASE + '/gestao.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(300);
+  ok(!!(await p.$('#d-orc-total')), 'a Gestão tem o campo do orçamento total');
+  await p.fill('#d-orc-total', '4500000');
+  await p.click('button[onclick="guardarOrcamento()"]');
+  await p.waitForTimeout(400);
+  const eGest = await api('orc_estado');
+  ok(N(eGest.resumo.teto) === 4500000, 'guardar na Gestão altera o teto do orçamento');
+
+  // ---------- a página desenha ----------
+  await p.goto(BASE + '/orcamento.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(500);
+  const kpis = await p.$$eval('#o-kpis .kpi', els => els.map(e => e.textContent));
+  ok(kpis.length === 4, 'a saúde do orçamento mostra quatro indicadores');
+  ok(kpis.some(t => /Por pagar/.test(t) && !/^—/.test(t.trim())),
+     'entre eles o por pagar, com um valor e não um traço');
+  const segmentos = await p.$$eval('#o-barra span', els => els.length);
+  ok(segmentos >= 2, 'a barra do curso tem os dois segmentos (pago, por pagar)');
+  // O teto já não se define aqui — mudou-se para a Gestão.
+  ok(!(await p.$('#a-total')), 'a página do orçamento já não tem o campo do teto');
+  const scroll = await p.$('.tabela-scroll');
+  ok(!!scroll, 'a tabela de despesas está num quadro que rola (responsiva)');
+
+  // ---------- a fatura de uma despesa (foto) ----------
+  // Um PNG mínimo (1×1), enviado pela API como a página o faria.
+  const px = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+  const fat = await p.evaluate(async ({ id, b64 }) => {
+    const bin = atob(b64); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const fd = new FormData();
+    fd.append('id', id); fd.append('ficheiro', new File([arr], 'fatura.png', { type: 'image/png' }));
+    const r = await fetch('api.php?action=orc_despesa_fatura', {
+      method: 'POST', headers: { 'X-CSRF-Token': window.CSRF }, body: fd });
+    return r.json();
+  }, { id: dContr.id, b64: px });
+  ok(fat && fat.success && /^assets\/faturas\//.test(fat.fatura || ''),
+     'anexar uma foto à despesa guarda a fatura (' + (fat && fat.fatura) + ')');
+  let eF = await api('orc_estado');
+  const comFat = (eF.despesas || []).find(d => +d.id === +dContr.id) || {};
+  ok(!!comFat.fatura, 'e o estado do orçamento passa a trazer o caminho da fatura');
+  // Removê-la limpa o campo.
+  const rem = await api('orc_despesa_fatura_apagar&id=' + dContr.id, {});
+  ok(rem && rem.success, 'remover a fatura responde bem');
+  eF = await api('orc_estado');
+  const semFat = (eF.despesas || []).find(d => +d.id === +dContr.id) || {};
+  ok(!semFat.fatura, 'e a despesa fica de novo sem fatura');
+
+  // O porteiro não chega aqui: a página é dos noivos.
+  ok(!(await p.$('nav a[href="orcamento.php"]')) === false, 'o menu tem a entrada do Orçamento para o admin');
+
+  // limpeza das contas do registo público (casamento primeiro, depois a conta órfã)
+  await api('casamento_estado&id=' + cidPub + '&estado=arquivado', {});
+  await api('casamento_apagar&id=' + cidPub, {});
+  const listaU = await api('utilizador_lista');
+  const conta = (listaU.contas || []).find(u => u.email === emailPub);
+  if (conta) await api('utilizador_apagar&id=' + conta.id, {});
+
+  // ---------- limpeza ----------
+  for (const id of [w1.id, w2.id, w3, wForm.id]) {
+    await api('casamento_estado&id=' + id + '&estado=arquivado', {});
+    await api('casamento_apagar&id=' + id, {});
+  }
+
+  console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');
+  ok(errs.length === 0, 'nenhum erro de JavaScript');
+  console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
+  await b.close(); process.exit(f ? 1 : 0);
+})().catch(e => { console.error('FATAL', e); process.exit(1); });

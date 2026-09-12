@@ -1,0 +1,60 @@
+# ============================================================
+# .htaccess — Endurecimento básico (Apache / InfinityFree)
+# ============================================================
+
+# --- Segredos e ficheiros internos -------------------------
+# Se o PHP falhar ou for desativado numa manutenção, os .php passam a ser
+# servidos como texto simples. Isto impede que as credenciais apareçam.
+<FilesMatch "^(config\.local\.php|config\.local\.example\.php)$">
+  Require all denied
+</FilesMatch>
+
+# Ficheiros de apoio que não têm de ser públicos
+<FilesMatch "^(LEIA-ME\.md|.*\.log|.*\.sql|composer\.(json|lock))$">
+  Require all denied
+</FilesMatch>
+
+# Nunca servir ficheiros de controlo de versões / editores
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# --- Cabeçalhos de segurança --------------------------------
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # A câmara é precisa na página do porteiro (leitura de QR); o resto fica fechado.
+  Header always set Permissions-Policy "geolocation=(), microphone=(), payment=()"
+</IfModule>
+
+# --- Cache dos recursos estáticos ---------------------------
+# Tipos de letra e bibliotecas não mudam: evita voltar a descarregá-los.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css                "access plus 7 days"
+  ExpiresByType application/javascript  "access plus 7 days"
+  ExpiresByType image/jpeg              "access plus 30 days"
+  ExpiresByType image/png               "access plus 30 days"
+  ExpiresByType image/svg+xml           "access plus 30 days"
+  ExpiresByType image/webp              "access plus 30 days"
+  ExpiresByType font/woff2              "access plus 1 year"
+  ExpiresByType audio/mp4               "access plus 30 days"
+</IfModule>
+
+# O service worker tem de ser sempre verificado, senão fica preso a uma versão.
+<FilesMatch "^sw\.js$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, must-revalidate"
+  </IfModule>
+</FilesMatch>
+
+# --- Compressão ---------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain
+  AddOutputFilterByType DEFLATE application/javascript application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# Sem listagem de diretórios
+Options -Indexes

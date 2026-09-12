@@ -1,0 +1,5 @@
+# Pasta de uploads do convite: apenas ficheiros estáticos.
+# Bloqueia a execução/entrega de scripts.
+<FilesMatch "\.(?i:php|phtml|phar|cgi|pl|py|sh)$">
+Require all denied
+</FilesMatch>
