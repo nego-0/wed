@@ -28,6 +28,12 @@
 // que o motor propõe: a copa põe-na e levanta-a do seu cabeçalho, o convidado
 // vê-a antes de escolher, e ela desfaz-se sozinha. Os minutos são do ecrã, a
 // hora é do servidor — a casa corre em Africa/Luanda e o browser em UTC.
+//
+// FASE 6 — o fecho. Duas coisas que as fases anteriores deixaram passar porque
+// as provas falavam com a API e não com o ecrã: o `modo` não se escolhia em
+// lado nenhum (uma regra escrita no painel nascia sempre a travar), e
+// `confirma` caducava sozinho como `sugere` — dois modos com o mesmo
+// comportamento e nomes diferentes.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -670,6 +676,132 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'o menu do convidado perde a faixa e volta a ter um «+» por cada bebida '
      + 'que dá para pedir (' + semFaixa.mais + ' de ' + semFaixa.podem + ')');
   await conv.close();
+
+  // ==================================================================
+  // FASE 6 — o fecho: os quatro modos chegam ao painel
+  // ==================================================================
+  // A passagem inteira pendura-se numa coluna — `modo` — e até aqui essa coluna
+  // não tinha ecrã nenhum: uma regra escrita no painel nascia sempre em
+  // «trava», e os três modos novos só se alcançavam pela API. As provas das
+  // fases 2 e 3 escreviam o modo pela API, e por isso nunca deram por isso — o
+  // que é a lição desta fase e a razão de ela existir.
+  await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(900);
+  await p.locator('#ab-regras').click();
+  await p.waitForTimeout(900);
+
+  // ============ 23. o formulário pergunta o que a regra FAZ ============
+  await p.evaluate(() => window.barRegraNova({}));
+  await p.waitForTimeout(1700);
+  // Quatro opções são um <select> de verdade, e não a escolha com procura:
+  // ninguém procura entre quatro coisas (§28.7 e assets/janela.js).
+  const modos = await p.evaluate(() => {
+    const s = document.getElementById('lf-modo');
+    return s ? { valor: s.value, ops: [...s.options].map(o => o.textContent) } : null;
+  });
+  ok(!!modos, 'a janela de uma regra pergunta o que fazer quando o número for passado');
+  ok(modos.valor === 'trava',
+     'e abre em «travar» — nenhuma regra muda de comportamento por omissão');
+  ok(modos.ops.length === 4, 'os quatro modos estão lá: ' + modos.ops.length);
+  ok(modos.ops.filter(t => /deixa passar/i.test(t)).length === 3,
+     'e três deles dizem, por extenso, que o pedido passa à mesma — «sugerir» '
+     + 'numa palavra não avisava ninguém de que a bebida sai: '
+     + modos.ops.join(' · '));
+  await p.selectOption('#lf-modo', 'sugere');
+  await p.waitForTimeout(400);
+  const fraseViva = await p.locator('#br-frase').innerText();
+  ok(/não recusa nada/i.test(fraseViva),
+     'a frase da janela muda com o modo, e diz o que interessa: «'
+     + fraseViva.replace(/\s+/g, ' ').slice(0, 100) + '»');
+
+  await p.fill('#lf-quantidade', '3');
+  await p.fill('#lf-nota', 'ZS pelo painel');
+  await p.click('#lic-jo');
+  await p.waitForTimeout(1500);
+  const pelaJanela = await p.evaluate(async () => {
+    const e = await window.api('bar_estado');
+    return (e.regras || []).filter(r => r.nota === 'ZS pelo painel')[0] || null;
+  });
+  ok(pelaJanela && pelaJanela.modo === 'sugere',
+     'e a regra guardada pelo painel fica MESMO em «sugere» ('
+     + ((pelaJanela || {}).modo || 'sem regra') + ')');
+  const pastilha = await p.locator('.b-reg:has-text("ZS pelo painel") .modo')
+                          .first().innerText().catch(() => '');
+  ok(/propõe/i.test(pastilha),
+     'a lista assinala-a, para não se ler como uma regra que trava: «' + pastilha + '»');
+
+  // ============ 24. uma proibição só existe a travar ============
+  // Quantidade 0 é uma porta fechada: não há número para passar, logo não há
+  // condição para medir nem acção para propor. Recusa-se, e não se «corrige»
+  // em silêncio — uma regra escrita a fingir que faz alguma coisa é o que este
+  // painel não pode ter.
+  const proibirSemTravar = await p.evaluate(async () =>
+    await window.api('bar_regra_guardar', { method: 'POST', silencioso: true,
+      body: JSON.stringify({ escopo: 'tudo', sujeito: 'convidado', unidade: 'bebidas',
+                             quantidade: 0, janela_min: 0, modo: 'avisa',
+                             nota: 'ZS impossível' }) }));
+  ok(proibirSemTravar && proibirSemTravar.success === false
+     && /só existe a travar/i.test(proibirSemTravar.message || ''),
+     'uma proibição em «avisa» é recusada, e diz porquê: «'
+     + ((proibirSemTravar || {}).message || '') + '»');
+
+  // ============ 25. «confirma» não caduca, «sugere» caduca ============
+  // É a única diferença entre os dois modos — e sem ela `confirma` era
+  // `sugere` escrito com outra palavra, que é uma escolha do painel a não
+  // mudar nada. Prova-se com a MESMA regra, mudando-lhe só o modo.
+  const regraModo = (modo, qtd) => p.evaluate(async ([m, q, id]) => {
+    const d = await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { id: id || 0, escopo: 'tudo', sujeito: 'casa', unidade: 'pedidos',
+        quantidade: q, janela_min: 60, modo: m, nota: 'ZS modo' }) });
+    const r = (d.regras || []).filter(x => x.nota === 'ZS modo')[0];
+    // A leitura do estado é que faz o motor medir: não há cron nenhum.
+    const e = await window.api('bar_estado');
+    return { id: r ? r.id : 0,
+             abertos: (e.alertas || []).filter(a => a.regra_id === (r || {}).id
+                                                 && a.estado === 'aberto'),
+             todos: (e.alertas || []).filter(a => a.regra_id === (r || {}).id) };
+  }, [modo, qtd, regraModo.id || 0]);
+
+  const sugereAcima = await regraModo('sugere', 1);
+  regraModo.id = sugereAcima.id;
+  ok(sugereAcima.abertos.length === 1,
+     'uma regra em «sugere», passada, levanta o seu alerta');
+  const sugereAbaixo = await regraModo('sugere', 999);
+  ok(sugereAbaixo.abertos.length === 0,
+     'e a condição a passar fecha-o sozinho — é o que «sugere» promete ('
+     + sugereAbaixo.abertos.length + ' abertos)');
+
+  const confirmaAcima = await regraModo('confirma', 1);
+  ok(confirmaAcima.abertos.length === 1
+     && (confirmaAcima.abertos[0].situacao || {}).modo === 'confirma',
+     'a MESMA regra em «confirma» levanta o alerta com o modo escrito no retrato');
+  ok(confirmaAcima.abertos[0].nivel === 'critico',
+     'e a pedir mais pressa do que a de «sugere»: ' + confirmaAcima.abertos[0].nivel);
+  const confirmaAbaixo = await regraModo('confirma', 999);
+  ok(confirmaAbaixo.abertos.length === 1,
+     'a condição passa e o alerta FICA — é o que separa «confirma» de «sugere»');
+
+  // ============ 26. e fecha-se quando alguém responde ============
+  await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1600);
+  await p.locator('#b-fer-fila .b-pilula:has-text("Alertas")').first().click();
+  await p.waitForTimeout(900);
+  const marca = await p.locator('.b-alerta:has(.b-al-pede)').count();
+  ok(marca >= 1,
+     'o painel assinala quem está à espera de resposta, para não se ler como '
+     + 'um ecrã encravado (' + marca + ')');
+  const respondido = await p.evaluate(async (aid) => {
+    await window.api('bar_alerta_decidir', { method: 'POST',
+      body: JSON.stringify({ id: aid, decisao: 'ignorar', nota: 'ZS já se resolveu' }) });
+    const e = await window.api('bar_estado');
+    const meu = (e.alertas || []).filter(a => a.id === aid)[0] || {};
+    return { estado: meu.estado,
+             abertos: (e.alertas || []).filter(a => a.regra_id === meu.regra_id
+                                                 && a.estado === 'aberto').length };
+  }, confirmaAbaixo.abertos[0].id);
+  ok(respondido.estado === 'ignorado' && respondido.abertos === 0,
+     'responder é que o fecha — e a chave fica livre para a próxima vez ('
+     + respondido.estado + ')');
 
   // ============ arrumar ============
   // De volta a bar.php: apagar convites é dos noivos, e é lá que essa porta

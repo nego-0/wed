@@ -246,12 +246,24 @@
   /** Uma regra, como se lê. A frase vem do servidor: duas gramáticas para a
       mesma regra é como se chega a um ecrã que diz uma coisa e a um servidor
       que faz outra. */
+  /** O que a regra faz ao ser passada, numa pastilha. Só aparece quando NÃO
+      trava: «trava» é o que toda a gente assume ao ler uma regra, e uma
+      pastilha em todas as linhas era ruído por cima da que interessa — a que
+      diz que aquela regra, afinal, não recusa bebida nenhuma. */
+  var MODOS = { sugere:   ['propõe',        'não recusa: propõe à copa o que fazer'],
+                confirma: ['pede resposta', 'não recusa: espera uma resposta da copa'],
+                avisa:    ['só avisa',      'não recusa: dá a notícia à copa'] };
+  function pastilhaModo(r) {
+    var m = MODOS[r.modo];
+    return m ? ' <small class="modo" title="' + esc(m[1]) + '">' + esc(m[0]) + '</small>' : '';
+  }
+
   function linhaRegra(r) {
     var espera = r.vigor === 'ainda' ? ' <small class="espera">ainda não são horas</small>'
                : r.vigor === 'passou' ? ' <small class="espera">já passou a hora</small>' : '';
     return '<div class="b-reg' + (r.vigor === 'agora' ? '' : ' espera') + '">'
       + '<span class="txt"><b>' + esc(r.quem) + '</b>' + espera
-      +   '<span class="fr">' + esc(r.frase) + '</span>'
+      +   '<span class="fr">' + esc(r.frase) + pastilhaModo(r) + '</span>'
       +   (r.mensagem ? '<small>lê: «' + esc(r.mensagem) + '»</small>' : '')
       +   (r.nota ? '<small class="so-nos">' + ico.ico('olho') + esc(r.nota) + '</small>' : '')
       + '</span>'
@@ -489,6 +501,24 @@
           valor: r ? r.janela_min : 0, min: 0, max: 1440,
           dica: '<b>0</b> é um tecto para a noite inteira.' },
 
+        // O que a regra FAZ quando o número é passado. É a escolha mais pesada
+        // do formulário — separa uma regra que recusa bebidas de uma que toca a
+        // campainha à copa — e por isso está aqui, a seguir aos números que ela
+        // manda, e escrita por extenso: «sugere» num select de uma palavra não
+        // diz a ninguém que a bebida sai à mesma.
+        { id: 'modo', rot: 'Quando o número for passado', tipo: 'escolha',
+          valor: (r && r.modo) || 'trava', procura: false, largura: 3,
+          opcoes: [
+            { v: 'trava',    r: 'Travar — recusa o pedido no momento' },
+            { v: 'sugere',   r: 'Sugerir — deixa passar e propõe à copa o que fazer' },
+            { v: 'confirma', r: 'Confirmar — deixa passar e espera resposta da copa' },
+            { v: 'avisa',    r: 'Avisar — deixa passar e só dá a notícia' }
+          ],
+          dica: 'Só <b>travar</b> recusa bebidas a alguém. Os outros três deixam '
+              + 'o pedido passar e põem um alerta no painel da copa — e o de '
+              + '<b>confirmar</b> fica lá até alguém responder, mesmo que a '
+              + 'situação passe entretanto.' },
+
         { id: 'vigora_hora', rot: 'A partir das', tipo: 'hora',
           valor: r ? hora(r.vigora_em) : '', dica: 'Vazio, vale já.' },
         { id: 'expira_hora', rot: 'Até às', tipo: 'hora',
@@ -511,7 +541,7 @@
         var fam = f.campo('familia'), conta = f.campo('conta');
         var alc = f.campo('alcance'), qtd = f.campo('quantidade');
         var jan = f.campo('janela_min'), sob = f.campo('sobre');
-        var pes = f.campo('pessoa');
+        var pes = f.campo('pessoa'), mod = f.campo('modo');
         var frase = document.getElementById('br-frase');
 
         var nomeDe = function (sel) {
@@ -532,6 +562,18 @@
           if (frase) frase.innerHTML = escrever(geral, porPedidos);
         };
 
+        /** O que a regra faz ao ser passada, em meia linha, por baixo da frase.
+            Sem isto a frase dizia «no máximo 2 bebidas» com a mesma cara nos
+            quatro modos — e em três deles a terceira bebida sai à mesma. */
+        var oQueFaz = function () {
+          var m = mod ? mod.value : 'trava';
+          if (m === 'trava') return '';
+          var t = m === 'sugere'   ? 'Não recusa nada: a copa recebe um alerta com uma proposta.'
+                : m === 'confirma' ? 'Não recusa nada: a copa recebe um alerta que fica à espera de resposta.'
+                :                    'Não recusa nada: a copa fica a saber, e mais nada.';
+          return '<small class="b-frase-modo">' + esc(t) + '</small>';
+        };
+
         /** A frase que a regra vai ser, escrita como o servidor a escreveria. */
         var escrever = function (geral, porPedidos) {
           var n = parseInt(qtd.value, 10);
@@ -548,16 +590,24 @@
                    : 'Cada convidado';
           if (!(n >= 0)) return '…';
           if (n === 0) {
+            // Uma proibição não tem número para se atingir: ou está lá e fecha
+            // a porta, ou não está. Nos outros três modos não haveria nada a
+            // medir nem nada a propor — a regra ficava escrita a não fazer
+            // nada, que é a pior coisa que este painel pode mostrar.
             return '<b>' + esc(quem) + '</b> não pode pedir'
-                 + esc(oQue || (porPedidos ? ' nada' : ' bebida nenhuma')) + '.';
+                 + esc(oQue || (porPedidos ? ' nada' : ' bebida nenhuma')) + '.'
+                 + (mod && mod.value !== 'trava'
+                     ? '<small class="b-frase-modo aviso">Uma proibição só existe '
+                       + 'a travar: sem número para passar, não há nada a avisar.</small>'
+                     : '');
           }
           var quanto = n + ' ' + unid + (n === 1 ? '' : 's');
           return '<b>' + esc(quem) + '</b>: no máximo <b>' + esc(quanto) + '</b>'
                + esc(oQue) + (m ? ' <b>a cada ' + m + ' min</b>' : ', ao todo')
-               + '.';
+               + '.' + oQueFaz();
         };
 
-        [fam, conta, alc, qtd, jan, sob, pes].forEach(function (el) {
+        [fam, conta, alc, qtd, jan, sob, pes, mod].forEach(function (el) {
           if (!el) return;
           el.addEventListener('change', ajustar);
           el.addEventListener('input', ajustar);
@@ -595,6 +645,7 @@
           quantidade: parseInt(v.quantidade, 10) || 0,
           janela_min: parseInt(v.janela_min, 10) || 0,
           vigora_hora: v.vigora_hora, expira_hora: v.expira_hora,
+          modo: v.modo,
           mensagem: v.mensagem, nota: v.nota
         };
         if (r) env.id = r.id;

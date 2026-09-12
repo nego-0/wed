@@ -3040,3 +3040,69 @@ do convidado com os «+» escondidos havendo bebidas que sem a pausa dariam para
 pedir; o número que anda ao segundo em vez de ficar parado à espera da próxima
 leitura; e — a que mais diz — que levantar a pausa devolve a frente ao que
 travava antes dela, em vez de a deixar a tapar tudo.
+
+### 31.8 Fase 6 — o fecho, e o que ele foi encontrar
+
+A última fase do plano dizia «provas e documento», e as provas vinham a ser
+escritas fase a fase. O que ela fez de verdade foi a leitura de conjunto — pegar
+no plano, ponto por ponto, e ir ver se o módulo faz mesmo o que ele promete.
+Encontrou duas coisas, e as duas eram da mesma família: **funcionalidades que
+existiam por dentro e não existiam para quem as usa**.
+
+**O `modo` não se escolhia em lado nenhum.** A passagem inteira pendura-se numa
+coluna, e essa coluna não tinha ecrã: uma regra escrita no painel nascia sempre
+em `trava`, e os três modos novos só se alcançavam pela API. As provas das fases
+2 e 3 mediam o motor escrevendo o modo *pela API* — e por isso nunca deram por
+isso. É o género de falha que só uma leitura de conjunto apanha: cada peça
+passava no seu exame, e a soma não se podia usar.
+
+Passa a haver a pergunta no formulário da regra — **«Quando o número for
+passado»** — com os quatro modos escritos por extenso, e três deles a dizer que
+o pedido **passa à mesma**. `Sugerir` numa palavra não avisa ninguém de que a
+bebida sai; é uma armadilha para quem escreve a regra a pensar que a está a
+travar. A frase viva da janela muda com o modo («Não recusa nada: a copa recebe
+um alerta…»), e a lista das regras assinala com uma pastilha as que não travam.
+A pastilha só aparece nessas: `trava` é o que toda a gente assume ao ler uma
+regra, e uma marca em todas as linhas era ruído por cima da que interessa.
+
+**Uma proibição só existe a travar.** Quantidade 0 com um modo que não trava não
+tem número para se passar — nada a medir, nada a propor. Ficava escrita no
+painel com ar de fazer alguma coisa, e não fazia nada. Recusa-se a gravar, com o
+porquê; **não** se corrige em silêncio para `trava`, que seria gravar uma regra
+diferente da que a pessoa escreveu.
+
+**`confirma` caducava sozinho como `sugere`.** A única diferença entre os dois
+modos é essa — o alerta de `confirma` fica aberto até alguém responder — e ela
+não estava lá: os dois modos eram o mesmo comportamento com nomes diferentes.
+Agora o modo viaja no retrato do momento (`situacao.modo`) e `barAlertaCaducar()`
+deixa em paz o que pede resposta. O modo lê-se do **retrato**, e não da regra: a
+regra pode ter sido mudada ou levantada entretanto, e o que importa é o que
+estava combinado quando o alerta nasceu. O painel marca-os com «pede resposta» —
+sem isso, um alerta que continua no ecrã depois de a situação passar lê-se como
+um ecrã encravado.
+
+#### O que ficou por fazer, de propósito
+
+A lista fechada de acções do plano tem sete; o motor sabe propor **quatro**
+(`pausar_copa`, `baixar_max_por_pedido`, `suspender_bebida`, `travar_convidado`)
+mais `nenhuma`. As outras três não se construíram porque nada as levanta:
+`fechar_copa` é uma decisão da noite, e não de um alerta; `reabrir_copa`
+desfaz-se sozinha (§31.7); e `apertar_limite` é editar a regra, que é o que o
+botão **Adaptar** já faz, na janela da própria regra. Um `if` para uma acção que
+ninguém propõe é código que nunca corre — e que um dia corre mal.
+
+Também não se construiu a proposta técnica de 28 pontos do pedido original, pela
+razão que o §3 do plano já dava: o motor existe e corre, `barVeredicto()` *é* o
+pseudocódigo, e um documento que descreve código a funcionar nasce velho no
+`commit` seguinte. O que se escreveu foi este §31.
+
+#### O que a sexta passagem deixa
+
+Das cinco coisas novas do plano, as cinco estão: o **modo** de cada regra (e
+agora com ecrã), os **alertas** com o painel de três botões, o **stock em
+percentagem** com degraus e a trava do «um degrau, um alerta», a **copa em
+pausa** com o seu terceiro estado, e as **mensagens** que o casal escreve. O
+motor deixou de ser só uma porta que fecha: mede, propõe, e quem decide continua
+a ser quem está lá — que era a frase toda desta passagem.
+
+`tests/chk_bar_sexta.js` fecha com 90 verificações, e a suite com 79 provas.

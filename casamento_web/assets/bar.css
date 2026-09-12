@@ -863,6 +863,11 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
             text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
 .b-al-topo .qd{ margin-left:auto; text-transform:none; letter-spacing:0;
                 font-size:.78rem; }
+/* Depois da hora, e não antes do nível: o nível diz a pressa, a hora diz desde
+   quando, e só depois é que interessa saber que este não se vai embora sozinho. */
+.b-al-pede{ padding:.05rem .45rem; border-radius:999px; background:var(--warn-bg);
+            color:var(--warn); font-size:.68rem; font-weight:700;
+            letter-spacing:.04em; white-space:nowrap; }
 .b-al-sit{ margin:.5rem 0 .35rem; font-size:.95rem; line-height:1.5; color:var(--ink); }
 .b-al-sit small{ display:block; margin-top:.15rem; font-size:.8rem;
                  color:var(--ink-fraco); }
@@ -922,6 +927,16 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    Nunca só pela opacidade — §25.7 não deixa um estado viver só na cor. */
 .b-reg.espera{ opacity:.62; }
 .b-reg .espera{ color:var(--warn); font-weight:600; }
+/* O que a regra faz ao ser passada — só quando NÃO trava (§31.8). Encostada à
+   frase, e não numa linha própria: a pergunta «esta regra recusa bebidas?»
+   faz-se sobre a frase, e a resposta tem de estar onde o olho já está. */
+.b-reg .modo{ display:inline-block; margin-left:.4rem; padding:.05rem .45rem;
+              border-radius:999px; background:var(--warn-bg); color:var(--warn);
+              font-size:.7rem; font-weight:700; text-transform:uppercase;
+              letter-spacing:.04em; vertical-align:.08em; white-space:nowrap; }
+/* E a mesma verdade dentro da janela, por baixo da frase que se está a escrever. */
+.b-frase-modo{ display:block; margin-top:.3rem; font-size:.78rem; color:var(--ink-fraco); }
+.b-frase-modo.aviso{ color:var(--warn); font-weight:600; }
 
 /* Uma definição da casa: a pergunta, o que está escolhido, e o gesto que a
    muda. Lê-se de cima a baixo como uma lista do que a casa decidiu. */

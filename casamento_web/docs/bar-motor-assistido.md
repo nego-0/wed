@@ -239,6 +239,11 @@ Cada fase fecha com a suite inteira verde. Ninguém começa a seguinte sem isso.
   alerta nenhum. É a fronteira toda desta passagem numa linha.
 - `docs/modulo-bar.md` §31; linhas novas em `versao.php`
 
+> Feita. A leitura de conjunto encontrou duas funcionalidades que existiam por
+> dentro e não existiam para quem as usa: o `modo` não se escolhia em ecrã
+> nenhum, e `confirma` caducava sozinho como `sugere`. As duas estão corrigidas
+> e provadas (§31.8), com a lista honesta do que ficou por construir e porquê.
+
 ---
 
 ## 5. As regras da casa (não negociáveis)

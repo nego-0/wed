@@ -3083,9 +3083,40 @@ function barAlertaLevantar(mysqli $conn, string $chave, string $tipo, string $ni
  * para a próxima descida. Um alerta caducado não se apaga: continua no
  * histórico da noite, que é metade da razão de ele existir.
  */
+/**
+ * Este alerta está à espera de resposta, e não se fecha sozinho?
+ *
+ * É a única diferença entre `confirma` e `sugere`, e é toda a razão de ser do
+ * modo: há coisas que passam sozinhas e que a copa tem de ficar a saber que
+ * passaram — a pessoa que bebeu de mais entre as onze e a meia-noite continua a
+ * ser a pessoa que bebeu de mais, mesmo que a janela já tenha rodado. Sem isto,
+ * `confirma` era `sugere` escrito com outra palavra, e uma escolha do painel
+ * que não muda nada é pior do que uma escolha a menos.
+ *
+ * O modo viaja no retrato do momento (`situacao`), e não se relê da regra: a
+ * regra pode ter sido mudada ou levantada desde então, e o que aqui se pergunta
+ * é o que estava combinado QUANDO o alerta nasceu.
+ */
+function barAlertaPedeResposta(mysqli $conn, string $chave): bool {
+    global $P;
+    $cid = casamentoAtual();
+    $st = $conn->prepare("SELECT estado, situacao FROM {$P}bar_alertas
+                          WHERE casamento_id=? AND chave=? ORDER BY id DESC LIMIT 1");
+    if (!$st) return false;
+    $st->bind_param('is', $cid, $chave);
+    @$st->execute();
+    $x = $st->get_result()->fetch_assoc();
+    if (!$x || $x['estado'] !== 'aberto') return false;
+    $s = json_decode((string)$x['situacao'], true);
+    return is_array($s) && ($s['modo'] ?? '') === 'confirma';
+}
+
 function barAlertaCaducar(mysqli $conn, string $chave): void {
     global $P;
     $cid = casamentoAtual();
+    // Menos um: o que pede resposta fica onde está, aberto, mesmo que a
+    // condição já tenha passado. Responder é que o fecha.
+    if (barAlertaPedeResposta($conn, $chave)) return;
     // Os que estavam por responder fecham-se: a pergunta deixou de fazer
     // sentido, e responder a uma pergunta que já não existe é trabalho a mais.
     $st = $conn->prepare("UPDATE {$P}bar_alertas SET estado='caducado'
@@ -3239,7 +3270,8 @@ function barSugereRegra(mysqli $conn, array $l, string $modo): int {
                   'minutos' => max(1, (int)barDef($conn, 'bar.pausa_min'))];
         return barAlertaLevantar($conn, $chave, 'caudal', $nivel,
             ['regra' => $frase, 'usado' => $c['usado'], 'tecto' => $tecto,
-             'janela_min' => (int)$l['janela_min'], 'unidade' => $l['unidade']],
+             'janela_min' => (int)$l['janela_min'], 'unidade' => $l['unidade'],
+             'modo' => $modo],
             $accao, (int)$l['id']) ? 1 : 0;
     }
 
@@ -3255,7 +3287,8 @@ function barSugereRegra(mysqli $conn, array $l, string $modo): int {
                   'minutos' => max(1, (int)barDef($conn, 'bar.pausa_min'))];
         return barAlertaLevantar($conn, $chave, 'regra_pessoa', $nivel,
             ['regra' => $frase, 'usado' => $c['usado'], 'tecto' => $tecto,
-             'convidado_id' => $gid, 'nome' => $g['nome'] ?? 'um convite'],
+             'convidado_id' => $gid, 'nome' => $g['nome'] ?? 'um convite',
+             'modo' => $modo],
             $accao, (int)$l['id']) ? 1 : 0;
     }
 
@@ -3297,7 +3330,7 @@ function barSugereRegra(mysqli $conn, array $l, string $modo): int {
                   'minutos' => max(1, (int)barDef($conn, 'bar.pausa_min'))];
         if (barAlertaLevantar($conn, 'regra:' . $l['id'] . ':' . $gid, 'regra_pessoa', $nivel,
                 ['regra' => $frase, 'usado' => $n, 'tecto' => $tecto,
-                 'convidado_id' => $gid, 'nome' => $g['nome']],
+                 'convidado_id' => $gid, 'nome' => $g['nome'], 'modo' => $modo],
                 $accao, (int)$l['id'])) $novos++;
     }
     // Quem desceu abaixo do tecto liberta a sua chave — numa regra com janela,
@@ -4837,6 +4870,14 @@ if ($acao === 'bar_regra_guardar') {
     // pior maneira de estrear a funcionalidade.
     $modo = in_array($d['modo'] ?? '', ['trava','sugere','confirma','avisa'], true)
           ? $d['modo'] : 'trava';
+    // Uma proibição só existe a travar. Sem número para se passar não há
+    // condição para medir nem acção para propor: a regra ficava escrita no
+    // painel, com ar de estar a fazer alguma coisa, e não fazia nada. Recusa-se
+    // aqui, e não se «corrige» em silêncio para `trava` — quem a escreveu tem
+    // de saber que as duas escolhas não cabem juntas.
+    if ($qtd <= 0 && $modo !== 'trava') {
+        erro('Uma proibição só existe a travar: sem número para passar, não há nada a avisar.');
+    }
 
     if ($id) {
         $st = $conn->prepare("UPDATE {$P}bar_limites SET escopo=?, alvo_id=?, sujeito=?,

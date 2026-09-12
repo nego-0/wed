@@ -562,6 +562,12 @@
       +   '<span class="b-semaforo ' + n[1] + '"></span>'
       +   '<b>' + esc(n[0]) + '</b>'
       +   '<span class="qd">' + esc(ha(a.criado_em)) + '</span>'
+      // A regra que o levantou foi escrita em «confirma»: este alerta não
+      // desaparece quando a situação passar, e quem o vê tem de saber que está
+      // à espera DELE. Sem a marca, um alerta que continua no painel depois de
+      // a condição passar lê-se como um ecrã encravado.
+      +   ((aberto && (a.situacao || {}).modo === 'confirma')
+            ? '<span class="b-al-pede">pede resposta</span>' : '')
       + '</div>'
       + '<div class="b-al-sit">' + situacaoEmPalavras(a) + '</div>'
       + '<div class="b-al-sug">' + ico.ico('raio') + accaoEmPalavras(sug) + '</div>'

@@ -791,6 +791,20 @@ function correcoesEsperadas(): array {
         ['Bar: pausar à mão fica no registo, como tudo o que muda a noite',
          'db.php', "'bar_pausa'         => ['pôs ou levantou a pausa da copa'"],
 
+        // ---- A sexta passagem, fase 6: o fecho ----
+        ['Bar: o modo escolhe-se na janela da regra, e não só pela API',
+         'assets/bar-regras.js', "{ id: 'modo', rot: 'Quando o número for passado'"],
+        ['Bar: e a frase da janela diz que aquela regra não recusa nada',
+         'assets/bar-regras.js', 'var oQueFaz = function ()'],
+        ['Bar: a lista assinala a regra que propõe em vez de travar',
+         'assets/bar-regras.js', 'function pastilhaModo('],
+        ['Bar: uma proibição só existe a travar — não se corrige em silêncio',
+         'api.php', "if (\$qtd <= 0 && \$modo !== 'trava') {"],
+        ['Bar: um alerta de «confirma» fica aberto até alguém responder',
+         'api.php', 'function barAlertaPedeResposta('],
+        ['Bar: e o painel diz quais é que estão à espera de resposta',
+         'assets/bar-copa.js', "'<span class=\"b-al-pede\">pede resposta</span>' : '')"],
+
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',
          'assets/icones.js', 'function copoDe('],
