@@ -705,6 +705,16 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     // o desenhou (os novos nascem com a de exemplo — ver instantaneoModelo).
     if (function_exists('ehAdminPlataforma') && ehAdminPlataforma()) {
         $defs = defsPadrao();
+        // A identidade em falta é a de EXEMPLO, e não a do desenho de origem.
+        //
+        // Um modelo da casa guarda só o que muda — o Borgonha são três cores e
+        // mais nada —, e o resto vinha do defsPadrao: o nome, a data e as
+        // FOTOGRAFIAS do primeiro casal. Era esse o retrato que o admin via em
+        // todos os modelos, e os dados de exemplo que ele próprio escolhe
+        // (modelo.exemplo.*) não apareciam em lado nenhum a não ser num modelo
+        // acabado de criar. Um modelo é da casa e serve todos os casais: a sua
+        // prova não pode ser o retrato de um deles.
+        foreach (exemploModelo($conn) as $k => $v) $defs[$k] = $v;
         $permitidas = array_flip(chavesModelo($ambito));
         foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
         $info = ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito];
@@ -722,6 +732,19 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     // prova precisam de saber para mostrarem o desenho dele.
     $desenho = array_flip(chavesDesenho($ambito));
     $defs = defsAtuais($conn);
+    // O que o casal ainda NÃO pôs é de exemplo, e não do casamento de origem.
+    //
+    // Um casal que ainda não enviou fotografias nenhumas via, em todas as
+    // miniaturas, as fotografias do primeiro casal — que é o valor de fábrica
+    // de `media.*`. A pergunta que isso levanta («porque é que o meu convite
+    // tem fotos de gente que não conheço?») não tem resposta boa. O que se
+    // mostra no lugar do que falta são os dados de exemplo, que é para isso que
+    // a casa os escolhe. O que o casal já tem é dele, e continua a ganhar: a
+    // miniatura tem de ser o convite DELE com o desenho do modelo.
+    $proprias = definicoesBD($conn);
+    foreach (exemploModelo($conn) as $k => $v) {
+        if (($proprias[$k] ?? '') === '') $defs[$k] = $v;
+    }
     foreach (padraoDesenho($ambito) as $k => $v) $defs[$k] = $v;
     foreach ($j as $k => $v) if (isset($desenho[$k]) && is_string($v)) $defs[$k] = $v;
     return [$defs, null, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];

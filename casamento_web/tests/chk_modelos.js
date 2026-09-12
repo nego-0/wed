@@ -446,6 +446,19 @@ const entrar = async (ctx, u, p) => {
   ok(/Pia/.test(provaCasal) || /PIA/i.test(provaCasal),
      'e ve-o com o SEU nome: a miniatura mostra o resultado, nao o modelo');
 
+  // As fotografias que faltam são as de EXEMPLO, e não as do casamento de
+  // origem. Um modelo da casa guarda só o desenho; o resto vinha do valor de
+  // fábrica, que é o convite do primeiro casal — e um casal que ainda não
+  // enviou fotografias nenhumas via, em todas as miniaturas, as fotografias
+  // de gente que não conhece. Os dados de exemplo existem exactamente para
+  // ocupar esse lugar, e até aqui não ocupavam nenhum.
+  const fotoEx = String(((await api('modelo_exemplo')).exemplo || {})['media.hero'] || '')
+                   .split('/').pop();
+  ok(fotoEx && provaCasal.includes(fotoEx),
+     'com a fotografia de exemplo da casa no lugar da que o casal ainda não pôs: ' + fotoEx);
+  ok(!/capa-isabel-abednego/.test(provaCasal),
+     'e nunca com as do casamento de origem — a prova de um modelo não é o retrato de um casal');
+
   const rascunho2 = await api('modelo_criar', { nome: 'ZZ Escondido ' + marca,
                                                 ambito: 'digital', visivel: false });
   const provaProibida = await noivos.evaluate(async (id) =>

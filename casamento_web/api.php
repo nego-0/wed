@@ -4355,6 +4355,50 @@ if ($acao === 'bar_estado') {
         'resolvidos' => array_map(fn($p) => barPedidoLinha($conn, $p, true), $fim)]);
 }
 
+if ($acao === 'bar_tectos') {
+    /* Quanto é que se pode MESMO servir de cada bebida deste pedido, agora.
+     *
+     * A janela de «servir menos» deixava subir o número até ao que a pessoa
+     * tinha pedido e não dizia nada — e só depois de carregar em «Aprovar
+     * assim» é que o servidor respondia que as regras não deixavam. Uma
+     * recusa que só aparece no fim é a mesma promessa a fingir que o menu do
+     * convidado evita (§9): o sítio de dizer «só pode levar duas» é ao lado do
+     * número, antes de alguém o escrever.
+     *
+     * A conta é a de sempre — `barVeredicto()`, que já pesa o stock, o máximo
+     * por pedido e a regra que manda —, e faz-se EXCLUINDO este pedido: as
+     * bebidas que estão a ser decididas não podem contar contra si próprias.
+     */
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    $id = (int)($_GET['id'] ?? 0);
+    $p  = $id ? barPedido($conn, $id) : null;
+    if (!$p) erro('Pedido não encontrado.');
+    barLimitesEsquecer();
+    $ritmo = barRitmoDaCasa($conn, $id);
+    $tectos = [];
+    foreach (barItensDoPedido($conn, $id) as $li) {
+        $item = barItem($conn, (int)$li['item_id']);
+        if (!$item) continue;
+        $v = barVeredicto($conn, $item, (int)$p['convidado_id'], (int)$p['convite_id'],
+                          $ritmo, $id);
+        $pedidas = (int)$li['quantidade'];
+        $pode = max(0, (int)$v['pode']);
+        $tectos[] = [
+            'item_id' => (int)$li['item_id'],
+            'nome'    => $li['nome'],
+            'pedidas' => $pedidas,
+            'pode'    => $pode,
+            'disponivel' => (int)$item['disponivel'],
+            // Porquê, em palavras, só quando o tecto fica abaixo do pedido. É
+            // a mesma frase que o servidor daria a recusar — a copa não pode
+            // ler aqui uma coisa e lá outra.
+            'porque'  => $pode < $pedidas
+                       ? barTextoTravao($conn, $item, $v, $pedidas) : ''];
+    }
+    ok(['tectos' => $tectos]);
+}
+
 if ($acao === 'bar_decidir') {
     // Aprovar (e reservar) ou recusar (com motivo).
     $cid = barCid();

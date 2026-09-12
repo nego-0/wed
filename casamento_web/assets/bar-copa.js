@@ -855,7 +855,7 @@
    * as recusas ou por palavras suas: alguém vai receber menos do que pediu, e
    * uma quantidade que encolhe em silêncio faz a pessoa pedir outra vez.
    */
-  window.copaParcial = function (id) {
+  window.copaParcial = async function (id) {
     var p = (EST.fila || []).filter(function (x) { return x.id === id; })[0];
     if (!p) return;
     var motivos = (EST.motivos || []).map(function (m) {
@@ -863,14 +863,35 @@
     });
     motivos.push({ v: '0', r: 'Outro — escrevo eu' });
 
+    /* Quanto é que se pode servir de cada uma, AGORA.
+       A janela abria com o número pedido e deixava lá voltar sem dizer nada;
+       quem carregasse em «Aprovar assim» é que descobria, no fim, que as
+       regras não deixavam aquele número. O tecto vem do servidor — a mesma
+       conta que a decisão vai fazer — e entra no próprio campo: não se pode
+       escrever o que não se pode servir, e diz-se porquê ao lado. */
+    var d = await window.api('bar_tectos&id=' + id, { method: 'GET', silencioso: true });
+    var tecto = {};
+    ((d && d.tectos) || []).forEach(function (t) { tecto[String(t.item_id)] = t; });
+
+    var travadas = 0, apertadas = 0;
     var campos = (p.itens || []).map(function (l) {
       var i = (EST.itens || []).filter(function (x) { return x.id === l.item_id; })[0];
       var ha = i ? i.disponivel : null;
+      var t = tecto[String(l.item_id)];
+      // Sem resposta do servidor não se inventa tecto nenhum: vale o que a
+      // pessoa pediu, e a decisão dirá que não — é o comportamento de antes, e
+      // é melhor do que um limite adivinhado pelo ecrã.
+      var topo = t ? Math.min(l.quantidade, t.pode) : l.quantidade;
+      if (t && t.pode <= 0) travadas++;
+      else if (topo < l.quantidade) apertadas++;
       return { id: 'q' + l.item_id, rot: l.nome, tipo: 'numero',
-               valor: l.quantidade, min: 0, max: l.quantidade,
+               valor: topo, min: 0, max: topo,
                dica: 'Pediu ' + l.quantidade
                    + (ha !== null ? ' · há ' + ha + ' por servir' : '')
-                   + '. Zero tira a bebida do pedido.' };
+                   + (topo < l.quantidade
+                       ? ' · <b>no máximo ' + topo + '</b> — ' + esc(t.porque)
+                       : '')
+                   + ' Zero tira a bebida do pedido.' };
     });
     campos.push({ id: 'motivo_id', rot: 'Porquê', tipo: 'escolha',
                   valor: motivos.length > 1 ? motivos[0].v : '0', opcoes: motivos });
@@ -882,16 +903,44 @@
       guardar: 'Aprovar assim',
       largo: true,
       dica: 'Baixe o que não pode servir. O convidado vê o novo número <b>e</b> '
-          + 'o motivo — é isso que o impede de voltar a pedir já a seguir.',
+          + 'o motivo — é isso que o impede de voltar a pedir já a seguir.'
+          // E o que as regras já decidiram por si, dito ANTES de se mexer nos
+          // números: a janela abre com esses campos no tecto deles, e quem
+          // tentar subi-los encontra a porta fechada — em vez de a encontrar
+          // no fim, depois de escrever o motivo.
+          + (travadas || apertadas
+              ? '<br><b>As regras do bar já apertaram este pedido.</b> '
+                + (travadas ? travadas + (travadas === 1 ? ' bebida não pode sair'
+                                                         : ' bebidas não podem sair') : '')
+                + (travadas && apertadas ? ', e ' : '')
+                + (apertadas ? apertadas + (apertadas === 1 ? ' vai em menos'
+                                                            : ' vão em menos') : '')
+                + '. O porquê está ao lado de cada uma; para mudar isso, levante '
+                + 'a regra em «Regras do Bar».'
+              : ''),
       campos: campos,
       aoGuardar: async function (v) {
-        var cortes = {}, mexeu = false;
+        var cortes = {}, mexeu = false, acima = null;
         (p.itens || []).forEach(function (l) {
           var q = parseInt(v['q' + l.item_id], 10);
           if (isNaN(q)) q = l.quantidade;
+          // O `max` do campo trava o botão de subir, mas não trava um número
+          // escrito à mão — e o que está em causa é uma regra do bar, que não
+          // pode depender do que o teclado deixa escrever. Confere-se aqui, e
+          // o servidor volta a conferir: são as mesmas contas nos dois sítios.
+          var t = tecto[String(l.item_id)];
+          if (t && q > t.pode && !acima) acima = { linha: l, t: t, q: q };
           cortes[String(l.item_id)] = q;
           if (q !== l.quantidade) mexeu = true;
         });
+        if (acima) {
+          licJanelaErro(acima.t.pode <= 0
+            ? '«' + acima.linha.nome + '» não pode sair de todo: ' + acima.t.porque
+              + ' Ponha zero, ou levante a regra em «Regras do Bar».'
+            : '«' + acima.linha.nome + '»: no máximo ' + acima.t.pode + '. '
+              + acima.t.porque);
+          return false;
+        }
         if (!mexeu) {
           licJanelaErro('Não baixou nada. Para servir o pedido inteiro há o botão «Aprovar».');
           return false;

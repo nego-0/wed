@@ -805,6 +805,26 @@ function correcoesEsperadas(): array {
         ['Bar: e o painel diz quais é que estão à espera de resposta',
          'assets/bar-copa.js', "'<span class=\"b-al-pede\">pede resposta</span>' : '')"],
 
+        // ---- A arrumação de bebidas.php e da aprovação parcial ----
+        ['Bar: o menu do convidado não se reescreve quando não mudou nada',
+         'assets/bar-convidado.js', 'if (html === pintado) {'],
+        ['Bar: as duas barras do topo têm a largura toda da coluna',
+         'assets/bar.css', '.b-festa-topo .b-mesa{ width:100%; }'],
+        ['Bar: e a procura do menu também, que ali está sozinha na linha',
+         'assets/bar.css', '.b-festa .b-busca{ max-width:none; }'],
+        ['Bar: a mesa de entrega escolhe-se com procura, como a pessoa',
+         'assets/bar-convidado.js', "rot: 'Mesa', tipo: 'escolha', procura: true"],
+        ['Bar: servir menos sabe quanto se pode servir ANTES de alguém escrever',
+         'api.php', "\$acao === 'bar_tectos'"],
+        ['Bar: e o número não sobe acima disso — nem escrito à mão',
+         'assets/bar-copa.js', 'if (t && q > t.pode && !acima) acima ='],
+
+        // ---- Os modelos e os dados de exemplo ----
+        ['Modelos: a prova de um modelo não é o retrato do primeiro casal',
+         'personalizacao.php', 'foreach (exemploModelo($conn) as $k => $v) $defs[$k] = $v;'],
+        ['Modelos: e o que o casal ainda não pôs mostra-se com os dados de exemplo',
+         'personalizacao.php', "if ((\$proprias[\$k] ?? '') === '') \$defs[\$k] = \$v;"],
+
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',
          'assets/icones.js', 'function copoDe('],

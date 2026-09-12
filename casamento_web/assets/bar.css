@@ -360,12 +360,22 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
    linha que a pessoa vê sempre, e o que se põe aqui rouba menu ao primeiro
    ecrã de um telemóvel. */
 .b-pastilhas{ display:flex; gap:.4rem; flex-wrap:wrap; }
+/* As duas pastilhas do topo são BARRAS: uma por linha, da largura toda da
+   coluna. Encolhidas ao seu texto, ficavam dois botões de tamanhos diferentes
+   («Entregar em Noivos» curto, «A pedir para Maria Madalena» comprido) com um
+   resto de barra vazio ao lado — e a segunda mudava de largura sempre que o
+   nome mudava. Uma linha inteira dá sempre o mesmo alvo no mesmo sítio, que é
+   o que se procura com o polegar sem olhar. */
+.b-festa-topo .b-pastilhas{ flex-direction:column; align-items:stretch; gap:.35rem; }
+.b-festa-topo .b-mesa{ width:100%; }
 .b-mesa{ display:inline-flex; align-items:center; gap:.4rem;
          background:rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.1); border-radius:50px;
          padding:.35rem .85rem; font-size:.85rem; cursor:pointer; min-height:40px;
          color:inherit; font-family:inherit; }
 .b-mesa .ico{ width:15px; height:15px; opacity:.75; }
-.b-mesa .seta{ width:13px; height:13px; opacity:.5; margin-left:.1rem; }
+/* A seta encosta-se à direita da barra — é a beira onde a mão a vai procurar,
+   e é o que diz que aquilo abre. Ao pé do texto parecia parte do nome. */
+.b-mesa .seta{ width:13px; height:13px; opacity:.5; margin-left:auto; }
 .b-para.on .ico{ opacity:1; }
 /* «A pedir para outra pessoa» é um estado, e um estado que se esquece dá uma
    ronda inteira lançada em nome do vizinho. Enquanto está ligado a pastilha
@@ -390,6 +400,14 @@ body.com-rodape .b-corpo{
    campo com o verde da plataforma no meio de um convite cor de vinho é a
    costura a aparecer. Os --c-* são as cores do casal; o desenho é o mesmo. */
 .b-festa .b-fer{ margin:0 0 .6rem; }
+/* A procura ocupa a coluna do meio inteira. Nos ecrãs de serviço ela divide a
+   linha com botões, e por isso tem um tecto de 26rem; aqui está sozinha, e
+   parada a meio de uma coluna de 560px lia-se como um campo por acabar. */
+.b-festa .b-busca{ max-width:none; }
+/* E o mesmo para a caixa do nome, no ecrã de entrada: é a mesma pergunta, e
+   uma barra mais estreita do que a outra em páginas seguidas dá a sensação de
+   que a página mudou de sítio. */
+.b-festa .b-procura{ max-width:560px; }
 .b-festa .b-foto{ background:var(--c-creme, #F3EEE3); }
 .b-festa .b-busca input{ border-color:rgba(0,0,0,.15); background:var(--c-cartao, #fff);
                          color:var(--c-tinta, #20342A); min-height:48px; }

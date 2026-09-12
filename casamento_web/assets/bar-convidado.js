@@ -33,7 +33,11 @@
   // faltavam quando o menu chegou: o menu repinta-se a cada volta, e uma
   // contagem guardada em segundos voltava ao princípio de oito em oito.
   var pausa = null;          // {espera_s, mensagem}
-  var pausaAte = 0;
+  // Os instantes em que cada espera acaba. Guardam-se em ABSOLUTO, e não em
+  // segundos: o menu repinta-se a cada volta, e uma contagem guardada em
+  // segundos voltava ao princípio de dez em dez — a pessoa via «2:00» a vida
+  // toda e nunca percebia que aquilo andava.
+  var pausaAte = 0, ritmoAte = 0, travaoAte = 0;
   var cesto = {};                       // item_id -> quantidade
   var meus = [];
   var relogio = null, procuraEspera = null;
@@ -93,6 +97,10 @@
 
   // ---- 1. quem é? -------------------------------------------
   function ecraProcura(aviso) {
+    // Quem escreve no corpo por fora do menu tem de esquecer o que lá estava:
+    // senão o menu seguinte, se calhar a ser igual ao último, era «saltado» e
+    // a pessoa ficava a olhar para o ecrã de quem é.
+    pintado = '';
     $('b-corpo').innerHTML =
       '<div class="b-procura">'
       + '<h1>Quem está a pedir?</h1>'
@@ -204,6 +212,8 @@
     return 'mesa ' + (mesaEntrega ? mesaEntrega.id : '?');
   }
 
+  var pintado = '';          // o último menu escrito, para não o reescrever igual
+
   function pintarMenu() {
     if (!eu) return;
     var html = '';
@@ -228,18 +238,17 @@
     if (ritmo) {
       html += '<div class="b-nota">' + esc(ritmo.mensagem
         || 'A copa está a dar vazão a muitos pedidos neste momento.')
-        + (ritmo.espera_s > 0
-            ? '<br>O seu abre em <b class="b-conta" data-ate="'
-              + (Date.now() + ritmo.espera_s * 1000) + '">' + esc(hms(ritmo.espera_s))
+        + (ritmoAte
+            ? '<br>O seu abre em <b class="b-conta" data-ate="' + ritmoAte + '">'
+              + esc(hms((ritmoAte - Date.now()) / 1000))
               + '</b> — e fica na frente quando abrir.' : '')
         + '</div>';
     } else if (travaoPedido) {
       // O travão do acto de pedir é da pessoa, e trava a página inteira.
       html += '<div class="b-nota">' + esc(travaoPedido.texto)
-        + (travaoPedido.espera_s > 0
-            ? ' <b class="b-conta" data-ate="'
-              + (Date.now() + travaoPedido.espera_s * 1000) + '">'
-              + esc(hms(travaoPedido.espera_s)) + '</b>' : '')
+        + (travaoAte
+            ? ' <b class="b-conta" data-ate="' + travaoAte + '">'
+              + esc(hms((travaoAte - Date.now()) / 1000)) + '</b>' : '')
         + '</div>';
     }
 
@@ -282,6 +291,20 @@
        escrever deixa de existir a cada letra, o foco cai para o <body>, e a
        letra seguinte vai para lado nenhum: escrevia-se «a», e depois nada.
        Guarda-se onde o cursor estava e devolve-se ao sítio. */
+    /* E o menu não se reescreve quando não mudou nada.
+       Esta função corre a cada volta do relógio — de dez em dez segundos — e
+       reescrever o corpo inteiro destrói e refaz todos os cartões, fotografias
+       incluídas: a página PISCAVA sozinha, à frente de quem estava a ler, e a
+       cada piscar perdia-se o sítio onde a pessoa ia. Comparar o texto que se
+       ia escrever com o que já lá está é mais barato do que o escrever, e a
+       volta em que nada mudou passa a não se ver.
+
+       Para isto valer, nenhum pedaço deste html pode ser calculado a partir da
+       hora de AGORA: as três contagens levam o instante em que acabam, que é o
+       mesmo a cada volta, e quem as faz andar ao segundo é o tique(). */
+    if (html === pintado) { pintarTopo(); pintarRodape(); return; }
+    pintado = html;
+
     var antes = document.activeElement;
     var escrevia = antes && antes.id === 'q-menu';
     var caret = escrevia ? antes.selectionStart : 0;
@@ -565,7 +588,14 @@
       guardar: 'É aqui',
       dica: 'A folha do QR está na <b>' + esc(MESA.nome) + '</b>. Se mudou de lugar, '
           + 'diga-nos para onde — quem entrega procura-o lá.',
-      campos: [{ id: 'mesa', rot: 'Mesa', tipo: 'escolha',
+      // Com a procura SEMPRE, e não só a partir de uma dúzia de mesas: as mesas
+      // de um casamento chamam-se «Alecrim», «Padrinhos», «7» — quem mudou de
+      // lugar sabe o nome do sítio onde está, e escrevê-lo é mais depressa do
+      // que o caçar numa roda de telemóvel. É também a mesma procura que a
+      // pastilha do lado abre para escolher a pessoa: duas barras irmãs no
+      // mesmo topo não podem abrir-se de maneiras diferentes.
+      campos: [{ id: 'mesa', rot: 'Mesa', tipo: 'escolha', procura: true,
+                 dicaProcura: 'O nome ou o número da mesa',
                  valor: mesaEntrega ? String(mesaEntrega.id) : String(MESA.id),
                  opcoes: d.mesas.map(function (m) { return { v: String(m.id), r: m.nome }; }) }],
       aoGuardar: function (v) {
@@ -745,13 +775,16 @@
     // «+» desaparecer numa bebida que essa pessoa já não pode pedir — mostrar
     // as minhas quotas e recusar no fim seria uma promessa a fingir.
     var d = await chamar('bar_menu', undefined, para ? { por: para.id } : null);
-    if (!d.success) { $('b-corpo').innerHTML = falhou(d); return; }
+    if (!d.success) { pintado = ''; $('b-corpo').innerHTML = falhou(d); return; }
     menu = { categorias: d.categorias, itens: d.itens };
     aberto = !!d.aberto;
     ritmo = d.ritmo || null;
     travaoPedido = d.pedido || null;
     pausa = d.pausa || null;
-    pausaAte = pausa ? Date.now() + pausa.espera_s * 1000 : 0;
+    pausaAte  = pausa ? Date.now() + pausa.espera_s * 1000 : 0;
+    ritmoAte  = (ritmo && ritmo.espera_s > 0) ? Date.now() + ritmo.espera_s * 1000 : 0;
+    travaoAte = (travaoPedido && travaoPedido.espera_s > 0)
+              ? Date.now() + travaoPedido.espera_s * 1000 : 0;
     // Uma bebida que desapareceu do menu não pode ficar no cesto.
     Object.keys(cesto).forEach(function (k) {
       var i = menu.itens.filter(function (x) { return String(x.id) === k; })[0];
@@ -774,7 +807,7 @@
 
   async function arrancar() {
     var d = await chamar('bar_mesa');
-    if (!d.success) { $('b-corpo').innerHTML = falhou(d); return; }
+    if (!d.success) { pintado = ''; $('b-corpo').innerHTML = falhou(d); return; }
     aberto = !!d.aberto;
     msgFechado = d.mensagem_fechado || msgFechado;
     procuraMin = d.procura_min || 4;
