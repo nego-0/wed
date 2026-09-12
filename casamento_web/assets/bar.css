@@ -864,6 +864,33 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                 color:var(--gold-deep); }
 .b-al-fim{ margin-top:.6rem; font-size:.82rem; color:var(--ink-fraco); }
 
+/* ---- o editor das frases que o convidado lê (§31.5) ---- */
+.b-vars{ display:flex; flex-wrap:wrap; gap:.3rem .9rem; margin:0 0 1rem;
+         font-size:.8rem; color:var(--ink-fraco); }
+.b-vars code{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+              font-size:.78rem; background:var(--cream); border-radius:5px;
+              padding:.1rem .3rem; color:var(--gold-deep); }
+.b-msg{ padding:.7rem 0; border-bottom:1px solid var(--line); }
+.b-msg:last-of-type{ border-bottom:0; }
+.b-msg label{ display:flex; align-items:center; gap:.5rem; font-size:.9rem;
+              margin-bottom:.35rem; color:var(--ink); }
+/* «Vossa» marca as que o casal reescreveu: sem isto, uma lista de dez caixas
+   não diz quais é que já foram tocadas. */
+.b-msg .sel{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+             background:var(--gold-pale); color:var(--gold-deep);
+             border-radius:20px; padding:.1rem .45rem; }
+.b-msg textarea{ width:100%; font:inherit; font-size:.9rem; line-height:1.5;
+                 padding:.5rem .6rem; border:1.5px solid var(--line);
+                 border-radius:9px; background:var(--card); color:var(--ink);
+                 resize:vertical; }
+.b-msg textarea:focus{ outline:none; border-color:var(--gold);
+                       box-shadow:0 0 0 3px var(--ring); }
+.b-msg .lida{ margin:0; font-size:.9rem; line-height:1.5; color:var(--ink); }
+/* O texto de fábrica por baixo: é o que sai se a caixa ficar vazia, e por isso
+   lê-se como exemplo e não como instrução. */
+.b-msg .fab{ display:block; margin-top:.3rem; font-size:.78rem; line-height:1.45;
+             color:var(--ink-fraco); font-style:italic; }
+
 /* A frase que a regra vai ser, escrita por cima do formulário e reescrita a
    cada campo que se toca. Um formulário de três números pede que se imagine o
    resultado; isto mostra-o. */

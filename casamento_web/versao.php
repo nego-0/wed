@@ -674,8 +674,10 @@ function correcoesEsperadas(): array {
          'api.php', "\$daqui = (int)(\$d['expira_min'] ?? 0)"],
         ['Bar: «agora não» não é «esta noite não» — a proibição com hora tem espera',
          'api.php', "'travao' => \$falta > 0 ? 'suspensa' : 'proibido'"],
+        // O texto da bebida suspensa saiu do `switch` para a lista de textos de
+        // fábrica (§31.5), onde é um modelo com variáveis como os outros.
         ['Bar: e o convidado lê quanto falta, e não que a bebida acabou',
-         'api.php', "case 'suspensa':"],
+         'api.php', 'está indisponível de momento'],
         ['Bar: uma bebida tem ficha de regras, como uma pessoa tem',
          'assets/bar-copa.js', 'window.copaRegrasDaBebida = function'],
         ['Bar: e chega-se-lhe pela barra de «Os números», onde o problema se vê',
@@ -754,6 +756,24 @@ function correcoesEsperadas(): array {
          'assets/bar-copa.js', 'function situacaoEmPalavras('],
         ['Bar: «ver a regra» não é botão à parte — chega-se lá por «adaptar»',
          'assets/bar-copa.js', 'window.copaAlertaAdaptar = function'],
+
+        // ---- A sexta passagem, fase 4: a voz da festa ----
+        ['Bar: o que o convidado lê passa a ser escrito pelo casal',
+         'api.php', 'function barMensagens('],
+        ['Bar: e os textos de fábrica são UMA lista, que o editor também mostra',
+         'api.php', 'function barTextosFabrica('],
+        ['Bar: com as mesmas variáveis dos dois lados, trocadas pela mesma função',
+         'api.php', 'function barTrocarVariaveis('],
+        ['Bar: a da regra manda sobre a da situação, e esta sobre a de fábrica',
+         'api.php', "\$sit = \$v['travao'] ?: 'corte';"],
+        ['Bar: uma variável que a frase não use não chega ao convidado',
+         'api.php', "preg_replace('/\\{[A-Z_]+\\}/u', '', \$t)"],
+        ['Bar: apagar a frase é voltar ao de fábrica, e não guardar um vazio',
+         'api.php', "\$acao === 'bar_mensagens_guardar'"],
+        ['Bar: a mensagem de fechado herda-se da definição antiga, sem se perder',
+         'api.php', "\$velha = trim(barDef(\$conn, 'bar.mensagem_fechado'));"],
+        ['Bar: e o editor das frases vive com as outras regras do bar',
+         'assets/bar-regras.js', 'function pintarMensagens('],
 
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',

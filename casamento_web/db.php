@@ -2205,6 +2205,7 @@ function nomesDeAcao(): array {
         // ignorado é uma decisão como as outras, e no dia seguinte tem de se
         // poder ver quem a tomou e a que horas.
         'bar_alerta'        => ['decidiu um alerta do bar', 'bar'],
+        'bar_mensagens'     => ['mudou o que o bar diz aos convidados', 'bar'],
         'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],
         'bar_mudou_mesa'    => ['mudou a mesa de um pedido do bar', 'bar'],
         'bar_pedido_amigo'  => ['pediu no bar por outro convidado', 'bar'],

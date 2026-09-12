@@ -2946,3 +2946,53 @@ mediu em números — o JSON da situação não se mostra a ninguém.
 | Aplicar `pausar_copa` põe mesmo a copa em pausa | Senão o botão fingia |
 | O convidado esbarra na pausa, com o tempo que falta | §30.3 |
 | O painel escreve português, e não JSON | O copeiro não lê chaves |
+
+### 31.6 Fase 4 — a voz da festa
+
+O que o convidado lê quando um pedido não passa é a voz da **festa**, e não a
+da aplicação. Até aqui essa voz era só nossa: os textos de fábrica, escritos
+uma vez, iguais em todos os casamentos. Um casal que trate os convidados por
+«tu», ou que queira uma frase sua, não tinha onde a pôr.
+
+Dez situações, uma linha cada: `stock` · `casa` · `proibido` · `suspensa` ·
+`intervalo` · `tecto` · `corte` · `copa_fechada` · `copa_pausada` ·
+`aguarda_copa`. E cinco variáveis: `{BEBIDA}` · `{PEDIDAS}` · `{ACEITES}` ·
+`{TEMPO}` · `{NOME}`.
+
+**Três degraus, e o mais específico ganha** — como em todo o resto do módulo
+(§8.0): a mensagem da **regra** (foi escrita a pensar naquele caso), depois a da
+**situação** (do casal), e só depois a de **fábrica**.
+
+**Os textos de fábrica passaram a ser uma lista, com as mesmas variáveis.**
+Estavam num `switch`, escritos com concatenações; agora são modelos como os do
+casal, trocados pela mesma função. Isso dá duas coisas de uma vez: o editor pode
+mostrar por baixo de cada caixa **exactamente** o que sai se ela ficar vazia, e
+não há uma segunda cópia dos textos para o ecrã — que era uma cópia a divergir.
+
+**Em branco não é «não digas nada».** Apagar a frase apaga a linha, e o que sai
+volta a ser a de fábrica. Guardar uma linha vazia seria guardar «o casal quer
+dizer nada», que não é a mesma coisa — e deixava o convidado a olhar para um
+balão sem texto.
+
+**Uma variável que a frase não use não chega ao convidado.** Quem escrever
+`{TEMPO}` numa situação que não tem tempo não põe ninguém a ler `{TEMPO}`: as
+que sobram apagam-se à saída.
+
+**O que o pessoal lê não passa por aqui.** As mensagens do casal são a festa a
+falar com quem bebe. A um copeiro diz-se o que se passa e o que ele pode fazer
+(«levante a pausa se for mesmo para servir agora»); a um convidado conta-se
+outra história, e é essa que o casal escreve.
+
+**A mensagem de bar fechado consolidou-se.** Vivia numa definição à parte
+(`bar.mensagem_fechado`), de antes de haver esta tabela. Passa a ser a situação
+`copa_fechada` como as outras — e a definição antiga **continua a ler-se
+enquanto ninguém escrever a nova**: um casal que a tenha escrito há meses não a
+perde porque arrumámos o sítio onde ela mora. Sem migração, e sem perder nada.
+
+**O que isto não é** (e por que razão o §2 do plano já o dizia): não é um sítio
+para mensagens por pessoa. Uma mensagem diferente é a pessoa perceber que foi
+apontada, e o §9 existe para o evitar.
+
+`tests/chk_bar_sexta.js` cobre-o em cinco verificações — a de fábrica sem frase
+do casal, a do casal com as variáveis trocadas, a da regra a ganhar às duas, o
+regresso à de fábrica ao apagar, e o editor com as dez caixas.

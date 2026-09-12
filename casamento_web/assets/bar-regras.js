@@ -152,6 +152,14 @@
       +     '<div id="br-fer-mot"></div>'
       +     '<div id="br-motivos"></div>'
       +   '</section>'
+      +   '<section class="b-cartao">'
+      +     '<div class="b-sec">' + ico.ico('chavena') + 'O que o bar diz aos convidados</div>'
+      +     '<p class="b-nota">Estas frases são a voz da <b>vossa</b> festa, e não '
+      +       'a da aplicação. Deixem em branco as que estiverem bem como estão — '
+      +       'em branco vale o texto de fábrica, que está escrito por baixo de '
+      +       'cada caixa.</p>'
+      +     '<div id="br-mensagens"></div>'
+      +   '</section>'
       + '</div>';
     pintar();
   }
@@ -162,6 +170,7 @@
     pintarDefs();
     pintarLimites();
     pintarMotivos();
+    pintarMensagens();
   }
 
   function EST() { return (ctx && ctx.estado && ctx.estado()) || {}; }
@@ -284,6 +293,63 @@
         + '</div>';
     }).join('');
   }
+
+  /* ---- o que o bar diz aos convidados ----------------------------
+     A voz da festa, e não a da aplicação. Cada situação tem uma caixa; em
+     branco vale o texto de fábrica, que fica escrito por baixo — quem escreve
+     a sua vê exactamente o que está a substituir, e quem não quer mexer não
+     tem de preencher nada.
+
+     As situações, as variáveis e os textos de fábrica vêm todos do SERVIDOR
+     (bar_estado): é ele quem troca as variáveis e quem escolhe o texto, e duas
+     listas — uma de cada lado — acabavam a discordar uma da outra. */
+  function pintarMensagens() {
+    var cx = document.getElementById('br-mensagens');
+    if (!cx) return;
+    var e = EST();
+    var sits = e.situacoes || {};
+    var fab  = e.fabrica || {};
+    var msgs = e.mensagens || {};
+    var vars = e.variaveis || {};
+    var chaves = Object.keys(sits);
+    if (!chaves.length) { cx.innerHTML = ''; return; }
+
+    var legenda = Object.keys(vars).map(function (v) {
+      return '<code>' + esc(v) + '</code> <small>' + esc(vars[v]) + '</small>';
+    }).join(' · ');
+
+    cx.innerHTML = '<p class="b-vars">' + legenda + '</p>'
+      + chaves.map(function (k) {
+          var posto = msgs[k] || '';
+          return '<div class="b-msg' + (posto ? ' posto' : '') + '">'
+            + '<label for="msg-' + k + '"><b>' + esc(sits[k]) + '</b>'
+            + (posto ? '<span class="sel">vossa</span>' : '') + '</label>'
+            + (PODE()
+                ? '<textarea id="msg-' + k + '" rows="2" maxlength="240" '
+                  + 'placeholder="Em branco: fica como está em baixo">'
+                  + esc(posto) + '</textarea>'
+                : '<p class="lida">' + esc(posto || fab[k] || '') + '</p>')
+            + '<small class="fab">' + esc(fab[k] || '') + '</small>'
+            + '</div>';
+        }).join('')
+      + (PODE() ? '<div style="margin-top:1rem"><button class="btn btn-ouro" '
+                + 'onclick="barMensagensGuardar()">' + ico.ico('visto')
+                + 'Guardar as frases</button></div>' : '');
+  }
+
+  window.barMensagensGuardar = async function () {
+    var sits = Object.keys(EST().situacoes || {});
+    var env = {};
+    sits.forEach(function (k) {
+      var el = document.getElementById('msg-' + k);
+      if (el) env[k] = el.value;
+    });
+    var d = await window.api('bar_mensagens_guardar', { method: 'POST',
+                                                        body: JSON.stringify(env) });
+    if (!d || !d.success) return;
+    toast('Guardado. É isto que os convidados vão ler.');
+    await refrescar();
+  };
 
   /* ---- o que o painel guarda entre pinturas ---------------------- */
   var VER = { buscaLim: '', buscaMot: '' };

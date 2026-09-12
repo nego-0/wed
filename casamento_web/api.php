@@ -2659,8 +2659,88 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
     return $out;
 }
 
+/* ============================================================
+   AS MENSAGENS DO CASAL (§31.5)
+
+   O que o convidado lê quando um pedido não passa é a voz da festa, e não a
+   da aplicação. Até aqui essa voz era só nossa: os textos de fábrica, escritos
+   uma vez, iguais em todos os casamentos. Um casal que trate os convidados por
+   «tu», ou que queira uma frase sua, não tinha onde a pôr.
+
+   Três coisas que isto NÃO é:
+     • não é um sítio para mensagens por pessoa — uma mensagem diferente é a
+       pessoa perceber que foi apontada, e o §9 existe para o evitar;
+     • não é obrigatório — uma linha vazia usa o texto de fábrica, e por isso
+       ninguém tem de preencher nada para o bar funcionar;
+     • não muda o que a regra decide, só o que se diz sobre a decisão.
+   ============================================================ */
+
+/** As situações que se podem reescrever, e o que cada uma quer dizer. */
+function barSituacoes(): array {
+    return [
+        'stock'        => 'A bebida acabou',
+        'casa'         => 'A copa está a dar vazão a muitos pedidos',
+        'proibido'     => 'Esta bebida não é para esta pessoa',
+        'suspensa'     => 'Bebida fechada por um bocado',
+        'intervalo'    => 'Ainda não são horas da próxima',
+        'tecto'        => 'Já levou o que a casa serve',
+        'corte'        => 'Cabe menos do que pediu',
+        'copa_fechada' => 'O bar está fechado',
+        'copa_pausada' => 'A copa está em pausa',
+        'aguarda_copa' => 'O pedido entrou e está à espera de decisão',
+    ];
+}
+
+/** As variáveis que se podem escrever dentro de uma mensagem. */
+function barVariaveis(): array {
+    return ['{BEBIDA}'   => 'o nome da bebida',
+            '{PEDIDAS}'  => 'quantas a pessoa pediu',
+            '{ACEITES}'  => 'quantas se podem servir',
+            '{TEMPO}'    => 'quanto falta, em palavras',
+            '{NOME}'     => 'o nome de quem pede'];
+}
+
+/** As mensagens escritas pelo casal, por situação. Lê-se uma vez por pedido. */
+function barMensagens(mysqli $conn): array {
+    global $P;
+    if (isset($GLOBALS['__bar_mensagens'])) return $GLOBALS['__bar_mensagens'];
+    $cid = casamentoAtual();
+    $out = [];
+    $r = @$conn->query("SELECT situacao, texto FROM {$P}bar_mensagens
+                        WHERE casamento_id=$cid AND ativo=1");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        if (trim((string)$x['texto']) !== '') $out[$x['situacao']] = $x['texto'];
+    }
+    // Herança: a mensagem de bar fechado viveu numa definição à parte antes de
+    // haver esta tabela. Continua a ler-se enquanto ninguém escrever a nova —
+    // um casal que a tenha escrito há meses não a perde por termos arrumado o
+    // sítio onde ela mora. Assim que ele guardar a nova, é a nova que manda.
+    if (!isset($out['copa_fechada'])) {
+        $velha = trim(barDef($conn, 'bar.mensagem_fechado'));
+        if ($velha !== '') $out['copa_fechada'] = $velha;
+    }
+    return $GLOBALS['__bar_mensagens'] = $out;
+}
+
+/** Esquecer as mensagens lidas — uma acabada de guardar vale já. */
+function barMensagensEsquecer(): void { unset($GLOBALS['__bar_mensagens']); }
+
+/**
+ * A mensagem do casal para esta situação, com as variáveis trocadas.
+ *
+ * Devolve '' quando não há — e é isso que faz o texto de fábrica continuar a
+ * valer sem ninguém ter de o repetir.
+ */
+function barMensagem(mysqli $conn, string $situacao, array $vars = []): string {
+    return barTrocarVariaveis(barMensagens($conn)[$situacao] ?? '', $vars);
+}
+
 /**
  * O que se diz a quem não pode pedir agora (§9).
+ *
+ * Três degraus, e por esta ordem: a mensagem da REGRA (a mais específica — foi
+ * escrita a pensar naquele caso), depois a da SITUAÇÃO (do casal, §31.5), e só
+ * depois a de fábrica. O mais específico ganha, como em todo o resto do módulo.
  *
  * Os textos fazem parte do módulo: são eles que decidem se isto parece uma
  * casa que cuida ou um torniquete. Três coisas nunca aparecem aqui — a `nota`
@@ -2668,34 +2748,74 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
  * «limitámos-lhe a si» (essa conversa faz-se de pessoa para pessoa), e a
  * palavra «limite».
  */
-function barTextoTravao(array $item, array $v, int $pedidas = 0): string {
+function barTextoTravao(mysqli $conn, array $item, array $v, int $pedidas = 0,
+                        string $quem = ''): string {
     if ($v['mensagem'] !== '') return $v['mensagem'];
     $nome = '«' . $item['nome'] . '»';
-    switch ($v['travao']) {
-        case 'stock':
-            return 'A ' . $nome . ' acabou. Escolha outra — a copa tem mais para provar.';
-        case 'casa':
-            return 'A copa está a dar vazão a muitos pedidos neste momento. '
-                 . 'O seu abre daqui a ' . barRelogio($v['espera_s'])
-                 . ' — e fica na frente quando abrir.';
-        case 'proibido':
-            return 'A ' . $nome . ' não está disponível para si esta noite. '
-                 . 'Fale com um garçom se achar que é engano.';
-        case 'suspensa':
-            // A copa fechou esta bebida por um bocado. Diz-se quanto falta e
-            // mais nada: o motivo é da casa, e «está a sair depressa de mais»
-            // dito ao convidado lê-se como uma acusação a quem a pediu.
-            return 'A ' . $nome . ' está indisponível de momento. '
-                 . 'Volte a tentar daqui a ' . barRelogio($v['espera_s']) . '.';
-        case 'intervalo':
-            return 'A próxima ' . $nome . ' abre daqui a ' . barRelogio($v['espera_s']) . '.';
-        case 'tecto':
-            return 'Já levou o que a casa serve de ' . $nome . ' esta noite. '
-                 . 'Há mais para provar.';
-    }
-    // Cabe alguma coisa, mas menos do que pediu.
-    return 'De ' . $nome . ' podemos servir-lhe ' . $v['pode']
-         . ($v['pode'] === 1 ? ' neste momento.' : ' neste momento.');
+    // A situação é o travão; quando cabe alguma coisa mas menos do que se
+    // pediu, é o «corte» — que não é travão nenhum, é uma conta.
+    $sit = $v['travao'] ?: 'corte';
+    $doCasal = barMensagem($conn, $sit, [
+        '{BEBIDA}'  => $item['nome'],
+        '{PEDIDAS}' => $pedidas,
+        '{ACEITES}' => (int)$v['pode'],
+        '{TEMPO}'   => $v['espera_s'] > 0 ? barRelogio((int)$v['espera_s']) : '',
+        '{NOME}'    => $quem,
+    ]);
+    if ($doCasal !== '') return $doCasal;
+    // E, em último, o de fábrica — escrito com as mesmas variáveis, e trocado
+    // pela mesma função. Assim o que o casal vê no editor como «o que está lá
+    // hoje» é exactamente o que sai daqui, e não uma cópia que um dia diverge.
+    return barTrocarVariaveis(barTextosFabrica()[$sit] ?? '', [
+        '{BEBIDA}'  => $item['nome'],
+        '{PEDIDAS}' => $pedidas,
+        '{ACEITES}' => (int)$v['pode'],
+        '{TEMPO}'   => $v['espera_s'] > 0 ? barRelogio((int)$v['espera_s']) : '',
+        '{NOME}'    => $quem,
+    ]);
+}
+
+/**
+ * Os textos de fábrica, por situação, com as variáveis por trocar.
+ *
+ * São a voz por omissão do módulo — e são também o que o editor mostra por
+ * baixo de cada caixa, para quem escreve a sua saber o que está a substituir.
+ * Uma segunda cópia para o ecrã seria uma cópia a divergir.
+ *
+ * Três coisas que nunca aparecem nestes textos: a `nota` da regra (é de quem a
+ * escreveu), a diferença entre «a casa limita» e «limitámos-lhe a si» (essa
+ * conversa faz-se de pessoa para pessoa), e a palavra «limite».
+ */
+function barTextosFabrica(): array {
+    return [
+        'stock'     => 'A «{BEBIDA}» acabou. Escolha outra — a copa tem mais para provar.',
+        'casa'      => 'A copa está a dar vazão a muitos pedidos neste momento. '
+                     . 'O seu abre daqui a {TEMPO} — e fica na frente quando abrir.',
+        'proibido'  => 'A «{BEBIDA}» não está disponível para si esta noite. '
+                     . 'Fale com um garçom se achar que é engano.',
+        // A copa fechou esta bebida por um bocado. Diz-se quanto falta e mais
+        // nada: o motivo é da casa, e «está a sair depressa de mais» dito ao
+        // convidado lê-se como uma acusação a quem a pediu.
+        'suspensa'  => 'A «{BEBIDA}» está indisponível de momento. '
+                     . 'Volte a tentar daqui a {TEMPO}.',
+        'intervalo' => 'A próxima «{BEBIDA}» abre daqui a {TEMPO}.',
+        'tecto'     => 'Já levou o que a casa serve de «{BEBIDA}» esta noite. '
+                     . 'Há mais para provar.',
+        'corte'     => 'De «{BEBIDA}» podemos servir-lhe {ACEITES} neste momento.',
+        'copa_fechada' => 'A copa está fechada neste momento.',
+        'copa_pausada' => 'A copa está a recuperar do movimento. '
+                        . 'Volte a tentar daqui a {TEMPO}.',
+        'aguarda_copa' => 'A copa está a ver. Diga este número a quem entregar.',
+    ];
+}
+
+/** Trocar as variáveis de um texto, e apagar as que sobrarem. */
+function barTrocarVariaveis(string $t, array $vars): string {
+    if ($t === '') return '';
+    foreach ($vars as $k => $v) $t = str_replace($k, (string)$v, $t);
+    // As que sobrarem apagam-se: um convidado não tem de ler «{TEMPO}» porque
+    // quem escreveu a frase usou uma variável que aquela situação não tem.
+    return trim(preg_replace('/\{[A-Z_]+\}/u', '', $t));
 }
 
 /**
@@ -2868,7 +2988,7 @@ function barTravaoDe(mysqli $conn, int $convidadoId, int $conviteId,
         $v = barVeredicto($conn, $item, $convidadoId, $conviteId, $ritmo, $excluir);
         if ((int)$f['q'] > (int)$v['pode']) {
             return 'As regras do bar não deixam servir isto: '
-                 . barTextoTravao($item, $v, (int)$f['q'])
+                 . barTextoTravao($conn, $item, $v, (int)$f['q'])
                  . ' Corte a quantidade, ou levante a regra em «Regras do Bar».';
         }
     }
@@ -2886,7 +3006,7 @@ function barFilaContraRegras(mysqli $conn): array {
             $v = barVeredicto($conn, $item, $gid, $conv, $ritmo);
             if ($li['quantidade'] > $v['pode']) {
                 $fora[] = ['id' => (int)$p['id'], 'codigo' => $p['codigo_curto'],
-                           'porque' => barTextoTravao($item, $v, $li['quantidade'])];
+                           'porque' => barTextoTravao($conn, $item, $v, $li['quantidade'])];
                 break;
             }
         }
@@ -3951,12 +4071,15 @@ if ($acao === 'bar_pedir') {
     // a decisão — a disponibilidade volta a conferir-se no momento.
     barPortaPublica($conn);
     $cid = casamentoAtual();
-    if (!barAberto($conn)) erro('A copa está fechada neste momento.');
+    if (!barAberto($conn)) {
+        erro(barMensagem($conn, 'copa_fechada') ?: 'A copa está fechada neste momento.');
+    }
     // A pausa. Diz-se quanto falta, e não «feche a página»: quem está com o
     // telemóvel na mão quer saber se vale a pena esperar — e vale, porque a
     // copa reabre sozinha.
     if ($falta = barPausaSegundos($conn)) {
-        erro('A copa está a recuperar do movimento. Volte a tentar daqui a '
+        erro(barMensagem($conn, 'copa_pausada', ['{TEMPO}' => barRelogio($falta)])
+          ?: 'A copa está a recuperar do movimento. Volte a tentar daqui a '
            . barRelogio($falta) . '.');
     }
     $eu = barQuemSou($conn);
@@ -3991,7 +4114,7 @@ if ($acao === 'bar_pedir') {
         if ($q > $v['pode']) {
             // A recusa fala como a página fala: diz o que se passa e quanto
             // falta, e não «limite excedido».
-            erro(barTextoTravao($item, $v, $q));
+            erro(barTextoTravao($conn, $item, $v, $q, $g['nome'] ?? ''));
         }
         $linhas[] = [$item, $q];
     }
@@ -4164,6 +4287,14 @@ if ($acao === 'bar_estado') {
         // resolvidos. O painel é da fase 3; a leitura entra já, para o motor
         // se poder ver a trabalhar.
         'alertas'    => barAlertas($conn),
+        // O que o casal escreveu para cada situação, e o vocabulário do
+        // editor: as situações que existem e as variáveis que se podem usar.
+        // Vem do servidor porque é ele quem as substitui — duas listas, uma de
+        // cada lado, acabavam a discordar.
+        'mensagens'  => barMensagens($conn),
+        'situacoes'  => barSituacoes(),
+        'variaveis'  => barVariaveis(),
+        'fabrica'    => barTextosFabrica(),
         // Telemóveis que valem uma segunda vista. Não acusam ninguém: a copa
         // conhece a sala e decide — o sistema limita-se a apontar (§5.3).
         'bandeiras'  => barBandeiras($conn),
@@ -4535,6 +4666,36 @@ if ($acao === 'bar_motivo_guardar') {
     @$st->execute();
     registar($conn, 'bar_motivo', $txt, '');
     ok(['motivos' => barMotivos($conn)]);
+}
+
+if ($acao === 'bar_mensagens_guardar') {
+    // O que o convidado lê em cada situação, pela voz do casal (§31.5).
+    // Guardam-se todas de uma vez: é um formulário só, e um formulário que
+    // gravasse campo a campo deixava metade escrita se a rede caísse a meio.
+    barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
+    $cid = casamentoAtual();
+    $d = corpo();
+    $n = 0;
+    foreach (array_keys(barSituacoes()) as $sit) {
+        if (!array_key_exists($sit, $d)) continue;
+        $txt = mb_substr(trim((string)$d[$sit]), 0, 240);
+        if ($txt === '') {
+            // Apagar é voltar ao texto de fábrica. Guardar uma linha vazia
+            // seria guardar «o casal quer dizer nada», que não é a mesma coisa.
+            $st = $conn->prepare("DELETE FROM {$P}bar_mensagens
+                                  WHERE casamento_id=? AND situacao=?");
+            if ($st) { $st->bind_param('is', $cid, $sit); @$st->execute(); }
+        } else {
+            $st = $conn->prepare("INSERT INTO {$P}bar_mensagens (casamento_id,situacao,texto,ativo)
+                                  VALUES (?,?,?,1)
+                                  ON DUPLICATE KEY UPDATE texto=VALUES(texto), ativo=1");
+            if ($st) { $st->bind_param('iss', $cid, $sit, $txt); @$st->execute(); }
+        }
+        $n++;
+    }
+    barMensagensEsquecer();
+    registar($conn, 'bar_mensagens', '', $n . ' situação(ões)');
+    ok(['mensagens' => barMensagens($conn)]);
 }
 
 if ($acao === 'bar_motivo_apagar') {
@@ -5010,6 +5171,11 @@ if ($acao === 'bar_pedir_por') {
     // A pausa vale também ao balcão. É a mesma razão de §30.2: uma paragem que
     // se contorna pela porta de serviço não é uma paragem — e quem a pôs foi a
     // própria copa, a dizer que não tem mãos a medir.
+    //
+    // Os textos daqui não passam pelas mensagens do casal (§31.5): essas são a
+    // voz da festa a falar com quem bebe, e quem lê isto é quem trabalha. A um
+    // copeiro diz-se o que se passa e o que ele pode fazer; a um convidado
+    // conta-se outra história, e é essa que o casal escreve.
     if ($falta = barPausaSegundos($conn)) {
         erro('A copa está em pausa por mais ' . barRelogio($falta)
            . '. Levante a pausa se for mesmo para servir agora.');

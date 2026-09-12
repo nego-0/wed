@@ -15,6 +15,14 @@
 // Se isto cair, ou o módulo ganhou um modo que não faz nada — e uma regra
 // desligada que continua escrita no painel é a pior coisa que este módulo pode
 // ter —, ou ganhou um modo que trava à mesma, e aí mentiu a quem o escolheu.
+//
+// FASE 3 — o painel: aplicar, adaptar, ignorar. O que se defende é que os três
+// botões FAZEM o que dizem — e que ignorar fica escrito, porque é uma decisão
+// como as outras.
+//
+// FASE 4 — a voz da festa. As frases que o convidado lê passam a ser do casal,
+// e não da aplicação. Em branco, valem as de fábrica: ninguém tem de preencher
+// nada para o bar funcionar.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -402,6 +410,116 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(!/\{|\}|"accao"/.test(painel.texto),
      'em português, e não em JSON: «' + painel.texto.slice(0, 90) + '»');
 
+  // ==================================================================
+  // FASE 4 — a voz da festa
+  // ==================================================================
+  await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(900);
+  // A secção 11 deixou a copa em pausa, e a pausa trava ANTES do veredicto —
+  // é para isso que ela existe. Levanta-se, senão o que aqui se lia era sempre
+  // a frase da pausa e nunca a da situação que se está a provar.
+  await p.evaluate(async () => {
+    await window.api('bar_defs', { method: 'POST',
+      body: JSON.stringify({ 'bar.pausada_ate': '' }) });
+  });
+
+  // ============ 13. as dez situações, e o que cada uma diz hoje ============
+  const voz = await p.evaluate(async () => {
+    const e = await window.api('bar_estado');
+    return { sits: Object.keys(e.situacoes || {}), fab: e.fabrica || {},
+             vars: Object.keys(e.variaveis || {}), msgs: e.mensagens || {} };
+  });
+  ok(voz.sits.length === 10,
+     'há dez situações que o casal pode reescrever: ' + voz.sits.length);
+  ok(voz.sits.every(s => (voz.fab[s] || '') !== ''),
+     'e todas trazem o texto de fábrica, para se ver o que se está a substituir');
+  ok(/\{BEBIDA\}/.test(voz.fab.stock || ''),
+     'os de fábrica são escritos com as MESMAS variáveis — não há duas '
+     + 'gramáticas: «' + (voz.fab.stock || '') + '»');
+
+  // ============ 14. uma frase do casal substitui a de fábrica ============
+  // O tecto de uma bebida, para haver uma recusa a ler. A regra fica sem
+  // mensagem própria: é a da SITUAÇÃO que se está a provar.
+  const paraRecusar = await p.evaluate(async ([it]) => {
+    const e = await window.api('bar_estado');
+    for (const x of (e.regras || [])) {
+      await window.api('bar_regra_apagar', { method: 'POST', body: JSON.stringify({ id: x.id }) });
+    }
+    await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { escopo: 'item', alvo_id: it, sujeito: 'convidado', unidade: 'bebidas',
+        quantidade: 0, janela_min: 0, modo: 'trava', nota: 'ZS fechada' }) });
+    return true;
+  }, [cen.item]);
+  ok(paraRecusar, 'fecha-se a bebida para haver uma recusa que se possa ler');
+
+  const deFabrica = await pedir(1);
+  ok(deFabrica.success === false && /não está disponível para si esta noite/.test(deFabrica.message),
+     'sem frase do casal, o convidado lê a de fábrica: «' + deFabrica.message + '»');
+
+  const comVoz = await p.evaluate(async () => {
+    await window.api('bar_mensagens_guardar', { method: 'POST', body: JSON.stringify(
+      { proibido: 'Hoje a {BEBIDA} não dá, {NOME} — mas há muito mais. Beijinhos!' }) });
+    return (await window.api('bar_estado')).mensagens.proibido;
+  });
+  ok(/Hoje a \{BEBIDA\}/.test(comVoz || ''),
+     'o casal escreve a sua, com variáveis lá dentro');
+
+  const lida = await pedir(1);
+  ok(lida.success === false && /Hoje a ZS Gin não dá, ZS Bebedor/.test(lida.message),
+     'e é ELA que o convidado lê, com as variáveis já trocadas: «'
+     + lida.message + '»');
+  ok(!/\{|\}/.test(lida.message),
+     'sem chavetas nenhumas à vista — nem as que a frase não usa');
+
+  // ============ 15. a da regra manda sobre a da situação ============
+  const daRegra = await p.evaluate(async ([it]) => {
+    const e = await window.api('bar_estado');
+    const r = (e.regras || []).filter(x => x.nota === 'ZS fechada')[0];
+    await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { id: r.id, escopo: 'item', alvo_id: it, sujeito: 'convidado', unidade: 'bebidas',
+        quantidade: 0, janela_min: 0, modo: 'trava', nota: 'ZS fechada',
+        mensagem: 'Esta é a da regra, e ganha.' }) });
+    return true;
+  }, [cen.item]);
+  const venceu = await pedir(1);
+  ok(daRegra && venceu.message === 'Esta é a da regra, e ganha.',
+     'a mensagem da REGRA continua a mandar sobre a da situação — é a mais '
+     + 'específica, e o mais específico ganha em todo o módulo: «'
+     + venceu.message + '»');
+
+  // ============ 16. apagar a frase devolve a de fábrica ============
+  const voltou = await p.evaluate(async ([it]) => {
+    const e = await window.api('bar_estado');
+    const r = (e.regras || []).filter(x => x.nota === 'ZS fechada')[0];
+    await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { id: r.id, escopo: 'item', alvo_id: it, sujeito: 'convidado', unidade: 'bebidas',
+        quantidade: 0, janela_min: 0, modo: 'trava', nota: 'ZS fechada', mensagem: '' }) });
+    await window.api('bar_mensagens_guardar', { method: 'POST',
+      body: JSON.stringify({ proibido: '' }) });
+    return (await window.api('bar_estado')).mensagens.proibido;
+  }, [cen.item]);
+  ok(voltou === undefined, 'apagar a frase apaga mesmo a linha, e não guarda um vazio');
+  const outraVezFabrica = await pedir(1);
+  ok(/não está disponível para si esta noite/.test(outraVezFabrica.message),
+     'e o convidado volta a ler a de fábrica — em branco não é «não digas nada»');
+
+  // ============ 17. o editor está lá, com o de fábrica à vista ============
+  await p.locator('#ab-regras').click();
+  await p.waitForTimeout(900);
+  const editor = await p.evaluate(() => {
+    const c = document.querySelectorAll('.b-msg');
+    const um = c[0];
+    return { quantas: c.length,
+             temCaixa: !!(um && um.querySelector('textarea')),
+             temFabrica: !!(um && um.querySelector('.fab')
+                            && um.querySelector('.fab').textContent.trim()),
+             temVars: !!document.querySelector('.b-vars code') };
+  });
+  ok(editor.quantas === 10, 'o editor traz as dez caixas (' + editor.quantas + ')');
+  ok(editor.temCaixa && editor.temFabrica,
+     'cada uma com a sua caixa e o texto de fábrica por baixo');
+  ok(editor.temVars, 'e a lista das variáveis que se podem usar');
+
   // ============ arrumar ============
   // De volta a bar.php: apagar convites é dos noivos, e é lá que essa porta
   // está aberta.
@@ -428,6 +546,11 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     }
     await window.api('bar_defs', { method: 'POST',
       body: JSON.stringify({ 'bar.degraus_stock': '50,30,15,5', 'bar.pausada_ate': '' }) });
+    // As frases voltam ao de fábrica: as outras provas contam com os textos
+    // que o módulo traz, e uma frase deixada aqui mudava-lhes o chão.
+    const limpar = {};
+    for (const k of Object.keys((await window.api('bar_estado')).situacoes || {})) limpar[k] = '';
+    await window.api('bar_mensagens_guardar', { method: 'POST', body: JSON.stringify(limpar) });
     await window.api('bar_fechar', { method: 'POST', body: '{}' });
   });
 
