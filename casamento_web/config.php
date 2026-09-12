@@ -189,6 +189,7 @@ function acoesDoCasamento(): array {
             'bar_regra_guardar','bar_regra_apagar',
             'bar_decidir','bar_cancelar_copa',
             'bar_apanhar','bar_entregue','bar_falhou','bar_pedir_por','bar_mudar_mesa',
+            'bar_alerta_decidir',
             // O casal pede a licença, e muda de ideias enquanto ninguém decidiu.
             'lic_pedir','lic_pedido_cancelar'];
 }

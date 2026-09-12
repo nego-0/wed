@@ -2926,12 +2926,16 @@ function barFilaContraRegras(mysqli $conn): array {
 function barAlertaVivo(mysqli $conn, string $chave): bool {
     global $P;
     $cid = casamentoAtual();
-    $st = $conn->prepare("SELECT id FROM {$P}bar_alertas
-                          WHERE casamento_id=? AND chave=? AND estado <> 'caducado' LIMIT 1");
+    // Olha-se para o ÚLTIMO desta chave, e não para «existe algum». A diferença
+    // é o que faz a trava soltar-se: enquanto o último não estiver caducado, a
+    // chave está tomada — esteja o alerta por responder ou já respondido.
+    $st = $conn->prepare("SELECT estado FROM {$P}bar_alertas
+                          WHERE casamento_id=? AND chave=? ORDER BY id DESC LIMIT 1");
     if (!$st) return true;                 // na dúvida, não se insiste
     $st->bind_param('is', $cid, $chave);
     @$st->execute();
-    return (bool)$st->get_result()->fetch_assoc();
+    $x = $st->get_result()->fetch_assoc();
+    return $x ? $x['estado'] !== 'caducado' : false;
 }
 
 /** Levantar um alerta, se ainda não houver um vivo com esta chave. */
@@ -2962,8 +2966,25 @@ function barAlertaLevantar(mysqli $conn, string $chave, string $tipo, string $ni
 function barAlertaCaducar(mysqli $conn, string $chave): void {
     global $P;
     $cid = casamentoAtual();
+    // Os que estavam por responder fecham-se: a pergunta deixou de fazer
+    // sentido, e responder a uma pergunta que já não existe é trabalho a mais.
     $st = $conn->prepare("UPDATE {$P}bar_alertas SET estado='caducado'
                           WHERE casamento_id=? AND chave=? AND estado='aberto'");
+    if ($st) { $st->bind_param('is', $cid, $chave); @$st->execute(); }
+
+    // E se ficou um já RESPONDIDO a segurar a chave, deixa-se a marca de que a
+    // condição passou.
+    //
+    // Sem isto, um alerta aplicado às 23h segurava a chave a noite inteira: a
+    // bebida era reposta, voltava a descer aos mesmos 15%, e o segundo
+    // esgotamento passava em silêncio — que é exactamente o que o alerta
+    // existe para não deixar acontecer. A marca é uma linha própria, e não uma
+    // reescrita do estado do alerta antigo: o que foi aplicado tem de continuar
+    // a ler-se como aplicado no histórico da noite.
+    if (!barAlertaVivo($conn, $chave)) return;
+    $st = $conn->prepare("INSERT INTO {$P}bar_alertas
+            (casamento_id,tipo,nivel,chave,situacao,sugestao,estado,criado_em)
+            VALUES (?,'fim','aviso',?,'{}','{}','caducado',NOW())");
     if ($st) { $st->bind_param('is', $cid, $chave); @$st->execute(); }
 }
 
@@ -3181,7 +3202,10 @@ function barSugereRegra(mysqli $conn, array $l, string $modo): int {
 function barAlertas(mysqli $conn, int $quantos = 30): array {
     global $P;
     $cid = casamentoAtual();
+    // As marcas de «a condição passou» (tipo 'fim') não são alertas: são o
+    // registo de que a chave se libertou, e não têm nada para ninguém ler.
     $r = @$conn->query("SELECT * FROM {$P}bar_alertas WHERE casamento_id=$cid
+                        AND tipo <> 'fim'
                         ORDER BY estado <> 'aberto', id DESC LIMIT " . max(1, min(200, $quantos)));
     $out = [];
     if ($r) while ($x = $r->fetch_assoc()) {
@@ -3735,6 +3759,10 @@ function barEstadoGeral(mysqli $conn): array {
     $n = fn(string $sql) => (int)(@$conn->query($sql)->fetch_row()[0] ?? 0);
     return [
         'aberto'     => barAberto($conn),
+        // Segundos até a copa sair da pausa. Zero é o caso normal, e a pausa
+        // desfaz-se sozinha — por isso é um número que conta para baixo, e não
+        // um interruptor que alguém tem de se lembrar de desligar.
+        'pausa_s'    => barPausaSegundos($conn),
         'em_analise' => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='em_analise'"),
         'aprovados'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='aprovado'"),
         'a_caminho'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='a_caminho'"),
@@ -3924,6 +3952,13 @@ if ($acao === 'bar_pedir') {
     barPortaPublica($conn);
     $cid = casamentoAtual();
     if (!barAberto($conn)) erro('A copa está fechada neste momento.');
+    // A pausa. Diz-se quanto falta, e não «feche a página»: quem está com o
+    // telemóvel na mão quer saber se vale a pena esperar — e vale, porque a
+    // copa reabre sozinha.
+    if ($falta = barPausaSegundos($conn)) {
+        erro('A copa está a recuperar do movimento. Volte a tentar daqui a '
+           . barRelogio($falta) . '.');
+    }
     $eu = barQuemSou($conn);
     if (!$eu) erro('Diga-nos primeiro quem é.');
     $mim = barConvidado($conn, $eu);
@@ -4643,6 +4678,134 @@ if ($acao === 'bar_regra_apagar') {
         'fila' => barFilaContraRegras($conn)]);
 }
 
+/**
+ * Executar a acção que um alerta propôs.
+ *
+ * As quatro acções que o motor sabe propor, e mais nenhuma. A lista é fechada
+ * de propósito: um alerta não é um sítio de onde se possa mandar fazer
+ * qualquer coisa, é um sítio de onde se responde SIM a uma pergunta concreta.
+ *
+ * Devolve o que se fez, em palavras, para o registo de acções. Null se não deu.
+ */
+function barAlertaAplicar(mysqli $conn, array $sug): ?string {
+    global $P;
+    $cid = casamentoAtual();
+    $accao = (string)($sug['accao'] ?? '');
+    $min = max(1, min(240, (int)($sug['minutos'] ?? 10)));
+
+    if ($accao === 'nenhuma') return 'sem acção';
+
+    if ($accao === 'pausar_copa') {
+        barGuardarDefs($conn, ['bar.pausada_ate' => date('Y-m-d H:i:s', time() + $min * 60)]);
+        esquecerDefinicoes($conn);
+        return 'copa em pausa por ' . $min . ' min';
+    }
+
+    if ($accao === 'baixar_max_por_pedido') {
+        $iid = (int)($sug['item_id'] ?? 0);
+        $item = $iid ? barItem($conn, $iid) : null;
+        if (!$item) return null;
+        $para = max(1, min(20, (int)($sug['para'] ?? 1)));
+        $st = $conn->prepare("UPDATE {$P}bar_itens SET max_por_pedido=?
+                              WHERE casamento_id=? AND id=?");
+        if (!$st) return null;
+        $st->bind_param('iii', $para, $cid, $iid);
+        if (!@$st->execute()) return null;
+        return '«' . $item['nome'] . '»: no máximo ' . $para . ' por pedido';
+    }
+
+    // Suspender uma bebida e travar uma pessoa são a mesma coisa por dentro:
+    // uma regra de quantidade 0 com hora de saída, que se desfaz sozinha
+    // (§30.3). Ter duas maneiras de escrever a mesma regra era ter duas
+    // maneiras de ela discordar de si própria.
+    if ($accao === 'suspender_bebida' || $accao === 'travar_convidado') {
+        $bebida = $accao === 'suspender_bebida';
+        $iid = (int)($sug['item_id'] ?? 0);
+        $gid = (int)($sug['convidado_id'] ?? 0);
+        $item = $bebida ? ($iid ? barItem($conn, $iid) : null) : null;
+        $g    = $bebida ? null : ($gid ? barConvidado($conn, $gid) : null);
+        if ($bebida ? !$item : !$g) return null;
+        $escopo = $bebida ? 'item' : 'tudo';
+        $alvo   = $bebida ? $iid : 0;
+        $pessoa = $bebida ? null : $gid;
+        $expira = date('Y-m-d H:i:s', time() + $min * 60);
+        $nota   = 'Posta pelo motor, ' . $min . ' min';
+        $zero = 0; $suj = 'convidado'; $uni = 'bebidas'; $modo = 'trava';
+        $st = $conn->prepare("INSERT INTO {$P}bar_limites
+                 (casamento_id,escopo,alvo_id,sujeito,alvo_convidado_id,unidade,
+                  quantidade,janela_min,nota,expira_em,modo,criado_por)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,'motor')");
+        if (!$st) return null;
+        $st->bind_param('isisisiissss', $cid, $escopo, $alvo, $suj, $pessoa, $uni,
+                        $zero, $zero, $nota, $expira, $modo);
+        if (!@$st->execute()) return null;
+        barLimitesEsquecer();
+        return $bebida
+            ? '«' . $item['nome'] . '» suspensa por ' . $min . ' min'
+            : $g['nome'] . ' travado por ' . $min . ' min';
+    }
+    return null;
+}
+
+if ($acao === 'bar_alerta_decidir') {
+    // O que a copa responde a uma proposta do motor. Três saídas, e nenhuma
+    // delas é deixar o alerta no ar: aplicar, adaptar (aplicar com outro
+    // número) ou ignorar.
+    $cid = barCid();
+    if (!podeCopa()) erro('Só a copa decide os alertas.');
+    exigirCorrecao();
+    $d = corpo();
+    $id = (int)($d['id'] ?? 0);
+    $decisao = (string)($d['decisao'] ?? '');
+    if (!in_array($decisao, ['aplicar', 'adaptar', 'ignorar'], true)) {
+        erro('Diga o que fazer com o alerta.');
+    }
+    $st = $conn->prepare("SELECT * FROM {$P}bar_alertas
+                          WHERE casamento_id=? AND id=? LIMIT 1");
+    $st->bind_param('ii', $cid, $id); @$st->execute();
+    $a = $st->get_result()->fetch_assoc();
+    if (!$a) erro('Esse alerta já não está aqui.');
+    if ($a['estado'] !== 'aberto') erro('Esse alerta já foi decidido.');
+
+    $sug = json_decode((string)$a['sugestao'], true) ?: [];
+    // Adaptar é aplicar com outro número. Só os NÚMEROS se adaptam — a acção
+    // em si não: um alerta que propõe suspender uma bebida não vira, a meio,
+    // uma pausa da copa. Quem quer outra coisa fecha o alerta e faz o gesto
+    // pela sua porta, que continua toda lá.
+    if ($decisao === 'adaptar') {
+        if (isset($d['minutos'])) $sug['minutos'] = (int)$d['minutos'];
+        if (isset($d['para']))    $sug['para']    = (int)$d['para'];
+    }
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 240) ?: null;
+    $quem = (string)(utilizadorAtual() ?? '');
+    $feito = null;
+
+    if ($decisao !== 'ignorar') {
+        $feito = barAlertaAplicar($conn, $sug);
+        if ($feito === null) erro('Não foi possível aplicar: o que o alerta propunha já não existe.');
+    }
+    $estado = $decisao === 'ignorar' ? 'ignorado'
+            : ($decisao === 'adaptar' ? 'adaptado' : 'aplicado');
+    $novaSug = json_encode($sug, JSON_UNESCAPED_UNICODE);
+    $st = $conn->prepare("UPDATE {$P}bar_alertas
+                          SET estado=?, decidido_por=?, decidido_em=NOW(), nota=?, sugestao=?
+                          WHERE casamento_id=? AND id=?");
+    $st->bind_param('ssssii', $estado, $quem, $nota, $novaSug, $cid, $id);
+    @$st->execute();
+
+    // Ignorar regista-se como se regista aplicar. É metade da razão de o painel
+    // existir: no dia seguinte, a pergunta «porque é que o gin acabou às duas»
+    // tem resposta escrita — e a resposta pode muito bem ser «porque alguém
+    // decidiu, às onze, que não era preciso fazer nada», o que é uma decisão
+    // legítima e tem de se poder ver.
+    registar($conn, 'bar_alerta', $a['tipo'],
+             $estado . ' · ' . ($feito ?? 'nada feito')
+           . ($nota ? ' · ' . $nota : ''));
+    ok(['alertas' => barAlertas($conn), 'estado' => barEstadoGeral($conn),
+        'itens' => barItens($conn, true),
+        'regras' => array_map(fn($x) => barRegraLinha($conn, $x), barLimitesTodos($conn))]);
+}
+
 if ($acao === 'bar_numeros') {
     // Os números da noite. Uma leitura só, porque quem os abre quer ver a
     // festa toda de uma vez e não coleccionar separadores.
@@ -4844,6 +5007,13 @@ if ($acao === 'bar_pedir_por') {
     if (!podeEntregar() && !podeCopa()) erro('Só o pessoal do bar.');
     exigirCorrecao();
     if (!barAberto($conn)) erro('A copa está fechada neste momento.');
+    // A pausa vale também ao balcão. É a mesma razão de §30.2: uma paragem que
+    // se contorna pela porta de serviço não é uma paragem — e quem a pôs foi a
+    // própria copa, a dizer que não tem mãos a medir.
+    if ($falta = barPausaSegundos($conn)) {
+        erro('A copa está em pausa por mais ' . barRelogio($falta)
+           . '. Levante a pausa se for mesmo para servir agora.');
+    }
     $d = corpo();
     $gid = (int)($d['convidado_id'] ?? 0);
     $g = $gid ? barConvidado($conn, $gid) : null;

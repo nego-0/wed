@@ -253,7 +253,160 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(subiu.abertos === 0,
      'e o alerta do degrau caduca sozinho: a condição passou, a chave liberta-se');
 
+  // ==================================================================
+  // FASE 3 — o painel, e o que os três botões fazem
+  // ==================================================================
+
+  /**
+   * Leva a bebida a uma percentagem exacta e devolve o alerta que nasceu daí.
+   *
+   * A percentagem tem de ser escolhida, e não deixada ao acaso: o degrau que
+   * se cruza decide a acção proposta (aos 25% propõe-se cortar o máximo por
+   * pedido; no último degrau propõe-se suspender a bebida), e uma prova que
+   * não sabe qual dos dois vai receber não está a provar nada.
+   */
+  const descerPara = (pc) => p.evaluate(async ([it, alvo]) => {
+    const e0 = await window.api('bar_estado');
+    const base = (e0.itens || []).filter(x => x.id === it)[0].base_noite;
+    await window.api('bar_stock_acerto', { method: 'POST', body: JSON.stringify(
+      { item_id: it, stock: Math.round(base * alvo / 100), nota: 'ZS a descer' }) });
+    const e = await window.api('bar_estado');
+    return (e.alertas || []).filter(x => x.tipo === 'stock_degrau'
+             && (x.situacao || {}).item_id === it && x.estado === 'aberto')[0];
+  }, [cen.item, pc]);
+
+  /** Repõe a bebida no cheio: é o que liberta a chave para o alerta seguinte. */
+  const encher = () => p.evaluate(async (it) => {
+    const e0 = await window.api('bar_estado');
+    const i = (e0.itens || []).filter(x => x.id === it)[0];
+    await window.api('bar_stock_acerto', { method: 'POST', body: JSON.stringify(
+      { item_id: it, stock: i.base_noite, nota: 'ZS a encher' }) });
+    await window.api('bar_estado');
+  }, cen.item);
+
+  // ============ 8. aplicar faz mesmo o que promete ============
+  const al = await descerPara(25);
+  ok(!!al && (al.sugestao || {}).accao === 'baixar_max_por_pedido',
+     'a bebida volta a descer e o motor propõe baixar o máximo por pedido');
+  const aplicado = await p.evaluate(async ([id, it]) => {
+    const antes = ((await window.api('bar_estado')).itens || [])
+      .filter(x => x.id === it)[0].max_por_pedido;
+    const d = await window.api('bar_alerta_decidir', { method: 'POST',
+      body: JSON.stringify({ id: id, decisao: 'aplicar' }) });
+    const i = (d.itens || []).filter(x => x.id === it)[0];
+    const a = (d.alertas || []).filter(x => x.id === id)[0];
+    return { antes: antes, depois: i.max_por_pedido, estado: a.estado, por: a.decidido_por };
+  }, [al.id, cen.item]);
+  ok(aplicado.depois < aplicado.antes,
+     'aplicar MUDA mesmo a bebida — ' + aplicado.antes + ' → ' + aplicado.depois
+     + ' por pedido; um botão que não faz nada é pior do que não haver botão');
+  ok(aplicado.estado === 'aplicado' && aplicado.por,
+     'e o alerta fecha-se com o nome de quem o decidiu: ' + aplicado.por);
+
+  // ============ 9. adaptar é aplicar com outro número ============
+  // O alerta anterior foi respondido e a chave está gasta; enche-se a bebida
+  // para a libertar, e volta-se a descer ao mesmo degrau.
+  await encher();
+  const al2 = await descerPara(25);
+  ok(!!al2, 'levanta-se outro alerta para o adaptar');
+  const adaptado = await p.evaluate(async ([id, it]) => {
+    const d = await window.api('bar_alerta_decidir', { method: 'POST',
+      body: JSON.stringify({ id: id, decisao: 'adaptar', para: 1 }) });
+    const i = (d.itens || []).filter(x => x.id === it)[0];
+    const a = (d.alertas || []).filter(x => x.id === id)[0];
+    return { max: i.max_por_pedido, estado: a.estado, para: (a.sugestao || {}).para };
+  }, [al2.id, cen.item]);
+  ok(adaptado.max === 1 && adaptado.para === 1,
+     'adaptar aplica com o número que a copa escreveu, e não com o proposto: '
+     + adaptado.max + ' por pedido');
+  ok(adaptado.estado === 'adaptado',
+     'e fica marcado como adaptado, e não como aplicado — a diferença conta-se '
+     + 'no dia seguinte');
+
+  // ============ 10. ignorar fecha e fica escrito ============
+  await encher();
+  const al3 = await descerPara(25);
+  const ignorado = await p.evaluate(async ([id, it]) => {
+    const antes = ((await window.api('bar_estado')).itens || [])
+      .filter(x => x.id === it)[0].max_por_pedido;
+    const d = await window.api('bar_alerta_decidir', { method: 'POST',
+      body: JSON.stringify({ id: id, decisao: 'ignorar', nota: 'ZS já mandei buscar mais' }) });
+    const i = (d.itens || []).filter(x => x.id === it)[0];
+    const a = (d.alertas || []).filter(x => x.id === id)[0];
+    return { mexeu: i.max_por_pedido !== antes, estado: a.estado, nota: a.nota, por: a.decidido_por };
+  }, [al3.id, cen.item]);
+  ok(!ignorado.mexeu, 'ignorar não mexe em nada — é isso que ignorar quer dizer');
+  ok(ignorado.estado === 'ignorado' && ignorado.por && /já mandei buscar/.test(ignorado.nota || ''),
+     'mas fica escrito quem ignorou e porquê: é uma decisão como as outras, e '
+     + 'no dia seguinte tem de se poder ver');
+
+  // E não se decide duas vezes o mesmo alerta.
+  const outraVez = await p.evaluate(async (id) =>
+    await window.api('bar_alerta_decidir', { method: 'POST', silencioso: true,
+      body: JSON.stringify({ id: id, decisao: 'aplicar' }) }), al3.id);
+  ok(outraVez && outraVez.success === false,
+     'e um alerta já decidido não se decide outra vez: «' + (outraVez.message || '') + '»');
+
+  // ============ 11. a pausa da copa vale mesmo ============
+  // `pausar_copa` é uma das acções que o motor propõe. Sem a pausa a valer, o
+  // botão «Aplicar» não fazia nada — e um botão que finge é pior do que um
+  // botão que não existe.
+  // A pausa põe-se pela PORTA POR ONDE O PAINEL A PÕE — aplicando o alerta —, e
+  // não escrevendo a hora à mão. Escrita à mão, escrevia-se pelo relógio do
+  // browser, que aqui corre em UTC enquanto a casa corre em Africa/Luanda: a
+  // pausa nascia expirada e a prova passava sem provar nada.
+  const semPausa = await p.evaluate(async () =>
+    (await window.api('bar_estado')).estado.pausa_s);
+  ok(semPausa === 0, 'a copa não está em pausa antes de alguém a pôr');
+
+  // Uma regra da CASA que não trava: é ela que levanta o alerta do caudal, e é
+  // esse que propõe pausar. Contada em pedidos, e esta noite já houve vários.
+  const caudal = await p.evaluate(async () => {
+    await window.api('bar_regra_guardar', { method: 'POST', body: JSON.stringify(
+      { escopo: 'tudo', sujeito: 'casa', unidade: 'pedidos', quantidade: 1,
+        janela_min: 60, modo: 'sugere', nota: 'ZS caudal' }) });
+    const e = await window.api('bar_estado');
+    return (e.alertas || []).filter(x => x.tipo === 'caudal' && x.estado === 'aberto')[0];
+  });
+  ok(!!caudal && (caudal.sugestao || {}).accao === 'pausar_copa',
+     'a copa passa o caudal e o motor propõe pô-la em pausa');
+
+  const comPausa = await p.evaluate(async ([id, t, it]) => {
+    const d = await window.api('bar_alerta_decidir', { method: 'POST',
+      body: JSON.stringify({ id: id, decisao: 'aplicar' }) });
+    const pedido = await (await fetch('api.php?action=bar_pedir&m=' + t, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ m: t, mesa_id: 1, itens: [{ item_id: it, quantidade: 1 }] }) })).json();
+    return { pausa_s: (d.estado || {}).pausa_s, ok: pedido.success, msg: pedido.message || '' };
+  }, [caudal.id, cen.token, cen.item]);
+  ok(comPausa.pausa_s > 0,
+     'aplicá-lo põe mesmo a copa em pausa, contada pelo relógio da casa ('
+     + comPausa.pausa_s + 's)');
+  ok(comPausa.ok === false && /recuperar do movimento/i.test(comPausa.msg),
+     'e o convidado esbarra nela, com o tempo que falta: «' + comPausa.msg + '»');
+
+  // ============ 12. a aba dos alertas está na copa, e à frente ============
+  await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1600);
+  const abas = await p.locator('#b-fer-fila .b-pilula').allInnerTexts();
+  ok(/Alertas/.test(abas[0] || ''),
+     'a copa abre com «Alertas» como primeira pastilha: ' + abas.join(' · '));
+  await p.locator('#b-fer-fila .b-pilula:has-text("Alertas")').first().click();
+  await p.waitForTimeout(900);
+  const painel = await p.evaluate(() => {
+    const c = document.querySelector('.b-alerta');
+    return { quantos: document.querySelectorAll('.b-alerta').length,
+             texto: c ? c.innerText.replace(/\s+/g, ' ') : '' };
+  });
+  ok(painel.quantos >= 1, 'e o painel desenha os alertas (' + painel.quantos + ')');
+  ok(!/\{|\}|"accao"/.test(painel.texto),
+     'em português, e não em JSON: «' + painel.texto.slice(0, 90) + '»');
+
   // ============ arrumar ============
+  // De volta a bar.php: apagar convites é dos noivos, e é lá que essa porta
+  // está aberta.
+  await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(800);
   await p.evaluate(async () => {
     const e = await window.api('bar_estado');
     for (const x of (e.fila || [])) {
@@ -274,7 +427,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       }
     }
     await window.api('bar_defs', { method: 'POST',
-      body: JSON.stringify({ 'bar.degraus_stock': '50,30,15,5' }) });
+      body: JSON.stringify({ 'bar.degraus_stock': '50,30,15,5', 'bar.pausada_ate': '' }) });
     await window.api('bar_fechar', { method: 'POST', body: '{}' });
   });
 

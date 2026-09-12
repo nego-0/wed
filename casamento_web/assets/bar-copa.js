@@ -60,6 +60,7 @@
     // pela porta do lado para não os apagar por baixo de quem os está a ler.
     if (VER.aba === 'num') pintarNumeros();
     else if (VER.aba === 'regras') pintarRegras();
+    else if (VER.aba === 'alertas') pintarAlertas();
     else pintarFila();
     pintarStock();
     pintarBandeiras();
@@ -120,6 +121,11 @@
      na vigésima vez, a palavra desfaz a dúvida na primeira, e o número diz
      se vale a pena lá ir antes de se lá ir. */
   var ABAS = [
+    // Os alertas vêm PRIMEIRO. É o que o motor tem para dizer, e o que ele diz
+    // é sobre a noite inteira — que o gin acaba daqui a vinte minutos, que a
+    // copa não tem mãos a medir. Um pedido por decidir espera oito segundos
+    // sem consequência; um alerta esperado até ao fim da festa não valeu nada.
+    ['alertas', 'Alertas',       'sino'],
     ['analise', 'Por decidir',   'analise'],
     ['espera',  'Por entregar',  'tabuleiro'],
     ['fim',     'Já resolvidos', 'visto'],
@@ -130,11 +136,15 @@
     ['regras',  'Regras do Bar', 'trancado']
   ];
   /** As abas que não são a fila: têm painel próprio e não usam a procura. */
-  function abaDePainel(a) { return a === 'num' || a === 'regras'; }
+  function abaDePainel(a) { return a === 'num' || a === 'regras' || a === 'alertas'; }
 
   function pintarFerramentas() {
     var e = EST.estado || {};
-    var conta = { analise: e.em_analise || 0,
+    var porDecidir = (EST.alertas || []).filter(function (a) {
+      return a.estado === 'aberto';
+    }).length;
+    var conta = { alertas: porDecidir || '',
+                  analise: e.em_analise || 0,
                   espera: (e.aprovados || 0) + (e.a_caminho || 0),
                   fim: '', num: '' };
     var fer = $('b-fer-fila');
@@ -174,6 +184,7 @@
     pintarFerramentas();
     if (qual === 'num') pintarNumeros();
     else if (qual === 'regras') pintarRegras();
+    else if (qual === 'alertas') pintarAlertas();
     else pintarFila();
   };
 
@@ -405,6 +416,208 @@
       +   'como entregue no acto.</small></span>'
       + ico.ico('seta') + '</button>';
   }
+
+  /* ============================================================
+     O PAINEL DOS ALERTAS (§31.4)
+
+     O motor mede e propõe; aqui é onde alguém responde. Três saídas, e
+     nenhuma delas é deixar o alerta no ar:
+
+       APLICAR  — faz o que ele propõe, com o número que ele propôs.
+       ADAPTAR  — o mesmo, com outro número. E é também por aqui que se chega
+                  à regra que o levantou: quem quer mudar a regra e quem quer
+                  mudar o número estão a fazer o mesmo gesto, que é «isto não
+                  está bem, deixa-me corrigir».
+       IGNORAR  — fecha-o, e fica escrito quem o fechou.
+
+     A nota é sempre opcional, em todos os níveis. Um copeiro obrigado a
+     escrever um porquê com as mãos molhadas escreve «x», e uma auditoria
+     cheia de «x» é pior do que uma auditoria sem nota nenhuma.
+     ============================================================ */
+  var NIVEIS = { critico: ['Crítico', 'mau'], atencao: ['Atenção', 'meio'],
+                 aviso: ['Aviso', 'bom'] };
+
+  /** A situação medida, dita em português. O painel não mostra JSON a ninguém. */
+  function situacaoEmPalavras(a) {
+    var s = a.situacao || {};
+    if (a.tipo === 'stock_degrau') {
+      return 'Resta <b>' + s.percentagem + '%</b> de <b>' + esc(s.bebida || '') + '</b> — '
+           + s.disponivel + ' de ' + s.base + ' com que a noite abriu.';
+    }
+    if (a.tipo === 'rutura') {
+      return '<b>' + esc(s.bebida || '') + '</b> acaba daqui a <b>' + hhmm(s.acaba_em_min)
+           + '</b> ao ritmo a que está a sair (' + s.por_hora + ' por hora, '
+           + s.disponivel + ' disponíveis).';
+    }
+    if (a.tipo === 'caudal') {
+      return 'A copa já serviu <b>' + s.usado + '</b> ' + (s.unidade || 'bebidas')
+           + ' nos últimos ' + s.janela_min + ' minutos, e a regra dizia '
+           + s.tecto + '.';
+    }
+    if (a.tipo === 'regra_pessoa') {
+      return '<b>' + esc(s.nome || '') + '</b> já vai em <b>' + s.usado + '</b>, e a regra '
+           + 'dizia ' + s.tecto + '. <small>' + esc(s.regra || '') + '</small>';
+    }
+    return esc(a.tipo);
+  }
+
+  /** A acção proposta, dita em português. */
+  function accaoEmPalavras(sug) {
+    sug = sug || {};
+    switch (sug.accao) {
+      case 'pausar_copa':
+        return 'Pôr a copa em pausa por ' + sug.minutos + ' minutos.';
+      case 'suspender_bebida':
+        return 'Suspender esta bebida por ' + sug.minutos + ' minutos.';
+      case 'baixar_max_por_pedido':
+        return 'Baixar para ' + sug.para + ' o máximo por pedido.';
+      case 'travar_convidado':
+        return 'Não servir mais esta pessoa durante ' + sug.minutos + ' minutos.';
+      default:
+        // «Apenas alerta»: o motor viu, disse, e não tem nada a propor. É um
+        // caso legítimo — nem tudo o que se vê tem resposta automática.
+        return 'Nada a fazer automaticamente — fica a saber.';
+    }
+  }
+
+  function pintarAlertas() {
+    var cx = $('b-fila');
+    if (VER.aba !== 'alertas') return;
+    regrasMontadas = false;
+    var todos = EST.alertas || [];
+    var abertos = todos.filter(function (a) { return a.estado === 'aberto'; });
+    var feitos  = todos.filter(function (a) { return a.estado !== 'aberto'; });
+
+    if (!abertos.length && !feitos.length) {
+      cx.innerHTML = '<div class="b-cartao">'
+        + vazio('visto', 'Nada a assinalar',
+                'O motor está a medir a noite — o stock, o ritmo, as regras que '
+                + 'não travam. Enquanto tudo correr dentro do previsto, esta '
+                + 'página fica assim.') + '</div>';
+      return;
+    }
+    var html = abertos.map(cartaoAlerta).join('');
+    if (!abertos.length) {
+      html = '<div class="b-cartao">'
+           + vazio('visto', 'Nada por decidir',
+                   'Todos os alertas desta noite já foram respondidos.') + '</div>';
+    }
+    if (feitos.length) {
+      html += '<div class="b-sec">' + ico.ico('relogio') + 'Já respondidos</div>'
+            + feitos.map(cartaoAlerta).join('');
+    }
+    cx.innerHTML = html;
+  }
+
+  function cartaoAlerta(a) {
+    var n = NIVEIS[a.nivel] || NIVEIS.aviso;
+    var aberto = a.estado === 'aberto';
+    var sug = a.sugestao || {};
+    return '<div class="b-alerta ' + esc(a.nivel) + (aberto ? '' : ' feito') + '">'
+      + '<div class="b-al-topo">'
+      +   '<span class="b-semaforo ' + n[1] + '"></span>'
+      +   '<b>' + esc(n[0]) + '</b>'
+      +   '<span class="qd">' + esc(ha(a.criado_em)) + '</span>'
+      + '</div>'
+      + '<div class="b-al-sit">' + situacaoEmPalavras(a) + '</div>'
+      + '<div class="b-al-sug">' + ico.ico('raio') + accaoEmPalavras(sug) + '</div>'
+      + (aberto
+          ? (PODE
+              ? '<div class="b-bt-fila">'
+                + (sug.accao && sug.accao !== 'nenhuma'
+                    ? '<button type="button" class="j-bt j-bt-sim" '
+                      + 'onclick="copaAlerta(' + a.id + ',\'aplicar\')">'
+                      + ico.ico('visto') + 'Aplicar</button>'
+                      + '<button type="button" class="j-bt" '
+                      + 'onclick="copaAlertaAdaptar(' + a.id + ')">'
+                      + ico.ico('lapis') + 'Adaptar</button>'
+                    : '')
+                + '<button type="button" class="j-bt" '
+                +   'onclick="copaAlertaIgnorar(' + a.id + ')">'
+                +   ico.ico('xis') + 'Ignorar</button>'
+                + '</div>'
+              : '')
+          : '<div class="b-al-fim">' + esc(rotuloEstado(a.estado))
+            + (a.decidido_por ? ' por ' + esc(a.decidido_por) : '')
+            + (a.nota ? ' — ' + esc(a.nota) : '') + '</div>')
+      + '</div>';
+  }
+
+  function rotuloEstado(e) {
+    return e === 'aplicado' ? 'Aplicado'
+         : e === 'adaptado' ? 'Aplicado com outro número'
+         : e === 'ignorado' ? 'Ignorado'
+         : 'Deixou de fazer sentido';
+  }
+
+  window.copaAlerta = async function (id, decisao, extra) {
+    var env = Object.assign({ id: id, decisao: decisao }, extra || {});
+    var d = await window.api('bar_alerta_decidir', { method: 'POST',
+                                                     body: JSON.stringify(env) });
+    if (!d || !d.success) return false;
+    toast(decisao === 'ignorar' ? 'Alerta ignorado — fica registado.' : 'Feito.');
+    await carregar(true);
+    return true;
+  };
+
+  window.copaAlertaIgnorar = function (id) {
+    var a = (EST.alertas || []).filter(function (x) { return x.id === id; })[0] || {};
+    licFormulario({
+      titulo: 'Ignorar este alerta',
+      guardar: 'Ignorar',
+      dica: 'Fica registado que foi ignorado, por quem e a que horas — é uma '
+          + 'decisão como as outras. A nota é opcional.',
+      campos: [
+        { id: 'nota', rot: 'Porquê (opcional)', tipo: 'text', valor: '', largura: 2,
+          dica: '«já mandei buscar mais», «o ritmo foi do brinde».' }
+      ],
+      aoGuardar: async function (v) {
+        return await window.copaAlerta(id, 'ignorar', { nota: v.nota });
+      }
+    });
+  };
+
+  /**
+   * Adaptar: o mesmo gesto, com outro número — e a porta para a regra.
+   *
+   * «Ver a regra» não é um botão à parte: quem quer mexer na regra e quem quer
+   * mexer no número estão a dizer a mesma coisa («isto não está bem»), e dois
+   * botões para o mesmo pensamento é uma escolha a mais a meio de uma festa.
+   */
+  window.copaAlertaAdaptar = function (id) {
+    var a = (EST.alertas || []).filter(function (x) { return x.id === id; })[0];
+    if (!a) return;
+    var sug = a.sugestao || {};
+    var porMinutos = sug.accao === 'pausar_copa' || sug.accao === 'suspender_bebida'
+                  || sug.accao === 'travar_convidado';
+    var campos = porMinutos
+      ? [{ id: 'minutos', rot: 'Por quantos minutos', tipo: 'numero',
+           valor: sug.minutos || 10, min: 1, max: 240 }]
+      : [{ id: 'para', rot: 'No máximo, por pedido', tipo: 'numero',
+           valor: sug.para || 1, min: 1, max: 20 }];
+    licFormulario({
+      titulo: 'Adaptar antes de aplicar',
+      guardar: 'Aplicar assim',
+      dica: accaoEmPalavras(sug) + ' Mude o número, ou vá à regra que levantou '
+          + 'isto se o que está errado for ela.',
+      campos: campos,
+      extra: a.regra_id
+        ? '<div class="b-bt-fila"><button type="button" class="j-bt" '
+          + 'onclick="copaAlertaRegra(' + a.regra_id + ')">' + ico.ico('trancado')
+          + 'Ir à regra que levantou isto</button></div>'
+        : '',
+      aoGuardar: async function (v) {
+        var extra = porMinutos ? { minutos: parseInt(v.minutos, 10) || 10 }
+                               : { para: parseInt(v.para, 10) || 1 };
+        return await window.copaAlerta(id, 'adaptar', extra);
+      }
+    });
+  };
+
+  window.copaAlertaRegra = function (regraId) {
+    licFecharJanela();
+    window.barRegraEditar(regraId);
+  };
 
   /* ---- as Regras do Bar, dentro da copa -------------------------
      O MESMO painel da montagem (assets/bar-regras.js), montado no mesmo sítio

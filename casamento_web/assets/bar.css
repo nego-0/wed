@@ -838,6 +838,32 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    copa trabalha: dois botões lado a lado num ecrã de 390px saem cortados. */
 .b-bt-fila{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.8rem; }
 
+/* ---- o cartão de um alerta do motor (§31.4) ----
+   A cor vem do NÍVEL, mas nunca sozinha: o semáforo tem a palavra ao lado
+   («Crítico», «Atenção»), porque uma barra de cor não diz nada a quem
+   distingue mal as cores, nem a quem está a olhar de lado com pressa. */
+.b-alerta{ background:var(--card); border:1px solid var(--line); border-radius:14px;
+           padding:.9rem 1rem; margin-bottom:.7rem;
+           border-left:4px solid var(--line); }
+.b-alerta.critico{ border-left-color:var(--danger); }
+.b-alerta.atencao{ border-left-color:var(--warn); }
+.b-alerta.aviso{ border-left-color:var(--gold-soft); }
+/* Os já respondidos ficam esbatidos, mas continuam legíveis: são o histórico
+   da noite, e é a eles que se volta no dia seguinte a perguntar porquê. */
+.b-alerta.feito{ opacity:.62; }
+.b-al-topo{ display:flex; align-items:center; gap:.45rem; font-size:.82rem;
+            text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
+.b-al-topo .qd{ margin-left:auto; text-transform:none; letter-spacing:0;
+                font-size:.78rem; }
+.b-al-sit{ margin:.5rem 0 .35rem; font-size:.95rem; line-height:1.5; color:var(--ink); }
+.b-al-sit small{ display:block; margin-top:.15rem; font-size:.8rem;
+                 color:var(--ink-fraco); }
+.b-al-sug{ display:flex; align-items:flex-start; gap:.4rem; font-size:.88rem;
+           line-height:1.45; color:var(--ink-fraco); }
+.b-al-sug .ico{ width:15px; height:15px; flex:none; margin-top:.15rem;
+                color:var(--gold-deep); }
+.b-al-fim{ margin-top:.6rem; font-size:.82rem; color:var(--ink-fraco); }
+
 /* A frase que a regra vai ser, escrita por cima do formulário e reescrita a
    cada campo que se toca. Um formulário de três números pede que se imagine o
    resultado; isto mostra-o. */

@@ -2201,6 +2201,10 @@ function nomesDeAcao(): array {
         'bar_regras'        => ['mudou as regras do bar', 'bar'],
         'bar_regra'         => ['pôs uma regra no bar', 'bar'],
         'bar_regra_fora'    => ['levantou uma regra do bar', 'bar'],
+        // Aplicado, adaptado ou IGNORADO — os três ficam escritos. Um alerta
+        // ignorado é uma decisão como as outras, e no dia seguinte tem de se
+        // poder ver quem a tomou e a que horas.
+        'bar_alerta'        => ['decidiu um alerta do bar', 'bar'],
         'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],
         'bar_mudou_mesa'    => ['mudou a mesa de um pedido do bar', 'bar'],
         'bar_pedido_amigo'  => ['pediu no bar por outro convidado', 'bar'],
@@ -2800,6 +2804,25 @@ function barDefsAtuais(mysqli $conn, int $cid = 0): array {
 /** O bar está a servir? */
 function barAberto(mysqli $conn, int $cid = 0): bool {
     return barDef($conn, 'bar.aberto', $cid) === '1';
+}
+
+/**
+ * Quantos segundos faltam até a copa sair da pausa. 0 = não está em pausa.
+ *
+ * A pausa é o terceiro estado da copa, e o único que se desfaz sozinho: passada
+ * a hora, `pausada_ate` fica no passado e isto devolve 0 — não há nada para
+ * ninguém levantar. É a mesma ideia da bebida suspensa (§30.3), e pela mesma
+ * razão: uma pausa que só acaba quando alguém se lembra dela é uma copa
+ * fechada a noite inteira.
+ *
+ * Uma copa FECHADA não está em pausa — está fechada, que é outra conversa e
+ * tem a sua própria mensagem.
+ */
+function barPausaSegundos(mysqli $conn, int $cid = 0): int {
+    $ate = trim(barDef($conn, 'bar.pausada_ate', $cid));
+    if ($ate === '') return 0;
+    $t = strtotime($ate);
+    return $t === false ? 0 : max(0, $t - time());
 }
 
 /**

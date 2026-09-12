@@ -2874,3 +2874,75 @@ para dar.
 alertas dela para trás. Um alerta sobre uma garrafa que já não está no menu é
 ruído que o copeiro não pode resolver — as acções propostas não têm sobre o que
 agir. Vão com ela.
+
+### 31.4 Fase 3 — o painel, e o que os três botões fazem
+
+O motor mede e propõe (§31.3); aqui é onde alguém responde. **Três** saídas, e
+nenhuma delas é deixar o alerta no ar:
+
+| | |
+|---|---|
+| **Aplicar** | faz o que ele propõe, com o número que ele propôs |
+| **Adaptar** | o mesmo, com outro número — e é por aqui que se chega à regra |
+| **Ignorar** | fecha-o, e fica escrito quem o fechou |
+
+**Eram quatro, e são três.** «Ver a regra» deixou de ser um botão à parte:
+quem quer mudar a regra e quem quer mudar o número estão a fazer o mesmo gesto
+— «isto não está bem, deixa-me corrigir» — e dois botões para o mesmo
+pensamento é uma escolha a mais a meio de uma festa. A porta para a regra vive
+dentro da janela de adaptar, e só aparece quando o alerta veio mesmo de uma
+regra (os de stock não vêm).
+
+**Adaptar muda o número, nunca a acção.** Um alerta que propõe suspender uma
+bebida não vira, a meio, uma pausa da copa: seria deixar o painel mandar fazer
+qualquer coisa, e um alerta não é isso — é um sítio de onde se responde **sim**
+a uma pergunta concreta. Quem quer outra coisa fecha o alerta e faz o gesto pela
+porta dele, que continua toda lá.
+
+**Ignorar regista-se como se regista aplicar**, com quem e a que horas, e a nota
+é sempre opcional. No dia seguinte, a pergunta «porque é que o gin acabou às
+duas» tem de ter resposta escrita — e a resposta pode muito bem ser «porque
+alguém decidiu, às onze, que não era preciso fazer nada». É uma decisão
+legítima, e tem de se poder ver.
+
+**O que a fase 2 tinha mal, e a prova apanhou.** A chave de um alerta libertava-
+se quando a condição passava — mas só para os alertas **por responder**. Um
+alerta aplicado às 23h segurava a chave a noite inteira: a bebida era reposta,
+voltava a descer aos mesmos 15%, e o **segundo** esgotamento passava em silêncio,
+que é exactamente o que o alerta existe para não deixar acontecer. Agora a
+libertação deixa uma marca própria (`tipo = 'fim'`), e o que foi aplicado
+continua a ler-se como aplicado no histórico — reescrever-lhe o estado teria
+apagado a decisão para resolver a trava.
+
+**A pausa da copa, trazida da fase 5.** `pausar_copa` é uma das acções que o
+motor propõe. Sem a pausa a valer, «Aplicar» não fazia nada — e um botão que
+finge é pior do que um botão que não existe. Entrou o mínimo: a copa em pausa
+recusa pedidos com o tempo que falta, **reabre sozinha**, e a pausa vale também
+ao balcão (§30.2 — uma paragem que se contorna pela porta de serviço não é uma
+paragem, e quem a pôs foi a própria copa a dizer que não tem mãos a medir). Para
+a fase 5 fica o gesto manual, no cabeçalho da copa.
+
+**A aba vem primeiro.** Antes de «Por decidir», e com a conta na pastilha. Um
+pedido por decidir espera oito segundos sem consequência; um alerta esperado até
+ao fim da festa não valeu nada. O painel escreve em português o que o motor
+mediu em números — o JSON da situação não se mostra a ninguém.
+
+### 31.5 A prova das fases 2 e 3
+
+`tests/chk_bar_sexta.js`, 38 verificações. As que defendem a passagem:
+
+| Verifica | Porque é que se parte |
+|---|---|
+| Em `trava`, a regra recusa e não levanta alerta | Metade da fronteira |
+| Em `sugere`, a mesma regra deixa passar e levanta | A outra metade |
+| O alerta nomeia a pessoa e propõe uma acção | Um painel que diz «alguém» não serve |
+| Cruzar 25% levanta UM alerta, o do degrau mais apertado | A 12%, três alertas diziam o mesmo |
+| A leitura seguinte não levanta outro igual | Senão o painel enche-se de cópias |
+| A base sobe com as caixas que chegam | Senão a percentagem passava dos 100% |
+| **Aplicar muda mesmo a bebida** | Um botão que não faz nada é pior do que não haver botão |
+| Adaptar aplica com o número escrito, e marca-se adaptado | A diferença conta-se no dia seguinte |
+| Ignorar não mexe em nada, mas fica escrito | É uma decisão como as outras |
+| Um alerta decidido não se decide outra vez | §31.4 |
+| Aplicar `pausar_copa` põe mesmo a copa em pausa | Senão o botão fingia |
+| O convidado esbarra na pausa, com o tempo que falta | §30.3 |
+| O painel escreve português, e não JSON | O copeiro não lê chaves |
