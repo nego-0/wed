@@ -2996,3 +2996,47 @@ apontada, e o §9 existe para o evitar.
 `tests/chk_bar_sexta.js` cobre-o em cinco verificações — a de fábrica sem frase
 do casal, a do casal com as variáveis trocadas, a da regra a ganhar às duas, o
 regresso à de fábrica ao apagar, e o editor com as dez caixas.
+
+### 31.7 Fase 5 — a pausa à mão, e o terceiro estado
+
+A pausa já existia por dentro desde a fase 3: era preciso, porque `pausar_copa` é
+uma das acções que o motor propõe, e um «Aplicar» que não fizesse nada era pior
+do que não ter botão nenhum. O que faltava era o **gesto** — a copa pôr e
+levantar a pausa por sua conta — e o estado à vista nos dois lados do balcão.
+
+**Porque não chega fechar o bar.** Fechar diz «acabou» à sala inteira; a pausa
+diz «já voltamos». São duas frases diferentes, e uma noite tem as duas. A copa vê
+o que o motor não mede — a bandeja que caiu, o brinde que encheu o balcão de uma
+vez, o copeiro que foi lá dentro — e precisa de a dizer sem mandar toda a gente
+para casa. Por isso são **dois botões**, lado a lado, e não um menu a perguntar
+qual das duas coisas se quis dizer.
+
+**Os minutos são do ecrã; a hora é do servidor.** `bar_pausa` recebe `minutos` e
+calcula `pausada_ate` com o relógio da casa. Esta regra custou duas provas para
+ser aprendida: o browser corre em UTC, a casa em `Africa/Luanda`, e uma pausa
+escrita com o relógio de cá **nascia expirada** — a copa carregava, nada
+acontecia, e ninguém tinha uma palavra a dizer porquê.
+
+**O terceiro estado vê-se.** O cabeçalho da copa deixa de ter duas leituras: com
+a pausa a correr diz «Copa em pausa» com o que falta a contar **ao segundo**, o
+farol fica âmbar e **parado** (a onda a pulsar é a promessa de que os pedidos
+estão a entrar, e não estão), e a dica diz o que é verdade — que a fila e as
+entregas seguem, e que a copa reabre sozinha. O relógio conta no browser e, ao
+chegar a zero, pede a leitura de verdade: quem manda na pausa é o servidor.
+
+**O convidado sabe antes de escolher.** `bar_menu` passa a trazer a pausa com os
+segundos que faltam, e a página mostra a faixa e esconde os «+». Era a última
+promessa a fingir que restava no módulo: deixar escolher três bebidas para só
+depois responder «estamos em pausa» é exactamente o que o §9 existe para evitar.
+
+**A pausa trava antes de tudo o resto**, e é o que se lê quando duas coisas
+travam ao mesmo tempo: uma bebida fechada por regra, com a copa em pausa, dá a
+frase da pausa — porque é a que se desfaz sozinha daqui a sete minutos, e é essa
+a informação útil a quem tem o telemóvel na mão.
+
+`tests/chk_bar_sexta.js` fecha a passagem com doze verificações: o cabeçalho
+antes, durante e depois; os sete minutos contados pelo relógio da casa; a faixa
+do convidado com os «+» escondidos havendo bebidas que sem a pausa dariam para
+pedir; o número que anda ao segundo em vez de ficar parado à espera da próxima
+leitura; e — a que mais diz — que levantar a pausa devolve a frente ao que
+travava antes dela, em vez de a deixar a tapar tudo.

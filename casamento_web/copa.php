@@ -94,6 +94,12 @@ $CAS  = casalInfo($DEFS);
     </div>
     <div class="numeros" id="b-numeros"></div>
     <span class="b-sinal" id="b-sinal">a ligar…</span>
+    <?php // A pausa é o terceiro estado, e tem botão próprio: fechar o bar e
+          // pausá-lo dizem coisas diferentes à sala («acabou» e «já
+          // voltamos»), e um botão que fizesse as duas obrigava a escolher
+          // num menu o que se quer dizer com pressa. Só aparece com o bar
+          // aberto — um bar fechado não tem movimento para acalmar. ?>
+    <button class="btn btn-claro" id="b-pausa-bt" onclick="copaPausa()" hidden>…</button>
     <button class="btn btn-fantasma" id="b-chave-bt" onclick="copaChave()">…</button>
   </div>
 

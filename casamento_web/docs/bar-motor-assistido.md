@@ -226,6 +226,11 @@ Cada fase fecha com a suite inteira verde. Ninguém começa a seguinte sem isso.
 - `bar.pausada_ate`; recusa com o tempo que falta; reabre sozinha
 - a acção `pausar_copa` do painel
 
+> Estes dois vieram para a **fase 3**: `pausar_copa` é uma das acções que o
+> painel propõe, e um «Aplicar» que não fizesse nada era pior do que não ter
+> botão. À fase 5 ficou o **gesto manual** — pôr e levantar a pausa do cabeçalho
+> da copa — e o estado à vista dos dois lados do balcão (§31.7).
+
 ### Fase 6 — provas e documento
 - `tests/chk_bar_sexta.js`, no formato das outras: cada linha defende **uma**
   coisa e diz o que se parte se ela cair

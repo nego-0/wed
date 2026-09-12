@@ -764,6 +764,14 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
   .b-chave .btn{ order:4; margin-left:0; width:100%; justify-content:center; }
 }
 
+/* A pausa: nem o verde de aberto, nem o cinzento de fechado.
+   O farol fica âmbar e PARADO — a onda a pulsar é a promessa de que os
+   pedidos estão a entrar, e em pausa não estão. O que se mexe é o número
+   que conta para baixo, que é o que a pausa tem de próprio. */
+.b-chave.pausa .farol{ background:var(--warn-bg); color:var(--warn); }
+.b-chave.pausa .farol::after{ display:none; }
+.b-chave .conta{ font-variant-numeric:tabular-nums; color:var(--warn); }
+
 /* O interruptor é UM só, e é o mesmo na montagem e na copa: a copa faz a
    pergunta «está aberto?» tantas vezes por noite como os noivos a fazem por
    mês, e merece a mesma resposta com o mesmo desenho. Teve durante um tempo

@@ -2204,6 +2204,7 @@ function nomesDeAcao(): array {
         // Aplicado, adaptado ou IGNORADO — os três ficam escritos. Um alerta
         // ignorado é uma decisão como as outras, e no dia seguinte tem de se
         // poder ver quem a tomou e a que horas.
+        'bar_pausa'         => ['pôs ou levantou a pausa da copa', 'bar'],
         'bar_alerta'        => ['decidiu um alerta do bar', 'bar'],
         'bar_mensagens'     => ['mudou o que o bar diz aos convidados', 'bar'],
         'bar_trocou_nome'   => ['trocou de nome no bar', 'bar'],

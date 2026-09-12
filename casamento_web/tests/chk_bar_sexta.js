@@ -23,6 +23,11 @@
 // FASE 4 — a voz da festa. As frases que o convidado lê passam a ser do casal,
 // e não da aplicação. Em branco, valem as de fábrica: ninguém tem de preencher
 // nada para o bar funcionar.
+//
+// FASE 5 — a pausa à mão. O terceiro estado da copa deixa de ser só uma coisa
+// que o motor propõe: a copa põe-na e levanta-a do seu cabeçalho, o convidado
+// vê-a antes de escolher, e ela desfaz-se sozinha. Os minutos são do ecrã, a
+// hora é do servidor — a casa corre em Africa/Luanda e o browser em UTC.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -519,6 +524,152 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(editor.temCaixa && editor.temFabrica,
      'cada uma com a sua caixa e o texto de fábrica por baixo');
   ok(editor.temVars, 'e a lista das variáveis que se podem usar');
+
+  // ==================================================================
+  // FASE 5 — a pausa à mão, e o terceiro estado
+  // ==================================================================
+  // O motor já sabia pausar a copa (fase 3). O que falta é o gesto de quem está
+  // lá: a copa vê o que a máquina não mede — a bandeja que caiu, o brinde que
+  // encheu o balcão de uma vez — e precisa de dizer «já voltamos» sem ter de
+  // dizer «acabou», que é o que fechar o bar diz à sala.
+
+  // ============ 18. o cabeçalho antes da pausa ============
+  await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1600);
+  const antes = await p.evaluate(() => ({
+    est: document.getElementById('b-est').innerText.trim(),
+    classe: document.getElementById('b-chave').className,
+    bt: document.getElementById('b-pausa-bt').innerText.trim(),
+    escondido: document.getElementById('b-pausa-bt').hidden
+  }));
+  ok(antes.est === 'Bar aberto' && !/pausa/.test(antes.classe),
+     'com o bar a servir, o cabeçalho diz «Bar aberto»: ' + antes.est);
+  ok(!antes.escondido && /Pausar a copa/.test(antes.bt),
+     'e o gesto está à mão, ao lado do interruptor: «' + antes.bt + '»');
+
+  // ============ 19. pausar à mão, pelo relógio da casa ============
+  // Os minutos vão daqui; a HORA é do servidor. Este browser corre em UTC e a
+  // casa em Africa/Luanda — uma pausa escrita com o relógio de cá nascia
+  // expirada, e o botão fingia (foi o que aconteceu na fase 3).
+  const aMao = await p.evaluate(async () => {
+    const d = await window.api('bar_pausa', { method: 'POST',
+                                              body: JSON.stringify({ minutos: 7 }) });
+    const e = await window.api('bar_estado');
+    return { pedida: d.pausa_s, lida: e.estado.pausa_s, propor: e.estado.pausa_min };
+  });
+  ok(aMao.pedida > 400 && aMao.pedida <= 420,
+     'sete minutos à mão são sete minutos na casa (' + aMao.pedida + 's)');
+  ok(aMao.propor === 10,
+     'e a copa sabe quantos minutos propor da próxima vez, sem ter de adivinhar ('
+     + aMao.propor + ')');
+
+  // A pausa trava ANTES de tudo o resto, e é isso que aqui se lê: a bebida
+  // desta prova está fechada por uma regra desde a secção 14, e mesmo assim o
+  // que o convidado recebe é a frase da pausa.
+  const naPausa = await pedir(1);
+  ok(naPausa.success === false && /recuperar do movimento/i.test(naPausa.message),
+     'e ninguém consegue pedir enquanto durar: «' + naPausa.message + '»');
+
+  // ============ 20. o convidado vê a pausa ANTES de escolher ============
+  // Um menu que deixasse escolher três bebidas para só depois responder
+  // «estamos em pausa» é a promessa a fingir que este módulo evita em todo o
+  // lado. A página diz logo, e diz quanto falta.
+  // Uma bebida limpa, sem regra nenhuma em cima e com stock de sobra: a única
+  // do menu até aqui é a ZS Gin, que a secção 14 fechou a esta pessoa. Sem
+  // isto, o menu estaria vazio de qualquer maneira e a faixa da pausa não
+  // provava nada — um «+» que não aparece porque não há nada para pedir.
+  const sumo = await p.evaluate(async () => {
+    const e = await window.api('bar_estado');
+    const d = await window.api('bar_item_guardar', { method: 'POST', body: JSON.stringify(
+      { nome: 'ZS Sumo', categoria_id: e.categorias[0].id, stock: 60,
+        visivel: 1, max_por_pedido: 4 }) });
+    return d.id || 0;
+  });
+  ok(sumo > 0, 'há uma bebida sem regras em cima, para o menu ter o que mostrar');
+
+  const conv = await casa.newPage();
+  conv.on('pageerror', e => errs.push('convidado: ' + e.message));
+  conv.on('console', m => { if (m.type() === 'error') errs.push('convidado: ' + m.text()); });
+  const menuDoConvidado = async () => {
+    await conv.goto(BASE + '/bebidas.php?m=' + cen.token, { waitUntil: 'networkidle' });
+    await conv.waitForTimeout(1400);
+    return await conv.evaluate(async (t) => {
+      // O que o SERVIDOR diz que esta pessoa pode pedir, ao lado do que a
+      // PÁGINA lhe mostra. É a comparação que interessa: a faixa da pausa só
+      // prova alguma coisa se houver bebidas que, sem ela, dariam para pedir.
+      const m = await (await fetch('api.php?action=bar_menu&m=' + t)).json();
+      return {
+        notas: [...document.querySelectorAll('.b-nota')]
+                 .map(x => x.innerText.replace(/\s+/g, ' ')).join(' | '),
+        conta: (document.querySelector('.b-nota .b-conta[data-ate]') || {}).textContent || '',
+        mais: document.querySelectorAll('.b-mais').length,
+        podem: ((m && m.itens) || []).filter(i => i.pode_pedir > 0).length
+      };
+    }, cen.token);
+  };
+  const emPausa = await menuDoConvidado();
+  ok(/em pausa/i.test(emPausa.notas),
+     'o menu abre a dizer que a copa está em pausa: «' + emPausa.notas.slice(0, 120) + '»');
+  ok(/^\d+:\d\d$/.test(emPausa.conta),
+     'com o tempo que falta a contar para baixo, ao segundo (' + emPausa.conta + ')');
+  ok(emPausa.mais === 0 && emPausa.podem > 0,
+     'e sem um único «+» para carregar, havendo bebidas que sem a pausa dariam '
+     + 'para pedir: não se escolhe o que não se pode pedir (' + emPausa.mais
+     + ' de ' + emPausa.podem + ')');
+
+  // ============ 21. o terceiro estado, no cabeçalho da copa ============
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1600);
+  const durante = await p.evaluate(() => ({
+    est: document.getElementById('b-est').innerText.replace(/\s+/g, ' ').trim(),
+    classe: document.getElementById('b-chave').className,
+    dica: document.getElementById('b-dica').innerText.trim(),
+    conta: (document.getElementById('b-conta-pausa') || {}).textContent || '',
+    bt: document.getElementById('b-pausa-bt').innerText.trim()
+  }));
+  ok(/Copa em pausa/.test(durante.est) && /\bpausa\b/.test(durante.classe),
+     'o cabeçalho da copa não diz «aberto» com a copa em pausa: «' + durante.est + '»');
+  ok(/^\d+:\d\d$/.test(durante.conta),
+     'conta o que falta, ao segundo, aqui também (' + durante.conta + ')');
+  ok(/reabre sozinha/.test(durante.dica),
+     'e diz que se desfaz sozinha — ninguém tem de se lembrar dela: «'
+     + durante.dica.slice(0, 80) + '»');
+  ok(/Levantar a pausa/.test(durante.bt),
+     'o mesmo botão passa a levantá-la: «' + durante.bt + '»');
+
+  // O relógio anda mesmo: dois segundos depois, falta menos.
+  await p.waitForTimeout(2200);
+  const andou = await p.evaluate(() =>
+    (document.getElementById('b-conta-pausa') || {}).textContent || '');
+  ok(andou !== durante.conta,
+     'e não é um número parado à espera da próxima leitura: ' + durante.conta
+     + ' → ' + andou);
+
+  // ============ 22. levantar a pausa é um clique ============
+  await p.locator('#b-pausa-bt').click();
+  await p.waitForTimeout(1400);
+  const depois = await p.evaluate(async () => ({
+    est: document.getElementById('b-est').innerText.trim(),
+    classe: document.getElementById('b-chave').className,
+    bt: document.getElementById('b-pausa-bt').innerText.trim(),
+    pausa_s: (await window.api('bar_estado')).estado.pausa_s
+  }));
+  ok(depois.pausa_s === 0 && !/pausa\b/.test(depois.classe),
+     'levantar a pausa levanta-a mesmo, sem esperar pelos sete minutos');
+  ok(depois.est === 'Bar aberto' && /Pausar a copa/.test(depois.bt),
+     'e o cabeçalho volta ao que era: ' + depois.est + ' · ' + depois.bt);
+
+  // O convidado volta a esbarrar na REGRA da secção 14, e não na pausa: é
+  // assim que se vê que a pausa saiu da frente, e não que ficou a tapar tudo.
+  const semPausaJa = await pedir(1);
+  ok(semPausaJa.success === false
+     && /não está disponível para si esta noite/.test(semPausaJa.message),
+     'e o que trava volta a ser a regra, não a pausa: «' + semPausaJa.message + '»');
+  const semFaixa = await menuDoConvidado();
+  ok(!/em pausa/i.test(semFaixa.notas) && semFaixa.mais === semFaixa.podem,
+     'o menu do convidado perde a faixa e volta a ter um «+» por cada bebida '
+     + 'que dá para pedir (' + semFaixa.mais + ' de ' + semFaixa.podem + ')');
+  await conv.close();
 
   // ============ arrumar ============
   // De volta a bar.php: apagar convites é dos noivos, e é lá que essa porta

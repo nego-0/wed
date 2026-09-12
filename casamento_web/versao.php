@@ -775,6 +775,22 @@ function correcoesEsperadas(): array {
         ['Bar: e o editor das frases vive com as outras regras do bar',
          'assets/bar-regras.js', 'function pintarMensagens('],
 
+        // ---- A sexta passagem, fase 5: a pausa à mão ----
+        ['Bar: a copa põe e levanta a pausa do seu cabeçalho, sem fechar o bar',
+         'api.php', "\$acao === 'bar_pausa'"],
+        ['Bar: os minutos são do ecrã, a hora é do servidor — a casa tem o seu fuso',
+         'assets/bar-copa.js', 'window.copaPausa = function'],
+        ['Bar: e o cabeçalho tem TRÊS estados, que a pausa não é um aberto com asterisco',
+         'assets/bar-copa.js', "cx.classList.toggle('pausa', pausa);"],
+        ['Bar: com o que falta a contar ao segundo, e não de oito em oito',
+         'assets/bar-copa.js', 'function tiquePausa('],
+        ['Bar: o menu do convidado sabe da pausa ANTES de o deixar escolher',
+         'assets/bar-convidado.js', '} else if (pausa) {'],
+        ['Bar: e o servidor manda-lha com o menu, não só na recusa do pedido',
+         'api.php', "'pausa' => (function () use (\$conn) {"],
+        ['Bar: pausar à mão fica no registo, como tudo o que muda a noite',
+         'db.php', "'bar_pausa'         => ['pôs ou levantou a pausa da copa'"],
+
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',
          'assets/icones.js', 'function copoDe('],

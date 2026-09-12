@@ -97,12 +97,25 @@
   function pintarChave() {
     var e = EST.estado || {};
     var cx = $('b-chave');
+    // A pausa é o TERCEIRO estado, e não um aberto com um asterisco: o bar
+    // continua aberto (a fila anda, as entregas saem), mas ninguém consegue
+    // pedir durante mais x minutos. Um cabeçalho que dissesse só «Bar aberto»
+    // com a copa em pausa punha a copa a jurar a um convidado que a página
+    // dele estava avariada.
+    pausaAte = e.pausa_s > 0 ? Date.now() + desvio + e.pausa_s * 1000 : 0;
+    var pausa = !!pausaAte;
     cx.classList.toggle('on', !!e.aberto);
-    $('b-farol').innerHTML = ico.ico(e.aberto ? 'aberto' : 'trancado');
-    $('b-est').textContent = e.aberto ? 'Bar aberto' : 'Bar fechado';
-    $('b-dica').textContent = e.aberto
-      ? 'Os pedidos entram na fila assim que alguém carrega no telemóvel.'
-      : 'Ninguém consegue pedir. O que já está na fila mantém-se.';
+    cx.classList.toggle('pausa', pausa);
+    $('b-farol').innerHTML = ico.ico(pausa ? 'relogio' : (e.aberto ? 'aberto' : 'trancado'));
+    $('b-est').innerHTML = pausa
+      ? 'Copa em pausa <span class="conta" id="b-conta-pausa">' + esc(hms(e.pausa_s)) + '</span>'
+      : (e.aberto ? 'Bar aberto' : 'Bar fechado');
+    $('b-dica').textContent = pausa
+      ? 'Ninguém consegue pedir enquanto durar. A fila e as entregas seguem, e a '
+        + 'copa reabre sozinha — não é preciso ninguém lembrar-se dela.'
+      : (e.aberto
+          ? 'Os pedidos entram na fila assim que alguém carrega no telemóvel.'
+          : 'Ninguém consegue pedir. O que já está na fila mantém-se.');
     $('b-numeros').innerHTML =
         num(e.a_caminho || 0, 'na sala')
       + num(e.bebidas_entregues || 0, 'servidas');
@@ -111,6 +124,37 @@
       + (e.aberto ? 'Fechar o bar' : 'Abrir o bar');
     bt.className = 'btn ' + (e.aberto ? 'btn-fantasma' : 'btn-ouro');
     bt.disabled = !PODE;
+    // O botão da pausa só existe com o bar aberto: um bar fechado não tem
+    // movimento para acalmar, e o botão a mais seria uma pergunta sem assunto.
+    var bp = $('b-pausa-bt');
+    bp.hidden = !e.aberto;
+    bp.innerHTML = ico.ico(pausa ? 'volta' : 'relogio')
+      + (pausa ? 'Levantar a pausa' : 'Pausar a copa');
+    bp.className = 'btn ' + (pausa ? 'btn-ouro' : 'btn-claro');
+    bp.disabled = !PODE;
+  }
+
+  /**
+   * O relógio da pausa, ao segundo.
+   *
+   * A copa relê-se de oito em oito segundos, e um número que só desce de oito
+   * em oito lê-se como um ecrã encravado — logo no sítio onde a pergunta é
+   * «quanto falta». Conta-se aqui, e quando chega a zero pede-se a leitura de
+   * verdade: quem manda na pausa é o servidor, não este relógio.
+   */
+  var pausaAte = 0;
+  function tiquePausa() {
+    var el = $('b-conta-pausa');
+    if (!el || !pausaAte) return;
+    var falta = (pausaAte - Date.now()) / 1000;
+    if (falta <= 0) { pausaAte = 0; carregar(true); return; }
+    el.textContent = hms(falta);
+  }
+  function hms(s) {
+    s = Math.max(0, Math.round(s));
+    var h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, g = s % 60;
+    var dd = function (v) { return (v < 10 ? '0' : '') + v; };
+    return (h ? h + ':' + dd(m) : m) + ':' + dd(g);
   }
   function num(v, rot) {
     return '<div><b>' + v + '</b><small>' + esc(rot) + '</small></div>';
@@ -930,6 +974,50 @@
     await carregar(true);
   };
 
+  /**
+   * A pausa à mão — o mesmo gesto que o motor propõe, feito pela copa.
+   *
+   * Existe porque a copa vê coisas que o motor não mede: a bandeja que caiu, o
+   * brinde que encheu o balcão de uma vez, o copeiro que foi lá dentro. A
+   * alternativa era fechar o bar, e fechar diz outra coisa à sala — diz
+   * «acabou», quando o que se quer dizer é «já voltamos».
+   *
+   * Os minutos vão para o servidor, a HORA é dele: o relógio deste tablet não
+   * decide quando a copa reabre (foi assim que uma pausa nasceu expirada).
+   */
+  window.copaPausa = function () {
+    var e = (EST && EST.estado) || {};
+    if (e.pausa_s > 0) return levantarPausa();
+    licFormulario({
+      titulo: 'Pausar a copa',
+      guardar: 'Pausar',
+      dica: 'Ninguém consegue pedir enquanto durar, e a página de quem tentar diz '
+          + 'quanto falta. A fila e as entregas seguem. No fim do tempo a copa '
+          + 'reabre sozinha — não fica nada à espera de alguém se lembrar.',
+      campos: [
+        { id: 'minutos', rot: 'Por quantos minutos', tipo: 'numero',
+          valor: e.pausa_min || 10, min: 1, max: 240 }
+      ],
+      aoGuardar: async function (v) {
+        var min = parseInt(v.minutos, 10) || 10;
+        var d = await window.api('bar_pausa', { method: 'POST',
+                                                body: JSON.stringify({ minutos: min }) });
+        if (!d || !d.success) return false;
+        toast('Copa em pausa por ' + min + ' min.');
+        await carregar(true);
+        return true;
+      }
+    });
+  };
+
+  async function levantarPausa() {
+    var d = await window.api('bar_pausa', { method: 'POST',
+                                            body: JSON.stringify({ levantar: 1 }) });
+    if (!d || !d.success) return;
+    toast('Pausa levantada. Já podem pedir.');
+    await carregar(true);
+  }
+
   // ---- o stock -------------------------------------------------
   /**
    * A coluna do stock, e a procura dentro dela.
@@ -1461,6 +1549,7 @@
   // Os «há N min» envelhecem sozinhos entre leituras: sem isto, um pedido
   // ficava «há 2 min» durante oito segundos de cada vez.
   tique = setInterval(function () { if (!document.hidden && EST) pintarFila(); }, 20000);
+  setInterval(function () { if (!document.hidden) tiquePausa(); }, 1000);
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) carregar(true);
   });

@@ -29,6 +29,11 @@
   var menu = { categorias: [], itens: [] };
   var ritmo = null;          // o caudal da copa, quando está cheio
   var travaoPedido = null;   // «o próximo pedido abre em…»
+  // A pausa da copa. Guarda-se o INSTANTE em que acaba, e não os segundos que
+  // faltavam quando o menu chegou: o menu repinta-se a cada volta, e uma
+  // contagem guardada em segundos voltava ao princípio de oito em oito.
+  var pausa = null;          // {espera_s, mensagem}
+  var pausaAte = 0;
   var cesto = {};                       // item_id -> quantidade
   var meus = [];
   var relogio = null, procuraEspera = null;
@@ -207,6 +212,15 @@
       html += '<div class="b-nota"><b>A copa ainda não está a servir.</b><br>'
         + esc(msgFechado || 'Assim que abrir, pode pedir daqui mesmo — a página avisa sozinha.')
         + '</div>';
+    } else if (pausa) {
+      // A pausa diz-se ANTES de escolher, e diz quanto falta. Quem está com o
+      // telemóvel na mão quer saber se vale a pena esperar — e vale, porque a
+      // copa reabre sozinha e a página recarrega-se quando o relógio chegar a
+      // zero. «Volte mais tarde» mandava a pessoa ao balcão perguntar.
+      html += '<div class="b-nota"><b>A copa está em pausa.</b><br>'
+        + esc(pausa.mensagem)
+        + '<br>Volta a servir em <b class="b-conta" data-ate="' + pausaAte + '">'
+        + esc(hms((pausaAte - Date.now()) / 1000)) + '</b>.</div>';
     }
 
     // O caudal da copa: não é a pessoa que pediu de mais, é a casa que está
@@ -395,7 +409,7 @@
       + (travada && i.aviso ? '<div class="ds">' + esc(i.aviso) + '</div>' : '')
       + '<div class="pe">'
       +   '<span class="qtd">' + esc(qtd) + relogio + '</span>'
-      +   (travada || !aberto ? '' :
+      +   (travada || !aberto || pausa ? '' :
             '<span class="b-mais">'
           + '<button type="button" class="dn" onclick="barMenos(' + i.id + ')"' + (n ? '' : ' disabled')
           +   ' aria-label="Menos um ' + esc(i.nome) + '">' + ico.ico('menos') + '</button>'
@@ -512,7 +526,7 @@
     // O botão diz o nome quando o pedido é de outra pessoa: é o último sítio
     // onde alguém repara que se esqueceu de voltar a si.
     $('b-pedir').textContent = para ? 'Pedir para ' + para.nome : 'Pedir';
-    $('b-pedir').disabled = !aberto;
+    $('b-pedir').disabled = !aberto || !!pausa;
   }
 
   window.barMais = function (id) {
@@ -736,6 +750,8 @@
     aberto = !!d.aberto;
     ritmo = d.ritmo || null;
     travaoPedido = d.pedido || null;
+    pausa = d.pausa || null;
+    pausaAte = pausa ? Date.now() + pausa.espera_s * 1000 : 0;
     // Uma bebida que desapareceu do menu não pode ficar no cesto.
     Object.keys(cesto).forEach(function (k) {
       var i = menu.itens.filter(function (x) { return String(x.id) === k; })[0];

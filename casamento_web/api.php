@@ -3883,6 +3883,10 @@ function barEstadoGeral(mysqli $conn): array {
         // desfaz-se sozinha — por isso é um número que conta para baixo, e não
         // um interruptor que alguém tem de se lembrar de desligar.
         'pausa_s'    => barPausaSegundos($conn),
+        // Quantos minutos propor a quem pausa à mão. É a mesma definição que o
+        // motor usa quando propõe a pausa — a casa tem UM número, e não um para
+        // a máquina e outro para as pessoas.
+        'pausa_min'  => max(1, (int)barDef($conn, 'bar.pausa_min')),
         'em_analise' => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='em_analise'"),
         'aprovados'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='aprovado'"),
         'a_caminho'  => $n("SELECT COUNT(*) FROM {$P}bar_pedidos WHERE casamento_id=$cid AND estado='a_caminho'"),
@@ -4062,6 +4066,18 @@ if ($acao === 'bar_menu') {
         'pedido' => (function () use ($conn, $eu, $g) {
             $v = barVeredictoPedido($conn, $eu, (int)$g['convite_id']);
             return $v ? ['espera_s' => $v['espera_s'], 'texto' => barTextoPedido($v)] : null;
+        })(),
+        // A pausa da copa diz-se AQUI, e não só na recusa: o menu que deixasse
+        // escolher três bebidas para depois responder «estamos em pausa» é a
+        // mesma promessa a fingir que o resto desta acção existe para evitar.
+        // Vai com os segundos que faltam para o relógio da página os contar.
+        'pausa' => (function () use ($conn) {
+            $s = barPausaSegundos($conn);
+            if (!$s) return null;
+            return ['espera_s' => $s,
+                    'mensagem' => barMensagem($conn, 'copa_pausada',
+                                              ['{TEMPO}' => barRelogio($s)])
+                      ?: 'A copa está a recuperar do movimento.'];
         })(),
         'aberto' => barAberto($conn)]);
 }
@@ -4471,6 +4487,34 @@ if ($acao === 'bar_abrir' || $acao === 'bar_fechar') {
     barGuardarDefs($conn, ['bar.aberto' => $abrir ? '1' : '0']);
     registar($conn, $abrir ? 'bar_abriu' : 'bar_fechou', '', '');
     ok(['aberto' => $abrir]);
+}
+
+if ($acao === 'bar_pausa') {
+    // A pausa à mão — o mesmo gesto que o motor propõe no painel, feito pela
+    // copa quando é ela a ver o que a máquina ainda não viu (a bandeja que caiu,
+    // o brinde que encheu o balcão de uma vez).
+    //
+    // Os minutos vêm do ecrã; a HORA calcula-se aqui. O tablet da copa pode
+    // estar noutro fuso ou com o relógio trocado, e uma pausa que nasce com a
+    // hora do browser nasce expirada — a copa carregaria em «pausar» e nada
+    // aconteceria, sem uma palavra a dizer porquê.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $d = corpo();
+    if (!empty($d['levantar'])) {
+        barGuardarDefs($conn, ['bar.pausada_ate' => '']);
+        esquecerDefinicoes($conn);
+        registar($conn, 'bar_pausa', '', 'levantou a pausa');
+        ok(['pausa_s' => 0]);
+    }
+    $min = (int)($d['minutos'] ?? 0);
+    if ($min <= 0) $min = max(1, (int)barDef($conn, 'bar.pausa_min'));
+    $min = max(1, min(240, $min));
+    barGuardarDefs($conn, ['bar.pausada_ate' => date('Y-m-d H:i:s', time() + $min * 60)]);
+    esquecerDefinicoes($conn);
+    registar($conn, 'bar_pausa', '', 'copa em pausa por ' . $min . ' min');
+    ok(['pausa_s' => barPausaSegundos($conn), 'minutos' => $min]);
 }
 
 if ($acao === 'bar_defs') {
