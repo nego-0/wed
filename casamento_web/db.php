@@ -28,7 +28,8 @@ class LigacaoAmbito extends mysqli {
                              'orcamento_categorias','orcamento_despesas','orcamento_pagamentos',
                              'lic_pedidos','lic_concessoes',
                              'bar_categorias','bar_itens','bar_stock_mov','bar_pedidos',
-                             'bar_pedido_itens','bar_motivos','bar_limites','bar_dispositivos'];
+                             'bar_pedido_itens','bar_motivos','bar_limites','bar_dispositivos',
+                             'bar_alertas','bar_mensagens'];
     public static bool $vigiar = false;   // ligado só depois de o esquema estar pronto
 
     private function auditar(string $sql): void {
@@ -193,7 +194,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 39;
+const ESQUEMA_VERSAO = 40;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1957,6 +1958,76 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}bar_pedidos", 'nota_entrega', "VARCHAR(240) DEFAULT NULL");
     }
 
+    // v40 — o motor deixa de só travar e passa a poder propor.
+    //
+    // Até aqui, uma regra do bar fazia uma coisa e uma só: recusava no momento
+    // do pedido. É a leitura certa para «esta pessoa não bebe álcool», e é a
+    // leitura errada para «o gin está a sair depressa de mais» — nessa, quem
+    // tem de decidir é quem está a olhar para a sala, e o sistema devia
+    // limitar-se a apontar. Faltava ao módulo a diferença entre uma regra que
+    // FECHA a porta e uma que TOCA A CAMPAINHA.
+    //
+    // Quatro peças, e nenhuma delas muda o que já está escrito:
+    //
+    //   `modo` — como é que esta regra se executa. Nasce 'trava' em todas as
+    //   linhas que já existem, que é exactamente o que elas faziam ontem.
+    //
+    //   `base_noite` — quantas havia quando a noite abriu, para a percentagem
+    //   («restam 15% do gin») ter denominador. Zero enquanto o bar não abrir:
+    //   uma percentagem sobre uma noite que não começou é um número inventado.
+    //
+    //   `bar_alertas` — o que o motor propõe, e o que a copa respondeu. É uma
+    //   proposta com data, e não um registo: nasce aberta e fecha-se aplicada,
+    //   adaptada, ignorada ou caducada. A `chave` é a identidade do alerta —
+    //   é ela que impede o mesmo degrau de stock de nascer outra vez a cada
+    //   leitura de oito segundos e afogar o painel.
+    //
+    //   `bar_mensagens` — o que se diz ao convidado em cada situação, em vez
+    //   do texto de fábrica. Uma linha por situação; vazia, vale o de fábrica,
+    //   e por isso ninguém tem de preencher nada para o bar funcionar.
+    if ($versaoAtual < 40) {
+        migColuna($conn, "{$P}bar_limites", 'modo',
+                  "ENUM('trava','sugere','confirma','avisa') NOT NULL DEFAULT 'trava'");
+        migColuna($conn, "{$P}bar_itens", 'base_noite', "INT NOT NULL DEFAULT 0");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_alertas (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                regra_id INT DEFAULT NULL,
+                tipo VARCHAR(40) NOT NULL,
+                nivel ENUM('aviso','atencao','critico') NOT NULL DEFAULT 'aviso',
+                -- A identidade do alerta: «gin, degrau 30». Dois alertas com a
+                -- mesma chave são o mesmo alerta, e o segundo não nasce.
+                chave VARCHAR(80) NOT NULL DEFAULT '',
+                -- O retrato numérico do momento, e a acção proposta. JSON, e
+                -- não colunas: o que se mede muda de alerta para alerta, e uma
+                -- tabela com vinte colunas quase sempre vazias mente sobre a
+                -- forma do que lá está.
+                situacao TEXT,
+                sugestao TEXT,
+                estado ENUM('aberto','aplicado','ignorado','adaptado','caducado')
+                       NOT NULL DEFAULT 'aberto',
+                decidido_por VARCHAR(80) DEFAULT NULL,
+                decidido_em DATETIME DEFAULT NULL,
+                nota VARCHAR(240) DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_baralerta_cas (casamento_id, estado, id),
+                INDEX idx_baralerta_chave (casamento_id, chave, estado)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}bar_mensagens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                situacao VARCHAR(40) NOT NULL,
+                texto VARCHAR(240) NOT NULL DEFAULT '',
+                ativo TINYINT(1) NOT NULL DEFAULT 1,
+                UNIQUE KEY uq_barmsg (casamento_id, situacao),
+                INDEX idx_barmsg_cas (casamento_id, ativo)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2598,6 +2669,15 @@ function barDefsPadrao(): array {
         'bar.trocar_nome'   => '1',           // trocar para outro convite: 1 avisa, 0 recusa
         'bar.procura_min'   => '4',
         'bar.mensagem_fechado' => '',
+        // Os degraus da percentagem de stock, do mais folgado ao mais apertado.
+        // «Restam 30% do gin» é a pergunta que a copa faz; «restam 18 garrafas»
+        // é a resposta a outra (essa é o `stock_minimo`, por bebida, que fica).
+        'bar.degraus_stock' => '50,30,15,5',
+        // A copa pausada: até quando, e por quanto tempo se propõe pausá-la.
+        // Vazio = não está em pausa. Passada a hora reabre sozinha — ninguém
+        // tem de se lembrar dela, que é a parte que sempre corre mal.
+        'bar.pausada_ate'   => '',
+        'bar.pausa_min'     => '10',
     ];
 }
 
@@ -2637,6 +2717,22 @@ function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
         }
         if ($chave === 'bar.procura_min')      $v = (string)max(1, min(8, (int)$v));
         if ($chave === 'bar.mensagem_fechado') $v = mb_substr($v, 0, 200);
+        if ($chave === 'bar.pausa_min')        $v = (string)max(1, min(240, (int)$v));
+        // Os degraus: números de 1 a 100, do maior para o menor, sem repetidos.
+        // Escritos ao contrário, o alerta de 15% nascia antes do de 30% e a
+        // copa via a bebida a ficar «crítica» com metade do stock na mão.
+        if ($chave === 'bar.degraus_stock') {
+            $ds = array_values(array_unique(array_filter(array_map(
+                fn($x) => max(0, min(100, (int)trim($x))),
+                explode(',', $v)), fn($x) => $x > 0)));
+            rsort($ds);
+            $v = implode(',', array_slice($ds, 0, 6));
+        }
+        // A hora de fim da pausa é um momento, e só se guarda se for um.
+        if ($chave === 'bar.pausada_ate' && $v !== ''
+            && !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $v)) {
+            $v = '';
+        }
 
         if ($v === $padrao[$chave]) {
             // Igual ao de fábrica não se guarda: a ausência já diz isso.

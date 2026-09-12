@@ -560,7 +560,7 @@ function correcoesEsperadas(): array {
         ['Bar: o retrato leva o menu, o stock, os motivos e as regras',
          'api.php', 'function impBar('],
         ['Bar: apagar ou substituir um casamento já não deixa órfãos do bar',
-         'api.php', "'bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_limites',"],
+         'api.php', "'bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_alertas','bar_limites',"],
         ['Bar: um casamento de exemplo, pronto a importar',
          'docs/exemplos/bar-exemplo.json', '"bar"'],
 
@@ -688,6 +688,24 @@ function correcoesEsperadas(): array {
          'assets/janela.css', '.lic-sel-pop.acima{'],
         ['Janela: um botão do CORPO tem a forma dos do rodapé, e não só a cor',
          'assets/janela.css', '.j-bt{ font-family:inherit;'],
+
+        // ---- A sexta passagem, fase 1: o esquema do motor assistido ----
+        ['Bar: cada regra passa a ter modo — travar, sugerir, confirmar ou avisar',
+         'db.php', "ENUM('trava','sugere','confirma','avisa') NOT NULL DEFAULT 'trava'"],
+        ['Bar: e as que já estavam escritas continuam a travar, como faziam',
+         'db.php', 'if ($versaoAtual < 40) {'],
+        ['Bar: a bebida guarda com quantas a noite abriu, para a percentagem ter conta',
+         'db.php', "migColuna(\$conn, \"{\$P}bar_itens\", 'base_noite'"],
+        ['Bar: os alertas do motor têm tabela, e uma chave que impede o mesmo duas vezes',
+         'db.php', 'CREATE TABLE IF NOT EXISTS {$P}bar_alertas'],
+        ['Bar: e o que se diz ao convidado em cada situação também',
+         'db.php', 'CREATE TABLE IF NOT EXISTS {$P}bar_mensagens'],
+        ['Bar: as duas tabelas novas entram na vigia de âmbito, como as outras oito',
+         'db.php', "'bar_alertas','bar_mensagens'"],
+        ['Bar: os degraus da percentagem arrumam-se do maior para o menor',
+         'db.php', "if (\$chave === 'bar.degraus_stock')"],
+        ['Bar: as mensagens viajam no retrato; os alertas, não — são de um momento',
+         'api.php', "\$barMensagens = \$um(\"SELECT situacao, texto, ativo"],
 
         // ---- O desenho do bar: peças, ícones, procura ----
         ['Bar: os desenhos da casa num módulo só — seis copos e os sinais',

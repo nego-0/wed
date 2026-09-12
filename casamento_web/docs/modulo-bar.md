@@ -2724,3 +2724,82 @@ meio de uma janela onde tudo o resto tem raio e respiro.
 | A janela de uma bebida traz as regras dela | §30.4 |
 | A barra de «Os números» abre-as | §30.4 |
 | O nome do convidado lê-se uma vez só | §30.5 |
+
+---
+
+## 31. A sexta passagem: o motor assistido
+
+O plano desta passagem está em `docs/bar-motor-assistido.md` — o que já existia,
+o que é novo, e o que se recusou construir. Aqui fica o que foi feito, fase a
+fase.
+
+### 31.1 Fase 1 — o esquema v40
+
+Até aqui, uma regra do bar fazia uma coisa e uma só: **recusava** no momento do
+pedido. É a leitura certa para «esta pessoa não bebe álcool». É a leitura errada
+para «o gin está a sair depressa de mais» — nessa, quem tem de decidir é quem
+está a olhar para a sala, e o sistema devia limitar-se a apontar. Faltava ao
+módulo a diferença entre uma regra que **fecha a porta** e uma que **toca a
+campainha**.
+
+Esta fase não muda comportamento nenhum. Abre o sítio onde o motor vai escrever.
+
+**`bar_limites.modo`** — `trava` · `sugere` · `confirma` · `avisa`. Nasce
+`trava` em todas as linhas que já existiam, que é exactamente o que elas faziam
+ontem. Uma migração que muda o comportamento de uma regra já escrita é a pior
+espécie de migração: ninguém a vê acontecer, e o bar passa a fazer outra coisa a
+meio de uma festa.
+
+**`bar_itens.base_noite`** — com quantas a noite abriu, para a percentagem
+(«restam 15% do gin») ter denominador. Zero enquanto o bar não abrir: uma
+percentagem sobre uma noite que não começou é um número inventado. Sobe com cada
+entrada de stock — chegam mais duas caixas, a base conta-as, senão a
+percentagem passava dos 100%.
+
+O `stock_minimo` **fica**. É outra pergunta: cinco whiskies é uma emergência,
+cinco águas não é nada, e isso não se lê numa percentagem.
+
+**`bar_alertas`** — o que o motor propõe, e o que a copa respondeu. É uma
+proposta com data, e não um registo: nasce `aberto` e fecha-se `aplicado`,
+`adaptado`, `ignorado` ou `caducado`. A `chave` é a identidade do alerta («gin,
+degrau 30»): é ela que impede o mesmo degrau de nascer outra vez a cada leitura
+de oito segundos e afogar o painel. A `situacao` e a `sugestao` vão em JSON —
+o que se mede muda de alerta para alerta, e uma tabela com vinte colunas quase
+sempre vazias mente sobre a forma do que lá está.
+
+**`bar_mensagens`** — o que se diz ao convidado em cada situação. Uma linha por
+situação; vazia, vale o texto de fábrica, e por isso ninguém tem de preencher
+nada para o bar funcionar.
+
+**As definições novas:** `bar.degraus_stock` (`50,30,15,5`), que se arrumam
+sozinhos do maior para o menor e sem repetidos — escritos ao contrário, o
+alerta de 15% nascia antes do de 30% e a copa via a bebida a ficar «crítica»
+com metade do stock ainda na mão; `bar.pausada_ate`, que só se guarda se for um
+momento; e `bar.pausa_min`.
+
+**No retrato, a mesma linha de sempre: a montagem viaja, a noite não.** As
+mensagens e o `modo` de cada regra viajam — são escrita do casal. Os alertas
+não: são propostas sobre um momento, e um momento não se importa de outra base.
+A `base_noite` também não, pela mesma razão. As duas tabelas novas entram na
+vigia de âmbito e nas três listas que apagam um casamento — órfãos numa base
+que ninguém volta a olhar não dão erro nenhum, só confundem quem um dia for
+contar linhas.
+
+### 31.2 A prova
+
+`tests/chk_bar_sexta.js` (fase 1):
+
+| Verifica | Porque é que se parte |
+|---|---|
+| O esquema anuncia-se em 40 | A migração correu |
+| Uma regra escrita sem modo nasce a `trava` | É isto que garante que o v40 não mexeu em nada |
+| O retrato traz as mensagens | São escrita do casal, e viajam com o menu |
+| E **não** traz os alertas nem a `base_noite` | São de um momento, e um momento não se importa |
+| Os degraus arrumam-se do maior para o menor | Ao contrário, «crítico» acendia com o stock cheio |
+| A hora da pausa só se guarda se for uma hora | Uma pausa com lixo dentro é uma copa fechada para sempre |
+
+A vigia de âmbito das duas tabelas novas não se prova daqui: ela só
+**acrescenta** uma verificação, e por isso a sua falta não dá erro nenhum — dá,
+um dia, uma consulta sem âmbito que ninguém apanhou. Fica pinada em
+`versao.php`, que é a ferramenta desta casa para «esta linha tem de estar neste
+ficheiro».

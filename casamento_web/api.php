@@ -6504,13 +6504,14 @@ if ($acao === 'casamento_apagar') {
     // Pela ordem certa: os convidados dependem dos convites, e as parcelas das
     // despesas, e estas das categorias.
     //
-    // As oito tabelas do bar entram nesta lista, e primeiro: apagar um
+    // As dez tabelas do bar entram nesta lista, e primeiro: apagar um
     // casamento deixava-as para trás, com pedidos e telemóveis a apontar para
     // convidados que já não existiam. Órfãos numa base que ninguém volta a
     // olhar são a pior espécie — não dão erro nenhum, só ocupam e confundem
-    // quem um dia for contar linhas.
-    foreach (['bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_limites',
-              'bar_motivos','bar_dispositivos','bar_itens','bar_categorias',
+    // quem um dia for contar linhas. Os alertas saem antes das regras, que é
+    // para onde o `regra_id` deles aponta.
+    foreach (['bar_pedido_itens','bar_pedidos','bar_stock_mov','bar_alertas','bar_limites',
+              'bar_motivos','bar_mensagens','bar_dispositivos','bar_itens','bar_categorias',
               'convidados','convites','mesas','versoes','registo','definicoes',
               'acessos','suporte_codigos',
               'orcamento_pagamentos','orcamento_despesas','orcamento_categorias'] as $t) {
@@ -7048,8 +7049,14 @@ function retratoCasamento(mysqli $conn, int $cid): array {
                      WHERE i.casamento_id=$cid ORDER BY i.ordem, i.nome");
     $barMotivos = $um("SELECT texto, ordem, ativo FROM {$P}bar_motivos
                        WHERE casamento_id=$cid ORDER BY ordem, id");
+    // O que se diz ao convidado em cada situação. É escrita do casal — viaja
+    // com o menu, como os motivos de recusa. Os ALERTAS, esses, não viajam:
+    // são propostas sobre um momento, e um momento não se importa de outra
+    // base. É a mesma linha que já separa a montagem da noite.
+    $barMensagens = $um("SELECT situacao, texto, ativo FROM {$P}bar_mensagens
+                         WHERE casamento_id=$cid ORDER BY situacao");
     $barLimites = $um("SELECT l.escopo, l.sujeito, l.unidade, l.quantidade, l.janela_min,
-                              l.mensagem, l.nota, l.vigora_em, l.expira_em, l.ativo,
+                              l.mensagem, l.nota, l.vigora_em, l.expira_em, l.ativo, l.modo,
                               it.nome AS alvo_item, ct.nome AS alvo_categoria,
                               g.nome AS alvo_convidado, cv.nome_exibicao AS alvo_convite
                        FROM {$P}bar_limites l
@@ -7068,7 +7075,8 @@ function retratoCasamento(mysqli $conn, int $cid): array {
             'convites' => $convites, 'versoes' => $versoes, 'acessos' => $acessos,
             'orcamento' => ['categorias' => $orcCategorias, 'despesas' => $orcDespesas],
             'bar' => ['categorias' => $barCategorias, 'itens' => $barItens,
-                      'motivos' => $barMotivos, 'limites' => $barLimites]];
+                      'motivos' => $barMotivos, 'limites' => $barLimites,
+                      'mensagens' => $barMensagens]];
 }
 
 if ($acao === 'dados_exportar') {
@@ -7309,7 +7317,8 @@ function impVersoes(mysqli $conn, int $cid, array $versoes): int {
  */
 function impBar(mysqli $conn, int $cid, array $bar): array {
     global $P;
-    $feito = ['bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0, 'bar_regras' => 0];
+    $feito = ['bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0,
+              'bar_regras' => 0, 'bar_mensagens' => 0];
 
     $idCat = [];
     foreach ((array)($bar['categorias'] ?? []) as $c) {
@@ -7365,6 +7374,22 @@ function impBar(mysqli $conn, int $cid, array $bar): array {
         if (@$st->execute()) $feito['bar_motivos']++;
     }
 
+    foreach ((array)($bar['mensagens'] ?? []) as $m) {
+        if (!is_array($m)) continue;
+        $sit = mb_substr(trim((string)($m['situacao'] ?? '')), 0, 40);
+        if ($sit === '') continue;
+        $tx = mb_substr((string)($m['texto'] ?? ''), 0, 240);
+        $at = isset($m['ativo']) ? (int)!empty($m['ativo']) : 1;
+        // Uma situação, uma linha. Se o ficheiro trouxer a mesma duas vezes,
+        // fica a última — e não duas, que era o bar a dizer duas coisas
+        // diferentes à mesma pergunta.
+        $st = $conn->prepare("INSERT INTO {$P}bar_mensagens (casamento_id,situacao,texto,ativo)
+                              VALUES ($cid,?,?,?)
+                              ON DUPLICATE KEY UPDATE texto=VALUES(texto), ativo=VALUES(ativo)");
+        $st->bind_param('ssi', $sit, $tx, $at);
+        if (@$st->execute()) $feito['bar_mensagens']++;
+    }
+
     // As regras por último: precisam das bebidas, das gavetas, das pessoas e
     // dos convites já escritos para os reencontrar pelo nome.
     $idPessoa = []; $idConvite = [];
@@ -7399,12 +7424,16 @@ function impBar(mysqli $conn, int $cid, array $bar): array {
         $vig = $hora($l['vigora_em'] ?? '');
         $exp = $hora($l['expira_em'] ?? '');
         $at = isset($l['ativo']) ? (int)!empty($l['ativo']) : 1;
+        // Uma regra de um ficheiro antigo (anterior ao v40) não traz modo. Cai
+        // em 'trava', que é o que ela fazia na base de onde saiu.
+        $modo = in_array($l['modo'] ?? '', ['trava','sugere','confirma','avisa'], true)
+              ? $l['modo'] : 'trava';
         $st = $conn->prepare("INSERT INTO {$P}bar_limites
                 (casamento_id,escopo,alvo_id,sujeito,alvo_convidado_id,alvo_convite_id,
-                 unidade,quantidade,janela_min,mensagem,nota,vigora_em,expira_em,ativo,criado_por)
-                VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,'importado')");
-        $st->bind_param('sisiisiissssi', $escopo, $alvo, $suj, $pessoa, $convite,
-                        $uni, $qtd, $jan, $msg, $nota, $vig, $exp, $at);
+                 unidade,quantidade,janela_min,mensagem,nota,vigora_em,expira_em,ativo,modo,criado_por)
+                VALUES ($cid,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'importado')");
+        $st->bind_param('sisiisiissssis', $escopo, $alvo, $suj, $pessoa, $convite,
+                        $uni, $qtd, $jan, $msg, $nota, $vig, $exp, $at, $modo);
         if (@$st->execute()) $feito['bar_regras']++;
     }
     return $feito;
@@ -7498,8 +7527,8 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
     // O bar sai primeiro, e de dentro para fora: as suas linhas apontam para
     // convidados e mesas, e apagar essas antes deixava a fila a apontar para
     // gente que já não existe.
-    foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_limites',
-              'bar_motivos', 'bar_dispositivos', 'bar_itens', 'bar_categorias',
+    foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_alertas', 'bar_limites',
+              'bar_motivos', 'bar_mensagens', 'bar_dispositivos', 'bar_itens', 'bar_categorias',
               'convidados', 'convites', 'mesas', 'versoes', 'definicoes',
               'orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
         $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
@@ -7508,7 +7537,8 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
     $feito = ['mesas' => 0, 'convites' => 0, 'pessoas' => 0, 'versoes' => 0,
               'definicoes' => 0, 'codigos_trocados' => 0,
               'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0,
-              'bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0, 'bar_regras' => 0];
+              'bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0,
+              'bar_regras' => 0, 'bar_mensagens' => 0];
     $feito['definicoes'] = impFichaDefs($conn, $cid, $r, $comFicha);
     $feito['mesas']      = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
     $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
@@ -7706,8 +7736,9 @@ function reporFabricaPartes(mysqli $conn, int $cid, array $partes): array {
         // e os motivos de recusa, para a copa não recomeçar numa folha em
         // branco. É o mesmo bar de origem que um casamento novo recebe.
         $feito['bar_itens'] = $um("SELECT COUNT(*) FROM {$P}bar_itens WHERE casamento_id=$cid");
-        foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_limites',
-                  'bar_motivos', 'bar_dispositivos', 'bar_itens', 'bar_categorias'] as $t) {
+        foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_alertas', 'bar_limites',
+                  'bar_motivos', 'bar_mensagens', 'bar_dispositivos', 'bar_itens',
+                  'bar_categorias'] as $t) {
             $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
         }
         $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=$cid AND chave LIKE 'bar.%'");
