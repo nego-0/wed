@@ -116,7 +116,7 @@ if ($pecaSel === 'cartao') {
   .man-cab{ border-bottom:3px double var(--gold-soft); padding-bottom:1rem; margin-bottom:1.6rem; }
   .man-cab h1{ margin:.2rem 0; }
   .man-cab .sub{ color:var(--gold); font-family:var(--serif); font-size:1.05rem; }
-  .man-cab .meta{ font-size:.82rem; color:#7a8078; margin-top:.5rem; }
+  .man-cab .meta{ font-size:.82rem; color:var(--ink-fraco); margin-top:.5rem; }
   .man-cab .meta b{ color:var(--ink); }
   .selo-vivo{ display:inline-block; background:var(--gold-pale); border:1px solid var(--gold-soft);
               border-radius:50px; padding:.15rem .7rem; font-size:.76rem; color:var(--ink); }
@@ -128,10 +128,10 @@ if ($pecaSel === 'cartao') {
 
   .tb{ width:100%; border-collapse:collapse; font-size:.88rem; }
   .tb th{ text-align:left; background:var(--cream); padding:.45rem .6rem; font-size:.74rem;
-          text-transform:uppercase; letter-spacing:.05em; color:#7a8078; }
+          text-transform:uppercase; letter-spacing:.05em; color:var(--ink-fraco); }
   .tb td{ border-top:1px solid var(--line); padding:.45rem .6rem; vertical-align:top; }
   .tb .num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .tb tr.off td{ color:#9aa09a; }
+  .tb tr.off td{ color:var(--ink-fraco); }
 
   .cores{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:.7rem; }
   .cor{ border:1px solid var(--line); border-radius:10px; overflow:hidden; }
@@ -141,7 +141,7 @@ if ($pecaSel === 'cartao') {
   .cor .amostra{ height:46px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .cor .txt{ padding:.4rem .55rem; font-size:.78rem; }
   .cor .txt b{ display:block; font-family:var(--serif); font-size:.9rem; }
-  .cor .hex{ font-family:ui-monospace,monospace; color:#7a8078; }
+  .cor .hex{ font-family:ui-monospace,monospace; color:var(--ink-fraco); }
 
   .aviso-p{ background:var(--gold-pale); border:1px solid var(--gold-soft); border-left:4px solid var(--gold);
             border-radius:8px; padding:.7rem .9rem; font-size:.88rem; margin:.7rem 0; }
@@ -150,7 +150,7 @@ if ($pecaSel === 'cartao') {
   .provas{ display:flex; gap:1.2rem; flex-wrap:wrap; align-items:flex-start; }
   .prova{ text-align:center; }
   .prova .palco{ border-radius:10px; overflow:hidden; border:1px solid var(--line); }
-  .prova .rot{ font-size:.78rem; color:#7a8078; margin-top:.4rem; }
+  .prova .rot{ font-size:.78rem; color:var(--ink-fraco); margin-top:.4rem; }
   .prova .rot b{ color:var(--ink); }
   .palco-cartao{ width:calc(720px * .34); height:calc(1080px * .34); background:#fff; }
   .palco-cartao .escala{ width:720px; height:1080px; transform:scale(.34); transform-origin:top left; }
@@ -172,6 +172,7 @@ if ($pecaSel === 'cartao') {
 <body>
 <?php cabecalho('Manual de impressão', 'Gerado a partir da configuração atual', 'grafica', ['no_print'=>true]); ?>
 
+<main id="conteudo">
 <div class="container">
 <div class="man-wrap">
 
@@ -231,7 +232,7 @@ if ($pecaSel === 'cartao') {
         <div class="cor">
           <div class="amostra" style="background:<?= $pal[$k] ?>"></div>
           <div class="txt"><b><?= escP($rot) ?></b><span class="hex"><?= strtoupper($pal[$k]) ?></span>
-            <div style="color:#7a8078;margin-top:.15rem"><?= escP($uso) ?></div></div>
+            <div style="color:var(--ink-fraco);margin-top:.15rem"><?= escP($uso) ?></div></div>
         </div>
       <?php endforeach; ?>
     </div>
@@ -248,7 +249,7 @@ if ($pecaSel === 'cartao') {
       <?php endforeach; ?>
       </tbody>
     </table>
-    <p style="font-size:.82rem;color:#7a8078;margin:.5rem 0 0">Tipos de letra: Alex Brush, Cormorant Garamond e
+    <p style="font-size:.82rem;color:var(--ink-fraco);margin:.5rem 0 0">Tipos de letra: Alex Brush, Cormorant Garamond e
       Montserrat (Google Fonts, licença SIL OFL — uso comercial permitido).</p>
   </div>
 
@@ -259,7 +260,7 @@ if ($pecaSel === 'cartao') {
       <tbody>
       <?php foreach ($rotulos as $k => $rot): $on = $camadas[$k] !== 0; ?>
         <tr class="<?= $on ? '' : 'off' ?>">
-          <td><?= escP($rot) ?><?= $k === 'ramos' ? ' <span style="color:#7a8078">(variante: '.escP($folh['nome']).')</span>' : '' ?></td>
+          <td><?= escP($rot) ?><?= $k === 'ramos' ? ' <span style="color:var(--ink-fraco)">(variante: '.escP($folh['nome']).')</span>' : '' ?></td>
           <td class="num"><?= $on ? '<b>Sim</b>' : 'Não — omitir' ?></td>
         </tr>
       <?php endforeach; ?>
@@ -288,7 +289,7 @@ if ($pecaSel === 'cartao') {
         a abraçar os nomes (o da direita rodado 180°), caixa
         <?= $cxOrn(150, 104, $escOrn('floreados')) ?><?= $escOrn('floreados') !== 100 ? ' (a '.$escOrn('floreados').'%)' : '' ?></td></tr>
       <tr><th>Entre os nomes</th><td><?= escP(cartaoElo($defs['cartao.elo'])['nome']) ?>
-        <span style="color:#7a8078">— <?= escP(cartaoElo($defs['cartao.elo'])['nota']) ?></span></td></tr>
+        <span style="color:var(--ink-fraco)">— <?= escP(cartaoElo($defs['cartao.elo'])['nota']) ?></span></td></tr>
     </table>
 
     <?php // Composição livre: só aparece quando alguém mexeu. Um cartão pela
@@ -305,17 +306,17 @@ if ($pecaSel === 'cartao') {
         <?php foreach ($rotulos as $k => $rot): $p = $posic[$k] ?? null; if (!$p) continue;
               $mm = fn(float $pc, float $lado) => number_format($pc / 100 * $lado / $pxmmCartao, 1, ',', ''); ?>
           <tr class="<?= $camadas[$k] !== 0 ? '' : 'off' ?>">
-            <td><?= escP($rot) ?><?= $camadas[$k] !== 0 ? '' : ' <span style="color:#7a8078">(desligada)</span>' ?></td>
+            <td><?= escP($rot) ?><?= $camadas[$k] !== 0 ? '' : ' <span style="color:var(--ink-fraco)">(desligada)</span>' ?></td>
             <td class="num"><?= $p['x'] > 0 ? '+' : '' ?><?= rtrim(rtrim(number_format($p['x'], 2, ',', ''), '0'), ',') ?> %
-              <span style="color:#7a8078">(<?= $mm($p['x'], CARTAO_L) ?> mm)</span></td>
+              <span style="color:var(--ink-fraco)">(<?= $mm($p['x'], CARTAO_L) ?> mm)</span></td>
             <td class="num"><?= $p['y'] > 0 ? '+' : '' ?><?= rtrim(rtrim(number_format($p['y'], 2, ',', ''), '0'), ',') ?> %
-              <span style="color:#7a8078">(<?= $mm($p['y'], CARTAO_A) ?> mm)</span></td>
+              <span style="color:var(--ink-fraco)">(<?= $mm($p['y'], CARTAO_A) ?> mm)</span></td>
             <td class="num"><?= $p['a'] ? (($p['a'] > 0 ? '+' : '') . rtrim(rtrim(number_format($p['a'], 1, ',', ''), '0'), ',') . '°') : '—' ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody>
       </table>
-      <p style="font-size:.82rem;color:#7a8078;margin:.4rem 0 0">As percentagens são do cartão
+      <p style="font-size:.82rem;color:var(--ink-fraco);margin:.4rem 0 0">As percentagens são do cartão
         (720 × 1080 px); os milímetros são a mesma medida em papel. A volta é à volta do centro
         de cada camada.</p>
     <?php endif; ?>
@@ -353,11 +354,12 @@ if ($pecaSel === 'cartao') {
   </div>
 
 
-  <p style="font-size:.78rem;color:#9aa09a;border-top:1px solid var(--line);padding-top:.7rem">
+  <p style="font-size:.78rem;color:var(--ink-fraco);border-top:1px solid var(--line);padding-top:.7rem">
     Documento gerado pelo sistema de gestão de convidados em <?= escP($geradoEm) ?>.
     Acompanha as edições feitas nos editores — se a configuração mudar, volte a gerá-lo.
   </p>
 </div>
 </div>
+</main>
 </body>
 </html>

@@ -123,7 +123,7 @@ if ($modQuero) {
     font-size:.88rem; border-bottom:1px solid var(--line); }
   .lic-itens li:last-child{ border-bottom:none; }
   .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:9.5rem; }
-  .lic-itens .med{ flex:1; color:#8a8f88; }
+  .lic-itens .med{ flex:1; color:var(--ink-fraco); }
   .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold); font-weight:600; }
   .lic-pedido-pe{ padding:1rem 1.3rem; border-top:1px solid var(--line);
     display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; }
@@ -146,11 +146,11 @@ if ($modQuero) {
     border-radius:var(--radius); padding:1.2rem 1.3rem;
     grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
   .lic-f{ display:flex; flex-direction:column; gap:.15rem; }
-  .lic-f .r{ font-size:.7rem; letter-spacing:.07em; text-transform:uppercase; color:#8a8f88; }
+  .lic-f .r{ font-size:.7rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-fraco); }
   .lic-f .v{ font-size:1rem; color:var(--ink); font-weight:600; }
   .lic-f .v.grande{ font-family:var(--serif); font-size:1.4rem; font-weight:400;
     font-variant-numeric:tabular-nums; }
-  .lic-f .n{ font-size:.76rem; color:#8a8f88; }
+  .lic-f .n{ font-size:.76rem; color:var(--ink-fraco); }
   .lic-f .v.aviso{ color:var(--warn); }
 
   /* O extracto dos pedidos já decididos. */
@@ -163,7 +163,7 @@ if ($modQuero) {
   .lic-h-selo.nao{ background:var(--danger-bg); color:var(--danger); }
   .lic-h-txt{ flex:1; min-width:180px; }
   .lic-h-tit{ font-weight:600; color:var(--ink); font-size:.9rem; }
-  .lic-h-det{ font-size:.79rem; color:#8a8f88; line-height:1.5; margin-top:.1rem; }
+  .lic-h-det{ font-size:.79rem; color:var(--ink-fraco); line-height:1.5; margin-top:.1rem; }
   .lic-h-vl{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink);
     white-space:nowrap; text-align:right; }
   /* A nota que a administração escreveu. Aparece sempre que exista — também
@@ -185,7 +185,7 @@ if ($modQuero) {
   .lic-det-cab{ display:flex; gap:1rem; align-items:flex-start;
     border-bottom:1px solid var(--line); padding-bottom:.9rem; margin-bottom:1rem; }
   .lic-det-tit{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
-  .lic-det-sub{ font-size:.82rem; color:#8a8f88; margin-top:.15rem; }
+  .lic-det-sub{ font-size:.82rem; color:var(--ink-fraco); margin-top:.15rem; }
   .lic-det-selo{ width:34px; height:34px; flex:none; border-radius:50%; display:flex;
     align-items:center; justify-content:center; font-weight:700; }
   .lic-det-selo.ok{ background:var(--ok-bg); color:var(--ok); }
@@ -193,14 +193,14 @@ if ($modQuero) {
   .lic-d-tab{ display:grid; gap:.1rem; }
   .lic-d-l{ display:flex; gap:1rem; padding:.4rem 0; border-bottom:1px solid var(--line); }
   .lic-d-l:last-child{ border-bottom:none; }
-  .lic-d-l span{ flex:1; color:#8a8f88; font-size:.82rem; }
+  .lic-d-l span{ flex:1; color:var(--ink-fraco); font-size:.82rem; }
   .lic-d-l b{ color:var(--ink); text-align:right; }
   .lic-d-mau{ color:var(--danger); }
   .lic-d-sec{ font-size:.72rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
-    color:#8a8f88; margin:1.3rem 0 .5rem; }
+    color:var(--ink-fraco); margin:1.3rem 0 .5rem; }
   .lic-d-mods{ width:100%; border-collapse:collapse; font-size:.84rem; }
   .lic-d-mods th{ text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;
-    color:#8a8f88; font-weight:600; padding:.3rem .5rem; border-bottom:1px solid var(--line); }
+    color:var(--ink-fraco); font-weight:600; padding:.3rem .5rem; border-bottom:1px solid var(--line); }
   .lic-d-mods td{ padding:.45rem .5rem; border-bottom:1px solid var(--line); }
   .lic-d-mods .n{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .lic-d-mods tfoot td{ font-weight:700; color:var(--ink); border-bottom:none;
@@ -236,6 +236,7 @@ if ($modQuero) {
 <body>
 <?php cabecalho($tit, $sub, 'licenca'); ?>
 
+<main id="conteudo">
 <div class="lic-wrap">
 
 <?php if ($souDaCasa): /* A casa a ver a licença de um casal. */ ?>
@@ -821,5 +822,6 @@ document.getElementById('lic-aceite').addEventListener('change', () =>
 
 carregar();
 </script>
+</main>
 </body>
 </html>

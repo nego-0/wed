@@ -907,6 +907,30 @@ function correcoesEsperadas(): array {
          'assets/janela.js', 'NÃO MEXE NO DOM PARA MEDIR, e só escreve o que mudou'],
         ['A lista do combo das mesas já não se fecha debaixo do dedo',
          'assets/mesas.js', 'const rolouPorFora = (e) => !(comboAberto && e.target && e.target.nodeType === 1'],
+
+        // ---- Auditoria de UI/UX: fases 1 e 2 (docs/auditoria-ui-ux.md §25) ----
+        ['A cor de texto e a de preenchimento são tokens diferentes',
+         'assets/estilo.css', '--gold-texto:#3C7517;'],
+        ['E o que se escreve por cima do preenchimento tem token próprio',
+         'assets/estilo.css', '--sobre-gold:var(--ivory);'],
+        ['O gradiente do botão mede-se pelos dois extremos, não pela média',
+         'assets/estilo.css', '--btn-a:#3C7517; --btn-b:#2F5C12; --btn-txt:#FFFFFF;'],
+        ['No tema escuro o --gold-deep é CLARO, porque o --gold-pale é escuro',
+         'assets/estilo.css', '--gold-deep:#9BDC63;'],
+        ['O anel de foco da casa deixou de ser exclusivo das páginas de serviço',
+         'assets/estilo.css', 'outline-width:2px; outline-style:solid; outline-color:var(--gold-texto);'],
+        ['O botão anima propriedades nomeadas, e não o outline-width',
+         'assets/estilo.css', 'transition:background-color .18s, color .18s, border-color .18s,'],
+        ['44px de alvo mínimo, e só onde há dedo',
+         'assets/estilo.css', '@media (pointer:coarse){'],
+        ['O que muda sem recarregar é anunciado a quem lê o ecrã',
+         'assets/api.js', 'function anunciar(msg) {'],
+        ['Há uma região viva no cabeçalho partilhado',
+         'parcial-cabecalho.php', 'id="avisos-vivos" class="so-leitor" role="status" aria-live="polite"'],
+        ['E uma ligação de salto antes das doze do menu',
+         'parcial-cabecalho.php', '<a class="salta-conteudo" href="#conteudo">Saltar para o conteúdo</a>'],
+        ['O conteúdo de cada página vive dentro de um <main> só',
+         'index.php', '<main id="conteudo">'],
     ];
 }
 
@@ -950,10 +974,10 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
           padding:.5rem .9rem; display:inline-block; margin:.4rem 0 1rem; }
   table{ width:100%; border-collapse:collapse; font-size:.88rem; }
   th,td{ text-align:left; padding:.45rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
-  th{ font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:#8a8f88; }
+  th{ font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
   .sim{ color:#1f7a3d; font-weight:600; }
   .nao{ color:var(--danger); font-weight:600; }
-  td.f{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem; color:#8a8f88; }
+  td.f{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem; color:var(--ink-fraco); }
   .aviso{ border-radius:10px; padding:.8rem 1rem; margin:1rem 0; line-height:1.55; }
   .aviso.mau{ background:#fbeceb; border:1px solid #e6c3bf; }
   .aviso.bom{ background:#eaf4ee; border:1px solid #bcdcc8; }
@@ -964,7 +988,7 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
 </head>
 <body>
 <h1>Versão instalada</h1>
-<p style="color:#8a8f88;margin:.2rem 0">Assinatura do que está neste servidor. Duas instalações
+<p style="color:var(--ink-fraco);margin:.2rem 0">Assinatura do que está neste servidor. Duas instalações
 iguais dão a mesma assinatura.</p>
 <div class="assin"><?= versaoApp() ?></div>
 
@@ -974,7 +998,7 @@ iguais dão a mesma assinatura.</p>
     — esperava-se <b>v<?= ESQUEMA_VERSAO ?></b>. A migração não correu, ou correu a meio:
     os ficheiros podem estar todos cá e faltar na mesma metade da correção.
   <?php else: ?>
-    <span style="color:#8a8f88">(em dia)</span>
+    <span style="color:var(--ink-fraco)">(em dia)</span>
   <?php endif; ?>
 </p>
 

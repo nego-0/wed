@@ -45,7 +45,7 @@ $CAS  = casalInfo($DEFS);
   .painel{ background:#fff; border:1px solid var(--line); border-radius:16px;
            padding:1.25rem 1.35rem; margin-bottom:1.15rem; box-shadow:0 1px 2px rgba(22,38,30,.03); }
   .painel h3{ margin:0 0 .15rem; font-size:1.08rem; }
-  .painel .dica{ font-size:.84rem; color:#8a8f88; margin-bottom:1rem; line-height:1.5; }
+  .painel .dica{ font-size:.84rem; color:var(--ink-fraco); margin-bottom:1rem; line-height:1.5; }
   .painel-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.7rem 1rem; flex-wrap:wrap; }
   .painel-topo .btn{ flex:0 0 auto; }
 
@@ -69,8 +69,8 @@ $CAS  = casalInfo($DEFS);
   .kpi.on::before{ width:5px; }
   .kpi .n{ font-family:var(--serif); font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1.05;
            font-variant-numeric:tabular-nums; }
-  .kpi .n small{ font-size:.9rem; color:#9aa09a; font-weight:400; }
-  .kpi .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#8a8f88; margin-top:.3rem; }
+  .kpi .n small{ font-size:.9rem; color:var(--ink-fraco); font-weight:400; }
+  .kpi .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); margin-top:.3rem; }
   .kpi.pago::before{ background:var(--o-pago); }   .kpi.pago .n{ color:var(--o-pago); }
   .kpi.ouro::before{ background:var(--o-contr); }
   .kpi.atraso::before{ background:#b9c2bb; }
@@ -83,7 +83,7 @@ $CAS  = casalInfo($DEFS);
                  transition:width .35s ease; }
   .o-barra .g-pago{ background:var(--o-pago); }
   .o-barra .g-prev{ background:var(--o-prev); color:var(--forest-deep); }
-  .o-legenda{ display:flex; flex-wrap:wrap; gap:.4rem 1.1rem; margin-top:.8rem; font-size:.8rem; color:#6c7570; }
+  .o-legenda{ display:flex; flex-wrap:wrap; gap:.4rem 1.1rem; margin-top:.8rem; font-size:.8rem; color:var(--ink-fraco); }
   .o-legenda span{ display:inline-flex; align-items:center; gap:.4rem; }
   .o-legenda i{ width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.05); }
   .o-legenda b{ color:var(--ink); font-variant-numeric:tabular-nums; }
@@ -97,7 +97,7 @@ $CAS  = casalInfo($DEFS);
           transition:.14s; position:relative; }
   .o-cat:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.1); }
   .o-cat .nome{ font-weight:600; color:var(--ink); font-size:.95rem; }
-  .o-cat .vals{ font-size:.82rem; color:#8a8f88; margin-top:.15rem; font-variant-numeric:tabular-nums; }
+  .o-cat .vals{ font-size:.82rem; color:var(--ink-fraco); margin-top:.15rem; font-variant-numeric:tabular-nums; }
   .o-cat .vals b{ color:var(--ink); }
   .o-cat .meter{ height:7px; border-radius:5px; background:var(--o-track); margin-top:.55rem; overflow:hidden; }
   .o-cat .meter > i{ display:block; height:100%; background:var(--o-contr); border-radius:5px; }
@@ -107,7 +107,7 @@ $CAS  = casalInfo($DEFS);
   .o-cat.acima .pct{ color:var(--o-over); }
   .o-cat .acs{ display:flex; gap:.4rem; margin-top:.6rem; opacity:0; transition:.14s; }
   .o-cat:hover .acs, .o-cat:focus-within .acs{ opacity:1; }
-  .mini{ font-size:.74rem; color:#6c7570; background:transparent; border:1px solid var(--line);
+  .mini{ font-size:.74rem; color:var(--ink-fraco); background:transparent; border:1px solid var(--line);
          border-radius:50px; padding:.14rem .6rem; cursor:pointer; }
   .mini:hover{ background:var(--cream); color:var(--ink); }
   .mini.perigo:hover{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
@@ -118,7 +118,7 @@ $CAS  = casalInfo($DEFS);
              border:1px solid var(--line); gap:2px; padding:2px; }
   .o-catbar .seg{ display:block; min-width:6px; border-radius:5px; cursor:pointer; transition:filter .12s, width .35s ease; }
   .o-catbar .seg:hover{ filter:brightness(1.08) saturate(1.1); }
-  .o-catbar-vazio{ color:#9aa09a; font-size:.85rem; padding:.2rem .3rem; }
+  .o-catbar-vazio{ color:var(--ink-fraco); font-size:.85rem; padding:.2rem .3rem; }
   .o-chips{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.8rem; }
   .chip-cat{ display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--line);
              background:var(--card); color:var(--ink); border-radius:50px; padding:.28rem .7rem;
@@ -127,7 +127,7 @@ $CAS  = casalInfo($DEFS);
   .chip-cat.on{ border-color:var(--gold); box-shadow:0 0 0 2px var(--ring); background:var(--gold-pale); }
   .chip-cat i{ width:11px; height:11px; border-radius:3px; display:inline-block; flex:none; border:1px solid rgba(0,0,0,.08); }
   .chip-cat b{ font-variant-numeric:tabular-nums; }
-  .chip-cat .pc{ color:#8a8f88; font-variant-numeric:tabular-nums; font-size:.78rem; }
+  .chip-cat .pc{ color:var(--ink-fraco); font-variant-numeric:tabular-nums; font-size:.78rem; }
   .chip-cat.on .pc{ color:var(--gold-deep); }
 
   /* ---- Cabeçalho do filtro por cima da tabela de despesas ---- */
@@ -152,13 +152,13 @@ $CAS  = casalInfo($DEFS);
   .cat-inline-lin{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
   .cat-inline-lin input[type=text]{ flex:1; min-width:140px; }
   .cat-cores{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-top:.55rem; }
-  .cat-cores-lbl{ font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#8a8f88; }
+  .cat-cores-lbl{ font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-fraco); }
   .cat-cores-ops{ display:flex; gap:.3rem; flex-wrap:wrap; }
   .cat-cor-op{ width:20px; height:20px; border-radius:50%; border:2px solid transparent; cursor:pointer;
                padding:0; outline:none; box-shadow:0 0 0 1px rgba(0,0,0,.08) inset; transition:transform .1s; }
   .cat-cor-op:hover{ transform:scale(1.12); }
   .cat-cor-op.on{ border-color:var(--ink); }
-  .cat-cor-livre{ display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; color:#6c7570; cursor:pointer; }
+  .cat-cor-livre{ display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; color:var(--ink-fraco); cursor:pointer; }
   .cat-cor-livre input[type=color]{ width:24px; height:24px; padding:0; border:1px solid var(--line);
                                     border-radius:6px; background:none; cursor:pointer; }
   .btn-sm{ padding:.4rem .8rem; font-size:.82rem; }
@@ -167,12 +167,12 @@ $CAS  = casalInfo($DEFS);
   .tabela-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   table.desp{ width:100%; border-collapse:collapse; min-width:560px; }
   table.desp th{ text-align:left; font-size:.68rem; text-transform:uppercase; letter-spacing:.06em;
-                 color:#8a8f88; font-weight:600; padding:.45rem .55rem; border-bottom:1px solid var(--line); }
+                 color:var(--ink-fraco); font-weight:600; padding:.45rem .55rem; border-bottom:1px solid var(--line); }
   table.desp td{ padding:.6rem .55rem; border-bottom:1px solid var(--line); font-size:.9rem; vertical-align:middle; }
   table.desp tr:last-child td{ border-bottom:0; }
   table.desp tbody tr:hover{ background:#fdfbf6; }
   .d-nome{ color:var(--ink); font-weight:500; }
-  .d-forn{ font-size:.77rem; color:#8a8f88; }
+  .d-forn{ font-size:.77rem; color:var(--ink-fraco); }
   .d-val{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; }
   /* O que ainda falta pagar, por baixo do valor — só aparece quando as duas
      contas dão números diferentes, isto é, quando já se liquidou alguma
@@ -192,13 +192,13 @@ $CAS  = casalInfo($DEFS);
              border:1px solid var(--gold-soft); background:var(--gold-pale); border-radius:50px;
              padding:.14rem .6rem; text-decoration:none; }
   .fat-chip:hover{ background:var(--gold-soft); }
-  .fat-anexar{ font-size:.74rem; color:#8a8f88; border:1px dashed var(--line); border-radius:50px;
+  .fat-anexar{ font-size:.74rem; color:var(--ink-fraco); border:1px dashed var(--line); border-radius:50px;
                padding:.14rem .6rem; cursor:pointer; background:transparent; }
   .fat-anexar:hover{ border-color:var(--gold-soft); color:var(--forest); }
   .fat-x{ border:0; background:none; color:var(--danger); cursor:pointer; font-size:1rem; line-height:1; margin-left:.2rem; }
 
   /* ---- Calendário de pagamentos ---- */
-  .o-mes{ font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:#a2a8a2;
+  .o-mes{ font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco);
           margin:.9rem 0 .3rem; font-weight:600; }
   .o-mes:first-child{ margin-top:0; }
   .pag{ display:grid; grid-template-columns:auto 1fr auto auto; gap:.7rem; align-items:center;
@@ -210,10 +210,10 @@ $CAS  = casalInfo($DEFS);
   .pag .data.venceu{ color:var(--o-over); font-weight:600; } .pag .data.venceu::before{ background:var(--o-over); }
   .pag .data.pago{ color:var(--o-pago); } .pag .data.pago::before{ background:var(--o-pago); }
   .pag .desc{ font-size:.88rem; color:var(--ink); min-width:0; }
-  .pag .desc small{ display:block; color:#8a8f88; font-size:.76rem; }
+  .pag .desc small{ display:block; color:var(--ink-fraco); font-size:.76rem; }
   .pag .mt{ font-variant-numeric:tabular-nums; font-size:.88rem; color:var(--ink); white-space:nowrap; text-align:right; font-weight:500; }
 
-  .vazio{ text-align:center; padding:2rem 1rem; color:#9aa09a; font-size:.9rem; }
+  .vazio{ text-align:center; padding:2rem 1rem; color:var(--ink-fraco); font-size:.9rem; }
   .vazio .btn{ margin-top:.8rem; }
 
   /* ---- Modais ---- */
@@ -253,7 +253,7 @@ $CAS  = casalInfo($DEFS);
 <body>
 <?php cabecalho('Orçamento', 'O curso das despesas — quanto se planeou, quanto saiu, o que falta', 'orcamento'); ?>
 
-<main class="container">
+<main class="container" id="conteudo">
 
   <?php if ($visita): ?>
     <div class="aviso-visita">

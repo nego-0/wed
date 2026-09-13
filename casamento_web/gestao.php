@@ -94,27 +94,27 @@ $MAPA_LOCAL = [
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:1rem; line-height:1.5; }
+  .painel .dica{ font-size:.85rem; color:var(--ink-fraco); margin-bottom:1rem; line-height:1.5; }
   .grelha{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.8rem; }
   .grelha .campo{ min-width:0; }
   .grelha label{ display:block; }
   .largo{ grid-column:1/-1; }
   .fim{ display:flex; gap:.6rem; align-items:center; margin-top:1rem; }
-  .fim .estado{ font-size:.82rem; color:#8a8f88; }
+  .fim .estado{ font-size:.82rem; color:var(--ink-fraco); }
   .linha{ display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center;
           padding:.65rem 0; border-top:1px solid var(--line); }
   .linha:first-of-type{ border-top:0; }
   .linha .selo{ width:34px; height:34px; border-radius:9px; background:var(--cream); color:var(--forest);
                 display:flex; align-items:center; justify-content:center; font-family:var(--serif); border:1px solid var(--line); }
   .linha .nm{ font-size:.95rem; color:var(--ink); }
-  .linha .mt{ font-size:.78rem; color:#8a8f88; margin-top:.1rem; }
+  .linha .mt{ font-size:.78rem; color:var(--ink-fraco); margin-top:.1rem; }
   .linha .ac{ display:flex; gap:.4rem; align-items:center; white-space:nowrap; }
   .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.ativo{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.pendente,.et.expirado{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .et.suspenso,.et.revogado{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
-  .et.inativo{ background:var(--cream); color:#8a8f88; border-color:var(--line); }
+  .et.inativo{ background:var(--cream); color:var(--ink-fraco); border-color:var(--line); }
   .et.valido{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .lf{ display:grid; grid-template-columns:2fr 1fr auto; gap:.7rem; align-items:end; margin-top:1rem;
        padding-top:1rem; border-top:1px dashed var(--line); }
@@ -124,7 +124,7 @@ $MAPA_LOCAL = [
   .aviso-visita{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
                  border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
   .porcima, .nota-dados{ background:var(--cream); border-left:3px solid var(--gold-soft); border-radius:8px;
-            padding:.6rem .8rem; font-size:.83rem; color:#6c7570; margin-top:.9rem; line-height:1.55; }
+            padding:.6rem .8rem; font-size:.83rem; color:var(--ink-fraco); margin-top:.9rem; line-height:1.55; }
   .semdono{ background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px;
             padding:.6rem .8rem; font-size:.84rem; color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
   @media (max-width:640px){ .lf{ grid-template-columns:1fr; } .linha{ grid-template-columns:auto 1fr; }
@@ -138,7 +138,7 @@ $MAPA_LOCAL = [
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
   /* As caixas de seleção das partes dos dados (levar / trazer / repor). */
   .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.35rem .9rem; margin:.5rem 0 .9rem; }
@@ -149,7 +149,7 @@ $MAPA_LOCAL = [
 <body>
 <?php cabecalho('Gestão', 'Os dados do casamento, quem lá entra e a sua conta', 'gestao'); ?>
 
-<main class="container">
+<main class="container" id="conteudo">
 
   <?php if ($visita): ?>
     <div class="aviso-visita">
@@ -303,7 +303,7 @@ $MAPA_LOCAL = [
           <input type="email" id="a-email" placeholder="pessoa@exemplo.pt" autocapitalize="none" spellcheck="false"
                  onkeydown="if(event.key==='Enter')convidar()">
           <div class="err"></div></div>
-        <div class="campo"><label for="a-nome">Nome <small style="color:#8a8f88">· opcional</small></label>
+        <div class="campo"><label for="a-nome">Nome <small style="color:var(--ink-fraco)">· opcional</small></label>
           <input type="text" id="a-nome" placeholder="Como o quer identificar"></div>
         <div style="align-self:start;margin-top:1.55rem"><button class="btn btn-ouro" onclick="convidar()">Convidar</button></div>
       </div>

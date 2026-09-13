@@ -89,7 +89,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .selo-v.ok{ background:#eaf4ee; border:1px solid #bcdcc8; color:#1f6b38; }
   .selo-v.fora{ background:#fdf3e6; border:1px solid var(--gold-soft); color:#8A6031; }
   .mini{ display:flex; gap:1.2rem; flex-wrap:wrap; margin:.8rem 0 0; }
-  .mini div{ font-size:.78rem; color:#8a8f88; }
+  .mini div{ font-size:.78rem; color:var(--ink-fraco); }
   .mini b{ display:block; font-family:var(--serif); font-size:1.35rem; color:var(--ink); line-height:1.1; }
 
   /* Coluna das versões recentes, dentro do cartão */
@@ -97,7 +97,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   @media (max-width:1100px){ .peca-vs{ border-left:0; border-top:1px solid var(--line);
                                        padding-left:0; padding-top:.9rem; } }
   .peca-vs h3{ font-size:.72rem; text-transform:uppercase; letter-spacing:.07em;
-               color:#8a8f88; margin:0 0 .5rem; }
+               color:var(--ink-fraco); margin:0 0 .5rem; }
   .peca-vs ul{ list-style:none; margin:0; padding:0; }
   .peca-vs li{ display:flex; align-items:baseline; gap:.45rem; padding:.28rem 0;
                border-bottom:1px solid var(--cream); font-size:.84rem; }
@@ -108,14 +108,14 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .peca-vs li .em{ font-size:.68rem; color:#1f6b38; white-space:nowrap; }
   .peca-vs li .qd{ font-size:.72rem; color:#a3a8a1; white-space:nowrap; }
   .peca-vs .maisv{ font-size:.78rem; display:inline-block; margin-top:.5rem; }
-  .peca-vs .nada{ font-size:.82rem; color:#8a8f88; line-height:1.5; }
+  .peca-vs .nada{ font-size:.82rem; color:var(--ink-fraco); line-height:1.5; }
 
   /* ---- Lista dos convites digitais ---- */
   .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .prod{ width:100%; border-collapse:collapse; min-width:560px; background:#fff;
          border:1px solid var(--line); border-radius:14px; overflow:hidden; }
   .prod th{ background:var(--cream); font-size:.74rem; text-transform:uppercase; letter-spacing:.06em;
-            color:#7a8078; text-align:left; padding:.6rem .8rem; font-weight:600; }
+            color:var(--ink-fraco); text-align:left; padding:.6rem .8rem; font-weight:600; }
   .prod td{ border-top:1px solid var(--line); padding:.6rem .8rem; vertical-align:middle; font-size:.9rem; }
   .prod tr:hover td{ background:#fcfbf7; }
   .prod .n{ color:var(--gold-soft); font-family:var(--serif); font-weight:700; width:2.2rem; }
@@ -133,7 +133,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .peca-abas{ display:flex; gap:.25rem; border-bottom:1px solid var(--line); margin:.5rem 0 .9rem; }
   .p-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
           padding:.42rem .1rem; margin-right:1.1rem; font:inherit; font-size:.86rem;
-          color:#8a8f88; }
+          color:var(--ink-fraco); }
   .p-aba:hover{ color:var(--ink); }
   .p-aba.on{ color:var(--ink); border-bottom-color:var(--gold); font-weight:600; }
   .p-aba:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:4px; }
@@ -172,12 +172,12 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-lupa:hover{ background:rgba(14,15,12,.9); }
   .ft-lupa:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
   .ft-nome{ font-size:.9rem; color:var(--ink); font-weight:600; }
-  .ft-desc{ font-size:.76rem; color:#8a8f88; margin-top:.05rem; line-height:1.35; }
+  .ft-desc{ font-size:.76rem; color:var(--ink-fraco); margin-top:.05rem; line-height:1.35; }
   .ft-acoes{ display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem; }
   .ft-acoes .btn{ font-size:.76rem; padding:.28rem .6rem; }
   .ft-erro{ flex-basis:100%; font-size:.76rem; color:var(--danger); margin-top:.1rem; }
   .ft-erro:empty{ display:none; }
-  .ft-vazio{ font-size:.85rem; color:#8a8f88; line-height:1.55; }
+  .ft-vazio{ font-size:.85rem; color:var(--ink-fraco); line-height:1.55; }
 
   /* ---- Em ponto grande, com a moldura da secção ----
      A fotografia inteira, e por cima a janela por onde a secção a mostra: o
@@ -239,7 +239,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
 <body>
 <?php cabecalho('Convite digital', 'O convite que os convidados abrem no telemóvel', 'convite'); ?>
 
-<main class="container">
+<main class="container" id="conteudo">
   <!-- Estado da peça -->
   <div class="peca">
     <div class="peca-prova">

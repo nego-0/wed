@@ -43,7 +43,7 @@ $CAS  = casalInfo($DEFS);
   @media (max-width:900px){ .b-duas{ grid-template-columns:1fr; } }
   /* O título de uma coluna: o sinal, a palavra, e a nota do lado. O ícone
      ancora a coluna quando o olho volta a ela pela vigésima vez. */
-  .b-tit{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-soft);
+  .b-tit{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-texto);
           margin:0 0 .6rem; display:flex; align-items:center; gap:.5rem; }
   .b-tit .ico{ width:18px; height:18px; opacity:.8; }
   .b-tit small{ font-size:.75rem; color:var(--ink-fraco); font-family:var(--sans);

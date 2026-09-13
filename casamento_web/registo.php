@@ -43,13 +43,13 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     display:flex; align-items:center; justify-content:center; color:var(--gold);
     font-family:var(--serif); font-weight:700; font-size:1.2rem; }
   .tit{ font-family:var(--serif); font-size:1.65rem; color:var(--ink); text-align:center; line-height:1.2; }
-  .sub{ text-align:center; color:#8a8f88; font-size:.9rem; margin:.4rem auto 1.6rem; line-height:1.55; max-width:42ch; }
+  .sub{ text-align:center; color:var(--ink-fraco); font-size:.9rem; margin:.4rem auto 1.6rem; line-height:1.55; max-width:42ch; }
 
   .par{ display:grid; grid-template-columns:1fr 1fr; gap:.85rem; }
   .campo{ margin-bottom:1rem; text-align:left; }
   .campo label{ display:flex; align-items:baseline; gap:.35rem; }
   .req{ color:var(--danger); font-weight:700; }
-  .nota{ font-size:.76rem; color:#9aa09a; margin-top:.32rem; line-height:1.5; }
+  .nota{ font-size:.76rem; color:var(--ink-fraco); margin-top:.32rem; line-height:1.5; }
 
   /* Estado dos campos: erro a vermelho, válido com um visto discreto. */
   .campo input, .campo select{ transition:border-color .15s, box-shadow .15s; }
@@ -69,7 +69,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
      largura da palavra mais longa. */
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--ink); }
   .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }
   .pw-barras{ display:flex; gap:3px; flex:1; }
@@ -78,18 +78,18 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .pw-forca.f2 i:nth-child(-n+2){ background:var(--warn); }
   .pw-forca.f3 i:nth-child(-n+3){ background:#9a9a3c; }
   .pw-forca.f4 i{ background:var(--ok); }
-  .pw-rot{ font-size:.72rem; color:#9aa09a; white-space:nowrap; min-width:4.5rem; text-align:right; }
+  .pw-rot{ font-size:.72rem; color:var(--ink-fraco); white-space:nowrap; min-width:4.5rem; text-align:right; }
 
   /* Secções e blocos opcionais que dobram. */
   .seccao{ font-family:var(--serif); color:var(--ink); font-size:1.08rem;
            margin:1.6rem 0 .8rem; padding-bottom:.35rem; border-bottom:1px solid var(--line);
            display:flex; align-items:baseline; gap:.5rem; }
-  .seccao .op{ font-family:var(--sans); font-size:.74rem; color:#9aa09a; font-weight:400; }
+  .seccao .op{ font-family:var(--sans); font-size:.74rem; color:var(--ink-fraco); font-weight:400; }
   details.bloco{ border:1px solid var(--line); border-radius:12px; margin:1rem 0; background:var(--card); }
   details.bloco > summary{ list-style:none; cursor:pointer; padding:.85rem 1rem; display:flex;
       align-items:center; gap:.6rem; font-family:var(--serif); color:var(--ink); font-size:1rem; }
   details.bloco > summary::-webkit-details-marker{ display:none; }
-  details.bloco > summary .op{ font-family:var(--sans); font-size:.74rem; color:#9aa09a; font-weight:400; margin-left:auto; }
+  details.bloco > summary .op{ font-family:var(--sans); font-size:.74rem; color:var(--ink-fraco); font-weight:400; margin-left:auto; }
   /* O sinal é desenhado (assets/icones.js) e não o carácter ›: a rotação de
      90° precisa de uma caixa própria, e um carácter roda dentro da linha de
      texto, saindo do sítio ao abrir. */
@@ -102,13 +102,13 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .msg.mau{ background:var(--danger-bg); color:var(--danger); border:1px solid rgba(165,71,63,.25); }
   .btn-enviar{ width:100%; justify-content:center; margin-top:.4rem; }
   .btn-enviar[disabled]{ opacity:.6; cursor:progress; }
-  .entrar-nota{ text-align:center; margin-top:1.1rem; font-size:.84rem; color:#8a8f88; }
+  .entrar-nota{ text-align:center; margin-top:1.1rem; font-size:.84rem; color:var(--ink-fraco); }
 
   .feito{ text-align:center; }
   .feito .ico{ width:60px; height:60px; margin:0 auto 1rem; border-radius:50%; background:var(--ok-bg);
                color:var(--ok); display:flex; align-items:center; justify-content:center; font-size:1.9rem; }
   .feito .cx{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
-              padding:.8rem 1rem; margin:1rem 0; font-size:.88rem; color:#6c7570; line-height:1.6; }
+              padding:.8rem 1rem; margin:1rem 0; font-size:.88rem; color:var(--ink-fraco); line-height:1.6; }
   @media (max-width:520px){ .par{ grid-template-columns:1fr; } .reg .card{ padding:1.8rem 1.3rem; } }
 </style>
 </head>
@@ -262,7 +262,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     <div class="card feito" id="obrigado" style="display:none">
       <div class="ico" data-ico="visto"></div>
       <div class="tit">Está feito — podem entrar já</div>
-      <p style="color:#6c7570;line-height:1.6;margin-top:.6rem">
+      <p style="color:var(--ink-fraco);line-height:1.6;margin-top:.6rem">
         A vossa conta está aberta. Entrem com o email e a palavra-passe que acabaram
         de escolher: encontram lá o pedido de licença, e podem alterá-lo enquanto
         a administração não o decidir.

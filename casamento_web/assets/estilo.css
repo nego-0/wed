@@ -13,10 +13,25 @@
   /* ---- Tema 1 · NIRAS (padrão) ---- */
   --ink:#12222F; --forest:#16283A; --forest-deep:#0C1925;
   --ivory:#F6F8F4; --cream:#EEF2EA; --sand:#E1E8DB; --card:#FFFFFF;
-  --gold:#4C8C1E; --gold-soft:#63B22B; --gold-pale:#E7F3DA; --gold-deep:#3C7517;
+  --gold:#3C7517; --gold-soft:#63B22B; --gold-pale:#E7F3DA; --gold-deep:#2F5C12;
   --blush:#E1E8DB; --text:#28323B;
-  --ok:#3E8E3E; --ok-bg:#E7F2E2;
-  --warn:#9C7413; --warn-bg:#F6EDD6;
+  --ok:#2F6B3C; --ok-bg:#E7F2E2;
+  /* --- os pares que o contraste obriga a separar (docs/auditoria-ui-ux.md §18.1) ---
+     --gold é o PREENCHIMENTO da marca. Não serve para texto nos quatro temas: o
+     ouro do Clássico (#B4864A) dá 3,26:1 sobre branco, e escurecê-lo mudava a
+     marca. Por isso o acento legível tem token próprio.
+     --sobre-gold é o que se escreve EM CIMA de um preenchimento --gold, e muda
+     de claro para escuro conforme o ouro do tema: o azul (#1F6FB2) é escuro e
+     pede texto claro; o verde do tema escuro (#8AD24A) é claro e pede texto
+     escuro. Um token só não servia os quatro — era o que punha a pastilha do
+     menu activo a 4,30:1.
+     --btn-* são os dois extremos do gradiente do botão e o texto por cima.
+     Um gradiente falha pelo extremo mais CLARO, e era por aí que o .btn-ouro
+     andava a 2,65:1 no topo da rampa: medem-se os dois extremos, não a média. */
+  --gold-texto:#3C7517;
+  --sobre-gold:var(--ivory);
+  --btn-a:#3C7517; --btn-b:#2F5C12; --btn-txt:#FFFFFF;
+  --warn:#7F5E0F; --warn-bg:#F6EDD6;
   --danger:#B4443C; --danger-bg:#F6E4E1;
   /* A tinta de segunda voz — datas, notas, o que acompanha sem mandar.
      Existe para que ninguém tenha de inventar um cinzento: um #8a8f88 solto
@@ -47,10 +62,12 @@
   /* ---- Tema 2 · Clássico (botânico de origem) ---- */
   --ink:#20342A; --forest:#2C4536; --forest-deep:#16261E;
   --ivory:#FBF8F1; --cream:#F5EEDF; --sand:#E9DFC9; --card:#FFFFFF;
-  --gold:#B4864A; --gold-soft:#D9BC8C; --gold-pale:#EFE3CB; --gold-deep:#8A6031;
+  --gold:#B4864A; --gold-soft:#D9BC8C; --gold-pale:#EFE3CB; --gold-deep:#7A5427;
+  --gold-texto:#7A5427; --sobre-gold:#16261E;
+  --btn-a:#7A5427; --btn-b:#5E3F1C; --btn-txt:#FFFFFF;
   --blush:#E4CDBB; --text:#3B4A40;
-  --ok:#2f7d4f; --ok-bg:#e7f1ea;
-  --warn:#a8792f; --warn-bg:#f6ecd8;
+  --ok:#2A6B43; --ok-bg:#e7f1ea;
+  --warn:#8A6320; --warn-bg:#f6ecd8;
   --danger:#a5473f; --danger-bg:#f4e2df;
   --ink-fraco:#57634F;
   --line:rgba(44,69,54,.12);
@@ -70,9 +87,11 @@
   --ink:#0F2A43; --forest:#123C63; --forest-deep:#0C2740;
   --ivory:#F4F7FB; --cream:#E9F1F9; --sand:#D9E6F2; --card:#FFFFFF;
   --gold:#1F6FB2; --gold-soft:#2E86C8; --gold-pale:#E4EFF9; --gold-deep:#175A94;
+  --gold-texto:#1F6FB2; --sobre-gold:var(--ivory);
+  --btn-a:#1F6FB2; --btn-b:#134C7C; --btn-txt:#FFFFFF;
   --blush:#D9E6F2; --text:#26384A;
-  --ok:#2f7d4f; --ok-bg:#e6f1ea;
-  --warn:#9a781f; --warn-bg:#f5edd6;
+  --ok:#2A6B43; --ok-bg:#e6f1ea;
+  --warn:#7F6119; --warn-bg:#f5edd6;
   --danger:#b1443c; --danger-bg:#f6e3e0;
   --ink-fraco:#526273;
   --line:rgba(15,42,67,.13);
@@ -93,7 +112,12 @@
      as superfícies do corpo vêm de --card (escuro). */
   --ink:#EBF1F3; --forest:#0E1B25; --forest-deep:#080F16;
   --ivory:#EEF3F0; --cream:#1E2A33; --sand:#28353E; --card:#17232C;
-  --gold:#8AD24A; --gold-soft:#6FBE33; --gold-pale:#1E3016; --gold-deep:#57A027;
+  --gold:#8AD24A; --gold-soft:#6FBE33; --gold-pale:#1E3016; --gold-deep:#9BDC63;
+  /* Aqui o --gold-pale é ESCURO (é fundo de uma superfície escura), e por isso
+     o --gold-deep tem de ser CLARO para se ler em cima dele — ao contrário dos
+     três temas claros. Era o que faltava: #57A027 sobre #1E3016 dava 4,34:1. */
+  --gold-texto:#8AD24A; --sobre-gold:#080F16;
+  --btn-a:#8AD24A; --btn-b:#6FBE33; --btn-txt:#080F16;
   --blush:#28353E; --text:#C6D2D8;
   --ok:#63C56E; --ok-bg:#173020;
   --warn:#D9AC46; --warn-bg:#332811;
@@ -112,13 +136,35 @@
     linear-gradient(165deg,#0E1A22 0%, #0A141B 100%);
 }
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+/* ---------- O que só os leitores de ecrã leem ----------
+   `so-leitor` tira do desenho sem tirar da árvore de acessibilidade. Não se usa
+   display:none nem visibility:hidden: essas tiram o elemento também para quem
+   lê o ecrã, que é precisamente quem isto serve. */
+.so-leitor{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0;
+}
+/* A ligação de salto: invisível até receber foco, e então visível de verdade —
+   por cima de tudo, com contraste próprio. É a primeira paragem de teclado da
+   página, e evita atravessar doze ligações de menu em cada visita. */
+.salta-conteudo{
+  position:absolute; left:12px; top:-100px; z-index:9999;
+  background:var(--card); color:var(--gold-texto); font-family:var(--sans); font-weight:600;
+  font-size:.9rem; padding:.7rem 1.1rem; border-radius:10px; border:2px solid var(--gold-texto);
+  box-shadow:var(--shadow); text-decoration:none;
+  transition:top .16s;
+}
+.salta-conteudo:focus{ top:12px; }
+@media (prefers-reduced-motion:reduce){ .salta-conteudo{ transition:none; } }
+@media print{ .salta-conteudo{ display:none !important; } }
 body{
   margin:0; font-family:var(--sans); color:var(--text); font-weight:300;
   background:var(--app-bg);
   min-height:100vh;
 }
 h1,h2,h3,h4{ font-family:var(--serif); color:var(--ink); font-weight:600; margin:0; }
-a{ color:var(--gold); text-decoration:none; }
+a{ color:var(--gold-texto); text-decoration:none; }
 a:hover{ text-decoration:underline; }
 
 /* ---------- Cabeçalho de aplicação ---------- */
@@ -171,9 +217,14 @@ a:hover{ text-decoration:underline; }
 .topo .nav a{
   color:var(--ivory); border:1px solid rgba(233,223,201,.35); border-radius:50px;
   padding:.4rem .85rem; font-size:.82rem; font-weight:400; display:inline-flex; gap:.4rem; align-items:center;
+  /* 44px é o mínimo com que um dedo acerta. Estas pastilhas tinham 30px de
+     altura e estão em TODAS as páginas — eram o alvo pequeno mais repetido do
+     sistema (docs/auditoria-ui-ux.md §8). A altura mínima não mexe no desenho
+     em ecrã largo, onde o padding já dava mais do que isto. */
+  min-height:44px;
 }
 .topo .nav a:hover{ background:rgba(233,223,201,.15); text-decoration:none; }
-.topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--forest-deep); font-weight:500; }
+.topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--sobre-gold); font-weight:500; }
 
 /* ---------- Layout ---------- */
 .container{ max-width:1180px; margin:0 auto; padding:1.25rem; }
@@ -185,22 +236,52 @@ a:hover{ text-decoration:underline; }
 .stat{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; position:relative; overflow:hidden; }
 .stat::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--gold-soft); }
 .stat .n{ font-family:var(--serif); font-size:2rem; font-weight:700; color:var(--ink); line-height:1; }
-.stat .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:1px; color:#8a8f88; margin-top:.35rem; }
+.stat .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:1px; color:var(--ink-fraco); margin-top:.35rem; }
 .stat.verde::before{ background:var(--ok); } .stat.verde .n{ color:var(--ok); }
 .stat.ouro::before{ background:var(--gold); } .stat.ouro .n{ color:var(--gold); }
 .stat.rosa::before{ background:var(--danger); } .stat.rosa .n{ color:var(--danger); }
 
 /* ---------- Botões ---------- */
 .btn{ font-family:var(--sans); font-weight:500; border:none; border-radius:50px; padding:.6rem 1.25rem;
-  cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-size:.9rem; transition:.18s; }
+  cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-size:.9rem;
+  /* As propriedades vêm NOMEADAS. Um `transition:.18s` seco anima tudo o que for
+     animável, e `outline-width` é animável: o anel de foco crescia de 0 a 2px em
+     180ms, e quem tabula depressa nunca o via inteiro. Foi também o que fez a
+     auditoria medir 0px e concluir, mal, que não havia anel nenhum — está lá o
+     episódio, em docs/auditoria-ui-ux.md §2.1. */
+  transition:background-color .18s, color .18s, border-color .18s,
+             box-shadow .18s, transform .18s; }
 .btn:hover{ transform:translateY(-1px); }
-.btn-ouro{ background:linear-gradient(135deg,var(--gold-soft),var(--gold-deep)); color:#fff; }
+.btn-ouro{ background:linear-gradient(135deg,var(--btn-a),var(--btn-b)); color:var(--btn-txt); }
 .btn-ouro:hover{ box-shadow:0 8px 22px rgba(180,134,74,.4); }
 .btn-verde{ background:linear-gradient(135deg,var(--forest),var(--forest-deep)); color:var(--ivory); }
-.btn-linha{ background:transparent; border:1.5px solid var(--gold); color:var(--gold); }
+.btn-linha{ background:transparent; border:1.5px solid var(--gold); color:var(--gold-texto); }
 .btn-linha:hover{ background:var(--gold); color:#fff; }
 .btn-fantasma{ background:transparent; border:1.5px solid var(--line); color:var(--text); }
 .btn-sm{ padding:.38rem .8rem; font-size:.82rem; }
+
+/* ---------- O tamanho da mão ----------
+   A casa já tinha isto certo, e só para a copa: `body.b-servico .btn{
+   min-height:48px }`. Fora dos ecrãs de serviço, 86% dos alvos mediam menos de
+   44px ao telemóvel. A regra sobe aqui, com o mínimo de 44 para toda a gente —
+   os 48 dos ecrãs de serviço continuam a mandar, porque são mais específicos.
+
+   Só no toque: num rato, um alvo de 24px acerta-se sem esforço, e esticar tudo
+   para 44 no desktop estragava a densidade de quem trabalha com rato à frente.
+   `pointer:coarse` é exactamente essa pergunta. */
+@media (pointer:coarse){
+  .btn, .btn-ico, .aba, .chip,
+  button:not(.lic-sel-op),
+  select, textarea,
+  input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]){
+    min-height:44px;
+  }
+  .btn-ico{ min-width:44px; }
+  /* As caixas de marcar ficam de fora de propósito: pôr-lhes min-height aumenta
+     a CAIXA, não a área de toque, e uma caixa de 44px ao lado de um nome é
+     desenho estragado. O que elas precisam é de área à volta, dada pelo rótulo
+     — fica em aberto, e está no backlog como alvo próprio. */
+}
 /* O ícone tem de caber no botão: sem medida, o SVG do WhatsApp desenhava-se a
    47px e esticava a linha do convite para o dobro da altura das outras. */
 .btn-ico{ display:inline-flex; align-items:center; gap:.35rem; padding:.4rem .6rem; border-radius:10px;
@@ -213,6 +294,25 @@ label{ font-size:.78rem; font-weight:500; color:var(--ink); text-transform:upper
 input,select,textarea{ font-family:var(--sans); font-weight:300; width:100%; padding:.6rem .8rem;
   border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); font-size:.95rem; }
 input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
+
+/* ---------- O anel de foco da casa ----------
+   Isto viveu seis passagens dentro de `body.b-servico`, escrito para quem
+   trabalha na copa com um teclado à frente. Estava certo, e estava preso: a
+   auditoria contou 22 paragens em 22 com anel próprio na copa, e 1 em 22 no
+   painel — no resto da aplicação o foco era o contorno de 1px do browser, que
+   existe mas não é desenho nenhum.
+   A regra é a mesma; o que muda é o âmbito. `:focus-visible` só marca quem
+   chegou por teclado, pelo que o rato continua a não deixar anéis atrás de si.
+   Longhands e não o atalho: `outline:2px solid var(--gold-texto)` é um atalho
+   com var() dentro, e o motor guarda os longhands por resolver — o que dá mau
+   resultado quando outra regra lhes toca. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible{
+  outline-width:2px; outline-style:solid; outline-color:var(--gold-texto);
+  outline-offset:3px; border-radius:6px; }
 .linha-form{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.9rem; }
 .check{ display:flex; align-items:center; gap:.5rem; }
 .check input{ width:auto; }
@@ -273,7 +373,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 /* Nome, estado e pessoas na mesma linha enquanto houver largura: em ecrãs
    largos cada convite passa a caber numa linha só, em vez de três. */
 .convite-corpo{ display:flex; align-items:center; gap:.55rem .9rem; flex-wrap:wrap; min-width:0; }
-.convite-meta{ font-size:.78rem; color:#8a8f88; display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
+.convite-meta{ font-size:.78rem; color:var(--ink-fraco); display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
 /* A tira de pessoas nunca quebra para uma segunda linha: são poucos nomes e
    um contador do resto, para o cartão manter a mesma altura com dois ou com
    vinte convidados. */
@@ -282,7 +382,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   font-family:inherit; font-size:.76rem; color:var(--ink); white-space:nowrap;
   max-width:14ch; overflow:hidden; text-overflow:ellipsis; }
 /* A conta dos que não cabem é um botão: abre a lista toda no próprio cartão. */
-.membro-chip.mais{ background:transparent; color:#8a8f88; border-style:dashed; cursor:pointer; }
+.membro-chip.mais{ background:transparent; color:var(--ink-fraco); border-style:dashed; cursor:pointer; }
 .membro-chip.mais:hover{ background:var(--gold-pale); border-color:var(--gold-soft); color:var(--ink); }
 /* Aberta a lista, os nomes vêm por inteiro e a tira ocupa a sua própria linha:
    aqui o cartão cresce porque foi o utilizador que pediu para o ver. */
@@ -311,7 +411,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   font-weight:600; color:var(--gold-soft); text-decoration:underline; white-space:nowrap; }
 .toast .anular:hover{ color:var(--ivory); }
 
-.vazio{ text-align:center; padding:3rem 1rem; color:#9aa09a; }
+.vazio{ text-align:center; padding:3rem 1rem; color:var(--ink-fraco); }
 .vazio .ico{ font-size:2.4rem; opacity:.5; }
 
 @media (max-width:640px){
@@ -353,7 +453,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
                   color:var(--ink); border-radius:14px; }
 .dobra > summary::-webkit-details-marker{ display:none; }
 .dobra > summary:hover{ background:var(--cream); }
-.dobra > summary small{ font-family:var(--sans); font-size:.82rem; color:#8a8f88; font-weight:400; }
+.dobra > summary small{ font-family:var(--sans); font-size:.82rem; color:var(--ink-fraco); font-weight:400; }
 .dobra > summary .mais{ display:inline-flex; align-items:center; justify-content:center;
                         width:22px; height:22px; flex:none; border-radius:7px; background:var(--cream);
                         border:1px solid var(--line); color:var(--forest); font-family:var(--sans);
@@ -442,7 +542,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
   border:1px solid var(--line); border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,.22);
   padding:.5rem; display:none; }
 .tema-fab-pop.aberto{ display:block; }
-.tema-fab-tit{ font-size:.68rem; text-transform:uppercase; letter-spacing:.12em; color:#8a8f88; padding:.3rem .5rem .45rem; }
+.tema-fab-tit{ font-size:.68rem; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-fraco); padding:.3rem .5rem .45rem; }
 .tema-fab-op{ display:flex; align-items:center; gap:.6rem; width:100%; border:0; background:transparent;
   cursor:pointer; padding:.5rem; border-radius:9px; font:inherit; color:var(--ink); text-align:left; }
 .tema-fab-op:hover{ background:var(--cream); }
@@ -453,7 +553,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 .tema-fab-check{ opacity:0; color:var(--gold); display:inline-flex; align-items:center; }
 .tema-fab-check svg{ width:15px; height:15px; }
 .tema-fab-op.on .tema-fab-check{ opacity:1; }
-.tema-fab-reset{ display:block; width:100%; border:0; background:transparent; cursor:pointer; color:#8a8f88;
+.tema-fab-reset{ display:block; width:100%; border:0; background:transparent; cursor:pointer; color:var(--ink-fraco);
   font:inherit; font-size:.78rem; padding:.5rem; margin-top:.2rem; border-top:1px solid var(--line); text-align:center; }
 .tema-fab-reset:hover{ color:var(--gold); }
 @media print{ .tema-fab{ display:none !important; } }
@@ -489,7 +589,7 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
 @media (max-width:640px){ .nav-tema{ display:none; } }
 
 /* Alternador discreto no rodapé da entrada/inscrição. */
-.tema-rodape{ margin-top:1.2rem; font-size:.76rem; color:#9aa09a; }
+.tema-rodape{ margin-top:1.2rem; font-size:.76rem; color:var(--ink-fraco); }
 .tema-rodape button{
   border:0; background:none; cursor:pointer; color:var(--gold);
   font:inherit; text-decoration:underline; padding:0;

@@ -33,11 +33,11 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
   .cartao .num{ position:absolute; top:.7rem; left:.9rem; font-family:var(--serif); font-weight:700; color:var(--gold-soft); font-size:1.1rem; }
   .cartao .selo-i{ width:44px;height:44px;margin:0 auto .5rem;border:2px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:var(--serif);font-weight:700; }
   .cartao .nm{ font-family:var(--serif); font-size:1.3rem; font-weight:600; color:var(--ink); line-height:1.15; }
-  .cartao .mm{ font-size:.8rem; color:#8a8f88; margin:.35rem 0 .6rem; }
+  .cartao .mm{ font-size:.8rem; color:var(--ink-fraco); margin:.35rem 0 .6rem; }
   .cartao canvas{ background:#fff; }
   .cartao .cod{ font-family:var(--serif); letter-spacing:3px; color:var(--ink); margin-top:.3rem; }
   .cartao .mesa{ font-size:.82rem; color:var(--forest); margin-top:.3rem; }
-  .cartao .marca{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.7rem; font-size:.82rem; color:#9aa09a; cursor:pointer; }
+  .cartao .marca{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.7rem; font-size:.82rem; color:var(--ink-fraco); cursor:pointer; }
   .cartao .marca .cx{ width:20px;height:20px;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#fff; }
   .cartao.impresso .marca{ color:var(--ok); } .cartao.impresso .marca .cx{ background:var(--ok); border-color:var(--ok); }
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
@@ -59,6 +59,7 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
 <body>
 <?php cabecalho('Convites físicos', 'Etiquetas para envelopes · com QR de entrada', 'grafica', ['no_print'=>true]); ?>
 
+<main id="conteudo">
 <div class="container">
   <?php barraEndereco('os QR destas etiquetas'); ?>
 
@@ -125,5 +126,6 @@ async function marcar(el,id){
     $('cont-impressos').textContent=document.querySelectorAll('.cartao.impresso').length; toast('Atualizado.'); }
 }
 </script>
+</main>
 </body>
 </html>

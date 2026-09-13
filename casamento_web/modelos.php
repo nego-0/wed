@@ -44,7 +44,7 @@ if ($aberto > 0) {
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
+  .painel .dica{ font-size:.85rem; color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
   .lf{ display:grid; grid-template-columns:2fr 3fr 1fr auto; gap:.7rem; align-items:end; }
   /* ---- A grelha dos modelos ----
      Esta página é sobre DESENHOS, e não mostrava desenho nenhum: escolher um
@@ -74,20 +74,20 @@ if ($aberto > 0) {
   .mod:hover .cara .lupa{ opacity:1; }
   .mod .corpo{ padding:.7rem .8rem; display:flex; flex-direction:column; gap:.3rem; flex:1; }
   .mod .nm{ font-family:var(--serif); font-size:1.02rem; color:var(--ink); line-height:1.25; }
-  .mod .meta{ font-size:.76rem; color:#8a8f88; display:flex; gap:.5rem; flex-wrap:wrap; }
-  .mod .desc{ font-size:.8rem; color:#6c7570; line-height:1.45; }
+  .mod .meta{ font-size:.76rem; color:var(--ink-fraco); display:flex; gap:.5rem; flex-wrap:wrap; }
+  .mod .desc{ font-size:.8rem; color:var(--ink-fraco); line-height:1.45; }
   .mod .ac{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap;
             padding:.6rem .8rem; border-top:1px solid var(--line); margin-top:auto; }
   .mod .ac .btn{ font-size:.78rem; padding:.3rem .6rem; }
   .vazio-mod{ border:1px dashed var(--line); border-radius:14px; padding:2rem 1.2rem;
-              text-align:center; color:#8a8f88; font-size:.9rem; line-height:1.6; }
+              text-align:center; color:var(--ink-fraco); font-size:.9rem; line-height:1.6; }
   .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.rascunho{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
-  .et.alcance{ background:#fff; color:#6c7570; text-transform:none; letter-spacing:0; }
+  .et.alcance{ background:#fff; color:var(--ink-fraco); text-transform:none; letter-spacing:0; }
   .et.origem{ background:rgba(180,134,74,.12); color:var(--gold); border-color:var(--gold); }
-  .et.fabrica{ background:#f4f2ee; color:#6c7570; text-transform:none; letter-spacing:0; }
+  .et.fabrica{ background:#f4f2ee; color:var(--ink-fraco); text-transform:none; letter-spacing:0; }
   .restauro{ display:flex; gap:1rem; align-items:flex-start; justify-content:space-between;
              flex-wrap:wrap; background:var(--gold-pale); border:1px solid var(--gold-soft);
              border-radius:12px; padding:.9rem 1.1rem; margin:.2rem 0 1rem; }
@@ -106,7 +106,7 @@ if ($aberto > 0) {
   .modal-corpo .cas-item{ padding:.42rem .2rem; border-bottom:1px solid var(--line); }
   .modal-corpo .cas-item:last-child{ border-bottom:0; }
   .modal-corpo .cas-nome{ flex:1; min-width:0; }
-  .modal-corpo .cas-data{ color:#8a8f88; font-size:.82rem; }
+  .modal-corpo .cas-data{ color:var(--ink-fraco); font-size:.82rem; }
   .jan-fim{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.2rem;
             border-top:1px solid var(--line); padding-top:1rem; }
   /* ---- Os dados de exemplo dos modelos ----
@@ -116,10 +116,10 @@ if ($aberto > 0) {
   .ex-grupo:first-child{ border-top:0; margin-top:0; padding-top:0; }
   .ex-grupo > h4{ margin:0 0 .1rem; font-size:.88rem; font-family:var(--sans);
                   font-weight:600; color:var(--ink); }
-  .ex-grupo > .nota{ font-size:.8rem; color:#8a8f88; margin-bottom:.7rem; line-height:1.5; }
+  .ex-grupo > .nota{ font-size:.8rem; color:var(--ink-fraco); margin-bottom:.7rem; line-height:1.5; }
   .ex-campos{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
   .ex-campos label{ display:block; margin-bottom:.3rem; font-size:.76rem; text-transform:uppercase;
-                    letter-spacing:.06em; color:#8a8f88; }
+                    letter-spacing:.06em; color:var(--ink-fraco); }
   /* align-items:start — a capa é ao alto e as outras ao baixo; esticadas todas
      à altura da mais alta, ficavam três cartões com meio palmo de branco. */
   .exs{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
@@ -132,7 +132,7 @@ if ($aberto > 0) {
   .ex.alto .moldura{ aspect-ratio:4/5; }
   .ex .moldura img{ width:100%; height:100%; object-fit:cover; display:block; }
   .ex .nm{ margin:.5rem 0 .1rem; font-size:.76rem; text-transform:uppercase;
-           letter-spacing:.06em; color:#8a8f88; }
+           letter-spacing:.06em; color:var(--ink-fraco); }
   /* A medida que a peca espera. Sem isto, cada envio era uma adivinha. */
   .ex .med{ font-size:.7rem; color:#a8ada6; margin-bottom:.35rem; }
   .ex input[type=file]{ font-size:.76rem; width:100%; }
@@ -159,7 +159,7 @@ if ($aberto > 0) {
                          cursor:pointer; font-family:var(--sans); text-align:left; }
   .modal-corpo .gal-i img{ display:block; width:100%; aspect-ratio:16/10; object-fit:cover; }
   .modal-corpo .gal-pe{ padding:.34rem .45rem; }
-  .modal-corpo .gal-nm{ display:block; font-size:.73rem; color:#6c7570;
+  .modal-corpo .gal-nm{ display:block; font-size:.73rem; color:var(--ink-fraco);
                         white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .modal-corpo .gal-pe select{ margin-top:.25rem; padding:.2rem .3rem; font-size:.74rem; }
   .modal-corpo .gal-et{ display:block; margin-top:.15rem; font-style:normal; font-size:.68rem;
@@ -170,7 +170,7 @@ if ($aberto > 0) {
   .modal-corpo .gal-abas .chip b{ font-weight:600; opacity:.6; margin-left:.15rem; }
   .modal-corpo .gal-env{ display:grid; grid-template-columns:1fr auto auto; gap:.5rem;
                          align-items:center; }
-  .modal-corpo .gal-rep{ margin-top:.6rem; font-size:.82rem; color:#6c7570;
+  .modal-corpo .gal-rep{ margin-top:.6rem; font-size:.82rem; color:var(--ink-fraco);
                          display:flex; gap:.6rem; align-items:center; }
   .modal-corpo .gal-x{ position:absolute; right:.3rem; top:.3rem; width:24px; height:24px;
                        border:0; border-radius:50%; background:rgba(255,255,255,.92);
@@ -180,10 +180,10 @@ if ($aberto > 0) {
   /* Acrescentar uma fotografia: fica no fim da janela, depois do que ja la esta. */
   .modal-corpo .gal-mais{ border-top:1px solid var(--line); margin-top:.9rem; padding-top:.8rem; }
   .modal-corpo .gal-mais label{ display:block; margin-bottom:.35rem; font-size:.76rem;
-                                text-transform:uppercase; letter-spacing:.06em; color:#8a8f88; }
+                                text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
   .modal-corpo .gal-mais .med{ font-size:.72rem; color:#a8ada6; margin-top:.3rem; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
-  .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
+  .chip{ border:1px solid var(--line); background:#fff; color:var(--ink-fraco); border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .chip-sep{ width:1px; align-self:stretch; background:var(--line); margin:.1rem .3rem; }
@@ -213,7 +213,7 @@ if ($aberto > 0) {
 <body>
 <?php cabecalho('Modelos de convite', 'Os desenhos que a casa oferece a todos os casais', 'modelos'); ?>
 
-<main class="container">
+<main class="container" id="conteudo">
 
   <div class="painel">
     <h3>Modelos</h3>

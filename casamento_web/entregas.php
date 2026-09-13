@@ -46,7 +46,7 @@ $CAS  = casalInfo($DEFS);
      esquerda dá a cada fila uma cara, para se saber onde se está a meio de
      um rolar rápido com o telemóvel na mão. */
   .b-secao{ margin:1.4rem 0 .6rem; font-family:var(--serif); font-size:1.05rem;
-            color:var(--gold-soft); display:flex; align-items:center; gap:.5rem; }
+            color:var(--gold-texto); display:flex; align-items:center; gap:.5rem; }
   .b-secao .ico{ width:17px; height:17px; opacity:.85; }
   .b-secao .n{ font-family:var(--sans); font-size:.72rem; font-weight:700;
                background:rgba(255,255,255,.1); border-radius:50px; padding:.1rem .5rem;
@@ -56,7 +56,7 @@ $CAS  = casalInfo($DEFS);
   .b-ped .b-acoes .btn{ flex:1 1 100%; }
   /* O que está nas MINHAS mãos distingue-se do resto: no meio de três filas
      empilhadas, é o único grupo em que a próxima acção é minha. */
-  .b-ped.minha{ border-color:var(--gold-soft); background:rgba(233,223,201,.055); }
+  .b-ped.minha{ border-color:var(--gold-texto); background:rgba(233,223,201,.055); }
 </style>
 </head>
 <body class="b-servico">

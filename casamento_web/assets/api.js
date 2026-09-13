@@ -14,8 +14,29 @@
   function token()    { return typeof global.CSRF === 'string' ? global.CSRF : ''; }
   function marcaHora(){ return typeof global.agora === 'function' ? global.agora() : null; }
 
+  /**
+   * Diz a quem lê o ecrã o que acabou de acontecer.
+   *
+   * A aplicação faz quase tudo sem recarregar — aprovar um pedido, guardar uma
+   * despesa, mudar uma mesa — e até à sétima passagem NENHUMA dessas
+   * confirmações chegava a um leitor de ecrã: havia zero `aria-live` em todo o
+   * sistema (docs/auditoria-ui-ux.md §7). A região está no cabeçalho
+   * partilhado; aqui só se escreve nela.
+   *
+   * Limpa-se antes de escrever, e escreve-se um instante depois, porque uma
+   * região viva só anuncia o que MUDA: pôr duas vezes o mesmo texto seguido
+   * seria silêncio na segunda.
+   */
+  function anunciar(msg) {
+    var reg = global.document && global.document.getElementById('avisos-vivos');
+    if (!reg || !msg) return;
+    reg.textContent = '';
+    global.setTimeout(function () { reg.textContent = String(msg); }, 50);
+  }
+
   function avisar(msg, silencioso) {
     if (silencioso) return;
+    anunciar(msg);
     if (typeof global.toast === 'function') global.toast(msg, true);
     else if (typeof global.alert === 'function') global.alert(msg);
   }
@@ -74,6 +95,8 @@
   }
 
   global.api = api;
+
+  global.anunciar = anunciar;
 
   /**
    * Envia um ficheiro grande em pedaços de ~1 MB (ação 'upload_chunk') e devolve

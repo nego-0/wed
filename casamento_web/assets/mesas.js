@@ -776,7 +776,7 @@ function renderTabBody(){
       </div>
       <div class="lista-plantas" id="lista-mesas-planta"></div>
       <div class="roster-conta" id="roster-conta"></div>
-      <p style="font-size:.76rem;color:#9aa09a;margin:.6rem 0 0">Carregue numa mesa para a vista ir até ela.</p>`;
+      <p style="font-size:.76rem;color:var(--ink-fraco);margin:.6rem 0 0">Carregue numa mesa para a vista ir até ela.</p>`;
     renderListaMesas();
     return;
   }
@@ -789,7 +789,7 @@ function renderTabBody(){
     </div>
     <div class="lista-tab" id="lista-tab"></div>
     <div class="roster-conta" id="roster-conta"></div>
-    <p style="font-size:.76rem;color:#9aa09a;margin:.6rem 0 0">Arraste um cartão para cima de uma mesa na planta.</p>`;
+    <p style="font-size:.76rem;color:var(--ink-fraco);margin:.6rem 0 0">Arraste um cartão para cima de uma mesa na planta.</p>`;
   renderLista();
 }
 
@@ -1017,7 +1017,7 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
   const madrinhas=CONVIDADOS.filter(g=>g.papel==='madrinha');
   const linhaPapel=g=>`
     <div class="sentado">
-      <span class="nm">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}<br><small style="color:#9aa09a">${esc(g.convite_nome)}</small></span>
+      <span class="nm">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}<br><small style="color:var(--ink-fraco)">${esc(g.convite_nome)}</small></span>
       <select class="sel-mini" title="Papel do convidado" onchange="definirPapel(${g.id}, this.value)">
         <option value="padrinho" ${g.papel==='padrinho'?'selected':''}>Padrinho (esq.)</option>
         <option value="madrinha" ${g.papel==='madrinha'?'selected':''}>Madrinha (dir.)</option>
@@ -1031,7 +1031,7 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
       <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
     </div>
-    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos <i data-ico="anel"></i>. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
+    <p style="font-size:.8rem;color:var(--ink-fraco);margin:.55rem 0 .2rem">Mesa de honra dos noivos <i data-ico="anel"></i>. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
     <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
     ${bloco('Padrinhos · ala esquerda', padrinhos)}
     ${bloco('Madrinhas · ala direita', madrinhas)}

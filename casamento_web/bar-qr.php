@@ -63,12 +63,12 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
      quando anda com um tabuleiro à procura dela. */
   .cartao .mesa{ font-family:var(--serif); font-size:2.1rem; color:var(--ink);
                  line-height:1.1; margin:.25rem 0 .1rem; }
-  .cartao .conv{ font-size:.82rem; color:#8a8f88; margin-bottom:.7rem; }
+  .cartao .conv{ font-size:.82rem; color:var(--ink-fraco); margin-bottom:.7rem; }
   .cartao canvas{ display:block; margin:0 auto; }
-  .cartao .lnk{ font-size:.72rem; color:#8a8f88; word-break:break-all;
+  .cartao .lnk{ font-size:.72rem; color:var(--ink-fraco); word-break:break-all;
                 line-height:1.35; margin-top:.5rem; }
   .cartao .lnk b{ color:var(--ink); font-size:.8rem; }
-  .cartao .rod{ font-size:.7rem; color:#8a8f88; margin-top:.6rem;
+  .cartao .rod{ font-size:.7rem; color:var(--ink-fraco); margin-top:.6rem;
                 border-top:1px solid var(--line); padding-top:.5rem; line-height:1.4; }
 
   /* A lista dos códigos: uma folha de trabalho, não um cartão de mesa. Duas

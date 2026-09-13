@@ -28,7 +28,7 @@
 
 /* E uma mesa VAZIA fica de traço leve: ainda não é notícia nenhuma. */
 .mesa-ico.vazia .mi-t{ fill:none; }
-.mesa-ico.vazia .mi-n{ fill:#8a8f88; }
+.mesa-ico.vazia .mi-n{ fill:var(--ink-fraco); }
 
 /* A dos noivos não tem número nem lotação: tem lugar. */
 .mesa-ico.f-noivos .mi-t{ fill:var(--gold); stroke:var(--gold-deep); }

@@ -27,7 +27,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .stats-mesa{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.7rem; margin-bottom:1.1rem; }
   .sm{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
   .sm .n{ font-family:var(--serif); font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1; }
-  .sm .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:#8a8f88; margin-top:.25rem; }
+  .sm .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }
   .sm.ok .n{ color:#1f7a3d; } .sm.alerta .n{ color:var(--danger); }
 
   /* Barra de adicionar mesa (acima do canvas, campos in-line) */
@@ -36,7 +36,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .barra-add input[type=text]{ flex:1 1 170px; min-width:0; }
   .barra-add input[type=number]{ flex:0 1 90px; min-width:0; }
   .barra-add .grp{ display:flex; align-items:center; gap:.4rem; }
-  .barra-add .grp .lbl{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; }
+  .barra-add .grp .lbl{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
 
   /* Seletores de forma e cor (partilhados por adicionar e editar) */
   .formas{ display:inline-flex; gap:.25rem; flex-wrap:wrap; }
@@ -179,9 +179,9 @@ $CAS = casalInfo(defsAtuais($conn));
   body.mesas-max.painel-fechado #btn-painel{ border-color:var(--forest); color:var(--forest); background:var(--cream); }
   /* Travas contra arrastos acidentais (ficam à esquerda do zoom) */
   .bloqueios{ display:inline-flex; gap:.5rem; align-items:center; margin-right:.2rem; }
-  .bloqueios .blq-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; }
+  .bloqueios .blq-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
   .bloqueios label{ display:inline-flex; align-items:center; gap:.3rem; font-size:.78rem;
-                    color:#7a8078; cursor:pointer; white-space:nowrap; }
+                    color:var(--ink-fraco); cursor:pointer; white-space:nowrap; }
   .bloqueios input{ width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
   .bloqueios label:has(input:checked){ color:var(--forest); font-weight:500; }
   /* Com as mesas fixas, o cursor deixa de sugerir arrasto */
@@ -361,7 +361,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .lista-sentados .nm-pega:hover{ background:var(--forest-deep); }
   .lista-sentados .nm-pega:active{ cursor:grabbing; }
   .lista-sentados .nm-pega .gi-m, .lista-sentados .nm-pega .gi-f{ color:#eef3ee; }
-  .dica-mini{ font-size:.76rem; color:#9aa09a; margin:-.2rem 0 .4rem; }
+  .dica-mini{ font-size:.76rem; color:var(--ink-fraco); margin:-.2rem 0 .4rem; }
 
   /* ============================================================
      A FOLHA: o esquema de mesas para levar para o salão
@@ -408,7 +408,7 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Rodar para a direita é o mesmo desenho ao espelho: é o que ↺ e ↻ eram um
      do outro, e poupa um segundo traço que teria de se manter a par. */
   .btn-gir.espelho > [data-ico]{ transform:scaleX(-1); }
-  .gir-val{ font-size:.78rem; color:#8a8f88; min-width:2.6em; text-align:center;
+  .gir-val{ font-size:.78rem; color:var(--ink-fraco); min-width:2.6em; text-align:center;
     font-variant-numeric:tabular-nums; }
   /* Rodar a mesa roda a MESA INTEIRA — o tampo, as cadeiras, a lotação, o
      sinal de estado e o nome. Antes rodava só o tampo e o resto ficava
@@ -434,15 +434,15 @@ $CAS = casalInfo(defsAtuais($conn));
   .filtros-tab input[type=search]{ flex:1; min-width:130px; }
   .filtros-tab select{ min-width:130px; }
   .lista-tab{ display:flex; flex-wrap:wrap; gap:.5rem; }
-  .roster-conta{ font-size:.76rem; color:#9aa09a; margin-top:.6rem; }
+  .roster-conta{ font-size:.76rem; color:var(--ink-fraco); margin-top:.6rem; }
   .chip-drag{ display:inline-flex; flex-direction:column; gap:.05rem; background:var(--cream); border:1px solid var(--line);
     border-radius:12px; padding:.45rem .7rem; cursor:grab; touch-action:none; user-select:none; max-width:100%; }
   .chip-drag:hover{ border-color:var(--gold-soft); }
   .chip-drag.arrastando{ opacity:.4; }
   .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
-  .chip-drag .cd-meta{ font-size:.72rem; color:#8a8f88; }
+  .chip-drag .cd-meta{ font-size:.72rem; color:var(--ink-fraco); }
   .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
-  .roster-vazio{ color:#9aa09a; font-size:.86rem; padding:.4rem 0; }
+  .roster-vazio{ color:var(--ink-fraco); font-size:.86rem; padding:.4rem 0; }
 
   /* ------------------------------------------------------------
      A LISTA DAS MESAS — a primeira pastilha do painel
@@ -461,7 +461,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .lm-txt{ flex:1; min-width:0; }
   .lm-nome{ display:block; font-size:.9rem; font-weight:600; line-height:1.25;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .lm-meta{ display:block; font-size:.73rem; color:#8a8f88; line-height:1.2; }
+  .lm-meta{ display:block; font-size:.73rem; color:var(--ink-fraco); line-height:1.2; }
   .lm-est{ flex:none; width:14px; height:14px; border-radius:50%; box-sizing:border-box;
     border:2px solid var(--est); background:#fff; }
   .lm-est.dot-parcial{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
@@ -481,11 +481,11 @@ $CAS = casalInfo(defsAtuais($conn));
   .sentado{ display:flex; align-items:center; gap:.5rem; border:1px solid var(--line); border-radius:10px; padding:.4rem .6rem; font-size:.9rem; }
   .sentado .nm{ flex:1; line-height:1.2; }
   .sel-mini{ flex:none; max-width:52%; font-size:.8rem; padding:.35rem .4rem; }
-  .vazio-mini{ color:#9aa09a; font-size:.86rem; padding:.3rem 0; }
+  .vazio-mini{ color:var(--ink-fraco); font-size:.86rem; padding:.3rem 0; }
   .acoes-bloco{ display:flex; gap:.5rem; margin-top:.8rem; }
   .semmesa-chip{ display:inline-flex; align-items:center; gap:.35rem; background:var(--cream); border:1px solid var(--line);
     border-radius:50px; padding:.25rem .6rem; font-size:.8rem; margin:.15rem .2rem 0 0; }
-  .rot{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; margin:.9rem 0 .3rem; }
+  .rot{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin:.9rem 0 .3rem; }
 
   /* Ícones de género / brinde nas pastilhas com nomes. Desenhados, e não os
      caracteres ♂ ♀ 🎁: nem todo o aparelho os tem e onde faltam sai o quadrado
@@ -500,7 +500,7 @@ $CAS = casalInfo(defsAtuais($conn));
     padding:.5rem .6rem; border-radius:10px; line-height:1.2; }
   .combo-btn:hover{ border-color:var(--gold-soft); }
   .combo-btn .combo-txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .combo-btn .combo-cx{ margin-left:auto; color:#9aa09a; font-size:.9rem; flex:none;
+  .combo-btn .combo-cx{ margin-left:auto; color:var(--ink-fraco); font-size:.9rem; flex:none;
     display:inline-flex; align-items:center; line-height:0; }
   .combo-btn .combo-cx > svg{ width:1em; height:1em; }
   .combo.combo-inline{ flex:none; max-width:56%; min-width:120px; }
@@ -513,8 +513,8 @@ $CAS = casalInfo(defsAtuais($conn));
   .combo-opt{ text-align:left; border:0; background:transparent; font-family:inherit; font-size:.86rem; color:var(--ink);
     padding:.4rem .5rem; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; gap:.05rem; width:100%; }
   .combo-opt:hover, .combo-opt.ativo{ background:var(--cream); }
-  .combo-opt .combo-sub{ font-size:.72rem; color:#8a8f88; }
-  .combo-vazio{ color:#9aa09a; font-size:.82rem; padding:.4rem .5rem; }
+  .combo-opt .combo-sub{ font-size:.72rem; color:var(--ink-fraco); }
+  .combo-vazio{ color:var(--ink-fraco); font-size:.82rem; padding:.4rem .5rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
@@ -523,6 +523,7 @@ $CAS = casalInfo(defsAtuais($conn));
 <body>
 <?php cabecalho('Planta de Mesas', 'Posição, capacidade e ocupação de cada mesa', 'mesas'); ?>
 
+<main id="conteudo">
 <div class="container">
   <div class="stats-mesa" id="stats"></div>
 
@@ -603,7 +604,7 @@ $CAS = casalInfo(defsAtuais($conn));
         <div class="rz rz-s"  data-dir="s"  title="Arraste para ajustar a altura do canvas"></div>
         <div class="rz rz-se" data-dir="se" title="Arraste para redimensionar o canvas"></div>
       </div>
-      <p id="dica-planta" style="font-size:.78rem;color:#9aa09a;margin:.6rem 0 0"></p>
+      <p id="dica-planta" style="font-size:.78rem;color:var(--ink-fraco);margin:.6rem 0 0"></p>
     </div>
 
     <!-- PAINEL DIREITO -->
@@ -632,5 +633,6 @@ window.DATA_EVENTO = <?= json_encode((string)(defsAtuais($conn)['evento.data'] ?
 window.BAR_LIGADO = <?= podeModulo('bar') ? 'true' : 'false' ?>;
 </script>
 <script src="<?= asset('assets/mesas.js') ?>"></script>
+</main>
 </body>
 </html>

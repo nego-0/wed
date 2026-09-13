@@ -64,7 +64,7 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
 <body>
 <?php cabecalho('Bar', 'O menu de bebidas que os convidados abrem na mesa', 'bar'); ?>
 
-<main class="container">
+<main class="container" id="conteudo">
   <div class="b-chave" id="b-chave">
     <div class="farol" id="b-farol"></div>
     <div>

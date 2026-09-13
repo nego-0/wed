@@ -67,8 +67,8 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   .amostras{ display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
   .amostra{ width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
   .amostra.on{ border-color:var(--ink); box-shadow:0 0 0 2px #fff inset; }
-  .rot{ font-size:.78rem; color:#8a8f88; letter-spacing:.08em; text-transform:uppercase; }
-  .legenda{ text-align:center; font-size:.78rem; color:#8a8f88; margin-top:.45rem; }
+  .rot{ font-size:.78rem; color:var(--ink-fraco); letter-spacing:.08em; text-transform:uppercase; }
+  .legenda{ text-align:center; font-size:.78rem; color:var(--ink-fraco); margin-top:.45rem; }
   .legenda a{ color:var(--gold); }
 
   /* ---- Impressão: 100×150 mm, um cartão por página, sem fundo ---- */
@@ -92,6 +92,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 <body>
 <?php cabecalho('Cartões 10×15', 'Convite para impressão a dourado sobre acrílico', 'grafica', ['no_print'=>true]); ?>
 
+<main id="conteudo">
 <div class="container">
   <div class="barra no-print">
     <span class="rot">Paleta</span>
@@ -167,5 +168,6 @@ async function guardarEstilo(){
 <?php // A escolha da casa também aqui: uma lista com outro desenho no meio de
       // um sistema onde todas as outras são iguais lê-se como outra aplicação. ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
+</main>
 </body>
 </html>

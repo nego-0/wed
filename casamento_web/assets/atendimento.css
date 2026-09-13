@@ -72,7 +72,7 @@
 .at-sug{ margin-top:.9rem; display:flex; flex-direction:column; gap:.35rem; }
 .at-vivo + .at-sug{ margin-top:0; }
 .at-sug-tit, .at-ct-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.6px;
-  color:#8a8f88; font-weight:700; }
+  color:var(--ink-fraco); font-weight:700; }
 .at-q{ text-align:left; background:none; border:1px solid var(--gold-soft); border-radius:12px;
   padding:.5rem .7rem; font-family:var(--sans); font-size:.84rem; line-height:1.35;
   color:var(--ink); cursor:pointer; transition:background .12s, border-color .12s; }
@@ -91,7 +91,7 @@
   font-weight:700; cursor:pointer; transition:filter .12s; }
 .at-vivo-bt:hover{ filter:brightness(1.06); }
 .at-vivo-bt:focus-visible{ outline:2px solid var(--forest); outline-offset:2px; }
-.at-vivo-estado{ font-size:.78rem; color:#8a8f88; margin-top:.3rem; text-align:center; }
+.at-vivo-estado{ font-size:.78rem; color:var(--ink-fraco); margin-top:.3rem; text-align:center; }
 .at-vivo-estado:empty{ display:none; }
 
 /* ---------- contactos ---------- */
@@ -105,7 +105,7 @@
    lado do número para o qual se quer ligar. */
 .at-ct-ic{ width:18px; opacity:.7; display:inline-flex; align-items:center;
            justify-content:center; line-height:0; font-size:1rem; }
-.at-horario{ font-size:.76rem; color:#8a8f88; margin-top:.15rem; }
+.at-horario{ font-size:.76rem; color:var(--ink-fraco); margin-top:.15rem; }
 
 @media (max-width:520px){
   .at-cx{ right:12px; left:12px; bottom:70px; align-items:stretch; }

@@ -118,6 +118,10 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
       // janela.js, que a usa para desenhar o sinal de cada janela. ?>
 <script src="<?= asset('assets/icones.js') ?>"></script>
 <header class="topo<?= $semPapel ?>">
+  <!-- Primeira paragem de teclado da página. Fica invisível até receber foco:
+       quem usa rato nunca a vê, quem tabula não atravessa doze ligações de
+       menu para chegar ao conteúdo (docs/auditoria-ui-ux.md §7). -->
+  <a class="salta-conteudo" href="#conteudo">Saltar para o conteúdo</a>
   <div class="wrap">
     <div class="monograma"><?= escP($CAS['mono']) ?></div>
     <div class="topo-txt">
@@ -168,6 +172,27 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     </nav>
   </div>
 </header>
+<!-- A região viva por onde passam os avisos. A aplicação faz quase tudo sem
+     recarregar — aprovar um pedido, guardar uma despesa, mudar uma mesa — e
+     até aqui nenhuma dessas confirmações chegava a um leitor de ecrã: havia
+     zero aria-live em todo o sistema. O api.js escreve aqui (ver anunciar()). -->
+<div id="avisos-vivos" class="so-leitor" role="status" aria-live="polite" aria-atomic="true"></div>
+<script>
+/* Os avisos de sucesso já existem em toda a aplicação, sob a forma de toasts —
+   mas um toast é pintura: quem lê o ecrã nunca soube que a despesa ficou
+   guardada. Em vez de reescrever as onze implementações de toast() espalhadas
+   pelas páginas, embrulha-se a que existir, uma vez, quando a página acaba de
+   montar. O `api.js` já anuncia os ERROS por sua conta (ver anunciar()).
+
+   Onde o toast() é privado de um módulo — o bar-pecas.js tem o seu dentro de um
+   IIFE — isto não lhe chega, e essas páginas continuam a anunciar só os erros.
+   Fica dito para quem lá voltar. */
+document.addEventListener('DOMContentLoaded', function () {
+  var orig = window.toast;
+  if (typeof orig !== 'function' || typeof window.anunciar !== 'function') return;
+  window.toast = function (m) { window.anunciar(m); return orig.apply(this, arguments); };
+});
+</script>
 <?php
     contagemScript();
     tiraSuporte(!empty($opcoes['no_print']));

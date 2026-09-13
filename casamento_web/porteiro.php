@@ -83,12 +83,12 @@ $CAS  = casalInfo($DEFS);
   .aviso-txt{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:.6rem .8rem; font-size:.88rem; margin-bottom:1rem; }
   .varios{ display:grid; gap:.5rem; }
   .varios .opc{ background:var(--ivory); color:var(--text); border-radius:12px; padding:.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
-  .varios .opc small{ color:#8a8f88; }
+  .varios .opc small{ color:var(--ink-fraco); }
   .msg-vazia{ text-align:center; color:var(--gold-pale); padding:1.4rem; }
 
   .abas{ display:flex; gap:.4rem; margin-bottom:1.1rem; background:rgba(255,255,255,.05); border:1px solid rgba(217,188,140,.2); border-radius:50px; padding:.25rem; }
   .aba{ flex:1; border:none; background:transparent; color:var(--gold-pale); font-family:var(--sans); font-weight:500; font-size:.92rem; padding:.6rem; border-radius:50px; cursor:pointer; }
-  .aba.on{ background:var(--gold); color:#20342A; }
+  .aba.on{ background:var(--gold); color:var(--sobre-gold); }
 
   .entradas-topo{ text-align:center; color:var(--gold-pale); font-size:.9rem; margin-bottom:1rem; }
   .entradas-topo b{ color:var(--gold-soft); font-family:var(--serif); font-size:1.1rem; }
@@ -407,7 +407,7 @@ function mostrarConvite(c){
     return `<div class="memb ${pres?'presente':''} ${(pres&&!conf)?'excecional':''}" onclick="checkin(${c.id},'membro',${m.id})">
       <span class="est-p"${pres?' data-ico="visto"':''}></span>
       <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
-      <span style="font-size:.75rem;color:#8a8f88">${nota}</span>
+      <span style="font-size:.75rem;color:var(--ink-fraco)">${nota}</span>
     </div>`;
   }).join('') : '';
 

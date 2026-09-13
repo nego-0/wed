@@ -510,7 +510,7 @@ function exigirModulo(string $chave): void {
        . '<path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/><path d="M12 14.5v2.5"/></svg>'
        . '<h1 style="font-family:var(--serif);font-size:1.5rem;color:var(--ink);margin:0 0 .6rem">'
        . 'Esta parte não está disponível</h1>'
-       . '<p style="color:#8a8f88;line-height:1.6;font-size:.92rem">A licença deste casamento não '
+       . '<p style="color:var(--ink-fraco);line-height:1.6;font-size:.92rem">A licença deste casamento não '
        . 'inclui, neste momento, o que esta página faz. Fale com os noivos — são eles que gerem '
        . 'a licença.</p>'
        . '<p style="margin-top:1.4rem"><a class="btn btn-linha" href="logout.php">Sair</a></p>'

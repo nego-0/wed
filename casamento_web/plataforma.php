@@ -176,24 +176,24 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
               font-size:1rem; border:1px solid var(--line); }
   .cas.aberto .selo{ background:var(--gold-pale); border-color:var(--gold-soft); }
   .cas .nm{ font-family:var(--serif); font-size:1.1rem; color:var(--ink); }
-  .cas .meta{ font-size:.8rem; color:#8a8f88; display:flex; gap:.7rem; flex-wrap:wrap; margin-top:.15rem; }
+  .cas .meta{ font-size:.8rem; color:var(--ink-fraco); display:flex; gap:.7rem; flex-wrap:wrap; margin-top:.15rem; }
   .cas .ac{ display:flex; gap:.4rem; align-items:center; white-space:nowrap; }
   .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.ativo{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.pendente{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
   .et.suspenso{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
-  .et.inativo{ background:var(--cream); color:#8a8f88; border-color:var(--line); }
+  .et.inativo{ background:var(--cream); color:var(--ink-fraco); border-color:var(--line); }
   .et.agora{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:#8a8f88; margin-bottom:.8rem; line-height:1.5; }
+  .painel .dica{ font-size:.85rem; color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
 
   /* Os painéis que dobram vivem em assets/estilo.css: são de duas páginas. */
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
   .falta{ color:var(--warn); font-weight:500; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
-  .chip{ border:1px solid var(--line); background:#fff; color:#6c7570; border-radius:50px;
+  .chip{ border:1px solid var(--line); background:#fff; color:var(--ink-fraco); border-radius:50px;
          padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .editor-conta{ grid-column:1/-1; border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.8rem; }
@@ -205,8 +205,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .numeros .n b{ display:block; font-family:var(--serif); font-size:1.9rem; line-height:1;
                  color:var(--forest); }
   .numeros .n span{ display:block; font-size:.76rem; text-transform:uppercase;
-                    letter-spacing:.05em; color:#8a8f88; margin-top:.35rem; }
-  .numeros .n em{ display:block; font-style:normal; font-size:.76rem; color:#a2a8a2; margin-top:.2rem; }
+                    letter-spacing:.05em; color:var(--ink-fraco); margin-top:.35rem; }
+  .numeros .n em{ display:block; font-style:normal; font-size:.76rem; color:var(--ink-fraco); margin-top:.2rem; }
   .numeros .n.alerta{ border-color:var(--gold-soft); background:var(--gold-pale); }
   .numeros .n.alerta b{ color:var(--gold); }
   /* Um número que leva a algum lado tem de o parecer. Os que são só contagem
@@ -254,7 +254,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-ped-selo.pendente{ color:var(--warn); }
   .lic-ped-selo.aprovado{ color:var(--ok); }
   .lic-ped-selo.recusado{ color:var(--danger); }
-  .lic-ped-selo.cancelado{ color:#9aa09a; }
+  .lic-ped-selo.cancelado{ color:var(--ink-fraco); }
   .lic-ped-nota{ background:var(--cream); border-left:3px solid var(--gold); border-radius:8px;
     padding:.6rem .8rem; font-size:.85rem; line-height:1.55; margin-top:.7rem; }
   .lic-itens{ list-style:none; margin:.7rem 0 0; padding:0; }
@@ -262,7 +262,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     font-size:.86rem; border-bottom:1px solid var(--line); }
   .lic-itens li:last-child{ border-bottom:none; }
   .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:8.5rem; }
-  .lic-itens .med{ flex:1; color:#8a8f88; }
+  .lic-itens .med{ flex:1; color:var(--ink-fraco); }
   .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold); font-weight:600; }
 
   .lic-tab{ width:100%; border-collapse:collapse; margin-top:.9rem; }
@@ -270,7 +270,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     font-size:.87rem; }
   .lic-tab tr:last-child td{ border-bottom:none; }
   .lic-tab tr.off{ opacity:.5; }
-  .lic-tab .med{ color:#8a8f88; }
+  .lic-tab .med{ color:var(--ink-fraco); }
   .lic-tab .pr{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
     white-space:nowrap; text-align:right; }
   .lic-tab .ac{ text-align:right; white-space:nowrap; }
@@ -284,14 +284,14 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-fator-prova{ margin-top:1.1rem; border:1.5px solid var(--gold-soft); border-radius:12px;
     background:var(--gold-pale); padding:.9rem 1rem; }
   .lic-fp-tit{ font-weight:700; color:var(--ink); font-size:.88rem; }
-  .lic-fp-sub{ font-size:.76rem; color:#8a8f88; margin-top:.1rem; }
+  .lic-fp-sub{ font-size:.76rem; color:var(--ink-fraco); margin-top:.1rem; }
   .lic-fp-linhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin:.7rem 0 .6rem; }
   .lic-fp-l{ display:flex; flex-direction:column; }
-  .lic-fp-l span{ font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:#8a8f88; }
+  .lic-fp-l span{ font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-fraco); }
   .lic-fp-l b{ font-size:1.05rem; color:var(--ink); font-variant-numeric:tabular-nums; }
   .lic-fp-l b.risca{ text-decoration:line-through; color:#a8ada6; font-weight:500; }
   /* Sem desconto não se risca nada: o proporcional passa a ser só a referência. */
-  .lic-fp-l b.ref{ color:#8a8f88; font-weight:500; }
+  .lic-fp-l b.ref{ color:var(--ink-fraco); font-weight:500; }
   .lic-fp-veredito{ font-size:.83rem; line-height:1.5; border-radius:8px; padding:.5rem .7rem; }
   .lic-fp-veredito.bom{ background:var(--ok-bg); color:var(--text); }
   .lic-fp-veredito.mau{ background:var(--danger-bg); color:var(--text); }
@@ -312,7 +312,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-pz-nome{ flex:1; font-weight:700; color:var(--ink); font-size:.98rem; }
   .lic-pz-fator{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
     font-size:.9rem; }
-  .lic-pz-res{ font-size:.78rem; color:#8a8f88; margin-top:.15rem; line-height:1.4; }
+  .lic-pz-res{ font-size:.78rem; color:var(--ink-fraco); margin-top:.15rem; line-height:1.4; }
   /* A barra é o preço POR MÊS: mais curta é melhor negócio. É a única forma de
      ver, de relance, se um factor faz o que se queria que fizesse. */
   .lic-pz-barra{ position:relative; height:26px; border-radius:6px; background:var(--sand);
@@ -321,7 +321,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     background:linear-gradient(90deg,var(--gold-soft),var(--gold-deep)); }
   .lic-pz-barra span{ position:relative; padding:0 .6rem; font-size:.78rem; font-weight:700;
     color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); font-variant-numeric:tabular-nums; }
-  .lic-pz-nums{ display:flex; gap:.9rem; flex-wrap:wrap; font-size:.76rem; color:#8a8f88; }
+  .lic-pz-nums{ display:flex; gap:.9rem; flex-wrap:wrap; font-size:.76rem; color:var(--ink-fraco); }
   .lic-pz-nums b{ color:var(--ink); font-variant-numeric:tabular-nums; }
   .lic-pz-nums b.risca{ text-decoration:line-through; color:#a8ada6; }
   .lic-pz-nums .poupa b{ color:var(--ok); }
@@ -344,16 +344,16 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     font-variant-numeric:tabular-nums; border:1px solid var(--line); border-radius:8px;
     background:var(--card); }
   .lic-pi-preco input:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 2px var(--ring); }
-  .lic-pi-preco small{ color:#8a8f88; font-size:.75rem; }
+  .lic-pi-preco small{ color:var(--ink-fraco); font-size:.75rem; }
   .lic-pi-conta{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-top:1rem; padding-top:.9rem;
     border-top:1px solid var(--line); }
   .lic-pi-conta > div{ display:flex; flex-direction:column; }
-  .lic-pi-conta .r{ font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:#8a8f88; }
+  .lic-pi-conta .r{ font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-fraco); }
   .lic-pi-conta b{ font-size:1.05rem; color:var(--ink); font-variant-numeric:tabular-nums; }
   .lic-pi-conta .bom b{ color:var(--ok); }
   .lic-pi-conta .mau b{ color:var(--warn); }
   .lic-pi:hover{ background:var(--cream); }
-  .lic-pi small{ color:#8a8f88; }
+  .lic-pi small{ color:var(--ink-fraco); }
 
   @media (max-width:640px){
     .lic-itens li{ flex-wrap:wrap; gap:.2rem .8rem; }
@@ -362,7 +362,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   }
 
   /* O menu "⋯" vive em assets/estilo.css: é de duas páginas. */
-  .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.84rem; color:#8a8f88;
+  .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.84rem; color:var(--ink-fraco);
                margin-bottom:1.4rem; padding:0 .2rem; }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
             padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
@@ -383,7 +383,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
   .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }
   .pw-barras{ display:flex; gap:3px; flex:1; }
@@ -392,7 +392,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .pw-forca.f2 i:nth-child(-n+2){ background:var(--warn); }
   .pw-forca.f3 i:nth-child(-n+3){ background:#9a9a3c; }
   .pw-forca.f4 i{ background:var(--ok); }
-  .pw-rot{ font-size:.72rem; color:#9aa09a; white-space:nowrap; min-width:4.5rem; text-align:right; }
+  .pw-rot{ font-size:.72rem; color:var(--ink-fraco); white-space:nowrap; min-width:4.5rem; text-align:right; }
 
   /* O aviso de estado da licença, no modal, veste-se do que diz. */
   .lic-estado.ok{ background:var(--ok-bg); border-color:var(--ok); border-style:solid; }
@@ -414,8 +414,8 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .at-item.off{ opacity:.62; border-style:dashed; }
   .at-item-cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; flex-wrap:wrap; }
   .at-item-cab b{ font-family:var(--serif); font-size:1rem; color:var(--ink); }
-  .at-item .at-ord{ margin-left:auto; font-size:.74rem; color:#8a8f88; font-variant-numeric:tabular-nums; }
-  .at-item-resp{ font-size:.86rem; color:#6c7570; line-height:1.55; margin-bottom:.55rem;
+  .at-item .at-ord{ margin-left:auto; font-size:.74rem; color:var(--ink-fraco); font-variant-numeric:tabular-nums; }
+  .at-item-resp{ font-size:.86rem; color:var(--ink-fraco); line-height:1.55; margin-bottom:.55rem;
     white-space:pre-wrap; }
   .at-item .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
   /* As caixas de seleção do painel de dados (âmbitos e casamentos). */
@@ -436,7 +436,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   cabecalho($tit, $sub, 'plataforma');
 ?>
 
-<main class="container">
+<main class="container" id="conteudo">
 
 <?php if (ehSuporte()): ?>
   <?php // ---- O posto do suporte: simples e ao que interessa ----
@@ -640,7 +640,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div><label>Cidade / região</label><input type="text" id="n-cidade"></div>
       </div>
       <div class="lf" style="grid-template-columns:1fr">
-        <div><label>Orçamento total <small style="color:#8a8f88">· opcional, serve de teto no Orçamento</small></label>
+        <div><label>Orçamento total <small style="color:var(--ink-fraco)">· opcional, serve de teto no Orçamento</small></label>
           <input type="text" id="n-orcamento" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00"></div>
       </div>
       <div class="lf" style="grid-template-columns:1fr">
@@ -690,7 +690,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           Iniciar com a licença já ativa</label></div>
       </div>
 
-      <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:#8a8f88">· opcional — quem gere o casamento. Deixe em branco para não criar já.</small></div>
+      <div class="dica" style="margin:1.1rem 0 .4rem"><b>Conta dos noivos</b> <small style="color:var(--ink-fraco)">· opcional — quem gere o casamento. Deixe em branco para não criar já.</small></div>
       <div class="lf" style="grid-template-columns:2fr 1fr 1fr;align-items:start">
         <div class="campo"><label for="n-noivos-email">Email dos noivos</label>
           <input type="email" id="n-noivos-email" autocomplete="off" autocapitalize="none" spellcheck="false">
@@ -705,7 +705,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             <button type="button" class="pw-olho" id="olho-nc" onclick="verSenha('n-noivos-confirmar','olho-nc')" aria-label="Mostrar a palavra-passe">mostrar</button></div>
           <div class="err"></div></div>
       </div>
-      <div class="dica bloco-porteiro" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:#8a8f88">· opcional — regista as entradas</small></div>
+      <div class="dica bloco-porteiro" style="margin:.9rem 0 .4rem"><b>Conta do porteiro</b> <small style="color:var(--ink-fraco)">· opcional — regista as entradas</small></div>
       <div class="lf bloco-porteiro" style="grid-template-columns:2fr 1fr 1fr;align-items:start">
         <div class="campo"><label for="n-porteiro-email">Email (utilizador) do porteiro</label>
           <input type="email" id="n-porteiro-email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="porta-…">
@@ -871,7 +871,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         e orçamentos), os modelos da casa e as contas.</div>
       <div class="dsel" style="margin:.2rem 0 .5rem">
         <label><input type="checkbox" id="dados-tudo-senhas"> Contas <b>com senhas</b>
-          <small style="color:#8a8f88">· só na exportação</small></label>
+          <small style="color:var(--ink-fraco)">· só na exportação</small></label>
       </div>
       <div class="fim" style="flex-wrap:wrap;margin:.2rem 0 .4rem">
         <button class="btn btn-ouro" onclick="exportarSistemaTudo()">Exportar tudo</button>
@@ -887,9 +887,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       <div class="dsel" id="dados-inc">
         <label><input type="checkbox" value="casamentos" checked onchange="dadosCasToggle()"> Casamentos</label>
         <label><input type="checkbox" value="modelos"> Modelos da casa</label>
-        <label><input type="checkbox" value="contas_casamento"> Contas de casamento <small style="color:#8a8f88">· noivos e porteiros</small></label>
-        <label><input type="checkbox" value="contas_admin"> Contas administrativas <small style="color:#8a8f88">· admin e suporte</small></label>
-        <label><input type="checkbox" id="dados-senhas"> Contas <b>com senhas</b> <small style="color:#8a8f88">· só na exportação</small></label>
+        <label><input type="checkbox" value="contas_casamento"> Contas de casamento <small style="color:var(--ink-fraco)">· noivos e porteiros</small></label>
+        <label><input type="checkbox" value="contas_admin"> Contas administrativas <small style="color:var(--ink-fraco)">· admin e suporte</small></label>
+        <label><input type="checkbox" id="dados-senhas"> Contas <b>com senhas</b> <small style="color:var(--ink-fraco)">· só na exportação</small></label>
       </div>
 
       <div id="dados-cas-bloco">
@@ -902,9 +902,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div class="dica" style="display:flex;gap:1rem;align-items:center;margin:.5rem 0 .2rem;flex-wrap:wrap">
           <span>Ao <b>Apagar</b>, os casamentos escolhidos:</span>
           <label><input type="radio" name="cas-modo" value="esvaziar" checked> Esvaziar
-            <small style="color:#8a8f88">· fica o casamento, sem os dados</small></label>
+            <small style="color:var(--ink-fraco)">· fica o casamento, sem os dados</small></label>
           <label><input type="radio" name="cas-modo" value="apagar"> Apagar
-            <small style="color:#8a8f88">· remove o casamento por inteiro</small></label>
+            <small style="color:var(--ink-fraco)">· remove o casamento por inteiro</small></label>
         </div>
       </div>
 
@@ -962,13 +962,13 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       .tema-amostra{ display:flex; gap:5px; }
       .tema-amostra i{ width:30px; height:20px; border-radius:5px; display:block; border:1px solid rgba(0,0,0,.10); }
       .tema-nome{ font-weight:600; color:var(--ink); }
-      .tema-desc{ font-size:.8rem; color:#8a8f88; line-height:1.4; }
+      .tema-desc{ font-size:.8rem; color:var(--ink-fraco); line-height:1.4; }
       #aud-tabela{ width:100%; border-collapse:collapse; font-size:.86rem; }
       #aud-tabela th{ text-align:left; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase;
-        color:#8a8f88; padding:.5rem .6rem; border-bottom:1px solid var(--line); }
+        color:var(--ink-fraco); padding:.5rem .6rem; border-bottom:1px solid var(--line); }
       #aud-tabela td{ padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
       #aud-tabela .a-accao{ font-weight:600; color:var(--gold); }
-      #aud-tabela .a-quando{ white-space:nowrap; color:#8a8f88; }
+      #aud-tabela .a-quando{ white-space:nowrap; color:var(--ink-fraco); }
       /* Cada linha abre: é preciso que se veja que se pode carregar nela. */
       #aud-tabela .a-linha{ cursor:pointer; }
       #aud-tabela .a-linha:hover td{ background:var(--cream); }
@@ -980,11 +980,11 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       #aud-tabela .a-detalhe dl{ display:grid; grid-template-columns:auto 1fr;
         gap:.3rem .9rem; margin:0; max-width:64rem; }
       #aud-tabela .a-detalhe dt{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
-        color:#8a8f88; white-space:nowrap; }
+        color:var(--ink-fraco); white-space:nowrap; }
       #aud-tabela .a-detalhe dd{ margin:0; font-size:.86rem; color:var(--text); overflow-wrap:anywhere; }
       #aud-tabela .a-detalhe code{ font-family:var(--mono,ui-monospace,Menlo,Consolas,monospace);
         font-size:.78rem; background:var(--card); border:1px solid var(--line);
-        border-radius:5px; padding:.05rem .35rem; color:#7a8078; }
+        border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
     </style>
     <div id="vista-definicoes" style="display:none">
     <div class="painel">
@@ -1007,7 +1007,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <label class="tema-op<?= $on ? ' on' : '' ?>">
           <input type="radio" name="tema" value="<?= $chave ?>" <?= $on ? 'checked' : '' ?> onchange="marcarTema(this)">
           <span class="tema-amostra"><i style="background:<?= $c1 ?>"></i><i style="background:<?= $c2 ?>"></i><i style="background:<?= $c3 ?>"></i></span>
-          <span class="tema-nome"><?= escP($rot) ?><?= $chave === 'niras' ? ' <small style="color:#8a8f88">· padrão</small>' : '' ?></span>
+          <span class="tema-nome"><?= escP($rot) ?><?= $chave === 'niras' ? ' <small style="color:var(--ink-fraco)">· padrão</small>' : '' ?></span>
           <span class="tema-desc"><?= escP($desc) ?></span>
         </label>
         <?php endforeach; ?>
@@ -1057,7 +1057,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div class="campo"><label for="at-nome">Nome <span class="req">*</span></label>
           <input type="text" id="at-nome" maxlength="80" placeholder="Ex: Atendimento">
           <div class="err"></div></div>
-        <div><label for="at-cargo">Função <small style="color:#8a8f88">· opcional</small></label>
+        <div><label for="at-cargo">Função <small style="color:var(--ink-fraco)">· opcional</small></label>
           <input type="text" id="at-cargo" maxlength="80" placeholder="Ex: Gestão de Convidados"></div>
       </div>
 
@@ -1082,7 +1082,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <input type="text" id="at-horario" maxlength="120" placeholder="Segunda a sexta, das 9h às 17h"></div>
       </div>
 
-      <h4 class="ed-sec" style="margin-top:1.4rem">Chat ao vivo <small style="color:#8a8f88">· encaixe pronto</small></h4>
+      <h4 class="ed-sec" style="margin-top:1.4rem">Chat ao vivo <small style="color:var(--ink-fraco)">· encaixe pronto</small></h4>
       <div class="dica">A caixa responde ao que se repete, e isso resolve a maioria — mas não fala
         com ninguém em tempo real. Quando quiserem uma ferramenta dessas (Tawk, Crisp, Chatwoot, o
         que for), é aqui que ela entra. Enquanto estiver em <b>nenhum</b>, as páginas públicas não
@@ -1207,7 +1207,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       </div>
       <div class="lf" style="grid-template-columns:1fr 1fr">
         <div><label for="ed-whatsapp">WhatsApp</label><input type="text" id="ed-whatsapp" inputmode="numeric"></div>
-        <div><label for="ed-orcamento">Orçamento total <small style="color:#8a8f88">· opcional</small></label>
+        <div><label for="ed-orcamento">Orçamento total <small style="color:var(--ink-fraco)">· opcional</small></label>
           <input type="text" id="ed-orcamento" class="campo-moeda" inputmode="decimal" placeholder="ex.: 2 500 000,00"></div>
       </div>
       <div class="lf" style="grid-template-columns:1fr">
@@ -1215,7 +1215,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
           <input type="url" id="ed-maps" data-mapa data-mapa-local="ed-local" placeholder="https://maps.app.goo.gl/…"></div>
       </div>
       <div class="lf" style="grid-template-columns:2fr 1fr">
-        <div><label for="ed-venue">Título do local <small style="color:#8a8f88">· ex.: «Copo d’água»</small></label>
+        <div><label for="ed-venue">Título do local <small style="color:var(--ink-fraco)">· ex.: «Copo d’água»</small></label>
           <input type="text" id="ed-venue"></div>
         <div></div>
       </div>
@@ -1249,7 +1249,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
             <select id="ed-np-papel"><option value="porteiro">Porteiro</option><option value="noivos">Noivos</option></select></div>
           <div class="campo"><label for="ed-np-email">Email</label>
             <input type="email" id="ed-np-email" autocomplete="off" autocapitalize="none" spellcheck="false"><div class="err"></div></div>
-          <div class="campo"><label for="ed-np-senha">Palavra-passe <small style="color:#8a8f88">· em branco = gerada</small></label>
+          <div class="campo"><label for="ed-np-senha">Palavra-passe <small style="color:var(--ink-fraco)">· em branco = gerada</small></label>
             <div class="pw-wrap"><input type="password" id="ed-np-senha" autocomplete="new-password" spellcheck="false">
               <button type="button" class="pw-olho" id="olho-np" onclick="verSenha('ed-np-senha','olho-np')">mostrar</button></div>
             <div class="err"></div></div>
@@ -2351,7 +2351,7 @@ function pintarAuditoria(){
     const cas = +r.casamento_id === 0 ? '<i>Plataforma</i>'
               : (r.casamento ? esc(r.casamento) : ('#' + r.casamento_id));
     const quem = esc(r.utilizador || '—')
-      + (r.papel ? ' <small style="color:#8a8f88">(' + esc(r.papel) + ')</small>' : '');
+      + (r.papel ? ' <small style="color:var(--ink-fraco)">(' + esc(r.papel) + ')</small>' : '');
     const resumo = [r.alvo, r.detalhe].filter(Boolean).map(esc).join(' · ');
     const campo = (rot, val) => val ? `<dt>${rot}</dt><dd>${val}</dd>` : '';
     return `<tr class="a-linha" onclick="audAbrir(${i})" tabindex="0"
@@ -2365,7 +2365,7 @@ function pintarAuditoria(){
       </tr>
       <tr class="a-detalhe" id="aud-det-${i}" hidden><td colspan="6"><dl>
         ${campo('Quem', `<b>${esc(r.utilizador || '—')}</b>`
-                        + (r.papel ? ` <span style="color:#8a8f88">(${esc(r.papel)})</span>` : ''))}
+                        + (r.papel ? ` <span style="color:var(--ink-fraco)">(${esc(r.papel)})</span>` : ''))}
         ${campo('O que fez', esc(r.frase || r.accao) + ` <code>${esc(r.accao)}</code>`)}
         ${campo('Casamento', cas)}
         ${campo('Sobre', esc(r.alvo))}
@@ -2711,7 +2711,7 @@ async function carregarDadosCasamentos(){
   alvo.dataset.pronto = '1';
   alvo.innerHTML = (d.casamentos || []).map(c =>
     `<label><input type="checkbox" value="${c.id}"> ${esc(c.nome)}
-       <small style="color:#8a8f88">${esc(c.estado)}</small></label>`).join('')
+       <small style="color:var(--ink-fraco)">${esc(c.estado)}</small></label>`).join('')
     || '<div class="dica">Nenhum casamento.</div>';
 }
 function dadosCasToggle(){
@@ -3011,7 +3011,7 @@ function modulosMeta(c){
 /** O que resta da licença, para a linha do casamento. */
 function licencaMeta(c){
   const m = +c.licenca_meses || 0;
-  if (!m) return '<span style="color:#b0b5af">licença sem limite</span>';
+  if (!m) return '<span style="color:var(--ink-fraco)">licença sem limite</span>';
   if (!c.licenca_ate) return '<span class="falta">licença por iniciar</span>';
   const dias = c.licenca_dias == null ? null : +c.licenca_dias;
   if (dias == null) return '';
@@ -3277,7 +3277,7 @@ async function tirarContaLigada(uid, nome){
 
 /** A data do casamento, e quanto falta — que é o que se quer saber primeiro. */
 function dataCasamento(iso){
-  if (!iso || iso === '0000-00-00') return '<span style="color:#b0b5af">sem data</span>';
+  if (!iso || iso === '0000-00-00') return '<span style="color:var(--ink-fraco)">sem data</span>';
   const d = new Date(iso + 'T12:00:00');
   if (isNaN(d)) return '';
   const hoje = new Date(); hoje.setHours(12,0,0,0);
@@ -3287,7 +3287,7 @@ function dataCasamento(iso){
   if (dias > 1)       falta = `<span class="conta">faltam ${dias} dias</span>`;
   else if (dias === 1) falta = '<span class="conta">é amanhã</span>';
   else if (dias === 0) falta = '<span class="conta">é hoje</span>';
-  else                falta = `<span style="color:#b0b5af">há ${Math.abs(dias)} dias</span>`;
+  else                falta = `<span style="color:var(--ink-fraco)">há ${Math.abs(dias)} dias</span>`;
   return `<span class="quando">${esc(data)}</span> ${falta}`;
 }
 

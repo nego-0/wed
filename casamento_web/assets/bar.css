@@ -179,7 +179,7 @@ body.b-servico [tabindex]:focus-visible{
           padding:.7rem 1rem; margin:0 0 1rem; border-radius:var(--radius);
           background:var(--card); border:1px solid var(--line); }
 .b-barra .n{ font-family:var(--serif); font-size:1.5rem; font-weight:700; line-height:1;
-             color:var(--gold-soft); font-variant-numeric:tabular-nums; }
+             color:var(--gold-texto); font-variant-numeric:tabular-nums; }
 .b-barra .l{ font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-fraco); }
 .b-barra .cresce{ flex:1 1 auto; }
 .b-sinal{ display:inline-flex; align-items:center; gap:.4rem; font-size:.85rem; }
@@ -190,7 +190,7 @@ body.b-servico [tabindex]:focus-visible{
 .b-fila{ display:grid; gap:.7rem; }
 .b-ped{ display:grid; gap:.55rem; }
 .b-ped-topo{ display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap; }
-.b-ped .cod{ font-family:var(--serif); font-size:1.2rem; font-weight:700; color:var(--gold-soft);
+.b-ped .cod{ font-family:var(--serif); font-size:1.2rem; font-weight:700; color:var(--gold-texto);
              font-variant-numeric:tabular-nums; }
 .b-ped .quem{ font-size:1.05rem; }
 .b-ped .onde{ font-size:.82rem; color:var(--ink-fraco); }
@@ -202,7 +202,7 @@ body.b-servico [tabindex]:focus-visible{
 .b-linha{ display:flex; align-items:center; gap:.45rem; background:rgba(0,0,0,.22);
           border-radius:9px; padding:.25rem .55rem .25rem .25rem; font-size:.9rem; }
 .b-linha .b-foto{ width:38px; aspect-ratio:1; border-radius:7px; flex:none; }
-.b-linha b{ font-variant-numeric:tabular-nums; color:var(--gold-soft); }
+.b-linha b{ font-variant-numeric:tabular-nums; color:var(--gold-texto); }
 .b-acoes{ display:flex; gap:.7rem; flex-wrap:wrap; }
 .b-acoes .btn{ flex:1 1 140px; justify-content:center; min-height:56px; }
 .b-bandeira{ display:inline-flex; align-items:center; gap:.3rem; font-size:.72rem;
@@ -236,7 +236,7 @@ body.b-servico [tabindex]:focus-visible{
    Aqui a mesa é o título, com o seu sinal ao lado; o código e o nome de quem
    bebe descem para a segunda linha, que é onde se confirma à chegada. */
 .b-destino{ display:flex; align-items:center; gap:.6rem; }
-.b-destino .ico{ width:20px; height:20px; color:var(--gold-soft); flex:none; }
+.b-destino .ico{ width:20px; height:20px; color:var(--gold-texto); flex:none; }
 .b-destino .mesa{ font-family:var(--serif); font-size:1.35rem; line-height:1.15;
                   color:var(--ink); min-width:0; overflow:hidden;
                   text-overflow:ellipsis; white-space:nowrap; }
@@ -250,7 +250,7 @@ body.b-servico [tabindex]:focus-visible{
 /* A segunda linha: quem bebe, e o código para confirmar à mesa. */
 .b-quem2{ font-size:.85rem; color:var(--ink-fraco); display:flex; align-items:baseline;
           gap:.5rem; flex-wrap:wrap; }
-.b-quem2 .cod{ font-family:var(--serif); font-weight:700; color:var(--gold-soft);
+.b-quem2 .cod{ font-family:var(--serif); font-weight:700; color:var(--gold-texto);
                font-variant-numeric:tabular-nums; letter-spacing:.03em; }
 .b-quem2 .nm{ color:var(--ink); }
 
@@ -262,7 +262,7 @@ body.b-servico [tabindex]:focus-visible{
 .b-tempos{ display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:1.6rem;
            padding-top:1rem; border-top:1px solid var(--line); }
 .b-tempos div{ min-width:88px; }
-.b-tempos .n{ font-family:var(--serif); font-size:1.3rem; color:var(--gold-soft);
+.b-tempos .n{ font-family:var(--serif); font-size:1.3rem; color:var(--gold-texto);
               font-variant-numeric:tabular-nums; line-height:1.1; }
 .b-tempos .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em;
               color:var(--ink-fraco); }
@@ -634,7 +634,7 @@ body.com-rodape .tema-fab{
            border:1px solid var(--line); border-radius:50px; padding:.42rem .85rem;
            font:inherit; font-size:.83rem; color:var(--text); cursor:pointer;
            min-height:40px; white-space:nowrap; transition:.15s; }
-.b-pilula:hover{ border-color:var(--gold-soft); }
+.b-pilula:hover{ border-color:var(--gold-texto); }
 .b-pilula .ico{ width:15px; height:15px; }
 .b-pilula .pt{ width:9px; height:9px; border-radius:3px; flex:none;
                background:var(--pt, var(--gold-soft)); }
@@ -897,7 +897,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
            border-left:4px solid var(--line); }
 .b-alerta.critico{ border-left-color:var(--danger); }
 .b-alerta.atencao{ border-left-color:var(--warn); }
-.b-alerta.aviso{ border-left-color:var(--gold-soft); }
+.b-alerta.aviso{ border-left-color:var(--gold-texto); }
 /* Os já respondidos ficam esbatidos, mas continuam legíveis: são o histórico
    da noite, e é a eles que se volta no dia seguinte a perguntar porquê. */
 .b-alerta.feito{ opacity:.62; }
@@ -1046,7 +1046,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
            background:var(--cream); border:1px dashed var(--line);
            border-radius:var(--radius); padding:.85rem 1rem; margin-bottom:.7rem;
            color:var(--ink); font:inherit; cursor:pointer; transition:.15s; min-height:64px; }
-.b-lancar:hover{ background:var(--sand); border-color:var(--gold-soft);
+.b-lancar:hover{ background:var(--sand); border-color:var(--gold-texto);
                  border-style:solid; }
 .b-lancar:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
 .b-lancar .sinal{ width:38px; height:38px; border-radius:11px; flex:none; display:flex;
@@ -1067,7 +1067,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
           border-left:2px solid var(--gold-soft); border-radius:0 9px 9px 0;
           padding:.55rem .7rem; }
 .b-notas .tit{ display:flex; align-items:center; gap:.35rem; font-size:.7rem;
-               text-transform:uppercase; letter-spacing:.07em; color:var(--gold-soft); }
+               text-transform:uppercase; letter-spacing:.07em; color:var(--gold-texto); }
 .b-notas .tit .ico{ width:13px; height:13px; }
 .b-notas .n{ font-size:.85rem; line-height:1.45; color:var(--ink); }
 .b-notas .n em{ display:block; font-style:normal; font-size:.72rem; color:var(--ink-fraco);
@@ -1098,7 +1098,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-graf-l .tr i{ display:block; height:100%; border-radius:50px;
                  background:var(--tinta, var(--gold-soft));
                  transition:width .45s cubic-bezier(.22,.61,.36,1); }
-.b-graf-l .v{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-soft);
+.b-graf-l .v{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-texto);
               font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
 /* Uma barra que se pode tocar leva à ficha da pessoa: o gráfico aponta, e a
    ficha é onde se faz alguma coisa a respeito. Sem isto era um desenho mudo. */

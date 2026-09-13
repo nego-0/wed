@@ -77,9 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .brasao{ width:70px; height:70px; margin:0 auto 1rem; border:2px solid var(--gold-soft); border-radius:50%;
     display:flex; align-items:center; justify-content:center; color:var(--gold); font-family:var(--serif); font-weight:700; font-size:1.3rem; }
   .casa{ font-family:var(--serif); font-size:1.75rem; color:var(--ink); line-height:1.15; margin-bottom:.3rem; }
-  .evento{ font-family:var(--sans); font-size:.86rem; color:#8a8f88; margin-bottom:1.6rem; }
+  .evento{ font-family:var(--sans); font-size:.86rem; color:var(--ink-fraco); margin-bottom:1.6rem; }
   .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:.85rem; margin-bottom:1rem; }
-  .dica{ font-size:.78rem; color:#9aa09a; margin-top:1.1rem; }
+  .dica{ font-size:.78rem; color:var(--ink-fraco); margin-top:1.1rem; }
   /* Verificações por campo, como nos outros formulários da casa. */
   .campo{ text-align:left; margin-bottom:1rem; }
   .campo input{ transition:border-color .15s, box-shadow .15s; }
@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:#9aa09a; font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
 </style>
 </head>

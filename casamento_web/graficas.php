@@ -111,7 +111,7 @@ $manual = [
   .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .prod{ width:100%; border-collapse:collapse; min-width:520px; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
   .prod th{ background:var(--cream); font-size:.74rem; text-transform:uppercase; letter-spacing:.06em;
-            color:#7a8078; text-align:left; padding:.6rem .8rem; font-weight:600; }
+            color:var(--ink-fraco); text-align:left; padding:.6rem .8rem; font-weight:600; }
   .prod td{ border-top:1px solid var(--line); padding:.7rem .8rem; vertical-align:middle; font-size:.9rem; }
   .prod tr:hover td{ background:#fcfbf7; }
   .prod .n{ color:var(--gold-soft); font-family:var(--serif); font-weight:700; width:2.2rem; }
@@ -138,20 +138,20 @@ $manual = [
   .mod-palco .escala{ width:720px; height:1080px; transform:scale(var(--me,.6)); }
   .mod-vazio{ color:var(--gold-pale); font-family:var(--serif); }
 
-  .por-definir{ color:#8a8f88; font-style:italic; }
+  .por-definir{ color:var(--ink-fraco); font-style:italic; }
 
   /* ---- Manuais ---- */
   .manuais{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
   .man{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem; }
   .man .ico{ font-size:1.6rem; color:var(--gold); }
   .man h3{ margin:.4rem 0 .2rem; }
-  .man p{ font-size:.86rem; color:#7a8078; margin:0 0 .9rem; }
+  .man p{ font-size:.86rem; color:var(--ink-fraco); margin:0 0 .9rem; }
   .man .acoes{ display:flex; gap:.5rem; flex-wrap:wrap; }
   .man.orig{ background:#fbfaf6; }
-  .man.orig h3{ font-size:1rem; margin:0 0 .6rem; color:#7a8078; }
+  .man.orig h3{ font-size:1rem; margin:0 0 .6rem; color:var(--ink-fraco); }
   .nota-man{ background:var(--gold-pale); border:1px solid var(--gold-soft); border-radius:12px;
              padding:.8rem 1rem; font-size:.88rem; margin-bottom:1.2rem; }
-  .nota-orig{ font-size:.84rem; color:#7a8078; margin:0 0 .9rem; }
+  .nota-orig{ font-size:.84rem; color:var(--ink-fraco); margin:0 0 .9rem; }
 
   @media print{
     @page{ margin:12mm; }
@@ -169,6 +169,7 @@ $manual = [
 <body>
 <?php cabecalho('Convite impresso', 'O que a gráfica recebe do convite físico: lista de produção e manual', 'grafica', ['no_print'=>true]); ?>
 
+<main id="conteudo">
 <div class="container">
   <?php barraEndereco('os QR da lista de produção'); ?>
 
@@ -333,5 +334,6 @@ window.addEventListener('resize', ()=>{
   if($('ov-modelo').classList.contains('aberto')) $('ov-modelo').style.setProperty('--me', escalaModelo());
 });
 </script>
+</main>
 </body>
 </html>
