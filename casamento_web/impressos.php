@@ -30,15 +30,15 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1rem; }
   .cartao{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem; text-align:center; position:relative; }
   .cartao.impresso{ border-color:var(--ok); box-shadow:0 6px 18px rgba(47,125,79,.14); }
-  .cartao .num{ position:absolute; top:.7rem; left:.9rem; font-family:var(--serif); font-weight:700; color:var(--gold-soft); font-size:1.1rem; }
+  .cartao .num{ position:absolute; top:.7rem; left:.9rem; font-family:var(--serif); font-weight:700; color:var(--gold-soft); font-size:var(--t-sub); }
   .cartao .selo-i{ width:44px;height:44px;margin:0 auto .5rem;border:2px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:var(--serif);font-weight:700; }
-  .cartao .nm{ font-family:var(--serif); font-size:1.3rem; font-weight:600; color:var(--ink); line-height:1.15; }
-  .cartao .mm{ font-size:.8rem; color:var(--ink-fraco); margin:.35rem 0 .6rem; }
+  .cartao .nm{ font-family:var(--serif); font-size:var(--t-titulo); font-weight:600; color:var(--ink); line-height:1.15; }
+  .cartao .mm{ font-size:var(--t-apoio); color:var(--ink-fraco); margin:.35rem 0 .6rem; }
   .cartao canvas{ background:#fff; }
   .cartao .cod{ font-family:var(--serif); letter-spacing:3px; color:var(--ink); margin-top:.3rem; }
-  .cartao .mesa{ font-size:.82rem; color:var(--forest); margin-top:.3rem; }
-  .cartao .marca{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.7rem; font-size:.82rem; color:var(--ink-fraco); cursor:pointer; }
-  .cartao .marca .cx{ width:20px;height:20px;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#fff; }
+  .cartao .mesa{ font-size:var(--t-apoio); color:var(--forest); margin-top:.3rem; }
+  .cartao .marca{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.7rem; font-size:var(--t-apoio); color:var(--ink-fraco); cursor:pointer; }
+  .cartao .marca .cx{ width:20px;height:20px;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:var(--t-apoio);color:#fff; }
   .cartao.impresso .marca{ color:var(--ok); } .cartao.impresso .marca .cx{ background:var(--ok); border-color:var(--ok); }
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
   .barra .cresce{ flex:1 1 200px; }

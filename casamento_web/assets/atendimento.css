@@ -13,7 +13,7 @@
 /* ---------- o botão ---------- */
 .at-botao{ display:inline-flex; align-items:center; gap:.45rem;
   background:var(--forest); color:#fff; border:0; border-radius:50px;
-  padding:.6rem .95rem .6rem .75rem; font-family:var(--sans); font-size:.9rem; font-weight:600;
+  padding:.6rem .95rem .6rem .75rem; font-family:var(--sans); font-size:var(--t-denso); font-weight:600;
   cursor:pointer; box-shadow:0 6px 18px rgba(22,38,30,.28); transition:transform .14s, box-shadow .14s; }
 .at-botao:hover{ transform:translateY(-2px); box-shadow:0 10px 24px rgba(22,38,30,.34); }
 .at-botao:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
@@ -30,9 +30,9 @@
 .at-cab{ display:flex; align-items:center; gap:.6rem; padding:.75rem .8rem;
   background:var(--forest); color:#fff; }
 .at-quem{ display:flex; flex-direction:column; line-height:1.2; flex:1; min-width:0; }
-.at-quem b{ font-family:var(--serif); font-size:1rem; font-weight:600; }
-.at-quem span{ font-size:.76rem; opacity:.82; }
-.at-x{ background:none; border:0; color:#fff; font-size:1.5rem; line-height:1;
+.at-quem b{ font-family:var(--serif); font-size:var(--t-corpo); font-weight:600; }
+.at-quem span{ font-size:var(--t-apoio); opacity:.82; }
+.at-x{ background:none; border:0; color:#fff; font-size:var(--t-seccao); line-height:1;
   cursor:pointer; padding:0 .2rem; opacity:.85; }
 .at-x:hover{ opacity:1; }
 
@@ -42,15 +42,15 @@
   color:var(--forest-deep); font-family:var(--serif); font-weight:700; }
 .at-av img{ width:100%; height:100%; object-fit:cover; display:block; }
 .at-av-letra{ border:1px solid var(--gold-soft); }
-.at-av-g{ width:38px; height:38px; font-size:1rem; }
-.at-av-p{ width:26px; height:26px; font-size:.8rem; align-self:flex-end; }
+.at-av-g{ width:38px; height:38px; font-size:var(--t-corpo); }
+.at-av-p{ width:26px; height:26px; font-size:var(--t-apoio); align-self:flex-end; }
 
 .at-corpo{ padding:.85rem .8rem 1rem; max-height:min(60vh, 430px); overflow-y:auto; }
 
 /* ---------- o fio ---------- */
 .at-fio{ display:flex; flex-direction:column; gap:.5rem; }
 .at-resp{ display:flex; gap:.4rem; align-items:flex-end; }
-.at-b{ border-radius:14px; padding:.55rem .75rem; font-size:.86rem; line-height:1.5; max-width:88%; }
+.at-b{ border-radius:14px; padding:.55rem .75rem; font-size:var(--t-denso); line-height:1.5; max-width:88%; }
 .at-b-dela{ background:var(--cream); color:var(--ink); border:1px solid var(--line);
   border-bottom-left-radius:5px; }
 .at-b-minha{ background:var(--forest); color:#fff; align-self:flex-end;
@@ -71,10 +71,10 @@
 /* ---------- as perguntas sugeridas ---------- */
 .at-sug{ margin-top:.9rem; display:flex; flex-direction:column; gap:.35rem; }
 .at-vivo + .at-sug{ margin-top:0; }
-.at-sug-tit, .at-ct-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.6px;
+.at-sug-tit, .at-ct-tit{ font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.6px;
   color:var(--ink-fraco); font-weight:700; }
 .at-q{ text-align:left; background:none; border:1px solid var(--gold-soft); border-radius:12px;
-  padding:.5rem .7rem; font-family:var(--sans); font-size:.84rem; line-height:1.35;
+  padding:.5rem .7rem; font-family:var(--sans); font-size:var(--t-apoio); line-height:1.35;
   color:var(--ink); cursor:pointer; transition:background .12s, border-color .12s; }
 .at-q:hover{ background:var(--gold-pale); border-color:var(--gold); }
 .at-q:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
@@ -87,25 +87,25 @@
    porque é outra coisa: ali fala-se com alguém. */
 .at-vivo{ margin:.9rem 0 1rem; padding-bottom:.9rem; border-bottom:1px solid var(--line); }
 .at-vivo-bt{ width:100%; background:var(--gold); color:var(--forest-deep); border:0;
-  border-radius:12px; padding:.6rem .8rem; font-family:var(--sans); font-size:.88rem;
+  border-radius:12px; padding:.6rem .8rem; font-family:var(--sans); font-size:var(--t-denso);
   font-weight:700; cursor:pointer; transition:filter .12s; }
 .at-vivo-bt:hover{ filter:brightness(1.06); }
 .at-vivo-bt:focus-visible{ outline:2px solid var(--forest); outline-offset:2px; }
-.at-vivo-estado{ font-size:.78rem; color:var(--ink-fraco); margin-top:.3rem; text-align:center; }
+.at-vivo-estado{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.3rem; text-align:center; }
 .at-vivo-estado:empty{ display:none; }
 
 /* ---------- contactos ---------- */
 .at-contactos{ margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--line);
   display:flex; flex-direction:column; gap:.3rem; }
-.at-ct{ display:inline-flex; align-items:center; gap:.45rem; font-size:.84rem;
+.at-ct{ display:inline-flex; align-items:center; gap:.45rem; font-size:var(--t-apoio);
   color:var(--forest); text-decoration:none; }
 .at-ct:hover{ text-decoration:underline; }
 /* Os sinais são desenhados (assets/icones.js): eram ☎ ✆ ✉, caracteres que
    metade dos aparelhos não tem — e onde faltam sai o quadrado vazio, mesmo ao
    lado do número para o qual se quer ligar. */
 .at-ct-ic{ width:18px; opacity:.7; display:inline-flex; align-items:center;
-           justify-content:center; line-height:0; font-size:1rem; }
-.at-horario{ font-size:.76rem; color:var(--ink-fraco); margin-top:.15rem; }
+           justify-content:center; line-height:0; font-size:var(--t-corpo); }
+.at-horario{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.15rem; }
 
 @media (max-width:520px){
   .at-cx{ right:12px; left:12px; bottom:70px; align-items:stretch; }

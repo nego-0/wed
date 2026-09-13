@@ -53,10 +53,10 @@ function barraEndereco(string $porque = 'os links e os QR desta página'): void 
     <style>
       .end-barra{ display:flex; gap:.8rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;
                   background:#fff; border:1px solid var(--line); border-left:4px solid var(--gold-soft);
-                  border-radius:10px; padding:.65rem .9rem; font-size:.85rem; color:var(--ink-fraco); }
+                  border-radius:10px; padding:.65rem .9rem; font-size:var(--t-denso); color:var(--ink-fraco); }
       .end-barra.aviso{ border-color:var(--warn); border-left-color:var(--warn); background:var(--warn-bg); color:var(--ink); }
       .end-barra .txt{ flex:1 1 320px; line-height:1.5; }
-      .end-barra code{ font-family:ui-monospace,monospace; font-size:.82em; background:rgba(0,0,0,.05);
+      .end-barra code{ font-family:ui-monospace,monospace; font-size:var(--t-apoio); background:rgba(0,0,0,.05);
                        padding:.05rem .3rem; border-radius:4px; word-break:break-all; }
       .end-barra .ac{ display:flex; gap:.4rem; align-items:center; }
       .end-barra .end-campo{ width:min(280px,52vw); margin:0; }

@@ -99,14 +99,14 @@ if ($modQuero) {
   .lic-estado.morta{ border-color:var(--danger); background:var(--danger-bg); }
   .lic-estado-ico{ width:48px; height:48px; flex:none; border-radius:14px;
     background:rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center;
-    font-size:1.7rem; }
+    font-size:var(--t-display); }
   .lic-estado-txt{ flex:1; min-width:230px; }
-  .lic-estado h2{ font-family:var(--serif); font-size:1.25rem; color:var(--ink); margin:0 0 .3rem; }
-  .lic-estado p{ margin:0; font-size:.88rem; line-height:1.6; color:var(--text); }
+  .lic-estado h2{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); margin:0 0 .3rem; }
+  .lic-estado p{ margin:0; font-size:var(--t-denso); line-height:1.6; color:var(--text); }
   .lic-estado .ac{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
 
   .lic-sec{ margin-bottom:2.4rem; }
-  .lic-sec > h2{ font-family:var(--serif); font-size:1.35rem; color:var(--ink);
+  .lic-sec > h2{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink);
     margin:0 0 .3rem; }
   .lic-sec > .dica{ margin-bottom:1.1rem; }
 
@@ -115,12 +115,12 @@ if ($modQuero) {
     border-radius:var(--radius); overflow:hidden; }
   .lic-pedido-cab{ padding:1.1rem 1.3rem; background:var(--cream); border-bottom:1px solid var(--line);
     display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-  .lic-pedido-cab .nm{ font-family:var(--serif); font-size:1.2rem; color:var(--ink); flex:1; }
-  .lic-pedido-cab .vl{ font-family:var(--serif); font-size:1.5rem; color:var(--ink);
+  .lic-pedido-cab .nm{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); flex:1; }
+  .lic-pedido-cab .vl{ font-family:var(--serif); font-size:var(--t-seccao); color:var(--ink);
     font-variant-numeric:tabular-nums; }
   .lic-itens{ list-style:none; margin:0; padding:.5rem 0; }
   .lic-itens li{ display:flex; gap:.8rem; align-items:baseline; padding:.6rem 1.3rem;
-    font-size:.88rem; border-bottom:1px solid var(--line); }
+    font-size:var(--t-denso); border-bottom:1px solid var(--line); }
   .lic-itens li:last-child{ border-bottom:none; }
   .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:9.5rem; }
   .lic-itens .med{ flex:1; color:var(--ink-fraco); }
@@ -130,14 +130,14 @@ if ($modQuero) {
   .lic-pedido-pe .dica{ flex:1; margin:0; min-width:180px; }
 
   .lic-nota{ background:var(--cream); border-left:3px solid var(--gold); border-radius:8px;
-    padding:.7rem .9rem; font-size:.85rem; line-height:1.55; margin-top:.9rem; }
+    padding:.7rem .9rem; font-size:var(--t-denso); line-height:1.55; margin-top:.9rem; }
   .lic-nota b{ color:var(--ink); }
 
   /* Campo de texto para a mensagem ao administrador. */
   .lic-msg{ margin-top:1.2rem; }
-  .lic-msg label{ display:block; font-size:.82rem; font-weight:600; color:var(--ink); margin-bottom:.35rem; }
+  .lic-msg label{ display:block; font-size:var(--t-apoio); font-weight:600; color:var(--ink); margin-bottom:.35rem; }
   .lic-msg textarea{ width:100%; min-height:74px; border:1.5px solid var(--line); border-radius:12px;
-    padding:.65rem .8rem; font-family:var(--sans); font-size:.88rem; color:var(--text);
+    padding:.65rem .8rem; font-family:var(--sans); font-size:var(--t-denso); color:var(--text);
     background:var(--card); resize:vertical; }
   .lic-msg textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
 
@@ -146,11 +146,11 @@ if ($modQuero) {
     border-radius:var(--radius); padding:1.2rem 1.3rem;
     grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); }
   .lic-f{ display:flex; flex-direction:column; gap:.15rem; }
-  .lic-f .r{ font-size:.7rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-fraco); }
-  .lic-f .v{ font-size:1rem; color:var(--ink); font-weight:600; }
-  .lic-f .v.grande{ font-family:var(--serif); font-size:1.4rem; font-weight:400;
+  .lic-f .r{ font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-fraco); }
+  .lic-f .v{ font-size:var(--t-corpo); color:var(--ink); font-weight:600; }
+  .lic-f .v.grande{ font-family:var(--serif); font-size:var(--t-titulo); font-weight:400;
     font-variant-numeric:tabular-nums; }
-  .lic-f .n{ font-size:.76rem; color:var(--ink-fraco); }
+  .lic-f .n{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .lic-f .v.aviso{ color:var(--warn); }
 
   /* O extracto dos pedidos já decididos. */
@@ -158,17 +158,17 @@ if ($modQuero) {
     border-bottom:1px solid var(--line); flex-wrap:wrap; }
   .lic-h:last-child{ border-bottom:none; }
   .lic-h-selo{ width:26px; height:26px; flex:none; border-radius:50%; display:flex;
-    align-items:center; justify-content:center; font-size:.8rem; font-weight:700; }
+    align-items:center; justify-content:center; font-size:var(--t-apoio); font-weight:700; }
   .lic-h-selo.ok{ background:var(--ok-bg); color:var(--ok); }
   .lic-h-selo.nao{ background:var(--danger-bg); color:var(--danger); }
   .lic-h-txt{ flex:1; min-width:180px; }
-  .lic-h-tit{ font-weight:600; color:var(--ink); font-size:.9rem; }
-  .lic-h-det{ font-size:.79rem; color:var(--ink-fraco); line-height:1.5; margin-top:.1rem; }
+  .lic-h-tit{ font-weight:600; color:var(--ink); font-size:var(--t-denso); }
+  .lic-h-det{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.5; margin-top:.1rem; }
   .lic-h-vl{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink);
     white-space:nowrap; text-align:right; }
   /* A nota que a administração escreveu. Aparece sempre que exista — também
      nas aprovações, onde antes se perdia. */
-  .lic-h-nota{ display:block; font-size:.79rem; line-height:1.5; color:var(--text);
+  .lic-h-nota{ display:block; font-size:var(--t-apoio); line-height:1.5; color:var(--text);
     margin-top:.35rem; background:var(--cream); border-left:3px solid var(--gold);
     border-radius:6px; padding:.4rem .6rem; }
   .lic-h-nota b{ color:var(--ink); }
@@ -177,15 +177,15 @@ if ($modQuero) {
     padding-right:.6rem; transition:background .12s; }
   .lic-h-clic:hover, .lic-h-clic:focus-visible{ background:var(--cream); outline:none; }
   .lic-h-clic:focus-visible{ box-shadow:0 0 0 2px var(--ring); }
-  .lic-h-ver{ display:block; font-size:.7rem; font-weight:600; color:var(--gold);
+  .lic-h-ver{ display:block; font-size:var(--t-etiqueta); font-weight:600; color:var(--gold);
     text-transform:uppercase; letter-spacing:.06em; margin-top:.15rem; }
 
   /* ---- o detalhe de uma decisão, na janela e no papel ---- */
-  .lic-det{ font-size:.88rem; color:var(--text); }
+  .lic-det{ font-size:var(--t-denso); color:var(--text); }
   .lic-det-cab{ display:flex; gap:1rem; align-items:flex-start;
     border-bottom:1px solid var(--line); padding-bottom:.9rem; margin-bottom:1rem; }
-  .lic-det-tit{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
-  .lic-det-sub{ font-size:.82rem; color:var(--ink-fraco); margin-top:.15rem; }
+  .lic-det-tit{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); }
+  .lic-det-sub{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.15rem; }
   .lic-det-selo{ width:34px; height:34px; flex:none; border-radius:50%; display:flex;
     align-items:center; justify-content:center; font-weight:700; }
   .lic-det-selo.ok{ background:var(--ok-bg); color:var(--ok); }
@@ -193,13 +193,13 @@ if ($modQuero) {
   .lic-d-tab{ display:grid; gap:.1rem; }
   .lic-d-l{ display:flex; gap:1rem; padding:.4rem 0; border-bottom:1px solid var(--line); }
   .lic-d-l:last-child{ border-bottom:none; }
-  .lic-d-l span{ flex:1; color:var(--ink-fraco); font-size:.82rem; }
+  .lic-d-l span{ flex:1; color:var(--ink-fraco); font-size:var(--t-apoio); }
   .lic-d-l b{ color:var(--ink); text-align:right; }
   .lic-d-mau{ color:var(--danger); }
-  .lic-d-sec{ font-size:.72rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  .lic-d-sec{ font-size:var(--t-etiqueta); font-weight:700; letter-spacing:.07em; text-transform:uppercase;
     color:var(--ink-fraco); margin:1.3rem 0 .5rem; }
-  .lic-d-mods{ width:100%; border-collapse:collapse; font-size:.84rem; }
-  .lic-d-mods th{ text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;
+  .lic-d-mods{ width:100%; border-collapse:collapse; font-size:var(--t-apoio); }
+  .lic-d-mods th{ text-align:left; font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.05em;
     color:var(--ink-fraco); font-weight:600; padding:.3rem .5rem; border-bottom:1px solid var(--line); }
   .lic-d-mods td{ padding:.45rem .5rem; border-bottom:1px solid var(--line); }
   .lic-d-mods .n{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -223,7 +223,7 @@ if ($modQuero) {
     body.a-imprimir-detalhe #lic-janela .pl-modal-rodape{ display:none !important; }
     body.a-imprimir-detalhe #lic-janela .pl-modal-corpo{ padding:0; overflow:visible; }
     .lic-d-rodape{ display:block !important; margin-top:1.6rem; padding-top:.6rem;
-      border-top:1px solid #ccc; font-size:.7rem; color:#666; }
+      border-top:1px solid #ccc; font-size:var(--t-apoio); color:#666; }
   }
 
   @media (max-width:640px){
@@ -439,7 +439,7 @@ function toast(msg, mau){
   if (!t){
     t = document.createElement('div'); t.id = 'lic-toast';
     t.style.cssText = 'position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);z-index:3000;'
-      + 'padding:.75rem 1.15rem;border-radius:50px;font-size:.88rem;font-weight:600;'
+      + 'padding:.75rem 1.15rem;border-radius:50px;font-size:var(--t-denso);font-weight:600;'
       + 'box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:90vw;text-align:center';
     document.body.appendChild(t);
   }

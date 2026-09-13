@@ -40,12 +40,25 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
      'abre nos casamentos, com o novo formulário guardado noutra pastilha');
 
   // O trabalho de todos os dias tem de estar acima da dobra.
+  //
+  // A medida é a DOBRA, e não um número fixo. Estava aqui um `< 700`, calibrado
+  // quando o texto era mais pequeno; ao subir o chão da tipografia para 13px
+  // (docs/auditoria-ui-ux.md §25) os cartões acima da lista cresceram ~20px e
+  // isto passou a acusar 719. A janela da prova tem 1000px de altura: a lista
+  // continuava à vista, e o que falhava era o proxy, não o produto.
+  // Agora exige-se o que a frase acima sempre quis dizer — a lista cabe no
+  // primeiro ecrã E sobra altura para se verem algumas linhas dela. Deixa de
+  // depender do tamanho da letra, e continua a apanhar quem engorde o cabeçalho.
   const alturas = await p.evaluate(() => ({
     lista: document.getElementById('lista-casamentos').getBoundingClientRect().top + scrollY,
-    pagina: document.body.scrollHeight
+    pagina: document.body.scrollHeight,
+    janela: window.innerHeight
   }));
-  console.log('   lista a', Math.round(alturas.lista), 'px · página', alturas.pagina, 'px');
-  ok(alturas.lista < 700, `a lista de casamentos aparece sem rolar muito (${Math.round(alturas.lista)}px)`);
+  const tecto = alturas.janela - 200;   // 200px é o que se vê de lista
+  console.log('   lista a', Math.round(alturas.lista), 'px · dobra aos',
+              alturas.janela, 'px · tecto', tecto, 'px · página', alturas.pagina, 'px');
+  ok(alturas.lista < tecto,
+     `a lista de casamentos aparece sem rolar (${Math.round(alturas.lista)}px, tecto ${tecto}px)`);
 
   // A pastilha "Novo casamento" revela o formulário; voltar a "Casamentos" esconde-o.
   await p.click('#vista-chips [data-vista="novo"]'); await p.waitForTimeout(250);

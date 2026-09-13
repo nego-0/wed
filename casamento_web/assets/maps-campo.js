@@ -33,9 +33,9 @@
     var s = document.createElement('style');
     s.id = 'maps-campo-css';
     s.textContent =
-      '.mapa-ferramentas{display:flex;flex-wrap:wrap;gap:.4rem .7rem;align-items:center;margin:.35rem 0 0;font-size:.82rem}' +
+      '.mapa-ferramentas{display:flex;flex-wrap:wrap;gap:.4rem .7rem;align-items:center;margin:.35rem 0 0;font-size:var(--t-apoio)}' +
       '.mapa-btn{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;border:1px solid var(--line,#d8dcd4);' +
-      'background:#fff;color:inherit;border-radius:8px;padding:.32rem .6rem;font:inherit;font-size:.82rem;line-height:1}' +
+      'background:#fff;color:inherit;border-radius:8px;padding:.32rem .6rem;font:inherit;font-size:var(--t-apoio);line-height:1}' +
       '.mapa-btn:hover{border-color:var(--gold,#a1854e)}' +
       '.mapa-btn svg{width:14px;height:14px;flex:none}' +
       '.mapa-coords{color:#6b7169;display:inline-flex;align-items:center;gap:.35rem}' +

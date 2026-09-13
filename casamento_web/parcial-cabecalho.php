@@ -363,7 +363,7 @@ function sairDoCasamento(ev){
 </script>
 <style>
   .tira-suporte{ background:var(--warn-bg); border-bottom:1px solid var(--warn); color:var(--ink);
-                 text-align:center; padding:.45rem .8rem; font-size:.82rem; }
+                 text-align:center; padding:.45rem .8rem; font-size:var(--t-apoio); }
   .tira-suporte a{ color:inherit; }
   @media print{ .tira-suporte{ display:none !important; } }
 </style>
@@ -390,7 +390,7 @@ function sairDoCasamento(ev){
 </div>
 <style>
   .tira-suporte{ background:var(--warn-bg); border-bottom:1px solid var(--warn); color:var(--ink);
-                 text-align:center; padding:.45rem .8rem; font-size:.82rem; }
+                 text-align:center; padding:.45rem .8rem; font-size:var(--t-apoio); }
   .tira-suporte a{ color:inherit; }
   @media print{ .tira-suporte{ display:none !important; } }
 </style>

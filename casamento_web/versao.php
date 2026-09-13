@@ -931,6 +931,18 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', '<a class="salta-conteudo" href="#conteudo">Saltar para o conteúdo</a>'],
         ['O conteúdo de cada página vive dentro de um <main> só',
          'index.php', '<main id="conteudo">'],
+
+        // ---- A escala tipográfica (docs/auditoria-ui-ux.md §18.2 e §25) ----
+        ['Há uma escala tipográfica, e são oito degraus',
+         'assets/estilo.css', '--t-etiqueta:.6875rem;'],
+        ['O chão do sistema são 13px — abaixo disso só etiquetas',
+         'assets/estilo.css', '--t-apoio:.8125rem;'],
+        ['O texto corrente deixou de ser leve',
+         'assets/estilo.css', 'color:var(--text); font-weight:400;'],
+        ['A nota dentro de um rótulo volta a ser uma frase',
+         'assets/estilo.css', 'label small, label .opt{'],
+        ['E os 44px do menu valem só onde há dedo',
+         'assets/estilo.css', '.topo .nav a{ min-height:44px; }'],
     ];
 }
 
@@ -969,21 +981,21 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
 <style>
   body{ padding:1.5rem; max-width:820px; margin:0 auto; }
   h1{ margin-bottom:.2rem; }
-  .assin{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:1.5rem; color:var(--gold);
+  .assin{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-seccao); color:var(--gold);
           background:var(--cream); border:1px solid var(--line); border-radius:10px;
           padding:.5rem .9rem; display:inline-block; margin:.4rem 0 1rem; }
-  table{ width:100%; border-collapse:collapse; font-size:.88rem; }
+  table{ width:100%; border-collapse:collapse; font-size:var(--t-denso); }
   th,td{ text-align:left; padding:.45rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
-  th{ font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
+  th{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
   .sim{ color:#1f7a3d; font-weight:600; }
   .nao{ color:var(--danger); font-weight:600; }
-  td.f{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.78rem; color:var(--ink-fraco); }
+  td.f{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-apoio); color:var(--ink-fraco); }
   .aviso{ border-radius:10px; padding:.8rem 1rem; margin:1rem 0; line-height:1.55; }
   .aviso.mau{ background:#fbeceb; border:1px solid #e6c3bf; }
   .aviso.bom{ background:#eaf4ee; border:1px solid #bcdcc8; }
   .copiar{ margin-top:1rem; }
   pre{ background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:.7rem;
-       font-size:.78rem; white-space:pre-wrap; }
+       font-size:var(--t-apoio); white-space:pre-wrap; }
 </style>
 </head>
 <body>

@@ -43,25 +43,25 @@ $CAS  = casalInfo($DEFS);
   @media (max-width:900px){ .b-duas{ grid-template-columns:1fr; } }
   /* O título de uma coluna: o sinal, a palavra, e a nota do lado. O ícone
      ancora a coluna quando o olho volta a ela pela vigésima vez. */
-  .b-tit{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-texto);
+  .b-tit{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--gold-texto);
           margin:0 0 .6rem; display:flex; align-items:center; gap:.5rem; }
   .b-tit .ico{ width:18px; height:18px; opacity:.8; }
-  .b-tit small{ font-size:.75rem; color:var(--ink-fraco); font-family:var(--sans);
+  .b-tit small{ font-size:var(--t-apoio); color:var(--ink-fraco); font-family:var(--sans);
                 margin-left:auto; font-variant-numeric:tabular-nums; }
 
   /* O cabeçalho é próprio, como o da porta: quem trabalha na copa não anda
      pelo menu do casal, e uma barra com «Convite impresso» aqui era ruído. */
   body.b-servico .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
                             max-width:1180px; margin:0 auto; padding:0 .15rem; }
-  body.b-servico .topo h1{ font-family:var(--serif); font-size:1.5rem; margin:0; color:var(--ink); }
-  body.b-servico .topo .sub{ font-size:.8rem; color:var(--ink-fraco); }
+  body.b-servico .topo h1{ font-family:var(--serif); font-size:var(--t-seccao); margin:0; color:var(--ink); }
+  body.b-servico .topo .sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
-  body.b-servico .topo .nav a{ color:var(--gold); font-size:.88rem; }
+  body.b-servico .topo .nav a{ color:var(--gold); font-size:var(--t-denso); }
 
   /* A nota de rodapé de uma coluna. Explica uma regra do módulo e lê-se uma
      vez na vida — por isso é pequena e discreta, e não uma frase em corpo de
      texto a competir com os números que estão por cima dela. */
-  .b-nota{ margin:.7rem 0 0; font-size:.78rem; line-height:1.55;
+  .b-nota{ margin:.7rem 0 0; font-size:var(--t-apoio); line-height:1.55;
            color:var(--ink-fraco); opacity:.85; }
 </style>
 </head>

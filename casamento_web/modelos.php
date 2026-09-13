@@ -43,8 +43,8 @@ if ($aberto > 0) {
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
-  .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
+  .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
+  .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
   .lf{ display:grid; grid-template-columns:2fr 3fr 1fr auto; gap:.7rem; align-items:end; }
   /* ---- A grelha dos modelos ----
      Esta página é sobre DESENHOS, e não mostrava desenho nenhum: escolher um
@@ -66,22 +66,22 @@ if ($aberto > 0) {
   .cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left; pointer-events:none; }
   .cara .selo{ position:absolute; right:.4rem; top:.4rem; z-index:2; width:26px; height:26px;
                border-radius:8px; background:rgba(255,255,255,.92); color:var(--forest);
-               display:flex; align-items:center; justify-content:center; font-size:.9rem;
+               display:flex; align-items:center; justify-content:center; font-size:var(--t-denso);
                border:1px solid var(--line); }
   .cara .lupa{ position:absolute; inset:0; z-index:3; display:flex; align-items:center;
                justify-content:center; background:rgba(22,38,30,.55); color:var(--ivory);
-               font-size:.82rem; opacity:0; transition:.15s; text-decoration:none; }
+               font-size:var(--t-apoio); opacity:0; transition:.15s; text-decoration:none; }
   .mod:hover .cara .lupa{ opacity:1; }
   .mod .corpo{ padding:.7rem .8rem; display:flex; flex-direction:column; gap:.3rem; flex:1; }
-  .mod .nm{ font-family:var(--serif); font-size:1.02rem; color:var(--ink); line-height:1.25; }
-  .mod .meta{ font-size:.76rem; color:var(--ink-fraco); display:flex; gap:.5rem; flex-wrap:wrap; }
-  .mod .desc{ font-size:.8rem; color:var(--ink-fraco); line-height:1.45; }
+  .mod .nm{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); line-height:1.25; }
+  .mod .meta{ font-size:var(--t-apoio); color:var(--ink-fraco); display:flex; gap:.5rem; flex-wrap:wrap; }
+  .mod .desc{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.45; }
   .mod .ac{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap;
             padding:.6rem .8rem; border-top:1px solid var(--line); margin-top:auto; }
-  .mod .ac .btn{ font-size:.78rem; padding:.3rem .6rem; }
+  .mod .ac .btn{ font-size:var(--t-apoio); padding:.3rem .6rem; }
   .vazio-mod{ border:1px dashed var(--line); border-radius:14px; padding:2rem 1.2rem;
-              text-align:center; color:var(--ink-fraco); font-size:.9rem; line-height:1.6; }
-  .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
+              text-align:center; color:var(--ink-fraco); font-size:var(--t-denso); line-height:1.6; }
+  .et{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.rascunho{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
@@ -91,14 +91,14 @@ if ($aberto > 0) {
   .restauro{ display:flex; gap:1rem; align-items:flex-start; justify-content:space-between;
              flex-wrap:wrap; background:var(--gold-pale); border:1px solid var(--gold-soft);
              border-radius:12px; padding:.9rem 1.1rem; margin:.2rem 0 1rem; }
-  .restauro-txt{ flex:1 1 320px; font-size:.9rem; color:#5b6460; }
+  .restauro-txt{ flex:1 1 320px; font-size:var(--t-denso); color:#5b6460; }
   .restauro-lista{ list-style:none; padding:0; margin:.5rem 0 0; display:grid; gap:.35rem; }
   .restauro-lista li{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
-  .restauro-amb{ font-size:.78rem; color:#8a938e; }
+  .restauro-amb{ font-size:var(--t-apoio); color:#8a938e; }
   /* Janela das opções de um modelo: as escolhas e a lista de casamentos.
      Vive no modal (ver #ov-modelo), que tem largura para uma lista se ler. */
   .modal-corpo .escolhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:.9rem; }
-  .modal-corpo .op{ display:flex; align-items:center; gap:.5rem; font-size:.92rem; color:var(--text);
+  .modal-corpo .op{ display:flex; align-items:center; gap:.5rem; font-size:var(--t-denso); color:var(--text);
                     text-transform:none; letter-spacing:0; cursor:pointer; font-weight:400; }
   .modal-corpo .op input{ width:auto; margin:0; accent-color:var(--forest); flex:none; }
   .modal-corpo .lista-cas{ max-height:min(46vh,300px); overflow:auto; border:1px solid var(--line);
@@ -106,7 +106,7 @@ if ($aberto > 0) {
   .modal-corpo .cas-item{ padding:.42rem .2rem; border-bottom:1px solid var(--line); }
   .modal-corpo .cas-item:last-child{ border-bottom:0; }
   .modal-corpo .cas-nome{ flex:1; min-width:0; }
-  .modal-corpo .cas-data{ color:var(--ink-fraco); font-size:.82rem; }
+  .modal-corpo .cas-data{ color:var(--ink-fraco); font-size:var(--t-apoio); }
   .jan-fim{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.2rem;
             border-top:1px solid var(--line); padding-top:1rem; }
   /* ---- Os dados de exemplo dos modelos ----
@@ -114,11 +114,11 @@ if ($aberto > 0) {
      campos. Vem por grupos, na ordem por que se lê um convite. */
   .ex-grupo{ border-top:1px solid var(--line); margin-top:1rem; padding-top:.9rem; }
   .ex-grupo:first-child{ border-top:0; margin-top:0; padding-top:0; }
-  .ex-grupo > h4{ margin:0 0 .1rem; font-size:.88rem; font-family:var(--sans);
+  .ex-grupo > h4{ margin:0 0 .1rem; font-size:var(--t-denso); font-family:var(--sans);
                   font-weight:600; color:var(--ink); }
-  .ex-grupo > .nota{ font-size:.8rem; color:var(--ink-fraco); margin-bottom:.7rem; line-height:1.5; }
+  .ex-grupo > .nota{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-bottom:.7rem; line-height:1.5; }
   .ex-campos{ display:grid; gap:.7rem; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
-  .ex-campos label{ display:block; margin-bottom:.3rem; font-size:.76rem; text-transform:uppercase;
+  .ex-campos label{ display:block; margin-bottom:.3rem; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
                     letter-spacing:.06em; color:var(--ink-fraco); }
   /* align-items:start — a capa é ao alto e as outras ao baixo; esticadas todas
      à altura da mais alta, ficavam três cartões com meio palmo de branco. */
@@ -131,16 +131,16 @@ if ($aberto > 0) {
                 background:#20211c; border:1px solid var(--line); }
   .ex.alto .moldura{ aspect-ratio:4/5; }
   .ex .moldura img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .ex .nm{ margin:.5rem 0 .1rem; font-size:.76rem; text-transform:uppercase;
+  .ex .nm{ margin:.5rem 0 .1rem; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
            letter-spacing:.06em; color:var(--ink-fraco); }
   /* A medida que a peca espera. Sem isto, cada envio era uma adivinha. */
-  .ex .med{ font-size:.7rem; color:#a8ada6; margin-bottom:.35rem; }
-  .ex input[type=file]{ font-size:.76rem; width:100%; }
+  .ex .med{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-bottom:.35rem; }
+  .ex input[type=file]{ font-size:var(--t-apoio); width:100%; }
   .ex .enq{ display:grid; grid-template-columns:repeat(3,1fr); gap:.3rem; margin-top:.45rem; }
-  .ex .enq input{ padding:.3rem .35rem; font-size:.78rem; text-align:center; }
-  .ex .enq span{ display:block; font-size:.66rem; text-transform:uppercase; letter-spacing:.05em;
-                 color:#a8ada6; text-align:center; margin-bottom:.15rem; }
-  .ex .btn-gal{ width:100%; font-size:.78rem; padding:.32rem .5rem; margin-bottom:.35rem; }
+  .ex .enq input{ padding:.3rem .35rem; font-size:var(--t-apoio); text-align:center; }
+  .ex .enq span{ display:block; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+                 color:var(--ink-fraco); text-align:center; margin-bottom:.15rem; }
+  .ex .btn-gal{ width:100%; font-size:var(--t-apoio); padding:.32rem .5rem; margin-bottom:.35rem; }
   /* A galeria da casa, dentro da janela: uma grelha de fotografias a escolher. */
   /* Ver uma imagem em grande, por cima de tudo. */
   #lightbox{ position:fixed; inset:0; z-index:1000; display:none; align-items:center;
@@ -159,32 +159,32 @@ if ($aberto > 0) {
                          cursor:pointer; font-family:var(--sans); text-align:left; }
   .modal-corpo .gal-i img{ display:block; width:100%; aspect-ratio:16/10; object-fit:cover; }
   .modal-corpo .gal-pe{ padding:.34rem .45rem; }
-  .modal-corpo .gal-nm{ display:block; font-size:.73rem; color:var(--ink-fraco);
+  .modal-corpo .gal-nm{ display:block; font-size:var(--t-apoio); color:var(--ink-fraco);
                         white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .modal-corpo .gal-pe select{ margin-top:.25rem; padding:.2rem .3rem; font-size:.74rem; }
-  .modal-corpo .gal-et{ display:block; margin-top:.15rem; font-style:normal; font-size:.68rem;
-                        color:#a8ada6; }
+  .modal-corpo .gal-pe select{ margin-top:.25rem; padding:.2rem .3rem; font-size:var(--t-apoio); }
+  .modal-corpo .gal-et{ display:block; margin-top:.15rem; font-style:normal; font-size:var(--t-apoio);
+                        color:var(--ink-fraco); }
   /* Os separadores por categoria, com a conta de cada uma: numa biblioteca que
      cresce, saber quantas ha antes de abrir a aba poupa o clique. */
   .modal-corpo .gal-abas{ display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:.7rem; }
   .modal-corpo .gal-abas .chip b{ font-weight:600; opacity:.6; margin-left:.15rem; }
   .modal-corpo .gal-env{ display:grid; grid-template-columns:1fr auto auto; gap:.5rem;
                          align-items:center; }
-  .modal-corpo .gal-rep{ margin-top:.6rem; font-size:.82rem; color:var(--ink-fraco);
+  .modal-corpo .gal-rep{ margin-top:.6rem; font-size:var(--t-apoio); color:var(--ink-fraco);
                          display:flex; gap:.6rem; align-items:center; }
   .modal-corpo .gal-x{ position:absolute; right:.3rem; top:.3rem; width:24px; height:24px;
                        border:0; border-radius:50%; background:rgba(255,255,255,.92);
-                       color:var(--danger); font-size:1rem; line-height:1; cursor:pointer;
+                       color:var(--danger); font-size:var(--t-corpo); line-height:1; cursor:pointer;
                        padding:0; }
   .modal-corpo .gal-x:hover{ background:var(--danger); color:#fff; }
   /* Acrescentar uma fotografia: fica no fim da janela, depois do que ja la esta. */
   .modal-corpo .gal-mais{ border-top:1px solid var(--line); margin-top:.9rem; padding-top:.8rem; }
-  .modal-corpo .gal-mais label{ display:block; margin-bottom:.35rem; font-size:.76rem;
+  .modal-corpo .gal-mais label{ display:block; margin-bottom:.35rem; font-size:var(--t-etiqueta); font-weight:600;
                                 text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
-  .modal-corpo .gal-mais .med{ font-size:.72rem; color:#a8ada6; margin-top:.3rem; }
+  .modal-corpo .gal-mais .med{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.3rem; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:var(--ink-fraco); border-radius:50px;
-         padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
+         padding:.3rem .8rem; font-size:var(--t-apoio); font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .chip-sep{ width:1px; align-self:stretch; background:var(--line); margin:.1rem .3rem; }
   .chip-acao.on{ background:var(--gold); border-color:var(--gold); color:#fff; }
@@ -192,20 +192,20 @@ if ($aberto > 0) {
   .chip-ferramentas.on{ background:var(--gold); border-color:var(--gold); border-style:solid; color:#fff; }
   .chip-num{ display:inline-flex; align-items:center; justify-content:center; min-width:1.15rem;
              height:1.15rem; padding:0 .3rem; border-radius:50px; background:var(--warn,#b5713a);
-             color:#fff; font-size:.72rem; font-weight:700; line-height:1; }
+             color:#fff; font-size:var(--t-apoio); font-weight:700; line-height:1; }
   .chip-ferramentas.on .chip-num{ background:#fff; color:var(--gold); }
   .fr-bloco{ border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin-bottom:1rem; }
-  .fr-bloco h4{ margin:0 0 .3rem; font-family:var(--sans); font-size:1rem; }
+  .fr-bloco h4{ margin:0 0 .3rem; font-family:var(--sans); font-size:var(--t-corpo); }
   .fr-lista{ list-style:none; padding:0; margin:.6rem 0; display:grid; gap:.4rem; }
   .fr-item{ display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
             padding:.35rem .2rem; border-bottom:1px solid var(--line); }
   .fr-item:last-child{ border-bottom:0; }
   .fr-nome{ font-weight:600; }
-  .fr-est{ font-size:.78rem; }
+  .fr-est{ font-size:var(--t-apoio); }
   .fr-est.ok{ color:var(--ok, #4b8b6f); }
   .fr-est.falta{ color:var(--warn, #b5713a); font-weight:600; }
   .aviso{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
-          border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1rem; line-height:1.5; }
+          border-radius:10px; padding:.7rem .9rem; font-size:var(--t-denso); margin-bottom:1rem; line-height:1.5; }
   @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .mod{ grid-template-columns:auto 1fr; }
                             .mod .ac{ grid-column:1/-1; } }
 </style>
@@ -369,7 +369,7 @@ function pintarFerramentas(){
         <div><label>&nbsp;</label><button class="btn" onclick="importar()">Trazer</button></div>
       </div>
       <div class="segredo" id="imp-res" style="display:none;background:var(--gold-pale);
-           border:1px dashed var(--gold-soft);border-radius:10px;padding:.8rem .9rem;margin-top:.9rem;font-size:.88rem"></div>
+           border:1px dashed var(--gold-soft);border-radius:10px;padding:.8rem .9rem;margin-top:.9rem;font-size:var(--t-denso)"></div>
     </div>`;
 }
 

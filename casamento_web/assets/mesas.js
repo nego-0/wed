@@ -776,7 +776,7 @@ function renderTabBody(){
       </div>
       <div class="lista-plantas" id="lista-mesas-planta"></div>
       <div class="roster-conta" id="roster-conta"></div>
-      <p style="font-size:.76rem;color:var(--ink-fraco);margin:.6rem 0 0">Carregue numa mesa para a vista ir até ela.</p>`;
+      <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.6rem 0 0">Carregue numa mesa para a vista ir até ela.</p>`;
     renderListaMesas();
     return;
   }
@@ -789,7 +789,7 @@ function renderTabBody(){
     </div>
     <div class="lista-tab" id="lista-tab"></div>
     <div class="roster-conta" id="roster-conta"></div>
-    <p style="font-size:.76rem;color:var(--ink-fraco);margin:.6rem 0 0">Arraste um cartão para cima de uma mesa na planta.</p>`;
+    <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.6rem 0 0">Arraste um cartão para cima de uma mesa na planta.</p>`;
   renderLista();
 }
 
@@ -983,7 +983,7 @@ impresso em cima dela a noite inteira; só diz qual é a mesa.">${esc(m.bar_toke
     <div style="margin-top:1rem">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <strong style="font-family:var(--serif);color:var(--ink)">Ocupação</strong>
-        <span style="font-size:.9rem;color:${oc>cap&&cap?'var(--danger)':'#7a8078'}">${oc}${cap?' / '+cap+' lugares':' lugares'}${cap&&oc>cap?' · excede!':''}</span>
+        <span style="font-size:var(--t-denso);color:${oc>cap&&cap?'var(--danger)':'#7a8078'}">${oc}${cap?' / '+cap+' lugares':' lugares'}${cap&&oc>cap?' · excede!':''}</span>
       </div>
       <div class="barra-ocup"><span class="${barCls}" style="width:${perc}%"></span></div>
     </div>
@@ -1031,7 +1031,7 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
       <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
     </div>
-    <p style="font-size:.8rem;color:var(--ink-fraco);margin:.55rem 0 .2rem">Mesa de honra dos noivos <i data-ico="anel"></i>. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
+    <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.55rem 0 .2rem">Mesa de honra dos noivos <i data-ico="anel"></i>. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
     <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
     ${bloco('Padrinhos · ala esquerda', padrinhos)}
     ${bloco('Madrinhas · ala direita', madrinhas)}

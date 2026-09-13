@@ -626,7 +626,7 @@
             + BP.estado(p.estado, p.estado_nome)
             + (p.estado === 'em_analise'
                 ? '<button class="btn btn-claro" style="min-height:40px;padding:.3rem .8rem;'
-                  + 'font-size:.8rem" onclick="barDesistir(' + p.id + ')">'
+                  + 'font-size:var(--t-apoio)" onclick="barDesistir(' + p.id + ')">'
                   + ico.ico('xis') + 'Desistir</button>' : '')
             + '</div>';
         }).join('')
@@ -706,7 +706,7 @@
       + '<input id="b-pq" type="search" autocomplete="off" autocapitalize="words" '
       +   'spellcheck="false" placeholder="O nome dessa pessoa" '
       +   'aria-label="Procurar a pessoa por quem vai pedir" '
-      +   'style="width:100%;font-size:1.05rem;padding:.8rem .9rem;border-radius:12px;'
+      +   'style="width:100%;font-size:var(--t-corpo);padding:.8rem .9rem;border-radius:12px;'
       +   'border:1px solid rgba(0,0,0,.2)">'
       + '<div class="b-nomes" id="b-pq-lista" role="listbox" style="margin-top:.7rem"></div>'
       + (para

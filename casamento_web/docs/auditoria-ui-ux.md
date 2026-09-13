@@ -711,9 +711,9 @@ apenas para as correcções acima.
 ## 23. Checklist de validação
 
 - [x] **V1** Zero pares texto/fundo abaixo de 4,5:1, sobre píxeis pintados — *0 em 407*
-- [ ] **V2** Zero cores literais em CSS novo, folhas e `<style>` de páginas
-- [ ] **V3** No máximo 9 pares tamanho/peso distintos por página
-- [ ] **V4** Zero frases abaixo de 13 px
+- [ ] **V2** Zero cores literais em CSS novo, folhas e `<style>` de páginas — *193 literais de texto substituídas por tokens*
+- [ ] **V3** No máximo 9 pares tamanho/peso distintos por página — *26 → 18; a variedade que resta é de PESO, não de tamanho*
+- [ ] **V4** Zero frases abaixo de 13 px — *229 → 7*
 - [ ] **V5** Zero alvos abaixo de 44×44 a 390 px — *332/385 → 72/395*
 - [ ] **V6** Todos os destinos primários alcançáveis a 390 px sem rolar na horizontal
 - [x] **V7** Zero transbordo horizontal nas 14 páginas × 3 larguras
@@ -774,7 +774,12 @@ depois, com a mesma sonda:
 
 | Medida | Antes | Depois |
 | --- | ---: | ---: |
-| Falhas de contraste (WCAG AA) | **118** / 397 | **0** / 407 |
+| Falhas de contraste (WCAG AA) | **118** / 397 | **0** / 414 |
+| Tamanhos de letra distintos | 16 | **11** |
+| Pares tamanho/peso | 43 | **29** |
+| Máximo de pares numa só página | 26 | **18** |
+| Texto abaixo de 13 px | 26,8 % | **14,7 %** — e 88 % desse resto são etiquetas de 11 px/600 |
+| Frases (não etiquetas) abaixo de 13 px | 229 | **7** |
 | Alvos abaixo de 44 px a 390 px | 332 / 385 (86 %) | 72 / 395 (18 %) |
 | Passos de teclado com anel da casa (painel) | 1 / 22 | 22 / 22 |
 | Páginas com `<main>` | 5 / 14 | 10 / 14 |
@@ -801,6 +806,31 @@ depois, com a mesma sonda:
 - **`<main id="conteudo">`, ligação de salto e região `aria-live`** nas 10
   páginas que usam o cabeçalho partilhado. O `api.js` anuncia os erros; o
   parcial embrulha o `toast()` onde ele é global.
+
+**A escala tipográfica (TIPO-001):**
+
+- **Oito degraus** — 11 · 13 · 14 · 16 · 18 · 21 · 24 · 28 px — declarados como
+  tokens, e **656 declarações de `font-size` convertidas**. Nenhum salto passou
+  de 1,8 px: foi um snap à escala, não um redesenho.
+- **O chão subiu.** A regra que decidiu cada caso foi mecânica e verificável:
+  abaixo de 13 px só ficaram as declarações em blocos com
+  `text-transform:uppercase` — essas são rótulos de uma ou duas palavras e
+  desceram a 11 px; tudo o resto subiu a 13 px. **50 desses blocos** passaram
+  também a peso 600, porque a 11 px o peso do corpo perde traço.
+- **O corpo deixou de ser leve:** `body{ font-weight:300 }` → `400`.
+- **Três armadilhas que só a medição apanhou:**
+  o `<small>` dentro de um `<label>` herdava as maiúsculas e levava por cima o
+  `0.8em` que o browser lhe dá — «· OPCIONAL, SERVE DE TETO NO ORÇAMENTO» a
+  **9,2 px**, 24 vezes só na plataforma; o `<code>` do URL encolhia pelo mesmo
+  motivo; e oito declarações viviam dentro de **strings de JavaScript**, onde
+  nenhum varrimento de CSS lhes chegava.
+- Mais **18 cores literais** que faltavam, encontradas ao caçar as anteriores:
+  `#a8ada6` (2,28:1), `#a3a8a1` (2,42:1), `#777` (4,48:1), `#9a7a3c` (4,02:1),
+  `#c98a86` (2,81:1).
+
+O convite e o seu editor ficaram **fora** desta escala, de propósito: são peças
+desenhadas com tipografia própria — scripts, molduras, escalas que o casal
+ajusta — e não crómio de aplicação.
 
 **O que ficou por fazer, e porquê:**
 

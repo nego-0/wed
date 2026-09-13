@@ -67,8 +67,8 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   .amostras{ display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
   .amostra{ width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
   .amostra.on{ border-color:var(--ink); box-shadow:0 0 0 2px #fff inset; }
-  .rot{ font-size:.78rem; color:var(--ink-fraco); letter-spacing:.08em; text-transform:uppercase; }
-  .legenda{ text-align:center; font-size:.78rem; color:var(--ink-fraco); margin-top:.45rem; }
+  .rot{ font-size:var(--t-etiqueta); font-weight:600; color:var(--ink-fraco); letter-spacing:.08em; text-transform:uppercase; }
+  .legenda{ text-align:center; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.45rem; }
   .legenda a{ color:var(--gold); }
 
   /* ---- Impressão: 100×150 mm, um cartão por página, sem fundo ---- */

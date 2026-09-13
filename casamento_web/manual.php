@@ -115,19 +115,19 @@ if ($pecaSel === 'cartao') {
   .man-wrap{ max-width:960px; margin:0 auto; padding:0 1rem 3rem; }
   .man-cab{ border-bottom:3px double var(--gold-soft); padding-bottom:1rem; margin-bottom:1.6rem; }
   .man-cab h1{ margin:.2rem 0; }
-  .man-cab .sub{ color:var(--gold); font-family:var(--serif); font-size:1.05rem; }
-  .man-cab .meta{ font-size:.82rem; color:var(--ink-fraco); margin-top:.5rem; }
+  .man-cab .sub{ color:var(--gold); font-family:var(--serif); font-size:var(--t-corpo); }
+  .man-cab .meta{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.5rem; }
   .man-cab .meta b{ color:var(--ink); }
   .selo-vivo{ display:inline-block; background:var(--gold-pale); border:1px solid var(--gold-soft);
-              border-radius:50px; padding:.15rem .7rem; font-size:.76rem; color:var(--ink); }
+              border-radius:50px; padding:.15rem .7rem; font-size:var(--t-apoio); color:var(--ink); }
 
   .sec{ margin-bottom:1.8rem; break-inside:avoid; }
-  .sec > h2{ font-size:1.1rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; margin-bottom:.8rem;
+  .sec > h2{ font-size:var(--t-sub); border-bottom:1px solid var(--line); padding-bottom:.3rem; margin-bottom:.8rem;
              display:flex; align-items:baseline; gap:.6rem; }
-  .sec > h2 .n{ font-family:var(--serif); color:var(--gold); font-size:1.3rem; }
+  .sec > h2 .n{ font-family:var(--serif); color:var(--gold); font-size:var(--t-titulo); }
 
-  .tb{ width:100%; border-collapse:collapse; font-size:.88rem; }
-  .tb th{ text-align:left; background:var(--cream); padding:.45rem .6rem; font-size:.74rem;
+  .tb{ width:100%; border-collapse:collapse; font-size:var(--t-denso); }
+  .tb th{ text-align:left; background:var(--cream); padding:.45rem .6rem; font-size:var(--t-etiqueta); font-weight:600;
           text-transform:uppercase; letter-spacing:.05em; color:var(--ink-fraco); }
   .tb td{ border-top:1px solid var(--line); padding:.45rem .6rem; vertical-align:top; }
   .tb .num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
@@ -139,23 +139,23 @@ if ($pecaSel === 'cartao') {
      descarta-o ao imprimir e a gráfica recebe cinco quadrados brancos com
      códigos hexadecimais por baixo — que é o oposto de uma amostra. */
   .cor .amostra{ height:46px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .cor .txt{ padding:.4rem .55rem; font-size:.78rem; }
-  .cor .txt b{ display:block; font-family:var(--serif); font-size:.9rem; }
+  .cor .txt{ padding:.4rem .55rem; font-size:var(--t-apoio); }
+  .cor .txt b{ display:block; font-family:var(--serif); font-size:var(--t-denso); }
   .cor .hex{ font-family:ui-monospace,monospace; color:var(--ink-fraco); }
 
   .aviso-p{ background:var(--gold-pale); border:1px solid var(--gold-soft); border-left:4px solid var(--gold);
-            border-radius:8px; padding:.7rem .9rem; font-size:.88rem; margin:.7rem 0; }
+            border-radius:8px; padding:.7rem .9rem; font-size:var(--t-denso); margin:.7rem 0; }
   .aviso-p b{ color:var(--ink); }
 
   .provas{ display:flex; gap:1.2rem; flex-wrap:wrap; align-items:flex-start; }
   .prova{ text-align:center; }
   .prova .palco{ border-radius:10px; overflow:hidden; border:1px solid var(--line); }
-  .prova .rot{ font-size:.78rem; color:var(--ink-fraco); margin-top:.4rem; }
+  .prova .rot{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.4rem; }
   .prova .rot b{ color:var(--ink); }
   .palco-cartao{ width:calc(720px * .34); height:calc(1080px * .34); background:#fff; }
   .palco-cartao .escala{ width:720px; height:1080px; transform:scale(.34); transform-origin:top left; }
 
-  .lista-check{ margin:0; padding-left:1.2rem; font-size:.9rem; line-height:1.7; }
+  .lista-check{ margin:0; padding-left:1.2rem; font-size:var(--t-denso); line-height:1.7; }
   .barra-man{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin:1rem 0 1.4rem; }
   .barra-man .cresce{ flex:1; }
 
@@ -218,7 +218,7 @@ if ($pecaSel === 'cartao') {
 
   <div class="sec">
     <h2><span class="n">2</span> Cor</h2>
-    <p style="font-size:.9rem;margin:0 0 .7rem">Paleta em uso: <b><?= escP($pal['nome']) ?></b>.
+    <p style="font-size:var(--t-denso);margin:0 0 .7rem">Paleta em uso: <b><?= escP($pal['nome']) ?></b>.
       Numa impressão a <b>um só dourado</b>, use <b><?= strtoupper($pal['accent']) ?></b> (o tom de acento) em toda a peça.
       Os restantes tons servem para dar profundidade em ecrã.</p>
     <div class="cores">
@@ -249,7 +249,7 @@ if ($pecaSel === 'cartao') {
       <?php endforeach; ?>
       </tbody>
     </table>
-    <p style="font-size:.82rem;color:var(--ink-fraco);margin:.5rem 0 0">Tipos de letra: Alex Brush, Cormorant Garamond e
+    <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.5rem 0 0">Tipos de letra: Alex Brush, Cormorant Garamond e
       Montserrat (Google Fonts, licença SIL OFL — uso comercial permitido).</p>
   </div>
 
@@ -295,7 +295,7 @@ if ($pecaSel === 'cartao') {
     <?php // Composição livre: só aparece quando alguém mexeu. Um cartão pela
           // composição de origem não precisa de uma tabela a dizê-lo. ?>
     <?php if ($posic): ?>
-      <h3 style="margin:1rem 0 .3rem;font-size:.92rem">Composição — camadas fora do sítio de origem</h3>
+      <h3 style="margin:1rem 0 .3rem;font-size:var(--t-denso)">Composição — camadas fora do sítio de origem</h3>
       <div class="aviso-p"><b>Não é erro de montagem.</b> Estas camadas foram deslocadas ou viradas
         de propósito no editor. A arte que segue já vai assim; a tabela existe para a prova ser
         conferida contra o que foi decidido, e não contra o desenho de origem.</div>
@@ -316,7 +316,7 @@ if ($pecaSel === 'cartao') {
         <?php endforeach; ?>
         </tbody>
       </table>
-      <p style="font-size:.82rem;color:var(--ink-fraco);margin:.4rem 0 0">As percentagens são do cartão
+      <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.4rem 0 0">As percentagens são do cartão
         (720 × 1080 px); os milímetros são a mesma medida em papel. A volta é à volta do centro
         de cada camada.</p>
     <?php endif; ?>
@@ -354,7 +354,7 @@ if ($pecaSel === 'cartao') {
   </div>
 
 
-  <p style="font-size:.78rem;color:var(--ink-fraco);border-top:1px solid var(--line);padding-top:.7rem">
+  <p style="font-size:var(--t-apoio);color:var(--ink-fraco);border-top:1px solid var(--line);padding-top:.7rem">
     Documento gerado pelo sistema de gestão de convidados em <?= escP($geradoEm) ?>.
     Acompanha as edições feitas nos editores — se a configuração mudar, volte a gerá-lo.
   </p>

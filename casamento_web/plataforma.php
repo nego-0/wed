@@ -173,12 +173,12 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .cas.aberto{ border-color:var(--gold-soft); box-shadow:0 0 0 3px rgba(180,134,74,.14); }
   .cas .selo{ width:38px; height:38px; border-radius:10px; background:var(--cream); color:var(--forest);
               display:flex; align-items:center; justify-content:center; font-family:var(--serif);
-              font-size:1rem; border:1px solid var(--line); }
+              font-size:var(--t-corpo); border:1px solid var(--line); }
   .cas.aberto .selo{ background:var(--gold-pale); border-color:var(--gold-soft); }
-  .cas .nm{ font-family:var(--serif); font-size:1.1rem; color:var(--ink); }
-  .cas .meta{ font-size:.8rem; color:var(--ink-fraco); display:flex; gap:.7rem; flex-wrap:wrap; margin-top:.15rem; }
+  .cas .nm{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); }
+  .cas .meta{ font-size:var(--t-apoio); color:var(--ink-fraco); display:flex; gap:.7rem; flex-wrap:wrap; margin-top:.15rem; }
   .cas .ac{ display:flex; gap:.4rem; align-items:center; white-space:nowrap; }
-  .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
+  .et{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.ativo{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.pendente{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
@@ -186,15 +186,15 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .et.inativo{ background:var(--cream); color:var(--ink-fraco); border-color:var(--line); }
   .et.agora{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
-  .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
+  .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
+  .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
 
   /* Os painéis que dobram vivem em assets/estilo.css: são de duas páginas. */
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
   .falta{ color:var(--warn); font-weight:500; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .chip{ border:1px solid var(--line); background:#fff; color:var(--ink-fraco); border-radius:50px;
-         padding:.3rem .8rem; font-size:.8rem; font-family:var(--sans); cursor:pointer; }
+         padding:.3rem .8rem; font-size:var(--t-apoio); font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .editor-conta{ grid-column:1/-1; border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.8rem; }
   .editor-conta .lf{ margin-top:.5rem; }
@@ -204,9 +204,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
                padding:.85rem 1rem; }
   .numeros .n b{ display:block; font-family:var(--serif); font-size:1.9rem; line-height:1;
                  color:var(--forest); }
-  .numeros .n span{ display:block; font-size:.76rem; text-transform:uppercase;
+  .numeros .n span{ display:block; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
                     letter-spacing:.05em; color:var(--ink-fraco); margin-top:.35rem; }
-  .numeros .n em{ display:block; font-style:normal; font-size:.76rem; color:var(--ink-fraco); margin-top:.2rem; }
+  .numeros .n em{ display:block; font-style:normal; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.2rem; }
   .numeros .n.alerta{ border-color:var(--gold-soft); background:var(--gold-pale); }
   .numeros .n.alerta b{ color:var(--gold); }
   /* Um número que leva a algum lado tem de o parecer. Os que são só contagem
@@ -219,7 +219,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
      casa, e o carácter mudava de comprimento e de peso conforme o tipo de
      letra. O `%23b4864a` é o dourado da casa escrito em hexadecimal para caber
      num URL — um `currentColor` não passa por dentro de um data: URI. */
-  .numeros button.n::after{ content:'ver'; display:block; font-size:.72rem; color:var(--gold);
+  .numeros button.n::after{ content:'ver'; display:block; font-size:var(--t-apoio); color:var(--gold);
                             margin-top:.35rem; opacity:0; transition:.15s;
                             padding-right:1.15em; background-repeat:no-repeat;
                             background-position:right center; background-size:.95em .95em;
@@ -239,27 +239,27 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   /* ---- Licenças: pedidos, preçário e pacotes ---- */
   .lic-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px;
     height:18px; padding:0 .3rem; margin-left:.4rem; border-radius:50px; background:var(--warn);
-    color:#fff; font-size:.7rem; font-weight:700; font-variant-numeric:tabular-nums; }
-  .lic-grupo{ font-family:var(--serif); font-size:1.15rem; color:var(--ink);
+    color:#fff; font-size:var(--t-apoio); font-weight:700; font-variant-numeric:tabular-nums; }
+  .lic-grupo{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink);
     margin:1.6rem 0 .8rem; display:flex; align-items:center; gap:.55rem; }
   .lic-grupo:first-child{ margin-top:.2rem; }
-  .lic-grupo span{ font-family:var(--sans); font-size:.72rem; font-weight:700;
+  .lic-grupo span{ font-family:var(--sans); font-size:var(--t-apoio); font-weight:700;
     background:var(--gold-pale); color:var(--gold-deep); border-radius:50px; padding:.12rem .5rem; }
   .lic-ped.pend{ border-left:4px solid var(--warn); }
   .lic-ped-cab{ display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
-  .lic-ped-nome{ font-family:var(--serif); font-size:1.15rem; color:var(--ink); }
-  .lic-ped-vl{ font-family:var(--serif); font-size:1.35rem; color:var(--ink);
+  .lic-ped-nome{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); }
+  .lic-ped-vl{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink);
     font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .lic-ped-selo{ font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .lic-ped-selo{ font-size:var(--t-etiqueta); font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
   .lic-ped-selo.pendente{ color:var(--warn); }
   .lic-ped-selo.aprovado{ color:var(--ok); }
   .lic-ped-selo.recusado{ color:var(--danger); }
   .lic-ped-selo.cancelado{ color:var(--ink-fraco); }
   .lic-ped-nota{ background:var(--cream); border-left:3px solid var(--gold); border-radius:8px;
-    padding:.6rem .8rem; font-size:.85rem; line-height:1.55; margin-top:.7rem; }
+    padding:.6rem .8rem; font-size:var(--t-denso); line-height:1.55; margin-top:.7rem; }
   .lic-itens{ list-style:none; margin:.7rem 0 0; padding:0; }
   .lic-itens li{ display:flex; gap:.8rem; align-items:baseline; padding:.4rem 0;
-    font-size:.86rem; border-bottom:1px solid var(--line); }
+    font-size:var(--t-denso); border-bottom:1px solid var(--line); }
   .lic-itens li:last-child{ border-bottom:none; }
   .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:8.5rem; }
   .lic-itens .med{ flex:1; color:var(--ink-fraco); }
@@ -267,7 +267,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
   .lic-tab{ width:100%; border-collapse:collapse; margin-top:.9rem; }
   .lic-tab td{ padding:.55rem .5rem; border-bottom:1px solid var(--line); vertical-align:top;
-    font-size:.87rem; }
+    font-size:var(--t-denso); }
   .lic-tab tr:last-child td{ border-bottom:none; }
   .lic-tab tr.off{ opacity:.5; }
   .lic-tab .med{ color:var(--ink-fraco); }
@@ -283,16 +283,16 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-fator-prova:empty{ display:none; }
   .lic-fator-prova{ margin-top:1.1rem; border:1.5px solid var(--gold-soft); border-radius:12px;
     background:var(--gold-pale); padding:.9rem 1rem; }
-  .lic-fp-tit{ font-weight:700; color:var(--ink); font-size:.88rem; }
-  .lic-fp-sub{ font-size:.76rem; color:var(--ink-fraco); margin-top:.1rem; }
+  .lic-fp-tit{ font-weight:700; color:var(--ink); font-size:var(--t-denso); }
+  .lic-fp-sub{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.1rem; }
   .lic-fp-linhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin:.7rem 0 .6rem; }
   .lic-fp-l{ display:flex; flex-direction:column; }
-  .lic-fp-l span{ font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-fraco); }
-  .lic-fp-l b{ font-size:1.05rem; color:var(--ink); font-variant-numeric:tabular-nums; }
-  .lic-fp-l b.risca{ text-decoration:line-through; color:#a8ada6; font-weight:500; }
+  .lic-fp-l span{ font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-fraco); }
+  .lic-fp-l b{ font-size:var(--t-corpo); color:var(--ink); font-variant-numeric:tabular-nums; }
+  .lic-fp-l b.risca{ text-decoration:line-through; color:var(--ink-fraco); font-weight:500; }
   /* Sem desconto não se risca nada: o proporcional passa a ser só a referência. */
   .lic-fp-l b.ref{ color:var(--ink-fraco); font-weight:500; }
-  .lic-fp-veredito{ font-size:.83rem; line-height:1.5; border-radius:8px; padding:.5rem .7rem; }
+  .lic-fp-veredito{ font-size:var(--t-apoio); line-height:1.5; border-radius:8px; padding:.5rem .7rem; }
   .lic-fp-veredito.bom{ background:var(--ok-bg); color:var(--text); }
   .lic-fp-veredito.mau{ background:var(--danger-bg); color:var(--text); }
   .lic-fp-veredito.igual{ background:var(--warn-bg); color:var(--text); }
@@ -309,21 +309,21 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
     background:var(--card); }
   .lic-pz.base{ border-color:var(--gold-soft); background:var(--gold-pale); }
   .lic-pz-cab{ display:flex; align-items:baseline; gap:.6rem; }
-  .lic-pz-nome{ flex:1; font-weight:700; color:var(--ink); font-size:.98rem; }
+  .lic-pz-nome{ flex:1; font-weight:700; color:var(--ink); font-size:var(--t-corpo); }
   .lic-pz-fator{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
-    font-size:.9rem; }
-  .lic-pz-res{ font-size:.78rem; color:var(--ink-fraco); margin-top:.15rem; line-height:1.4; }
+    font-size:var(--t-denso); }
+  .lic-pz-res{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.15rem; line-height:1.4; }
   /* A barra é o preço POR MÊS: mais curta é melhor negócio. É a única forma de
      ver, de relance, se um factor faz o que se queria que fizesse. */
   .lic-pz-barra{ position:relative; height:26px; border-radius:6px; background:var(--sand);
     margin:.6rem 0 .5rem; overflow:hidden; display:flex; align-items:center; }
   .lic-pz-barra i{ position:absolute; inset:0 auto 0 0; border-radius:6px;
     background:linear-gradient(90deg,var(--gold-soft),var(--gold-deep)); }
-  .lic-pz-barra span{ position:relative; padding:0 .6rem; font-size:.78rem; font-weight:700;
+  .lic-pz-barra span{ position:relative; padding:0 .6rem; font-size:var(--t-apoio); font-weight:700;
     color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); font-variant-numeric:tabular-nums; }
-  .lic-pz-nums{ display:flex; gap:.9rem; flex-wrap:wrap; font-size:.76rem; color:var(--ink-fraco); }
+  .lic-pz-nums{ display:flex; gap:.9rem; flex-wrap:wrap; font-size:var(--t-apoio); color:var(--ink-fraco); }
   .lic-pz-nums b{ color:var(--ink); font-variant-numeric:tabular-nums; }
-  .lic-pz-nums b.risca{ text-decoration:line-through; color:#a8ada6; }
+  .lic-pz-nums b.risca{ text-decoration:line-through; color:var(--ink-fraco); }
   .lic-pz-nums .poupa b{ color:var(--ok); }
   .lic-pz-nums .caro b{ color:var(--danger); }
   .lic-pz-ac{ display:flex; gap:.4rem; margin-top:.7rem; }
@@ -332,7 +332,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-pi-mod:first-child{ border-top:none; }
   .lic-pi-nome{ font-weight:700; color:var(--ink); margin-bottom:.45rem; }
   .lic-pi{ display:flex; gap:.5rem; align-items:center; padding:.32rem .5rem; border-radius:8px;
-    cursor:pointer; font-size:.87rem; text-transform:none; letter-spacing:normal;
+    cursor:pointer; font-size:var(--t-denso); text-transform:none; letter-spacing:normal;
     font-weight:400; margin:0; }
   /* Pela mesma razão que na montra: `width:100%` num rádio come a linha toda. */
   .lic-pi input{ width:16px; height:16px; min-width:16px; padding:0; margin:0;
@@ -340,16 +340,16 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-pi-txt{ flex:1; min-width:0; }
   /* O preço vive na própria linha do escalão: é ali que se olha para ele. */
   .lic-pi-preco{ display:flex; align-items:center; gap:.25rem; flex:none; }
-  .lic-pi-preco input{ width:6.5rem; padding:.25rem .45rem; font-size:.85rem; text-align:right;
+  .lic-pi-preco input{ width:6.5rem; padding:.25rem .45rem; font-size:var(--t-denso); text-align:right;
     font-variant-numeric:tabular-nums; border:1px solid var(--line); border-radius:8px;
     background:var(--card); }
   .lic-pi-preco input:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 2px var(--ring); }
-  .lic-pi-preco small{ color:var(--ink-fraco); font-size:.75rem; }
+  .lic-pi-preco small{ color:var(--ink-fraco); font-size:var(--t-apoio); }
   .lic-pi-conta{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-top:1rem; padding-top:.9rem;
     border-top:1px solid var(--line); }
   .lic-pi-conta > div{ display:flex; flex-direction:column; }
-  .lic-pi-conta .r{ font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-fraco); }
-  .lic-pi-conta b{ font-size:1.05rem; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .lic-pi-conta .r{ font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-fraco); }
+  .lic-pi-conta b{ font-size:var(--t-corpo); color:var(--ink); font-variant-numeric:tabular-nums; }
   .lic-pi-conta .bom b{ color:var(--ok); }
   .lic-pi-conta .mau b{ color:var(--warn); }
   .lic-pi:hover{ background:var(--cream); }
@@ -358,14 +358,14 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   @media (max-width:640px){
     .lic-itens li{ flex-wrap:wrap; gap:.2rem .8rem; }
     .lic-itens .mod{ min-width:0; }
-    .lic-tab td{ padding:.45rem .3rem; font-size:.83rem; }
+    .lic-tab td{ padding:.45rem .3rem; font-size:var(--t-apoio); }
   }
 
   /* O menu "⋯" vive em assets/estilo.css: é de duas páginas. */
-  .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.84rem; color:var(--ink-fraco);
+  .linha-info{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:var(--t-apoio); color:var(--ink-fraco);
                margin-bottom:1.4rem; padding:0 .2rem; }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
-            padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
+            padding:.8rem .9rem; margin-top:.9rem; font-size:var(--t-denso); line-height:1.6; }
   .lf{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.7rem; align-items:end; }
   @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .cas{ grid-template-columns:auto 1fr; } .cas .ac{ grid-column:1/-1; } }
 
@@ -376,14 +376,14 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .campo.mau input, .campo.mau select{ border-color:var(--danger); }
   .campo.mau input:focus, .campo.mau select:focus{ box-shadow:0 0 0 3px rgba(165,71,63,.15); }
   .campo.ok input:not(:focus){ border-color:#bcd6c4; }
-  .err{ display:none; color:var(--danger); font-size:.77rem; margin-top:.34rem; line-height:1.45; }
+  .err{ display:none; color:var(--danger); font-size:var(--t-apoio); margin-top:.34rem; line-height:1.45; }
   .campo.mau .err{ display:block; }
   /* Palavra-passe: o olho para mostrar, e a força ao lado. O campo reserva
      espaço à direita para o botão não passar por cima do que se escreve. */
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:var(--t-apoio); padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
   .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }
   .pw-barras{ display:flex; gap:3px; flex:1; }
@@ -392,7 +392,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .pw-forca.f2 i:nth-child(-n+2){ background:var(--warn); }
   .pw-forca.f3 i:nth-child(-n+3){ background:#9a9a3c; }
   .pw-forca.f4 i{ background:var(--ok); }
-  .pw-rot{ font-size:.72rem; color:var(--ink-fraco); white-space:nowrap; min-width:4.5rem; text-align:right; }
+  .pw-rot{ font-size:var(--t-apoio); color:var(--ink-fraco); white-space:nowrap; min-width:4.5rem; text-align:right; }
 
   /* O aviso de estado da licença, no modal, veste-se do que diz. */
   .lic-estado.ok{ background:var(--ok-bg); border-color:var(--ok); border-style:solid; }
@@ -401,7 +401,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   /* No modal, os campos empilham-se em ecrã estreito. */
   @media (max-width:560px){ .modal-corpo .lf{ grid-template-columns:1fr; } }
   /* Os separadores de secção do editor completo. */
-  .ed-sec{ font-family:var(--serif); color:var(--forest); font-size:1.02rem; margin:1.2rem 0 .5rem;
+  .ed-sec{ font-family:var(--serif); color:var(--forest); font-size:var(--t-corpo); margin:1.2rem 0 .5rem;
            padding-top:.9rem; border-top:1px solid var(--line); }
   .ed-sec:first-of-type{ border-top:0; padding-top:0; margin-top:.2rem; }
   .ed-conta{ border:1px solid var(--line); border-radius:12px; padding:.7rem .8rem; margin-bottom:.6rem; }
@@ -413,14 +413,14 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .at-item{ border:1px solid var(--line); border-radius:12px; padding:.7rem .85rem; margin-bottom:.55rem; }
   .at-item.off{ opacity:.62; border-style:dashed; }
   .at-item-cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; flex-wrap:wrap; }
-  .at-item-cab b{ font-family:var(--serif); font-size:1rem; color:var(--ink); }
-  .at-item .at-ord{ margin-left:auto; font-size:.74rem; color:var(--ink-fraco); font-variant-numeric:tabular-nums; }
-  .at-item-resp{ font-size:.86rem; color:var(--ink-fraco); line-height:1.55; margin-bottom:.55rem;
+  .at-item-cab b{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); }
+  .at-item .at-ord{ margin-left:auto; font-size:var(--t-apoio); color:var(--ink-fraco); font-variant-numeric:tabular-nums; }
+  .at-item-resp{ font-size:var(--t-denso); color:var(--ink-fraco); line-height:1.55; margin-bottom:.55rem;
     white-space:pre-wrap; }
   .at-item .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
   /* As caixas de seleção do painel de dados (âmbitos e casamentos). */
   .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.35rem .9rem; margin:.4rem 0 .9rem; }
-  .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:.9rem; color:var(--ink); cursor:pointer; }
+  .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:var(--t-denso); color:var(--ink); cursor:pointer; }
   .dsel input{ width:auto; margin:0; accent-color:var(--forest); flex:none; }
   .dsel-cas{ max-height:230px; overflow:auto; border:1px solid var(--line); border-radius:10px;
              padding:.6rem .8rem; background:var(--cream); }
@@ -847,7 +847,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         <div class="campo">
           <label for="lic-pol-corpo">Texto</label>
           <textarea id="lic-pol-corpo" rows="22" style="width:100%;font-family:var(--mono,monospace);
-            font-size:.83rem;line-height:1.6;border:1.5px solid var(--line);border-radius:12px;
+            font-size:var(--t-apoio);line-height:1.6;border:1.5px solid var(--line);border-radius:12px;
             padding:.8rem;background:var(--card);color:var(--text);resize:vertical"></textarea>
         </div>
         <div class="fim" style="flex-wrap:wrap">
@@ -962,9 +962,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       .tema-amostra{ display:flex; gap:5px; }
       .tema-amostra i{ width:30px; height:20px; border-radius:5px; display:block; border:1px solid rgba(0,0,0,.10); }
       .tema-nome{ font-weight:600; color:var(--ink); }
-      .tema-desc{ font-size:.8rem; color:var(--ink-fraco); line-height:1.4; }
-      #aud-tabela{ width:100%; border-collapse:collapse; font-size:.86rem; }
-      #aud-tabela th{ text-align:left; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase;
+      .tema-desc{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.4; }
+      #aud-tabela{ width:100%; border-collapse:collapse; font-size:var(--t-denso); }
+      #aud-tabela th{ text-align:left; font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.06em; text-transform:uppercase;
         color:var(--ink-fraco); padding:.5rem .6rem; border-bottom:1px solid var(--line); }
       #aud-tabela td{ padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
       #aud-tabela .a-accao{ font-weight:600; color:var(--gold); }
@@ -979,11 +979,11 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       #aud-tabela .a-detalhe td{ background:var(--cream); padding:.7rem 1rem 1rem; }
       #aud-tabela .a-detalhe dl{ display:grid; grid-template-columns:auto 1fr;
         gap:.3rem .9rem; margin:0; max-width:64rem; }
-      #aud-tabela .a-detalhe dt{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+      #aud-tabela .a-detalhe dt{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
         color:var(--ink-fraco); white-space:nowrap; }
-      #aud-tabela .a-detalhe dd{ margin:0; font-size:.86rem; color:var(--text); overflow-wrap:anywhere; }
+      #aud-tabela .a-detalhe dd{ margin:0; font-size:var(--t-denso); color:var(--text); overflow-wrap:anywhere; }
       #aud-tabela .a-detalhe code{ font-family:var(--mono,ui-monospace,Menlo,Consolas,monospace);
-        font-size:.78rem; background:var(--card); border:1px solid var(--line);
+        font-size:var(--t-apoio); background:var(--card); border:1px solid var(--line);
         border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
     </style>
     <div id="vista-definicoes" style="display:none">
@@ -1031,7 +1031,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
         — não é uma conversa a sério, e não finge sê-lo.</div>
 
       <label style="margin:.9rem 0 .2rem;display:inline-flex;align-items:center;gap:.5rem;
-                    font-weight:600;text-transform:none;letter-spacing:0;font-size:.95rem">
+                    font-weight:600;text-transform:none;letter-spacing:0;font-size:var(--t-corpo)">
         <input type="checkbox" id="at-ativo" style="width:auto;margin:0">
         Mostrar a caixa nas páginas públicas
       </label>
@@ -1898,7 +1898,7 @@ function licPintarPrecario(){
       +   '<div style="flex:1;min-width:200px"><h3 style="margin:0">' + licEsc(m.nome)
       +     (m.ativo ? '' : ' <span class="et">desligado</span>') + '</h3>'
       +     '<div class="dica" style="margin:.15rem 0 0">' + licEsc(m.resumo) + '</div>'
-      +     '<div style="color:var(--gold);font-weight:600;font-size:.83rem;margin-top:.15rem">'
+      +     '<div style="color:var(--gold);font-weight:600;font-size:var(--t-apoio);margin-top:.15rem">'
       +       licEsc(m.beneficio) + '</div></div>'
       +   '<div class="fim" style="margin:0">'
       +     '<button class="btn btn-sm" onclick="licModuloEditar(' + m.id + ')">Editar módulo</button>'

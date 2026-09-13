@@ -26,8 +26,8 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Estatísticas */
   .stats-mesa{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.7rem; margin-bottom:1.1rem; }
   .sm{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
-  .sm .n{ font-family:var(--serif); font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1; }
-  .sm .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }
+  .sm .n{ font-family:var(--serif); font-size:var(--t-display); font-weight:700; color:var(--ink); line-height:1; }
+  .sm .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }
   .sm.ok .n{ color:#1f7a3d; } .sm.alerta .n{ color:var(--danger); }
 
   /* Barra de adicionar mesa (acima do canvas, campos in-line) */
@@ -36,7 +36,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .barra-add input[type=text]{ flex:1 1 170px; min-width:0; }
   .barra-add input[type=number]{ flex:0 1 90px; min-width:0; }
   .barra-add .grp{ display:flex; align-items:center; gap:.4rem; }
-  .barra-add .grp .lbl{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
+  .barra-add .grp .lbl{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
 
   /* Seletores de forma e cor (partilhados por adicionar e editar) */
   .formas{ display:inline-flex; gap:.25rem; flex-wrap:wrap; }
@@ -62,7 +62,7 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Planta */
   .planta-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem; }
   .planta-topo{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
-  .planta-topo .titulo{ font-family:var(--serif); font-size:1.2rem; color:var(--ink); font-weight:600; flex:1; }
+  .planta-topo .titulo{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); font-weight:600; flex:1; }
   /* A legenda era uma fila de bolinhas cinzentas com letra de 12px: dizia-se
      o nome do estado e mais nada. Agora cada pastilha traz o sinal na cor com
      que ele aparece na planta, o que quer dizer, e QUANTAS mesas estão assim —
@@ -70,11 +70,11 @@ $CAS = casalInfo(defsAtuais($conn));
   .legenda{ display:flex; gap:.45rem; flex-wrap:wrap; margin-bottom:.8rem; }
   .legenda .lg{ display:inline-flex; align-items:center; gap:.4rem;
     background:var(--cream); border:1px solid var(--line); border-radius:50px;
-    padding:.22rem .6rem .22rem .45rem; font-size:.82rem; color:var(--ink); line-height:1.2; }
+    padding:.22rem .6rem .22rem .45rem; font-size:var(--t-apoio); color:var(--ink); line-height:1.2; }
   .legenda .lg b{ font-weight:600; }
   .legenda .lg .n{ font-variant-numeric:tabular-nums; font-weight:700;
     background:#fff; border:1px solid var(--line); border-radius:50px;
-    padding:0 .38rem; font-size:.78rem; }
+    padding:0 .38rem; font-size:var(--t-apoio); }
   .legenda .lg.zero{ opacity:.45; }
 
   /* ------------------------------------------------------------
@@ -179,8 +179,8 @@ $CAS = casalInfo(defsAtuais($conn));
   body.mesas-max.painel-fechado #btn-painel{ border-color:var(--forest); color:var(--forest); background:var(--cream); }
   /* Travas contra arrastos acidentais (ficam à esquerda do zoom) */
   .bloqueios{ display:inline-flex; gap:.5rem; align-items:center; margin-right:.2rem; }
-  .bloqueios .blq-tit{ font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
-  .bloqueios label{ display:inline-flex; align-items:center; gap:.3rem; font-size:.78rem;
+  .bloqueios .blq-tit{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
+  .bloqueios label{ display:inline-flex; align-items:center; gap:.3rem; font-size:var(--t-apoio);
                     color:var(--ink-fraco); cursor:pointer; white-space:nowrap; }
   .bloqueios input{ width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
   .bloqueios label:has(input:checked){ color:var(--forest); font-weight:500; }
@@ -205,7 +205,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .planta-viewport::-webkit-scrollbar-corner{ background:transparent; }
 
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
-  .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:.78rem;
+  .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:var(--t-apoio);
     padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
   .zoombar button:first-child{ border-left:0; }
   .zoombar button.on{ background:var(--forest); color:#fff; }
@@ -221,7 +221,7 @@ $CAS = casalInfo(defsAtuais($conn));
   body.bloq-scroll .planta{ cursor:default; }
   body.a-panorar, body.a-panorar .planta, body.a-panorar .mesa-node{ cursor:grabbing; }
   .planta .dica-vazia{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    color:#a7ad9f; font-size:.9rem; text-align:center; padding:1rem; }
+    color:#a7ad9f; font-size:var(--t-denso); text-align:center; padding:1rem; }
 
   /* Linhas-guia magnéticas */
   .guia{ position:absolute; background:var(--gold); opacity:0; pointer-events:none; z-index:19; transition:opacity .08s; }
@@ -355,13 +355,13 @@ $CAS = casalInfo(defsAtuais($conn));
      nome é a pega do arrasto: leva-se dali para a mesa que se quiser. */
   .lista-sentados .nm-pega{ flex:1; min-width:0; display:inline-block;
     background:var(--forest); color:#fff; border-radius:50px;
-    padding:.24rem .7rem; font-size:.86rem; line-height:1.25; font-weight:500;
+    padding:.24rem .7rem; font-size:var(--t-denso); line-height:1.25; font-weight:500;
     cursor:grab; touch-action:none; user-select:none;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lista-sentados .nm-pega:hover{ background:var(--forest-deep); }
   .lista-sentados .nm-pega:active{ cursor:grabbing; }
   .lista-sentados .nm-pega .gi-m, .lista-sentados .nm-pega .gi-f{ color:#eef3ee; }
-  .dica-mini{ font-size:.76rem; color:var(--ink-fraco); margin:-.2rem 0 .4rem; }
+  .dica-mini{ font-size:var(--t-apoio); color:var(--ink-fraco); margin:-.2rem 0 .4rem; }
 
   /* ============================================================
      A FOLHA: o esquema de mesas para levar para o salão
@@ -374,16 +374,16 @@ $CAS = casalInfo(defsAtuais($conn));
   .folha-planta{ display:none; }
   .folha-cab{ display:flex; align-items:baseline; gap:.6rem; border-bottom:2px solid #333;
     padding-bottom:.4rem; margin-bottom:.8rem; }
-  .folha-cab h1{ font-family:var(--serif); font-size:1.35rem; margin:0; }
-  .folha-cab .sub{ font-size:.85rem; color:#555; }
-  .folha-cab .quando{ margin-left:auto; font-size:.78rem; color:#777; }
+  .folha-cab h1{ font-family:var(--serif); font-size:var(--t-titulo); margin:0; }
+  .folha-cab .sub{ font-size:var(--t-denso); color:#555; }
+  .folha-cab .quando{ margin-left:auto; font-size:var(--t-apoio); color:var(--ink-fraco); }
   .folha-mapa{ overflow:hidden; margin-bottom:1rem; }
   .folha-mapa .planta{ transform-origin:top left; }
-  .folha-lista{ column-count:3; column-gap:1.2rem; font-size:.8rem; }
+  .folha-lista{ column-count:3; column-gap:1.2rem; font-size:var(--t-apoio); }
   .folha-mesa{ break-inside:avoid; margin-bottom:.7rem; }
-  .folha-mesa h3{ font-family:var(--serif); font-size:.92rem; margin:0 0 .12rem;
+  .folha-mesa h3{ font-family:var(--serif); font-size:var(--t-denso); margin:0 0 .12rem;
     border-bottom:1px solid #ccc; padding-bottom:.1rem; }
-  .folha-mesa .meta{ font-size:.72rem; color:#777; }
+  .folha-mesa .meta{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .folha-mesa ol{ margin:.2rem 0 0; padding-left:1.15rem; }
   .folha-mesa li{ line-height:1.45; }
   .folha-mesa .ninguem{ color:#999; font-style:italic; }
@@ -401,14 +401,14 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* Rodar a mesa: um salão real não tem tudo alinhado com as paredes. */
   .btn-gir{ border:1.5px solid var(--line); background:#fff; border-radius:8px; cursor:pointer;
-    width:28px; height:28px; padding:0; font-size:.95rem; line-height:1; color:var(--ink);
+    width:28px; height:28px; padding:0; font-size:var(--t-corpo); line-height:1; color:var(--ink);
     display:inline-flex; align-items:center; justify-content:center; }
   .btn-gir:hover{ border-color:var(--forest); background:var(--cream); }
-  .btn-gir.larga{ width:auto; padding:0 .45rem; font-size:.72rem; }
+  .btn-gir.larga{ width:auto; padding:0 .45rem; font-size:var(--t-apoio); }
   /* Rodar para a direita é o mesmo desenho ao espelho: é o que ↺ e ↻ eram um
      do outro, e poupa um segundo traço que teria de se manter a par. */
   .btn-gir.espelho > [data-ico]{ transform:scaleX(-1); }
-  .gir-val{ font-size:.78rem; color:var(--ink-fraco); min-width:2.6em; text-align:center;
+  .gir-val{ font-size:var(--t-apoio); color:var(--ink-fraco); min-width:2.6em; text-align:center;
     font-variant-numeric:tabular-nums; }
   /* Rodar a mesa roda a MESA INTEIRA — o tampo, as cadeiras, a lotação, o
      sinal de estado e o nome. Antes rodava só o tampo e o resto ficava
@@ -421,10 +421,10 @@ $CAS = casalInfo(defsAtuais($conn));
   .painel-mesas{ display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
   .tabset{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:.8rem .9rem 1rem; display:flex; flex-direction:column; min-height:0; }
   .tabset-tabs{ display:flex; gap:.3rem; flex-wrap:wrap; margin-bottom:.8rem; }
-  .tabset-tabs .rt{ border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:.85rem;
+  .tabset-tabs .rt{ border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:var(--t-denso);
     padding:.4rem .7rem; border-radius:50px; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
   .tabset-tabs .rt.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
-  .tabset-tabs .rt-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:.72rem; min-width:1.1rem; text-align:center; }
+  .tabset-tabs .rt-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); min-width:1.1rem; text-align:center; }
   .tabset-tabs .rt.on .rt-n{ background:rgba(255,255,255,.22); color:#fff; }
   .tabset-tabs .rt-mesa{ border-color:var(--gold-soft); }
   .tab-body{ overflow:auto; max-height:60vh; }
@@ -434,15 +434,15 @@ $CAS = casalInfo(defsAtuais($conn));
   .filtros-tab input[type=search]{ flex:1; min-width:130px; }
   .filtros-tab select{ min-width:130px; }
   .lista-tab{ display:flex; flex-wrap:wrap; gap:.5rem; }
-  .roster-conta{ font-size:.76rem; color:var(--ink-fraco); margin-top:.6rem; }
+  .roster-conta{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.6rem; }
   .chip-drag{ display:inline-flex; flex-direction:column; gap:.05rem; background:var(--cream); border:1px solid var(--line);
     border-radius:12px; padding:.45rem .7rem; cursor:grab; touch-action:none; user-select:none; max-width:100%; }
   .chip-drag:hover{ border-color:var(--gold-soft); }
   .chip-drag.arrastando{ opacity:.4; }
-  .chip-drag .cd-nome{ font-size:.9rem; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
-  .chip-drag .cd-meta{ font-size:.72rem; color:var(--ink-fraco); }
+  .chip-drag .cd-nome{ font-size:var(--t-denso); color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+  .chip-drag .cd-meta{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
-  .roster-vazio{ color:var(--ink-fraco); font-size:.86rem; padding:.4rem 0; }
+  .roster-vazio{ color:var(--ink-fraco); font-size:var(--t-denso); padding:.4rem 0; }
 
   /* ------------------------------------------------------------
      A LISTA DAS MESAS — a primeira pastilha do painel
@@ -459,15 +459,15 @@ $CAS = casalInfo(defsAtuais($conn));
   .lm-linha.on{ border-color:var(--forest); box-shadow:0 0 0 1.5px var(--forest); background:var(--cream); }
   .lm-ico{ flex:none; display:flex; align-items:center; }
   .lm-txt{ flex:1; min-width:0; }
-  .lm-nome{ display:block; font-size:.9rem; font-weight:600; line-height:1.25;
+  .lm-nome{ display:block; font-size:var(--t-denso); font-weight:600; line-height:1.25;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .lm-meta{ display:block; font-size:.73rem; color:var(--ink-fraco); line-height:1.2; }
+  .lm-meta{ display:block; font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.2; }
   .lm-est{ flex:none; width:14px; height:14px; border-radius:50%; box-sizing:border-box;
     border:2px solid var(--est); background:#fff; }
   .lm-est.dot-parcial{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
   .lm-est.dot-cheia, .lm-est.dot-excede{ background:var(--est); }
   .ghost-drag{ position:fixed; z-index:1000; transform:translate(-50%,-50%); pointer-events:none;
-    background:var(--forest); color:#fff; font-size:.85rem; padding:.4rem .7rem; border-radius:10px;
+    background:var(--forest); color:#fff; font-size:var(--t-denso); padding:.4rem .7rem; border-radius:10px;
     box-shadow:0 10px 26px rgba(0,0,0,.3); white-space:nowrap; }
 
   /* Formulário de edição (compacto, in-line) */
@@ -478,14 +478,14 @@ $CAS = casalInfo(defsAtuais($conn));
   .barra-ocup span{ display:block; height:100%; background:var(--gold); }
   .barra-ocup span.cheio{ background:#1f7a3d; } .barra-ocup span.excede{ background:var(--danger); }
   .lista-sentados{ display:flex; flex-direction:column; gap:.4rem; margin:.4rem 0 .2rem; }
-  .sentado{ display:flex; align-items:center; gap:.5rem; border:1px solid var(--line); border-radius:10px; padding:.4rem .6rem; font-size:.9rem; }
+  .sentado{ display:flex; align-items:center; gap:.5rem; border:1px solid var(--line); border-radius:10px; padding:.4rem .6rem; font-size:var(--t-denso); }
   .sentado .nm{ flex:1; line-height:1.2; }
-  .sel-mini{ flex:none; max-width:52%; font-size:.8rem; padding:.35rem .4rem; }
-  .vazio-mini{ color:var(--ink-fraco); font-size:.86rem; padding:.3rem 0; }
+  .sel-mini{ flex:none; max-width:52%; font-size:var(--t-apoio); padding:.35rem .4rem; }
+  .vazio-mini{ color:var(--ink-fraco); font-size:var(--t-denso); padding:.3rem 0; }
   .acoes-bloco{ display:flex; gap:.5rem; margin-top:.8rem; }
   .semmesa-chip{ display:inline-flex; align-items:center; gap:.35rem; background:var(--cream); border:1px solid var(--line);
-    border-radius:50px; padding:.25rem .6rem; font-size:.8rem; margin:.15rem .2rem 0 0; }
-  .rot{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin:.9rem 0 .3rem; }
+    border-radius:50px; padding:.25rem .6rem; font-size:var(--t-apoio); margin:.15rem .2rem 0 0; }
+  .rot{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin:.9rem 0 .3rem; }
 
   /* Ícones de género / brinde nas pastilhas com nomes. Desenhados, e não os
      caracteres ♂ ♀ 🎁: nem todo o aparelho os tem e onde faltam sai o quadrado
@@ -496,25 +496,25 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Dropdown de pesquisa (substitui os <select> de listas longas) */
   .combo{ position:relative; display:block; width:100%; }
   .combo-btn{ width:100%; display:flex; align-items:center; gap:.4rem; text-align:left; cursor:pointer;
-    border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:.9rem;
+    border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:var(--t-denso);
     padding:.5rem .6rem; border-radius:10px; line-height:1.2; }
   .combo-btn:hover{ border-color:var(--gold-soft); }
   .combo-btn .combo-txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .combo-btn .combo-cx{ margin-left:auto; color:var(--ink-fraco); font-size:.9rem; flex:none;
+  .combo-btn .combo-cx{ margin-left:auto; color:var(--ink-fraco); font-size:var(--t-denso); flex:none;
     display:inline-flex; align-items:center; line-height:0; }
   .combo-btn .combo-cx > svg{ width:1em; height:1em; }
   .combo.combo-inline{ flex:none; max-width:56%; min-width:120px; }
-  .combo.combo-inline .combo-btn{ font-size:.8rem; padding:.35rem .45rem; }
+  .combo.combo-inline .combo-btn{ font-size:var(--t-apoio); padding:.35rem .45rem; }
   .combo-pop{ position:fixed; z-index:1200; background:#fff; border:1px solid var(--line); border-radius:12px;
     box-shadow:0 12px 30px rgba(22,38,30,.20); padding:.4rem; min-width:220px; }
   .combo-pop[hidden]{ display:none; }
   .combo-search{ width:100%; margin-bottom:.35rem; box-sizing:border-box; }
   .combo-list{ max-height:244px; overflow:auto; display:flex; flex-direction:column; gap:.1rem; }
-  .combo-opt{ text-align:left; border:0; background:transparent; font-family:inherit; font-size:.86rem; color:var(--ink);
+  .combo-opt{ text-align:left; border:0; background:transparent; font-family:inherit; font-size:var(--t-denso); color:var(--ink);
     padding:.4rem .5rem; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; gap:.05rem; width:100%; }
   .combo-opt:hover, .combo-opt.ativo{ background:var(--cream); }
-  .combo-opt .combo-sub{ font-size:.72rem; color:var(--ink-fraco); }
-  .combo-vazio{ color:var(--ink-fraco); font-size:.82rem; padding:.4rem .5rem; }
+  .combo-opt .combo-sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+  .combo-vazio{ color:var(--ink-fraco); font-size:var(--t-apoio); padding:.4rem .5rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
@@ -604,7 +604,7 @@ $CAS = casalInfo(defsAtuais($conn));
         <div class="rz rz-s"  data-dir="s"  title="Arraste para ajustar a altura do canvas"></div>
         <div class="rz rz-se" data-dir="se" title="Arraste para redimensionar o canvas"></div>
       </div>
-      <p id="dica-planta" style="font-size:.78rem;color:var(--ink-fraco);margin:.6rem 0 0"></p>
+      <p id="dica-planta" style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.6rem 0 0"></p>
     </div>
 
     <!-- PAINEL DIREITO -->

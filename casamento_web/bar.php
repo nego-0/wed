@@ -51,10 +51,10 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
   .b-folhas{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.9rem; }
   .b-folha{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
             padding:1rem; text-align:center; }
-  .b-folha .mesa{ font-family:var(--serif); font-size:1.3rem; color:var(--ink); }
+  .b-folha .mesa{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); }
   .b-folha canvas{ margin:.5rem auto .3rem; display:block; }
-  .b-folha .lnk{ font-size:.7rem; color:var(--ink-fraco); word-break:break-all; line-height:1.3; }
-  .b-folha .rod{ font-size:.68rem; color:var(--ink-fraco); opacity:.8; margin-top:.5rem; }
+  .b-folha .lnk{ font-size:var(--t-apoio); color:var(--ink-fraco); word-break:break-all; line-height:1.3; }
+  .b-folha .rod{ font-size:var(--t-apoio); color:var(--ink-fraco); opacity:.8; margin-top:.5rem; }
   @media print{
     .topo, .b-abas, .b-chave, .no-print, .barra-endereco{ display:none !important; }
     .b-folha{ break-inside:avoid; border:1px dashed var(--line); }

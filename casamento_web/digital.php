@@ -77,53 +77,53 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
                       transform:scale(var(--pv,.44)); transform-origin:top left; pointer-events:none; }
   .peca-prova .lupa{ position:absolute; left:0; right:0; bottom:0; text-align:center;
                      padding:.4rem; background:rgba(14,15,12,.82);
-                     color:var(--gold-pale); font-size:.72rem; text-decoration:none; }
+                     color:var(--gold-pale); font-size:var(--t-apoio); text-decoration:none; }
   .peca-prova .lupa:hover{ background:rgba(14,15,12,.95); color:#fff; }
 
-  .peca h2{ margin:0 0 .4rem; font-size:1.35rem; }
-  .peca .estado-linha{ margin:0; font-size:.88rem; line-height:1.55; color:#6d726b; }
+  .peca h2{ margin:0 0 .4rem; font-size:var(--t-titulo); }
+  .peca .estado-linha{ margin:0; font-size:var(--t-denso); line-height:1.55; color:#6d726b; }
   /* Nome próprio: não herda o .acoes global, que empurra tudo para a direita. */
   .peca-acoes{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.9rem; justify-content:flex-start; }
   .selo-v{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
-           padding:.2rem .7rem; font-size:.8rem; }
+           padding:.2rem .7rem; font-size:var(--t-apoio); }
   .selo-v.ok{ background:#eaf4ee; border:1px solid #bcdcc8; color:#1f6b38; }
   .selo-v.fora{ background:#fdf3e6; border:1px solid var(--gold-soft); color:#8A6031; }
   .mini{ display:flex; gap:1.2rem; flex-wrap:wrap; margin:.8rem 0 0; }
-  .mini div{ font-size:.78rem; color:var(--ink-fraco); }
-  .mini b{ display:block; font-family:var(--serif); font-size:1.35rem; color:var(--ink); line-height:1.1; }
+  .mini div{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+  .mini b{ display:block; font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); line-height:1.1; }
 
   /* Coluna das versões recentes, dentro do cartão */
   .peca-vs{ border-left:1px solid var(--line); padding-left:1.2rem; }
   @media (max-width:1100px){ .peca-vs{ border-left:0; border-top:1px solid var(--line);
                                        padding-left:0; padding-top:.9rem; } }
-  .peca-vs h3{ font-size:.72rem; text-transform:uppercase; letter-spacing:.07em;
+  .peca-vs h3{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.07em;
                color:var(--ink-fraco); margin:0 0 .5rem; }
   .peca-vs ul{ list-style:none; margin:0; padding:0; }
   .peca-vs li{ display:flex; align-items:baseline; gap:.45rem; padding:.28rem 0;
-               border-bottom:1px solid var(--cream); font-size:.84rem; }
+               border-bottom:1px solid var(--cream); font-size:var(--t-apoio); }
   .peca-vs li:last-child{ border-bottom:0; }
   .peca-vs li .nm{ font-family:var(--serif); color:var(--ink); min-width:0;
                    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .peca-vs li .qd{ margin-left:auto; }
-  .peca-vs li .em{ font-size:.68rem; color:#1f6b38; white-space:nowrap; }
-  .peca-vs li .qd{ font-size:.72rem; color:#a3a8a1; white-space:nowrap; }
-  .peca-vs .maisv{ font-size:.78rem; display:inline-block; margin-top:.5rem; }
-  .peca-vs .nada{ font-size:.82rem; color:var(--ink-fraco); line-height:1.5; }
+  .peca-vs li .em{ font-size:var(--t-apoio); color:#1f6b38; white-space:nowrap; }
+  .peca-vs li .qd{ font-size:var(--t-apoio); color:var(--ink-fraco); white-space:nowrap; }
+  .peca-vs .maisv{ font-size:var(--t-apoio); display:inline-block; margin-top:.5rem; }
+  .peca-vs .nada{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.5; }
 
   /* ---- Lista dos convites digitais ---- */
   .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .prod{ width:100%; border-collapse:collapse; min-width:560px; background:#fff;
          border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-  .prod th{ background:var(--cream); font-size:.74rem; text-transform:uppercase; letter-spacing:.06em;
+  .prod th{ background:var(--cream); font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.06em;
             color:var(--ink-fraco); text-align:left; padding:.6rem .8rem; font-weight:600; }
-  .prod td{ border-top:1px solid var(--line); padding:.6rem .8rem; vertical-align:middle; font-size:.9rem; }
+  .prod td{ border-top:1px solid var(--line); padding:.6rem .8rem; vertical-align:middle; font-size:var(--t-denso); }
   .prod tr:hover td{ background:#fcfbf7; }
   .prod .n{ color:var(--gold-soft); font-family:var(--serif); font-weight:700; width:2.2rem; }
-  .prod .nm{ font-family:var(--serif); font-size:1.05rem; color:var(--ink); }
+  .prod .nm{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); }
   .prod .cod{ font-family:var(--serif); letter-spacing:2px; }
   .prod canvas{ display:block; background:#fff; }
   .prod .ac{ white-space:nowrap; }
-  .prod .ac a{ font-size:.82rem; margin-right:.6rem; }
+  .prod .ac a{ font-size:var(--t-apoio); margin-right:.6rem; }
 
   /* ---- As abas da peça --------------------------------------
      O estado e as fotografias são a mesma peça vista de dois lados. Numa aba,
@@ -132,7 +132,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .peca-corpo{ min-width:0; }
   .peca-abas{ display:flex; gap:.25rem; border-bottom:1px solid var(--line); margin:.5rem 0 .9rem; }
   .p-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
-          padding:.42rem .1rem; margin-right:1.1rem; font:inherit; font-size:.86rem;
+          padding:.42rem .1rem; margin-right:1.1rem; font:inherit; font-size:var(--t-denso);
           color:var(--ink-fraco); }
   .p-aba:hover{ color:var(--ink); }
   .p-aba.on{ color:var(--ink); border-bottom-color:var(--gold); font-weight:600; }
@@ -161,23 +161,23 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
              width:124px; aspect-ratio:4/3; }
   .ft-agora img{ width:100%; height:100%; object-fit:cover; display:block; }
   .ft-agora .et{ position:absolute; left:0; bottom:0; right:0; text-align:center;
-                 font-size:.58rem; letter-spacing:.03em; text-transform:uppercase;
+                 font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.03em; text-transform:uppercase;
                  white-space:nowrap; padding:.15rem; background:rgba(14,15,12,.72); color:#fff; }
   .ft-sec.nossa .ft-agora{ outline:2px solid var(--gold); outline-offset:-2px; }
   /* A lupa, por cima da fotografia: vê-se pequena, e é em grande que se decide. */
   .ft-lupa{ position:absolute; top:.25rem; right:.25rem; width:24px; height:24px; padding:0;
             border:0; border-radius:7px; background:rgba(14,15,12,.6); color:#fff;
-            font-size:.85rem; line-height:1; cursor:pointer; display:flex;
+            font-size:var(--t-denso); line-height:1; cursor:pointer; display:flex;
             align-items:center; justify-content:center; }
   .ft-lupa:hover{ background:rgba(14,15,12,.9); }
   .ft-lupa:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
-  .ft-nome{ font-size:.9rem; color:var(--ink); font-weight:600; }
-  .ft-desc{ font-size:.76rem; color:var(--ink-fraco); margin-top:.05rem; line-height:1.35; }
+  .ft-nome{ font-size:var(--t-denso); color:var(--ink); font-weight:600; }
+  .ft-desc{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.05rem; line-height:1.35; }
   .ft-acoes{ display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.45rem; }
-  .ft-acoes .btn{ font-size:.76rem; padding:.28rem .6rem; }
-  .ft-erro{ flex-basis:100%; font-size:.76rem; color:var(--danger); margin-top:.1rem; }
+  .ft-acoes .btn{ font-size:var(--t-apoio); padding:.28rem .6rem; }
+  .ft-erro{ flex-basis:100%; font-size:var(--t-apoio); color:var(--danger); margin-top:.1rem; }
   .ft-erro:empty{ display:none; }
-  .ft-vazio{ font-size:.85rem; color:var(--ink-fraco); line-height:1.55; }
+  .ft-vazio{ font-size:var(--t-denso); color:var(--ink-fraco); line-height:1.55; }
 
   /* ---- Em ponto grande, com a moldura da secção ----
      A fotografia inteira, e por cima a janela por onde a secção a mostra: o
@@ -208,10 +208,10 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
      tapa-lhe justamente o pedaço que se veio aqui ver. */
   .ft-lente-pe{ flex:none; z-index:1; display:flex; align-items:center; gap:.8rem;
                 flex-wrap:wrap; justify-content:center; text-align:center; }
-  .ft-lente-pe .leg{ color:var(--ivory); font-size:.85rem; }
+  .ft-lente-pe .leg{ color:var(--ivory); font-size:var(--t-denso); }
   .ft-lente-ac{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
                 justify-content:center; }
-  .ft-lente-dica{ color:#c9cfc6; font-size:.78rem; }
+  .ft-lente-dica{ color:#c9cfc6; font-size:var(--t-apoio); }
   /* Por guardar: o aviso é discreto, mas não passa por dizer nada. */
   .ft-lente-dica.aviso{ color:var(--gold-pale); }
   /* Um ponto desenhado, e não o carácter ●, que muda de tamanho e de peso
@@ -221,7 +221,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
                                 background:var(--gold); }
   /* Os botões do pé vivem sobre o escuro: os da casa são para fundo claro e
      desapareciam aqui. */
-  .ft-lente-ac .btn{ font-size:.76rem; padding:.28rem .7rem; background:rgba(255,255,255,.1);
+  .ft-lente-ac .btn{ font-size:var(--t-apoio); padding:.28rem .7rem; background:rgba(255,255,255,.1);
                      border:1px solid rgba(233,223,201,.42); color:var(--ivory); }
   .ft-lente-ac .btn:hover{ background:rgba(255,255,255,.2); }
   /* O «Guardar» é o que se veio aqui fazer: veste-se como tal enquanto houver
@@ -232,7 +232,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-lente-ac .btn-ouro[disabled]{ background:none; border-color:rgba(233,223,201,.25);
                                     color:#9aa196; font-weight:400; cursor:default; }
   .ft-lente .fechar{ position:absolute; top:.8rem; right:1rem; background:none; border:0;
-                     color:#fff; font-size:1.8rem; line-height:1; cursor:pointer; z-index:2; }
+                     color:#fff; font-size:var(--t-display); line-height:1; cursor:pointer; z-index:2; }
 
 </style>
 </head>

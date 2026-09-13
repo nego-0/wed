@@ -75,22 +75,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .login{ width:100%; max-width:400px; text-align:center; }
   .login .card{ padding:2.4rem 2rem; }
   .brasao{ width:70px; height:70px; margin:0 auto 1rem; border:2px solid var(--gold-soft); border-radius:50%;
-    display:flex; align-items:center; justify-content:center; color:var(--gold); font-family:var(--serif); font-weight:700; font-size:1.3rem; }
-  .casa{ font-family:var(--serif); font-size:1.75rem; color:var(--ink); line-height:1.15; margin-bottom:.3rem; }
-  .evento{ font-family:var(--sans); font-size:.86rem; color:var(--ink-fraco); margin-bottom:1.6rem; }
-  .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:.85rem; margin-bottom:1rem; }
-  .dica{ font-size:.78rem; color:var(--ink-fraco); margin-top:1.1rem; }
+    display:flex; align-items:center; justify-content:center; color:var(--gold); font-family:var(--serif); font-weight:700; font-size:var(--t-titulo); }
+  .casa{ font-family:var(--serif); font-size:var(--t-display); color:var(--ink); line-height:1.15; margin-bottom:.3rem; }
+  .evento{ font-family:var(--sans); font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:1.6rem; }
+  .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:var(--t-denso); margin-bottom:1rem; }
+  .dica{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:1.1rem; }
   /* Verificações por campo, como nos outros formulários da casa. */
   .campo{ text-align:left; margin-bottom:1rem; }
   .campo input{ transition:border-color .15s, box-shadow .15s; }
   .campo.mau input{ border-color:var(--danger); }
   .campo.mau input:focus{ box-shadow:0 0 0 3px rgba(165,71,63,.15); }
-  .err{ display:none; color:var(--danger); font-size:.77rem; margin-top:.34rem; }
+  .err{ display:none; color:var(--danger); font-size:var(--t-apoio); margin-top:.34rem; }
   .campo.mau .err{ display:block; }
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:var(--t-apoio); padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
 </style>
 </head>

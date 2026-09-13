@@ -75,7 +75,7 @@
 
 /* ---- estado de um pedido: cor, palavra e forma -------------- */
 .b-est{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
-        padding:.18rem .6rem; font-size:.74rem; font-weight:600; white-space:nowrap;
+        padding:.18rem .6rem; font-size:var(--t-etiqueta); font-weight:600; white-space:nowrap;
         text-transform:uppercase; letter-spacing:.04em; }
 /* A forma vem de um SVG e já não de um content:'◔'. Um carácter tipográfico
    depende da fonte instalada — e nos que faltam sai o quadrado do «não sei
@@ -95,7 +95,7 @@
 .b-vazio{ text-align:center; padding:2.6rem 1rem; color:var(--ink-fraco); line-height:1.6; }
 .b-vazio .ico{ width:38px; height:38px; opacity:.4; display:block; margin:0 auto .7rem;
                stroke-width:1.2; }
-.b-vazio b{ display:block; font-family:var(--serif); font-size:1.15rem; color:var(--ink);
+.b-vazio b{ display:block; font-family:var(--serif); font-size:var(--t-sub); color:var(--ink);
             font-weight:400; margin-bottom:.25rem; }
 .b-vazio p{ margin:0; max-width:34rem; margin-inline:auto; }
 .b-vazio .btn{ margin-top:1rem; }
@@ -172,17 +172,17 @@ body.b-servico [tabindex]:focus-visible{
    .b-bt-grande sozinho, e estava a encolher para 48 exactamente o botão que
    existe para ter 56. O «Entregue» do garçom é o alvo mais tocado da noite. */
 .b-bt-grande, body.b-servico .b-bt-grande{
-  min-height:56px; font-size:1rem; width:100%; justify-content:center; }
+  min-height:56px; font-size:var(--t-corpo); width:100%; justify-content:center; }
 
 /* A barra de estado, sempre à vista */
 .b-barra{ display:flex; align-items:center; gap:.9rem; flex-wrap:wrap;
           padding:.7rem 1rem; margin:0 0 1rem; border-radius:var(--radius);
           background:var(--card); border:1px solid var(--line); }
-.b-barra .n{ font-family:var(--serif); font-size:1.5rem; font-weight:700; line-height:1;
+.b-barra .n{ font-family:var(--serif); font-size:var(--t-seccao); font-weight:700; line-height:1;
              color:var(--gold-texto); font-variant-numeric:tabular-nums; }
-.b-barra .l{ font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-fraco); }
+.b-barra .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-fraco); }
 .b-barra .cresce{ flex:1 1 auto; }
-.b-sinal{ display:inline-flex; align-items:center; gap:.4rem; font-size:.85rem; }
+.b-sinal{ display:inline-flex; align-items:center; gap:.4rem; font-size:var(--t-denso); }
 .b-sinal::before{ content:''; width:9px; height:9px; border-radius:50%; background:var(--danger); }
 .b-sinal.on::before{ background:var(--ok); box-shadow:0 0 0 4px rgba(62,142,62,.22); }
 
@@ -190,22 +190,22 @@ body.b-servico [tabindex]:focus-visible{
 .b-fila{ display:grid; gap:.7rem; }
 .b-ped{ display:grid; gap:.55rem; }
 .b-ped-topo{ display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap; }
-.b-ped .cod{ font-family:var(--serif); font-size:1.2rem; font-weight:700; color:var(--gold-texto);
+.b-ped .cod{ font-family:var(--serif); font-size:var(--t-sub); font-weight:700; color:var(--gold-texto);
              font-variant-numeric:tabular-nums; }
-.b-ped .quem{ font-size:1.05rem; }
-.b-ped .onde{ font-size:.82rem; color:var(--ink-fraco); }
-.b-ped .ha{ margin-left:auto; font-size:.78rem; color:var(--ink-fraco);
+.b-ped .quem{ font-size:var(--t-corpo); }
+.b-ped .onde{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+.b-ped .ha{ margin-left:auto; font-size:var(--t-apoio); color:var(--ink-fraco);
             font-variant-numeric:tabular-nums; }
 .b-ped.velho{ border-color:var(--warn); }
 .b-ped.muito-velho{ border-color:var(--danger); }
 .b-linhas{ display:flex; gap:.5rem; flex-wrap:wrap; }
 .b-linha{ display:flex; align-items:center; gap:.45rem; background:rgba(0,0,0,.22);
-          border-radius:9px; padding:.25rem .55rem .25rem .25rem; font-size:.9rem; }
+          border-radius:9px; padding:.25rem .55rem .25rem .25rem; font-size:var(--t-denso); }
 .b-linha .b-foto{ width:38px; aspect-ratio:1; border-radius:7px; flex:none; }
 .b-linha b{ font-variant-numeric:tabular-nums; color:var(--gold-texto); }
 .b-acoes{ display:flex; gap:.7rem; flex-wrap:wrap; }
 .b-acoes .btn{ flex:1 1 140px; justify-content:center; min-height:56px; }
-.b-bandeira{ display:inline-flex; align-items:center; gap:.3rem; font-size:.72rem;
+.b-bandeira{ display:inline-flex; align-items:center; gap:.3rem; font-size:var(--t-apoio);
              background:var(--warn-bg); color:var(--warn); border-radius:50px; padding:.15rem .55rem; }
 /* Um pedido que deixou de caber numa regra posta depois de ele entrar. Fica
    assinalado, não recusado: quem pôs a regra pode querer servir o copo que já
@@ -237,7 +237,7 @@ body.b-servico [tabindex]:focus-visible{
    bebe descem para a segunda linha, que é onde se confirma à chegada. */
 .b-destino{ display:flex; align-items:center; gap:.6rem; }
 .b-destino .ico{ width:20px; height:20px; color:var(--gold-texto); flex:none; }
-.b-destino .mesa{ font-family:var(--serif); font-size:1.35rem; line-height:1.15;
+.b-destino .mesa{ font-family:var(--serif); font-size:var(--t-titulo); line-height:1.15;
                   color:var(--ink); min-width:0; overflow:hidden;
                   text-overflow:ellipsis; white-space:nowrap; }
 /* Sem mesa, o título é o NOME de quem bebe — e o aviso desce para a segunda
@@ -245,10 +245,10 @@ body.b-servico [tabindex]:focus-visible{
    ninguém a achar uma pessoa num salão. */
 .b-quem2 .sem{ display:inline-flex; align-items:center; gap:.3rem; color:var(--warn); }
 .b-quem2 .sem .ico{ width:13px; height:13px; }
-.b-destino .ha{ margin-left:auto; font-size:.78rem; color:var(--ink-fraco);
+.b-destino .ha{ margin-left:auto; font-size:var(--t-apoio); color:var(--ink-fraco);
                 font-variant-numeric:tabular-nums; white-space:nowrap; }
 /* A segunda linha: quem bebe, e o código para confirmar à mesa. */
-.b-quem2{ font-size:.85rem; color:var(--ink-fraco); display:flex; align-items:baseline;
+.b-quem2{ font-size:var(--t-denso); color:var(--ink-fraco); display:flex; align-items:baseline;
           gap:.5rem; flex-wrap:wrap; }
 .b-quem2 .cod{ font-family:var(--serif); font-weight:700; color:var(--gold-texto);
                font-variant-numeric:tabular-nums; letter-spacing:.03em; }
@@ -262,9 +262,9 @@ body.b-servico [tabindex]:focus-visible{
 .b-tempos{ display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:1.6rem;
            padding-top:1rem; border-top:1px solid var(--line); }
 .b-tempos div{ min-width:88px; }
-.b-tempos .n{ font-family:var(--serif); font-size:1.3rem; color:var(--gold-texto);
+.b-tempos .n{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--gold-texto);
               font-variant-numeric:tabular-nums; line-height:1.1; }
-.b-tempos .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:.06em;
+.b-tempos .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
               color:var(--ink-fraco); }
 
 /* ---- o stock, em tempo real -------------------------------- */
@@ -284,9 +284,9 @@ body.b-servico [tabindex]:focus-visible{
    deixa uma coluna de 44px vazia à esquerda a fingir que ali havia alguma
    coisa. É a mesma linha, com uma coluna a menos. */
 .b-stock.lista .b-item{ grid-template-columns:1fr auto; }
-.b-item .nm{ font-size:.95rem; }
-.b-item .sub{ font-size:.74rem; color:var(--ink-fraco); }
-.b-item .qt{ font-family:var(--serif); font-size:1.3rem; font-weight:700; line-height:1;
+.b-item .nm{ font-size:var(--t-corpo); }
+.b-item .sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+.b-item .qt{ font-family:var(--serif); font-size:var(--t-titulo); font-weight:700; line-height:1;
              font-variant-numeric:tabular-nums; text-align:right; }
 .b-semaforo{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:.35rem; }
 .b-semaforo.bom{ background:var(--ok); } .b-semaforo.meio{ background:var(--warn); }
@@ -309,9 +309,9 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
    de dois desenhos diferentes. Uma página, uma coluna. */
 .b-festa-capa{ text-align:center; padding:1.9rem 1.2rem 1.4rem;
                max-width:560px; margin-inline:auto; }
-.b-festa-capa .marca{ font-size:.68rem; text-transform:uppercase; letter-spacing:.22em;
+.b-festa-capa .marca{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.22em;
                       color:var(--c-ouro, #B4864A); opacity:.85; }
-.b-festa-capa .mono{ font-family:var(--c-serif, Georgia, serif); font-size:1.75rem;
+.b-festa-capa .mono{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-display);
                      line-height:1.25; margin-top:.35rem;
                      color:var(--c-tinta, #20342A); }
 /* O filete: dois traços que se apagam para fora e um losango ao meio. Tudo
@@ -325,16 +325,16 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
   background:linear-gradient(90deg, var(--c-ouro, #B4864A), transparent); }
 .b-festa-capa .filete span{ width:6px; height:6px; flex:none; rotate:45deg;
                             background:var(--c-ouro, #B4864A); }
-.b-festa-capa .lema{ margin-top:.7rem; font-size:.86rem; line-height:1.6;
+.b-festa-capa .lema{ margin-top:.7rem; font-size:var(--t-denso); line-height:1.6;
                      color:var(--c-tinta, #20342A); opacity:.72; }
 
 /* O fecho da página, com o mesmo filete da abertura: as duas pontas rimam, e
    o menu deixa de acabar no ar a meio do ecrã. */
 .b-festa-pe{ text-align:center; padding:2.2rem 1rem 1rem;
              max-width:560px; margin-inline:auto; }
-.b-festa-pe p{ margin:.5rem 0 0; font-size:.82rem; line-height:1.6;
+.b-festa-pe p{ margin:.5rem 0 0; font-size:var(--t-apoio); line-height:1.6;
                color:var(--c-tinta, #20342A); opacity:.72; }
-.b-festa-pe p.fraco{ font-size:.76rem; opacity:.5; }
+.b-festa-pe p.fraco{ font-size:var(--t-apoio); opacity:.5; }
 .b-festa-pe .filete{ display:flex; align-items:center; justify-content:center;
                      gap:.55rem; margin:0 auto .3rem; max-width:180px; }
 .b-festa-pe .filete i{ flex:1; height:1px;
@@ -370,7 +370,7 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-festa-topo .b-mesa{ width:100%; }
 .b-mesa{ display:inline-flex; align-items:center; gap:.4rem;
          background:rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.1); border-radius:50px;
-         padding:.35rem .85rem; font-size:.85rem; cursor:pointer; min-height:40px;
+         padding:.35rem .85rem; font-size:var(--t-denso); cursor:pointer; min-height:40px;
          color:inherit; font-family:inherit; }
 .b-mesa .ico{ width:15px; height:15px; opacity:.75; }
 /* A seta encosta-se à direita da barra — é a beira onde a mão a vai procurar,
@@ -396,7 +396,7 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 .b-mesa-cartao > .ico{ width:15px; height:15px; opacity:.6; flex:none; }
 .b-mesa-cartao .lic-sel{ min-width:7rem; }
 .b-mesa-cartao .lic-sel-bt{ background:none; border:0; min-height:42px;
-                            padding:.2rem .1rem; box-shadow:none; font-size:.9rem; }
+                            padding:.2rem .1rem; box-shadow:none; font-size:var(--t-denso); }
 .b-para.on .ico{ opacity:1; }
 /* «A pedir para outra pessoa» é um estado, e um estado que se esquece dá uma
    ronda inteira lançada em nome do vizinho. Enquanto está ligado a pastilha
@@ -453,7 +453,7 @@ body.com-rodape .b-corpo{
 .b-festa .b-vazio{ color:rgba(0,0,0,.55); }
 .b-festa .b-vazio b{ color:var(--c-verde, #20342A); font-family:var(--c-serif, Georgia, serif); }
 
-.b-gaveta{ font-family:var(--c-serif, Georgia, serif); font-size:.78rem; letter-spacing:.16em;
+.b-gaveta{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.16em;
            text-transform:uppercase; color:var(--c-ouro, #B4864A); margin:1.4rem 0 .6rem;
            display:flex; align-items:center; gap:.45rem; scroll-margin-top:9rem; }
 .b-gaveta .ico{ width:15px; height:15px; }
@@ -472,7 +472,7 @@ body.com-rodape .b-corpo{
 .b-bebida .selos{ position:absolute; top:.4rem; left:.4rem; right:.4rem;
                   display:flex; align-items:flex-start; gap:.3rem; pointer-events:none; }
 .b-selo{ display:inline-flex; align-items:center; gap:.22rem; border-radius:50px;
-         font-size:.66rem; font-weight:700; letter-spacing:.03em; padding:.16rem .42rem;
+         font-size:var(--t-apoio); font-weight:700; letter-spacing:.03em; padding:.16rem .42rem;
          background:var(--c-fundo, #FBF8F1); color:var(--c-tinta, #20342A);
          box-shadow:0 1px 4px rgba(0,0,0,.16); }
 .b-selo .ico{ width:11px; height:11px; }
@@ -487,20 +487,20 @@ body.com-rodape .b-corpo{
    era cor, não informação. A fotografia, quando existe, fica com o painel
    inteiro: é ela que merece o espaço. */
 .b-bebida .b-foto.sem-foto{ aspect-ratio:auto; height:84px; }
-.b-bebida .nm{ font-family:var(--c-serif, Georgia, serif); font-size:1.05rem; padding:.55rem .7rem 0; }
-.b-bebida .ds{ font-size:.76rem; color:rgba(0,0,0,.55); padding:.1rem .7rem .4rem; line-height:1.35; }
+.b-bebida .nm{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-corpo); padding:.55rem .7rem 0; }
+.b-bebida .ds{ font-size:var(--t-apoio); color:rgba(0,0,0,.55); padding:.1rem .7rem .4rem; line-height:1.35; }
 .b-bebida .pe{ margin-top:auto; display:flex; align-items:center; gap:.5rem;
                padding:.4rem .55rem .55rem; }
-.b-bebida .qtd{ font-size:.74rem; color:rgba(0,0,0,.5); }
+.b-bebida .qtd{ font-size:var(--t-apoio); color:rgba(0,0,0,.5); }
 .b-bebida.esgotada{ opacity:.55; }
 /* Uma bebida travada não fica cinzenta e muda: diz quanto falta, e o que sai
    já em vez dela. É a diferença entre uma porta fechada e uma sugestão. */
 .b-conta{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--c-verde); }
 .b-alt{ padding:.1rem .55rem .6rem; display:flex; gap:.3rem; flex-wrap:wrap;
-        align-items:center; font-size:.74rem; color:rgba(0,0,0,.55); }
+        align-items:center; font-size:var(--t-apoio); color:rgba(0,0,0,.55); }
 .b-alt button{ background:transparent; border:1px solid var(--c-ouro, #B4864A);
                color:var(--c-verde); border-radius:50px; padding:.25rem .6rem;
-               font:inherit; font-size:.74rem; cursor:pointer; min-height:34px; }
+               font:inherit; font-size:var(--t-apoio); cursor:pointer; min-height:34px; }
 /* Saltar para a alternativa acende-a por um instante — senão a pessoa chega
    lá e não sabe a qual das dez é que carregou. */
 .b-bebida.b-aponta{ outline:2px solid var(--c-ouro, #B4864A); outline-offset:2px; }
@@ -532,9 +532,9 @@ body.com-rodape .b-corpo{
            padding:var(--b-rodape-p) 1.1rem
                    calc(var(--b-rodape-p) + env(safe-area-inset-bottom));
            display:flex; align-items:center; gap:.8rem; }
-.b-rodape .resumo{ font-size:.9rem; }
+.b-rodape .resumo{ font-size:var(--t-denso); }
 .b-rodape .btn{ margin-left:auto; min-height:var(--b-rodape-bt);
-                padding:0 1.6rem; font-size:1rem; }
+                padding:0 1.6rem; font-size:var(--t-corpo); }
 
 /* E o botão do tema sai-lhe da frente. A barra só aparece quando há bebidas no
    cesto — e é exactamente aí que o canto de baixo à direita deixa de ser um
@@ -550,41 +550,41 @@ body.com-rodape .tema-fab{
 
 /* A procura do nome */
 .b-procura{ max-width:460px; margin:2.4rem auto; padding:0 1.2rem; text-align:center; }
-.b-procura h1{ font-family:var(--c-serif, Georgia, serif); font-weight:400; font-size:1.6rem;
+.b-procura h1{ font-family:var(--c-serif, Georgia, serif); font-weight:400; font-size:var(--t-seccao);
                margin:0 0 .2rem; }
-.b-procura p{ color:rgba(0,0,0,.6); font-size:.9rem; margin:0 0 1.2rem; }
-.b-procura input{ width:100%; font-size:1.1rem; padding:.9rem 1rem; border-radius:12px;
+.b-procura p{ color:rgba(0,0,0,.6); font-size:var(--t-denso); margin:0 0 1.2rem; }
+.b-procura input{ width:100%; font-size:var(--t-sub); padding:.9rem 1rem; border-radius:12px;
                   border:1px solid rgba(0,0,0,.2); background:var(--c-cartao, #fff); color:inherit; }
 .b-nomes{ display:grid; gap:.5rem; margin-top:.9rem; text-align:left; }
 .b-nome{ display:block; width:100%; text-align:left; background:var(--c-cartao, #fff);
          border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:.75rem .9rem;
          cursor:pointer; min-height:56px; color:inherit; font:inherit; }
-.b-nome b{ font-family:var(--c-serif, Georgia, serif); font-size:1.05rem; display:block; }
-.b-nome span{ font-size:.78rem; color:rgba(0,0,0,.55); }
-.b-ajuda{ margin-top:1.2rem; font-size:.82rem; color:rgba(0,0,0,.55); line-height:1.5; }
+.b-nome b{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-corpo); display:block; }
+.b-nome span{ font-size:var(--t-apoio); color:rgba(0,0,0,.55); }
+.b-ajuda{ margin-top:1.2rem; font-size:var(--t-apoio); color:rgba(0,0,0,.55); line-height:1.5; }
 
 /* Os quatro dígitos do convite, quando a casa os pede.
    Grandes e espaçados: escrevem-se de pé, com um copo na outra mão, e a
    pessoa tem de ver de relance que já lá pôs os quatro. */
-.b-pin{ text-align:center; font-size:1.8rem !important; letter-spacing:.5em;
+.b-pin{ text-align:center; font-size:var(--t-display) !important; letter-spacing:.5em;
         text-indent:.5em; font-variant-numeric:tabular-nums; }
 .b-pin-bt{ width:100%; min-height:56px; margin-top:.7rem; }
 /* O erro fica à vista e não desaparece sozinho: um código trocado exige uma
    acção, e uma mensagem que se apaga ao fim de três segundos não a pede (§25.11). */
-.b-pin-erro{ min-height:1.2rem; margin-top:.6rem; font-size:.85rem; color:var(--danger, #A2483F); }
+.b-pin-erro{ min-height:1.2rem; margin-top:.6rem; font-size:var(--t-denso); color:var(--danger, #A2483F); }
 .b-pin-erro:empty{ min-height:0; }
 
 /* Os meus pedidos, no fim do menu */
 /* O que esta pessoa já pediu — só esta. É a resposta a «quantas já levei?»,
    que é a pergunta que se faz antes de pedir a seguinte. */
-.b-conta-minha{ font-size:.85rem; color:rgba(0,0,0,.6); margin:-.2rem 0 .6rem;
+.b-conta-minha{ font-size:var(--t-denso); color:rgba(0,0,0,.6); margin:-.2rem 0 .6rem;
                 line-height:1.5; }
 .b-conta-minha b{ font-variant-numeric:tabular-nums; color:var(--c-verde); }
 .b-meus{ margin-top:2rem; }
 .b-meu{ display:flex; align-items:center; gap:.6rem; background:var(--c-cartao, #fff);
         border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:.6rem .8rem; margin-bottom:.5rem; }
 .b-meu .cod{ font-family:var(--c-serif, Georgia, serif); font-weight:700; }
-.b-meu .oq{ font-size:.85rem; flex:1 1 auto; }
+.b-meu .oq{ font-size:var(--t-denso); flex:1 1 auto; }
 
 /* ---- movimento: pouco, e desligável ------------------------- */
 @media (prefers-reduced-motion: reduce){
@@ -602,7 +602,7 @@ body.com-rodape .tema-fab{
    ============================================================ */
 .b-fer{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin:0 0 1.1rem; }
 .b-fer .cresce{ flex:1 1 auto; }
-.b-fer .conta{ font-size:.8rem; color:var(--ink-fraco); font-variant-numeric:tabular-nums;
+.b-fer .conta{ font-size:var(--t-apoio); color:var(--ink-fraco); font-variant-numeric:tabular-nums;
                white-space:nowrap; }
 
 /* ---- a caixa de procura -------------------------------------
@@ -614,7 +614,7 @@ body.com-rodape .tema-fab{
                  width:17px; height:17px; color:var(--ink-fraco); pointer-events:none; }
 .b-busca input{ width:100%; min-height:44px; padding:.5rem 2.4rem .5rem 2.4rem;
                 border:1px solid var(--line); border-radius:50px; background:var(--card);
-                font:inherit; font-size:.92rem; color:var(--ink); }
+                font:inherit; font-size:var(--t-denso); color:var(--ink); }
 .b-busca input::-webkit-search-cancel-button{ display:none; }
 .b-busca input:focus{ outline:none; border-color:var(--gold);
                       box-shadow:0 0 0 3px var(--ring); }
@@ -632,13 +632,13 @@ body.com-rodape .tema-fab{
 .b-pastilhas{ display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; }
 .b-pilula{ display:inline-flex; align-items:center; gap:.4rem; background:var(--card);
            border:1px solid var(--line); border-radius:50px; padding:.42rem .85rem;
-           font:inherit; font-size:.83rem; color:var(--text); cursor:pointer;
+           font:inherit; font-size:var(--t-apoio); color:var(--text); cursor:pointer;
            min-height:40px; white-space:nowrap; transition:.15s; }
 .b-pilula:hover{ border-color:var(--gold-texto); }
 .b-pilula .ico{ width:15px; height:15px; }
 .b-pilula .pt{ width:9px; height:9px; border-radius:3px; flex:none;
                background:var(--pt, var(--gold-soft)); }
-.b-pilula .n{ font-size:.76rem; color:var(--ink-fraco); font-variant-numeric:tabular-nums; }
+.b-pilula .n{ font-size:var(--t-apoio); color:var(--ink-fraco); font-variant-numeric:tabular-nums; }
 .b-pilula.on{ background:var(--gold-pale); border-color:var(--gold); color:var(--gold-deep);
               font-weight:600; }
 .b-pilula.on .n{ color:var(--gold-deep); }
@@ -699,7 +699,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                     box-shadow:0 1px 3px rgba(0,0,0,.16); }
 .b-cart .capa .alc .ico{ width:12px; height:12px; }
 .b-marca{ display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .55rem;
-          border-radius:50px; font-size:.68rem; font-weight:600; letter-spacing:.03em;
+          border-radius:50px; font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.03em;
           text-transform:uppercase; background:var(--card); color:var(--text);
           box-shadow:0 1px 3px rgba(0,0,0,.18); }
 .b-marca .ico{ width:12px; height:12px; stroke-width:2; }
@@ -709,14 +709,14 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 
 .b-cart .corpo{ padding:.8rem .9rem .9rem; display:flex; flex-direction:column; gap:.35rem;
                 flex:1; }
-.b-cart .gav{ display:inline-flex; align-items:center; gap:.4rem; font-size:.7rem;
+.b-cart .gav{ display:inline-flex; align-items:center; gap:.4rem; font-size:var(--t-etiqueta); font-weight:600;
               text-transform:uppercase; letter-spacing:.07em; color:var(--ink-fraco); }
 .b-cart .gav i{ width:8px; height:8px; border-radius:2px; flex:none;
                 background:var(--tinta, var(--gold-soft)); }
-.b-cart .nm{ font-family:var(--serif); font-size:1.12rem; color:var(--ink); line-height:1.25;
+.b-cart .nm{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); line-height:1.25;
              display:flex; align-items:center; gap:.4rem; }
 .b-cart .nm .ico{ width:15px; height:15px; color:var(--ink-fraco); }
-.b-cart .ds{ font-size:.8rem; color:var(--ink-fraco); line-height:1.45; }
+.b-cart .ds{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.45; }
 
 /* ---- o medidor do stock -------------------------------------
    Três números lado a lado, todos do mesmo tamanho, não dizem nada: era
@@ -724,9 +724,9 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    leitura — e o que está PROMETIDO desenha-se à parte, porque é bebida que
    ainda está na copa mas já tem dono. */
 .b-medidor{ margin-top:auto; padding-top:.6rem; }
-.b-medidor .linha{ display:flex; align-items:baseline; gap:.4rem; font-size:.76rem;
+.b-medidor .linha{ display:flex; align-items:baseline; gap:.4rem; font-size:var(--t-apoio);
                    color:var(--ink-fraco); }
-.b-medidor .linha b{ font-family:var(--serif); font-size:1.3rem; color:var(--ink);
+.b-medidor .linha b{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink);
                      font-variant-numeric:tabular-nums; line-height:1; }
 .b-medidor .linha .dir{ margin-left:auto; }
 .b-medidor .barra{ height:5px; border-radius:50px; background:var(--sand); overflow:hidden;
@@ -752,9 +752,9 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                background:color-mix(in srgb, var(--tinta, var(--gold-soft)) 18%, transparent); }
 .b-cat .sinal .ico{ width:21px; height:21px; }
 .b-cat .txt{ flex:1 1 auto; min-width:0; }
-.b-cat .txt b{ display:block; font-family:var(--serif); font-size:1rem; font-weight:400;
+.b-cat .txt b{ display:block; font-family:var(--serif); font-size:var(--t-corpo); font-weight:400;
                color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.b-cat .txt small{ font-size:.75rem; color:var(--ink-fraco); }
+.b-cat .txt small{ font-size:var(--t-apoio); color:var(--ink-fraco); }
 .b-cat .b-bt-ico{ width:34px; height:34px; border-radius:9px; }
 .b-cat .b-bt-ico .ico{ width:16px; height:16px; }
 
@@ -764,7 +764,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-abas{ display:flex; gap:.2rem; border-bottom:1px solid var(--line); margin:0 0 1.3rem;
          overflow-x:auto; }
 .b-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
-        padding:.7rem .2rem; margin-right:1.5rem; font:inherit; font-size:.92rem;
+        padding:.7rem .2rem; margin-right:1.5rem; font:inherit; font-size:var(--t-denso);
         color:var(--ink-fraco); display:inline-flex; align-items:center; gap:.45rem;
         white-space:nowrap; min-height:46px; }
 .b-aba .ico{ width:17px; height:17px; }
@@ -791,15 +791,15 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                            border-radius:50%; border:2px solid var(--ok); opacity:.5;
                            animation:b-farol 2.4s ease-out infinite; }
 @keyframes b-farol{ 0%{ transform:scale(1); opacity:.5 } 70%,100%{ transform:scale(1.5); opacity:0 } }
-.b-chave .est{ font-family:var(--serif); font-size:1.25rem; color:var(--ink); }
+.b-chave .est{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); }
 .b-chave .dica{ margin:0; }
 .b-chave > div:nth-child(2){ flex:1 1 14rem; min-width:0; }
 .b-chave .btn{ min-height:48px; flex:none; }
 .b-chave .numeros{ display:flex; gap:1.4rem; flex:none; }
 .b-chave .numeros div{ text-align:right; }
-.b-chave .numeros b{ display:block; font-family:var(--serif); font-size:1.4rem; color:var(--ink);
+.b-chave .numeros b{ display:block; font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink);
                      line-height:1; font-variant-numeric:tabular-nums; }
-.b-chave .numeros small{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+.b-chave .numeros small{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
                          color:var(--ink-fraco); }
 @media (max-width:640px){
   .b-chave .numeros{ margin-left:0; order:3; width:100%; justify-content:space-between; }
@@ -830,7 +830,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 @media (max-width:860px){ .b-duas-largo{ grid-template-columns:1fr; } }
 
 /* O título de uma secção da montagem: serif, com o seu sinal. */
-.b-sec{ font-family:var(--serif); font-size:1.1rem; font-weight:400; color:var(--ink);
+.b-sec{ font-family:var(--serif); font-size:var(--t-sub); font-weight:400; color:var(--ink);
         margin:0 0 .5rem; display:flex; align-items:center; gap:.5rem; }
 .b-sec .ico{ width:18px; height:18px; color:var(--gold-deep); }
 
@@ -845,7 +845,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    num tablet de pé, sem duas folhas de estilo. */
 .b-regras{ display:grid; gap:1.1rem; max-width:820px; }
 .b-regras > section{ padding:1.1rem 1.2rem; }
-.b-regras .b-nota{ margin:-.2rem 0 .9rem; font-size:.82rem; line-height:1.6;
+.b-regras .b-nota{ margin:-.2rem 0 .9rem; font-size:var(--t-apoio); line-height:1.6;
                    color:var(--ink-fraco); }
 .b-regras .b-fer{ margin-bottom:.8rem; }
 
@@ -859,25 +859,25 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-fam + .b-fam{ margin-top:1rem; }
 .b-fam.vazia{ border-style:dashed; }
 .b-fam-t{ display:flex; align-items:center; gap:.5rem; font-family:var(--serif);
-          font-size:1.02rem; color:var(--ink); }
+          font-size:var(--t-corpo); color:var(--ink); }
 .b-fam-t .ico{ width:18px; height:18px; color:var(--gold-deep); flex:none; }
-.b-fam-t .n{ margin-left:auto; font-size:.75rem; font-weight:700;
+.b-fam-t .n{ margin-left:auto; font-size:var(--t-apoio); font-weight:700;
              font-variant-numeric:tabular-nums; color:var(--gold-deep);
              background:var(--gold-pale); border-radius:50px; padding:.1rem .5rem; }
-.b-fam-d{ margin:.35rem 0 .2rem; font-size:.79rem; line-height:1.6;
+.b-fam-d{ margin:.35rem 0 .2rem; font-size:var(--t-apoio); line-height:1.6;
           color:var(--ink-fraco); }
-.b-fam-nada{ margin:.6rem 0 .1rem; font-size:.82rem; color:var(--ink-fraco);
+.b-fam-nada{ margin:.6rem 0 .1rem; font-size:var(--t-apoio); color:var(--ink-fraco);
              font-style:italic; }
 
 /* Um grupo de limites: o nome, a contagem, e a explicação por baixo. O título
    com a contagem diz de relance se há alguma coisa ali antes de se ler. */
 .b-grupo{ margin-top:1rem; }
 .b-grupo-t{ display:flex; align-items:center; gap:.5rem;
-            font-size:.8rem; text-transform:uppercase; letter-spacing:.06em;
+            font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
             color:var(--ink-fraco); }
-.b-grupo-t .n{ margin-left:auto; font-size:.72rem; font-weight:700;
+.b-grupo-t .n{ margin-left:auto; font-size:var(--t-apoio); font-weight:700;
                font-variant-numeric:tabular-nums; color:var(--ink-fraco); }
-.b-grupo-d{ margin:.25rem 0 .5rem; font-size:.77rem; line-height:1.55;
+.b-grupo-d{ margin:.25rem 0 .5rem; font-size:var(--t-apoio); line-height:1.55;
             color:var(--ink-fraco); opacity:.85; }
 
 /* Os dois gestos de uma regra: editar e levantar. Juntos, e à direita. */
@@ -901,56 +901,56 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 /* Os já respondidos ficam esbatidos, mas continuam legíveis: são o histórico
    da noite, e é a eles que se volta no dia seguinte a perguntar porquê. */
 .b-alerta.feito{ opacity:.62; }
-.b-al-topo{ display:flex; align-items:center; gap:.45rem; font-size:.82rem;
+.b-al-topo{ display:flex; align-items:center; gap:.45rem; font-size:var(--t-apoio);
             text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
 .b-al-topo .qd{ margin-left:auto; text-transform:none; letter-spacing:0;
-                font-size:.78rem; }
+                font-size:var(--t-apoio); }
 /* Depois da hora, e não antes do nível: o nível diz a pressa, a hora diz desde
    quando, e só depois é que interessa saber que este não se vai embora sozinho. */
 .b-al-pede{ padding:.05rem .45rem; border-radius:999px; background:var(--warn-bg);
-            color:var(--warn); font-size:.68rem; font-weight:700;
+            color:var(--warn); font-size:var(--t-apoio); font-weight:700;
             letter-spacing:.04em; white-space:nowrap; }
-.b-al-sit{ margin:.5rem 0 .35rem; font-size:.95rem; line-height:1.5; color:var(--ink); }
-.b-al-sit small{ display:block; margin-top:.15rem; font-size:.8rem;
+.b-al-sit{ margin:.5rem 0 .35rem; font-size:var(--t-corpo); line-height:1.5; color:var(--ink); }
+.b-al-sit small{ display:block; margin-top:.15rem; font-size:var(--t-apoio);
                  color:var(--ink-fraco); }
-.b-al-sug{ display:flex; align-items:flex-start; gap:.4rem; font-size:.88rem;
+.b-al-sug{ display:flex; align-items:flex-start; gap:.4rem; font-size:var(--t-denso);
            line-height:1.45; color:var(--ink-fraco); }
 .b-al-sug .ico{ width:15px; height:15px; flex:none; margin-top:.15rem;
                 color:var(--gold-deep); }
-.b-al-fim{ margin-top:.6rem; font-size:.82rem; color:var(--ink-fraco); }
+.b-al-fim{ margin-top:.6rem; font-size:var(--t-apoio); color:var(--ink-fraco); }
 
 /* ---- o editor das frases que o convidado lê (§31.5) ---- */
 .b-vars{ display:flex; flex-wrap:wrap; gap:.3rem .9rem; margin:0 0 1rem;
-         font-size:.8rem; color:var(--ink-fraco); }
+         font-size:var(--t-apoio); color:var(--ink-fraco); }
 .b-vars code{ font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
-              font-size:.78rem; background:var(--cream); border-radius:5px;
+              font-size:var(--t-apoio); background:var(--cream); border-radius:5px;
               padding:.1rem .3rem; color:var(--gold-deep); }
 .b-msg{ padding:.7rem 0; border-bottom:1px solid var(--line); }
 .b-msg:last-of-type{ border-bottom:0; }
-.b-msg label{ display:flex; align-items:center; gap:.5rem; font-size:.9rem;
+.b-msg label{ display:flex; align-items:center; gap:.5rem; font-size:var(--t-denso);
               margin-bottom:.35rem; color:var(--ink); }
 /* «Vossa» marca as que o casal reescreveu: sem isto, uma lista de dez caixas
    não diz quais é que já foram tocadas. */
-.b-msg .sel{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+.b-msg .sel{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
              background:var(--gold-pale); color:var(--gold-deep);
              border-radius:20px; padding:.1rem .45rem; }
-.b-msg textarea{ width:100%; font:inherit; font-size:.9rem; line-height:1.5;
+.b-msg textarea{ width:100%; font:inherit; font-size:var(--t-denso); line-height:1.5;
                  padding:.5rem .6rem; border:1.5px solid var(--line);
                  border-radius:9px; background:var(--card); color:var(--ink);
                  resize:vertical; }
 .b-msg textarea:focus{ outline:none; border-color:var(--gold);
                        box-shadow:0 0 0 3px var(--ring); }
-.b-msg .lida{ margin:0; font-size:.9rem; line-height:1.5; color:var(--ink); }
+.b-msg .lida{ margin:0; font-size:var(--t-denso); line-height:1.5; color:var(--ink); }
 /* O texto de fábrica por baixo: é o que sai se a caixa ficar vazia, e por isso
    lê-se como exemplo e não como instrução. */
-.b-msg .fab{ display:block; margin-top:.3rem; font-size:.78rem; line-height:1.45;
+.b-msg .fab{ display:block; margin-top:.3rem; font-size:var(--t-apoio); line-height:1.45;
              color:var(--ink-fraco); font-style:italic; }
 
 /* A frase que a regra vai ser, escrita por cima do formulário e reescrita a
    cada campo que se toca. Um formulário de três números pede que se imagine o
    resultado; isto mostra-o. */
 .b-frase{ background:var(--j-ouro-pal, var(--gold-pale)); border-radius:10px;
-          padding:.7rem .85rem; font-size:.92rem; line-height:1.5;
+          padding:.7rem .85rem; font-size:var(--t-denso); line-height:1.5;
           color:var(--j-ink, var(--ink)); }
 .b-frase b{ font-weight:700; }
 
@@ -959,10 +959,10 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-reg{ display:flex; align-items:flex-start; gap:.7rem; padding:.6rem 0; }
 .b-reg + .b-reg{ border-top:1px dotted var(--line); }
 .b-reg .txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:.15rem; }
-.b-reg .txt > b{ font-size:.78rem; text-transform:uppercase; letter-spacing:.05em;
+.b-reg .txt > b{ font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.05em;
                  color:var(--ink-fraco); font-weight:700; }
-.b-reg .fr{ font-size:.95rem; color:var(--ink); line-height:1.45; }
-.b-reg small{ font-size:.76rem; color:var(--ink-fraco); line-height:1.45; }
+.b-reg .fr{ font-size:var(--t-corpo); color:var(--ink); line-height:1.45; }
+.b-reg small{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.45; }
 .b-reg .so-nos{ display:inline-flex; align-items:center; gap:.3rem; }
 .b-reg .so-nos .ico{ width:13px; height:13px; flex:none; }
 /* Escrita mas ainda sem valer, ou já passada: apaga-se, e diz-se por palavras.
@@ -974,10 +974,10 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    faz-se sobre a frase, e a resposta tem de estar onde o olho já está. */
 .b-reg .modo{ display:inline-block; margin-left:.4rem; padding:.05rem .45rem;
               border-radius:999px; background:var(--warn-bg); color:var(--warn);
-              font-size:.7rem; font-weight:700; text-transform:uppercase;
+              font-size:var(--t-etiqueta); font-weight:700; text-transform:uppercase;
               letter-spacing:.04em; vertical-align:.08em; white-space:nowrap; }
 /* E a mesma verdade dentro da janela, por baixo da frase que se está a escrever. */
-.b-frase-modo{ display:block; margin-top:.3rem; font-size:.78rem; color:var(--ink-fraco); }
+.b-frase-modo{ display:block; margin-top:.3rem; font-size:var(--t-apoio); color:var(--ink-fraco); }
 .b-frase-modo.aviso{ color:var(--warn); font-weight:600; }
 
 /* Uma definição da casa: a pergunta, o que está escolhido, e o gesto que a
@@ -987,17 +987,17 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-def:last-child{ border-bottom:0; padding-bottom:0; }
 .b-def:first-child{ padding-top:0; }
 .b-def .txt{ flex:1 1 auto; min-width:0; }
-.b-def .txt b{ display:block; font-size:.92rem; color:var(--ink); font-weight:600; }
-.b-def .txt small{ display:block; font-size:.79rem; color:var(--ink-fraco); line-height:1.5;
+.b-def .txt b{ display:block; font-size:var(--t-denso); color:var(--ink); font-weight:600; }
+.b-def .txt small{ display:block; font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.5;
                    margin-top:.15rem; }
 /* O valor em vigor, à direita: é o que se lê de relance ao passar os olhos. */
-.b-def .val{ flex:none; max-width:12rem; text-align:right; font-size:.85rem;
+.b-def .val{ flex:none; max-width:12rem; text-align:right; font-size:var(--t-denso);
              color:var(--gold-deep); font-weight:600; }
 .b-def .val.nao{ color:var(--ink-fraco); font-weight:400; }
 
 /* Um motivo de recusa, na lista. */
 .b-mot{ display:flex; align-items:center; gap:.7rem; padding:.55rem 0;
-        border-bottom:1px solid var(--line); font-size:.9rem; }
+        border-bottom:1px solid var(--line); font-size:var(--t-denso); }
 .b-mot:last-child{ border-bottom:0; }
 .b-mot span{ flex:1; min-width:0; }
 
@@ -1013,9 +1013,9 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                  color:var(--gold-deep); }
 .b-posto .sinal .ico{ width:22px; height:22px; }
 .b-posto .txt{ flex:1 1 auto; min-width:0; }
-.b-posto .txt b{ display:block; font-family:var(--serif); font-size:1.05rem;
+.b-posto .txt b{ display:block; font-family:var(--serif); font-size:var(--t-corpo);
                  font-weight:400; color:var(--ink); }
-.b-posto .txt small{ font-size:.78rem; color:var(--ink-fraco); }
+.b-posto .txt small{ font-size:var(--t-apoio); color:var(--ink-fraco); }
 .b-posto .btn{ flex:none; }
 
 /* Uma conta da equipa. */
@@ -1023,17 +1023,17 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
           border-bottom:1px solid var(--line); }
 .b-conta:last-child{ border-bottom:0; }
 .b-conta .quem{ flex:1 1 auto; min-width:0; }
-.b-conta .quem b{ display:block; font-size:.92rem; color:var(--ink);
+.b-conta .quem b{ display:block; font-size:var(--t-denso); color:var(--ink);
                   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.b-conta .quem small{ font-size:.78rem; color:var(--ink-fraco); }
-.b-conta .papel{ flex:none; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;
+.b-conta .quem small{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+.b-conta .papel{ flex:none; font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.05em;
                  background:var(--gold-pale); color:var(--gold-deep); border-radius:50px;
                  padding:.2rem .6rem; font-weight:600; }
 .b-conta .papel.fora{ background:var(--cream); color:var(--ink-fraco); }
 
 /* A senha nova, para se copiar de uma vez. Grande e em mono: escreve-se num
    papel e entrega-se em mão, e um erro de leitura aqui custa uma noite. */
-.b-senha{ font-family:var(--mono); font-size:1.5rem; letter-spacing:.08em;
+.b-senha{ font-family:var(--mono); font-size:var(--t-seccao); letter-spacing:.08em;
           background:var(--cream); border:1px dashed var(--gold); border-radius:10px;
           padding:.7rem 1rem; text-align:center; color:var(--ink); user-select:all;
           margin:.4rem 0 .2rem; }
@@ -1054,8 +1054,8 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
                   background:var(--gold-soft); color:var(--forest-deep); }
 .b-lancar .sinal .ico{ width:20px; height:20px; stroke-width:2.2; }
 .b-lancar .txt{ flex:1 1 auto; min-width:0; }
-.b-lancar .txt b{ display:block; font-family:var(--serif); font-size:1.08rem; font-weight:400; }
-.b-lancar .txt small{ display:block; font-size:.78rem; color:var(--ink-fraco); line-height:1.45;
+.b-lancar .txt b{ display:block; font-family:var(--serif); font-size:var(--t-sub); font-weight:400; }
+.b-lancar .txt small{ display:block; font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.45;
                       margin-top:.1rem; }
 .b-lancar > .ico:last-child{ width:18px; height:18px; color:var(--ink-fraco); flex:none; }
 
@@ -1066,11 +1066,11 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-notas{ display:grid; gap:.35rem; background:rgba(0,0,0,.2);
           border-left:2px solid var(--gold-soft); border-radius:0 9px 9px 0;
           padding:.55rem .7rem; }
-.b-notas .tit{ display:flex; align-items:center; gap:.35rem; font-size:.7rem;
+.b-notas .tit{ display:flex; align-items:center; gap:.35rem; font-size:var(--t-etiqueta); font-weight:600;
                text-transform:uppercase; letter-spacing:.07em; color:var(--gold-texto); }
 .b-notas .tit .ico{ width:13px; height:13px; }
-.b-notas .n{ font-size:.85rem; line-height:1.45; color:var(--ink); }
-.b-notas .n em{ display:block; font-style:normal; font-size:.72rem; color:var(--ink-fraco);
+.b-notas .n{ font-size:var(--t-denso); line-height:1.45; color:var(--ink); }
+.b-notas .n em{ display:block; font-style:normal; font-size:var(--t-apoio); color:var(--ink-fraco);
                 margin-top:.1rem; }
 
 /* A segunda fila de acções de um cartão de entrega. «Entregue» fica sozinho
@@ -1078,7 +1078,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    outras duas — a nota, e o «não estava na mesa» — são a excepção, e ficam
    por baixo, mais pequenas e lado a lado. */
 .b-acoes-menor{ display:flex; gap:.5rem; flex:1 1 100%; }
-.b-acoes-menor .btn{ flex:1 1 0; min-height:48px; font-size:.85rem; padding:.4rem .7rem; }
+.b-acoes-menor .btn{ flex:1 1 0; min-height:48px; font-size:var(--t-denso); padding:.4rem .7rem; }
 
 /* ---- o gráfico de barras ------------------------------------
    Doze linhas de dígitos não têm forma nenhuma: o olho compara comprimentos,
@@ -1091,14 +1091,14 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 .b-graf{ display:grid; gap:.3rem; }
 .b-graf-l{ display:grid; grid-template-columns:minmax(5.5rem, 9rem) 1fr auto;
            align-items:center; gap:.6rem; padding:.25rem .35rem; border-radius:8px; }
-.b-graf-l .nm{ font-size:.85rem; overflow:hidden; text-overflow:ellipsis;
+.b-graf-l .nm{ font-size:var(--t-denso); overflow:hidden; text-overflow:ellipsis;
                white-space:nowrap; color:var(--ink); }
 .b-graf-l .tr{ height:11px; border-radius:50px; background:var(--cream);
                overflow:hidden; display:block; }
 .b-graf-l .tr i{ display:block; height:100%; border-radius:50px;
                  background:var(--tinta, var(--gold-soft));
                  transition:width .45s cubic-bezier(.22,.61,.36,1); }
-.b-graf-l .v{ font-family:var(--serif); font-size:1.05rem; color:var(--gold-texto);
+.b-graf-l .v{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--gold-texto);
               font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
 /* Uma barra que se pode tocar leva à ficha da pessoa: o gráfico aponta, e a
    ficha é onde se faz alguma coisa a respeito. Sem isto era um desenho mudo. */

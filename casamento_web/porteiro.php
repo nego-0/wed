@@ -28,7 +28,7 @@ $CAS  = casalInfo($DEFS);
 <style>
   /* Aviso de ligação (offline / a sincronizar) */
   .barra-offline{ position:fixed; left:0; right:0; bottom:0; z-index:900; padding:.55rem .9rem;
-    text-align:center; font-size:.86rem; font-weight:500; letter-spacing:.01em; }
+    text-align:center; font-size:var(--t-denso); font-weight:500; letter-spacing:.01em; }
   .barra-offline.off{ background:#7a3b34; color:#ffe9e4; }
   .barra-offline.sync{ background:var(--gold); color:#1a1b17; }
 
@@ -45,11 +45,11 @@ $CAS  = casalInfo($DEFS);
   .contador-porta{ display:flex; gap:.7rem; margin-bottom:1.1rem; }
   .cp{ flex:1; background:rgba(255,255,255,.06); border:1px solid rgba(217,188,140,.2); border-radius:14px; padding:.9rem; text-align:center; }
   .cp .n{ font-family:var(--serif); font-size:1.9rem; font-weight:700; color:var(--gold-soft); line-height:1; }
-  .cp .l{ font-size:.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--gold-pale); margin-top:.3rem; }
+  .cp .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--gold-pale); margin-top:.3rem; }
 
   #leitor{ border-radius:16px; overflow:hidden; margin-bottom:1rem; display:none; background:#000; }
   #leitor.on{ display:block; }
-  .btn-scan{ width:100%; justify-content:center; font-size:1.05rem; padding:1rem; margin-bottom:1rem; }
+  .btn-scan{ width:100%; justify-content:center; font-size:var(--t-corpo); padding:1rem; margin-bottom:1rem; }
 
   .busca-manual{ display:flex; gap:.5rem; margin-bottom:1.2rem; }
   .busca-manual input{ background:rgba(255,255,255,.9); }
@@ -61,43 +61,43 @@ $CAS  = casalInfo($DEFS);
   .faixa.ok{ background:linear-gradient(135deg,#2f7d4f,#245e3b); }
   .faixa.aviso{ background:linear-gradient(135deg,#a8792f,#8A6031); }
   .faixa.rec{ background:linear-gradient(135deg,#a5473f,#7d332d); }
-  .faixa .est{ font-size:.78rem; text-transform:uppercase; letter-spacing:2px; opacity:.9; }
-  .faixa .nome{ font-family:var(--serif); font-size:1.7rem; font-weight:600; line-height:1.1; margin-top:.2rem; }
-  .faixa .meta{ font-size:.9rem; opacity:.95; margin-top:.3rem; }
+  .faixa .est{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:2px; opacity:.9; }
+  .faixa .nome{ font-family:var(--serif); font-size:var(--t-display); font-weight:600; line-height:1.1; margin-top:.2rem; }
+  .faixa .meta{ font-size:var(--t-denso); opacity:.95; margin-top:.3rem; }
   .conteudo{ padding:1.2rem 1.3rem; }
   .lista-memb{ display:grid; gap:.5rem; margin-bottom:1rem; }
   .memb{ display:flex; align-items:center; gap:.7rem; border:1.5px solid var(--line); border-radius:12px; padding:.7rem .9rem; cursor:pointer; }
-  .memb .est-p{ width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex:none; }
+  .memb .est-p{ width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:var(--t-apoio);flex:none; }
   .memb.presente{ background:var(--ok-bg); border-color:var(--ok); }
   .memb.presente .est-p{ background:var(--ok); border-color:var(--ok); color:#fff; }
   .memb.bloqueado{ opacity:.85; cursor:pointer; background:#f7eae8; border-color:#e6c3bf; }
-  .memb.bloqueado .est-p{ border-color:#c98a86; color:#a5473f; }
+  .memb.bloqueado .est-p{ border-color:var(--danger); color:#a5473f; }
   .memb.excecional{ background:#fbf3e3; border-color:#e0b96a; }
   .memb.excecional .est-p{ background:#c88a2a; border-color:#c88a2a; color:#fff; }
-  .memb .nm{ flex:1; font-size:1rem; }
-  .memb-mesa{ display:block; font-size:.75rem; color:var(--gold); margin-top:.1rem; }
+  .memb .nm{ flex:1; font-size:var(--t-corpo); }
+  .memb-mesa{ display:block; font-size:var(--t-apoio); color:var(--gold); margin-top:.1rem; }
   .mesas-dividido{ background:var(--gold-pale); color:#6b4e22; border:1px solid var(--gold-soft);
-    border-radius:10px; padding:.55rem .8rem; font-size:.85rem; margin-bottom:1rem; }
+    border-radius:10px; padding:.55rem .8rem; font-size:var(--t-denso); margin-bottom:1rem; }
   .acoes-porta{ display:flex; gap:.6rem; flex-wrap:wrap; }
   .acoes-porta .btn{ flex:1; justify-content:center; }
-  .aviso-txt{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:.6rem .8rem; font-size:.88rem; margin-bottom:1rem; }
+  .aviso-txt{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:.6rem .8rem; font-size:var(--t-denso); margin-bottom:1rem; }
   .varios{ display:grid; gap:.5rem; }
   .varios .opc{ background:var(--ivory); color:var(--text); border-radius:12px; padding:.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
   .varios .opc small{ color:var(--ink-fraco); }
   .msg-vazia{ text-align:center; color:var(--gold-pale); padding:1.4rem; }
 
   .abas{ display:flex; gap:.4rem; margin-bottom:1.1rem; background:rgba(255,255,255,.05); border:1px solid rgba(217,188,140,.2); border-radius:50px; padding:.25rem; }
-  .aba{ flex:1; border:none; background:transparent; color:var(--gold-pale); font-family:var(--sans); font-weight:500; font-size:.92rem; padding:.6rem; border-radius:50px; cursor:pointer; }
+  .aba{ flex:1; border:none; background:transparent; color:var(--gold-pale); font-family:var(--sans); font-weight:500; font-size:var(--t-denso); padding:.6rem; border-radius:50px; cursor:pointer; }
   .aba.on{ background:var(--gold); color:var(--sobre-gold); }
 
-  .entradas-topo{ text-align:center; color:var(--gold-pale); font-size:.9rem; margin-bottom:1rem; }
-  .entradas-topo b{ color:var(--gold-soft); font-family:var(--serif); font-size:1.1rem; }
+  .entradas-topo{ text-align:center; color:var(--gold-pale); font-size:var(--t-denso); margin-bottom:1rem; }
+  .entradas-topo b{ color:var(--gold-soft); font-family:var(--serif); font-size:var(--t-sub); }
   .entrada-item{ background:rgba(255,255,255,.06); border:1px solid rgba(217,188,140,.2); border-left:3px solid #2f7d4f; border-radius:12px; padding:.8rem 1rem; margin-bottom:.6rem; }
   .ent-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; }
-  .ent-nome{ font-family:var(--serif); font-size:1.2rem; font-weight:600; color:var(--ivory); }
-  .ent-hora{ font-size:.8rem; color:var(--gold-pale); white-space:nowrap; }
-  .ent-meta{ font-size:.82rem; color:var(--gold-pale); margin-top:.15rem; }
-  .ent-pessoas{ font-size:.88rem; color:var(--ivory); margin-top:.4rem; opacity:.9; }
+  .ent-nome{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--ivory); }
+  .ent-hora{ font-size:var(--t-apoio); color:var(--gold-pale); white-space:nowrap; }
+  .ent-meta{ font-size:var(--t-apoio); color:var(--gold-pale); margin-top:.15rem; }
+  .ent-pessoas{ font-size:var(--t-denso); color:var(--ivory); margin-top:.4rem; opacity:.9; }
 </style>
 <!-- use-credentials: sem isto o navegador pede o manifesto sem a sessão, e a
      aplicação instalada ficava com o nome genérico em vez do casamento. -->
@@ -400,14 +400,14 @@ function mostrarConvite(c){
       return `<div class="memb bloqueado" onclick="excecaoMembro(${c.id},${m.id})">
         <span class="est-p" data-ico="xis"></span>
         <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
-        <span style="font-size:.75rem;color:#c98a86">não confirmou · autorizar?</span>
+        <span style="font-size:var(--t-apoio);color:var(--danger)">não confirmou · autorizar?</span>
       </div>`;
     }
     const nota = pres ? (conf?'presente':'presente (exceção)') : 'marcar';
     return `<div class="memb ${pres?'presente':''} ${(pres&&!conf)?'excecional':''}" onclick="checkin(${c.id},'membro',${m.id})">
       <span class="est-p"${pres?' data-ico="visto"':''}></span>
       <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
-      <span style="font-size:.75rem;color:var(--ink-fraco)">${nota}</span>
+      <span style="font-size:var(--t-apoio);color:var(--ink-fraco)">${nota}</span>
     </div>`;
   }).join('') : '';
 
@@ -436,7 +436,7 @@ function mostrarConvite(c){
       <div class="acoes-porta">
         ${podeEntrar
           ? `<button class="btn btn-verde" onclick="checkin(${c.id},'todos')">Dar entrada${rotuloEntrada}</button>`
-          : `<button class="btn btn-linha" style="flex:1;border-color:#c98a86;color:#e0b0ac" onclick="excecaoTodos(${c.id})">Autorizar entrada (exceção)</button>`}
+          : `<button class="btn btn-linha" style="flex:1;border-color:var(--danger);color:var(--danger)" onclick="excecaoTodos(${c.id})">Autorizar entrada (exceção)</button>`}
         ${(presente||parcial)?`<button class="btn btn-fantasma" onclick="checkin(${c.id},'anular')">Anular entrada</button>`:''}
       </div>
       ${!podeEntrar?`<div class="aviso-txt" style="margin-top:.6rem">Sem presença confirmada. Autorize a entrada apenas em casos excecionais.</div>`:''}

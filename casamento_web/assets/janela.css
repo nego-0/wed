@@ -89,29 +89,29 @@ body.editor .pl-modal{
 
 .pl-modal-cab{ position:relative; padding:1.15rem 1.4rem 1rem; border-bottom:1px solid var(--j-linha);
   display:flex; align-items:flex-start; gap:1rem; flex:none; }
-.pl-modal-cab h3{ font-family:var(--j-serif); font-size:1.3rem; line-height:1.25;
+.pl-modal-cab h3{ font-family:var(--j-serif); font-size:var(--t-titulo); line-height:1.25;
   color:var(--j-ink); margin:0; flex:1; font-weight:600; }
-.pl-modal-x{ background:none; border:0; color:var(--j-fraco); font-size:1.4rem; line-height:1;
+.pl-modal-x{ background:none; border:0; color:var(--j-fraco); font-size:var(--t-titulo); line-height:1;
   cursor:pointer; padding:.1rem .35rem; margin:-.2rem -.35rem 0 0; flex:none;
   border-radius:8px; transition:background .15s ease, color .15s ease; }
 .pl-modal-x:hover{ color:var(--j-ink); background:var(--j-linha); }
 .pl-modal-x:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--j-anel); }
 
-.pl-modal-corpo{ padding:1.2rem 1.4rem; overflow-y:auto; font-size:.9rem; line-height:1.6; }
+.pl-modal-corpo{ padding:1.2rem 1.4rem; overflow-y:auto; font-size:var(--t-denso); line-height:1.6; }
 .pl-modal-corpo > :first-child{ margin-top:0; }
 .pl-modal-corpo > :last-child{ margin-bottom:0; }
 .pl-modal-corpo b, .pl-modal-corpo strong{ color:var(--j-ink); }
 .pl-modal-corpo a{ color:var(--j-ouro); }
 /* A nota de contexto de um formulário em janela (cfg.dica). Vinha de
    estilo.css, que os editores não carregam — e lá ficava sem cor nenhuma. */
-.pl-modal-corpo .dica{ font-size:.82rem; line-height:1.55; color:var(--j-fraco);
+.pl-modal-corpo .dica{ font-size:var(--t-apoio); line-height:1.55; color:var(--j-fraco);
   margin:0 0 1rem; }
 
 .pl-modal-rodape{ padding:.9rem 1.4rem; border-top:1px solid var(--j-linha); align-items:center;
   display:flex; gap:.6rem; justify-content:flex-end; flex-wrap:wrap; flex:none; }
 /* O aviso fica no rodapé, ao lado do botão que o provocou — e não num toast
    que passa: quem errou um campo tem de o ler enquanto o corrige. */
-.lic-j-erro{ flex:1; min-width:12rem; color:var(--j-perigo); font-size:.83rem;
+.lic-j-erro{ flex:1; min-width:12rem; color:var(--j-perigo); font-size:var(--t-apoio);
   line-height:1.4; text-align:left; }
 .lic-j-erro:empty{ display:none; }
 
@@ -124,7 +124,7 @@ body.editor .pl-modal{
    bebida — apanhava só a cor de `.j-bt-sim` e nada da forma: saía um
    rectângulo de canto vivo, colado ao texto, no meio de uma janela onde tudo
    o resto tem raio e respiro. */
-.j-bt{ font-family:inherit; font-size:.86rem; font-weight:600;
+.j-bt{ font-family:inherit; font-size:var(--t-denso); font-weight:600;
   line-height:1.2; padding:.58rem 1.1rem; border-radius:9px; border:1px solid transparent;
   cursor:pointer; transition:background .15s ease, border-color .15s ease,
   color .15s ease, box-shadow .15s ease; }
@@ -151,18 +151,18 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 
 .lic-form{ display:grid; gap:.9rem 1rem; grid-template-columns:repeat(3, 1fr); }
 .lic-f-c{ display:flex; flex-direction:column; gap:.3rem; min-width:0; }
-.lic-f-c label{ font-size:.7rem; letter-spacing:.06em; text-transform:uppercase;
+.lic-f-c label{ font-size:var(--t-etiqueta); letter-spacing:.06em; text-transform:uppercase;
   color:var(--j-fraco); font-weight:700; margin:0; }
 .lic-f-c input, .lic-f-c select, .lic-f-c textarea{ width:100%; padding:.55rem .7rem;
   border:1.5px solid var(--j-linha); border-radius:9px; background:var(--j-campo);
-  font-family:var(--j-sans); font-size:.9rem; color:var(--j-ink);
+  font-family:var(--j-sans); font-size:var(--t-denso); color:var(--j-ink);
   transition:border-color .15s ease, box-shadow .15s ease; }
 .lic-f-c input::placeholder, .lic-f-c textarea::placeholder{ color:var(--j-fraco); opacity:.75; }
 .lic-f-c input[type=number]{ font-variant-numeric:tabular-nums; }
 .lic-f-c input:focus, .lic-f-c select:focus, .lic-f-c textarea:focus{ outline:none;
   border-color:var(--j-ouro); box-shadow:0 0 0 3px var(--j-anel); }
 .lic-f-c textarea{ resize:vertical; line-height:1.5; }
-.lic-f-d{ font-size:.75rem; color:var(--j-fraco); line-height:1.45; }
+.lic-f-d{ font-size:var(--t-apoio); color:var(--j-fraco); line-height:1.45; }
 .lic-f-d b{ color:var(--j-ink); }
 
 /* ---- a escolha com procura (ver assets/janela.js) ----
@@ -176,7 +176,7 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel{ position:relative; min-width:0; }
 .lic-sel-bt{ width:100%; display:flex; align-items:center; gap:.5rem; cursor:pointer;
   padding:.5rem .75rem; border:1.5px solid var(--j-linha); border-radius:10px;
-  background:var(--j-campo); font-family:var(--j-sans); font-size:.9rem;
+  background:var(--j-campo); font-family:var(--j-sans); font-size:var(--t-denso);
   color:var(--j-ink); text-align:left; min-height:44px;
   transition:border-color .15s ease, box-shadow .15s ease, background .15s ease; }
 .lic-sel-bt .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
@@ -217,7 +217,7 @@ body.editor .j-bt-perigo{ color:#2a1512; }
   border-bottom:1px solid var(--j-linha); }
 .lic-sel-q .ico{ width:15px; height:15px; flex:none; color:var(--j-fraco); }
 .lic-sel-q input{ flex:1; min-width:0; border:0; background:none; padding:.15rem 0;
-  font-family:var(--j-sans); font-size:.88rem; color:var(--j-ink); }
+  font-family:var(--j-sans); font-size:var(--t-denso); color:var(--j-ink); }
 .lic-sel-q input:focus{ outline:none; }
 /* Numa lista curta a procura não se mostra — mas fica no sítio, porque é ela
    que recebe as setas e o Enter. Fora do ecrã, e não `display:none`: um campo
@@ -239,7 +239,7 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel-lista{ scrollbar-width:thin; }
 .lic-sel-op{ display:flex; align-items:center; gap:.6rem; width:100%; text-align:left;
   border:0; background:none; cursor:pointer; padding:.55rem .65rem; border-radius:9px;
-  font:inherit; font-size:.9rem; color:var(--j-ink); min-height:42px; line-height:1.35;
+  font:inherit; font-size:var(--t-denso); color:var(--j-ink); min-height:42px; line-height:1.35;
   transition:background .12s ease; }
 .lic-sel-op:hover{ background:var(--j-campo); }
 /* O nome não se parte em duas linhas: uma lista com linhas de alturas
@@ -257,7 +257,7 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel-op.sob{ background:var(--j-ouro-pal); }
 .lic-sel-op.on{ color:var(--j-ouro); font-weight:600; }
 .lic-sel-op.on .ico{ opacity:1; }
-.lic-sel-nada{ padding:.9rem .7rem; font-size:.84rem; color:var(--j-fraco);
+.lic-sel-nada{ padding:.9rem .7rem; font-size:var(--t-apoio); color:var(--j-fraco);
                text-align:center; }
 
 /* ---- a mesma caixa, por cima de um <select> que já existia ----
@@ -294,7 +294,7 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-f-sim{ display:flex; align-items:center; gap:.55rem; margin:0;
   padding:.55rem .7rem; min-height:42px;
   border:1.5px solid var(--j-linha); border-radius:9px; background:var(--j-campo);
-  text-transform:none; letter-spacing:normal; font-weight:500; font-size:.88rem;
+  text-transform:none; letter-spacing:normal; font-weight:500; font-size:var(--t-denso);
   color:var(--j-ink); cursor:pointer; transition:border-color .15s, background .15s; }
 .lic-f-sim:hover{ border-color:var(--j-ouro); }
 .lic-f-sim:has(input:checked){ border-color:var(--j-ouro); background:var(--j-ouro-pal); }
@@ -338,20 +338,20 @@ body.editor .j-bt-perigo{ color:#2a1512; }
    A janela veste-se sozinha (é a regra desta folha) e agora também por dentro:
    estas peças saem dos --j-*, e por isso acertam nos quatro temas e nas duas
    luzes sem que nenhuma página tenha de saber disso. */
-.j-sec{ font-family:var(--j-serif); font-size:.98rem; font-weight:600; color:var(--j-ink);
+.j-sec{ font-family:var(--j-serif); font-size:var(--t-corpo); font-weight:600; color:var(--j-ink);
         margin:1.1rem 0 .45rem; display:flex; align-items:center; gap:.45rem; }
 .j-sec:first-child{ margin-top:.2rem; }
 .j-sec .ico{ width:16px; height:16px; color:var(--j-ouro); }
-.j-sec small{ margin-left:auto; font-family:var(--j-sans); font-size:.75rem;
+.j-sec small{ margin-left:auto; font-family:var(--j-sans); font-size:var(--t-apoio);
               font-weight:400; color:var(--j-fraco); }
 
 /* Uma linha de lista: a frase à esquerda, a nota discreta, o gesto à direita.
    É a forma de todas as listas em janela — regras, motivos, telemóveis. */
 .j-linha{ display:flex; align-items:center; gap:.6rem; padding:.5rem 0;
-          border-bottom:1px solid var(--j-linha); font-size:.9rem; }
+          border-bottom:1px solid var(--j-linha); font-size:var(--t-denso); }
 .j-linha:last-child{ border-bottom:0; }
 .j-linha > span{ flex:1; min-width:0; }
-.j-linha small{ color:var(--j-fraco); font-size:.78rem; }
+.j-linha small{ color:var(--j-fraco); font-size:var(--t-apoio); }
 /* Esbatida, mas nunca SÓ esbatida: a frase ao lado diz porquê, em palavras. */
 .j-linha.espera{ opacity:.62; }
 /* O gesto de tirar uma linha é pequeno e discreto — mas tem 34px de alvo e um
@@ -367,19 +367,19 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 /* ---- a pergunta de sim/não, com o que está em jogo à vista ---- */
 .lic-conf{ display:flex; gap:1rem; align-items:flex-start; }
 .lic-conf-ico{ width:42px; height:42px; flex:none; border-radius:12px; background:var(--j-ouro-pal);
-  display:flex; align-items:center; justify-content:center; font-size:1.25rem; line-height:1;
+  display:flex; align-items:center; justify-content:center; font-size:var(--t-titulo); line-height:1;
   color:var(--j-ouro); }
 /* Um sinal desenhado, quando o há: o emoji continua a caber, para as janelas
    da casa que ainda não passaram por aqui. */
 .lic-conf-ico .ico{ width:22px; height:22px; }
 .lic-conf.perigo .lic-conf-ico{ background:var(--j-perigo-bg); color:var(--j-perigo); }
-.lic-conf-txt{ flex:1; font-size:.9rem; line-height:1.6; color:var(--j-texto); }
+.lic-conf-txt{ flex:1; font-size:var(--t-denso); line-height:1.6; color:var(--j-texto); }
 .lic-conf-txt p{ margin:.7rem 0 0; }
 .lic-conf-itens{ list-style:none; margin:.8rem 0 0; padding:0; }
 .lic-conf-itens li{ display:flex; gap:.6rem; align-items:baseline; padding:.35rem 0;
-  border-bottom:1px solid var(--j-linha); font-size:.85rem; }
+  border-bottom:1px solid var(--j-linha); font-size:var(--t-denso); }
 .lic-conf-itens li:last-child{ border-bottom:none; }
-.lic-conf-itens span{ flex:1; color:var(--j-fraco); font-size:.78rem; }
+.lic-conf-itens span{ flex:1; color:var(--j-fraco); font-size:var(--t-apoio); }
 .lic-conf-itens em{ font-style:normal; font-variant-numeric:tabular-nums; color:var(--j-ouro);
   font-weight:600; }
 /* A lista do que a ação vai levar (ou trazer). Uma linha por coisa, com
@@ -400,7 +400,7 @@ body.editor .j-bt-perigo{ color:#2a1512; }
   .pl-modal-cx{ max-height:92vh; border-radius:var(--j-raio) var(--j-raio) 0 0;
     border-width:1px 0 0; }
   .pl-modal-cab{ padding:1rem 1.1rem .85rem; }
-  .pl-modal-cab h3{ font-size:1.15rem; }
+  .pl-modal-cab h3{ font-size:var(--t-sub); }
   .pl-modal-corpo{ padding:1rem 1.1rem; }
   .pl-modal-rodape{ padding:.85rem 1.1rem calc(.85rem + env(safe-area-inset-bottom));
     flex-direction:column-reverse; align-items:stretch; }

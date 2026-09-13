@@ -93,23 +93,23 @@ $MAPA_LOCAL = [
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem; margin-bottom:1.2rem; }
-  .painel h3{ margin:0 0 .2rem; font-size:1.05rem; }
-  .painel .dica{ font-size:.85rem; color:var(--ink-fraco); margin-bottom:1rem; line-height:1.5; }
+  .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
+  .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:1rem; line-height:1.5; }
   .grelha{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.8rem; }
   .grelha .campo{ min-width:0; }
   .grelha label{ display:block; }
   .largo{ grid-column:1/-1; }
   .fim{ display:flex; gap:.6rem; align-items:center; margin-top:1rem; }
-  .fim .estado{ font-size:.82rem; color:var(--ink-fraco); }
+  .fim .estado{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .linha{ display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center;
           padding:.65rem 0; border-top:1px solid var(--line); }
   .linha:first-of-type{ border-top:0; }
   .linha .selo{ width:34px; height:34px; border-radius:9px; background:var(--cream); color:var(--forest);
                 display:flex; align-items:center; justify-content:center; font-family:var(--serif); border:1px solid var(--line); }
-  .linha .nm{ font-size:.95rem; color:var(--ink); }
-  .linha .mt{ font-size:.78rem; color:var(--ink-fraco); margin-top:.1rem; }
+  .linha .nm{ font-size:var(--t-corpo); color:var(--ink); }
+  .linha .mt{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.1rem; }
   .linha .ac{ display:flex; gap:.4rem; align-items:center; white-space:nowrap; }
-  .et{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
+  .et{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em; border-radius:50px;
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.ativo{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.pendente,.et.expirado{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
@@ -118,31 +118,31 @@ $MAPA_LOCAL = [
   .et.valido{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
   .lf{ display:grid; grid-template-columns:2fr 1fr auto; gap:.7rem; align-items:end; margin-top:1rem;
        padding-top:1rem; border-top:1px dashed var(--line); }
-  .cod{ font-family:ui-monospace,monospace; font-size:1.05rem; letter-spacing:.12em; color:var(--ink); }
+  .cod{ font-family:ui-monospace,monospace; font-size:var(--t-corpo); letter-spacing:.12em; color:var(--ink); }
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
-            padding:.8rem .9rem; margin-top:.9rem; font-size:.88rem; line-height:1.6; }
+            padding:.8rem .9rem; margin-top:.9rem; font-size:var(--t-denso); line-height:1.6; }
   .aviso-visita{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
-                 border-radius:10px; padding:.7rem .9rem; font-size:.86rem; margin-bottom:1.2rem; line-height:1.5; }
+                 border-radius:10px; padding:.7rem .9rem; font-size:var(--t-denso); margin-bottom:1.2rem; line-height:1.5; }
   .porcima, .nota-dados{ background:var(--cream); border-left:3px solid var(--gold-soft); border-radius:8px;
-            padding:.6rem .8rem; font-size:.83rem; color:var(--ink-fraco); margin-top:.9rem; line-height:1.55; }
+            padding:.6rem .8rem; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.9rem; line-height:1.55; }
   .semdono{ background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px;
-            padding:.6rem .8rem; font-size:.84rem; color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
+            padding:.6rem .8rem; font-size:var(--t-apoio); color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
   @media (max-width:640px){ .lf{ grid-template-columns:1fr; } .linha{ grid-template-columns:auto 1fr; }
                             .linha .ac{ grid-column:1/-1; } }
   /* Verificações por campo, como nos outros formulários da casa. */
   .campo input{ transition:border-color .15s, box-shadow .15s; }
   .campo.mau input{ border-color:var(--danger); }
   .campo.mau input:focus{ box-shadow:0 0 0 3px rgba(165,71,63,.15); }
-  .err{ display:none; color:var(--danger); font-size:.77rem; margin-top:.34rem; }
+  .err{ display:none; color:var(--danger); font-size:var(--t-apoio); margin-top:.34rem; }
   .campo.mau .err{ display:block; }
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
-            cursor:pointer; color:var(--ink-fraco); font-size:.74rem; padding:.2rem .3rem; }
+            cursor:pointer; color:var(--ink-fraco); font-size:var(--t-apoio); padding:.2rem .3rem; }
   .pw-olho:hover{ color:var(--forest); }
   /* As caixas de seleção das partes dos dados (levar / trazer / repor). */
   .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.35rem .9rem; margin:.5rem 0 .9rem; }
-  .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:.9rem; color:var(--ink); cursor:pointer; }
+  .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:var(--t-denso); color:var(--ink); cursor:pointer; }
   .dsel input{ width:auto; margin:0; accent-color:var(--forest); flex:none; }
 </style>
 </head>

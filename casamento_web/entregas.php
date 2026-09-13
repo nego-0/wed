@@ -36,22 +36,22 @@ $CAS  = casalInfo($DEFS);
 <style>
   body.b-servico .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
                             max-width:560px; margin:0 auto; padding:0 .15rem; }
-  body.b-servico .topo h1{ font-family:var(--serif); font-size:1.5rem; margin:0; color:var(--ink); }
-  body.b-servico .topo .sub{ font-size:.8rem; color:var(--ink-fraco); }
+  body.b-servico .topo h1{ font-family:var(--serif); font-size:var(--t-seccao); margin:0; color:var(--ink); }
+  body.b-servico .topo .sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
-  body.b-servico .topo .nav a{ color:var(--gold); font-size:.88rem; }
+  body.b-servico .topo .nav a{ color:var(--gold); font-size:var(--t-denso); }
 
   /* As três filas: a minha, a que espera, e a que voltou. Cabeçalhos em vez
      de abas — num só ecrã, rolar é mais rápido do que escolher. O sinal à
      esquerda dá a cada fila uma cara, para se saber onde se está a meio de
      um rolar rápido com o telemóvel na mão. */
-  .b-secao{ margin:1.4rem 0 .6rem; font-family:var(--serif); font-size:1.05rem;
+  .b-secao{ margin:1.4rem 0 .6rem; font-family:var(--serif); font-size:var(--t-corpo);
             color:var(--gold-texto); display:flex; align-items:center; gap:.5rem; }
   .b-secao .ico{ width:17px; height:17px; opacity:.85; }
-  .b-secao .n{ font-family:var(--sans); font-size:.72rem; font-weight:700;
+  .b-secao .n{ font-family:var(--sans); font-size:var(--t-apoio); font-weight:700;
                background:rgba(255,255,255,.1); border-radius:50px; padding:.1rem .5rem;
                font-variant-numeric:tabular-nums; }
-  .b-secao small{ font-family:var(--sans); font-size:.74rem; color:var(--ink-fraco);
+  .b-secao small{ font-family:var(--sans); font-size:var(--t-apoio); color:var(--ink-fraco);
                   font-weight:400; margin-left:auto; text-align:right; }
   .b-ped .b-acoes .btn{ flex:1 1 100%; }
   /* O que está nas MINHAS mãos distingue-se do resto: no meio de três filas

@@ -164,9 +164,22 @@ const rotulos = (p, sel) => p.$$eval(sel, els => els.map(e =>
   const m2 = sup.locator('.mesa-node').first();
   const posA = await m2.evaluate(e => e.style.left + '|' + e.style.top);
   const bb = await m2.boundingBox();
-  await sup.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  // Arrasta-se PARA DENTRO, e não sempre para baixo e para a direita.
+  // A mesa não começa no mesmo sítio em todas as corridas — as provas
+  // anteriores mexem-lhe —, e quando ela calhava perto da borda o gesto de
+  // +110/+60 batia no limite da tela: a posição não mudava e a prova acusava
+  // um arrasto partido que não estava partido. Falhava uma corrida em cada
+  // duas. Mirar o centro da tela mantém o gesto sempre dentro do que é
+  // possível, seja onde for que a mesa esteja.
+  const tela = await sup.locator('#tab-body, .planta-cartao').first().boundingBox();
+  const mx = bb.x + bb.width / 2, my = bb.y + bb.height / 2;
+  const alvoX = tela ? tela.x + tela.width / 2 : mx;
+  const alvoY = tela ? tela.y + tela.height / 2 : my;
+  const dx = Math.sign(alvoX - mx) * 110 || 110;
+  const dy = Math.sign(alvoY - my) * 60  || 60;
+  await sup.mouse.move(mx, my);
   await sup.mouse.down();
-  await sup.mouse.move(bb.x + bb.width / 2 + 110, bb.y + bb.height / 2 + 60, { steps: 12 });
+  await sup.mouse.move(mx + dx, my + dy, { steps: 12 });
   await sup.mouse.up();
   await sup.waitForTimeout(900);
   const posB = await m2.evaluate(e => e.style.left + '|' + e.style.top);

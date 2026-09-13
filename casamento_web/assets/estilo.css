@@ -45,6 +45,29 @@
   --sans:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
   --script:'Archivo','Segoe UI',system-ui,sans-serif;
 
+  /* ---------- A escala tipográfica ----------
+     Havia 43 pares tamanho/peso distintos e 769 declarações de font-size, com
+     .76, .77, .78, .79 e .80rem a coexistirem — não era uma escala, eram
+     decisões pontuais acumuladas (docs/auditoria-ui-ux.md §6). Oito degraus
+     chegam para tudo o que a aplicação mostra.
+
+     O degrau que importa é o CHÃO. 26,8% do texto renderizava abaixo de 13px,
+     com frases inteiras a 11 e 12px — e em ecrãs sem retina, que é o parque
+     real, um peso leve a 11px perde traço. Abaixo de 13px só ficam etiquetas
+     de uma ou duas palavras EM MAIÚSCULAS; foi essa a regra que decidiu, ao
+     converter, o que subia para 13px e o que descia para 11px.
+
+     Estes tokens são do SISTEMA, e não do convite: o convite e o seu editor
+     têm tipografia desenhada, com escalas próprias, e ficaram de fora. */
+  --t-etiqueta:.6875rem;  /* 11px — só maiúsculas curtas */
+  --t-apoio:.8125rem;     /* 13px — metadados. O mínimo para uma frase */
+  --t-denso:.875rem;      /* 14px — listas, tabelas, cartões */
+  --t-corpo:1rem;         /* 16px — texto corrente */
+  --t-sub:1.125rem;       /* 18px — títulos de cartão */
+  --t-titulo:1.3125rem;   /* 21px — secções e janelas */
+  --t-seccao:1.5rem;      /* 24px — aberturas de secção */
+  --t-display:1.75rem;    /* 28px — o h1 da página */
+
   /* Viveu aqui, durante um tempo, uma família --sala-*: uma paleta escura que
      tema nenhum redefinia, para a copa e as entregas serem escuras a qualquer
      hora e em qualquer tema. Saiu com a terceira passagem do bar — um módulo
@@ -151,7 +174,7 @@
 .salta-conteudo{
   position:absolute; left:12px; top:-100px; z-index:9999;
   background:var(--card); color:var(--gold-texto); font-family:var(--sans); font-weight:600;
-  font-size:.9rem; padding:.7rem 1.1rem; border-radius:10px; border:2px solid var(--gold-texto);
+  font-size:var(--t-denso); padding:.7rem 1.1rem; border-radius:10px; border:2px solid var(--gold-texto);
   box-shadow:var(--shadow); text-decoration:none;
   transition:top .16s;
 }
@@ -159,7 +182,7 @@
 @media (prefers-reduced-motion:reduce){ .salta-conteudo{ transition:none; } }
 @media print{ .salta-conteudo{ display:none !important; } }
 body{
-  margin:0; font-family:var(--sans); color:var(--text); font-weight:300;
+  margin:0; font-family:var(--sans); color:var(--text); font-weight:400;
   background:var(--app-bg);
   min-height:100vh;
 }
@@ -184,16 +207,16 @@ a:hover{ text-decoration:underline; }
 .monograma{
   width:52px; height:52px; flex:none; border:2px solid var(--gold-soft); border-radius:50%;
   display:flex; align-items:center; justify-content:center; color:var(--gold-soft);
-  font-family:var(--serif); font-weight:700; font-size:1.05rem; letter-spacing:.5px;
+  font-family:var(--serif); font-weight:700; font-size:var(--t-corpo); letter-spacing:.5px;
 }
-.topo h1{ color:var(--ivory); font-size:1.35rem; line-height:1.1; }
-.topo .sub{ font-family:var(--serif); font-style:italic; color:var(--gold-pale); font-size:1rem; margin-top:.1rem; }
-.topo .sub.licenca-restante{ font-family:var(--sans); font-style:normal; font-size:.82rem; opacity:.9; }
+.topo h1{ color:var(--ivory); font-size:var(--t-titulo); line-height:1.1; }
+.topo .sub{ font-family:var(--serif); font-style:italic; color:var(--gold-pale); font-size:var(--t-corpo); margin-top:.1rem; }
+.topo .sub.licenca-restante{ font-family:var(--sans); font-style:normal; font-size:var(--t-apoio); opacity:.9; }
 .topo .sub.licenca-restante.aviso{ color:#f4c9a0; opacity:1; font-weight:600; }
 /* A coluna do meio cresce e encolhe; sem isto, um título longo empurrava a
    contagem e o menu para uma linha só deles. */
 .topo .topo-txt{ min-width:0; flex:1 1 auto; }
-.topo .sub.topo-casal{ font-size:.92rem; opacity:.92; }
+.topo .sub.topo-casal{ font-size:var(--t-denso); opacity:.92; }
 
 /* ---------- A contagem decrescente ----------
    A pergunta que o casal faz todos os dias, e que até aqui só o convite
@@ -203,7 +226,7 @@ a:hover{ text-decoration:underline; }
 .contagem{ display:inline-flex; align-items:baseline; gap:.32rem; white-space:nowrap;
            font-variant-numeric:tabular-nums; }
 .contagem .cg-l{ opacity:.8; }
-.contagem .cg-n{ font-family:var(--serif); font-size:1.05rem; font-weight:700;
+.contagem .cg-n{ font-family:var(--serif); font-size:var(--t-corpo); font-weight:700;
                  color:var(--gold-soft); line-height:1; }
 .contagem .cg-t{ letter-spacing:.02em; color:var(--gold-pale); opacity:.9; }
 /* Os pedaços que não se aplicam saem de cena — senão deixavam o espaço deles. */
@@ -211,17 +234,23 @@ a:hover{ text-decoration:underline; }
 /* No próprio dia, deixa de ser um número e passa a ser um anúncio. */
 .contagem.hoje .cg-n{ color:var(--ivory); letter-spacing:.04em; }
 /* Depois, conta para a frente — e recolhe, que já não é o assunto. */
-.contagem.passou .cg-n{ font-size:.95rem; opacity:.85; }
+.contagem.passou .cg-n{ font-size:var(--t-corpo); opacity:.85; }
 
 .topo .nav{ margin-left:auto; display:flex; gap:.4rem; flex-wrap:wrap; }
 .topo .nav a{
   color:var(--ivory); border:1px solid rgba(233,223,201,.35); border-radius:50px;
-  padding:.4rem .85rem; font-size:.82rem; font-weight:400; display:inline-flex; gap:.4rem; align-items:center;
-  /* 44px é o mínimo com que um dedo acerta. Estas pastilhas tinham 30px de
-     altura e estão em TODAS as páginas — eram o alvo pequeno mais repetido do
-     sistema (docs/auditoria-ui-ux.md §8). A altura mínima não mexe no desenho
-     em ecrã largo, onde o padding já dava mais do que isto. */
-  min-height:44px;
+  padding:.4rem .85rem; font-size:var(--t-apoio); font-weight:400; display:inline-flex; gap:.4rem; align-items:center;
+}
+/* 44px é o mínimo com que um dedo acerta, e estas pastilhas tinham 30px de
+   altura em TODAS as páginas — eram o alvo pequeno mais repetido do sistema
+   (docs/auditoria-ui-ux.md §8).
+   Mas SÓ no toque. À primeira escrevi isto sem guarda, e o cabeçalho engordou
+   14px em todo o lado: a chk_admin_ui apanhou-o logo, porque exige que a lista
+   de casamentos apareça a menos de 700px do topo. Tinha razão — um rato acerta
+   num alvo de 30px sem esforço, e o preço era mais crómio antes do conteúdo,
+   que é o próprio defeito UI-002 que a auditoria aponta. */
+@media (pointer:coarse){
+  .topo .nav a{ min-height:44px; }
 }
 .topo .nav a:hover{ background:rgba(233,223,201,.15); text-decoration:none; }
 .topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--sobre-gold); font-weight:500; }
@@ -236,14 +265,14 @@ a:hover{ text-decoration:underline; }
 .stat{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; position:relative; overflow:hidden; }
 .stat::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--gold-soft); }
 .stat .n{ font-family:var(--serif); font-size:2rem; font-weight:700; color:var(--ink); line-height:1; }
-.stat .l{ font-size:.72rem; text-transform:uppercase; letter-spacing:1px; color:var(--ink-fraco); margin-top:.35rem; }
+.stat .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--ink-fraco); margin-top:.35rem; }
 .stat.verde::before{ background:var(--ok); } .stat.verde .n{ color:var(--ok); }
 .stat.ouro::before{ background:var(--gold); } .stat.ouro .n{ color:var(--gold); }
 .stat.rosa::before{ background:var(--danger); } .stat.rosa .n{ color:var(--danger); }
 
 /* ---------- Botões ---------- */
 .btn{ font-family:var(--sans); font-weight:500; border:none; border-radius:50px; padding:.6rem 1.25rem;
-  cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-size:.9rem;
+  cursor:pointer; display:inline-flex; align-items:center; gap:.5rem; font-size:var(--t-denso);
   /* As propriedades vêm NOMEADAS. Um `transition:.18s` seco anima tudo o que for
      animável, e `outline-width` é animável: o anel de foco crescia de 0 a 2px em
      180ms, e quem tabula depressa nunca o via inteiro. Foi também o que fez a
@@ -258,7 +287,7 @@ a:hover{ text-decoration:underline; }
 .btn-linha{ background:transparent; border:1.5px solid var(--gold); color:var(--gold-texto); }
 .btn-linha:hover{ background:var(--gold); color:#fff; }
 .btn-fantasma{ background:transparent; border:1.5px solid var(--line); color:var(--text); }
-.btn-sm{ padding:.38rem .8rem; font-size:.82rem; }
+.btn-sm{ padding:.38rem .8rem; font-size:var(--t-apoio); }
 
 /* ---------- O tamanho da mão ----------
    A casa já tinha isto certo, e só para a copa: `body.b-servico .btn{
@@ -290,9 +319,18 @@ a:hover{ text-decoration:underline; }
 .btn-ico:hover{ background:var(--cream); }
 
 /* ---------- Formulários ---------- */
-label{ font-size:.78rem; font-weight:500; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:.35rem; }
+label{ font-size:var(--t-etiqueta); font-weight:600; color:var(--ink); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:.35rem; }
+/* A nota que acompanha um rótulo NÃO é um rótulo.
+   Um <label> está nos 11px e em maiúsculas, e o <small> lá dentro herdava as
+   maiúsculas e levava por cima o 0.8em que o browser lhe dá por omissão: dava
+   «· OPCIONAL, SERVE DE TETO NO ORÇAMENTO» a 9,2px. Eram 24 casos só na
+   plataforma. Aqui a nota volta a ser uma frase: tamanho absoluto, caixa
+   normal, e o peso do corpo. */
+label small, label .opt{
+  font-size:var(--t-apoio); text-transform:none; letter-spacing:0;
+  font-weight:400; color:var(--ink-fraco); }
 input,select,textarea{ font-family:var(--sans); font-weight:300; width:100%; padding:.6rem .8rem;
-  border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); font-size:.95rem; }
+  border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); font-size:var(--t-corpo); }
 input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--ring); }
 
 /* ---------- O anel de foco da casa ----------
@@ -318,7 +356,7 @@ summary:focus-visible,
 .check input{ width:auto; }
 
 /* ---------- Etiquetas de estado ---------- */
-.tag{ font-size:.72rem; font-weight:500; padding:.2rem .6rem; border-radius:50px; display:inline-flex; align-items:center; gap:.3rem; }
+.tag{ font-size:var(--t-apoio); font-weight:500; padding:.2rem .6rem; border-radius:50px; display:inline-flex; align-items:center; gap:.3rem; }
 .tag.ok{ background:var(--ok-bg); color:var(--ok); }
 .tag.pend{ background:var(--warn-bg); color:var(--warn); }
 .tag.rec{ background:var(--danger-bg); color:var(--danger); }
@@ -339,12 +377,12 @@ summary:focus-visible,
   display:grid; grid-template-columns:auto auto 1fr auto; gap:.7rem; align-items:center; transition:.18s; }
 .convite-row:hover{ border-color:var(--gold-soft); box-shadow:0 6px 18px rgba(180,134,74,.12); }
 .selo-tipo{ width:32px; height:32px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center;
-  font-size:1rem; background:var(--cream); color:var(--forest); border:1px solid var(--line); }
+  font-size:var(--t-corpo); background:var(--cream); color:var(--forest); border:1px solid var(--line); }
 .selo-tipo svg{ width:16px; height:16px; }
 .selo-tipo.digital{ background:var(--gold-pale); color:var(--gold-deep); }
 .selo-tipo.fisico{ background:var(--sand); color:var(--forest); }
 .selo-tipo.ambos{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); }
-.convite-nome{ font-family:var(--serif); font-size:1.05rem; font-weight:600; color:var(--ink); line-height:1.2; }
+.convite-nome{ font-family:var(--serif); font-size:var(--t-corpo); font-weight:600; color:var(--ink); line-height:1.2; }
 /* Em ecrã largo o cartão é sempre de uma linha: nome, estado e pessoas
    encolhem com reticências em vez de quebrarem. Antes, um convite com seis
    convidados ocupava o dobro da altura de um com dois — numa lista longa é
@@ -373,13 +411,13 @@ summary:focus-visible,
 /* Nome, estado e pessoas na mesma linha enquanto houver largura: em ecrãs
    largos cada convite passa a caber numa linha só, em vez de três. */
 .convite-corpo{ display:flex; align-items:center; gap:.55rem .9rem; flex-wrap:wrap; min-width:0; }
-.convite-meta{ font-size:.78rem; color:var(--ink-fraco); display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
+.convite-meta{ font-size:var(--t-apoio); color:var(--ink-fraco); display:flex; gap:.7rem; flex-wrap:wrap; align-items:center; }
 /* A tira de pessoas nunca quebra para uma segunda linha: são poucos nomes e
    um contador do resto, para o cartão manter a mesma altura com dois ou com
    vinte convidados. */
 .membros-mini{ display:flex; gap:.28rem; flex-wrap:nowrap; min-width:0; }
 .membro-chip{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.12rem .55rem;
-  font-family:inherit; font-size:.76rem; color:var(--ink); white-space:nowrap;
+  font-family:inherit; font-size:var(--t-apoio); color:var(--ink); white-space:nowrap;
   max-width:14ch; overflow:hidden; text-overflow:ellipsis; }
 /* A conta dos que não cabem é um botão: abre a lista toda no próprio cartão. */
 .membro-chip.mais{ background:transparent; color:var(--ink-fraco); border-style:dashed; cursor:pointer; }
@@ -397,17 +435,17 @@ summary:focus-visible,
 .modal-topo{ background:linear-gradient(135deg,var(--forest),var(--forest-deep)); color:var(--ivory); padding:1.1rem 1.4rem; display:flex; align-items:center; justify-content:space-between; }
 .modal-topo h3{ color:var(--ivory); }
 .modal-corpo{ padding:1.4rem; }
-.fechar{ background:transparent; border:none; color:var(--ivory); font-size:1.3rem; cursor:pointer; }
+.fechar{ background:transparent; border:none; color:var(--ivory); font-size:var(--t-titulo); cursor:pointer; }
 
 /* ---------- Toast ---------- */
 .toast{ position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
-  background:var(--forest-deep); color:var(--ivory); padding:.8rem 1.3rem; border-radius:50px; font-size:.9rem;
+  background:var(--forest-deep); color:var(--ivory); padding:.8rem 1.3rem; border-radius:50px; font-size:var(--t-denso);
   box-shadow:0 10px 30px rgba(0,0,0,.3); z-index:90; transition:.25s; pointer-events:none; }
 .toast.mostrar{ opacity:1; transform:translateX(-50%) translateY(0); }
 .toast.erro{ background:var(--danger); }
 /* Toast com ação (ex.: "Anular") — tem de receber cliques. */
 .toast.accao{ pointer-events:auto; display:inline-flex; align-items:center; gap:1rem; }
-.toast .anular{ background:none; border:0; padding:0; cursor:pointer; font-family:inherit; font-size:.88rem;
+.toast .anular{ background:none; border:0; padding:0; cursor:pointer; font-family:inherit; font-size:var(--t-denso);
   font-weight:600; color:var(--gold-soft); text-decoration:underline; white-space:nowrap; }
 .toast .anular:hover{ color:var(--ivory); }
 
@@ -434,7 +472,7 @@ summary:focus-visible,
      linha dobra, e é a contagem que passa para a segunda — daí o nome do casal
      poder quebrar sem levar a contagem consigo. */
   .topo .sub.topo-casal{ white-space:normal; }
-  .contagem .cg-n{ font-size:1rem; }
+  .contagem .cg-n{ font-size:var(--t-corpo); }
 }
 
 /* ============================================================
@@ -449,15 +487,15 @@ summary:focus-visible,
    linha que mostra. */
 .dobra, .painel.dobra{ padding:0; }
 .dobra > summary{ list-style:none; cursor:pointer; padding:.95rem 1.2rem; display:flex;
-                  align-items:baseline; gap:.5rem; font-family:var(--serif); font-size:1.05rem;
+                  align-items:baseline; gap:.5rem; font-family:var(--serif); font-size:var(--t-corpo);
                   color:var(--ink); border-radius:14px; }
 .dobra > summary::-webkit-details-marker{ display:none; }
 .dobra > summary:hover{ background:var(--cream); }
-.dobra > summary small{ font-family:var(--sans); font-size:.82rem; color:var(--ink-fraco); font-weight:400; }
+.dobra > summary small{ font-family:var(--sans); font-size:var(--t-apoio); color:var(--ink-fraco); font-weight:400; }
 .dobra > summary .mais{ display:inline-flex; align-items:center; justify-content:center;
                         width:22px; height:22px; flex:none; border-radius:7px; background:var(--cream);
                         border:1px solid var(--line); color:var(--forest); font-family:var(--sans);
-                        font-size:.95rem; line-height:1; align-self:center; transition:.15s; }
+                        font-size:var(--t-corpo); line-height:1; align-self:center; transition:.15s; }
 .dobra[open] > summary{ border-bottom:1px solid var(--line); border-radius:14px 14px 0 0; }
 .dobra[open] > summary .mais{ background:var(--gold-pale); border-color:var(--gold-soft); transform:rotate(45deg); }
 /* As margens do conteúdo só valem com ele à vista: fechadas, deixavam o
@@ -468,7 +506,7 @@ summary:focus-visible,
 .dobra[open] > .dica:first-of-type{ margin-top:.9rem; }
 /* Uma dobra dentro de um painel não repete a moldura do painel. */
 .dobra-dentro{ border:1px solid var(--line); border-radius:12px; margin:0 0 .2rem; }
-.dobra-dentro > summary{ padding:.6rem .8rem; font-size:.95rem; }
+.dobra-dentro > summary{ padding:.6rem .8rem; font-size:var(--t-corpo); }
 .dobra-dentro[open] > *:not(summary){ margin-left:.8rem; margin-right:.8rem; }
 
 /* ============================================================
@@ -512,7 +550,7 @@ summary:focus-visible,
          box-shadow:0 12px 32px rgba(32,52,42,.18); text-align:left; }
 .mm-pop button, .mm-pop a{ display:block; width:100%; text-align:left; background:none; border:0;
          cursor:pointer; padding:.45rem .6rem; border-radius:8px; font-family:var(--sans);
-         font-size:.85rem; color:var(--text); text-decoration:none; }
+         font-size:var(--t-denso); color:var(--text); text-decoration:none; }
 .mm-pop button:hover, .mm-pop a:hover{ background:var(--cream); }
 .mm-pop button.perigo{ color:var(--danger); }
 .mm-pop button.perigo:hover{ background:var(--danger-bg); }
@@ -542,24 +580,24 @@ summary:focus-visible,
   border:1px solid var(--line); border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,.22);
   padding:.5rem; display:none; }
 .tema-fab-pop.aberto{ display:block; }
-.tema-fab-tit{ font-size:.68rem; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-fraco); padding:.3rem .5rem .45rem; }
+.tema-fab-tit{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-fraco); padding:.3rem .5rem .45rem; }
 .tema-fab-op{ display:flex; align-items:center; gap:.6rem; width:100%; border:0; background:transparent;
   cursor:pointer; padding:.5rem; border-radius:9px; font:inherit; color:var(--ink); text-align:left; }
 .tema-fab-op:hover{ background:var(--cream); }
 .tema-fab-op.on{ background:var(--gold-pale); }
 .tema-fab-dots{ display:flex; gap:3px; flex:none; }
 .tema-fab-dots i{ width:16px; height:16px; border-radius:4px; display:block; border:1px solid rgba(0,0,0,.12); }
-.tema-fab-nome{ flex:1; font-size:.86rem; }
+.tema-fab-nome{ flex:1; font-size:var(--t-denso); }
 .tema-fab-check{ opacity:0; color:var(--gold); display:inline-flex; align-items:center; }
 .tema-fab-check svg{ width:15px; height:15px; }
 .tema-fab-op.on .tema-fab-check{ opacity:1; }
 .tema-fab-reset{ display:block; width:100%; border:0; background:transparent; cursor:pointer; color:var(--ink-fraco);
-  font:inherit; font-size:.78rem; padding:.5rem; margin-top:.2rem; border-top:1px solid var(--line); text-align:center; }
+  font:inherit; font-size:var(--t-apoio); padding:.5rem; margin-top:.2rem; border-top:1px solid var(--line); text-align:center; }
 .tema-fab-reset:hover{ color:var(--gold); }
 @media print{ .tema-fab{ display:none !important; } }
 .marca-wordmark{
   font-family:var(--serif); font-weight:800; letter-spacing:.13em;
-  font-size:1.55rem; color:var(--ink);
+  font-size:var(--t-seccao); color:var(--ink);
 }
 /* Na entrada e na inscrição o logótipo é grande e centrado. */
 .marca-niras.grande{ justify-content:center; gap:.8rem; margin-bottom:.4rem; }
@@ -579,17 +617,17 @@ summary:focus-visible,
 .nav-tema{
   color:var(--ivory); background:transparent; cursor:pointer;
   border:1px solid rgba(255,255,255,.35); border-radius:50px;
-  padding:.4rem .85rem; font-size:.82rem; font-family:var(--sans); font-weight:400;
+  padding:.4rem .85rem; font-size:var(--t-apoio); font-family:var(--sans); font-weight:400;
   display:inline-flex; gap:.4rem; align-items:center;
 }
 .nav-tema:hover{ background:rgba(255,255,255,.14); }
-.nav-tema .glf{ font-size:.95rem; line-height:1; }
+.nav-tema .glf{ font-size:var(--t-corpo); line-height:1; }
 /* No telemóvel, o menu já é comprido: o alternador sai daqui (a entrada e a
    inscrição têm-no no rodapé, esse fica sempre à mão). */
 @media (max-width:640px){ .nav-tema{ display:none; } }
 
 /* Alternador discreto no rodapé da entrada/inscrição. */
-.tema-rodape{ margin-top:1.2rem; font-size:.76rem; color:var(--ink-fraco); }
+.tema-rodape{ margin-top:1.2rem; font-size:var(--t-apoio); color:var(--ink-fraco); }
 .tema-rodape button{
   border:0; background:none; cursor:pointer; color:var(--gold);
   font:inherit; text-decoration:underline; padding:0;
@@ -599,7 +637,7 @@ summary:focus-visible,
    para reimprimir só esta. Ver assets/mesas.js e bar-qr.php. */
 .mesa-bar{ display:flex; align-items:center; gap:.5rem; margin-top:.8rem;
            padding-top:.7rem; border-top:1px solid var(--line); flex-wrap:wrap; }
-.mesa-bar code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem;
+.mesa-bar code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:var(--t-apoio);
                 background:var(--cream); border-radius:6px; padding:.2rem .5rem;
                 letter-spacing:.06em; }
 .mesa-bar .btn{ margin-left:auto; }
@@ -616,9 +654,9 @@ summary:focus-visible,
 .tira-bar{ display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
            background:var(--gold-pale); color:var(--gold-deep);
            border:1px solid var(--gold-soft); border-radius:var(--radius);
-           padding:.7rem 1rem; margin-bottom:1rem; font-size:.9rem;
+           padding:.7rem 1rem; margin-bottom:1rem; font-size:var(--t-denso);
            text-decoration:none; }
 .tira-bar:hover{ filter:brightness(.97); }
 .tira-bar .urg{ background:var(--warn-bg); color:var(--warn);
                 border-radius:50px; padding:.1rem .55rem; font-weight:600; }
-.tira-bar .ir{ margin-left:auto; font-size:.82rem; text-decoration:underline; }
+.tira-bar .ir{ margin-left:auto; font-size:var(--t-apoio); text-decoration:underline; }

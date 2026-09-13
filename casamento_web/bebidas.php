@@ -41,7 +41,7 @@ if (!$mesa || !podeModulo('bar')) {
        . 'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
        . '<path d="M7.6 3.2h8.8l-.5 5.1a4.4 4.4 0 0 1-7.8 0z"/><path d="M12 12.7V20"/>'
        . '<path d="M8.4 20.6h7.2"/></svg>'
-       . '<h1 style="font-weight:400;font-size:1.3rem">Este código não serve</h1>'
+       . '<h1 style="font-weight:400;font-size:var(--t-titulo)">Este código não serve</h1>'
        . '<p style="color:#6b7268">Talvez a folha seja de outra festa, ou o bar ainda não '
        . 'esteja montado. Chame um garçom — ele resolve isto num instante.</p>'
        . '</div></body></html>';
@@ -92,7 +92,7 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
                /* A tinta clara do CASAL, e não um branco inventado: quem
                   escolher um verde pálido para o convite fica com um botão
                   legível na mesma. */
-               background:var(--c-verde); color:var(--c-fundo); font:inherit; font-size:.95rem;
+               background:var(--c-verde); color:var(--c-fundo); font:inherit; font-size:var(--t-corpo);
                padding:.6rem 1.2rem; min-height:48px; }
 .b-festa .btn[disabled]{ opacity:.4; cursor:default; }
 .b-festa .btn-claro{ background:transparent; color:var(--c-verde); }
@@ -102,7 +102,7 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
 
 /* O aviso de que a copa está fechada, ou de que há um limite a cumprir. */
 .b-nota{ background:var(--c-creme); border:1px solid rgba(0,0,0,.08); border-radius:12px;
-         padding:.85rem 1rem; margin-bottom:1rem; font-size:.9rem; line-height:1.5; }
+         padding:.85rem 1rem; margin-bottom:1rem; font-size:var(--t-denso); line-height:1.5; }
 .b-nota b{ font-family:var(--c-serif); }
 
 /* O recibo depois de pedir: o número que se diz ao garçom. */

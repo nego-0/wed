@@ -57,18 +57,18 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
            display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
   .cartao{ background:#fff; border:1px dashed var(--line); border-radius:var(--radius);
            padding:1.4rem 1rem 1rem; text-align:center; break-inside:avoid; }
-  .cartao .mono{ font-family:var(--serif); font-size:.78rem; letter-spacing:.18em;
+  .cartao .mono{ font-family:var(--serif); font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.18em;
                  text-transform:uppercase; color:var(--gold-deep); }
   /* O nome da mesa é a maior coisa do cartão: é o que o garçom lê de longe
      quando anda com um tabuleiro à procura dela. */
   .cartao .mesa{ font-family:var(--serif); font-size:2.1rem; color:var(--ink);
                  line-height:1.1; margin:.25rem 0 .1rem; }
-  .cartao .conv{ font-size:.82rem; color:var(--ink-fraco); margin-bottom:.7rem; }
+  .cartao .conv{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-bottom:.7rem; }
   .cartao canvas{ display:block; margin:0 auto; }
-  .cartao .lnk{ font-size:.72rem; color:var(--ink-fraco); word-break:break-all;
+  .cartao .lnk{ font-size:var(--t-apoio); color:var(--ink-fraco); word-break:break-all;
                 line-height:1.35; margin-top:.5rem; }
-  .cartao .lnk b{ color:var(--ink); font-size:.8rem; }
-  .cartao .rod{ font-size:.7rem; color:var(--ink-fraco); margin-top:.6rem;
+  .cartao .lnk b{ color:var(--ink); font-size:var(--t-apoio); }
+  .cartao .rod{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.6rem;
                 border-top:1px solid var(--line); padding-top:.5rem; line-height:1.4; }
 
   /* A lista dos códigos: uma folha de trabalho, não um cartão de mesa. Duas
