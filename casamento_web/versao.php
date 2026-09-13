@@ -896,11 +896,15 @@ function correcoesEsperadas(): array {
         ['A lista mede-se pelo que mostra, e não pela largura do campo',
          'assets/janela.css', 'width:max-content; min-width:100%;'],
         ['E encosta-se para dentro quando essa largura passaria a borda',
-         'assets/janela.js', 'const passa = r.right - (limite.right - RESPIRO);'],
+         'assets/janela.js', 'const passa = (cxR.left + pop.offsetWidth) - (limite.right - RESPIRO);'],
         ['O tecto da lista acompanha a altura do ecrã',
          'assets/janela.css', 'max-height:min(340px, 44vh)'],
         ['Alvos de 48px nas listas dos ecrãs de serviço',
          'assets/janela.css', '.b-cx .lic-sel-op, .b-festa .lic-sel-op{ min-height:48px; }'],
+        ['Rolar dentro da lista já não a faz piscar',
+         'assets/janela.js', 'if (e.target && e.target.nodeType === 1 && pop.contains(e.target)) return;'],
+        ['E remedir a lista não lhe limpa a altura para a voltar a pôr',
+         'assets/janela.js', 'NÃO MEXE NO DOM PARA MEDIR, e só escreve o que mudou'],
     ];
 }
 

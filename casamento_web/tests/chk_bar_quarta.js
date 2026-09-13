@@ -231,6 +231,70 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(await cxM.count() === 1,
      'a janela do balcão pergunta para onde vai a bebida que a copa lança');
 
+  // ---- rolar DENTRO da lista não a faz piscar -------------------------
+  // O ouvinte que mantém a lista no sítio ouve o scroll em CAPTURA — tem de
+  // ser, porque o scroll de um elemento não borbulha e sem isso não se sabia
+  // que a janela tinha rolado. Mas em captura chegava-lhe também o scroll da
+  // PRÓPRIA lista, e a cada linha rolada a lista remedia-se a si mesma:
+  // limpava a altura, voltava a calculá-la, e escrevia-a outra vez. Doze
+  // voltas de roda davam 36 escritas no DOM — trinta e seis refluxos, e é isso
+  // que se vê a tremer debaixo do dedo.
+  //
+  // Conta-se o que a rolagem ESCREVE, e não o que fica no fim: o estado final
+  // voltava sempre ao sítio, e por isso medi-lo não apanhava nada. O defeito é
+  // o caminho, não o destino.
+  // A lista que se rola é a das BEBIDAS, e não a das mesas: um salão de prova
+  // tem duas ou três mesas, e uma lista que cabe inteira não rola — a prova
+  // não provava nada. Estas bebidas nascem aqui e saem no fim, com as outras
+  // «ZW »; bebidas não mexem na lotação que as outras provas contam.
+  await p.evaluate(async () => {
+    const e = await window.api('bar_estado');
+    for (let i = 1; i <= 14; i++) {
+      await window.api('bar_item_guardar', { method: 'POST', silencioso: true,
+        body: JSON.stringify({ nome: 'ZW Enchimento ' + i,
+                               categoria_id: e.categorias[0].id, stock: 20,
+                               visivel: 1, max_por_pedido: 2 }) });
+    }
+  });
+  // A página tem de voltar a ler o bar: `copaPedirPor` monta a lista a partir
+  // do estado que ela já tinha em memória, e as bebidas acabadas de criar não
+  // estavam lá. Sem isto a lista abria com uma linha e não havia nada a rolar.
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForTimeout(1800);
+  await p.evaluate(() => window.copaPedirPor());
+  await p.waitForTimeout(1800);
+  const cxI = p.locator('#lic-janela .lic-sel[data-sel="item"]');
+  await cxI.locator('.lic-sel-bt').click();
+  await p.waitForTimeout(450);
+  await p.evaluate(() => {
+    const pop = document.querySelector('#lic-janela .lic-sel-pop:not([hidden])');
+    const l = pop.querySelector('.lic-sel-lista');
+    window.__escritas = 0;
+    window.__obs = new MutationObserver(ms => { window.__escritas += ms.length; });
+    window.__obs.observe(pop, { attributes: true, attributeFilter: ['style', 'class'] });
+    window.__obs.observe(l,   { attributes: true, attributeFilter: ['style', 'class'] });
+  });
+  const cxLista = await cxI.locator('.lic-sel-lista').boundingBox();
+  await p.mouse.move(cxLista.x + cxLista.width / 2, cxLista.y + cxLista.height / 2);
+  for (let i = 0; i < 8; i++) { await p.mouse.wheel(0, 90); await p.waitForTimeout(40); }
+  await p.waitForTimeout(350);
+  const tremeu = await p.evaluate(() => {
+    window.__obs.disconnect();
+    const l = document.querySelector('#lic-janela .lic-sel-pop:not([hidden]) .lic-sel-lista');
+    return { escritas: window.__escritas, rolou: l.scrollTop };
+  });
+  ok(tremeu.rolou > 0,
+     'a lista rolou mesmo por dentro (' + tremeu.rolou + 'px) — senão isto não prova nada');
+  ok(tremeu.escritas === 0,
+     'e rolar por dentro não lhe mexe uma linha: ' + tremeu.escritas + ' escritas no DOM');
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(250);
+  // A janela volta a abrir-se limpa: o resto da prova conta com ela de origem.
+  await p.evaluate(() => { licFecharJanela(); });
+  await p.waitForTimeout(400);
+  await p.evaluate(() => window.copaPedirPor());
+  await p.waitForTimeout(1800);
+
   await p.fill('#lf-nome', cen.quem.nome.slice(0, 4));
   await p.waitForTimeout(900);
   await p.locator('#pp-achados button').first().click();

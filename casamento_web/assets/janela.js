@@ -498,13 +498,20 @@ function licSelLigarUm(cx){
      * depois de carregar no campo; para cima só quando em baixo não cabe e em
      * cima cabe melhor.
      */
+    /* NÃO MEXE NO DOM PARA MEDIR, e só escreve o que mudou.
+       Isto corria a cada evento de scroll, e começava por limpar a altura e a
+       classe para depois as recalcular. Limpar a altura devolve à lista, por
+       um instante, o tamanho que ela queria ter — e a cada fotograma de uma
+       rolagem isso é a lista a crescer e a encolher debaixo do dedo. Era o
+       pisca-pisca que se via ao rolar dentro da lista de «Aprovar pedido».
+       Nada aqui precisa de limpar nada: `fora` é uma diferença (vale a
+       qualquer altura), `scrollHeight` é o conteúdo (não olha ao max-height),
+       e o lado mede-se pelo BOTÃO, que não depende de onde a lista está. */
     const RESPIRO = 14;      // entre a lista e a borda de quem a contém
     const MINIMO  = 132;     // três linhas: menos do que isto é uma fresta
     const assentar = () => {
       const lista = pop.querySelector('.lic-sel-lista');
       if (!lista) return;
-      pop.classList.remove('acima');
-      lista.style.maxHeight = '';
 
       const cai = rolador();
       const j = cai ? cai.getBoundingClientRect()
@@ -536,12 +543,9 @@ function licSelLigarUm(cx){
       // mudado para quem a abre.
       const GANHO = Math.max(48, linha);
       const paraCima = abaixo < quer && acima > abaixo + GANHO;
-      if (paraCima) pop.classList.add('acima');
-
       const espaco = (paraCima ? acima : abaixo) - fora;
-      if (quer > (paraCima ? acima : abaixo)) {
-        lista.style.maxHeight = Math.floor(inteiras(Math.max(MINIMO, espaco))) + 'px';
-      }
+      const novoAlto = quer > (paraCima ? acima : abaixo)
+        ? Math.floor(inteiras(Math.max(MINIMO, espaco))) + 'px' : '';
 
       /* E na horizontal.
          A lista mede-se pelo que tem de mostrar e pode ficar mais larga do que
@@ -549,17 +553,28 @@ function licSelLigarUm(cx){
          direita a faria passar a borda e sair cortada, ou pior, alargar a
          janela e pô-la a rolar de lado. Puxa-se para dentro o que passar.
          Nunca para a direita: a esquerda dela alinha com a do campo, e é esse
-         alinhamento que liga a lista ao campo que a abriu. */
-      pop.style.left = '';
+         alinhamento que liga a lista ao campo que a abriu.
+
+         A conta faz-se a partir da caixa do CAMPO, e não do sítio onde a lista
+         está agora: a esquerda natural dela é a do campo, e medir o que já foi
+         desviado dava um desvio em cima do outro a cada nova medição. */
       const limite = cai ? cai.getBoundingClientRect()
                          : { left: 0, right: window.innerWidth };
-      const r = pop.getBoundingClientRect();
-      const passa = r.right - (limite.right - RESPIRO);
-      if (passa > 0) {
-        // Nunca mais para a esquerda do que a borda de quem a contém: puxá-la
-        // para lá seria trocar um corte à direita por outro à esquerda.
-        pop.style.left = -Math.min(passa, Math.max(0, r.left - (limite.left + RESPIRO))) + 'px';
+      const cxR = cx.getBoundingClientRect();
+      const passa = (cxR.left + pop.offsetWidth) - (limite.right - RESPIRO);
+      // Nunca mais para a esquerda do que a borda de quem a contém: puxá-la
+      // para lá seria trocar um corte à direita por outro à esquerda.
+      const desvio = passa > 0
+        ? -Math.min(passa, Math.max(0, cxR.left - (limite.left + RESPIRO))) : 0;
+      const novoEsq = desvio ? desvio + 'px' : '';
+
+      // E só agora se escreve — e só o que mudou. Escrever o mesmo valor outra
+      // vez custa um refluxo por cada evento de rolagem, e é isso que se vê.
+      if (pop.classList.contains('acima') !== paraCima) {
+        pop.classList.toggle('acima', paraCima);
       }
+      if (lista.style.maxHeight !== novoAlto) lista.style.maxHeight = novoAlto;
+      if (pop.style.left !== novoEsq) pop.style.left = novoEsq;
     };
 
     const abrir = (sim) => {
@@ -614,12 +629,34 @@ function licSelLigarUm(cx){
 
     bt.addEventListener('click', (e) => { e.stopPropagation(); abrir(pop.hidden); });
     q.addEventListener('input', () => { filtrar(); assentar(); });
-    // Enquanto está aberta, a lista acompanha o que se mexe por baixo dela: uma
-    // janela que role com a lista aberta punha-a outra vez a meio da parede.
-    window.addEventListener('scroll', () => { if (!pop.hidden) assentar(); },
-                            { passive: true, capture: true });
-    window.addEventListener('resize', () => { if (!pop.hidden) assentar(); },
-                            { passive: true });
+
+    /* Enquanto está aberta, a lista acompanha o que se mexe POR BAIXO dela: uma
+       janela que role com a lista aberta punha-a outra vez a meio da parede.
+
+       Duas cautelas, e as duas foram pagas com o mesmo defeito — a lista a
+       piscar ao rolar dentro dela, em «Aprovar pedido»:
+
+       1. O ouvinte é em CAPTURA, e tem de ser: o scroll de um elemento não
+          borbulha, e sem captura não se sabia que o corpo da janela tinha
+          rolado. Mas em captura chega aqui TUDO o que rola — incluindo a
+          própria lista. Uma lista que se remede a si mesma a cada linha
+          rolada é uma lista a tremer, e a conta nem sequer mudou: rolar por
+          dentro não move o campo nem as bordas da janela.
+       2. Uma rolagem dá dezenas de eventos por segundo. Junta-se a rajada num
+          fotograma só, que é quando o ecrã é repintado de qualquer maneira.
+    */
+    let medirMarcado = false;
+    const remedir = () => {
+      if (medirMarcado || pop.hidden) return;
+      medirMarcado = true;
+      requestAnimationFrame(() => { medirMarcado = false; if (!pop.hidden) assentar(); });
+    };
+    window.addEventListener('scroll', (e) => {
+      if (pop.hidden) return;
+      if (e.target && e.target.nodeType === 1 && pop.contains(e.target)) return;
+      remedir();
+    }, { passive: true, capture: true });
+    window.addEventListener('resize', remedir, { passive: true });
     q.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown'){ e.preventDefault(); andar(1); }
       else if (e.key === 'ArrowUp'){ e.preventDefault(); andar(-1); }

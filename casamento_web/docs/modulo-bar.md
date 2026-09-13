@@ -3370,3 +3370,39 @@ não rola a janela, e que a lista cabe inteira lá dentro nos quatro lados. O
 clique dessa prova é dado de dentro da página, e não com `locator.click()`: o
 Playwright faz `scrollIntoView` antes de carregar, e seria a prova a rolar a
 janela para depois se queixar de que ela rolou.
+
+### 32.5 E rolar DENTRO da lista também não a mexe
+
+Ficou um resto: em «Aprovar pedido», na copa, rolar a lista de bebidas fazia-a
+piscar.
+
+A culpa era do ouvinte que mantém a lista no sítio enquanto a janela rola. É um
+ouvinte em **captura**, e tem de ser — o `scroll` de um elemento não borbulha, e
+sem captura não se saberia que o corpo da janela tinha rolado. Só que, em
+captura, chega-lhe **tudo** o que rola na página, incluindo a própria lista. A
+cada linha rolada a lista remedia-se a si mesma: limpava a altura, voltava a
+calculá-la, e escrevia-a outra vez. Doze voltas de roda davam **36 escritas no
+DOM** — trinta e seis refluxos, e é isso que se vê a tremer debaixo do dedo. A
+conta nem sequer mudava: rolar por dentro não move o campo nem as bordas da
+janela.
+
+Três correcções, e todas valem para além deste defeito:
+
+- **O ouvinte ignora o que vem de dentro da lista.** É o arranjo certo: o que
+  ele quer saber é se o que está POR BAIXO se mexeu.
+- **Medir deixou de mexer no DOM.** Nada ali precisa de limpar nada: `fora` é
+  uma diferença (vale a qualquer altura), `scrollHeight` é o conteúdo (não olha
+  ao `max-height`), e o lado mede-se pelo BOTÃO, que não depende de onde a
+  lista está. Limpar a altura devolvia à lista, por um instante, o tamanho que
+  ela queria ter.
+- **Só se escreve o que mudou.** Escrever o mesmo valor outra vez custa um
+  refluxo por evento.
+
+A rajada de eventos junta-se ainda num fotograma só (`requestAnimationFrame`),
+que é quando o ecrã é repintado de qualquer maneira.
+
+`chk_bar_quarta.js` prova-o onde a queixa nasceu: abre «Aprovar pedido», rola a
+lista de bebidas com a roda do rato, e conta as escritas com um
+`MutationObserver`. Conta-se o que a rolagem **escreve**, e não o que fica no
+fim — o estado final voltava sempre ao sítio, e medi-lo não apanhava nada. O
+defeito era o caminho, não o destino.
