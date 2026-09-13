@@ -230,10 +230,7 @@
     var cx = $('b-listas');
     if (!cx || !window.licSelProcuraLigar) return;
     window.licSelProcuraLigar(cx);
-    // Um <select>, e já não um <input type=hidden>: desde que o motor da
-    // escolha é o Select2, quem guarda o valor é o próprio <select> — ele fica
-    // no html, escondido, e continua a ser a verdade. O id não mudou.
-    cx.querySelectorAll('.b-mesa-cartao select').forEach(function (campo) {
+    cx.querySelectorAll('.b-mesa-cartao input[type=hidden]').forEach(function (campo) {
       if (campo.dataset.ligado) return;
       campo.dataset.ligado = '1';
       campo.addEventListener('change', async function () {

@@ -235,13 +235,11 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await p.waitForTimeout(900);
   await p.locator('#pp-achados button').first().click();
   await p.waitForTimeout(300);
-  // A lista abre-se pela caixa do campo e escolhe-se na lista ABERTA, que o
-  // Select2 pendura fora dela (ver tests/escolhas.js).
-  await cxM.locator('.select2-selection').first().click();
+  await cxM.locator('.lic-sel-bt').click();
   await p.waitForTimeout(300);
-  await p.locator('.select2-container--open .select2-search__field').fill('ZW Jardim');
+  await cxM.locator('.lic-sel-q input').fill('ZW Jardim');
   await p.waitForTimeout(400);
-  await p.locator('.select2-container--open .select2-results__option').first().click();
+  await cxM.locator('.lic-sel-op:visible').first().click();
   await p.waitForTimeout(300);
   // Sem o «já foi entregue»: assim o pedido fica POR ENTREGAR, que é o caso em
   // que a mesa interessa — alguém tem de lá ir.

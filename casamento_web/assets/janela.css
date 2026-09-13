@@ -165,21 +165,115 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-f-d{ font-size:.75rem; color:var(--j-fraco); line-height:1.45; }
 .lic-f-d b{ color:var(--j-ink); }
 
-/* ---- a escolha com procura ----
-   O DESENHO vive agora em assets/select2-casa.css: o motor desta escolha
-   passou a ser o Select2 (ver janela.js e docs/bar-motor-assistido.md §5.1), e
-   as classes que aqui estavam — .lic-sel-bt, .lic-sel-pop, .lic-sel-op e as
-   outras — eram do componente escrito à mão que ele substituiu. Ficaram só as
-   duas que continuam a ser da casa:
+/* ---- a escolha com procura (ver assets/janela.js) ----
+   Veste-se como um campo, porque é um campo: quem olha para o formulário não
+   tem de descobrir que aquela caixa é de outra família. O que muda é o que ela
+   abre — uma lista com uma caixa de procura em cima. */
+/* `min-width:0` porque a caixa vive, muitas vezes, numa célula de grelha ou
+   de flex: sem isto o conteúdo mínimo do botão empurra a coluna para além da
+   fracção que lhe foi dada, e a linha inteira desalinha. Era o que acontecia
+   à coluna da mesa, na linha de uma pessoa do convite. */
+.lic-sel{ position:relative; min-width:0; }
+.lic-sel-bt{ width:100%; display:flex; align-items:center; gap:.5rem; cursor:pointer;
+  padding:.5rem .75rem; border:1.5px solid var(--j-linha); border-radius:10px;
+  background:var(--j-campo); font-family:var(--j-sans); font-size:.9rem;
+  color:var(--j-ink); text-align:left; min-height:44px;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.lic-sel-bt .txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; }
+.lic-sel-bt .ico{ width:16px; height:16px; flex:none; color:var(--j-fraco);
+  transition:transform .15s ease; }
+.lic-sel-bt[aria-expanded="true"] .ico{ transform:rotate(180deg); }
+.lic-sel-bt:hover{ border-color:var(--j-ouro); }
+.lic-sel-bt:focus-visible{ outline:none; border-color:var(--j-ouro);
+  box-shadow:0 0 0 3px var(--j-anel); }
+/* Por cima de tudo o que a janela tenha por baixo, e nunca a empurrar o
+   formulário: uma lista que empurrasse os campos fazia o botão «Guardar»
+   fugir para fora do ecrã a meio de uma escolha. */
+/* A LARGURA é dela, e não do campo.
+   Era `left:0; right:0` — a lista nascia com a largura exacta do campo. Num
+   campo largo isso é certo; num campo estreito (a coluna da mesa, na linha de
+   uma pessoa do convite, vale um quarto da linha) a lista saía com quatro
+   centímetros e os nomes das mesas ficavam todos cortados com reticências. A
+   lista mede-se pelo que TEM de mostrar: nunca menos do que o campo, nunca
+   mais do que cabe no ecrã. Se essa largura a fizer passar a borda direita,
+   `assentar()` puxa-a para dentro. */
+.lic-sel-pop{ position:absolute; z-index:5; left:0; top:calc(100% + 5px);
+  width:max-content; min-width:100%; max-width:min(360px, 90vw);
+  background:var(--j-card); border:1.5px solid var(--j-linha); border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.10);
+  overflow:hidden; transform-origin:top center;
+  animation:lic-sel-entra .13s cubic-bezier(.2,.8,.3,1); }
+@keyframes lic-sel-entra{ from{ opacity:0; transform:translateY(-4px) } }
+@media (prefers-reduced-motion:reduce){ .lic-sel-pop{ animation:none } }
+/* Virada para cima, quando o espaço está todo lá (ver `assentar` em
+   janela.js): um campo no fundo de uma janela que rola não tem por baixo de si
+   onde abrir, e a lista saía cortada a meio de uma linha. */
+.lic-sel-pop.acima{ top:auto; bottom:calc(100% + 5px); transform-origin:bottom center;
+  box-shadow:0 -10px 30px rgba(0,0,0,.16), 0 -2px 8px rgba(0,0,0,.10);
+  animation-name:lic-sel-entra-acima; }
+@keyframes lic-sel-entra-acima{ from{ opacity:0; transform:translateY(4px) } }
+.lic-sel-q{ display:flex; align-items:center; gap:.45rem; padding:.5rem .6rem;
+  border-bottom:1px solid var(--j-linha); }
+.lic-sel-q .ico{ width:15px; height:15px; flex:none; color:var(--j-fraco); }
+.lic-sel-q input{ flex:1; min-width:0; border:0; background:none; padding:.15rem 0;
+  font-family:var(--j-sans); font-size:.88rem; color:var(--j-ink); }
+.lic-sel-q input:focus{ outline:none; }
+/* Numa lista curta a procura não se mostra — mas fica no sítio, porque é ela
+   que recebe as setas e o Enter. Fora do ecrã, e não `display:none`: um campo
+   que não se pode focar era ficar sem teclado na lista. */
+.lic-sel-q.curta{ position:absolute; width:1px; height:1px; overflow:hidden;
+                  clip-path:inset(50%); padding:0; border:0; }
+/* O TECTO da lista, que `assentar()` aperta depois ao espaço que há.
+   São 44vh e não 340px fixos: num telemóvel deitado, 340px é o ecrã quase
+   todo, e uma lista que ocupa o ecrã todo deixa de se ler como um menu do
+   campo e passa a ler-se como outra página. A metade da altura é sempre meia
+   altura, seja qual for o aparelho. O limite de 340 continua lá para os ecrãs
+   grandes, onde 44vh seriam demasiadas linhas de uma vez.
+   `overscroll-behavior:contain` é o que impede a rolagem de escapar para a
+   janela quando se chega ao fim da lista. */
+.lic-sel-lista{ max-height:min(340px, 44vh); overflow-y:auto; padding:.3rem;
+                overscroll-behavior:contain; }
+/* Uma barra de rolagem fina, para a lista não parecer uma janela dentro da
+   janela. */
+.lic-sel-lista{ scrollbar-width:thin; }
+.lic-sel-op{ display:flex; align-items:center; gap:.6rem; width:100%; text-align:left;
+  border:0; background:none; cursor:pointer; padding:.55rem .65rem; border-radius:9px;
+  font:inherit; font-size:.9rem; color:var(--j-ink); min-height:42px; line-height:1.35;
+  transition:background .12s ease; }
+.lic-sel-op:hover{ background:var(--j-campo); }
+/* O nome não se parte em duas linhas: uma lista com linhas de alturas
+   diferentes não se percorre com os olhos, e `assentar()` conta em linhas
+   inteiras — com alturas desiguais a conta deixava de fechar. */
+.lic-sel-op > span{ flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* O visto é desenhado, e não o carácter ✓: nas fontes que não o têm sai o
+   quadrado do «não sei desenhar isto», e o que ficava sem sinal era
+   justamente a linha escolhida. É a mesma razão do visto do selector de tema. */
+.lic-sel-op .ico{ width:15px; height:15px; flex:none; opacity:0; color:var(--j-ouro); }
+/* `sob` é onde as setas estão; `on` é o que está escolhido. São duas coisas
+   diferentes e por isso têm duas marcas: sem isso, andar com o teclado parecia
+   estar a escolher a cada tecla. */
+.lic-sel-op.sob{ background:var(--j-ouro-pal); }
+.lic-sel-op.on{ color:var(--j-ouro); font-weight:600; }
+.lic-sel-op.on .ico{ opacity:1; }
+.lic-sel-nada{ padding:.9rem .7rem; font-size:.84rem; color:var(--j-fraco);
+               text-align:center; }
 
-     .lic-sel          a caixa à volta, por onde as páginas encontram o campo
-                       (closest('.lic-sel')) e por onde as provas lá chegam
-                       (data-sel). Não desenha: só não deixa a coluna encolher.
-     .lic-sel-pagina   diz «veste-te pelos tokens da PÁGINA», para quem está
-                       fora de uma janela.
-
-   O <select> escondido também se descreve lá, ao pé do resto. */
+/* ---- a mesma caixa, por cima de um <select> que já existia ----
+   O <select> fica lá, escondido, a guardar o valor: quem o manipulava antes
+   continua a manipulá-lo. Escondê-lo com display:none tirava-o da ordem de
+   tabulação e do formulário; assim fica invisível e continua a contar. */
+.lic-sel-nativo{ position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+                 overflow:hidden; clip-path:inset(50%); border:0; }
 .lic-sel.desligada{ opacity:.55; pointer-events:none; }
+
+/* Nos ecrãs de serviço, 48px. O bar usa-se de pé, a meia-luz, com as mãos
+   molhadas e o telemóvel numa mão só — é a medida que o resto do módulo já
+   segue, e uma lista com linhas de 42 no meio de botões de 48 dá um campo que
+   se falha ao primeiro toque. */
+.b-cx .lic-sel-bt, .b-festa .lic-sel-bt{ min-height:48px; }
+.b-cx .lic-sel-op, .b-festa .lic-sel-op{ min-height:48px; }
 
 /* Fora de uma janela, a caixa veste-se pelos tokens da PÁGINA: os --j-* são
    dos modais, e um formulário no meio de uma página não é um modal. A classe é

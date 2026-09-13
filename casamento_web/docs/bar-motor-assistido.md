@@ -267,30 +267,42 @@ Cada fase fecha com a suite inteira verde. Ninguém começa a seguinte sem isso.
   produz a escassez que anuncia. O número não é escondido no ecrã: não sai do
   servidor (ver `bar_menu`, em `api.php`).
 
-### 5.1 A regra das bibliotecas foi revogada
+### 5.1 A regra das bibliotecas: revogada, experimentada, e desfeita
 
-A regra dizia «nada de bibliotecas novas; sem jQuery, sem Select2». Foi
-revogada por decisão de quem manda no produto, e revogada de propósito: a
-ordem foi trazer o Select2 e pôr todos os `<select>` do sistema a usá-lo.
+Esta secção é um registo, e não uma regra. Fica escrita porque a pergunta
+«porque é que isto não usa Select2?» já foi feita uma vez, foi respondida com
+código, e a resposta foi desfeita — e sem o registo alguém a faria outra vez.
 
-Está feito. `assets/jquery.min.js` e `assets/select2.min.js` são agora peças da
-casa, e é o Select2 que veste as listas — a escolha escrita à mão saiu.
+**O que aconteceu, por ordem:**
 
-**O que a regra protegia, e que continua de pé:**
+1. A regra dizia «nada de bibliotecas novas; sem jQuery, sem Select2».
+2. Foi **revogada** por decisão de quem manda no produto, com a ordem expressa
+   de trazer o Select2 e pôr todos os `<select>` do sistema a usá-lo.
+3. Foi feito: jQuery 3.7.1 e Select2 4.1.0 em `assets/`, servidos pela casa, com
+   uma folha que lhes trocava as cores pelos tokens do tema, e com a escolha
+   escrita à mão retirada.
+4. **Foi desfeito**, por decisão da mesma pessoa, depois de se ver a funcionar.
 
-- **Serve-se daqui, nunca de um CDN.** Os ficheiros vivem em `assets/`, como o
-  `qrious` e o `html5-qrcode` já viviam. Uma festa num salão sem rede tem de
-  abrir o bar à mesma, e um `<script src="https://…">` que não carrega é um
-  ecrã sem listas a meio de um casamento.
-- **O desenho é o da casa.** `assets/select2-casa.css` mapeia as classes do
-  Select2 para os tokens do tema. Uma lista que se veste sozinha traz a paleta
-  de outra gente para dentro de um convite.
-- **Versão fixa, escrita no ficheiro.** Sem `latest`, sem actualizações
-  automáticas.
+**Porque foi desfeito:** a razão foi de uso, não de princípio — a lista do
+Select2, dentro de uma janela, obrigava a rolar o modal só por se ter aberto.
+Uma escolha que faz a janela mexer-se debaixo dos olhos de quem a abriu é pior
+do que uma lista sem procura.
 
-**O que se perdeu, escrito aqui para que ninguém finja que não sabia:** o
-sistema carrega agora ~110 KB que não carregava. Quem vier depois, e achar que
-isso pesa de mais no telemóvel de um convidado num salão com rede fraca, tem
-aqui a conta feita e o histórico todo para decidir de novo — mas não desfaça
-isto por conta própria: a decisão foi tomada por quem manda, e é revogá-la que
-precisa de uma decisão igual.
+**O que isso deixa decidido, e o que não deixa:**
+
+- A escolha da casa (`licSelProcuraHtml`, em `assets/janela.js`) é o que veste
+  as listas do sistema. É ela que se melhora quando há que melhorar.
+- A proibição **não voltou a ser absoluta**. Foi revogada, e revogá-la foi uma
+  decisão; o que se desfez foi *aquela* biblioteca, por *aquela* razão. Uma
+  biblioteca nova precisa de ser decidida — não está proibida à partida.
+- O que a regra protegia continua a valer para o que quer que entre: serve-se
+  de `assets/` e nunca de um CDN (um salão sem rede tem de abrir o bar à
+  mesma), a versão fica fixa no ficheiro, e o desenho é vestido pelos tokens
+  do tema.
+
+**O custo medido, para quem voltar a esta conta:** eram ~177 KB de jQuery mais
+Select2. E há uma armadilha que ficou aprendida e que vale para qualquer
+biblioteca que use jQuery: o `trigger` do jQuery **não despacha um evento no
+browser** — corre os handlers do próprio jQuery e o `onchange` inline, e mais
+nada. Os dezasseis `addEventListener('change', …)` deste sistema ficavam
+surdos, sem dar erro nenhum.

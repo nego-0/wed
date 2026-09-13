@@ -3241,70 +3241,32 @@ reconstruírem.
 
 ## 32. A sétima passagem: o Select2, o stock calado, e o posto que decide
 
-### 32.1 O Select2 no lugar da escolha escrita à mão
+### 32.1 O Select2: experimentado e desfeito
 
-A regra da casa proibia bibliotecas novas — «sem jQuery, sem Select2». **Foi
-revogada** por decisão de quem manda no produto (a decisão e o que ela custa
-estão em `docs/bar-motor-assistido.md` §5.1), e a ordem foi usar o Select2 em
-todos os `<select>` do sistema. Está feito.
+A regra «nada de bibliotecas novas» foi revogada, o Select2 entrou em todos os
+`<select>` do sistema, e foi desfeito depois de se ver a funcionar. O registo da
+decisão — as quatro fases, e o que fica decidido — está em
+`docs/bar-motor-assistido.md` §5.1.
 
-O componente escrito à mão saiu — eram ~430 linhas em `assets/janela.js`, com a
-lista, a procura, o teclado e o cálculo de onde a lista cabia. O que ficou no
-lugar é uma casca fina por cima do Select2, e ela existe por uma razão que não é
-decorativa: as páginas chamam `licSelProcuraHtml`, `licSelDefinir`,
-`licSelRefrescar`, `licSelUpgrade` e `licSelProcuraLigar` em dezenas de sítios.
-Mantendo os **nomes** e as **assinaturas**, a troca do motor não obrigou a mexer
-em nenhum deles — e o dia em que o Select2 sair também não obrigará.
+**A razão de se desfazer foi de uso:** a lista, dentro de uma janela, obrigava a
+rolar o modal só por se ter aberto. Uma escolha que faz a janela mexer-se
+debaixo dos olhos de quem a abriu é pior do que uma lista sem procura.
 
-O que a casca acrescenta, e porquê:
+Fica a escolha da casa, melhorada — é o que §32.4 conta.
 
-- **Procura sem acentos.** O Select2 compara o que se escreve tal e qual: quem
-  escreve «jose» não encontra «José». Numa festa, de pé, com o telemóvel numa
-  mão, ninguém escreve acentos. O `matcher` da casa passa os dois lados por
-  `licChave()`.
-- **A lista não é cortada pela janela.** `dropdownParent` põe-na dentro do
-  modal. É a mesma dor de §28.6, resolvida agora por outro caminho.
-- **A procura desaparece nas listas curtas.** Escrever para filtrar entre três
-  opções é trabalho para nada, e num telemóvel é um teclado por cima da lista.
-- **Fala português.** O Select2 vem em inglês; as frases estão em `janela.js`.
-- **Veste-se pela casa.** `assets/select2-casa.css` troca-lhe as cores, os
-  raios e as medidas pelos tokens do tema — e por isso segue os quatro temas,
-  os editores escuros e os ecrãs do bar sem saber que eles existem.
+Duas coisas aprendidas que vale a pena guardar, porque valem para qualquer
+biblioteca que use jQuery e não para o Select2 em particular:
 
-Serve-se de `assets/`, e nunca de um CDN: um salão sem rede tem de abrir o bar à
-mesma. Ver `parcial-select2.php`, que é o único sítio onde a ordem de carga está
-escrita — e ela importa: o `janela.js` veste os campos no `DOMContentLoaded`, e
-sem o jQuery já definido nessa altura não veste nada.
-
-**Três armadilhas que custaram tempo, e ficam escritas para não se repetirem:**
-
-1. **O ciclo infinito.** `licSelRefrescar` manda o Select2 redesenhar-se com
-   `trigger('change.select2')`. O `trigger` do jQuery acaba por invocar o
-   `onchange=` escrito no html do elemento — o namespace escolhe entre os
-   handlers *ligados*, e o inline não é um deles. A linha de uma pessoa, em
-   `index.php`, tem `onchange="sincroMesaPapel(...)"`, que chama
-   `licSelRefrescar`: redesenhar chamava o onchange, que mandava redesenhar.
-   «Maximum call stack size exceeded», e o painel de convidados morria ao abrir
-   um convite. O `triggerHandler` **não** resolve — faz o mesmo. Resolve uma
-   tranca de reentrada (`licSelSoACaixa`), global de propósito: o ciclo passa
-   por fora destas funções e uma tranca por elemento não o via passar.
-2. **O Escape fechava a janela inteira.** Abrir uma escolha, arrepender-se,
-   carregar em Escape — e perder o formulário com tudo o que já lá estava
-   escrito. A janela não podia saber que havia uma lista aberta, porque o
-   Select2 está ligado ao campo (em baixo) e ela ao documento (em cima): quando
-   a janela é chamada, a lista já fechou. A pergunta passa a ser feita num
-   ouvinte na fase de **captura**, que corre antes.
-3. **Dois caminhos a vestir o mesmo campo.** A passagem que varre a página
-   chegava a um campo que já nascera dentro de uma caixa da casa, punha-lhe uma
-   segunda caixa à volta, e perdia pelo caminho o que a primeira dizia — entre
-   outras coisas o `data-procura`. O sintoma era uma lista de duas opções com
-   caixa de procura por cima.
-
-Nas provas, `tests/escolhas.js` foi reescrito. Duas coisas que não se adivinham:
-a lista **não vive dentro da caixa do campo** (o Select2 pendura-a no `body`, ou
-no modal), e **não há um `data-valor` nas linhas** — o caminho honesto é o que
-uma pessoa faz: descobrir o texto daquele valor e carregar na linha que o
-mostra.
+- **O `trigger` do jQuery não despacha um evento no browser.** Corre os
+  handlers que o próprio jQuery registou, chama o `onchange` escrito no html, e
+  fica-se por aí. Os dezasseis `addEventListener('change', …)` deste sistema
+  ficavam surdos — sem erro nenhum, simplesmente não acontecia: a frase que
+  explica uma regra não mudava com o modo, o rodapé do convidado não repintava,
+  o cartão de uma entrega não gravava a mesa nova.
+- **Redesenhar uma caixa pode acordar quem a mandou redesenhar.** A linha de uma
+  pessoa, em `index.php`, tem `onchange="sincroMesaPapel(...)"`, que pede à caixa
+  para acompanhar o `<select>`. Se o pedido de redesenho passar pelo `onchange`,
+  fecha-se o ciclo e a página morre com «Maximum call stack size exceeded».
 
 ### 32.2 O convidado deixa de ler o stock
 
@@ -3359,3 +3321,52 @@ $daCopa = podeCopa() && $posto === 'copa';
 Quem não o reclama submete — incluindo um lançador novo que amanhã alguém
 escreva e se esqueça de declarar. É de propósito que a falha cai desse lado: o
 engano mais caro é servir sem decisão, e o mais barato é uma decisão a mais.
+
+### 32.4 A escolha da casa: dimensões, e uma janela que não se mexe
+
+Com o Select2 desfeito, a escolha escrita à mão volta a ser o que veste as
+listas — e leva o que faltava.
+
+**A janela deixa de se mexer.** Havia em `assentar()` um terceiro gesto: quando
+a lista não cabia por baixo do campo, ROLAVA o corpo da janela para ganhar
+espaço. Resolvia o corte e criava coisa pior — tudo o que estava à volta (o
+rótulo, os outros campos, o botão de guardar) saltava de sítio por se ter aberto
+uma lista, e o que a pessoa estava a ler fugia-lhe. **Um menu que se abre não
+pode arrastar a página consigo.**
+
+Ficam dois gestos, e nenhum toca no que está por baixo:
+
+- **escolher o lado** onde há mais espaço — para baixo enquanto der, porque é
+  onde a pessoa espera a lista depois de carregar no campo;
+- **apertar a altura** ao que esse lado tem, em linhas inteiras.
+
+A troca de lado exige um ganho real (uma linha inteira, no mínimo). Sem essa
+margem, um campo a meio da janela trocava de lado a cada dois pixels de
+rolagem, e a lista aparecia ora acima ora abaixo do mesmo campo sem nada ter
+mudado para quem a abre.
+
+**A largura passa a ser dela, e não do campo.** Era `left:0; right:0` — a lista
+nascia com a largura exacta do campo. Num campo largo isso é certo; num campo
+estreito (a coluna da mesa, na linha de uma pessoa do convite, vale um quarto da
+linha) a lista saía com quatro centímetros e os nomes das mesas ficavam todos
+cortados com reticências. Agora mede-se pelo que tem de mostrar: nunca menos do
+que o campo, nunca mais do que cabe no ecrã — e se isso a fizer passar a borda
+direita, `assentar()` puxa-a para dentro.
+
+**O tecto da lista são 44vh, e não 340px fixos.** Num telemóvel deitado, 340px
+é o ecrã quase todo, e uma lista que ocupa o ecrã todo deixa de se ler como um
+menu do campo e passa a ler-se como outra página. Metade da altura é sempre
+metade, seja qual for o aparelho — com o limite de 340 a valer nos ecrãs
+grandes, onde 44vh seriam demasiadas linhas de uma vez.
+
+O resto é afinação: a caixa fechada com mais respiro e 44px de alto, as linhas
+sem quebra (uma lista com linhas de alturas diferentes não se percorre com os
+olhos — e a conta das linhas inteiras deixava de fechar), uma sombra mais leve,
+e uma entrada de 130ms que se desliga com `prefers-reduced-motion`. Nos ecrãs
+de serviço — o bar, que se usa de pé e a meia-luz — os alvos sobem para 48px.
+
+`chk_bar_terceira.js` prova as duas coisas que interessam: que abrir uma escolha
+não rola a janela, e que a lista cabe inteira lá dentro nos quatro lados. O
+clique dessa prova é dado de dentro da página, e não com `locator.click()`: o
+Playwright faz `scrollIntoView` antes de carregar, e seria a prova a rolar a
+janela para depois se queixar de que ela rolou.

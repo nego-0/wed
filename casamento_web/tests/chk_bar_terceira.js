@@ -181,11 +181,11 @@ const { escolher } = require('./escolhas');
   await gar.waitForTimeout(900);
   await gar.locator('#pp-achados button').first().click();
   await gar.waitForTimeout(300);
-  await cxMesa.locator('.select2-selection').first().click();
+  await cxMesa.locator('.lic-sel-bt').click();
   await gar.waitForTimeout(300);
-  await gar.locator('.select2-container--open .select2-search__field').fill('ZT Varanda');
+  await cxMesa.locator('.lic-sel-q input').fill('ZT Varanda');
   await gar.waitForTimeout(400);
-  await gar.locator('.select2-container--open .select2-results__option').first().click();
+  await cxMesa.locator('.lic-sel-op:visible').first().click();
   await gar.waitForTimeout(300);
   await gar.click('#lic-jo');
   await gar.waitForTimeout(1600);
@@ -249,25 +249,69 @@ const { escolher } = require('./escolhas');
   const comProcura = await copa.locator('#lic-janela .lic-sel').count();
   ok(comProcura >= 2,
      'a janela de uma regra tem escolhas com procura por dentro (' + comProcura + ')');
+
+  // ---- abrir uma escolha não mexe a janela ----------------------------
+  // Houve aqui um gesto que ROLAVA o corpo da janela para a lista ganhar
+  // espaço em baixo. Resolvia o corte e criava coisa pior: tudo o que estava à
+  // volta saltava de sítio por se ter aberto uma lista, e o que a pessoa
+  // estava a ler fugia-lhe. A lista cabe no espaço que há — virando-se para
+  // cima quando é lá que ele está — e nunca arrasta a janela consigo.
+  // O clique é dado DE DENTRO da página, e não com `locator.click()`: o
+  // Playwright faz `scrollIntoView` antes de carregar, e seria a prova a rolar
+  // a janela para depois se queixar de que ela rolou. Um `el.click()` não mexe
+  // em nada — mede-se a aplicação, e não o arnês.
+  const rolou = await copa.evaluate(() => {
+    const cx = document.querySelector('#lic-janela .pl-modal-corpo');
+    cx.scrollTop = cx.scrollHeight;
+    const antes = cx.scrollTop;
+    // O campo mais abaixo que se veja: é o que tem menos espaço por baixo, e
+    // era o que fazia a janela saltar.
+    const bts = [...document.querySelectorAll('#lic-janela .lic-sel-bt')]
+      .filter(b => b.offsetParent !== null);
+    const alvo = bts[bts.length - 1];
+    alvo.click();
+    return { antes: antes, depois: cx.scrollTop, quantos: bts.length };
+  });
+  await copa.waitForTimeout(450);
+  const rolaAntes = rolou.antes, rolaDepois = rolou.depois;
+  ok(rolaAntes === rolaDepois,
+     'abrir uma escolha não rola a janela por baixo dela: '
+     + rolaAntes + ' → ' + rolaDepois);
+  // E a lista fica INTEIRA dentro do corpo da janela, nos quatro lados: se
+  // saísse, voltava o corte a meio de uma linha que isto existe para evitar.
+  const dentro = await copa.evaluate(() => {
+    const pop = document.querySelector('#lic-janela .lic-sel-pop:not([hidden])');
+    const cx  = document.querySelector('#lic-janela .pl-modal-corpo');
+    if (!pop || !cx) return null;
+    const r = pop.getBoundingClientRect(), c = cx.getBoundingClientRect();
+    return { cima: r.top >= c.top - 1, baixo: r.bottom <= c.bottom + 1,
+             esq: r.left >= c.left - 1, dir: r.right <= c.right + 1,
+             alta: Math.round(r.height) };
+  });
+  ok(dentro && dentro.cima && dentro.baixo && dentro.esq && dentro.dir,
+     'e a lista cabe inteira dentro da janela, nos quatro lados: '
+     + JSON.stringify(dentro));
+  await copa.keyboard.press('Escape');
+  await copa.waitForTimeout(250);
   // E a procura procura — sem acentos, que é como se escreve de pé.
   // Pelo NOME do campo e não pela posição: a ordem dos campos mudou na quarta
   // passagem (§29.4) e um índice fixo apanhou a caixa errada — a de «qual
   // pessoa», que está escondida enquanto a regra não for de ninguém.
   const sobre = copa.locator('#lic-janela .lic-sel[data-sel="sobre"]');
-  await sobre.locator('.select2-selection').first().click();
+  await sobre.locator('.lic-sel-bt').click();
   await copa.waitForTimeout(300);
-  const antes = await copa.locator('.select2-container--open .select2-results__option').count();
-  await copa.locator('.select2-container--open .select2-search__field').fill('zt tinto');
+  const antes = await sobre.locator('.lic-sel-op:visible').count();
+  await sobre.locator('.lic-sel-q input').fill('zt tinto');
   await copa.waitForTimeout(400);
-  const depois = await copa.locator('.select2-container--open .select2-results__option').count();
+  const depois = await sobre.locator('.lic-sel-op:visible').count();
   ok(antes > depois && depois === 1,
      'e escrever filtra a lista: ' + antes + ' → ' + depois);
   // O rótulo fica limpo: houve um dia em que saía «ZT Tinto NaNNaNNaN».
-  const rotulo = await copa.locator('.select2-container--open .select2-results__option').first().innerText();
+  const rotulo = await sobre.locator('.lic-sel-op:visible').first().innerText();
   ok(!/NaN/.test(rotulo), 'e o rótulo é o nome, e não uma conta falhada: «' + rotulo.trim() + '»');
-  await copa.locator('.select2-container--open .select2-results__option').first().click();
+  await sobre.locator('.lic-sel-op:visible').first().click();
   await copa.waitForTimeout(300);
-  ok(/ZT Tinto/.test(await sobre.locator('.select2-selection__rendered').innerText()),
+  ok(/ZT Tinto/.test(await sobre.locator('.lic-sel-bt .txt').innerText()),
      'escolher fecha a lista e escreve o nome no botão');
 
   // ============ 7. a regra de pessoa é a mesma janela ============

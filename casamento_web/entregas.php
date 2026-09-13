@@ -11,7 +11,6 @@
 // que impede o bar de vender o que já não tem.
 // ============================================================
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
@@ -112,7 +111,6 @@ $CAS  = casalInfo($DEFS);
 <script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/bar-pecas.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
-<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/bar-entrega.js') ?>"></script>
 </body>

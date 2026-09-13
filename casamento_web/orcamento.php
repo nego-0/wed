@@ -12,7 +12,6 @@
 // sem tratamento à parte, como o resto do orçamento.
 // ============================================================
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
@@ -428,7 +427,6 @@ $CAS  = casalInfo($DEFS);
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script>window.SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
-<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>
 <script src="<?= asset('assets/orcamento.js') ?>"></script>

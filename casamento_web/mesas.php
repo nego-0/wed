@@ -3,7 +3,6 @@
 // mesas.php — Planta de mesas (posição, capacidade e ocupação)
 // ============================================================
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/personalizacao.php';
@@ -518,7 +517,6 @@ $CAS = casalInfo(defsAtuais($conn));
   .combo-vazio{ color:#9aa09a; font-size:.82rem; padding:.4rem .5rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
-<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/mesa-icone.js') ?>"></script>
 </head>

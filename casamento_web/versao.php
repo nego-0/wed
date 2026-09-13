@@ -685,9 +685,9 @@ function correcoesEsperadas(): array {
         ['Bar: o nome de quem entrou lê-se uma vez só, dentro da pastilha',
          'bebidas.php', 'Duas pastilhas e mais nada.'],
         ['Escolha com procura: a lista assenta onde cabe, em linhas inteiras',
-         'assets/janela.js', 'function licSelOndePor('],
+         'assets/janela.js', 'const assentar = () =>'],
         ['E vira-se para cima quando o espaço está todo lá',
-         'assets/select2-casa.css', '.pl-modal .select2-container{'],
+         'assets/janela.css', '.lic-sel-pop.acima{'],
         ['Janela: um botão do CORPO tem a forma dos do rodapé, e não só a cor',
          'assets/janela.css', '.j-bt{ font-family:inherit;'],
 
@@ -880,29 +880,27 @@ function correcoesEsperadas(): array {
         ['bebidas.php: o menu tem esqueleto fixo, e só muda o que mudou',
          'assets/bar-convidado.js', 'function esqueleto('],
 
-        // ---- O Select2, o stock que o convidado não lê, e o posto que decide ----
-        ['A regra «nada de bibliotecas novas» foi revogada, e está escrito porquê',
-         'docs/bar-motor-assistido.md', '5.1 A regra das bibliotecas foi revogada'],
-        ['O jQuery e o Select2 são servidos pela casa, e não por um CDN',
-         'parcial-select2.php', 'function select2Scripts('],
-        ['As listas do sistema são Select2',
-         'assets/janela.js', "$(sel).select2({"],
-        ['A procura das listas ignora acentos — quem escreve de pé não os põe',
-         'assets/janela.js', 'function licSelFiltro('],
-        ['A lista de uma escolha em janela nasce dentro do modal, e não é cortada',
-         'assets/janela.js', 'function licSelOndePor('],
-        ['Redesenhar a caixa não acorda o onchange da página (era um ciclo infinito)',
-         'assets/janela.js', 'function licSelSoACaixa('],
-        ['O Escape fecha a lista, e não a janela inteira por baixo dela',
-         'assets/janela.js', 'let licHaviaLista = false;'],
-        ['O Select2 veste-se pelos tokens do tema, e não pelos cinzentos dele',
-         'assets/select2-casa.css', '--s2-ouro:   var(--gold'],
+        // ---- O stock que o convidado não lê, e o posto que decide ----
         ['O convidado não lê quanto stock resta',
          'assets/bar-convidado.js', 'O que se diz sobre a quantidade: NADA'],
         ['E o número nem sai do servidor para o menu do convidado',
          'api.php', '`disponivel` NÃO sai por aqui'],
         ['Quem lança do posto das entregas submete à copa, mesmo sendo admin',
          'api.php', "\$daCopa = podeCopa() && \$posto === 'copa';"],
+
+        // ---- A escolha da casa: dimensões, e a janela que não se mexe ----
+        ['Abrir uma escolha já não rola a janela por baixo dela',
+         'assets/janela.js', 'Pôr a lista onde ela caiba — SEM mexer na janela'],
+        ['A lista troca de lado só quando ganha mesmo espaço com isso',
+         'assets/janela.js', 'const GANHO = Math.max(48, linha);'],
+        ['A lista mede-se pelo que mostra, e não pela largura do campo',
+         'assets/janela.css', 'width:max-content; min-width:100%;'],
+        ['E encosta-se para dentro quando essa largura passaria a borda',
+         'assets/janela.js', 'const passa = r.right - (limite.right - RESPIRO);'],
+        ['O tecto da lista acompanha a altura do ecrã',
+         'assets/janela.css', 'max-height:min(340px, 44vh)'],
+        ['Alvos de 48px nas listas dos ecrãs de serviço',
+         'assets/janela.css', '.b-cx .lic-sel-op, .b-festa .lic-sel-op{ min-height:48px; }'],
     ];
 }
 

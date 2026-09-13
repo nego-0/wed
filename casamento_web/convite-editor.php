@@ -9,7 +9,6 @@
 // voltar ao servidor. Tudo passa por um histórico com desfazer.
 // ============================================================
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
@@ -254,7 +253,6 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noi
 <script src="<?= asset('assets/editor-diag.js') ?>"></script>
 <?php endif; ?>
 <script src="<?= asset('assets/api.js') ?>"></script>
-<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
