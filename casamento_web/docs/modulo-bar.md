@@ -3106,3 +3106,27 @@ motor deixou de ser só uma porta que fecha: mede, propõe, e quem decide contin
 a ser quem está lá — que era a frase toda desta passagem.
 
 `tests/chk_bar_sexta.js` fecha com 90 verificações, e a suite com 79 provas.
+
+### 31.9 A mesa de entrega é de quem lança o pedido
+
+O garçom e o copeiro lançam pedidos por quem está à mesa, e a entrega ia sempre
+para a mesa **marcada** da pessoa — a que ela tem na planta. Numa festa isso é
+verdade durante a primeira hora: depois as pessoas levantam-se, juntam-se noutra
+mesa, ficam no jardim. Quem lança o pedido está a olhar para o sítio onde ela
+está, e é esse sítio que tem de poder dizer.
+
+As duas janelas — «Aprovar um pedido», na copa, e «Pedir por um convidado», nas
+entregas — ganham o campo **«Entregar em»**, com a procura por dentro. A escolha
+começa em **«Onde a pessoa está sentada»**: é o que já acontecia, é o caso
+normal, e assim ninguém responde a uma pergunta a mais por cada pedido. Há também
+«Sem mesa — fica ao balcão», para quem vem buscar.
+
+A peça é **uma só** (`BP.campoMesa` / `BP.mesaEscolhida`, em `bar-pecas.js`): é o
+mesmo gesto em dois postos, e duas cópias acabavam a divergir numa delas. A lista
+das mesas também se unificou — o garçom já tinha a sua para mudar a mesa de um
+pedido feito, e duas listas das mesmas mesas acabam a responder coisas diferentes
+à mesma pergunta.
+
+O servidor não mudou: `bar_pedir_por` já aceitava `mesa_id`, e era o ecrã que lhe
+mandava sempre o mesmo. `chk_bar_terceira.js` prova o lado do garçom e
+`chk_bar_quarta.js` o do copeiro, os dois pelo ecrã e até ao pedido na fila.

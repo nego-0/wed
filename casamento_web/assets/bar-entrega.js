@@ -265,15 +265,13 @@
   };
 
   /* ---- mudar a mesa de um pedido -------------------------------
-     A lista das mesas pede-se uma vez e fica: num salão são vinte ou trinta,
-     não mudam durante a festa, e pedi-las a cada janela era uma ida ao
-     servidor de cada vez que alguém se levanta. */
-  var MESAS = null;
+     A lista das mesas pede-se uma vez e fica (BP.mesasDoBar guarda-a): num
+     salão são vinte ou trinta, não mudam durante a festa, e pedi-las a cada
+     janela era uma ida ao servidor de cada vez que alguém se levanta. É a
+     mesma lista que a janela de lançar um pedido usa — duas listas das mesmas
+     mesas acabavam a responder coisas diferentes à mesma pergunta. */
   window.entMudarMesa = async function (id) {
-    if (!MESAS) {
-      var d = await window.api('bar_mesas', { method: 'GET', silencioso: true });
-      MESAS = (d && d.success) ? (d.mesas || []) : [];
-    }
+    var MESAS = await BP.mesasDoBar();
     if (!MESAS.length) { toast('Não há mesas marcadas neste casamento.', true); return; }
     var p = ((EST && EST.pedidos) || []).filter(function (x) { return x.id === id; })[0] || {};
     var opcoes = [{ v: '0', r: 'Sem mesa — ao balcão' }].concat(
@@ -346,6 +344,9 @@
     var e = await window.api('bar_itens_pedir', { method: 'GET', silencioso: true });
     var itens = (e && e.success ? e.itens : []);
     if (!itens.length) { toast('Não há nada disponível para pedir.', true); return; }
+    // Quem anda na sala é quem melhor sabe onde a pessoa está: a mesa de
+    // entrega escolhe-se aqui, e não fica presa à da planta.
+    var mesas = await BP.mesasDoBar();
     licFormulario({
       titulo: 'Pedir por um convidado',
       guardar: 'Lançar o pedido',
@@ -363,7 +364,8 @@
           opcoes: itens.map(function (i) {
             return { v: String(i.id), r: i.nome + ' (' + i.disponivel + ')' };
           }) },
-        { id: 'quantidade', rot: 'Quantas', tipo: 'numero', valor: 1, min: 1, max: 12 }
+        { id: 'quantidade', rot: 'Quantas', tipo: 'numero', valor: 1, min: 1, max: 12 },
+        BP.campoMesa(mesas)
       ],
       aoGuardar: async function (v) {
         if (!ppEscolhido) { licJanelaErro('Escolha o convidado na lista.'); return false; }
@@ -371,7 +373,7 @@
         // janela, ao pé do campo que a há-de resolver.
         var d = await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
           body: JSON.stringify({ convidado_id: ppEscolhido.id,
-                                 mesa_id: ppEscolhido.mesa_id,
+                                 mesa_id: BP.mesaEscolhida(v.mesa, ppEscolhido),
                                  itens: [{ item_id: parseInt(v.item, 10),
                                            quantidade: parseInt(v.quantidade, 10) || 1 }] }) });
         if (!d || !d.success) {

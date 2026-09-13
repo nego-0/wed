@@ -155,6 +155,50 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(lancado && lancado.success === true,
      'e o pedido lançado por ele entra mesmo: ' + ((lancado.pedido || {}).codigo || lancado.message));
 
+  // ---- e diz PARA ONDE vai ----------------------------------------
+  // A entrega ia sempre para a mesa marcada da pessoa — a da planta. Numa
+  // festa isso é verdade durante a primeira hora: depois as pessoas
+  // levantam-se, juntam-se noutra mesa, ficam no jardim. Quem lança o pedido
+  // está a olhar para o sítio onde ela está.
+  const varanda = await p.evaluate(async () => {
+    const d = await window.api('mesa_save', { method: 'POST',
+      body: JSON.stringify({ nome: 'ZT Varanda', lugares: 6 }) });
+    const l = await window.api('mesa_list');
+    return ((l.mesas || []).filter(m => m.nome === 'ZT Varanda')[0] || {}).id || 0;
+  });
+  ok(varanda > 0, 'há uma segunda mesa, para a entrega poder mudar de sítio');
+
+  await gar.evaluate(() => window.entPedirPor());
+  await gar.waitForTimeout(1600);
+  const cxMesa = gar.locator('#lic-janela .lic-sel[data-sel="mesa"]');
+  ok(await cxMesa.count() === 1,
+     'a janela do garçom pergunta para onde vai a bebida');
+  ok(await gar.evaluate(() => (document.getElementById('lf-mesa') || {}).value) === '',
+     'e abre na mesa da própria pessoa — o caso normal não se pergunta duas vezes');
+
+  await gar.fill('#lf-nome', cenario.pessoa.nome.slice(0, 4));
+  await gar.waitForTimeout(900);
+  await gar.locator('#pp-achados button').first().click();
+  await gar.waitForTimeout(300);
+  await cxMesa.locator('.lic-sel-bt').click();
+  await gar.waitForTimeout(300);
+  await cxMesa.locator('.lic-sel-q input').fill('ZT Varanda');
+  await gar.waitForTimeout(400);
+  await cxMesa.locator('.lic-sel-op:visible').first().click();
+  await gar.waitForTimeout(300);
+  await gar.click('#lic-jo');
+  await gar.waitForTimeout(1600);
+
+  // As mesas dos pedidos desta pessoa: o primeiro foi lançado pela API sem
+  // mesa nenhuma, este foi lançado pelo ecrã com a mesa escolhida à mão.
+  const mesasDele = await p.evaluate(async (nome) => {
+    const e = await window.api('bar_estado');
+    return (e.fila || []).filter(x => x.convidado === nome).map(x => x.mesa || '—');
+  }, cenario.pessoa.nome);
+  ok(mesasDele.includes('ZT Varanda'),
+     'e o pedido que ele lança vai para a mesa que ele escolheu: '
+     + mesasDele.join(' · '));
+
   // ============ 4. uma regra da casa em PEDIDOS trava o acto de pedir ======
   // A mesma linha era lida de duas maneiras: barRitmoDaCasa fechava todas as
   // bebidas com a mensagem do caudal, e barVeredictoPedido ignorava-a por não
@@ -280,6 +324,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       await window.api('bar_item_apagar', { method: 'POST', body: JSON.stringify({ id: i.id }) });
     }
     await window.api('bar_fechar', { method: 'POST', body: '{}' });
+    // A mesa desta prova sai daqui: uma mesa a mais no salão muda a lotação
+    // que as outras provas contam.
+    const ms = await window.api('mesa_list', { silencioso: true });
+    for (const m of ((ms && ms.mesas) || []).filter(m => /^ZT /.test(m.nome))) {
+      await window.api('mesa_delete&id=' + m.id, { method: 'POST', silencioso: true });
+    }
     const d = await window.api('acesso_lista', { silencioso: true });
     for (const a of ((d && d.acessos) || [])) {
       if (a.email === 'zt.garcom@exemplo.pt') {

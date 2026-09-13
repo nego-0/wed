@@ -819,6 +819,15 @@ function correcoesEsperadas(): array {
         ['Bar: e o número não sobe acima disso — nem escrito à mão',
          'assets/bar-copa.js', 'if (t && q > t.pode && !acima) acima ='],
 
+        ['Bar: quem lança um pedido diz para onde vai a bebida',
+         'assets/bar-pecas.js', 'function campoMesa('],
+        ['Bar: e por omissão vai para a mesa da pessoa, como ia antes',
+         'assets/bar-pecas.js', 'function mesaEscolhida('],
+        ['Bar: a copa escolhe a mesa ao lançar do balcão',
+         'assets/bar-copa.js', 'BP.campoMesa(mesas),'],
+        ['Bar: e o garçom escolhe-a na sala, que é onde vê a pessoa',
+         'assets/bar-entrega.js', 'BP.campoMesa(mesas)'],
+
         // ---- Os modelos e os dados de exemplo ----
         ['Modelos: a prova de um modelo não é o retrato do primeiro casal',
          'personalizacao.php', 'foreach (exemploModelo($conn) as $k => $v) $defs[$k] = $v;'],

@@ -1490,11 +1490,14 @@
      Por isso subiu para o topo da fila por decidir, com o nome do gesto:
      «Aprovar pedido».
      ============================================================ */
-  window.copaPedirPor = function () {
+  window.copaPedirPor = async function () {
     var itens = (EST.itens || []).filter(function (i) {
       return i.estado === 'ativo' && i.disponivel > 0;
     });
     if (!itens.length) { toast('Não há nada disponível para pedir.', true); return; }
+    // As mesas pedem-se uma vez por noite (BP.mesasDoBar guarda-as): num salão
+    // são vinte ou trinta, e não mudam entre pedidos.
+    var mesas = await BP.mesasDoBar();
     licFormulario({
       titulo: 'Aprovar um pedido',
       guardar: 'Aprovar',
@@ -1513,6 +1516,7 @@
             return { v: String(i.id), r: i.nome + ' (' + i.disponivel + ')' };
           }) },
         { id: 'quantidade', rot: 'Quantas', tipo: 'numero', valor: 1, min: 1, max: 12 },
+        BP.campoMesa(mesas),
         { id: 'entregue', rot: 'Já foi entregue?', tipo: 'sim', valor: true, largura: 2,
           aoLado: 'Sim, o copo já seguiu com a pessoa',
           dica: 'Desligue se a bebida ainda tem de ir à mesa: o pedido passa '
@@ -1524,7 +1528,7 @@
         // do campo que a há-de resolver, e não numa nota que passa no canto.
         var d = await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
           body: JSON.stringify({ convidado_id: ppEscolhido.id,
-                                 mesa_id: ppEscolhido.mesa_id,
+                                 mesa_id: BP.mesaEscolhida(v.mesa, ppEscolhido),
                                  entregue: !!v.entregue,
                                  itens: [{ item_id: parseInt(v.item, 10),
                                            quantidade: parseInt(v.quantidade, 10) || 1 }] }) });

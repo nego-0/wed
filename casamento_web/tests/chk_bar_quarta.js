@@ -210,7 +210,54 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e muda a mesa de um pedido em vez de o devolver: agora vai à «'
      + (mudou.pedido || {}).mesa + '»');
 
+  // ============ 5.1 quem LANÇA um pedido também escolhe a mesa ============
+  // Mudar a mesa de um pedido já feito resolvia metade do problema: a outra
+  // metade é o pedido que nasce no sítio errado. O copeiro ao balcão e o
+  // garçom na sala estão os dois a olhar para onde a pessoa está — e a entrega
+  // ia sempre para a mesa da planta, que ao fim de uma hora já não diz nada.
+  const jardim = await p.evaluate(async () => {
+    await window.api('mesa_save', { method: 'POST',
+      body: JSON.stringify({ nome: 'ZW Jardim', lugares: 4 }) });
+    const l = await window.api('mesa_list');
+    return ((l.mesas || []).filter(m => m.nome === 'ZW Jardim')[0] || {}).id || 0;
+  });
+  ok(jardim > 0, 'há um sítio para onde a pessoa se possa ter mudado');
+
+  await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1800);
+  await p.evaluate(() => window.copaPedirPor());
+  await p.waitForTimeout(1800);
+  const cxM = p.locator('#lic-janela .lic-sel[data-sel="mesa"]');
+  ok(await cxM.count() === 1,
+     'a janela do balcão pergunta para onde vai a bebida que a copa lança');
+
+  await p.fill('#lf-nome', cen.quem.nome.slice(0, 4));
+  await p.waitForTimeout(900);
+  await p.locator('#pp-achados button').first().click();
+  await p.waitForTimeout(300);
+  await cxM.locator('.lic-sel-bt').click();
+  await p.waitForTimeout(300);
+  await cxM.locator('.lic-sel-q input').fill('ZW Jardim');
+  await p.waitForTimeout(400);
+  await cxM.locator('.lic-sel-op:visible').first().click();
+  await p.waitForTimeout(300);
+  // Sem o «já foi entregue»: assim o pedido fica POR ENTREGAR, que é o caso em
+  // que a mesa interessa — alguém tem de lá ir.
+  await p.uncheck('#lf-entregue').catch(() => {});
+  await p.click('#lic-jo');
+  await p.waitForTimeout(1600);
+
+  const noJardim = await p.evaluate(async (nome) => {
+    const e = await window.api('bar_estado');
+    return (e.fila || []).filter(x => x.convidado === nome).map(x => x.mesa || '—');
+  }, cen.quem.nome);
+  ok(noJardim.includes('ZW Jardim'),
+     'e o pedido que ela lança vai para a mesa escolhida, e não para a da planta: '
+     + noJardim.join(' · '));
+
   // ============ 6. a ficha traz TODAS as notas ============
+  await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(900);
   await p.evaluate(async (id) =>
     await window.api('bar_entregue', { method: 'POST', body: JSON.stringify(
       { id: id, nota: 'ZW nota de prova' }) }), pid2);
@@ -257,6 +304,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       if (c.nome_exibicao === 'ZW Prova') {
         await window.api('convite_delete&definitivo=1&id=' + c.id, { method: 'POST' });
       }
+    }
+    // A mesa desta prova sai daqui: uma mesa a mais no salão muda a lotação
+    // que as outras provas contam.
+    const ms = await window.api('mesa_list', { silencioso: true });
+    for (const m of ((ms && ms.mesas) || []).filter(m => /^ZW /.test(m.nome))) {
+      await window.api('mesa_delete&id=' + m.id, { method: 'POST', silencioso: true });
     }
     await window.api('bar_fechar', { method: 'POST', body: '{}' });
   });

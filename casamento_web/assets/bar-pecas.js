@@ -206,11 +206,56 @@
     return 'há ' + Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
   }
 
+  /* ---- para onde vai a bebida, quando é o pessoal a lançar -------
+     O garçom e o copeiro lançam pedidos por quem está à mesa, e até aqui a
+     entrega ia sempre para a mesa MARCADA da pessoa — a que ela tem na planta.
+     Numa festa isso é verdade durante a primeira hora: depois as pessoas
+     levantam-se, juntam-se noutra mesa, ficam no jardim. Quem lança o pedido
+     está a olhar para o sítio onde a pessoa está, e é esse sítio que tem de
+     poder dizer.
+
+     A escolha começa em «a mesa da pessoa»: é o que estava a acontecer antes e
+     é o caso normal, e assim ninguém tem de responder a uma pergunta a mais
+     por cada pedido. As duas janelas usam a mesma peça — são o mesmo gesto em
+     dois postos, e duas cópias acabavam a divergir numa delas. */
+  var MESAS = null;
+  async function mesasDoBar() {
+    if (MESAS) return MESAS;
+    var d = await window.api('bar_mesas', { method: 'GET', silencioso: true });
+    MESAS = (d && d.success) ? (d.mesas || []) : [];
+    return MESAS;
+  }
+
+  /** O campo «Entregar em», já com as mesas todas e a procura por dentro. */
+  function campoMesa(mesas) {
+    return { id: 'mesa', rot: 'Entregar em', tipo: 'escolha', valor: '',
+             procura: true, dicaProcura: 'Nome ou número da mesa', largura: 3,
+             opcoes: [{ v: '', r: 'Onde a pessoa está sentada' },
+                      { v: '0', r: 'Sem mesa — fica ao balcão' }]
+                     .concat((mesas || []).map(function (m) {
+                       return { v: String(m.id), r: m.nome };
+                     })),
+             dica: 'Mude se a pessoa não estiver no lugar dela — quem entrega '
+                 + 'procura-a onde aqui disser.' };
+  }
+
+  /**
+   * A mesa que sai do campo: a escolhida, ou a da pessoa quando não se escolheu.
+   * Devolve 0 para «ao balcão», que é o que o servidor lê como «sem mesa».
+   */
+  function mesaEscolhida(valor, pessoa) {
+    if (valor === '' || valor === undefined || valor === null) {
+      return (pessoa && pessoa.mesa_id) ? parseInt(pessoa.mesa_id, 10) : 0;
+    }
+    return parseInt(valor, 10) || 0;
+  }
+
   window.BP = {
     esc: esc, apo: apo, toast: toast, chave: chave,
     campoBusca: campoBusca, ligarBusca: ligarBusca,
     pilula: pilula, btIco: btIco, vazio: vazio,
-    foto: foto, sinal: sinal, estado: estado, ha: ha
+    foto: foto, sinal: sinal, estado: estado, ha: ha,
+    mesasDoBar: mesasDoBar, campoMesa: campoMesa, mesaEscolhida: mesaEscolhida
   };
   // As páginas do bar chamam toast() à seca, como o resto da casa.
   window.toast = toast;
