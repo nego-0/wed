@@ -196,8 +196,17 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     const e = await window.api('bar_estado');
     return (e.notas || {})[String(gid)] || [];
   }, base.quem.id);
-  ok(notas.length === 1 && /não lhe servirem mais/.test(notas[0].texto),
-     'e a copa lê a nota ao decidir o pedido seguinte dessa pessoa');
+  // A nota que a copa lê é a MAIS RECENTE, não «a única».
+  //
+  // Estava aqui `notas.length === 1`, e isso obrigava a base limpa: a prova
+  // deixa a nota escrita no pedido, e à segunda corrida havia duas. Falhava
+  // sozinha, sem nada ter mudado no produto — e a acusação caía em cima de
+  // quem tivesse mexido no código nesse dia.
+  // O que o produto promete é o que se verifica agora: a nota de há pouco vem
+  // à frente (barNotasDeEntrega ordena por entregue_em DESC) e a lista fica
+  // pelas três últimas, que é o que cabe por cima de um pedido.
+  ok(notas.length >= 1 && notas.length <= 3 && /não lhe servirem mais/.test(notas[0].texto),
+     `e a copa lê a nota ao decidir o pedido seguinte dessa pessoa (${notas.length} à vista)`);
 
   // Aparece mesmo no ecrã, colada ao pedido — não só na resposta da API.
   await p.goto(BASE + '/copa.php', { waitUntil: 'networkidle' });
