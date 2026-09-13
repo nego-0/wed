@@ -724,17 +724,17 @@ const { escolher } = require('./escolhas');
   // ============ 23. o formulário pergunta o que a regra FAZ ============
   await p.evaluate(() => window.barRegraNova({}));
   await p.waitForTimeout(1700);
-  // As opções lêem-se da caixa da escolha, e já não de um `<select>`: desde
-  // que a escolha com procura veste TODOS os campos do sistema, o que está no
-  // html é `<input type=hidden id=lf-modo>` com o valor, e as linhas ao lado.
-  // Numa lista de quatro, a caixa de procura fica escondida — ninguém procura
-  // entre quatro coisas —, mas o desenho é o mesmo do resto da casa.
+  // As opções lêem-se do <select>, que é quem as tem. Ele está escondido por
+  // baixo da caixa do Select2, mas continua a ser a verdade — e por isso esta
+  // leitura atravessou já duas trocas de motor sem precisar de mudar.
+  // Numa lista de quatro, a caixa de procura fica escondida (o Select2 põe-lhe
+  // `select2-search--hide`): ninguém procura entre quatro coisas.
   const modos = await p.evaluate(() => {
     const v = document.getElementById('lf-modo');
     const cx = v && v.closest('.lic-sel');
     if (!cx) return null;
     return { valor: v.value,
-             ops: [...cx.querySelectorAll('.lic-sel-op')].map(o => o.textContent.trim()) };
+             ops: [...cx.querySelectorAll('option')].map(o => o.textContent.trim()) };
   });
   ok(!!modos, 'a janela de uma regra pergunta o que fazer quando o número for passado');
   ok(modos.valor === 'trava',

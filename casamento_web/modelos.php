@@ -18,6 +18,7 @@
 // num modelo.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
@@ -301,6 +302,7 @@ if ($aberto > 0) {
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script>

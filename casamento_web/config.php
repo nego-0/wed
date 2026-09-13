@@ -138,6 +138,12 @@ function ficheirosApp(): array {
             'assets/montra/bar.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
             'assets/janela.css','assets/janela.js',
+            // A lista com procura e o que ela traz atrás. Servidos DAQUI, e
+            // nunca de um CDN: um salão sem rede tem de abrir o bar à mesma
+            // (ver parcial-select2.php e docs/bar-motor-assistido.md §5.1).
+            'assets/jquery.min.js','assets/select2.min.js',
+            'assets/select2.min.css','assets/select2-casa.css',
+            'parcial-select2.php',
             'assets/mesa-icone.css','assets/mesa-icone.js',
             'assets/atendimento.css','assets/atendimento.js',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',

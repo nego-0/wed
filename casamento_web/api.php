@@ -4084,7 +4084,18 @@ if ($acao === 'bar_menu') {
             'foto' => $i['foto'], 'foto_pos' => $i['foto_pos'],
             'categoria_id' => $i['categoria_id'], 'categoria' => $i['categoria'],
             'categoria_cor' => $i['categoria_cor'], 'alcoolico' => $i['alcoolico'],
-            'disponivel' => $i['disponivel'], 'pode_pedir' => $i['pode_pedir'],
+            // `disponivel` NÃO sai por aqui. Tirar o aviso do ecrã e continuar
+            // a mandar o número era esconder a folha e deixar a resposta atrás
+            // dela: quem abrisse as ferramentas do browser lia o stock da
+            // festa inteira. O que o convidado não pode ver também não lhe é
+            // enviado.
+            //
+            // `pode_pedir` fica, porque é o tecto DESTE pedido e é ele que
+            // trava o «+» — sem isso a pessoa escolhe quatro e leva com um
+            // erro depois de carregar em «Pedir». Quando o stock é menor que o
+            // máximo por pedido, este número é o stock; é o preço de o botão
+            // não mentir, e é um tecto, não um anúncio.
+            'pode_pedir' => $i['pode_pedir'],
             // Porque não pode, quanto falta, e o que sai já em vez disto.
             'travao' => $i['travao'], 'espera_s' => $i['espera_s'],
             'aviso' => $i['aviso'], 'alternativas' => $i['alternativas'],
@@ -5339,8 +5350,22 @@ if ($acao === 'bar_pedir_por') {
        ninguém: escrevia o pedido e ele estava servido. Não é falta de
        confiança — é que a decisão é um posto, e um posto não se exerce por
        acidente de onde se está a escrever. O que ele lança SUBMETE-SE: entra
-       na fila por decidir, como o de qualquer convidado. */
-    $daCopa = podeCopa();
+       na fila por decidir, como o de qualquer convidado.
+
+       E é o POSTO que manda, não o papel — foi aqui que isto esteve errado.
+       `podeCopa()` é verdade para o copeiro E para o admin, e o admin são os
+       noivos, que abrem as três páginas do bar. Um deles a dar uma ajuda na
+       sala, com entregas.php aberto, lançava pedidos JÁ APROVADOS: saltavam a
+       copa, apareciam em «por entregar», e a decisão que a copa devia tomar
+       nunca lhe era posta. O papel dizia «podes decidir»; o sítio onde a
+       pessoa estava dizia «estás a servir». Ganha o sítio.
+
+       Por isso o atalho da copa exige que o ecrã RECLAME o posto da copa. Quem
+       não o reclama submete — incluindo um lançador novo que amanhã alguém
+       escreva e se esqueça de declarar. O engano mais caro é servir sem
+       decisão; o mais barato é uma decisão a mais. */
+    $posto  = (string)($d['posto'] ?? '');
+    $daCopa = podeCopa() && $posto === 'copa';
     $jaEntregue = $daCopa && !empty($d['entregue']);
     $estado = $jaEntregue ? 'entregue' : ($daCopa ? 'aprovado' : 'em_analise');
     foreach ($linhas as [$item, $q]) {

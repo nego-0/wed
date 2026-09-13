@@ -5,6 +5,7 @@
 // O nome do convidado e as mesas vêm da base de dados.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
@@ -166,6 +167,7 @@ async function guardarEstilo(){
 </script>
 <?php // A escolha da casa também aqui: uma lista com outro desenho no meio de
       // um sistema onde todas as outras são iguais lê-se como outra aplicação. ?>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 </body>
 </html>

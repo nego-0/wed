@@ -203,6 +203,39 @@ const { escolher } = require('./escolhas');
      + (await conv.locator('#b-para').innerText()).replace(/\s+/g, ' ').trim() + '»');
   ok(await conv.locator('#b-mesa').isVisible(),
      'a mesa de entrega fica à vista e muda-se: as pessoas trocam de lugar');
+
+  // ---- o convidado NÃO lê o stock da casa ----------------------------
+  // Havia aqui «Só 5 — últimas» e um selo «Restam 5» no canto da fotografia.
+  // A intenção era cortês e o efeito era o contrário: quem lê o número corre
+  // para a garrafa, pede três para garantir, e quem chega depois não apanha
+  // nenhuma — o aviso escasso produz a escassez que anuncia.
+  const menuTxt = await conv.locator('#b-menu-cx').innerText();
+  ok(!/[Rr]estam?\s+\d/.test(menuTxt) && !/Só\s+\d+\s*—\s*últimas/.test(menuTxt),
+     'o menu do convidado não lhe diz quantas garrafas restam');
+  ok((await conv.locator('.b-selo.pouca').count()) === 0,
+     'e não há selo de «poucas» no canto de fotografia nenhuma');
+  // E não é só o ecrã: o número NÃO SAI do servidor. Escondê-lo na folha e
+  // continuar a mandá-lo era deixar a resposta atrás dela, a um clique das
+  // ferramentas do browser.
+  // Pede-se como a própria página pede: o menu do convidado só se abre com o
+  // token da mesa, que vem no endereço. Sem ele a resposta vem vazia — e uma
+  // resposta vazia não prova nada, porque não traz campo nenhum.
+  const veioDoServidor = await conv.evaluate(async () => {
+    const token = new URLSearchParams(location.search).get('m') || '';
+    const r = await fetch('api.php?action=bar_menu&m=' + encodeURIComponent(token),
+                          { headers: { 'Accept': 'application/json' } });
+    const d = await r.json().catch(() => ({}));
+    const i = (d.itens || [])[0] || {};
+    return { quantas: (d.itens || []).length,
+             temDisponivel: Object.prototype.hasOwnProperty.call(i, 'disponivel'),
+             temPodePedir: Object.prototype.hasOwnProperty.call(i, 'pode_pedir') };
+  });
+  ok(veioDoServidor.quantas > 0,
+     'o menu do convidado responde com bebidas (' + veioDoServidor.quantas + ')');
+  ok(veioDoServidor.temDisponivel === false,
+     'e o servidor não lho manda: `disponivel` não vem no menu do convidado');
+  ok(veioDoServidor.temPodePedir === true,
+     'mas `pode_pedir` vem — é o tecto DESTE pedido, e é ele que trava o «+»');
   ok((await conv.locator('.b-bebida').count()) >= 2,
      'e o menu abre com as bebidas nas suas gavetas');
   ok((await conv.locator('.b-bebida:has-text("ZZ Espumante") .b-foto img')

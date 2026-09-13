@@ -20,6 +20,7 @@
 // era a única forma de um porteiro poder mudar a sua senha.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
@@ -388,6 +389,7 @@ $MAPA_LOCAL = [
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>

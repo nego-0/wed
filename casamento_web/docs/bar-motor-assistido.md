@@ -255,8 +255,42 @@ Cada fase fecha com a suite inteira verde. Ninguém começa a seguinte sem isso.
   (`LigacaoAmbito` rebenta se não mencionar).
 - As acções novas do bar ficam **acima** da barreira de `api.php`, com o seu
   próprio cadeado — nunca atrás de `exigirAdminApi()`.
-- Nada de bibliotecas novas. Sem jQuery, sem Select2, sem frameworks.
+- ~~Nada de bibliotecas novas. Sem jQuery, sem Select2, sem frameworks.~~
+  **REVOGADA** — ver §5.1, logo a seguir.
 - Os quatro temas aplicam-se por inteiro; nenhuma cor solta fora dos tokens.
+  Isto vale para o que vem de fora tanto como para o que se escreve aqui: uma
+  biblioteca que traga o seu próprio desenho é vestida com os tokens da casa.
 - Alvos de toque de 48px nos ecrãs de serviço: isto usa-se de pé, a meia-luz.
 - O convidado **nunca** lê a razão técnica. Nem o número da regra, nem o
-  limite, nem o que o sistema sabe sobre ele.
+  limite, nem o que o sistema sabe sobre ele — **nem o stock**. Contar-lhe
+  quantas garrafas restam é convidá-lo a correr para elas, e o aviso escasso
+  produz a escassez que anuncia. O número não é escondido no ecrã: não sai do
+  servidor (ver `bar_menu`, em `api.php`).
+
+### 5.1 A regra das bibliotecas foi revogada
+
+A regra dizia «nada de bibliotecas novas; sem jQuery, sem Select2». Foi
+revogada por decisão de quem manda no produto, e revogada de propósito: a
+ordem foi trazer o Select2 e pôr todos os `<select>` do sistema a usá-lo.
+
+Está feito. `assets/jquery.min.js` e `assets/select2.min.js` são agora peças da
+casa, e é o Select2 que veste as listas — a escolha escrita à mão saiu.
+
+**O que a regra protegia, e que continua de pé:**
+
+- **Serve-se daqui, nunca de um CDN.** Os ficheiros vivem em `assets/`, como o
+  `qrious` e o `html5-qrcode` já viviam. Uma festa num salão sem rede tem de
+  abrir o bar à mesma, e um `<script src="https://…">` que não carrega é um
+  ecrã sem listas a meio de um casamento.
+- **O desenho é o da casa.** `assets/select2-casa.css` mapeia as classes do
+  Select2 para os tokens do tema. Uma lista que se veste sozinha traz a paleta
+  de outra gente para dentro de um convite.
+- **Versão fixa, escrita no ficheiro.** Sem `latest`, sem actualizações
+  automáticas.
+
+**O que se perdeu, escrito aqui para que ninguém finja que não sabia:** o
+sistema carrega agora ~110 KB que não carregava. Quem vier depois, e achar que
+isso pesa de mais no telemóvel de um convidado num salão com rede fraca, tem
+aqui a conta feita e o histórico todo para decidir de novo — mas não desfaça
+isto por conta própria: a decisão foi tomada por quem manda, e é revogá-la que
+precisa de uma decisão igual.

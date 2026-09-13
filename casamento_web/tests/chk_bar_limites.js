@@ -20,16 +20,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
  * Escolher numa «escolha com procura» (assets/janela.js).
  *
  * Abre a lista, escreve o nome, e carrega na linha. Não se pode usar
- * selectOption(): o campo com o id `lf-<que>` é um <input type=hidden>, e o
- * que se vê é o componente à volta dele.
+ * selectOption(): o <select> com o id `lf-<que>` está escondido por baixo da
+ * caixa do Select2, e ninguém carrega no que não se vê.
  */
 async function escolherComProcura(p, que, nome) {
   const cx = p.locator('.lic-sel[data-sel="' + que + '"]');
-  await cx.locator('.lic-sel-bt').click();
+  await cx.locator('.select2-selection').first().click();
   await p.waitForTimeout(250);
-  await cx.locator('.lic-sel-q input').fill(nome);
+  // A lista é pendurada fora da caixa (no modal, ou no body): procura-se pela
+  // que está ABERTA, que é sempre uma só. Ver tests/escolhas.js.
+  await p.locator('.select2-container--open .select2-search__field').fill(nome);
   await p.waitForTimeout(350);
-  await cx.locator('.lic-sel-op:visible').first().click();
+  await p.locator('.select2-container--open .select2-results__option').first().click();
   await p.waitForTimeout(250);
 }
 

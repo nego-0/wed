@@ -17,6 +17,7 @@
 // para ver.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
@@ -426,6 +427,7 @@ const SO_VER = <?= $soVer ? 'true' : 'false' ?>;
 const LIC_ESTADO = '<?= escP($LIC) ?>';
 </script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/planos.js') ?>"></script>
 <script>

@@ -18,6 +18,7 @@
 // peça de outro casamento.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 
@@ -173,6 +174,7 @@ window.BAR = {
 </script>
 <script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/bar-pecas.js') ?>"></script>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/bar-convidado.js') ?>"></script>
 </body>

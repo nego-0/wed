@@ -544,10 +544,15 @@
         var pes = f.campo('pessoa'), mod = f.campo('modo');
         var frase = document.getElementById('br-frase');
 
+        // O nome lê-se do <select>, e não do que a caixa da escolha mostra.
+        // Lia-se do botão dela, e isso era ler a PINTURA em vez da verdade:
+        // bastou o motor da escolha mudar (é o Select2 desde §32.5) para o
+        // selector do botão deixar de existir e a frase ficar a dizer o id da
+        // bebida. A opção escolhida sabe sempre o seu próprio nome.
         var nomeDe = function (sel) {
-          var op = sel && sel.closest('.lic-sel');
-          var bt = op && op.querySelector('.lic-sel-bt .txt');
-          return bt ? bt.textContent : (sel ? sel.value : '');
+          if (!sel) return '';
+          var op = sel.options && sel.options[sel.selectedIndex];
+          return op ? op.textContent : sel.value;
         };
 
         var ajustar = function () {

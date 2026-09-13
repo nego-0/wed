@@ -1527,8 +1527,12 @@
         if (!ppEscolhido) { licJanelaErro('Escolha o convidado na lista.'); return false; }
         // Silencioso, para a recusa das regras se ler DENTRO da janela, ao pé
         // do campo que a há-de resolver, e não numa nota que passa no canto.
+        // `posto: 'copa'` é o que dá o atalho de nascer já aprovado. Quem
+        // está aqui está ao balcão, a olhar para a pessoa e para as garrafas:
+        // já decidiu. É uma reclamação explícita porque o servidor, sem ela,
+        // manda o pedido para a fila — ver bar_pedir_por, em api.php.
         var d = await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
-          body: JSON.stringify({ convidado_id: ppEscolhido.id,
+          body: JSON.stringify({ convidado_id: ppEscolhido.id, posto: 'copa',
                                  mesa_id: BP.mesaEscolhida(v.mesa, ppEscolhido),
                                  entregue: !!v.entregue,
                                  itens: [{ item_id: parseInt(v.item, 10),

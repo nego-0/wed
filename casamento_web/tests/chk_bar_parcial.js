@@ -212,7 +212,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ============ 4. o pedido do balcão nasce decidido ============
   const balcao = await p.evaluate(async ([gid, iid]) =>
     await window.api('bar_pedir_por', { method: 'POST', body: JSON.stringify({
-      convidado_id: gid, itens: [{ item_id: iid, quantidade: 1 }] }) }),
+      convidado_id: gid, posto: 'copa', itens: [{ item_id: iid, quantidade: 1 }] }) }),
     [base.quem.id, base.ids.cerveja]);
   ok(balcao && balcao.pedido.estado === 'aprovado',
      'um pedido lançado ao balcão nasce aprovado — quem o escreve já o decidiu');
@@ -223,7 +223,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   }, base.ids.cerveja);
   const jaFoi = await p.evaluate(async ([gid, iid]) =>
     await window.api('bar_pedir_por', { method: 'POST', body: JSON.stringify({
-      convidado_id: gid, entregue: true,
+      convidado_id: gid, posto: 'copa', entregue: true,
       itens: [{ item_id: iid, quantidade: 1 }] }) }),
     [base.quem.id, base.ids.cerveja]);
   ok(jaFoi && jaFoi.pedido.estado === 'entregue',

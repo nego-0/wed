@@ -108,8 +108,31 @@ function licFecharJanela(){
   }
   LIC_FOCO_ANTES = null;
 }
+/* Havia uma lista de escolha aberta quando se carregou no Escape?
+
+   A pergunta tem de ser feita ANTES de o Select2 responder ao mesmo Escape, e
+   é essa a razão de isto viver num ouvinte à parte, na fase de CAPTURA. Os
+   eventos descem em captura e sobem em borbulha: o Select2 está ligado ao
+   campo (lá em baixo) e o `licTeclaJanela` ao documento (cá em cima), e por
+   isso, quando a janela é chamada, o Select2 JÁ fechou a lista e a marca de
+   «aberta» já não existe.
+
+   O sintoma era este: abrir uma escolha, arrepender-se, carregar em Escape —
+   e perder o formulário inteiro, com tudo o que já lá estava escrito. Um
+   Escape fecha UMA coisa de cada vez, e a de cima é a lista. */
+let licHaviaLista = false;
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    licHaviaLista = !!document.querySelector('.select2-container--open');
+  }
+}, true);
+
 function licTeclaJanela(ev){
-  if (ev.key === 'Escape'){ licFecharJanela(); return; }
+  if (ev.key === 'Escape'){
+    // O Escape era da lista: ela fechou-se, e a janela fica. Ver acima.
+    if (licHaviaLista) { licHaviaLista = false; return; }
+    licFecharJanela(); return;
+  }
   // O Tab não sai da janela: por trás dela está uma página inteira de botões
   // que não se podem usar, e passar por eles às cegas é perder-se.
   if (ev.key === 'Tab'){
@@ -271,30 +294,47 @@ function licFormulario(cfg){
 }
 
 /* ============================================================
-   A ESCOLHA COM PROCURA
+   A ESCOLHA COM PROCURA — agora sobre o Select2
 
    Uma lista de dezasseis bebidas ou de duzentos convidados dentro de um
    <select> é uma parede: rola-se à procura do nome, passa-se ao lado, e
    recomeça-se. O que se quer é escrever três letras.
 
-   É nativo, e não Select2. O Select2 faz exactamente isto e fá-lo bem, mas
-   traz o jQuery atrás (são ~160KB para uma caixa de procura), e traz a sua
-   própria linguagem de cores — que teria de ser reescrita nos quatro temas da
-   casa, mais o modo de leitura, mais as janelas dos editores, que se vestem
-   por --j-*. É a mesma conta que se fez ao Bootstrap (docs §25.20) e dá o
-   mesmo resultado: o que aqui falta não é uma biblioteca, é um componente, e
-   o componente são setenta linhas que já falam a língua da casa.
+   Isto foi, durante muito tempo, um componente escrito à mão — porque a regra
+   da casa proibia bibliotecas novas. A regra foi REVOGADA (ver
+   docs/bar-motor-assistido.md §5.1) e a ordem foi usar o Select2. Está usado:
+   estas funções são uma casca fina por cima dele.
 
-   O que faz: abre, filtra sem olhar a acentos, anda com as setas, escolhe com
-   Enter, fecha com Escape ou com um clique fora. O valor vive num campo
-   escondido com o id de sempre (`lf-<id>`), e por isso tudo o que lê
-   formulários continua a ler este como lia um <select>.
+   A casca existe por uma razão só, e não é decorativa: as páginas desta casa
+   chamam `licSelProcuraHtml`, `licSelDefinir`, `licSelRefrescar`,
+   `licSelUpgrade` e `licSelProcuraLigar` em dezenas de sítios. Mantendo os
+   NOMES e as ASSINATURAS, a troca do motor por baixo não obrigou a mexer em
+   nenhum deles — e o dia em que o Select2 sair (ou subir de versão e mudar de
+   DOM) também não obrigará.
+
+   O que a casca acrescenta ao Select2, e porquê:
+
+   - **Procura sem acentos.** O Select2 compara o que se escreve tal e qual:
+     quem escreve «jose» não encontra «José». Numa festa em Angola, ninguém
+     escreve acentos de pé, com o telemóvel numa mão. O `matcher` desta casa
+     passa os dois lados por `licChave()`.
+   - **A lista não é cortada pela janela.** Uma lista dentro de um modal que
+     rola fica presa ao `overflow` dele. `dropdownParent` põe-na no modal, que
+     é o que resolve isto — é a mesma dor que já custou uma tarde antes
+     (§«a lista de uma escolha não pode ser cortada pela janela»).
+   - **A caixa de procura desaparece nas listas curtas.** Escrever para filtrar
+     entre três opções é trabalho para nada, e num telemóvel é um teclado a
+     abrir-se por cima da lista que se quer ler.
+   - **Fala português.** O Select2 vem em inglês; as frases estão aqui em baixo,
+     escritas como o resto da casa fala.
+
+   O `<select>` continua a ser a verdade: é ele que guarda o valor, é ele que o
+   formulário envia, e é `#lf-<id>` como sempre foi. Quem o manipulava a mão
+   continua a manipulá-lo — basta disparar `change` (ou chamar
+   `licSelRefrescar`) para a caixa se voltar a sincronizar.
    ============================================================ */
-/* A caixa de PROCURA só aparece a partir daqui. A escolha é sempre a da casa —
-   é ela que se vê em todo o sistema, e uma página com dois desenhos de lista é
-   uma página que parece montada por duas pessoas —, mas escrever para filtrar
-   entre três opções é um campo a pedir trabalho para nada, e num telemóvel é um
-   teclado a abrir-se por cima da lista que se quer ler. */
+
+/* A caixa de PROCURA só aparece a partir daqui. */
 const LIC_SEL_PROCURA_MIN = 6;
 
 /** Sem acentos e em minúsculas: quem escreve de pé não põe acentos nenhuns. */
@@ -303,82 +343,180 @@ function licChave(s){
     .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
+/** Há Select2? Nas páginas que não o carregam, o <select> fica o do sistema. */
+function licTemSelect2(){
+  return typeof window.jQuery === 'function' && !!window.jQuery.fn
+      && typeof window.jQuery.fn.select2 === 'function';
+}
+
+/* As frases do Select2, em português europeu. O `language` do Select2 aceita
+   funções, e é por elas que passam os plurais — «1 carácter» e não
+   «1 caracteres», que é o que se lê em metade dos sítios que o usam. */
+const LIC_SEL_FRASES = {
+  errorLoading: () => 'Não foi possível carregar a lista.',
+  inputTooLong: (a) => {
+    const n = a.input.length - a.maximum;
+    return 'Apague ' + n + (n === 1 ? ' carácter' : ' caracteres') + '.';
+  },
+  inputTooShort: (a) => {
+    const n = a.minimum - a.input.length;
+    return 'Escreva mais ' + n + (n === 1 ? ' letra' : ' letras') + '.';
+  },
+  loadingMore: () => 'A carregar mais…',
+  maximumSelected: (a) => {
+    const n = a.maximum;
+    return 'Só pode escolher ' + n + (n === 1 ? ' item' : ' itens') + '.';
+  },
+  noResults: () => 'Nada com esse nome.',
+  searching: () => 'A procurar…',
+  removeAllItems: () => 'Limpar'
+};
+
+/**
+ * O filtro da casa: ignora acentos, e procura em qualquer sítio do nome.
+ *
+ * «gin» encontra «Gin Tónico» e também «Sloe Gin» — quem procura uma bebida
+ * raramente sabe por que palavra ela começa. Os grupos (<optgroup>) são
+ * tratados pelo Select2 se lhe devolvermos o grupo com os filhos que passaram.
+ */
+function licSelFiltro(params, dados){
+  const q = licChave(params.term);
+  if (!q) return dados;
+  if (dados.children) {
+    const filhos = dados.children.filter(f => licChave(f.text).indexOf(q) >= 0);
+    if (!filhos.length) return null;
+    return Object.assign({}, dados, { children: filhos });
+  }
+  return licChave(dados.text).indexOf(q) >= 0 ? dados : null;
+}
+
+/** As <option> de uma lista, a partir das opções da casa ({v, r}). */
+function licSelOpcoesHtml(ops, escolhido){
+  const alvo = ops.filter(o => String(o.v) === String(escolhido))[0]
+            || ops[0] || { v: '', r: '—' };
+  return ops.map(o =>
+    '<option value="' + licEsc(o.v) + '"'
+    + (String(o.v) === String(alvo.v) ? ' selected' : '') + '>'
+    + licEsc(o.r) + '</option>').join('');
+}
+
+/**
+ * O html de um campo de escolha, para quem monta formulários.
+ *
+ * Devolve um <select> a sério dentro da caixa da casa. Era um
+ * <input type=hidden> mais uma lista de botões escritos à mão; agora que o
+ * motor é o Select2, o que ele precisa de vestir é um <select>. O id não
+ * mudou — `lf-<id>` —, e por isso quem lê formulários continua a ler isto sem
+ * saber que mudou de motor.
+ */
 function licSelProcuraHtml(c, v){
   const ops = c.opcoes || [];
-  const esc = ops.find(o => String(o.v) === String(v)) || ops[0] || { v: '', r: '—' };
   // `classe` serve para quem a põe FORA de uma janela: sem `lic-sel-pagina` a
   // caixa procura tokens --j-* que só existem dentro do modal, e a lista sai
   // sem fundo — lê-se a página através dela.
   return '<div class="lic-sel' + (c.classe ? ' ' + c.classe : '') + '"'
-    + ' data-sel="' + licEsc(c.id) + '">'
-    + '<input type="hidden" id="lf-' + licEsc(c.id) + '" value="' + licEsc(esc.v) + '">'
-    + licSelCorpoHtml(ops, esc.v, c.rot, c.dicaProcura, c.procura)
+    + ' data-sel="' + licEsc(c.id) + '"'
+    + (c.procura === true ? ' data-procura="1"' : '')
+    + (c.procura === false ? ' data-procura="0"' : '')
+    + (c.dicaProcura ? ' data-dica-procura="' + licEsc(c.dicaProcura) + '"' : '')
+    + '>'
+    + '<select id="lf-' + licEsc(c.id) + '"'
+    + ' aria-label="' + licEsc(c.rot || 'lista') + '">'
+    + licSelOpcoesHtml(ops, v)
+    + '</select>'
     + '</div>';
 }
 
 /**
- * O botão e a lista — a parte que é igual nos dois usos.
+ * Onde é que a lista há-de nascer.
  *
- * Escrita uma vez porque é usada de dois sítios (a janela e o <select> vestido
- * por fora), e duas cópias de um componente são duas cópias que divergem: já
- * aconteceu neste projecto com a procura, que numa página ignorava acentos e
- * na outra não.
+ * Por omissão o Select2 pendura-a no <body>, e dentro de um modal isso põe-na
+ * por baixo do véu — a lista abre e não se vê. Pendurada no modal, vê-se e
+ * acompanha-o. Fora de um modal, o <body> é o sítio certo: pendurá-la no campo
+ * seria voltar a prendê-la ao `overflow` de quem estiver acima.
  */
-function licSelCorpoHtml(ops, escolhido, rot, dicaProcura, procura){
-  const esc = ops.filter(o => String(o.v) === String(escolhido))[0]
-           || ops[0] || { v: '', r: '—' };
-  // A caixa de procura fica no html mesmo quando não se mostra: é ela que
-  // recebe as setas e o Enter, e tirá-la do sítio era ficar sem teclado numa
-  // lista curta. Esconde-se por classe. `procura` força-a (true) ou proíbe-a
-  // (false); sem opinião, decide o tamanho da lista.
-  const curta = procura === true ? false
-              : procura === false ? true
-              : ops.length < LIC_SEL_PROCURA_MIN;
-  return ''
-    + '<button type="button" class="lic-sel-bt" aria-haspopup="listbox" aria-expanded="false">'
-    +   '<span class="txt">' + licEsc(esc.r) + '</span>'
-    +   '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-    +   'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    +   '<path d="m6 9 6 6 6-6"/></svg>'
-    + '</button>'
-    + '<div class="lic-sel-pop" hidden>'
-    +   '<div class="lic-sel-q' + (curta ? ' curta' : '') + '">'
-    +     '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-    +     'stroke-width="1.8" stroke-linecap="round" aria-hidden="true">'
-    +     '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
-    +     '<input type="search" autocomplete="off" placeholder="'
-    +       licEsc(dicaProcura || 'Escreva para procurar') + '" '
-    +       'aria-label="Procurar em ' + licEsc(rot || 'lista') + '">'
-    +   '</div>'
-    +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(rot || 'lista') + '">'
-    +     ops.map(o => licSelOpcaoHtml(o, esc.v)).join('')
-    +   '</div>'
-    +   '<div class="lic-sel-nada" hidden>Nada com esse nome.</div>'
-    + '</div>';
+function licSelOndePor(sel){
+  const $ = window.jQuery;
+  const modal = sel.closest('.pl-modal');
+  return modal ? $(modal) : $(document.body);
 }
 
-/**
- * Uma linha da lista.
- *
- * Vive numa função sua, e não numa `.map()` embutida na de cima, por uma razão
- * que já custou uma tarde: esta folha alinha as cadeias de texto pondo o `+`
- * no princípio da linha, e dentro de uma arrow function isso encontra-se com o
- * `+` do operador. `'texto' + + (x ? ' on' : '')` é uma soma com um MAIS
- * UNÁRIO à frente — que converte ' on' em número, dá NaN, e cola «NaNNaNNaN»
- * ao fim de cada opção. O ecrã mostrava «Cervejas NaNNaNNaN» e a procura não
- * filtrava nada, porque os atributos do meio também se tinham desfeito.
- * Separada, a linha é uma expressão normal e a armadilha não existe.
- */
-function licSelOpcaoHtml(o, escolhido){
-  const on = String(o.v) === String(escolhido) ? ' on' : '';
-  return '<button type="button" role="option" class="lic-sel-op' + on + '"'
-       + ' data-v="' + licEsc(o.v) + '"'
-       + ' data-k="' + licEsc(licChave(o.r)) + '">'
-       + '<span>' + licEsc(o.r) + '</span>'
-       + '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
-       + ' stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"'
-       + ' aria-hidden="true"><path d="M20 6.5 9.2 17.3 4 12.1"/></svg>'
-       + '</button>';
+/** Dar vida a uma escolha: o Select2, com as opções da casa. */
+function licSelLigarUm(cx){
+  if (!cx || cx.dataset.ligado) return;
+  const sel = cx.querySelector('select');
+  if (!sel) return;
+  if (!licTemSelect2()) return;          // página sem a biblioteca: fica nativo
+  cx.dataset.ligado = '1';
+  const $ = window.jQuery;
+  const quantas = sel.options.length;
+  // `data-procura` força (1) ou proíbe (0); sem opinião, decide o tamanho.
+  const opiniao = cx.dataset.procura;
+  const comProcura = opiniao === '1' ? true
+                   : opiniao === '0' ? false
+                   : quantas >= LIC_SEL_PROCURA_MIN;
+  $(sel).select2({
+    width: '100%',
+    dropdownParent: licSelOndePor(sel),
+    // O Select2 conta as opções para decidir; nós já decidimos acima, e
+    // dizemos-lho com um número que não deixa dúvidas.
+    minimumResultsForSearch: comProcura ? 0 : Infinity,
+    placeholder: cx.dataset.dicaProcura || '',
+    language: LIC_SEL_FRASES,
+    matcher: licSelFiltro,
+    // O <select> desta casa nunca é de escolha múltipla nem se limpa com um
+    // ✕: quando não há escolha, há uma opção que o diz («Sem mesa», «Todas»).
+    allowClear: false,
+    // A lista não leva html — os textos são escapados por quem os escreve.
+    escapeMarkup: m => m
+  });
+  licSelEcoarNativo(sel);
+  // A procura do Select2 nasce com o `placeholder` do campo, que aqui é a dica
+  // de procura e não o valor. Sem isto lê-se «Mesa» dentro da caixa onde se
+  // devia escrever «escreva o nome da mesa».
+  if (comProcura && cx.dataset.dicaProcura) {
+    $(sel).on('select2:open', () => {
+      const campo = document.querySelector('.select2-container--open .select2-search__field');
+      if (campo) campo.setAttribute('placeholder', cx.dataset.dicaProcura);
+    });
+  }
+}
+
+/* ============================================================
+   O `change` DO jQUERY NÃO É UM `change` DO BROWSER
+
+   Esta é a costura mais importante de todo o Select2 nesta casa, e a que menos
+   se vê. O Select2 anuncia uma escolha com `$(sel).trigger('change')` — um
+   evento do jQuery. E o `trigger` do jQuery, ao contrário do que quase toda a
+   gente supõe, NÃO despacha um evento no browser: corre os handlers que o
+   próprio jQuery registou, chama o `elem.onchange` escrito no html, e fica-se
+   por aí. Quem ouviu com `addEventListener('change', …)` — que é como o resto
+   deste sistema ouve, em dezasseis sítios — nunca é chamado.
+
+   O sintoma era silencioso e por isso perigoso: escolher no ecrã mudava o
+   valor, o formulário até gravava o valor certo, mas tudo o que devia REAGIR à
+   escolha ficava parado. A frase que explica uma regra do bar não mudava com o
+   modo; a mesa de entrega não repintava o rodapé; o cartão de uma entrega não
+   gravava a mesa nova. Nada disto dá erro — simplesmente não acontece.
+
+   A ponte é esta função: quando o jQuery anuncia, despacha-se um `change` a
+   sério, e aí toda a gente ouve.
+
+   O `onchange` é tirado e reposto à volta do despacho, e isso não é um truque
+   sem razão: o jQuery vai chamá-lo a seguir, sozinho, dentro do mesmo
+   `trigger`. Sem o tirar, o handler escrito no html corria DUAS vezes por cada
+   escolha. Assim corre uma — pela mão do jQuery — e os ouvintes normais
+   correm uma, pela do browser.
+   ============================================================ */
+function licSelEcoarNativo(sel){
+  window.jQuery(sel).on('change.casa', function () {
+    if (sel.__licEco) return;             // é o nosso próprio eco a voltar
+    sel.__licEco = true;
+    const inline = sel.onchange;
+    sel.onchange = null;
+    try { sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    finally { sel.onchange = inline; sel.__licEco = false; }
+  });
 }
 
 function licSelProcuraLigar(raiz){
@@ -389,10 +527,9 @@ function licSelProcuraLigar(raiz){
 /* ============================================================
    A MESMA LISTA EM TODO O SISTEMA
 
-   Havia dezenas de <select> nativos espalhados pelas páginas e três ou quatro
-   sítios com esta escolha. Duas listas com desenhos diferentes na mesma página
-   leem-se como duas aplicações, e a diferença notava-se logo no primeiro campo
-   que não filtrava nada — a pessoa escrevia e não acontecia coisa nenhuma.
+   Havia dezenas de <select> nativos espalhados pelas páginas. Duas listas com
+   desenhos diferentes na mesma página leem-se como duas aplicações, e a
+   diferença notava-se logo no primeiro campo que não filtrava nada.
 
    Passa a haver uma passagem só, que veste o que encontrar. Corre ao carregar a
    página e volta a correr sobre o que nascer depois: os painéis desta casa
@@ -404,11 +541,20 @@ function licSelProcuraLigar(raiz){
    por exemplo) marca-o com `data-sem-procura`, nele ou num antepassado.
    ============================================================ */
 function licSelVestirTodos(raiz){
+  if (!licTemSelect2()) return;
   const alvo = (raiz && raiz.querySelectorAll) ? raiz : document;
   alvo.querySelectorAll('select').forEach(sel => {
     // `multiple` não é uma escolha, é uma lista de caixas: esta não o sabe ser.
     if (sel.multiple || sel.dataset.licSel) return;
     if (sel.closest('[data-sem-procura]')) return;
+    // Um campo que JÁ nasceu dentro de uma caixa da casa (é o que
+    // licSelProcuraHtml escreve) liga-se por ela, e não se embrulha outra vez.
+    // Sem esta linha havia dois caminhos a vestir o mesmo campo: esta passagem
+    // chegava primeiro, punha-lhe uma segunda caixa à volta e perdia pelo
+    // caminho o que a primeira dizia — entre outras coisas, o `data-procura`.
+    // O sintoma era uma lista de duas opções com caixa de procura por cima.
+    const jaTem = sel.closest('.lic-sel');
+    if (jaTem) { licSelLigarUm(jaTem); sel.dataset.licSel = '1'; return; }
     licSelUpgrade(sel);
   });
 }
@@ -416,9 +562,16 @@ function licSelVestirTodos(raiz){
 /* Uma vez ao abrir, e depois sobre o que for aparecendo. O observador junta as
    chegadas de um mesmo instante numa passagem só: um painel que se escreve de
    uma vez traz vinte nós, e vesti-los um a um seria vinte passagens pela
-   página. */
+   página.
+
+   O observador IGNORA o que o próprio Select2 escreve. Ele pendura a lista no
+   body e reescreve a caixa a cada abertura; sem este cuidado, cada abertura
+   acordava a passagem, que voltava a varrer a página inteira — e uma delas
+   apanhava o <select> de procura do próprio Select2 e tentava vesti-lo. */
 (function () {
   let marcado = false;
+  const nosso = (n) => n.classList && (n.classList.contains('select2-container')
+                                    || n.classList.contains('select2-dropdown'));
   const vestirEmBreve = () => {
     if (marcado) return;
     marcado = true;
@@ -429,7 +582,7 @@ function licSelVestirTodos(raiz){
     new MutationObserver(mut => {
       for (const m of mut) {
         for (const n of m.addedNodes) {
-          if (n.nodeType !== 1) continue;
+          if (n.nodeType !== 1 || nosso(n)) continue;
           if (n.tagName === 'SELECT' || (n.querySelector && n.querySelector('select'))) {
             vestirEmBreve(); return;
           }
@@ -441,173 +594,6 @@ function licSelVestirTodos(raiz){
     document.addEventListener('DOMContentLoaded', arrancar);
   } else arrancar();
 })();
-
-/**
- * Dar vida a uma escolha com procura.
- *
- * Onde o valor mora é a única coisa que muda entre os dois usos: numa janela
- * é um <input type=hidden> com o id do campo; sobre um <select> existente é o
- * próprio <select>, que fica escondido mas continua a ser a verdade — e é por
- * isso que o código que já lá estava (`sel.value`, `sel.options`,
- * `sel.disabled`) continua a funcionar sem saber que isto existe.
- */
-function licSelLigarUm(cx){
-    if (cx.dataset.ligado) return;
-    cx.dataset.ligado = '1';
-    const guardado = cx.querySelector('input[type=hidden]') || cx.querySelector('select');
-    const bt   = cx.querySelector('.lic-sel-bt');
-    const pop  = cx.querySelector('.lic-sel-pop');
-    const q    = cx.querySelector('.lic-sel-q input');
-    const nada = cx.querySelector('.lic-sel-nada');
-    const ops  = () => Array.from(cx.querySelectorAll('.lic-sel-op'));
-    const vivas = () => ops().filter(o => !o.hidden);
-
-    /* Quem é que rola por baixo deste campo.
-       O corpo de uma janela rola; a página, também. É contra esse que a lista
-       tem de caber — e não contra o ecrã. */
-    const rolador = () => {
-      let n = cx.parentElement;
-      while (n && n !== document.body){
-        const s = getComputedStyle(n);
-        if (/(auto|scroll)/.test(s.overflowY) && n.scrollHeight > n.clientHeight) return n;
-        n = n.parentElement;
-      }
-      return null;
-    };
-
-    /**
-     * Pôr a lista onde ela caiba.
-     *
-     * A lista é absoluta dentro do campo, e o campo vive no corpo de uma janela
-     * que rola. Uma caixa absoluta não pinta para fora de um antepassado com
-     * overflow: a lista saía CORTADA a meio de uma linha, e meia linha cortada
-     * é a lista a dizer «há mais» sem dizer quanto — que é exactamente o que
-     * esta caixa existe para evitar.
-     *
-     * Três gestos, por esta ordem: rolar o que rola para ganhar espaço (quase
-     * sempre chega, e a lista fica onde a pessoa espera — debaixo do campo que
-     * carregou); virá-la para cima se o espaço estiver todo lá; e, em último,
-     * apertar a altura ao que sobrar. Nunca fica cortada.
-     */
-    const FRESTA = 160;      // menos do que isto não é uma lista, é uma fresta
-    const assentar = () => {
-      const lista = pop.querySelector('.lic-sel-lista');
-      if (!lista) return;
-      pop.classList.remove('acima');
-      lista.style.maxHeight = '';
-      const cai = rolador();
-      const medir = () => {
-        const j = cai ? cai.getBoundingClientRect()
-                      : { top: 0, bottom: window.innerHeight };
-        const b = bt.getBoundingClientRect();
-        return { abaixo: j.bottom - b.bottom - 14, acima: b.top - j.top - 14 };
-      };
-      let m = medir();
-      if (m.abaixo < FRESTA && cai){
-        const podeRolar = cai.scrollHeight - cai.clientHeight - cai.scrollTop;
-        if (podeRolar > 0){
-          cai.scrollTop += Math.min(podeRolar, FRESTA - m.abaixo);
-          m = medir();
-        }
-      }
-      // O alto da lista é a caixa de procura mais as linhas; o que se aperta
-      // são as linhas, para a procura nunca desaparecer com elas.
-      const fora = pop.getBoundingClientRect().height - lista.getBoundingClientRect().height;
-      const alta = lista.getBoundingClientRect().height;
-      // Em linhas INTEIRAS. Uma altura cortada a meio de uma linha é a mesma
-      // queixa por outra via: vê-se meia palavra e não se sabe se há mais duas
-      // ou mais vinte. Cortada no fim de uma linha, a lista diz «há mais» com
-      // a barra de rolagem, que é como se diz isso.
-      const linha = (lista.querySelector('.lic-sel-op') || {}).offsetHeight || 0;
-      const forro = lista.clientHeight - lista.scrollHeight > 0 ? 0
-                  : (parseFloat(getComputedStyle(lista).paddingTop) || 0) * 2;
-      const inteiras = (h) => (linha > 0
-        ? Math.max(linha, Math.floor((h - forro) / linha) * linha + forro)
-        : Math.max(80, h));
-      if (m.acima > m.abaixo && m.acima >= FRESTA){
-        pop.classList.add('acima');
-        lista.style.maxHeight = Math.floor(inteiras(m.acima - fora)) + 'px';
-      } else if (m.abaixo < alta + fora){
-        lista.style.maxHeight = Math.floor(inteiras(Math.max(80, m.abaixo - fora))) + 'px';
-      }
-    };
-
-    const abrir = (sim) => {
-      // Abrir uma fecha as outras. O clique no botão pára a propagação (senão
-      // o ouvinte de «clicar fora» fechava-a no mesmo gesto que a abriu), e
-      // sem isto duas listas ficavam abertas por cima uma da outra.
-      if (sim){
-        document.querySelectorAll('.lic-sel').forEach(outra => {
-          if (outra === cx) return;
-          const p = outra.querySelector('.lic-sel-pop');
-          const b = outra.querySelector('.lic-sel-bt');
-          if (p) p.hidden = true;
-          if (b) b.setAttribute('aria-expanded', 'false');
-        });
-      }
-      pop.hidden = !sim;
-      bt.setAttribute('aria-expanded', sim ? 'true' : 'false');
-      if (sim){
-        q.value = ''; filtrar(); assentar();
-        // Numa lista curta a procura está escondida: o foco vai para ela à
-        // mesma (é quem ouve as setas), mas sem a pôr à vista.
-        q.focus({ preventScroll: true });
-      }
-    };
-    const escolher = (op) => {
-      guardado.value = op.dataset.v;
-      bt.querySelector('.txt').textContent = op.querySelector('span').textContent;
-      ops().forEach(o => o.classList.toggle('on', o === op));
-      abrir(false); bt.focus();
-      // Quem montou o formulário pode querer reagir à escolha (mostrar outro
-      // campo, por exemplo). Um evento, e não um callback: assim o campo não
-      // precisa de saber quem está a ouvir.
-      guardado.dispatchEvent(new Event('change', { bubbles: true }));
-    };
-    const filtrar = () => {
-      const k = licChave(q.value);
-      ops().forEach(o => { o.hidden = k !== '' && o.dataset.k.indexOf(k) < 0; });
-      const n = vivas().length;
-      nada.hidden = n > 0;
-      ops().forEach(o => o.classList.remove('sob'));
-      if (n) vivas()[0].classList.add('sob');
-    };
-    const andar = (passo) => {
-      const lista = vivas();
-      if (!lista.length) return;
-      let i = lista.findIndex(o => o.classList.contains('sob'));
-      i = i < 0 ? 0 : Math.min(lista.length - 1, Math.max(0, i + passo));
-      lista.forEach(o => o.classList.remove('sob'));
-      lista[i].classList.add('sob');
-      lista[i].scrollIntoView({ block: 'nearest' });
-    };
-
-    bt.addEventListener('click', (e) => { e.stopPropagation(); abrir(pop.hidden); });
-    q.addEventListener('input', () => { filtrar(); assentar(); });
-    // Enquanto está aberta, a lista acompanha o que se mexe por baixo dela: uma
-    // janela que role com a lista aberta punha-a outra vez a meio da parede.
-    window.addEventListener('scroll', () => { if (!pop.hidden) assentar(); },
-                            { passive: true, capture: true });
-    window.addEventListener('resize', () => { if (!pop.hidden) assentar(); },
-                            { passive: true });
-    q.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowDown'){ e.preventDefault(); andar(1); }
-      else if (e.key === 'ArrowUp'){ e.preventDefault(); andar(-1); }
-      else if (e.key === 'Enter'){
-        e.preventDefault();
-        const sob = cx.querySelector('.lic-sel-op.sob');
-        if (sob) escolher(sob);
-      } else if (e.key === 'Escape'){ e.stopPropagation(); abrir(false); bt.focus(); }
-    });
-    cx.querySelectorAll('.lic-sel-op').forEach(o => {
-      o.addEventListener('click', (e) => { e.stopPropagation(); escolher(o); });
-    });
-    // Um clique fora fecha.
-    document.addEventListener('click', (e) => {
-      if (!cx.isConnected) return;      // a janela fechou-se e levou-a
-      if (!cx.contains(e.target)) abrir(false);
-    });
-}
 
 /**
  * Vestir um <select> que já existe na página com a procura por dentro.
@@ -627,82 +613,102 @@ function licSelLigarUm(cx){
 function licSelUpgrade(sel, opc){
   if (!sel || sel.dataset.licSel) return null;
   opc = opc || {};
-  const ops = Array.from(sel.options).map(o => ({ v: o.value, r: o.textContent }));
   const minimo = opc.minimo === undefined ? 0 : opc.minimo;
-  if (ops.length <= minimo) return null;
+  if (sel.options.length <= minimo) return null;
+  if (!licTemSelect2()) return null;
   sel.dataset.licSel = '1';
 
+  // A caixa da casa fica à volta, e não é decoração: é por `closest('.lic-sel')`
+  // que metade das páginas encontra o campo que acabou de mexer, e é nela que
+  // vive o `data-sel` que as provas usam para chegar a um campo pelo nome.
   const cx = document.createElement('div');
   // `lic-sel-pagina` diz-lhe para se vestir pelos tokens da página: fora de um
   // modal não há --j-* nenhuns a herdar.
   cx.className = 'lic-sel'
-    + (cx.closest && sel.closest('.pl-modal') ? '' : ' lic-sel-pagina')
+    + (sel.closest('.pl-modal') ? '' : ' lic-sel-pagina')
     + (opc.classe ? ' ' + opc.classe : '');
   cx.dataset.sel = sel.className || sel.name || 'sel';
-  const rot = opc.rotulo || sel.getAttribute('title') || 'lista';
-  cx.innerHTML = licSelCorpoHtml(ops, sel.value, rot, opc.dicaProcura);
+  if (opc.dicaProcura) cx.dataset.dicaProcura = opc.dicaProcura;
+  if (opc.rotulo && !sel.getAttribute('aria-label')) {
+    sel.setAttribute('aria-label', opc.rotulo);
+  }
   sel.parentNode.insertBefore(cx, sel);
-  cx.insertBefore(sel, cx.firstChild);
-  sel.classList.add('lic-sel-nativo');
+  cx.appendChild(sel);
 
   licSelLigarUm(cx);
-  // O <select> pode mudar por fora: quem o mexia continua a mexê-lo.
-  sel.addEventListener('change', () => licSelRefrescar(cx));
-  licSelRefrescar(cx);
   return cx;
 }
 
 /**
  * Pôr uma escolha num valor, de fora.
  *
- * Vale para as duas espécies — a que guarda o valor num <input type=hidden>
- * (a dos formulários e a que se põe à mão numa página) e a que veste um
- * <select>. Quem mexe no valor por fora tem de mexer também no que se lê no
- * botão, senão a caixa diz uma coisa e o formulário envia outra.
+ * `cx` é a caixa `.lic-sel` (é o que as páginas têm à mão), mas aceita também o
+ * próprio <select>: quem chama nem sempre sabe qual dos dois apanhou.
  *
  * `calado` não dispara `change`: é para quando quem chama JÁ sabe (acabou de
- * ser ele a mudar o estado) e não se quer ouvir a si próprio.
+ * ser ele a mudar o estado) e não se quer ouvir a si próprio. Mesmo calado, a
+ * CAIXA tem de ser avisada — senão ela diz uma coisa e o formulário envia
+ * outra —, e é isso que faz o `change.select2`, que só o Select2 ouve.
  */
 function licSelDefinir(cx, valor, calado){
   if (!cx) return;
-  const guardado = cx.querySelector('input[type=hidden]') || cx.querySelector('select');
-  if (!guardado) return;
-  guardado.value = String(valor);
-  const ops = Array.from(cx.querySelectorAll('.lic-sel-op'));
-  const op = ops.filter(o => o.dataset.v === String(valor))[0];
-  ops.forEach(o => o.classList.toggle('on', o === op));
-  const txt = cx.querySelector('.lic-sel-bt .txt');
-  if (txt && op) txt.textContent = op.querySelector('span').textContent;
-  if (!calado) guardado.dispatchEvent(new Event('change', { bubbles: true }));
+  const sel = cx.tagName === 'SELECT' ? cx : cx.querySelector('select');
+  if (!sel) return;
+  sel.value = String(valor);
+  if (!licTemSelect2() || !sel.dataset.licSel && !sel.dataset.select2Id) {
+    if (!calado) sel.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
+  const $ = window.jQuery;
+  if (calado) licSelSoACaixa(sel);
+  else $(sel).trigger('change');
 }
 
-/** Voltar a pôr a caixa de acordo com o <select> que está por baixo dela. */
+/* ============================================================
+   REDESENHAR A CAIXA SEM ACORDAR A PÁGINA
+
+   O Select2 redesenha-se quando o <select> dispara `change.select2`. O
+   problema é como se dispara isso: tanto o `trigger` como o `triggerHandler`
+   do jQuery, mesmo com o namespace, acabam por invocar o `onchange=` escrito
+   no html do elemento — o namespace serve para escolher entre os handlers
+   LIGADOS, e o inline não é um deles, é lido do `elem.onchange`.
+
+   E isso fechava um ciclo infinito bem real: a linha de uma pessoa, em
+   index.php, tem `onchange="sincroMesaPapel(...)"`, e sincroMesaPapel chama
+   licSelRefrescar para a caixa acompanhar o <select>. Redesenhar chamava o
+   onchange, que mandava redesenhar, que chamava o onchange — «Maximum call
+   stack size exceeded», e a página do painel de convidados morria ao abrir um
+   convite.
+
+   A tranca é uma só e é global de propósito: o ciclo passa POR FORA destas
+   funções (vai à página e volta), e uma tranca por elemento não o via passar.
+   ============================================================ */
+let licSelADesenhar = false;
+function licSelSoACaixa(sel){
+  if (licSelADesenhar) return;
+  licSelADesenhar = true;
+  try { window.jQuery(sel).trigger('change.select2'); }
+  finally { licSelADesenhar = false; }
+}
+
+/**
+ * Voltar a pôr a caixa de acordo com o <select> que está por baixo dela.
+ *
+ * Chama-se quando as OPÇÕES mudaram por fora (o editor de convites acrescenta e
+ * tira mesas). `change.select2` é o evento que redesenha a caixa sem a
+ * reconstruir e sem acordar quem ouve `change` — que seria ouvir-se a si
+ * próprio e, nos sítios que gravam ao mudar, gravar sem ninguém ter mexido.
+ */
 function licSelRefrescar(cx){
-  const sel = cx.querySelector('select');
-  if (!sel) return;
-  const bt = cx.querySelector('.lic-sel-bt');
-  const lista = cx.querySelector('.lic-sel-lista');
-  // As opções podem ter mudado (o editor de convites acrescenta e tira uma).
-  const ops = Array.from(sel.options).map(o => ({ v: o.value, r: o.textContent }));
-  if (lista) lista.innerHTML = ops.map(o => licSelOpcaoHtml(o, sel.value)).join('');
-  cx.querySelectorAll('.lic-sel-op').forEach(o => {
-    if (o.dataset.ligado) return;
-    o.dataset.ligado = '1';
-    o.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sel.value = o.dataset.v;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      const pop = cx.querySelector('.lic-sel-pop');
-      if (pop) pop.hidden = true;
-      if (bt) { bt.setAttribute('aria-expanded', 'false'); bt.focus(); }
-    });
-  });
-  const esc = Array.from(sel.options).filter(o => o.value === sel.value)[0];
-  if (bt) {
-    bt.querySelector('.txt').textContent = esc ? esc.textContent : '—';
-    bt.disabled = sel.disabled;
-  }
-  cx.classList.toggle('desligada', sel.disabled);
+  if (!cx) return;
+  const sel = cx.tagName === 'SELECT' ? cx : cx.querySelector('select');
+  if (!sel || !licTemSelect2()) return;
+  // Quem chama isto está a dizer «as opções mudaram, redesenha» — e não «o
+  // valor mudou», que é o que um `change` anuncia e o que faria as páginas
+  // gravarem sem ninguém ter mexido. Ver licSelSoACaixa: é ela que impede o
+  // ciclo com o `onchange` da própria página.
+  licSelSoACaixa(sel);
+  if (cx.classList) cx.classList.toggle('desligada', sel.disabled);
 }
 
 /**

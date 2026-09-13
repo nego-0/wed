@@ -628,8 +628,8 @@ function correcoesEsperadas(): array {
          'bebidas.php', 'class="b-festa-capa"'],
         ['Bar: e fecha a dizer o que acontece a seguir',
          'assets/bar-convidado.js', 'function rodapeDaCasa('],
-        ['Bar: o convidado vê o que leva álcool e o que está quase a acabar',
-         'assets/bar-convidado.js', "'<span class=\"b-selo pouca\">'"],
+                ['Bar: o convidado vê o que leva álcool (o selo de «poucas» saiu com o número)',
+         'assets/bar-convidado.js', "marcas += '<span class=\"b-selo alc\""],
 
         // ---- A quarta passagem: o que ficou por afinar (§29) ----
         ['Bar: a conversa do wi-fi partilhado saiu — cada um pede pela sua rede',
@@ -685,9 +685,9 @@ function correcoesEsperadas(): array {
         ['Bar: o nome de quem entrou lê-se uma vez só, dentro da pastilha',
          'bebidas.php', 'Duas pastilhas e mais nada.'],
         ['Escolha com procura: a lista assenta onde cabe, em linhas inteiras',
-         'assets/janela.js', 'const assentar = () =>'],
+         'assets/janela.js', 'function licSelOndePor('],
         ['E vira-se para cima quando o espaço está todo lá',
-         'assets/janela.css', '.lic-sel-pop.acima{'],
+         'assets/select2-casa.css', '.pl-modal .select2-container{'],
         ['Janela: um botão do CORPO tem a forma dos do rodapé, e não só a cor',
          'assets/janela.css', '.j-bt{ font-family:inherit;'],
 
@@ -879,6 +879,30 @@ function correcoesEsperadas(): array {
          'assets/bar-convidado.js', 'function poe(caixa, id, html)'],
         ['bebidas.php: o menu tem esqueleto fixo, e só muda o que mudou',
          'assets/bar-convidado.js', 'function esqueleto('],
+
+        // ---- O Select2, o stock que o convidado não lê, e o posto que decide ----
+        ['A regra «nada de bibliotecas novas» foi revogada, e está escrito porquê',
+         'docs/bar-motor-assistido.md', '5.1 A regra das bibliotecas foi revogada'],
+        ['O jQuery e o Select2 são servidos pela casa, e não por um CDN',
+         'parcial-select2.php', 'function select2Scripts('],
+        ['As listas do sistema são Select2',
+         'assets/janela.js', "$(sel).select2({"],
+        ['A procura das listas ignora acentos — quem escreve de pé não os põe',
+         'assets/janela.js', 'function licSelFiltro('],
+        ['A lista de uma escolha em janela nasce dentro do modal, e não é cortada',
+         'assets/janela.js', 'function licSelOndePor('],
+        ['Redesenhar a caixa não acorda o onchange da página (era um ciclo infinito)',
+         'assets/janela.js', 'function licSelSoACaixa('],
+        ['O Escape fecha a lista, e não a janela inteira por baixo dela',
+         'assets/janela.js', 'let licHaviaLista = false;'],
+        ['O Select2 veste-se pelos tokens do tema, e não pelos cinzentos dele',
+         'assets/select2-casa.css', '--s2-ouro:   var(--gold'],
+        ['O convidado não lê quanto stock resta',
+         'assets/bar-convidado.js', 'O que se diz sobre a quantidade: NADA'],
+        ['E o número nem sai do servidor para o menu do convidado',
+         'api.php', '`disponivel` NÃO sai por aqui'],
+        ['Quem lança do posto das entregas submete à copa, mesmo sendo admin',
+         'api.php', "\$daCopa = podeCopa() && \$posto === 'copa';"],
     ];
 }
 

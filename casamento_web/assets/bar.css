@@ -478,7 +478,10 @@ body.com-rodape .b-corpo{
 .b-selo .ico{ width:11px; height:11px; }
 /* O álcool é só o sinal, e vai para a direita: é uma nota, não um aviso. */
 .b-selo.alc{ margin-left:auto; padding:.22rem; }
-.b-selo.pouca{ color:var(--c-ouro, #B4864A); }
+/* Houve aqui um `.b-selo.pouca`, que escrevia «Restam 5» no canto da
+   fotografia. Saiu com o número: o convidado não lê o stock da casa — ler
+   quantas garrafas sobram é o que o faz correr para elas. Ver bar-convidado.js,
+   em cartao(). */
 /* Sem fotografia, a chapa é uma FAIXA. Em painel de 4:3, dezasseis bebidas
    sem fotografia davam cinco ecrãs de rolar num telemóvel — e o que se rolava
    era cor, não informação. A fotografia, quando existe, fica com o painel

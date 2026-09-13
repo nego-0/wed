@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
@@ -105,6 +106,7 @@ $CAS  = casalInfo($DEFS);
 <meta name="theme-color" content="#16261E">
 <script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 </head>
 <body>

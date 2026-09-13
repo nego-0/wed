@@ -230,7 +230,10 @@
     var cx = $('b-listas');
     if (!cx || !window.licSelProcuraLigar) return;
     window.licSelProcuraLigar(cx);
-    cx.querySelectorAll('.b-mesa-cartao input[type=hidden]').forEach(function (campo) {
+    // Um <select>, e já não um <input type=hidden>: desde que o motor da
+    // escolha é o Select2, quem guarda o valor é o próprio <select> — ele fica
+    // no html, escondido, e continua a ser a verdade. O id não mudou.
+    cx.querySelectorAll('.b-mesa-cartao select').forEach(function (campo) {
       if (campo.dataset.ligado) return;
       campo.dataset.ligado = '1';
       campo.addEventListener('change', async function () {
@@ -434,8 +437,13 @@
         if (!ppEscolhido) { licJanelaErro('Escolha o convidado na lista.'); return false; }
         // Silencioso: se forem as regras a travar, a razão lê-se dentro da
         // janela, ao pé do campo que a há-de resolver.
+        // `posto: 'entrega'` — e nunca 'copa', nem quando quem está aqui é o
+        // admin ou os noivos. Quem tem esta página aberta está na sala a
+        // servir, e o que lança daqui submete-se à copa como o de qualquer
+        // convidado. O papel diz o que a pessoa PODE fazer; o posto diz o que
+        // ela está a fazer, e é o posto que manda.
         var d = await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
-          body: JSON.stringify({ convidado_id: ppEscolhido.id,
+          body: JSON.stringify({ convidado_id: ppEscolhido.id, posto: 'entrega',
                                  mesa_id: BP.mesaEscolhida(v.mesa, ppEscolhido),
                                  itens: [{ item_id: parseInt(v.item, 10),
                                            quantidade: parseInt(v.quantidade, 10) || 1 }] }) });

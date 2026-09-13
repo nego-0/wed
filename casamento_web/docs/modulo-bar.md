@@ -3238,3 +3238,124 @@ mais nada. O corpo passa a ter um esqueleto fixo de cinco caixas (`#b-avisos`,
 `poe(caixa, id, html)` só escreve quando o html daquela caixa mudou mesmo. As
 gavetas mudam de gaveta activa por classe (`marcarGaveta()`), sem se
 reconstruírem.
+
+## 32. A sétima passagem: o Select2, o stock calado, e o posto que decide
+
+### 32.1 O Select2 no lugar da escolha escrita à mão
+
+A regra da casa proibia bibliotecas novas — «sem jQuery, sem Select2». **Foi
+revogada** por decisão de quem manda no produto (a decisão e o que ela custa
+estão em `docs/bar-motor-assistido.md` §5.1), e a ordem foi usar o Select2 em
+todos os `<select>` do sistema. Está feito.
+
+O componente escrito à mão saiu — eram ~430 linhas em `assets/janela.js`, com a
+lista, a procura, o teclado e o cálculo de onde a lista cabia. O que ficou no
+lugar é uma casca fina por cima do Select2, e ela existe por uma razão que não é
+decorativa: as páginas chamam `licSelProcuraHtml`, `licSelDefinir`,
+`licSelRefrescar`, `licSelUpgrade` e `licSelProcuraLigar` em dezenas de sítios.
+Mantendo os **nomes** e as **assinaturas**, a troca do motor não obrigou a mexer
+em nenhum deles — e o dia em que o Select2 sair também não obrigará.
+
+O que a casca acrescenta, e porquê:
+
+- **Procura sem acentos.** O Select2 compara o que se escreve tal e qual: quem
+  escreve «jose» não encontra «José». Numa festa, de pé, com o telemóvel numa
+  mão, ninguém escreve acentos. O `matcher` da casa passa os dois lados por
+  `licChave()`.
+- **A lista não é cortada pela janela.** `dropdownParent` põe-na dentro do
+  modal. É a mesma dor de §28.6, resolvida agora por outro caminho.
+- **A procura desaparece nas listas curtas.** Escrever para filtrar entre três
+  opções é trabalho para nada, e num telemóvel é um teclado por cima da lista.
+- **Fala português.** O Select2 vem em inglês; as frases estão em `janela.js`.
+- **Veste-se pela casa.** `assets/select2-casa.css` troca-lhe as cores, os
+  raios e as medidas pelos tokens do tema — e por isso segue os quatro temas,
+  os editores escuros e os ecrãs do bar sem saber que eles existem.
+
+Serve-se de `assets/`, e nunca de um CDN: um salão sem rede tem de abrir o bar à
+mesma. Ver `parcial-select2.php`, que é o único sítio onde a ordem de carga está
+escrita — e ela importa: o `janela.js` veste os campos no `DOMContentLoaded`, e
+sem o jQuery já definido nessa altura não veste nada.
+
+**Três armadilhas que custaram tempo, e ficam escritas para não se repetirem:**
+
+1. **O ciclo infinito.** `licSelRefrescar` manda o Select2 redesenhar-se com
+   `trigger('change.select2')`. O `trigger` do jQuery acaba por invocar o
+   `onchange=` escrito no html do elemento — o namespace escolhe entre os
+   handlers *ligados*, e o inline não é um deles. A linha de uma pessoa, em
+   `index.php`, tem `onchange="sincroMesaPapel(...)"`, que chama
+   `licSelRefrescar`: redesenhar chamava o onchange, que mandava redesenhar.
+   «Maximum call stack size exceeded», e o painel de convidados morria ao abrir
+   um convite. O `triggerHandler` **não** resolve — faz o mesmo. Resolve uma
+   tranca de reentrada (`licSelSoACaixa`), global de propósito: o ciclo passa
+   por fora destas funções e uma tranca por elemento não o via passar.
+2. **O Escape fechava a janela inteira.** Abrir uma escolha, arrepender-se,
+   carregar em Escape — e perder o formulário com tudo o que já lá estava
+   escrito. A janela não podia saber que havia uma lista aberta, porque o
+   Select2 está ligado ao campo (em baixo) e ela ao documento (em cima): quando
+   a janela é chamada, a lista já fechou. A pergunta passa a ser feita num
+   ouvinte na fase de **captura**, que corre antes.
+3. **Dois caminhos a vestir o mesmo campo.** A passagem que varre a página
+   chegava a um campo que já nascera dentro de uma caixa da casa, punha-lhe uma
+   segunda caixa à volta, e perdia pelo caminho o que a primeira dizia — entre
+   outras coisas o `data-procura`. O sintoma era uma lista de duas opções com
+   caixa de procura por cima.
+
+Nas provas, `tests/escolhas.js` foi reescrito. Duas coisas que não se adivinham:
+a lista **não vive dentro da caixa do campo** (o Select2 pendura-a no `body`, ou
+no modal), e **não há um `data-valor` nas linhas** — o caminho honesto é o que
+uma pessoa faz: descobrir o texto daquele valor e carregar na linha que o
+mostra.
+
+### 32.2 O convidado deixa de ler o stock
+
+O menu do convidado dizia «Só 5 — últimas» por baixo do nome, e punha um selo
+«Restam 5» no canto da fotografia, quando o stock ia abaixo de meia dúzia.
+
+A intenção era cortês. O efeito era o contrário de tudo o que este módulo faz:
+**contar a um convidado quantas garrafas restam é convidá-lo a correr para
+elas.** Numa festa a corrida é literal — quem lê o número pede três para
+garantir, e quem chega dez minutos depois não apanha nenhuma. O aviso escasso
+produz a escassez que anuncia.
+
+Era, além disso, uma regra da casa a ser quebrada: o convidado nunca lê o que o
+sistema sabe sobre ele nem sobre a casa (§5 do motor assistido). O limite já
+não se dizia; o stock dizia-se.
+
+Os dois avisos saíram, **e o número deixou de sair do servidor**: `bar_menu` já
+não manda `disponivel`. Tirar o aviso do ecrã e continuar a mandar o número era
+esconder a folha e deixar a resposta atrás dela, a um clique das ferramentas do
+browser.
+
+Ficaram duas coisas, e nenhuma é excepção:
+
+- **«Acabou»** — não é um limite, é o estado da bebida. Quem olha para uma
+  bebida que não pode pedir tem de saber porquê, senão carrega no botão a noite
+  inteira.
+- **`pode_pedir`** — é o tecto DESTE pedido, e é ele que trava o «+». Sem isso a
+  pessoa escolhe quatro e leva com um erro depois de carregar em «Pedir».
+  Quando o stock é menor que o máximo por pedido, este número é o stock: é o
+  preço de o botão não mentir, e é um tecto, não um anúncio.
+
+### 32.3 O posto manda, e não o papel
+
+Os pedidos lançados do ecrã das entregas apareciam na aba **«por entregar»** da
+copa, em vez de **«por decidir»**.
+
+Para um garçom a sério, não apareciam — `bar_pedir_por` já o fazia bem, e há
+prova disso desde §31.9. O que ninguém tinha visto é que `podeCopa()` é verdade
+para o copeiro **e para o admin** — e o admin são os noivos, que abrem as três
+páginas do bar. Um deles a dar uma ajuda na sala, com `entregas.php` aberto,
+lançava pedidos **já aprovados**: saltavam a copa, apareciam em «por entregar»,
+e a decisão que a copa devia tomar nunca lhe era posta.
+
+O papel dizia «podes decidir»; o sítio onde a pessoa estava dizia «estás a
+servir». **Ganha o sítio.** O ecrã passa a declarar de onde lança, e o atalho da
+copa exige que se reclame o posto da copa:
+
+```php
+$daCopa = podeCopa() && $posto === 'copa';
+```
+
+Quem não o reclama submete — incluindo um lançador novo que amanhã alguém
+escreva e se esqueça de declarar. É de propósito que a falha cai desse lado: o
+engano mais caro é servir sem decisão, e o mais barato é uma decisão a mais.

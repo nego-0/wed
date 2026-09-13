@@ -144,6 +144,38 @@ const { escolher } = require('./escolhas');
     await window.api('bar_entregue', { method: 'POST',
                                        body: JSON.stringify({ id: id }) }), doGarcom.pedido.id);
 
+  // ---- e o POSTO manda, não o papel -----------------------------------
+  // `podeCopa()` é verdade para o copeiro E para o admin — e o admin são os
+  // noivos, que abrem as três páginas do bar. Um deles a dar uma ajuda na sala,
+  // com entregas.php aberto, lançava pedidos JÁ APROVADOS: saltavam a copa,
+  // apareciam em «por entregar», e a decisão nunca lhe era posta. Quem está no
+  // posto das entregas SUBMETE, seja quem for.
+  const doAdminNaSala = await p.evaluate(async ([g, it]) =>
+    await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
+      body: JSON.stringify({ convidado_id: g, posto: 'entrega',
+                             itens: [{ item_id: it, quantidade: 1 }] }) }),
+    [cen.quem.id, cen.item]);
+  ok(doAdminNaSala && doAdminNaSala.pedido.estado === 'em_analise',
+     'o admin no posto das entregas também submete à copa: «'
+     + ((doAdminNaSala.pedido || {}).estado || doAdminNaSala.message) + '»');
+  // E quem não diz de onde lança submete na mesma: o engano mais caro é servir
+  // sem decisão, e o mais barato é uma decisão a mais.
+  const semDizerPosto = await p.evaluate(async ([g, it]) =>
+    await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
+      body: JSON.stringify({ convidado_id: g, itens: [{ item_id: it, quantidade: 1 }] }) }),
+    [cen.quem.id, cen.item]);
+  ok(semDizerPosto && semDizerPosto.pedido.estado === 'em_analise',
+     'e quem não declara o posto submete também — o atalho da copa pede-se');
+  // O da copa, esse, nasce decidido: está ao balcão a olhar para as garrafas.
+  const doBalcao = await p.evaluate(async ([g, it]) =>
+    await window.api('bar_pedir_por', { method: 'POST', silencioso: true,
+      body: JSON.stringify({ convidado_id: g, posto: 'copa',
+                             itens: [{ item_id: it, quantidade: 1 }] }) }),
+    [cen.quem.id, cen.item]);
+  ok(doBalcao && doBalcao.pedido.estado === 'aprovado',
+     'e o do balcão nasce aprovado, que é o que separa os dois postos: «'
+     + ((doBalcao.pedido || {}).estado || doBalcao.message) + '»');
+
   // ============ 2. as regras valem também no balcão ============
   // Uma bebida fechada a toda a gente. O copeiro lança pelo balcão — a porta
   // que não consultava regra nenhuma — e tem de esbarrar como qualquer outro.

@@ -466,10 +466,30 @@
     var n = cesto[i.id] || 0;
     var travada = i.pode_pedir <= 0;
 
-    // O que se diz sobre a quantidade muda com o que ela é: um número exacto
-    // quando é pouco (é uma decisão a tomar já), e silêncio quando é muito.
+    // O que se diz sobre a quantidade: NADA, enquanto houver.
+    //
+    // Aqui dizia-se «Só 5 — últimas» quando o stock ia abaixo de meia dúzia.
+    // A intenção era cortês; o efeito era o contrário de tudo o que este
+    // módulo faz. Contar a um convidado quantas garrafas restam é convidá-lo a
+    // correr para elas — e numa festa a corrida é literal: quem lê o número
+    // pede três para garantir, e quem chega dez minutos depois não apanha
+    // nenhuma. O aviso escasso produz a escassez que anuncia.
+    //
+    // É a mesma regra que já valia para os limites: o convidado nunca lê o que
+    // o sistema sabe sobre ele nem sobre a casa — nem o número da regra, nem o
+    // limite, nem o stock. O que ele precisa de saber é se pode pedir agora, e
+    // isso diz-se sem números.
+    //
+    // «Acabou» fica, e não é excepção nenhuma: não é um limite, é o estado da
+    // bebida. Quem está a olhar para uma bebida que não pode pedir tem de
+    // saber porquê, senão carrega no botão a noite inteira.
+    //
+    // O `travada` continua a guardar a cadeia toda, e tem de continuar: as
+    // linhas abaixo dizem todas PORQUE É QUE NÃO SE PODE PEDIR. Sem ele, uma
+    // bebida à venda caía no último `else` e anunciava «Já levou o que a casa
+    // serve» a quem ainda não tinha pedido nada.
     var qtd = '';
-    if (!travada) qtd = i.disponivel <= 6 ? 'Só ' + i.disponivel + ' — últimas' : '';
+    if (!travada) qtd = '';
     else if (i.travao === 'stock') qtd = 'Acabou';
     else if (i.travao === 'proibido') qtd = 'Não disponível para si';
     // Um relógio sozinho por baixo de um nome não diz que é uma espera: sem a
@@ -495,18 +515,13 @@
                + esc(a.nome) + '</button>';
         }).join(' ') + '</div>' : '';
 
-    // Duas marcas de canto na fotografia, que o convidado não tinha e a copa
-    // sempre teve: o que leva álcool, e o que está quase a acabar. A segunda
-    // é uma cortesia — quem sabe que restam três escolhe agora em vez de
-    // descobrir daqui a meia hora que ficou sem.
+    // Uma marca de canto na fotografia: o que leva álcool. Havia uma segunda,
+    // «Restam N», que dizia ao convidado quanto stock sobrava — e essa saiu
+    // pela razão de cima. O que resta é da copa, e é lá que se vê.
     var marcas = '';
     if (i.alcoolico) {
       marcas += '<span class="b-selo alc" title="Com álcool" aria-label="Com álcool">'
               + ico.ico('gota') + '</span>';
-    }
-    if (!travada && i.disponivel > 0 && i.disponivel <= 6) {
-      marcas += '<span class="b-selo pouca">' + ico.ico('aviso')
-              + 'Restam ' + i.disponivel + '</span>';
     }
 
     return '<div class="b-bebida' + (travada ? ' esgotada' : '') + (n ? ' no-cesto' : '')

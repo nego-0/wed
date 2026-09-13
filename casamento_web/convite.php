@@ -5,6 +5,7 @@
 // convite em PDF ou enviá-lo pelo WhatsApp.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/parcial-select2.php';
 require_once __DIR__ . '/personalizacao.php';
 // Primeiro o convite, só depois as definições: é o código que diz de que
 // casamento se trata, e cada casamento tem os seus nomes, cores e textos.
@@ -328,6 +329,7 @@ async function enviar(){
 </script>
 <?php endif; ?>
 <script src="<?= asset('assets/icones.js') ?>"></script>
+<?php select2Tudo(); ?>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 </body>
 </html>

@@ -1,0 +1,244 @@
+/* ============================================================
+   select2-casa.css — o Select2 vestido pela casa
+
+   O Select2 traz o seu próprio desenho: cinzentos de fábrica, cantos de 4px,
+   um azul de selecção que não é de ninguém. Numa página desta casa isso
+   lê-se como um campo importado de outro sítio — e num CONVITE, que é o
+   documento mais cuidado que aqui se faz, lê-se como um erro.
+
+   Esta folha não reescreve o Select2: troca-lhe as cores, os raios e as
+   medidas pelos TOKENS do tema. Por isso segue os quatro temas sem saber que
+   eles existem, e segue os que vierem depois.
+
+   Três ambientes, e os três estão aqui:
+
+     1. a PÁGINA — tokens --gold, --line, --card, --ink…
+     2. a JANELA — tokens --j-*, que a janela.css define e que existem só lá
+        dentro (é a razão de a caixa ter de dizer se está numa ou na outra);
+     3. os EDITORES — fundo escuro, sem estilo.css nenhum: os --j-* deles
+        vêm de `body.editor`, em janela.css, e chegam aqui de graça.
+
+   Vem DEPOIS de select2.min.css — quem vem depois ganha, e é disso que isto
+   vive. Ver parcial-select2.php.
+   ============================================================ */
+
+/* ---------- as variáveis, num sítio só ----------
+   O Select2 vive em três ambientes com paletas diferentes. Em vez de repetir
+   as regras três vezes, as regras usam --s2-* e é só isto que muda de
+   ambiente para ambiente. */
+:root,
+.lic-sel-pagina,
+.select2-container{
+  --s2-card:   var(--card, #fff);
+  --s2-campo:  var(--card, #fff);
+  --s2-ink:    var(--ink, #12222f);
+  --s2-texto:  var(--text, #28323b);
+  --s2-fraco:  #8a8f88;
+  --s2-linha:  var(--line, rgba(18,34,47,.12));
+  --s2-ouro:   var(--gold, #4c8c1e);
+  --s2-pal:    var(--gold-pale, #e7f3da);
+  --s2-anel:   var(--ring, rgba(99,178,43,.28));
+  --s2-raio:   10px;
+  --s2-alto:   42px;
+}
+
+/* Dentro de uma janela mandam os --j-*: lá não há tokens da página nenhuns, e
+   nos editores não há mesmo estilo.css. É a mesma razão por que a janela.css
+   se veste sozinha. A lista aberta também é apanhada por isto: ela nasce
+   DENTRO do modal (ver licSelOndePor, em janela.js), e não no <body>. */
+.pl-modal .select2-container{
+  --s2-card:   var(--j-card, #fff);
+  --s2-campo:  var(--j-campo, #fff);
+  --s2-ink:    var(--j-ink, #12222f);
+  --s2-texto:  var(--j-texto, #28323b);
+  --s2-fraco:  var(--j-fraco, #8a8f88);
+  --s2-linha:  var(--j-linha, rgba(18,34,47,.12));
+  --s2-ouro:   var(--j-ouro, #4c8c1e);
+  --s2-pal:    var(--j-ouro-pal, #e7f3da);
+  --s2-anel:   var(--j-anel, rgba(99,178,43,.28));
+  --s2-raio:   var(--j-raio, 10px);
+}
+
+/* ---------- a caixa fechada ---------- */
+.select2-container--default .select2-selection--single{
+  height:auto; min-height:var(--s2-alto);
+  display:flex; align-items:center;
+  background:var(--s2-campo);
+  border:1.5px solid var(--s2-linha);
+  border-radius:var(--s2-raio);
+  padding:.25rem .2rem .25rem .1rem;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.select2-container--default .select2-selection--single:hover{
+  border-color:var(--s2-ouro);
+}
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single{
+  border-color:var(--s2-ouro);
+  box-shadow:0 0 0 3px var(--s2-anel);
+  outline:none;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered{
+  color:var(--s2-texto);
+  font-family:inherit; font-size:.9rem; line-height:1.35;
+  padding-left:.7rem; padding-right:.4rem;
+}
+.select2-container--default .select2-selection--single .select2-selection__placeholder{
+  color:var(--s2-fraco);
+}
+
+/* A seta é o mesmo traço do resto da casa — o Select2 desenha-a com bordas de
+   CSS (um triângulo cheio), que ao pé dos sinais desta casa parece de outra
+   aplicação. Aqui é uma máscara com a mesma geometria do glifo «baixoSeta» de
+   assets/icones.js, e toma a cor do texto como os outros sinais. */
+.select2-container--default .select2-selection--single .select2-selection__arrow{
+  height:100%; width:28px; right:2px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b{
+  border:0; width:16px; height:16px; margin:0; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:var(--s2-fraco);
+  -webkit-mask:var(--s2-seta) center/16px 16px no-repeat;
+          mask:var(--s2-seta) center/16px 16px no-repeat;
+  transition:transform .15s ease;
+}
+.select2-container--default.select2-container--open
+  .select2-selection--single .select2-selection__arrow b{
+  transform:translate(-50%,-50%) rotate(180deg);
+  background:var(--s2-ouro);
+}
+:root{
+  --s2-seta: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6.5 9.5 5.5 5.5 5.5-5.5'/%3E%3C/svg%3E");
+}
+
+/* Um campo desligado diz-se apagado, e não com o cursor proibido em cima de
+   uma caixa que parece viva. */
+.select2-container--default.select2-container--disabled .select2-selection--single{
+  background:var(--s2-campo); opacity:.55; cursor:default;
+}
+
+/* ---------- a lista aberta ---------- */
+/* z-index alto: a lista é pendurada no modal (ver licSelOndePor, em
+   janela.js) e tem de ficar por cima do corpo dele, que rola. */
+.select2-container--default .select2-dropdown{
+  background:var(--s2-card);
+  border:1.5px solid var(--s2-linha);
+  border-radius:var(--s2-raio);
+  box-shadow:0 14px 40px rgba(0,0,0,.18);
+  overflow:hidden;
+  z-index:2100;
+}
+.select2-container--default .select2-dropdown--above{ border-radius:var(--s2-raio); }
+
+/* A caixa de procura, com a lupa por dentro — como as outras procuras da casa
+   (ver campoBusca, em bar-pecas.js). */
+.select2-container--default .select2-search--dropdown{
+  padding:.5rem; border-bottom:1px solid var(--s2-linha);
+}
+.select2-container--default .select2-search--dropdown .select2-search__field{
+  background:var(--s2-campo) var(--s2-lupa) no-repeat left .55rem center;
+  background-size:16px 16px;
+  border:1.5px solid var(--s2-linha); border-radius:8px;
+  padding:.5rem .6rem .5rem 2rem;
+  font-family:inherit; font-size:.88rem; color:var(--s2-texto);
+  min-height:38px;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field:focus{
+  outline:none; border-color:var(--s2-ouro); box-shadow:0 0 0 3px var(--s2-anel);
+}
+:root{
+  --s2-lupa: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8f88' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+}
+
+.select2-container--default .select2-results > .select2-results__options{
+  max-height:280px; padding:.25rem;
+}
+.select2-container--default .select2-results__option{
+  color:var(--s2-texto);
+  font-size:.9rem; line-height:1.35;
+  padding:.6rem .7rem; border-radius:8px;
+  min-height:42px; display:flex; align-items:center;
+}
+/* «sob» é onde as setas estão; «escolhida» é o que está escolhido. São duas
+   coisas diferentes e por isso têm duas marcas: sem isso, andar com o teclado
+   parecia estar a escolher a cada tecla. */
+.select2-container--default .select2-results__option--highlighted[aria-selected],
+.select2-container--default .select2-results__option--highlighted[data-selected]{
+  background:var(--s2-pal); color:var(--s2-ink);
+}
+.select2-container--default .select2-results__option[aria-selected=true],
+.select2-container--default .select2-results__option[data-selected=true]{
+  background:transparent; color:var(--s2-ouro); font-weight:600;
+  padding-right:1.9rem;
+}
+.select2-container--default
+  .select2-results__option--highlighted[aria-selected=true]{
+  background-color:var(--s2-pal);
+}
+/* O visto é DESENHADO, e não o carácter ✓: nas fontes que não o têm sai o
+   quadrado do «não sei desenhar isto», e o que ficava sem sinal era justamente
+   a linha escolhida.
+   Vem num ::after com MÁSCARA, e não numa imagem de fundo, por uma razão que
+   custa a ver e se paga cara: uma imagem de fundo traz a cor gravada lá
+   dentro, e um `data:` URI não sabe o que é `currentColor`. O verde da casa
+   ficava verde também no editor escuro, onde o dourado é outro. A máscara toma
+   a cor do texto da linha, que já é a certa em cada ambiente. */
+.select2-container--default .select2-results__option[aria-selected=true]::after,
+.select2-container--default .select2-results__option[data-selected=true]::after{
+  content:''; margin-left:auto; flex:none; width:15px; height:15px;
+  background:currentColor;
+  -webkit-mask:var(--s2-visto) center/15px 15px no-repeat;
+          mask:var(--s2-visto) center/15px 15px no-repeat;
+}
+:root{
+  --s2-visto: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6.5 9.2 17.3 4 12.1'/%3E%3C/svg%3E");
+}
+.select2-container--default .select2-results__message,
+.select2-container--default .select2-results__option--disabled{
+  color:var(--s2-fraco); font-size:.84rem; text-align:center; padding:.9rem .7rem;
+}
+/* O título de um grupo não é uma opção: não se escolhe nem se ilumina. */
+.select2-container--default .select2-results__group{
+  color:var(--s2-fraco); font-size:.72rem; font-weight:700;
+  letter-spacing:.06em; text-transform:uppercase; padding:.6rem .7rem .3rem;
+}
+
+/* ---------- a caixa da casa, à volta ---------- */
+/* `.lic-sel` é a caixa que janela.js põe à volta de cada <select> vestido: é
+   por ela que as páginas encontram o campo (`closest('.lic-sel')`) e é nela
+   que vive o `data-sel` por onde as provas lá chegam. Não desenha nada — só
+   garante que não encolhe abaixo da coluna que lhe deram. */
+.lic-sel{ position:relative; min-width:0; }
+.lic-sel .select2-container{ max-width:100%; }
+/* O <select> continua no html a guardar o valor. O Select2 esconde-o com
+   `display:none`, o que o tira da ordem de tabulação e do formulário; assim
+   fica invisível e continua a contar. */
+.lic-sel select.select2-hidden-accessible{
+  position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+}
+
+/* ---------- os ecrãs de serviço ----------
+   O bar usa-se de pé, a meia-luz, com as mãos molhadas: 48px de alvo, que é a
+   medida que o resto do módulo já segue. */
+.b-cx .select2-container--default .select2-selection--single,
+.b-festa .select2-container--default .select2-selection--single{ min-height:48px; }
+.b-cx .select2-container--default .select2-results__option,
+.b-festa .select2-container--default .select2-results__option{ min-height:48px; }
+
+/* ---------- telemóvel ---------- */
+/* Um teclado a abrir-se rouba metade do ecrã: a lista encurta para caber com
+   ele, em vez de ficar por baixo dele. */
+@media (max-width:560px){
+  .select2-container--default .select2-results > .select2-results__options{
+    max-height:46vh;
+  }
+}
+
+/* Quem não quer animação não a tem — e a lista continua a abrir. */
+@media (prefers-reduced-motion:reduce){
+  .select2-container--default .select2-selection--single,
+  .select2-container--default .select2-selection--single .select2-selection__arrow b{
+    transition:none;
+  }
+}

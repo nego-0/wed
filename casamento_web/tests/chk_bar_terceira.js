@@ -181,11 +181,11 @@ const { escolher } = require('./escolhas');
   await gar.waitForTimeout(900);
   await gar.locator('#pp-achados button').first().click();
   await gar.waitForTimeout(300);
-  await cxMesa.locator('.lic-sel-bt').click();
+  await cxMesa.locator('.select2-selection').first().click();
   await gar.waitForTimeout(300);
-  await cxMesa.locator('.lic-sel-q input').fill('ZT Varanda');
+  await gar.locator('.select2-container--open .select2-search__field').fill('ZT Varanda');
   await gar.waitForTimeout(400);
-  await cxMesa.locator('.lic-sel-op:visible').first().click();
+  await gar.locator('.select2-container--open .select2-results__option').first().click();
   await gar.waitForTimeout(300);
   await gar.click('#lic-jo');
   await gar.waitForTimeout(1600);
@@ -254,20 +254,20 @@ const { escolher } = require('./escolhas');
   // passagem (§29.4) e um índice fixo apanhou a caixa errada — a de «qual
   // pessoa», que está escondida enquanto a regra não for de ninguém.
   const sobre = copa.locator('#lic-janela .lic-sel[data-sel="sobre"]');
-  await sobre.locator('.lic-sel-bt').click();
+  await sobre.locator('.select2-selection').first().click();
   await copa.waitForTimeout(300);
-  const antes = await sobre.locator('.lic-sel-op:visible').count();
-  await sobre.locator('.lic-sel-q input').fill('zt tinto');
+  const antes = await copa.locator('.select2-container--open .select2-results__option').count();
+  await copa.locator('.select2-container--open .select2-search__field').fill('zt tinto');
   await copa.waitForTimeout(400);
-  const depois = await sobre.locator('.lic-sel-op:visible').count();
+  const depois = await copa.locator('.select2-container--open .select2-results__option').count();
   ok(antes > depois && depois === 1,
      'e escrever filtra a lista: ' + antes + ' → ' + depois);
   // O rótulo fica limpo: houve um dia em que saía «ZT Tinto NaNNaNNaN».
-  const rotulo = await sobre.locator('.lic-sel-op:visible').first().innerText();
+  const rotulo = await copa.locator('.select2-container--open .select2-results__option').first().innerText();
   ok(!/NaN/.test(rotulo), 'e o rótulo é o nome, e não uma conta falhada: «' + rotulo.trim() + '»');
-  await sobre.locator('.lic-sel-op:visible').first().click();
+  await copa.locator('.select2-container--open .select2-results__option').first().click();
   await copa.waitForTimeout(300);
-  ok(/ZT Tinto/.test(await sobre.locator('.lic-sel-bt .txt').innerText()),
+  ok(/ZT Tinto/.test(await sobre.locator('.select2-selection__rendered').innerText()),
      'escolher fecha a lista e escreve o nome no botão');
 
   // ============ 7. a regra de pessoa é a mesma janela ============
