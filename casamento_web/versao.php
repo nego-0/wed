@@ -905,6 +905,8 @@ function correcoesEsperadas(): array {
          'assets/janela.js', 'if (e.target && e.target.nodeType === 1 && pop.contains(e.target)) return;'],
         ['E remedir a lista não lhe limpa a altura para a voltar a pôr',
          'assets/janela.js', 'NÃO MEXE NO DOM PARA MEDIR, e só escreve o que mudou'],
+        ['A lista do combo das mesas já não se fecha debaixo do dedo',
+         'assets/mesas.js', 'const rolouPorFora = (e) => !(comboAberto && e.target && e.target.nodeType === 1'],
     ];
 }
 

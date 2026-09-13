@@ -1266,9 +1266,28 @@ $('tab-body').addEventListener('click', e=>{
   if(btn){ abrirCombo(btn.closest('.combo')); }
 });
 $('tab-body').addEventListener('input', e=>{ const s=e.target.closest('.combo-search'); if(s) renderComboLista(s.closest('.combo'), s.value); });
-$('tab-body').addEventListener('scroll', fecharCombo, true);
+/* A lista fecha-se quando o que está POR BAIXO rola, e não quando é ela a
+   rolar.
+
+   Os dois ouvintes de scroll são em CAPTURA, e têm de ser: o scroll de um
+   elemento não borbulha, e sem captura não se sabia que o painel das abas
+   tinha rolado. Mas em captura chega-lhes TUDO o que rola — incluindo a
+   própria lista, que tem 244px de altura e costuma ter cinquenta nomes lá
+   dentro. O resultado era pior do que um defeito de pintura: a pessoa rolava a
+   lista para procurar um nome e a lista DESAPARECIA-LHE debaixo do dedo, à
+   primeira volta da roda.
+
+   Fechar ao rolar por fora continua certo — a caixa é `position:fixed` e
+   posicionada à mão, e se ficasse aberta apareceria descolada do botão que a
+   abriu. O que faltava era perguntar de onde veio o scroll.
+
+   (É o mesmo defeito que a escolha das janelas tinha, com outro sintoma: lá
+   remedia-se a lista a cada linha rolada e ela tremia. Ver assets/janela.js.) */
+const rolouPorFora = (e) => !(comboAberto && e.target && e.target.nodeType === 1
+                              && comboAberto.contains(e.target));
+$('tab-body').addEventListener('scroll', e=>{ if(rolouPorFora(e)) fecharCombo(); }, true);
 document.addEventListener('pointerdown', e=>{ if(comboAberto && !e.target.closest('.combo')) fecharCombo(); }, true);
-window.addEventListener('scroll', ()=>{ if(comboAberto) fecharCombo(); }, true);
+window.addEventListener('scroll', e=>{ if(comboAberto && rolouPorFora(e)) fecharCombo(); }, true);
 aplicarCanvas();
 
 carregar();

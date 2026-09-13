@@ -3406,3 +3406,49 @@ lista de bebidas com a roda do rato, e conta as escritas com um
 `MutationObserver`. Conta-se o que a rolagem **escreve**, e não o que fica no
 fim — o estado final voltava sempre ao sítio, e medi-lo não apanhava nada. O
 defeito era o caminho, não o destino.
+
+### 32.6 O mesmo defeito noutra lista: o combo das mesas
+
+Perguntou-se se o pisca aparecia noutras janelas do sistema. Procurou-se pela
+causa, e não pelo sintoma: **quem é que ouve `scroll` em captura?** São três
+sítios em todo o sistema — um em `assets/janela.js`, já arranjado em §32.5, e
+dois em `assets/mesas.js`, ambos a chamar `fecharCombo`.
+
+O combo das mesas tem `max-height:244px` e `overflow:auto` — rola, portanto. E
+o que lá se encontrou era **pior** do que um tremor: com 51 mesas na lista e
+2302px de conteúdo dentro de 244px de altura, rolar por dentro dava
+
+```
+depois de rolar por dentro: {"aindaAberta":false,"rolou":-1}   ✘ FECHOU-SE
+```
+
+A lista desaparecia debaixo do dedo à primeira volta da roda, e a mesa ficava
+por escolher. Ninguém tinha dado pela coisa porque o salão de exemplo tem
+poucas mesas: só com meia centena é que a lista rola.
+
+A causa é a de sempre. A captura é **necessária** — o `scroll` de um elemento
+não borbulha, e sem ela não se saberia que o painel das abas tinha rolado —
+mas em captura chega **tudo**, incluindo a própria lista. Fechar ao rolar por
+fora continua certo: a caixa é `position:fixed`, posicionada à mão, e ficaria
+descolada do botão. O que faltava era perguntar **de onde veio** o scroll:
+
+```js
+const rolouPorFora = (e) => !(comboAberto && e.target && e.target.nodeType === 1
+                              && comboAberto.contains(e.target));
+```
+
+Depois: `{"aindaAberta":true,"rolou":400}` — ficou aberta.
+
+O resto do sistema ficou limpo. `.mm-pop` (o menu «mais») não tem `max-height`
+nem `overflow`, e não ouve `scroll`; `editor-diag.js`, `editor-paineis.js` e
+`tela-livre.js` medem com `getBoundingClientRect` mas não ouvem `scroll`
+nenhum; e não há um único ouvinte de `wheel` ou `touchmove` em todo o
+`assets/`. A escolha da casa foi medida nas três janelas onde há listas longas
+— a regra nova em `bar.php` (53 opções), «Aprovar pedido» na copa (48) e
+«Pedir por» em `entregas.php` (48) — e ainda pelo outro caminho, o
+`licSelUpgrade` numa **página** em vez de uma janela: 0 escritas em todas.
+
+**A lição, que vale para a próxima lista que alguém escrever:** um ouvinte de
+`scroll` em captura é quase sempre o que se quer, mas quase nunca o que se
+escreve — falta-lhe a pergunta sobre a origem. O remédio não é largar a
+captura; é olhar para o `e.target`.
