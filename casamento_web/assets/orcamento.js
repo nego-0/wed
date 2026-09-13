@@ -403,7 +403,8 @@
       if (PODE) {
         h += '<td class="d-ac">'
           + '<button class="mini" onclick="orcEditarDespesa(' + d.id + ')">Abrir</button>'
-          + '<button class="mini perigo" onclick="orcApagarDespesa(' + d.id + ')">✕</button></td>';
+          + '<button class="mini perigo" onclick="orcApagarDespesa(' + d.id + ')"'
+       + ' data-ico="xis" aria-label="Apagar despesa"></button></td>';
       }
       h += '</tr>';
     });
@@ -462,7 +463,7 @@
 
   // ---- categorias: criam-se e editam-se DENTRO do formulário de despesa ----
   // (não têm teto — são só gavetas com uma cor). A escolha fica no select da
-  // despesa; «+ nova» acrescenta, «✎» renomeia (ou apaga) a que estiver escolhida.
+  // despesa; «+ nova» acrescenta, o lápis renomeia (ou apaga) a que estiver escolhida.
   var CAT_MODO = '';   // 'nova' | 'editar'
   var CAT_COR = '';    // a cor escolhida no formulário (sugerida, ou a do casal)
 
@@ -529,7 +530,7 @@
     if (!id) return;
     const r = await licConfirmar({
       titulo: 'Apagar esta categoria?',
-      icone: '🏷️', confirmar: 'Apagar categoria',
+      icone: 'etiqueta', confirmar: 'Apagar categoria',
       texto: 'As <b>despesas ficam</b> — passam a «sem categoria», e os valores não mudam.'
            + '<br><br>Só se perde a arrumação.'
     });
@@ -606,7 +607,8 @@
         + '<span class="desc">' + (p.nota ? esc(p.nota) : '') + '</span>'
         + '<span class="mt">' + fmt(p.valor) + '</span>'
         + '<span><button class="mini" onclick="orcEditarParcela(' + p.id + ')">Editar</button> '
-        + '<button class="mini perigo" onclick="orcApagarParcela(' + p.id + ')">✕</button></span></div>';
+        + '<button class="mini perigo" onclick="orcApagarParcela(' + p.id + ')"'
+       + ' data-ico="xis" aria-label="Apagar prestação"></button></span></div>';
     }).join('');
   }
 
@@ -650,7 +652,7 @@
   window.orcApagarDespesa = async function (id) {
     const r = await licConfirmar({
       titulo: 'Apagar esta despesa?',
-      icone: '🗑️', perigo: true, confirmar: 'Apagar despesa',
+      icone: 'lixo', perigo: true, confirmar: 'Apagar despesa',
       texto: 'As <b>prestações</b> já registadas e a <b>fatura</b> vão com ela.'
            + '<br><br><b>Isto não se desfaz.</b>'
     });
@@ -683,7 +685,7 @@
   window.orcApagarFatura = async function (id) {
     const r = await licConfirmar({
       titulo: 'Remover a fatura desta despesa?',
-      icone: '📄', confirmar: 'Remover fatura',
+      icone: 'documento', confirmar: 'Remover fatura',
       texto: 'O ficheiro é <b>apagado do servidor</b>. A despesa e os pagamentos ficam '
            + 'como estão.<br><br>Pode anexar outra fatura depois.'
     });

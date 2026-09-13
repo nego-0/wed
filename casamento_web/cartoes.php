@@ -51,6 +51,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 <title>Cartões 10×15 · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <style>
   /* ---- Escala: o cartão é desenhado a 720×1080 px (= 100×150 mm) ---- */
@@ -114,7 +115,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   </div>
 
   <?php if (!$convites): ?>
-    <div class="vazio no-print"><div class="ico">✉</div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
+    <div class="vazio no-print"><div class="ico" data-ico="carta"></div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
   <?php else: ?>
   <div class="grelha-cartoes <?= $soId ? 'unica' : '' ?>">
     <?php foreach ($convites as $c):
@@ -134,7 +135,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   <?php endif; ?>
 
   <?php if ($soId): ?>
-    <p class="no-print" style="text-align:center;margin-top:1rem"><a href="cartoes.php">← Ver todos os cartões</a></p>
+    <p class="no-print" style="text-align:center;margin-top:1rem"><a href="cartoes.php"><i data-ico="setaEsquerda"></i> Ver todos os cartões</a></p>
   <?php endif; ?>
 </div>
 
@@ -163,5 +164,8 @@ async function guardarEstilo(){
   toast(d.success ? 'Estilo guardado como predefinição.' : (d.message||'Não foi possível guardar.'));
 }
 </script>
+<?php // A escolha da casa também aqui: uma lista com outro desenho no meio de
+      // um sistema onde todas as outras são iguais lê-se como outra aplicação. ?>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 </body>
 </html>

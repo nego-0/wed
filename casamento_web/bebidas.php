@@ -141,7 +141,10 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
       // para dizer o que MUDA, e empurrar o menu para fora do primeiro ecrã. ?>
 <div class="b-festa-topo">
   <div class="b-pastilhas">
-    <button class="b-mesa" id="b-mesa" type="button" onclick="barMesa()" hidden></button>
+    <?php // A mesa é uma escolha, e por isso é aqui a própria escolha: a lista
+          // da casa, com a procura por dentro. Era um botão que abria uma
+          // janela com uma lista lá dentro — quatro gestos para dizer um. ?>
+    <div class="b-mesa b-mesa-cx" id="b-mesa" hidden></div>
     <button class="b-mesa b-para" id="b-para" type="button" onclick="barPara()" hidden></button>
   </div>
 </div>

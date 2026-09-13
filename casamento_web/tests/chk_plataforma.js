@@ -84,8 +84,12 @@ const entrar = async (ctx, user, pass) => {
      'e não fica com o casamento de ninguém aberto por si');
   ok(!/Isabel|Abednego/.test(cabRecem) && /Administração/.test(cabRecem),
      'o cabeçalho é da casa, e não de um casal ao acaso');
-  ok((await recem.locator('.topo .monograma').innerText()).trim() === '✦',
-     'e o monograma é a marca da plataforma, não as iniciais de um casal');
+  // O monograma é o círculo onde estão, normalmente, as INICIAIS do casal.
+  // Sem casamento aberto ficam as da casa (PLATAFORMA['mono']). Era aqui o
+  // carácter ✦ — que passou a ser o emblema desenhado, e esse vive no brasão
+  // das páginas de entrada, não neste círculo de texto.
+  ok((await recem.locator('.topo .monograma').innerText()).trim() === 'GC',
+     'e o monograma é o da casa, não as iniciais de um casal');
 
   const nums = await recem.locator('.numeros').innerText();
   console.log('   números:', nums.replace(/\s+/g, ' ').slice(0, 140));

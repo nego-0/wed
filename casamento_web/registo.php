@@ -90,7 +90,11 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
       align-items:center; gap:.6rem; font-family:var(--serif); color:var(--ink); font-size:1rem; }
   details.bloco > summary::-webkit-details-marker{ display:none; }
   details.bloco > summary .op{ font-family:var(--sans); font-size:.74rem; color:#9aa09a; font-weight:400; margin-left:auto; }
-  details.bloco > summary .chev{ transition:transform .2s; color:var(--gold-soft); }
+  /* O sinal é desenhado (assets/icones.js) e não o carácter ›: a rotação de
+     90° precisa de uma caixa própria, e um carácter roda dentro da linha de
+     texto, saindo do sítio ao abrir. */
+  details.bloco > summary .chev{ transition:transform .2s; color:var(--gold-soft);
+    font-size:1rem; line-height:0; }
   details.bloco[open] > summary .chev{ transform:rotate(90deg); }
   details.bloco > .bloco-corpo{ padding:0 1rem 1rem; }
 
@@ -112,7 +116,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   <div class="reg">
     <form class="card" id="formulario" novalidate autocomplete="on" onsubmit="return false">
       <?php marcaNiras('grande so-niras'); ?>
-      <div class="brasao so-classico"><?= escP(PLATAFORMA['marca']) ?></div>
+      <div class="brasao so-classico" data-ico="<?= escP(PLATAFORMA['marca']) ?>"></div>
       <div class="tit">Inscrever o nosso casamento</div>
       <div class="sub">Deixem os dados do vosso casamento e uma conta de acesso.
         A inscrição é revista por quem gere a plataforma antes de abrir.</div>
@@ -180,7 +184,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
         <div class="nota">Serve de teto para acompanhar as despesas. Fica para preencher depois, se preferir.</div></div>
 
       <details class="bloco">
-        <summary><span class="chev">›</span>As cerimónias<span class="op">civil e religiosa</span></summary>
+        <summary><span class="chev" data-ico="direita"></span>As cerimónias<span class="op">civil e religiosa</span></summary>
         <div class="bloco-corpo">
           <div class="par">
             <div class="campo"><label for="civil_hora">Civil · hora</label>
@@ -205,7 +209,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
            uma conta de porteiro sem esse módulo entra e não encontra porta
            nenhuma para guardar. Ver aoMudar(), mais abaixo. -->
       <details class="bloco" id="bloco-porteiro" hidden>
-        <summary><span class="chev">›</span>Conta do porteiro<span class="op">opcional</span></summary>
+        <summary><span class="chev" data-ico="direita"></span>Conta do porteiro<span class="op">opcional</span></summary>
         <div class="bloco-corpo">
           <div class="nota" style="margin:0 0 .8rem">Quem regista as entradas à porta. Se a criarem, precisa das duas coisas —
             email (utilizador) e palavra-passe. Fica pronta quando a inscrição for aprovada.</div>
@@ -256,7 +260,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     </section>
 
     <div class="card feito" id="obrigado" style="display:none">
-      <div class="ico">&#10003;</div>
+      <div class="ico" data-ico="visto"></div>
       <div class="tit">Está feito — podem entrar já</div>
       <p style="color:#6c7570;line-height:1.6;margin-top:.6rem">
         A vossa conta está aberta. Entrem com o email e a palavra-passe que acabaram
@@ -269,6 +273,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     </div>
   </div>
 
+<script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/planos.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/moeda.js') ?>"></script>

@@ -386,7 +386,7 @@ function pintarNumFerramentas(){
 async function reporDesenhoDeOrigem(){
   const r = await licConfirmar({
     titulo: 'Repor os modelos da casa?',
-    icone: '↩️', confirmar: 'Repor os da casa',
+    icone: 'volta', confirmar: 'Repor os da casa',
     texto: 'Os modelos <b>da casa</b> que ainda têm o nome de origem voltam ao desenho que o '
          + 'sistema traz.<br><br>Os modelos que <b>criou não são tocados</b>.'
   });
@@ -599,7 +599,7 @@ async function guardar(id, recapturar){
 async function recapturar(id){
   const r = await licConfirmar({
     titulo: 'Trazer o desenho do casamento aberto?',
-    icone: '📸', perigo: true, confirmar: 'Trazer desenho',
+    icone: 'maquina', perigo: true, confirmar: 'Trazer desenho',
     texto: 'O modelo passa a ter o desenho do casamento que está aberto.<br><br>'
          + 'O desenho que o modelo tinha <b>perde-se</b>. Quem já o aplicou fica como está.'
   });
@@ -675,7 +675,7 @@ async function guardarVisibilidade(id){
 async function apagar(id, nome){
   const r = await licConfirmar({
     titulo: 'Apagar o modelo «' + licEsc(nome) + '»?',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar modelo',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar modelo',
     texto: 'O modelo sai da galeria e <b>não se desfaz</b>.<br><br>'
          + 'Os casais que já o usaram <b>ficam como estão</b> — o desenho passou a ser deles.'
   });
@@ -697,7 +697,7 @@ async function definirOrigem(id, on){
   if (on){
     const r = await licConfirmar({
       titulo: 'Passar «' + licEsc(m.nome || '') + '» a peça de origem?',
-      icone: '⭐', confirmar: 'Passar a peça de origem',
+      icone: 'estrela', confirmar: 'Passar a peça de origem',
       texto: 'Do ' + (m.ambito === 'impresso' ? '<b>cartão impresso</b>' : '<b>convite digital</b>')
            + '.<br><br>Passa a ser o <b>ponto de regresso</b> desta peça, e o nome por que ela '
            + 'se dá a conhecer quando o casal ainda não escolheu nada.'
@@ -977,7 +977,7 @@ async function reporGaleria(){
 async function apagarDaGaleria(src, daCasa){
   const r = await licConfirmar({
     titulo: daCasa ? 'Tirar esta fotografia da galeria?' : 'Apagar esta fotografia?',
-    icone: '🖼️', perigo: !daCasa,
+    icone: 'imagem', perigo: !daCasa,
     confirmar: daCasa ? 'Tirar da galeria' : 'Apagar fotografia',
     texto: daCasa
       ? 'É <b>da casa</b>: o ficheiro fica no servidor e pode repô-la a qualquer momento '
@@ -1035,7 +1035,7 @@ async function guardarExemplo(){
 async function exemploFabrica(){
   const r = await licConfirmar({
     titulo: 'Repor os dados de exemplo de fábrica?',
-    icone: '↩️', confirmar: 'Repor de fábrica',
+    icone: 'volta', confirmar: 'Repor de fábrica',
     texto: 'O <b>casal</b>, o <b>evento</b>, as <b>imagens</b> e o <b>som</b> de exemplo voltam '
          + 'aos que o sistema traz.<br><br>São só os dados com que um modelo novo nasce — '
          + 'nenhum casamento é tocado.'

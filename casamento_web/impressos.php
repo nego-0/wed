@@ -69,7 +69,7 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
   </div>
 
   <?php if (!$convites): ?>
-    <div class="vazio"><div class="ico">✉</div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
+    <div class="vazio"><div class="ico" data-ico="carta"></div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
   <?php else: ?>
   <div class="grelha-cartoes" id="grelha">
     <?php $n=1; foreach ($convites as $c):
@@ -92,7 +92,7 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
         <div class="mesa"><?= count($distr)>1?'Mesas':'Mesa' ?>: <?= htmlspecialchars(textoMesas($distr, $comNumMesa)) ?></div>
       <?php endif; ?>
       <div class="marca no-print" onclick="marcar(this,<?= $c['id'] ?>)">
-        <span class="cx">✓</span><span class="txt"><?= $c['impresso']?'Impresso':'Marcar impresso' ?></span>
+        <span class="cx" data-ico="visto"></span><span class="txt"><?= $c['impresso']?'Impresso':'Marcar impresso' ?></span>
       </div>
     </div>
     <?php $n++; endforeach; ?>

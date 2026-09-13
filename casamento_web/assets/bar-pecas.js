@@ -112,7 +112,11 @@
    */
   function pilula(cfg) {
     var n = cfg.n;
+    // `chave` marca a pastilha para quem quiser acendê-la e apagá-la POR
+    // CLASSE, sem refazer a fila inteira — é o que deixa a barra das gavetas
+    // quieta enquanto se escolhe entre elas.
     return '<button type="button" class="b-pilula' + (cfg.ligada ? ' on' : '') + '"'
+      + (cfg.chave === undefined ? '' : ' data-chave="' + esc(cfg.chave) + '"')
       + (cfg.cor ? ' style="--pt:' + esc(cfg.cor) + '"' : '')
       + (cfg.titulo ? ' title="' + esc(cfg.titulo) + '"' : '')
       + ' onclick="' + cfg.accao + '" aria-pressed="' + (cfg.ligada ? 'true' : 'false') + '">'
@@ -218,12 +222,22 @@
      é o caso normal, e assim ninguém tem de responder a uma pergunta a mais
      por cada pedido. As duas janelas usam a mesma peça — são o mesmo gesto em
      dois postos, e duas cópias acabavam a divergir numa delas. */
-  var MESAS = null;
-  async function mesasDoBar() {
-    if (MESAS) return MESAS;
+  /* A lista guarda-se, mas NÃO para sempre.
+     O cartão de cada entrega precisa dela a cada pintura, e pedi-la de dois em
+     dois segundos era um pedido ao servidor por nada. Mas guardá-la para toda
+     a sessão era pior: um ecrã de garçom fica aberto a noite inteira, e uma
+     mesa criada a meio da festa nunca lhe aparecia — a janela de «pedir por
+     alguém» mostrava a planta como ela estava à hora a que ele entrou.
+     Meio minuto é longo o bastante para poupar os pedidos da pintura e curto o
+     bastante para ninguém dar pela diferença. `mesasDoBar(true)` força, para
+     quando o que se vai abrir É a lista. */
+  var MESAS = null, MESAS_ATE = 0;
+  var MESAS_TTL = 30000;
+  async function mesasDoBar(forcar) {
+    if (MESAS && !forcar && Date.now() < MESAS_ATE) return MESAS;
     var d = await window.api('bar_mesas', { method: 'GET', silencioso: true });
-    MESAS = (d && d.success) ? (d.mesas || []) : [];
-    return MESAS;
+    if (d && d.success) { MESAS = d.mesas || []; MESAS_ATE = Date.now() + MESAS_TTL; }
+    return MESAS || [];
   }
 
   /** O campo «Entregar em», já com as mesas todas e a procura por dentro. */

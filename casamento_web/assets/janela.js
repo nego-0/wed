@@ -163,19 +163,13 @@ function licFormulario(cfg){
           campo = '<label class="lic-f-sim"><input type="checkbox" id="lf-' + c.id + '"'
                 + (c.valor ? ' checked' : '') + '><span>' + licEsc(c.aoLado || 'Sim') + '</span></label>';
         } else if (c.tipo === 'escolha'){
-          // Uma lista curta é melhor como <select>: é o que o telemóvel sabe
-          // desenhar em roda, e ninguém procura entre três coisas. A partir de
-          // uma dúzia o <select> passa a ser uma parede — dezasseis bebidas,
-          // duzentos convidados — e aí a procura deixa de ser um luxo.
-          // `procura: true` força-a; `procura: false` proíbe-a.
-          const muitas = (c.opcoes || []).length > LIC_SEL_MUITAS;
-          const comProcura = c.procura === undefined ? muitas : !!c.procura;
-          campo = comProcura ? licSelProcuraHtml(c, v)
-                : '<select id="lf-' + c.id + '">'
-                + (c.opcoes || []).map(o =>
-                    '<option value="' + licEsc(o.v) + '"' + (String(o.v) === v ? ' selected' : '') + '>'
-                    + licEsc(o.r) + '</option>').join('')
-                + '</select>';
+          // SEMPRE a escolha da casa — a mesma que veste os <select> das
+          // páginas. Havia aqui dois desenhos, um para listas curtas e outro
+          // para longas, e um formulário com cinco campos mostrava os dois: a
+          // altura mudava de linha para linha e o que se fazia num não se fazia
+          // no outro. O que muda com o tamanho da lista é só a caixa de
+          // procura, que não aparece quando não há o que procurar.
+          campo = licSelProcuraHtml(c, v);
         } else if (c.tipo === 'cor'){
           // Doze escolhas boas, e a porta para o resto. Um campo a pedir
           // «#rrggbb» é um teste de conhecimentos: ninguém escolhe uma cor
@@ -296,7 +290,12 @@ function licFormulario(cfg){
    escondido com o id de sempre (`lf-<id>`), e por isso tudo o que lê
    formulários continua a ler este como lia um <select>.
    ============================================================ */
-const LIC_SEL_MUITAS = 8;
+/* A caixa de PROCURA só aparece a partir daqui. A escolha é sempre a da casa —
+   é ela que se vê em todo o sistema, e uma página com dois desenhos de lista é
+   uma página que parece montada por duas pessoas —, mas escrever para filtrar
+   entre três opções é um campo a pedir trabalho para nada, e num telemóvel é um
+   teclado a abrir-se por cima da lista que se quer ler. */
+const LIC_SEL_PROCURA_MIN = 6;
 
 /** Sem acentos e em minúsculas: quem escreve de pé não põe acentos nenhuns. */
 function licChave(s){
@@ -307,9 +306,13 @@ function licChave(s){
 function licSelProcuraHtml(c, v){
   const ops = c.opcoes || [];
   const esc = ops.find(o => String(o.v) === String(v)) || ops[0] || { v: '', r: '—' };
-  return '<div class="lic-sel" data-sel="' + licEsc(c.id) + '">'
+  // `classe` serve para quem a põe FORA de uma janela: sem `lic-sel-pagina` a
+  // caixa procura tokens --j-* que só existem dentro do modal, e a lista sai
+  // sem fundo — lê-se a página através dela.
+  return '<div class="lic-sel' + (c.classe ? ' ' + c.classe : '') + '"'
+    + ' data-sel="' + licEsc(c.id) + '">'
     + '<input type="hidden" id="lf-' + licEsc(c.id) + '" value="' + licEsc(esc.v) + '">'
-    + licSelCorpoHtml(ops, esc.v, c.rot, c.dicaProcura)
+    + licSelCorpoHtml(ops, esc.v, c.rot, c.dicaProcura, c.procura)
     + '</div>';
 }
 
@@ -321,9 +324,16 @@ function licSelProcuraHtml(c, v){
  * aconteceu neste projecto com a procura, que numa página ignorava acentos e
  * na outra não.
  */
-function licSelCorpoHtml(ops, escolhido, rot, dicaProcura){
+function licSelCorpoHtml(ops, escolhido, rot, dicaProcura, procura){
   const esc = ops.filter(o => String(o.v) === String(escolhido))[0]
            || ops[0] || { v: '', r: '—' };
+  // A caixa de procura fica no html mesmo quando não se mostra: é ela que
+  // recebe as setas e o Enter, e tirá-la do sítio era ficar sem teclado numa
+  // lista curta. Esconde-se por classe. `procura` força-a (true) ou proíbe-a
+  // (false); sem opinião, decide o tamanho da lista.
+  const curta = procura === true ? false
+              : procura === false ? true
+              : ops.length < LIC_SEL_PROCURA_MIN;
   return ''
     + '<button type="button" class="lic-sel-bt" aria-haspopup="listbox" aria-expanded="false">'
     +   '<span class="txt">' + licEsc(esc.r) + '</span>'
@@ -332,7 +342,7 @@ function licSelCorpoHtml(ops, escolhido, rot, dicaProcura){
     +   '<path d="m6 9 6 6 6-6"/></svg>'
     + '</button>'
     + '<div class="lic-sel-pop" hidden>'
-    +   '<div class="lic-sel-q">'
+    +   '<div class="lic-sel-q' + (curta ? ' curta' : '') + '">'
     +     '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     +     'stroke-width="1.8" stroke-linecap="round" aria-hidden="true">'
     +     '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
@@ -375,6 +385,62 @@ function licSelProcuraLigar(raiz){
   (raiz || document.getElementById('lic-janela') || document)
     .querySelectorAll('.lic-sel').forEach(cx => licSelLigarUm(cx));
 }
+
+/* ============================================================
+   A MESMA LISTA EM TODO O SISTEMA
+
+   Havia dezenas de <select> nativos espalhados pelas páginas e três ou quatro
+   sítios com esta escolha. Duas listas com desenhos diferentes na mesma página
+   leem-se como duas aplicações, e a diferença notava-se logo no primeiro campo
+   que não filtrava nada — a pessoa escrevia e não acontecia coisa nenhuma.
+
+   Passa a haver uma passagem só, que veste o que encontrar. Corre ao carregar a
+   página e volta a correr sobre o que nascer depois: os painéis desta casa
+   escrevem-se com innerHTML e um select que aparecesse a meio de uma lista
+   ficava de fora — e um campo diferente dos outros é pior do que todos iguais
+   e feios.
+
+   Quem quiser mesmo a roda do sistema (um campo dentro de uma linha apertada,
+   por exemplo) marca-o com `data-sem-procura`, nele ou num antepassado.
+   ============================================================ */
+function licSelVestirTodos(raiz){
+  const alvo = (raiz && raiz.querySelectorAll) ? raiz : document;
+  alvo.querySelectorAll('select').forEach(sel => {
+    // `multiple` não é uma escolha, é uma lista de caixas: esta não o sabe ser.
+    if (sel.multiple || sel.dataset.licSel) return;
+    if (sel.closest('[data-sem-procura]')) return;
+    licSelUpgrade(sel);
+  });
+}
+
+/* Uma vez ao abrir, e depois sobre o que for aparecendo. O observador junta as
+   chegadas de um mesmo instante numa passagem só: um painel que se escreve de
+   uma vez traz vinte nós, e vesti-los um a um seria vinte passagens pela
+   página. */
+(function () {
+  let marcado = false;
+  const vestirEmBreve = () => {
+    if (marcado) return;
+    marcado = true;
+    requestAnimationFrame(() => { marcado = false; licSelVestirTodos(document); });
+  };
+  const arrancar = () => {
+    licSelVestirTodos(document);
+    new MutationObserver(mut => {
+      for (const m of mut) {
+        for (const n of m.addedNodes) {
+          if (n.nodeType !== 1) continue;
+          if (n.tagName === 'SELECT' || (n.querySelector && n.querySelector('select'))) {
+            vestirEmBreve(); return;
+          }
+        }
+      }
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', arrancar);
+  } else arrancar();
+})();
 
 /**
  * Dar vida a uma escolha com procura.
@@ -481,7 +547,12 @@ function licSelLigarUm(cx){
       }
       pop.hidden = !sim;
       bt.setAttribute('aria-expanded', sim ? 'true' : 'false');
-      if (sim){ q.value = ''; filtrar(); assentar(); q.focus(); }
+      if (sim){
+        q.value = ''; filtrar(); assentar();
+        // Numa lista curta a procura está escondida: o foco vai para ela à
+        // mesma (é quem ouve as setas), mas sem a pôr à vista.
+        q.focus({ preventScroll: true });
+      }
     };
     const escolher = (op) => {
       guardado.value = op.dataset.v;
@@ -547,14 +618,18 @@ function licSelLigarUm(cx){
  * fazê-lo sem saber de nada; basta disparar `change` (ou chamar
  * `licSelRefrescar`) para a caixa se voltar a sincronizar.
  *
- * Um <select> nativo é melhor em telemóvel — abre a roda do sistema — e por
- * isso isto só se põe onde a lista é longa a ponto de a roda deixar de servir.
+ * Vale para TODAS as listas do sistema, e não só para as longas. A roda nativa
+ * do telemóvel é boa, mas cada sistema desenha a sua: numa página que já tem
+ * esta escolha em metade dos campos, a outra metade aparecia com outro desenho,
+ * outra altura e outro comportamento. Uma casa, uma lista. Quem quiser mesmo o
+ * <select> do sistema põe-lhe `data-sem-procura`.
  */
 function licSelUpgrade(sel, opc){
   if (!sel || sel.dataset.licSel) return null;
   opc = opc || {};
   const ops = Array.from(sel.options).map(o => ({ v: o.value, r: o.textContent }));
-  if (ops.length <= (opc.minimo || LIC_SEL_MUITAS)) return null;
+  const minimo = opc.minimo === undefined ? 0 : opc.minimo;
+  if (ops.length <= minimo) return null;
   sel.dataset.licSel = '1';
 
   const cx = document.createElement('div');
@@ -575,6 +650,30 @@ function licSelUpgrade(sel, opc){
   sel.addEventListener('change', () => licSelRefrescar(cx));
   licSelRefrescar(cx);
   return cx;
+}
+
+/**
+ * Pôr uma escolha num valor, de fora.
+ *
+ * Vale para as duas espécies — a que guarda o valor num <input type=hidden>
+ * (a dos formulários e a que se põe à mão numa página) e a que veste um
+ * <select>. Quem mexe no valor por fora tem de mexer também no que se lê no
+ * botão, senão a caixa diz uma coisa e o formulário envia outra.
+ *
+ * `calado` não dispara `change`: é para quando quem chama JÁ sabe (acabou de
+ * ser ele a mudar o estado) e não se quer ouvir a si próprio.
+ */
+function licSelDefinir(cx, valor, calado){
+  if (!cx) return;
+  const guardado = cx.querySelector('input[type=hidden]') || cx.querySelector('select');
+  if (!guardado) return;
+  guardado.value = String(valor);
+  const ops = Array.from(cx.querySelectorAll('.lic-sel-op'));
+  const op = ops.filter(o => o.dataset.v === String(valor))[0];
+  ops.forEach(o => o.classList.toggle('on', o === op));
+  const txt = cx.querySelector('.lic-sel-bt .txt');
+  if (txt && op) txt.textContent = op.querySelector('span').textContent;
+  if (!calado) guardado.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 /** Voltar a pôr a caixa de acordo com o <select> que está por baixo dela. */

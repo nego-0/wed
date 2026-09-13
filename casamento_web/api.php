@@ -1744,7 +1744,7 @@ if ($acao === 'lic_modulo_guardar') {
     if ($nome === '') erro('O módulo precisa de um nome.');
     $resumo = mb_substr(trim((string)($d['resumo'] ?? '')), 0, 180);
     $benef  = mb_substr(trim((string)($d['beneficio'] ?? '')), 0, 180);
-    $icone  = mb_substr(trim((string)($d['icone'] ?? '')), 0, 8);
+    $icone  = mb_substr(trim((string)($d['icone'] ?? '')), 0, 24);
     $ativo  = !empty($d['ativo']) ? 1 : 0;
     $st = $conn->prepare("UPDATE {$P}lic_modulos SET nome=?, resumo=?, beneficio=?, icone=?, ativo=? WHERE id=?");
     $st->bind_param('ssssii', $nome, $resumo, $benef, $icone, $ativo, $id);

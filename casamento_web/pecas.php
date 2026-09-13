@@ -315,7 +315,7 @@ function svgVoluta(string $cor, string $tipo = 'caracol'): string {
  */
 function cartaoElos(): array {
     return [
-        'coracao'   => ['nome'=>'Coração', 'nota'=>'♡ — como o design o trouxe'],
+        'coracao'   => ['nome'=>'Coração', 'nota'=>'Um coração — como o design o trouxe'],
         'comercial' => ['nome'=>'&',       'nota'=>'O e-comercial, na letra das frases'],
         'letra'     => ['nome'=>'e',       'nota'=>'A palavra, na caligrafia dos nomes'],
         'losango'   => ['nome'=>'Losango', 'nota'=>'O mesmo losango dos cantos'],

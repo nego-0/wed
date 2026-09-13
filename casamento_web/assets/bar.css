@@ -376,6 +376,27 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 /* A seta encosta-se à direita da barra — é a beira onde a mão a vai procurar,
    e é o que diz que aquilo abre. Ao pé do texto parecia parte do nome. */
 .b-mesa .seta{ width:13px; height:13px; opacity:.5; margin-left:auto; }
+
+/* A barra da mesa é uma ESCOLHA por dentro (a lista da casa), e não um botão
+   para uma janela. O que se vê tem de continuar a ser uma barra: o ícone e o
+   rótulo à esquerda, o nome da mesa a ocupar o resto, e a lista a abrir-se
+   debaixo dela. */
+.b-mesa-cx{ padding:0 .5rem 0 .85rem; gap:.5rem; }
+.b-mesa-cx .rot{ color:var(--c-tinta, #20342A); opacity:.75; flex:none; }
+.b-mesa-cx .lic-sel{ flex:1; min-width:0; }
+.b-mesa-cx .lic-sel-bt{ background:none; border:0; padding:.2rem .2rem .2rem 0;
+                        min-height:38px; font-weight:600; box-shadow:none; }
+.b-mesa-cx .lic-sel-bt .txt{ text-align:left; }
+
+/* A mesa dentro de um cartão de entrega: pesa como um dos botões da fila, para
+   a linha não ficar com um campo alto no meio de três botões baixos. */
+.b-mesa-cartao{ display:inline-flex; align-items:center; gap:.35rem;
+                border:1px solid var(--line); border-radius:50px;
+                padding:0 .3rem 0 .7rem; min-height:44px; background:var(--card); }
+.b-mesa-cartao > .ico{ width:15px; height:15px; opacity:.6; flex:none; }
+.b-mesa-cartao .lic-sel{ min-width:7rem; }
+.b-mesa-cartao .lic-sel-bt{ background:none; border:0; min-height:42px;
+                            padding:.2rem .1rem; box-shadow:none; font-size:.9rem; }
 .b-para.on .ico{ opacity:1; }
 /* «A pedir para outra pessoa» é um estado, e um estado que se esquece dá uma
    ronda inteira lançada em nome do vizinho. Enquanto está ligado a pastilha

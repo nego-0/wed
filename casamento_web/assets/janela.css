@@ -169,7 +169,11 @@ body.editor .j-bt-perigo{ color:#2a1512; }
    Veste-se como um campo, porque é um campo: quem olha para o formulário não
    tem de descobrir que aquela caixa é de outra família. O que muda é o que ela
    abre — uma lista com uma caixa de procura em cima. */
-.lic-sel{ position:relative; }
+/* `min-width:0` porque a caixa vive, muitas vezes, numa célula de grelha ou
+   de flex: sem isto o conteúdo mínimo do botão empurra a coluna para além da
+   fracção que lhe foi dada, e a linha inteira desalinha. Era o que acontecia
+   à coluna da mesa, na linha de uma pessoa do convite. */
+.lic-sel{ position:relative; min-width:0; }
 .lic-sel-bt{ width:100%; display:flex; align-items:center; gap:.5rem; cursor:pointer;
   padding:.55rem .7rem; border:1.5px solid var(--j-linha); border-radius:9px;
   background:var(--j-campo); font-family:var(--j-sans); font-size:.9rem;
@@ -200,6 +204,11 @@ body.editor .j-bt-perigo{ color:#2a1512; }
 .lic-sel-q input{ flex:1; min-width:0; border:0; background:none; padding:.15rem 0;
   font-family:var(--j-sans); font-size:.88rem; color:var(--j-ink); }
 .lic-sel-q input:focus{ outline:none; }
+/* Numa lista curta a procura não se mostra — mas fica no sítio, porque é ela
+   que recebe as setas e o Enter. Fora do ecrã, e não `display:none`: um campo
+   que não se pode focar era ficar sem teclado na lista. */
+.lic-sel-q.curta{ position:absolute; width:1px; height:1px; overflow:hidden;
+                  clip-path:inset(50%); padding:0; border:0; }
 /* Mais alta do que era. A 230px cabiam cinco linhas e meia, e meia linha
    cortada em baixo é a lista a dizer «há mais» sem dizer quanto — rolava-se às
    cegas. A 340 cabem oito inteiras, que é o tamanho a partir do qual esta

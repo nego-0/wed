@@ -19,7 +19,7 @@ if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 if (!$MODELO && !podeEditarPeca('impresso')) {
     header('Location: licenca.php?quero=impresso&preciso=editar'); exit;
 }
-$CAS  = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
+$CAS  = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noiva' => '', 'noivo' => '']
                 : casalInfo($defs);
 // A contagem também aqui — é a mesma casa. A desenhar um MODELO não há dia
 // nenhum a contar: o modelo não é de casamento nenhum.
@@ -132,15 +132,15 @@ $camposPorCamada = [
   <div class="cresce"></div>
   <?php contagem($DATA_EV, $HORA_EV); ?>
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
-  <a href="graficas.php">← Entregáveis à gráfica</a>
+  <a href="graficas.php"><i data-ico="setaEsquerda"></i> Entregáveis à gráfica</a>
   <span class="ed-sep"></span>
   <a href="cartoes.php">Ver todos os cartões</a>
 </div>
 <?php contagemScript(); ?>
 
 <div class="ed-opcoes">
-  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled>↶ Desfazer</button>
-  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled>↷ Refazer</button>
+  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i data-ico="desfazer"></i> Desfazer</button>
+  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i data-ico="refazer"></i> Refazer</button>
   <span class="ed-sep"></span>
   <span class="rot">Paleta</span>
   <div class="amostras" id="amostras">
@@ -212,21 +212,21 @@ $camposPorCamada = [
   <!-- Painéis -->
   <div class="ed-paineis">
     <div class="ed-painel" id="p-props">
-      <h3 onclick="alternarPainel(this)">Propriedades <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Propriedades <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="props">
         <div class="vazio-painel">Escolha uma camada — na lista abaixo ou clicando no cartão — para editar o que ela mostra.</div>
       </div>
     </div>
     <div class="ed-painel cresce">
-      <h3 onclick="alternarPainel(this)">Camadas <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Camadas <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="camadas"></div>
     </div>
     <div class="ed-painel fechado" id="p-cores">
-      <h3 onclick="alternarPainel(this)">Cores <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Cores <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="cores"></div>
     </div>
     <div class="ed-painel fechado" id="p-tipografia">
-      <h3 onclick="alternarPainel(this)">Tipografia <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Tipografia <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="tipografia"></div>
     </div>
   </div>
@@ -472,13 +472,13 @@ function renderCoresJa(){
     </div>` +
     // Nem <label> a envolver o seletor, nem botões a nascer durante a escolha:
     // o painel de cores do navegador fecha-se assim que o elemento a que está
-    // preso muda de sítio ou de tamanho. O ↺ está sempre lá, só se apaga.
+    // preso muda de sítio ou de tamanho. O botão de repor está sempre lá, só se apaga.
     Object.keys(CORES_VAR).map(v =>
       `<div class="cor-linha">
         <input type="color" value="${corDe(v)}" aria-label="${CORES_ROT[v]}" oninput="editarCor('${v}',this.value,this)">
         <span>${CORES_ROT[v]}</span>
         <button class="bt bt-min repor-cor${est.cores[v] ? '' : ' vazio'}" onclick="limparCor('${v}')"
-                title="Voltar à cor da paleta" tabindex="${est.cores[v] ? 0 : -1}">↺</button>
+                title="Voltar à cor da paleta" tabindex="${est.cores[v] ? 0 : -1}"><i data-ico="rodar"></i></button>
       </div>`).join('') +
     (Object.keys(est.cores).length
       ? `<button class="bt" style="width:100%;margin-top:.4rem" onclick="limparCores()">Repor as cores da paleta</button>`
@@ -493,7 +493,7 @@ function editarCor(v, cor, el){
   cartao().style.setProperty('--ct-'+v, est.cores[v]);
   marcarSujo(true); registarPasso();
   // Nada de redesenhar aqui: fecharia o painel de cores a meio da escolha.
-  // O ↺ já existe na linha; basta deixar de estar apagado.
+  // O botão de repor já existe na linha; basta deixar de estar apagado.
   if (el){
     const bt = el.closest('.cor-linha').querySelector('.repor-cor');
     if (bt){ bt.classList.remove('vazio'); bt.tabIndex = 0; }
@@ -568,8 +568,10 @@ function renderCamadas(){
       <button class="olho" title="${tr ? 'Trancada: destranque para esconder' : (vis?'Ocultar':'Mostrar')}"
               onclick="event.stopPropagation();${tr?'':`alternarCamada('${k}')`}">${vis?OLHO_ON:OLHO_OFF}</button>
       <span class="nome">${rot}</span>
-      ${mov ? '<span class="mini" title="Movida do sítio de origem">✥</span>' : ''}
-      <span class="mini" title="${ORNAMENTOS.includes(k)?'Camada decorativa':'Camada de texto'}">${ORNAMENTOS.includes(k)?'◈':'T'}</span>
+      ${mov ? '<span class="mini" data-ico="mover" title="Movida do sítio de origem"></span>' : ''}
+      ${ORNAMENTOS.includes(k)
+        ? '<span class="mini" data-ico="losango" title="Camada decorativa"></span>'
+        : '<span class="mini" title="Camada de texto">T</span>'}
       <button class="cadeado" title="${tr ? 'Destrancar' : 'Trancar: não se arrasta nem se esconde'}"
               onclick="event.stopPropagation();alternarTranca('${k}')">${tr?CADEADO_ON:CADEADO_OFF}</button>
     </div>`;
@@ -832,7 +834,7 @@ async function reporPosicoes(){
   if (!Object.keys(est.pos).length) return msg('Nenhuma camada foi movida.');
   const r = await licConfirmar({
     titulo: 'Repor todas as camadas?',
-    icone: '↩️', confirmar: 'Repor composição',
+    icone: 'volta', confirmar: 'Repor composição',
     texto: 'Todas as camadas voltam ao sítio que o design lhes deu — as '
          + '<b>' + Object.keys(est.pos).length + '</b> que moveu incluídas.'
          + '<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado até guardar.'
@@ -987,7 +989,7 @@ function acrescentarCerimonia(k, horaPadrao){
 async function removerCerimonia(k, rot){
   const r = await licConfirmar({
     titulo: 'Tirar a ' + licEsc(rot.toLowerCase()) + ' do cartão?',
-    icone: '⛪', confirmar: 'Tirar do cartão',
+    icone: 'igreja', confirmar: 'Tirar do cartão',
     texto: 'A <b>hora</b> e o <b>local</b> desta cerimónia são apagados, e ela deixa de se '
          + 'anunciar no cartão.<br><br><b>Ctrl+Z desfaz.</b>'
   });
@@ -1260,7 +1262,7 @@ function marcarInvalidos(inv){
 async function repor(){
   const r = await licConfirmar({
     titulo: 'Repor tudo como estava ao abrir?',
-    icone: '↩️', confirmar: 'Repor tudo',
+    icone: 'volta', confirmar: 'Repor tudo',
     texto: 'Todos os valores voltam ao que eram quando abriu o editor — textos, estilos, '
          + 'ornamentos e composição.<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado '
          + 'até guardar.'
@@ -1275,7 +1277,7 @@ async function reporOrnamento(){
   const k = selecionada;
   const r = await licConfirmar({
     titulo: 'Repor o feitio de «' + licEsc(CAMADAS[k]) + '»?',
-    icone: '✨', confirmar: 'Repor feitio',
+    icone: 'estrela', confirmar: 'Repor feitio',
     texto: 'Esta camada decorativa volta ao desenho de origem.'
          + '<br><br><b>Ctrl+Z desfaz.</b>'
   });
@@ -1300,7 +1302,7 @@ async function reporCamada(){
   if (!campos) return msg('"' + CAMADAS[selecionada] + '" mostra as mesas de cada convidado: altera-se na Planta de Mesas.');
   const r = await licConfirmar({
     titulo: 'Repor os textos de «' + licEsc(CAMADAS[selecionada]) + '»?',
-    icone: '↩️', confirmar: 'Repor textos',
+    icone: 'volta', confirmar: 'Repor textos',
     texto: 'Os textos desta camada voltam aos do modelo de origem. O resto do cartão '
          + 'fica como está.<br><br><b>Ctrl+Z desfaz.</b>'
   });

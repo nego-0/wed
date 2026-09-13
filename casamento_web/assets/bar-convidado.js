@@ -100,7 +100,7 @@
     // Quem escreve no corpo por fora do menu tem de esquecer o que lá estava:
     // senão o menu seguinte, se calhar a ser igual ao último, era «saltado» e
     // a pessoa ficava a olhar para o ecrã de quem é.
-    pintado = '';
+    esqueletoPosto = false;
     $('b-corpo').innerHTML =
       '<div class="b-procura">'
       + '<h1>Quem está a pedir?</h1>'
@@ -200,10 +200,50 @@
     var bm = $('b-mesa');
     if (!eu) { bm.hidden = true; return; }
     bm.hidden = false;
-    // «Entregar em X» e não «na X»: as mesas chamam-se «Noivos», «Padrinhos»,
-    // «7» — e metade delas não casa com artigo nenhum.
-    bm.innerHTML = ico.ico('mesa') + 'Entregar em <b>' + esc(nomeDaMesa()) + '</b>' + seta;
-    bm.setAttribute('aria-label', 'Entregar na mesa ' + nomeDaMesa() + '. Tocar para mudar.');
+    // A mesa é uma ESCOLHA, e por isso é aqui a própria escolha — não um botão
+    // que abre uma janela com uma lista lá dentro. Abrir uma janela inteira,
+    // ler um título, escolher, e carregar em «É aqui» são quatro gestos para
+    // dizer uma coisa que a lista diz sozinha. A barra fica com a mesa à vista,
+    // e toca-se nela para a trocar (§32.2).
+    montarBarraMesa();
+  }
+
+  /* ---- a barra da mesa: a lista, e não um botão para uma janela ----
+     Monta-se uma vez, quando já se sabe quem é a pessoa (é daí que vem a mesa
+     de partida) e quais são as mesas da casa. Depois só se lhe muda o valor:
+     refazê-la a cada pintura fechava a lista na cara de quem a tinha aberto. */
+  var barraMesaPronta = false;
+  async function montarBarraMesa() {
+    var cx = $('b-mesa');
+    if (!cx) return;
+    if (barraMesaPronta) {
+      if (window.licSelDefinir) {
+        window.licSelDefinir(cx.querySelector('.lic-sel'),
+                             String((mesaEntrega || MESA).id), true);
+      }
+      return;
+    }
+    var lista = await asMesas();
+    if (!lista || !lista.length || !window.licSelProcuraHtml) return;
+    barraMesaPronta = true;
+    cx.innerHTML = ico.ico('mesa') + '<span class="rot">Entregar em</span>'
+      + window.licSelProcuraHtml(
+          { id: 'mesa-entrega', rot: 'Entregar em', classe: 'lic-sel-pagina',
+            dicaProcura: 'O nome ou o número da mesa',
+            opcoes: lista.map(function (m) { return { v: String(m.id), r: m.nome }; }) },
+          String((mesaEntrega || MESA).id));
+    window.licSelProcuraLigar(cx);
+    var campo = document.getElementById('lf-mesa-entrega');
+    if (campo) {
+      campo.addEventListener('change', function () {
+        var id = parseInt(this.value, 10);
+        var m = lista.filter(function (x) { return Number(x.id) === id; })[0];
+        if (!m) return;
+        mesaEntrega = { id: m.id, nome: m.nome };
+        // O rodapé diz para onde vai o que está no cesto: muda com a mesa.
+        pintarRodape();
+      });
+    }
   }
 
   function nomeDaMesa() {
@@ -212,12 +252,51 @@
     return 'mesa ' + (mesaEntrega ? mesaEntrega.id : '?');
   }
 
-  var pintado = '';          // o último menu escrito, para não o reescrever igual
+  /* ---- o menu pinta-se por SECÇÕES ------------------------------
+     Havia aqui um `innerHTML` só, com a página toda dentro. A cada volta do
+     relógio — de dez em dez segundos — todos os cartões e todas as fotografias
+     eram destruídos e refeitos à frente de quem estava a ler: a página piscava
+     sozinha, e com a contagem de um tempo limite a correr piscava sempre,
+     porque o texto do relógio ia dentro do html e mudava a cada segundo.
 
-  function pintarMenu() {
-    if (!eu) return;
+     Agora o corpo tem quatro caixas fixas, e cada uma só se reescreve quando o
+     que ELA diz mudou. As gavetas e os cartões — a parte cara, a que tem
+     imagens — ficam quietos enquanto a contagem anda numa faixa acima deles.
+
+     E as contagens nascem VAZIAS: o número é escrito logo a seguir pelo
+     tique(), que é quem o vai andando ao segundo. Assim o html de uma faixa
+     com relógio é igual de volta para volta, e a caixa não se reescreve. */
+  var pintado = { avisos: '', fer: '', menu: '', meus: '', pe: '' };
+  var esqueletoPosto = false;
+
+  /** As caixas fixas do corpo. Põem-se uma vez; depois só se lhes escreve dentro. */
+  function esqueleto() {
+    $('b-corpo').innerHTML =
+        '<div id="b-avisos"></div>'
+      + '<div id="b-fer-cx"></div>'
+      + '<div id="b-menu-cx"></div>'
+      + '<div id="b-meus-cx"></div>'
+      + '<div id="b-pe-cx"></div>';
+    esqueletoPosto = true;
+    for (var k in pintado) pintado[k] = '';
+  }
+
+  /** Escrever numa caixa só se o que lá vai for outro. */
+  function poe(caixa, id, html) {
+    if (pintado[caixa] === html) return false;
+    pintado[caixa] = html;
+    var el = $(id);
+    if (el) el.innerHTML = html;
+    return true;
+  }
+
+  /** Uma contagem que nasce vazia — o tique() escreve-lhe o número. */
+  function relogioDe(ate) {
+    return '<b class="b-conta" data-ate="' + ate + '"></b>';
+  }
+
+  function htmlAvisos() {
     var html = '';
-
     if (!aberto) {
       html += '<div class="b-nota"><b>A copa ainda não está a servir.</b><br>'
         + esc(msgFechado || 'Assim que abrir, pode pedir daqui mesmo — a página avisa sozinha.')
@@ -229,8 +308,7 @@
       // zero. «Volte mais tarde» mandava a pessoa ao balcão perguntar.
       html += '<div class="b-nota"><b>A copa está em pausa.</b><br>'
         + esc(pausa.mensagem)
-        + '<br>Volta a servir em <b class="b-conta" data-ate="' + pausaAte + '">'
-        + esc(hms((pausaAte - Date.now()) / 1000)) + '</b>.</div>';
+        + '<br>Volta a servir em ' + relogioDe(pausaAte) + '.</div>';
     }
 
     // O caudal da copa: não é a pessoa que pediu de mais, é a casa que está
@@ -239,88 +317,80 @@
       html += '<div class="b-nota">' + esc(ritmo.mensagem
         || 'A copa está a dar vazão a muitos pedidos neste momento.')
         + (ritmoAte
-            ? '<br>O seu abre em <b class="b-conta" data-ate="' + ritmoAte + '">'
-              + esc(hms((ritmoAte - Date.now()) / 1000))
-              + '</b> — e fica na frente quando abrir.' : '')
+            ? '<br>O seu abre em ' + relogioDe(ritmoAte)
+              + ' — e fica na frente quando abrir.' : '')
         + '</div>';
     } else if (travaoPedido) {
       // O travão do acto de pedir é da pessoa, e trava a página inteira.
       html += '<div class="b-nota">' + esc(travaoPedido.texto)
-        + (travaoAte
-            ? ' <b class="b-conta" data-ate="' + travaoAte + '">'
-              + esc(hms((travaoAte - Date.now()) / 1000)) + '</b>' : '')
-        + '</div>';
+        + (travaoAte ? ' ' + relogioDe(travaoAte) : '') + '</div>';
     }
+    return html;
+  }
 
+  function htmlMenu() {
     if (!menu.itens.length) {
-      html += vazio('taca', 'O menu ainda não tem bebidas',
-                    'A copa está a acabar de o montar. Volte daqui a pouco.');
-    } else {
-      html += ferramentas();
-      var vistos = peneira(menu.itens);
-      if (!vistos.length) {
-        html += vazio('procurar', 'Nada com esse nome',
-          'São ' + menu.itens.length + ' bebidas no menu; nenhuma responde ao que procura.',
-          '<button class="btn btn-claro" onclick="barLimpar()">' + ico.ico('volta')
-          + 'Ver o menu todo</button>');
-      } else {
-        // Por gaveta, na ordem em que a copa as arrumou. Nenhuma bebida se
-        // perde pelo caminho: o que não coube em gaveta nenhuma cai em
-        // «Outras» — um menu que esconde metade das bebidas em silêncio é pior
-        // do que um menu feio.
-        var porMostrar = vistos.slice();
-        menu.categorias.forEach(function (c) {
-          var dela = porMostrar.filter(function (i) { return Number(i.categoria_id) === Number(c.id); });
-          if (!dela.length) return;
-          porMostrar = porMostrar.filter(function (i) { return dela.indexOf(i) < 0; });
-          html += tituloGaveta(c) + '<div class="b-menu">' + dela.map(cartao).join('') + '</div>';
-        });
-        if (porMostrar.length) {
-          html += tituloGaveta({ id: 0, nome: 'Outras' })
-            + '<div class="b-menu">' + porMostrar.map(cartao).join('') + '</div>';
-        }
-      }
+      return vazio('taca', 'O menu ainda não tem bebidas',
+                   'A copa está a acabar de o montar. Volte daqui a pouco.');
     }
-
-    html += pintarMeus();
-    html += rodapeDaCasa();
-
-    /* O cursor não se perde a meio de uma palavra.
-       Escrever na procura chama isto outra vez, e isto reescreve o corpo
-       INTEIRO — a caixa de procura incluída. O elemento onde a pessoa estava a
-       escrever deixa de existir a cada letra, o foco cai para o <body>, e a
-       letra seguinte vai para lado nenhum: escrevia-se «a», e depois nada.
-       Guarda-se onde o cursor estava e devolve-se ao sítio. */
-    /* E o menu não se reescreve quando não mudou nada.
-       Esta função corre a cada volta do relógio — de dez em dez segundos — e
-       reescrever o corpo inteiro destrói e refaz todos os cartões, fotografias
-       incluídas: a página PISCAVA sozinha, à frente de quem estava a ler, e a
-       cada piscar perdia-se o sítio onde a pessoa ia. Comparar o texto que se
-       ia escrever com o que já lá está é mais barato do que o escrever, e a
-       volta em que nada mudou passa a não se ver.
-
-       Para isto valer, nenhum pedaço deste html pode ser calculado a partir da
-       hora de AGORA: as três contagens levam o instante em que acabam, que é o
-       mesmo a cada volta, e quem as faz andar ao segundo é o tique(). */
-    if (html === pintado) { pintarTopo(); pintarRodape(); return; }
-    pintado = html;
-
-    var antes = document.activeElement;
-    var escrevia = antes && antes.id === 'q-menu';
-    var caret = escrevia ? antes.selectionStart : 0;
-
-    $('b-corpo').innerHTML = html;
-    if (menu.itens.length) ligarBusca('q-menu', function (v) { busca = v; pintarMenu(); });
-
-    if (escrevia) {
-      var novo = $('q-menu');
-      if (novo) {
-        novo.focus();
-        try { novo.setSelectionRange(caret, caret); } catch (e) {}
-      }
+    var vistos = peneira(menu.itens);
+    if (!vistos.length) {
+      return vazio('procurar', 'Nada com esse nome',
+        'São ' + menu.itens.length + ' bebidas no menu; nenhuma responde ao que procura.',
+        '<button class="btn btn-claro" onclick="barLimpar()">' + ico.ico('volta')
+        + 'Ver o menu todo</button>');
     }
+    // Por gaveta, na ordem em que a copa as arrumou. Nenhuma bebida se perde
+    // pelo caminho: o que não coube em gaveta nenhuma cai em «Outras» — um
+    // menu que esconde metade das bebidas em silêncio é pior do que um menu
+    // feio.
+    var html = '', porMostrar = vistos.slice();
+    menu.categorias.forEach(function (c) {
+      var dela = porMostrar.filter(function (i) { return Number(i.categoria_id) === Number(c.id); });
+      if (!dela.length) return;
+      porMostrar = porMostrar.filter(function (i) { return dela.indexOf(i) < 0; });
+      html += tituloGaveta(c) + '<div class="b-menu">' + dela.map(cartao).join('') + '</div>';
+    });
+    if (porMostrar.length) {
+      html += tituloGaveta({ id: 0, nome: 'Outras' })
+        + '<div class="b-menu">' + porMostrar.map(cartao).join('') + '</div>';
+    }
+    return html;
+  }
+
+  function pintarMenu() {
+    if (!eu) return;
+    if (!esqueletoPosto || !$('b-menu-cx')) esqueleto();
+
+    poe('avisos', 'b-avisos', htmlAvisos());
+    // A caixa da procura escreve-se UMA vez: reescrevê-la a cada letra era
+    // apagar o campo onde a pessoa estava a escrever e devolver-lhe o cursor a
+    // seguir — um remendo que se via. As pastilhas das gavetas vão com ela, e
+    // mudam de estado por classe, sem se refazerem.
+    if (poe('fer', 'b-fer-cx', ferramentas()) && menu.itens.length) {
+      ligarBusca('q-menu', function (v) { busca = v; pintarMenu(); });
+    }
+    marcarGaveta();
+    poe('menu', 'b-menu-cx', htmlMenu());
+    poe('meus', 'b-meus-cx', pintarMeus());
+    poe('pe', 'b-pe-cx', rodapeDaCasa());
+
+    // Os relógios das faixas nascem vazios; escreve-se-lhes o número já, para
+    // não haver um instante de nada antes do primeiro tique.
+    tique(true);
     pintarTopo();
     pintarRodape();
+  }
+
+  /** A gaveta escolhida acende-se por classe, sem refazer as pastilhas. */
+  function marcarGaveta() {
+    var cx = $('b-fer-cx');
+    if (!cx) return;
+    cx.querySelectorAll('.b-pilula[data-chave]').forEach(function (b) {
+      var ligada = Number(b.dataset.chave) === Number(gaveta);
+      b.classList.toggle('on', ligada);
+      b.setAttribute('aria-pressed', ligada ? 'true' : 'false');
+    });
   }
 
   /** O título de uma gaveta: o copo dela, a sua cor, e o nome. */
@@ -347,14 +417,18 @@
       menu.categorias.filter(function (c) {
         return menu.itens.some(function (i) { return Number(i.categoria_id) === Number(c.id); });
       }));
-    return '<div class="b-fer">' + campoBusca('q-menu', 'Procurar uma bebida', busca) + '</div>'
+    /* Escreve-se UMA vez, e por isso não leva aqui nem o que está escrito na
+       procura nem qual é a gaveta acesa: são as duas coisas que mudam a toda a
+       hora, e pô-las no html obrigava a refazer a barra — a apagar o campo
+       onde a pessoa está a escrever — a cada letra e a cada toque. O campo
+       guarda o seu próprio texto; a gaveta acende-se por classe (marcarGaveta). */
+    return '<div class="b-fer">' + campoBusca('q-menu', 'Procurar uma bebida', '') + '</div>'
       + '<div class="b-pastilhas rolo">'
       + chips.map(function (c) {
           var n = c.id
             ? menu.itens.filter(function (i) { return Number(i.categoria_id) === Number(c.id); }).length
             : menu.itens.length;
-          return BP.pilula({ rot: c.nome, cor: c.cor || '', n: n,
-                             ligada: Number(gaveta) === Number(c.id),
+          return BP.pilula({ rot: c.nome, cor: c.cor || '', n: n, chave: c.id,
                              accao: 'barGaveta(' + c.id + ')' });
         }).join('')
       + '</div>';
@@ -378,7 +452,15 @@
     gaveta = (Number(gaveta) === Number(id)) ? 0 : Number(id);
     pintarMenu();
   };
-  window.barLimpar = function () { busca = ''; gaveta = 0; pintarMenu(); };
+  window.barLimpar = function () {
+    busca = ''; gaveta = 0;
+    // A barra da procura já não se reescreve a cada volta: quem limpa o filtro
+    // tem de limpar também o campo, senão ficava lá a palavra que já não filtra.
+    var q = $('q-menu'), cx = $('q-menu-cx');
+    if (q) q.value = '';
+    if (cx) cx.classList.remove('tem');
+    pintarMenu();
+  };
 
   function cartao(i) {
     var n = cesto[i.id] || 0;
@@ -398,9 +480,13 @@
     // A espera vive num relógio que anda no browser, ao segundo — como a do
     // cabeçalho, e pela mesma razão: uma contagem calculada no servidor nasce
     // velha. O data-ate é o instante em que abre; o tique trata do resto.
-    var relogio = (travada && i.espera_s > 0)
-      ? '<span class="b-conta" data-ate="' + (Date.now() + i.espera_s * 1000) + '">'
-        + esc(hms(i.espera_s)) + '</span>' : '';
+    // O instante em que esta bebida abre — fixado quando o menu chegou, e não
+    // recalculado a cada pintura. Era esta linha que ainda punha a grelha a
+    // piscar: `Date.now()` mudava o html do cartão a cada volta, e o cartão
+    // inteiro (fotografia incluída) era refeito por causa de um número que o
+    // tique() escreve sozinho.
+    var relogio = (travada && i.ate)
+      ? '<span class="b-conta" data-ate="' + i.ate + '"></span>' : '';
 
     // As alternativas são o que transforma uma porta fechada numa sugestão.
     var alt = (travada && i.alternativas && i.alternativas.length)
@@ -577,34 +663,10 @@
     return mesas;
   }
 
-  window.barMesa = async function () {
-    var lista = await asMesas();
-    // Sem modal aberto, licJanelaErro não tem onde escrever: seria um toque
-    // sem resposta nenhuma.
-    if (!lista) { janelaAviso('Sem ligação', 'Não deu para ir buscar as mesas. Tente outra vez.'); return; }
-    var d = { mesas: lista };
-    licFormulario({
-      titulo: 'Onde entregamos?',
-      guardar: 'É aqui',
-      dica: 'A folha do QR está na <b>' + esc(MESA.nome) + '</b>. Se mudou de lugar, '
-          + 'diga-nos para onde — quem entrega procura-o lá.',
-      // Com a procura SEMPRE, e não só a partir de uma dúzia de mesas: as mesas
-      // de um casamento chamam-se «Alecrim», «Padrinhos», «7» — quem mudou de
-      // lugar sabe o nome do sítio onde está, e escrevê-lo é mais depressa do
-      // que o caçar numa roda de telemóvel. É também a mesma procura que a
-      // pastilha do lado abre para escolher a pessoa: duas barras irmãs no
-      // mesmo topo não podem abrir-se de maneiras diferentes.
-      campos: [{ id: 'mesa', rot: 'Mesa', tipo: 'escolha', procura: true,
-                 dicaProcura: 'O nome ou o número da mesa',
-                 valor: mesaEntrega ? String(mesaEntrega.id) : String(MESA.id),
-                 opcoes: d.mesas.map(function (m) { return { v: String(m.id), r: m.nome }; }) }],
-      aoGuardar: function (v) {
-        var m = d.mesas.filter(function (x) { return String(x.id) === String(v.mesa); })[0];
-        if (m) { mesaEntrega = { id: m.id, nome: m.nome }; pintarMenu(); }
-        return true;
-      }
-    });
-  };
+  /* A janela «Onde entregamos?» saiu daqui.
+     Era um modal com uma lista lá dentro e um botão a confirmar: quatro gestos
+     para dizer o que a própria barra passou a dizer num. Fica registado porque
+     o gesto não desapareceu — mudou de sítio, e está em montarBarraMesa(). */
 
   // ---- pedir por outra pessoa -------------------------------
   /**
@@ -775,8 +837,15 @@
     // «+» desaparecer numa bebida que essa pessoa já não pode pedir — mostrar
     // as minhas quotas e recusar no fim seria uma promessa a fingir.
     var d = await chamar('bar_menu', undefined, para ? { por: para.id } : null);
-    if (!d.success) { pintado = ''; $('b-corpo').innerHTML = falhou(d); return; }
+    if (!d.success) { esqueletoPosto = false; $('b-corpo').innerHTML = falhou(d); return; }
     menu = { categorias: d.categorias, itens: d.itens };
+    // Cada bebida travada leva o INSTANTE em que abre, e não os segundos que
+    // faltavam quando a resposta chegou: é o que faz o cartão dela ser igual
+    // de pintura para pintura enquanto o relógio anda.
+    var agora = Date.now();
+    menu.itens.forEach(function (i) {
+      i.ate = (i.espera_s > 0) ? agora + i.espera_s * 1000 : 0;
+    });
     aberto = !!d.aberto;
     ritmo = d.ritmo || null;
     travaoPedido = d.pedido || null;
@@ -807,7 +876,7 @@
 
   async function arrancar() {
     var d = await chamar('bar_mesa');
-    if (!d.success) { pintado = ''; $('b-corpo').innerHTML = falhou(d); return; }
+    if (!d.success) { esqueletoPosto = false; $('b-corpo').innerHTML = falhou(d); return; }
     aberto = !!d.aberto;
     msgFechado = d.mensagem_fechado || msgFechado;
     procuraMin = d.procura_min || 4;
@@ -833,7 +902,19 @@
    * calculada no servidor nasce velha. Quando um chega a zero, o menu
    * recarrega-se sozinho — a pessoa não tem de adivinhar que já pode.
    */
-  function tique() {
+  /**
+   * Os relógios das esperas, ao segundo.
+   *
+   * É este que escreve o número dentro de cada contagem — o html nasce sem ele
+   * de propósito, para uma faixa com relógio ser igual de volta para volta e a
+   * secção dela não se ter de reescrever (ver `pintarMenu`). Escrever aqui é
+   * mexer no texto de um <b>: não refaz nada, não pisca, e não custa nada.
+   *
+   * `sohEscrever` é para a chamada que vem logo a seguir a pintar: aí só se
+   * quer pôr os números no sítio. Recarregar o menu de dentro da pintura era
+   * um ciclo — pintar, ver um relógio a zero, recarregar, pintar.
+   */
+  function tique(sohEscrever) {
     var contas = document.querySelectorAll('.b-conta[data-ate]');
     if (!contas.length) return;
     var acabou = false;
@@ -844,7 +925,7 @@
     }
     // Uma vez só por volta: recarregar por cada relógio que chega a zero seria
     // pedir o menu três vezes no mesmo segundo.
-    if (acabou && !document.hidden) carregarMenu();
+    if (acabou && !sohEscrever && !document.hidden) carregarMenu();
   }
 
   var batidas = 0;

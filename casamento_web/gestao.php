@@ -541,7 +541,7 @@ async function trocarPapel(uid, papel){
 async function tirar(uid, nome){
   const r = await licConfirmar({
     titulo: 'Eliminar a conta de «' + licEsc(nome) + '»?',
-    icone: '🗑️', perigo: true, confirmar: 'Eliminar conta',
+    icone: 'lixo', perigo: true, confirmar: 'Eliminar conta',
     texto: 'A conta é <b>apagada</b> e deixa de entrar. <b>Não se desfaz.</b><br><br>'
          + 'O email fica livre para uma conta nova.'
   });
@@ -586,7 +586,7 @@ async function gerarCodigo(){
 async function revogar(id){
   const r = await licConfirmar({
     titulo: 'Revogar este código?',
-    icone: '⛔', perigo: true, confirmar: 'Revogar código',
+    icone: 'proibido', perigo: true, confirmar: 'Revogar código',
     texto: 'Quem o tiver <b>deixa de entrar, já</b>. Se essa pessoa estiver a trabalhar '
          + 'no seu casamento neste momento, é posta fora.<br><br>'
          + 'Pode gerar outro código a qualquer altura.'
@@ -632,7 +632,7 @@ async function importarTudo(){
   }
   const resp = await licConfirmar({
     titulo: 'Trazer todos os dados deste ficheiro?',
-    icone: '📥', perigo: true, confirmar: 'Trazer e substituir',
+    icone: 'descarregar', perigo: true, confirmar: 'Trazer e substituir',
     texto: 'Os seus dados — <b>lista de convidados</b>, <b>mesas</b>, <b>versões dos '
          + 'convites</b> e <b>orçamento</b> — são substituídos pelos do ficheiro.<br><br>'
          + '<b>Não é uma junção, e não se desfaz.</b> Se quiser guardar o que tem agora, '
@@ -657,7 +657,7 @@ async function apagarTudo(){
   // não deve chegar para deitar fora a lista inteira de convidados.
   const r = await licConfirmar({
     titulo: 'Apagar todos os dados deste casamento?',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar tudo',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar tudo',
     texto: '<ul class="lic-conf-lista">'
          + '<li>A <b>lista de convidados</b></li>'
          + '<li>As <b>mesas</b> e o seu desenho</li>'

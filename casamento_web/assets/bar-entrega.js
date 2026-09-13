@@ -38,7 +38,14 @@
   }
 
   // ---- carregar ------------------------------------------------
+  var pintadoListas = '';    // a última lista escrita, para não a reescrever igual
+
   async function carregar(silencioso) {
+    // A lista das mesas chega uma vez e fica: é ela que põe a escolha dentro
+    // de cada cartão.
+    if (MESAS_CARTAO === null && window.BP && BP.mesasDoBar) {
+      MESAS_CARTAO = await BP.mesasDoBar();
+    }
     var d = await window.api('bar_entrega_lista', { method: 'GET', silencioso: !!silencioso });
     var sinal = $('b-sinal');
     if (!d || !d.success) {
@@ -117,7 +124,17 @@
       html += seccao('pessoas', 'Com outros', oF, null,
                      oF.length === 1 ? '1 pedido a caminho' : oF.length + ' pedidos a caminho');
     }
-    $('b-listas').innerHTML = html;
+    /* A lista relê-se de oito em oito segundos. Enquanto se reescrevia sempre,
+       cada volta destruía os cartões à frente de quem estava a olhar — e,
+       agora que a mesa se escolhe dentro do cartão, fechava a lista na mão de
+       quem a tinha aberto. Compara-se primeiro: a volta em que nada mudou não
+       se vê. (Os «há N min» são escritos por pintarTempos, e por isso não
+       entram no html.) */
+    if (html !== pintadoListas) {
+      pintadoListas = html;
+      $('b-listas').innerHTML = html;
+      ligarMesasDosCartoes();
+    }
     pintarTempos();
   }
 
@@ -186,6 +203,47 @@
       + '</div>';
   }
 
+  /* ---- a mesa de um pedido, escolhida no próprio cartão -----------
+     A lista das mesas é a mesma de toda a gente (BP.mesasDoBar), pedida uma
+     vez por noite. Enquanto ela não chegar, o cartão mostra o botão de sempre:
+     um campo vazio à espera de uma resposta do servidor era pior do que o
+     botão que já lá estava. */
+  var MESAS_CARTAO = null;
+  function escolhaDeMesa(p) {
+    if (!MESAS_CARTAO || !MESAS_CARTAO.length || !window.licSelProcuraHtml) {
+      return '<button class="btn btn-fantasma" onclick="entMudarMesa(' + p.id + ')">'
+           + ico.ico('mesa') + 'Mudar de mesa</button>';
+    }
+    return '<span class="b-mesa-cartao" title="Para onde vai esta bebida">'
+      + ico.ico('mesa')
+      + window.licSelProcuraHtml(
+          { id: 'mesa-p' + p.id, rot: 'Entregar em', classe: 'lic-sel-pagina',
+            dicaProcura: 'O nome ou o número da mesa',
+            opcoes: [{ v: '0', r: 'Sem mesa — ao balcão' }].concat(
+              MESAS_CARTAO.map(function (m) { return { v: String(m.id), r: m.nome }; })) },
+          String(p.mesa_id || 0))
+      + '</span>';
+  }
+
+  /** Dar vida às escolhas de mesa que acabaram de ser escritas nos cartões. */
+  function ligarMesasDosCartoes() {
+    var cx = $('b-listas');
+    if (!cx || !window.licSelProcuraLigar) return;
+    window.licSelProcuraLigar(cx);
+    cx.querySelectorAll('.b-mesa-cartao input[type=hidden]').forEach(function (campo) {
+      if (campo.dataset.ligado) return;
+      campo.dataset.ligado = '1';
+      campo.addEventListener('change', async function () {
+        var id = parseInt(campo.id.replace('lf-mesa-p', ''), 10);
+        var d = await window.api('bar_mudar_mesa', { method: 'POST', body: JSON.stringify(
+          { id: id, mesa_id: parseInt(campo.value, 10) || 0 }) });
+        if (!d || !d.success) return;
+        toast('Mesa mudada.');
+        await carregar(true);
+      });
+    });
+  }
+
   function acoes(p) {
     if (p.estado === 'a_caminho') {
       return '<div class="b-acoes">'
@@ -198,8 +256,10 @@
         // sentada e levantou-se para dançar, e isso acontece a toda a hora.
         // «Não estava na mesa» manda o pedido de volta à copa e faz esperar
         // outra vez por uma bebida que já estava pronta.
-        +   '<button class="btn btn-fantasma" onclick="entMudarMesa(' + p.id + ')">'
-        +     ico.ico('mesa') + 'Mudar de mesa</button>'
+        // A mesa é uma ESCOLHA, e está aqui como escolha: era um botão que
+        // abria uma janela com uma lista lá dentro, e quem anda na sala com
+        // um tabuleiro na mão não tem gestos a perder.
+        +   escolhaDeMesa(p)
         +   '<button class="btn btn-fantasma" onclick="entFalhou(' + p.id + ')">'
         +     ico.ico('volta') + 'Não estava na mesa</button>'
         + '</div></div>';
@@ -271,7 +331,10 @@
      mesma lista que a janela de lançar um pedido usa — duas listas das mesmas
      mesas acabavam a responder coisas diferentes à mesma pergunta. */
   window.entMudarMesa = async function (id) {
-    var MESAS = await BP.mesasDoBar();
+    // Com `true`: o que se vai abrir É a lista das mesas, e quem a abre tem de
+    // ver a planta como ela está agora — uma mesa acrescentada a meio da noite
+    // incluída. Nas pinturas dos cartões vale a cópia guardada.
+    var MESAS = await BP.mesasDoBar(true);
     if (!MESAS.length) { toast('Não há mesas marcadas neste casamento.', true); return; }
     var p = ((EST && EST.pedidos) || []).filter(function (x) { return x.id === id; })[0] || {};
     var opcoes = [{ v: '0', r: 'Sem mesa — ao balcão' }].concat(
@@ -346,7 +409,7 @@
     if (!itens.length) { toast('Não há nada disponível para pedir.', true); return; }
     // Quem anda na sala é quem melhor sabe onde a pessoa está: a mesa de
     // entrega escolhe-se aqui, e não fica presa à da planta.
-    var mesas = await BP.mesasDoBar();
+    var mesas = await BP.mesasDoBar(true);
     licFormulario({
       titulo: 'Pedir por um convidado',
       guardar: 'Lançar o pedido',

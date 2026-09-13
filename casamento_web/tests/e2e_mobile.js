@@ -84,7 +84,14 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   ok(resto.every(x=>/^\d+ convites?$/.test(x.s)), 'os cartões de pessoas contam todos em convites');
   ok(resto.every(x=>/pessoas?\b.*\bem\b.*convites?/.test(x.t)), 'o título explica o que é cada número');
   ok(brindes.length === 1, 'há um cartão de brindes');
-  ok(brindes.every(x=>/♂\s*\d+\s*·\s*♀\s*\d+/.test(x.s)), 'o cartão dos brindes reparte-os por género');
+  // Os sinais de género são DESENHADOS (assets/icones.js) e já não os
+  // caracteres ♂ ♀: o innerText não os traz, e por isso o que se lê aqui são
+  // os dois números com o ponto do meio. Que os sinais lá estão prova-se
+  // abaixo, pelos elementos.
+  ok(brindes.every(x=>/^\s*\d+\s*·\s*\d+/.test(x.s)), 'o cartão dos brindes reparte-os por género');
+  const sinaisBrinde = await p.$$eval('.stat-f .ss [data-ico]', ns => ns.map(n => n.dataset.ico));
+  ok(sinaisBrinde.includes('homem') && sinaisBrinde.includes('mulher'),
+     'e a repartição traz os dois sinais desenhados: ' + sinaisBrinde.join(', '));
   ok(brindes.every(x=>/\d+ a homens.*\d+ a mulheres/.test(x.t)), 'o título dos brindes explica a repartição');
 
   console.log('\n==== '+(fails===0&&errs.length===0?'ALL PASS':(fails||errs.length)+' FAIL(S)')+' ====');

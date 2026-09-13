@@ -61,7 +61,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     $semCasamento = function_exists('casamentoAtual') && casamentoAtual() <= 0;
     $CAS = $GLOBALS['CAS'] ?? null;
     if ($semCasamento) {
-        $CAS = ['mono' => PLATAFORMA['marca'], 'casal' => PLATAFORMA['nome'],
+        $CAS = ['mono' => PLATAFORMA['mono'], 'casal' => PLATAFORMA['nome'],
                 'noiva' => '', 'noivo' => ''];
     } elseif (!is_array($CAS) || !isset($CAS['mono'])) {
         // As páginas já calculam $CAS; se não, calcula-se aqui a partir da ligação.
@@ -110,6 +110,13 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     [$dataDoEvento, $horaDoEvento] = $semCasamento ? ['', ''] : diaDoCasamento();
     ?>
 <?php include __DIR__ . '/parcial-tema.php'; ?>
+<?php // O alfabeto de sinais da casa, em TODAS as páginas que têm cabeçalho.
+      // Vivia só nas quatro do bar, e por isso o resto do sistema escrevia os
+      // seus sinais com emojis — que mudam de desenho conforme o telemóvel,
+      // não obedecem à cor do tema, e trazem o seu próprio fundo colorido para
+      // dentro de um convite. Aqui é uma folha só, partilhada, e vem ANTES de
+      // janela.js, que a usa para desenhar o sinal de cada janela. ?>
+<script src="<?= asset('assets/icones.js') ?>"></script>
 <header class="topo<?= $semPapel ?>">
   <div class="wrap">
     <div class="monograma"><?= escP($CAS['mono']) ?></div>

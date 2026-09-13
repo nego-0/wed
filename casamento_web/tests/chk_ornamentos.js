@@ -10,6 +10,7 @@ const { chromium } = require('playwright-core');
 const janela = require('./_janela');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolher } = require('./escolhas');
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -60,7 +61,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // diferentes a cruzarem-se), e isso vê-se no contacto, não numa medida.
   const traços = {};
   for (const v of feitiosVol) {
-    await p.selectOption(selVol, v); await p.waitForTimeout(400);
+    await escolher(p, selVol, v); await p.waitForTimeout(400);
     const m = await p.evaluate(() => {
       const svg = document.querySelector('#escala .ct-voluta-se svg');
       if (!svg) return null;
@@ -97,7 +98,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(elos.includes('comercial'), 'com o "&" entre eles');
 
   for (const e of elos) {
-    await p.selectOption(selElo, e); await p.waitForTimeout(400);
+    await escolher(p, selElo, e); await p.waitForTimeout(400);
     const r = await p.evaluate(() => {
       const n = document.querySelector('#escala .ct-nomes');
       const el = n.querySelector('.ct-coracao');
@@ -116,9 +117,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   }
 
   // ---- grava-se e sai impresso ----
-  await p.selectOption(selElo, 'comercial'); await p.waitForTimeout(300);
+  await escolher(p, selElo, 'comercial'); await p.waitForTimeout(300);
   await p.evaluate(() => selecionar('volutas')); await p.waitForTimeout(400);
-  await p.selectOption(selVol, 'leque'); await p.waitForTimeout(300);
+  await escolher(p, selVol, 'leque'); await p.waitForTimeout(300);
   ok(await p.evaluate(() => guardar()), 'as duas escolhas gravam-se');
 
   await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });

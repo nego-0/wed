@@ -51,7 +51,15 @@ function escP($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF
 const PLATAFORMA = [
     'nome'  => 'Gestão de Convidados',
     'sub'   => 'Convites, mesas e entradas do seu casamento',
-    'marca' => '✦',
+    // O emblema da casa é um DESENHO, pelo nome que tem em assets/icones.js —
+    // e não um carácter como o ✦ que aqui estava. Um carácter de ornamento não
+    // existe em todo o tipo de letra (onde falta sai o quadrado do «não sei
+    // desenhar isto», logo na primeira coisa que se vê ao entrar) e nenhum
+    // deles tem o traço do resto da casa.
+    'marca' => 'anel',
+    // O monograma é TEXTO: o círculo pequeno ao lado do nome é onde estão,
+    // normalmente, as iniciais do casal. Sem casamento aberto ficam as da casa.
+    'mono'  => 'GC',
 ];
 
 // ---- Base de dados -----------------------------------------

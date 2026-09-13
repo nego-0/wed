@@ -319,7 +319,7 @@
       if (op.gravar) { var ok = await op.gravar(); return ok !== false; }
       var r = await licConfirmar({
         titulo: 'Tem alterações por gravar',
-        icone: '⚠️', confirmar: 'Guardar assim mesmo',
+        icone: 'aviso', confirmar: 'Guardar assim mesmo',
         texto: 'A versão fotografa a peça <b>como está gravada</b> — as alterações que ainda '
              + 'não gravou <b>não entram nela</b>.<br><br>Cancele, grave, e volte aqui se as '
              + 'quiser dentro da versão.'
@@ -369,7 +369,7 @@
         : 'A peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.';
       var r = await licConfirmar({
         titulo: 'Pôr «' + licEsc(v.nome) + '» em vigor?',
-        icone: '↩️', perigo: sujo(), confirmar: 'Pôr em vigor',
+        icone: 'volta', perigo: sujo(), confirmar: 'Pôr em vigor',
         texto: oQueFica
              + (sujo() ? '<br><br><b>Tem alterações por gravar, e elas perdem-se.</b>' : '')
       });
@@ -383,7 +383,7 @@
       var v = porId(id); if (!v) return;
       var r = await licConfirmar({
         titulo: 'Atualizar «' + licEsc(v.nome) + '»?',
-        icone: '🔄', perigo: true, confirmar: 'Atualizar versão',
+        icone: 'volta', perigo: true, confirmar: 'Atualizar versão',
         texto: 'A versão passa a guardar a peça <b>tal como está agora</b>.<br><br>'
              + 'O conteúdo antigo desta versão <b>perde-se</b> — se o quiser manter, '
              + 'cancele e guarde antes uma versão nova.'
@@ -422,7 +422,7 @@
       var v = porId(id); if (!v) return;
       var r = await licConfirmar({
         titulo: 'Apagar a versão «' + licEsc(v.nome) + '»?',
-        icone: '🗑️', perigo: true, confirmar: 'Apagar versão',
+        icone: 'lixo', perigo: true, confirmar: 'Apagar versão',
         texto: v.em_vigor
           ? 'É a versão que está <b>em vigor</b>. A peça <b>não muda</b> — perde-se só o '
             + 'registo de que este era o estado guardado.'
@@ -440,7 +440,7 @@
       if (!m) return;
       var r = await licConfirmar({
         titulo: 'Pôr o modelo «' + licEsc(m.nome) + '» em vigor?',
-        icone: '🎨', perigo: sujo(), confirmar: 'Pôr em vigor',
+        icone: 'paleta', perigo: sujo(), confirmar: 'Pôr em vigor',
         texto: 'O desenho da peça passa a ser o dele — é o que os <b>convidados passam a '
              + 'receber</b>.<br><br>Os seus <b>nomes, datas e fotografias ficam como estão</b>, '
              + 'e as versões que guardou não se perdem.'

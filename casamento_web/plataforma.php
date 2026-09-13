@@ -154,7 +154,7 @@ if (ehAdminPlataforma()) {
 // casamento 0 devolvia o casal de origem do config.php, que não é de ninguém
 // aqui. O cabeçalho, nesse caso, veste-se da casa.
 $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
-                   : ['mono'=>PLATAFORMA['marca'], 'casal'=>PLATAFORMA['nome'], 'noiva'=>'', 'noivo'=>''];
+                   : ['mono'=>PLATAFORMA['mono'], 'casal'=>PLATAFORMA['nome'], 'noiva'=>'', 'noivo'=>''];
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -214,8 +214,17 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .numeros button.n{ font:inherit; text-align:left; cursor:pointer; transition:.15s; }
   .numeros button.n:hover{ border-color:var(--gold-soft); transform:translateY(-2px);
                            box-shadow:0 6px 16px rgba(180,134,74,.12); }
-  .numeros button.n::after{ content:'ver →'; display:block; font-size:.72rem; color:var(--gold);
-                            margin-top:.35rem; opacity:0; transition:.15s; }
+  /* A seta vem DESENHADA, como imagem de fundo, e não como o carácter → dentro
+     do `content`: uma pseudo-classe não leva um `<i data-ico>` como o resto da
+     casa, e o carácter mudava de comprimento e de peso conforme o tipo de
+     letra. O `%23b4864a` é o dourado da casa escrito em hexadecimal para caber
+     num URL — um `currentColor` não passa por dentro de um data: URI. */
+  .numeros button.n::after{ content:'ver'; display:block; font-size:.72rem; color:var(--gold);
+                            margin-top:.35rem; opacity:0; transition:.15s;
+                            padding-right:1.15em; background-repeat:no-repeat;
+                            background-position:right center; background-size:.95em .95em;
+                            background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b4864a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12h14'/%3E%3Cpath d='m13 6.5 5.5 5.5-5.5 5.5'/%3E%3C/svg%3E");
+                            width:fit-content; }
   .numeros button.n:hover::after{ opacity:1; }
 
   /* ---- A linha de um casamento ----
@@ -1352,7 +1361,7 @@ async function atFotoEnviar(){
 
 async function atFotoTirar(){
   const r = await licConfirmar({
-    titulo: 'Tirar a fotografia?', icone: '🖼️', confirmar: 'Tirar a fotografia',
+    titulo: 'Tirar a fotografia?', icone: 'imagem', confirmar: 'Tirar a fotografia',
     texto: 'A caixa passa a mostrar a inicial do nome. O ficheiro é apagado — para o ter de '
          + 'volta, envie-o outra vez.'
   });
@@ -1425,7 +1434,7 @@ function atPintarLista(){
 function atFormulario(p){
   return licFormulario({
     titulo: p.id ? 'Editar a pergunta' : 'Nova pergunta',
-    icone: '💬', guardar: 'Guardar pergunta',
+    icone: 'conversa', guardar: 'Guardar pergunta',
     campos: [
       { id:'pergunta', rot:'Pergunta', tipo:'texto', valor:p.pergunta || '', largura:3,
         dica:'Como o casal a faria. «Quanto custa?» vale mais do que «Tabela de preços».' },
@@ -1462,7 +1471,7 @@ async function atAlternar(id){
 async function atApagar(id){
   const p = AT_PERGUNTAS.find(x => x.id === id); if (!p) return;
   const r = await licConfirmar({
-    titulo: 'Apagar esta pergunta?', icone: '💬', perigo: true, confirmar: 'Apagar pergunta',
+    titulo: 'Apagar esta pergunta?', icone: 'conversa', perigo: true, confirmar: 'Apagar pergunta',
     texto: '<b>' + licEsc(p.pergunta) + '</b><br><br>Apaga-se a pergunta e a resposta. Para a '
          + 'esconder sem a perder, use antes <b>Desligar</b>.'
   });
@@ -1589,8 +1598,11 @@ function licCartaoPedido(p){
       + '<span class="pr">' + licKz(it.preco) + '</span></li>';
   }).join('');
   const pend = p.estado === 'pendente';
-  const selo = { pendente:'⏳ à espera', aprovado:'✓ aprovado',
-                 recusado:'✕ recusado', cancelado:'— cancelado' }[p.estado] || p.estado;
+  const seloIco = { pendente:'ampulheta', aprovado:'visto',
+                    recusado:'xis', cancelado:'traco' }[p.estado] || '';
+  const seloTxt = { pendente:'à espera', aprovado:'aprovado',
+                    recusado:'recusado', cancelado:'cancelado' }[p.estado] || p.estado;
+  const selo = (seloIco ? '<i data-ico="' + seloIco + '"></i> ' : '') + licEsc(seloTxt);
   return '<div class="painel lic-ped' + (pend ? ' pend' : '') + '">'
     + '<div class="lic-ped-cab">'
     +   '<div style="flex:1;min-width:200px">'
@@ -1638,7 +1650,7 @@ async function licDecidir(id, decisao){
 
   const r = await licConfirmar({
     titulo: (decisao === 'aprovar' ? 'Aprovar' : 'Recusar') + ' o pedido de ' + quem,
-    icone: decisao === 'aprovar' ? '✓' : '✕',
+    icone: decisao === 'aprovar' ? 'visto' : 'xis',
     perigo: decisao === 'recusar',
     confirmar: decisao === 'aprovar' ? 'Conceder licença' : 'Recusar pedido',
     texto: (decisao === 'aprovar'
@@ -1855,7 +1867,7 @@ async function licPrazoApagar(id){
   const p = (LIC_CAT.prazos || []).find(x => x.id === id); if (!p) return;
   const r = await licConfirmar({
     titulo: 'Apagar o prazo «' + licEsc(p.nome) + '»?',
-    icone: '🗑', perigo: true, confirmar: 'Apagar prazo',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar prazo',
     texto: 'Deixa de estar à escolha na montra.<br><br>'
          + 'As licenças <b>já concedidas</b> com ele não se alteram: o prazo de cada casamento '
          + 'está guardado nele próprio.'
@@ -1882,7 +1894,7 @@ function licPintarPrecario(){
       + '</tr>').join('');
     return '<div class="painel">'
       + '<div style="display:flex;gap:.8rem;align-items:flex-start;flex-wrap:wrap">'
-      +   '<div style="font-size:1.5rem">' + licEsc(m.icone || '•') + '</div>'
+      +   '<div class="lic-mod-ico" data-ico="' + licEsc(m.icone || 'anel') + '"></div>'
       +   '<div style="flex:1;min-width:200px"><h3 style="margin:0">' + licEsc(m.nome)
       +     (m.ativo ? '' : ' <span class="et">desligado</span>') + '</h3>'
       +     '<div class="dica" style="margin:.15rem 0 0">' + licEsc(m.resumo) + '</div>'
@@ -1898,6 +1910,20 @@ function licPintarPrecario(){
   }).join('');
 }
 
+/**
+ * Os sinais que o admin pode dar a um módulo.
+ *
+ * A coluna `icone` guarda um NOME («mesa», «moeda»), não o desenho: o traço
+ * vive uma única vez em icones.js e o HTML escreve `data-ico="mesa"`. Guardar
+ * aqui o desenho seria uma segunda cópia — e duas cópias do mesmo traço são
+ * duas cópias que divergem. Até à v41 guardava-se um emoji, que cada sistema
+ * desenhava à sua maneira e nenhum desenhava como o resto da casa.
+ */
+function licIconesOpcoes(){
+  const nomes = (window.ICO && window.ICO.glifos) ? Object.keys(window.ICO.glifos) : [];
+  return nomes.sort().map(n => ({ v: n, r: n }));
+}
+
 function licModulo(id){ return LIC_CAT.modulos.find(m => m.id === id); }
 function licEscalao(id){
   for (const m of LIC_CAT.modulos){ const e = m.escaloes.find(x => x.id === id); if (e) return [m, e]; }
@@ -1911,7 +1937,8 @@ function licModuloEditar(id){
     dica: 'O que este módulo é, e como se apresenta na montra da inscrição.',
     campos: [
       { id:'nome',   rot:'Nome',   valor:m.nome, largura:2 },
-      { id:'icone',  rot:'Ícone',  valor:m.icone, dica:'Um emoji.' },
+      { id:'icone',  rot:'Ícone',  valor:m.icone, tipo:'escolha', opcoes:licIconesOpcoes(),
+        dica:'Um dos sinais desenhados da casa. Vê-se no cartão acima assim que guardar.' },
       { id:'ativo',  rot:'',       tipo:'sim', valor:m.ativo, aoLado:'À venda' },
       { id:'resumo', rot:'O que faz', valor:m.resumo, largura:3, tipo:'area', linhas:2,
         dica:'Uma linha, em linguagem de casamento.' },
@@ -1984,7 +2011,7 @@ async function licEscalaoApagar(id){
   const [m, e] = licEscalao(id); if (!e) return;
   const r = await licConfirmar({
     titulo: 'Apagar o escalão «' + licEsc(e.nome) + '»?',
-    icone: '🗑',
+    icone: 'lixo',
     perigo: true, confirmar: 'Apagar escalão',
     texto: 'Deixa de estar à venda em <b>' + licEsc(m.nome) + '</b>.<br><br>'
          + 'Se já houver licenças assentes nele, <b>não se apaga</b>: desliga-se, e deixa apenas '
@@ -2086,7 +2113,8 @@ function licPacoteItens(id){
   const p = LIC_CAT.pacotes.find(x => x.id === id); if (!p) return;
   const dentro = new Set(p.itens);
   const linhas = LIC_CAT.modulos.map(m =>
-    '<div class="lic-pi-mod"><div class="lic-pi-nome">' + licEsc(m.icone || '•') + ' '
+    '<div class="lic-pi-mod"><div class="lic-pi-nome">'
+    + '<i class="lic-pi-ico" data-ico="' + licEsc(m.icone || 'anel') + '"></i> '
     + licEsc(m.nome) + '</div>'
     + m.escaloes.map(e =>
         '<label class="lic-pi"><input type="checkbox" value="' + e.id + '"'
@@ -2165,7 +2193,7 @@ async function licPacoteApagar(id){
   const p = LIC_CAT.pacotes.find(x => x.id === id); if (!p) return;
   const r = await licConfirmar({
     titulo: 'Apagar o pacote «' + licEsc(p.nome) + '»?',
-    icone: '🗑', perigo: true, confirmar: 'Apagar pacote',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar pacote',
     texto: 'Deixa de aparecer na montra da inscrição.<br><br>'
          + 'As licenças <b>já concedidas</b> por ele não se alteram: o que foi concedido está '
          + 'concedido, e os casamentos que o levaram continuam com os seus módulos.'
@@ -2199,7 +2227,7 @@ async function licPolGuardar(){
   const corpo = document.getElementById('lic-pol-corpo').value.trim();
   const r = await licConfirmar({
     titulo: 'Publicar uma versão nova das políticas?',
-    icone: '📄', confirmar: 'Publicar versão ' + ((LIC_POL ? LIC_POL.versao : 0) + 1),
+    icone: 'documento', confirmar: 'Publicar versão ' + ((LIC_POL ? LIC_POL.versao : 0) + 1),
     texto: 'A versão <b>' + (LIC_POL ? LIC_POL.versao : 1) + '</b> fica guardada — é a prova do '
          + 'texto que os casais já aceitaram, e essa não se reescreve.<br><br>'
          + 'Os pedidos <b>novos</b> passam a apontar para a versão nova; os antigos continuam a '
@@ -2226,7 +2254,7 @@ async function licPolGuardar(){
 async function licRevogarDe(id, nome){
   const r = await licConfirmar({
     titulo: 'Revogar a licença de «' + licEsc(nome) + '»?',
-    icone: '⚠️', perigo: true, confirmar: 'Revogar licença',
+    icone: 'aviso', perigo: true, confirmar: 'Revogar licença',
     texto: '<b>Todos os módulos fecham de imediato.</b> O casal deixa de poder entrar no painel, '
          + 'nas mesas, no orçamento e nos convites.<br><br>'
          + 'Os dados <b>não</b> se apagam, e a Gestão fica aberta: o casal continua a poder '
@@ -2333,7 +2361,7 @@ function pintarAuditoria(){
         <td class="a-accao">${esc(r.frase || r.accao)}</td>
         <td>${quem}</td>
         <td>${resumo}</td>
-        <td class="a-abre" aria-hidden="true">▸</td>
+        <td class="a-abre"><i data-ico="direita" aria-hidden="true"></i></td>
       </tr>
       <tr class="a-detalhe" id="aud-det-${i}" hidden><td colspan="6"><dl>
         ${campo('Quem', `<b>${esc(r.utilizador || '—')}</b>`
@@ -2617,14 +2645,14 @@ async function criar(){
 // ---------- arquivar, reabrir, apagar ----------
 // Cada mudança de estado diz o que muda para as pessoas, e não só para a ficha.
 const AVISO_ESTADO = {
-  arquivado: { titulo: 'Arquivar «%s»?', icone: '📦', botao: 'Arquivar',
+  arquivado: { titulo: 'Arquivar «%s»?', icone: 'caixaFechada', botao: 'Arquivar',
     texto: 'Sai das listas de trabalho, e as contas que só existem por causa dele '
          + '<b>ficam paradas</b> — o casal deixa de entrar.<br><br>'
          + '<b>Nada se apaga</b>: reabrir devolve o casamento e as contas.' },
-  suspenso:  { titulo: 'Suspender «%s»?', icone: '⏸️', botao: 'Suspender', perigo: true,
+  suspenso:  { titulo: 'Suspender «%s»?', icone: 'pausa', botao: 'Suspender', perigo: true,
     texto: 'O casal deixa de entrar, e os <b>convites deixam de abrir</b> para os '
          + 'convidados.<br><br><b>Nada se apaga.</b>' },
-  ativo:     { titulo: 'Reabrir «%s»?', icone: '✅', botao: 'Reabrir',
+  ativo:     { titulo: 'Reabrir «%s»?', icone: 'visto', botao: 'Reabrir',
     texto: 'Volta às listas de trabalho e o casal volta a entrar. As contas que ficaram '
          + 'paradas com ele voltam também.' },
 };
@@ -2660,7 +2688,7 @@ async function apagar(id, nome){
   // se desfaz, e um clique distraído não deve chegar para a fazer.
   const r = await licConfirmar({
     titulo: 'Apagar «' + licEsc(nome) + '» de vez?',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar de vez',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar de vez',
     texto: 'Vão-se os <b>convites</b>, as <b>pessoas</b>, as <b>mesas</b>, o <b>desenho</b> '
          + 'e o <b>histórico</b>. Não se desfaz.<br><br>'
          + 'Se ainda quiser os dados, cancele e use «Levar os dados» primeiro.',
@@ -2718,7 +2746,7 @@ async function importarSistemaTudo(){
   }
   const r = await licConfirmar({
     titulo: 'Importar tudo o que o ficheiro traz?',
-    icone: '📥', confirmar: 'Importar tudo',
+    icone: 'descarregar', confirmar: 'Importar tudo',
     texto: 'Os casamentos entram como <b>novos</b>; os modelos e as contas que já existam '
          + '<b>saltam-se</b>.<br><br><b>Nada do que já cá está é substituído.</b>'
   });
@@ -2733,7 +2761,7 @@ async function apagarSistemaTudo(){
   // perder é quem escreve as palavras, sem um "OK" pelo meio a interromper.
   const r = await licConfirmar({
     titulo: 'Apagar tudo o que há no sistema?',
-    icone: '☢️', perigo: true, confirmar: 'Apagar tudo',
+    icone: 'aviso', perigo: true, confirmar: 'Apagar tudo',
     texto: '<ul class="lic-conf-lista">'
          + '<li>Todos os <b>casamentos</b>, por inteiro (listas, mesas, versões, orçamentos)</li>'
          + '<li>Os <b>modelos personalizados</b> (ficam os de origem)</li>'
@@ -2776,7 +2804,7 @@ async function importarDados(){
                 contas_casamento:'contas de casamento', contas_admin:'contas administrativas' };
   const r = await licConfirmar({
     titulo: 'Trazer do ficheiro?',
-    icone: '📥', confirmar: 'Trazer',
+    icone: 'descarregar', confirmar: 'Trazer',
     texto: '<ul class="lic-conf-lista">'
          + inc.map(i => '<li>' + licEsc(rot[i]) + '</li>').join('') + '</ul><br>'
          + 'Os casamentos entram como <b>novos</b>; modelos e contas que já existam '
@@ -2823,7 +2851,7 @@ async function apagarDados(){
   }
   const r = await licConfirmar({
     titulo: 'Apagar — isto elimina dados',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar',
     texto: '<ul class="lic-conf-lista">'
          + linhas.map(l => '<li>' + licEsc(l) + '</li>').join('') + '</ul>'
          + '<br><b>Não se desfaz.</b>'
@@ -3058,7 +3086,8 @@ async function licDesenharModulos(id){
         + '<span class="lic-pi-txt">' + licEsc(e.nome) + '</span>'
         + '<span class="lic-pi-preco"><small>' + licKz(e.preco) + '</small></span></label>';
     }).join('');
-    return '<div class="lic-pi-mod"><div class="lic-pi-nome">' + licEsc(m.icone || '•') + ' '
+    return '<div class="lic-pi-mod"><div class="lic-pi-nome">'
+      + '<i class="lic-pi-ico" data-ico="' + licEsc(m.icone || 'anel') + '"></i> '
       + licEsc(m.nome) + '</div>'
       + '<label class="lic-pi"><input type="radio" name="lm-' + licEsc(m.chave) + '" value="0"'
       + (g && g.ativo ? '' : ' checked') + '>'
@@ -3219,7 +3248,7 @@ async function guardarContaLigada(uid){
 async function pedirReporSenha(email){
   const r = await licConfirmar({
     titulo: 'Repor a senha de «' + licEsc(email) + '»?',
-    icone: '🔑', confirmar: 'Repor senha',
+    icone: 'chave', confirmar: 'Repor senha',
     texto: 'A senha atual <b>deixa de servir</b> de imediato. A nova aparece aqui '
          + '<b>uma vez</b> — copie-a antes de fechar.'
   });
@@ -3237,7 +3266,7 @@ async function reporSenhaLigada(uid, email){
 async function tirarContaLigada(uid, nome){
   const r = await licConfirmar({
     titulo: 'Eliminar a conta de «' + licEsc(nome) + '»?',
-    icone: '🗑️', perigo: true, confirmar: 'Eliminar conta',
+    icone: 'lixo', perigo: true, confirmar: 'Eliminar conta',
     texto: 'A conta é <b>apagada</b> e deixa de entrar. <b>Não se desfaz.</b><br><br>'
          + 'O email fica livre para uma conta nova.'
   });
@@ -3399,7 +3428,7 @@ async function guardarConta(id){
 async function apagarConta(id, email){
   const r = await licConfirmar({
     titulo: 'Apagar a conta de «' + licEsc(email) + '»?',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar conta',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar conta',
     texto: '<b>Não se desfaz.</b><br><br>Se ela ainda tiver lugar nalgum casamento, '
          + 'tire-lho primeiro em <b>Editar</b>.'
   });
@@ -3411,7 +3440,7 @@ async function estadoConta(id, estado){
   if (estado === 'suspenso'){
     const r = await licConfirmar({
       titulo: 'Suspender esta conta?',
-      icone: '⏸️', confirmar: 'Suspender',
+      icone: 'pausa', confirmar: 'Suspender',
       texto: 'Deixa de entrar <b>até ser reativada</b>. Nada se apaga.'
     });
     if (!r.sim) return;

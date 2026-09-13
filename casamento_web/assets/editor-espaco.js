@@ -65,7 +65,10 @@
     chip = document.createElement('span');
     chip.className = 'esp-chip';
     chip.title = 'O editor está mais apertado do que o recomendado (' + M.l + ' × ' + M.a + ').';
-    chip.textContent = '⚠ ecrã apertado';
+    // O sinal é desenhado (assets/icones.js, que a página do editor já traz):
+    // o carácter ⚠ traz o seu próprio fundo amarelo em muitos aparelhos, e um
+    // quadrado colorido no meio de uma barra escura lê-se como um erro.
+    chip.innerHTML = '<i data-ico="aviso"></i> ecrã apertado';
     chip.addEventListener('click', function () {
       // Voltar a ver o aviso por inteiro: quem continuou pode querer relê-lo.
       try { sessionStorage.removeItem(CHAVE); } catch (e) {}

@@ -1495,9 +1495,10 @@
       return i.estado === 'ativo' && i.disponivel > 0;
     });
     if (!itens.length) { toast('Não há nada disponível para pedir.', true); return; }
-    // As mesas pedem-se uma vez por noite (BP.mesasDoBar guarda-as): num salão
-    // são vinte ou trinta, e não mudam entre pedidos.
-    var mesas = await BP.mesasDoBar();
+    // Com `true`: a lista guardada serve para pintar, mas quem vai ESCOLHER
+    // uma mesa tem de ver a planta como ela está — as mesas de um salão não
+    // mudam de minuto a minuto, mas acrescentam-se a meio de uma festa.
+    var mesas = await BP.mesasDoBar(true);
     licFormulario({
       titulo: 'Aprovar um pedido',
       guardar: 'Aprovar',

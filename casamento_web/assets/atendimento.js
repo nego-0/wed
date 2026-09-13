@@ -88,12 +88,12 @@
     var tel = (c.telefone || '').trim(), wa = (c.whatsapp || '').trim();
     var em = (c.email || '').trim(), ho = (c.horario || '').trim();
     if (tel) h += '<a class="at-ct" href="tel:' + esc(tel.replace(/\s+/g, '')) + '">'
-               + '<span class="at-ct-ic" aria-hidden="true">☎</span>' + esc(tel) + '</a>';
+               + '<span class="at-ct-ic" data-ico="telefone" aria-hidden="true"></span>' + esc(tel) + '</a>';
     if (wa)  h += '<a class="at-ct" target="_blank" rel="noopener" href="https://wa.me/'
                + esc(wa.replace(/[^0-9]/g, '')) + '">'
-               + '<span class="at-ct-ic" aria-hidden="true">✆</span>WhatsApp ' + esc(wa) + '</a>';
+               + '<span class="at-ct-ic" data-ico="conversa" aria-hidden="true"></span>WhatsApp ' + esc(wa) + '</a>';
     if (em)  h += '<a class="at-ct" href="mailto:' + esc(em) + '">'
-               + '<span class="at-ct-ic" aria-hidden="true">✉</span>' + esc(em) + '</a>';
+               + '<span class="at-ct-ic" data-ico="carta" aria-hidden="true"></span>' + esc(em) + '</a>';
     if (!h && !ho) return '';
     return '<div class="at-contactos">'
          + '<div class="at-ct-tit">Falar connosco</div>'

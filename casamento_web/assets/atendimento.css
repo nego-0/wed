@@ -100,7 +100,11 @@
 .at-ct{ display:inline-flex; align-items:center; gap:.45rem; font-size:.84rem;
   color:var(--forest); text-decoration:none; }
 .at-ct:hover{ text-decoration:underline; }
-.at-ct-ic{ width:18px; text-align:center; opacity:.7; }
+/* Os sinais são desenhados (assets/icones.js): eram ☎ ✆ ✉, caracteres que
+   metade dos aparelhos não tem — e onde faltam sai o quadrado vazio, mesmo ao
+   lado do número para o qual se quer ligar. */
+.at-ct-ic{ width:18px; opacity:.7; display:inline-flex; align-items:center;
+           justify-content:center; line-height:0; font-size:1rem; }
 .at-horario{ font-size:.76rem; color:#8a8f88; margin-top:.15rem; }
 
 @media (max-width:520px){

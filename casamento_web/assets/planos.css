@@ -11,6 +11,14 @@
    escuras.
    ============================================================ */
 
+/* Os dois desenhos que esta folha usa em `::before`. São os mesmos traços do
+   assets/icones.js — mesma caixa de 24, mesmas coordenadas — porque um visto
+   que não é o visto da casa lê-se como outra aplicação. */
+:root{
+  --pl-visto: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6.5 9.2 17.3 4 12.1'/%3E%3C/svg%3E");
+  --pl-traco: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
+}
+
 /* ---------- cabeçalho da secção ---------- */
 .pl-topo{ text-align:center; max-width:62ch; margin:0 auto 1.8rem; }
 .pl-topo h2{ font-family:var(--serif); font-size:1.9rem; color:var(--ink);
@@ -90,10 +98,21 @@
 .pl-inclui{ list-style:none; padding:0; margin:1.1rem 0 1.2rem; flex:1; }
 .pl-inclui li{ display:flex; gap:.5rem; align-items:flex-start; font-size:.85rem;
   color:var(--text); line-height:1.45; padding:.3rem 0; }
-.pl-inclui li::before{ content:'✓'; color:var(--gold); font-weight:800; flex:none;
-  font-size:.9rem; line-height:1.45; }
+/* O visto e o traço são DESENHADOS, e não os caracteres ✓ e —: o ✓ não existe
+   em todos os tipos de letra (e onde falta sai o quadrado do «não sei desenhar
+   isto», logo na linha que devia dizer «está incluído»), e onde existe cada
+   sistema desenha-o à sua maneira — fino na Apple, gordo no Android — enquanto
+   o resto desta montra é todo do mesmo traço. Aqui não pode ser um `<i
+   data-ico>` como no resto da casa, porque são `::before` de linhas de lista
+   escritas pelo servidor: a máscara deixa o desenho tomar a cor do `color` da
+   regra, que é o que faz o traço apagado das linhas «não». */
+.pl-inclui li::before{ content:''; flex:none; width:.95rem; height:1.3rem;
+  background:var(--gold);
+  -webkit-mask:var(--pl-visto) center/.95rem .95rem no-repeat;
+          mask:var(--pl-visto) center/.95rem .95rem no-repeat; }
 .pl-inclui li.nao{ color:#b6bbb4; }
-.pl-inclui li.nao::before{ content:'—'; color:#cfd4cc; font-weight:600; }
+.pl-inclui li.nao::before{ background:#cfd4cc;
+  -webkit-mask-image:var(--pl-traco); mask-image:var(--pl-traco); }
 
 .pl-escolher{ width:100%; justify-content:center; }
 .pl-pac.on .pl-escolher{ pointer-events:none; }
@@ -109,7 +128,7 @@
 .pl-mod-cab{ display:flex; align-items:flex-start; gap:.75rem; margin-bottom:.85rem; }
 .pl-mod-cab > div:nth-child(2){ flex:1; min-width:0; }
 .pl-mod-ico{ width:38px; height:38px; flex:none; border-radius:11px; background:var(--gold-pale);
-  display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
+  display:flex; align-items:center; justify-content:center; font-size:1.35rem; color:var(--gold); }
 .pl-mod-nome{ font-weight:700; color:var(--ink); font-size:1rem; }
 .pl-mod-benef{ font-size:.81rem; color:var(--gold); font-weight:600; margin-top:.1rem; }
 .pl-mod-resumo{ font-size:.81rem; color:#8a8f88; line-height:1.5; margin-top:.15rem; }
@@ -177,7 +196,8 @@
 .pl-modal-img figcaption{ text-align:center; color:#fff; font-size:.85rem; opacity:.9; }
 .pl-lupa-nav{ display:flex; gap:.6rem; justify-content:center; }
 .pl-lupa-nav button{ background:rgba(255,255,255,.15); border:0; color:#fff; cursor:pointer;
-  border-radius:50px; padding:.4rem 1rem; font-family:var(--sans); font-size:.84rem; }
+  border-radius:50px; padding:.4rem 1rem; font-family:var(--sans); font-size:.84rem;
+  display:inline-flex; align-items:center; gap:.35rem; }
 .pl-lupa-nav button:hover{ background:rgba(255,255,255,.3); }
 
 /* ---------- a porta do plano à medida ---------- */
@@ -241,7 +261,7 @@
 .pl-tenho-c.sim{ border-color:var(--ok); background:var(--ok-bg); }
 .pl-tenho-c.nao{ opacity:.72; border-style:dashed; }
 .pl-tenho-ico{ width:32px; height:32px; flex:none; border-radius:9px; background:rgba(255,255,255,.65);
-  display:flex; align-items:center; justify-content:center; font-size:1rem; }
+  display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
 .pl-tenho-n{ font-weight:700; font-size:.88rem; color:var(--ink); }
 .pl-tenho-d{ font-size:.78rem; color:#8a8f88; line-height:1.4; margin-top:.1rem; }
 .pl-tenho-d b{ color:var(--ok); }

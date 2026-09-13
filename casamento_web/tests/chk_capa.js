@@ -5,6 +5,7 @@ const { chromium } = require('playwright-core');
 const janela = require('./_janela');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolherNo } = require('./escolhas');
 const OUT = process.env.TEST_OUT || require('os').tmpdir();
 
 (async () => {
@@ -74,11 +75,11 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   // ---------- 2b. os selos do monograma (não animam: seguros de intercalar) ----------
   const seloSel = p.locator('#props select').filter({ hasText: 'Camafeu' });
   ok(await seloSel.count() > 0, 'o Envelope tem o seletor de selo do monograma');
-  await seloSel.selectOption('camafeu');
+  await escolherNo(p, seloSel, 'camafeu');
   await p.waitForTimeout(300);
   ok(await tela().locator('#cover').getAttribute('data-selo') === 'camafeu',
      'escolher um selo muda o feitio do monograma na tela');
-  await seloSel.selectOption('cera');   // volta ao de origem
+  await escolherNo(p, seloSel, 'cera');   // volta ao de origem
   await p.waitForTimeout(200);
 
   // ---------- 3. o painel oferece monograma e dica ----------
@@ -113,11 +114,11 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   // (o #cover atrasa a volta à vista), e uma leitura a meio sairia vazia.
   const abreSel = p.locator('#props select').filter({ hasText: 'Portas ao meio' });
   ok(await abreSel.count() > 0, 'o Envelope tem o seletor de abertura');
-  await abreSel.selectOption('cruzado');
+  await escolherNo(p, abreSel, 'cruzado');
   await p.waitForTimeout(300);
   ok(await tela().locator('#cover').getAttribute('data-abre') === 'cruzado',
      'escolher uma abertura muda o modo do envelope na tela');
-  await abreSel.selectOption('portas');   // volta ao de origem
+  await escolherNo(p, abreSel, 'portas');   // volta ao de origem
 
   // ---------- 5. editar a dica ----------
   await p.fill('#props [data-chave="capa.monograma"]', 'I♥A');   // deixa um monograma para gravar

@@ -23,7 +23,7 @@ if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 if (!$MODELO && !podeEditarPeca('digital')) {
     header('Location: licenca.php?quero=digital&preciso=editar'); exit;
 }
-$CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'noivo' => '']
+$CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noiva' => '', 'noivo' => '']
                : casalInfo($DEFS_ED);
 // A contagem também aqui — é a mesma casa. A desenhar um MODELO não há dia
 // nenhum a contar: o modelo não é de casamento nenhum.
@@ -149,15 +149,15 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
   <div class="cresce"></div>
   <?php contagem($DATA_EV, $HORA_EV); ?>
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
-  <a href="digital.php">← Convite digital</a>
+  <a href="digital.php"><i data-ico="setaEsquerda"></i> Convite digital</a>
   <span class="ed-sep"></span>
   <a href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir o convite</a>
 </div>
 <?php contagemScript(); ?>
 
 <div class="ed-opcoes">
-  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled>↶ Desfazer</button>
-  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled>↷ Refazer</button>
+  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i data-ico="desfazer"></i> Desfazer</button>
+  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i data-ico="refazer"></i> Refazer</button>
   <span class="ed-sep"></span>
   <span class="rot">Largura</span>
   <select id="largura" onchange="aplicarLargura()">
@@ -215,27 +215,27 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => '◆', 'noiva' => '', 'n
 
   <div class="ed-paineis">
     <div class="ed-painel" id="p-props">
-      <h3 onclick="alternarPainel(this)">Propriedades <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Propriedades <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="props"></div>
     </div>
     <div class="ed-painel">
-      <h3 onclick="alternarPainel(this)">Camadas <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Camadas <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="camadas"></div>
     </div>
     <div class="ed-painel fechado">
-      <h3 onclick="alternarPainel(this)">Cores <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Cores <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="cores"></div>
     </div>
     <div class="ed-painel fechado">
-      <h3 onclick="alternarPainel(this)">Tipografia <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Tipografia <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="tipografia"></div>
     </div>
     <div class="ed-painel fechado">
-      <h3 onclick="alternarPainel(this)">Fotos e música <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Fotos e música <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="media"></div>
     </div>
     <div class="ed-painel fechado cresce">
-      <h3 onclick="alternarPainel(this)">Efeitos <span class="chev">▾</span></h3>
+      <h3 onclick="alternarPainel(this)">Efeitos <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="efeitos"></div>
     </div>
   </div>
@@ -607,7 +607,7 @@ async function reporLivresDa(sec){
   if (!ids.length) return msg('Nada foi movido nesta camada.');
   const r = await licConfirmar({
     titulo: 'Repor a composição desta camada?',
-    icone: '↩️', confirmar: 'Repor composição',
+    icone: 'volta', confirmar: 'Repor composição',
     texto: '<b>' + ids.length + '</b> bloco(s) voltam ao sítio que o design lhes deu.'
          + '<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado até guardar.'
   });
@@ -775,7 +775,7 @@ function acrescentarCerimonia(k, horaPadrao){
 async function removerCerimonia(k, rot){
   const r = await licConfirmar({
     titulo: 'Tirar a ' + licEsc(rot.toLowerCase()) + ' do convite?',
-    icone: '⛪', confirmar: 'Tirar do convite',
+    icone: 'igreja', confirmar: 'Tirar do convite',
     texto: 'A <b>hora</b> e o <b>local</b> desta cerimónia são apagados, e ela deixa de se '
          + 'anunciar aos convidados.<br><br><b>Ctrl+Z desfaz.</b>'
   });
@@ -1024,7 +1024,7 @@ async function apagarBloco(id){
   const b = blocoLivre(id); if (!b) return;
   const r = await licConfirmar({
     titulo: 'Apagar a secção «' + licEsc(b.titulo || 'livre') + '»?',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar secção',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar secção',
     texto: 'A secção sai do convite, com o que tem lá dentro.'
          + '<br><br><b>Ctrl+Z devolve-a</b>, e nada fica gravado até guardar.'
   });
@@ -1181,7 +1181,7 @@ function renderPropsLivre(b){
         <div class="it-topo"><span class="n">${i+1}</span>
           <select onchange="editarItemBloco('${b.id}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
             ${opcoesIcone(it.i)}</select>
-          <button class="bt bt-min" onclick="removerItemBloco('${b.id}',${i})" title="Remover">✕</button>
+          <button class="bt bt-min" onclick="removerItemBloco('${b.id}',${i})" title="Remover"><i data-ico="xis"></i></button>
         </div>
         <input type="text" placeholder="Título" value="${esc(it.t||'')}" oninput="editarItemBloco('${b.id}',${i},'t',this.value)">
         <textarea placeholder="Texto" oninput="editarItemBloco('${b.id}',${i},'x',this.value)">${esc(it.x||'')}</textarea>
@@ -1261,7 +1261,7 @@ function linhasCerimoniaCrono(){
     const ops = `<option value="selo"${ic==='selo'?' selected':''}>Selo · ${esc(nomeSelo)}</option>`
       + opcoesIcone(ic);
     return `<div class="it it-fixo">
-      <div class="it-topo"><span class="n">⛪</span>
+      <div class="it-topo"><span class="n" data-ico="igreja"></span>
         <select onchange="mudarIconeCerimonia('${l.k}',this.value)" style="width:auto;margin:0;flex:1">${ops}</select>
       </div>
       <div class="sel-nada" style="text-align:left;padding:.1rem 0 0">
@@ -1285,10 +1285,10 @@ function listaHTML(lk){
         ${cfg.icone?`<select onchange="editarItem('${lk}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
           ${opcoesIcone(it.i)}</select>`:'<span class="cresce"></span>'}
         <button class="bt bt-min" onclick="moverItem('${lk}',${i},-1)" ${i===0?'disabled':''}
-                title="Subir">↑</button>
+                title="Subir"><i data-ico="setaCima"></i></button>
         <button class="bt bt-min" onclick="moverItem('${lk}',${i},1)" ${i===itens.length-1?'disabled':''}
-                title="Descer">↓</button>
-        <button class="bt bt-min" onclick="removerItem('${lk}',${i})" title="Remover">✕</button>
+                title="Descer"><i data-ico="setaBaixo"></i></button>
+        <button class="bt bt-min" onclick="removerItem('${lk}',${i})" title="Remover"><i data-ico="xis"></i></button>
       </div>
       ${cfg.campos.map(([c,ph,tag])=> tag==='textarea'
         ? `<textarea placeholder="${ph}" oninput="editarItem('${lk}',${i},'${c}',this.value)">${esc(it[c]||'')}</textarea>`
@@ -1349,7 +1349,7 @@ function renderCoresJa(){
       return `<label class="cor-linha" title="${esc(r.onde)}">
           <input type="color" value="${cor}" oninput="editarCor('${v}',this.value)">
           <span>${esc(r.rotulo)}</span>
-          ${EST.paleta[v] ? `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor de origem">↺</button>` : ''}
+          ${EST.paleta[v] ? `<button class="bt bt-min" onclick="event.preventDefault();limparCor('${v}')" title="Voltar à cor de origem"><i data-ico="rodar"></i></button>` : ''}
         </label>
         <div class="cor-onde">${esc(r.onde)}</div>`;
     }).join('');
@@ -1358,7 +1358,7 @@ function editarCor(v, cor, el){
   EST.paleta[v] = cor.toUpperCase();
   enviarTela({tipo:'tema', vars:{[v]:EST.paleta[v]}});   // a tela muda de cor na hora
   marcarSujo(true); registarPasso();
-  // O ↺ já existe na linha; basta deixar de estar apagado. Fazê-lo nascer aqui
+  // O botão de repor já existe na linha; basta deixar de estar apagado. Fazê-lo nascer aqui
   // mexia no elemento a que o painel de cores do navegador está preso, e ele
   // fechava-se a meio da escolha.
   if (el){
@@ -1396,7 +1396,7 @@ function renderMedia(){
     const v = EST.val[k]||'', img = k!=='media.musica';
     const f = FOTOS[k];          // as recortadas têm enquadramento
     let h = `<div class="med">
-      ${img?`<img src="${esc(v)}?v=${MEDIA_V}" alt="">`:`<span class="ico-prev" style="width:52px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ed-linha);border-radius:4px">♪</span>`}
+      ${img?`<img src="${esc(v)}?v=${MEDIA_V}" alt="">`:`<span class="ico-prev" style="width:52px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ed-linha);border-radius:4px" data-ico="musica"></span>`}
       <span class="nm">${rot}<small>${esc(v.split('/').pop())}</small></span>
       <label class="bt bt-min">Trocar<input type="file" accept="${img?'image/*':'audio/*,.m4a,.mp3'}" onchange="enviarFicheiro('${k}',this)"></label>
     </div>`;
@@ -1875,7 +1875,7 @@ async function reporSeccao(){
 
   const r = await licConfirmar({
     titulo: 'Repor «' + licEsc(rotulo) + '» no modelo de origem?',
-    icone: '↩️', perigo: !!fotos.length, confirmar: 'Repor secção',
+    icone: 'volta', perigo: !!fotos.length, confirmar: 'Repor secção',
     texto: fotos.length
       ? 'Voltam os <b>textos</b>, os <b>estilos</b>, a <b>composição</b> e a '
         + '<b>fotografia</b> de origem.<br><br>A foto que tenha posto à mão nesta secção é '

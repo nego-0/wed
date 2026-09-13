@@ -174,7 +174,7 @@ $manual = [
 
   <div class="estado-peca no-print">
     <?php if ($estadoVs['estado'] === 'vigor'): ?>
-      <span class="selo-v ok">✓ Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span>
+      <span class="selo-v ok"><i data-ico="visto"></i> Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span>
       <span class="txt">É esta versão do cartão que se imprime, e a que o manual retrata.</span>
     <?php elseif ($estadoVs['estado'] === 'alterada'): ?>
       <span class="selo-v fora"><b><?= escP($estadoVs['nome']) ?></b> · com alterações</span>
@@ -211,7 +211,7 @@ $manual = [
     </div>
 
     <?php if (!$convites): ?>
-      <div class="vazio"><div class="ico">✉</div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
+      <div class="vazio"><div class="ico" data-ico="carta"></div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
     <?php else: ?>
     <div class="prod-scroll">
     <table class="prod" id="prod">
@@ -251,7 +251,7 @@ $manual = [
       Depois de editar o cartão, basta abrir o manual outra vez.</div>
     <div class="manuais">
       <div class="man">
-        <div class="ico">📄</div>
+        <div class="ico" data-ico="documento"></div>
         <h3><?= escP($manual['titulo']) ?></h3>
         <p><?= escP($manual['sub']) ?></p>
         <div class="acoes">
@@ -287,7 +287,7 @@ $manual = [
     <div class="mod-topo">
       <span class="nm" id="mod-nome"></span>
       <a class="btn" id="mod-imprimir" href="#">Imprimir este cartão</a>
-      <button class="mod-fechar" onclick="fecharModelo()" title="Fechar (Esc)" aria-label="Fechar">✕</button>
+      <button class="mod-fechar" onclick="fecharModelo()" title="Fechar (Esc)" aria-label="Fechar" data-ico="xis"></button>
     </div>
     <div class="mod-palco" id="mod-palco"><div class="escala" id="mod-corpo"></div></div>
   </div>

@@ -69,11 +69,12 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     .m-extras{ grid-column:1 / 4; grid-template-columns:1fr; }
   }
   /* Ícones de género / brinde nas pastilhas */
-  /* ♂ e ♀ são glifos finos: à medida do texto à volta ficavam quase invisíveis.
-     Um pouco maiores, mais escuros e com uma fonte que os desenha bem. */
-  .gi{ font-weight:700; line-height:1; font-size:1.15em; vertical-align:-.05em;
-       font-family:'Segoe UI Symbol','Noto Sans Symbols 2','Noto Sans Symbols',
-                   'DejaVu Sans',system-ui,sans-serif; }
+  /* Eram os caracteres ♂ ♀ 🎁, e isso obrigava a pedir uma fonte de símbolos
+     — 'Segoe UI Symbol', 'Noto Sans Symbols' — porque as fontes de texto ou
+     não os têm (e sai o quadrado) ou desenham-nos finos de mais para se verem
+     a este tamanho. Agora são desenhos da casa: acompanham o tamanho da letra
+     ao lado, herdam a cor, e são o mesmo traço em qualquer aparelho. */
+  .gi{ line-height:0; font-size:1.15em; }
   .gi-m{ color:#2f5568; } .gi-f{ color:#9c4256; } .gi-b{ font-weight:400; font-size:1em; }
   .sugestoes{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0 .2rem; }
   .sugestao{ background:var(--cream); border:1px solid var(--line); border-radius:50px; padding:.25rem .7rem; font-size:.8rem; cursor:pointer; }
@@ -181,7 +182,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .stat-f .ss{ font-size:.66rem; color:#b0b4ab; margin-top:.1rem; }
   .stat-f .ss .gi{ font-size:.92rem; }
   .stat-f.ativo .ss{ color:rgba(239,227,203,.7); }
-  /* Cartão selecionado (fundo verde): os símbolos ♂/♀ herdam o tom claro. */
+  /* Cartão selecionado (fundo verde): os sinais de género herdam o tom claro. */
   .stat-f.ativo .ss .gi{ color:inherit; }
 
   /* O tecto da licença: o aviso e o botão que se fecha. */
@@ -613,10 +614,10 @@ function statCard(ic,pessoas,convites,l,onclick,ativo,cls='',subHtml='',titulo='
     <span class="si">${ic}</span><span class="sn">${+pessoas||0}</span><span class="sl">${l}</span><span class="ss">${sub}</span></button>`;
 }
 
-// Sub-linha do cartão de brindes: quantos recebem por género (♂/♀).
+// Sub-linha do cartão de brindes: quantos recebem por género.
 function brindeSub(s){
   const m=+s.pes_brinde_m||0, f=+s.pes_brinde_f||0, sg=+s.pes_brinde_sg||0;
-  return `<span class="gi gi-m">♂</span> ${m} · <span class="gi gi-f">♀</span> ${f}`
+  return `<i class="gi gi-m" data-ico="homem"></i> ${m} · <i class="gi gi-f" data-ico="mulher"></i> ${f}`
        + (sg?` · ${sg}?`:'');
 }
 function brindeTitulo(s){
@@ -676,7 +677,7 @@ async function tiraDoBar(){
     + (e.em_analise ? ` · <span class="urg">${e.em_analise} por decidir</span>` : '')
     + (e.aprovados||e.a_caminho ? ` · ${(e.aprovados||0)+(e.a_caminho||0)} por entregar` : '')
     + ` · ${e.bebidas_entregues||0} servidas`
-    + `<span class="ir">ir à copa →</span>`;
+    + `<span class="ir">ir à copa <i data-ico="seta"></i></span>`;
 }
 function alternarStats(){ STATS_ABERTO = !STATS_ABERTO; carregar(); }
 
@@ -778,8 +779,9 @@ function tagEstado(e){
 function iconeTipo(t){ return t==='fisico'?IC.envelope:(t==='ambos'?(IC.telemovel+IC.envelope):IC.telemovel); }
 function iconeLado(l){ return l==='noiva'?IC.noiva:(l==='ambos'?(IC.noivo+IC.noiva):IC.noivo); }
 // Ícones sugestivos de género (e brinde) para as pastilhas com nomes.
-const genIco=g=> g==='m'?'<span class="gi gi-m" title="Masculino">♂</span> ':g==='f'?'<span class="gi gi-f" title="Feminino">♀</span> ':'';
-const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>':'';
+const genIco=g=> g==='m'?'<i class="gi gi-m" data-ico="homem" title="Masculino"></i> '
+               :g==='f'?'<i class="gi gi-f" data-ico="mulher" title="Feminino"></i> ':'';
+const brindeIco=b=> +b?' <i class="gi gi-b" data-ico="presente" title="Recebe brinde"></i>':'';
 /** Primeiro nome — é o que se procura ao varrer a lista; o resto está no título. */
 const primeiroNome=n=> String(n||'').trim().split(/\s+/)[0] || '';
 
@@ -863,7 +865,7 @@ function massaMesa(){
 
 function renderConvites(){
   const el=$('lista');
-  if(!CONVITES.length){ el.innerHTML=`<div class="vazio"><div class="ico">✦</div><p>Ainda não há convites. Crie o primeiro ou importe a sua lista.</p></div>`; return; }
+  if(!CONVITES.length){ el.innerHTML=`<div class="vazio"><div class="ico" data-ico="brilho"></div><p>Ainda não há convites. Crie o primeiro ou importe a sua lista.</p></div>`; return; }
   // Convites que saíram da lista (por filtro) deixam de contar para a seleção
   [...SELEC].forEach(id => { if(!CONVITES.some(c=>c.id==id)) SELEC.delete(id); });
   renderBarraSelecao();
@@ -911,8 +913,8 @@ function renderConvites(){
           ? `<button class="btn-ico bt-wa" title="Enviar o convite por WhatsApp para ${esc(c.telefone)}" onclick="enviarWhatsApp(${c.id})">${IC.whatsapp} Enviar</button>`
           : `<button class="btn-ico" title="Sem telefone — adicione-o para poder enviar" onclick="editar(${c.id})" style="opacity:.55">${IC.whatsapp} Sem nº</button>`}
         <button class="btn-ico" title="Editar" onclick="editar(${c.id})">Editar</button>
-        ${c.tipo!=='fisico'?`<button class="btn-ico" title="Marcar como enviado" onclick="flag(${c.id},'enviado',${c.enviado?0:1})" style="${c.enviado?'background:var(--ok-bg);color:var(--ok)':''}">${c.enviado?'Enviado ✓':'Enviado'}</button>`:''}
-        ${c.tipo!=='digital'?`<button class="btn-ico" title="Marcar como impresso" onclick="flag(${c.id},'impresso',${c.impresso?0:1})" style="${c.impresso?'background:var(--ok-bg);color:var(--ok)':''}">${c.impresso?'Impresso ✓':'Impresso'}</button>`:''}
+        ${c.tipo!=='fisico'?`<button class="btn-ico" title="Marcar como enviado" onclick="flag(${c.id},'enviado',${c.enviado?0:1})" style="${c.enviado?'background:var(--ok-bg);color:var(--ok)':''}">${c.enviado?'Enviado <i data-ico="visto"></i>':'Enviado'}</button>`:''}
+        ${c.tipo!=='digital'?`<button class="btn-ico" title="Marcar como impresso" onclick="flag(${c.id},'impresso',${c.impresso?0:1})" style="${c.impresso?'background:var(--ok-bg);color:var(--ok)':''}">${c.impresso?'Impresso <i data-ico="visto"></i>':'Impresso'}</button>`:''}
         <div class="menu-mais">
           <button class="btn-ico bt-mais" title="Mais ações" aria-haspopup="true" data-escrita="0" onclick="abrirMais(event,${c.id})"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
         </div>
@@ -1034,13 +1036,13 @@ function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=fa
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
     <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)"
             onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesMesaMembro(mesaId)}</select>
-    <label class="m-brinde" title="Esta pessoa recebe brinde">Brindes? <input type="checkbox" ${brinde?'checked':''}> 🎁</label>
+    <label class="m-brinde" title="Esta pessoa recebe brinde">Brindes? <input type="checkbox" ${brinde?'checked':''}> <i data-ico="presente"></i></label>
     <button class="btn-ico" type="button" title="Retirar esta pessoa"
-            onclick="this.closest('.membro-linha').remove();renderSugestoes();atualizarPrevia();contarPessoas()">✕</button>
+            onclick="this.closest('.membro-linha').remove();renderSugestoes();atualizarPrevia();contarPessoas()"><i data-ico="xis"></i></button>
     <div class="m-extras" onclick="cliqueSeg(event)">
       ${segMembro('m-genero', genero, [
-        ['m', '♂ Masculino', 'Masculino'],
-        ['f', '♀ Feminino',  'Feminino']])}
+        ['m', '<i data-ico="homem"></i> Masculino', 'Masculino'],
+        ['f', '<i data-ico="mulher"></i> Feminino',  'Feminino']])}
       ${segMembro('m-papel', papel, [
         ['',   'Convidado', 'Convidado(a) — o papel de origem'],
         ['pm', PM_ROTULO[genero] || PM_ROTULO[''],
@@ -1209,7 +1211,7 @@ async function flag(id,campo,valor){ const d=await api(`convite_flag&id=${id}&ca
 async function eliminar(id){ const c=CONVITES.find(x=>x.id==id); const nome=c?c.nome_final:'este convite';
   const r = await licConfirmar({
     titulo: 'Eliminar o convite «' + licEsc(nome) + '»?',
-    icone: '🗑️', confirmar: 'Eliminar convite',
+    icone: 'lixo', confirmar: 'Eliminar convite',
     texto: 'Vai para a <b>reciclagem</b>, e as pessoas dele vão com ele.<br><br>'
          + 'Pode <b>repô-lo</b> a qualquer momento, em Histórico.'
   });
@@ -1237,7 +1239,7 @@ function telefoneWa(t){
 function mensagemWhatsApp(c){
   const nome = (c.nome_final || c.nome_exibicao || '').trim();
   const l = linkConvite(c.codigo);
-  return `Olá ${nome}! 💛\n\n${CASAL} têm o prazer de vos convidar para o seu casamento, no dia ${DATA_EXT}.\n\nO convite está aqui:\n${l}\n\nAgradecemos que confirme a presença por esse link. Até lá!`;
+  return `Olá ${nome}!\n\n${CASAL} têm o prazer de vos convidar para o seu casamento, no dia ${DATA_EXT}.\n\nO convite está aqui:\n${l}\n\nAgradecemos que confirme a presença por esse link. Até lá!`;
 }
 function enviarWhatsApp(id){
   const c = CONVITES.find(x=>x.id==id); if(!c) return;
@@ -1331,7 +1333,7 @@ async function renderMesasGestao(){
         ${cap?`<div class="barra-ocup"><span class="${perc>=100?'cheio':''}" style="width:${perc}%"></span></div>`:''}
       </div>
       <button class="btn-ico" onclick="editarMesa(${m.id})">Editar</button>
-      <button class="btn-ico" onclick="eliminarMesa(${m.id})">✕</button>
+      <button class="btn-ico" onclick="eliminarMesa(${m.id})"><i data-ico="xis"></i></button>
     </div>`;
   }).join('') : '<p style="color:#9aa09a">Ainda não há mesas.</p>';
 }
@@ -1346,7 +1348,7 @@ async function eliminarMesa(id){ const m=MESAS.find(x=>x.id==id); const nome=m?m
   const sentados = (CONVITES||[]).filter(c => String(c.mesa_id||'') === String(id)).length;
   const r = await licConfirmar({
     titulo: 'Eliminar a mesa «' + licEsc(nome) + '»?',
-    icone: '🪑', perigo: true, confirmar: 'Eliminar mesa',
+    icone: 'mesa', perigo: true, confirmar: 'Eliminar mesa',
     texto: (sentados
         ? '<b>' + sentados + '</b> convite(s) estão sentados nesta mesa e <b>ficam sem mesa</b>. '
         : 'Não há convites sentados nesta mesa. ')
@@ -1437,7 +1439,7 @@ async function carregarLixo(){
 async function apagarDeVez(id, nome){
   const r = await licConfirmar({
     titulo: 'Apagar «' + licEsc(nome) + '» de vez?',
-    icone: '🗑️', perigo: true, confirmar: 'Apagar de vez',
+    icone: 'lixo', perigo: true, confirmar: 'Apagar de vez',
     texto: 'Sai da reciclagem e <b>deixa de poder ser reposto</b>. As pessoas deste convite '
          + 'vão com ele.<br><br><b>Isto não se desfaz.</b>'
   });

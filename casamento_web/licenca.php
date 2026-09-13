@@ -99,7 +99,7 @@ if ($modQuero) {
   .lic-estado.morta{ border-color:var(--danger); background:var(--danger-bg); }
   .lic-estado-ico{ width:48px; height:48px; flex:none; border-radius:14px;
     background:rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center;
-    font-size:1.4rem; }
+    font-size:1.7rem; }
   .lic-estado-txt{ flex:1; min-width:230px; }
   .lic-estado h2{ font-family:var(--serif); font-size:1.25rem; color:var(--ink); margin:0 0 .3rem; }
   .lic-estado p{ margin:0; font-size:.88rem; line-height:1.6; color:var(--text); }
@@ -240,7 +240,7 @@ if ($modQuero) {
 
 <?php if ($souDaCasa): /* A casa a ver a licença de um casal. */ ?>
   <div class="lic-estado" style="border-color:var(--gold-soft); background:var(--gold-pale)">
-    <div class="lic-estado-ico">👀</div>
+    <div class="lic-estado-ico" data-ico="olho"></div>
     <div class="lic-estado-txt">
       <h2>Está a ver a licença de <?= escP($CAS['casal']) ?></h2>
       <p>É exactamente esta a página que o casal vê. Aqui não se pede nem se decide nada —
@@ -260,7 +260,7 @@ if ($modQuero) {
       $escQuero  = (string)($temQuero['nome'] ?? '');
 ?>
   <div class="pl-porta">
-    <div class="pl-porta-ico"><?= escP($modQuero['icone'] ?: '🔒') ?></div>
+    <div class="pl-porta-ico" data-ico="<?= escP($modQuero['icone'] ?: 'cadeado') ?>"></div>
 
     <?php if ($faltaQuero === 'modulo'): ?>
       <h2><?= escP($modQuero['nome']) ?> não faz parte da sua licença</h2>
@@ -300,7 +300,7 @@ if ($modQuero) {
 <?php // ---- a barra de estado: onde é que este casal está ---- ?>
 <?php if ($LIC === 'pendente'): ?>
   <div class="lic-estado espera">
-    <div class="lic-estado-ico">⏳</div>
+    <div class="lic-estado-ico" data-ico="ampulheta"></div>
     <div class="lic-estado-txt">
       <h2>O seu pedido está à espera de decisão</h2>
       <p>Já tem conta e já entrou — falta só a administração conceder os módulos que pediu.
@@ -312,7 +312,7 @@ if ($modQuero) {
                         . "casamentos WHERE id=" . (int)$cid);
       $rev = $r ? $r->fetch_assoc() : null; ?>
   <div class="lic-estado morta">
-    <div class="lic-estado-ico">⚠️</div>
+    <div class="lic-estado-ico" data-ico="aviso"></div>
     <div class="lic-estado-txt">
       <h2>A licença deste casamento foi revogada</h2>
       <p><?= $rev && $rev['licenca_revogada_motivo']
@@ -328,7 +328,7 @@ if ($modQuero) {
       $r = $conn->query("SELECT licenca_pacote FROM " . PREFIXO . "casamentos WHERE id=" . (int)$cid);
       $pac = $r ? (string)($r->fetch_assoc()['licenca_pacote'] ?? '') : ''; ?>
   <div class="lic-estado viva">
-    <div class="lic-estado-ico">✓</div>
+    <div class="lic-estado-ico" data-ico="visto"></div>
     <div class="lic-estado-txt">
       <h2>Licença ativa<?= $pac !== '' ? ' · ' . escP($pac) : '' ?></h2>
       <p><?= $frase !== '' ? escP($frase) : 'Sem limite de tempo.' ?></p>
@@ -350,7 +350,7 @@ if ($modQuero) {
         $g = $MODS[$ch] ?? ['ativo' => false];
         $tem = !empty($g['ativo']); ?>
         <div class="pl-tenho-c <?= $tem ? 'sim' : 'nao' ?>">
-          <div class="pl-tenho-ico"><?= escP($m['icone'] ?: '•') ?></div>
+          <div class="pl-tenho-ico" data-ico="<?= escP($m['icone'] ?: 'anel') ?>"></div>
           <div style="flex:1">
             <div class="pl-tenho-n"><?= escP($m['nome']) ?></div>
             <?php if (!$tem): ?>
@@ -367,11 +367,11 @@ if ($modQuero) {
                 <div class="pl-medidor<?= $pc >= 90 ? ' cheio' : '' ?>"><i style="width:<?= $pc ?>%"></i></div>
               <?php endif; ?>
             <?php elseif ($ch === 'impresso' || $ch === 'digital'): ?>
-              <div class="pl-tenho-d"><b>✓</b>
+              <div class="pl-tenho-d"><b data-ico="visto"></b>
                 <?= !empty($g['todos_modelos']) ? 'Todos os modelos, com edição'
                     : (!empty($g['editar']) ? 'Modelo padrão, com edição' : 'Modelo padrão, sem edição') ?></div>
             <?php else: ?>
-              <div class="pl-tenho-d"><b>✓</b> Incluído</div>
+              <div class="pl-tenho-d"><b data-ico="visto"></b> Incluído</div>
             <?php endif; ?>
           </div>
         </div>
@@ -518,8 +518,8 @@ function histRotulo(x){
        + (x.estado === 'aprovado' ? ' · aprovado' : ' · recusado');
 }
 function histSelo(x){
-  if (x.tipo === 'revogacao') return ['nao', '⚠'];
-  return x.estado === 'aprovado' ? ['ok', '✓'] : ['nao', '✕'];
+  if (x.tipo === 'revogacao') return ['nao', 'aviso'];
+  return x.estado === 'aprovado' ? ['ok', 'visto'] : ['nao', 'xis'];
 }
 
 function desenharHistorico(){
@@ -657,7 +657,7 @@ function alterarPedido(){
 async function cancelarPedido(){
   const r = await licConfirmar({
     titulo: 'Cancelar o pedido de licença?',
-    icone: '↩️', confirmar: 'Cancelar pedido',
+    icone: 'volta', confirmar: 'Cancelar pedido',
     texto: 'O pedido sai da fila da administração e <b>deixa de ser analisado</b>.<br><br>'
          + 'Pode <b>voltar a pedir quando quiser</b>, e escolher outro plano.'
   });
@@ -720,7 +720,7 @@ function janelaHistorico(i){
     +   '<div class="lic-det-tit">' + escapar(histRotulo(x)) + '</div>'
     +   '<div class="lic-det-sub">' + escapar(LIC.casamento.nome || '') + '</div>'
     + '</div><div class="lic-det-selo ' + (rev || !ok ? 'nao' : 'ok') + '">'
-    +   (rev ? '⚠' : ok ? '✓' : '✕') + '</div></div>';
+    +   ICO.ico(rev ? 'aviso' : ok ? 'visto' : 'xis') + '</div></div>';
 
   corpo += '<div class="lic-d-tab">'
     + linha(rev ? 'Data da revogação' : 'Decidido em', escapar(dataLonga(x.decidido_em)))

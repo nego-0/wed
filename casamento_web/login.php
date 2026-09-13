@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login">
     <div class="card">
       <?php marcaNiras('grande so-niras'); ?>
-      <div class="brasao so-classico"><?= escP(PLATAFORMA['marca']) ?></div>
+      <div class="brasao so-classico" data-ico="<?= escP(PLATAFORMA['marca']) ?>"></div>
       <div class="casa"><?= escP(PLATAFORMA['nome']) ?></div>
       <div class="evento"><?= escP(PLATAFORMA['sub']) ?></div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>
@@ -164,6 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 </script>
 <?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
+<script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/atendimento.js') ?>"></script>
 </body>
 </html>

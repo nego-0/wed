@@ -377,6 +377,25 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold);
    vista; o que estraga fica atrás de um clique. Ao mesmo peso,
    um gesto distraído arquivava a festa de alguém.
    ============================================================ */
+/* ============================================================
+   OS SINAIS DESENHADOS
+
+   Todo o sistema escreve `<i data-ico="lixo"></i>` e o assets/icones.js põe
+   lá dentro o SVG. Estas três regras são o que faz esse SVG comportar-se como
+   uma letra: a caixa de 1em acompanha o tamanho do texto ao lado, o
+   `vertical-align` põe-no sobre a linha de base (sem ele fica meio ponto
+   abaixo, e nota-se em toda a linha), e `flex:none` impede que encolha quando
+   o pai é um flex apertado — era o que acontecia aos ✓ dentro dos botões.
+
+   Antes destes sinais, o sistema escrevia caracteres: ✓ ✕ ▸ ⏳ 🎁 ♂ ♀. Cada
+   sistema operativo desenha-os à sua maneira (o ✓ da Apple é fino e azul, o
+   do Android é verde e gordo), muitos aparelhos não têm alguns deles e
+   mostram o quadrado vazio, e nenhum deles alinha com o traço da casa. */
+[data-ico]{ display:inline-flex; align-items:center; justify-content:center; flex:none;
+            vertical-align:-.14em; line-height:0; }
+[data-ico] > svg{ width:1em; height:1em; display:block; }
+[data-ico].grande > svg{ width:1.5em; height:1.5em; }
+
 .mm{ position:relative; display:inline-block; }
 /* O botão dos três pontos leva um SVG, e não o glifo "⋯": esse desenha-se
    encostado ao fundo da linha na maioria dos tipos de letra, e ficava caído

@@ -27,6 +27,9 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Confirmação · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<?php // A escolha da casa: é a mesma lista de todo o sistema, e traz a procura
+      // por dentro quando as opções forem muitas. ?>
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
   :root{
     --ink:#20342A; --forest:#2C4536; --forest-deep:#16261E;
@@ -75,7 +78,11 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   h3.sec{ font-family:var(--serif); text-align:center; color:var(--ink); font-size:1.4rem; margin:0 0 1rem; }
   .opcoes{ display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:1rem; }
   .op{ border:1.5px solid rgba(44,69,54,.15); border-radius:14px; padding:1rem; text-align:center; cursor:pointer; transition:.15s; background:#fff; }
-  .op .em{ font-size:1.5rem; display:block; margin-bottom:.3rem; }
+  /* Os sinais são desenhados (assets/icones.js): eram 🌿 e 🕊️, e um emoji
+     colorido de sistema no meio de um convite a dourado e verde traz consigo
+     a paleta de outra gente — além de mudar de desenho conforme o telemóvel
+     de quem recebe o convite, que é justamente quem não se pode controlar. */
+  .op .em{ font-size:1.5rem; display:block; margin-bottom:.3rem; color:var(--gold); }
   .op:hover{ border-color:var(--gold-soft); }
   .op.sel-sim{ border-color:var(--forest); background:var(--cream); }
   .op.sel-nao{ border-color:#a5473f; background:#f7eae8; }
@@ -160,7 +167,7 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       </div>
 
       <div class="contador" id="contador"></div>
-      <div class="divisor">✦</div>
+      <div class="divisor"><i data-ico="brilho"></i></div>
 
       <div class="info-ev">
         <strong><?= escP($DEFS['evento.local']) ?></strong><br>
@@ -182,8 +189,8 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       <!-- FORMULÁRIO -->
       <div id="form-rsvp">
         <div class="opcoes">
-          <div class="op" id="op-sim" onclick="escolher('sim')"><span class="em">🌿</span>Vou comparecer</div>
-          <div class="op" id="op-nao" onclick="escolher('nao')"><span class="em">🕊️</span>Não poderei ir</div>
+          <div class="op" id="op-sim" onclick="escolher('sim')"><span class="em" data-ico="folha"></span>Vou comparecer</div>
+          <div class="op" id="op-nao" onclick="escolher('nao')"><span class="em" data-ico="pomba"></span>Não poderei ir</div>
         </div>
 
         <div id="detalhes-sim" style="display:none;">
@@ -268,7 +275,7 @@ const $=id=>document.getElementById(id);
 function tick(){
   const agora=new Date(), dif=DATA_EV-agora;
   const box=$('contador'); if(!box) return;
-  if(dif<=0){ box.innerHTML='<div class="u"><div class="v">♥</div><div class="t">É hoje!</div></div>'; return; }
+  if(dif<=0){ box.innerHTML='<div class="u"><div class="v" data-ico="coracao"></div><div class="t">É hoje!</div></div>'; return; }
   const d=Math.floor(dif/864e5), h=Math.floor(dif%864e5/36e5), m=Math.floor(dif%36e5/6e4), s=Math.floor(dif%6e4/1e3);
   const u=(v,t)=>`<div class="u"><div class="v">${v}</div><div class="t">${t}</div></div>`;
   box.innerHTML=u(d,'dias')+u(h,'horas')+u(m,'min')+u(s,'seg');
@@ -314,11 +321,13 @@ async function enviar(){
     $('concluido').classList.add('on');
     $('concluido').scrollIntoView({behavior:'smooth'});
   } else {
-    $('form-rsvp').innerHTML='<div class="estado-atual"><span class="nao">Resposta registada.</span> Sentiremos a sua falta — obrigado por avisar. 🕊️</div>';
+    $('form-rsvp').innerHTML='<div class="estado-atual"><span class="nao">Resposta registada.</span> Sentiremos a sua falta — obrigado por avisar. <i data-ico="pomba"></i></div>';
     $('concluido').classList.remove('on');
   }
 }
 </script>
 <?php endif; ?>
+<script src="<?= asset('assets/icones.js') ?>"></script>
+<script src="<?= asset('assets/janela.js') ?>"></script>
 </body>
 </html>

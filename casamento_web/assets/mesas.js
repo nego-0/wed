@@ -74,7 +74,7 @@ function aplicarBloqueios(){
     : 'Arraste as <b>bordas do canvas</b> para o redimensionar.');
   partes.push(BLOQ.scroll
     ? 'A <b>vista está fixa</b>: a planta não se desloca.'
-    : 'Arraste o <b>fundo do canvas</b> para deslocar a vista, e use o alvo (⌖) para voltar ao centro das mesas.');
+    : 'Arraste o <b>fundo do canvas</b> para deslocar a vista, e use o <b>alvo</b> para voltar ao centro das mesas.');
   dica.innerHTML=partes.join(' ');
 }
 async function guardarBloqueio(){
@@ -341,8 +341,9 @@ const normConvidados=a=>(a||[]).map(g=>({...g, id:+g.id, convite_id:+g.convite_i
   mesa_pessoa:numOuNull(g.mesa_pessoa), mesa_convite:numOuNull(g.mesa_convite), mesa_efetiva_id:numOuNull(g.mesa_efetiva_id),
   papel:g.papel||null, mesa_efetiva_esp:g.mesa_efetiva_esp||null, genero:g.genero||'', brinde:+g.brinde||0}));
 // Ícones sugestivos de género (e brinde) para as pastilhas com nomes.
-const genIco=g=> g==='m'?'<span class="gi gi-m" title="Masculino">♂</span> ':g==='f'?'<span class="gi gi-f" title="Feminino">♀</span> ':'';
-const brindeIco=b=> +b?' <span class="gi gi-b" title="Recebe brinde">🎁</span>':'';
+const genIco=g=> g==='m'?'<i class="gi gi-m" data-ico="homem" title="Masculino"></i> '
+               :g==='f'?'<i class="gi gi-f" data-ico="mulher" title="Feminino"></i> ':'';
+const brindeIco=b=> +b?' <i class="gi gi-b" data-ico="presente" title="Recebe brinde"></i>':'';
 const ehNoivos=m=>m&&m.especial==='noivos';
 // Dimensão base (px) do nó da mesa: tamanho manual sobrepõe-se ao automático.
 // A mesa dos noivos tem a dimensão de uma mesa comum (tamanho geral).
@@ -434,7 +435,10 @@ function renderStats(){
  * desenha a lotação, como um relógio que se enche. Cor e feitio dizem o mesmo,
  * de modo que quem não distingue cores continua a ler a planta.
  */
-const GLIFO_ESTADO={ vazia:'', parcial:'', cheia:'✓', excede:'!' };
+/* «Completa» leva o visto DESENHADO (o mesmo traço do resto da casa) e não o
+   carácter ✓, que nem todos os aparelhos têm — e onde falta sai o quadrado
+   por cima do prato mais cheio da planta. O «!» é letra e fica letra. */
+const GLIFO_ESTADO={ vazia:'', parcial:'', cheia:'<i data-ico="visto"></i>', excede:'!' };
 function fracaoOcup(m){
   const oc=+m.ocupacao||0, cap=+m.capacidade||0;
   if(!cap) return oc?100:0;
@@ -851,14 +855,14 @@ function renderLista(){
         <span class="cd-nome">${genIco(g.genero)}${esc(g.nome)}${brindeIco(g.brinde)}</span><span class="cd-meta">${esc(g.convite_nome)} · ${meta}</span></div>`;
     }).join('');
   }
-  box.innerHTML = html || `<div class="roster-vazio">${activeTab==='semmesa'?'Está tudo sentado. 🎉':'Nada corresponde aos filtros.'}</div>`;
+  box.innerHTML = html || `<div class="roster-vazio">${activeTab==='semmesa'?'<i data-ico="festa"></i> Está tudo sentado.':'Nada corresponde aos filtros.'}</div>`;
   const cont=$('roster-conta'); if(cont) cont.textContent = total+unidade;
 }
 
 // ---------- dropdown de pesquisa (substitui os <select> longos) ----------
 function comboHTML(kind, arg, placeholder, cls){
   return `<div class="combo ${cls||''}" data-kind="${kind}" data-arg="${arg??''}">
-    <button type="button" class="combo-btn"><span class="combo-txt">${esc(placeholder)}</span><span class="combo-cx">▾</span></button>
+    <button type="button" class="combo-btn"><span class="combo-txt">${esc(placeholder)}</span><span class="combo-cx" data-ico="baixoSeta"></span></button>
     <div class="combo-pop" hidden>
       <input type="text" class="combo-search" placeholder="Procurar…" autocomplete="off">
       <div class="combo-list"></div>
@@ -961,9 +965,9 @@ function detalheHTML(){
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Dimensão</span>
         <select id="ed-tam" class="sel-mini" title="Dimensão da mesa" onchange="guardarMesaEd()">${optTam(m.tamanho)}</select></div>
       <div class="grp rodar" style="display:flex;align-items:center;gap:.35rem"><span class="rot" style="margin:0">Rodar</span>
-        <button class="btn-gir" type="button" title="Rodar 15° para a esquerda" onclick="rodarMesa(-15)">↺</button>
+        <button class="btn-gir" type="button" title="Rodar 15° para a esquerda" onclick="rodarMesa(-15)"><i data-ico="rodar"></i></button>
         <span class="gir-val" id="ed-rot-val">${(+m.rotacao||0)}°</span>
-        <button class="btn-gir" type="button" title="Rodar 15° para a direita" onclick="rodarMesa(15)">↻</button>
+        <button class="btn-gir espelho" type="button" title="Rodar 15° para a direita" onclick="rodarMesa(15)"><i data-ico="rodar"></i></button>
         ${(+m.rotacao||0) ? '<button class="btn-gir larga" type="button" title="Voltar a pôr a mesa ao direito" onclick="rodarMesa(null)">repor</button>' : ''}</div>
     </div>
 
@@ -1001,7 +1005,7 @@ impresso em cima dela a noite inteira; só diz qual é a mesa.">${esc(m.bar_toke
 
     <div class="rot">Sentar convite inteiro nesta mesa</div>
     ${comboHTML('sentar', '', 'Escolher convite…')}
-    ${convAqui.length?`<div style="margin-top:.4rem">${convAqui.map(c=>`<span class="semmesa-chip">${esc(c.nome_final)}<button class="btn-ico" title="Retirar convite da mesa" onclick="retirarConvite(${c.id})">✕</button></span>`).join('')}</div>`:''}
+    ${convAqui.length?`<div style="margin-top:.4rem">${convAqui.map(c=>`<span class="semmesa-chip">${esc(c.nome_final)}<button class="btn-ico" title="Retirar convite da mesa" onclick="retirarConvite(${c.id})"><i data-ico="xis"></i></button></span>`).join('')}</div>`:''}
 
     <div class="acoes-bloco">
       <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
@@ -1027,7 +1031,7 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
       <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
     </div>
-    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos ⚭. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
+    <p style="font-size:.8rem;color:#7a8078;margin:.55rem 0 .2rem">Mesa de honra dos noivos <i data-ico="anel"></i>. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
     <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
     ${bloco('Padrinhos · ala esquerda', padrinhos)}
     ${bloco('Madrinhas · ala direita', madrinhas)}
@@ -1131,7 +1135,7 @@ async function eliminar(id){
   const m=MESAS.find(x=>x.id===id); const nome=m?m.nome:'esta mesa';
   const r = await licConfirmar({
     titulo: 'Eliminar a mesa «' + licEsc(nome) + '»?',
-    icone: '🪑', perigo: true, confirmar: 'Eliminar mesa',
+    icone: 'mesa', perigo: true, confirmar: 'Eliminar mesa',
     texto: 'Os <b>convites e pessoas sentados ficam sem mesa</b> — ninguém é apagado, só '
          + 'perdem o lugar.<br><br>A mesa sai da planta, e para a ter de volta cria-se outra.'
   });
@@ -1221,7 +1225,7 @@ async function largarArraste(e){
     // Largar na mesa dos noivos torna a pessoa padrinho/madrinha. Convites não entram.
     if(item.tipo!=='pessoa') return toast('Na mesa dos noivos só entram padrinhos e madrinhas.',true);
     const g=CONVIDADOS.find(x=>x.id===item.id);
-    // Género define o papel (♂ padrinho, ♀ madrinha); sem género, decide o lado onde se largou.
+    // Género define o papel (homem padrinho, mulher madrinha); sem género, decide o lado onde se largou.
     let papel = g&&g.genero==='m' ? 'padrinho' : g&&g.genero==='f' ? 'madrinha' : null;
     if(!papel){ const r=node.getBoundingClientRect(); papel = (e.clientX < r.left + r.width/2) ? 'padrinho' : 'madrinha'; }
     await definirPapel(item.id, papel);

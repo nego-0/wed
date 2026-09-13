@@ -257,7 +257,8 @@
         + '<ul class="pl-inclui">' + linhas.join('') + '</ul>'
         + '<div class="pl-pac-ac">'
         +   '<button type="button" class="btn ' + (sel.pacote === p.id ? 'btn-ouro' : 'btn-linha') + ' pl-escolher">'
-        +     (sel.pacote === p.id ? '✓ Escolhido' : 'Escolher ' + esc(p.nome)) + '</button>'
+        +     (sel.pacote === p.id ? '<i data-ico="visto"></i> Escolhido'
+                              : 'Escolher ' + esc(p.nome)) + '</button>'
         // Ver o que este pacote traz, em imagens — uma por módulo incluído.
         +   '<button type="button" class="pl-exemplo-lig" data-exemplo-pac="' + p.id + '">'
         +     'Ver exemplo</button>'
@@ -305,7 +306,7 @@
       var escs = m.escaloes.filter(function (e) { return e.ativo; });
       if (!escs.length) return;
       h += '<div class="pl-mod" data-chave="' + esc(m.chave) + '"><div class="pl-mod-cab">'
-         + '<div class="pl-mod-ico">' + esc(m.icone || '•') + '</div><div>'
+         + '<div class="pl-mod-ico" data-ico="' + esc(m.icone || 'anel') + '"></div><div>'
          + '<div class="pl-mod-nome">' + esc(m.nome)
          + (m.obrigatorio ? ' <span class="pl-mod-obrig">obrigatório</span>' : '') + '</div>'
          + (m.beneficio ? '<div class="pl-mod-benef">' + esc(m.beneficio) + '</div>' : '')
@@ -363,7 +364,7 @@
            +   (on ? ' checked' : '') + (tem ? ' disabled' : '') + '>'
            + '<span><span class="pl-esc-nome">' + esc(e.nome) + '</span>'
            + (e.resumo ? '<span class="pl-esc-res">' + esc(e.resumo) + '</span>' : '')
-           + (tem ? '<span class="pl-esc-tem">✓ Já tem</span>' : preco)
+           + (tem ? '<span class="pl-esc-tem"><i data-ico="visto"></i> Já tem</span>' : preco)
            + '</span></label>';
       });
       h += '</div>';
@@ -523,8 +524,10 @@
       +   (it.nota ? ' — ' + esc(it.nota) : '') + '</figcaption>'
       + (varias
           ? '<div class="pl-lupa-nav">'
-            + '<button type="button" id="pl-lupa-ant" aria-label="Anterior">‹ Anterior</button>'
-            + '<button type="button" id="pl-lupa-seg" aria-label="Seguinte">Seguinte ›</button>'
+            + '<button type="button" id="pl-lupa-ant" aria-label="Anterior">'
+            +   '<i data-ico="esquerda"></i> Anterior</button>'
+            + '<button type="button" id="pl-lupa-seg" aria-label="Seguinte">'
+            +   'Seguinte <i data-ico="direita"></i></button>'
             + '</div>'
           : '')
       + '</figure>';

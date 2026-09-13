@@ -499,7 +499,15 @@ function exigirModulo(string $chave): void {
        . '<title>Sem acesso · ' . htmlspecialchars($marca, ENT_QUOTES, 'UTF-8') . '</title>'
        . '<link href="assets/estilo.css" rel="stylesheet"></head><body>'
        . '<div style="max-width:34rem;margin:14vh auto;padding:2rem 1.5rem;text-align:center">'
-       . '<div style="font-size:2.2rem;margin-bottom:.8rem">🔒</div>'
+       // O cadeado é desenhado à mão AQUI, e não pelo assets/icones.js como no
+       // resto da casa: esta página nasce de dentro do auth, sem cabeçalho e
+       // sem javascript nenhum — é o que a torna segura de servir em qualquer
+       // estado. É o mesmo traço do glifo «cadeado» dessa folha.
+       . '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" '
+       . 'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" '
+       . 'style="color:var(--gold);margin-bottom:.8rem">'
+       . '<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/>'
+       . '<path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/><path d="M12 14.5v2.5"/></svg>'
        . '<h1 style="font-family:var(--serif);font-size:1.5rem;color:var(--ink);margin:0 0 .6rem">'
        . 'Esta parte não está disponível</h1>'
        . '<p style="color:#8a8f88;line-height:1.6;font-size:.92rem">A licença deste casamento não '

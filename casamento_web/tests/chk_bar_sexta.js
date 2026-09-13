@@ -37,6 +37,7 @@
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolher } = require('./escolhas');
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -72,8 +73,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // ============ 1. a versão do esquema ============
   const primeiro = await retratoDoBar();
-  ok(primeiro.esquema === 40,
-     'o esquema anuncia-se na versão 40 (lido: ' + primeiro.esquema + ')');
+  // «pelo menos 40», e não «igual a 40»: o que esta prova quer saber é que o
+  // retrato traz consigo o esquema onde a fase 1 escreveu. Pregá-lo ao número
+  // exacto obrigava a mexer aqui a cada migração seguinte, e o que falhava
+  // não era o bar — era o calendário.
+  ok(primeiro.esquema >= 40,
+     'o retrato anuncia um esquema com a fase 1 lá dentro (lido: ' + primeiro.esquema + ')');
 
   // ============ 2. o modo de cada regra ============
   // Uma regra escrita sem dizer o modo nasce a TRAVAR — que é o que todas as
@@ -623,6 +628,32 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      + 'para pedir: não se escolhe o que não se pode pedir (' + emPausa.mais
      + ' de ' + emPausa.podem + ')');
 
+  // ---- e a página NÃO pisca enquanto a contagem anda ----------------
+  // O menu relê-se de dez em dez segundos. Enquanto o html de uma secção
+  // levasse lá dentro o número de um relógio, esse html mudava a cada segundo
+  // e a secção era reescrita: as gavetas e as fotografias desapareciam e
+  // voltavam à frente de quem estava a ler. Marcam-se os nós e espera-se uma
+  // volta inteira: os que sobreviverem são os que não foram refeitos.
+  await conv.evaluate(() => {
+    document.querySelectorAll('.b-bebida').forEach((e, i) => { e.dataset.marca = 'b' + i; });
+    document.querySelectorAll('.b-pilula').forEach((e, i) => { e.dataset.marca = 'p' + i; });
+  });
+  await conv.waitForTimeout(12000);
+  const quietos = await conv.evaluate(() => ({
+    bebidas: document.querySelectorAll('.b-bebida').length,
+    vivas: [...document.querySelectorAll('.b-bebida')].filter(e => e.dataset.marca).length,
+    pilulas: document.querySelectorAll('.b-pilula').length,
+    pvivas: [...document.querySelectorAll('.b-pilula')].filter(e => e.dataset.marca).length,
+    conta: (document.querySelector('.b-nota .b-conta') || {}).textContent || ''
+  }));
+  ok(quietos.bebidas > 0 && quietos.vivas === quietos.bebidas
+     && quietos.pvivas === quietos.pilulas,
+     'e passada uma volta do relógio nada foi refeito — nem uma gaveta, nem um '
+     + 'cartão: ' + quietos.vivas + '/' + quietos.bebidas + ' bebidas e '
+     + quietos.pvivas + '/' + quietos.pilulas + ' gavetas de pé');
+  ok(/^\d+:\d\d$/.test(quietos.conta) && quietos.conta !== emPausa.conta,
+     'com a contagem a andar na mesma: ' + emPausa.conta + ' → ' + quietos.conta);
+
   // ============ 21. o terceiro estado, no cabeçalho da copa ============
   await p.reload({ waitUntil: 'networkidle' });
   await p.waitForTimeout(1600);
@@ -693,11 +724,17 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ============ 23. o formulário pergunta o que a regra FAZ ============
   await p.evaluate(() => window.barRegraNova({}));
   await p.waitForTimeout(1700);
-  // Quatro opções são um <select> de verdade, e não a escolha com procura:
-  // ninguém procura entre quatro coisas (§28.7 e assets/janela.js).
+  // As opções lêem-se da caixa da escolha, e já não de um `<select>`: desde
+  // que a escolha com procura veste TODOS os campos do sistema, o que está no
+  // html é `<input type=hidden id=lf-modo>` com o valor, e as linhas ao lado.
+  // Numa lista de quatro, a caixa de procura fica escondida — ninguém procura
+  // entre quatro coisas —, mas o desenho é o mesmo do resto da casa.
   const modos = await p.evaluate(() => {
-    const s = document.getElementById('lf-modo');
-    return s ? { valor: s.value, ops: [...s.options].map(o => o.textContent) } : null;
+    const v = document.getElementById('lf-modo');
+    const cx = v && v.closest('.lic-sel');
+    if (!cx) return null;
+    return { valor: v.value,
+             ops: [...cx.querySelectorAll('.lic-sel-op')].map(o => o.textContent.trim()) };
   });
   ok(!!modos, 'a janela de uma regra pergunta o que fazer quando o número for passado');
   ok(modos.valor === 'trava',
@@ -707,7 +744,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e três deles dizem, por extenso, que o pedido passa à mesma — «sugerir» '
      + 'numa palavra não avisava ninguém de que a bebida sai: '
      + modos.ops.join(' · '));
-  await p.selectOption('#lf-modo', 'sugere');
+  await escolher(p, '#lf-modo', 'sugere');
   await p.waitForTimeout(400);
   const fraseViva = await p.locator('#br-frase').innerText();
   ok(/não recusa nada/i.test(fraseViva),

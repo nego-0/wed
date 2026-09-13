@@ -17,6 +17,7 @@
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolher } = require('./escolhas');
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -137,13 +138,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok((await noivos.locator('.b-cart .capa .b-chapa svg').count()) >= 1,
      'sem fotografia, o cartão desenha o copo da gaveta — e não uma inicial em corpo grande');
 
-  const escolher = noivos.waitForEvent('filechooser');
+  // `seletorFich`, e não `escolher`: `escolher` é a função de ./escolhas que
+  // esta prova usa lá em baixo, e um `const` com o mesmo nome apagava-a para
+  // todo o corpo da função — inclusive ANTES desta linha.
+  const seletorFich = noivos.waitForEvent('filechooser');
   // O botão da fotografia passou a ser só o ícone: o rótulo vive no
   // aria-label (e no title), que é o que o torna acessível e o que se procura
   // aqui — se um dia deixar de ter nome, esta linha falha, e é isso que se quer.
   await noivos.locator('.b-cart:has-text("ZZ Espumante") button[aria-label*="fotografia"]')
     .first().click();
-  await (await escolher).setFiles(fich);
+  await (await seletorFich).setFiles(fich);
   await noivos.waitForTimeout(2200);
   const foto = await noivos.locator('.b-cart:has-text("ZZ Espumante") .capa img')
                            .getAttribute('src').catch(() => null);
@@ -312,7 +316,11 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   await copa.waitForTimeout(1000);
   await copa.locator('.b-ped .btn-fantasma').first().click();     // Recusar
   await copa.waitForTimeout(600);
-  ok(await copa.locator('#lf-motivo_id').isVisible(),
+  // A caixa à volta, e não o `#lf-motivo_id`: desde que a escolha com procura
+  // veste todos os campos, o que guarda o valor é um `<input type=hidden>` —
+  // e um campo escondido nunca está «visível», por muito que a lista esteja
+  // aberta à frente de quem decide.
+  ok(await copa.locator('.lic-sel[data-sel="motivo_id"]').isVisible(),
      'recusar abre a lista de motivos: um «não» seco manda a pessoa pedir outra vez');
   await copa.click('#lic-jo');
   await copa.waitForTimeout(1000);
@@ -412,7 +420,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
        === 'Porteiro|Copeiro|Garçom',
      'a Gestão convida para os três postos, e não só para a porta');
 
-  await ges.selectOption('#a-papel', 'copeiro');
+  await escolher(ges, '#a-papel', 'copeiro');
   await ges.waitForTimeout(200);
   ok(/stock/.test(await ges.locator('#a-oque').innerText()),
      'e diz o que o posto vê antes de o dar: ' + (await ges.locator('#a-oque').innerText()));

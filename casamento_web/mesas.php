@@ -333,7 +333,7 @@ $CAS = casalInfo(defsAtuais($conn));
      medalha: cresce com a mesa (com um chão de 16px, para se ver a 50%
      de zoom), traz o traço na cor do estado — e o recheio DESENHA a
      lotação, como um relógio que se enche: vazia é um anel oco, a
-     encher é a fatia proporcional, completa fecha o círculo com um ✓ e
+     encher é a fatia proporcional, completa fecha o círculo com o visto e
      excede fecha-o a vermelho com um !. Cor e feitio dizem o mesmo, e
      por isso um deles pode faltar a quem o lê. */
   /* Encostada ao TAMPO, e não ao canto da caixa: a caixa do nó é 1.6× o tampo
@@ -405,6 +405,9 @@ $CAS = casalInfo(defsAtuais($conn));
     display:inline-flex; align-items:center; justify-content:center; }
   .btn-gir:hover{ border-color:var(--forest); background:var(--cream); }
   .btn-gir.larga{ width:auto; padding:0 .45rem; font-size:.72rem; }
+  /* Rodar para a direita é o mesmo desenho ao espelho: é o que ↺ e ↻ eram um
+     do outro, e poupa um segundo traço que teria de se manter a par. */
+  .btn-gir.espelho > [data-ico]{ transform:scaleX(-1); }
   .gir-val{ font-size:.78rem; color:#8a8f88; min-width:2.6em; text-align:center;
     font-variant-numeric:tabular-nums; }
   /* Rodar a mesa roda a MESA INTEIRA — o tampo, as cadeiras, a lotação, o
@@ -484,8 +487,10 @@ $CAS = casalInfo(defsAtuais($conn));
     border-radius:50px; padding:.25rem .6rem; font-size:.8rem; margin:.15rem .2rem 0 0; }
   .rot{ font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; color:#9aa09a; margin:.9rem 0 .3rem; }
 
-  /* Ícones de género / brinde nas pastilhas com nomes */
-  .gi{ font-weight:700; line-height:1; }
+  /* Ícones de género / brinde nas pastilhas com nomes. Desenhados, e não os
+     caracteres ♂ ♀ 🎁: nem todo o aparelho os tem e onde faltam sai o quadrado
+     vazio — e aqui, ao lado de um nome, o que se lê é «isto é um erro». */
+  .gi{ line-height:0; }
   .gi-m{ color:#4a6b7a; } .gi-f{ color:#b56b78; } .gi-b{ font-weight:400; }
 
   /* Dropdown de pesquisa (substitui os <select> de listas longas) */
@@ -495,7 +500,9 @@ $CAS = casalInfo(defsAtuais($conn));
     padding:.5rem .6rem; border-radius:10px; line-height:1.2; }
   .combo-btn:hover{ border-color:var(--gold-soft); }
   .combo-btn .combo-txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .combo-btn .combo-cx{ margin-left:auto; color:#9aa09a; font-size:.7rem; flex:none; }
+  .combo-btn .combo-cx{ margin-left:auto; color:#9aa09a; font-size:.9rem; flex:none;
+    display:inline-flex; align-items:center; line-height:0; }
+  .combo-btn .combo-cx > svg{ width:1em; height:1em; }
   .combo.combo-inline{ flex:none; max-width:56%; min-width:120px; }
   .combo.combo-inline .combo-btn{ font-size:.8rem; padding:.35rem .45rem; }
   .combo-pop{ position:fixed; z-index:1200; background:#fff; border:1px solid var(--line); border-radius:12px;
@@ -526,7 +533,7 @@ $CAS = casalInfo(defsAtuais($conn));
     <div class="grp"><span class="lbl">Forma</span><div class="formas" id="nova-forma"></div></div>
     <div class="grp"><span class="lbl">Cor</span><div class="cores" id="nova-cor"></div></div>
     <button class="btn btn-ouro btn-sm" onclick="adicionarMesa()">+ Mesa</button>
-    <button class="btn btn-fantasma btn-sm" id="btn-noivos" style="display:none" onclick="adicionarNoivos()" title="Repor a mesa de honra dos noivos">⚭ Mesa dos noivos</button>
+    <button class="btn btn-fantasma btn-sm" id="btn-noivos" style="display:none" onclick="adicionarNoivos()" title="Repor a mesa de honra dos noivos"><i data-ico="anel"></i> Mesa dos noivos</button>
   </div>
 
   <div class="layout">

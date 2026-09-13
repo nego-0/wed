@@ -194,7 +194,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 40;
+const ESQUEMA_VERSAO = 41;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -273,7 +273,7 @@ function semearPrecario(mysqli $conn): void {
     $catalogo = [
         ['convidados', 'Lista de convidados',
          'Convites, acompanhantes e confirmações de presença.',
-         'Saiba quem vem, sem contar nomes numa folha.', '👤', 1, [
+         'Saiba quem vem, sem contar nomes numa folha.', 'pessoas', 1, [
             ['convidados_80',  'Até 80 convidados',   'Uma festa de família.',            18000, 80,  0, 0],
             ['convidados_200', 'Até 200 convidados',  'O tamanho da maioria dos casamentos.', 32000, 200, 0, 0],
             ['convidados_400', 'Até 400 convidados',  'Casamentos grandes, com folga.',   48000, 400, 0, 0],
@@ -281,36 +281,36 @@ function semearPrecario(mysqli $conn): void {
          ]],
         ['porta', 'Controlo à porta',
          'O posto do porteiro: lê o QR e marca quem entrou.',
-         'Ninguém entra a mais, ninguém fica à porta por engano.', '🎟️', 0, [
+         'Ninguém entra a mais, ninguém fica à porta por engano.', 'bilhete', 0, [
             ['porta_sim', 'Controlo à porta', 'Leitor de QR, entradas ao minuto e quem falta.', 20000, 0, 0, 0],
          ]],
         ['mesas', 'Planta de mesas',
          'Desenhe o salão e sente cada convidado no seu lugar.',
-         'Acabe com a folha de papel riscada mil vezes.', '🪑', 0, [
+         'Acabe com a folha de papel riscada mil vezes.', 'mesa', 0, [
             ['mesas_sim', 'Planta de mesas', 'Mesas, lugares e a planta a arrastar.', 25000, 0, 0, 0],
          ]],
         ['orcamento', 'Orçamento',
          'Categorias, despesas, prestações e faturas num só sítio.',
-         'Saiba para onde foi cada kwanza — antes da conta chegar.', '💰', 0, [
+         'Saiba para onde foi cada kwanza — antes da conta chegar.', 'moeda', 0, [
             ['orcamento_sim', 'Orçamento', 'Teto, despesas, pagamentos e faturas.', 22000, 0, 0, 0],
          ]],
         ['impresso', 'Convite impresso',
          'O convite em papel, pronto para a gráfica.',
-         'Leve à gráfica um ficheiro que já está certo.', '✉️', 0, [
+         'Leve à gráfica um ficheiro que já está certo.', 'carta', 0, [
             ['impresso_padrao',  'Modelo padrão',        'O desenho da casa, pronto a usar.',        12000, 0, 0, 0],
             ['impresso_edicao',  'Padrão, com edição',   'O modelo padrão, seu para desenhar.',      28000, 0, 1, 0],
             ['impresso_atelier', 'Todos os modelos',     'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
          ]],
         ['digital', 'Convite digital',
          'A página do convite, com RSVP e código por convidado.',
-         'Envie por WhatsApp e receba as respostas sozinho.', '📱', 0, [
+         'Envie por WhatsApp e receba as respostas sozinho.', 'telemovel', 0, [
             ['digital_padrao',  'Modelo padrão',       'O desenho da casa, pronto a enviar.',       12000, 0, 0, 0],
             ['digital_edicao',  'Padrão, com edição',  'O modelo padrão, seu para desenhar.',       28000, 0, 1, 0],
             ['digital_atelier', 'Todos os modelos',    'A galeria inteira, e o editor sem limites.', 45000, 0, 1, 1],
          ]],
         ['bar', 'Bar da festa',
          'O menu de bebidas na mesa: o convidado pede, a copa decide, o garçom entrega.',
-         'Ninguém fica de copo vazio à espera de quem passe.', '🍹', 0, [
+         'Ninguém fica de copo vazio à espera de quem passe.', 'alto', 0, [
             ['bar_basico',   'Pedidos e entregas', 'O menu, a copa e os garçons.',       22000, 0, 0, 0],
             ['bar_completo', 'Bar governado',      'Mais os limites, o ritmo e a estatística.', 38000, 0, 0, 0],
          ]],
@@ -1339,7 +1339,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 nome VARCHAR(80) NOT NULL,
                 resumo VARCHAR(180) DEFAULT '',
                 beneficio VARCHAR(180) DEFAULT '',
-                icone VARCHAR(8) DEFAULT '',
+                icone VARCHAR(24) DEFAULT '',   /* um NOME de assets/icones.js, não um emoji */
                 imagem VARCHAR(255) DEFAULT '',
                 obrigatorio TINYINT(1) NOT NULL DEFAULT 0,
                 ordem INT NOT NULL DEFAULT 0,
@@ -1574,7 +1574,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         $img = imagensDaMontra()['porta'] ?? '';
         $st = @$conn->prepare("INSERT IGNORE INTO {$P}lic_modulos
                                (chave,nome,resumo,beneficio,icone,ordem,imagem,obrigatorio,ativo)
-                               VALUES ('porta',?,?,?,'🎟️',15,?,0,1)");
+                               VALUES ('porta',?,?,?,'bilhete',15,?,0,1)");
         if ($st) {
             $nm = 'Controlo à porta';
             $rs = 'O posto do porteiro: lê o QR e marca quem entrou.';
@@ -1866,7 +1866,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             $img = imagensDaMontra()['bar'] ?? '';
             $st = @$conn->prepare("INSERT INTO {$P}lic_modulos
                                    (chave,nome,resumo,beneficio,icone,ordem,imagem,obrigatorio)
-                                   VALUES ('bar','Bar da festa',?,?,'🍹',?,?,0)");
+                                   VALUES ('bar','Bar da festa',?,?,'alto',?,?,0)");
             if ($st) {
                 $res = 'O menu de bebidas na mesa: o convidado pede, a copa decide, o garçom entrega.';
                 $ben = 'Ninguém fica de copo vazio à espera de quem passe.';
@@ -2026,6 +2026,54 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 UNIQUE KEY uq_barmsg (casamento_id, situacao),
                 INDEX idx_barmsg_cas (casamento_id, ativo)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
+
+    // v41 — os módulos deixam de se apresentar com emojis.
+    //
+    // O ícone de cada módulo da licença era um emoji guardado na tabela, e o
+    // que se via na página do casal era o desenho que o SISTEMA DELE tivesse
+    // para aquele carácter — outro em cada telemóvel, com fundo próprio, sem
+    // obedecer ao tema. Passa a ser o NOME de um sinal da casa
+    // (assets/icones.js), desenhado onde for preciso.
+    //
+    // Um emoji que o admin tenha escolhido à mão e não esteja nesta lista fica
+    // como está: é dele, e apagá-lo em silêncio seria pior. A página desenha o
+    // que souber desenhar, e o resto escreve-se como sempre.
+    if ($versaoAtual < 41) {
+        // A coluna era VARCHAR(8) porque um emoji cabe em oito bytes. Um NOME
+        // não cabe — «telemovel» tem nove letras — e o MariaDB, em modo
+        // estrito, recusa a linha inteira em silêncio: o módulo do convite
+        // digital simplesmente não nascia no catálogo. Alargar vem PRIMEIRO,
+        // antes de qualquer escrita de nomes.
+        @$conn->query("ALTER TABLE {$P}lic_modulos MODIFY icone VARCHAR(24) DEFAULT ''");
+
+        // A troca faz-se em PHP, lendo linha a linha — e NÃO com um
+        // «UPDATE ... WHERE icone = '👤'».
+        //
+        // A tabela é utf8mb4_unicode_ci, e essa colação (UCA 4.0.0) não tem
+        // peso nenhum para os caracteres do plano suplementar: para ela, TODOS
+        // os emojis são a mesma coisa. Um WHERE por igualdade apanhava as sete
+        // linhas de uma vez, e a primeira volta do ciclo punha «pessoas» em
+        // todas — a mesa, o orçamento, o convite digital e o bar incluídos.
+        // Comparar em PHP compara bytes, que é o que aqui se quer.
+        $mapa = ['👤' => 'pessoas', '🎟️' => 'bilhete', '🎟' => 'bilhete',
+                 '🪑' => 'mesa', '💰' => 'moeda', '✉️' => 'carta', '✉' => 'carta',
+                 '📱' => 'telemovel', '🍹' => 'alto', '🔒' => 'cadeado',
+                 '📄' => 'documento', '🎁' => 'presente'];
+        if ($r = @$conn->query("SELECT id, icone FROM {$P}lic_modulos")) {
+            $porTrocar = [];
+            while ($m = $r->fetch_assoc()) {
+                $novo = $mapa[$m['icone']] ?? null;
+                if ($novo !== null) $porTrocar[(int)$m['id']] = $novo;
+            }
+            $st = $conn->prepare("UPDATE {$P}lic_modulos SET icone=? WHERE id=?");
+            if ($st) {
+                foreach ($porTrocar as $id => $novo) {
+                    $st->bind_param('si', $novo, $id);
+                    @$st->execute();
+                }
+            }
+        }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -103,6 +103,7 @@ $CAS  = casalInfo($DEFS);
      aplicação instalada ficava com o nome genérico em vez do casamento. -->
 <link rel="manifest" href="manifest.php" crossorigin="use-credentials">
 <meta name="theme-color" content="#16261E">
+<script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 </head>
@@ -375,7 +376,7 @@ function mostrarVarios(lista){
     <div class="conteudo"><div class="varios">${lista.map((c,i)=>`
       <div class="opc" onclick="mostrarConvite(RESULTADOS[${i}])">
         <span>${esc(c.nome_final)}<br><small>${esc((c.membros||[]).map(m=>m.nome).join(', '))}</small></span>
-        <span>${c.checkin_estado==='presente'?'✓':'›'}</span>
+        <span data-ico="${c.checkin_estado==='presente'?'visto':'direita'}"></span>
       </div>`).join('')}</div></div></div>`;
 }
 
@@ -397,14 +398,14 @@ function mostrarConvite(c){
     const pres=+m.presente, conf=(m.rsvp==='confirmado');
     if(!conf && !pres){
       return `<div class="memb bloqueado" onclick="excecaoMembro(${c.id},${m.id})">
-        <span class="est-p">✕</span>
+        <span class="est-p" data-ico="xis"></span>
         <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
         <span style="font-size:.75rem;color:#c98a86">não confirmou · autorizar?</span>
       </div>`;
     }
     const nota = pres ? (conf?'presente':'presente (exceção)') : 'marcar';
     return `<div class="memb ${pres?'presente':''} ${(pres&&!conf)?'excecional':''}" onclick="checkin(${c.id},'membro',${m.id})">
-      <span class="est-p">${pres?'✓':''}</span>
+      <span class="est-p"${pres?' data-ico="visto"':''}></span>
       <span class="nm">${esc(m.nome)}${mesaBadge(m)}</span>
       <span style="font-size:.75rem;color:#8a8f88">${nota}</span>
     </div>`;
@@ -465,7 +466,7 @@ async function checkin(id,modo,membroId=0,excecao=false){
 function excecaoMembro(id,mid){
   licConfirmar({
     titulo: 'Autorizar a entrada?',
-    icone: '🎟️', confirmar: 'Autorizar entrada',
+    icone: 'bilhete', confirmar: 'Autorizar entrada',
     texto: '<b>Esta pessoa não confirmou presença.</b><br><br>Pode deixá-la entrar em '
          + 'carácter excepcional — a entrada fica registada como autorizada por si.'
   }).then(r => { if (r.sim) checkin(id,'membro',mid,true); });
@@ -473,7 +474,7 @@ function excecaoMembro(id,mid){
 function excecaoTodos(id){
   licConfirmar({
     titulo: 'Autorizar a entrada?',
-    icone: '🎟️', confirmar: 'Autorizar entrada',
+    icone: 'bilhete', confirmar: 'Autorizar entrada',
     texto: '<b>Este convite não tem presença confirmada.</b><br><br>Pode deixá-lo entrar em '
          + 'carácter excepcional — a entrada fica registada como autorizada por si.'
   }).then(r => { if (r.sim) checkin(id,'todos',0,true); });

@@ -5,6 +5,7 @@ const { chromium } = require('playwright-core');
 const janela = require('./_janela');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolher } = require('./escolhas');
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -71,7 +72,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   for (const [id, esperado] of [['fina','.7px'], ['simples','1.4px'], ['cantos','0'],
                                 ['dupla','1.4px'], ['tripla','1.6px'],
                                 ['pontilhada','2px'], ['arredondada','1.4px']]) {
-    await p.selectOption('#props select', id); await p.waitForTimeout(350);
+    await escolher(p, '#props select', id); await p.waitForTimeout(350);
     const m = await mold();
     console.log(`  ${id.padEnd(11)} linha=${m.linha} (real ${m.bordaReal}) cantos=${m.cantos} anéis=[${m.aneis}]`);
     ok(m.larg === esperado, `feitio "${id}" põe a espessura em ${esperado}`);
@@ -91,7 +92,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
         parseFloat(getComputedStyle(document.querySelector('#escala .ct-moldura')).borderTopLeftRadius) > 10,
         ), 'os "cantos redondos" arredondam mesmo as esquinas');
   }
-  await p.selectOption('#props select', 'cantos'); await p.waitForTimeout(300);
+  await escolher(p, '#props select', 'cantos'); await p.waitForTimeout(300);
   // Só os dois primeiros <i> são esquadrias (os outros dois são os anéis); as
   // outras duas esquadrias são o ::before e o ::after.
   ok(await p.evaluate(() => [...document.querySelectorAll('#escala .ct-moldura i')].slice(0, 2)
@@ -99,7 +100,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      && ['::before','::after'].every(q =>
           getComputedStyle(document.querySelector('#escala .ct-moldura'), q).display === 'block')),
      'as quatro esquadrias aparecem');
-  await p.selectOption('#props select', 'simples'); await p.waitForTimeout(300);
+  await escolher(p, '#props select', 'simples'); await p.waitForTimeout(300);
 
   // A moldura tem de ficar simétrica dentro do cartão — já esteve com altura
   // zero, por uma regra do editor que lhe punha position:relative.
@@ -133,10 +134,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // ---- folhagem dentro da camada das trepadeiras ----
   await p.evaluate(() => selecionar('ramos')); await p.waitForTimeout(350);
   ok(await p.locator('#props select').count() === 1, 'as trepadeiras escolhem a folhagem na própria camada');
-  await p.selectOption('#props select', 'feto'); await p.waitForTimeout(400);
+  await escolher(p, '#props select', 'feto'); await p.waitForTimeout(400);
   ok(await p.evaluate(() => est.folhagem) === 'feto', 'escolher a folhagem na camada muda o estado');
   ok(await p.evaluate(() => $('folhagem').value) === 'feto', 'a barra de cima acompanha');
-  await p.selectOption('#props select', 'eucalipto'); await p.waitForTimeout(300);
+  await escolher(p, '#props select', 'eucalipto'); await p.waitForTimeout(300);
 
   // ---- camada das mesas: explicação honesta ----
   await p.evaluate(() => selecionar('mesas')); await p.waitForTimeout(350);

@@ -10,6 +10,7 @@
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolher } = require('./escolhas');
 
 const entrar = async (ctx, user, pass) => {
   const p = await ctx.newPage();
@@ -73,7 +74,7 @@ const entrar = async (ctx, user, pass) => {
   await admin.evaluate((id) => gerirLicenca(id), w.id);
   await admin.waitForTimeout(200);
   ok(await admin.locator('#ov-licenca.aberto').count() === 1, 'o modal de licença abre');
-  await admin.selectOption('#lic-periodo', '6');
+  await escolher(admin, '#lic-periodo', '6');
   await admin.evaluate(() => licPeriodoMudou());
   await admin.evaluate(() => { document.getElementById('lic-reiniciar').checked = true; });
   await admin.evaluate(() => guardarLicenca()); await admin.waitForTimeout(300);
@@ -106,7 +107,7 @@ const entrar = async (ctx, user, pass) => {
   // adicionar um porteiro pelo editor
   const portEmail = 'porta.' + marca + '@exemplo.pt';
   await admin.evaluate(() => { document.getElementById('ed-nova-conta').open = true; });
-  await admin.selectOption('#ed-np-papel', 'porteiro');
+  await escolher(admin, '#ed-np-papel', 'porteiro');
   await admin.fill('#ed-np-email', portEmail);
   await admin.evaluate(() => adicionarConta()); await admin.waitForTimeout(500);
   ficha = await api('casamento_ficha&id=' + w.id);

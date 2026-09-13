@@ -68,7 +68,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // pastilhas de 25% cada, alinhadas por baixo dos campos de cima.
   const larg = await p.evaluate(() => {
     const r = document.querySelectorAll('#membros .membro-linha')[1];
-    const L = s => r.querySelector(s).getBoundingClientRect();
+    // A caixa VISÍVEL, e não o elemento que se procurou: desde que a escolha
+    // com procura veste todos os campos, o <select> nativo continua no html
+    // mas mede 1px — ele guarda o valor, quem ocupa a coluna é a caixa à volta.
+    // Medir o <select> dava 2,5% e dizia que a coluna da mesa tinha encolhido,
+    // quando o que tinha mudado era quem a ocupa.
+    const cxDe = e => e.closest('.lic-sel') || e;
+    const L = s => cxDe(r.querySelector(s)).getBoundingClientRect();
     const linha1 = L('.m-brinde').right - L('input[type=text]').left;
     const pc = n => Math.round(n / linha1 * 1000) / 10;
     const bts = [...r.querySelectorAll('.m-extras .seg button')];

@@ -21,6 +21,7 @@
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { escolher } = require('./escolhas');
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -120,7 +121,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       }
     }
   });
-  await ges.selectOption('#a-papel', 'entregador');
+  await escolher(ges, '#a-papel', 'entregador');
   await ges.fill('#a-email', 'zt.garcom@exemplo.pt');
   await ges.fill('#a-nome', 'ZT Garçom');
   await ges.click('button:has-text("Convidar")');

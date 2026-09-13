@@ -3130,3 +3130,111 @@ pedido feito, e duas listas das mesmas mesas acabam a responder coisas diferente
 O servidor não mudou: `bar_pedir_por` já aceitava `mesa_id`, e era o ecrã que lhe
 mandava sempre o mesmo. `chk_bar_terceira.js` prova o lado do garçom e
 `chk_bar_quarta.js` o do copeiro, os dois pelo ecrã e até ao pedido na fila.
+
+### 31.10 A escolha com procura passa a ser a escolha da casa
+
+O bar tinha uma lista com procura por dentro; o resto do sistema tinha
+`<select>` nativos. Trinta e nove deles, espalhados por catorze páginas. Duas
+listas com desenhos diferentes na mesma página leem-se como duas aplicações, e
+a diferença nota-se logo no primeiro campo onde a pessoa escreve e não acontece
+nada.
+
+**O que NÃO se fez:** trazer o Select2. A regra da casa (ver
+`docs/bar-motor-assistido.md` §5) é «nada de bibliotecas novas — sem jQuery,
+sem Select2», e trazê-lo seriam ~160 KB e uma segunda folha de estilos a
+discutir com a nossa em cada tema. O que a casa quer do Select2 — procurar
+dentro da lista, teclado, listas longas que não rebentam o ecrã — já existe em
+`licSelProcuraHtml`, escrito para isso.
+
+**O que se fez:** uma passagem só, `licSelVestirTodos()`, que corre ao carregar
+a página e volta a correr sobre o que nascer depois (um `MutationObserver` na
+raiz do documento — os painéis desta casa escrevem-se com `innerHTML`, e um
+`<select>` que aparecesse a meio de uma lista ficava de fora). O `<select>`
+nativo **continua lá**, escondido mas presente: é ele que guarda o valor, é ele
+que o formulário envia, e todo o `onchange` e `.value` que já existia continua a
+funcionar sem se lhe tocar. Quem não a quer escreve `data-sem-procura`.
+
+Isto tem um preço, e está pago: o `selectOption()` do Playwright deixa de
+chegar ao campo, porque o que está por cima já não é um `<select>`. As provas
+passam a escolher por `tests/escolhas.js` (`escolher`, `escolherNo`,
+`escolherTexto`), que carrega no botão e na opção como uma pessoa faria.
+
+**E a janela deixa de ser precisa onde a lista basta.** A mesa de entrega, em
+`bebidas.php`, era um botão que abria uma janela para escolher de uma lista —
+dois gestos e um ecrã inteiro por cima do menu, para responder a «qual é a
+mesa». Passa a ser a lista, na página, ao lado da procura. A janela fica onde
+ainda é a peça certa: quando há **mais do que uma decisão** (o pedido, com
+quantidade e nota) ou quando a lista **não existe até se escrever** — é o caso
+de «pedir por um convidado», que é uma procura no servidor, a partir de três
+letras, para não pôr a lista de convidados de uma festa à vista de quem
+carregar num botão.
+
+### 31.11 Fim dos emojis: os sinais passam todos a ser desenhados
+
+Um emoji não é um ícone: é uma letra que cada sistema operativo desenha à sua
+maneira. O ✓ da Apple é fino e azul, o do Android é gordo e verde; o 🎁 traz o
+seu próprio fundo colorido para dentro de um convite feito a dourado e verde; e
+o que o aparelho não tiver mostra como o quadrado do «não sei desenhar isto» —
+que aparecia, entre outros sítios, na linha que devia dizer «está incluído».
+
+Passa a haver **um alfabeto só**: `assets/icones.js`, oitenta sinais na mesma
+caixa de 24, com o mesmo traço de 1,6 e a cor do texto ao lado. O HTML escreve
+o **nome**:
+
+```html
+<i data-ico="lixo"></i>
+```
+
+e `ICO.vestir()` põe lá dentro o desenho — ao abrir a página, e outra vez sobre
+o que nascer depois. Três regras em `assets/estilo.css` (`[data-ico]`) fazem-no
+comportar-se como uma letra: caixa de `1em`, assente na linha de base, sem
+encolher dentro de um flex apertado.
+
+Onde não cabe um elemento — um `::before` de lista, o `content` de uma
+pseudo-classe — o desenho entra como máscara ou como imagem de fundo, com as
+mesmas coordenadas (é o caso do visto da montra dos planos e da seta do painel
+de números). E há uma excepção assumida: a página de «sem acesso» nasce de
+dentro do `auth.php`, sem cabeçalho e sem javascript nenhum — é o que a torna
+segura de servir em qualquer estado —, e por isso desenha o seu cadeado à mão,
+com o traço do glifo `cadeado`.
+
+**O ícone de um módulo da licença deixa de ser um emoji guardado na tabela** e
+passa a ser o nome de um sinal (esquema **v41**). Duas armadilhas apareceram no
+caminho, e ambas estão escritas onde mordem:
+
+- A coluna era `VARCHAR(8)` — oito bytes, o tamanho de um emoji. «telemovel»
+  tem nove letras, e o MariaDB em modo estrito **recusa a linha inteira em
+  silêncio**: o módulo do convite digital simplesmente não nascia no catálogo.
+  A migração alarga a coluna **antes** de escrever nome nenhum.
+- A tabela é `utf8mb4_unicode_ci`, e essa colação (UCA 4.0.0) não tem peso
+  nenhum para o plano suplementar: **para ela todos os emojis são iguais**. Um
+  `UPDATE ... WHERE icone = '👤'` apanhava as sete linhas de uma vez e a
+  primeira volta do ciclo punha «pessoas» em todas. A troca faz-se a ler linha
+  a linha e a comparar em PHP, que compara bytes.
+
+Um emoji que o admin tenha escolhido à mão e não esteja no mapa fica como está:
+é dele. O formulário do admin passa a oferecer a lista dos nomes, com procura.
+
+### 31.12 O menu do convidado deixa de piscar
+
+`bebidas.php` repintava `#b-corpo` inteiro a cada segundo. A causa não era o
+ritmo — era o que o HTML tinha lá dentro: **a contagem do tempo de espera era
+calculada na altura de pintar**. Com `Date.now()` no meio do html, dois
+desenhos seguidos nunca são iguais, e um memo de «só escreve se mudou» nunca
+acerta: escrevia sempre, e a cada escrita as gavetas piscavam, a caixa de
+procura perdia o cursor e a lista saltava para o topo.
+
+A regra que ficou é simples e vale para o resto da casa: **nada do que se
+pinta pode depender do relógio**. Cada contagem leva o instante em que acaba —
+um valor fixo, decidido quando o menu chegou do servidor:
+
+```js
+<span class="b-conta" data-ate="1757800000000"></span>
+```
+
+— e é o tique de um segundo que lhe escreve os minutos por dentro, sem tocar em
+mais nada. O corpo passa a ter um esqueleto fixo de cinco caixas (`#b-avisos`,
+`#b-fer-cx`, `#b-menu-cx`, `#b-meus-cx`, `#b-pe-cx`), cada uma com o seu memo:
+`poe(caixa, id, html)` só escreve quando o html daquela caixa mudou mesmo. As
+gavetas mudam de gaveta activa por classe (`marcarGaveta()`), sem se
+reconstruírem.

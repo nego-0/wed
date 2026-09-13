@@ -214,8 +214,11 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-lente-dica{ color:#c9cfc6; font-size:.78rem; }
   /* Por guardar: o aviso é discreto, mas não passa por dizer nada. */
   .ft-lente-dica.aviso{ color:var(--gold-pale); }
-  .ft-lente-dica.aviso::before{ content:'●'; font-size:.6em; vertical-align:.25em;
-                                margin-right:.35rem; color:var(--gold); }
+  /* Um ponto desenhado, e não o carácter ●, que muda de tamanho e de peso
+     conforme o tipo de letra — num aparelho era uma bola, noutro um grão. */
+  .ft-lente-dica.aviso::before{ content:''; display:inline-block; width:.42em; height:.42em;
+                                border-radius:50%; margin-right:.4rem; vertical-align:.08em;
+                                background:var(--gold); }
   /* Os botões do pé vivem sobre o escuro: os da casa são para fundo claro e
      desapareciam aqui. */
   .ft-lente-ac .btn{ font-size:.76rem; padding:.28rem .7rem; background:rgba(255,255,255,.1);
@@ -259,7 +262,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       <div class="p-painel" id="pn-estado" role="tabpanel" aria-labelledby="ab-estado">
       <div class="estado-linha">
         <?php if ($estadoVs['estado'] === 'vigor'): ?>
-          <span class="selo-v ok">✓ Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span><br>
+          <span class="selo-v ok"><i data-ico="visto"></i> Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span><br>
           É esta versão que os convidados recebem quando o convite é enviado ou aberto.
         <?php elseif ($estadoVs['estado'] === 'alterada'): ?>
           <span class="selo-v fora"><b><?= escP($estadoVs['nome']) ?></b> · com alterações</span><br>
@@ -307,7 +310,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
             $vig = $emVigor && (int)$emVigor['id'] === (int)$v['id']; ?>
             <li>
               <span class="nm"><?= escP($v['nome']) ?></span>
-              <?php if ($vig): ?><span class="em">✓ em vigor</span><?php endif; ?>
+              <?php if ($vig): ?><span class="em"><i data-ico="visto"></i> em vigor</span><?php endif; ?>
               <span class="qd"><?= escP($v['utilizador'] ?: '—') ?> ·
                 <?= escP(date('d/m H:i', strtotime($v['criado_em']))) ?></span>
             </li>
@@ -331,7 +334,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
     </div>
 
   <?php if (!$convites): ?>
-    <div class="vazio"><div class="ico">✉</div><p>Ainda não há convites marcados como digitais.<br>
+    <div class="vazio"><div class="ico" data-ico="carta"></div><p>Ainda não há convites marcados como digitais.<br>
       No painel, defina o tipo do convite como “Digital” ou “Ambos”.</p></div>
   <?php else: ?>
     <div class="prod-scroll">
@@ -481,7 +484,8 @@ function ftPintar(){
                     + (sc.pos ? ' style="object-position:' + sc.pos.x + '% ' + sc.pos.y + '%"' : '')
                     + ' alt="A fotografia da secção ' + ftEsc(sc.rotulo) + '">' : '')
     +   '<button type="button" class="ft-lupa" data-ft="lupa"'
-    +     ' title="Ver em ponto grande" aria-label="Ver em ponto grande">⤢</button>'
+    +     ' title="Ver em ponto grande" aria-label="Ver em ponto grande"'
+    +     ' data-ico="expandir"></button>'
     +   '<span class="et">' + (sc.nossa ? 'vossa' : 'do modelo') + '</span>'
     + '</div>'
     + '<div>'
@@ -557,7 +561,7 @@ function ftSujo(){
 async function ftLenteFechar(){
   if (ftSujo()){
     const r = await licConfirmar({
-      titulo: 'Guardar o enquadramento?', icone: '🖼️', confirmar: 'Guardar',
+      titulo: 'Guardar o enquadramento?', icone: 'imagem', confirmar: 'Guardar',
       cancelar: 'Descartar',
       texto: 'Mexeu na moldura de «' + licEsc(FT_LENTE.rotulo) + '» e ainda não guardou. '
            + 'Se descartar, a secção fica com o enquadramento que tinha.'
@@ -781,7 +785,7 @@ async function ftRepor(sec){
   const sc = ftSec(sec) || {};
   const r = await licConfirmar({
     titulo: 'Voltar à fotografia de origem em «' + licEsc(sc.rotulo || '') + '»?',
-    icone: '↩️', perigo: true, confirmar: 'Voltar à de origem',
+    icone: 'volta', perigo: true, confirmar: 'Voltar à de origem',
     texto: 'A secção volta a mostrar a fotografia com que o convite nasceu, e a '
          + 'vossa é <b>apagada</b>.<br><br>Se ela estiver guardada numa das vossas '
          + 'versões, o ficheiro fica — é essa versão que o segura.'

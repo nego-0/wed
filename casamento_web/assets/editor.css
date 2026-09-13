@@ -211,7 +211,10 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
               text-transform:uppercase; letter-spacing:.12em; color:var(--ed-texto-2); font-weight:500;
               display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;
               position:sticky; top:0; z-index:2; }
-.ed-painel > h3 .chev{ transition:transform .15s; }
+/* O sinal é desenhado, e não o carácter ▾ (ver assets/icones.js): a caixa
+   própria é o que deixa a rotação girar em torno do centro do sinal, e não do
+   meio de uma linha de texto. */
+.ed-painel > h3 .chev{ transition:transform .15s; line-height:0; display:inline-flex; }
 .ed-painel.fechado > h3 .chev{ transform:rotate(-90deg); }
 .ed-painel.fechado .ed-painel-corpo,
 .ed-painel.fechado .ed-redim{ display:none; }
@@ -408,8 +411,9 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .cor-linha{ display:flex; align-items:center; gap:.4rem; margin-bottom:.3rem; }
 .cor-linha input[type=color]{ width:28px; height:22px; border:none; background:none; padding:0; cursor:pointer; flex:none; }
 .cor-linha span{ flex:1; min-width:0; font-size:.75rem; color:var(--ed-texto); }
-/* O ↺ ocupa sempre o seu lugar: se nascesse ao mudar a cor, a linha mudava de
-   tamanho e o painel de cores do navegador fechava-se a meio da escolha. */
+/* O botão de repor ocupa sempre o seu lugar: se nascesse ao mudar a cor, a
+   linha mudava de tamanho e o painel de cores do navegador fechava-se a meio
+   da escolha. */
 .repor-cor{ flex:none; }
 .repor-cor.vazio{ visibility:hidden; pointer-events:none; }
 .cor-onde{ font-size:.66rem; color:var(--ed-texto-2); line-height:1.35; margin:-.15rem 0 .5rem 2.2rem; }
