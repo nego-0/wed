@@ -250,9 +250,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .bt-mais{ justify-content:center; }
   .pop-mais{ position:fixed; z-index:70; width:190px; background:#fff; border:1px solid var(--line);
     border-radius:12px; box-shadow:0 12px 32px rgba(32,52,42,.18); padding:.3rem; }
-  .pop-mais button{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer;
-    padding:.5rem .6rem; border-radius:8px; font-family:inherit; font-size:var(--t-denso); color:var(--text); }
-  .pop-mais button:hover{ background:var(--cream); }
+  .pop-mais button, .pop-mais a{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer;
+    padding:.5rem .6rem; border-radius:8px; font-family:inherit; font-size:var(--t-denso); color:var(--text);
+    text-decoration:none; }
+  .pop-mais button:hover, .pop-mais a:hover{ background:var(--cream); }
   .pop-mais button.perigo{ color:var(--danger); }
   .pop-mais button.perigo:hover{ background:#fdecea; }
   /* Aberto para cima, a sombra vem de baixo. */
@@ -340,6 +341,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .vazio-hist{ color:var(--ink-fraco); text-align:center; padding:1.4rem; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/estados.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/mesa-icone.js') ?>"></script>
 </head>
@@ -371,15 +373,21 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     <div class="cresce">
       <input type="search" id="busca" placeholder="Procurar convite, código ou pessoa…" oninput="debounceCarregar()">
     </div>
-    <button class="btn btn-verde" onclick="abrirMesas()">Mesas</button>
-    <button class="btn btn-fantasma" onclick="abrirMensagens()">Mensagens</button>
-    <button class="btn btn-fantasma" onclick="abrirEntradas()">Entradas</button>
-    <button class="btn btn-fantasma" onclick="abrirHistorico()">Histórico</button>
-    <a class="btn btn-fantasma" href="api.php?action=export">Exportar CSV</a>
-    <!-- data-escrita: abrir a janela não escreve nada, mas só serve para criar.
-           Numa visita de leitura, deixá-la abrir era convidar a preencher um
-           formulário inteiro para o Guardar dizer que não. -->
-      <button class="btn btn-ouro" data-escrita="1" onclick="novoConvite()">+ Novo convite</button>
+    <!-- UMA primária por contexto (docs/auditoria-ui-ux.md, CTA-001).
+         Estavam aqui oito acções em fila, com «+ Novo convite» — a que se faz
+         dezenas de vezes — em oitavo lugar, depois de quatro que se fazem uma
+         vez por casamento. A que manda vem primeiro; a segunda fica secundária;
+         as outras quatro passam para trás do «⋯», que é onde vivem as acções
+         de uma vez só.
+         data-escrita: abrir a janela não escreve nada, mas só serve para criar.
+         Numa visita de leitura, deixá-la abrir era convidar a preencher um
+         formulário inteiro para o Guardar dizer que não. -->
+    <button class="btn btn-ouro" data-escrita="1" onclick="novoConvite()">+ Novo convite</button>
+    <button class="btn btn-fantasma" onclick="abrirMesas()">Mesas</button>
+    <button class="btn btn-fantasma btn-mais-acoes" onclick="abrirAccoes(event)"
+            aria-haspopup="true">
+      <svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg>
+      Mais acções</button>
   </div>
 
   <!-- FILTRO DE MESAS (chips) -->
@@ -536,6 +544,12 @@ const BASE = <?= json_encode(enderecoPublico()) ?>;
 const CASAL = <?= json_encode($CAS['casal']) ?>;
 const DATA_EXT = <?= json_encode($dataExt) ?>;
 window.CSRF = <?= json_encode(csrfToken()) ?>;
+// Quantas linhas a primeira página vai ter. O servidor já sabe a conta ($12),
+// por isso o esqueleto pode ter o número CERTO de barras em vez de um palpite:
+// com um palpite, um casamento de dois convites via 368px de barras a encolher
+// para 114px assim que a resposta chegava — um salto a fingir-se de cortesia.
+// Tecto de oito: um esqueleto de sessenta linhas é uma página inteira a tremer.
+const ESQ_LINHAS = <?= min(8, min((int)$totalConvites, (int)LISTA_POR_PAGINA)) ?>;
 const CAP = <?= (int)MAX_LUGARES_TOTAL ?>;
 // O tecto da LICENÇA, que é outra coisa da «capacidade» do salão: aquela é uma
 // intenção do casal, esta é um limite que o servidor faz cumprir. 0 = sem
@@ -579,6 +593,12 @@ async function carregar(mais=false){
     mesa:filtroMesa, busca:$('busca').value, impresso:filtroImpresso,
     genero:filtroGenero, brinde:filtroBrinde, pagina:PAGINA
   });
+  // O esqueleto só quando não há nada no lugar (docs/auditoria-ui-ux.md,
+  // EST-001). Esta lista ficava em branco à chegada e aparecia toda de uma
+  // vez: um branco não diz se está a pensar ou se avariou. Mas com a lista já
+  // cheia, trocá-la por barras a cada tecla da procura seria pior do que
+  // deixar as linhas de antes quietas durante os 150ms que a resposta demora.
+  if(!mais && !CONVITES.length && ESQ_LINHAS) $('lista').innerHTML = EST.esqueleto(ESQ_LINHAS, 54);
   const d = await api('convite_list&'+q.toString());
   if(!d.success){ if(mais) PAGINA--; return toast('Erro ao carregar.', true); }
   CONVITES = mais ? CONVITES.concat(d.convites) : d.convites;
@@ -869,7 +889,20 @@ function massaMesa(){
 
 function renderConvites(){
   const el=$('lista');
-  if(!CONVITES.length){ el.innerHTML=`<div class="vazio"><div class="ico" data-ico="brilho"></div><p>Ainda não há convites. Crie o primeiro ou importe a sua lista.</p></div>`; return; }
+  if(!CONVITES.length){
+    // Um vazio por causa de um filtro tem de o confessar: senão lê-se como
+    // «não há convites nenhuns» e a pessoa vai criar o que já lá está.
+    const filtrado = !!(filtroTipo||filtroLado||filtroEstado||filtroMesa||filtroImpresso
+                        ||filtroGenero||filtroBrinde||$('busca').value.trim());
+    el.innerHTML = filtrado
+      ? EST.vazio('procurar', 'Nenhum convite com estes filtros',
+          'Há convites na lista, mas nenhum corresponde ao que está escolhido agora.',
+          '<button class="btn btn-fantasma" onclick="limparFiltros()">Limpar filtros</button>')
+      : EST.vazio('brilho', 'Ainda não há convites',
+          'É por aqui que se começa: crie o primeiro convite, ou importe a lista que já tem numa folha de cálculo.',
+          '<button class="btn btn-ouro" data-escrita="1" onclick="novoConvite()">+ Novo convite</button>');
+    return;
+  }
   // Convites que saíram da lista (por filtro) deixam de contar para a seleção
   [...SELEC].forEach(id => { if(!CONVITES.some(c=>c.id==id)) SELEC.delete(id); });
   renderBarraSelecao();
@@ -1254,22 +1287,20 @@ function enviarWhatsApp(id){
   if(!(+c.enviado)) flag(id,'enviado',1);
 }
 
-// ---------- menu "mais ações" ----------
+// ---------- menus "⋯" ----------
+// Desenhar e posicionar vive num sítio só. São dois menus com o mesmo feitio:
+// o de cada linha de convite e o da barra de ações. Escrevê-los duas vezes já
+// custou uma: a barra de ações chegou a chamar um `abrirMais` de outro ficheiro
+// com outra assinatura, e o menu não abria sem dar erro nenhum — a versão desta
+// página sai calada quando não encontra o convite que lhe pedem.
 function fecharMais(){ const m=document.getElementById('pop-mais'); if(m) m.remove(); }
-function abrirMais(ev, id){
+function mostrarPop(ev, itens){
   ev.stopPropagation(); fecharMais();
-  const c = CONVITES.find(x=>x.id==id); if(!c) return;
-  const itens = [
-    ['Copiar link',              `copiarLinkDireto('${c.codigo}')`],
-    ['Ver convite digital',      `verConvite('${c.codigo}')`],
-    ['Descarregar (offline)',    `baixarConvite('${c.codigo}')`],
-    ['Mostrar QR',               `mostrarQR('${c.codigo}')`],
-    ['Eliminar convite',         `eliminar(${c.id})`, 'perigo'],
-  ];
   const pop = document.createElement('div');
   pop.id = 'pop-mais'; pop.className = 'pop-mais';
-  pop.innerHTML = itens.map(([r,acao,cls]) =>
-    `<button class="${cls||''}" onclick="fecharMais();${acao}">${r}</button>`).join('');
+  pop.innerHTML = itens.map(([r,acao,cls]) => cls === 'link'
+    ? `<a href="${acao}" onclick="fecharMais()">${r}</a>`
+    : `<button class="${cls||''}" onclick="fecharMais();${acao}">${r}</button>`).join('');
   document.body.appendChild(pop);
   const r = ev.currentTarget.getBoundingClientRect();
   const larg = 190;
@@ -1285,6 +1316,27 @@ function abrirMais(ev, id){
     ? Math.max(8, r.top - alt - 6) + 'px'
     : Math.min(r.bottom + 6, window.innerHeight - alt - 8) + 'px';
   setTimeout(()=>document.addEventListener('click', fecharMais, {once:true}), 0);
+}
+function abrirMais(ev, id){
+  const c = CONVITES.find(x=>x.id==id); if(!c) return;
+  mostrarPop(ev, [
+    ['Copiar link',              `copiarLinkDireto('${c.codigo}')`],
+    ['Ver convite digital',      `verConvite('${c.codigo}')`],
+    ['Descarregar (offline)',    `baixarConvite('${c.codigo}')`],
+    ['Mostrar QR',               `mostrarQR('${c.codigo}')`],
+    ['Eliminar convite',         `eliminar(${c.id})`, 'perigo'],
+  ]);
+}
+// As acções de uma vez por casamento (docs/auditoria-ui-ux.md, CTA-001).
+// «Exportar CSV» fica uma ligação de verdade: é uma descarga, e um botão que
+// atribui `location` tira-lhe o botão do meio e o «guardar como».
+function abrirAccoes(ev){
+  mostrarPop(ev, [
+    ['Mensagens dos convidados', 'abrirMensagens()'],
+    ['Entradas à porta',         'abrirEntradas()'],
+    ['Histórico',                'abrirHistorico()'],
+    ['Exportar CSV',             'api.php?action=export', 'link'],
+  ]);
 }
 document.addEventListener('keydown', e => { if(e.key==='Escape') fecharMais(); });
 function copiarLinkDireto(codigo){ copiarTexto(linkConvite(codigo)); }

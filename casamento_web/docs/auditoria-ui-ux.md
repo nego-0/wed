@@ -644,7 +644,7 @@ de chegada)
 | 1 · Fundação | Tokens de cor, escala tipográfica, alvos | DS-001 TIPO-001 TOQUE-001 | Cor e alvos ✅; tipografia por fazer |
 | 2 · Acessibilidade base | Marcos, salto, região viva, anel de foco | A11Y-001 A11Y-002 SEO-001 FOCO-002 | ✅ nas páginas com cabeçalho partilhado |
 | 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | ✅ |
-| 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | Por fazer |
+| 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | ✅ nas três listas principais |
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | Por fazer |
 | 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | Por fazer |
 | 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | Por fazer |
@@ -880,6 +880,85 @@ por mudança de estado, **zero** ao parar em cima do limiar.
 engolir **todos** os toques do telemóvel. Só apareceu quando a prova tentou
 tocar em alguma coisa. Está na `chk_nav_baixo.js` como verificação própria, e
 nas directrizes.
+
+### Fase 4 — estados e feedback (CTA-001, EST-001)
+
+**CTA-001 — uma primária por contexto.** A barra do painel tinha oito acções em
+fila, todas com o mesmo peso, e `+ Novo convite` — a que se faz dezenas de vezes
+— era a **oitava**, depois de quatro que se fazem uma vez por casamento. Ficou:
+uma primária (`+ Novo convite`), uma secundária (`Mesas`) e um `⋯ Mais acções`
+com Mensagens, Entradas, Histórico e Exportar CSV. Três botões à vista, em vez
+de oito.
+
+| Medida (barra do painel) | Antes | Depois |
+| --- | ---: | ---: |
+| Botões à vista | 8 | **3** |
+| Botões com peso de primária | 8 | **1** |
+| Posição de `+ Novo convite` | 8.ª | **1.ª** |
+
+**Um defeito que isto destapou, e que era meu:** a primeira versão carregava o
+`assets/menu-mais.js` no painel e chamava `abrirMais(event,'acoes')`. Só que o
+`index.php` **já tinha** um `abrirMais(ev, id)` seu — o menu «⋯» de cada linha
+de convite, com outra assinatura — e a definição da página ganhava à do
+ficheiro. O menu não abria e **não dava erro nenhum**: a versão da página sai
+calada quando não encontra o convite que lhe pedem. Foi preciso ir ver ao
+browser; ler o código não chegava, porque as duas linhas estavam certas cada
+uma por si. Ficaram os dois menus a desenhar-se no mesmo sítio (`mostrarPop`),
+que era o que devia ter sido feito à primeira.
+
+**EST-001 — esqueletos e vazios.** Não havia um único esqueleto fora do módulo
+do bar, e a lista do painel — a página onde se passa o tempo todo — ficava **em
+branco** à espera do servidor e depois aparecia toda de uma vez. Um branco não
+diz se está a pensar ou se avariou.
+
+Passou a haver uma peça só para a casa toda (`assets/estados.js`: `EST.esqueleto`
+e `EST.vazio`), com a assinatura que o módulo do bar já usava — de propósito:
+duas peças com o mesmo nome e ordem diferente dos argumentos é uma armadilha à
+espera.
+
+| Lista | Antes | Depois |
+| --- | --- | --- |
+| Painel (`#lista`) | página em branco | esqueleto com o número **certo** de linhas |
+| Plataforma (`#lista-casamentos`) | `A carregar…` numa linha cinzenta | 6 cartões marcados |
+| Modelos (`#lista`) | `A carregar…` numa linha cinzenta | 4 provas marcadas |
+
+**A medida que interessa é o salto.** Um esqueleto de altura errada é um salto
+de página disfarçado de cortesia. Medido, com a resposta atrasada de propósito:
+
+| Lista | Esqueleto | Lista verdadeira | Salto |
+| --- | ---: | ---: | ---: |
+| Painel (2 convites) | 117 px | 114 px | **−3 px** |
+| Plataforma (25 casamentos) | 620 px | 2221 px | +1601 px |
+| Modelos (8 modelos) | 592 px | 1200 px | +608 px |
+
+A primeira versão do painel tinha seis barras fixas: 368 px a **encolher** para
+114 px assim que a resposta chegava. Crescer é inofensivo — a lista continua por
+baixo e nada do que já se estava a ler se mexe; **encolher** puxa a página para
+cima por baixo do dedo. O `index.php` já contava os convites no servidor
+(`$totalConvites`), por isso o esqueleto passou a ter o número exacto de linhas,
+com tecto de oito — sessenta barras a pulsar é uma página inteira a tremer.
+
+Pelo mesmo motivo, **a zero não há esqueleto nenhum**: prometer uma lista e
+entregar «ainda não há convites» é pior do que não prometer nada. As três
+páginas passam uma contagem do servidor só para decidir isso.
+
+O vazio deixou de ser uma frase solta: tem título, porquê e o gesto que o
+resolve. E um vazio por causa de um **filtro** confessa-o — senão lê-se como
+«está tudo vazio» e a pessoa vai criar o que já lá está.
+
+Detalhes que a prova fixa: as barras levam `aria-hidden` (um leitor de ecrã a
+soletrar seis caixas vazias é pior do que o silêncio) e a frase «A carregar…»
+vai numa `.so-leitor` para quem ouve; e `prefers-reduced-motion` desliga a
+pulsação, que é exactamente o que essa preferência pede.
+
+**O que ficou de fora, e porquê:** o estado vazio do `modelos.php` não foi
+tocado. Já tinha título, explicação e o gesto — e o comentário no código mostra
+que foi corrigido uma vez por dizer uma coisa que deixara de ser verdade.
+Reescrevê-lo era arriscar perder isso. Ficam também ~20 `A carregar…` noutras
+listas do `plataforma.php` e do `gestao.php`: são listas pequenas e de uma vez
+só, e um esqueleto em cada uma era trabalho a fingir.
+
+Provas: `tests/chk_estados.js` (20 verificações).
 
 **O que ficou por fazer, e porquê:**
 

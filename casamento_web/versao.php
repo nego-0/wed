@@ -961,6 +961,28 @@ function correcoesEsperadas(): array {
          'assets/estilo.css', 'body{ padding-top:var(--topo-alt, 0px); }'],
         ['E encolhe a trabalhar, com o limiar medido na altura dele',
          'parcial-cabecalho.php', "CURTO = h;            // só encolhe quando ele já saiu de vista"],
+
+        // ---- Uma primária por contexto (CTA-001) ----
+        ['O painel tem UMA ação principal, e as de uma vez só vão para trás do «⋯»',
+         'index.php', 'function abrirAccoes(ev){'],
+        ['Os dois menus «⋯» do painel desenham-se no mesmo sítio',
+         'index.php', 'function mostrarPop(ev, itens){'],
+
+        // ---- Esqueletos e estados vazios (EST-001) ----
+        ['Há uma peça de esqueleto e uma de vazio para a casa toda',
+         'assets/estados.js', 'raiz.EST = { esqueleto: esqueleto, vazio: vazio };'],
+        ['O esqueleto não pulsa a quem desligou as animações',
+         'assets/estilo.css', '@media (prefers-reduced-motion:reduce){ .esqueleto{'],
+        ['O vazio tem título, porquê e o gesto que o resolve',
+         'assets/estilo.css', '.vazio b{ display:block;'],
+        ['O painel marca o lugar da lista com o número certo de linhas',
+         'index.php', 'const ESQ_LINHAS ='],
+        ['A zero, não há esqueleto nenhum — encolher para o vazio era um salto',
+         'plataforma.php', 'const ESQ_CASAMENTOS ='],
+        ['E a grelha dos modelos também marca o lugar antes das provas chegarem',
+         'modelos.php', 'const ESQ_MODELOS ='],
+        ['Um vazio por causa de um filtro confessa-o, em vez de dizer que não há nada',
+         'index.php', "EST.vazio('procurar', 'Nenhum convite com estes filtros',"],
     ];
 }
 

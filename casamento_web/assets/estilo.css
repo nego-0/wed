@@ -578,8 +578,31 @@ summary:focus-visible,
   font-weight:600; color:var(--gold-soft); text-decoration:underline; white-space:nowrap; }
 .toast .anular:hover{ color:var(--ivory); }
 
-.vazio{ text-align:center; padding:3rem 1rem; color:var(--ink-fraco); }
+/* ---- o vazio (docs/auditoria-ui-ux.md, EST-001) ------------------
+   Existia em três das catorze páginas, e era uma frase solta a pedir
+   desculpa a um canto. Um vazio tem três partes: o que não há (título), o
+   porquê (texto) e — quando existe — o gesto que o resolve. É a mesma peça
+   que o módulo do bar já usava (.b-vazio); passa a ser da casa toda, e o
+   markup antigo, sem <b>, continua a ler-se na mesma. */
+.vazio{ text-align:center; padding:3rem 1rem; color:var(--ink-fraco); line-height:1.6; }
 .vazio .ico{ font-size:2.4rem; opacity:.5; }
+.vazio b{ display:block; font-family:var(--serif); font-size:var(--t-sub); color:var(--ink);
+          font-weight:400; margin:.15rem 0 .25rem; }
+.vazio p{ margin:0; max-width:34rem; margin-inline:auto; }
+.vazio .btn{ margin-top:1rem; }
+
+/* ---- o esqueleto: o lugar do conteúdo antes de ele chegar --------
+   Um branco não diz se está a pensar ou se avariou. As barras têm a altura
+   das linhas verdadeiras: um esqueleto de outra altura é um salto de página
+   disfarçado de cortesia. Quem desligou as animações não leva nenhuma — isto
+   pulsa no ecrã inteiro e é exactamente o que essa preferência pede. */
+.esq-lista{ display:grid; gap:.55rem; }
+.esq-grelha{ grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:1rem; }
+.esqueleto{ border-radius:10px; background:var(--cream); box-shadow:inset 0 0 0 1px var(--line);
+            animation:esq-pulso 1.4s ease-in-out infinite; }
+.esq-linha{ height:54px; }
+@keyframes esq-pulso{ 0%,100%{ opacity:.5 } 50%{ opacity:1 } }
+@media (prefers-reduced-motion:reduce){ .esqueleto{ animation:none; opacity:.7; } }
 
 @media (max-width:640px){
   .convite-row{ grid-template-columns:auto auto 1fr; }
@@ -673,6 +696,9 @@ summary:focus-visible,
 .ico-mais{ width:16px; height:16px; fill:currentColor; display:block; flex:none; }
 /* Por baixo do botão; para cima quando não há espaço em baixo (ver
    assets/menu-mais.js) — senão o menu do último cartão abria fora do ecrã. */
+/* O «⋯» precisa de um pai posicionado para a caixa saber onde cair. Nas listas
+   do admin isso vinha do cartão; solto numa barra de acções, não vinha de lado
+   nenhum e a caixa ia parar ao canto da página. */
 .mm-pop.acima{ top:auto; bottom:calc(100% + 4px); }
 .mm-pop{ position:absolute; right:0; top:calc(100% + 4px); z-index:60; width:180px; background:var(--card);
          border:1px solid var(--line); border-radius:12px; padding:.3rem;

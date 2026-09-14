@@ -26,6 +26,17 @@ if (!ehAdminPlataforma()) {
     header('Location: ' . (utilizadorId() ? 'plataforma.php' : 'login.php?r=modelos.php')); exit;
 }
 
+// Quantos modelos há, só para o esqueleto saber se deve existir (docs/
+// auditoria-ui-ux.md, EST-001). A zero não se mostra nenhum: um esqueleto a
+// encolher para «ainda não há modelos» é um salto, e é pior do que não ter
+// esqueleto — o vazio aparece de rompante depois de a página prometer uma
+// grelha. É uma contagem, e não a lista: quem a filtra por âmbito continua a
+// ver a promessa certa, porque acima de zero isto é um sinal e não uma medida.
+$totalModelos = 0;
+if ($r = @$conn->query("SELECT COUNT(*) n FROM {$P}modelos")) {
+    $totalModelos = (int)($r->fetch_assoc()['n'] ?? 0);
+}
+
 $aberto = casamentoAtual();
 $nomeAberto = '';
 if ($aberto > 0) {
@@ -301,12 +312,14 @@ if ($aberto > 0) {
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/estados.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const TEM_CASAMENTO = <?= $aberto > 0 ? 'true' : 'false' ?>;
+const ESQ_MODELOS = <?= min(4, (int)$totalModelos) ?>;
 let AMBITO = '', MODELOS = {}, CATALOGO = [], VISTA = 'modelos';
 const rotAmb = a => a === 'impresso' ? 'convite impresso' : 'convite digital';
 
@@ -446,6 +459,12 @@ function verExemplo(){
 }
 
 async function carregar(){
+  // Cada cartão desta grelha traz uma <iframe> com o convite desenhado em
+  // tamanho real: é a lista mais lenta da casa a chegar. Marcar-lhe o lugar
+  // com a forma que vai ter poupa o salto (docs/auditoria-ui-ux.md, EST-001).
+  if (!Object.keys(MODELOS).length && ESQ_MODELOS) {
+    $('lista').innerHTML = EST.esqueleto(ESQ_MODELOS, 592, 'grelha');
+  }
   const d = await api('modelo_lista' + (AMBITO ? '&ambito=' + AMBITO : ''));
   if (!d || !d.success) return;
   MODELOS = {};

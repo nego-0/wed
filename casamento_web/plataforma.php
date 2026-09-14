@@ -1273,6 +1273,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script src="<?= asset('assets/api.js') ?>"></script>
+<script src="<?= asset('assets/estados.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/maps-campo.js') ?>"></script>
 <script src="<?= asset('assets/menu-mais.js') ?>"></script>
@@ -2880,6 +2881,13 @@ function mostrarApagado(d){
 }
 
 // ---------- os casamentos, por ordem de uso ----------
+// Quantas barras tem o esqueleto desta lista. Vem do servidor (docs/auditoria-
+// ui-ux.md, EST-001) por uma razão só: a zero, não se mostra esqueleto nenhum.
+// Um esqueleto a encolher para «ainda não há casamentos» é um salto, e é pior
+// do que não ter esqueleto — o vazio aparece de rompante depois de a página
+// prometer uma lista. Acima de zero é um sinal, não uma medida: os cartões
+// verdadeiros continuam a chegar por baixo, e por baixo nada se mexe.
+const ESQ_CASAMENTOS = <?= min(6, (int)($G['ativos'] ?? 0)) ?>;
 let ESTADO_CAS = 'ativo';
 function filtrarCasamentos(e, saltar){
   ESTADO_CAS = e;
@@ -2902,12 +2910,34 @@ const quando = s => {
 async function carregarCasamentos(){
   const alvo = document.getElementById('lista-casamentos');
   const q = (document.getElementById('q-cas').value || '').trim();
+  // Enquanto a resposta não chega, o lugar dos cartões fica marcado com a
+  // altura que eles vão ter (docs/auditoria-ui-ux.md, EST-001) — em vez de uma
+  // linha de texto cinzenta que encolhe a página e a faz saltar ao chegar.
+  if (!Object.keys(CASAMENTOS).length && ESQ_CASAMENTOS) {
+    alvo.innerHTML = EST.esqueleto(ESQ_CASAMENTOS, 96);
+  }
   const d = await api('casamento_lista&estado=' + ESTADO_CAS + (q ? '&q=' + encodeURIComponent(q) : ''));
   if (!d || !d.success) return;
   CASAMENTOS = {};
   d.casamentos.forEach(c => { CASAMENTOS[c.id] = c; });   // para os modais não irem procurar outra vez
   if (!d.casamentos.length){
-    alvo.innerHTML = '<div class="dica">Nenhum casamento aqui.</div>'; return;
+    // Vazio por procura, vazio por arquivo e vazio a sério não são a mesma
+    // notícia, e a de cada um leva o gesto que lhe serve.
+    alvo.innerHTML = q
+      ? EST.vazio('procurar', 'Nada com «' + q + '»',
+          'Nenhum casamento deste lado corresponde ao que procurou.',
+          '<button class="btn btn-fantasma" onclick="document.getElementById(\'q-cas\').value=\'\';carregarCasamentos()">Limpar a procura</button>')
+      : (ESTADO_CAS === 'arquivado'
+        ? EST.vazio('caixa', 'Nenhum casamento arquivado',
+            'Os casamentos que arquivar ficam aqui, com tudo o que têm dentro, e podem voltar quando quiser.')
+        // Quem não manda na casa não tem a vista «Novo casamento»: oferecer-lhe
+        // o botão era mandá-lo a uma porta que não existe do lado dele.
+        : EST.vazio('anel', 'Ainda não há casamentos',
+            'Cada casamento é uma casa à parte: convidados, mesas, bar e convites só dele.',
+            MANDA_NA_CASA
+              ? '<button class="btn btn-ouro" onclick="verVista(\'novo\')">+ Novo casamento</button>'
+              : ''));
+    return;
   }
   alvo.innerHTML = d.casamentos.map(c => {
     const aberto = +c.id === +d.aberto;
