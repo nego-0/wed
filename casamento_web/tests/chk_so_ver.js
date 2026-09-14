@@ -162,27 +162,36 @@ const rotulos = (p, sel) => p.$$eval(sel, els => els.map(e =>
   await sup.goto(BASE + '/mesas.php', { waitUntil: 'networkidle' });
   await sup.waitForTimeout(1600);
   const m2 = sup.locator('.mesa-node').first();
+
+  // Esta prova andou a falhar de forma intermitente, e levou três tentativas a
+  // arranjar porque as duas primeiras trataram sintomas. A causa, medida:
+  //
+  // Em base limpa há UMA mesa — a dos noivos — e ela assenta a y=663 com 125px
+  // de altura, ou seja com o centro em 725. A janela desta página tem 720. O
+  // ponto do gesto caía FORA DO ECRÃ: o rato não acertava em nada,
+  // `elementsFromPoint` devolvia lista vazia, e o arrasto nem chegava a
+  // começar. Quando outras provas corriam antes, a primeira mesa era outra e
+  // calhava visível — e a prova passava, pela razão errada.
+  //
+  // Três coisas a garantir, portanto: a mesa à vista antes de se lhe tocar; o
+  // gesto a mirar o centro da TELA (#planta, e não #tab-body, que é o painel
+  // das abas ao lado); e o destino dentro do ecrã, porque um gesto que acaba
+  // fora dele não é gesto nenhum.
+  await m2.scrollIntoViewIfNeeded();
+  await sup.waitForTimeout(200);
   const posA = await m2.evaluate(e => e.style.left + '|' + e.style.top);
   const bb = await m2.boundingBox();
-  // Arrasta-se PARA DENTRO, e não sempre para baixo e para a direita.
-  // A mesa não começa no mesmo sítio em todas as corridas — as provas
-  // anteriores mexem-lhe —, e quando ela calhava perto da borda o gesto de
-  // +110/+60 batia no limite da tela: a posição não mudava e a prova acusava
-  // um arrasto partido que não estava partido. Falhava uma corrida em cada
-  // duas. Mirar o centro da tela mantém o gesto sempre dentro do que é
-  // possível, seja onde for que a mesa esteja.
-  // #planta é a TELA. À primeira apontei para #tab-body, que é o painel das
-  // abas ao lado — o arrasto ia na direcção errada e empurrava a mesa contra a
-  // parede. Passou três vezes por sorte e falhou à quarta.
   const tela = await sup.locator('#planta').boundingBox();
   const mx = bb.x + bb.width / 2, my = bb.y + bb.height / 2;
   const alvoX = tela ? tela.x + tela.width / 2 : mx;
   const alvoY = tela ? tela.y + tela.height / 2 : my;
-  const dx = Math.sign(alvoX - mx) * 110 || 110;
-  const dy = Math.sign(alvoY - my) * 60  || 60;
+  const janela = await sup.evaluate(() => [innerWidth, innerHeight]);
+  const dentro = (v, max) => Math.max(8, Math.min(max - 8, v));
+  const destX = dentro(mx + (Math.sign(alvoX - mx) * 110 || 110), janela[0]);
+  const destY = dentro(my + (Math.sign(alvoY - my) * 60  || 60),  janela[1]);
   await sup.mouse.move(mx, my);
   await sup.mouse.down();
-  await sup.mouse.move(mx + dx, my + dy, { steps: 12 });
+  await sup.mouse.move(destX, destY, { steps: 12 });
   await sup.mouse.up();
   await sup.waitForTimeout(900);
   const posB = await m2.evaluate(e => e.style.left + '|' + e.style.top);
