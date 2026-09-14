@@ -246,6 +246,46 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
      zero aria-live em todo o sistema. O api.js escreve aqui (ver anunciar()). -->
 <div id="avisos-vivos" class="so-leitor" role="status" aria-live="polite" aria-atomic="true"></div>
 <script>
+/* O cabeçalho encolhe assim que se começa a trabalhar.
+   Escreve-se no DOM só quando o estado MUDA, e uma vez por fotograma: a
+   rajada de eventos de uma rolagem junta-se toda no mesmo repintar, que é a
+   regra que esta casa aprendeu a arranjar o tremor da lista de escolha. */
+(function () {
+  'use strict';
+  var topo = document.querySelector('.topo');
+  if (!topo) return;
+  var CURTO = 0, LONGO = 0, curto = false, marcado = false;
+
+  /* O corpo guarda o lugar do cabeçalho, e o limiar é a altura dele.
+     Mede-se aqui e não no CSS porque a altura muda de página para página — o
+     subtítulo tem uma ou duas linhas, a tira da licença aparece ou não. */
+  function medir() {
+    if (curto) return;                    // encolhido, a medida não é a cheia
+    var h = Math.round(topo.getBoundingClientRect().height);
+    if (!h) return;
+    document.documentElement.style.setProperty('--topo-alt', h + 'px');
+    CURTO = h;            // só encolhe quando ele já saiu de vista
+    LONGO = Math.max(8, Math.round(h * 0.35));
+  }
+
+  function ver() {
+    marcado = false;
+    var y = window.scrollY || document.documentElement.scrollTop || 0;
+    var quer = curto ? (y > LONGO) : (y > CURTO);
+    if (quer === curto) return;
+    curto = quer;
+    document.body.classList.toggle('topo-curto', curto);
+  }
+  window.addEventListener('scroll', function () {
+    if (marcado) return;
+    marcado = true;
+    requestAnimationFrame(ver);
+  }, { passive: true });
+  window.addEventListener('resize', function () { medir(); }, { passive: true });
+  medir();
+})();
+</script>
+<script>
 /* A folha do «Mais»: sobe, e sai por onde se espera.
    Um painel que só fecha no botão que o abriu obriga a apontar; este fecha no
    fundo escurecido, no Escape, e ao escolher um destino. O foco entra na folha

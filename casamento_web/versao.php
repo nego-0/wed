@@ -955,6 +955,12 @@ function correcoesEsperadas(): array {
          'assets/estilo.css', '.folha-fundo:not([hidden]){'],
         ['Há um sinal de reticências para dizer «e há mais»',
          'assets/icones.js', 'reticencias:'],
+
+        // ---- O cabeçalho sai do caminho (UI-002) ----
+        ['No telemóvel o cabeçalho é fixo e o corpo guarda-lhe o lugar',
+         'assets/estilo.css', 'body{ padding-top:var(--topo-alt, 0px); }'],
+        ['E encolhe a trabalhar, com o limiar medido na altura dele',
+         'parcial-cabecalho.php', "CURTO = h;            // só encolhe quando ele já saiu de vista"],
     ];
 }
 

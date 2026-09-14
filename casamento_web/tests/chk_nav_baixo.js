@@ -145,6 +145,52 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
        return !!a && a.id === 'nb-mais'; }),
      'e numa página que vive na folha, acende-se o «Mais»');
 
+  // ============ o cabeçalho sai do caminho (UI-002) ============
+  await m.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+  await m.waitForTimeout(1600);
+  const alturaTopo = () => m.evaluate(() =>
+    Math.round(document.querySelector('.topo').getBoundingClientRect().height));
+  const cheio = await alturaTopo();
+  ok(cheio > 120, 'à chegada o cabeçalho diz tudo: ' + cheio + 'px');
+
+  // Conta-se o que a rolagem ESCREVE, e não o que fica no fim. Com o cabeçalho
+  // em `sticky` isto oscilava: encolher tirava 162px de cima da vista, o âncora
+  // de rolagem do Chromium compensava mexendo no scrollY, e o limiar voltava a
+  // ser cruzado — o cabeçalho abria e fechava sozinho por cima do dedo.
+  await m.evaluate(() => {
+    window.__e = 0;
+    window.__o = new MutationObserver(ms => { window.__e += ms.length; });
+    window.__o.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  });
+  // A roda do rato não rola sob emulação de telemóvel: rola-se como a página rola.
+  for (let i = 1; i <= 12; i++) { await m.evaluate(k => scrollTo(0, k * 60), i); await m.waitForTimeout(45); }
+  await m.waitForTimeout(400);
+  const curto = await alturaTopo();
+  ok(curto < cheio / 2,
+     'e encolhe a trabalhar: ' + cheio + 'px → ' + curto + 'px');
+  ok(await m.evaluate(() => getComputedStyle(document.body).paddingTop) !== '0px',
+     'o corpo guarda-lhe o lugar — com o cabeçalho fixo, a altura do documento não muda');
+
+  // De volta ao topo, ele volta a dizer tudo.
+  await m.evaluate(() => scrollTo(0, 0));
+  await m.waitForTimeout(500);
+  ok(await alturaTopo() === cheio, 'no topo volta a estar inteiro');
+
+  // E não treme quando a rolagem pára em cima do limiar.
+  await m.evaluate(() => scrollTo(0, 220)); await m.waitForTimeout(500);
+  await m.evaluate(() => {
+    window.__t = 0;
+    window.__o2 = new MutationObserver(ms => { window.__t += ms.length; });
+    window.__o2.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  });
+  for (let i = 0; i < 12; i++) {
+    await m.evaluate(k => scrollTo(0, 190 + (k % 6) * 8), i);
+    await m.waitForTimeout(70);
+  }
+  const tremeu = await m.evaluate(() => { window.__o2.disconnect(); return window.__t; });
+  ok(tremeu === 0,
+     'e parar em cima do limiar não o põe a abrir e fechar: ' + tremeu + ' escritas');
+
   // ============ no ecrã largo, nada disto existe ============
   const d = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
   d.on('pageerror', e => errs.push('desktop: ' + e.message));

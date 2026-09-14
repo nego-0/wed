@@ -255,6 +255,44 @@ a:hover{ text-decoration:underline; }
 .topo .nav a:hover{ background:rgba(233,223,201,.15); text-decoration:none; }
 .topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--sobre-gold); font-weight:500; }
 
+/* ---------- O cabeçalho sai do caminho, no telemóvel ----------
+   Ao chegar, ele diz tudo: de quem é a festa, quanto falta, que licença corre,
+   em que casamento se está. Isso é informação de chegada, e a prova do
+   cabeçalho exige-a em TODAS as páginas — foi decisão da casa, e mantém-se.
+   O que não faz sentido é ela continuar a ocupar um quinto do ecrã enquanto se
+   trabalha. Por isso cola-se ao topo e encolhe à primeira rolagem, deixando o
+   título, que é o que diz onde se está.
+
+   A histerese não é capricho: encolher aos 80px e voltar a crescer só abaixo
+   dos 24px evita que o cabeçalho oscile em cima do dedo quando a rolagem para
+   mesmo em cima do limiar — e uma mudança de altura em cima do limiar move o
+   conteúdo por baixo. */
+@media (max-width:760px){
+  /* FIXO, e não sticky, com o corpo a guardar-lhe o lugar em padding-top.
+     Com sticky o cabeçalho continua no fluxo: encolher de 198px para 36px tira
+     162px de cima da vista, e o âncora de rolagem do Chromium compensa isso
+     mexendo no scrollY — o que volta a cruzar o limiar e põe o cabeçalho a
+     abrir e fechar sozinho por cima do dedo. Fixo, a altura do documento nunca
+     muda, e não há nada que compensar.
+     O limiar de encolher é a própria altura do cabeçalho (--topo-alt, medida
+     no arranque): só encolhe depois de ele ter saído de vista por si, e por
+     isso não fica buraco nenhum entre ele e o conteúdo. */
+  .topo{
+    position:fixed; top:0; left:0; right:0; z-index:80;
+    transition:padding-top .16s, padding-bottom .16s;
+  }
+  body{ padding-top:var(--topo-alt, 0px); }
+  body.topo-curto .topo{ padding-top:.5rem; padding-bottom:.5rem; }
+  body.topo-curto .topo .sub,
+  body.topo-curto .topo .monograma{ display:none; }
+  body.topo-curto .topo h1{ font-size:var(--t-sub); }
+  /* A tira de suporte acompanha: ela é aviso de chegada, não de trabalho. */
+  body.topo-curto .tira-suporte{ display:none; }
+}
+@media (prefers-reduced-motion:reduce){
+  .topo{ transition:none; }
+}
+
 /* ---------- A navegação de baixo, no telemóvel ----------
    No ecrã largo não existe: a tira do cabeçalho cabe e chega. A 390px é ela
    que passa a mandar, e a tira de cima recolhe — duas navegações ao mesmo

@@ -629,7 +629,7 @@ TOQUE-001 de propósito: `min-height` numa checkbox aumenta a **caixa**, não a
 **Estruturais:** `TIPO-001` · `NAV-001` · `CONV-001` · `RSVP-001` · `RSVP-002` ·
 `DENS-001`
 
-**Refinamentos:** `EST-001` · `UI-001` · `UI-002` · `A11Y-003` · `A11Y-004` ·
+**Refinamentos:** `EST-001` · `UI-001` ✅ · `UI-002` ✅ · `A11Y-003` · `A11Y-004` ·
 `CONV-002`
 
 **Experimental:** `UX-010` · `RSVP-003` (RSVP por evento) · `EMO-002` (momento
@@ -643,7 +643,7 @@ de chegada)
 | --- | --- | --- | --- |
 | 1 · Fundação | Tokens de cor, escala tipográfica, alvos | DS-001 TIPO-001 TOQUE-001 | Cor e alvos ✅; tipografia por fazer |
 | 2 · Acessibilidade base | Marcos, salto, região viva, anel de foco | A11Y-001 A11Y-002 SEO-001 FOCO-002 | ✅ nas páginas com cabeçalho partilhado |
-| 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | NAV-001 ✅ e UI-001 ✅; UI-002 por fazer |
+| 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | ✅ |
 | 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | Por fazer |
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | Por fazer |
 | 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | Por fazer |
@@ -856,6 +856,22 @@ ajusta — e não crómio de aplicação.
 - O botão do tema subiu: aquele canto passou a ser da navegação (UI-001).
 - Um sinal novo no alfabeto da casa — `reticencias` —, porque um menu «Mais»
   com um sinal de somar diz «criar».
+
+**O cabeçalho sai do caminho (UI-002):** à chegada diz tudo — de quem é a festa,
+quanto falta, que licença corre — porque isso é informação de chegada, e a prova
+do cabeçalho exige-a em todas as páginas por decisão da casa. À primeira rolagem
+encolhe de **198 px para 36 px**, deixando o título, que é o que diz onde se
+está; no topo volta a estar inteiro.
+
+Foi preciso torná-lo **fixo**, e não `sticky`, com o corpo a guardar-lhe o lugar
+em `padding-top`. Com `sticky` ele continua no fluxo: encolher tira 162 px de
+cima da vista, o **âncora de rolagem do Chromium** compensa isso mexendo no
+`scrollY`, e o limiar volta a ser cruzado — o cabeçalho abria e fechava sozinho
+por cima do dedo. Fixo, a altura do documento nunca muda e não há nada que
+compensar. O limiar de encolher é a própria altura dele, medida no arranque
+(muda de página para página), de modo que só encolhe depois de ter saído de
+vista por si — e não fica buraco entre ele e o conteúdo. Medido: **uma** escrita
+por mudança de estado, **zero** ao parar em cima do limiar.
 
 **Um defeito que a prova apanhou e que eu tinha acabado de introduzir:**
 `[hidden]` é um selector de atributo e perde para uma classe. Com um
