@@ -562,8 +562,7 @@ Escala de base 4: `4 · 8 · 12 · 16 · 24 · 32 · 48 · 64`. Um raio por pape
 ### P0
 
 **NAV-001 · A navegação móvel esconde três quartos da aplicação.** 12 destinos,
-3 visíveis, 741 px escondidos, altura 30 px. Barra inferior fixa + folha «Mais».
-Impacto alto · esforço médio · risco médio.
+3 visíveis, 741 px escondidos, altura 30 px. ✅ **Feito** — ver §25.
 
 **TIPO-001 · Não há escala tipográfica.** 43 pares; 229 de 854 nós abaixo de
 13 px. A escala de §18.2 como tokens; peso 300 sai do texto corrente. Impacto
@@ -644,7 +643,7 @@ de chegada)
 | --- | --- | --- | --- |
 | 1 · Fundação | Tokens de cor, escala tipográfica, alvos | DS-001 TIPO-001 TOQUE-001 | Cor e alvos ✅; tipografia por fazer |
 | 2 · Acessibilidade base | Marcos, salto, região viva, anel de foco | A11Y-001 A11Y-002 SEO-001 FOCO-002 | ✅ nas páginas com cabeçalho partilhado |
-| 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | Por fazer |
+| 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | NAV-001 ✅ e UI-001 ✅; UI-002 por fazer |
 | 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | Por fazer |
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | Por fazer |
 | 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | Por fazer |
@@ -677,6 +676,10 @@ apenas para as correcções acima.
   de texto, são dois tokens.
 - Só os **sete degraus** da escala. Abaixo de 13 px, só etiquetas curtas em 600.
 - Espaçamento em múltiplos de 4. Um raio por papel.
+- **Um `display` que ligue um painel escreve-se `:not([hidden])`.** `[hidden]` é
+  um selector de atributo e perde para qualquer classe: sem o qualificador, o
+  painel fica ligado mesmo escondido. Num fundo de folha em `position:fixed`
+  isso tapa a página inteira e engole todos os toques, sem se ver nada.
 - Uma cor nova só entra depois de medido o contraste sobre **píxeis pintados** —
   porque a casa usa gradientes. Num gradiente medem-se os **dois extremos**.
 
@@ -715,7 +718,7 @@ apenas para as correcções acima.
 - [ ] **V3** No máximo 9 pares tamanho/peso distintos por página — *26 → 18; a variedade que resta é de PESO, não de tamanho*
 - [ ] **V4** Zero frases abaixo de 13 px — *229 → 7*
 - [ ] **V5** Zero alvos abaixo de 44×44 a 390 px — *332/385 → 72/395*
-- [ ] **V6** Todos os destinos primários alcançáveis a 390 px sem rolar na horizontal
+- [x] **V6** Todos os destinos primários alcançáveis a 390 px sem rolar na horizontal
 - [x] **V7** Zero transbordo horizontal nas 14 páginas × 3 larguras
 - [ ] **V8** Um `<h1>`, um `<main>` e uma ligação de salto por página — *10/14*
 - [ ] **V9** Uma região `aria-live` por página — *10/14*
@@ -759,7 +762,7 @@ de que, nessa altura, o resto da aplicação já se parece com ele.
 3. **TOQUE-001** ✅ — 44 px de alvo mínimo no toque
 4. **A11Y-002** ✅ — o anel de foco da casa deixa de ser exclusivo do bar
 5. **A11Y-001** ✅ — `<main>`, ligação de salto e região `aria-live`
-6. **NAV-001** — navegação inferior e folha «Mais» no telemóvel
+6. **NAV-001** ✅ — navegação inferior e folha «Mais» no telemóvel
 7. **CONV-001** — resumo persistente no funil de licença
 8. **EST-001** — esqueletos e estados vazios em todas as listas
 9. **RSVP-001** — refeição, restrições e perguntas no RSVP
@@ -785,6 +788,7 @@ depois, com a mesma sonda:
 | Páginas com `<main>` | 5 / 14 | 10 / 14 |
 | Páginas com ligação de salto | 0 / 14 | 10 / 14 |
 | Páginas com região `aria-live` | 0 / 14 | 10 / 14 |
+| Destinos visíveis a 390 px | **3** / 12 | **5** / 5 na barra + 8 na folha |
 | Transbordo horizontal | 0 | 0 |
 
 **O que mudou, concretamente:**
@@ -831,6 +835,35 @@ depois, com a mesma sonda:
 O convite e o seu editor ficaram **fora** desta escala, de propósito: são peças
 desenhadas com tipografia própria — scripts, molduras, escalas que o casal
 ajusta — e não crómio de aplicação.
+
+**A navegação de baixo (NAV-001):**
+
+- **Barra fixa em baixo a ≤760 px**, com quatro destinos e o «Mais». A escolha
+  dos quatro não é a ordem do menu: é a do que o casal faz mais vezes —
+  Painel · Mesas · Convite · Orçamento — filtrada pela licença, de modo que
+  ninguém vê o que não tem.
+- **A tira do cabeçalho recolhe** no telemóvel. Duas navegações ao mesmo tempo
+  são duas respostas à mesma pergunta; no ecrã largo é ela que continua a
+  mandar, intacta.
+- **Rótulos curtos só na barra.** «Convite digital» tem 15 caracteres e a coluna
+  tem 78 px: cortava-se a meio. O nome por extenso fica no menu de cima e na
+  folha, onde há largura.
+- **A folha sai por onde se espera** — fundo escurecido, Escape, ou ao escolher
+  — e o foco volta ao botão. Sem isso, quem navega por teclado ficava atrás dela
+  a tabular por uma página que já não vê.
+- **A página em que se está lê-se na barra**, e quando ela vive na folha
+  acende-se o «Mais».
+- O botão do tema subiu: aquele canto passou a ser da navegação (UI-001).
+- Um sinal novo no alfabeto da casa — `reticencias` —, porque um menu «Mais»
+  com um sinal de somar diz «criar».
+
+**Um defeito que a prova apanhou e que eu tinha acabado de introduzir:**
+`[hidden]` é um selector de atributo e perde para uma classe. Com um
+`.folha-fundo{ display:block }` solto, o fundo escurecido ficava com
+`display:block` mesmo escondido — invisível, mas por cima da página inteira e a
+engolir **todos** os toques do telemóvel. Só apareceu quando a prova tentou
+tocar em alguma coisa. Está na `chk_nav_baixo.js` como verificação própria, e
+nas directrizes.
 
 **O que ficou por fazer, e porquê:**
 

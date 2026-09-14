@@ -244,7 +244,11 @@
     brilho: '<path d="M12 2.5c0 5.2 1.8 7 7 7-5.2 0-7 1.8-7 7 0-5.2-1.8-7-7-7 5.2 0 7-1.8 7-7z"/>',
     musica: '<path d="M9 18V5.5l10-2V16"/><circle cx="6.5" cy="18" r="2.5"/>'
           + '<circle cx="16.5" cy="16" r="2.5"/>',
-    ponto: '<circle cx="12" cy="12" r="4.5"/>'
+    ponto: '<circle cx="12" cy="12" r="4.5"/>',
+    // Três pontos: o sinal universal de «e há mais». Faltava — a casa tinha o
+    // `ponto` sozinho, e um menu «Mais» com um sinal de somar dizia «criar».
+    reticencias: '<circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/>'
+               + '<circle cx="18.5" cy="12" r="1.6"/>'
   };
 
   // ---- a saída ------------------------------------------------

@@ -943,6 +943,18 @@ function correcoesEsperadas(): array {
          'assets/estilo.css', 'label small, label .opt{'],
         ['E os 44px do menu valem só onde há dedo',
          'assets/estilo.css', '.topo .nav a{ min-height:44px; }'],
+
+        // ---- A navegação de baixo, no telemóvel (NAV-001) ----
+        ['No telemóvel a navegação está em baixo, ao alcance do polegar',
+         'parcial-cabecalho.php', '<nav class="nav-baixo'],
+        ['E o resto dos destinos vive numa folha que sobe',
+         'parcial-cabecalho.php', 'id="folha-mais"'],
+        ['A tira do cabeçalho recolhe quando a barra de baixo aparece',
+         'assets/estilo.css', '.topo .nav{ display:none; }'],
+        ['O fundo escondido não tapa a página — [hidden] perde para uma classe',
+         'assets/estilo.css', '.folha-fundo:not([hidden]){'],
+        ['Há um sinal de reticências para dizer «e há mais»',
+         'assets/icones.js', 'reticencias:'],
     ];
 }
 

@@ -172,11 +172,120 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     </nav>
   </div>
 </header>
+<?php
+  // ---------- A navegação de baixo, no telemóvel ----------
+  //
+  // A tira do cabeçalho continua onde estava, e no ecrã largo é ela que manda.
+  // Mas a 390px ela escondia 741px de si própria numa rolagem horizontal sem
+  // indício nenhum: três destinos visíveis em doze, e três quartos da aplicação
+  // por descobrir (docs/auditoria-ui-ux.md §8). Uma funcionalidade que não se
+  // encontra vale zero, por melhor que seja.
+  //
+  // Aqui em baixo ficam os destinos do trabalho de todos os dias, ao alcance do
+  // polegar e sempre à vista; o resto — administração, licença, contas — vai
+  // para uma folha que sobe quando se pede. A ordem não é a do menu de cima: é
+  // a do que o casal faz mais vezes.
+  //
+  // Fica FORA do <header> de propósito. As provas lêem `header nav a` para
+  // saber o menu de uma página, e uma segunda cópia lá dentro duplicava-lhes
+  // todos os destinos.
+  $ordemBaixo = ['painel', 'mesas', 'convite', 'orcamento', 'bar', 'grafica', 'porta'];
+  // Rótulos curtos, só para a barra. «Convite digital» tem 15 caracteres e a
+  // coluna tem 78px: cortava-se a meio, e um rótulo cortado não é um rótulo.
+  // O nome por extenso continua no menu de cima e na folha, onde há largura.
+  $curtoDe = [
+    'convite' => 'Convite', 'grafica' => 'Impresso', 'plataforma' => 'Casamentos',
+  ];
+  $icoDe = [
+    'painel' => 'pessoas', 'mesas'   => 'mesa',   'grafica'    => 'carta',
+    'convite'=> 'telemovel','porta'  => 'porta',  'bar'        => 'taca',
+    'orcamento'=>'moeda',  'gestao'  => 'mala',   'licenca'    => 'chave',
+    'plataforma'=>'anel',  'modelos' => 'documento',
+  ];
+  // Até quatro: com cinco alvos numa barra de 390px, cada um fica com 78px e o
+  // rótulo deixa de caber sem cortar.
+  $naBarra = [];
+  foreach ($ordemBaixo as $k) {
+    if (count($naBarra) >= 4) break;
+    if (isset($itens[$k])) $naBarra[] = $k;
+  }
+  $naFolha = array_diff(array_keys($itens), $naBarra);
+  $ativoNaFolha = in_array($ativo, $naFolha, true);
+?>
+<nav class="nav-baixo<?= $semPapel ?>" aria-label="Destinos principais">
+  <?php foreach ($naBarra as $k): [$url, $rotulo] = $itens[$k];
+        $eh = ($k === $ativo); ?>
+  <a href="<?= $url ?>" class="nb-item<?= $eh ? ' ativo' : '' ?>"<?= $eh ? ' aria-current="page"' : '' ?>>
+    <span class="nb-ico" data-ico="<?= $icoDe[$k] ?? 'ponto' ?>"></span>
+    <span class="nb-rot"><?= escP($curtoDe[$k] ?? $rotulo) ?></span>
+  </a>
+  <?php endforeach; ?>
+  <button type="button" class="nb-item nb-mais<?= $ativoNaFolha ? ' ativo' : '' ?>"
+          id="nb-mais" aria-expanded="false" aria-controls="folha-mais">
+    <span class="nb-ico" data-ico="reticencias"></span>
+    <span class="nb-rot">Mais</span>
+  </button>
+</nav>
+<div class="folha-fundo<?= $semPapel ?>" id="folha-fundo" hidden></div>
+<div class="folha-mais<?= $semPapel ?>" id="folha-mais" hidden
+     role="dialog" aria-modal="true" aria-labelledby="fm-tit">
+  <div class="fm-pega" aria-hidden="true"></div>
+  <h2 class="fm-tit" id="fm-tit">Mais</h2>
+  <div class="fm-lista">
+    <?php foreach ($naFolha as $k): [$url, $rotulo] = $itens[$k];
+          $eh = ($k === $ativo); ?>
+    <a href="<?= $url ?>"<?= $eh ? ' class="ativo" aria-current="page"' : '' ?>>
+      <span class="fm-ico" data-ico="<?= $icoDe[$k] ?? 'ponto' ?>"></span><?= escP($rotulo) ?></a>
+    <?php endforeach; ?>
+    <a href="logout.php" class="fm-sair"><span class="fm-ico" data-ico="porta"></span>Sair</a>
+  </div>
+</div>
 <!-- A região viva por onde passam os avisos. A aplicação faz quase tudo sem
      recarregar — aprovar um pedido, guardar uma despesa, mudar uma mesa — e
      até aqui nenhuma dessas confirmações chegava a um leitor de ecrã: havia
      zero aria-live em todo o sistema. O api.js escreve aqui (ver anunciar()). -->
 <div id="avisos-vivos" class="so-leitor" role="status" aria-live="polite" aria-atomic="true"></div>
+<script>
+/* A folha do «Mais»: sobe, e sai por onde se espera.
+   Um painel que só fecha no botão que o abriu obriga a apontar; este fecha no
+   fundo escurecido, no Escape, e ao escolher um destino. O foco entra na folha
+   e volta ao botão quando ela se fecha — sem isso, quem navega por teclado
+   ficava atrás dela, a tabular por uma página que já não vê. */
+(function () {
+  'use strict';
+  var bt = document.getElementById('nb-mais');
+  var folha = document.getElementById('folha-mais');
+  var fundo = document.getElementById('folha-fundo');
+  if (!bt || !folha || !fundo) return;
+
+  function abrir() {
+    folha.hidden = false; fundo.hidden = false;
+    requestAnimationFrame(function () { folha.classList.add('aberta'); });
+    bt.setAttribute('aria-expanded', 'true');
+    var primeiro = folha.querySelector('a');
+    if (primeiro) primeiro.focus();
+  }
+  function fechar(devolverFoco) {
+    folha.classList.remove('aberta');
+    bt.setAttribute('aria-expanded', 'false');
+    // Espera-se a descida antes de a tirar da árvore, senão ela desaparece de
+    // repente em vez de sair. Quem pediu menos movimento não espera nada.
+    var lento = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 180;
+    setTimeout(function () { folha.hidden = true; fundo.hidden = true; }, lento);
+    if (devolverFoco) bt.focus();
+  }
+  bt.addEventListener('click', function () {
+    if (bt.getAttribute('aria-expanded') === 'true') fechar(true); else abrir();
+  });
+  fundo.addEventListener('click', function () { fechar(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !folha.hidden) { e.stopPropagation(); fechar(true); }
+  }, true);
+  folha.addEventListener('click', function (e) {
+    if (e.target.closest('a')) fechar(false);   // escolheu: a página vai mudar
+  });
+})();
+</script>
 <script>
 /* Os avisos de sucesso já existem em toda a aplicação, sob a forma de toasts —
    mas um toast é pintura: quem lê o ecrã nunca soube que a despesa ficou

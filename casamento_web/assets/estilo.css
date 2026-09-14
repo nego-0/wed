@@ -255,6 +255,97 @@ a:hover{ text-decoration:underline; }
 .topo .nav a:hover{ background:rgba(233,223,201,.15); text-decoration:none; }
 .topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--sobre-gold); font-weight:500; }
 
+/* ---------- A navegação de baixo, no telemóvel ----------
+   No ecrã largo não existe: a tira do cabeçalho cabe e chega. A 390px é ela
+   que passa a mandar, e a tira de cima recolhe — duas navegações ao mesmo
+   tempo são duas respostas à mesma pergunta. */
+.nav-baixo{ display:none; }
+.folha-mais, .folha-fundo{ display:none; }
+
+@media (max-width:760px){
+  /* A tira de cima sai de cena: os seus doze destinos passam a viver entre a
+     barra de baixo e a folha do «Mais». */
+  .topo .nav{ display:none; }
+
+  .nav-baixo{
+    display:flex; position:fixed; left:0; right:0; bottom:0; z-index:90;
+    background:var(--card); border-top:1px solid var(--line);
+    /* O tabuleiro do telemóvel come a última faixa do ecrã. Sem isto, o rótulo
+       do último destino fica por baixo da barra do sistema. */
+    padding-bottom:env(safe-area-inset-bottom, 0);
+    box-shadow:0 -2px 14px rgba(18,34,47,.07);
+  }
+  .nb-item{
+    flex:1 1 0; min-width:0; min-height:56px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    padding:6px 2px; border:0; background:none; cursor:pointer;
+    color:var(--ink-fraco); text-decoration:none; font-family:var(--sans);
+  }
+  .nb-item:hover{ text-decoration:none; }
+  .nb-ico{ display:flex; width:22px; height:22px; }
+  .nb-ico svg{ width:22px; height:22px; }
+  .nb-rot{
+    font-size:var(--t-etiqueta); font-weight:600; line-height:1.1;
+    /* Um rótulo cortado a meio não é um rótulo. Cabe, ou encolhe a letra —
+       nunca sai da barra. */
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .nb-item.ativo{ color:var(--gold-texto); }
+  .nb-item.ativo .nb-ico{ color:var(--gold-texto); }
+
+  /* O conteúdo não pode acabar por baixo da barra. */
+  body{ padding-bottom:calc(56px + env(safe-area-inset-bottom, 0)); }
+  /* E o botão do tema sobe, que aquele canto passou a ser da navegação
+     (docs/auditoria-ui-ux.md, UI-001). */
+  .tema-fab{ bottom:calc(68px + env(safe-area-inset-bottom, 0)); }
+
+  /* ---- a folha ---- */
+  /* O `:not([hidden])` não é enfeite: `[hidden]` é um selector de atributo, e
+     perde para uma classe. Sem isto o fundo escurecido ficava com
+     display:block mesmo escondido — invisível, mas a tapar a página inteira e
+     a engolir todos os toques. */
+  .folha-fundo:not([hidden]){
+    display:block; position:fixed; inset:0; z-index:95;
+    background:rgba(12,25,37,.42);
+  }
+  .folha-mais:not([hidden]){
+    display:block; position:fixed; left:0; right:0; bottom:0; z-index:96;
+    background:var(--card); border-radius:18px 18px 0 0;
+    padding:10px 14px calc(18px + env(safe-area-inset-bottom, 0));
+    box-shadow:0 -10px 34px rgba(18,34,47,.22);
+    max-height:76vh; overflow-y:auto;
+    transform:translateY(100%); transition:transform .18s ease-out;
+  }
+  .folha-mais.aberta{ transform:translateY(0); }
+  .fm-pega{
+    width:38px; height:4px; border-radius:3px; background:var(--line);
+    margin:2px auto 10px;
+  }
+  .fm-tit{
+    font-family:var(--sans); font-size:var(--t-etiqueta); font-weight:600;
+    text-transform:uppercase; letter-spacing:.1em; color:var(--ink-fraco);
+    margin:0 0 8px 4px;
+  }
+  .fm-lista{ display:flex; flex-direction:column; }
+  .fm-lista a{
+    display:flex; align-items:center; gap:12px; min-height:52px;
+    padding:6px 8px; border-radius:10px;
+    color:var(--text); text-decoration:none; font-size:var(--t-corpo);
+  }
+  .fm-lista a:hover{ background:var(--cream); text-decoration:none; }
+  .fm-lista a.ativo{ background:var(--gold-pale); color:var(--gold-texto); font-weight:600; }
+  .fm-ico{ display:flex; width:20px; height:20px; flex:none; color:var(--ink-fraco); }
+  .fm-ico svg{ width:20px; height:20px; }
+  .fm-lista a.ativo .fm-ico{ color:var(--gold-texto); }
+  .fm-sair{ margin-top:6px; border-top:1px solid var(--line); border-radius:0; }
+}
+@media (prefers-reduced-motion:reduce){
+  .folha-mais{ transition:none; }
+}
+@media print{
+  .nav-baixo, .folha-mais, .folha-fundo{ display:none !important; }
+}
+
 /* ---------- Layout ---------- */
 .container{ max-width:1180px; margin:0 auto; padding:1.25rem; }
 .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
