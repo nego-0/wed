@@ -91,7 +91,17 @@ const PAGINAS = [
   ok(linhas.filter(l => l.includes('&')).length <= 2,
      'o nome do casal não se repete na linha de apoio: ' + JSON.stringify(linhas.slice(0, 3)));
 
-  // ============ 2. a contagem conta mesmo, e ao segundo ============
+  // ============ 2. a contagem conta mesmo — em dias ============
+  //
+  // Esta prova exigia aqui o cronómetro ao segundo, e passou a falhar quando a
+  // contagem virou marco (docs/auditoria-ui-ux.md, EMO-001). Não é uma
+  // regressão: é a regra nova. A trezentos dias de distância um cronómetro não
+  // é uma contagem, é um relógio de bomba no canto do cabeçalho — e a segunda
+  // que passou não muda decisão nenhuma. Na semana da festa volta a aparecer,
+  // e é a chk_tom.js que guarda esse outro lado, com a data mexida de propósito.
+  //
+  // O que se defende AQUI é o que vale todo o ano: os dias estão certos, e o
+  // dia e a hora inteiros continuam à mão de quem passe o rato por cima.
   const cg = () => p.evaluate(() => {
     const c = document.getElementById('topo-contagem');
     return { n: c.querySelector('.cg-n').textContent.trim(),
@@ -102,13 +112,23 @@ const PAGINAS = [
   const dias = await cg();
   ok(/^\d+ dias?$/.test(dias.n) && /^faltam?$/.test(dias.l),
      'a contagem dá os dias que faltam: ' + dias.l + ' ' + dias.n);
-  ok(/^\d\d:\d\d:\d\d$/.test(dias.t),
-     'e as horas, os minutos e os segundos até lá: ' + dias.t);
+  const longe = parseInt(dias.n, 10) >= 7;
+  ok(!longe || dias.t === '',
+     'e longe da festa não traz cronómetro: a esta distância planeia-se em '
+     + 'semanas, e um relógio a andar por cima do trabalho não ajuda nisso');
 
-  // Os segundos mexem: uma contagem parada é a data escrita de outra maneira.
-  await p.waitForTimeout(2100);
-  const depois = await cg();
-  ok(depois.t !== dias.t, 'e o relógio anda sozinho: ' + dias.t + ' → ' + depois.t);
+  // E o cabeçalho fica MESMO quieto: era uma escrita por segundo, todo o ano,
+  // para mostrar um número que só muda à meia-noite. Conta-se o que ele
+  // escreve, e não o que lá está — é a diferença entre parecer parado e estar.
+  const escritas = await p.evaluate(() => new Promise(res => {
+    let n = 0;
+    const o = new MutationObserver(ms => { n += ms.length; });
+    o.observe(document.getElementById('topo-contagem'),
+              { subtree: true, characterData: true, childList: true });
+    setTimeout(() => { o.disconnect(); res(n); }, 4200);
+  }));
+  ok(!longe || escritas === 0,
+     'e não escreve nada durante quatro segundos: ' + escritas + ' escritas');
 
   // A contagem está no lugar da data — e a data continua à mão, no title.
   const linha = await p.evaluate(() =>

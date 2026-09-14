@@ -499,12 +499,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
   <div id="progresso" class="progresso-cap mb-4"></div>
 
-  <!-- ONDE VAI CADA MÓDULO (docs/auditoria-ui-ux.md, UX-010).
-       O painel dizia muito sobre os convidados e nada sobre o resto: quem
-       tinha a planta, o orçamento e o bar na licença não tinha em sítio nenhum
-       uma resposta à pergunta com que se abre o portátil — «o que falta
-       fazer?». Ia-se a cada página ver. -->
-  <div id="tira-modulos" class="mb-4"></div>
 
   <!-- ESTATÍSTICAS -->
   <div class="grelha-stats" id="stats"></div>
@@ -533,6 +527,19 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
       Mais acções</button>
   </div>
 
+
+  <!-- ONDE VAI CADA MÓDULO (docs/auditoria-ui-ux.md, UX-010).
+       O painel dizia muito sobre os convidados e nada sobre o resto: quem
+       tinha a planta, o orçamento e o bar na licença não tinha em sítio nenhum
+       uma resposta à pergunta com que se abre o portátil — «o que falta
+       fazer?». Ia-se a cada página ver.
+
+       Fica DEPOIS da barra de ações, e não antes, por uma razão medida: os
+       seus 154px punham a caixa de procura a 892px num ecrã de 844 — fora do
+       primeiro ecrã do telemóvel. A procura é o que se usa todos os dias; a
+       tira é uma consulta de planeamento. O que se usa todos os dias vem
+       primeiro. (A prova é a e2e_mobile.js, que guarda exactamente isto.) -->
+  <div id="tira-modulos" class="mb-4"></div>
   <!-- FILTRO DE MESAS (chips) -->
   <div id="filtro-mesas" class="chips-mesa mb-4"></div>
 

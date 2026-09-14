@@ -84,9 +84,18 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
         }).length,
       };
     });
-    ok(!!pop && pop.itens === 4, 'o «⋯» abre com as quatro acções de uma vez só ' + nome);
+    // O número não se fixa: o «⋯» é onde as acções de uma vez por casamento
+    // vão parar, e a fase 6 pôs-lhe mais duas (as perguntas da confirmação e
+    // quem falta responder). O que se defende é que sejam POUCAS e que se
+    // alcancem todas — um menu de quinze linhas é a barra de oito botões outra
+    // vez, só que escondida.
+    ok(!!pop && pop.itens >= 4 && pop.itens <= 8,
+       'o «⋯» abre com as acções de uma vez só, e são poucas ' + nome
+       + ': ' + (pop ? pop.itens : 0));
     ok(!!pop && pop.dentro, 'e abre dentro do ecrã ' + nome);
-    ok(!!pop && pop.alcancaveis === 4, 'com as quatro a poderem ser tocadas ' + nome);
+    ok(!!pop && pop.alcancaveis === pop.itens,
+       'com todas a poderem ser tocadas ' + nome
+       + ' (' + (pop ? pop.alcancaveis + '/' + pop.itens : '0') + ')');
     await p.keyboard.press('Escape');
     await p.waitForTimeout(200);
   }
