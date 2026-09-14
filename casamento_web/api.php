@@ -568,7 +568,83 @@ if ($acao === 'rsvp_submit') {
     $st->bind_param('sisi', $estado, $confirm, $mensagem, $c['id']); // string, int, string, int
     $st->execute();
 
+    // ---- as respostas às perguntas do casal (RSVP-001) ----
+    // Escrevem-se DEPOIS do estado, e só as de perguntas que existem e estão
+    // activas: o que vem do lado de fora não escolhe o que se guarda. Uma
+    // recusa apaga-as — quem não vem não tem prato nem boleia, e deixar a
+    // resposta antiga lá fazia-a entrar na conta do catering.
+    $respostas = is_array($d['respostas'] ?? null) ? $d['respostas'] : [];
+    if ($decisao === 'nao') {
+        $st = $conn->prepare("DELETE FROM {$P}rsvp_respostas WHERE " . doCasamento() . " AND convite_id=?");
+        $st->bind_param('i', $c['id']); $st->execute();
+    } else {
+        guardarRespostasRsvp($conn, (int)$c['id'], $respostas);
+    }
+
     ok(['estado' => $estado, 'confirmados' => $confirm]);
+}
+
+/**
+ * Guarda as respostas de um convite às perguntas do casal.
+ *
+ * Cada resposta vem como {chave, convidado, valor}. `convidado` a zero quer
+ * dizer «é do convite inteiro».
+ *
+ * Só entra o que passa por três peneiras, e a ordem importa:
+ *   1. a pergunta existe neste casamento e está activa;
+ *   2. se é de escolha, o valor é uma das opções que o casal escreveu — senão
+ *      o resumo enchia-se de valores que nunca estiveram na lista;
+ *   3. a pessoa é mesmo deste convite (ou é o convite inteiro).
+ * Sem a terceira, quem soubesse o seu código respondia pelos convidados dos
+ * outros: o código é a única chave que a porta pública pede.
+ */
+function guardarRespostasRsvp(mysqli $conn, int $conviteId, array $respostas): void {
+    global $P;
+    $perg = [];
+    if ($r = $conn->query("SELECT chave, tipo, opcoes, por_pessoa FROM {$P}rsvp_perguntas
+                           WHERE " . doCasamento() . " AND ativa=1")) {
+        while ($x = $r->fetch_assoc()) $perg[$x['chave']] = $x;
+    }
+    if (!$perg) return;
+
+    $meus = [0 => true];
+    if ($r = $conn->query("SELECT id FROM {$P}convidados WHERE " . doCasamento()
+                        . " AND convite_id=" . $conviteId)) {
+        while ($x = $r->fetch_row()) $meus[(int)$x[0]] = true;
+    }
+
+    $ins = $conn->prepare("INSERT INTO {$P}rsvp_respostas
+                             (casamento_id, convite_id, convidado_id, chave, valor)
+                           VALUES (?,?,?,?,?)
+                           ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $del = $conn->prepare("DELETE FROM {$P}rsvp_respostas WHERE " . doCasamento()
+                        . " AND convite_id=? AND convidado_id=? AND chave=?");
+    if (!$ins || !$del) return;
+    $cid = casamentoAtual();
+
+    foreach ($respostas as $x) {
+        $chave = (string)($x['chave'] ?? '');
+        if (!isset($perg[$chave])) continue;
+        $p = $perg[$chave];
+        $quem = (int)($x['convidado'] ?? 0);
+        if (!$p['por_pessoa']) $quem = 0;
+        if (!isset($meus[$quem])) continue;
+
+        $valor = mb_substr(trim((string)($x['valor'] ?? '')), 0, 240);
+        if ($p['tipo'] === 'sim_nao') $valor = $valor === 'sim' ? 'sim' : ($valor === 'nao' ? 'nao' : '');
+        if ($p['tipo'] === 'escolha' && $valor !== '') {
+            $ops = array_values(array_filter(array_map('trim', explode("\n", (string)$p['opcoes'])), 'strlen'));
+            if (!in_array($valor, $ops, true)) continue;
+        }
+        // Uma resposta apagada apaga-se: guardar '' deixava-a a contar como
+        // «respondeu» num resumo que conta linhas.
+        if ($valor === '') {
+            $del->bind_param('iis', $conviteId, $quem, $chave); $del->execute();
+            continue;
+        }
+        $ins->bind_param('iiiss', $cid, $conviteId, $quem, $chave, $valor);
+        $ins->execute();
+    }
 }
 
 // ============================================================
@@ -6127,6 +6203,88 @@ if ($acao === 'convite_foto_posicao') {
     guardarDefinicoes($conn, [$sc['enq'] => round($x, 1) . ' ' . round($y, 1) . ' ' . $zoom]);
     registar($conn, 'convite_foto_posicao', $chave, round($x) . '% ' . round($y) . '%');
     ok(['chave' => $chave, 'seccoes' => seccoesDeFoto($conn, defsAtuais($conn))]);
+}
+
+// ============================================================
+// PERGUNTAS DO RSVP — o casal faz as suas (RSVP-001)
+//
+// A resposta a um convite trazia «vem / não vem», quantos, e um recado. Tudo
+// o resto — o prato, as alergias, a boleia — ficava para telefonemas um a um.
+// Numa festa de duzentas pessoas isso são duzentos telefonemas e nenhum
+// número que se possa dar ao catering.
+// ============================================================
+if ($acao === 'rsvp_perguntas') {
+    exigirModuloApi('convidados');
+    ok(['perguntas' => perguntasRsvp($conn, false)]);
+}
+
+if ($acao === 'rsvp_perguntas_guardar') {
+    exigirCorrecao();
+    exigirModuloApi('convidados');
+    $d = corpo();
+    $lista = is_array($d['perguntas'] ?? null) ? $d['perguntas'] : [];
+    if (count($lista) > 12) erro('São de mais: doze perguntas já é um formulário, e não um convite.');
+
+    // As chaves que sobrevivem. As respostas de uma pergunta apagada são
+    // apagadas com ela — guardar respostas a uma pergunta que já não existe é
+    // guardar lixo que ninguém volta a ler.
+    $vivas = [];
+    foreach ($lista as $p) {
+        $chave = strtolower(trim((string)($p['chave'] ?? '')));
+        $chave = preg_replace('/[^a-z0-9_]/', '', $chave);
+        if ($chave === '') continue;
+        $vivas[] = $chave;
+    }
+
+    $cid = casamentoAtual();
+    if ($vivas) {
+        $esc = implode(',', array_map(fn($k) => "'" . $conn->real_escape_string($k) . "'", $vivas));
+        $conn->query("DELETE FROM {$P}rsvp_perguntas WHERE " . doCasamento() . " AND chave NOT IN ($esc)");
+        $conn->query("DELETE FROM {$P}rsvp_respostas WHERE " . doCasamento() . " AND chave NOT IN ($esc)");
+    } else {
+        $conn->query("DELETE FROM {$P}rsvp_perguntas WHERE " . doCasamento());
+        $conn->query("DELETE FROM {$P}rsvp_respostas WHERE " . doCasamento());
+    }
+
+    $st = $conn->prepare("INSERT INTO {$P}rsvp_perguntas
+            (casamento_id, chave, rotulo, ajuda, tipo, opcoes, obrigatoria, por_pessoa, ordem, ativa)
+          VALUES (?,?,?,?,?,?,?,?,?,?)
+          ON DUPLICATE KEY UPDATE rotulo=VALUES(rotulo), ajuda=VALUES(ajuda), tipo=VALUES(tipo),
+            opcoes=VALUES(opcoes), obrigatoria=VALUES(obrigatoria), por_pessoa=VALUES(por_pessoa),
+            ordem=VALUES(ordem), ativa=VALUES(ativa)");
+    if (!$st) erro('Não foi possível guardar as perguntas.');
+
+    $ordem = 0;
+    foreach ($lista as $p) {
+        $chave = preg_replace('/[^a-z0-9_]/', '', strtolower(trim((string)($p['chave'] ?? ''))));
+        if ($chave === '') continue;
+        $rotulo = mb_substr(trim((string)($p['rotulo'] ?? '')), 0, 160);
+        if ($rotulo === '') $rotulo = $chave;
+        $ajuda = mb_substr(trim((string)($p['ajuda'] ?? '')), 0, 240);
+        $tipo  = in_array($p['tipo'] ?? '', ['escolha','texto','sim_nao'], true) ? $p['tipo'] : 'escolha';
+        // As opções chegam como lista ou como texto de várias linhas; guardam-se
+        // sempre uma por linha, sem repetidas e sem vazias.
+        $ops = is_array($p['opcoes'] ?? null) ? $p['opcoes'] : explode("\n", (string)($p['opcoes'] ?? ''));
+        $ops = array_values(array_unique(array_filter(array_map(
+            fn($o) => mb_substr(trim((string)$o), 0, 60), $ops), 'strlen')));
+        if ($tipo !== 'escolha') $ops = [];
+        if ($tipo === 'escolha' && !$ops) continue;   // uma escolha sem opções não é escolha nenhuma
+        $opcoes = implode("\n", array_slice($ops, 0, 12));
+        $obrig = !empty($p['obrigatoria']) ? 1 : 0;
+        $porPes = isset($p['por_pessoa']) ? (!empty($p['por_pessoa']) ? 1 : 0) : 1;
+        $ativa = isset($p['ativa']) ? (!empty($p['ativa']) ? 1 : 0) : 1;
+        $ordem++;
+        $st->bind_param('isssssiiii', $cid, $chave, $rotulo, $ajuda, $tipo, $opcoes,
+                        $obrig, $porPes, $ordem, $ativa);
+        $st->execute();
+    }
+    registar($conn, 'rsvp_perguntas', '', count($vivas) . ' pergunta(s)');
+    ok(['perguntas' => perguntasRsvp($conn, false)]);
+}
+
+if ($acao === 'rsvp_resumo') {
+    exigirModuloApi('convidados');
+    ok(rsvpResumo($conn));
 }
 
 if ($acao === 'convite_list') {

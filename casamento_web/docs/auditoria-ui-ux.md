@@ -646,7 +646,7 @@ de chegada)
 | 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | ✅ |
 | 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | ✅ nas três listas principais |
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | ✅ (sem prova social: ver §25) |
-| 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | Por fazer |
+| 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | RSVP-001 ✅; resto por fazer |
 | 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | Por fazer |
 | 8 · Tom | Contagem como marco, momento de chegada | EMO-001 EMO-002 | Por fazer |
 
@@ -1023,8 +1023,63 @@ Provas: `tests/chk_funil.js` (19 verificações), num casamento criado de
 propósito com a licença mais baixa — a casa de exemplo tem tudo, e num
 casamento que já tem tudo não há nada para pedir.
 
+### Fase 6 — a confirmação deixa de ser só «vem ou não vem» (RSVP-001)
+
+A resposta a um convite trazia três coisas: se vem, quantos, e um recado. Tudo
+o resto — o prato, as alergias, a boleia, se leva criança — ficava para
+telefonemas um a um, ou para a caixa do recado, de onde ninguém tira uma conta.
+Numa festa de duzentas pessoas isso são duzentos telefonemas e **nenhum número**
+que se possa dar ao catering.
+
+**Esquema v42, duas tabelas.** As *perguntas* são do casamento: cada casal faz
+as suas, e uma casa que servisse a mesma lista a toda a gente estaria a decidir
+o menu dos outros. As *respostas* são chave/valor e não colunas, porque as
+perguntas mudam de casamento para casamento — uma tabela com vinte colunas
+quase sempre vazias mente sobre a forma do que lá está.
+
+| Decisão | Porquê |
+| --- | --- |
+| `convidado_id = 0`, e não `NULL`, para «é do convite inteiro» | Um índice UNIQUE deixa passar `NULL`s repetidos: a segunda resposta à mesma pergunta nascia **ao lado** da primeira em vez de a substituir |
+| A chave prende-se assim que a pergunta existe | Mudá-la depois deixava para trás as respostas já dadas, sem aviso nenhum |
+| O resumo conta em SQL | Quatrocentas pessoas × seis perguntas são 2 400 linhas para trazer para memória só para somar |
+| Só contam as de quem confirmou | Uma resposta de quem depois recusou não entra na conta do catering |
+
+**O prato é de cada um.** Perguntá-lo uma vez a um convite de quatro dava um
+prato para quatro pessoas, e é o contrário disso que serve a quem cozinha. As
+perguntas por pessoa aparecem agrupadas pelo nome de cada convidado; as do
+convite todo (a boleia costuma ser da família que vem junta) perguntam-se uma
+vez. Quem é desmarcado de «quem vai comparecer» tem o bloco fechado: não se
+pede o prato a quem acabou de dizer que não vai.
+
+**O que vem de fora não escolhe o que se guarda.** Três peneiras, por esta
+ordem: a pergunta existe e está activa; se é de escolha, o valor é uma das
+opções que o casal escreveu; e a pessoa é mesmo deste convite. Sem a terceira,
+quem soubesse o seu código respondia pelos convidados dos outros — o código é a
+única chave que a porta pública pede. As três estão provadas por tentativa
+directa em `chk_rsvp_perguntas.js`, e não por leitura do código.
+
+**O resumo diz também quantos faltam.** «1 Carne · 1 Peixe», e ao lado «faltam
+1 de 2». Uma conta de metade da lista entregue como se fosse toda é pior do que
+conta nenhuma. As respostas de texto livre não se somam — contam-se e lêem-se
+uma a uma, que é o que uma alergia pede.
+
+**Um defeito que a própria prova tinha, e que quase a fazia mentir:**
+`convite_save` devolve `membros`, não `membros_det`. A primeira versão do teste
+lia o segundo, ficava com uma lista vazia, e as três verificações da
+adulteração — a opção fora da lista, a pergunta inventada, a pessoa do convite
+alheio — passavam **sem testar coisa nenhuma**. Foi apanhado porque a linha
+seguinte estourou ao ler `[0].id` de `undefined`; sem esse acaso, teria ficado
+três verificações verdes a não verificar nada. A prova passou a exigir, em
+voz alta, que os ids existam antes de os usar.
+
+Provas: `tests/chk_rsvp_perguntas.js` (26 verificações), num casamento criado
+de propósito e levado embora no fim — as perguntas são do casamento, e
+escrevê-las no de exemplo mudava o que as outras provas lá encontram.
+
 **O que ficou por fazer, e porquê:**
 
+- RSVP-002 (prazo e lembretes em lote) e UX-010 (tira de progresso por módulo):
+  por fazer.
 - Prova social no funil (CONV-002, metade): precisa de testemunhos reais e
   autorizados. Inventá-los está fora de questão.
 - As 4 páginas sem cabeçalho partilhado (`login`, `registo`, `copa`, `entregas`,

@@ -995,6 +995,20 @@ function correcoesEsperadas(): array {
          'licenca.php', 'function vestirConta(c){'],
         ['E está à vista que um pedido se pode cancelar enquanto espera',
          'assets/planos.css', '.pl-conta-promessa{'],
+
+        // ---- As perguntas da confirmação (RSVP-001) ----
+        ['A confirmação deixa de ser só «vem ou não vem»',
+         'db.php', 'CREATE TABLE IF NOT EXISTS {$P}rsvp_perguntas'],
+        ['E as respostas são chave/valor, que é a forma do que lá está',
+         'db.php', 'CREATE TABLE IF NOT EXISTS {$P}rsvp_respostas'],
+        ['O prato pergunta-se a cada pessoa, e quem não vem não responde',
+         'convite.php', 'function campoRsvp(array $p, int $quem, array $respostas): string {'],
+        ['O que vem de fora não escolhe o que se guarda',
+         'api.php', 'function guardarRespostasRsvp(mysqli $conn, int $conviteId, array $respostas): void {'],
+        ['E o resumo soma-se sozinho, com quantos ainda faltam',
+         'db.php', 'function rsvpResumo(mysqli $conn): array {'],
+        ['O casal faz as suas perguntas, e a chave prende-se depois de existir',
+         'index.php', 'const presa = !p.nova && p.chave;'],
     ];
 }
 

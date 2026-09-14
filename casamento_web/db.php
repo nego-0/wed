@@ -194,7 +194,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 41;
+const ESQUEMA_VERSAO = 42;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2076,6 +2076,67 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
     }
 
+    // v42 — o RSVP deixa de ser só «vem ou não vem».
+    //
+    // A resposta a um convite trazia três coisas: se vem, quantos, e um
+    // recado. Tudo o resto — o que come, se tem alergias, se precisa de
+    // boleia, se leva criança — ficava para telefonemas um a um, ou para a
+    // caixa do recado, de onde ninguém tira uma conta. Numa festa de duzentas
+    // pessoas isso são duzentos telefonemas e nenhum número.
+    //
+    // Duas tabelas. As PERGUNTAS são do casamento: cada casal faz as suas, e
+    // uma casa que servisse a mesma lista a toda a gente estaria a decidir o
+    // menu dos outros. As RESPOSTAS são chave/valor e não colunas, porque as
+    // perguntas mudam de casamento para casamento — uma tabela com vinte
+    // colunas quase sempre vazias mente sobre a forma do que lá está.
+    //
+    // convidado_id=0 quer dizer «é do convite inteiro», e não NULL: um índice
+    // UNIQUE deixa passar NULLs repetidos, e a segunda resposta à mesma
+    // pergunta nascia ao lado da primeira em vez de a substituir.
+    if ($versaoAtual < 42) {
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}rsvp_perguntas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                -- A chave é o nome com que a resposta fica guardada. Mudar o
+                -- rótulo não mexe nas respostas já dadas; mudar a chave sim, e
+                -- é por isso que ela não se edita depois de existir.
+                chave VARCHAR(40) NOT NULL,
+                rotulo VARCHAR(160) NOT NULL,
+                ajuda VARCHAR(240) DEFAULT NULL,
+                tipo ENUM('escolha','texto','sim_nao') NOT NULL DEFAULT 'escolha',
+                -- Uma opção por linha. Só para 'escolha'.
+                opcoes TEXT,
+                obrigatoria TINYINT(1) NOT NULL DEFAULT 0,
+                -- Por pessoa ou pelo convite todo: o prato é de cada um, a
+                -- boleia costuma ser da família que vem junta.
+                por_pessoa TINYINT(1) NOT NULL DEFAULT 1,
+                ordem INT NOT NULL DEFAULT 0,
+                ativa TINYINT(1) NOT NULL DEFAULT 1,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_rsvpperg (casamento_id, chave),
+                INDEX idx_rsvpperg_cas (casamento_id, ativa, ordem)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS {$P}rsvp_respostas (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                casamento_id INT NOT NULL,
+                convite_id INT NOT NULL,
+                convidado_id INT NOT NULL DEFAULT 0,
+                chave VARCHAR(40) NOT NULL,
+                valor VARCHAR(240) NOT NULL DEFAULT '',
+                em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_rsvpresp (casamento_id, convite_id, convidado_id, chave),
+                -- O resumo agrega por chave e valor: é este índice que o faz
+                -- sem varrer a tabela toda a cada abertura do painel.
+                INDEX idx_rsvpresp_ch (casamento_id, chave, valor(40))
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // O prazo para responder, e quando o lembrete foi enviado, são do
+        // casamento e vivem nas definições — não é preciso coluna nova.
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2208,6 +2269,7 @@ function nomesDeAcao(): array {
         'convite_reposto'   => ['tirou um convite da reciclagem', 'convites'],
         'convite_apagado'   => ['apagou um convite definitivamente', 'convites'],
         'rsvp_manual'       => ['alterou a presença de alguém', 'convites'],
+        'rsvp_perguntas'    => ['mudou as perguntas da confirmação', 'convites'],
         'impresso_sim'      => ['marcou um convite como impresso', 'convites'],
         'impresso_nao'      => ['desmarcou o impresso de um convite', 'convites'],
         'enviado_sim'       => ['marcou um convite como enviado', 'convites'],
@@ -3160,6 +3222,70 @@ function carregarConvite(mysqli $conn, $chave, string $por = 'id', bool $elimina
     unset($m);
     $c['nome_final'] = nomeConvite($c);
     return $c;
+}
+
+/** As perguntas deste casamento. `$soAtivas` para o lado do convidado. */
+function perguntasRsvp(mysqli $conn, bool $soAtivas = true): array {
+    global $P;
+    $filtro = $soAtivas ? ' AND ativa=1' : '';
+    $r = $conn->query("SELECT id, chave, rotulo, ajuda, tipo, opcoes, obrigatoria, por_pessoa, ordem, ativa
+                       FROM {$P}rsvp_perguntas WHERE " . doCasamento() . "$filtro ORDER BY ordem, id");
+    $out = [];
+    while ($r && ($x = $r->fetch_assoc())) {
+        $x['opcoes'] = array_values(array_filter(array_map('trim',
+            explode("\n", (string)$x['opcoes'])), 'strlen'));
+        foreach (['id','obrigatoria','por_pessoa','ordem','ativa'] as $k) $x[$k] = (int)$x[$k];
+        $out[] = $x;
+    }
+    return $out;
+}
+
+/**
+ * O resumo agregado: «43 carne · 12 peixe · 5 vegetariano».
+ *
+ * Conta-se em SQL e não em PHP: uma festa de quatrocentas pessoas com seis
+ * perguntas são dois mil e quatrocentas linhas para trazer para memória só
+ * para somar. E conta-se só o que veio de quem CONFIRMOU — uma resposta de
+ * quem depois recusou não entra na conta do catering.
+ */
+function rsvpResumo(mysqli $conn): array {
+    global $P;
+    $perg = perguntasRsvp($conn, true);
+    if (!$perg) return ['perguntas' => [], 'faltam' => 0];
+
+    $contas = [];
+    $r = $conn->query("SELECT a.chave, a.valor, COUNT(*) n
+                       FROM {$P}rsvp_respostas a
+                       JOIN {$P}convites c ON c.id = a.convite_id
+                       WHERE " . doCasamento('a') . "
+                         AND c.rsvp_estado IN ('confirmado','parcial')
+                       GROUP BY a.chave, a.valor
+                       ORDER BY n DESC, a.valor");
+    while ($r && ($x = $r->fetch_assoc())) {
+        $contas[$x['chave']][] = ['valor' => $x['valor'], 'n' => (int)$x['n']];
+    }
+
+    // Quantas pessoas confirmaram, para se saber quem ainda não respondeu às
+    // perguntas — é esse número que diz se a conta já se pode dar ao catering.
+    $conf = 0;
+    if ($q = $conn->query("SELECT COUNT(*) n FROM {$P}convidados g
+                           JOIN {$P}convites c ON c.id = g.convite_id
+                           WHERE " . doCasamento('g') . " AND g.rsvp='confirmado'")) {
+        $conf = (int)$q->fetch_assoc()['n'];
+    }
+
+    $out = [];
+    foreach ($perg as $p) {
+        $linhas = $contas[$p['chave']] ?? [];
+        $respondeu = array_sum(array_column($linhas, 'n'));
+        $out[] = ['chave' => $p['chave'], 'rotulo' => $p['rotulo'], 'tipo' => $p['tipo'],
+                  'por_pessoa' => $p['por_pessoa'], 'linhas' => $linhas,
+                  'respondeu' => $respondeu,
+                  // Só faz sentido faltar a quem a pergunta é feita: uma
+                  // pergunta do convite inteiro não se compara com pessoas.
+                  'faltam' => $p['por_pessoa'] ? max(0, $conf - $respondeu) : null];
+    }
+    return ['perguntas' => $out, 'confirmadas' => $conf];
 }
 
 /**

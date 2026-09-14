@@ -18,6 +18,45 @@ $horaTxt  = horaTexto($DEFS['evento.hora'], false);
 $tzOff    = (new DateTime('now', new DateTimeZone(date_default_timezone_get())))->format('P');
 $whats    = $DEFS['evento.whatsapp'];
 $valido = (bool)$c;
+// As perguntas que o casal fez (RSVP-001). Vêm depois de carregarConvite(),
+// que é quem fixa o âmbito do casamento a partir do código — antes dele não
+// há casamento nenhum aberto e isto viria vazio.
+$perguntas = $valido ? perguntasRsvp($conn, true) : [];
+// E o que este convite já respondeu, para quem volta não recomeçar do zero.
+$respostas = [];
+if ($valido && $perguntas) {
+    $st = $conn->prepare("SELECT convidado_id, chave, valor FROM " . PREFIXO . "rsvp_respostas
+                          WHERE " . doCasamento() . " AND convite_id=?");
+    if ($st) {
+        $st->bind_param('i', $c['id']); $st->execute();
+        $rr = $st->get_result();
+        while ($x = $rr->fetch_assoc()) $respostas[(int)$x['convidado_id']][$x['chave']] = $x['valor'];
+    }
+}
+/** Um campo de resposta. `$quem` é o id da pessoa, ou 0 para o convite todo. */
+function campoRsvp(array $p, int $quem, array $respostas): string {
+    $val = $respostas[$quem][$p['chave']] ?? '';
+    $nome = 'r_' . $p['chave'] . '_' . $quem;
+    $h = '<div class="campo r-campo" data-chave="' . escP($p['chave']) . '" data-quem="' . $quem . '">';
+    $h .= '<label for="' . escP($nome) . '">' . escP($p['rotulo'])
+        . ($p['obrigatoria'] ? ' <span class="r-obrig">obrigatório</span>' : '') . '</label>';
+    if ($p['ajuda'] !== '') $h .= '<p class="r-ajuda">' . escP($p['ajuda']) . '</p>';
+    if ($p['tipo'] === 'texto') {
+        $h .= '<input type="text" id="' . escP($nome) . '" maxlength="240" value="' . escP($val) . '">';
+    } elseif ($p['tipo'] === 'sim_nao') {
+        $h .= '<select id="' . escP($nome) . '">'
+            . '<option value="">—</option>'
+            . '<option value="sim"' . ($val === 'sim' ? ' selected' : '') . '>Sim</option>'
+            . '<option value="nao"' . ($val === 'nao' ? ' selected' : '') . '>Não</option></select>';
+    } else {
+        $h .= '<select id="' . escP($nome) . '"><option value="">Escolha…</option>';
+        foreach ($p['opcoes'] as $o) {
+            $h .= '<option value="' . escP($o) . '"' . ($val === $o ? ' selected' : '') . '>' . escP($o) . '</option>';
+        }
+        $h .= '</select>';
+    }
+    return $h . '</div>';
+}
 $linkDigital = $valido ? enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'] : '';
 $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
 ?>
@@ -95,6 +134,19 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   .membro{ display:flex; align-items:center; gap:.6rem; border:1.5px solid rgba(44,69,54,.12); border-radius:12px; padding:.6rem .8rem; cursor:pointer; }
   .membro input{ width:auto; }
   .membro.off{ opacity:.5; }
+  /* As perguntas do casal (RSVP-001). Agrupadas por pessoa, porque o prato é
+     de cada um: perguntá-lo uma vez a um convite de quatro dava um prato para
+     quatro. O nome em cima diz de quem é o grupo — sem ele, quatro caixas
+     iguais seguidas não se sabe a quem pertencem. */
+  .r-pessoa{ border:1.5px solid rgba(44,69,54,.12); border-radius:14px;
+             padding:.9rem 1rem .2rem; margin-bottom:.8rem; background:rgba(245,238,223,.45); }
+  .r-pessoa.off{ display:none; }
+  .r-quem{ font-family:var(--serif); font-size:1.05rem; color:var(--ink); margin-bottom:.6rem; }
+  .r-ajuda{ font-family:var(--sans); font-weight:300; font-size:.85rem; color:#6d746c;
+            margin:-.2rem 0 .45rem; line-height:1.45; }
+  .r-obrig{ font-family:var(--sans); font-size:.7rem; font-weight:500; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--gold); }
+  .r-campo.falta select, .r-campo.falta input{ border-color:#a5473f; background:#fdf3f2; }
   .btn{ font-family:var(--sans); font-weight:500; border:none; border-radius:50px; padding:.85rem 1.4rem; cursor:pointer;
     font-size:1rem; width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.5rem; text-decoration:none; }
   .btn svg{ width:18px; height:18px; }
@@ -213,13 +265,36 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
             <div class="membros" id="membros">
               <?php foreach ($c['membros'] as $m): ?>
                 <label class="membro" data-id="<?= $m['id'] ?>">
-                  <input type="checkbox" checked onchange="this.closest('.membro').classList.toggle('off',!this.checked)">
+                  <input type="checkbox" checked onchange="trocarMembro(this)">
                   <span><?= htmlspecialchars($m['nome']) ?></span>
                 </label>
               <?php endforeach; ?>
             </div>
           </div>
           <?php endif; ?>
+
+          <?php // ---- as perguntas do casal (RSVP-001) ----
+                // As de cada pessoa vêm agrupadas por nome: perguntar o prato
+                // uma vez a um convite de quatro dava um prato para quatro
+                // pessoas, e é o contrário disso que serve ao catering.
+                // Quem não vem não responde — o bloco fecha com a quadrícula.
+                $porPessoa  = array_values(array_filter($perguntas, fn($p) => $p['por_pessoa']));
+                $doConvite  = array_values(array_filter($perguntas, fn($p) => !$p['por_pessoa']));
+                $nomeados   = count($c['membros']) > 1 ? $c['membros'] : [];
+          ?>
+          <?php if ($porPessoa && $nomeados): ?>
+            <?php foreach ($nomeados as $m): ?>
+              <div class="r-pessoa" data-quem="<?= (int)$m['id'] ?>">
+                <div class="r-quem"><?= htmlspecialchars($m['nome']) ?></div>
+                <?php foreach ($porPessoa as $p) echo campoRsvp($p, (int)$m['id'], $respostas); ?>
+              </div>
+            <?php endforeach; ?>
+          <?php elseif ($porPessoa): ?>
+            <?php // Sem lista de nomes não há a quem perguntar um a um: a
+                  // resposta é do convite, e é assim que fica guardada. ?>
+            <?php foreach ($porPessoa as $p) echo campoRsvp($p, 0, $respostas); ?>
+          <?php endif; ?>
+          <?php foreach ($doConvite as $p) echo campoRsvp($p, 0, $respostas); ?>
         </div>
 
         <div class="campo">
@@ -298,12 +373,49 @@ function enviarWhatsapp(){
   window.open('https://wa.me/'+n+'?text='+encodeURIComponent(msg),'_blank');
 }
 
+// Quem não vem não responde a perguntas: o bloco dele fecha com a quadrícula.
+// Deixá-lo aberto era pedir o prato de quem acabou de dizer que não vai.
+function trocarMembro(caixa){
+  const linha = caixa.closest('.membro');
+  linha.classList.toggle('off', !caixa.checked);
+  const grupo = document.querySelector('.r-pessoa[data-quem="' + linha.dataset.id + '"]');
+  if (grupo) grupo.classList.toggle('off', !caixa.checked);
+}
+
+// As respostas às perguntas do casal (RSVP-001). Só as de quem vai — um bloco
+// fechado não conta —, e uma pergunta obrigatória por responder trava o envio
+// em vez de deixar a conta do catering sair com um buraco lá dentro.
+function recolherRespostas(){
+  const out = []; let falta = null;
+  document.querySelectorAll('.r-campo').forEach(cx => {
+    cx.classList.remove('falta');
+    const grupo = cx.closest('.r-pessoa');
+    if (grupo && grupo.classList.contains('off')) return;
+    const campo = cx.querySelector('select, input');
+    const valor = (campo.value || '').trim();
+    if (!valor) {
+      if (cx.querySelector('.r-obrig') && !falta) { falta = cx; cx.classList.add('falta'); }
+      // Uma resposta apagada envia-se na mesma: é assim que se desfaz.
+    }
+    out.push({ chave: cx.dataset.chave, convidado: +cx.dataset.quem, valor: valor });
+  });
+  return { respostas: out, falta: falta };
+}
+
 async function enviar(){
   if(!escolha){ alert('Por favor, indique se vai comparecer.'); return; }
-  const btn=$('btn-enviar'); btn.textContent='A enviar…'; btn.disabled=true;
   const membros=[...document.querySelectorAll('#membros .membro')].map(el=>({
     id:+el.dataset.id, vai:el.querySelector('input').checked
   }));
+  const rr = escolha === 'sim' ? recolherRespostas() : { respostas: [], falta: null };
+  if (rr.falta) {
+    rr.falta.scrollIntoView({ behavior:'smooth', block:'center' });
+    const campo = rr.falta.querySelector('select, input');
+    if (campo) campo.focus();
+    alert('Falta responder a «' + rr.falta.querySelector('label').textContent.replace(/obrigatório/i,'').trim() + '».');
+    return;
+  }
+  const btn=$('btn-enviar'); btn.textContent='A enviar…'; btn.disabled=true;
   let confirmados=0;
   if(escolha==='sim'){
     confirmados = $('confirmados') ? +$('confirmados').value
@@ -311,7 +423,8 @@ async function enviar(){
   }
   const agora=()=>{ const d=new Date(),p=n=>String(n).padStart(2,'0');
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); };
-  const payload={ codigo:CODIGO, decisao:escolha, confirmados, mensagem:$('mensagem').value, membros, ts:agora() };
+  const payload={ codigo:CODIGO, decisao:escolha, confirmados, mensagem:$('mensagem').value,
+                  membros, respostas:rr.respostas, ts:agora() };
   const r=await fetch('api.php?action=rsvp_submit',{method:'POST',body:JSON.stringify(payload)});
   const d=await r.json();
   btn.disabled=false; btn.textContent='Confirmar resposta';

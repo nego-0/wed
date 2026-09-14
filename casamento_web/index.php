@@ -339,6 +339,48 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .reg-detalhe code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-apoio);
                      background:var(--cream); border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
   .vazio-hist{ color:var(--ink-fraco); text-align:center; padding:1.4rem; }
+
+  /* As perguntas da confirmação (docs/auditoria-ui-ux.md, RSVP-001).
+     Um cartão por pergunta, e a pergunta em cima com o tamanho de uma
+     pergunta: numa lista de campos todos iguais não se via o que era a
+     pergunta e o que era a maquinaria dela. */
+  .pg-cartao{ border:1px solid var(--line); border-radius:14px; padding:.9rem 1rem;
+              margin-bottom:.7rem; background:var(--card); }
+  .pg-cab{ display:flex; gap:.5rem; align-items:center; }
+  .pg-cab .pg-rotulo{ flex:1; min-width:0; font-family:var(--serif); font-size:var(--t-sub);
+                      margin:0; padding:.45rem .6rem; }
+  .pg-ajuda{ margin:.45rem 0 0; font-size:var(--t-apoio); }
+  .pg-linha{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+             gap:.5rem; margin-top:.6rem; }
+  .pg-linha label, .pg-ops{ display:block; font-size:var(--t-etiqueta); font-weight:600;
+             text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
+  .pg-linha input, .pg-linha select{ margin-top:.25rem; }
+  .pg-ops{ margin-top:.6rem; }
+  .pg-ops textarea{ margin-top:.25rem; font-family:var(--sans); font-size:var(--t-denso);
+                    text-transform:none; letter-spacing:0; font-weight:400; }
+  .pg-obrig{ display:flex; align-items:center; gap:.5rem; margin-top:.6rem;
+             font-size:var(--t-apoio); color:var(--ink-fraco); text-transform:none;
+             letter-spacing:0; font-weight:400; }
+  .pg-obrig input{ width:17px; height:17px; accent-color:var(--gold); margin:0; }
+
+  /* O resumo: é isto que se dá ao catering. Por isso diz também quantos
+     faltam — uma conta de metade da lista entregue como se fosse toda é pior
+     do que conta nenhuma. */
+  .pg-resumo{ background:var(--cream); border-radius:14px; padding:.9rem 1rem; margin-bottom:1rem; }
+  .pg-resumo-vazio{ background:var(--cream); border-radius:14px; padding:.9rem 1rem;
+                    margin-bottom:1rem; color:var(--ink-fraco); font-size:var(--t-apoio); }
+  .pg-r-bloco + .pg-r-bloco{ margin-top:.8rem; border-top:1px solid var(--line); padding-top:.8rem; }
+  .pg-r-tit{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
+             letter-spacing:.06em; color:var(--ink-fraco); margin-bottom:.4rem;
+             display:flex; gap:.6rem; flex-wrap:wrap; align-items:baseline; }
+  .pg-falta{ color:var(--warn); text-transform:none; letter-spacing:0; font-weight:400; }
+  .pg-r-linhas{ display:flex; gap:.5rem; flex-wrap:wrap; }
+  .pg-conta{ background:var(--card); border:1px solid var(--line); border-radius:999px;
+             padding:.25rem .7rem; font-size:var(--t-denso); }
+  .pg-conta b{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink);
+               font-weight:400; margin-right:.25rem; }
+  .pg-txt{ background:var(--card); border:1px solid var(--line); border-radius:10px;
+           padding:.25rem .6rem; font-size:var(--t-denso); }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/estados.js') ?>"></script>
@@ -523,6 +565,25 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 </div>
 
 <!-- ===== MODAL HISTÓRICO (reciclagem + registo de atividade) ===== -->
+<?php // ---- as perguntas da confirmação, e o que elas já responderam (RSVP-001) ---- ?>
+<div class="overlay" id="ov-perguntas">
+  <div class="modal">
+    <div class="modal-topo"><h3>Perguntas da confirmação</h3>
+      <button class="fechar" onclick="fechar('ov-perguntas')">&times;</button></div>
+    <div class="modal-corpo">
+      <p class="dica">Tudo o que perguntar aqui aparece no convite, depois de a pessoa
+        dizer que vai. As respostas somam-se sozinhas na tabela em baixo — é ela que se
+        dá ao catering, em vez de duzentos telefonemas.</p>
+      <div id="pg-resumo"></div>
+      <div id="pg-lista"></div>
+      <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem">
+        <button class="btn btn-fantasma" data-escrita="1" onclick="novaPergunta()">+ Nova pergunta</button>
+        <button class="btn btn-ouro" data-escrita="1" onclick="guardarPerguntas()">Guardar perguntas</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-historico">
   <div class="modal">
     <div class="modal-topo"><h3>Histórico</h3><button class="fechar" onclick="fechar('ov-historico')">&times;</button></div>
@@ -1333,6 +1394,7 @@ function abrirMais(ev, id){
 function abrirAccoes(ev){
   mostrarPop(ev, [
     ['Mensagens dos convidados', 'abrirMensagens()'],
+    ['Perguntas da confirmação', 'abrirPerguntas()'],
     ['Entradas à porta',         'abrirEntradas()'],
     ['Histórico',                'abrirHistorico()'],
     ['Exportar CSV',             'api.php?action=export', 'link'],
@@ -1463,6 +1525,150 @@ async function abrirEntradas(){
 }
 
 // ---------- histórico: reciclagem + registo de atividade ----------
+// ---------- as perguntas da confirmação (docs/auditoria-ui-ux.md, RSVP-001) ----------
+// A resposta a um convite trazia «vem / não vem», quantos, e um recado. O
+// prato, as alergias e a boleia ficavam para telefonemas um a um: numa festa
+// de duzentas pessoas isso são duzentos telefonemas e nenhum número que se
+// possa dar ao catering.
+let PERGUNTAS = [];
+
+async function abrirPerguntas(){
+  abrir('ov-perguntas');
+  $('pg-lista').innerHTML = EST.esqueleto(2, 120);
+  $('pg-resumo').innerHTML = '';
+  const d = await api('rsvp_perguntas');
+  PERGUNTAS = (d && d.perguntas) || [];
+  pintarPerguntas();
+  pintarResumoRsvp();
+}
+
+function novaPergunta(){
+  PERGUNTAS.push({ chave:'', rotulo:'', ajuda:'', tipo:'escolha',
+                   opcoes:[], obrigatoria:0, por_pessoa:1, ativa:1, nova:true });
+  pintarPerguntas();
+}
+
+function pintarPerguntas(){
+  const el = $('pg-lista');
+  if (!PERGUNTAS.length){
+    el.innerHTML = EST.vazio('conversa', 'Ainda não pergunta nada',
+      'A confirmação pergunta só se a pessoa vem. Acrescente o que precisa de saber '
+      + 'antes do dia — o prato, as alergias, quem precisa de boleia.');
+    return;
+  }
+  el.innerHTML = PERGUNTAS.map((p, i) => {
+    // A chave é o nome com que a resposta fica guardada: muda-se enquanto a
+    // pergunta é nova, e prende-se assim que ela existe. Mudá-la depois
+    // deixava para trás as respostas já dadas, sem aviso nenhum.
+    const presa = !p.nova && p.chave;
+    return `<div class="pg-cartao" data-i="${i}">
+      <div class="pg-cab">
+        <input type="text" class="pg-rotulo" placeholder="A pergunta, como o convidado a lê"
+               value="${esc(p.rotulo||'')}" oninput="mudarPergunta(${i},'rotulo',this.value)">
+        <button class="btn-ico" title="Retirar esta pergunta" data-escrita="1"
+                onclick="tirarPergunta(${i})"><span data-ico="lixo"></span></button>
+      </div>
+      <input type="text" class="pg-ajuda" placeholder="Uma linha de ajuda (opcional)"
+             value="${esc(p.ajuda||'')}" oninput="mudarPergunta(${i},'ajuda',this.value)">
+      <div class="pg-linha">
+        <label>Nome guardado
+          <input type="text" value="${esc(p.chave||'')}" ${presa ? 'disabled' : ''}
+                 placeholder="prato" oninput="mudarPergunta(${i},'chave',this.value)">
+        </label>
+        <label>Tipo de resposta
+          <select onchange="mudarPergunta(${i},'tipo',this.value)">
+            <option value="escolha"${p.tipo==='escolha'?' selected':''}>Uma de várias</option>
+            <option value="texto"${p.tipo==='texto'?' selected':''}>Texto livre</option>
+            <option value="sim_nao"${p.tipo==='sim_nao'?' selected':''}>Sim ou não</option>
+          </select>
+        </label>
+        <label>A quem
+          <select onchange="mudarPergunta(${i},'por_pessoa',+this.value)">
+            <option value="1"${p.por_pessoa?' selected':''}>A cada pessoa</option>
+            <option value="0"${!p.por_pessoa?' selected':''}>Ao convite todo</option>
+          </select>
+        </label>
+      </div>
+      ${p.tipo==='escolha' ? `<label class="pg-ops">As respostas possíveis, uma por linha
+        <textarea rows="3" placeholder="Carne&#10;Peixe&#10;Vegetariano"
+          oninput="mudarPergunta(${i},'opcoes',this.value.split('\\n'))">${esc((p.opcoes||[]).join('\n'))}</textarea></label>` : ''}
+      <label class="pg-obrig"><input type="checkbox" ${p.obrigatoria?'checked':''}
+        onchange="mudarPergunta(${i},'obrigatoria',this.checked?1:0)"> Sem isto não se confirma</label>
+    </div>`;
+  }).join('');
+}
+
+function mudarPergunta(i, campo, valor){
+  if (!PERGUNTAS[i]) return;
+  // A chave é o nome de uma coluna, não uma frase: minúsculas, letras, números
+  // e traço baixo. Limpa-se aqui para ninguém guardar «Prato principal!» e
+  // depois não perceber porque é que a pergunta não aparece.
+  if (campo === 'chave') valor = String(valor).toLowerCase().replace(/[^a-z0-9_]/g, '');
+  PERGUNTAS[i][campo] = valor;
+  // O tipo muda a forma do cartão; o resto escreve-se sem o redesenhar, senão
+  // o cursor saltava para o fim a cada letra.
+  if (campo === 'tipo') pintarPerguntas();
+}
+
+function tirarPergunta(i){
+  const p = PERGUNTAS[i]; if (!p) return;
+  PERGUNTAS.splice(i, 1);
+  pintarPerguntas();
+  toast('Pergunta retirada. Guarde para valer.');
+}
+
+async function guardarPerguntas(){
+  // A chave falta-lhe muitas vezes: escreve-se o rótulo e esquece-se o resto.
+  // Em vez de recusar, deriva-se do rótulo — e só se pede quando não dá.
+  PERGUNTAS.forEach(p => {
+    if (!p.chave) p.chave = (p.rotulo||'').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0, 40);
+  });
+  const semNome = PERGUNTAS.find(p => !p.chave || !p.rotulo);
+  if (semNome){ toast('Falta escrever a pergunta.', true); return; }
+  const semOps = PERGUNTAS.find(p => p.tipo === 'escolha'
+    && !(p.opcoes||[]).filter(o => String(o).trim()).length);
+  if (semOps){ toast('«' + semOps.rotulo + '» é uma escolha e não tem respostas possíveis.', true); return; }
+
+  const d = await api('rsvp_perguntas_guardar', { method:'POST',
+    body: JSON.stringify({ perguntas: PERGUNTAS }) });
+  if (!d || !d.success) return;
+  PERGUNTAS = d.perguntas || [];
+  pintarPerguntas();
+  pintarResumoRsvp();
+  toast('Perguntas guardadas. Já aparecem nos convites.');
+}
+
+/**
+ * O resumo agregado: «43 carne · 12 peixe · 5 vegetariano».
+ *
+ * É este número que se dá ao catering, e por isso diz também quantos FALTAM:
+ * uma conta de metade da lista entregue como se fosse toda é pior do que conta
+ * nenhuma. As respostas de texto livre não se somam — contam-se e lêem-se uma
+ * a uma, que é o que uma alergia pede.
+ */
+async function pintarResumoRsvp(){
+  const cx = $('pg-resumo');
+  const d = await api('rsvp_resumo', { silencioso:true });
+  if (!d || !d.success || !(d.perguntas||[]).length){ cx.innerHTML = ''; return; }
+  const comResposta = d.perguntas.filter(p => p.respondeu > 0);
+  if (!comResposta.length){
+    cx.innerHTML = '<div class="pg-resumo-vazio">Ainda ninguém respondeu. '
+      + 'As contas aparecem aqui à medida que as confirmações chegam.</div>';
+    return;
+  }
+  cx.innerHTML = '<div class="pg-resumo">' + comResposta.map(p => {
+    const linhas = p.tipo === 'texto'
+      ? p.linhas.map(l => `<span class="pg-txt">${esc(l.valor)}${l.n>1?' ×'+l.n:''}</span>`).join('')
+      : p.linhas.map(l => `<span class="pg-conta"><b>${l.n}</b> ${esc(l.valor)}</span>`).join('');
+    const falta = p.faltam > 0
+      ? `<span class="pg-falta">faltam ${p.faltam} de ${d.confirmadas}</span>` : '';
+    return `<div class="pg-r-bloco"><div class="pg-r-tit">${esc(p.rotulo)}${falta}</div>
+            <div class="pg-r-linhas">${linhas}</div></div>`;
+  }).join('') + '</div>';
+}
+
 function abrirHistorico(){ abrir('ov-historico'); abaHistorico('lixo'); }
 
 async function abaHistorico(qual){
