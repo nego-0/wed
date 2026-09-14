@@ -147,6 +147,11 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   .r-obrig{ font-family:var(--sans); font-size:.7rem; font-weight:500; text-transform:uppercase;
             letter-spacing:.06em; color:var(--gold); }
   .r-campo.falta select, .r-campo.falta input{ border-color:#a5473f; background:#fdf3f2; }
+  .r-prazo{ background:var(--cream); border-radius:12px; padding:.7rem .9rem; margin-bottom:1rem;
+            font-family:var(--sans); font-weight:300; font-size:.9rem; color:var(--text);
+            text-align:center; }
+  .r-prazo b{ font-weight:500; color:var(--ink); }
+  .r-prazo.passou{ background:#f7eae8; }
   .btn{ font-family:var(--sans); font-weight:500; border:none; border-radius:50px; padding:.85rem 1.4rem; cursor:pointer;
     font-size:1rem; width:100%; display:inline-flex; align-items:center; justify-content:center; gap:.5rem; text-decoration:none; }
   .btn svg{ width:18px; height:18px; }
@@ -301,6 +306,24 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
           <label>Deixe uma mensagem aos noivos <span style="color:#aaa;font-weight:300">(opcional)</span></label>
           <textarea id="mensagem" rows="2" placeholder="Uma palavra de carinho…"><?= htmlspecialchars($c['rsvp_mensagem'] ?? '') ?></textarea>
         </div>
+
+        <?php // O prazo (RSVP-002). Um convite sem prazo é respondido «depois»,
+              // e «depois» é o dia em que o catering já fechou a conta. Passado
+              // o prazo não se fecha a porta — responder tarde continua a ser
+              // melhor do que não responder —, mas diz-se que já passou.
+              $prazo = (string)($DEFS['rsvp.prazo'] ?? '');
+              if ($prazo !== '' && ($tp = strtotime($prazo . ' 23:59:59'))):
+                $meses = ['janeiro','fevereiro','março','abril','maio','junho',
+                          'julho','agosto','setembro','outubro','novembro','dezembro'];
+                $quando = (int)date('j', $tp) . ' de ' . $meses[(int)date('n', $tp) - 1];
+                $passou = $tp < time();
+        ?>
+          <div class="r-prazo<?= $passou ? ' passou' : '' ?>">
+            <?= $passou
+              ? 'O prazo de resposta era ' . escP($quando) . '. Ainda assim, diga-nos — é melhor tarde.'
+              : 'Agradecemos a resposta até <b>' . escP($quando) . '</b>.' ?>
+          </div>
+        <?php endif; ?>
 
         <button class="btn btn-ouro" id="btn-enviar" onclick="enviar()">Confirmar resposta</button>
       </div>

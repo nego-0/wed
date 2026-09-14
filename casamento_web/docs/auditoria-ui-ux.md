@@ -646,7 +646,7 @@ de chegada)
 | 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | ✅ |
 | 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | ✅ nas três listas principais |
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | ✅ (sem prova social: ver §25) |
-| 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | RSVP-001 ✅; resto por fazer |
+| 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | ✅ |
 | 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | Por fazer |
 | 8 · Tom | Contagem como marco, momento de chegada | EMO-001 EMO-002 | Por fazer |
 
@@ -1076,10 +1076,79 @@ Provas: `tests/chk_rsvp_perguntas.js` (26 verificações), num casamento criado
 de propósito e levado embora no fim — as perguntas são do casamento, e
 escrevê-las no de exemplo mudava o que as outras provas lá encontram.
 
+### Fase 6, segunda parte — o prazo, os lembretes e a tira (RSVP-002, UX-010)
+
+**RSVP-002 — um convite sem prazo é respondido «depois».** E «depois» é o dia
+em que o catering já fechou a conta. O prazo (`rsvp.prazo`) aparece no convite
+por extenso — «Agradecemos a resposta até 30 de abril» —, e passado o prazo **não
+se fecha a porta**: responder tarde continua a ser melhor do que não responder,
+e o convite passa a dizer «era a 30 de abril; ainda assim, diga-nos — é melhor
+tarde».
+
+Sobre os lembretes, uma decisão que é preciso dizer em voz alta: **esta casa não
+envia correio.** Os convites vão pela mão do casal, pelo WhatsApp, e o lembrete
+vai pelo mesmo caminho. Construir um motor de envio seria inventar uma peça que
+o produto não tem — e a regra 1 desta auditoria proíbe-o. O que faltava não era
+o envio: era **saber a quem falta e a quem já se tocou**. Sem essa marca, ao fim
+de duas voltas metade da lista recebe o mesmo recado duas vezes e a outra metade
+não recebe nenhum, que é a maneira mais rápida de um lembrete passar a ser uma
+chatice.
+
+Ficou: uma janela com quem ainda não respondeu (pendentes e parciais), quem tem
+telefone e quem não tem, o recado já escrito com o prazo lá dentro, e uma marca
+de «avisado» com a data — em coluna `rsvp_lembrete_em` (esquema **v43**). Quem
+já foi avisado desce na lista e fica mais apagado: o que se procura aqui é a
+próxima pessoa a quem tocar.
+
+**UX-010 — onde vai cada módulo.** O painel dizia muito sobre os convidados e
+nada sobre o resto. Quem tinha a planta de mesas, o orçamento e o bar na licença
+não tinha, em sítio nenhum, uma resposta à pergunta com que se abre o portátil:
+*o que é que falta fazer?* Ia-se a cada página ver.
+
+Uma tira de cartões, um por módulo **que a licença abre** — uma tira com barras
+de coisas que não se podem usar seria uma montra disfarçada de progresso. Cada
+cartão leva ao sítio onde o trabalho se faz, e ordenam-se pelo que **falta**,
+não pelo que já está feito.
+
+| Módulo | O que conta |
+| --- | --- |
+| Confirmações | convites já respondidos / convites |
+| Sentados | pessoas com mesa / pessoas confirmadas |
+| Enviados | convites digitais enviados / digitais |
+| Impressos | convites físicos impressos / físicos |
+| Despesas pagas | pago / previsto — e não «gasto do que se tem», que seria uma corrida ao tecto |
+| Fotos do bar | bebidas com fotografia / bebidas |
+| Entradas | pessoas que entraram / confirmadas |
+
+**A tira custou três medições até prestar.** A primeira versão media **166 px**
+no ecrã largo e **296 px** no telemóvel — o suficiente para empurrar a lista de
+convites para fora do primeiro ecrã, que é justamente o que ela devia ajudar a
+não fazer. A culpa não era do empilhamento do rótulo sobre a conta, como
+supus à primeira: eram as **frases dos estados vazios** («Ainda não há despesas
+lançadas») a quebrar em três linhas, e uma linha de grelha cresce toda com o
+cartão mais alto. A segunda tentativa — pôr rótulo e conta na mesma linha —
+resolveu meio problema e criou outro: rótulos cortados a meio.
+
+| | Ecrã largo | 390 px |
+| --- | ---: | ---: |
+| Primeira versão | 166 px | 296 px |
+| Rótulo e conta na mesma linha | 165 px, 2 rótulos cortados | 177 px, 3 cortados |
+| Frases curtas + rótulos curtos | **110 px** | **154 px** |
+
+O que resolveu foi encurtar o que se escreve, e não mexer no arranjo: «sem
+despesas» em vez da frase, «Enviados» em vez de «Convites enviados» — com a
+frase inteira no `title`. Onde a conta ainda não faz sentido não se desenha
+barra nenhuma: uma barra a zero por cento diria que há trabalho por fazer onde
+ainda não há trabalho.
+
+Provas: `tests/chk_tira_modulos.js` (17 verificações) e a segunda metade de
+`tests/chk_rsvp_perguntas.js`.
+
 **O que ficou por fazer, e porquê:**
 
-- RSVP-002 (prazo e lembretes em lote) e UX-010 (tira de progresso por módulo):
-  por fazer.
+- Envio automático de lembretes: o produto não envia correio, e construir esse
+  motor era inventar uma peça que ele não tem. O que se fez foi o que faltava
+  mesmo — saber a quem falta e a quem já se tocou.
 - Prova social no funil (CONV-002, metade): precisa de testemunhos reais e
   autorizados. Inventá-los está fora de questão.
 - As 4 páginas sem cabeçalho partilhado (`login`, `registo`, `copa`, `entregas`,

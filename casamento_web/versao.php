@@ -1009,6 +1009,22 @@ function correcoesEsperadas(): array {
          'db.php', 'function rsvpResumo(mysqli $conn): array {'],
         ['O casal faz as suas perguntas, e a chave prende-se depois de existir',
          'index.php', 'const presa = !p.nova && p.chave;'],
+
+        // ---- O prazo e os lembretes (RSVP-002) ----
+        ['O convite diz até quando se espera resposta',
+         'convite.php', "\$prazo = (string)(\$DEFS['rsvp.prazo'] ?? '');"],
+        ['E o painel diz a quem falta, e a quem já se tocou',
+         'index.php', 'async function abrirLembretes(){'],
+        ['O lembrete fica marcado, para a segunda volta não repetir a primeira',
+         'db.php', "migColuna(\$conn, \"{\$P}convites\", 'rsvp_lembrete_em'"],
+
+        // ---- Onde vai cada módulo (UX-010) ----
+        ['O painel diz onde vai cada módulo da licença',
+         'api.php', "if (\$acao === 'painel_progresso') {"],
+        ['E só os que a licença abre — uma barra do que não se usa é uma montra',
+         'index.php', 'async function carregarTiraModulos(){'],
+        ['Os rótulos da tira são curtos: um rótulo cortado não é um rótulo',
+         'index.php', '.tm-rot{ display:block; font-size:var(--t-etiqueta);'],
     ];
 }
 

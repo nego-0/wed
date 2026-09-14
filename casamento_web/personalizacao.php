@@ -762,6 +762,10 @@ function defsPadrao(): array {
         'evento.cidade' => 'Namibe · Angola',
         'evento.maps'   => 'https://maps.app.goo.gl/9o8MAHokTFRpgDBG9',
         'evento.whatsapp' => EVENTO['whatsapp'],
+        // Até quando se aceita resposta (docs/auditoria-ui-ux.md, RSVP-002).
+        // Vazio = não se pede prazo nenhum. Um convite sem prazo é respondido
+        // «depois», e «depois» é o dia em que o catering já fechou a conta.
+        'rsvp.prazo' => '',
         // Quantas pessoas se espera receber. Era um teto fixo no config.php,
         // igual para todos os casamentos — o que num sistema de vários não
         // quer dizer nada: cada casal sabe o tamanho da sua festa.
@@ -2447,6 +2451,11 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'cronograma.icone_religiosa':
             return ($valor === 'selo' || isset(iconesConvite()[$valor])) ? $valor : 'selo';
         case 'evento.data':
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
+        case 'rsvp.prazo':
+            // Vazio é uma resposta legítima: quer dizer «não peço prazo».
+            // Por isso não devolve null (que seria «não guardo isto»).
+            if ($valor === '') return '';
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'evento.hora':
             return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $valor) ? $valor : null;

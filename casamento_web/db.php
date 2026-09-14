@@ -194,7 +194,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 42;
+const ESQUEMA_VERSAO = 43;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2133,8 +2133,16 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 INDEX idx_rsvpresp_ch (casamento_id, chave, valor(40))
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        // O prazo para responder, e quando o lembrete foi enviado, são do
-        // casamento e vivem nas definições — não é preciso coluna nova.
+    }
+
+    // v43 — o lembrete de confirmação fica marcado.
+    //
+    // Sem isto, quem tem cem convites por responder não sabe a quem já tocou.
+    // Ao fim de duas voltas, metade da lista recebe o mesmo recado duas vezes
+    // e a outra metade não recebe nenhum — que é a maneira mais rápida de um
+    // lembrete passar a ser uma chatice.
+    if ($versaoAtual < 43) {
+        migColuna($conn, "{$P}convites", 'rsvp_lembrete_em', "DATETIME DEFAULT NULL");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
@@ -2270,6 +2278,7 @@ function nomesDeAcao(): array {
         'convite_apagado'   => ['apagou um convite definitivamente', 'convites'],
         'rsvp_manual'       => ['alterou a presença de alguém', 'convites'],
         'rsvp_perguntas'    => ['mudou as perguntas da confirmação', 'convites'],
+        'rsvp_lembrete'     => ['marcou lembretes de confirmação', 'convites'],
         'impresso_sim'      => ['marcou um convite como impresso', 'convites'],
         'impresso_nao'      => ['desmarcou o impresso de um convite', 'convites'],
         'enviado_sim'       => ['marcou um convite como enviado', 'convites'],

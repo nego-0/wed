@@ -6287,6 +6287,138 @@ if ($acao === 'rsvp_resumo') {
     ok(rsvpResumo($conn));
 }
 
+/**
+ * Quem ainda não respondeu, e a quem já se tocou (RSVP-002).
+ *
+ * Esta casa não envia correio: os convites vão pela mão do casal, pelo
+ * WhatsApp, e o lembrete vai pelo mesmo caminho. O que falta não é um motor de
+ * envio — é saber a QUEM falta e a quem já se tocou. Sem essa marca, ao fim de
+ * duas voltas metade da lista recebe o mesmo recado duas vezes e a outra
+ * metade não recebe nenhum.
+ */
+if ($acao === 'rsvp_lembretes') {
+    exigirModuloApi('convidados');
+    $r = $conn->query("SELECT c.id, c.codigo, c.nome_exibicao, c.telefone, c.lugares,
+                              c.rsvp_estado, c.rsvp_confirmados, c.rsvp_lembrete_em, c.enviado
+                       FROM {$P}convites c
+                       WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c') . "
+                         AND c.rsvp_estado IN ('pendente','parcial')
+                       ORDER BY (c.telefone IS NULL OR c.telefone=''), c.rsvp_lembrete_em IS NOT NULL,
+                                c.nome_exibicao");
+    $lista = [];
+    while ($r && ($x = $r->fetch_assoc())) {
+        $x['id'] = (int)$x['id']; $x['lugares'] = (int)$x['lugares'];
+        $x['rsvp_confirmados'] = (int)$x['rsvp_confirmados'];
+        $x['enviado'] = (int)$x['enviado'];
+        $lista[] = $x;
+    }
+    $defs = defsAtuais($conn);
+    ok(['convites' => $lista, 'prazo' => (string)($defs['rsvp.prazo'] ?? '')]);
+}
+
+/**
+ * Onde é que cada módulo da licença vai (UX-010).
+ *
+ * O painel dizia muito sobre os convidados e nada sobre o resto: quem tinha a
+ * planta de mesas, o orçamento e o bar na licença não tinha, em sítio nenhum,
+ * uma resposta à pergunta com que se abre o portátil — «o que é que falta
+ * fazer?». Ia-se a cada página ver.
+ *
+ * Só aparecem os módulos que a licença abre: uma tira com barras de coisas que
+ * não se podem usar é uma montra disfarçada de progresso. E onde a conta ainda
+ * não faz sentido — o bar antes de haver menu, a porta antes do dia — diz-se o
+ * que falta em vez de se inventar uma percentagem.
+ */
+if ($acao === 'painel_progresso') {
+    exigirModuloApi('convidados');
+    $mods = licencaModulos($conn);
+    $tem  = fn($k) => !empty($mods[$k]['ativo']) || ehPessoalPlataforma();
+    $um   = fn(string $sql) => (($r = @$conn->query($sql)) && ($x = $r->fetch_row())) ? $x : [0, 0];
+    $out  = [];
+
+    // ---- convidados: quantos convites já responderam ----
+    [$comResposta, $totalConv] = $um(
+        "SELECT SUM(rsvp_estado IN ('confirmado','recusado')), COUNT(*)
+         FROM {$P}convites c WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c'));
+    $out[] = ['chave' => 'convidados', 'ico' => 'pessoas', 'rotulo' => 'Confirmações',
+              'feito' => (int)$comResposta, 'total' => (int)$totalConv, 'unidade' => 'convites',
+              'vazio' => 'sem convites', 'dica' => 'Ainda não há convites na lista.', 'onde' => 'index.php'];
+
+    if ($tem('mesas')) {
+        // Sentar é o trabalho da planta, e só se pode sentar quem vem.
+        [$sentados, $aVir] = $um(
+            "SELECT SUM(g.mesa_id IS NOT NULL), COUNT(*)
+             FROM {$P}convidados g JOIN {$P}convites c ON c.id = g.convite_id
+             WHERE " . doCasamento('g') . " AND g.rsvp='confirmado'");
+        $out[] = ['chave' => 'mesas', 'ico' => 'mesa', 'rotulo' => 'Sentados',
+                  'feito' => (int)$sentados, 'total' => (int)$aVir, 'unidade' => 'pessoas',
+                  'vazio' => 'sem confirmados', 'dica' => 'Ainda ninguém confirmou: sentar vem depois.', 'onde' => 'mesas.php'];
+    }
+    if ($tem('digital')) {
+        [$enviados, $digitais] = $um(
+            "SELECT SUM(enviado=1), COUNT(*) FROM {$P}convites c
+             WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c')
+           . " AND tipo IN ('digital','ambos')");
+        $out[] = ['chave' => 'digital', 'ico' => 'telemovel', 'rotulo' => 'Enviados',
+                  'feito' => (int)$enviados, 'total' => (int)$digitais, 'unidade' => 'convites',
+                  'vazio' => 'nenhum digital', 'dica' => 'Nenhum convite marcado como digital.', 'onde' => 'digital.php'];
+    }
+    if ($tem('impresso')) {
+        [$impressos, $fisicos] = $um(
+            "SELECT SUM(impresso=1), COUNT(*) FROM {$P}convites c
+             WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c')
+           . " AND tipo IN ('fisico','ambos')");
+        $out[] = ['chave' => 'impresso', 'ico' => 'carta', 'rotulo' => 'Impressos',
+                  'feito' => (int)$impressos, 'total' => (int)$fisicos, 'unidade' => 'convites',
+                  'vazio' => 'nenhum físico', 'dica' => 'Nenhum convite marcado como físico.', 'onde' => 'impressos.php'];
+    }
+    if ($tem('orcamento')) {
+        // O progresso do orçamento é o que já está pago do que está previsto —
+        // e não o que se gastou do que se tem, que seria uma corrida ao teto.
+        [$pago, $previsto] = $um(
+            "SELECT COALESCE(SUM(CASE WHEN estado='pago' THEN valor END),0), COALESCE(SUM(valor),0)
+             FROM {$P}orcamento_despesas WHERE " . doCasamento());
+        $out[] = ['chave' => 'orcamento', 'ico' => 'moeda', 'rotulo' => 'Despesas pagas',
+                  'feito' => (float)$pago, 'total' => (float)$previsto, 'unidade' => 'dinheiro',
+                  'vazio' => 'sem despesas', 'dica' => 'Ainda não há despesas lançadas.', 'onde' => 'orcamento.php'];
+    }
+    if ($tem('bar')) {
+        // Um bar mede-se pelo que já tem na carta: antes disso não há conta
+        // nenhuma a fazer, e uma barra a zero por cento mentiria sobre o
+        // trabalho que falta.
+        [$comFoto, $itens] = $um(
+            "SELECT SUM(foto IS NOT NULL AND foto<>''), COUNT(*)
+             FROM {$P}bar_itens WHERE " . doCasamento());
+        $out[] = ['chave' => 'bar', 'ico' => 'alto', 'rotulo' => 'Fotos do bar',
+                  'feito' => (int)$comFoto, 'total' => (int)$itens, 'unidade' => 'bebidas',
+                  'vazio' => 'carta vazia', 'dica' => 'A carta do bar ainda está vazia.', 'onde' => 'bebidas.php'];
+    }
+    if ($tem('porta')) {
+        [$presentes, $confirmados] = $um(
+            "SELECT SUM(g.presente=1), SUM(g.rsvp='confirmado')
+             FROM {$P}convidados g WHERE " . doCasamento('g'));
+        $out[] = ['chave' => 'porta', 'ico' => 'porta', 'rotulo' => 'Entradas',
+                  'feito' => (int)$presentes, 'total' => (int)$confirmados, 'unidade' => 'pessoas',
+                  'vazio' => 'sem confirmados', 'dica' => 'Ainda ninguém confirmou presença.', 'onde' => 'porteiro.php'];
+    }
+    ok(['modulos' => $out]);
+}
+
+if ($acao === 'rsvp_lembrete_marcar') {
+    exigirCorrecao();
+    exigirModuloApi('convidados');
+    $d = corpo();
+    $ids = array_values(array_filter(array_map('intval', (array)($d['ids'] ?? [])), fn($i) => $i > 0));
+    if (!$ids) erro('Não foi indicado nenhum convite.');
+    // Marcar é dizer «já lhe toquei», e desmarcar é poder dizer que afinal não.
+    $limpar = !empty($d['limpar']);
+    $lista = implode(',', array_slice($ids, 0, 500));
+    $conn->query("UPDATE {$P}convites SET rsvp_lembrete_em=" . ($limpar ? 'NULL' : 'NOW()')
+                . " WHERE " . doCasamento() . " AND id IN ($lista)");
+    registar($conn, 'rsvp_lembrete', '', count($ids) . ' convite(s)');
+    ok(['n' => count($ids)]);
+}
+
 if ($acao === 'convite_list') {
     exigirModuloApi('convidados');
     $tipo=$_GET['tipo']??''; $lado=$_GET['lado']??''; $estado=$_GET['estado']??'';

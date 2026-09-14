@@ -340,6 +340,74 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                      background:var(--cream); border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
   .vazio-hist{ color:var(--ink-fraco); text-align:center; padding:1.4rem; }
 
+  /* Onde vai cada módulo (docs/auditoria-ui-ux.md, UX-010).
+     Um cartão por módulo da licença, com a conta e uma barra fina. Clica-se e
+     vai-se ao sítio onde o trabalho se faz: uma tira que só informa obriga a
+     ir procurar o caminho a seguir. */
+  .tm-grelha{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.6rem; }
+  .tm-cartao{ display:flex; align-items:center; gap:.65rem; text-decoration:none;
+              background:var(--card); border:1px solid var(--line); border-radius:12px;
+              padding:.6rem .8rem; position:relative; overflow:hidden; color:var(--text); }
+  .tm-cartao:hover{ border-color:var(--gold-soft); }
+  .tm-ico{ width:20px; height:20px; flex:none; color:var(--gold); }
+  .tm-ico svg{ width:20px; height:20px; }
+  /* Rótulo em cima, conta em baixo — e ambos numa linha só cada um. A tira
+     chegou a medir 166px no ecrã largo e 296px no telemóvel, o suficiente para
+     empurrar a lista de convites para fora do primeiro ecrã, que é justamente
+     o que ela devia ajudar a não fazer. A culpa não era do empilhamento: eram
+     as frases dos estados vazios («Ainda não há despesas lançadas») a quebrar
+     em três linhas e a esticar a linha inteira da grelha, que cresce toda com
+     o cartão mais alto. A frase ficou curta e a explicação foi para o título. */
+  .tm-txt{ min-width:0; flex:1; }
+  /* Os rótulos são curtos de propósito — «Enviados», e não «Convites
+     enviados». Numa coluna de 172px a 390px, um rótulo de vinte letras ou
+     quebrava em duas linhas (e esticava a linha inteira da grelha, que cresce
+     toda com o cartão mais alto) ou era cortado a meio, e um rótulo cortado
+     não é um rótulo. A frase inteira vive no título. */
+  .tm-rot{ display:block; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
+           letter-spacing:.06em; color:var(--ink-fraco);
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tm-num{ display:block; font-size:var(--t-denso); color:var(--ink);
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tm-vazio .tm-num{ color:var(--ink-fraco); }
+  /* A barra é uma linha no fundo do cartão, e não uma caixa a mais: o cartão
+     já é pequeno, e uma barra com moldura roubava-lhe a linha do número. */
+  .tm-barra{ position:absolute; left:0; right:0; bottom:0; height:3px; background:var(--cream); }
+  .tm-barra span{ display:block; height:100%; background:var(--gold); }
+  .tm-feito .tm-barra span{ background:var(--ok); }
+  .tm-mais{ margin-top:.5rem; background:none; border:0; cursor:pointer; font-family:var(--sans);
+            font-size:var(--t-apoio); color:var(--gold-texto); text-decoration:underline;
+            padding:.4rem 0; }
+  /* A 390px, uma coluna de 190px só deixa caber um cartão por linha e a tira
+     ficava com a altura de um ecrã. Duas colunas fixas: a conta é curta e cabe. */
+  @media (max-width:760px){
+    .tm-grelha{ grid-template-columns:1fr 1fr; gap:.5rem; }
+    .tm-cartao{ padding:.5rem .6rem; gap:.5rem; }
+    .tm-ico, .tm-ico svg{ width:17px; height:17px; }
+  }
+
+  /* Quem ainda não respondeu (docs/auditoria-ui-ux.md, RSVP-002).
+     Quem já foi avisado fica mais apagado e desce na lista: o que se procura
+     aqui é a próxima pessoa a quem tocar, e não a lista toda outra vez. */
+  .lb-prazo{ display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; margin-bottom:.5rem; }
+  .lb-prazo label{ margin:0; }
+  .lb-prazo input{ width:auto; margin:0; }
+  .lb-prazo .dica{ margin:0; }
+  .lb-tarde{ color:var(--danger); font-weight:600; }
+  .lb-topo{ display:flex; justify-content:space-between; align-items:center; gap:.7rem;
+            flex-wrap:wrap; background:var(--cream); border-radius:12px;
+            padding:.6rem .9rem; margin:.8rem 0 .6rem; font-size:var(--t-denso); }
+  .lb-linha{ display:flex; justify-content:space-between; align-items:center; gap:.7rem;
+             flex-wrap:wrap; border-bottom:1px solid var(--line); padding:.6rem .2rem; }
+  .lb-linha:last-child{ border-bottom:0; }
+  .lb-linha.ja{ opacity:.6; }
+  .lb-quem b{ display:block; font-weight:600; }
+  .lb-sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+  .lb-acoes{ display:flex; align-items:center; gap:.6rem; }
+  .lb-marca{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
+             letter-spacing:.06em; color:var(--ok); }
+  .lb-sem{ font-size:var(--t-apoio); color:var(--warn); }
+
   /* As perguntas da confirmação (docs/auditoria-ui-ux.md, RSVP-001).
      Um cartão por pergunta, e a pergunta em cima com o tamanho de uma
      pergunta: numa lista de campos todos iguais não se via o que era a
@@ -404,6 +472,13 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
   <!-- PROGRESSO DE CAPACIDADE -->
   <div id="progresso" class="progresso-cap mb-4"></div>
+
+  <!-- ONDE VAI CADA MÓDULO (docs/auditoria-ui-ux.md, UX-010).
+       O painel dizia muito sobre os convidados e nada sobre o resto: quem
+       tinha a planta, o orçamento e o bar na licença não tinha em sítio nenhum
+       uma resposta à pergunta com que se abre o portátil — «o que falta
+       fazer?». Ia-se a cada página ver. -->
+  <div id="tira-modulos" class="mb-4"></div>
 
   <!-- ESTATÍSTICAS -->
   <div class="grelha-stats" id="stats"></div>
@@ -565,6 +640,24 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 </div>
 
 <!-- ===== MODAL HISTÓRICO (reciclagem + registo de atividade) ===== -->
+<?php // ---- quem ainda não respondeu, e o prazo para responder (RSVP-002) ---- ?>
+<div class="overlay" id="ov-lembretes">
+  <div class="modal">
+    <div class="modal-topo"><h3>Quem ainda não respondeu</h3>
+      <button class="fechar" onclick="fechar('ov-lembretes')">&times;</button></div>
+    <div class="modal-corpo">
+      <div class="lb-prazo">
+        <label for="lb-data">Responder até</label>
+        <input type="date" id="lb-data" onchange="guardarPrazo()">
+        <span class="dica" id="lb-prazo-txt"></span>
+      </div>
+      <p class="dica">Um convite sem prazo é respondido «depois», e «depois» é o dia em
+        que o catering já fechou a conta. O prazo aparece no convite.</p>
+      <div id="lb-lista"></div>
+    </div>
+  </div>
+</div>
+
 <?php // ---- as perguntas da confirmação, e o que elas já responderam (RSVP-001) ---- ?>
 <div class="overlay" id="ov-perguntas">
   <div class="modal">
@@ -798,6 +891,64 @@ function renderProgresso(s){
       <div class="pc-conf" style="width:${pConf}%"></div>
     </div>` + (temTeto && restam<=5 ? avisoTeto(restam) : '');
   travarNovoConvite(restam);
+}
+
+// ---------- onde vai cada módulo (docs/auditoria-ui-ux.md, UX-010) ----------
+// Só aparecem os módulos que a licença abre: uma tira com barras de coisas que
+// não se podem usar é uma montra disfarçada de progresso. E ordena-se pelo que
+// FALTA, porque é isso que se vem aqui perguntar — não o que já está feito.
+let TIRA_TODA = false;
+
+async function carregarTiraModulos(){
+  const d = await api('painel_progresso', { silencioso:true });
+  if (!d || !d.success) return;
+  MODULOS_PROG = (d.modulos || []).map(m => {
+    const total = +m.total || 0, feito = +m.feito || 0;
+    return Object.assign({}, m, { total, feito, falta: Math.max(0, total - feito),
+                                  pct: total > 0 ? Math.round(feito / total * 100) : 0 });
+  }).sort((a, b) => b.falta - a.falta);
+  pintarTiraModulos();
+}
+let MODULOS_PROG = [];
+
+function pintarTiraModulos(){
+  const el = $('tira-modulos');
+  if (!MODULOS_PROG.length){ el.innerHTML = ''; return; }
+  // No telemóvel mostram-se os quatro que mais pedem trabalho: sete cartões
+  // empurravam a lista de convites para fora do primeiro ecrã, e o primeiro
+  // ecrã é o que se vê antes de decidir se vale a pena rolar.
+  const estreito = window.matchMedia('(max-width:760px)').matches;
+  const tecto = (estreito && !TIRA_TODA) ? 4 : MODULOS_PROG.length;
+  const vistos = MODULOS_PROG.slice(0, tecto);
+  const escondidos = MODULOS_PROG.length - vistos.length;
+
+  el.innerHTML = '<div class="tm-grelha">' + vistos.map(m => {
+    // Sem nada contado não se desenha barra nenhuma: uma barra a zero por
+    // cento diria que há trabalho por fazer onde ainda não há trabalho.
+    const vazio = m.total <= 0;
+    const num = m.unidade === 'dinheiro'
+      ? `${fmtKz(m.feito)} de ${fmtKz(m.total)}`
+      : `${m.feito} de ${m.total}`;
+    // O título leva a frase inteira: no cartão ela não cabe sem o esticar, mas
+    // «sem despesas» sozinho não diz o que fazer a seguir.
+    const tit = vazio ? (m.dica || m.vazio) : `${m.rotulo}: ${num} (${m.pct}%)`;
+    return `<a class="tm-cartao${vazio ? ' tm-vazio' : ''}${m.pct >= 100 ? ' tm-feito' : ''}"
+               href="${m.onde}" title="${esc(tit)}">
+      <span class="tm-ico" data-ico="${esc(m.ico)}"></span>
+      <span class="tm-txt">
+        <span class="tm-rot">${esc(m.rotulo)}</span>
+        <span class="tm-num">${vazio ? esc(m.vazio) : num}</span>
+      </span>
+      ${vazio ? '' : `<span class="tm-barra"><span style="width:${m.pct}%"></span></span>`}
+    </a>`;
+  }).join('') + '</div>'
+  + (escondidos > 0
+      ? `<button class="tm-mais" onclick="TIRA_TODA=true;pintarTiraModulos()">Ver os outros ${escondidos}</button>`
+      : '');
+}
+
+function fmtKz(v){
+  return new Intl.NumberFormat('pt-PT', { maximumFractionDigits:0 }).format(v || 0);
 }
 
 /** O aviso de que o tecto está à vista — com a saída, que é reforçar a licença. */
@@ -1394,6 +1545,7 @@ function abrirMais(ev, id){
 function abrirAccoes(ev){
   mostrarPop(ev, [
     ['Mensagens dos convidados', 'abrirMensagens()'],
+    ['Quem ainda não respondeu', 'abrirLembretes()'],
     ['Perguntas da confirmação', 'abrirPerguntas()'],
     ['Entradas à porta',         'abrirEntradas()'],
     ['Histórico',                'abrirHistorico()'],
@@ -1525,6 +1677,120 @@ async function abrirEntradas(){
 }
 
 // ---------- histórico: reciclagem + registo de atividade ----------
+// ---------- quem ainda não respondeu (docs/auditoria-ui-ux.md, RSVP-002) ----------
+// Esta casa não envia correio: os convites vão pela mão do casal, pelo
+// WhatsApp, e o lembrete vai pelo mesmo caminho. O que faltava não era um
+// motor de envio — era saber a QUEM falta e a quem já se tocou. Sem essa
+// marca, ao fim de duas voltas metade da lista recebe o mesmo recado duas
+// vezes e a outra metade não recebe nenhum.
+let LEMBRETES = [], PRAZO = '';
+
+async function abrirLembretes(){
+  abrir('ov-lembretes');
+  $('lb-lista').innerHTML = EST.esqueleto(4, 56);
+  const d = await api('rsvp_lembretes');
+  if (!d || !d.success) return;
+  LEMBRETES = d.convites || []; PRAZO = d.prazo || '';
+  $('lb-data').value = PRAZO;
+  pintarPrazo();
+  pintarLembretes();
+}
+
+function pintarPrazo(){
+  const el = $('lb-prazo-txt');
+  if (!PRAZO){ el.textContent = 'sem prazo'; el.classList.remove('lb-tarde'); return; }
+  const dias = Math.ceil((new Date(PRAZO + 'T23:59:59') - Date.now()) / 86400000);
+  el.textContent = dias > 1  ? 'faltam ' + dias + ' dias'
+                 : dias === 1 ? 'é amanhã'
+                 : dias === 0 ? 'é hoje'
+                 : 'passou há ' + (-dias) + (dias === -1 ? ' dia' : ' dias');
+  el.classList.toggle('lb-tarde', dias < 0);
+}
+
+async function guardarPrazo(){
+  PRAZO = $('lb-data').value || '';
+  const d = await api('defs_save', { method:'POST',
+    body: JSON.stringify({ defs: { 'rsvp.prazo': PRAZO } }) });
+  if (!d || !d.success) return;
+  pintarPrazo();
+  toast(PRAZO ? 'Prazo guardado. Já aparece nos convites.' : 'Prazo retirado.');
+}
+
+function pintarLembretes(){
+  const el = $('lb-lista');
+  if (!LEMBRETES.length){
+    el.innerHTML = EST.vazio('visto', 'Está tudo respondido',
+      'Não há convites à espera de resposta. É raro, e é bom.');
+    return;
+  }
+  const semTel = LEMBRETES.filter(c => !telefoneWa(c.telefone)).length;
+  const porTocar = LEMBRETES.filter(c => !c.rsvp_lembrete_em);
+  el.innerHTML =
+    `<div class="lb-topo">
+       <span><b>${LEMBRETES.length}</b> convite(s) por responder${
+         semTel ? ` · <span class="lb-sem">${semTel} sem telefone</span>` : ''}</span>
+       ${porTocar.length ? `<button class="btn btn-fantasma btn-sm" data-escrita="1"
+          onclick="marcarLembretes(${JSON.stringify(porTocar.map(c=>c.id)).replace(/"/g,'&quot;')})"
+          >Marcar os ${porTocar.length} como avisados</button>` : ''}
+     </div>` +
+    LEMBRETES.map(c => {
+      const tel = telefoneWa(c.telefone);
+      const jaFoi = !!c.rsvp_lembrete_em;
+      const parcial = c.rsvp_estado === 'parcial';
+      return `<div class="lb-linha${jaFoi ? ' ja' : ''}">
+        <div class="lb-quem">
+          <b>${esc(c.nome_exibicao)}</b>
+          <span class="lb-sub">${parcial
+            ? `respondeu por ${c.rsvp_confirmados} de ${c.lugares}`
+            : `${c.lugares} lugar(es) · ${c.enviado ? 'convite enviado' : 'convite por enviar'}`}</span>
+        </div>
+        <div class="lb-acoes">
+          ${jaFoi ? `<span class="lb-marca" title="${esc(c.rsvp_lembrete_em)}">avisado</span>` : ''}
+          ${tel ? `<button class="btn btn-fantasma btn-sm" data-escrita="1"
+                     onclick="lembrar(${c.id})">Lembrar</button>`
+                : `<span class="lb-sem">sem telefone</span>`}
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// O recado leva o prazo quando há um: «até 12 de Maio» é um pedido, «quando
+// puder» é um adiamento.
+function mensagemLembrete(c){
+  const l = linkConvite(c.codigo);
+  const nome = (c.nome_exibicao || '').split(/\s*[eE&]\s*/)[0].trim() || 'Olá';
+  const ate = PRAZO ? ` até ${dataCurta(PRAZO)}` : '';
+  return `Olá ${nome}! Um lembrete com carinho: ainda estamos à espera da sua confirmação `
+       + `para o casamento de ${CASAL}, no dia ${DATA_EXT}.\n\n`
+       + `É por aqui, e leva um minuto${ate}:\n${l}\n\nObrigado!`;
+}
+
+function dataCurta(iso){
+  const m = ['janeiro','fevereiro','março','abril','maio','junho',
+             'julho','agosto','setembro','outubro','novembro','dezembro'];
+  const d = new Date(iso + 'T12:00:00');
+  return d.getDate() + ' de ' + m[d.getMonth()];
+}
+
+async function lembrar(id){
+  const c = LEMBRETES.find(x => x.id == id); if (!c) return;
+  const tel = telefoneWa(c.telefone);
+  if (!tel) return toast('Este convite não tem telefone.', true);
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(mensagemLembrete(c)),
+              '_blank', 'noopener');
+  await marcarLembretes([id], true);
+}
+
+async function marcarLembretes(ids, calado){
+  const d = await api('rsvp_lembrete_marcar', { method:'POST',
+    body: JSON.stringify({ ids: ids }), silencioso: !!calado });
+  if (!d || !d.success) return;
+  const agora = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  LEMBRETES.forEach(c => { if (ids.includes(c.id)) c.rsvp_lembrete_em = agora; });
+  pintarLembretes();
+  if (!calado) toast(d.n + ' convite(s) marcados como avisados.');
+}
+
 // ---------- as perguntas da confirmação (docs/auditoria-ui-ux.md, RSVP-001) ----------
 // A resposta a um convite trazia «vem / não vem», quantos, e um recado. O
 // prato, as alergias e a boleia ficavam para telefonemas um a um: numa festa
@@ -1777,6 +2043,10 @@ async function carregarRegisto(mais=false){
 
 montarPickers();
 carregar();
+carregarTiraModulos();
+// A tira muda de feitio com a largura: a quatro cartões num telemóvel, inteira
+// num ecrã largo. Rodar o aparelho sem isto deixava-a com a forma do outro.
+addEventListener('resize', () => pintarTiraModulos(), { passive:true });
 </script>
 </main>
 </body>

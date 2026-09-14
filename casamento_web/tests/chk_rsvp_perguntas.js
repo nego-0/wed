@@ -204,6 +204,59 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(p3.linhas.length === 0,
      'recusar apaga as respostas: quem não vem não entra na conta do catering');
 
+  // ---------- 8. o prazo e os lembretes (RSVP-002) ----------
+  // Esta casa não envia correio: os convites vão pela mão do casal, pelo
+  // WhatsApp. O que faltava não era um motor de envio — era saber a QUEM falta
+  // e a quem já se tocou.
+  const pend = await api('convite_save', { nome_exibicao: 'ZZ Por responder ' + marca,
+    tipo: 'digital', lado: 'noiva', telefone: '+244923000111', membros: [{ nome: 'ZZ Quieto' }] });
+  ok(pend && pend.success, 'criou um convite por responder');
+
+  let lb = await api('rsvp_lembretes');
+  ok(lb && lb.success, 'a lista de quem falta responde');
+  const naLista = (lb.convites || []).find(c => c.id === pend.convite.id);
+  ok(!!naLista, 'e traz o convite que ainda não respondeu');
+  ok((lb.convites || []).every(c => c.rsvp_estado !== 'confirmado'),
+     'e ninguém que já tenha respondido por inteiro');
+  ok(!naLista.rsvp_lembrete_em, 'que ainda não foi avisado');
+
+  d = await api('defs_save', { defs: { 'rsvp.prazo': '2027-04-30' } });
+  ok(d && d.success, 'guardou o prazo de resposta');
+  lb = await api('rsvp_lembretes');
+  ok(lb.prazo === '2027-04-30', 'e a lista sabe-o: ' + lb.prazo);
+
+  // O prazo aparece no convite — que é o único sítio onde ele serve de alguma
+  // coisa. Guardado e não mostrado seria uma nota para o casal ler a si mesmo.
+  const gp = await (await b.newContext({ viewport: { width: 390, height: 844 },
+                                         isMobile: true })).newPage();
+  gp.on('pageerror', e => errs.push('prazo: ' + e.message));
+  await gp.goto(BASE + '/convite.php?c=' + pend.convite.codigo, { waitUntil: 'networkidle' });
+  await gp.waitForTimeout(600);
+  await gp.click('#op-sim');
+  await gp.waitForTimeout(300);
+  const noConvite = await gp.evaluate(() => {
+    const e = document.querySelector('.r-prazo');
+    return e ? { texto: e.textContent.replace(/\s+/g, ' ').trim(), aVista: e.offsetParent !== null } : null;
+  });
+  ok(!!noConvite && noConvite.aVista, 'e o convidado lê-o no convite');
+  ok(!!noConvite && /30 de abril/i.test(noConvite.texto),
+     'com a data por extenso, e não 2027-04-30: ' + (noConvite ? noConvite.texto : ''));
+
+  d = await api('rsvp_lembrete_marcar', { ids: [pend.convite.id] });
+  ok(d && d.success && d.n === 1, 'marcar como avisado responde');
+  lb = await api('rsvp_lembretes');
+  const jaFoi = (lb.convites || []).find(c => c.id === pend.convite.id);
+  ok(!!jaFoi && !!jaFoi.rsvp_lembrete_em,
+     'e fica escrito quando foi — sem isso, à segunda volta metade da lista '
+     + 'leva o mesmo recado duas vezes e a outra metade nenhum');
+
+  // Um prazo vazio é uma resposta legítima: quer dizer «não peço prazo».
+  d = await api('defs_save', { defs: { 'rsvp.prazo': '' } });
+  lb = await api('rsvp_lembretes');
+  ok(lb.prazo === '', 'e tirar o prazo é tirá-lo, e não guardar a data de ontem');
+
+  await api('convite_delete&definitivo=1&id=' + pend.convite.id, {});
+
   // ---------- arrumar ----------
   // O casamento inteiro sai daqui: as perguntas são dele, e deixá-lo ficar
   // mudava as contas que as outras provas encontram na plataforma. Arquiva-se
