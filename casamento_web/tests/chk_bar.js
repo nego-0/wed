@@ -129,7 +129,14 @@ const { escolher } = require('./escolhas');
   require('fs').writeFileSync(fich, Buffer.from(png, 'base64'));
 
   // As bebidas nasceram pela API; a grelha só as tem depois de repintar.
-  await noivos.reload({ waitUntil: 'networkidle' });
+  //
+  // Volta-se ao menu PELO ENDEREÇO, e não por um reload seco: desde que cada
+  // separador tem endereço próprio (docs/auditoria-ui-ux.md, DENS-001), o
+  // `#ab-mesas` que esta prova carregou lá em cima ficou em `?aba=mesas`, e um
+  // reload reabria as Mesas — com a grelha das bebidas escondida e o botão da
+  // fotografia fora de alcance. É a funcionalidade a funcionar; era a prova que
+  // contava com o contrário.
+  await noivos.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
   await noivos.waitForTimeout(800);
   // Sem fotografia, o cartão põe a CHAPA: um véu da cor da gaveta com o copo
   // dela desenhado a traço (§25.8). Era uma inicial em corpo 32 sobre cor

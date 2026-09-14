@@ -262,16 +262,78 @@
     el.innerHTML = ico.ico(ABAS[k][0]) + ABAS[k][1];
   });
 
-  window.barAba = function (qual) {
+  /* ---- cada separador tem endereço próprio (docs/auditoria-ui-ux.md,
+     DENS-001) ---------------------------------------------------------
+     Esta página é a mais densa da casa e vive em cinco separadores. Sem
+     endereço, nenhum deles se podia guardar nos favoritos, mandar a alguém,
+     nem alcançar com o botão de voltar: quem estava nas Regras e carregava em
+     «voltar» saía da página inteira em vez de recuar um separador. E ao
+     recarregar caía-se sempre no menu, por muito que o trabalho estivesse
+     noutro sítio.
+
+     Usa-se `?aba=` e `history.pushState`: o endereço muda, o conteúdo não
+     recarrega, e o botão de voltar anda separador a separador. O `?` em vez do
+     `#` porque o endereço tem de se ler e copiar como qualquer outro — e
+     porque a âncora já é de outra coisa nesta casa. */
+  function abaDoEndereco() {
+    var q = new URLSearchParams(location.search).get('aba');
+    return ABAS[q] ? q : 'menu';
+  }
+
+  window.barAba = function (qual, semEndereco) {
+    if (!ABAS[qual]) qual = 'menu';
     Object.keys(ABAS).forEach(function (k) {
-      $('ab-' + k).classList.toggle('on', k === qual);
-      $('ab-' + k).setAttribute('aria-selected', k === qual ? 'true' : 'false');
-      $('pn-' + k).hidden = k !== qual;
+      var bt = $('ab-' + k), pn = $('pn-' + k);
+      var eu = (k === qual);
+      bt.classList.toggle('on', eu);
+      bt.setAttribute('aria-selected', eu ? 'true' : 'false');
+      // Tabindex rotativo (A11Y-003): dentro de um tablist, o Tab entra e sai
+      // do grupo inteiro, e é com as setas que se anda entre separadores.
+      // Cinco paragens de Tab seguidas antes de chegar ao conteúdo é
+      // exactamente o que este padrão existe para evitar.
+      bt.tabIndex = eu ? 0 : -1;
+      pn.hidden = !eu;
     });
     if (qual === 'mesas')  pintarFolhas();
     if (qual === 'regras') pintarRegras();
     if (qual === 'gente')  pintarEquipa();
+
+    if (!semEndereco && abaDoEndereco() !== qual) {
+      var u = new URL(location.href);
+      // O menu é o de origem: deixá-lo sem `?aba=` mantém o endereço da página
+      // limpo para quem só a abre.
+      if (qual === 'menu') u.searchParams.delete('aba');
+      else u.searchParams.set('aba', qual);
+      history.pushState({ aba: qual }, '', u);
+    }
   };
+
+  // O botão de voltar anda separador a separador, e não para fora da página.
+  addEventListener('popstate', function () { window.barAba(abaDoEndereco(), true); });
+
+  /* ---- o teclado (A11Y-003) ----------------------------------------
+     Setas para andar, Home/End para os extremos. É o que um `role="tablist"`
+     promete a quem o ouve anunciado: sem isto, o leitor de ecrã diz «separador
+     1 de 5» e as setas não fazem nada — uma promessa que a página não cumpria. */
+  var tiraAbas = document.querySelector('.b-abas');
+  if (tiraAbas) {
+    tiraAbas.addEventListener('keydown', function (ev) {
+      var chaves = Object.keys(ABAS);
+      var aqui = chaves.indexOf(abaDoEndereco());
+      var ir = null;
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') ir = (aqui + 1) % chaves.length;
+      else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') ir = (aqui - 1 + chaves.length) % chaves.length;
+      else if (ev.key === 'Home') ir = 0;
+      else if (ev.key === 'End')  ir = chaves.length - 1;
+      if (ir === null) return;
+      ev.preventDefault();
+      window.barAba(chaves[ir]);
+      // O foco segue a escolha: um separador que se acende sem levar o foco
+      // deixa quem navega por teclado a ouvir um sítio e a estar noutro.
+      $('ab-' + chaves[ir]).focus();
+    });
+  }
+
 
   /* ============================================================
      AS REGRAS DO BAR
@@ -640,5 +702,13 @@
     pode: PODE,
     recarregar: carregar
   });
+
+  // À chegada, abre-se o separador que o endereço pedir — e só AQUI, no fim.
+  // Posto junto da definição de barAba, isto corria a meio do ficheiro: um
+  // `?aba=gente` no endereço chamava pintarEquipa() antes de POSTOS existir
+  // (é um `var`, e portanto estava declarado e vazio), e a página abria com um
+  // erro em vez da equipa. O mesmo valia para as Regras, cujo painel só se
+  // liga duas linhas acima desta.
+  window.barAba(abaDoEndereco(), true);
   carregar();
 })();

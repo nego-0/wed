@@ -1025,6 +1025,22 @@ function correcoesEsperadas(): array {
          'index.php', 'async function carregarTiraModulos(){'],
         ['Os rótulos da tira são curtos: um rótulo cortado não é um rótulo',
          'index.php', '.tm-rot{ display:block; font-size:var(--t-etiqueta);'],
+
+        // ---- Cada separador com endereço próprio (DENS-001) ----
+        ['Os separadores do bar têm endereço próprio, e o «voltar» recua um',
+         'assets/bar-montagem.js', 'function abaDoEndereco() {'],
+        ['E abre-se o que o endereço pedir — no fim, quando tudo já existe',
+         'assets/bar-montagem.js', 'window.barAba(abaDoEndereco(), true);'],
+
+        // ---- Os separadores cumprem o que o papel promete (A11Y-003) ----
+        ['Cada separador diz que painel comanda',
+         'bar.php', 'role="tab" id="ab-menu"   aria-controls="pn-menu"'],
+        ['E cada painel diz de quem é, e recebe o foco',
+         'bar.php', '<section id="pn-menu" role="tabpanel" aria-labelledby="ab-menu" tabindex="0">'],
+        ['As setas andam entre separadores, e o foco vai com elas',
+         'assets/bar-montagem.js', "if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown')"],
+        ['No convite digital, o mesmo — meio padrão é pior do que nenhum',
+         'digital.php', "const tira = document.querySelector('.peca-abas'); if (!tira) return;"],
     ];
 }
 

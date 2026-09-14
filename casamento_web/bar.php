@@ -75,15 +75,25 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
     <button class="btn btn-ouro" id="b-chave-bt" onclick="barChave()">Abrir o bar</button>
   </div>
 
-  <div class="b-abas" role="tablist">
-    <button class="b-aba on" role="tab" id="ab-menu"   onclick="barAba('menu')"></button>
-    <button class="b-aba"    role="tab" id="ab-gav"    onclick="barAba('gav')"></button>
-    <button class="b-aba"    role="tab" id="ab-mesas"  onclick="barAba('mesas')"></button>
-    <button class="b-aba"    role="tab" id="ab-regras" onclick="barAba('regras')"></button>
-    <button class="b-aba"    role="tab" id="ab-gente"  onclick="barAba('gente')"></button>
+  <?php // Cada separador tem endereço próprio (docs/auditoria-ui-ux.md,
+        // DENS-001) e é navegável pelo teclado como manda o padrão (A11Y-003).
+        // aria-controls e o tabindex rotativo vivem aqui, no HTML, e não são
+        // postos por JavaScript: quem lê a página com um leitor de ecrã antes
+        // de o JS correr encontra-os na mesma. ?>
+  <div class="b-abas" role="tablist" aria-label="Secções da montagem do bar">
+    <button class="b-aba on" role="tab" id="ab-menu"   aria-controls="pn-menu"
+            aria-selected="true"  tabindex="0"  onclick="barAba('menu')"></button>
+    <button class="b-aba"    role="tab" id="ab-gav"    aria-controls="pn-gav"
+            aria-selected="false" tabindex="-1" onclick="barAba('gav')"></button>
+    <button class="b-aba"    role="tab" id="ab-mesas"  aria-controls="pn-mesas"
+            aria-selected="false" tabindex="-1" onclick="barAba('mesas')"></button>
+    <button class="b-aba"    role="tab" id="ab-regras" aria-controls="pn-regras"
+            aria-selected="false" tabindex="-1" onclick="barAba('regras')"></button>
+    <button class="b-aba"    role="tab" id="ab-gente"  aria-controls="pn-gente"
+            aria-selected="false" tabindex="-1" onclick="barAba('gente')"></button>
   </div>
 
-  <section id="pn-menu">
+  <section id="pn-menu" role="tabpanel" aria-labelledby="ab-menu" tabindex="0">
     <!-- A barra de ferramentas: procurar, filtrar por gaveta, filtrar por
          estado, e a acção principal à direita. O conteúdo desenha-se em JS
          porque as gavetas são dados. -->
@@ -92,7 +102,7 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
     <div class="b-grelha" id="b-grelha"></div>
   </section>
 
-  <section id="pn-gav" hidden>
+  <section id="pn-gav" role="tabpanel" aria-labelledby="ab-gav" tabindex="0" hidden>
     <div class="b-fer" id="b-fer-gav"></div>
     <div class="b-cats" id="b-cats"></div>
     <p class="dica">As gavetas arrumam o menu e dão-lhe cor — e é a cor que o
@@ -100,7 +110,7 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
       elas ficam sem gaveta.</p>
   </section>
 
-  <section id="pn-mesas" hidden>
+  <section id="pn-mesas" role="tabpanel" aria-labelledby="ab-mesas" tabindex="0" hidden>
     <p class="dica">Uma folha por mesa, para recortar e pousar. É por aqui que os
       convidados entram no menu — não há link no convite, porque um convite é de
       uma família e o bar precisa de saber qual das pessoas está a pedir.</p>
@@ -118,7 +128,7 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
         // O painel é desenhado por assets/bar-regras.js, e o MESMO painel é
         // montado na copa. Aqui fica só o sítio onde ele entra: duas cópias
         // parecidas do mesmo ecrã foi como as regras começaram a divergir. ?>
-  <section id="pn-regras" hidden>
+  <section id="pn-regras" role="tabpanel" aria-labelledby="ab-regras" tabindex="0" hidden>
     <div id="pn-regras-cx"></div>
   </section>
 
@@ -126,7 +136,7 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
         // Os noivos criam e tiram as contas do bar sem passar pela Gestão, e
         // entram nos dois postos com todos os recursos: são a casa, e a casa
         // tem de poder servir uma mesa quando falta alguém. ?>
-  <section id="pn-gente" hidden>
+  <section id="pn-gente" role="tabpanel" aria-labelledby="ab-gente" tabindex="0" hidden>
     <div class="b-postos" id="b-postos"></div>
     <div class="b-fer" id="b-fer-gente"></div>
     <div class="b-cartao-claro" id="b-equipa"></div>

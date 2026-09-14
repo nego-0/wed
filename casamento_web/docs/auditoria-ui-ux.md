@@ -647,7 +647,7 @@ de chegada)
 | 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | ✅ nas três listas principais |
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | ✅ (sem prova social: ver §25) |
 | 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | ✅ |
-| 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | Por fazer |
+| 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | ✅ |
 | 8 · Tom | Contagem como marco, momento de chegada | EMO-001 EMO-002 | Por fazer |
 
 ---
@@ -1143,6 +1143,59 @@ ainda não há trabalho.
 
 Provas: `tests/chk_tira_modulos.js` (17 verificações) e a segunda metade de
 `tests/chk_rsvp_perguntas.js`.
+
+### Fase 7 — densidade e separadores (DENS-001, A11Y-003)
+
+**DENS-001 — cada separador com endereço próprio.** O `bar.php` é a página mais
+densa da casa (a auditoria contou-lhe 225 acções) e vive em cinco separadores.
+Nenhum deles tinha endereço. As consequências, por ordem de irritação:
+
+1. Não se podia guardar nos favoritos nem mandar a alguém. «Vai às Regras do
+   Bar» era uma instrução, não um link.
+2. O botão de voltar saía da **página inteira** em vez de recuar um separador —
+   quem estava nas Regras e carregava em «voltar» ia parar ao painel.
+3. Ao recarregar caía-se sempre no menu, por muito que o trabalho estivesse
+   noutro sítio.
+
+Ficou `?aba=` com `history.pushState`: o endereço muda, o conteúdo não
+recarrega, o «voltar» anda separador a separador, e um nome que não exista cai
+no menu em vez de deixar a página em branco. O menu fica **sem** `?aba=` para o
+endereço da página se manter limpo para quem só a abre.
+
+**A11Y-003 — um `role="tablist"` é uma promessa.** Estava metade feita: o papel
+lá estava, o comportamento não. Quem ouve «separador 1 de 5» anunciado espera
+que as setas andem e que o Tab atravesse o grupo de uma vez — e carregava nas
+setas sem que nada acontecesse. Uma promessa por cumprir é pior do que não a
+fazer.
+
+| | Antes | Depois |
+| --- | --- | --- |
+| `aria-controls` no separador | — | ✅ |
+| `role="tabpanel"` + `aria-labelledby` | — | ✅ |
+| Painel capaz de receber o foco | — | ✅ |
+| Tabindex rotativo (uma paragem, não cinco) | — | ✅ |
+| Setas, Home e End | — | ✅ |
+| O foco segue a escolha | — | ✅ |
+
+Aplicado nos dois sítios que usam o padrão — `bar.php` e `digital.php` —, e não
+só no primeiro: meio padrão aplicado é exactamente a promessa por cumprir de
+que se falava acima.
+
+**Dois defeitos meus, e os dois só apareceram a correr.** O primeiro: pus a
+chamada de arranque (`barAba(abaDoEndereco())`) junto da definição da função, a
+meio do ficheiro. Um `?aba=gente` no endereço chamava então `pintarEquipa()`
+**antes** de `POSTOS` existir — é um `var`, portanto já declarado e ainda vazio
+— e a página abria com um erro em vez da equipa. O mesmo valia para as Regras,
+cujo painel só se liga no fim do ficheiro. A chamada passou para o fim.
+
+O segundo é mais interessante porque **não era um defeito**: a `chk_bar.js`
+começou a falhar. Carrega em `#ab-mesas` a meio e mais abaixo fazia `reload()`
+à espera de voltar ao menu. Com endereço próprio, o reload reabre as Mesas — a
+grelha das bebidas fica escondida e o botão da fotografia fora de alcance. Era
+a funcionalidade a funcionar e a prova a contar com o contrário; corrigiu-se a
+prova, navegando como uma pessoa navegaria.
+
+Provas: `tests/chk_abas.js` (22 verificações).
 
 **O que ficou por fazer, e porquê:**
 

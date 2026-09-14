@@ -427,6 +427,9 @@ function pecaAba(qual){
     const on = b.id === 'ab-' + qual;
     b.classList.toggle('on', on);
     b.setAttribute('aria-selected', on ? 'true' : 'false');
+    // Tabindex rotativo (docs/auditoria-ui-ux.md, A11Y-003): num tablist, o
+    // Tab entra e sai do grupo inteiro e são as setas que andam lá dentro.
+    b.tabIndex = on ? 0 : -1;
   });
   document.getElementById('pn-estado').hidden = qual !== 'estado';
   document.getElementById('pn-fotos').hidden  = qual !== 'fotos';
@@ -434,6 +437,31 @@ function pecaAba(qual){
   // largura toda — quatro secções espremidas em 300px eram uma escada.
   document.querySelector('.peca').classList.toggle('fotos', qual === 'fotos');
 }
+
+// As setas andam entre separadores, Home e End vão aos extremos. É o que um
+// `role="tablist"` promete a quem o ouve anunciado — e sem isto o leitor de
+// ecrã dizia «separador 1 de 2» e as setas não faziam nada.
+(function(){
+  const tira = document.querySelector('.peca-abas'); if (!tira) return;
+  const abas = ['estado', 'fotos'];
+  document.querySelectorAll('.p-aba').forEach(b => {
+    b.tabIndex = b.classList.contains('on') ? 0 : -1;
+  });
+  tira.addEventListener('keydown', ev => {
+    const aqui = abas.findIndex(a => document.getElementById('ab-' + a).classList.contains('on'));
+    let ir = null;
+    if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') ir = (aqui + 1) % abas.length;
+    else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') ir = (aqui - 1 + abas.length) % abas.length;
+    else if (ev.key === 'Home') ir = 0;
+    else if (ev.key === 'End')  ir = abas.length - 1;
+    if (ir === null) return;
+    ev.preventDefault();
+    pecaAba(abas[ir]);
+    // O foco segue a escolha: um separador que se acende sem levar o foco
+    // deixa quem navega por teclado a ouvir um sítio e a estar noutro.
+    document.getElementById('ab-' + abas[ir]).focus();
+  });
+})();
 
 // ============================================================
 // As fotografias do convite
