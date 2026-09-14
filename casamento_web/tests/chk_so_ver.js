@@ -171,7 +171,10 @@ const rotulos = (p, sel) => p.$$eval(sel, els => els.map(e =>
   // um arrasto partido que não estava partido. Falhava uma corrida em cada
   // duas. Mirar o centro da tela mantém o gesto sempre dentro do que é
   // possível, seja onde for que a mesa esteja.
-  const tela = await sup.locator('#tab-body, .planta-cartao').first().boundingBox();
+  // #planta é a TELA. À primeira apontei para #tab-body, que é o painel das
+  // abas ao lado — o arrasto ia na direcção errada e empurrava a mesa contra a
+  // parede. Passou três vezes por sorte e falhou à quarta.
+  const tela = await sup.locator('#planta').boundingBox();
   const mx = bb.x + bb.width / 2, my = bb.y + bb.height / 2;
   const alvoX = tela ? tela.x + tela.width / 2 : mx;
   const alvoY = tela ? tela.y + tela.height / 2 : my;
