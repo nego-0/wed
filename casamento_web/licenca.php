@@ -637,8 +637,45 @@ function desenharMontra(){
     // quer acrescentar, e um pacote — de preço fechado, com coisas que ele já
     // tem lá dentro — desmentia a promessa de que paga só a diferença.
     pacotes: !ativa,
-    sugerir: !ativa
+    sugerir: !ativa,
+    aoMudar: vestirConta
   });
+  vestirConta(Planos.escolha());
+}
+
+/**
+ * A conta do funil leva a acção e a promessa (docs/auditoria-ui-ux.md,
+ * CONV-001 e CONV-002).
+ *
+ * O resumo já acompanhava a pessoa pela lista abaixo, mas era só um número:
+ * quem decidia a meio tinha de rolar até ao fim para encontrar o botão, e a
+ * página tem 6575px num telemóvel. O botão passa a estar onde a decisão se
+ * toma. Não substitui o de baixo — esse vem depois da caixa de aceitação, que
+ * é a ordem que a lei pede —, e ambos passam pelo mesmo `submeter()`, que
+ * leva a pessoa à caixa quando ela ainda não está marcada.
+ *
+ * E a promessa diz o que É VERDADE e o código cumpre: isto é um pedido que vai
+ * a decisão, não uma compra; enquanto estiver à espera pode ser cancelado
+ * (lic_pedido_cancelar) ou alterado. O que trava um funil como este não é o
+ * preço — é não se saber se há volta atrás.
+ */
+function vestirConta(c){
+  const cx = document.getElementById('pl-acoes');
+  if (!cx) return;
+  const ativa = LIC.casamento.licenca_estado === 'ativa';
+  const rot = ativa ? 'Pedir reforço' : 'Pedir licença';
+  cx.innerHTML = (c && c.vazio) || SO_VER ? ''
+    : '<button class="btn btn-ouro" id="lic-pedir-conta" onclick="submeter()">'
+      + rot + '</button>';
+  const conta = document.querySelector('.pl-conta');
+  if (conta && !conta.querySelector('.pl-conta-promessa')) {
+    const p = document.createElement('div');
+    p.className = 'pl-conta-promessa';
+    p.innerHTML = '<span class="ico" data-ico="volta"></span>'
+      + '<span>Isto é um pedido, não um pagamento: vai a decisão da '
+      + 'administração e pode ser alterado ou cancelado enquanto espera.</span>';
+    conta.appendChild(p);
+  }
 }
 
 function alterarPedido(){
@@ -648,7 +685,8 @@ function alterarPedido(){
   // (é um pedido inicial), e só os módulos se já há (é um reforço).
   const temLic = LIC.casamento.licenca_estado === 'ativa';
   Planos.montar('lic-planos', LIC.catalogo,
-                { tenho: LIC.modulos, moeda: LIC.moeda, pacotes: !temLic, sugerir: false });
+                { tenho: LIC.modulos, moeda: LIC.moeda, pacotes: !temLic, sugerir: false,
+                  aoMudar: vestirConta });
   Planos.repor(p.pacote_id ? +p.pacote_id : 0, p.itens.map(i => +i.escalao_id));
   document.getElementById('lic-nota').value = p.nota_casal || '';
   document.getElementById('lic-aceite').checked = false;

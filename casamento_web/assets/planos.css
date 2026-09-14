@@ -221,8 +221,16 @@
   font-variant-numeric:tabular-nums; margin-top:.3rem; }
 .pl-riscado + .pl-esc-preco{ margin-top:.05rem; }
 
-/* ---------- a conta, sempre à vista ---------- */
-.pl-conta{ position:sticky; bottom:0; z-index:5; margin-top:1.6rem;
+/* ---------- a conta, sempre à vista ----------
+   O fundo a que ela se cola é o fundo LIVRE do ecrã, e não o zero: a barra de
+   navegação do telemóvel é fixa e estava a enterrar 57 dos seus 111px — o
+   total e a linha que diz o que se leva. Foi a barra de baixo (NAV-001) que
+   criou isto, e não se via em fotografia nenhuma: só medindo a meio da
+   rolagem, que é onde a conta está agarrada.
+   A altura é MEDIDA (parcial-cabecalho.php) e não assumida: há páginas que
+   fazem o seu próprio cabeçalho e não têm barra nenhuma — o registo é uma —,
+   e nessas isto fica a zero e a conta não se levanta à toa. */
+.pl-conta{ position:sticky; bottom:var(--nav-baixo-alt, 0px); z-index:5; margin-top:1.6rem;
   background:var(--card); border:1.5px solid var(--gold-soft); border-radius:var(--radius);
   padding:1.1rem 1.3rem; box-shadow:0 -6px 24px rgba(0,0,0,.09);
   display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
@@ -232,6 +240,17 @@
   font-variant-numeric:tabular-nums; }
 .pl-conta-det{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.2rem; line-height:1.45; }
 .pl-conta-poupa{ color:var(--ok); font-weight:700; }
+/* A acção vive DENTRO da conta (CONV-001): o resumo que acompanha a pessoa
+   pelo funil abaixo não pode ser só um número — quem decide a meio da lista
+   tinha de rolar até ao fim para encontrar o botão. */
+#pl-acoes:empty{ display:none; }
+#pl-acoes .btn{ white-space:nowrap; }
+/* A promessa é uma linha inteira: a conta é uma caixa `flex` que quebra, e sem
+   isto ela ia sentar-se ao lado do botão e ficar com 40px de largura. */
+.pl-conta-promessa{ width:100%; font-size:var(--t-apoio); color:var(--ink-fraco);
+  margin-top:.45rem; display:flex; align-items:flex-start; gap:.4rem; line-height:1.45; }
+.pl-conta-promessa .ico{ width:15px; height:15px; flex:none; opacity:.7; }
+
 
 /* ---------- políticas ---------- */
 .pl-aceite{ display:flex; gap:.6rem; align-items:flex-start; margin-top:1.3rem;

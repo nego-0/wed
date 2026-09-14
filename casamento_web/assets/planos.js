@@ -373,6 +373,38 @@
     return h + '</div>';
   }
 
+  /**
+   * Os módulos escolhidos, pelo nome (docs/auditoria-ui-ux.md, CONV-001).
+   *
+   * Dizia «3 módulo(s) à medida». Três quais? O resumo que acompanha a pessoa
+   * pelo funil abaixo tem de dizer o que ela está a levar — um número não se
+   * confere, e quem não consegue conferir o que escolheu não submete.
+   *
+   * O nome do módulo sozinho esconde o degrau, e é o degrau que custa dinheiro
+   * («Lista de convidados» não diz se são 80 ou 400). O nome do degrau sozinho
+   * é ambíguo: «Modelo padrão» é o do convite digital e o do impresso. Por
+   * isso o degrau vem entre parênteses, e só quando o módulo tem mais do que
+   * um e o nome dele não é já o nome do módulo — na planta de mesas são a
+   * mesma coisa, e «Planta de mesas (Planta de mesas)» é ruído.
+   *
+   * A partir do quarto conta-se o resto: uma lista de oito nomes numa barra de
+   * telemóvel deixa de ser um resumo.
+   */
+  function nomesEscolhidos(c) {
+    var nomes = [];
+    (c.escaloes || []).forEach(function (id) {
+      var e = escalao(id); if (!e) return;
+      var m = modulo(e.modulo);
+      var nomeMod = m && m.nome ? m.nome : e.modulo;
+      var varios = m && (m.escaloes || []).filter(function (x) { return x.ativo; }).length > 1;
+      nomes.push(varios && e.nome && e.nome !== nomeMod
+        ? nomeMod + ' (' + e.nome + ')' : nomeMod);
+    });
+    if (!nomes.length) return '0 módulos';
+    if (nomes.length <= 3) return esc(nomes.join(', '));
+    return esc(nomes.slice(0, 3).join(', ')) + ' e mais ' + (nomes.length - 3);
+  }
+
   function desenharConta() {
     var c = Planos.escolha();
     // Num reforço o total É a diferença: o que já se tem está desligado e fora
@@ -391,9 +423,9 @@
               ? ' · <span class="pl-conta-poupa">poupa ' + esc(moeda(comPrazo(p.poupanca)))
                 + '</span>' : '');
     } else if (COM_PACOTES) {
-      det = c.escaloes.length + ' módulo(s) à medida · ' + c.meses + ' meses';
+      det = nomesEscolhidos(c) + ' · ' + c.meses + ' meses';
     } else {
-      det = 'Junta ' + c.escaloes.length + ' módulo(s) à licença que já tem. '
+      det = 'Junta ' + nomesEscolhidos(c) + ' à licença que já tem. '
           + 'O que já está pago não volta a ser cobrado.';
     }
     return '<div class="pl-conta"><div class="pl-conta-txt">'

@@ -645,7 +645,7 @@ de chegada)
 | 2 · Acessibilidade base | Marcos, salto, região viva, anel de foco | A11Y-001 A11Y-002 SEO-001 FOCO-002 | ✅ nas páginas com cabeçalho partilhado |
 | 3 · Navegação móvel | Barra inferior, folha, cabeçalho, tema | NAV-001 UI-001 UI-002 | ✅ |
 | 4 · Estados e feedback | Esqueletos, vazios, uma primária | EST-001 CTA-001 | ✅ nas três listas principais |
-| 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | Por fazer |
+| 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | ✅ (sem prova social: ver §25) |
 | 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | Por fazer |
 | 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | Por fazer |
 | 8 · Tom | Contagem como marco, momento de chegada | EMO-001 EMO-002 | Por fazer |
@@ -960,8 +960,73 @@ só, e um esqueleto em cada uma era trabalho a fingir.
 
 Provas: `tests/chk_estados.js` (20 verificações).
 
+### Fase 5 — o funil da licença (CONV-001, CONV-002)
+
+**Uma avaria que esta auditoria fabricou, e que só se via a medir.** A conta do
+funil (`.pl-conta`) cola-se ao fundo do ecrã desde sempre — `position:sticky;
+bottom:0`. A barra de navegação que a **fase 3** pôs em baixo é fixa e ocupa
+esse fundo. Resultado: **57 dos 111 px** da conta ficavam enterrados por baixo
+dela — o total e a linha que diz o que se leva.
+
+Não aparecia em fotografia nenhuma. No fim da página a conta solta-se do fundo
+e sobe, e aí está tudo bem; ao chegar, ainda não está agarrada. Só a **meio da
+rolagem** — que é onde ela passa a maior parte do tempo — é que o defeito
+existe. É o mesmo erro de método que já me tinha custado o `chk_so_ver`:
+verificar no estado em que já passava.
+
+| Posição na rolagem | Tapado antes | Tapado depois |
+| --- | ---: | ---: |
+| 20 % | 57 px | **0 px** |
+| 35 % | 57 px | **0 px** |
+| 50 % | 57 px | **0 px** |
+| 65 % | 57 px | **0 px** |
+| 80 % | 0 px | 0 px |
+
+A altura da barra é **medida** e publicada em `--nav-baixo-alt`
+(`parcial-cabecalho.php`), e não assumida em 56 px: há páginas que fazem o seu
+próprio cabeçalho e não têm barra nenhuma — o `registo.php` é uma —, e nessas
+a variável fica a `0px` e a conta não se levanta à toa. No ecrã largo, o mesmo.
+
+**CONV-001 — o resumo acompanha e age.** Faltavam-lhe duas coisas:
+
+- *Dizia um número, não um nome.* «3 módulo(s) à medida» — três quais? Um
+  número não se confere, e quem não consegue conferir o que escolheu não
+  submete. Passa a dizer `Lista de convidados (Até 200 convidados)`. O nome do
+  módulo sozinho esconde o degrau, e é o degrau que custa dinheiro; o nome do
+  degrau sozinho é ambíguo, porque «Modelo padrão» é o do convite digital **e**
+  o do impresso. Por isso vêm os dois — e o degrau só quando o módulo tem mais
+  do que um: «Planta de mesas (Planta de mesas)» seria ruído.
+- *Não tinha gesto.* A página tem **6 642 px** num telemóvel de 844. Quem
+  decidia a meio da lista tinha de rolar até ao fim para encontrar o botão.
+  O `#pl-acoes` — um sítio vazio que ninguém preenchia desde que foi escrito —
+  passa a levar «Pedir licença» / «Pedir reforço». Não substitui o de baixo:
+  esse vem **depois** da caixa de aceitação, que é a ordem que a lei pede, e
+  ambos passam pelo mesmo `submeter()`, que leva a pessoa à caixa quando ela
+  ainda não está marcada.
+
+**CONV-002 — reversibilidade, sim; prova social, não.** A conta passa a dizer,
+à vista: *«Isto é um pedido, não um pagamento: vai a decisão da administração e
+pode ser alterado ou cancelado enquanto espera.»* É verdade e o código
+cumpre-a — há `lic_pedido_cancelar` e há `alterarPedido()`. O que trava um
+funil destes não é o preço; é não se saber se há como desfazer.
+
+A outra metade do CONV-002 — **prova social** — **não foi feita, de propósito**.
+Escrever «centenas de casais confiam nesta casa» seria inventar, e a regra 1
+desta auditoria proíbe-o. A plataforma tem números reais (`$G['casamentos']`),
+mas mostrar a um casal quantos casamentos há na casa não é prova social: é
+dizer-lhe o tamanho do negócio de outra pessoa, e num negócio pequeno joga
+contra. Prova social honesta aqui precisaria de uma coisa que não existe:
+testemunhos pedidos e autorizados. Fica registado como **por fazer**, e não
+como feito.
+
+Provas: `tests/chk_funil.js` (19 verificações), num casamento criado de
+propósito com a licença mais baixa — a casa de exemplo tem tudo, e num
+casamento que já tem tudo não há nada para pedir.
+
 **O que ficou por fazer, e porquê:**
 
+- Prova social no funil (CONV-002, metade): precisa de testemunhos reais e
+  autorizados. Inventá-los está fora de questão.
 - As 4 páginas sem cabeçalho partilhado (`login`, `registo`, `copa`, `entregas`,
   `porteiro`) constroem o seu próprio topo e precisam do mesmo tratamento à mão.
 - `convite.php` ficou de fora da troca de cores: é a única página que não carrega

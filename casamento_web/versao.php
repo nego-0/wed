@@ -983,6 +983,18 @@ function correcoesEsperadas(): array {
          'modelos.php', 'const ESQ_MODELOS ='],
         ['Um vazio por causa de um filtro confessa-o, em vez de dizer que não há nada',
          'index.php', "EST.vazio('procurar', 'Nenhum convite com estes filtros',"],
+
+        // ---- O resumo do funil da licença (CONV-001 e CONV-002) ----
+        ['A altura da barra de baixo é medida, para quem se cola ao fundo a saber',
+         'parcial-cabecalho.php', "setProperty('--nav-baixo-alt'"],
+        ['E a conta do funil cola-se ao fundo LIVRE, não por baixo da barra',
+         'assets/planos.css', 'bottom:var(--nav-baixo-alt, 0px)'],
+        ['A conta diz o degrau que se leva, e não «3 módulo(s)»',
+         'assets/planos.js', 'function nomesEscolhidos(c) {'],
+        ['O gesto de pedir está na conta, onde a decisão se toma',
+         'licenca.php', 'function vestirConta(c){'],
+        ['E está à vista que um pedido se pode cancelar enquanto espera',
+         'assets/planos.css', '.pl-conta-promessa{'],
     ];
 }
 

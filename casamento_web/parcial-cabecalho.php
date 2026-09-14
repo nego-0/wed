@@ -268,6 +268,19 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     LONGO = Math.max(8, Math.round(h * 0.35));
   }
 
+  /* E a barra de baixo, pelo mesmo motivo: quem se cola ao fundo do ecrã tem
+     de saber quanto é que ela ocupa. Mede-se em vez de se assumir 56px — há
+     páginas que fazem o seu próprio cabeçalho e não têm barra nenhuma (o
+     registo é uma), e nessas isto fica a zero e nada se levanta à toa.
+     Foi esta barra que enterrou 57 dos 111px da conta do funil da licença por
+     baixo dela, e não se via em fotografia: só a meio da rolagem. */
+  function medirBaixo() {
+    var nb = document.querySelector('.nav-baixo');
+    var h = nb && getComputedStyle(nb).display !== 'none'
+          ? Math.round(nb.getBoundingClientRect().height) : 0;
+    document.documentElement.style.setProperty('--nav-baixo-alt', h + 'px');
+  }
+
   function ver() {
     marcado = false;
     var y = window.scrollY || document.documentElement.scrollTop || 0;
@@ -281,8 +294,9 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     marcado = true;
     requestAnimationFrame(ver);
   }, { passive: true });
-  window.addEventListener('resize', function () { medir(); }, { passive: true });
+  window.addEventListener('resize', function () { medir(); medirBaixo(); }, { passive: true });
   medir();
+  medirBaixo();
 })();
 </script>
 <script>
