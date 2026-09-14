@@ -123,7 +123,13 @@ const { confirmar } = require('./_janela');
 
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
-  await page.click('button:has-text("Histórico")');
+  // O Histórico deixou de estar na barra: é uma acção de uma vez por
+  // casamento, e passou para trás do «⋯» (docs/auditoria-ui-ux.md, CTA-001).
+  // Chegar-lhe é agora um gesto a mais, e é de propósito — a barra tem uma
+  // primária só, e não oito acções em fila com o mesmo peso.
+  await page.click('.btn-mais-acoes');
+  await page.waitForTimeout(250);
+  await page.click('#pop-mais button:has-text("Histórico")');
   await page.waitForTimeout(700);
   const modal = await page.evaluate(() => {
     const o = document.getElementById('ov-historico');
