@@ -648,7 +648,7 @@ de chegada)
 | 5 · Funil comercial | Resumo persistente, reversibilidade | CONV-001 CONV-002 | ✅ (sem prova social: ver §25) |
 | 6 · Gestão do casamento | RSVP alargado, prazo, lembretes | RSVP-001 RSVP-002 UX-010 | ✅ |
 | 7 · Densidade | `bar.php` em rotas; separadores | DENS-001 A11Y-003 | ✅ |
-| 8 · Tom | Contagem como marco, momento de chegada | EMO-001 EMO-002 | Por fazer |
+| 8 · Tom | Contagem como marco, momento de chegada | EMO-001 EMO-002 | ✅ |
 
 ---
 
@@ -1197,6 +1197,57 @@ prova, navegando como uma pessoa navegaria.
 
 Provas: `tests/chk_abas.js` (22 verificações).
 
+### Fase 8 — o tom (EMO-001, EMO-002)
+
+**EMO-001 — a contagem é um marco, não um cronómetro.** O cabeçalho mostrava
+`faltam 312 dias 07:14:22` e o relógio andava ao segundo, o ano inteiro, por
+cima do trabalho. A trezentos dias de distância isso não é uma contagem: é um
+relógio de bomba no canto do ecrã. A segunda que passou não muda decisão
+nenhuma — a essa distância planeia-se em semanas.
+
+Na semana da festa muda tudo: aí os segundos **são** a festa a chegar, e é isso
+que se quer ver. É o mesmo número com dois significados, e o que faz a
+diferença é a distância.
+
+| Distância | Antes | Depois |
+| --- | --- | --- |
+| 300 dias | `faltam 300 dias 07:14:22`, 1 escrita/segundo | `faltam 300 dias`, **0 escritas em 4 s** |
+| 3 dias | igual | `faltam 3 dias 03:36:21`, ao segundo |
+
+O ritmo do próprio relógio segue a mesma regra: uma volta por minuto longe da
+festa, uma por segundo na última semana. Estava a escrever no DOM 86 400 vezes
+por dia para mostrar um número que só muda à meia-noite.
+
+**EMO-002 — o momento em que a lista fecha.** Meses de trabalho — escrever a
+lista, mandar os convites, lembrar quem não respondeu — acabavam com um contador
+de pendentes a passar de 1 para 0. Sem nada. Este sítio é uma ferramenta de
+trabalho e faz bem em sê-lo, mas há um punhado de momentos num casamento que
+merecem ser ditos, e este é o maior deles.
+
+Passa a haver uma tira: *«A lista está fechada. Os 47 convites responderam —
+vêm 112 pessoas, e 8 não puderam vir.»* Duas decisões, e as duas por um motivo:
+
+- **A tira fica enquanto for verdade.** É o estado, e um estado que desaparece
+  obriga a ir confirmá-lo a outro lado.
+- **A festa é uma vez por pessoa**, guardada no browser de cada uma, com a
+  contagem de convites na chave (a lista que cresce e volta a fechar-se é um
+  momento novo). Repetida a cada visita deixava de ser um momento e passava a
+  ser um enfeite. E quem tem as animações desligadas não leva nenhuma — mas
+  ouve a notícia na região viva, porque é a notícia que importa.
+
+Nada pisca: o que pisca lê-se como avaria, e isto é o contrário de uma avaria.
+
+Provas: `tests/chk_tom.js` (21 verificações), num casamento criado de propósito
+— mexer na data e no estado do de exemplo mudava o que as outras provas lá
+encontram.
+
+**Uma marca de versão que passou a mentir.** O `versao.php` afirmava «a
+contagem ficou no lugar da data, **e conta ao segundo**», presa à linha
+`setInterval(todas, 1000)`. Deixou de ser verdade de propósito. Uma marca
+assim não se apaga nem se deixa ficar: reescreve-se para o que passou a ser
+verdade — «e abranda com a distância» —, senão o ficheiro que existe para
+travar regressões passa a guardar uma.
+
 **O que ficou por fazer, e porquê:**
 
 - Envio automático de lembretes: o produto não envia correio, e construir esse
@@ -1204,8 +1255,9 @@ Provas: `tests/chk_abas.js` (22 verificações).
   mesmo — saber a quem falta e a quem já se tocou.
 - Prova social no funil (CONV-002, metade): precisa de testemunhos reais e
   autorizados. Inventá-los está fora de questão.
-- As 4 páginas sem cabeçalho partilhado (`login`, `registo`, `copa`, `entregas`,
+- As 5 páginas sem cabeçalho partilhado (`login`, `registo`, `copa`, `entregas`,
   `porteiro`) constroem o seu próprio topo e precisam do mesmo tratamento à mão.
+  (Dizia «as 4» e listava cinco — contadas agora uma a uma.)
 - `convite.php` ficou de fora da troca de cores: é a única página que não carrega
   `estilo.css`, e um `var(--ink-fraco)` sem tokens por trás não é cinzento
   nenhum.
@@ -1213,6 +1265,37 @@ Provas: `tests/chk_abas.js` (22 verificações).
   um IIFE — o embrulho não lhe chega, e essas páginas anunciam só os erros.
 - As caixas de marcar (A11Y-004): `min-height` aumenta a caixa, não a área de
   toque.
+
+---
+
+## 26. As oito fases, em resumo
+
+| Fase | O que mudou | Provas |
+| --- | --- | --- |
+| 1 · Fundação | Cor, escala tipográfica, alvos de toque | contraste 118 → **0** falhas; 16 → **11** tamanhos; alvos pequenos 86 % → **18 %** |
+| 2 · Acessibilidade base | `<main>`, salto, região viva, anel de foco | `<main>` 5 → **10**/14; foco 1/22 → **22/22** no painel |
+| 3 · Navegação móvel | Barra inferior, folha, cabeçalho que encolhe | destinos à vista 3/12 → **5 + 8**; cabeçalho 198 → **36 px** |
+| 4 · Estados e feedback | Esqueletos, vazios, uma primária | painel 8 → **3** botões; salto do esqueleto **−3 px** |
+| 5 · Funil comercial | Conta acima da barra, com gesto e promessa | **57 px** enterrados → **0** |
+| 6 · Gestão | Perguntas do RSVP, prazo, lembretes, tira de módulos | esquema **v42** e **v43**; tira 296 → **154 px** |
+| 7 · Densidade | Separadores com endereço, e com teclado | 5 separadores, 5 endereços; setas, Home, End |
+| 8 · Tom | Contagem como marco, momento de chegada | **0** escritas em 4 s (eram 4) longe da festa |
+
+**O que a auditoria mudou em mim, a meio.** Três vezes a medição desmentiu-me
+— e é por isso que estas tabelas existem, em vez de adjectivos:
+
+1. A sonda de contraste lia `background-color` numa casa que pinta com
+   gradientes, e fabricou **98 falhas** que não existiam.
+2. Verifiquei uma correção no estado em que ela já passava (`chk_so_ver`), e
+   dei-a por boa três vezes seguidas.
+3. A primeira versão do esqueleto do painel *encolhia* 254 px ao chegar a
+   resposta — um salto disfarçado de cortesia, e eu tinha-o dado por feito
+   sem medir o antes e o depois.
+
+E duas vezes o trabalho de uma fase estragou o de outra: a barra de baixo (fase
+3) enterrou a conta do funil (corrigido na fase 5), e o endereço dos separadores
+(fase 7) partiu uma prova que contava com o contrário. Nenhuma das duas se via
+em fotografia — só a meio de um gesto.
 
 ---
 

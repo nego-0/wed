@@ -475,12 +475,43 @@ function contagemScript(): void {
     var ms = alvo - agora, dias = Math.floor(ms / 86400000);
     pre.textContent = dias === 1 ? 'falta' : 'faltam';
     n.textContent = dias >= 1 ? plural(dias, 'dia', 'dias') : '';
-    t.textContent = relogio(ms);
+    // O relógio só na última semana (docs/auditoria-ui-ux.md, EMO-001).
+    //
+    // A trezentos dias de distância, um cronómetro ao segundo não é uma
+    // contagem: é um relógio de bomba no canto do cabeçalho, a mexer-se o dia
+    // inteiro por cima do trabalho. E a segunda que passou não muda decisão
+    // nenhuma — a esta distância planeia-se em semanas.
+    //
+    // Na semana da festa muda tudo: aí os segundos são a festa a chegar, e é
+    // isso que se quer ver. É o mesmo número com dois significados, e o que
+    // faz a diferença é a distância.
+    t.textContent = dias < 7 ? relogio(ms) : '';
   }
 
   function todas(){ for (var i = 0; i < caixas.length; i++) pintar(caixas[i]); }
   todas();
-  setInterval(todas, 1000);
+
+  /* E o relógio da página também abranda com a distância.
+     Estava a escrever no DOM uma vez por segundo, todo o ano, para mostrar um
+     número que só muda à meia-noite. Longe da festa chega uma volta por
+     minuto — a contagem de dias continua certa, e o cabeçalho deixa de se
+     mexer por baixo dos olhos de quem está a trabalhar. */
+  var ritmoAtual = 0, temporizador = null;
+  function ritmo(){
+    var perto = caixas.some(function (cx) {
+      var p = (cx.dataset.dia || '').split('-'), h = (cx.dataset.hora || '00:00').split(':');
+      var alvo = new Date(+p[0], +p[1] - 1, +p[2], +h[0] || 0, +h[1] || 0, 0, 0);
+      var ms = alvo - new Date();
+      // A última semana, o próprio dia e o dia seguinte contam como «perto».
+      return ms < 7 * 86400000 && ms > -2 * 86400000;
+    });
+    var quero = perto ? 1000 : 60000;
+    if (quero === ritmoAtual) return;
+    ritmoAtual = quero;
+    if (temporizador) clearInterval(temporizador);
+    temporizador = setInterval(function(){ todas(); ritmo(); }, quero);
+  }
+  ritmo();
 })();
 </script>
 <?php

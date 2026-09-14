@@ -347,8 +347,11 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'function contagem('],
         ['E diz sempre de quem é a festa: casal e data no mesmo sítio, em toda a parte',
          'parcial-cabecalho.php', 'topo-casal'],
-        ['A contagem ficou no lugar da data, e conta ao segundo',
-         'parcial-cabecalho.php', 'setInterval(todas, 1000)'],
+        // Esta dizia «e conta ao segundo». Deixou de ser verdade, e de
+        // propósito: ao segundo só na semana da festa (EMO-001). Uma marca que
+        // continuasse a afirmar o contrário passava a guardar uma mentira.
+        ['A contagem ficou no lugar da data, e abranda com a distância',
+         'parcial-cabecalho.php', 'var quero = perto ? 1000 : 60000;'],
         ['Os cartões do orçamento filtram as despesas e o calendário',
          'assets/orcamento.js', 'window.orcFiltrarEstado'],
         ['E o que falta pagar desconta as prestações já liquidadas, na lista como no cartão',
@@ -1041,6 +1044,16 @@ function correcoesEsperadas(): array {
          'assets/bar-montagem.js', "if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown')"],
         ['No convite digital, o mesmo — meio padrão é pior do que nenhum',
          'digital.php', "const tira = document.querySelector('.peca-abas'); if (!tira) return;"],
+
+        // ---- O tom (EMO-001 e EMO-002) ----
+        ['O cronómetro ao segundo só na semana da festa',
+         'parcial-cabecalho.php', "t.textContent = dias < 7 ? relogio(ms) : '';"],
+        ['E quando o último convite responde, isso diz-se',
+         'index.php', 'function momentoDeChegada(s){'],
+        ['A tira fica enquanto for verdade, e a festa é uma vez por pessoa',
+         'index.php', "const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + total;"],
+        ['Quem desligou as animações não leva festa nenhuma',
+         'index.php', '.chegada.festa, .chegada.festa .ch-ico{ animation:none; }'],
     ];
 }
 

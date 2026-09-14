@@ -340,6 +340,27 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                      background:var(--cream); border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
   .vazio-hist{ color:var(--ink-fraco); text-align:center; padding:1.4rem; }
 
+  /* O momento de chegada (docs/auditoria-ui-ux.md, EMO-002).
+     Dourado e sóbrio: isto é uma boa notícia, não um alarme — e a página em
+     que ela aparece é a mesma onde se trabalha todos os dias. */
+  .chegada{ display:flex; align-items:center; gap:.8rem;
+            background:linear-gradient(135deg, var(--gold-pale), var(--cream));
+            border:1px solid var(--gold-soft); border-radius:14px; padding:.9rem 1.15rem;
+            color:var(--ink); font-size:var(--t-denso); line-height:1.5; }
+  .chegada b{ font-family:var(--serif); font-size:var(--t-sub); font-weight:400;
+              display:block; margin-bottom:.1rem; }
+  .ch-ico{ width:26px; height:26px; flex:none; color:var(--gold); }
+  .ch-ico svg{ width:26px; height:26px; }
+  /* A festa é uma vez por pessoa: entra devagar e fica. Nada de piscar — o que
+     pisca lê-se como avaria, e isto é o contrário de uma avaria. */
+  .chegada.festa{ animation:ch-entra .7s cubic-bezier(.2,.8,.2,1) both; }
+  .chegada.festa .ch-ico{ animation:ch-brilha 1.6s ease-out .3s 2; }
+  @keyframes ch-entra{ from{ opacity:0; transform:translateY(-8px) } to{ opacity:1; transform:none } }
+  @keyframes ch-brilha{ 0%,100%{ transform:none } 30%{ transform:scale(1.18) rotate(-6deg) } }
+  @media (prefers-reduced-motion:reduce){
+    .chegada.festa, .chegada.festa .ch-ico{ animation:none; }
+  }
+
   /* Onde vai cada módulo (docs/auditoria-ui-ux.md, UX-010).
      Um cartão por módulo da licença, com a conta e uma barra fina. Clica-se e
      vai-se ao sítio onde o trabalho se faz: uma tira que só informa obriga a
@@ -471,6 +492,11 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   <?php endif; ?>
 
   <!-- PROGRESSO DE CAPACIDADE -->
+  <!-- O momento em que o último convite responde (EMO-002). Fica enquanto for
+       verdade: é o estado, e um estado que desaparece obriga a ir confirmá-lo
+       a outro lado. -->
+  <div id="chegada" class="chegada mb-4" hidden></div>
+
   <div id="progresso" class="progresso-cap mb-4"></div>
 
   <!-- ONDE VAI CADA MÓDULO (docs/auditoria-ui-ux.md, UX-010).
@@ -698,6 +724,10 @@ const BASE = <?= json_encode(enderecoPublico()) ?>;
 const CASAL = <?= json_encode($CAS['casal']) ?>;
 const DATA_EXT = <?= json_encode($dataExt) ?>;
 window.CSRF = <?= json_encode(csrfToken()) ?>;
+// Qual é o casamento aberto. O momento de chegada (EMO-002) guarda-se por
+// casamento: quem responde pela casa entra em vários, e o momento de um não
+// pode ficar dado como visto no outro.
+window.CASAMENTO_ID = <?= (int)casamentoAtual() ?>;
 // Quantas linhas a primeira página vai ter. O servidor já sabe a conta ($12),
 // por isso o esqueleto pode ter o número CERTO de barras em vez de um palpite:
 // com um palpite, um casamento de dois convites via 368px de barras a encolher
@@ -810,6 +840,7 @@ const CARTOES_BASE = 4;
 
 function renderStats(s){
   renderProgresso(s);
+  momentoDeChegada(s);
   const e=filtroEstado, t=filtroTipo, l=filtroLado;
   const limpo = !e && !t && !l && !filtroImpresso && !filtroMesa && !filtroGenero && !filtroBrinde && !$('busca').value;
   const cartoes = [
@@ -861,6 +892,50 @@ function alternarStats(){ STATS_ABERTO = !STATS_ABERTO; carregar(); }
 
 // Barra de progresso: preenchimento do número de convidados face à capacidade
 let ULTIMAS_STATS = null;
+/**
+ * O momento em que o último convite responde (docs/auditoria-ui-ux.md, EMO-002).
+ *
+ * Meses de trabalho — escrever a lista, mandar os convites, lembrar quem não
+ * respondeu — acabavam com um contador de pendentes a passar de 1 para 0. Sem
+ * nada. O sítio onde isto se faz é uma ferramenta de trabalho, e faz bem em
+ * sê-lo, mas há um punhado de momentos num casamento que merecem ser ditos, e
+ * este é o maior deles: a lista está fechada.
+ *
+ * A tira fica enquanto for verdade — é o estado, e um estado que desaparece
+ * obriga a ir confirmá-lo a outro lado. A festa (a animação e o anúncio) é uma
+ * vez por pessoa, guardada no browser de cada uma: repetida a cada visita
+ * deixava de ser um momento e passava a ser um enfeite.
+ */
+function momentoDeChegada(s){
+  const el = $('chegada'); if (!el) return;
+  const total = +s.convites || 0, pendentes = +s.pendentes || 0;
+  const fechada = total > 0 && pendentes === 0;
+  if (!fechada){ el.hidden = true; el.classList.remove('festa'); return; }
+
+  const pes = +s.pes_confirmados || 0, recusados = +s.recusados || 0;
+  el.innerHTML = '<span class="ch-ico" data-ico="brilho"></span>'
+    + '<span><b>A lista está fechada.</b> '
+    + (total === 1 ? 'O convite respondeu' : 'Os ' + total + ' convites responderam')
+    + (pes ? ' — ' + (pes === 1 ? 'vem 1 pessoa' : 'vêm ' + pes + ' pessoas') : '')
+    + (recusados ? ', e ' + (recusados === 1 ? '1 não pôde vir' : recusados + ' não puderam vir') : '')
+    + '.</span>';
+  el.hidden = false;
+
+  // Uma vez por pessoa, e por casamento: a chave leva o número de convites,
+  // para a lista que cresce e volta a fechar-se ser um momento novo.
+  const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + total;
+  let visto = true;
+  try { visto = localStorage.getItem(chave) === '1'; } catch (e) {}
+  if (visto) return;
+  try { localStorage.setItem(chave, '1'); } catch (e) {}
+  // A tira diz o estado sempre; a festa só quando há mesmo festa. Uma lista
+  // fechada em que ninguém pode vir é uma notícia — não é uma celebração, e
+  // animá-la seria a página a não perceber o que acabou de acontecer.
+  if (pes > 0) el.classList.add('festa');
+  // E quem não vê a animação ouve a notícia: é a notícia que importa.
+  if (window.anunciar) anunciar('A lista está fechada: todos os convites já responderam.');
+}
+
 function renderProgresso(s){
   ULTIMAS_STATS = s;
   const cap=+s.capacidade||CAP||0;
