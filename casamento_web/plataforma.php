@@ -239,7 +239,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   /* ---- Licenças: pedidos, preçário e pacotes ---- */
   .lic-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px;
     height:18px; padding:0 .3rem; margin-left:.4rem; border-radius:50px; background:var(--warn);
-    color:#fff; font-size:var(--t-apoio); font-weight:700; font-variant-numeric:tabular-nums; }
+    color:var(--sobre-warn); font-size:var(--t-apoio); font-weight:700; font-variant-numeric:tabular-nums; }
   .lic-grupo{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink);
     margin:1.6rem 0 .8rem; display:flex; align-items:center; gap:.55rem; }
   .lic-grupo:first-child{ margin-top:.2rem; }

@@ -947,15 +947,25 @@ function correcoesEsperadas(): array {
         ['E os 44px do menu valem só onde há dedo',
          'assets/estilo.css', '.topo .nav a{ min-height:44px; }'],
 
-        // ---- A navegação de baixo, no telemóvel (NAV-001) ----
-        ['No telemóvel a navegação está em baixo, ao alcance do polegar',
-         'parcial-cabecalho.php', '<nav class="nav-baixo'],
-        ['E o resto dos destinos vive numa folha que sobe',
-         'parcial-cabecalho.php', 'id="folha-mais"'],
-        ['A tira do cabeçalho recolhe quando a barra de baixo aparece',
+        // ---- A navegação no telemóvel (NAV-001) ----
+        // Foi uma barra fixa em baixo com uma folha para o resto. Resolvia o
+        // problema de encontrar os destinos e criava outro: era a TERCEIRA
+        // coisa a flutuar por cima da página e tapava 39 dos 44px do botão do
+        // tema. Passou a ser uma gaveta, que só existe quando se pede.
+        ['No telemóvel os destinos vivem numa gaveta lateral',
+         'parcial-cabecalho.php', '<nav class="gaveta'],
+        ['E a escolha do tema vive lá dentro, em vez de flutuar num canto',
+         'parcial-cabecalho.php', 'data-gv-tema='],
+        ['A tira do cabeçalho recolhe quando a gaveta a substitui',
          'assets/estilo.css', '.topo .nav{ display:none; }'],
         ['O fundo escondido não tapa a página — [hidden] perde para uma classe',
-         'assets/estilo.css', '.folha-fundo:not([hidden]){'],
+         'assets/estilo.css', '.gaveta-fundo:not([hidden]){'],
+        ['O foco fica preso na gaveta enquanto ela estiver aberta',
+         'parcial-cabecalho.php', 'if (e.shiftKey && document.activeElement === primeiro)'],
+        ['O cabeçalho mede-se depois de as fontes chegarem, e não antes',
+         'parcial-cabecalho.php', 'new ResizeObserver(function () { medir(); }).observe(topo);'],
+        ['A contagem nunca se perde: é o nome do casal que encolhe',
+         'assets/estilo.css', '.topo .sub.topo-casal .tc-nome{'],
         ['Há um sinal de reticências para dizer «e há mais»',
          'assets/icones.js', 'reticencias:'],
 

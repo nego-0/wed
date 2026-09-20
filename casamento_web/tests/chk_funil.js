@@ -3,13 +3,16 @@
 //
 // O que aqui se defende:
 //
-//   1. A conta não fica por baixo da barra de navegação. Esta é uma avaria que
-//      esta casa fabricou: a conta cola-se ao fundo do ecrã desde sempre, e a
-//      barra de baixo (NAV-001) passou a ocupar esse fundo. Ficavam 57 dos
-//      seus 111px enterrados — o total e a linha que diz o que se leva. Não se
-//      via em fotografia nenhuma: só a MEIO da rolagem, que é onde a conta
-//      está agarrada. No fim da página ela solta-se e sobe, e aí parece bem.
-//      Por isso mede-se a meio, e não onde já estava certo.
+//   1. Nada fica por cima da conta. Esta é uma avaria que esta casa fabricou e
+//      já desfez: a conta cola-se ao fundo do ecrã desde sempre, e a barra de
+//      navegação de baixo (NAV-001) passou a ocupar esse fundo — ficavam 57 dos
+//      seus 111px enterrados, o total e a linha que diz o que se leva. A barra
+//      saiu (é hoje uma gaveta lateral), mas a prova FICA e passou a perguntar
+//      ao ecrã quem está por cima, em vez de medir contra um elemento em
+//      concreto: assim apanha também a próxima coisa que alguém ponha a
+//      flutuar ali. Não se via em fotografia nenhuma: só a MEIO da rolagem,
+//      que é onde a conta está agarrada. No fim da página ela solta-se e sobe,
+//      e aí parece bem — por isso mede-se a meio, e não onde já estava certo.
 //   2. A conta diz o que se está a levar PELO NOME. Dizia «3 módulo(s)»; três
 //      quais? Um número não se confere, e quem não consegue conferir o que
 //      escolheu não submete.
@@ -74,10 +77,15 @@ const entrar = async (ctx, user, pass) => {
   await casal.goto(BASE + '/licenca.php', { waitUntil: 'networkidle' });
   await casal.waitForTimeout(2200);
 
+  // Isto media a altura da barra de navegação de baixo, que enterrava 57 dos
+  // 111px da conta. A barra saiu — os destinos passaram para uma gaveta
+  // lateral, que não tapa nada —, e a medida ficou: continua a medir-se o que
+  // estiver colado ao fundo em vez de se assumir um número. A zero quer dizer
+  // «não há nada em baixo», que é o estado certo.
   const medida = await casal.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--nav-baixo-alt').trim());
-  ok(/^\d+px$/.test(medida) && parseInt(medida, 10) > 40,
-     'a altura da barra de baixo é medida, e não assumida: ' + medida);
+  ok(medida === '0px',
+     'nada está colado ao fundo do ecrã, e a conta sabe-o: ' + medida);
 
   // Escolher alguma coisa, para haver conta e haver gesto.
   const escolha = await casal.evaluate(() => {
@@ -94,23 +102,32 @@ const entrar = async (ctx, user, pass) => {
   // ---- a meio da rolagem, que é onde a conta está agarrada ----
   const alt = await casal.evaluate(() => document.body.scrollHeight);
   console.log('  (a página tem ' + alt + 'px num ecrã de 844px)');
-  let pior = null;
+  let pior = 0, quemTapa = '';
   for (const frac of [0.2, 0.3, 0.4, 0.5, 0.6]) {
     await casal.evaluate(y => scrollTo(0, y), Math.round(alt * frac));
     await casal.waitForTimeout(320);
+    // Pergunta-se ao ecrã quem está por cima do fundo da conta. É mais forte
+    // do que medir contra um elemento em concreto: apanha a barra de baixo que
+    // já não existe, e apanharia a próxima coisa que alguém pusesse a flutuar
+    // ali. O defeito original não se via em fotografia nenhuma — no fim da
+    // página a conta solta-se e sobe, e aí está tudo bem; só a MEIO da rolagem,
+    // que é onde ela passa o tempo, é que ficava enterrada.
     const m = await casal.evaluate(() => {
       const c = document.querySelector('.pl-conta');
-      const nb = document.querySelector('.nav-baixo');
-      if (!c || !nb) return null;
-      const r = c.getBoundingClientRect(), n = nb.getBoundingClientRect();
-      if (r.bottom <= 0 || r.top >= innerHeight) return { fora: true, tapada: 0 };
-      return { tapada: Math.max(0, Math.round(r.bottom - n.top)) };
+      if (!c) return null;
+      const r = c.getBoundingClientRect();
+      if (r.bottom <= 0 || r.top >= innerHeight) return { tapada: 0 };
+      const x = Math.round(r.left + r.width / 2);
+      const y = Math.round(Math.min(r.bottom - 6, innerHeight - 2));
+      const e = document.elementFromPoint(x, y);
+      const porCima = e && !c.contains(e) && e !== c ? (e.className || e.tagName) : '';
+      return { tapada: porCima ? 1 : 0, quem: String(porCima).slice(0, 30) };
     });
-    if (m && (!pior || m.tapada > pior)) pior = m.tapada;
+    if (m && m.tapada) { pior = m.tapada; quemTapa = m.quem; }
   }
   ok(pior === 0,
-     'a meio do funil, a conta não fica por baixo da barra de baixo: '
-     + pior + 'px enterrados');
+     'a meio do funil, nada fica por cima da conta'
+     + (pior ? ': ' + quemTapa : ''));
 
   const conta = await casal.evaluate(() => {
     const c = document.querySelector('.pl-conta');
@@ -181,7 +198,7 @@ const entrar = async (ctx, user, pass) => {
   const largo = await pc.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--nav-baixo-alt').trim());
   ok(largo === '0px',
-     'no ecrã largo não há barra de baixo, e a conta não se levanta à toa: ' + largo);
+     'e no ecrã largo também nada se cola ao fundo: ' + largo);
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));
   console.log(f ? `\n${f} verificação(ões) falharam` : '\nTudo certo.');

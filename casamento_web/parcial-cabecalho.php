@@ -126,7 +126,10 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     <div class="monograma"><?= escP($CAS['mono']) ?></div>
     <div class="topo-txt">
       <h1><?= escP($titulo) ?></h1>
-      <?php if ($sub !== ''): ?><div class="sub"><?= escP($sub) ?></div><?php endif; ?>
+      <?php // A frase de apoio leva o texto inteiro no `title`: no telemóvel ela
+            // é cortada a uma linha (ver .topo .sub no estilo.css), e o que se
+            // corta tem de ficar à mão de quem o quiser ler. ?>
+      <?php if ($sub !== ''): ?><div class="sub" title="<?= escP($sub) ?>"><?= escP($sub) ?></div><?php endif; ?>
       <?php
         // Quem é o casal e quanto falta — em todas as páginas, no mesmo sítio.
         // Andava misturado na linha de apoio de algumas (o painel, as mesas) e
@@ -138,10 +141,13 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
         // ao abrir a página é quanto falta. Continua à mão, no título da
         // contagem, para quem a for procurar.
         if (!$semCasamento && $dataDoEvento !== ''): ?>
-        <div class="sub topo-casal"><?= escP($CAS['casal']) ?>
+        <?php // O nome do casal num <span> seu para poder ENCOLHER sozinho: numa
+              // linha estreita é ele que se corta, e a contagem — que é o
+              // número que se vem cá ver — fica sempre inteira. ?>
+        <div class="sub topo-casal"><span class="tc-nome"><?= escP($CAS['casal']) ?></span>
           · <?php contagem($dataDoEvento, $horaDoEvento, !empty($opcoes['no_print'])); ?></div>
       <?php elseif (!$semCasamento): ?>
-        <div class="sub topo-casal"><?= escP($CAS['casal']) ?></div>
+        <div class="sub topo-casal"><span class="tc-nome"><?= escP($CAS['casal']) ?></span></div>
       <?php endif; ?>
       <?php
         // Quanto tempo de licença resta a este casamento — logo abaixo dos
@@ -170,76 +176,87 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
       <?php endforeach; ?>
       <a href="logout.php">Sair</a>
     </nav>
+    <?php // O puxador da gaveta. É um <button> e não um <a> de propósito: as
+          // provas lêem `header nav a` para saber o menu de cada página, e um
+          // link aqui dentro duplicava-lhes um destino que não existe. ?>
+    <button type="button" class="gaveta-bt<?= $semPapel ?>" id="gaveta-bt"
+            aria-expanded="false" aria-controls="gaveta" aria-label="Abrir o menu">
+      <span class="gv-tracos" aria-hidden="true"><i></i><i></i><i></i></span>
+    </button>
   </div>
 </header>
 <?php
-  // ---------- A navegação de baixo, no telemóvel ----------
+  // ---------- A gaveta lateral, no telemóvel ----------
   //
   // A tira do cabeçalho continua onde estava, e no ecrã largo é ela que manda.
   // Mas a 390px ela escondia 741px de si própria numa rolagem horizontal sem
-  // indício nenhum: três destinos visíveis em doze, e três quartos da aplicação
-  // por descobrir (docs/auditoria-ui-ux.md §8). Uma funcionalidade que não se
-  // encontra vale zero, por melhor que seja.
+  // indício nenhum: três destinos visíveis em doze, e três quartos da
+  // aplicação por descobrir (docs/auditoria-ui-ux.md §8).
   //
-  // Aqui em baixo ficam os destinos do trabalho de todos os dias, ao alcance do
-  // polegar e sempre à vista; o resto — administração, licença, contas — vai
-  // para uma folha que sobe quando se pede. A ordem não é a do menu de cima: é
-  // a do que o casal faz mais vezes.
+  // Esteve aqui, durante um tempo, uma barra fixa em baixo com quatro destinos
+  // e uma folha para o resto. Resolvia o problema de os encontrar e criava
+  // outro: era a TERCEIRA coisa a flutuar por cima da página, depois do
+  // cabeçalho fixo e da pastilha do tema — e tapava-lhe 39 dos 44px, com
+  // z-index 90 contra 75. Uma página com três camadas a pairar por cima já não
+  // é uma página: é um monte de barras com conteúdo a espreitar por entre elas.
   //
-  // Fica FORA do <header> de propósito. As provas lêem `header nav a` para
-  // saber o menu de uma página, e uma segunda cópia lá dentro duplicava-lhes
-  // todos os destinos.
-  $ordemBaixo = ['painel', 'mesas', 'convite', 'orcamento', 'bar', 'grafica', 'porta'];
-  // Rótulos curtos, só para a barra. «Convite digital» tem 15 caracteres e a
-  // coluna tem 78px: cortava-se a meio, e um rótulo cortado não é um rótulo.
-  // O nome por extenso continua no menu de cima e na folha, onde há largura.
-  $curtoDe = [
-    'convite' => 'Convite', 'grafica' => 'Impresso', 'plataforma' => 'Casamentos',
-  ];
+  // Agora há UMA gaveta, que só existe quando se pede. Traz os doze destinos
+  // por extenso (não há coluna de 78px a cortar «Convite digital» a meio), traz
+  // a escolha do tema — que deixou de ter de flutuar sozinha — e sai de cena
+  // assim que se escolhe. Com ela fechada, a vista principal não tem nada por
+  // cima a não ser o cabeçalho.
+  //
+  // O custo, dito em voz alta: cada destino ficou a um toque de distância a
+  // mais do que estava na barra. Em troca, a página inteira é da pessoa.
+  //
+  // Fica FORA do <header> de propósito, como a barra ficava: as provas lêem
+  // `header nav a` para saber o menu de uma página, e uma segunda cópia lá
+  // dentro duplicava-lhes todos os destinos.
   $icoDe = [
     'painel' => 'pessoas', 'mesas'   => 'mesa',   'grafica'    => 'carta',
     'convite'=> 'telemovel','porta'  => 'porta',  'bar'        => 'taca',
     'orcamento'=>'moeda',  'gestao'  => 'mala',   'licenca'    => 'chave',
     'plataforma'=>'anel',  'modelos' => 'documento',
   ];
-  // Até quatro: com cinco alvos numa barra de 390px, cada um fica com 78px e o
-  // rótulo deixa de caber sem cortar.
-  $naBarra = [];
-  foreach ($ordemBaixo as $k) {
-    if (count($naBarra) >= 4) break;
-    if (isset($itens[$k])) $naBarra[] = $k;
-  }
-  $naFolha = array_diff(array_keys($itens), $naBarra);
-  $ativoNaFolha = in_array($ativo, $naFolha, true);
+  $temasGaveta = function_exists('temasDisponiveis') ? temasDisponiveis() : [];
+  $amostrasGaveta = function_exists('temasAmostras') ? temasAmostras() : [];
 ?>
-<nav class="nav-baixo<?= $semPapel ?>" aria-label="Destinos principais">
-  <?php foreach ($naBarra as $k): [$url, $rotulo] = $itens[$k];
-        $eh = ($k === $ativo); ?>
-  <a href="<?= $url ?>" class="nb-item<?= $eh ? ' ativo' : '' ?>"<?= $eh ? ' aria-current="page"' : '' ?>>
-    <span class="nb-ico" data-ico="<?= $icoDe[$k] ?? 'ponto' ?>"></span>
-    <span class="nb-rot"><?= escP($curtoDe[$k] ?? $rotulo) ?></span>
-  </a>
-  <?php endforeach; ?>
-  <button type="button" class="nb-item nb-mais<?= $ativoNaFolha ? ' ativo' : '' ?>"
-          id="nb-mais" aria-expanded="false" aria-controls="folha-mais">
-    <span class="nb-ico" data-ico="reticencias"></span>
-    <span class="nb-rot">Mais</span>
-  </button>
-</nav>
-<div class="folha-fundo<?= $semPapel ?>" id="folha-fundo" hidden></div>
-<div class="folha-mais<?= $semPapel ?>" id="folha-mais" hidden
-     role="dialog" aria-modal="true" aria-labelledby="fm-tit">
-  <div class="fm-pega" aria-hidden="true"></div>
-  <h2 class="fm-tit" id="fm-tit">Mais</h2>
-  <div class="fm-lista">
-    <?php foreach ($naFolha as $k): [$url, $rotulo] = $itens[$k];
-          $eh = ($k === $ativo); ?>
-    <a href="<?= $url ?>"<?= $eh ? ' class="ativo" aria-current="page"' : '' ?>>
-      <span class="fm-ico" data-ico="<?= $icoDe[$k] ?? 'ponto' ?>"></span><?= escP($rotulo) ?></a>
-    <?php endforeach; ?>
-    <a href="logout.php" class="fm-sair"><span class="fm-ico" data-ico="porta"></span>Sair</a>
+<div class="gaveta-fundo<?= $semPapel ?>" id="gaveta-fundo" hidden></div>
+<nav class="gaveta<?= $semPapel ?>" id="gaveta" hidden
+     role="dialog" aria-modal="true" aria-labelledby="gv-tit">
+  <div class="gv-topo">
+    <h2 class="gv-tit" id="gv-tit">Ir para</h2>
+    <button type="button" class="gv-fechar" id="gv-fechar" aria-label="Fechar o menu">&times;</button>
   </div>
-</div>
+  <div class="gv-lista">
+    <?php foreach ($itens as $k => [$url, $rotulo]): $eh = ($k === $ativo); ?>
+    <a href="<?= $url ?>"<?= $eh ? ' class="ativo" aria-current="page"' : '' ?>>
+      <span class="gv-ico" data-ico="<?= $icoDe[$k] ?? 'ponto' ?>"></span><?= escP($rotulo) ?></a>
+    <?php endforeach; ?>
+    <a href="logout.php" class="gv-sair"><span class="gv-ico" data-ico="porta"></span>Sair</a>
+  </div>
+  <?php // O tema vive aqui dentro, e não a pairar num canto: era a pastilha
+        // que a barra de baixo tapava. Num ecrã largo continua no canto, onde
+        // não estorva ninguém. ?>
+  <?php if ($temasGaveta): ?>
+  <div class="gv-temas">
+    <h3 class="gv-sub">Tema visual</h3>
+    <?php foreach ($temasGaveta as $chave => $rot):
+      $c = $amostrasGaveta[$chave]['cores'] ?? ['#888', '#888', '#eee']; ?>
+    <button type="button" class="gv-tema" data-gv-tema="<?= escP($chave) ?>"
+            onclick="temaEscolher('<?= escP($chave) ?>'); gavetaMarcarTema();">
+      <span class="gv-tema-cores" aria-hidden="true"><i style="background:<?= escP($c[0]) ?>"></i><i
+        style="background:<?= escP($c[1]) ?>"></i><i style="background:<?= escP($c[2]) ?>"></i></span>
+      <span class="gv-tema-nome"><?= escP($rot) ?></span>
+      <span class="gv-tema-visto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+        stroke-linejoin="round"><path d="M20 6.5 9.2 17.3 4 12.1"/></svg></span>
+    </button>
+    <?php endforeach; ?>
+    <button type="button" class="gv-tema-repor" onclick="temaRepor()">Usar o tema da casa</button>
+  </div>
+  <?php endif; ?>
+</nav>
 <!-- A região viva por onde passam os avisos. A aplicação faz quase tudo sem
      recarregar — aprovar um pedido, guardar uma despesa, mudar uma mesa — e
      até aqui nenhuma dessas confirmações chegava a um leitor de ecrã: havia
@@ -268,14 +285,16 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     LONGO = Math.max(8, Math.round(h * 0.35));
   }
 
-  /* E a barra de baixo, pelo mesmo motivo: quem se cola ao fundo do ecrã tem
-     de saber quanto é que ela ocupa. Mede-se em vez de se assumir 56px — há
-     páginas que fazem o seu próprio cabeçalho e não têm barra nenhuma (o
-     registo é uma), e nessas isto fica a zero e nada se levanta à toa.
-     Foi esta barra que enterrou 57 dos 111px da conta do funil da licença por
-     baixo dela, e não se via em fotografia: só a meio da rolagem. */
+  /* Quanto ocupa o que está colado ao fundo do ecrã.
+     Nasceu por causa da barra de navegação de baixo, que enterrava 57 dos
+     111px da conta do funil da licença — e não se via em fotografia nenhuma,
+     só a meio da rolagem. A barra saiu (é agora uma gaveta lateral, que não
+     tapa nada), mas a medida FICA e continua a medir-se em vez de se assumir:
+     é assim que a conta do funil volta a colar-se ao fundo verdadeiro sem que
+     ninguém tenha de se lembrar de lá ir mudar um número. Se amanhã voltar a
+     haver alguma coisa colada ao fundo, basta dar-lhe esta classe. */
   function medirBaixo() {
-    var nb = document.querySelector('.nav-baixo');
+    var nb = document.querySelector('.barra-fundo');
     var h = nb && getComputedStyle(nb).display !== 'none'
           ? Math.round(nb.getBoundingClientRect().height) : 0;
     document.documentElement.style.setProperty('--nav-baixo-alt', h + 'px');
@@ -297,47 +316,92 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   window.addEventListener('resize', function () { medir(); medirBaixo(); }, { passive: true });
   medir();
   medirBaixo();
+
+  /* E volta a medir-se sempre que o cabeçalho mudar de altura.
+     Medir uma vez, ao correr o script, dava 111px para um cabeçalho que
+     acabava com 128: as fontes da casa ainda não tinham chegado e as linhas
+     eram mais baixas. O corpo guardava-lhe 111px de lugar e os 17px que
+     faltavam ficavam a tapar o princípio do conteúdo — a tira de suporte,
+     precisamente, que é um aviso. Um ResizeObserver não tem de adivinhar
+     quando é que a página assentou: sabe. */
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(function () { medir(); }).observe(topo);
+  } else {
+    // Sem observador, mede-se outra vez quando as fontes chegarem.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(medir);
+    setTimeout(medir, 400);
+  }
 })();
 </script>
 <script>
-/* A folha do «Mais»: sobe, e sai por onde se espera.
-   Um painel que só fecha no botão que o abriu obriga a apontar; este fecha no
-   fundo escurecido, no Escape, e ao escolher um destino. O foco entra na folha
-   e volta ao botão quando ela se fecha — sem isso, quem navega por teclado
-   ficava atrás dela, a tabular por uma página que já não vê. */
+/* A gaveta: abre-se quando se pede, e sai por onde se espera.
+   Um painel que só fecha no botão que o abriu obriga a apontar; esta fecha no
+   fundo escurecido, no Escape, e ao escolher um destino. O foco entra nela e
+   volta ao puxador quando ela se fecha — sem isso, quem navega por teclado
+   ficava atrás dela, a tabular por uma página que já não vê.
+   E o foco fica PRESO lá dentro enquanto estiver aberta: um diálogo modal que
+   deixa tabular para a página que está por baixo não é modal nenhum. */
 (function () {
   'use strict';
-  var bt = document.getElementById('nb-mais');
-  var folha = document.getElementById('folha-mais');
-  var fundo = document.getElementById('folha-fundo');
-  if (!bt || !folha || !fundo) return;
+  var bt = document.getElementById('gaveta-bt');
+  var gv = document.getElementById('gaveta');
+  var fundo = document.getElementById('gaveta-fundo');
+  if (!bt || !gv || !fundo) return;
 
+  function focaveis() {
+    return [].slice.call(gv.querySelectorAll('a[href], button:not([disabled])'))
+      .filter(function (e) { return e.offsetParent !== null; });
+  }
   function abrir() {
-    folha.hidden = false; fundo.hidden = false;
-    requestAnimationFrame(function () { folha.classList.add('aberta'); });
+    gv.hidden = false; fundo.hidden = false;
+    requestAnimationFrame(function () { gv.classList.add('aberta'); fundo.classList.add('aberto'); });
     bt.setAttribute('aria-expanded', 'true');
-    var primeiro = folha.querySelector('a');
-    if (primeiro) primeiro.focus();
+    // A página por baixo não rola enquanto a gaveta está aberta: rolar o que
+    // está atrás de um painel modal é mexer no que não se está a ver.
+    document.body.classList.add('com-gaveta');
+    gavetaMarcarTema();
+    var f = focaveis();
+    if (f.length) f[0].focus();
   }
   function fechar(devolverFoco) {
-    folha.classList.remove('aberta');
+    gv.classList.remove('aberta'); fundo.classList.remove('aberto');
     bt.setAttribute('aria-expanded', 'false');
-    // Espera-se a descida antes de a tirar da árvore, senão ela desaparece de
-    // repente em vez de sair. Quem pediu menos movimento não espera nada.
-    var lento = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 180;
-    setTimeout(function () { folha.hidden = true; fundo.hidden = true; }, lento);
+    document.body.classList.remove('com-gaveta');
+    // Espera-se a saída antes de a tirar da árvore, senão desaparece de repente
+    // em vez de sair. Quem pediu menos movimento não espera nada.
+    var lento = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 200;
+    setTimeout(function () { gv.hidden = true; fundo.hidden = true; }, lento);
     if (devolverFoco) bt.focus();
   }
   bt.addEventListener('click', function () {
     if (bt.getAttribute('aria-expanded') === 'true') fechar(true); else abrir();
   });
+  document.getElementById('gv-fechar').addEventListener('click', function () { fechar(true); });
   fundo.addEventListener('click', function () { fechar(false); });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !folha.hidden) { e.stopPropagation(); fechar(true); }
+    if (gv.hidden) return;
+    if (e.key === 'Escape') { e.stopPropagation(); fechar(true); return; }
+    if (e.key !== 'Tab') return;
+    var f = focaveis(); if (!f.length) return;
+    var primeiro = f[0], ultimo = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+    else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
   }, true);
-  folha.addEventListener('click', function (e) {
+  gv.addEventListener('click', function (e) {
     if (e.target.closest('a')) fechar(false);   // escolheu: a página vai mudar
   });
+
+  /* Qual dos temas está aceso. A escolha aplica-se de imediato (temaEscolher,
+     em parcial-seletor-tema.php) e a gaveta fica aberta: quem está a comparar
+     temas quer ver o efeito sem ter de reabrir o menu de cada vez. */
+  window.gavetaMarcarTema = function () {
+    var a = document.documentElement.getAttribute('data-tema') || 'niras';
+    [].forEach.call(gv.querySelectorAll('[data-gv-tema]'), function (b) {
+      var eu = b.getAttribute('data-gv-tema') === a;
+      b.classList.toggle('on', eu);
+      b.setAttribute('aria-pressed', eu ? 'true' : 'false');
+    });
+  };
 })();
 </script>
 <script>

@@ -42,7 +42,7 @@
      gradiente do cabeçalho — um gradiente falha sempre pelo lado mais claro. */
   --topo-txt:#E7F3DA; --topo-acento:#8FD455;
   --btn-a:#3C7517; --btn-b:#2F5C12; --btn-txt:#FFFFFF;
-  --warn:#7F5E0F; --warn-bg:#F6EDD6;
+  --warn:#7F5E0F; --warn-bg:#F6EDD6; --sobre-warn:#FFFFFF;
   --danger:#B4443C; --danger-bg:#F6E4E1;
   /* A tinta de segunda voz — datas, notas, o que acompanha sem mandar.
      Existe para que ninguém tenha de inventar um cinzento: um #8a8f88 solto
@@ -104,7 +104,7 @@
   --btn-a:#7A5427; --btn-b:#5E3F1C; --btn-txt:#FFFFFF;
   --blush:#E4CDBB; --text:#3B4A40;
   --ok:#2A6B43; --ok-bg:#e7f1ea;
-  --warn:#8A6320; --warn-bg:#f6ecd8;
+  --warn:#8A6320; --warn-bg:#f6ecd8; --sobre-warn:#FFFFFF;
   --danger:#a5473f; --danger-bg:#f4e2df;
   --ink-fraco:#57634F;
   --line:rgba(44,69,54,.12);
@@ -131,7 +131,7 @@
   --btn-a:#1F6FB2; --btn-b:#134C7C; --btn-txt:#FFFFFF;
   --blush:#D9E6F2; --text:#26384A;
   --ok:#2A6B43; --ok-bg:#e6f1ea;
-  --warn:#7F6119; --warn-bg:#f5edd6;
+  --warn:#7F6119; --warn-bg:#f5edd6; --sobre-warn:#FFFFFF;
   --danger:#b1443c; --danger-bg:#f6e3e0;
   --ink-fraco:#526273;
   --line:rgba(15,42,67,.13);
@@ -163,7 +163,7 @@
   --btn-a:#8AD24A; --btn-b:#6FBE33; --btn-txt:#080F16;
   --blush:#28353E; --text:#C6D2D8;
   --ok:#63C56E; --ok-bg:#173020;
-  --warn:#D9AC46; --warn-bg:#332811;
+  --warn:#D9AC46; --warn-bg:#332811; --sobre-warn:#080F16;
   --danger:#E58177; --danger-bg:#3A1F1C;
   --ink-fraco:#A8B8C4;
   --line:rgba(255,255,255,.13);
@@ -313,95 +313,146 @@ a:hover{ text-decoration:underline; }
   .topo{ transition:none; }
 }
 
-/* ---------- A navegação de baixo, no telemóvel ----------
-   No ecrã largo não existe: a tira do cabeçalho cabe e chega. A 390px é ela
-   que passa a mandar, e a tira de cima recolhe — duas navegações ao mesmo
-   tempo são duas respostas à mesma pergunta. */
-.nav-baixo{ display:none; }
-.folha-mais, .folha-fundo{ display:none; }
+/* ---------- A gaveta lateral, no telemóvel ----------
+   No ecrã largo não existe: a tira do cabeçalho cabe e chega. A 390px é a
+   gaveta que manda, e a tira de cima recolhe — duas navegações ao mesmo tempo
+   são duas respostas à mesma pergunta.
+
+   Abre pela DIREITA. Um telemóvel segura-se com uma mão e o polegar chega
+   melhor a esse lado; e o puxador fica no fim da linha do cabeçalho, que é
+   onde a mão já está. */
+.gaveta-bt{ display:none; }
+.gaveta, .gaveta-fundo{ display:none; }
 
 @media (max-width:760px){
-  /* A tira de cima sai de cena: os seus doze destinos passam a viver entre a
-     barra de baixo e a folha do «Mais». */
+  /* A tira de cima sai de cena: os seus doze destinos passam a viver na gaveta,
+     pelo nome inteiro — não há coluna de 78px a cortá-los a meio. */
   .topo .nav{ display:none; }
 
-  .nav-baixo{
-    display:flex; position:fixed; left:0; right:0; bottom:0; z-index:90;
-    background:var(--card); border-top:1px solid var(--line);
-    /* O tabuleiro do telemóvel come a última faixa do ecrã. Sem isto, o rótulo
-       do último destino fica por baixo da barra do sistema. */
-    padding-bottom:env(safe-area-inset-bottom, 0);
-    box-shadow:0 -2px 14px rgba(18,34,47,.07);
-  }
-  .nb-item{
-    flex:1 1 0; min-width:0; min-height:56px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-    padding:6px 2px; border:0; background:none; cursor:pointer;
-    color:var(--ink-fraco); text-decoration:none; font-family:var(--sans);
-  }
-  .nb-item:hover{ text-decoration:none; }
-  .nb-ico{ display:flex; width:22px; height:22px; }
-  .nb-ico svg{ width:22px; height:22px; }
-  .nb-rot{
-    font-size:var(--t-etiqueta); font-weight:600; line-height:1.1;
-    /* Um rótulo cortado a meio não é um rótulo. Cabe, ou encolhe a letra —
-       nunca sai da barra. */
-    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
-  .nb-item.ativo{ color:var(--gold-texto); }
-  .nb-item.ativo .nb-ico{ color:var(--gold-texto); }
+  /* ---- o cabeçalho deixa de comer um terço do ecrã ----
+     Medido a 390×844: 253px no painel e 272px nas mesas, no orçamento e na
+     gestão — quase um TERÇO do primeiro ecrã, antes de se ver o que quer que
+     seja. E variava com o tema sem ninguém ter escolhido isso: no Clássico
+     dava 174px, porque a serifa dele é estreita e a mesma frase cabe numa
+     linha; no NIRAS, no Azul e no Escuro a letra é mais larga, a frase quebra
+     em duas e o cabeçalho cresce 19px de cada vez. Um cabeçalho que muda de
+     altura conforme a fonte do tema não é uma decisão de desenho.
 
-  /* O conteúdo não pode acabar por baixo da barra. */
-  body{ padding-bottom:calc(56px + env(safe-area-inset-bottom, 0)); }
-  /* E o botão do tema sobe, que aquele canto passou a ser da navegação
-     (docs/auditoria-ui-ux.md, UI-001). */
-  .tema-fab{ bottom:calc(68px + env(safe-area-inset-bottom, 0)); }
+     A frase de apoio passa a UMA linha, ao tamanho de metadado, com o texto
+     inteiro no `title`. Ela diz o que a página é; o <h1> já o disse pelo nome,
+     e quem chega aqui pela segunda vez não a volta a ler.
 
-  /* ---- a folha ---- */
-  /* O `:not([hidden])` não é enfeite: `[hidden]` é um selector de atributo, e
-     perde para uma classe. Sem isto o fundo escurecido ficava com
-     display:block mesmo escondido — invisível, mas a tapar a página inteira e
-     a engolir todos os toques. */
-  .folha-fundo:not([hidden]){
+     Outras saídas consideradas, e porque não: tirá-la de todo no telemóvel
+     (perde-se a explicação para quem chega pela primeira vez); pô-la na
+     gaveta (ninguém abre uma gaveta para ler a legenda da página em que já
+     está); encurtar os textos à mão (são catorze frases escritas com cuidado,
+     e o problema voltava na décima quinta). */
+  .topo .sub{
+    font-size:var(--t-apoio); line-height:1.35;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .topo .sub.topo-casal{ font-size:var(--t-apoio); }
+  .topo h1{ font-size:var(--t-sub); }
+  /* Monograma, texto e puxador NUMA linha. A `.wrap` quebra por omissão, e o
+     puxador — que tem `margin-left:auto` — caía para uma linha só dele: 44px
+     de cabeçalho a mais, por causa de um botão de 44px que tinha onde caber ao
+     lado. Era isso que fazia a diferença entre os 112px do Clássico e os 229px
+     dos outros temas, e não a largura da letra como supus à primeira. */
+  .topo .wrap{ flex-wrap:nowrap; gap:.7rem; }
+  .monograma{ width:42px; height:42px; }
+
+  .gaveta-bt{
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-left:auto; flex:none; width:44px; height:44px;
+    border:1px solid var(--topo-txt); border-radius:12px;
+    background:transparent; color:var(--topo-txt); cursor:pointer;
+  }
+  .gv-tracos{ display:flex; flex-direction:column; gap:4px; width:18px; }
+  .gv-tracos i{ display:block; height:2px; border-radius:2px; background:currentColor; }
+
+  .gaveta-fundo:not([hidden]){
     display:block; position:fixed; inset:0; z-index:95;
-    background:rgba(12,25,37,.42);
+    background:rgba(12,25,37,.45); opacity:0; transition:opacity .2s ease-out;
   }
-  .folha-mais:not([hidden]){
-    display:block; position:fixed; left:0; right:0; bottom:0; z-index:96;
-    background:var(--card); border-radius:18px 18px 0 0;
-    padding:10px 14px calc(18px + env(safe-area-inset-bottom, 0));
-    box-shadow:0 -10px 34px rgba(18,34,47,.22);
-    max-height:76vh; overflow-y:auto;
-    transform:translateY(100%); transition:transform .18s ease-out;
+  .gaveta-fundo.aberto{ opacity:1; }
+
+  .gaveta:not([hidden]){
+    display:flex; flex-direction:column; position:fixed; z-index:96;
+    top:0; right:0; bottom:0; width:min(86vw, 330px);
+    background:var(--card); box-shadow:-10px 0 34px rgba(18,34,47,.28);
+    padding:10px 12px calc(14px + env(safe-area-inset-bottom, 0));
+    overflow-y:auto; overscroll-behavior:contain;
+    transform:translateX(100%); transition:transform .2s ease-out;
   }
-  .folha-mais.aberta{ transform:translateY(0); }
-  .fm-pega{
-    width:38px; height:4px; border-radius:3px; background:var(--line);
-    margin:2px auto 10px;
-  }
-  .fm-tit{
+  .gaveta.aberta{ transform:translateX(0); }
+
+  /* A página por baixo não rola enquanto a gaveta está aberta. */
+  body.com-gaveta{ overflow:hidden; }
+
+  .gv-topo{ display:flex; align-items:center; gap:.6rem; margin-bottom:6px; }
+  .gv-tit{
     font-family:var(--sans); font-size:var(--t-etiqueta); font-weight:600;
     text-transform:uppercase; letter-spacing:.1em; color:var(--ink-fraco);
-    margin:0 0 8px 4px;
+    margin:0 0 0 4px; flex:1;
   }
-  .fm-lista{ display:flex; flex-direction:column; }
-  .fm-lista a{
-    display:flex; align-items:center; gap:12px; min-height:52px;
+  .gv-fechar{
+    width:44px; height:44px; flex:none; border:0; background:none; cursor:pointer;
+    font-size:26px; line-height:1; color:var(--ink-fraco); border-radius:10px;
+  }
+  .gv-fechar:hover{ background:var(--cream); }
+
+  .gv-lista{ display:flex; flex-direction:column; }
+  .gv-lista a{
+    display:flex; align-items:center; gap:12px; min-height:48px;
     padding:6px 8px; border-radius:10px;
     color:var(--text); text-decoration:none; font-size:var(--t-corpo);
   }
-  .fm-lista a:hover{ background:var(--cream); text-decoration:none; }
-  .fm-lista a.ativo{ background:var(--gold-pale); color:var(--gold-texto); font-weight:600; }
-  .fm-ico{ display:flex; width:20px; height:20px; flex:none; color:var(--ink-fraco); }
-  .fm-ico svg{ width:20px; height:20px; }
-  .fm-lista a.ativo .fm-ico{ color:var(--gold-texto); }
-  .fm-sair{ margin-top:6px; border-top:1px solid var(--line); border-radius:0; }
+  .gv-lista a:hover{ background:var(--cream); text-decoration:none; }
+  .gv-lista a.ativo{ background:var(--gold-pale); color:var(--gold-texto); font-weight:600; }
+  .gv-ico{ display:flex; width:20px; height:20px; flex:none; color:var(--ink-fraco); }
+  .gv-ico svg{ width:20px; height:20px; }
+  .gv-lista a.ativo .gv-ico{ color:var(--gold-texto); }
+  .gv-sair{ margin-top:6px; border-top:1px solid var(--line); border-radius:0; }
+
+  /* ---- o tema, aqui dentro ----
+     Era uma pastilha a flutuar no canto de baixo, e a barra de navegação
+     tapava-lhe 39 dos 44px. Aqui tem espaço, tem nome e mostra as cores de
+     cada tema antes de se escolher. */
+  .gv-temas{ margin-top:14px; border-top:1px solid var(--line); padding-top:10px; }
+  .gv-sub{
+    font-family:var(--sans); font-size:var(--t-etiqueta); font-weight:600;
+    text-transform:uppercase; letter-spacing:.1em; color:var(--ink-fraco);
+    margin:0 0 6px 4px;
+  }
+  .gv-tema{
+    display:flex; align-items:center; gap:10px; width:100%; min-height:44px;
+    padding:4px 8px; border:0; border-radius:10px; background:none; cursor:pointer;
+    font-family:var(--sans); font-size:var(--t-denso); color:var(--text); text-align:left;
+  }
+  .gv-tema:hover{ background:var(--cream); }
+  .gv-tema.on{ background:var(--gold-pale); color:var(--gold-texto); font-weight:600; }
+  .gv-tema-cores{ display:flex; gap:3px; flex:none; }
+  .gv-tema-cores i{ width:11px; height:11px; border-radius:50%; border:1px solid var(--line); }
+  .gv-tema-nome{ flex:1; min-width:0; }
+  .gv-tema-visto{ width:16px; height:16px; flex:none; opacity:0; color:var(--gold-texto); }
+  .gv-tema-visto svg{ width:16px; height:16px; }
+  .gv-tema.on .gv-tema-visto{ opacity:1; }
+  .gv-tema-repor{
+    margin-top:4px; width:100%; min-height:44px; border:0; background:none; cursor:pointer;
+    font-family:var(--sans); font-size:var(--t-apoio); color:var(--ink-fraco);
+    text-align:left; padding:0 8px; border-radius:10px;
+  }
+  .gv-tema-repor:hover{ background:var(--cream); }
+
+  /* E a pastilha do tema deixa de flutuar: mudou-se para dentro da gaveta, e
+     duas portas para a mesma escolha eram uma a mais. */
+  .tema-fab{ display:none; }
 }
 @media (prefers-reduced-motion:reduce){
-  .folha-mais{ transition:none; }
+  .gaveta, .gaveta-fundo{ transition:none; }
 }
 @media print{
-  .nav-baixo, .folha-mais, .folha-fundo{ display:none !important; }
+  .gaveta, .gaveta-fundo, .gaveta-bt{ display:none !important; }
 }
 
 /* ---------- Layout ---------- */
@@ -640,10 +691,16 @@ summary:focus-visible,
      procura) caber no primeiro ecrã. */
   .topo{ padding:1.05rem 1.1rem; }
   .topo .wrap{ gap:.7rem; }
-  /* A contagem vai no fio do texto, com o nome do casal: num ecrã estreito a
-     linha dobra, e é a contagem que passa para a segunda — daí o nome do casal
-     poder quebrar sem levar a contagem consigo. */
-  .topo .sub.topo-casal{ white-space:normal; }
+  /* A contagem vai no fio do texto, com o nome do casal.
+     Deixava-se a linha DOBRAR, e a contagem passava para a segunda — o que
+     custava mais 18px de cabeçalho em todas as páginas. Agora não dobra: é o
+     NOME que encolhe com reticências, e a contagem, que é o número que se vem
+     cá ver, fica sempre inteira. */
+  .topo .sub.topo-casal{
+    display:flex; align-items:baseline; gap:.3rem; white-space:nowrap; overflow:hidden;
+  }
+  .topo .sub.topo-casal .tc-nome{ min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .topo .sub.topo-casal .contagem{ flex:none; }
   .contagem .cg-n{ font-size:var(--t-corpo); }
 }
 
