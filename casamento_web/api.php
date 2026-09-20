@@ -884,7 +884,7 @@ if ($acao === 'atendimento_guardar') {
         $st->bind_param('ss', $chave, $vl);
         @$st->execute();
     }
-    registar($conn, 'atendimento_guardar', $campos['nome'],
+    registarDaCasa($conn, 'atendimento_guardar', $campos['nome'],
              $campos['ativo'] === '1' ? 'ligado' : 'desligado');
     ok(['def' => atendimentoDefs($conn)]);
 }
@@ -917,7 +917,7 @@ if ($acao === 'atendimento_faq_guardar') {
         if (!$st->execute()) erro('Não foi possível criar a pergunta.');
         $id = $conn->insert_id;
     }
-    registar($conn, 'atendimento_pergunta', $per, 'id ' . $id);
+    registarDaCasa($conn, 'atendimento_pergunta', $per, 'id ' . $id);
     ok(['id' => $id, 'perguntas' => atendimentoFaq($conn, true)]);
 }
 
@@ -932,7 +932,7 @@ if ($acao === 'atendimento_faq_apagar') {
     $st = $conn->prepare("DELETE FROM {$P}atendimento_faq WHERE id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a pergunta.');
-    registar($conn, 'atendimento_pergunta_apagar', (string)$x['pergunta'], 'id ' . $id);
+    registarDaCasa($conn, 'atendimento_pergunta_apagar', (string)$x['pergunta'], 'id ' . $id);
     ok(['perguntas' => atendimentoFaq($conn, true)]);
 }
 
@@ -1653,7 +1653,7 @@ if ($acao === 'lic_decidir') {
         $st = $conn->prepare("UPDATE {$P}casamentos SET licenca_estado='sem'
                               WHERE id=? AND licenca_estado='pendente'");
         $st->bind_param('i', $cid); @$st->execute();
-        registar($conn, 'licenca_recusar', (string)$ped['casamento_nome'], $nota);
+        registar($conn, 'licenca_recusar', (string)$ped['casamento_nome'], $nota, $cid);
         ok(['id' => $pid, 'estado' => 'recusado']);
     }
 
@@ -1687,7 +1687,7 @@ if ($acao === 'lic_decidir') {
 
     registar($conn, 'licenca_aprovar', (string)$ped['casamento_nome'],
              $pacote . ' · ' . count($ped['itens']) . ' módulo(s) · ' . $meses . ' mês(es)'
-             . ($contas ? " · $contas conta(s) ativada(s)" : ''));
+             . ($contas ? " · $contas conta(s) ativada(s)" : ''), $cid);
     ok(['id' => $pid, 'estado' => 'aprovado', 'modulos' => $mudou,
         'contas_ativadas' => $contas, 'licenca' => licencaInfo($conn, $cid)]);
 }
@@ -1719,7 +1719,7 @@ if ($acao === 'lic_revogar') {
                           licenca_revogada_em=NOW(), licenca_revogada_motivo=? WHERE id=?");
     $st->bind_param('si', $motivo, $cid);
     if (!$st->execute()) erro('Não foi possível revogar a licença.');
-    registar($conn, 'licenca_revogar', (string)$c['nome'], $motivo);
+    registar($conn, 'licenca_revogar', (string)$c['nome'], $motivo, $cid);
     ok(['casamento' => $cid, 'estado' => 'revogada']);
 }
 
@@ -1804,7 +1804,7 @@ if ($acao === 'lic_conceder') {
     registar($conn, 'licenca_conceder', (string)$c['nome'],
              "$n módulo(s) · " . ($meses ? "$meses mês(es)" : 'sem limite')
              . ($reiniciar ? ' · relógio a contar de hoje' : '')
-             . ($contas ? " · casamento aberto, $contas conta(s) ativada(s)" : ''));
+             . ($contas ? " · casamento aberto, $contas conta(s) ativada(s)" : ''), $cid);
     ok(['casamento' => $cid, 'modulos' => $n, 'estado' => $novoEstado,
         'contas_ativadas' => $contas, 'licenca' => licencaInfo($conn, $cid)]);
 }
@@ -1825,7 +1825,7 @@ if ($acao === 'lic_modulo_guardar') {
     $st = $conn->prepare("UPDATE {$P}lic_modulos SET nome=?, resumo=?, beneficio=?, icone=?, ativo=? WHERE id=?");
     $st->bind_param('ssssii', $nome, $resumo, $benef, $icone, $ativo, $id);
     if (!$st->execute()) erro('Não foi possível guardar o módulo.');
-    registar($conn, 'lic_modulo_guardar', $nome);
+    registarDaCasa($conn, 'lic_modulo_guardar', $nome);
     ok(['catalogo' => licCatalogo($conn)]);
 }
 
@@ -1862,7 +1862,7 @@ if ($acao === 'lic_escalao_guardar') {
         if (!$st->execute()) erro('Não foi possível criar o escalão.');
         $id = $conn->insert_id;
     }
-    registar($conn, 'lic_escalao_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz');
+    registarDaCasa($conn, 'lic_escalao_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz');
     ok(['id' => $id, 'catalogo' => licCatalogo($conn)]);
 }
 
@@ -1880,12 +1880,12 @@ if ($acao === 'lic_escalao_apagar') {
     $usos = $r ? (int)$r->fetch_row()[0] : 0;
     if ($usos > 0) {
         @$conn->query("UPDATE {$P}lic_escaloes SET ativo=0 WHERE id=$id");
-        registar($conn, 'lic_escalao_desligar', (string)$e['nome'], "$usos licença(s) assentam nele");
+        registarDaCasa($conn, 'lic_escalao_desligar', (string)$e['nome'], "$usos licença(s) assentam nele");
         ok(['desligado' => true, 'usos' => $usos, 'catalogo' => licCatalogo($conn)]);
     }
     @$conn->query("DELETE FROM {$P}lic_pacote_itens WHERE escalao_id=$id");
     @$conn->query("DELETE FROM {$P}lic_escaloes WHERE id=$id");
-    registar($conn, 'lic_escalao_apagar', (string)$e['nome']);
+    registarDaCasa($conn, 'lic_escalao_apagar', (string)$e['nome']);
     ok(['catalogo' => licCatalogo($conn)]);
 }
 
@@ -1970,7 +1970,7 @@ if ($acao === 'lic_pacote_guardar') {
         }
     }
 
-    registar($conn, 'lic_pacote_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz'
+    registarDaCasa($conn, 'lic_pacote_guardar', $nome, number_format($preco, 2, ',', ' ') . ' Kz'
              . ($precos ? " · $precos preço(s) de módulo alterado(s)" : '')
              . ($faltam ? ' · SEM ' . implode(', ', $faltam) : ''));
     ok(['id' => $id, 'precos_mudados' => $precos, 'faltam' => $faltam,
@@ -1987,7 +1987,7 @@ if ($acao === 'lic_pacote_apagar') {
     if (!$p) erro('Pacote não encontrado.');
     @$conn->query("DELETE FROM {$P}lic_pacote_itens WHERE pacote_id=$id");
     @$conn->query("DELETE FROM {$P}lic_pacotes WHERE id=$id");
-    registar($conn, 'lic_pacote_apagar', (string)$p['nome']);
+    registarDaCasa($conn, 'lic_pacote_apagar', (string)$p['nome']);
     ok(['catalogo' => licCatalogo($conn)]);
 }
 
@@ -2019,7 +2019,7 @@ if ($acao === 'lic_prazo_guardar') {
         if (!$st->execute()) erro('Já existe um prazo com esse número de meses.');
         $id = $conn->insert_id;
     }
-    registar($conn, 'lic_prazo_guardar', $nome, "$meses meses · factor $fator");
+    registarDaCasa($conn, 'lic_prazo_guardar', $nome, "$meses meses · factor $fator");
     ok(['id' => $id, 'catalogo' => licCatalogo($conn)]);
 }
 
@@ -2035,7 +2035,7 @@ if ($acao === 'lic_prazo_apagar') {
     if ($r && (int)$r->fetch_row()[0] <= 1)
         erro('Tem de ficar pelo menos um prazo: é ele que dá o preço.');
     @$conn->query("DELETE FROM {$P}lic_prazos WHERE id=$id");
-    registar($conn, 'lic_prazo_apagar', (string)$p['nome']);
+    registarDaCasa($conn, 'lic_prazo_apagar', (string)$p['nome']);
     ok(['catalogo' => licCatalogo($conn)]);
 }
 
@@ -2055,7 +2055,7 @@ if ($acao === 'lic_politica_guardar') {
                           VALUES (?,?,?,1)");
     $st->bind_param('iss', $nova, $titulo, $corpoT);
     if (!$st->execute()) erro('Não foi possível publicar as políticas.');
-    registar($conn, 'lic_politica_guardar', $titulo, "versão $nova");
+    registarDaCasa($conn, 'lic_politica_guardar', $titulo, "versão $nova");
     ok(['politica' => licPolitica($conn)]);
 }
 
@@ -6821,7 +6821,8 @@ if ($acao === 'casamento_criar') {
     }
 
     registar($conn, 'casamento_criado', $nome, 'id ' . $novo
-        . ($meses ? " · licença $meses mês(es)" . ($licencaAtiva ? ' (ativa)' : ' (por iniciar)') : ''));
+        . ($meses ? " · licença $meses mês(es)" . ($licencaAtiva ? ' (ativa)' : ' (por iniciar)') : ''),
+        $novo);
     ok(['id' => $novo, 'nome' => $nome, 'dados_do_evento' => $gravadas,
         'licenca' => licencaInfo($conn, $novo), 'contas' => $contas]);
 }
@@ -6836,8 +6837,14 @@ if ($acao === 'casamento_abrir') {
     if ($c['estado'] === 'arquivado') erro('Esse casamento está arquivado.');
     // Ter o número não chega: é preciso ter lugar lá dentro. Sem isto, bastava
     // escrever outro id no endereço para entrar no casamento de outro casal.
+    // Só se escreve quando a sessão MUDA de casamento. Reabrir o que já estava
+    // aberto é o que a página faz sozinha a cada recarregamento, e eram essas
+    // as 132 linhas iguais que enchiam o histórico de um só casal — 18 em cada
+    // 100 — e empurravam para baixo tudo o que interessava. Quem entra na casa
+    // de outro continua a ficar escrito, que é o que esta linha serve.
+    $jaAberto = (int)($_SESSION['casamento_id'] ?? 0) === (int)$c['id'];
     if (!abrirCasamento($conn, (int)$c['id'])) erro('Não tem acesso a esse casamento.');
-    registar($conn, 'casamento_aberto', $c['nome'], 'id ' . (int)$c['id']);
+    if (!$jaAberto) registar($conn, 'casamento_aberto', $c['nome'], 'id ' . (int)$c['id']);
     ok(['id' => (int)$c['id'], 'nome' => $c['nome']]);
 }
 
@@ -6874,7 +6881,7 @@ if ($acao === 'utilizador_editar') {
     $st = $conn->prepare("UPDATE {$P}utilizadores SET email=?, nome=?, papel_plataforma=? WHERE id=?");
     $st->bind_param('sssi', $email, $nome, $plat, $id);
     if (!$st->execute()) erro('Já existe uma conta com esse email.');
-    registar($conn, 'conta_editada', $email, $plat ? ('plataforma: ' . $plat) : 'sem papel de plataforma');
+    registarDaCasa($conn, 'conta_editada', $email, $plat ? ('plataforma: ' . $plat) : 'sem papel de plataforma');
     ok(['id' => $id, 'email' => $email, 'papel_plataforma' => $plat]);
 }
 
@@ -6914,7 +6921,7 @@ if ($acao === 'utilizador_apagar') {
     $st = $conn->prepare("DELETE FROM {$P}utilizadores WHERE id=?");
     $st->bind_param('i', $id);
     if (!$st->execute()) erro('Não foi possível apagar a conta.');
-    registar($conn, 'utilizador_apagado', (string)$u['email']);
+    registarDaCasa($conn, 'utilizador_apagado', (string)$u['email']);
     ok(['id' => $id]);
 }
 
@@ -7003,7 +7010,10 @@ if ($acao === 'utilizador_criar') {
         $st->bind_param('iis', $uid, $cid, $papelCas);
         @$st->execute();
     }
-    registar($conn, 'conta_criada', $email, $plat ? ('plataforma: '.$plat) : ('casamento '.$cid));
+    // Uma conta de casamento é assunto desse casamento; uma conta da casa não é
+    // de casamento nenhum — e não pode cair no que o admin tiver aberto.
+    registar($conn, 'conta_criada', $email, $plat ? ('plataforma: '.$plat) : ('casamento '.$cid),
+             $plat ? 0 : max(0, $cid));
     ok(['id' => $uid, 'email' => $email]);
 }
 
@@ -7134,7 +7144,7 @@ if ($acao === 'acesso_dar') {
                           ON DUPLICATE KEY UPDATE papel=VALUES(papel)");
     $st->bind_param('iis', $uid, $cid, $papelCas);
     if (!$st->execute()) erro('Não foi possível dar o acesso.');
-    registar($conn, 'acesso_dado', 'conta '.$uid, 'casamento '.$cid.' · '.$papelCas);
+    registar($conn, 'acesso_dado', 'conta '.$uid, 'casamento '.$cid.' · '.$papelCas, $cid);
     ok(['utilizador' => $uid, 'casamento' => $cid, 'papel' => $papelCas]);
 }
 
@@ -7303,7 +7313,7 @@ if ($acao === 'utilizador_estado') {
     $st = $conn->prepare("UPDATE {$P}utilizadores SET estado=? WHERE id=?");
     $st->bind_param('si', $novo, $id);
     if (!$st->execute()) erro('Não foi possível mudar o estado.');
-    registar($conn, 'conta_estado', (string)$u['email'], $novo);
+    registarDaCasa($conn, 'conta_estado', (string)$u['email'], $novo);
     ok(['id' => $id, 'estado' => $novo]);
 }
 
@@ -7322,7 +7332,7 @@ if ($acao === 'utilizador_repor_senha') {
     $st = $conn->prepare("UPDATE {$P}utilizadores SET senha_hash=? WHERE id=?");
     $st->bind_param('si', $hash, $id);
     if (!$st->execute()) erro('Não foi possível repor a senha.');
-    registar($conn, 'senha_reposta', (string)$u['email']);
+    registarDaCasa($conn, 'senha_reposta', (string)$u['email']);
     ok(['id' => $id, 'email' => $u['email'], 'senha' => $nova]);
 }
 
@@ -7337,7 +7347,7 @@ if ($acao === 'acesso_tirar_de') {
     $st = $conn->prepare("DELETE FROM {$P}acessos WHERE utilizador_id=? AND casamento_id=?");
     $st->bind_param('ii', $uid, $cid);
     if (!$st->execute()) erro('Não foi possível tirar o lugar.');
-    registar($conn, 'acesso_tirado', 'conta ' . $uid, 'casamento ' . $cid);
+    registar($conn, 'acesso_tirado', 'conta ' . $uid, 'casamento ' . $cid, $cid);
     ok(['utilizador' => $uid, 'casamento' => $cid]);
 }
 
@@ -7384,7 +7394,7 @@ if ($acao === 'conta_apagar_do_casamento') {
         $apagada = true;
     }
     registar($conn, 'conta_apagada', (string)$u['email'],
-             $apagada ? 'eliminada' : 'tirada do casamento ' . $cid . ' (tem outros)');
+             $apagada ? 'eliminada' : 'tirada do casamento ' . $cid . ' (tem outros)', $cid);
     ok(['utilizador' => $uid, 'apagada' => $apagada]);
 }
 
@@ -7463,7 +7473,7 @@ if ($acao === 'casamento_estado') {
     }
     $parou = ($novo === 'arquivado' || $novo === 'suspenso');
     $rotulo = $parou ? 'conta(s) parada(s)' : 'conta(s) ativada(s)';
-    registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas $rotulo" : ''));
+    registar($conn, 'casamento_estado', $c['nome'], $novo . ($contas ? " · $contas $rotulo" : ''), $id);
     ok(['id' => $id, 'estado' => $novo,
         'contas_ativadas' => $parou ? 0 : $contas,
         'contas_paradas'  => $parou ? $contas : 0]);
@@ -7497,7 +7507,7 @@ if ($acao === 'casamento_licenca') {
         if ($iniciar) iniciarLicenca($conn, $id);   // só arranca se ainda não corria
     }
     registar($conn, 'casamento_licenca', (string)$c['nome'],
-             $meses ? "$meses mês(es)" . ($iniciar || $reiniciar ? ' (a contar)' : '') : 'sem limite');
+             $meses ? "$meses mês(es)" . ($iniciar || $reiniciar ? ' (a contar)' : '') : 'sem limite', $id);
     ok(['id' => $id, 'licenca' => licencaInfo($conn, $id)]);
 }
 
@@ -7610,7 +7620,7 @@ if ($acao === 'casamento_editar') {
             (string)($d['porteiro_senha'] ?? ''), $id, 'porteiro');
     }
 
-    registar($conn, 'casamento_ficha', $nome, 'edição completa (id ' . $id . ')');
+    registar($conn, 'casamento_ficha', $nome, 'edição completa (id ' . $id . ')', $id);
     ok(['id' => $id, 'nome' => $nome, 'noiva' => $noiva, 'noivo' => $noivo,
         'data_evento' => $data, 'dados_do_evento' => $gravadas, 'contas' => $contas]);
 }
@@ -7696,7 +7706,7 @@ if ($acao === 'casamento_apagar') {
         $_SESSION['casamento_id'] = 0;
         $_SESSION['papel'] = null;
     }
-    registar($conn, 'casamento_apagado', $c['nome'],
+    registarDaCasa($conn, 'casamento_apagado', $c['nome'],
              $levou['convites'] . ' convites · ' . $levou['pessoas'] . ' pessoas · '
              . $levou['contas'] . ' contas');
     ok(['id' => $id, 'nome' => $c['nome'], 'levou' => $levou]);
@@ -7864,7 +7874,7 @@ if ($acao === 'sistema_tema_guardar') {
     $conn->query("DELETE FROM {$P}definicoes WHERE casamento_id=0 AND chave='sistema.tema'");
     $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor) VALUES (0, 'sistema.tema', ?)");
     $st->bind_param('s', $tema); $st->execute();
-    registar($conn, 'tema_sistema', $tema, temasDisponiveis()[$tema]);
+    registarDaCasa($conn, 'tema_sistema', $tema, temasDisponiveis()[$tema]);
     ok(['tema' => $tema, 'rotulo' => temasDisponiveis()[$tema]]);
 }
 
@@ -8344,8 +8354,10 @@ if ($acao === 'dados_exportar') {
     $saida['resumo'] = resumoExportacao($saida);
 
     $nome = 'dados-' . ($ambito === 'sistema' ? 'sistema' : 'casamento') . '-' . date('Y-m-d') . '.json';
+    // Levar ESTE casamento é assunto dele; levar o sistema inteiro é da casa.
     registar($conn, 'dados_exportados', $ambito,
-             count($ids) . ' casamento(s)' . ($partes ? ' · ' . implode('+', $partes) : ''));
+             count($ids) . ' casamento(s)' . ($partes ? ' · ' . implode('+', $partes) : ''),
+             $ambito === 'sistema' ? 0 : null);
     header('Content-Type: application/json; charset=utf-8');
     header('Content-Disposition: attachment; filename=' . $nome);
     echo json_encode($saida, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
@@ -8951,7 +8963,7 @@ if ($acao === 'dados_importar') {
             $feito = reporCasamento($conn, $novo, $r, false);
             $feito['id'] = $novo; $feito['nome'] = $nome;
             $resumo[] = $feito;
-            registar($conn, 'dados_importados', $nome, 'casamento novo #' . $novo);
+            registar($conn, 'dados_importados', $nome, 'casamento novo #' . $novo, $novo);
         }
         if (!$resumo) erro('Não foi possível criar casamento nenhum a partir do ficheiro.');
     } else {
@@ -9442,7 +9454,7 @@ if ($acao === 'modelos_restaurar') {
     $repor = !empty($d['repor']);
     $res = restaurarModelosDeCasa($conn, $alvos, $repor);
     $feito = array_merge($res['criados'], $res['repostos']);
-    registar($conn, 'modelos_restaurados', $feito ? implode(', ', $feito) : '(nada em falta)');
+    registarDaCasa($conn, 'modelos_restaurados', $feito ? implode(', ', $feito) : '(nada em falta)');
     ok($res + ['catalogo' => catalogoModelosEmFalta($conn)]);
 }
 
@@ -9485,7 +9497,7 @@ if ($acao === 'modelo_visibilidade') {
         $st = $conn->prepare("INSERT INTO {$P}modelo_casamentos (modelo_id, casamento_id) VALUES (?, ?)");
         foreach (array_keys($ids) as $c) { $st->bind_param('ii', $id, $c); @$st->execute(); }
     }
-    registar($conn, 'modelo_visibilidade', (string)$m['nome'],
+    registarDaCasa($conn, 'modelo_visibilidade', (string)$m['nome'],
              $alcance === 'todos' ? 'todos os casamentos' : count($ids) . ' casamento(s)');
     ok(['id' => $id, 'alcance' => $alcance, 'casamentos' => array_keys($ids)]);
 }
@@ -9542,7 +9554,7 @@ if ($acao === 'modelo_exemplo_guardar') {
         if ($v === ($fabrica[$k] ?? null)) { $del->bind_param('s', $chave); $del->execute(); }
         else { $ins->bind_param('ss', $chave, $v); $ins->execute(); }
     }
-    registar($conn, 'modelo_exemplo', 'dados de exemplo dos modelos', implode(', ', array_keys($mudados)));
+    registarDaCasa($conn, 'modelo_exemplo', 'dados de exemplo dos modelos', implode(', ', array_keys($mudados)));
     ok(['exemplo' => exemploModelo($conn)]);
 }
 
@@ -9592,7 +9604,7 @@ if ($acao === 'modelo_exemplo_upload') {
                               ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
         $st->bind_param('ss', $chaveDef, $caminho); $st->execute();
     }
-    registar($conn, 'modelo_exemplo', 'imagem para a galeria', $categoria);
+    registarDaCasa($conn, 'modelo_exemplo', 'imagem para a galeria', $categoria);
     ok(['path' => $caminho, 'galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn)]);
 }
 
@@ -9625,7 +9637,7 @@ if ($acao === 'modelo_exemplo_apagar') {
     } else {
         @unlink(__DIR__ . '/' . $src);
     }
-    registar($conn, 'modelo_exemplo', $daCasa ? 'fotografia da casa escondida' : 'fotografia apagada',
+    registarDaCasa($conn, 'modelo_exemplo', $daCasa ? 'fotografia da casa escondida' : 'fotografia apagada',
              basename($src));
     ok(['galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn),
         'ocultas' => count(galeriaOcultas($conn))]);
@@ -9637,7 +9649,7 @@ if ($acao === 'modelo_exemplo_repor') {
     $quantas = count(galeriaOcultas($conn));
     if (!$quantas) erro('Não há nenhuma escondida.');
     guardarGaleriaOcultas($conn, []);
-    registar($conn, 'modelo_exemplo', 'galeria da casa reposta', $quantas . ' fotografia(s)');
+    registarDaCasa($conn, 'modelo_exemplo', 'galeria da casa reposta', $quantas . ' fotografia(s)');
     ok(['galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn), 'ocultas' => 0]);
 }
 
@@ -9664,7 +9676,7 @@ if ($acao === 'modelo_exemplo_categoria') {
         $st = $conn->prepare("UPDATE {$P}definicoes SET valor=? WHERE casamento_id=0 AND valor=?");
         $st->bind_param('ss', $novoSrc, $src); $st->execute();
     }
-    registar($conn, 'modelo_exemplo', 'categoria da imagem', $cat);
+    registarDaCasa($conn, 'modelo_exemplo', 'categoria da imagem', $cat);
     ok(['src' => $novoSrc, 'galeria' => galeriaCompleta($conn), 'exemplo' => exemploModelo($conn)]);
 }
 
@@ -9712,7 +9724,7 @@ if ($acao === 'modelo_criar') {
     // a partir daí insert_id é o dessa linha — devolvia-se um número que não é
     // de modelo nenhum, e o modelo acabado de criar ficava inalcançável.
     $novoId = $conn->insert_id;
-    registar($conn, 'modelo_criado', $nome, $ambito . ' · ' . count($defs) . ' definição(ões)');
+    registarDaCasa($conn, 'modelo_criado', $nome, $ambito . ' · ' . count($defs) . ' definição(ões)');
     ok(['id' => $novoId, 'nome' => $nome, 'ambito' => $ambito, 'definicoes' => count($defs)]);
 }
 
@@ -9745,7 +9757,7 @@ if ($acao === 'modelo_editar') {
         $st->bind_param('ssii', $nome, $descricao, $vis, $id);
     }
     if (!$st->execute()) erro('Não foi possível guardar.');
-    registar($conn, 'modelo_editado', $nome, empty($d['recapturar']) ? '' : 'desenho recapturado');
+    registarDaCasa($conn, 'modelo_editado', $nome, empty($d['recapturar']) ? '' : 'desenho recapturado');
     ok(['id' => $id, 'nome' => $nome]);
 }
 
@@ -9778,7 +9790,7 @@ if ($acao === 'modelo_defs') {
     $st = $conn->prepare("UPDATE {$P}modelos SET defs=?, atualizado_em=NOW() WHERE id=?");
     $st->bind_param('si', $j, $id);
     if (!$st->execute()) erro('Não foi possível guardar o modelo.');
-    registar($conn, 'modelo_desenhado', (string)$m['nome'], count($defs) . ' definição(ões)');
+    registarDaCasa($conn, 'modelo_desenhado', (string)$m['nome'], count($defs) . ' definição(ões)');
     ok(['gravadas' => count($defs), 'invalidas' => $invalidas]);
 }
 
@@ -9798,7 +9810,7 @@ if ($acao === 'modelo_apagar') {
     if (!$st->execute()) erro('Não foi possível apagar.');
     // Apagar um modelo não desfaz nada em casamento nenhum: quem o aplicou
     // ficou com uma cópia, e é dele.
-    registar($conn, 'modelo_apagado', (string)$m['nome']);
+    registarDaCasa($conn, 'modelo_apagado', (string)$m['nome']);
     ok(['id' => $id, 'nome' => $m['nome']]);
 }
 
@@ -9839,7 +9851,7 @@ if ($acao === 'modelo_pecaorigem') {
     $presos = 0;
     if ($stp) { $stp->bind_param('s', $chave); $stp->execute();
                 $presos = (int)$stp->get_result()->fetch_row()[0]; }
-    registar($conn, 'peca_origem_definida', $nome ?? '(automático)',
+    registarDaCasa($conn, 'peca_origem_definida', $nome ?? '(automático)',
              $ambito . ($presos ? " · $presos casamento(s) mantêm o que tinham" : ''));
     ok(['ambito' => $ambito, 'id' => $id, 'nome' => $nome ?? nomeDaOrigem($conn, $ambito, 0),
         'presos' => $presos]);
@@ -9953,7 +9965,7 @@ if ($acao === 'modelos_exportar') {
               'gerado_em' => date('c'), 'gerado_por' => utilizadorAtual() ?? '',
               'resumo' => ['modelos' => count($lista)] + $porAmbito,
               'modelos' => $lista];
-    registar($conn, 'modelos_exportados', count($lista) . ' modelo(s)');
+    registarDaCasa($conn, 'modelos_exportados', count($lista) . ' modelo(s)');
     header('Content-Type: application/json; charset=utf-8');
     header('Content-Disposition: attachment; filename=modelos-' . date('Y-m-d') . '.json');
     echo json_encode($saida, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
@@ -9988,7 +10000,7 @@ if ($acao === 'modelos_importar') {
         if (@$st->execute()) $entrou++; else $saltou++;
     }
     if (!$entrou) erro('O ficheiro não trouxe modelo nenhum aproveitável.');
-    registar($conn, 'modelos_importados', $entrou . ' modelo(s)');
+    registarDaCasa($conn, 'modelos_importados', $entrou . ' modelo(s)');
     ok(['entraram' => $entrou, 'saltados' => $saltou]);
 }
 
@@ -10068,7 +10080,7 @@ if ($acao === 'sistema_importar') {
             if (@$st->execute()) $res['contas']++;
         }
     }
-    registar($conn, 'sistema_importado', implode('+', $inc), json_encode($res));
+    registarDaCasa($conn, 'sistema_importado', implode('+', $inc), json_encode($res));
     ok(['inc' => array_values($inc), 'res' => $res, 'criados' => $criados]);
 }
 
@@ -10167,7 +10179,7 @@ if ($acao === 'sistema_repor_fabrica') {
         $res[$modo === 'apagar' ? 'casamentos_apagados' : 'casamentos'] = $n;
     }
     if (!$res) erro('Escolha o que quer apagar.');
-    registar($conn, 'sistema_dados_apagados', $tudo ? 'tudo' : 'gestão', json_encode($res));
+    registarDaCasa($conn, 'sistema_dados_apagados', $tudo ? 'tudo' : 'gestão', json_encode($res));
     ok(['res' => $res] + ($tudo ? ['tudo' => true] : []));
 }
 

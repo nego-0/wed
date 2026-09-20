@@ -987,6 +987,24 @@ function correcoesEsperadas(): array {
         ['Há um sinal de reticências para dizer «e há mais»',
          'assets/icones.js', 'reticencias:'],
 
+        // ---- Cada casamento vê o histórico DELE, e só o dele ----
+        // registar() escrevia sempre no casamento aberto: o que era da casa
+        // caía no histórico de quem por acaso estivesse aberto (um casal lia
+        // lá o nome e o tamanho da festa de outro), e o que se decidia SOBRE um
+        // casamento a partir da plataforma caía no zero, que o casal não vê.
+        ['Quem decide sobre um casamento diz qual, e a linha fica no histórico dele',
+         'db.php', 'function registar(mysqli $conn, string $accao, string $alvo = \'\', string $detalhe = \'\','],
+        ['E o que é da casa fica na casa, sem poder escorregar para um casamento',
+         'db.php', 'function registarDaCasa(mysqli $conn, string $accao, string $alvo = \'\', string $detalhe = \'\'): void {'],
+        ['O histórico já escrito foi arrumado, casa por casa',
+         'db.php', '    if ($versaoAtual < 44) {'],
+        ['Reabrir o casamento que já estava aberto não escreve linha nenhuma',
+         'api.php', '$jaAberto = (int)($_SESSION[\'casamento_id\'] ?? 0) === (int)$c[\'id\'];'],
+        ['Cada ação do casal é uma frase, com a conta lá dentro',
+         'index.php', 'grid-template-areas:"quando frase fam"; }'],
+        ['E no telemóvel o quadro do admin vira cartões em vez de transbordar',
+         'plataforma.php', '#aud-tabela .a-linha{ display:flex; flex-direction:column; position:relative;'],
+
         // ---- O cabeçalho sai do caminho (UI-002) ----
         ['No telemóvel o cabeçalho é fixo e o corpo guarda-lhe o lugar',
          'assets/estilo.css', 'body.topo-fixo{ padding-top:var(--topo-alt, 0px); }'],

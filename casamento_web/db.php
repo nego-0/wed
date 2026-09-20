@@ -120,6 +120,21 @@ function usarCasamento(int $id): void {
     $GLOBALS['CASAMENTO_ID'] = max(1, $id);
 }
 
+/** O nome do casamento aberto, tal como está na ficha. Vazio se não houver. */
+function nomeDoCasamento(?int $id = null): string {
+    global $conn, $P;
+    static $cache = [];
+    $i = $id ?? casamentoAtual();
+    if (!array_key_exists($i, $cache)) {
+        $cache[$i] = '';
+        if ($i > 0 && isset($conn) && $conn instanceof mysqli) {
+            $r = @$conn->query("SELECT nome FROM {$P}casamentos WHERE id=" . (int)$i . " LIMIT 1");
+            if ($r && ($x = $r->fetch_row())) $cache[$i] = (string)$x[0];
+        }
+    }
+    return $cache[$i];
+}
+
 /**
  * Fragmento SQL que prende uma consulta ao casamento em causa. Segue o mesmo
  * idioma do soVivos(): entra no WHERE, ao lado das outras condições.
@@ -194,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 43;
+const ESQUEMA_VERSAO = 44;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2145,6 +2160,96 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}convites", 'rsvp_lembrete_em', "DATETIME DEFAULT NULL");
     }
 
+    // v44 — arrumar o histórico: cada linha no casamento a que pertence.
+    //
+    // registar() escrevia sempre no casamento ABERTO, e isso errava dos dois
+    // lados. Para dentro: um casal lia no seu próprio histórico «apagou um
+    // casamento — ZZ Casamento A · 1 convites · 1 pessoas · 2 contas», porque o
+    // admin tinha aquele casamento aberto quando apagou o outro. O nome e o
+    // tamanho da festa de terceiros, na página de quem não tem nada a ver com
+    // isso. Para fora: uma licença revogada da plataforma (sem casamento
+    // aberto) caía no zero, e o casal a quem ela foi revogada não tinha linha
+    // nenhuma a dizer quem, quando, nem porquê — só a palavra «revogada» num
+    // canto do painel.
+    //
+    // O código novo já escreve certo. Isto endireita o que ficou escrito:
+    //
+    //   • o que é DA CASA (preçário, modelos, contas da plataforma, o tema, o
+    //     sistema, apagar um casamento) vai para o zero, venha de onde vier;
+    //   • o que é SOBRE UM CASAMENTO e está no zero vai para esse casamento,
+    //     quando se consegue dizer qual sem adivinhar: pelo «id N» que o
+    //     detalhe traz, ou por um nome que bata num casamento e num só.
+    //
+    // Na dúvida, fica onde está. Uma linha no zero é invisível ao casal mas o
+    // admin vê-a; uma linha no casamento errado é o contrário, e é essa que faz
+    // estragos — por isso a dúvida resolve-se sempre a favor do zero.
+    if ($versaoAtual < 44) {
+        $daCasa = ['lic_modulo_guardar','lic_escalao_guardar','lic_escalao_apagar',
+                   'lic_escalao_desligar','lic_pacote_guardar','lic_pacote_apagar',
+                   'lic_prazo_guardar','lic_prazo_apagar','lic_politica_guardar',
+                   'modelo_criado','modelo_editado','modelo_desenhado','modelo_apagado',
+                   'modelo_visibilidade','modelo_exemplo','modelos_exportados',
+                   'modelos_importados','modelos_restaurados','peca_origem_definida',
+                   'tema_sistema','sistema_importado','sistema_dados_apagados',
+                   'atendimento_guardar','atendimento_pergunta','atendimento_pergunta_apagar',
+                   'conta_editada','conta_estado','senha_reposta','utilizador_apagado',
+                   'casamento_apagado'];
+        $lista = "'" . implode("','", $daCasa) . "'";
+        @$conn->query("UPDATE {$P}registo SET casamento_id=0
+                       WHERE casamento_id <> 0 AND accao IN ($lista)");
+
+        // Uma conta da plataforma não é de casamento nenhum; uma conta de
+        // casamento é — e o detalhe diz qual das duas é.
+        @$conn->query("UPDATE {$P}registo SET casamento_id=0
+                       WHERE casamento_id <> 0 AND accao='conta_criada'
+                         AND detalhe LIKE 'plataforma:%'");
+
+        // O caminho de volta, para as que ficaram no zero. Primeiro as que
+        // trazem o número escrito — «id 19», «casamento novo #19».
+        @$conn->query("UPDATE {$P}registo SET casamento_id =
+                         CAST(SUBSTRING(detalhe, 4) AS UNSIGNED)
+                       WHERE casamento_id = 0 AND detalhe REGEXP '^id [0-9]+$'
+                         AND accao IN ('casamento_criado','casamento_aberto')
+                         AND CAST(SUBSTRING(detalhe, 4) AS UNSIGNED) IN
+                             (SELECT id FROM (SELECT id FROM {$P}casamentos) c)");
+
+        // Depois as decisões que trazem o NOME do casamento no alvo. Só quando
+        // esse nome pertence a um casamento e a um só: com dois casamentos
+        // chamados o mesmo, adivinhar seria mostrar a um casal a licença do
+        // outro — e era precisamente disso que esta migração veio tratar.
+        $sobreCasamento = ['licenca_aprovar','licenca_recusar','licenca_conceder',
+                           'licenca_revogar','casamento_licenca','casamento_estado',
+                           'casamento_criado','casamento_ficha'];
+        $lista2 = "'" . implode("','", $sobreCasamento) . "'";
+        @$conn->query("UPDATE {$P}registo r
+                       JOIN (SELECT nome, MIN(id) id FROM {$P}casamentos
+                             GROUP BY nome HAVING COUNT(*) = 1) c ON c.nome = r.alvo
+                       SET r.casamento_id = c.id
+                       WHERE r.casamento_id = 0 AND r.accao IN ($lista2)");
+
+        // Falta o caso que fazia o estrago maior, e que não é «está no zero» nem
+        // «é da casa»: está NUM casamento, mas fala de OUTRO. Nestas ações o
+        // alvo É o nome do casamento em causa — se não bate com o nome do
+        // casamento onde a linha está, a linha não é dali. Vai para o casamento
+        // certo se o nome o identificar, e para o zero se não (o caso comum é o
+        // outro casamento já ter sido apagado: aí não há histórico onde a pôr).
+        @$conn->query("UPDATE {$P}registo r
+                       JOIN {$P}casamentos onde ON onde.id = r.casamento_id
+                       LEFT JOIN (SELECT nome, MIN(id) id FROM {$P}casamentos
+                                  GROUP BY nome HAVING COUNT(*) = 1) c ON c.nome = r.alvo
+                       SET r.casamento_id = COALESCE(c.id, 0)
+                       WHERE r.casamento_id <> 0 AND r.accao IN ($lista2)
+                         AND r.alvo <> '' AND r.alvo <> onde.nome");
+
+        // E as linhas órfãs — de casamentos que já não existem. O casal não as
+        // vê (não há casal), e ao admin aparecem como «#7» sem nome nenhum.
+        // No zero, aparecem pelo que são: coisas da casa, já sem dono.
+        @$conn->query("UPDATE {$P}registo r
+                       LEFT JOIN {$P}casamentos c ON c.id = r.casamento_id
+                       SET r.casamento_id = 0
+                       WHERE r.casamento_id <> 0 AND c.id IS NULL");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2242,18 +2347,52 @@ if ($flag && $flag->num_rows === 0) {
 /**
  * Regista uma ação no histórico (quem fez o quê). Nunca interrompe o fluxo:
  * se a tabela ainda não existir, ignora em silêncio.
+ *
+ * O casamento é o ABERTO, por omissão — que é o certo para tudo o que se faz
+ * lá dentro. Mas há decisões que são SOBRE um casamento e que se tomam de
+ * fora dele: conceder uma licença, revogá-la, suspender a festa. Essas eram
+ * escritas com casamento_id = 0, porque quem as toma está na plataforma e não
+ * tem casamento aberto — e o casal nunca chegava a ver, no seu próprio
+ * histórico, o que lhe tinham feito. A licença dizia-lhe «revogada»; o
+ * histórico dele não tinha linha nenhuma a dizer quem, quando, nem porquê.
+ *
+ * Daí o quarto argumento: quem decide sobre um casamento diz qual é, e a
+ * linha fica no histórico DESSE casamento. O admin continua a ver tudo, pelo
+ * registo de auditoria, que atravessa os casamentos de propósito.
+ *
+ * O mesmo descuido corria ao contrário, e era pior: o que NÃO é de casamento
+ * nenhum — apagar um modelo da casa, mexer no preçário, apagar a conta de um
+ * suporte, apagar OUTRO casamento — também caía no casamento aberto, porque a
+ * omissão é o aberto. Com 132 linhas assim no histórico de um só casal, esse
+ * casal lia lá «apagou um casamento — ZZ Casamento A · 1 convites · 1 pessoas
+ * · 2 contas»: o nome e o tamanho da festa de outra gente. Quem escreve sobre
+ * a casa usa registarDaCasa(), que fixa o zero e não tem por onde escorregar.
  */
-function registar(mysqli $conn, string $accao, string $alvo = '', string $detalhe = ''): void {
+function registar(mysqli $conn, string $accao, string $alvo = '', string $detalhe = '',
+                  ?int $casamentoId = null): void {
     global $P;
     $u = function_exists('utilizadorAtual') ? (utilizadorAtual() ?? '') : '';
     $p = function_exists('papel') ? (papel() ?? '') : '';
     $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
+    $cid = $casamentoId !== null ? max(0, $casamentoId) : casamentoAtual();
     $st = @$conn->prepare("INSERT INTO {$P}registo (casamento_id,utilizador,papel,accao,alvo,detalhe,ip)
-                           VALUES (" . casamentoAtual() . ",?,?,?,?,?,?)");
+                           VALUES (" . $cid . ",?,?,?,?,?,?)");
     if (!$st) return;
     $alvo = substr($alvo, 0, 120); $detalhe = substr($detalhe, 0, 255);
     $st->bind_param('ssssss', $u, $p, $accao, $alvo, $detalhe, $ip);
     @$st->execute();
+}
+
+/**
+ * Regista uma ação DA CASA — que não pertence a casamento nenhum.
+ *
+ * O preçário, os modelos, o tema, as contas da plataforma, a importação do
+ * sistema: nada disto é de um casal, e nada disto pode ir parar ao histórico
+ * do casamento que o admin tiver aberto na altura. Fica no zero, que é onde o
+ * registo de auditoria a vai buscar com o rótulo «Plataforma».
+ */
+function registarDaCasa(mysqli $conn, string $accao, string $alvo = '', string $detalhe = ''): void {
+    registar($conn, $accao, $alvo, $detalhe, 0);
 }
 
 /**
@@ -2356,11 +2495,11 @@ function nomesDeAcao(): array {
         // ---- a licença ----
         'licenca_pedido'          => ['pediu uma licença', 'licenca'],
         'licenca_pedido_cancelar' => ['cancelou o pedido de licença', 'licenca'],
-        'licenca_aprovar'         => ['aprovou um pedido de licença', 'licenca'],
-        'licenca_recusar'         => ['recusou um pedido de licença', 'licenca'],
+        'licenca_aprovar'         => ['aprovou o pedido de licença', 'licenca'],
+        'licenca_recusar'         => ['recusou o pedido de licença', 'licenca'],
         'licenca_conceder'        => ['concedeu módulos de licença', 'licenca'],
-        'licenca_revogar'         => ['revogou uma licença', 'licenca'],
-        'casamento_licenca'       => ['alterou a licença de um casamento', 'licenca'],
+        'licenca_revogar'         => ['revogou a licença', 'licenca'],
+        'casamento_licenca'       => ['alterou a licença do casamento', 'licenca'],
         'lic_modulo_guardar'   => ['guardou um módulo do preçário', 'licenca'],
         'lic_escalao_guardar'  => ['guardou um escalão do preçário', 'licenca'],
         'lic_escalao_apagar'   => ['apagou um escalão do preçário', 'licenca'],
@@ -2386,11 +2525,11 @@ function nomesDeAcao(): array {
         'suporte_entrou'         => ['entrou com um código de suporte', 'contas'],
         // ---- o casamento em si ----
         'registo_publico'   => ['inscreveu-se na plataforma', 'casamento'],
-        'casamento_criado'  => ['criou um casamento', 'casamento'],
+        'casamento_criado'  => ['criou o casamento', 'casamento'],
         'casamento_ficha'   => ['alterou a ficha do casamento', 'casamento'],
-        'casamento_estado'  => ['mudou o estado de um casamento', 'casamento'],
+        'casamento_estado'  => ['mudou o estado do casamento', 'casamento'],
         'casamento_apagado' => ['apagou um casamento', 'casamento'],
-        'casamento_aberto'  => ['abriu um casamento', 'casamento'],
+        'casamento_aberto'  => ['entrou no casamento', 'casamento'],
         'casamento_fechado' => ['fechou o casamento', 'casamento'],
         'casamento_reposto' => ['repôs o casamento de fábrica', 'casamento'],
         'endereco_publico'  => ['mudou o endereço público', 'casamento'],

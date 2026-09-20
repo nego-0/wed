@@ -985,6 +985,33 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       #aud-tabela .a-detalhe code{ font-family:var(--mono,ui-monospace,Menlo,Consolas,monospace);
         font-size:var(--t-apoio); background:var(--card); border:1px solid var(--line);
         border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
+      /* Num telemóvel, seis colunas não cabem — e não cabiam mesmo: a tabela
+         media 634px dentro de uma caixa de 310. Metade de cada linha ficava
+         fora do ecrã, e a metade que ficava fora era a do lado direito, onde
+         está o que foi feito ao certo. Rolar de lado para ler UMA linha, e
+         rolar de volta para ler a seguinte, não é ler uma tabela.
+         Abaixo dos 760px cada linha passa a ser um cartão, com o mesmo
+         conteúdo por outra ordem: primeiro a ação, depois quem, depois o
+         casamento e o detalhe, e a hora por baixo. Continua a ser a mesma
+         <table> — abre na mesma, filtra na mesma, imprime na mesma. */
+      @media (max-width:760px){
+        #aud-tabela thead{ display:none; }
+        #aud-tabela, #aud-tabela tbody, #aud-tabela td{ display:block; width:auto; }
+        #aud-tabela .a-linha{ display:flex; flex-direction:column; position:relative;
+          padding:.55rem 2rem .6rem .2rem; border-bottom:1px solid var(--line); }
+        #aud-tabela .a-linha td{ border:0; padding:.05rem 0; }
+        #aud-tabela .a-accao{ order:1; font-size:var(--t-corpo); }
+        #aud-tabela .a-quem{ order:2; }
+        #aud-tabela .a-resumo{ order:3; color:var(--ink-fraco); }
+        #aud-tabela .a-resumo:empty{ display:none; }
+        #aud-tabela .a-cas{ order:4; font-size:var(--t-apoio); color:var(--ink-fraco); }
+        #aud-tabela .a-quando{ order:5; font-size:var(--t-apoio); }
+        #aud-tabela .a-abre{ position:absolute; top:.55rem; right:.3rem; order:0; }
+        #aud-tabela .a-detalhe{ display:block; }
+        #aud-tabela .a-detalhe td{ padding:.6rem .7rem .8rem; }
+        #aud-tabela .a-detalhe dl{ grid-template-columns:1fr; gap:.05rem; }
+        #aud-tabela .a-detalhe dt{ margin-top:.45rem; }
+      }
     </style>
     <div id="vista-definicoes" style="display:none">
     <div class="painel">
@@ -2358,10 +2385,10 @@ function pintarAuditoria(){
     return `<tr class="a-linha" onclick="audAbrir(${i})" tabindex="0"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();audAbrir(${i})}">
         <td class="a-quando">${esc((r.criado_em||'').replace('T',' ').slice(0,16))}</td>
-        <td>${cas}</td>
+        <td class="a-cas">${cas}</td>
         <td class="a-accao">${esc(r.frase || r.accao)}</td>
-        <td>${quem}</td>
-        <td>${resumo}</td>
+        <td class="a-quem">${quem}</td>
+        <td class="a-resumo">${resumo}</td>
         <td class="a-abre"><i data-ico="direita" aria-hidden="true"></i></td>
       </tr>
       <tr class="a-detalhe" id="aud-det-${i}" hidden><td colspan="6"><dl>

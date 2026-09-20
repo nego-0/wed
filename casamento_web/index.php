@@ -299,7 +299,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .abas-hist{ display:flex; gap:.4rem; border-bottom:1px solid var(--line); margin-bottom:.9rem; }
   .aba-h{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit;
     font-size:var(--t-denso); color:var(--ink-fraco); padding:.5rem .8rem; margin-bottom:-1px; }
-  .aba-h.ativa{ color:var(--forest); border-bottom-color:var(--gold); font-weight:600; }
+  /* A aba ESCOLHIDA tem de ser a que mais se vê. Em --forest ficava ao
+     contrário no tema escuro — quase da cor do fundo —, e a aba que se via
+     bem era a outra, a que não estava aberta. */
+  .aba-h.ativa{ color:var(--ink); border-bottom-color:var(--gold); font-weight:600; }
   .lixo-item{ display:flex; align-items:center; gap:.7rem; border:1px solid var(--line); border-radius:12px;
     padding:.7rem .9rem; margin-bottom:.55rem; background:var(--card); }
   .lixo-item .cresce{ min-width:0; }
@@ -312,23 +315,52 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
      aberto, e não precisa de JavaScript nenhum para o fazer. */
   .reg-linha{ border-bottom:1px solid var(--line); font-size:var(--t-denso); }
   .reg-linha:last-child{ border-bottom:0; }
-  .reg-linha > summary{ display:flex; gap:.6rem; align-items:baseline; padding:.45rem .2rem;
-                        cursor:pointer; list-style:none; border-radius:8px; }
+  /* Quatro coisas lado a lado cabem num ecrã largo; num telemóvel, não.
+     A 313px, a hora (92px fixos), a conta e a pastilha da família deixavam à
+     frase uns quarenta pixéis, e ela partia-se em seis linhas: CADA ação
+     ocupava 190px, e o histórico dava quatro por ecrã. Por isso é uma grelha
+     e não uma fila — no telemóvel a frase leva a primeira linha inteira e a
+     hora e a família passam para baixo, em letra pequena, que é a ordem por
+     que se lê: primeiro o que foi feito, depois quando. */
+  .reg-linha > summary{ display:grid; gap:.1rem .6rem; align-items:baseline; padding:.45rem .2rem;
+                        cursor:pointer; list-style:none; border-radius:8px;
+                        grid-template-columns:92px minmax(0,1fr) auto;
+                        grid-template-areas:"quando frase fam"; }
   .reg-linha > summary::-webkit-details-marker{ display:none; }
   .reg-linha > summary:hover{ background:var(--cream); }
   .reg-linha[open] > summary{ background:var(--cream); }
-  .reg-quando{ color:var(--ink-fraco); font-size:var(--t-apoio); white-space:nowrap; flex:none; width:92px; }
-  .reg-quem{ color:var(--forest); font-weight:600; white-space:nowrap; flex:none; }
-  .reg-que{ color:var(--text); min-width:0; overflow-wrap:anywhere; flex:1; }
+  .reg-quando{ grid-area:quando; color:var(--ink-fraco); font-size:var(--t-apoio); white-space:nowrap; }
+  .reg-que{ grid-area:frase; color:var(--text); min-width:0; overflow-wrap:anywhere; }
+  /* A conta que fez a coisa vai DENTRO da frase — «a Ana criou um convite» —
+     em vez de numa coluna ao lado. Lê-se de uma vez, e não rouba largura.
+     Em --forest, no tema escuro, era #0E1B25 sobre #17232C: o nome da conta —
+     a resposta a «por qual conta», que é metade do que se vem cá perguntar —
+     não se via. --gold-texto é a cor de acento que VIRA com o tema. */
+  .reg-quem{ color:var(--gold-texto); font-weight:600; }
+  .reg-que .reg-alvo{ color:var(--ink); font-weight:600; }
+  .reg-que .reg-det{ color:var(--ink-fraco); }
+  /* Fechada, a frase fica em duas linhas: a seguir a isso já não se está a ler,
+     está-se a procurar. Aberta, diz tudo. */
+  .reg-linha:not([open]) .reg-que{ display:-webkit-box; -webkit-line-clamp:2;
+                                   -webkit-box-orient:vertical; overflow:hidden; }
+  @media (max-width:640px){
+    .reg-linha > summary{ grid-template-columns:minmax(0,1fr) auto;
+                          grid-template-areas:"frase frase" "quando fam"; }
+  }
   /* A família da ação, numa pastilha: dá a ler o assunto antes da frase. */
-  .reg-fam{ flex:none; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+  .reg-fam{ grid-area:fam; justify-self:end; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em;
             padding:.1rem .45rem; border-radius:50px; background:var(--cream); color:var(--ink-fraco);
             border:1px solid var(--line); }
-  .reg-fam.convites{ background:var(--gold-pale); color:var(--gold-deep); border-color:var(--gold-soft); }
-  .reg-fam.pecas{ background:#eae6f0; color:#6b5b8e; border-color:#d6cfe4; }
+  /* As pastilhas tinham duas cores emprestadas de sítios errados: «peças» era
+     um lilás escrito à mão, que no tema escuro ficava a ser a única mancha
+     clara da lista; «contas» e «casamento» eram --forest sobre --sand, e no
+     escuro isso é #0E1B25 sobre #28353E — uma pastilha com a palavra apagada
+     lá dentro. Todas passam a sair de fundos e tintas que viram com o tema. */
+  .reg-fam.convites{ background:var(--gold-pale); color:var(--gold-texto); border-color:var(--gold-soft); }
+  .reg-fam.pecas{ background:var(--cream); color:var(--text); border-color:var(--line); }
   .reg-fam.orcamento{ background:var(--ok-bg); color:var(--ok); border-color:transparent; }
   .reg-fam.licenca{ background:var(--warn-bg); color:var(--warn); border-color:transparent; }
-  .reg-fam.contas, .reg-fam.casamento{ background:var(--sand); color:var(--forest); border-color:transparent; }
+  .reg-fam.contas, .reg-fam.casamento{ background:var(--sand); color:var(--text); border-color:transparent; }
   .reg-detalhe{ padding:.15rem .2rem .8rem 92px; }
   @media (max-width:640px){ .reg-detalhe{ padding-left:.2rem; } }
   .reg-detalhe dl{ display:grid; grid-template-columns:auto 1fr; gap:.3rem .8rem; margin:0; }
@@ -735,6 +767,10 @@ window.CSRF = <?= json_encode(csrfToken()) ?>;
 // casamento: quem responde pela casa entra em vários, e o momento de um não
 // pode ficar dado como visto no outro.
 window.CASAMENTO_ID = <?= (int)casamentoAtual() ?>;
+// E como se chama. No histórico, as decisões da casa trazem o nome do
+// casamento no alvo — «suspendeu um casamento · Isabel & Abednego» —, que aqui
+// dentro é dizer duas vezes a mesma coisa: este histórico é só deste casamento.
+window.CASAMENTO_NOME = <?= json_encode(nomeDoCasamento()) ?>;
 // Quantas linhas a primeira página vai ter. O servidor já sabe a conta ($12),
 // por isso o esqueleto pode ter o número CERTO de barras em vez de um palpite:
 // com um palpite, um casamento de dois convites via 368px de barras a encolher
@@ -2096,16 +2132,23 @@ async function carregarRegisto(mais=false){
   if(!rs.length){ el.innerHTML='<p class="vazio-hist">Ainda não há atividade registada.</p>'; return; }
   el.innerHTML=`<p class="msg-conta">${REG_TOTAL} ação(ões) registadas · a ver as ${rs.length} mais recentes</p>`
     + rs.map(r=>{
-    // Fechada, a linha diz o essencial. Aberta, diz tudo o que se sabe dela —
-    // e é aí que se responde a «quem foi, e a partir de onde».
-    const alvo=r.alvo?` <b>${esc(r.alvo)}</b>`:'';
-    const det=r.detalhe?` <span style="color:var(--ink-fraco)">· ${esc(r.detalhe)}</span>`:'';
+    // Fechada, a linha é uma FRASE — «a Ana criou um convite Maria Silva» — e
+    // não quatro campos a que o leitor tem de dar sentido. Aberta, diz tudo o
+    // que se sabe dela, que é onde se responde a «com que papel, e de onde».
+    //
+    // O detalhe é escrito para quem lá chegar a perguntar alguma coisa, e às
+    // vezes traz o número interno da linha («id 42»). Isso não diz nada a
+    // ninguém aqui: fica guardado para o painel aberto, onde faz sentido.
+    const proprio = r.alvo && r.alvo === window.CASAMENTO_NOME;
+    const alvo=(r.alvo && !proprio)?` <span class="reg-alvo">${esc(r.alvo)}</span>`:'';
+    const soId=/^id \d+$/.test((r.detalhe||'').trim());
+    const det=(r.detalhe && !soId)?` <span class="reg-det">· ${esc(r.detalhe)}</span>`:'';
     const campo=(rot,val)=> val ? `<dt>${rot}</dt><dd>${val}</dd>` : '';
     return `<details class="reg-linha">
       <summary>
         <span class="reg-quando" title="${esc(dataInteira(r.criado_em))}">${fmtHora(r.criado_em)}</span>
-        <span class="reg-quem">${esc(r.utilizador||'—')}</span>
-        <span class="reg-que">${esc(r.frase||r.accao)}${alvo}${det}</span>
+        <span class="reg-que"><span class="reg-quem">${esc(r.utilizador||'—')}</span>
+          ${esc(r.frase||r.accao)}${alvo}${det}</span>
         <span class="reg-fam ${esc(r.familia||'outra')}">${esc(r.familia||'outra')}</span>
       </summary>
       <div class="reg-detalhe"><dl>
