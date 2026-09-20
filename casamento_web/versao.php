@@ -978,6 +978,12 @@ function correcoesEsperadas(): array {
          'assets/mesas.js', 'function porAqui(){'],
         ['Numa página chamada Planta de Mesas, a planta vê-se ao chegar',
          'mesas.php', 'id="barra-add-dobra"'],
+
+        // ---- A fotografia da bebida cabe inteira ----
+        ['A fotografia de uma bebida cabe inteira, em vez de ser cortada',
+         'assets/bar.css', '.b-foto img{ width:100%; height:100%; object-fit:contain;'],
+        ['E o cartão da montagem mostra-a inteira também',
+         'assets/bar.css', '.b-cart .capa img{ width:100%; height:100%; object-fit:contain;'],
         ['Há um sinal de reticências para dizer «e há mais»',
          'assets/icones.js', 'reticencias:'],
 

@@ -165,11 +165,14 @@
    */
   function foto(i) {
     if (i.foto) {
-      // foto_pos é o enquadramento que o casal escolheu na montagem: numa
-      // garrafa alta, o centro automático corta-lhe o rótulo.
-      return '<div class="b-foto"><img src="' + esc(i.foto) + '" alt=""'
-        + (i.foto_pos ? ' style="object-position:' + esc(i.foto_pos) + '"' : '')
-        + ' loading="lazy"></div>';
+      // O enquadramento (foto_pos) era preciso enquanto a fotografia era
+      // CORTADA para encher a caixa: numa garrafa alta, o centro automático
+      // comia-lhe o rótulo, e o casal tinha de escolher que pedaço ficava.
+      // Agora a fotografia cabe inteira (object-fit:contain, ver bar.css), e
+      // não há pedaço nenhum a escolher — deslocá-la só serviria para a
+      // encostar a um canto da moldura. O valor continua guardado: é do casal,
+      // e ninguém o apaga por a maneira de mostrar ter mudado.
+      return '<div class="b-foto"><img src="' + esc(i.foto) + '" alt="" loading="lazy"></div>';
     }
     // A classe diz a quem a desenha que ali não há fotografia — e há sítios
     // (o menu do convidado) onde a chapa sem fotografia deve ser uma faixa e

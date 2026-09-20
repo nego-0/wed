@@ -43,10 +43,18 @@
 .ico-22{ width:22px; height:22px; }
 .ico-28{ width:28px; height:28px; }
 
-/* ---- a mesma caixa para todas as fotografias ---------------- */
+/* ---- a mesma caixa para todas as fotografias ----------------
+   A fotografia cabe INTEIRA na caixa, e não é cortada para a encher.
+   Estava em `cover`: a caixa ficava sempre cheia, é certo, mas à custa de
+   cortar o que não coubesse — e o que se fotografa aqui são GARRAFAS, que são
+   altas e estreitas. Numa caixa 4/3 o `cover` come-lhes o gargalo e a base e
+   deixa uma faixa do meio: fica-se com uma mancha de rótulo sem saber que
+   bebida é. Quem manda uma fotografia de uma garrafa quer ver a garrafa.
+   Com `contain` sobra fundo à volta, e é de propósito: a cor da gaveta a
+   emoldurar é melhor do que meia garrafa. */
 .b-foto{ position:relative; border-radius:10px; overflow:hidden; background:var(--cream);
          aspect-ratio:4/3; }
-.b-foto img{ width:100%; height:100%; object-fit:cover; display:block; }
+.b-foto img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 /* ---- a chapa: o lugar da fotografia que ainda não existe -----
    Um menu por montar tem quase tudo sem fotografia, e o que lá estava era um
@@ -686,7 +694,10 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    tem nada para mostrar. Quando a fotografia chegar, ela fica com o painel
    inteiro — que é o que §25.8 promete. */
 .b-cart .capa.faixa{ aspect-ratio:auto; height:76px; }
-.b-cart .capa img{ width:100%; height:100%; object-fit:cover; display:block; }
+/* Inteira, também aqui: é o mesmo princípio da .b-foto — o cartão da montagem
+   é onde se confere o que se pôs no menu, e conferir meia garrafa não é
+   conferir nada. */
+.b-cart .capa img{ width:100%; height:100%; object-fit:contain; display:block; }
 /* As marcas ficam POR CIMA da capa, no canto: não roubam linha ao corpo, e é
    onde o olho já vai quando percorre uma grelha. */
 .b-cart .marcas{ position:absolute; top:.5rem; right:.5rem; display:flex; gap:.3rem;
