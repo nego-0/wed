@@ -297,11 +297,20 @@ a:hover{ text-decoration:underline; }
      O limiar de encolher é a própria altura do cabeçalho (--topo-alt, medida
      no arranque): só encolhe depois de ele ter saído de vista por si, e por
      isso não fica buraco nenhum entre ele e o conteúdo. */
-  .topo{
+  /* Só onde o cabeçalho PARTILHADO está — é o script dele que põe a classe
+     `topo-fixo` no corpo, e é o mesmo script que mede a altura a reservar.
+     Sem esta condição, as páginas que constroem o seu próprio topo (a copa, as
+     entregas, a porta) apanhavam o `position:fixed` e NÃO tinham quem lhes
+     medisse o `--topo-alt`: o corpo reservava zero, e o cabeçalho ficava
+     pousado por cima do conteúdo. Na copa isso dava o título, a tira de aviso
+     e o primeiro cartão todos no mesmo sítio — e o cabeçalho transparente por
+     cima, que é como quem diz invisível a tapar o que está por baixo.
+     Fixar e reservar são a mesma decisão: ou vêm as duas, ou não vem nenhuma. */
+  body.topo-fixo .topo{
     position:fixed; top:0; left:0; right:0; z-index:80;
     transition:padding-top .16s, padding-bottom .16s;
   }
-  body{ padding-top:var(--topo-alt, 0px); }
+  body.topo-fixo{ padding-top:var(--topo-alt, 0px); }
   body.topo-curto .topo{ padding-top:.5rem; padding-bottom:.5rem; }
   body.topo-curto .topo .sub,
   body.topo-curto .topo .monograma{ display:none; }

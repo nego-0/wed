@@ -276,6 +276,11 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   /* O corpo guarda o lugar do cabeçalho, e o limiar é a altura dele.
      Mede-se aqui e não no CSS porque a altura muda de página para página — o
      subtítulo tem uma ou duas linhas, a tira da licença aparece ou não. */
+  /* A marca de que o cabeçalho partilhado ESTÁ nesta página. É ela que liga o
+     `position:fixed` e o lugar reservado, no estilo.css — e é posta aqui, pelo
+     mesmo script que mede, para as duas coisas não se poderem separar. */
+  document.body.classList.add('topo-fixo');
+
   function medir() {
     if (curto) return;                    // encolhido, a medida não é a cheia
     var h = Math.round(topo.getBoundingClientRect().height);

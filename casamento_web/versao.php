@@ -964,6 +964,10 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'if (e.shiftKey && document.activeElement === primeiro)'],
         ['O cabeçalho mede-se depois de as fontes chegarem, e não antes',
          'parcial-cabecalho.php', 'new ResizeObserver(function () { medir(); }).observe(topo);'],
+        ['Fixar o cabeçalho e reservar-lhe o lugar são a MESMA decisão',
+         'assets/estilo.css', 'body.topo-fixo .topo{'],
+        ['E quem faz o seu próprio topo não apanha o fixo sem quem o meça',
+         'parcial-cabecalho.php', "document.body.classList.add('topo-fixo');"],
         ['A contagem nunca se perde: é o nome do casal que encolhe',
          'assets/estilo.css', '.topo .sub.topo-casal .tc-nome{'],
         ['Há um sinal de reticências para dizer «e há mais»',
@@ -971,7 +975,7 @@ function correcoesEsperadas(): array {
 
         // ---- O cabeçalho sai do caminho (UI-002) ----
         ['No telemóvel o cabeçalho é fixo e o corpo guarda-lhe o lugar',
-         'assets/estilo.css', 'body{ padding-top:var(--topo-alt, 0px); }'],
+         'assets/estilo.css', 'body.topo-fixo{ padding-top:var(--topo-alt, 0px); }'],
         ['E encolhe a trabalhar, com o limiar medido na altura dele',
          'parcial-cabecalho.php', "CURTO = h;            // só encolhe quando ele já saiu de vista"],
 
