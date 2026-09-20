@@ -25,6 +25,21 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* Estatísticas */
   .stats-mesa{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.7rem; margin-bottom:1.1rem; }
+  .barra-add-sum{ display:none; }
+  @media (max-width:760px){
+    /* Os números encolhem: quatro cartões de 120px de altura são 240px de
+       ecrã para dizer quatro números de duas casas. */
+    .stats-mesa{ grid-template-columns:1fr 1fr; gap:.5rem; margin-bottom:.8rem; }
+    .stats-mesa > *{ padding:.5rem .6rem !important; }
+    .barra-add-sum{
+      display:flex; align-items:center; gap:.5rem; min-height:44px; cursor:pointer;
+      list-style:none; padding:.4rem .2rem; margin-bottom:.4rem;
+      font-family:var(--sans); font-size:var(--t-denso); font-weight:600; color:var(--gold-texto);
+    }
+    .barra-add-sum::-webkit-details-marker{ display:none; }
+    .barra-add-sum::before{ content:'+'; font-size:var(--t-sub); line-height:1; }
+    .barra-add-dobra[open] .barra-add-sum::before{ content:'\2212'; }
+  }
   .sm{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
   .sm .n{ font-family:var(--serif); font-size:var(--t-display); font-weight:700; color:var(--ink); line-height:1; }
   .sm .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }
@@ -405,6 +420,27 @@ $CAS = casalInfo(defsAtuais($conn));
     display:inline-flex; align-items:center; justify-content:center; }
   .btn-gir:hover{ border-color:var(--forest); background:var(--cream); }
   .btn-gir.larga{ width:auto; padding:0 .45rem; font-size:var(--t-apoio); }
+  /* «Pôr aqui» acende enquanto espera pelo toque seguinte. Um modo que não se
+     vê é um modo que se esquece — e o toque a seguir faria outra coisa. */
+  .btn-gir.on{ background:var(--gold-pale); border-color:var(--gold-soft);
+               color:var(--gold-texto); font-weight:600; }
+  /* E a planta diz que está à espera: o cursor muda, e no telemóvel o aviso
+     em cima da tela é a única pista que resta (não há cursor nenhum). */
+  body.a-por-mesa .planta-viewport{ cursor:crosshair; }
+  body.a-por-mesa .planta-viewport::after{
+    content:'Toque onde a mesa vai ficar'; position:absolute; z-index:30;
+    left:50%; top:10px; transform:translateX(-50%);
+    background:var(--forest); color:var(--ivory); border-radius:999px;
+    padding:.35rem .8rem; font-size:var(--t-apoio); pointer-events:none;
+    box-shadow:0 6px 18px rgba(0,0,0,.25);
+  }
+  /* No telemóvel os alvos de mexer a mesa crescem: 28px é a medida de quem
+     tem um rato, e aqui quem manda é o polegar. */
+  @media (max-width:760px){
+    .btn-gir{ width:40px; height:40px; font-size:var(--t-sub); }
+    .btn-gir.larga{ height:40px; padding:0 .7rem; font-size:var(--t-denso); }
+    .grp.mover{ flex-wrap:wrap; }
+  }
   /* Rodar para a direita é o mesmo desenho ao espelho: é o que ↺ e ↻ eram um
      do outro, e poupa um segundo traço que teria de se manter a par. */
   .btn-gir.espelho > [data-ico]{ transform:scaleX(-1); }
@@ -527,7 +563,14 @@ $CAS = casalInfo(defsAtuais($conn));
 <div class="container">
   <div class="stats-mesa" id="stats"></div>
 
-  <!-- ADICIONAR MESA (acima do canvas) -->
+  <!-- ADICIONAR MESA (acima do canvas)
+       Num telemóvel isto dobra-se. Medido a 390x844: os números de cima (240px)
+       e este formulário (234px) empurravam a planta para y=982 — ou seja, para
+       fora de um ecrã de 844px. Numa página que se chama «Planta de Mesas», a
+       planta não pode ser a única coisa que não se vê ao chegar. Criar uma mesa
+       faz-se meia dúzia de vezes; olhar para o salão faz-se sempre. -->
+  <details class="barra-add-dobra" id="barra-add-dobra" open>
+    <summary class="barra-add-sum">Nova mesa</summary>
   <div class="barra-add">
     <input type="text" id="nova-nome" placeholder="Nova mesa (nome)">
     <input type="number" id="nova-cap" min="1" placeholder="Lugares">
@@ -536,6 +579,16 @@ $CAS = casalInfo(defsAtuais($conn));
     <button class="btn btn-ouro btn-sm" onclick="adicionarMesa()">+ Mesa</button>
     <button class="btn btn-fantasma btn-sm" id="btn-noivos" style="display:none" onclick="adicionarNoivos()" title="Repor a mesa de honra dos noivos"><i data-ico="anel"></i> Mesa dos noivos</button>
   </div>
+  </details>
+  <script>
+  /* Aberto no ecrã largo, fechado no telemóvel. O atributo `open` é booleano e
+     não se pode pedir a uma media query — decide-se aqui, uma vez, e quem o
+     abrir fica com ele aberto. */
+  (function(){
+    var d = document.getElementById('barra-add-dobra');
+    if (d && matchMedia('(max-width:760px)').matches) d.open = false;
+  })();
+  </script>
 
   <div class="layout">
     <!-- PLANTA -->

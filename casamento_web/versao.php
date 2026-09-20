@@ -970,6 +970,14 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', "document.body.classList.add('topo-fixo');"],
         ['A contagem nunca se perde: é o nome do casal que encolhe',
          'assets/estilo.css', '.topo .sub.topo-casal .tc-nome{'],
+
+        // ---- Mexer uma mesa sem a arrastar, no telemóvel ----
+        ['As setas empurram a mesa um passo de cada vez',
+         'assets/mesas.js', 'async function empurrarMesa(dx, dy){'],
+        ['E o «pôr aqui» põe-na onde o toque seguinte cair',
+         'assets/mesas.js', 'function porAqui(){'],
+        ['Numa página chamada Planta de Mesas, a planta vê-se ao chegar',
+         'mesas.php', 'id="barra-add-dobra"'],
         ['Há um sinal de reticências para dizer «e há mais»',
          'assets/icones.js', 'reticencias:'],
 

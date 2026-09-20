@@ -659,6 +659,24 @@ function panUp(){
 // ---------- arrastar mesas + linhas-guia magnéticas ----------
 let drag=null;
 $('planta').addEventListener('pointerdown', e=>{
+  // À espera de destino: este toque é a posição, e não o princípio de um
+  // arrasto. Sai daqui antes de tudo o resto — incluindo antes de o fundo
+  // começar a deslocar a vista.
+  if(aPorMesa){
+    e.preventDefault(); e.stopPropagation();
+    const m=MESAS.find(x=>x.id===SEL);
+    if(m){
+      const r=$('planta').getBoundingClientRect();
+      const x=Math.max(2, Math.min(98*EXT.x, (e.clientX-r.left)/r.width*100*EXT.x));
+      const y=Math.max(2, Math.min(98*EXT.y, (e.clientY-r.top)/r.height*100*EXT.y));
+      m.pos_x=x; m.pos_y=y;
+      salvarPos(m.id, x, y);
+      renderPlanta();
+      if(window.anunciar) anunciar('Mesa ' + (m.nome||'') + ' movida.');
+    }
+    cancelarPorAqui();
+    return;
+  }
   const node=e.target.closest('.mesa-node');
   if(!node){
     // Fundo do canvas: arrastar DESLOCA A VISTA, como num mapa. Sem isto, para
@@ -964,6 +982,14 @@ function detalheHTML(){
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Cor</span><div class="cores" id="ed-cor">${htmlCores(m.cor||'neutra')}</div></div>
       <div class="grp" style="display:flex;align-items:center;gap:.4rem"><span class="rot" style="margin:0">Dimensão</span>
         <select id="ed-tam" class="sel-mini" title="Dimensão da mesa" onchange="guardarMesaEd()">${optTam(m.tamanho)}</select></div>
+      <div class="grp mover" style="display:flex;align-items:center;gap:.35rem"><span class="rot" style="margin:0">Mover</span>
+        <button class="btn-gir" type="button" title="Um passo para a esquerda" onclick="empurrarMesa(-1,0)">&#8592;</button>
+        <button class="btn-gir" type="button" title="Um passo para cima" onclick="empurrarMesa(0,-1)">&#8593;</button>
+        <button class="btn-gir" type="button" title="Um passo para baixo" onclick="empurrarMesa(0,1)">&#8595;</button>
+        <button class="btn-gir" type="button" title="Um passo para a direita" onclick="empurrarMesa(1,0)">&#8594;</button>
+        <button class="btn-gir larga" type="button" id="bt-por-aqui"
+                title="Tocar aqui e depois na planta põe a mesa nesse sítio"
+                onclick="porAqui()">pôr aqui</button></div>
       <div class="grp rodar" style="display:flex;align-items:center;gap:.35rem"><span class="rot" style="margin:0">Rodar</span>
         <button class="btn-gir" type="button" title="Rodar 15° para a esquerda" onclick="rodarMesa(-15)"><i data-ico="rodar"></i></button>
         <span class="gir-val" id="ed-rot-val">${(+m.rotacao||0)}°</span>
@@ -1113,6 +1139,57 @@ async function guardarMesaEd(){
  * nome. Rodar só o tampo e deixar o resto direito não dava uma mesa virada:
  * dava um tampo torto com etiquetas espetadas a direito por cima dele.
  */
+/* ---------- mexer a mesa sem a arrastar ----------
+   Arrastar num telemóvel é o pior dos gestos: o dedo tapa justamente a mesa
+   que se está a mexer, a precisão é a de uma almofada, e o mesmo gesto serve
+   para deslocar a vista — o canvas e a mesa disputam-no. Ficam dois caminhos
+   que não são arrasto nenhum, e que servem o rato tão bem como o dedo:
+
+     • as SETAS empurram a mesa um passo de cada vez. É a única forma de
+       acertar ao pixel, e num ecrã pequeno é a única que acerta de todo;
+     • «PÔR AQUI» espera pelo toque seguinte na planta e põe lá a mesa. Dois
+       toques em vez de um arrasto, e o segundo é onde se está a olhar.
+
+   Sentar gente já tinha caminho sem arrasto (as listas de escolha ao lado de
+   cada nome); o que faltava era isto — pôr a mesa onde ela vai ficar. */
+const PASSO_MESA = 1.5;     // em pontos percentuais da planta
+
+async function empurrarMesa(dx, dy){
+  const m = MESAS.find(x => x.id === SEL); if(!m) return;
+  if(travaLeitura()) return;
+  if(mesasFixas()){ avisarMesasFixas(); return; }
+  const x = Math.max(2, Math.min(98 * EXT.x, (+m.pos_x || 50) + dx * PASSO_MESA));
+  const y = Math.max(2, Math.min(98 * EXT.y, (+m.pos_y || 50) + dy * PASSO_MESA));
+  m.pos_x = x; m.pos_y = y;
+  renderPlanta();
+  await salvarPos(m.id, x, y);
+}
+
+/* «Pôr aqui»: o próximo toque na planta é o destino.
+   Fica em modo de espera, e diz-se que está — um modo que não se vê é um modo
+   que se esquece, e o toque seguinte faria outra coisa qualquer. */
+let aPorMesa = false;
+function porAqui(){
+  const m = MESAS.find(x => x.id === SEL); if(!m) return;
+  if(travaLeitura()) return;
+  if(mesasFixas()){ avisarMesasFixas(); return; }
+  aPorMesa = !aPorMesa;
+  document.body.classList.toggle('a-por-mesa', aPorMesa);
+  const bt = document.getElementById('bt-por-aqui');
+  if(bt){ bt.classList.toggle('on', aPorMesa); bt.textContent = aPorMesa ? 'toque na planta' : 'pôr aqui'; }
+  if(aPorMesa && window.anunciar) anunciar('Toque na planta para pôr lá a mesa.');
+}
+function cancelarPorAqui(){
+  if(!aPorMesa) return;
+  aPorMesa = false;
+  document.body.classList.remove('a-por-mesa');
+  const bt = document.getElementById('bt-por-aqui');
+  if(bt){ bt.classList.remove('on'); bt.textContent = 'pôr aqui'; }
+}
+function avisarMesasFixas(){
+  if(window.toast) toast('As mesas estão fixas. Destrave-as na barra da planta para as mexer.', true);
+}
+
 async function rodarMesa(passo){
   const m=MESAS.find(x=>x.id===SEL); if(!m) return;
   if(travaLeitura()) return;
