@@ -87,19 +87,19 @@ $manual = [
 <style>
   /* Faixa com o estado da peça, acima das abas. */
   .estado-peca{ display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
-    background:#fff; border:1px solid var(--line); border-radius:14px;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
     padding:.7rem .95rem; margin-bottom:1rem; }
   .estado-peca .cresce{ flex:1; }
-  .estado-peca .txt{ font-size:var(--t-denso); color:#6d726b; }
+  .estado-peca .txt{ font-size:var(--t-denso); color:var(--ink-fraco); }
   .estado-peca .qtd{ white-space:nowrap; }
   .selo-v{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
            padding:.2rem .7rem; font-size:var(--t-apoio); white-space:nowrap; }
-  .selo-v.ok{ background:#eaf4ee; border:1px solid #bcdcc8; color:#1f6b38; }
-  .selo-v.fora{ background:#fdf3e6; border:1px solid var(--gold-soft); color:#8A6031; }
+  .selo-v.ok{ background:var(--ok-bg); border:1px solid var(--ok); color:var(--ok); }
+  .selo-v.fora{ background:var(--warn-bg); border:1px solid var(--gold-soft); color:var(--warn); }
   .btn-sm{ padding:.3rem .8rem; font-size:var(--t-apoio); }
 
   .abas{ display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.2rem; }
-  .abas a{ background:#fff; border:1px solid var(--line); border-radius:50px; padding:.45rem 1.1rem;
+  .abas a{ background:var(--card); border:1px solid var(--line); border-radius:50px; padding:.45rem 1.1rem;
            font-size:var(--t-denso); color:var(--text); text-decoration:none; }
   .abas a:hover{ border-color:var(--gold-soft); }
   .abas a.on{ background:var(--forest); border-color:var(--forest); color:#fff; }
@@ -109,16 +109,16 @@ $manual = [
   /* ---- Lista de produção dos convites ---- */
   /* Em ecrãs estreitos desliza a tabela, não a página inteira. */
   .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .prod{ width:100%; border-collapse:collapse; min-width:520px; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .prod{ width:100%; border-collapse:collapse; min-width:520px; background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
   .prod th{ background:var(--cream); font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.06em;
             color:var(--ink-fraco); text-align:left; padding:.6rem .8rem; font-weight:600; }
   .prod td{ border-top:1px solid var(--line); padding:.7rem .8rem; vertical-align:middle; font-size:var(--t-denso); }
-  .prod tr:hover td{ background:#fcfbf7; }
+  .prod tr:hover td{ background:var(--cream); }
   .prod .n{ color:var(--gold-soft); font-family:var(--serif); font-weight:700; width:2.2rem; }
   .prod .nm{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); }
   .prod .ms{ color:var(--forest); font-size:var(--t-apoio); }
   .prod .cod{ font-family:var(--serif); letter-spacing:2px; }
-  .prod canvas{ display:block; background:#fff; }
+  .prod canvas{ display:block; background:var(--card); }
   .prod .ver{ font-size:var(--t-apoio); white-space:nowrap; }
   .prod tbody tr{ cursor:pointer; }
 
@@ -142,12 +142,12 @@ $manual = [
 
   /* ---- Manuais ---- */
   .manuais{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
-  .man{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem; }
+  .man{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.2rem; }
   .man .ico{ font-size:var(--t-seccao); color:var(--gold); }
   .man h3{ margin:.4rem 0 .2rem; }
   .man p{ font-size:var(--t-denso); color:var(--ink-fraco); margin:0 0 .9rem; }
   .man .acoes{ display:flex; gap:.5rem; flex-wrap:wrap; }
-  .man.orig{ background:#fbfaf6; }
+  .man.orig{ background:var(--cream); }
   .man.orig h3{ font-size:var(--t-corpo); margin:0 0 .6rem; color:var(--ink-fraco); }
   .nota-man{ background:var(--gold-pale); border:1px solid var(--gold-soft); border-radius:12px;
              padding:.8rem 1rem; font-size:var(--t-denso); margin-bottom:1.2rem; }

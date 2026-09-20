@@ -53,7 +53,7 @@ if ($aberto > 0) {
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
-  .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
+  .painel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
   .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
   .lf{ display:grid; grid-template-columns:2fr 3fr 1fr auto; gap:.7rem; align-items:end; }
@@ -66,10 +66,10 @@ if ($aberto > 0) {
   /* Sem overflow:hidden aqui: era ele que cortava o menu "⋯" — o painel abria,
      mas ficava recortado pela borda do cartão e parecia não fazer nada. Quem
      precisa de recortar é a moldura da miniatura, e essa recorta-se a si. */
-  .mod{ background:#fff; border:1px solid var(--line); border-radius:14px;
+  .mod{ background:var(--card); border:1px solid var(--line); border-radius:14px;
         display:flex; flex-direction:column; transition:.16s; }
   .mod:hover{ border-color:var(--gold-soft); box-shadow:0 8px 22px rgba(180,134,74,.14); }
-  .mod.por-publicar{ background:repeating-linear-gradient(135deg,#fff 0 10px,#fdfbf6 10px 20px); }
+  .mod.por-publicar{ background:repeating-linear-gradient(135deg,var(--card) 0 10px,var(--cream) 10px 20px); }
   /* A moldura tem a proporção do cartão (2:3); a prova é desenhada em tamanho
      real e encolhida por transform, para o que se vê ser o que sai. */
   .cara{ position:relative; width:100%; aspect-ratio:2/3; overflow:hidden; background:#20211c;
@@ -96,16 +96,16 @@ if ($aberto > 0) {
        padding:.1rem .55rem; border:1px solid var(--line); }
   .et.publicado{ background:var(--ok-bg); color:var(--ok); border-color:var(--ok); }
   .et.rascunho{ background:var(--warn-bg); color:var(--warn); border-color:var(--warn); }
-  .et.alcance{ background:#fff; color:var(--ink-fraco); text-transform:none; letter-spacing:0; }
-  .et.origem{ background:rgba(180,134,74,.12); color:var(--gold); border-color:var(--gold); }
-  .et.fabrica{ background:#f4f2ee; color:var(--ink-fraco); text-transform:none; letter-spacing:0; }
+  .et.alcance{ background:var(--card); color:var(--ink-fraco); text-transform:none; letter-spacing:0; }
+  .et.origem{ background:var(--gold-pale); color:var(--gold-texto); border-color:var(--gold-soft); }
+  .et.fabrica{ background:var(--cream); color:var(--ink-fraco); text-transform:none; letter-spacing:0; }
   .restauro{ display:flex; gap:1rem; align-items:flex-start; justify-content:space-between;
              flex-wrap:wrap; background:var(--gold-pale); border:1px solid var(--gold-soft);
              border-radius:12px; padding:.9rem 1.1rem; margin:.2rem 0 1rem; }
-  .restauro-txt{ flex:1 1 320px; font-size:var(--t-denso); color:#5b6460; }
+  .restauro-txt{ flex:1 1 320px; font-size:var(--t-denso); color:var(--ink-fraco); }
   .restauro-lista{ list-style:none; padding:0; margin:.5rem 0 0; display:grid; gap:.35rem; }
   .restauro-lista li{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
-  .restauro-amb{ font-size:var(--t-apoio); color:#8a938e; }
+  .restauro-amb{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   /* Janela das opções de um modelo: as escolhas e a lista de casamentos.
      Vive no modal (ver #ov-modelo), que tem largura para uma lista se ler. */
   .modal-corpo .escolhas{ display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:.9rem; }
@@ -135,7 +135,7 @@ if ($aberto > 0) {
      à altura da mais alta, ficavam três cartões com meio palmo de branco. */
   .exs{ display:grid; gap:.8rem; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
         align-items:start; }
-  .ex{ border:1px solid var(--line); border-radius:12px; padding:.6rem; background:#fff; }
+  .ex{ border:1px solid var(--line); border-radius:12px; padding:.6rem; background:var(--card); }
   /* A miniatura recorta como a secção recorta no convite (cover + foco + zoom):
      é o único modo de o enquadramento ao lado querer dizer alguma coisa. */
   .ex .moldura{ display:block; width:100%; aspect-ratio:16/10; overflow:hidden; border-radius:8px;
@@ -160,7 +160,7 @@ if ($aberto > 0) {
   #lightbox img{ max-width:95vw; max-height:95vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
   .modal-corpo .gal{ display:grid; gap:.6rem; grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
                      max-height:min(56vh,420px); overflow:auto; padding:.2rem; }
-  .modal-corpo .gal-i{ position:relative; border:1px solid var(--line); background:#fff;
+  .modal-corpo .gal-i{ position:relative; border:1px solid var(--line); background:var(--card);
                        border-radius:10px; overflow:hidden; transition:.14s; }
   .modal-corpo .gal-i:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.18); }
   /* A que esta em vigor marca-se: numa grelha de vinte, saber qual e a de agora
@@ -194,7 +194,7 @@ if ($aberto > 0) {
                                 text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
   .modal-corpo .gal-mais .med{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.3rem; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
-  .chip{ border:1px solid var(--line); background:#fff; color:var(--ink-fraco); border-radius:50px;
+  .chip{ border:1px solid var(--line); background:var(--card); color:var(--ink-fraco); border-radius:50px;
          padding:.3rem .8rem; font-size:var(--t-apoio); font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .chip-sep{ width:1px; align-self:stretch; background:var(--line); margin:.1rem .3rem; }
@@ -204,7 +204,7 @@ if ($aberto > 0) {
   .chip-num{ display:inline-flex; align-items:center; justify-content:center; min-width:1.15rem;
              height:1.15rem; padding:0 .3rem; border-radius:50px; background:var(--warn,#b5713a);
              color:#fff; font-size:var(--t-apoio); font-weight:700; line-height:1; }
-  .chip-ferramentas.on .chip-num{ background:#fff; color:var(--gold); }
+  .chip-ferramentas.on .chip-num{ background:var(--card); color:var(--gold); }
   .fr-bloco{ border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin-bottom:1rem; }
   .fr-bloco h4{ margin:0 0 .3rem; font-family:var(--sans); font-size:var(--t-corpo); }
   .fr-lista{ list-style:none; padding:0; margin:.6rem 0; display:grid; gap:.4rem; }

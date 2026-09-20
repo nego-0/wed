@@ -28,13 +28,13 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
 <script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1rem; }
-  .cartao{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem; text-align:center; position:relative; }
+  .cartao{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.2rem; text-align:center; position:relative; }
   .cartao.impresso{ border-color:var(--ok); box-shadow:0 6px 18px rgba(47,125,79,.14); }
   .cartao .num{ position:absolute; top:.7rem; left:.9rem; font-family:var(--serif); font-weight:700; color:var(--gold-soft); font-size:var(--t-sub); }
-  .cartao .selo-i{ width:44px;height:44px;margin:0 auto .5rem;border:2px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);font-family:var(--serif);font-weight:700; }
+  .cartao .selo-i{ width:44px;height:44px;margin:0 auto .5rem;border:2px solid var(--gold-soft);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold-texto);font-family:var(--serif);font-weight:700; }
   .cartao .nm{ font-family:var(--serif); font-size:var(--t-titulo); font-weight:600; color:var(--ink); line-height:1.15; }
   .cartao .mm{ font-size:var(--t-apoio); color:var(--ink-fraco); margin:.35rem 0 .6rem; }
-  .cartao canvas{ background:#fff; }
+  .cartao canvas{ background:var(--card); }
   .cartao .cod{ font-family:var(--serif); letter-spacing:3px; color:var(--ink); margin-top:.3rem; }
   .cartao .mesa{ font-size:var(--t-apoio); color:var(--forest); margin-top:.3rem; }
   .cartao .marca{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.7rem; font-size:var(--t-apoio); color:var(--ink-fraco); cursor:pointer; }

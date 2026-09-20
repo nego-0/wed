@@ -35,14 +35,17 @@ $CAS  = casalInfo($DEFS);
   /* Os dois estados do dinheiro, e o que passa do teto. Vêm sempre com rótulo
      (legenda e valor em cada segmento), por isso a cor nunca conta sozinha. */
   :root{
-    --o-pago:#2f7d4f;      /* já saiu          */
-    --o-contr:#B4864A;     /* acento ouro (KPI, medidor das gavetas) */
-    --o-prev:#D9BC8C;      /* previsto/por pagar */
-    --o-over:#a5473f;      /* acima do teto    */
-    --o-track:#efe8da;     /* o carril vazio   */
+    /* Eram cinco cores cravadas à mão, iguais nos quatro temas — e no escuro
+       o carril ficava um creme claro com texto claro por cima. Cada uma tem
+       um papel que o sistema já sabe nomear, e é daí que passam a vir. */
+    --o-pago:var(--ok);        /* já saiu          */
+    --o-contr:var(--gold);     /* acento (KPI, medidor das gavetas) */
+    --o-prev:var(--gold-soft); /* previsto/por pagar */
+    --o-over:var(--danger);    /* acima do teto    */
+    --o-track:var(--cream);    /* o carril vazio   */
   }
   main.container{ max-width:920px; }
-  .painel{ background:#fff; border:1px solid var(--line); border-radius:16px;
+  .painel{ background:var(--card); border:1px solid var(--line); border-radius:16px;
            padding:1.25rem 1.35rem; margin-bottom:1.15rem; box-shadow:0 1px 2px rgba(22,38,30,.03); }
   .painel h3{ margin:0 0 .15rem; font-size:var(--t-sub); }
   .painel .dica{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-bottom:1rem; line-height:1.5; }
@@ -50,19 +53,19 @@ $CAS  = casalInfo($DEFS);
   .painel-topo .btn{ flex:0 0 auto; }
 
   /* ---- Saúde do orçamento: os números que se leem primeiro ---- */
-  .o-hero{ background:linear-gradient(158deg,#fff 0%, #fffdf8 100%);
+  .o-hero{ background:linear-gradient(158deg,var(--card) 0%, var(--cream) 100%);
            border-color:var(--gold-soft); }
   .o-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.7rem; margin-bottom:1.15rem; }
   /* Os cartões SÃO o filtro: cada um é uma fatia das despesas, e clicar nele
      mostra só essa fatia — na lista e no calendário. Por isso são botões, e
      não caixas: têm de se ver como coisa em que se carrega. */
-  .kpi{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.85rem .95rem;
+  .kpi{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:.85rem .95rem;
         position:relative; overflow:hidden; text-align:left; font-family:inherit; cursor:pointer;
         display:block; width:100%; transition:border-color .15s, box-shadow .15s, transform .15s; }
   .kpi:hover:not([disabled]){ border-color:var(--gold-soft); transform:translateY(-1px);
         box-shadow:0 6px 18px rgba(180,134,74,.14); }
   .kpi:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--ring); }
-  .kpi.on{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset; background:#fffdf6; }
+  .kpi.on{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset; background:var(--card); }
   /* O que não tem nada para mostrar não convida a carregar. */
   .kpi.morto{ cursor:default; opacity:.6; }
   .kpi::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--gold-soft); }
@@ -93,7 +96,7 @@ $CAS  = casalInfo($DEFS);
 
   /* ---- Categorias: onde pesa a festa ---- */
   .o-cats{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:.8rem; }
-  .o-cat{ border:1px solid var(--line); border-radius:12px; padding:.85rem .95rem; background:#fff;
+  .o-cat{ border:1px solid var(--line); border-radius:12px; padding:.85rem .95rem; background:var(--card);
           transition:.14s; position:relative; }
   .o-cat:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.1); }
   .o-cat .nome{ font-weight:600; color:var(--ink); font-size:var(--t-corpo); }
@@ -170,7 +173,7 @@ $CAS  = casalInfo($DEFS);
                  color:var(--ink-fraco); font-weight:600; padding:.45rem .55rem; border-bottom:1px solid var(--line); }
   table.desp td{ padding:.6rem .55rem; border-bottom:1px solid var(--line); font-size:var(--t-denso); vertical-align:middle; }
   table.desp tr:last-child td{ border-bottom:0; }
-  table.desp tbody tr:hover{ background:#fdfbf6; }
+  table.desp tbody tr:hover{ background:var(--cream); }
   .d-nome{ color:var(--ink); font-weight:500; }
   .d-forn{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .d-val{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; }
@@ -182,7 +185,7 @@ $CAS  = casalInfo($DEFS);
   .est{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.04em; border-radius:50px;
         padding:.12rem .6rem; border:1px solid var(--line); white-space:nowrap; display:inline-flex; align-items:center; gap:.3rem; }
   .est::before{ content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
-  .est.previsto{ background:#fbf5e9; color:var(--warn); border-color:var(--gold-soft); }
+  .est.previsto{ background:var(--warn-bg); color:var(--warn); border-color:var(--gold-soft); }
   .est.pago{ background:var(--ok-bg); color:var(--o-pago); border-color:var(--o-pago); }
 
   /* ---- Fatura (foto ou PDF) ---- */
@@ -220,7 +223,7 @@ $CAS  = casalInfo($DEFS);
   .modal-fundo{ position:fixed; inset:0; background:rgba(22,38,30,.5); display:none;
                 align-items:center; justify-content:center; padding:1rem; z-index:60; }
   .modal-fundo.aberto{ display:flex; }
-  .modal{ background:#fff; border-radius:16px; padding:1.4rem 1.5rem; max-width:540px; width:100%;
+  .modal{ background:var(--card); border-radius:16px; padding:1.4rem 1.5rem; max-width:540px; width:100%;
           max-height:90vh; overflow:auto; box-shadow:0 20px 60px rgba(22,38,30,.3); }
   .modal h3{ margin:0 0 1rem; }
   .modal .campo{ margin-bottom:.9rem; }
@@ -270,7 +273,7 @@ $CAS  = casalInfo($DEFS);
     <div class="o-legenda" id="o-legenda"></div>
     <p class="dica" style="margin:.9rem 0 0">Toque num dos números acima para ver só essa parte —
       nas despesas e no calendário. O <b>teto</b> e a <b>moeda</b> definem-se em
-      <a href="gestao.php" style="color:var(--gold)">Gestão</a>. Sem teto, a barra mede-se pela soma
+      <a href="gestao.php" style="color:var(--gold-texto)">Gestão</a>. Sem teto, a barra mede-se pela soma
       das despesas. As categorias são só gavetas com uma cor — não têm teto próprio.</p>
   </div>
 

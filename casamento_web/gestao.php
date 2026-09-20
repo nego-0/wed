@@ -92,7 +92,7 @@ $MAPA_LOCAL = [
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <style>
-  .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem; margin-bottom:1.2rem; }
+  .painel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.2rem 1.3rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
   .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:1rem; line-height:1.5; }
   .grelha{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.8rem; }

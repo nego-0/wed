@@ -168,10 +168,10 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
 <link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet"><?php // a cara de quem atende, no painel do atendimento ?>
 <style>
   .cas-lista{ display:grid; gap:.7rem; }
-  .cas{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
+  .cas{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
         display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center; }
   .cas.aberto{ border-color:var(--gold-soft); box-shadow:0 0 0 3px rgba(180,134,74,.14); }
-  .cas .selo{ width:38px; height:38px; border-radius:10px; background:var(--cream); color:var(--forest);
+  .cas .selo{ width:38px; height:38px; border-radius:10px; background:var(--cream); color:var(--ink);
               display:flex; align-items:center; justify-content:center; font-family:var(--serif);
               font-size:var(--t-corpo); border:1px solid var(--line); }
   .cas.aberto .selo{ background:var(--gold-pale); border-color:var(--gold-soft); }
@@ -185,7 +185,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .et.suspenso{ background:var(--danger-bg); color:var(--danger); border-color:var(--danger); }
   .et.inativo{ background:var(--cream); color:var(--ink-fraco); border-color:var(--line); }
   .et.agora{ background:var(--gold-pale); color:var(--ink); border-color:var(--gold-soft); }
-  .painel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
+  .painel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
   .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
 
@@ -193,17 +193,17 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .cod{ font-family:ui-monospace,monospace; letter-spacing:.12em; }
   .falta{ color:var(--warn); font-weight:500; }
   .filtros{ display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.8rem; }
-  .chip{ border:1px solid var(--line); background:#fff; color:var(--ink-fraco); border-radius:50px;
+  .chip{ border:1px solid var(--line); background:var(--card); color:var(--ink-fraco); border-radius:50px;
          padding:.3rem .8rem; font-size:var(--t-apoio); font-family:var(--sans); cursor:pointer; }
   .chip.on{ background:var(--forest); border-color:var(--forest); color:var(--ivory); }
   .editor-conta{ grid-column:1/-1; border-top:1px dashed var(--line); margin-top:.7rem; padding-top:.8rem; }
   .editor-conta .lf{ margin-top:.5rem; }
   .numeros{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
             gap:.7rem; margin-bottom:.8rem; }
-  .numeros .n{ background:#fff; border:1px solid var(--line); border-radius:12px;
+  .numeros .n{ background:var(--card); border:1px solid var(--line); border-radius:12px;
                padding:.85rem 1rem; }
   .numeros .n b{ display:block; font-family:var(--serif); font-size:1.9rem; line-height:1;
-                 color:var(--forest); }
+                 color:var(--ink); }
   .numeros .n span{ display:block; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
                     letter-spacing:.05em; color:var(--ink-fraco); margin-top:.35rem; }
   .numeros .n em{ display:block; font-style:normal; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.2rem; }

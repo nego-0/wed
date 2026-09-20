@@ -25,13 +25,13 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* Estatísticas */
   .stats-mesa{ display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.7rem; margin-bottom:1.1rem; }
-  .sm{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
+  .sm{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
   .sm .n{ font-family:var(--serif); font-size:var(--t-display); font-weight:700; color:var(--ink); line-height:1; }
   .sm .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }
   .sm.ok .n{ color:#1f7a3d; } .sm.alerta .n{ color:var(--danger); }
 
   /* Barra de adicionar mesa (acima do canvas, campos in-line) */
-  .barra-add{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.7rem .9rem; margin-bottom:1.1rem;
+  .barra-add{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.7rem .9rem; margin-bottom:1.1rem;
     display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; }
   .barra-add input[type=text]{ flex:1 1 170px; min-width:0; }
   .barra-add input[type=number]{ flex:0 1 90px; min-width:0; }
@@ -40,7 +40,7 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* Seletores de forma e cor (partilhados por adicionar e editar) */
   .formas{ display:inline-flex; gap:.25rem; flex-wrap:wrap; }
-  .formas button{ border:1.5px solid var(--line); background:#fff; border-radius:9px; cursor:pointer;
+  .formas button{ border:1.5px solid var(--line); background:var(--card); border-radius:9px; cursor:pointer;
     width:34px; height:32px; display:inline-flex; align-items:center; justify-content:center; padding:0; }
   .formas button.on{ border-color:var(--forest); background:var(--cream); }
   .fsw{ display:inline-block; background:var(--gold-soft); }
@@ -51,16 +51,16 @@ $CAS = casalInfo(defsAtuais($conn));
   .fsw-comprida{ width:24px; height:8px; border-radius:3px; }
   .fsw-ferradura{ width:18px; height:14px; border-radius:6px 6px 0 0; clip-path:polygon(0 0,32% 0,32% 58%,68% 58%,68% 0,100% 0,100% 100%,0 100%); }
   .cores{ display:inline-flex; gap:.3rem; flex-wrap:wrap; }
-  .cores button{ width:26px; height:26px; padding:0; border-radius:50%; border:1px solid var(--line); background:#fff; cursor:pointer;
+  .cores button{ width:26px; height:26px; padding:0; border-radius:50%; border:1px solid var(--line); background:var(--card); cursor:pointer;
     display:inline-flex; align-items:center; justify-content:center; }
   .cores button.on{ box-shadow:0 0 0 2px var(--forest); border-color:var(--forest); }
   .csw{ display:block; width:18px; height:18px; border-radius:50%; border:1px solid rgba(0,0,0,.12); }
-  .csw-neutra{ background:#FBF8F1; } .csw-verde{ background:#2C4536; } .csw-ouro{ background:#B4864A; }
+  .csw-neutra{ background:var(--cream); } .csw-verde{ background:#2C4536; } .csw-ouro{ background:#B4864A; }
   .csw-terracota{ background:#b5673f; } .csw-azul{ background:#4a6b7a; } .csw-ameixa{ background:#7a4a6b; }
   .csw-rosa{ background:#b56b78; } .csw-salva{ background:#6b7a53; }
 
   /* Planta */
-  .planta-cartao{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem; }
+  .planta-cartao{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:1rem; }
   .planta-topo{ display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
   .planta-topo .titulo{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); font-weight:600; flex:1; }
   /* A legenda era uma fila de bolinhas cinzentas com letra de 12px: dizia-se
@@ -73,7 +73,7 @@ $CAS = casalInfo(defsAtuais($conn));
     padding:.22rem .6rem .22rem .45rem; font-size:var(--t-apoio); color:var(--ink); line-height:1.2; }
   .legenda .lg b{ font-weight:600; }
   .legenda .lg .n{ font-variant-numeric:tabular-nums; font-weight:700;
-    background:#fff; border:1px solid var(--line); border-radius:50px;
+    background:var(--card); border:1px solid var(--line); border-radius:50px;
     padding:0 .38rem; font-size:var(--t-apoio); }
   .legenda .lg.zero{ opacity:.45; }
 
@@ -93,11 +93,11 @@ $CAS = casalInfo(defsAtuais($conn));
   .dot-cheia,   .lg-cheia  { --est:var(--est-cheia); }
   .dot-excede,  .lg-excede { --est:var(--est-excede); }
   .legenda .lg i{ width:14px; height:14px; border-radius:50%; flex:none; box-sizing:border-box;
-    border:2px solid var(--est); background:#fff; }
+    border:2px solid var(--est); background:var(--card); }
   .legenda .lg-parcial i{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
   .legenda .lg-cheia i, .legenda .lg-excede i{ background:var(--est); }
   .legenda .lg:not(.zero){ border-color:var(--est); }
-  .legenda .lg-excede:not(.zero){ background:#fdf1ef; }
+  .legenda .lg-excede:not(.zero){ background:var(--danger-bg); }
 
   /* Canvas de tamanho FIXO (a moldura não muda com o zoom): é a janela de scroll.
      O tamanho é definido pelo utilizador (arrastar as bordas) e guardado na BD.
@@ -138,7 +138,7 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* Barra de zoom + botão de maximizar */
   .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
-  .icon-btn{ border:1px solid var(--line); background:#fff; color:var(--text); border-radius:10px;
+  .icon-btn{ border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:10px;
     width:34px; height:32px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
   .icon-btn:hover{ border-color:var(--gold-soft); color:var(--forest); }
   .icon-btn .i-comp{ display:none; }
@@ -205,7 +205,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .planta-viewport::-webkit-scrollbar-corner{ background:transparent; }
 
   .zoombar{ display:inline-flex; border:1px solid var(--line); border-radius:50px; overflow:hidden; }
-  .zoombar button{ border:0; background:#fff; color:var(--text); font-family:inherit; font-size:var(--t-apoio);
+  .zoombar button{ border:0; background:var(--card); color:var(--text); font-family:inherit; font-size:var(--t-apoio);
     padding:.32rem .6rem; cursor:pointer; line-height:1.1; border-left:1px solid var(--line); }
   .zoombar button:first-child{ border-left:0; }
   .zoombar button.on{ background:var(--forest); color:#fff; }
@@ -277,7 +277,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .noivos-ala.dir{ transform:translate(calc(var(--d)*0.5), -50%); }
   .noivos-ala .ala-tit{ font-size:calc(var(--d)*0.081); text-transform:uppercase; letter-spacing:.5px;
     color:#8a6a2f; text-align:center; font-weight:700; }
-  .noivos-ala .ala-p{ background:#fff; border:1px solid #d8c193; border-radius:50px;
+  .noivos-ala .ala-p{ background:var(--card); border:1px solid #d8c193; border-radius:50px;
     font-size:calc(var(--d)*0.088); padding:calc(var(--d)*0.03) calc(var(--d)*0.09); line-height:1.15;
     text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#5c4321;
     user-select:none; box-shadow:0 2px 6px rgba(180,134,74,.18); }
@@ -312,7 +312,7 @@ $CAS = casalInfo(defsAtuais($conn));
     /* O tamanho da letra é ESCOLHIDO, e não herdado da mesa: numa planta com
        mesas de dimensões diferentes, os nomes saíam todos de tamanhos
        diferentes — e o da mesa pequena era o que menos se lia. */
-    font-size:var(--rot-tam, 13px); line-height:1.2; color:var(--ink);
+    font-size:var(--rot-tam, 13px); line-height:1.2; color:var(--forest-deep);
     max-width:calc(var(--d)*1.9 + 4em); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
     text-align:center;
     background:color-mix(in srgb, var(--ivory) 88%, transparent);
@@ -400,7 +400,7 @@ $CAS = casalInfo(defsAtuais($conn));
   }
 
   /* Rodar a mesa: um salão real não tem tudo alinhado com as paredes. */
-  .btn-gir{ border:1.5px solid var(--line); background:#fff; border-radius:8px; cursor:pointer;
+  .btn-gir{ border:1.5px solid var(--line); background:var(--card); border-radius:8px; cursor:pointer;
     width:28px; height:28px; padding:0; font-size:var(--t-corpo); line-height:1; color:var(--ink);
     display:inline-flex; align-items:center; justify-content:center; }
   .btn-gir:hover{ border-color:var(--forest); background:var(--cream); }
@@ -419,9 +419,9 @@ $CAS = casalInfo(defsAtuais($conn));
 
   /* Painel direito: conjunto de abas */
   .painel-mesas{ display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
-  .tabset{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:.8rem .9rem 1rem; display:flex; flex-direction:column; min-height:0; }
+  .tabset{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:.8rem .9rem 1rem; display:flex; flex-direction:column; min-height:0; }
   .tabset-tabs{ display:flex; gap:.3rem; flex-wrap:wrap; margin-bottom:.8rem; }
-  .tabset-tabs .rt{ border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:var(--t-denso);
+  .tabset-tabs .rt{ border:1px solid var(--line); background:var(--card); color:var(--text); font-family:inherit; font-size:var(--t-denso);
     padding:.4rem .7rem; border-radius:50px; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
   .tabset-tabs .rt.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
   .tabset-tabs .rt-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); min-width:1.1rem; text-align:center; }
@@ -441,7 +441,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .chip-drag.arrastando{ opacity:.4; }
   .chip-drag .cd-nome{ font-size:var(--t-denso); color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
   .chip-drag .cd-meta{ font-size:var(--t-apoio); color:var(--ink-fraco); }
-  .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:#fff; }
+  .chip-drag.sem-mesa{ border-style:dashed; border-color:var(--gold-soft); background:var(--card); }
   .roster-vazio{ color:var(--ink-fraco); font-size:var(--t-denso); padding:.4rem 0; }
 
   /* ------------------------------------------------------------
@@ -453,7 +453,7 @@ $CAS = casalInfo(defsAtuais($conn));
      É o índice do salão. */
   .lista-plantas{ display:flex; flex-direction:column; gap:.35rem; }
   .lm-linha{ display:flex; align-items:center; gap:.55rem; width:100%; text-align:left;
-    border:1px solid var(--line); background:#fff; border-radius:12px; padding:.38rem .55rem;
+    border:1px solid var(--line); background:var(--card); border-radius:12px; padding:.38rem .55rem;
     cursor:pointer; font-family:inherit; color:var(--ink); }
   .lm-linha:hover{ border-color:var(--gold-soft); background:var(--cream); }
   .lm-linha.on{ border-color:var(--forest); box-shadow:0 0 0 1.5px var(--forest); background:var(--cream); }
@@ -463,7 +463,7 @@ $CAS = casalInfo(defsAtuais($conn));
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lm-meta{ display:block; font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.2; }
   .lm-est{ flex:none; width:14px; height:14px; border-radius:50%; box-sizing:border-box;
-    border:2px solid var(--est); background:#fff; }
+    border:2px solid var(--est); background:var(--card); }
   .lm-est.dot-parcial{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
   .lm-est.dot-cheia, .lm-est.dot-excede{ background:var(--est); }
   .ghost-drag{ position:fixed; z-index:1000; transform:translate(-50%,-50%); pointer-events:none;
@@ -496,7 +496,7 @@ $CAS = casalInfo(defsAtuais($conn));
   /* Dropdown de pesquisa (substitui os <select> de listas longas) */
   .combo{ position:relative; display:block; width:100%; }
   .combo-btn{ width:100%; display:flex; align-items:center; gap:.4rem; text-align:left; cursor:pointer;
-    border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:var(--t-denso);
+    border:1px solid var(--line); background:var(--card); color:var(--text); font-family:inherit; font-size:var(--t-denso);
     padding:.5rem .6rem; border-radius:10px; line-height:1.2; }
   .combo-btn:hover{ border-color:var(--gold-soft); }
   .combo-btn .combo-txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -505,7 +505,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .combo-btn .combo-cx > svg{ width:1em; height:1em; }
   .combo.combo-inline{ flex:none; max-width:56%; min-width:120px; }
   .combo.combo-inline .combo-btn{ font-size:var(--t-apoio); padding:.35rem .45rem; }
-  .combo-pop{ position:fixed; z-index:1200; background:#fff; border:1px solid var(--line); border-radius:12px;
+  .combo-pop{ position:fixed; z-index:1200; background:var(--card); border:1px solid var(--line); border-radius:12px;
     box-shadow:0 12px 30px rgba(22,38,30,.20); padding:.4rem; min-width:220px; }
   .combo-pop[hidden]{ display:none; }
   .combo-search{ width:100%; margin-bottom:.35rem; box-sizing:border-box; }

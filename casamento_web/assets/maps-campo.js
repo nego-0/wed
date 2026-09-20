@@ -35,12 +35,12 @@
     s.textContent =
       '.mapa-ferramentas{display:flex;flex-wrap:wrap;gap:.4rem .7rem;align-items:center;margin:.35rem 0 0;font-size:var(--t-apoio)}' +
       '.mapa-btn{display:inline-flex;align-items:center;gap:.35rem;cursor:pointer;border:1px solid var(--line,#d8dcd4);' +
-      'background:#fff;color:inherit;border-radius:8px;padding:.32rem .6rem;font:inherit;font-size:var(--t-apoio);line-height:1}' +
+      'background:var(--card);color:inherit;border-radius:8px;padding:.32rem .6rem;font:inherit;font-size:var(--t-apoio);line-height:1}' +
       '.mapa-btn:hover{border-color:var(--gold,#a1854e)}' +
       '.mapa-btn svg{width:14px;height:14px;flex:none}' +
-      '.mapa-coords{color:#6b7169;display:inline-flex;align-items:center;gap:.35rem}' +
+      '.mapa-coords{color:var(--ink-fraco);display:inline-flex;align-items:center;gap:.35rem}' +
       '.mapa-coords svg{width:14px;height:14px;flex:none}' +
-      '.mapa-coords.tem{color:var(--forest,#2f5d3a)}' +
+      '.mapa-coords.tem{color:var(--gold-texto,#2f5d3a)}' +
       '.mapa-coords .copiar{cursor:pointer;text-decoration:underline;color:inherit}';
     document.head.appendChild(s);
   }

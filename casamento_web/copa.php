@@ -56,7 +56,7 @@ $CAS  = casalInfo($DEFS);
   body.b-servico .topo h1{ font-family:var(--serif); font-size:var(--t-seccao); margin:0; color:var(--ink); }
   body.b-servico .topo .sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
-  body.b-servico .topo .nav a{ color:var(--gold); font-size:var(--t-denso); }
+  body.b-servico .topo .nav a{ color:var(--gold-texto); font-size:var(--t-denso); }
 
   /* A nota de rodapé de uma coluna. Explica uma regra do módulo e lê-se uma
      vez na vida — por isso é pequena e discreta, e não uma frase em corpo de

@@ -39,7 +39,7 @@ $CAS  = casalInfo($DEFS);
   body.b-servico .topo h1{ font-family:var(--serif); font-size:var(--t-seccao); margin:0; color:var(--ink); }
   body.b-servico .topo .sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
-  body.b-servico .topo .nav a{ color:var(--gold); font-size:var(--t-denso); }
+  body.b-servico .topo .nav a{ color:var(--gold-texto); font-size:var(--t-denso); }
 
   /* As três filas: a minha, a que espera, e a que voltou. Cabeçalhos em vez
      de abas — num só ecrã, rolar é mais rápido do que escolher. O sinal à

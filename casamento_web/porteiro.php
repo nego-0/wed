@@ -45,7 +45,7 @@ $CAS  = casalInfo($DEFS);
   .contador-porta{ display:flex; gap:.7rem; margin-bottom:1.1rem; }
   .cp{ flex:1; background:rgba(255,255,255,.06); border:1px solid rgba(217,188,140,.2); border-radius:14px; padding:.9rem; text-align:center; }
   .cp .n{ font-family:var(--serif); font-size:1.9rem; font-weight:700; color:var(--gold-soft); line-height:1; }
-  .cp .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--gold-pale); margin-top:.3rem; }
+  .cp .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--topo-txt); margin-top:.3rem; }
 
   #leitor{ border-radius:16px; overflow:hidden; margin-bottom:1rem; display:none; background:#000; }
   #leitor.on{ display:block; }
@@ -56,7 +56,7 @@ $CAS  = casalInfo($DEFS);
 
   .resultado{ display:none; }
   .resultado.on{ display:block; }
-  .cartao-conv{ background:var(--ivory); color:var(--text); border-radius:18px; overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,.35); }
+  .cartao-conv{ background:var(--ivory); color:var(--forest-deep); border-radius:18px; overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,.35); }
   .faixa{ padding:1.2rem 1.3rem; color:#fff; }
   .faixa.ok{ background:linear-gradient(135deg,#2f7d4f,#245e3b); }
   .faixa.aviso{ background:linear-gradient(135deg,#a8792f,#8A6031); }
@@ -82,12 +82,12 @@ $CAS  = casalInfo($DEFS);
   .acoes-porta .btn{ flex:1; justify-content:center; }
   .aviso-txt{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:.6rem .8rem; font-size:var(--t-denso); margin-bottom:1rem; }
   .varios{ display:grid; gap:.5rem; }
-  .varios .opc{ background:var(--ivory); color:var(--text); border-radius:12px; padding:.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .varios .opc{ background:var(--ivory); color:var(--forest-deep); border-radius:12px; padding:.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
   .varios .opc small{ color:var(--ink-fraco); }
   .msg-vazia{ text-align:center; color:var(--gold-pale); padding:1.4rem; }
 
   .abas{ display:flex; gap:.4rem; margin-bottom:1.1rem; background:rgba(255,255,255,.05); border:1px solid rgba(217,188,140,.2); border-radius:50px; padding:.25rem; }
-  .aba{ flex:1; border:none; background:transparent; color:var(--gold-pale); font-family:var(--sans); font-weight:500; font-size:var(--t-denso); padding:.6rem; border-radius:50px; cursor:pointer; }
+  .aba{ flex:1; border:none; background:transparent; color:var(--topo-txt); font-family:var(--sans); font-weight:500; font-size:var(--t-denso); padding:.6rem; border-radius:50px; cursor:pointer; }
   .aba.on{ background:var(--gold); color:var(--sobre-gold); }
 
   .entradas-topo{ text-align:center; color:var(--gold-pale); font-size:var(--t-denso); margin-bottom:1rem; }
@@ -144,7 +144,7 @@ $CAS  = casalInfo($DEFS);
 
     <div class="busca-manual">
       <input type="search" id="q" placeholder="Código ou nome do convidado…" onkeydown="if(event.key==='Enter')buscar()">
-      <button class="btn btn-linha" style="border-color:var(--gold-soft);color:var(--gold-soft)" onclick="buscar()">Procurar</button>
+      <button class="btn btn-linha" style="border-color:var(--topo-acento);color:var(--topo-acento)" onclick="buscar()">Procurar</button>
     </div>
 
     <div class="resultado" id="resultado"></div>
@@ -440,7 +440,7 @@ function mostrarConvite(c){
         ${(presente||parcial)?`<button class="btn btn-fantasma" onclick="checkin(${c.id},'anular')">Anular entrada</button>`:''}
       </div>
       ${!podeEntrar?`<div class="aviso-txt" style="margin-top:.6rem">Sem presença confirmada. Autorize a entrada apenas em casos excecionais.</div>`:''}
-      <button class="btn btn-linha" style="width:100%;margin-top:.7rem;border-color:var(--gold-soft);color:var(--gold-soft)" onclick="proximo()">Próximo</button>
+      <button class="btn btn-linha" style="width:100%;margin-top:.7rem;border-color:var(--topo-acento);color:var(--topo-acento)" onclick="proximo()">Próximo</button>
     </div>
   </div>`;
 }

@@ -66,7 +66,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
      tudo e sobrava meia página vazia. */
   .peca{ display:grid; grid-template-columns:170px minmax(260px,1fr) minmax(220px,340px);
          gap:1.4rem; align-items:start;
-         background:#fff; border:1px solid var(--line); border-radius:16px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
+         background:var(--card); border:1px solid var(--line); border-radius:16px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   @media (max-width:1100px){ .peca{ grid-template-columns:150px 1fr; } .peca-vs{ grid-column:1 / -1; } }
   @media (max-width:560px){ .peca{ grid-template-columns:1fr; } .peca-prova{ max-width:190px; } }
 
@@ -77,17 +77,17 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
                       transform:scale(var(--pv,.44)); transform-origin:top left; pointer-events:none; }
   .peca-prova .lupa{ position:absolute; left:0; right:0; bottom:0; text-align:center;
                      padding:.4rem; background:rgba(14,15,12,.82);
-                     color:var(--gold-pale); font-size:var(--t-apoio); text-decoration:none; }
+                     color:var(--topo-txt); font-size:var(--t-apoio); text-decoration:none; }
   .peca-prova .lupa:hover{ background:rgba(14,15,12,.95); color:#fff; }
 
   .peca h2{ margin:0 0 .4rem; font-size:var(--t-titulo); }
-  .peca .estado-linha{ margin:0; font-size:var(--t-denso); line-height:1.55; color:#6d726b; }
+  .peca .estado-linha{ margin:0; font-size:var(--t-denso); line-height:1.55; color:var(--ink-fraco); }
   /* Nome próprio: não herda o .acoes global, que empurra tudo para a direita. */
   .peca-acoes{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.9rem; justify-content:flex-start; }
   .selo-v{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
            padding:.2rem .7rem; font-size:var(--t-apoio); }
-  .selo-v.ok{ background:#eaf4ee; border:1px solid #bcdcc8; color:#1f6b38; }
-  .selo-v.fora{ background:#fdf3e6; border:1px solid var(--gold-soft); color:#8A6031; }
+  .selo-v.ok{ background:var(--ok-bg); border:1px solid var(--ok); color:var(--ok); }
+  .selo-v.fora{ background:var(--warn-bg); border:1px solid var(--gold-soft); color:var(--warn); }
   .mini{ display:flex; gap:1.2rem; flex-wrap:wrap; margin:.8rem 0 0; }
   .mini div{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .mini b{ display:block; font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); line-height:1.1; }
@@ -105,23 +105,23 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .peca-vs li .nm{ font-family:var(--serif); color:var(--ink); min-width:0;
                    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .peca-vs li .qd{ margin-left:auto; }
-  .peca-vs li .em{ font-size:var(--t-apoio); color:#1f6b38; white-space:nowrap; }
+  .peca-vs li .em{ font-size:var(--t-apoio); color:var(--ok); white-space:nowrap; }
   .peca-vs li .qd{ font-size:var(--t-apoio); color:var(--ink-fraco); white-space:nowrap; }
   .peca-vs .maisv{ font-size:var(--t-apoio); display:inline-block; margin-top:.5rem; }
   .peca-vs .nada{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.5; }
 
   /* ---- Lista dos convites digitais ---- */
   .prod-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .prod{ width:100%; border-collapse:collapse; min-width:560px; background:#fff;
+  .prod{ width:100%; border-collapse:collapse; min-width:560px; background:var(--card);
          border:1px solid var(--line); border-radius:14px; overflow:hidden; }
   .prod th{ background:var(--cream); font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.06em;
             color:var(--ink-fraco); text-align:left; padding:.6rem .8rem; font-weight:600; }
   .prod td{ border-top:1px solid var(--line); padding:.6rem .8rem; vertical-align:middle; font-size:var(--t-denso); }
-  .prod tr:hover td{ background:#fcfbf7; }
+  .prod tr:hover td{ background:var(--cream); }
   .prod .n{ color:var(--gold-soft); font-family:var(--serif); font-weight:700; width:2.2rem; }
   .prod .nm{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); }
   .prod .cod{ font-family:var(--serif); letter-spacing:2px; }
-  .prod canvas{ display:block; background:#fff; }
+  .prod canvas{ display:block; background:var(--card); }
   .prod .ac{ white-space:nowrap; }
   .prod .ac a{ font-size:var(--t-apoio); margin-right:.6rem; }
 
@@ -152,7 +152,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-cab{ margin:-.2rem 0 .8rem; }
   .ft-secs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:.7rem; }
   .ft-sec{ display:grid; grid-template-columns:auto 1fr; gap:.75rem; align-items:start;
-           border:1px solid var(--line); border-radius:12px; padding:.6rem .7rem; background:#fff; }
+           border:1px solid var(--line); border-radius:12px; padding:.6rem .7rem; background:var(--card); }
   /* A mesma caixa para todas as secções. As janelas do convite têm feitios
      diferentes — uma capa a toda a altura do ecrã não é um passe de entrada —,
      mas uma grelha de miniaturas com quatro feitios era uma escada. O feitio
@@ -211,7 +211,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   .ft-lente-pe .leg{ color:var(--ivory); font-size:var(--t-denso); }
   .ft-lente-ac{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
                 justify-content:center; }
-  .ft-lente-dica{ color:#c9cfc6; font-size:var(--t-apoio); }
+  .ft-lente-dica{ color:var(--topo-txt); font-size:var(--t-apoio); }
   /* Por guardar: o aviso é discreto, mas não passa por dizer nada. */
   .ft-lente-dica.aviso{ color:var(--gold-pale); }
   /* Um ponto desenhado, e não o carácter ●, que muda de tamanho e de peso
@@ -230,7 +230,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
                           color:var(--forest-deep); font-weight:600; }
   .ft-lente-ac .btn-ouro:hover{ background:var(--gold-soft); border-color:var(--gold-soft); }
   .ft-lente-ac .btn-ouro[disabled]{ background:none; border-color:rgba(233,223,201,.25);
-                                    color:#9aa196; font-weight:400; cursor:default; }
+                                    color:var(--ink-fraco); font-weight:400; cursor:default; }
   .ft-lente .fechar{ position:absolute; top:.8rem; right:1rem; background:none; border:0;
                      color:#fff; font-size:var(--t-display); line-height:1; cursor:pointer; z-index:2; }
 

@@ -69,7 +69,7 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   .amostra.on{ border-color:var(--ink); box-shadow:0 0 0 2px #fff inset; }
   .rot{ font-size:var(--t-etiqueta); font-weight:600; color:var(--ink-fraco); letter-spacing:.08em; text-transform:uppercase; }
   .legenda{ text-align:center; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.45rem; }
-  .legenda a{ color:var(--gold); }
+  .legenda a{ color:var(--gold-texto); }
 
   /* ---- Impressão: 100×150 mm, um cartão por página, sem fundo ---- */
   @media print{

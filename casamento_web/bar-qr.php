@@ -55,7 +55,7 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
   .barra .dica{ margin:0; flex:1 1 16rem; }
   .folhas{ max-width:900px; margin:0 auto 3rem; padding:0 1rem;
            display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-  .cartao{ background:#fff; border:1px dashed var(--line); border-radius:var(--radius);
+  .cartao{ background:var(--card); border:1px dashed var(--line); border-radius:var(--radius);
            padding:1.4rem 1rem 1rem; text-align:center; break-inside:avoid; }
   .cartao .mono{ font-family:var(--serif); font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.18em;
                  text-transform:uppercase; color:var(--gold-deep); }

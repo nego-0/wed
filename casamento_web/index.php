@@ -50,7 +50,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
      duas perguntas de duas respostas — numa lista dessas, o menu que abre e
      fecha esconde metade da resposta e obriga a um clique a mais para ver a
      outra. Aqui está tudo à vista, e vê-se o que está escolhido sem abrir nada. */
-  .m-extras .seg{ display:grid; grid-template-columns:1fr 1fr; min-width:0; background:#fff;
+  .m-extras .seg{ display:grid; grid-template-columns:1fr 1fr; min-width:0; background:var(--card);
                   border:1px solid var(--line); border-radius:9px; overflow:hidden; }
   .m-extras .seg button{ min-width:0; border:0; border-right:1px solid var(--line);
                          background:transparent; font:inherit; font-size:var(--t-apoio); color:#6d746c;
@@ -134,7 +134,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
   /* Cartões de filtro com ícones (painel coeso: cada cartão filtra a lista) */
   .grelha-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:.7rem; }
-  .stat-f{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:.85rem .6rem; cursor:pointer;
+  .stat-f{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.85rem .6rem; cursor:pointer;
     display:flex; flex-direction:column; align-items:center; gap:.25rem; text-align:center; transition:.16s;
     font-family:inherit; color:var(--text); }
   .stat-f:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.12); transform:translateY(-2px); }
@@ -144,7 +144,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .stat-f .sn{ font-family:var(--serif); font-size:var(--t-seccao); font-weight:700; color:var(--ink); line-height:1; }
   .stat-f .sl{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
   .stat-f.ativo{ border-color:var(--forest); background:var(--forest); }
-  .stat-f.ativo .sn{ color:#fff; } .stat-f.ativo .sl{ color:var(--gold-pale); }
+  .stat-f.ativo .sn{ color:var(--ivory); } .stat-f.ativo .sl{ color:var(--topo-txt); }
   .stat-f.ativo .si{ background:rgba(255,255,255,.15); color:var(--gold-pale); }
   .stat-f.verde .si{ color:#1f7a3d; } .stat-f.ouro .si{ color:var(--gold); } .stat-f.rosa .si{ color:#a5473f; }
   /* Os cartões extra fazem parte da mesma grelha (display:contents) — assim
@@ -155,7 +155,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
   /* Fim da lista: "mostrar mais" e a contagem do que já se vê */
   .btn-mais-lista{ display:flex; flex-direction:column; align-items:center; gap:.15rem; width:100%; margin-top:.4rem;
-    background:#fff; border:1px solid var(--line); border-radius:14px; padding:.8rem; cursor:pointer;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.8rem; cursor:pointer;
     font-family:inherit; font-size:var(--t-corpo); color:var(--forest); transition:.16s; }
   .btn-mais-lista:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.12); }
   .btn-mais-lista small{ color:var(--ink-fraco); font-size:var(--t-apoio); }
@@ -170,7 +170,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     .stat-f .si{ width:28px; height:28px; }
     .stat-f .sn{ font-size:var(--t-titulo); }
     .stats-extra:not(.aberto){ display:none; }
-    .btn-stats-mais{ display:block; width:100%; margin:.6rem 0 0; background:#fff; border:1px solid var(--line);
+    .btn-stats-mais{ display:block; width:100%; margin:.6rem 0 0; background:var(--card); border:1px solid var(--line);
       border-radius:12px; padding:.55rem; font-family:inherit; font-size:var(--t-denso); color:var(--forest); cursor:pointer; }
     .btn-stats-mais:hover{ border-color:var(--gold-soft); }
     .conta-extra{ display:inline-block; min-width:18px; padding:0 .3rem; margin-left:.25rem; border-radius:50px;
@@ -200,7 +200,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .btn.travado:hover{ transform:none; box-shadow:none; }
 
   /* Barra de progresso de capacidade */
-  .progresso-cap{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:1rem 1.15rem; }
+  .progresso-cap{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1rem 1.15rem; }
   .pc-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; flex-wrap:wrap; margin-bottom:.6rem; }
   .pc-tit{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--ink); }
   .pc-nums{ font-size:var(--t-apoio); color:var(--ink-fraco); } .pc-nums b{ color:var(--ink); font-weight:600; } .pc-nums .v-conf{ color:#1f7a3d; }
@@ -212,7 +212,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .chips-mesa{ display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
   .chips-mesa:empty{ display:none; }
   .chips-lbl{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-fraco); margin-right:.2rem; }
-  .chip-m{ display:inline-flex; align-items:center; gap:.35rem; background:#fff; border:1px solid var(--line); border-radius:50px; padding:.3rem .8rem; font-size:var(--t-apoio); cursor:pointer; color:var(--text); font-family:inherit; }
+  .chip-m{ display:inline-flex; align-items:center; gap:.35rem; background:var(--card); border:1px solid var(--line); border-radius:50px; padding:.3rem .8rem; font-size:var(--t-apoio); cursor:pointer; color:var(--text); font-family:inherit; }
   .chip-m:hover{ border-color:var(--gold-soft); }
   .chip-m.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
   .chip-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); }
@@ -220,7 +220,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
   /* Seletores de ícones no modal (Tipo / Lado) */
   .picker{ display:flex; gap:.5rem; }
-  .pk{ flex:1; display:flex; flex-direction:column; align-items:center; gap:.25rem; padding:.6rem .3rem; border:1.5px solid var(--line); border-radius:12px; background:#fff; cursor:pointer; font-size:var(--t-apoio); color:var(--text); font-family:inherit; }
+  .pk{ flex:1; display:flex; flex-direction:column; align-items:center; gap:.25rem; padding:.6rem .3rem; border:1.5px solid var(--line); border-radius:12px; background:var(--card); cursor:pointer; font-size:var(--t-apoio); color:var(--text); font-family:inherit; }
   .pk:hover{ border-color:var(--gold-soft); }
   .pk .pk-ic{ display:inline-flex; color:var(--gold); } .pk .pk-ic svg{ width:20px; height:20px; }
   .pk.on{ border-color:var(--forest); background:var(--cream); color:var(--ink); font-weight:500; }
@@ -248,14 +248,14 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   /* O botão dos três pontos leva o SVG .ico-mais (ver estilo.css): o glifo "⋯"
      desenhava-se caído para o fundo da linha. Centra-se o ícone na sua caixa. */
   .bt-mais{ justify-content:center; }
-  .pop-mais{ position:fixed; z-index:70; width:190px; background:#fff; border:1px solid var(--line);
+  .pop-mais{ position:fixed; z-index:70; width:190px; background:var(--card); border:1px solid var(--line);
     border-radius:12px; box-shadow:0 12px 32px rgba(32,52,42,.18); padding:.3rem; }
   .pop-mais button, .pop-mais a{ display:block; width:100%; text-align:left; background:none; border:0; cursor:pointer;
     padding:.5rem .6rem; border-radius:8px; font-family:inherit; font-size:var(--t-denso); color:var(--text);
     text-decoration:none; }
   .pop-mais button:hover, .pop-mais a:hover{ background:var(--cream); }
   .pop-mais button.perigo{ color:var(--danger); }
-  .pop-mais button.perigo:hover{ background:#fdecea; }
+  .pop-mais button.perigo:hover{ background:var(--danger-bg); }
   /* Aberto para cima, a sombra vem de baixo. */
   .pop-mais.acima{ box-shadow:0 -12px 32px rgba(32,52,42,.18); }
 
@@ -263,7 +263,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .tem-msg{ display:inline-flex; align-items:center; color:var(--gold); cursor:pointer; }
   .tem-msg svg{ width:15px; height:15px; }
   .msg-conta{ font-size:var(--t-etiqueta); font-weight:600; color:var(--ink-fraco); text-transform:uppercase; letter-spacing:.5px; margin:0 0 .6rem; }
-  .msg-item{ border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem; margin-bottom:.6rem; background:#fff; }
+  .msg-item{ border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem; margin-bottom:.6rem; background:var(--card); }
   .msg-topo{ display:flex; align-items:center; gap:.5rem; margin-bottom:.35rem; }
   .msg-topo strong{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); }
   .msg-txt{ margin:0; font-style:italic; color:var(--text); line-height:1.55; }
@@ -278,7 +278,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .membro-linha .m-vai input{ width:18px; height:18px; accent-color:#1f7a3d; cursor:pointer; }
   /* Na confirmação parcial entra uma coluna à cabeça (a caixa do "vem"). As
      colunas dos campos mantêm-se, e a segunda linha acompanha o desvio. */
-  #membros.parcial .membro-linha{ background:#f4faf5; border-radius:10px; padding:.3rem .4rem;
+  #membros.parcial .membro-linha{ background:var(--ok-bg); border-radius:10px; padding:.3rem .4rem;
                                   grid-template-columns:auto 2fr 1fr 1fr auto; }
   #membros.parcial .m-extras{ grid-column:2 / 5; }
   @media (max-width:560px){
@@ -288,7 +288,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   }
   .entradas-topo-dash{ text-align:center; color:var(--ink-fraco); font-size:var(--t-denso); margin-bottom:.9rem; }
   .entradas-topo-dash b{ color:#1f7a3d; font-family:var(--serif); font-size:var(--t-sub); }
-  .entrada-d{ border:1px solid var(--line); border-left:3px solid #1f7a3d; border-radius:12px; padding:.75rem 1rem; margin-bottom:.6rem; background:#fff; }
+  .entrada-d{ border:1px solid var(--line); border-left:3px solid #1f7a3d; border-radius:12px; padding:.75rem 1rem; margin-bottom:.6rem; background:var(--card); }
   .ent-d-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; }
   .ent-d-topo strong{ font-family:var(--serif); font-size:var(--t-sub); color:var(--ink); }
   .ent-d-hora{ font-size:var(--t-apoio); color:var(--ink-fraco); white-space:nowrap; }
@@ -301,7 +301,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     font-size:var(--t-denso); color:var(--ink-fraco); padding:.5rem .8rem; margin-bottom:-1px; }
   .aba-h.ativa{ color:var(--forest); border-bottom-color:var(--gold); font-weight:600; }
   .lixo-item{ display:flex; align-items:center; gap:.7rem; border:1px solid var(--line); border-radius:12px;
-    padding:.7rem .9rem; margin-bottom:.55rem; background:#fff; }
+    padding:.7rem .9rem; margin-bottom:.55rem; background:var(--card); }
   .lixo-item .cresce{ min-width:0; }
   .lixo-item strong{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); display:block;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

@@ -30,6 +30,17 @@
      andava a 2,65:1 no topo da rampa: medem-se os dois extremos, não a média. */
   --gold-texto:#3C7517;
   --sobre-gold:var(--ivory);
+  /* O cabeçalho é escuro nos QUATRO temas — é a única superfície da casa que
+     não muda de claro para escuro com o tema. Logo, o texto dele precisa de
+     tokens PRÓPRIOS, e não dos do corpo da página.
+     Era isto que estava errado: `.topo .sub` lia --gold-pale, que nos temas
+     claros é um creme e no escuro é uma SUPERFÍCIE escura (#1E3016). O
+     subtítulo ficava a 1,24:1 sobre o cabeçalho — invisível, nas treze
+     páginas. O mesmo valia para o monograma e para a contagem, e no tema azul
+     o acento (#2E86C8) já estava a 2,89:1 sem ninguém dar por isso.
+     Os valores abaixo são medidos sobre --forest, que é o extremo claro do
+     gradiente do cabeçalho — um gradiente falha sempre pelo lado mais claro. */
+  --topo-txt:#E7F3DA; --topo-acento:#8FD455;
   --btn-a:#3C7517; --btn-b:#2F5C12; --btn-txt:#FFFFFF;
   --warn:#7F5E0F; --warn-bg:#F6EDD6;
   --danger:#B4443C; --danger-bg:#F6E4E1;
@@ -87,6 +98,9 @@
   --ivory:#FBF8F1; --cream:#F5EEDF; --sand:#E9DFC9; --card:#FFFFFF;
   --gold:#B4864A; --gold-soft:#D9BC8C; --gold-pale:#EFE3CB; --gold-deep:#7A5427;
   --gold-texto:#7A5427; --sobre-gold:#16261E;
+  /* O cabeçalho é escuro nos QUATRO temas: o texto dele precisa de tokens
+     próprios, e não dos do corpo da página. Medido sobre --forest. */
+  --topo-txt:#EFE3CB; --topo-acento:#D9BC8C;
   --btn-a:#7A5427; --btn-b:#5E3F1C; --btn-txt:#FFFFFF;
   --blush:#E4CDBB; --text:#3B4A40;
   --ok:#2A6B43; --ok-bg:#e7f1ea;
@@ -111,6 +125,9 @@
   --ivory:#F4F7FB; --cream:#E9F1F9; --sand:#D9E6F2; --card:#FFFFFF;
   --gold:#1F6FB2; --gold-soft:#2E86C8; --gold-pale:#E4EFF9; --gold-deep:#175A94;
   --gold-texto:#1F6FB2; --sobre-gold:var(--ivory);
+  /* O cabeçalho é escuro nos QUATRO temas: o texto dele precisa de tokens
+     próprios, e não dos do corpo da página. Medido sobre --forest. */
+  --topo-txt:#E4EFF9; --topo-acento:#9CC9EE;
   --btn-a:#1F6FB2; --btn-b:#134C7C; --btn-txt:#FFFFFF;
   --blush:#D9E6F2; --text:#26384A;
   --ok:#2A6B43; --ok-bg:#e6f1ea;
@@ -140,6 +157,9 @@
      o --gold-deep tem de ser CLARO para se ler em cima dele — ao contrário dos
      três temas claros. Era o que faltava: #57A027 sobre #1E3016 dava 4,34:1. */
   --gold-texto:#8AD24A; --sobre-gold:#080F16;
+  /* O cabeçalho é escuro nos QUATRO temas: o texto dele precisa de tokens
+     próprios, e não dos do corpo da página. Medido sobre --forest. */
+  --topo-txt:#C6D2D8; --topo-acento:#8AD24A;
   --btn-a:#8AD24A; --btn-b:#6FBE33; --btn-txt:#080F16;
   --blush:#28353E; --text:#C6D2D8;
   --ok:#63C56E; --ok-bg:#173020;
@@ -205,12 +225,12 @@ a:hover{ text-decoration:underline; }
 }
 .topo .wrap{ position:relative; z-index:1; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
 .monograma{
-  width:52px; height:52px; flex:none; border:2px solid var(--gold-soft); border-radius:50%;
-  display:flex; align-items:center; justify-content:center; color:var(--gold-soft);
+  width:52px; height:52px; flex:none; border:2px solid var(--topo-acento); border-radius:50%;
+  display:flex; align-items:center; justify-content:center; color:var(--topo-acento);
   font-family:var(--serif); font-weight:700; font-size:var(--t-corpo); letter-spacing:.5px;
 }
 .topo h1{ color:var(--ivory); font-size:var(--t-titulo); line-height:1.1; }
-.topo .sub{ font-family:var(--serif); font-style:italic; color:var(--gold-pale); font-size:var(--t-corpo); margin-top:.1rem; }
+.topo .sub{ font-family:var(--serif); font-style:italic; color:var(--topo-txt); font-size:var(--t-corpo); margin-top:.1rem; }
 .topo .sub.licenca-restante{ font-family:var(--sans); font-style:normal; font-size:var(--t-apoio); opacity:.9; }
 .topo .sub.licenca-restante.aviso{ color:#f4c9a0; opacity:1; font-weight:600; }
 /* A coluna do meio cresce e encolhe; sem isto, um título longo empurrava a
@@ -227,8 +247,8 @@ a:hover{ text-decoration:underline; }
            font-variant-numeric:tabular-nums; }
 .contagem .cg-l{ opacity:.8; }
 .contagem .cg-n{ font-family:var(--serif); font-size:var(--t-corpo); font-weight:700;
-                 color:var(--gold-soft); line-height:1; }
-.contagem .cg-t{ letter-spacing:.02em; color:var(--gold-pale); opacity:.9; }
+                 color:var(--topo-acento); line-height:1; }
+.contagem .cg-t{ letter-spacing:.02em; color:var(--topo-txt); opacity:.9; }
 /* Os pedaços que não se aplicam saem de cena — senão deixavam o espaço deles. */
 .contagem span:empty{ display:none; }
 /* No próprio dia, deixa de ser um número e passa a ser um anúncio. */
