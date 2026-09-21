@@ -1260,6 +1260,34 @@ function correcoesEsperadas(): array {
          'assets/mesas.js', 'function irAMesa(id){'],
         ['E o «pôr aqui» já não confunde o dedo que rola com o dedo que escolhe',
          'assets/mesas.js', 'const LIMIAR_ARRASTO = 12;'],
+
+        // ---- A barra diz de quem é a festa, e sai de cima dos modais ----
+        ['A barra de navegação lê os noivos da FICHA, e não do que está escrito no convite',
+         'personalizacao.php', 'function casalDaFicha(mysqli $conn): array {'],
+        ['Um modal abre-se por cima do cabeçalho fixo, e não por baixo dele',
+         'assets/estilo.css', 'justify-content:center; z-index:100; padding:1rem; }'],
+        ['E o toast vê-se por cima do modal onde a acção foi feita',
+         'assets/estilo.css', 'z-index:120; transition:.25s; pointer-events:none; }'],
+
+        // ---- A garrafa passa a ser pedível ----
+        ['As doses e os artigos deixam de ser o mesmo número: uma garrafa é UMA coisa pedida',
+         'api.php', "'max_itens' => max(1, (int)\$item['max_por_pedido']),"],
+        ['O servidor confere as duas contas, cada uma na sua unidade',
+         'api.php', "if (\$q > (int)\$v['max_itens']) {"],
+        ['E o «+» da garrafa deixa de nascer desactivado',
+         'assets/bar-convidado.js', 'function cabeMais(i, un, gastoEmDoses) {'],
+
+        // ---- A carta do convidado veste o tema que o convidado escolher ----
+        ['A página do bar responde aos quatro temas, e por omissão fica a paleta do casal',
+         'bebidas.php', ':root[data-tema]{'],
+        ['Com a tinta separada do enchimento: no escuro não podem ser a mesma cor',
+         'bebidas.php', '--c-acento: <?= escP($pal[\'forest\']) ?>;   /* TINTA: nomes, contas, links   */'],
+        ['As linhas de um pedido deixam o véu preto fixo e passam a superfície da casa',
+         'assets/bar.css', 'background:var(--cream); border:1px solid var(--line);'],
+        ['E a unidade de cada linha lê-se: era um cinzento cravado sobre um fundo que vira',
+         'assets/bar.css', 'letter-spacing:.05em; color:var(--c-fraco, var(--ink-fraco)); }'],
+        ['As caixas de ícone da licença e dos módulos deixam o véu branco fixo',
+         'assets/planos.css', 'background:var(--gold-pale); color:var(--gold-deep);'],
     ];
 }
 

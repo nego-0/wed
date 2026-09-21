@@ -2716,17 +2716,35 @@ function barRitmoDaCasa(mysqli $conn, int $excluir = 0): ?array {
  */
 function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteId,
                       ?array $ritmo, int $excluir = 0): array {
-    $out = ['pode' => min((int)$item['disponivel'], (int)$item['max_por_pedido']),
+    // DUAS CONTAS, e são de unidades diferentes. Misturá-las tornava a garrafa
+    // impossível de pedir — e tornava mesmo, sempre, em toda a casa:
+    //
+    //   `pode`      conta DOSES. É o stock (que se mede em copos, porque é o
+    //               copo que acaba) e o tecto das regras («duas bebidas de 30
+    //               em 30 minutos»). Uma garrafa de seis gasta seis.
+    //
+    //   `max_itens` conta ARTIGOS. É o «máximo por pedido» da bebida — quantas
+    //               desta é que cabem num pedido. Uma garrafa é UMA coisa
+    //               pedida, ainda que leve seis copos lá dentro.
+    //
+    // Estavam somadas no mesmo número, com um `min()`. O «máximo por pedido»
+    // nasce em 2 e uma garrafa tem 6 doses: seis nunca é menor ou igual a
+    // dois, e por isso o «+» da garrafa nascia desactivado e o servidor
+    // recusava o pedido que lá chegasse por outra via. Nenhuma garrafa desta
+    // casa era pedível, com a carta acabada de montar e nada por configurar.
+    $out = ['pode' => (int)$item['disponivel'],
+            'max_itens' => max(1, (int)$item['max_por_pedido']),
             'travao' => null, 'espera_s' => 0, 'mensagem' => ''];
 
     if ((int)$item['disponivel'] <= 0) {
-        return ['pode' => 0, 'travao' => 'stock', 'espera_s' => 0, 'mensagem' => ''];
+        return ['pode' => 0, 'max_itens' => 0, 'travao' => 'stock',
+                'espera_s' => 0, 'mensagem' => ''];
     }
     // O caudal da casa corre por cima de tudo, e nenhum limite individual o
     // levanta: é o ritmo da copa, e a copa é de todos.
     if ($ritmo) {
-        return ['pode' => 0, 'travao' => 'casa', 'espera_s' => $ritmo['segundos'],
-                'mensagem' => $ritmo['mensagem']];
+        return ['pode' => 0, 'max_itens' => 0, 'travao' => 'casa',
+                'espera_s' => $ritmo['segundos'], 'mensagem' => $ritmo['mensagem']];
     }
     $l = barLimiteQueManda(barLimites($conn), $item, $convidadoId, $conviteId);
     if (!$l) return $out;
@@ -2740,13 +2758,14 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
         // nada para levantar depois — a bebida volta ao menu por si.
         $ate = !empty($l['expira_em']) ? strtotime($l['expira_em']) : false;
         $falta = $ate ? max(0, $ate - time()) : 0;
-        return ['pode' => 0, 'travao' => $falta > 0 ? 'suspensa' : 'proibido',
+        return ['pode' => 0, 'max_itens' => 0, 'travao' => $falta > 0 ? 'suspensa' : 'proibido',
                 'espera_s' => $falta, 'mensagem' => $l['mensagem'] ?: ''];
     }
     $c = barConsumo($conn, $l, $convidadoId, $conviteId, $excluir);
     $sobra = $l['quantidade'] - $c['usado'];
     if ($sobra <= 0) {
-        return ['pode' => 0, 'travao' => $l['janela_min'] > 0 ? 'intervalo' : 'tecto',
+        return ['pode' => 0, 'max_itens' => 0,
+                'travao' => $l['janela_min'] > 0 ? 'intervalo' : 'tecto',
                 'espera_s' => barEspera($l, $c['mais_velho']),
                 'mensagem' => $l['mensagem'] ?: ''];
     }
@@ -3045,9 +3064,16 @@ function barTravaoDe(mysqli $conn, int $convidadoId, int $conviteId,
         $item = barItem($conn, (int)$f['li']['item_id']);
         if (!$item) continue;
         $v = barVeredicto($conn, $item, $convidadoId, $conviteId, $ritmo, $excluir);
-        if ((int)$f['q'] > (int)$v['pode']) {
+        // Em DOSES, como em todo o lado: uma garrafa de seis pesa seis contra
+        // o stock e contra a regra. Sem isto, aprovar duas garrafas media-se
+        // como se fossem dois copos, e a regra que o casal escreveu deixava
+        // passar doze bebidas onde tinha escrito duas.
+        $un = ($f['li']['unidade'] ?? 'copo') === 'garrafa' ? 'garrafa' : 'copo';
+        $doses = $un === 'garrafa' ? max(1, (int)($item['doses_garrafa'] ?? 6)) : 1;
+        $gasto = (int)$f['q'] * $doses;
+        if ($gasto > (int)$v['pode']) {
             return 'As regras do bar não deixam servir isto: '
-                 . barTextoTravao($conn, $item, $v, (int)$f['q'])
+                 . barTextoTravao($conn, $item, $v, $gasto)
                  . ' Corte a quantidade, ou levante a regra em «Regras do Bar».';
         }
     }
@@ -3612,7 +3638,8 @@ function barItensPara(mysqli $conn, int $convidadoId, int $conviteId): array {
     $ritmo = barRitmoDaCasa($conn);
     foreach ($itens as &$i) {
         $v = barVeredicto($conn, $i, $convidadoId, $conviteId, $ritmo);
-        $i['pode_pedir'] = $v['pode'];
+        $i['pode_pedir'] = $v['pode'];        // em DOSES
+        $i['max_itens']  = $v['max_itens'];   // em ARTIGOS
         $i['travao']     = $v['travao'];
         $i['espera_s']   = $v['espera_s'];
         $i['aviso']      = $v['mensagem'];
@@ -4160,6 +4187,10 @@ if ($acao === 'bar_menu') {
             // máximo por pedido, este número é o stock; é o preço de o botão
             // não mentir, e é um tecto, não um anúncio.
             'pode_pedir' => $i['pode_pedir'],
+            // O tecto em ARTIGOS, ao lado do tecto em doses. São duas contas
+            // diferentes e o ecrã precisa das duas: sem esta, o «+» da garrafa
+            // media seis doses contra «duas por pedido» e nascia desactivado.
+            'max_itens' => (int)($i['max_itens'] ?? $i['max_por_pedido'] ?? 1),
             // COMO SE SERVE. Isto não saía daqui, e a falta era funda: o ecrã
             // do convidado tinha de ler `servir` para oferecer a garrafa, e
             // como nunca o recebia a condição nunca era verdadeira. O que se
@@ -4262,10 +4293,19 @@ if ($acao === 'bar_pedir') {
         // COPOS, que é o que acaba. Pedir duas garrafas de seis é pedir doze.
         $doses = $un === 'garrafa' ? max(1, (int)($item['doses_garrafa'] ?? 6)) : 1;
         $v = barVeredicto($conn, $item, $paraId, $conviteId, $ritmo);
+        // As DOSES contra o stock e as regras: é o copo que acaba, e uma
+        // garrafa leva seis lá dentro.
         if ($q * $doses > $v['pode']) {
             // A recusa fala como a página fala: diz o que se passa e quanto
             // falta, e não «limite excedido».
             erro(barTextoTravao($conn, $item, $v, $q * $doses, $g['nome'] ?? ''));
+        }
+        // E os ARTIGOS contra o «máximo por pedido», que é outra conta: «duas
+        // por pedido» quer dizer duas coisas, e uma garrafa é uma coisa. Era
+        // aqui que a garrafa morria — seis doses medidas contra um tecto de
+        // dois artigos, e nenhuma garrafa desta casa se conseguia pedir.
+        if ($q > (int)$v['max_itens']) {
+            erro(barTextoTravao($conn, $item, $v, $q, $g['nome'] ?? ''));
         }
         $linhas[] = [$item, $q, $un];
     }

@@ -614,7 +614,7 @@
             // tecto é sobre o total.
             var gasto = todas.reduce(function (t, x) {
               return t + (cesto[chaveCesto(i.id, x)] || 0) * custoDe(i, x); }, 0);
-            var cabe = gasto + custoDe(i, u) <= i.pode_pedir;
+            var cabe = cabeMais(i, u, gasto);
             var rot = u === 'garrafa' ? 'garrafa' : 'copo';
             return '<span class="b-mais">'
               + '<button type="button" class="dn" onclick="barMenos(' + i.id + ',\'' + u + '\')"'
@@ -758,6 +758,31 @@
   // doses que leva dentro, que é como o stock se conta.
   function custoDe(i, un) { return un === 'garrafa' ? Math.max(1, +i.doses_garrafa || 6) : 1; }
 
+  /** Quantas desta bebida já estão no cesto, somando as duas unidades. */
+  function itensNoCesto(i) {
+    return ['copo', 'garrafa'].reduce(function (t, u) {
+      return t + (cesto[chaveCesto(i.id, u)] || 0); }, 0);
+  }
+
+  /**
+   * Ainda cabe mais uma? Duas contas, e são de unidades diferentes.
+   *
+   *   DOSES    — o stock (que se mede em copos, porque é o copo que acaba) e
+   *              o tecto das regras. Uma garrafa de seis gasta seis.
+   *   ARTIGOS  — o «máximo por pedido» desta bebida. Uma garrafa é UMA coisa
+   *              pedida, ainda que leve seis copos lá dentro.
+   *
+   * Estavam somadas no mesmo número. O «máximo por pedido» nasce em dois e
+   * uma garrafa tem seis doses: seis nunca é menor ou igual a dois, e por
+   * isso o «+» da garrafa nascia desactivado — em toda a casa, com a carta
+   * acabada de montar e nada por configurar. Nenhuma garrafa era pedível.
+   */
+  function cabeMais(i, un, gastoEmDoses) {
+    var tecto = +i.max_itens || 1;
+    return (gastoEmDoses + custoDe(i, un) <= i.pode_pedir)
+        && (itensNoCesto(i) + 1 <= tecto);
+  }
+
   window.barMais = function (id, un) {
     var i = menu.itens.filter(function (x) { return x.id === id; })[0];
     if (!i) return;
@@ -773,7 +798,7 @@
       var q = cesto[chaveCesto(id, u)] || 0;
       if (q) jaGasto += q * custoDe(i, u);
     });
-    if (jaGasto + custoDe(i, un) > i.pode_pedir) return;
+    if (!cabeMais(i, un, jaGasto)) return;
     cesto[k] = n;
     pintarMenu();
   };
@@ -998,7 +1023,10 @@
       // que alguém tivesse no cesto: o menu mudou debaixo dela.
       if ((un === 'garrafa' && i.servir === 'copo') ||
           (un === 'copo' && i.servir === 'garrafa')) { delete cesto[k]; return; }
-      var tecto = Math.floor(i.pode_pedir / custoDe(i, un));
+      // As duas contas outra vez: quantas cabem em DOSES, e quantas cabem em
+      // ARTIGOS. A menor das duas é o que fica no cesto.
+      var porDoses = Math.floor(i.pode_pedir / custoDe(i, un));
+      var tecto = Math.min(porDoses, +i.max_itens || 1);
       if (cesto[k] > tecto) { if (tecto > 0) cesto[k] = tecto; else delete cesto[k]; }
     });
     await recarregarMeus();

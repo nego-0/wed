@@ -97,8 +97,13 @@ if ($modQuero) {
   .lic-estado.espera{ border-color:var(--warn); background:var(--warn-bg); }
   .lic-estado.viva{ border-color:var(--ok); }
   .lic-estado.morta{ border-color:var(--danger); background:var(--danger-bg); }
+  /* O mesmo que a .pl-tenho-ico: o fundo era um véu BRANCO fixo, e no tema
+     escuro dava uma caixa quase branca com o desenho pálido lá dentro —
+     1,2:1 sobre um cartão escuro. O par --gold-pale / --gold-deep vira com o
+     tema, e é o que a casa já usa para uma caixa de ícone. */
   .lic-estado-ico{ width:48px; height:48px; flex:none; border-radius:14px;
-    background:rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center;
+    background:var(--gold-pale); color:var(--gold-deep);
+    display:flex; align-items:center; justify-content:center;
     font-size:var(--t-display); }
   .lic-estado-txt{ flex:1; min-width:230px; }
   .lic-estado h2{ font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); margin:0 0 .3rem; }

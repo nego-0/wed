@@ -210,8 +210,23 @@ body.b-servico [tabindex]:focus-visible{
             font-variant-numeric:tabular-nums; }
 .b-ped.velho{ border-color:var(--warn); }
 .b-ped.muito-velho{ border-color:var(--danger); }
+/* O QUE FOI PEDIDO, linha a linha — o que a copa serve e o garçom carrega.
+
+   O fundo era `rgba(0,0,0,.22)`: um véu preto fixo, igual nos quatro temas.
+   Sobre o cartão claro dá um cinzento médio — e um cinzento médio é o pior
+   fundo que há, porque nem a tinta escura nem a clara lhe assentam. A conta
+   («2×», em --gold-texto, que é escuro nos temas claros) media 3,1:1 e a
+   unidade («garrafa», cinzenta) media 2,9:1. Tudo isto num bloco que é lido
+   de relance, a contra-luz, com pressa.
+
+   Passa a ser uma superfície da casa: --cream é o recuo que a casa já usa
+   para dizer «isto está dentro daquilo», e vira com o tema como tudo o resto.
+   A tinta é a de texto; a conta fica no acento, que sobre --cream tem margem
+   de sobra. */
 .b-linhas{ display:flex; gap:.5rem; flex-wrap:wrap; }
-.b-linha{ display:flex; align-items:center; gap:.45rem; background:rgba(0,0,0,.22);
+.b-linha{ display:flex; align-items:center; gap:.45rem;
+          background:var(--cream); border:1px solid var(--line);
+          color:var(--text);
           border-radius:9px; padding:.25rem .55rem .25rem .25rem; font-size:var(--t-denso); }
 .b-linha .b-foto{ width:38px; aspect-ratio:1; border-radius:7px; flex:none; }
 .b-linha b{ font-variant-numeric:tabular-nums; color:var(--gold-texto); }
@@ -368,7 +383,7 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
                           background:var(--c-ouro, #B4864A); }
 
 .b-festa-topo{ position:sticky; top:0; z-index:20; padding:.55rem 1.1rem;
-               background:var(--c-fundo, #FBF8F1); border-bottom:1px solid rgba(0,0,0,.08); }
+               background:var(--c-fundo, #FBF8F1); border-bottom:1px solid var(--c-linha); }
 /* A página é de telemóvel, mas abre-se num portátil (o casal a experimentar,
    nós a provar). O topo e o rodapé alinham-se com a coluna do meio, em vez de
    fugirem para as pontas de um ecrã de 27 polegadas. */
@@ -396,7 +411,8 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
    duas cápsulas em branco — o `display` da classe manda mais que o [hidden]. */
 .b-mesa[hidden]{ display:none; }
 .b-mesa{ display:inline-flex; align-items:center; gap:.4rem;
-         background:rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.1); border-radius:50px;
+         background:color-mix(in srgb, var(--c-tinta) 6%, transparent);
+         border:1px solid var(--c-linha); border-radius:50px;
          padding:.35rem .85rem; font-size:var(--t-denso); cursor:pointer; min-height:40px;
          color:inherit; font-family:inherit; }
 .b-mesa .ico{ width:15px; height:15px; opacity:.75; }
@@ -428,8 +444,10 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
 /* «A pedir para outra pessoa» é um estado, e um estado que se esquece dá uma
    ronda inteira lançada em nome do vizinho. Enquanto está ligado a pastilha
    deixa de ser discreta: cor cheia, e o nome dentro dela. */
+/* Tinta SOBRE o enchimento, e não «a cor do fundo da página»: são a mesma
+   coisa na paleta do casal e deixam de ser assim que há um tema por baixo. */
 .b-para.on{ background:var(--c-ouro, #B4864A); border-color:var(--c-ouro, #B4864A);
-            color:var(--c-fundo, #FBF8F1); font-weight:600; }
+            color:var(--c-sobre, #FBF8F1); font-weight:600; }
 .b-corpo{ max-width:560px; margin:0 auto; padding:1rem 1.1rem; }
 /* No menu do convidado, o corpo cola-se à barra. A folga de cima somava-se ao
    respiro da própria barra e abria uma banda de nada entre a pastilha e a
@@ -457,19 +475,19 @@ body.com-rodape .b-corpo{
    que a página mudou de sítio. */
 .b-festa .b-procura{ max-width:560px; }
 .b-festa .b-foto{ background:var(--c-creme, #F3EEE3); }
-.b-festa .b-busca input{ border-color:rgba(0,0,0,.15); background:var(--c-cartao, #fff);
+.b-festa .b-busca input{ border-color:var(--c-linha); background:var(--c-cartao, #fff);
                          color:var(--c-tinta, #20342A); min-height:48px; }
-.b-festa .b-busca > .ico, .b-festa .b-busca .limpar{ color:rgba(0,0,0,.45); }
-.b-festa .b-busca input::placeholder{ color:rgba(0,0,0,.4); }
+.b-festa .b-busca > .ico, .b-festa .b-busca .limpar{ color:var(--c-fraco); }
+.b-festa .b-busca input::placeholder{ color:var(--c-fraco); }
 .b-festa .b-busca input:focus{ border-color:var(--c-ouro, #B4864A);
                                box-shadow:0 0 0 3px rgba(0,0,0,.06); }
 .b-festa .b-busca .limpar:hover{ background:var(--c-creme, #F3EEE3); }
-.b-festa .b-pilula{ background:var(--c-cartao, #fff); border-color:rgba(0,0,0,.12);
+.b-festa .b-pilula{ background:var(--c-cartao, #fff); border-color:var(--c-linha);
                     color:var(--c-tinta, #20342A); min-height:42px; }
-.b-festa .b-pilula .n{ color:rgba(0,0,0,.45); }
+.b-festa .b-pilula .n{ color:var(--c-fraco); }
 .b-festa .b-pilula.on{ background:var(--c-verde, #20342A); border-color:var(--c-verde, #20342A);
-                       color:var(--c-fundo, #FBF8F1); }
-.b-festa .b-pilula.on .n{ color:var(--c-fundo, #FBF8F1); }
+                       color:var(--c-sobre, #FBF8F1); }
+.b-festa .b-pilula.on .n{ color:var(--c-sobre, #FBF8F1); }
 .b-festa .b-pilula:focus-visible{ outline:2px solid var(--c-ouro, #B4864A); outline-offset:2px; }
 /* As gavetas rolam de lado em vez de embrulharem para uma segunda e terceira
    linha: num telemóvel, quatro linhas de pastilhas empurram o menu para fora
@@ -477,8 +495,8 @@ body.com-rodape .b-corpo{
 .b-festa .b-pastilhas.rolo{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:.2rem;
                             scrollbar-width:none; }
 .b-festa .b-pastilhas.rolo::-webkit-scrollbar{ display:none; }
-.b-festa .b-vazio{ color:rgba(0,0,0,.55); }
-.b-festa .b-vazio b{ color:var(--c-verde, #20342A); font-family:var(--c-serif, Georgia, serif); }
+.b-festa .b-vazio{ color:var(--c-fraco); }
+.b-festa .b-vazio b{ color:var(--c-acento, #20342A); font-family:var(--c-serif, Georgia, serif); }
 
 .b-gaveta{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.16em;
            text-transform:uppercase; color:var(--c-ouro, #B4864A); margin:1.4rem 0 .6rem;
@@ -490,7 +508,7 @@ body.com-rodape .b-corpo{
              background:var(--tinta, currentColor); }
 .b-gaveta:first-child{ margin-top:.2rem; }
 .b-menu{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:.8rem; }
-.b-bebida{ background:var(--c-cartao, #fff); border:1px solid rgba(0,0,0,.08); border-radius:14px;
+.b-bebida{ background:var(--c-cartao, #fff); border:1px solid var(--c-linha); border-radius:14px;
            overflow:hidden; display:flex; flex-direction:column; }
 .b-bebida .b-foto{ border-radius:0; }
 /* As marcas de canto vivem POR CIMA da fotografia, e por isso a fotografia
@@ -515,18 +533,18 @@ body.com-rodape .b-corpo{
    inteiro: é ela que merece o espaço. */
 .b-bebida .b-foto.sem-foto{ aspect-ratio:auto; height:84px; }
 .b-bebida .nm{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-corpo); padding:.55rem .7rem 0; }
-.b-bebida .ds{ font-size:var(--t-apoio); color:rgba(0,0,0,.55); padding:.1rem .7rem .4rem; line-height:1.35; }
+.b-bebida .ds{ font-size:var(--t-apoio); color:var(--c-fraco); padding:.1rem .7rem .4rem; line-height:1.35; }
 .b-bebida .pe{ margin-top:auto; display:flex; align-items:center; gap:.5rem;
                padding:.4rem .55rem .55rem; }
-.b-bebida .qtd{ font-size:var(--t-apoio); color:rgba(0,0,0,.5); }
+.b-bebida .qtd{ font-size:var(--t-apoio); color:var(--c-fraco); }
 .b-bebida.esgotada{ opacity:.55; }
 /* Uma bebida travada não fica cinzenta e muda: diz quanto falta, e o que sai
    já em vez dela. É a diferença entre uma porta fechada e uma sugestão. */
-.b-conta{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--c-verde); }
+.b-conta{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--c-acento); }
 .b-alt{ padding:.1rem .55rem .6rem; display:flex; gap:.3rem; flex-wrap:wrap;
-        align-items:center; font-size:var(--t-apoio); color:rgba(0,0,0,.55); }
+        align-items:center; font-size:var(--t-apoio); color:var(--c-fraco); }
 .b-alt button{ background:transparent; border:1px solid var(--c-ouro, #B4864A);
-               color:var(--c-verde); border-radius:50px; padding:.25rem .6rem;
+               color:var(--c-acento); border-radius:50px; padding:.25rem .6rem;
                font:inherit; font-size:var(--t-apoio); cursor:pointer; min-height:34px; }
 /* Saltar para a alternativa acende-a por um instante — senão a pessoa chega
    lá e não sabe a qual das dez é que carregou. */
@@ -544,25 +562,31 @@ body.com-rodape .b-corpo{
    («qual destes é o meu?») em vez de uma resposta que se pode mudar. */
 .b-serve{ padding:.15rem .7rem .35rem; font-size:var(--t-etiqueta);
           letter-spacing:.05em; text-transform:uppercase; }
-.b-serve-txt{ color:var(--c-fraco, #6b7280); font-weight:600; }
+.b-serve-txt{ color:var(--c-fraco, var(--ink-fraco)); font-weight:600; }
 .b-serve.escolhe{ display:flex; gap:.3rem; }
 .b-un-bt{ flex:1; min-height:34px; border-radius:50px; cursor:pointer;
-          border:1px solid rgba(0,0,0,.15); background:transparent;
-          color:var(--c-fraco, #6b7280);
+          border:1px solid var(--c-linha); background:transparent;
+          color:var(--c-fraco, var(--ink-fraco));
           font:inherit; font-size:var(--t-etiqueta); font-weight:600;
           text-transform:uppercase; letter-spacing:.05em; }
 /* A escolhida veste-se da cor do casal, e o contraste é com o fundo dela — o
    texto claro sobre o verde do convite, como o «Pedir» do rodapé. */
 .b-un-bt.on{ background:var(--c-verde, #20342A); border-color:var(--c-verde, #20342A);
-             color:var(--c-fundo, #FBF8F1); }
+             color:var(--c-sobre, #FBF8F1); }
 
 /* O contador de uma bebida: menos, quantas, mais. Os 40px são o mínimo de um
    alvo tocado com o polegar, de pé e com um copo na outra mão. */
 .b-mais{ margin-left:auto; display:flex; align-items:center; gap:.25rem; }
-/* Na copa e nas entregas, a unidade vai a par do número: «2× Tinto garrafas». */
+/* Na copa e nas entregas, a unidade vai a par do número: «2× Tinto garrafas».
+
+   O recurso `--c-fraco` é da paleta do CASAL, e só existe na página do
+   convidado. Nos dois ecrãs de serviço caía no `#6b7280` cravado à mão — um
+   cinzento que não vira com tema nenhum, sobre um fundo que vira: media
+   2,9:1, e é o que diz se se leva um copo ou a garrafa inteira. Aqui manda a
+   tinta fraca da CASA, que é a que acompanha o fundo de cada tema. */
 .b-un{ font-size:var(--t-apoio); font-weight:600; text-transform:uppercase;
-  letter-spacing:.05em; color:var(--c-fraco, #6b7280); }
-.b-mais button{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(0,0,0,.15);
+  letter-spacing:.05em; color:var(--c-fraco, var(--ink-fraco)); }
+.b-mais button{ width:40px; height:40px; border-radius:50%; border:1px solid var(--c-linha);
                 background:var(--c-cartao, #fff); line-height:1; cursor:pointer;
                 color:inherit; display:inline-flex; align-items:center; justify-content:center; }
 .b-mais button .ico{ width:16px; height:16px; }
@@ -570,7 +594,7 @@ body.com-rodape .b-corpo{
 /* Com alguma coisa no cesto, o «mais» ganha a cor do casal: numa grelha de
    doze cartões, é assim que se vê onde já se carregou sem contar os números. */
 .b-bebida.no-cesto .b-mais .up{ background:var(--c-verde, #20342A);
-                                border-color:var(--c-verde, #20342A); color:var(--c-fundo, #FBF8F1); }
+                                border-color:var(--c-verde, #20342A); color:var(--c-sobre, #FBF8F1); }
 .b-bebida.no-cesto{ border-color:var(--c-verde, #20342A); }
 .b-mais .v{ min-width:1.4rem; text-align:center; font-variant-numeric:tabular-nums; font-weight:600; }
 
@@ -583,7 +607,7 @@ body.com-rodape .b-corpo{
 :root{ --b-rodape-p:.7rem; --b-rodape-bt:56px;
        --b-rodape-alt:calc(var(--b-rodape-bt) + var(--b-rodape-p) * 2 + 1px); }
 .b-rodape{ position:fixed; left:0; right:0; bottom:0; z-index:30;
-           background:var(--c-fundo, #FBF8F1); border-top:1px solid rgba(0,0,0,.1);
+           background:var(--c-fundo, #FBF8F1); border-top:1px solid var(--c-linha);
            padding:var(--b-rodape-p) 1.1rem
                    calc(var(--b-rodape-p) + env(safe-area-inset-bottom));
            display:flex; align-items:center; gap:.8rem; }
@@ -609,14 +633,14 @@ body.com-rodape .tema-fab{
                margin:0 0 .2rem; color:var(--c-tinta, #20342A); }
 .b-procura p{ color:var(--c-tinta, #20342A); opacity:.72; font-size:var(--t-denso); margin:0 0 1.2rem; }
 .b-procura input{ width:100%; font-size:var(--t-sub); padding:.9rem 1rem; border-radius:12px;
-                  border:1px solid rgba(0,0,0,.2); background:var(--c-cartao, #fff); color:inherit; }
+                  border:1px solid var(--c-linha); background:var(--c-cartao, #fff); color:inherit; }
 .b-nomes{ display:grid; gap:.5rem; margin-top:.9rem; text-align:left; }
 .b-nome{ display:block; width:100%; text-align:left; background:var(--c-cartao, #fff);
-         border:1px solid rgba(0,0,0,.12); border-radius:12px; padding:.75rem .9rem;
+         border:1px solid var(--c-linha); border-radius:12px; padding:.75rem .9rem;
          cursor:pointer; min-height:56px; color:inherit; font:inherit; }
 .b-nome b{ font-family:var(--c-serif, Georgia, serif); font-size:var(--t-corpo); display:block; }
-.b-nome span{ font-size:var(--t-apoio); color:rgba(0,0,0,.55); }
-.b-ajuda{ margin-top:1.2rem; font-size:var(--t-apoio); color:rgba(0,0,0,.55); line-height:1.5; }
+.b-nome span{ font-size:var(--t-apoio); color:var(--c-fraco); }
+.b-ajuda{ margin-top:1.2rem; font-size:var(--t-apoio); color:var(--c-fraco); line-height:1.5; }
 
 /* Os quatro dígitos do convite, quando a casa os pede.
    Grandes e espaçados: escrevem-se de pé, com um copo na outra mão, e a
@@ -632,12 +656,12 @@ body.com-rodape .tema-fab{
 /* Os meus pedidos, no fim do menu */
 /* O que esta pessoa já pediu — só esta. É a resposta a «quantas já levei?»,
    que é a pergunta que se faz antes de pedir a seguinte. */
-.b-conta-minha{ font-size:var(--t-denso); color:rgba(0,0,0,.6); margin:-.2rem 0 .6rem;
+.b-conta-minha{ font-size:var(--t-denso); color:var(--c-fraco); margin:-.2rem 0 .6rem;
                 line-height:1.5; }
-.b-conta-minha b{ font-variant-numeric:tabular-nums; color:var(--c-verde); }
+.b-conta-minha b{ font-variant-numeric:tabular-nums; color:var(--c-acento); }
 .b-meus{ margin-top:2rem; }
 .b-meu{ display:flex; align-items:center; gap:.6rem; background:var(--c-cartao, #fff);
-        border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:.6rem .8rem; margin-bottom:.5rem; }
+        border:1px solid var(--c-linha); border-radius:12px; padding:.6rem .8rem; margin-bottom:.5rem; }
 .b-meu .cod{ font-family:var(--c-serif, Georgia, serif); font-weight:700; }
 .b-meu .oq{ font-size:var(--t-denso); flex:1 1 auto; }
 
@@ -1121,7 +1145,11 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    Aparece colado ao pedido SEGUINTE da mesma pessoa, que é o único momento em
    que a observação serve para decidir alguma coisa. Não é um aviso: é o que
    se soube, e por isso não tem a cor de um aviso. */
-.b-notas{ display:grid; gap:.35rem; background:rgba(0,0,0,.2);
+/* O fundo era rgba(0,0,0,.2) — o mesmo véu preto fixo que já cegava as linhas
+   de pedido. Sobre um cartão claro dá um cinzento médio, e --ink por cima
+   dele fica a meio caminho de nada. --cream é a superfície recuada da casa, e
+   vira com o tema como tudo o resto. */
+.b-notas{ display:grid; gap:.35rem; background:var(--cream);
           border-left:2px solid var(--gold-soft); border-radius:0 9px 9px 0;
           padding:.55rem .7rem; }
 .b-notas .tit{ display:flex; align-items:center; gap:.35rem; font-size:var(--t-etiqueta); font-weight:600;

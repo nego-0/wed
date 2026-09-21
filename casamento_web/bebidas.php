@@ -198,31 +198,89 @@ if ($pausaS > 0) {
 <style>
 <?= $tipo['faces'] ?>
 /* As cores e as letras do convite deste casal — o menu é uma peça da festa
-   deles, não da casa que a serve. */
+   deles, não da casa que a serve.
+
+   TRÊS PAPÉIS, e não dois. A paleta do casal traz um verde só, e esse verde
+   faz duas coisas ao mesmo tempo: é a TINTA dos nomes das bebidas e é o
+   ENCHIMENTO dos botões, com o fundo da página por cima. Num convite claro
+   as duas funcionam com a mesma cor, e por isso ninguém tinha reparado. Num
+   fundo escuro não podem ser a mesma: uma tinta tem de clarear quando o
+   fundo escurece, e um enchimento tem de continuar escuro para o que está
+   por cima dele se ler. Separam-se aqui, e por omissão valem o que sempre
+   valeram — a paleta do casal, intacta. */
 :root{
   --c-fundo:  <?= escP($pal['ivory']) ?>;
   --c-cartao: #ffffff;
   --c-tinta:  <?= escP($pal['text']) ?>;
-  --c-verde:  <?= escP($pal['forest']) ?>;
+  --c-verde:  <?= escP($pal['forest']) ?>;   /* ENCHIMENTO: botões, pastilhas */
+  --c-acento: <?= escP($pal['forest']) ?>;   /* TINTA: nomes, contas, links   */
+  --c-sobre:  <?= escP($pal['ivory']) ?>;    /* o que se escreve sobre o enchimento */
   --c-ouro:   <?= escP($pal['gold']) ?>;
   --c-creme:  <?= escP($pal['cream']) ?>;
+  /* A tinta apagada e os filetes. Estavam escritos à mão em rgba(0,0,0,…) —
+     um preto desmaiado, que só funciona enquanto o fundo for claro. Fazem-se
+     da tinta da página, seja ela qual for: assim seguem-na quando ela vira. */
+  --c-fraco:  color-mix(in srgb, <?= escP($pal['text']) ?> 64%, transparent);
+  --c-linha:  color-mix(in srgb, <?= escP($pal['text']) ?> 16%, transparent);
   <?= $tipo['vars'] ?>
   --c-serif: var(--f-serif, Georgia, serif);
   --c-sans:  var(--f-sans, system-ui, sans-serif);
 }
-.b-festa-topo .eu{ color:var(--c-verde); }
-.b-bebida .nm{ color:var(--c-verde); }
-.b-nome b{ color:var(--c-verde); }
+
+/* E QUANDO O CONVIDADO ESCOLHE UM TEMA.
+
+   O botão do tema existe nesta página (é aqui que ele faz mais falta: um
+   telemóvel na mão, de noite, no meio de uma festa) e não mexia em nada. O
+   corpo é pintado por estes --c-*, que são fixos; o `data-tema` só chegava
+   às JANELAS, que são cartões da casa. O resultado era uma página clara com
+   janelas escuras por dentro — e, pior, as peças da casa que vivem no corpo
+   (o campo da mesa é uma delas) ficavam com a tinta do tema escuro sobre o
+   fundo claro do convite. É daí que vinha o nome da mesa quase invisível:
+   2,24:1, medido.
+
+   Enquanto ninguém escolhe nada não há `data-tema` nenhum, e a página é a
+   peça do casal — que é o que ela deve ser por omissão. Escolhido um tema, a
+   escolha é de quem está a olhar para o ecrã, e respeita-se: as superfícies e
+   a tinta passam a ser as da casa, e passam a concordar com as das janelas.
+
+   O acento é a tinta de acento da casa (clara no escuro, escura nos claros),
+   e o enchimento continua a ser escuro em todos — com --topo-txt por cima,
+   que é a tinta que a casa reserva para superfícies que não viram. */
+:root[data-tema]{
+  /* NÃO --ivory: é um dos dois tokens que a casa não vira com o tema (no
+     escuro continua claro, porque é a tinta que se escreve sobre o cabeçalho
+     e os modais escuros). Usá-lo como fundo dava uma página clara dentro do
+     tema escuro, com a tinta clara por cima — 1,37:1, medido.
+
+     E também não --app-bg, que é o fundo do corpo na casa: é um GRADIENTE, e
+     este token serve-se também como cor em sítios pequenos. Uma cor é o que
+     tem de ser. --cream é a superfície plana que vira com os quatro temas
+     (branco-sujo nos claros, #1E2A33 no escuro); --sand fica para o recuo. */
+  --c-fundo:  var(--cream);
+  --c-cartao: var(--card);
+  --c-creme:  var(--sand);
+  --c-tinta:  var(--text);
+  --c-fraco:  var(--ink-fraco);
+  --c-linha:  var(--line);
+  --c-verde:  var(--forest);
+  --c-acento: var(--gold-texto);
+  --c-sobre:  var(--topo-txt);
+  --c-ouro:   var(--gold);
+}
+
+.b-festa-topo .eu{ color:var(--c-acento); }
+.b-bebida .nm{ color:var(--c-acento); }
+.b-nome b{ color:var(--c-acento); }
 /* O botão principal, na paleta do casal: a folha da casa não chega aqui. */
 .b-festa .btn{ display:inline-flex; align-items:center; justify-content:center;
                border-radius:50px; border:1px solid var(--c-verde); cursor:pointer;
                /* A tinta clara do CASAL, e não um branco inventado: quem
                   escolher um verde pálido para o convite fica com um botão
                   legível na mesma. */
-               background:var(--c-verde); color:var(--c-fundo); font:inherit; font-size:var(--t-corpo);
+               background:var(--c-verde); color:var(--c-sobre); font:inherit; font-size:var(--t-corpo);
                padding:.6rem 1.2rem; min-height:48px; }
 .b-festa .btn[disabled]{ opacity:.4; cursor:default; }
-.b-festa .btn-claro{ background:transparent; color:var(--c-verde); }
+.b-festa .btn-claro{ background:transparent; color:var(--c-acento); }
 .b-festa .btn:focus-visible, .b-festa .b-nome:focus-visible, .b-festa .b-mesa:focus-visible,
 .b-festa .b-mais button:focus-visible, .b-festa input:focus-visible{
   outline:2px solid var(--c-ouro); outline-offset:2px; }

@@ -131,12 +131,27 @@ async function escolherComProcura(p, que, nome) {
     [token, id, q]);
 
   // ============ 1. a precedência ============
-  ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 5, 'sem regras, pode o que cabe num pedido');
+  //
+  // DUAS CONTAS, e não uma. `pode_pedir` conta DOSES — o stock (que se mede
+  // em copos) e o tecto das regras. `max_itens` conta ARTIGOS — o «máximo por
+  // pedido» da bebida. Estavam somadas no mesmo número com um min(), e isso
+  // tornava a garrafa impossível de pedir: o máximo por pedido nasce em dois
+  // e uma garrafa tem seis doses, pelo que o «+» dela nascia desactivado em
+  // toda a casa. O que esta prova defende continua todo de pé — o que mudou
+  // foi qual dos dois números responde a cada pergunta.
+  const semRegra = await bebida(cA, 'ZZ Whisky');
+  ok(semRegra.max_itens === 5, 'sem regras, cabem num pedido as que a bebida deixa: '
+     + semRegra.max_itens);
+  ok(semRegra.pode_pedir === 50,
+     'e há em stock o que se repôs, contado em doses: ' + semRegra.pode_pedir);
 
   await regra({ escopo: 'item', alvo_id: base.ids.whisky, sujeito: 'convidado',
                 unidade: 'bebidas', quantidade: 2, janela_min: 0 });
   ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 2, 'um tecto geral de 2 por convidado morde');
-  ok((await bebida(cA, 'ZZ Gin')).pode_pedir === 5, 'e não toca na bebida do lado');
+  const ginComRegra = await bebida(cA, 'ZZ Gin');
+  ok(ginComRegra.pode_pedir === 50 && ginComRegra.max_itens === 5,
+     'e não toca na bebida do lado: ' + ginComRegra.pode_pedir + ' doses, '
+     + ginComRegra.max_itens + ' por pedido');
 
   await regra({ escopo: 'item', alvo_id: base.ids.whisky, sujeito: 'convidado',
                 alvo_convidado_id: A.id, unidade: 'bebidas', quantidade: 1, janela_min: 0 });
@@ -174,8 +189,10 @@ async function escolherComProcura(p, que, nome) {
   ok((await pedir(cA, base.ids.gin, 1)).success === true, 'sem regras, um pedido passa');
   await regra({ escopo: 'tudo', sujeito: 'convidado', unidade: 'pedidos',
                 quantidade: 1, janela_min: 30 });
-  ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 5,
-     'uma regra de pedidos não mexe na conta de cada bebida');
+  const wDepois = await bebida(cA, 'ZZ Whisky');
+  ok(wDepois.pode_pedir === 50 && wDepois.max_itens === 5,
+     'uma regra de pedidos não mexe na conta de cada bebida: '
+     + wDepois.pode_pedir + ' doses, ' + wDepois.max_itens + ' por pedido');
   const t2 = await pedir(cA, base.ids.whisky, 1);
   ok(t2.success === false, 'e o segundo é travado — a regra é sobre o ACTO de pedir');
   ok(/próximo pedido abre/i.test(t2.message || ''), 'dizendo quando abre: «' + t2.message + '»');

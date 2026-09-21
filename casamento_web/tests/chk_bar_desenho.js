@@ -117,7 +117,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     folhas[nome] = await p.evaluate(async (n) => await (await fetch(n)).text(), nome);
   }
   // Um hexadecimal só passa se for o valor de recurso de um var(--x, #y).
+  //
+  // E os COMENTÁRIOS não contam. Esta prova lia a folha inteira, prosa
+  // incluída — e a prosa desta casa cita cores de propósito: é assim que se
+  // explica porque é que um #6b7280 cravado à mão não servia. Uma cor citada
+  // num comentário a dizer que ela estava errada não é uma cor inventada; era
+  // a prova a acusar quem a tinha corrigido.
   const soltos = (css) => css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/var\(\s*--[A-Za-z0-9-]+\s*,\s*#[0-9a-fA-F]{3,8}\s*\)/g, '')
     .match(/#[0-9a-fA-F]{3,8}\b/g) || [];
   ok(soltos(folhas['assets/bar.css']).length === 0,
@@ -132,7 +139,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     // bebidas.php emite a paleta do casal em hexadecimal, e é o que tem a
     // fazer: são as cores DAQUELE convite, vindas da base de dados, e não
     // cores escolhidas por quem escreveu a folha. Só essas linhas passam.
-    const semPaleta = estilos.replace(/--c-[a-z-]+:\s*#[0-9a-fA-F]{3,8};/g, '');
+    // A paleta do casal sai em hexadecimal, e é o que tem a fazer. Sai por
+    // dois caminhos: directa (`--c-fundo: #FBF8F1;`) e dentro de um
+    // color-mix, que é como se faz uma tinta apagada a partir da tinta da
+    // página — sem isso, a tinta fraca era um preto cravado que só funcionava
+    // enquanto o fundo fosse claro.
+    const semPaleta = estilos
+      .replace(/--c-[a-z-]+:\s*[^;]*;/g, '');
     const maus = soltos(semPaleta);
     ok(maus.length === 0,
        'o <style> de ' + pag.split('?')[0] + ' também não'

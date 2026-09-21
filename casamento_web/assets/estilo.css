@@ -642,8 +642,30 @@ summary:focus-visible,
 .convite-row.pessoas-abertas .membro-chip{ max-width:none; }
 .acoes{ display:flex; gap:.35rem; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
 
-/* ---------- Modal ---------- */
-.overlay{ position:fixed; inset:0; background:rgba(22,38,30,.55); display:none; align-items:center; justify-content:center; z-index:60; padding:1rem; }
+/* ---------- Modal ----------
+
+   AS CAMADAS DESTA CASA, de baixo para cima. Estavam por escrever em lado
+   nenhum, e é por isso que uma delas ficou no sítio errado:
+
+      60   pop-ups de página (.mm-pop) — vivem dentro do conteúdo
+      70   .pop-mais
+      75   a pastilha do tema
+      80   o cabeçalho, quando fica fixo no topo (body.topo-fixo)
+      95   o fundo da gaveta do telemóvel
+      96   a gaveta
+     100   ESTES modais
+     120   o toast — diz o que aconteceu, e tem de se ver por cima do modal
+           onde a acção foi feita
+    2000   as janelas novas (.pl-modal)
+
+   O modal estava em 60: por BAIXO do cabeçalho fixo, que está em 80. Com o
+   cabeçalho na forma estendida — alto, com o monograma e o subtítulo — ele
+   tapava o topo de qualquer modal aberto: no histórico de acções comia o
+   título e a primeira aba, que é onde se escolhe o que se veio ver.
+
+   Um modal é, por definição, a coisa mais à frente do ecrã enquanto está
+   aberto. Passa para cima de tudo o que é chrome da página. */
+.overlay{ position:fixed; inset:0; background:rgba(22,38,30,.55); display:none; align-items:center; justify-content:center; z-index:100; padding:1rem; }
 .overlay.aberto{ display:flex; }
 .modal{ background:var(--card); border-radius:20px; width:100%; max-width:640px; max-height:92vh; overflow:auto; box-shadow:0 30px 60px rgba(0,0,0,.3); }
 .modal-topo{ background:linear-gradient(135deg,var(--forest),var(--forest-deep)); color:var(--ivory); padding:1.1rem 1.4rem; display:flex; align-items:center; justify-content:space-between; }
@@ -654,7 +676,11 @@ summary:focus-visible,
 /* ---------- Toast ---------- */
 .toast{ position:fixed; bottom:1.2rem; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
   background:var(--forest-deep); color:var(--ivory); padding:.8rem 1.3rem; border-radius:50px; font-size:var(--t-denso);
-  box-shadow:0 10px 30px rgba(0,0,0,.3); z-index:90; transition:.25s; pointer-events:none; }
+  /* Acima do modal (100): o toast diz o que acabou de acontecer, e a acção
+     é quase sempre feita DENTRO de um modal. Em 90 ficava escondido por trás
+     dele — a pessoa guardava, não via confirmação nenhuma, e guardava outra
+     vez. */
+  box-shadow:0 10px 30px rgba(0,0,0,.3); z-index:120; transition:.25s; pointer-events:none; }
 .toast.mostrar{ opacity:1; transform:translateX(-50%) translateY(0); }
 .toast.erro{ background:var(--danger); }
 /* Toast com ação (ex.: "Anular") — tem de receber cliques. */

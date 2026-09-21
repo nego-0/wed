@@ -63,9 +63,16 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     if ($semCasamento) {
         $CAS = ['mono' => PLATAFORMA['mono'], 'casal' => PLATAFORMA['nome'],
                 'noiva' => '', 'noivo' => ''];
+    } elseif (isset($GLOBALS['conn']) && function_exists('casalDaFicha')) {
+        // A barra diz quem é o casamento ABERTO, e vai buscá-lo à ficha dele —
+        // não ao $CAS que a página tiver calculado. As páginas calculam-no a
+        // partir das definições do CONVITE (casalInfo(defsAtuais(...))), e o
+        // convite é um sítio onde o casal escreve o que quer: um nome
+        // experimentado no editor, ou um de exemplo deixado lá dentro,
+        // aparecia no topo de todas as páginas da aplicação.
+        $CAS = casalDaFicha($GLOBALS['conn']);
     } elseif (!is_array($CAS) || !isset($CAS['mono'])) {
-        // As páginas já calculam $CAS; se não, calcula-se aqui a partir da ligação.
-        $CAS = casalInfo(isset($GLOBALS['conn']) ? defsAtuais($GLOBALS['conn']) : defsPadrao());
+        $CAS = casalInfo(defsPadrao());
     }
     $itens = menuPrincipal();
     if (!empty($opcoes['sem_porta'])) unset($itens['porta']);

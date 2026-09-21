@@ -2408,6 +2408,35 @@ function defsAtuais(mysqli $conn): array {
     return $defs;
 }
 
+/**
+ * Quem são os noivos DESTE casamento — para a barra de navegação.
+ *
+ * Não é a mesma pergunta que casalInfo() responde, e a diferença só aparece
+ * quando as duas respostas divergem. `casal.noiva` e `casal.noivo` são campos
+ * do CONVITE: o casal escreve-os no editor, e o que lá puser é o que sai
+ * impresso. A ficha do casamento é outra coisa — é quem a festa é, o nome com
+ * que ela foi aberta e por onde é gerida.
+ *
+ * Enquanto ninguém mexe no convite, as duas dizem o mesmo (defsPadrao() já
+ * carrega a ficha por cima do config.php). Assim que alguém guarda o editor,
+ * o valor guardado passa a ganhar em defsAtuais() — e a barra de navegação de
+ * toda a aplicação passava a dizer o que estava escrito no convite. Quem
+ * tivesse experimentado um nome, ou deixado um de exemplo lá dentro, via-o no
+ * topo de todas as páginas, todos os dias, sem perceber de onde vinha.
+ *
+ * A barra é da aplicação, não do convite: manda a ficha. O convite continua a
+ * ser do casal, e continua a dizer o que eles lá escreveram.
+ */
+function casalDaFicha(mysqli $conn): array {
+    $ficha = identidadeCasamento();
+    $noiva = trim((string)($ficha['casal.noiva'] ?? ''));
+    $noivo = trim((string)($ficha['casal.noivo'] ?? ''));
+    // Sem ficha — um casamento sem nome nenhum, que não devia existir —, vale
+    // o que houver no convite. Ficar sem nada era pior.
+    if ($noiva === '' && $noivo === '') return casalInfo(defsAtuais($conn));
+    return casalInfo(['casal.noiva' => $noiva, 'casal.noivo' => $noivo]);
+}
+
 /** Nome/monograma do casal (para cabeçalhos das outras páginas). */
 function casalInfo(array $defs): array {
     $noiva = trim((string)($defs['casal.noiva'] ?? ''));

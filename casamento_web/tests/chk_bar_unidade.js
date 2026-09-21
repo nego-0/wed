@@ -126,6 +126,70 @@ const marca = 'zzu' + Math.floor(Math.random() * 1e5);
      'uma que só sai à garrafa diz isso, e não fica calada a fingir que é um '
      + 'copo: «' + (vGarrafa && vGarrafa.serve) + '»');
 
+  // ---- e A GARRAFA PEDE-SE ----
+  //
+  // Não se pedia. O «máximo por pedido» e o stock estavam somados no mesmo
+  // número, e são contas de unidades diferentes: o stock mede-se em DOSES
+  // (uma garrafa de seis gasta seis) e o máximo por pedido conta ARTIGOS
+  // (uma garrafa é uma coisa pedida). O máximo nasce em dois; seis nunca é
+  // menor ou igual a dois. O «+» da garrafa nascia desactivado em toda a
+  // casa, com a carta acabada de montar e nada por configurar — e o
+  // servidor recusava o pedido que lá chegasse por outra via.
+  //
+  // Esta bebida é de propósito a mais desfavorável que há: seis doses por
+  // garrafa contra o máximo por pedido DE ORIGEM.
+  const soGarrafaPadrao = await post('bar_item_guardar',
+    { nome: 'ZZU Champanhe ' + marca, alcoolico: 1, servir: 'garrafa', doses_garrafa: 6 });
+  await post('bar_stock_repor', { item_id: soGarrafaPadrao.id, quantidade: 60, nota: 'prova' });
+  await conv.reload({ waitUntil: 'networkidle' });
+  await conv.waitForTimeout(2200);
+  const podeGarrafa = await conv.evaluate(async id => {
+    const c = document.getElementById('bb-' + id);
+    if (!c) return { existe: false };
+    const up = c.querySelector('.b-mais .up');
+    const antes = !!(up && up.disabled);
+    barMais(id, 'garrafa');
+    await new Promise(r => setTimeout(r, 600));
+    const c2 = document.getElementById('bb-' + id);
+    return { existe: true, desactivado: antes,
+             conta: (c2.querySelector('.b-mais .v') || {}).textContent,
+             cesto: !document.getElementById('b-rodape').hidden };
+  }, soGarrafaPadrao.id);
+  ok(podeGarrafa.existe && !podeGarrafa.desactivado,
+     'o «+» de uma bebida só à garrafa NÃO nasce desactivado — nascia, e com '
+     + 'ele nenhuma garrafa desta casa era pedível');
+  ok(podeGarrafa.conta === '1' && podeGarrafa.cesto,
+     'e carregar nele põe a garrafa no cesto: ' + podeGarrafa.conta);
+
+  const pedidoGarrafa = await conv.evaluate(async () => {
+    document.getElementById('b-pedir').click();
+    await new Promise(r => setTimeout(r, 2400));
+    const e = document.querySelector('.b-erro');
+    const meu = document.querySelector('.b-meu .oq');
+    return { erro: e ? e.textContent.trim() : '',
+             meu: meu ? meu.textContent.replace(/\s+/g, ' ').trim() : '' };
+  });
+  ok(!pedidoGarrafa.erro && /garrafa/i.test(pedidoGarrafa.meu),
+     'e o pedido passa no servidor, que fazia a mesma conta errada: «'
+     + (pedidoGarrafa.erro || pedidoGarrafa.meu) + '»');
+
+  // O stock continua a contar-se em doses: sem copos que cheguem para uma
+  // garrafa inteira, ela não se pede. A trava certa é esta, e é a que fica.
+  const semStock = await post('bar_item_guardar',
+    { nome: 'ZZU Pouco ' + marca, servir: 'garrafa', doses_garrafa: 12 });
+  await post('bar_stock_repor', { item_id: semStock.id, quantidade: 4, nota: 'prova' });
+  await conv.reload({ waitUntil: 'networkidle' });
+  await conv.waitForTimeout(2200);
+  const pouco = await conv.evaluate(id => {
+    const c = document.getElementById('bb-' + id);
+    if (!c) return null;
+    const up = c.querySelector('.b-mais .up');
+    return { travado: !up || up.disabled };
+  }, semStock.id);
+  ok(pouco && pouco.travado,
+     'mas quatro copos não dão uma garrafa de doze, e essa continua travada — '
+     + 'a conta das doses é a que protege o stock, e não se perdeu');
+
   const vAmbos = await ler(ambos.id);
   ok(vAmbos && vAmbos.escolhas.length === 2,
      'uma que sai das duas maneiras dá a ESCOLHER, em vez de dois pares de '
@@ -192,17 +256,27 @@ const marca = 'zzu' + Math.floor(Math.random() * 1e5);
      + 'ficava por dizer');
 
   // ============ 3. as entregas ============
-  const aprovado = await p.evaluate(async m => {
-    const d = await (await fetch('api.php?action=bar_estado')).json();
-    const p1 = (d.fila || []).find(x => x.estado === 'em_analise'
-      && (x.itens || []).some(l => (l.nome || '').includes(m)));
-    if (!p1) return 0;
-    const r = await fetch('api.php?action=bar_decidir', { method: 'POST',
-      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: p1.id, decisao: 'aprovar' }) });
-    return (await r.json()).success ? p1.id : 0;
+  // TODOS os pedidos desta prova, e não só o primeiro: ela faz dois (a
+  // garrafa sozinha, e o copo mais a garrafa do tinto), e é preciso que as
+  // duas unidades cheguem ao ecrã de quem entrega para haver o que comparar.
+  const aprovados = await p.evaluate(async m => {
+    const feitos = [];
+    for (let volta = 0; volta < 4; volta++) {
+      const d = await (await fetch('api.php?action=bar_estado')).json();
+      const pend = (d.fila || []).filter(x => x.estado === 'em_analise'
+        && (x.itens || []).some(l => (l.nome || '').includes(m)));
+      if (!pend.length) break;
+      for (const x of pend) {
+        const r = await fetch('api.php?action=bar_decidir', { method: 'POST',
+          headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: x.id, decisao: 'aprovar' }) });
+        if ((await r.json()).success) feitos.push(x.id);
+      }
+    }
+    return feitos;
   }, marca);
-  ok(aprovado > 0, 'a copa aprova-o, para ele chegar a quem entrega: #' + aprovado);
+  ok(aprovados.length >= 2,
+     'a copa aprova-os, para chegarem a quem entrega: ' + aprovados.join(', '));
 
   await p.goto(BASE + '/entregas.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(2400);
@@ -257,7 +331,8 @@ const marca = 'zzu' + Math.floor(Math.random() * 1e5);
   // nome). Esta prova pede de propósito, por isso tem sempre de os fechar.
   await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(900);
-  const ficaram = await limparBar(p, { itens: [soCopo.id, ambos.id, soGarrafa.id], marca });
+  const ficaram = await limparBar(p, { itens: [soCopo.id, ambos.id, soGarrafa.id,
+                                              soGarrafaPadrao.id, semStock.id], marca });
   ok(ficaram.length === 0,
      'a prova não deixa bebidas atrás de si — uma que fique aparece na carta da '
      + 'corrida seguinte e faz falhar outra prova: ' + (ficaram.join(' | ') || 'nada'));
