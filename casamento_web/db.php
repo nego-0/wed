@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 47;
+const ESQUEMA_VERSAO = 48;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2336,6 +2336,27 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                        WHERE r.email IS NULL");
     }
 
+    // v48 — cada casamento tem o seu link de bar.
+    //
+    // Até aqui a única porta do menu era o código da MESA. Isso amarrava duas
+    // coisas que não têm de andar juntas: saber DE QUE FESTA se trata, e saber
+    // PARA ONDE se leva a bebida. Sem uma folha em cima da mesa não havia
+    // menu nenhum — e há convidados de pé, no jardim, junto ao balcão, que
+    // não estão sentados em mesa nenhuma; há o casal a querer ver o próprio
+    // menu; e há a folha que se molha, cai ou vai parar ao bolso de alguém.
+    //
+    // O casamento passa a ter o seu código. O da mesa continua a valer, e
+    // continua a dizer a mesa — que é o que sempre fez de útil.
+    if ($versaoAtual < 48) {
+        migColuna($conn, "{$P}casamentos", 'bar_token', "VARCHAR(12) DEFAULT NULL");
+        migIndice($conn, "{$P}casamentos", 'idx_cas_bartoken', 'bar_token');
+        $r = @$conn->query("SELECT id FROM {$P}casamentos WHERE bar_token IS NULL OR bar_token=''");
+        if ($r) while ($c = $r->fetch_assoc()) {
+            $t = barTokenNovo();
+            @$conn->query("UPDATE {$P}casamentos SET bar_token='$t' WHERE id=" . (int)$c['id']);
+        }
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -3138,6 +3159,113 @@ function barMesaDoToken(mysqli $conn, string $token): ?array {
     if (!$m) return null;
     usarCasamento((int)$m['casamento_id']);
     return $m;
+}
+
+/**
+ * O casamento a que pertence um código de BAR — o da festa, não o da mesa.
+ *
+ * O código da mesa diz duas coisas ao mesmo tempo: de que festa se trata e
+ * para onde vai a bebida. Este diz só a primeira, que é a que faz falta para
+ * abrir o menu. Quem está de pé no jardim, quem perdeu a folha da mesa e o
+ * próprio casal a espreitar a carta entram por aqui — e escolhem a mesa
+ * depois, na página, como sempre puderam.
+ */
+function barCasamentoDoToken(mysqli $conn, string $token): ?array {
+    global $P;
+    if (!preg_match('/^[A-Z0-9]{6,16}$/', $token)) return null;
+    $st = $conn->prepare("SELECT id, nome FROM {$P}casamentos
+                          WHERE bar_token=? AND estado='ativo' AND id > 0 LIMIT 1");
+    if (!$st) return null;
+    $st->bind_param('s', $token);
+    if (!$st->execute()) return null;
+    $c = $st->get_result()->fetch_assoc();
+    if (!$c) return null;
+    usarCasamento((int)$c['id']);
+    return $c;
+}
+
+/** O código de bar deste casamento, criado à primeira vez que se pede. */
+function barTokenDoCasamento(mysqli $conn, int $cid = 0): string {
+    global $P;
+    $cid = $cid ?: casamentoAtual();
+    if ($cid <= 0) return '';
+    $st = @$conn->prepare("SELECT bar_token FROM {$P}casamentos WHERE id=? LIMIT 1");
+    if (!$st) return '';
+    $st->bind_param('i', $cid);
+    if (!$st->execute()) return '';
+    $x = $st->get_result()->fetch_assoc();
+    if (!$x) return '';
+    $t = trim((string)($x['bar_token'] ?? ''));
+    // Um casamento criado antes desta mudança, ou logo a seguir a ela, não
+    // tem código nenhum. Cria-se aqui em vez de se devolver vazio: a página
+    // que o foi buscar precisa dele agora, e não na próxima migração.
+    if ($t === '') {
+        $t = barTokenNovo();
+        @$conn->query("UPDATE {$P}casamentos SET bar_token='$t' WHERE id=$cid");
+    }
+    return $t;
+}
+
+/**
+ * Os textos que o casal escreveu para cada situação do bar (§31.5).
+ *
+ * Viveram na api.php enquanto só a api falava com o convidado. Passaram para
+ * aqui quando a bebidas.php precisou de dizer, ela própria e antes de montar
+ * ecrã nenhum, que a copa está fechada — e o que ela tem de dizer é o texto
+ * DO CASAL, não uma segunda frase escrita noutro sítio a dizer o mesmo de
+ * outra maneira. Duas fontes para a mesma frase acabam sempre com as duas
+ * diferentes.
+ */
+function barMensagens(mysqli $conn): array {
+    global $P;
+    if (isset($GLOBALS['__bar_mensagens'])) return $GLOBALS['__bar_mensagens'];
+    $cid = casamentoAtual();
+    $out = [];
+    $r = @$conn->query("SELECT situacao, texto FROM {$P}bar_mensagens
+                        WHERE casamento_id=$cid AND ativo=1");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        if (trim((string)$x['texto']) !== '') $out[$x['situacao']] = $x['texto'];
+    }
+    // Herança: a mensagem de bar fechado viveu numa definição à parte antes de
+    // haver esta tabela. Continua a ler-se enquanto ninguém escrever a nova —
+    // um casal que a tenha escrito há meses não a perde por termos arrumado o
+    // sítio onde ela mora. Assim que ele guardar a nova, é a nova que manda.
+    if (!isset($out['copa_fechada'])) {
+        $velha = trim(barDef($conn, 'bar.mensagem_fechado'));
+        if ($velha !== '') $out['copa_fechada'] = $velha;
+    }
+    return $GLOBALS['__bar_mensagens'] = $out;
+}
+
+/** Esquecer as mensagens lidas — uma acabada de guardar vale já. */
+function barMensagensEsquecer(): void { unset($GLOBALS['__bar_mensagens']); }
+
+/**
+ * A mensagem do casal para esta situação, com as variáveis trocadas.
+ *
+ * Devolve '' quando não há — e é isso que faz o texto de fábrica continuar a
+ * valer sem ninguém ter de o repetir.
+ */
+function barMensagem(mysqli $conn, string $situacao, array $vars = []): string {
+    return barTrocarVariaveis(barMensagens($conn)[$situacao] ?? '', $vars);
+}
+
+function barTrocarVariaveis(string $t, array $vars): string {
+    if ($t === '') return '';
+    foreach ($vars as $k => $v) $t = str_replace($k, (string)$v, $t);
+    // As que sobrarem apagam-se: um convidado não tem de ler «{TEMPO}» porque
+    // quem escreveu a frase usou uma variável que aquela situação não tem.
+    return trim(preg_replace('/\{[A-Z_]+\}/u', '', $t));
+}
+
+/** Um tempo dito como uma pessoa o diria. */
+function barRelogio(int $s): string {
+    if ($s <= 0)   return 'um instante';
+    if ($s < 60)   return $s . ' segundos';
+    $m = (int)round($s / 60);
+    if ($m < 60)   return $m . ($m === 1 ? ' minuto' : ' minutos');
+    $h = intdiv($m, 60); $r = $m % 60;
+    return $h . 'h' . str_pad((string)$r, 2, '0', STR_PAD_LEFT);
 }
 
 /** Sem acentos e sem maiúsculas: é assim que se procura um nome. */

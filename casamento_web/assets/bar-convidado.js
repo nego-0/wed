@@ -17,9 +17,19 @@
   'use strict';
 
   var TOKEN = window.BAR.token;
-  var MESA  = window.BAR.mesa;          // a mesa do QR — onde a folha está pousada
+  var CASA  = window.BAR.casa || '';    // o código da festa, quando se entrou por ele
+  // A mesa do QR — onde a folha está pousada. NULL quando se entrou pelo link
+  // da festa, que é o caso novo: aí não há folha nenhuma e a mesa escolhe-se
+  // na pastilha do topo. Guarda-se um objecto vazio em vez de null para o
+  // resto do ficheiro poder continuar a escrever MESA.id sem se defender a
+  // cada linha; o id zero nunca casa com o de mesa nenhuma, que é o que se
+  // quer — «não é a mesma mesa» é verdade quando não há mesa.
+  var SEM_MESA = { id: 0, nome: null };
+  var MESA  = window.BAR.mesa || SEM_MESA;
   var eu = null;                        // quem este telemóvel é
-  var mesaEntrega = MESA;               // para onde vai a bebida (pode mudar-se)
+  // Para onde vai a bebida (pode mudar-se). Sem mesa de entrada fica por
+  // dizer, e é a página que a vai pedir.
+  var mesaEntrega = window.BAR.mesa || null;
   var aberto = false, msgFechado = window.BAR.fechado || '';
   var procuraMin = 4;
   // Por quem estou a pedir. null = por mim, que é o estado normal e aquele a
@@ -59,7 +69,10 @@
   // ---- a conversa com o servidor ----------------------------
   // O token vai sempre: é ele que diz de que casamento se trata.
   async function chamar(accao, corpo, extra) {
-    var url = 'api.php?action=' + encodeURIComponent(accao) + '&m=' + encodeURIComponent(TOKEN);
+    // O código viaja em todos os pedidos — é ele a chave, que aqui não há
+    // sessão. O da mesa quando se entrou por uma, o da festa quando não.
+    var url = 'api.php?action=' + encodeURIComponent(accao)
+            + (TOKEN ? '&m=' + encodeURIComponent(TOKEN) : '&c=' + encodeURIComponent(CASA));
     if (extra) {
       Object.keys(extra).forEach(function (k) {
         url += '&' + k + '=' + encodeURIComponent(extra[k]);
@@ -67,7 +80,7 @@
     }
     var opc = { headers: { 'Accept': 'application/json' } };
     if (corpo !== undefined) {
-      corpo.m = TOKEN;
+      if (TOKEN) corpo.m = TOKEN; else corpo.c = CASA;
       opc.method = 'POST';
       opc.headers['Content-Type'] = 'application/json';
       opc.body = JSON.stringify(corpo);
@@ -246,10 +259,18 @@
     }
   }
 
+  /** A mesa por onde se entrou — a do QR, ou nenhuma se se entrou pelo link
+      da festa. É a ela que se volta quando a pessoa não tem mesa marcada. */
+  function mesaDeEntrada() { return window.BAR.mesa || null; }
+
   function nomeDaMesa() {
     if (mesaEntrega && mesaEntrega.nome) return mesaEntrega.nome;
     if (mesaEntrega && mesaEntrega.id === MESA.id) return MESA.nome;
-    return 'mesa ' + (mesaEntrega ? mesaEntrega.id : '?');
+    // Sem mesa nenhuma — quem entrou pelo link da festa e ainda não escolheu.
+    // Diz-se o que falta fazer, e não «mesa ?», que é uma pergunta devolvida
+    // a quem não a fez.
+    if (!mesaEntrega || !mesaEntrega.id) return 'uma mesa por escolher';
+    return 'mesa ' + mesaEntrega.id;
   }
 
   /* ---- o menu pinta-se por SECÇÕES ------------------------------
@@ -807,7 +828,7 @@
     licFecharJanela();
     para = null;
     cesto = {};
-    mesaEntrega = eu && eu.mesa_id ? await mesaPorId(eu.mesa_id) : MESA;
+    mesaEntrega = eu && eu.mesa_id ? await mesaPorId(eu.mesa_id) : mesaDeEntrada();
     await carregarMenu();
   };
 
@@ -832,7 +853,9 @@
     var bt = $('b-pedir');
     var rotulo = bt.textContent;
     bt.disabled = true; bt.textContent = 'A enviar…';
-    var corpo = { itens: itens, mesa_id: mesaEntrega ? mesaEntrega.id : MESA.id,
+    // Zero quando não há mesa — e aí o servidor pergunta-a, em vez de deixar
+    // o pedido cair na copa com o destino em branco.
+    var corpo = { itens: itens, mesa_id: (mesaEntrega && mesaEntrega.id) || MESA.id,
                   mesa_qr_id: MESA.id };
     if (para) corpo.por_id = para.id;
     var d = await chamar('bar_pedir', corpo);
@@ -845,7 +868,7 @@
     // saía toda em nome do vizinho, e a quota dele é que pagava.
     if (para) {
       para = null;
-      mesaEntrega = eu && eu.mesa_id ? await mesaPorId(eu.mesa_id) : MESA;
+      mesaEntrega = eu && eu.mesa_id ? await mesaPorId(eu.mesa_id) : mesaDeEntrada();
     }
     // O menu inteiro, e não só «os meus pedidos»: pedir é o momento em que os
     // limites mudam, e um cartão que ficou sem quota tem de perder o «+» já.
@@ -948,7 +971,7 @@
       eu = d.eu;
       // Ao voltar à página, a mesa de entrega volta a ser a da pessoa (ou a do
       // QR): uma escolha feita há duas horas já não diz onde ela está agora.
-      mesaEntrega = eu.mesa_id ? await mesaPorId(eu.mesa_id) : MESA;
+      mesaEntrega = eu.mesa_id ? await mesaPorId(eu.mesa_id) : mesaDeEntrada();
       await carregarMenu();
     } else {
       pintarTopo();

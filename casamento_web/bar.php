@@ -25,6 +25,8 @@ $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $ENDERECO = enderecoPublico();
 barGarantirTokens($conn);
+// O link da festa — o que não depende de folha nenhuma em cima de uma mesa.
+$LINK_CASA = $ENDERECO . '/bebidas.php?c=' . barTokenDoCasamento($conn);
 
 // As mesas, com o seu código: é o que vai no QR pousado em cima delas.
 $mesas = [];
@@ -46,6 +48,16 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
   /* A folha das medidas está em bar.css: as abas, o interruptor, a barra de
      ferramentas e o cartão de uma bebida são componentes, e vivem lá. Aqui
      fica só o que é desta página e de mais lado nenhum. */
+
+  /* O link da festa, para copiar. Um campo que se selecciona todo ao toque:
+     marcar um endereço com o dedo falha mais vezes do que acerta. */
+  .b-lig{ display:flex; gap:.5rem; align-items:center; background:var(--cream);
+          border:1px solid var(--line); border-radius:10px; padding:.35rem .35rem .35rem .8rem; }
+  .b-lig input{ flex:1; min-width:0; border:none; background:transparent; padding:.35rem 0;
+                font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-apoio);
+                color:var(--text); }
+  .b-lig input:focus{ box-shadow:none; outline:none; }
+  .b-lig .btn{ flex:none; }
 
   /* As folhas das mesas, na pré-visualização */
   .b-folhas{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.9rem; }
@@ -111,9 +123,35 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
   </section>
 
   <section id="pn-mesas" role="tabpanel" aria-labelledby="ab-mesas" tabindex="0" hidden>
-    <p class="dica">Uma folha por mesa, para recortar e pousar. É por aqui que os
-      convidados entram no menu — não há link no convite, porque um convite é de
-      uma família e o bar precisa de saber qual das pessoas está a pedir.</p>
+    <?php // ---- O link da festa -------------------------------------
+          // Uma folha em cima da mesa resolve quem está sentado. Não resolve
+          // quem está de pé no jardim, quem foi ao balcão, quem molhou a
+          // folha, nem o casal a querer ver a própria carta. Este link abre o
+          // menu a partir de qualquer sítio; a mesa escolhe-se lá dentro.
+          //
+          // É o mesmo menu e o mesmo bar: o que muda é só a porta por onde se
+          // entra. Pode ir no grupo da família, num cartaz à entrada, ou dito
+          // em voz alta ao microfone. ?>
+    <div class="b-cartao-claro" style="margin-bottom:1.2rem">
+      <h3 style="margin:0 0 .3rem;font-size:var(--t-sub);font-weight:400">O link da festa</h3>
+      <p class="dica" style="margin:0 0 .7rem">Abre o menu sem folha nenhuma — para quem
+        está de pé, para quem perdeu a da mesa, e para vocês verem a carta. Quem entra
+        por aqui escolhe a mesa na própria página.</p>
+      <div class="b-lig">
+        <?php // Um campo e não um <code>: num telemóvel, marcar texto com o
+              // dedo para o copiar é um gesto que falha mais vezes do que
+              // acerta, e o campo deixa-se seleccionar de uma vez. ?>
+        <input type="text" id="b-link-casa" readonly value="<?= escP($LINK_CASA) ?>"
+               aria-label="O link do bar desta festa"
+               onclick="this.select()">
+        <button class="btn btn-claro" type="button" onclick="barCopiarLink()">Copiar</button>
+      </div>
+    </div>
+
+    <p class="dica">E uma folha por mesa, para recortar e pousar. O código da mesa faz as
+      duas coisas de uma vez: abre o menu E diz onde entregar. Não há link no convite,
+      porque um convite é de uma família e o bar precisa de saber qual das pessoas está
+      a pedir.</p>
     <div class="acoes no-print" style="justify-content:flex-start;margin-bottom:1rem">
       <?php // A impressão vive em bar-qr.php: uma folha para a tesoura e um
             // ecrã para trabalhar querem coisas contrárias, e a folha não quer

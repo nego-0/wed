@@ -2282,13 +2282,32 @@ function barCid(): int {
     return $cid;
 }
 
-/** A porta pública: sem token válido não se entra, e sem módulo também não. */
-function barPortaPublica(mysqli $conn): array {
+/**
+ * A porta pública: sem código válido não se entra, e sem módulo também não.
+ *
+ * Dois códigos servem, e respondem a perguntas diferentes. O da MESA (`m`)
+ * diz de que festa se trata E onde a pessoa está sentada. O da FESTA (`c`)
+ * diz só a primeira coisa — é o link do casal, para quem está de pé, para
+ * quem perdeu a folha da mesa, para o próprio casal a ver a carta.
+ *
+ * Devolve a mesa quando se entrou por uma, e null quando não. Quem chamou
+ * esta função só para guardar a porta pode ignorar o que ela devolve; quem
+ * precisa da mesa tem de contar com o null, porque agora ele acontece.
+ */
+function barPortaPublica(mysqli $conn): ?array {
     $token = strtoupper(trim((string)($_GET['m'] ?? (corpo()['m'] ?? ''))));
-    $mesa = barMesaDoToken($conn, $token);
-    if (!$mesa) erro('Este código de mesa não serve. Chame um garçom.');
-    if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
-    return $mesa;
+    if ($token !== '') {
+        $mesa = barMesaDoToken($conn, $token);
+        if (!$mesa) erro('Este código de mesa não serve. Chame um garçom.');
+        if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
+        return $mesa;
+    }
+    $casa = strtoupper(trim((string)($_GET['c'] ?? (corpo()['c'] ?? ''))));
+    if ($casa !== '' && barCasamentoDoToken($conn, $casa)) {
+        if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
+        return null;
+    }
+    erro('Este código não serve. Chame um garçom.');
 }
 
 // ---- o telemóvel, e a pessoa a que ele pertence -------------
@@ -2776,40 +2795,10 @@ function barVariaveis(): array {
             '{NOME}'     => 'o nome de quem pede'];
 }
 
-/** As mensagens escritas pelo casal, por situação. Lê-se uma vez por pedido. */
-function barMensagens(mysqli $conn): array {
-    global $P;
-    if (isset($GLOBALS['__bar_mensagens'])) return $GLOBALS['__bar_mensagens'];
-    $cid = casamentoAtual();
-    $out = [];
-    $r = @$conn->query("SELECT situacao, texto FROM {$P}bar_mensagens
-                        WHERE casamento_id=$cid AND ativo=1");
-    if ($r) while ($x = $r->fetch_assoc()) {
-        if (trim((string)$x['texto']) !== '') $out[$x['situacao']] = $x['texto'];
-    }
-    // Herança: a mensagem de bar fechado viveu numa definição à parte antes de
-    // haver esta tabela. Continua a ler-se enquanto ninguém escrever a nova —
-    // um casal que a tenha escrito há meses não a perde por termos arrumado o
-    // sítio onde ela mora. Assim que ele guardar a nova, é a nova que manda.
-    if (!isset($out['copa_fechada'])) {
-        $velha = trim(barDef($conn, 'bar.mensagem_fechado'));
-        if ($velha !== '') $out['copa_fechada'] = $velha;
-    }
-    return $GLOBALS['__bar_mensagens'] = $out;
-}
-
-/** Esquecer as mensagens lidas — uma acabada de guardar vale já. */
-function barMensagensEsquecer(): void { unset($GLOBALS['__bar_mensagens']); }
-
-/**
- * A mensagem do casal para esta situação, com as variáveis trocadas.
- *
- * Devolve '' quando não há — e é isso que faz o texto de fábrica continuar a
- * valer sem ninguém ter de o repetir.
- */
-function barMensagem(mysqli $conn, string $situacao, array $vars = []): string {
-    return barTrocarVariaveis(barMensagens($conn)[$situacao] ?? '', $vars);
-}
+// barMensagens(), barMensagensEsquecer() e barMensagem() passaram para a
+// db.php: a bebidas.php precisa delas antes de montar ecrã nenhum, para dizer
+// que a copa está fechada com o texto DO CASAL. Duas cópias da mesma frase
+// acabam sempre com as duas diferentes.
 
 /**
  * O que se diz a quem não pode pedir agora (§9).
@@ -2886,13 +2875,7 @@ function barTextosFabrica(): array {
 }
 
 /** Trocar as variáveis de um texto, e apagar as que sobrarem. */
-function barTrocarVariaveis(string $t, array $vars): string {
-    if ($t === '') return '';
-    foreach ($vars as $k => $v) $t = str_replace($k, (string)$v, $t);
-    // As que sobrarem apagam-se: um convidado não tem de ler «{TEMPO}» porque
-    // quem escreveu a frase usou uma variável que aquela situação não tem.
-    return trim(preg_replace('/\{[A-Z_]+\}/u', '', $t));
-}
+// barTrocarVariaveis() foi com elas — é o que as faz frase.
 
 /**
  * Uma regra dita em voz alta.
@@ -3468,14 +3451,7 @@ function barCaudal(mysqli $conn): ?array {
 }
 
 /** Segundos em palavras: «3 minutos», «1h20», «40 segundos». */
-function barRelogio(int $s): string {
-    if ($s <= 0)   return 'um instante';
-    if ($s < 60)   return $s . ' segundos';
-    $m = (int)round($s / 60);
-    if ($m < 60)   return $m . ($m === 1 ? ' minuto' : ' minutos');
-    $h = intdiv($m, 60); $r = $m % 60;
-    return $h . 'h' . str_pad((string)$r, 2, '0', STR_PAD_LEFT);
-}
+// barRelogio() foi com elas — a pausa diz-se com um tempo lá dentro.
 
 /**
  * Pode esta pessoa fazer um pedido, agora?
@@ -4026,7 +4002,10 @@ if ($acao === 'bar_mesa') {
     $mesa = barPortaPublica($conn);
     $eu = barQuemSou($conn);
     $quem = $eu ? barConvidado($conn, $eu) : null;
-    ok(['mesa' => ['id' => (int)$mesa['id'], 'nome' => $mesa['nome']],
+    // Sem mesa quando se entrou pelo link da festa: a pessoa escolhe-a na
+    // página. Vai null e não uma mesa inventada — um zero aqui aparecia no
+    // ecrã do entregador como «mesa 0», que é pior do que não dizer nada.
+    ok(['mesa' => $mesa ? ['id' => (int)$mesa['id'], 'nome' => $mesa['nome']] : null,
         'aberto' => barAberto($conn),
         'mensagem_fechado' => barDef($conn, 'bar.mensagem_fechado'),
         'procura_min' => max(1, (int)barDef($conn, 'bar.procura_min')),
@@ -4214,7 +4193,7 @@ if ($acao === 'bar_menu') {
 if ($acao === 'bar_pedir') {
     // O pedido. O que a página mostrou é uma promessa; o que aqui se calcula é
     // a decisão — a disponibilidade volta a conferir-se no momento.
-    barPortaPublica($conn);
+    $mesaDaPorta = barPortaPublica($conn);
     $cid = casamentoAtual();
     if (!barAberto($conn)) {
         erro(barMensagem($conn, 'copa_fechada') ?: 'A copa está fechada neste momento.');
@@ -4278,6 +4257,24 @@ if ($acao === 'bar_pedir') {
         $linhas[] = [$item, $q, $un];
     }
     if (!$linhas) erro('Escolha pelo menos uma bebida.');
+
+    // Onde é que isto se entrega. Três respostas, por esta ordem, e a
+    // primeira que exista ganha:
+    //
+    //   1. a que o pedido traz — foi a pessoa que a escolheu, e a escolha
+    //      dela é a mais recente de todas;
+    //   2. a mesa DA PORTA, quando se entrou por um código de mesa: o
+    //      servidor sabe-a, e perguntá-la a quem está sentado debaixo dela
+    //      era perguntar o que já se tem à frente;
+    //   3. a mesa a que a pessoa está sentada na lista de convidados.
+    //
+    // Só quando nenhuma existe é que se pergunta — e isso é o caso novo,
+    // de quem entrou pelo link da festa e ainda não disse onde está. O que
+    // não se faz é mandar o pedido para a copa com o destino em branco e o
+    // entregador a andar pelo salão a perguntar por um nome.
+    if (!$mesaId && $mesaDaPorta) $mesaId = (int)$mesaDaPorta['id'];
+    if (!$mesaId) $mesaId = (int)($g['mesa_id'] ?? 0);
+    if (!$mesaId) erro('Diga-nos a que mesa levar — escolha-a em cima, no «Entregar em».');
 
     $codigo = barCodigoCurto();
     $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);

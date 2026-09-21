@@ -762,19 +762,19 @@ function correcoesEsperadas(): array {
 
         // ---- A sexta passagem, fase 4: a voz da festa ----
         ['Bar: o que o convidado lê passa a ser escrito pelo casal',
-         'api.php', 'function barMensagens('],
+         'db.php', 'function barMensagens('],
         ['Bar: e os textos de fábrica são UMA lista, que o editor também mostra',
          'api.php', 'function barTextosFabrica('],
         ['Bar: com as mesmas variáveis dos dois lados, trocadas pela mesma função',
-         'api.php', 'function barTrocarVariaveis('],
+         'db.php', 'function barTrocarVariaveis('],
         ['Bar: a da regra manda sobre a da situação, e esta sobre a de fábrica',
          'api.php', "\$sit = \$v['travao'] ?: 'corte';"],
         ['Bar: uma variável que a frase não use não chega ao convidado',
-         'api.php', "preg_replace('/\\{[A-Z_]+\\}/u', '', \$t)"],
+         'db.php', "preg_replace('/\\{[A-Z_]+\\}/u', '', \$t)"],
         ['Bar: apagar a frase é voltar ao de fábrica, e não guardar um vazio',
          'api.php', "\$acao === 'bar_mensagens_guardar'"],
         ['Bar: a mensagem de fechado herda-se da definição antiga, sem se perder',
-         'api.php', "\$velha = trim(barDef(\$conn, 'bar.mensagem_fechado'));"],
+         'db.php', "\$velha = trim(barDef(\$conn, 'bar.mensagem_fechado'));"],
         ['Bar: e o editor das frases vive com as outras regras do bar',
          'assets/bar-regras.js', 'function pintarMensagens('],
 
@@ -1209,6 +1209,20 @@ function correcoesEsperadas(): array {
          'index.php', '.chegada[hidden]{ display:none; }'],
         ['O mesmo nos tempos das entregas, nas pastilhas da mesa e no aviso dos modelos',
          'assets/bar.css', '.b-tempos[hidden]{ display:none; }'],
+
+        // ---- O bar tem duas portas, e a copa fechada tem recado ----
+        ['Cada casamento tem o seu link de bar, que não depende de mesa nenhuma',
+         'db.php', 'function barCasamentoDoToken(mysqli $conn, string $token): ?array {'],
+        ['A porta pública do bar aceita o código da festa ao lado do da mesa',
+         'api.php', "\$casa = strtoupper(trim((string)(\$_GET['c'] ?? (corpo()['c'] ?? ''))));"],
+        ['O casal vê e copia o link da festa no Bar › Mesas e códigos',
+         'bar.php', 'O link da festa'],
+        ['Com a copa fechada ou em pausa não se desenha menu nenhum — só o recado',
+         'bebidas.php', 'function barRecado(string $titulo, string $texto, ?array $pal = null,'],
+        ['E a pausa conta o que falta e vai buscar o menu sozinha ao chegar a zero',
+         'bebidas.php', 'if(s<=0){location.reload();return;}'],
+        ['Sem mesa por dizer, pergunta-se — em vez de pedir às cegas',
+         'api.php', "if (!\$mesaId) erro('Diga-nos a que mesa levar"],
 
         // ---- O registo de ações diz QUEM ao certo ----
         ['Cada ação registada guarda o email de quem a fez, e não só o nome',

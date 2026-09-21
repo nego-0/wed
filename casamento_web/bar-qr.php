@@ -91,10 +91,12 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
 <body>
 
 <div class="barra no-print">
-  <p class="dica"><b>Uma folha por mesa</b>, para recortar e pousar. É por aqui
-    que os convidados entram no menu — e é a única porta, de propósito: um
-    convite é de uma família, e o bar precisa de saber qual das pessoas está a
-    pedir.</p>
+  <p class="dica"><b>Uma folha por mesa</b>, para recortar e pousar. O código de cada
+    mesa faz duas coisas de uma vez: abre o menu e diz onde entregar. Há também o
+    <b>link da festa</b>, no Bar &rsaquo; Mesas e códigos, para quem não esteja sentado —
+    esse abre o menu na mesma e a mesa escolhe-se na página. Não há link no convite,
+    de propósito: um convite é de uma família, e o bar precisa de saber qual das
+    pessoas está a pedir.</p>
   <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
   <a class="btn" href="bar.php">Voltar ao bar</a>
 </div>

@@ -601,58 +601,58 @@ const { escolher } = require('./escolhas');
   const conv = await casa.newPage();
   conv.on('pageerror', e => errs.push('convidado: ' + e.message));
   conv.on('console', m => { if (m.type() === 'error') errs.push('convidado: ' + m.text()); });
+  // Isto mudou de forma, e a mudança foi deliberada. A faixa da pausa vivia
+  // POR CIMA do menu, com o menu inteiro desenhado por baixo — sem «+», é
+  // certo, mas com as vinte bebidas à vista de quem não podia pedir nenhuma.
+  // Uma montra fechada continua a ser uma montra. Agora a pausa tem a página
+  // toda, como o «Este código não serve»: uma taça, o recado do casal, e a
+  // contagem.
+  //
+  // O que esta prova defendia continua todo de pé, e é isso que aqui se mede:
+  // dizer-se ANTES de escolher (mais forte: já nem há o que escolher), não
+  // haver maneira nenhuma de carregar num «+», e a contagem a andar ao
+  // segundo — que é o que traz a pessoa de volta sem ela ter de se lembrar da
+  // página. O que caiu foi a prova de «a secção não é refeita a cada
+  // segundo»: já não há secção nenhuma para refazer.
   const menuDoConvidado = async () => {
     await conv.goto(BASE + '/bebidas.php?m=' + cen.token, { waitUntil: 'networkidle' });
     await conv.waitForTimeout(1400);
     return await conv.evaluate(async (t) => {
-      // O que o SERVIDOR diz que esta pessoa pode pedir, ao lado do que a
-      // PÁGINA lhe mostra. É a comparação que interessa: a faixa da pausa só
-      // prova alguma coisa se houver bebidas que, sem ela, dariam para pedir.
+      // O que o SERVIDOR diz que esta pessoa poderia pedir, ao lado do que a
+      // PÁGINA lhe mostra. É a comparação que interessa: recusar o menu só
+      // prova alguma coisa se houver bebidas que, sem a pausa, dariam para
+      // pedir.
       const m = await (await fetch('api.php?action=bar_menu&m=' + t)).json();
       return {
-        notas: [...document.querySelectorAll('.b-nota')]
-                 .map(x => x.innerText.replace(/\s+/g, ' ')).join(' | '),
-        conta: (document.querySelector('.b-nota .b-conta[data-ate]') || {}).textContent || '',
+        titulo: (document.querySelector('h1') || {}).textContent || '',
+        recado: [...document.querySelectorAll('p')]
+                  .map(x => x.innerText.replace(/\s+/g, ' ')).join(' | '),
+        conta: (document.getElementById('b-conta') || {}).textContent || '',
         mais: document.querySelectorAll('.b-mais').length,
+        temMenu: !!document.getElementById('b-corpo'),
         podem: ((m && m.itens) || []).filter(i => i.pode_pedir > 0).length
       };
     }, cen.token);
   };
   const emPausa = await menuDoConvidado();
-  ok(/em pausa/i.test(emPausa.notas),
-     'o menu abre a dizer que a copa está em pausa: «' + emPausa.notas.slice(0, 120) + '»');
+  ok(/em pausa/i.test(emPausa.titulo),
+     'o convidado abre e lê logo que a copa está em pausa: «' + emPausa.titulo + '»');
   ok(/^\d+:\d\d$/.test(emPausa.conta),
      'com o tempo que falta a contar para baixo, ao segundo (' + emPausa.conta + ')');
-  ok(emPausa.mais === 0 && emPausa.podem > 0,
-     'e sem um único «+» para carregar, havendo bebidas que sem a pausa dariam '
-     + 'para pedir: não se escolhe o que não se pode pedir (' + emPausa.mais
-     + ' de ' + emPausa.podem + ')');
+  ok(emPausa.mais === 0 && !emPausa.temMenu && emPausa.podem > 0,
+     'e sem menu nenhum por baixo, havendo bebidas que sem a pausa dariam para '
+     + 'pedir: uma montra fechada continua a ser uma montra ('
+     + emPausa.podem + ' bebidas escondidas com razão)');
 
-  // ---- e a página NÃO pisca enquanto a contagem anda ----------------
-  // O menu relê-se de dez em dez segundos. Enquanto o html de uma secção
-  // levasse lá dentro o número de um relógio, esse html mudava a cada segundo
-  // e a secção era reescrita: as gavetas e as fotografias desapareciam e
-  // voltavam à frente de quem estava a ler. Marcam-se os nós e espera-se uma
-  // volta inteira: os que sobreviverem são os que não foram refeitos.
-  await conv.evaluate(() => {
-    document.querySelectorAll('.b-bebida').forEach((e, i) => { e.dataset.marca = 'b' + i; });
-    document.querySelectorAll('.b-pilula').forEach((e, i) => { e.dataset.marca = 'p' + i; });
-  });
-  await conv.waitForTimeout(12000);
-  const quietos = await conv.evaluate(() => ({
-    bebidas: document.querySelectorAll('.b-bebida').length,
-    vivas: [...document.querySelectorAll('.b-bebida')].filter(e => e.dataset.marca).length,
-    pilulas: document.querySelectorAll('.b-pilula').length,
-    pvivas: [...document.querySelectorAll('.b-pilula')].filter(e => e.dataset.marca).length,
-    conta: (document.querySelector('.b-nota .b-conta') || {}).textContent || ''
-  }));
-  ok(quietos.bebidas > 0 && quietos.vivas === quietos.bebidas
-     && quietos.pvivas === quietos.pilulas,
-     'e passada uma volta do relógio nada foi refeito — nem uma gaveta, nem um '
-     + 'cartão: ' + quietos.vivas + '/' + quietos.bebidas + ' bebidas e '
-     + quietos.pvivas + '/' + quietos.pilulas + ' gavetas de pé');
-  ok(/^\d+:\d\d$/.test(quietos.conta) && quietos.conta !== emPausa.conta,
-     'com a contagem a andar na mesma: ' + emPausa.conta + ' → ' + quietos.conta);
+  // ---- e a contagem anda mesmo ----------------------------------
+  // A pausa desfaz-se SOZINHA. Sem um relógio a andar, a pessoa ficava a olhar
+  // para uma frase parada sem saber que a copa já tinha reaberto, e a única
+  // saída era recarregar de vez em quando, à sorte.
+  await conv.waitForTimeout(6000);
+  const andouNoMenu = await conv.evaluate(() =>
+    (document.getElementById('b-conta') || {}).textContent || '');
+  ok(/^\d+:\d\d$/.test(andouNoMenu) && andouNoMenu !== emPausa.conta,
+     'e a contagem anda: ' + emPausa.conta + ' → ' + andouNoMenu);
 
   // ============ 21. o terceiro estado, no cabeçalho da copa ============
   await p.reload({ waitUntil: 'networkidle' });

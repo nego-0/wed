@@ -1,17 +1,27 @@
 <?php
 // ============================================================
-// bebidas.php — O menu, para quem está sentado à mesa
+// bebidas.php — O menu, para quem está na festa
 //
-// A única porta do bar para os convidados, e abre-se por um código que está
-// impresso em cima da mesa (?m=TOKEN). Não há sessão, não há login e não há
-// link no convite: é o token da mesa que diz de que casamento se trata, tal
-// como o código do convite faz em convite-digital.php.
+// Duas portas, e são duas perguntas diferentes:
 //
-// O token não é segredo — quem se senta à mesa lê-o. O que impede alguém de
-// pedir em nome de outro é o passo seguinte: a pessoa escolhe-se numa lista
-// pela procura do nome, e o telemóvel fica preso a esse nome (ver
-// docs/modulo-bar.md §5). É honesto dizê-lo: isto trava o engano e o abuso
-// distraído, não um impostor decidido.
+//   ?c=CÓDIGO  — o código DA FESTA. Diz de que casamento se trata, e mais
+//                nada. É o link do casal: vai no convite, no grupo da
+//                família, no cartaz à entrada.
+//
+//   ?m=CÓDIGO  — o código DA MESA, impresso na folha pousada em cima dela.
+//                Diz a mesma coisa que o outro E diz para onde vai a bebida.
+//
+// Durante muito tempo houve só o segundo, e isso amarrava duas coisas que não
+// têm de andar juntas. Sem folha em cima da mesa não havia menu nenhum — e há
+// gente de pé no jardim, há quem esteja ao balcão, há a folha que se molha ou
+// vai parar ao bolso de alguém, e há o próprio casal a querer ver a carta.
+// Quem entra pelo código da festa escolhe a mesa na página, como sempre pôde.
+//
+// Nenhum dos dois é segredo — quem se senta à mesa lê o da mesa, e o da festa
+// anda no convite. O que impede alguém de pedir em nome de outro é o passo
+// seguinte: a pessoa escolhe-se numa lista pela procura do nome, e o telemóvel
+// fica preso a esse nome (ver docs/modulo-bar.md §5). É honesto dizê-lo: isto
+// trava o engano e o abuso distraído, não um impostor decidido.
 //
 // A página veste o convite do casal — as cores e as letras saem das mesmas
 // definições. Um menu com a paleta da casa, no meio da festa deles, seria uma
@@ -21,38 +31,127 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 
-$token = strtoupper(trim((string)($_GET['m'] ?? '')));
-$mesa  = $token !== '' ? barMesaDoToken($conn, $token) : null;
-
-// Sem mesa não há página nenhuma: nem sabemos de que casamento se trata, e
-// portanto nem com que cores pedir desculpa. Fica em português simples.
-if (!$mesa || !podeModulo('bar')) {
-    http_response_code(404);
+/**
+ * Uma página inteira com um recado, e mais nada.
+ *
+ * É o ecrã do «Este código não serve», e passa a ser também o da copa fechada
+ * e o da copa em pausa. A razão de ser o MESMO ecrã: nos três casos não há
+ * nada para pedir, e um menu desenhado por baixo de um aviso a dizer que não
+ * se pode pedir é uma montra — convida a escolher para depois recusar. Quem
+ * chega quer saber se vale a pena esperar, e quer saber já.
+ *
+ * Com paleta, veste-se do convite do casal; sem ela (código que não serve, e
+ * portanto festa que não se sabe qual é) fica em português simples, que é o
+ * que se pode fazer quando nem as cores se conhecem.
+ */
+function barRecado(string $titulo, string $texto, ?array $pal = null,
+                   array $tipo = [], int $http = 200, int $faltam = 0): void {
+    http_response_code($http);
     header('Content-Type: text/html; charset=utf-8');
+    $fundo = $pal['ivory'] ?? '#FBF8F1';
+    $tinta = $pal['text']  ?? '#20342A';
+    $ouro  = $pal['gold']  ?? '#B4864A';
+    $fraco = $pal['cream'] ? $tinta : '#6b7268';
     echo '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
-       . '<title>Bar</title></head>'
-       . '<body style="font:16px/1.6 system-ui,sans-serif;background:#FBF8F1;color:#20342A;margin:0">'
+       . '<meta name="robots" content="noindex,nofollow">'
+       . '<meta name="theme-color" content="' . escP($fundo) . '">'
+       . '<title>Bar</title>'
+       . ($tipo ? '<link href="' . escP(asset('assets/fontes.css')) . '" rel="stylesheet">' : '')
+       . '<style>' . ($tipo['faces'] ?? '') . ':root{' . ($tipo['vars'] ?? '') . '}</style>'
+       . '</head>'
+       . '<body style="font:16px/1.6 ' . ($tipo ? 'var(--f-sans, system-ui), ' : '')
+       . 'system-ui,sans-serif;background:' . escP($fundo) . ';color:' . escP($tinta) . ';margin:0">'
        . '<div style="max-width:24rem;margin:18vh auto;padding:0 1.5rem;text-align:center">'
-       // Uma taça a traço, e não um emoji: numa página de erro sem folhas de
-       // estilo nem ícones carregados, o emoji sai como o desenho de outro
-       // sistema operativo — ou como o quadrado do «não sei desenhar isto».
-       . '<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="#B4864A" '
+       // Uma taça a traço, e não um emoji: nesta página não entram as folhas
+       // de estilo nem os ícones da casa, e o emoji sai como o desenho de
+       // outro sistema operativo — ou como o quadrado do «não sei desenhar
+       // isto».
+       . '<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="' . escP($ouro) . '" '
        . 'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
        . '<path d="M7.6 3.2h8.8l-.5 5.1a4.4 4.4 0 0 1-7.8 0z"/><path d="M12 12.7V20"/>'
        . '<path d="M8.4 20.6h7.2"/></svg>'
-       . '<h1 style="font-weight:400;font-size:var(--t-titulo)">Este código não serve</h1>'
-       . '<p style="color:#6b7268">Talvez a folha seja de outra festa, ou o bar ainda não '
-       . 'esteja montado. Chame um garçom — ele resolve isto num instante.</p>'
+       // O tamanho vai escrito: aqui não há tokens da casa carregados, e um
+       // var(--t-titulo) sem ninguém que o defina deixa o título do tamanho
+       // do texto.
+       . '<h1 style="font-weight:400;font-size:1.5rem;margin:.6rem 0 .4rem'
+       . ($tipo ? ';font-family:var(--f-serif, Georgia, serif)' : '') . '">'
+       . escP($titulo) . '</h1>'
+       . '<p style="color:' . escP($fraco) . ';opacity:.78">' . escP($texto) . '</p>'
+       // A contagem, quando há uma espera com fim à vista. Não é enfeite: uma
+       // pausa desfaz-se SOZINHA, e sem isto a pessoa ficava a olhar para uma
+       // frase parada sem saber que a copa já tinha reaberto — e a única saída
+       // era recarregar de vez em quando, à sorte. O relógio anda, e ao chegar
+       // a zero a página vai buscar o menu por sua conta.
+       //
+       // O instante do fim vem do SERVIDOR (agora + faltam), e não da hora do
+       // browser: a casa corre em Africa/Luanda e o telemóvel do convidado
+       // pode estar noutro fuso ou com o relógio trocado.
+       . ($faltam > 0
+          ? '<p style="font-size:1.1rem;margin-top:1.1rem"><b id="b-conta" '
+            . 'data-faltam="' . (int)$faltam . '" aria-live="polite">'
+            . escP(barRelogio($faltam)) . '</b></p>'
+            . '<script>(function(){'
+            . 'var e=document.getElementById("b-conta");'
+            . 'var fim=Date.now()+(+e.dataset.faltam)*1000;'
+            . 'function passo(){'
+            . 'var s=Math.max(0,Math.round((fim-Date.now())/1000));'
+            . 'if(s<=0){location.reload();return;}'
+            . 'var m=Math.floor(s/60);'
+            . 'e.textContent=m+":"+String(s%60).padStart(2,"0");'
+            . 'setTimeout(passo,1000);}'
+            . 'passo();})();</script>'
+          : '')
        . '</div></body></html>';
     exit;
+}
+
+// A mesa é opcional; a festa não. Tenta-se primeiro pelo código da mesa, que
+// responde às duas perguntas de uma vez.
+$token     = strtoupper(trim((string)($_GET['m'] ?? '')));
+$tokenCasa = strtoupper(trim((string)($_GET['c'] ?? '')));
+$mesa      = $token !== ''     ? barMesaDoToken($conn, $token)      : null;
+$casa      = $mesa === null && $tokenCasa !== ''
+             ? barCasamentoDoToken($conn, $tokenCasa) : null;
+
+// Sem um nem outro não há página nenhuma: nem sabemos de que casamento se
+// trata, e portanto nem com que cores pedir desculpa. Fica em português
+// simples, que é tudo o que se pode fazer sem saber de quem é a festa.
+if ((!$mesa && !$casa) || !podeModulo('bar')) {
+    barRecado('Este código não serve',
+              'Talvez a folha seja de outra festa, ou o bar ainda não esteja montado. '
+              . 'Chame um garçom — ele resolve isto num instante.',
+              null, [], 404);
 }
 
 $DEFS = defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $pal  = paletaEfetiva($DEFS);
 $tipo = cssTipografia($DEFS);
-$mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
+$mensagemFechada = barMensagem($conn, 'copa_fechada');
+
+// A copa fechada, e a copa em pausa. Daqui não se passa: o menu não chega a
+// ser montado, e o convidado lê o recado do casal — o dele, o que ele
+// escreveu, e não uma frase da casa a dizer o mesmo de outra maneira.
+//
+// Isto era um aviso POR CIMA do menu, com o menu todo desenhado por baixo.
+// Escolher três bebidas para depois descobrir que não se pode pedir nada é a
+// promessa que esta página existe para não fazer.
+if (!barAberto($conn)) {
+    barRecado('A copa ainda não está a servir',
+              $mensagemFechada
+                ?: 'Assim que abrir, pode pedir daqui mesmo. Volte a esta página dentro '
+                 . 'de pouco — ou chame um garçom, que lhe sabe dizer.',
+              $pal, $tipo);
+}
+$pausaS = barPausaSegundos($conn);
+if ($pausaS > 0) {
+    barRecado('A copa está em pausa',
+              (barMensagem($conn, 'copa_pausada', ['{TEMPO}' => barRelogio($pausaS)])
+                 ?: 'A copa está a recuperar do movimento.')
+              . ' Volta a servir dentro de:',
+              $pal, $tipo, 200, $pausaS);
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -166,8 +265,14 @@ $mensagemFechada = barDef($conn, 'bar.mensagem_fechado');
 
 <script>
 window.BAR = {
+  // O código da mesa, quando se entrou por uma. Quem entrou pelo link da
+  // festa chega aqui sem mesa nenhuma, e escolhe-a na pastilha do topo —
+  // que é a mesma escolha que sempre esteve lá para quem se quis mudar.
   token: <?= json_encode($token) ?>,
-  mesa: <?= json_encode(['id' => (int)$mesa['id'], 'nome' => $mesa['nome']], JSON_UNESCAPED_UNICODE) ?>,
+  casa: <?= json_encode($tokenCasa) ?>,
+  mesa: <?= $mesa
+            ? json_encode(['id' => (int)$mesa['id'], 'nome' => $mesa['nome']], JSON_UNESCAPED_UNICODE)
+            : 'null' ?>,
   fechado: <?= json_encode($mensagemFechada) ?>
 };
 </script>

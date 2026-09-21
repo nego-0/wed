@@ -512,6 +512,28 @@
     await pintarEquipa();
   };
 
+  // ---- o link da festa ----
+  // Copiar e dizer que copiou. Sem o aviso, quem carrega no botão fica sem
+  // saber se aconteceu alguma coisa e carrega outra vez.
+  window.barCopiarLink = function () {
+    var campo = $('b-link-casa');
+    if (!campo) return;
+    campo.select();
+    var feito = false;
+    try { feito = document.execCommand('copy'); } catch (e) {}
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(campo.value).then(function () {
+        if (window.toast) toast('Link copiado.');
+      }, function () {
+        // A área de transferência pode estar fechada ao pé de página (é
+        // preciso ligação segura). O campo fica marcado, e diz-se o que fazer.
+        if (window.toast) toast('Está marcado — copie com o teclado.');
+      });
+    } else if (window.toast) {
+      toast(feito ? 'Link copiado.' : 'Está marcado — copie com o teclado.');
+    }
+  };
+
   // ---- as folhas das mesas ----
   var folhasFeitas = false;
   function pintarFolhas() {
