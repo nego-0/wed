@@ -1133,35 +1133,85 @@ let ULTIMAS_STATS = null;
  * vez por pessoa, guardada no browser de cada uma: repetida a cada visita
  * deixava de ser um momento e passava a ser um enfeite.
  */
+/**
+ * A HORA DA FESTA — e a tira só existe dentro dela.
+ *
+ * A tira aparecia assim que o último convite respondesse, e isso pode ser em
+ * Março para um casamento em Dezembro: ficava nove meses no cimo do painel, a
+ * dar a notícia do dia em que foi dada. Uma tira que está sempre lá deixa de
+ * se ver, e esta ocupa o lugar de onde se trabalha todos os dias.
+ *
+ * O dia e a hora saem do cabeçalho (#topo-contagem, data-dia/data-hora), que é
+ * quem já os tem — pedi-los outra vez ao servidor era arranjar uma segunda
+ * verdade para a mesma coisa. Sem data marcada não há hora nenhuma, e a tira
+ * não aparece.
+ *
+ * A festa acaba às 6 da manhã do dia seguinte, e não à meia-noite: às duas da
+ * manhã ainda se está na festa, e é a essa hora que alguém abre o painel para
+ * ver quem falta chegar.
+ */
+function horaDaFesta(){
+  const el = document.getElementById('topo-contagem');
+  if (!el) return null;
+  const dia  = el.getAttribute('data-dia')  || '';
+  const hora = el.getAttribute('data-hora') || '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return null;
+  const inicio = new Date(dia + 'T' + (/^\d{2}:\d{2}$/.test(hora) ? hora : '00:00') + ':00');
+  if (isNaN(inicio)) return null;
+  const fim = new Date(dia + 'T00:00:00');
+  fim.setDate(fim.getDate() + 1);
+  fim.setHours(6, 0, 0, 0);
+  const agora = AGORA_FESTA || new Date();
+  return (agora >= inicio && agora < fim) ? { inicio, fim } : null;
+}
+// Só a prova lhe mexe: um relógio que se pode adiantar é a única maneira de
+// verificar uma tira que depende da hora sem esperar pelo dia do casamento.
+let AGORA_FESTA = null;
+
 function momentoDeChegada(s){
   const el = $('chegada'); if (!el) return;
-  const total = +s.convites || 0, pendentes = +s.pendentes || 0;
-  const fechada = total > 0 && pendentes === 0;
-  if (!fechada){ el.hidden = true; el.classList.remove('festa'); return; }
+  if (!horaDaFesta()){ el.hidden = true; el.classList.remove('festa'); return; }
 
-  const pes = +s.pes_confirmados || 0, recusados = +s.recusados || 0;
-  el.innerHTML = '<span class="ch-ico" data-ico="brilho"></span>'
-    + '<span><b>A lista está fechada.</b> '
-    + (total === 1 ? 'O convite respondeu' : 'Os ' + total + ' convites responderam')
-    + (pes ? ' — ' + (pes === 1 ? 'vem 1 pessoa' : 'vêm ' + pes + ' pessoas') : '')
-    + (recusados ? ', e ' + (recusados === 1 ? '1 não pôde vir' : recusados + ' não puderam vir') : '')
-    + '.</span>';
+  const total = +s.convites || 0;
+  const espera = +s.pes_confirmados || 0;
+  const chegaram = +s.presentes || 0;
+  const pendentes = +s.pendentes || 0;
+
+  // Na festa, o que se pergunta ao painel é quem já chegou — e não quantos
+  // convites responderam, que é conversa de Setembro.
+  let texto;
+  if (espera > 0 && chegaram >= espera) {
+    texto = '<b>Estão todos cá.</b> ' + (espera === 1 ? 'Chegou 1 pessoa' : 'Chegaram as ' + espera + ' pessoas')
+          + ' que confirmaram.';
+  } else if (chegaram > 0) {
+    texto = '<b>A festa começou.</b> Já chegaram <b>' + chegaram + '</b>'
+          + (espera ? ' de ' + espera : '') + '.';
+  } else if (espera > 0) {
+    texto = '<b>É hoje.</b> ' + (espera === 1 ? 'Espera-se 1 pessoa' : 'Esperam-se ' + espera + ' pessoas')
+          + (pendentes ? ', e ' + pendentes + ' convite(s) ainda sem resposta' : '')
+          + '.';
+  } else {
+    texto = '<b>É hoje.</b> Ainda ninguém confirmou presença.';
+  }
+  el.innerHTML = '<span class="ch-ico" data-ico="brilho"></span><span>' + texto + '</span>';
   el.hidden = false;
 
-  // Uma vez por pessoa, e por casamento: a chave leva o número de convites,
-  // para a lista que cresce e volta a fechar-se ser um momento novo.
-  const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + total;
+  // A festa (a animação e o anúncio) é uma vez por pessoa e por casamento: é um
+  // momento, e repetido a cada visita passava a ser um enfeite. A chave leva o
+  // DIA, para o casamento seguinte da mesma casa ser um momento novo.
+  const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + (total || 0);
   let visto = true;
   try { visto = localStorage.getItem(chave) === '1'; } catch (e) {}
   if (visto) return;
   try { localStorage.setItem(chave, '1'); } catch (e) {}
-  // A tira diz o estado sempre; a festa só quando há mesmo festa. Uma lista
-  // fechada em que ninguém pode vir é uma notícia — não é uma celebração, e
-  // animá-la seria a página a não perceber o que acabou de acontecer.
-  if (pes > 0) el.classList.add('festa');
-  // E quem não vê a animação ouve a notícia: é a notícia que importa.
-  if (window.anunciar) anunciar('A lista está fechada: todos os convites já responderam.');
+  if (espera > 0) el.classList.add('festa');
+  if (window.anunciar) anunciar(el.textContent.trim());
 }
+
+// A página fica aberta a tarde inteira, e a hora da festa chega sozinha. Sem
+// isto, quem abriu o painel às cinco só via a tira ao recarregar — e a tira
+// que só aparece se alguém a for buscar não serve para o que serve.
+setInterval(() => { if (ULTIMAS_STATS) momentoDeChegada(ULTIMAS_STATS); }, 60000);
 
 function renderProgresso(s){
   ULTIMAS_STATS = s;

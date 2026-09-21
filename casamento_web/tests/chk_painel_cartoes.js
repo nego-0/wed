@@ -29,6 +29,27 @@ const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linu
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const marca = 'zzp' + Math.floor(Math.random() * 1e6);
 
+
+/** Arruma um casamento de prova: arquiva-se primeiro, que é o que a casa exige
+ *  antes de apagar — sem isso o apagar falhava em silêncio e os casamentos de
+ *  prova iam-se juntando no arquivo de trabalho, a estragar as provas seguintes. */
+async function arrumarCasamento(pg, id){
+  return pg.evaluate(async i => {
+    const g = a => fetch('api.php?action=' + a, { method: 'POST',
+      headers: { 'X-CSRF-Token': window.CSRF } }).then(r => r.json()).catch(() => null);
+    const post = (a, c) => fetch('api.php?action=' + a, { method: 'POST',
+      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+      body: JSON.stringify(c) }).then(r => r.json()).catch(() => null);
+    // São TRÊS passos, e por boa razão: um casamento com licença em vigor não
+    // se arquiva, e um que não esteja arquivado não se apaga. A casa obriga a
+    // desfazer pela ordem em que se fez, e uma prova que salte um passo deixa
+    // o casamento no arquivo de trabalho a estragar as provas seguintes.
+    await post('lic_revogar', { casamento: i, motivo: 'Fim da prova automática' });
+    await g('casamento_estado&id=' + i + '&estado=arquivado');
+    return g('casamento_apagar&id=' + i);
+  }, id);
+}
+
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const errs = [];
@@ -229,11 +250,7 @@ const marca = 'zzp' + Math.floor(Math.random() * 1e6);
   ok(v3[0] === 'Todos', 'e há caminho de volta ao que vinha de origem: ' + v3[0]);
 
   // ---- arrumar ----
-  await p.evaluate(async i => {
-    await fetch('api.php?action=casamento_apagar&id=' + i, { method: 'POST',
-      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirmar: 'ZZ Painel ' + i }) });
-  }, cid).catch(() => {});
+  await arrumarCasamento(p, cid);
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));
   console.log(f ? `\n${f} verificação(ões) falharam` : '\nTudo certo.');

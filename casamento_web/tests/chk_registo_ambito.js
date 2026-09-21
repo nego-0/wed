@@ -177,9 +177,13 @@ const marca = 'zzreg' + Math.floor(Math.random() * 1e6);
      'com a conta dentro da frase — «admin entrou no casamento» — e não numa coluna à parte');
 
   // ---- arrumar ----
-  await api('casamento_abrir&id=' + idB);
-  await api('casamento_apagar&id=' + idA, { confirmar: 'ZZ Alfa ' + marca });
-  await api('casamento_apagar&id=' + idB, { confirmar: 'ZZ Beta ' + marca });
+  // Revogar, arquivar, apagar: a casa obriga a desfazer pela ordem em que se
+  // fez, e o A já tem a licença revogada por esta própria prova.
+  for (const id of [idA, idB]) {
+    await api('lic_revogar', { casamento: id, motivo: 'Fim da prova automática' });
+    await api('casamento_estado&id=' + id + '&estado=arquivado');
+    await api('casamento_apagar&id=' + id);
+  }
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));
   console.log(f ? `\n${f} verificação(ões) falharam` : '\nTudo certo.');

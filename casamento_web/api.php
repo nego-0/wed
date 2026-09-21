@@ -7928,6 +7928,16 @@ if ($acao === 'convite_rsvp_manual') {
     $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_confirmados=$conta, rsvp_em=$TS
                         WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si',$estado,$id); $st->execute();
+    // E as PESSOAS do convite seguem-no. Sem isto, marcar um convite como
+    // confirmado deixava os nomes lá dentro em 'pendente', e o painel dizia as
+    // duas coisas ao mesmo tempo — «6 confirmados» num cartão e «3 convites
+    // sem resposta» no outro, sobre exactamente os mesmos convites. Um estado
+    // «parcial» é o único que não se propaga: aí é cada pessoa que manda, e
+    // alinhá-las apagava justamente a informação que torna o convite parcial.
+    if ($estado === 'confirmado' || $estado === 'recusado' || $estado === 'pendente') {
+        $st=$conn->prepare("UPDATE {$P}convidados SET rsvp=? WHERE " . doCasamento() . " AND convite_id=?");
+        $st->bind_param('si',$estado,$id); @$st->execute();
+    }
     registar($conn, 'rsvp_manual', '', 'id '.$id.' -> '.$estado);
     ok(['stats'=>estatisticas($conn)]);
 }

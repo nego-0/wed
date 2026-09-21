@@ -1090,6 +1090,20 @@ function correcoesEsperadas(): array {
         ['E a escolha é de cada casamento, e aguenta o recarregar',
          'index.php', "function chaveOrdem(){ return 'painel.cartoes.' + (window.CASAMENTO_ID || 0); }"],
 
+        // ---- A tira de chegada é da hora da festa ----
+        // Aparecia mal o último convite respondesse: num casamento de Dezembro
+        // cuja lista fecha em Março, são nove meses de tira no cimo do painel.
+        ['A tira de chegada só existe entre a hora marcada e as 6 da manhã seguinte',
+         'index.php', 'function horaDaFesta(){'],
+        ['E o dia sai do cabeçalho, que é quem já o tem',
+         'index.php', "const dia  = el.getAttribute('data-dia')  || '';"],
+        ['Na festa, a tira fala de quem CHEGOU, e não de convites que responderam',
+         'index.php', "texto = '<b>A festa começou.</b> Já chegaram <b>' + chegaram + '</b>'"],
+        ['A hora da festa chega sozinha a quem deixou o painel aberto',
+         'index.php', 'setInterval(() => { if (ULTIMAS_STATS) momentoDeChegada(ULTIMAS_STATS); }, 60000);'],
+        ['Marcar um convite à mão arrasta as pessoas que ele traz',
+         'api.php', "if (\$estado === 'confirmado' || \$estado === 'recusado' || \$estado === 'pendente') {"],
+
         // ---- As pessoas confirmadas contam-se mesmo (os números certos) ----
         ['Marcar a presença à mão escreve a conta dos lugares, e não só o estado',
          'api.php', "\$conta = \$estado === 'confirmado' ? 'lugares'"],
@@ -1119,10 +1133,10 @@ function correcoesEsperadas(): array {
         // ---- O tom (EMO-001 e EMO-002) ----
         ['O cronómetro ao segundo só na semana da festa',
          'parcial-cabecalho.php', "t.textContent = dias < 7 ? relogio(ms) : '';"],
-        ['E quando o último convite responde, isso diz-se',
+        ['E no dia, a tira diz quem já chegou',
          'index.php', 'function momentoDeChegada(s){'],
-        ['A tira fica enquanto for verdade, e a festa é uma vez por pessoa',
-         'index.php', "const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + total;"],
+        ['A festa é uma vez por pessoa: repetida a cada visita era um enfeite',
+         'index.php', "const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + (total || 0);"],
         ['Quem desligou as animações não leva festa nenhuma',
          'index.php', '.chegada.festa, .chegada.festa .ch-ico{ animation:none; }'],
     ];
@@ -1163,18 +1177,23 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
 <style>
   body{ padding:1.5rem; max-width:820px; margin:0 auto; }
   h1{ margin-bottom:.2rem; }
-  .assin{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-seccao); color:var(--gold);
+  /* --gold é enchimento; a tinta é --gold-texto (2,82:1 em classico). */
+  .assin{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-seccao); color:var(--gold-texto);
           background:var(--cream); border:1px solid var(--line); border-radius:10px;
           padding:.5rem .9rem; display:inline-block; margin:.4rem 0 1rem; }
   table{ width:100%; border-collapse:collapse; font-size:var(--t-denso); }
   th,td{ text-align:left; padding:.45rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
   th{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-fraco); }
-  .sim{ color:#1f7a3d; font-weight:600; }
+  /* Verde cravado à mão: 3,29:1 no escuro. --ok é o mesmo verde a virar. */
+  .sim{ color:var(--ok); font-weight:600; }
   .nao{ color:var(--danger); font-weight:600; }
   td.f{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-apoio); color:var(--ink-fraco); }
   .aviso{ border-radius:10px; padding:.8rem 1rem; margin:1rem 0; line-height:1.55; }
-  .aviso.mau{ background:#fbeceb; border:1px solid #e6c3bf; }
-  .aviso.bom{ background:#eaf4ee; border:1px solid #bcdcc8; }
+  /* Fundos cravados à mão. No tema escuro ficavam duas ilhas CLARAS com o
+     texto claro da página por cima: «Está tudo cá.» dava 1,37:1 — a frase
+     que esta página existe para dizer era a que menos se via. */
+  .aviso.mau{ background:var(--danger-bg); border:1px solid var(--danger); color:var(--text); }
+  .aviso.bom{ background:var(--ok-bg); border:1px solid var(--ok); color:var(--text); }
   .copiar{ margin-top:1rem; }
   pre{ background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:.7rem;
        font-size:var(--t-apoio); white-space:pre-wrap; }

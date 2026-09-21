@@ -115,7 +115,8 @@ if ($pecaSel === 'cartao') {
   .man-wrap{ max-width:960px; margin:0 auto; padding:0 1rem 3rem; }
   .man-cab{ border-bottom:3px double var(--gold-soft); padding-bottom:1rem; margin-bottom:1.6rem; }
   .man-cab h1{ margin:.2rem 0; }
-  .man-cab .sub{ color:var(--gold); font-family:var(--serif); font-size:var(--t-corpo); }
+  /* Idem: 3,02:1 em classico. */
+  .man-cab .sub{ color:var(--gold-texto); font-family:var(--serif); font-size:var(--t-corpo); }
   .man-cab .meta{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.5rem; }
   .man-cab .meta b{ color:var(--ink); }
   .selo-vivo{ display:inline-block; background:var(--gold-pale); border:1px solid var(--gold-soft);
@@ -124,7 +125,7 @@ if ($pecaSel === 'cartao') {
   .sec{ margin-bottom:1.8rem; break-inside:avoid; }
   .sec > h2{ font-size:var(--t-sub); border-bottom:1px solid var(--line); padding-bottom:.3rem; margin-bottom:.8rem;
              display:flex; align-items:baseline; gap:.6rem; }
-  .sec > h2 .n{ font-family:var(--serif); color:var(--gold); font-size:var(--t-titulo); }
+  .sec > h2 .n{ font-family:var(--serif); color:var(--gold-texto); font-size:var(--t-titulo); }
 
   .tb{ width:100%; border-collapse:collapse; font-size:var(--t-denso); }
   .tb th{ text-align:left; background:var(--cream); padding:.45rem .6rem; font-size:var(--t-etiqueta); font-weight:600;
