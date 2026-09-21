@@ -23,6 +23,7 @@
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const { limparBar } = require('./limpar-bar');
 const marca = 'zzk' + Math.floor(Math.random() * 1e5);
 const RECADO = 'Abrimos as ' + (10 + Math.floor(Math.random() * 8)) + ' e um quarto, ' + marca;
 
@@ -227,13 +228,18 @@ const RECADO = 'Abrimos as ' + (10 + Math.floor(Math.random() * 8)) + ' e um qua
 
   // ---- arrumar: a copa fica como estava, e a prova não deixa nada ----
   await post(p, 'bar_mensagens_guardar', { copa_fechada: '' });
+  // Primeiro os PEDIDOS, depois a bebida: uma bebida com pedidos por entregar
+  // não se apaga, e esta prova acabou de fazer um. Sem isto a bebida ficava,
+  // e aparecia na carta da corrida seguinte a fazer falhar outra prova.
+  const ficaram = await limparBar(p, { itens: [feito.item], marca });
+  ok(ficaram.length === 0,
+     'a prova não deixa bebidas atrás de si: ' + (ficaram.join(' | ') || 'nada'));
   if (!estavaAberto) await post(p, 'bar_fechar');
   await p.evaluate(async x => {
-    const post = (a) => fetch('api.php?action=' + a, { method: 'POST',
+    const g = (a) => fetch('api.php?action=' + a, { method: 'POST',
       headers: { 'X-CSRF-Token': window.CSRF } }).catch(() => {});
-    if (x.item) await post('bar_item_apagar&id=' + x.item);
-    if (x.convite) await post('convite_delete&id=' + x.convite);
-    if (x.mesa) await post('mesa_delete&id=' + x.mesa);
+    if (x.convite) await g('convite_delete&id=' + x.convite);
+    if (x.mesa) await g('mesa_delete&id=' + x.mesa);
   }, feito);
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));

@@ -531,14 +531,34 @@ body.com-rodape .b-corpo{
 /* Saltar para a alternativa acende-a por um instante — senão a pessoa chega
    lá e não sabe a qual das dez é que carregou. */
 .b-bebida.b-aponta{ outline:2px solid var(--c-ouro, #B4864A); outline-offset:2px; }
+/* COMO SE SERVE, no cartão de cada bebida.
+
+   Uma bebida que só sai ao copo tem de o dizer ANTES de ser pedida: quem olha
+   para «Whisky» não sabe se lhe trazem um copo ou a garrafa, e descobria-o
+   com o tabuleiro à frente. Fica entre o nome e os botões, que é onde o olho
+   passa a caminho de carregar no «+».
+
+   Quando a bebida admite as duas, isto deixa de ser uma frase e passa a ser a
+   ESCOLHA — com o copo já marcado. Antes eram dois pares de botões iguais,
+   um por baixo do outro, cada um com o seu rótulo: uma pergunta implícita
+   («qual destes é o meu?») em vez de uma resposta que se pode mudar. */
+.b-serve{ padding:.15rem .7rem .35rem; font-size:var(--t-etiqueta);
+          letter-spacing:.05em; text-transform:uppercase; }
+.b-serve-txt{ color:var(--c-fraco, #6b7280); font-weight:600; }
+.b-serve.escolhe{ display:flex; gap:.3rem; }
+.b-un-bt{ flex:1; min-height:34px; border-radius:50px; cursor:pointer;
+          border:1px solid rgba(0,0,0,.15); background:transparent;
+          color:var(--c-fraco, #6b7280);
+          font:inherit; font-size:var(--t-etiqueta); font-weight:600;
+          text-transform:uppercase; letter-spacing:.05em; }
+/* A escolhida veste-se da cor do casal, e o contraste é com o fundo dela — o
+   texto claro sobre o verde do convite, como o «Pedir» do rodapé. */
+.b-un-bt.on{ background:var(--c-verde, #20342A); border-color:var(--c-verde, #20342A);
+             color:var(--c-fundo, #FBF8F1); }
+
 /* O contador de uma bebida: menos, quantas, mais. Os 40px são o mínimo de um
    alvo tocado com o polegar, de pé e com um copo na outra mão. */
 .b-mais{ margin-left:auto; display:flex; align-items:center; gap:.25rem; }
-/* Com duas unidades, cada fila diz de qual é — sem rótulo seriam dois pares de
-   botões iguais um debaixo do outro, e ninguém sabia qual era a garrafa. */
-.b-mais.com-rot{ margin-left:0; width:100%; justify-content:flex-end; }
-.b-mais.com-rot .un{ margin-right:auto; font-size:var(--t-etiqueta); font-weight:600;
-  text-transform:uppercase; letter-spacing:.06em; color:var(--c-fraco, #6b7280); }
 /* Na copa e nas entregas, a unidade vai a par do número: «2× Tinto garrafas». */
 .b-un{ font-size:var(--t-apoio); font-weight:600; text-transform:uppercase;
   letter-spacing:.05em; color:var(--c-fraco, #6b7280); }

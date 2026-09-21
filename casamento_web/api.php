@@ -4160,6 +4160,19 @@ if ($acao === 'bar_menu') {
             // máximo por pedido, este número é o stock; é o preço de o botão
             // não mentir, e é um tecto, não um anúncio.
             'pode_pedir' => $i['pode_pedir'],
+            // COMO SE SERVE. Isto não saía daqui, e a falta era funda: o ecrã
+            // do convidado tinha de ler `servir` para oferecer a garrafa, e
+            // como nunca o recebia a condição nunca era verdadeira. O que se
+            // via era sempre um contador só, sem rótulo — uma bebida que só
+            // sai à garrafa aparecia como se fosse um copo, e a garrafa de um
+            // vinho que a serve não se conseguia pedir de todo.
+            //
+            // Não é informação reservada, ao contrário do stock: é o que se
+            // lê numa carta de bebidas. `doses_garrafa` vai junto porque é a
+            // conta com que o «+» sabe se ainda cabe mais uma garrafa dentro
+            // do que esta pessoa pode pedir.
+            'servir' => $i['servir'] ?? 'copo',
+            'doses_garrafa' => (int)($i['doses_garrafa'] ?? 6),
             // Porque não pode, quanto falta, e o que sai já em vez disto.
             'travao' => $i['travao'], 'espera_s' => $i['espera_s'],
             'aviso' => $i['aviso'], 'alternativas' => $i['alternativas'],

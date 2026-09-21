@@ -1170,6 +1170,21 @@ function correcoesEsperadas(): array {
         ['E o cesto do convidado separa copos de garrafas da mesma bebida',
          'assets/bar-convidado.js', "function chaveCesto(id, un) { return id + ':' + (un === 'garrafa' ? 'garrafa' : 'copo'); }"],
 
+        // ---- …e isso dito a quem precisa de saber ----
+        // Tudo o de cima existia e nada disso chegava ao convidado: o menu
+        // dele nunca recebeu o `servir`, e por isso a condição que oferecia a
+        // garrafa nunca foi verdadeira uma única vez.
+        ['O menu do convidado recebe como cada bebida se serve — sem isto, nunca soube',
+         'api.php', "'servir' => \$i['servir'] ?? 'copo',"],
+        ['O cartão diz-o antes de ser pedida: só ao copo, só à garrafa, ou as duas',
+         'assets/bar-convidado.js', 'function comoSeServe(i) { return BP.comoServe(i && i.servir); }'],
+        ['Servindo-se das duas, o convidado escolhe — e o copo vem marcado',
+         'assets/bar-convidado.js', "return unEscolhida[i.id] || 'copo';"],
+        ['A copa e as entregas dizem a unidade SEMPRE, e não só quando é garrafa',
+         'assets/bar-pecas.js', 'function unidade(un, n) {'],
+        ['E o convidado relê no que já pediu, com o «Desistir» ainda ao lado',
+         'assets/bar-convidado.js', "return l.quantidade + '× ' + l.nome + ' (' + BP.unidade(l.unidade, l.quantidade) + ')';"],
+
         // ---- As pessoas confirmadas contam-se mesmo (os números certos) ----
         ['Marcar a presença à mão escreve a conta dos lugares, e não só o estado',
          'api.php', "\$conta = \$estado === 'confirmado' ? 'lugares'"],

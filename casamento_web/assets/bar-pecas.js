@@ -267,8 +267,35 @@
     return parseInt(valor, 10) || 0;
   }
 
+  /**
+   * A unidade de uma linha de pedido, por extenso e no plural certo.
+   *
+   * Vive aqui porque a dizem TRÊS ecrãs — o convidado, a copa e as entregas —
+   * e porque a casa já aprendeu, com as regras e com as mensagens, o que
+   * acontece a uma frase escrita em três sítios: passado um mês são três
+   * frases diferentes, e quem lê a do meio não sabe se é a mesma coisa.
+   *
+   * Diz-se SEMPRE, e não só quando é garrafa. Calar o copo obrigava quem lê a
+   * saber que o silêncio significa copo — e quem não sabe, adivinha. O que a
+   * copa precisa de saber para servir e o que o garçom precisa de levar no
+   * tabuleiro é a mesma coisa, e não se deixa por dizer.
+   */
+  function unidade(un, n) {
+    var g = un === 'garrafa';
+    var muitas = (+n || 1) !== 1;
+    return g ? (muitas ? 'garrafas' : 'garrafa') : (muitas ? 'copos' : 'copo');
+  }
+
+  /** Como uma bebida se serve, dito a quem a vai pedir. */
+  function comoServe(servir) {
+    if (servir === 'ambos')   return 'Ao copo ou à garrafa';
+    if (servir === 'garrafa') return 'Só à garrafa';
+    return 'Só ao copo';
+  }
+
   window.BP = {
     esc: esc, apo: apo, toast: toast, chave: chave,
+    unidade: unidade, comoServe: comoServe,
     campoBusca: campoBusca, ligarBusca: ligarBusca,
     pilula: pilula, btIco: btIco, vazio: vazio,
     foto: foto, sinal: sinal, estado: estado, ha: ha,

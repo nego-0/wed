@@ -168,10 +168,10 @@
 
   function cartao(p, deOutro) {
     var linhas = (p.itens || []).map(function (l) {
-      // A UNIDADE diz-se quando não é a do costume: quem está na copa tem de
-      // saber se leva um copo ou a garrafa inteira, e «2× Tinto» não o diz.
-      var un = l.unidade === 'garrafa'
-        ? ' <span class="b-un">' + (l.quantidade === 1 ? 'garrafa' : 'garrafas') + '</span>' : '';
+      // A UNIDADE diz-se SEMPRE, e não só quando é garrafa. É o que se põe no
+      // tabuleiro: «2× Tinto» tanto pode ser dois copos como duas garrafas, e
+      // quem volta à copa para perguntar faz a mesa esperar duas vezes.
+      var un = ' <span class="b-un">' + BP.unidade(l.unidade, l.quantidade) + '</span>';
       return '<span class="b-linha">' + foto(l) + '<b>' + l.quantidade + '×</b> '
         + esc(l.nome) + un + '</span>';
     }).join('');

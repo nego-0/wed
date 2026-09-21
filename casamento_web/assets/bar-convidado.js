@@ -483,12 +483,40 @@
     pintarMenu();
   };
 
+  // Como se serve cada bebida, dito ao convidado. Isto não estava em lado
+  // nenhum: quem olhava para «Whisky» não sabia se lhe traziam um copo ou a
+  // garrafa, e descobria-o com o tabuleiro à frente. Uma bebida que só sai ao
+  // copo tem de o dizer ANTES de ser pedida — é a mesma regra da copa e das
+  // entregas, que também passaram a dizê-lo.
+  // A frase vive em bar-pecas.js, com a copa e as entregas: é a mesma
+  // informação e tem de ser as mesmas palavras.
+  function comoSeServe(i) { return BP.comoServe(i && i.servir); }
+
+  // Qual das unidades está escolhida em cada bebida que admite as duas.
+  // O copo vem por omissão — é a dose, é o que a maior parte das pessoas quer,
+  // e uma garrafa escolhida por engano é um engano caro.
+  var unEscolhida = {};
+  function unDe(i) {
+    if (i.servir !== 'ambos') return i.servir === 'garrafa' ? 'garrafa' : 'copo';
+    return unEscolhida[i.id] || 'copo';
+  }
+  window.barUnidade = function (id, un) {
+    unEscolhida[id] = un === 'garrafa' ? 'garrafa' : 'copo';
+    pintarMenu();
+  };
+
   function cartao(i) {
-    // Uma linha de botões por unidade que esta bebida admite. Quem só se serve
-    // ao copo tem uma só, e é exactamente como era antes de a garrafa existir.
-    var uns = i.servir === 'ambos' ? ['copo', 'garrafa']
-            : [i.servir === 'garrafa' ? 'garrafa' : 'copo'];
-    var n = uns.reduce(function (t, u) { return t + (cesto[chaveCesto(i.id, u)] || 0); }, 0);
+    // Uma bebida que se sirva das duas maneiras deixa a pessoa DIZER qual —
+    // e diz-se com uma escolha, não com dois pares de botões iguais um por
+    // baixo do outro. Dois contadores lado a lado é uma pergunta implícita
+    // («qual destes é o meu?»); uma escolha com o copo já marcado é uma
+    // resposta que se pode mudar.
+    var uns = [unDe(i)];
+    // O cesto conta as DUAS unidades, mesmo que só uma esteja à vista: quem
+    // pôs uma garrafa e depois voltou ao copo tem na mesma a garrafa no cesto,
+    // e o cartão tem de continuar a dizê-lo.
+    var todas = i.servir === 'ambos' ? ['copo', 'garrafa'] : uns;
+    var n = todas.reduce(function (t, u) { return t + (cesto[chaveCesto(i.id, u)] || 0); }, 0);
     var travada = i.pode_pedir <= 0;
 
     // O que se diz sobre a quantidade: NADA, enquanto houver.
@@ -549,6 +577,25 @@
               + ico.ico('gota') + '</span>';
     }
 
+    // Como se serve — sempre, e não só quando é a garrafa. Um cartão calado
+    // obrigava a pessoa a adivinhar, e quem adivinha adivinha o costume: o
+    // copo. Quem quisesse a garrafa de um vinho que a serve nunca o saberia.
+    var servico = '<div class="b-serve' + (i.servir === 'ambos' ? ' escolhe' : '') + '">'
+      + (i.servir === 'ambos' && !travada && aberto && !pausa
+         // A escolha, com o copo já marcado. É a dose, é o que a maior parte
+         // das pessoas quer, e uma garrafa escolhida por engano é um engano
+         // caro — por isso o padrão é o copo e a garrafa é uma decisão.
+         ? ['copo', 'garrafa'].map(function (u) {
+             var ligado = unDe(i) === u;
+             return '<button type="button" class="b-un-bt' + (ligado ? ' on' : '') + '"'
+               + ' onclick="barUnidade(' + i.id + ',\'' + u + '\')"'
+               + ' aria-pressed="' + (ligado ? 'true' : 'false') + '"'
+               + ' aria-label="Pedir ' + esc(i.nome) + ' ' + (u === 'garrafa' ? 'à garrafa' : 'ao copo') + '">'
+               + (u === 'garrafa' ? 'garrafa' : 'copo') + '</button>';
+           }).join('')
+         : '<span class="b-serve-txt">' + esc(comoSeServe(i)) + '</span>')
+      + '</div>';
+
     return '<div class="b-bebida' + (travada ? ' esgotada' : '') + (n ? ' no-cesto' : '')
       + '" id="bb-' + i.id + '" style="--tinta:' + esc(i.categoria_cor || 'transparent') + '">'
       + '<div class="cx-foto">' + foto(i)
@@ -556,18 +603,20 @@
       + '<div class="nm">' + esc(i.nome) + '</div>'
       + (i.descricao ? '<div class="ds">' + esc(i.descricao) + '</div>' : '')
       + (travada && i.aviso ? '<div class="ds">' + esc(i.aviso) + '</div>' : '')
+      + servico
       + '<div class="pe">'
       +   '<span class="qtd">' + esc(qtd) + relogio + '</span>'
       +   (travada || !aberto || pausa ? '' : uns.map(function (u) {
             var q = cesto[chaveCesto(i.id, u)] || 0;
             // O que já está no cesto desta bebida, em doses: é contra isto que
-            // se sabe se ainda cabe mais uma garrafa.
-            var gasto = uns.reduce(function (t, x) {
+            // se sabe se ainda cabe mais uma garrafa. Contam-se as DUAS
+            // unidades: três copos e uma garrafa de seis são nove doses, e o
+            // tecto é sobre o total.
+            var gasto = todas.reduce(function (t, x) {
               return t + (cesto[chaveCesto(i.id, x)] || 0) * custoDe(i, x); }, 0);
             var cabe = gasto + custoDe(i, u) <= i.pode_pedir;
             var rot = u === 'garrafa' ? 'garrafa' : 'copo';
-            return '<span class="b-mais' + (uns.length > 1 ? ' com-rot' : '') + '">'
-              + (uns.length > 1 ? '<span class="un">' + rot + '</span>' : '')
+            return '<span class="b-mais">'
               + '<button type="button" class="dn" onclick="barMenos(' + i.id + ',\'' + u + '\')"'
               +   (q ? '' : ' disabled')
               +   ' aria-label="Menos um ' + esc(rot) + ' de ' + esc(i.nome) + '">'
@@ -646,7 +695,13 @@
     return '<div class="b-meus"><div class="b-gaveta">' + ico.ico('nota')
       + 'Os meus pedidos</div>' + conta
       + meus.map(function (p) {
-          var oq = p.itens.map(function (l) { return l.quantidade + '× ' + l.nome; }).join(', ');
+          // Com a unidade: é aqui que a pessoa confere o que pediu, e «2×
+          // Tinto» não lhe diz se vêm dois copos ou duas garrafas. Quem
+          // escolheu a garrafa por engano tem de o poder ver enquanto o
+          // «Desistir» ainda está ao lado.
+          var oq = p.itens.map(function (l) {
+            return l.quantidade + '× ' + l.nome + ' (' + BP.unidade(l.unidade, l.quantidade) + ')';
+          }).join(', ');
           // De quem é esta: a que lancei por outro, e a que outro lançou por
           // mim. Sem estas duas linhas a lista misturava as bebidas da mesa
           // toda sem dizer de quem eram.
