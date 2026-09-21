@@ -32,6 +32,44 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 
 /**
+ * O relógio da pausa.
+ *
+ * Vive numa constante, num nowdoc, e não colado com pontos dentro do echo lá
+ * de baixo — por duas razões. A primeira é de leitura: JavaScript partido em
+ * catorze pedaços de string é JavaScript que ninguém revê. A segunda é que a
+ * casa tem uma prova (chk_js_sintaxe.js) que recolhe os blocos de guião dos
+ * ficheiros e os manda compilar: um bloco escrito com concatenação de PHP
+ * chega-lhe como sintaxe partida, e ela não consegue dizer se o que vai para
+ * o browser está bem ou mal. Escrito assim, chega-lhe inteiro.
+ * (E a palavra que abre um desses blocos não se escreve aqui entre sinais,
+ * porque a prova a apanharia a ela em vez do guião — foi o que aconteceu à
+ * primeira tentativa deste comentário.)
+ *
+ * O instante do fim conta-se a partir dos segundos que o SERVIDOR mandou (no
+ * data-faltam), e não da hora do browser: a casa corre em Africa/Luanda e o
+ * telemóvel do convidado pode estar noutro fuso ou com o relógio trocado.
+ * Ao chegar a zero a página vai buscar o menu por sua conta — a pausa
+ * desfaz-se sozinha, e sem isto a pessoa ficava a olhar para uma frase parada
+ * sem saber que a copa já tinha reaberto.
+ */
+const RELOGIO_DA_PAUSA = <<<'HTML'
+<script>
+(function () {
+  var e = document.getElementById('b-conta');
+  if (!e) return;
+  var fim = Date.now() + (+e.dataset.faltam || 0) * 1000;
+  (function passo() {
+    var s = Math.max(0, Math.round((fim - Date.now()) / 1000));
+    if (s <= 0) { location.reload(); return; }
+    var m = Math.floor(s / 60);
+    e.textContent = m + ':' + String(s % 60).padStart(2, '0');
+    setTimeout(passo, 1000);
+  })();
+})();
+</script>
+HTML;
+
+/**
  * Uma página inteira com um recado, e mais nada.
  *
  * É o ecrã do «Este código não serve», e passa a ser também o da copa fechada
@@ -90,17 +128,7 @@ function barRecado(string $titulo, string $texto, ?array $pal = null,
        . ($faltam > 0
           ? '<p style="font-size:1.1rem;margin-top:1.1rem"><b id="b-conta" '
             . 'data-faltam="' . (int)$faltam . '" aria-live="polite">'
-            . escP(barRelogio($faltam)) . '</b></p>'
-            . '<script>(function(){'
-            . 'var e=document.getElementById("b-conta");'
-            . 'var fim=Date.now()+(+e.dataset.faltam)*1000;'
-            . 'function passo(){'
-            . 'var s=Math.max(0,Math.round((fim-Date.now())/1000));'
-            . 'if(s<=0){location.reload();return;}'
-            . 'var m=Math.floor(s/60);'
-            . 'e.textContent=m+":"+String(s%60).padStart(2,"0");'
-            . 'setTimeout(passo,1000);}'
-            . 'passo();})();</script>'
+            . escP(barRelogio($faltam)) . '</b></p>' . RELOGIO_DA_PAUSA
           : '')
        . '</div></body></html>';
     exit;

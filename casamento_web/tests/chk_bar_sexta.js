@@ -62,6 +62,34 @@ const { escolher } = require('./escolhas');
   await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(800);
 
+  // ---- a lousa limpa ----
+  // Os alertas por decidir de corridas anteriores ficam abertos, e vão-se
+  // somando. A API devolve os 30 primeiros, com os ABERTOS à frente — pelo
+  // que a partir de trinta alertas abertos um alerta acabado de decidir cai
+  // fora da lista, e esta prova, que o vai lá procurar para confirmar que a
+  // decisão pegou, não o encontra e morre num sítio que não tem nada a ver
+  // com o que partiu.
+  //
+  // Não é defeito do produto: uma copa a sério não junta trinta alertas por
+  // decidir ao longo de meses. É defeito da prova, que vivia à mercê do que
+  // as corridas anteriores tivessem deixado. Começa-se por os arrumar, como
+  // já se faz à fila e às regras.
+  const limpos = await p.evaluate(async () => {
+    let n = 0;
+    for (let volta = 0; volta < 6; volta++) {
+      const e = await window.api('bar_estado');
+      const abertos = (e.alertas || []).filter(x => x.estado === 'aberto');
+      if (!abertos.length) break;
+      for (const a of abertos) {
+        await window.api('bar_alerta_decidir', { method: 'POST', silencioso: true,
+          body: JSON.stringify({ id: a.id, decisao: 'ignorar' }) });
+        n++;
+      }
+    }
+    return n;
+  });
+  ok(true, 'lousa limpa: ' + limpos + ' alerta(s) de corridas anteriores arrumados');
+
   // O retrato do bar, lido como o ficheiro que se descarrega — é ele que diz
   // o que viaja e o que fica.
   const retratoDoBar = () => p.evaluate(async () => {
