@@ -156,6 +156,17 @@ const entrar = async (ctx, user, pass) => {
   ok(campos > 0, `e traz o preço de cada escalão, editável ali mesmo (${campos})`);
 
   const contaAntes = await admin.$eval('#lic-pi-conta', e => e.textContent);
+  // O PREÇÁRIO É DA CASA, e esta prova vai escrever nele. Guarda-se o preço de
+  // origem para o repor no fim: sem isso, cada corrida somava 7 000 ao mesmo
+  // escalão e o preçário ia subindo sozinho. Duas corridas bastaram para pôr
+  // «Até 80 convidados» ao preço de «Até 200» — e com os dois iguais, o degrau
+  // entre eles passa a ser zero, que é o número que a chk_reforco mede. A
+  // prova do reforço falhava sem ninguém lhe ter tocado.
+  const origem = await admin.evaluate(() => {
+    const i = document.querySelector('#lic-pi-lista input[type=checkbox]:checked');
+    const pr = document.querySelector('#lic-pi-lista input[data-preco="' + i.value + '"]');
+    return { id: +i.value, preco: +pr.value };
+  });
   await admin.evaluate(() => {
     const i = document.querySelector('#lic-pi-lista input[type=checkbox]:checked');
     const pr = document.querySelector('#lic-pi-lista input[data-preco="' + i.value + '"]');
@@ -301,6 +312,21 @@ const entrar = async (ctx, user, pass) => {
   ok(errs.length === 0, 'sem erros de JavaScript na inscrição: ' + (errs.join(' | ') || 'nenhum'));
 
   // ---------- limpeza ----------
+  // O preço volta ao que era: o preçário é da casa, e as provas seguintes
+  // contam com ele como o encontraram.
+  const doCat = await api('lic_catalogo');
+  let esc0 = null;
+  (doCat.catalogo.modulos || []).forEach(m => (m.escaloes || []).forEach(e => {
+    if (e.id === origem.id) esc0 = Object.assign({ modulo: m.id }, e); }));
+  if (esc0) {
+    const rep = await api('lic_escalao_guardar', {
+      id: esc0.id, modulo: esc0.modulo, nome: esc0.nome, resumo: esc0.resumo || '',
+      preco: origem.preco, limite: esc0.limite || 0,
+      editar: esc0.editar ? 1 : 0, todos_modelos: esc0.todos_modelos ? 1 : 0,
+      ordem: esc0.ordem || 0, ativo: 1 });
+    ok(rep && rep.success, 'e o preçário da casa volta ao preço que tinha: ' + origem.preco);
+  }
+
   await api('casamento_estado&id=' + cid + '&estado=arquivado');
   await api('casamento_apagar&id=' + cid);
   const conta = ((await api('utilizador_lista&q=' + encodeURIComponent(email))).contas || [])
