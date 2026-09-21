@@ -215,6 +215,45 @@ $CAS  = casalInfo($DEFS);
   .pag .desc{ font-size:var(--t-denso); color:var(--ink); min-width:0; }
   .pag .desc small{ display:block; color:var(--ink-fraco); font-size:var(--t-apoio); }
   .pag .mt{ font-variant-numeric:tabular-nums; font-size:var(--t-denso); color:var(--ink); white-space:nowrap; text-align:right; font-weight:500; }
+  /* POR PAGAR é vermelho — é o que ainda pode correr mal, e era o que se lia
+     igual ao que já estava resolvido. O que venceu leva-o a cheio; o que está
+     a chegar leva o âmbar de quem ainda vai a tempo. */
+  .pag .data.porpagar{ color:var(--danger); } .pag .data.porpagar::before{ background:var(--danger); }
+  .pag .data.perto{ color:var(--warn); font-weight:600; } .pag .data.perto::before{ background:var(--warn); }
+  .pag .mt.porpagar{ color:var(--danger); }
+  .pag .data small{ display:block; font-size:var(--t-apoio); font-weight:400; opacity:.85; }
+  .pag.l-venceu{ background:var(--danger-bg); }
+  /* O número da parcela dentro da série: «2/3». Sem isto, uma linha solta não
+     diz se é a primeira de três ou a última. */
+  .o-np{ display:inline-block; min-width:2.2rem; font-variant-numeric:tabular-nums;
+    font-size:var(--t-apoio); font-weight:600; color:var(--ink-fraco); }
+  /* O cabeçalho de cada produto: quanto já saiu, quanto falta. */
+  .o-grupo{ display:grid; grid-template-columns:1fr auto; gap:.2rem .7rem; align-items:baseline;
+    margin:1rem 0 .1rem; padding:.45rem .6rem; background:var(--cream); border-radius:9px; }
+  .o-grupo.mau{ background:var(--danger-bg); }
+  .o-grupo .g-nome{ font-weight:600; color:var(--ink); font-size:var(--t-denso); }
+  .o-grupo .g-total{ font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink);
+    font-size:var(--t-denso); text-align:right; }
+  .o-grupo .g-conta{ grid-column:1/-1; font-size:var(--t-apoio); color:var(--ink-fraco); }
+  /* O aviso de prazos, por cima da lista. */
+  .o-prazos{ display:flex; align-items:center; gap:.6rem; margin:.2rem 0 .8rem;
+    padding:.6rem .8rem; border-radius:10px; background:var(--warn-bg); color:var(--text);
+    border-left:3px solid var(--warn); font-size:var(--t-denso); line-height:1.5; }
+  .o-prazos.mau{ background:var(--danger-bg); border-left-color:var(--danger); }
+  .o-prazos .ic{ width:18px; height:18px; flex:none; color:var(--warn); }
+  .o-prazos.mau .ic{ color:var(--danger); }
+  /* Por produto ou por mês. */
+  .o-modo{ display:inline-flex; gap:.3rem; margin:0 0 .6rem; }
+  .o-modo-bt{ background:var(--card); border:1px solid var(--line); border-radius:50px;
+    padding:.25rem .7rem; font-family:inherit; font-size:var(--t-apoio); color:var(--ink-fraco);
+    cursor:pointer; }
+  .o-modo-bt:hover{ border-color:var(--gold-soft); }
+  .o-modo-bt.on{ background:var(--gold-pale); border-color:var(--gold-soft);
+    color:var(--gold-texto); font-weight:600; }
+  /* O cartão da margem: informa, não filtra. */
+  .kpi.margem::before{ background:var(--gold-soft); }
+  .kpi.margem.mau::before{ background:var(--o-over); } .kpi.margem.mau .n{ color:var(--o-over); }
+  .kpi.margem{ opacity:1; }
 
   .vazio{ text-align:center; padding:2rem 1rem; color:var(--ink-fraco); font-size:var(--t-denso); }
   .vazio .btn{ margin-top:.8rem; }

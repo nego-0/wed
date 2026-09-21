@@ -189,13 +189,34 @@
         dica: 'Ver só o que falta pagar' },
       { est: 'pago', n: fmt(r.pago), l: 'Já pago', cls: 'pago',
         dica: 'Ver só o que já saiu' },
-      { est: 'atraso', n: fmt(totalAtraso), l: 'Em atraso', cls: 'atraso' + (nAtraso ? ' mau' : ''),
-        dica: nAtraso ? 'Ver as ' + nAtraso + ' despesa(s) com parcelas vencidas'
-                      : 'Nada vencido — nada para ver' }
+      // O QUARTO CARTÃO TEM DOIS TRABALHOS, e faz um de cada vez.
+      //
+      // Enquanto nada estiver vencido, ele mostra a MARGEM — o que sobra do
+      // teto depois de tudo o que já está prometido. Era o número que faltava
+      // no cimo da página: vivia numa legenda por baixo da barra, e é a
+      // pergunta com que se abre um orçamento («ainda posso?»). Nesse estado
+      // não filtra nada, porque uma diferença entre dois números não é uma
+      // fatia de despesas — não há lista que lhe corresponda.
+      //
+      // Assim que houver uma parcela vencida, o cartão passa a ser o do
+      // ATRASO e volta a filtrar. Um atraso é mais urgente do que uma folga,
+      // e trocar o alerta por um número bonito era apagar a única coisa que
+      // obrigava a agir hoje.
+      (nAtraso
+        ? { est: 'atraso', n: fmt(totalAtraso), l: 'Em atraso', cls: 'atraso mau',
+            dica: 'Ver as ' + nAtraso + ' despesa(s) com parcelas vencidas' }
+        : { est: null, n: r.base > 0 ? fmt(r.base - (r.pago + r.previsto)) : '—',
+            l: 'Margem', cls: 'margem' + (r.base > 0 && (r.base - (r.pago + r.previsto)) < 0 ? ' mau' : ''),
+            info: true,
+            dica: r.base > 0
+              ? 'O que sobra do teto depois de tudo o que já está prometido'
+              : 'Sem teto marcado não há margem para calcular' })
     ];
     $('o-kpis').innerHTML = kpis.map(function (k) {
-      var on = FILTRO_EST === k.est;
-      var morto = k.est === 'atraso' && !nAtraso;
+      // O cartão de informação (a margem) não é um filtro: não se acende, não
+      // se carrega, e não finge que há uma lista por trás dele.
+      var on = !k.info && FILTRO_EST === k.est;
+      var morto = !!k.info;
       return '<button type="button" class="kpi ' + k.cls + (on ? ' on' : '')
         + (morto ? ' morto' : '') + '" title="' + esc(k.dica) + '"'
         + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
@@ -216,12 +237,13 @@
     }).join('');
 
     var leg = [['var(--o-pago)', 'Pago', r.pago], ['var(--o-prev)', 'Por pagar', r.previsto]];
-    // A margem: uma leitura, e não uma gaveta — por isso não é cartão. Fica
-    // aqui, ao pé da barra que a desenha, e é a mesma coisa que a folga que o
-    // carril vazio mostra: dizê-la duas vezes era enchimento.
-    if (r.base > 0) {
-      leg.push(['var(--o-track)', r.falta >= 0 ? 'Margem até ao teto' : 'Acima do teto',
-                Math.abs(r.falta), r.acima_do_teto]);
+    // A margem subiu para o cartão, e por isso sai daqui: dizer o mesmo número
+    // duas vezes no mesmo ecrã é o defeito que se acabou de corrigir no painel
+    // — lê-se como se fossem dois números, e quem os compara procura a
+    // diferença. Só se diz aqui quando ela é MÁ, porque aí deixa de ser a
+    // mesma coisa: «Acima do teto» é um aviso, e o cartão não o dá.
+    if (r.base > 0 && r.falta < 0) {
+      leg.push(['var(--o-track)', 'Acima do teto', Math.abs(r.falta), r.acima_do_teto]);
     }
     $('o-legenda').innerHTML = leg.map(function (l) {
       return '<span' + (l[3] ? ' class="mau"' : '') + '>'
@@ -413,6 +435,101 @@
   }
 
   // ---- calendário de pagamentos, agrupado por mês ----
+  // Por produto ou por mês. O padrão é POR PRODUTO: quem paga a fotografia em
+  // três vezes quer ver as três juntas — «2 de 3 pagas, falta uma em Março» —,
+  // e não três linhas soltas em três meses diferentes, cada uma sem memória
+  // das outras. O calendário continua a um toque, para quem quer a ordem do
+  // tempo (é a pergunta de quem está a olhar para a conta bancária).
+  var AGRUPAR = 'produto';
+  try { AGRUPAR = localStorage.getItem('orc.agrupar') || 'produto'; } catch (e) {}
+  window.orcAgrupar = function (m) {
+    AGRUPAR = m;
+    try { localStorage.setItem('orc.agrupar', m); } catch (e) {}
+    renderPagamentos(ORC.pagamentos);
+  };
+
+  /** Dias até uma data (negativo = já passou). */
+  function diasAte(d) {
+    if (!d) return null;
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    var alvo = new Date(d + 'T00:00:00');
+    if (isNaN(alvo)) return null;
+    return Math.round((alvo - hoje) / 86400000);
+  }
+
+  /** «daqui a 3 dias», «hoje», «há 5 dias». */
+  function prazoTexto(dias) {
+    if (dias === null) return '';
+    if (dias === 0) return 'hoje';
+    if (dias === 1) return 'amanhã';
+    if (dias > 1) return 'daqui a ' + dias + ' dias';
+    if (dias === -1) return 'ontem';
+    return 'há ' + Math.abs(dias) + ' dias';
+  }
+
+  // O aviso de prazos: o que já venceu, e o que vence dentro de duas semanas.
+  // Duas semanas porque é o passo de quem paga a fornecedores — dá tempo de
+  // transferir e de ligar a perguntar se recebeu.
+  var JANELA_PRAZO = 14;
+  function avisoPrazos(lista) {
+    var venc = [], perto = [];
+    lista.forEach(function (p) {
+      if (p.pago_em || !p.data_prevista) return;
+      var d = diasAte(p.data_prevista);
+      if (d === null) return;
+      if (d < 0) venc.push(p); else if (d <= JANELA_PRAZO) perto.push(p);
+    });
+    if (!venc.length && !perto.length) return '';
+    var soma = function (a) { return a.reduce(function (t, x) { return t + num(x.valor); }, 0); };
+    var partes = [];
+    if (venc.length) {
+      partes.push('<b>' + venc.length + (venc.length === 1 ? ' parcela venceu' : ' parcelas venceram')
+                + '</b> (' + esc(fmt(soma(venc))) + ')');
+    }
+    if (perto.length) {
+      partes.push(perto.length + (perto.length === 1 ? ' vence' : ' vencem')
+                + ' nos próximos ' + JANELA_PRAZO + ' dias (' + esc(fmt(soma(perto))) + ')');
+    }
+    // A mais próxima por nome: um aviso que não diz de QUÊ obriga a procurar.
+    var proxima = venc.concat(perto).sort(function (a, b) {
+      return (a.data_prevista || '') < (b.data_prevista || '') ? -1 : 1; })[0];
+    return '<div class="o-prazos' + (venc.length ? ' mau' : '') + '">'
+      + '<span class="ic" data-ico="' + (venc.length ? 'aviso' : 'relogio') + '" aria-hidden="true"></span>'
+      + '<span>' + partes.join(' · ')
+      + (proxima ? ' — a seguir: <b>' + esc(proxima.despesa) + '</b>, '
+                 + esc(prazoTexto(diasAte(proxima.data_prevista))) : '')
+      + '</span></div>';
+  }
+
+  /** A linha de uma parcela. */
+  function linhaPag(p, ordem, total) {
+    var pago = !!p.pago_em;
+    var dias = pago ? null : diasAte(p.data_prevista);
+    var venceu = !pago && dias !== null && dias < 0;
+    var perto = !pago && dias !== null && dias >= 0 && dias <= JANELA_PRAZO;
+    // POR PAGAR diz-se «data limite», e não uma data sozinha: uma data sozinha
+    // podia ser a do pagamento, e era assim que se lia a das que já saíram.
+    var dataTxt = pago ? ('pago ' + p.pago_em)
+                : (p.data_prevista ? 'data limite ' + p.data_prevista : 'sem data limite');
+    var classe = pago ? 'pago' : (venceu ? 'venceu' : (perto ? 'perto' : 'porpagar'));
+    var h = '<div class="pag' + (venceu ? ' l-venceu' : '') + '">'
+      + '<span class="data ' + classe + '" title="' + esc(prazoTexto(dias)) + '">'
+      +   esc(dataTxt) + (dias !== null ? ' <small>' + esc(prazoTexto(dias)) + '</small>' : '')
+      + '</span>'
+      + '<span class="desc">'
+      +   (ordem ? '<span class="o-np">' + ordem + '/' + total + '</span> ' : '')
+      +   esc(p.despesa) + (p.nota ? '<small>' + esc(p.nota) + '</small>' : '')
+      + '</span>'
+      + '<span class="mt' + (pago ? '' : ' porpagar') + '">' + fmt(p.valor) + '</span>';
+    if (PODE) {
+      h += '<span style="display:inline-flex;gap:.35rem;justify-content:flex-end">'
+        + '<button class="mini" onclick="orcEditarParcela(' + p.id + ')">Editar</button>'
+        + '<button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
+        + (pago ? 'Desmarcar' : 'Dar por pago') + '</button></span>';
+    } else { h += '<span></span>'; }
+    return h + '</div>';
+  }
+
   function renderPagamentos(pags) {
     var box = $('lista-pagamentos');
     if (!pags.length) {
@@ -427,32 +544,65 @@
     var soma = lista.reduce(function (s, p) { return s + num(p.valor); }, 0);
     var cab = tiraFiltro(lista.length + ' parcela(s)', soma,
                          FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria'));
+    var botoes = '<div class="o-modo">'
+      + ['produto', 'mes'].map(function (m) {
+          return '<button type="button" class="o-modo-bt' + (AGRUPAR === m ? ' on' : '') + '"'
+            + ' onclick="orcAgrupar(\'' + m + '\')" aria-pressed="' + (AGRUPAR === m) + '">'
+            + (m === 'produto' ? 'Por produto' : 'Por mês') + '</button>';
+        }).join('') + '</div>';
     if (!lista.length) {
-      box.innerHTML = cab + '<div class="vazio">Nenhuma parcela responde a este filtro.</div>';
+      box.innerHTML = cab + botoes + '<div class="vazio">Nenhuma parcela responde a este filtro.</div>';
       return;
     }
-    var hoje = new Date().toISOString().slice(0, 10);
-    var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    var h = cab, mesAtual = '';
-    lista.forEach(function (p) {
-      var pago = !!p.pago_em;
-      var chaveData = pago ? p.pago_em : p.data_prevista;
-      var mes = chaveData ? (function () { var d = chaveData.split('-'); return meses[(+d[1] || 1) - 1] + ' de ' + d[0]; })() : 'Sem data';
-      if (mes !== mesAtual) { h += '<div class="o-mes">' + esc(mes) + '</div>'; mesAtual = mes; }
-      var venceu = !pago && p.data_prevista && p.data_prevista < hoje;
-      var dataTxt = pago ? ('pago ' + p.pago_em) : (p.data_prevista || 'sem data');
-      h += '<div class="pag">'
-        + '<span class="data ' + (pago ? 'pago' : (venceu ? 'venceu' : '')) + '">' + esc(dataTxt) + '</span>'
-        + '<span class="desc">' + esc(p.despesa) + (p.nota ? '<small>' + esc(p.nota) + '</small>' : '') + '</span>'
-        + '<span class="mt">' + fmt(p.valor) + '</span>';
-      if (PODE) {
-        h += '<span style="display:inline-flex;gap:.35rem;justify-content:flex-end">'
-          + '<button class="mini" onclick="orcEditarParcela(' + p.id + ')">Editar</button>'
-          + '<button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
-          + (pago ? 'Desmarcar' : 'Dar por pago') + '</button></span>';
-      } else { h += '<span></span>'; }
-      h += '</div>';
-    });
+    var h = cab + avisoPrazos(lista) + botoes;
+
+    if (AGRUPAR === 'produto') {
+      // As parcelas da mesma despesa, juntas e por ordem de data. O cabeçalho
+      // de cada bloco responde à pergunta que se faz a um pagamento faseado:
+      // quanto já saiu, quanto falta, e para quando.
+      var porDesp = {}, ordem = [];
+      lista.forEach(function (p) {
+        var k = String(p.despesa_id != null ? p.despesa_id : p.despesa);
+        if (!porDesp[k]) { porDesp[k] = []; ordem.push(k); }
+        porDesp[k].push(p);
+      });
+      // Primeiro o que tem dívida mais próxima de vencer; o que está pago vai
+      // para o fim, que é onde já não pede nada a ninguém.
+      ordem.sort(function (a, b) {
+        var pa = porDesp[a].filter(function (x) { return !x.pago_em && x.data_prevista; });
+        var pb = porDesp[b].filter(function (x) { return !x.pago_em && x.data_prevista; });
+        if (!pa.length && !pb.length) return 0;
+        if (!pa.length) return 1;
+        if (!pb.length) return -1;
+        return pa[0].data_prevista < pb[0].data_prevista ? -1 : 1;
+      });
+      ordem.forEach(function (k) {
+        var ps = porDesp[k].slice().sort(function (a, b) {
+          return (a.data_prevista || '9999') < (b.data_prevista || '9999') ? -1 : 1; });
+        var pagas = ps.filter(function (x) { return !!x.pago_em; });
+        var falta = ps.reduce(function (t, x) { return t + (x.pago_em ? 0 : num(x.valor)); }, 0);
+        var tot = ps.reduce(function (t, x) { return t + num(x.valor); }, 0);
+        var venc = ps.some(function (x) {
+          var d = x.pago_em ? null : diasAte(x.data_prevista); return d !== null && d < 0; });
+        h += '<div class="o-grupo' + (venc ? ' mau' : '') + '">'
+          + '<span class="g-nome">' + esc(ps[0].despesa) + '</span>'
+          + '<span class="g-conta">' + pagas.length + ' de ' + ps.length
+          + (ps.length === 1 ? ' paga' : ' pagas')
+          + (falta > 0 ? ' · falta ' + esc(fmt(falta)) : ' · tudo pago')
+          + '</span>'
+          + '<span class="g-total">' + esc(fmt(tot)) + '</span></div>';
+        ps.forEach(function (p, i) { h += linhaPag(p, i + 1, ps.length); });
+      });
+    } else {
+      var meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+      var mesAtual = '';
+      lista.forEach(function (p) {
+        var chaveData = p.pago_em ? p.pago_em : p.data_prevista;
+        var mes = chaveData ? (function () { var d = chaveData.split('-'); return meses[(+d[1] || 1) - 1] + ' de ' + d[0]; })() : 'Sem data';
+        if (mes !== mesAtual) { h += '<div class="o-mes">' + esc(mes) + '</div>'; mesAtual = mes; }
+        h += linhaPag(p, 0, 0);
+      });
+    }
     box.innerHTML = h;
   }
 

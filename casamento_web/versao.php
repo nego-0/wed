@@ -1090,6 +1090,20 @@ function correcoesEsperadas(): array {
         ['E a escolha é de cada casamento, e aguenta o recarregar',
          'index.php', "function chaveOrdem(){ return 'painel.cartoes.' + (window.CASAMENTO_ID || 0); }"],
 
+        // ---- O orçamento de quem paga a prestações ----
+        ['O quarto cartão mostra a margem, e cede o lugar ao atraso quando o há',
+         'assets/orcamento.js', "l: 'Margem', cls: 'margem'"],
+        ['A margem sai da legenda: o mesmo número duas vezes lê-se como dois',
+         'assets/orcamento.js', "if (r.base > 0 && r.falta < 0) {"],
+        ['Uma parcela por pagar diz «data limite», e a vermelho',
+         'assets/orcamento.js', ": (p.data_prevista ? 'data limite ' + p.data_prevista : 'sem data limite');"],
+        ['E avisa-se o que vence nos próximos catorze dias, dizendo de quê',
+         'assets/orcamento.js', 'function avisoPrazos(lista) {'],
+        ['As parcelas do mesmo produto andam juntas, com a conta do produto',
+         'assets/orcamento.js', "if (AGRUPAR === 'produto') {"],
+        ['E o calendário fica a um toque, para quem quer a ordem do tempo',
+         'assets/orcamento.js', 'window.orcAgrupar = function (m) {'],
+
         // ---- A tira de chegada é da hora da festa ----
         // Aparecia mal o último convite respondesse: num casamento de Dezembro
         // cuja lista fecha em Março, são nove meses de tira no cimo do painel.
