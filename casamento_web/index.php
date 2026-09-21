@@ -7,7 +7,7 @@ exigirAdmin();
 // O painel é a lista de convidados: sem esse módulo não há nada para mostrar.
 exigirModulo('convidados');
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 $dataExt = dataExtensa($DEFS['evento.data']);
 $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE " . doCasamento('c') . " AND ".soVivos($conn,'c')."")->fetch_row()[0];
 ?>
@@ -828,6 +828,11 @@ window.CASAMENTO_ID = <?= (int)casamentoAtual() ?>;
 // casamento no alvo — «suspendeu um casamento · Isabel & Abednego» —, que aqui
 // dentro é dizer duas vezes a mesma coisa: este histórico é só deste casamento.
 window.CASAMENTO_NOME = <?= json_encode(nomeDoCasamento()) ?>;
+// O endereço do bar DESTA festa. O cartão «Bar» apontava para a bebidas.php
+// sem endereço nenhum, e a bebidas.php sem endereço não é uma página: é o
+// recado a dizer que o endereço não serve. Quem carregasse no cartão do seu
+// próprio bar ia parar a um erro.
+window.BAR_LINK = <?= json_encode(podeModulo('bar') ? barLinkDaFesta($conn) : '') ?>;
 // Quantas linhas a primeira página vai ter. O servidor já sabe a conta ($12),
 // por isso o esqueleto pode ter o número CERTO de barras em vez de um palpite:
 // com um palpite, um casamento de dois convites via 368px de barras a encolher
@@ -1067,7 +1072,10 @@ function cartoesDeModulo(){
     { chave:'mesas',     rot:'Sentados', unidade:'confirmados', onde:'mesas.php' },
     { chave:'porta',     rot:'Entradas', unidade:'confirmados', onde:'porteiro.php' },
     { chave:'orcamento', rot:'Despesas', unidade:'pagas',       onde:'orcamento.php' },
-    { chave:'bar',       rot:'Bar',      unidade:'com foto',    onde:'bebidas.php' },
+    // O bar leva ao ENDEREÇO desta festa, e não à página sem endereço — essa
+    // só sabe dizer que o endereço não serve.
+    { chave:'bar',       rot:'Bar',      unidade:'com foto',
+      onde: window.BAR_LINK || 'bar.php' },
   ];
   // Entre si, vem primeiro o que mais falta — é isso que se vem aqui
   // perguntar (UX-010). A tira antiga ordenava-se toda assim; agora os

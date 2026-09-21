@@ -14,7 +14,7 @@ require_once __DIR__ . '/pecas.php';
 exigirAdmin();
 
 $defs = defsAtuais($conn);
-$CAS  = casalInfo($defs);
+$CAS  = casalDaFicha($conn);
 
 $pecaSel = 'cartao';   // só há o manual do cartão de convite
 

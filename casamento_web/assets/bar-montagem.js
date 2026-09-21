@@ -546,7 +546,10 @@
       return;
     }
     cx.innerHTML = mesas.map(function (m) {
-      var url = window.BAR_ENDERECO + '/bebidas.php?m=' + m.token;
+      // O endereço DA FESTA com o código da mesa por cima: assim a folha diz
+      // de que casamento é (quem a apanha do chão sabe onde a devolver) e o
+      // QR continua a poupar o gesto de escolher a mesa.
+      var url = window.BAR_LINK_FESTA + '?m=' + m.token;
       return '<div class="b-folha"><div class="mesa">' + esc(m.nome) + '</div>'
         + '<canvas class="b-qr" data-link="' + esc(url) + '"></canvas>'
         + '<div class="lnk">' + esc(url) + '</div>'
@@ -646,7 +649,15 @@
       { id: 'estado', rot: 'No menu', tipo: 'escolha', valor: i.estado || 'ativo',
         opcoes: [{ v: 'ativo', r: 'À vista' }, { v: 'oculto', r: 'Escondida' }] }
     ];
-    if (!i.id) campos.push({ id: 'stock', rot: 'Quantas há, para começar', tipo: 'numero', valor: 0, min: 0 });
+    // A UNIDADE do stock, dita. «Quantas há» não diz quantas O QUÊ, e a
+    // resposta muda tudo: o stock conta-se em COPOS, sempre, porque é o copo
+    // que acaba. Quem tem dez garrafas de espumante escrevia dez a pensar em
+    // garrafas, ficava com dez copos — menos de duas garrafas —, e depois o
+    // «+» da garrafa não deixava pedir a terceira sem dizer porquê.
+    if (!i.id) campos.push({ id: 'stock', rot: 'Quantos COPOS há, para começar',
+      tipo: 'numero', valor: 0, min: 0,
+      dica: 'Sempre em copos, mesmo nas que só saem à garrafa: uma garrafa '
+          + 'gasta os copos que leva dentro. Dez garrafas de seis são 60.' });
     return campos;
   }
 

@@ -11,7 +11,7 @@ exigirPorta();
 exigirModulo('convidados');
 exigirModulo('porta');
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 // O dia da festa: é hoje que este posto trabalha, e a contagem diz-lho.
 [$DATA_EV, $HORA_EV] = diaDoCasamento();
 ?>

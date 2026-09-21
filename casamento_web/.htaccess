@@ -19,6 +19,23 @@
   Require all denied
 </FilesMatch>
 
+# --- O endereço do bar de cada festa ------------------------
+# `bebidas-2026-12-19-ia.php` é o link que o casal dá aos convidados: vai no
+# convite, no grupo da família, num cartaz à entrada. Lê-se, dita-se e
+# reconhece-se — quem o vê sabe de que festa é. Por baixo é a bebidas.php de
+# sempre, com o endereço a dizer qual é o casamento.
+#
+# O QSA guarda o que vier a seguir: quem entra pelo QR de uma mesa traz um
+# `?m=CÓDIGO`, e esse continua a dizer para onde levar a bebida.
+#
+# Se o mod_rewrite não estiver ligado, nada disto acontece e a forma
+# `bebidas.php?c=2026-12-19-ia` continua a abrir a mesma página — é por isso
+# que a página aceita as duas.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^bebidas-([A-Za-z0-9-]+)\.php$ bebidas.php?c=$1 [QSA,L]
+</IfModule>
+
 # --- Cabeçalhos de segurança --------------------------------
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"

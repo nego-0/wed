@@ -14,7 +14,7 @@ exigirAdmin();
 exigirModulo('impresso');
 
 $defs = defsAtuais($conn);
-$CAS  = casalInfo($defs);
+$CAS  = casalDaFicha($conn);
 $ENDERECO = enderecoPublico();   // para onde apontam os QR desta lista
 
 // ---- Fragmento: só o cartão de um convite -------------------

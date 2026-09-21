@@ -486,7 +486,7 @@ if ($acao === 'export') {
     // O nome do ficheiro é o do casal aberto: com vários casamentos na mesma
     // casa, três exportações com o mesmo nome acabam por se sobrepor na pasta
     // das transferências de quem as fez.
-    $alcunha = strtolower(casalInfo(defsAtuais($conn))['casal']);
+    $alcunha = strtolower(casalDaFicha($conn)['casal']);
     $alcunha = preg_replace('/[^a-z0-9]+/', '_',
                  iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $alcunha) ?: 'convidados');
     $alcunha = trim((string)$alcunha, '_') ?: 'convidados';
@@ -4204,6 +4204,13 @@ if ($acao === 'bar_menu') {
             // do que esta pessoa pode pedir.
             'servir' => $i['servir'] ?? 'copo',
             'doses_garrafa' => (int)($i['doses_garrafa'] ?? 6),
+            // Quantas GARRAFAS inteiras ainda dá o que há. O stock conta-se em
+            // copos — é o copo que acaba —, pelo que isto é uma divisão. Vai
+            // para o ecrã porque sem ele o «+» de uma garrafa ficava
+            // desactivado sem uma palavra a dizer porquê: com quatro copos e
+            // seis por garrafa não cabe nenhuma, e um botão morto sem
+            // explicação lê-se como avaria.
+            'garrafas_possiveis' => (int)($i['garrafas_possiveis'] ?? 0),
             // Porque não pode, quanto falta, e o que sai já em vez disto.
             'travao' => $i['travao'], 'espera_s' => $i['espera_s'],
             'aviso' => $i['aviso'], 'alternativas' => $i['alternativas'],

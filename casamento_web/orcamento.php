@@ -21,7 +21,7 @@ exigirModulo('orcamento');
 $visita = emVisitaDeSuporte();
 $soVer  = $visita && !podeCorrigir();
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 ?>
 <!DOCTYPE html>
 <html lang="pt">

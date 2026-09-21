@@ -110,8 +110,14 @@ const { escolher } = require('./escolhas');
   const cartaoQr = await folha.locator('.cartao').first().innerText();
   ok(/Sem rede\?/.test(cartaoQr),
      'com o rodapé que diz o que fazer sem rede — é a saída de sempre');
-  ok(/bebidas\.php\?m=/.test(cartaoQr),
-     'e o endereço escrito, para quem prefira escrever a apontar a câmara');
+  // O endereço da FESTA com o código da mesa por cima. Era `bebidas.php?m=`
+  // — a mesma página para toda a gente, com um punhado de letras sem vogais a
+  // dizer qual era a mesa. Agora a folha diz de que casamento é: quem a
+  // apanha do chão sabe onde a devolver, e quem a escreve à mão escreve uma
+  // data e duas iniciais em vez de dez letras sem sentido.
+  ok(/bebidas-\d{4}-\d{2}-\d{2}-[a-z]+(-\d+)?\.php\?m=/.test(cartaoQr),
+     'e o endereço escrito, legível, para quem prefira escrever a apontar a '
+     + 'câmara: ' + (cartaoQr.match(/\S*bebidas\S*/) || ['(nenhum)'])[0]);
   const urlDoQr = await folha.locator('.cartao canvas').first().getAttribute('data-url');
   await folha.close();
 

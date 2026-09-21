@@ -153,7 +153,7 @@ if (ehAdminPlataforma()) {
 // Sem casamento aberto não há casal a nomear — e ler as definições do
 // casamento 0 devolvia o casal de origem do config.php, que não é de ninguém
 // aqui. O cabeçalho, nesse caso, veste-se da casa.
-$CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
+$CAS = $aberto > 0 ? casalDaFicha($conn)
                    : ['mono'=>PLATAFORMA['mono'], 'casal'=>PLATAFORMA['nome'], 'noiva'=>'', 'noivo'=>''];
 ?>
 <!DOCTYPE html>

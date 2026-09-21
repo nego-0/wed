@@ -134,26 +134,42 @@ function barRecado(string $titulo, string $texto, ?array $pal = null,
     exit;
 }
 
-// A mesa é opcional; a festa não. Tenta-se primeiro pelo código da mesa, que
-// responde às duas perguntas de uma vez.
+// A FESTA é obrigatória; a MESA é opcional.
+//
+// A ordem inverteu-se, e a razão é essa: o endereço da festa é a porta, e o
+// código da mesa é uma comodidade por cima dele. Quem entra pelo QR pousado
+// na mesa traz os dois (`bebidas-2026-12-19-ia.php?m=CÓDIGO`) e poupa um
+// gesto — chega com a mesa já escolhida. Quem entra pelo link escolhe-a na
+// página, que é uma coisa que toda a gente faz de qualquer maneira: mudar de
+// lugar numa festa é a regra, não a excepção.
+//
+// O código da mesa sozinho continua a abrir, porque há folhas impressas com
+// ele e um endereço que deixa de abrir é pior do que um endereço feio.
 $token     = strtoupper(trim((string)($_GET['m'] ?? '')));
-$tokenCasa = strtoupper(trim((string)($_GET['c'] ?? '')));
-$mesa      = $token !== ''     ? barMesaDoToken($conn, $token)      : null;
-$casa      = $mesa === null && $tokenCasa !== ''
-             ? barCasamentoDoToken($conn, $tokenCasa) : null;
+$tokenCasa = trim((string)($_GET['c'] ?? ''));
+$casa      = $tokenCasa !== '' ? barCasamentoDoToken($conn, $tokenCasa) : null;
+$mesa      = $token !== ''     ? barMesaDoToken($conn, $token)          : null;
+// A mesa manda sobre a festa quando as duas vêm: é a mesma casa, e ela traz
+// mais informação. Se a mesa for de OUTRA festa que não a do endereço,
+// ignora-se — a festa é a do endereço, e a folha é que está trocada.
+if ($casa && $mesa && (int)$mesa['casamento_id'] !== (int)$casa['id']) {
+    $mesa = null;
+    usarCasamento((int)$casa['id']);
+}
 
-// Sem um nem outro não há página nenhuma: nem sabemos de que casamento se
-// trata, e portanto nem com que cores pedir desculpa. Fica em português
-// simples, que é tudo o que se pode fazer sem saber de quem é a festa.
+// Sem festa nenhuma não há página: nem sabemos de quem ela é, e portanto nem
+// com que cores pedir desculpa. Fica em português simples, que é tudo o que
+// se pode fazer sem saber de quem é a festa.
 if ((!$mesa && !$casa) || !podeModulo('bar')) {
-    barRecado('Este código não serve',
-              'Talvez a folha seja de outra festa, ou o bar ainda não esteja montado. '
-              . 'Chame um garçom — ele resolve isto num instante.',
+    barRecado('Este endereço não serve',
+              'Talvez seja de outra festa, ou o bar ainda não esteja montado. '
+              . 'Peça o link aos noivos, ou chame um garçom — ele resolve isto '
+              . 'num instante.',
               null, [], 404);
 }
 
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 $pal  = paletaEfetiva($DEFS);
 $tipo = cssTipografia($DEFS);
 $mensagemFechada = barMensagem($conn, 'copa_fechada');
@@ -214,7 +230,8 @@ if ($pausaS > 0) {
   --c-tinta:  <?= escP($pal['text']) ?>;
   --c-verde:  <?= escP($pal['forest']) ?>;   /* ENCHIMENTO: botões, pastilhas */
   --c-acento: <?= escP($pal['forest']) ?>;   /* TINTA: nomes, contas, links   */
-  --c-sobre:  <?= escP($pal['ivory']) ?>;    /* o que se escreve sobre o enchimento */
+  --c-sobre:  <?= escP($pal['ivory']) ?>;    /* o que se escreve sobre o VERDE  */
+  --c-sobre-ouro: <?= escP($pal['ivory']) ?>;/* e o que se escreve sobre o OURO */
   --c-ouro:   <?= escP($pal['gold']) ?>;
   --c-creme:  <?= escP($pal['cream']) ?>;
   /* A tinta apagada e os filetes. Estavam escritos à mão em rgba(0,0,0,…) —
@@ -265,6 +282,16 @@ if ($pausaS > 0) {
   --c-verde:  var(--forest);
   --c-acento: var(--gold-texto);
   --c-sobre:  var(--topo-txt);
+  /* DOIS enchimentos, e cada um pede a sua tinta. O verde é escuro nos
+     quatro temas, e por cima dele vai tinta clara (--topo-txt). O OURO não:
+     é escuro nos temas claros e CLARO no escuro, e por cima dele vai o que a
+     casa reserva para isso (--sobre-gold), que vira ao contrário.
+     Com os dois no mesmo token, a pastilha «A pedir para Fulano» ligada
+     escrevia tinta clara sobre ouro claro: 1,19:1, medido. É a pastilha que
+     diz em nome de QUEM se está a pedir — esquecê-la ligada dá uma ronda
+     inteira lançada em nome do vizinho, e para não se esquecer tem de se
+     conseguir ler. */
+  --c-sobre-ouro: var(--sobre-gold);
   --c-ouro:   var(--gold);
 }
 

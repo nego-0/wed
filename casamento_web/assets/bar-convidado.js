@@ -542,7 +542,16 @@
     // bebida à venda caía no último `else` e anunciava «Já levou o que a casa
     // serve» a quem ainda não tinha pedido nada.
     var qtd = '';
-    if (!travada) qtd = '';
+    // À VISTA, MAS SEM GARRAFA INTEIRA. O stock conta-se em copos, porque é o
+    // copo que acaba; uma garrafa gasta os que leva dentro. Com quatro copos
+    // e seis por garrafa não cabe garrafa nenhuma — e a bebida não está
+    // esgotada, pelo que nada a marcava. O «+» ficava desactivado, calado, e
+    // um botão morto sem explicação lê-se como avaria. Foi assim que isto
+    // chegou duas vezes de volta: «o ícone + parece desabilitado».
+    if (!travada && unDe(i) === 'garrafa' && (+i.garrafas_possiveis || 0) < 1) {
+      qtd = i.servir === 'garrafa' ? 'Sem garrafas inteiras' : 'Sem garrafas — peça ao copo';
+    }
+    else if (!travada) qtd = '';
     else if (i.travao === 'stock') qtd = 'Acabou';
     else if (i.travao === 'proibido') qtd = 'Não disponível para si';
     // Um relógio sozinho por baixo de um nome não diz que é uma espera: sem a

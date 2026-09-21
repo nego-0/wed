@@ -69,9 +69,30 @@ const RECADO = 'Abrimos as ' + (10 + Math.floor(Math.random() * 8)) + ' e um qua
              temBotao: !!document.querySelector('.b-lig .btn') };
   });
   ok(!!link, 'o casal tem o link da festa à vista, no Bar › Mesas e códigos');
-  ok(link && /bebidas\.php\?c=[A-Z0-9]{6,16}$/.test(link.valor || ''),
-     'e é um endereço da festa (?c=), não de uma mesa: ' + (link && link.valor));
+  // LEGÍVEL, e não um punhado de letras sem vogais. Este endereço vai num
+  // convite, num grupo de família, dito ao microfone: quem o vê tem de saber
+  // de que festa é. A data COMPLETA e não só o ano — dois casais com as
+  // mesmas iniciais no mesmo ano não é nada raro, «A & B» é meia lista.
+  ok(link && /\/bebidas-\d{4}-\d{2}-\d{2}-[a-z]+(-\d+)?\.php$/.test(link.valor || ''),
+     'e lê-se: data completa e iniciais dos noivos — ' + (link && link.valor));
   ok(link && link.visivel && link.temBotao, 'com um botão para o copiar');
+
+  // ---- e o endereço ABRE ----
+  const abriu = await p.evaluate(async u => {
+    const r = await fetch(u, { redirect: 'follow' });
+    const t = await r.text();
+    return { estado: r.status, titulo: (t.match(/<title>([^<]*)<\/title>/) || [])[1] || '' };
+  }, link.valor);
+  ok(abriu.estado === 200,
+     'e abre mesmo, em vez de ser um endereço bonito que dá 404: ' + abriu.estado);
+
+  // Um endereço de outra festa não abre esta. O que garante que ele identifica
+  // UMA festa, e não uma qualquer.
+  const inventado = await p.evaluate(async u => {
+    const r = await fetch(u.replace(/bebidas-[^.]+\.php/, 'bebidas-2099-01-01-zz.php'));
+    return r.status;
+  }, link.valor);
+  ok(inventado === 404, 'e um inventado não abre nenhuma: ' + inventado);
 
   // ---- 2. com a copa FECHADA, não há menu nenhum ----
   if (estavaAberto) await post(p, 'bar_fechar');
@@ -161,8 +182,11 @@ const RECADO = 'Abrimos as ' + (10 + Math.floor(Math.random() * 8)) + ' e um qua
      'com a copa aberta, quem entra pelo link da festa chega ao «Quem está a pedir?»');
   ok(aberta.semMesa && aberta.token === '',
      'sem mesa nenhuma — não há folha pousada em cima de mesa nenhuma');
-  ok(/^[A-Z0-9]{6,16}$/.test(aberta.casa || ''),
-     'e com o código da festa na mão, que é o que assina os pedidos');
+  // O endereço legível é também o que assina os pedidos: o telemóvel manda-o
+  // em cada chamada, porque aqui não há sessão nenhuma.
+  ok(/^[a-z0-9-]{3,64}$/.test(aberta.casa || ''),
+     'e com o endereço da festa na mão, que é o que assina os pedidos: «'
+     + aberta.casa + '»');
 
   // ---- 5. e pede-se de verdade por esta porta ----
   //

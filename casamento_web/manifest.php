@@ -17,7 +17,7 @@ require_once __DIR__ . '/personalizacao.php';
 // sessão, serve-se o genérico, que é melhor do que servir o nome de outro.
 $casal = '';
 if (podeEntrar()) {
-    $CAS = casalInfo(defsAtuais($conn));
+    $CAS = casalDaFicha($conn);
     $casal = trim((string)$CAS['casal']);
 }
 

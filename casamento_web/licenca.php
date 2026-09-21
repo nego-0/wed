@@ -32,7 +32,7 @@ $cid   = casamentoAtual();
 $souDaCasa = ehPessoalPlataforma();
 $soVer = $souDaCasa || (emVisitaDeSuporte() && !podeCorrigir());
 $DEFS  = defsAtuais($conn);
-$CAS   = casalInfo($DEFS);
+$CAS   = casalDaFicha($conn);
 
 // O módulo que trouxe cá o casal, quando veio de uma porta fechada.
 $quero = (string)($_GET['quero'] ?? '');

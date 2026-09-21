@@ -30,7 +30,7 @@ $souAdmin = ehAdmin();
 $visita   = emVisitaDeSuporte();
 $soVer    = $visita && !podeCorrigir();
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 
 // O orçamento total (teto) e a moeda são factos do casamento, como a ficha —
 // definem-se aqui, e não na página do orçamento, que passa a ser só a leitura

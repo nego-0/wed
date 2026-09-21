@@ -26,8 +26,9 @@ exigirAdmin();
 exigirModulo('bar');
 
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 $ENDERECO = rtrim(enderecoPublico(), '/');
+$LINK_FESTA = barLinkDaFesta($conn);
 barGarantirTokens($conn);
 
 // Uma mesa só, quando se vem reimprimir a folha de uma que se estragou.
@@ -107,7 +108,9 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
 <?php else: ?>
 <div class="folhas">
   <?php foreach ($mesas as $m):
-    $url = $ENDERECO . '/bebidas.php?m=' . $m['bar_token']; ?>
+    // O endereço da festa com o código da mesa por cima: a folha diz de que
+    // casamento é, e o QR continua a poupar o gesto de escolher a mesa.
+    $url = $LINK_FESTA . '?m=' . $m['bar_token']; ?>
   <div class="cartao">
     <div class="mono"><?= escP($CAS['mono']) ?> · Bar</div>
     <div class="mesa"><?= escP($m['nome']) ?></div>

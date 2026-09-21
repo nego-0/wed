@@ -1288,6 +1288,32 @@ function correcoesEsperadas(): array {
          'assets/bar.css', 'letter-spacing:.05em; color:var(--c-fraco, var(--ink-fraco)); }'],
         ['As caixas de ícone da licença e dos módulos deixam o véu branco fixo',
          'assets/planos.css', 'background:var(--gold-pale); color:var(--gold-deep);'],
+
+        // ---- O endereço do bar lê-se, e a garrafa pede-se ----
+        ['Cada festa tem um endereço com a data completa e as iniciais dos noivos',
+         'db.php', 'function barSlugDe(string $data, string $noiva, string $noivo): string {'],
+        ['Único em toda a casa, e nunca refeito depois de estar a circular',
+         'db.php', 'function barSlugGarantir(mysqli $conn, int $cid): string {'],
+        ['O servidor reescreve bebidas-2026-12-19-ia.php para a página de sempre',
+         '.htaccess', 'RewriteRule ^bebidas-([A-Za-z0-9-]+)\\.php$ bebidas.php?c=$1 [QSA,L]'],
+        ['E o de desenvolvimento faz o mesmo, para as provas medirem o endereço a sério',
+         'router-dev.php', "if (preg_match('#^/bebidas-([A-Za-z0-9-]+)\\.php$#', \$caminho, \$m)) {"],
+        ['A festa é a porta; a mesa é uma comodidade por cima dela',
+         'bebidas.php', '// A FESTA é obrigatória; a MESA é opcional.'],
+        ['O cartão «Bar» do painel leva ao endereço desta festa, e não a um erro',
+         'index.php', 'window.BAR_LINK = <?= json_encode(podeModulo(\'bar\') ? barLinkDaFesta($conn) : \'\') ?>;'],
+        ['Um «+» de garrafa desactivado diz porquê, em vez de se ler como avaria',
+         'assets/bar-convidado.js', "qtd = i.servir === 'garrafa' ? 'Sem garrafas inteiras' : 'Sem garrafas — peça ao copo';"],
+        ['E o stock diz em que unidade se conta, que era de onde vinha a confusão',
+         'assets/bar-montagem.js', "rot: 'Quantos COPOS há, para começar',"],
+        ['A tinta sobre o OURO é outra que a tinta sobre o verde: o ouro vira, o verde não',
+         'bebidas.php', '--c-sobre-ouro: var(--sobre-gold);'],
+
+        // ---- A ficha manda em toda a casa ----
+        ['O nome de cada página sai da ficha do casamento, e não do editor do convite',
+         'index.php', '$CAS  = casalDaFicha($conn);'],
+        ['Na carta do convidado também — é a página que a festa inteira abre',
+         'bebidas.php', '$CAS  = casalDaFicha($conn);'],
     ];
 }
 

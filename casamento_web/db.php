@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 48;
+const ESQUEMA_VERSAO = 49;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2357,6 +2357,27 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
     }
 
+    // v49 — o link do bar passa a ler-se.
+    //
+    // O código da festa era um punhado de letras sem vogais (FGFMBKPZNB): bom
+    // para não se confundir a escrever à mão, péssimo para ir num convite ou
+    // ser dito ao microfone. Passa a haver um endereço com a data e as
+    // iniciais — `2026-12-19-ia` —, que se lê, se dita e se reconhece: quem o
+    // vê sabe logo de que festa é.
+    //
+    // A DATA COMPLETA, e não só o ano: dois casamentos do mesmo casal no
+    // mesmo ano são raros, mas dois casais com as mesmas iniciais no mesmo
+    // ano não são nada raros — «A & B» é meia lista. Com o dia, a colisão
+    // exige a mesma data E as mesmas iniciais; e mesmo aí há o sufixo.
+    //
+    // O código antigo continua a valer: há folhas impressas com ele.
+    if ($versaoAtual < 49) {
+        migColuna($conn, "{$P}casamentos", 'bar_slug', "VARCHAR(64) DEFAULT NULL");
+        migIndice($conn, "{$P}casamentos", 'idx_cas_barslug', 'bar_slug');
+        $r = @$conn->query("SELECT id FROM {$P}casamentos WHERE bar_slug IS NULL OR bar_slug=''");
+        if ($r) while ($c = $r->fetch_assoc()) barSlugGarantir($conn, (int)$c['id']);
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -3172,16 +3193,113 @@ function barMesaDoToken(mysqli $conn, string $token): ?array {
  */
 function barCasamentoDoToken(mysqli $conn, string $token): ?array {
     global $P;
-    if (!preg_match('/^[A-Z0-9]{6,16}$/', $token)) return null;
+    $token = trim($token);
+    if ($token === '') return null;
+    // Duas formas, e a casa responde às duas. O ENDEREÇO legível
+    // (`2026-12-19-ia`) é o que se dá a ler; o CÓDIGO antigo
+    // (`FGFMBKPZNB`) continua a valer porque anda impresso — um endereço
+    // que deixa de abrir é pior do que um endereço feio.
+    $porSlug = preg_match('/^[a-z0-9-]{3,64}$/', mb_strtolower($token));
+    $porCodigo = preg_match('/^[A-Z0-9]{6,16}$/', strtoupper($token));
+    if (!$porSlug && !$porCodigo) return null;
+    $slug = mb_strtolower($token);
+    $cod  = strtoupper($token);
     $st = $conn->prepare("SELECT id, nome FROM {$P}casamentos
-                          WHERE bar_token=? AND estado='ativo' AND id > 0 LIMIT 1");
+                          WHERE (bar_slug=? OR bar_token=?) AND estado='ativo' AND id > 0
+                          LIMIT 1");
     if (!$st) return null;
-    $st->bind_param('s', $token);
+    $st->bind_param('ss', $slug, $cod);
     if (!$st->execute()) return null;
     $c = $st->get_result()->fetch_assoc();
     if (!$c) return null;
     usarCasamento((int)$c['id']);
     return $c;
+}
+
+/**
+ * O endereço público do bar deste casamento — o que se dá a ler e a copiar.
+ *
+ * `bebidas-2026-12-19-ia.php` quando o servidor reescreve (é o que o
+ * .htaccess desta casa faz), e a forma com pergunta por baixo dela, que
+ * funciona em qualquer servidor. As duas abrem a mesma página.
+ */
+function barLinkDaFesta(mysqli $conn, int $cid = 0, bool $bonito = true): string {
+    $cid = $cid ?: casamentoAtual();
+    $slug = barSlugGarantir($conn, $cid);
+    if ($slug === '') return '';
+    $base = rtrim(enderecoPublico(), '/');
+    return $bonito ? $base . '/bebidas-' . $slug . '.php'
+                   : $base . '/bebidas.php?c=' . rawurlencode($slug);
+}
+
+/**
+ * O endereço legível do bar de um casamento: `2026-12-19-ia`.
+ *
+ * A data completa e as iniciais dos noivos. A data completa e não só o ano
+ * porque dois casais com as mesmas iniciais no mesmo ano não é nada raro —
+ * «A & B» é meia lista de casamentos. Com o dia, a colisão exige a mesma data
+ * E as mesmas iniciais, e para essa há o sufixo.
+ *
+ * Sem data marcada fica só com as iniciais, e a festa ganha a data quando ela
+ * for marcada — o slug não se refaz sozinho depois de estar a circular.
+ */
+function barSlugDe(string $data, string $noiva, string $noivo): string {
+    $ini = function (string $s): string {
+        $s = trim($s);
+        if ($s === '') return '';
+        $t = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_substr($s, 0, 1, 'UTF-8'));
+        $t = preg_replace('/[^a-zA-Z0-9]/', '', (string)$t);
+        return mb_strtolower((string)$t);
+    };
+    $letras = $ini($noiva) . $ini($noivo);
+    $dia = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data) && $data !== '0000-00-00' ? $data : '';
+    $base = trim($dia . '-' . $letras, '-');
+    // Uma festa sem data e sem nomes não fica sem endereço nenhum.
+    return $base !== '' ? $base : 'festa';
+}
+
+/**
+ * Garante que este casamento tem endereço, e devolve-o.
+ *
+ * Único em toda a casa: se já houver um igual, acrescenta-se um número. Não
+ * se refaz um que já exista — ele anda impresso e dito, e um endereço que
+ * muda sozinho é um endereço que deixa de abrir.
+ */
+function barSlugGarantir(mysqli $conn, int $cid): string {
+    global $P;
+    if ($cid <= 0) return '';
+    $st = @$conn->prepare("SELECT bar_slug, data_evento, noiva, noivo, nome
+                             FROM {$P}casamentos WHERE id=? LIMIT 1");
+    if (!$st) return '';
+    $st->bind_param('i', $cid);
+    if (!$st->execute()) return '';
+    $x = $st->get_result()->fetch_assoc();
+    if (!$x) return '';
+    $jaTem = trim((string)($x['bar_slug'] ?? ''));
+    if ($jaTem !== '') return $jaTem;
+
+    // Os nomes saem da FICHA, que é quem a festa é. Sem eles, parte-se o nome
+    // do casamento, que é quase sempre «Marta & Nuno».
+    $noiva = trim((string)$x['noiva']);
+    $noivo = trim((string)$x['noivo']);
+    if ($noiva === '' && $noivo === '') {
+        $partes = preg_split('/\s*(?:&|\+|\se\s)\s*/ui', trim((string)$x['nome']), 2);
+        $noiva = trim($partes[0] ?? '');
+        $noivo = trim($partes[1] ?? '');
+    }
+    $base = barSlugDe((string)$x['data_evento'], $noiva, $noivo);
+    $slug = $base;
+    for ($n = 2; $n < 200; $n++) {
+        $q = @$conn->prepare("SELECT id FROM {$P}casamentos WHERE bar_slug=? AND id<>? LIMIT 1");
+        if (!$q) break;
+        $q->bind_param('si', $slug, $cid);
+        $q->execute();
+        if (!$q->get_result()->fetch_assoc()) break;
+        $slug = $base . '-' . $n;
+    }
+    $st2 = @$conn->prepare("UPDATE {$P}casamentos SET bar_slug=? WHERE id=?");
+    if ($st2) { $st2->bind_param('si', $slug, $cid); @$st2->execute(); }
+    return $slug;
 }
 
 /** O código de bar deste casamento, criado à primeira vez que se pede. */

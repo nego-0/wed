@@ -16,7 +16,7 @@ exigirAdmin();
 exigirModulo('digital');
 
 $defs = defsAtuais($conn);
-$CAS  = casalInfo($defs);
+$CAS  = casalDaFicha($conn);
 $ENDERECO = enderecoPublico();   // para onde apontam os links e os QR desta lista
 
 // Uma página só. Havia duas abas — "Convites a enviar" e "Estado e versões" —

@@ -30,9 +30,17 @@ const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linu
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
 // Os cartões que nascem de um módulo, e a página de cada um.
-const DOS_MODULOS = { mesas:'mesas.php', porta:'porteiro.php',
-                      orcamento:'orcamento.php', bar:'bebidas.php',
-                      digital:'digital.php', impresso:'impressos.php' };
+//
+// O BAR é o único que não é uma página fixa: leva ao ENDEREÇO desta festa
+// (`bebidas-2026-12-19-ia.php`), que é o link que o casal dá aos convidados.
+// Apontava para a `bebidas.php` sem endereço nenhum — e essa não é uma
+// página, é o recado a dizer que o endereço não serve. Quem carregasse no
+// cartão do seu próprio bar ia parar a um erro. Por isso aqui vão padrões, e
+// não nomes de ficheiro.
+const DOS_MODULOS = { mesas:/mesas\.php/, porta:/porteiro\.php/,
+                      orcamento:/orcamento\.php/, bar:/bebidas[-.]/,
+                      digital:/digital\.php/, impresso:/impressos\.php/ };
+const casa = (destinos, re) => destinos.some(h => re.test(h));
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -94,7 +102,7 @@ const DOS_MODULOS = { mesas:'mesas.php', porta:'porteiro.php',
   const destinos = cs.map(c => c.onde).filter(Boolean);
   const abertos = mods.map(m => m.chave);
   const aMais = Object.entries(DOS_MODULOS)
-    .filter(([k, pag]) => destinos.includes(pag) && !abertos.includes(k))
+    .filter(([k, re]) => casa(destinos, re) && !abertos.includes(k))
     .map(([k]) => k);
   ok(aMais.length === 0,
      'nenhum caminho para um módulo que a licença não abre: ' + (aMais.join(', ') || 'nenhum'));
@@ -103,12 +111,12 @@ const DOS_MODULOS = { mesas:'mesas.php', porta:'porteiro.php',
   // da festa não aparece — três meses antes diria «0 de 12» e mais nada.
   const soNoDia = new Set(['porta']);
   const emFalta = Object.entries(DOS_MODULOS)
-    .filter(([k, pag]) => abertos.includes(k) && !destinos.includes(pag) && !soNoDia.has(k))
+    .filter(([k, re]) => abertos.includes(k) && !casa(destinos, re) && !soNoDia.has(k))
     .map(([k]) => k);
   ok(emFalta.length === 0,
      'e todos os que ela abre têm caminho: ' + (emFalta.join(', ') || 'nenhum em falta'));
   const naFesta = await p.evaluate(() => !!horaDaFesta());
-  ok(naFesta === destinos.includes('porteiro.php'),
+  ok(naFesta === casa(destinos, /porteiro\.php/),
      'e o das entradas aparece exactamente quando é a hora da festa (agora: '
      + (naFesta ? 'é' : 'não é') + ')');
 

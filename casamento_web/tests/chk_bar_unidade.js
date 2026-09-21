@@ -184,11 +184,18 @@ const marca = 'zzu' + Math.floor(Math.random() * 1e5);
     const c = document.getElementById('bb-' + id);
     if (!c) return null;
     const up = c.querySelector('.b-mais .up');
-    return { travado: !up || up.disabled };
+    return { travado: !up || up.disabled,
+             recado: (c.querySelector('.qtd') || {}).textContent || '' };
   }, semStock.id);
   ok(pouco && pouco.travado,
      'mas quatro copos não dão uma garrafa de doze, e essa continua travada — '
      + 'a conta das doses é a que protege o stock, e não se perdeu');
+  // E DIZ PORQUÊ. Um «+» desactivado sem uma palavra lê-se como avaria, e foi
+  // assim que isto voltou duas vezes: «o ícone + parece desabilitado». A
+  // bebida não está esgotada — há copos —, só não há garrafa inteira, e essa
+  // diferença é tudo o que a pessoa precisa de saber.
+  ok(pouco && /sem garrafas/i.test(pouco.recado || ''),
+     'e diz porquê, em vez de deixar um botão morto: «' + (pouco && pouco.recado) + '»');
 
   const vAmbos = await ler(ambos.id);
   ok(vAmbos && vAmbos.escolhas.length === 2,

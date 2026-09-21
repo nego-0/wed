@@ -22,11 +22,16 @@ exigirModulo('bar');
 $visita = emVisitaDeSuporte();
 $soVer  = $visita && !podeCorrigir();
 $DEFS = defsAtuais($conn);
-$CAS  = casalInfo($DEFS);
+$CAS  = casalDaFicha($conn);
 $ENDERECO = enderecoPublico();
 barGarantirTokens($conn);
 // O link da festa — o que não depende de folha nenhuma em cima de uma mesa.
-$LINK_CASA = $ENDERECO . '/bebidas.php?c=' . barTokenDoCasamento($conn);
+// Legível de propósito: vai num convite, num grupo de família, dito ao
+// microfone. `bebidas-2026-12-19-ia.php` diz de que festa é; um punhado de
+// letras sem vogais não diz nada a ninguém.
+$LINK_CASA = barLinkDaFesta($conn);
+// A forma com pergunta, para o caso de o servidor não reescrever endereços.
+$LINK_CRU  = barLinkDaFesta($conn, 0, false);
 
 // As mesas, com o seu código: é o que vai no QR pousado em cima delas.
 $mesas = [];
@@ -58,6 +63,8 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
                 color:var(--text); }
   .b-lig input:focus{ box-shadow:none; outline:none; }
   .b-lig .btn{ flex:none; }
+  .b-lig-alt{ margin-top:.5rem; font-size:var(--t-apoio); }
+  .b-lig-alt > summary{ cursor:pointer; color:var(--gold-texto); }
 
   /* As folhas das mesas, na pré-visualização */
   .b-folhas{ display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.9rem; }
@@ -146,6 +153,21 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
                onclick="this.select()">
         <button class="btn btn-claro" type="button" onclick="barCopiarLink()">Copiar</button>
       </div>
+      <?php // A rede por baixo. O endereço bonito depende de o servidor
+            // reescrever endereços (o .htaccess desta casa pede-o); onde isso
+            // estiver desligado, esta forma abre a mesma página. Diz-se aqui,
+            // em letra pequena, em vez de deixar alguém descobrir por um 404
+            // no dia da festa. ?>
+      <details class="b-lig-alt">
+        <summary>O link não abre?</summary>
+        <p class="dica" style="margin:.5rem 0 .4rem">Alguns servidores não reescrevem
+          endereços. Este outro abre a mesma página em qualquer um:</p>
+        <div class="b-lig">
+          <input type="text" id="b-link-cru" readonly value="<?= escP($LINK_CRU) ?>"
+                 aria-label="O mesmo link, na forma que abre em qualquer servidor"
+                 onclick="this.select()">
+        </div>
+      </details>
     </div>
 
     <p class="dica">E uma folha por mesa, para recortar e pousar. O código da mesa faz as
@@ -192,6 +214,7 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
 window.BAR_MESAS = <?= json_encode(array_map(fn($m) => [
     'id' => (int)$m['id'], 'nome' => $m['nome'], 'token' => $m['bar_token']], $mesas), JSON_UNESCAPED_UNICODE) ?>;
 window.BAR_ENDERECO = <?= json_encode($ENDERECO) ?>;
+window.BAR_LINK_FESTA = <?= json_encode($LINK_CASA) ?>;
 </script>
 <script src="<?= asset('assets/icones.js') ?>"></script>
 <script src="<?= asset('assets/bar-pecas.js') ?>"></script>
