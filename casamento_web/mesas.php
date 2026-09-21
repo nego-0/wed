@@ -460,7 +460,8 @@ $CAS = casalInfo(defsAtuais($conn));
   .tabset-tabs .rt{ border:1px solid var(--line); background:var(--card); color:var(--text); font-family:inherit; font-size:var(--t-denso);
     padding:.4rem .7rem; border-radius:50px; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
   .tabset-tabs .rt.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
-  .tabset-tabs .rt-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); min-width:1.1rem; text-align:center; }
+  /* Ver .chip-n no index: --forest sobre --cream é 1,19:1 no tema escuro. */
+  .tabset-tabs .rt-n{ background:var(--cream); color:var(--text); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); min-width:1.1rem; text-align:center; }
   .tabset-tabs .rt.on .rt-n{ background:rgba(255,255,255,.22); color:#fff; }
   .tabset-tabs .rt-mesa{ border-color:var(--gold-soft); }
   .tab-body{ overflow:auto; max-height:60vh; }

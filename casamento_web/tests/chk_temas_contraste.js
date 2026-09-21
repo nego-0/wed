@@ -61,9 +61,12 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
     const m = (d && (d.mesas || [])).find(x => x.bar_token);
     return m ? m.bar_token : null;
   });
+  // manual.php e versao.php faltavam a esta lista, e é por isso que nunca
+  // ninguém mediu o que lá está escrito: «todas as páginas» quer dizer todas.
   const PAGINAS = ['index.php', 'mesas.php', 'digital.php', 'impressos.php', 'orcamento.php',
                    'bar.php', 'gestao.php', 'licenca.php', 'modelos.php', 'plataforma.php',
-                   'graficas.php', 'cartoes.php', 'copa.php', 'entregas.php', 'porteiro.php']
+                   'graficas.php', 'cartoes.php', 'copa.php', 'entregas.php', 'porteiro.php',
+                   'manual.php', 'versao.php']
                   .concat(mesa ? ['bebidas.php?m=' + mesa] : []);
   ok(!!mesa, 'há uma mesa com código de bar, para a carta do convidado entrar na prova');
 

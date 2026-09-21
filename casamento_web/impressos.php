@@ -36,7 +36,8 @@ $ENDERECO = enderecoPublico();   // para onde apontam os QR destas etiquetas
   .cartao .mm{ font-size:var(--t-apoio); color:var(--ink-fraco); margin:.35rem 0 .6rem; }
   .cartao canvas{ background:var(--card); }
   .cartao .cod{ font-family:var(--serif); letter-spacing:3px; color:var(--ink); margin-top:.3rem; }
-  .cartao .mesa{ font-size:var(--t-apoio); color:var(--forest); margin-top:.3rem; }
+  /* O nome da mesa a --forest desaparecia no tema escuro (1,09:1). */
+  .cartao .mesa{ font-size:var(--t-apoio); color:var(--gold-texto); margin-top:.3rem; }
   .cartao .marca{ display:inline-flex; align-items:center; gap:.4rem; margin-top:.7rem; font-size:var(--t-apoio); color:var(--ink-fraco); cursor:pointer; }
   .cartao .marca .cx{ width:20px;height:20px;border:2px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:var(--t-apoio);color:#fff; }
   .cartao.impresso .marca{ color:var(--ok); } .cartao.impresso .marca .cx{ background:var(--ok); border-color:var(--ok); }

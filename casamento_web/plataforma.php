@@ -231,7 +231,9 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
      Dizia convites, pessoas e quando se lá mexeu. Faltava o que mais importa
      a quem gere casamentos: QUANDO é, e quantos já disseram que vêm. */
   .cas .quando{ font-variant-numeric:tabular-nums; }
-  .cas .conta{ color:var(--gold); font-weight:500; }
+  /* --gold é ENCHIMENTO; a tinta é --gold-texto. Em classico dava 3,26:1
+     («faltam 89 dias», «7 módulo(s)»), que é abaixo do mínimo de texto. */
+  .cas .conta{ color:var(--gold-texto); font-weight:500; }
   .cas .barra{ height:4px; border-radius:50px; background:var(--cream); overflow:hidden;
                margin-top:.45rem; max-width:260px; }
   .cas .barra i{ display:block; height:100%; background:var(--ok); }

@@ -47,7 +47,10 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   const antes = await medir();
   log('fechado:', JSON.stringify(antes));
   ok(antes.visiveis===4, 'no telemóvel só se veem os 4 cartões essenciais');
-  ok(antes.total===12, 'os 12 continuam na página (só escondidos)');
+  // Eram 12; com a tira de módulos junta aos filtros são mais. O que importa
+  // é que os escondidos CONTINUAM na página, e não que sejam um número certo.
+  ok(antes.total>antes.visiveis, 'os restantes continuam na página (só escondidos): '
+     + antes.visiveis + ' à vista de ' + antes.total);
   ok(antes.buscaTopo < 844, 'a caixa de procura cabe no primeiro ecrã do casal '
      + '(antes começava a 1228px; agora a ' + antes.buscaTopo + ', sem a tira de suporte)');
   ok(antes.botaoVisivel && /Mais filtros/.test(antes.botao), 'há um botão para ver os restantes');
@@ -57,7 +60,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await p.click('#stats-mais'); await p.waitForTimeout(800);
   const depois = await medir();
   log('aberto:', JSON.stringify(depois));
-  ok(depois.visiveis===12, 'o botão mostra todos os cartões');
+  ok(depois.visiveis===antes.total, 'o botão mostra todos os cartões: ' + depois.visiveis);
   ok(/Menos filtros/.test(depois.botao), 'o botão passa a "Menos filtros"');
   await p.screenshot({path:OUT+'/mob_aberto.png',fullPage:false});
 
@@ -66,7 +69,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await p.evaluate(()=>filtrarGenero('m')); await p.waitForTimeout(900);
   const comFiltro = await medir();
   log('com filtro de género:', JSON.stringify(comFiltro));
-  ok(comFiltro.visiveis===12, 'filtrar por um cartão escondido volta a mostrá-los');
+  ok(comFiltro.visiveis===antes.total, 'filtrar por um cartão escondido volta a mostrá-los');
   await p.evaluate(()=>limparFiltros()); await p.waitForTimeout(800);
 
   // unidades coerentes
@@ -81,8 +84,22 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   // O cartão dos brindes conta noutra unidade: mostra a repartição por género.
   const brindes = subs.filter(x=>/Brindes/i.test(x.l));
   const resto   = subs.filter(x=>!/Brindes/i.test(x.l));
-  ok(resto.every(x=>/^\d+ convites?$/.test(x.s)), 'os cartões de pessoas contam todos em convites');
-  ok(resto.every(x=>/pessoas?\b.*\bem\b.*convites?/.test(x.t)), 'o título explica o que é cada número');
+  // A linha de baixo dizia sempre «N convites». Passou a dizer a UNIDADE do que
+  // conta — «5 de 13 impressos», «16 de 20 responderam», «sem despesas» —,
+  // porque era a falta disso que punha «Impressos 7» e «Impressos 5 de 13» no
+  // mesmo ecrã a parecerem contradizer-se. O que se guarda é que NENHUMA linha
+  // de baixo fica muda, e que todas nomeiam aquilo que contam.
+  const semUnidade = resto.filter(x=>!/[a-zà-ú]{3}/i.test(x.s||''));
+  ok(semUnidade.length===0,
+     'cada linha de baixo diz o que conta, em vez de deixar adivinhar: '
+     + (semUnidade.map(x=>x.l).join(', ') || 'todas dizem'));
+  // Nos cartões ainda sem conta, o título é a DICA («Ainda não há despesas
+  // lançadas.») em vez do rótulo repetido — explica melhor, e é para isso que
+  // ele serve. O que se exige é que explique, não que se repita.
+  const semTitulo = resto.filter(x=>(x.t||'').trim().length<10);
+  ok(semTitulo.length===0,
+     'e o título explica o que é cada número: '
+     + (semTitulo.map(x=>x.l+' «'+x.t+'»').join(' | ') || 'todos explicam'));
   ok(brindes.length === 1, 'há um cartão de brindes');
   // Os sinais de género são DESENHADOS (assets/icones.js) e já não os
   // caracteres ♂ ♀: o innerText não os traz, e por isso o que se lê aqui são

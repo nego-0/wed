@@ -5,20 +5,22 @@
 // uma resposta à pergunta com que se abre o portátil — «o que é que falta
 // fazer?». Ia-se a cada página ver.
 //
-// O que aqui se defende:
+// Isto vivia numa TIRA própria (.tm-cartao), por baixo da barra de ações. A
+// tira acabou: metade dos seus rótulos já estava nos cartões de cima com outro
+// número — «Confirmações 16 de 19» debaixo de «Confirmados 0» —, e duas tiras
+// a dizer o mesmo de maneiras diferentes lêem-se como um erro. Os números
+// passaram para os cartões do painel; o que esta prova defende é o que a tira
+// defendia, que continua a valer no sítio novo:
 //
-//   1. Só aparecem os módulos que a LICENÇA abre. Uma tira com barras de
-//      coisas que não se podem usar é uma montra disfarçada de progresso.
-//   2. Cada cartão leva ao sítio onde o trabalho se faz. Uma tira que só
-//      informa obriga a ir procurar o caminho a seguir.
-//   3. Ordena-se pelo que FALTA, que é o que se vem aqui perguntar — e não
-//      pelo que já está feito.
-//   4. Nada de rótulos cortados nem cartões de alturas diferentes. A primeira
-//      versão media 166px no ecrã largo e 296px no telemóvel, o suficiente
-//      para empurrar a lista de convites para fora do primeiro ecrã — que é
-//      justamente o que esta tira devia ajudar a não fazer. A culpa era das
-//      frases dos estados vazios a quebrar em três linhas: uma linha da grelha
-//      cresce toda com o cartão mais alto.
+//   1. Só aparece o que a LICENÇA abre. Um cartão de uma coisa que não se pode
+//      usar é uma montra disfarçada de progresso.
+//   2. Cada um leva ao sítio onde o trabalho se faz. Um número que só informa
+//      obriga a ir procurar o caminho a seguir.
+//   3. Entre os módulos, vem primeiro o que mais FALTA — é isso que se vem
+//      aqui perguntar. (Os cartões de filtro têm ordem própria, a do casal:
+//      esta regra vale dentro do grupo dos módulos, que é onde sempre quis
+//      dizer alguma coisa.)
+//   4. Nada de rótulos cortados nem cartões de alturas diferentes.
 //   5. Onde a conta ainda não faz sentido — o bar antes de haver carta, a
 //      porta antes do dia — diz-se o que falta em vez de se inventar uma
 //      percentagem. Uma barra a zero por cento diria que há trabalho por fazer
@@ -26,6 +28,11 @@
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+
+// Os cartões que nascem de um módulo, e a página de cada um.
+const DOS_MODULOS = { mesas:'mesas.php', porta:'porteiro.php',
+                      orcamento:'orcamento.php', bar:'bebidas.php',
+                      digital:'digital.php', impresso:'impressos.php' };
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -47,116 +54,124 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     return p;
   };
 
+  // Lê os cartões do painel, com o destino de cada um (esteja o destino no
+  // próprio cartão ou na seta do canto, que é como ficam os que também filtram).
+  const lerCartoes = pg => pg.evaluate(() => {
+    const cortado = e => !!e && e.scrollWidth > e.clientWidth + 1;
+    return [...document.querySelectorAll('#stats .stat-f')].map(c => {
+      const cx = c.parentElement;
+      const seta = cx && cx.classList.contains('stat-cx') ? cx.querySelector('.stat-ir') : null;
+      return {
+        rot: ((c.querySelector('.sl') || {}).textContent || '').trim(),
+        num: ((c.querySelector('.sn') || {}).textContent || '').trim(),
+        sub: ((c.querySelector('.ss') || {}).textContent || '').trim(),
+        onde: c.getAttribute('href') || (seta && seta.getAttribute('href')) || null,
+        titulo: c.getAttribute('title') || '',
+        altura: Math.round(c.getBoundingClientRect().height),
+        cortado: cortado(c.querySelector('.sl')) || cortado(c.querySelector('.ss')),
+        escondido: !!c.closest('.stats-extra:not(.aberto)'),
+      };
+    });
+  });
+
   // ============ no ecrã largo ============
   const p = await entrar(await b.newContext({ viewport: { width: 1280, height: 900 } }));
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
-  await p.waitForTimeout(2200);
+  await p.waitForTimeout(2600);
 
-  const tira = await p.evaluate(() => {
-    const cs = [...document.querySelectorAll('.tm-cartao')];
-    const cortado = e => !!e && e.scrollWidth > e.clientWidth + 1;
-    return {
-      cartoes: cs.length,
-      rotulos: cs.map(c => c.querySelector('.tm-rot').textContent.trim()),
-      destinos: cs.map(c => c.getAttribute('href')),
-      alturas: [...new Set(cs.map(c => Math.round(c.getBoundingClientRect().height)))],
-      cortados: cs.filter(c => cortado(c.querySelector('.tm-rot'))
-                            || cortado(c.querySelector('.tm-num')))
-                  .map(c => c.querySelector('.tm-rot').textContent.trim()),
-      // Sem nada contado não há barra nenhuma: ver o comentário em cima.
-      semConta: cs.filter(c => c.classList.contains('tm-vazio')).length,
-      barrasEmVazios: cs.filter(c => c.classList.contains('tm-vazio')
-                                  && c.querySelector('.tm-barra')).length,
-      comTitulo: cs.filter(c => (c.getAttribute('title') || '').length > 8).length,
-      altura: Math.round(document.getElementById('tira-modulos').getBoundingClientRect().height),
-      transbordo: document.documentElement.scrollWidth - innerWidth,
-    };
+  const mods = await p.evaluate(async () => {
+    const d = await (await fetch('api.php?action=painel_progresso')).json();
+    return (d.modulos || []).map(m => ({ chave: m.chave, rotulo: m.rotulo,
+      feito: +m.feito || 0, total: +m.total || 0,
+      falta: Math.max(0, (+m.total || 0) - (+m.feito || 0)) }));
   });
-  ok(tira.cartoes > 0, 'o painel diz onde vai cada módulo: ' + tira.cartoes + ' cartões');
-  ok(tira.cortados.length === 0,
-     'sem rótulos nem contas cortados a meio' + (tira.cortados.length ? ': ' + tira.cortados.join(', ') : ''));
-  ok(tira.alturas.length === 1,
-     'e todos da mesma altura — uma frase que quebra estica a linha inteira da grelha: '
-     + tira.alturas.join('px, ') + 'px');
-  ok(tira.altura < 140,
-     'a tira cabe num punhado de pixéis, e não num ecrã: ' + tira.altura + 'px');
-  ok(tira.destinos.every(h => h && /\.php$/.test(h)),
-     'cada cartão leva ao sítio onde o trabalho se faz');
-  ok(tira.comTitulo === tira.cartoes,
-     'e cada um leva a frase inteira no título, que no cartão não cabia');
-  ok(tira.barrasEmVazios === 0,
-     'sem nada contado não se desenha barra nenhuma — zero por cento diria que '
-     + 'há trabalho por fazer onde ainda não há trabalho');
-  ok(tira.transbordo === 0, 'e a página não ganha rolagem horizontal');
-
-  // ---- o que a licença não abre não aparece ----
-  const conferido = await p.evaluate(async () => {
-    const r = await fetch('api.php?action=painel_progresso');
-    const d = await r.json();
-    const daApi = (d.modulos || []).map(m => m.chave);
-    const noEcra = [...document.querySelectorAll('.tm-cartao')].length;
-    return { daApi: daApi, noEcra: noEcra };
-  });
-  ok(conferido.daApi.length === conferido.noEcra,
-     'a tira mostra exactamente os módulos que a licença abre ('
-     + conferido.daApi.join(', ') + ')');
-  ok(conferido.daApi.includes('convidados'),
+  const cs = await lerCartoes(p);
+  ok(cs.length > 0, 'o painel tem cartões: ' + cs.length);
+  ok(mods.some(m => m.chave === 'convidados'),
      'a lista de convidados está sempre lá: é a porta de entrada de tudo o resto');
 
-  // ---- ordena-se pelo que falta ----
-  const ordem = await p.evaluate(async () => {
-    const r = await fetch('api.php?action=painel_progresso');
-    const d = await r.json();
-    const falta = {};
-    (d.modulos || []).forEach(m => { falta[m.chave] = Math.max(0, (+m.total || 0) - (+m.feito || 0)); });
-    const rots = [...document.querySelectorAll('.tm-cartao')]
-      .map(c => c.getAttribute('href').replace('.php', ''));
-    return { faltas: (d.modulos || []).map(m => falta[m.chave]), n: rots.length };
+  // ---- 1. só o que a licença abre ----
+  const destinos = cs.map(c => c.onde).filter(Boolean);
+  const abertos = mods.map(m => m.chave);
+  const aMais = Object.entries(DOS_MODULOS)
+    .filter(([k, pag]) => destinos.includes(pag) && !abertos.includes(k))
+    .map(([k]) => k);
+  ok(aMais.length === 0,
+     'nenhum caminho para um módulo que a licença não abre: ' + (aMais.join(', ') || 'nenhum'));
+  const emFalta = Object.entries(DOS_MODULOS)
+    .filter(([k, pag]) => abertos.includes(k) && !destinos.includes(pag))
+    .map(([k]) => k);
+  ok(emFalta.length === 0,
+     'e todos os que ela abre têm caminho: ' + (emFalta.join(', ') || 'nenhum em falta'));
+
+  // ---- 2. cada caminho é uma página ----
+  ok(destinos.length > 0 && destinos.every(h => /\.php$/.test(h)),
+     'cada caminho leva ao sítio onde o trabalho se faz: ' + destinos.length + ' cartões com página');
+
+  // ---- 3. entre os módulos, o que mais falta vem primeiro ----
+  const soModulos = ['Sentados', 'Entradas', 'Despesas', 'Bar'];
+  const ordemNoEcra = cs.map(c => c.rot).filter(r => soModulos.includes(r));
+  const faltaDe = { 'Sentados':'mesas', 'Entradas':'porta', 'Despesas':'orcamento', 'Bar':'bar' };
+  const faltas = ordemNoEcra.map(r => {
+    const m = mods.find(x => x.chave === faltaDe[r]);
+    return m ? m.falta : -1;
   });
-  const noEcraFaltas = await p.evaluate(() =>
-    [...document.querySelectorAll('.tm-cartao')].map(c => {
-      const t = (c.getAttribute('title') || '');
-      const m = t.match(/(\d[\d\s]*) de (\d[\d\s]*)/);
-      if (!m) return -1;   // um cartão sem conta não entra na ordenação
-      return parseInt(m[2].replace(/\s/g, ''), 10) - parseInt(m[1].replace(/\s/g, ''), 10);
-    }).filter(x => x >= 0));
-  const ordenada = noEcraFaltas.every((v, i, a) => i === 0 || a[i - 1] >= v);
+  const ordenada = faltas.every((v, i, a) => i === 0 || a[i - 1] >= v);
   ok(ordenada,
-     'e o que mais falta vem primeiro — é isso que se vem aqui perguntar: '
-     + noEcraFaltas.join(' ≥ '));
+     'entre os módulos, o que mais falta vem primeiro: ' + (faltas.join(' ≥ ') || '(nenhum)'));
+
+  // ---- 4. nada cortado, e todos da mesma altura ----
+  const cortados = cs.filter(c => c.cortado).map(c => c.rot);
+  ok(cortados.length === 0,
+     'sem rótulos nem contas cortados a meio' + (cortados.length ? ': ' + cortados.join(', ') : ''));
+  const alturas = [...new Set(cs.filter(c => !c.escondido).map(c => c.altura))];
+  ok(alturas.length === 1,
+     'e os cartões à vista todos da mesma altura — uma frase que quebra estica a '
+     + 'linha inteira da grelha: ' + alturas.join('px, ') + 'px');
+
+  // ---- 5. sem conta, diz-se o que falta em vez de se inventar uma barra ----
+  const vazios = mods.filter(m => m.total <= 0).map(m => m.rotulo);
+  const semNumero = cs.filter(c => soModulos.includes(c.rot) && c.num === '—');
+  ok(semNumero.every(c => c.sub.length > 3),
+     'onde ainda não há conta, o cartão diz o que falta em vez de mostrar um zero: '
+     + (semNumero.map(c => c.rot + ' «' + c.sub + '»').join(', ') || 'todos com conta'));
+  ok(semNumero.every(c => c.titulo.length > 8),
+     'e a frase inteira vive no título, que no cartão não cabia'
+     + (vazios.length ? ' (' + vazios.join(', ') + ')' : ''));
+
+  const transbordo = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  ok(transbordo === 0, 'e a página não ganha rolagem horizontal');
 
   // ============ no telemóvel ============
   const m = await entrar(await b.newContext({ viewport: { width: 390, height: 844 },
                                               isMobile: true, hasTouch: true }));
   await m.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
-  await m.waitForTimeout(2200);
+  await m.waitForTimeout(2600);
+  const cm = await lerCartoes(m);
+  const aVista = cm.filter(c => !c.escondido);
+  ok(aVista.length === 4,
+     'a 390px ficam quatro cartões à vista, e o resto a um toque: ' + aVista.length);
+  ok(aVista.every(c => !c.cortado), 'nada cortado a 390px');
+  ok([...new Set(aVista.map(c => c.altura))].length === 1,
+     'e os quatro da mesma altura');
+
   const est = await m.evaluate(() => {
-    const cs = [...document.querySelectorAll('.tm-cartao')];
-    const cortado = e => !!e && e.scrollWidth > e.clientWidth + 1;
-    return { cartoes: cs.length,
-             altura: Math.round(document.getElementById('tira-modulos').getBoundingClientRect().height),
-             alturas: [...new Set(cs.map(c => Math.round(c.getBoundingClientRect().height)))],
-             cortados: cs.filter(c => cortado(c.querySelector('.tm-rot'))
-                                   || cortado(c.querySelector('.tm-num'))).length,
-             mais: !!document.querySelector('.tm-mais'),
+    const busca = document.getElementById('busca');
+    return { busca: Math.round(busca.getBoundingClientRect().top + scrollY),
+             ecra: innerHeight,
              transbordo: document.documentElement.scrollWidth - innerWidth };
   });
-  ok(est.cartoes <= 4,
-     'a 390px mostram-se os quatro que mais pedem trabalho: ' + est.cartoes);
-  ok(est.altura < 180,
-     'e a tira não come o primeiro ecrã: ' + est.altura + 'px');
-  ok(est.cortados === 0, 'nada cortado a 390px');
-  ok(est.alturas.length === 1, 'e os cartões todos da mesma altura');
+  ok(est.busca < est.ecra,
+     'e a caixa de procura continua no primeiro ecrã — era a razão de a tira '
+     + 'antiga viver lá em baixo: y=' + est.busca + ' num ecrã de ' + est.ecra);
   ok(est.transbordo === 0, 'sem rolagem horizontal');
 
-  if (est.mais) {
-    await m.click('.tm-mais');
-    await m.waitForTimeout(350);
-    const todos = await m.evaluate(() => document.querySelectorAll('.tm-cartao').length);
-    ok(todos > est.cartoes,
-       'e os outros estão a um toque de distância, não escondidos: '
-       + est.cartoes + ' → ' + todos);
-  }
+  await m.click('#stats-mais');
+  await m.waitForTimeout(500);
+  const depois = (await lerCartoes(m)).filter(c => !c.escondido).length;
+  ok(depois > aVista.length,
+     'e os outros estão a um toque de distância, não escondidos: '
+     + aVista.length + ' → ' + depois);
 
   ok(errs.length === 0, 'nenhum erro de JavaScript: ' + errs.slice(0, 3).join(' | '));
   console.log(f ? `\n${f} verificação(ões) falharam` : '\nTudo certo.');

@@ -116,7 +116,8 @@ $manual = [
   .prod tr:hover td{ background:var(--cream); }
   .prod .n{ color:var(--gold-soft); font-family:var(--serif); font-weight:700; width:2.2rem; }
   .prod .nm{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); }
-  .prod .ms{ color:var(--forest); font-size:var(--t-apoio); }
+  /* Idem: --forest é enchimento, e aqui era tinta sobre um cartão escuro. */
+  .prod .ms{ color:var(--gold-texto); font-size:var(--t-apoio); }
   .prod .cod{ font-family:var(--serif); letter-spacing:2px; }
   .prod canvas{ display:block; background:var(--card); }
   .prod .ver{ font-size:var(--t-apoio); white-space:nowrap; }

@@ -250,7 +250,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .progresso-cap{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1rem 1.15rem; }
   .pc-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; flex-wrap:wrap; margin-bottom:.6rem; }
   .pc-tit{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--ink); }
-  .pc-nums{ font-size:var(--t-apoio); color:var(--ink-fraco); } .pc-nums b{ color:var(--ink); font-weight:600; } .pc-nums .v-conf{ color:#1f7a3d; }
+  .pc-nums{ font-size:var(--t-apoio); color:var(--ink-fraco); } .pc-nums b{ color:var(--ink); font-weight:600; }
+  /* Verde cravado à mão: no tema escuro ficava a 2,98:1 sobre o cartão.
+     --ok é o mesmo verde, mas o que vira com o tema. */
+  .pc-nums .v-conf{ color:var(--ok); }
   .pc-barra{ position:relative; height:14px; background:var(--cream); border-radius:50px; overflow:hidden; }
   .pc-conv{ position:absolute; left:0; top:0; height:100%; background:var(--gold-soft); border-radius:50px; transition:width .5s ease; }
   .pc-conf{ position:absolute; left:0; top:0; height:100%; background:linear-gradient(90deg,var(--forest),#1f7a3d); border-radius:50px; transition:width .5s ease; }
@@ -262,7 +265,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .chip-m{ display:inline-flex; align-items:center; gap:.35rem; background:var(--card); border:1px solid var(--line); border-radius:50px; padding:.3rem .8rem; font-size:var(--t-apoio); cursor:pointer; color:var(--text); font-family:inherit; }
   .chip-m:hover{ border-color:var(--gold-soft); }
   .chip-m.on{ background:var(--forest); color:#fff; border-color:var(--forest); }
-  .chip-n{ background:var(--cream); color:var(--forest); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); }
+  /* --forest é um ENCHIMENTO, não uma tinta: no tema escuro é #0E1B25, e
+     sobre --cream (#1E2A33) dava 1,19:1 — a contagem do chip não se via. */
+  .chip-n{ background:var(--cream); color:var(--text); border-radius:50px; padding:0 .4rem; font-size:var(--t-apoio); }
   .chip-m.on .chip-n{ background:rgba(255,255,255,.2); color:#fff; }
 
   /* Seletores de ícones no modal (Tipo / Lado) */
@@ -1040,7 +1045,13 @@ function cartoesDeModulo(){
     { chave:'orcamento', rot:'Despesas', unidade:'pagas',       onde:'orcamento.php' },
     { chave:'bar',       rot:'Bar',      unidade:'com foto',    onde:'bebidas.php' },
   ];
-  return mapa.filter(x => temMod(x.chave)).map(x => {
+  // Entre si, vem primeiro o que mais falta — é isso que se vem aqui
+  // perguntar (UX-010). A tira antiga ordenava-se toda assim; agora os
+  // filtros têm ordem própria (a do casal), por isso a regra vale dentro do
+  // grupo dos módulos, que é onde ela sempre quis dizer alguma coisa.
+  const falta = k => { const m = MODULOS_PROG.find(y => y.chave === k);
+                       return m ? Math.max(0, m.total - m.feito) : -1; };
+  return mapa.filter(x => temMod(x.chave)).sort((a, b) => falta(b.chave) - falta(a.chave)).map(x => {
     const m = MODULOS_PROG.find(y => y.chave === x.chave) || {};
     const vazio = !(m.total > 0);
     const num = m.unidade === 'dinheiro' ? fmtKz(m.feito) : (m.feito || 0);
