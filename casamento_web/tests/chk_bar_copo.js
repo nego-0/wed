@@ -101,6 +101,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     const ms = await (await fetch('api.php?action=mesa_list')).json();
     // A mesa dos noivos tem painel próprio e não serve para isto.
     let mesa = (ms.mesas || []).find(m => m.especial !== 'noivos');
+    const jaHavia = !!mesa;
     if (!mesa) {
       await post('mesa_save', { nome: 'ZZ Mesa do bar', capacidade: 8,
                                 forma: 'redonda', cor: 'neutra' });
@@ -109,12 +110,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       mesa = livres[livres.length - 1];
     }
     if (!mesa) return { erro: 'não há mesa onde sentar' };
+    const criou = !jaHavia;
     const cv = await post('convite_save', { nome_exibicao: 'ZZ Provadores', tipo: 'ambos',
       membros: [{ nome: 'ZZ Provador' }, { nome: 'ZZ Provadora' }] });
     const cid = cv.id || (cv.convite && cv.convite.id);
     await g('convite_rsvp_manual&id=' + cid + '&estado=confirmado');
     await post('convite_mesa', { id: cid, mesa_id: mesa.id });
-    return { convite: cid, mesa: +mesa.id, nome: mesa.nome };
+    return { convite: cid, mesa: +mesa.id, nome: mesa.nome, criou: criou };
   });
   ok(!!sentou.convite, 'sentou duas pessoas numa mesa, para haver quem peça');
 
@@ -188,10 +190,15 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      + (jaNao.message || '?') + '»');
 
   // ---- arrumar ----
-  await p.evaluate(async c => {
-    await fetch('api.php?action=convite_delete&id=' + c + '&definitivo=1',
-      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
-  }, sentou.convite).catch(() => {});
+  // A mesa também: ela nasce no mesmo sítio onde a chk_planta põe as dela, e
+  // duas mesas empilhadas na mesma coordenada fazem uma tapar o clique da
+  // outra. Foi assim que esta prova pôs a da planta a falhar.
+  await p.evaluate(async ({ c, m }) => {
+    const g = a => fetch('api.php?action=' + a,
+      { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } }).catch(() => null);
+    await g('convite_delete&id=' + c + '&definitivo=1');
+    if (m) await g('mesa_delete&id=' + m);
+  }, { c: sentou.convite, m: sentou.criou ? sentou.mesa : 0 }).catch(() => {});
   for (const id of [idCopo, idAmbos]) {
     await p.evaluate(async i => {
       await fetch('api.php?action=bar_item_apagar&id=' + i,

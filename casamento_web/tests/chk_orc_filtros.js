@@ -91,11 +91,17 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(/540\s*000/.test(cs[3].valor.replace(/ /g, ' ')),
      'o «Em atraso» soma as parcelas vencidas: ' + cs[3].valor);
 
-  // A margem passou para a legenda da barra.
+  // A margem já não vive na legenda: subiu para o quarto cartão, e lá fica
+  // enquanto não houver nada vencido (aqui há, por isso o cartão é o do
+  // atraso). Dizê-la nos dois sítios era o defeito que se corrigiu no painel —
+  // o mesmo número duas vezes no mesmo ecrã lê-se como dois.
   const legenda = await p.evaluate(() =>
     document.getElementById('o-legenda').textContent.replace(/\s+/g, ' '));
-  ok(/Margem até ao teto|Acima do teto/.test(legenda) && !/Folga/.test(legenda),
-     'e a margem lê-se junto à barra, uma vez só: ' + legenda.trim().slice(0, 90));
+  ok(!/Margem/i.test(legenda),
+     'a margem não se repete na legenda — é do cartão: ' + legenda.trim().slice(0, 90));
+  ok(/Pago/.test(legenda) && /Por pagar/.test(legenda),
+     'que continua a dizer o que a BARRA desenha, que é outra coisa: '
+     + legenda.trim().slice(0, 60));
 
   // ============ 2. «Por pagar» encolhe as duas listas ============
   const tudo = await listas();

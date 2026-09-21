@@ -102,7 +102,14 @@ const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, 
   ok(escritasPerto >= 2,
      'e volta a andar ao segundo, que é o que aqui se quer: ' + escritasPerto + ' escritas em 3s');
 
-  // ============ EMO-002: a lista fecha ============
+  // ============ EMO-002: a tira do dia ============
+  //
+  // Isto guardava «quando o último convite responde, a lista diz que está
+  // fechada» — e a tira aparecia nesse instante, fosse Março ou Dezembro. Para
+  // um casamento a 300 dias, era uma tira no cimo do painel durante dez meses
+  // a dar a notícia do dia em que foi dada. A tira passou a ser do DIA DA
+  // FESTA; o que ela defende continua igual, e há mais uma coisa a defender:
+  // fora da hora, não aparece de todo.
   const cv = [];
   for (const nome of ['ZZ Um ' + marca, 'ZZ Dois ' + marca]) {
     const r = await api('convite_save', { nome_exibicao: nome, tipo: 'digital',
@@ -116,22 +123,24 @@ const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, 
   ok(await p.evaluate(() => document.getElementById('chegada').hidden),
      'com convites por responder, não se anuncia nada — seria uma mentira simpática');
 
-  // Responder a um só não chega: a notícia é a lista FECHADA.
-  await p.evaluate(async (c) => {
-    await fetch('api.php?action=rsvp_submit', { method: 'POST', body: JSON.stringify({
-      codigo: c.codigo, decisao: 'sim', confirmados: 1,
-      membros: (c.membros || []).map(m => ({ id: m.id, vai: true })) }) });
-  }, cv[0]);
+  // Respondem os dois: a lista fecha-se. E mesmo assim a tira NÃO aparece,
+  // porque o casamento é daqui a 300 dias.
+  for (const c of cv) {
+    await p.evaluate(async (x) => {
+      await fetch('api.php?action=rsvp_submit', { method: 'POST', body: JSON.stringify({
+        codigo: x.codigo, decisao: 'sim', confirmados: 1,
+        membros: (x.membros || []).map(m => ({ id: m.id, vai: true })) }) });
+    }, c);
+  }
   await p.reload({ waitUntil: 'networkidle' });
-  await p.waitForTimeout(1800);
+  await p.waitForTimeout(1900);
   ok(await p.evaluate(() => document.getElementById('chegada').hidden),
-     'e com metade respondida também não: é a lista fechada que é a notícia');
+     'com a lista toda fechada e a festa a 300 dias, continua calada — era aqui '
+     + 'que ela ficava dez meses a dizer a mesma coisa');
 
-  await p.evaluate(async (c) => {
-    await fetch('api.php?action=rsvp_submit', { method: 'POST', body: JSON.stringify({
-      codigo: c.codigo, decisao: 'sim', confirmados: 1,
-      membros: (c.membros || []).map(m => ({ id: m.id, vai: true })) }) });
-  }, cv[1]);
+  // Agora é hoje, e a hora já passou: é a festa.
+  const hoje = iso(new Date());
+  await api('defs_save', { defs: { 'evento.data': hoje, 'evento.hora': '00:01' } });
   await p.reload({ waitUntil: 'networkidle' });
   await p.waitForTimeout(1900);
   const chegou = await p.evaluate(() => {
@@ -141,13 +150,14 @@ const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, 
              desenho: !!e.querySelector('svg'),
              vivo: (document.getElementById('avisos-vivos') || {}).textContent.trim() };
   });
-  ok(!chegou.escondido, 'respondido o último, a lista diz que está fechada');
-  ok(/fechada/i.test(chegou.texto) && /pessoas?/i.test(chegou.texto),
-     'e diz o que isso quer dizer em gente: «' + chegou.texto.slice(0, 80) + '»');
+  ok(!chegou.escondido, 'chegado o dia, a tira aparece');
+  ok(/pessoas?|chegaram|hoje/i.test(chegou.texto),
+     'e diz o que se passa em gente, e não em convites: «' + chegou.texto.slice(0, 80) + '»');
   ok(chegou.desenho, 'com um sinal desenhado, e não um emoji');
   ok(chegou.festa, 'a primeira vez, entra com festa');
-  ok(/fechada/i.test(chegou.vivo),
-     'e quem não vê a animação ouve a notícia — é a notícia que importa');
+  ok(chegou.vivo.length > 0 && /pessoas?|chegaram|hoje/i.test(chegou.vivo),
+     'e quem não vê a animação ouve a notícia — é a notícia que importa: «'
+     + chegou.vivo.slice(0, 60) + '»');
 
   // A festa é uma vez: repetida a cada visita deixava de ser um momento.
   await p.reload({ waitUntil: 'networkidle' });

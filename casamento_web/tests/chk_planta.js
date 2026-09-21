@@ -527,4 +527,34 @@ const entrar = async (ctx, user, pass) => {
   ok(errs.length === 0, 'nenhum erro de JavaScript');
   console.log(f ? `\n${f} FALHA(S)` : '\nTUDO VERDE');
   await b.close(); process.exit(f ? 1 : 0);
-})().catch(e => { console.error('FATAL', e); process.exit(1); });
+})().catch(async e => {
+  // A limpeza vivia só no fim do caminho feliz. Quando esta prova rebentava a
+  // meio — e rebenta, é para isso que serve —, as duas mesas ficavam no salão,
+  // na mesma coordenada onde a corrida seguinte punha as suas. A segunda
+  // tapava o clique da primeira, e a prova passava a falhar por causa do lixo
+  // que ela própria tinha deixado: uma falha que se alimenta a si mesma.
+  console.error('FATAL', e);
+  try {
+    const { chromium } = require('playwright-core');
+    const bb = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
+    const pp = await (await bb.newContext()).newPage();
+    await pp.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
+    await pp.fill('input[name=utilizador]', 'admin');
+    await pp.fill('input[name=senha]', 'noivos2026');
+    await pp.click('button[type=submit]');
+    await pp.waitForLoadState('networkidle');
+    await pp.evaluate(async () => {
+      const g = a => fetch('api.php?action=' + a,
+        { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } })
+        .then(r => r.json()).catch(() => null);
+      await g('casamento_abrir&id=1');
+      const d = await (await fetch('api.php?action=mesa_list')).json();
+      for (const m of (d.mesas || [])) {
+        if (/^ZZ (Vazia|Com gente) /.test(m.nome || '')) await g('mesa_delete&id=' + m.id);
+      }
+    });
+    await bb.close();
+    console.error('(as mesas de prova foram arrumadas)');
+  } catch (e2) { console.error('e a arrumação também falhou:', e2.message); }
+  process.exit(1);
+});
