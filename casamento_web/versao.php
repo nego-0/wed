@@ -1118,6 +1118,17 @@ function correcoesEsperadas(): array {
         ['Marcar um convite à mão arrasta as pessoas que ele traz',
          'api.php', "if (\$estado === 'confirmado' || \$estado === 'recusado' || \$estado === 'pendente') {"],
 
+        // ---- O nome de quem pediu é um alvo, e a pastilha não dança ----
+        // A prova do desenho do bar só via estes dois defeitos por acidente:
+        // o nome e a pastilha do estado só existem com um pedido no ecrã, e a
+        // copa abria vazia. Passou a pôr um pedido na fila, e viu-os.
+        ['Na copa, o nome de quem pediu tem 48px de alvo e não 20',
+         'assets/bar.css', '          cursor:pointer; text-align:left; min-height:48px;'],
+        ['E a pastilha do estado conta em números tabulares, como as outras',
+         'assets/bar.css', '        text-transform:uppercase; letter-spacing:.04em; font-variant-numeric:tabular-nums; }'],
+        ['A prova do desenho põe um pedido na fila, para ter um cartão que medir',
+         'tests/chk_bar_desenho.js', "posto: 'entregas',"],
+
         // ---- Ao copo ou à garrafa ----
         // Não havia unidade nenhuma: um pedido era um pedido, e a única defesa
         // do whisky bom era o «máximo por pedido» — que limita a quantidade

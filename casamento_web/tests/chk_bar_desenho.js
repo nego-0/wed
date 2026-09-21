@@ -73,9 +73,41 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
       { nome: 'ZZD Água com acento', categoria_id: e.categorias[0].id, stock: 25,
         visivel: 1, max_por_pedido: 3 }) });
     await window.api('bar_abrir', { method: 'POST', body: '{}' });
-    return { token: window.BAR_MESAS[0].token };
+
+    // E UM PEDIDO NA FILA. Sem ele, a copa abre vazia — e metade do que esta
+    // prova mede só existe quando há um cartão de pedido no ecrã: o nome de
+    // quem pediu (que é um botão, e portanto um alvo para o dedo) e a pastilha
+    // do estado (que tem números a contar). Os dois defeitos que isto apanhou
+    // — um alvo de 20px e uma pastilha sem números tabulares — passaram
+    // despercebidos durante muito tempo porque a prova só os via por acidente,
+    // quando outra prova deixava um pedido para trás. Deixa de ser por acaso.
+    const e2 = await window.api('bar_estado');
+    const beb = (e2.itens || []).filter(i => /^ZZD /.test(i.nome))[0];
+    const ms = await window.api('mesa_list');
+    const mesa = (ms.mesas || []).filter(m => m.especial !== 'noivos')[0] || (ms.mesas || [])[0];
+    // Uma pessoa desta prova, com nome: é o nome dela que vira botão no cartão.
+    const cv = await window.api('convite_save', { method: 'POST', body: JSON.stringify(
+      { nome_exibicao: 'ZZD Convidados', tipo: 'ambos',
+        membros: [{ nome: 'ZZD Joana Silva' }] }) });
+    const conv = cv.convite || null;
+    const quem = conv && (conv.membros || [])[0];
+    if (conv && mesa) {
+      await window.api('convite_mesa', { method: 'POST',
+        body: JSON.stringify({ id: conv.id, mesa_id: mesa.id }) });
+    }
+    // Pelo posto das ENTREGAS: um pedido lançado por quem anda na sala nasce
+    // por decidir, que é o estado em que a copa tem trabalho — e é o cartão
+    // que se quer medir.
+    if (beb && quem && mesa) {
+      await window.api('bar_pedir_por', { method: 'POST', body: JSON.stringify(
+        { convidado_id: quem.id, mesa_id: mesa.id, posto: 'entregas',
+          itens: [{ item_id: beb.id, quantidade: 2 }] }) });
+    }
+    return { token: window.BAR_MESAS[0].token, convite: conv ? conv.id : 0,
+             pediu: !!(beb && quem && mesa) };
   });
   const token = cenario.token;
+  ok(cenario.pediu, 'pôs um pedido na fila, para a copa ter um cartão que medir');
 
   // ============ 1. nenhuma cor inventada ============
   // Lê-se a folha como o browser a recebe, e não do disco: é a folha servida

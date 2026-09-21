@@ -82,9 +82,13 @@
 }
 
 /* ---- estado de um pedido: cor, palavra e forma -------------- */
+/* Os números desta pastilha contam-se a olho enquanto ela muda («3 de 5»), e
+   por isso são tabulares como os outros: sem isso, cada algarismo tem largura
+   própria e a pastilha dança de segundo a segundo debaixo do olhar de quem a
+   está a ler. */
 .b-est{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
         padding:.18rem .6rem; font-size:var(--t-etiqueta); font-weight:600; white-space:nowrap;
-        text-transform:uppercase; letter-spacing:.04em; }
+        text-transform:uppercase; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
 /* A forma vem de um SVG e já não de um content:'◔'. Um carácter tipográfico
    depende da fonte instalada — e nos que faltam sai o quadrado do «não sei
    desenhar isto», que num ecrã de serviço é pior do que não ter sinal nenhum. */
@@ -221,9 +225,16 @@ body.b-servico [tabindex]:focus-visible{
 .b-ped.fora{ border-color:var(--warn); }
 /* O nome de quem pediu é a porta para a ficha dele — é ali que a copa lhe põe
    uma regra, com a pessoa à frente e sem sair do ecrã. */
-.quem-bt{ background:none; border:0; padding:0; font:inherit; color:inherit;
-          cursor:pointer; text-align:left; border-bottom:1px dotted var(--line); }
-.quem-bt:hover{ border-bottom-style:solid; }
+/* E é um ALVO: mede-se na copa, de pé, com o telemóvel numa mão e um copo na
+   outra. Sem enchimento nenhum media 20px de altura — menos de metade dos 48
+   que um dedo precisa. O enchimento vai em cima e em baixo para o nome não sair
+   do sítio onde estava, e o sublinhado passa a ser desenhado à medida do texto
+   (box-shadow) em vez de ser a borda do botão, que agora fica lá longe. */
+.quem-bt{ background:none; border:0; padding:.35rem 0; font:inherit; color:inherit;
+          cursor:pointer; text-align:left; min-height:48px;
+          display:inline-flex; align-items:center;
+          box-shadow:inset 0 -1px 0 0 var(--line); }
+.quem-bt:hover{ box-shadow:inset 0 -2px 0 0 currentColor; }
 .quem-bt:focus-visible{ outline:2px solid var(--gold-soft); outline-offset:3px; }
 /* As bandeiras: telemóveis que valem uma segunda vista. Ficam por baixo do
    stock e não em cima da fila — não são urgentes, são para reparar. */
