@@ -174,10 +174,29 @@ function identidadeCasamento(): array {
     if (array_key_exists($id, $cache)) return $cache[$id];
     $out = [];
     if ($id > 0 && isset($conn) && $conn instanceof mysqli) {
-        $r = @$conn->query("SELECT noiva, noivo, data_evento FROM {$P}casamentos WHERE id=$id LIMIT 1");
+        $r = @$conn->query("SELECT nome, noiva, noivo, data_evento FROM {$P}casamentos WHERE id=$id LIMIT 1");
         if ($r && ($x = $r->fetch_assoc())) {
-            if (trim((string)$x['noiva']) !== '') $out['casal.noiva'] = trim($x['noiva']);
-            if (trim((string)$x['noivo']) !== '') $out['casal.noivo'] = trim($x['noivo']);
+            $noiva = trim((string)$x['noiva']);
+            $noivo = trim((string)$x['noivo']);
+            // Quando a ficha não traz os nomes — e não traz sempre: criar um
+            // casamento pede só o NOME —, tiram-se do nome do casamento, que é
+            // quase sempre «Marta & Nuno». Sem isto caía-se em defsPadrao(), e
+            // defsPadrao() fala do casal do config.php: um casal novo abria o
+            // painel e via, no cabeçalho e no monograma, o nome de outras
+            // pessoas. É o próprio casamento que tem de se nomear.
+            if ($noiva === '' && $noivo === '') {
+                $partes = preg_split('/\s*(?:&|\+|\se\s)\s*/ui', trim((string)$x['nome']), 2);
+                if (count($partes) === 2 && trim($partes[0]) !== '' && trim($partes[1]) !== '') {
+                    $noiva = trim($partes[0]);
+                    $noivo = trim($partes[1]);
+                } else {
+                    // Um nome que não se parte («Casamento da Marta») vale por
+                    // inteiro: casalInfo() sabe viver com um lado só.
+                    $noiva = trim((string)$x['nome']);
+                }
+            }
+            if ($noiva !== '') $out['casal.noiva'] = $noiva;
+            if ($noivo !== '') $out['casal.noivo'] = $noivo;
             if (!empty($x['data_evento']) && $x['data_evento'] !== '0000-00-00') {
                 $out['evento.data'] = $x['data_evento'];
             }
@@ -2391,10 +2410,15 @@ function defsAtuais(mysqli $conn): array {
 
 /** Nome/monograma do casal (para cabeçalhos das outras páginas). */
 function casalInfo(array $defs): array {
-    $noiva = $defs['casal.noiva']; $noivo = $defs['casal.noivo'];
-    return ['noiva'=>$noiva, 'noivo'=>$noivo,
-            'casal'=>$noiva.' & '.$noivo,
-            'mono'=>inicialU($noiva).'&'.inicialU($noivo)];
+    $noiva = trim((string)($defs['casal.noiva'] ?? ''));
+    $noivo = trim((string)($defs['casal.noivo'] ?? ''));
+    // Com um lado só — um casamento cujo nome não se parte em dois —, não se
+    // escreve «Marta & », nem se desenha um monograma com metade em branco.
+    $dois  = $noiva !== '' && $noivo !== '';
+    $casal = $dois ? ($noiva . ' & ' . $noivo) : trim($noiva . $noivo);
+    $mono  = $dois ? (inicialU($noiva) . '&' . inicialU($noivo))
+                   : inicialU(trim($noiva . $noivo));
+    return ['noiva'=>$noiva, 'noivo'=>$noivo, 'casal'=>$casal, 'mono'=>$mono];
 }
 
 // ---- Validação e gravação ----------------------------------

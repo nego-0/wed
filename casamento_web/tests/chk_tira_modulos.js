@@ -98,11 +98,19 @@ const DOS_MODULOS = { mesas:'mesas.php', porta:'porteiro.php',
     .map(([k]) => k);
   ok(aMais.length === 0,
      'nenhum caminho para um módulo que a licença não abre: ' + (aMais.join(', ') || 'nenhum'));
+  // «porta» é a excepção, e é uma excepção com razão: o cartão das ENTRADAS
+  // conta quem já passou pela porta, e isso é conta de uma noite. Fora da hora
+  // da festa não aparece — três meses antes diria «0 de 12» e mais nada.
+  const soNoDia = new Set(['porta']);
   const emFalta = Object.entries(DOS_MODULOS)
-    .filter(([k, pag]) => abertos.includes(k) && !destinos.includes(pag))
+    .filter(([k, pag]) => abertos.includes(k) && !destinos.includes(pag) && !soNoDia.has(k))
     .map(([k]) => k);
   ok(emFalta.length === 0,
      'e todos os que ela abre têm caminho: ' + (emFalta.join(', ') || 'nenhum em falta'));
+  const naFesta = await p.evaluate(() => !!horaDaFesta());
+  ok(naFesta === destinos.includes('porteiro.php'),
+     'e o das entradas aparece exactamente quando é a hora da festa (agora: '
+     + (naFesta ? 'é' : 'não é') + ')');
 
   // ---- 2. cada caminho é uma página ----
   ok(destinos.length > 0 && destinos.every(h => /\.php$/.test(h)),

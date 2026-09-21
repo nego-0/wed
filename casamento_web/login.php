@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
             cursor:pointer; color:var(--ink-fraco); font-size:var(--t-apoio); padding:.2rem .3rem; }
-  .pw-olho:hover{ color:var(--forest); }
+  .pw-olho:hover{ color:var(--gold-texto); }
 </style>
 </head>
 <body>
@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button class="btn btn-verde" style="width:100%; justify-content:center;" type="submit">Entrar</button>
       </form>
       <div class="dica">Entre com o seu email. Depois de entrar, escolhe-se o casamento.<br>
-        Ainda não tem conta? <a href="registo.php" style="color:var(--gold)">Inscreva o seu casamento</a>.</div>
+        Ainda não tem conta? <a href="registo.php" style="color:var(--gold-texto)">Inscreva o seu casamento</a>.</div>
     </div>
   </div>
 <script>

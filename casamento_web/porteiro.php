@@ -75,7 +75,7 @@ $CAS  = casalInfo($DEFS);
   .memb.excecional{ background:#fbf3e3; border-color:#e0b96a; }
   .memb.excecional .est-p{ background:#c88a2a; border-color:#c88a2a; color:#fff; }
   .memb .nm{ flex:1; font-size:var(--t-corpo); }
-  .memb-mesa{ display:block; font-size:var(--t-apoio); color:var(--gold); margin-top:.1rem; }
+  .memb-mesa{ display:block; font-size:var(--t-apoio); color:var(--gold-texto); margin-top:.1rem; }
   .mesas-dividido{ background:var(--gold-pale); color:#6b4e22; border:1px solid var(--gold-soft);
     border-radius:10px; padding:.55rem .8rem; font-size:var(--t-denso); margin-bottom:1rem; }
   .acoes-porta{ display:flex; gap:.6rem; flex-wrap:wrap; }

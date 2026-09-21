@@ -191,13 +191,13 @@ $CAS  = casalInfo($DEFS);
   /* ---- Fatura (foto ou PDF) ---- */
   .fat-thumb{ width:38px; height:38px; border-radius:7px; object-fit:cover; border:1px solid var(--line);
               cursor:zoom-in; display:block; }
-  .fat-chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:var(--t-apoio); color:var(--forest);
+  .fat-chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:var(--t-apoio); color:var(--text);
              border:1px solid var(--gold-soft); background:var(--gold-pale); border-radius:50px;
              padding:.14rem .6rem; text-decoration:none; }
   .fat-chip:hover{ background:var(--gold-soft); }
   .fat-anexar{ font-size:var(--t-apoio); color:var(--ink-fraco); border:1px dashed var(--line); border-radius:50px;
                padding:.14rem .6rem; cursor:pointer; background:transparent; }
-  .fat-anexar:hover{ border-color:var(--gold-soft); color:var(--forest); }
+  .fat-anexar:hover{ border-color:var(--gold-soft); color:var(--gold-texto); }
   .fat-x{ border:0; background:none; color:var(--danger); cursor:pointer; font-size:var(--t-corpo); line-height:1; margin-left:.2rem; }
 
   /* ---- Calendário de pagamentos ---- */

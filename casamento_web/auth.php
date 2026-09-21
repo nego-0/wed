@@ -505,7 +505,7 @@ function exigirModulo(string $chave): void {
        // estado. É o mesmo traço do glifo «cadeado» dessa folha.
        . '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" '
        . 'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" '
-       . 'style="color:var(--gold);margin-bottom:.8rem">'
+       . 'style="color:var(--gold-texto);margin-bottom:.8rem">'
        . '<rect x="4.5" y="10.5" width="15" height="10" rx="2.2"/>'
        . '<path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/><path d="M12 14.5v2.5"/></svg>'
        . '<h1 style="font-family:var(--serif);font-size:var(--t-seccao);color:var(--ink);margin:0 0 .6rem">'

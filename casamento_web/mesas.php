@@ -155,7 +155,7 @@ $CAS = casalInfo(defsAtuais($conn));
   .planta-ctrls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
   .icon-btn{ border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:10px;
     width:34px; height:32px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
-  .icon-btn:hover{ border-color:var(--gold-soft); color:var(--forest); }
+  .icon-btn:hover{ border-color:var(--gold-soft); color:var(--gold-texto); }
   .icon-btn .i-comp{ display:none; }
   body.mesas-max .icon-btn .i-exp{ display:none; }
   body.mesas-max .icon-btn .i-comp{ display:inline-flex; }
@@ -191,14 +191,14 @@ $CAS = casalInfo(defsAtuais($conn));
   body.mesas-max.painel-fechado .painel-mesas{ display:none; }
   #btn-painel{ display:none; }
   body.mesas-max #btn-painel{ display:inline-flex; }
-  body.mesas-max.painel-fechado #btn-painel{ border-color:var(--forest); color:var(--forest); background:var(--cream); }
+  body.mesas-max.painel-fechado #btn-painel{ border-color:var(--gold-soft); color:var(--gold-texto); background:var(--cream); }
   /* Travas contra arrastos acidentais (ficam à esquerda do zoom) */
   .bloqueios{ display:inline-flex; gap:.5rem; align-items:center; margin-right:.2rem; }
   .bloqueios .blq-tit{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
   .bloqueios label{ display:inline-flex; align-items:center; gap:.3rem; font-size:var(--t-apoio);
                     color:var(--ink-fraco); cursor:pointer; white-space:nowrap; }
   .bloqueios input{ width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
-  .bloqueios label:has(input:checked){ color:var(--forest); font-weight:500; }
+  .bloqueios label:has(input:checked){ color:var(--ink); font-weight:500; }
   /* Com as mesas fixas, o cursor deixa de sugerir arrasto */
   body.bloq-mesas .mesa-node{ cursor:pointer; }
   /* Com o canvas fixo, as pegas de redimensionar desaparecem */

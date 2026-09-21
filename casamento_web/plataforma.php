@@ -208,7 +208,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
                     letter-spacing:.05em; color:var(--ink-fraco); margin-top:.35rem; }
   .numeros .n em{ display:block; font-style:normal; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.2rem; }
   .numeros .n.alerta{ border-color:var(--gold-soft); background:var(--gold-pale); }
-  .numeros .n.alerta b{ color:var(--gold); }
+  .numeros .n.alerta b{ color:var(--gold-texto); }
   /* Um número que leva a algum lado tem de o parecer. Os que são só contagem
      ficam como estavam — fingir que tudo é clicável é pior do que não o ser. */
   .numeros button.n{ font:inherit; text-align:left; cursor:pointer; transition:.15s; }
@@ -219,7 +219,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
      casa, e o carácter mudava de comprimento e de peso conforme o tipo de
      letra. O `%23b4864a` é o dourado da casa escrito em hexadecimal para caber
      num URL — um `currentColor` não passa por dentro de um data: URI. */
-  .numeros button.n::after{ content:'ver'; display:block; font-size:var(--t-apoio); color:var(--gold);
+  .numeros button.n::after{ content:'ver'; display:block; font-size:var(--t-apoio); color:var(--gold-texto);
                             margin-top:.35rem; opacity:0; transition:.15s;
                             padding-right:1.15em; background-repeat:no-repeat;
                             background-position:right center; background-size:.95em .95em;
@@ -265,7 +265,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-itens li:last-child{ border-bottom:none; }
   .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:8.5rem; }
   .lic-itens .med{ flex:1; color:var(--ink-fraco); }
-  .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold); font-weight:600; }
+  .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold-texto); font-weight:600; }
 
   .lic-tab{ width:100%; border-collapse:collapse; margin-top:.9rem; }
   .lic-tab td{ padding:.55rem .5rem; border-bottom:1px solid var(--line); vertical-align:top;
@@ -273,7 +273,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-tab tr:last-child td{ border-bottom:none; }
   .lic-tab tr.off{ opacity:.5; }
   .lic-tab .med{ color:var(--ink-fraco); }
-  .lic-tab .pr{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
+  .lic-tab .pr{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold-texto);
     white-space:nowrap; text-align:right; }
   .lic-tab .ac{ text-align:right; white-space:nowrap; }
   .lic-tab .ac .btn{ margin-left:.3rem; }
@@ -312,7 +312,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .lic-pz.base{ border-color:var(--gold-soft); background:var(--gold-pale); }
   .lic-pz-cab{ display:flex; align-items:baseline; gap:.6rem; }
   .lic-pz-nome{ flex:1; font-weight:700; color:var(--ink); font-size:var(--t-corpo); }
-  .lic-pz-fator{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold);
+  .lic-pz-fator{ font-variant-numeric:tabular-nums; font-weight:700; color:var(--gold-texto);
     font-size:var(--t-denso); }
   .lic-pz-res{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.15rem; line-height:1.4; }
   /* A barra é o preço POR MÊS: mais curta é melhor negócio. É a única forma de
@@ -386,7 +386,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
             cursor:pointer; color:var(--ink-fraco); font-size:var(--t-apoio); padding:.2rem .3rem; }
-  .pw-olho:hover{ color:var(--forest); }
+  .pw-olho:hover{ color:var(--gold-texto); }
   .pw-forca{ display:flex; align-items:center; gap:.5rem; margin-top:.4rem; }
   .pw-barras{ display:flex; gap:3px; flex:1; }
   .pw-barras i{ height:4px; flex:1; border-radius:50px; background:var(--cream); transition:background .2s; }
@@ -403,7 +403,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
   /* No modal, os campos empilham-se em ecrã estreito. */
   @media (max-width:560px){ .modal-corpo .lf{ grid-template-columns:1fr; } }
   /* Os separadores de secção do editor completo. */
-  .ed-sec{ font-family:var(--serif); color:var(--forest); font-size:var(--t-corpo); margin:1.2rem 0 .5rem;
+  .ed-sec{ font-family:var(--serif); color:var(--ink); font-size:var(--t-corpo); margin:1.2rem 0 .5rem;
            padding-top:.9rem; border-top:1px solid var(--line); }
   .ed-sec:first-of-type{ border-top:0; padding-top:0; margin-top:.2rem; }
   .ed-conta{ border:1px solid var(--line); border-radius:12px; padding:.7rem .8rem; margin-bottom:.6rem; }
@@ -969,7 +969,7 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       #aud-tabela th{ text-align:left; font-size:var(--t-etiqueta); font-weight:600; letter-spacing:.06em; text-transform:uppercase;
         color:var(--ink-fraco); padding:.5rem .6rem; border-bottom:1px solid var(--line); }
       #aud-tabela td{ padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
-      #aud-tabela .a-accao{ font-weight:600; color:var(--gold); }
+      #aud-tabela .a-accao{ font-weight:600; color:var(--gold-texto); }
       #aud-tabela .a-quando{ white-space:nowrap; color:var(--ink-fraco); }
       /* Cada linha abre: é preciso que se veja que se pode carregar nela. */
       #aud-tabela .a-linha{ cursor:pointer; }
@@ -1928,7 +1928,7 @@ function licPintarPrecario(){
       +   '<div style="flex:1;min-width:200px"><h3 style="margin:0">' + licEsc(m.nome)
       +     (m.ativo ? '' : ' <span class="et">desligado</span>') + '</h3>'
       +     '<div class="dica" style="margin:.15rem 0 0">' + licEsc(m.resumo) + '</div>'
-      +     '<div style="color:var(--gold);font-weight:600;font-size:var(--t-apoio);margin-top:.15rem">'
+      +     '<div style="color:var(--gold-texto);font-weight:600;font-size:var(--t-apoio);margin-top:.15rem">'
       +       licEsc(m.beneficio) + '</div></div>'
       +   '<div class="fim" style="margin:0">'
       +     '<button class="btn btn-sm" onclick="licModuloEditar(' + m.id + ')">Editar módulo</button>'

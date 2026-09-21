@@ -58,7 +58,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                          overflow:hidden; text-overflow:ellipsis; }
   .m-extras .seg button:last-child{ border-right:0; }
   .m-extras .seg button:hover:not(:disabled){ background:var(--cream); }
-  .m-extras .seg button.on{ background:var(--gold-pale); color:var(--forest); font-weight:600;
+  .m-extras .seg button.on{ background:var(--gold-pale); color:var(--gold-texto); font-weight:600;
                             box-shadow:inset 0 0 0 1px var(--gold-soft); }
   .m-extras .seg button:disabled{ opacity:.45; cursor:not-allowed; }
   /* Num ecrã estreito, quatro pastilhas de 25% deixam de caber sem cortar as
@@ -97,7 +97,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                                   text-transform:uppercase; letter-spacing:.08em; color:#8a9a8d; flex:none; }
   .fset{ border-top:1px solid var(--line); margin-top:1.25rem; padding-top:1.1rem; }
   .fset:first-of-type{ border-top:0; margin-top:0; padding-top:0; }
-  .fset-t{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--forest);
+  .fset-t{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--ink);
            margin:0 0 .75rem; display:flex; align-items:baseline; gap:.5rem; }
   .fset-t .cont{ font-family:var(--sans); font-size:var(--t-apoio); font-weight:400; color:var(--ink-fraco);
                  text-transform:none; letter-spacing:0; }
@@ -139,7 +139,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     font-family:inherit; color:var(--text); }
   .stat-f:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.12); transform:translateY(-2px); }
   .stat-f .si{ display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;
-    background:var(--cream); color:var(--forest); margin-bottom:.1rem; }
+    /* O ÍCONE do cartão. Em --forest sobre --cream, no tema escuro, é
+       #0E1B25 sobre #1E2A33 — o desenho fica lá, e não se vê nenhum. */
+    background:var(--cream); color:var(--gold-texto); margin-bottom:.1rem; }
   .stat-f .si svg{ width:18px; height:18px; }
   .stat-f .si i[data-ico]{ width:18px; height:18px; display:block; }
   .stat-f .si i[data-ico] svg{ width:100%; height:100%; }
@@ -147,8 +149,15 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .stat-f .sl{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
   .stat-f.ativo{ border-color:var(--forest); background:var(--forest); }
   .stat-f.ativo .sn{ color:var(--ivory); } .stat-f.ativo .sl{ color:var(--topo-txt); }
-  .stat-f.ativo .si{ background:rgba(255,255,255,.15); color:var(--gold-pale); }
-  .stat-f.verde .si{ color:#1f7a3d; } .stat-f.ouro .si{ color:var(--gold); } .stat-f.rosa .si{ color:#a5473f; }
+  /* O cartão escolhido tem fundo --forest, que é escuro nos QUATRO temas.
+     --gold-pale é um creme nos claros e uma SUPERFÍCIE escura no escuro:
+     ali dentro dava 1,55:1 e o ícone do cartão aberto desaparecia. A tinta
+     de uma superfície que não vira é a que também não vira. */
+  .stat-f.ativo .si{ background:rgba(255,255,255,.15); color:var(--topo-txt); }
+  /* Verde e rosa estavam cravados à mão: o mesmo tom nos quatro temas, e no
+     escuro o rosa media 2,75:1. --ok e --danger são os mesmos sinais, a
+     virar com o tema. */
+  .stat-f.verde .si{ color:var(--ok); } .stat-f.ouro .si{ color:var(--gold); } .stat-f.rosa .si{ color:var(--danger); }
   /* Os cartões extra fazem parte da mesma grelha (display:contents) — assim
      alinham com os outros em vez de formarem uma segunda grelha desencontrada. */
   .stats-extra{ display:contents; }
@@ -203,7 +212,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   /* Fim da lista: "mostrar mais" e a contagem do que já se vê */
   .btn-mais-lista{ display:flex; flex-direction:column; align-items:center; gap:.15rem; width:100%; margin-top:.4rem;
     background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.8rem; cursor:pointer;
-    font-family:inherit; font-size:var(--t-corpo); color:var(--forest); transition:.16s; }
+    font-family:inherit; font-size:var(--t-corpo); color:var(--gold-texto); transition:.16s; }
   .btn-mais-lista:hover{ border-color:var(--gold-soft); box-shadow:0 6px 16px rgba(180,134,74,.12); }
   .btn-mais-lista small{ color:var(--ink-fraco); font-size:var(--t-apoio); }
   .btn-mais-lista .conta-extra{ display:inline-block; min-width:18px; padding:0 .35rem; border-radius:50px;
@@ -218,7 +227,9 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     .stat-f .sn{ font-size:var(--t-titulo); }
     .stats-extra:not(.aberto){ display:none; }
     .btn-stats-mais{ display:block; width:100%; margin:.6rem 0 0; background:var(--card); border:1px solid var(--line);
-      border-radius:12px; padding:.55rem; font-family:inherit; font-size:var(--t-denso); color:var(--forest); cursor:pointer; }
+      /* --forest é ENCHIMENTO: sobre --card, no escuro, «Mais filtros» ficava
+         a 1,2:1 — lia-se a palavra por se saber que ela lá estava. */
+      border-radius:12px; padding:.55rem; font-family:inherit; font-size:var(--t-denso); color:var(--gold-texto); cursor:pointer; }
     .btn-stats-mais:hover{ border-color:var(--gold-soft); }
     .conta-extra{ display:inline-block; min-width:18px; padding:0 .3rem; margin-left:.25rem; border-radius:50px;
       background:var(--cream); color:var(--ink-fraco); font-size:var(--t-apoio); }
@@ -276,7 +287,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .pk:hover{ border-color:var(--gold-soft); }
   .pk .pk-ic{ display:inline-flex; color:var(--gold); } .pk .pk-ic svg{ width:20px; height:20px; }
   .pk.on{ border-color:var(--forest); background:var(--cream); color:var(--ink); font-weight:500; }
-  .pk.on .pk-ic{ color:var(--forest); }
+  .pk.on .pk-ic{ color:var(--gold-texto); }
 
   /* Seleção múltipla e ações em massa */
   .sel-conv{ display:flex; align-items:center; padding-right:.2rem; cursor:pointer; }
@@ -1051,7 +1062,14 @@ function cartoesDeModulo(){
   // grupo dos módulos, que é onde ela sempre quis dizer alguma coisa.
   const falta = k => { const m = MODULOS_PROG.find(y => y.chave === k);
                        return m ? Math.max(0, m.total - m.feito) : -1; };
-  return mapa.filter(x => temMod(x.chave)).sort((a, b) => falta(b.chave) - falta(a.chave)).map(x => {
+  // «ENTRADAS» é do DIA, como a tira de chegada — conta quem já entrou pela
+  // porta. A 89 dias da festa, ninguém entrou nem vai entrar, e o cartão só
+  // ocupa lugar a dizer «0 de 12». Aparece à hora da festa e não antes, pela
+  // mesma razão por que a tira aparece: é a conta de uma noite, não de um
+  // planeamento.
+  const doDia = new Set(['porta']);
+  return mapa.filter(x => temMod(x.chave) && (!doDia.has(x.chave) || horaDaFesta()))
+             .sort((a, b) => falta(b.chave) - falta(a.chave)).map(x => {
     const m = MODULOS_PROG.find(y => y.chave === x.chave) || {};
     const vazio = !(m.total > 0);
     const num = m.unidade === 'dinheiro' ? fmtKz(m.feito) : (m.feito || 0);

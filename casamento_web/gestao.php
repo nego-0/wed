@@ -104,7 +104,7 @@ $MAPA_LOCAL = [
   .linha{ display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center;
           padding:.65rem 0; border-top:1px solid var(--line); }
   .linha:first-of-type{ border-top:0; }
-  .linha .selo{ width:34px; height:34px; border-radius:9px; background:var(--cream); color:var(--forest);
+  .linha .selo{ width:34px; height:34px; border-radius:9px; background:var(--cream); color:var(--gold-texto);
                 display:flex; align-items:center; justify-content:center; font-family:var(--serif); border:1px solid var(--line); }
   .linha .nm{ font-size:var(--t-corpo); color:var(--ink); }
   .linha .mt{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.1rem; }
@@ -139,7 +139,7 @@ $MAPA_LOCAL = [
   .pw-wrap input{ padding-right:4.6rem; }
   .pw-olho{ position:absolute; right:.5rem; top:50%; transform:translateY(-50%); border:0; background:none;
             cursor:pointer; color:var(--ink-fraco); font-size:var(--t-apoio); padding:.2rem .3rem; }
-  .pw-olho:hover{ color:var(--forest); }
+  .pw-olho:hover{ color:var(--gold-texto); }
   /* As caixas de seleção das partes dos dados (levar / trazer / repor). */
   .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.35rem .9rem; margin:.5rem 0 .9rem; }
   .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:var(--t-denso); color:var(--ink); cursor:pointer; }

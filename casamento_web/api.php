@@ -6432,9 +6432,17 @@ if ($acao === 'painel_progresso') {
     if ($tem('orcamento')) {
         // O progresso do orçamento é o que já está pago do que está previsto —
         // e não o que se gastou do que se tem, que seria uma corrida ao teto.
-        [$pago, $previsto] = $um(
-            "SELECT COALESCE(SUM(CASE WHEN estado='pago' THEN valor END),0), COALESCE(SUM(valor),0)
-             FROM {$P}orcamento_despesas WHERE " . doCasamento());
+        //
+        // E a conta é a MESMA que a página do orçamento faz, porque é a mesma
+        // pergunta. Aqui somava-se o valor das despesas com estado 'pago', o
+        // que deixa de fora tudo o que se paga a prestações: uma despesa de
+        // 900 000 com duas parcelas de 300 000 já liquidadas continua em
+        // 'previsto' e contava ZERO. O painel dizia um número e o orçamento
+        // dizia outro, sobre o mesmo dinheiro — e o que estava certo era o do
+        // orçamento, que conta as parcelas (orcamentoResumo).
+        $ro = orcamentoResumo($conn);
+        $pago = (float)($ro['pago'] ?? 0);
+        $previsto = $pago + (float)($ro['previsto'] ?? 0);
         $out[] = ['chave' => 'orcamento', 'ico' => 'moeda', 'rotulo' => 'Despesas pagas',
                   'feito' => (float)$pago, 'total' => (float)$previsto, 'unidade' => 'dinheiro',
                   'vazio' => 'sem despesas', 'dica' => 'Ainda não há despesas lançadas.', 'onde' => 'orcamento.php'];

@@ -1104,6 +1104,30 @@ function correcoesEsperadas(): array {
         ['E o calendário fica a um toque, para quem quer a ordem do tempo',
          'assets/orcamento.js', 'window.orcAgrupar = function (m) {'],
 
+        // ---- Nenhum enchimento serve de tinta (a regra, agora guardada) ----
+        ['Uma prova LÊ AS FOLHAS: o que o ecrã esconde, ela vê na mesma',
+         'tests/chk_tokens_tinta.js', 'const TINTA = l => FOREST.test(l)'],
+        ['«Mais filtros» e os ícones do painel leem-se no tema escuro',
+         'index.php', 'border-radius:12px; padding:.55rem; font-family:inherit; font-size:var(--t-denso); color:var(--gold-texto); cursor:pointer; }'],
+        ['E o ícone do cartão escolhido também — --gold-pale ali dentro era 1,55:1',
+         'index.php', '.stat-f.ativo .si{ background:rgba(255,255,255,.15); color:var(--topo-txt); }'],
+        ['Os sinais verde e vermelho viram com o tema em vez de serem cravados',
+         'index.php', '.stat-f.verde .si{ color:var(--ok); }'],
+
+        // ---- O painel e o orçamento contam o mesmo dinheiro ----
+        ['O cartão das despesas conta as parcelas, como a página do orçamento',
+         'api.php', '$ro = orcamentoResumo($conn);'],
+
+        // ---- O que é do DIA só aparece no dia ----
+        ['«Entradas» é conta de uma noite, e não aparece três meses antes',
+         'index.php', "const doDia = new Set(['porta']);"],
+
+        // ---- Cada casamento diz o nome do SEU casal ----
+        ['Sem noiva e noivo na ficha, os nomes saem do nome do casamento',
+         'personalizacao.php', '// painel e via, no cabeçalho e no monograma, o nome de outras'],
+        ['E um casamento de um nome só não fica com meio monograma',
+         'personalizacao.php', '    // Com um lado só — um casamento cujo nome não se parte em dois —, não se'],
+
         // ---- A tira de chegada é da hora da festa ----
         // Aparecia mal o último convite respondesse: num casamento de Dezembro
         // cuja lista fecha em Março, são nove meses de tira no cimo do painel.

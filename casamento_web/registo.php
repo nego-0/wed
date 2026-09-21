@@ -36,7 +36,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   .reg .card{ padding:2.3rem 2.1rem; max-width:560px; margin-left:auto; margin-right:auto; }
   .reg-planos{ margin-top:2.2rem; }
   .reg-passo{ display:inline-flex; align-items:center; gap:.45rem; font-size:var(--t-etiqueta); font-weight:600;
-    letter-spacing:.1em; text-transform:uppercase; color:var(--gold);
+    letter-spacing:.1em; text-transform:uppercase; color:var(--gold-texto);
     background:var(--gold-pale); border-radius:50px; padding:.3rem .85rem; }
   .reg-enviar{ max-width:560px; margin:1.4rem auto 0; }
   .brasao{ width:64px; height:64px; margin:0 auto .9rem; border:2px solid var(--gold-soft); border-radius:50%;

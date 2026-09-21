@@ -76,7 +76,13 @@ if ($aberto > 0) {
          border-bottom:1px solid var(--line); display:block; border-radius:13px 13px 0 0; }
   .cara iframe{ position:absolute; top:0; left:0; border:0; transform-origin:top left; pointer-events:none; }
   .cara .selo{ position:absolute; right:.4rem; top:.4rem; z-index:2; width:26px; height:26px;
-               border-radius:8px; background:rgba(255,255,255,.92); color:var(--forest);
+               /* O selo assenta SOBRE a miniatura da peça, que é sempre clara:
+                  por isso o fundo branco aqui é de propósito e não um descuido.
+                  A tinta é que tinha de ser sempre escura — --forest é escuro
+                  nos temas claros mas quase preto no escuro, e é aí que ele
+                  funciona bem; o que não pode é virar com o tema e sumir-se
+                  num fundo que NÃO vira. --forest-deep não vira, e é esse. */
+               border-radius:8px; background:rgba(255,255,255,.92); color:var(--forest-deep);
                display:flex; align-items:center; justify-content:center; font-size:var(--t-denso);
                border:1px solid var(--line); }
   .cara .lupa{ position:absolute; inset:0; z-index:3; display:flex; align-items:center;

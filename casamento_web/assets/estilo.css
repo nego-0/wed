@@ -588,10 +588,10 @@ summary:focus-visible,
   display:grid; grid-template-columns:auto auto 1fr auto; gap:.7rem; align-items:center; transition:.18s; }
 .convite-row:hover{ border-color:var(--gold-soft); box-shadow:0 6px 18px rgba(180,134,74,.12); }
 .selo-tipo{ width:32px; height:32px; border-radius:9px; flex:none; display:flex; align-items:center; justify-content:center;
-  font-size:var(--t-corpo); background:var(--cream); color:var(--forest); border:1px solid var(--line); }
+  font-size:var(--t-corpo); background:var(--cream); color:var(--text); border:1px solid var(--line); }
 .selo-tipo svg{ width:16px; height:16px; }
 .selo-tipo.digital{ background:var(--gold-pale); color:var(--gold-deep); }
-.selo-tipo.fisico{ background:var(--sand); color:var(--forest); }
+.selo-tipo.fisico{ background:var(--sand); color:var(--text); }
 .selo-tipo.ambos{ background:linear-gradient(135deg,var(--gold-pale),var(--sand)); }
 .convite-nome{ font-family:var(--serif); font-size:var(--t-corpo); font-weight:600; color:var(--ink); line-height:1.2; }
 /* Em ecrã largo o cartão é sempre de uma linha: nome, estado e pessoas
@@ -734,7 +734,7 @@ summary:focus-visible,
 .dobra > summary small{ font-family:var(--sans); font-size:var(--t-apoio); color:var(--ink-fraco); font-weight:400; }
 .dobra > summary .mais{ display:inline-flex; align-items:center; justify-content:center;
                         width:22px; height:22px; flex:none; border-radius:7px; background:var(--cream);
-                        border:1px solid var(--line); color:var(--forest); font-family:var(--sans);
+                        border:1px solid var(--line); color:var(--text); font-family:var(--sans);
                         font-size:var(--t-corpo); line-height:1; align-self:center; transition:.15s; }
 .dobra[open] > summary{ border-bottom:1px solid var(--line); border-radius:14px 14px 0 0; }
 .dobra[open] > summary .mais{ background:var(--gold-pale); border-color:var(--gold-soft); transform:rotate(45deg); }

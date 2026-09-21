@@ -124,7 +124,7 @@ if ($modQuero) {
   .lic-itens li:last-child{ border-bottom:none; }
   .lic-itens .mod{ font-weight:700; color:var(--ink); min-width:9.5rem; }
   .lic-itens .med{ flex:1; color:var(--ink-fraco); }
-  .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold); font-weight:600; }
+  .lic-itens .pr{ font-variant-numeric:tabular-nums; color:var(--gold-texto); font-weight:600; }
   .lic-pedido-pe{ padding:1rem 1.3rem; border-top:1px solid var(--line);
     display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; }
   .lic-pedido-pe .dica{ flex:1; margin:0; min-width:180px; }
@@ -177,7 +177,7 @@ if ($modQuero) {
     padding-right:.6rem; transition:background .12s; }
   .lic-h-clic:hover, .lic-h-clic:focus-visible{ background:var(--cream); outline:none; }
   .lic-h-clic:focus-visible{ box-shadow:0 0 0 2px var(--ring); }
-  .lic-h-ver{ display:block; font-size:var(--t-etiqueta); font-weight:600; color:var(--gold);
+  .lic-h-ver{ display:block; font-size:var(--t-etiqueta); font-weight:600; color:var(--gold-texto);
     text-transform:uppercase; letter-spacing:.06em; margin-top:.15rem; }
 
   /* ---- o detalhe de uma decisão, na janela e no papel ---- */

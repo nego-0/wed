@@ -98,7 +98,7 @@
 .at-contactos{ margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--line);
   display:flex; flex-direction:column; gap:.3rem; }
 .at-ct{ display:inline-flex; align-items:center; gap:.45rem; font-size:var(--t-apoio);
-  color:var(--forest); text-decoration:none; }
+  color:var(--gold-texto); text-decoration:none; }
 .at-ct:hover{ text-decoration:underline; }
 /* Os sinais são desenhados (assets/icones.js): eram ☎ ✆ ✉, caracteres que
    metade dos aparelhos não tem — e onde faltam sai o quadrado vazio, mesmo ao
