@@ -735,8 +735,12 @@
     var idade = p.estado === 'em_analise' ? minutos(p.criado_em) : 0;
     var classe = idade > 10 ? ' muito-velho' : (idade > 5 ? ' velho' : '');
     var linhas = (p.itens || []).map(function (l) {
+      // A UNIDADE diz-se quando não é a do costume: quem está na copa tem de
+      // saber se leva um copo ou a garrafa inteira, e «2× Tinto» não o diz.
+      var un = l.unidade === 'garrafa'
+        ? ' <span class="b-un">' + (l.quantidade === 1 ? 'garrafa' : 'garrafas') + '</span>' : '';
       return '<span class="b-linha">' + foto(l) + '<b>' + l.quantidade + '×</b> '
-        + esc(l.nome) + '</span>';
+        + esc(l.nome) + un + '</span>';
     }).join('');
 
     // Onde entregar, e — se for diferente — de onde o pedido veio. Uma pessoa

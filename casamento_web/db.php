@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 45;
+const ESQUEMA_VERSAO = 46;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1725,6 +1725,18 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 -- garrafas de whisky é uma emergência e 5 águas não é nada.
                 stock_minimo INT NOT NULL DEFAULT 8,
                 max_por_pedido INT NOT NULL DEFAULT 2,
+                -- COMO SE SERVE. Há bebidas que só saem ao copo: o whisky bom,
+                -- o espumante da meia-noite, o que o casal comprou a contar e
+                -- não quer ver sair inteiro numa mesa só. E há as que saem à
+                -- garrafa — a água, o vinho da mesa, os refrigerantes.
+                -- O padrão é 'copo' porque é o que a casa já fazia: até aqui
+                -- um pedido era sempre uma dose, e chamar-lhe outra coisa
+                -- mudava o sentido do que já está gravado.
+                servir ENUM('copo','garrafa','ambos') NOT NULL DEFAULT 'copo',
+                -- Quantos copos saem de uma garrafa. É por isto que o stock se
+                -- conta em DOSES e não em garrafas: o que acaba a meio da noite
+                -- é o copo, e uma garrafa aberta já não volta à prateleira.
+                doses_garrafa INT NOT NULL DEFAULT 6,
                 estado ENUM('ativo','oculto') NOT NULL DEFAULT 'ativo',
                 ordem INT NOT NULL DEFAULT 0,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1794,6 +1806,9 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                 item_id INT NOT NULL,
                 nome_no_momento VARCHAR(80) NOT NULL,
                 quantidade INT NOT NULL DEFAULT 1,
+                -- Ao copo ou à garrafa: fica gravado no PEDIDO, porque é o que
+                -- a copa tem de servir e o que a conta da noite tem de somar.
+                unidade ENUM('copo','garrafa') NOT NULL DEFAULT 'copo',
                 INDEX idx_barpi_ped (pedido_id),
                 INDEX idx_barpi_cas (casamento_id, item_id),
                 FOREIGN KEY (pedido_id) REFERENCES {$P}bar_pedidos(id) ON DELETE CASCADE
@@ -2267,6 +2282,24 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         @$conn->query("UPDATE {$P}convites SET rsvp_confirmados = 0
                        WHERE rsvp_estado = 'recusado' AND rsvp_confirmados IS NOT NULL
                          AND rsvp_confirmados <> 0");
+    }
+
+    // v46 — ao copo ou à garrafa.
+    //
+    // «Algumas bebidas só serão pedidas por copo, não à garrafa»: o whisky bom,
+    // o espumante da meia-noite. Até aqui não havia a distinção — um pedido era
+    // um pedido —, e sem ela não há como dizer que ESTA não sai inteira.
+    //
+    // Toda a carta que já existe nasce em 'copo', que é exactamente o que a
+    // casa fazia: cada linha de pedido valia uma dose. Assim nada muda de
+    // sentido no que está gravado, e a garrafa é uma porta que o casal abre
+    // bebida a bebida, quando quiser.
+    if ($versaoAtual < 46) {
+        migColuna($conn, "{$P}bar_itens", 'servir',
+                  "ENUM('copo','garrafa','ambos') NOT NULL DEFAULT 'copo'");
+        migColuna($conn, "{$P}bar_itens", 'doses_garrafa', "INT NOT NULL DEFAULT 6");
+        migColuna($conn, "{$P}bar_pedido_itens", 'unidade',
+                  "ENUM('copo','garrafa') NOT NULL DEFAULT 'copo'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

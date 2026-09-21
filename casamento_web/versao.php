@@ -1104,6 +1104,23 @@ function correcoesEsperadas(): array {
         ['Marcar um convite à mão arrasta as pessoas que ele traz',
          'api.php', "if (\$estado === 'confirmado' || \$estado === 'recusado' || \$estado === 'pendente') {"],
 
+        // ---- Ao copo ou à garrafa ----
+        // Não havia unidade nenhuma: um pedido era um pedido, e a única defesa
+        // do whisky bom era o «máximo por pedido» — que limita a quantidade
+        // mas não impede que a quantidade seja a garrafa.
+        ['Cada bebida diz como se serve: só ao copo, só à garrafa, ou as duas',
+         'db.php', "servir ENUM('copo','garrafa','ambos') NOT NULL DEFAULT 'copo'"],
+        ['A carta que já existia fica ao copo, que é o que a casa fazia',
+         'db.php', '    if ($versaoAtual < 46) {'],
+        ['A trava é do servidor, e não da carta que o telemóvel tem aberta',
+         'api.php', "erro((\$item['nome'] ?: 'Esta bebida') . ' serve-se só ao copo.');"],
+        ['Uma garrafa gasta as doses que leva dentro: o stock conta-se em copos',
+         'api.php', "\$doses = \$un === 'garrafa' ? max(1, (int)(\$item['doses_garrafa'] ?? 6)) : 1;"],
+        ['O pedido guarda a unidade, que é o que a copa tem de servir',
+         'db.php', "unidade ENUM('copo','garrafa') NOT NULL DEFAULT 'copo'"],
+        ['E o cesto do convidado separa copos de garrafas da mesma bebida',
+         'assets/bar-convidado.js', "function chaveCesto(id, un) { return id + ':' + (un === 'garrafa' ? 'garrafa' : 'copo'); }"],
+
         // ---- As pessoas confirmadas contam-se mesmo (os números certos) ----
         ['Marcar a presença à mão escreve a conta dos lugares, e não só o estado',
          'api.php', "\$conta = \$estado === 'confirmado' ? 'lugares'"],

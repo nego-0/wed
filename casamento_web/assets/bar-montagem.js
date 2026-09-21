@@ -607,6 +607,19 @@
       { id: 'stock_minimo', rot: 'Avisar quando restarem', tipo: 'numero',
         valor: i.stock_minimo === undefined ? 8 : i.stock_minimo, min: 0,
         dica: 'A partir daqui a bebida entra em «A acabar», aqui e na copa.' },
+      // COMO SE SERVE. Há bebidas que só saem ao copo — o whisky bom, o
+      // espumante da meia-noite —, e sem isto não havia como dizê-lo: um
+      // pedido era um pedido, e uma mesa podia levar a garrafa inteira.
+      { id: 'servir', rot: 'Serve-se', tipo: 'escolha', valor: i.servir || 'copo',
+        opcoes: [{ v: 'copo', r: 'Só ao copo' },
+                 { v: 'garrafa', r: 'Só à garrafa' },
+                 { v: 'ambos', r: 'Ao copo ou à garrafa' }],
+        dica: 'Ao copo, ninguém pode pedir a garrafa inteira.' },
+      // Só conta para quem serve garrafas, e é o que liga as duas contas: o
+      // stock é em COPOS (é o copo que acaba), e uma garrafa leva estes.
+      { id: 'doses_garrafa', rot: 'Copos por garrafa', tipo: 'numero',
+        valor: i.doses_garrafa === undefined ? 6 : i.doses_garrafa, min: 1,
+        dica: 'Uma garrafa pedida gasta estes copos do stock.' },
       { id: 'alcoolico', rot: 'Álcool', tipo: 'sim', aoLado: 'Tem álcool', valor: !!i.alcoolico },
       { id: 'estado', rot: 'No menu', tipo: 'escolha', valor: i.estado || 'ativo',
         opcoes: [{ v: 'ativo', r: 'À vista' }, { v: 'oculto', r: 'Escondida' }] }

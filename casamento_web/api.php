@@ -3611,6 +3611,13 @@ function barItens(mysqli $conn, bool $tudo = false): array {
         // Quanto é que se pode pedir DESTE item, agora, sem olhar a ninguém:
         // o que há e o que cabe num pedido. É o que a copa e a montagem veem.
         $x['pode_pedir'] = min($x['disponivel'], $x['max_por_pedido']);
+        // Como se serve, e quantos copos dá uma garrafa. O stock conta-se em
+        // COPOS: por isso «garrafas que ainda dá» é uma divisão, e não o stock.
+        $x['servir'] = in_array($x['servir'] ?? 'copo', ['copo','garrafa','ambos'], true)
+                     ? $x['servir'] : 'copo';
+        $x['doses_garrafa'] = max(1, (int)($x['doses_garrafa'] ?? 6));
+        $x['garrafas_possiveis'] = $x['servir'] === 'copo'
+            ? 0 : intdiv($x['disponivel'], $x['doses_garrafa']);
         $out[] = $x;
     }
     return $out;
@@ -3703,7 +3710,7 @@ function barReservar(mysqli $conn, int $itemId, int $q): void {
 function barItensDoPedido(mysqli $conn, int $pedidoId): array {
     global $P;
     $cid = casamentoAtual();
-    $st = $conn->prepare("SELECT pi.item_id, pi.nome_no_momento, pi.quantidade, i.foto
+    $st = $conn->prepare("SELECT pi.item_id, pi.nome_no_momento, pi.quantidade, pi.unidade, i.foto
                           FROM {$P}bar_pedido_itens pi
                           LEFT JOIN {$P}bar_itens i ON i.id = pi.item_id AND i.casamento_id = pi.casamento_id
                           WHERE pi.casamento_id=? AND pi.pedido_id=? ORDER BY pi.id");
@@ -3714,7 +3721,9 @@ function barItensDoPedido(mysqli $conn, int $pedidoId): array {
     $r = $st->get_result();
     while ($x = $r->fetch_assoc()) {
         $out[] = ['item_id' => (int)$x['item_id'], 'nome' => $x['nome_no_momento'],
-                  'quantidade' => (int)$x['quantidade'], 'foto' => $x['foto']];
+                  'quantidade' => (int)$x['quantidade'], 'foto' => $x['foto'],
+                  // A copa tem de saber se leva um copo ou a garrafa inteira.
+                  'unidade' => ($x['unidade'] ?? 'copo') === 'garrafa' ? 'garrafa' : 'copo'];
     }
     return $out;
 }
@@ -4246,13 +4255,27 @@ if ($acao === 'bar_pedir') {
         if ($iid <= 0 || $q <= 0) continue;
         $item = barItem($conn, $iid);
         if (!$item || $item['estado'] !== 'ativo') erro('Uma das bebidas já não está no menu.');
+        // Ao copo ou à garrafa — e só o que ESTA bebida permite. É aqui que se
+        // trava, e não só na carta: a carta que a pessoa tem aberta pode ter
+        // dois minutos, e um pedido chega por onde quiser chegar.
+        $un = ($li['unidade'] ?? 'copo') === 'garrafa' ? 'garrafa' : 'copo';
+        $serve = (string)($item['servir'] ?? 'copo');
+        if ($un === 'garrafa' && $serve === 'copo') {
+            erro(($item['nome'] ?: 'Esta bebida') . ' serve-se só ao copo.');
+        }
+        if ($un === 'copo' && $serve === 'garrafa') {
+            erro(($item['nome'] ?: 'Esta bebida') . ' serve-se só à garrafa.');
+        }
+        // Uma garrafa gasta as doses todas que tem dentro: o stock conta-se em
+        // COPOS, que é o que acaba. Pedir duas garrafas de seis é pedir doze.
+        $doses = $un === 'garrafa' ? max(1, (int)($item['doses_garrafa'] ?? 6)) : 1;
         $v = barVeredicto($conn, $item, $paraId, $conviteId, $ritmo);
-        if ($q > $v['pode']) {
+        if ($q * $doses > $v['pode']) {
             // A recusa fala como a página fala: diz o que se passa e quanto
             // falta, e não «limite excedido».
-            erro(barTextoTravao($conn, $item, $v, $q, $g['nome'] ?? ''));
+            erro(barTextoTravao($conn, $item, $v, $q * $doses, $g['nome'] ?? ''));
         }
-        $linhas[] = [$item, $q];
+        $linhas[] = [$item, $q, $un];
     }
     if (!$linhas) erro('Escolha pelo menos uma bebida.');
 
@@ -4273,14 +4296,19 @@ if ($acao === 'bar_pedir') {
     if (!@$st->execute()) erro('Não foi possível enviar o pedido.');
     $pid = $conn->insert_id;
 
-    foreach ($linhas as [$item, $q]) {
+    foreach ($linhas as [$item, $q, $un]) {
         $si = $conn->prepare("INSERT INTO {$P}bar_pedido_itens
-                (casamento_id,pedido_id,item_id,nome_no_momento,quantidade) VALUES (?,?,?,?,?)");
+                (casamento_id,pedido_id,item_id,nome_no_momento,quantidade,unidade)
+                VALUES (?,?,?,?,?,?)");
         $iid = (int)$item['id']; $nome = (string)$item['nome'];
-        $si->bind_param('iiisi', $cid, $pid, $iid, $nome, $q);
+        $si->bind_param('iiisis', $cid, $pid, $iid, $nome, $q, $un);
         @$si->execute();
     }
-    $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
+    // O resumo diz a unidade quando ela não é a do costume: «2× Whisky» e
+    // «2 garrafas de Vinho» não são o mesmo recado para quem está na copa.
+    $resumo = implode(', ', array_map(
+        fn($l) => $l[1] . '× ' . $l[0]['nome'] . ($l[2] === 'garrafa'
+            ? ' (' . ($l[1] === 1 ? 'garrafa' : 'garrafas') . ')' : ''), $linhas));
     if ($porOutro) {
         registar($conn, 'bar_pedido_amigo', $g['nome'],
                  '#' . $codigo . ' · ' . $resumo . ' · lançado por ' . $mim['nome']);
@@ -4772,25 +4800,34 @@ if ($acao === 'bar_item_guardar') {
     // garrafas de whisky é uma emergência e cinco águas não é nada — e era
     // exactamente isso que um número fixo para todas não sabia distinguir.
     $min  = max(0, min(9999, (int)($d['stock_minimo'] ?? 8)));
+    // Como esta bebida se serve. O padrão é o copo: é o que a casa sempre fez,
+    // e a garrafa é uma porta que se abre bebida a bebida.
+    $serv = in_array($d['servir'] ?? '', ['copo','garrafa','ambos'], true) ? $d['servir'] : 'copo';
+    // Quantos copos saem de uma garrafa — só conta para quem serve garrafas.
+    $dose = max(1, min(60, (int)($d['doses_garrafa'] ?? 6)));
     if ($id) {
         $st = $conn->prepare("UPDATE {$P}bar_itens SET categoria_id=?, nome=?, descricao=?, alcoolico=?,
-                              volume_ml=?, max_por_pedido=?, stock_minimo=?, estado=?, ordem=?
+                              volume_ml=?, max_por_pedido=?, stock_minimo=?, estado=?, ordem=?,
+                              servir=?, doses_garrafa=?
                               WHERE casamento_id=$cid AND id=?");
-        $st->bind_param('issiiiisii', $cat, $nome, $desc, $alc, $vol, $maxp, $min, $est, $ord, $id);
+        $st->bind_param('issiiiisisii', $cat, $nome, $desc, $alc, $vol, $maxp, $min, $est, $ord,
+                        $serv, $dose, $id);
         @$st->execute();
     } else {
         $st = $conn->prepare("INSERT INTO {$P}bar_itens
                 (casamento_id,categoria_id,nome,descricao,alcoolico,volume_ml,max_por_pedido,
-                 stock_minimo,estado,ordem,stock)
-                VALUES (?,?,?,?,?,?,?,?,?,?,0)");
-        $st->bind_param('iissiiiisi', $cid, $cat, $nome, $desc, $alc, $vol, $maxp, $min, $est, $ord);
+                 stock_minimo,estado,ordem,servir,doses_garrafa,stock)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0)");
+        $st->bind_param('iissiiiisisi', $cid, $cat, $nome, $desc, $alc, $vol, $maxp, $min, $est, $ord,
+                        $serv, $dose);
         @$st->execute();
         $id = $conn->insert_id;
         // O stock inicial, quando vem junto: entra como entrada, com razão.
         $q0 = (int)($d['stock'] ?? 0);
         if ($q0 > 0) barMoverStock($conn, $id, $q0, 'entrada', null, 'stock inicial');
     }
-    registar($conn, 'bar_item', $nome, '');
+    registar($conn, 'bar_item', $nome,
+             $serv === 'copo' ? 'só ao copo' : ($serv === 'garrafa' ? 'só à garrafa' : 'copo ou garrafa'));
     ok(['id' => $id, 'itens' => barItens($conn, true)]);
 }
 

@@ -515,6 +515,14 @@ body.com-rodape .b-corpo{
 /* O contador de uma bebida: menos, quantas, mais. Os 40px são o mínimo de um
    alvo tocado com o polegar, de pé e com um copo na outra mão. */
 .b-mais{ margin-left:auto; display:flex; align-items:center; gap:.25rem; }
+/* Com duas unidades, cada fila diz de qual é — sem rótulo seriam dois pares de
+   botões iguais um debaixo do outro, e ninguém sabia qual era a garrafa. */
+.b-mais.com-rot{ margin-left:0; width:100%; justify-content:flex-end; }
+.b-mais.com-rot .un{ margin-right:auto; font-size:var(--t-etiqueta); font-weight:600;
+  text-transform:uppercase; letter-spacing:.06em; color:var(--c-fraco, #6b7280); }
+/* Na copa e nas entregas, a unidade vai a par do número: «2× Tinto garrafas». */
+.b-un{ font-size:var(--t-apoio); font-weight:600; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--c-fraco, #6b7280); }
 .b-mais button{ width:40px; height:40px; border-radius:50%; border:1px solid rgba(0,0,0,.15);
                 background:var(--c-cartao, #fff); line-height:1; cursor:pointer;
                 color:inherit; display:inline-flex; align-items:center; justify-content:center; }

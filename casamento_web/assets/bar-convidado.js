@@ -463,7 +463,11 @@
   };
 
   function cartao(i) {
-    var n = cesto[i.id] || 0;
+    // Uma linha de botões por unidade que esta bebida admite. Quem só se serve
+    // ao copo tem uma só, e é exactamente como era antes de a garrafa existir.
+    var uns = i.servir === 'ambos' ? ['copo', 'garrafa']
+            : [i.servir === 'garrafa' ? 'garrafa' : 'copo'];
+    var n = uns.reduce(function (t, u) { return t + (cesto[chaveCesto(i.id, u)] || 0); }, 0);
     var travada = i.pode_pedir <= 0;
 
     // O que se diz sobre a quantidade: NADA, enquanto houver.
@@ -533,15 +537,27 @@
       + (travada && i.aviso ? '<div class="ds">' + esc(i.aviso) + '</div>' : '')
       + '<div class="pe">'
       +   '<span class="qtd">' + esc(qtd) + relogio + '</span>'
-      +   (travada || !aberto || pausa ? '' :
-            '<span class="b-mais">'
-          + '<button type="button" class="dn" onclick="barMenos(' + i.id + ')"' + (n ? '' : ' disabled')
-          +   ' aria-label="Menos um ' + esc(i.nome) + '">' + ico.ico('menos') + '</button>'
-          + '<span class="v" aria-live="polite">' + n + '</span>'
-          + '<button type="button" class="up" onclick="barMais(' + i.id + ')"'
-          +   (n >= i.pode_pedir ? ' disabled' : '')
-          +   ' aria-label="Mais um ' + esc(i.nome) + '">' + ico.ico('mais') + '</button>'
-          + '</span>')
+      +   (travada || !aberto || pausa ? '' : uns.map(function (u) {
+            var q = cesto[chaveCesto(i.id, u)] || 0;
+            // O que já está no cesto desta bebida, em doses: é contra isto que
+            // se sabe se ainda cabe mais uma garrafa.
+            var gasto = uns.reduce(function (t, x) {
+              return t + (cesto[chaveCesto(i.id, x)] || 0) * custoDe(i, x); }, 0);
+            var cabe = gasto + custoDe(i, u) <= i.pode_pedir;
+            var rot = u === 'garrafa' ? 'garrafa' : 'copo';
+            return '<span class="b-mais' + (uns.length > 1 ? ' com-rot' : '') + '">'
+              + (uns.length > 1 ? '<span class="un">' + rot + '</span>' : '')
+              + '<button type="button" class="dn" onclick="barMenos(' + i.id + ',\'' + u + '\')"'
+              +   (q ? '' : ' disabled')
+              +   ' aria-label="Menos um ' + esc(rot) + ' de ' + esc(i.nome) + '">'
+              +   ico.ico('menos') + '</button>'
+              + '<span class="v" aria-live="polite">' + q + '</span>'
+              + '<button type="button" class="up" onclick="barMais(' + i.id + ',\'' + u + '\')"'
+              +   (cabe ? '' : ' disabled')
+              +   ' aria-label="Mais um ' + esc(rot) + ' de ' + esc(i.nome) + '">'
+              +   ico.ico('mais') + '</button>'
+              + '</span>';
+          }).join(''))
       + '</div>' + alt + '</div>';
   }
 
@@ -636,6 +652,8 @@
   function pintarRodape() {
     var total = 0;
     Object.keys(cesto).forEach(function (k) { total += cesto[k]; });
+    // Uma garrafa é UMA coisa pedida, ainda que leve seis copos lá dentro: o
+    // rodapé conta o que a pessoa vai receber, e não as doses que isso gasta.
     var rod = $('b-rodape');
     rod.hidden = total === 0;
     // A barra tapa o canto de baixo à direita, onde mora o botão do tema. Quem
@@ -653,17 +671,40 @@
     $('b-pedir').disabled = !aberto || !!pausa;
   }
 
-  window.barMais = function (id) {
+  // O cesto passa a ser por BEBIDA E UNIDADE: «2 copos de tinto» e «1 garrafa
+  // de tinto» são duas linhas do mesmo pedido, e somá-las numa só perdia
+  // justamente a coisa que a copa precisa de saber para servir.
+  function chaveCesto(id, un) { return id + ':' + (un === 'garrafa' ? 'garrafa' : 'copo'); }
+  // A unidade de origem de cada bebida: quem só se serve à garrafa abre na
+  // garrafa, e o resto abre no copo.
+  function unidadeBase(i) { return (i && i.servir === 'garrafa') ? 'garrafa' : 'copo'; }
+  // Quantos copos gasta uma unidade — é por aqui que uma garrafa conta como as
+  // doses que leva dentro, que é como o stock se conta.
+  function custoDe(i, un) { return un === 'garrafa' ? Math.max(1, +i.doses_garrafa || 6) : 1; }
+
+  window.barMais = function (id, un) {
     var i = menu.itens.filter(function (x) { return x.id === id; })[0];
     if (!i) return;
-    var n = (cesto[id] || 0) + 1;
-    if (n > i.pode_pedir) return;
-    cesto[id] = n;
+    un = un === 'garrafa' ? 'garrafa' : 'copo';
+    if (un === 'garrafa' && i.servir === 'copo') return;
+    if (un === 'copo' && i.servir === 'garrafa') return;
+    var k = chaveCesto(id, un);
+    var n = (cesto[k] || 0) + 1;
+    // O que já está no cesto DESTA bebida conta para o tecto, nas duas
+    // unidades: três copos e uma garrafa de seis são nove doses, e não uma.
+    var jaGasto = 0;
+    ['copo', 'garrafa'].forEach(function (u) {
+      var q = cesto[chaveCesto(id, u)] || 0;
+      if (q) jaGasto += q * custoDe(i, u);
+    });
+    if (jaGasto + custoDe(i, un) > i.pode_pedir) return;
+    cesto[k] = n;
     pintarMenu();
   };
-  window.barMenos = function (id) {
-    var n = (cesto[id] || 0) - 1;
-    if (n > 0) cesto[id] = n; else delete cesto[id];
+  window.barMenos = function (id, un) {
+    var k = chaveCesto(id, un);
+    var n = (cesto[k] || 0) - 1;
+    if (n > 0) cesto[k] = n; else delete cesto[k];
     pintarMenu();
   };
 
@@ -784,7 +825,8 @@
 
   window.barEnviar = async function () {
     var itens = Object.keys(cesto).map(function (k) {
-      return { item_id: parseInt(k, 10), quantidade: cesto[k] };
+      var p = k.split(':');
+      return { item_id: parseInt(p[0], 10), unidade: p[1] || 'copo', quantidade: cesto[k] };
     });
     if (!itens.length) return;
     var bt = $('b-pedir');
@@ -872,8 +914,14 @@
     // Uma bebida que desapareceu do menu não pode ficar no cesto.
     Object.keys(cesto).forEach(function (k) {
       var i = menu.itens.filter(function (x) { return String(x.id) === k; })[0];
-      if (!i || i.pode_pedir <= 0) delete cesto[k];
-      else if (cesto[k] > i.pode_pedir) cesto[k] = i.pode_pedir;
+      if (!i || i.pode_pedir <= 0) { delete cesto[k]; return; }
+      var un = k.split(':')[1] || 'copo';
+      // Uma bebida que passou a servir-se só ao copo deixa cair as garrafas
+      // que alguém tivesse no cesto: o menu mudou debaixo dela.
+      if ((un === 'garrafa' && i.servir === 'copo') ||
+          (un === 'copo' && i.servir === 'garrafa')) { delete cesto[k]; return; }
+      var tecto = Math.floor(i.pode_pedir / custoDe(i, un));
+      if (cesto[k] > tecto) { if (tecto > 0) cesto[k] = tecto; else delete cesto[k]; }
     });
     await recarregarMeus();
   }
