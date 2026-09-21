@@ -1205,6 +1205,22 @@ function correcoesEsperadas(): array {
          'index.php', "const chave = 'chegada.' + (window.CASAMENTO_ID || 0) + '.' + (total || 0);"],
         ['Quem desligou as animações não leva festa nenhuma',
          'index.php', '.chegada.festa, .chegada.festa .ch-ico{ animation:none; }'],
+        ['E fora da hora da festa a tira não deixa sequer a caixa vazia',
+         'index.php', '.chegada[hidden]{ display:none; }'],
+        ['O mesmo nos tempos das entregas, nas pastilhas da mesa e no aviso dos modelos',
+         'assets/bar.css', '.b-tempos[hidden]{ display:none; }'],
+
+        // ---- O tema volta às páginas do serviço ----
+        ['A pastilha do tema só se recolhe onde há gaveta que a receba',
+         'assets/estilo.css', 'body.tem-gaveta .tema-fab{ display:none; }'],
+        ['Copa, entregas e carta do convidado voltam a poder mudar de tema no telemóvel',
+         'parcial-cabecalho.php', "document.body.classList.add('tem-gaveta');"],
+
+        // ---- A planta, a partir da lista (UX) ----
+        ['Carregar numa mesa da lista abre-a e centra-a, como se lhe tocassem na planta',
+         'assets/mesas.js', 'function irAMesa(id){'],
+        ['E o «pôr aqui» já não confunde o dedo que rola com o dedo que escolhe',
+         'assets/mesas.js', 'const LIMIAR_ARRASTO = 12;'],
     ];
 }
 

@@ -438,6 +438,12 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   /* O momento de chegada (docs/auditoria-ui-ux.md, EMO-002).
      Dourado e sóbrio: isto é uma boa notícia, não um alarme — e a página em
      que ela aparece é a mesma onde se trabalha todos os dias. */
+  /* Sem esta linha, a tira NUNCA se esconde. O `hidden` do HTML vale por uma
+     regra [hidden]{display:none} do browser, e um `display` escrito numa
+     classe ganha-lhe — pelo que a tira ficava lá, vazia: sem ícone, sem texto,
+     só a moldura e o fundo verde, uma barra oca por cima dos convidados.
+     Esconder o conteúdo não é esconder a caixa. */
+  .chegada[hidden]{ display:none; }
   .chegada{ display:flex; align-items:center; gap:.8rem;
             background:linear-gradient(135deg, var(--gold-pale), var(--cream));
             border:1px solid var(--gold-soft); border-radius:14px; padding:.9rem 1.15rem;

@@ -514,8 +514,43 @@ function centrarMesas(calado){
   irPara((c.x0+c.x1)/2, (c.y0+c.y1)/2, !!calado);
   if(!calado) toast('Vista no centro das mesas.');
 }
+// Centrar pela POSIÇÃO GUARDADA punha a mesa ao lado do meio — até 93px de
+// desvio, e uma delas ficava mesmo fora da vista. A posição é a do ponto onde
+// a mesa assenta; o que se quer ao centro é o DESENHO dela, que tem tamanho e
+// está onde o browser o pôs. Mede-se o nó.
+//
+// Nas bordas do salão o centro perfeito não existe: não há para onde rolar
+// mais. Aí encosta-se ao máximo, que é o mais perto do meio que a vista chega —
+// e a mesa fica sempre dentro dela, que é o que se veio buscar.
 function centrarEm(id, calado){
   const m=MESAS.find(x=>x.id===+id); if(!m||m.pos_x==null) return;
+  const vp=$('planta-viewport'), no=document.querySelector('.mesa-node[data-id="'+(+id)+'"]');
+  if(vp && no){
+    const rv=vp.getBoundingClientRect(), rn=no.getBoundingClientRect();
+    const alvoL = vp.scrollLeft + (rn.left + rn.width/2) - (rv.left + rv.width/2);
+    const alvoT = vp.scrollTop  + (rn.top  + rn.height/2) - (rv.top  + rv.height/2);
+    const maxL = Math.max(0, vp.scrollWidth  - vp.clientWidth);
+    const maxT = Math.max(0, vp.scrollHeight - vp.clientHeight);
+    const destino = { left: Math.max(0, Math.min(maxL, Math.round(alvoL))),
+                      top:  Math.max(0, Math.min(maxT, Math.round(alvoT))) };
+    // Onde o centro não chega — uma mesa encostada à borda do salão, com o
+    // scroll já no fim —, garante-se ao menos que ela se vê INTEIRA. Ver a
+    // mesa é o que se veio buscar; o centro é como se serve isso quando há
+    // salão para os dois lados.
+    const nL = vp.scrollLeft + (rn.left - rv.left);
+    const nT = vp.scrollTop  + (rn.top  - rv.top);
+    if (nL < destino.left) destino.left = Math.max(0, Math.round(nL));
+    else if (nL + rn.width > destino.left + rv.width) {
+      destino.left = Math.min(maxL, Math.round(nL + rn.width - rv.width));
+    }
+    if (nT < destino.top) destino.top = Math.max(0, Math.round(nT));
+    else if (nT + rn.height > destino.top + rv.height) {
+      destino.top = Math.min(maxT, Math.round(nT + rn.height - rv.height));
+    }
+    if(calado){ vp.scrollLeft=destino.left; vp.scrollTop=destino.top; }
+    else vp.scrollTo(Object.assign({behavior:'smooth'}, destino));
+    return;
+  }
   irPara(+m.pos_x, +m.pos_y, !!calado);
 }
 // O meio do que está à VISTA, em percentagem do mundo base. É onde a mesa nova
@@ -657,6 +692,10 @@ function panUp(){
 }
 
 // ---------- arrastar mesas + linhas-guia magnéticas ----------
+// A partir de onde um gesto deixa de ser um toque e passa a ser um arrasto.
+// Doze pixéis é o que um dedo pousado quieto oscila num ecrã táctil: abaixo
+// disto ninguém quis deslocar nada, acima disto ninguém quis carregar.
+const LIMIAR_ARRASTO = 12;
 let drag=null;
 $('planta').addEventListener('pointerdown', e=>{
   // À espera de destino: este toque é a posição, e não o princípio de um
@@ -664,17 +703,35 @@ $('planta').addEventListener('pointerdown', e=>{
   // começar a deslocar a vista.
   if(aPorMesa){
     e.preventDefault(); e.stopPropagation();
-    const m=MESAS.find(x=>x.id===SEL);
-    if(m){
-      const r=$('planta').getBoundingClientRect();
-      const x=Math.max(2, Math.min(98*EXT.x, (e.clientX-r.left)/r.width*100*EXT.x));
-      const y=Math.max(2, Math.min(98*EXT.y, (e.clientY-r.top)/r.height*100*EXT.y));
-      m.pos_x=x; m.pos_y=y;
-      salvarPos(m.id, x, y);
-      renderPlanta();
-      if(window.anunciar) anunciar('Mesa ' + (m.nome||'') + ' movida.');
-    }
-    cancelarPorAqui();
+    // Um TOQUE põe a mesa; um ARRASTO é alguém a deslocar a vista, e não uma
+    // escolha de sítio. Decide-se no fim do gesto, porque é só aí que se sabe
+    // qual dos dois foi: pôr a mesa onde o dedo POUSOU fazia-a saltar para o
+    // princípio de qualquer rolagem.
+    const inicio = { x:e.clientX, y:e.clientY };
+    const alvo = e.currentTarget;
+    const fim = ev => {
+      alvo.removeEventListener('pointerup', fim);
+      alvo.removeEventListener('pointercancel', cancelou);
+      const d = Math.hypot(ev.clientX - inicio.x, ev.clientY - inicio.y);
+      if(d > LIMIAR_ARRASTO){ return; }   // foi rolagem: o modo fica à espera
+      const m=MESAS.find(x=>x.id===SEL);
+      if(m){
+        const r=$('planta').getBoundingClientRect();
+        const x=Math.max(2, Math.min(98*EXT.x, (ev.clientX-r.left)/r.width*100*EXT.x));
+        const y=Math.max(2, Math.min(98*EXT.y, (ev.clientY-r.top)/r.height*100*EXT.y));
+        m.pos_x=x; m.pos_y=y;
+        salvarPos(m.id, x, y);
+        renderPlanta();
+        if(window.anunciar) anunciar('Mesa ' + (m.nome||'') + ' movida.');
+      }
+      cancelarPorAqui();
+    };
+    const cancelou = () => {
+      alvo.removeEventListener('pointerup', fim);
+      alvo.removeEventListener('pointercancel', cancelou);
+    };
+    alvo.addEventListener('pointerup', fim);
+    alvo.addEventListener('pointercancel', cancelou);
     return;
   }
   const node=e.target.closest('.mesa-node');
@@ -761,10 +818,30 @@ function selecionar(id, manterAba){ SEL=+id||null; if(!manterAba) activeTab='mes
 // acertar. O gesto que abre é o mesmo que fecha.
 function alternar(id){ if(SEL===(+id||null)) desselecionar(); else selecionar(id); }
 function desselecionar(){ if(SEL===null) return; SEL=null; if(activeTab==='mesa') activeTab='mesas'; renderPlanta(); renderTabs(); renderTabBody(); }
-// Da lista do painel: leva a vista até à mesa e marca-a, sem sair da lista —
-// quem está a percorrer o salão mesa a mesa não quer ser mudado de página a
-// cada passo. A pastilha da mesa aparece ao lado, para quem quiser os detalhes.
-function irAMesa(id){ selecionar(id, true); centrarEm(id); }
+// Da lista do painel: abre a mesa e põe-na no meio da vista — o mesmo que
+// tocar-lhe no canvas, porque é a mesma intenção. Antes mantinha-se a aba da
+// LISTA: a mesa ficava marcada mas o painel dela não abria, e o «pôr aqui» e
+// as setas, que vivem lá dentro, não havia maneira de os alcançar sem ir à
+// aba à mão.
+//
+// E leva o CANVAS ao ecrã antes de centrar. No telemóvel a planta começa a
+// y=741 num ecrã de 844: centrar uma mesa dentro de uma caixa que está quase
+// toda fora da vista é acertar num sítio que ninguém vê.
+function irAMesa(id){
+  selecionar(id);
+  const vp = $('planta-viewport');
+  if (vp && vp.getBoundingClientRect().top > innerHeight * 0.5) {
+    // SEM deslize. A página a deslizar e a conta do centro a correr ao mesmo
+    // tempo dão uma conta feita contra medidas que ainda estão a mudar: duas
+    // das cinco mesas ficavam fora da vista com scroll de sobra para lá
+    // chegar. Primeiro assenta-se a página, depois centra-se — e é o canvas
+    // que desliza, que é o movimento que diz «olhe para aqui».
+    vp.scrollIntoView({ block: 'center' });
+  }
+  // E depois de o painel se redesenhar: a aba da mesa acabou de abrir e muda
+  // as alturas de tudo o que está à volta.
+  requestAnimationFrame(() => requestAnimationFrame(() => centrarEm(id)));
+}
 function irTab(k){ if(k==='mesa'&&!SEL) return; activeTab=k; renderTabs(); renderTabBody(); }
 
 function renderTabs(){
@@ -1178,6 +1255,17 @@ function porAqui(){
   const bt = document.getElementById('bt-por-aqui');
   if(bt){ bt.classList.toggle('on', aPorMesa); bt.textContent = aPorMesa ? 'toque na planta' : 'pôr aqui'; }
   if(aPorMesa && window.anunciar) anunciar('Toque na planta para pôr lá a mesa.');
+  // E a planta vem à vista, senão o modo é um convite para um acidente: no
+  // telemóvel ela começa abaixo da dobra, e quem liga o modo tem de rolar para
+  // lá chegar. Rolar é arrastar o dedo — e o dedo começa por pousar algures.
+  // Se pousar na planta, o toque vale como destino e a mesa salta para onde a
+  // rolagem começou, que não é sítio nenhum que alguém tenha escolhido.
+  if(aPorMesa){
+    const vp = $('planta-viewport');
+    if(vp && vp.getBoundingClientRect().top > innerHeight * 0.4){
+      vp.scrollIntoView({ block:'center', behavior:'smooth' });
+    }
+  }
 }
 function cancelarPorAqui(){
   if(!aPorMesa) return;

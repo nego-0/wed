@@ -412,8 +412,20 @@ const entrar = async (ctx, user, pass) => {
              sel: SEL, aba: activeTab };
   }, vazia.id);
   ok(centrada.sel === +vazia.id, 'carregar numa linha escolhe a mesa');
-  ok(centrada.aba === 'mesas',
-     'sem sair da lista — quem percorre o salão mesa a mesa não quer mudar de página a cada passo');
+  // ISTO MUDOU DE IDEIA, e a ideia velha está aqui escrita de propósito.
+  //
+  // Guardava-se que carregar numa linha da lista NÃO mudava de aba: quem
+  // percorre o salão mesa a mesa não quer ser mudado de página a cada passo.
+  // Parece bem, e tinha um custo que não se via: o painel da mesa é onde vivem
+  // as setas e o «pôr aqui». Escolher a mesa pela lista deixava-a marcada e o
+  // painel dela fechado — e quem quisesse mexê-la tinha de ir à aba à mão,
+  // sem nada a dizer-lhe que ela existia.
+  //
+  // Passa a abrir a mesa, que é o que fazer-lhe um clique quer dizer em
+  // qualquer outro sítio: o mesmo que tocar-lhe no canvas.
+  ok(centrada.aba === 'mesa',
+     'e abre-a, como se lhe tivessem tocado no canvas — é lá que estão as setas '
+     + 'e o «pôr aqui»');
   ok(centrada.dx < 45 && centrada.dy < 45,
      `e a vista vai ter com ela, ao centro do canvas (${Math.round(centrada.dx)}, ${Math.round(centrada.dy)} px)`);
 

@@ -102,7 +102,14 @@ async function arrumarCasamento(pg, id){
       AGORA_FESTA = q ? new Date(q) : null;
       momentoDeChegada(ULTIMAS_STATS || {});
       const el = document.getElementById('chegada');
-      return { escondida: el.hidden, texto: el.textContent.replace(/\s+/g, ' ').trim() };
+      // Pergunta-se ao BROWSER, não ao atributo. `el.hidden` dizia que sim e a
+      // faixa continuava desenhada: o [hidden] do browser é uma regra fraca e
+      // o display da classe ganhava-lhe. Escondido é não ter caixa nenhuma.
+      return { escondida: getComputedStyle(el).display === 'none'
+                       && el.getClientRects().length === 0,
+               atributo: el.hidden,
+               alto: Math.round(el.getBoundingClientRect().height),
+               texto: el.textContent.replace(/\s+/g, ' ').trim() };
     }, quando);
   };
 

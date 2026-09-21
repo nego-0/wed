@@ -278,6 +278,10 @@ body.b-servico [tabindex]:focus-visible{
    Estavam só no <style> de entregas.php, e na copa a classe não tinha estilo
    nenhum — os quatro tempos empilhavam-se numa lista com o número por cima
    do rótulo. Uma classe partilhada por duas páginas pertence à folha. */
+/* Um `display` de classe ganha ao [hidden] do browser: sem esta linha, os
+   tempos nascem escondidos e aparecem na mesma — uma faixa com risco por cima
+   e quatro casas vazias, antes de haver um único pedido para cronometrar. */
+.b-tempos[hidden]{ display:none; }
 .b-tempos{ display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:1.6rem;
            padding-top:1rem; border-top:1px solid var(--line); }
 .b-tempos div{ min-width:88px; }
@@ -387,6 +391,10 @@ body.b-festa{ margin:0; background:var(--c-fundo, #FBF8F1); color:var(--c-tinta,
    o que se procura com o polegar sem olhar. */
 .b-festa-topo .b-pastilhas{ flex-direction:column; align-items:stretch; gap:.35rem; }
 .b-festa-topo .b-mesa{ width:100%; }
+/* As pastilhas da mesa e do «para quem» nascem escondidas e só se enchem
+   quando há mesa ou destinatário. Sem esta linha ficavam à vista de início,
+   duas cápsulas em branco — o `display` da classe manda mais que o [hidden]. */
+.b-mesa[hidden]{ display:none; }
 .b-mesa{ display:inline-flex; align-items:center; gap:.4rem;
          background:rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.1); border-radius:50px;
          padding:.35rem .85rem; font-size:var(--t-denso); cursor:pointer; min-height:40px;

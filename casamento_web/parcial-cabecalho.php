@@ -352,6 +352,13 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   var gv = document.getElementById('gaveta');
   var fundo = document.getElementById('gaveta-fundo');
   if (!bt || !gv || !fundo) return;
+  // ESTA página tem gaveta, e é só aqui que a pastilha do tema se recolhe para
+  // dentro dela. A copa, as entregas e a carta do convidado requerem este
+  // ficheiro só para usar a tiraSuporte() — não desenham cabeçalho nenhum, não
+  // têm gaveta, e ficaram sem nenhuma porta para o tema no telemóvel quando a
+  // regra era `.tema-fab{display:none}` a seco. Uma classe entende-a toda a
+  // gente, e diz a verdade: o tema mudou de sítio onde há sítio novo.
+  document.body.classList.add('tem-gaveta');
 
   function focaveis() {
     return [].slice.call(gv.querySelectorAll('a[href], button:not([disabled])'))

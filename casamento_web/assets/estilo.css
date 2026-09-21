@@ -456,8 +456,11 @@ a:hover{ text-decoration:underline; }
   .gv-tema-repor:hover{ background:var(--cream); }
 
   /* E a pastilha do tema deixa de flutuar: mudou-se para dentro da gaveta, e
-     duas portas para a mesma escolha eram uma a mais. */
-  .tema-fab{ display:none; }
+     duas portas para a mesma escolha eram uma a mais.
+     SÓ ONDE HÁ GAVETA. A copa, as entregas e a carta do convidado não têm
+     cabeçalho de app nenhum — escondê-la lá deixava essas páginas sem forma
+     de mudar de tema no telemóvel, que é justamente onde elas se usam. */
+  body.tem-gaveta .tema-fab{ display:none; }
 }
 @media (prefers-reduced-motion:reduce){
   .gaveta, .gaveta-fundo{ transition:none; }

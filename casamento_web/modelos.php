@@ -207,6 +207,10 @@ if ($aberto > 0) {
   .chip-acao.on{ background:var(--gold); border-color:var(--gold); color:#fff; }
   .chip-ferramentas{ border-style:dashed; display:inline-flex; align-items:center; gap:.35rem; }
   .chip-ferramentas.on{ background:var(--gold); border-color:var(--gold); border-style:solid; color:#fff; }
+  /* Zero por decidir é NENHUM aviso, e não um aviso a dizer zero. Sem esta
+     linha o [hidden] do browser perde para o display da classe e a pastilha
+     laranja fica sempre acesa, vazia, ao lado do botão. */
+  .chip-num[hidden]{ display:none; }
   .chip-num{ display:inline-flex; align-items:center; justify-content:center; min-width:1.15rem;
              height:1.15rem; padding:0 .3rem; border-radius:50px; background:var(--warn,#b5713a);
              color:#fff; font-size:var(--t-apoio); font-weight:700; line-height:1; }
