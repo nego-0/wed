@@ -1210,6 +1210,16 @@ function correcoesEsperadas(): array {
         ['O mesmo nos tempos das entregas, nas pastilhas da mesa e no aviso dos modelos',
          'assets/bar.css', '.b-tempos[hidden]{ display:none; }'],
 
+        // ---- O registo de ações diz QUEM ao certo ----
+        ['Cada ação registada guarda o email de quem a fez, e não só o nome',
+         'db.php', "migColuna(\$conn, \"{\$P}registo\", 'email', \"VARCHAR(190) DEFAULT NULL\");"],
+        ['O email da conta com sessão aberta está à mão de quem regista',
+         'auth.php', "function emailAtual(): ?string       { return \$_SESSION['email'] ?? null; }"],
+        ['No painel dos noivos, o email vem dentro do campo «Quem»',
+         'index.php', 'function quemAoCerto(r){'],
+        ['Na auditoria da casa, vem na própria tabela e dá para procurar por ele',
+         'api.php', "\$cond[] = '(r.utilizador LIKE ? OR r.email LIKE ? OR r.alvo LIKE ? OR r.detalhe LIKE ? OR r.accao LIKE ?)';"],
+
         // ---- O tema volta às páginas do serviço ----
         ['A pastilha do tema só se recolhe onde há gaveta que a receba',
          'assets/estilo.css', 'body.tem-gaveta .tema-fab{ display:none; }'],

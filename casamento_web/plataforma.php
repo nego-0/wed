@@ -971,6 +971,11 @@ $CAS = $aberto > 0 ? casalInfo(defsAtuais($conn))
       #aud-tabela td{ padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
       #aud-tabela .a-accao{ font-weight:600; color:var(--gold-texto); }
       #aud-tabela .a-quando{ white-space:nowrap; color:var(--ink-fraco); }
+      /* O email por baixo do nome: é ele que identifica a pessoa, mas quem
+         percorre a coluna procura o nome. Segunda linha, discreto, e
+         monoespaçado porque é um endereço que se compara letra a letra. */
+      #aud-tabela .a-email{ display:block; font-family:ui-monospace,Menlo,Consolas,monospace;
+        font-size:var(--t-etiqueta); color:var(--ink-fraco); overflow-wrap:anywhere; }
       /* Cada linha abre: é preciso que se veja que se pode carregar nela. */
       #aud-tabela .a-linha{ cursor:pointer; }
       #aud-tabela .a-linha:hover td{ background:var(--cream); }
@@ -2380,8 +2385,14 @@ function pintarAuditoria(){
   const linhas = AUD_ROWS.map((r, i) => {
     const cas = +r.casamento_id === 0 ? '<i>Plataforma</i>'
               : (r.casamento ? esc(r.casamento) : ('#' + r.casamento_id));
+    // Aqui o email vai na TABELA e não só no detalhe: esta página existe para
+    // responder a «quem foi», e o nome sozinho não responde — muda, repete-se,
+    // e é escolhido pela própria pessoa. Na linha fechada fica em segunda
+    // linha, pequeno, para não roubar a leitura ao nome.
+    const email = (r.email || '').trim();
     const quem = esc(r.utilizador || '—')
-      + (r.papel ? ' <small style="color:var(--ink-fraco)">(' + esc(r.papel) + ')</small>' : '');
+      + (r.papel ? ' <small style="color:var(--ink-fraco)">(' + esc(r.papel) + ')</small>' : '')
+      + (email ? '<span class="a-email">' + esc(email) + '</span>' : '');
     const resumo = [r.alvo, r.detalhe].filter(Boolean).map(esc).join(' · ');
     const campo = (rot, val) => val ? `<dt>${rot}</dt><dd>${val}</dd>` : '';
     return `<tr class="a-linha" onclick="audAbrir(${i})" tabindex="0"
@@ -2396,6 +2407,9 @@ function pintarAuditoria(){
       <tr class="a-detalhe" id="aud-det-${i}" hidden><td colspan="6"><dl>
         ${campo('Quem', `<b>${esc(r.utilizador || '—')}</b>`
                         + (r.papel ? ` <span style="color:var(--ink-fraco)">(${esc(r.papel)})</span>` : ''))}
+        ${campo('Email', email
+                  ? `<a href="mailto:${esc(email)}"><code>${esc(email)}</code></a>`
+                  : `<span style="color:var(--ink-fraco)">não registado — linha anterior a esta mudança</span>`)}
         ${campo('O que fez', esc(r.frase || r.accao) + ` <code>${esc(r.accao)}</code>`)}
         ${campo('Casamento', cas)}
         ${campo('Sobre', esc(r.alvo))}

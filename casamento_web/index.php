@@ -433,6 +433,13 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .reg-detalhe dd b{ color:var(--ink); }
   .reg-detalhe code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:var(--t-apoio);
                      background:var(--cream); border-radius:5px; padding:.05rem .35rem; color:var(--ink-fraco); }
+  /* O email de quem fez. Monoespaçado porque é um endereço e não uma frase:
+     lê-se carácter a carácter quando se compara com outro. */
+  .reg-email{ display:inline-block; font-family:ui-monospace,Menlo,Consolas,monospace;
+              font-size:var(--t-apoio); overflow-wrap:anywhere; }
+  .reg-email a{ color:var(--gold-texto); text-decoration:none; }
+  .reg-email a:hover{ text-decoration:underline; }
+  .reg-email-vazio{ color:var(--ink-fraco); font-family:inherit; font-style:italic; }
   .vazio-hist{ color:var(--ink-fraco); text-align:center; padding:1.4rem; }
 
   /* O momento de chegada (docs/auditoria-ui-ux.md, EMO-002).
@@ -2346,6 +2353,21 @@ function dataInteira(sql){
     {weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 
+// Quem, ao certo. O nome é para ler de relance; o email é para responder à
+// pergunta a sério — «quem é que apagou isto?» —, e é por isso que aparece na
+// linha ABERTA e não na fechada: lá em cima estorvava a frase, aqui dentro é
+// a única coisa que identifica a pessoa sem margem para dúvida.
+//
+// Em branco quando a linha é anterior a esta mudança e a migração não
+// conseguiu atribuí-la sem adivinhar (dois nomes iguais, uma conta apagada).
+// Diz-se que não se sabe, em vez de se calar: um campo que desaparece parece
+// um esquecimento, e isto foi uma decisão.
+function quemAoCerto(r){
+  const e = (r.email||'').trim();
+  return e ? ` <span class="reg-email"><a href="mailto:${esc(e)}">${esc(e)}</a></span>`
+           : ` <span class="reg-email reg-email-vazio">(email não registado)</span>`;
+}
+
 async function carregarRegisto(mais=false){
   const el=$('hist-registo');
   REG_PAGINA = mais ? REG_PAGINA+1 : 1;
@@ -2379,7 +2401,8 @@ async function carregarRegisto(mais=false){
       </summary>
       <div class="reg-detalhe"><dl>
         ${campo('Quem', `<b>${esc(r.utilizador||'—')}</b>`
-                        + (r.papel?` <span style="color:var(--ink-fraco)">(${esc(r.papel)})</span>`:''))}
+                        + (r.papel?` <span style="color:var(--ink-fraco)">(${esc(r.papel)})</span>`:'')
+                        + quemAoCerto(r))}
         ${campo('O que fez', esc(r.frase||r.accao) + ` <code>${esc(r.accao)}</code>`)}
         ${campo('Sobre', esc(r.alvo))}
         ${campo('Ao certo', esc(r.detalhe))}

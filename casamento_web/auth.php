@@ -33,6 +33,12 @@ if (session_status() === PHP_SESSION_NONE) {
 function papel(): ?string            { return $_SESSION['papel'] ?? null; }
 function utilizadorAtual(): ?string  { return $_SESSION['utilizador'] ?? null; }
 function utilizadorId(): int         { return (int)($_SESSION['utilizador_id'] ?? 0); }
+// O email de quem está a trabalhar. Não serve para entrar nem para decidir
+// nada: serve para o registo de ações poder dizer QUEM ao certo. O nome é
+// escolhido pela pessoa, muda quando lhe apetece e repete-se — duas «Ana
+// Silva» na mesma casa são duas linhas de histórico que ninguém distingue.
+// O email é a chave da conta e é único, e é por ele que se lhe pergunta.
+function emailAtual(): ?string       { return $_SESSION['email'] ?? null; }
 function ehAdmin(): bool             { return papel() === 'admin'; }
 function podeEntrar(): bool          { return in_array(papel(), ['admin', 'porteiro'], true); }
 // O bar tem dois postos, e são trabalhos diferentes: quem decide à copa e quem
@@ -600,6 +606,7 @@ function autenticar(string $utilizador, string $senha): ?string {
     session_regenerate_id(true);
     $_SESSION['utilizador_id']    = (int)$u['id'];
     $_SESSION['utilizador']       = $u['nome'] ?: $u['email'];
+    $_SESSION['email']            = (string)$u['email'];
     $_SESSION['papel_plataforma'] = $u['papel_plataforma'] ?: null;
 
     @$conn->query("UPDATE {$P}utilizadores SET ultimo_acesso = NOW() WHERE id = " . (int)$u['id']);

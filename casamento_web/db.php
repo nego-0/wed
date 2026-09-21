@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 46;
+const ESQUEMA_VERSAO = 47;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2302,6 +2302,40 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                   "ENUM('copo','garrafa') NOT NULL DEFAULT 'copo'");
     }
 
+    // v47 — o registo de ações diz QUEM ao certo.
+    //
+    // A coluna «utilizador» guarda o NOME, e o nome não identifica ninguém: a
+    // pessoa escolhe-o, muda-o quando quer, e duas contas podem ter o mesmo.
+    // Quem lê o histórico à procura de um responsável — «quem é que apagou
+    // este convite?» — encontrava «Ana», e ficava na mesma. O email é a chave
+    // da conta, é único, e é por ele que se lhe chega.
+    //
+    // Guarda-se o email da altura, e não uma ligação à conta: o registo é um
+    // documento do que aconteceu naquele dia. Se a conta mudar de email, ou
+    // for apagada, a linha continua a dizer quem foi — que é a única coisa que
+    // se lhe pede.
+    if ($versaoAtual < 47) {
+        migColuna($conn, "{$P}registo", 'email', "VARCHAR(190) DEFAULT NULL");
+        migIndice($conn, "{$P}registo", 'idx_reg_email', 'email');
+        // O que já lá está fica com o email que se lhe conseguir descobrir. O
+        // nome guardado foi `nome ?: email`, pelo que se procura pelos dois; e
+        // só se aceita quando dá UMA conta e uma só — com duas «Ana Silva» não
+        // há maneira honesta de escolher, e inventar era pior do que deixar em
+        // branco. O que ficar vazio lê-se como «não se sabe», que é a verdade.
+        @$conn->query("UPDATE {$P}registo r
+                          JOIN (SELECT LOWER(TRIM(nome)) AS chave, MIN(email) AS email
+                                  FROM {$P}utilizadores
+                                 WHERE nome IS NOT NULL AND TRIM(nome) <> ''
+                                 GROUP BY LOWER(TRIM(nome)) HAVING COUNT(*) = 1) u
+                            ON u.chave = LOWER(TRIM(r.utilizador))
+                         SET r.email = u.email
+                       WHERE r.email IS NULL");
+        @$conn->query("UPDATE {$P}registo r
+                          JOIN {$P}utilizadores u ON LOWER(u.email) = LOWER(TRIM(r.utilizador))
+                         SET r.email = u.email
+                       WHERE r.email IS NULL");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2425,13 +2459,18 @@ function registar(mysqli $conn, string $accao, string $alvo = '', string $detalh
     global $P;
     $u = function_exists('utilizadorAtual') ? (utilizadorAtual() ?? '') : '';
     $p = function_exists('papel') ? (papel() ?? '') : '';
+    // O nome diz como a pessoa se chama; o email diz QUEM É. Guardam-se os
+    // dois: o nome porque é o que se lê de relance numa linha de histórico, e
+    // o email porque é o que responde quando a pergunta é a sério.
+    $e = function_exists('emailAtual') ? (emailAtual() ?? '') : '';
     $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
     $cid = $casamentoId !== null ? max(0, $casamentoId) : casamentoAtual();
-    $st = @$conn->prepare("INSERT INTO {$P}registo (casamento_id,utilizador,papel,accao,alvo,detalhe,ip)
-                           VALUES (" . $cid . ",?,?,?,?,?,?)");
+    $st = @$conn->prepare("INSERT INTO {$P}registo (casamento_id,utilizador,email,papel,accao,alvo,detalhe,ip)
+                           VALUES (" . $cid . ",?,?,?,?,?,?,?)");
     if (!$st) return;
     $alvo = substr($alvo, 0, 120); $detalhe = substr($detalhe, 0, 255);
-    $st->bind_param('ssssss', $u, $p, $accao, $alvo, $detalhe, $ip);
+    $e = substr($e, 0, 190);
+    $st->bind_param('sssssss', $u, $e, $p, $accao, $alvo, $detalhe, $ip);
     @$st->execute();
 }
 

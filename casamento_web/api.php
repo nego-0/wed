@@ -7848,6 +7848,9 @@ function registoLinha(array $x): array {
     return [
         'id'         => isset($x['id']) ? (int)$x['id'] : 0,
         'utilizador' => (string)($x['utilizador'] ?? ''),
+        // Quem ao certo. Vem vazio nas linhas antigas que a migração não
+        // conseguiu atribuir sem adivinhar — e vazio, aí, é a resposta certa.
+        'email'      => (string)($x['email'] ?? ''),
         'papel'      => (string)($x['papel'] ?? ''),
         'accao'      => (string)$x['accao'],
         'frase'      => $frase,
@@ -7865,7 +7868,7 @@ if ($acao === 'registo_lista') {
     $porPag = max(10, min(500, (int)($_GET['por_pagina'] ?? 100)));
     $pagina = max(1, (int)($_GET['pagina'] ?? 1));
     $total  = (int)(@$conn->query("SELECT COUNT(*) FROM {$P}registo WHERE " . doCasamento() . "")?->fetch_row()[0] ?? 0);
-    $r = $conn->query("SELECT id, utilizador, papel, accao, alvo, detalhe, ip, criado_em
+    $r = $conn->query("SELECT id, utilizador, email, papel, accao, alvo, detalhe, ip, criado_em
                        FROM {$P}registo WHERE " . doCasamento() . " ORDER BY id DESC
                        LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag));
     $linhas = [];
@@ -7892,8 +7895,10 @@ if ($acao === 'registo_auditoria') {
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['ate'] ?? ''))) { $cond[] = 'r.criado_em <= ?'; $par[] = $_GET['ate'] . ' 23:59:59'; $tipos .= 's'; }
     $q = trim((string)($_GET['q'] ?? ''));
     if ($q !== '') {
-        $cond[] = '(r.utilizador LIKE ? OR r.alvo LIKE ? OR r.detalhe LIKE ? OR r.accao LIKE ?)';
-        $like = '%' . $q . '%'; array_push($par, $like, $like, $like, $like); $tipos .= 'ssss';
+        // Procurar pelo EMAIL é a maneira exacta de seguir uma pessoa por todo
+        // o registo — a que não falha por ela ter mudado o nome pelo meio.
+        $cond[] = '(r.utilizador LIKE ? OR r.email LIKE ? OR r.alvo LIKE ? OR r.detalhe LIKE ? OR r.accao LIKE ?)';
+        $like = '%' . $q . '%'; array_push($par, $like, $like, $like, $like, $like); $tipos .= 'sssss';
     }
     $where = implode(' AND ', $cond);
 
@@ -7903,7 +7908,7 @@ if ($acao === 'registo_auditoria') {
         if ($par) $stc->bind_param($tipos, ...$par);
         $stc->execute(); $total = (int)$stc->get_result()->fetch_row()[0];
 
-        $sql = "SELECT r.id, r.casamento_id, c.nome AS casamento, r.utilizador, r.papel,
+        $sql = "SELECT r.id, r.casamento_id, c.nome AS casamento, r.utilizador, r.email, r.papel,
                        r.accao, r.alvo, r.detalhe, r.ip, r.criado_em
                 FROM {$P}registo r LEFT JOIN {$P}casamentos c ON c.id = r.casamento_id
                 WHERE $where ORDER BY r.id DESC LIMIT $porPag OFFSET " . (($pagina - 1) * $porPag);
