@@ -1072,8 +1072,33 @@ function correcoesEsperadas(): array {
          'api.php', "if (\$acao === 'painel_progresso') {"],
         ['E só os que a licença abre — uma barra do que não se usa é uma montra',
          'index.php', 'async function carregarTiraModulos(){'],
-        ['Os rótulos da tira são curtos: um rótulo cortado não é um rótulo',
-         'index.php', '.tm-rot{ display:block; font-size:var(--t-etiqueta);'],
+
+        // ---- Um número, um sítio (o painel deixa de se contradizer) ----
+        // Havia DUAS tiras de cartões, e quatro rótulos apareciam nas duas com
+        // números diferentes: «Confirmados 0» em cima e «Confirmações 16 de
+        // 19» em baixo, «Impressos 7» e «Impressos 5 de 13». Os números até
+        // estavam certos — contavam unidades diferentes —, mas nenhum dizia
+        // qual, e o mesmo rótulo duas vezes no mesmo ecrã lê-se como erro.
+        ['Cada número do painel vive num cartão só, e a linha de baixo diz o que conta',
+         'index.php', 'function subProg(chave, nome){'],
+        ['O cartão leva à página dona do número, sem deixar de filtrar a lista',
+         'index.php', '.stat-cx{ position:relative; display:grid; }'],
+        ['E a seta do canto vê-se: a 2,2:1 era um comando invisível',
+         'index.php', '  .stat-ir:hover{ background:var(--cream); color:var(--gold-texto); }'],
+        ['Os cartões à vista escolhem-se sem abrir os «Mais filtros»',
+         'index.php', 'function moverCartao(chave, d){'],
+        ['E a escolha é de cada casamento, e aguenta o recarregar',
+         'index.php', "function chaveOrdem(){ return 'painel.cartoes.' + (window.CASAMENTO_ID || 0); }"],
+
+        // ---- As pessoas confirmadas contam-se mesmo (os números certos) ----
+        ['Marcar a presença à mão escreve a conta dos lugares, e não só o estado',
+         'api.php', "\$conta = \$estado === 'confirmado' ? 'lugares'"],
+        ['Um convite confirmado vale os lugares que tem, mesmo sem nomes escritos',
+         'db.php', "WHEN rsvp_estado='confirmado' THEN COALESCE(NULLIF(rsvp_confirmados,0), lugares)"],
+        ['Quem já estava marcado à mão foi acertado',
+         'db.php', '    if ($versaoAtual < 45) {'],
+        ['Sentar o convite inteiro conta como sentar — é o caminho normal da planta',
+         'api.php', "WHEN c.mesa_id IS NOT NULL THEN \$lugConf"],
 
         // ---- Cada separador com endereço próprio (DENS-001) ----
         ['Os separadores do bar têm endereço próprio, e o «voltar» recua um',

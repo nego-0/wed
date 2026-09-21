@@ -6344,12 +6344,32 @@ if ($acao === 'painel_progresso') {
               'feito' => (int)$comResposta, 'total' => (int)$totalConv, 'unidade' => 'convites',
               'vazio' => 'sem convites', 'dica' => 'Ainda não há convites na lista.', 'onde' => 'index.php'];
 
+    // Quantos LUGARES estão confirmados, contados como o painel os conta: um
+    // convite confirmado vale os lugares que tem, mesmo que ninguém tenha
+    // escrito os nomes das pessoas. Contar linhas da tabela de convidados —
+    // que é o que aqui se fazia — dava zero a quem gere a festa por convites,
+    // e «sem confirmados» num casamento com vinte confirmações.
+    $lugConf = "CASE WHEN c.rsvp_estado='confirmado' THEN COALESCE(NULLIF(c.rsvp_confirmados,0), c.lugares)
+                     WHEN c.rsvp_estado='parcial'    THEN COALESCE(c.rsvp_confirmados,0) END";
+
     if ($tem('mesas')) {
         // Sentar é o trabalho da planta, e só se pode sentar quem vem.
+        //
+        // Senta-se de duas maneiras: o convite INTEIRO numa mesa
+        // (convites.mesa_id) ou cada pessoa na sua (convidados.mesa_id). Esta
+        // conta só olhava para a segunda, por isso quem sentava famílias
+        // inteiras — que é o caminho normal da planta — via a barra parada em
+        // zero por mais mesas que enchesse.
         [$sentados, $aVir] = $um(
-            "SELECT SUM(g.mesa_id IS NOT NULL), COUNT(*)
-             FROM {$P}convidados g JOIN {$P}convites c ON c.id = g.convite_id
-             WHERE " . doCasamento('g') . " AND g.rsvp='confirmado'");
+            "SELECT COALESCE(SUM(CASE
+                        WHEN c.rsvp_estado NOT IN ('confirmado','parcial') THEN 0
+                        WHEN c.mesa_id IS NOT NULL THEN $lugConf
+                        ELSE (SELECT COUNT(*) FROM {$P}convidados g
+                              WHERE g.convite_id = c.id AND g.mesa_id IS NOT NULL
+                                AND g.rsvp = 'confirmado')
+                     END),0),
+                    COALESCE(SUM($lugConf),0)
+             FROM {$P}convites c WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c'));
         $out[] = ['chave' => 'mesas', 'ico' => 'mesa', 'rotulo' => 'Sentados',
                   'feito' => (int)$sentados, 'total' => (int)$aVir, 'unidade' => 'pessoas',
                   'vazio' => 'sem confirmados', 'dica' => 'Ainda ninguém confirmou: sentar vem depois.', 'onde' => 'mesas.php'];
@@ -6394,9 +6414,13 @@ if ($acao === 'painel_progresso') {
                   'vazio' => 'carta vazia', 'dica' => 'A carta do bar ainda está vazia.', 'onde' => 'bebidas.php'];
     }
     if ($tem('porta')) {
+        // A entrada regista-se no CONVITE (checkin_presentes), que é o que o
+        // porteiro marca à porta — daí vir daqui e não das linhas de pessoas,
+        // que num casamento gerido por convites estão vazias. É a mesma coluna
+        // de que o painel já tirava os «presentes».
         [$presentes, $confirmados] = $um(
-            "SELECT SUM(g.presente=1), SUM(g.rsvp='confirmado')
-             FROM {$P}convidados g WHERE " . doCasamento('g'));
+            "SELECT COALESCE(SUM(c.checkin_presentes),0), COALESCE(SUM($lugConf),0)
+             FROM {$P}convites c WHERE " . doCasamento('c') . " AND " . soVivos($conn, 'c'));
         $out[] = ['chave' => 'porta', 'ico' => 'porta', 'rotulo' => 'Entradas',
                   'feito' => (int)$presentes, 'total' => (int)$confirmados, 'unidade' => 'pessoas',
                   'vazio' => 'sem confirmados', 'dica' => 'Ainda ninguém confirmou presença.', 'onde' => 'porteiro.php'];
@@ -7892,7 +7916,17 @@ if ($acao === 'convite_rsvp_manual') {
     exigirModuloApi('convidados');
     $id=(int)($_GET['id']??0); $estado=$_GET['estado']??'';
     if (!in_array($estado,['pendente','confirmado','recusado','parcial'],true)) erro('Estado inválido.');
-    $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_em=$TS WHERE " . doCasamento() . " AND id=?");
+    // O estado e a CONTA de quem vem andam juntos. Mexer só no estado deixava
+    // rsvp_confirmados como estava — e é dele que o painel tira as pessoas
+    // confirmadas. Marcar doze convites à mão dava «Confirmados: 0», com «12
+    // convites» escrito por baixo, no mesmo cartão. O convite_save já fazia
+    // isto bem; era só esta porta que ficava por fechar.
+    $conta = $estado === 'confirmado' ? 'lugares'
+           : ($estado === 'recusado'  ? '0'
+           : ($estado === 'pendente'  ? 'NULL'
+           : 'COALESCE(rsvp_confirmados,1)'));   // parcial: mantém o que já sabia
+    $st=$conn->prepare("UPDATE {$P}convites SET rsvp_estado=?, rsvp_confirmados=$conta, rsvp_em=$TS
+                        WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('si',$estado,$id); $st->execute();
     registar($conn, 'rsvp_manual', '', 'id '.$id.' -> '.$estado);
     ok(['stats'=>estatisticas($conn)]);

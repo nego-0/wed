@@ -141,6 +141,8 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .stat-f .si{ display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%;
     background:var(--cream); color:var(--forest); margin-bottom:.1rem; }
   .stat-f .si svg{ width:18px; height:18px; }
+  .stat-f .si i[data-ico]{ width:18px; height:18px; display:block; }
+  .stat-f .si i[data-ico] svg{ width:100%; height:100%; }
   .stat-f .sn{ font-family:var(--serif); font-size:var(--t-seccao); font-weight:700; color:var(--ink); line-height:1; }
   .stat-f .sl{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); }
   .stat-f.ativo{ border-color:var(--forest); background:var(--forest); }
@@ -152,6 +154,51 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .stats-extra{ display:contents; }
   .btn-stats-mais{ display:none; }
   .esp-stats{ height:0; }   /* respiro entre os cartões e a barra de ações */
+
+  /* O cartão que filtra E tem página: o filtro é o cartão todo, e o canto leva
+     à página. São irmãos, não um dentro do outro — um <a> dentro de um
+     <button> não é HTML válido e o teclado não sabe o que fazer com ele. */
+  .stat-cx{ position:relative; display:grid; }
+  .stat-cx > .stat-f{ width:100%; }
+  /* Discreta, não invisível. Com opacity:.55 media 2,2:1 contra o cartão nos
+     três temas claros — medido nos PIXÉIS PINTADOS, não na folha de estilo —, e
+     3:1 é o mínimo de um comando que se carrega. É a única saída do cartão
+     para a página do número: apagá-la é escondê-la. Fica a --ink-fraco por
+     inteiro, que já é a tinta do secundário, e o tamanho é que a faz discreta. */
+  .stat-ir{ position:absolute; top:.3rem; right:.3rem; width:22px; height:22px;
+    display:flex; align-items:center; justify-content:center; border-radius:7px;
+    color:var(--ink-fraco); transition:.14s; }
+  .stat-ir:hover{ background:var(--cream); color:var(--gold-texto); }
+  .stat-ir i{ width:13px; height:13px; display:block; }
+  .stat-cx > .stat-f.ativo ~ .stat-ir{ color:var(--topo-txt); opacity:.8; }
+  a.stat-f{ text-decoration:none; }
+
+  /* A arrumar: as setas que mexem o cartão de lugar. Só aparecem no modo, para
+     não porem dois alvos em cada cartão no uso normal. */
+  .stat-arr{ position:relative; display:grid; }
+  /* O cartão abre espaço em baixo enquanto se arruma: sem isto as setas
+     assentavam por cima do rótulo e da linha de baixo, e ficava-se a escolher
+     a ordem de cartões cujo nome deixava de se ler. */
+  /* Pelo #stats: a regra do telemóvel repõe `padding` inteiro mais abaixo e
+     levava este fundo à frente. */
+  /* O fundo reservado tem de dar para a ALTURA REAL das setas, que no
+     telemóvel são alvos de 44px e não os 24px que o desenho pedia — medido, e
+     não suposto: com 35px de fundo a linha de baixo do cartão ficava debaixo
+     delas e liam-se cartões sem saber de que números eram. */
+  #stats .stat-arr .stat-f{ padding-bottom:3.6rem; }
+  .stat-setas{ position:absolute; left:0; right:0; bottom:.4rem; display:flex; justify-content:center; gap:.3rem; }
+  .stat-setas button{ width:26px; height:24px; border-radius:7px; border:1px solid var(--line);
+    background:var(--card); color:var(--gold-texto); font-size:var(--t-denso); line-height:1;
+    cursor:pointer; font-family:inherit; padding:0; }
+  .stat-setas button:hover{ border-color:var(--gold-soft); }
+  .stats-baixo{ display:flex; gap:.5rem; align-items:center; }
+  .stats-baixo .btn-stats-mais{ flex:1; }
+  .bt-arrumar{ flex:none; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    background:var(--card); border:1px solid var(--line); border-radius:12px; cursor:pointer;
+    color:var(--ink-fraco); transition:.14s; }
+  .bt-arrumar:hover{ border-color:var(--gold-soft); color:var(--gold-texto); }
+  .bt-arrumar.on{ background:var(--gold-pale); border-color:var(--gold-soft); color:var(--gold-texto); }
+  .bt-arrumar i{ width:17px; height:17px; display:block; }
 
   /* Fim da lista: "mostrar mais" e a contagem do que já se vê */
   .btn-mais-lista{ display:flex; flex-direction:column; align-items:center; gap:.15rem; width:100%; margin-top:.4rem;
@@ -394,50 +441,11 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   }
 
   /* Onde vai cada módulo (docs/auditoria-ui-ux.md, UX-010).
-     Um cartão por módulo da licença, com a conta e uma barra fina. Clica-se e
-     vai-se ao sítio onde o trabalho se faz: uma tira que só informa obriga a
-     ir procurar o caminho a seguir. */
-  .tm-grelha{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.6rem; }
-  .tm-cartao{ display:flex; align-items:center; gap:.65rem; text-decoration:none;
-              background:var(--card); border:1px solid var(--line); border-radius:12px;
-              padding:.6rem .8rem; position:relative; overflow:hidden; color:var(--text); }
-  .tm-cartao:hover{ border-color:var(--gold-soft); }
-  .tm-ico{ width:20px; height:20px; flex:none; color:var(--gold); }
-  .tm-ico svg{ width:20px; height:20px; }
-  /* Rótulo em cima, conta em baixo — e ambos numa linha só cada um. A tira
-     chegou a medir 166px no ecrã largo e 296px no telemóvel, o suficiente para
-     empurrar a lista de convites para fora do primeiro ecrã, que é justamente
-     o que ela devia ajudar a não fazer. A culpa não era do empilhamento: eram
-     as frases dos estados vazios («Ainda não há despesas lançadas») a quebrar
-     em três linhas e a esticar a linha inteira da grelha, que cresce toda com
-     o cartão mais alto. A frase ficou curta e a explicação foi para o título. */
-  .tm-txt{ min-width:0; flex:1; }
-  /* Os rótulos são curtos de propósito — «Enviados», e não «Convites
-     enviados». Numa coluna de 172px a 390px, um rótulo de vinte letras ou
-     quebrava em duas linhas (e esticava a linha inteira da grelha, que cresce
-     toda com o cartão mais alto) ou era cortado a meio, e um rótulo cortado
-     não é um rótulo. A frase inteira vive no título. */
-  .tm-rot{ display:block; font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
-           letter-spacing:.06em; color:var(--ink-fraco);
-           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tm-num{ display:block; font-size:var(--t-denso); color:var(--ink);
-           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tm-vazio .tm-num{ color:var(--ink-fraco); }
-  /* A barra é uma linha no fundo do cartão, e não uma caixa a mais: o cartão
-     já é pequeno, e uma barra com moldura roubava-lhe a linha do número. */
-  .tm-barra{ position:absolute; left:0; right:0; bottom:0; height:3px; background:var(--cream); }
-  .tm-barra span{ display:block; height:100%; background:var(--gold); }
-  .tm-feito .tm-barra span{ background:var(--ok); }
-  .tm-mais{ margin-top:.5rem; background:none; border:0; cursor:pointer; font-family:var(--sans);
-            font-size:var(--t-apoio); color:var(--gold-texto); text-decoration:underline;
-            padding:.4rem 0; }
-  /* A 390px, uma coluna de 190px só deixa caber um cartão por linha e a tira
-     ficava com a altura de um ecrã. Duas colunas fixas: a conta é curta e cabe. */
-  @media (max-width:760px){
-    .tm-grelha{ grid-template-columns:1fr 1fr; gap:.5rem; }
-    .tm-cartao{ padding:.5rem .6rem; gap:.5rem; }
-    .tm-ico, .tm-ico svg{ width:17px; height:17px; }
-  }
+     Isto era uma tira de cartões só dela (.tm-*), aqui em baixo. Os números
+     dela passaram para os cartões do painel — ver .stat-f e subProg() — porque
+     metade deles já lá estava em cima com outro nome e outro número. Sem tira,
+     as suas cem linhas de folha de estilo deixaram de servir para nada; ficam
+     aqui em nota para quem vier à procura delas pelo nome. */
 
   /* Quem ainda não respondeu (docs/auditoria-ui-ux.md, RSVP-002).
      Quem já foi avisado fica mais apagado e desce na lista: o que se procura
@@ -534,7 +542,16 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 
   <!-- ESTATÍSTICAS -->
   <div class="grelha-stats" id="stats"></div>
-  <button class="btn-stats-mais mb-4" id="stats-mais" onclick="alternarStats()">Mais filtros</button>
+  <div class="stats-baixo mb-4">
+    <button class="btn-stats-mais" id="stats-mais" onclick="alternarStats()">Mais filtros</button>
+    <!-- Discreto de propósito: escolher a ordem dos cartões é coisa que se faz
+         uma vez e não se volta a mexer. Fica FORA do «Mais filtros» porque é
+         precisamente sem abrir os «Mais filtros» que se quer pôr à frente o
+         cartão que se usa todos os dias. -->
+    <button class="bt-arrumar" id="stats-arrumar" onclick="arrumarCartoes()"
+            aria-pressed="false" title="Escolher os cartões à vista">
+      <i data-ico="mover" aria-hidden="true"></i></button>
+  </div>
   <div class="esp-stats mb-4"></div>
 
   <!-- AÇÕES -->
@@ -564,14 +581,25 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
        O painel dizia muito sobre os convidados e nada sobre o resto: quem
        tinha a planta, o orçamento e o bar na licença não tinha em sítio nenhum
        uma resposta à pergunta com que se abre o portátil — «o que falta
-       fazer?». Ia-se a cada página ver.
+       fazer?».
 
-       Fica DEPOIS da barra de ações, e não antes, por uma razão medida: os
-       seus 154px punham a caixa de procura a 892px num ecrã de 844 — fora do
-       primeiro ecrã do telemóvel. A procura é o que se usa todos os dias; a
-       tira é uma consulta de planeamento. O que se usa todos os dias vem
-       primeiro. (A prova é a e2e_mobile.js, que guarda exactamente isto.) -->
-  <div id="tira-modulos" class="mb-4"></div>
+       Isto era uma TIRA à parte, aqui em baixo, com sete cartões seus. O
+       problema é que quatro desses cartões falavam do mesmo que os cartões de
+       cima — «Confirmações» ao lado de «Confirmados», «Impressos» ao lado de
+       «Impressos» — com números diferentes, porque contavam unidades
+       diferentes sem o dizerem. Duas tiras, dois números, um rótulo: lia-se
+       como um erro, e era.
+
+       Agora é tudo a mesma grelha, lá em cima: o progresso de cada módulo é a
+       linha de baixo do cartão que fala da mesma coisa, e os que não tinham
+       cartão nenhum (Sentados, Entradas, Despesas, Bar) passaram a ter um,
+       com o caminho para a sua página. Um número, um sítio.
+
+       Nota de layout que continua a valer: esta grelha vem ANTES da barra de
+       ações, e a tira de baixo tinha 154px que punham a caixa de procura a
+       892px num ecrã de 844. Ao juntar, a conta é outra — os cartões de módulo
+       entram nos «Mais filtros» e não empurram nada. A e2e_mobile.js guarda
+       exactamente isto. -->
   <!-- FILTRO DE MESAS (chips) -->
   <div id="filtro-mesas" class="chips-mesa mb-4"></div>
 
@@ -830,6 +858,7 @@ async function carregar(mais=false){
   if(!d.success){ if(mais) PAGINA--; return toast('Erro ao carregar.', true); }
   CONVITES = mais ? CONVITES.concat(d.convites) : d.convites;
   MESAS=d.mesas; STATS=d.stats||{}; TOTAL=+d.total||CONVITES.length; HA_MAIS=!!d.ha_mais;
+  ULTIMO_STATS = d.stats;
   renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
   tiraDoBar();
 }
@@ -856,13 +885,45 @@ const IC = {
 // Todos os cartões dizem o mesmo: número grande = PESSOAS, linha de baixo = a
 // quantos convites pertencem. Sem esta regra lia-se "6 · 2 convites" ao lado de
 // "0 · convidados" e não se percebia o que cada número contava.
-function statCard(ic,pessoas,convites,l,onclick,ativo,cls='',subHtml='',titulo=''){
-  const p = (+pessoas===1?'1 pessoa':(+pessoas||0)+' pessoas');
-  const c = (+convites===1?'1 convite':(+convites||0)+' convites');
-  const sub = subHtml || c;
-  const tit = titulo || `${l}: ${p} em ${c}`;
-  return `<button class="stat-f ${cls}${ativo?' ativo':''}" onclick="${onclick}" title="${tit}">
-    <span class="si">${ic}</span><span class="sn">${+pessoas||0}</span><span class="sl">${l}</span><span class="ss">${sub}</span></button>`;
+//
+// A linha de baixo passou a dizer a UNIDADE, e é isso que desfaz a contradição
+// que havia no painel: «Impressos 7» aqui em cima e «Impressos 5 de 13» na tira
+// lá de baixo. Os dois números estavam certos — um contava PESSOAS em convites
+// impressos, o outro contava CONVITES impressos dos que são físicos —, mas
+// nenhum dizia a que pergunta respondia, e o mesmo rótulo com dois números no
+// mesmo ecrã lê-se como um erro. Agora cada linha nomeia o que conta.
+//
+// E o cartão passa a poder levar a PÁGINA a que o número pertence. Quem tem
+// «Sentados» quer ir à planta; quem tem «Impressos» quer ir aos impressos. Era
+// para isso que servia a tira de baixo, que deixa de ser precisa.
+function statCard(o){
+  const p = (+o.n===1?'1 pessoa':(+o.n||0)+' pessoas');
+  const tit = o.titulo || `${o.rot}: ${o.sub ? p + ' · ' + String(o.sub).replace(/<[^>]*>/g,'') : p}`;
+  const miolo = `<span class="si">${o.ic}</span><span class="sn">${o.num!=null?o.num:(+o.n||0)}</span>`
+              + `<span class="sl">${o.rot}</span><span class="ss">${o.sub||''}</span>`;
+  const cls = `stat-f ${o.cls||''}${o.ativo?' ativo':''}`;
+  // Sem filtro, o cartão É o link: um destino só, e o cartão inteiro leva lá.
+  if (!o.onclick && o.onde)
+    return `<a class="${cls}" href="${o.onde}" title="${esc(tit)}">${miolo}</a>`;
+  const bt = `<button class="${cls}" onclick="${o.onclick||''}" title="${esc(tit)}">${miolo}</button>`;
+  if (!o.onde) return bt;
+  // Com as duas coisas, o cartão filtra a lista (que é o que se faz sem sair
+  // daqui) e leva um canto discreto para a página dona do número. Dois
+  // elementos irmãos, e não um dentro do outro: um <a> dentro de um <button>
+  // não é HTML, e o teclado tropeça nele.
+  return `<span class="stat-cx">${bt}<a class="stat-ir" href="${o.onde}"
+            title="Abrir ${esc(o.rot)}" aria-label="Abrir ${esc(o.rot)}"
+            onclick="event.stopPropagation()"><i data-ico="direita" aria-hidden="true"></i></a></span>`;
+}
+
+/** «5 de 13 impressos» — a sub-linha que nomeia o que conta. */
+function subProg(chave, nome){
+  const m = (MODULOS_PROG||[]).find(x => x.chave === chave);
+  if (!m) return '';
+  if (m.total <= 0) return esc(m.vazio || '');
+  const f = m.unidade === 'dinheiro' ? fmtKz(m.feito) : m.feito;
+  const t = m.unidade === 'dinheiro' ? fmtKz(m.total) : m.total;
+  return `${f} de ${t} ${esc(nome)}`;
 }
 
 // Sub-linha do cartão de brindes: quantos recebem por género.
@@ -877,40 +938,152 @@ function brindeTitulo(s){
        + (sg?` · ${sg} sem género definido`:'') + ` (${(+s.pes_brinde||0)} no total)`;
 }
 
-// Os quatro primeiros são o essencial; no telemóvel os restantes ficam
-// escondidos atrás de "Mais filtros" para a lista não fugir do ecrã.
+// Quantos cartões ficam à vista antes do «Mais filtros». Os outros escondem-se
+// no telemóvel para a lista não fugir do ecrã.
 const CARTOES_BASE = 4;
+
+// A ordem é do casal, e guarda-se por casamento: quem anda a imprimir quer os
+// «Impressos» à frente; no dia da festa o que interessa é «Entradas». Sem isto,
+// pôr à frente o cartão que se usa obrigava a abrir os «Mais filtros» de cada
+// vez — que é o que o casal pediu para não ter de fazer.
+function chaveOrdem(){ return 'painel.cartoes.' + (window.CASAMENTO_ID || 0); }
+function ordemGuardada(){
+  try { return JSON.parse(localStorage.getItem(chaveOrdem()) || '[]'); } catch (e) { return []; }
+}
+function guardarOrdem(cs){
+  try { localStorage.setItem(chaveOrdem(), JSON.stringify(cs)); } catch (e) {}
+}
+/** Põe os cartões pela ordem escolhida; os que não estão lá ficam atrás. */
+function porOrdem(cartoes){
+  const o = ordemGuardada();
+  if (!o.length) return cartoes;
+  const por = new Map(cartoes.map(c => [c.chave, c]));
+  const out = [];
+  o.forEach(k => { if (por.has(k)) { out.push(por.get(k)); por.delete(k); } });
+  return out.concat([...por.values()]);
+}
+let ARRUMAR = false;
 
 function renderStats(s){
   renderProgresso(s);
   momentoDeChegada(s);
   const e=filtroEstado, t=filtroTipo, l=filtroLado;
   const limpo = !e && !t && !l && !filtroImpresso && !filtroMesa && !filtroGenero && !filtroBrinde && !$('busca').value;
+  const nConv = n => (+n===1 ? '1 convite' : (+n||0) + ' convites');
+
+  // Os números que estavam em DOIS sítios passam a estar num só. A tira de
+  // baixo dizia «Confirmações 16 de 19», «Enviados 5 de 13», «Impressos 5 de
+  // 13» e «Sentados» — e três desses rótulos já cá estavam em cima com outro
+  // número. Cada um foi para a linha de baixo do cartão que fala da mesma
+  // coisa, com a unidade dita, e o cartão ganhou o caminho para a página.
   const cartoes = [
-    statCard(IC.todos, s.lugares, s.convites, 'Todos', "limparFiltros()", limpo),
-    statCard(IC.check, s.pes_confirmados, s.confirmados, 'Confirmados', "filtrarEstado('confirmado')", e==='confirmado','verde'),
-    statCard(IC.relogio, s.pes_pendentes, s.pendentes, 'Pendentes', "filtrarEstado('pendente')", e==='pendente','ouro'),
-    statCard(IC.xis, s.pes_recusados, s.recusados, 'Recusados', "filtrarEstado('recusado')", e==='recusado','rosa'),
-    statCard(IC.telemovel, s.pes_digitais, s.digitais, 'Digitais', "filtrarTipo('digital')", t==='digital'),
-    statCard(IC.envelope, s.pes_fisicos, s.fisicos, 'Físicos', "filtrarTipo('fisico')", t==='fisico'),
-    statCard(IC.impressora, s.pes_impressos, s.impressos, 'Impressos', "filtrarImpresso()", filtroImpresso==='1'),
-    statCard(IC.noivo, s.pes_noivos, s.noivos, 'Noivo', "filtrarLado('noivo')", l==='noivo'),
-    statCard(IC.noiva, s.pes_noivas, s.noivas, 'Noiva', "filtrarLado('noiva')", l==='noiva'),
-    statCard(IC.masculino, s.pes_masculino, s.conv_masculino, 'Masculino', "filtrarGenero('m')", filtroGenero==='m'),
-    statCard(IC.feminino, s.pes_feminino, s.conv_feminino, 'Feminino', "filtrarGenero('f')", filtroGenero==='f','rosa'),
-    statCard(IC.brinde, s.pes_brinde, s.conv_brinde, 'Brindes', "filtrarBrinde()", filtroBrinde==='1','ouro', brindeSub(s), brindeTitulo(s)),
-  ];
+    { chave:'todos', h: statCard({ ic:IC.todos, n:s.lugares, rot:'Todos',
+        sub:nConv(s.convites), onclick:"limparFiltros()", ativo:limpo }) },
+    { chave:'confirmados', h: statCard({ ic:IC.check, n:s.pes_confirmados, rot:'Confirmados',
+        sub:subProg('convidados','responderam') || nConv(s.confirmados),
+        onclick:"filtrarEstado('confirmado')", ativo:e==='confirmado', cls:'verde' }) },
+    { chave:'pendentes', h: statCard({ ic:IC.relogio, n:s.pes_pendentes, rot:'Pendentes',
+        sub:nConv(s.pendentes), onclick:"filtrarEstado('pendente')", ativo:e==='pendente', cls:'ouro' }) },
+    { chave:'recusados', h: statCard({ ic:IC.xis, n:s.pes_recusados, rot:'Recusados',
+        sub:nConv(s.recusados), onclick:"filtrarEstado('recusado')", ativo:e==='recusado', cls:'rosa' }) },
+    { chave:'digitais', h: statCard({ ic:IC.telemovel, n:s.pes_digitais, rot:'Digitais',
+        sub:subProg('digital','enviados') || nConv(s.digitais),
+        onclick:"filtrarTipo('digital')", ativo:t==='digital', onde:temMod('digital')?'digital.php':'' }) },
+    { chave:'fisicos', h: statCard({ ic:IC.envelope, n:s.pes_fisicos, rot:'Físicos',
+        sub:subProg('impresso','impressos') || nConv(s.fisicos),
+        onclick:"filtrarTipo('fisico')", ativo:t==='fisico', onde:temMod('impresso')?'impressos.php':'' }) },
+    { chave:'impressos', h: statCard({ ic:IC.impressora, n:s.pes_impressos, rot:'Impressos',
+        sub:nConv(s.impressos), onclick:"filtrarImpresso()", ativo:filtroImpresso==='1',
+        onde:temMod('impresso')?'impressos.php':'' }) },
+    { chave:'noivo', h: statCard({ ic:IC.noivo, n:s.pes_noivos, rot:'Noivo',
+        sub:nConv(s.noivos), onclick:"filtrarLado('noivo')", ativo:l==='noivo' }) },
+    { chave:'noiva', h: statCard({ ic:IC.noiva, n:s.pes_noivas, rot:'Noiva',
+        sub:nConv(s.noivas), onclick:"filtrarLado('noiva')", ativo:l==='noiva' }) },
+    { chave:'masculino', h: statCard({ ic:IC.masculino, n:s.pes_masculino, rot:'Masculino',
+        sub:nConv(s.conv_masculino), onclick:"filtrarGenero('m')", ativo:filtroGenero==='m' }) },
+    { chave:'feminino', h: statCard({ ic:IC.feminino, n:s.pes_feminino, rot:'Feminino',
+        sub:nConv(s.conv_feminino), onclick:"filtrarGenero('f')", ativo:filtroGenero==='f', cls:'rosa' }) },
+    { chave:'brindes', h: statCard({ ic:IC.brinde, n:s.pes_brinde, rot:'Brindes',
+        sub:brindeSub(s), titulo:brindeTitulo(s), onclick:"filtrarBrinde()",
+        ativo:filtroBrinde==='1', cls:'ouro' }) },
+  ].concat(cartoesDeModulo());
+
   // Um filtro ativo entre os "extra" obriga a mostrá-los: senão o painel diria
-  // que está filtrado sem se ver por quê.
+  // que está filtrado sem se ver por quê. A arrumar, mostram-se todos — não se
+  // escolhe a ordem do que não se vê.
   if (filtroTipo || filtroImpresso || filtroLado || filtroGenero || filtroBrinde) STATS_ABERTO = true;
+  const ord = porOrdem(cartoes);
+  const html = c => ARRUMAR ? envolverArrumar(c) : c.h;
+  const aberto = STATS_ABERTO || ARRUMAR;
   $('stats').innerHTML =
-    cartoes.slice(0, CARTOES_BASE).join('') +
-    `<div class="stats-extra${STATS_ABERTO?' aberto':''}">${cartoes.slice(CARTOES_BASE).join('')}</div>`;
+    ord.slice(0, CARTOES_BASE).map(html).join('') +
+    `<div class="stats-extra${aberto?' aberto':''}">${ord.slice(CARTOES_BASE).map(html).join('')}</div>`;
   $('stats-mais').innerHTML = STATS_ABERTO
     ? 'Menos filtros'
-    : `Mais filtros <span class="conta-extra">${cartoes.length-CARTOES_BASE}</span>`;
+    : `Mais filtros <span class="conta-extra">${ord.length-CARTOES_BASE}</span>`;
+  const bt = $('stats-arrumar');
+  if (bt) { bt.classList.toggle('on', ARRUMAR);
+            bt.setAttribute('aria-pressed', ARRUMAR ? 'true' : 'false');
+            bt.title = ARRUMAR ? 'Terminar de arrumar os cartões' : 'Escolher os cartões à vista'; }
+  ORD_ATUAL = ord.map(c => c.chave);
 }
 let STATS_ABERTO = false;
+let ORD_ATUAL = [];
+
+/** Os cartões cujo número vive noutra página e que aqui não tinham filtro. */
+function cartoesDeModulo(){
+  // O ícone vem do servidor («mesa», «porta», «moeda», «alto») e desenha-se
+  // pelo data-ico, como na tira antiga: o mapa IC daqui só tem os dos filtros.
+  const mapa = [
+    { chave:'mesas',     rot:'Sentados', unidade:'confirmados', onde:'mesas.php' },
+    { chave:'porta',     rot:'Entradas', unidade:'confirmados', onde:'porteiro.php' },
+    { chave:'orcamento', rot:'Despesas', unidade:'pagas',       onde:'orcamento.php' },
+    { chave:'bar',       rot:'Bar',      unidade:'com foto',    onde:'bebidas.php' },
+  ];
+  return mapa.filter(x => temMod(x.chave)).map(x => {
+    const m = MODULOS_PROG.find(y => y.chave === x.chave) || {};
+    const vazio = !(m.total > 0);
+    const num = m.unidade === 'dinheiro' ? fmtKz(m.feito) : (m.feito || 0);
+    return { chave: x.chave, h: statCard({
+      ic: `<i data-ico="${esc(m.ico||'todos')}" aria-hidden="true"></i>`,
+      n: m.feito || 0, num: vazio ? '—' : num, rot: x.rot,
+      sub: vazio ? esc(m.vazio || '') : subProg(x.chave, x.unidade),
+      titulo: vazio ? (m.dica || m.vazio || x.rot) : `${x.rot}: ${m.feito} de ${m.total}`,
+      onde: x.onde }) };
+  });
+}
+function temMod(k){ return (MODULOS_PROG||[]).some(m => m.chave === k); }
+
+/** No modo de arrumar, cada cartão ganha as setas que o mexem de lugar. */
+function envolverArrumar(c){
+  return `<span class="stat-arr">${c.h}
+    <span class="stat-setas">
+      <button type="button" onclick="moverCartao('${c.chave}',-1)" aria-label="Mover para trás">‹</button>
+      <button type="button" onclick="moverCartao('${c.chave}',1)" aria-label="Mover para a frente">›</button>
+    </span></span>`;
+}
+function moverCartao(chave, d){
+  const o = ORD_ATUAL.slice();
+  const i = o.indexOf(chave);
+  const j = i + d;
+  if (i < 0 || j < 0 || j >= o.length) return;
+  o.splice(j, 0, o.splice(i, 1)[0]);
+  guardarOrdem(o);
+  // A nova ordem vale JÁ, e não só quando o próximo desenho acontecer: dois
+  // toques seguidos na mesma seta liam os dois a mesma ordem velha e o cartão
+  // só andava uma casa. E repinta-se do que já está em memória — reordenar
+  // cartões não é razão para ir buscar a lista de convites ao servidor.
+  ORD_ATUAL = o;
+  if (ULTIMO_STATS) renderStats(ULTIMO_STATS); else carregar();
+}
+function arrumarCartoes(){
+  ARRUMAR = !ARRUMAR;
+  if (ULTIMO_STATS) renderStats(ULTIMO_STATS); else carregar();
+}
+function reporCartoes(){
+  guardarOrdem([]); ARRUMAR = false;
+  if (ULTIMO_STATS) renderStats(ULTIMO_STATS); else carregar();
+}
 
 // ---- O bar, no dia ------------------------------------------
 // Só se mostra com o bar aberto ou com pedidos por decidir: um zero a zero
@@ -1015,8 +1188,9 @@ function renderProgresso(s){
 // Só aparecem os módulos que a licença abre: uma tira com barras de coisas que
 // não se podem usar é uma montra disfarçada de progresso. E ordena-se pelo que
 // FALTA, porque é isso que se vem aqui perguntar — não o que já está feito.
-let TIRA_TODA = false;
-
+// O progresso de cada módulo já não tem tira própria: entra nos CARTÕES, na
+// linha de baixo daquele que fala da mesma coisa (ver statCard e subProg). Isto
+// só vai buscar os números e manda repintar.
 async function carregarTiraModulos(){
   const d = await api('painel_progresso', { silencioso:true });
   if (!d || !d.success) return;
@@ -1024,46 +1198,13 @@ async function carregarTiraModulos(){
     const total = +m.total || 0, feito = +m.feito || 0;
     return Object.assign({}, m, { total, feito, falta: Math.max(0, total - feito),
                                   pct: total > 0 ? Math.round(feito / total * 100) : 0 });
-  }).sort((a, b) => b.falta - a.falta);
-  pintarTiraModulos();
+  });
+  // Os números chegam depois dos cartões já desenhados: sem isto, as linhas de
+  // baixo ficavam a dizer só «N convites» até ao carregamento seguinte.
+  if (ULTIMO_STATS) renderStats(ULTIMO_STATS);
 }
 let MODULOS_PROG = [];
-
-function pintarTiraModulos(){
-  const el = $('tira-modulos');
-  if (!MODULOS_PROG.length){ el.innerHTML = ''; return; }
-  // No telemóvel mostram-se os quatro que mais pedem trabalho: sete cartões
-  // empurravam a lista de convites para fora do primeiro ecrã, e o primeiro
-  // ecrã é o que se vê antes de decidir se vale a pena rolar.
-  const estreito = window.matchMedia('(max-width:760px)').matches;
-  const tecto = (estreito && !TIRA_TODA) ? 4 : MODULOS_PROG.length;
-  const vistos = MODULOS_PROG.slice(0, tecto);
-  const escondidos = MODULOS_PROG.length - vistos.length;
-
-  el.innerHTML = '<div class="tm-grelha">' + vistos.map(m => {
-    // Sem nada contado não se desenha barra nenhuma: uma barra a zero por
-    // cento diria que há trabalho por fazer onde ainda não há trabalho.
-    const vazio = m.total <= 0;
-    const num = m.unidade === 'dinheiro'
-      ? `${fmtKz(m.feito)} de ${fmtKz(m.total)}`
-      : `${m.feito} de ${m.total}`;
-    // O título leva a frase inteira: no cartão ela não cabe sem o esticar, mas
-    // «sem despesas» sozinho não diz o que fazer a seguir.
-    const tit = vazio ? (m.dica || m.vazio) : `${m.rotulo}: ${num} (${m.pct}%)`;
-    return `<a class="tm-cartao${vazio ? ' tm-vazio' : ''}${m.pct >= 100 ? ' tm-feito' : ''}"
-               href="${m.onde}" title="${esc(tit)}">
-      <span class="tm-ico" data-ico="${esc(m.ico)}"></span>
-      <span class="tm-txt">
-        <span class="tm-rot">${esc(m.rotulo)}</span>
-        <span class="tm-num">${vazio ? esc(m.vazio) : num}</span>
-      </span>
-      ${vazio ? '' : `<span class="tm-barra"><span style="width:${m.pct}%"></span></span>`}
-    </a>`;
-  }).join('') + '</div>'
-  + (escondidos > 0
-      ? `<button class="tm-mais" onclick="TIRA_TODA=true;pintarTiraModulos()">Ver os outros ${escondidos}</button>`
-      : '');
-}
+let ULTIMO_STATS = null;
 
 function fmtKz(v){
   return new Intl.NumberFormat('pt-PT', { maximumFractionDigits:0 }).format(v || 0);
@@ -2169,9 +2310,6 @@ async function carregarRegisto(mais=false){
 montarPickers();
 carregar();
 carregarTiraModulos();
-// A tira muda de feitio com a largura: a quatro cartões num telemóvel, inteira
-// num ecrã largo. Rodar o aparelho sem isto deixava-a com a forma do outro.
-addEventListener('resize', () => pintarTiraModulos(), { passive:true });
 </script>
 </main>
 </body>

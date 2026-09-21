@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 44;
+const ESQUEMA_VERSAO = 45;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2250,6 +2250,25 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                        WHERE r.casamento_id <> 0 AND c.id IS NULL");
     }
 
+    // v45 — os convites confirmados à mão passam a saber quantos vêm.
+    //
+    // Marcar a presença à mão escrevia o estado e deixava rsvp_confirmados
+    // vazio. O painel conta as pessoas por essa coluna, por isso um casal que
+    // tivesse feito as confirmações a partir da lista via «Confirmados: 0» com
+    // «12 convites» escrito por baixo, no mesmo cartão. A porta já está fechada
+    // (convite_rsvp_manual escreve as duas coisas); isto arruma o que passou.
+    //
+    // Só se toca no que está confirmado E sem conta nenhuma: um convite que
+    // respondeu «vão 2 dos 4» está em 'parcial' e fica como está.
+    if ($versaoAtual < 45) {
+        @$conn->query("UPDATE {$P}convites SET rsvp_confirmados = lugares
+                       WHERE rsvp_estado = 'confirmado'
+                         AND (rsvp_confirmados IS NULL OR rsvp_confirmados = 0)");
+        @$conn->query("UPDATE {$P}convites SET rsvp_confirmados = 0
+                       WHERE rsvp_estado = 'recusado' AND rsvp_confirmados IS NOT NULL
+                         AND rsvp_confirmados <> 0");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2733,7 +2752,16 @@ function estatisticas(mysqli $conn): array {
     $c = $linha("SELECT
         COUNT(*)                                              AS convites,
         COALESCE(SUM(lugares),0)                              AS lugares,
-        COALESCE(SUM(rsvp_confirmados),0)                     AS lug_confirm,
+        -- Um convite CONFIRMADO conta as pessoas que tem, mesmo que ninguém
+        -- tenha preenchido a conta dos lugares: rsvp_confirmados é o número
+        -- que o convidado deu ao responder, e fica vazio quando o casal marca
+        -- a presença à mão. Somar a coluna em cru dava «Confirmados: 0» com
+        -- «12 convites» na linha de baixo do mesmo cartão. O porteiro.php já
+        -- lia isto assim (`rsvp_confirmados || lugares`); faltava aqui.
+        COALESCE(SUM(CASE
+            WHEN rsvp_estado='confirmado' THEN COALESCE(NULLIF(rsvp_confirmados,0), lugares)
+            WHEN rsvp_estado='parcial'    THEN COALESCE(rsvp_confirmados,0)
+            END),0)                                           AS lug_confirm,
         SUM(tipo IN ('digital','ambos'))                      AS digitais,
         SUM(tipo IN ('fisico','ambos'))                       AS fisicos,
         SUM(lado IN ('noivo','ambos'))                        AS noivos,
@@ -2784,7 +2812,12 @@ function estatisticas(mysqli $conn): array {
                       : "0 AS brinde, 0 AS conv_brinde, $exprBg";
     $g = $linha("SELECT COUNT(*) AS convidados, $exprG, $exprB,
         SUM(g.rsvp='pendente' AND c.rsvp_estado NOT IN ('pendente','parcial')) AS pend_fora,
-        SUM(g.rsvp='recusado' AND c.rsvp_estado<>'recusado')                   AS rec_fora
+        SUM(g.rsvp='recusado' AND c.rsvp_estado<>'recusado')                   AS rec_fora,
+        -- E o simétrico, que faltava: gente que confirmou dentro de um convite
+        -- que no conjunto não está confirmado. Sem isto, «Confirmados» ficava
+        -- a ser o único dos três estados que não contava as pessoas soltas —
+        -- e a soma dos três cartões não batia com «Todos».
+        SUM(g.rsvp='confirmado' AND c.rsvp_estado NOT IN ('confirmado','parcial')) AS conf_fora
         FROM {$P}convidados g JOIN {$P}convites c ON g.convite_id=c.id WHERE " . doCasamento("c") . " AND $vivos");
 
     $mesas = $linha("SELECT COUNT(*) AS n FROM {$P}mesas WHERE " . doCasamento() . "");
@@ -2813,7 +2846,7 @@ function estatisticas(mysqli $conn): array {
         'pes_brinde_m'  => $n($g,'brinde_m'), 'pes_brinde_f' => $n($g,'brinde_f'),
         'pes_brinde_sg' => $n($g,'brinde_sg'),   // recebem brinde mas sem género definido
     ];
-    $s['pes_confirmados'] = $s['lug_confirm'];
+    $s['pes_confirmados'] = $s['lug_confirm'] + $n($g,'conf_fora');
     // Pessoas por confirmar: lugares dos convites pendentes + lugares por confirmar
     // dos parciais + integrantes pendentes de convites de outro estado (grupos disjuntos).
     $s['pes_pendentes'] = $n($c,'lug_pendentes') + $n($c,'lug_parc_pend') + $n($g,'pend_fora');
