@@ -1235,7 +1235,7 @@ function correcoesEsperadas(): array {
         ['Com a copa fechada ou em pausa não se desenha menu nenhum — só o recado',
          'bebidas.php', 'function barRecado(string $titulo, string $texto, ?array $pal = null,'],
         ['E a pausa conta o que falta e vai buscar o menu sozinha ao chegar a zero',
-         'bebidas.php', 'if(s<=0){location.reload();return;}'],
+         'bebidas.php', 'if (s <= 0) { location.reload(); return; }'],
         ['Sem mesa por dizer, pergunta-se — em vez de pedir às cegas',
          'api.php', "if (!\$mesaId) erro('Diga-nos a que mesa levar"],
 
