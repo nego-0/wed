@@ -106,6 +106,21 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
           const r = el.getBoundingClientRect();
           if (r.width < 4 || r.height < 4) continue;
           if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+          // E ESTÁ MESMO LÁ. Um elemento dentro de um contentor que rola
+          // (a planta do salão é `overflow:auto` com 56vh de altura) continua
+          // a devolver um rectângulo com ar de estar no ecrã mesmo depois de
+          // ter saído dele por baixo — está é RECORTADO, e os píxeis naquele
+          // sítio são de outra coisa qualquer.
+          //
+          // A prova lia esses píxeis e comparava-os com a tinta de um texto
+          // que ninguém vê: acusava 1.8:1 numa mesa que na planta se lê a 8:1,
+          // porque media a tinta de papel dela contra o fundo escuro da página
+          // por baixo do canvas. Pergunta-se ao browser o que está DE FACTO
+          // pintado no meio do rectângulo, que é a única resposta honesta.
+          const cx = Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2));
+          const cy = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
+          const emCima = document.elementFromPoint(cx, cy);
+          if (!emCima || !(el === emCima || el.contains(emCima) || emCima.contains(el))) continue;
           // A TINTA DE UM <text> DE SVG É O `fill`, e não o `color`.
           //
           // Num SVG o `color` é só o valor a que `currentColor` se refere: ele
