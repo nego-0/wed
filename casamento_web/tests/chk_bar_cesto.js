@@ -68,6 +68,20 @@ const marca = 'zzc' + Math.floor(Math.random() * 1e5);
     }
   });
   await ardosiaLimpa();
+  // E as MESAS que uma corrida morta a meio deixou. A limpeza do fim só
+  // corre quando a prova chega ao fim; uma que rebente antes disso deixa a
+  // sua mesa na planta, e as mesas nascem todas no mesmo canto — vinte
+  // corridas depois há uma pilha delas em cima umas das outras, e é outra
+  // prova, noutro ficheiro, que falha a dizer que não há canvas onde pegar.
+  await p.evaluate(async pre => {
+    const post = (a, c) => fetch('api.php?action=' + a, { method: 'POST',
+      headers: { 'X-CSRF-Token': window.CSRF, 'Content-Type': 'application/json' },
+      body: JSON.stringify(c) }).then(r => r.json());
+    const d = await (await fetch('api.php?action=mesa_list')).json();
+    for (const m of (d.mesas || [])) {
+      if (String(m.nome).startsWith(pre)) await post('mesa_apagar', { id: +m.id });
+    }
+  }, 'ZZC ');
 
   // Duas bebidas: uma ao copo e uma das duas maneiras, para o cesto ter
   // chaves das duas formas («id:copo» e «id:garrafa») — que é onde o defeito
