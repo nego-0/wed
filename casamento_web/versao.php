@@ -1382,6 +1382,10 @@ function correcoesEsperadas(): array {
          'assets/mesa-icone.css', '.mesa-ico.f-noivos .mi-n{ fill:var(--sobre-gold); }'],
         ['E a marca de «Escondida» troca a tinta pelo enchimento, que era o que estava trocado',
          'assets/bar.css', '.b-marca.oculta{ background:var(--forest); color:var(--topo-txt); }'],
+        ['O véu de «escondida» fica na fotografia, e não na etiqueta que o explica',
+         'assets/bar.css', '.b-cart.oculta .capa .b-chapa{ filter:grayscale(.6); opacity:.75; }'],
+        ['A varredura de contraste mede só a parte do elemento que está à vista',
+         'tests/chk_temas_contraste.js', 'cx0 = Math.max(cx0, qr.left);'],
     ];
 }
 

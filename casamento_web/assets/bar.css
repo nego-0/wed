@@ -826,7 +826,18 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
 
 .b-cart .acs{ display:flex; gap:.35rem; margin-top:.7rem; }
 .b-cart .acs .fim{ margin-left:auto; }
-.b-cart.oculta .capa{ filter:grayscale(.6); opacity:.75; }
+/* Uma bebida escondida mostra-se desbotada: é o sinal de que saiu do menu, e
+   lê-se antes de qualquer palavra. Mas o desbotamento é para a FOTOGRAFIA, e
+   estava a ser dado à capa inteira — e dentro da capa está a etiqueta que diz
+   «ESCONDIDA». A única coisa que ali explica o efeito era a que o efeito
+   apagava: o verde da etiqueta chegava ao ecrã cinzento-claro (o `grayscale`
+   tira-lhe a cor, o `opacity` mistura-a com a fotografia por baixo) e a tinta
+   sobre ele caía a 4:1, abaixo do que se lê a 11px.
+
+   O véu fica na fotografia e na chapa. A etiqueta e a gota do álcool ficam
+   nítidas, que é o que uma etiqueta tem de ser. */
+.b-cart.oculta .capa img,
+.b-cart.oculta .capa .b-chapa{ filter:grayscale(.6); opacity:.75; }
 
 /* ============================================================
    AS GAVETAS, E O SELECTOR DE COR

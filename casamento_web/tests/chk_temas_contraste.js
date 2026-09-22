@@ -111,21 +111,36 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
           const r = el.getBoundingClientRect();
           if (r.width < 4 || r.height < 4) continue;
           if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
-          // E ESTÁ MESMO LÁ. Um elemento dentro de um contentor que rola
-          // (a planta do salão é `overflow:auto` com 56vh de altura) continua
-          // a devolver um rectângulo com ar de estar no ecrã mesmo depois de
-          // ter saído dele por baixo — está é RECORTADO, e os píxeis naquele
-          // sítio são de outra coisa qualquer.
+          // SÓ SE MEDE O QUE SE VÊ.
           //
-          // A prova lia esses píxeis e comparava-os com a tinta de um texto
-          // que ninguém vê: acusava 1.8:1 numa mesa que na planta se lê a 8:1,
-          // porque media a tinta de papel dela contra o fundo escuro da página
-          // por baixo do canvas. Pergunta-se ao browser o que está DE FACTO
-          // pintado no meio do rectângulo, que é a única resposta honesta.
-          const cx = Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2));
-          const cy = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
-          const emCima = document.elementFromPoint(cx, cy);
-          if (!emCima || !(el === emCima || el.contains(emCima) || emCima.contains(el))) continue;
+          // Um elemento dentro de um contentor que corta o que sai dele — a
+          // planta do salão é `overflow:auto` — devolve o rectângulo INTEIRO,
+          // inclusive a parte que ficou de fora. Uma mesa encostada à margem
+          // esquerda do canvas tem metade do número em cima do papel claro e
+          // metade em cima do fundo escuro da página.
+          //
+          // A amostragem apanhava as duas metades e a cor de fundo que saía
+          // era a de fora: acusava 1.8:1 numa etiqueta que, onde de facto se
+          // vê, se lê a 8:1. Não é a mesa que está errada, é a amostra.
+          //
+          // Corta-se o rectângulo pelo de cada antepassado que corte, e mede-se
+          // o que sobrar. Reduzir a amostra é melhor do que saltar o elemento:
+          // a parte visível continua a ser texto que alguém lê, e continua a
+          // ter de se ler bem.
+          let cx0 = r.left, cy0 = r.top, cx1 = r.right, cy1 = r.bottom;
+          for (let q = el.parentElement; q; q = q.parentElement) {
+            const qs = getComputedStyle(q);
+            if (qs.overflowX === 'visible' && qs.overflowY === 'visible') continue;
+            const qr = q.getBoundingClientRect();
+            cx0 = Math.max(cx0, qr.left);  cy0 = Math.max(cy0, qr.top);
+            cx1 = Math.min(cx1, qr.right); cy1 = Math.min(cy1, qr.bottom);
+          }
+          cx0 = Math.max(cx0, 0); cy0 = Math.max(cy0, 0);
+          cx1 = Math.min(cx1, innerWidth); cy1 = Math.min(cy1, innerHeight);
+          // O que sobra tem de dar para medir. Abaixo disto é uma nesga, e uma
+          // nesga não diz nada sobre o que se lê.
+          if (cx1 - cx0 < 4 || cy1 - cy0 < 4) continue;
+          const vis = { left: cx0, top: cy0, width: cx1 - cx0, height: cy1 - cy0 };
           // A TINTA DE UM <text> DE SVG É O `fill`, e não o `color`.
           //
           // Num SVG o `color` é só o valor a que `currentColor` se refere: ele
@@ -143,9 +158,8 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
           const px = parseFloat(cs.fontSize) || 16, peso = parseInt(cs.fontWeight, 10) || 400;
           out.push({ cor: [+m[0], +m[1], +m[2]], px, peso,
             grande: px >= 24 || (px >= 18.66 && peso >= 700),
-            caixa: { x: Math.round(r.left), y: Math.round(r.top),
-                     w: Math.round(Math.min(r.width, innerWidth - r.left)),
-                     h: Math.round(Math.min(r.height, innerHeight - r.top)) },
+            caixa: { x: Math.round(vis.left), y: Math.round(vis.top),
+                     w: Math.round(vis.width), h: Math.round(vis.height) },
             texto: t.slice(0, 34),
             onde: el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
                 + (el.className && typeof el.className === 'string'
