@@ -53,22 +53,34 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
       { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
   }).catch(() => {});
 
-  // A carta do bar abre-se PELA MESA: sem o código dela dá 404, e foi assim
-  // que ela escapou à primeira passagem desta prova.
-  const mesa = await p.evaluate(async () => {
+  // A carta do bar abre-se PELO ENDEREÇO DA FESTA, com a mesa por cima: sem
+  // ele dá o recado de «endereço não serve», e foi assim que ela escapou à
+  // primeira passagem desta prova. O código da mesa é o NOME dela passado a
+  // endereço — era a coluna `bar_token`, que está vazia desde que os códigos
+  // opacos saíram. Lida dessa coluna, esta prova media as cores do RECADO e
+  // não as da carta, e passava a dizer que tinha medido a carta.
+  const bar = await p.evaluate(async () => {
+    const slug = (s) => String(s || '').toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const r = await fetch('api.php?action=mesa_list');
     const d = await r.json().catch(() => null);
-    const m = (d && (d.mesas || [])).find(x => x.bar_token);
-    return m ? m.bar_token : null;
+    const m = (d && (d.mesas || [])).find(x => slug(x.nome));
+    return m ? slug(m.nome) : null;
   });
+  await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
+  await p.waitForTimeout(900);
+  const linkFesta = await p.evaluate(() => window.BAR_LINK_FESTA || '');
+  const mesa = bar && linkFesta
+    ? linkFesta.replace(/^.*\//, '') + '&m=' + encodeURIComponent(bar) : null;
   // manual.php e versao.php faltavam a esta lista, e é por isso que nunca
   // ninguém mediu o que lá está escrito: «todas as páginas» quer dizer todas.
   const PAGINAS = ['index.php', 'mesas.php', 'digital.php', 'impressos.php', 'orcamento.php',
                    'bar.php', 'gestao.php', 'licenca.php', 'modelos.php', 'plataforma.php',
                    'graficas.php', 'cartoes.php', 'copa.php', 'entregas.php', 'porteiro.php',
                    'manual.php', 'versao.php']
-                  .concat(mesa ? ['bebidas.php?m=' + mesa] : []);
-  ok(!!mesa, 'há uma mesa com código de bar, para a carta do convidado entrar na prova');
+                  .concat(mesa ? [mesa] : []);
+  ok(!!mesa, 'há uma mesa com código de bar, para a carta do convidado entrar na prova: '
+     + mesa);
 
   const falhas = [];
   for (const tema of TEMAS) {
@@ -98,7 +110,19 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
           const r = el.getBoundingClientRect();
           if (r.width < 4 || r.height < 4) continue;
           if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
-          const m = cs.color.match(/\d+/g);
+          // A TINTA DE UM <text> DE SVG É O `fill`, e não o `color`.
+          //
+          // Num SVG o `color` é só o valor a que `currentColor` se refere: ele
+          // pode estar em branco e o desenho sair cinzento-escuro, porque o
+          // que pinta é o `fill`. A planta do salão escreve os números das
+          // mesas assim, e esta prova lia-lhes o `color` — herdado do tema,
+          // claro no modo escuro — contra um fundo claro, e acusava 1.08:1
+          // numa etiqueta que na verdade se lê a 8:1. Era um erro de medição,
+          // e do pior género: um alarme falso repetido ensina a ignorar o
+          // alarme.
+          const ehSvg = el.ownerSVGElement || el.tagName === 'svg';
+          const tinta = ehSvg && cs.fill && cs.fill !== 'none' ? cs.fill : cs.color;
+          const m = String(tinta).match(/\d+/g);
           if (!m) continue;
           const px = parseFloat(cs.fontSize) || 16, peso = parseInt(cs.fontWeight, 10) || 400;
           out.push({ cor: [+m[0], +m[1], +m[2]], px, peso,

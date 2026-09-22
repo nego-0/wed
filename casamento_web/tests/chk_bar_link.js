@@ -71,10 +71,15 @@ const RECADO = 'Abrimos as ' + (10 + Math.floor(Math.random() * 8)) + ' e um qua
   ok(!!link, 'o casal tem o link da festa à vista, no Bar › Mesas e códigos');
   // LEGÍVEL, e não um punhado de letras sem vogais. Este endereço vai num
   // convite, num grupo de família, dito ao microfone: quem o vê tem de saber
-  // de que festa é. A data COMPLETA e não só o ano — dois casais com as
-  // mesmas iniciais no mesmo ano não é nada raro, «A & B» é meia lista.
-  ok(link && /\/bebidas-\d{4}-\d{2}-\d{2}-[a-z]+(-\d+)?\.php$/.test(link.valor || ''),
-     'e lê-se: data completa e iniciais dos noivos — ' + (link && link.valor));
+  // de que festa é.
+  //
+  // E CURTO: o ano e as iniciais, `bebidas.php?c=2026-ia`. A data completa
+  // estava lá a precaver um choque que quase nunca acontece — dois casais com
+  // as mesmas iniciais no MESMO ano —, e fazia toda a gente pagar por ele com
+  // oito dígitos a mais. O mês, o dia, a hora ou o local entram só quando o
+  // choque é mesmo real (é o que a prova de unicidade, mais abaixo, mede).
+  ok(link && /\/bebidas\.php\?c=\d{4}-[a-z0-9-]+$/.test(link.valor || ''),
+     'e lê-se: o ano e as iniciais dos noivos — ' + (link && link.valor));
   ok(link && link.visivel && link.temBotao, 'com um botão para o copiar');
 
   // ---- e o endereço ABRE ----
@@ -89,7 +94,7 @@ const RECADO = 'Abrimos as ' + (10 + Math.floor(Math.random() * 8)) + ' e um qua
   // Um endereço de outra festa não abre esta. O que garante que ele identifica
   // UMA festa, e não uma qualquer.
   const inventado = await p.evaluate(async u => {
-    const r = await fetch(u.replace(/bebidas-[^.]+\.php/, 'bebidas-2099-01-01-zz.php'));
+    const r = await fetch(u.replace(/\?c=.*$/, '?c=2099-zz'));
     return r.status;
   }, link.valor);
   ok(inventado === 404, 'e um inventado não abre nenhuma: ' + inventado);

@@ -145,8 +145,18 @@ const entrar = async (ctx, user, pass) => {
   await api('casamento_abrir&id=' + casA.id);
   const man = await admin.evaluate(async () => (await fetch('manifest.php')).json());
   console.log('   manifesto:', man.name);
-  ok((man.name || '').includes('AnaMarca' + marca),
-     'o manifesto da aplicação da porta nomeia o casamento aberto');
+  // Os nomes da FICHA, e não os que ficaram escritos no editor do convite.
+  // Esta casa tem os dois: a ficha do casamento («Ana», «Alberto») e o que o
+  // casal escreveu no seu convite («AnaMarca…»). Quem manda é a ficha — é ela
+  // que identifica a FESTA, e é por isso que o ícone instalado no telemóvel
+  // do porteiro diz o nome que a casa usa para falar deste casamento. O
+  // convite continua a mostrar o que o casal lá escreveu, que é dele (a
+  // verificação de convite.php, mais acima, mede exactamente isso).
+  ok((man.name || '').includes('Ana') && (man.name || '').includes('Alberto'),
+     'o manifesto da aplicação da porta nomeia o casamento aberto pela ficha: «'
+     + man.name + '»');
+  ok(!/Bia|Bruno/.test(man.name || ''),
+     'e não o do lado — o manifesto é de uma festa só');
 
   // ---------- limpeza ----------
   await api('casamento_abrir&id=1');

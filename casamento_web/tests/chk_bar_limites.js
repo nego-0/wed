@@ -132,13 +132,25 @@ async function escolherComProcura(p, que, nome) {
 
   // ============ 1. a precedência ============
   //
-  // DUAS CONTAS, e não uma. `pode_pedir` conta DOSES — o stock (que se mede
-  // em copos) e o tecto das regras. `max_itens` conta ARTIGOS — o «máximo por
-  // pedido» da bebida. Estavam somadas no mesmo número com um min(), e isso
-  // tornava a garrafa impossível de pedir: o máximo por pedido nasce em dois
-  // e uma garrafa tem seis doses, pelo que o «+» dela nascia desactivado em
-  // toda a casa. O que esta prova defende continua todo de pé — o que mudou
-  // foi qual dos dois números responde a cada pergunta.
+  // DUAS CONTAS, e não uma, porque são unidades diferentes:
+  //
+  //   `pode_pedir` conta DOSES. É o STOCK, e só ele — mede-se em copos,
+  //               porque é o copo que acaba, e uma garrafa gasta os que leva
+  //               dentro.
+  //   `max_itens` conta ARTIGOS. É o «máximo por pedido» da bebida e o tecto
+  //               das REGRAS. Uma garrafa é uma coisa pedida, ainda que leve
+  //               seis copos lá dentro.
+  //
+  // O tecto da regra vive do lado dos artigos porque é aí que ele já se media:
+  // o consumo que lhe serve de conta é `pi.quantidade` — uma garrafa pedida
+  // conta uma. Medir o gasto em artigos e o tecto em doses era comparar duas
+  // contas diferentes, e falhava exactamente para quem pedia à garrafa: com
+  // «no máximo 2 bebidas», seis doses nunca cabiam em dois e o «+» apagava-se
+  // numa bebida anunciada como «ao copo ou à garrafa».
+  //
+  // O que esta prova defende continua todo de pé — os tectos mordem, a regra
+  // da pessoa manda sobre a geral, e o servidor recusa o que não cabe. O que
+  // mudou foi qual dos dois números responde a cada pergunta.
   const semRegra = await bebida(cA, 'ZZ Whisky');
   ok(semRegra.max_itens === 5, 'sem regras, cabem num pedido as que a bebida deixa: '
      + semRegra.max_itens);
@@ -147,7 +159,12 @@ async function escolherComProcura(p, que, nome) {
 
   await regra({ escopo: 'item', alvo_id: base.ids.whisky, sujeito: 'convidado',
                 unidade: 'bebidas', quantidade: 2, janela_min: 0 });
-  ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 2, 'um tecto geral de 2 por convidado morde');
+  const comTecto = await bebida(cA, 'ZZ Whisky');
+  ok(comTecto.max_itens === 2, 'um tecto geral de 2 por convidado morde: '
+     + comTecto.max_itens);
+  ok(comTecto.pode_pedir === 50,
+     'e morde no sítio certo — o STOCK não se mexeu, que é outra pergunta: '
+     + comTecto.pode_pedir + ' doses');
   const ginComRegra = await bebida(cA, 'ZZ Gin');
   ok(ginComRegra.pode_pedir === 50 && ginComRegra.max_itens === 5,
      'e não toca na bebida do lado: ' + ginComRegra.pode_pedir + ' doses, '
@@ -155,9 +172,9 @@ async function escolherComProcura(p, que, nome) {
 
   await regra({ escopo: 'item', alvo_id: base.ids.whisky, sujeito: 'convidado',
                 alvo_convidado_id: A.id, unidade: 'bebidas', quantidade: 1, janela_min: 0 });
-  ok((await bebida(cA, 'ZZ Whisky')).pode_pedir === 1,
+  ok((await bebida(cA, 'ZZ Whisky')).max_itens === 1,
      'o tecto DESTA pessoa (1) substitui o geral (2) — e não dá 3');
-  ok((await bebida(cB, 'ZZ Whisky')).pode_pedir === 2, 'a pessoa do lado fica com o geral');
+  ok((await bebida(cB, 'ZZ Whisky')).max_itens === 2, 'a pessoa do lado fica com o geral');
 
   // ============ 2. proibir uma gaveta a alguém ============
   await regra({ escopo: 'categoria', alvo_id: base.cats.g1, sujeito: 'convidado',
@@ -177,7 +194,11 @@ async function escolherComProcura(p, que, nome) {
 
   ok((await pedir(cA, base.ids.whisky, 1)).success === true, 'pedir 1 passa');
   const w2 = await bebida(cA, 'ZZ Whisky');
-  ok(w2.pode_pedir === 0 && w2.travao === 'tecto', 'e o tecto fecha-se a seguir');
+  // Gasto o tecto, o veredicto fecha os DOIS números: um tecto esgotado não é
+  // «cabe menos», é «não cabe». É o que põe a bebida a dizer porquê, em vez
+  // de deixar um «+» morto no cartão.
+  ok(w2.pode_pedir === 0 && w2.max_itens === 0 && w2.travao === 'tecto',
+     'e o tecto fecha-se a seguir');
   ok(w2.alternativas.some(x => x.nome === 'ZZ Gin'),
      'com alternativa da mesma gaveta, que passa em todos os testes agora');
 

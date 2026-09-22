@@ -34,7 +34,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `convite.php` | Página pública de confirmação de presença + passe de entrada com QR. |
 | `porteiro.php` | Página do porteiro: leitura de QR por câmara e busca manual. |
 | `bar.php` | **A montagem do bar**, para os noivos: as gavetas do menu, as bebidas com fotografia e stock, e as folhas de QR para pousar em cima das mesas. |
-| `bebidas.php` | **O menu do convidado**, aberto pelo código da mesa (`?m=…`) — sem sessão e sem link no convite. Escolhe-se numa lista de nomes, escolhe a mesa de entrega e pede. Veste as cores do convite do casal. |
+| `bebidas.php` | **O menu do convidado**, aberto pelo endereço da festa (`?c=2026-ia`) — sem sessão e sem link no convite. O código da mesa (`?m=1-alegria`, o nome dela) é opcional e vem por cima: é o que o QR pousado na mesa acrescenta, e quem entra sem ele escolhe a mesa na página. Escolhe-se numa lista de nomes e pede. Veste as cores do convite do casal. |
 | `copa.php` | **O posto do copeiro:** a fila por decidir, aprovar ou recusar com motivo, o stock em tempo real, os números da noite e as **Regras do Bar**. Segue o tema escolhido, como o resto da casa — quem passa a noite no salão escolhe o tema «escuro» no botão flutuante. |
 | `entregas.php` | **O posto do garçom:** apanhar, entregar (é aqui, e só aqui, que o stock real desce), devolver à copa, e os tempos da noite. |
 | `assets/bar.css` | Os três registos do bar: a montagem clara, o escuro dos dois postos, e o menu que veste o convite. |

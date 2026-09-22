@@ -32,13 +32,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 // Os cartões que nascem de um módulo, e a página de cada um.
 //
 // O BAR é o único que não é uma página fixa: leva ao ENDEREÇO desta festa
-// (`bebidas-2026-12-19-ia.php`), que é o link que o casal dá aos convidados.
+// (`bebidas.php?c=2026-ia`), que é o link que o casal dá aos convidados.
 // Apontava para a `bebidas.php` sem endereço nenhum — e essa não é uma
 // página, é o recado a dizer que o endereço não serve. Quem carregasse no
-// cartão do seu próprio bar ia parar a um erro. Por isso aqui vão padrões, e
-// não nomes de ficheiro.
+// cartão do seu próprio bar ia parar a um erro. Por isso o padrão exige o
+// `?c=`: é ele que faz a diferença entre um link e um erro.
 const DOS_MODULOS = { mesas:/mesas\.php/, porta:/porteiro\.php/,
-                      orcamento:/orcamento\.php/, bar:/bebidas[-.]/,
+                      orcamento:/orcamento\.php/, bar:/bebidas\.php\?c=[a-z0-9-]+/,
                       digital:/digital\.php/, impresso:/impressos\.php/ };
 const casa = (destinos, re) => destinos.some(h => re.test(h));
 
@@ -121,7 +121,10 @@ const casa = (destinos, re) => destinos.some(h => re.test(h));
      + (naFesta ? 'é' : 'não é') + ')');
 
   // ---- 2. cada caminho é uma página ----
-  ok(destinos.length > 0 && destinos.every(h => /\.php$/.test(h)),
+  // Uma página, com ou sem endereço atrás: o cartão do bar leva o `?c=` da
+  // festa, sem o qual a bebidas.php não é uma página — é o recado a dizer que
+  // o endereço não serve.
+  ok(destinos.length > 0 && destinos.every(h => /\.php(\?[^#]*)?$/.test(h)),
      'cada caminho leva ao sítio onde o trabalho se faz: ' + destinos.length + ' cartões com página');
 
   // ---- 3. entre os módulos, o que mais falta vem primeiro ----

@@ -2295,19 +2295,20 @@ function barCid(): int {
  * precisa da mesa tem de contar com o null, porque agora ele acontece.
  */
 function barPortaPublica(mysqli $conn): ?array {
-    $token = strtoupper(trim((string)($_GET['m'] ?? (corpo()['m'] ?? ''))));
-    if ($token !== '') {
-        $mesa = barMesaDoToken($conn, $token);
-        if (!$mesa) erro('Este código de mesa não serve. Chame um garçom.');
-        if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
-        return $mesa;
-    }
-    $casa = strtoupper(trim((string)($_GET['c'] ?? (corpo()['c'] ?? ''))));
-    if ($casa !== '' && barCasamentoDoToken($conn, $casa)) {
-        if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
-        return null;
-    }
-    erro('Este código não serve. Chame um garçom.');
+    // A FESTA primeiro: é ela a porta, e é ela que diz em que casa se procura
+    // a mesa. Dois casamentos podem ter, os dois, uma «Mesa 1».
+    $casa = trim((string)($_GET['c'] ?? (corpo()['c'] ?? '')));
+    $doCasa = $casa !== '' ? barCasamentoDoToken($conn, $casa) : null;
+    $mesaTx = trim((string)($_GET['m'] ?? (corpo()['m'] ?? '')));
+    $mesa = $mesaTx !== ''
+          ? barMesaDoToken($conn, $mesaTx, $doCasa ? (int)$doCasa['id'] : 0) : null;
+    if ($doCasa) usarCasamento((int)$doCasa['id']);
+
+    if (!$doCasa && !$mesa) erro('Este endereço não serve. Chame um garçom.');
+    if (!podeModulo('bar')) erro('Este casamento não serve bebidas por aqui.');
+    // Devolve a mesa quando a há; null quando se entrou só pela festa. Quem
+    // chamou isto para guardar a porta pode ignorar o que ela devolve.
+    return $mesa;
 }
 
 // ---- o telemóvel, e a pessoa a que ele pertence -------------
@@ -2719,13 +2720,23 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
     // DUAS CONTAS, e são de unidades diferentes. Misturá-las tornava a garrafa
     // impossível de pedir — e tornava mesmo, sempre, em toda a casa:
     //
-    //   `pode`      conta DOSES. É o stock (que se mede em copos, porque é o
-    //               copo que acaba) e o tecto das regras («duas bebidas de 30
-    //               em 30 minutos»). Uma garrafa de seis gasta seis.
+    //   `pode`      conta DOSES. É o STOCK, e só ele — que se mede em copos,
+    //               porque é o copo que acaba. Uma garrafa de seis gasta seis.
     //
-    //   `max_itens` conta ARTIGOS. É o «máximo por pedido» da bebida — quantas
-    //               desta é que cabem num pedido. Uma garrafa é UMA coisa
-    //               pedida, ainda que leve seis copos lá dentro.
+    //   `max_itens` conta ARTIGOS. É o «máximo por pedido» da bebida E o tecto
+    //               das regras («duas bebidas de 30 em 30 minutos»). Uma
+    //               garrafa é UMA coisa pedida, ainda que leve seis copos lá
+    //               dentro.
+    //
+    // A regra ficou deste lado porque é deste lado que ela já se media: o
+    // consumo que barConsumo() soma é `pi.quantidade`, ou seja ARTIGOS — uma
+    // garrafa pedida conta uma. Medir esse gasto em artigos e o tecto em doses
+    // era comparar duas contas diferentes, e a comparação só falhava para quem
+    // pedia à garrafa: com uma regra tão banal como «no máximo 2 bebidas», seis
+    // doses nunca cabiam em dois, e o «+» da garrafa apagava-se — sem uma
+    // palavra a dizer porquê — numa bebida anunciada como «ao copo ou à
+    // garrafa». O stock continua a defender-se em doses, que é onde a conta das
+    // doses é mesmo verdade.
     //
     // Estavam somadas no mesmo número, com um `min()`. O «máximo por pedido»
     // nasce em 2 e uma garrafa tem 6 doses: seis nunca é menor ou igual a
@@ -2769,7 +2780,8 @@ function barVeredicto(mysqli $conn, array $item, int $convidadoId, int $conviteI
                 'espera_s' => barEspera($l, $c['mais_velho']),
                 'mensagem' => $l['mensagem'] ?: ''];
     }
-    $out['pode'] = min($out['pode'], $sobra);
+    // O tecto da regra é de ARTIGOS, como o consumo que lhe serve de conta.
+    $out['max_itens'] = min($out['max_itens'], $sobra);
     return $out;
 }
 
@@ -2836,13 +2848,19 @@ function barTextoTravao(mysqli $conn, array $item, array $v, int $pedidas = 0,
                         string $quem = ''): string {
     if ($v['mensagem'] !== '') return $v['mensagem'];
     $nome = '«' . $item['nome'] . '»';
+    // QUANTAS SE ACEITAM: o menor dos dois tectos, que são de unidades
+    // diferentes. `pode` são doses (o stock) e `max_itens` são artigos (as
+    // regras). Dizer só o primeiro fazia a frase prometer o que a casa não
+    // servia — «podemos servir-lhe 50» a quem tem uma regra de duas — desde
+    // que o tecto das regras passou a viver do lado dos artigos.
+    $aceites = max(0, min((int)$v['pode'], (int)$v['max_itens']));
     // A situação é o travão; quando cabe alguma coisa mas menos do que se
     // pediu, é o «corte» — que não é travão nenhum, é uma conta.
     $sit = $v['travao'] ?: 'corte';
     $doCasal = barMensagem($conn, $sit, [
         '{BEBIDA}'  => $item['nome'],
         '{PEDIDAS}' => $pedidas,
-        '{ACEITES}' => (int)$v['pode'],
+        '{ACEITES}' => $aceites,
         '{TEMPO}'   => $v['espera_s'] > 0 ? barRelogio((int)$v['espera_s']) : '',
         '{NOME}'    => $quem,
     ]);
@@ -2853,7 +2871,7 @@ function barTextoTravao(mysqli $conn, array $item, array $v, int $pedidas = 0,
     return barTrocarVariaveis(barTextosFabrica()[$sit] ?? '', [
         '{BEBIDA}'  => $item['nome'],
         '{PEDIDAS}' => $pedidas,
-        '{ACEITES}' => (int)$v['pode'],
+        '{ACEITES}' => $aceites,
         '{TEMPO}'   => $v['espera_s'] > 0 ? barRelogio((int)$v['espera_s']) : '',
         '{NOME}'    => $quem,
     ]);
@@ -3064,16 +3082,23 @@ function barTravaoDe(mysqli $conn, int $convidadoId, int $conviteId,
         $item = barItem($conn, (int)$f['li']['item_id']);
         if (!$item) continue;
         $v = barVeredicto($conn, $item, $convidadoId, $conviteId, $ritmo, $excluir);
-        // Em DOSES, como em todo o lado: uma garrafa de seis pesa seis contra
-        // o stock e contra a regra. Sem isto, aprovar duas garrafas media-se
-        // como se fossem dois copos, e a regra que o casal escreveu deixava
-        // passar doze bebidas onde tinha escrito duas.
+        // As duas contas da casa, cada uma na sua unidade — as mesmas que o
+        // telemóvel do convidado fez antes de o pedido entrar na fila. O STOCK
+        // em doses (uma garrafa de seis pesa seis, porque é o copo que acaba);
+        // as REGRAS em artigos (uma garrafa é uma coisa servida, e é assim que
+        // o consumo já vinha somado). Aprovar tinha de fazer as mesmas contas
+        // que pedir, senão a copa recusava à mão o que a página deixou pedir.
         $un = ($f['li']['unidade'] ?? 'copo') === 'garrafa' ? 'garrafa' : 'copo';
         $doses = $un === 'garrafa' ? max(1, (int)($item['doses_garrafa'] ?? 6)) : 1;
         $gasto = (int)$f['q'] * $doses;
         if ($gasto > (int)$v['pode']) {
             return 'As regras do bar não deixam servir isto: '
                  . barTextoTravao($conn, $item, $v, $gasto)
+                 . ' Corte a quantidade, ou levante a regra em «Regras do Bar».';
+        }
+        if ((int)$f['q'] > (int)$v['max_itens']) {
+            return 'As regras do bar não deixam servir isto: '
+                 . barTextoTravao($conn, $item, $v, (int)$f['q'])
                  . ' Corte a quantidade, ou levante a regra em «Regras do Bar».';
         }
     }
@@ -3089,9 +3114,22 @@ function barFilaContraRegras(mysqli $conn): array {
             $item = barItem($conn, $li['item_id']);
             if (!$item) continue;
             $v = barVeredicto($conn, $item, $gid, $conv, $ritmo);
-            if ($li['quantidade'] > $v['pode']) {
+            // As duas contas, cada uma na sua unidade — as mesmas que o pedido
+            // fez para entrar. Os ARTIGOS contra o tecto das regras (uma
+            // garrafa é uma coisa servida) e as DOSES contra o stock (uma
+            // garrafa de seis leva seis copos). Media-se a quantidade, que são
+            // artigos, contra o stock, que são doses: desde que a regra passou
+            // a viver do lado dos artigos, esta linha deixava de assinalar o
+            // que existe para assinalar — uma regra escrita a meio da festa e
+            // uma fila que continuava a parecer em ordem.
+            $doses = ($li['unidade'] ?? 'copo') === 'garrafa'
+                   ? max(1, (int)($item['doses_garrafa'] ?? 6)) : 1;
+            $gasto = (int)$li['quantidade'] * $doses;
+            $quanto = $li['quantidade'] > $v['max_itens'] ? (int)$li['quantidade']
+                    : ($gasto > $v['pode'] ? $gasto : 0);
+            if ($quanto > 0) {
                 $fora[] = ['id' => (int)$p['id'], 'codigo' => $p['codigo_curto'],
-                           'porque' => barTextoTravao($conn, $item, $v, $li['quantidade'])];
+                           'porque' => barTextoTravao($conn, $item, $v, $quanto)];
                 break;
             }
         }
@@ -3617,7 +3655,12 @@ function barItens(mysqli $conn, bool $tudo = false): array {
         // COPOS: por isso «garrafas que ainda dá» é uma divisão, e não o stock.
         $x['servir'] = in_array($x['servir'] ?? 'copo', ['copo','garrafa','ambos'], true)
                      ? $x['servir'] : 'copo';
-        $x['doses_garrafa'] = max(1, (int)($x['doses_garrafa'] ?? 6));
+        // Excepto na bebida que SÓ se serve à garrafa: aí o stock já são
+        // garrafas, e uma garrafa custa uma. O campo não se aplica — anula-se
+        // aqui também, para que um registo antigo com 6 lá dentro não volte a
+        // descontar seis por cada garrafa pedida.
+        $x['doses_garrafa'] = $x['servir'] === 'garrafa'
+            ? 1 : max(1, (int)($x['doses_garrafa'] ?? 6));
         $x['garrafas_possiveis'] = $x['servir'] === 'copo'
             ? 0 : intdiv($x['disponivel'], $x['doses_garrafa']);
         $out[] = $x;
@@ -4117,7 +4160,6 @@ if ($acao === 'bar_mesas') {
     if (podeCopa() || podeEntregar()) { barCid(); }
     else { barPortaPublica($conn); }
     $cid = casamentoAtual();
-    barGarantirTokens($conn, $cid);
     $r = @$conn->query("SELECT id, nome FROM {$P}mesas WHERE casamento_id=$cid
                         ORDER BY (especial='noivos') DESC, nome");
     $out = [];
@@ -4555,7 +4597,15 @@ if ($acao === 'bar_tectos') {
         $v = barVeredicto($conn, $item, (int)$p['convidado_id'], (int)$p['convite_id'],
                           $ritmo, $id);
         $pedidas = (int)$li['quantidade'];
-        $pode = max(0, (int)$v['pode']);
+        // Quantas se podem servir DESTA linha, em ARTIGOS — que é a unidade em
+        // que `pedidas` está, e a unidade em que a copa decide. São dois
+        // tectos: o das regras já vem em artigos; o do stock vem em doses e
+        // divide-se pelo que cada uma leva dentro (uma garrafa de seis gasta
+        // seis copos). Comparar artigos com doses fazia a copa ver «pode 50»
+        // ao lado de «pedidas 2» numa pessoa que tinha o seu tecto gasto.
+        $dosesLi = ($li['unidade'] ?? 'copo') === 'garrafa'
+                 ? max(1, (int)($item['doses_garrafa'] ?? 6)) : 1;
+        $pode = max(0, min((int)$v['max_itens'], intdiv((int)$v['pode'], $dosesLi)));
         $tectos[] = [
             'item_id' => (int)$li['item_id'],
             'nome'    => $li['nome'],
@@ -4861,7 +4911,12 @@ if ($acao === 'bar_item_guardar') {
     // e a garrafa é uma porta que se abre bebida a bebida.
     $serv = in_array($d['servir'] ?? '', ['copo','garrafa','ambos'], true) ? $d['servir'] : 'copo';
     // Quantos copos saem de uma garrafa — só conta para quem serve garrafas.
-    $dose = max(1, min(60, (int)($d['doses_garrafa'] ?? 6)));
+    //
+    // Numa bebida que SÓ se serve à garrafa o campo não tem sentido nenhum: o
+    // stock já está contado em garrafas, não em copos, e uma garrafa custa uma
+    // garrafa. Deixá-lo a 6 fazia cada pedido descontar seis do stock, o que
+    // esgotava a bebida ao fim de nada e travava o «+» ao convidado. Anula-se.
+    $dose = $serv === 'garrafa' ? 1 : max(1, min(60, (int)($d['doses_garrafa'] ?? 6)));
     if ($id) {
         $st = $conn->prepare("UPDATE {$P}bar_itens SET categoria_id=?, nome=?, descricao=?, alcoolico=?,
                               volume_ml=?, max_por_pedido=?, stock_minimo=?, estado=?, ordem=?,
@@ -5008,17 +5063,10 @@ if ($acao === 'bar_motivo_apagar') {
     ok(['motivos' => barMotivos($conn)]);
 }
 
-if ($acao === 'bar_mesa_token') {
-    // Gerar (ou regerar) o código da mesa. Regerar invalida a folha que já
-    // esteja pousada — por isso é um gesto explícito.
-    barCid(); if (!ehAdmin()) erro('Só os noivos.'); exigirCorrecao();
-    $cid = casamentoAtual();
-    $id = (int)(corpo()['mesa_id'] ?? 0);
-    $t = barTokenNovo();
-    $st = $conn->prepare("UPDATE {$P}mesas SET bar_token=? WHERE casamento_id=$cid AND id=?");
-    $st->bind_param('si', $t, $id); @$st->execute();
-    ok(['token' => $t]);
-}
+// A acção `bar_mesa_token` saiu daqui. Gerava (e regerava) um código opaco
+// por mesa, e regerá-lo invalidava a folha pousada em cima dela. A mesa passa
+// a dizer-se pelo NOME — «1 Alegria» é `1-alegria` —, que não se gera nem se
+// regera: muda quando o nome muda, que é exactamente quando deve mudar.
 
 // ---- as regras: quanto, de quem, de quanto em quanto tempo ----
 
@@ -5311,8 +5359,14 @@ if ($acao === 'bar_meu_consumo') {
     $faltas = [];
     $ritmo = barRitmoDaCasa($conn);
     foreach (barItensPara($conn, $eu, (int)$g['convite_id']) as $i) {
-        if ($i['travao'] === null && $i['pode_pedir'] >= $i['max_por_pedido']) continue;
-        $faltas[] = ['nome' => $i['nome'], 'pode' => $i['pode_pedir'],
+        // Quanto ainda CABE é agora a conta dos artigos: é lá que vive o tecto
+        // da regra. Contra `pode_pedir` (que é só o stock) uma pessoa a uma
+        // bebida do seu limite desaparecia desta lista, por haver caixas
+        // cheias na copa — e o que ela queria saber era precisamente que lhe
+        // faltava uma.
+        $cabe = min((int)$i['max_itens'], (int)$i['pode_pedir']);
+        if ($i['travao'] === null && $cabe >= $i['max_por_pedido']) continue;
+        $faltas[] = ['nome' => $i['nome'], 'pode' => $cabe,
                      'travao' => $i['travao'], 'espera_s' => $i['espera_s']];
     }
     ok(['levou'   => barConsumoPessoal($conn, $eu),
@@ -8111,7 +8165,7 @@ if ($acao === 'mesa_save') {
     $rot=((int)round(((int)($d['rotacao'] ?? 0)) / 15) * 15) % 360; if ($rot < 0) $rot += 360;
     if ($nome==='') erro('Nome da mesa obrigatório.');
     if ($id){ $st=$conn->prepare("UPDATE {$P}mesas SET nome=?,capacidade=?,forma=?,cor=?,tamanho=?,rotacao=? WHERE " . doCasamento() . " AND id=?"); $st->bind_param('sisssii',$nome,$cap,$forma,$cor,$tam,$rot,$id); }
-    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho,rotacao,bar_token) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,'" . barTokenNovo() . "')"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$rot); }
+    else    { $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,tamanho,rotacao) VALUES (" . casamentoAtual() . ",?,?,?,?,?,?)"); $st->bind_param('sisssi',$nome,$cap,$forma,$cor,$tam,$rot); }
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;

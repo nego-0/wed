@@ -29,13 +29,12 @@ $DEFS = defsAtuais($conn);
 $CAS  = casalDaFicha($conn);
 $ENDERECO = rtrim(enderecoPublico(), '/');
 $LINK_FESTA = barLinkDaFesta($conn);
-barGarantirTokens($conn);
 
 // Uma mesa só, quando se vem reimprimir a folha de uma que se estragou.
 $soEsta = (int)($_GET['mesa'] ?? 0);
 $onde = $soEsta > 0 ? ' AND id=' . $soEsta : '';
 $mesas = [];
-$r = $conn->query("SELECT id, nome, bar_token FROM {$P}mesas WHERE " . doCasamento() . "$onde
+$r = $conn->query("SELECT id, nome FROM {$P}mesas WHERE " . doCasamento() . "$onde
                    ORDER BY (especial='noivos') DESC, nome");
 if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
 ?>
@@ -92,12 +91,12 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
 <body>
 
 <div class="barra no-print">
-  <p class="dica"><b>Uma folha por mesa</b>, para recortar e pousar. O código de cada
-    mesa faz duas coisas de uma vez: abre o menu e diz onde entregar. Há também o
-    <b>link da festa</b>, no Bar &rsaquo; Mesas e códigos, para quem não esteja sentado —
-    esse abre o menu na mesma e a mesa escolhe-se na página. Não há link no convite,
-    de propósito: um convite é de uma família, e o bar precisa de saber qual das
-    pessoas está a pedir.</p>
+  <p class="dica"><b>Uma folha por mesa</b>, para recortar e pousar. O endereço de cada
+    uma leva o nome da mesa, e por isso faz duas coisas de uma vez: abre o menu e diz
+    onde entregar. Sem folha nenhuma funciona na mesma — o <b>link da festa</b>, no
+    Bar &rsaquo; Mesas e códigos, abre o menu e deixa a mesa à escolha. Não há link no
+    convite, de propósito: um convite é de uma família, e o bar precisa de saber qual
+    das pessoas está a pedir.</p>
   <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
   <a class="btn" href="bar.php">Voltar ao bar</a>
 </div>
@@ -108,9 +107,10 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
 <?php else: ?>
 <div class="folhas">
   <?php foreach ($mesas as $m):
-    // O endereço da festa com o código da mesa por cima: a folha diz de que
-    // casamento é, e o QR continua a poupar o gesto de escolher a mesa.
-    $url = $LINK_FESTA . '?m=' . $m['bar_token']; ?>
+    // O endereço da festa com o NOME da mesa por cima: a folha diz de que
+    // casamento é e de que mesa é, e quem a quiser escrever à mão escreve
+    // duas palavras em vez de dez letras sem vogais.
+    $url = $LINK_FESTA . '&m=' . rawurlencode(barSlugTexto((string)$m['nome'])); ?>
   <div class="cartao">
     <div class="mono"><?= escP($CAS['mono']) ?> · Bar</div>
     <div class="mesa"><?= escP($m['nome']) ?></div>

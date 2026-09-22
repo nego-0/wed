@@ -2,26 +2,26 @@
 // ============================================================
 // bebidas.php — O menu, para quem está na festa
 //
-// Duas portas, e são duas perguntas diferentes:
+// O endereço tem duas partes, e a segunda é opcional:
 //
-//   ?c=CÓDIGO  — o código DA FESTA. Diz de que casamento se trata, e mais
-//                nada. É o link do casal: vai no convite, no grupo da
-//                família, no cartaz à entrada.
+//     bebidas.php?c=2026-ia             — a FESTA. Chega para abrir.
+//     bebidas.php?c=2026-ia&m=1-alegria — e a MESA, para quem leu o QR.
 //
-//   ?m=CÓDIGO  — o código DA MESA, impresso na folha pousada em cima dela.
-//                Diz a mesma coisa que o outro E diz para onde vai a bebida.
+// As duas lêem-se. O `c` é o ano e as iniciais dos noivos — e só desce ao mês,
+// ao dia ou à hora quando duas festas chocam, porque um endereço mais curto é
+// um endereço que se dita ao telefone sem soletrar. O `m` é o nome real da
+// mesa: «1 Alegria» é `1-alegria`, que se reconhece e se escreve à mão.
 //
-// Durante muito tempo houve só o segundo, e isso amarrava duas coisas que não
-// têm de andar juntas. Sem folha em cima da mesa não havia menu nenhum — e há
-// gente de pé no jardim, há quem esteja ao balcão, há a folha que se molha ou
-// vai parar ao bolso de alguém, e há o próprio casal a querer ver a carta.
-// Quem entra pelo código da festa escolhe a mesa na página, como sempre pôde.
+// Houve aqui códigos de dez letras sem vogais, um por mesa, e eram a única
+// porta: sem folha em cima da mesa não havia menu nenhum. Mas há gente de pé
+// no jardim, há quem esteja ao balcão, há a folha que se molha ou vai parar
+// ao bolso de alguém, e há o próprio casal a querer ver a carta.
 //
-// Nenhum dos dois é segredo — quem se senta à mesa lê o da mesa, e o da festa
-// anda no convite. O que impede alguém de pedir em nome de outro é o passo
-// seguinte: a pessoa escolhe-se numa lista pela procura do nome, e o telemóvel
-// fica preso a esse nome (ver docs/modulo-bar.md §5). É honesto dizê-lo: isto
-// trava o engano e o abuso distraído, não um impostor decidido.
+// Nada disto é segredo — está impresso em cima da mesa a noite inteira. O que
+// impede alguém de pedir em nome de outro é o passo seguinte: a pessoa
+// escolhe-se numa lista pela procura do nome, e o telemóvel fica preso a esse
+// nome (ver docs/modulo-bar.md §5). É honesto dizê-lo: isto trava o engano e
+// o abuso distraído, não um impostor decidido.
 //
 // A página veste o convite do casal — as cores e as letras saem das mesmas
 // definições. Um menu com a paleta da casa, no meio da festa deles, seria uma
@@ -136,30 +136,26 @@ function barRecado(string $titulo, string $texto, ?array $pal = null,
 
 // A FESTA é obrigatória; a MESA é opcional.
 //
-// A ordem inverteu-se, e a razão é essa: o endereço da festa é a porta, e o
-// código da mesa é uma comodidade por cima dele. Quem entra pelo QR pousado
-// na mesa traz os dois (`bebidas-2026-12-19-ia.php?m=CÓDIGO`) e poupa um
-// gesto — chega com a mesa já escolhida. Quem entra pelo link escolhe-a na
-// página, que é uma coisa que toda a gente faz de qualquer maneira: mudar de
-// lugar numa festa é a regra, não a excepção.
+//     bebidas.php?c=2026-ia             — a festa, e a mesa escolhe-se dentro
+//     bebidas.php?c=2026-ia&m=1-alegria — e já com a mesa, para quem leu o QR
 //
-// O código da mesa sozinho continua a abrir, porque há folhas impressas com
-// ele e um endereço que deixa de abrir é pior do que um endereço feio.
-$token     = strtoupper(trim((string)($_GET['m'] ?? '')));
+// O `c` chega para abrir, e é isso que o torna o link do casal: vai no
+// convite, no grupo da família, num cartaz à entrada. O `m` é o NOME real da
+// mesa e poupa um gesto a quem aponta a câmara à folha pousada nela — mas é
+// só isso, uma comodidade. Escolher a mesa é uma coisa que toda a gente acaba
+// por fazer: numa festa muda-se de lugar.
 $tokenCasa = trim((string)($_GET['c'] ?? ''));
-$casa      = $tokenCasa !== '' ? barCasamentoDoToken($conn, $tokenCasa) : null;
-$mesa      = $token !== ''     ? barMesaDoToken($conn, $token)          : null;
-// A mesa manda sobre a festa quando as duas vêm: é a mesma casa, e ela traz
-// mais informação. Se a mesa for de OUTRA festa que não a do endereço,
-// ignora-se — a festa é a do endereço, e a folha é que está trocada.
-if ($casa && $mesa && (int)$mesa['casamento_id'] !== (int)$casa['id']) {
-    $mesa = null;
-    usarCasamento((int)$casa['id']);
-}
+$tokenMesa = trim((string)($_GET['m'] ?? ''));
+$casa = $tokenCasa !== '' ? barCasamentoDoToken($conn, $tokenCasa) : null;
+// A mesa procura-se DENTRO da festa que o `c` disser: dois casamentos podem
+// ter, os dois, uma «Mesa 1», e têm de poder.
+$mesa = $tokenMesa !== ''
+      ? barMesaDoToken($conn, $tokenMesa, $casa ? (int)$casa['id'] : 0) : null;
+if ($casa) usarCasamento((int)$casa['id']);
 
-// Sem festa nenhuma não há página: nem sabemos de quem ela é, e portanto nem
-// com que cores pedir desculpa. Fica em português simples, que é tudo o que
-// se pode fazer sem saber de quem é a festa.
+// Sem festa não há página: nem sabemos de quem ela é, e portanto nem com que
+// cores pedir desculpa. Fica em português simples, que é tudo o que se pode
+// fazer sem saber de quem é a festa.
 if ((!$mesa && !$casa) || !podeModulo('bar')) {
     barRecado('Este endereço não serve',
               'Talvez seja de outra festa, ou o bar ainda não esteja montado. '
@@ -381,8 +377,11 @@ window.BAR = {
   // O código da mesa, quando se entrou por uma. Quem entrou pelo link da
   // festa chega aqui sem mesa nenhuma, e escolhe-a na pastilha do topo —
   // que é a mesma escolha que sempre esteve lá para quem se quis mudar.
-  token: <?= json_encode($token) ?>,
-  casa: <?= json_encode($tokenCasa) ?>,
+  token: <?= json_encode($tokenMesa) ?>,
+  // O endereço da FESTA vai sempre, ainda que se tenha entrado pela mesa: é
+  // ele que assina cada pedido, e é ele que diz de que casa se fala. Quando
+  // não veio no endereço, vai-se buscar o canónico.
+  casa: <?= json_encode($tokenCasa !== '' ? $tokenCasa : barSlugGarantir($conn, casamentoAtual())) ?>,
   mesa: <?= $mesa
             ? json_encode(['id' => (int)$mesa['id'], 'nome' => $mesa['nome']], JSON_UNESCAPED_UNICODE)
             : 'null' ?>,

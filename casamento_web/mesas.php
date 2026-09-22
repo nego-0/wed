@@ -43,7 +43,13 @@ $CAS = casalDaFicha($conn);
   .sm{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
   .sm .n{ font-family:var(--serif); font-size:var(--t-display); font-weight:700; color:var(--ink); line-height:1; }
   .sm .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }
-  .sm.ok .n{ color:#1f7a3d; } .sm.alerta .n{ color:var(--danger); }
+  /* O verde do «está tudo sentado» é TINTA, e por isso tem de virar com o
+     tema: cravado em #1f7a3d ficava a 2.98:1 sobre o cartão escuro — um
+     número em corpo grande que se adivinhava em vez de se ler. O --ok já faz
+     esta conta nos quatro temas, e é o mesmo verde que o resto da casa usa
+     para dizer que está bem. O --danger ao lado sempre foi um token; era só
+     este que não era. */
+  .sm.ok .n{ color:var(--ok); } .sm.alerta .n{ color:var(--danger); }
 
   /* Barra de adicionar mesa (acima do canvas, campos in-line) */
   .barra-add{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.7rem .9rem; margin-bottom:1.1rem;

@@ -512,6 +512,13 @@
     await pintarEquipa();
   };
 
+  /** O nome de uma mesa reduzido ao que cabe num endereço: «1 Alegria» →
+      `1-alegria`. A mesma conta que o servidor faz em barSlugTexto(). */
+  function barSlug(nome){
+    return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
   // ---- o link da festa ----
   // Copiar e dizer que copiou. Sem o aviso, quem carrega no botão fica sem
   // saber se aconteceu alguma coisa e carrega outra vez.
@@ -546,10 +553,10 @@
       return;
     }
     cx.innerHTML = mesas.map(function (m) {
-      // O endereço DA FESTA com o código da mesa por cima: assim a folha diz
-      // de que casamento é (quem a apanha do chão sabe onde a devolver) e o
-      // QR continua a poupar o gesto de escolher a mesa.
-      var url = window.BAR_LINK_FESTA + '?m=' + m.token;
+      // O endereço DA FESTA com o NOME da mesa por cima: a folha diz de que
+      // casamento é (quem a apanha do chão sabe onde a devolver) e de que
+      // mesa é, e o QR poupa o gesto de a escolher.
+      var url = window.BAR_LINK_FESTA + '&m=' + encodeURIComponent(barSlug(m.nome));
       return '<div class="b-folha"><div class="mesa">' + esc(m.nome) + '</div>'
         + '<canvas class="b-qr" data-link="' + esc(url) + '"></canvas>'
         + '<div class="lnk">' + esc(url) + '</div>'
@@ -640,8 +647,15 @@
                  { v: 'garrafa', r: 'Só à garrafa' },
                  { v: 'ambos', r: 'Ao copo ou à garrafa' }],
         dica: 'Ao copo, ninguém pode pedir a garrafa inteira.' },
-      // Só conta para quem serve garrafas, e é o que liga as duas contas: o
-      // stock é em COPOS (é o copo que acaba), e uma garrafa leva estes.
+      // Só conta para quem serve COPOS, e é o que liga as duas contas: o
+      // stock é em copos (é o copo que acaba), e uma garrafa leva estes.
+      //
+      // Numa bebida que só sai à garrafa o campo não tem sentido nenhum, e
+      // ficar lá fazia mal: o stock de uma dessas conta-se em GARRAFAS — são
+      // elas que se tiram da caixa —, e o «6» que ninguém tinha razão para
+      // mexer punha cada garrafa pedida a gastar seis do stock. Dez garrafas
+      // davam uma e sobravam quatro, e o «+» do convidado apagava-se. Por isso
+      // desaparece quando se escolhe «Só à garrafa» (ver aoMontar).
       { id: 'doses_garrafa', rot: 'Copos por garrafa', tipo: 'numero',
         valor: i.doses_garrafa === undefined ? 6 : i.doses_garrafa, min: 1,
         dica: 'Uma garrafa pedida gasta estes copos do stock.' },
@@ -656,14 +670,65 @@
     // «+» da garrafa não deixava pedir a terceira sem dizer porquê.
     if (!i.id) campos.push({ id: 'stock', rot: 'Quantos COPOS há, para começar',
       tipo: 'numero', valor: 0, min: 0,
-      dica: 'Sempre em copos, mesmo nas que só saem à garrafa: uma garrafa '
-          + 'gasta os copos que leva dentro. Dez garrafas de seis são 60.' });
+      dica: 'Uma garrafa gasta os copos que leva dentro: dez garrafas de seis '
+          + 'são 60.' });
     return campos;
+  }
+
+  /**
+   * Os campos que só fazem sentido consoante a resposta de outro.
+   *
+   * «Copos por garrafa» é do COPO: é quantos copos se tiram de uma garrafa
+   * quando se serve ao copo. Numa bebida que só sai à garrafa não há copos
+   * nenhuns para contar — o que se tira da caixa é a garrafa —, e o campo
+   * deixado lá a dizer «6» não era uma pergunta inofensiva: punha cada
+   * garrafa a descontar seis do stock, e a bebida esgotava-se ao fim de nada
+   * com o «+» do convidado apagado e sem uma palavra a explicar porquê.
+   *
+   * O rótulo do stock muda com ele, que é a outra metade da mesma coisa: com
+   * o campo escondido, a unidade do stock deixou de ser o copo e passou a ser
+   * a garrafa, e quem está a preencher tem de o ler ali — não no fim, depois
+   * de ter escrito dez a pensar em garrafas.
+   *
+   * Corre também de entrada, e não só à mudança: uma bebida que JÁ ESTÁ «só à
+   * garrafa» abre o formulário com o campo à vista se ninguém o esconder.
+   */
+  function bebidaReactiva(f) {
+    var servir = f.campo('servir');
+    var stock  = f.campo('stock');
+    var rotulo = stock ? document.querySelector('label[for="lf-stock"]') : null;
+    var dica   = stock && stock.parentElement
+               ? stock.parentElement.querySelector('.lic-f-d') : null;
+    var dicaServir = servir && servir.closest('.lic-f-c')
+                   ? servir.closest('.lic-f-c').querySelector('.lic-f-d') : null;
+    var DIZ = { copo:    'Ao copo, ninguém pode pedir a garrafa inteira.',
+                garrafa: 'Só à garrafa: sai a garrafa, e não se serve ao copo.',
+                ambos:   'O convidado escolhe, com o copo marcado de origem.' };
+    function aplicar() {
+      var soGarrafa = servir && servir.value === 'garrafa';
+      // A frase por baixo tem de dizer o que está escolhido. Ficava parada em
+      // «Ao copo, ninguém pode pedir a garrafa inteira» por cima de um «Só à
+      // garrafa» — uma explicação a contradizer a resposta que está ao lado.
+      if (dicaServir && servir) dicaServir.textContent = DIZ[servir.value] || DIZ.copo;
+      f.mostrar('doses_garrafa', !soGarrafa);
+      if (rotulo) {
+        rotulo.textContent = soGarrafa ? 'Quantas GARRAFAS há, para começar'
+                                       : 'Quantos COPOS há, para começar';
+      }
+      if (dica) {
+        dica.textContent = soGarrafa
+          ? 'Esta só sai à garrafa: conte garrafas, que é o que se tira da caixa.'
+          : 'Uma garrafa gasta os copos que leva dentro: dez garrafas de seis são 60.';
+      }
+    }
+    if (servir) servir.addEventListener('change', aplicar);
+    aplicar();
   }
 
   window.barNova = function () {
     licFormulario({
       titulo: 'Bebida nova', guardar: 'Criar', largo: true, campos: camposDaBebida({}),
+      aoMontar: bebidaReactiva,
       aoGuardar: async function (v) {
         if (!v.nome) return licJanelaErro('A bebida precisa de um nome.'), false;
         var d = await window.api('bar_item_guardar', { method: 'POST', body: JSON.stringify(v) });
@@ -681,6 +746,7 @@
     if (!i) return;
     licFormulario({
       titulo: i.nome, guardar: 'Guardar', largo: true, campos: camposDaBebida(i),
+      aoMontar: bebidaReactiva,
       aoGuardar: async function (v) {
         if (!v.nome) return licJanelaErro('A bebida precisa de um nome.'), false;
         v.id = id;

@@ -168,6 +168,13 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
 <link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet"><?php // a cara de quem atende, no painel do atendimento ?>
 <style>
   .cas-lista{ display:grid; gap:.7rem; }
+  /* Os registos à espera são um AVISO, não a lista de trabalho. Sem tecto, o
+     aviso crescia sem fim: com sete à espera empurrava a lista de casamentos
+     para os 1200px — abaixo da dobra, num ecrã de mil —, e quem abria a
+     plataforma via um aviso em ecrã inteiro e tinha de rolar para chegar ao
+     que veio fazer. Três linhas e o resto rola aqui dentro: o aviso continua
+     a dizer quantos são (está no título) sem tomar a página. */
+  .pend-lista{ max-height:15rem; overflow:auto; }
   .cas{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:.8rem 1rem;
         display:grid; grid-template-columns:auto 1fr auto; gap:.9rem; align-items:center; }
   .cas.aberto{ border-color:var(--gold-soft); box-shadow:0 0 0 3px rgba(180,134,74,.14); }
@@ -574,7 +581,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
         <b>Abre-se-lhes a casa decidindo o pedido de licença</b>, em
         <a href="#" onclick="verVista('licencas');return false"><b>Licenças</b></a>: aprovar o
         pedido activa o casamento e as suas contas, no mesmo gesto.</div>
-      <div class="cas-lista">
+      <div class="cas-lista pend-lista">
         <?php foreach ($pendentes as $p): ?>
           <div class="cas">
             <div class="selo">?</div>

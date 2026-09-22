@@ -79,9 +79,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      + 'quarenta copos a seis, e não quarenta garrafas');
 
   // ---- o padrão de quem já lá estava ----
-  // Só as que não são de provas: uma corrida anterior pode ter deixado ZZ lá.
+  // Só as que não são de provas: uma corrida anterior pode ter deixado lá as
+  // suas. O padrão é `ZZ` mais as letras de cada prova (ZZU, ZZG, ZZK...) —
+  // pedir o espaço a seguir ao ZZ deixava passar todas menos as desta, e uma
+  // bebida «ao copo ou à garrafa» esquecida por outra corrida fazia esta
+  // linha falhar por uma razão que não é a que ela mede.
   const velhas = carta.filter(x => x.id !== idCopo && x.id !== idAmbos
-                                && !/^ZZ /.test(x.nome || ''));
+                                && !/^ZZ/i.test(x.nome || ''));
   ok(velhas.every(x => x.servir === 'copo'),
      'a carta que já existia fica toda ao copo — que é exactamente o que a casa '
      + 'fazia antes de a garrafa existir: ' + velhas.length + ' bebida(s)');
@@ -126,7 +130,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // à letra não dava nada, e a prova ficava sem mesa por onde entrar.
   const token = await p.evaluate(m => ((window.BAR_MESAS || [])
                                        .find(x => +x.id === +m) || {}).token, sentou.mesa);
-  ok(/^[A-Z0-9]{6,16}$/.test(token || ''), 'há uma mesa com código para o QR: ' + token);
+  // O código da mesa é o NOME dela passado a endereço (`mesa-7`), e não um
+  // punhado de letras sem vogais: é o que se lê no QR e o que se escreve à mão.
+  ok(/^[a-z0-9-]{1,64}$/.test(token || ''), 'há uma mesa com código para o QR: ' + token);
 
   const salao = await b.newContext({ viewport: { width: 390, height: 844 } });
   const conv = await salao.newPage();

@@ -120,16 +120,28 @@ const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++;
   console.log('   ' + JSON.stringify(mov));
 
   // ---- e agora o essencial: dá para pedir? ----
+  // O código de QR de cada mesa é o NOME dela, passado a endereço. Não há
+  // coluna nenhuma a guardá-lo — era `bar_token`, dez letras sem vogais —,
+  // e por isso o que se confere é que cada mesa importada tem um nome que dá
+  // um endereço: uma mesa sem nome não tem por onde ser apontada.
   const mesas = await p.evaluate(async () => {
+    const slug = (s) => String(s || '').toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const d = await window.api('mesa_list');
-    return (d.mesas || []).map(m => ({ nome: m.nome, token: m.bar_token }));
+    return (d.mesas || []).map(m => ({ nome: m.nome, token: slug(m.nome) }));
   });
   ok(mesas.length === 7 && mesas.every(m => m.token), 'as sete mesas chegaram com o seu código de QR');
   const tok = mesas.filter(m => m.nome === 'Oliveira')[0].token;
+  // Entra-se pelo endereço DESTA festa, com a mesa por cima. O `?m=` sozinho
+  // não chega aqui: o casamento importado é novo, e sem o `c` o servidor não
+  // tem por onde saber de que festa é a «Oliveira» — há uma em cada salão.
+  const linkFesta = await p.evaluate(() => window.BAR_LINK_FESTA);
+  ok(/\?c=/.test(linkFesta || ''),
+     'o casamento importado tem o seu endereço de bar: ' + linkFesta);
 
   const tel = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   tel.on('pageerror', e => console.log('  JS tel!', e.message));
-  await tel.goto(BASE + '/bebidas.php?m=' + tok, { waitUntil: 'networkidle' });
+  await tel.goto(linkFesta + '&m=' + tok, { waitUntil: 'networkidle' });
   await tel.waitForTimeout(900);
   await tel.fill('#b-q', 'Estêv');
   await tel.waitForTimeout(900);

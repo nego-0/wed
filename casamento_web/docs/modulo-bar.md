@@ -113,12 +113,22 @@ lido — e pode ser trocada (§4.2).
 - o endereço escrito, curto, para quem prefere escrever;
 - uma linha de rodapé: *sem rede? chame um garçom — ele faz o pedido por si*.
 
-**Onde vive o token da mesa:** coluna nova `bar_token CHAR(12)` em `cw_mesas`,
-gerada na migração para as mesas que já existem e ao criar uma mesa nova. Não é
-segredo nenhum — está impresso em cima da mesa a noite inteira — e por isso não
-dá para pedir: só escolhe a mesa. Reimprimir a folha gera tokens novos se se
-pedir; por omissão mantém-nos, para não invalidar as folhas já em cima das
-mesas.
+**O endereço, e onde ele vive.** A festa é a porta e a mesa vem por cima dela:
+`bebidas.php?c=2026-ia&m=1-alegria`. O `c` é o endereço da festa — o ano e as
+iniciais dos noivos — e vive na coluna `bar_slug` de `cw_casamentos`, gerado uma
+vez e nunca refeito depois de estar a circular; só cresce quando duas festas
+chocam, e aí entra o mês, depois o dia, depois a hora ou o local. O `m` é o
+**nome da mesa** passado a endereço, calculado na hora a partir do nome: não há
+coluna nenhuma a guardá-lo, e por isso mudar o nome da mesa muda o endereço,
+que é o comportamento certo — o QR reimprime-se com o nome novo.
+
+Nem um nem outro é segredo: estão impressos em cima da mesa a noite inteira. Por
+isso o `c` sozinho não dá para pedir (quem entra por ele escolhe a mesa na
+página), e o `m` só escolhe a mesa.
+
+Antes disto eram dois códigos opacos de dez a doze letras sem vogais
+(`bar_token`, em `cw_mesas` e em `cw_casamentos`). As colunas ficam na base — uma
+coluna apagada não se desapaga —, mas estão vazias e já nada as lê.
 
 ### 4.2 A mesa de entrega escolhe-se
 

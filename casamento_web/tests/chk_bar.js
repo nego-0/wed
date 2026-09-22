@@ -91,7 +91,16 @@ const { escolher } = require('./escolhas');
   ok(montado.aberto === true, 'abrir o bar guarda-se mesmo, e não só no ecrã');
 
   const mesa = await noivos.evaluate(() => window.BAR_MESAS[0]);
-  ok(/^[A-Z0-9]{6,16}$/.test(mesa.token), 'cada mesa tem o seu código para o QR');
+  // O código da mesa é o NOME dela, passado a endereço. Era um punhado de
+  // letras sem vogais — dizia à casa qual era a mesa e não dizia nada a
+  // ninguém mais. Quem apanha a folha do chão lê «mesa-1-alegria» e sabe onde
+  // a pousar; quem a escreve à mão escreve o que está escrito na mesa.
+  ok(/^[a-z0-9-]{1,64}$/.test(mesa.token || '')
+     && mesa.token === mesa.nome.toLowerCase().normalize('NFD')
+          .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, ''),
+     'o código de cada mesa é o nome dela: «' + mesa.nome + '» → «'
+     + mesa.token + '»');
 
   await noivos.click('#ab-mesas');
   await noivos.waitForTimeout(400);
@@ -110,12 +119,12 @@ const { escolher } = require('./escolhas');
   const cartaoQr = await folha.locator('.cartao').first().innerText();
   ok(/Sem rede\?/.test(cartaoQr),
      'com o rodapé que diz o que fazer sem rede — é a saída de sempre');
-  // O endereço da FESTA com o código da mesa por cima. Era `bebidas.php?m=`
-  // — a mesma página para toda a gente, com um punhado de letras sem vogais a
-  // dizer qual era a mesa. Agora a folha diz de que casamento é: quem a
-  // apanha do chão sabe onde a devolver, e quem a escreve à mão escreve uma
-  // data e duas iniciais em vez de dez letras sem sentido.
-  ok(/bebidas-\d{4}-\d{2}-\d{2}-[a-z]+(-\d+)?\.php\?m=/.test(cartaoQr),
+  // A FESTA em `c`, a MESA em `m`, e as duas a ler-se. Era `bebidas.php?m=` —
+  // a mesma página para toda a gente, com um punhado de letras sem vogais a
+  // dizer qual era a mesa. Agora a folha diz de que casamento é e para que
+  // mesa vai: quem a apanha do chão sabe onde a devolver, e quem a escreve à
+  // mão escreve um ano, duas iniciais e o nome da mesa.
+  ok(/bebidas\.php\?c=\d{4}-[a-z0-9-]+&(amp;)?m=[a-z0-9-]+/.test(cartaoQr),
      'e o endereço escrito, legível, para quem prefira escrever a apontar a '
      + 'câmara: ' + (cartaoQr.match(/\S*bebidas\S*/) || ['(nenhum)'])[0]);
   const urlDoQr = await folha.locator('.cartao canvas').first().getAttribute('data-url');

@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 49;
+const ESQUEMA_VERSAO = 51;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -1871,13 +1871,10 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         // A mesa ganha o seu código: é o que vai no QR pousado em cima dela.
+        // (A v50 aposentou esses códigos — a mesa diz-se agora pelo nome. A
+        // coluna fica, vazia; o preenchimento que aqui havia saiu.)
         migColuna($conn, "{$P}mesas", 'bar_token', "VARCHAR(12) DEFAULT NULL");
         migIndice($conn, "{$P}mesas", 'idx_mesa_bartoken', 'bar_token');
-        $r = @$conn->query("SELECT id FROM {$P}mesas WHERE casamento_id > 0 AND (bar_token IS NULL OR bar_token='')");
-        if ($r) while ($m = $r->fetch_assoc()) {
-            $t = barTokenNovo();
-            @$conn->query("UPDATE {$P}mesas SET bar_token='$t' WHERE casamento_id > 0 AND id=" . (int)$m['id']);
-        }
 
         // Os papéis novos: quem serve à copa e quem leva à mesa.
         @$conn->query("ALTER TABLE {$P}acessos MODIFY papel
@@ -2348,13 +2345,9 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // O casamento passa a ter o seu código. O da mesa continua a valer, e
     // continua a dizer a mesa — que é o que sempre fez de útil.
     if ($versaoAtual < 48) {
+        // (Também aposentado na v50, pelo endereço legível. A coluna fica.)
         migColuna($conn, "{$P}casamentos", 'bar_token', "VARCHAR(12) DEFAULT NULL");
         migIndice($conn, "{$P}casamentos", 'idx_cas_bartoken', 'bar_token');
-        $r = @$conn->query("SELECT id FROM {$P}casamentos WHERE bar_token IS NULL OR bar_token=''");
-        if ($r) while ($c = $r->fetch_assoc()) {
-            $t = barTokenNovo();
-            @$conn->query("UPDATE {$P}casamentos SET bar_token='$t' WHERE id=" . (int)$c['id']);
-        }
     }
 
     // v49 — o link do bar passa a ler-se.
@@ -2378,6 +2371,46 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         if ($r) while ($c = $r->fetch_assoc()) barSlugGarantir($conn, (int)$c['id']);
     }
 
+    // v50 — os endereços passam a ser os curtos, e os códigos opacos saem.
+    //
+    // O v49 tinha posto a data completa em todos («2026-12-19-ia»). Passa a
+    // ser o mínimo que distingue — o ano e as iniciais —, com o mês, o dia e
+    // a hora a entrarem só quando duas festas chocam. Um endereço mais curto
+    // é um endereço que se dita ao telefone sem soletrar.
+    //
+    // Refazem-se TODOS, o que normalmente não se faria: um endereço que anda
+    // a circular não se muda por baixo de quem o tem. Aqui faz-se porque o
+    // anterior não chegou a circular — nasceu neste mesmo troço de trabalho e
+    // nunca foi impresso nem dado a ninguém.
+    //
+    // E os códigos opacos das mesas (`bar_token`, dez letras sem vogais) vão
+    // embora com ele: a mesa passa a dizer-se pelo NOME, que é o que se
+    // reconhece e o que se consegue escrever à mão. A coluna fica na tabela —
+    // apagar uma coluna é irreversível, e não custa nada tê-la lá vazia.
+    if ($versaoAtual < 50) {
+        @$conn->query("UPDATE {$P}casamentos SET bar_slug=NULL");
+        $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
+        if ($r) while ($c = $r->fetch_assoc()) barSlugGarantir($conn, (int)$c['id']);
+    }
+
+    // v51 — «copos por garrafa» não se aplica a quem só serve garrafas.
+    //
+    // O campo diz quantos copos se tiram de uma garrafa, e existe para ligar
+    // as duas contas da casa: o stock mede-se em copos, porque é o copo que
+    // acaba. Numa bebida que SÓ sai à garrafa não há copos nenhuns a contar —
+    // o que se tira da caixa é a garrafa —, mas o campo continuava lá com o
+    // seu 6 de origem, que ninguém tinha razão para ir mexer. O resultado era
+    // uma garrafa a descontar seis do stock: dez garrafas davam uma e
+    // sobravam quatro copos que não faziam garrafa nenhuma, e o «+» do
+    // convidado apagava-se sem uma palavra a dizer porquê.
+    //
+    // Passa a um, que é a verdade dessas: uma garrafa custa uma garrafa. O
+    // formulário deixou de perguntar o que não se aplica, e o servidor anula-o
+    // ao guardar — isto trata das que já estavam gravadas.
+    if ($versaoAtual < 51) {
+        @$conn->query("UPDATE {$P}bar_itens SET doses_garrafa=1 WHERE servir='garrafa'");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2399,8 +2432,8 @@ if (cfg_local('semear_demo', false)) {
                                VALUES (1, ?, ?, ?, ?, 'ativo')");
         if ($st) { $st->bind_param('ssss', $nome, $noiva, $noivo, $data); @$st->execute(); }
         // A mesa dos noivos, como qualquer casamento tem.
-        @$conn->query("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y,bar_token)
-                       VALUES (1,'Noivos',2,'redonda','ouro','noivos',50,42,'" . barTokenNovo() . "')");
+        @$conn->query("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y)
+                       VALUES (1,'Noivos',2,'redonda','ouro','noivos',50,42)");
         // Uma conta de porteiro do casamento de demonstração (a suite conta com
         // ela; não existe no produto). Só se não houver já uma com este email.
         $rp = @$conn->query("SELECT 1 FROM {$P}utilizadores WHERE email='porteiro@local' LIMIT 1");
@@ -3044,15 +3077,6 @@ function semearOrcamento(mysqli $conn, int $cid): void {
 // peças que a base de dados e as quatro páginas partilham.
 // ============================================================
 
-/** O código que vai no QR pousado em cima da mesa. Não é segredo: só diz qual. */
-function barTokenNovo(): string {
-    // Sem vogais nem caracteres que se confundam à mão (0/O, 1/l): o token
-    // também se escreve, quando o telemóvel não lê o código.
-    $abc = '23456789BCDFGHJKMNPQRSTVWXYZ';
-    $t = '';
-    for ($i = 0; $i < 10; $i++) $t .= $abc[random_int(0, strlen($abc) - 1)];
-    return $t;
-}
 
 /** O código curto que se diz em voz alta: «o A47 é para a mesa 3». */
 function barCodigoCurto(): string {
@@ -3166,20 +3190,30 @@ function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
  * a mesa. Como não há sessão, é ele que fixa o âmbito de tudo o que vier a
  * seguir no pedido — o mesmo que carregarConvite() faz com o código.
  */
-function barMesaDoToken(mysqli $conn, string $token): ?array {
+function barMesaDoToken(mysqli $conn, string $token, int $cid = 0): ?array {
     global $P;
-    if (!preg_match('/^[A-Z0-9]{6,16}$/', $token)) return null;
+    // O NOME da mesa, reduzido a um endereço: «1 Alegria» é `1-alegria`. Era
+    // um código de dez letras sem vogais, que não dizia nada a ninguém e que
+    // ninguém conseguia escrever à mão sem se enganar. O nome real diz de que
+    // mesa se fala — a quem o lê no telemóvel e a quem apanha a folha do chão.
+    $alvo = barSlugTexto($token);
+    if ($alvo === '') return null;
+    $cid = $cid ?: casamentoAtual();
+    // DENTRO da festa, e não em toda a casa: dois casamentos podem ter, os
+    // dois, uma «Mesa 1», e têm de poder. É o `c` que diz qual é a festa.
+    $onde = $cid > 0 ? 'm.casamento_id = ' . (int)$cid : 'm.casamento_id > 0';
     $st = $conn->prepare("SELECT m.id, m.nome, m.casamento_id
                           FROM {$P}mesas m
                           JOIN {$P}casamentos w ON w.id = m.casamento_id AND w.estado='ativo'
-                          WHERE m.bar_token=? AND m.casamento_id > 0 LIMIT 1");
+                          WHERE $onde");
     if (!$st) return null;
-    $st->bind_param('s', $token);
     if (!$st->execute()) return null;
-    $m = $st->get_result()->fetch_assoc();
-    if (!$m) return null;
-    usarCasamento((int)$m['casamento_id']);
-    return $m;
+    foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $m) {
+        if (barSlugTexto((string)$m['nome']) !== $alvo) continue;
+        usarCasamento((int)$m['casamento_id']);
+        return $m;
+    }
+    return null;
 }
 
 /**
@@ -3193,22 +3227,12 @@ function barMesaDoToken(mysqli $conn, string $token): ?array {
  */
 function barCasamentoDoToken(mysqli $conn, string $token): ?array {
     global $P;
-    $token = trim($token);
-    if ($token === '') return null;
-    // Duas formas, e a casa responde às duas. O ENDEREÇO legível
-    // (`2026-12-19-ia`) é o que se dá a ler; o CÓDIGO antigo
-    // (`FGFMBKPZNB`) continua a valer porque anda impresso — um endereço
-    // que deixa de abrir é pior do que um endereço feio.
-    $porSlug = preg_match('/^[a-z0-9-]{3,64}$/', mb_strtolower($token));
-    $porCodigo = preg_match('/^[A-Z0-9]{6,16}$/', strtoupper($token));
-    if (!$porSlug && !$porCodigo) return null;
-    $slug = mb_strtolower($token);
-    $cod  = strtoupper($token);
+    $slug = barSlugTexto($token);
+    if ($slug === '') return null;
     $st = $conn->prepare("SELECT id, nome FROM {$P}casamentos
-                          WHERE (bar_slug=? OR bar_token=?) AND estado='ativo' AND id > 0
-                          LIMIT 1");
+                          WHERE bar_slug=? AND estado='ativo' AND id > 0 LIMIT 1");
     if (!$st) return null;
-    $st->bind_param('ss', $slug, $cod);
+    $st->bind_param('s', $slug);
     if (!$st->execute()) return null;
     $c = $st->get_result()->fetch_assoc();
     if (!$c) return null;
@@ -3217,33 +3241,18 @@ function barCasamentoDoToken(mysqli $conn, string $token): ?array {
 }
 
 /**
- * O endereço público do bar deste casamento — o que se dá a ler e a copiar.
+ * O endereço de uma festa: `2026-ia`.
  *
- * `bebidas-2026-12-19-ia.php` quando o servidor reescreve (é o que o
- * .htaccess desta casa faz), e a forma com pergunta por baixo dela, que
- * funciona em qualquer servidor. As duas abrem a mesma página.
+ * O ANO e as INICIAIS dos noivos, que é o mínimo que se lê e se dita. Só se
+ * desce ao pormenor quando ele faz falta — o `$grau` diz quanto: o mês, o
+ * dia, e depois a hora ou o local. Um endereço mais curto é um endereço que
+ * se dita ao telefone sem soletrar.
+ *
+ * Sem data marcada fica só com as iniciais, e ganha a data quando ela for
+ * marcada — desde que ainda não tenha começado a circular.
  */
-function barLinkDaFesta(mysqli $conn, int $cid = 0, bool $bonito = true): string {
-    $cid = $cid ?: casamentoAtual();
-    $slug = barSlugGarantir($conn, $cid);
-    if ($slug === '') return '';
-    $base = rtrim(enderecoPublico(), '/');
-    return $bonito ? $base . '/bebidas-' . $slug . '.php'
-                   : $base . '/bebidas.php?c=' . rawurlencode($slug);
-}
-
-/**
- * O endereço legível do bar de um casamento: `2026-12-19-ia`.
- *
- * A data completa e as iniciais dos noivos. A data completa e não só o ano
- * porque dois casais com as mesmas iniciais no mesmo ano não é nada raro —
- * «A & B» é meia lista de casamentos. Com o dia, a colisão exige a mesma data
- * E as mesmas iniciais, e para essa há o sufixo.
- *
- * Sem data marcada fica só com as iniciais, e a festa ganha a data quando ela
- * for marcada — o slug não se refaz sozinho depois de estar a circular.
- */
-function barSlugDe(string $data, string $noiva, string $noivo): string {
+function barSlugDe(string $data, string $noiva, string $noivo, int $grau = 0,
+                   string $hora = '', string $local = ''): string {
     $ini = function (string $s): string {
         $s = trim($s);
         if ($s === '') return '';
@@ -3252,17 +3261,52 @@ function barSlugDe(string $data, string $noiva, string $noivo): string {
         return mb_strtolower((string)$t);
     };
     $letras = $ini($noiva) . $ini($noivo);
-    $dia = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data) && $data !== '0000-00-00' ? $data : '';
-    $base = trim($dia . '-' . $letras, '-');
+    $temData = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data) && $data !== '0000-00-00';
+    $ano = $temData ? substr($data, 0, 4) : '';
+    $mes = $temData ? substr($data, 5, 2) : '';
+    $dia = $temData ? substr($data, 8, 2) : '';
+
+    $partes = array_values(array_filter([$ano, $letras]));
+    if ($grau >= 1 && $mes !== '') $partes = array_values(array_filter([$ano, $mes, $letras]));
+    if ($grau >= 2 && $dia !== '') $partes = array_values(array_filter([$ano, $mes, $dia, $letras]));
+    if ($grau >= 3) {
+        // A HORA e o LOCAL, por esta ordem: duas festas no mesmo dia com as
+        // mesmas iniciais são quase sempre duas em sítios diferentes, ou uma
+        // de dia e outra à noite.
+        $extra = barSlugTexto($hora !== '' ? substr($hora, 0, 5) : '');
+        if ($extra === '') $extra = barSlugTexto($local);
+        if ($extra !== '') $partes[] = $extra;
+    }
+    $base = implode('-', $partes);
     // Uma festa sem data e sem nomes não fica sem endereço nenhum.
     return $base !== '' ? $base : 'festa';
 }
 
 /**
+ * Um texto qualquer reduzido ao que cabe num endereço.
+ *
+ * Sem acentos, sem maiúsculas, sem pontuação e sem espaços — «1 Alegria» fica
+ * `1-alegria`, «Mesa dos Padrinhos» fica `mesa-dos-padrinhos`. É o que faz um
+ * endereço legível: quem o lê reconhece a mesa de que se fala.
+ */
+function barSlugTexto(string $s): string {
+    $s = trim($s);
+    if ($s === '') return '';
+    $t = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
+    $t = mb_strtolower((string)($t === false ? $s : $t));
+    $t = preg_replace('/[^a-z0-9]+/', '-', $t) ?? '';
+    return trim((string)$t, '-');
+}
+
+/**
  * Garante que este casamento tem endereço, e devolve-o.
  *
- * Único em toda a casa: se já houver um igual, acrescenta-se um número. Não
- * se refaz um que já exista — ele anda impresso e dito, e um endereço que
+ * Único em toda a casa. Quando choca com outra festa, não se lhe pendura um
+ * número — desce-se ao PORMENOR que as distingue, por esta ordem: o mês, o
+ * dia, e depois a hora ou o local. `2026-ia-2` não diz nada a ninguém;
+ * `2026-06-ia` diz que é a de Junho.
+ *
+ * Não se refaz um que já exista: ele anda dito e escrito, e um endereço que
  * muda sozinho é um endereço que deixa de abrir.
  */
 function barSlugGarantir(mysqli $conn, int $cid): string {
@@ -3287,42 +3331,74 @@ function barSlugGarantir(mysqli $conn, int $cid): string {
         $noiva = trim($partes[0] ?? '');
         $noivo = trim($partes[1] ?? '');
     }
-    $base = barSlugDe((string)$x['data_evento'], $noiva, $noivo);
-    $slug = $base;
-    for ($n = 2; $n < 200; $n++) {
+
+    // A hora e o local não estão na ficha — vivem nas definições do convite,
+    // e lêem-se com o id EXPLÍCITO: definicoesBD() serve o casamento ABERTO,
+    // e quem chama isto pode estar a tratar de outro.
+    $hora = ''; $local = '';
+    $sd = @$conn->prepare("SELECT chave, valor FROM {$P}definicoes
+                            WHERE casamento_id=? AND chave IN ('evento.hora','evento.local')");
+    if ($sd) {
+        $sd->bind_param('i', $cid);
+        if ($sd->execute()) {
+            foreach ($sd->get_result()->fetch_all(MYSQLI_ASSOC) as $d) {
+                if ($d['chave'] === 'evento.hora')  $hora  = (string)$d['valor'];
+                if ($d['chave'] === 'evento.local') $local = (string)$d['valor'];
+            }
+        }
+    }
+
+    $livre = function (string $s) use ($conn, $P, $cid): bool {
         $q = @$conn->prepare("SELECT id FROM {$P}casamentos WHERE bar_slug=? AND id<>? LIMIT 1");
-        if (!$q) break;
-        $q->bind_param('si', $slug, $cid);
+        if (!$q) return true;
+        $q->bind_param('si', $s, $cid);
         $q->execute();
-        if (!$q->get_result()->fetch_assoc()) break;
-        $slug = $base . '-' . $n;
+        return !$q->get_result()->fetch_assoc();
+    };
+    // Quatro graus, do mais curto ao mais preciso. Pára-se no primeiro livre.
+    $slug = '';
+    for ($grau = 0; $grau <= 3; $grau++) {
+        $tenta = barSlugDe((string)$x['data_evento'], $noiva, $noivo, $grau, $hora, $local);
+        if ($tenta === $slug) continue;           // este grau não acrescentou nada
+        $slug = $tenta;
+        if ($livre($slug)) break;
+    }
+    // Esgotados os pormenores (mesma data, mesmas iniciais, mesma hora e mesmo
+    // local), resta o número. É o caso em que nada mais os separa.
+    if (!$livre($slug)) {
+        $base = $slug;
+        for ($n = 2; $n < 500 && !$livre($slug); $n++) $slug = $base . '-' . $n;
     }
     $st2 = @$conn->prepare("UPDATE {$P}casamentos SET bar_slug=? WHERE id=?");
     if ($st2) { $st2->bind_param('si', $slug, $cid); @$st2->execute(); }
     return $slug;
 }
 
-/** O código de bar deste casamento, criado à primeira vez que se pede. */
-function barTokenDoCasamento(mysqli $conn, int $cid = 0): string {
-    global $P;
+/**
+ * O endereço público do bar deste casamento.
+ *
+ *     bebidas.php?c=2026-ia            — a festa, e nada mais
+ *     bebidas.php?c=2026-ia&m=1-alegria — e a mesa por onde se entrou
+ *
+ * O `c` chega para abrir: quem entra por ele escolhe a mesa na página, que é
+ * o que toda a gente acaba por fazer de qualquer maneira — numa festa muda-se
+ * de lugar. O `m` poupa esse gesto a quem aponta a câmara ao QR pousado na
+ * mesa, e é o NOME real dela, para se reconhecer e se poder escrever à mão.
+ *
+ * Uma pergunta simples, sem reescritas de servidor: funciona em qualquer
+ * alojamento, e não há um endereço bonito que dê 404 onde o mod_rewrite
+ * estiver desligado.
+ */
+function barLinkDaFesta(mysqli $conn, int $cid = 0, string $mesa = ''): string {
     $cid = $cid ?: casamentoAtual();
-    if ($cid <= 0) return '';
-    $st = @$conn->prepare("SELECT bar_token FROM {$P}casamentos WHERE id=? LIMIT 1");
-    if (!$st) return '';
-    $st->bind_param('i', $cid);
-    if (!$st->execute()) return '';
-    $x = $st->get_result()->fetch_assoc();
-    if (!$x) return '';
-    $t = trim((string)($x['bar_token'] ?? ''));
-    // Um casamento criado antes desta mudança, ou logo a seguir a ela, não
-    // tem código nenhum. Cria-se aqui em vez de se devolver vazio: a página
-    // que o foi buscar precisa dele agora, e não na próxima migração.
-    if ($t === '') {
-        $t = barTokenNovo();
-        @$conn->query("UPDATE {$P}casamentos SET bar_token='$t' WHERE id=$cid");
-    }
-    return $t;
+    $slug = barSlugGarantir($conn, $cid);
+    if ($slug === '') return '';
+    $url = rtrim(enderecoPublico(), '/') . '/bebidas.php?c=' . rawurlencode($slug);
+    $m = barSlugTexto($mesa);
+    if ($m !== '') $url .= '&m=' . rawurlencode($m);
+    return $url;
 }
+
 
 /**
  * Os textos que o casal escreveu para cada situação do bar (§31.5).
@@ -3436,26 +3512,6 @@ function barPausaSegundos(mysqli $conn, int $cid = 0): int {
     return $t === false ? 0 : max(0, $t - time());
 }
 
-/**
- * Toda a mesa deste casamento tem o seu código.
- *
- * As mesas nascem em três sítios (a semente, o painel, a planta) e uma que
- * nasça sem código é uma mesa sem QR — uma folha em branco pousada em cima
- * dela. Em vez de andar atrás de cada sítio, confere-se aqui, que é barato e
- * corre quando alguém vai imprimir ou listar as mesas.
- */
-function barGarantirTokens(mysqli $conn, int $cid = 0): void {
-    global $P;
-    $cid = $cid ?: casamentoAtual();
-    if ($cid <= 0) return;
-    $r = @$conn->query("SELECT id FROM {$P}mesas
-                        WHERE casamento_id=$cid AND (bar_token IS NULL OR bar_token='')");
-    if (!$r) return;
-    while ($m = $r->fetch_assoc()) {
-        $t = barTokenNovo();
-        @$conn->query("UPDATE {$P}mesas SET bar_token='$t' WHERE casamento_id=$cid AND id=" . (int)$m['id']);
-    }
-}
 
 
 /**

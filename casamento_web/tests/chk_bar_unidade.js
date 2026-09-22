@@ -175,12 +175,22 @@ const marca = 'zzu' + Math.floor(Math.random() * 1e5);
 
   // O stock continua a contar-se em doses: sem copos que cheguem para uma
   // garrafa inteira, ela não se pede. A trava certa é esta, e é a que fica.
+  //
+  // A bebida é de propósito das que saem DAS DUAS MANEIRAS: só aí é que
+  // «copos por garrafa» quer dizer alguma coisa. Numa que só sai à garrafa o
+  // campo não se aplica — o stock dessas são garrafas, e uma garrafa custa
+  // uma —, e o servidor anula-o ao guardar.
   const semStock = await post('bar_item_guardar',
-    { nome: 'ZZU Pouco ' + marca, servir: 'garrafa', doses_garrafa: 12 });
+    { nome: 'ZZU Pouco ' + marca, servir: 'ambos', doses_garrafa: 12 });
   await post('bar_stock_repor', { item_id: semStock.id, quantidade: 4, nota: 'prova' });
   await conv.reload({ waitUntil: 'networkidle' });
   await conv.waitForTimeout(2200);
-  const pouco = await conv.evaluate(id => {
+  const pouco = await conv.evaluate(async id => {
+    // Sai das duas maneiras, e o copo é o de origem: é preciso pedir a
+    // garrafa para se ver o que a garrafa faz. Ao copo esta serve-se à mesma,
+    // que é precisamente o que a frase abaixo tem de dizer.
+    barUnidade(id, 'garrafa');
+    await new Promise(r => setTimeout(r, 700));
     const c = document.getElementById('bb-' + id);
     if (!c) return null;
     const up = c.querySelector('.b-mais .up');

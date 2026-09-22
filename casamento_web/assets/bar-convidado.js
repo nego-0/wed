@@ -69,10 +69,13 @@
   // ---- a conversa com o servidor ----------------------------
   // O token vai sempre: é ele que diz de que casamento se trata.
   async function chamar(accao, corpo, extra) {
-    // O código viaja em todos os pedidos — é ele a chave, que aqui não há
-    // sessão. O da mesa quando se entrou por uma, o da festa quando não.
+    // O endereço viaja em todos os pedidos — é ele a chave, que aqui não há
+    // sessão. A FESTA vai sempre (é ela que diz de que casa se fala); a mesa
+    // vai quando se entrou por uma, e serve para o servidor saber onde
+    // entregar sem ninguém ter de escolher.
     var url = 'api.php?action=' + encodeURIComponent(accao)
-            + (TOKEN ? '&m=' + encodeURIComponent(TOKEN) : '&c=' + encodeURIComponent(CASA));
+            + (CASA ? '&c=' + encodeURIComponent(CASA) : '')
+            + (TOKEN ? '&m=' + encodeURIComponent(TOKEN) : '');
     if (extra) {
       Object.keys(extra).forEach(function (k) {
         url += '&' + k + '=' + encodeURIComponent(extra[k]);
@@ -80,7 +83,8 @@
     }
     var opc = { headers: { 'Accept': 'application/json' } };
     if (corpo !== undefined) {
-      if (TOKEN) corpo.m = TOKEN; else corpo.c = CASA;
+      if (CASA) corpo.c = CASA;
+      if (TOKEN) corpo.m = TOKEN;
       opc.method = 'POST';
       opc.headers['Content-Type'] = 'application/json';
       opc.body = JSON.stringify(corpo);
