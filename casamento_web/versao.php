@@ -1376,6 +1376,12 @@ function correcoesEsperadas(): array {
          'api.php', "if (\$codigoFich !== '') \$feito['mapa_codigos'][\$codigoFich] = \$convId;"],
         ['E cada bebida viaja a saber como se serve, e com o seu limiar de «a acabar»',
          'api.php', 'i.servir, i.doses_garrafa, i.stock_minimo,'],
+
+        // ---- Duas tintas que se pintavam por cima de si próprias ----
+        ['O número da mesa dos noivos lê-se sobre o tampo de ouro que só ela tem',
+         'assets/mesa-icone.css', '.mesa-ico.f-noivos .mi-n{ fill:var(--sobre-gold); }'],
+        ['E a marca de «Escondida» troca a tinta pelo enchimento, que era o que estava trocado',
+         'assets/bar.css', '.b-marca.oculta{ background:var(--forest); color:var(--topo-txt); }'],
     ];
 }
 

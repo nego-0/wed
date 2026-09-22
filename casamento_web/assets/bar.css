@@ -785,7 +785,13 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
           text-transform:uppercase; background:var(--card); color:var(--text);
           box-shadow:0 1px 3px rgba(0,0,0,.18); }
 .b-marca .ico{ width:12px; height:12px; stroke-width:2; }
-.b-marca.oculta{ background:var(--ink); color:var(--ivory); }
+/* A marca de «Escondida» é um ENCHIMENTO com tinta por cima, e por isso leva
+   o par que a casa tem para isso: --forest enche, --topo-txt escreve. Estava
+   com --ink a encher e --ivory a escrever, que são os dois papéis trocados:
+   o --ink é TINTA (no escuro vira claro, e passou a ser um fundo claro) e o
+   --ivory nunca vira. Davam claro sobre claro — 1.71:1 no tema escuro, uma
+   etiqueta que só se via de lado. */
+.b-marca.oculta{ background:var(--forest); color:var(--topo-txt); }
 .b-marca.pouca{ background:var(--warn-bg); color:var(--warn); }
 .b-marca.zero{ background:var(--danger-bg); color:var(--danger); }
 

@@ -178,7 +178,17 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
         const rz = razao(lum(a.cor[0], a.cor[1], a.cor[2]), lum(fu[0], fu[1], fu[2]));
         const minimo = a.grande ? 3 : 4.5;
         if (rz < minimo) falhas.push({ tema, pag, onde: a.onde, texto: a.texto,
-                                       razao: +rz.toFixed(2), minimo });
+                                       razao: +rz.toFixed(2), minimo,
+                                       // O que se MEDIU, para quem vier a seguir
+                                       // poder julgar o número em vez de confiar
+                                       // nele: a tinta, o fundo que saiu dos
+                                       // pixéis, e o tamanho que escolhe o
+                                       // mínimo. Sem isto, cada falha obrigava a
+                                       // reconstruir a medição à mão — foi o que
+                                       // custou as duas últimas.
+                                       tinta: 'rgb(' + a.cor.join(',') + ')',
+                                       fundo: 'rgb(' + fu.join(',') + ')',
+                                       px: Math.round(a.px) });
       });
     }
   }
@@ -186,7 +196,9 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
   console.log('   (medidas ' + PAGINAS.length + ' páginas × ' + TEMAS.length + ' temas)');
   if (falhas.length) {
     falhas.slice(0, 12).forEach(x => console.log('   ' + (x.nota || x.razao + ':1')
-      + '  ' + x.tema + ' · ' + x.pag + ' · ' + (x.onde || '') + ' «' + (x.texto || '') + '»'));
+      + '  ' + x.tema + ' · ' + x.pag + ' · ' + (x.onde || '') + ' «' + (x.texto || '') + '»'
+      + (x.tinta ? '  [tinta ' + x.tinta + ' sobre ' + x.fundo + ', ' + x.px + 'px, '
+                 + 'mínimo ' + x.minimo + ':1]' : '')));
   }
   ok(falhas.length === 0,
      'todo o texto se lê nos quatro temas: ' + falhas.length + ' falha(s)');
