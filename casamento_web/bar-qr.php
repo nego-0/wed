@@ -34,9 +34,18 @@ $LINK_FESTA = barLinkDaFesta($conn);
 $soEsta = (int)($_GET['mesa'] ?? 0);
 $onde = $soEsta > 0 ? ' AND id=' . $soEsta : '';
 $mesas = [];
-$r = $conn->query("SELECT id, nome FROM {$P}mesas WHERE " . doCasamento() . "$onde
+$r = $conn->query("SELECT id, nome, bar_token FROM {$P}mesas WHERE " . doCasamento() . "$onde
                    ORDER BY (especial='noivos') DESC, nome");
 if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
+// Uma mesa antiga pode ainda não ter código (a coluna esteve vazia entre duas
+// versões). Dá-se-lhe um AQUI, antes de imprimir: uma folha com um QR que não
+// abre nada é pior do que uma folha a menos, porque ninguém desconfia dela.
+foreach ($mesas as &$_m) {
+    if (trim((string)($_m['bar_token'] ?? '')) === '') {
+        $_m['bar_token'] = barMesaTokenGarantir($conn, (int)$_m['id']);
+    }
+}
+unset($_m);
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -107,10 +116,11 @@ if ($r) $mesas = $r->fetch_all(MYSQLI_ASSOC);
 <?php else: ?>
 <div class="folhas">
   <?php foreach ($mesas as $m):
-    // O endereço da festa com o NOME da mesa por cima: a folha diz de que
-    // casamento é e de que mesa é, e quem a quiser escrever à mão escreve
-    // duas palavras em vez de dez letras sem vogais.
-    $url = $LINK_FESTA . '&m=' . rawurlencode(barSlugTexto((string)$m['nome'])); ?>
+    // O endereço da festa com o CÓDIGO da mesa por cima: a folha diz de que
+    // casamento é (quem a apanha do chão sabe onde a devolver) e leva a bebida
+    // à mesa certa sem ninguém ter de a escolher. O código é estável — o nome
+    // da mesa pode mudar depois de a folha estar impressa, e muda.
+    $url = $LINK_FESTA . '&m=' . rawurlencode((string)($m['bar_token'] ?? '')); ?>
   <div class="cartao">
     <div class="mono"><?= escP($CAS['mono']) ?> · Bar</div>
     <div class="mesa"><?= escP($m['nome']) ?></div>

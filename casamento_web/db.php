@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 51;
+const ESQUEMA_VERSAO = 52;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2387,6 +2387,10 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // embora com ele: a mesa passa a dizer-se pelo NOME, que é o que se
     // reconhece e o que se consegue escrever à mão. A coluna fica na tabela —
     // apagar uma coluna é irreversível, e não custa nada tê-la lá vazia.
+    //
+    // (A v52 desfez esta metade e voltou a encher a coluna. A razão está lá
+    // escrita: o nome muda, e levava atrás o endereço das folhas já impressas.
+    // O `c` da festa, esse, ficou legível — e é por isso que este bloco fica.)
     if ($versaoAtual < 50) {
         @$conn->query("UPDATE {$P}casamentos SET bar_slug=NULL");
         $r = @$conn->query("SELECT id FROM {$P}casamentos ORDER BY id");
@@ -2409,6 +2413,28 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // ao guardar — isto trata das que já estavam gravadas.
     if ($versaoAtual < 51) {
         @$conn->query("UPDATE {$P}bar_itens SET doses_garrafa=1 WHERE servir='garrafa'");
+    }
+
+    // v52 — a mesa volta a ter código gerado, e o endereço da festa fica.
+    //
+    // A v50 tinha tirado os códigos das mesas e posto o NOME no lugar deles:
+    // `?m=1-alegria` lê-se, dita-se e escreve-se à mão, que era o defeito de
+    // `FGFMBKPZNB`. Mas o nome tem um defeito que o código não tem — MUDA. Quem
+    // renomeasse uma mesa em «Mesas» mudava, sem dar por isso e sem nada a
+    // avisar, o endereço de todas as folhas de QR já impressas e pousadas em
+    // cima dela. As folhas passavam a apontar para uma mesa que já não existe
+    // com aquele nome, e isso descobre-se no dia da festa.
+    //
+    // O `c` da festa fica como está, legível: esse é para ser dito e escrito,
+    // e o nome de um casamento não muda na véspera. São perguntas diferentes,
+    // e por isso levam respostas de matérias diferentes.
+    //
+    // A coluna nunca chegou a ser apagada — só esvaziada —, pelo que isto é
+    // enchê-la outra vez, mesa a mesa, sem tocar em nenhuma que já tenha um.
+    if ($versaoAtual < 52) {
+        $r = @$conn->query("SELECT id FROM {$P}mesas
+                            WHERE casamento_id > 0 AND (bar_token IS NULL OR bar_token='')");
+        if ($r) while ($m = $r->fetch_assoc()) barMesaTokenGarantir($conn, (int)$m['id']);
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
@@ -2434,6 +2460,7 @@ if (cfg_local('semear_demo', false)) {
         // A mesa dos noivos, como qualquer casamento tem.
         @$conn->query("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y)
                        VALUES (1,'Noivos',2,'redonda','ouro','noivos',50,42)");
+        barMesaTokenGarantir($conn, (int)$conn->insert_id);
         // Uma conta de porteiro do casamento de demonstração (a suite conta com
         // ela; não existe no produto). Só se não houver já uma com este email.
         $rp = @$conn->query("SELECT 1 FROM {$P}utilizadores WHERE email='porteiro@local' LIMIT 1");
@@ -2497,6 +2524,7 @@ if ($flag && $flag->num_rows === 0) {
         while ($conn->query("SELECT id FROM {$P}mesas WHERE " . doCasamento() . " AND nome='" . $conn->real_escape_string($nomeN) . "'")->num_rows) $nomeN = 'Noivos ' . $n++;
         $stN = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (" . casamentoAtual() . ",?,2,'redonda','ouro','noivos',50,42)");
         $stN->bind_param('s', $nomeN); $stN->execute();
+        barMesaTokenGarantir($conn, (int)$conn->insert_id);
     }
     $conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'noivos.criada','1') ON DUPLICATE KEY UPDATE valor='1'");
 }
@@ -2862,7 +2890,12 @@ function resolverMesa(mysqli $conn, string $nome): ?int {
     if ($r = $st->get_result()->fetch_assoc()) return (int)$r['id'];
     $st = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome) VALUES (" . casamentoAtual() . ",?)");
     $st->bind_param('s', $nome); $st->execute();
-    return $conn->insert_id;
+    $novo = (int)$conn->insert_id;
+    // Nasce com o código de QR, como qualquer outra. Uma mesa criada de
+    // passagem — ao importar uma lista de convidados que nomeia mesas que
+    // ainda não existem — é uma mesa como as outras, e vai ter folha.
+    barMesaTokenGarantir($conn, $novo);
+    return $novo;
 }
 
 /** Recalcula APENAS o estado de entrada (check-in) a partir dos membros. Não toca no RSVP. */
@@ -3078,6 +3111,67 @@ function semearOrcamento(mysqli $conn, int $cid): void {
 // ============================================================
 
 
+/**
+ * O código de uma mesa: dez letras e algarismos, gerados.
+ *
+ * Esteve fora por um tempo — a mesa passou a dizer-se pelo NOME, e o endereço
+ * ficava `?m=1-alegria`, que se lê e se dita. Volta porque o nome tem
+ * um defeito que o código não tem: MUDA. Renomear uma mesa em «Mesas» mudava,
+ * em silêncio, o endereço de todas as folhas já impressas e pousadas em cima
+ * dela — e ninguém liga as duas coisas no dia da festa. Um código gerado é
+ * estável por construção: nasce com a mesa e não se mexe.
+ *
+ * Sem vogais nem caracteres que se confundam à mão (0/O, 1/l): o código também
+ * se escreve, quando a câmara não lê o QR — que é o caso de quem está no
+ * jardim com pouca luz, e é para esses que a linha «ou escreva» existe.
+ *
+ * Não é segredo nenhum: está impresso em cima da mesa a noite inteira, e só
+ * diz QUE MESA É. Quem impede um pedido em nome de outro é o passo seguinte —
+ * a pessoa escolhe-se numa lista e o telemóvel fica preso a esse nome.
+ */
+function barTokenNovo(): string {
+    $abc = '23456789BCDFGHJKMNPQRSTVWXYZ';
+    $t = '';
+    for ($i = 0; $i < 10; $i++) $t .= $abc[random_int(0, strlen($abc) - 1)];
+    return $t;
+}
+
+/**
+ * O código desta mesa, criando-o se ainda não houver.
+ *
+ * Idempotente e nunca refeito: uma mesa que já tem código fica com o que tem,
+ * porque ele pode estar impresso. Serve as mesas antigas (a migração) e as que
+ * nascem agora, sem duas escritas diferentes da mesma regra.
+ */
+function barMesaTokenGarantir(mysqli $conn, int $mesaId): string {
+    global $P;
+    $st = $conn->prepare("SELECT bar_token FROM {$P}mesas WHERE id=? LIMIT 1");
+    if (!$st) return '';
+    $st->bind_param('i', $mesaId);
+    if (!$st->execute()) return '';
+    $r = $st->get_result()->fetch_assoc();
+    if (!$r) return '';
+    $atual = trim((string)($r['bar_token'] ?? ''));
+    if ($atual !== '') return $atual;
+    // Um código repetido mandava duas mesas para a mesma porta. São 28^10
+    // hipóteses, mas «improvável» não é «impossível», e a coluna não tem
+    // índice único — por isso confere-se, e tenta-se outra vez.
+    for ($i = 0; $i < 12; $i++) {
+        $t = barTokenNovo();
+        $q = $conn->prepare("SELECT 1 FROM {$P}mesas WHERE bar_token=? LIMIT 1");
+        if (!$q) return '';
+        $q->bind_param('s', $t);
+        if (!$q->execute()) return '';
+        if ($q->get_result()->num_rows > 0) continue;
+        $u = $conn->prepare("UPDATE {$P}mesas SET bar_token=? WHERE id=?");
+        if (!$u) return '';
+        $u->bind_param('si', $t, $mesaId);
+        @$u->execute();
+        return $t;
+    }
+    return '';
+}
+
 /** O código curto que se diz em voz alta: «o A47 é para a mesa 3». */
 function barCodigoCurto(): string {
     $l = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -3192,28 +3286,28 @@ function barGuardarDefs(mysqli $conn, array $novos, int $cid = 0): int {
  */
 function barMesaDoToken(mysqli $conn, string $token, int $cid = 0): ?array {
     global $P;
-    // O NOME da mesa, reduzido a um endereço: «1 Alegria» é `1-alegria`. Era
-    // um código de dez letras sem vogais, que não dizia nada a ninguém e que
-    // ninguém conseguia escrever à mão sem se enganar. O nome real diz de que
-    // mesa se fala — a quem o lê no telemóvel e a quem apanha a folha do chão.
-    $alvo = barSlugTexto($token);
+    // O CÓDIGO da mesa, gerado com ela. Chegou a ser o nome passado a endereço
+    // («1 Alegria» → `1-alegria`), que se lê e se escreve à mão — mas o nome
+    // muda, e mudá-lo em «Mesas» mudava em silêncio o endereço de todas as
+    // folhas já pousadas em cima da mesa. O código não muda nunca.
+    $alvo = strtoupper(trim($token));
     if ($alvo === '') return null;
     $cid = $cid ?: casamentoAtual();
-    // DENTRO da festa, e não em toda a casa: dois casamentos podem ter, os
-    // dois, uma «Mesa 1», e têm de poder. É o `c` que diz qual é a festa.
+    // DENTRO da festa quando se sabe qual é — é o `c` que o diz. O código é
+    // único em toda a casa, mas limitar o âmbito à festa evita que um código
+    // de outro casamento abra esta, ainda que por engano de quem escreve.
     $onde = $cid > 0 ? 'm.casamento_id = ' . (int)$cid : 'm.casamento_id > 0';
     $st = $conn->prepare("SELECT m.id, m.nome, m.casamento_id
                           FROM {$P}mesas m
                           JOIN {$P}casamentos w ON w.id = m.casamento_id AND w.estado='ativo'
-                          WHERE $onde");
+                          WHERE $onde AND m.bar_token = ? LIMIT 1");
     if (!$st) return null;
+    $st->bind_param('s', $alvo);
     if (!$st->execute()) return null;
-    foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $m) {
-        if (barSlugTexto((string)$m['nome']) !== $alvo) continue;
-        usarCasamento((int)$m['casamento_id']);
-        return $m;
-    }
-    return null;
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) return null;
+    usarCasamento((int)$m['casamento_id']);
+    return $m;
 }
 
 /**
@@ -3377,13 +3471,21 @@ function barSlugGarantir(mysqli $conn, int $cid): string {
 /**
  * O endereço público do bar deste casamento.
  *
- *     bebidas.php?c=2026-ia            — a festa, e nada mais
- *     bebidas.php?c=2026-ia&m=1-alegria — e a mesa por onde se entrou
+ *     bebidas.php?c=2026-ia              — a festa, e nada mais
+ *     bebidas.php?c=2026-ia&m=FGFMBKPZNB — e a mesa por onde se entrou
  *
  * O `c` chega para abrir: quem entra por ele escolhe a mesa na página, que é
  * o que toda a gente acaba por fazer de qualquer maneira — numa festa muda-se
  * de lugar. O `m` poupa esse gesto a quem aponta a câmara ao QR pousado na
- * mesa, e é o NOME real dela, para se reconhecer e se poder escrever à mão.
+ * mesa, e é o CÓDIGO gerado dela.
+ *
+ * As duas partes respondem a perguntas diferentes, e por isso são de matérias
+ * diferentes. O `c` vai num convite, num grupo de família, dito ao microfone:
+ * tem de se ler e de se reconhecer, e por isso é o ano e as iniciais. O `m`
+ * vai numa folha pousada em cima de uma mesa, e o que ele tem de ser é
+ * ESTÁVEL — a folha imprime-se uma vez e fica lá a noite inteira. Um nome
+ * muda quando alguém renomeia a mesa, e leva o endereço atrás sem avisar
+ * ninguém; um código gerado nasce com a mesa e não se mexe.
  *
  * Uma pergunta simples, sem reescritas de servidor: funciona em qualquer
  * alojamento, e não há um endereço bonito que dê 404 onde o mod_rewrite
@@ -3394,7 +3496,7 @@ function barLinkDaFesta(mysqli $conn, int $cid = 0, string $mesa = ''): string {
     $slug = barSlugGarantir($conn, $cid);
     if ($slug === '') return '';
     $url = rtrim(enderecoPublico(), '/') . '/bebidas.php?c=' . rawurlencode($slug);
-    $m = barSlugTexto($mesa);
+    $m = strtoupper(trim($mesa));
     if ($m !== '') $url .= '&m=' . rawurlencode($m);
     return $url;
 }

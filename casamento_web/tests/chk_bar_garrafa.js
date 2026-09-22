@@ -194,12 +194,20 @@ const marca = 'zzg' + Math.floor(Math.random() * 1e5);
     { escopo: 'tudo', sujeito: 'convidado', unidade: 'bebidas', quantidade: 2, janela_min: 0 });
   ok(regra.success, 'a casa põe «no máximo 2 bebidas por convidado»');
 
-  const slug = cena.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // Entra-se pelo endereço da festa com o CÓDIGO da mesa por cima — o que vai
+  // no QR pousado em cima dela. O código vem do servidor com a mesa: é gerado
+  // ao criá-la, e não se deduz do nome.
+  const tok = await p.evaluate(async n => {
+    const d = await (await fetch('api.php?action=mesa_list')).json();
+    return ((d.mesas || []).find(x => x.nome === n) || {}).bar_token || '';
+  }, cena.nome);
+  ok(/^[A-Z0-9]{10}$/.test(tok), 'a mesa nasceu com o seu código de QR: ' + tok);
+
   const salao = await b.newContext({ viewport: { width: 390, height: 844 },
                                      isMobile: true, hasTouch: true });
   const conv = await salao.newPage();
   conv.on('pageerror', e => errs.push('convidado: ' + e.message));
-  await conv.goto(BASE + '/bebidas.php?c=2026-ia&m=' + slug, { waitUntil: 'networkidle' });
+  await conv.goto(BASE + '/bebidas.php?c=2026-ia&m=' + tok, { waitUntil: 'networkidle' });
   await conv.waitForTimeout(1500);
   await conv.fill('#b-q', 'ZZG Provador');
   await conv.waitForTimeout(1200);

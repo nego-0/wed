@@ -120,17 +120,19 @@ const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++;
   console.log('   ' + JSON.stringify(mov));
 
   // ---- e agora o essencial: dá para pedir? ----
-  // O código de QR de cada mesa é o NOME dela, passado a endereço. Não há
-  // coluna nenhuma a guardá-lo — era `bar_token`, dez letras sem vogais —,
-  // e por isso o que se confere é que cada mesa importada tem um nome que dá
-  // um endereço: uma mesa sem nome não tem por onde ser apontada.
+  // Cada mesa importada nasce com o SEU código de QR, gerado aqui. O ficheiro
+  // não o traz, nem podia: um código vindo de outra instalação podia já estar
+  // dado a outra mesa desta, e duas mesas com o mesmo código mandam as bebidas
+  // de uma para a outra.
   const mesas = await p.evaluate(async () => {
-    const slug = (s) => String(s || '').toLowerCase().normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const d = await window.api('mesa_list');
-    return (d.mesas || []).map(m => ({ nome: m.nome, token: slug(m.nome) }));
+    return (d.mesas || []).map(m => ({ nome: m.nome, token: m.bar_token }));
   });
-  ok(mesas.length === 7 && mesas.every(m => m.token), 'as sete mesas chegaram com o seu código de QR');
+  ok(mesas.length === 7 && mesas.every(m => /^[A-Z0-9]{10}$/.test(m.token || '')),
+     'as sete mesas chegaram com o seu código de QR');
+  ok(new Set(mesas.map(m => m.token)).size === mesas.length,
+     'e cada uma com o SEU — dois códigos iguais mandavam as bebidas de uma '
+     + 'mesa para a outra');
   const tok = mesas.filter(m => m.nome === 'Oliveira')[0].token;
   // Entra-se pelo endereço DESTA festa, com a mesa por cima. O `?m=` sozinho
   // não chega aqui: o casamento importado é novo, e sem o `c` o servidor não

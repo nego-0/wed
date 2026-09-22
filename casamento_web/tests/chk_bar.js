@@ -91,16 +91,14 @@ const { escolher } = require('./escolhas');
   ok(montado.aberto === true, 'abrir o bar guarda-se mesmo, e não só no ecrã');
 
   const mesa = await noivos.evaluate(() => window.BAR_MESAS[0]);
-  // O código da mesa é o NOME dela, passado a endereço. Era um punhado de
-  // letras sem vogais — dizia à casa qual era a mesa e não dizia nada a
-  // ninguém mais. Quem apanha a folha do chão lê «mesa-1-alegria» e sabe onde
-  // a pousar; quem a escreve à mão escreve o que está escrito na mesa.
-  ok(/^[a-z0-9-]{1,64}$/.test(mesa.token || '')
-     && mesa.token === mesa.nome.toLowerCase().normalize('NFD')
-          .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, ''),
-     'o código de cada mesa é o nome dela: «' + mesa.nome + '» → «'
-     + mesa.token + '»');
+  // O código da mesa é GERADO com ela, e não o nome dela. Chegou a ser o nome
+  // passado a endereço — que se lê e se escreve à mão —, mas o nome MUDA:
+  // renomear uma mesa mudava em silêncio o endereço de todas as folhas já
+  // pousadas em cima dela, e isso descobre-se no dia da festa. Dez
+  // caracteres, sem vogais nem 0/O ou 1/l, que é o que faz um código
+  // escrevível à mão sem enganos por quem a câmara não serve.
+  ok(/^[23456789BCDFGHJKMNPQRSTVWXYZ]{10}$/.test(mesa.token || ''),
+     'cada mesa tem o seu código gerado para o QR: «' + mesa.token + '»');
 
   await noivos.click('#ab-mesas');
   await noivos.waitForTimeout(400);
@@ -119,12 +117,12 @@ const { escolher } = require('./escolhas');
   const cartaoQr = await folha.locator('.cartao').first().innerText();
   ok(/Sem rede\?/.test(cartaoQr),
      'com o rodapé que diz o que fazer sem rede — é a saída de sempre');
-  // A FESTA em `c`, a MESA em `m`, e as duas a ler-se. Era `bebidas.php?m=` —
-  // a mesma página para toda a gente, com um punhado de letras sem vogais a
-  // dizer qual era a mesa. Agora a folha diz de que casamento é e para que
-  // mesa vai: quem a apanha do chão sabe onde a devolver, e quem a escreve à
-  // mão escreve um ano, duas iniciais e o nome da mesa.
-  ok(/bebidas\.php\?c=\d{4}-[a-z0-9-]+&(amp;)?m=[a-z0-9-]+/.test(cartaoQr),
+  // A FESTA em `c`, a MESA em `m`. Era `bebidas.php?m=` — a mesma página para
+  // toda a gente, e nada a dizer de que casamento era. Agora a folha diz-no:
+  // quem a apanha do chão sabe onde a devolver. O `c` lê-se (um ano e duas
+  // iniciais), o `m` não precisa — o que ele precisa de ser é ESTÁVEL, porque
+  // a folha imprime-se uma vez e o nome de uma mesa pode mudar depois disso.
+  ok(/bebidas\.php\?c=\d{4}-[a-z0-9-]+&(amp;)?m=[A-Z0-9]{10}/.test(cartaoQr),
      'e o endereço escrito, legível, para quem prefira escrever a apontar a '
      + 'câmara: ' + (cartaoQr.match(/\S*bebidas\S*/) || ['(nenhum)'])[0]);
   const urlDoQr = await folha.locator('.cartao canvas').first().getAttribute('data-url');

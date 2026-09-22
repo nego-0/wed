@@ -52,6 +52,35 @@
   var meus = [];
   var relogio = null, procuraEspera = null;
 
+  /* ---- QUEM ESTÁ A ESCOLHER NÃO É INTERROMPIDO -------------------------
+     O menu recarrega-se de tempos a tempos, e ao recarregar apara o cesto:
+     uma bebida que saiu do menu, ou que a copa suspendeu, não pode ficar lá
+     dentro. Está certo — mas corria de trinta em trinta segundos por um
+     relógio fixo, sem olhar a quem estava do outro lado. Quem estivesse a
+     montar o pedido via os seus números mexerem-se sozinhos a meio, sem nada
+     a explicar porquê, e concluía o óbvio: que a página se tinha enganado.
+
+     Passa a esperar que a pessoa PARE. Vinte segundos sem um toque, sem um
+     scroll, sem uma tecla — e aí sim, vai buscar o menu. Qualquer gesto ao
+     segundo dezanove adia a volta inteira.
+
+     Não há aqui risco nenhum de servir o que não existe: quem decide o que se
+     pode pedir é o servidor, no `bar_pedir`, e ele refaz as contas todas com
+     o estado do momento. Um menu adiado uns segundos no telemóvel pode, no
+     pior caso, mostrar uma bebida que acabou entretanto — e nesse caso o
+     pedido leva uma recusa que diz porquê, que é o que já acontecia. O que
+     não pode acontecer é o contrário: apagar a escolha de quem está a
+     escolher, por causa de um relógio. */
+  var PARAGEM_MS = 20000;               // quanto tempo quieto antes de refrescar
+  var recadoDoCesto = '';               // o que se tirou do cesto, para o dizer
+  var ultimoGesto = Date.now();
+  var ultimoMenu  = Date.now();
+  function gesto() { ultimoGesto = Date.now(); }
+  ['pointerdown', 'touchstart', 'keydown', 'input', 'wheel', 'scroll']
+    .forEach(function (e) {
+      document.addEventListener(e, gesto, { passive: true, capture: true });
+    });
+
   function $(id) { return document.getElementById(id); }
 
   // As peças comuns do módulo (assets/bar-pecas.js). O convidado usa as
@@ -322,6 +351,13 @@
 
   function htmlAvisos() {
     var html = '';
+    // O que o bar mexeu no cesto desde a última vez que esta pessoa olhou.
+    // Vem primeiro porque é a única linha aqui que fala de uma coisa que
+    // MUDOU agora mesmo, e nos números que ela tem à frente. Diz-se uma vez.
+    if (recadoDoCesto) {
+      html += '<div class="b-nota"><b>' + esc(recadoDoCesto) + '</b></div>';
+      recadoDoCesto = '';
+    }
     if (!aberto) {
       html += '<div class="b-nota"><b>A copa ainda não está a servir.</b><br>'
         + esc(msgFechado || 'Assim que abrir, pode pedir daqui mesmo — a página avisa sozinha.')
@@ -1011,6 +1047,11 @@
     // as minhas quotas e recusar no fim seria uma promessa a fingir.
     var d = await chamar('bar_menu', undefined, para ? { por: para.id } : null);
     if (!d.success) { esqueletoPosto = false; $('b-corpo').innerHTML = falhou(d); return; }
+    // Os nomes do menu ANTIGO, guardados antes de ele ser substituído: uma
+    // bebida que sai do menu deixa de ter nome no novo, e o recado ficava a
+    // dizer «uma bebida» a quem sabe perfeitamente qual foi a que escolheu.
+    var nomesAntes = {};
+    (menu.itens || []).forEach(function (x) { nomesAntes[String(x.id)] = x.nome; });
     menu = { categorias: d.categorias, itens: d.itens };
     // Cada bebida travada leva o INSTANTE em que abre, e não os segundos que
     // faltavam quando a resposta chegou: é o que faz o cartão dela ser igual
@@ -1027,21 +1068,52 @@
     ritmoAte  = (ritmo && ritmo.espera_s > 0) ? Date.now() + ritmo.espera_s * 1000 : 0;
     travaoAte = (travaoPedido && travaoPedido.espera_s > 0)
               ? Date.now() + travaoPedido.espera_s * 1000 : 0;
-    // Uma bebida que desapareceu do menu não pode ficar no cesto.
+    ultimoMenu = Date.now();
+    // O cesto apara-se — mas só pelo que MUDOU, e nunca «por via das dúvidas».
+    // Três razões, e mais nenhuma: a bebida saiu do menu, deixou de se servir
+    // naquela unidade, ou o que esta pessoa pode levar desceu abaixo do que
+    // ela escolheu. Fora disso, o que está escolhido fica.
+    //
+    // E AQUI ESTAVA O DEFEITO, não no relógio. A chave do cesto é `id:unidade`
+    // («17:garrafa») desde que a garrafa passou a poder escolher-se, e esta
+    // linha continuou a comparar `String(x.id)` — «17» — com a chave inteira.
+    // Nunca eram iguais. O `!i` dava sempre verdadeiro e o cesto esvaziava-se
+    // POR COMPLETO a cada volta do menu, a bebida boa e a má, com o bar
+    // inteiro por servir e nada de facto mudado. Quem estivesse a escolher via
+    // o cesto desaparecer-lhe da mão de trinta em trinta segundos.
+    var tirado = [];
     Object.keys(cesto).forEach(function (k) {
-      var i = menu.itens.filter(function (x) { return String(x.id) === k; })[0];
-      if (!i || i.pode_pedir <= 0) { delete cesto[k]; return; }
+      var i = menu.itens.filter(function (x) { return String(x.id) === k.split(':')[0]; })[0];
+      if (!i || i.pode_pedir <= 0) {
+        tirado.push((i && i.nome) || nomesAntes[k.split(':')[0]] || 'uma bebida');
+        delete cesto[k]; return;
+      }
       var un = k.split(':')[1] || 'copo';
       // Uma bebida que passou a servir-se só ao copo deixa cair as garrafas
       // que alguém tivesse no cesto: o menu mudou debaixo dela.
       if ((un === 'garrafa' && i.servir === 'copo') ||
-          (un === 'copo' && i.servir === 'garrafa')) { delete cesto[k]; return; }
+          (un === 'copo' && i.servir === 'garrafa')) {
+        tirado.push(i.nome); delete cesto[k]; return;
+      }
       // As duas contas outra vez: quantas cabem em DOSES, e quantas cabem em
       // ARTIGOS. A menor das duas é o que fica no cesto.
       var porDoses = Math.floor(i.pode_pedir / custoDe(i, un));
       var tecto = Math.min(porDoses, +i.max_itens || 1);
-      if (cesto[k] > tecto) { if (tecto > 0) cesto[k] = tecto; else delete cesto[k]; }
+      if (cesto[k] > tecto) {
+        tirado.push(i.nome);
+        if (tecto > 0) cesto[k] = tecto; else delete cesto[k];
+      }
     });
+    // E DIZ-SE. Mexer nos números de alguém sem uma palavra é o que faz a
+    // página parecer avariada: a pessoa olha, vê outra coisa do que deixou, e
+    // não tem como saber que foi o bar que mudou e não ela que se enganou.
+    if (tirado.length) {
+      recadoDoCesto = tirado.length === 1
+        ? 'O bar mudou: «' + tirado[0] + '» já não cabe como estava, e o cesto '
+          + 'foi acertado.'
+        : 'O bar mudou: ' + tirado.length + ' bebidas já não cabiam como '
+          + 'estavam, e o cesto foi acertado.';
+    }
     await recarregarMeus();
   }
 
@@ -1055,6 +1127,14 @@
   }
 
   window.barRecarregar = function () { arrancar(); };
+
+  /* Duas janelas para a suite, e mais nada. Sem elas, medir a paragem obrigava
+     a prova a esperar pelo relógio real e a adivinhar quando ele bateu — e uma
+     prova que adivinha é uma prova que acusa o produto de coisas que ele não
+     fez. `barTesteRecarregarMenu` faz a volta que o relógio faria;
+     `barTesteUltimoMenu` diz quando foi a última, para se ver se houve. */
+  window.barTesteRecarregarMenu = function () { return carregarMenu(); };
+  window.barTesteUltimoMenu = function () { return ultimoMenu; };
 
   async function arrancar() {
     var d = await chamar('bar_mesa');
@@ -1114,14 +1194,30 @@
   function bater() {
     if (document.hidden || !eu) return;
     batidas++;
-    // O que muda depressa são os pedidos; o que muda devagar é o menu. Um
-    // menu inteiro de trinta em trinta segundos chega, e poupa a rede do
-    // salão, que numa festa é sempre pior do que parece.
-    if (batidas % 3 === 0) carregarMenu(); else recarregarMeus();
+    // O que muda depressa são os PEDIDOS — o estado daquilo que já se pediu —,
+    // e isso vai de dez em dez segundos. Não mexe no cesto: só repinta «os
+    // meus pedidos», que é onde a pessoa vai ver se a copa já decidiu.
+    if (batidas % 2 === 0) recarregarMeus();
+
+    // O MENU é outra coisa: recarregá-lo apara o cesto, e por isso espera que
+    // a pessoa esteja quieta. Vinte segundos sem um gesto, e vinte desde a
+    // última volta — assim quem larga o telemóvel em cima da mesa tem o menu
+    // fresco quando lhe volta a pegar, e quem está a escolher não é
+    // interrompido a meio.
+    //
+    // Com o cesto VAZIO não há nada a proteger, e não se adia coisa nenhuma:
+    // o que o adiamento defende é uma escolha feita, e não existe nenhuma.
+    var agora = Date.now();
+    var quieto = (agora - ultimoGesto) >= PARAGEM_MS || !Object.keys(cesto).length;
+    if (quieto && (agora - ultimoMenu) >= PARAGEM_MS) carregarMenu();
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) bater(); });
 
   arrancar();
-  relogio = setInterval(bater, 10000);
+  // Cinco em cinco segundos: não é mais rede (os pedidos continuam a ir de dez
+  // em dez), é só olhar mais vezes para o relógio da paragem. Com uma batida
+  // de dez, uma pessoa que parasse logo a seguir a uma esperava vinte e nove
+  // segundos pelo refresco em vez de vinte.
+  relogio = setInterval(bater, 5000);
   setInterval(tique, 1000);
 })();

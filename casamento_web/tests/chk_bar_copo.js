@@ -130,9 +130,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // à letra não dava nada, e a prova ficava sem mesa por onde entrar.
   const token = await p.evaluate(m => ((window.BAR_MESAS || [])
                                        .find(x => +x.id === +m) || {}).token, sentou.mesa);
-  // O código da mesa é o NOME dela passado a endereço (`mesa-7`), e não um
-  // punhado de letras sem vogais: é o que se lê no QR e o que se escreve à mão.
-  ok(/^[a-z0-9-]{1,64}$/.test(token || ''), 'há uma mesa com código para o QR: ' + token);
+  // O código da mesa é gerado com ela e não muda — é o que vai no QR pousado
+  // em cima dela, e a folha imprime-se uma vez só.
+  ok(/^[A-Z0-9]{10}$/.test(token || ''), 'há uma mesa com código para o QR: ' + token);
 
   const salao = await b.newContext({ viewport: { width: 390, height: 844 } });
   const conv = await salao.newPage();

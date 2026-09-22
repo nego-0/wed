@@ -30,12 +30,19 @@ $ENDERECO = enderecoPublico();
 // não dizia nada a ninguém.
 $LINK_CASA = barLinkDaFesta($conn);
 
-// As mesas. O QR de cada uma leva o NOME dela no endereço — não há
-// código nenhum a decorar.
+// As mesas, com o código que vai no QR de cada uma. Uma mesa antiga pode
+// ainda não ter (a coluna esteve vazia entre duas versões): barMesaTokenGarantir
+// dá-lho aqui, uma vez, em vez de deixar a folha sair sem endereço.
 $mesas = [];
-$rm = $conn->query("SELECT id, nome FROM {$P}mesas WHERE " . doCasamento() . "
+$rm = $conn->query("SELECT id, nome, bar_token FROM {$P}mesas WHERE " . doCasamento() . "
                     ORDER BY (especial='noivos') DESC, nome");
 if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
+foreach ($mesas as &$_m) {
+    if (trim((string)($_m['bar_token'] ?? '')) === '') {
+        $_m['bar_token'] = barMesaTokenGarantir($conn, (int)$_m['id']);
+    }
+}
+unset($_m);
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -192,13 +199,13 @@ if ($rm) $mesas = $rm->fetch_all(MYSQLI_ASSOC);
 <script>window.CSRF = <?= json_encode(csrfToken()) ?>;</script>
 <script>window.SO_VER_UI = <?= $soVer ? 'true' : 'false' ?>;</script>
 <script>
-// O `token` da mesa é hoje o próprio NOME, passado a endereço: «Mesa 1 —
-// Alegria» vira `mesa-1-alegria`. Era um punhado de letras sem vogais, que
-// ninguém conseguia ditar ao telefone nem escrever à mão a partir de um QR
-// molhado. O nome faz as duas coisas, e diz a que mesa se refere.
+// O `token` da mesa é o código gerado com ela, e vem da base de dados. Chegou
+// a ser o próprio nome passado a endereço — que se lê e se escreve à mão —,
+// mas o nome muda: renomear uma mesa em «Mesas» mudava, em silêncio, o
+// endereço de todas as folhas já pousadas em cima dela.
 window.BAR_MESAS = <?= json_encode(array_map(fn($m) => [
     'id' => (int)$m['id'], 'nome' => $m['nome'],
-    'token' => barSlugTexto((string)$m['nome'])], $mesas), JSON_UNESCAPED_UNICODE) ?>;
+    'token' => (string)($m['bar_token'] ?? '')], $mesas), JSON_UNESCAPED_UNICODE) ?>;
 window.BAR_ENDERECO = <?= json_encode($ENDERECO) ?>;
 window.BAR_LINK_FESTA = <?= json_encode($LINK_CASA) ?>;
 </script>

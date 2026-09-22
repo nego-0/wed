@@ -4857,6 +4857,54 @@ if ($acao === 'bar_stock_repor' || $acao === 'bar_stock_acerto') {
     ok(['itens' => barItens($conn, true)]);
 }
 
+if ($acao === 'bar_stock_reiniciar') {
+    // REDEFINIR A QUANTIDADE INICIAL desta bebida.
+    //
+    // O acerto (acima) diz a verdade sobre o que HÁ agora, e deixa a base da
+    // noite onde estava — é isso que faz a percentagem dizer «restam 15% do
+    // gin», que é a notícia útil a meio da festa.
+    //
+    // Isto é outra coisa, e é de antes: o casal está a montar o bar e o número
+    // que lá pôs está errado de origem — contou caixas em vez de garrafas,
+    // mudou de fornecedor, tirou uma bebida da lista de compras. Aqui a base
+    // MOVE-SE com o stock, porque não há noite nenhuma a decorrer: o que se
+    // está a corrigir é o ponto de partida. Sem isto, uma bebida posta a 200 e
+    // reposta a 50 ficava a dizer «resta 25%» a noite inteira, com as
+    // cinquenta intactas.
+    //
+    // É dos NOIVOS, não da copa a meio do serviço: quem quer dizer «contei e
+    // há menos do que pensávamos» usa o acerto, que é o que guarda a base e
+    // deixa o rasto certo no livro-razão.
+    barCid();
+    if (!podeCopa()) erro('Só a copa.');
+    exigirCorrecao();
+    $d = corpo();
+    $iid = (int)($d['item_id'] ?? 0);
+    $item = $iid ? barItem($conn, $iid) : null;
+    if (!$item) erro('Bebida não encontrada.');
+    $novo = max(0, min(999999, (int)($d['quantidade'] ?? 0)));
+    $nota = mb_substr(trim((string)($d['nota'] ?? '')), 0, 160);
+    if ($nota === '') $nota = 'quantidade inicial redefinida';
+    // O que já está prometido a alguém não se apaga por baixo dele. Pôr o
+    // stock abaixo do reservado deixava pedidos aprovados sem bebida que os
+    // cubra — e quem os aprovou não foi avisado de nada.
+    $preso = max(0, (int)$item['reservado']);
+    if ($novo < $preso) {
+        erro('Há ' . $preso . ' já prometidas a pedidos por entregar. '
+           . 'Não se pode ficar abaixo disso — decida esses pedidos primeiro.');
+    }
+    $delta = $novo - (int)$item['stock'];
+    barMoverStock($conn, $iid, $delta, 'acerto', null, $nota);
+    // A base ACOMPANHA, que é o que distingue isto de um acerto. Escreve-se
+    // depois do movimento porque barMoverStock sobe-a sozinha quando o stock
+    // sobe — e aqui ela também tem de DESCER.
+    $cidA = casamentoAtual();
+    @$conn->query("UPDATE {$P}bar_itens SET base_noite=$novo
+                   WHERE casamento_id=$cidA AND id=$iid");
+    registar($conn, 'bar_stock', $item['nome'], 'quantidade inicial: ' . $novo . ' — ' . $nota);
+    ok(['itens' => barItens($conn, true)]);
+}
+
 if ($acao === 'bar_categoria_guardar') {
     barCid(); if (!podeCopa()) erro('Só a copa.'); exigirCorrecao();
     $cid = casamentoAtual(); $d = corpo();
@@ -5063,10 +5111,12 @@ if ($acao === 'bar_motivo_apagar') {
     ok(['motivos' => barMotivos($conn)]);
 }
 
-// A acção `bar_mesa_token` saiu daqui. Gerava (e regerava) um código opaco
-// por mesa, e regerá-lo invalidava a folha pousada em cima dela. A mesa passa
-// a dizer-se pelo NOME — «1 Alegria» é `1-alegria` —, que não se gera nem se
-// regera: muda quando o nome muda, que é exactamente quando deve mudar.
+// A acção `bar_mesa_token` saiu daqui, e não volta. O código da mesa continua
+// a existir — é ele que vai no QR —, mas GERA-SE UMA VEZ, com a mesa, e não há
+// botão nenhum para o refazer. Era isso que a acção fazia, e refazê-lo
+// invalidava, em silêncio, a folha já pousada em cima da mesa. Quem precisa de
+// uma folha nova reimprime a que há; quem precisa de outro código cria outra
+// mesa, que é o que de facto está a fazer.
 
 // ---- as regras: quanto, de quem, de quanto em quanto tempo ----
 
@@ -8169,6 +8219,11 @@ if ($acao === 'mesa_save') {
     @$st->execute();
     if ($conn->errno===1062) erro('Já existe uma mesa com esse nome.');
     $novoId = $id ?: $conn->insert_id;
+    // Uma mesa nova nasce com o seu código de QR. Sem isto, a folha da mesa
+    // saía sem endereço e a mesa ficava sem porta — e ninguém dá por isso até
+    // alguém apontar a câmara. Uma mesa que já existe fica com o código que
+    // tem: ele pode estar impresso.
+    if (!$id) barMesaTokenGarantir($conn, (int)$novoId);
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
 }
 if ($acao === 'mesa_noivos') {
@@ -8181,6 +8236,7 @@ if ($acao === 'mesa_noivos') {
     $st=$conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y) VALUES (" . casamentoAtual() . ",?,2,'redonda','ouro','noivos',50,42)");
     $st->bind_param('s',$nome); $st->execute();
     $novoId=$conn->insert_id; // capturar antes de listarMesas() (que corre outras queries)
+    barMesaTokenGarantir($conn, (int)$novoId);
     ok(['mesas'=>listarMesas($conn),'id'=>$novoId]);
 }
 if ($acao === 'mesa_pos') {
@@ -8383,6 +8439,26 @@ function retratoCasamento(mysqli $conn, int $cid): array {
         if (isset($porCodigo[$cod])) $convites[$porCodigo[$cod]]['membros'][] = $g;
     }
 
+    // ---- as perguntas do RSVP, e o que as pessoas responderam ----
+    // Faltavam aqui, e a falta era funda: «tem alergias?», «precisa de
+    // transporte?», «vem de carro?» são perguntas que o casal escreveu, e as
+    // respostas são o que a lista de convidados tem de mais útil no dia antes.
+    // Levar os dados de um casamento e deixar isto para trás é levar a lista e
+    // esquecer o que ela dizia.
+    //
+    // As respostas prendem-se ao convite pelo CÓDIGO e à pessoa pelo NOME — o
+    // número é desta base e não sobrevive a uma importação, como em todo o
+    // resto deste retrato.
+    $rsvpPerguntas = $um("SELECT chave, rotulo, ajuda, tipo, opcoes, obrigatoria,
+                                 por_pessoa, ordem, ativa
+                          FROM {$P}rsvp_perguntas WHERE casamento_id=$cid
+                          ORDER BY ordem, id");
+    $rsvpRespostas = $um("SELECT c.codigo, g.nome AS pessoa, r.chave, r.valor
+                          FROM {$P}rsvp_respostas r
+                          JOIN {$P}convites c ON c.id = r.convite_id
+                          LEFT JOIN {$P}convidados g ON g.id = r.convidado_id
+                          WHERE r.casamento_id=$cid ORDER BY r.id");
+
     $versoes = $um("SELECT nome, ambito, defs, predefinida, utilizador, criado_em, atualizado_em
                     FROM {$P}versoes WHERE casamento_id=$cid ORDER BY id");
 
@@ -8427,8 +8503,15 @@ function retratoCasamento(mysqli $conn, int $cid): array {
     // base e não sobrevive a uma importação.
     $barCategorias = $um("SELECT nome, ordem, cor FROM {$P}bar_categorias
                           WHERE casamento_id=$cid ORDER BY ordem, nome");
+    // `servir` e `doses_garrafa` vão junto: são o que distingue uma bebida que
+    // sai à garrafa de uma que sai ao copo, e sem elas uma carta importada
+    // chegava com tudo ao copo — o espumante da meia-noite incluído. O
+    // `stock_minimo` é o «avisar quando restarem», que é por bebida de
+    // propósito (cinco garrafas de whisky é uma emergência, cinco águas não é
+    // nada): sem ele, todas voltavam ao número de fábrica.
     $barItens = $um("SELECT i.nome, i.descricao, i.alcoolico, i.volume_ml,
                             i.max_por_pedido, i.estado, i.ordem, i.stock,
+                            i.servir, i.doses_garrafa, i.stock_minimo,
                             c.nome AS categoria
                      FROM {$P}bar_itens i
                      LEFT JOIN {$P}bar_categorias c ON c.id = i.categoria_id
@@ -8460,6 +8543,7 @@ function retratoCasamento(mysqli $conn, int $cid): array {
     usarCasamento($anterior > 0 ? $anterior : 1);
     return ['ficha' => $ficha, 'definicoes' => $defs, 'mesas' => $mesas,
             'convites' => $convites, 'versoes' => $versoes, 'acessos' => $acessos,
+            'rsvp' => ['perguntas' => $rsvpPerguntas, 'respostas' => $rsvpRespostas],
             'orcamento' => ['categorias' => $orcCategorias, 'despesas' => $orcDespesas],
             'bar' => ['categorias' => $barCategorias, 'itens' => $barItens,
                       'motivos' => $barMotivos, 'limites' => $barLimites,
@@ -8601,7 +8685,11 @@ function impMesas(mysqli $conn, int $cid, array $mesas): int {
         $st = $conn->prepare("INSERT INTO {$P}mesas (casamento_id,nome,capacidade,forma,cor,especial,pos_x,pos_y,tamanho)
                               VALUES ($cid,?,?,?,?,?,?,?,?)");
         $st->bind_param('sisssddi', $nm, $cap, $forma, $cor, $esp, $px, $py, $tam);
-        if (@$st->execute()) $n++;
+        // O código de QR é DESTA casa: não vem no ficheiro nem se copia de lá.
+        // Um ficheiro exportado de outra instalação traria códigos que já
+        // podiam estar dados a outras mesas — e duas mesas com o mesmo código
+        // mandam as bebidas de uma para a outra.
+        if (@$st->execute()) { $n++; barMesaTokenGarantir($conn, (int)$conn->insert_id); }
     }
     return $n;
 }
@@ -8610,10 +8698,18 @@ function impMesas(mysqli $conn, int $cid, array $mesas): int {
 function impConvites(mysqli $conn, int $cid, array $convites): array {
     global $P;
     $idMesa = mapaMesas($conn, $cid);          // as mesas que já lá estão, pelo nome
-    $feito = ['convites' => 0, 'pessoas' => 0, 'codigos_trocados' => 0];
+    // De que código do FICHEIRO nasceu cada convite escrito. Um código pode ser
+    // trocado à entrada (já estava dado a outro casamento desta casa), e quem
+    // vier atrás prender-lhe coisas pelo código do ficheiro — as respostas do
+    // RSVP — não tem como saber disso sozinho. Sem este mapa, importar para
+    // uma casa onde o original ainda vive perdia as respostas todas, caladas:
+    // o código colidia, era trocado, e não havia convite nenhum a atender por
+    // aquele nome.
+    $feito = ['convites' => 0, 'pessoas' => 0, 'codigos_trocados' => 0, 'mapa_codigos' => []];
     foreach ($convites as $c) {
         if (!is_array($c) || trim((string)($c['nome_exibicao'] ?? '')) === '') continue;
-        $codigo = strtoupper(trim((string)($c['codigo'] ?? '')));
+        $codigoFich = strtoupper(trim((string)($c['codigo'] ?? '')));
+        $codigo = $codigoFich;
         if ($codigo === '' || !preg_match('/^[A-Z0-9]{4,16}$/', $codigo)) {
             $codigo = gerarCodigo($conn); $feito['codigos_trocados']++;
         } else {
@@ -8651,6 +8747,7 @@ function impConvites(mysqli $conn, int $cid, array $convites): array {
         $st->bind_param('sssssiissssissiiiis', ...$vals);   // 19 colunas, pela ordem acima
         if (!@$st->execute()) continue;
         $convId = $conn->insert_id; $feito['convites']++;
+        if ($codigoFich !== '') $feito['mapa_codigos'][$codigoFich] = $convId;
 
         foreach ((array)($c['membros'] ?? []) as $g) {
             if (!is_array($g) || trim((string)($g['nome'] ?? '')) === '') continue;
@@ -8668,6 +8765,90 @@ function impConvites(mysqli $conn, int $cid, array $convites): array {
             $q->bind_param('issisiisi', $convId, $gnome, $gen, $prin, $rsvp, $pres, $bri, $pap, $gm);
             if (@$q->execute()) $feito['pessoas']++;
         }
+    }
+    return $feito;
+}
+
+/**
+ * Escreve as perguntas do RSVP e as respostas que já lá estavam.
+ *
+ * As perguntas são do casal e vêm inteiras. As respostas prendem-se ao convite
+ * pelo CÓDIGO e à pessoa pelo NOME — os números são desta base e não
+ * sobrevivem a uma importação, como no resto do retrato. Uma resposta cujo
+ * convite não veio no ficheiro deixa-se cair em silêncio: não há a quem a
+ * prender, e inventar-lhe um dono era pior do que perdê-la.
+ *
+ * As respostas escrevem-se DEPOIS dos convites, e é por isso que isto corre
+ * onde corre.
+ */
+function impRsvp(mysqli $conn, int $cid, array $rsvp, array $mapaCodigos = []): array {
+    global $P;
+    $feito = ['rsvp_perguntas' => 0, 'rsvp_respostas' => 0];
+
+    foreach ((array)($rsvp['perguntas'] ?? []) as $q) {
+        if (!is_array($q)) continue;
+        $chave = mb_substr(trim((string)($q['chave'] ?? '')), 0, 40);
+        $rot   = mb_substr(trim((string)($q['rotulo'] ?? '')), 0, 160);
+        if ($chave === '' || $rot === '') continue;
+        $ajuda = isset($q['ajuda']) && $q['ajuda'] !== null
+               ? mb_substr((string)$q['ajuda'], 0, 240) : null;
+        $tipo  = in_array($q['tipo'] ?? '', ['escolha','texto','sim_nao'], true)
+               ? (string)$q['tipo'] : 'escolha';
+        $ops   = isset($q['opcoes']) && $q['opcoes'] !== null ? (string)$q['opcoes'] : null;
+        $obr   = (int)!empty($q['obrigatoria']);
+        $pp    = isset($q['por_pessoa']) ? (int)!empty($q['por_pessoa']) : 1;
+        $ord   = (int)($q['ordem'] ?? 0);
+        $at    = isset($q['ativa']) ? (int)!empty($q['ativa']) : 1;
+        $st = $conn->prepare("INSERT INTO {$P}rsvp_perguntas
+                (casamento_id,chave,rotulo,ajuda,tipo,opcoes,obrigatoria,por_pessoa,ordem,ativa)
+                VALUES ($cid,?,?,?,?,?,?,?,?,?)");
+        if (!$st) continue;
+        $st->bind_param('sssssiiii', $chave, $rot, $ajuda, $tipo, $ops, $obr, $pp, $ord, $at);
+        if (@$st->execute()) $feito['rsvp_perguntas']++;
+    }
+
+    $respostas = (array)($rsvp['respostas'] ?? []);
+    if (!$respostas) return $feito;
+
+    // Os convites e as pessoas que ACABARAM de ser escritos, pelo que o
+    // ficheiro usa para lhes chamar: o código e o nome.
+    //
+    // O mapa vem de quem os escreveu, e não de uma leitura da base: um código
+    // pode ter sido TROCADO à entrada, por já estar dado a outro casamento
+    // desta casa. Quem importa para uma casa onde o original ainda vive cai
+    // sempre nesse caso — e sem o mapa, as respostas ficavam todas de fora,
+    // caladas, com o resumo a dizer «0» sem explicar porquê.
+    $idConv = [];
+    $r = @$conn->query("SELECT id, codigo FROM {$P}convites WHERE casamento_id=$cid");
+    if ($r) while ($x = $r->fetch_assoc()) $idConv[(string)$x['codigo']] = (int)$x['id'];
+    foreach ($mapaCodigos as $doFicheiro => $idNovo) $idConv[(string)$doFicheiro] = (int)$idNovo;
+    $idPessoa = [];
+    $r = @$conn->query("SELECT id, convite_id, nome FROM {$P}convidados WHERE casamento_id=$cid");
+    if ($r) while ($x = $r->fetch_assoc()) {
+        $idPessoa[(int)$x['convite_id'] . '|' . (string)$x['nome']] = (int)$x['id'];
+    }
+
+    $ins = $conn->prepare("INSERT INTO {$P}rsvp_respostas
+            (casamento_id,convite_id,convidado_id,chave,valor) VALUES ($cid,?,?,?,?)");
+    if (!$ins) return $feito;
+    foreach ($respostas as $a) {
+        if (!is_array($a)) continue;
+        $cod = (string)($a['codigo'] ?? '');
+        if (!isset($idConv[$cod])) continue;
+        $convId = $idConv[$cod];
+        // A resposta pode ser do convite inteiro (convidado_id=0) ou de uma
+        // pessoa dele. Uma pessoa que não veio no ficheiro cai para o convite,
+        // que é o dono que resta — e não se perde o que ela respondeu.
+        $pessoa = 0;
+        $nome = (string)($a['pessoa'] ?? '');
+        if ($nome !== '' && isset($idPessoa[$convId . '|' . $nome])) {
+            $pessoa = $idPessoa[$convId . '|' . $nome];
+        }
+        $chave = mb_substr((string)($a['chave'] ?? ''), 0, 40);
+        $valor = mb_substr((string)($a['valor'] ?? ''), 0, 240);
+        if ($chave === '') continue;
+        $ins->bind_param('iiss', $convId, $pessoa, $chave, $valor);
+        if (@$ins->execute()) $feito['rsvp_respostas']++;
     }
     return $feito;
 }
@@ -8735,6 +8916,16 @@ function impBar(mysqli $conn, int $cid, array $bar): array {
         $est = ($i['estado'] ?? 'ativo') === 'oculto' ? 'oculto' : 'ativo';
         $ord = (int)($i['ordem'] ?? 0);
         $stk = max(0, (int)($i['stock'] ?? 0));
+        $min = max(0, min(9999, (int)($i['stock_minimo'] ?? 8)));
+        // Como se serve, e quantos copos dá uma garrafa. Um ficheiro antigo
+        // não traz nenhum dos dois: nesse caso vale o copo, que é o que a casa
+        // sempre fez e o que essas bebidas de facto eram.
+        $srv = in_array($i['servir'] ?? '', ['copo','garrafa','ambos'], true)
+             ? (string)$i['servir'] : 'copo';
+        // Numa que só sai à garrafa o campo não se aplica — o stock dessas são
+        // garrafas, e uma garrafa custa uma. A mesma anulação que o
+        // bar_item_guardar faz, para um ficheiro não a contornar por trás.
+        $dose = $srv === 'garrafa' ? 1 : max(1, min(60, (int)($i['doses_garrafa'] ?? 6)));
         // A bebida nasce a ZERO e o stock entra pelo livro-razão, como qualquer
         // outra entrada. Escrevê-lo aqui E lançar o movimento a seguir dava o
         // dobro das garrafas — foi o que aconteceu à primeira, e é o erro que
@@ -8743,9 +8934,11 @@ function impBar(mysqli $conn, int $cid, array $bar): array {
         // caminho por onde o stock se mexe.
         $st = $conn->prepare("INSERT INTO {$P}bar_itens
                 (casamento_id,categoria_id,nome,descricao,alcoolico,volume_ml,
-                 max_por_pedido,estado,ordem,stock,reservado)
-                VALUES ($cid,?,?,?,?,?,?,?,?,0,0)");
-        $st->bind_param('issiiisi', $catId, $nm, $desc, $alc, $vol, $maxp, $est, $ord);
+                 max_por_pedido,estado,ordem,stock,reservado,
+                 servir,doses_garrafa,stock_minimo)
+                VALUES ($cid,?,?,?,?,?,?,?,?,0,0,?,?,?)");
+        $st->bind_param('issiiisisii', $catId, $nm, $desc, $alc, $vol, $maxp, $est, $ord,
+                        $srv, $dose, $min);
         if (!@$st->execute()) continue;
         $idItem[$nm] = $conn->insert_id;
         $feito['bar_itens']++;
@@ -8916,8 +9109,12 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
     // O bar sai primeiro, e de dentro para fora: as suas linhas apontam para
     // convidados e mesas, e apagar essas antes deixava a fila a apontar para
     // gente que já não existe.
+    // As respostas do RSVP antes das pessoas que as deram, e as perguntas
+    // antes das respostas: ficavam as duas para trás, e um «substituir»
+    // deixava as perguntas do casamento antigo em cima das do ficheiro.
     foreach (['bar_pedido_itens', 'bar_pedidos', 'bar_stock_mov', 'bar_alertas', 'bar_limites',
               'bar_motivos', 'bar_mensagens', 'bar_dispositivos', 'bar_itens', 'bar_categorias',
+              'rsvp_respostas', 'rsvp_perguntas',
               'convidados', 'convites', 'mesas', 'versoes', 'definicoes',
               'orcamento_pagamentos', 'orcamento_despesas', 'orcamento_categorias'] as $t) {
         $conn->query("DELETE FROM {$P}$t WHERE casamento_id=$cid");
@@ -8927,12 +9124,17 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
               'definicoes' => 0, 'codigos_trocados' => 0,
               'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0,
               'bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0,
-              'bar_regras' => 0, 'bar_mensagens' => 0];
+              'bar_regras' => 0, 'bar_mensagens' => 0,
+              'rsvp_perguntas' => 0, 'rsvp_respostas' => 0];
     $feito['definicoes'] = impFichaDefs($conn, $cid, $r, $comFicha);
     $feito['mesas']      = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
     $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
     $feito['convites'] = $cv['convites']; $feito['pessoas'] = $cv['pessoas'];
     $feito['codigos_trocados'] = $cv['codigos_trocados'];
+    // O RSVP depois dos convites: as respostas prendem-se ao convite pelo
+    // código e à pessoa pelo nome, e esses têm de estar escritos primeiro.
+    foreach (impRsvp($conn, $cid, (array)($r['rsvp'] ?? []),
+                     (array)($cv['mapa_codigos'] ?? [])) as $k => $v) $feito[$k] = $v;
     $feito['versoes'] = impVersoes($conn, $cid, (array)($r['versoes'] ?? []));
     foreach (impOrcamento($conn, $cid, (array)($r['orcamento'] ?? [])) as $k => $v) $feito[$k] = $v;
     // O bar por último: as regras dele apontam para bebidas, gavetas, pessoas
@@ -8954,7 +9156,12 @@ function partesCasamento(): array {
 /** Um retrato ficando só com as secções pedidas (a ficha vai sempre, para nomear). */
 function retratoParcial(array $r, array $partes): array {
     $out = ['ficha' => $r['ficha'] ?? [], 'partes' => array_values($partes)];
-    if (in_array('convidados', $partes, true)) $out['convites'] = $r['convites'] ?? [];
+    if (in_array('convidados', $partes, true)) {
+        $out['convites'] = $r['convites'] ?? [];
+        // As perguntas do RSVP e o que as pessoas responderam são parte da
+        // lista de convidados: quem leva a lista leva o que ela diz.
+        $out['rsvp'] = $r['rsvp'] ?? [];
+    }
     if (in_array('mesas', $partes, true))      $out['mesas'] = $r['mesas'] ?? [];
     $amb = [];
     if (in_array('digital', $partes, true))  $amb[] = 'digital';
@@ -8997,11 +9204,17 @@ function reporCasamentoPartes(mysqli $conn, int $cid, array $r, array $partes): 
         $feito['mesas'] = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
     }
     if (in_array('convidados', $partes, true)) {
+        // As respostas do RSVP caem com as pessoas a que pertencem: são delas,
+        // e deixá-las para trás era guardar respostas sem quem as deu.
+        $conn->query("DELETE FROM {$P}rsvp_respostas WHERE casamento_id=$cid");
+        $conn->query("DELETE FROM {$P}rsvp_perguntas WHERE casamento_id=$cid");
         $conn->query("DELETE FROM {$P}convidados WHERE casamento_id=$cid");
         $conn->query("DELETE FROM {$P}convites WHERE casamento_id=$cid");
         $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
         $feito['convites'] = $cv['convites']; $feito['pessoas'] = $cv['pessoas'];
         $feito['codigos_trocados'] = $cv['codigos_trocados'];
+        foreach (impRsvp($conn, $cid, (array)($r['rsvp'] ?? []),
+                         (array)($cv['mapa_codigos'] ?? [])) as $k => $v) $feito[$k] = $v;
     }
     foreach (['digital', 'impresso'] as $amb) {
         if (!in_array($amb, $partes, true)) continue;

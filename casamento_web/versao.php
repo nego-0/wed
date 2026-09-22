@@ -1296,9 +1296,11 @@ function correcoesEsperadas(): array {
          'db.php', 'for ($grau = 0; $grau <= 3; $grau++) {'],
         ['Único em toda a casa, e nunca refeito depois de estar a circular',
          'db.php', 'function barSlugGarantir(mysqli $conn, int $cid): string {'],
-        ['A mesa diz-se pelo NOME — `?m=1-alegria` —, e não por um código sem vogais',
-         'db.php', '$alvo = barSlugTexto($token);'],
-        ['E o nome procura-se DENTRO da festa: duas festas podem ter uma «Mesa 1»',
+        ['A mesa tem código gerado — o nome muda, e levava as folhas impressas atrás',
+         'db.php', 'function barMesaTokenGarantir(mysqli $conn, int $mesaId): string {'],
+        ['Cada mesa nova nasce com o seu, e não há duas com o mesmo',
+         'db.php', "\$q = \$conn->prepare(\"SELECT 1 FROM {\$P}mesas WHERE bar_token=? LIMIT 1\");"],
+        ['E o código procura-se DENTRO da festa, que é o que o `c` diz',
          'db.php', "\$onde = \$cid > 0 ? 'm.casamento_id = ' . (int)\$cid : 'm.casamento_id > 0';"],
         ['A festa é a porta; a mesa é uma comodidade por cima dela',
          'bebidas.php', '// A FESTA é obrigatória; a MESA é opcional.'],
@@ -1348,6 +1350,32 @@ function correcoesEsperadas(): array {
          'mesas.php', '.sm.ok .n{ color:var(--ok); }'],
         ['Os registos à espera são um aviso com tecto, e não uma página inteira',
          'plataforma.php', '.pend-lista{ max-height:15rem; overflow:auto; }'],
+
+        // ---- O cesto de quem está a escolher, e o stock de quem monta ----
+        ['O cesto do convidado deixa de se esvaziar a cada volta do menu',
+         'assets/bar-convidado.js', "var i = menu.itens.filter(function (x) { return String(x.id) === k.split(':')[0]; })[0];"],
+        ['E a volta espera vinte segundos de paragem antes de lhe tocar',
+         'assets/bar-convidado.js', 'var PARAGEM_MS = 20000;'],
+        ['Qualquer gesto adia a volta inteira — um toque, um scroll, uma tecla',
+         'assets/bar-convidado.js', "['pointerdown', 'touchstart', 'keydown', 'input', 'wheel', 'scroll']"],
+        ['E quando o cesto cede mesmo, a página diz porquê em vez de mexer em silêncio',
+         'assets/bar-convidado.js', 'recadoDoCesto = tirado.length === 1'],
+        ['Os noivos redefinem a quantidade inicial de cada bebida, e a base vai com ela',
+         'api.php', "if (\$acao === 'bar_stock_reiniciar') {"],
+        ['Sem poder ficar abaixo do que já está prometido a alguém',
+         'api.php', "if (\$novo < \$preso) {"],
+        ['Somar, acertar e redefinir na mesma janela, que é a mesma pergunta em três momentos',
+         'assets/bar-montagem.js', "{ v: 'reiniciar', r: 'Redefinir a quantidade inicial' }"],
+
+        // ---- Levar os dados leva-os todos ----
+        ['A exportação leva as perguntas do RSVP e o que cada um respondeu',
+         'api.php', "'rsvp' => ['perguntas' => \$rsvpPerguntas, 'respostas' => \$rsvpRespostas],"],
+        ['E a importação volta a prendê-las ao convite e à pessoa, pelo nome',
+         'api.php', 'function impRsvp(mysqli $conn, int $cid, array $rsvp, array $mapaCodigos = []): array {'],
+        ['Mesmo quando o código do convite teve de ser trocado à entrada',
+         'api.php', "if (\$codigoFich !== '') \$feito['mapa_codigos'][\$codigoFich] = \$convId;"],
+        ['E cada bebida viaja a saber como se serve, e com o seu limiar de «a acabar»',
+         'api.php', 'i.servir, i.doses_garrafa, i.stock_minimo,'],
     ];
 }
 

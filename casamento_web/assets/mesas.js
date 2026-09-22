@@ -691,13 +691,6 @@ function panUp(){
   if(!p.mexeu) desselecionar();
 }
 
-/** O nome de uma mesa reduzido ao que cabe num endereço: «1 Alegria» →
-    `1-alegria`. A mesma conta que o servidor faz em barSlugTexto(). */
-function barSlug(nome){
-  return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-}
-
 // ---------- arrastar mesas + linhas-guia magnéticas ----------
 // A partir de onde um gesto deixa de ser um toque e passa a ser um arrasto.
 // Doze pixéis é o que um dedo pousado quieto oscila num ecrã táctil: abaixo
@@ -1084,10 +1077,10 @@ function detalheHTML(){
     ${BAR_LIGADO ? `
     <div class="mesa-bar">
       <span class="rot" style="margin:0">Bar</span>
-      <code title="O endereço que vai no QR desta mesa. Não é segredo — está
-impresso em cima dela a noite inteira; só diz qual é a mesa. É o NOME dela:
-era um código de dez letras sem vogais, que ninguém conseguia escrever à mão
-sem se enganar nem reconhecer ao lê-lo.">${esc(barSlug(m.nome))}</code>
+      <code title="O código que vai no QR desta mesa. Não é segredo — está
+impresso em cima dela a noite inteira; só diz qual é a mesa. É gerado e não
+muda: se fosse o nome, renomear a mesa mudava o endereço de todas as folhas já
+impressas, sem nada a avisar.">${esc(m.bar_token || '—')}</code>
       <a class="btn btn-fantasma btn-sm" href="bar-qr.php?mesa=${m.id}" target="_blank"
          rel="noopener" title="Reimprimir só a folha desta mesa">Folha</a>
     </div>` : ''}

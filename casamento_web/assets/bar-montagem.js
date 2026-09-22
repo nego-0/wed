@@ -214,7 +214,7 @@
       +     btIco('lapis',   'Editar',                 'barEditar(' + i.id + ')')
       +     btIco('maquina', i.foto ? 'Trocar a fotografia' : 'Pôr uma fotografia',
                              'barFoto(' + i.id + ')')
-      +     btIco('caixa',   'Somar ao stock',         'barRepor(' + i.id + ')')
+      +     btIco('caixa',   'Stock: somar, acertar ou redefinir', 'barRepor(' + i.id + ')')
       +     btIco('lixo',    'Apagar do menu',         'barApagar(' + i.id + ')', 'perigo fim')
       +   '</div>' : '')
       + '</div></div>';
@@ -512,13 +512,6 @@
     await pintarEquipa();
   };
 
-  /** O nome de uma mesa reduzido ao que cabe num endereço: «1 Alegria» →
-      `1-alegria`. A mesma conta que o servidor faz em barSlugTexto(). */
-  function barSlug(nome){
-    return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  }
-
   // ---- o link da festa ----
   // Copiar e dizer que copiou. Sem o aviso, quem carrega no botão fica sem
   // saber se aconteceu alguma coisa e carrega outra vez.
@@ -553,10 +546,12 @@
       return;
     }
     cx.innerHTML = mesas.map(function (m) {
-      // O endereço DA FESTA com o NOME da mesa por cima: a folha diz de que
-      // casamento é (quem a apanha do chão sabe onde a devolver) e de que
-      // mesa é, e o QR poupa o gesto de a escolher.
-      var url = window.BAR_LINK_FESTA + '&m=' + encodeURIComponent(barSlug(m.nome));
+      // O endereço DA FESTA com o CÓDIGO da mesa por cima: a folha diz de que
+      // casamento é (quem a apanha do chão sabe onde a devolver) e leva a
+      // bebida à mesa certa sem ninguém ter de a escolher. O código vem do
+      // servidor e é estável — o nome da mesa pode mudar depois de a folha
+      // estar impressa, e o endereço não pode mudar com ele.
+      var url = window.BAR_LINK_FESTA + '&m=' + encodeURIComponent(m.token || '');
       return '<div class="b-folha"><div class="mesa">' + esc(m.nome) + '</div>'
         + '<canvas class="b-qr" data-link="' + esc(url) + '"></canvas>'
         + '<div class="lnk">' + esc(url) + '</div>'
@@ -769,23 +764,92 @@
     if (d && d.success) { toast('Fora do menu.'); carregar(); }
   };
 
+  /**
+   * O stock de uma bebida, e as TRÊS coisas diferentes que se lhe fazem.
+   *
+   * Havia uma só — somar o que chegou —, e as outras duas faziam falta a quem
+   * está a montar o bar, que é justamente quem está nesta página:
+   *
+   *   SOMAR      o que chegou agora. Não mexe na base da noite para baixo: é
+   *              uma entrada, e o denominador da percentagem sobe com ela.
+   *   ACERTAR    para o que se contou. Diz a verdade sobre o que HÁ, e deixa a
+   *              base onde estava — é assim que «restam 15% do gin» continua a
+   *              ser a notícia que é. Pede uma nota, porque um acerto sem
+   *              explicação é um número que ninguém sabe defender depois.
+   *   REDEFINIR  a quantidade inicial. É de ANTES da festa: o número está
+   *              errado de origem, e a base move-se com ele. Sem isto, uma
+   *              bebida posta a 200 e reposta a 50 ficava a dizer «resta 25%»
+   *              a noite inteira, com as cinquenta intactas.
+   *
+   * As três estão na mesma janela porque são a mesma pergunta — «quantas há?»
+   * — feita em três momentos. Separá-las em três botões no cartão era pôr o
+   * cartão a explicar uma distinção que só se percebe de dentro.
+   */
   window.barRepor = function (id) {
     var i = (EST.itens || []).find(function (x) { return +x.id === +id; });
     if (!i) return;
+    var soGarrafa = i.servir === 'garrafa';
+    var un = soGarrafa ? 'garrafas' : 'copos';
     licFormulario({
-      titulo: 'Stock de «' + licEsc(i.nome) + '»', guardar: 'Somar',
-      dica: 'Há <b>' + i.stock + '</b> em stock e <b>' + i.disponivel + '</b> disponíveis. '
-          + 'Some o que chegou — ou ponha um número negativo, se algo se partiu.',
+      titulo: 'Stock de «' + licEsc(i.nome) + '»', guardar: 'Aplicar', largo: true,
+      dica: 'Há <b>' + i.stock + '</b> em stock, <b>' + i.disponivel + '</b> por servir'
+          + (i.reservado ? ' e <b>' + i.reservado + '</b> já prometidas' : '')
+          + '. Conta-se em ' + un + '.',
       campos: [
-        { id: 'quantidade', rot: 'Quantas entraram', tipo: 'numero', valor: 12 },
-        { id: 'nota', rot: 'Nota (opcional)', valor: '' }
+        { id: 'modo', rot: 'O que quer fazer', tipo: 'escolha', valor: 'somar', largura: 2,
+          opcoes: [{ v: 'somar',     r: 'Somar o que chegou' },
+                   { v: 'acertar',   r: 'Acertar para o que contei' },
+                   { v: 'reiniciar', r: 'Redefinir a quantidade inicial' }],
+          dica: 'Somar é uma entrada. Acertar diz o que há agora. Redefinir é '
+              + 'corrigir o ponto de partida, antes da festa.' },
+        { id: 'quantidade', rot: 'Quantas', tipo: 'numero', valor: 12 },
+        { id: 'nota', rot: 'Nota', valor: '' }
       ],
+      aoMontar: function (f) {
+        var modo = f.campo('modo');
+        var qt   = f.campo('quantidade');
+        var rotQ = document.querySelector('label[for="lf-quantidade"]');
+        var rotN = document.querySelector('label[for="lf-nota"]');
+        function aplicar() {
+          var m = modo ? modo.value : 'somar';
+          if (rotQ) {
+            rotQ.textContent = m === 'somar' ? 'Quantas entraram'
+                             : (m === 'acertar' ? 'Quantas há, afinal'
+                                                : 'Quantas há, para começar');
+          }
+          // A nota é obrigatória no acerto e só nesse: é o único dos três em
+          // que o número muda sem nada ter entrado nem saído, e o livro-razão
+          // fica a dever uma explicação a quem o ler depois.
+          if (rotN) rotN.textContent = m === 'acertar' ? 'Nota (obrigatória)' : 'Nota (opcional)';
+          if (qt) qt.min = m === 'somar' ? undefined : 0;
+        }
+        if (modo) modo.addEventListener('change', aplicar);
+        aplicar();
+      },
       aoGuardar: async function (v) {
-        if (!v.quantidade) return licJanelaErro('Diga quantas entraram.'), false;
-        var d = await window.api('bar_stock_repor', { method: 'POST',
-          body: JSON.stringify({ item_id: id, quantidade: v.quantidade, nota: v.nota }) });
-        if (!d || !d.success) return false;
-        toast('Stock actualizado.'); carregar(); return true;
+        var m = v.modo || 'somar';
+        var q = parseInt(v.quantidade, 10);
+        if (m === 'somar') {
+          if (!q) return licJanelaErro('Diga quantas entraram.'), false;
+          var d = await window.api('bar_stock_repor', { method: 'POST',
+            body: JSON.stringify({ item_id: id, quantidade: q, nota: v.nota }) });
+          if (!d || !d.success) return false;
+          toast('Stock actualizado.'); carregar(); return true;
+        }
+        if (!(q >= 0)) return licJanelaErro('Diga quantas há.'), false;
+        if (m === 'acertar') {
+          if (!String(v.nota || '').trim()) {
+            return licJanelaErro('Um acerto explica-se: escreva uma nota.'), false;
+          }
+          var da = await window.api('bar_stock_acerto', { method: 'POST',
+            body: JSON.stringify({ item_id: id, stock: q, nota: v.nota }) });
+          if (!da || !da.success) return false;
+          toast('Stock acertado.'); carregar(); return true;
+        }
+        var dr = await window.api('bar_stock_reiniciar', { method: 'POST',
+          body: JSON.stringify({ item_id: id, quantidade: q, nota: v.nota }) });
+        if (!dr || !dr.success) return false;
+        toast('Quantidade inicial redefinida.'); carregar(); return true;
       }
     });
   };

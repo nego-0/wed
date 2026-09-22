@@ -55,17 +55,13 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
 
   // A carta do bar abre-se PELO ENDEREÇO DA FESTA, com a mesa por cima: sem
   // ele dá o recado de «endereço não serve», e foi assim que ela escapou à
-  // primeira passagem desta prova. O código da mesa é o NOME dela passado a
-  // endereço — era a coluna `bar_token`, que está vazia desde que os códigos
-  // opacos saíram. Lida dessa coluna, esta prova media as cores do RECADO e
-  // não as da carta, e passava a dizer que tinha medido a carta.
+  // primeira passagem desta prova. Lida de uma coluna vazia ou de um código
+  // que já não resolve, esta prova media as cores do RECADO e dizia que tinha
+  // medido a carta.
   const bar = await p.evaluate(async () => {
-    const slug = (s) => String(s || '').toLowerCase().normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const r = await fetch('api.php?action=mesa_list');
-    const d = await r.json().catch(() => null);
-    const m = (d && (d.mesas || [])).find(x => slug(x.nome));
-    return m ? slug(m.nome) : null;
+    const d = await (await fetch('api.php?action=mesa_list')).json().catch(() => null);
+    const m = (d && (d.mesas || [])).find(x => x.bar_token);
+    return m ? m.bar_token : null;
   });
   await p.goto(BASE + '/bar.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(900);

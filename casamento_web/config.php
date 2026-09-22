@@ -192,7 +192,8 @@ function acoesDoCasamento(): array {
             // lá trabalha — mas todos correm dentro de um casamento.
             'bar_categoria_guardar','bar_categoria_apagar',
             'bar_item_guardar','bar_item_apagar','bar_item_foto','bar_item_foto_tirar',
-            'bar_stock_repor','bar_stock_acerto','bar_abrir','bar_fechar','bar_defs',
+            'bar_stock_repor','bar_stock_acerto','bar_stock_reiniciar',
+            'bar_abrir','bar_fechar','bar_defs',
             'bar_motivo_guardar','bar_motivo_apagar',
             'bar_regra_guardar','bar_regra_apagar',
             'bar_decidir','bar_cancelar_copa',

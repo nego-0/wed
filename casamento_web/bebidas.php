@@ -4,16 +4,20 @@
 //
 // O endereço tem duas partes, e a segunda é opcional:
 //
-//     bebidas.php?c=2026-ia             — a FESTA. Chega para abrir.
-//     bebidas.php?c=2026-ia&m=1-alegria — e a MESA, para quem leu o QR.
+//     bebidas.php?c=2026-ia              — a FESTA. Chega para abrir.
+//     bebidas.php?c=2026-ia&m=FGFMBKPZNB — e a MESA, para quem leu o QR.
 //
-// As duas lêem-se. O `c` é o ano e as iniciais dos noivos — e só desce ao mês,
-// ao dia ou à hora quando duas festas chocam, porque um endereço mais curto é
-// um endereço que se dita ao telefone sem soletrar. O `m` é o nome real da
-// mesa: «1 Alegria» é `1-alegria`, que se reconhece e se escreve à mão.
+// As duas partes respondem a perguntas diferentes, e por isso são de matérias
+// diferentes. O `c` vai num convite, num grupo de família, dito ao microfone:
+// LÊ-SE — o ano e as iniciais dos noivos, e só desce ao mês, ao dia ou à hora
+// quando duas festas chocam. O `m` vai numa folha pousada em cima de uma mesa,
+// e o que ele tem de ser é ESTÁVEL: a folha imprime-se uma vez e fica lá a
+// noite inteira. Um código feito do nome da mesa mudava com ele, e renomear a
+// mesa invalidava calado todas as folhas já impressas.
 //
-// Houve aqui códigos de dez letras sem vogais, um por mesa, e eram a única
-// porta: sem folha em cima da mesa não havia menu nenhum. Mas há gente de pé
+// A mesa foi durante um tempo a ÚNICA porta, e isso amarrava duas coisas que
+// não têm de andar juntas: sem folha em cima da mesa não havia menu nenhum.
+// Mas há gente de pé
 // no jardim, há quem esteja ao balcão, há a folha que se molha ou vai parar
 // ao bolso de alguém, e há o próprio casal a querer ver a carta.
 //
@@ -137,15 +141,21 @@ function barRecado(string $titulo, string $texto, ?array $pal = null,
 // A FESTA é obrigatória; a MESA é opcional.
 //
 //     bebidas.php?c=2026-ia             — a festa, e a mesa escolhe-se dentro
-//     bebidas.php?c=2026-ia&m=1-alegria — e já com a mesa, para quem leu o QR
+//     bebidas.php?c=2026-ia&m=FGFMBKPZNB — e já com a mesa, para quem leu o QR
 //
 // O `c` chega para abrir, e é isso que o torna o link do casal: vai no
-// convite, no grupo da família, num cartaz à entrada. O `m` é o NOME real da
-// mesa e poupa um gesto a quem aponta a câmara à folha pousada nela — mas é
-// só isso, uma comodidade. Escolher a mesa é uma coisa que toda a gente acaba
-// por fazer: numa festa muda-se de lugar.
+// convite, no grupo da família, num cartaz à entrada. Por isso LÊ-SE — o ano e
+// as iniciais dos noivos. O `m` é o código gerado da mesa e poupa um gesto a
+// quem aponta a câmara à folha pousada nela — mas é só isso, uma comodidade.
+// Escolher a mesa é uma coisa que toda a gente acaba por fazer: numa festa
+// muda-se de lugar.
+//
+// O `m` não precisa de se ler, precisa de ser ESTÁVEL: a folha imprime-se uma
+// vez e fica lá a noite inteira, e um código feito do nome da mesa mudava com
+// ele — renomear a mesa em «Mesas» invalidava, calado, todas as folhas já
+// pousadas em cima dela.
 $tokenCasa = trim((string)($_GET['c'] ?? ''));
-$tokenMesa = trim((string)($_GET['m'] ?? ''));
+$tokenMesa = strtoupper(trim((string)($_GET['m'] ?? '')));
 $casa = $tokenCasa !== '' ? barCasamentoDoToken($conn, $tokenCasa) : null;
 // A mesa procura-se DENTRO da festa que o `c` disser: dois casamentos podem
 // ter, os dois, uma «Mesa 1», e têm de poder.

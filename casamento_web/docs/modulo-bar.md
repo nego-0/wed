@@ -114,21 +114,38 @@ lido — e pode ser trocada (§4.2).
 - uma linha de rodapé: *sem rede? chame um garçom — ele faz o pedido por si*.
 
 **O endereço, e onde ele vive.** A festa é a porta e a mesa vem por cima dela:
-`bebidas.php?c=2026-ia&m=1-alegria`. O `c` é o endereço da festa — o ano e as
-iniciais dos noivos — e vive na coluna `bar_slug` de `cw_casamentos`, gerado uma
-vez e nunca refeito depois de estar a circular; só cresce quando duas festas
-chocam, e aí entra o mês, depois o dia, depois a hora ou o local. O `m` é o
-**nome da mesa** passado a endereço, calculado na hora a partir do nome: não há
-coluna nenhuma a guardá-lo, e por isso mudar o nome da mesa muda o endereço,
-que é o comportamento certo — o QR reimprime-se com o nome novo.
+`bebidas.php?c=2026-ia&m=FGFMBKPZNB`.
+
+As duas partes respondem a perguntas diferentes, e por isso são de matérias
+diferentes:
+
+- O **`c`** é o endereço da festa, e vive em `cw_casamentos.bar_slug`. Vai num
+  convite, num grupo de família, dito ao microfone — tem de se ler e de se
+  reconhecer, e por isso é o ano e as iniciais dos noivos. Gera-se uma vez e
+  não se refaz depois de estar a circular; só cresce quando duas festas chocam,
+  e aí entra o mês, depois o dia, depois a hora ou o local.
+- O **`m`** é o código da mesa, e vive em `cw_mesas.bar_token`: dez caracteres
+  gerados, sem vogais nem `0/O` ou `1/l`, para se escreverem à mão sem enganos
+  quando a câmara não serve. Nasce com a mesa, em `barMesaTokenGarantir()`, e
+  não se mexe.
+
+O `m` chegou a ser o **nome** da mesa passado a endereço (`1-alegria`), que tem
+a virtude óbvia de se ler. Voltou a ser um código gerado por uma razão que a
+legibilidade não compensa: o nome MUDA. Renomear uma mesa em «Mesas» mudava, em
+silêncio, o endereço de todas as folhas de QR já impressas e pousadas em cima
+dela — e isso descobre-se no dia da festa. O que uma folha impressa precisa é
+de ser estável; o que um convite precisa é de ser legível. São requisitos
+diferentes, e cada metade do endereço serve o seu.
 
 Nem um nem outro é segredo: estão impressos em cima da mesa a noite inteira. Por
 isso o `c` sozinho não dá para pedir (quem entra por ele escolhe a mesa na
-página), e o `m` só escolhe a mesa.
+página), e o `m` só escolhe a mesa. O que impede um pedido em nome de outro é o
+passo seguinte: a pessoa escolhe-se numa lista e o telemóvel fica preso a esse
+nome (§5).
 
-Antes disto eram dois códigos opacos de dez a doze letras sem vogais
-(`bar_token`, em `cw_mesas` e em `cw_casamentos`). As colunas ficam na base — uma
-coluna apagada não se desapaga —, mas estão vazias e já nada as lê.
+O código da mesa **não viaja numa importação**: um vindo de outra instalação
+podia já estar dado a outra mesa desta, e duas mesas com o mesmo código mandam
+as bebidas de uma para a outra. Cada mesa importada recebe o seu, gerado aqui.
 
 ### 4.2 A mesa de entrega escolhe-se
 
