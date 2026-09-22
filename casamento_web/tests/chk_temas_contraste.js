@@ -79,6 +79,11 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
      + mesa);
 
   const falhas = [];
+  // Quantos textos se chegaram MESMO a medir. Uma prova que filtra o que não
+  // está à vista corre o risco oposto ao que corrigiu: filtrar de mais e
+  // passar calada por não ter olhado para nada. O número fica à vista, e a
+  // linha abaixo falha se ele cair para um valor que não mede casa nenhuma.
+  let medidos = 0;
   for (const tema of TEMAS) {
     for (const pag of PAGINAS) {
       const r = await p.goto(BASE + '/' + pag, { waitUntil: 'networkidle' }).catch(() => null);
@@ -188,6 +193,7 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
         });
       }, { dados: tiro.toString('base64'), alvos });
 
+      medidos += alvos.length;
       alvos.forEach((a, i) => {
         const fu = fundos[i]; if (!fu) return;
         const rz = razao(lum(a.cor[0], a.cor[1], a.cor[2]), lum(fu[0], fu[1], fu[2]));
@@ -208,7 +214,11 @@ const razao = (a, b) => { const [x, y] = a > b ? [a, b] : [b, a]; return (x + 0.
     }
   }
 
-  console.log('   (medidas ' + PAGINAS.length + ' páginas × ' + TEMAS.length + ' temas)');
+  console.log('   (medidas ' + PAGINAS.length + ' páginas × ' + TEMAS.length + ' temas, '
+              + medidos + ' textos)');
+  ok(medidos >= 400,
+     'e mediu mesmo alguma coisa — uma varredura que filtra o que está fora do '
+     + 'ecrã pode filtrar de mais e passar por não ter olhado: ' + medidos + ' textos');
   if (falhas.length) {
     falhas.slice(0, 12).forEach(x => console.log('   ' + (x.nota || x.razao + ':1')
       + '  ' + x.tema + ' · ' + x.pag + ' · ' + (x.onde || '') + ' «' + (x.texto || '') + '»'
