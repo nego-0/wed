@@ -957,8 +957,8 @@ function renderLista(){
 // ---------- dropdown de pesquisa (substitui os <select> longos) ----------
 function comboHTML(kind, arg, placeholder, cls){
   return `<div class="combo ${cls||''}" data-kind="${kind}" data-arg="${arg??''}">
-    <button type="button" class="combo-btn"><span class="combo-txt">${esc(placeholder)}</span><span class="combo-cx" data-ico="baixoSeta"></span></button>
-    <div class="combo-pop" hidden>
+    <button type="button" class="combo-btn" aria-expanded="false"><span class="combo-txt">${esc(placeholder)}</span><span class="combo-cx" data-ico="baixoSeta"></span></button>
+    <div class="combo-pop" role="dialog" aria-modal="true" aria-label="Escolher" hidden>
       <input type="text" class="combo-search" placeholder="Procurar…" autocomplete="off">
       <div class="combo-list"></div>
     </div>
@@ -1002,18 +1002,49 @@ function comboAcao(kind, arg, value){
   if(kind==='papel-add')   return definirPapel(value, arg);
 }
 let comboAberto=null;
-function fecharCombo(){ if(comboAberto){ const p=comboAberto.querySelector('.combo-pop'); if(p) p.hidden=true; comboAberto=null; } }
+const comboEhModal=()=>matchMedia('(max-width:760px)').matches;
+function fecharCombo(){
+  if(comboAberto){
+    const p=comboAberto.querySelector('.combo-pop'), b=comboAberto.querySelector('.combo-btn');
+    if(p) p.hidden=true;
+    if(b) b.setAttribute('aria-expanded','false');
+    comboAberto=null;
+  }
+  document.body.classList.remove('combo-aberto');
+}
+function centrarComboMobile(){
+  if(!comboAberto || !comboEhModal()) return;
+  const pop=comboAberto.querySelector('.combo-pop'); if(!pop || pop.hidden) return;
+  const vv=window.visualViewport;
+  const x=vv?vv.offsetLeft:0, y=vv?vv.offsetTop:0;
+  const w=vv?vv.width:window.innerWidth, h=vv?vv.height:window.innerHeight;
+  const margem=16, largura=Math.max(220, w-margem*2), altura=Math.max(180, h-margem*2);
+  pop.style.left=Math.round(x+margem)+'px';
+  pop.style.width=Math.round(largura)+'px';
+  pop.style.maxHeight=Math.round(altura)+'px';
+  const ph=Math.min(pop.scrollHeight, altura);
+  pop.style.top=Math.round(y+Math.max(margem,(h-ph)/2))+'px';
+}
 function abrirCombo(combo){
   if(comboAberto===combo){ fecharCombo(); return; }
   fecharCombo();
   const btn=combo.querySelector('.combo-btn'), pop=combo.querySelector('.combo-pop');
   const r=btn.getBoundingClientRect();
-  pop.style.left =Math.round(r.left)+'px';
-  pop.style.top  =Math.round(r.bottom+4)+'px';
-  pop.style.width=Math.max(220, Math.round(r.width))+'px';
+  if(comboEhModal()){
+    pop.style.left=''; pop.style.top=''; pop.style.width='';
+    document.body.classList.add('combo-aberto');
+  }else{
+    pop.style.left =Math.round(r.left)+'px';
+    pop.style.top  =Math.round(r.bottom+4)+'px';
+    pop.style.width=Math.max(220, Math.round(r.width))+'px';
+    pop.style.maxHeight='';
+  }
   pop.hidden=false; comboAberto=combo;
+  btn.setAttribute('aria-expanded','true');
   renderComboLista(combo, '');
+  if(comboEhModal()) centrarComboMobile();
   const s=combo.querySelector('.combo-search'); s.value=''; setTimeout(()=>s.focus(), 0);
+  if(comboEhModal()) return;
   const pr=pop.getBoundingClientRect();
   if(pr.bottom>window.innerHeight-8) pop.style.top=Math.max(8, Math.round(r.top-pr.height-4))+'px';
 }
@@ -1414,7 +1445,13 @@ ligarPicker($('nova-cor'),'cor',v=>novaCor=v);
 $('zoombar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setZoom(b.dataset.zoom); });
 $('rotbar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setRotulo(+b.dataset.rot); });
 document.querySelectorAll('.rz').forEach(h=> h.addEventListener('pointerdown', e=> iniciarRz(e, h.dataset.dir)));
-window.addEventListener('resize', ()=>{ fecharCombo(); aplicarTamanhoCanvas(); ajustarScrollCanvas(); });
+window.addEventListener('resize', ()=>{
+  // O teclado virtual também redimensiona a janela. Fechar aqui era o motivo
+  // por que a escolha desaparecia poucos instantes depois de ser aberta.
+  if(comboAberto && comboEhModal()) centrarComboMobile(); else fecharCombo();
+  aplicarTamanhoCanvas(); ajustarScrollCanvas();
+});
+if(window.visualViewport) window.visualViewport.addEventListener('resize', centrarComboMobile);
 // Sair do ecrã inteiro pelo navegador (Esc, F11) desfaz também a vista
 // maximizada: ficar com a página presa em «maximizado» sem ecrã inteiro era
 // deixar o utilizador num estado que ele julgava ter fechado.

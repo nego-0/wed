@@ -133,49 +133,15 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     <div class="monograma"><?= escP($CAS['mono']) ?></div>
     <div class="topo-txt">
       <h1><?= escP($titulo) ?></h1>
-      <?php // A frase de apoio leva o texto inteiro no `title`: no telemóvel ela
-            // é cortada a uma linha (ver .topo .sub no estilo.css), e o que se
-            // corta tem de ficar à mão de quem o quiser ler. ?>
-      <?php if ($sub !== ''): ?><div class="sub" title="<?= escP($sub) ?>"><?= escP($sub) ?></div><?php endif; ?>
       <?php
-        // Quem é o casal e quanto falta — em todas as páginas, no mesmo sítio.
-        // Andava misturado na linha de apoio de algumas (o painel, as mesas) e
-        // ausente das outras: em metade da casa não se sabia de quem era a
-        // festa que se estava a mexer.
-        //
-        // No lugar da data está agora a contagem. A data lê-se uma vez e nunca
-        // mais muda — quem trabalha aqui já a sabe de cor; o que se quer saber
-        // ao abrir a página é quanto falta. Continua à mão, no título da
-        // contagem, para quem a for procurar.
+        // O cabeçalho identifica a página e marca o tempo até à celebração.
+        // A descrição pertence ao corpo, onde pode respirar e ser lida como
+        // introdução; a licença tem a sua página. O nome dos noivos também não
+        // se repete em todas as páginas: o casamento aberto já é o contexto.
         if (!$semCasamento && $dataDoEvento !== ''): ?>
-        <?php // O nome do casal num <span> seu para poder ENCOLHER sozinho: numa
-              // linha estreita é ele que se corta, e a contagem — que é o
-              // número que se vem cá ver — fica sempre inteira. ?>
-        <div class="sub topo-casal"><span class="tc-nome"><?= escP($CAS['casal']) ?></span>
-          · <?php contagem($dataDoEvento, $horaDoEvento, !empty($opcoes['no_print'])); ?></div>
-      <?php elseif (!$semCasamento): ?>
-        <div class="sub topo-casal"><span class="tc-nome"><?= escP($CAS['casal']) ?></span></div>
+        <div class="sub topo-contagem-linha"><?php
+          contagem($dataDoEvento, $horaDoEvento, !empty($opcoes['no_print']), true); ?></div>
       <?php endif; ?>
-      <?php
-        // Quanto tempo de licença resta a este casamento — logo abaixo dos
-        // nomes, para o casal saber sempre com que prazo conta. Só quando há
-        // casamento aberto e a licença tem limite.
-        if (!$semCasamento && function_exists('licencaInfo') && isset($GLOBALS['conn'])):
-          $licInfo   = licencaInfo($GLOBALS['conn'], casamentoAtual());
-          $licFrase  = licencaFrase($licInfo);
-          if ($licFrase !== ''):
-            $licMau = !$licInfo['iniciada'] || (int)$licInfo['dias'] < 15; ?>
-        <div class="sub licenca-restante<?= $licMau ? ' aviso' : '' ?>"><?= escP($licFrase) ?></div>
-      <?php endif; endif; ?>
-      <?php if (!empty($variosCasamentos)):
-        $nomeAberto = '';
-        $stc = @$GLOBALS['conn']->prepare("SELECT nome FROM " . PREFIXO . "casamentos WHERE id=?");
-        if ($stc) { $cid = casamentoAtual(); $stc->bind_param('i', $cid); $stc->execute();
-                    $rowc = $stc->get_result()->fetch_assoc(); $nomeAberto = $rowc['nome'] ?? ''; }
-        if ($nomeAberto !== ''): ?>
-        <div class="sub" style="opacity:.85">A trabalhar em: <b><?= escP($nomeAberto) ?></b>
-          · <a href="plataforma.php" style="color:inherit;text-decoration:underline">trocar</a></div>
-      <?php endif; endif; ?>
     </div>
     <nav class="nav<?= $semPapel ?>">
       <?php foreach ($itens as $chave => [$url, $rotulo]): ?>
@@ -442,6 +408,11 @@ document.addEventListener('DOMContentLoaded', function () {
 <?php
     contagemScript();
     tiraSuporte(!empty($opcoes['no_print']));
+    // A frase de apoio começa o conteúdo, em vez de engrossar o cabeçalho.
+    // É centralizada aqui para todas as páginas seguirem a mesma regra.
+    if ($sub !== ''): ?>
+<div class="pagina-descricao<?= $semPapel ?>"><p><?= escP($sub) ?></p></div>
+<?php endif;
     // A pastilha circular do tema — discreta, no canto. Só onde há cabeçalho
     // (páginas com estilo.css); nunca no papel.
     if (empty($opcoes['no_print'])) include __DIR__ . '/parcial-seletor-tema.php';
@@ -478,18 +449,17 @@ function diaDoCasamento(): array {
  * Aqui dentro ficaria no meio de uma linha de texto, e o texto da linha passava
  * a incluir o código-fonte do guião.
  *
- * Uma linha só, com três pedaços — «faltam» · «132 dias» · «04:12:33» — para
- * caber no fio do texto onde estava a data, e igual na barra dos editores. Os
- * segundos contam-se de facto: uma contagem que não mexe é uma data escrita de
- * outra maneira.
+ * No cabeçalho sai como «132 Dias Até ao “Sim, Aceito”»; noutros contextos
+ * conserva o formato compacto antigo. Na última semana junta o relógio.
  */
-function contagem(string $data, string $hora, bool $noPrint = false): void {
+function contagem(string $data, string $hora, bool $noPrint = false, bool $modoSim = false): void {
     if ($data === '') return;
     $quando = dataExtensa($data) . ($hora !== '' ? ', às ' . str_replace(':', 'h', $hora) : '');
-    ?><span class="contagem<?= $noPrint ? ' no-print' : '' ?>" id="topo-contagem"
+    ?><span class="contagem<?= $modoSim ? ' contagem-sim' : '' ?><?= $noPrint ? ' no-print' : '' ?>" id="topo-contagem"
          data-dia="<?= escP($data) ?>" data-hora="<?= escP($hora) ?>"
-         title="<?= escP($quando) ?>"><span class="cg-l"></span> <span
-         class="cg-n">—</span> <span class="cg-t"></span></span><?php
+         title="<?= escP($quando) ?>"><?php if ($modoSim): ?><span class="cg-n">—</span> <span
+         class="cg-l"></span><?php else: ?><span class="cg-l"></span> <span
+         class="cg-n">—</span><?php endif; ?> <span class="cg-t"></span></span><?php
 }
 
 /**
@@ -538,8 +508,11 @@ function contagemScript(): void {
 
     if (agora >= fim){
       cx.classList.add('passou');
-      pre.textContent = 'há';
-      n.textContent = plural(Math.floor((agora - fim) / 86400000) + 1, 'dia', 'dias');
+      var passados = Math.floor((agora - fim) / 86400000) + 1;
+      pre.textContent = cx.classList.contains('contagem-sim') ? 'Desde o “Sim, Aceito”' : 'há';
+      n.textContent = cx.classList.contains('contagem-sim')
+        ? plural(passados, 'Dia', 'Dias')
+        : plural(passados, 'dia', 'dias');
       t.textContent = '';
       return;
     }
@@ -548,16 +521,20 @@ function contagemScript(): void {
                 && agora.getDate() === alvo.getDate();
     if (mesmoDia || agora >= alvo){
       cx.classList.add('hoje');
-      pre.textContent = '';
-      n.textContent = 'É HOJE';
+      pre.textContent = cx.classList.contains('contagem-sim') ? 'é o “Sim, Aceito”' : '';
+      n.textContent = cx.classList.contains('contagem-sim') ? 'Hoje' : 'É HOJE';
       // Antes da hora marcada, o relógio ainda tem que contar; depois dela, a
       // festa está a acontecer e um cronómetro só estorvava.
       t.textContent = agora < alvo ? relogio(alvo - agora) : '';
       return;
     }
     var ms = alvo - agora, dias = Math.floor(ms / 86400000);
-    pre.textContent = dias === 1 ? 'falta' : 'faltam';
-    n.textContent = dias >= 1 ? plural(dias, 'dia', 'dias') : '';
+    pre.textContent = cx.classList.contains('contagem-sim')
+      ? 'Até ao “Sim, Aceito”'
+      : (dias === 1 ? 'falta' : 'faltam');
+    n.textContent = cx.classList.contains('contagem-sim')
+      ? plural(Math.max(0, dias), 'Dia', 'Dias')
+      : (dias >= 1 ? plural(dias, 'dia', 'dias') : '');
     // O relógio só na última semana (docs/auditoria-ui-ux.md, EMO-001).
     //
     // A trezentos dias de distância, um cronómetro ao segundo não é uma

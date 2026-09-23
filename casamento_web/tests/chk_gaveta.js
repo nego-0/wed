@@ -40,7 +40,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     await pg.click('button[type=submit]');
     await pg.waitForLoadState('networkidle');
     await pg.evaluate(async () => {
-      await fetch('api.php?action=casamento_abrir&id=1',
+      const l = await (await fetch('api.php?action=casamento_lista&estado=ativo',
+        { headers: { 'X-CSRF-Token': window.CSRF } })).json();
+      const c = (l.casamentos || [])[0];
+      await fetch('api.php?action=casamento_abrir&id=' + c.id,
         { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
     }).catch(() => {});
   };
@@ -96,35 +99,30 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'o puxador tem 44px e está dentro do ecrã');
   ok(cab.transbordo === 0, 'e a página não ganha rolagem horizontal');
 
-  // A contagem é o número que se vem cá ver: quando a linha aperta, é o nome
-  // do casal que encolhe, nunca ela.
+  // A contagem é a única linha de contexto no cabeçalho e não pode cortar.
   const linha = await m.evaluate(() => {
-    const cg = document.querySelector('.topo-casal .contagem');
-    const nome = document.querySelector('.topo-casal .tc-nome');
-    if (!cg || !nome) return null;
+    const cx = document.querySelector('.topo-contagem-linha');
+    const cg = cx && cx.querySelector('.contagem');
+    if (!cg) return null;
     const r = cg.getBoundingClientRect();
     return { contagem: cg.textContent.replace(/\s+/g, ' ').trim(),
              inteira: r.width > 0 && r.right <= innerWidth + 1,
-             alt: Math.round(document.querySelector('.topo-casal').getBoundingClientRect().height),
-             nomeCortado: nome.scrollWidth > nome.clientWidth + 1 };
+             alt: Math.round(cx.getBoundingClientRect().height) };
   });
-  ok(!!linha && linha.inteira && /dias|HOJE|dia/.test(linha.contagem),
+  ok(!!linha && linha.inteira && /dias|HOJE|dia/i.test(linha.contagem),
      'a contagem fica sempre inteira: «' + (linha ? linha.contagem : '') + '»');
   ok(!!linha && linha.alt <= 24,
-     'e a linha do casal não dobra — dobrar custava 18px de cabeçalho em todas '
+     'e a linha da contagem não dobra — dobrar custava 18px de cabeçalho em todas '
      + 'as páginas: ' + (linha ? linha.alt : '?') + 'px');
 
-  // A frase de apoio corta-se a uma linha, mas o que se corta fica à mão.
+  // A frase de apoio saiu do cabeçalho e abre o corpo da página.
   const apoio = await m.evaluate(() => {
-    const s = document.querySelector('.topo .sub:not(.topo-casal):not(.licenca-restante)');
+    const s = document.querySelector('.pagina-descricao p');
     if (!s) return null;
-    return { umaLinha: Math.round(s.getBoundingClientRect().height) <= 24,
-             titulo: (s.getAttribute('title') || '').length > 0,
-             igual: (s.getAttribute('title') || '') === s.textContent.trim() };
+    return { noCorpo: !s.closest('.topo'), texto: s.textContent.trim() };
   });
-  ok(!!apoio && apoio.umaLinha, 'a frase de apoio fica-se por uma linha');
-  ok(!!apoio && apoio.titulo && apoio.igual,
-     'e o texto inteiro fica no título, para quem o quiser ler');
+  ok(!!apoio && apoio.noCorpo && apoio.texto,
+     'a descrição da página está inteira no corpo: «' + (apoio ? apoio.texto : '') + '»');
 
   // ---- 3. a gaveta ----
   await m.click('#gaveta-bt');

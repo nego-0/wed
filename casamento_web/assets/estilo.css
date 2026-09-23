@@ -233,12 +233,10 @@ a:hover{ text-decoration:underline; }
 }
 .topo h1{ color:var(--ivory); font-size:var(--t-titulo); line-height:1.1; }
 .topo .sub{ font-family:var(--serif); font-style:italic; color:var(--topo-txt); font-size:var(--t-corpo); margin-top:.1rem; }
-.topo .sub.licenca-restante{ font-family:var(--sans); font-style:normal; font-size:var(--t-apoio); opacity:.9; }
-.topo .sub.licenca-restante.aviso{ color:#f4c9a0; opacity:1; font-weight:600; }
 /* A coluna do meio cresce e encolhe; sem isto, um título longo empurrava a
    contagem e o menu para uma linha só deles. */
 .topo .topo-txt{ min-width:0; flex:1 1 auto; }
-.topo .sub.topo-casal{ font-size:var(--t-denso); opacity:.92; }
+.topo .sub.topo-contagem-linha{ font-size:var(--t-denso); opacity:.95; }
 
 /* ---------- A contagem decrescente ----------
    A pergunta que o casal faz todos os dias, e que até aqui só o convite
@@ -362,7 +360,7 @@ a:hover{ text-decoration:underline; }
     font-size:var(--t-apoio); line-height:1.35;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .topo .sub.topo-casal{ font-size:var(--t-apoio); }
+  .topo .sub.topo-contagem-linha{ font-size:var(--t-apoio); }
   .topo h1{ font-size:var(--t-sub); }
   /* Monograma, texto e puxador NUMA linha. A `.wrap` quebra por omissão, e o
      puxador — que tem `margin-left:auto` — caía para uma linha só dele: 44px
@@ -471,8 +469,23 @@ a:hover{ text-decoration:underline; }
 
 /* ---------- Layout ---------- */
 .container{ max-width:1180px; margin:0 auto; padding:1.25rem; }
+.pagina-descricao{ max-width:1180px; margin:0 auto; padding:1rem 1.25rem 0; }
+.pagina-descricao p{ margin:0; color:var(--ink-fraco); font-size:var(--t-denso); line-height:1.5; }
 .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); }
 .p-4{ padding:1.5rem; } .p-3{ padding:1.1rem; } .mb-4{ margin-bottom:1.5rem; } .mb-3{ margin-bottom:1.1rem; }
+
+/* A base móvel das áreas de administração. Cada página pode ter grelhas e
+   cartões próprios; estes limites garantem que nenhum campo, ação ou texto
+   obriga a página inteira a andar para o lado. */
+@media (max-width:760px){
+  .container{ padding:.85rem; }
+  main, .container, .card, .painel{ min-width:0; max-width:100%; }
+  .card, .painel{ overflow-wrap:anywhere; }
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+  select, textarea{ max-width:100%; box-sizing:border-box; }
+  .fim, .acoes, .ac{ flex-wrap:wrap; }
+  .p-4{ padding:1rem; }
+}
 
 /* ---------- Estatísticas ---------- */
 .grelha-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.85rem; }
@@ -731,17 +744,11 @@ summary:focus-visible,
      procura) caber no primeiro ecrã. */
   .topo{ padding:1.05rem 1.1rem; }
   .topo .wrap{ gap:.7rem; }
-  /* A contagem vai no fio do texto, com o nome do casal.
-     Deixava-se a linha DOBRAR, e a contagem passava para a segunda — o que
-     custava mais 18px de cabeçalho em todas as páginas. Agora não dobra: é o
-     NOME que encolhe com reticências, e a contagem, que é o número que se vem
-     cá ver, fica sempre inteira. */
-  .topo .sub.topo-casal{
-    display:flex; align-items:baseline; gap:.3rem; white-space:nowrap; overflow:hidden;
+  .topo .sub.topo-contagem-linha{
+    display:flex; align-items:baseline; white-space:nowrap; overflow:hidden;
   }
-  .topo .sub.topo-casal .tc-nome{ min-width:0; overflow:hidden; text-overflow:ellipsis; }
-  .topo .sub.topo-casal .contagem{ flex:none; }
   .contagem .cg-n{ font-size:var(--t-corpo); }
+  .pagina-descricao{ padding:.75rem .85rem 0; }
 }
 
 /* ============================================================

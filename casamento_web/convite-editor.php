@@ -28,6 +28,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noi
 // A contagem também aqui — é a mesma casa. A desenhar um MODELO não há dia
 // nenhum a contar: o modelo não é de casamento nenhum.
 [$DATA_EV, $HORA_EV] = $MODELO ? ['', ''] : diaDoCasamento();
+$SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -145,11 +146,11 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noi
 
 <div class="ed-menu">
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
-  <span class="doc">Convite digital · <b><?= escP($CAS['casal']) ?></b></span>
+  <span class="doc">Convite digital</span>
   <div class="cresce"></div>
-  <?php contagem($DATA_EV, $HORA_EV); ?>
+  <?php contagem($DATA_EV, $HORA_EV, false, true); ?>
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
-  <a href="digital.php"><i data-ico="setaEsquerda"></i> Convite digital</a>
+  <a class="sair-editor" href="<?= escP($SAIR_EDITOR) ?>"><i data-ico="setaEsquerda"></i> Sair do Editor</a>
   <span class="ed-sep"></span>
   <a href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir o convite</a>
 </div>
@@ -256,7 +257,7 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noi
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
-<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?> };</script>
+<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?> };</script>
 <script src="<?= asset('assets/editor-espaco.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;

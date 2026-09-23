@@ -33,6 +33,12 @@ function correcoesEsperadas(): array {
          'assets/editor.css', 'input[type=range]{ touch-action:pan-y'],
         ['Aviso "por guardar" fora da barra de opções (o editor deixa de saltar)',
          'assets/editor.css', '.marca-sujo{'],
+        ['O editor digital tem uma saída explícita e regressa ao lugar certo',
+         'convite-editor.php', 'class="sair-editor"'],
+        ['O editor impresso tem uma saída explícita e regressa ao lugar certo',
+         'editor-cartao.php', 'class="sair-editor"'],
+        ['O aviso de ecrã pequeno também permite sair do editor',
+         'assets/editor-espaco.js', '>Sair do Editor</a>'],
         ['Seletor de cor fora do <label>',
          'editor-cartao.php', 'class="cor-linha">'],
         ['Redesenho adiado durante um gesto',
@@ -345,8 +351,10 @@ function correcoesEsperadas(): array {
          'personalizacao.php', 'function fixarPecaOrigemDoCasal('],
         ['O cabeçalho conta os dias que faltam, em todas as páginas da casa',
          'parcial-cabecalho.php', 'function contagem('],
-        ['E diz sempre de quem é a festa: casal e data no mesmo sítio, em toda a parte',
-         'parcial-cabecalho.php', 'topo-casal'],
+        ['As descrições das páginas começam o corpo, fora do cabeçalho',
+         'parcial-cabecalho.php', 'class="pagina-descricao'],
+        ['O cabeçalho fica só com a contagem «Até ao Sim, Aceito»',
+         'parcial-cabecalho.php', 'Até ao “Sim, Aceito”'],
         // Esta dizia «e conta ao segundo». Deixou de ser verdade, e de
         // propósito: ao segundo só na semana da festa (EMO-001). Uma marca que
         // continuasse a afirmar o contrário passava a guardar uma mentira.
@@ -978,8 +986,18 @@ function correcoesEsperadas(): array {
          'assets/estilo.css', 'body.topo-fixo .topo{'],
         ['E quem faz o seu próprio topo não apanha o fixo sem quem o meça',
          'parcial-cabecalho.php', "document.body.classList.add('topo-fixo');"],
-        ['A contagem nunca se perde: é o nome do casal que encolhe',
-         'assets/estilo.css', '.topo .sub.topo-casal .tc-nome{'],
+        ['A contagem do cabeçalho nunca dobra no telemóvel',
+         'assets/estilo.css', '.topo .sub.topo-contagem-linha{'],
+
+        // ---- Administração no telemóvel ----
+        ['Os formulários da plataforma vencem as grelhas em linha no telemóvel',
+         'plataforma.php', 'grid-template-columns:minmax(0,1fr) !important'],
+        ['Modelos, dados de exemplo e galeria cabem numa coluna móvel',
+         'modelos.php', '.modal-corpo .gal-env{ grid-template-columns:minmax(0,1fr); }'],
+        ['A gestão do casamento empilha campos e ações no telemóvel',
+         'gestao.php', '.grelha, .dsel{ grid-template-columns:minmax(0,1fr); }'],
+        ['A licença empilha a ficha e deixa as tabelas percorríveis no telemóvel',
+         'licenca.php', '.lic-d-mods{ display:block; overflow-x:auto; }'],
 
         // ---- Mexer uma mesa sem a arrastar, no telemóvel ----
         ['As setas empurram a mesa um passo de cada vez',
@@ -988,6 +1006,10 @@ function correcoesEsperadas(): array {
          'assets/mesas.js', 'function porAqui(){'],
         ['Numa página chamada Planta de Mesas, a planta vê-se ao chegar',
          'mesas.php', 'id="barra-add-dobra"'],
+        ['A escolha de mesa abre como diálogo centrado no telemóvel',
+         'mesas.php', 'body.combo-aberto::before'],
+        ['O teclado móvel já não fecha a escolha de mesa ao redimensionar a vista',
+         'assets/mesas.js', 'if(comboAberto && comboEhModal()) centrarComboMobile()'],
 
         // ---- A fotografia da bebida cabe inteira ----
         ['A fotografia de uma bebida cabe inteira, em vez de ser cortada',
@@ -1477,6 +1499,11 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
   .copiar{ margin-top:1rem; }
   pre{ background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:.7rem;
        font-size:var(--t-apoio); white-space:pre-wrap; }
+  @media (max-width:640px){
+    body{ padding:.85rem; }
+    .assin{ max-width:100%; overflow-wrap:anywhere; }
+    table{ display:block; overflow-x:auto; }
+  }
 </style>
 </head>
 <body>

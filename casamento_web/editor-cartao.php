@@ -24,6 +24,7 @@ $CAS  = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'no
 // A contagem também aqui — é a mesma casa. A desenhar um MODELO não há dia
 // nenhum a contar: o modelo não é de casamento nenhum.
 [$DATA_EV, $HORA_EV] = $MODELO ? ['', ''] : diaDoCasamento();
+$SAIR_EDITOR = $MODELO ? 'modelos.php' : 'graficas.php';
 
 $pal      = cartaoPaletaEfetiva($defs);
 $estilo   = cartaoEstiloVars($defs);
@@ -128,11 +129,11 @@ $camposPorCamada = [
 
 <div class="ed-menu">
   <div class="marca"><span class="ed-mono"><?= escP($CAS['mono']) ?></span> Editor</div>
-  <span class="doc">Convite impresso · <b><?= escP($CAS['casal']) ?></b></span>
+  <span class="doc">Convite impresso</span>
   <div class="cresce"></div>
-  <?php contagem($DATA_EV, $HORA_EV); ?>
+  <?php contagem($DATA_EV, $HORA_EV, false, true); ?>
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
-  <a href="graficas.php"><i data-ico="setaEsquerda"></i> Entregáveis à gráfica</a>
+  <a class="sair-editor" href="<?= escP($SAIR_EDITOR) ?>"><i data-ico="setaEsquerda"></i> Sair do Editor</a>
   <span class="ed-sep"></span>
   <a href="cartoes.php">Ver todos os cartões</a>
 </div>
@@ -250,7 +251,7 @@ $camposPorCamada = [
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
-<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?> };</script>
+<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?> };</script>
 <script src="<?= asset('assets/editor-espaco.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;

@@ -11,7 +11,7 @@
    Daí o aviso: diz a medida que falta, e deixa continuar a quem
    quiser mesmo — não é uma porta fechada, é um aviso de trabalho.
 
-   A página define window.EDITOR_MIN = {l, a, nome}.
+   A página define window.EDITOR_MIN = {l, a, sair}.
    ============================================================ */
 (function () {
   'use strict';
@@ -48,9 +48,10 @@
           'Se estiver com o navegador em meia janela, este é o momento de a alargar.</p>' +
         '<div class="esp-bt">' +
           '<button type="button" class="esp-ok">Continuar mesmo assim</button>' +
-          '<a class="esp-volta" href="index.php">Voltar ao painel</a>' +
+          '<a class="esp-volta" href="#">Sair do Editor</a>' +
         '</div>' +
       '</div>';
+    caixa.querySelector('.esp-volta').setAttribute('href', M.sair || 'index.php');
     caixa.querySelector('.esp-ok').addEventListener('click', function () {
       marcarAvancou(); rever();
     });

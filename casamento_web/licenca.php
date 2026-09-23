@@ -233,8 +233,16 @@ if ($modQuero) {
 
   @media (max-width:640px){
     .lic-wrap{ padding:1rem .8rem 3rem; }
+    .lic-estado{ padding:1rem; gap:.7rem; }
+    .lic-estado-txt{ min-width:0; width:100%; }
+    .lic-estado h2, .lic-sec > h2{ font-size:var(--t-sub); }
+    .lic-ficha{ grid-template-columns:minmax(0,1fr); padding:1rem; }
     .lic-itens li{ flex-wrap:wrap; gap:.3rem .8rem; }
     .lic-itens .mod{ min-width:0; }
+    .lic-itens .med{ flex-basis:100%; }
+    .lic-d-l{ flex-direction:column; gap:.15rem; }
+    .lic-d-l b{ text-align:left; }
+    .lic-d-mods{ display:block; overflow-x:auto; }
   }
 </style>
 </head>

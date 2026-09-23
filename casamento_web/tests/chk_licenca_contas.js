@@ -56,11 +56,14 @@ const entrar = async (ctx, u, s) => {
   // Os noivos entram já.
   let noivos = await entrar(await b.newContext(), noivosEmail, 'segredo12345');
   ok(await noivos._entrou(), 'os noivos entram com a conta criada');
-  // E o cabeçalho diz o que resta da licença.
+  // A licença deixou de ocupar o cabeçalho; continua acessível na sua página.
   await noivos.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   const cab = (await noivos.textContent('.licenca-restante').catch(() => '')) || '';
   console.log('   cabeçalho licença:', JSON.stringify(cab.replace(/\s+/g, ' ').trim()));
-  ok(/licença/i.test(cab), 'o cabeçalho dos noivos mostra o que resta da licença');
+  ok(cab === '', 'o cabeçalho dos noivos não repete a informação da licença');
+  await noivos.goto(BASE + '/licenca.php', { waitUntil: 'networkidle' });
+  ok(await noivos.locator('.lic-wrap').count() === 1,
+     'a informação continua disponível na página Licença');
   await noivos.context().close();
 
   // ---------- 2. contas administrativas contam-se à parte ----------

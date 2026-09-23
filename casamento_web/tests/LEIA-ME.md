@@ -84,7 +84,9 @@ Entram com **admin / noivos2026**.
 | `chk_ornamentos.js`     | as cinco volutas de canto e os seis elos entre os nomes: cada uma cabe na sua caixa, o elo fica centrado, e as escolhas chegam à folha de cartões e ao manual |
 | `chk_cerimonias.js`     | cerimónias que se acrescentam e removem nas duas peças, cronograma que se rearranja, e a hora vazia que já não é meia-noite |
 | `chk_admin_ui.js`       | o painel da administração arrumado por quem o usa, e os modelos a mostrarem a cara |
+| `chk_admin_mobile.js`   | todas as áreas administrativas cabem no telemóvel, com descrições no corpo e o seletor de mesa em diálogo centrado |
 | `chk_editor_espaco.js`  | o editor avisa quando o ecrã é pequeno (e deixa continuar), e o manual de impressão segue o cartão em vigor |
+| `chk_sair_editor.js`    | os dois editores mostram «Sair do Editor», regressam ao contexto certo e protegem alterações por guardar |
 | `chk_tela_livre.js`     | posicionamento livre: arrastar blocos no cartão, no envelope e nas páginas do corpo (incluindo secções livres), íman, cadeado, e a composição a chegar ao convidado |
 | `chk_dados.js`          | levar os dados e trazê-los de volta: o que sai volta igual, substituir substitui, e cada um só leva o que é seu |
 | `chk_so_ver.js`         | o ecrã em modo de leitura: o que escreve fica apagado, o que só mostra continua vivo, e os gestos da planta não arrancam — mas arrancam com um código de correção |

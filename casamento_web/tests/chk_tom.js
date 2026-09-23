@@ -63,7 +63,7 @@ const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, 
   });
   const far = await ler();
   ok(!!far, 'o cabeçalho traz a contagem');
-  ok(/\d+ dias/.test(far.dias),
+  ok(/\d+ dias/i.test(far.dias),
      'a trezentos dias conta em DIAS: «' + far.texto + '»');
   ok(far.relogio === '',
      'e sem cronómetro ao segundo — a esta distância planeia-se em semanas, '
@@ -88,7 +88,7 @@ const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, 
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1500);
   const semana = await ler();
-  ok(/\d+ dias?/.test(semana.dias), 'na semana da festa continua a dizer os dias');
+  ok(/\d+ dias?/i.test(semana.dias), 'na semana da festa continua a dizer os dias');
   ok(/^\d\d:\d\d:\d\d$/.test(semana.relogio),
      'e AGORA aparece o relógio — aqui os segundos são a festa a chegar: '
      + semana.relogio);

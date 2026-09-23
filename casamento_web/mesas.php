@@ -558,6 +558,21 @@ $CAS = casalDaFicha($conn);
   .combo-opt:hover, .combo-opt.ativo{ background:var(--cream); }
   .combo-opt .combo-sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
   .combo-vazio{ color:var(--ink-fraco); font-size:var(--t-apoio); padding:.4rem .5rem; }
+  @media (max-width:760px){
+    /* No telemóvel, a escolha de mesa é um diálogo no centro da área que se
+       vê. Ao abrir o teclado, o viewport muda de altura; o JavaScript volta a
+       centrá-lo sem o fechar. */
+    body.combo-aberto{ overflow:hidden; }
+    body.combo-aberto::before{ content:''; position:fixed; inset:0; z-index:1190;
+      background:rgba(12,25,37,.46); }
+    .combo-pop{ z-index:1200; display:flex; flex-direction:column; overflow:hidden;
+      border-radius:16px; padding:.65rem; }
+    .combo-list{ flex:1; min-height:0; max-height:none; }
+    .combo-search{ flex:none; }
+    .sentado{ display:grid; grid-template-columns:minmax(0,1fr); gap:.4rem; }
+    .sentado .nm-pega{ width:100%; max-width:100%; }
+    .combo.combo-inline{ width:100%; max-width:none; min-width:0; }
+  }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>

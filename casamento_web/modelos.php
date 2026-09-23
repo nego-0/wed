@@ -227,8 +227,22 @@ if ($aberto > 0) {
   .fr-est.falta{ color:var(--warn, #b5713a); font-weight:600; }
   .aviso{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
           border-radius:10px; padding:.7rem .9rem; font-size:var(--t-denso); margin-bottom:1rem; line-height:1.5; }
-  @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .mod{ grid-template-columns:auto 1fr; }
-                            .mod .ac{ grid-column:1/-1; } }
+  @media (max-width:720px){
+    .lf{ grid-template-columns:minmax(0,1fr) !important; }
+    .painel{ padding:.9rem; }
+    .ex-campos, .exs{ grid-template-columns:minmax(0,1fr); }
+    .modal-corpo .gal-env{ grid-template-columns:minmax(0,1fr); }
+    .modal-corpo .gal-env .btn{ width:100%; justify-content:center; }
+    .jan-fim{ flex-wrap:wrap; }
+  }
+  @media (max-width:430px){
+    .grelha{ grid-template-columns:minmax(0,1fr); }
+    .filtros{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:.25rem;
+      overscroll-behavior-x:contain; scrollbar-width:none; }
+    .filtros::-webkit-scrollbar{ display:none; }
+    .filtros .chip, .filtros .chip-sep{ flex:none; }
+    #lightbox{ padding:.75rem; }
+  }
 </style>
 </head>
 <body>

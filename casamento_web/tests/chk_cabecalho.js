@@ -44,21 +44,22 @@ const PAGINAS = [
   await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', 'noivos2026');
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
   await p.evaluate(async () => {
-    await fetch('api.php?action=casamento_abrir&id=1',
+    const l = await (await fetch('api.php?action=casamento_lista&estado=ativo',
+      { headers: { 'X-CSRF-Token': window.CSRF } })).json();
+    const c = (l.casamentos || [])[0];
+    await fetch('api.php?action=casamento_abrir&id=' + c.id,
       { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
   });
-  // Quem é o casal e quando é o dia, lidos do próprio cabeçalho: é ele que os
-  // tem de dizer, e é contra ele que as outras páginas se comparam.
+  // A data do casamento continua no title da contagem, embora o cabeçalho já
+  // não repita o nome dos noivos nem a data por extenso.
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(700);
   const casal = await p.evaluate(() => {
     const c = document.getElementById('topo-contagem');
-    const n = document.querySelector('.topo-casal');
-    if (!c || !n) return null;
-    return { nome: n.textContent.split('·')[0].trim(), data: c.dataset.dia };
+    if (!c) return null;
+    return { data: c.dataset.dia };
   });
-  ok(casal && casal.data, 'o casamento de prova tem casal e data: '
-     + (casal ? casal.nome + ' · ' + casal.data : '—'));
+  ok(casal && casal.data, 'o casamento de prova tem data: ' + (casal ? casal.data : '—'));
 
   // ============ 1. o mesmo cabeçalho em toda a parte ============
   const faltam = [];
@@ -68,28 +69,29 @@ const PAGINAS = [
     const d = await p.evaluate(([sel]) => {
       const t = document.querySelector(sel);
       const c = document.getElementById('topo-contagem');
-      const id = document.querySelector('.topo-casal, .ed-menu .doc');
+      const desc = document.querySelector('.pagina-descricao p');
       return { titulo: t ? t.textContent.replace(/\s+/g, ' ').trim() : null,
                contagem: c ? c.textContent.replace(/\s+/g, ' ').trim() : null,
                dia: c ? c.dataset.dia : null,
-               identidade: id ? id.textContent.replace(/\s+/g, ' ').trim() : null };
+               descricao: desc ? desc.textContent.replace(/\s+/g, ' ').trim() : null };
     }, [sel]);
     const bom = d.titulo && d.contagem && d.dia === casal.data
-             && (d.identidade || '').includes(casal.nome)
              && (!titulo || d.titulo === titulo);
     if (!bom) faltam.push(pagina + ' → ' + JSON.stringify(d));
   }
   ok(faltam.length === 0,
-     `as ${PAGINAS.length} páginas com cabeçalho dizem o casal e trazem a contagem`
+     `as ${PAGINAS.length} páginas com cabeçalho trazem a contagem`
        + (faltam.length ? ':\n     ' + faltam.join('\n     ') : ''));
 
-  // O nome do casal deixa de estar duplicado na linha de apoio: era esse o
-  // remendo que se usava no painel e nas mesas, e que faltava nas outras.
+  // A descrição está no corpo; nome dos noivos e licença saíram do cabeçalho.
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
-  const linhas = await p.evaluate(() =>
-    [...document.querySelectorAll('.topo .sub')].map(e => e.textContent.trim()));
-  ok(linhas.filter(l => l.includes('&')).length <= 2,
-     'o nome do casal não se repete na linha de apoio: ' + JSON.stringify(linhas.slice(0, 3)));
+  const cab = await p.evaluate(() => ({
+    nome: !!document.querySelector('.topo .tc-nome, .topo .topo-casal'),
+    licenca: !!document.querySelector('.topo .licenca-restante'),
+    descricao: document.querySelector('.pagina-descricao p')?.textContent.trim() || '',
+    descNoTopo: !!document.querySelector('.topo .pagina-descricao') }));
+  ok(!cab.nome && !cab.licenca, 'o cabeçalho não repete os noivos nem a licença');
+  ok(cab.descricao && !cab.descNoTopo, 'a descrição da página começa o corpo: ' + cab.descricao);
 
   // ============ 2. a contagem conta mesmo — em dias ============
   //
@@ -110,8 +112,8 @@ const PAGINAS = [
              titulo: c.getAttribute('title') || '', cls: c.className };
   });
   const dias = await cg();
-  ok(/^\d+ dias?$/.test(dias.n) && /^faltam?$/.test(dias.l),
-     'a contagem dá os dias que faltam: ' + dias.l + ' ' + dias.n);
+  ok(/^\d+ Dias?$/.test(dias.n) && dias.l === 'Até ao “Sim, Aceito”',
+     'a contagem diz «N Dias Até ao “Sim, Aceito”»: ' + dias.n + ' ' + dias.l);
   const longe = parseInt(dias.n, 10) >= 7;
   ok(!longe || dias.t === '',
      'e longe da festa não traz cronómetro: a esta distância planeia-se em '
@@ -132,7 +134,7 @@ const PAGINAS = [
 
   // A contagem está no lugar da data — e a data continua à mão, no title.
   const linha = await p.evaluate(() =>
-    document.querySelector('.topo-casal').textContent.replace(/\s+/g, ' ').trim());
+    document.querySelector('.topo-contagem-linha').textContent.replace(/\s+/g, ' ').trim());
   ok(!/de janeiro|de fevereiro|de março|de abril|de maio|de junho|de julho|de agosto|de setembro|de outubro|de novembro|de dezembro/i
        .test(linha),
      'a data por extenso saiu da linha, que agora é do casal e da contagem: ' + linha);
@@ -152,7 +154,7 @@ const PAGINAS = [
     const alvo = new Date(+d[0], +d[1] - 1, +d[2], +h[0] || 0, +h[1] || 0, 0, 0);
     return Math.floor((alvo - new Date()) / 86400000);
   });
-  ok(dias.n === conferida + (conferida === 1 ? ' dia' : ' dias'),
+  ok(dias.n === conferida + (conferida === 1 ? ' Dia' : ' Dias'),
      'e são os dias certos até lá (' + conferida + ')');
 
   // ============ 3. o próprio dia, e o dia seguinte ============
@@ -160,7 +162,7 @@ const PAGINAS = [
   // ver o que só se veria uma vez, no dia do casamento de alguém.
   const comData = (quando, hora) => p.evaluate(([q, h]) => {
     const cx = document.getElementById('topo-contagem');
-    cx.dataset.dia = q; cx.className = 'contagem';
+    cx.dataset.dia = q; cx.className = 'contagem contagem-sim';
     if (h) cx.dataset.hora = h;
     // O guião do cabeçalho já correu; corre-se outra vez, agora com a data nova.
     const s = [...document.scripts].find(x => /\.contagem\[data-dia\]/.test(x.textContent));
@@ -179,11 +181,11 @@ const PAGINAS = [
                     + String(x.getMinutes()).padStart(2, '0');
 
   const hoje = await comData(iso(0));
-  ok(hoje.n === 'É HOJE' && /hoje/.test(hoje.cls),
+  ok(hoje.n === 'Hoje' && hoje.l === 'é o “Sim, Aceito”' && /hoje/.test(hoje.cls),
      'no próprio dia deixa de ser um número: ' + hoje.n + ' · ' + hoje.t);
 
   const ontem = await comData(iso(-2));
-  ok(ontem.l === 'há' && /passou/.test(ontem.cls) && ontem.t === '',
+  ok(ontem.l === 'Desde o “Sim, Aceito”' && /passou/.test(ontem.cls) && ontem.t === '',
      'e depois conta para a frente, sem relógio: ' + ontem.l + ' ' + ontem.n);
 
   // A véspera, com o casamento a vinte e tal horas de distância: é aí que falta
@@ -198,8 +200,8 @@ const PAGINAS = [
   const daquiA25h = new Date(Date.now() + 25 * 3600000);
   const amanha = await comData(isoDe(daquiA25h),
                                String(daquiA25h.getHours()).padStart(2, '0') + ':00');
-  ok(amanha.n === '1 dia' && amanha.l === 'falta',
-     'a véspera diz «falta 1 dia», no singular: ' + amanha.l + ' ' + amanha.n);
+  ok(amanha.n === '1 Dia' && amanha.l === 'Até ao “Sim, Aceito”',
+     'a véspera diz «1 Dia Até ao “Sim, Aceito”»: ' + amanha.n + ' ' + amanha.l);
 
   // E dentro das últimas 24 horas o número desaparece: fica só o relógio, que
   // é a verdade — «1 dia 16:56:12» seria um dia a mais.
@@ -211,8 +213,9 @@ const PAGINAS = [
   const daqui23h = new Date(Date.now() + 23 * 3600000);
   if (daqui23h.getDate() !== new Date().getDate()) {
     const ultimas = await comData(isoDe(daqui23h), hhmm(daqui23h));
-    ok(ultimas.n === '' && /^\d\d:\d\d:\d\d$/.test(ultimas.t),
-       'e nas últimas horas fica só o relógio, sem dia nenhum: ' + ultimas.t);
+    ok(ultimas.n === '0 Dias' && ultimas.l === 'Até ao “Sim, Aceito”'
+       && /^\d\d:\d\d:\d\d$/.test(ultimas.t),
+       'e nas últimas horas diz «0 Dias» com o relógio: ' + ultimas.t);
   } else {
     console.log('(saltado: à uma da manhã as 23 horas seguintes ainda são hoje)');
   }
@@ -227,7 +230,7 @@ const PAGINAS = [
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   const semCasal = await p.evaluate(() => ({
     contagem: !!document.getElementById('topo-contagem'),
-    casal: !!document.querySelector('.topo-casal') }));
+    casal: !!document.querySelector('.topo-contagem-linha') }));
   ok(!semCasal.contagem && !semCasal.casal,
      'sem casamento aberto, o cabeçalho não conta os dias de ninguém');
 
@@ -237,7 +240,10 @@ const PAGINAS = [
   await tel.fill('input[name=utilizador]', 'admin'); await tel.fill('input[name=senha]', 'noivos2026');
   await tel.click('button[type=submit]'); await tel.waitForLoadState('networkidle');
   await tel.evaluate(async () => {
-    await fetch('api.php?action=casamento_abrir&id=1',
+    const l = await (await fetch('api.php?action=casamento_lista&estado=ativo',
+      { headers: { 'X-CSRF-Token': window.CSRF } })).json();
+    const c = (l.casamentos || [])[0];
+    await fetch('api.php?action=casamento_abrir&id=' + c.id,
       { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
   });
   await tel.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
@@ -247,7 +253,7 @@ const PAGINAS = [
     const t = document.querySelector('.topo h1');
     const rc = c.getBoundingClientRect(), rt = t.getBoundingClientRect();
     return { direita: Math.round(rc.right), janela: innerWidth,
-             naLinha: !!c.closest('.topo-casal'),
+             naLinha: !!c.closest('.topo-contagem-linha'),
              abaixo: rc.top > rt.bottom, texto: c.textContent.replace(/\s+/g, ' ').trim() };
   });
   ok(mob.naLinha && mob.abaixo && mob.direita <= mob.janela,

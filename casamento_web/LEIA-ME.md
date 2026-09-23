@@ -586,6 +586,12 @@ um modelo da casa era pedir o que não é preciso, e arriscar deixar lá o rascu
 Uma tira no topo do editor não deixa esquecer que o que se está a desenhar é da
 casa e não de um casal.
 
+Os dois editores mostram **Sair do Editor** na barra superior. Num convite do
+casal, a saída regressa à área da respetiva peça (Convite digital ou Entregáveis
+à gráfica); ao desenhar um modelo da casa, regressa à lista de modelos. A mesma
+saída aparece no aviso de ecrã pequeno. Se houver alterações por guardar, a
+confirmação de saída já usada pelos editores continua a protegê-las.
+
 Aplicar um modelo é **ficar com ele**: parte-se do desenho de origem da peça e
 põe-se o modelo por cima, para o casal ficar exatamente com o modelo e não com
 uma mistura do que tinha. A partir daí o desenho é do casal: mexer no modelo
@@ -941,9 +947,17 @@ quem chegava para entrar no seu era recebido pelo nome de outras pessoas.
 (ou que o admin escreveu ao criar o casamento) vivem em `cw_casamentos` e
 entram como **valor de origem** de `defsPadrao()` — não como definições
 gravadas. Daí seguem sozinhos para tudo o que delas sai: o monograma, o
-cabeçalho, o convite digital, o cartão impresso, a página de confirmação, a
+convite digital, o cartão impresso, a página de confirmação, a
 contagem decrescente, o manifesto da porta e o nome do ficheiro CSV. A versão
 "Original" de cada casamento passa também a ser a dele.
+
+**O cabeçalho deixa o conteúdo falar.** Mostra o título da área e a contagem
+«N Dias Até ao “Sim, Aceito”». Não repete o nome dos noivos nem o estado da
+licença em todas as páginas. A descrição de cada área abre o corpo da página,
+onde pode ser lida como introdução; a licença continua detalhada na sua área
+própria. Os formulários, cartões, listas, ações e janelas das áreas de
+administração empilham-se ou passam a rolagem local em ecrãs móveis, sem criar
+rolagem horizontal na página.
 
 O editor do convite continua a poder escrever um nome diferente por cima — é
 para isso que serve. Quando isso acontece, a página de gestão di-lo, e guardar
@@ -1099,6 +1113,10 @@ género devolve o papel a *Convidado*, que sem género não tem nome. **Só padr
 **Mesas no convite.** O convite (digital, físico e a página de confirmação) menciona **todas as mesas** dos seus integrantes, com o número de lugares em cada uma — ex.: *"Mesas: A (1 lugar) e B (4 lugares)"*. No editor há a opção *"Mostrar o número de lugares por mesa no convite"*, que liga/desliga o *(N lugares)* junto a cada mesa **tanto no convite digital como no físico** (cartões).
 
 **Painel de abas.** Ao lado do canvas há um conjunto de abas — *Pessoas*, *Convites*, *Sem mesa* e (ao selecionar uma mesa) a aba dessa mesa com os seus detalhes e convidados. As abas *Pessoas*/*Convites* têm pesquisa e filtro por estado de RSVP; cada cartão pode ser arrastado para uma mesa da planta. A criação de mesas fica num formulário compacto por cima das abas. As listas longas do painel de uma mesa (mudar de mesa, trazer uma pessoa, sentar um convite, nomear padrinho/madrinha) são **dropdowns de pesquisa**: abrem uma caixa com campo de procura e resultados filtrados à medida que escreve.
+
+No telemóvel, esses dropdowns abrem como **diálogos centrados na área visível**,
+com fundo escurecido. O teclado virtual pode reduzir a altura disponível sem
+fechar a escolha: o diálogo volta a centrar-se e a lista continua aberta.
 
 **Ao posicionar as mesas** surgem **linhas-guia magnéticas** que alinham a mesa que arrasta com o centro das outras (ou do salão). Ao selecionar uma mesa, as suas pessoas aparecem como pastilhas na planta que se arrastam para outra mesa.
 

@@ -376,7 +376,28 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
   .segredo{ background:var(--gold-pale); border:1px dashed var(--gold-soft); border-radius:10px;
             padding:.8rem .9rem; margin-top:.9rem; font-size:var(--t-denso); line-height:1.6; }
   .lf{ display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:.7rem; align-items:end; }
-  @media (max-width:720px){ .lf{ grid-template-columns:1fr; } .cas{ grid-template-columns:auto 1fr; } .cas .ac{ grid-column:1/-1; } }
+  @media (max-width:720px){
+    /* Há muitos .lf com grelha definida no atributo style. Sem !important,
+       essa definição ganhava à media query e os formulários saíam do ecrã. */
+    .lf{ grid-template-columns:minmax(0,1fr) !important; }
+    .cas{ grid-template-columns:auto minmax(0,1fr); padding:.7rem; gap:.65rem; }
+    .cas .ac{ grid-column:1/-1; flex-wrap:wrap; white-space:normal; }
+    .cas .ac .btn{ flex:1 1 auto; justify-content:center; }
+    .painel{ padding:.9rem; }
+    .dsel{ grid-template-columns:minmax(0,1fr); }
+    .lic-prazos-lista{ grid-template-columns:minmax(0,1fr); }
+    .lic-pi{ align-items:flex-start; flex-wrap:wrap; }
+    .lic-pi-preco{ width:100%; padding-left:1.5rem; }
+    .lic-pi-preco input{ flex:1; width:auto; }
+  }
+  @media (max-width:430px){
+    .numeros{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+    .numeros .n{ padding:.7rem; min-width:0; }
+    .filtros{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:.25rem;
+      overscroll-behavior-x:contain; scrollbar-width:none; }
+    .filtros::-webkit-scrollbar{ display:none; }
+    .filtros .chip{ flex:none; }
+  }
 
   /* ---- Verificações de preenchimento (as mesmas do formulário público) ----
      Um campo com erro acende a vermelho e diz o que falta, logo por baixo. */

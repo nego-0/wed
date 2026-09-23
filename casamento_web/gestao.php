@@ -127,8 +127,14 @@ $MAPA_LOCAL = [
             padding:.6rem .8rem; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.9rem; line-height:1.55; }
   .semdono{ background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:8px;
             padding:.6rem .8rem; font-size:var(--t-apoio); color:var(--ink); margin-bottom:.8rem; line-height:1.55; }
-  @media (max-width:640px){ .lf{ grid-template-columns:1fr; } .linha{ grid-template-columns:auto 1fr; }
-                            .linha .ac{ grid-column:1/-1; } }
+  @media (max-width:640px){
+    .lf{ grid-template-columns:minmax(0,1fr) !important; }
+    .grelha, .dsel{ grid-template-columns:minmax(0,1fr); }
+    .linha{ grid-template-columns:auto minmax(0,1fr); }
+    .linha .ac{ grid-column:1/-1; white-space:normal; flex-wrap:wrap; }
+    .painel{ padding:.9rem; }
+    .fim .btn{ width:100%; justify-content:center; }
+  }
   /* Verificações por campo, como nos outros formulários da casa. */
   .campo input{ transition:border-color .15s, box-shadow .15s; }
   .campo.mau input{ border-color:var(--danger); }
