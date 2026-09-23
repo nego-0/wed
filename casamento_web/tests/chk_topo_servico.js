@@ -35,9 +35,13 @@ const PARTILHADO = ['index.php', 'mesas.php', 'orcamento.php'];
   await p.click('button[type=submit]');
   await p.waitForLoadState('networkidle');
   await p.evaluate(async () => {
-    await fetch('api.php?action=casamento_abrir&id=1',
+    const l = await (await fetch('api.php?action=casamento_lista&estado=ativo',
+      { headers: { 'X-CSRF-Token': window.CSRF } })).json();
+    const c = (l.casamentos || [])[0];
+    if (!c) throw new Error('A prova dos postos precisa de um casamento ativo.');
+    await fetch('api.php?action=casamento_abrir&id=' + c.id,
       { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
-  }).catch(() => {});
+  });
 
   const ler = () => p.evaluate(() => {
     const t = document.querySelector('.topo');
@@ -58,6 +62,9 @@ const PARTILHADO = ['index.php', 'mesas.php', 'orcamento.php'];
       seuSitio: !!(noMeio && noMeio.closest('.topo')),
       abaixoFora: !!(abaixo && !abaixo.closest('.topo')),
       transbordo: document.documentElement.scrollWidth - innerWidth,
+      servico: document.body.classList.contains('b-servico'),
+      folhaServico: !!document.querySelector('link[href*="assets/bar.css"]'),
+      pagina: location.pathname.split('/').pop(),
       // Um cabeçalho FIXO tem de ter fundo: transparente, deixa o conteúdo
       // passar-lhe por trás e lê-se tudo em cima de tudo.
       pintado: cs.backgroundImage !== 'none'
@@ -70,11 +77,14 @@ const PARTILHADO = ['index.php', 'mesas.php', 'orcamento.php'];
     await p.waitForTimeout(1500);
     const m = await ler();
     ok(!!m, pag + ': tem cabeçalho');
+    ok(!!m && m.pagina === pag, pag + ': abre sem desvio (' + (m ? m.pagina : '?') + ')');
     ok(!!m && !m.fixo && m.pos !== 'fixed',
        pag + ': faz o seu próprio topo, e por isso ele NÃO é fixo (' + (m ? m.pos : '?') + ')');
     ok(!!m && m.seuSitio && m.abaixoFora,
        pag + ': nada se sobrepõe — o cabeçalho está no lugar dele e o conteúdo a seguir');
     ok(!!m && m.transbordo === 0, pag + ': sem rolagem horizontal');
+    ok(!!m && m.servico && m.folhaServico,
+       pag + ': usa a estrutura visual comum dos postos de serviço');
   }
 
   for (const pag of PARTILHADO) {

@@ -112,7 +112,7 @@ if ($pecaSel === 'cartao') {
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <style>
-  .man-wrap{ max-width:960px; margin:0 auto; padding:0 1rem 3rem; }
+  .man-wrap{ max-width:960px; margin:0 auto; padding:0 1.25rem 3rem; }
   .man-cab{ border-bottom:3px double var(--gold-soft); padding-bottom:1rem; margin-bottom:1.6rem; }
   .man-cab h1{ margin:.2rem 0; }
   /* Idem: 3,02:1 em classico. */
@@ -171,7 +171,8 @@ if ($pecaSel === 'cartao') {
 </style>
 </head>
 <body>
-<?php cabecalho('Manual de impressão', 'Gerado a partir da configuração atual', 'grafica', ['no_print'=>true]); ?>
+<?php cabecalho('Manual de impressão', 'Gerado a partir da configuração atual', 'grafica',
+                ['no_print'=>true, 'largura'=>'960px']); ?>
 
 <main id="conteudo">
 <div class="container">

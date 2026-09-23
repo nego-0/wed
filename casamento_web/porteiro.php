@@ -12,7 +12,6 @@ exigirModulo('convidados');
 exigirModulo('porta');
 $DEFS = defsAtuais($conn);
 $CAS  = casalDaFicha($conn);
-// O dia da festa: é hoje que este posto trabalha, e a contagem diz-lho.
 [$DATA_EV, $HORA_EV] = diaDoCasamento();
 ?>
 <!DOCTYPE html>
@@ -23,6 +22,7 @@ $CAS  = casalDaFicha($conn);
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/bar.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <script src="<?= asset('assets/html5-qrcode.min.js') ?>"></script>
 <style>
@@ -32,31 +32,35 @@ $CAS  = casalDaFicha($conn);
   .barra-offline.off{ background:#7a3b34; color:#ffe9e4; }
   .barra-offline.sync{ background:var(--gold); color:#1a1b17; }
 
-  body{ background:linear-gradient(175deg,#16261E,#20342A); color:var(--ivory); min-height:100vh; }
-  /* O cabeçalho é o da casa (.topo, em estilo.css): mesmo monograma, mesmos
-     nomes, mesma contagem, mesmas pastilhas no menu. O que muda é só a
-     moldura — aqui o fundo já é o verde da página, e a barra não precisa de
-     desenhar o seu. Antes era uma barra à parte, parecida mas não igual: quem
-     abre a porta abre a mesma casa. */
-  .topo{ background:none; padding:1.1rem 1.25rem; }
-  .topo::after{ display:none; }
-  .contentor{ max-width:560px; margin:0 auto; padding:1rem 1.1rem 3rem; }
+  /* A porta é um posto de serviço, como Copa e Entregas: coluna curta,
+     cabeçalho próprio, alvos grandes e as cores do tema escolhido. */
+  body.b-servico .topo .wrap{ display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+                              max-width:560px; margin:0 auto; padding:0 .15rem; }
+  body.b-servico .topo h1{ font-family:var(--serif); font-size:var(--t-seccao);
+                           margin:0; color:var(--ink); }
+  body.b-servico .topo .sub{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+  body.b-servico .topo .nav{ margin-left:auto; display:flex; gap:1rem; }
+  body.b-servico .topo .nav a{ color:var(--gold-texto); font-size:var(--t-denso); }
 
   .contador-porta{ display:flex; gap:.7rem; margin-bottom:1.1rem; }
-  .cp{ flex:1; background:rgba(255,255,255,.06); border:1px solid rgba(217,188,140,.2); border-radius:14px; padding:.9rem; text-align:center; }
-  .cp .n{ font-family:var(--serif); font-size:1.9rem; font-weight:700; color:var(--gold-soft); line-height:1; }
-  .cp .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--topo-txt); margin-top:.3rem; }
+  .cp{ flex:1; min-width:0; background:var(--card); border:1px solid var(--line);
+       border-radius:var(--radius); padding:.9rem; text-align:center; }
+  .cp .n{ font-family:var(--serif); font-size:1.9rem; font-weight:700;
+          color:var(--gold-texto); line-height:1; font-variant-numeric:tabular-nums; }
+  .cp .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
+          letter-spacing:1px; color:var(--ink-fraco); margin-top:.3rem; }
 
   #leitor{ border-radius:16px; overflow:hidden; margin-bottom:1rem; display:none; background:#000; }
   #leitor.on{ display:block; }
   .btn-scan{ width:100%; justify-content:center; font-size:var(--t-corpo); padding:1rem; margin-bottom:1rem; }
 
   .busca-manual{ display:flex; gap:.5rem; margin-bottom:1.2rem; }
-  .busca-manual input{ background:rgba(255,255,255,.9); }
+  .busca-manual input{ min-width:0; }
 
   .resultado{ display:none; }
   .resultado.on{ display:block; }
-  .cartao-conv{ background:var(--ivory); color:var(--forest-deep); border-radius:18px; overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,.35); }
+  .cartao-conv{ background:var(--card); color:var(--text); border:1px solid var(--line);
+                border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
   .faixa{ padding:1.2rem 1.3rem; color:#fff; }
   .faixa.ok{ background:linear-gradient(135deg,#2f7d4f,#245e3b); }
   .faixa.aviso{ background:linear-gradient(135deg,#a8792f,#8A6031); }
@@ -82,22 +86,35 @@ $CAS  = casalDaFicha($conn);
   .acoes-porta .btn{ flex:1; justify-content:center; }
   .aviso-txt{ background:var(--warn-bg); color:var(--warn); border-radius:10px; padding:.6rem .8rem; font-size:var(--t-denso); margin-bottom:1rem; }
   .varios{ display:grid; gap:.5rem; }
-  .varios .opc{ background:var(--ivory); color:var(--forest-deep); border-radius:12px; padding:.8rem 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+  .varios .opc{ background:var(--card); color:var(--text); border:1px solid var(--line);
+                border-radius:12px; padding:.8rem 1rem; cursor:pointer;
+                display:flex; justify-content:space-between; align-items:center; }
   .varios .opc small{ color:var(--ink-fraco); }
-  .msg-vazia{ text-align:center; color:var(--gold-pale); padding:1.4rem; }
+  .msg-vazia{ text-align:center; color:var(--ink-fraco); padding:1.4rem; }
 
-  .abas{ display:flex; gap:.4rem; margin-bottom:1.1rem; background:rgba(255,255,255,.05); border:1px solid rgba(217,188,140,.2); border-radius:50px; padding:.25rem; }
-  .aba{ flex:1; border:none; background:transparent; color:var(--topo-txt); font-family:var(--sans); font-weight:500; font-size:var(--t-denso); padding:.6rem; border-radius:50px; cursor:pointer; }
-  .aba.on{ background:var(--gold); color:var(--sobre-gold); }
+  .abas{ display:flex; gap:.4rem; margin-bottom:1.1rem; background:var(--cream);
+         border:1px solid var(--line); border-radius:50px; padding:.25rem; }
+  .aba{ flex:1; min-height:48px; border:none; background:transparent; color:var(--ink-fraco);
+        font-family:var(--sans); font-weight:500; font-size:var(--t-denso);
+        padding:.6rem; border-radius:50px; cursor:pointer; }
+  .aba.on{ background:var(--gold-pale); color:var(--gold-texto); box-shadow:inset 0 0 0 1px var(--gold-soft); }
 
-  .entradas-topo{ text-align:center; color:var(--gold-pale); font-size:var(--t-denso); margin-bottom:1rem; }
-  .entradas-topo b{ color:var(--gold-soft); font-family:var(--serif); font-size:var(--t-sub); }
-  .entrada-item{ background:rgba(255,255,255,.06); border:1px solid rgba(217,188,140,.2); border-left:3px solid #2f7d4f; border-radius:12px; padding:.8rem 1rem; margin-bottom:.6rem; }
+  .entradas-topo{ text-align:center; color:var(--ink-fraco); font-size:var(--t-denso); margin-bottom:1rem; }
+  .entradas-topo b{ color:var(--gold-texto); font-family:var(--serif); font-size:var(--t-sub); }
+  .entrada-item{ background:var(--card); border:1px solid var(--line); border-left:3px solid var(--ok);
+                 border-radius:12px; padding:.8rem 1rem; margin-bottom:.6rem; }
   .ent-topo{ display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; }
-  .ent-nome{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--ivory); }
-  .ent-hora{ font-size:var(--t-apoio); color:var(--gold-pale); white-space:nowrap; }
-  .ent-meta{ font-size:var(--t-apoio); color:var(--gold-pale); margin-top:.15rem; }
-  .ent-pessoas{ font-size:var(--t-denso); color:var(--ivory); margin-top:.4rem; opacity:.9; }
+  .ent-nome{ font-family:var(--serif); font-size:var(--t-sub); font-weight:600; color:var(--ink); }
+  .ent-hora{ font-size:var(--t-apoio); color:var(--ink-fraco); white-space:nowrap; }
+  .ent-meta{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.15rem; }
+  .ent-pessoas{ font-size:var(--t-denso); color:var(--text); margin-top:.4rem; }
+  @media (max-width:480px){
+    .contador-porta{ gap:.45rem; }
+    .cp{ padding:.75rem .35rem; }
+    .cp .n{ font-size:var(--t-seccao); }
+    .busca-manual{ flex-direction:column; }
+    .busca-manual .btn{ justify-content:center; }
+  }
 </style>
 <!-- use-credentials: sem isto o navegador pede o manifesto sem a sessão, e a
      aplicação instalada ficava com o nome genérico em vez do casamento. -->
@@ -107,16 +124,16 @@ $CAS  = casalDaFicha($conn);
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/janela.js') ?>"></script>
 </head>
-<body>
+<body class="b-servico">
 <?php tiraSuporte(true); ?>
 <header class="topo">
   <div class="wrap">
-    <div class="monograma"><?= escP($CAS['mono']) ?></div>
-    <div class="topo-txt">
+    <div>
       <h1>Entrada do evento</h1>
       <div class="sub">Quem chega, quem já entrou, quem falta</div>
-      <div class="sub topo-casal"><?= escP($CAS['casal']) ?>
-        <?php if ($DATA_EV !== ''): ?>· <?php contagem($DATA_EV, $HORA_EV); ?><?php endif; ?></div>
+      <?php if ($DATA_EV !== ''): ?>
+      <div class="sub topo-contagem-linha"><?php contagem($DATA_EV, $HORA_EV, false, true); ?></div>
+      <?php endif; ?>
     </div>
     <nav class="nav">
       <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>
@@ -125,8 +142,7 @@ $CAS  = casalDaFicha($conn);
   </div>
 </header>
 <?php contagemScript(); ?>
-
-<div class="contentor">
+<main class="b-sala estreita" id="conteudo">
   <div class="contador-porta" id="contador">
     <div class="cp"><div class="n" id="c-presentes">0</div><div class="l">Presentes</div></div>
     <div class="cp"><div class="n" id="c-confirm">0</div><div class="l">Confirmados</div></div>
@@ -144,7 +160,7 @@ $CAS  = casalDaFicha($conn);
 
     <div class="busca-manual">
       <input type="search" id="q" placeholder="Código ou nome do convidado…" onkeydown="if(event.key==='Enter')buscar()">
-      <button class="btn btn-linha" style="border-color:var(--topo-acento);color:var(--topo-acento)" onclick="buscar()">Procurar</button>
+      <button class="btn btn-linha" onclick="buscar()">Procurar</button>
     </div>
 
     <div class="resultado" id="resultado"></div>
@@ -154,7 +170,9 @@ $CAS  = casalDaFicha($conn);
     <div class="entradas-topo" id="entradas-topo"></div>
     <div id="lista-entradas"></div>
   </div>
-</div>
+</main>
+
+<?php include __DIR__ . '/parcial-seletor-tema.php'; ?>
 
 <div class="toast" id="toast"></div>
 
@@ -440,7 +458,7 @@ function mostrarConvite(c){
         ${(presente||parcial)?`<button class="btn btn-fantasma" onclick="checkin(${c.id},'anular')">Anular entrada</button>`:''}
       </div>
       ${!podeEntrar?`<div class="aviso-txt" style="margin-top:.6rem">Sem presença confirmada. Autorize a entrada apenas em casos excecionais.</div>`:''}
-      <button class="btn btn-linha" style="width:100%;margin-top:.7rem;border-color:var(--topo-acento);color:var(--topo-acento)" onclick="proximo()">Próximo</button>
+      <button class="btn btn-linha" style="width:100%;margin-top:.7rem" onclick="proximo()">Próximo</button>
     </div>
   </div>`;
 }

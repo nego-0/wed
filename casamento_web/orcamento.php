@@ -293,7 +293,8 @@ $CAS  = casalDaFicha($conn);
 </style>
 </head>
 <body>
-<?php cabecalho('Orçamento', 'O curso das despesas — quanto se planeou, quanto saiu, o que falta', 'orcamento'); ?>
+<?php cabecalho('Orçamento', 'O curso das despesas — quanto se planeou, quanto saiu, o que falta',
+                'orcamento', ['largura'=>'920px']); ?>
 
 <main class="container" id="conteudo">
 

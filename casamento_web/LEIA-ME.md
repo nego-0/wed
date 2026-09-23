@@ -1122,7 +1122,11 @@ fechar a escolha: o diálogo volta a centrar-se e a lista continua aberta.
 
 **Confirmação de presença (RSVP).** Cada convite tem um link único (`convite.php?c=CÓDIGO`). O convidado confirma se comparece, quantos lugares e quem, e pode deixar uma mensagem. Ao confirmar, recebe o **passe de entrada com QR**.
 
-**Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real.
+**Porteiro.** Na página de entrada, o porteiro lê o QR com a câmara ou procura pelo nome/código. Vê o estado do convite e regista a entrada (de todos ou de cada pessoa). **Junto a cada pessoa aparece a sua mesa**, e se o convite estiver dividido por mesas surge um aviso com as mesas envolvidas — para o porteiro poder orientar cada convidado. O contador de presenças atualiza em tempo real. A página usa a mesma estrutura visual de serviço da Copa e das Entregas: coluna curta, alvos grandes, cartões do tema e seletor de tema disponível.
+
+As descrições das páginas seguem a largura real do conteúdo. Nas áreas mais
+estreitas, como Orçamento, Licença e Manual de impressão, a introdução e o
+primeiro cartão começam no mesmo eixo em vez de usarem duas grelhas distintas.
 
 **Convites físicos.** A página *Convites físicos* gera as etiquetas com o nome e o QR de cada convite, prontas a imprimir para os envelopes.
 

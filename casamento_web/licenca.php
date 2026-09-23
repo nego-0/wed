@@ -90,7 +90,7 @@ if ($modQuero) {
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet">
 <style>
-  .lic-wrap{ max-width:1080px; margin:0 auto; padding:1.5rem 1.1rem 4rem; }
+  .lic-wrap{ max-width:1080px; margin:0 auto; padding:1.5rem 1.25rem 4rem; }
   .lic-estado{ display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap;
     border-radius:var(--radius); padding:1.3rem 1.4rem; margin-bottom:1.6rem;
     background:var(--card); border:1.5px solid var(--line); box-shadow:var(--shadow); }
@@ -232,7 +232,7 @@ if ($modQuero) {
   }
 
   @media (max-width:640px){
-    .lic-wrap{ padding:1rem .8rem 3rem; }
+    .lic-wrap{ padding:1rem .85rem 3rem; }
     .lic-estado{ padding:1rem; gap:.7rem; }
     .lic-estado-txt{ min-width:0; width:100%; }
     .lic-estado h2, .lic-sec > h2{ font-size:var(--t-sub); }
@@ -247,7 +247,7 @@ if ($modQuero) {
 </style>
 </head>
 <body>
-<?php cabecalho($tit, $sub, 'licenca'); ?>
+<?php cabecalho($tit, $sub, 'licenca', ['largura'=>'1080px']); ?>
 
 <main id="conteudo">
 <div class="lic-wrap">

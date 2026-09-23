@@ -112,6 +112,13 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     // menu que só sabe dizer "não" é pior do que um menu curto.
     if ($semCasamento) $itens = array_intersect_key($itens, ['plataforma' => 1, 'modelos' => 1]);
     $semPapel = !empty($opcoes['no_print']) ? ' no-print' : '';
+    // Algumas páginas trabalham numa coluna mais estreita do que os 1180px
+    // da casa (Orçamento, Licença e Manual). A introdução tem de começar no
+    // mesmo eixo do conteúdo que apresenta, em vez de parecer pertencer a
+    // outra grelha. Só se aceita uma medida CSS simples, definida pela própria
+    // página; qualquer valor inesperado regressa à largura comum.
+    $larguraPagina = (string)($opcoes['largura'] ?? '1180px');
+    if (!preg_match('/^\d+(?:\.\d+)?(?:px|rem)$/', $larguraPagina)) $larguraPagina = '1180px';
 
     // O dia e a hora do casamento: dão a linha de identidade e a contagem.
     [$dataDoEvento, $horaDoEvento] = $semCasamento ? ['', ''] : diaDoCasamento();
@@ -411,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // A frase de apoio começa o conteúdo, em vez de engrossar o cabeçalho.
     // É centralizada aqui para todas as páginas seguirem a mesma regra.
     if ($sub !== ''): ?>
-<div class="pagina-descricao<?= $semPapel ?>"><p><?= escP($sub) ?></p></div>
+<div class="pagina-descricao<?= $semPapel ?>" style="--pagina-largura:<?= escP($larguraPagina) ?>"><p><?= escP($sub) ?></p></div>
 <?php endif;
     // A pastilha circular do tema — discreta, no canto. Só onde há cabeçalho
     // (páginas com estilo.css); nunca no papel.

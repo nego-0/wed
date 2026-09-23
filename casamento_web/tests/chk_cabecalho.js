@@ -93,6 +93,38 @@ const PAGINAS = [
   ok(!cab.nome && !cab.licenca, 'o cabeçalho não repete os noivos nem a licença');
   ok(cab.descricao && !cab.descNoTopo, 'a descrição da página começa o corpo: ' + cab.descricao);
 
+  // A descrição e o conteúdo pertencem à mesma coluna. Algumas páginas são
+  // mais estreitas do que os 1180px comuns; a introdução acompanha essa
+  // medida, em vez de começar dezenas de píxeis antes do primeiro cartão.
+  const alinhadas = [
+    ['index.php', '.container'],
+    ['orcamento.php', 'main.container'],
+    ['licenca.php', '.lic-wrap'],
+    ['manual.php', '.man-wrap'],
+  ];
+  const tortas = [];
+  for (const [pagina, sel] of alinhadas) {
+    await p.goto(BASE + '/' + pagina, { waitUntil: 'networkidle' });
+    const a = await p.evaluate((sel) => {
+      const d = document.querySelector('.pagina-descricao');
+      const c = document.querySelector(sel);
+      if (!d || !c) return null;
+      const dr = d.getBoundingClientRect(), cr = c.getBoundingClientRect();
+      return { dl: Math.round(dr.left), cl: Math.round(cr.left),
+               dw: Math.round(dr.width), cw: Math.round(cr.width) };
+    }, sel);
+    if (!a || Math.abs(a.dl - a.cl) > 1 || Math.abs(a.dw - a.cw) > 1) {
+      tortas.push(pagina + ' → ' + JSON.stringify(a));
+    }
+  }
+  ok(tortas.length === 0, 'a descrição alinha com a coluna real de cada página'
+     + (tortas.length ? ':\n     ' + tortas.join('\n     ') : ''));
+
+  // As provas da contagem que se seguem mexem no cabeçalho e usam o CSRF da
+  // página principal. O ciclo acima termina no Manual, uma página só de
+  // leitura que não precisa desse token.
+  await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
+
   // ============ 2. a contagem conta mesmo — em dias ============
   //
   // Esta prova exigia aqui o cronómetro ao segundo, e passou a falhar quando a
@@ -223,16 +255,18 @@ const PAGINAS = [
   // ============ 4. sem casamento aberto, não há contagem ============
   // Quem responde pela casa entra sem casamento nenhum, de propósito. Uma
   // contagem ali seria a contagem de quem?
-  await p.evaluate(async () => {
-    await fetch('api.php?action=casamento_fechar',
+  const fechamento = await p.evaluate(async () => {
+    const r = await fetch('api.php?action=casamento_fechar',
       { method: 'POST', headers: { 'X-CSRF-Token': window.CSRF } });
+    return r.json();
   });
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   const semCasal = await p.evaluate(() => ({
     contagem: !!document.getElementById('topo-contagem'),
     casal: !!document.querySelector('.topo-contagem-linha') }));
-  ok(!semCasal.contagem && !semCasal.casal,
-     'sem casamento aberto, o cabeçalho não conta os dias de ninguém');
+  ok(fechamento && fechamento.success && !semCasal.contagem && !semCasal.casal,
+     'sem casamento aberto, o cabeçalho não conta os dias de ninguém'
+       + (!fechamento || !fechamento.success ? ': ' + JSON.stringify(fechamento) : ''));
 
   // ============ 5. no telemóvel ============
   const tel = await (await b.newContext({ viewport: { width: 390, height: 780 } })).newPage();

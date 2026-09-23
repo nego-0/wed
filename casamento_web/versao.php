@@ -353,6 +353,8 @@ function correcoesEsperadas(): array {
          'parcial-cabecalho.php', 'function contagem('],
         ['As descrições das páginas começam o corpo, fora do cabeçalho',
          'parcial-cabecalho.php', 'class="pagina-descricao'],
+        ['A descrição acompanha a largura real da coluna de cada página',
+         'parcial-cabecalho.php', "\$opcoes['largura'] ?? '1180px'"],
         ['O cabeçalho fica só com a contagem «Até ao Sim, Aceito»',
          'parcial-cabecalho.php', 'Até ao “Sim, Aceito”'],
         // Esta dizia «e conta ao segundo». Deixou de ser verdade, e de
@@ -623,6 +625,10 @@ function correcoesEsperadas(): array {
         // ---- A terceira passagem: o módulo entra no sistema (§28) ----
         ['Bar: os quatro temas aplicam-se por inteiro — fim do salão escuro por decreto',
          'assets/bar.css', 'body.b-servico{ min-height:100vh; }'],
+        ['A porta veste a mesma estrutura de serviço da copa e das entregas',
+         'porteiro.php', '<body class="b-servico">'],
+        ['A porta também oferece o seletor de tema do módulo de serviço',
+         'porteiro.php', "include __DIR__ . '/parcial-seletor-tema.php'"],
         ['Bar: e a paleta paralela do salão saiu dos tokens da casa',
          'assets/estilo.css', 'Viveu aqui, durante um tempo, uma família --sala-*'],
         ['Bar: «Regras do Bar» é uma aba da copa, e não um link que a expulsa',
