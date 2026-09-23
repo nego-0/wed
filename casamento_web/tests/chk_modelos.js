@@ -289,7 +289,7 @@ const entrar = async (ctx, u, p) => {
      `a galeria vem numa lista so, com tudo dentro (${gal.length} fotografias)`);
   const porCat = {};
   gal.forEach(f => porCat[f.categoria] = (porCat[f.categoria] || 0) + 1);
-  const semCat = ['capa','historia','interludio','acesso'].filter(c => (porCat[c] || 0) < 3);
+  const semCat = ['capa','historia','interludio','acesso'].filter(c => (porCat[c] || 0) < 5);
   ok(!semCat.length,
      'cada categoria tem por onde escolher' + (semCat.length ? ' — falta ' + semCat.join(', ') : ''));
   ok(Object.keys(exAntes.categorias || {}).includes('sem'),
@@ -299,7 +299,7 @@ const entrar = async (ctx, u, p) => {
   // Enviar sem categoria guarda na mesma, e NAO poe nada em vigor.
   const antesAcesso = exAntes.exemplo['media.acesso'];
   const env = await admin.evaluate(async () => {
-    const r = await fetch('assets/convite/galeria/acesso-38708859.jpg');
+    const r = await fetch('assets/convite/galeria/acesso-exemplo.jpg');
     const fd = new FormData();
     fd.append('ficheiro', new File([await r.blob()], 'prova.jpg', { type: 'image/jpeg' }));
     fd.append('categoria', 'sem');
@@ -327,12 +327,12 @@ const entrar = async (ctx, u, p) => {
 
   // Uma da casa tira-se da galeria - mas escondendo, nao apagando: o ficheiro
   // vem com a instalacao e um deploy tra-lo-ia de volta.
-  const alvoCasa = 'assets/convite/galeria/capa-34371787.jpg';
+  const alvoCasa = 'assets/convite/galeria/capa-exemplo.jpg';
   const tirou = await api('modelo_exemplo_apagar', { src: alvoCasa });
   ok(tirou && tirou.success && !(tirou.galeria || []).some(f => f.src === alvoCasa),
      'tambem se tiram da galeria as que a casa traz');
   const aindaLa = await admin.evaluate(async () =>
-    (await fetch('assets/convite/galeria/capa-34371787.jpg')).ok);
+    (await fetch('assets/convite/galeria/capa-exemplo.jpg')).ok);
   ok(aindaLa, 'e o ficheiro fica no servidor — esconde-se a decisao, nao se destroi o que veio na instalacao');
   ok((tirou.ocultas || 0) === 1, 'a galeria diz quantas estao escondidas');
   const reps = await api('modelo_exemplo_repor');

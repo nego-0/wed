@@ -716,6 +716,7 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
 
     $j = json_decode((string)$m['defs'], true);
     if (!is_array($j)) $j = [];
+    $j = fotosGaleriaAtuais($j);
 
     // Quem vê, e para quê, muda o que se mostra.
     //
@@ -1102,14 +1103,14 @@ function categoriaDoFicheiro(string $nome): string {
 /**
  * A galeria de fotografias que a casa traz para os modelos.
  *
- * São do Pexels (licença livre, uso comercial, sem atribuição obrigatória) e
- * vêm já recortadas para a moldura da sua categoria — por isso quem escolhe
- * uma fica com o enquadramento certo, sem ter de o acertar à mão.
+ * Conserva as quatro fotografias do convite de origem e quatro conjuntos
+ * fictícios gerados a partir da sua linguagem visual. O primeiro conjunto é o
+ * dado de exemplo de fábrica; os outros três ampliam as escolhas da galeria.
+ * Todos mostram casais que não correspondem a clientes e vêm já recortados
+ * para a moldura da sua categoria.
  *
- * O acervo é variado de propósito, e com mais casais de pele escura do que
- * qualquer outra coisa: é quem este sistema serve. A proveniência de cada
- * ficheiro está em assets/convite/galeria/CREDITOS.md, e o número no nome é o
- * da fotografia no Pexels.
+ * A origem e a função de cada ficheiro estão documentadas em
+ * assets/convite/galeria/CREDITOS.md.
  */
 function galeriaExemplo(): array {
     $itens = [
@@ -1119,30 +1120,22 @@ function galeriaExemplo(): array {
         'historia-isabel-abednego.jpg'   => 'Isabel & Abednego · história',
         'interludio-isabel-abednego.jpg' => 'Isabel & Abednego · interlúdio',
         'acesso-isabel-abednego.jpg'     => 'Isabel & Abednego · acesso',
-        'capa-34371787.jpg' => 'Jardim ao fim da tarde',
-        'capa-31877241.jpg' => 'Fato branco, palmeiras',
-        'capa-35845533.jpg' => 'Traje tradicional, azul e ouro',
-        'capa-38739043.jpg' => 'Traje tradicional, estúdio',
-        'capa-35069916.jpg' => 'Casamento indiano, ao ar livre',
-        'capa-29237392.jpg' => 'Abraço em jardim',
-        'historia-18706408.jpg' => 'A aliança a ser posta',
-        'historia-30268255.jpg' => 'Mãos, luz quente',
-        'historia-30008469.jpg' => 'A aliança sobre o vestido',
-        'historia-27463225.jpg' => 'Mãos pousadas, preto e branco',
-        'historia-38147801.jpg' => 'Pulseiras e hena',
-        'historia-28588976.jpg' => 'Mãos dadas, alianças',
-        'interludio-30679260.jpg' => 'Testa com testa',
-        'interludio-37828095.jpg' => 'Mãos que se procuram',
-        'interludio-31673125.jpg' => 'Penumbra, a aliança',
-        'interludio-37045023.jpg' => 'Guirlandas',
-        'interludio-12153956.jpg' => 'Turbante e sorriso',
-        'interludio-31953140.jpg' => 'Interior amplo',
-        'acesso-32895248.jpg' => 'Sob o véu',
-        'acesso-29747608.jpg' => 'Exterior, tons de terra',
-        'acesso-26711184.jpg' => 'Verde, testa com testa',
-        'acesso-38708859.jpg' => 'Riso à entrada',
-        'acesso-36248917.jpg' => 'Mandapa florido',
-        'acesso-36297030.jpg' => 'Pátio histórico',
+        'capa-exemplo.jpg'       => 'Casal de exemplo · capa',
+        'historia-exemplo.jpg'   => 'Casal de exemplo · história',
+        'interludio-exemplo.jpg' => 'Casal de exemplo · interlúdio',
+        'acesso-exemplo.jpg'     => 'Casal de exemplo · acesso',
+        'capa-aurora-urbana.jpg'       => 'Aurora Urbana · capa',
+        'historia-aurora-urbana.jpg'   => 'Aurora Urbana · história',
+        'interludio-aurora-urbana.jpg' => 'Aurora Urbana · interlúdio',
+        'acesso-aurora-urbana.jpg'     => 'Aurora Urbana · acesso',
+        'capa-jardim-solar.jpg'       => 'Jardim Solar · capa',
+        'historia-jardim-solar.jpg'   => 'Jardim Solar · história',
+        'interludio-jardim-solar.jpg' => 'Jardim Solar · interlúdio',
+        'acesso-jardim-solar.jpg'     => 'Jardim Solar · acesso',
+        'capa-dunas-cobre.jpg'       => 'Dunas de Cobre · capa',
+        'historia-dunas-cobre.jpg'   => 'Dunas de Cobre · história',
+        'interludio-dunas-cobre.jpg' => 'Dunas de Cobre · interlúdio',
+        'acesso-dunas-cobre.jpg'     => 'Dunas de Cobre · acesso',
     ];
     $out = [];
     foreach ($itens as $f => $nome) {
@@ -1150,6 +1143,21 @@ function galeriaExemplo(): array {
                   'categoria' => categoriaDoFicheiro($f)];
     }
     return $out;
+}
+
+/**
+ * Converte referências antigas às fotografias numéricas que saíram da
+ * instalação para a variação fictícia da mesma secção. Assim, um modelo ou
+ * convite já guardado não fica com uma imagem partida depois da atualização.
+ */
+function fotosGaleriaAtuais(array $defs): array {
+    foreach ($defs as $k => $v) {
+        if (!is_string($v)) continue;
+        if (preg_match('#^assets/convite/galeria/(capa|historia|interludio|acesso)-\d+\.jpg$#', $v, $m)) {
+            $defs[$k] = 'assets/convite/galeria/' . $m[1] . '-exemplo.jpg';
+        }
+    }
+    return $defs;
 }
 
 /**
@@ -1163,7 +1171,9 @@ function galeriaOcultas(mysqli $conn): array {
     $r = @$conn->query("SELECT valor FROM {$P}definicoes
                         WHERE casamento_id=0 AND chave='modelo.galeria.ocultas' LIMIT 1");
     $j = ($r && ($x = $r->fetch_assoc())) ? json_decode((string)$x['valor'], true) : [];
-    return is_array($j) ? array_values(array_filter($j, 'is_string')) : [];
+    if (!is_array($j)) return [];
+    $atuais = array_flip(array_column(galeriaExemplo(), 'ficheiro'));
+    return array_values(array_filter($j, fn($v) => is_string($v) && isset($atuais[$v])));
 }
 
 function guardarGaleriaOcultas(mysqli $conn, array $ocultas): void {
@@ -1286,7 +1296,7 @@ function seccoesDeFoto(mysqli $conn, array $defs): array {
 
 /**
  * Os valores de fábrica desses dados: um casal e um evento que não são de
- * ninguém, e quatro imagens que são desenho da casa e não fotografias.
+ * ninguém, e quatro fotografias de um casal fictício criado para demonstração.
  */
 function exemploDeFabrica(): array {
     $p = defsPadrao();
@@ -1304,13 +1314,13 @@ function exemploDeFabrica(): array {
         'evento.whatsapp' => '',
         'evento.civil_local'     => '', 'evento.civil_maps'     => '',
         'evento.religiosa_local' => '', 'evento.religiosa_maps' => '',
-        // Fotografias da galeria da casa (Pexels, licença livre): um modelo tem
-        // de parecer um convite a sério, e um desenho no lugar da capa não
-        // parecia. Ver assets/convite/galeria/CREDITOS.md.
-        'media.hero'       => 'assets/convite/galeria/capa-34371787.jpg',
-        'media.historia'   => 'assets/convite/galeria/historia-18706408.jpg',
-        'media.interludio' => 'assets/convite/galeria/interludio-30679260.jpg',
-        'media.acesso'     => 'assets/convite/galeria/acesso-32895248.jpg',
+        // Variações fictícias das fotografias de origem: dão corpo ao modelo
+        // sem expor o casal real como dado de exemplo.
+        // Ver assets/convite/galeria/CREDITOS.md.
+        'media.hero'       => 'assets/convite/galeria/capa-exemplo.jpg',
+        'media.historia'   => 'assets/convite/galeria/historia-exemplo.jpg',
+        'media.interludio' => 'assets/convite/galeria/interludio-exemplo.jpg',
+        'media.acesso'     => 'assets/convite/galeria/acesso-exemplo.jpg',
         // Vêm já cortadas à medida da secção: o enquadramento é o centro.
         'foto.hero' => '50 50 100', 'foto.historia' => '50 50 100',
         'foto.interludio' => '50 50 100', 'foto.acesso' => '50 50 100',
@@ -1334,7 +1344,7 @@ function exemploModelo(mysqli $conn): array {
         $k = substr($f['chave'], strlen('modelo.exemplo.'));
         if (isset($out[$k])) $out[$k] = (string)$f['valor'];
     }
-    return $out;
+    return fotosGaleriaAtuais($out);
 }
 
 /**
@@ -2435,7 +2445,7 @@ function defsAtuais(mysqli $conn): array {
     foreach (definicoesBD($conn) as $k => $v) {
         if (array_key_exists($k, $defs) && $v !== null && $v !== '') $defs[$k] = $v;
     }
-    return $defs;
+    return fotosGaleriaAtuais($defs);
 }
 
 /**

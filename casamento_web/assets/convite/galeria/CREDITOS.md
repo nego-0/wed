@@ -1,26 +1,18 @@
-# Galeria de exemplo dos modelos
+# Galeria dos modelos
 
-Fotografias do **[Pexels](https://www.pexels.com/)**, sob a
-[Pexels License](https://www.pexels.com/license/): uso comercial permitido e
-**atribuição não obrigatória**. Ficam creditadas aqui à mesma — saber de onde
-veio cada ficheiro é o que permite substituí-lo ou verificá-lo mais tarde.
+A galeria contém cinco conjuntos de quatro fotografias: o convite de origem de
+Isabel & Abednego e quatro casais fictícios criados para demonstração. Não há
+fotografias de bancos de imagens nem de outros casais reais.
 
-O que a licença **não** permite, e que aqui se respeita: vender cópias
-inalteradas, redistribuir noutro banco de imagens, usar como marca, e mostrar
-pessoas identificáveis sob má luz ou a sugerir que apoiam o produto. Servem de
-imagem de exemplo num convite — o uso previsto.
+Cada ficheiro está preparado para a moldura da sua secção: as capas medem
+1000×1247 e as fotografias horizontais geradas medem 1300×812. A fotografia
+original da história conserva os seus 1200×750.
 
-Cada ficheiro está recortado para a moldura da sua secção (a capa 1000×1247, as
-restantes 1300×812 ou 1200×750) e o interlúdio convertido a preto e branco, que
-é como a secção o mostra. O número no nome é o da fotografia no Pexels: para
-chegar ao original, `https://www.pexels.com/photo/<número>/`.
+## Fotografias de origem — Isabel & Abednego
 
-## Fotografias de origem (Isabel & Abednego)
-
-Os quatro ficheiros `*-isabel-abednego.jpg` **não** são do Pexels: são as
-fotografias do convite que o sistema traz de fábrica (o modelo «Isabel &
-Abednego»). Viviam soltas em `assets/convite/` e passaram para aqui, ao lado
-das restantes, para deixarem de ser um caso à parte.
+Estas são as fotografias do convite que o sistema traz de fábrica. Permanecem
+disponíveis para o convite original, mas não são usadas para preencher os dados
+de exemplo de novos modelos ou casamentos.
 
 | Ficheiro | Secção |
 |---|---|
@@ -29,35 +21,47 @@ das restantes, para deixarem de ser um caso à parte.
 | `interludio-isabel-abednego.jpg` | Interlúdio |
 | `acesso-isabel-abednego.jpg` | Passe de entrada |
 
-## Galeria do Pexels
+## Fotografias geradas — casal de exemplo
 
-| Ficheiro | Secção | Descrição | Original |
-|---|---|---|---|
-| `capa-34371787.jpg` | Capa | Jardim ao fim da tarde | [34371787](https://www.pexels.com/photo/34371787/) |
-| `capa-31877241.jpg` | Capa | Fato branco, palmeiras | [31877241](https://www.pexels.com/photo/31877241/) |
-| `capa-35845533.jpg` | Capa | Traje tradicional, azul e ouro | [35845533](https://www.pexels.com/photo/35845533/) |
-| `capa-38739043.jpg` | Capa | Traje tradicional, estúdio | [38739043](https://www.pexels.com/photo/38739043/) |
-| `capa-35069916.jpg` | Capa | Casamento indiano, ao ar livre | [35069916](https://www.pexels.com/photo/35069916/) |
-| `capa-29237392.jpg` | Capa | Abraço em jardim | [29237392](https://www.pexels.com/photo/29237392/) |
-| `historia-18706408.jpg` | História | A aliança a ser posta | [18706408](https://www.pexels.com/photo/18706408/) |
-| `historia-30268255.jpg` | História | Mãos, luz quente | [30268255](https://www.pexels.com/photo/30268255/) |
-| `historia-30008469.jpg` | História | A aliança sobre o vestido | [30008469](https://www.pexels.com/photo/30008469/) |
-| `historia-27463225.jpg` | História | Mãos pousadas, preto e branco | [27463225](https://www.pexels.com/photo/27463225/) |
-| `historia-38147801.jpg` | História | Pulseiras e hena | [38147801](https://www.pexels.com/photo/38147801/) |
-| `historia-28588976.jpg` | História | Mãos dadas, alianças | [28588976](https://www.pexels.com/photo/28588976/) |
-| `interludio-30679260.jpg` | Interlúdio | Testa com testa | [30679260](https://www.pexels.com/photo/30679260/) |
-| `interludio-37828095.jpg` | Interlúdio | Mãos que se procuram | [37828095](https://www.pexels.com/photo/37828095/) |
-| `interludio-31673125.jpg` | Interlúdio | Penumbra, a aliança | [31673125](https://www.pexels.com/photo/31673125/) |
-| `interludio-37045023.jpg` | Interlúdio | Guirlandas | [37045023](https://www.pexels.com/photo/37045023/) |
-| `interludio-12153956.jpg` | Interlúdio | Turbante e sorriso | [12153956](https://www.pexels.com/photo/12153956/) |
-| `interludio-31953140.jpg` | Interlúdio | Interior amplo | [31953140](https://www.pexels.com/photo/31953140/) |
-| `acesso-32895248.jpg` | Acesso | Sob o véu | [32895248](https://www.pexels.com/photo/32895248/) |
-| `acesso-29747608.jpg` | Acesso | Exterior, tons de terra | [29747608](https://www.pexels.com/photo/29747608/) |
-| `acesso-26711184.jpg` | Acesso | Verde, testa com testa | [26711184](https://www.pexels.com/photo/26711184/) |
-| `acesso-38708859.jpg` | Acesso | Riso à entrada | [38708859](https://www.pexels.com/photo/38708859/) |
-| `acesso-36248917.jpg` | Acesso | Mandapa florido | [36248917](https://www.pexels.com/photo/36248917/) |
-| `acesso-36297030.jpg` | Acesso | Pátio histórico | [36297030](https://www.pexels.com/photo/36297030/) |
+As quatro imagens abaixo foram geradas com o OpenAI ImageGen a partir da função
+visual das fotografias de origem. Rostos, cenários, poses, roupas e paletas foram
+alterados para formar um casal fictício coerente. São as imagens usadas pelos
+dados de exemplo.
 
-A lista que o painel lê está em `personalizacao.php`, na função
-`galeriaExemplo()` — acrescentar uma fotografia é pôr o ficheiro aqui, uma linha
-lá, e outra nesta tabela.
+| Ficheiro | Secção | Cena |
+|---|---|---|
+| `capa-exemplo.jpg` | Capa | Terraço tropical ao pôr do sol |
+| `historia-exemplo.jpg` | História | Aliança numa galeria de arte |
+| `interludio-exemplo.jpg` | Interlúdio | Dança na praia ao crepúsculo |
+| `acesso-exemplo.jpg` | Passe de entrada | Caminhada num pátio iluminado |
+
+## Fotografias geradas — Aurora Urbana
+
+| Ficheiro | Secção | Cena |
+|---|---|---|
+| `capa-aurora-urbana.jpg` | Capa | Cobertura cosmopolita na hora azul |
+| `historia-aurora-urbana.jpg` | História | Encontro num bar de luz elétrica |
+| `interludio-aurora-urbana.jpg` | Interlúdio | Dança sobre reflexos de chuva |
+| `acesso-aurora-urbana.jpg` | Passe de entrada | Chegada por um túnel iluminado |
+
+## Fotografias geradas — Jardim Solar
+
+| Ficheiro | Secção | Cena |
+|---|---|---|
+| `capa-jardim-solar.jpg` | Capa | Caminhada numa estufa tropical |
+| `historia-jardim-solar.jpg` | História | Flor e aliança entre ervas aromáticas |
+| `interludio-jardim-solar.jpg` | Interlúdio | Ponte sobre um lago de nenúfares |
+| `acesso-jardim-solar.jpg` | Passe de entrada | Chegada sob buganvílias |
+
+## Fotografias geradas — Dunas de Cobre
+
+| Ficheiro | Secção | Cena |
+|---|---|---|
+| `capa-dunas-cobre.jpg` | Capa | Pavilhão de pedra junto às dunas |
+| `historia-dunas-cobre.jpg` | História | Pulseira numa biblioteca de pedra |
+| `interludio-dunas-cobre.jpg` | Interlúdio | Caminhada num salar ao amanhecer |
+| `acesso-dunas-cobre.jpg` | Passe de entrada | Entrada num pátio de adobe |
+
+A lista apresentada pelo painel está em `personalizacao.php`, na função
+`galeriaExemplo()`. Os valores de fábrica dos dados de exemplo são definidos em
+`exemploDeFabrica()` no mesmo ficheiro.

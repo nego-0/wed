@@ -675,18 +675,15 @@ De fábrica são Ana & Bruno, 12 de Junho de 2027, Quinta das Acácias, Luanda, 
 contacto nem mapas (não há telefone de exemplo que se possa inventar sem mandar
 alguém a lado nenhum) — e, como imagens, quatro fotografias da galeria da casa.
 
-**A galeria da casa.** Um modelo tem de parecer um convite a sério, e desenhos
-no lugar das fotografias não pareciam. A instalação traz **24 fotografias** em
-`assets/convite/galeria/`, seis por secção, já recortadas para a moldura de cada
-uma (a capa 1000×1247, as restantes 1300×812 ou 1200×750) e o interlúdio já
-convertido a preto e branco. São do Pexels, sob licença livre para uso
-comercial; a proveniência de cada uma está em `galeria/CREDITOS.md`, e a lista
-que o painel lê é `galeriaExemplo()`.
-
-O acervo é variado de propósito, e com mais casais de pele escura do que
-qualquer outra coisa — é quem este sistema serve. Há também casamentos indianos
-e europeus, porque um exemplo que só mostra um tipo de casamento diz ao resto
-que o produto não é para eles.
+**A galeria da casa.** A instalação traz **20 fotografias** em
+`assets/convite/galeria/`: as quatro fotografias do convite de origem de Isabel
+& Abednego e quatro conjuntos fictícios completos. «Casal de exemplo» é o
+padrão de fábrica; «Aurora Urbana», «Jardim Solar» e «Dunas de Cobre» são
+alternativas com identidade e direção visual próprias. Cada conjunto tem capa,
+história, interlúdio e acesso já recortados para a respetiva moldura (as capas
+1000×1247 e as horizontais geradas 1300×812; a história original conserva
+1200×750). A origem e a função de cada ficheiro estão em
+`galeria/CREDITOS.md`, e a lista que o painel lê é `galeriaExemplo()`.
 
 **Uma lista só, com separadores.** A galeria abre de dois sítios: do botão de
 cada imagem do painel — e aí escolher aplica àquela secção —, ou de **«Gerir a

@@ -15,8 +15,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const marca = 'zzp' + Math.floor(Math.random() * 1e5);
 
 // Um default à escolha do admin, e o valor de fábrica ao qual se repõe no fim.
-const DEFAULT_ADMIN = 'assets/convite/galeria/acesso-26711184.jpg';
-const FABRICA_HERO  = 'assets/convite/galeria/capa-34371787.jpg';      // o exemplo neutro
+const DEFAULT_ADMIN = 'assets/convite/galeria/acesso-exemplo.jpg';
+const FABRICA_HERO  = 'assets/convite/galeria/capa-exemplo.jpg';      // o exemplo fictício
 const PRIMEIRO_CASAL = 'assets/convite/galeria/capa-isabel-abednego.jpg'; // o que NÃO deve aparecer
 
 (async () => {
