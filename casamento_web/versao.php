@@ -1381,6 +1381,16 @@ function correcoesEsperadas(): array {
         ['Pelo email, criando a conta quando ela não existe nesta casa',
          'api.php', "foreach (impAcessos(\$conn, \$cid, (array)(\$r['acessos'] ?? [])) as \$k => \$v) \$feito[\$k] = \$v;"],
 
+        // ---- Um casamento novo nasce com as fotos de exemplo do admin ----
+        ['Um casamento novo nasce com as fotografias de exemplo do admin, e não com as do primeiro casal',
+         'personalizacao.php', 'function semearConviteDeExemplo(mysqli $conn, int $cid): void {'],
+        ['Semeando só media e foto — o nome e o evento são do casal e vêm do registo',
+         'personalizacao.php', "if (preg_match('/^(media|foto)\\./', \$k) && (string)\$v !== '') \$defs[\$k] = (string)\$v;"],
+        ['A festa que se inscreve leva o exemplo do admin logo à criação',
+         'api.php', 'semearConviteDeExemplo($conn, $cid);   // e com as fotografias de exemplo do admin'],
+        ['E a que o admin cria à mão também',
+         'api.php', 'semearConviteDeExemplo($conn, $novo);   // e com as fotografias de exemplo do admin'],
+
         // ---- Duas tintas que se pintavam por cima de si próprias ----
         ['O número da mesa dos noivos lê-se sobre o tampo de ouro que só ela tem',
          'assets/mesa-icone.css', '.mesa-ico.f-noivos .mi-n{ fill:var(--sobre-gold); }'],

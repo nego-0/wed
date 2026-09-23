@@ -737,6 +737,7 @@ if ($acao === 'registo_publico') {
     $gravadas = guardarEventoDoRegisto($conn, $cid, $d);
     semearOrcamento($conn, $cid);   // começa com as gavetas de origem, como os do admin
     semearBar($conn, $cid);
+    semearConviteDeExemplo($conn, $cid);   // e com as fotografias de exemplo do admin
 
     $_SESSION['registo_feito'] = time();
     usarCasamento($cid);
@@ -7004,6 +7005,7 @@ if ($acao === 'casamento_criar') {
     $gravadas = guardarEventoDoRegisto($conn, $novo, $d);
     semearOrcamento($conn, $novo);   // começa com as gavetas de origem
     semearBar($conn, $novo);         // e com as gavetas do bar e os motivos de recusa
+    semearConviteDeExemplo($conn, $novo);   // e com as fotografias de exemplo do admin
 
     // E a licença: um casamento criado aqui dentro nasce com tudo aberto. Quem
     // o criou já decidiu — não há pedido nenhum a analisar. Se se quiser dar-lhe

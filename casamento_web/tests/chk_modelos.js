@@ -414,11 +414,16 @@ const entrar = async (ctx, u, p) => {
   ok(!new RegExp('Zita ' + marca).test(provaAntes),
      'e a prova dele também — um modelo já feito não se reescreve por baixo de quem o desenhou');
 
-  // O convite de origem é o produto, não um exemplo: continua com as suas imagens.
+  // O convite de um casamento JÁ FEITO é o produto, não um exemplo: mexer nos
+  // dados de exemplo do admin (Zita, acima) não lhe entra por baixo. O casamento
+  // aberto nasceu com o exemplo neutro que estava em vigor à sua criação (e não
+  // com as fotografias do primeiro casal — era esse o mau costume que se corrigiu);
+  // o que aqui se prova é que a edição do exemplo NÃO o reescreveu depois.
   const origem = await admin.evaluate(async () =>
     await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1')).text());
-  ok(/galeria\/capa-isabel-abednego\.jpg/.test(origem),
-     'e o convite de origem mantém as imagens de sempre — mexeu-se nos modelos, não no produto');
+  ok(!new RegExp('Zita ' + marca).test(origem)
+     && !/galeria\/capa-isabel-abednego\.jpg/.test(origem),
+     'e o convite de um casamento já feito não é reescrito pela edição do exemplo — mexeu-se nos modelos, não no produto');
 
   await api('modelo_exemplo_guardar', exAntes.fabrica);
   const exReposto = await api('modelo_exemplo');

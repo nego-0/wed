@@ -1350,6 +1350,36 @@ function identidadeGenerica(mysqli $conn): array {
 }
 
 /**
+ * Um casamento novo nasce com as FOTOGRAFIAS de exemplo do admin.
+ *
+ * Sem isto, o convite digital de um casamento acabado de criar mostrava as
+ * fotografias do PRIMEIRO casal — que é o valor de fábrica de `media.*`, e é o
+ * retrato real dele — até o casal enviar as suas. É exactamente o problema que
+ * os «dados de exemplo» existem para evitar nos modelos, e que ficava por
+ * resolver nos casamentos: um casal a inscrever-se via, no seu convite, as
+ * fotografias de gente que não conhece. A festa passa a nascer com o padrão
+ * neutro que o admin escolheu, e o casal troca-o pelo seu quando quiser.
+ *
+ * Só as imagens e o seu enquadramento (media/foto): o nome e o evento vêm do
+ * registo — são do casal, e não se semeiam com um exemplo. Semear pela mesma
+ * porta que as outras definições (guardarDefinicoes) tem uma vantagem: o que
+ * for igual ao de fábrica não se escreve, porque não precisa — a leitura já lá
+ * cai. Fica só o que o admin mudou de facto.
+ */
+function semearConviteDeExemplo(mysqli $conn, int $cid): void {
+    if ($cid <= 0) return;
+    $defs = [];
+    foreach (exemploModelo($conn) as $k => $v) {
+        if (preg_match('/^(media|foto)\./', $k) && (string)$v !== '') $defs[$k] = (string)$v;
+    }
+    if (!$defs) return;
+    $anterior = casamentoAtual();
+    usarCasamento($cid);
+    guardarDefinicoes($conn, $defs);
+    usarCasamento($anterior > 0 ? $anterior : $cid);
+}
+
+/**
  * Troca num conjunto de definições a identidade pela de exemplo.
  *
  * Vale para qualquer modelo que nasça agora, venha ele do convite de um
