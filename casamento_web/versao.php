@@ -1243,7 +1243,7 @@ function correcoesEsperadas(): array {
         ['Cada ação registada guarda o email de quem a fez, e não só o nome',
          'db.php', "migColuna(\$conn, \"{\$P}registo\", 'email', \"VARCHAR(190) DEFAULT NULL\");"],
         ['O email da conta com sessão aberta está à mão de quem regista',
-         'auth.php', "function emailAtual(): ?string       { return \$_SESSION['email'] ?? null; }"],
+         'auth.php', 'function emailAtual(): ?string {'],
         ['No painel dos noivos, o email vem dentro do campo «Quem»',
          'index.php', 'function quemAoCerto(r){'],
         ['Na auditoria da casa, vem na própria tabela e dá para procurar por ele',
@@ -1386,6 +1386,15 @@ function correcoesEsperadas(): array {
          'assets/bar.css', '.b-cart.oculta .capa .b-chapa{ filter:grayscale(.6); opacity:.75; }'],
         ['A varredura de contraste mede só a parte do elemento que está à vista',
          'tests/chk_temas_contraste.js', 'cx0 = Math.max(cx0, qr.left);'],
+        // ---- O responsável pela acção ----
+        ['O papel do registo distingue noivos, administração e suporte',
+         'auth.php', "return papel() === 'admin' ? 'noivos' : papel();"],
+        ['O registo guarda o papel da pessoa, sem mudar as permissões',
+         'db.php', "function_exists('papelRegisto')"],
+        ['Sessões antigas recuperam o email pela conta autenticada',
+         'auth.php', 'SELECT email FROM {$P}utilizadores WHERE id=?'],
+        ['O utilizador apresentado no histórico é o email registado na acção',
+         'api.php', "'utilizador' => trim((string)(\$x['email'] ?? ''))"],
     ];
 }
 

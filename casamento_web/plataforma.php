@@ -2397,9 +2397,11 @@ function pintarAuditoria(){
     // e é escolhido pela própria pessoa. Na linha fechada fica em segunda
     // linha, pequeno, para não roubar a leitura ao nome.
     const email = (r.email || '').trim();
-    const quem = esc(r.utilizador || '—')
-      + (r.papel ? ' <small style="color:var(--ink-fraco)">(' + esc(r.papel) + ')</small>' : '')
-      + (email ? '<span class="a-email">' + esc(email) + '</span>' : '');
+    const identidade = email
+      ? '<span class="a-email">' + esc(email) + '</span>'
+      : esc(r.utilizador || '—');
+    const quem = identidade
+      + (r.papel ? ' <small style="color:var(--ink-fraco)">(' + esc(r.papel) + ')</small>' : '');
     const resumo = [r.alvo, r.detalhe].filter(Boolean).map(esc).join(' · ');
     const campo = (rot, val) => val ? `<dt>${rot}</dt><dd>${val}</dd>` : '';
     return `<tr class="a-linha" onclick="audAbrir(${i})" tabindex="0"
@@ -2412,11 +2414,10 @@ function pintarAuditoria(){
         <td class="a-abre"><i data-ico="direita" aria-hidden="true"></i></td>
       </tr>
       <tr class="a-detalhe" id="aud-det-${i}" hidden><td colspan="6"><dl>
-        ${campo('Quem', `<b>${esc(r.utilizador || '—')}</b>`
+        ${campo('Quem', email ? `<a href="mailto:${esc(email)}">${esc(email)}</a>`
+                        + (r.papel ? ` <span style="color:var(--ink-fraco)">(${esc(r.papel)})</span>` : '')
+                        : `<b>${esc(r.utilizador || '—')}</b>`
                         + (r.papel ? ` <span style="color:var(--ink-fraco)">(${esc(r.papel)})</span>` : ''))}
-        ${campo('Email', email
-                  ? `<a href="mailto:${esc(email)}"><code>${esc(email)}</code></a>`
-                  : `<span style="color:var(--ink-fraco)">não registado — linha anterior a esta mudança</span>`)}
         ${campo('O que fez', esc(r.frase || r.accao) + ` <code>${esc(r.accao)}</code>`)}
         ${campo('Casamento', cas)}
         ${campo('Sobre', esc(r.alvo))}

@@ -60,6 +60,10 @@ const marca = 'zzq' + Math.floor(Math.random() * 1e5);
   ok(minha && /@/.test(minha.email || ''),
      'com o email de quem a fez, e não só o nome: «' + (minha && minha.utilizador)
      + '» → «' + (minha && minha.email) + '»');
+  ok(minha && minha.utilizador === minha.email,
+     'o utilizador apresentado é o email da conta responsável');
+  ok(minha && minha.papel === 'admin',
+     'o administrador da plataforma conserva o papel admin');
 
   // ---- 2. o email é o da CONTA que entrou, não um qualquer ----
   const meu = await p.evaluate(async () => {
@@ -109,10 +113,10 @@ const marca = 'zzq' + Math.floor(Math.random() * 1e5);
   // ---- 4. quando não se sabe, diz-se ----
   const semEmail = await p.evaluate(() => {
     // Finge-se uma linha antiga, sem email, e vê-se o que a página escreve.
-    return typeof quemAoCerto === 'function' ? quemAoCerto({ email: '' }) : null;
+    return typeof quemAoCerto === 'function' ? quemAoCerto({ email: '', utilizador: 'Pessoa antiga' }) : null;
   });
-  ok(semEmail !== null && /não registado/i.test(semEmail),
-     'sem email, a linha diz que não se sabe em vez de se calar: '
+  ok(semEmail === 'Pessoa antiga',
+     'linhas antigas conservam a identidade sem a expressão email não registado: '
      + String(semEmail).replace(/<[^>]*>/g, '').trim());
 
   // ---- 5. na auditoria da casa, o email vai na tabela e dá para procurar ----

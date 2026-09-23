@@ -8008,7 +8008,7 @@ function registoLinha(array $x): array {
     [$frase, $familia] = nomeDaAcao((string)$x['accao']);
     return [
         'id'         => isset($x['id']) ? (int)$x['id'] : 0,
-        'utilizador' => (string)($x['utilizador'] ?? ''),
+        'utilizador' => trim((string)($x['email'] ?? '')) ?: (string)($x['utilizador'] ?? ''),
         // Quem ao certo. Vem vazio nas linhas antigas que a migração não
         // conseguiu atribuir sem adivinhar — e vazio, aí, é a resposta certa.
         'email'      => (string)($x['email'] ?? ''),

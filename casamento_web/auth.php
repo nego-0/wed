@@ -38,7 +38,31 @@ function utilizadorId(): int         { return (int)($_SESSION['utilizador_id'] ?
 // escolhido pela pessoa, muda quando lhe apetece e repete-se — duas «Ana
 // Silva» na mesma casa são duas linhas de histórico que ninguém distingue.
 // O email é a chave da conta e é único, e é por ele que se lhe pergunta.
-function emailAtual(): ?string       { return $_SESSION['email'] ?? null; }
+function emailAtual(): ?string {
+    global $conn, $P;
+    // A conta autenticada é a fonte: cobre sessões anteriores ao campo email
+    // e mudanças do email feitas enquanto a sessão continua aberta.
+    static $emails = [];
+    $id = utilizadorId();
+    if (!$id) return null;
+    if (!array_key_exists($id, $emails)) {
+        $st = $conn->prepare("SELECT email FROM {$P}utilizadores WHERE id=?");
+        if (!$st) return $_SESSION['email'] ?? null;
+        $st->bind_param('i', $id);
+        $st->execute();
+        $u = $st->get_result()->fetch_assoc();
+        $emails[$id] = $u ? (string)$u['email'] : null;
+        $_SESSION['email'] = $emails[$id];
+    }
+    return $emails[$id];
+}
+
+/** Identidade do papel no histórico; não altera as permissões da aplicação. */
+function papelRegisto(): ?string {
+    $plataforma = papelPlataforma();
+    if (in_array($plataforma, ['admin', 'suporte'], true)) return $plataforma;
+    return papel() === 'admin' ? 'noivos' : papel();
+}
 function ehAdmin(): bool             { return papel() === 'admin'; }
 function podeEntrar(): bool          { return in_array(papel(), ['admin', 'porteiro'], true); }
 // O bar tem dois postos, e são trabalhos diferentes: quem decide à copa e quem

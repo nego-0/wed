@@ -2561,10 +2561,10 @@ function registar(mysqli $conn, string $accao, string $alvo = '', string $detalh
                   ?int $casamentoId = null): void {
     global $P;
     $u = function_exists('utilizadorAtual') ? (utilizadorAtual() ?? '') : '';
-    $p = function_exists('papel') ? (papel() ?? '') : '';
+    $p = function_exists('papelRegisto') ? (papelRegisto() ?? '') : '';
     // O nome diz como a pessoa se chama; o email diz QUEM É. Guardam-se os
-    // dois: o nome porque é o que se lê de relance numa linha de histórico, e
-    // o email porque é o que responde quando a pergunta é a sério.
+    // dois para preservar o histórico. A API apresenta o email como utilizador;
+    // a coluna antiga continua a preservar o nome, sem truncar emails a 60 caracteres.
     $e = function_exists('emailAtual') ? (emailAtual() ?? '') : '';
     $ip = mb_substr((string)($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45);
     $cid = $casamentoId !== null ? max(0, $casamentoId) : casamentoAtual();
