@@ -527,6 +527,7 @@ function exigirModulo(string $chave): void {
     echo '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
        . '<title>Sem acesso · ' . htmlspecialchars($marca, ENT_QUOTES, 'UTF-8') . '</title>'
+       . '<link rel="icon" href="assets/icone-sistema-32.png" type="image/png" sizes="32x32">'
        . '<link href="assets/estilo.css" rel="stylesheet"></head><body>'
        . '<div style="max-width:34rem;margin:14vh auto;padding:2rem 1.5rem;text-align:center">'
        // O cadeado é desenhado à mão AQUI, e não pelo assets/icones.js como no

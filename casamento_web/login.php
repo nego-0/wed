@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entrar · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
@@ -74,8 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   body{ display:flex; align-items:center; justify-content:center; padding:1.25rem; }
   .login{ width:100%; max-width:400px; text-align:center; }
   .login .card{ padding:2.4rem 2rem; }
-  .brasao{ width:70px; height:70px; margin:0 auto 1rem; border:2px solid var(--gold-soft); border-radius:50%;
-    display:flex; align-items:center; justify-content:center; color:var(--gold); font-family:var(--serif); font-weight:700; font-size:var(--t-titulo); }
+  .brasao{ width:82px; height:82px; margin:0 auto .8rem; display:block; object-fit:contain; }
   .casa{ font-family:var(--serif); font-size:var(--t-display); color:var(--ink); line-height:1.15; margin-bottom:.3rem; }
   .evento{ font-family:var(--sans); font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:1.6rem; }
   .erro{ background:var(--danger-bg); color:var(--danger); border-radius:10px; padding:.6rem; font-size:var(--t-denso); margin-bottom:1rem; }
@@ -98,7 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login">
     <div class="card">
       <?php marcaNiras('grande so-niras'); ?>
-      <div class="brasao so-classico" data-ico="<?= escP(PLATAFORMA['marca']) ?>"></div>
+      <img class="brasao so-classico" src="<?= asset('assets/' . PLATAFORMA['marca']) ?>"
+           alt="" width="82" height="82">
       <div class="casa"><?= escP(PLATAFORMA['nome']) ?></div>
       <div class="evento"><?= escP(PLATAFORMA['sub']) ?></div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>

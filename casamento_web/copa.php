@@ -26,6 +26,7 @@ $CAS  = casalDaFicha($conn);
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Copa · <?= escP($CAS['casal']) ?></title>
 <?php // O salão é escuro nos quatro temas (bar.css fixa-lhe a paleta); o tema

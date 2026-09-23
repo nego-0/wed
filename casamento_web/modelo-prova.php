@@ -31,6 +31,7 @@ $conv = ['nome' => 'Família Agostinho', 'mesas' => [['nome'=>'Mesa Luar','n'=>2
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prova · <?= escP($MODELO['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">

@@ -35,10 +35,18 @@ echo json_encode([
     'background_color' => '#16261E',
     'theme_color'      => '#16261E',
     'lang'             => 'pt',
-    'icons'            => [[
-        'src'     => 'assets/pecas/icons/coracao.svg',
-        'sizes'   => 'any',
-        'type'    => 'image/svg+xml',
-        'purpose' => 'any',
-    ]],
+    'icons'            => [
+        [
+            'src'     => 'assets/icone-sistema-192.png',
+            'sizes'   => '192x192',
+            'type'    => 'image/png',
+            'purpose' => 'any',
+        ],
+        [
+            'src'     => 'assets/icone-sistema-512.png',
+            'sizes'   => '512x512',
+            'type'    => 'image/png',
+            'purpose' => 'any',
+        ],
+    ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);

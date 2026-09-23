@@ -9,14 +9,18 @@
    Nada relacionado com a API é guardado em cache: os pedidos de
    check-in têm de chegar mesmo ao servidor, ou ficam em fila.
    ============================================================ */
-const CACHE = 'porta-v2';   // v2: deixou de guardar páginas de outros casamentos
+const CACHE = 'porta-v3';   // v3: a aplicação instalável recebe a marca das alianças
 
 // Casca mínima para a página abrir offline.
 const CASCA = [
   'porteiro.php',
+  'favicon.ico',
   'assets/estilo.css',
   'assets/fontes.css',
   'assets/api.js',
+  'assets/icone-sistema.png',
+  'assets/icone-sistema-192.png',
+  'assets/icone-sistema-512.png',
   'assets/html5-qrcode.min.js',
   'assets/convite/fonts/cormorant-garamond-latin-400-normal.woff2',
   'assets/convite/fonts/cormorant-garamond-latin-600-normal.woff2',

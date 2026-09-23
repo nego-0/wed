@@ -51,12 +51,9 @@ function escP($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF
 const PLATAFORMA = [
     'nome'  => 'Gestão de Convidados',
     'sub'   => 'Convites, mesas e entradas do seu casamento',
-    // O emblema da casa é um DESENHO, pelo nome que tem em assets/icones.js —
-    // e não um carácter como o ✦ que aqui estava. Um carácter de ornamento não
-    // existe em todo o tipo de letra (onde falta sai o quadrado do «não sei
-    // desenhar isto», logo na primeira coisa que se vê ao entrar) e nenhum
-    // deles tem o traço do resto da casa.
-    'marca' => 'anel',
+    // A marca da casa é a proposta aprovada, preservada no PNG original; os
+    // tamanhos pequenos são derivados diretamente dele, sem redesenhar.
+    'marca' => 'icone-sistema.png',
     // O monograma é TEXTO: o círculo pequeno ao lado do nome é onde estão,
     // normalmente, as iniciais do casal. Sem casamento aberto ficam as da casa.
     'mono'  => 'GC',
@@ -126,7 +123,7 @@ function ficheirosApp(): array {
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
-            'licenca.php','manifest.php','sw.js',
+            'licenca.php','manifest.php','sw.js','parcial-icone.php','favicon.ico',
             // O bar: a montagem, o posto da copa, o do garçom, e o menu que
             // o convidado abre na mesa.
             'bar.php','copa.php','entregas.php','bebidas.php','bar-qr.php',
@@ -137,6 +134,9 @@ function ficheirosApp(): array {
             'assets/montra/digital.jpg','assets/montra/porta.jpg',
             'assets/montra/bar.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
+            'assets/icone-sistema.png','assets/icone-sistema-32.png',
+            'assets/icone-sistema-180.png','assets/icone-sistema-192.png',
+            'assets/icone-sistema-512.png',
             'assets/janela.css','assets/janela.js',
             'assets/mesa-icone.css','assets/mesa-icone.js',
             'assets/atendimento.css','assets/atendimento.js',

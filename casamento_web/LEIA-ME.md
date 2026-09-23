@@ -23,6 +23,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
+| `parcial-icone.php` / `assets/icone-sistema.*` | **A marca da aplicação:** a proposta aprovada das alianças botânicas, preservada no PNG original e derivada para os tamanhos de navegador, iPhone e aplicação instalável. A parcial declara a mesma família de ícones em todas as páginas PHP. |
 | `modelo-prova.php` | A cara de um modelo do convite impresso, sozinha numa folha — é o que a grelha dos modelos encolhe para miniatura. |
 | `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
 | `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |

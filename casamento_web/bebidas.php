@@ -99,6 +99,7 @@ function barRecado(string $titulo, string $texto, ?array $pal = null,
        . '<meta name="robots" content="noindex,nofollow">'
        . '<meta name="theme-color" content="' . escP($fundo) . '">'
        . '<title>Bar</title>'
+       . '<link rel="icon" href="' . escP(asset('assets/icone-sistema-32.png')) . '" type="image/png" sizes="32x32">'
        . ($tipo ? '<link href="' . escP(asset('assets/fontes.css')) . '" rel="stylesheet">' : '')
        . '<style>' . ($tipo['faces'] ?? '') . ':root{' . ($tipo['vars'] ?? '') . '}</style>'
        . '</head>'
@@ -206,6 +207,7 @@ if ($pausaS > 0) {
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">

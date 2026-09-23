@@ -20,6 +20,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inscrever o nosso casamento · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
@@ -39,9 +40,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
     letter-spacing:.1em; text-transform:uppercase; color:var(--gold-texto);
     background:var(--gold-pale); border-radius:50px; padding:.3rem .85rem; }
   .reg-enviar{ max-width:560px; margin:1.4rem auto 0; }
-  .brasao{ width:64px; height:64px; margin:0 auto .9rem; border:2px solid var(--gold-soft); border-radius:50%;
-    display:flex; align-items:center; justify-content:center; color:var(--gold);
-    font-family:var(--serif); font-weight:700; font-size:var(--t-sub); }
+  .brasao{ width:76px; height:76px; margin:0 auto .7rem; display:block; object-fit:contain; }
   .tit{ font-family:var(--serif); font-size:var(--t-display); color:var(--ink); text-align:center; line-height:1.2; }
   .sub{ text-align:center; color:var(--ink-fraco); font-size:var(--t-denso); margin:.4rem auto 1.6rem; line-height:1.55; max-width:42ch; }
 
@@ -116,7 +115,8 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   <div class="reg">
     <form class="card" id="formulario" novalidate autocomplete="on" onsubmit="return false">
       <?php marcaNiras('grande so-niras'); ?>
-      <div class="brasao so-classico" data-ico="<?= escP(PLATAFORMA['marca']) ?>"></div>
+      <img class="brasao so-classico" src="<?= asset('assets/' . PLATAFORMA['marca']) ?>"
+           alt="" width="76" height="76">
       <div class="tit">Inscrever o nosso casamento</div>
       <div class="sub">Deixem os dados do vosso casamento e uma conta de acesso.
         A inscrição é revista por quem gere a plataforma antes de abrir.</div>

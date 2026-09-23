@@ -73,6 +73,12 @@ function correcoesEsperadas(): array {
          'porteiro.php', "'porta.dados.' + CASAMENTO"],
         ['Manifesto da porta com o nome do casamento aberto',
          'manifest.php', 'application/manifest+json'],
+        ['As alianças botânicas identificam todos os separadores do sistema',
+         'parcial-icone.php', "rel=\"icon\""],
+        ['A aplicação instalável usa a mesma marca em alta resolução',
+         'manifest.php', 'icone-sistema-512.png'],
+        ['Entrada e inscrição apresentam a proposta aprovada sem a redesenhar',
+         'config.php', "'marca' => 'icone-sistema.png'"],
 
         // ---- Endereço público (esquema v8) ----
         ['Endereço público por casamento (QR e links)',
@@ -1477,6 +1483,7 @@ $esqOk = ($esqInstalado === ESQUEMA_VERSAO);
 <!DOCTYPE html>
 <html lang="pt">
 <head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Versão instalada</title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
