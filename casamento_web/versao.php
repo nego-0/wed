@@ -1376,6 +1376,10 @@ function correcoesEsperadas(): array {
          'api.php', "if (\$codigoFich !== '') \$feito['mapa_codigos'][\$codigoFich] = \$convId;"],
         ['E cada bebida viaja a saber como se serve, e com o seu limiar de «a acabar»',
          'api.php', 'i.servir, i.doses_garrafa, i.stock_minimo,'],
+        ['E as contas dos noivos religam-se ao casamento, para a festa não ficar sem dono',
+         'api.php', 'function impAcessos(mysqli $conn, int $cid, array $acessos): array {'],
+        ['Pelo email, criando a conta quando ela não existe nesta casa',
+         'api.php', "foreach (impAcessos(\$conn, \$cid, (array)(\$r['acessos'] ?? [])) as \$k => \$v) \$feito[\$k] = \$v;"],
 
         // ---- Duas tintas que se pintavam por cima de si próprias ----
         ['O número da mesa dos noivos lê-se sobre o tampo de ouro que só ela tem',

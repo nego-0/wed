@@ -9092,6 +9092,61 @@ function impFichaDefs(mysqli $conn, int $cid, array $r, bool $comFicha): int {
 }
 
 /**
+ * Religa as contas ao casamento importado.
+ *
+ * O retrato leva, por cada acesso, o EMAIL, o nome e o papel — nunca a senha,
+ * que é de quem a tem. Faltava quem os voltasse a escrever: o casamento entrava
+ * inteiro, mas nada ligava as contas dos noivos à festa, e o casal abria a
+ * sessão para um painel vazio ou para um «não tem casamento nenhum». Uma festa
+ * sem dono é uma festa que ninguém pode gerir.
+ *
+ * A conta encontra-se pelo EMAIL, que é a chave de uma pessoa em toda a casa —
+ * o número de utilizador é desta base e não sobrevive a uma importação, como
+ * tudo o resto do retrato. Quando a conta não existe (uma restauração para uma
+ * instalação limpa, em que as contas não foram trazidas à parte pela via das
+ * contas), cria-se, com uma senha temporária: a de origem não viaja, e a pessoa
+ * recupera-a pela porta do costume. Assim a festa nunca fica órfã.
+ *
+ * INSERT IGNORE, e nunca se TIRA acesso a ninguém: religar é idempotente, e um
+ * ficheiro com menos contas do que a casa tem não pode trancar o casal fora do
+ * seu próprio casamento.
+ */
+function impAcessos(mysqli $conn, int $cid, array $acessos): array {
+    global $P;
+    $feito = ['acessos' => 0, 'contas_criadas' => 0];
+    $papeis = ['noivos', 'porteiro', 'copeiro', 'entregador'];
+    foreach ($acessos as $a) {
+        if (!is_array($a)) continue;
+        $email = mb_strtolower(trim((string)($a['email'] ?? '')));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+        $papel = in_array($a['papel'] ?? '', $papeis, true) ? (string)$a['papel'] : 'noivos';
+
+        $q = $conn->prepare("SELECT id FROM {$P}utilizadores WHERE email=? LIMIT 1");
+        $q->bind_param('s', $email); $q->execute();
+        $row = $q->get_result()->fetch_row();
+        if ($row) {
+            $uid = (int)$row[0];
+        } else {
+            // Não existe nesta casa: cria-se, para a festa não ficar sem dono.
+            // Senha temporária — a de origem não viaja de propósito.
+            $nome = mb_substr((string)($a['nome'] ?? ''), 0, 120);
+            $hash = password_hash(senhaTemporaria(), PASSWORD_DEFAULT);
+            $st = $conn->prepare("INSERT INTO {$P}utilizadores (email, nome, senha_hash, estado)
+                                  VALUES (?,?,?, 'ativo')");
+            $st->bind_param('sss', $email, $nome, $hash);
+            if (!@$st->execute()) continue;
+            $uid = $conn->insert_id;
+            $feito['contas_criadas']++;
+        }
+        $st = $conn->prepare("INSERT IGNORE INTO {$P}acessos (utilizador_id, casamento_id, papel)
+                              VALUES (?,?,?)");
+        $st->bind_param('iis', $uid, $cid, $papel);
+        if (@$st->execute()) $feito['acessos']++;
+    }
+    return $feito;
+}
+
+/**
  * Escreve um casamento INTEIRO a partir de um retrato. Devolve o que fez.
  *
  * Os códigos dos convites são únicos em todo o sistema: se um já estiver
@@ -9125,8 +9180,12 @@ function reporCasamento(mysqli $conn, int $cid, array $r, bool $comFicha): array
               'orc_categorias' => 0, 'orc_despesas' => 0, 'orc_pagamentos' => 0,
               'bar_categorias' => 0, 'bar_itens' => 0, 'bar_motivos' => 0,
               'bar_regras' => 0, 'bar_mensagens' => 0,
-              'rsvp_perguntas' => 0, 'rsvp_respostas' => 0];
+              'rsvp_perguntas' => 0, 'rsvp_respostas' => 0,
+              'acessos' => 0, 'contas_criadas' => 0];
     $feito['definicoes'] = impFichaDefs($conn, $cid, $r, $comFicha);
+    // As contas dos noivos (e do porteiro, e de quem serve o bar) religam-se ao
+    // casamento. Sem isto, o casamento entra inteiro mas fica sem dono.
+    foreach (impAcessos($conn, $cid, (array)($r['acessos'] ?? [])) as $k => $v) $feito[$k] = $v;
     $feito['mesas']      = impMesas($conn, $cid, (array)($r['mesas'] ?? []));
     $cv = impConvites($conn, $cid, (array)($r['convites'] ?? []));
     $feito['convites'] = $cv['convites']; $feito['pessoas'] = $cv['pessoas'];
