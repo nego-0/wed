@@ -121,7 +121,7 @@ function ficheirosApp(): array {
             'editor-cartao.php','convite-editor.php','convite-digital.php','mesas.php',
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
-            'parcial-cabecalho.php','parcial-endereco.php','versao.php','plataforma.php',
+            'parcial-cabecalho.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
             'licenca.php','manifest.php','sw.js','parcial-icone.php','favicon.ico',
             // O bar: a montagem, o posto da copa, o do garçom, e o menu que
@@ -165,7 +165,7 @@ function acoesDaPlataforma(): array {
             'modelo_exemplo_guardar','modelo_exemplo_upload','modelo_exemplo_apagar',
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
             'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica',
-            'sistema_tema_guardar','upload_chunk',
+            'sistema_tema_guardar','sistema_endereco_guardar','upload_chunk',
             // O preçário das licenças e as decisões sobre os pedidos.
             'lic_decidir','lic_revogar','lic_conceder','lic_modulo_guardar',
             'lic_escalao_guardar','lic_escalao_apagar','lic_pacote_guardar','lic_pacote_apagar',
@@ -180,7 +180,7 @@ function acoesDoCasamento(): array {
             // As fotografias do convite, fora do editor.
             'convite_foto_enviar','convite_foto_repor','convite_foto_posicao',
             'versao_criar','versao_aplicar','versao_atualizar','versao_renomear','versao_apagar',
-            'casamento_identidade','casamento_endereco',
+            'casamento_identidade',
             'acesso_dar','acesso_convidar','acesso_tirar','acesso_papel','conta_apagar_do_casamento',
             'casamento_repor_fabrica',
             'suporte_codigo_criar','suporte_codigo_revogar',

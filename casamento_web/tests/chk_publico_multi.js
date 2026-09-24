@@ -108,12 +108,20 @@ const entrar = async (ctx, user, pass) => {
   ok(porLink && porLink.success === false, 'nem quando lhe passam o endereço completo do QR alheio');
 
   // ---------- 4. o endereço público é de cada casamento ----------
-  const mau = await api('casamento_endereco', { endereco: 'não é um endereço' });
+  const mau = await api('sistema_endereco_guardar', {
+    casamento_id: casA.id, endereco: 'não é um endereço'
+  });
   ok(mau && mau.success === false, 'um endereço mal escrito é recusado');
 
-  const posto = await api('casamento_endereco', { endereco: 'https://casamento-a-' + marca + '.exemplo.pt/' });
+  const posto = await api('sistema_endereco_guardar', {
+    casamento_id: casA.id, endereco: 'https://casamento-a-' + marca + '.exemplo.pt/'
+  });
   ok(posto && posto.success && posto.endereco === 'https://casamento-a-' + marca + '.exemplo.pt',
-     'o endereço público guarda-se sem a barra final');
+     'o admin da plataforma guarda o endereço público sem a barra final');
+
+  const antigo = await api('casamento_endereco', { endereco: 'https://indevido.exemplo.pt' });
+  ok(antigo && antigo.success === false,
+     'a antiga alteração a partir do casamento deixou de existir');
 
   await admin.goto(BASE + '/impressos.php', { waitUntil: 'networkidle' });
   const links = await admin.$$eval('canvas.qr', els => els.map(e => e.dataset.link));
@@ -128,18 +136,16 @@ const entrar = async (ctx, user, pass) => {
   ok(linksB.length > 0 && linksB.every(l => l.startsWith(BASE + '/')),
      'e o casamento ao lado não herda o endereço do vizinho');
 
-  // As provas correm em 127.0.0.1: é exatamente o caso que a barra existe para
-  // apanhar — imprimir cartões cujo QR só abre na máquina de quem os imprimiu.
-  const barraB = await admin.locator('.end-barra').innerText();
-  console.log('   barra em B:', barraB.replace(/\s+/g, ' ').slice(0, 120));
-  ok(/só existe nesta máquina/.test(barraB),
-     'a barra avisa, antes de imprimir, que o endereço só existe nesta máquina');
+  ok(await admin.locator('.end-barra').count() === 0,
+     'as páginas de impressão já não mostram avisos sobre o endereço público');
 
-  // E, no casamento onde o endereço foi fixado, não há aviso nenhum a dar.
+  // O endereço só se edita nas Definições do admin da plataforma.
   await api('casamento_abrir&id=' + casA.id);
-  await admin.goto(BASE + '/impressos.php', { waitUntil: 'networkidle' });
-  ok(!(await admin.locator('.end-barra').getAttribute('class')).includes('aviso'),
-     'e cala-se quando o endereço definitivo já está fixado');
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  await admin.click('[data-vista="definicoes"]');
+  ok(await admin.locator('#def-endereco-' + casA.id).inputValue()
+       === 'https://casamento-a-' + marca + '.exemplo.pt',
+     'o endereço guardado aparece apenas nas Definições do admin');
 
   // ---------- o manifesto da porta diz de que casamento é ----------
   await api('casamento_abrir&id=' + casA.id);

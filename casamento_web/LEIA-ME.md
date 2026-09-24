@@ -20,14 +20,13 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `licenca.php` | **A licença do casal:** o que tem, quanto falta do prazo, quantos convidados cabem — e onde pede, altera ou reforça o plano. É a única página que um casal recém-inscrito vê. |
 | `assets/planos.js` | O motor da montra dos planos, partilhado pela inscrição e pela área da licença: desenha os pacotes, deixa montar um plano à peça, soma a conta e recolhe a escolha. |
 | `assets/planos.css` | O visual da montra, dos cartões de escalão e da janela das políticas de utilização. |
-| `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas e (para o suporte) a entrada por código. |
-| `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, o endereço público, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
+| `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas, definições dos endereços públicos e (para o suporte) a entrada por código. |
+| `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
 | `parcial-icone.php` / `assets/icone-sistema.*` | **A marca da aplicação:** a proposta aprovada das alianças botânicas, preservada no PNG original e derivada para os tamanhos de navegador, iPhone e aplicação instalável. A parcial declara a mesma família de ícones em todas as páginas PHP. |
 | `modelo-prova.php` | A cara de um modelo do convite impresso, sozinha numa folha — é o que a grelha dos modelos encolhe para miniatura. |
 | `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
 | `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |
-| `parcial-endereco.php` | A barra do endereço público, onde se geram links e QR. |
 | `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
 | `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
 | `convite-editor.php` | **Personalização completa do convite digital**: textos, história, cronograma, manual, fotos, música, cores e efeitos — com pré-visualização ao vivo. |
@@ -967,7 +966,7 @@ convite e ninguém percebia porquê.
 
 **Onde o casal gere isto.** `gestao.php` junta o que é do casamento e não do
 desenho de uma peça: a ficha, os dados do evento (hora, sítio, mapa,
-contacto), o endereço público, quem entra e com que papel, as contas dos
+contacto), quem entra e com que papel, as contas dos
 porteiros, os códigos de suporte e a mudança da própria senha. A última secção
 é para toda a gente — era a única forma de um porteiro poder mudar a sua.
 
@@ -1005,10 +1004,11 @@ configurado, e prometer um email que nunca chega seria pior: quando alguém
 perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma
 senha temporária para lha entregar.
 
-**O endereço público.** Os QR e os links dos convites são absolutos e, uma vez
-impressos, são para sempre. Cada casamento tem o seu endereço, fixado na barra
-que aparece nas páginas que geram links e QR — que avisa, antes de imprimir,
-quando o endereço só existe na máquina de quem o está a ver.
+**O endereço público.** Os QR e os links dos convites são absolutos. Cada
+casamento tem o seu endereço, definido exclusivamente pelo admin da plataforma
+em `plataforma.php` → **Definições**. As páginas de trabalho dos noivos usam-no
+sem apresentar avisos nem permitir alterações. Se o campo estiver vazio, o
+sistema usa automaticamente o endereço do servidor que recebeu o pedido.
 
 ---
 

@@ -11,7 +11,6 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
-require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
 exigirModulo('digital');
 
@@ -325,8 +324,6 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       <?php endif; ?>
     </div>
   </div>
-
-  <?php barraEndereco('os links e os QR dos convites digitais'); ?>
 
   <div class="barra no-print">
       <div class="cresce"><input type="search" id="busca" placeholder="Procurar convite ou código…" oninput="filtrar()"></div>

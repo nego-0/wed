@@ -9,7 +9,6 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
 require_once __DIR__ . '/pecas.php';
-require_once __DIR__ . '/parcial-endereco.php';
 exigirAdmin();
 exigirModulo('impresso');
 
@@ -173,8 +172,6 @@ $manual = [
 
 <main id="conteudo">
 <div class="container">
-  <?php barraEndereco('os QR da lista de produção'); ?>
-
   <div class="estado-peca no-print">
     <?php if ($estadoVs['estado'] === 'vigor'): ?>
       <span class="selo-v ok"><i data-ico="visto"></i> Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span>

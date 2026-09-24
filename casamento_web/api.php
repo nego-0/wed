@@ -7190,20 +7190,6 @@ if ($acao === 'casamento_identidade') {
     ok(['nome' => $nome, 'noiva' => $noiva, 'noivo' => $noivo, 'data_evento' => $data]);
 }
 
-if ($acao === 'casamento_endereco') {
-    // O endereço por onde os convidados chegam a ESTE casamento. Quem gere o
-    // casamento aberto pode fixá-lo — é ele que sai nos QR e nos links.
-    $d = corpo();
-    $novo = limparEndereco((string)($d['endereco'] ?? ''));
-    if ($novo === null) erro('Endereço inválido. Escreva algo como https://casamento.exemplo.pt');
-    $st = $conn->prepare("UPDATE {$P}casamentos SET endereco_publico=? WHERE id=?");
-    $id = casamentoAtual();
-    $st->bind_param('si', $novo, $id);
-    if (!$st->execute()) erro('Não foi possível guardar o endereço.');
-    registar($conn, 'endereco_publico', $novo !== '' ? $novo : '(deduzido do pedido)');
-    ok(['endereco' => $novo]);
-}
-
 if ($acao === 'utilizador_criar') {
     // Contas criadas pela casa. O registo público entra 'pendente' e espera
     // aprovação; usa a mesma tabela.
@@ -8113,6 +8099,29 @@ if ($acao === 'sistema_tema_guardar') {
     $st->bind_param('s', $tema); $st->execute();
     registarDaCasa($conn, 'tema_sistema', $tema, temasDisponiveis()[$tema]);
     ok(['tema' => $tema, 'rotulo' => temasDisponiveis()[$tema]]);
+}
+
+if ($acao === 'sistema_endereco_guardar') {
+    // Esta definição afeta links já partilhados e QR que podem ir para papel.
+    // Por isso vive na administração da plataforma, fora dos ecrãs dos noivos.
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda endereços públicos.');
+    $d = corpo();
+    $id = (int)($d['casamento_id'] ?? 0);
+    $novo = limparEndereco((string)($d['endereco'] ?? ''));
+    if ($id < 1) erro('Casamento inválido.');
+    if ($novo === null) erro('Endereço inválido. Escreva algo como https://casamento.exemplo.pt');
+
+    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=? LIMIT 1");
+    $st->bind_param('i', $id); $st->execute();
+    $casamento = $st->get_result()->fetch_assoc();
+    if (!$casamento) erro('Casamento não encontrado.');
+
+    $st = $conn->prepare("UPDATE {$P}casamentos SET endereco_publico=? WHERE id=?");
+    $st->bind_param('si', $novo, $id);
+    if (!$st->execute()) erro('Não foi possível guardar o endereço.');
+    registarDaCasa($conn, 'endereco_publico', (string)$casamento['nome'],
+        $novo !== '' ? $novo : '(automático)');
+    ok(['endereco' => $novo, 'casamento' => (string)$casamento['nome']]);
 }
 
 if ($acao === 'convite_flag') {

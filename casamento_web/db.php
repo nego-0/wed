@@ -2804,7 +2804,7 @@ function base_url(): string {
 /**
  * O endereço por onde os convidados deste casamento chegam.
  *
- * Se o casal (ou o pessoal da casa) tiver fixado um, é esse — e é esse que vai
+ * Se o admin da plataforma tiver fixado um, é esse — e é esse que vai
  * nos QR, nos links partilhados e no PDF. Sem nada fixado, deduz-se do pedido
  * em curso, que é o que sempre se fez e serve bem quando há um só endereço.
  */
@@ -2820,19 +2820,6 @@ function enderecoPublico(?int $casamentoId = null): string {
         }
     }
     return $cache[$id] !== '' ? $cache[$id] : base_url();
-}
-
-/**
- * Um endereço que só existe na máquina de quem o está a ver.
- *
- * Serve para avisar antes de imprimir: um QR para 127.0.0.1 ou para a rede de
- * casa não abre no telemóvel de ninguém, e no papel já não há emenda.
- */
-function enderecoSoLocal(string $url): bool {
-    $h = strtolower((string)parse_url($url, PHP_URL_HOST));
-    if ($h === '') return true;
-    return $h === 'localhost' || str_ends_with($h, '.local') || str_ends_with($h, '.localhost')
-        || preg_match('/^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1)/', $h) === 1;
 }
 
 /** Aceita um endereço público escrito à mão. Devolve null se não servir. */

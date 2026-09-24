@@ -150,6 +150,17 @@ if (ehAdminPlataforma()) {
     if ($r) $pendentes = $r->fetch_all(MYSQLI_ASSOC);
 }
 
+// O endereço público é uma definição técnica da plataforma. Reúne-se aqui
+// para o admin o poder acertar sem espalhar avisos pelos ecrãs de trabalho dos
+// noivos. Continua a pertencer a cada casamento, porque os links e os QR de
+// festas diferentes podem viver em domínios diferentes.
+$enderecosPublicos = [];
+if ($mandaNaCasa) {
+    $r = @$conn->query("SELECT id, nome, estado, endereco_publico
+                        FROM {$P}casamentos ORDER BY nome, id");
+    if ($r) $enderecosPublicos = $r->fetch_all(MYSQLI_ASSOC);
+}
+
 // Sem casamento aberto não há casal a nomear — e ler as definições do
 // casamento 0 devolvia o casal de origem do config.php, que não é de ninguém
 // aqui. O cabeçalho, nesse caso, veste-se da casa.
@@ -438,6 +449,18 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
   .ed-conta{ border:1px solid var(--line); border-radius:12px; padding:.7rem .8rem; margin-bottom:.6rem; }
   .ed-conta .cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
   .ed-conta .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
+  .def-enderecos{ display:grid; gap:.65rem; }
+  .def-endereco{ display:grid; grid-template-columns:minmax(180px,.8fr) minmax(260px,1.5fr) auto;
+    gap:.7rem; align-items:end; padding:.75rem .8rem; border:1px solid var(--line);
+    border-radius:12px; background:var(--card); }
+  .def-endereco-nome{ align-self:center; min-width:0; }
+  .def-endereco-nome b{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .def-endereco-nome small{ color:var(--ink-fraco); text-transform:capitalize; }
+  .def-endereco .estado{ display:block; min-height:1.2em; margin-top:.25rem; }
+  @media (max-width:720px){
+    .def-endereco{ grid-template-columns:minmax(0,1fr); align-items:stretch; }
+    .def-endereco .btn{ width:100%; justify-content:center; }
+  }
   /* Atendimento — a cara de quem atende e a lista de perguntas. */
   .at-foto-ed{ display:flex; align-items:center; gap:.6rem; }
   .at-foto-bts{ display:flex; flex-direction:column; gap:.3rem; }
@@ -1081,6 +1104,31 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
       </div>
       <div class="porcima" style="margin-top:.8rem">Aplica-se a todas as páginas e a todos os utilizadores —
         entrada, inscrição e área de gestão. A mudança fica visível no carregamento seguinte de cada página.</div>
+
+      <h4 class="ed-sec">Endereços públicos</h4>
+      <div class="dica">A base usada nos links e códigos QR de cada casamento. Deixe o campo vazio para
+        usar automaticamente o endereço deste servidor.</div>
+      <div class="def-enderecos" id="def-enderecos">
+        <?php if (!$enderecosPublicos): ?>
+          <div class="porcima">Ainda não existem casamentos.</div>
+        <?php endif; ?>
+        <?php foreach ($enderecosPublicos as $end): $eid = (int)$end['id']; ?>
+          <div class="def-endereco" data-casamento="<?= $eid ?>">
+            <div class="def-endereco-nome">
+              <b><?= escP($end['nome']) ?></b>
+              <small><?= escP($end['estado']) ?></small>
+            </div>
+            <div>
+              <label for="def-endereco-<?= $eid ?>">Endereço público</label>
+              <input type="url" id="def-endereco-<?= $eid ?>" value="<?= escP((string)$end['endereco_publico']) ?>"
+                     placeholder="https://casamento.exemplo.pt" inputmode="url" autocomplete="off"
+                     autocapitalize="none" spellcheck="false">
+              <span class="estado" id="def-endereco-estado-<?= $eid ?>"></span>
+            </div>
+            <button class="btn btn-ouro" type="button" onclick="guardarEnderecoSistema(<?= $eid ?>, this)">Guardar</button>
+          </div>
+        <?php endforeach; ?>
+      </div>
     </div>
     </div><!-- /vista-definicoes -->
 
@@ -1563,6 +1611,25 @@ async function guardarTema(){
   // para o próprio admin passar a ver a base que acabou de definir.
   try { localStorage.removeItem('tema'); } catch (e) {}
   setTimeout(() => location.reload(), 700);
+}
+
+async function guardarEnderecoSistema(id, botao){
+  const inp = document.getElementById('def-endereco-' + id);
+  const est = document.getElementById('def-endereco-estado-' + id);
+  if (!inp) return;
+  botao.disabled = true;
+  if (est) est.textContent = 'A guardar…';
+  const d = await api('sistema_endereco_guardar', {
+    method:'POST', body:JSON.stringify({ casamento_id:id, endereco:inp.value })
+  });
+  botao.disabled = false;
+  if (!d || !d.success) {
+    if (est) est.textContent = '';
+    return;
+  }
+  inp.value = d.endereco || '';
+  if (est) est.textContent = 'Guardado';
+  toast('Endereço público guardado para ' + (d.casamento || 'o casamento') + '.');
 }
 
 // ---------- Licenças: pedidos, preçário, pacotes e políticas ----------

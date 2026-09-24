@@ -23,7 +23,6 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/parcial-cabecalho.php';
-require_once __DIR__ . '/parcial-endereco.php';
 exigirPorta();
 
 $souAdmin = ehAdmin();
@@ -256,13 +255,6 @@ $MAPA_LOCAL = [
         <button class="btn btn-ouro" onclick="guardarOrcamento()">Guardar</button>
         <span class="estado" id="e-orcamento"></span>
       </div>
-    </div>
-
-    <div class="painel">
-      <h3>Endereço público</h3>
-      <div class="dica">O endereço por onde os convidados chegam. É este que vai nos QR impressos —
-        e no papel já não há emenda.</div>
-      <?php barraEndereco('os links e os QR dos convites'); ?>
     </div>
 
     <div class="painel">

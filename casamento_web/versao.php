@@ -83,8 +83,10 @@ function correcoesEsperadas(): array {
         // ---- Endereço público (esquema v8) ----
         ['Endereço público por casamento (QR e links)',
          'db.php', 'function enderecoPublico('],
-        ['Aviso antes de imprimir QR para um endereço local',
-         'parcial-endereco.php', 'function barraEndereco('],
+        ['Endereços públicos reunidos nas Definições do admin da plataforma',
+         'plataforma.php', 'id="def-enderecos"'],
+        ['Só o admin da plataforma pode mudar o endereço público',
+         'api.php', "acao === 'sistema_endereco_guardar'"],
 
         // ---- Contas, papéis e suporte ----
         ['Inscrição pública de um casal, com aprovação',
