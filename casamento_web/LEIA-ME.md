@@ -20,7 +20,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 | `licenca.php` | **A licença do casal:** o que tem, quanto falta do prazo, quantos convidados cabem — e onde pede, altera ou reforça o plano. É a única página que um casal recém-inscrito vê. |
 | `assets/planos.js` | O motor da montra dos planos, partilhado pela inscrição e pela área da licença: desenha os pacotes, deixa montar um plano à peça, soma a conta e recolhe a escolha. |
 | `assets/planos.css` | O visual da montra, dos cartões de escalão e da janela das políticas de utilização. |
-| `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas, definições dos endereços públicos e (para o suporte) a entrada por código. |
+| `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas, definição do endereço público e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
 | `parcial-icone.php` / `assets/icone-sistema.*` | **A marca da aplicação:** a proposta aprovada das alianças botânicas, preservada no PNG original e derivada para os tamanhos de navegador, iPhone e aplicação instalável. A parcial declara a mesma família de ícones em todas as páginas PHP. |
@@ -66,7 +66,7 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 - **`cw_convites`** — o convite é a unidade central: código único, nome a exibir, sufixo opcional, tipo (`digital`/`fisico`/`ambos`), lado, número de lugares, mesa, telefone, estados de RSVP e de entrada, mensagens e observações.
 - **`cw_convidados`** — as pessoas nominais de cada convite (com RSVP e presença individuais).
 - **`cw_mesas`** — mesas com capacidade e ocupação.
-- **`cw_casamentos`** — quem é quem: nome, noivos, data, estado (`pendente`/`ativo`/`suspenso`/`arquivado`) e o endereço público por onde os convidados chegam.
+- **`cw_casamentos`** — quem é quem: nome, noivos, data e estado (`pendente`/`ativo`/`suspenso`/`arquivado`).
 - **`cw_utilizadores`** — as contas (email, senha cifrada, papel na plataforma, estado).
 - **`cw_acessos`** — quem entra em que casamento, e como (`noivos` / `porteiro` /
   `copeiro` / `entregador`). Os três últimos são postos: cada um vê o seu ecrã e
@@ -1004,11 +1004,12 @@ configurado, e prometer um email que nunca chega seria pior: quando alguém
 perde a senha, o admin da plataforma repõe-na e recebe no ecrã, uma vez, uma
 senha temporária para lha entregar.
 
-**O endereço público.** Os QR e os links dos convites são absolutos. Cada
-casamento tem o seu endereço, definido exclusivamente pelo admin da plataforma
-em `plataforma.php` → **Definições**. As páginas de trabalho dos noivos usam-no
-sem apresentar avisos nem permitir alterações. Se o campo estiver vazio, o
-sistema usa automaticamente o endereço do servidor que recebeu o pedido.
+**O endereço público.** Os QR e os links dos convites são absolutos. Toda a
+plataforma usa um único endereço, definido exclusivamente pelo admin em
+`plataforma.php` → **Definições**; o código único de cada convite identifica o
+casamento certo. As páginas dos noivos usam esse endereço sem apresentar avisos
+nem permitir alterações. Se o campo estiver vazio, o sistema usa automaticamente
+o endereço do servidor que recebeu o pedido.
 
 ---
 

@@ -150,15 +150,13 @@ if (ehAdminPlataforma()) {
     if ($r) $pendentes = $r->fetch_all(MYSQLI_ASSOC);
 }
 
-// O endereço público é uma definição técnica da plataforma. Reúne-se aqui
-// para o admin o poder acertar sem espalhar avisos pelos ecrãs de trabalho dos
-// noivos. Continua a pertencer a cada casamento, porque os links e os QR de
-// festas diferentes podem viver em domínios diferentes.
-$enderecosPublicos = [];
+// Um endereço único serve todos os casamentos: é o código do convite que diz
+// a festa a que pertence. O campo vive aqui, longe dos ecrãs dos noivos.
+$enderecoPublicoSistema = '';
 if ($mandaNaCasa) {
-    $r = @$conn->query("SELECT id, nome, estado, endereco_publico
-                        FROM {$P}casamentos ORDER BY nome, id");
-    if ($r) $enderecosPublicos = $r->fetch_all(MYSQLI_ASSOC);
+    $r = @$conn->query("SELECT valor FROM {$P}definicoes
+                        WHERE casamento_id=0 AND chave='sistema.endereco_publico' LIMIT 1");
+    if ($r && ($x = $r->fetch_assoc())) $enderecoPublicoSistema = (string)$x['valor'];
 }
 
 // Sem casamento aberto não há casal a nomear — e ler as definições do
@@ -450,12 +448,9 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
   .ed-conta .cab{ display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
   .ed-conta .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
   .def-enderecos{ display:grid; gap:.65rem; }
-  .def-endereco{ display:grid; grid-template-columns:minmax(180px,.8fr) minmax(260px,1.5fr) auto;
+  .def-endereco{ display:grid; grid-template-columns:minmax(260px,1fr) auto;
     gap:.7rem; align-items:end; padding:.75rem .8rem; border:1px solid var(--line);
     border-radius:12px; background:var(--card); }
-  .def-endereco-nome{ align-self:center; min-width:0; }
-  .def-endereco-nome b{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .def-endereco-nome small{ color:var(--ink-fraco); text-transform:capitalize; }
   .def-endereco .estado{ display:block; min-height:1.2em; margin-top:.25rem; }
   @media (max-width:720px){
     .def-endereco{ grid-template-columns:minmax(0,1fr); align-items:stretch; }
@@ -1105,29 +1100,20 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
       <div class="porcima" style="margin-top:.8rem">Aplica-se a todas as páginas e a todos os utilizadores —
         entrada, inscrição e área de gestão. A mudança fica visível no carregamento seguinte de cada página.</div>
 
-      <h4 class="ed-sec">Endereços públicos</h4>
-      <div class="dica">A base usada nos links e códigos QR de cada casamento. Deixe o campo vazio para
-        usar automaticamente o endereço deste servidor.</div>
+      <h4 class="ed-sec">Endereço público</h4>
+      <div class="dica">A base única usada nos links e códigos QR de todos os casamentos. Deixe o campo
+        vazio para usar automaticamente o endereço deste servidor.</div>
       <div class="def-enderecos" id="def-enderecos">
-        <?php if (!$enderecosPublicos): ?>
-          <div class="porcima">Ainda não existem casamentos.</div>
-        <?php endif; ?>
-        <?php foreach ($enderecosPublicos as $end): $eid = (int)$end['id']; ?>
-          <div class="def-endereco" data-casamento="<?= $eid ?>">
-            <div class="def-endereco-nome">
-              <b><?= escP($end['nome']) ?></b>
-              <small><?= escP($end['estado']) ?></small>
-            </div>
+          <div class="def-endereco">
             <div>
-              <label for="def-endereco-<?= $eid ?>">Endereço público</label>
-              <input type="url" id="def-endereco-<?= $eid ?>" value="<?= escP((string)$end['endereco_publico']) ?>"
+              <label for="def-endereco-publico">Endereço público da plataforma</label>
+              <input type="url" id="def-endereco-publico" value="<?= escP($enderecoPublicoSistema) ?>"
                      placeholder="https://casamento.exemplo.pt" inputmode="url" autocomplete="off"
                      autocapitalize="none" spellcheck="false">
-              <span class="estado" id="def-endereco-estado-<?= $eid ?>"></span>
+              <span class="estado" id="def-endereco-estado"></span>
             </div>
-            <button class="btn btn-ouro" type="button" onclick="guardarEnderecoSistema(<?= $eid ?>, this)">Guardar</button>
+            <button class="btn btn-ouro" type="button" onclick="guardarEnderecoSistema(this)">Guardar</button>
           </div>
-        <?php endforeach; ?>
       </div>
     </div>
     </div><!-- /vista-definicoes -->
@@ -1613,14 +1599,14 @@ async function guardarTema(){
   setTimeout(() => location.reload(), 700);
 }
 
-async function guardarEnderecoSistema(id, botao){
-  const inp = document.getElementById('def-endereco-' + id);
-  const est = document.getElementById('def-endereco-estado-' + id);
+async function guardarEnderecoSistema(botao){
+  const inp = document.getElementById('def-endereco-publico');
+  const est = document.getElementById('def-endereco-estado');
   if (!inp) return;
   botao.disabled = true;
   if (est) est.textContent = 'A guardar…';
   const d = await api('sistema_endereco_guardar', {
-    method:'POST', body:JSON.stringify({ casamento_id:id, endereco:inp.value })
+    method:'POST', body:JSON.stringify({ endereco:inp.value })
   });
   botao.disabled = false;
   if (!d || !d.success) {
@@ -1629,7 +1615,7 @@ async function guardarEnderecoSistema(id, botao){
   }
   inp.value = d.endereco || '';
   if (est) est.textContent = 'Guardado';
-  toast('Endereço público guardado para ' + (d.casamento || 'o casamento') + '.');
+  toast('Endereço público guardado para todos os casamentos.');
 }
 
 // ---------- Licenças: pedidos, preçário, pacotes e políticas ----------

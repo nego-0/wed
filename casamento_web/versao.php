@@ -80,11 +80,11 @@ function correcoesEsperadas(): array {
         ['Entrada e inscrição apresentam a proposta aprovada sem a redesenhar',
          'config.php', "'marca' => 'icone-sistema.png'"],
 
-        // ---- Endereço público (esquema v8) ----
-        ['Endereço público por casamento (QR e links)',
-         'db.php', 'function enderecoPublico('],
-        ['Endereços públicos reunidos nas Definições do admin da plataforma',
-         'plataforma.php', 'id="def-enderecos"'],
+        // ---- Endereço público (esquema v53) ----
+        ['Um endereço público único para todos os casamentos',
+         'db.php', "'sistema.endereco_publico'"],
+        ['O endereço único vive nas Definições do admin da plataforma',
+         'plataforma.php', 'id="def-endereco-publico"'],
         ['Só o admin da plataforma pode mudar o endereço público',
          'api.php', "acao === 'sistema_endereco_guardar'"],
 

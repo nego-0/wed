@@ -8104,24 +8104,19 @@ if ($acao === 'sistema_tema_guardar') {
 if ($acao === 'sistema_endereco_guardar') {
     // Esta definição afeta links já partilhados e QR que podem ir para papel.
     // Por isso vive na administração da plataforma, fora dos ecrãs dos noivos.
-    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda endereços públicos.');
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o endereço público.');
     $d = corpo();
-    $id = (int)($d['casamento_id'] ?? 0);
     $novo = limparEndereco((string)($d['endereco'] ?? ''));
-    if ($id < 1) erro('Casamento inválido.');
     if ($novo === null) erro('Endereço inválido. Escreva algo como https://casamento.exemplo.pt');
 
-    $st = $conn->prepare("SELECT nome FROM {$P}casamentos WHERE id=? LIMIT 1");
-    $st->bind_param('i', $id); $st->execute();
-    $casamento = $st->get_result()->fetch_assoc();
-    if (!$casamento) erro('Casamento não encontrado.');
-
-    $st = $conn->prepare("UPDATE {$P}casamentos SET endereco_publico=? WHERE id=?");
-    $st->bind_param('si', $novo, $id);
+    $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id, chave, valor)
+                          VALUES (0, 'sistema.endereco_publico', ?)
+                          ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('s', $novo);
     if (!$st->execute()) erro('Não foi possível guardar o endereço.');
-    registarDaCasa($conn, 'endereco_publico', (string)$casamento['nome'],
+    registarDaCasa($conn, 'endereco_publico', 'todos os casamentos',
         $novo !== '' ? $novo : '(automático)');
-    ok(['endereco' => $novo, 'casamento' => (string)$casamento['nome']]);
+    ok(['endereco' => $novo]);
 }
 
 if ($acao === 'convite_flag') {

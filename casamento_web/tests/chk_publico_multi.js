@@ -107,16 +107,20 @@ const entrar = async (ctx, user, pass) => {
   const porLink = await api('porta_buscar&q=' + encodeURIComponent(BASE + '/convite.php?c=' + codB));
   ok(porLink && porLink.success === false, 'nem quando lhe passam o endereço completo do QR alheio');
 
-  // ---------- 4. o endereço público é de cada casamento ----------
+  // ---------- 4. o endereço público é único para toda a plataforma ----------
+  await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
+  await admin.click('[data-vista="definicoes"]');
+  const enderecoAntes = await admin.locator('#def-endereco-publico').inputValue();
+
   const mau = await api('sistema_endereco_guardar', {
-    casamento_id: casA.id, endereco: 'não é um endereço'
+    endereco: 'não é um endereço'
   });
   ok(mau && mau.success === false, 'um endereço mal escrito é recusado');
 
   const posto = await api('sistema_endereco_guardar', {
-    casamento_id: casA.id, endereco: 'https://casamento-a-' + marca + '.exemplo.pt/'
+    endereco: 'https://casamentos-' + marca + '.exemplo.pt/'
   });
-  ok(posto && posto.success && posto.endereco === 'https://casamento-a-' + marca + '.exemplo.pt',
+  ok(posto && posto.success && posto.endereco === 'https://casamentos-' + marca + '.exemplo.pt',
      'o admin da plataforma guarda o endereço público sem a barra final');
 
   const antigo = await api('casamento_endereco', { endereco: 'https://indevido.exemplo.pt' });
@@ -126,26 +130,28 @@ const entrar = async (ctx, user, pass) => {
   await admin.goto(BASE + '/impressos.php', { waitUntil: 'networkidle' });
   const links = await admin.$$eval('canvas.qr', els => els.map(e => e.dataset.link));
   console.log('   QR impressos:', JSON.stringify(links));
-  ok(links.length > 0 && links.every(l => l.startsWith('https://casamento-a-' + marca + '.exemplo.pt/')),
+  ok(links.length > 0 && links.every(l => l.startsWith('https://casamentos-' + marca + '.exemplo.pt/')),
      'os QR das etiquetas levam o endereço fixado, não aquele por onde se entrou');
 
-  // E o casamento do lado continua a deduzir o seu, sem herdar o de A.
+  // O casamento do lado usa exatamente a mesma base pública.
   await api('casamento_abrir&id=' + casB.id);
   await admin.goto(BASE + '/impressos.php', { waitUntil: 'networkidle' });
   const linksB = await admin.$$eval('canvas.qr', els => els.map(e => e.dataset.link));
-  ok(linksB.length > 0 && linksB.every(l => l.startsWith(BASE + '/')),
-     'e o casamento ao lado não herda o endereço do vizinho');
+  ok(linksB.length > 0 && linksB.every(l => l.startsWith('https://casamentos-' + marca + '.exemplo.pt/')),
+     'todos os casamentos usam o mesmo endereço público');
 
   ok(await admin.locator('.end-barra').count() === 0,
      'as páginas de impressão já não mostram avisos sobre o endereço público');
 
-  // O endereço só se edita nas Definições do admin da plataforma.
-  await api('casamento_abrir&id=' + casA.id);
+  // O endereço só se edita uma vez, nas Definições do admin da plataforma.
   await admin.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   await admin.click('[data-vista="definicoes"]');
-  ok(await admin.locator('#def-endereco-' + casA.id).inputValue()
-       === 'https://casamento-a-' + marca + '.exemplo.pt',
-     'o endereço guardado aparece apenas nas Definições do admin');
+  ok(await admin.locator('#def-endereco-publico').inputValue()
+       === 'https://casamentos-' + marca + '.exemplo.pt',
+     'há um único endereço nas Definições do admin');
+
+  // A definição é da casa; a prova devolve-a ao valor que encontrou.
+  await api('sistema_endereco_guardar', { endereco: enderecoAntes });
 
   // ---------- o manifesto da porta diz de que casamento é ----------
   await api('casamento_abrir&id=' + casA.id);

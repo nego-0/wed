@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 52;
+const ESQUEMA_VERSAO = 53;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2437,6 +2437,23 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         if ($r) while ($m = $r->fetch_assoc()) barMesaTokenGarantir($conn, (int)$m['id']);
     }
 
+    // v53 — um único endereço público para toda a plataforma.
+    //
+    // Os códigos dos convites já são únicos em todo o sistema; não é preciso
+    // um domínio diferente para saber a que casamento pertencem. Conserva-se
+    // o primeiro endereço anteriormente fixado, para uma atualização não
+    // partir os QR que já saíram da gráfica. As antigas colunas ficam apenas
+    // como legado e deixam de ser lidas.
+    if ($versaoAtual < 53) {
+        @$conn->query("INSERT IGNORE INTO {$P}definicoes (casamento_id, chave, valor)
+                       SELECT 0, 'sistema.endereco_publico', endereco_publico
+                       FROM {$P}casamentos
+                       WHERE endereco_publico IS NOT NULL AND endereco_publico <> ''
+                       ORDER BY CASE estado WHEN 'ativo' THEN 0 WHEN 'pendente' THEN 1
+                                            WHEN 'suspenso' THEN 2 ELSE 3 END, id
+                       LIMIT 1");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2802,24 +2819,24 @@ function base_url(): string {
 }
 
 /**
- * O endereço por onde os convidados deste casamento chegam.
+ * O endereço por onde os convidados chegam à plataforma.
  *
- * Se o admin da plataforma tiver fixado um, é esse — e é esse que vai
- * nos QR, nos links partilhados e no PDF. Sem nada fixado, deduz-se do pedido
- * em curso, que é o que sempre se fez e serve bem quando há um só endereço.
+ * É uma definição única da casa: todos os casamentos usam a mesma base e o
+ * código único do convite identifica a festa. O parâmetro antigo conserva-se
+ * para compatibilidade com quem ainda o passa, mas já não altera a resposta.
  */
 function enderecoPublico(?int $casamentoId = null): string {
     global $conn, $P;
-    static $cache = [];
-    $id = $casamentoId ?? casamentoAtual();
-    if (!array_key_exists($id, $cache)) {
-        $cache[$id] = '';
-        if ($id > 0 && isset($conn)) {
-            $r = @$conn->query("SELECT endereco_publico FROM {$P}casamentos WHERE id=" . (int)$id . " LIMIT 1");
-            if ($r && ($x = $r->fetch_assoc())) $cache[$id] = rtrim((string)$x['endereco_publico'], '/');
+    static $cache = null;
+    if ($cache === null) {
+        $cache = '';
+        if (isset($conn)) {
+            $r = @$conn->query("SELECT valor FROM {$P}definicoes
+                                WHERE casamento_id=0 AND chave='sistema.endereco_publico' LIMIT 1");
+            if ($r && ($x = $r->fetch_assoc())) $cache = rtrim((string)$x['valor'], '/');
         }
     }
-    return $cache[$id] !== '' ? $cache[$id] : base_url();
+    return $cache !== '' ? $cache : base_url();
 }
 
 /** Aceita um endereço público escrito à mão. Devolve null se não servir. */
