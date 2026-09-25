@@ -780,10 +780,26 @@ function atendimentoDefs(mysqli $conn): array {
                         WHERE casamento_id=0 AND chave LIKE 'atendimento.%'");
     if ($r) while ($x = $r->fetch_row()) $d[substr((string)$x[0], 12)] = (string)$x[1];
     return $d + ['ativo' => '0', 'nome' => 'Atendimento', 'cargo' => '', 'foto' => '',
+                 'titulo' => '', 'promessa' => '', 'destaques' => '', 'cta_rotulo' => '',
                  'saudacao' => '', 'telefone' => '', 'whatsapp' => '', 'email' => '',
                  'horario' => '',
                  // O chat AO VIVO, para quando houver um. Ver licAoVivo().
                  'chat_modo' => 'nenhum', 'chat_script' => '', 'chat_rotulo' => ''];
+}
+
+/** Demonstrações e manuais editáveis. */
+function atendimentoConteudos(mysqli $conn, string $tipo, bool $todos = false): array {
+    global $P;
+    if (!in_array($tipo, ['demo','ajuda'], true)) return [];
+    $sql = "SELECT id,tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo
+            FROM {$P}atendimento_conteudos WHERE tipo=?" . ($todos ? '' : ' AND ativo=1') .
+           ' ORDER BY ordem,id';
+    $st = @$conn->prepare($sql); if (!$st) return [];
+    $st->bind_param('s', $tipo); @$st->execute(); $r = $st->get_result(); $out = [];
+    while ($x = $r->fetch_assoc()) {
+        $x['id']=(int)$x['id']; $x['ordem']=(int)$x['ordem']; $x['ativo']=(int)$x['ativo']; $out[]=$x;
+    }
+    return $out;
 }
 
 /**
@@ -834,6 +850,10 @@ if ($acao === 'atendimento_publico') {
     ok(['ativo' => true,
         'atendente' => ['nome' => $d['nome'], 'cargo' => $d['cargo'], 'foto' => $d['foto']],
         'saudacao'  => $d['saudacao'],
+        'marketing' => ['titulo'=>$d['titulo'], 'promessa'=>$d['promessa'],
+                        'destaques'=>array_values(array_filter(array_map('trim', preg_split('/\R/', $d['destaques'])))),
+                        'cta_rotulo'=>$d['cta_rotulo']],
+        'demonstracoes' => atendimentoConteudos($conn, 'demo'),
         'contactos' => ['telefone' => $d['telefone'], 'whatsapp' => $d['whatsapp'],
                         'email' => $d['email'], 'horario' => $d['horario']],
         'perguntas' => atendimentoFaq($conn, false),
@@ -844,17 +864,33 @@ if ($acao === 'atendimento_publico') {
 
 if ($acao === 'atendimento_ler') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê o atendimento.');
-    ok(['def' => atendimentoDefs($conn), 'perguntas' => atendimentoFaq($conn, true)]);
+    ok(['def' => atendimentoDefs($conn), 'perguntas' => atendimentoFaq($conn, true),
+        'conteudos' => array_merge(atendimentoConteudos($conn,'demo',true), atendimentoConteudos($conn,'ajuda',true))]);
+}
+
+if ($acao === 'ajuda_conteudos') {
+    exigirAdminApi();
+    $todos = ehAdminPlataforma();
+    $permitidos = [];
+    if (!$todos) foreach (licencaModulos($conn) as $k=>$v) if (!empty($v['ativo'])) $permitidos[$k]=1;
+    $itens = array_values(array_filter(atendimentoConteudos($conn,'ajuda'),
+        fn($x) => $todos || isset($permitidos[$x['modulo']])));
+    ok(['conteudos'=>$itens]);
 }
 
 if ($acao === 'atendimento_guardar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita o atendimento.');
     exigirCsrf();
     $d = corpo();
+    $atuais = atendimentoDefs($conn);
     $campos = [
         'ativo'    => !empty($d['ativo']) ? '1' : '0',
         'nome'     => mb_substr(trim((string)($d['nome'] ?? '')), 0, 80),
         'cargo'    => mb_substr(trim((string)($d['cargo'] ?? '')), 0, 80),
+        'titulo'   => mb_substr(trim((string)($d['titulo'] ?? $atuais['titulo'])), 0, 180),
+        'promessa' => mb_substr(trim((string)($d['promessa'] ?? $atuais['promessa'])), 0, 700),
+        'destaques'=> mb_substr(trim((string)($d['destaques'] ?? $atuais['destaques'])), 0, 1200),
+        'cta_rotulo'=>mb_substr(trim((string)($d['cta_rotulo'] ?? $atuais['cta_rotulo'])), 0, 100),
         'saudacao' => mb_substr(trim((string)($d['saudacao'] ?? '')), 0, 600),
         'telefone' => mb_substr(trim((string)($d['telefone'] ?? '')), 0, 40),
         'whatsapp' => mb_substr(trim((string)($d['whatsapp'] ?? '')), 0, 40),
@@ -888,6 +924,48 @@ if ($acao === 'atendimento_guardar') {
     registarDaCasa($conn, 'atendimento_guardar', $campos['nome'],
              $campos['ativo'] === '1' ? 'ligado' : 'desligado');
     ok(['def' => atendimentoDefs($conn)]);
+}
+
+if ($acao === 'atendimento_avatar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda o avatar.');
+    exigirCsrf(); $d=corpo();
+    $permitidos=['assets/atendimento/avatar-alina.webp','assets/atendimento/avatar-mateus.webp','assets/atendimento/avatar-sofia.webp'];
+    $foto=(string)($d['foto']??''); if (!in_array($foto,$permitidos,true)) erro('Avatar inválido.');
+    $st=$conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'atendimento.foto',?) ON DUPLICATE KEY UPDATE valor=VALUES(valor)");
+    $st->bind_param('s',$foto); $st->execute();
+    registarDaCasa($conn,'atendimento_avatar',$foto,'avatar padrão'); ok(['path'=>$foto]);
+}
+
+if ($acao === 'atendimento_conteudo_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita este conteúdo.');
+    exigirCsrf(); $d=corpo(); $id=(int)($d['id']??0);
+    $tipo=in_array(($d['tipo']??''),['demo','ajuda'],true)?(string)$d['tipo']:'';
+    $mod=(string)($d['modulo']??''); $mods=['convidados','mesas','impresso','digital','porta','bar','orcamento'];
+    if (!$tipo || !in_array($mod,$mods,true)) erro('Tipo ou módulo inválido.');
+    $tit=mb_substr(trim((string)($d['titulo']??'')),0,160); $res=mb_substr(trim((string)($d['resumo']??'')),0,500);
+    $txt=mb_substr(trim((string)($d['conteudo']??'')),0,12000); $dados=mb_substr(trim((string)($d['dados']??'')),0,2000); $ord=max(0,min(9999,(int)($d['ordem']??0))); $atv=!empty($d['ativo'])?1:0;
+    if ($tit==='' || $txt==='') erro('Escreva o título e o conteúdo.');
+    if ($id>0) { $st=$conn->prepare("UPDATE {$P}atendimento_conteudos SET titulo=?,resumo=?,conteudo=?,dados=?,ordem=?,ativo=? WHERE id=? AND tipo=? AND modulo=?");
+      $st->bind_param('ssssiiiss',$tit,$res,$txt,$dados,$ord,$atv,$id,$tipo,$mod);
+    } else { $media=''; $st=$conn->prepare("INSERT INTO {$P}atendimento_conteudos (tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE titulo=VALUES(titulo),resumo=VALUES(resumo),conteudo=VALUES(conteudo),dados=VALUES(dados),ordem=VALUES(ordem),ativo=VALUES(ativo)");
+      $st->bind_param('sssssssii',$tipo,$mod,$tit,$res,$txt,$media,$dados,$ord,$atv);
+    }
+    if (!$st->execute()) erro('Não foi possível guardar o conteúdo.');
+    registarDaCasa($conn,'atendimento_conteudo',$tit,$tipo.':'.$mod);
+    ok(['conteudos'=>array_merge(atendimentoConteudos($conn,'demo',true),atendimentoConteudos($conn,'ajuda',true))]);
+}
+
+if ($acao === 'atendimento_conteudo_media') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda a ilustração.');
+    exigirCsrf(); $id=(int)($_GET['id']??0); $src=origemUpload('ficheiro',8*1024*1024);
+    $ext=strtolower(pathinfo($src['nome'],PATHINFO_EXTENSION)); if (!in_array($ext,['gif','png','webp'],true)) erro('Use GIF, PNG ou WEBP.');
+    if (function_exists('finfo_open')) { $fi=finfo_open(FILEINFO_MIME_TYPE); $mt=finfo_file($fi,$src['tmp']); finfo_close($fi);
+      if(!in_array($mt,['image/gif','image/png','image/webp'],true)) erro('O conteúdo do ficheiro não corresponde a uma imagem.'); }
+    $st=$conn->prepare("SELECT media FROM {$P}atendimento_conteudos WHERE id=? AND tipo='ajuda'"); $st->bind_param('i',$id); $st->execute(); $ant=$st->get_result()->fetch_assoc();
+    if (!$ant) erro('Material não encontrado.'); $dir=__DIR__.'/assets/ajuda'; if(!is_dir($dir)) @mkdir($dir,0755,true);
+    $nome='guia-'.$id.'-'.time().'.'.$ext; if(!moverUpload($src,"$dir/$nome")) erro('Não foi possível guardar a ilustração.');
+    $path='assets/ajuda/'.$nome; $st=$conn->prepare("UPDATE {$P}atendimento_conteudos SET media=? WHERE id=?"); $st->bind_param('si',$path,$id); $st->execute();
+    $velha=(string)($ant['media']??''); if(preg_match('~^assets/ajuda/guia-~',$velha)) @unlink(__DIR__.'/'.$velha); ok(['path'=>$path]);
 }
 
 if ($acao === 'atendimento_faq_guardar') {
@@ -959,7 +1037,7 @@ if ($acao === 'atendimento_foto') {
 
     // A anterior sai: era só desta caixa, e ninguém mais lhe pega.
     $antiga = (string)(atendimentoDefs($conn)['foto'] ?? '');
-    if ($antiga !== '' && str_starts_with($antiga, 'assets/atendimento/')) @unlink(__DIR__ . '/' . $antiga);
+    if (preg_match('~^assets/atendimento/atendente-~', $antiga)) @unlink(__DIR__ . '/' . $antiga);
 
     $chave = 'atendimento.foto';
     $st = $conn->prepare("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,?,?)
@@ -972,7 +1050,7 @@ if ($acao === 'atendimento_foto_tirar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda a foto.');
     exigirCsrf();
     $antiga = (string)(atendimentoDefs($conn)['foto'] ?? '');
-    if ($antiga !== '' && str_starts_with($antiga, 'assets/atendimento/')) @unlink(__DIR__ . '/' . $antiga);
+    if (preg_match('~^assets/atendimento/atendente-~', $antiga)) @unlink(__DIR__ . '/' . $antiga);
     @$conn->query("UPDATE {$P}definicoes SET valor='' WHERE casamento_id=0 AND chave='atendimento.foto'");
     ok(['path' => '']);
 }

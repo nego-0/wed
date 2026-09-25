@@ -123,7 +123,7 @@ function ficheirosApp(): array {
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
-            'licenca.php','manifest.php','sw.js','parcial-icone.php','favicon.ico',
+            'licenca.php','ajuda.php','atendimento.php','manifest.php','sw.js','parcial-icone.php','favicon.ico',
             // O bar: a montagem, o posto da copa, o do garçom, e o menu que
             // o convidado abre na mesa.
             'bar.php','copa.php','entregas.php','bebidas.php','bar-qr.php',
@@ -139,7 +139,10 @@ function ficheirosApp(): array {
             'assets/icone-sistema-512.png',
             'assets/janela.css','assets/janela.js',
             'assets/mesa-icone.css','assets/mesa-icone.js',
-            'assets/atendimento.css','assets/atendimento.js',
+            'assets/atendimento.css','assets/atendimento.js','assets/central.css','assets/central.js',
+            'assets/atendimento/avatar-alina.webp','assets/atendimento/avatar-mateus.webp','assets/atendimento/avatar-sofia.webp',
+            'assets/ajuda/convidados.gif','assets/ajuda/mesas.gif','assets/ajuda/impresso.gif',
+            'assets/ajuda/digital.gif','assets/ajuda/porta.gif','assets/ajuda/bar.gif','assets/ajuda/orcamento.gif',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
@@ -166,6 +169,9 @@ function acoesDaPlataforma(): array {
             'modelo_exemplo_categoria','modelo_exemplo_repor','modelo_pecaorigem',
             'modelos_importar','modelos_restaurar','sistema_importar','sistema_repor_fabrica',
             'sistema_tema_guardar','sistema_endereco_guardar','upload_chunk',
+            'atendimento_guardar','atendimento_faq_guardar','atendimento_faq_apagar',
+            'atendimento_foto','atendimento_foto_tirar','atendimento_avatar',
+            'atendimento_conteudo_guardar','atendimento_conteudo_media',
             // O preçário das licenças e as decisões sobre os pedidos.
             'lic_decidir','lic_revogar','lic_conceder','lic_modulo_guardar',
             'lic_escalao_guardar','lic_escalao_apagar','lic_pacote_guardar','lic_pacote_apagar',

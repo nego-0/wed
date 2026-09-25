@@ -6,6 +6,22 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 
 ---
 
+## Atendimento, demonstrações e Ajuda
+
+A caixa de atendimento nas páginas públicas conduz agora a uma **montra comercial completa** em `atendimento.php`. A página apresenta a proposta de valor, a pessoa que atende, perguntas frequentes e uma demonstração de cada módulo. Os painéis de demonstração são construídos apenas com **nomes e valores fictícios**, estão isolados das APIs de gestão e levam uma marca de água persistente. O bloqueio de selecção, arrasto e menu de contexto desencoraja a cópia casual; como qualquer conteúdo entregue a um navegador pode ser fotografado ou inspeccionado, a protecção efectiva vem de nunca entregar dados reais, segredos nem código administrativo nessa vista.
+
+Em **Casamentos → Atendimento**, o administrador da plataforma pode:
+
+- editar o título, a promessa, as vantagens e o botão da página comercial;
+- escolher um dos três avatares realistas incluídos, enviar uma fotografia própria e definir livremente o nome e a função;
+- editar, ordenar, ligar ou desligar perguntas, demonstrações e materiais de ajuda;
+- substituir as ilustrações dos guias por GIF, PNG ou WEBP;
+- configurar contactos e, opcionalmente, o encaixe de chat ao vivo.
+
+Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta a licença do casamento e mostra somente os guias dos módulos adquiridos. Cada guia inicial inclui texto passo a passo e uma animação curta; o administrador mantém todo esse material sem editar ficheiros.
+
+---
+
 ## Ficheiros
 
 | Ficheiro | Função |

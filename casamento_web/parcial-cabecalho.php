@@ -18,6 +18,7 @@ function menuPrincipal(): array {
         'orcamento' => ['orcamento.php',     'Orçamento'],
         'gestao'  => ['gestao.php',          'Gestão'],
         'licenca' => ['licenca.php',         'Licença'],
+        'ajuda'   => ['ajuda.php',           'Ajuda'],
         // A entrada da plataforma só aparece a quem tem mais do que um
         // casamento à mão — para quem só tem o seu, seria uma porta para nada.
         'plataforma' => ['plataforma.php',   'Casamentos'],
@@ -86,7 +87,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     // O orçamento é dos noivos: o porteiro, que trabalha à porta, não tem lá
     // contas nenhumas. (Numa visita de suporte, o papel continua 'admin' e a
     // entrada fica — vê-se, mas em leitura, como o resto da página.)
-    if (!function_exists('ehAdmin') || !ehAdmin()) { unset($itens['orcamento']); unset($itens['bar']); }
+    if (!function_exists('ehAdmin') || !ehAdmin()) { unset($itens['orcamento']); unset($itens['bar']); unset($itens['ajuda']); }
     // Os modelos são da casa: quem não responde por ela não tem lá o que fazer.
     if (!function_exists('ehAdminPlataforma') || !ehAdminPlataforma()) unset($itens['modelos']);
 
@@ -195,7 +196,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
   $icoDe = [
     'painel' => 'pessoas', 'mesas'   => 'mesa',   'grafica'    => 'carta',
     'convite'=> 'telemovel','porta'  => 'porta',  'bar'        => 'taca',
-    'orcamento'=>'moeda',  'gestao'  => 'mala',   'licenca'    => 'chave',
+    'orcamento'=>'moeda',  'gestao'  => 'mala',   'licenca'    => 'chave', 'ajuda'=>'conversa',
     'plataforma'=>'anel',  'modelos' => 'documento',
   ];
   $temasGaveta = function_exists('temasDisponiveis') ? temasDisponiveis() : [];

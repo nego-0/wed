@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 53;
+const ESQUEMA_VERSAO = 54;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -443,9 +443,13 @@ function semearAtendimento(mysqli $conn): void {
     // As definições vivem no casamento 0: são da casa, não de um casal.
     $base = [
         'atendimento.ativo'     => '1',
-        'atendimento.nome'      => 'Atendimento',
-        'atendimento.cargo'     => 'Gestão de Convidados',
-        'atendimento.foto'      => '',
+        'atendimento.nome'      => 'Alina',
+        'atendimento.cargo'     => 'Consultora de casamentos',
+        'atendimento.foto'      => 'assets/atendimento/avatar-alina.webp',
+        'atendimento.titulo'    => 'O vosso casamento, organizado com serenidade',
+        'atendimento.promessa'  => 'Convites, convidados, mesas, recepção e orçamento reunidos num só lugar — com uma equipa pronta para ajudar.',
+        'atendimento.destaques' => "Experimentem cada módulo antes de escolher\nPaguem apenas pelo que precisam\nOs vossos dados continuam a ser vossos",
+        'atendimento.cta_rotulo'=> 'Ver a plataforma em funcionamento',
         'atendimento.saudacao'  => 'Olá! Bem-vindos. Aqui respondemos às perguntas mais '
                                  . 'frequentes de quem está a pensar inscrever-se. '
                                  . 'Escolha uma abaixo — ou fale connosco pelos contactos.',
@@ -499,6 +503,41 @@ function semearAtendimento(mysqli $conn): void {
         if (!$st) continue;
         $st->bind_param('ssi', $p, $rp, $od);
         @$st->execute();
+    }
+}
+
+/** Conteúdo comercial e guias editáveis, comum a toda a plataforma. */
+function semearConteudosAtendimento(mysqli $conn): void {
+    global $P;
+    $modulos = [
+      'convidados' => ['Convidados e confirmações', 'Reúnam famílias, acompanhantes e respostas sem perder nomes em folhas.',
+        "Criem convites por família, acompanhem confirmações e saibam sempre quem vem.\n\nNa demonstração podem explorar uma lista fictícia, os estados de RSVP e os indicadores gerais.", "Famílias: 48\nConfirmados: 106\nPor responder: 19"],
+      'mesas' => ['Mesas e planta da sala', 'Distribuam os convidados e percebam a lotação de cada mesa num relance.',
+        "Organizem o salão visualmente, movam convidados e detectem lugares livres.\n\nA demonstração usa nomes inventados e uma planta de exemplo.", "Mesa Acácia: 8 / 10\nMesa Kilamba: 10 / 10\nLugares livres: 14"],
+      'impresso' => ['Convite impresso', 'Escolham um modelo elegante e levem para a gráfica medidas e instruções certas.',
+        "Personalizem texto, cores e composição. O manual de impressão acompanha a peça para reduzir surpresas na gráfica.", "Modelo: Botânico\nFormato: A5\nSangria: 3 mm"],
+      'digital' => ['Convite digital', 'Uma experiência bonita no telemóvel, com confirmação no próprio convite.',
+        "Vejam a capa, a história, os locais e o formulário de confirmação tal como um convidado os verá.", "Aberturas: 184\nConfirmações: 72%\nMensagens: 31"],
+      'porta' => ['Entrada do evento', 'Confirmem entradas em segundos e saibam imediatamente quem ainda falta.',
+        "A equipa da porta pesquisa nomes ou lê códigos, sem expor a gestão completa do casamento.", "Presentes: 87\nEsperados: 125\nEntradas/min: 6"],
+      'bar' => ['Bar e serviço de mesa', 'Pedidos claros entre convidado, copa e entrega, com limites e stock sob controlo.',
+        "Experimentem o percurso fictício: escolher bebidas, preparar na copa e confirmar a entrega na mesa.", "Na copa: 4\nEm entrega: 3\nEntregues: 46"],
+      'orcamento' => ['Orçamento', 'Planeado, pago e por pagar, com cada despesa no seu lugar.',
+        "Acompanhem categorias, pagamentos e desvios com números fictícios que mostram a visão final sem revelar dados reais.", "Planeado: 8 450 000 Kz\nPago: 5 120 000 Kz\nPor pagar: 3 330 000 Kz"],
+    ];
+    $ordem = 10;
+    foreach ($modulos as $chave => [$titulo, $resumo, $corpo, $dados]) {
+        foreach (['demo','ajuda'] as $tipo) {
+            $media = $tipo === 'ajuda' ? 'assets/ajuda/' . $chave . '.gif' : '';
+            $texto = $tipo === 'ajuda'
+              ? "1. Abra o módulo no menu principal.\n2. Use os controlos assinalados na animação.\n3. Guarde a alteração e confirme o resultado.\n\n" . $corpo
+              : $corpo;
+            $st = @$conn->prepare("INSERT IGNORE INTO {$P}atendimento_conteudos
+                (tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,1)");
+            $dadosTipo = $tipo === 'demo' ? $dados : '';
+            if ($st) { $st->bind_param('sssssssi', $tipo,$chave,$titulo,$resumo,$texto,$media,$dadosTipo,$ordem); @$st->execute(); }
+        }
+        $ordem += 10;
     }
 }
 
@@ -2454,6 +2493,27 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                        LIMIT 1");
     }
 
+    // v54 — o atendimento passa a ser também montra, demonstração e manual.
+    // O conteúdo é global: descreve o produto, não pertence a casamento algum.
+    if ($versaoAtual < 54) {
+        $conn->query("CREATE TABLE IF NOT EXISTS {$P}atendimento_conteudos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tipo ENUM('demo','ajuda') NOT NULL,
+            modulo VARCHAR(32) NOT NULL,
+            titulo VARCHAR(160) NOT NULL,
+            resumo VARCHAR(500) NOT NULL DEFAULT '',
+            conteudo MEDIUMTEXT NOT NULL,
+            media VARCHAR(255) NOT NULL DEFAULT '',
+            dados TEXT NOT NULL,
+            ordem INT NOT NULL DEFAULT 0,
+            ativo TINYINT(1) NOT NULL DEFAULT 1,
+            UNIQUE KEY uq_atendimento_conteudo (tipo, modulo),
+            INDEX idx_atendimento_tipo (tipo, ativo, ordem)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        semearAtendimento($conn);
+        semearConteudosAtendimento($conn);
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2703,6 +2763,8 @@ function nomesDeAcao(): array {
         'atendimento_guardar'        => ['mexeu no atendimento', 'casa'],
         'atendimento_pergunta'       => ['guardou uma pergunta do atendimento', 'casa'],
         'atendimento_pergunta_apagar'=> ['apagou uma pergunta do atendimento', 'casa'],
+        'atendimento_avatar'          => ['escolheu o avatar do atendimento', 'casa'],
+        'atendimento_conteudo'        => ['editou conteúdo do atendimento', 'casa'],
         // ---- a licença ----
         'licenca_pedido'          => ['pediu uma licença', 'licenca'],
         'licenca_pedido_cancelar' => ['cancelou o pedido de licença', 'licenca'],

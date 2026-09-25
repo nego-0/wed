@@ -93,6 +93,7 @@
 .at-vivo-bt:focus-visible{ outline:2px solid var(--forest); outline-offset:2px; }
 .at-vivo-estado{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.3rem; text-align:center; }
 .at-vivo-estado:empty{ display:none; }
+.at-montra{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin:.8rem 0;padding:.7rem .8rem;border-radius:12px;background:var(--forest);color:#fff;text-decoration:none;font-size:var(--t-denso);font-weight:700}.at-montra:hover{filter:brightness(1.08)}.at-montra span{font-size:1.15rem}
 
 /* ---------- contactos ---------- */
 .at-contactos{ margin-top:1rem; padding-top:.8rem; border-top:1px solid var(--line);

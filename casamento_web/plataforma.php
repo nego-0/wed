@@ -467,6 +467,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
   .at-item-resp{ font-size:var(--t-denso); color:var(--ink-fraco); line-height:1.55; margin-bottom:.55rem;
     white-space:pre-wrap; }
   .at-item .ac{ display:flex; gap:.4rem; flex-wrap:wrap; }
+  .at-avatares{display:flex;gap:.7rem;flex-wrap:wrap;margin:.7rem 0 1rem}.at-avatar-op{border:2px solid transparent;background:var(--cream);border-radius:14px;padding:.35rem;cursor:pointer;text-align:center}.at-avatar-op.on{border-color:var(--forest)}.at-avatar-op img{display:block;width:76px;height:76px;object-fit:cover;border-radius:10px}.at-avatar-op span{display:block;font-size:.72rem;margin-top:.25rem}.at-conteudos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}.at-conteudo{border:1px solid var(--line);border-radius:12px;padding:.85rem}.at-conteudo.off{opacity:.6}.at-conteudo small{color:var(--ink-fraco);text-transform:uppercase;letter-spacing:.08em}.at-conteudo h4{margin:.3rem 0}.at-conteudo p{color:var(--ink-fraco);font-size:var(--t-denso)}@media(max-width:700px){.at-conteudos{grid-template-columns:1fr}}
   /* As caixas de seleção do painel de dados (âmbitos e casamentos). */
   .dsel{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.35rem .9rem; margin:.4rem 0 .9rem; }
   .dsel label{ display:flex; gap:.5rem; align-items:center; font-size:var(--t-denso); color:var(--ink); cursor:pointer; }
@@ -1135,9 +1136,20 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
       <div class="porcima" style="margin:0 0 1rem">Desligada, não aparece botão nenhum — e a
         página não pede sequer estes dados ao servidor.</div>
 
+      <h4 class="ed-sec">Mensagem comercial</h4>
+      <div class="dica">A promessa principal da página pública. Deve dizer o resultado que o casal obtém, sem linguagem técnica.</div>
+      <div><label for="at-titulo">Título</label><input id="at-titulo" maxlength="180"></div>
+      <div style="margin-top:.6rem"><label for="at-promessa">Promessa</label><textarea id="at-promessa" rows="3" maxlength="700"></textarea></div>
+      <div class="lf" style="grid-template-columns:2fr 1fr;margin-top:.6rem"><div><label for="at-destaques">Vantagens <small>· uma por linha</small></label><textarea id="at-destaques" rows="4" maxlength="1200"></textarea></div><div><label for="at-cta">Texto do botão</label><input id="at-cta" maxlength="100"></div></div>
+
       <h4 class="ed-sec">Quem atende</h4>
       <div class="dica">O nome e a cara que aparecem na caixa. Pode ser uma pessoa da equipa ou
         simplesmente «Atendimento» — o que não pode é prometer alguém que não existe do outro lado.</div>
+      <div class="at-avatares" id="at-avatares">
+        <button type="button" class="at-avatar-op" data-foto="assets/atendimento/avatar-alina.webp" onclick="atEscolherAvatar(this)"><img src="assets/atendimento/avatar-alina.webp" alt="Alina"><span>Alina</span></button>
+        <button type="button" class="at-avatar-op" data-foto="assets/atendimento/avatar-mateus.webp" onclick="atEscolherAvatar(this)"><img src="assets/atendimento/avatar-mateus.webp" alt="Mateus"><span>Mateus</span></button>
+        <button type="button" class="at-avatar-op" data-foto="assets/atendimento/avatar-sofia.webp" onclick="atEscolherAvatar(this)"><img src="assets/atendimento/avatar-sofia.webp" alt="Sofia"><span>Sofia</span></button>
+      </div>
       <div class="lf" style="grid-template-columns:auto 1.4fr 1.4fr">
         <div>
           <label>Fotografia</label>
@@ -1224,6 +1236,9 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
         <button class="btn" onclick="atNovaPergunta()">&#43; Nova pergunta</button>
       </div>
     </div>
+
+    <div class="painel"><h3>Demonstrações dos módulos</h3><div class="dica">Conteúdo da montra pública. Os painéis usam apenas dados fictícios e levam marca de água.</div><div id="at-demos" class="at-conteudos"></div></div>
+    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Pode substituir cada animação por GIF, PNG ou WEBP.</div><div id="at-ajudas" class="at-conteudos"></div><input type="file" id="at-media-f" accept="image/gif,image/png,image/webp" hidden onchange="atMediaEnviar()"></div>
     </div><!-- /vista-atendimento -->
   <?php endif; ?>
 </main>
@@ -1411,7 +1426,7 @@ function verVista(v){
 // são escritas de antemão de propósito: é uma lista de perguntas frequentes com
 // cara de conversa, e não uma promessa de que há alguém do outro lado a teclar.
 // ============================================================
-let AT_CARREGADO = false, AT_PERGUNTAS = [], AT_FOTO = '';
+let AT_CARREGADO = false, AT_PERGUNTAS = [], AT_CONTEUDOS = [], AT_FOTO = '', AT_MEDIA_ID = 0;
 
 function atPrimeiraVez(){ if (!AT_CARREGADO){ AT_CARREGADO = true; atCarregar(); } }
 
@@ -1422,6 +1437,7 @@ async function atCarregar(){
   $('at-ativo').checked = String(c.ativo) === '1';
   const pv = (id, v) => { const e = $(id); if (e) e.value = v || ''; };
   pv('at-nome', c.nome); pv('at-cargo', c.cargo); pv('at-saudacao', c.saudacao);
+  pv('at-titulo', c.titulo); pv('at-promessa', c.promessa); pv('at-destaques', c.destaques); pv('at-cta', c.cta_rotulo);
   pv('at-telefone', c.telefone); pv('at-whatsapp', c.whatsapp);
   pv('at-email', c.email); pv('at-horario', c.horario);
   $('at-chat-modo').value = c.chat_modo === 'script' ? 'script' : 'nenhum';
@@ -1431,6 +1447,7 @@ async function atCarregar(){
   atPintarFoto();
   AT_PERGUNTAS = d.perguntas || [];
   atPintarLista();
+  AT_CONTEUDOS = d.conteudos || []; atPintarConteudos();
 }
 
 function atPintarFoto(){
@@ -1444,6 +1461,12 @@ function atPintarFoto(){
     pre.textContent = nome.charAt(0).toUpperCase() || 'A';
   }
   const bt = $('at-foto-tirar'); if (bt) bt.style.display = AT_FOTO ? '' : 'none';
+  document.querySelectorAll('.at-avatar-op').forEach(x=>x.classList.toggle('on',x.dataset.foto===AT_FOTO));
+}
+
+async function atEscolherAvatar(bt){
+  const d=await api('atendimento_avatar',{method:'POST',body:JSON.stringify({foto:bt.dataset.foto})});
+  if(!d||!d.success)return; AT_FOTO=d.path; atPintarFoto(); toast('Avatar escolhido. Pode agora definir o nome e a função.');
 }
 
 async function atFotoEnviar(){
@@ -1493,6 +1516,8 @@ async function atGuardar(){
   const d = await api('atendimento_guardar', { method:'POST', body: JSON.stringify({
     ativo: $('at-ativo').checked ? 1 : 0,
     nome, cargo: ($('at-cargo').value || '').trim(),
+    titulo:($('at-titulo').value||'').trim(), promessa:($('at-promessa').value||'').trim(),
+    destaques:($('at-destaques').value||'').trim(), cta_rotulo:($('at-cta').value||'').trim(),
     saudacao: ($('at-saudacao').value || '').trim(),
     telefone: ($('at-telefone').value || '').trim(),
     whatsapp: ($('at-whatsapp').value || '').trim(),
@@ -1528,6 +1553,20 @@ function atPintarLista(){
       </div>
     </div>`).join('');
 }
+
+const AT_MODULOS={convidados:'Convidados',mesas:'Mesas',impresso:'Convite impresso',digital:'Convite digital',porta:'Porta',bar:'Bar',orcamento:'Orçamento'};
+function atPintarConteudos(){
+  ['demo','ajuda'].forEach(tipo=>{const cx=$(tipo==='demo'?'at-demos':'at-ajudas'); if(!cx)return;
+    const xs=AT_CONTEUDOS.filter(x=>x.tipo===tipo); cx.innerHTML=xs.map(x=>`<article class="at-conteudo${x.ativo?'':' off'}"><small>${esc(AT_MODULOS[x.modulo]||x.modulo)} · ${x.ativo?'visível':'desligado'}</small><h4>${esc(x.titulo)}</h4><p>${esc(x.resumo||'')}</p><div class="ac"><button class="btn btn-sm" onclick="atEditarConteudo(${x.id})">Editar…</button>${tipo==='ajuda'?`<button class="btn btn-sm" onclick="atEscolherMedia(${x.id})">Trocar ilustração…</button>`:''}</div></article>`).join('');
+  });
+}
+function atEditarConteudo(id){const x=AT_CONTEUDOS.find(y=>y.id===id);if(!x)return; const campos=[
+  {id:'titulo',rot:'Título',tipo:'texto',valor:x.titulo,largura:3},{id:'resumo',rot:'Resumo',tipo:'area',linhas:3,valor:x.resumo,largura:3},{id:'conteudo',rot:'Conteúdo',tipo:'area',linhas:8,valor:x.conteudo,largura:3}];
+  if(x.tipo==='demo')campos.push({id:'dados',rot:'Indicadores fictícios',tipo:'area',linhas:4,valor:x.dados||'',largura:3,dica:'Um por linha, no formato Rótulo: valor. São estes números que aparecem na pré-visualização.'});
+  campos.push({id:'ordem',rot:'Ordem',tipo:'numero',valor:x.ordem,min:0,max:9999},{id:'ativo',rot:'Visível',tipo:'sim',valor:!!x.ativo,largura:2,aoLado:'Mostrar este conteúdo'});
+  licFormulario({titulo:x.tipo==='demo'?'Editar demonstração':'Editar material de ajuda',icone:'conversa',guardar:'Guardar conteúdo',campos,aoGuardar:async v=>{const d=await api('atendimento_conteudo_guardar',{method:'POST',body:JSON.stringify({id:x.id,tipo:x.tipo,modulo:x.modulo,titulo:v.titulo,resumo:v.resumo,conteudo:v.conteudo,dados:v.dados||'',ordem:v.ordem,ativo:v.ativo?1:0})});if(!d||!d.success)return false;AT_CONTEUDOS=d.conteudos||[];atPintarConteudos();toast('Conteúdo guardado.');return true;}});}
+function atEscolherMedia(id){AT_MEDIA_ID=id;$('at-media-f').click();}
+async function atMediaEnviar(){const f=$('at-media-f').files[0];if(!f||!AT_MEDIA_ID)return;const fd=new FormData();fd.append('ficheiro',f);const r=await fetch('api.php?action=atendimento_conteudo_media&id='+AT_MEDIA_ID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});const d=await r.json();$('at-media-f').value='';if(!d||!d.success){toast((d&&d.message)||'Não foi possível guardar a ilustração.',true);return;}const x=AT_CONTEUDOS.find(y=>y.id===AT_MEDIA_ID);if(x)x.media=d.path;toast('Ilustração actualizada.');}
 
 function atFormulario(p){
   return licFormulario({

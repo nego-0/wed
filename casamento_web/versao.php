@@ -88,6 +88,18 @@ function correcoesEsperadas(): array {
         ['Só o admin da plataforma pode mudar o endereço público',
          'api.php', "acao === 'sistema_endereco_guardar'"],
 
+        // ---- Atendimento comercial, demonstrações e ajuda (esquema v54) ----
+        ['A área pública de atendimento apresenta a plataforma e deixa experimentar cada módulo',
+         'atendimento.php', 'DEMONSTRAÇÃO · DADOS FICTÍCIOS'],
+        ['A demonstração nunca consulta dados de casamentos reais',
+         'atendimento.php', 'function atDados(string $txt)'],
+        ['Os noivos têm ajuda apenas para os módulos incluídos na licença',
+         'ajuda.php', "isset(\$permitidos[\$x['modulo']])"],
+        ['O admin edita a mensagem comercial, demonstrações, guias e ilustrações',
+         'plataforma.php', 'id="at-ajudas"'],
+        ['Três avatares realistas de origem podem receber o nome escolhido pelo admin',
+         'plataforma.php', 'avatar-sofia.webp'],
+
         // ---- Contas, papéis e suporte ----
         ['Inscrição pública de um casal, com aprovação',
          'registo.php', 'registo_publico'],

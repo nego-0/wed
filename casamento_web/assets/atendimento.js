@@ -175,6 +175,12 @@
          + '</div>';
   }
 
+  function montraHtml(){
+    var m=D.marketing||{};
+    return '<a class="at-montra" href="atendimento.php">'
+      + esc(m.cta_rotulo||'Ver a plataforma em funcionamento') + '<span aria-hidden="true">→</span></a>';
+  }
+
   function montar() {
     var a = D.atendente || {};
     cx = document.createElement('div');
@@ -197,6 +203,7 @@
     // seis perguntas, num sítio a que só se chega rolando, era pagar por uma
     // ferramenta e depois escondê-la.
     +     aoVivoHtml()
+    +     montraHtml()
     +     perguntasHtml()
     +     contactos()
     +   '</div>'
