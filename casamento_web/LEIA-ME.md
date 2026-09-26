@@ -8,6 +8,8 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 
 ## Atendimento, demonstrações e Ajuda
 
+O formulário de login indica apenas **«Entre com o seu email.»**; foi retirada a frase sobre escolher o casamento depois de entrar.
+
 **Modais em qualquer ecrã.** Os formulários, histórico, pagamentos, licenças,
 pré-visualizações e janelas dos editores respeitam a área visível do navegador,
 incluindo as barras móveis e o teclado. Abrem acima do menu e permitem percorrer

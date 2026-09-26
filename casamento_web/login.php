@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <button class="btn btn-verde" style="width:100%; justify-content:center;" type="submit">Entrar</button>
       </form>
-      <div class="dica">Entre com o seu email. Depois de entrar, escolhe-se o casamento.<br>
+      <div class="dica">Entre com o seu email.<br>
         Ainda não tem conta? <a href="registo.php" style="color:var(--gold-texto)">Inscreva o seu casamento</a>.</div>
     </div>
   </div>

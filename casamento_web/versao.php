@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O login apresenta apenas a instrução de entrada por email',
+         'login.php', 'Entre com o seu email.<br>'],
         ['Todos os modais respeitam o teclado, as barras móveis e a área visível',
          'assets/modais.js', 'window.visualViewport'],
         ['Formulários, histórico e pré-visualizações abrem acima do menu',
