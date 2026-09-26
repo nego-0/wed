@@ -416,7 +416,7 @@ const { escolher } = require('./escolhas');
     return (x + 0.05) / (y + 0.05);
   };
   const medidas = {};
-  for (const tema of ['niras', 'classico', 'azul', 'escuro']) {
+  for (const tema of ['jardim', 'classico', 'azul', 'escuro']) {
     await copa.evaluate(t => { try { localStorage.setItem('tema', t); } catch (e) {} }, tema);
     await copa.reload({ waitUntil: 'networkidle' });
     await copa.waitForTimeout(700);
@@ -453,12 +453,12 @@ const { escolher } = require('./escolhas');
   }
   // E muda mesmo: se os quatro dessem a mesma medida, o tema não estaria a
   // chegar cá — que era exactamente o estado que esta prova defendia antes.
-  const distintos = new Set(['niras', 'classico', 'azul', 'escuro']
+  const distintos = new Set(['jardim', 'classico', 'azul', 'escuro']
     .map(t => JSON.stringify(medidas[t]))).size;
   ok(distintos > 1,
      'e a copa obedece ao tema, em vez de o ignorar: '
      + distintos + ' aspectos distintos em quatro temas');
-  ok(JSON.stringify(medidas.escuro) !== JSON.stringify(medidas.niras),
+  ok(JSON.stringify(medidas.escuro) !== JSON.stringify(medidas.jardim),
      'o «escuro» dá mesmo um ecrã escuro — que é como o salão o quer à meia-noite');
   await copa.evaluate(() => { try { localStorage.removeItem('tema'); } catch (e) {} });
 

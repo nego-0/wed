@@ -142,7 +142,7 @@ const razao = (a, c) => { const l1 = lum(a), l2 = lum(c);
   }, tema);
 
   const fundos = {};
-  for (const tema of ['niras', 'classico', 'azul', 'escuro']) {
+  for (const tema of ['jardim', 'classico', 'azul', 'escuro']) {
     const m = await medir(tema);
     fundos[tema] = m.fundo.join(',');
     const alvos = Object.entries(m).filter(([k, v]) => k !== 'fundo' && v);
@@ -154,8 +154,8 @@ const razao = (a, c) => { const l1 = lum(a), l2 = lum(c);
        + (maus.length ? ' — falham: ' + maus.join(', ') : ''));
   }
 
-  ok(fundos.escuro !== fundos.niras,
-     'e o tema escuro escurece MESMO a página: ' + fundos.niras + ' → ' + fundos.escuro);
+  ok(fundos.escuro !== fundos.jardim,
+     'e o tema escuro escurece MESMO a página: ' + fundos.jardim + ' → ' + fundos.escuro);
   ok(new Set(Object.values(fundos)).size >= 3,
      'com os quatro temas a dar fundos diferentes, e não quatro vezes o mesmo: '
      + new Set(Object.values(fundos)).size + ' fundos distintos');

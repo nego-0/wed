@@ -114,9 +114,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <body>
   <div class="reg">
     <form class="card" id="formulario" novalidate autocomplete="on" onsubmit="return false">
-      <?php marcaNiras('grande so-niras'); ?>
-      <img class="brasao so-classico" src="<?= asset('assets/' . PLATAFORMA['marca']) ?>"
-           alt="" width="76" height="76">
+      <?php marcaKulemba('grande'); ?>
       <div class="tit">Inscrever o nosso casamento</div>
       <div class="sub">Deixem os dados do vosso casamento e uma conta de acesso.
         A inscrição é revista por quem gere a plataforma antes de abrir.</div>

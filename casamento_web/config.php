@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 // config.php — Configuração central do sistema (SEM segredos)
-// Isabel & Abednego · Gestão de Convidados
+// Kulemba · Organização de casamentos
 //
 // Este ficheiro pode ir para o controlo de versões (Git/GitHub):
 // NÃO contém palavras-passe nem dados de ligação à base de dados.
@@ -49,14 +49,14 @@ function escP($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF
 // entrada, a inscrição — e onde mostrar o nome de um casal era mostrar o de
 // outras pessoas a quem lá chega. Estes são os nomes da CASA.
 const PLATAFORMA = [
-    'nome'  => 'Gestão de Convidados',
+    'nome'  => 'Kulemba',
     'sub'   => 'Convites, mesas e entradas do seu casamento',
-    // A marca da casa é a proposta aprovada, preservada no PNG original; os
+    // A marca Kulemba representa uma oferta e a união; os
     // tamanhos pequenos são derivados diretamente dele, sem redesenhar.
     'marca' => 'icone-sistema.png',
     // O monograma é TEXTO: o círculo pequeno ao lado do nome é onde estão,
     // normalmente, as iniciais do casal. Sem casamento aberto ficam as da casa.
-    'mono'  => 'GC',
+    'mono'  => 'K',
 ];
 
 // ---- Base de dados -----------------------------------------
@@ -134,7 +134,7 @@ function ficheirosApp(): array {
             'assets/montra/digital.jpg','assets/montra/porta.jpg',
             'assets/montra/bar.jpg',
             'assets/estilo.css','assets/editor.css','assets/pecas.css','assets/planos.css',
-            'assets/icone-sistema.png','assets/icone-sistema-32.png',
+            'parcial-marca.php','assets/logo-kulemba.png','assets/icone-sistema.png','assets/icone-sistema-32.png',
             'assets/icone-sistema-180.png','assets/icone-sistema-192.png',
             'assets/icone-sistema-512.png',
             'assets/janela.css','assets/janela.js',

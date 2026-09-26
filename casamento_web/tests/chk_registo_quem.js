@@ -161,7 +161,7 @@ const marca = 'zzq' + Math.floor(Math.random() * 1e5);
   const razao = (a, b) => { const l1 = lum(a), l2 = lum(b);
     return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05); };
   const piores = [];
-  for (const tema of ['niras', 'classico', 'azul', 'escuro']) {
+  for (const tema of ['jardim', 'classico', 'azul', 'escuro']) {
     const cores = await p.evaluate(async t => {
       document.documentElement.setAttribute('data-tema', t);
       abrirHistorico(); abaHistorico('registo');

@@ -1,10 +1,16 @@
-# Gestão de Convidados — Isabel & Abednego
+# Kulemba — Organização de casamentos
 
 Sistema em PHP + MySQL para gerir os convidados do casamento: criação de convites (digitais e físicos), geração dos nomes a exibir, confirmação de presença (RSVP), código QR de entrada e página do porteiro para validar convites à porta do evento.
 
 O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas novas com o prefixo `cw_` e não altera as tabelas antigas (`guests`, `invite_groups`, `mesas`). Pode, num clique, importar a lista existente para o novo formato.
 
 ---
+
+## Identidade Kulemba e temas
+
+O nome da plataforma é **Kulemba**. A marca junta um coração a duas formas de oferta entrelaçadas e está em `assets/logo-kulemba.png`. É a mesma nos quatro temas; sobre fundos escuros usa uma versão branca por CSS. O símbolo dá origem ao favicon e aos ícones da aplicação. Ver [guia da marca](docs/marca-kulemba.md).
+
+A paleta azul-noite, verde e marfim chama-se **Jardim Nocturno** (chave `jardim`). As cores mantêm-se. A migração **v55** converte a definição global que usava a chave anterior, e a escolha guardada no navegador é convertida na primeira abertura. As outras três paletas e a identidade dos casais mantêm-se.
 
 ## Atendimento, demonstrações e Ajuda
 
@@ -53,7 +59,7 @@ Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta
 | `plataforma.php` | Os casamentos que o sistema serve: fila de aprovação, criação de casamentos, gestão de contas, definição do endereço público e (para o suporte) a entrada por código. |
 | `gestao.php` | **A área de gestão do casamento:** a ficha (nomes, data), os dados do evento, quem entra e com que papel, os códigos de suporte, e a mudança da própria senha. |
 | `manifest.php` | O manifesto da aplicação da porta, com o nome do casamento aberto. |
-| `parcial-icone.php` / `assets/icone-sistema.*` | **A marca da aplicação:** a proposta aprovada das alianças botânicas, preservada no PNG original e derivada para os tamanhos de navegador, iPhone e aplicação instalável. A parcial declara a mesma família de ícones em todas as páginas PHP. |
+| `parcial-icone.php` / `assets/icone-sistema.*` | **A marca da aplicação:** o símbolo Kulemba, derivado da arte original para os tamanhos de navegador, iPhone e aplicação instalável. A parcial declara a mesma família de ícones em todas as páginas PHP. |
 | `modelo-prova.php` | A cara de um modelo do convite impresso, sozinha numa folha — é o que a grelha dos modelos encolhe para miniatura. |
 | `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
 | `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |

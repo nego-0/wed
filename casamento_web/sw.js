@@ -9,7 +9,7 @@
    Nada relacionado com a API é guardado em cache: os pedidos de
    check-in têm de chegar mesmo ao servidor, ou ficam em fila.
    ============================================================ */
-const CACHE = 'porta-v3';   // v3: a aplicação instalável recebe a marca das alianças
+const CACHE = 'porta-v4';   // v4: identidade Kulemba e tema Jardim Nocturno
 
 // Casca mínima para a página abrir offline.
 const CASCA = [

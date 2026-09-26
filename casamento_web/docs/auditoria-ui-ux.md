@@ -447,7 +447,7 @@ detalhe. No desktop, coluna fixa à direita.
 | --- | --- | --- |
 | Organização | Forte | Estados, filtros, contagens, tudo consistente |
 | Confiança | Forte | Exportação sempre disponível, histórico, políticas citadas na lei |
-| Elegância | Parcial | O tema Clássico tem-na; o padrão NIRAS é corporativo |
+| Elegância | Parcial | O tema Clássico tem-na; o padrão Jardim Nocturno é corporativo |
 | Celebração | Fraca | A contagem é o único gesto festivo, reduzido a um cronómetro |
 | Romantismo | Ausente no painel | Vive todo no convite |
 | Personalização | Parcial | Quatro temas e editores ricos; o painel não reflecte o casamento |
@@ -796,8 +796,8 @@ depois, com a mesma sonda:
 - **Três tokens novos por papel** — `--gold-texto`, `--sobre-gold`,
   `--btn-a`/`--btn-b`/`--btn-txt` — declarados nos quatro temas. 32 combinações
   de cor verificadas por cálculo antes de uma linha ser escrita.
-- **`--gold` do NIRAS** de `#4C8C1E` para `#3C7517`; **`--gold-deep`** ajustado
-  em NIRAS, Clássico e Escuro (no tema escuro tinha de ficar mais **claro**,
+- **`--gold` do Jardim Nocturno** de `#4C8C1E` para `#3C7517`; **`--gold-deep`** ajustado
+  em Jardim Nocturno, Clássico e Escuro (no tema escuro tinha de ficar mais **claro**,
   porque lá o `--gold-pale` é um fundo escuro); **`--ok`** e **`--warn`**
   escurecidos nos três temas claros.
 - **175 cores literais** substituídas por `var(--ink-fraco)` — 25 nas folhas,

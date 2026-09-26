@@ -21,6 +21,16 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A plataforma chama-se Kulemba',
+         'config.php', "'nome'  => 'Kulemba'"],
+        ['A nova marca aparece na entrada, inscrição e atendimento',
+         'parcial-marca.php', 'assets/logo-kulemba.png'],
+        ['O tema Jardim Nocturno mantém a paleta original',
+         'db.php', "'jardim'    => 'Jardim Nocturno'"],
+        ['A escolha do tema antigo migra também no navegador',
+         'parcial-tema.php', "escolha = 'jardim'"],
+        ['A aplicação offline renova a marca em cache',
+         'sw.js', "const CACHE = 'porta-v4'"],
         ['O convite da demonstração tem texto próprio e fotografias sem cortes',
          'assets/demonstracao-convite.css', 'aspect-ratio:1000/1247'],
         ['A demonstração digital usa uma largura de leitura e pode abrir numa janela completa',
@@ -85,11 +95,11 @@ function correcoesEsperadas(): array {
          'porteiro.php', "'porta.dados.' + CASAMENTO"],
         ['Manifesto da porta com o nome do casamento aberto',
          'manifest.php', 'application/manifest+json'],
-        ['As alianças botânicas identificam todos os separadores do sistema',
+        ['O símbolo Kulemba identifica os separadores do sistema',
          'parcial-icone.php', "rel=\"icon\""],
         ['A aplicação instalável usa a mesma marca em alta resolução',
          'manifest.php', 'icone-sistema-512.png'],
-        ['Entrada e inscrição apresentam a proposta aprovada sem a redesenhar',
+        ['Entrada e inscrição apresentam a mesma identidade Kulemba',
          'config.php', "'marca' => 'icone-sistema.png'"],
 
         // ---- Endereço público (esquema v53) ----

@@ -546,7 +546,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <script src="<?= asset('assets/mesa-icone.js') ?>"></script>
 </head>
 <body>
-<?php cabecalho('Gestão de Convidados', 'Quem vem, com quem, e por onde entra', 'painel'); ?>
+<?php cabecalho('Convidados', 'Quem vem, com quem, e por onde entra', 'painel'); ?>
 
 <main id="conteudo">
 <div class="container">

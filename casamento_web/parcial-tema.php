@@ -9,13 +9,18 @@
 //     à base. Muda-se na pastilha circular (ver parcial-seletor-tema).
 // Incluir dentro do <head> (ou o mais cedo possível no corpo).
 // ============================================================
-$temaSistema = function_exists('temaSistema') ? temaSistema() : 'niras';
+$temaSistema = function_exists('temaSistema') ? temaSistema() : 'jardim';
 ?>
 <script>
 (function(){
   var base = <?= json_encode($temaSistema) ?>, escolha = null;
   try { escolha = localStorage.getItem('tema'); } catch (e) {}
-  var validos = ['niras','classico','azul','escuro'];
+  // Mantém a preferência e as cores nos navegadores que usavam o nome antigo.
+  if (escolha === 'niras') {
+    escolha = 'jardim';
+    try { localStorage.setItem('tema', escolha); } catch (e) {}
+  }
+  var validos = ['jardim','classico','azul','escuro'];
   var t = (escolha && validos.indexOf(escolha) >= 0) ? escolha : base;
   document.documentElement.setAttribute('data-tema', t);
 })();

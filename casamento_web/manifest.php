@@ -25,15 +25,15 @@ header('Content-Type: application/manifest+json; charset=utf-8');
 header('Cache-Control: no-cache');   // muda com o casamento aberto
 
 echo json_encode([
-    'name'             => 'Entrada do evento' . ($casal !== '' ? ' · ' . $casal : ''),
-    'short_name'       => 'Entrada',
+    'name'             => PLATAFORMA['nome'] . ' · Entrada do evento' . ($casal !== '' ? ' · ' . $casal : ''),
+    'short_name'       => PLATAFORMA['nome'],
     'description'      => 'Leitura de convites e registo de entradas à porta do evento.',
     'start_url'        => 'porteiro.php',
     'scope'            => '.',
     'display'          => 'standalone',
     'orientation'      => 'portrait',
-    'background_color' => '#16261E',
-    'theme_color'      => '#16261E',
+    'background_color' => '#F6F8F4',
+    'theme_color'      => '#16283A',
     'lang'             => 'pt',
     'icons'            => [
         [

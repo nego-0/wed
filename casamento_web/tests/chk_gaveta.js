@@ -160,7 +160,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(aberta.temas === 4, 'a escolha do tema está na gaveta: ' + aberta.temas + ' temas');
   ok(aberta.aceso.length === 1, 'com um — e só um — aceso: ' + aberta.aceso.join(', '));
   const antes = await m.evaluate(() => document.documentElement.getAttribute('data-tema'));
-  const outro = ['niras', 'classico', 'azul', 'escuro'].find(t => t !== antes);
+  const outro = ['jardim', 'classico', 'azul', 'escuro'].find(t => t !== antes);
   await m.click('[data-gv-tema="' + outro + '"]');
   await m.waitForTimeout(400);
   const trocou = await m.evaluate(() => ({

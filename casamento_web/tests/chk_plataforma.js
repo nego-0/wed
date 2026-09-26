@@ -187,7 +187,7 @@ const entrar = async (ctx, user, pass) => {
   console.log('   entrada:', txtLogin.replace(/\s+/g, ' ').slice(0, 80), '| título:', tituloLogin);
   ok(!/Isabel|Abednego/.test(txtLogin + tituloLogin),
      'a página de entrada não mostra o nome de casal nenhum');
-  ok(txtLogin.includes('Gestão de Convidados'), 'mostra a casa, que é de quem lá chega');
+  ok(tituloLogin.includes('Kulemba'), 'mostra a casa, que é de quem lá chega');
   await porta.goto(BASE + '/registo.php', { waitUntil: 'networkidle' });
   ok(!/Isabel|Abednego/.test(await porta.locator('body').innerText()),
      'e a inscrição também não');

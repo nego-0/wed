@@ -358,7 +358,7 @@ if ($pecaSel === 'cartao') {
 
 
   <p style="font-size:var(--t-apoio);color:var(--ink-fraco);border-top:1px solid var(--line);padding-top:.7rem">
-    Documento gerado pelo sistema de gestão de convidados em <?= escP($geradoEm) ?>.
+    Documento gerado por <?= escP(PLATAFORMA['nome']) ?> em <?= escP($geradoEm) ?>.
     Acompanha as edições feitas nos editores — se a configuração mudar, volte a gerá-lo.
   </p>
 </div>

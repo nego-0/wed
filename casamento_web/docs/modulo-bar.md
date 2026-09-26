@@ -1483,7 +1483,7 @@ botões. Nunca cor.
 ### 25.3 Os tokens, e a proibição de inventar cor
 
 Tudo o que se pinta sai de `assets/estilo.css`. Existem **quatro temas** —
-`niras` (o de origem), `classico`, `azul` e `escuro` —, trocados em
+`jardim` (o de origem), `classico`, `azul` e `escuro` —, trocados em
 `<html data-tema>`; o módulo tem de sobreviver aos quatro sem uma linha de
 excepção.
 
@@ -1515,7 +1515,7 @@ excepção.
    de verde claro a quase preto) e os rótulos desapareciam contra o próprio
    fundo. `bar.css` limita-se a dar-lhes, dentro de `body.b-noite`, os nomes
    por que o resto da folha os conhece.
-3. **Nunca** `color: #fff` sobre `--gold`: o dourado do tema `niras` é verde e
+3. **Nunca** `color: #fff` sobre `--gold`: o dourado do tema `jardim` é verde e
    o do `classico` é castanho, e o contraste não é o mesmo. Usa-se
    `--gold-deep` para texto sobre claro e `#fff` só sobre `--gold-deep`.
 4. As cores das categorias de bebida (§14, `cw_bar_categorias.cor`) são

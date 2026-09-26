@@ -38,8 +38,8 @@ $__amostras = function_exists('temasAmostras') ? temasAmostras() : [];
 </div>
 <script>
 (function(){
-  var VALIDOS = ['niras','classico','azul','escuro'];
-  function atual(){ return document.documentElement.getAttribute('data-tema') || 'niras'; }
+  var VALIDOS = ['jardim','classico','azul','escuro'];
+  function atual(){ return document.documentElement.getAttribute('data-tema') || 'jardim'; }
   function marcarAtual(){
     var a = atual();
     document.querySelectorAll('#temaFabPop .tema-fab-op').forEach(function(b){

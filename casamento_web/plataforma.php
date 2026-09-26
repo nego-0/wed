@@ -170,7 +170,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
 <head>
 <?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Casamentos · Plataforma</title>
+<title>Casamentos · <?= escP(PLATAFORMA['nome']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
@@ -1078,7 +1078,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
         <?php
           $temaAtualDef = temaSistema();
           $previews = [
-            'niras'    => ['#16283A', '#63B22B', '#F6F8F4', 'Azul-noite + verde institucional.'],
+            'jardim'    => ['#16283A', '#63B22B', '#F6F8F4', 'Azul-noite, verde e marfim.'],
             'classico' => ['#2C4536', '#B4864A', '#FBF8F1', 'Verde-floresta, dourado e marfim.'],
             'azul'     => ['#123C63', '#2E86C8', '#F4F7FB', 'Azul corporativo, claro.'],
             'escuro'   => ['#0E1B25', '#8AD24A', '#17232C', 'Grafite escuro, acento verde.'],
@@ -1089,7 +1089,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
         <label class="tema-op<?= $on ? ' on' : '' ?>">
           <input type="radio" name="tema" value="<?= $chave ?>" <?= $on ? 'checked' : '' ?> onchange="marcarTema(this)">
           <span class="tema-amostra"><i style="background:<?= $c1 ?>"></i><i style="background:<?= $c2 ?>"></i><i style="background:<?= $c3 ?>"></i></span>
-          <span class="tema-nome"><?= escP($rot) ?><?= $chave === 'niras' ? ' <small style="color:var(--ink-fraco)">· padrão</small>' : '' ?></span>
+          <span class="tema-nome"><?= escP($rot) ?><?= $chave === 'jardim' ? ' <small style="color:var(--ink-fraco)">· padrão</small>' : '' ?></span>
           <span class="tema-desc"><?= escP($desc) ?></span>
         </label>
         <?php endforeach; ?>
@@ -1167,7 +1167,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
           <input type="text" id="at-nome" maxlength="80" placeholder="Ex: Atendimento">
           <div class="err"></div></div>
         <div><label for="at-cargo">Função <small style="color:var(--ink-fraco)">· opcional</small></label>
-          <input type="text" id="at-cargo" maxlength="80" placeholder="Ex: Gestão de Convidados"></div>
+          <input type="text" id="at-cargo" maxlength="80" placeholder="Ex: Consultora de casamentos"></div>
       </div>
 
       <div style="margin-top:.9rem"><label for="at-saudacao">Mensagem de boas-vindas</label>

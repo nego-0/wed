@@ -97,10 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="login">
     <div class="card">
-      <?php marcaNiras('grande so-niras'); ?>
-      <img class="brasao so-classico" src="<?= asset('assets/' . PLATAFORMA['marca']) ?>"
-           alt="" width="82" height="82">
-      <div class="casa"><?= escP(PLATAFORMA['nome']) ?></div>
+      <?php marcaKulemba('grande'); ?>
+
       <div class="evento"><?= escP(PLATAFORMA['sub']) ?></div>
       <?php if ($erro): ?><div class="erro"><?= $erro ?></div><?php endif; ?>
       <form method="post" id="form-login" novalidate>

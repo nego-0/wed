@@ -21,7 +21,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
 // As páginas da casa que têm cabeçalho — as do casal, a da porta e os dois
 // editores. Cada uma diz onde está o seu título.
 const PAGINAS = [
-  ['index.php',          '.topo h1',       'Gestão de Convidados'],
+  ['index.php',          '.topo h1',       'Convidados'],
   ['mesas.php',          '.topo h1',       'Planta de Mesas'],
   ['orcamento.php',      '.topo h1',       'Orçamento'],
   ['digital.php',        '.topo h1',       'Convite digital'],

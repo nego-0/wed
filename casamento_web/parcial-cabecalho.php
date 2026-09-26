@@ -388,7 +388,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
      em parcial-seletor-tema.php) e a gaveta fica aberta: quem está a comparar
      temas quer ver o efeito sem ter de reabrir o menu de cada vez. */
   window.gavetaMarcarTema = function () {
-    var a = document.documentElement.getAttribute('data-tema') || 'niras';
+    var a = document.documentElement.getAttribute('data-tema') || 'jardim';
     [].forEach.call(gv.querySelectorAll('[data-gv-tema]'), function (b) {
       var eu = b.getAttribute('data-gv-tema') === a;
       b.classList.toggle('on', eu);

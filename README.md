@@ -1,6 +1,6 @@
-# wed
+# Kulemba
 
-Gestão de convidados do casamento de Isabel & Abednego.
+Plataforma de organização de casamentos: convites, convidados, mesas, recepção, bebidas e orçamento.
 
 | Pasta | O que é |
 |---|---|

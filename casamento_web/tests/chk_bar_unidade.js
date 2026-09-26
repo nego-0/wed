@@ -315,7 +315,7 @@ const marca = 'zzu' + Math.floor(Math.random() * 1e5);
   const razao = (a, c) => { const l1 = lum(a), l2 = lum(c);
     return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05); };
   const maus = [];
-  for (const tema of ['niras', 'classico', 'azul', 'escuro']) {
+  for (const tema of ['jardim', 'classico', 'azul', 'escuro']) {
     const cores = await conv.evaluate(async ({ t, i }) => {
       document.documentElement.setAttribute('data-tema', t);
       await new Promise(r => setTimeout(r, 400));

@@ -2,15 +2,15 @@
    estilo.css — Sistema de design
    ------------------------------------------------------------
    DOIS TEMAS, um só conjunto de tokens:
-   • Tema 1 (padrão) — NIRAS: azul-noite + verde institucional.
-     A identidade da entidade que gere o sistema.
+   • Tema 1 (padrão) — Jardim Nocturno: azul-noite + verde institucional.
+     A paleta padrão da plataforma Kulemba.
    • Tema 2 — Clássico: verde-floresta + dourado + marfim.
      A identidade botânica de origem, guardada em [data-tema="classico"].
    Troca-se em <html data-tema="..."> (ver parcial-tema.php). Todo o
    sistema já lê por tokens, por isso retematizar é só trocar os valores.
    ============================================================ */
 :root{
-  /* ---- Tema 1 · NIRAS (padrão) ---- */
+  /* ---- Tema 1 · Jardim Nocturno (padrão) ---- */
   --ink:#12222F; --forest:#16283A; --forest-deep:#0C1925;
   --ivory:#F6F8F4; --cream:#EEF2EA; --sand:#E1E8DB; --card:#FFFFFF;
   --gold:#3C7517; --gold-soft:#63B22B; --gold-pale:#E7F3DA; --gold-deep:#2F5C12;
@@ -343,7 +343,7 @@ a:hover{ text-decoration:underline; }
      gestão — quase um TERÇO do primeiro ecrã, antes de se ver o que quer que
      seja. E variava com o tema sem ninguém ter escolhido isso: no Clássico
      dava 174px, porque a serifa dele é estreita e a mesma frase cabe numa
-     linha; no NIRAS, no Azul e no Escuro a letra é mais larga, a frase quebra
+     linha; no Jardim Nocturno, no Azul e no Escuro a letra é mais larga, a frase quebra
      em duas e o cabeçalho cresce 19px de cada vez. Um cabeçalho que muda de
      altura conforme a fonte do tema não é uma decisão de desenho.
 
@@ -836,17 +836,14 @@ summary:focus-visible,
 .mm-pop hr{ border:0; border-top:1px solid var(--line); margin:.25rem 0; }
 
 /* ============================================================
-   Marca NIRAS (logótipo) e alternador de tema
+   Marca Kulemba (logótipo) e alternador de tema
    ============================================================ */
-.marca-niras{ display:inline-flex; align-items:center; gap:.6rem; line-height:1; }
-.marca-niras .marca-simbolo{ flex:none; display:block; }
-/* Logótipo oficial (ficheiro em assets/logo-niras.*), quando presente. */
-.marca-oficial{ display:block; height:2.3rem; width:auto; max-width:100%; }
-.marca-niras.grande .marca-oficial{ height:3.2rem; }
-/* Duas variantes, a certa por tema: escura nos claros, branca no escuro. */
-.marca-escuro{ display:none; }
-:root[data-tema="escuro"] .marca-claro{ display:none; }
-:root[data-tema="escuro"] .marca-escuro{ display:block; }
+.marca-kulemba{ display:inline-flex; align-items:center; gap:.6rem; line-height:1; }
+.marca-kulemba .marca-simbolo{ flex:none; display:block; }
+/* Logótipo oficial (ficheiro em assets/logo-kulemba.*), quando presente. */
+.marca-oficial{ display:block; width:170px; height:auto; max-width:100%; object-fit:contain; }
+.marca-kulemba.grande .marca-oficial{ width:270px; height:auto; }
+:root[data-tema="escuro"] .marca-oficial,.marca-kulemba.sobre-escuro .marca-oficial{filter:brightness(0) invert(1)}
 
 /* ---------- Pastilha circular de tema (escolha pessoal) ---------- */
 .tema-fab{ position:fixed; right:18px; bottom:18px; z-index:75; }
@@ -879,18 +876,12 @@ summary:focus-visible,
   font-size:var(--t-seccao); color:var(--ink);
 }
 /* Na entrada e na inscrição o logótipo é grande e centrado. */
-.marca-niras.grande{ justify-content:center; gap:.8rem; margin-bottom:.4rem; }
-.marca-niras.grande .marca-wordmark{ font-size:2rem; }
+.marca-kulemba.grande{ justify-content:center; gap:.8rem; margin-bottom:.4rem; }
+.marca-kulemba.grande .marca-wordmark{ font-size:2rem; }
 
-/* O símbolo é sempre o verde institucional; a palavra segue a tinta do tema
-   (azul-noite no NIRAS, verde-floresta no clássico) — legível nos dois. */
+/* A assinatura preserva as cores originais; sobre escuro aparece em branco. */
 
-/* Mostrar a marca certa conforme o tema: NIRAS por defeito, brasão no clássico.
-   O !important é para vencer o .brasao{display:flex} que o <style> de cada
-   página (login/registo) declara depois desta folha. */
-.so-classico{ display:none !important; }
-:root[data-tema="classico"] .so-niras{ display:none !important; }
-:root[data-tema="classico"] .so-classico{ display:revert !important; }
+/* A identidade Kulemba é a mesma nos quatro temas. */
 
 /* Alternador de tema na barra de navegação (mesma pele dos links do topo). */
 .nav-tema{

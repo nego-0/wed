@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 54;
+const ESQUEMA_VERSAO = 55;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2514,6 +2514,12 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         semearConteudosAtendimento($conn);
     }
 
+    // v55 — novo nome para a mesma paleta; preserva a escolha do administrador.
+    if ($versaoAtual < 55) {
+        $conn->query("UPDATE {$P}definicoes SET valor='jardim'
+                      WHERE casamento_id=0 AND chave='sistema.tema' AND valor='niras'");
+    }
+
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
     @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor) VALUES (0,'schema.versao','" . ESQUEMA_VERSAO . "')
                    ON DUPLICATE KEY UPDATE valor='" . ESQUEMA_VERSAO . "'");
@@ -2823,7 +2829,7 @@ function nomeDaAcao(string $chave): array {
 /** Os temas que o sistema oferece (chave => rótulo). O 1.º é o padrão. */
 function temasDisponiveis(): array {
     return [
-        'niras'    => 'NIRAS',
+        'jardim'    => 'Jardim Nocturno',
         'classico' => 'Clássico',
         'azul'     => 'Azul corporativo',
         'escuro'   => 'Escuro',
@@ -2833,7 +2839,7 @@ function temasDisponiveis(): array {
 /** Amostras de cor e uma nota de cada tema — para o seletor e as Definições. */
 function temasAmostras(): array {
     return [
-        'niras'    => ['cores' => ['#16283A', '#63B22B', '#F6F8F4'], 'desc' => 'Azul-noite + verde institucional.'],
+        'jardim'    => ['cores' => ['#16283A', '#63B22B', '#F6F8F4'], 'desc' => 'Azul-noite, verde e marfim.'],
         'classico' => ['cores' => ['#2C4536', '#B4864A', '#FBF8F1'], 'desc' => 'Verde-floresta, dourado e marfim.'],
         'azul'     => ['cores' => ['#123C63', '#2E86C8', '#F4F7FB'], 'desc' => 'Azul corporativo, claro.'],
         'escuro'   => ['cores' => ['#0E1B25', '#8AD24A', '#17232C'], 'desc' => 'Grafite escuro, acento verde.'],
@@ -2843,17 +2849,19 @@ function temasAmostras(): array {
 /**
  * O tema escolhido para o sistema — uma definição da casa (casamento_id=0),
  * que o admin controla. Vale para toda a gente e todas as páginas. Sem escolha,
- * é o NIRAS. Lê-se uma vez por pedido.
+ * é o Jardim Nocturno. Lê-se uma vez por pedido.
  */
 function temaSistema(): string {
     static $t = null;
     if ($t !== null) return $t;
-    $t = 'niras';
+    $t = 'jardim';
     $conn = $GLOBALS['conn'] ?? null;
     if ($conn instanceof mysqli) {
         $r = @$conn->query("SELECT valor FROM " . PREFIXO . "definicoes WHERE casamento_id=0 AND chave='sistema.tema' LIMIT 1");
         if ($r && ($row = $r->fetch_row())) {
             $v = (string)$row[0];
+            // Compatibilidade com cópias de segurança anteriores à mudança de marca.
+            if ($v === 'niras') $v = 'jardim';
             if (isset(temasDisponiveis()[$v])) $t = $v;
         }
     }
