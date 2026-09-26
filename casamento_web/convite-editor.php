@@ -1105,6 +1105,7 @@ function renderPropsJa(){
 /** Propriedades da capa que abre (o envelope selado). */
 function renderPropsCapa(){
   let h = `<div class="sel-nada" style="margin-bottom:.6rem"><b>${esc(CAPA_ROTULO)}</b> — a capa fechada que os convidados tocam para abrir.</div>`;
+  h += estiloDigitalHTML();
   h += campoHTML('capa.monograma');
   h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
         O monograma aparece no selo, no separador do convite e no rodapé.</div>`;
@@ -1116,6 +1117,19 @@ function renderPropsCapa(){
   h += painelLivre(CAPA_ID);
   $('props').innerHTML = h;
   if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
+}
+const ESTILOS_DIGITAIS = [['classico','Clássico botânico'],['kulemba','Kulemba Contemporâneo']];
+function estiloDigitalHTML(){
+  const atual = EST.val['digital.estilo'] || 'classico';
+  const ops = ESTILOS_DIGITAIS.map(([v,r])=>`<option value="${v}"${v===atual?' selected':''}>${esc(r)}</option>`).join('');
+  return `<div class="campo"><label>Linguagem visual</label>
+    <select onchange="mudarEstiloDigital(this.value)">${ops}</select>
+    <div class="dica-md">Muda ícones, efeitos, molduras, bordas e separadores sem alterar o conteúdo.</div></div>`;
+}
+function mudarEstiloDigital(v){
+  if (!ESTILOS_DIGITAIS.some(([k])=>k===v)) v = 'classico';
+  EST.val['digital.estilo'] = v;
+  marcarSujo(true); registarPasso(); recarregarTela();
 }
 // As aberturas do envelope, pela mesma ordem que o servidor aceita.
 const ABERTURAS = [['portas','Portas ao meio'],['subir','A subir'],

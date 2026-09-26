@@ -556,6 +556,31 @@ function catalogoModelosDeCasa(): array {
                                         JSON_UNESCAPED_UNICODE)];
     }
 
+    // Um segundo desenho completo, sobre o mesmo documento editável. A chave
+    // digital.estilo muda a linguagem dos ícones, molduras, separadores e
+    // movimentos sem trocar o HTML nem retirar qualquer ferramenta ao editor.
+    $kulemba = [
+        'digital.estilo' => 'kulemba',
+        'capa.abertura' => 'esvair',
+        'capa.selo' => 'anel',
+        'cer.emblema_civil' => 'aneis',
+        'cer.emblema_religiosa' => 'estrela',
+        'cer.emblema_copo' => 'taca',
+        'cer.ramos' => '0',
+        'cer.moldura' => '1',
+        'cer.tamanho' => '108',
+        'cronograma.icone_civil' => 'aneis',
+        'cronograma.icone_religiosa' => 'estrela',
+        'fx.petalas' => '1',
+    ];
+    $out[] = [
+        'ambito' => 'digital',
+        'nome' => 'Kulemba Contemporâneo',
+        'origem' => false,
+        'descricao' => 'Geometria suave, luz em movimento e molduras contemporâneas inspiradas no símbolo Kulemba.',
+        'defs' => json_encode($kulemba, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+    ];
+
     // Variações do convite impresso — paleta, folhagem e elo, que é o que ali se vê.
     foreach ([['salvia',    'eucalipto', 'coracao',   'Sálvia',     'Verde acinzentado e folha de oliveira.'],
               ['terracota', 'florido',   'losango',   'Terracota',  'Barro quente, com folhagem florida.'],
@@ -813,6 +838,9 @@ function defsPadrao(): array {
         'capa.abertura' => 'portas',
         // O feitio do selo do monograma: cera (de origem), anel, camafeu ou liso.
         'capa.selo' => 'cera',
+        // A linguagem visual troca ornamentos, molduras e efeitos, conservando
+        // a estrutura e todos os campos do editor.
+        'digital.estilo' => 'classico',
         'textos.kicker' => 'Vamos nos casar',
         'textos.hero_sub' => 'O nosso casamento',
         'textos.convite_eyebrow' => 'Venha partilhar a nossa alegria',
@@ -2525,6 +2553,8 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'capa.selo':
             // O feitio do selo. Desconhecido volta ao de origem (cera).
             return in_array($valor, ['cera','anel','camafeu','liso'], true) ? $valor : 'cera';
+        case 'digital.estilo':
+            return in_array($valor, ['classico','kulemba'], true) ? $valor : 'classico';
         case 'cer.emblema_civil':
         case 'cer.emblema_religiosa':
         case 'cer.emblema_copo':
@@ -2876,6 +2906,7 @@ function convitePlaceholders(array $defs): array {
         '{{COVER_HINT}}' => escP($defs['capa.dica']),
         '{{ABERTURA}}' => escP($defs['capa.abertura'] ?? 'portas'),
         '{{SELO}}' => escP($defs['capa.selo'] ?? 'cera'),
+        '{{ESTILO_DIGITAL}}' => escP($defs['digital.estilo'] ?? 'classico'),
         '{{NOIVA}}' => escP($noiva), '{{NOIVO}}' => escP($noivo),
         '{{CASAL_ALT}}' => escP($noiva.' e '.$noivo),
         '{{DIA}}' => $d, '{{ANO}}' => $ano,

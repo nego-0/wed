@@ -18,6 +18,13 @@ A paleta azul-noite, verde e marfim chama-se **Jardim Nocturno** (chave `jardim`
 
 O convite digital da demonstração tem uma história e textos próprios de Lia e Daniel. A pré-visualização ocupa até 640 px e pode abrir numa janela completa. Os quatro enquadramentos respeitam a proporção das fotografias e deixam os rostos visíveis, com as legendas do interlúdio e do acesso fora das imagens. Estas adaptações estão em `assets/demonstracao-convite.css` e não mudam os convites dos casamentos. A dica da paleta fica abaixo do selector; foi retirado o aviso sobre a duração das alterações da demonstração.
 
+O catálogo digital inclui **Kulemba Contemporâneo**, uma segunda linguagem
+visual construída sobre o mesmo convite: reorganiza molduras, ícones,
+separadores e efeitos, mas conserva todas as secções e todos os controlos do
+editor. A escolha “Linguagem visual” aparece nas propriedades da capa. Na
+migração v56, este modelo passa a peça padrão quando a instalação ainda usava
+a origem histórica; uma escolha anterior do administrador é respeitada.
+
 O formulário de login indica apenas **«Entre com o seu email.»**; foi retirada a frase sobre escolher o casamento depois de entrar.
 
 **Modais em qualquer ecrã.** Os formulários, histórico, pagamentos, licenças,

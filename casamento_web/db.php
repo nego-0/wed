@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 55;
+const ESQUEMA_VERSAO = 56;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2518,6 +2518,31 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     if ($versaoAtual < 55) {
         $conn->query("UPDATE {$P}definicoes SET valor='jardim'
                       WHERE casamento_id=0 AND chave='sistema.tema' AND valor='niras'");
+    }
+
+    // v56 — segundo desenho integral do convite digital. Instala-se no
+    // catálogo e passa a origem da casa apenas quando o admin ainda usava a
+    // origem histórica; uma escolha deliberada do admin é preservada.
+    if ($versaoAtual < 56) {
+        require_once __DIR__ . '/personalizacao.php';
+        restaurarModelosDeCasa($conn, [[
+            'ambito' => 'digital', 'nome' => 'Kulemba Contemporâneo'
+        ]]);
+        $atual = 0;
+        $r = @$conn->query("SELECT valor FROM {$P}definicoes
+                            WHERE casamento_id=0 AND chave='modelo.pecaorigem.digital' LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) $atual = (int)$x['valor'];
+        $historico = 0;
+        $r = @$conn->query("SELECT id FROM {$P}modelos
+                            WHERE ambito='digital' AND nome='Isabel & Abednego'
+                              AND criado_por='sistema' ORDER BY id LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) $historico = (int)$x['id'];
+        if ($atual === 0 || $atual === $historico) {
+            $r = @$conn->query("SELECT id FROM {$P}modelos
+                                WHERE ambito='digital' AND nome='Kulemba Contemporâneo'
+                                  AND criado_por='sistema' ORDER BY id LIMIT 1");
+            if ($r && ($x = $r->fetch_assoc())) definirPecaOrigem($conn, 'digital', (int)$x['id']);
+        }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O catálogo inclui o modelo digital Kulemba Contemporâneo',
+         'personalizacao.php', "'nome' => 'Kulemba Contemporâneo'"],
+        ['O editor troca a linguagem visual sem perder os seus campos',
+         'convite-editor.php', 'function mudarEstiloDigital(v)'],
+        ['Molduras, separadores, ícones e luzes compõem o novo modelo',
+         'assets/convite-base.html', 'KULEMBA CONTEMPORÂNEO'],
         ['A marca Kulemba fica centrada no formulário de registo',
          'registo.php', '.reg .marca-kulemba{ display:flex; width:100%; justify-content:center; }'],
         ['A plataforma chama-se Kulemba',
