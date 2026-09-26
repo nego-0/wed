@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Todos os modais respeitam o teclado, as barras móveis e a área visível',
+         'assets/modais.js', 'window.visualViewport'],
+        ['Formulários, histórico e pré-visualizações abrem acima do menu',
+         'assets/modais.css', 'z-index:10000'],
         ['Lista de convites numa linha só',
          'assets/estilo.css', 'grid-template-columns:auto auto 1fr auto'],
         ['Ícone dos botões com medida (linha baixa)',

@@ -11,3 +11,5 @@ $iconeAsset = static function (string $ficheiro): string {
 <link rel="alternate icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="<?= escP($iconeAsset('icone-sistema-180.png')) ?>" sizes="180x180">
 <meta name="theme-color" content="#16261e">
+<link rel="stylesheet" href="<?= escP($iconeAsset('modais.css')) ?>">
+<script defer src="<?= escP($iconeAsset('modais.js')) ?>"></script>

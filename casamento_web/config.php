@@ -138,6 +138,7 @@ function ficheirosApp(): array {
             'assets/icone-sistema-180.png','assets/icone-sistema-192.png',
             'assets/icone-sistema-512.png',
             'assets/janela.css','assets/janela.js',
+            'assets/modais.css','assets/modais.js',
             'assets/mesa-icone.css','assets/mesa-icone.js',
             'assets/atendimento.css','assets/atendimento.js','assets/central.css','assets/central.js',
             'assets/atendimento/avatar-alina.webp','assets/atendimento/avatar-mateus.webp','assets/atendimento/avatar-sofia.webp',

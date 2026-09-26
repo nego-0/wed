@@ -8,6 +8,12 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 
 ## Atendimento, demonstrações e Ajuda
 
+**Modais em qualquer ecrã.** Os formulários, histórico, pagamentos, licenças,
+pré-visualizações e janelas dos editores respeitam a área visível do navegador,
+incluindo as barras móveis e o teclado. Abrem acima do menu e permitem percorrer
+todo o conteúdo quando a altura é reduzida. A regra comum vive em
+`assets/modais.css` e `assets/modais.js`.
+
 A caixa de atendimento nas páginas públicas conduz agora a uma **montra comercial completa** em `atendimento.php`. A página apresenta a proposta de valor, a pessoa que atende, perguntas frequentes e uma demonstração de cada módulo. Os painéis de demonstração são construídos apenas com **nomes e valores fictícios**, estão isolados das APIs de gestão e levam uma marca de água persistente. O bloqueio de selecção, arrasto e menu de contexto desencoraja a cópia casual; como qualquer conteúdo entregue a um navegador pode ser fotografado ou inspeccionado, a protecção efectiva vem de nunca entregar dados reais, segredos nem código administrativo nessa vista.
 
 Em **Casamentos → Atendimento**, o administrador da plataforma pode:
