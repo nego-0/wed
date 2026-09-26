@@ -25,6 +25,12 @@ editor. A escolha “Linguagem visual” aparece nas propriedades da capa. Na
 migração v56, este modelo passa a peça padrão quando a instalação ainda usava
 a origem histórica; uma escolha anterior do administrador é respeitada.
 
+A demonstração pública lê a peça de origem digital definida pelo administrador
+e aplica esse desenho aos dados fictícios de Lia e Daniel. O nome do modelo é
+mostrado na montra. Assim, a demonstração, o padrão oferecido a novos casais e
+o modelo que o administrador publica são a mesma peça; casamentos já existentes
+conservam a origem que lhes ficou associada quando receberam a licença.
+
 O formulário de login indica apenas **«Entre com o seu email.»**; foi retirada a frase sobre escolher o casamento depois de entrar.
 
 **Modais em qualquer ecrã.** Os formulários, histórico, pagamentos, licenças,

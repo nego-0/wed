@@ -1,8 +1,10 @@
 <?php
-// Sem sessão, códigos de convite, modelos privados ou consultas a casamentos.
+// Sem sessão, códigos de convite ou consultas a casamentos: lê apenas a peça
+// de origem global que o administrador publicou para a casa.
+require_once __DIR__.'/db.php';
 require_once __DIR__.'/parcial-demonstracao.php';
 header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src data:; connect-src 'none'; form-action 'none'; frame-ancestors 'self'");
-$d=demonstracaoDefs();
+$d=demonstracaoDefsComModelo($conn);
 $tpl=file_get_contents(__DIR__.'/assets/convite-base.html');
 // O iframe tem origem opaca. Incorporar apenas as fontes locais do modelo
 // mantém a tipografia real sem abrir permissões de acesso à página principal.

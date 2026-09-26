@@ -62,7 +62,27 @@ juntos?';
     foreach(['hero','historia','interludio','acesso'] as $foto)$d['foto.'.$foto]='50 0 100';
     return $d;
 }
-function demonstracaoInterface(string $m): void {
+
+/**
+ * Veste os dados fictícios com o modelo que o administrador definiu como
+ * peça de origem. O desenho vem do modelo; o casal, as fotografias e a
+ * narrativa continuam a ser os da demonstração comercial.
+ */
+function demonstracaoDefsComModelo(mysqli $conn): array {
+    $demo = demonstracaoDefs();
+    $modelo = modeloDeOrigem($conn, 'digital', 0);
+    if (!$modelo) return $demo;
+    $desenho = desenhoDoModeloId($conn, 'digital', (int)$modelo['id']);
+    if (!is_array($desenho)) return $demo;
+    $conteudo = '/^(casal|evento|media|foto|textos|historia|interludio|cronograma|acesso|manual|rsvp|footer)\./';
+    $final = array_replace($demo, $desenho);
+    foreach ($demo as $chave => $valor) {
+        if (preg_match($conteudo, $chave)) $final[$chave] = $valor;
+    }
+    return $final;
+}
+
+function demonstracaoInterface(string $m, string $modeloDigital = ''): void {
     switch($m) {
       case 'convidados': ?>
         <div class="stats"><div class="stat"><div class="n">6</div><div class="l">Convidados</div></div><div class="stat"><div class="n" data-confirmados>4</div><div class="l">Confirmados</div></div><div class="stat"><div class="n" data-pendentes>2</div><div class="l">Pendentes</div></div></div>
@@ -79,7 +99,7 @@ function demonstracaoInterface(string $m): void {
         <div class="demo-papel"><div class="demo-escala"><?=renderCartaoConvite(cartaoDadosEvento($d),['nome'=>'Família Mendes','mesas'=>[['nome'=>'Acácia','n'=>2]]],cartaoPaleta('ouro'),'eucalipto')?></div></div>
         <?php break;
       case 'digital': ?>
-        <div class="demo-digital"><div class="demo-digital-intro"><span class="demo-selo">Uma história contada com carinho</span><h4>Um convite que dá vontade de abrir.</h4><p>Conheça Lia e Daniel, descubra os detalhes do dia e confirme a presença no final.</p><a href="demonstracao-convite.php" target="_blank" rel="noopener">Ver convite numa janela completa ↗</a></div><iframe title="Convite digital de Lia e Daniel — demonstração" loading="lazy" src="demonstracao-convite.php" sandbox="allow-scripts"></iframe></div>
+        <div class="demo-digital"><div class="demo-digital-intro"><span class="demo-selo"><?= $modeloDigital !== '' ? 'Modelo padrão · '.escP($modeloDigital) : 'Uma história contada com carinho' ?></span><h4>Um convite que dá vontade de abrir.</h4><p>Conheça Lia e Daniel, descubra os detalhes do dia e confirme a presença no final.</p><a href="demonstracao-convite.php" target="_blank" rel="noopener">Ver convite numa janela completa ↗</a></div><iframe title="Convite digital de Lia e Daniel — demonstração" loading="lazy" src="demonstracao-convite.php" sandbox="allow-scripts"></iframe></div>
         <?php break;
       case 'porta': ?>
         <div class="stats"><div class="stat"><div class="n" data-presentes>0</div><div class="l">Presentes</div></div><div class="stat"><div class="n" data-esperados>4</div><div class="l">Confirmados</div></div></div>
