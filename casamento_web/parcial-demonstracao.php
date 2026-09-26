@@ -11,6 +11,55 @@ function demonstracaoDefs(): array {
     $d['media.interludio']='assets/convite/galeria/interludio-jardim-solar.jpg';
     $d['media.acesso']='assets/convite/galeria/acesso-jardim-solar.jpg';
     $d['media.musica']='';
+    // Uma história própria, escrita para este casal fictício.
+    $d['capa.dica']='Abram connosco este novo capítulo';
+    $d['textos.kicker']='Lia & Daniel · 17 de Julho de 2027';
+    $d['textos.hero_sub']='Escolhemos caminhar juntos';
+    $d['textos.convite_eyebrow']='O nosso dia também é vosso';
+    $d['textos.lead']='Entre conversas demoradas e passeios sem pressa, encontrámos o nosso lugar um no outro. Agora queremos celebrar este amor com as pessoas que fazem parte da nossa história. Venham brindar connosco!';
+    $d['textos.closing']='Guardámos um lugar à mesa e um abraço para vos receber.';
+    $d['historia.eyebrow']='Como tudo começou';
+    $d['historia.titulo']='Dos pequenos encontros ao grande sim';
+    $d['historia.quote']='A nossa melhor descoberta foi perceber que juntos nos sentimos em casa.';
+    $d['historia.autor']='Lia & Daniel';
+    $d['historia.capitulos']=json_encode([
+        ['t'=>'Uma conversa que ficou', 'x'=>'Conhecemo-nos num almoço de amigos. Entre gargalhadas e histórias, a tarde passou depressa. A conversa continuou muito depois de nos despedirmos.'],
+        ['t'=>'O nosso lugar favorito', 'x'=>'Vieram os passeios pelo jardim, as músicas partilhadas e os planos de domingo. Sem darmos conta, os dias mais simples tornaram-se os mais especiais.'],
+        ['t'=>'Um sim, muitos amanhãs', 'x'=>'O pedido chegou num fim de tarde, com o mesmo sorriso do primeiro encontro. Dissemos sim a uma vida em conjunto. E queremos começar esse caminho convosco.'],
+    ],JSON_UNESCAPED_UNICODE);
+    $d['interludio.quote']='Que nunca nos faltem tempo para nós, motivos para rir e vontade de continuar.';
+    $d['interludio.autor']='Lia & Daniel';
+    $d['interludio.fecho']='De mãos dadas, para o que vier.';
+    $d['evento.civil_hora']='16:00'; $d['evento.hora']='18:00';
+    $d['cronograma.itens']=json_encode([
+        ['h'=>'16H00','p'=>'Tarde','t'=>'O nosso sim','s'=>'Cerimónia no jardim','i'=>'aneis'],
+        ['h'=>'18H00','p'=>'Tarde','t'=>'Um brinde a nós','s'=>'Recepção e fotografias','i'=>'taca'],
+        ['h'=>'19H00','p'=>'Noite','t'=>'Todos à mesa','s'=>'Jantar entre família e amigos','i'=>'buffet'],
+        ['h'=>'21H00','p'=>'Noite','t'=>'A pista é nossa','s'=>'Bolo, música e muitos abraços','i'=>'musica'],
+    ],JSON_UNESCAPED_UNICODE);
+    $d['acesso.eyebrow']='Estamos à vossa espera';
+    $d['acesso.titulo']='O vosso lugar está reservado';
+    $d['acesso.instrucao']='À chegada, apresentem o convite à nossa equipa. Nós ajudamos a encontrar a mesa e a começar a festa.';
+    $d['acesso.nota']='Família Mendes · Mesa Acácia · 2 lugares';
+    $d['manual.eyebrow']='Para aproveitar o dia'; $d['manual.titulo']='Venham celebrar connosco';
+    $d['manual.intro']='Tragam o vosso melhor sorriso. Do resto, cuidamos juntos.';
+    $d['manual.itens']=json_encode([
+        ['i'=>'relogio','x'=>'Cheguem com tempo
+para um **abraço**'],
+        ['i'=>'envelope','x'=>'Tenham o **convite**
+à mão na entrada'],
+        ['i'=>'telemovel','x'=>'Guardem **memórias**
+e vivam o momento'],
+        ['i'=>'taca','x'=>'Brindem, dancem
+e **divirtam-se**'],
+    ],JSON_UNESCAPED_UNICODE);
+    $d['rsvp.titulo']='Vamos celebrar
+juntos?';
+    $d['rsvp.sub']='Digam-nos se podemos contar convosco. Mal podemos esperar por este dia!';
+    $d['rsvp.prazo']='2027-06-30'; $d['rsvp.deadline']='Confirmem até 30 de Junho de 2027';
+    $d['footer.local']='Jardim das Acácias · Luanda';
+    $d['footer.quote']='O melhor deste dia será partilhá-lo convosco.';
+    foreach(['hero','historia','interludio','acesso'] as $foto)$d['foto.'.$foto]='50 0 100';
     return $d;
 }
 function demonstracaoInterface(string $m): void {
@@ -26,11 +75,11 @@ function demonstracaoInterface(string $m): void {
         <?php break;
       case 'impresso':
         $d=demonstracaoDefs(); ?>
-        <div class="demo-toolbar"><label for="demo-paleta">Paleta<select id="demo-paleta"><?php foreach(cartaoPaletas() as $k=>$p): ?><option value="<?=escP($k)?>"><?=escP($p['nome'])?></option><?php endforeach ?></select></label><span class="demo-dica">Experimente as cores do convite impresso.</span></div>
+        <div class="demo-toolbar demo-toolbar-paleta"><label for="demo-paleta">Paleta<select id="demo-paleta" aria-describedby="demo-paleta-dica"><?php foreach(cartaoPaletas() as $k=>$p): ?><option value="<?=escP($k)?>"><?=escP($p['nome'])?></option><?php endforeach ?></select></label><p id="demo-paleta-dica" class="demo-dica">Experimente as cores do convite impresso.</p></div>
         <div class="demo-papel"><div class="demo-escala"><?=renderCartaoConvite(cartaoDadosEvento($d),['nome'=>'Família Mendes','mesas'=>[['nome'=>'Acácia','n'=>2]]],cartaoPaleta('ouro'),'eucalipto')?></div></div>
         <?php break;
       case 'digital': ?>
-        <div class="demo-digital"><div><span class="demo-selo">O convite que o convidado recebe</span><h4>Abra o envelope. Conheça a história.</h4><p>Percorra o convite e experimente a confirmação de presença no final. Esta é a mesma composição usada no convite digital, com dados de exemplo.</p></div><iframe title="Convite digital de Lia e Daniel — demonstração" loading="lazy" src="demonstracao-convite.php" sandbox="allow-scripts"></iframe></div>
+        <div class="demo-digital"><div class="demo-digital-intro"><span class="demo-selo">Uma história contada com carinho</span><h4>Um convite que dá vontade de abrir.</h4><p>Conheça Lia e Daniel, descubra os detalhes do dia e confirme a presença no final.</p><a href="demonstracao-convite.php" target="_blank" rel="noopener">Ver convite numa janela completa ↗</a></div><iframe title="Convite digital de Lia e Daniel — demonstração" loading="lazy" src="demonstracao-convite.php" sandbox="allow-scripts"></iframe></div>
         <?php break;
       case 'porta': ?>
         <div class="stats"><div class="stat"><div class="n" data-presentes>0</div><div class="l">Presentes</div></div><div class="stat"><div class="n" data-esperados>4</div><div class="l">Confirmados</div></div></div>

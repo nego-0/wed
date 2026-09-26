@@ -8,6 +8,8 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 
 ## Atendimento, demonstrações e Ajuda
 
+O convite digital da demonstração tem uma história e textos próprios de Lia e Daniel. A pré-visualização ocupa até 640 px e pode abrir numa janela completa. Os quatro enquadramentos respeitam a proporção das fotografias e deixam os rostos visíveis, com as legendas do interlúdio e do acesso fora das imagens. Estas adaptações estão em `assets/demonstracao-convite.css` e não mudam os convites dos casamentos. A dica da paleta fica abaixo do selector; foi retirado o aviso sobre a duração das alterações da demonstração.
+
 O formulário de login indica apenas **«Entre com o seu email.»**; foi retirada a frase sobre escolher o casamento depois de entrar.
 
 **Modais em qualquer ecrã.** Os formulários, histórico, pagamentos, licenças,

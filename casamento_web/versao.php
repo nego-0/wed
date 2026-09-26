@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O convite da demonstração tem texto próprio e fotografias sem cortes',
+         'assets/demonstracao-convite.css', 'aspect-ratio:1000/1247'],
+        ['A demonstração digital usa uma largura de leitura e pode abrir numa janela completa',
+         'parcial-demonstracao.php', 'Ver convite numa janela completa'],
+        ['A dica de cores alinha por baixo do selector da paleta',
+         'parcial-demonstracao.php', 'demo-toolbar-paleta'],
         ['O login apresenta apenas a instrução de entrada por email',
          'login.php', 'Entre com o seu email.<br>'],
         ['Todos os modais respeitam o teclado, as barras móveis e a área visível',

@@ -1,0 +1,9 @@
+/* Enquadramentos exclusivos da demonstração: as quatro fotos ficam inteiras. */
+#hero .frame{height:auto;min-height:0;aspect-ratio:1000/1247}
+#hero img,.story-photo img,.inter-bg,.acesso-photo img{transform:none!important;object-position:center top}
+#hero .content{padding:0 20px 24px}#hero h1{font-size:clamp(42px,11vw,76px)}#hero .sub{font-size:clamp(16px,3.5vw,20px)}#hero .datebar{margin-top:16px;gap:15px}#hero .datebar .mid{font-size:34px}#hero .datebar .side{font-size:12px}#hero .scrollcue{display:none}#hero .kicker{font-size:8px;letter-spacing:.2em;white-space:normal;width:90%;text-align:center;top:15px}
+.story-photo{aspect-ratio:1300/812;margin-inline:0}.story-photo img{object-fit:contain}
+#interludio{display:block;min-height:0}.inter-bg{position:relative;display:block;height:auto;aspect-ratio:1300/812;object-fit:contain}.inter-veil{display:none}.inter-content{margin:auto;max-width:540px;padding:36px 26px}.inter-content blockquote{text-shadow:none}
+.acesso-photo{height:auto;min-height:0}.acesso-photo img{position:relative;display:block;height:auto;aspect-ratio:1300/812;object-fit:contain}.acesso-veil{display:none}.acesso-head{position:relative;inset:auto;padding:32px 22px 0}.acesso-body.pad{padding-top:30px}
+#dlBtn,#audioBtn{display:none!important}#demo-rsvp{text-align:center;padding:36px 24px;background:var(--ivory);color:var(--forest);max-width:640px;margin:auto}#demo-rsvp button{margin:18px 0;padding:14px 24px;background:var(--forest);color:var(--ivory);font:inherit;border:0;border-radius:30px;cursor:pointer}#demo-rsvp button:disabled{opacity:.75;cursor:default}#demo-resposta:empty{display:none}
+@media(max-width:360px){.pad{padding:58px 20px}#hero .content{padding-bottom:18px}#hero .datebar{margin-top:12px}#hero .datebar .line{flex-basis:32px}.chapter{padding-left:58px}.inter-content{padding:28px 22px}}

@@ -140,7 +140,7 @@ function ficheirosApp(): array {
             'assets/janela.css','assets/janela.js',
             'assets/modais.css','assets/modais.js',
             'assets/mesa-icone.css','assets/mesa-icone.js',
-            'assets/atendimento.css','assets/atendimento.js','assets/central.css','assets/central.js',
+            'assets/demonstracao-convite.css','assets/atendimento.css','assets/atendimento.js','assets/central.css','assets/central.js',
             'assets/atendimento/avatar-alina.webp','assets/atendimento/avatar-mateus.webp','assets/atendimento/avatar-sofia.webp',
             'assets/ajuda/convidados.gif','assets/ajuda/mesas.gif','assets/ajuda/impresso.gif',
             'assets/ajuda/digital.gif','assets/ajuda/porta.gif','assets/ajuda/bar.gif','assets/ajuda/orcamento.gif',
