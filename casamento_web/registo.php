@@ -35,6 +35,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   /* Duas larguras na mesma página: os dados do casal são uma conversa a dois e
      ficam estreitos; a montra dos planos precisa de espaço para se ver. */
   .reg .card{ padding:2.3rem 2.1rem; max-width:560px; margin-left:auto; margin-right:auto; }
+  .reg .marca-kulemba{ display:flex; width:100%; justify-content:center; }
   .reg-planos{ margin-top:2.2rem; }
   .reg-passo{ display:inline-flex; align-items:center; gap:.45rem; font-size:var(--t-etiqueta); font-weight:600;
     letter-spacing:.1em; text-transform:uppercase; color:var(--gold-texto);

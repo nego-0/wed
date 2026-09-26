@@ -10,6 +10,8 @@ O sistema foi desenhado para **coexistir** com a sua lista atual: cria tabelas n
 
 O nome da plataforma é **Kulemba**. A marca junta um coração a duas formas de oferta entrelaçadas e está em `assets/logo-kulemba.png`. É a mesma nos quatro temas; sobre fundos escuros usa uma versão branca por CSS. O símbolo dá origem ao favicon e aos ícones da aplicação. Ver [guia da marca](docs/marca-kulemba.md).
 
+No formulário de registo, a assinatura ocupa uma linha própria e fica centrada na largura do cartão, inclusive em ecrãs estreitos.
+
 A paleta azul-noite, verde e marfim chama-se **Jardim Nocturno** (chave `jardim`). As cores mantêm-se. A migração **v55** converte a definição global que usava a chave anterior, e a escolha guardada no navegador é convertida na primeira abertura. As outras três paletas e a identidade dos casais mantêm-se.
 
 ## Atendimento, demonstrações e Ajuda

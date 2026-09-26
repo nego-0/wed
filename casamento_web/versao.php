@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A marca Kulemba fica centrada no formulário de registo',
+         'registo.php', '.reg .marca-kulemba{ display:flex; width:100%; justify-content:center; }'],
         ['A plataforma chama-se Kulemba',
          'config.php', "'nome'  => 'Kulemba'"],
         ['A nova marca aparece na entrada, inscrição e atendimento',
