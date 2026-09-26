@@ -123,7 +123,7 @@ function ficheirosApp(): array {
             'porteiro.php','convite.php','login.php','auth.php',
             'parcial-cabecalho.php','versao.php','plataforma.php',
             'registo.php','gestao.php','orcamento.php','modelos.php','modelo-prova.php',
-            'licenca.php','ajuda.php','atendimento.php','manifest.php','sw.js','parcial-icone.php','favicon.ico',
+            'licenca.php','ajuda.php','atendimento.php','parcial-demonstracao.php','demonstracao-convite.php','manifest.php','sw.js','parcial-icone.php','favicon.ico',
             // O bar: a montagem, o posto da copa, o do garçom, e o menu que
             // o convidado abre na mesa.
             'bar.php','copa.php','entregas.php','bebidas.php','bar-qr.php',

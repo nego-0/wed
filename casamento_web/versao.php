@@ -93,9 +93,15 @@ function correcoesEsperadas(): array {
          'api.php', "acao === 'sistema_endereco_guardar'"],
 
         // ---- Atendimento comercial, demonstrações e ajuda (esquema v54) ----
+        ['Demonstração interactiva sem gravações e com reposição do estado',
+         'assets/central.js', 'function repor(anunciar)'],
+        ['O convite digital de exemplo usa o modelo real sem acesso às APIs',
+         'demonstracao-convite.php', "connect-src 'none'"],
+        ['A montra respeita quem prefere reduzir as animações',
+         'assets/central.css', 'prefers-reduced-motion:reduce'],
         ['A área pública de atendimento apresenta a plataforma e deixa experimentar cada módulo',
-         'atendimento.php', 'DEMONSTRAÇÃO · DADOS FICTÍCIOS'],
-        ['A demonstração nunca consulta dados de casamentos reais',
+         'atendimento.php', 'demonstracaoInterface($m)'],
+        ['A montra apresenta os indicadores de exemplo definidos pelo admin',
          'atendimento.php', 'function atDados(string $txt)'],
         ['Os noivos têm ajuda apenas para os módulos incluídos na licença',
          'ajuda.php', "isset(\$permitidos[\$x['modulo']])"],

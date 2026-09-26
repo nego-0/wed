@@ -5,10 +5,10 @@ const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0
  const pub=await b.newPage();const erros=[];pub.on('pageerror',e=>erros.push(e.message));await pub.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'});
  ok(await pub.locator('[data-demo]').count()===7,'a montra apresenta os sete módulos');
  ok(await pub.locator('[data-painel]').count()===7,'cada módulo tem uma vista própria');
- ok((await pub.textContent('body')).includes('DADOS FICTÍCIOS'),'a demonstração declara que os dados são fictícios');
+ ok((await pub.textContent('body')).includes('são fictícios'),'a demonstração declara que os dados são fictícios');
  await pub.locator('[data-demo="bar"]').click();
  ok(await pub.locator('[data-painel="bar"]').isVisible(),'é possível mudar de módulo sem sair da visão geral');
- ok((await pub.locator('[data-painel="bar"] .demo-metricas').textContent()).includes('Na copa'),'o módulo usa valores de demonstração, não dados da base');
+ ok(await pub.locator('#demo-bebidas button').count()===3,'o bar apresenta três bebidas de exemplo');
  const ctx=await b.newContext();const p=await ctx.newPage();await p.goto(BASE+'/login.php');await p.fill('input[name=utilizador]','admin@local');await p.fill('input[name=senha]','noivos2026');await p.click('button[type=submit]');await p.waitForLoadState('networkidle');
  const ler=()=>p.evaluate(async()=>await(await fetch('api.php?action=atendimento_ler')).json());let d=await ler();
  ok(d.success&&d.conteudos.filter(x=>x.tipo==='demo').length===7,'o admin recebe as sete demonstrações para editar');

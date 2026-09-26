@@ -14,7 +14,11 @@ incluindo as barras móveis e o teclado. Abrem acima do menu e permitem percorre
 todo o conteúdo quando a altura é reduzida. A regra comum vive em
 `assets/modais.css` e `assets/modais.js`.
 
-A caixa de atendimento nas páginas públicas conduz agora a uma **montra comercial completa** em `atendimento.php`. A página apresenta a proposta de valor, a pessoa que atende, perguntas frequentes e uma demonstração de cada módulo. Os painéis de demonstração são construídos apenas com **nomes e valores fictícios**, estão isolados das APIs de gestão e levam uma marca de água persistente. O bloqueio de selecção, arrasto e menu de contexto desencoraja a cópia casual; como qualquer conteúdo entregue a um navegador pode ser fotografado ou inspeccionado, a protecção efectiva vem de nunca entregar dados reais, segredos nem código administrativo nessa vista.
+A caixa de atendimento nas páginas públicas conduz a uma **montra comercial interactiva** em `atendimento.php`, com fotografias de exemplo, ícones do sistema, animações discretas e perguntas frequentes editáveis. As animações respeitam a preferência de movimento reduzido.
+
+A demonstração não tem marcas de água nem bloqueios de selecção ou menu de contexto. Usa os componentes visuais do sistema, o renderizador do convite impresso e o modelo completo do convite digital. As vistas de gestão são adaptadas para permitir acções limitadas com dados fictícios: confirmar presença, procurar convidados, mudar mesas, registar entradas, acompanhar um pedido da copa à entrega e registar pagamentos. Os indicadores acompanham as acções e **Recomeçar demonstração** repõe todo o exemplo. A paleta do convite impresso e a confirmação do convite digital também podem ser experimentadas.
+
+O estado vive apenas na memória do navegador; não usa as APIs de gestão nem grava dados de casamentos. `demonstracao-convite.php` não abre sessão nem consulta a base de dados: renderiza um casal fictício, com fotografias da galeria de exemplos e um QR sem validade. O iframe limita os scripts e bloqueia pedidos às APIs e o envio de formulários através de CSP. Os títulos, textos, indicadores ilustrativos e a disponibilidade de cada módulo continuam editáveis pelo admin. As acções e os dados usados na simulação são definidos em `parcial-demonstracao.php` e `assets/central.js`.
 
 Em **Casamentos → Atendimento**, o administrador da plataforma pode:
 
