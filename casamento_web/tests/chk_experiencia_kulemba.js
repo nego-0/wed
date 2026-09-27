@@ -20,15 +20,17 @@ const USER = process.env.TEST_USER || 'admin', PASSWORD = process.env.TEST_PASSW
       await snap(url.slice(1,-4));
     }
     console.log('PASS: entrada, registo e demonstração usam as novas imagens');
+    await page.goto(BASE+'/registo.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('[data-exemplo],[data-exemplo-pac]').count(),0,'o registo não mostra exemplos dos módulos');
+    await page.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.demo-app-topo').count(),7,'cada módulo reproduz o cabeçalho da aplicação');
     await page.goto(BASE+'/login.php',{waitUntil:'networkidle'}); await page.fill('[name=utilizador]',USER); await page.fill('[name=senha]',PASSWORD); await page.click('button[type=submit]'); await page.waitForLoadState('networkidle');
     await page.goto(BASE+'/plataforma.php?vista=atendimento',{waitUntil:'networkidle'});
-    assert.equal(await page.locator('.admin-nav a').count(),9); assert(await page.locator('.admin-nav a.ativo').getAttribute('href').then(x=>x.includes('atendimento')));
+    assert.equal(await page.locator('.topo .nav a:not([href="logout.php"])').count(),9); assert(await page.locator('.topo .nav a.ativo').getAttribute('href').then(x=>x.includes('atendimento')));
     assert(await page.locator('#vista-atendimento').isVisible());
-    await page.goto(BASE+'/modelos.php',{waitUntil:'domcontentloaded'}); await page.locator('.admin-nav').waitFor(); assert.equal(await page.locator('.admin-nav a').count(),9); assert.match(await page.locator('.admin-nav a.ativo').innerText(),/Modelos/);
+    await page.goto(BASE+'/modelos.php',{waitUntil:'domcontentloaded'}); await page.locator('.topo .nav').waitFor(); assert.equal(await page.locator('.topo .nav a:not([href="logout.php"])').count(),9); assert.match(await page.locator('.topo .nav a.ativo').innerText(),/Modelos/);
     console.log('PASS: o menu administrativo é único e abre a vista pedida');
     const abriu=await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}).then(r=>r.json()));
     assert.equal(abriu.success,true,'abrir o casamento de teste');
-    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.aj-card').count(),7); assert.equal(await page.locator('.aj-submenu button').count(),8);
+    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.aj-card').count(),7); assert.equal(await page.locator('.aj-submenu button').count(),8); assert.equal(await page.locator('.aj-sticker').count(),7); assert.equal(await page.locator('video').count(),0); assert.equal((await page.locator('body').innerText()).includes('Interface real'),false);
     await page.fill('#aj-busca','convidado mesa'); assert((await page.locator('.aj-card:visible').count())>=1); assert.match(await page.locator('#aj-resultado').innerText(),/guia/);
     await page.fill('#aj-busca',''); await page.locator('[data-aj-modulo="bar"]').click(); assert.equal(await page.locator('.aj-card:visible').count(),1); assert.match(await page.locator('.aj-card:visible').textContent(),/ACOMPANHAR UM PEDIDO/);
     await page.setViewportSize({width:390,height:844}); await page.reload({waitUntil:'networkidle'}); assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);

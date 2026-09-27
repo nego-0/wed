@@ -21,14 +21,18 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
-        ['As áreas do administrador partilham uma única navegação',
-         'parcial-cabecalho.php', 'function menuAdministracao(): array'],
+        ['As áreas do administrador ocupam as pastilhas do próprio cabeçalho',
+         'parcial-cabecalho.php', 'as próprias pastilhas do cabeçalho'],
         ['Login, registo e demonstração apresentam a campanha visual Kulemba',
          'assets/entrada.css', 'primeira impressão usa a linguagem editorial Kulemba'],
         ['A Ajuda pesquisa tarefas e navega apenas pelos módulos da licença',
          'assets/ajuda.js', 'data-aj-modulo'],
-        ['As animações da Ajuda são regravadas a partir da interface real',
-         'tests/gerar-ajuda.js', 'Regrava as animações da Ajuda'],
+        ['A Ajuda transforma os passos editáveis em stickers animados',
+         'ajuda.php', 'function passosDoSticker'],
+        ['O registo não apresenta galerias de exemplos nos módulos',
+         'registo.php', 'exemplos: false'],
+        ['A demonstração reproduz o cabeçalho e as pastilhas da aplicação',
+         'atendimento.php', 'class="demo-app-topo"'],
         ['A semente da Ajuda explica operações concretas de cada módulo',
          'db.php', 'function ajudaOperacionalPadrao'],
         ['Kulemba Contemporâneo tem composição editorial, fotografias enquadradas e capa em arco',

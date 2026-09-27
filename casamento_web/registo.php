@@ -388,7 +388,7 @@ async function carregarPlanos(){
                  || (d.catalogo.modulos || []).some(m => m.ativo && m.escaloes.some(e => e.ativo));
     if (!temAlgo) throw new Error('catálogo vazio');
     Planos.montar('reg-planos', d.catalogo,
-                  { moeda: d.moeda, aoMudar: porteiroConformePlano });
+                  { moeda: d.moeda, exemplos: false, aoMudar: porteiroConformePlano });
     porteiroConformePlano();
   } catch (e) {
     // Sem preçário não se pode escolher plano nenhum, mas a inscrição não pode

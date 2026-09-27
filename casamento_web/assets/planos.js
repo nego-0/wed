@@ -23,6 +23,7 @@
   var AO_MUDAR = null;
   var ALVO = null;
   var COM_PACOTES = true;
+  var MOSTRAR_EXEMPLOS = true;
   var PRAZOS = [];                         // prazos de licença, com o seu factor
   // 'prazo' são os meses escolhidos; é ele que multiplica todos os preços.
   // 'aMedida' diz se o casal abriu a secção dos módulos avulso. Fechada por
@@ -260,8 +261,7 @@
         +     (sel.pacote === p.id ? '<i data-ico="visto"></i> Escolhido'
                               : 'Escolher ' + esc(p.nome)) + '</button>'
         // Ver o que este pacote traz, em imagens — uma por módulo incluído.
-        +   '<button type="button" class="pl-exemplo-lig" data-exemplo-pac="' + p.id + '">'
-        +     'Ver exemplo</button>'
+        +   (MOSTRAR_EXEMPLOS ? '<button type="button" class="pl-exemplo-lig" data-exemplo-pac="' + p.id + '">Ver exemplo</button>' : '')
         + '</div>'
         + '</div>';
     });
@@ -315,7 +315,7 @@
          // A captura do módulo a trabalhar, atrás de um botão. Mostrada de
          // enfiada, empurrava tudo para baixo; escondida atrás de um botão,
          // continua a um clique de quem a quer ver — e não estorva quem não.
-         + (m.imagem
+         + (MOSTRAR_EXEMPLOS && m.imagem
              ? '<button type="button" class="btn btn-linha btn-sm pl-exemplo"'
                + ' data-exemplo="' + esc(m.chave) + '">Ver exemplo</button>'
              : '')
@@ -658,6 +658,7 @@
       MOEDA = opcoes.moeda || 'Kz';
       AO_MUDAR = opcoes.aoMudar || null;
       COM_PACOTES = opcoes.pacotes !== false;
+      MOSTRAR_EXEMPLOS = opcoes.exemplos !== false;
       PRAZOS  = (CAT.prazos || []).slice();
       sel = { pacote: 0, escaloes: {}, prazo: opcoes.prazo || 0 };
 
