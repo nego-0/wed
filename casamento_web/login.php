@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/entrada.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:center; justify-content:center; padding:1.25rem; }
@@ -94,8 +95,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   .pw-olho:hover{ color:var(--gold-texto); }
 </style>
 </head>
-<body>
+<body class="entrada-publica login-publica">
+<main class="entrada-shell">
+  <section class="entrada-visual" aria-label="Organização elegante do casamento">
+    <img src="<?= asset('assets/marketing/login-kulemba.webp') ?>" alt="Um casal prepara convites e a organização do casamento" fetchpriority="high">
+    <div class="entrada-orbita um"><span data-ico="carta"></span>Convites personalizados</div>
+    <div class="entrada-orbita dois"><span data-ico="mesa"></span>Mesas organizadas</div>
+    <div class="entrada-orbita tres"><span data-ico="pessoas"></span>Convidados confirmados</div>
+    <div class="entrada-mensagem"><b>O vosso dia, organizado com serenidade.</b><span>Convites, convidados, mesas, orçamento e equipas a trabalhar no mesmo lugar.</span></div>
+  </section>
   <div class="login">
+    <a class="entrada-voltar" href="atendimento.php">← Conhecer a plataforma</a>
     <div class="card">
       <?php marcaKulemba('grande'); ?>
 
@@ -121,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Ainda não tem conta? <a href="registo.php" style="color:var(--gold-texto)">Inscreva o seu casamento</a>.</div>
     </div>
   </div>
+</main>
 <script>
   const $ = id => document.getElementById(id);
   // A verificação que falta antes de ir ao servidor: assinala, por campo e em

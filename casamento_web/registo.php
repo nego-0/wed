@@ -28,6 +28,7 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/planos.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/atendimento.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/entrada.css') ?>" rel="stylesheet">
 <?php include __DIR__ . '/parcial-tema.php'; ?>
 <style>
   body{ display:flex; align-items:flex-start; justify-content:center; padding:1.5rem 1.25rem; }
@@ -112,8 +113,12 @@ if (podeEntrar()) { header('Location: index.php'); exit; }
   @media (max-width:520px){ .par{ grid-template-columns:1fr; } .reg .card{ padding:1.8rem 1.3rem; } }
 </style>
 </head>
-<body>
+<body class="entrada-publica registo-publico">
   <div class="reg">
+    <section class="reg-hero">
+      <img src="<?= asset('assets/marketing/registo-kulemba.webp') ?>" alt="Casal a preparar o casamento em conjunto" fetchpriority="high">
+      <div class="reg-hero-copia"><?php marcaKulemba('sobre-escuro'); ?><h1>Comecem por aquilo que já sabem.</h1><p>Registem o casamento agora. A data, os espaços, os convidados e os restantes detalhes podem crescer convosco.</p></div>
+    </section>
     <form class="card" id="formulario" novalidate autocomplete="on" onsubmit="return false">
       <?php marcaKulemba('grande'); ?>
       <div class="tit">Inscrever o nosso casamento</div>
