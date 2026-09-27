@@ -20,23 +20,26 @@ sua página própria dentro da mesma navegação.
 O administrador da plataforma pode rever o conjunto completo. A página permite
 pesquisar várias palavras e filtrar por módulo. Cada cabeçalho escrito no
 conteúdo torna-se um tópico oficial; as linhas numeradas formam uma resposta
-verificada, fácil de seguir. O tópico mostra uma captura real da operação e o
-elemento `picture` escolhe a versão de computador ou telemóvel conforme o ecrã.
-O conteúdo continua editável em Administração → Atendimento.
+verificada, fácil de seguir. Cada passo abre a sua narração detalhada e um GIF
+da interface real. O elemento `picture` escolhe o GIF de computador ou de
+telemóvel conforme o ecrã. O conteúdo continua editável em Administração →
+Atendimento: escreva `||` entre o título curto e a narração do passo.
 
-A migração v57 substitui apenas o texto genérico que veio da semente antiga.
-Materiais que o administrador já editou não são alterados.
+A migração v58 acrescenta as narrações apenas aos materiais que ainda têm o
+texto exacto da versão 57. Materiais que o administrador já editou não são
+alterados.
 
 ## Actualizar as capturas
 
 O administrador edita o campo de passos em **Administração → Atendimento →
-Materiais de ajuda**. Linhas como `1. Abra Mesas` tornam-se imediatamente passos
-do tópico, na ordem em que foram escritas. Uma linha sem número funciona como
-título da operação seguinte.
+Materiais de ajuda**. Linhas como `1. Abra Mesas || No menu, escolha Mesas`
+tornam-se imediatamente passos: antes de `||` fica o título, depois fica a
+narração expandida. Uma linha sem número funciona como título da operação.
 
 Depois de uma alteração visual ao produto, execute
 `node tests/gerar-capturas-ajuda.js` contra uma instalação com dados de exemplo.
-O script abre cada módulo real, reproduz as operações relevantes e grava 28
-JPEG em `assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile.
-As capturas têm um movimento suave de enquadramento na Ajuda; dispositivos com
-movimento reduzido recebem a mesma imagem estática.
+O script abre cada módulo real e grava 28 JPEG em
+`assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Em
+seguida chama `tests/gerar-gifs-ajuda.py`, que transforma essas capturas nos 84
+GIFs de `assets/ajuda/passos/`: três passos, dois tamanhos e dois tópicos por
+módulo. Defina `PYTHON` se o executável não estiver disponível como `python`.

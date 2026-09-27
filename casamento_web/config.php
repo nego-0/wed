@@ -117,7 +117,7 @@ function ficheirosApp(): array {
     // partilhado ficaram de fora quando foram criados, e por isso mexer neles
     // não mudava a assinatura — que existe justamente para dizer se o que está
     // instalado é o que se julga.
-    return ['index.php','api.php','db.php','config.php','personalizacao.php','pecas.php',
+    $ficheiros = ['index.php','api.php','db.php','config.php','personalizacao.php','pecas.php',
             'editor-cartao.php','convite-editor.php','convite-digital.php','mesas.php',
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
@@ -144,25 +144,19 @@ function ficheirosApp(): array {
             'assets/entrada.css','assets/ajuda.css','assets/ajuda.js',
             'assets/marketing/login-kulemba.webp','assets/marketing/registo-kulemba.webp','assets/marketing/demonstracao-kulemba.webp',
             'assets/atendimento/avatar-alina.webp','assets/atendimento/avatar-mateus.webp','assets/atendimento/avatar-sofia.webp',
-            'assets/ajuda/capturas/convidados-1-desktop.jpg','assets/ajuda/capturas/convidados-1-mobile.jpg',
-            'assets/ajuda/capturas/convidados-2-desktop.jpg','assets/ajuda/capturas/convidados-2-mobile.jpg',
-            'assets/ajuda/capturas/mesas-1-desktop.jpg','assets/ajuda/capturas/mesas-1-mobile.jpg',
-            'assets/ajuda/capturas/mesas-2-desktop.jpg','assets/ajuda/capturas/mesas-2-mobile.jpg',
-            'assets/ajuda/capturas/impresso-1-desktop.jpg','assets/ajuda/capturas/impresso-1-mobile.jpg',
-            'assets/ajuda/capturas/impresso-2-desktop.jpg','assets/ajuda/capturas/impresso-2-mobile.jpg',
-            'assets/ajuda/capturas/digital-1-desktop.jpg','assets/ajuda/capturas/digital-1-mobile.jpg',
-            'assets/ajuda/capturas/digital-2-desktop.jpg','assets/ajuda/capturas/digital-2-mobile.jpg',
-            'assets/ajuda/capturas/porta-1-desktop.jpg','assets/ajuda/capturas/porta-1-mobile.jpg',
-            'assets/ajuda/capturas/porta-2-desktop.jpg','assets/ajuda/capturas/porta-2-mobile.jpg',
-            'assets/ajuda/capturas/bar-1-desktop.jpg','assets/ajuda/capturas/bar-1-mobile.jpg',
-            'assets/ajuda/capturas/bar-2-desktop.jpg','assets/ajuda/capturas/bar-2-mobile.jpg',
-            'assets/ajuda/capturas/orcamento-1-desktop.jpg','assets/ajuda/capturas/orcamento-1-mobile.jpg',
-            'assets/ajuda/capturas/orcamento-2-desktop.jpg','assets/ajuda/capturas/orcamento-2-mobile.jpg',
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
             'assets/so-ver.js',
             'assets/convite-base.html'];
+    // As imagens de ajuda são geradas; incluí-las por padrão evita manter uma
+    // lista manual de 112 ficheiros sempre que os passos mudam.
+    foreach (['assets/ajuda/capturas/*.jpg','assets/ajuda/passos/*.gif'] as $padrao) {
+        foreach (glob(__DIR__.'/'.$padrao) ?: [] as $ficheiro) {
+            $ficheiros[] = str_replace('\\','/',substr($ficheiro,strlen(__DIR__)+1));
+        }
+    }
+    return $ficheiros;
 }
 
 /**

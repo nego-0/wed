@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 57;
+const ESQUEMA_VERSAO = 58;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -506,8 +506,8 @@ function semearAtendimento(mysqli $conn): void {
     }
 }
 
-/** Conteúdo comercial e guias editáveis, comum a toda a plataforma. */
-function ajudaOperacionalPadrao(string $modulo): string {
+/** Texto sem narração usado pela versão 57; permite migrar sem tocar em edições do admin. */
+function ajudaOperacionalAnterior(string $modulo): string {
     return [
       'convidados' => "CRIAR UM CONVITE\n1. Abra Convidados e escolha Novo convite.\n2. Indique a família, os lugares e os convidados.\n3. Guarde e envie o código ou ligação.\n\nCONFIRMAR E EDITAR\n1. Pesquise o nome.\n2. Abra o convite e actualize a resposta.\n3. Confirme o resumo no topo.",
       'mesas' => "CRIAR UMA MESA\n1. Abra Mesas e escolha Nova mesa.\n2. Dê-lhe nome, forma e capacidade.\n3. Arraste-a para o lugar certo na planta.\n\nSENTAR CONVIDADOS\n1. Escolha a pessoa na lista.\n2. Abra o selector de mesa.\n3. Confirme a lotação depois da mudança.",
@@ -516,6 +516,21 @@ function ajudaOperacionalPadrao(string $modulo): string {
       'porta' => "REGISTAR UMA ENTRADA\n1. Pesquise a família ou leia o código.\n2. Confirme as pessoas que chegaram.\n3. Registe a entrada e veja o total actualizar.\n\nCORRIGIR UMA ENTRADA\n1. Volte a abrir o convite.\n2. Retire a marca da pessoa errada.\n3. Confirme quem ainda falta.",
       'bar' => "PREPARAR O MENU\n1. Abra Bar e crie as categorias.\n2. Adicione bebidas, quantidades e limites.\n3. Abra o serviço quando a equipa estiver pronta.\n\nACOMPANHAR UM PEDIDO\n1. O convidado envia o pedido.\n2. A copa aceita e prepara.\n3. O garçom recolhe e confirma a entrega.",
       'orcamento' => "REGISTAR UMA DESPESA\n1. Abra Orçamento e escolha Nova despesa.\n2. Indique categoria, fornecedor, previsto e prazo.\n3. Guarde e registe cada pagamento.\n\nACOMPANHAR O TOTAL\n1. Compare previsto, contratado e pago.\n2. Filtre por categoria ou estado.\n3. Reveja os valores ainda por pagar.",
+    ][$modulo] ?? '';
+}
+
+/** Conteúdo comercial e guias editáveis, comum a toda a plataforma.
+ *  Em cada passo, o texto depois de || é a narração que abre com o GIF.
+ */
+function ajudaOperacionalPadrao(string $modulo): string {
+    return [
+      'convidados' => "CRIAR UM CONVITE\n1. Abra Convidados e escolha Novo convite. || No menu superior, entre em Convidados. Prima Novo convite para abrir a ficha sem sair da lista.\n2. Indique a família, os lugares e os convidados. || Escreva o nome da família, defina o número de lugares e acrescente cada pessoa pelo nome. Confirme os dados antes de avançar.\n3. Guarde e envie o código ou ligação. || Prima Guardar. No cartão criado, copie a ligação ou o código individual e envie-o apenas à família correspondente.\n\nCONFIRMAR E EDITAR\n1. Pesquise o nome. || Use a pesquisa no topo da lista de convidados e escreva parte do nome da pessoa ou da família.\n2. Abra o convite e actualize a resposta. || Abra o cartão encontrado, escolha a resposta recebida e ajuste os acompanhantes quando necessário.\n3. Confirme o resumo no topo. || Depois de guardar, verifique se os totais de confirmados, recusados e por responder foram actualizados.",
+      'mesas' => "CRIAR UMA MESA\n1. Abra Mesas e escolha Nova mesa. || Entre em Mesas e abra o bloco Nova mesa acima da planta. O formulário aparece no mesmo ecrã.\n2. Dê-lhe nome, forma e capacidade. || Preencha um nome fácil de reconhecer, escolha a forma e indique quantos lugares a mesa comporta.\n3. Arraste-a para o lugar certo na planta. || Guarde a mesa e arraste-a pela planta até à posição real da sala. O sistema conserva a nova posição.\n\nSENTAR CONVIDADOS\n1. Escolha a pessoa na lista. || Abra a lista Pessoas ou use a pesquisa para encontrar exactamente o convidado que pretende sentar.\n2. Abra o selector de mesa. || Prima a mesa indicada junto ao nome. No telemóvel, o selector abre ao centro para que todas as opções fiquem visíveis.\n3. Confirme a lotação depois da mudança. || Escolha a mesa e confira o contador de lugares. Se ficar cheia, distribua primeiro outra pessoa antes de continuar.",
+      'impresso' => "ESCOLHER E PERSONALIZAR\n1. Abra Convite impresso e escolha a peça. || Entre em Convite impresso e seleccione o cartão, envelope ou outra peça que pretende preparar.\n2. Entre no editor para mudar texto, cor e composição. || Abra o editor, seleccione cada elemento e ajuste o texto, a cor, a tipografia e a posição na pré-visualização.\n3. Guarde uma versão identificada. || Prima Guardar versão, atribua um nome claro à prova e confirme para poder compará-la ou recuperá-la depois.\n\nENVIAR À GRÁFICA\n1. Abra a peça em vigor. || Na lista de peças, abra a versão marcada Em vigor e confirme que é exactamente a aprovada pelo casal.\n2. Reveja a prova visual. || Verifique nomes, data, horas, moradas, margens e cores em todas as faces antes de descarregar.\n3. Descarregue o respectivo manual de impressão. || Abra o Manual de impressão da peça e entregue-o com o ficheiro à gráfica; contém formato, sangria, papel e acabamento.",
+      'digital' => "PUBLICAR O CONVITE\n1. Abra Convite digital e entre no editor. || No menu, escolha Convite digital e abra o editor do modelo que será enviado aos convidados.\n2. Ajuste capa, fotografias, textos e secções. || Percorra as áreas do editor, substitua as fotografias e reveja textos, locais e ordem das secções na pré-visualização.\n3. Guarde e marque a versão que os convidados recebem. || Guarde uma versão com nome e aplique-a como versão em vigor. Só essa versão aparece na ligação pública.\n\nTESTAR COMO CONVIDADO\n1. Abra a pré-visualização. || Use Pré-visualizar para abrir o convite com a mesma largura e navegação que o convidado verá no telemóvel.\n2. Percorra todas as secções. || Desça da capa até ao fim e confirme fotografias, textos, mapas, horários e botões em cada secção.\n3. Teste a confirmação antes de partilhar. || Abra o formulário de confirmação, valide os campos e faça uma resposta de teste antes de copiar a ligação definitiva.",
+      'porta' => "REGISTAR UMA ENTRADA\n1. Pesquise a família ou leia o código. || Na página Porta, escreva o nome da família ou use o leitor para abrir directamente o convite apresentado à entrada.\n2. Confirme as pessoas que chegaram. || Compare os nomes no ecrã com o grupo presente e marque apenas as pessoas que acabaram de chegar.\n3. Registe a entrada e veja o total actualizar. || Confirme a entrada. O total de presentes muda imediatamente e o registo fica disponível no histórico.\n\nCORRIGIR UMA ENTRADA\n1. Volte a abrir o convite. || Pesquise novamente a família na lista de entradas para ver todas as pessoas e o estado actual.\n2. Retire a marca da pessoa errada. || Desmarque somente a pessoa registada por engano e confirme a correcção quando o sistema pedir.\n3. Confirme quem ainda falta. || Abra a lista de faltas e confirme que a pessoa regressou ao grupo certo e que os totais estão correctos.",
+      'bar' => "PREPARAR O MENU\n1. Abra Bar e crie as categorias. || Entre em Bar, abra Categorias e crie grupos simples, como Água, Refrigerantes, Cervejas e Cocktails.\n2. Adicione bebidas, quantidades e limites. || Em cada categoria, registe a bebida, a quantidade disponível e os limites que evitam pedidos indevidos.\n3. Abra o serviço quando a equipa estiver pronta. || Confirme o menu e o stock com a copa; depois active o serviço para tornar os pedidos disponíveis aos convidados.\n\nACOMPANHAR UM PEDIDO\n1. O convidado envia o pedido. || No menu da mesa, o convidado escolhe as bebidas, revê a selecção e confirma o pedido uma única vez.\n2. A copa aceita e prepara. || Na Copa, a equipa abre o novo pedido, aceita-o e marca a preparação para todos acompanharem o estado.\n3. O garçom recolhe e confirma a entrega. || Em Entregas, o garçom assume o pedido, leva-o à mesa indicada e marca Entregue apenas depois da entrega.",
+      'orcamento' => "REGISTAR UMA DESPESA\n1. Abra Orçamento e escolha Nova despesa. || Entre em Orçamento e prima Nova despesa para abrir a ficha completa por cima da página.\n2. Indique categoria, fornecedor, previsto e prazo. || Escolha a categoria, identifique o fornecedor e preencha o valor previsto e a data limite com base no acordo.\n3. Guarde e registe cada pagamento. || Guarde a despesa e acrescente cada parcela paga na própria ficha, com data e comprovativo quando existir.\n\nACOMPANHAR O TOTAL\n1. Compare previsto, contratado e pago. || Leia os cartões do topo para detectar rapidamente diferenças entre o plano, o valor acordado e o que já saiu.\n2. Filtre por categoria ou estado. || Use os filtros para isolar uma categoria, pagamentos atrasados ou despesas ainda sem fornecedor definido.\n3. Reveja os valores ainda por pagar. || Abra as despesas pendentes, confirme as próximas datas e corrija parcelas antes de partilhar o resumo.",
     ][$modulo] ?? '';
 }
 
@@ -2564,6 +2579,18 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                                   WHERE tipo='ajuda' AND modulo=?
                                     AND conteudo LIKE '1. Abra o módulo no menu principal.%'");
             if ($st) { $st->bind_param('ss', $texto, $modulo); @$st->execute(); }
+        }
+    }
+
+    // v58 — cada passo passa a ter uma narração detalhada associada ao GIF.
+    // A igualdade exacta protege todo o material que já foi editado pelo admin.
+    if ($versaoAtual < 58) {
+        foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {
+            $anterior = ajudaOperacionalAnterior($modulo);
+            $texto = ajudaOperacionalPadrao($modulo);
+            $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
+                                  WHERE tipo='ajuda' AND modulo=? AND conteudo=?");
+            if ($st) { $st->bind_param('sss', $texto, $modulo, $anterior); @$st->execute(); }
         }
     }
 
