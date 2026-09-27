@@ -9,7 +9,7 @@
 /** As entradas do menu, por ordem. A chave é o "id" usado em $ativo. */
 function menuPrincipal(): array {
     return [
-        'painel'  => ['index.php',           'Painel'],
+        'painel'  => ['index.php',           'Convidados'],
         'mesas'   => ['mesas.php',           'Mesas'],
         'grafica' => ['graficas.php',        'Convite impresso'],
         'convite' => ['digital.php',         'Convite digital'],

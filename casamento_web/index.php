@@ -16,7 +16,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
 <head>
 <?php include __DIR__ . '/parcial-icone.php'; ?>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel · <?= escP($CAS['casal']) ?></title>
+<title>Convidados · <?= escP($CAS['casal']) ?></title>
 <link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
 <link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">

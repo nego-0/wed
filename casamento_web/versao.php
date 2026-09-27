@@ -29,6 +29,8 @@ function correcoesEsperadas(): array {
          'assets/ajuda.js', 'data-aj-modulo'],
         ['Cada passo da Ajuda abre a sua narração e o GIF responsivo',
          'ajuda.php', 'function gifAjuda'],
+        ['O módulo principal chama-se Convidados no menu e no título',
+         'parcial-cabecalho.php', "'Convidados'"],
         ['O registo não apresenta galerias de exemplos nos módulos',
          'registo.php', 'exemplos: false'],
         ['A demonstração reproduz o cabeçalho e as pastilhas da aplicação',

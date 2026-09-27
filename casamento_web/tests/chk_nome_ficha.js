@@ -26,7 +26,7 @@ const DO_CONVITE = { noiva: 'ZZFalsa' + marca, noivo: 'ZZErrado' + marca };
 
 // As páginas da APLICAÇÃO. Em todas, o nome vem da ficha.
 const PAGINAS = [
-  ['index.php', 'Painel'], ['mesas.php', 'Mesas'], ['orcamento.php', 'Orçamento'],
+  ['index.php', 'Convidados'], ['mesas.php', 'Mesas'], ['orcamento.php', 'Orçamento'],
   ['bar.php', 'Bar'], ['copa.php', 'Copa'], ['entregas.php', 'Entregas'],
   ['porteiro.php', 'Porta'], ['gestao.php', 'Gestão'], ['licenca.php', 'Licença'],
   ['impressos.php', 'Impressos'], ['digital.php', 'Digital'], ['graficas.php', 'Gráficas'],

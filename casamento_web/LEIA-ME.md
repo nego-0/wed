@@ -99,7 +99,7 @@ Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta
 | `modelo-prova.php` | A cara de um modelo do convite impresso, sozinha numa folha — é o que a grelha dos modelos encolhe para miniatura. |
 | `modelos.php` | **Modelos de convite da casa:** os desenhos prontos que o admin oferece a todos os casais, com criação a partir de um casamento aberto, publicação, importação e exportação. |
 | `versao.php` | **O que está mesmo instalado neste servidor:** a assinatura do conteúdo, a versão do esquema da base, e uma marca por cada alteração recente. |
-| `index.php` | Painel de administração (convites, convidados, mesas, importação, QR). |
+| `index.php` | Convidados: convites, confirmações, importação e QR. |
 | `mesas.php` | Planta visual das mesas: posição (arrastar), capacidade e ocupação, com atribuição de convites. |
 | `convite-editor.php` | **Personalização completa do convite digital**: textos, história, cronograma, manual, fotos, música, cores e efeitos — com pré-visualização ao vivo. |
 | `personalizacao.php` | Motor da personalização: valores originais, validação e composição do convite. |

@@ -137,7 +137,7 @@ $CAS  = casalDaFicha($conn);
       <?php endif; ?>
     </div>
     <nav class="nav">
-      <?php if (ehAdmin()): ?><a href="index.php">Painel</a><a href="mesas.php">Mesas</a><?php endif; ?>
+      <?php if (ehAdmin()): ?><a href="index.php">Convidados</a><a href="mesas.php">Mesas</a><?php endif; ?>
       <a href="logout.php">Sair</a>
     </nav>
   </div>

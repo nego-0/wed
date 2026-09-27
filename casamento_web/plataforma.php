@@ -979,7 +979,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
     <div class="painel">
       <h3>Registo de ações</h3>
       <div class="dica">O rasto do que se faz na casa — em todos os casamentos e na plataforma. Filtre e
-        pesquise. (Os noivos veem, no seu Painel, apenas o histórico do próprio casamento.)</div>
+        pesquise. (Os noivos veem, em Convidados, apenas o histórico do próprio casamento.)</div>
       <div class="lf" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr auto;align-items:end;margin-top:.6rem">
         <div class="campo"><label>Casamento</label>
           <select id="aud-casamento"><option value="todos">Todos</option><option value="0">Plataforma</option></select></div>
