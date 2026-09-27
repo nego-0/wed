@@ -16,6 +16,21 @@ A paleta azul-noite, verde e marfim chama-se **Jardim Nocturno** (chave `jardim`
 
 ## Atendimento, demonstrações e Ajuda
 
+As áreas da administração da plataforma usam um único sub-menu partilhado,
+desde Casamentos e Licenças até Atendimento, Definições e Modelos. Cada ligação
+abre directamente a vista correspondente e o endereço pode ser guardado.
+
+As páginas públicas de entrada, inscrição e demonstração usam fotografias
+editoriais próprias da Kulemba, combinadas com pequenos indicadores animados
+dos módulos. As imagens WebP vivem em `assets/marketing/` e respeitam a opção
+do dispositivo por movimento reduzido.
+
+A Ajuda tem pesquisa por palavras, sub-menu dos módulos contratados e guias de
+operações com animações da interface real. O administrador continua a editar
+texto e multimédia em Atendimento. `tests/gerar-ajuda.js` visita uma instalação
+de testes, assinala os controlos reais e volta a gravar os sete WEBM sem alterar
+os dados. Ver [guia de manutenção](docs/ajuda-e-experiencia-publica.md).
+
 O convite digital da demonstração tem uma história e textos próprios de Lia e Daniel. A pré-visualização ocupa até 640 px e pode abrir numa janela completa. Os quatro enquadramentos respeitam a proporção das fotografias e deixam os rostos visíveis, com as legendas do interlúdio e do acesso fora das imagens. Estas adaptações estão em `assets/demonstracao-convite.css` e não mudam os convites dos casamentos. A dica da paleta fica abaixo do selector; foi retirado o aviso sobre a duração das alterações da demonstração.
 
 O catálogo digital inclui **Kulemba Contemporâneo**, uma segunda linguagem

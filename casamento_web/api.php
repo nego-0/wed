@@ -958,9 +958,9 @@ if ($acao === 'atendimento_conteudo_guardar') {
 if ($acao === 'atendimento_conteudo_media') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma muda a ilustração.');
     exigirCsrf(); $id=(int)($_GET['id']??0); $src=origemUpload('ficheiro',8*1024*1024);
-    $ext=strtolower(pathinfo($src['nome'],PATHINFO_EXTENSION)); if (!in_array($ext,['gif','png','webp'],true)) erro('Use GIF, PNG ou WEBP.');
+    $ext=strtolower(pathinfo($src['nome'],PATHINFO_EXTENSION)); if (!in_array($ext,['gif','png','webp','webm','mp4'],true)) erro('Use GIF, PNG, WEBP, WEBM ou MP4.');
     if (function_exists('finfo_open')) { $fi=finfo_open(FILEINFO_MIME_TYPE); $mt=finfo_file($fi,$src['tmp']); finfo_close($fi);
-      if(!in_array($mt,['image/gif','image/png','image/webp'],true)) erro('O conteúdo do ficheiro não corresponde a uma imagem.'); }
+      if(!in_array($mt,['image/gif','image/png','image/webp','video/webm','video/mp4'],true)) erro('O conteúdo do ficheiro não corresponde a uma imagem ou vídeo.'); }
     $st=$conn->prepare("SELECT media FROM {$P}atendimento_conteudos WHERE id=? AND tipo='ajuda'"); $st->bind_param('i',$id); $st->execute(); $ant=$st->get_result()->fetch_assoc();
     if (!$ant) erro('Material não encontrado.'); $dir=__DIR__.'/assets/ajuda'; if(!is_dir($dir)) @mkdir($dir,0755,true);
     $nome='guia-'.$id.'-'.time().'.'.$ext; if(!moverUpload($src,"$dir/$nome")) erro('Não foi possível guardar a ilustração.');

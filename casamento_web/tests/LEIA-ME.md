@@ -32,6 +32,16 @@ estão. Corre-se quando o produto muda de cara: uma montra que mostra o ecrã
 de há seis meses vende uma coisa que já não existe. `node montra.js` faz
 todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 
+`gerar-ajuda.js` regrava os vídeos curtos de `assets/ajuda/` com a interface
+real. Trabalha numa instalação de testes, abre o casamento indicado e apenas
+aponta para os controlos; não grava alterações. `AJUDA_MODULOS=mesas,digital`
+limita a execução. Além do WEBM, cria a capa PNG mostrada antes da reprodução.
+`TEST_CASAMENTO` vale `1` por omissão.
+
+```sh
+BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=<senha-de-teste> TEST_CASAMENTO=1 node gerar-ajuda.js
+```
+
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js
 ```
@@ -63,6 +73,7 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | Ficheiro                | Assunto                                                        |
 |-------------------------|----------------------------------------------------------------|
 | `chk_arrasto.js`        | faixas e seletores de cor deixam-se arrastar até ao fim         |
+| `chk_experiencia_kulemba.js` | menu administrativo comum, imagens públicas e Ajuda pesquisável |
 | `chk_compacto.js`       | a lista de convites cabe numa linha por convite, com marca de versão nos assets |
 | `chk_cores_textos.js`   | cores com nome, textos que pintam ao vivo, nomes dos noivos     |
 | `chk_deco.js`           | feitios da moldura, tamanho dos ornamentos, e tudo a chegar à impressão |

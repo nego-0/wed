@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 56;
+const ESQUEMA_VERSAO = 57;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -507,6 +507,18 @@ function semearAtendimento(mysqli $conn): void {
 }
 
 /** Conteúdo comercial e guias editáveis, comum a toda a plataforma. */
+function ajudaOperacionalPadrao(string $modulo): string {
+    return [
+      'convidados' => "CRIAR UM CONVITE\n1. Abra Convidados e escolha Novo convite.\n2. Indique a família, os lugares e os convidados.\n3. Guarde e envie o código ou ligação.\n\nCONFIRMAR E EDITAR\n1. Pesquise o nome.\n2. Abra o convite e actualize a resposta.\n3. Confirme o resumo no topo.",
+      'mesas' => "CRIAR UMA MESA\n1. Abra Mesas e escolha Nova mesa.\n2. Dê-lhe nome, forma e capacidade.\n3. Arraste-a para o lugar certo na planta.\n\nSENTAR CONVIDADOS\n1. Escolha a pessoa na lista.\n2. Abra o selector de mesa.\n3. Confirme a lotação depois da mudança.",
+      'impresso' => "ESCOLHER E PERSONALIZAR\n1. Abra Convite impresso e escolha a peça.\n2. Entre no editor para mudar texto, cor e composição.\n3. Guarde uma versão identificada.\n\nENVIAR À GRÁFICA\n1. Abra a peça em vigor.\n2. Reveja a prova visual.\n3. Descarregue o respectivo manual de impressão.",
+      'digital' => "PUBLICAR O CONVITE\n1. Abra Convite digital e entre no editor.\n2. Ajuste capa, fotografias, textos e secções.\n3. Guarde e marque a versão que os convidados recebem.\n\nTESTAR COMO CONVIDADO\n1. Abra a pré-visualização.\n2. Percorra todas as secções.\n3. Teste a confirmação antes de partilhar.",
+      'porta' => "REGISTAR UMA ENTRADA\n1. Pesquise a família ou leia o código.\n2. Confirme as pessoas que chegaram.\n3. Registe a entrada e veja o total actualizar.\n\nCORRIGIR UMA ENTRADA\n1. Volte a abrir o convite.\n2. Retire a marca da pessoa errada.\n3. Confirme quem ainda falta.",
+      'bar' => "PREPARAR O MENU\n1. Abra Bar e crie as categorias.\n2. Adicione bebidas, quantidades e limites.\n3. Abra o serviço quando a equipa estiver pronta.\n\nACOMPANHAR UM PEDIDO\n1. O convidado envia o pedido.\n2. A copa aceita e prepara.\n3. O garçom recolhe e confirma a entrega.",
+      'orcamento' => "REGISTAR UMA DESPESA\n1. Abra Orçamento e escolha Nova despesa.\n2. Indique categoria, fornecedor, previsto e prazo.\n3. Guarde e registe cada pagamento.\n\nACOMPANHAR O TOTAL\n1. Compare previsto, contratado e pago.\n2. Filtre por categoria ou estado.\n3. Reveja os valores ainda por pagar.",
+    ][$modulo] ?? '';
+}
+
 function semearConteudosAtendimento(mysqli $conn): void {
     global $P;
     $modulos = [
@@ -529,9 +541,7 @@ function semearConteudosAtendimento(mysqli $conn): void {
     foreach ($modulos as $chave => [$titulo, $resumo, $corpo, $dados]) {
         foreach (['demo','ajuda'] as $tipo) {
             $media = $tipo === 'ajuda' ? 'assets/ajuda/' . $chave . '.gif' : '';
-            $texto = $tipo === 'ajuda'
-              ? "1. Abra o módulo no menu principal.\n2. Use os controlos assinalados na animação.\n3. Guarde a alteração e confirme o resultado.\n\n" . $corpo
-              : $corpo;
+            $texto = $tipo === 'ajuda' ? ajudaOperacionalPadrao($chave) : $corpo;
             $st = @$conn->prepare("INSERT IGNORE INTO {$P}atendimento_conteudos
                 (tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,1)");
             $dadosTipo = $tipo === 'demo' ? $dados : '';
@@ -2542,6 +2552,18 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                                 WHERE ambito='digital' AND nome='Kulemba Contemporâneo'
                                   AND criado_por='sistema' ORDER BY id LIMIT 1");
             if ($r && ($x = $r->fetch_assoc())) definirPecaOrigem($conn, 'digital', (int)$x['id']);
+        }
+    }
+
+    // v57 — a ajuda passa de um conselho genérico para operações concretas.
+    // Só substitui a semente antiga; texto que o administrador editou fica seu.
+    if ($versaoAtual < 57) {
+        foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {
+            $texto = ajudaOperacionalPadrao($modulo);
+            $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
+                                  WHERE tipo='ajuda' AND modulo=?
+                                    AND conteudo LIKE '1. Abra o módulo no menu principal.%'");
+            if ($st) { $st->bind_param('ss', $texto, $modulo); @$st->execute(); }
         }
     }
 

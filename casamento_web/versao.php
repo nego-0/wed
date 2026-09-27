@@ -21,6 +21,16 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As áreas do administrador partilham uma única navegação',
+         'parcial-cabecalho.php', 'function menuAdministracao(): array'],
+        ['Login, registo e demonstração apresentam a campanha visual Kulemba',
+         'assets/entrada.css', 'primeira impressão usa a linguagem editorial Kulemba'],
+        ['A Ajuda pesquisa tarefas e navega apenas pelos módulos da licença',
+         'assets/ajuda.js', 'data-aj-modulo'],
+        ['As animações da Ajuda são regravadas a partir da interface real',
+         'tests/gerar-ajuda.js', 'Regrava as animações da Ajuda'],
+        ['A semente da Ajuda explica operações concretas de cada módulo',
+         'db.php', 'function ajudaOperacionalPadrao'],
         ['Kulemba Contemporâneo tem composição editorial, fotografias enquadradas e capa em arco',
          'assets/convite-base.html', 'Envelope de papel, com dois arcos entrelaçados em gravura.'],
         ['Os símbolos Kulemba são gravuras próprias e conservam as escolhas do editor',

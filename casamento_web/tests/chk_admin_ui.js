@@ -8,15 +8,17 @@ const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const OUT  = process.env.TEST_OUT || require('os').tmpdir();
+const PASSWORD = process.env.TEST_PASSWORD;
 
 (async () => {
+  if (!PASSWORD) throw new Error('Defina TEST_PASSWORD com a senha da conta de testes.');
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
   const p = await (await b.newContext({ viewport: { width: 1400, height: 1000 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
-  await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', 'noivos2026');
+  await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', PASSWORD);
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
   const api = (a, c) => p.evaluate(async ({ a, c }) => {
     const r = await fetch('api.php?action=' + a, { method: 'POST',
@@ -29,12 +31,12 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.goto(BASE + '/plataforma.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1200);
 
-  // A página abre nos casamentos, e criar/contas são pastilhas à parte — o
-  // trabalho de todos os dias não fica soterrado por formulários de uso raro.
-  const chips = await p.evaluate(() =>
-    [...document.querySelectorAll('#vista-chips .chip')].map(c => c.dataset.vista));
-  ok(chips.includes('casamentos') && chips.includes('novo') && chips.includes('contas'),
-     'a barra tem as pastilhas Casamentos, Novo casamento e Contas administrativas');
+  // A página abre nos casamentos, e o menu administrativo comum dá acesso às
+  // vistas sem repetir uma segunda navegação dentro da página.
+  const menu = await p.evaluate(() =>
+    [...document.querySelectorAll('.admin-nav a')].map(a => new URL(a.href).searchParams.get('vista') || 'modelos'));
+  ok(menu.includes('casamentos') && menu.includes('novo') && menu.includes('contas'),
+     'o menu administrativo tem Casamentos, Novo casamento e Contas administrativas');
   ok(await p.locator('#vista-casamentos').isVisible()
      && !(await p.locator('#vista-novo').isVisible()),
      'abre nos casamentos, com o novo formulário guardado noutra pastilha');
@@ -60,15 +62,18 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(alturas.lista < tecto,
      `a lista de casamentos aparece sem rolar (${Math.round(alturas.lista)}px, tecto ${tecto}px)`);
 
-  // A pastilha "Novo casamento" revela o formulário; voltar a "Casamentos" esconde-o.
-  await p.click('#vista-chips [data-vista="novo"]'); await p.waitForTimeout(250);
+  // O menu abre a vista pedida e mantém-na no endereço, para permitir ligações diretas.
+  await Promise.all([p.waitForURL(/vista=novo/), p.click('.admin-nav a[href*="vista=novo"]')]);
+  await p.locator('#vista-novo').waitFor({ state: 'visible' });
   ok(await p.locator('#vista-novo').isVisible() && await p.locator('#n-nome').isVisible(),
-     'a pastilha "Novo casamento" mostra o formulário de criar');
-  await p.click('#vista-chips [data-vista="contas"]'); await p.waitForTimeout(200);
+     '"Novo casamento" mostra o formulário de criar');
+  await Promise.all([p.waitForURL(/vista=contas/), p.click('.admin-nav a[href*="vista=contas"]')]);
+  await p.locator('#vista-contas').waitFor({ state: 'visible' });
   ok(await p.locator('#vista-contas').isVisible()
      && await p.evaluate(() => { const d = document.getElementById('d-conta'); return d && !d.open; }),
-     'a pastilha "Contas administrativas" abre com a "Nova conta" dobrada');
-  await p.click('#vista-chips [data-vista="casamentos"]'); await p.waitForTimeout(200);
+     '"Contas administrativas" abre com a "Nova conta" dobrada');
+  await Promise.all([p.waitForURL(/vista=casamentos/), p.click('.admin-nav a[href*="vista=casamentos"]')]);
+  await p.locator('#lista-casamentos .cas').first().waitFor({ state: 'visible' });
 
   // A linha do casamento diz quando é, quanto falta e quantos confirmaram.
   const linha = await p.evaluate(() => {
@@ -85,7 +90,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(linha && /confirmaram/.test(linha.txt), 'e quantos já disseram que vêm');
   ok(linha && linha.barra, 'com a barra de confirmações a dar a proporção de relance');
   ok(linha && linha.principais.length === 1 && /Abrir|Continuar/.test(linha.principais[0]),
-     `só a ação principal está à vista (${(linha && linha.principais).join(', ')})`);
+     `só a ação principal está à vista (${linha ? linha.principais.join(', ') : 'sem linha'})`);
   // O «⋯» guarda o que não é do dia-a-dia. Fechar a casa só lá está quando
   // PODE lá estar: um casamento com licença em vigor não se suspende nem
   // arquiva — decide-se a licença primeiro (ver chk_lic_travao.js). Quando não
@@ -143,7 +148,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
                                          ambito: 'impresso', visivel: false });
   ok(mD.success && mI.success, 'criam-se dois modelos de prova');
 
-  await p.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
+  await p.goto(BASE + '/modelos.php', { waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(3500);
   ok(await p.evaluate(() =>
        [...document.querySelectorAll('#filtros .chip')].some(c => c.dataset.vista === 'novo')),
@@ -204,7 +209,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   ok(r.ok, 'modelo-prova.php desenha mesmo o cartão');
   ok(r.rosa, 'e com a paleta daquele modelo, não com a do casamento aberto');
 
-  await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(3000);
+  await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(3000);
   await p.screenshot({ path: OUT + '/admin-modelos.png', fullPage: true });
 
   // ---- estado vazio: já não manda abrir um casamento à toa ----
@@ -218,7 +223,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await api('modelo_apagar&id=' + mD.id);
   await api('modelo_apagar&id=' + mI.id);
   if (!(antes.modelos || []).length) {
-    await p.goto(BASE + '/modelos.php', { waitUntil: 'networkidle' });
+    await p.goto(BASE + '/modelos.php', { waitUntil: 'domcontentloaded' });
     await p.waitForTimeout(1200);
     const txt = await p.locator('#lista').innerText();
     ok(/Novo modelo/.test(txt) && !/casamento aberto/.test(txt),
