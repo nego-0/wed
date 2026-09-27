@@ -1238,7 +1238,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
     </div>
 
     <div class="painel"><h3>Demonstrações dos módulos</h3><div class="dica">Conteúdo da montra pública. Os painéis usam a interface do sistema com dados fictícios e acções de exemplo. As alterações da demonstração não são guardadas.</div><div id="at-demos" class="at-conteudos"></div></div>
-    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Os passos escritos aqui geram automaticamente os stickers animados da Ajuda.</div><div id="at-ajudas" class="at-conteudos"></div></div>
+    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Cada título e as linhas numeradas tornam-se tópicos e passos do fórum; as capturas são actualizadas pelo script da interface.</div><div id="at-ajudas" class="at-conteudos"></div></div>
     </div><!-- /vista-atendimento -->
   <?php endif; ?>
 </main>

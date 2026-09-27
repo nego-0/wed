@@ -20,7 +20,7 @@ const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0
  await gravar(x);
  await p.goto(BASE+'/plataforma.php');await p.waitForSelector('#lista-casamentos .casamento, #lista-casamentos button');
  const abrir=p.getByRole('button',{name:'Abrir'}).first();if(await abrir.count()){await abrir.click();await p.waitForLoadState('networkidle');}
- await p.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});ok(await p.locator('.aj-card').count()===7,'a licença de demonstração abre os sete guias');
- ok(await p.locator('.aj-card img').evaluateAll(async xs=>(await Promise.all(xs.map(x=>fetch(x.src)))).every(r=>r.ok&&/^image\//.test(r.headers.get('content-type')||''))),'os GIFs dos guias carregam');
+ await p.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});ok(await p.locator('.aj-card').count()===14,'a licença de demonstração abre os catorze tópicos');
+ ok(await p.locator('.aj-captura picture').evaluateAll(async xs=>{const urls=xs.flatMap(x=>[x.querySelector('img')?.src,x.querySelector('source')?.srcset]).filter(Boolean);return (await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&/^image\//.test(r.headers.get('content-type')||''));}),'as capturas desktop e mobile dos guias carregam');
  ok(erros.length===0,'a montra não produz erros JavaScript');await b.close();process.exit(falhas?1:0);
 })().catch(e=>{console.error(e);process.exit(1)});

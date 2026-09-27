@@ -540,7 +540,7 @@ function semearConteudosAtendimento(mysqli $conn): void {
     $ordem = 10;
     foreach ($modulos as $chave => [$titulo, $resumo, $corpo, $dados]) {
         foreach (['demo','ajuda'] as $tipo) {
-            $media = $tipo === 'ajuda' ? 'assets/ajuda/' . $chave . '.gif' : '';
+            $media = '';
             $texto = $tipo === 'ajuda' ? ajudaOperacionalPadrao($chave) : $corpo;
             $st = @$conn->prepare("INSERT IGNORE INTO {$P}atendimento_conteudos
                 (tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,1)");

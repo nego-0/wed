@@ -30,12 +30,13 @@ const USER = process.env.TEST_USER || 'admin', PASSWORD = process.env.TEST_PASSW
     console.log('PASS: o menu administrativo é único e abre a vista pedida');
     const abriu=await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}).then(r=>r.json()));
     assert.equal(abriu.success,true,'abrir o casamento de teste');
-    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.aj-card').count(),7); assert.equal(await page.locator('.aj-submenu button').count(),8); assert.equal(await page.locator('.aj-sticker').count(),7); assert.equal(await page.locator('video').count(),0); assert.equal((await page.locator('body').innerText()).includes('Interface real'),false);
-    await page.fill('#aj-busca','convidado mesa'); assert((await page.locator('.aj-card:visible').count())>=1); assert.match(await page.locator('#aj-resultado').innerText(),/guia/);
-    await page.fill('#aj-busca',''); await page.locator('[data-aj-modulo="bar"]').click(); assert.equal(await page.locator('.aj-card:visible').count(),1); assert.match(await page.locator('.aj-card:visible').textContent(),/ACOMPANHAR UM PEDIDO/);
-    await page.setViewportSize({width:390,height:844}); await page.reload({waitUntil:'networkidle'}); assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.aj-card').count(),14); assert.equal(await page.locator('.aj-submenu button').count(),8); assert.equal(await page.locator('.aj-captura picture').count(),14); assert.equal(await page.locator('.aj-captura source[media]').count(),14); assert.equal(await page.locator('video').count(),0); await snap('ajuda-desktop');
+    await page.fill('#aj-busca','convidado mesa'); assert((await page.locator('.aj-card:visible').count())>=1); assert.match(await page.locator('#aj-resultado').innerText(),/tópico/);
+    await page.fill('#aj-busca',''); await page.locator('[data-aj-modulo="bar"]').click(); assert.equal(await page.locator('.aj-card:visible').count(),2); assert.match(await page.locator('.aj-card:visible').last().textContent(),/Acompanhar Um Pedido/i);
+    await page.setViewportSize({width:390,height:844}); await page.reload({waitUntil:'networkidle'}); const larguraAjuda=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,janela:innerWidth})); console.log('Ajuda mobile:',larguraAjuda); assert.equal(larguraAjuda.scroll<=larguraAjuda.janela+1,true);
     await snap('ajuda-mobile');
-    console.log('PASS: ajuda pesquisa, filtra por módulo e cabe no telemóvel');
+    assert.equal(await page.locator('.aj-card:visible picture img').first().evaluate(e=>e.complete&&e.naturalWidth>300),true);
+    console.log('PASS: fórum de ajuda pesquisa, filtra e mostra capturas reais responsivas');
     assert.deepEqual(errors,[],'erros JavaScript');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

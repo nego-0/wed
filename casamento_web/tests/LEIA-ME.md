@@ -32,9 +32,9 @@ estão. Corre-se quando o produto muda de cara: uma montra que mostra o ecrã
 de há seis meses vende uma coisa que já não existe. `node montra.js` faz
 todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 
-Os stickers da Ajuda são gerados pelo próprio `ajuda.php` a partir das linhas
-numeradas que o administrador escreve. `chk_experiencia_kulemba.js` confirma
-que os sete stickers existem, não carregam vídeos e continuam pesquisáveis.
+`gerar-capturas-ajuda.js` abre os módulos reais e actualiza as imagens desktop
+e mobile dos tópicos da Ajuda. `chk_experiencia_kulemba.js` confirma que os 14
+tópicos são pesquisáveis, têm capturas responsivas e cabem no telemóvel.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js
