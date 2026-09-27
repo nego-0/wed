@@ -882,6 +882,9 @@ window.addEventListener('message', e=>{
  * remendar no browser.
  */
 function recarregarTela(){
+  // A tela de espera pode já estar a receber este novo rascunho. O descarte
+  // do fundido anterior não pode navegar esse documento para about:blank.
+  clearTimeout(trocarTela._t);
   telaPronta = false;
   // A tela vai ser recomposta de raiz, e um documento novo começa no princípio.
   // Leva consigo o sítio onde estava a ser lida: sem isto, cada retoque punha o
@@ -1129,7 +1132,7 @@ function estiloDigitalHTML(){
 function mudarEstiloDigital(v){
   if (!ESTILOS_DIGITAIS.some(([k])=>k===v)) v = 'classico';
   EST.val['digital.estilo'] = v;
-  marcarSujo(true); registarPasso(); recarregarTela();
+  marcarSujo(true); registarPasso(); renderEfeitos(); renderMedia(); recarregarTela();
 }
 // As aberturas do envelope, pela mesma ordem que o servidor aceita.
 const ABERTURAS = [['portas','Portas ao meio'],['subir','A subir'],
@@ -1419,7 +1422,7 @@ function renderMedia(){
     if (f){
       const e = lerEnq(EST.val[f.chave]);
       h += `<div class="enq" data-foto="${f.id}">
-        <div class="enq-caixa" style="aspect-ratio:${f.proporcao}" onpointerdown="arrastarFoco(event,'${f.id}')">
+        <div class="enq-caixa" style="aspect-ratio:${EST.val['digital.estilo']==='kulemba' ? (f.id==='hero'?'4/5':'3/2') : f.proporcao}" onpointerdown="arrastarFoco(event,'${f.id}')">
           <img src="${esc(v)}?v=${MEDIA_V}" alt="" style="object-position:${e.x}% ${e.y}%;transform:scale(${e.zoom/100})">
           <span class="mira" style="left:${e.x}%;top:${e.y}%"></span>
           <span class="guias"></span>
@@ -1656,7 +1659,8 @@ function rotularBotaoGuardar(estado){
 
 // ---------- efeitos ----------
 function renderEfeitos(){
-  $('efeitos').innerHTML = [['fx.petalas','Pétalas a cair'],['fx.autoplay','Música arranca ao abrir']]
+  const ambiente = EST.val['digital.estilo'] === 'kulemba' ? 'Pontos de luz suaves' : 'Pétalas a cair';
+  $('efeitos').innerHTML = [['fx.petalas',ambiente],['fx.autoplay','Música arranca ao abrir']]
     .map(([k,rot])=>`<div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
       <input type="checkbox" ${EST.val[k]==='1'?'checked':''} onchange="alternarFx('${k}')"
              style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> ${rot}</label></div>`).join('');

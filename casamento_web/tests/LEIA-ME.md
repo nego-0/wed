@@ -46,6 +46,18 @@ Três variáveis de ambiente, todas com valor por omissão:
 
 Entram com **admin / noivos2026**.
 
+A prova `chk_kulemba_contemporaneo.js` aceita também `TEST_USER` (por omissão
+`admin`) e `TEST_PASSWORD` (por omissão `noivos2026`). Use uma base de testes:
+guarda um texto e fontes temporários num modelo, muda o modelo de origem e
+repõe ambas as definições no fim, incluindo quando há falhas. `BASE_URL` e
+`CHROMIUM` seguem os valores acima; no Windows, sem `CHROMIUM`, procura o Chrome
+em `C:\Program Files\Google\Chrome\Application\chrome.exe`. `SCREENSHOTS`,
+quando definido, indica a pasta para as capturas opcionais desta prova.
+
+```sh
+BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk_kulemba_contemporaneo.js
+```
+
 ## O que cada uma prova
 
 | Ficheiro                | Assunto                                                        |
@@ -77,6 +89,7 @@ Entram com **admin / noivos2026**.
 | `chk_identidade.js`     | os nomes e a data da ficha do casamento chegam sozinhos a todas as peças, e cada casamento tem a sua |
 | `chk_contas.js`         | registo público e aprovação, códigos de suporte (ver / corrigir / revogar), equipa do casamento e contas suspensas |
 | `chk_editor_avancado.js`| desenhar modelos sem casa emprestada, camadas trancadas que resistem ao arrasto, e o ponto focal que se cola às guias |
+| `chk_kulemba_contemporaneo.js` | linguagem Kulemba no editor e demonstração: ícones, molduras, fotografias, efeitos, gravação, fontes embebidas, CSP e larguras de 320, 390 e 1440 px |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
 | `chk_modelo_versao.js`  | a peça chama o modelo pelo nome (em vigor e com alterações), e alterá-lo obriga a uma versão do casal, com nome, que mais ninguém vê |
 | `chk_orcamento.js`      | o curso das despesas: contas do resumo, isolamento entre casamentos, a ida e volta no export/import, e o teto pelos formulários de registo e pela Gestão |

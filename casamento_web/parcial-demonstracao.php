@@ -77,7 +77,8 @@ function demonstracaoDefsComModelo(mysqli $conn): array {
     $conteudo = '/^(casal|evento|media|foto|textos|historia|interludio|cronograma|acesso|manual|rsvp|footer)\./';
     $final = array_replace($demo, $desenho);
     foreach ($demo as $chave => $valor) {
-        if (preg_match($conteudo, $chave)) $final[$chave] = $valor;
+        if (preg_match($conteudo, $chave) && !str_ends_with($chave, '.visivel')
+            && !str_starts_with($chave, 'cronograma.icone_')) $final[$chave] = $valor;
     }
     return $final;
 }

@@ -40,6 +40,7 @@ body{
 }
 ::selection{background:var(--gold-soft);color:var(--forest-deep)}
 img{display:block}
+.hero-photo,.inter-photo,.acesso-image{display:contents}
 
 /* ============ COVER ============ */
 #cover{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:visibility 0s 1.6s}
@@ -408,62 +409,221 @@ footer .fdate{margin-top:14px;font-size:10px;letter-spacing:.4em;text-transform:
 footer .fnote{margin-top:26px;font-family:var(--f-serif);font-style:italic;font-size:14px;color:rgba(239,227,203,.55);max-width:360px;margin-left:auto;margin-right:auto;line-height:1.6}
 
 /* ============ KULEMBA CONTEMPORÂNEO ============
-   O mesmo convite e os mesmos controlos ganham uma linguagem própria: a
-   oferta entrelaçada da marca inspira losangos suaves, linhas interrompidas,
-   luzes e molduras deslocadas. */
-body[data-estilo="kulemba"] main{box-shadow:0 0 0 1px rgba(217,188,140,.18),0 35px 110px rgba(6,18,13,.38)}
-body[data-estilo="kulemba"] #cover .gate{background:
-  radial-gradient(circle at 50% 42%,rgba(217,188,140,.13) 0 2px,transparent 3px),
-  linear-gradient(145deg,var(--forest-deep),var(--forest) 60%,#48624d)}
-body[data-estilo="kulemba"] #cover .gate::before{content:"";position:absolute;top:8%;bottom:8%;width:42%;opacity:.48;
-  border:1px solid var(--gold-soft);border-radius:52% 48% 50% 50%/58% 48% 52% 42%;transform:rotate(18deg)}
-body[data-estilo="kulemba"] #cover .gate.left::before{right:-8%}
-body[data-estilo="kulemba"] #cover .gate.right::before{left:-8%;transform:rotate(-18deg)}
-body[data-estilo="kulemba"] #cover .seal{border-radius:48% 52% 46% 54%/55% 45% 55% 45%;transform:rotate(45deg);animation:kulembaSeal 4s ease-in-out infinite}
-body[data-estilo="kulemba"] #cover .seal::before{border-radius:inherit;border-style:dashed}
-body[data-estilo="kulemba"] #cover .seal span{transform:rotate(-45deg) translateY(-3px)}
-@keyframes kulembaSeal{0%,100%{transform:rotate(45deg) scale(1)}50%{transform:rotate(45deg) scale(1.055)}}
-body[data-estilo="kulemba"] .petal svg{display:none}
-body[data-estilo="kulemba"] .petal{width:9px!important;height:9px!important;border:1px solid var(--gold-soft);background:rgba(217,188,140,.42);border-radius:50% 50% 8% 50%;box-shadow:0 0 12px rgba(217,188,140,.75);animation-name:kulembaLight}
-@keyframes kulembaLight{0%{opacity:0;transform:translateY(-8vh) translateX(0) rotate(45deg) scale(.5)}12%{opacity:.8}50%{transform:translateY(50vh) translateX(-4vw) rotate(225deg) scale(1)}92%{opacity:.65}100%{opacity:0;transform:translateY(112vh) translateX(7vw) rotate(405deg) scale(.55)}}
-body[data-estilo="kulemba"] .pageno{font-family:var(--f-sans);font-style:normal;font-size:9px;letter-spacing:.42em;text-transform:uppercase}
-body[data-estilo="kulemba"] .pageno::before,body[data-estilo="kulemba"] .pageno::after{content:"";display:inline-block;width:22px;height:1px;margin:0 10px 3px;background:currentColor;opacity:.55}
-body[data-estilo="kulemba"] .rule{width:92px;background:linear-gradient(90deg,transparent,var(--gold-soft) 24%,transparent 25% 38%,var(--gold) 39% 61%,transparent 62% 75%,var(--gold-soft) 76%,transparent)}
-body[data-estilo="kulemba"] .rule::after{width:8px;height:8px;border:1px solid var(--gold);background:var(--ivory);border-radius:50% 50% 8% 50%}
-body[data-estilo="kulemba"] .leaf-corner{opacity:.35;transform:rotate(8deg)}
-body[data-estilo="kulemba"] .leaf-corner.tr{transform:scaleX(-1) rotate(8deg)}
-body[data-estilo="kulemba"] .leaf-corner.bl{transform:scaleY(-1) rotate(8deg)}
-body[data-estilo="kulemba"] .leaf-corner.br{transform:rotate(188deg)}
-body[data-estilo="kulemba"] #convite .monogram{border-radius:50% 50% 12% 50%;transform:rotate(45deg);border-width:2px;box-shadow:8px 8px 0 rgba(217,188,140,.18)}
-body[data-estilo="kulemba"] #convite .monogram::before{border-style:solid;border-radius:inherit}
-body[data-estilo="kulemba"] #convite .monogram span{transform:rotate(-45deg) translateY(-2px)}
-body[data-estilo="kulemba"] #convite .guest-card{border:0;border-radius:26px 6px 26px 6px;box-shadow:12px 12px 0 var(--sand),var(--shadow);overflow:visible}
-body[data-estilo="kulemba"] #convite .guest-card::before{inset:8px -8px -8px 8px;border:1px solid var(--gold-soft);border-radius:22px 5px 22px 5px}
-body[data-estilo="kulemba"] .story-photo{border-radius:34px 8px 34px 8px;box-shadow:10px 10px 0 var(--sand),var(--shadow)}
-body[data-estilo="kulemba"] .chapter .dot{border-radius:50% 50% 8% 50%;transform:rotate(45deg);background:var(--cream);box-shadow:0 0 0 5px var(--ivory)}
-body[data-estilo="kulemba"] .chapter .dot::after{border-radius:50%;transform:none}
-body[data-estilo="kulemba"] .inter-orn{width:96px;filter:drop-shadow(0 0 8px rgba(217,188,140,.6));transform:rotate(4deg)}
-body[data-estilo="kulemba"] #grande-dia .bigdate .side{border:0;position:relative}
-body[data-estilo="kulemba"] #grande-dia .bigdate .side::after{content:"";display:block;width:36px;height:1px;background:var(--gold-soft);margin:9px auto 0}
-body[data-estilo="kulemba"] #countdown .cell{border:0;border-radius:18px 5px;background:linear-gradient(145deg,rgba(251,248,241,.09),rgba(251,248,241,.025));box-shadow:inset 0 0 0 1px rgba(217,188,140,.25)}
+   Marfim, fotografia e gravura: a composição usa os mesmos campos editáveis.
+   Os ornamentos ficam em pseudo-elementos, sem transformar letras ou ícones. */
+body[data-estilo="kulemba"]{background:var(--cream);--k-line:color-mix(in srgb,var(--gold) 38%,transparent);--k-soft:color-mix(in srgb,var(--gold-soft) 14%,var(--ivory))}
+body[data-estilo="kulemba"] main{max-width:680px;box-shadow:0 12px 90px color-mix(in srgb,var(--forest-deep) 14%,transparent)}
+body[data-estilo="kulemba"] .pad{padding:80px clamp(24px,7vw,60px)}
+body[data-estilo="kulemba"] .page{isolation:isolate;--uw:calc(min(100vw,680px)/100);--uh:calc(min(100vw,680px)/100)}
+body[data-estilo="kulemba"] .rv{transform:translateY(18px);transition-duration:.8s}
+body[data-estilo="kulemba"] .rv.in{transform:none}
+body[data-estilo="kulemba"] .eyebrow{font-size:10px;letter-spacing:.24em;line-height:1.7;font-weight:500;text-indent:0}
+body[data-estilo="kulemba"] .pageno{font:400 10px var(--f-sans);letter-spacing:.22em;color:var(--gold);margin-bottom:20px}
+body[data-estilo="kulemba"] .leaf-corner{display:none}
+body[data-estilo="kulemba"] .rule{width:126px;margin:32px auto;background:linear-gradient(90deg,transparent,var(--gold) 38%,transparent 39% 61%,var(--gold) 62%,transparent)}
+body[data-estilo="kulemba"] .rule::after{width:15px;height:9px;border:1px solid var(--gold);border-radius:50%;background:none;transform:translate(-68%,-50%) rotate(-35deg)}
+body[data-estilo="kulemba"] .rule::before{content:"";position:absolute;left:50%;top:50%;width:15px;height:9px;border:1px solid var(--gold);border-radius:50%;transform:translate(-20%,-50%) rotate(35deg)}
+
+/* Envelope de papel, com dois arcos entrelaçados em gravura. */
+body[data-estilo="kulemba"] #cover{overflow:auto;padding:32px 24px}
+body[data-estilo="kulemba"] #cover .gate{background:var(--ivory)}
+body[data-estilo="kulemba"] #cover .gate::after{background:radial-gradient(ellipse at 50% 45%,var(--k-soft),transparent 65%)}
+body[data-estilo="kulemba"] #cover .gate::before{content:"";position:absolute;inset:18px;border:1px solid var(--k-line);z-index:1}
+body[data-estilo="kulemba"] #cover .gate.left::before{right:0;border-right:0}
+body[data-estilo="kulemba"] #cover .gate.right::before{left:0;border-left:0}
+body[data-estilo="kulemba"] #cover .seal-wrap{width:min(100%,430px);padding:34px 24px 26px;margin:auto}
+body[data-estilo="kulemba"] #cover .seal-wrap::before,
+body[data-estilo="kulemba"] #cover .seal-wrap::after{content:"";position:absolute;inset:-18px 4px -4px;border:1px solid var(--k-line);border-radius:48% 48% 2px 2px / 25% 25% 2px 2px;pointer-events:none;z-index:-1}
+body[data-estilo="kulemba"] #cover .seal-wrap::after{inset:-8px 14px 6px;opacity:.5}
+body[data-estilo="kulemba"] #cover .seal{width:94px;height:94px;margin:0 auto 38px;animation:none;box-shadow:0 7px 20px color-mix(in srgb,var(--gold) 20%,transparent)}
+body[data-estilo="kulemba"] #cover .seal span{font-size:36px}
+body[data-estilo="kulemba"] #cover[data-selo="anel"] .seal{border:1px solid var(--gold);box-shadow:none}
+body[data-estilo="kulemba"] #cover[data-selo="anel"] .seal::before{inset:7px;border:1px solid var(--k-line)}
+body[data-estilo="kulemba"] #cover[data-selo="anel"] .seal span{color:var(--forest)}
+body[data-estilo="kulemba"] #cover .cover-names{gap:9px;margin-bottom:26px}
+body[data-estilo="kulemba"] .cn-name{color:var(--forest-deep);font-size:clamp(27px,7vw,42px);letter-spacing:.09em;text-indent:0;max-width:100%;overflow-wrap:anywhere;line-height:1.16}
+body[data-estilo="kulemba"] .cn-amp{font-size:37px;color:var(--gold)}
+body[data-estilo="kulemba"] .cover-date{color:var(--forest);gap:16px;margin-bottom:26px}
+body[data-estilo="kulemba"] .cd-bar{background:var(--k-line);height:20px}
+body[data-estilo="kulemba"] #cover .cover-hint{display:inline-flex;align-items:center;justify-content:center;gap:14px;max-width:100%;color:var(--forest);font-size:9px;line-height:1.7;letter-spacing:.16em;text-indent:0;border-bottom:1px solid var(--gold);padding:10px 0;animation:none}
+body[data-estilo="kulemba"] #cover .cover-hint::after{content:"↗";font-size:20px;color:var(--gold);line-height:1}
+body[data-estilo="kulemba"] #cover.open .seal-wrap{transform:translateY(-12px);transition:opacity .65s,transform .9s}
+
+/* Fotografia inteira em moldura editorial; os nomes têm o seu próprio papel. */
+body[data-estilo="kulemba"] #hero{background:var(--ivory)}
+body[data-estilo="kulemba"] #hero .frame{height:auto;min-height:0;display:grid;grid-template-areas:"kicker" "photo" "names";padding:28px clamp(20px,5vw,36px) 0;aspect-ratio:auto}
+body[data-estilo="kulemba"] #hero .kicker{grid-area:kicker;position:static;transform:none;white-space:normal;width:auto;color:var(--forest);text-shadow:none;font-size:9px;line-height:1.7;letter-spacing:.2em;text-indent:0;text-align:center;margin:2px 10px 24px}
+body[data-estilo="kulemba"] .hero-photo{grid-area:photo;display:block;position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:48% 48% 3px 3px / 28% 28% 3px 3px;outline:1px solid var(--k-line);outline-offset:7px}
+body[data-estilo="kulemba"] #hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(var(--zoom-hero,1));object-position:var(--foco-hero)}
+body[data-estilo="kulemba"] #hero .veil{display:none}
+body[data-estilo="kulemba"] #hero .content{grid-area:names;position:relative;inset:auto;padding:36px 8px 34px;color:var(--forest)}
+body[data-estilo="kulemba"] #hero h1{font-family:var(--f-serif);font-weight:400;font-size:clamp(46px,11vw,72px);line-height:1.03;color:var(--forest-deep);text-shadow:none;overflow-wrap:anywhere}
+body[data-estilo="kulemba"] #hero h1 .amp{font-family:var(--f-script);display:block;font-size:.6em;line-height:1.1;color:var(--gold);padding:1px 0}
+body[data-estilo="kulemba"] #hero .sub{font-size:18px;color:var(--text);margin-top:18px}
+body[data-estilo="kulemba"] #hero .datebar{gap:16px;margin-top:24px;color:var(--forest)}
+body[data-estilo="kulemba"] #hero .datebar .line{background:var(--k-line);flex:1 1 24px;max-width:40px}
+body[data-estilo="kulemba"] #hero .datebar .side{font:400 10px var(--f-sans);letter-spacing:.12em;color:var(--forest)}
+body[data-estilo="kulemba"] #hero .datebar .mid{font-size:37px;color:var(--gold)}
+body[data-estilo="kulemba"] #hero .scrollcue{display:inline-flex;color:var(--forest);font-size:8px;letter-spacing:.2em;margin-top:22px}
+body[data-estilo="kulemba"] #hero .scrollcue .dot{height:22px}
+
+/* Convite pessoal e história: filetes, papel e numerais em vez de caixas. */
+body[data-estilo="kulemba"] #convite{background:var(--cream);border-block:1px solid var(--k-line)}
+body[data-estilo="kulemba"] #convite .monogram{border:0;border-radius:0;width:100px;height:74px;margin-bottom:30px}
+body[data-estilo="kulemba"] #convite .monogram::before,
+body[data-estilo="kulemba"] #convite .monogram::after{content:"";position:absolute;inset:0 18px;border:1px solid var(--gold);border-radius:50%;transform:rotate(-36deg)}
+body[data-estilo="kulemba"] #convite .monogram::after{transform:rotate(36deg)}
+body[data-estilo="kulemba"] #convite .monogram span{font-size:29px;z-index:1;background:var(--cream);padding:0 6px}
+body[data-estilo="kulemba"] #convite .lead{font-size:calc(22px * var(--esc-txt));line-height:1.65;max-width:450px}
+body[data-estilo="kulemba"] #convite .guest-card{border:0;border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);border-radius:0;background:var(--ivory);box-shadow:none;padding:28px 18px;max-width:420px}
+body[data-estilo="kulemba"] #convite .guest-card::before{inset:5px 0;border:0;border-block:1px solid var(--k-line);border-radius:0}
+body[data-estilo="kulemba"] #convite .guest-label{font-size:9px;letter-spacing:.22em}
+body[data-estilo="kulemba"] #convite .guest-name{font-size:clamp(25px,6vw,34px)}
+body[data-estilo="kulemba"] #convite .closing{max-width:370px;margin:32px auto 0;line-height:1.7}
+body[data-estilo="kulemba"] #historia .titles h2{font-family:var(--f-serif);font-size:clamp(36px,8vw,50px);line-height:1.12;font-weight:400;max-width:440px;margin:auto}
+body[data-estilo="kulemba"] #historia .open-quote{margin-top:28px}
+body[data-estilo="kulemba"] #historia .open-quote .mark{display:none}
+body[data-estilo="kulemba"] #historia .open-quote blockquote{font-size:calc(20px * var(--esc-txt));font-weight:400}
+body[data-estilo="kulemba"] .story-photo{margin:28px 0 36px;aspect-ratio:3/2;border-radius:3px;box-shadow:none;outline:1px solid var(--k-line);outline-offset:7px}
+body[data-estilo="kulemba"] .thread{counter-reset:chapters;max-width:460px}
+body[data-estilo="kulemba"] .thread .spine{display:none}
+body[data-estilo="kulemba"] .chapter{padding:27px 0 27px 50px;border-bottom:1px solid var(--k-line);counter-increment:chapters}
+body[data-estilo="kulemba"] .chapter:last-child{border:0;padding-bottom:0}
+body[data-estilo="kulemba"] .chapter .dot{display:none}
+body[data-estilo="kulemba"] .chapter::before{content:counter(chapters,decimal-leading-zero);position:absolute;left:0;top:26px;font:italic 27px var(--f-serif);color:var(--gold)}
+body[data-estilo="kulemba"] .chapter .ch-eyebrow{display:none}
+body[data-estilo="kulemba"] .chapter h3{font-size:calc(24px * var(--esc-txt));font-weight:500}
+body[data-estilo="kulemba"] .chapter p{font-size:calc(14px * var(--esc-txt));line-height:1.85}
+body[data-estilo="kulemba"] .chapter p .drop{float:none;font:inherit;color:inherit;padding:0}
+
+/* Uma pausa fotográfica, seguida de uma frase em papel escuro. */
+body[data-estilo="kulemba"] #interludio{display:block;min-height:0}
+body[data-estilo="kulemba"] .inter-photo{display:block;position:relative;aspect-ratio:3/2;overflow:hidden}
+body[data-estilo="kulemba"] .inter-bg{position:absolute;inset:0;height:100%;width:100%;object-fit:cover;transform:scale(var(--zoom-interludio,1))}
+body[data-estilo="kulemba"] .inter-veil{display:none}
+body[data-estilo="kulemba"] .inter-content{max-width:540px;padding:54px 32px 58px;margin:auto}
+body[data-estilo="kulemba"] .inter-orn{display:none}
+body[data-estilo="kulemba"] .inter-content::before{content:"";display:block;width:26px;height:26px;border:1px solid var(--gold-soft);border-radius:50% 50% 1px 50%;transform:rotate(45deg);margin:0 auto 30px}
+body[data-estilo="kulemba"] .inter-content blockquote{font-size:clamp(25px,6vw,34px);font-weight:400;line-height:1.45;text-shadow:none}
+body[data-estilo="kulemba"] .inter-close{border:0;padding-top:0;margin-top:26px;font-size:17px}
+
+/* Calendário e cerimónias: gravuras num pórtico de linhas finas. */
+body[data-estilo="kulemba"] #grande-dia{background:var(--ivory);color:var(--forest-deep)}
+body[data-estilo="kulemba"] #grande-dia .eyebrow,body[data-estilo="kulemba"] #grande-dia .pageno{color:var(--gold)}
+body[data-estilo="kulemba"] #grande-dia .bigdate{gap:15px}
+body[data-estilo="kulemba"] #grande-dia .bigdate .side{font:400 10px var(--f-sans);letter-spacing:.13em;color:var(--forest);border-color:var(--k-line);min-width:76px}
+body[data-estilo="kulemba"] #grande-dia .bigdate .num{font-size:clamp(78px,20vw,112px);font-weight:400;color:var(--forest)}
+body[data-estilo="kulemba"] #grande-dia .year{font-size:16px;color:var(--forest);margin-top:14px}
+body[data-estilo="kulemba"] #grande-dia .weekday{font-size:30px;color:var(--gold);margin-bottom:26px}
+body[data-estilo="kulemba"] #countdown{gap:0;border-block:1px solid var(--k-line);max-width:380px;margin:0 auto 24px;flex-wrap:nowrap}
+body[data-estilo="kulemba"] #countdown .cell{flex:1;min-width:0;padding:18px 6px;background:none;border:0;border-radius:0;position:relative}
+body[data-estilo="kulemba"] #countdown .cell+.cell::before{content:"";position:absolute;left:0;top:24px;bottom:24px;border-left:1px solid var(--k-line)}
+body[data-estilo="kulemba"] #countdown .v{font-size:32px;color:var(--forest)}
+body[data-estilo="kulemba"] #countdown .l{color:var(--text);font-size:8px;letter-spacing:.15em}
+body[data-estilo="kulemba"] .cal-btn{border:0;border-radius:0;border-bottom:1px solid var(--gold);color:var(--forest);font-size:9px;letter-spacing:.12em;padding:10px 0;margin-bottom:52px}
+body[data-estilo="kulemba"] .cerimonias{margin-bottom:62px}
+body[data-estilo="kulemba"] .cerimonias h2,body[data-estilo="kulemba"] .timeline-wrap h2{font-family:var(--f-serif);font-weight:400;font-size:clamp(34px,8vw,45px);line-height:1.15;color:var(--forest)}
+body[data-estilo="kulemba"] .cerimonias h2{margin-bottom:38px}
+body[data-estilo="kulemba"] .cer-item,body[data-estilo="kulemba"] .cer-item.wide,
+body[data-estilo="kulemba"] .cerimonias.sem-ramos .cer-item{padding-top:0;max-width:100%;flex:1 1 230px}
+body[data-estilo="kulemba"] .cer-medal,body[data-estilo="kulemba"] .cer-item.wide .cer-medal,
+body[data-estilo="kulemba"] .cerimonias.sem-ramos .cer-medal,
+body[data-estilo="kulemba"] .cerimonias.sem-ramos .cer-item.wide .cer-medal{position:relative;top:auto;left:auto;transform:none;margin:0 auto 20px;width:calc(100px * var(--cer-tam,1))}
+body[data-estilo="kulemba"] .cer-medal::before{display:none}
+body[data-estilo="kulemba"] .cer-medal .cer-emb,body[data-estilo="kulemba"] .cer-medal img{filter:none;color:var(--gold);opacity:1}
+body[data-estilo="kulemba"] .cer-card,body[data-estilo="kulemba"] .cer-item.wide .cer-card{padding:28px 20px;color:var(--gold);border:0;border-radius:0;background:none;box-shadow:none}
 body[data-estilo="kulemba"] .cer-card .cf{display:none}
-body[data-estilo="kulemba"] .cer-card{border:1px solid rgba(217,188,140,.62);border-radius:34px 7px 34px 7px;background:linear-gradient(145deg,rgba(251,248,241,.07),transparent 58%);box-shadow:10px 10px 0 rgba(217,188,140,.08)}
-body[data-estilo="kulemba"] .cer-medal::before{border-radius:50% 50% 10% 50%;transform:rotate(45deg);border:1px solid rgba(217,188,140,.5)}
-body[data-estilo="kulemba"] .cer-medal .cer-emb,body[data-estilo="kulemba"] .cer-medal img{transform:scale(.82);filter:drop-shadow(0 5px 12px rgba(0,0,0,.4))}
-body[data-estilo="kulemba"] .cer-orn .l{background:linear-gradient(90deg,transparent,var(--gold-soft))}
-body[data-estilo="kulemba"] .cer-orn .l:last-child{transform:scaleX(-1)}
-body[data-estilo="kulemba"] .timeline-wrap{border-top:0;position:relative}
-body[data-estilo="kulemba"] .timeline-wrap::before{content:"";display:block;width:72px;height:10px;margin:-5px auto 48px;border-top:1px solid var(--gold-soft);border-bottom:1px solid rgba(217,188,140,.45);transform:skewX(-35deg)}
-body[data-estilo="kulemba"] .timeline .spine{border-left-style:solid;opacity:.55}
-body[data-estilo="kulemba"] .t-item .node{border-radius:50% 50% 8% 50%;background:var(--forest);box-shadow:0 0 0 5px var(--forest-deep),0 0 0 6px rgba(217,188,140,.42),0 12px 28px rgba(0,0,0,.35)}
-body[data-estilo="kulemba"] .t-item .node.cer{border-radius:50% 50% 8% 50%}
-body[data-estilo="kulemba"] .qr-card{border-radius:30px 7px;background:var(--ivory);box-shadow:12px 12px 0 rgba(217,188,140,.17),0 20px 50px rgba(0,0,0,.4)}
-body[data-estilo="kulemba"] .qr-corner{width:22px;height:22px;border-width:1px;transform:rotate(8deg)}
-body[data-estilo="kulemba"] .mcell{border:0;border-radius:22px 5px;background:linear-gradient(145deg,var(--cream),var(--ivory));box-shadow:inset 0 0 0 1px rgba(180,134,74,.3),7px 7px 0 var(--sand)}
-body[data-estilo="kulemba"] .mcell svg{width:42px;height:42px;padding:9px;border:1px solid var(--gold-soft);border-radius:50% 50% 8% 50%;transform:rotate(45deg)}
-body[data-estilo="kulemba"] .mcell svg>*{transform-origin:center;transform:rotate(-45deg)}
-body[data-estilo="kulemba"] #rsvp{background:radial-gradient(circle at 50% 0,rgba(217,188,140,.2),transparent 35%),linear-gradient(180deg,var(--ivory),var(--cream))}
-body[data-estilo="kulemba"] .btn{border-radius:18px 4px;box-shadow:7px 7px 0 rgba(180,134,74,.18)}
+body[data-estilo="kulemba"] .cer-card:has(.cf){border:1px solid var(--k-line);background:var(--k-soft)}
+body[data-estilo="kulemba"] .cer-card:has(.cf)::before{content:"";position:absolute;inset:6px;border:1px solid var(--k-line);pointer-events:none}
+body[data-estilo="kulemba"] .cer-card:not(:has(.cf)){padding-block:8px}
+body[data-estilo="kulemba"] .cer-kind{color:var(--gold);font-size:9px;letter-spacing:.24em}
+body[data-estilo="kulemba"] .cer-name,body[data-estilo="kulemba"] .cer-item.wide .cer-name{font-size:32px;text-transform:none;letter-spacing:0;text-indent:0;color:var(--forest);line-height:1.2;overflow-wrap:anywhere}
+body[data-estilo="kulemba"] .cer-place,body[data-estilo="kulemba"] .cer-item.wide .cer-place{font-size:18px;color:var(--forest)}
+body[data-estilo="kulemba"] .cer-city{font-size:9px;letter-spacing:.16em;color:var(--text)}
+body[data-estilo="kulemba"] .cer-hour{font-size:25px;color:var(--forest)}
+body[data-estilo="kulemba"] .cer-hour i{width:3px;height:3px;background:var(--gold)}
+body[data-estilo="kulemba"] .cer-orn .l{width:28px;background:var(--k-line)}
+body[data-estilo="kulemba"] .cerimonias .fl-svg{color:var(--gold)}
+body[data-estilo="kulemba"] .cer-badge{background:var(--ivory);color:var(--gold);width:44px}
+body[data-estilo="kulemba"] .cer-after{margin:36px auto;gap:12px}
+body[data-estilo="kulemba"] .cer-after .fl{display:none}
+body[data-estilo="kulemba"] .cer-after .t{white-space:normal;font-size:16px;color:var(--text)}
+body[data-estilo="kulemba"] .cer-after .l{background:var(--k-line);min-width:16px}
+body[data-estilo="kulemba"] .cer-map{white-space:normal;border:0;border-bottom:1px solid var(--gold);border-radius:0;padding:9px 0;color:var(--forest);font-size:9px;letter-spacing:.12em}
+body[data-estilo="kulemba"] .timeline-wrap{border-top:1px solid var(--k-line);padding-top:48px}
+body[data-estilo="kulemba"] .timeline-wrap .tsub{color:var(--text);margin:10px 0 30px}
+body[data-estilo="kulemba"] .timeline{max-width:450px}
+body[data-estilo="kulemba"] .timeline .spine{left:29px;border-left:1px solid var(--k-line)}
+body[data-estilo="kulemba"] .timeline .spine i{background:var(--gold);box-shadow:none}
+body[data-estilo="kulemba"] .t-item{display:grid;grid-template-columns:1fr;min-height:118px;padding:20px 0 20px 80px;text-align:left}
+body[data-estilo="kulemba"] .t-item .half,body[data-estilo="kulemba"] .t-item .half.time,body[data-estilo="kulemba"] .t-item .half.desc,
+body[data-estilo="kulemba"] .t-item:nth-child(even) .half.time,body[data-estilo="kulemba"] .t-item:nth-child(even) .half.desc{width:100%;padding:0;text-align:left;order:initial;min-width:0}
+body[data-estilo="kulemba"] .t-item .node{left:29px;width:48px;height:58px;transform:translate(-50%,-50%);border:1px solid var(--k-line);border-radius:24px 24px 3px 3px;background:var(--ivory);box-shadow:0 0 0 6px var(--ivory)}
+body[data-estilo="kulemba"] .t-item .node svg{width:26px;height:26px;transform:none;color:var(--gold);stroke:currentColor;stroke-width:1.25}
+body[data-estilo="kulemba"] .t-item .node.cer img,body[data-estilo="kulemba"] .t-item .node.cer-svg .cer-emb{width:100%;height:auto;transform:none;filter:none;color:var(--gold)}
+body[data-estilo="kulemba"] .t-item .hh{font:500 11px var(--f-sans);letter-spacing:.14em;color:var(--gold);margin-bottom:8px}
+body[data-estilo="kulemba"] .t-item .hh small{display:inline;font-size:8px;color:var(--text);margin-left:10px;letter-spacing:.08em}
+body[data-estilo="kulemba"] .t-item .tt{font:500 24px/1.25 var(--f-serif);color:var(--forest);overflow-wrap:anywhere}
+body[data-estilo="kulemba"] .t-item .tt em{font-size:10px;letter-spacing:.04em;text-transform:none;line-height:1.6;color:var(--text)}
+body[data-estilo="kulemba"] .t-item .tt .loc{color:var(--text)}
+
+/* Passe de entrada, pequenos gestos e confirmação. */
+body[data-estilo="kulemba"] #acesso{background:var(--forest-deep)}
+body[data-estilo="kulemba"] .acesso-photo{height:auto;min-height:0}
+body[data-estilo="kulemba"] .acesso-image{display:block;position:relative;aspect-ratio:3/2;overflow:hidden}
+body[data-estilo="kulemba"] .acesso-photo img{position:absolute;inset:0;width:100%;height:100%;transform:scale(var(--zoom-acesso,1));object-fit:cover}
+body[data-estilo="kulemba"] .acesso-veil{display:none}
+body[data-estilo="kulemba"] .acesso-head{position:relative;inset:auto;padding:48px 26px 0}
+body[data-estilo="kulemba"] .acesso-head h2{font-family:var(--f-serif);font-size:clamp(35px,8vw,46px);text-shadow:none}
+body[data-estilo="kulemba"] .qr-card{border-radius:2px;padding:24px;box-shadow:none;outline:1px solid var(--gold-soft);outline-offset:8px;width:min(100%,280px)}
+body[data-estilo="kulemba"] .qr-corner{display:none}
+body[data-estilo="kulemba"] .acesso-body{padding-top:36px}
+body[data-estilo="kulemba"] .qr-instr{margin-top:32px;line-height:1.7}
+body[data-estilo="kulemba"] #manual h2{font-size:clamp(32px,7vw,42px);font-weight:400;letter-spacing:0}
+body[data-estilo="kulemba"] .mgrid{gap:0;max-width:470px;border-top:1px solid var(--k-line)}
+body[data-estilo="kulemba"] .mcell{padding:26px 14px;background:none;border:0;border-bottom:1px solid var(--k-line);border-radius:0;box-shadow:none}
+body[data-estilo="kulemba"] .mcell:nth-child(odd){border-right:1px solid var(--k-line)}
+body[data-estilo="kulemba"] .mcell:hover{transform:translateY(-2px);box-shadow:none}
+body[data-estilo="kulemba"] .mcell svg{width:32px;height:32px;stroke-width:1.25;stroke:var(--gold);color:var(--gold);transform:none;margin-bottom:14px}
+body[data-estilo="kulemba"] .mcell p{font-size:calc(13px * var(--esc-txt));letter-spacing:.01em;line-height:1.7}
+body[data-estilo="kulemba"] #rsvp{padding-top:62px;background:var(--cream);border-top:1px solid var(--k-line)}
+body[data-estilo="kulemba"] #rsvp::before{content:"";display:block;width:36px;height:1px;background:var(--gold);margin:0 auto 26px}
+body[data-estilo="kulemba"] #rsvp h2{font-family:var(--f-serif);font-size:clamp(40px,9vw,56px);line-height:1.06}
+body[data-estilo="kulemba"] #rsvp .deadline{font-size:10px;letter-spacing:.12em;line-height:1.7}
+body[data-estilo="kulemba"] .btn{border-radius:3px;padding:17px 26px;letter-spacing:.12em;font-size:10px}
+body[data-estilo="kulemba"] .btn-gold{color:var(--ivory);background:var(--forest);box-shadow:none}
+body[data-estilo="kulemba"] .btn-gold:hover{background:var(--forest-deep);box-shadow:0 8px 24px color-mix(in srgb,var(--forest) 18%,transparent)}
+body[data-estilo="kulemba"] footer{padding:44px 30px}
+body[data-estilo="kulemba"] footer .mono{font-size:38px}
+body[data-estilo="kulemba"] footer .fdate{letter-spacing:.16em;line-height:1.8}
+body[data-estilo="kulemba"] footer .fnote{color:var(--gold-pale);opacity:.85}
+
+/* Luz ténue por cima da página; nunca intercepta um gesto. */
+body[data-estilo="kulemba"] #petals{z-index:4;opacity:.5}
+body[data-estilo="kulemba"] .petal svg{display:none}
+body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;border-radius:50%;background:var(--gold-soft);box-shadow:0 0 7px var(--gold-soft);animation-name:kulembaLight}
+@keyframes kulembaLight{0%{opacity:0;transform:translateY(106vh) translateX(0)}20%,75%{opacity:.5}100%{opacity:0;transform:translateY(-8vh) translateX(30px)}}
+@media(max-width:430px){
+  body[data-estilo="kulemba"] .pad{padding:60px 24px}
+  body[data-estilo="kulemba"] #hero .content{padding:30px 4px}
+  body[data-estilo="kulemba"] .cer-grid{gap:30px}
+  body[data-estilo="kulemba"] .cer-item{flex-basis:100%}
+  body[data-estilo="kulemba"] .chapter{padding-left:42px}
+  body[data-estilo="kulemba"] .t-item{padding-left:70px}
+  body[data-estilo="kulemba"] .inter-content{padding:44px 28px}
+}
+@media(max-height:640px){
+  body[data-estilo="kulemba"] #cover .seal-wrap{padding-block:18px}
+  body[data-estilo="kulemba"] #cover .seal{width:64px;height:64px;margin-bottom:18px}
+  body[data-estilo="kulemba"] #cover .seal span{font-size:26px}
+  body[data-estilo="kulemba"] #cover .cover-names{gap:4px;margin-bottom:16px}
+  body[data-estilo="kulemba"] .cn-name{font-size:25px}
+  body[data-estilo="kulemba"] .cover-date{margin-bottom:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  body[data-estilo="kulemba"] .rv{opacity:1;transform:none}
+  body[data-estilo="kulemba"] .petal{display:none}
+}
 
 @media (max-width:430px){
   .pad{padding:70px 22px}
@@ -512,7 +672,7 @@ body[data-estilo="kulemba"] .btn{border-radius:18px 4px;box-shadow:7px 7px 0 rgb
 <!--BLOCO:hero-->
   <section id="hero" class="page">
     <div class="frame">
-      <img src="{{IMG_HERO}}" alt="{{CASAL_ALT}}" fetchpriority="high" decoding="async">
+      <div class="hero-photo"><img src="{{IMG_HERO}}" alt="{{CASAL_ALT}}" fetchpriority="high" decoding="async"></div>
       <div class="veil"></div>
       <p class="kicker">{{KICKER}}</p>
       <div class="content">
@@ -567,7 +727,7 @@ body[data-estilo="kulemba"] .btn{border-radius:18px 4px;box-shadow:7px 7px 0 rgb
 <!--BLOCO:interludio-->
 <!--SEC:interludio-->
   <section id="interludio" class="page">
-    <img class="inter-bg" src="{{IMG_INTERLUDIO}}" alt="{{CASAL_ALT}}" loading="lazy">
+    <div class="inter-photo"><img class="inter-bg" src="{{IMG_INTERLUDIO}}" alt="{{CASAL_ALT}}" loading="lazy"></div>
     <div class="inter-veil"></div>
     <div class="inter-content pad">
       <svg class="inter-orn rv" viewBox="0 0 160 24" aria-hidden="true">
@@ -645,7 +805,7 @@ body[data-estilo="kulemba"] .btn{border-radius:18px 4px;box-shadow:7px 7px 0 rgb
 <!--BLOCO:acesso-->
   <section id="acesso" class="page">
     <div class="acesso-photo">
-      <img src="{{IMG_ACESSO}}" alt="{{CASAL_ALT}}" loading="lazy" decoding="async">
+      <div class="acesso-image"><img src="{{IMG_ACESSO}}" alt="{{CASAL_ALT}}" loading="lazy" decoding="async"></div>
       <div class="acesso-veil"></div>
       <div class="acesso-head">
         <span class="pageno">— quatro —</span>
@@ -699,6 +859,19 @@ body[data-estilo="kulemba"] .btn{border-radius:18px 4px;box-shadow:7px 7px 0 rgb
 <script>
 (function(){
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Na composição editorial, a capa cresce com os nomes e com a fotografia.
+  // O arrasto e o convite publicado usam a mesma percentagem da caixa real.
+  if(document.body.dataset.estilo==='kulemba'){
+    var heroFrame=document.querySelector('#hero .frame');
+    function medirCapa(){
+      heroFrame.style.setProperty('--uw',heroFrame.offsetWidth/100+'px');
+      heroFrame.style.setProperty('--uh',heroFrame.offsetHeight/100+'px');
+    }
+    medirCapa();
+    if(window.ResizeObserver) new ResizeObserver(medirCapa).observe(heroFrame);
+    else window.addEventListener('resize',medirCapa);
+  }
 
   /* ---- cover ---- */
   var cover = document.getElementById('cover');

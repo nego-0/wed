@@ -25,6 +25,11 @@ editor. A escolha “Linguagem visual” aparece nas propriedades da capa. Na
 migração v56, este modelo passa a peça padrão quando a instalação ainda usava
 a origem histórica; uma escolha anterior do administrador é respeitada.
 
+A composição contemporânea foi revista com capa em arco, fotografia separada
+dos nomes, símbolos SVG próprios, capítulos numerados e cronograma vertical.
+As molduras e os enquadramentos respondem às opções do editor. Ver
+[o guia do modelo](docs/convite-kulemba-contemporaneo.md).
+
 A demonstração pública lê a peça de origem digital definida pelo administrador
 e aplica esse desenho aos dados fictícios de Lia e Daniel. O nome do modelo é
 mostrado na montra. Assim, a demonstração, o padrão oferecido a novos casais e

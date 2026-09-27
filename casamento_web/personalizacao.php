@@ -93,7 +93,8 @@ function temasPredef(): array {
 }
 
 // ---- Catálogo de ícones (SVG de traço, viewBox 24) ---------
-function iconesConvite(): array {
+function iconesConvite(string $estilo = 'classico'): array {
+    if ($estilo === 'kulemba') return iconesKulemba();
     return [
         'aneis'     => '<circle cx="9" cy="14.5" r="4.6"/><circle cx="15" cy="14.5" r="4.6"/><path d="M9 6.6l1.5 1.5L9 9.6 7.5 8.1z" fill="currentColor" stroke="none"/><path d="M9 9.6v.8" />',
         'bolo'      => '<path d="M4 20.5h16" stroke-linecap="round"/><path d="M5.5 20V14.6c0-.9.7-1.6 1.6-1.6h9.8c.9 0 1.6.7 1.6 1.6V20"/><path d="M8.4 13v-2.6c0-.7.5-1.2 1.2-1.2h4.8c.7 0 1.2.5 1.2 1.2V13"/><path d="M12 9.2V6.6"/><path d="M12 3.8c1 .7 1 2 0 2.7-1-.7-1-2 0-2.7z" fill="currentColor" stroke="none"/><path d="M5.8 16.6h12.4" opacity=".55"/>',
@@ -110,6 +111,27 @@ function iconesConvite(): array {
         'estrela'   => '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8z" stroke-linejoin="round"/>',
         'camera'    => '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7l1.5-2.5h4L15.5 7"/><circle cx="12" cy="13.5" r="3.5"/>',
     ];
+}
+
+/** Os mesmos símbolos editáveis, redesenhados para a linguagem Kulemba. */
+function iconesKulemba(): array {
+    $icones = [
+        'aneis'     => '<path d="M13.2 10.8a5.1 5.1 0 1 0 .8 6.8M11.2 17.3a5.1 5.1 0 1 0 .2-6.7"/><path d="m7 6 2-2 2 2-2 2Z M9 8v1.7"/>',
+        'bolo'      => '<path d="M3 21h18M5 21v-7h14v7M8 14V9h8v5M12 9V6"/><path d="M5 16.5c1.2 1.7 2.3 1.7 3.5 0 1.2 1.7 2.3 1.7 3.5 0 1.2 1.7 2.3 1.7 3.5 0 1.2 1.7 2.3 1.7 3.5 0M12 2c-2 2-2 3.5 0 3.5S14 4 12 2Z"/>',
+        'musica'    => '<path d="M9 17.5V5l10-2v12.5M9 8l10-2"/><ellipse cx="6" cy="18" rx="3" ry="2.3"/><ellipse cx="16" cy="16" rx="3" ry="2.3"/>',
+        'buffet'    => '<path d="M3 17h18M5 17a7 7 0 0 1 14 0M6 20h12M12 10V7M10.5 7h3M9 5c-1-1-.8-2 0-3M15 5c-1-1-.8-2 0-3"/>',
+        'envelope'  => '<rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="m3.5 7 8.5 6.5L20.5 7M3.5 18l6-6M20.5 18l-6-6"/><path d="M12 4.5 10.8 3c-1-1.2-3 .3-1.5 1.8L12 7l2.7-2.2C16.2 3.3 14.2 1.8 13.2 3Z"/>',
+        'relogio'   => '<circle cx="12" cy="12.5" r="8.5"/><path d="M12 7v5.5l3.5 2M12 4V2M9.5 2h5M5.7 6.2 4 4.5"/>',
+        'casal'     => '<circle cx="7.5" cy="7" r="2.5"/><circle cx="16.5" cy="7" r="2.5"/><path d="M2.5 20v-3a5 5 0 0 1 8-4M21.5 20v-3a5 5 0 0 0-8-4M12 21s-5-3.1-5-5.3a2.6 2.6 0 0 1 5-1 2.6 2.6 0 0 1 5 1C17 17.9 12 21 12 21Z"/>',
+        'telemovel' => '<rect x="6.5" y="2" width="11" height="20" rx="2.3"/><path d="M10 5h4M10.5 19h3M12 14.5s-3.5-2.2-3.5-4a1.9 1.9 0 0 1 3.5-.8 1.9 1.9 0 0 1 3.5.8c0 1.8-3.5 4-3.5 4Z"/>',
+        'crianca'   => '<circle cx="8" cy="6" r="2.2"/><circle cx="17" cy="8" r="1.9"/><path d="M8 8.5v5.8M3.5 11l4.5 1.5 5-1 4 1 4-1M8 14l-3 7M8 14l3 7M17 10v5M17 15l-2.5 6M17 15l2.5 6"/>',
+        'taca'      => '<path d="M7 3h10l-1 7a4 4 0 0 1-8 0ZM8 7h8M12 14v7M8 21h8"/>',
+        'brinde'    => '<g transform="rotate(-14 7.5 12)"><path d="M5 3h5v6.5a2.5 2.5 0 0 1-5 0ZM5 7h5M7.5 12v9M5 21h5"/></g><g transform="rotate(14 16.5 12)"><path d="M14 3h5v6.5a2.5 2.5 0 0 1-5 0ZM14 7h5M16.5 12v9M14 21h5"/></g><path d="M12 1v1.5M10.5 2l.5 1M13.5 2l-.5 1"/>',
+        'coracao'   => '<path d="M12 20.5C9.7 18.9 3 14.5 3 9a4.5 4.5 0 0 1 9-1 4.5 4.5 0 0 1 9 1c0 5.5-6.7 9.9-9 11.5Z"/>',
+        'estrela'   => '<path d="m12 3 2.5 5.4 5.9.7-4.3 4 .9 5.9-5-2.9-5 2.9.9-5.9-4.3-4 5.9-.7Z"/><path d="M20.5 3v3M19 4.5h3M3 18.5V21M1.8 19.8h2.4"/>',
+        'camera'    => '<path d="M3 8a2 2 0 0 1 2-2h3l1.5-2h5L16 6h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="4"/><path d="M10 13a2 2 0 0 1 2-2M17.5 9H18"/>',
+    ];
+    return array_map(fn($svg) => '<g stroke-linecap="round" stroke-linejoin="round">'.$svg.'</g>', $icones);
 }
 
 /**
@@ -2083,8 +2105,9 @@ function ramoLouro(float $cx, float $cy, float $r): string {
  * As medidas são as dos emblemas da casa (ver medidasEmblema): as duas
  * versões trocam-se uma pela outra sem nada saltar de sítio.
  */
-function emblemaDesenhado(string $simbolo, bool $comRamos): string {
-    $ic = iconesConvite()[$simbolo] ?? iconesConvite()['coracao'];
+function emblemaDesenhado(string $simbolo, bool $comRamos, string $estilo = 'classico'): string {
+    $icones = iconesConvite($estilo);
+    $ic = $icones[$simbolo] ?? $icones['coracao'];
     $m  = medidasEmblema($comRamos);
     $cx = $m['w'] / 2; $cy = $m['h'] / 2;
 
@@ -2097,12 +2120,23 @@ function emblemaDesenhado(string $simbolo, bool $comRamos): string {
     // O símbolo entra numa caixa quadrada inscrita no anel de dentro. O traço
     // afina-se na mesma proporção: à escala a que o símbolo cresce, o traço
     // de 1.5 do ícone ficava um garrote.
-    $g = $m['glifo']; $e = $g / 24;
+    $g = $estilo === 'kulemba' ? 138.0 : $m['glifo']; $e = $g / 24;
     $glifo = '<g transform="translate(' . round($cx - $g/2, 1) . ',' . round($cy - $g/2, 1) . ')'
            . ' scale(' . round($e, 3) . ')" fill="none" stroke="currentColor"'
            . ' stroke-width="' . round($m['traco'] * 0.84 / $e, 3) . '"'
            . ' stroke-linecap="round" stroke-linejoin="round">' . $ic . '</g>';
 
+    if ($estilo === 'kulemba') {
+        // Uma única auréola aberta: o símbolo continua direito e os ramos
+        // opcionais conservam as medidas que o editor já conhece.
+        $r = 105.0;
+        $halo = '<path d="M'.($cx-28).' '.round($cy+$r*.962, 1)
+              . 'A'.$r.' '.$r.' 0 1 1 '.($cx+28).' '.round($cy+$r*.962, 1).'"/>'
+              . '<path d="m'.$cx.' '.($cy+$r-7).' 7 7-7 7-7-7Z"/>';
+        return '<svg class="cer-emb cer-emb-kulemba" viewBox="0 0 '.$m['w'].' '.$m['h'].'" aria-hidden="true">'
+             . $louro.'<g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">'
+             . $halo.'</g>'.$glifo.'</svg>';
+    }
     return '<svg class="cer-emb" viewBox="0 0 ' . $m['w'] . ' ' . $m['h'] . '" aria-hidden="true">'
          . $louro
          . '<g fill="none" stroke="currentColor" stroke-width="' . $m['traco'] . '">'
@@ -2119,13 +2153,13 @@ function emblemaDesenhado(string $simbolo, bool $comRamos): string {
  * um símbolo. Sem ramos, o desenho de casa troca-se pela sua versão em anel —
  * é a mesma peça, e não uma peça a menos.
  */
-function emblemaCerimonia(string $qual, string $escolha, bool $comRamos): string {
+function emblemaCerimonia(string $qual, string $escolha, bool $comRamos, string $estilo = 'classico'): string {
     if ($escolha === 'original') {
         $f = emblemasDeCasa()[$qual] ?? emblemasDeCasa()['copo'];
         $ficheiro = $comRamos ? $f['ramos'] : $f['anel'];
         return '<img src="assets/convite/' . $ficheiro . '" alt="" loading="lazy" decoding="async">';
     }
-    return emblemaDesenhado($escolha, $comRamos);
+    return emblemaDesenhado($escolha, $comRamos, $estilo);
 }
 
 /**
@@ -2135,9 +2169,10 @@ function emblemaCerimonia(string $qual, string $escolha, bool $comRamos): string
  * é a que cabe num círculo. Escolhido um ícone de traço, vale esse, como nas
  * restantes linhas do dia.
  */
-function seloCronograma(string $qual, string $emblema, string $icone): string {
+function seloCronograma(string $qual, string $emblema, string $icone, string $estilo = 'classico'): string {
     if ($icone !== 'selo') {
-        $ic = iconesConvite()[$icone] ?? iconesConvite()['coracao'];
+        $icones = iconesConvite($estilo);
+        $ic = $icones[$icone] ?? $icones['coracao'];
         return '<div class="node"><svg viewBox="0 0 24 24">' . $ic . '</svg></div>';
     }
     if ($emblema === 'original') {
@@ -2145,7 +2180,7 @@ function seloCronograma(string $qual, string $emblema, string $icone): string {
         return '<div class="node cer"><img src="assets/convite/' . $f['anel'] . '"'
              . ' alt="" loading="lazy" decoding="async"></div>';
     }
-    return '<div class="node cer cer-svg">' . emblemaDesenhado($emblema, false) . '</div>';
+    return '<div class="node cer cer-svg">' . emblemaDesenhado($emblema, false, $estilo) . '</div>';
 }
 
 /**
@@ -2156,7 +2191,14 @@ function seloCronograma(string $qual, string $emblema, string $icone): string {
  * geradas precisam ambos dele: escrito em dois sítios, mudava num e não no
  * outro.
  */
-function seloCerimonia(): string {
+function seloCerimonia(string $estilo = 'classico'): string {
+    if ($estilo === 'kulemba') {
+        return '<span class="cer-badge bt"><svg viewBox="0 0 64 20" aria-hidden="true"'
+             . ' fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round">'
+             . '<path d="M8 10h10M46 10h10" opacity=".5"/>'
+             . '<path d="M34.3 5.6a6 6 0 1 0 0 8.8M29.7 14.4a6 6 0 1 0 0-8.8"/>'
+             . '</svg></span>';
+    }
     $meia = '<g fill="currentColor" stroke="none">'
           . '<path d="M22.6 7C21.1 4.6 18.7 3.3 15.8 3.5c1.2 2.4 3.8 3.7 6.8 3.5Z"/>'
           . '<path d="M24.7 7.7c-2.1 1.2-4.1 3-5.3 5.2 2.6-.2 5-2.2 5.3-5.2Z"/>'
@@ -2173,7 +2215,15 @@ function seloCerimonia(): string {
 }
 
 /** O ramo florido que separa o nome da hora, dentro do cartão. */
-function ornamentoCerimonia(): string {
+function ornamentoCerimonia(string $estilo = 'classico'): string {
+    if ($estilo === 'kulemba') {
+        return '<div class="cer-orn"><span class="l"></span>'
+             . '<svg class="fl fl-svg" viewBox="0 0 40 20" aria-hidden="true" fill="none"'
+             . ' stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">'
+             . '<path d="m20 3 7 7-7 7-7-7Z M3 10h5M32 10h5"/>'
+             . '<circle cx="20" cy="10" r="1" fill="currentColor" stroke="none"/>'
+             . '</svg><span class="l"></span></div>';
+    }
     $ramo = '<path d="M47.6 23.6C49 12.4 57 10 57.6 17.2 58 22 52.2 25 47.6 23.6Z"/>'
           . '<path d="M49.6 24.6C61 17.2 72 18.6 81 24.6 72 23 60 22.6 49.6 24.6Z"/>'
           . '<circle cx="63" cy="9.4" r="1.4"/><path d="M83 24.6H96"/>';
@@ -2235,7 +2285,8 @@ function cerimoniasDoCronograma(array $defs): array {
             'h'    => horaCartao($hora),
             'p'    => $h < 12 ? 'Manhã' : ($h < 19 ? 'Tarde' : 'Noite'),
             'selo' => seloCronograma($k, (string)($defs['cer.emblema_'.$k] ?? 'original'),
-                                     (string)($defs['cronograma.icone_'.$k] ?? 'selo')),
+                                     (string)($defs['cronograma.icone_'.$k] ?? 'selo'),
+                                     (string)($defs['digital.estilo'] ?? 'classico')),
             't'    => $tipo !== '' ? $tipo . ' ' . mb_strtolower($nome, 'UTF-8') : $nome,
             's'    => $f['sub'],
             'loc'  => trim((string)($defs['evento.'.$k.'_local'] ?? '')),
@@ -2259,6 +2310,7 @@ function cerimoniasDoCronograma(array $defs): array {
  * d'água são do modelo.
  */
 function cerimoniasHtml(array $defs): string {
+    $estilo  = (string)($defs['digital.estilo'] ?? 'classico');
     $ramos   = (string)($defs['cer.ramos'] ?? '1') !== '0';
     $moldura = (string)($defs['cer.moldura'] ?? '1') !== '0';
     $cartoes = '';
@@ -2270,17 +2322,17 @@ function cerimoniasHtml(array $defs): string {
         $maps  = trim((string)($defs['evento.'.$k.'_maps'] ?? ''));
         $emb   = (string)($defs['cer.emblema_'.$k] ?? 'original');
         $cartoes .= '<div class="cer-item"><div class="cer-medal">'
-          . emblemaCerimonia($k, $emb, $ramos) . '</div>'
+          . emblemaCerimonia($k, $emb, $ramos, $estilo) . '</div>'
           . '<div class="cer-card">'
           // Sem moldura, o desenho sai — e sai também o selo que pousava nela.
           . ($moldura
               ? '<svg class="cf" data-arch="0" aria-hidden="true"><path class="out"></path><path class="in"></path></svg>'
-                . seloCerimonia()
+                . seloCerimonia($estilo)
               : '')
           . '<div class="cer-body">'
           . ($tipo !== '' ? '<div class="cer-kind">' . escP($tipo) . '</div>' : '')
           . '<div class="cer-name">' . escP($nome) . '</div>'
-          . ornamentoCerimonia()
+          . ornamentoCerimonia($estilo)
           . '<div class="cer-hour"><i></i>' . escP(horaCartao($hora)) . '<i></i></div>'
           . ($local !== '' ? '<p class="cer-place">' . escP($local) . '</p>' : '')
           . '<div class="cer-city">' . escP($defs['evento.cidade'] ?? '') . '</div>'
@@ -2333,8 +2385,8 @@ function ordemBlocos(array $defs): array {
 }
 
 /** Compõe o HTML de uma secção livre, com as classes do próprio convite. */
-function renderBlocoLivre(array $b, array $tokens, bool $editor = false): string {
-    $icones = iconesConvite();
+function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string $estilo = 'classico'): string {
+    $icones = iconesConvite($estilo);
     $eyebrow = trim((string)($b['eyebrow'] ?? ''));
     $titulo  = trim((string)($b['titulo'] ?? ''));
     $texto   = trim((string)($b['texto'] ?? ''));
@@ -2383,7 +2435,8 @@ function ordenarBlocos(string $html, array $defs, array $tokens = [], bool $edit
     if (!$pecas) return $html;
 
     foreach (blocosLivres($defs) as $b) {
-        if (!empty($b['id'])) $pecas[$b['id']] = "\n".renderBlocoLivre($b, $tokens, $editor);
+        if (!empty($b['id'])) $pecas[$b['id']] = "\n".renderBlocoLivre($b, $tokens, $editor,
+            (string)($defs['digital.estilo'] ?? 'classico'));
     }
 
     $novo = '';
@@ -2827,8 +2880,9 @@ function convitePlaceholders(array $defs): array {
     $fim = clone $ini; $fim->modify('+330 minutes');
     $agoraUtc = new DateTime('now', new DateTimeZone('UTC'));
 
-    // Blocos repetíveis
-    $icones = iconesConvite();
+    // Blocos repetíveis: as mesmas escolhas usam o traço do modelo activo.
+    $estilo = (string)($defs['digital.estilo'] ?? 'classico');
+    $icones = iconesConvite($estilo);
     $caps = json_decode($defs['historia.capitulos'], true) ?: [];
     $ROM = ['I','II','III','IV','V','VI','VII','VIII'];
     $htmlCaps = '';
@@ -2938,16 +2992,16 @@ function convitePlaceholders(array $defs): array {
         // tratamento diferente — um em itálico grande, o outro em versaletes.
         '{{VENUE_LOCAL}}'  => escP($defs['evento.local']),
         '{{VENUE_CIDADE}}' => escP($defs['evento.cidade']),
-        '{{CER_ORNAMENTO}}' => ornamentoCerimonia(),
+        '{{CER_ORNAMENTO}}' => ornamentoCerimonia($estilo),
         // O cartão do copo d'água vive no modelo (os seus campos são
         // marcadores que o editor reescreve ao vivo), mas obedece às mesmas
         // escolhas dos outros: o emblema, os ramos, a moldura e o tamanho.
         '{{CER_EMBLEMA_COPO}}' => emblemaCerimonia('copo',
             (string)($defs['cer.emblema_copo'] ?? 'original'),
-            (string)($defs['cer.ramos'] ?? '1') !== '0'),
+            (string)($defs['cer.ramos'] ?? '1') !== '0', $estilo),
         '{{CER_MOLDURA_ARCO}}' => (string)($defs['cer.moldura'] ?? '1') !== '0'
             ? '<svg class="cf" data-arch="1" aria-hidden="true"><path class="out"></path>'
-              . '<path class="in"></path></svg>' . seloCerimonia()
+              . '<path class="in"></path></svg>' . seloCerimonia($estilo)
             : '',
         '{{CER_TAM}}' => number_format(max(60, min(160, (int)($defs['cer.tamanho'] ?? 100))) / 100, 2, '.', ''),
         // Sem louro o emblema é OUTRA peça, mais pequena: 104 pixéis em vez de
