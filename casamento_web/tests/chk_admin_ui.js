@@ -34,7 +34,7 @@ const PASSWORD = process.env.TEST_PASSWORD;
   // A página abre nos casamentos, e o menu administrativo comum dá acesso às
   // vistas sem repetir uma segunda navegação dentro da página.
   const menu = await p.evaluate(() =>
-    [...document.querySelectorAll('.admin-nav a')].map(a => new URL(a.href).searchParams.get('vista') || 'modelos'));
+    [...document.querySelectorAll('.topo .nav a:not([href="logout.php"])')].map(a => new URL(a.href).searchParams.get('vista') || 'modelos'));
   ok(menu.includes('casamentos') && menu.includes('novo') && menu.includes('contas'),
      'o menu administrativo tem Casamentos, Novo casamento e Contas administrativas');
   ok(await p.locator('#vista-casamentos').isVisible()
@@ -63,16 +63,16 @@ const PASSWORD = process.env.TEST_PASSWORD;
      `a lista de casamentos aparece sem rolar (${Math.round(alturas.lista)}px, tecto ${tecto}px)`);
 
   // O menu abre a vista pedida e mantém-na no endereço, para permitir ligações diretas.
-  await Promise.all([p.waitForURL(/vista=novo/), p.click('.admin-nav a[href*="vista=novo"]')]);
+  await Promise.all([p.waitForURL(/vista=novo/), p.click('.topo .nav a[href*="vista=novo"]')]);
   await p.locator('#vista-novo').waitFor({ state: 'visible' });
   ok(await p.locator('#vista-novo').isVisible() && await p.locator('#n-nome').isVisible(),
      '"Novo casamento" mostra o formulário de criar');
-  await Promise.all([p.waitForURL(/vista=contas/), p.click('.admin-nav a[href*="vista=contas"]')]);
+  await Promise.all([p.waitForURL(/vista=contas/), p.click('.topo .nav a[href*="vista=contas"]')]);
   await p.locator('#vista-contas').waitFor({ state: 'visible' });
   ok(await p.locator('#vista-contas').isVisible()
      && await p.evaluate(() => { const d = document.getElementById('d-conta'); return d && !d.open; }),
      '"Contas administrativas" abre com a "Nova conta" dobrada');
-  await Promise.all([p.waitForURL(/vista=casamentos/), p.click('.admin-nav a[href*="vista=casamentos"]')]);
+  await Promise.all([p.waitForURL(/vista=casamentos/), p.click('.topo .nav a[href*="vista=casamentos"]')]);
   await p.locator('#lista-casamentos .cas').first().waitFor({ state: 'visible' });
 
   // A linha do casamento diz quando é, quanto falta e quantos confirmaram.

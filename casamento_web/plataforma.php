@@ -1419,7 +1419,7 @@ function verVista(v){
   if (MANDA_NA_CASA && history.replaceState) {
     const u = new URL(location.href); u.searchParams.set('vista', v);
     history.replaceState(null, '', u.pathname + u.search);
-    document.querySelectorAll('.admin-nav a').forEach(a => {
+    document.querySelectorAll('.topo .nav a').forEach(a => {
       const au = new URL(a.href, location.href);
       a.classList.toggle('ativo', au.pathname.endsWith('/plataforma.php') && au.searchParams.get('vista') === v);
     });

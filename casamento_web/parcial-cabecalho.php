@@ -46,7 +46,7 @@ function menuModulos(): array {
     ];
 }
 
-/** Um único mapa para todas as áreas reservadas ao administrador da casa. */
+/** A administração usa as próprias pastilhas do cabeçalho em todas as suas áreas. */
 function menuAdministracao(): array {
     return [
         'casamentos'  => ['plataforma.php?vista=casamentos', 'Casamentos', 'anel'],
@@ -91,6 +91,9 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
         $CAS = casalInfo(defsPadrao());
     }
     $itens = menuPrincipal();
+    $ativoMenu = $ativo;
+    $menuAdminUnificado = function_exists('ehAdminPlataforma') && ehAdminPlataforma()
+                       && in_array($ativo, ['plataforma','modelos'], true);
     if (!empty($opcoes['sem_porta'])) unset($itens['porta']);
     // "Casamentos" só faz sentido a quem escolhe entre vários.
     $variosCasamentos = false;
@@ -127,6 +130,14 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     // de volta a esta página, porque não há casamento nenhum para mostrar. Um
     // menu que só sabe dizer "não" é pior do que um menu curto.
     if ($semCasamento) $itens = array_intersect_key($itens, ['plataforma' => 1, 'modelos' => 1]);
+    // Esta substituição vem depois dos filtros do menu do casamento: as vistas
+    // administrativas não são módulos licenciados nem dependem de casamento aberto.
+    if ($menuAdminUnificado) {
+        $itens = [];
+        foreach (menuAdministracao() as $chave => [$url, $rotulo]) $itens[$chave] = [$url, $rotulo];
+        $ativoMenu = $ativo === 'modelos' ? 'modelos' : (string)($_GET['vista'] ?? 'casamentos');
+        if (!isset($itens[$ativoMenu])) $ativoMenu = 'casamentos';
+    }
     $semPapel = !empty($opcoes['no_print']) ? ' no-print' : '';
     // Algumas páginas trabalham numa coluna mais estreita do que os 1180px
     // da casa (Orçamento, Licença e Manual). A introdução tem de começar no
@@ -168,7 +179,7 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     </div>
     <nav class="nav<?= $semPapel ?>">
       <?php foreach ($itens as $chave => [$url, $rotulo]): ?>
-      <a href="<?= $url ?>"<?= $chave === $ativo ? ' class="ativo" aria-current="page"' : '' ?>><?= $rotulo ?></a>
+      <a href="<?= $url ?>"<?= $chave === $ativoMenu ? ' class="ativo" aria-current="page"' : '' ?>><?= $rotulo ?></a>
       <?php endforeach; ?>
       <a href="logout.php">Sair</a>
     </nav>
@@ -181,20 +192,6 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     </button>
   </div>
 </header>
-<?php if (function_exists('ehAdminPlataforma') && ehAdminPlataforma()):
-  $adminVista = $ativo === 'modelos' ? 'modelos'
-              : ($ativo === 'plataforma' ? (string)($_GET['vista'] ?? 'casamentos') : '');
-  if ($adminVista !== '' && !isset(menuAdministracao()[$adminVista])) $adminVista = 'casamentos'; ?>
-<nav class="admin-nav<?= $semPapel ?>" aria-label="Administração da plataforma">
-  <div class="admin-nav-interior">
-    <span class="admin-nav-titulo">Administração</span>
-    <?php foreach (menuAdministracao() as $chave => [$url, $rotulo, $icone]): ?>
-    <a href="<?= escP($url) ?>"<?= $chave === $adminVista ? ' class="ativo" aria-current="page"' : '' ?>>
-      <span data-ico="<?= escP($icone) ?>" aria-hidden="true"></span><?= escP($rotulo) ?></a>
-    <?php endforeach; ?>
-  </div>
-</nav>
-<?php endif; ?>
 <?php
   // ---------- A gaveta lateral, no telemóvel ----------
   //
