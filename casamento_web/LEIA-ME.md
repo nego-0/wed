@@ -25,11 +25,10 @@ editoriais próprias da Kulemba, combinadas com pequenos indicadores animados
 dos módulos. As imagens WebP vivem em `assets/marketing/` e respeitam a opção
 do dispositivo por movimento reduzido.
 
-A Ajuda tem pesquisa por palavras, sub-menu dos módulos contratados e guias de
-operações com animações da interface real. O administrador continua a editar
-texto e multimédia em Atendimento. `tests/gerar-ajuda.js` visita uma instalação
-de testes, assinala os controlos reais e volta a gravar os sete WEBM sem alterar
-os dados. Ver [guia de manutenção](docs/ajuda-e-experiencia-publica.md).
+A Ajuda tem pesquisa por palavras, sub-menu dos módulos contratados e stickers
+animados com o texto de cada passo. O administrador edita os passos em
+Atendimento; a animação é reconstruída automaticamente, sem vídeos ou trabalho
+de gravação. Ver [guia de manutenção](docs/ajuda-e-experiencia-publica.md).
 
 O convite digital da demonstração tem uma história e textos próprios de Lia e Daniel. A pré-visualização ocupa até 640 px e pode abrir numa janela completa. Os quatro enquadramentos respeitam a proporção das fotografias e deixam os rostos visíveis, com as legendas do interlúdio e do acesso fora das imagens. Estas adaptações estão em `assets/demonstracao-convite.css` e não mudam os convites dos casamentos. A dica da paleta fica abaixo do selector; foi retirado o aviso sobre a duração das alterações da demonstração.
 

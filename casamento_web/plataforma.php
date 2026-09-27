@@ -1238,7 +1238,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
     </div>
 
     <div class="painel"><h3>Demonstrações dos módulos</h3><div class="dica">Conteúdo da montra pública. Os painéis usam a interface do sistema com dados fictícios e acções de exemplo. As alterações da demonstração não são guardadas.</div><div id="at-demos" class="at-conteudos"></div></div>
-    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Pode substituir cada animação por GIF, PNG, WEBP, WEBM ou MP4. O script <code>tests/gerar-ajuda.js</code> volta a gravar todos os módulos a partir da interface real.</div><div id="at-ajudas" class="at-conteudos"></div><input type="file" id="at-media-f" accept="image/gif,image/png,image/webp,video/webm,video/mp4" hidden onchange="atMediaEnviar()"></div>
+    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Os passos escritos aqui geram automaticamente os stickers animados da Ajuda.</div><div id="at-ajudas" class="at-conteudos"></div></div>
     </div><!-- /vista-atendimento -->
   <?php endif; ?>
 </main>
@@ -1565,7 +1565,7 @@ function atPintarLista(){
 const AT_MODULOS={convidados:'Convidados',mesas:'Mesas',impresso:'Convite impresso',digital:'Convite digital',porta:'Porta',bar:'Bar',orcamento:'Orçamento'};
 function atPintarConteudos(){
   ['demo','ajuda'].forEach(tipo=>{const cx=$(tipo==='demo'?'at-demos':'at-ajudas'); if(!cx)return;
-    const xs=AT_CONTEUDOS.filter(x=>x.tipo===tipo); cx.innerHTML=xs.map(x=>`<article class="at-conteudo${x.ativo?'':' off'}"><small>${esc(AT_MODULOS[x.modulo]||x.modulo)} · ${x.ativo?'visível':'desligado'}</small><h4>${esc(x.titulo)}</h4><p>${esc(x.resumo||'')}</p><div class="ac"><button class="btn btn-sm" onclick="atEditarConteudo(${x.id})">Editar…</button>${tipo==='ajuda'?`<button class="btn btn-sm" onclick="atEscolherMedia(${x.id})">Trocar ilustração…</button>`:''}</div></article>`).join('');
+  const xs=AT_CONTEUDOS.filter(x=>x.tipo===tipo); cx.innerHTML=xs.map(x=>`<article class="at-conteudo${x.ativo?'':' off'}"><small>${esc(AT_MODULOS[x.modulo]||x.modulo)} · ${x.ativo?'visível':'desligado'}</small><h4>${esc(x.titulo)}</h4><p>${esc(x.resumo||'')}</p><div class="ac"><button class="btn btn-sm" onclick="atEditarConteudo(${x.id})">Editar…</button></div></article>`).join('');
   });
 }
 function atEditarConteudo(id){const x=AT_CONTEUDOS.find(y=>y.id===id);if(!x)return; const campos=[

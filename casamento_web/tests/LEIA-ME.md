@@ -32,15 +32,9 @@ estão. Corre-se quando o produto muda de cara: uma montra que mostra o ecrã
 de há seis meses vende uma coisa que já não existe. `node montra.js` faz
 todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 
-`gerar-ajuda.js` regrava os vídeos curtos de `assets/ajuda/` com a interface
-real. Trabalha numa instalação de testes, abre o casamento indicado e apenas
-aponta para os controlos; não grava alterações. `AJUDA_MODULOS=mesas,digital`
-limita a execução. Além do WEBM, cria a capa PNG mostrada antes da reprodução.
-`TEST_CASAMENTO` vale `1` por omissão.
-
-```sh
-BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=<senha-de-teste> TEST_CASAMENTO=1 node gerar-ajuda.js
-```
+Os stickers da Ajuda são gerados pelo próprio `ajuda.php` a partir das linhas
+numeradas que o administrador escreve. `chk_experiencia_kulemba.js` confirma
+que os sete stickers existem, não carregam vídeos e continuam pesquisáveis.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js
