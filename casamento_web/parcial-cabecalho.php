@@ -46,6 +46,21 @@ function menuModulos(): array {
     ];
 }
 
+/** Um único mapa para todas as áreas reservadas ao administrador da casa. */
+function menuAdministracao(): array {
+    return [
+        'casamentos'  => ['plataforma.php?vista=casamentos', 'Casamentos', 'anel'],
+        'novo'        => ['plataforma.php?vista=novo', '+ Novo', 'mais'],
+        'licencas'    => ['plataforma.php?vista=licencas', 'Licenças', 'chave'],
+        'contas'      => ['plataforma.php?vista=contas', 'Contas', 'pessoas'],
+        'dados'       => ['plataforma.php?vista=dados', 'Dados', 'documento'],
+        'registo'     => ['plataforma.php?vista=registo', 'Acções', 'documento'],
+        'atendimento' => ['plataforma.php?vista=atendimento', 'Atendimento', 'conversa'],
+        'definicoes'  => ['plataforma.php?vista=definicoes', 'Definições', 'paleta'],
+        'modelos'     => ['modelos.php', 'Modelos', 'carta'],
+    ];
+}
+
 /**
  * Escreve o cabeçalho da página.
  *
@@ -166,6 +181,20 @@ function cabecalho(string $titulo, string $sub, string $ativo, array $opcoes = [
     </button>
   </div>
 </header>
+<?php if (function_exists('ehAdminPlataforma') && ehAdminPlataforma()):
+  $adminVista = $ativo === 'modelos' ? 'modelos'
+              : ($ativo === 'plataforma' ? (string)($_GET['vista'] ?? 'casamentos') : '');
+  if ($adminVista !== '' && !isset(menuAdministracao()[$adminVista])) $adminVista = 'casamentos'; ?>
+<nav class="admin-nav<?= $semPapel ?>" aria-label="Administração da plataforma">
+  <div class="admin-nav-interior">
+    <span class="admin-nav-titulo">Administração</span>
+    <?php foreach (menuAdministracao() as $chave => [$url, $rotulo, $icone]): ?>
+    <a href="<?= escP($url) ?>"<?= $chave === $adminVista ? ' class="ativo" aria-current="page"' : '' ?>>
+      <span data-ico="<?= escP($icone) ?>" aria-hidden="true"></span><?= escP($rotulo) ?></a>
+    <?php endforeach; ?>
+  </div>
+</nav>
+<?php endif; ?>
 <?php
   // ---------- A gaveta lateral, no telemóvel ----------
   //

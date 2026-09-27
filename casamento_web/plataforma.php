@@ -555,7 +555,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
 
   <?php // As pastilhas que comandam a página: os casamentos, criar um novo, e as
         // contas administrativas. As duas últimas são do admin da casa. ?>
-  <div class="filtros vista-chips" id="vista-chips" style="margin-bottom:1.2rem">
+  <div class="filtros vista-chips<?= ehAdminPlataforma() ? ' so-leitor' : '' ?>" id="vista-chips" style="margin-bottom:1.2rem">
     <button class="chip on" data-vista="casamentos" onclick="verVista('casamentos')">Casamentos</button>
     <?php if ($mandaNaCasa): ?>
       <button class="chip" data-vista="novo" onclick="verVista('novo')">&#43; Novo casamento</button>
@@ -1238,7 +1238,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
     </div>
 
     <div class="painel"><h3>Demonstrações dos módulos</h3><div class="dica">Conteúdo da montra pública. Os painéis usam a interface do sistema com dados fictícios e acções de exemplo. As alterações da demonstração não são guardadas.</div><div id="at-demos" class="at-conteudos"></div></div>
-    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Pode substituir cada animação por GIF, PNG ou WEBP.</div><div id="at-ajudas" class="at-conteudos"></div><input type="file" id="at-media-f" accept="image/gif,image/png,image/webp" hidden onchange="atMediaEnviar()"></div>
+    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Pode substituir cada animação por GIF, PNG, WEBP, WEBM ou MP4. O script <code>tests/gerar-ajuda.js</code> volta a gravar todos os módulos a partir da interface real.</div><div id="at-ajudas" class="at-conteudos"></div><input type="file" id="at-media-f" accept="image/gif,image/png,image/webp,video/webm,video/mp4" hidden onchange="atMediaEnviar()"></div>
     </div><!-- /vista-atendimento -->
   <?php endif; ?>
 </main>
@@ -1416,6 +1416,14 @@ function verVista(v){
   if (v === 'registo') auditarPrimeiraVez();
   if (v === 'licencas') licPrimeiraVez();
   if (v === 'atendimento') atPrimeiraVez();
+  if (MANDA_NA_CASA && history.replaceState) {
+    const u = new URL(location.href); u.searchParams.set('vista', v);
+    history.replaceState(null, '', u.pathname + u.search);
+    document.querySelectorAll('.admin-nav a').forEach(a => {
+      const au = new URL(a.href, location.href);
+      a.classList.toggle('ativo', au.pathname.endsWith('/plataforma.php') && au.searchParams.get('vista') === v);
+    });
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -3657,6 +3665,12 @@ const MANDA_NA_CASA = <?= $mandaNaCasa ? 'true' : 'false' ?>;
 carregarCasamentos();
 carregarContas();
 if (document.getElementById('c-tipo')) tipoMudou();
+<?php if ($mandaNaCasa): ?>
+const VISTA_INICIAL = <?= json_encode((string)($_GET['vista'] ?? 'casamentos')) ?>;
+if (['casamentos','novo','contas','licencas','dados','registo','atendimento','definicoes'].includes(VISTA_INICIAL)) {
+  verVista(VISTA_INICIAL);
+}
+<?php endif; ?>
 </script>
 </body>
 </html>

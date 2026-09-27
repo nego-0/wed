@@ -275,6 +275,17 @@ a:hover{ text-decoration:underline; }
 .topo .nav a:hover{ background:rgba(233,223,201,.15); text-decoration:none; }
 .topo .nav a.ativo{ background:var(--gold); border-color:var(--gold); color:var(--sobre-gold); font-weight:500; }
 
+/* Navegação da administração: a mesma em Casamentos, Modelos e em cada vista
+   do painel. Não se volta a aprender um conjunto de pastilhas por página. */
+.admin-nav{background:var(--card);border-bottom:1px solid var(--line);position:relative;z-index:10}
+.admin-nav-interior{max-width:1180px;margin:auto;padding:.62rem 1rem;display:flex;align-items:center;gap:.38rem;overflow-x:auto;scrollbar-width:thin}
+.admin-nav-titulo{flex:none;margin-right:.45rem;font-size:var(--t-etiqueta);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-fraco)}
+.admin-nav a{flex:none;display:inline-flex;align-items:center;gap:.38rem;padding:.48rem .7rem;border-radius:50px;color:var(--ink-fraco);font-size:var(--t-apoio);text-decoration:none;border:1px solid transparent}
+.admin-nav a [data-ico]{display:inline-flex;width:16px;height:16px}.admin-nav a [data-ico] svg{width:16px;height:16px}
+.admin-nav a:hover{background:var(--cream);color:var(--ink)}
+.admin-nav a.ativo{background:var(--forest);border-color:var(--forest);color:var(--ivory);font-weight:700}
+@media(max-width:760px){.admin-nav-titulo{position:sticky;left:0;background:var(--card);padding-right:.5rem}.admin-nav-interior{padding:.5rem .75rem}.admin-nav a{min-height:42px}}
+
 /* ---------- O cabeçalho sai do caminho, no telemóvel ----------
    Ao chegar, ele diz tudo: de quem é a festa, quanto falta, que licença corre,
    em que casamento se está. Isso é informação de chegada, e a prova do
