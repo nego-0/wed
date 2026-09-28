@@ -105,6 +105,7 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | `chk_identidade.js`     | os nomes e a data da ficha do casamento chegam sozinhos a todas as peças, e cada casamento tem a sua |
 | `chk_contas.js`         | registo público e aprovação, códigos de suporte (ver / corrigir / revogar), equipa do casamento e contas suspensas |
 | `chk_editor_avancado.js`| desenhar modelos sem casa emprestada, camadas trancadas que resistem ao arrasto, e o ponto focal que se cola às guias |
+| `chk_orc_mobile.js`     | despesas, botão de fatura e calendário sem transbordo nem texto cortado a 390 px |
 | `chk_kulemba_contemporaneo.js` | linguagem Kulemba no editor e demonstração: ícones, molduras, fotografias, efeitos, gravação, fontes embebidas, CSP e larguras de 320, 390 e 1440 px |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
 | `chk_modelo_versao.js`  | a peça chama o modelo pelo nome (em vigor e com alterações), e alterá-lo obriga a uma versão do casal, com nome, que mais ninguém vê |

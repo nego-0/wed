@@ -197,7 +197,7 @@ $CAS  = casalDaFicha($conn);
              padding:.14rem .6rem; text-decoration:none; }
   .fat-chip:hover{ background:var(--gold-soft); }
   .fat-anexar{ font-size:var(--t-apoio); color:var(--ink-fraco); border:1px dashed var(--line); border-radius:50px;
-               padding:.14rem .6rem; cursor:pointer; background:transparent; }
+               padding:.14rem .6rem; cursor:pointer; background:transparent; white-space:nowrap; }
   .fat-anexar:hover{ border-color:var(--gold-soft); color:var(--gold-texto); }
   .fat-x{ border:0; background:none; color:var(--danger); cursor:pointer; font-size:var(--t-corpo); line-height:1; margin-left:.2rem; }
 
@@ -216,6 +216,7 @@ $CAS  = casalDaFicha($conn);
   .pag .desc{ font-size:var(--t-denso); color:var(--ink); min-width:0; }
   .pag .desc small{ display:block; color:var(--ink-fraco); font-size:var(--t-apoio); }
   .pag .mt{ font-variant-numeric:tabular-nums; font-size:var(--t-denso); color:var(--ink); white-space:nowrap; text-align:right; font-weight:500; }
+  .pag-acoes{ display:inline-flex; gap:.35rem; justify-content:flex-end; }
   /* POR PAGAR é vermelho — é o que ainda pode correr mal, e era o que se lia
      igual ao que já estava resolvido. O que venceu leva-o a cheio; o que está
      a chegar leva o âmbar de quem ainda vai a tempo. */
@@ -243,6 +244,7 @@ $CAS  = casalDaFicha($conn);
   .o-prazos.mau{ background:var(--danger-bg); border-left-color:var(--danger); }
   .o-prazos .ic{ width:18px; height:18px; flex:none; color:var(--warn); }
   .o-prazos.mau .ic{ color:var(--danger); }
+  .o-prazos-texto{ min-width:0; }
   /* Por produto ou por mês. */
   .o-modo{ display:inline-flex; gap:.3rem; margin:0 0 .6rem; }
   .o-modo-bt{ background:var(--card); border:1px solid var(--line); border-radius:50px;
@@ -282,14 +284,61 @@ $CAS  = casalDaFicha($conn);
   #lightbox img{ max-width:95vw; max-height:95vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
 
   @media (max-width:640px){
-    .painel{ padding:1rem 1.05rem; }
+    main.container{ width:100%; max-width:100%; padding-inline:.7rem; overflow-x:clip; }
+    .painel{ min-width:0; padding:1rem; overflow:hidden; }
+    .painel-topo{ align-items:flex-start; }
+    .painel-topo>div{ min-width:0; flex:1 1 190px; }
+    .painel .dica,.d-nome,.d-forn,.o-grupo .g-nome,.o-grupo .g-conta{ overflow-wrap:anywhere; }
+    .o-kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
+    .kpi{ min-width:0; padding:.75rem .7rem; }
     .kpi .n{ font-size:var(--t-seccao); }
-    .pag .data{ grid-row:1; grid-column:1; }
-    .pag .mt{ grid-row:1; grid-column:2; }
+    .kpi .n small{ display:block; margin-top:.15rem; }
+    .o-legenda{ gap:.45rem .8rem; }
+    .o-filtro{ align-items:flex-start; }
+    .o-filtro .mini{ margin-left:0; }
+
+    /* Em ecrãs estreitos cada despesa passa a cartão. A tabela continua
+       semântica no desktop, mas já não obriga o telemóvel a percorrer 560 px. */
+    .tabela-scroll{ overflow:visible; }
+    table.desp{ display:block; min-width:0; }
+    table.desp thead{ display:none; }
+    table.desp tbody{ display:grid; gap:.75rem; }
+    table.desp tr{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:.65rem .8rem; padding:.85rem; border:1px solid var(--line); border-radius:12px;
+      background:var(--card); }
+    table.desp td{ display:block; min-width:0; padding:0; border:0; text-align:left; white-space:normal; }
+    table.desp td::before{ content:attr(data-label); display:block; margin-bottom:.25rem;
+      color:var(--ink-fraco); font-size:.58rem; font-weight:700; letter-spacing:.07em;
+      text-transform:uppercase; }
+    table.desp td.d-resumo,table.desp td.d-ac{ grid-column:1/-1; }
+    table.desp td.d-val{ text-align:right; }
+    table.desp td.d-val::before{ text-align:right; }
+    .d-cat>span{ max-width:100%; white-space:normal!important; }
+    .d-fat>span{ max-width:100%; }
+    .fat-anexar,.fat-chip{ min-height:36px; display:inline-flex; align-items:center; }
+    .d-ac{ display:flex!important; justify-content:flex-end; gap:.4rem; }
+    .d-ac .mini{ min-height:36px; }
+
+    .o-prazos{ align-items:flex-start; padding:.7rem; }
+    .o-prazos-texto{ overflow-wrap:anywhere; }
+    .o-modo{ display:flex; width:100%; }
+    .o-modo-bt{ flex:1; min-height:38px; }
+    .pag{ grid-template-columns:minmax(0,1fr) auto; gap:.45rem .7rem;
+      padding:.75rem .25rem; align-items:start; }
+    .pag .data{ grid-row:1; grid-column:1; min-width:0; white-space:normal; flex-wrap:wrap;
+      overflow-wrap:anywhere; }
+    .pag .data::before{ flex:none; }
+    .pag .data small{ flex-basis:100%; margin-left:1.15rem; }
+    .pag .mt{ grid-row:1; grid-column:2; align-self:start; }
     .pag .desc{ grid-row:2; grid-column:1 / -1; }
-    .pag > span:last-child{ grid-row:3; grid-column:1 / -1; }
+    .pag-acoes{ grid-row:3; grid-column:1 / -1; flex-wrap:wrap; justify-content:flex-start; }
+    .pag-acoes .mini{ min-height:36px; }
+    .o-grupo{ grid-template-columns:minmax(0,1fr) auto; }
     .modal{ padding:1.2rem 1.1rem; }
     .modal .lin2{ grid-template-columns:1fr; }
+    #md-fatura-cx>div:first-child,#md-parcelas-cx>div:first-child{ flex-wrap:wrap; gap:.45rem; }
+    .modal .fim{ flex-wrap:wrap; }
+    .modal .fim .btn{ flex:1 1 120px; }
   }
 </style>
 </head>

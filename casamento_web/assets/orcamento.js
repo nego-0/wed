@@ -415,15 +415,15 @@
           + corCat(d.categoria_id) + ';display:inline-block;flex:none"></i>' + esc(nomeCat[d.categoria_id]) + '</span>'
         : '<span style="color:#b9beb6">—</span>';
       h += '<tr>'
-        + '<td><div class="d-nome">' + esc(d.descricao) + '</div>'
+        + '<td class="d-resumo" data-label="Despesa"><div class="d-nome">' + esc(d.descricao) + '</div>'
         + (d.fornecedor ? '<div class="d-forn">' + esc(d.fornecedor) + '</div>' : '')
         + parc + '</td>'
-        + '<td>' + celaCat + '</td>'
-        + '<td><span class="est ' + d.estado + '">' + d.estado + '</span></td>'
-        + '<td>' + celaFatura(d) + '</td>'
-        + '<td class="d-val">' + fmt(d.valor) + restante + '</td>';
+        + '<td class="d-cat" data-label="Categoria">' + celaCat + '</td>'
+        + '<td class="d-est" data-label="Estado"><span class="est ' + d.estado + '">' + d.estado + '</span></td>'
+        + '<td class="d-fat" data-label="Fatura">' + celaFatura(d) + '</td>'
+        + '<td class="d-val" data-label="Valor">' + fmt(d.valor) + restante + '</td>';
       if (PODE) {
-        h += '<td class="d-ac">'
+        h += '<td class="d-ac" data-label="Acções">'
           + '<button class="mini" onclick="orcEditarDespesa(' + d.id + ')">Abrir</button>'
           + '<button class="mini perigo" onclick="orcApagarDespesa(' + d.id + ')"'
        + ' data-ico="xis" aria-label="Apagar despesa"></button></td>';
@@ -495,7 +495,7 @@
       return (a.data_prevista || '') < (b.data_prevista || '') ? -1 : 1; })[0];
     return '<div class="o-prazos' + (venc.length ? ' mau' : '') + '">'
       + '<span class="ic" data-ico="' + (venc.length ? 'aviso' : 'relogio') + '" aria-hidden="true"></span>'
-      + '<span>' + partes.join(' · ')
+      + '<span class="o-prazos-texto">' + partes.join(' · ')
       + (proxima ? ' — a seguir: <b>' + esc(proxima.despesa) + '</b>, '
                  + esc(prazoTexto(diasAte(proxima.data_prevista))) : '')
       + '</span></div>';
@@ -522,7 +522,7 @@
       + '</span>'
       + '<span class="mt' + (pago ? '' : ' porpagar') + '">' + fmt(p.valor) + '</span>';
     if (PODE) {
-      h += '<span style="display:inline-flex;gap:.35rem;justify-content:flex-end">'
+      h += '<span class="pag-acoes">'
         + '<button class="mini" onclick="orcEditarParcela(' + p.id + ')">Editar</button>'
         + '<button class="mini" onclick="orcLiquidar(' + p.id + ',' + (pago ? 'false' : 'true') + ')">'
         + (pago ? 'Desmarcar' : 'Dar por pago') + '</button></span>';
