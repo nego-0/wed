@@ -33,7 +33,9 @@ de há seis meses vende uma coisa que já não existe. `node montra.js` faz
 todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 
 `gerar-capturas-ajuda.js` abre os módulos reais e actualiza as imagens desktop
-e mobile usadas por trás dos stickers vectoriais. `chk_experiencia_kulemba.js`
+e mobile usadas por trás dos stickers vectoriais. Antes de cada fluxo, cria
+dados de exemplo pela API e mede o centro do controlo real; as 84 coordenadas
+ficam em `assets/ajuda/capturas/alvos-cenas.json`. `chk_experiencia_kulemba.js`
 confirma que os 14 tópicos são pesquisáveis, os 42 passos abrem apenas a sua
 narração, a captura permanece ao lado e tudo cabe no telemóvel.
 `rever-stickers-ajuda.js` gera 84 quadros de revisão — três passos, dois
@@ -42,7 +44,8 @@ Defina `HELP_STICKER_REVIEW` com uma pasta temporária antes de o executar.
 Nos fluxos que mudam de estado,
 `HELP_CAPTURE_SCENES_ONLY=1 node tests/gerar-capturas-ajuda.js` recria as cenas
 antes de abrir, no topo e depois da rolagem até ao botão final. O nome antigo
-`HELP_CAPTURE_MODAL_ONLY` continua aceite.
+`HELP_CAPTURE_MODAL_ONLY` continua aceite. Para depurar apenas um formato, use
+`HELP_CAPTURE_DEVICE=desktop` ou `HELP_CAPTURE_DEVICE=mobile`.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js

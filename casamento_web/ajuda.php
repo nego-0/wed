@@ -75,6 +75,31 @@ function stickerAjuda(string $modulo,int $topico,int $passo): array {
     ];
     $linha=$alvos[$modulo][$topico][$passo]??['tocar',50,50,50,50,0,0];
     $anterior=$passo>0?($alvos[$modulo][$topico][$passo-1]??$linha):$linha;
+
+    // O gerador mede o centro do controlo real em cada captura. Ler essas
+    // medidas evita copiar coordenadas à mão quando um botão muda de lugar e
+    // conserva a tabela acima como recurso para instalações sem o manifesto.
+    static $medidos=null;
+    if($medidos===null){
+        $medidos=[]; $f=__DIR__.'/assets/ajuda/capturas/alvos-cenas.json';
+        $js=is_readable($f)?json_decode((string)file_get_contents($f),true):[];
+        foreach(is_array($js)?$js:[] as $m){
+            if(!isset($m['modulo'],$m['topico'],$m['passo'],$m['dispositivo']))continue;
+            $medidos[$m['modulo']][(int)$m['topico']][(int)$m['passo']][$m['dispositivo']]=$m;
+        }
+    }
+    $atual=$medidos[$modulo][$topico+1][$passo+1]??[];
+    $antes=$passo>0?($medidos[$modulo][$topico+1][$passo]??[]):$atual;
+    if(isset($atual['desktop']['x'],$atual['desktop']['y'])){
+        $d=$atual['desktop']; $dp=$antes['desktop']??$d;
+        $linha[0]=(string)($d['tipo']??$linha[0]); $linha[1]=(float)$d['x']; $linha[2]=(float)$d['y'];
+        $linha[5]=!empty($d['rolar']); $anterior[1]=(float)($dp['x']??$linha[1]); $anterior[2]=(float)($dp['y']??$linha[2]);
+    }
+    if(isset($atual['mobile']['x'],$atual['mobile']['y'])){
+        $m=$atual['mobile']; $mp=$antes['mobile']??$m;
+        $linha[0]=(string)($m['tipo']??$linha[0]); $linha[3]=(float)$m['x']; $linha[4]=(float)$m['y'];
+        $linha[6]=!empty($m['rolar']); $anterior[3]=(float)($mp['x']??$linha[3]); $anterior[4]=(float)($mp['y']??$linha[4]);
+    }
     return [
       'tipo'=>$linha[0],
       'desktop'=>['x'=>$linha[1],'y'=>$linha[2],'px'=>$anterior[1],'py'=>$anterior[2],'rolar'=>(bool)$linha[5]],

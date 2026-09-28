@@ -40,17 +40,21 @@ tornam-se imediatamente passos: antes de `||` fica o título, depois fica a
 narração expandida. Uma linha sem número funciona como título da operação.
 
 Depois de uma alteração visual ao produto, execute
-`node tests/gerar-capturas-ajuda.js` contra uma instalação com dados de exemplo.
-O script abre cada módulo real e grava os 28 JPEG de base em
-`assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Nos
-fluxos que mudam de estado grava ainda uma cena por passo. Assim, “Novo
-convite”, o formulário e “Guardar convite” são três estados reais; o mesmo
-vale para “Nova despesa”, Mesas e a passagem das páginas das peças para os
-editores e painéis de versões. `HELP_CAPTURE_SCENES_ONLY=1` actualiza apenas
-essas trinta cenas. `HELP_CAPTURE_MODAL_ONLY=1` continua aceite para não quebrar
-rotinas antigas. Os stickers reutilizáveis vivem em `assets/ajuda/stickers/`;
-a posição e o tipo de
-gesto de cada passo são definidos por `stickerAjuda()` em `ajuda.php`.
+`node tests/gerar-capturas-ajuda.js` contra uma instalação de testes. O script
+cria dados de exemplo contextualizados através da API real, abre cada módulo e
+grava 84 JPEG em `assets/ajuda/capturas/`: três passos de dois tópicos, nos sete
+módulos, em desktop e mobile. Assim, “Novo convite”, o formulário preenchido e
+“Guardar convite” são estados reais; os passos finais de actualização e
+filtragem também mostram o respectivo resultado. No convite digital, a cena
+passa brevemente pela abertura e acompanha a rolagem até à secção indicada.
+
+`HELP_CAPTURE_SCENES_ONLY=1` actualiza apenas as cenas dos passos;
+`HELP_CAPTURE_DEVICE=desktop` ou `mobile` limita temporariamente a execução a
+um formato. `HELP_CAPTURE_MODAL_ONLY=1` continua aceite para não quebrar
+rotinas antigas. O gerador mede cada alvo no elemento real e grava os valores
+em `alvos-cenas.json`; `ajuda.php` usa esse manifesto para colocar o sticker e
+para representar a rolagem. Os stickers reutilizáveis vivem em
+`assets/ajuda/stickers/`.
 
 Antes de publicar novas coordenadas, execute
 `node tests/rever-stickers-ajuda.js`. O script abre os três passos de cada um

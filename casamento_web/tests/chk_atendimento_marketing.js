@@ -1,6 +1,9 @@
 // A montra só usa ficção, e o admin manda no que ela diz.
 const { chromium } = require('playwright-core');
+const fs=require('node:fs'),path=require('node:path');
 const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0.1:8921';
+const ALVOS=JSON.parse(fs.readFileSync(path.join(__dirname,'..','assets','ajuda','capturas','alvos-cenas.json'),'utf8'));
+const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>x.rolar).map(x=>`${x.modulo}-${x.topico}-${x.passo}`)).size;
 (async()=>{const b=await chromium.launch({executablePath:EXE,headless:true});let falhas=0;const ok=(v,m)=>{console.log((v?'PASS':'FAIL')+': '+m);if(!v)falhas++;};
  const pub=await b.newPage();const erros=[];pub.on('pageerror',e=>erros.push(e.message));await pub.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'});
  ok(await pub.locator('[data-demo]').count()===7,'a montra apresenta os sete módulos');
@@ -23,6 +26,6 @@ const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0
  await p.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});ok(await p.locator('.aj-card').count()===14,'a licença de demonstração abre os catorze tópicos');
  ok(await p.locator('.aj-demonstracao picture').evaluateAll(async xs=>{const urls=xs.flatMap(x=>[x.querySelector('img')?.src,x.querySelector('source')?.srcset]).filter(Boolean);return urls.length===84&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/jpeg'));}),'as cenas nítidas dos 42 passos em desktop e mobile carregam');
  ok(await p.locator('.aj-sticker').evaluateAll(async xs=>{const urls=xs.map(x=>x.src);return urls.length===42&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/svg+xml'));}),'os stickers vectoriais dos 42 passos carregam');
- ok(await p.locator('.aj-scroll-marca img').evaluateAll(async xs=>{const urls=xs.map(x=>x.src);return urls.length===16&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/svg+xml'));}),'os percursos de rolagem necessários carregam');
+ ok(await p.locator('.aj-scroll-marca img').evaluateAll(async (xs,n)=>{const urls=xs.map(x=>x.src);return urls.length===n&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/svg+xml'));},PASSOS_COM_ROLAGEM),'os percursos de rolagem necessários carregam');
  ok(erros.length===0,'a montra não produz erros JavaScript');await b.close();process.exit(falhas?1:0);
 })().catch(e=>{console.error(e);process.exit(1)});

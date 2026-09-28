@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Cada passo da Ajuda usa dados de exemplo e coordenadas medidas na interface real',
+         'ajuda.php', 'assets/ajuda/capturas/alvos-cenas.json'],
         ['Os filtros de Convidados mostram uma única linha em qualquer ecrã',
          'index.php', 'function cartoesNaPrimeiraLinha(total)'],
         ['As Regras do Bar ocupam a mesma largura das Gavetas e da Equipa',
