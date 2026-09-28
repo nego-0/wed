@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 58;
+const ESQUEMA_VERSAO = 59;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -534,6 +534,25 @@ function ajudaOperacionalPadrao(string $modulo): string {
     ][$modulo] ?? '';
 }
 
+/**
+ * A montra pública fala a linguagem de quem ainda está a decidir: vantagens e
+ * recursos, e não «como se faz». Mantém, porém, a mesma forma da ajuda — dois
+ * temas por módulo, três destaques cada — para assentar sobre as mesmas
+ * capturas e os mesmos stickers da central visual. O que muda é a voz: cada
+ * linha nomeia um recurso e, depois de ||, explica o que o casal ganha com ele.
+ */
+function demonstracaoComercialPadrao(string $modulo): string {
+    return [
+      'convidados' => "CONVITES POR FAMÍLIA, SEM NOMES PERDIDOS\n1. Cada família no seu cartão. || Reúna acompanhantes e crianças num só convite, com o número de lugares certo. Acabam-se as folhas soltas e os nomes repetidos.\n2. Ligação e código privados. || Cada família recebe um acesso só seu para confirmar, sem ver a lista dos outros convidados.\n3. Confirmações que chegam sozinhas. || As respostas entram em tempo real e os totais de confirmados, recusas e pendentes actualizam-se à sua frente.\n\nSEMPRE A SABER QUEM VEM\n1. Pesquisa imediata. || Encontre qualquer pessoa ou família ao escrever meia palavra, mesmo com centenas de convidados.\n2. O estado de cada resposta. || Veja num relance quem confirmou, quem ainda não respondeu e quantos lugares já estão comprometidos.\n3. O retrato da festa no topo. || Os indicadores gerais dão-lhe a dimensão do evento sem abrir uma única ficha.",
+      'mesas' => "A SALA INTEIRA NUM ECRÃ\n1. Planta visual da festa. || Veja todas as mesas dispostas como estarão na sala, com a forma e a lotação de cada uma.\n2. Mesas à sua medida. || Crie mesas redondas ou compridas, dê-lhes nome e defina quantos lugares comportam.\n3. Arrastar para o lugar real. || Coloque cada mesa onde ela ficará no salão; a disposição fica guardada tal como a deixou.\n\nCADA CONVIDADO NO SEU LUGAR\n1. Sentar em segundos. || Escolha uma pessoa e toque na mesa: o lugar é atribuído sem cálculos nem papéis.\n2. Lotação sempre à vista. || O contador de lugares avisa quando uma mesa enche, antes de haver enganos.\n3. Ajustes sem esforço. || Mude alguém de mesa quando quiser e veja os lugares livres recalcularem-se na hora.",
+      'impresso' => "UM CONVITE IMPRESSO À VOSSA IMAGEM\n1. Modelos elegantes. || Comece por uma peça bonita e coerente, pronta a personalizar em minutos.\n2. Texto, cores e composição. || Ajuste cada detalhe — nomes, tipografia, paleta — com uma pré-visualização fiel ao resultado final.\n3. Provas guardadas e comparáveis. || Grave versões identificadas e volte à que preferir sempre que quiser.\n\nDA PROVA À GRÁFICA SEM SURPRESAS\n1. Revisão fiel ao papel. || Confira nomes, datas, moradas e margens exactamente como vão sair impressos.\n2. Paletas à escolha. || Experimente combinações de cor e veja a peça mudar ao vivo.\n3. Manual de impressão incluído. || Leve para a gráfica o formato, a sangria, o papel e o acabamento, sem margem para erro.",
+      'digital' => "UM CONVITE DIGITAL QUE ENCANTA\n1. Lindo no telemóvel. || Uma experiência de página inteira, com capa, história e fotografias que dá gosto abrir.\n2. A vossa história contada. || Capítulos, cronograma e mapas apresentam o dia tal como ele vai ser.\n3. Confirmação no próprio convite. || O convidado responde sem sair da página, e a resposta chega-vos de imediato.\n\nPARTILHAR COM CONFIANÇA\n1. Pré-visualização real. || Veja o convite tal como o convidado o verá, antes de o enviar.\n2. Uma só versão pública. || Apenas o modelo que aprovar fica visível na ligação; nada de rascunhos à mostra.\n3. Uma ligação para todos. || Partilhe um único endereço e acompanhe as aberturas e as confirmações.",
+      'porta' => "ENTRADAS SEM FILAS\n1. Encontrar em segundos. || Pesquise o nome ou leia o código e o grupo aparece pronto a confirmar.\n2. Confirmar quem chegou. || Marque apenas as pessoas presentes, com o resto da gestão fora de vista.\n3. Total a subir ao vivo. || Cada entrada actualiza o número de presentes na hora.\n\nCONTROLO SEM COMPLICAÇÕES\n1. Correcções fáceis. || Desmarque um engano num toque, sem estragar o registo.\n2. Quem ainda falta. || Veja a lista de ausentes e saiba sempre quantos convidados esperar.\n3. Acesso limitado à porta. || A equipa da entrada trabalha sem aceder às contas nem aos dados do casamento.",
+      'bar' => "UM BAR QUE SERVE SOZINHO\n1. Menu por categorias. || Organize águas, refrigerantes, cervejas e cocktails em grupos claros.\n2. Stock e limites sob controlo. || Defina quantidades e limites que evitam pedidos a mais.\n3. Abrir quando quiser. || Active o serviço apenas quando a copa estiver pronta.\n\nDO PEDIDO À ENTREGA, LIGADOS\n1. O convidado pede da mesa. || Escolhe as bebidas e confirma o pedido uma só vez, sem chamar ninguém.\n2. A copa prepara. || A equipa recebe o pedido, aceita-o e acompanha a preparação.\n3. A entrega confirmada. || O garçom leva à mesa certa e marca a entrega — tudo fica registado.",
+      'orcamento' => "AS CONTAS DO CASAMENTO EM ORDEM\n1. Cada despesa no seu lugar. || Registe fornecedor, categoria, valor previsto e prazo numa ficha só.\n2. Pagamentos acompanhados. || Some parcelas e sinais e saiba a todo o momento quanto já saiu.\n3. Comprovativos à mão. || Guarde a fatura junto da despesa, para nada se perder.\n\nO PANORAMA FINANCEIRO NUM RELANCE\n1. Planeado, pago e por pagar. || Três números no topo dizem-lhe onde está o orçamento.\n2. Filtros que respondem. || Isole uma categoria, os atrasos ou o que falta pagar num toque.\n3. Sem sustos de última hora. || Veja as próximas datas e ajuste antes que se tornem um problema.",
+    ][$modulo] ?? '';
+}
+
 function semearConteudosAtendimento(mysqli $conn): void {
     global $P;
     $modulos = [
@@ -556,7 +575,7 @@ function semearConteudosAtendimento(mysqli $conn): void {
     foreach ($modulos as $chave => [$titulo, $resumo, $corpo, $dados]) {
         foreach (['demo','ajuda'] as $tipo) {
             $media = '';
-            $texto = $tipo === 'ajuda' ? ajudaOperacionalPadrao($chave) : $corpo;
+            $texto = $tipo === 'ajuda' ? ajudaOperacionalPadrao($chave) : demonstracaoComercialPadrao($chave);
             $st = @$conn->prepare("INSERT IGNORE INTO {$P}atendimento_conteudos
                 (tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,1)");
             $dadosTipo = $tipo === 'demo' ? $dados : '';
@@ -2590,6 +2609,27 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             $texto = ajudaOperacionalPadrao($modulo);
             $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
                                   WHERE tipo='ajuda' AND modulo=? AND conteudo=?");
+            if ($st) { $st->bind_param('sss', $texto, $modulo, $anterior); @$st->execute(); }
+        }
+    }
+
+    // v59 — a montra deixa de repetir os guias de utilização e passa a falar de
+    // vantagens e recursos, mantendo a mesma central visual. Só troca a prosa de
+    // origem da demonstração; o que o admin já reescreveu para a montra fica seu.
+    if ($versaoAtual < 59) {
+        $prosaAntiga = [
+          'convidados' => "Criem convites por família, acompanhem confirmações e saibam sempre quem vem.\n\nNa demonstração podem explorar uma lista fictícia, os estados de RSVP e os indicadores gerais.",
+          'mesas' => "Organizem o salão visualmente, movam convidados e detectem lugares livres.\n\nA demonstração usa nomes inventados e uma planta de exemplo.",
+          'impresso' => "Personalizem texto, cores e composição. O manual de impressão acompanha a peça para reduzir surpresas na gráfica.",
+          'digital' => "Vejam a capa, a história, os locais e o formulário de confirmação tal como um convidado os verá.",
+          'porta' => "A equipa da porta pesquisa nomes ou lê códigos, sem expor a gestão completa do casamento.",
+          'bar' => "Experimentem o percurso fictício: escolher bebidas, preparar na copa e confirmar a entrega na mesa.",
+          'orcamento' => "Acompanhem categorias, pagamentos e desvios com números fictícios que mostram a visão final sem revelar dados reais.",
+        ];
+        foreach ($prosaAntiga as $modulo => $anterior) {
+            $texto = demonstracaoComercialPadrao($modulo);
+            $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
+                                  WHERE tipo='demo' AND modulo=? AND conteudo=?");
             if ($st) { $st->bind_param('sss', $texto, $modulo, $anterior); @$st->execute(); }
         }
     }

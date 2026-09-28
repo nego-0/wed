@@ -17,12 +17,16 @@ sua página própria dentro da mesma navegação.
 ## Uma central, dois contextos
 
 `parcial-ajuda.php` contém o renderizador usado tanto por `ajuda.php` como por
-a secção `#demonstracao` de `atendimento.php`. O conteúdo, a ordem dos tópicos,
-as capturas, os stickers, a pesquisa e os filtros são os mesmos nos dois
-contextos. A página pública apresenta todos os materiais activos; depois da
-entrada, a licença limita a central aos módulos adquiridos pelo casamento.
-O administrador mantém esta colecção única em **Administração → Atendimento →
-Materiais da Ajuda e da demonstração**.
+a secção `#demonstracao` de `atendimento.php`. A disposição, as capturas, os
+stickers, a pesquisa e os filtros são os mesmos nos dois contextos; muda só a
+**voz**, escolhida pelo parâmetro `$modo`: `ajuda` fala de tarefas e passos de
+utilização, `demonstracao` fala de vantagens e recursos, para quem ainda está a
+decidir. Cada um lê a sua colecção — a Ajuda os guias (`tipo=ajuda`), a montra o
+texto de marketing (`tipo=demo`) — e o texto de fábrica da montra vive em
+`demonstracaoComercialPadrao()`. A página pública apresenta todos os materiais
+activos; depois da entrada, a licença limita a Ajuda aos módulos adquiridos pelo
+casamento. O administrador edita as duas colecções, à parte, em **Administração
+→ Atendimento**: a **Montra pública (marketing)** e os **Materiais de ajuda**.
 
 ## Ajuda por licença
 
@@ -44,10 +48,11 @@ alterados.
 
 ## Actualizar as capturas
 
-O administrador edita o campo de passos em **Administração → Atendimento →
-Materiais da Ajuda e da demonstração**. Linhas como `1. Abra Mesas || No menu, escolha Mesas`
+O administrador edita o campo de passos em **Administração → Atendimento**, tanto
+nos **Materiais de ajuda** como na **Montra pública**. Linhas como `1. Abra Mesas || No menu, escolha Mesas`
 tornam-se imediatamente passos: antes de `||` fica o título, depois fica a
-narração expandida. Uma linha sem número funciona como título da operação.
+narração expandida. Uma linha sem número funciona como título da operação (ou do
+tema, na montra). As duas colecções assentam nas mesmas capturas e stickers.
 
 Depois de uma alteração visual ao produto, execute
 `node tests/gerar-capturas-ajuda.js` contra uma instalação de testes. O script

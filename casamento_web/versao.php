@@ -21,8 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
-        ['A demonstração pública apresenta a mesma central visual da Ajuda',
-         'atendimento.php', 'renderCentralAjuda($itens,$rot,$ico)'],
+        ['A demonstração pública usa a central visual da Ajuda com linguagem de marketing',
+         'atendimento.php', "renderCentralAjuda(\$itens,\$rot,\$ico,'demonstracao')"],
+        ['E a montra tem texto próprio de vantagens e recursos, separado dos guias de utilização',
+         'db.php', 'function demonstracaoComercialPadrao'],
         ['O Orçamento apresenta despesas e prestações sem transbordo no telemóvel',
          'orcamento.php', 'table.desp tr{ display:grid'],
         ['E o cartão de despesa dispensa as etiquetas repetidas, com o nome e o valor a par',
@@ -167,8 +169,8 @@ function correcoesEsperadas(): array {
          'assets/central.css', 'prefers-reduced-motion:reduce'],
         ['Os noivos têm ajuda apenas para os módulos incluídos na licença',
          'ajuda.php', "isset(\$permitidos[\$x['modulo']])"],
-        ['O admin edita a mensagem comercial e os guias partilhados com a demonstração',
-         'plataforma.php', 'id="at-ajudas"'],
+        ['O admin edita, à parte, a montra de marketing e os guias de ajuda',
+         'plataforma.php', 'id="at-demos"'],
         ['Três avatares realistas de origem podem receber o nome escolhido pelo admin',
          'plataforma.php', 'avatar-sofia.webp'],
 

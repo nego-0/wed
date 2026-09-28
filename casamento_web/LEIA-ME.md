@@ -63,11 +63,14 @@ todo o conteúdo quando a altura é reduzida. A regra comum vive em
 A caixa de atendimento nas páginas públicas conduz a uma **montra comercial**
 em `atendimento.php`, com fotografias de exemplo, ícones do sistema,
 animações discretas e perguntas frequentes editáveis. Dentro da secção
-`#demonstracao`, a página apresenta exactamente a mesma central visual,
-tópicos, capturas reais, stickers e interacções da página de Ajuda. O
-componente comum vive em `parcial-ajuda.php`; a página pública mostra todos os
-módulos e os noivos logados vêem apenas os módulos da sua licença. A estrutura
-anterior de abas e painéis fictícios deixou de ser apresentada.
+`#demonstracao`, a página usa a mesma central visual, capturas reais, stickers e
+interacções da página de Ajuda, mas fala a linguagem da montra: vantagens e
+recursos, e não os passos de utilização. O componente comum vive em
+`parcial-ajuda.php` e recebe o modo (`ajuda` ou `demonstracao`); cada contexto lê
+a sua colecção — a montra o texto de marketing (`tipo=demo`), a Ajuda os guias
+(`tipo=ajuda`). A página pública mostra todos os módulos e os noivos logados vêem
+apenas os módulos da sua licença. A estrutura anterior de abas e painéis
+fictícios deixou de ser apresentada.
 
 `demonstracao-convite.php` continua disponível para validar isoladamente o
 convite fictício de Lia e Daniel e não grava dados de casamentos.
@@ -76,11 +79,11 @@ Em **Casamentos → Atendimento**, o administrador da plataforma pode:
 
 - editar o título, a promessa, as vantagens e o botão da página comercial;
 - escolher um dos três avatares realistas incluídos, enviar uma fotografia própria e definir livremente o nome e a função;
-- editar, ordenar, ligar ou desligar perguntas e os materiais partilhados pela Ajuda e pela demonstração;
+- editar, ordenar, ligar ou desligar perguntas, o texto de marketing da montra pública e, à parte, os guias de ajuda;
 - substituir as ilustrações dos guias por GIF, PNG ou WEBP;
 - configurar contactos e, opcionalmente, o encaixe de chat ao vivo.
 
-Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta a licença do casamento e mostra somente os guias dos módulos adquiridos. Cada guia inclui texto passo a passo, uma captura real adequada ao dispositivo e um sticker vectorial; o administrador mantém o mesmo material que alimenta a demonstração pública sem editar ficheiros.
+Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta a licença do casamento e mostra somente os guias dos módulos adquiridos. Cada guia inclui texto passo a passo, uma captura real adequada ao dispositivo e um sticker vectorial. A montra pública partilha essas capturas e stickers, mas com texto de marketing próprio; o administrador edita as duas colecções sem tocar em ficheiros.
 
 ---
 

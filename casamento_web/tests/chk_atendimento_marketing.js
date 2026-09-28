@@ -1,4 +1,7 @@
-// A demonstração pública usa exactamente a mesma central visual da Ajuda.
+// A demonstração pública usa a mesma central visual da Ajuda — os mesmos
+// stickers, capturas e disposição —, mas fala a linguagem da montra: vantagens
+// e recursos, e não os passos de utilização. O conteúdo de marketing é uma
+// colecção própria (tipo demo), editável pelo admin à parte dos guias.
 const { chromium } = require('playwright-core');
 const fs=require('node:fs'),path=require('node:path');
 const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0.1:8921';
@@ -27,25 +30,35 @@ const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>x.rolar).map(x=>`${x.modulo}-${
 
  const ctx=await b.newContext(),p=await ctx.newPage();
  await p.goto(BASE+'/login.php');await p.fill('input[name=utilizador]','admin@local');await p.fill('input[name=senha]','noivos2026');await p.click('button[type=submit]');await p.waitForLoadState('networkidle');
- const ler=()=>p.evaluate(async()=>await(await fetch('api.php?action=atendimento_ler')).json());let d=await ler();
- ok(d.success&&d.conteudos.filter(x=>x.tipo==='ajuda').length===7,'o admin recebe os sete materiais partilhados');
- await p.goto(BASE+'/plataforma.php?vista=atendimento',{waitUntil:'networkidle'});
- ok(await p.locator('#at-ajudas .at-conteudo').count()===7,'o admin edita uma única colecção de materiais');
- ok(await p.locator('#at-demos').count()===0,'o editor antigo das demonstrações foi retirado');
+ // A montra fala de marketing, não de utilização: a moldura anuncia recursos e
+ // vantagens, e não «passos» nem «tópicos de utilização».
+ const textoDemo=await demo.innerText();
+ ok(/O que a plataforma faz por si/.test(textoDemo)&&/recurso/i.test(textoDemo),'a montra usa a linguagem de recursos e vantagens');
+ ok(!/Tópicos de utilização/.test(textoDemo)&&!/passo a passo/i.test(textoDemo),'a montra não fala em passos de utilização');
 
- d=await ler(); const x=d.conteudos.find(x=>x.tipo==='ajuda'&&x.modulo==='convidados'); const marca=' Prova partilhada';
+ const ler=()=>p.evaluate(async()=>await(await fetch('api.php?action=atendimento_ler')).json());let d=await ler();
+ ok(d.success&&d.conteudos.filter(x=>x.tipo==='ajuda').length===7,'o admin recebe os sete materiais de ajuda');
+ ok(d.conteudos.filter(x=>x.tipo==='demo').length===7,'e os sete materiais de marketing da montra');
+ await p.goto(BASE+'/plataforma.php?vista=atendimento',{waitUntil:'networkidle'});
+ ok(await p.locator('#at-ajudas .at-conteudo').count()===7,'o admin edita os guias de ajuda');
+ ok(await p.locator('#at-demos .at-conteudo').count()===7,'e edita, à parte, a montra pública de marketing');
+
+ // Editar a montra (tipo demo) reflecte-se na demonstração pública; a Ajuda,
+ // essa, não se mexe — são colecções próprias.
+ d=await ler(); const x=d.conteudos.find(x=>x.tipo==='demo'&&x.modulo==='convidados'); const marca=' Vantagem de prova';
  const gravar=v=>p.evaluate(async v=>await(await fetch('api.php?action=atendimento_conteudo_guardar',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':window.CSRF},body:JSON.stringify(v)})).json(),v);
- let g=await gravar({...x,resumo:x.resumo+marca});ok(g.success,'o admin edita o material comum');
- await pub.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'});ok((await pub.locator('#demonstracao').innerText()).includes(marca),'a edição aparece na demonstração pública');
+ let g=await gravar({...x,resumo:x.resumo+marca});ok(g.success,'o admin edita o material da montra');
+ await pub.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'});ok((await pub.locator('#demonstracao').innerText()).includes(marca),'a edição da montra aparece na demonstração pública');
  await gravar(x);
 
  await p.goto(BASE+'/plataforma.php');await p.waitForSelector('#lista-casamentos .casamento, #lista-casamentos button');
  const abrir=p.getByRole('button',{name:'Abrir'}).first();if(await abrir.count()){await abrir.click();await p.waitForLoadState('networkidle');}
  await p.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});
  const titulosAjuda=await p.locator('.aj-card .aj-assunto b').allTextContents();
+ ok((await p.locator('main').innerText()).includes('Tópicos de utilização'),'a Ajuda autenticada continua a explicar a utilização');
  await pub.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'});
  const titulosDemo=await pub.locator('#demonstracao .aj-card .aj-assunto b').allTextContents();
- ok(JSON.stringify(titulosDemo)===JSON.stringify(titulosAjuda),'a demonstração e a Ajuda exibem os mesmos tópicos na mesma ordem');
+ ok(titulosDemo.length===14&&JSON.stringify(titulosDemo)!==JSON.stringify(titulosAjuda),'a montra e a Ajuda trazem títulos próprios, cada um na sua linguagem');
  ok(erros.length===0,'a montra não produz erros JavaScript');
  await b.close();process.exit(falhas?1:0);
 })().catch(e=>{console.error(e);process.exit(1)});

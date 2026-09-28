@@ -95,24 +95,56 @@ function stickerAjuda(string $modulo,int $topico,int $passo): array {
     ];
 }
 
-/** A mesma central visual serve a Ajuda autenticada e a demonstração pública. */
-function renderCentralAjuda(array $itens,array $rot,array $ico): void { ?>
-<section class="aj-hero"><div><span class="aj-kicker">Comunidade de ajuda Kulemba</span><h2>Faça cada operação, passo a passo.</h2><p>Escolha um tópico e acompanhe as instruções pela imagem da mesma interface que tem à sua frente.</p></div><div class="aj-pesquisa"><label for="aj-busca">Pesquisar uma dúvida ou tarefa</label><span data-ico="procurar" aria-hidden="true"></span><input id="aj-busca" type="search" placeholder="Ex.: mudar um convidado de mesa" autocomplete="off"><kbd>/</kbd></div></section>
+/**
+ * A mesma central visual serve dois contextos, com a mesma disposição, capturas
+ * e stickers — muda só a voz. Em 'ajuda' (a Central autenticada) fala-se de
+ * tarefas e passos; em 'demonstracao' (a montra pública) fala-se de vantagens e
+ * recursos, para quem ainda está a decidir. O conteúdo de cada um chega de
+ * colecções próprias, por isso aqui só se escolhe o vocabulário da moldura.
+ */
+function renderCentralAjuda(array $itens,array $rot,array $ico,string $modo='ajuda'): void {
+    $mkt = $modo === 'demonstracao';
+    $T = $mkt ? [
+        'kicker'=>'Conheça a plataforma Kulemba',
+        'titulo'=>'Tudo o que o vosso casamento ganha, recurso a recurso.',
+        'intro'=>'Escolha um módulo e descubra as vantagens sobre a mesma interface que vai usar no grande dia.',
+        'busca_rot'=>'Procure um recurso ou vantagem','busca_ph'=>'Ex.: confirmar presenças no próprio convite',
+        'cat_conta'=>'recursos em destaque','cat_todos'=>'Todos os recursos',
+        'forum_kicker'=>'Vantagens e recursos','forum_titulo'=>'O que a plataforma faz por si',
+        'selo'=>'Em destaque','meta'=>'recursos',
+        'resposta_estado'=>'Apresentação do módulo · sempre na versão mais recente',
+        'resposta_intro'=>'Percorra cada recurso. A imagem mostra a interface real e o sticker assinala exactamente onde a vantagem acontece.',
+        'destaque'=>'Recurso em destaque','passo_rot'=>'Recurso','passo_detalhe'=>'O que ganha',
+        'passo_fecho'=>'Incluído no módulo.','rodape'=>'Cada módulo trabalha ligado aos outros durante toda a celebração.',
+    ] : [
+        'kicker'=>'Comunidade de ajuda Kulemba',
+        'titulo'=>'Faça cada operação, passo a passo.',
+        'intro'=>'Escolha um tópico e acompanhe as instruções pela imagem da mesma interface que tem à sua frente.',
+        'busca_rot'=>'Pesquisar uma dúvida ou tarefa','busca_ph'=>'Ex.: mudar um convidado de mesa',
+        'cat_conta'=>'tópicos oficiais','cat_todos'=>'Todos os tópicos',
+        'forum_kicker'=>'Perguntas e respostas','forum_titulo'=>'Tópicos de utilização',
+        'selo'=>'Guia oficial','meta'=>'passos',
+        'resposta_estado'=>'Resposta verificada · acompanha a versão actual',
+        'resposta_intro'=>'Abra cada passo pela ordem indicada. A captura nítida mostra a interface real e o sticker animado indica a acção exacta.',
+        'destaque'=>'Acção em destaque','passo_rot'=>'Passo','passo_detalhe'=>'Narração detalhada',
+        'passo_fecho'=>'Conclua este passo antes de abrir o seguinte.','rodape'=>'Conclua um passo antes de avançar para o seguinte.',
+    ]; ?>
+<section class="aj-hero"><div><span class="aj-kicker"><?=escP($T['kicker'])?></span><h2><?=escP($T['titulo'])?></h2><p><?=escP($T['intro'])?></p></div><div class="aj-pesquisa"><label for="aj-busca"><?=escP($T['busca_rot'])?></label><span data-ico="procurar" aria-hidden="true"></span><input id="aj-busca" type="search" placeholder="<?=escP($T['busca_ph'])?>" autocomplete="off"><kbd>/</kbd></div></section>
   <?php if(!$itens): ?>
   <div class="aj-vazio"><h2>A ajuda aparecerá com os vossos módulos</h2><p>Quando a licença for atribuída, esta página mostrará apenas os guias correspondentes.</p><a class="btn" href="licenca.php">Ver licença</a></div>
   <?php else: $totalTopicos=array_sum(array_map(fn($x)=>count(topicosDaAjuda($x['conteudo'])),$itens)); ?>
   <div class="aj-forum">
-    <aside class="aj-categorias" aria-label="Categorias da ajuda"><div class="aj-categorias-titulo"><span data-ico="conversa"></span><div><b>Categorias</b><small><?= $totalTopicos ?> tópicos oficiais</small></div></div><nav class="aj-submenu"><button class="ativo" type="button" data-aj-modulo="todos"><span data-ico="brilho"></span><b>Todos os tópicos</b><small><?= $totalTopicos ?></small></button><?php foreach($itens as $x): $quantos=count(topicosDaAjuda($x['conteudo'])); ?><button type="button" data-aj-modulo="<?=escP($x['modulo'])?>"><span data-ico="<?=escP($ico[$x['modulo']]??'documento')?>"></span><b><?=escP($rot[$x['modulo']]??$x['modulo'])?></b><small><?= $quantos ?></small></button><?php endforeach ?></nav></aside>
-    <section class="aj-conteudo"><div class="aj-forum-topo"><div><span class="aj-kicker">Perguntas e respostas</span><h2>Tópicos de utilização</h2></div><p class="aj-resultado" id="aj-resultado" role="status"></p></div>
+    <aside class="aj-categorias" aria-label="Categorias da ajuda"><div class="aj-categorias-titulo"><span data-ico="conversa"></span><div><b>Categorias</b><small><?= $totalTopicos ?> <?=escP($T['cat_conta'])?></small></div></div><nav class="aj-submenu"><button class="ativo" type="button" data-aj-modulo="todos"><span data-ico="brilho"></span><b><?=escP($T['cat_todos'])?></b><small><?= $totalTopicos ?></small></button><?php foreach($itens as $x): $quantos=count(topicosDaAjuda($x['conteudo'])); ?><button type="button" data-aj-modulo="<?=escP($x['modulo'])?>"><span data-ico="<?=escP($ico[$x['modulo']]??'documento')?>"></span><b><?=escP($rot[$x['modulo']]??$x['modulo'])?></b><small><?= $quantos ?></small></button><?php endforeach ?></nav></aside>
+    <section class="aj-conteudo"><div class="aj-forum-topo"><div><span class="aj-kicker"><?=escP($T['forum_kicker'])?></span><h2><?=escP($T['forum_titulo'])?></h2></div><p class="aj-resultado" id="aj-resultado" role="status"></p></div>
       <div class="aj-lista" id="aj-grid"><?php $primeiro=true; foreach($itens as $x): foreach(topicosDaAjuda($x['conteudo']) as $n=>$topico): $pesquisaPassos=implode(' ',array_map(fn($p)=>$p['titulo'].' '.$p['narracao'],$topico['passos'])); $pesquisa=mb_strtolower(($rot[$x['modulo']]??$x['modulo']).' '.$x['titulo'].' '.$x['resumo'].' '.$topico['titulo'].' '.$pesquisaPassos,'UTF-8'); ?>
         <article class="aj-card" data-modulo="<?=escP($x['modulo'])?>" data-topico="<?=$n?>" data-pesquisa="<?=escP($pesquisa)?>">
           <details<?= $primeiro?' open':'' ?>>
-            <summary><span class="aj-avatar" data-ico="<?=escP($ico[$x['modulo']]??'documento')?>"></span><span class="aj-assunto"><small><?=escP($rot[$x['modulo']]??$x['modulo'])?> · Guia oficial</small><b><?=escP($topico['titulo'])?></b><em><?=escP($x['resumo'])?></em></span><span class="aj-meta"><b><?=count($topico['passos'])?></b><small>passos</small><i data-ico="direita"></i></span></summary>
-            <div class="aj-resposta"><header><span class="aj-avatar kulemba">K</span><div><b>Equipa Kulemba</b><small>Resposta verificada · acompanha a versão actual</small></div></header><p>Abra cada passo pela ordem indicada. A captura nítida mostra a interface real e o sticker animado indica a acção exacta.</p>
-              <div class="aj-guia"><figure class="aj-demonstracao"><div class="aj-imagem"><?php foreach($topico['passos'] as $i=>$passo): $cenaDesk=capturaAjuda($x['modulo'],$n,'desktop',$i); $cenaMov=capturaAjuda($x['modulo'],$n,'mobile',$i); ?><picture class="aj-cena<?= $i===0?' ativo':'' ?>" data-cena-passo="<?=$i?>"><source media="(max-width:700px)" srcset="<?=asset($cenaMov)?>"><img src="<?=asset($cenaDesk)?>" alt="Passo <?=$i+1?> de <?=escP($topico['titulo'])?> em <?=escP($rot[$x['modulo']]??$x['modulo'])?>" loading="lazy"></picture><?php endforeach; foreach($topico['passos'] as $i=>$passo): $sticker=stickerAjuda($x['modulo'],$n,$i); $d=$sticker['desktop']; $m=$sticker['mobile']; $classes=($d['rolar']?' tem-rolagem-d':'').($m['rolar']?' tem-rolagem-m':''); $estilo="--dx:{$d['x']}%;--dy:{$d['y']}%;--dpx:{$d['px']}%;--dpy:{$d['py']}%;--mx:{$m['x']}%;--my:{$m['y']}%;--mpx:{$m['px']}%;--mpy:{$m['py']}%"; ?><span class="aj-sticker-marca<?=$classes?><?= $i===0?' ativo':'' ?>" data-sticker-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img class="aj-sticker <?=escP($sticker['tipo'])?>" src="<?=asset('assets/ajuda/stickers/'.$sticker['tipo'].'.svg')?>" alt=""></span><?php if($d['rolar']||$m['rolar']): ?><span class="aj-scroll-marca<?= $d['rolar']?' rolagem-d':'' ?><?= $m['rolar']?' rolagem-m':'' ?>" data-scroll-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img src="<?=asset('assets/ajuda/stickers/rolar.svg')?>" alt=""></span><?php endif; endforeach ?></div><figcaption><span data-ico="brilho"></span><b>Acção em destaque</b><small data-aj-legenda><?=escP($topico['passos'][0]['titulo']??'Abra o primeiro passo')?></small></figcaption></figure>
-                <ol class="aj-passos"><?php foreach($topico['passos'] as $i=>$passo): ?><li><details class="aj-passo" data-passo="<?=$i?>"<?= $i===0?' open':'' ?>><summary><span><?= $i+1 ?></span><span><small>Passo <?= $i+1 ?></small><b><?=escP($passo['titulo'])?></b></span><i data-ico="direita" aria-hidden="true"></i></summary><div class="aj-passo-detalhe"><small>Narração detalhada</small><p><?=escP($passo['narracao'])?></p><em>Conclua este passo antes de abrir o seguinte.</em></div></details></li><?php endforeach ?></ol>
+            <summary><span class="aj-avatar" data-ico="<?=escP($ico[$x['modulo']]??'documento')?>"></span><span class="aj-assunto"><small><?=escP($rot[$x['modulo']]??$x['modulo'])?> · <?=escP($T['selo'])?></small><b><?=escP($topico['titulo'])?></b><em><?=escP($x['resumo'])?></em></span><span class="aj-meta"><b><?=count($topico['passos'])?></b><small><?=escP($T['meta'])?></small><i data-ico="direita"></i></span></summary>
+            <div class="aj-resposta"><header><span class="aj-avatar kulemba">K</span><div><b>Equipa Kulemba</b><small><?=escP($T['resposta_estado'])?></small></div></header><p><?=escP($T['resposta_intro'])?></p>
+              <div class="aj-guia"><figure class="aj-demonstracao"><div class="aj-imagem"><?php foreach($topico['passos'] as $i=>$passo): $cenaDesk=capturaAjuda($x['modulo'],$n,'desktop',$i); $cenaMov=capturaAjuda($x['modulo'],$n,'mobile',$i); ?><picture class="aj-cena<?= $i===0?' ativo':'' ?>" data-cena-passo="<?=$i?>"><source media="(max-width:700px)" srcset="<?=asset($cenaMov)?>"><img src="<?=asset($cenaDesk)?>" alt="Passo <?=$i+1?> de <?=escP($topico['titulo'])?> em <?=escP($rot[$x['modulo']]??$x['modulo'])?>" loading="lazy"></picture><?php endforeach; foreach($topico['passos'] as $i=>$passo): $sticker=stickerAjuda($x['modulo'],$n,$i); $d=$sticker['desktop']; $m=$sticker['mobile']; $classes=($d['rolar']?' tem-rolagem-d':'').($m['rolar']?' tem-rolagem-m':''); $estilo="--dx:{$d['x']}%;--dy:{$d['y']}%;--dpx:{$d['px']}%;--dpy:{$d['py']}%;--mx:{$m['x']}%;--my:{$m['y']}%;--mpx:{$m['px']}%;--mpy:{$m['py']}%"; ?><span class="aj-sticker-marca<?=$classes?><?= $i===0?' ativo':'' ?>" data-sticker-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img class="aj-sticker <?=escP($sticker['tipo'])?>" src="<?=asset('assets/ajuda/stickers/'.$sticker['tipo'].'.svg')?>" alt=""></span><?php if($d['rolar']||$m['rolar']): ?><span class="aj-scroll-marca<?= $d['rolar']?' rolagem-d':'' ?><?= $m['rolar']?' rolagem-m':'' ?>" data-scroll-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img src="<?=asset('assets/ajuda/stickers/rolar.svg')?>" alt=""></span><?php endif; endforeach ?></div><figcaption><span data-ico="brilho"></span><b><?=escP($T['destaque'])?></b><small data-aj-legenda><?=escP($topico['passos'][0]['titulo']??'Abra o primeiro passo')?></small></figcaption></figure>
+                <ol class="aj-passos"><?php foreach($topico['passos'] as $i=>$passo): ?><li><details class="aj-passo" data-passo="<?=$i?>"<?= $i===0?' open':'' ?>><summary><span><?= $i+1 ?></span><span><small><?=escP($T['passo_rot'])?> <?= $i+1 ?></small><b><?=escP($passo['titulo'])?></b></span><i data-ico="direita" aria-hidden="true"></i></summary><div class="aj-passo-detalhe"><small><?=escP($T['passo_detalhe'])?></small><p><?=escP($passo['narracao'])?></p><em><?=escP($T['passo_fecho'])?></em></div></details></li><?php endforeach ?></ol>
               </div>
-              <footer><span data-ico="visto"></span>Conclua um passo antes de avançar para o seguinte.</footer>
+              <footer><span data-ico="visto"></span><?=escP($T['rodape'])?></footer>
             </div>
           </details>
         </article>
