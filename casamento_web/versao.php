@@ -25,6 +25,8 @@ function correcoesEsperadas(): array {
          'atendimento.php', 'renderCentralAjuda($itens,$rot,$ico)'],
         ['O Orçamento apresenta despesas e prestações sem transbordo no telemóvel',
          'orcamento.php', 'table.desp tr{ display:grid'],
+        ['E o cartão de despesa dispensa as etiquetas repetidas, com o nome e o valor a par',
+         'orcamento.php', 'table.desp td::before{ display:none'],
         ['Cada passo da Ajuda usa dados de exemplo e coordenadas medidas na interface real',
          'parcial-ajuda.php', 'assets/ajuda/capturas/alvos-cenas.json'],
         ['Os filtros de Convidados mostram uma única linha em qualquer ecrã',

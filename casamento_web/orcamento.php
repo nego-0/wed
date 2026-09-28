@@ -298,25 +298,48 @@ $CAS  = casalDaFicha($conn);
     .o-filtro .mini{ margin-left:0; }
 
     /* Em ecrãs estreitos cada despesa passa a cartão. A tabela continua
-       semântica no desktop, mas já não obriga o telemóvel a percorrer 560 px. */
+       semântica no desktop, mas já não obriga o telemóvel a percorrer 560 px.
+       E deixa de parecer um formulário: as etiquetas em maiúsculas repetidas
+       saem, porque num cartão o nome, o valor e a pastilha dizem-se por si. O
+       que fica é uma hierarquia — o nome e o valor lado a lado em cima, o
+       estado e a categoria a meio, e a fatura e as acções num rodapé com um
+       traço a fechá-lo. */
     .tabela-scroll{ overflow:visible; }
     table.desp{ display:block; min-width:0; }
     table.desp thead{ display:none; }
-    table.desp tbody{ display:grid; gap:.75rem; }
-    table.desp tr{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-      gap:.65rem .8rem; padding:.85rem; border:1px solid var(--line); border-radius:12px;
-      background:var(--card); }
+    table.desp tbody{ display:grid; gap:.85rem; }
+    table.desp tr{ display:grid; grid-template-columns:minmax(0,1fr) auto;
+      row-gap:.5rem; column-gap:.9rem; align-items:baseline;
+      padding:1rem 1.05rem; border:1px solid var(--line); border-radius:14px;
+      background:var(--card); box-shadow:0 1px 3px rgba(22,38,30,.05); }
     table.desp td{ display:block; min-width:0; padding:0; border:0; text-align:left; white-space:normal; }
-    table.desp td::before{ content:attr(data-label); display:block; margin-bottom:.25rem;
-      color:var(--ink-fraco); font-size:.58rem; font-weight:700; letter-spacing:.07em;
-      text-transform:uppercase; }
-    table.desp td.d-resumo,table.desp td.d-ac{ grid-column:1/-1; }
-    table.desp td.d-val{ text-align:right; }
-    table.desp td.d-val::before{ text-align:right; }
-    .d-cat>span{ max-width:100%; white-space:normal!important; }
+    table.desp td::before{ display:none; }   /* fora as etiquetas repetidas */
+
+    /* 1.ª linha: o nome à esquerda, o valor à direita, no mesmo pé. São o par
+       que responde à pergunta «o quê, e quanto». */
+    table.desp td.d-resumo{ grid-column:1; grid-row:1; }
+    table.desp td.d-val{ grid-column:2; grid-row:1; text-align:right; }
+    .d-nome{ font-size:var(--t-corpo); font-weight:600; line-height:1.3; }
+    table.desp td.d-val{ font-size:var(--t-corpo); font-weight:600; }
+    .d-forn{ margin-top:.15rem; }
+    .d-falta{ margin-top:.1rem; }
+
+    /* 2.ª linha: estado (esq.) e categoria (dir.), como duas etiquetas a par. */
+    table.desp td.d-est{ grid-column:1; grid-row:2; align-self:center; }
+    table.desp td.d-cat{ grid-column:2; grid-row:2; align-self:center; text-align:right; }
+    .d-cat>span{ max-width:100%; white-space:normal!important; justify-content:flex-end; }
+
+    /* Rodapé: fatura à esquerda e acções à direita, na mesma linha, fechada por
+       um traço. As duas células ocupam a largura toda e sobrepõem-se — uma
+       encosta a si, a outra ao fim —, e o traço de uma corre sem falha de ponta
+       a ponta. */
+    table.desp td.d-fat{ grid-column:1/-1; grid-row:3; align-self:center;
+      margin-top:.35rem; padding-top:.8rem; border-top:1px solid var(--line); }
+    table.desp td.d-ac{ grid-column:1/-1; grid-row:3; justify-self:end; align-self:center;
+      margin-top:.35rem; padding-top:.8rem; display:flex; justify-content:flex-end; gap:.45rem; }
     .d-fat>span{ max-width:100%; }
     .fat-anexar,.fat-chip{ min-height:36px; display:inline-flex; align-items:center; }
-    .d-ac{ display:flex!important; justify-content:flex-end; gap:.4rem; }
+    .fat-thumb{ width:44px; height:44px; }
     .d-ac .mini{ min-height:36px; }
 
     .o-prazos{ align-items:flex-start; padding:.7rem; }
