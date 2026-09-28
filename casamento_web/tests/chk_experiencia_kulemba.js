@@ -23,7 +23,7 @@ const PASSOS_COM_ROLAGEM = new Set(ALVOS.filter(x=>x.rolar).map(x=>`${x.modulo}-
     }
     console.log('PASS: entrada, registo e demonstração usam as novas imagens');
     await page.goto(BASE+'/registo.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('[data-exemplo],[data-exemplo-pac]').count(),0,'o registo não mostra exemplos dos módulos');
-    await page.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.demo-app-topo').count(),7,'cada módulo reproduz o cabeçalho da aplicação');
+    await page.goto(BASE+'/atendimento.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('#demonstracao .aj-card').count(),14,'a demonstração apresenta os mesmos tópicos da Ajuda'); assert.equal(await page.locator('#demonstracao .aj-passo').count(),42,'a demonstração apresenta os mesmos passos da Ajuda'); assert.equal(await page.locator('#demonstracao [data-demo],#demonstracao [data-painel],#demonstracao .demo-app-topo').count(),0,'a estrutura antiga foi retirada');
     await page.goto(BASE+'/login.php',{waitUntil:'networkidle'}); await page.fill('[name=utilizador]',USER); await page.fill('[name=senha]',PASSWORD); await page.click('button[type=submit]'); await page.waitForLoadState('networkidle');
     await page.goto(BASE+'/plataforma.php?vista=atendimento',{waitUntil:'networkidle'});
     assert.equal(await page.locator('.topo .nav a:not([href="logout.php"])').count(),9); assert(await page.locator('.topo .nav a.ativo').getAttribute('href').then(x=>x.includes('atendimento')));

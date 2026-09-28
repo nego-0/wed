@@ -60,21 +60,27 @@ incluindo as barras móveis e o teclado. Abrem acima do menu e permitem percorre
 todo o conteúdo quando a altura é reduzida. A regra comum vive em
 `assets/modais.css` e `assets/modais.js`.
 
-A caixa de atendimento nas páginas públicas conduz a uma **montra comercial interactiva** em `atendimento.php`, com fotografias de exemplo, ícones do sistema, animações discretas e perguntas frequentes editáveis. As animações respeitam a preferência de movimento reduzido.
+A caixa de atendimento nas páginas públicas conduz a uma **montra comercial**
+em `atendimento.php`, com fotografias de exemplo, ícones do sistema,
+animações discretas e perguntas frequentes editáveis. Dentro da secção
+`#demonstracao`, a página apresenta exactamente a mesma central visual,
+tópicos, capturas reais, stickers e interacções da página de Ajuda. O
+componente comum vive em `parcial-ajuda.php`; a página pública mostra todos os
+módulos e os noivos logados vêem apenas os módulos da sua licença. A estrutura
+anterior de abas e painéis fictícios deixou de ser apresentada.
 
-A demonstração não tem marcas de água nem bloqueios de selecção ou menu de contexto. Usa os componentes visuais do sistema, o renderizador do convite impresso e o modelo completo do convite digital. As vistas de gestão são adaptadas para permitir acções limitadas com dados fictícios: confirmar presença, procurar convidados, mudar mesas, registar entradas, acompanhar um pedido da copa à entrega e registar pagamentos. Os indicadores acompanham as acções e **Recomeçar demonstração** repõe todo o exemplo. A paleta do convite impresso e a confirmação do convite digital também podem ser experimentadas.
-
-O estado vive apenas na memória do navegador; não usa as APIs de gestão nem grava dados de casamentos. `demonstracao-convite.php` não abre sessão nem consulta a base de dados: renderiza um casal fictício, com fotografias da galeria de exemplos e um QR sem validade. O iframe limita os scripts e bloqueia pedidos às APIs e o envio de formulários através de CSP. Os títulos, textos, indicadores ilustrativos e a disponibilidade de cada módulo continuam editáveis pelo admin. As acções e os dados usados na simulação são definidos em `parcial-demonstracao.php` e `assets/central.js`.
+`demonstracao-convite.php` continua disponível para validar isoladamente o
+convite fictício de Lia e Daniel e não grava dados de casamentos.
 
 Em **Casamentos → Atendimento**, o administrador da plataforma pode:
 
 - editar o título, a promessa, as vantagens e o botão da página comercial;
 - escolher um dos três avatares realistas incluídos, enviar uma fotografia própria e definir livremente o nome e a função;
-- editar, ordenar, ligar ou desligar perguntas, demonstrações e materiais de ajuda;
+- editar, ordenar, ligar ou desligar perguntas e os materiais partilhados pela Ajuda e pela demonstração;
 - substituir as ilustrações dos guias por GIF, PNG ou WEBP;
 - configurar contactos e, opcionalmente, o encaixe de chat ao vivo.
 
-Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta a licença do casamento e mostra somente os guias dos módulos adquiridos. Cada guia inicial inclui texto passo a passo e uma animação curta; o administrador mantém todo esse material sem editar ficheiros.
+Os noivos autenticados encontram **Ajuda** no menu principal. A página consulta a licença do casamento e mostra somente os guias dos módulos adquiridos. Cada guia inclui texto passo a passo, uma captura real adequada ao dispositivo e um sticker vectorial; o administrador mantém o mesmo material que alimenta a demonstração pública sem editar ficheiros.
 
 ---
 

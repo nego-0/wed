@@ -14,6 +14,16 @@ pastilhas do próprio cabeçalho; já não existe uma segunda barra. Cada endere
 `plataforma.php?vista=...` abre directamente a área pedida. Modelos mantém a
 sua página própria dentro da mesma navegação.
 
+## Uma central, dois contextos
+
+`parcial-ajuda.php` contém o renderizador usado tanto por `ajuda.php` como por
+a secção `#demonstracao` de `atendimento.php`. O conteúdo, a ordem dos tópicos,
+as capturas, os stickers, a pesquisa e os filtros são os mesmos nos dois
+contextos. A página pública apresenta todos os materiais activos; depois da
+entrada, a licença limita a central aos módulos adquiridos pelo casamento.
+O administrador mantém esta colecção única em **Administração → Atendimento →
+Materiais da Ajuda e da demonstração**.
+
 ## Ajuda por licença
 
 `ajuda.php` só recebe conteúdos activos dos módulos contratados pelo casamento.
@@ -35,7 +45,7 @@ alterados.
 ## Actualizar as capturas
 
 O administrador edita o campo de passos em **Administração → Atendimento →
-Materiais de ajuda**. Linhas como `1. Abra Mesas || No menu, escolha Mesas`
+Materiais da Ajuda e da demonstração**. Linhas como `1. Abra Mesas || No menu, escolha Mesas`
 tornam-se imediatamente passos: antes de `||` fica o título, depois fica a
 narração expandida. Uma linha sem número funciona como título da operação.
 

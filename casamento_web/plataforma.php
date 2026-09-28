@@ -1237,8 +1237,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
       </div>
     </div>
 
-    <div class="painel"><h3>Demonstrações dos módulos</h3><div class="dica">Conteúdo da montra pública. Os painéis usam a interface do sistema com dados fictícios e acções de exemplo. As alterações da demonstração não são guardadas.</div><div id="at-demos" class="at-conteudos"></div></div>
-    <div class="painel"><h3>Materiais de ajuda</h3><div class="dica">Guias mostrados aos noivos apenas quando o módulo faz parte da licença. Cada título e as linhas numeradas tornam-se tópicos e passos do fórum; as capturas são actualizadas pelo script da interface.</div><div id="at-ajudas" class="at-conteudos"></div></div>
+    <div class="painel"><h3>Materiais da Ajuda e da demonstração</h3><div class="dica">A página pública apresenta exactamente estes mesmos guias. Aos noivos logados aparecem apenas os módulos da licença; na demonstração aparecem todos. Cada título e as linhas numeradas tornam-se tópicos e passos, e as capturas são actualizadas pelo script da interface.</div><div id="at-ajudas" class="at-conteudos"></div></div>
     </div><!-- /vista-atendimento -->
   <?php endif; ?>
 </main>
@@ -1564,15 +1563,13 @@ function atPintarLista(){
 
 const AT_MODULOS={convidados:'Convidados',mesas:'Mesas',impresso:'Convite impresso',digital:'Convite digital',porta:'Porta',bar:'Bar',orcamento:'Orçamento'};
 function atPintarConteudos(){
-  ['demo','ajuda'].forEach(tipo=>{const cx=$(tipo==='demo'?'at-demos':'at-ajudas'); if(!cx)return;
-  const xs=AT_CONTEUDOS.filter(x=>x.tipo===tipo); cx.innerHTML=xs.map(x=>`<article class="at-conteudo${x.ativo?'':' off'}"><small>${esc(AT_MODULOS[x.modulo]||x.modulo)} · ${x.ativo?'visível':'desligado'}</small><h4>${esc(x.titulo)}</h4><p>${esc(x.resumo||'')}</p><div class="ac"><button class="btn btn-sm" onclick="atEditarConteudo(${x.id})">Editar…</button></div></article>`).join('');
-  });
+  const cx=$('at-ajudas'); if(!cx)return;
+  const xs=AT_CONTEUDOS.filter(x=>x.tipo==='ajuda'); cx.innerHTML=xs.map(x=>`<article class="at-conteudo${x.ativo?'':' off'}"><small>${esc(AT_MODULOS[x.modulo]||x.modulo)} · ${x.ativo?'visível':'desligado'}</small><h4>${esc(x.titulo)}</h4><p>${esc(x.resumo||'')}</p><div class="ac"><button class="btn btn-sm" onclick="atEditarConteudo(${x.id})">Editar…</button></div></article>`).join('');
 }
 function atEditarConteudo(id){const x=AT_CONTEUDOS.find(y=>y.id===id);if(!x)return; const campos=[
   {id:'titulo',rot:'Título',tipo:'texto',valor:x.titulo,largura:3},{id:'resumo',rot:'Resumo',tipo:'area',linhas:3,valor:x.resumo,largura:3},{id:'conteudo',rot:'Conteúdo',tipo:'area',linhas:8,valor:x.conteudo,largura:3}];
-  if(x.tipo==='demo')campos.push({id:'dados',rot:'Indicadores fictícios',tipo:'area',linhas:4,valor:x.dados||'',largura:3,dica:'Um por linha, no formato Rótulo: valor. São estes números que aparecem na pré-visualização.'});
   campos.push({id:'ordem',rot:'Ordem',tipo:'numero',valor:x.ordem,min:0,max:9999},{id:'ativo',rot:'Visível',tipo:'sim',valor:!!x.ativo,largura:2,aoLado:'Mostrar este conteúdo'});
-  licFormulario({titulo:x.tipo==='demo'?'Editar demonstração':'Editar material de ajuda',icone:'conversa',guardar:'Guardar conteúdo',campos,aoGuardar:async v=>{const d=await api('atendimento_conteudo_guardar',{method:'POST',body:JSON.stringify({id:x.id,tipo:x.tipo,modulo:x.modulo,titulo:v.titulo,resumo:v.resumo,conteudo:v.conteudo,dados:v.dados||'',ordem:v.ordem,ativo:v.ativo?1:0})});if(!d||!d.success)return false;AT_CONTEUDOS=d.conteudos||[];atPintarConteudos();toast('Conteúdo guardado.');return true;}});}
+  licFormulario({titulo:'Editar material da Ajuda e demonstração',icone:'conversa',guardar:'Guardar conteúdo',campos,aoGuardar:async v=>{const d=await api('atendimento_conteudo_guardar',{method:'POST',body:JSON.stringify({id:x.id,tipo:'ajuda',modulo:x.modulo,titulo:v.titulo,resumo:v.resumo,conteudo:v.conteudo,dados:'',ordem:v.ordem,ativo:v.ativo?1:0})});if(!d||!d.success)return false;AT_CONTEUDOS=d.conteudos||[];atPintarConteudos();toast('Conteúdo guardado na Ajuda e na demonstração.');return true;}});}
 function atEscolherMedia(id){AT_MEDIA_ID=id;$('at-media-f').click();}
 async function atMediaEnviar(){const f=$('at-media-f').files[0];if(!f||!AT_MEDIA_ID)return;const fd=new FormData();fd.append('ficheiro',f);const r=await fetch('api.php?action=atendimento_conteudo_media&id='+AT_MEDIA_ID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});const d=await r.json();$('at-media-f').value='';if(!d||!d.success){toast((d&&d.message)||'Não foi possível guardar a ilustração.',true);return;}const x=AT_CONTEUDOS.find(y=>y.id===AT_MEDIA_ID);if(x)x.media=d.path;toast('Ilustração actualizada.');}
 
