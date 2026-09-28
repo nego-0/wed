@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As Regras do Bar ocupam a mesma largura das Gavetas e da Equipa',
+         'assets/bar.css', '.b-regras{ display:grid; gap:1.1rem; width:100%; }'],
         ['As áreas do administrador ocupam as pastilhas do próprio cabeçalho',
          'parcial-cabecalho.php', 'as próprias pastilhas do cabeçalho'],
         ['Login, registo e demonstração apresentam a campanha visual Kulemba',

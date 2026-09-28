@@ -942,7 +942,7 @@ body.b-servico .b-bt-ico{ width:48px; height:48px; }
    como a casa se porta, o que trava um pedido, e o que se diz a quem se
    recusa. Em coluna, o mesmo painel serve a montagem num ecrã largo e a copa
    num tablet de pé, sem duas folhas de estilo. */
-.b-regras{ display:grid; gap:1.1rem; max-width:820px; }
+.b-regras{ display:grid; gap:1.1rem; width:100%; }
 .b-regras > section{ padding:1.1rem 1.2rem; }
 .b-regras .b-nota{ margin:-.2rem 0 .9rem; font-size:var(--t-apoio); line-height:1.6;
                    color:var(--ink-fraco); }
