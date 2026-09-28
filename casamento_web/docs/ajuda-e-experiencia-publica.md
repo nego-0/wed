@@ -20,10 +20,11 @@ sua página própria dentro da mesma navegação.
 O administrador da plataforma pode rever o conjunto completo. A página permite
 pesquisar várias palavras e filtrar por módulo. Cada cabeçalho escrito no
 conteúdo torna-se um tópico oficial; as linhas numeradas formam uma resposta
-verificada, fácil de seguir. Cada passo abre a sua narração detalhada e um GIF
-da interface real. O elemento `picture` escolhe o GIF de computador ou de
-telemóvel conforme o ecrã. O conteúdo continua editável em Administração →
-Atendimento: escreva `||` entre o título curto e a narração do passo.
+verificada, fácil de seguir. A captura real permanece à esquerda e os passos
+ficam à direita; abrir um passo expande apenas a sua narração. O elemento
+`picture` escolhe a captura de computador ou telemóvel, e um sticker vectorial
+animado assinala a acção correspondente. O conteúdo continua editável em
+Administração → Atendimento: escreva `||` entre o título curto e a narração.
 
 A migração v58 acrescenta as narrações apenas aos materiais que ainda têm o
 texto exacto da versão 57. Materiais que o administrador já editou não são
@@ -39,7 +40,6 @@ narração expandida. Uma linha sem número funciona como título da operação.
 Depois de uma alteração visual ao produto, execute
 `node tests/gerar-capturas-ajuda.js` contra uma instalação com dados de exemplo.
 O script abre cada módulo real e grava 28 JPEG em
-`assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Em
-seguida chama `tests/gerar-gifs-ajuda.py`, que transforma essas capturas nos 84
-GIFs de `assets/ajuda/passos/`: três passos, dois tamanhos e dois tópicos por
-módulo. Defina `PYTHON` se o executável não estiver disponível como `python`.
+`assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Os
+stickers reutilizáveis vivem em `assets/ajuda/stickers/`; a posição e o tipo de
+gesto de cada passo são definidos por `stickerAjuda()` em `ajuda.php`.

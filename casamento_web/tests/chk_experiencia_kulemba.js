@@ -30,14 +30,14 @@ const USER = process.env.TEST_USER || 'admin', PASSWORD = process.env.TEST_PASSW
     console.log('PASS: o menu administrativo é único e abre a vista pedida');
     const abriu=await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}).then(r=>r.json()));
     assert.equal(abriu.success,true,'abrir o casamento de teste');
-    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.aj-card').count(),14); assert.equal(await page.locator('.aj-submenu button').count(),8); assert.equal(await page.locator('.aj-passo').count(),42); assert.equal(await page.locator('.aj-passo picture').count(),42); assert.equal(await page.locator('.aj-passo source[media]').count(),42); assert.equal(await page.locator('video').count(),0); await snap('ajuda-desktop');
+    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'}); assert.equal(await page.locator('.aj-card').count(),14); assert.equal(await page.locator('.aj-submenu button').count(),8); assert.equal(await page.locator('.aj-passo').count(),42); assert.equal(await page.locator('.aj-demonstracao picture').count(),14); assert.equal(await page.locator('.aj-demonstracao source[media]').count(),14); assert.equal(await page.locator('.aj-sticker').count(),42); assert.equal(await page.locator('video').count(),0); await snap('ajuda-desktop');
     await page.fill('#aj-busca','convidado mesa'); assert((await page.locator('.aj-card:visible').count())>=1); assert.match(await page.locator('#aj-resultado').innerText(),/tópico/);
     await page.fill('#aj-busca',''); await page.locator('[data-aj-modulo="bar"]').click(); assert.equal(await page.locator('.aj-card:visible').count(),2); assert.match(await page.locator('.aj-card:visible').last().textContent(),/Acompanhar Um Pedido/i);
     await page.setViewportSize({width:390,height:844}); await page.reload({waitUntil:'networkidle'}); const larguraAjuda=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,janela:innerWidth})); console.log('Ajuda mobile:',larguraAjuda); assert.equal(larguraAjuda.scroll<=larguraAjuda.janela+1,true);
     await snap('ajuda-mobile');
-    const segundo=page.locator('.aj-card:visible .aj-passo').nth(1);await segundo.locator('summary').click();assert.equal(await segundo.getAttribute('open'),'');assert.equal(await segundo.locator('.aj-passo-corpo p').isVisible(),true);assert.match(await segundo.locator('picture img').getAttribute('src'),/assets\/ajuda\/passos\/.+\.gif/);
-    assert.equal(await segundo.locator('picture img').evaluate(e=>e.complete&&e.naturalWidth>=300),true);
-    console.log('PASS: fórum de ajuda pesquisa, filtra e abre GIF e narração em cada passo');
+    const guia=page.locator('.aj-card:visible .aj-guia').first(),alturaImagem=await guia.locator('.aj-demonstracao').evaluate(e=>e.getBoundingClientRect().height),segundo=guia.locator('.aj-passo').nth(1);await segundo.locator('summary').click();assert.equal(await segundo.getAttribute('open'),'');assert.equal(await segundo.locator('.aj-passo-detalhe p').isVisible(),true);assert.equal(await guia.locator('.aj-sticker-marca.ativo[data-sticker-passo="1"]').count(),1);assert(Math.abs((await guia.locator('.aj-demonstracao').evaluate(e=>e.getBoundingClientRect().height))-alturaImagem)<2);
+    assert.match(await guia.locator('picture img').getAttribute('src'),/assets\/ajuda\/capturas\/.+\.jpg/);assert.equal(await guia.locator('picture img').evaluate(e=>e.complete&&e.naturalWidth>=300),true);
+    console.log('PASS: fórum de ajuda mantém a captura ao lado e expande só a narração do passo');
     assert.deepEqual(errors,[],'erros JavaScript');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

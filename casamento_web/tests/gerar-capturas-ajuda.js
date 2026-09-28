@@ -2,7 +2,7 @@
 // Requer uma instalação local com dados de demonstração e uma conta admin.
 // BASE_URL, TEST_USER, TEST_PASSWORD e CHROMIUM podem ser definidos no ambiente.
 const { chromium } = require('playwright-core');
-const fs = require('node:fs'), path = require('node:path'), { spawnSync } = require('node:child_process');
+const fs = require('node:fs'), path = require('node:path');
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const USER = process.env.TEST_USER || 'admin';
 const PASSWORD = process.env.TEST_PASSWORD;
@@ -66,7 +66,4 @@ async function guardar(p,nome,topico,dispositivo){
     }
   }
   await browser.close();
-  const PYTHON=process.env.PYTHON || (process.platform==='win32'?'python':'python3');
-  const gifs=spawnSync(PYTHON,[path.join(__dirname,'gerar-gifs-ajuda.py')],{stdio:'inherit',env:process.env});
-  if(gifs.status!==0)throw new Error('Não foi possível gerar os GIFs dos passos. Defina PYTHON com o executável correcto.');
 })().catch(e=>{console.error(e);process.exit(1)});

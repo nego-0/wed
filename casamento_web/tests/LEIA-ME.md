@@ -32,10 +32,10 @@ estão. Corre-se quando o produto muda de cara: uma montra que mostra o ecrã
 de há seis meses vende uma coisa que já não existe. `node montra.js` faz
 todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 
-`gerar-capturas-ajuda.js` abre os módulos reais, actualiza as imagens desktop e
-mobile e chama `gerar-gifs-ajuda.py` para criar o GIF próprio de cada passo.
-`chk_experiencia_kulemba.js` confirma que os 14 tópicos são pesquisáveis, os 42
-passos abrem narração e GIF responsivo e tudo cabe no telemóvel.
+`gerar-capturas-ajuda.js` abre os módulos reais e actualiza as imagens desktop
+e mobile usadas por trás dos stickers vectoriais. `chk_experiencia_kulemba.js`
+confirma que os 14 tópicos são pesquisáveis, os 42 passos abrem apenas a sua
+narração, a captura permanece ao lado e tudo cabe no telemóvel.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js

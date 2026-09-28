@@ -151,7 +151,7 @@ function ficheirosApp(): array {
             'assets/convite-base.html'];
     // As imagens de ajuda são geradas; incluí-las por padrão evita manter uma
     // lista manual de 112 ficheiros sempre que os passos mudam.
-    foreach (['assets/ajuda/capturas/*.jpg','assets/ajuda/passos/*.gif'] as $padrao) {
+    foreach (['assets/ajuda/capturas/*.jpg','assets/ajuda/stickers/*.svg'] as $padrao) {
         foreach (glob(__DIR__.'/'.$padrao) ?: [] as $ficheiro) {
             $ficheiros[] = str_replace('\\','/',substr($ficheiro,strlen(__DIR__)+1));
         }

@@ -520,7 +520,7 @@ function ajudaOperacionalAnterior(string $modulo): string {
 }
 
 /** Conteúdo comercial e guias editáveis, comum a toda a plataforma.
- *  Em cada passo, o texto depois de || é a narração que abre com o GIF.
+ *  Em cada passo, o texto depois de || é a narração que abre com o sticker.
  */
 function ajudaOperacionalPadrao(string $modulo): string {
     return [
@@ -2582,7 +2582,7 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         }
     }
 
-    // v58 — cada passo passa a ter uma narração detalhada associada ao GIF.
+    // v58 — cada passo passa a ter uma narração detalhada associada à demonstração.
     // A igualdade exacta protege todo o material que já foi editado pelo admin.
     if ($versaoAtual < 58) {
         foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {

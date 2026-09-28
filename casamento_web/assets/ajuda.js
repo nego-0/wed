@@ -7,11 +7,13 @@
   botoes.forEach(b=>b.addEventListener('click',()=>{modulo=b.dataset.ajModulo;botoes.forEach(x=>x.classList.toggle('ativo',x===b));filtrar();if(innerWidth<820)document.querySelector('.aj-conteudo')?.scrollIntoView({behavior:'smooth',block:'start'});}));
   busca.addEventListener('input',filtrar);document.addEventListener('keydown',e=>{if(e.key==='/'&&!/input|textarea|select/i.test(document.activeElement.tagName)){e.preventDefault();busca.focus();}});
   document.querySelectorAll('.aj-card>details').forEach(d=>d.addEventListener('toggle',()=>{if(!d.open)return;document.querySelectorAll('.aj-card>details[open]').forEach(outro=>{if(outro!==d)outro.open=false;});}));
-  const repetirGif=el=>{if(!el)return;const atr=el.tagName==='SOURCE'?'srcset':'src',valor=el.getAttribute(atr);if(!valor)return;const url=new URL(valor,location.href);url.searchParams.set('passo',Date.now());el.setAttribute(atr,url.href);};
   document.querySelectorAll('.aj-passo').forEach(d=>d.addEventListener('toggle',()=>{
     if(!d.open)return;
     d.closest('.aj-passos')?.querySelectorAll('.aj-passo[open]').forEach(outro=>{if(outro!==d)outro.open=false;});
-    repetirGif(d.querySelector('source'));repetirGif(d.querySelector('img'));
+    const guia=d.closest('.aj-guia'),passo=d.dataset.passo;
+    guia?.querySelectorAll('[data-sticker-passo]').forEach(s=>s.classList.toggle('ativo',s.dataset.stickerPasso===passo));
+    const legenda=guia?.querySelector('[data-aj-legenda]'),titulo=d.querySelector('summary b');
+    if(legenda&&titulo)legenda.textContent=titulo.textContent;
   }));
   filtrar();
 })();
