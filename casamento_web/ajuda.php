@@ -34,29 +34,47 @@ function topicosDaAjuda(string $texto): array {
 function capturaAjuda(string $modulo,int $topico,string $dispositivo): string {
     return 'assets/ajuda/capturas/'.$modulo.'-'.($topico+1).'-'.$dispositivo.'.jpg';
 }
-/** Tipo e posição do sticker sobre o controlo real, em percentagem da captura. */
+/** Tipo, posição por dispositivo e eventual percurso desde o passo anterior. */
 function stickerAjuda(string $modulo,int $topico,int $passo): array {
-    $tipos=[
-      'convidados'=>[['tocar','escrever','confirmar'],['escrever','tocar','confirmar']],
-      'mesas'=>[['tocar','escrever','arrastar'],['tocar','tocar','confirmar']],
-      'impresso'=>[['tocar','escrever','confirmar'],['tocar','tocar','confirmar']],
-      'digital'=>[['tocar','escrever','confirmar'],['tocar','arrastar','confirmar']],
-      'porta'=>[['escrever','tocar','confirmar'],['tocar','tocar','confirmar']],
-      'bar'=>[['tocar','escrever','confirmar'],['tocar','tocar','confirmar']],
-      'orcamento'=>[['tocar','escrever','confirmar'],['tocar','tocar','confirmar']],
+    // tipo, desktop x/y, mobile x/y, rolagem desktop/mobile. Cada ponto foi
+    // revisto sobre a captura correspondente, não transposto entre formatos.
+    $alvos=[
+      'convidados'=>[
+        [['tocar',25,6,26,7,0,0],['escrever',36,21,50,21,0,0],['confirmar',75,94,84,96,1,1]],
+        [['escrever',35,79,30,63,0,0],['tocar',77,94,37,98,0,1],['confirmar',50,20,50,12,1,1]],
+      ],
+      'mesas'=>[
+        [['tocar',92,15,19,31,0,0],['escrever',28,15,50,31,0,0],['arrastar',34,70,50,71,1,1]],
+        [['tocar',78,22,50,94,0,0],['tocar',81,48,50,94,1,0],['confirmar',50,7,50,8,1,1]],
+      ],
+      'impresso'=>[
+        [['tocar',94,4,43,70,0,0],['escrever',50,45,43,70,1,0],['confirmar',14,14,43,70,1,0]],
+        [['tocar',70,8,50,13,0,0],['tocar',50,42,50,47,1,1],['confirmar',83,8,27,8,1,1]],
+      ],
+      'digital'=>[
+        [['tocar',95,4,43,70,0,0],['escrever',88,46,43,70,1,0],['confirmar',84,9,43,70,1,0]],
+        [['tocar',50,37,50,28,0,0],['arrastar',50,72,50,65,1,1],['confirmar',50,94,50,94,1,1]],
+      ],
+      'porta'=>[
+        [['escrever',42,45,50,49,0,0],['tocar',36,31,25,35,0,0],['confirmar',68,45,50,55,0,1]],
+        [['tocar',67,28,73,29,0,0],['tocar',50,45,50,49,0,0],['confirmar',38,34,50,37,0,0]],
+      ],
+      'bar'=>[
+        [['tocar',22,31,22,44,0,0],['escrever',85,39,78,46,0,0],['confirmar',89,22,50,27,0,1]],
+        [['tocar',22,32,37,58,0,0],['confirmar',20,54,50,89,1,1],['tocar',83,10,25,13,1,1]],
+      ],
+      'orcamento'=>[
+        [['tocar',35,19,30,15,0,0],['escrever',50,40,50,39,0,0],['confirmar',70,76,88,85,1,1]],
+        [['tocar',50,10,50,12,0,0],['tocar',50,46,50,45,1,1],['confirmar',50,76,50,85,1,1]],
+      ],
     ];
-    $pontos=[
-      'convidados'=>[[[50,8],[48,43],[50,88]],[[23,53],[48,77],[43,24]]],
-      'mesas'=>[[[12,24],[48,25],[48,68]],[[82,47],[82,58],[52,18]]],
-      'impresso'=>[[[17,11],[78,45],[83,11]],[[56,12],[54,43],[83,8]]],
-      'digital'=>[[[83,10],[82,47],[82,13]],[[50,48],[50,67],[17,94]]],
-      'porta'=>[[[50,50],[50,34],[50,29]],[[34,28],[65,28],[50,36]]],
-      'bar'=>[[[24,45],[76,55],[82,17]],[[31,50],[31,50],[66,27]]],
-      'orcamento'=>[[[50,10],[50,48],[66,88]],[[50,12],[52,48],[50,82]]],
+    $linha=$alvos[$modulo][$topico][$passo]??['tocar',50,50,50,50,0,0];
+    $anterior=$passo>0?($alvos[$modulo][$topico][$passo-1]??$linha):$linha;
+    return [
+      'tipo'=>$linha[0],
+      'desktop'=>['x'=>$linha[1],'y'=>$linha[2],'px'=>$anterior[1],'py'=>$anterior[2],'rolar'=>(bool)$linha[5]],
+      'mobile'=>['x'=>$linha[3],'y'=>$linha[4],'px'=>$anterior[3],'py'=>$anterior[4],'rolar'=>(bool)$linha[6]],
     ];
-    $tipo=$tipos[$modulo][$topico][$passo]??'tocar';
-    [$x,$y]=$pontos[$modulo][$topico][$passo]??[50,50];
-    return ['tipo'=>$tipo,'x'=>$x,'y'=>$y];
 }
 ?><!doctype html><html lang="pt"><head><?php include __DIR__.'/parcial-icone.php'; ?>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ajuda · <?= escP($CAS['casal']) ?></title>
@@ -75,7 +93,7 @@ function stickerAjuda(string $modulo,int $topico,int $passo): array {
           <details<?= $primeiro?' open':'' ?>>
             <summary><span class="aj-avatar" data-ico="<?=escP($ico[$x['modulo']]??'documento')?>"></span><span class="aj-assunto"><small><?=escP($rot[$x['modulo']]??$x['modulo'])?> · Guia oficial</small><b><?=escP($topico['titulo'])?></b><em><?=escP($x['resumo'])?></em></span><span class="aj-meta"><b><?=count($topico['passos'])?></b><small>passos</small><i data-ico="direita"></i></span></summary>
             <div class="aj-resposta"><header><span class="aj-avatar kulemba">K</span><div><b>Equipa Kulemba</b><small>Resposta verificada · acompanha a versão actual</small></div></header><p>Abra cada passo pela ordem indicada. A captura nítida mostra a interface real e o sticker animado indica a acção exacta.</p>
-              <div class="aj-guia"><figure class="aj-demonstracao"><picture><source media="(max-width:700px)" srcset="<?=asset($mov)?>"><img src="<?=asset($desk)?>" alt="Ecrã real de <?=escP($rot[$x['modulo']]??$x['modulo'])?> para <?=escP($topico['titulo'])?>" loading="lazy"></picture><?php foreach($topico['passos'] as $i=>$passo): $sticker=stickerAjuda($x['modulo'],$n,$i); ?><span class="aj-sticker-marca<?= $i===0?' ativo':'' ?>" data-sticker-passo="<?=$i?>" style="--sx:<?=$sticker['x']?>%;--sy:<?=$sticker['y']?>%" aria-hidden="true"><img class="aj-sticker <?=escP($sticker['tipo'])?>" src="<?=asset('assets/ajuda/stickers/'.$sticker['tipo'].'.svg')?>" alt=""></span><?php endforeach ?><figcaption><span data-ico="brilho"></span><b>Acção em destaque</b><small data-aj-legenda><?=escP($topico['passos'][0]['titulo']??'Abra o primeiro passo')?></small></figcaption></figure>
+              <div class="aj-guia"><figure class="aj-demonstracao"><div class="aj-imagem"><picture><source media="(max-width:700px)" srcset="<?=asset($mov)?>"><img src="<?=asset($desk)?>" alt="Ecrã real de <?=escP($rot[$x['modulo']]??$x['modulo'])?> para <?=escP($topico['titulo'])?>" loading="lazy"></picture><?php foreach($topico['passos'] as $i=>$passo): $sticker=stickerAjuda($x['modulo'],$n,$i); $d=$sticker['desktop']; $m=$sticker['mobile']; $classes=($d['rolar']?' tem-rolagem-d':'').($m['rolar']?' tem-rolagem-m':''); $estilo="--dx:{$d['x']}%;--dy:{$d['y']}%;--dpx:{$d['px']}%;--dpy:{$d['py']}%;--mx:{$m['x']}%;--my:{$m['y']}%;--mpx:{$m['px']}%;--mpy:{$m['py']}%"; ?><span class="aj-sticker-marca<?=$classes?><?= $i===0?' ativo':'' ?>" data-sticker-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img class="aj-sticker <?=escP($sticker['tipo'])?>" src="<?=asset('assets/ajuda/stickers/'.$sticker['tipo'].'.svg')?>" alt=""></span><?php if($d['rolar']||$m['rolar']): ?><span class="aj-scroll-marca<?= $d['rolar']?' rolagem-d':'' ?><?= $m['rolar']?' rolagem-m':'' ?>" data-scroll-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img src="<?=asset('assets/ajuda/stickers/rolar.svg')?>" alt=""></span><?php endif; endforeach ?></div><figcaption><span data-ico="brilho"></span><b>Acção em destaque</b><small data-aj-legenda><?=escP($topico['passos'][0]['titulo']??'Abra o primeiro passo')?></small></figcaption></figure>
                 <ol class="aj-passos"><?php foreach($topico['passos'] as $i=>$passo): ?><li><details class="aj-passo" data-passo="<?=$i?>"<?= $i===0?' open':'' ?>><summary><span><?= $i+1 ?></span><span><small>Passo <?= $i+1 ?></small><b><?=escP($passo['titulo'])?></b></span><i data-ico="direita" aria-hidden="true"></i></summary><div class="aj-passo-detalhe"><small>Narração detalhada</small><p><?=escP($passo['narracao'])?></p><em>Conclua este passo antes de abrir o seguinte.</em></div></details></li><?php endforeach ?></ol>
               </div>
               <footer><span data-ico="visto"></span>Conclua um passo antes de avançar para o seguinte.</footer>

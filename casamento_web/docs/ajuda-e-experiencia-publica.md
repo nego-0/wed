@@ -23,7 +23,9 @@ conteúdo torna-se um tópico oficial; as linhas numeradas formam uma resposta
 verificada, fácil de seguir. A captura real permanece à esquerda e os passos
 ficam à direita; abrir um passo expande apenas a sua narração. O elemento
 `picture` escolhe a captura de computador ou telemóvel, e um sticker vectorial
-animado assinala a acção correspondente. O conteúdo continua editável em
+animado assinala a acção correspondente. Cada formato tem coordenadas próprias;
+quando dois controlos estão afastados, uma mão com seta mostra primeiro a
+rolagem entre o passo anterior e o actual. O conteúdo continua editável em
 Administração → Atendimento: escreva `||` entre o título curto e a narração.
 
 A migração v58 acrescenta as narrações apenas aos materiais que ainda têm o
@@ -43,3 +45,9 @@ O script abre cada módulo real e grava 28 JPEG em
 `assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Os
 stickers reutilizáveis vivem em `assets/ajuda/stickers/`; a posição e o tipo de
 gesto de cada passo são definidos por `stickerAjuda()` em `ajuda.php`.
+
+Antes de publicar novas coordenadas, execute
+`node tests/rever-stickers-ajuda.js`. O script abre os três passos de cada um
+dos 14 tópicos em computador e telemóvel, confirma que os 84 alvos pertencem à
+respectiva captura e grava os quadros indicados por `HELP_STICKER_REVIEW` para
+inspecção visual. Os percursos de rolagem também recebem um quadro intermédio.

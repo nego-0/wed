@@ -36,6 +36,9 @@ todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 e mobile usadas por trás dos stickers vectoriais. `chk_experiencia_kulemba.js`
 confirma que os 14 tópicos são pesquisáveis, os 42 passos abrem apenas a sua
 narração, a captura permanece ao lado e tudo cabe no telemóvel.
+`rever-stickers-ajuda.js` gera 84 quadros de revisão — três passos, dois
+formatos e catorze tópicos — e quadros intermédios para toda a rolagem animada.
+Defina `HELP_STICKER_REVIEW` com uma pasta temporária antes de o executar.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js

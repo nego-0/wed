@@ -12,6 +12,7 @@
     d.closest('.aj-passos')?.querySelectorAll('.aj-passo[open]').forEach(outro=>{if(outro!==d)outro.open=false;});
     const guia=d.closest('.aj-guia'),passo=d.dataset.passo;
     guia?.querySelectorAll('[data-sticker-passo]').forEach(s=>s.classList.toggle('ativo',s.dataset.stickerPasso===passo));
+    guia?.querySelectorAll('[data-scroll-passo]').forEach(s=>s.classList.toggle('ativo',s.dataset.scrollPasso===passo));
     const legenda=guia?.querySelector('[data-aj-legenda]'),titulo=d.querySelector('summary b');
     if(legenda&&titulo)legenda.textContent=titulo.textContent;
   }));

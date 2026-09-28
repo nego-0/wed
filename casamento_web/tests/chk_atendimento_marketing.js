@@ -23,5 +23,6 @@ const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0
  await p.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});ok(await p.locator('.aj-card').count()===14,'a licença de demonstração abre os catorze tópicos');
  ok(await p.locator('.aj-demonstracao picture').evaluateAll(async xs=>{const urls=xs.flatMap(x=>[x.querySelector('img')?.src,x.querySelector('source')?.srcset]).filter(Boolean);return urls.length===28&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/jpeg'));}),'as capturas nítidas desktop e mobile carregam');
  ok(await p.locator('.aj-sticker').evaluateAll(async xs=>{const urls=xs.map(x=>x.src);return urls.length===42&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/svg+xml'));}),'os stickers vectoriais dos 42 passos carregam');
+ ok(await p.locator('.aj-scroll-marca img').evaluateAll(async xs=>{const urls=xs.map(x=>x.src);return urls.length===21&&(await Promise.all(urls.map(x=>fetch(x)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/svg+xml'));}),'os percursos de rolagem necessários carregam');
  ok(erros.length===0,'a montra não produz erros JavaScript');await b.close();process.exit(falhas?1:0);
 })().catch(e=>{console.error(e);process.exit(1)});
