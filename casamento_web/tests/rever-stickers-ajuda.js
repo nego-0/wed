@@ -25,7 +25,7 @@ fs.mkdirSync(OUT,{recursive:true});
     const scroll=guia.locator(`[data-scroll-passo="${passo}"]`),temScroll=await scroll.count()&&await scroll.evaluate((e,d)=>e.classList.contains(d==='desktop'?'rolagem-d':'rolagem-m'),dispositivo);
     if(temScroll){await page.waitForTimeout(420);await guia.locator('.aj-demonstracao').screenshot({path:path.join(OUT,`${modulo}-${topico}-${passo+1}-${dispositivo}-rolagem.png`)});}
     await page.waitForTimeout(700);
-    const alvo=guia.locator(`.aj-sticker-marca.ativo[data-sticker-passo="${passo}"]`),foto=guia.locator('.aj-demonstracao picture');
+    const alvo=guia.locator(`.aj-sticker-marca.ativo[data-sticker-passo="${passo}"]`),foto=guia.locator('.aj-cena.ativo');
     const [a,f]=await Promise.all([alvo.boundingBox(),foto.boundingBox()]);assert(a&&f&&a.x>=f.x&&a.x<=f.x+f.width&&a.y>=f.y&&a.y<=f.y+f.height,`${modulo}/${topico}/${passo+1}/${dispositivo}: alvo fora da captura`);
     await guia.locator('.aj-demonstracao').screenshot({path:path.join(OUT,`${modulo}-${topico}-${passo+1}-${dispositivo}.png`)});
    }

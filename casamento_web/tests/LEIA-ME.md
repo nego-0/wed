@@ -39,6 +39,10 @@ narração, a captura permanece ao lado e tudo cabe no telemóvel.
 `rever-stickers-ajuda.js` gera 84 quadros de revisão — três passos, dois
 formatos e catorze tópicos — e quadros intermédios para toda a rolagem animada.
 Defina `HELP_STICKER_REVIEW` com uma pasta temporária antes de o executar.
+Nos fluxos que mudam de estado,
+`HELP_CAPTURE_SCENES_ONLY=1 node tests/gerar-capturas-ajuda.js` recria as cenas
+antes de abrir, no topo e depois da rolagem até ao botão final. O nome antigo
+`HELP_CAPTURE_MODAL_ONLY` continua aceite.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js

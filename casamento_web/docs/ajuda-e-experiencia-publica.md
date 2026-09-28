@@ -41,13 +41,21 @@ narração expandida. Uma linha sem número funciona como título da operação.
 
 Depois de uma alteração visual ao produto, execute
 `node tests/gerar-capturas-ajuda.js` contra uma instalação com dados de exemplo.
-O script abre cada módulo real e grava 28 JPEG em
-`assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Os
-stickers reutilizáveis vivem em `assets/ajuda/stickers/`; a posição e o tipo de
+O script abre cada módulo real e grava os 28 JPEG de base em
+`assets/ajuda/capturas/`: dois tópicos por módulo, em desktop e mobile. Nos
+fluxos que mudam de estado grava ainda uma cena por passo. Assim, “Novo
+convite”, o formulário e “Guardar convite” são três estados reais; o mesmo
+vale para “Nova despesa”, Mesas e a passagem das páginas das peças para os
+editores e painéis de versões. `HELP_CAPTURE_SCENES_ONLY=1` actualiza apenas
+essas trinta cenas. `HELP_CAPTURE_MODAL_ONLY=1` continua aceite para não quebrar
+rotinas antigas. Os stickers reutilizáveis vivem em `assets/ajuda/stickers/`;
+a posição e o tipo de
 gesto de cada passo são definidos por `stickerAjuda()` em `ajuda.php`.
 
 Antes de publicar novas coordenadas, execute
 `node tests/rever-stickers-ajuda.js`. O script abre os três passos de cada um
 dos 14 tópicos em computador e telemóvel, confirma que os 84 alvos pertencem à
 respectiva captura e grava os quadros indicados por `HELP_STICKER_REVIEW` para
-inspecção visual. Os percursos de rolagem também recebem um quadro intermédio.
+inspecção visual. Quando um passo exige rolagem, a cena muda para o estado
+final enquanto a mão mostra o percurso; essa transição também recebe um quadro
+intermédio.
