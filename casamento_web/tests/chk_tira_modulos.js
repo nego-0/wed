@@ -147,6 +147,11 @@ const casa = (destinos, re) => destinos.some(h => re.test(h));
   ok(alturas.length === 1,
      'e os cartões à vista todos da mesma altura — uma frase que quebra estica a '
      + 'linha inteira da grelha: ' + alturas.join('px, ') + 'px');
+  const linhasLargas = await p.$$eval('#stats .stat-f', ns => [...new Set(ns
+    .filter(n => n.offsetParent !== null)
+    .map(n => Math.round(n.getBoundingClientRect().top)))]);
+  ok(linhasLargas.length === 1,
+     'e o ecrã largo também apresenta apenas uma linha antes de «Mais filtros»');
 
   // ---- 5. sem conta, diz-se o que falta em vez de se inventar uma barra ----
   const vazios = mods.filter(m => m.total <= 0).map(m => m.rotulo);
@@ -168,11 +173,15 @@ const casa = (destinos, re) => destinos.some(h => re.test(h));
   await m.waitForTimeout(2600);
   const cm = await lerCartoes(m);
   const aVista = cm.filter(c => !c.escondido);
-  ok(aVista.length === 4,
-     'a 390px ficam quatro cartões à vista, e o resto a um toque: ' + aVista.length);
+  ok(aVista.length === 2,
+     'a 390px fica uma linha de dois cartões, e o resto a um toque: ' + aVista.length);
+  const linhasMoveis = await m.$$eval('#stats .stat-f', ns => [...new Set(ns
+    .filter(n => n.offsetParent !== null)
+    .map(n => Math.round(n.getBoundingClientRect().top)))]);
+  ok(linhasMoveis.length === 1, 'os dois cartões formam exactamente uma linha');
   ok(aVista.every(c => !c.cortado), 'nada cortado a 390px');
   ok([...new Set(aVista.map(c => c.altura))].length === 1,
-     'e os quatro da mesma altura');
+     'e os dois da mesma altura');
 
   const est = await m.evaluate(() => {
     const busca = document.getElementById('busca');

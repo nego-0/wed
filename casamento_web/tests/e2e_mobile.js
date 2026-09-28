@@ -49,7 +49,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
 
   const antes = await medir();
   log('fechado:', JSON.stringify(antes));
-  ok(antes.visiveis===4, 'no telemóvel só se veem os 4 cartões essenciais');
+  ok(antes.visiveis===2, 'no telemóvel vê-se uma única linha de 2 cartões essenciais');
   // Eram 12; com a tira de módulos junta aos filtros são mais. O que importa
   // é que os escondidos CONTINUAM na página, e não que sejam um número certo.
   ok(antes.total>antes.visiveis, 'os restantes continuam na página (só escondidos): '

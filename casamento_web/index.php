@@ -160,9 +160,18 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
      virar com o tema. */
   .stat-f.verde .si{ color:var(--ok); } .stat-f.ouro .si{ color:var(--gold); } .stat-f.rosa .si{ color:var(--danger); }
   /* Os cartões extra fazem parte da mesma grelha (display:contents) — assim
-     alinham com os outros em vez de formarem uma segunda grelha desencontrada. */
+     alinham com os outros em vez de formarem uma segunda grelha desencontrada.
+     Fechados, desaparecem em qualquer largura: a primeira vista tem sempre
+     exactamente uma linha, e o gesto para continuar é sempre o mesmo. */
   .stats-extra{ display:contents; }
-  .btn-stats-mais{ display:none; }
+  .stats-extra:not(.aberto){ display:none; }
+  .btn-stats-mais{ display:block; width:100%; margin:.6rem 0 0; background:var(--card);
+    border:1px solid var(--line); border-radius:12px; padding:.55rem; font-family:inherit;
+    font-size:var(--t-denso); color:var(--gold-texto); cursor:pointer; }
+  .btn-stats-mais[hidden]{ display:none; }
+  .btn-stats-mais:hover{ border-color:var(--gold-soft); }
+  .conta-extra{ display:inline-block; min-width:18px; padding:0 .3rem; margin-left:.25rem;
+    border-radius:50px; background:var(--cream); color:var(--ink-fraco); font-size:var(--t-apoio); }
   .esp-stats{ height:0; }   /* respiro entre os cartões e a barra de ações */
 
   /* O cartão que filtra E tem página: o filtro é o cartão todo, e o canto leva
@@ -226,14 +235,6 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     .stat-f{ padding:.6rem .4rem; }
     .stat-f .si{ width:28px; height:28px; }
     .stat-f .sn{ font-size:var(--t-titulo); }
-    .stats-extra:not(.aberto){ display:none; }
-    .btn-stats-mais{ display:block; width:100%; margin:.6rem 0 0; background:var(--card); border:1px solid var(--line);
-      /* --forest é ENCHIMENTO: sobre --card, no escuro, «Mais filtros» ficava
-         a 1,2:1 — lia-se a palavra por se saber que ela lá estava. */
-      border-radius:12px; padding:.55rem; font-family:inherit; font-size:var(--t-denso); color:var(--gold-texto); cursor:pointer; }
-    .btn-stats-mais:hover{ border-color:var(--gold-soft); }
-    .conta-extra{ display:inline-block; min-width:18px; padding:0 .3rem; margin-left:.25rem; border-radius:50px;
-      background:var(--cream); color:var(--ink-fraco); font-size:var(--t-apoio); }
   }
   .stat-f.ativo.verde,.stat-f.ativo.rosa,.stat-f.ativo.ouro{ background:var(--forest); }
 
@@ -972,9 +973,19 @@ function brindeTitulo(s){
        + (sg?` · ${sg} sem género definido`:'') + ` (${(+s.pes_brinde||0)} no total)`;
 }
 
-// Quantos cartões ficam à vista antes do «Mais filtros». Os outros escondem-se
-// no telemóvel para a lista não fugir do ecrã.
-const CARTOES_BASE = 4;
+// Quantos cartões cabem numa linha antes do «Mais filtros». O valor já não é
+// fixo: num telemóvel cabem dois, num portátil sete ou oito. Assim nunca nasce
+// uma segunda linha por acaso e também não se desperdiça espaço num ecrã largo.
+function cartoesNaPrimeiraLinha(total){
+  const grelha = $('stats');
+  if (!grelha) return Math.min(total, 1);
+  if (matchMedia('(max-width:720px)').matches) return Math.min(total, 2);
+  const css = getComputedStyle(grelha);
+  const intervalo = parseFloat(css.columnGap) || 0;
+  const minimo = 112;
+  return Math.max(1, Math.min(total,
+    Math.floor((grelha.clientWidth + intervalo) / (minimo + intervalo))));
+}
 
 // A ordem é do casal, e guarda-se por casamento: quem anda a imprimir quer os
 // «Impressos» à frente; no dia da festa o que interessa é «Entradas». Sem isto,
@@ -1049,12 +1060,14 @@ function renderStats(s){
   const ord = porOrdem(cartoes);
   const html = c => ARRUMAR ? envolverArrumar(c) : c.h;
   const aberto = STATS_ABERTO || ARRUMAR;
+  const base = cartoesNaPrimeiraLinha(ord.length);
   $('stats').innerHTML =
-    ord.slice(0, CARTOES_BASE).map(html).join('') +
-    `<div class="stats-extra${aberto?' aberto':''}">${ord.slice(CARTOES_BASE).map(html).join('')}</div>`;
+    ord.slice(0, base).map(html).join('') +
+    `<div class="stats-extra${aberto?' aberto':''}">${ord.slice(base).map(html).join('')}</div>`;
+  $('stats-mais').hidden = ord.length <= base;
   $('stats-mais').innerHTML = STATS_ABERTO
     ? 'Menos filtros'
-    : `Mais filtros <span class="conta-extra">${ord.length-CARTOES_BASE}</span>`;
+    : `Mais filtros <span class="conta-extra">${ord.length-base}</span>`;
   const bt = $('stats-arrumar');
   if (bt) { bt.classList.toggle('on', ARRUMAR);
             bt.setAttribute('aria-pressed', ARRUMAR ? 'true' : 'false');
@@ -1547,7 +1560,13 @@ function marcarMetaCortada(){
     m.classList.toggle('cortado', m.scrollWidth > m.clientWidth + 1);
   });
 }
-addEventListener('resize', ()=>{ clearTimeout(window._tMeta); window._tMeta=setTimeout(marcarMetaCortada,150); });
+addEventListener('resize', ()=>{
+  clearTimeout(window._tMeta);
+  window._tMeta=setTimeout(()=>{
+    marcarMetaCortada();
+    if (ULTIMO_STATS && !STATS_ABERTO && !ARRUMAR) renderStats(ULTIMO_STATS);
+  },150);
+});
 
 /** Rodapé da lista: quantos se veem, quantos há e o botão para trazer mais. */
 function rodapeLista(){
