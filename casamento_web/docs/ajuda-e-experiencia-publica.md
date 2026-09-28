@@ -71,6 +71,8 @@ em `alvos-cenas.json`; `ajuda.php` usa esse manifesto para colocar o sticker e
 para representar a rolagem. Os stickers reutilizáveis vivem em
 `assets/ajuda/stickers/`.
 
+O renderizador escolhe os stickers por contexto e pela posição estável do passo: os guias usam acções operacionais; a montra combina as descrições comerciais com benefícios como protecção, comparação e confirmação. `node tests/gerar-stickers-ajuda.js` regenera os 17 SVG semânticos; com `HELP_STICKER_SHEET` também produz a folha visual de revisão. `node tests/chk_stickers_semanticos.js` valida os 42 passos dos dois contextos em computador e telemóvel.
+
 Antes de publicar novas coordenadas, execute
 `node tests/rever-stickers-ajuda.js`. O script abre os três passos de cada um
 dos 14 tópicos em computador e telemóvel, confirma que os 84 alvos pertencem à

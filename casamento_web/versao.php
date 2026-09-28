@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os stickers animados acompanham as descrições próprias da montra e os passos da Ajuda',
+         'parcial-ajuda.php', "'demonstracao'=>["],
+        ['E os passos de privacidade usam uma ilustração de protecção dedicada',
+         'assets/ajuda/stickers/proteger.svg', '<path d="M64 15 105 31v29'],
         ['A demonstração pública usa a central visual da Ajuda com linguagem de marketing',
          'atendimento.php', "renderCentralAjuda(\$itens,\$rot,\$ico,'demonstracao')"],
         ['E a montra tem texto próprio de vantagens e recursos, separado dos guias de utilização',

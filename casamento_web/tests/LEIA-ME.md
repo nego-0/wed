@@ -43,6 +43,10 @@ usa a mesma central, a mesma ordem e os mesmos materiais da página de Ajuda.
 `rever-stickers-ajuda.js` gera 84 quadros de revisão — três passos, dois
 formatos e catorze tópicos — e quadros intermédios para toda a rolagem animada.
 Defina `HELP_STICKER_REVIEW` com uma pasta temporária antes de o executar.
+`gerar-stickers-ajuda.js` recria as ilustrações vectoriais associadas aos
+verbos dos passos; com `HELP_STICKER_SHEET` também produz uma folha PNG para
+revisão visual. `chk_stickers_semanticos.js` verifica a correspondência das 42
+descrições em computador e telemóvel.
 Nos fluxos que mudam de estado,
 `HELP_CAPTURE_SCENES_ONLY=1 node tests/gerar-capturas-ajuda.js` recria as cenas
 antes de abrir, no topo e depois da rolagem até ao botão final. O nome antigo
@@ -82,6 +86,7 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | `chk_arrasto.js`        | faixas e seletores de cor deixam-se arrastar até ao fim         |
 | `chk_experiencia_kulemba.js` | menu administrativo comum, imagens públicas e central partilhada pesquisável |
 | `chk_atendimento_marketing.js` | identidade entre a demonstração pública e a Ajuda, incluindo edição administrativa |
+| `chk_stickers_semanticos.js` | 42 descrições ligadas a 19 stickers animados em desktop e mobile |
 | `chk_compacto.js`       | a lista de convites cabe numa linha por convite, com marca de versão nos assets |
 | `chk_cores_textos.js`   | cores com nome, textos que pintam ao vivo, nomes dos noivos     |
 | `chk_deco.js`           | feitios da moldura, tamanho dos ornamentos, e tudo a chegar à impressão |
