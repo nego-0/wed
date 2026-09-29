@@ -82,6 +82,7 @@ Em **Casamentos → Atendimento**, o administrador da plataforma pode:
 - editar o título, a promessa, as vantagens e o botão da página comercial;
 - escolher um dos três avatares realistas incluídos, enviar uma fotografia própria e definir livremente o nome e a função;
 - editar, ordenar, ligar ou desligar perguntas, o texto de marketing da montra pública e, à parte, os guias de ajuda;
+- gerar novamente os stickers de cada área a partir das capturas actuais e ajustar, passo a passo, a acção, a posição e a rolagem em desktop e mobile;
 - substituir as ilustrações dos guias por GIF, PNG ou WEBP;
 - configurar contactos e, opcionalmente, o encaixe de chat ao vivo.
 

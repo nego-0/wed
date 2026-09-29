@@ -2,6 +2,8 @@
 const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
+const USER = process.env.TEST_USER || 'admin';
+const PASSWORD = process.env.TEST_PASSWORD || 'noivos2026';
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -10,7 +12,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
-  await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', 'noivos2026');
+  await p.fill('input[name=utilizador]', USER); await p.fill('input[name=senha]', PASSWORD);
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
   // O admin entra sem casamento aberto (é da plataforma, não de um casal):
   // escolhe-se um casamento ativo, sem depender do número desta instalação.
@@ -50,6 +52,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(/^[0-9a-f]{8}$/.test(assin), 'a assinatura é um hash curto do conteúdo instalado');
   const naos = await p.locator('td.nao').count();
   console.log('  correções em falta:', naos);
+  if (naos) console.log('  marcadores ausentes:', (await p.locator('tr:has(td.nao)').allInnerTexts()).join(' | '));
   ok(naos === 0, 'nesta instalação não falta nenhuma correção');
   ok(await p.locator('.aviso.bom').count() === 1, 'a página diz claramente que está tudo cá');
 

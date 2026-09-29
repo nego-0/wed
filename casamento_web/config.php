@@ -181,6 +181,7 @@ function acoesDaPlataforma(): array {
             'atendimento_guardar','atendimento_faq_guardar','atendimento_faq_apagar',
             'atendimento_foto','atendimento_foto_tirar','atendimento_avatar',
             'atendimento_conteudo_guardar','atendimento_conteudo_media',
+            'atendimento_stickers_gerar','atendimento_stickers_guardar',
             // O preçário das licenças e as decisões sobre os pedidos.
             'lic_decidir','lic_revogar','lic_conceder','lic_modulo_guardar',
             'lic_escalao_guardar','lic_escalao_apagar','lic_pacote_guardar','lic_pacote_apagar',

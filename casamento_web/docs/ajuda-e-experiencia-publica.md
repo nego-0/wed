@@ -71,7 +71,11 @@ em `alvos-cenas.json`; `ajuda.php` usa esse manifesto para colocar o sticker e
 para representar a rolagem. Os stickers reutilizáveis vivem em
 `assets/ajuda/stickers/`.
 
-O renderizador escolhe os stickers por contexto e pela posição estável do passo: os guias usam acções operacionais; a montra combina as descrições comerciais com benefícios como protecção, comparação e confirmação. `node tests/gerar-stickers-ajuda.js` regenera os 17 SVG semânticos; com `HELP_STICKER_SHEET` também produz a folha visual de revisão. `node tests/chk_stickers_semanticos.js` valida os 42 passos dos dois contextos em computador e telemóvel.
+O renderizador escolhe os stickers por contexto e pela posição estável do passo: os guias usam acções operacionais; a montra combina as descrições comerciais com benefícios como protecção, comparação e confirmação. `node tests/gerar-stickers-ajuda.js` regenera os 20 SVG semânticos; com `HELP_STICKER_SHEET` também produz a folha visual de revisão. `node tests/chk_stickers_semanticos.js` valida os 42 passos dos dois contextos em computador e telemóvel.
+
+O admin pode fazer esta manutenção sem editar JSON ou ficheiros. Em cada cartão de **Montra pública** e **Materiais de ajuda**, **Gerar** recompõe a configuração a partir do manifesto actual e **Gerir stickers** abre todos os passos. A janela permite escolher a animação, corrigir X/Y e activar o percurso de rolagem separadamente em desktop e mobile. Os ajustes ficam na coluna `stickers`; os indicadores comerciais permanecem na coluna `dados`.
+
+Para actualizar apenas um módulo de capturas, defina `HELP_CAPTURE_MODULE`, por exemplo `HELP_CAPTURE_MODULE=digital`. O fluxo digital abre a peça padrão com os dados de exemplo do admin e captura tanto o convite publicado como a página de confirmação.
 
 Antes de publicar novas coordenadas, execute
 `node tests/rever-stickers-ajuda.js`. O script abre os três passos de cada um

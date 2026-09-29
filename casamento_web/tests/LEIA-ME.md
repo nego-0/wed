@@ -52,6 +52,8 @@ Nos fluxos que mudam de estado,
 antes de abrir, no topo e depois da rolagem até ao botão final. O nome antigo
 `HELP_CAPTURE_MODAL_ONLY` continua aceite. Para depurar apenas um formato, use
 `HELP_CAPTURE_DEVICE=desktop` ou `HELP_CAPTURE_DEVICE=mobile`.
+`HELP_CAPTURE_MODULE=digital` limita a geração a um módulo e conserva no
+manifesto as coordenadas dos restantes.
 
 ```sh
 TEST_OUT=/tmp/amostras node amostras.js
@@ -86,7 +88,10 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | `chk_arrasto.js`        | faixas e seletores de cor deixam-se arrastar até ao fim         |
 | `chk_experiencia_kulemba.js` | menu administrativo comum, imagens públicas e central partilhada pesquisável |
 | `chk_atendimento_marketing.js` | identidade entre a demonstração pública e a Ajuda, incluindo edição administrativa |
-| `chk_stickers_semanticos.js` | 42 descrições ligadas a 19 stickers animados em desktop e mobile |
+| `chk_admin_stickers.js` | geração e gestão separada dos stickers da Demonstração e da Ajuda pelo admin |
+| `chk_exemplo_demonstracao.js` | peça padrão e dados de exemplo do admin no convite, confirmação e montra; fábrica Marta & Pedro |
+| `chk_demonstracao_interactiva.js` | sete módulos na central pública, convite e confirmação reais, sem escritas nem transbordo |
+| `chk_stickers_semanticos.js` | 42 descrições ligadas a 20 stickers animados em desktop e mobile |
 | `chk_compacto.js`       | a lista de convites cabe numa linha por convite, com marca de versão nos assets |
 | `chk_cores_textos.js`   | cores com nome, textos que pintam ao vivo, nomes dos noivos     |
 | `chk_deco.js`           | feitios da moldura, tamanho dos ornamentos, e tudo a chegar à impressão |

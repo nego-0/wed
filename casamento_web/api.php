@@ -5,6 +5,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/parcial-ajuda.php';
 
 $acao = $_GET['action'] ?? '';
 
@@ -791,7 +792,7 @@ function atendimentoDefs(mysqli $conn): array {
 function atendimentoConteudos(mysqli $conn, string $tipo, bool $todos = false): array {
     global $P;
     if (!in_array($tipo, ['demo','ajuda'], true)) return [];
-    $sql = "SELECT id,tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo
+    $sql = "SELECT id,tipo,modulo,titulo,resumo,conteudo,media,dados,stickers,ordem,ativo
             FROM {$P}atendimento_conteudos WHERE tipo=?" . ($todos ? '' : ' AND ativo=1') .
            ' ORDER BY ordem,id';
     $st = @$conn->prepare($sql); if (!$st) return [];
@@ -947,12 +948,49 @@ if ($acao === 'atendimento_conteudo_guardar') {
     if ($tit==='' || $txt==='') erro('Escreva o título e o conteúdo.');
     if ($id>0) { $st=$conn->prepare("UPDATE {$P}atendimento_conteudos SET titulo=?,resumo=?,conteudo=?,dados=?,ordem=?,ativo=? WHERE id=? AND tipo=? AND modulo=?");
       $st->bind_param('ssssiiiss',$tit,$res,$txt,$dados,$ord,$atv,$id,$tipo,$mod);
-    } else { $media=''; $st=$conn->prepare("INSERT INTO {$P}atendimento_conteudos (tipo,modulo,titulo,resumo,conteudo,media,dados,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE titulo=VALUES(titulo),resumo=VALUES(resumo),conteudo=VALUES(conteudo),dados=VALUES(dados),ordem=VALUES(ordem),ativo=VALUES(ativo)");
-      $st->bind_param('sssssssii',$tipo,$mod,$tit,$res,$txt,$media,$dados,$ord,$atv);
+    } else { $media=''; $stickers=''; $st=$conn->prepare("INSERT INTO {$P}atendimento_conteudos (tipo,modulo,titulo,resumo,conteudo,media,dados,stickers,ordem,ativo) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE titulo=VALUES(titulo),resumo=VALUES(resumo),conteudo=VALUES(conteudo),dados=VALUES(dados),ordem=VALUES(ordem),ativo=VALUES(ativo)");
+      $st->bind_param('ssssssssii',$tipo,$mod,$tit,$res,$txt,$media,$dados,$stickers,$ord,$atv);
     }
     if (!$st->execute()) erro('Não foi possível guardar o conteúdo.');
     registarDaCasa($conn,'atendimento_conteudo',$tit,$tipo.':'.$mod);
     ok(['conteudos'=>array_merge(atendimentoConteudos($conn,'demo',true),atendimentoConteudos($conn,'ajuda',true))]);
+}
+
+if ($acao === 'atendimento_stickers_gerar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma gera os stickers.');
+    exigirCsrf(); $d=corpo(); $id=(int)($d['id']??0);
+    $st=$conn->prepare("SELECT id,tipo,modulo,conteudo FROM {$P}atendimento_conteudos WHERE id=? AND tipo IN ('demo','ajuda') LIMIT 1");
+    $st->bind_param('i',$id); $st->execute(); $x=$st->get_result()->fetch_assoc();
+    if(!$x) erro('Material de ajuda ou demonstração não encontrado.');
+    $mapa=gerarStickersAjuda((string)$x['modulo'],(string)$x['conteudo'],(string)$x['tipo']);
+    $stickers=json_encode(['v'=>1,'stickers'=>$mapa,'gerado_em'=>date(DATE_ATOM)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $st=$conn->prepare("UPDATE {$P}atendimento_conteudos SET stickers=? WHERE id=?");$st->bind_param('si',$stickers,$id);
+    if(!$st->execute()) erro('Não foi possível gerar os stickers.');
+    registarDaCasa($conn,'atendimento_stickers_gerados',(string)$x['modulo'],(string)$x['tipo']);
+    ok(['stickers'=>$stickers,'conteudos'=>array_merge(atendimentoConteudos($conn,'demo',true),atendimentoConteudos($conn,'ajuda',true))]);
+}
+
+if ($acao === 'atendimento_stickers_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma gere os stickers.');
+    exigirCsrf(); $d=corpo(); $id=(int)($d['id']??0); $recebidos=$d['stickers']??null;
+    if(!is_array($recebidos)) erro('Configuração de stickers inválida.');
+    $permitidos=['abrir','activar','adicionar','arrastar','comparar','confirmar','descarregar','desmarcar','editar','entregar','enviar','escrever','filtrar','guardar','pesquisar','preencher','preparar','proteger','rever','rolar','selecionar','tocar'];
+    $limpar=function($linha)use($permitidos){
+        if(!is_array($linha)||!in_array((string)($linha[0]??''),$permitidos,true))return null;
+        $r=[(string)$linha[0]];for($i=1;$i<=4;$i++)$r[]=round(max(0,min(100,(float)($linha[$i]??50))),1);
+        $r[]=(int)!empty($linha[5]);$r[]=(int)!empty($linha[6]);
+        for($i=7;$i<=10;$i++)$r[]=round(max(0,min(100,(float)($linha[$i]??($linha[$i-6]??50)))),1);
+        return $r;
+    };
+    $mapa=[];
+    foreach(array_slice($recebidos,0,12,true) as $t=>$passos){if(!is_array($passos))continue;foreach(array_slice($passos,0,12,true) as $p=>$linha){$ok=$limpar($linha);if($ok!==null)$mapa[(int)$t][(int)$p]=$ok;}}
+    $st=$conn->prepare("SELECT tipo,modulo FROM {$P}atendimento_conteudos WHERE id=? AND tipo IN ('demo','ajuda') LIMIT 1");$st->bind_param('i',$id);$st->execute();$x=$st->get_result()->fetch_assoc();
+    if(!$x) erro('Material de ajuda ou demonstração não encontrado.');
+    $stickers=json_encode(['v'=>1,'stickers'=>$mapa,'gerido_em'=>date(DATE_ATOM)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    $st=$conn->prepare("UPDATE {$P}atendimento_conteudos SET stickers=? WHERE id=?");$st->bind_param('si',$stickers,$id);
+    if(!$st->execute()) erro('Não foi possível guardar os stickers.');
+    registarDaCasa($conn,'atendimento_stickers_geridos',(string)$x['modulo'],(string)$x['tipo']);
+    ok(['stickers'=>$stickers,'conteudos'=>array_merge(atendimentoConteudos($conn,'demo',true),atendimentoConteudos($conn,'ajuda',true))]);
 }
 
 if ($acao === 'atendimento_conteudo_media') {

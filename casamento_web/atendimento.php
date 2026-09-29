@@ -4,7 +4,7 @@ require_once __DIR__ . '/parcial-marca.php';
 require_once __DIR__ . '/parcial-ajuda.php';
 require_once __DIR__ . '/personalizacao.php';
 function atDef(mysqli $c): array { global $P; $o=[]; $r=$c->query("SELECT chave,valor FROM {$P}definicoes WHERE casamento_id=0 AND chave LIKE 'atendimento.%'"); if($r) while($x=$r->fetch_row())$o[substr($x[0],12)]=$x[1]; return $o; }
-function atConteudo(mysqli $c,string $tipo): array { global $P; $st=$c->prepare("SELECT modulo,titulo,resumo,conteudo,dados FROM {$P}atendimento_conteudos WHERE tipo=? AND ativo=1 ORDER BY ordem,id"); $st->bind_param('s',$tipo); $st->execute(); return $st->get_result()->fetch_all(MYSQLI_ASSOC); }
+function atConteudo(mysqli $c,string $tipo): array { global $P; $st=$c->prepare("SELECT modulo,titulo,resumo,conteudo,dados,stickers FROM {$P}atendimento_conteudos WHERE tipo=? AND ativo=1 ORDER BY ordem,id"); $st->bind_param('s',$tipo); $st->execute(); return $st->get_result()->fetch_all(MYSQLI_ASSOC); }
 $d=atDef($conn); $itens=atConteudo($conn,'demo'); $exemplo=exemploModelo($conn);
 $casalExemplo=trim(($exemplo['casal.noiva']??'Marta').' & '.($exemplo['casal.noivo']??'Pedro'));
 $faq=[]; $r=$conn->query("SELECT pergunta,resposta FROM {$P}atendimento_faq WHERE ativo=1 ORDER BY ordem,id"); if($r)$faq=$r->fetch_all(MYSQLI_ASSOC);
