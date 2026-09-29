@@ -13,6 +13,7 @@ const OUT = process.env.HELP_CAPTURE_OUT || path.join(__dirname,'..','assets','a
 const SO_CENAS = process.env.HELP_CAPTURE_SCENES_ONLY === '1' ||
   process.env.HELP_CAPTURE_MODAL_ONLY === '1'; // nome antigo, mantido por compatibilidade
 const SO_DISPOSITIVO = process.env.HELP_CAPTURE_DEVICE || '';
+const SO_MODULO = process.env.HELP_CAPTURE_MODULE || '';
 if(!PASSWORD) throw new Error('Defina TEST_PASSWORD com a senha da conta de testes.');
 fs.mkdirSync(OUT,{recursive:true});
 const alvosGerados=[];
@@ -28,7 +29,7 @@ const modulos = [
     ['/editor-cartao.php',null], ['/manual.php?peca=cartao',null]
   ]],
   ['digital',[
-    ['/convite-editor.php',null], ['/convite-digital.php?demo=1',null]
+    ['/convite-digital.php?demo=1',null], ['/convite.php?demo=1',null]
   ]],
   ['porta',[
     ['/porteiro.php',null], ['/porteiro.php',async p=>p.locator('#tab-ent').click()]
@@ -139,15 +140,15 @@ const sequenciasComCenas = [
     {tipo:'rever',rolar:true,fazer:async p=>{const linha=p.locator('table.prod tbody tr').filter({hasText:'Família Kiala'});await linha.click();await p.locator('#ov-modelo.aberto').waitFor();await p.waitForTimeout(450);await marcar(p,p.locator('#mod-palco'));}},
     {tipo:'descarregar',rolar:true,fazer:async p=>{await p.goto(BASE+'/manual.php?peca=cartao',{waitUntil:'networkidle'});await marcar(p,p.getByRole('button',{name:'Imprimir manual'}));}},
   ]},
-  {nome:'digital',topico:1,url:'/digital.php',passos:[
-    {tipo:'abrir',fazer:async p=>marcar(p,p.locator('a[href="convite-editor.php"]'))},
-    {tipo:'editar',rolar:true,fazer:async p=>{await p.goto(BASE+'/convite-editor.php',{waitUntil:'networkidle'});await continuarEditor(p);await marcar(p,p.locator('#camadas .camada').first());}},
-    {tipo:'guardar',fazer:async p=>{await p.locator('#bt-versao').click();await p.locator('.vs-jan.aberta').waitFor();await p.waitForTimeout(700);await marcar(p,p.locator('.vs-fim'));}},
+  {nome:'digital',topico:1,url:'/convite-digital.php?demo=1',passos:[
+    {tipo:'abrir',fazer:async p=>marcar(p,p.locator('#cover .seal'))},
+    {tipo:'rever',rolar:true,fazer:async p=>{await p.locator('#cover').click();await p.waitForTimeout(500);await marcar(p,p.locator('#historia .titles'));}},
+    {tipo:'confirmar',rolar:true,fazer:async p=>{await p.goto(BASE+'/convite.php?demo=1',{waitUntil:'networkidle'});await marcar(p,p.locator('#form-rsvp .opcoes'));}},
   ]},
   {nome:'digital',topico:2,url:'/convite-digital.php?demo=1',passos:[
     {tipo:'abrir',fazer:async p=>marcar(p,p.locator('#cover .seal'))},
     {tipo:'rolar',rolar:true,fazer:async p=>{await p.locator('#cover').click();await p.waitForTimeout(500);await marcar(p,p.locator('#convite .guest-card'));}},
-    {tipo:'confirmar',rolar:true,fazer:async p=>{await p.evaluate(()=>document.body.style.paddingBottom='45vh');await marcar(p,p.locator('#rsvp .btn-gold'));}},
+    {tipo:'confirmar',rolar:true,fazer:async p=>{await p.goto(BASE+'/convite.php?demo=1',{waitUntil:'networkidle'});await p.locator('#op-sim').click();await marcar(p,p.locator('#membros'));}},
   ]},
   {nome:'porta',topico:1,url:'/porteiro.php',passos:[
     {tipo:'pesquisar',fazer:async p=>{await p.fill('#q','Família Kiala');await p.evaluate(()=>buscar());await p.waitForTimeout(450);await marcar(p,p.locator('#q'));}},
@@ -214,7 +215,7 @@ async function guardarCena(p,cena,passo,dispositivo){
     await p.setViewportSize(viewport);
     await p.goto(BASE+'/index.php',{waitUntil:'networkidle'});
     await prepararDados(p);
-    if(!SO_CENAS)for(const [nome,topicos] of modulos){
+    if(!SO_CENAS)for(const [nome,topicos] of modulos.filter(([nome])=>!SO_MODULO||nome===SO_MODULO)){
       for(let i=0;i<topicos.length;i++){
         const [url,preparar]=topicos[i]; await p.goto(BASE+url,{waitUntil:'networkidle'});
         try{if(preparar)await preparar(p);}catch(e){console.warn(`${nome}/${i+1}: ${e.message}`);}
@@ -222,7 +223,7 @@ async function guardarCena(p,cena,passo,dispositivo){
       }
       console.log(`CAPTURA ${nome} · ${dispositivo}`);
     }
-    for(const fluxo of sequenciasComCenas){
+    for(const fluxo of sequenciasComCenas.filter(x=>!SO_MODULO||x.nome===SO_MODULO)){
       const url=typeof fluxo.url==='function'?fluxo.url():fluxo.url;
       await p.goto(BASE+url,{waitUntil:'networkidle'});
       for(let i=0;i<fluxo.passos.length;i++){
@@ -234,7 +235,13 @@ async function guardarCena(p,cena,passo,dispositivo){
       }
     }
   }
-  fs.writeFileSync(path.join(OUT,'alvos-cenas.json'),JSON.stringify(alvosGerados,null,2));
+  let alvosFinais=alvosGerados;
+  const manifesto=path.join(OUT,'alvos-cenas.json');
+  if(SO_MODULO&&fs.existsSync(manifesto)){
+    const anteriores=JSON.parse(fs.readFileSync(manifesto,'utf8'));
+    alvosFinais=[...anteriores.filter(x=>x.modulo!==SO_MODULO),...alvosGerados];
+  }
+  fs.writeFileSync(manifesto,JSON.stringify(alvosFinais,null,2));
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
 

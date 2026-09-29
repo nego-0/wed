@@ -5,13 +5,22 @@
 // convite em PDF ou enviá-lo pelo WhatsApp.
 // ============================================================
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/parcial-demonstracao.php';
 // Primeiro o convite, só depois as definições: é o código que diz de que
 // casamento se trata, e cada casamento tem os seus nomes, cores e textos.
 $codigo = strtoupper(trim($_GET['c'] ?? ''));
-$c = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
+$demo = isset($_GET['demo']) && $_GET['demo'] === '1';
+if ($demo && !ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
+$c = $demo ? [
+    'id'=>0,'codigo'=>'EXEMPLO','nome_exibicao'=>'Família Mendes','sufixo'=>null,
+    'mostrar_num_mesa'=>1,'lugares'=>2,'mesa_nome'=>'Acácia','msg_pessoal'=>'',
+    'rsvp_estado'=>'pendente','rsvp_confirmados'=>null,
+    'membros'=>[['id'=>-1,'nome'=>'Carla Mendes','rsvp'=>'pendente'],['id'=>-2,'nome'=>'Rui Mendes','rsvp'=>'pendente']],
+] : ($codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null);
 
-$DEFS = defsAtuais($conn);
+$DEFS = $demo ? demonstracaoDefsComModelo($conn) : defsAtuais($conn);
 $CAS  = casalInfo($DEFS);
 $dataExt  = dataExtensa($DEFS['evento.data']);
 $horaTxt  = horaTexto($DEFS['evento.hora'], false);
@@ -21,7 +30,7 @@ $valido = (bool)$c;
 // As perguntas que o casal fez (RSVP-001). Vêm depois de carregarConvite(),
 // que é quem fixa o âmbito do casamento a partir do código — antes dele não
 // há casamento nenhum aberto e isto viria vazio.
-$perguntas = $valido ? perguntasRsvp($conn, true) : [];
+$perguntas = $valido && !$demo ? perguntasRsvp($conn, true) : [];
 // E o que este convite já respondeu, para quem volta não recomeçar do zero.
 $respostas = [];
 if ($valido && $perguntas) {

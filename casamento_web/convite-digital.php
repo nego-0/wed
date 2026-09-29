@@ -10,6 +10,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/parcial-demonstracao.php';
 
 // O convite tem de ser encontrado ANTES de se lerem as definições: é o código
 // que revela de que casamento se trata, e as definições (nomes, cores, textos)
@@ -18,11 +19,10 @@ require_once __DIR__ . '/personalizacao.php';
 $codigo   = strtoupper(trim($_GET['c'] ?? ''));
 $c        = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
 
-$DEFS = defsAtuais($conn);
-$download = isset($_GET['download']) && $_GET['download'] === '1';
-
 // Pré-visualização do editor (só admin): convidado de exemplo, sem tocar na BD.
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
+$DEFS = $demo ? demonstracaoDefsComModelo($conn) : defsAtuais($conn);
+$download = isset($_GET['download']) && $_GET['download'] === '1';
 if ($demo) {
     // Também o admin da plataforma, que desenha modelos sem casamento aberto.
     if (!ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
@@ -49,7 +49,12 @@ if ($demo && (int)($_GET['modelo'] ?? 0) > 0) {
     // só o admin tem — e usá-lo aqui fazia a prova do casal cair no convite
     // dele, com todas as miniaturas iguais.
     [$defsMod, , $MOD] = defsDoEditor($conn, 'digital');
-    if ($MOD) $DEFS = $defsMod;
+    if ($MOD) {
+        $DEFS = $defsMod;
+        // O modelo muda o desenho; casal, evento e fotografias continuam a ser
+        // exactamente os dados de exemplo escolhidos pelo administrador.
+        foreach (exemploModelo($conn) as $chave=>$valor) $DEFS[$chave]=$valor;
+    }
 }
 
 // Rascunho por gravar: o editor envia o estado em edição para a tela poder

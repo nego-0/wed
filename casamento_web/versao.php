@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O exemplo de fábrica identifica o casal como Marta & Pedro',
+         'personalizacao.php', "'casal.noiva'   => 'Marta'"],
+        ['A demonstração digital usa a peça padrão e os dados de exemplo definidos pelo admin',
+         'parcial-demonstracao.php', 'demonstracaoDefsComModelo'],
+        ['As capturas digitais mostram o convite publicado e a página pública de confirmação',
+         'tests/gerar-capturas-ajuda.js', "'/convite.php?demo=1'"],
         ['Os stickers animados acompanham as descrições próprias da montra e os passos da Ajuda',
          'parcial-ajuda.php', "'demonstracao'=>["],
         ['E os passos de privacidade usam uma ilustração de protecção dedicada',
@@ -31,8 +37,6 @@ function correcoesEsperadas(): array {
          'db.php', 'function demonstracaoComercialPadrao'],
         ['O Orçamento apresenta despesas e prestações sem transbordo no telemóvel',
          'orcamento.php', 'table.desp tr{ display:grid'],
-        ['E o cartão de despesa dispensa as etiquetas repetidas, com o nome e o valor a par',
-         'orcamento.php', 'table.desp td::before{ display:none'],
         ['Cada passo da Ajuda usa dados de exemplo e coordenadas medidas na interface real',
          'parcial-ajuda.php', 'assets/ajuda/capturas/alvos-cenas.json'],
         ['Os filtros de Convidados mostram uma única linha em qualquer ecrã',

@@ -34,7 +34,7 @@ interface muda. Ver [guia de manutenção](docs/ajuda-e-experiencia-publica.md).
 
 Os stickers acompanham o sentido de cada texto: a Ajuda usa gestos operacionais e a montra usa benefícios comerciais. O vocabulário visual reúne 20 acções animadas, incluindo privacidade e acesso protegido, e pode ser regenerado por `tests/gerar-stickers-ajuda.js`.
 
-O convite digital da demonstração tem uma história e textos próprios de Lia e Daniel. A pré-visualização ocupa até 640 px e pode abrir numa janela completa. Os quatro enquadramentos respeitam a proporção das fotografias e deixam os rostos visíveis, com as legendas do interlúdio e do acesso fora das imagens. Estas adaptações estão em `assets/demonstracao-convite.css` e não mudam os convites dos casamentos. A dica da paleta fica abaixo do selector; foi retirado o aviso sobre a duração das alterações da demonstração.
+O convite digital da demonstração usa a peça padrão escolhida pelo administrador e os dados de exemplo da casa, que de fábrica são **Marta & Pedro**. As imagens mostram o convite publicado e a página pública de confirmação, sem expor o editor. Os quatro enquadramentos respeitam a proporção das fotografias e deixam os rostos visíveis.
 
 O catálogo digital inclui **Kulemba Contemporâneo**, uma segunda linguagem
 visual construída sobre o mesmo convite: reorganiza molduras, ícones,
@@ -49,7 +49,7 @@ As molduras e os enquadramentos respondem às opções do editor. Ver
 [o guia do modelo](docs/convite-kulemba-contemporaneo.md).
 
 A demonstração pública lê a peça de origem digital definida pelo administrador
-e aplica esse desenho aos dados fictícios de Lia e Daniel. O nome do modelo é
+e aplica esse desenho aos dados de exemplo definidos pelo administrador. O nome do modelo é
 mostrado na montra. Assim, a demonstração, o padrão oferecido a novos casais e
 o modelo que o administrador publica são a mesma peça; casamentos já existentes
 conservam a origem que lhes ficou associada quando receberam a licença.
@@ -75,7 +75,7 @@ apenas os módulos da sua licença. A estrutura anterior de abas e painéis
 fictícios deixou de ser apresentada.
 
 `demonstracao-convite.php` continua disponível para validar isoladamente o
-convite fictício de Lia e Daniel e não grava dados de casamentos.
+convite padrão com os dados de exemplo da casa e não grava dados de casamentos.
 
 Em **Casamentos → Atendimento**, o administrador da plataforma pode:
 

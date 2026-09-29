@@ -1353,8 +1353,8 @@ function exemploDeFabrica(): array {
     // Só o que é do primeiro casal é que muda; o resto (horas, títulos, número
     // de lugares, enquadramentos) é o de origem, que já não é de ninguém.
     $proprio = [
-        'casal.noiva'   => 'Ana',
-        'casal.noivo'   => 'Bruno',
+        'casal.noiva'   => 'Marta',
+        'casal.noivo'   => 'Pedro',
         'evento.data'   => '2027-06-12',
         'evento.local'  => 'Quinta das Acácias',
         'evento.cidade' => 'Luanda · Angola',
