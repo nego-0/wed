@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A montra usa pictogramas próprios para os 42 recursos descritos',
+         'parcial-ajuda.php', "'digital'=>[['convite','historia','confirmar'],['telemovel','publicar','whatsapp']]"],
+        ['Os alvos da demonstração são pontos discretos e deixam o pictograma na legenda',
+         'assets/ajuda.css', '.central-publica .aj-sticker{display:none}'],
+        ['A partilha digital mostra o atalho WhatsApp na lista real de convidados',
+         'tests/gerar-capturas-ajuda.js', "tipo:'whatsapp'"],
         ['O exemplo de fábrica identifica o casal como Marta & Pedro',
          'personalizacao.php', "'casal.noiva'   => 'Marta'"],
         ['A demonstração digital usa a peça padrão e os dados de exemplo definidos pelo admin',

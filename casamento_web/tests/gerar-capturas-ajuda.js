@@ -10,13 +10,16 @@ const EXE = process.env.CHROMIUM || (process.platform === 'win32'
   ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
   : '/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const OUT = process.env.HELP_CAPTURE_OUT || path.join(__dirname,'..','assets','ajuda','capturas');
+const OUT_DEMO = path.join(OUT,'demonstracao');
 const SO_CENAS = process.env.HELP_CAPTURE_SCENES_ONLY === '1' ||
   process.env.HELP_CAPTURE_MODAL_ONLY === '1'; // nome antigo, mantido por compatibilidade
 const SO_DISPOSITIVO = process.env.HELP_CAPTURE_DEVICE || '';
 const SO_MODULO = process.env.HELP_CAPTURE_MODULE || '';
 if(!PASSWORD) throw new Error('Defina TEST_PASSWORD com a senha da conta de testes.');
 fs.mkdirSync(OUT,{recursive:true});
+fs.mkdirSync(OUT_DEMO,{recursive:true});
 const alvosGerados=[];
+const alvosDemoGerados=[];
 
 const modulos = [
   ['convidados',[
@@ -181,6 +184,17 @@ const sequenciasComCenas = [
     {tipo:'rever',rolar:true,fazer:async p=>marcar(p,p.locator('table.desp tr').filter({hasText:'Fotografia e vídeo'}).locator('.d-nome'))},
   ]},
 ].map(f=>({...f,passos:f.passos.map(p=>({alvo:ALVO,...p}))}));
+// A montra pode contar uma vantagem diferente do guia operacional. Estas
+// cenas específicas evitam forçar uma captura da Ajuda a explicar outro gesto.
+const sequenciasDemonstracao = [
+  {nome:'digital',topico:2,url:'/index.php',passos:[
+    {numero:3,tipo:'whatsapp',fazer:async p=>{
+      await p.fill('#busca','Família Kiala');await p.dispatchEvent('#busca','input');await p.waitForTimeout(450);
+      const linha=p.locator('.convite-row').filter({hasText:'Família Kiala'}).first();
+      await marcar(p,linha.locator('.bt-wa'));
+    }},
+  ]},
+].map(f=>({...f,passos:f.passos.map(p=>({alvo:ALVO,...p}))}));
 async function enquadrar(p){
   await p.waitForTimeout(500);
   await p.evaluate(()=>{const m=document.querySelector('main');if(m)scrollTo({top:Math.max(0,m.offsetTop-8),behavior:'instant'});});
@@ -190,13 +204,13 @@ async function guardar(p,nome,topico,dispositivo){
   await enquadrar(p);
   await p.screenshot({path:path.join(OUT,`${nome}-${topico}-${dispositivo}.jpg`),type:'jpeg',quality:84,fullPage:false});
 }
-async function guardarCena(p,cena,passo,dispositivo){
+async function guardarCena(p,cena,passo,dispositivo,pasta=OUT){
   const selector=typeof cena.alvo==='string'?cena.alvo:cena.alvo[dispositivo];
   const alvo=p.locator(selector+':visible').first();await alvo.waitFor();await p.waitForTimeout(260);
   const b=await alvo.boundingBox(),v=p.viewportSize();
   if(!b||b.x<0||b.y<0||b.x+b.width>v.width||b.y+b.height>v.height)
     throw new Error(`${cena.nome||''}/${passo}/${dispositivo}: alvo fora do enquadramento`);
-  await p.screenshot({path:path.join(OUT,`${cena.modulo}-${cena.topico}-${passo}-${dispositivo}.jpg`),type:'jpeg',quality:88,fullPage:false});
+  await p.screenshot({path:path.join(pasta,`${cena.modulo}-${cena.topico}-${passo}-${dispositivo}.jpg`),type:'jpeg',quality:88,fullPage:false});
   return {x:+((b.x+b.width/2)/v.width*100).toFixed(1),y:+((b.y+b.height/2)/v.height*100).toFixed(1)};
 }
 (async()=>{
@@ -234,6 +248,16 @@ async function guardarCena(p,cena,passo,dispositivo){
         console.log(`ALVO ${fluxo.nome}/${fluxo.topico}/${i+1} · ${dispositivo}: ${ponto.x},${ponto.y}`);
       }
     }
+    for(const fluxo of sequenciasDemonstracao.filter(x=>!SO_MODULO||x.nome===SO_MODULO)){
+      await p.goto(BASE+fluxo.url,{waitUntil:'networkidle'});
+      for(const passo of fluxo.passos){
+        const cena={...passo,modulo:fluxo.nome,topico:fluxo.topico};await cena.fazer(p);
+        const ponto=await guardarCena(p,cena,passo.numero,dispositivo,OUT_DEMO);
+        alvosDemoGerados.push({modulo:fluxo.nome,topico:fluxo.topico,passo:passo.numero,dispositivo,
+          tipo:cena.tipo||'tocar',rolar:!!cena.rolar,...ponto});
+        console.log(`ALVO DEMO ${fluxo.nome}/${fluxo.topico}/${passo.numero} · ${dispositivo}: ${ponto.x},${ponto.y}`);
+      }
+    }
   }
   let alvosFinais=alvosGerados;
   const manifesto=path.join(OUT,'alvos-cenas.json');
@@ -242,6 +266,13 @@ async function guardarCena(p,cena,passo,dispositivo){
     alvosFinais=[...anteriores.filter(x=>x.modulo!==SO_MODULO),...alvosGerados];
   }
   fs.writeFileSync(manifesto,JSON.stringify(alvosFinais,null,2));
+  let alvosDemoFinais=alvosDemoGerados;
+  const manifestoDemo=path.join(OUT,'alvos-demonstracao.json');
+  if(SO_MODULO&&fs.existsSync(manifestoDemo)){
+    const anteriores=JSON.parse(fs.readFileSync(manifestoDemo,'utf8'));
+    alvosDemoFinais=[...anteriores.filter(x=>x.modulo!==SO_MODULO),...alvosDemoGerados];
+  }
+  fs.writeFileSync(manifestoDemo,JSON.stringify(alvosDemoFinais,null,2));
   await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
 

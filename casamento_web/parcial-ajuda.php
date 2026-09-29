@@ -19,13 +19,21 @@ function topicosDaAjuda(string $texto): array {
     }
     return $topicos;
 }
-function capturaAjuda(string $modulo,int $topico,string $dispositivo,?int $passo=null): string {
+function capturaAjuda(string $modulo,int $topico,string $dispositivo,?int $passo=null,string $modo='ajuda'): string {
     $raiz='assets/ajuda/capturas/'.$modulo.'-'.($topico+1);
     if($passo!==null){
+        if($modo==='demonstracao'){
+            $demo='assets/ajuda/capturas/demonstracao/'.$modulo.'-'.($topico+1).'-'.($passo+1).'-'.$dispositivo.'.jpg';
+            if(is_file(__DIR__.'/'.$demo)) return $demo;
+        }
         $cena=$raiz.'-'.($passo+1).'-'.$dispositivo.'.jpg';
         if(is_file(__DIR__.'/'.$cena)) return $cena;
     }
     return $raiz.'-'.$dispositivo.'.jpg';
+}
+/** Vocabulário visual disponível no gerador e no gestor do administrador. */
+function tiposStickerAjuda(): array {
+    return ['abrir','activar','adicionar','arrastar','ausentes','categorias','comparar','configurar','confirmar','contador','convite','corrigir','descarregar','desmarcar','despesa','editar','entregar','enviar','escrever','estados','factura','familia','filtrar','guardar','historia','lotacao','modelos','mover','paleta','parcelas','pedido','pesquisar','planta','preencher','preparar','presenca','proteger','publicar','prazos','qr','resumo','rever','rolar','selecionar','sentar','stock','telemovel','tocar','valores','versoes','whatsapp'];
 }
 /** Mantém um vocabulário visual próprio para o guia operacional e para a
  *  narrativa comercial, mesmo quando o administrador melhora os títulos. */
@@ -41,13 +49,13 @@ function tipoStickerAjuda(string $modulo,int $topico,int $passo,string $modo,str
         'orcamento'=>[['adicionar','preencher','guardar'],['comparar','filtrar','rever']],
       ],
       'demonstracao'=>[
-        'convidados'=>[['adicionar','proteger','confirmar'],['pesquisar','rever','comparar']],
-        'mesas'=>[['rever','adicionar','arrastar'],['selecionar','rever','editar']],
-        'impresso'=>[['selecionar','editar','guardar'],['rever','editar','descarregar']],
-        'digital'=>[['abrir','rever','confirmar'],['rever','guardar','enviar']],
-        'porta'=>[['pesquisar','selecionar','comparar'],['desmarcar','rever','proteger']],
-        'bar'=>[['adicionar','comparar','activar'],['enviar','preparar','entregar']],
-        'orcamento'=>[['adicionar','comparar','guardar'],['comparar','filtrar','rever']],
+        'convidados'=>[['familia','proteger','contador'],['pesquisar','estados','resumo']],
+        'mesas'=>[['planta','configurar','arrastar'],['sentar','lotacao','mover']],
+        'impresso'=>[['modelos','editar','versoes'],['rever','paleta','descarregar']],
+        'digital'=>[['convite','historia','confirmar'],['telemovel','publicar','whatsapp']],
+        'porta'=>[['qr','presenca','contador'],['corrigir','ausentes','proteger']],
+        'bar'=>[['categorias','stock','activar'],['pedido','preparar','entregar']],
+        'orcamento'=>[['despesa','parcelas','factura'],['valores','filtrar','prazos']],
       ],
     ];
     if(isset($mapas[$modo][$modulo][$topico][$passo])) return $mapas[$modo][$modulo][$topico][$passo];
@@ -98,15 +106,21 @@ function stickerAjuda(string $modulo,int $topico,int $passo,string $titulo='',st
     // conserva a tabela acima como recurso para instalações sem o manifesto.
     static $medidos=null;
     if($medidos===null){
-        $medidos=[]; $f=__DIR__.'/assets/ajuda/capturas/alvos-cenas.json';
-        $js=is_readable($f)?json_decode((string)file_get_contents($f),true):[];
-        foreach(is_array($js)?$js:[] as $m){
-            if(!isset($m['modulo'],$m['topico'],$m['passo'],$m['dispositivo']))continue;
-            $medidos[$m['modulo']][(int)$m['topico']][(int)$m['passo']][$m['dispositivo']]=$m;
+        $medidos=['ajuda'=>[],'demonstracao'=>[]];
+        foreach(['ajuda'=>'alvos-cenas.json','demonstracao'=>'alvos-demonstracao.json'] as $contexto=>$nome){
+          $f=__DIR__.'/assets/ajuda/capturas/'.$nome;
+          $js=is_readable($f)?json_decode((string)file_get_contents($f),true):[];
+          foreach(is_array($js)?$js:[] as $m){
+              if(!isset($m['modulo'],$m['topico'],$m['passo'],$m['dispositivo']))continue;
+              $medidos[$contexto][$m['modulo']][(int)$m['topico']][(int)$m['passo']][$m['dispositivo']]=$m;
+          }
         }
     }
-    $atual=$medidos[$modulo][$topico+1][$passo+1]??[];
-    $antes=$passo>0?($medidos[$modulo][$topico+1][$passo]??[]):$atual;
+    $contexto=$modo==='demonstracao'?'demonstracao':'ajuda';
+    $mapa=$medidos[$contexto][$modulo]??[];
+    $apoio=$medidos['ajuda'][$modulo]??[];
+    $atual=$mapa[$topico+1][$passo+1]??$apoio[$topico+1][$passo+1]??[];
+    $antes=$passo>0?($mapa[$topico+1][$passo]??$apoio[$topico+1][$passo]??[]):$atual;
     if(isset($atual['desktop']['x'],$atual['desktop']['y'])){
         $d=$atual['desktop']; $dp=$antes['desktop']??$d;
         $linha[0]=(string)($d['tipo']??$linha[0]); $linha[1]=(float)$d['x']; $linha[2]=(float)$d['y'];
@@ -119,7 +133,7 @@ function stickerAjuda(string $modulo,int $topico,int $passo,string $titulo='',st
     }
     $tipo=tipoStickerAjuda($modulo,$topico,$passo,$modo,$titulo,(string)$linha[0]);
     if($personalizado){
-        $permitidos=['abrir','activar','adicionar','arrastar','comparar','confirmar','descarregar','desmarcar','editar','entregar','enviar','escrever','filtrar','guardar','pesquisar','preencher','preparar','proteger','rever','rolar','selecionar','tocar'];
+        $permitidos=tiposStickerAjuda();
         if(in_array((string)($personalizado[0]??''),$permitidos,true)) $tipo=(string)$personalizado[0];
         foreach([1,2,3,4] as $i) if(isset($personalizado[$i])&&is_numeric($personalizado[$i])) $linha[$i]=max(0,min(100,(float)$personalizado[$i]));
         if(array_key_exists(5,$personalizado)) $linha[5]=!empty($personalizado[5]);
@@ -142,6 +156,7 @@ function dadosStickersAjuda($dados): array {
 
 /** Gera a configuração inicial a partir das capturas medidas e do texto actual. */
 function gerarStickersAjuda(string $modulo,string $conteudo,string $modo): array {
+    if($modo==='demo') $modo='demonstracao';
     $saida=[];
     foreach(topicosDaAjuda($conteudo) as $t=>$topico){
         foreach($topico['passos'] as $p=>$passo){
@@ -199,7 +214,7 @@ function renderCentralAjuda(array $itens,array $rot,array $ico,string $modo='aju
           <details<?= $primeiro?' open':'' ?>>
             <summary><span class="aj-avatar" data-ico="<?=escP($ico[$x['modulo']]??'documento')?>"></span><span class="aj-assunto"><small><?=escP($rot[$x['modulo']]??$x['modulo'])?> · <?=escP($T['selo'])?></small><b><?=escP($topico['titulo'])?></b><em><?=escP($x['resumo'])?></em></span><span class="aj-meta"><b><?=count($topico['passos'])?></b><small><?=escP($T['meta'])?></small><i data-ico="direita"></i></span></summary>
             <div class="aj-resposta"><header><span class="aj-avatar kulemba">K</span><div><b>Equipa Kulemba</b><small><?=escP($T['resposta_estado'])?></small></div></header><p><?=escP($T['resposta_intro'])?></p>
-              <div class="aj-guia"><figure class="aj-demonstracao"><div class="aj-imagem"><?php foreach($topico['passos'] as $i=>$passo): $cenaDesk=capturaAjuda($x['modulo'],$n,'desktop',$i); $cenaMov=capturaAjuda($x['modulo'],$n,'mobile',$i); ?><picture class="aj-cena<?= $i===0?' ativo':'' ?>" data-cena-passo="<?=$i?>"><source media="(max-width:700px)" srcset="<?=asset($cenaMov)?>"><img src="<?=asset($cenaDesk)?>" alt="Passo <?=$i+1?> de <?=escP($topico['titulo'])?> em <?=escP($rot[$x['modulo']]??$x['modulo'])?>" loading="lazy"></picture><?php endforeach; foreach($topico['passos'] as $i=>$passo): $sticker=stickerAjuda($x['modulo'],$n,$i,$passo['titulo'],$modo,$stickersGeridos[$n][$i]??null); $d=$sticker['desktop']; $m=$sticker['mobile']; $classes=($d['rolar']?' tem-rolagem-d':'').($m['rolar']?' tem-rolagem-m':''); $estilo="--dx:{$d['x']}%;--dy:{$d['y']}%;--dpx:{$d['px']}%;--dpy:{$d['py']}%;--mx:{$m['x']}%;--my:{$m['y']}%;--mpx:{$m['px']}%;--mpy:{$m['py']}%"; ?><span class="aj-sticker-marca<?=$classes?><?= $i===0?' ativo':'' ?>" data-sticker-passo="<?=$i?>" data-sticker-tipo="<?=escP($sticker['tipo'])?>" style="<?=$estilo?>" aria-hidden="true"><img class="aj-sticker <?=escP($sticker['tipo'])?>" src="<?=asset('assets/ajuda/stickers/'.$sticker['tipo'].'.svg')?>" alt=""></span><?php if($d['rolar']||$m['rolar']): ?><span class="aj-scroll-marca<?= $d['rolar']?' rolagem-d':'' ?><?= $m['rolar']?' rolagem-m':'' ?>" data-scroll-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img src="<?=asset('assets/ajuda/stickers/rolar.svg')?>" alt=""></span><?php endif; endforeach ?></div><figcaption><span data-ico="brilho"></span><b><?=escP($T['destaque'])?></b><small data-aj-legenda><?=escP($topico['passos'][0]['titulo']??'Abra o primeiro passo')?></small></figcaption></figure>
+              <div class="aj-guia"><figure class="aj-demonstracao"><div class="aj-imagem"><?php foreach($topico['passos'] as $i=>$passo): $cenaDesk=capturaAjuda($x['modulo'],$n,'desktop',$i,$modo); $cenaMov=capturaAjuda($x['modulo'],$n,'mobile',$i,$modo); ?><picture class="aj-cena<?= $i===0?' ativo':'' ?>" data-cena-passo="<?=$i?>"><source media="(max-width:700px)" srcset="<?=asset($cenaMov)?>"><img src="<?=asset($cenaDesk)?>" alt="Passo <?=$i+1?> de <?=escP($topico['titulo'])?> em <?=escP($rot[$x['modulo']]??$x['modulo'])?>" loading="lazy"></picture><?php endforeach; foreach($topico['passos'] as $i=>$passo): $sticker=stickerAjuda($x['modulo'],$n,$i,$passo['titulo'],$modo,$stickersGeridos[$n][$i]??null); $d=$sticker['desktop']; $m=$sticker['mobile']; $classes=($d['rolar']?' tem-rolagem-d':'').($m['rolar']?' tem-rolagem-m':''); $estilo="--dx:{$d['x']}%;--dy:{$d['y']}%;--dpx:{$d['px']}%;--dpy:{$d['py']}%;--mx:{$m['x']}%;--my:{$m['y']}%;--mpx:{$m['px']}%;--mpy:{$m['py']}%"; ?><span class="aj-sticker-marca<?=$classes?><?= $i===0?' ativo':'' ?>" data-sticker-passo="<?=$i?>" data-sticker-tipo="<?=escP($sticker['tipo'])?>" style="<?=$estilo?>" aria-hidden="true"><img class="aj-sticker <?=escP($sticker['tipo'])?>" src="<?=asset('assets/ajuda/stickers/'.$sticker['tipo'].'.svg')?>" alt=""></span><?php if($d['rolar']||$m['rolar']): ?><span class="aj-scroll-marca<?= $d['rolar']?' rolagem-d':'' ?><?= $m['rolar']?' rolagem-m':'' ?>" data-scroll-passo="<?=$i?>" style="<?=$estilo?>" aria-hidden="true"><img src="<?=asset('assets/ajuda/stickers/rolar.svg')?>" alt=""></span><?php endif; endforeach ?></div><figcaption><span class="aj-legenda-icone"><i data-ico="brilho"></i><img class="aj-legenda-sticker" data-aj-sticker-legenda alt=""></span><b><?=escP($T['destaque'])?></b><small data-aj-legenda><?=escP($topico['passos'][0]['titulo']??'Abra o primeiro passo')?></small></figcaption></figure>
                 <ol class="aj-passos"><?php foreach($topico['passos'] as $i=>$passo): ?><li><details class="aj-passo" data-passo="<?=$i?>"<?= $i===0?' open':'' ?>><summary><span><?= $i+1 ?></span><span><small><?=escP($T['passo_rot'])?> <?= $i+1 ?></small><b><?=escP($passo['titulo'])?></b></span><i data-ico="direita" aria-hidden="true"></i></summary><div class="aj-passo-detalhe"><small><?=escP($T['passo_detalhe'])?></small><p><?=escP($passo['narracao'])?></p><em><?=escP($T['passo_fecho'])?></em></div></details></li><?php endforeach ?></ol>
               </div>
               <footer><span data-ico="visto"></span><?=escP($T['rodape'])?></footer>

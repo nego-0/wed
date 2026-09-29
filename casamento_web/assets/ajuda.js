@@ -26,6 +26,9 @@
     guia?.querySelectorAll('[data-scroll-passo]').forEach(s=>s.classList.toggle('ativo',s.dataset.scrollPasso===passo));
     const legenda=guia?.querySelector('[data-aj-legenda]'),titulo=d.querySelector('summary b');
     if(legenda&&titulo)legenda.textContent=titulo.textContent;
+    const marca=guia?.querySelector(`.aj-sticker-marca[data-sticker-passo="${passo}"] img`),icone=guia?.querySelector('[data-aj-sticker-legenda]');
+    if(marca&&icone)icone.src=marca.src;
   }));
+  document.querySelectorAll('.aj-guia').forEach(guia=>{const marca=guia.querySelector('.aj-sticker-marca.ativo img'),icone=guia.querySelector('[data-aj-sticker-legenda]');if(marca&&icone)icone.src=marca.src;});
   filtrar();
 })();

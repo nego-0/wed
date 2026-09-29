@@ -974,7 +974,7 @@ if ($acao === 'atendimento_stickers_guardar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma gere os stickers.');
     exigirCsrf(); $d=corpo(); $id=(int)($d['id']??0); $recebidos=$d['stickers']??null;
     if(!is_array($recebidos)) erro('Configuração de stickers inválida.');
-    $permitidos=['abrir','activar','adicionar','arrastar','comparar','confirmar','descarregar','desmarcar','editar','entregar','enviar','escrever','filtrar','guardar','pesquisar','preencher','preparar','proteger','rever','rolar','selecionar','tocar'];
+    $permitidos=tiposStickerAjuda();
     $limpar=function($linha)use($permitidos){
         if(!is_array($linha)||!in_array((string)($linha[0]??''),$permitidos,true))return null;
         $r=[(string)$linha[0]];for($i=1;$i<=4;$i++)$r[]=round(max(0,min(100,(float)($linha[$i]??50))),1);

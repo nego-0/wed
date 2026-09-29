@@ -14,16 +14,22 @@ const AJUDA=[
   'adicionar','preencher','guardar','comparar','filtrar','rever',
 ];
 const DEMONSTRACAO=[
-  'adicionar','proteger','confirmar','pesquisar','rever','comparar',
-  'rever','adicionar','arrastar','selecionar','rever','editar',
-  'selecionar','editar','guardar','rever','editar','descarregar',
-  'abrir','rever','confirmar','rever','rolar','enviar',
-  'pesquisar','selecionar','comparar','desmarcar','rever','proteger',
-  'adicionar','comparar','activar','enviar','preparar','entregar',
-  'adicionar','comparar','guardar','comparar','filtrar','rever',
+  'familia','proteger','contador','pesquisar','estados','resumo',
+  'planta','configurar','arrastar','sentar','lotacao','mover',
+  'modelos','editar','versoes','rever','paleta','descarregar',
+  'convite','historia','confirmar','telemovel','publicar','whatsapp',
+  'qr','presenca','contador','corrigir','ausentes','proteger',
+  'categorias','stock','activar','pedido','preparar','entregar',
+  'despesa','parcelas','factura','valores','filtrar','prazos',
 ];
 (async()=>{
   const pasta=path.join(__dirname,'..','assets','ajuda','stickers');
+  const capturas=path.join(__dirname,'..','assets','ajuda','capturas');
+  const alvosDemo=JSON.parse(fs.readFileSync(path.join(capturas,'alvos-demonstracao.json'),'utf8'));
+  assert.deepEqual(alvosDemo.map(x=>[x.modulo,x.topico,x.passo,x.dispositivo,x.tipo]),[
+    ['digital',2,3,'desktop','whatsapp'],['digital',2,3,'mobile','whatsapp']
+  ],'a partilha tem alvos próprios no botão WhatsApp em desktop e mobile');
+  for(const dispositivo of ['desktop','mobile'])assert.equal(fs.existsSync(path.join(capturas,'demonstracao',`digital-2-3-${dispositivo}.jpg`)),true,'falta a captura de partilha em '+dispositivo);
   for(const tipo of new Set([...AJUDA,...DEMONSTRACAO])){
     const svg=fs.readFileSync(path.join(pasta,tipo+'.svg'),'utf8');
     assert.match(svg,/@keyframes|<svg[^>]*>/,tipo+' é um SVG válido');
@@ -47,10 +53,13 @@ const DEMONSTRACAO=[
     assert.equal(await page.locator('#demonstracao .aj-sticker').evaluateAll(async xs=>(await Promise.all(xs.map(x=>fetch(x.src)))).every(r=>r.ok&&(r.headers.get('content-type')||'').includes('image/svg+xml'))),true,'todos os stickers carregam como SVG');
     const primeiro=page.locator('#demonstracao .aj-sticker-marca.ativo .aj-sticker').first();
     assert.notEqual(await primeiro.evaluate(e=>getComputedStyle(e).animationName),'none','a animação externa está activa');
+    const marcas=await page.locator('#demonstracao .aj-sticker-marca').evaluateAll(xs=>xs.map(x=>({p:parseFloat(getComputedStyle(x,'::before').width),icone:getComputedStyle(x.querySelector('.aj-sticker')).display})));
+    assert.equal(marcas.every(x=>x.p<=12.1&&x.icone==='none'),true,'a captura conserva apenas pontos compactos, sem pictogramas sobre o conteúdo');
+    assert.equal(await page.locator('#demonstracao [data-aj-sticker-legenda][src]').count(),14,'cada demonstração leva o pictograma semântico para a legenda');
     await page.setViewportSize({width:390,height:844});await page.reload({waitUntil:'networkidle'});
     assert.deepEqual(await page.locator('#demonstracao .aj-sticker-marca').evaluateAll(xs=>xs.map(x=>x.dataset.stickerTipo)),DEMONSTRACAO,'o telemóvel conserva a relação entre texto e sticker');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'os novos stickers não criam transbordo');
     assert.deepEqual(erros,[],'sem erros JavaScript');
-    console.log('PASS: 42 descrições comerciais e 42 passos de ajuda conjugados com 20 stickers animados');
+    console.log('PASS: 42 descrições comerciais com pictogramas próprios e marcadores discretos, sem alterar os 42 passos de ajuda');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

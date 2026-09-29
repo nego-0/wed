@@ -1563,7 +1563,7 @@ function atPintarLista(){
 }
 
 const AT_MODULOS={convidados:'Convidados',mesas:'Mesas',impresso:'Convite impresso',digital:'Convite digital',porta:'Porta',bar:'Bar',orcamento:'Orçamento'};
-const AT_STICKERS=['abrir','activar','adicionar','arrastar','comparar','confirmar','descarregar','desmarcar','editar','entregar','enviar','escrever','filtrar','guardar','pesquisar','preencher','preparar','proteger','rever','rolar','selecionar','tocar'];
+const AT_STICKERS=['abrir','activar','adicionar','arrastar','ausentes','categorias','comparar','configurar','confirmar','contador','convite','corrigir','descarregar','desmarcar','despesa','editar','entregar','enviar','escrever','estados','factura','familia','filtrar','guardar','historia','lotacao','modelos','mover','paleta','parcelas','pedido','pesquisar','planta','preencher','preparar','presenca','proteger','publicar','prazos','qr','resumo','rever','rolar','selecionar','sentar','stock','telemovel','tocar','valores','versoes','whatsapp'];
 function atStickerDados(x){try{const d=JSON.parse(x.stickers||'{}');return d&&Array.isArray(d.stickers)?d.stickers:[];}catch(e){return[];}}
 function atTopicos(txt){const original=String(txt||''),ts=[];let nome='Como fazer',ps=[];const guardar=()=>{if(ps.length)ts.push({titulo:nome,passos:ps});ps=[];};original.split(/\r?\n/).forEach(l=>{l=l.trim();if(!l)return;const m=l.match(/^\d+[.)]\s*(.+)$/);if(m){ps.push((m[1].split('||')[0]||'Passo').trim());}else{guardar();nome=l.toLowerCase().replace(/(^|\s)\S/g,s=>s.toUpperCase());}});guardar();if(!ts.length){const linhas=original.split(/[.;]\s+/).map(s=>s.trim()).filter(Boolean);if(linhas.length)ts.push({titulo:'Como fazer',passos:linhas});}return ts;}
 function atPintarConteudos(){
