@@ -1000,6 +1000,8 @@ function correcoesEsperadas(): array {
          'assets/bar-convidado.js', 'function montarBarraMesa('],
         ['Sinais desenhados por nome, escritos em HTML',
          'assets/icones.js', 'function vestir('],
+        ['A confirmação de presença usa sinais claros e proporcionais para aceitar ou recusar',
+         'convite.php', 'data-ico="presenca"'],
         ['Os sinais desenhados alinham como uma letra, em todo o sistema',
          'assets/estilo.css', '[data-ico] > svg{'],
         ['O emblema da casa é um desenho, e o monograma é texto',

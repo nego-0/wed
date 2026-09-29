@@ -107,6 +107,11 @@
     menos: '<path d="M5 12h14"/>',
     visto: '<path d="M20 6.5 9.2 17.3 4 12.1"/>',
     xis: '<path d="M18 6 6 18M6 6l12 12"/>',
+    // Decisões de RSVP: o círculo dá o mesmo peso visual às duas escolhas;
+    // o visto confirma e o traço comunica indisponibilidade sem o tom severo
+    // de uma cruz, de um sinal de proibição ou de uma ave decorativa.
+    presenca: '<circle cx="12" cy="12" r="8.5"/><path d="m8 12.2 2.6 2.6 5.7-6"/>',
+    ausencia: '<circle cx="12" cy="12" r="8.5"/><path d="M8.3 12h7.4"/>',
     relogio: '<circle cx="12" cy="12" r="8.6"/><path d="M12 6.8V12l3.4 2"/>',
     // Meia-lua a encher: o pedido que está a ser pensado.
     analise: '<circle cx="12" cy="12" r="8.6"/><path d="M12 3.4a8.6 8.6 0 0 1 0 17.2z" fill="currentColor" stroke="none"/>',

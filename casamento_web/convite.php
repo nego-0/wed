@@ -127,12 +127,15 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   h3.sec{ font-family:var(--serif); text-align:center; color:var(--ink); font-size:1.4rem; margin:0 0 1rem; }
   .opcoes{ display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:1rem; }
   .op{ border:1.5px solid rgba(44,69,54,.15); border-radius:14px; padding:1rem; text-align:center; cursor:pointer; transition:.15s; background:#fff; }
-  /* Os sinais são desenhados (assets/icones.js): eram 🌿 e 🕊️, e um emoji
-     colorido de sistema no meio de um convite a dourado e verde traz consigo
-     a paleta de outra gente — além de mudar de desenho conforme o telemóvel
-     de quem recebe o convite, que é justamente quem não se pode controlar. */
-  .op .em{ font-size:1.5rem; display:block; margin-bottom:.3rem; color:var(--gold); }
+  /* Os dois sinais têm a mesma presença e respondem à decisão, sem símbolos
+     decorativos que possam ser confundidos com a linguagem do convite. */
+  .op .em{ width:3.25rem; height:3.25rem; display:flex; align-items:center; justify-content:center;
+    margin:0 auto .65rem; color:var(--gold); transition:color .15s,transform .15s; }
+  .op .em svg{ width:100%; height:100%; display:block; }
+  #op-sim .em{ color:var(--forest); }
+  #op-nao .em{ color:#9b6a60; }
   .op:hover{ border-color:var(--gold-soft); }
+  .op:hover .em{ transform:translateY(-2px); }
   .op.sel-sim{ border-color:var(--forest); background:var(--cream); }
   .op.sel-nao{ border-color:#a5473f; background:#f7eae8; }
   .campo{ margin-bottom:1rem; }
@@ -256,8 +259,8 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       <!-- FORMULÁRIO -->
       <div id="form-rsvp">
         <div class="opcoes">
-          <div class="op" id="op-sim" onclick="escolher('sim')"><span class="em" data-ico="folha"></span>Vou comparecer</div>
-          <div class="op" id="op-nao" onclick="escolher('nao')"><span class="em" data-ico="pomba"></span>Não poderei ir</div>
+          <div class="op" id="op-sim" onclick="escolher('sim')"><span class="em" data-ico="presenca"></span>Vou comparecer</div>
+          <div class="op" id="op-nao" onclick="escolher('nao')"><span class="em" data-ico="ausencia"></span>Não poderei ir</div>
         </div>
 
         <div id="detalhes-sim" style="display:none;">
@@ -467,7 +470,7 @@ async function enviar(){
     $('concluido').classList.add('on');
     $('concluido').scrollIntoView({behavior:'smooth'});
   } else {
-    $('form-rsvp').innerHTML='<div class="estado-atual"><span class="nao">Resposta registada.</span> Sentiremos a sua falta — obrigado por avisar. <i data-ico="pomba"></i></div>';
+    $('form-rsvp').innerHTML='<div class="estado-atual"><span class="nao">Resposta registada.</span> Sentiremos a sua falta — obrigado por avisar. <i data-ico="ausencia"></i></div>';
     $('concluido').classList.remove('on');
   }
 }
