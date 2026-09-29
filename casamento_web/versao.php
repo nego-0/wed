@@ -1122,6 +1122,8 @@ function correcoesEsperadas(): array {
          'mesas.php', 'body.combo-aberto::before'],
         ['O teclado móvel já não fecha a escolha de mesa ao redimensionar a vista',
          'assets/mesas.js', 'if(comboAberto && comboEhModal()) centrarComboMobile()'],
+        ['O detalhe da mesa surge com animação leve e rolagem suave na lista e na planta',
+         'assets/mesas.js', 'function revelarDetalheMesa(body, detalhe, rolarPagina)'],
 
         // ---- A fotografia da bebida cabe inteira ----
         ['A fotografia de uma bebida cabe inteira, em vez de ser cortada',

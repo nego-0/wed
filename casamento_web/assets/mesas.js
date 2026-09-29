@@ -15,6 +15,10 @@ function agora(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
 // A primeira pastilha do painel é a das MESAS: é o índice do salão, e é por
 // ele que se começa quando se abre a planta.
 let MESAS=[], CONVITES=[], CONVIDADOS=[], SEL=null, novaForma='redonda', novaCor='neutra', activeTab='mesas';
+// A mesa pode ser aberta pela planta ou pela lista. O pedido fica vivo apenas
+// durante o redesenho do painel e diz se é preciso trazer o detalhe à área
+// visível; assim as actualizações de dados não repetem a animação sem motivo.
+let DETALHE_A_REVELAR=null;
 // O bar só existe para quem o comprou: sem o módulo, a linha do código e da
 // folha não aparece na ficha da mesa. A página diz-nos se ele está ligado.
 const BAR_LIGADO = !!window.BAR_LIGADO;
@@ -811,12 +815,16 @@ async function salvarPos(id,x,y,forma){
 // O id guarda-se sempre como número. Vindo de um data-attribute é texto, e
 // «"29" === 29» é falso: bastava isso para a mesa escolhida deixar de se
 // reconhecer a si própria e o segundo toque voltar a abri-la.
-function selecionar(id, manterAba){ SEL=+id||null; if(!manterAba) activeTab='mesa';
+function selecionar(id, manterAba, revelar){ SEL=+id||null; if(!manterAba) activeTab='mesa';
+  DETALHE_A_REVELAR = revelar && SEL
+    ? { id:SEL, rolarPagina:revelar.rolarPagina!==false }
+    : null;
   renderPlanta(); renderTabs(); renderTabBody(); }
 // Tocar na mesa que já está escolhida fecha-a. Para largar a mesa era preciso
 // acertar no fundo do canvas — e num salão cheio quase não há fundo por onde
 // acertar. O gesto que abre é o mesmo que fecha.
-function alternar(id){ if(SEL===(+id||null)) desselecionar(); else selecionar(id); }
+function alternar(id){ if(SEL===(+id||null)) desselecionar();
+  else selecionar(id, false, {rolarPagina:true}); }
 function desselecionar(){ if(SEL===null) return; SEL=null; if(activeTab==='mesa') activeTab='mesas'; renderPlanta(); renderTabs(); renderTabBody(); }
 // Da lista do painel: abre a mesa e põe-na no meio da vista — o mesmo que
 // tocar-lhe no canvas, porque é a mesma intenção. Antes mantinha-se a aba da
@@ -828,15 +836,16 @@ function desselecionar(){ if(SEL===null) return; SEL=null; if(activeTab==='mesa'
 // y=741 num ecrã de 844: centrar uma mesa dentro de uma caixa que está quase
 // toda fora da vista é acertar num sítio que ninguém vê.
 function irAMesa(id){
-  selecionar(id);
+  // Num clique real a lista está à vista: o detalhe substitui-a no mesmo
+  // lugar. Se esta função for chamada enquanto o painel está fora do ecrã,
+  // mantém-se o comportamento de trazer primeiro a planta à vista.
+  const painel = document.querySelector('.painel-mesas');
+  const rp = painel && painel.getBoundingClientRect();
+  const painelVisivel = !!rp && rp.bottom>0 && rp.top<innerHeight;
+  selecionar(id, false, {rolarPagina:painelVisivel});
   const vp = $('planta-viewport');
   if (vp && vp.getBoundingClientRect().top > innerHeight * 0.5) {
-    // SEM deslize. A página a deslizar e a conta do centro a correr ao mesmo
-    // tempo dão uma conta feita contra medidas que ainda estão a mudar: duas
-    // das cinco mesas ficavam fora da vista com scroll de sobra para lá
-    // chegar. Primeiro assenta-se a página, depois centra-se — e é o canvas
-    // que desliza, que é o movimento que diz «olhe para aqui».
-    vp.scrollIntoView({ block: 'center' });
+    vp.scrollIntoView({ block:'center', behavior:movimentoReduzido()?'auto':'smooth' });
   }
   // E depois de o painel se redesenhar: a aba da mesa acabou de abrir e muda
   // as alturas de tudo o que está à volta.
@@ -859,7 +868,16 @@ function renderTabs(){
 
 function renderTabBody(){
   const body=$('tab-body');
-  if(activeTab==='mesa' && SEL){ body.innerHTML=detalheHTML(); ligarDetalhe(body); return; }
+  if(activeTab==='mesa' && SEL){
+    const pedido=DETALHE_A_REVELAR; DETALHE_A_REVELAR=null;
+    body.innerHTML=`<div class="mesa-detalhe" data-mesa-id="${SEL}">${detalheHTML()}</div>`;
+    ligarDetalhe(body);
+    if(pedido && pedido.id===SEL){
+      const detalhe=body.querySelector('.mesa-detalhe');
+      requestAnimationFrame(()=>revelarDetalheMesa(body, detalhe, pedido.rolarPagina));
+    }
+    return;
+  }
   if(activeTab==='mesas'){
     // A procura sobrevive ao redesenho: carregar numa mesa da lista volta a
     // desenhar o painel, e uma procura que se apagava a cada clique obrigava a
@@ -886,6 +904,32 @@ function renderTabBody(){
     <div class="roster-conta" id="roster-conta"></div>
     <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.6rem 0 0">Arraste um cartão para cima de uma mesa na planta.</p>`;
   renderLista();
+}
+
+const movimentoReduzido=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
+function revelarDetalheMesa(body, detalhe, rolarPagina){
+  if(!body || !detalhe) return;
+  const comportamento=movimentoReduzido()?'auto':'smooth';
+  // No ecrã largo o painel tem a sua própria rolagem; voltar ao início mostra
+  // primeiro o nome e os controlos da mesa, em vez de conservar a posição da
+  // lista que acabou de desaparecer.
+  if(body.scrollTo) body.scrollTo({top:0, behavior:comportamento});
+  else body.scrollTop=0;
+  detalhe.classList.remove('a-surgir');
+  void detalhe.offsetWidth;
+  detalhe.classList.add('a-surgir');
+
+  if(!rolarPagina) return;
+  const r=detalhe.getBoundingClientRect();
+  const vv=window.visualViewport;
+  const topo=vv?vv.offsetTop:0, altura=vv?vv.height:innerHeight;
+  const estreito=matchMedia('(max-width:900px)').matches;
+  // Num monitor largo o painel já está ao lado da planta. No telemóvel fica
+  // abaixo dela, por isso só se move a página quando o detalhe não cabe na
+  // área que o utilizador está efectivamente a ver.
+  if(estreito && (r.top<topo+8 || r.top>topo+altura*.62)){
+    detalhe.scrollIntoView({behavior:comportamento, block:'start'});
+  }
 }
 
 /**
