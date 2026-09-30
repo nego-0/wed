@@ -40,13 +40,13 @@ function tiposStickerAjuda(): array {
 function tipoStickerAjuda(string $modulo,int $topico,int $passo,string $modo,string $titulo,string $padrao): string {
     $mapas=[
       'ajuda'=>[
-        'convidados'=>[['abrir','preencher','enviar'],['pesquisar','editar','rever']],
-        'mesas'=>[['adicionar','preencher','arrastar'],['selecionar','selecionar','rever']],
-        'impresso'=>[['selecionar','editar','guardar'],['abrir','rever','descarregar']],
-        'digital'=>[['abrir','rever','confirmar'],['abrir','rolar','confirmar']],
-        'porta'=>[['pesquisar','selecionar','confirmar'],['abrir','desmarcar','rever']],
-        'bar'=>[['adicionar','preencher','activar'],['enviar','preparar','entregar']],
-        'orcamento'=>[['adicionar','preencher','guardar'],['comparar','filtrar','rever']],
+        'convidados'=>[['familia','configurar','enviar'],['pesquisar','estados','resumo']],
+        'mesas'=>[['adicionar','configurar','arrastar'],['sentar','selecionar','lotacao']],
+        'impresso'=>[['modelos','editar','versoes'],['publicar','rever','descarregar']],
+        'digital'=>[['convite','historia','presenca'],['telemovel','rolar','confirmar']],
+        'porta'=>[['qr','presenca','contador'],['corrigir','desmarcar','ausentes']],
+        'bar'=>[['categorias','stock','activar'],['pedido','preparar','entregar']],
+        'orcamento'=>[['despesa','configurar','parcelas'],['valores','filtrar','prazos']],
       ],
       'demonstracao'=>[
         'convidados'=>[['familia','proteger','contador'],['pesquisar','estados','resumo']],

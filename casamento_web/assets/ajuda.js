@@ -49,7 +49,7 @@
       void imagem.offsetWidth;
       if(gesto?.classList.contains('rolagem-d'))imagem.classList.add('rolando-d');
       if(gesto?.classList.contains('rolagem-m'))imagem.classList.add('rolando-m');
-      imagem._ajCenaTimer=setTimeout(()=>{anterior?.classList.remove('anterior');imagem.classList.remove('rolando-d','rolando-m');},1020);
+      imagem._ajCenaTimer=setTimeout(()=>{anterior?.classList.remove('anterior');imagem.classList.remove('rolando-d','rolando-m');},1180);
     }
     guia?.querySelectorAll('[data-sticker-passo]').forEach(s=>s.classList.toggle('ativo',s.dataset.stickerPasso===passo));
     guia?.querySelectorAll('[data-scroll-passo]').forEach(s=>s.classList.toggle('ativo',s.dataset.scrollPasso===passo));

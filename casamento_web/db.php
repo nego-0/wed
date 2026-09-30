@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 61;
+const ESQUEMA_VERSAO = 62;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2660,6 +2660,14 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         // mão pelo administrador (gerido_em) continuam intactas.
         @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''
                        WHERE stickers LIKE '%\"gerado_em\"%'");
+    }
+
+    // v62 — os guias passam a usar os pictogramas contextuais da montra e os
+    // mesmos marcadores compactos. Recriam-se apenas configurações geradas;
+    // posições e símbolos afinados à mão pelo administrador ficam intactos.
+    if ($versaoAtual < 62) {
+        @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''
+                       WHERE tipo='ajuda' AND stickers LIKE '%\"gerado_em\"%'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -70,7 +70,7 @@ async function apiImagemExemplo(p,acao,id,ficheiro){
     if(!resposta.ok)throw new Error('Não foi possível abrir a imagem de exemplo: '+ficheiro);
     const blob=await resposta.blob(),fd=new FormData();
     fd.append('id',String(id));
-    fd.append('ficheiro',new File([blob],'coca-cola.jpg',{type:blob.type||'image/jpeg'}));
+    fd.append('ficheiro',new File([blob],ficheiro.split('/').pop(),{type:blob.type||'image/jpeg'}));
     return fetch('api.php?action='+acao,{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd}).then(r=>r.json());
   },{acao,id,ficheiro});
 }
@@ -134,6 +134,17 @@ async function prepararDados(p){
   if(!bebida.foto){
     const foto=await apiImagemExemplo(p,'bar_item_foto',+bebida.id,'assets/ajuda/exemplos/coca-cola.jpg');
     if(!foto.success)throw new Error('Não foi possível associar a fotografia à Coca-Cola: '+(foto.error||''));
+  }
+  const cervejas=(bar.categorias||[]).find(c=>/cerveja/i.test(c.nome))||(bar.categorias||[])[0];
+  const vinhos=(bar.categorias||[]).find(c=>/vinho|espumante/i.test(c.nome))||cervejas;
+  for(const exemplo of [
+    {nome:'Cuca',descricao:'Cerveja angolana bem fresca',ficheiro:'assets/ajuda/exemplos/cuca.jpg',categoria_id:+cervejas.id,servir:'garrafa',doses_garrafa:1,stock:36},
+    {nome:'Vinho tinto',descricao:'Vinho tinto para acompanhar o jantar',ficheiro:'assets/ajuda/exemplos/vinho-tinto.jpg',categoria_id:+vinhos.id,servir:'ambos',doses_garrafa:6,stock:30},
+  ]){
+    bar=await api(p,'bar_estado');let item=(bar.itens||[]).find(i=>i.nome===exemplo.nome);
+    if(!item){const r=await api(p,'bar_item_guardar',{...exemplo,alcoolico:1,max_por_pedido:2,stock_minimo:6,estado:'ativo'});bar=await api(p,'bar_estado');item=(bar.itens||[]).find(i=>+i.id===+r.id);}
+    else if(+item.categoria_id!==+exemplo.categoria_id){await api(p,'bar_item_guardar',{...item,...exemplo,alcoolico:1,max_por_pedido:2,stock_minimo:6,estado:'ativo'});bar=await api(p,'bar_estado');item=(bar.itens||[]).find(i=>i.nome===exemplo.nome);}
+    if(item&&!item.foto){const foto=await apiImagemExemplo(p,'bar_item_foto',+item.id,exemplo.ficheiro);if(!foto.success)throw new Error('Não foi possível associar a fotografia a '+exemplo.nome+': '+(foto.error||''));}
   }
   await api(p,'bar_abrir',{});bar=await api(p,'bar_estado');
   const membro=(convite.membros||[]).find(m=>m.nome==='Ana Kiala')||convite.membros[0];

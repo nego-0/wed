@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os 42 passos da Ajuda usam pictogramas contextuais, marcadores discretos e cenas da interface actual',
+         'parcial-ajuda.php', "'convidados'=>[['familia','configurar','enviar']"],
+        ['Os exemplos do Bar incluem Coca-Cola, Cuca e vinho tinto com fotografias próprias',
+         'tests/gerar-capturas-ajuda.js', "ficheiro:'assets/ajuda/exemplos/cuca.jpg'"],
         ['As categorias da Ajuda e da Demonstração mudam com rolagem visível e fading de pelo menos um segundo',
          'assets/ajuda.js', 'const DURACAO_CATEGORIA=1100'],
         ['Os detalhes das mesas surgem com rolagem suave e fading visível durante pelo menos um segundo',

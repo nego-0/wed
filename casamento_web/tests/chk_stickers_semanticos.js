@@ -5,13 +5,13 @@ const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:
 const BASE=process.env.BASE_URL||'http://127.0.0.1:8920';
 const EXE=process.env.CHROMIUM||(process.platform==='win32'?'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe':'/opt/pw-browsers/chromium-1194/chrome-linux/chrome');
 const AJUDA=[
-  'abrir','preencher','enviar','pesquisar','editar','rever',
-  'adicionar','preencher','arrastar','selecionar','selecionar','rever',
-  'selecionar','editar','guardar','abrir','rever','descarregar',
-  'abrir','rever','confirmar','abrir','rolar','confirmar',
-  'pesquisar','selecionar','confirmar','abrir','desmarcar','rever',
-  'adicionar','preencher','activar','enviar','preparar','entregar',
-  'adicionar','preencher','guardar','comparar','filtrar','rever',
+  'familia','configurar','enviar','pesquisar','estados','resumo',
+  'adicionar','configurar','arrastar','sentar','selecionar','lotacao',
+  'modelos','editar','versoes','publicar','rever','descarregar',
+  'convite','historia','presenca','telemovel','rolar','confirmar',
+  'qr','presenca','contador','corrigir','desmarcar','ausentes',
+  'categorias','stock','activar','pedido','preparar','entregar',
+  'despesa','configurar','parcelas','valores','filtrar','prazos',
 ];
 const DEMONSTRACAO=[
   'familia','proteger','contador','pesquisar','estados','resumo',
@@ -30,6 +30,7 @@ const DEMONSTRACAO=[
     ['digital',2,3,'desktop','whatsapp'],['digital',2,3,'mobile','whatsapp']
   ],'a partilha tem alvos próprios no botão WhatsApp em desktop e mobile');
   for(const dispositivo of ['desktop','mobile'])assert.equal(fs.existsSync(path.join(capturas,'demonstracao',`digital-2-3-${dispositivo}.jpg`)),true,'falta a captura de partilha em '+dispositivo);
+  for(const foto of ['coca-cola.jpg','cuca.jpg','vinho-tinto.jpg'])assert.equal(fs.existsSync(path.join(__dirname,'..','assets','ajuda','exemplos',foto)),true,'falta a fotografia de exemplo '+foto);
   for(const tipo of new Set([...AJUDA,...DEMONSTRACAO])){
     const svg=fs.readFileSync(path.join(pasta,tipo+'.svg'),'utf8');
     assert.match(svg,/@keyframes|<svg[^>]*>/,tipo+' é um SVG válido');
@@ -59,7 +60,15 @@ const DEMONSTRACAO=[
     await page.setViewportSize({width:390,height:844});await page.reload({waitUntil:'networkidle'});
     assert.deepEqual(await page.locator('#demonstracao .aj-sticker-marca').evaluateAll(xs=>xs.map(x=>x.dataset.stickerTipo)),DEMONSTRACAO,'o telemóvel conserva a relação entre texto e sticker');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'os novos stickers não criam transbordo');
+    await page.goto(BASE+'/login.php',{waitUntil:'networkidle'});await page.fill('input[name=utilizador]','admin');await page.fill('input[name=senha]','noivos2026');await page.click('button[type=submit]');await page.waitForLoadState('networkidle');
+    await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}));
+    await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});
+    assert.deepEqual(await page.locator('.aj-sticker-marca').evaluateAll(xs=>xs.map(x=>x.dataset.stickerTipo)),AJUDA,'os 42 passos da Ajuda usam os pictogramas contextuais aprovados');
+    const marcasAjuda=await page.locator('.aj-sticker-marca').evaluateAll(xs=>xs.map(x=>({p:parseFloat(getComputedStyle(x,'::before').width),icone:getComputedStyle(x.querySelector('.aj-sticker')).display})));
+    assert.equal(marcasAjuda.every(x=>x.p<=12.1&&x.icone==='none'),true,'a Ajuda usa os mesmos pontos compactos da Demonstração');
+    assert.equal(await page.locator('[data-aj-sticker-legenda][src]').count(),14,'a Ajuda coloca os pictogramas contextuais nas legendas');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'os stickers da Ajuda não criam transbordo no telemóvel');
     assert.deepEqual(erros,[],'sem erros JavaScript');
-    console.log('PASS: 42 descrições comerciais com pictogramas próprios e marcadores discretos, sem alterar os 42 passos de ajuda');
+    console.log('PASS: 84 passos com pictogramas contextuais e marcadores discretos, acompanhados por exemplos fotográficos do Bar');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
