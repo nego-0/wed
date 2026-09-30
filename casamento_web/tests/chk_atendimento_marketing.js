@@ -32,16 +32,16 @@ const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>{
  let duracao=await demo.locator('.aj-card[data-modulo="bar"]:visible').first().evaluate(e=>parseFloat(getComputedStyle(e).animationDuration)*1000);
  ok(duracao>=1000,'a mudança de categoria mantém o fading visível por pelo menos um segundo');
  await pub.waitForTimeout(1150);
- let topo=await demo.locator('.aj-card[data-modulo="bar"]:visible').first().evaluate(e=>e.getBoundingClientRect().top);
- ok(topo>=65&&topo<=130,'a categoria alinha suavemente o primeiro recurso no desktop');
+ let posicao=await pub.evaluate(()=>{const k=document.querySelector('#demonstracao .aj-forum-topo .aj-kicker'),h=document.querySelector('.mk-topo');return {topo:k.getBoundingClientRect().top,cabecalho:h.getBoundingClientRect().bottom};});
+ ok(posicao.topo>=posicao.cabecalho&&posicao.topo<=posicao.cabecalho+32,'a categoria deixa “Vantagens e recursos” visível sob o menu no desktop');
  await pub.setViewportSize({width:390,height:844}); await pub.reload({waitUntil:'networkidle'});
  ok(await pub.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'a página pública não transborda no telemóvel');
  await pub.locator('#demonstracao [data-aj-modulo="orcamento"]').click();await pub.waitForTimeout(100);
  duracao=await pub.locator('#demonstracao .aj-card[data-modulo="orcamento"]:visible').first().evaluate(e=>parseFloat(getComputedStyle(e).animationDuration)*1000);
  ok(duracao>=1000,'o fading de categoria conserva a duração no telemóvel');
  await pub.waitForTimeout(1150);
- topo=await pub.locator('#demonstracao .aj-card[data-modulo="orcamento"]:visible').first().evaluate(e=>e.getBoundingClientRect().top);
- ok(topo>=55&&topo<=110,'a categoria alinha suavemente o primeiro recurso no telemóvel');
+ posicao=await pub.evaluate(()=>{const k=document.querySelector('#demonstracao .aj-forum-topo .aj-kicker'),h=document.querySelector('.mk-topo');return {topo:k.getBoundingClientRect().top,cabecalho:h.getBoundingClientRect().bottom};});
+ ok(posicao.topo>=posicao.cabecalho&&posicao.topo<=posicao.cabecalho+24,'a categoria deixa “Vantagens e recursos” visível sob o menu no telemóvel');
 
  const ctx=await b.newContext(),p=await ctx.newPage();
  await p.goto(BASE+'/login.php');await p.fill('input[name=utilizador]',USER);await p.fill('input[name=senha]',PASSWORD);await p.click('button[type=submit]');await p.waitForLoadState('networkidle');

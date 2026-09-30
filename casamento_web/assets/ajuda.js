@@ -25,11 +25,13 @@
   }
   function alinharPrimeiroRecurso(){
     const primeiro=cards.find(c=>!c.hidden);if(!primeiro)return;
+    const alvo=document.body.classList.contains('central-publica')
+      ? document.querySelector('.aj-forum-topo')||primeiro : primeiro;
     clearTimeout(temporizadorEntrada);cards.forEach(c=>c.classList.remove('aj-entrada-categoria'));
     requestAnimationFrame(()=>{
       void primeiro.offsetWidth;
       cards.filter(c=>!c.hidden).forEach(c=>c.classList.add('aj-entrada-categoria'));
-      rolarAte(primeiro);
+      rolarAte(alvo);
       temporizadorEntrada=setTimeout(()=>cards.forEach(c=>c.classList.remove('aj-entrada-categoria')),DURACAO_CATEGORIA+100);
     });
   }
