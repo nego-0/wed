@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As categorias da Ajuda e da Demonstração alinham suavemente o primeiro recurso',
+         'assets/ajuda.js', 'function alinharPrimeiroRecurso'],
         ['As capturas da Ajuda e da Demonstração são recriadas com confirmação, orçamento e Bar actuais',
          'tests/gerar-capturas-ajuda.js', "assets/ajuda/exemplos/coca-cola.jpg"],
         ['O exemplo financeiro respeita o teto de 7 500 000 Kz',

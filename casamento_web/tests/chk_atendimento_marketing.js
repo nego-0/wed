@@ -4,7 +4,12 @@ const fs=require('node:fs'),path=require('node:path');
 const EXE=process.env.CHROMIUM; const BASE=process.env.BASE_URL||'http://127.0.0.1:8921';
 const USER=process.env.TEST_USER||'admin', PASSWORD=process.env.TEST_PASSWORD||'noivos2026';
 const ALVOS=JSON.parse(fs.readFileSync(path.join(__dirname,'..','assets','ajuda','capturas','alvos-cenas.json'),'utf8'));
-const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>x.rolar).map(x=>`${x.modulo}-${x.topico}-${x.passo}`)).size;
+const ALVOS_DEMO=JSON.parse(fs.readFileSync(path.join(__dirname,'..','assets','ajuda','capturas','alvos-demonstracao.json'),'utf8'));
+const demoPorChave=new Map(ALVOS_DEMO.map(x=>[`${x.modulo}-${x.topico}-${x.passo}-${x.dispositivo}`,x]));
+const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>{
+ const chave=`${x.modulo}-${x.topico}-${x.passo}-${x.dispositivo}`;
+ return (demoPorChave.get(chave)||x).rolar;
+}).map(x=>`${x.modulo}-${x.topico}-${x.passo}`)).size;
 
 (async()=>{
  const b=await chromium.launch({executablePath:EXE,headless:true});let falhas=0;
@@ -23,8 +28,14 @@ const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>x.rolar).map(x=>`${x.modulo}-${
  ok(await demo.locator('.aj-card:visible').count()>=1,'a pesquisa funciona dentro da demonstração');
  await demo.locator('#aj-busca').fill(''); await demo.locator('[data-aj-modulo="bar"]').click();
  ok(await demo.locator('.aj-card:visible').count()===2,'o filtro por módulo funciona dentro da demonstração');
+ await pub.waitForTimeout(750);
+ let topo=await demo.locator('.aj-card[data-modulo="bar"]:visible').first().evaluate(e=>e.getBoundingClientRect().top);
+ ok(topo>=65&&topo<=130,'a categoria alinha suavemente o primeiro recurso no desktop');
  await pub.setViewportSize({width:390,height:844}); await pub.reload({waitUntil:'networkidle'});
  ok(await pub.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'a página pública não transborda no telemóvel');
+ await pub.locator('#demonstracao [data-aj-modulo="orcamento"]').click();await pub.waitForTimeout(750);
+ topo=await pub.locator('#demonstracao .aj-card[data-modulo="orcamento"]:visible').first().evaluate(e=>e.getBoundingClientRect().top);
+ ok(topo>=55&&topo<=110,'a categoria alinha suavemente o primeiro recurso no telemóvel');
 
  const ctx=await b.newContext(),p=await ctx.newPage();
  await p.goto(BASE+'/login.php');await p.fill('input[name=utilizador]',USER);await p.fill('input[name=senha]',PASSWORD);await p.click('button[type=submit]');await p.waitForLoadState('networkidle');
