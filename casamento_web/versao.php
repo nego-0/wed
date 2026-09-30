@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A Demonstração e a Ajuda mantêm textos, símbolos e ícones legíveis no tema escuro',
+         'assets/ajuda.css', 'contraste da central nos quatro temas'],
         ['As migrações repõem todas as escolhas e conteúdos sem preservar personalizações anteriores',
          'db.php', 'if ($versaoAtual < 65)'],
         ['A migração repõe sempre o conteúdo comercial padrão do Bar',
