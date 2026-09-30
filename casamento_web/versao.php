@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os detalhes das mesas surgem com rolagem suave e fading visível durante pelo menos um segundo',
+         'mesas.php', 'animation:mesa-detalhe-surgir 1.1s'],
         ['As categorias da Ajuda e da Demonstração alinham suavemente o primeiro recurso',
          'assets/ajuda.js', 'function alinharPrimeiroRecurso'],
         ['As capturas da Ajuda e da Demonstração são recriadas com confirmação, orçamento e Bar actuais',

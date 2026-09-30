@@ -72,11 +72,14 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     let estado = await page.evaluate(i => ({
       abriu: !!document.querySelector('.mesa-detalhe[data-mesa-id="' + i + '"]'),
       animou: !!document.querySelector('.mesa-detalhe.a-surgir'),
+      duracao: parseFloat(getComputedStyle(document.querySelector('.mesa-detalhe')).animationDuration) * 1000,
       suave: window.__rolagensDetalhe.some(x => x.opcoes && x.opcoes.behavior === 'smooth')
     }), id);
     ok(estado.abriu && estado.animou,
        `${largura}px: a lista abre o detalhe com a animação leve`);
     ok(estado.suave, `${largura}px: a lista usa rolagem suave`);
+    ok(estado.duracao >= 1000,
+       `${largura}px: o fading do detalhe dura pelo menos um segundo`);
 
     // Fecha pelo próprio desenho e volta a abrir a partir da planta.
     const no = page.locator('.mesa-node[data-id="' + id + '"]');
@@ -89,12 +92,15 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     estado = await page.evaluate(i => ({
       abriu: !!document.querySelector('.mesa-detalhe[data-mesa-id="' + i + '"]'),
       animou: !!document.querySelector('.mesa-detalhe.a-surgir'),
+      duracao: parseFloat(getComputedStyle(document.querySelector('.mesa-detalhe')).animationDuration) * 1000,
       suave: window.__rolagensDetalhe.some(x => x.opcoes && x.opcoes.behavior === 'smooth'),
       pagina: window.__rolagensDetalhe.some(x => x.tipo === 'pagina')
     }), id);
     ok(estado.abriu && estado.animou,
        `${largura}px: a planta abre o mesmo detalhe com a animação`);
     ok(estado.suave, `${largura}px: a planta usa rolagem suave`);
+    ok(estado.duracao >= 1000,
+       `${largura}px: a planta mantém o fading de pelo menos um segundo`);
     if (mobile) ok(estado.pagina, '390px: a planta traz o detalhe à área visível');
 
     await page.evaluate(async i => {

@@ -473,12 +473,13 @@ $CAS = casalDaFicha($conn);
   .tabset-tabs .rt-mesa{ border-color:var(--gold-soft); }
   .tab-body{ overflow:auto; max-height:60vh; }
   /* O detalhe nasce no mesmo painel para quem chega pela lista ou pela
-     planta. Um movimento curto liga visualmente o gesto ao conteúdo novo sem
-     atrasar o trabalho, e a margem impede o cabeçalho de o tapar no telemóvel. */
+     planta. A entrada longa o suficiente para ser acompanhada liga o gesto ao
+     conteúdo novo, e a margem impede o cabeçalho de o tapar no telemóvel. */
   .mesa-detalhe{ scroll-margin-top:5.5rem; transform-origin:50% 0; }
-  .mesa-detalhe.a-surgir{ animation:mesa-detalhe-surgir .28s cubic-bezier(.2,.72,.25,1) both; }
+  .mesa-detalhe.a-surgir{ animation:mesa-detalhe-surgir 1.1s cubic-bezier(.16,.72,.22,1) both; }
   @keyframes mesa-detalhe-surgir{
-    from{ opacity:.2; transform:translateY(10px) scale(.992); }
+    from{ opacity:.04; transform:translateY(18px) scale(.992); }
+    45%{ opacity:.72; }
     to{ opacity:1; transform:translateY(0) scale(1); }
   }
   @media (max-width:900px){ .tab-body{ max-height:none; } .painel-mesas{ position:static; } }
