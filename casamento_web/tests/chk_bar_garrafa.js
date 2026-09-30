@@ -237,6 +237,11 @@ const marca = 'zzg' + Math.floor(Math.random() * 1e5);
   await conv.locator('.b-nome').first().click();
   await conv.waitForTimeout(2000);
 
+  const rotulosPedido = await conv.evaluate(() => [BP.comoServe('copo'), BP.comoServe('garrafa')]);
+  ok(rotulosPedido[0] === 'AO COPO' && rotulosPedido[1] === 'À GARRAFA',
+     'bebidas.php usa os rótulos directos «AO COPO» e «À GARRAFA»: '
+     + rotulosPedido.join(' / '));
+
   const escolher = (id, un) => conv.evaluate(async ({ i, u }) => {
     barUnidade(+i, u);
     await new Promise(r => setTimeout(r, 700));

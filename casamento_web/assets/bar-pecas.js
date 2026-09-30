@@ -289,8 +289,8 @@
   /** Como uma bebida se serve, dito a quem a vai pedir. */
   function comoServe(servir) {
     if (servir === 'ambos')   return 'Ao copo ou à garrafa';
-    if (servir === 'garrafa') return 'Só à garrafa';
-    return 'Só ao copo';
+    if (servir === 'garrafa') return 'À GARRAFA';
+    return 'AO COPO';
   }
 
   window.BP = {

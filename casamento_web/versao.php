@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O menu do convidado identifica directamente AO COPO e À GARRAFA',
+         'assets/bar-pecas.js', "if (servir === 'garrafa') return 'À GARRAFA'"],
         ['As categorias da Demonstração alinham Vantagens e recursos abaixo do menu fixo',
          'assets/ajuda.js', "document.querySelector('.aj-forum-topo')||primeiro"],
         ['O sticker do Bar usa a fotografia indicada da Cuca e serve a Coca-Cola apenas à garrafa',
