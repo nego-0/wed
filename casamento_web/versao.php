@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Login e Registo acompanham o fundo, os cartões e os controlos dos quatro temas',
+         'assets/entrada.css', 'A folha de entrada acompanha o tema.'],
+        ['A Demonstração pública mantém disponível o botão flutuante de escolha do tema',
+         'atendimento.php', "include __DIR__.'/parcial-seletor-tema.php'"],
         ['A Demonstração e a Ajuda mantêm textos, símbolos e ícones legíveis no tema escuro',
          'assets/ajuda.css', 'contraste da central nos quatro temas'],
         ['As migrações repõem todas as escolhas e conteúdos sem preservar personalizações anteriores',
