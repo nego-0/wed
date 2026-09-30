@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As migrações repõem todas as escolhas e conteúdos sem preservar personalizações anteriores',
+         'db.php', 'if ($versaoAtual < 65)'],
+        ['A migração repõe sempre o conteúdo comercial padrão do Bar',
+         'db.php', 'if ($versaoAtual < 64)'],
         ['A Demonstração detalha os seis momentos reais do Bar em linguagem comercial',
          'db.php', 'Fotografias, stock e limites que inspiram confiança.'],
         ['O menu do convidado identifica directamente AO COPO e À GARRAFA',

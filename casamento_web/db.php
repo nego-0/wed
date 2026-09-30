@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 63;
+const ESQUEMA_VERSAO = 65;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -504,19 +504,6 @@ function semearAtendimento(mysqli $conn): void {
         $st->bind_param('ssi', $p, $rp, $od);
         @$st->execute();
     }
-}
-
-/** Texto sem narração usado pela versão 57; permite migrar sem tocar em edições do admin. */
-function ajudaOperacionalAnterior(string $modulo): string {
-    return [
-      'convidados' => "CRIAR UM CONVITE\n1. Abra Convidados e escolha Novo convite.\n2. Indique a família, os lugares e os convidados.\n3. Guarde e envie o código ou ligação.\n\nCONFIRMAR E EDITAR\n1. Pesquise o nome.\n2. Abra o convite e actualize a resposta.\n3. Confirme o resumo no topo.",
-      'mesas' => "CRIAR UMA MESA\n1. Abra Mesas e escolha Nova mesa.\n2. Dê-lhe nome, forma e capacidade.\n3. Arraste-a para o lugar certo na planta.\n\nSENTAR CONVIDADOS\n1. Escolha a pessoa na lista.\n2. Abra o selector de mesa.\n3. Confirme a lotação depois da mudança.",
-      'impresso' => "ESCOLHER E PERSONALIZAR\n1. Abra Convite impresso e escolha a peça.\n2. Entre no editor para mudar texto, cor e composição.\n3. Guarde uma versão identificada.\n\nENVIAR À GRÁFICA\n1. Abra a peça em vigor.\n2. Reveja a prova visual.\n3. Descarregue o respectivo manual de impressão.",
-      'digital' => "PUBLICAR O CONVITE\n1. Abra Convite digital e entre no editor.\n2. Ajuste capa, fotografias, textos e secções.\n3. Guarde e marque a versão que os convidados recebem.\n\nTESTAR COMO CONVIDADO\n1. Abra a pré-visualização.\n2. Percorra todas as secções.\n3. Teste a confirmação antes de partilhar.",
-      'porta' => "REGISTAR UMA ENTRADA\n1. Pesquise a família ou leia o código.\n2. Confirme as pessoas que chegaram.\n3. Registe a entrada e veja o total actualizar.\n\nCORRIGIR UMA ENTRADA\n1. Volte a abrir o convite.\n2. Retire a marca da pessoa errada.\n3. Confirme quem ainda falta.",
-      'bar' => "PREPARAR O MENU\n1. Abra Bar e crie as categorias.\n2. Adicione bebidas, quantidades e limites.\n3. Abra o serviço quando a equipa estiver pronta.\n\nACOMPANHAR UM PEDIDO\n1. O convidado envia o pedido.\n2. A copa aceita e prepara.\n3. O garçom recolhe e confirma a entrega.",
-      'orcamento' => "REGISTAR UMA DESPESA\n1. Abra Orçamento e escolha Nova despesa.\n2. Indique categoria, fornecedor, previsto e prazo.\n3. Guarde e registe cada pagamento.\n\nACOMPANHAR O TOTAL\n1. Compare previsto, contratado e pago.\n2. Filtre por categoria ou estado.\n3. Reveja os valores ainda por pagar.",
-    ][$modulo] ?? '';
 }
 
 /** Conteúdo comercial e guias editáveis, comum a toda a plataforma.
@@ -1182,15 +1169,15 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         // circularidade, e assim as paletas não se duplicam nesta migração.
         require_once __DIR__ . '/personalizacao.php';
 
-        // Os dois de origem passam a dizer o que são. Só se o nome for ainda o
-        // semeado — um nome que o admin tenha mudado é dele.
-        foreach ([['digital', 'Convite digital (modelo da casa)', 'Desenho de origem · convite digital'],
-                  ['impresso', 'Convite impresso (modelo da casa)', 'Desenho de origem · convite impresso']]
-                 as [$amb, $velho, $novo]) {
+        // Os dois modelos vazios de origem passam a dizer o que são, mesmo que
+        // o nome anteriormente tenha sido alterado.
+        foreach ([['digital', 'Desenho de origem · convite digital'],
+                  ['impresso', 'Desenho de origem · convite impresso']]
+                 as [$amb, $novo]) {
             $st = $conn->prepare("UPDATE {$P}modelos SET nome=?,
                                   descricao='O ponto de partida da casa, e o caminho de volta: aplicá-lo devolve a peça ao desenho de origem.'
-                                  WHERE nome=? AND ambito=? AND criado_por='sistema'");
-            $st->bind_param('sss', $novo, $velho, $amb); @$st->execute();
+                                  WHERE ambito=? AND criado_por='sistema' AND defs='{}'");
+            $st->bind_param('ss', $novo, $amb); @$st->execute();
         }
 
         $ins = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, alcance, criado_por)
@@ -1324,10 +1311,8 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             $snap = [];
             foreach (chavesModelo($amb) as $k) $snap[$k] = (string)($padrao[$k] ?? '');
             $defs = json_encode($snap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            // Só se ainda for o modelo semeado com o nome antigo — um nome que o
-            // admin já tenha mudado é dele.
             $st = $conn->prepare("UPDATE {$P}modelos SET nome='Isabel & Abednego', defs=?
-                                  WHERE ambito=? AND criado_por='sistema' AND nome LIKE 'Desenho de origem%'");
+                                  WHERE ambito=? AND criado_por='sistema' AND defs='{}'");
             $st->bind_param('ss', $defs, $amb); @$st->execute();
         }
 
@@ -1356,10 +1341,6 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     if ($versaoAtual < 23) {
         foreach (['digital', 'impresso'] as $amb) {
             $chave = 'modelo.pecaorigem.' . $amb;
-            // Só se ainda não houver designação — uma escolha do admin é dele.
-            $st = $conn->prepare("SELECT 1 FROM {$P}definicoes WHERE casamento_id=0 AND chave=? LIMIT 1");
-            $st->bind_param('s', $chave); @$st->execute();
-            if ($st->get_result()->fetch_row()) continue;
             // O modelo de origem: o Isabel & Abednego semeado (criado_por='sistema').
             $st = $conn->prepare("SELECT id FROM {$P}modelos
                                   WHERE ambito=? AND criado_por='sistema' AND nome='Isabel & Abednego'
@@ -2560,125 +2541,122 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         semearConteudosAtendimento($conn);
     }
 
-    // v55 — novo nome para a mesma paleta; preserva a escolha do administrador.
+    // v55 — novo nome para a mesma paleta em todas as instalações.
     if ($versaoAtual < 55) {
         $conn->query("UPDATE {$P}definicoes SET valor='jardim'
-                      WHERE casamento_id=0 AND chave='sistema.tema' AND valor='niras'");
+                      WHERE casamento_id=0 AND chave='sistema.tema'");
     }
 
-    // v56 — segundo desenho integral do convite digital. Instala-se no
-    // catálogo e passa a origem da casa apenas quando o admin ainda usava a
-    // origem histórica; uma escolha deliberada do admin é preservada.
+    // v56 — segundo desenho integral do convite digital e nova origem da casa.
     if ($versaoAtual < 56) {
         require_once __DIR__ . '/personalizacao.php';
         restaurarModelosDeCasa($conn, [[
             'ambito' => 'digital', 'nome' => 'Kulemba Contemporâneo'
-        ]]);
-        $atual = 0;
-        $r = @$conn->query("SELECT valor FROM {$P}definicoes
-                            WHERE casamento_id=0 AND chave='modelo.pecaorigem.digital' LIMIT 1");
-        if ($r && ($x = $r->fetch_assoc())) $atual = (int)$x['valor'];
-        $historico = 0;
+        ]], true);
         $r = @$conn->query("SELECT id FROM {$P}modelos
-                            WHERE ambito='digital' AND nome='Isabel & Abednego'
+                            WHERE ambito='digital' AND nome='Kulemba Contemporâneo'
                               AND criado_por='sistema' ORDER BY id LIMIT 1");
-        if ($r && ($x = $r->fetch_assoc())) $historico = (int)$x['id'];
-        if ($atual === 0 || $atual === $historico) {
-            $r = @$conn->query("SELECT id FROM {$P}modelos
-                                WHERE ambito='digital' AND nome='Kulemba Contemporâneo'
-                                  AND criado_por='sistema' ORDER BY id LIMIT 1");
-            if ($r && ($x = $r->fetch_assoc())) definirPecaOrigem($conn, 'digital', (int)$x['id']);
-        }
+        if ($r && ($x = $r->fetch_assoc())) definirPecaOrigem($conn, 'digital', (int)$x['id']);
     }
 
     // v57 — a ajuda passa de um conselho genérico para operações concretas.
-    // Só substitui a semente antiga; texto que o administrador editou fica seu.
     if ($versaoAtual < 57) {
         foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {
             $texto = ajudaOperacionalPadrao($modulo);
             $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
-                                  WHERE tipo='ajuda' AND modulo=?
-                                    AND conteudo LIKE '1. Abra o módulo no menu principal.%'");
+                                  WHERE tipo='ajuda' AND modulo=?");
             if ($st) { $st->bind_param('ss', $texto, $modulo); @$st->execute(); }
         }
     }
 
     // v58 — cada passo passa a ter uma narração detalhada associada à demonstração.
-    // A igualdade exacta protege todo o material que já foi editado pelo admin.
     if ($versaoAtual < 58) {
         foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {
-            $anterior = ajudaOperacionalAnterior($modulo);
             $texto = ajudaOperacionalPadrao($modulo);
             $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
-                                  WHERE tipo='ajuda' AND modulo=? AND conteudo=?");
-            if ($st) { $st->bind_param('sss', $texto, $modulo, $anterior); @$st->execute(); }
+                                  WHERE tipo='ajuda' AND modulo=?");
+            if ($st) { $st->bind_param('ss', $texto, $modulo); @$st->execute(); }
         }
     }
 
     // v59 — a montra deixa de repetir os guias de utilização e passa a falar de
-    // vantagens e recursos, mantendo a mesma central visual. Só troca a prosa de
-    // origem da demonstração; o que o admin já reescreveu para a montra fica seu.
+    // vantagens e recursos, mantendo a mesma central visual.
     if ($versaoAtual < 59) {
-        $prosaAntiga = [
-          'convidados' => "Criem convites por família, acompanhem confirmações e saibam sempre quem vem.\n\nNa demonstração podem explorar uma lista fictícia, os estados de RSVP e os indicadores gerais.",
-          'mesas' => "Organizem o salão visualmente, movam convidados e detectem lugares livres.\n\nA demonstração usa nomes inventados e uma planta de exemplo.",
-          'impresso' => "Personalizem texto, cores e composição. O manual de impressão acompanha a peça para reduzir surpresas na gráfica.",
-          'digital' => "Vejam a capa, a história, os locais e o formulário de confirmação tal como um convidado os verá.",
-          'porta' => "A equipa da porta pesquisa nomes ou lê códigos, sem expor a gestão completa do casamento.",
-          'bar' => "Experimentem o percurso fictício: escolher bebidas, preparar na copa e confirmar a entrega na mesa.",
-          'orcamento' => "Acompanhem categorias, pagamentos e desvios com números fictícios que mostram a visão final sem revelar dados reais.",
-        ];
-        foreach ($prosaAntiga as $modulo => $anterior) {
+        foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {
             $texto = demonstracaoComercialPadrao($modulo);
             $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
-                                  WHERE tipo='demo' AND modulo=? AND conteudo=?");
-            if ($st) { $st->bind_param('sss', $texto, $modulo, $anterior); @$st->execute(); }
+                                  WHERE tipo='demo' AND modulo=?");
+            if ($st) { $st->bind_param('ss', $texto, $modulo); @$st->execute(); }
         }
     }
 
-    // v60 — o admin gere separadamente os stickers da Ajuda e da montra. A
-    // coluna própria preserva os indicadores comerciais que já vivem em dados.
+    // v60 — o admin gere separadamente os stickers da Ajuda e da montra.
     if ($versaoAtual < 60) {
         migColuna($conn, "{$P}atendimento_conteudos", 'stickers', 'MEDIUMTEXT NOT NULL');
-        $anterior = "PUBLICAR O CONVITE\n1. Abra Convite digital e entre no editor. || No menu, escolha Convite digital e abra o editor do modelo que será enviado aos convidados.\n2. Ajuste capa, fotografias, textos e secções. || Percorra as áreas do editor, substitua as fotografias e reveja textos, locais e ordem das secções na pré-visualização.\n3. Guarde e marque a versão que os convidados recebem. || Guarde uma versão com nome e aplique-a como versão em vigor. Só essa versão aparece na ligação pública.\n\nTESTAR COMO CONVIDADO\n1. Abra a pré-visualização. || Use Pré-visualizar para abrir o convite com a mesma largura e navegação que o convidado verá no telemóvel.\n2. Percorra todas as secções. || Desça da capa até ao fim e confirme fotografias, textos, mapas, horários e botões em cada secção.\n3. Teste a confirmação antes de partilhar. || Abra o formulário de confirmação, valide os campos e faça uma resposta de teste antes de copiar a ligação definitiva.";
         $texto = ajudaOperacionalPadrao('digital');
         $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
-                              WHERE tipo='ajuda' AND modulo='digital' AND conteudo=?");
-        if ($st) { $st->bind_param('ss', $texto, $anterior); @$st->execute(); }
+                              WHERE tipo='ajuda' AND modulo='digital'");
+        if ($st) { $st->bind_param('s', $texto); @$st->execute(); }
     }
 
-    // v61 — o exemplo financeiro respeita o teto de 7,5 milhões. Só troca os
-    // números de fábrica; indicadores que o administrador escreveu ficam seus.
+    // v61 — o exemplo financeiro respeita o teto de 7,5 milhões.
     if ($versaoAtual < 61) {
-        $antigo = "Planeado: 8 450 000 Kz\nPago: 5 120 000 Kz\nPor pagar: 3 330 000 Kz";
         $novo = "Teto: 7 500 000 Kz\nPlaneado: 6 500 000 Kz\nPago: 2 700 000 Kz\nPor pagar: 3 800 000 Kz";
         $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET dados=?
-                              WHERE tipo='demo' AND modulo='orcamento' AND dados=?");
-        if ($st) { $st->bind_param('ss', $novo, $antigo); @$st->execute(); }
-        // Uma configuração gerada pode apontar para a geometria das capturas
-        // antigas. Limpa-se só o resultado automático: posições ajustadas à
-        // mão pelo administrador (gerido_em) continuam intactas.
-        @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''
-                       WHERE stickers LIKE '%\"gerado_em\"%'");
+                              WHERE tipo='demo' AND modulo='orcamento'");
+        if ($st) { $st->bind_param('s', $novo); @$st->execute(); }
+        @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''");
     }
 
     // v62 — os guias passam a usar os pictogramas contextuais da montra e os
-    // mesmos marcadores compactos. Recriam-se apenas configurações geradas;
-    // posições e símbolos afinados à mão pelo administrador ficam intactos.
+    // mesmos marcadores compactos.
     if ($versaoAtual < 62) {
         @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''
-                       WHERE tipo='ajuda' AND stickers LIKE '%\"gerado_em\"%'");
+                       WHERE tipo='ajuda'");
     }
 
-    // v63 — a montra do Bar acompanha os mesmos seis ecrãs operacionais da
-    // Ajuda, mas explica o seu valor em linguagem comercial. A comparação com
-    // o texto anterior protege qualquer versão já escrita pelo administrador.
-    if ($versaoAtual < 63) {
-        $anterior = "UM BAR QUE SERVE SOZINHO\n1. Menu por categorias. || Organize águas, refrigerantes, cervejas e cocktails em grupos claros.\n2. Stock e limites sob controlo. || Defina quantidades e limites que evitam pedidos a mais.\n3. Abrir quando quiser. || Active o serviço apenas quando a copa estiver pronta.\n\nDO PEDIDO À ENTREGA, LIGADOS\n1. O convidado pede da mesa. || Escolhe as bebidas e confirma o pedido uma só vez, sem chamar ninguém.\n2. A copa prepara. || A equipa recebe o pedido, aceita-o e acompanha a preparação.\n3. A entrega confirmada. || O garçom leva à mesa certa e marca a entrega — tudo fica registado.";
+    // v64 — a montra do Bar acompanha os mesmos seis ecrãs operacionais da
+    // Ajuda e a migração repõe sempre a versão comercial definida no código.
+    if ($versaoAtual < 64) {
         $novo = demonstracaoComercialPadrao('bar');
         $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
-                              WHERE tipo='demo' AND modulo='bar' AND conteudo=?");
-        if ($st) { $st->bind_param('ss', $novo, $anterior); @$st->execute(); }
+                              WHERE tipo='demo' AND modulo='bar'");
+        if ($st) { $st->bind_param('s', $novo); @$st->execute(); }
+    }
+
+    // v65 — repõe sem excepções todas as escolhas e conteúdos que migrações
+    // anteriores deixavam intactos quando tinham sido editados pelo admin.
+    if ($versaoAtual < 65) {
+        @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor)
+                       VALUES (0,'sistema.tema','jardim')
+                       ON DUPLICATE KEY UPDATE valor='jardim'");
+
+        require_once __DIR__ . '/personalizacao.php';
+        restaurarModelosDeCasa($conn, null, true);
+        $r = @$conn->query("SELECT id FROM {$P}modelos
+                            WHERE ambito='digital' AND nome='Kulemba Contemporâneo'
+                              AND criado_por='sistema' ORDER BY id LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) definirPecaOrigem($conn, 'digital', (int)$x['id']);
+        $r = @$conn->query("SELECT id FROM {$P}modelos
+                            WHERE ambito='impresso' AND nome='Isabel & Abednego'
+                              AND criado_por='sistema' ORDER BY id LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) definirPecaOrigem($conn, 'impresso', (int)$x['id']);
+
+        foreach (['convidados','mesas','impresso','digital','porta','bar','orcamento'] as $modulo) {
+            $ajuda = ajudaOperacionalPadrao($modulo);
+            $demo = demonstracaoComercialPadrao($modulo);
+            $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
+                                  WHERE tipo='ajuda' AND modulo=?");
+            if ($st) { $st->bind_param('ss', $ajuda, $modulo); @$st->execute(); }
+            $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
+                                  WHERE tipo='demo' AND modulo=?");
+            if ($st) { $st->bind_param('ss', $demo, $modulo); @$st->execute(); }
+        }
+        $dados = "Teto: 7 500 000 Kz\nPlaneado: 6 500 000 Kz\nPago: 2 700 000 Kz\nPor pagar: 3 800 000 Kz";
+        $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET dados=?
+                              WHERE tipo='demo' AND modulo='orcamento'");
+        if ($st) { $st->bind_param('s', $dados); @$st->execute(); }
+        @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
