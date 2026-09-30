@@ -31,6 +31,7 @@ const DEMONSTRACAO=[
   ],'a partilha tem alvos próprios no botão WhatsApp em desktop e mobile');
   for(const dispositivo of ['desktop','mobile'])assert.equal(fs.existsSync(path.join(capturas,'demonstracao',`digital-2-3-${dispositivo}.jpg`)),true,'falta a captura de partilha em '+dispositivo);
   for(const foto of ['coca-cola.jpg','cuca.jpg','vinho-tinto.jpg'])assert.equal(fs.existsSync(path.join(__dirname,'..','assets','ajuda','exemplos',foto)),true,'falta a fotografia de exemplo '+foto);
+  assert.match(fs.readFileSync(path.join(__dirname,'gerar-capturas-ajuda.js'),'utf8'),/nome:'Coca-Cola'[\s\S]*?servir:'garrafa'/,'a Coca-Cola de exemplo só pode ser pedida à garrafa');
   for(const tipo of new Set([...AJUDA,...DEMONSTRACAO])){
     const svg=fs.readFileSync(path.join(pasta,tipo+'.svg'),'utf8');
     assert.match(svg,/@keyframes|<svg[^>]*>/,tipo+' é um SVG válido');

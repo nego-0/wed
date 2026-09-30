@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O sticker do Bar usa a fotografia indicada da Cuca e serve a Coca-Cola apenas à garrafa',
+         'tests/gerar-capturas-ajuda.js', "nome:'Coca-Cola',descricao:'Bem fresca, com gelo',categoria_id:+semAlcool.id,alcoolico:0,max_por_pedido:2,stock_minimo:8,servir:'garrafa'"],
         ['Os 42 passos da Ajuda usam pictogramas contextuais, marcadores discretos e cenas da interface actual',
          'parcial-ajuda.php', "'convidados'=>[['familia','configurar','enviar']"],
         ['Os exemplos do Bar incluem Coca-Cola, Cuca e vinho tinto com fotografias próprias',

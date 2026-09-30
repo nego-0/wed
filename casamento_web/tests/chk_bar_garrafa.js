@@ -197,11 +197,20 @@ const marca = 'zzg' + Math.floor(Math.random() * 1e5);
     const dm = await post('mesa_save', { nome: 'ZZG Mesa ' + m, capacidade: 6,
                                          forma: 'redonda', cor: 'neutra' });
     const mesa = (dm.mesas || []).filter(x => x.nome === 'ZZG Mesa ' + m).pop();
-    await post('convite_save', { nome_exibicao: 'ZZG Provador ' + m,
+    const dc = await post('convite_save', { nome_exibicao: 'ZZG Provador ' + m,
       mesa: mesa ? String(mesa.id) : '', membros: [{ nome: 'ZZG Provador ' + m }] });
-    return { mesa: mesa ? +mesa.id : 0, nome: 'ZZG Mesa ' + m };
+    return { mesa: mesa ? +mesa.id : 0, nome: 'ZZG Mesa ' + m,
+             convidado: +(((dc.convite || {}).membros || [])[0] || {}).id || 0 };
   }, marca);
   await post('bar_abrir');
+
+  const peloBalcao = await post('bar_pedir_por', { posto: 'copa',
+    convidado_id: cena.convidado, mesa_id: cena.mesa,
+    itens: [{ item_id: soGarrafa.id, quantidade: 1 }] });
+  ok(peloBalcao.success && peloBalcao.pedido.itens[0].unidade === 'garrafa',
+     'um pedido lançado pelo pessoal respeita «só à garrafa»: '
+     + ((peloBalcao.pedido.itens[0] || {}).unidade || peloBalcao.message));
+  await post('bar_cancelar_copa', { id: peloBalcao.pedido.id });
 
   // A regra mais banal que há, e a primeira que qualquer casa escreve.
   const regra = await post('bar_regra_guardar',

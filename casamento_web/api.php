@@ -5722,7 +5722,10 @@ if ($acao === 'bar_pedir_por') {
         if ($iid <= 0 || $q <= 0) continue;
         $item = barItem($conn, $iid);
         if (!$item) continue;
-        $linhas[] = [$item, $q];
+        $serve = (string)($item['servir'] ?? 'copo');
+        $un = $serve === 'garrafa' ? 'garrafa'
+            : ($serve === 'ambos' && ($li['unidade'] ?? '') === 'garrafa' ? 'garrafa' : 'copo');
+        $linhas[] = [$item, $q, $un];
     }
     if (!$linhas) erro('Escolha pelo menos uma bebida.');
 
@@ -5759,7 +5762,7 @@ if ($acao === 'bar_pedir_por') {
     $daCopa = podeCopa() && $posto === 'copa';
     $jaEntregue = $daCopa && !empty($d['entregue']);
     $estado = $jaEntregue ? 'entregue' : ($daCopa ? 'aprovado' : 'em_analise');
-    foreach ($linhas as [$item, $q]) {
+    foreach ($linhas as [$item, $q, $un]) {
         if ((int)$item['disponivel'] < $q) {
             erro('Já não há «' . $item['nome'] . '» que chegue: restam '
                . (int)$item['disponivel'] . '.');
@@ -5774,7 +5777,7 @@ if ($acao === 'bar_pedir_por') {
 
        O alcance de uma regra é absoluto ou não é regra nenhuma. O balcão não é
        excepção: é só outra maneira de entrar. */
-    $finais = array_map(fn($l) => ['li' => ['item_id' => (int)$l[0]['id']], 'q' => $l[1]], $linhas);
+    $finais = array_map(fn($l) => ['li' => ['item_id' => (int)$l[0]['id'], 'unidade' => $l[2]], 'q' => $l[1]], $linhas);
     if ($travao = barTravaoDe($conn, $gid, (int)$g['convite_id'], $finais)) erro($travao);
     $codigo = barCodigoCurto();
     $quem = (string)(utilizadorAtual() ?? '');
@@ -5795,11 +5798,11 @@ if ($acao === 'bar_pedir_por') {
     else                  $st->bind_param('isiiis',   $cid, $codigo, $gid, $conviteId, $mesaId, $quem);
     if (!@$st->execute()) erro('Não foi possível lançar o pedido.');
     $pid = $conn->insert_id;
-    foreach ($linhas as [$item, $q]) {
+    foreach ($linhas as [$item, $q, $un]) {
         $si = $conn->prepare("INSERT INTO {$P}bar_pedido_itens
-                (casamento_id,pedido_id,item_id,nome_no_momento,quantidade) VALUES (?,?,?,?,?)");
+                (casamento_id,pedido_id,item_id,nome_no_momento,quantidade,unidade) VALUES (?,?,?,?,?,?)");
         $iid = (int)$item['id']; $nome = (string)$item['nome'];
-        $si->bind_param('iiisi', $cid, $pid, $iid, $nome, $q);
+        $si->bind_param('iiisis', $cid, $pid, $iid, $nome, $q, $un);
         @$si->execute();
     }
     // O stock segue a mesma regra de sempre (§4): aprovar PROMETE, entregar
@@ -5807,11 +5810,12 @@ if ($acao === 'bar_pedir_por') {
     // conta fica exactamente onde ficaria se tivesse passado pelos dois ecrãs.
     // Um que nasce POR DECIDIR não promete nada: quem promete é a aprovação, e
     // reservar aqui contaria a mesma garrafa duas vezes quando ela chegasse.
-    foreach ($linhas as [$item, $q]) {
+    foreach ($linhas as [$item, $q, $un]) {
         if ($jaEntregue)   barMoverStock($conn, (int)$item['id'], -$q, 'entrega', $pid, 'lançado ao balcão');
         elseif ($daCopa)   barReservar($conn, (int)$item['id'], $q);
     }
-    $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome'], $linhas));
+    $resumo = implode(', ', array_map(fn($l) => $l[1] . '× ' . $l[0]['nome']
+              . ($l[2] === 'garrafa' ? ' (' . ($l[1] === 1 ? 'garrafa' : 'garrafas') . ')' : ''), $linhas));
     registar($conn, 'bar_pedido_por', $g['nome'],
              '#' . $codigo . ' · ' . $resumo
            . ($jaEntregue ? ' · entregue no acto'

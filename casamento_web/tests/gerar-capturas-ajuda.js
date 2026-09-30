@@ -120,6 +120,15 @@ async function prepararDados(p){
   }
 
   let bar=await api(p,'bar_estado');
+  // As suites do Bar criam bebidas ZZ. Uma captura tem de mostrar apenas os
+  // exemplos editoriais, mesmo quando é regenerada na mesma base de testes.
+  for(const pedido of [...(bar.fila||[]),...(bar.resolvidos||[])]){
+    if(!(pedido.itens||[]).some(i=>/^ZZ/i.test(i.nome)))continue;
+    if(pedido.estado==='em_analise')await api(p,'bar_decidir',{id:+pedido.id,decisao:'recusar',motivo_texto:'Limpeza da captura'});
+    else if(['aprovado','a_caminho','falhou'].includes(pedido.estado))await api(p,'bar_cancelar_copa',{id:+pedido.id});
+  }
+  for(const item of (bar.itens||[]).filter(i=>/^ZZ/i.test(i.nome)))await api(p,'bar_item_apagar',{id:+item.id});
+  bar=await api(p,'bar_estado');
   // Retira da fila apenas o exemplo antigo usado pelo gerador anterior. Assim
   // uma regeneração sobre a mesma base continua a produzir uma cena limpa.
   for(const pedido of [...(bar.fila||[]),...(bar.resolvidos||[])]){
@@ -130,27 +139,35 @@ async function prepararDados(p){
   bar=await api(p,'bar_estado');
   let bebida=(bar.itens||[]).find(i=>i.nome==='Coca-Cola');
   const semAlcool=(bar.categorias||[]).find(c=>c.nome==='Sem álcool')||(bar.categorias||[])[0];
-  if(!bebida){const r=await api(p,'bar_item_guardar',{nome:'Coca-Cola',descricao:'Bem fresca, com gelo',categoria_id:+semAlcool.id,alcoolico:0,max_por_pedido:2,stock_minimo:8,servir:'copo',doses_garrafa:6,stock:48,estado:'ativo'});bar=await api(p,'bar_estado');bebida=(bar.itens||[]).find(i=>+i.id===+r.id);}
-  if(!bebida.foto){
+  const coca={nome:'Coca-Cola',descricao:'Bem fresca, com gelo',categoria_id:+semAlcool.id,alcoolico:0,max_por_pedido:2,stock_minimo:8,servir:'garrafa',doses_garrafa:1,stock:48,estado:'ativo'};
+  if(!bebida){const r=await api(p,'bar_item_guardar',coca);bar=await api(p,'bar_estado');bebida=(bar.itens||[]).find(i=>+i.id===+r.id);}
+  else if(bebida.servir!=='garrafa'){await api(p,'bar_item_guardar',{...coca,id:+bebida.id});bar=await api(p,'bar_estado');bebida=(bar.itens||[]).find(i=>+i.id===+bebida.id);}
+  {
     const foto=await apiImagemExemplo(p,'bar_item_foto',+bebida.id,'assets/ajuda/exemplos/coca-cola.jpg');
     if(!foto.success)throw new Error('Não foi possível associar a fotografia à Coca-Cola: '+(foto.error||''));
   }
   const cervejas=(bar.categorias||[]).find(c=>/cerveja/i.test(c.nome))||(bar.categorias||[])[0];
   const vinhos=(bar.categorias||[]).find(c=>/vinho|espumante/i.test(c.nome))||cervejas;
   for(const exemplo of [
-    {nome:'Cuca',descricao:'Cerveja angolana bem fresca',ficheiro:'assets/ajuda/exemplos/cuca.jpg',categoria_id:+cervejas.id,servir:'garrafa',doses_garrafa:1,stock:36},
-    {nome:'Vinho tinto',descricao:'Vinho tinto para acompanhar o jantar',ficheiro:'assets/ajuda/exemplos/vinho-tinto.jpg',categoria_id:+vinhos.id,servir:'ambos',doses_garrafa:6,stock:30},
+    {nome:'Cuca',descricao:'Cerveja angolana bem fresca',ficheiro:'assets/ajuda/exemplos/cuca.jpg',actualizar_foto:true,categoria_id:+cervejas.id,servir:'garrafa',doses_garrafa:1,stock:36},
+    {nome:'Vinho tinto',descricao:'Vinho tinto para acompanhar o jantar',ficheiro:'assets/ajuda/exemplos/vinho-tinto.jpg',actualizar_foto:true,categoria_id:+vinhos.id,servir:'ambos',doses_garrafa:6,stock:30},
   ]){
     bar=await api(p,'bar_estado');let item=(bar.itens||[]).find(i=>i.nome===exemplo.nome);
     if(!item){const r=await api(p,'bar_item_guardar',{...exemplo,alcoolico:1,max_por_pedido:2,stock_minimo:6,estado:'ativo'});bar=await api(p,'bar_estado');item=(bar.itens||[]).find(i=>+i.id===+r.id);}
     else if(+item.categoria_id!==+exemplo.categoria_id){await api(p,'bar_item_guardar',{...item,...exemplo,alcoolico:1,max_por_pedido:2,stock_minimo:6,estado:'ativo'});bar=await api(p,'bar_estado');item=(bar.itens||[]).find(i=>i.nome===exemplo.nome);}
-    if(item&&!item.foto){const foto=await apiImagemExemplo(p,'bar_item_foto',+item.id,exemplo.ficheiro);if(!foto.success)throw new Error('Não foi possível associar a fotografia a '+exemplo.nome+': '+(foto.error||''));}
+    if(item&&(exemplo.actualizar_foto||!item.foto)){const foto=await apiImagemExemplo(p,'bar_item_foto',+item.id,exemplo.ficheiro);if(!foto.success)throw new Error('Não foi possível associar a fotografia a '+exemplo.nome+': '+(foto.error||''));}
   }
   await api(p,'bar_abrir',{});bar=await api(p,'bar_estado');
   const membro=(convite.membros||[]).find(m=>m.nome==='Ana Kiala')||convite.membros[0];
   const membroBar=(convite.membros||[]).find(m=>m.nome==='Mateus Kiala')||membro;
-  const jaPedido=[...(bar.fila||[]),...(bar.resolvidos||[])].some(x=>(x.itens||[]).some(i=>i.nome==='Coca-Cola'));
-  if(!jaPedido) await api(p,'bar_pedir_por',{posto:'copa',convidado_id:+membroBar.id,mesa_id:+mesa.id,itens:[{item_id:+bebida.id,quantidade:2}]});
+  for(const pedido of [...(bar.fila||[]),...(bar.resolvidos||[])]){
+    if(!(pedido.itens||[]).some(i=>i.nome==='Coca-Cola'&&i.unidade!=='garrafa'))continue;
+    if(pedido.estado==='em_analise')await api(p,'bar_decidir',{id:+pedido.id,decisao:'recusar',motivo_texto:'Exemplo anterior ao pedido por garrafa'});
+    else if(['aprovado','a_caminho','falhou'].includes(pedido.estado))await api(p,'bar_cancelar_copa',{id:+pedido.id});
+  }
+  bar=await api(p,'bar_estado');
+  const jaPedido=[...(bar.fila||[]),...(bar.resolvidos||[])].some(x=>['em_analise','aprovado','a_caminho'].includes(x.estado)&&(x.itens||[]).some(i=>i.nome==='Coca-Cola'&&i.unidade==='garrafa'));
+  if(!jaPedido) await api(p,'bar_pedir_por',{posto:'copa',convidado_id:+membroBar.id,mesa_id:+mesa.id,itens:[{item_id:+bebida.id,quantidade:2,unidade:'garrafa'}]});
 
   DADOS={conviteId:+convite.id,conviteCodigo:convite.codigo,membroId:+membro.id,mesaId:+mesa.id,
     mesaToken:mesa.bar_token,bebidaId:+bebida.id,categoriaBarId:+semAlcool.id,despesaId:+desp.id,categoriaOrcId:+cat.id};
