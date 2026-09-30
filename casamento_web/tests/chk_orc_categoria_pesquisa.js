@@ -1,7 +1,9 @@
 // O nome da categoria escreve-se no próprio campo da despesa. Se não existir,
 // aparece apenas a paleta e a categoria nasce juntamente com a despesa. A
-// mesma prova confirma os valores compactos nas fatias estreitas da barra.
+// mesma prova confirma os valores compactos nas fatias estreitas da barra e
+// que eliminar a categoria filtrada conserva as despesas sem categoria.
 const { chromium } = require('playwright-core');
+const { confirmar } = require('./_janela');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const USER = process.env.TEST_USER || 'admin';
@@ -85,6 +87,27 @@ const PASS = process.env.TEST_PASSWORD || 'noivos2026';
     ok(curto === '1.55M Kz', 'a fatia estreita mostra 1.55M Kz');
     ok(/1[ .\u00a0]550[ .\u00a0]000 Kz/.test(titulo || ''),
        'o valor completo continua disponível no título da barra');
+
+    await page.locator('#o-chips .chip-cat', { hasText: nomeCategoria }).click();
+    await page.waitForSelector('#lista-despesas .o-filtro-apagar');
+    ok(await page.locator('#lista-despesas .o-filtro-apagar').isVisible(),
+       'ao filtrar uma categoria aparece a opção de a eliminar');
+    ok(await page.locator('#lista-pagamentos .o-filtro-apagar').count() === 0,
+       'a acção aparece uma só vez, junto das despesas filtradas');
+
+    await page.click('#lista-despesas .o-filtro-apagar');
+    await confirmar(page);
+    await page.waitForFunction(nome => ![...document.querySelectorAll('#o-chips .chip-cat')]
+      .some(chip => chip.textContent.includes(nome)), nomeCategoria);
+    const semCategoria = await api('orc_estado');
+    ok(!(semCategoria.categorias || []).some(c => +c.id === +categoria.id),
+       'a categoria escolhida é eliminada');
+    const antigas = (semCategoria.despesas || []).filter(d =>
+      d.descricao === 'Transporte dos convidados' || d.descricao === 'Espaço e catering');
+    ok(antigas.length === 2 && antigas.every(d => d.categoria_id == null),
+       'as despesas associadas permanecem e passam para Sem categoria');
+    ok(await page.locator('#lista-despesas .o-filtro').count() === 0,
+       'depois de eliminar a categoria a lista deixa o filtro extinto');
   } finally {
     if (casamentoId && api) {
       await api('casamento_estado&id=' + casamentoId + '&estado=arquivado', {}).catch(() => {});

@@ -143,7 +143,7 @@ $CAS  = casalDaFicha($conn);
   .o-filtro .o-filtro-cat{ display:inline-flex; align-items:center; gap:.45rem; font-weight:600; color:var(--ink); }
   .o-filtro .o-filtro-cat i{ width:12px; height:12px; border-radius:3px; display:inline-block; }
   .o-filtro b{ font-variant-numeric:tabular-nums; color:var(--ink); }
-  .o-filtro .mini{ margin-left:auto; }
+  .o-filtro-acoes{ margin-left:auto; display:inline-flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
   /* A pastilha do estado, ao lado da da categoria: os dois filtros cruzam-se,
      e a tira tem de dizer os dois. */
   .o-filtro .o-filtro-est{ font-weight:600; border-radius:50px; padding:.1rem .6rem;
@@ -298,7 +298,7 @@ $CAS  = casalDaFicha($conn);
     .kpi .n small{ display:block; margin-top:.15rem; }
     .o-legenda{ gap:.45rem .8rem; }
     .o-filtro{ align-items:flex-start; }
-    .o-filtro .mini{ margin-left:0; }
+    .o-filtro-acoes{ margin-left:0; width:100%; }
 
     /* Em ecrãs estreitos cada despesa passa a cartão. A tabela continua
        semântica no desktop, mas já não obriga o telemóvel a percorrer 560 px. */

@@ -9760,12 +9760,32 @@ if ($acao === 'orc_categoria_apagar') {
     $cid = casamentoAtual();
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
     if (!$id) erro('Categoria inválida.');
-    // As despesas ficam: a chave estrangeira põe-lhes categoria_id a NULL. O
-    // dinheiro não desaparece só porque a gaveta mudou de nome.
-    $st = $conn->prepare("DELETE FROM {$P}orcamento_categorias WHERE casamento_id=$cid AND id=?");
-    $st->bind_param('i', $id); @$st->execute();
-    registar($conn, 'orcamento_categoria_apagada', '', 'id ' . $id);
-    ok(['resumo' => orcamentoResumo($conn)]);
+    $st = $conn->prepare("SELECT nome FROM {$P}orcamento_categorias WHERE casamento_id=$cid AND id=? LIMIT 1");
+    $st->bind_param('i', $id); $st->execute();
+    $cat = $st->get_result()->fetch_assoc();
+    if (!$cat) erro('Categoria não encontrada.');
+
+    // Desliga-se primeiro, de forma explícita. As instalações novas já têm
+    // ON DELETE SET NULL, mas esta escrita também protege bases antigas que
+    // ainda não tenham essa chave: apaga-se a gaveta, nunca as despesas.
+    $conn->begin_transaction();
+    try {
+        $st = $conn->prepare("UPDATE {$P}orcamento_despesas SET categoria_id=NULL WHERE casamento_id=$cid AND categoria_id=?");
+        $st->bind_param('i', $id);
+        if (!$st->execute()) throw new RuntimeException('Não foi possível libertar as despesas.');
+        $despesasSemCategoria = $st->affected_rows;
+
+        $st = $conn->prepare("DELETE FROM {$P}orcamento_categorias WHERE casamento_id=$cid AND id=?");
+        $st->bind_param('i', $id);
+        if (!$st->execute() || $st->affected_rows !== 1) throw new RuntimeException('Não foi possível apagar a categoria.');
+        $conn->commit();
+    } catch (Throwable $e) {
+        $conn->rollback();
+        erro($e->getMessage());
+    }
+    registar($conn, 'orcamento_categoria_apagada', (string)$cat['nome'],
+             'id ' . $id . ' · ' . $despesasSemCategoria . ' despesa(s) sem categoria');
+    ok(['despesas_sem_categoria' => $despesasSemCategoria, 'resumo' => orcamentoResumo($conn)]);
 }
 
 if ($acao === 'orc_despesa_guardar') {

@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Uma categoria filtrada pode ser eliminada sem apagar as despesas, que passam para Sem categoria',
+         'assets/orcamento.js', 'window.orcApagarCategoria = apagarCategoria'],
         ['O formulário de despesa pesquisa categorias pelo nome e cria uma nova directamente com a cor escolhida',
          'assets/orcamento.js', 'async function categoriaParaGuardar'],
         ['As barras de Pago e Por pagar abreviam automaticamente os valores quando o espaço é reduzido',

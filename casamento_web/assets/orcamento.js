@@ -372,7 +372,7 @@
    * três despesas onde tinha trinta precisa de ler o motivo na própria lista, e
    * não de se lembrar do cartão em que carregou.
    */
-  function tiraFiltro(quantos, valor, nomeCat) {
+  function tiraFiltro(quantos, valor, nomeCat, permitirApagarCategoria) {
     if (FILTRO_CAT == null && FILTRO_EST == null) return '';
     var partes = [];
     if (FILTRO_CAT != null) {
@@ -382,9 +382,14 @@
     if (FILTRO_EST != null) {
       partes.push('<span class="o-filtro-est ' + FILTRO_EST + '">' + esc(nomeDoEstado()) + '</span>');
     }
+    var apagar = PODE && permitirApagarCategoria && FILTRO_CAT != null && FILTRO_CAT !== 'sem'
+      ? '<button type="button" class="mini perigo o-filtro-apagar" onclick="orcApagarCategoria('
+        + Number(FILTRO_CAT) + ')">Eliminar categoria</button>'
+      : '';
     return '<div class="o-filtro">' + partes.join('')
       + '<b>' + esc(fmt(valor)) + '</b> · ' + quantos
-      + '<button class="mini" onclick="orcLimparFiltros()">&times; limpar</button></div>';
+      + '<span class="o-filtro-acoes">' + apagar
+      + '<button type="button" class="mini" onclick="orcLimparFiltros()">&times; limpar</button></span></div>';
   }
 
   // ---- despesas ----
@@ -423,7 +428,7 @@
               : function (d) { return num(d.valor); };
     var real = lista.reduce(function (s, d) { return s + conta(d); }, 0);
     var nome = FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria');
-    var cab = tiraFiltro(lista.length + ' despesa(s)', real, nome);
+    var cab = tiraFiltro(lista.length + ' despesa(s)', real, nome, true);
     if (!lista.length) {
       box.innerHTML = cab + '<div class="vazio">Nenhuma despesa responde a este filtro.</div>';
       return;
@@ -578,7 +583,7 @@
     var lista = pagamentosFiltrados();
     var soma = lista.reduce(function (s, p) { return s + num(p.valor); }, 0);
     var cab = tiraFiltro(lista.length + ' parcela(s)', soma,
-                         FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria'));
+                         FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria'), false);
     var botoes = '<div class="o-modo">'
       + ['produto', 'mes'].map(function (m) {
           return '<button type="button" class="o-modo-bt' + (AGRUPAR === m ? ' on' : '') + '"'
@@ -714,22 +719,32 @@
     toast(corpo.id ? 'Categoria guardada.' : 'Categoria criada.');
   };
 
-  window.catInlineApagar = async function () {
-    var id = $('md-categoria-id').value;
-    if (!id) return;
+  async function apagarCategoria(id) {
+    id = Number(id);
+    if (!PODE || !id) return false;
     const r = await licConfirmar({
-      titulo: 'Apagar esta categoria?',
-      icone: 'etiqueta', confirmar: 'Apagar categoria',
+      titulo: 'Eliminar esta categoria?',
+      icone: 'etiqueta', confirmar: 'Eliminar categoria',
       texto: 'As <b>despesas ficam</b> — passam a «sem categoria», e os valores não mudam.'
            + '<br><br>Só se perde a arrumação.'
     });
-    if (!r.sim) return;
+    if (!r.sim) return false;
     var d = await window.api('orc_categoria_apagar&id=' + id, { method: 'POST' });
-    if (!d || !d.success) return;
+    if (!d || !d.success) return false;
+    if (FILTRO_CAT != null && String(FILTRO_CAT) === String(id)) FILTRO_CAT = null;
     await carregar();
+    var n = Number(d.despesas_sem_categoria) || 0;
+    toast('Categoria eliminada.' + (n ? ' ' + n + ' despesa' + (n === 1 ? '' : 's')
+      + ' ' + (n === 1 ? 'ficou' : 'ficaram') + ' sem categoria.' : ''));
+    return true;
+  }
+  window.orcApagarCategoria = apagarCategoria;
+
+  window.catInlineApagar = async function () {
+    var id = $('md-categoria-id').value;
+    if (!id || !await apagarCategoria(id)) return;
     preencheCategorias('');
     catInlineFechar();
-    toast('Categoria apagada.');
   };
 
   // ---- despesas ----
