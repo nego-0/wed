@@ -47,18 +47,23 @@ const PASS = process.env.TEST_PASSWORD || 'noivos2026';
     await page.click('button:has-text("+ Despesa")');
     await page.fill('#md-desc', 'Transporte dos convidados');
     await page.fill('#md-valor', '1550000');
-    await page.fill('#md-categoria', nomeCategoria);
+    const selectorCategoria = page.locator('#md-categoria').locator('xpath=ancestor::div[contains(@class,"lic-sel")][1]');
+    await selectorCategoria.locator('.lic-sel-bt').click();
+    await selectorCategoria.locator('.lic-sel-q input').fill(nomeCategoria);
+    await selectorCategoria.locator('.lic-sel-novo').click();
 
     ok(await page.locator('#md-cat-inline').isVisible(),
        'um nome novo revela imediatamente a escolha da cor');
+    ok(await selectorCategoria.isVisible(),
+       'a categoria usa o mesmo selector pesquisável das mesas dos convidados');
     ok(await page.locator('#md-cat-cores').isVisible()
        && await page.locator('#md-cat-inline .cat-inline-lin').isHidden(),
        'na criação aparece apenas a paleta, sem repetir o nome e os botões antigos');
     await page.locator('#md-cat-cores [data-cor="#2E86C8"]').click();
     await page.click('#m-desp .fim .btn-ouro');
     await page.waitForFunction(nome => {
-      const opcoes = [...document.querySelectorAll('#md-categorias-lista option')];
-      return opcoes.some(o => o.value === nome) && document.querySelector('#md-categoria-id').value;
+      const opcoes = [...document.querySelectorAll('#md-categoria option')];
+      return opcoes.some(o => o.textContent === nome) && document.querySelector('#md-categoria-id').value;
     }, nomeCategoria);
 
     const estado = await api('orc_estado');
@@ -71,7 +76,9 @@ const PASS = process.env.TEST_PASSWORD || 'noivos2026';
 
     await page.evaluate(() => fechar('m-desp'));
     await page.click('button:has-text("+ Despesa")');
-    await page.fill('#md-categoria', nomeCategoria.toLocaleLowerCase('pt-PT'));
+    await selectorCategoria.locator('.lic-sel-bt').click();
+    await selectorCategoria.locator('.lic-sel-q input').fill(nomeCategoria.toLocaleLowerCase('pt-PT'));
+    await selectorCategoria.locator('.lic-sel-op', { hasText: nomeCategoria }).click();
     ok(await page.locator('#md-cat-inline').isHidden()
        && await page.locator('#md-cat-editar').isVisible(),
        'a pesquisa reconhece uma categoria existente sem distinguir maiúsculas');

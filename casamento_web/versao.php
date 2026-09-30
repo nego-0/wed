@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Categorias e mesas do convite usam o mesmo selector pesquisável das mesas individuais',
+         'assets/janela.js', 'class="lic-sel-novo"'],
+        ['A presença parcial antecede a lista e organiza cada convidado num cartão sem transbordo mobile',
+         'index.php', 'Marque <b>Vai ao casamento</b> apenas nas pessoas confirmadas.'],
         ['Uma categoria filtrada pode ser eliminada sem apagar as despesas, que passam para Sem categoria',
          'assets/orcamento.js', 'window.orcApagarCategoria = apagarCategoria'],
         ['O formulário de despesa pesquisa categorias pelo nome e cria uma nova directamente com a cor escolhida',

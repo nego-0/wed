@@ -312,7 +312,7 @@ function licSelProcuraHtml(c, v){
   return '<div class="lic-sel' + (c.classe ? ' ' + c.classe : '') + '"'
     + ' data-sel="' + licEsc(c.id) + '">'
     + '<input type="hidden" id="lf-' + licEsc(c.id) + '" value="' + licEsc(esc.v) + '">'
-    + licSelCorpoHtml(ops, esc.v, c.rot, c.dicaProcura, c.procura)
+    + licSelCorpoHtml(ops, esc.v, c.rot, c.dicaProcura, c.procura, c.novo)
     + '</div>';
 }
 
@@ -324,7 +324,7 @@ function licSelProcuraHtml(c, v){
  * aconteceu neste projecto com a procura, que numa página ignorava acentos e
  * na outra não.
  */
-function licSelCorpoHtml(ops, escolhido, rot, dicaProcura, procura){
+function licSelCorpoHtml(ops, escolhido, rot, dicaProcura, procura, novo){
   const esc = ops.filter(o => String(o.v) === String(escolhido))[0]
            || ops[0] || { v: '', r: '—' };
   // A caixa de procura fica no html mesmo quando não se mostra: é ela que
@@ -353,6 +353,10 @@ function licSelCorpoHtml(ops, escolhido, rot, dicaProcura, procura){
     +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(rot || 'lista') + '">'
     +     ops.map(o => licSelOpcaoHtml(o, esc.v)).join('')
     +   '</div>'
+    +   (novo ? '<button type="button" class="lic-sel-novo" hidden>'
+    +     '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    +       'stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
+    +     '<span>Criar <b></b></span></button>' : '')
     +   '<div class="lic-sel-nada" hidden>Nada com esse nome.</div>'
     + '</div>';
 }
@@ -459,6 +463,7 @@ function licSelLigarUm(cx){
     const pop  = cx.querySelector('.lic-sel-pop');
     const q    = cx.querySelector('.lic-sel-q input');
     const nada = cx.querySelector('.lic-sel-nada');
+    const novo = cx.querySelector('.lic-sel-novo');
     const ops  = () => Array.from(cx.querySelectorAll('.lic-sel-op'));
     const vivas = () => ops().filter(o => !o.hidden);
 
@@ -609,11 +614,24 @@ function licSelLigarUm(cx){
       // precisa de saber quem está a ouvir.
       guardado.dispatchEvent(new Event('change', { bubbles: true }));
     };
+    const criar = () => {
+      const valor = q.value.trim();
+      if (!novo || !valor) return;
+      cx.dispatchEvent(new CustomEvent('licselnovo', {
+        bubbles: true, detail: { valor: valor }
+      }));
+      abrir(false); bt.focus();
+    };
     const filtrar = () => {
       const k = licChave(q.value);
       ops().forEach(o => { o.hidden = k !== '' && o.dataset.k.indexOf(k) < 0; });
       const n = vivas().length;
-      nada.hidden = n > 0;
+      const exata = !!k && ops().some(o => o.dataset.k === k);
+      if (novo) {
+        novo.hidden = !k || exata;
+        const b = novo.querySelector('b'); if (b) b.textContent = '«' + q.value.trim() + '»';
+      }
+      nada.hidden = n > 0 || (novo && !novo.hidden);
       ops().forEach(o => o.classList.remove('sob'));
       if (n) vivas()[0].classList.add('sob');
     };
@@ -663,9 +681,10 @@ function licSelLigarUm(cx){
       else if (e.key === 'Enter'){
         e.preventDefault();
         const sob = cx.querySelector('.lic-sel-op.sob');
-        if (sob) escolher(sob);
+        if (sob) escolher(sob); else if (novo && !novo.hidden) criar();
       } else if (e.key === 'Escape'){ e.stopPropagation(); abrir(false); bt.focus(); }
     });
+    if (novo) novo.addEventListener('click', (e) => { e.stopPropagation(); criar(); });
     cx.querySelectorAll('.lic-sel-op').forEach(o => {
       o.addEventListener('click', (e) => { e.stopPropagation(); escolher(o); });
     });
@@ -707,7 +726,7 @@ function licSelUpgrade(sel, opc){
     + (opc.classe ? ' ' + opc.classe : '');
   cx.dataset.sel = sel.className || sel.name || 'sel';
   const rot = opc.rotulo || sel.getAttribute('title') || 'lista';
-  cx.innerHTML = licSelCorpoHtml(ops, sel.value, rot, opc.dicaProcura);
+  cx.innerHTML = licSelCorpoHtml(ops, sel.value, rot, opc.dicaProcura, opc.procura, opc.novo);
   sel.parentNode.insertBefore(cx, sel);
   cx.insertBefore(sel, cx.firstChild);
   sel.classList.add('lic-sel-nativo');

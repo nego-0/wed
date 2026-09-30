@@ -65,9 +65,14 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   /* Num ecrã estreito, quatro pastilhas de 25% deixam de caber sem cortar as
      palavras: passam a duas por linha, cada uma com metade. */
   @media (max-width:560px){
-    .membro-linha{ grid-template-columns:1fr 1fr auto; }
-    .membro-linha input[type=text]{ grid-column:1 / 4; }
-    .m-extras{ grid-column:1 / 4; grid-template-columns:1fr; }
+    .membro-linha{ grid-template-columns:minmax(0,1fr) auto; gap:.55rem;
+      padding:.75rem; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+    .membro-linha input[type=text]{ grid-column:1; grid-row:1; }
+    .membro-linha > .btn-ico{ grid-column:2; grid-row:1; width:44px; min-width:44px; height:44px; padding:0; }
+    .membro-linha > .lic-sel{ grid-column:1 / -1; grid-row:2; }
+    .membro-linha .m-brinde{ grid-column:1 / -1; justify-content:flex-start;
+      grid-row:3; min-height:42px; padding:.5rem .65rem; border:1px solid var(--line); border-radius:9px; }
+    .m-extras{ grid-column:1 / -1; grid-row:4; grid-template-columns:1fr; }
   }
   /* Ícones de género / brinde nas pastilhas */
   /* Eram os caracteres ♂ ♀ 🎁, e isso obrigava a pedir uma fonte de símbolos
@@ -102,6 +107,14 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
            margin:0 0 .75rem; display:flex; align-items:baseline; gap:.5rem; }
   .fset-t .cont{ font-family:var(--sans); font-size:var(--t-apoio); font-weight:400; color:var(--ink-fraco);
                  text-transform:none; letter-spacing:0; }
+  .presenca-bloco{ margin:0 0 1rem; padding:.75rem; border:1px solid var(--line);
+    border-radius:12px; background:var(--cream); }
+  .presenca-bloco > label{ margin-bottom:.45rem; }
+  .presenca-ajuda{ margin:.45rem 0 0; color:var(--ink-fraco); font-size:var(--t-apoio); line-height:1.45; }
+  .presenca-parcial-nota{ display:none; margin:.65rem 0 0; padding:.55rem .7rem;
+    border-left:3px solid var(--ok); border-radius:8px; background:var(--ok-bg);
+    color:var(--ink); font-size:var(--t-denso); }
+  .presenca-bloco.parcial .presenca-parcial-nota{ display:block; }
   /* Duas colunas para os campos curtos: menos rolo, mesma informação. */
   .lf2{ display:grid; grid-template-columns:1fr 1fr; gap:.9rem; margin-top:.9rem; }
   @media (max-width:620px){
@@ -338,7 +351,10 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                 font-size:var(--t-denso); color:var(--text); text-transform:none; letter-spacing:0; font-weight:400; }
   .opcao-check input{ width:18px; height:18px; margin-top:.1rem; accent-color:var(--forest); flex:none; }
   .opcao-check small{ color:var(--ink-fraco); }
-  .membro-linha .m-vai{ display:none; align-items:center; justify-content:center; }
+  .membro-linha .m-vai{ display:none; align-items:center; justify-content:center; gap:.3rem;
+    min-height:38px; padding:.35rem .45rem; border:1px solid var(--line); border-radius:9px;
+    background:var(--card); color:var(--ink); font-size:var(--t-apoio); font-weight:600;
+    text-transform:none; letter-spacing:0; white-space:nowrap; }
   #membros.parcial .membro-linha .m-vai{ display:inline-flex; }
   .membro-linha .m-vai input{ width:18px; height:18px; accent-color:#1f7a3d; cursor:pointer; }
   /* Na confirmação parcial entra uma coluna à cabeça (a caixa do "vem"). As
@@ -347,9 +363,13 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                                   grid-template-columns:auto 2fr 1fr 1fr auto; }
   #membros.parcial .m-extras{ grid-column:2 / 5; }
   @media (max-width:560px){
-    #membros.parcial .membro-linha{ grid-template-columns:auto 1fr 1fr auto; }
-    #membros.parcial .membro-linha input[type=text]{ grid-column:2 / 5; }
-    #membros.parcial .m-extras{ grid-column:1 / 5; }
+    #membros.parcial .membro-linha{ grid-template-columns:minmax(0,1fr) auto; padding:.75rem; }
+    #membros.parcial .membro-linha .m-vai{ grid-column:1 / -1; grid-row:1; justify-content:flex-start; }
+    #membros.parcial .membro-linha input[type=text]{ grid-column:1; grid-row:2; }
+    #membros.parcial .membro-linha > .btn-ico{ grid-column:2; grid-row:2; }
+    #membros.parcial .membro-linha > .lic-sel{ grid-column:1 / -1; grid-row:3; }
+    #membros.parcial .membro-linha .m-brinde{ grid-column:1 / -1; grid-row:4; }
+    #membros.parcial .m-extras{ grid-column:1 / -1; grid-row:5; }
   }
   .entradas-topo-dash{ text-align:center; color:var(--ink-fraco); font-size:var(--t-denso); margin-bottom:.9rem; }
   .entradas-topo-dash b{ color:#1f7a3d; font-family:var(--serif); font-size:var(--t-sub); }
@@ -648,6 +668,13 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
       <!-- 1. Quem vem -->
       <section class="fset">
         <h4 class="fset-t">Quem vem <span class="cont" id="cont-pessoas"></span></h4>
+        <div class="presenca-bloco" id="bloco-presenca">
+          <label>Presença do convite</label>
+          <input type="hidden" id="c-presenca" value="pendente">
+          <div class="picker" data-target="c-presenca"></div>
+          <p class="presenca-ajuda">Escolha “Parcial” para indicar, pessoa a pessoa, quem confirmou.</p>
+          <p class="presenca-parcial-nota">Marque <b>Vai ao casamento</b> apenas nas pessoas confirmadas.</p>
+        </div>
         <div id="membros"></div>
         <button class="btn btn-fantasma btn-sm" type="button" onclick="addMembro()">+ Adicionar pessoa</button>
         <div class="dica-lugares">Cada pessoa é um lugar — os lugares do convite contam-se por esta lista.</div>
@@ -684,13 +711,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
           <div><label>Convidado de</label>
             <input type="hidden" id="c-lado" value="noivo">
             <div class="picker" data-target="c-lado"></div></div>
-          <div><label>Mesa</label><input type="text" id="c-mesa" list="lista-mesas" placeholder="Nome da mesa"><datalist id="lista-mesas"></datalist></div>
-        </div>
-
-        <div style="margin-top:.9rem;">
-          <label>Presença</label>
-          <input type="hidden" id="c-presenca" value="pendente">
-          <div class="picker" data-target="c-presenca"></div>
+          <div><label for="c-mesa">Mesa</label><select id="c-mesa" title="Mesa do convite"><option value="">Sem mesa</option></select></div>
         </div>
 
         <div style="margin-top:.9rem;"><label>Observações <span class="opt">· opcional</span></label><textarea id="c-obs" rows="2"></textarea></div>
@@ -894,7 +915,7 @@ async function carregar(mais=false){
   CONVITES = mais ? CONVITES.concat(d.convites) : d.convites;
   MESAS=d.mesas; STATS=d.stats||{}; TOTAL=+d.total||CONVITES.length; HA_MAIS=!!d.ha_mais;
   ULTIMO_STATS = d.stats;
-  renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderDatalistMesas();
+  renderStats(d.stats); renderConvites(); renderFiltroMesas(); renderSelectMesas();
   tiraDoBar();
 }
 
@@ -1591,7 +1612,14 @@ function renderFiltroMesas(){
     + chip(SEM_MESA, 'Sem mesa'+`<span class="chip-n">${semMesa}</span>`, filtroMesa===SEM_MESA)
     + MESAS.map(m=>chip(m.nome, esc(m.nome)+`<span class="chip-n">${m.ocupacao||0}</span>`, filtroMesa===m.nome)).join('');
 }
-function renderDatalistMesas(){ $('lista-mesas').innerHTML=MESAS.map(m=>`<option value="${esc(m.nome)}">`).join(''); }
+function renderSelectMesas(){
+  const sel=$('c-mesa'); if(!sel) return;
+  const antes=sel.value;
+  sel.innerHTML='<option value="">Sem mesa</option>'
+    + MESAS.filter(m=>m.especial!=='noivos').map(m=>`<option value="${esc(m.nome)}">${esc(m.nome)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===antes)) sel.value=antes;
+  const cx=sel.closest('.lic-sel'); if(cx&&window.licSelRefrescar) licSelRefrescar(cx);
+}
 
 // ---------- modal convite ----------
 function novoConvite(){
@@ -1620,6 +1648,7 @@ function abrirConvite(c){
   pickVal('c-lado', c?c.lado:'noivo');
   pickVal('c-presenca', c?(c.rsvp_estado||'pendente'):'pendente');
   $('c-mesa').value = c?(c.mesa_nome||''):'';
+  if($('c-mesa').closest('.lic-sel')&&window.licSelRefrescar) licSelRefrescar($('c-mesa').closest('.lic-sel'));
   $('c-telefone').value = c?(c.telefone||''):'';
   $('c-obs').value = c?(c.observacoes||''):'';
   $('c-msg').value = c?(c.msg_pessoal||''):'';
@@ -1659,7 +1688,7 @@ function addMembro(valor='', vai=true, mesaId='', papel='', genero='', brinde=fa
   // pastilhas do género e do papel, um quarto cada, debaixo dos campos de
   // cima. Estavam atrás de um "⋯" para caberem; alinhadas em grelha cabem, e
   // uma pessoa lê-se toda de uma vez.
-  div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}></label>
+  div.innerHTML=`<label class="m-vai" title="Esta pessoa confirma presença"><input type="checkbox" ${vai?'checked':''}><span>Vai ao casamento</span></label>
     <input type="text" placeholder="Nome completo" value="${esc(valor)}" oninput="renderSugestoes()">
     <select class="m-mesa" title="Mesa desta pessoa (por omissão, a do convite)"
             onchange="sincroMesaPapel(this.closest('.membro-linha'))">${opcoesMesaMembro(mesaId)}</select>
@@ -1784,6 +1813,7 @@ function membrosComPresenca(){
 function sincroPresencaMembros(v){
   const box=$('membros'); if(!box) return;
   box.classList.toggle('parcial', v==='parcial');
+  $('bloco-presenca')?.classList.toggle('parcial', v==='parcial');
   const checks=box.querySelectorAll('.m-vai input');
   if(v==='confirmado') checks.forEach(c=>c.checked=true);
   else if(v==='recusado') checks.forEach(c=>c.checked=false);
@@ -1990,7 +2020,7 @@ async function guardarMesa(){
   const nome=$('m-nome').value.trim(); if(!nome)return toast('Indique o nome da mesa.',true);
   const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:$('m-id').value||0,nome,capacidade:$('m-cap').value})});
   if(!d.success)return toast(d.message,true);
-  $('m-id').value='';$('m-nome').value='';$('m-cap').value=''; MESAS=d.mesas; renderMesasGestao(); renderFiltroMesas(); renderDatalistMesas(); toast('Mesa guardada.');
+  $('m-id').value='';$('m-nome').value='';$('m-cap').value=''; MESAS=d.mesas; renderMesasGestao(); renderFiltroMesas(); renderSelectMesas(); toast('Mesa guardada.');
 }
 async function eliminarMesa(id){ const m=MESAS.find(x=>x.id==id); const nome=m?m.nome:'esta mesa';
   const sentados = (CONVITES||[]).filter(c => String(c.mesa_id||'') === String(id)).length;

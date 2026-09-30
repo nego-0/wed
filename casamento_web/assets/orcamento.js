@@ -657,6 +657,10 @@
   // (ou com a que o casal escolher). O lápis continua a editar uma já existente.
   var CAT_MODO = '';   // 'nova-auto' | 'editar'
   var CAT_COR = '';    // a cor escolhida no formulário (sugerida, ou a do casal)
+  var CAT_NOME_NOVO = '';
+  var CAT_SEL = window.licSelUpgrade ? licSelUpgrade($('md-categoria'), {
+    rotulo: 'Categoria da despesa', dicaProcura: 'Nome da categoria', procura: true, novo: true
+  }) : null;
 
   // As pastilhas de cor sugeridas + a escolha atual em destaque.
   function renderCatCores() {
@@ -758,23 +762,25 @@
     return (ORC.categorias || []).find(function (c) { return chaveCategoria(c.nome) === chave; }) || null;
   }
   function preencheCategorias(escolhida) {
-    var lista = $('md-categorias-lista'); lista.innerHTML = '';
+    var lista = $('md-categoria'); lista.innerHTML = '<option value="">Sem categoria</option>';
     (ORC.categorias || []).forEach(function (c) {
       var o = document.createElement('option');
-      o.value = c.nome; lista.appendChild(o);
+      o.value = c.id; o.textContent = c.nome; lista.appendChild(o);
     });
     var atual = (ORC.categorias || []).find(function (c) { return +c.id === +escolhida; });
-    $('md-categoria').value = atual ? atual.nome : '';
+    CAT_NOME_NOVO = '';
+    lista.value = atual ? String(atual.id) : '';
     $('md-categoria-id').value = atual ? atual.id : '';
     $('md-cat-editar').style.display = atual ? '' : 'none';
     catInlineFechar();
+    if (CAT_SEL && window.licSelRefrescar) licSelRefrescar(CAT_SEL);
   }
-  function categoriaDigitada() {
-    var nome = $('md-categoria').value.trim();
-    var existente = categoriaPeloNome(nome);
+  function categoriaEscolhida() {
+    var id = $('md-categoria').value;
+    var existente = (ORC.categorias || []).find(function (c) { return String(c.id) === String(id); });
     $('md-categoria-id').value = existente ? existente.id : '';
     $('md-cat-editar').style.display = existente ? '' : 'none';
-    if (!nome || existente) {
+    if (id !== '__nova__' || !CAT_NOME_NOVO) {
       if (CAT_MODO === 'nova-auto') catInlineFechar();
       return;
     }
@@ -788,14 +794,32 @@
     $('md-cat-inline').querySelector('.cat-inline-lin').style.display = 'none';
     $('md-cat-inline').style.display = '';
   }
-  $('md-categoria').addEventListener('input', categoriaDigitada);
-  $('md-categoria').addEventListener('change', categoriaDigitada);
+  $('md-categoria').addEventListener('change', categoriaEscolhida);
+  if (CAT_SEL) CAT_SEL.addEventListener('licselnovo', function (ev) {
+    var nome = String(ev.detail && ev.detail.valor || '').trim().slice(0, 80);
+    if (!nome) return;
+    var existente = categoriaPeloNome(nome);
+    if (existente) {
+      $('md-categoria').value = String(existente.id);
+      CAT_NOME_NOVO = '';
+    } else {
+      CAT_NOME_NOVO = nome;
+      var antiga = $('md-categoria').querySelector('option[data-nova]');
+      if (antiga) antiga.remove();
+      var op = document.createElement('option');
+      op.value = '__nova__'; op.textContent = nome; op.dataset.nova = '1';
+      $('md-categoria').appendChild(op); $('md-categoria').value = '__nova__';
+    }
+    licSelRefrescar(CAT_SEL);
+    categoriaEscolhida();
+  });
 
   async function categoriaParaGuardar() {
-    var nome = $('md-categoria').value.trim();
+    var valor = $('md-categoria').value;
+    if (!valor) return '';
+    if (valor !== '__nova__') return valor;
+    var nome = CAT_NOME_NOVO.trim();
     if (!nome) return '';
-    var existente = categoriaPeloNome(nome);
-    if (existente) return existente.id;
     var criada = await window.api('orc_categoria_guardar', {
       method: 'POST', body: JSON.stringify({ nome: nome, cor: CAT_COR || '' })
     });

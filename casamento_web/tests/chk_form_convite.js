@@ -63,6 +63,12 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
         && ['.m-mesa', '.m-brinde', '.m-genero', '.m-papel']
              .every(s => r.querySelector(s).getBoundingClientRect().width > 0);
   }), 'mesa, brindes, género e papel veem-se sem abrir nada');
+  ok(await p.evaluate(() => {
+    const geral = document.getElementById('c-mesa').closest('.lic-sel');
+    const individual = document.querySelector('#membros .m-mesa').closest('.lic-sel');
+    return !!geral && !!individual
+      && geral.querySelector('.lic-sel-q input') && individual.querySelector('.lic-sel-q input');
+  }), 'a mesa do convite e a mesa individual usam o mesmo selector pesquisável');
 
   // As proporções pedidas: nome 50%, mesa 25%, brindes 25%; e em baixo quatro
   // pastilhas de 25% cada, alinhadas por baixo dos campos de cima.
@@ -94,25 +100,27 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      `as quatro pastilhas ocupam um quarto cada (${larg.pastilhas.join('% · ')}%)`);
   ok(larg.esq && larg.dir, 'e a segunda linha começa e acaba onde a primeira');
 
-  await p.evaluate((mesa) => {
+  await p.evaluate(() => {
     const r = document.querySelectorAll('#membros .membro-linha')[1];
     r.querySelector('.m-genero button[data-v=m]').click();
-    const ms = r.querySelector('.m-mesa');
-    const opt = [...ms.options].find(o => o.textContent.includes(mesa));
-    if (opt) ms.value = opt.value;
     r.querySelector('.m-brinde input').checked = true;
-  }, MESA);
+  });
+  const mesaIndividual = p.locator('#membros .membro-linha').nth(1).locator('.lic-sel');
+  await mesaIndividual.locator('.lic-sel-bt').click();
+  await mesaIndividual.locator('.lic-sel-op', { hasText: MESA }).click();
   await p.waitForTimeout(200);
 
-  await p.evaluate((mesa) => {
+  await p.evaluate(() => {
     document.getElementById('c-telefone').value = '+244912345678';
     document.getElementById('c-obs').value = 'Obs de prova';
     document.getElementById('c-msg').value = 'Mensagem de prova';
-    document.getElementById('c-mesa').value = mesa;
     document.getElementById('c-mostrar-num-mesa').checked = false;
     pickVal('c-tipo', 'ambos'); pickVal('c-lado', 'noiva'); pickVal('c-presenca', 'confirmado');
     atualizarPrevia();
-  }, MESA);
+  });
+  const mesaConvite = p.locator('#c-mesa').locator('xpath=ancestor::div[contains(@class,"lic-sel")][1]');
+  await mesaConvite.locator('.lic-sel-bt').click();
+  await mesaConvite.locator('.lic-sel-op', { hasText: MESA }).click();
   await p.evaluate(() => guardarConvite());
   await p.waitForTimeout(1600);
 
@@ -244,6 +252,41 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   lug = (await api('convite_get&id=' + id)).convite.lugares;
   console.log('   com duas pessoas → lugares:', lug);
   ok(+lug === 2, 'retirar uma pessoa retira um lugar');
+
+  // ---------- presença parcial no telemóvel ----------
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.evaluate((i) => editar(i), id);
+  await p.waitForTimeout(700);
+  await p.evaluate(() => pickVal('c-presenca', 'parcial'));
+  await p.waitForTimeout(250);
+  const movel = await p.evaluate(() => {
+    const modal = document.querySelector('#ov-convite .modal');
+    const corpo = document.querySelector('#ov-convite .modal-corpo');
+    const linhas = [...document.querySelectorAll('#membros .membro-linha')];
+    const dentro = e => {
+      const r=e.getBoundingClientRect(), c=corpo.getBoundingClientRect();
+      return r.left >= c.left - 1 && r.right <= c.right + 1;
+    };
+    return {
+      semOverflow: modal.scrollWidth <= modal.clientWidth + 1 && corpo.scrollWidth <= corpo.clientWidth + 1,
+      nota: getComputedStyle(document.querySelector('.presenca-parcial-nota')).display !== 'none',
+      linhas: linhas.length,
+      controlosDentro: linhas.every(r => [r.querySelector('.m-vai'), r.querySelector('input[type=text]'),
+        r.querySelector('.lic-sel'), r.querySelector('.m-brinde'), r.querySelector('.m-extras')]
+        .every(e => e && dentro(e))),
+      rotulo: linhas.every(r => /Vai ao casamento/.test(r.querySelector('.m-vai').textContent)),
+      presencaAntes: document.getElementById('bloco-presenca').getBoundingClientRect().top
+        < document.getElementById('membros').getBoundingClientRect().top
+    };
+  });
+  console.log('   parcial mobile:', JSON.stringify(movel));
+  ok(movel.semOverflow && movel.controlosDentro,
+     'a presença parcial cabe no modal mobile sem campos sobrepostos ou transbordo');
+  ok(movel.nota && movel.rotulo,
+     'cada pessoa explica claramente se vai ao casamento');
+  ok(movel.presencaAntes,
+     'a presença escolhe-se antes da lista em que a confirmação individual aparece');
+  await p.evaluate(() => fechar('ov-convite'));
 
   // ---------- limpeza ----------
   await api('convite_delete&id=' + id + '&definitivo=1', {});

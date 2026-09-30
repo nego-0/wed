@@ -154,7 +154,7 @@ $CAS  = casalDaFicha($conn);
 
   /* ---- Categoria criada/editada dentro do form de despesa ---- */
   .cat-linha{ display:flex; gap:.4rem; align-items:center; }
-  .cat-linha input[type=text]{ flex:1; min-width:0; }
+  .cat-linha .lic-sel{ flex:1; min-width:0; }
   .cat-inline{ margin-top:.5rem; }
   .cat-inline-lin{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
   .cat-inline-lin input[type=text]{ flex:1; min-width:140px; }
@@ -430,11 +430,10 @@ $CAS  = casalDaFicha($conn);
     <div class="campo">
       <label for="md-categoria">Categoria</label>
       <div class="cat-linha">
-        <input type="text" id="md-categoria" list="md-categorias-lista" maxlength="80"
-               role="combobox" aria-autocomplete="list" autocomplete="off"
-               placeholder="Sem categoria — escreva para procurar ou criar">
+        <select id="md-categoria" title="Categoria da despesa">
+          <option value="">Sem categoria</option>
+        </select>
         <input type="hidden" id="md-categoria-id">
-        <datalist id="md-categorias-lista"></datalist>
         <button type="button" class="mini" id="md-cat-editar" onclick="catInline('editar')" title="Editar a categoria escolhida">&#9998;</button>
       </div>
       <div class="cat-inline" id="md-cat-inline" style="display:none">
