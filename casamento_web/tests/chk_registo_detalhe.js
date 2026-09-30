@@ -64,7 +64,7 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
        + (cruas.length ? ' — falta(m): ' + cruas.join(', ') : ''));
 
   // ============ 2. o painel dos noivos: a linha abre ============
-  await p.evaluate(() => { abrirHistorico(); abaHistorico('registo'); });
+  await p.evaluate(() => abrirHistorico());
   await p.waitForFunction(() => document.querySelectorAll('.reg-linha').length > 0,
                           null, { timeout: 10000 });
   const fechada = await p.evaluate(() => {

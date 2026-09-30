@@ -159,7 +159,7 @@ const marca = 'zzreg' + Math.floor(Math.random() * 1e6);
 
   await m.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   await m.waitForTimeout(1400);
-  await m.evaluate(() => { abrirHistorico(); abaHistorico('registo'); });
+  await m.evaluate(() => abrirHistorico());
   await m.waitForTimeout(2400);
   const alt = await m.evaluate(() => {
     const ls = [...document.querySelectorAll('.reg-linha')].slice(0, 12);

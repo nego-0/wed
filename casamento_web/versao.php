@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Reciclagem e Histórico são opções independentes em Mais acções e Repor não quebra no telemóvel',
+         'index.php', "['Reciclagem',               'abrirReciclagem()']"],
         ['Categorias e mesas do convite usam o mesmo selector pesquisável das mesas individuais',
          'assets/janela.js', 'class="lic-sel-novo"'],
         ['A presença parcial antecede a lista e organiza cada convidado num cartão sem transbordo mobile',

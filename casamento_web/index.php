@@ -380,20 +380,14 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   .ent-d-meta{ font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.15rem; }
   .ent-d-pessoas{ font-size:var(--t-denso); color:var(--text); margin-top:.35rem; }
 
-  /* Histórico: reciclagem e registo de atividade */
-  .abas-hist{ display:flex; gap:.4rem; border-bottom:1px solid var(--line); margin-bottom:.9rem; }
-  .aba-h{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit;
-    font-size:var(--t-denso); color:var(--ink-fraco); padding:.5rem .8rem; margin-bottom:-1px; }
-  /* A aba ESCOLHIDA tem de ser a que mais se vê. Em --forest ficava ao
-     contrário no tema escuro — quase da cor do fundo —, e a aba que se via
-     bem era a outra, a que não estava aberta. */
-  .aba-h.ativa{ color:var(--ink); border-bottom-color:var(--gold); font-weight:600; }
+  /* Reciclagem e registo de actividade têm entradas e janelas próprias. */
   .lixo-item{ display:flex; align-items:center; gap:.7rem; border:1px solid var(--line); border-radius:12px;
     padding:.7rem .9rem; margin-bottom:.55rem; background:var(--card); }
   .lixo-item .cresce{ min-width:0; }
   .lixo-item strong{ font-family:var(--serif); font-size:var(--t-corpo); color:var(--ink); display:block;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .lixo-item small{ color:var(--ink-fraco); font-size:var(--t-apoio); }
+  .lixo-item .bt-repor{ flex:none; white-space:nowrap; min-width:max-content; }
   /* Cada ação abre. Fechada é uma linha; aberta conta tudo o que dela se
      sabe — quem, com que papel, o que fez ao certo, sobre o quê, quando e de
      onde. Um <details> e não um clique nosso: abre com o teclado, imprime
@@ -783,7 +777,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   </div>
 </div>
 
-<!-- ===== MODAL HISTÓRICO (reciclagem + registo de atividade) ===== -->
+<!-- ===== MODAIS DE ACÇÕES SECUNDÁRIAS ===== -->
 <?php // ---- quem ainda não respondeu, e o prazo para responder (RSVP-002) ---- ?>
 <div class="overlay" id="ov-lembretes">
   <div class="modal">
@@ -821,16 +815,20 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
   </div>
 </div>
 
+<div class="overlay" id="ov-reciclagem">
+  <div class="modal">
+    <div class="modal-topo"><h3>Reciclagem</h3><button class="fechar" onclick="fechar('ov-reciclagem')">&times;</button></div>
+    <div class="modal-corpo">
+      <div id="hist-lixo"></div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-historico">
   <div class="modal">
     <div class="modal-topo"><h3>Histórico</h3><button class="fechar" onclick="fechar('ov-historico')">&times;</button></div>
     <div class="modal-corpo">
-      <div class="abas-hist">
-        <button class="aba-h ativa" id="aba-lixo" onclick="abaHistorico('lixo')">Reciclagem</button>
-        <button class="aba-h" id="aba-registo" onclick="abaHistorico('registo')">Atividade</button>
-      </div>
-      <div id="hist-lixo"></div>
-      <div id="hist-registo" hidden></div>
+      <div id="hist-registo"></div>
     </div>
   </div>
 </div>
@@ -1870,7 +1868,7 @@ async function eliminar(id){ const c=CONVITES.find(x=>x.id==id); const nome=c?c.
     titulo: 'Eliminar o convite «' + licEsc(nome) + '»?',
     icone: 'lixo', confirmar: 'Eliminar convite',
     texto: 'Vai para a <b>reciclagem</b>, e as pessoas dele vão com ele.<br><br>'
-         + 'Pode <b>repô-lo</b> a qualquer momento, em Histórico.'
+         + 'Pode <b>repô-lo</b> a qualquer momento, em Reciclagem.'
   });
   if (!r.sim) return;
   const d=await api('convite_delete&id='+id);
@@ -1879,7 +1877,7 @@ async function eliminar(id){ const c=CONVITES.find(x=>x.id==id); const nome=c?c.
 /** Repõe um convite que estava na reciclagem. */
 async function repor(id){
   const d=await api('convite_restaurar&id='+id);
-  if(d.success){ toast('Convite reposto.'); carregar(); if($('ov-historico').classList.contains('aberto')) abaHistorico('lixo'); }
+  if(d.success){ toast('Convite reposto.'); carregar(); if($('ov-reciclagem').classList.contains('aberto')) carregarLixo(); }
 }
 
 function linkConvite(codigo){ return BASE+'/convite-digital.php?c='+codigo; }
@@ -1957,6 +1955,7 @@ function abrirAccoes(ev){
     ['Perguntas da confirmação', 'abrirPerguntas()'],
     ['Entradas à porta',         'abrirEntradas()'],
     ['Histórico',                'abrirHistorico()'],
+    ['Reciclagem',               'abrirReciclagem()'],
     ['Exportar CSV',             'api.php?action=export', 'link'],
   ]);
 }
@@ -2084,7 +2083,7 @@ async function abrirEntradas(){
   abrir('ov-entradas');
 }
 
-// ---------- histórico: reciclagem + registo de atividade ----------
+// ---------- reciclagem e registo de actividade ----------
 // ---------- quem ainda não respondeu (docs/auditoria-ui-ux.md, RSVP-002) ----------
 // Esta casa não envia correio: os convites vão pela mão do casal, pelo
 // WhatsApp, e o lembrete vai pelo mesmo caminho. O que faltava não era um
@@ -2343,16 +2342,8 @@ async function pintarResumoRsvp(){
   }).join('') + '</div>';
 }
 
-function abrirHistorico(){ abrir('ov-historico'); abaHistorico('lixo'); }
-
-async function abaHistorico(qual){
-  const lixo = qual==='lixo';
-  $('aba-lixo').classList.toggle('ativa', lixo);
-  $('aba-registo').classList.toggle('ativa', !lixo);
-  $('hist-lixo').hidden = !lixo;
-  $('hist-registo').hidden = lixo;
-  lixo ? carregarLixo() : carregarRegisto();
-}
+function abrirHistorico(){ abrir('ov-historico'); carregarRegisto(); }
+function abrirReciclagem(){ abrir('ov-reciclagem'); carregarLixo(); }
 
 async function carregarLixo(){
   const el=$('hist-lixo');
@@ -2367,7 +2358,7 @@ async function carregarLixo(){
         <strong>${esc(c.nome_exibicao)}</strong>
         <small>${c.lugares} lugar(es) · Cód. ${esc(c.codigo)} · eliminado ${fmtHora(c.eliminado_em)}</small>
       </div>
-      <button class="btn btn-fantasma" onclick="repor(${c.id})">Repor</button>
+      <button class="btn btn-fantasma bt-repor" title="Repor este convite" onclick="repor(${c.id})">Repor</button>
       <button class="btn-ico" title="Apagar definitivamente" onclick="apagarDeVez(${c.id}, ${JSON.stringify(c.nome_exibicao)})">&times;</button>
     </div>`).join('');
 }

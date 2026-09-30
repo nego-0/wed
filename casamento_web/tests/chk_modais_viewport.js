@@ -5,7 +5,7 @@ try {const page=await browser.newPage({viewport:{width:390,height:660}}); const 
 const base=process.env.BASE_URL||'http://127.0.0.1:8921';
 await page.goto(base+'/login.php');await page.fill('[name=utilizador]','admin@local');await page.fill('[name=senha]','noivos2026');await page.click('button[type=submit]');await page.waitForLoadState('networkidle');
 await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}));
-for(const [url,ids] of [['index.php',['ov-convite','ov-qr','ov-mesas','ov-mensagens','ov-entradas','ov-lembretes','ov-perguntas','ov-historico']],['orcamento.php',['m-desp','m-pag']],['plataforma.php',['ov-licenca','ov-editar']]]){
+for(const [url,ids] of [['index.php',['ov-convite','ov-qr','ov-mesas','ov-mensagens','ov-entradas','ov-lembretes','ov-perguntas','ov-reciclagem','ov-historico']],['orcamento.php',['m-desp','m-pag']],['plataforma.php',['ov-licenca','ov-editar']]]){
 await page.goto(base+'/'+url,{waitUntil:'networkidle'});
 if(url==='plataforma.php')assert(await page.locator('body').evaluate(el=>el.classList.contains('admin-plataforma')));
 for(const height of [660,320]){await page.setViewportSize({width:390,height});

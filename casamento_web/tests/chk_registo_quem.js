@@ -86,9 +86,8 @@ const marca = 'zzq' + Math.floor(Math.random() * 1e5);
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(2600);
   const abriu = await p.evaluate(async () => {
-    // O histórico vive numa janela, e a atividade é a segunda aba lá dentro.
+    // O histórico vive na sua própria janela.
     abrirHistorico();
-    abaHistorico('registo');
     await new Promise(r => setTimeout(r, 1800));
     const d = document.querySelector('#hist-registo .reg-linha');
     if (!d) return null;
@@ -164,7 +163,7 @@ const marca = 'zzq' + Math.floor(Math.random() * 1e5);
   for (const tema of ['jardim', 'classico', 'azul', 'escuro']) {
     const cores = await p.evaluate(async t => {
       document.documentElement.setAttribute('data-tema', t);
-      abrirHistorico(); abaHistorico('registo');
+      abrirHistorico();
       await new Promise(r => setTimeout(r, 1500));
       const d = document.querySelector('#hist-registo .reg-linha');
       if (!d) return null;

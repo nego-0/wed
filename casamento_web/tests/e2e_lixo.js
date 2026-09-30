@@ -102,10 +102,11 @@ const { confirmar } = require('./_janela');
   // Só as ações desta prova: o registo é de todo o casamento, e desde que há
   // contas a sério passam por lá outras pessoas (uma visita de suporte, um
   // porteiro). Exigir que TUDO fosse do admin era uma prova a falar de si
-  // própria e não do que se quer garantir — que a ação fica com o nome de quem
-  // a fez.
+  // própria e não do que se quer garantir — que a ação fica com o email de
+  // quem a fez, que é a identidade adoptada pelo registo de acções.
   const meus = rs.filter(r => ['convite_criado','convite_eliminado','convite_reposto'].includes(r.accao));
-  ok(meus.length > 0 && meus.every(r => r.utilizador === 'admin'), 'guarda QUEM fez a ação');
+  ok(meus.length > 0 && meus.every(r => /@/.test(r.email || r.utilizador || '')),
+     'guarda o email de QUEM fez a ação');
 
   // ---------- apagar de vez ----------
   await api('convite_delete&id=' + id);
@@ -123,32 +124,45 @@ const { confirmar } = require('./_janela');
 
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
-  // O Histórico deixou de estar na barra: é uma acção de uma vez por
-  // casamento, e passou para trás do «⋯» (docs/auditoria-ui-ux.md, CTA-001).
-  // Chegar-lhe é agora um gesto a mais, e é de propósito — a barra tem uma
-  // primária só, e não oito acções em fila com o mesmo peso.
+  // A Reciclagem tem uma opção própria atrás do «⋯»: não fica escondida como
+  // uma aba do Histórico, que é outro assunto.
   await page.click('.btn-mais-acoes');
   await page.waitForTimeout(250);
-  await page.click('#pop-mais button:has-text("Histórico")');
+  const opcoesMais = await page.locator('#pop-mais button, #pop-mais a').allTextContents();
+  ok(opcoesMais.some(x => x.trim() === 'Histórico') && opcoesMais.some(x => x.trim() === 'Reciclagem'),
+     'Mais acções apresenta Histórico e Reciclagem separadamente');
+  await page.click('#pop-mais button:has-text("Reciclagem")');
   await page.waitForTimeout(700);
   const modal = await page.evaluate(() => {
-    const o = document.getElementById('ov-historico');
+    const o = document.getElementById('ov-reciclagem');
+    const bt = document.querySelector('#hist-lixo .lixo-item .bt-repor');
     return {
       aberto: o.classList.contains('aberto'),
       itens: document.querySelectorAll('#hist-lixo .lixo-item').length,
       texto: document.getElementById('hist-lixo').textContent.replace(/\s+/g, ' ').trim().slice(0, 110),
-      temRepor: !!document.querySelector('#hist-lixo .lixo-item .btn'),
+      temRepor: !!bt,
     };
   });
   log('modal:', JSON.stringify(modal));
-  ok(modal.aberto, 'o botão Histórico abre a janela');
+  ok(modal.aberto, 'a opção Reciclagem abre a sua própria janela');
   ok(modal.itens === 1, 'a reciclagem lista o convite eliminado');
   ok(/Teste Janela/.test(modal.texto) && /3 lugar/.test(modal.texto), 'mostra nome e lugares do que foi eliminado');
   ok(modal.temRepor, 'oferece o botão Repor');
+  await page.setViewportSize({ width: 390, height: 844 });
+  const reporMobile = await page.evaluate(() => {
+    const bt = document.querySelector('#hist-lixo .lixo-item .bt-repor');
+    const item = bt && bt.closest('.lixo-item');
+    const modal = document.querySelector('#ov-reciclagem .modal');
+    return !!bt && getComputedStyle(bt).whiteSpace === 'nowrap'
+      && bt.scrollWidth <= bt.clientWidth + 1
+      && item.scrollWidth <= item.clientWidth + 1
+      && modal.scrollWidth <= modal.clientWidth + 1;
+  });
+  ok(reporMobile, 'em mobile, Repor permanece numa linha sem provocar transbordo');
   await page.screenshot({ path: OUT + '/hist_lixo.png' });
 
   // repor a partir da janela
-  await page.click('#hist-lixo .lixo-item .btn');
+  await page.click('#hist-lixo .lixo-item .bt-repor');
   await page.waitForTimeout(900);
   const vazia = await page.evaluate(() => document.getElementById('hist-lixo').textContent);
   ok(/vazia/.test(vazia), 'a reciclagem fica vazia depois de repor pela janela');
@@ -157,14 +171,18 @@ const { confirmar } = require('./_janela');
   await api('convite_delete&id=' + cUI.convite.id);
   await api('convite_delete&definitivo=1&id=' + cUI.convite.id);
 
-  await page.click('#aba-registo');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => fechar('ov-reciclagem'));
+  await page.click('.btn-mais-acoes');
+  await page.waitForTimeout(150);
+  await page.click('#pop-mais button:has-text("Histórico")');
   await page.waitForTimeout(700);
   const regUI = await page.evaluate(() => {
     const l = document.querySelectorAll('#hist-registo .reg-linha');
     return { n: l.length, primeiro: l[0] ? l[0].textContent.replace(/\s+/g, ' ').trim() : '' };
   });
   log('registo na UI:', JSON.stringify(regUI));
-  ok(regUI.n > 0, 'a aba Atividade lista o histórico');
+  ok(regUI.n > 0, 'a opção Histórico lista o registo de actividade');
   ok(/admin/.test(regUI.primeiro), 'mostra quem fez a ação');
   await page.screenshot({ path: OUT + '/hist_registo.png' });
 
