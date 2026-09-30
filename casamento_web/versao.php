@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A Demonstração detalha os seis momentos reais do Bar em linguagem comercial',
+         'db.php', 'Fotografias, stock e limites que inspiram confiança.'],
         ['O menu do convidado identifica directamente AO COPO e À GARRAFA',
          'assets/bar-pecas.js', "if (servir === 'garrafa') return 'À GARRAFA'"],
         ['As categorias da Demonstração alinham Vantagens e recursos abaixo do menu fixo',

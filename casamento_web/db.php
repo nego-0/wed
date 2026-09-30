@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 62;
+const ESQUEMA_VERSAO = 63;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -548,7 +548,7 @@ function demonstracaoComercialPadrao(string $modulo): string {
       'impresso' => "UM CONVITE IMPRESSO À VOSSA IMAGEM\n1. Modelos elegantes. || Comece por uma peça bonita e coerente, pronta a personalizar em minutos.\n2. Texto, cores e composição. || Ajuste cada detalhe — nomes, tipografia, paleta — com uma pré-visualização fiel ao resultado final.\n3. Provas guardadas e comparáveis. || Grave versões identificadas e volte à que preferir sempre que quiser.\n\nDA PROVA À GRÁFICA SEM SURPRESAS\n1. Revisão fiel ao papel. || Confira nomes, datas, moradas e margens exactamente como vão sair impressos.\n2. Paletas à escolha. || Experimente combinações de cor e veja a peça mudar ao vivo.\n3. Manual de impressão incluído. || Leve para a gráfica o formato, a sangria, o papel e o acabamento, sem margem para erro.",
       'digital' => "UM CONVITE DIGITAL QUE ENCANTA\n1. Lindo no telemóvel. || Uma experiência de página inteira, com capa, história e fotografias que dá gosto abrir.\n2. A vossa história contada. || Capítulos, cronograma e mapas apresentam o dia tal como ele vai ser.\n3. Confirmação no próprio convite. || O convidado responde sem sair da página, e a resposta chega-vos de imediato.\n\nPARTILHAR COM CONFIANÇA\n1. Pré-visualização real. || Veja o convite tal como o convidado o verá, antes de o enviar.\n2. Uma só versão pública. || Apenas o modelo que aprovar fica visível na ligação; nada de rascunhos à mostra.\n3. Uma ligação para todos. || Partilhe um único endereço e acompanhe as aberturas e as confirmações.",
       'porta' => "ENTRADAS SEM FILAS\n1. Encontrar em segundos. || Pesquise o nome ou leia o código e o grupo aparece pronto a confirmar.\n2. Confirmar quem chegou. || Marque apenas as pessoas presentes, com o resto da gestão fora de vista.\n3. Total a subir ao vivo. || Cada entrada actualiza o número de presentes na hora.\n\nCONTROLO SEM COMPLICAÇÕES\n1. Correcções fáceis. || Desmarque um engano num toque, sem estragar o registo.\n2. Quem ainda falta. || Veja a lista de ausentes e saiba sempre quantos convidados esperar.\n3. Acesso limitado à porta. || A equipa da entrada trabalha sem aceder às contas nem aos dados do casamento.",
-      'bar' => "UM BAR QUE SERVE SOZINHO\n1. Menu por categorias. || Organize águas, refrigerantes, cervejas e cocktails em grupos claros.\n2. Stock e limites sob controlo. || Defina quantidades e limites que evitam pedidos a mais.\n3. Abrir quando quiser. || Active o serviço apenas quando a copa estiver pronta.\n\nDO PEDIDO À ENTREGA, LIGADOS\n1. O convidado pede da mesa. || Escolhe as bebidas e confirma o pedido uma só vez, sem chamar ninguém.\n2. A copa prepara. || A equipa recebe o pedido, aceita-o e acompanha a preparação.\n3. A entrega confirmada. || O garçom leva à mesa certa e marca a entrega — tudo fica registado.",
+      'bar' => "UM MENU QUE CONVIDA A PEDIR\n1. Categorias claras para escolher depressa. || Águas, refrigerantes, cervejas, vinhos e cocktails surgem organizados como num menu profissional, para cada convidado encontrar a bebida sem chamar a equipa.\n2. Fotografias, stock e limites que inspiram confiança. || Cada cartão apresenta a bebida com fotografia real — Coca-Cola, Cuca, vinho e outras opções — enquanto o sistema acompanha quantidades e limites em segundo plano.\n3. O bar abre quando tudo está pronto. || Os noivos ou a copa confirmam o menu e o stock e activam o serviço no momento certo; a partir daí, os pedidos ficam disponíveis nas mesas.\n\nDO TELEMÓVEL À MESA, SEM PEDIDOS PERDIDOS\n1. O convidado pede no próprio telemóvel. || A partir da mesa, escolhe bebidas ao copo ou à garrafa, revê a selecção e envia um pedido claro sem ficar à espera de alguém.\n2. A copa recebe e prepara com contexto. || O pedido chega com convidado, mesa, bebida, quantidade e forma de servir; a copa aceita, prepara e mantém o estado visível para a equipa.\n3. O garçom entrega na mesa certa. || A entrega mostra o destino e o conteúdo do pedido; o garçom assume o serviço e confirma apenas depois de levar as bebidas, deixando todo o percurso registado.",
       'orcamento' => "AS CONTAS DO CASAMENTO EM ORDEM\n1. Cada despesa no seu lugar. || Registe fornecedor, categoria, valor previsto e prazo numa ficha só.\n2. Pagamentos acompanhados. || Some parcelas e sinais e saiba a todo o momento quanto já saiu.\n3. Comprovativos à mão. || Guarde a fatura junto da despesa, para nada se perder.\n\nO PANORAMA FINANCEIRO NUM RELANCE\n1. Planeado, pago e por pagar. || Três números no topo dizem-lhe onde está o orçamento.\n2. Filtros que respondem. || Isole uma categoria, os atrasos ou o que falta pagar num toque.\n3. Sem sustos de última hora. || Veja as próximas datas e ajuste antes que se tornem um problema.",
     ][$modulo] ?? '';
 }
@@ -2668,6 +2668,17 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     if ($versaoAtual < 62) {
         @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''
                        WHERE tipo='ajuda' AND stickers LIKE '%\"gerado_em\"%'");
+    }
+
+    // v63 — a montra do Bar acompanha os mesmos seis ecrãs operacionais da
+    // Ajuda, mas explica o seu valor em linguagem comercial. A comparação com
+    // o texto anterior protege qualquer versão já escrita pelo administrador.
+    if ($versaoAtual < 63) {
+        $anterior = "UM BAR QUE SERVE SOZINHO\n1. Menu por categorias. || Organize águas, refrigerantes, cervejas e cocktails em grupos claros.\n2. Stock e limites sob controlo. || Defina quantidades e limites que evitam pedidos a mais.\n3. Abrir quando quiser. || Active o serviço apenas quando a copa estiver pronta.\n\nDO PEDIDO À ENTREGA, LIGADOS\n1. O convidado pede da mesa. || Escolhe as bebidas e confirma o pedido uma só vez, sem chamar ninguém.\n2. A copa prepara. || A equipa recebe o pedido, aceita-o e acompanha a preparação.\n3. A entrega confirmada. || O garçom leva à mesa certa e marca a entrega — tudo fica registado.";
+        $novo = demonstracaoComercialPadrao('bar');
+        $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
+                              WHERE tipo='demo' AND modulo='bar' AND conteudo=?");
+        if ($st) { $st->bind_param('ss', $novo, $anterior); @$st->execute(); }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

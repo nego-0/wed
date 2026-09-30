@@ -28,6 +28,10 @@ const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>{
  ok(await demo.locator('.aj-card:visible').count()>=1,'a pesquisa funciona dentro da demonstração');
  await demo.locator('#aj-busca').fill(''); await demo.locator('[data-aj-modulo="bar"]').click();
  ok(await demo.locator('.aj-card:visible').count()===2,'o filtro por módulo funciona dentro da demonstração');
+ const textoBar=(await demo.locator('.aj-card[data-modulo="bar"]:visible').evaluateAll(xs=>xs.map(x=>x.textContent||''))).join(' ').toLocaleLowerCase('pt-PT');
+ ok(textoBar.includes('coca-cola, cuca, vinho')&&textoBar.includes('ao copo ou à garrafa')&&textoBar.includes('forma de servir'),'os seis passos do Bar explicam os ecrãs reais em linguagem comercial');
+ const capturasBar=await demo.locator('.aj-card[data-modulo="bar"]:visible picture img').evaluateAll(xs=>xs.map(x=>new URL(x.src).pathname));
+ ok(capturasBar.length===6&&capturasBar.every(x=>/\/assets\/ajuda\/capturas\/bar-[12]-[123]-desktop\.jpg$/.test(x)),'a Demonstração reutiliza exactamente as seis capturas detalhadas do Bar da Ajuda');
  await pub.waitForTimeout(100);
  let duracao=await demo.locator('.aj-card[data-modulo="bar"]:visible').first().evaluate(e=>parseFloat(getComputedStyle(e).animationDuration)*1000);
  ok(duracao>=1000,'a mudança de categoria mantém o fading visível por pelo menos um segundo');
