@@ -28,12 +28,18 @@ const PASSOS_COM_ROLAGEM=new Set(ALVOS.filter(x=>{
  ok(await demo.locator('.aj-card:visible').count()>=1,'a pesquisa funciona dentro da demonstração');
  await demo.locator('#aj-busca').fill(''); await demo.locator('[data-aj-modulo="bar"]').click();
  ok(await demo.locator('.aj-card:visible').count()===2,'o filtro por módulo funciona dentro da demonstração');
- await pub.waitForTimeout(750);
+ await pub.waitForTimeout(100);
+ let duracao=await demo.locator('.aj-card[data-modulo="bar"]:visible').first().evaluate(e=>parseFloat(getComputedStyle(e).animationDuration)*1000);
+ ok(duracao>=1000,'a mudança de categoria mantém o fading visível por pelo menos um segundo');
+ await pub.waitForTimeout(1150);
  let topo=await demo.locator('.aj-card[data-modulo="bar"]:visible').first().evaluate(e=>e.getBoundingClientRect().top);
  ok(topo>=65&&topo<=130,'a categoria alinha suavemente o primeiro recurso no desktop');
  await pub.setViewportSize({width:390,height:844}); await pub.reload({waitUntil:'networkidle'});
  ok(await pub.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'a página pública não transborda no telemóvel');
- await pub.locator('#demonstracao [data-aj-modulo="orcamento"]').click();await pub.waitForTimeout(750);
+ await pub.locator('#demonstracao [data-aj-modulo="orcamento"]').click();await pub.waitForTimeout(100);
+ duracao=await pub.locator('#demonstracao .aj-card[data-modulo="orcamento"]:visible').first().evaluate(e=>parseFloat(getComputedStyle(e).animationDuration)*1000);
+ ok(duracao>=1000,'o fading de categoria conserva a duração no telemóvel');
+ await pub.waitForTimeout(1150);
  topo=await pub.locator('#demonstracao .aj-card[data-modulo="orcamento"]:visible').first().evaluate(e=>e.getBoundingClientRect().top);
  ok(topo>=55&&topo<=110,'a categoria alinha suavemente o primeiro recurso no telemóvel');
 

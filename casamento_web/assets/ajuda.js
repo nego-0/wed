@@ -2,11 +2,36 @@
   'use strict';
   const busca=document.getElementById('aj-busca'),cards=[...document.querySelectorAll('.aj-card')];if(!busca||!cards.length)return;
   const botoes=[...document.querySelectorAll('[data-aj-modulo]')],estado=document.getElementById('aj-resultado'),vazio=document.getElementById('aj-sem-resultados');let modulo='todos';
+  const DURACAO_CATEGORIA=1100;let animacaoRolagem=0,temporizadorEntrada=0;
   const limpar=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   function filtrar(){const termos=limpar(busca.value).split(/\s+/).filter(Boolean);let n=0;cards.forEach(c=>{const texto=limpar(c.dataset.pesquisa),ver=(modulo==='todos'||c.dataset.modulo===modulo)&&termos.every(t=>texto.includes(t));c.hidden=!ver;if(ver)n++;});vazio.hidden=n!==0;estado.textContent=n+(n===1?' tópico encontrado':' tópicos encontrados');}
+  function rolarAte(elemento){
+    cancelAnimationFrame(animacaoRolagem);
+    const reduzido=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const inicio=window.scrollY;
+    const margem=parseFloat(getComputedStyle(elemento).scrollMarginTop)||0;
+    const maximo=Math.max(0,document.documentElement.scrollHeight-innerHeight);
+    const destino=Math.min(maximo,Math.max(0,inicio+elemento.getBoundingClientRect().top-margem));
+    const distancia=destino-inicio;
+    if(reduzido||Math.abs(distancia)<2){window.scrollTo(0,destino);return;}
+    const comeco=performance.now();
+    const mover=agora=>{
+      const t=Math.min(1,(agora-comeco)/DURACAO_CATEGORIA);
+      const suave=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+      window.scrollTo(0,inicio+distancia*suave);
+      if(t<1)animacaoRolagem=requestAnimationFrame(mover);
+    };
+    animacaoRolagem=requestAnimationFrame(mover);
+  }
   function alinharPrimeiroRecurso(){
     const primeiro=cards.find(c=>!c.hidden);if(!primeiro)return;
-    requestAnimationFrame(()=>primeiro.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}));
+    clearTimeout(temporizadorEntrada);cards.forEach(c=>c.classList.remove('aj-entrada-categoria'));
+    requestAnimationFrame(()=>{
+      void primeiro.offsetWidth;
+      cards.filter(c=>!c.hidden).forEach(c=>c.classList.add('aj-entrada-categoria'));
+      rolarAte(primeiro);
+      temporizadorEntrada=setTimeout(()=>cards.forEach(c=>c.classList.remove('aj-entrada-categoria')),DURACAO_CATEGORIA+100);
+    });
   }
   botoes.forEach(b=>b.addEventListener('click',()=>{modulo=b.dataset.ajModulo;botoes.forEach(x=>x.classList.toggle('ativo',x===b));filtrar();alinharPrimeiroRecurso();}));
   busca.addEventListener('input',filtrar);document.addEventListener('keydown',e=>{if(e.key==='/'&&!/input|textarea|select/i.test(document.activeElement.tagName)){e.preventDefault();busca.focus();}});

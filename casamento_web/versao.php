@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As categorias da Ajuda e da Demonstração mudam com rolagem visível e fading de pelo menos um segundo',
+         'assets/ajuda.js', 'const DURACAO_CATEGORIA=1100'],
         ['Os detalhes das mesas surgem com rolagem suave e fading visível durante pelo menos um segundo',
          'mesas.php', 'animation:mesa-detalhe-surgir 1.1s'],
         ['As categorias da Ajuda e da Demonstração alinham suavemente o primeiro recurso',
