@@ -64,6 +64,16 @@ async function api(p,acao,corpo){
     return fetch('api.php?action='+acao,op).then(r=>r.json());
   },{acao,corpo});
 }
+async function apiImagemExemplo(p,acao,id,ficheiro){
+  return p.evaluate(async ({acao,id,ficheiro})=>{
+    const resposta=await fetch(ficheiro,{cache:'no-store'});
+    if(!resposta.ok)throw new Error('Não foi possível abrir a imagem de exemplo: '+ficheiro);
+    const blob=await resposta.blob(),fd=new FormData();
+    fd.append('id',String(id));
+    fd.append('ficheiro',new File([blob],'coca-cola.jpg',{type:blob.type||'image/jpeg'}));
+    return fetch('api.php?action='+acao,{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd}).then(r=>r.json());
+  },{acao,id,ficheiro});
+}
 async function marcar(p,loc){
   await p.locator('[data-aj-alvo]').evaluateAll(ns=>ns.forEach(n=>n.removeAttribute('data-aj-alvo')));
   const alvo=loc.first();await alvo.waitFor();await alvo.evaluate(e=>{document.documentElement.style.scrollBehavior='auto';e.dataset.ajAlvo='1';e.scrollIntoView({block:'center',inline:'nearest'});});
@@ -86,23 +96,50 @@ async function prepararDados(p){
   else convite=(await api(p,'convite_get&id='+(+convite.id))).convite;
   await api(p,'porta_checkin',{convite_id:+convite.id,modo:'anular'});
 
-  let orc=await api(p,'orc_estado');
-  let cat=(orc.categorias||[]).find(c=>c.nome==='Fotografia');
-  if(!cat){const r=await api(p,'orc_categoria_guardar',{nome:'Fotografia',previsto:'950000',cor:'#B4864A'});orc=await api(p,'orc_estado');cat=(orc.categorias||[]).find(c=>+c.id===+r.id);}
-  let desp=(orc.despesas||[]).find(d=>d.descricao==='Fotografia e vídeo');
-  const rd=await api(p,'orc_despesa_guardar',{id:desp?+desp.id:0,categoria_id:+cat.id,descricao:'Fotografia e vídeo',fornecedor:'Luz do Sul',valor:'850000',estado:'previsto',nota:'Sinal pago; saldo antes da cerimónia.'});
-  orc=await api(p,'orc_estado');desp=(orc.despesas||[]).find(d=>+d.id===+rd.id);
-  if(!(orc.pagamentos||[]).some(x=>+x.despesa_id===+desp.id))
-    await api(p,'orc_pagamento_guardar',{despesa_id:+desp.id,valor:'300000',data_prevista:'2026-10-15',pago_em:'2026-09-20',nota:'Sinal'});
+  // Um casamento com números plausíveis: o limite é 7,5 milhões e a soma
+  // planeada fica abaixo dele, deixando uma margem legível no gráfico.
+  await api(p,'orc_ajuste',{total:'7500000',moeda:'Kz'});
+  const exemplosOrc=[
+    ['Espaço e catering','2800000','#3F7254','Quinta e menu do casamento','Quinta das Acácias','2650000','1500000'],
+    ['Fotografia','950000','#B4864A','Fotografia e vídeo','Luz do Sul','850000','300000'],
+    ['Decoração','1200000','#8E6E97','Flores e decoração do salão','Atelier Jasmim','1100000','400000'],
+    ['Música e som','650000','#477A8A','DJ, som e iluminação','Ritmo Eventos','580000','200000'],
+    ['Vestuário','900000','#9A6959','Vestuário dos noivos','Casa Kiala','760000','300000'],
+  ];
+  let cat=null,desp=null,orc=await api(p,'orc_estado');
+  for(const [nome,previsto,cor,descricao,fornecedor,valor,pago] of exemplosOrc){
+    let c=(orc.categorias||[]).find(x=>x.nome===nome);
+    const rc=await api(p,'orc_categoria_guardar',{id:c?+c.id:0,nome,previsto,cor});
+    orc=await api(p,'orc_estado');c=(orc.categorias||[]).find(x=>+x.id===+rc.id);
+    let d=(orc.despesas||[]).find(x=>x.descricao===descricao);
+    const rd=await api(p,'orc_despesa_guardar',{id:d?+d.id:0,categoria_id:+c.id,descricao,fornecedor,valor,estado:'previsto',nota:'Pagamento acompanhado no calendário.'});
+    orc=await api(p,'orc_estado');d=(orc.despesas||[]).find(x=>+x.id===+rd.id);
+    if(!(orc.pagamentos||[]).some(x=>+x.despesa_id===+d.id))
+      await api(p,'orc_pagamento_guardar',{despesa_id:+d.id,valor:pago,data_prevista:'2026-10-15',pago_em:'2026-09-20',nota:'Sinal'});
+    if(nome==='Fotografia'){cat=c;desp=d;}
+  }
 
   let bar=await api(p,'bar_estado');
-  let bebida=(bar.itens||[]).find(i=>i.nome==='Sumo de múcua');
+  // Retira da fila apenas o exemplo antigo usado pelo gerador anterior. Assim
+  // uma regeneração sobre a mesma base continua a produzir uma cena limpa.
+  for(const pedido of [...(bar.fila||[]),...(bar.resolvidos||[])]){
+    if(!(pedido.itens||[]).some(i=>i.nome==='Sumo de múcua'))continue;
+    if(pedido.estado==='em_analise') await api(p,'bar_decidir',{id:+pedido.id,decisao:'recusar',motivo_texto:'Exemplo substituído'});
+    else if(['aprovado','a_caminho','falhou'].includes(pedido.estado)) await api(p,'bar_cancelar_copa',{id:+pedido.id});
+  }
+  bar=await api(p,'bar_estado');
+  let bebida=(bar.itens||[]).find(i=>i.nome==='Coca-Cola');
   const semAlcool=(bar.categorias||[]).find(c=>c.nome==='Sem álcool')||(bar.categorias||[])[0];
-  if(!bebida){const r=await api(p,'bar_item_guardar',{nome:'Sumo de múcua',descricao:'Fresco, com hortelã',categoria_id:+semAlcool.id,alcoolico:0,max_por_pedido:2,stock_minimo:8,servir:'copo',doses_garrafa:6,stock:48,estado:'ativo'});bar=await api(p,'bar_estado');bebida=(bar.itens||[]).find(i=>+i.id===+r.id);}
+  if(!bebida){const r=await api(p,'bar_item_guardar',{nome:'Coca-Cola',descricao:'Bem fresca, com gelo',categoria_id:+semAlcool.id,alcoolico:0,max_por_pedido:2,stock_minimo:8,servir:'copo',doses_garrafa:6,stock:48,estado:'ativo'});bar=await api(p,'bar_estado');bebida=(bar.itens||[]).find(i=>+i.id===+r.id);}
+  if(!bebida.foto){
+    const foto=await apiImagemExemplo(p,'bar_item_foto',+bebida.id,'assets/ajuda/exemplos/coca-cola.jpg');
+    if(!foto.success)throw new Error('Não foi possível associar a fotografia à Coca-Cola: '+(foto.error||''));
+  }
   await api(p,'bar_abrir',{});bar=await api(p,'bar_estado');
   const membro=(convite.membros||[]).find(m=>m.nome==='Ana Kiala')||convite.membros[0];
-  const jaPedido=[...(bar.fila||[]),...(bar.resolvidos||[])].some(x=>x.convite==='Família Kiala'&&x.convidado==='Ana Kiala');
-  if(!jaPedido) await api(p,'bar_pedir_por',{posto:'copa',convidado_id:+membro.id,mesa_id:+mesa.id,itens:[{item_id:+bebida.id,quantidade:2}]});
+  const membroBar=(convite.membros||[]).find(m=>m.nome==='Mateus Kiala')||membro;
+  const jaPedido=[...(bar.fila||[]),...(bar.resolvidos||[])].some(x=>(x.itens||[]).some(i=>i.nome==='Coca-Cola'));
+  if(!jaPedido) await api(p,'bar_pedir_por',{posto:'copa',convidado_id:+membroBar.id,mesa_id:+mesa.id,itens:[{item_id:+bebida.id,quantidade:2}]});
 
   DADOS={conviteId:+convite.id,conviteCodigo:convite.codigo,membroId:+membro.id,mesaId:+mesa.id,
     mesaToken:mesa.bar_token,bebidaId:+bebida.id,categoriaBarId:+semAlcool.id,despesaId:+desp.id,categoriaOrcId:+cat.id};
@@ -165,13 +202,13 @@ const sequenciasComCenas = [
   ]},
   {nome:'bar',topico:1,url:'/bar.php?aba=gav',passos:[
     {tipo:'adicionar',fazer:async p=>marcar(p,p.locator('.b-cat').filter({hasText:'Sem álcool'}))},
-    {tipo:'preencher',fazer:async p=>{await p.evaluate(()=>barAba('menu'));await p.evaluate(()=>barNova());await p.fill('#lf-nome','Sumo de múcua');await p.fill('#lf-descricao','Fresco, com hortelã');await p.fill('#lf-stock','48');await p.evaluate(id=>{const s=document.getElementById('lf-categoria_id');if(s){s.value=String(id);s.dispatchEvent(new Event('change',{bubbles:true}));}},DADOS.categoriaBarId);await marcar(p,p.locator('#lf-nome'));}},
-    {tipo:'activar',rolar:true,fazer:async p=>{await p.locator('#lic-jx').click();await p.evaluate(()=>barAba('menu'));await p.waitForTimeout(350);await marcar(p,p.locator('.b-cart').filter({hasText:'Sumo de múcua'}));}},
+    {tipo:'preencher',fazer:async p=>{await p.evaluate(()=>barAba('menu'));await p.evaluate(id=>barEditar(id),DADOS.bebidaId);await p.fill('#lf-nome','Coca-Cola');await p.fill('#lf-descricao','Bem fresca, com gelo');await p.evaluate(id=>{const s=document.getElementById('lf-categoria_id');if(s){s.value=String(id);s.dispatchEvent(new Event('change',{bubbles:true}));}},DADOS.categoriaBarId);await marcar(p,p.locator('#lf-nome'));}},
+    {tipo:'activar',rolar:true,fazer:async p=>{if(await p.locator('#lic-jx').count())await p.locator('#lic-jx').click();await p.evaluate(()=>barAba('menu'));await p.waitForTimeout(350);await marcar(p,p.locator('.b-cart').filter({hasText:'Coca-Cola'}));}},
   ]},
   {nome:'bar',topico:2,url:()=>`/bebidas.php?m=${DADOS.mesaToken}`,passos:[
-    {tipo:'enviar',fazer:async p=>{if(await p.locator('#b-q').count()){await p.fill('#b-q','Ana Kiala');await p.waitForTimeout(550);await p.locator('.b-nome').filter({hasText:'Ana Kiala'}).click();await p.waitForTimeout(550);}await marcar(p,p.locator('.b-bebida').filter({hasText:'Sumo de múcua'}));}},
-    {tipo:'preparar',rolar:true,fazer:async p=>{await p.goto(BASE+'/copa.php',{waitUntil:'networkidle'});const aba=p.locator('.b-pilula').filter({hasText:'Por entregar'});await aba.waitFor();await aba.click();await p.waitForTimeout(450);await marcar(p,p.locator('.b-ped').filter({hasText:'Ana Kiala'}).first());}},
-    {tipo:'entregar',rolar:true,fazer:async p=>{await p.goto(BASE+'/entregas.php',{waitUntil:'networkidle'});await p.waitForTimeout(450);await marcar(p,p.locator('.b-ped').filter({hasText:'Ana Kiala'}).first());}},
+    {tipo:'enviar',fazer:async p=>{if(await p.locator('#b-q').count()){await p.fill('#b-q','Mateus Kiala');await p.waitForTimeout(550);await p.locator('.b-nome').filter({hasText:'Mateus Kiala'}).click();await p.waitForTimeout(550);}await marcar(p,p.locator('.b-bebida').filter({hasText:'Coca-Cola'}));}},
+    {tipo:'preparar',rolar:true,fazer:async p=>{await p.goto(BASE+'/copa.php',{waitUntil:'networkidle'});const aba=p.locator('.b-pilula').filter({hasText:'Por entregar'});await aba.waitFor();await aba.click();await p.waitForTimeout(450);await marcar(p,p.locator('.b-ped').filter({hasText:'Coca-Cola'}).first());}},
+    {tipo:'entregar',rolar:true,fazer:async p=>{await p.goto(BASE+'/entregas.php',{waitUntil:'networkidle'});await p.waitForTimeout(450);await marcar(p,p.locator('.b-ped').filter({hasText:'Coca-Cola'}).first());}},
   ]},
   {nome:'orcamento',topico:1,url:'/orcamento.php',passos:[
     {tipo:'adicionar',fazer:async p=>marcar(p,p.locator('button[onclick="abrirDespesa()"]:visible').first())},

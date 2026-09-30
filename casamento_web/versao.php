@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As capturas da Ajuda e da Demonstração são recriadas com confirmação, orçamento e Bar actuais',
+         'tests/gerar-capturas-ajuda.js', "assets/ajuda/exemplos/coca-cola.jpg"],
+        ['O exemplo financeiro respeita o teto de 7 500 000 Kz',
+         'db.php', 'Teto: 7 500 000 Kz'],
         ['A montra usa pictogramas próprios para os 42 recursos descritos',
          'parcial-ajuda.php', "'digital'=>[['convite','historia','confirmar'],['telemovel','publicar','whatsapp']]"],
         ['Os alvos da demonstração são pontos discretos e deixam o pictograma na legenda',

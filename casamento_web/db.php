@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 60;
+const ESQUEMA_VERSAO = 61;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -569,7 +569,7 @@ function semearConteudosAtendimento(mysqli $conn): void {
       'bar' => ['Bar e serviço de mesa', 'Pedidos claros entre convidado, copa e entrega, com limites e stock sob controlo.',
         "Experimentem o percurso fictício: escolher bebidas, preparar na copa e confirmar a entrega na mesa.", "Na copa: 4\nEm entrega: 3\nEntregues: 46"],
       'orcamento' => ['Orçamento', 'Planeado, pago e por pagar, com cada despesa no seu lugar.',
-        "Acompanhem categorias, pagamentos e desvios com números fictícios que mostram a visão final sem revelar dados reais.", "Planeado: 8 450 000 Kz\nPago: 5 120 000 Kz\nPor pagar: 3 330 000 Kz"],
+        "Acompanhem categorias, pagamentos e desvios com números fictícios que mostram a visão final sem revelar dados reais.", "Teto: 7 500 000 Kz\nPlaneado: 6 500 000 Kz\nPago: 2 700 000 Kz\nPor pagar: 3 800 000 Kz"],
     ];
     $ordem = 10;
     foreach ($modulos as $chave => [$titulo, $resumo, $corpo, $dados]) {
@@ -2645,6 +2645,21 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET conteudo=?
                               WHERE tipo='ajuda' AND modulo='digital' AND conteudo=?");
         if ($st) { $st->bind_param('ss', $texto, $anterior); @$st->execute(); }
+    }
+
+    // v61 — o exemplo financeiro respeita o teto de 7,5 milhões. Só troca os
+    // números de fábrica; indicadores que o administrador escreveu ficam seus.
+    if ($versaoAtual < 61) {
+        $antigo = "Planeado: 8 450 000 Kz\nPago: 5 120 000 Kz\nPor pagar: 3 330 000 Kz";
+        $novo = "Teto: 7 500 000 Kz\nPlaneado: 6 500 000 Kz\nPago: 2 700 000 Kz\nPor pagar: 3 800 000 Kz";
+        $st = @$conn->prepare("UPDATE {$P}atendimento_conteudos SET dados=?
+                              WHERE tipo='demo' AND modulo='orcamento' AND dados=?");
+        if ($st) { $st->bind_param('ss', $novo, $antigo); @$st->execute(); }
+        // Uma configuração gerada pode apontar para a geometria das capturas
+        // antigas. Limpa-se só o resultado automático: posições ajustadas à
+        // mão pelo administrador (gerido_em) continuam intactas.
+        @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''
+                       WHERE stickers LIKE '%\"gerado_em\"%'");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.
