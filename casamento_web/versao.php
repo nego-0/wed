@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os três indicadores da campanha cabem lado a lado no telemóvel sem rolagem horizontal',
+         'assets/central.css', 'grid-template-columns:repeat(3,minmax(0,1fr))'],
         ['Os formulários modais do administrador rolam por inteiro, como os do Orçamento',
          'assets/modais.css', 'o cartão inteiro é a área de rolagem'],
         ['Login e Registo acompanham o fundo, os cartões e os controlos dos quatro temas',
