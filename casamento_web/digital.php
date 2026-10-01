@@ -17,6 +17,7 @@ exigirModulo('digital');
 $defs = defsAtuais($conn);
 $CAS  = casalDaFicha($conn);
 $ENDERECO = enderecoPublico();   // para onde apontam os links e os QR desta lista
+$PROVA_ATUAL = 'convite-digital.php?demo=1&atual=1';
 
 // Uma página só. Havia duas abas — "Convites a enviar" e "Estado e versões" —
 // mas o estado já está no cartão do topo e as versões cabem lá ao lado: as
@@ -243,8 +244,8 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
   <!-- Estado da peça -->
   <div class="peca">
     <div class="peca-prova">
-      <iframe src="convite-digital.php?demo=1&amp;prova=1" title="Prova do convite" loading="lazy" scrolling="no"></iframe>
-      <a class="lupa" href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir em tamanho real</a>
+      <iframe src="<?= escP($PROVA_ATUAL . '&prova=1') ?>" title="Prova do convite em vigor" loading="lazy" scrolling="no"></iframe>
+      <a class="lupa" href="<?= escP($PROVA_ATUAL) ?>" target="_blank" rel="noopener">Abrir em tamanho real</a>
     </div>
     <div class="peca-corpo">
       <h2><?= escP($CAS['casal']) ?></h2>
@@ -285,7 +286,7 @@ if (colunaExiste($conn, "{$P}convites", 'enviado_em')) {
       </div>
       <div class="peca-acoes">
         <a class="btn btn-ouro" href="convite-editor.php">Editar o convite</a>
-        <a class="btn" href="convite-digital.php?demo=1" target="_blank" rel="noopener">Ver como um convidado</a>
+        <a class="btn" href="<?= escP($PROVA_ATUAL) ?>" target="_blank" rel="noopener">Ver como um convidado</a>
       </div>
       </div><!-- /pn-estado -->
 

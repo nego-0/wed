@@ -105,6 +105,7 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | `chk_versao.js`         | a página de versão diz a verdade, e ?diag=1 traz o diagnóstico  |
 | `chk_versao_vigor.js`   | a versão em vigor é a que os convidados recebem e o manual retrata |
 | `chk_digital_menu.js`   | entrada do convite digital, e o menu "⋯" a abrir para cima quando não cabe |
+| `chk_digital_previa_atual.js` | miniatura e atalhos mostram a peça em vigor no casamento aberto, nunca o convite da demonstração |
 | `chk_capa.js`           | a capa (envelope) com monograma editável no editor do convite digital |
 | `chk_sem_numero.js`     | o número de lugares não entra no nome do convite, em peça nenhuma |
 | `chk_versao_grava.js`   | guardar uma versão apanha o que está no ecrã, e não só o que já foi gravado |

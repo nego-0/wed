@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A miniatura e os atalhos do Convite digital mostram exactamente a peça em vigor no casamento aberto',
+         'digital.php', "'convite-digital.php?demo=1&atual=1'"],
         ['Os convites digitais mostram o ícone Kulemba no separador, inclusive quando descarregados',
          'assets/convite-base.html', 'assets/icone-sistema-32.png'],
         ['Os três indicadores da campanha cabem lado a lado no telemóvel sem rolagem horizontal',

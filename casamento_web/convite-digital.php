@@ -19,13 +19,20 @@ require_once __DIR__ . '/parcial-demonstracao.php';
 $codigo   = strtoupper(trim($_GET['c'] ?? ''));
 $c        = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
 
-// Pré-visualização do editor (só admin): convidado de exemplo, sem tocar na BD.
+// Pré-visualização administrativa: convidado de exemplo, sem tocar na BD.
+// A demonstração pública usa os dados e a peça definidos pelo administrador.
+// Já ?atual=1 é a prova da peça do casamento aberto: tem de usar exactamente
+// as mesmas definições que os convidados recebem, embora com uma família de
+// exemplo para não expor um convite real na página de gestão.
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
-$DEFS = $demo ? demonstracaoDefsComModelo($conn) : defsAtuais($conn);
+$provaAtual = $demo && ($_GET['atual'] ?? '') === '1';
+if ($demo && !ehAdmin() && !ehAdminPlataforma()) {
+    http_response_code(403);
+    exit('Apenas administração.');
+}
+$DEFS = ($demo && !$provaAtual) ? demonstracaoDefsComModelo($conn) : defsAtuais($conn);
 $download = isset($_GET['download']) && $_GET['download'] === '1';
 if ($demo) {
-    // Também o admin da plataforma, que desenha modelos sem casamento aberto.
-    if (!ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
     $c = ['id'=>0, 'codigo'=>'EXEMPLO', 'nome_exibicao'=>'Família Exemplo', 'sufixo'=>null,
           'mostrar_num_mesa'=>1, 'lugares'=>4, 'mesa_nome'=>'Mesa 1',
           'msg_pessoal'=>'', 'membros'=>[]];
