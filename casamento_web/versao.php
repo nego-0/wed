@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os formulários modais do administrador rolam por inteiro, como os do Orçamento',
+         'assets/modais.css', 'o cartão inteiro é a área de rolagem'],
         ['Login e Registo acompanham o fundo, os cartões e os controlos dos quatro temas',
          'assets/entrada.css', 'A folha de entrada acompanha o tema.'],
         ['A Demonstração pública mantém disponível o botão flutuante de escolha do tema',

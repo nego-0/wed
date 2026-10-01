@@ -23,6 +23,13 @@ html body :is(.fechar,.pl-modal-x) { flex-shrink:0; min-width:36px; min-height:3
 html body :is(#lightbox,.pl-modal-img) img { max-height:calc(var(--modal-altura) - 130px); object-fit:contain; }
 html body.modal-em-uso { overflow:hidden; }
 html body .toast { z-index:10300; }
+
+/* No painel da administração, os formulários seguem o modelo do Orçamento:
+   o cartão inteiro é a área de rolagem. Título, campos, avisos e botões passam
+   juntos, em vez de prender o cabeçalho e o rodapé enquanto só o miolo anda. */
+html body.admin-plataforma .modal-topo { position:relative; top:auto; }
+html body.admin-plataforma .pl-modal-cx { display:block; overflow:auto; }
+html body.admin-plataforma .pl-modal-corpo { overflow:visible; flex:none; }
 @media(max-height:440px) {
   html body .pl-modal-cx { display:block; overflow:auto; }
   html body .pl-modal-corpo { overflow:visible; }

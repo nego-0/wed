@@ -476,7 +476,7 @@ $CAS = $aberto > 0 ? casalDaFicha($conn)
              padding:.6rem .8rem; background:var(--cream); }
 </style>
 </head>
-<body>
+<body class="admin-plataforma">
 <?php
   // O título veste-se de quem chega: o admin vê a casa toda; o suporte tem um
   // posto simples, à volta do código; o casal vê os seus casamentos.
