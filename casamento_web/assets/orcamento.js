@@ -34,6 +34,17 @@
     var s = n.toLocaleString('pt-PT', { minimumFractionDigits: casas, maximumFractionDigits: 2 });
     return s + ' ' + MOEDA;
   }
+  // Dentro de uma fatia estreita, 1 550 000 Kz não cabe. Conserva-se o valor
+  // completo no título e encurta-se só o rótulo visível: 1.55M Kz.
+  function fmtCurto(v) {
+    var n = num(v), abs = Math.abs(n), divisor = 1, sufixo = '';
+    if (abs >= 1000000000) { divisor = 1000000000; sufixo = 'B'; }
+    else if (abs >= 1000000) { divisor = 1000000; sufixo = 'M'; }
+    else if (abs >= 1000) { divisor = 1000; sufixo = 'K'; }
+    if (!sufixo) return fmt(n);
+    var reduzido = (n / divisor).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+    return reduzido + sufixo + ' ' + MOEDA;
+  }
   function pct(parte, todo) { return todo > 0 ? Math.max(0, Math.min(100, (parte / todo) * 100)) : 0; }
   function paraCampo(v) { return window.Moeda ? window.Moeda.paraCampo(v) : String(num(v) || ''); }
 
@@ -233,8 +244,10 @@
       if (s[1] <= 0) return '';
       var w = pct(s[1], denom);
       return '<span class="' + s[0] + '" style="width:' + w + '%" title="' + s[2] + ': ' + esc(fmt(s[1])) + '">'
-        + (w > 14 ? esc(fmt(s[1])) : '') + '</span>';
+        + '<b class="o-barra-valor" data-completo="' + esc(fmt(s[1])) + '" data-curto="' + esc(fmtCurto(s[1])) + '">'
+        + esc(fmt(s[1])) + '</b></span>';
     }).join('');
+    ajustarRotulosBarra();
 
     var leg = [['var(--o-pago)', 'Pago', r.pago], ['var(--o-prev)', 'Por pagar', r.previsto]];
     // A margem subiu para o cartão, e por isso sai daqui: dizer o mesmo número
@@ -251,6 +264,28 @@
         + esc(l[1]) + ' <b>' + esc(fmt(l[2])) + '</b></span>';
     }).join('');
   }
+
+  // Mede a largura verdadeira depois de o browser distribuir as percentagens.
+  // Repete no redimensionamento para a mesma barra funcionar no telemóvel e no
+  // computador sem adivinhar uma percentagem mínima.
+  function ajustarRotulosBarra() {
+    requestAnimationFrame(function () {
+      [].forEach.call(document.querySelectorAll('#o-barra > span'), function (seg) {
+        var rotulo = seg.querySelector('.o-barra-valor'); if (!rotulo) return;
+        rotulo.textContent = rotulo.dataset.completo || '';
+        seg.classList.remove('compacto');
+        if (rotulo.scrollWidth > Math.max(0, seg.clientWidth - 6)) {
+          rotulo.textContent = rotulo.dataset.curto || rotulo.dataset.completo || '';
+          seg.classList.add('compacto');
+        }
+      });
+    });
+  }
+  var esperaBarra = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(esperaBarra);
+    esperaBarra = setTimeout(ajustarRotulosBarra, 100);
+  });
 
   // ---- distribuição por categoria: soma dos reais (categorias + sem categoria) ----
   function itensCategoria(cats, semCat) {
@@ -611,10 +646,11 @@
   function fechar(id) { $(id).classList.remove('aberto'); }
   window.fechar = fechar;
 
-  // ---- categorias: criam-se e editam-se DENTRO do formulário de despesa ----
-  // (não têm teto — são só gavetas com uma cor). A escolha fica no select da
-  // despesa; «+ nova» acrescenta, o lápis renomeia (ou apaga) a que estiver escolhida.
-  var CAT_MODO = '';   // 'nova' | 'editar'
+  // ---- categorias: escrevem-se e pesquisam-se DENTRO do formulário --------
+  // O campo é simultaneamente pesquisa e criação. Se o nome não existir, só a
+  // paleta aparece; ao guardar a despesa, a categoria nasce com a cor sugerida
+  // (ou com a que o casal escolher). O lápis continua a editar uma já existente.
+  var CAT_MODO = '';   // 'nova-auto' | 'editar'
   var CAT_COR = '';    // a cor escolhida no formulário (sugerida, ou a do casal)
 
   // As pastilhas de cor sugeridas + a escolha atual em destaque.
@@ -636,24 +672,27 @@
   window.catCorEscolher = function (hex) { setCatCor(hex); };
 
   window.catInline = function (modo) {
-    var sel = $('md-categoria');
     renderCatCores();
     if (modo === 'editar') {
-      if (!sel.value) { toast('Escolha uma categoria para editar, ou use «+ nova».', true); return; }
+      var id = $('md-categoria-id').value;
+      var atual = (ORC.categorias || []).find(function (c) { return +c.id === +id; });
+      if (!atual) { toast('Escolha uma categoria existente para editar.', true); return; }
       CAT_MODO = 'editar';
-      $('md-cat-nome').value = sel.options[sel.selectedIndex].textContent;
+      $('md-cat-nome').value = atual.nome;
+      $('md-cat-inline').querySelector('.cat-inline-lin').style.display = '';
       $('md-cat-apagar').style.display = '';
-      setCatCor(corCat(sel.value));                 // a que tem em vigor (guardada ou sugerida)
+      setCatCor(corCat(id));                        // a que tem em vigor (guardada ou sugerida)
     } else {
-      CAT_MODO = 'nova';
-      $('md-cat-nome').value = '';
-      $('md-cat-apagar').style.display = 'none';
-      setCatCor(corSugerida((ORC.categorias || []).length)); // uma sugestão nova, variada
+      return;
     }
     $('md-cat-inline').style.display = '';
     setTimeout(function () { $('md-cat-nome').focus(); }, 40);
   };
-  window.catInlineFechar = function () { $('md-cat-inline').style.display = 'none'; CAT_MODO = ''; };
+  window.catInlineFechar = function () {
+    $('md-cat-inline').style.display = 'none';
+    $('md-cat-inline').querySelector('.cat-inline-lin').style.display = '';
+    CAT_MODO = '';
+  };
 
   // Escolher uma cor à mão (o seletor nativo) também tira o destaque das sugeridas.
   (function () {
@@ -665,18 +704,18 @@
     var nome = $('md-cat-nome').value.trim();
     if (!nome) { toast('Dê um nome à categoria.', true); return; }
     var corpo = { nome: nome, cor: CAT_COR || '' };
-    if (CAT_MODO === 'editar') corpo.id = $('md-categoria').value;
+    if (CAT_MODO === 'editar') corpo.id = $('md-categoria-id').value;
     var d = await window.api('orc_categoria_guardar', { method: 'POST', body: JSON.stringify(corpo) });
     if (!d || !d.success) return;
     var novoId = d.id;
     await carregar();                          // refresca a barra, as pastilhas e o estado
-    preencheCategorias('md-categoria', novoId); // repõe o select, já com a nova escolhida
+    preencheCategorias(novoId);                  // repõe a pesquisa, já com a categoria escolhida
     catInlineFechar();
     toast(corpo.id ? 'Categoria guardada.' : 'Categoria criada.');
   };
 
   window.catInlineApagar = async function () {
-    var id = $('md-categoria').value;
+    var id = $('md-categoria-id').value;
     if (!id) return;
     const r = await licConfirmar({
       titulo: 'Apagar esta categoria?',
@@ -688,27 +727,75 @@
     var d = await window.api('orc_categoria_apagar&id=' + id, { method: 'POST' });
     if (!d || !d.success) return;
     await carregar();
-    preencheCategorias('md-categoria', '');
+    preencheCategorias('');
     catInlineFechar();
     toast('Categoria apagada.');
   };
 
   // ---- despesas ----
-  function preencheCategorias(sel, escolhida) {
-    var s = $(sel); s.innerHTML = '<option value="">— sem categoria —</option>';
+  function chaveCategoria(nome) {
+    return String(nome || '').trim().toLocaleLowerCase('pt-PT')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function categoriaPeloNome(nome) {
+    var chave = chaveCategoria(nome);
+    if (!chave) return null;
+    return (ORC.categorias || []).find(function (c) { return chaveCategoria(c.nome) === chave; }) || null;
+  }
+  function preencheCategorias(escolhida) {
+    var lista = $('md-categorias-lista'); lista.innerHTML = '';
     (ORC.categorias || []).forEach(function (c) {
       var o = document.createElement('option');
-      o.value = c.id; o.textContent = c.nome;
-      if (+escolhida === +c.id) o.selected = true;
-      s.appendChild(o);
+      o.value = c.nome; lista.appendChild(o);
     });
+    var atual = (ORC.categorias || []).find(function (c) { return +c.id === +escolhida; });
+    $('md-categoria').value = atual ? atual.nome : '';
+    $('md-categoria-id').value = atual ? atual.id : '';
+    $('md-cat-editar').style.display = atual ? '' : 'none';
+    catInlineFechar();
+  }
+  function categoriaDigitada() {
+    var nome = $('md-categoria').value.trim();
+    var existente = categoriaPeloNome(nome);
+    $('md-categoria-id').value = existente ? existente.id : '';
+    $('md-cat-editar').style.display = existente ? '' : 'none';
+    if (!nome || existente) {
+      if (CAT_MODO === 'nova-auto') catInlineFechar();
+      return;
+    }
+    if (CAT_MODO !== 'nova-auto') {
+      CAT_MODO = 'nova-auto';
+      renderCatCores();
+      setCatCor(corSugerida((ORC.categorias || []).length));
+    }
+    // Para criar, o nome já está no campo de pesquisa: repetir outro campo e
+    // três botões era precisamente o atrito. Fica visível apenas a paleta.
+    $('md-cat-inline').querySelector('.cat-inline-lin').style.display = 'none';
+    $('md-cat-inline').style.display = '';
+  }
+  $('md-categoria').addEventListener('input', categoriaDigitada);
+  $('md-categoria').addEventListener('change', categoriaDigitada);
+
+  async function categoriaParaGuardar() {
+    var nome = $('md-categoria').value.trim();
+    if (!nome) return '';
+    var existente = categoriaPeloNome(nome);
+    if (existente) return existente.id;
+    var criada = await window.api('orc_categoria_guardar', {
+      method: 'POST', body: JSON.stringify({ nome: nome, cor: CAT_COR || '' })
+    });
+    if (!criada || !criada.success) return false;
+    await carregar();
+    preencheCategorias(criada.id);
+    toast('Categoria criada.');
+    return criada.id;
   }
 
   function abrirDespesa() {
     $('m-desp-titulo').textContent = 'Nova despesa';
     $('md-id').value = ''; $('md-desc').value = ''; $('md-valor').value = '';
     $('md-estado').value = 'previsto'; $('md-fornecedor').value = ''; $('md-nota').value = '';
-    preencheCategorias('md-categoria', '');
+    preencheCategorias('');
     $('md-parcelas-cx').style.display = 'none';    // parcelas só depois de existir
     $('md-fatura-cx').style.display = 'none';       // fatura idem
     abrir('m-desp'); setTimeout(function () { $('md-desc').focus(); }, 50);
@@ -722,7 +809,7 @@
     $('md-id').value = d.id; $('md-desc').value = d.descricao;
     $('md-valor').value = paraCampo(d.valor); $('md-estado').value = d.estado;
     $('md-fornecedor').value = d.fornecedor || ''; $('md-nota').value = d.nota || '';
-    preencheCategorias('md-categoria', d.categoria_id);
+    preencheCategorias(d.categoria_id);
     $('md-parcelas-cx').style.display = PODE ? '' : 'none';
     $('md-fatura-cx').style.display = '';
     renderFaturaNoModal(d);
@@ -775,10 +862,17 @@
   };
 
   async function guardarDespesa() {
+    if (!$('md-desc').value.trim()) {
+      toast('Descreva a despesa.', true);
+      $('md-desc').focus();
+      return;
+    }
+    var categoriaId = await categoriaParaGuardar();
+    if (categoriaId === false) return;
     var d = await window.api('orc_despesa_guardar', {
       method: 'POST', body: JSON.stringify({
         id: $('md-id').value, descricao: $('md-desc').value.trim(), valor: $('md-valor').value.trim(),
-        estado: $('md-estado').value, categoria_id: $('md-categoria').value,
+        estado: $('md-estado').value, categoria_id: categoriaId,
         fornecedor: $('md-fornecedor').value.trim(), nota: $('md-nota').value.trim()
       })
     });

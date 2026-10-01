@@ -85,6 +85,9 @@ $CAS  = casalDaFicha($conn);
   .o-barra span{ display:flex; align-items:center; justify-content:center; font-size:var(--t-apoio); font-weight:600;
                  color:#fff; white-space:nowrap; overflow:hidden; min-width:0; border-radius:5px;
                  transition:width .35s ease; }
+  .o-barra-valor{ display:block; width:100%; padding:0 .25rem; text-align:center; overflow:hidden;
+                  white-space:nowrap; line-height:1; }
+  .o-barra span.compacto .o-barra-valor{ font-size:calc(var(--t-apoio) - 1px); letter-spacing:-.02em; }
   .o-barra .g-pago{ background:var(--o-pago); }
   .o-barra .g-prev{ background:var(--o-prev); color:var(--forest-deep); }
   .o-legenda{ display:flex; flex-wrap:wrap; gap:.4rem 1.1rem; margin-top:.8rem; font-size:var(--t-apoio); color:var(--ink-fraco); }
@@ -151,7 +154,7 @@ $CAS  = casalDaFicha($conn);
 
   /* ---- Categoria criada/editada dentro do form de despesa ---- */
   .cat-linha{ display:flex; gap:.4rem; align-items:center; }
-  .cat-linha select{ flex:1; }
+  .cat-linha input[type=text]{ flex:1; min-width:0; }
   .cat-inline{ margin-top:.5rem; }
   .cat-inline-lin{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; }
   .cat-inline-lin input[type=text]{ flex:1; min-width:140px; }
@@ -427,8 +430,11 @@ $CAS  = casalDaFicha($conn);
     <div class="campo">
       <label for="md-categoria">Categoria</label>
       <div class="cat-linha">
-        <select id="md-categoria"><option value="">— sem categoria —</option></select>
-        <button type="button" class="mini" onclick="catInline('nova')">+ nova</button>
+        <input type="text" id="md-categoria" list="md-categorias-lista" maxlength="80"
+               role="combobox" aria-autocomplete="list" autocomplete="off"
+               placeholder="Sem categoria — escreva para procurar ou criar">
+        <input type="hidden" id="md-categoria-id">
+        <datalist id="md-categorias-lista"></datalist>
         <button type="button" class="mini" id="md-cat-editar" onclick="catInline('editar')" title="Editar a categoria escolhida">&#9998;</button>
       </div>
       <div class="cat-inline" id="md-cat-inline" style="display:none">

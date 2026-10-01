@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O formulário de despesa pesquisa categorias pelo nome e cria uma nova directamente com a cor escolhida',
+         'assets/orcamento.js', 'async function categoriaParaGuardar'],
+        ['As barras de Pago e Por pagar abreviam automaticamente os valores quando o espaço é reduzido',
+         'assets/orcamento.js', 'function ajustarRotulosBarra'],
         ['A miniatura e os atalhos do Convite digital mostram exactamente a peça em vigor no casamento aberto',
          'digital.php', "'convite-digital.php?demo=1&atual=1'"],
         ['Os convites digitais mostram o ícone Kulemba no separador, inclusive quando descarregados',

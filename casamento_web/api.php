@@ -9726,6 +9726,15 @@ if ($acao === 'orc_categoria_guardar') {
         $c = strtolower(trim((string)$d['cor']));
         if (preg_match('/^#[0-9a-f]{6}$/', $c)) $cor = $c;
     }
+    // O campo de pesquisa pode ser guardado duas vezes por cliques rápidos ou
+    // por dois separadores. Um nome já existente é a mesma gaveta: devolve-se
+    // o id dela em vez de criar duplicados visualmente indistinguíveis.
+    if (!$id) {
+        $ja = $conn->prepare("SELECT id FROM {$P}orcamento_categorias WHERE casamento_id=$cid AND nome=? LIMIT 1");
+        $ja->bind_param('s', $nome); $ja->execute();
+        $linhaJa = $ja->get_result()->fetch_assoc();
+        if ($linhaJa) ok(['id' => (int)$linhaJa['id'], 'existente' => true, 'resumo' => orcamentoResumo($conn)]);
+    }
     if ($id) {
         // Só se mexe na cor quando ela vem no pedido — guardar o nome não apaga
         // a cor escolhida antes.
