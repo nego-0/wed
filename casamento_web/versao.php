@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os convites digitais mostram o ícone Kulemba no separador, inclusive quando descarregados',
+         'assets/convite-base.html', 'assets/icone-sistema-32.png'],
         ['Os três indicadores da campanha cabem lado a lado no telemóvel sem rolagem horizontal',
          'assets/central.css', 'grid-template-columns:repeat(3,minmax(0,1fr))'],
         ['Os formulários modais do administrador rolam por inteiro, como os do Orçamento',

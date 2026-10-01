@@ -84,6 +84,11 @@ if (!$c) {
     header('Content-Type: text/html; charset=utf-8');
     echo '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+       . '<link rel="icon" href="' . escP(asset('assets/icone-sistema-32.png')) . '" type="image/png" sizes="32x32">'
+       . '<link rel="icon" href="' . escP(asset('assets/icone-sistema-512.png')) . '" type="image/png" sizes="512x512">'
+       . '<link rel="alternate icon" href="' . escP(asset('favicon.ico')) . '" type="image/x-icon">'
+       . '<link rel="apple-touch-icon" href="' . escP(asset('assets/icone-sistema-180.png')) . '" sizes="180x180">'
+       . '<meta name="theme-color" content="#16283a">'
        . '<title>Convite não encontrado</title>'
        . '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;'
        . 'font-family:Georgia,serif;background:#16261E;color:#FBF8F1;text-align:center;padding:2rem}a{color:#D9BC8C}</style>'
@@ -481,7 +486,7 @@ JS;
 // (base64), para o ficheiro poder ser visto completamente offline.
 // ============================================================
 function embutirRecursos(string $html, string $base): string {
-    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','woff2'=>'font/woff2'];
+    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','ico'=>'image/x-icon','woff2'=>'font/woff2'];
 
     $paraDataUri = function (string $rel) use ($base, $mime): ?string {
         $rel = ltrim($rel, '/');
@@ -508,7 +513,16 @@ function embutirRecursos(string $html, string $base): string {
             return $d ? 'url(' . $d . ')' : $m[0];
         }, $html);
 
-    // 3) QRious:  <script src="assets/qrious.min.js"></script> -> inline
+    // 3) Ícones do navegador: o convite descarregado conserva a identidade
+    // da Kulemba mesmo quando é aberto sem ligação à Internet.
+    $html = preg_replace_callback(
+        '#href="(assets/icone-sistema-(?:32|180|512)\.png|favicon\.ico)"#i',
+        function ($m) use ($paraDataUri) {
+            $d = $paraDataUri($m[1]);
+            return $d ? 'href="' . $d . '"' : $m[0];
+        }, $html);
+
+    // 4) QRious:  <script src="assets/qrious.min.js"></script> -> inline
     $qr = $base . '/assets/qrious.min.js';
     if (is_readable($qr)) {
         $js = file_get_contents($qr);
