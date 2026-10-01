@@ -43,12 +43,21 @@ const dia = n => { const d=new Date(); d.setDate(d.getDate()+n); return d.toISOS
         fatura:!!fat&&limpo(fat)&&getComputedStyle(fat).whiteSpace==='nowrap',
         prazos:[...document.querySelectorAll('.o-prazos,.pag,.pag .data,.pag .desc,.pag-acoes')].every(limpo),
         cartao:getComputedStyle(linha).display==='grid',
+        // O cartão não é um formulário: as etiquetas repetidas da tabela ficam
+        // escondidas, e o nome e o valor partilham a linha de topo — é a
+        // hierarquia que faz dele um cartão e não uma tabela encolhida.
+        semRotulos:getComputedStyle(linha.querySelector('td'),'::before').display==='none',
+        parTopo:(()=>{const n=linha.querySelector('td.d-resumo'),v=linha.querySelector('td.d-val');
+          if(!n||!v)return false;const a=n.getBoundingClientRect(),b=v.getBoundingClientRect();
+          return Math.abs(a.top-b.top)<=4&&b.right>=a.right;})(),
         textos:[...document.querySelectorAll('.pag .data')].map(x=>x.textContent.replace(/\s+/g,' ').trim())
       };
     });
     assert.equal(estado.pagina,true,'a página não transborda');
     assert.equal(estado.tabela,true,'o cartão de despesa cabe no ecrã');
     assert.equal(estado.cartao,true,'a despesa usa a disposição mobile em cartão');
+    assert.equal(estado.semRotulos,true,'o cartão dispensa as etiquetas repetidas da tabela');
+    assert.equal(estado.parTopo,true,'o nome e o valor partilham a linha de topo do cartão');
     assert.equal(estado.fatura,true,'+ fatura permanece inteiro e dentro do cartão');
     assert.equal(estado.prazos,true,'avisos, prestações e acções cabem no calendário');
     assert(estado.textos.some(x=>/há 5 dias/.test(x)),'o prazo em atraso continua legível');
