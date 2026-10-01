@@ -1,0 +1,22 @@
+[
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "whatsapp",
+    "rolar": false,
+    "x": 70,
+    "y": 94.2
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "whatsapp",
+    "rolar": false,
+    "x": 17,
+    "y": 90.2
+  }
+]
