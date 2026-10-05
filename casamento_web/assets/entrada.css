@@ -1,17 +1,41 @@
 /* Entrada e inscrição: a primeira impressão usa a linguagem editorial Kulemba. */
 /* A folha de entrada acompanha o tema. `--ivory` é a tinta clara usada sobre
    cabeçalhos escuros e, por isso, não pode servir de fundo no tema escuro. */
-body.entrada-publica{min-height:100svh;background:var(--app-bg);color:var(--text);overflow-x:hidden}
-.entrada-shell{width:min(1180px,100%);margin:auto;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);gap:clamp(28px,5vw,72px);align-items:center}
-.entrada-visual{position:relative;min-height:690px;border-radius:240px 240px 28px 28px;overflow:hidden;isolation:isolate;box-shadow:0 34px 90px #10271d26}
+body.entrada-publica{min-height:100svh;background:var(--app-bg);color:var(--text);overflow-x:hidden;align-items:flex-start}
+.entrada-shell{width:min(1180px,100%);margin-block:auto;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);gap:clamp(28px,5vw,68px);align-items:center}
+.entrada-visual{position:relative;height:clamp(580px,calc(100svh - 2.5rem),720px);min-height:0;border-radius:220px 220px 28px 28px;overflow:hidden;isolation:isolate;box-shadow:0 34px 90px #10271d26}
 .entrada-visual>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.entrada-visual::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(9,31,23,.8));z-index:1}
 .entrada-mensagem{position:absolute;left:clamp(24px,5vw,54px);right:clamp(24px,5vw,54px);bottom:42px;z-index:2;color:#fff}.entrada-mensagem b{display:block;font:400 clamp(31px,4vw,50px)/1.08 var(--serif);max-width:13ch}.entrada-mensagem span{display:block;max-width:46ch;margin-top:13px;color:#ffffffc9;line-height:1.6;font-size:14px}
 .entrada-orbita{position:absolute;z-index:3;display:flex;align-items:center;gap:9px;padding:11px 14px;border:1px solid #ffffff48;border-radius:14px;background:#10271dcc;color:#fff;box-shadow:0 12px 35px #0003;backdrop-filter:blur(10px);font-size:12px;animation:entrada-flutua 6s ease-in-out infinite}.entrada-orbita [data-ico]{display:flex;color:#d8b679}.entrada-orbita [data-ico] svg{width:20px;height:20px}.entrada-orbita.um{top:18%;right:5%}.entrada-orbita.dois{top:36%;left:5%;animation-delay:-2s}.entrada-orbita.tres{top:53%;right:7%;animation-delay:-4s}
-.login-publica .login{max-width:430px}.login-publica .login .card{border-radius:24px;box-shadow:0 22px 60px #10271d12}.entrada-voltar{display:inline-flex;margin-bottom:18px;color:var(--gold-texto);font-size:13px;text-decoration:none}
+.login-publica .login{max-width:440px}.login-publica .login .card{border-radius:24px;box-shadow:0 22px 60px #10271d12}.entrada-voltar{display:inline-flex;margin-bottom:18px;color:var(--gold-texto);font-size:13px;text-decoration:none}
 :root[data-tema="escuro"] .login-publica .login .card,
 :root[data-tema="escuro"] .registo-publico .card{box-shadow:0 22px 60px rgba(0,0,0,.42)}
 .reg-hero{position:relative;min-height:460px;margin-bottom:32px;border-radius:220px 220px 26px 26px;overflow:hidden;color:#fff;isolation:isolate;box-shadow:0 24px 70px #10271d20}.reg-hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%}.reg-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,34,25,.86),rgba(10,34,25,.15) 68%)}.reg-hero-copia{position:relative;z-index:1;max-width:510px;padding:clamp(42px,8vw,86px)}.reg-hero-copia .marca-kulemba{justify-content:flex-start!important;filter:brightness(0) invert(1);margin-bottom:25px}.reg-hero-copia h1{font:400 clamp(38px,5vw,62px)/1.06 var(--serif);color:#fff;margin:0 0 18px}.reg-hero-copia p{line-height:1.7;color:#ffffffce;max-width:45ch}
 @keyframes entrada-flutua{50%{transform:translateY(-9px)}}
-@media(max-width:820px){.entrada-shell{grid-template-columns:1fr}.entrada-visual{min-height:380px;border-radius:160px 160px 22px 22px}.entrada-mensagem b{font-size:34px}.login-publica .login{max-width:480px;margin:auto}.reg-hero{min-height:390px}.reg-hero-copia{padding:45px 30px}.reg-hero::after{background:linear-gradient(90deg,rgba(10,34,25,.86),rgba(10,34,25,.38))}}
-@media(max-width:520px){body.entrada-publica{padding:.8rem}.entrada-visual{min-height:310px}.entrada-orbita{display:none}.entrada-mensagem{bottom:25px}.entrada-mensagem span{font-size:12px}.reg-hero{border-radius:120px 120px 18px 18px;min-height:350px;margin-bottom:20px}.reg-hero-copia{padding:36px 24px}.reg-hero-copia h1{font-size:38px}}
+@media(max-width:820px){
+  body.login-publica{padding:0;align-items:flex-start}
+  .login-publica .entrada-shell{position:relative;display:block;width:100%;min-height:100svh;padding:clamp(150px,26vw,215px) clamp(16px,5vw,36px) 112px}
+  .login-publica .entrada-visual{position:absolute;z-index:0;inset:0 0 auto;height:clamp(250px,40vw,330px);min-height:0;border-radius:0 0 72px 72px;box-shadow:none}
+  .login-publica .entrada-visual::after{background:linear-gradient(180deg,rgba(8,28,20,.12),rgba(8,28,20,.72))}
+  .login-publica .entrada-orbita{display:none}
+  .login-publica .entrada-mensagem{bottom:90px;text-align:center}
+  .login-publica .entrada-mensagem b{font-size:clamp(27px,5vw,36px);max-width:none}
+  .login-publica .entrada-mensagem span{display:none}
+  .login-publica .login{position:relative;z-index:2;max-width:480px;margin:auto}
+  .login-publica .entrada-voltar{margin:0 0 12px 10px;color:#fff;text-shadow:0 1px 12px #0009}
+  .reg-hero{min-height:390px}.reg-hero-copia{padding:45px 30px}.reg-hero::after{background:linear-gradient(90deg,rgba(10,34,25,.86),rgba(10,34,25,.38))}
+}
+@media(max-width:520px){
+  body.entrada-publica{padding:.8rem}
+  body.login-publica{padding:0}
+  .login-publica .entrada-shell{padding:108px 14px 104px}
+  .login-publica .entrada-visual{height:210px;border-radius:0 0 44px 44px}
+  .login-publica .entrada-mensagem{display:none}
+  .login-publica .login .card{padding:1.4rem 1.15rem;border-radius:20px}
+  .login-publica .login-titulo{font-size:1.8rem}
+  .login-publica .evento{margin-bottom:1.35rem}
+  .login-publica .entrada-voltar{margin-left:8px}
+  .reg-hero{border-radius:120px 120px 18px 18px;min-height:350px;margin-bottom:20px}.reg-hero-copia{padding:36px 24px}.reg-hero-copia h1{font-size:38px}
+}
+@media(max-width:360px){.login-publica .entrada-shell{padding-inline:10px}.login-publica .login .card{padding-inline:1rem}.login-publica .pw-wrap input{padding-right:5.8rem}}
 @media(prefers-reduced-motion:reduce){.entrada-orbita{animation:none}}

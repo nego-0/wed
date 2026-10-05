@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O login identifica claramente a entrada, conserva o email após erro e integra a fotografia no topo móvel',
+         'login.php', 'Entrar na Kulemba'],
         ['Reciclagem e Histórico são opções independentes em Mais acções e Repor não quebra no telemóvel',
          'index.php', "['Reciclagem',               'abrirReciclagem()']"],
         ['Categorias e mesas do convite usam o mesmo selector pesquisável das mesas individuais',
