@@ -262,6 +262,7 @@ body.editor select option,body.editor select optgroup{
     linear-gradient(transparent, var(--ed-painel)) local bottom / 100% 18px no-repeat,
     radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.5), transparent) scroll top / 100% 9px no-repeat,
     radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.5), transparent) scroll bottom / 100% 9px no-repeat;
+  background-color:var(--ed-painel);
 }
 
 /* Barras de deslocamento visíveis: no fundo escuro as do sistema quase não se
@@ -277,7 +278,7 @@ body.editor select option,body.editor select optgroup{
 
 /* ---- Camadas ---------------------------------------------- */
 .camada{ display:flex; align-items:center; gap:.5rem; padding:.32rem .4rem; border-radius:6px;
-         cursor:pointer; border:1px solid transparent; }
+         cursor:pointer; border:1px solid transparent; background:#242620; }
 .camada:hover{ background:#34362f; }
 .camada.sel{ background:#3d4a41; border-color:var(--ed-sel); }
 .camada .olho{ background:none; border:0; padding:0; cursor:pointer; color:var(--ed-texto-2);

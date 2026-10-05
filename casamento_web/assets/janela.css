@@ -57,6 +57,24 @@ body.editor .pl-modal{
   --j-serif:    'Cormorant Garamond', Georgia, serif;
   --j-sans:     'Jost', system-ui, -apple-system, sans-serif;
 }
+/* Os <select> dos editores também são vestidos por janela.js, mas vivem fora
+   de .pl-modal. licSelUpgrade() marca-os como escolhas de página e essa classe
+   apontava para tokens claros (--card, --cream...) que os editores não têm.
+   O resultado visível era uma caixa e uma lista sem fundo, embora o <select>
+   nativo, escondido por baixo, já fosse opaco. A paleta tem de estar no
+   controlo personalizado que a pessoa realmente abre. */
+body.editor .lic-sel{
+  --j-card:     #2f312c;
+  --j-ink:      #ece7db;
+  --j-texto:    #d6d3c9;
+  --j-fraco:    #979c90;
+  --j-linha:    #43463f;
+  --j-campo:    #23241f;
+  --j-ouro:     #b4864a;
+  --j-ouro-pal: #3b3327;
+  --j-anel:     rgba(217,188,140,.28);
+  --j-sans:     'Jost', system-ui, -apple-system, sans-serif;
+}
 
 /* Os ecrãs do bar tiveram aqui uma paleta própria, de salão escuro, porque a
    página por baixo era escura em qualquer tema e um cartão branco no meio

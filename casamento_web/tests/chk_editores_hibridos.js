@@ -50,14 +50,36 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
     ok(base.cabecalhoTab === 0 && base.cabecalhoRole === 'button', `${nome}: painéis respondem ao teclado`);
     ok(base.ariaLive, `${nome}: mensagens do editor são anunciadas por leitores de ecrã`);
     const fundosSelect = await page.evaluate(() => {
-      const opaco = c => c !== 'transparent' && !/rgba\([^)]*,\s*0(?:\.0+)?\s*\)/.test(c);
-      return [...document.querySelectorAll('select')].flatMap(s => {
+      const opaco = c => {
+        if (!c || c === 'transparent') return false;
+        const m=c.match(/^rgba?\(([^)]+)\)$/);
+        if (!m) return true;
+        const n=m[1].split(/[, /]+/).filter(Boolean);
+        return n.length<4 || Number(n[3])>=.999;
+      };
+      const nativos=[...document.querySelectorAll('select')].flatMap(s => {
         const o=s.querySelector('option');
         return [getComputedStyle(s).backgroundColor, ...(o?[getComputedStyle(o).backgroundColor]:[])];
-      }).map(c => ({cor:c,opaco:opaco(c)}));
+      });
+      const visuais=[...document.querySelectorAll('.lic-sel')].flatMap(cx => [
+        getComputedStyle(cx.querySelector('.lic-sel-bt')).backgroundColor,
+        getComputedStyle(cx.querySelector('.lic-sel-pop')).backgroundColor
+      ]);
+      const camadas=[...document.querySelectorAll('.camada')].map(c=>getComputedStyle(c).backgroundColor);
+      const modeloNovo=document.querySelector('#modelo-novo');
+      return {nativos:nativos.map(c=>({cor:c,opaco:opaco(c)})),
+        visuais:visuais.map(c=>({cor:c,opaco:opaco(c)})),
+        camadas:camadas.map(c=>({cor:c,opaco:opaco(c)})),
+        modeloNovo:!modeloNovo || !!modeloNovo.closest('.lic-sel')};
     });
-    ok(fundosSelect.length>0 && fundosSelect.every(x=>x.opaco),
-      `${nome}: selectores e opções têm fundo opaco (${[...new Set(fundosSelect.map(x=>x.cor))].join(', ')})`);
+    ok(fundosSelect.nativos.length>0 && fundosSelect.nativos.every(x=>x.opaco),
+      `${nome}: selectores nativos e opções conservam fundo opaco`);
+    ok(fundosSelect.visuais.length>0 && fundosSelect.visuais.every(x=>x.opaco),
+      `${nome}: botões e listas dos selectores visíveis têm fundo opaco (${[...new Set(fundosSelect.visuais.map(x=>x.cor))].join(', ')})`);
+    ok(fundosSelect.camadas.length>0 && fundosSelect.camadas.every(x=>x.opaco),
+      `${nome}: linhas do selector de camadas têm fundo opaco`);
+    ok(fundosSelect.modeloNovo,
+      `${nome}: selector de nova camada usa o controlo personalizado verificado`);
     if (nome === 'editor-cartao.php') {
       await page.locator('.ed-mais > summary').click();
       await page.locator('#bt-guias-impressao').click();

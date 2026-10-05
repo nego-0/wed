@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os selectores personalizados e as camadas dos editores têm fundos realmente opacos',
+         'assets/janela.css', 'A paleta tem de estar no'],
         ['Os selectores dos editores são opacos e Camadas fechado não reserva espaço vazio',
          'assets/editor.css', 'Selectores sempre opacos'],
         ['As camadas do editor móvel usam altura natural e não herdam dimensões guardadas no desktop',
