@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As camadas do editor móvel usam altura natural e não herdam dimensões guardadas no desktop',
+         'assets/editor.css', 'Medidas escolhidas na secretária não governam uma gaveta'],
         ['Os modelos usam editores híbridos por capacidades, com interface móvel, rascunhos recuperáveis e controlos acessíveis',
          'assets/editor-hibrido.js', 'kulemba.editor.rascunho.'],
         ['O login identifica claramente a entrada, conserva o email após erro e integra a fotografia no topo móvel',

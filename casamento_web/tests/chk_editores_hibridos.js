@@ -80,6 +80,35 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
     ok(movel.mesa >= 360 && movel.palco >= 300,
       `${nome}: a prévia ocupa o centro útil no telemóvel (mesa ${Math.round(movel.mesa)} / peça ${Math.round(movel.palco)} px; ${movel.palcoCss}; ${movel.transform})`);
     ok(movel.nav >= 56 && movel.botoes.every(x => x >= 44), `${nome}: navegação móvel tem alvos tácteis suficientes`);
+    if (nome === 'convite-editor.php') {
+      // Reproduz a captura: uma altura/uma largura gravadas no desktop não
+      // podem comprimir a lista quando o mesmo editor abre no telemóvel.
+      await page.evaluate(() => localStorage.setItem('ed.paineis.convite-editor.php', JSON.stringify({
+        largura:250, alturas:{Camadas:110}
+      })));
+      await page.reload({waitUntil:'networkidle'}); await page.waitForTimeout(1500);
+      await page.locator('.ed-movel-bt[data-abrir="camadas"]').click();
+      const lista = await page.evaluate(() => {
+        const linhas = [...document.querySelectorAll('#camadas > .camada')].map(x => {
+          const r=x.getBoundingClientRect(); return {top:r.top,bottom:r.bottom,height:r.height};
+        });
+        const add=document.querySelector('#camadas > .add-sec').getBoundingClientRect();
+        const painel=document.querySelector('.ed-paineis').getBoundingClientRect();
+        const corpo=document.getElementById('camadas');
+        return {linhas,addTop:add.top,painelL:painel.width,janela:innerWidth,
+          corpoH:corpo.getBoundingClientRect().height,conteudoH:corpo.scrollHeight,
+          pega:getComputedStyle(document.querySelector('.ed-redim')).display};
+      });
+      const separadas=lista.linhas.every((r,i,a)=>i===0 || r.top>=a[i-1].bottom-1);
+      const ultima=lista.linhas[lista.linhas.length-1];
+      ok(separadas && ultima && lista.addTop>=ultima.bottom-1,
+        'convite-editor.php: camadas e selector de novas secções não se sobrepõem no telemóvel');
+      ok(Math.abs(lista.painelL-lista.janela)<2 && lista.pega==='none',
+        'convite-editor.php: medidas persistidas do desktop são ignoradas na gaveta móvel');
+      ok(lista.corpoH>=lista.conteudoH-1,
+        'convite-editor.php: a lista usa altura natural e a rolagem pertence ao inspector');
+      await page.evaluate(() => localStorage.removeItem('ed.paineis.convite-editor.php'));
+    }
     await page.locator('.ed-movel-bt[data-abrir="previa"]').click();
     ok(await page.locator('body.ed-inspector-on').count() === 0, `${nome}: Prévia devolve toda a área à peça`);
 
