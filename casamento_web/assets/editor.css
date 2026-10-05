@@ -81,6 +81,15 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 /* A lista aberta segue o mesmo escuro (onde o navegador deixa). */
 .ed-opcoes select option{ background:var(--ed-painel); color:var(--ed-texto); }
 
+/* Selectores sempre opacos. Alguns navegadores herdavam o fundo transparente
+   das opções nativas e deixavam ver as camadas ou os campos que estavam por
+   baixo da lista aberta. A regra abrange barra, inspector e listas internas. */
+body.editor select{ background-color:#191a16 !important; color:var(--ed-texto);
+  color-scheme:dark; background-clip:padding-box; }
+body.editor .ed-opcoes select{ background-color:#3a3d37 !important; }
+body.editor select option,body.editor select optgroup{
+  background-color:#242620 !important; color:var(--ed-texto) !important; }
+
 .ed-sep{ width:1px; height:20px; background:var(--ed-linha); }
 
 /* Seletor de versões na barra: a versão em vigor aparece escolhida. Cabe ao
@@ -234,6 +243,9 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
    coluna que desliza não há espaço livre, e o flex-shrink esmagava-o a nada. */
 .ed-painel.cresce{ flex:1 0 auto; min-height:0; }
 .ed-painel.cresce .ed-painel-corpo{ max-height:none; }
+/* Fechado é só o cabeçalho. Sem retirar o flex expansível, «Camadas» podia
+   ficar minimizado e continuar a reservar quase toda a coluna do impresso. */
+.ed-painel.cresce.fechado{ flex:0 0 auto; }
 /* As propriedades são o painel mais fundo dos três: uma camada com texto,
    cerimónias, posição e volta não cabia nos 220px de todos, e o que ficava de
    fora era justamente o que se tinha vindo fazer. Continua a poder puxar-se

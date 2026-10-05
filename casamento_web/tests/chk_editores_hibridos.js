@@ -49,11 +49,33 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
     ok(base.grupos === 2 && base.mais, `${nome}: comandos principais, contexto e Mais acções estão separados`);
     ok(base.cabecalhoTab === 0 && base.cabecalhoRole === 'button', `${nome}: painéis respondem ao teclado`);
     ok(base.ariaLive, `${nome}: mensagens do editor são anunciadas por leitores de ecrã`);
+    const fundosSelect = await page.evaluate(() => {
+      const opaco = c => c !== 'transparent' && !/rgba\([^)]*,\s*0(?:\.0+)?\s*\)/.test(c);
+      return [...document.querySelectorAll('select')].flatMap(s => {
+        const o=s.querySelector('option');
+        return [getComputedStyle(s).backgroundColor, ...(o?[getComputedStyle(o).backgroundColor]:[])];
+      }).map(c => ({cor:c,opaco:opaco(c)}));
+    });
+    ok(fundosSelect.length>0 && fundosSelect.every(x=>x.opaco),
+      `${nome}: selectores e opções têm fundo opaco (${[...new Set(fundosSelect.map(x=>x.cor))].join(', ')})`);
     if (nome === 'editor-cartao.php') {
       await page.locator('.ed-mais > summary').click();
       await page.locator('#bt-guias-impressao').click();
       ok(await page.locator('#arte.guias-impressao').count() === 1,
         'editor-cartao.php: a prova pode mostrar corte e área segura de impressão');
+      const hCamadas=page.locator('.ed-painel[data-grupo="camadas"]>h3');
+      if (await hCamadas.getAttribute('aria-expanded') === 'true') await hCamadas.click();
+      const fechado=await page.evaluate(() => {
+        const p=document.querySelector('.ed-painel[data-grupo="camadas"]');
+        const h=p.querySelector('h3'); const n=p.nextElementSibling;
+        return {painel:p.getBoundingClientRect(),cab:h.getBoundingClientRect(),
+          corpo:getComputedStyle(p.querySelector('.ed-painel-corpo')).display,
+          seguinte:n && n.getBoundingClientRect()};
+      });
+      ok(fechado.corpo==='none' && fechado.painel.height<=fechado.cab.height+2,
+        'editor-cartao.php: Camadas minimizado ocupa apenas o cabeçalho');
+      ok(!fechado.seguinte || fechado.seguinte.top<=fechado.painel.bottom+2,
+        'editor-cartao.php: o painel seguinte sobe sem deixar espaço vazio');
     }
 
     const h = page.locator('.ed-painel>h3').first();
