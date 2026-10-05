@@ -41,7 +41,13 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
       mais: !!document.querySelector('.ed-mais'),
       cabecalhoTab: document.querySelector('.ed-painel>h3').tabIndex,
       cabecalhoRole: document.querySelector('.ed-painel>h3').getAttribute('role'),
-      ariaLive: !!document.querySelector('.ed-estado [aria-live="polite"]')
+      ariaLive: !!document.querySelector('.ed-estado [aria-live="polite"]'),
+      sairIcone: (() => {
+        const svg=document.querySelector('.sair-editor [data-ico="setaEsquerda"] svg.ico');
+        if (!svg) return null;
+        const r=svg.getBoundingClientRect();
+        return {largura:r.width,altura:r.height};
+      })()
     }));
     ok(base.manifesto && base.manifesto.schema === 1 && base.manifesto.ambito,
       `${nome}: recebe o manifesto de capacidades do modelo`);
@@ -49,6 +55,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
     ok(base.grupos === 2 && base.mais, `${nome}: comandos principais, contexto e Mais acções estão separados`);
     ok(base.cabecalhoTab === 0 && base.cabecalhoRole === 'button', `${nome}: painéis respondem ao teclado`);
     ok(base.ariaLive, `${nome}: mensagens do editor são anunciadas por leitores de ecrã`);
+    ok(base.sairIcone && base.sairIcone.largura>=14 && base.sairIcone.altura>=14,
+      `${nome}: Sair do Editor apresenta a seta (${base.sairIcone ? Math.round(base.sairIcone.largura)+'×'+Math.round(base.sairIcone.altura) : 'ausente'})`);
     const fundosSelect = await page.evaluate(() => {
       const opaco = c => {
         if (!c || c === 'transparent') return false;
@@ -115,15 +123,19 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
       const mesa = document.querySelector('.ed-mesa').getBoundingClientRect();
       const nav = document.querySelector('.ed-movel').getBoundingClientRect();
       const palco = document.querySelector('#arte,#palco').getBoundingClientRect();
+      const sairIco = document.querySelector('.sair-editor svg.ico').getBoundingClientRect();
       return { sw:document.documentElement.scrollWidth, vw:innerWidth, mesa:mesa.width,
         palco:palco.width, palcoCss:document.querySelector('#arte,#palco').style.cssText,
         transform:getComputedStyle(document.querySelector('#arte,#palco')).transform,
-        nav:nav.height, botoes:[...document.querySelectorAll('.ed-movel-bt')].map(x=>x.getBoundingClientRect().height) };
+        nav:nav.height, sairIco:{largura:sairIco.width,altura:sairIco.height},
+        botoes:[...document.querySelectorAll('.ed-movel-bt')].map(x=>x.getBoundingClientRect().height) };
     });
     ok(movel.sw <= movel.vw, `${nome}: não há transbordo horizontal a 390 px`);
     ok(movel.mesa >= 360 && movel.palco >= 300,
       `${nome}: a prévia ocupa o centro útil no telemóvel (mesa ${Math.round(movel.mesa)} / peça ${Math.round(movel.palco)} px; ${movel.palcoCss}; ${movel.transform})`);
     ok(movel.nav >= 56 && movel.botoes.every(x => x >= 44), `${nome}: navegação móvel tem alvos tácteis suficientes`);
+    ok(movel.sairIco.largura>=18 && movel.sairIco.altura>=18,
+      `${nome}: a saída móvel mantém o ícone visível (${Math.round(movel.sairIco.largura)}×${Math.round(movel.sairIco.altura)})`);
     if (nome === 'convite-editor.php') {
       // Reproduz a captura: uma altura/uma largura gravadas no desktop não
       // podem comprimir a lista quando o mesmo editor abre no telemóvel.

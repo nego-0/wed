@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O botão Sair do Editor e os restantes sinais SVG aparecem nos dois editores',
+         'editor-cartao.php', "asset('assets/icones.js')"],
         ['Os selectores personalizados e as camadas dos editores têm fundos realmente opacos',
          'assets/janela.css', 'A paleta tem de estar no'],
         ['Os selectores dos editores são opacos e Camadas fechado não reserva espaço vazio',
