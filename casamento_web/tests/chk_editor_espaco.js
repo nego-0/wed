@@ -1,9 +1,9 @@
-// O editor pede mesa, e o manual acompanha o cartão em vigor.
+// O editor adapta a mesa ao ecrã, e o manual acompanha o cartão em vigor.
 //
-// Duas coisas que só se veem de fora: um ecrã pequeno tem de AVISAR (e deixar
-// continuar, que a decisão é de quem trabalha), e o manual de impressão tem de
-// dizer o que o cartão é AGORA — feitio da moldura, tamanho dos ornamentos e a
-// composição livre — e não o que ele era quando alguém escreveu a página.
+// Duas coisas que só se veem de fora: tablet/telemóvel precisam de uma
+// composição própria (ecrã baixo de computador conserva um aviso), e o manual
+// de impressão tem de dizer o que o cartão é AGORA — feitio da moldura,
+// tamanho dos ornamentos e composição livre.
 const { chromium } = require('playwright-core');
 const EXE  = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
@@ -31,63 +31,39 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   });
   await p.goto(BASE + '/index.php', { waitUntil: 'networkidle' });
 
-  // ============ 1. o aviso de ecrã apertado ============
+  // ============ 1. o editor adapta-se ao ecrã ============
   for (const pag of ['editor-cartao.php', 'convite-editor.php']) {
     await p.setViewportSize({ width: 1440, height: 950 });
     await p.goto(BASE + '/' + pag, { waitUntil: 'networkidle' });
-    // "Continuar mesmo assim" vale para a sessão de trabalho inteira, e é isso
-    // que se quer: quem já disse que sabe não quer ouvi-lo em cada página. Aqui
-    // limpa-se para cada editor ser provado de fresco.
     await p.evaluate(() => sessionStorage.removeItem('editor.espaco.avancar'));
-    await p.waitForTimeout(pag === 'convite-editor.php' ? 2600 : 1000);
+    await p.waitForTimeout(pag === 'convite-editor.php' ? 1800 : 600);
     const min = await p.evaluate(() => window.EDITOR_MIN);
-    ok(min && min.l >= 1000 && min.a >= 600, `${pag}: a medida mínima está declarada (${min && min.l}×${min && min.a})`);
-    ok(await p.locator('.esp-aviso.on').count() === 0, 'com mesa que chegue, nem sinal do aviso');
+    ok(min && min.l >= 1000 && min.a >= 600, `${pag}: a medida de precisão está declarada (${min && min.l}×${min && min.a})`);
+    ok(await p.locator('.esp-aviso.on').count() === 0, 'com mesa que chegue, não há aviso');
 
-    // Encolher: o aviso aparece sozinho, sem recarregar.
+    // Tablet e telemóvel têm composição própria: gaveta e barra inferior.
     await p.setViewportSize({ width: 900, height: 640 });
-    await p.waitForTimeout(500);
-    ok(await p.locator('.esp-aviso.on').count() === 1, 'encolher a janela faz o aviso aparecer');
-    const txt = await p.locator('.esp-cartao').innerText();
-    ok(/900 × 640/.test(txt), 'que diz a medida que se tem: ' + (txt.match(/Tem [^.]*/) || [''])[0]);
-    ok(new RegExp(min.l + ' × ' + min.a).test(txt), 'e a que faz falta');
-    ok(/largura e altura/.test(txt), 'e o que é que falta ao certo');
-    ok(await p.locator('body.esp-travado').count() === 1, 'enquanto está à frente, o corpo não se mexe');
+    await p.waitForTimeout(450);
+    ok(await p.locator('.esp-aviso.on').count() === 0, 'no tablet entra a composição adaptada, sem bloqueio');
+    ok(await p.locator('.ed-movel').isVisible(), 'e aparece a navegação adaptada');
+    await p.locator('.ed-movel-bt[data-abrir="camadas"]').click();
+    ok(await p.locator('body.ed-inspector-on').count() === 1, 'a navegação abre o inspector como gaveta');
+    await p.locator('.ed-movel-bt[data-abrir="previa"]').click();
 
-    // Continuar mesmo assim: é um aviso, não uma porta fechada.
-    await p.click('.esp-ok'); await p.waitForTimeout(250);
-    ok(await p.locator('.esp-aviso.on').count() === 0, 'quem quiser continua mesmo assim');
-    ok(await p.locator('body.esp-travado').count() === 0, 'e o editor volta a responder');
-    ok(await p.locator('.ed-estado .esp-chip.on').count() === 1,
-       'ficando a marca na barra de estado, para não se esquecer');
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(450);
+    const medida = await p.evaluate(() => ({
+      doc: document.documentElement.scrollWidth, janela: innerWidth,
+      mesa: document.querySelector('.ed-mesa').getBoundingClientRect().width,
+      peca: document.querySelector('#arte,#palco').getBoundingClientRect().width
+    }));
+    ok(medida.doc <= medida.janela, 'o telemóvel não ganha rolagem horizontal');
+    ok(medida.mesa >= 360 && medida.peca >= 300, 'a prévia usa a largura útil do telemóvel');
 
-    // Voltar a crescer: nem aviso nem marca.
-    await p.setViewportSize({ width: 1440, height: 950 });
-    await p.waitForTimeout(400);
-    ok(await p.locator('.esp-chip.on').count() === 0, 'e a marca sai quando a janela volta a dar mesa');
+    // Só uma janela de computador demasiado baixa mantém o aviso de precisão.
+    await p.setViewportSize({ width: 1440, height: 520 }); await p.waitForTimeout(450);
+    ok(await p.locator('.esp-aviso.on').count() === 1, 'um desktop demasiado baixo conserva o aviso de precisão');
+    await p.click('.esp-ok'); await p.waitForTimeout(150);
   }
-
-  // A escolha de continuar dura a sessão de trabalho, e não só a página.
-  await p.setViewportSize({ width: 900, height: 640 }); await p.waitForTimeout(450);
-  ok(await p.locator('.esp-aviso.on').count() === 0 && await p.locator('.esp-chip.on').count() === 1,
-     'depois de continuar, encolher outra vez traz só a marca — não o aviso todo');
-  await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
-  await p.waitForTimeout(900);
-  ok(await p.locator('.esp-aviso.on').count() === 0,
-     'quem já disse que sabe não o ouve outra vez na página seguinte');
-  ok(await p.locator('.esp-chip.on').count() === 1, 'mas a marca continua lá');
-  await p.click('.esp-chip'); await p.waitForTimeout(250);
-  ok(await p.locator('.esp-aviso.on').count() === 1, 'e a marca traz o aviso de volta a quem o quiser reler');
-  await p.click('.esp-ok'); await p.waitForTimeout(200);
-
-  // Só falta a altura: o aviso tem de o dizer, e não falar de largura.
-  await p.evaluate(() => sessionStorage.removeItem('editor.espaco.avancar'));
-  await p.setViewportSize({ width: 1440, height: 520 });
-  await p.waitForTimeout(500);
-  const sohAltura = await p.locator('.esp-cartao .esp-med').innerText();
-  ok(/altura/.test(sohAltura) && !/largura/.test(sohAltura),
-     'faltando só a altura, é da altura que fala: ' + sohAltura);
-  await p.screenshot({ path: OUT + '/editor-espaco.png' });
   await p.setViewportSize({ width: 1440, height: 950 });
 
   // ============ 2. o manual segue o cartão em vigor ============

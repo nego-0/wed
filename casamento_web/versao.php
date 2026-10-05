@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os modelos usam editores híbridos por capacidades, com interface móvel, rascunhos recuperáveis e controlos acessíveis',
+         'assets/editor-hibrido.js', 'kulemba.editor.rascunho.'],
         ['O login identifica claramente a entrada, conserva o email após erro e integra a fotografia no topo móvel',
          'login.php', 'Entrar na Kulemba'],
         ['Reciclagem e Histórico são opções independentes em Mais acções e Repor não quebra no telemóvel',
@@ -164,7 +166,7 @@ function correcoesEsperadas(): array {
         ['A dica de cores alinha por baixo do selector da paleta',
          'parcial-demonstracao.php', 'demo-toolbar-paleta'],
         ['O login apresenta apenas a instrução de entrada por email',
-         'login.php', 'Entre com o seu email.<br>'],
+         'login.php', 'Ainda não têm conta?'],
         ['Todos os modais respeitam o teclado, as barras móveis e a área visível',
          'assets/modais.js', 'window.visualViewport'],
         ['Formulários, histórico e pré-visualizações abrem acima do menu',

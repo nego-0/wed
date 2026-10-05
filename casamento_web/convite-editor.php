@@ -11,6 +11,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/editor-modelo.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 // Desenhar um modelo da casa não é entrar em casa de casal nenhum: quem
 // responde pela plataforma chega aqui sem ter casamento aberto.
@@ -47,8 +48,14 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 </style>
 <style>
   /* ---- Tela ---- */
-  .cv-palco{ position:relative; background:#16261E; border-radius:10px; overflow:hidden;
+  .cv-escala{ position:relative; flex:0 0 auto; }
+  .cv-palco{ position:absolute; left:0; top:0; background:#16261E; border-radius:10px; overflow:hidden;
              box-shadow:0 18px 50px rgba(0,0,0,.6); transition:width .18s ease; }
+  .cv-palco::after{ content:'A actualizar'; position:absolute; z-index:5; right:.65rem; top:.65rem;
+    padding:.28rem .48rem; border-radius:99px; background:rgba(20,21,17,.82); color:#d9bc8c;
+    font-size:.68rem; letter-spacing:.04em; opacity:0; transform:translateY(-4px); pointer-events:none;
+    transition:opacity .18s ease,transform .18s ease; }
+  .cv-palco.a-renderizar::after{ opacity:1; transform:none; }
   /* Duas telas sobrepostas. A nova compõe-se por baixo, invisível; quando fica
      pronta, trocam-se com um fundido. Sem isto via-se o convite desaparecer e
      voltar — um piscar a cada retoque. */
@@ -158,8 +165,11 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 <?php contagemScript(); ?>
 
 <div class="ed-opcoes">
+  <div class="ed-opcoes-principais">
   <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i data-ico="desfazer"></i> Desfazer</button>
   <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i data-ico="refazer"></i> Refazer</button>
+  </div>
+  <div class="ed-opcoes-contexto">
   <span class="ed-sep"></span>
   <span class="rot">Largura</span>
   <select id="largura" onchange="aplicarLargura()">
@@ -172,6 +182,8 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
     <button class="bt bt-min" onclick="zoomPasso(-1)" title="Reduzir">−</button>
     <span class="val" id="zoom-val">100%</span>
     <button class="bt bt-min" onclick="zoomPasso(1)" title="Ampliar">+</button>
+    <button class="bt bt-min" onclick="ajustarPrevia()" title="Ajustar à janela">Ajustar</button>
+  </div>
   </div>
   <div class="cresce"></div>
   <?php // As versões são de um casamento: guardam o que ESTE casal decidiu. Um
@@ -182,7 +194,12 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
             title="Versões e modelos">—</button>
     <span class="ed-sep"></span>
   <?php endif; ?>
-  <button class="bt" id="bt-repor" onclick="reporSeccao()">Repor Secção</button>
+  <details class="ed-mais">
+    <summary class="bt">Mais acções</summary>
+    <div class="ed-mais-menu">
+      <button type="button" class="perigo" id="bt-repor" onclick="reporSeccao()">Repor secção</button>
+    </div>
+  </details>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
 </div>
 
@@ -197,7 +214,8 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
   </div>
 
   <div class="ed-mesa" id="mesa">
-    <div class="cv-palco" id="palco" style="width:640px">
+    <div class="cv-escala" id="moldura-palco">
+      <div class="cv-palco" id="palco" style="width:640px">
       <!-- A que está à vista tem sempre o id "tela"; o id troca de elemento
            quando as duas se trocam. -->
       <iframe class="tela" id="tela" name="telaA" title="Convite"></iframe>
@@ -212,6 +230,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
         <input type="hidden" name="tela_sec" id="tela-sec" value="">
         <input type="hidden" name="tela_dy" id="tela-dy" value="0">
       </form>
+      </div>
     </div>
   </div>
 
@@ -220,23 +239,23 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
       <h3 onclick="alternarPainel(this)">Propriedades <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="props"></div>
     </div>
-    <div class="ed-painel">
+    <div class="ed-painel" data-grupo="camadas">
       <h3 onclick="alternarPainel(this)">Camadas <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="camadas"></div>
     </div>
-    <div class="ed-painel fechado">
+    <div class="ed-painel fechado" id="p-cores" data-grupo="cores">
       <h3 onclick="alternarPainel(this)">Cores <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="cores"></div>
     </div>
-    <div class="ed-painel fechado">
+    <div class="ed-painel fechado" id="p-tipografia" data-grupo="tipografia">
       <h3 onclick="alternarPainel(this)">Tipografia <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="tipografia"></div>
     </div>
-    <div class="ed-painel fechado">
+    <div class="ed-painel fechado" data-grupo="media">
       <h3 onclick="alternarPainel(this)">Fotos e música <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="media"></div>
     </div>
-    <div class="ed-painel fechado cresce">
+    <div class="ed-painel fechado cresce" data-grupo="efeitos">
       <h3 onclick="alternarPainel(this)">Efeitos <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="efeitos"></div>
     </div>
@@ -244,7 +263,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 </div>
 
 <div class="ed-estado">
-  <span id="estado">Escolha um texto na tela, ou uma camada à direita.</span>
+  <span id="estado" role="status" aria-live="polite">Escolha um texto na tela, ou uma camada à direita.</span>
   <div class="cresce"></div>
   <span class="aviso-txt" id="passos"></span>
   <span class="marca-sujo" id="marca-sujo">alterações por guardar</span>
@@ -258,8 +277,15 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
-<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?> };</script>
+<script>
+window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?>, ambito:'digital' };
+window.EDITOR_HIBRIDO = {
+  ambito:'digital', chave:<?= json_encode($MODELO ? 'modelo-'.(int)$MODELO['id'] : 'casamento-'.casamentoAtual()) ?>,
+  manifesto:<?= json_encode(manifestoEditorModelo('digital', $DEFS_ED, $MODELO), JSON_UNESCAPED_UNICODE) ?>
+};
+</script>
 <script src="<?= asset('assets/editor-espaco.js') ?>"></script>
+<script src="<?= asset('assets/editor-hibrido.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const PADRAO   = <?= json_encode(defsPadrao(), JSON_UNESCAPED_UNICODE) ?>;
@@ -516,7 +542,11 @@ function marcarBotoes(){
 }
 
 // ---------- alterações por guardar ----------
-function marcarSujo(v){ if (SUJO===v) return; SUJO=v; $('marca-sujo').classList.toggle('on', v); }
+function marcarSujo(v){
+  if (SUJO===v) return;
+  SUJO=v; $('marca-sujo').classList.toggle('on', v);
+  if (window.EditorHibrido) EditorHibrido.alterado(v);
+}
 window.addEventListener('beforeunload', e=>{ if (SUJO){ e.preventDefault(); e.returnValue=''; } });
 // Uma foto trocada só FICA se o casal guardar/actualizar uma versão. Se sair
 // sem o fazer — incluindo fechar a aba ou o navegador —, avisa-se o servidor
@@ -820,6 +850,8 @@ function trocarTela(){
   $('f-tela').target = antiga.name;    // a próxima recomposição vai para esta
   aplicarFerramenta();                 // a tela nova nasce sempre com as marcas
   ajustarAltura();
+  $('palco').classList.remove('a-renderizar');
+  $('palco').removeAttribute('aria-busy');
   // Passado o fundido, larga-se o documento que saiu: dois convites a correr
   // ao mesmo tempo são duas contagens decrescentes e duas animações.
   clearTimeout(trocarTela._t);
@@ -886,6 +918,8 @@ function recarregarTela(){
   // do fundido anterior não pode navegar esse documento para about:blank.
   clearTimeout(trocarTela._t);
   telaPronta = false;
+  $('palco').classList.add('a-renderizar');
+  $('palco').setAttribute('aria-busy', 'true');
   // A tela vai ser recomposta de raiz, e um documento novo começa no princípio.
   // Leva consigo o sítio onde estava a ser lida: sem isto, cada retoque punha o
   // convite no topo e mandava-o descer outra vez até à secção — a maquete
@@ -1687,8 +1721,14 @@ const PASSOS = [.5,.6,.75,.9,1,1.25,1.5];
 let zoom = 1;
 function aplicarZoom(){
   $('palco').style.transform = 'scale('+zoom+')';
-  $('palco').style.transformOrigin = 'top center';
+  $('palco').style.transformOrigin = 'top left';
   $('zoom-val').textContent = Math.round(zoom*100)+'%';
+  dimensionarMolduraPalco();
+}
+function dimensionarMolduraPalco(){
+  const p = $('palco'), m = $('moldura-palco'); if (!p || !m) return;
+  m.style.width = Math.round(p.offsetWidth * zoom) + 'px';
+  m.style.height = Math.round(p.offsetHeight * zoom) + 'px';
 }
 function zoomPasso(d){
   const i = PASSOS.indexOf(zoom);
@@ -1698,11 +1738,20 @@ function zoomPasso(d){
 function aplicarLargura(){
   const w = $('largura').value;
   $('palco').style.width = w+'px';
+  dimensionarMolduraPalco();
 }
+function ajustarPrevia(){
+  const m = $('mesa').getBoundingClientRect();
+  const w = Number($('largura').value || 640);
+  zoom = Math.max(.35, Math.min(1.5, (m.width - 32) / w));
+  aplicarZoom(); ajustarAltura();
+}
+window.addEventListener('resize', () => { if (innerWidth < 1280) ajustarPrevia(); });
 function ajustarAltura(){
   const h = $('mesa').clientHeight - 52;
   // A altura é do palco: as duas telas ocupam-no por inteiro, sobrepostas.
   $('palco').style.height = Math.max(420, h/zoom) + 'px';
+  dimensionarMolduraPalco();
 }
 window.addEventListener('resize', ajustarAltura);
 
@@ -1781,6 +1830,12 @@ async function gravarDefs(defs, proteger){
 }
 
 async function guardar(opcoes){
+  const btGuardar = $('bt-guardar');
+  if (btGuardar.disabled) return false;
+  btGuardar.disabled = true;
+  btGuardar.setAttribute('aria-busy', 'true');
+  msg('A guardar…');
+  try {
   const defs = defsAlteradas();
 
   // Um MODELO da casa (só o admin lá chega) grava-se direto e inteiro.
@@ -1822,6 +1877,10 @@ async function guardar(opcoes){
 
   // O casal SEM versão sua: «Guardar Como» — nasce uma versão com nome.
   return await guardarComo(defs);
+  } finally {
+    btGuardar.disabled = false;
+    btGuardar.removeAttribute('aria-busy');
+  }
 }
 
 function guardarComo(defs){
@@ -1932,12 +1991,17 @@ async function reporSeccao(){
 
 // ---------- arranque ----------
 renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia(); renderVersoes();
-aplicarZoom(); ajustarAltura(); marcarBotoes(); rotularBotaoRepor();
+aplicarZoom(); ajustarAltura(); if (innerWidth < 1280) ajustarPrevia(); marcarBotoes(); rotularBotaoRepor();
 // As duas telas: o «load» é de cada elemento, e o id anda de uma para a outra.
 [$('tela'), $('tela-b')].forEach(f =>
   f.addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); }));
 recarregarTela();                       // primeira pintura da tela
 msg('Clique num texto do convite para o editar.');
+EditorHibrido.ligarRascunho({
+  capturar: () => instantaneo(),
+  restaurar: estado => aplicarEstado(typeof estado === 'string' ? estado : JSON.stringify(estado)),
+  mostrarSujo: () => marcarSujo(true)
+});
 </script>
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>

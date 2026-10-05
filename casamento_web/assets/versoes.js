@@ -78,6 +78,7 @@
     var aba = 'versoes';
     var ocupado = false;
     var jan = null;
+    var focoAnterior = null;
 
     function q(accao, extra) {
       return accao + '&ambito=' + encodeURIComponent(ambito) + (extra || '');
@@ -146,15 +147,27 @@
 
     function abrir(qual) {
       criarJanela();
+      focoAnterior = document.activeElement;
       if (qual) aba = qual;
       jan.classList.add('aberta');
       pintar();
       recarregar();
+      setTimeout(function () { var x = jan.querySelector('.vs-x'); if (x) x.focus(); }, 0);
     }
-    function fechar() { if (jan) jan.classList.remove('aberta'); }
+    function fechar() {
+      if (jan) jan.classList.remove('aberta');
+      if (focoAnterior && focoAnterior.focus) focoAnterior.focus();
+    }
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && jan && jan.classList.contains('aberta')) fechar();
+      if (e.key !== 'Tab' || !jan || !jan.classList.contains('aberta')) return;
+      var f = Array.prototype.slice.call(jan.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'))
+        .filter(function (x) { return !x.disabled && x.offsetParent !== null; });
+      if (!f.length) return;
+      var primeiro = f[0], ultimo = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
     });
 
     function pintar() {

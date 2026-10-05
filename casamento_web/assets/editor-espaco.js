@@ -1,10 +1,10 @@
 /* ============================================================
    editor-espaco.js — O editor precisa de mesa para trabalhar
 
-   Os editores têm três colunas — ferramentas, peça e painéis — e
-   uma barra de opções que não deve passar a duas linhas. Abaixo de
-   certa medida deixam de caber: os painéis comem a peça, a barra
-   quebra e o editor salta por baixo do rato a meio de um gesto.
+   No computador os editores usam três colunas. Em tablet e telemóvel o
+   núcleo híbrido transforma o inspector numa gaveta e oferece uma barra
+   inferior; aí este aviso já não é necessário. Conserva-se apenas para uma
+   janela de computador demasiado baixa para trabalho de precisão.
 
    Isso não se descobre a olho. Descobre-se depois de meia hora de
    trabalho, quando um arrasto sai torto e não se percebe porquê.
@@ -26,6 +26,7 @@
 
   function falta() {
     var l = window.innerWidth, a = window.innerHeight;
+    if (l < 1280) return null; // existe uma composição adaptada para esta largura
     if (l >= M.l && a >= M.a) return null;
     return { l: l, a: a, estreito: l < M.l, baixo: a < M.a };
   }
@@ -40,10 +41,9 @@
       '<div class="esp-cartao" role="alertdialog" aria-labelledby="esp-tit">' +
         '<h2 id="esp-tit">Este ecrã é pequeno para o editor</h2>' +
         '<p class="esp-med"></p>' +
-        '<p>O editor precisa de <b>' + M.l + ' × ' + M.a + '</b> para as ferramentas, a peça e os ' +
-          'painéis caberem lado a lado. Mais apertado do que isto, os painéis comem a peça e a barra ' +
-          'de cima passa a duas linhas — o editor salta por baixo do rato a meio de um gesto, e o que ' +
-          'se vê deixa de ser o que sai impresso.</p>' +
+        '<p>O editor precisa de <b>' + M.l + ' × ' + M.a + '</b> para manter a peça, as ferramentas e ' +
+          'os controlos visíveis durante ajustes de precisão. Nesta altura alguns controlos podem ' +
+          'ficar fora da área confortável de trabalho.</p>' +
         '<p class="esp-sug">Aumente a janela, rode o tablet, ou volte a abrir num ecrã maior. ' +
           'Se estiver com o navegador em meia janela, este é o momento de a alargar.</p>' +
         '<div class="esp-bt">' +

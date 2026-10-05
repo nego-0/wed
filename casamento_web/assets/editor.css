@@ -57,9 +57,11 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .ed-menu .contagem.passou .cg-n{ opacity:.75; }
 
 /* ---- Barra de opções (por baixo do menu) ------------------- */
-.ed-opcoes{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap;
+.ed-opcoes{ display:flex; align-items:center; gap:.65rem; flex-wrap:nowrap;
             background:var(--ed-painel-2); border-bottom:1px solid var(--ed-linha);
             padding:.4rem .8rem; flex:0 0 auto; }
+.ed-opcoes-principais,.ed-opcoes-contexto{ display:flex; align-items:center; gap:.55rem; min-width:0; }
+.ed-opcoes-contexto{ overflow:hidden; }
 .ed-opcoes .rot{ color:var(--ed-texto-2); font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; }
 
 /* O seletor de largura (e qualquer outro nesta barra) veste-se como os botões:
@@ -317,6 +319,20 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
 .bt:disabled{ opacity:.45; cursor:default; }
 .bt-min{ padding:.2rem .45rem; font-size:.75rem; }
 
+/* As reposições são acções ocasionais e destrutivas. Vivem num único menu,
+   deixando a barra estável e o Guardar sempre no mesmo sítio. */
+.ed-mais{ position:relative; flex:none; }
+.ed-mais > summary{ list-style:none; white-space:nowrap; }
+.ed-mais > summary::-webkit-details-marker{ display:none; }
+.ed-mais[open] > summary{ border-color:var(--ed-ouro); }
+.ed-mais-menu{ position:absolute; z-index:120; right:0; top:calc(100% + .45rem); width:230px;
+  padding:.35rem; border:1px solid var(--ed-linha); border-radius:9px; background:var(--ed-painel);
+  box-shadow:0 16px 40px rgba(0,0,0,.45); display:flex; flex-direction:column; }
+.ed-mais-menu button{ border:0; border-radius:6px; padding:.55rem .65rem; text-align:left;
+  background:transparent; color:var(--ed-texto); font:inherit; cursor:pointer; }
+.ed-mais-menu button:hover,.ed-mais-menu button:focus-visible{ background:var(--ed-painel-2); outline:none; }
+.ed-mais-menu button.perigo{ color:#e4a098; }
+
 /* ---- Amostras de paleta ------------------------------------ */
 .amostras{ display:flex; gap:.35rem; align-items:center; }
 .amostra{ width:24px; height:24px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
@@ -422,6 +438,97 @@ body.editor{ margin:0; background:var(--ed-fundo); color:var(--ed-texto);
   border-radius:5px; font-size:1.15rem; color:var(--ed-ouro-claro); text-align:center;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ed-estado .aviso-txt{ color:var(--ed-ouro-claro); }
+
+/* Margens técnicas da prova impressa. A exterior representa o corte e a
+   interior a área segura; são guias do editor, nunca fazem parte da peça. */
+.ed-arte.guias-impressao::before,.ed-arte.guias-impressao::after{
+  content:''; position:absolute; z-index:90; pointer-events:none; box-sizing:border-box; }
+.ed-arte.guias-impressao::before{ inset:3px; border:1px dashed #ef6b61; }
+.ed-arte.guias-impressao::after{ inset:calc(18px * var(--esc, .5)); border:1px dashed #58a8d8; }
+
+/* Rascunho local e recuperação após fecho/queda do navegador. */
+.ed-rascunho-estado{ color:#8fc0a4; }
+.ed-recuperar{ position:fixed; z-index:8500; left:50%; top:4.7rem; transform:translateX(-50%);
+  width:min(620px,calc(100vw - 2rem)); box-sizing:border-box; display:flex; gap:.55rem; align-items:center;
+  padding:.7rem .8rem; background:#263229; border:1px solid var(--ed-sel); border-radius:11px;
+  box-shadow:0 16px 44px rgba(0,0,0,.48); color:var(--ed-texto); }
+.ed-recuperar > div{ flex:1; min-width:0; }
+.ed-recuperar b,.ed-recuperar span{ display:block; }
+.ed-recuperar span{ color:var(--ed-texto-2); font-size:.74rem; margin-top:.1rem; }
+
+/* Navegação adaptada: invisível no computador, torna-se a barra principal em
+   ecrãs tácteis. */
+.ed-movel,.ed-inspector-fechar{ display:none; }
+
+@media (max-width:1279px){
+  .ed-paineis{ position:fixed; z-index:300; right:0; top:0; bottom:60px; width:min(360px,88vw);
+    padding-top:48px; box-shadow:-16px 0 40px rgba(0,0,0,.48); transform:translateX(105%);
+    transition:transform .25s ease; }
+  body.ed-inspector-on .ed-paineis{ transform:translateX(0); }
+  .ed-inspector-fechar{ display:flex; position:absolute; z-index:5; right:.55rem; top:.45rem;
+    width:38px; height:38px; align-items:center; justify-content:center; border:1px solid var(--ed-linha);
+    border-radius:50%; background:var(--ed-painel-2); color:var(--ed-texto); font-size:1.5rem; cursor:pointer; }
+  .ed-mesa{ padding:18px; }
+  .ed-opcoes-contexto .rot,.ed-opcoes-contexto > .ed-sep{ display:none; }
+  .ed-menu .contagem,.ed-menu .versao-app{ display:none; }
+  .ed-corpo{ padding-bottom:60px; }
+  .ed-movel{ position:fixed; z-index:400; left:0; right:0; bottom:0; height:61px; display:grid;
+    grid-template-columns:repeat(5,1fr); padding:4px; box-sizing:border-box;
+    background:var(--ed-painel); border-top:1px solid var(--ed-linha); }
+  .ed-movel-bt{ min-width:0; border:0; border-radius:8px; background:transparent; color:var(--ed-texto-2);
+    font:600 .68rem/1.1 'Jost',system-ui,sans-serif; display:flex; flex-direction:column; gap:2px;
+    align-items:center; justify-content:center; cursor:pointer; }
+  .ed-movel-bt span{ font-size:1rem; line-height:1; color:var(--ed-ouro-claro); }
+  .ed-movel-bt.on{ background:#3d4a41; color:var(--ed-texto); }
+  .ed-movel-bt.guardar{ color:#1a1b17; background:var(--ed-ouro); }
+}
+
+@media (max-width:767px){
+  body.editor{ height:100dvh; min-height:0; }
+  .tira-modelo{ display:none; }
+  .ed-menu{ min-height:42px; box-sizing:border-box; padding:.35rem .55rem; gap:.55rem; }
+  .ed-menu .marca{ font-size:.88rem; }
+  .ed-menu .doc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ed-menu > a:not(.sair-editor),.ed-menu > .ed-sep{ display:none; }
+  .ed-menu .sair-editor{ font-size:0; width:42px; height:38px; display:flex; align-items:center;
+    justify-content:center; border:1px solid var(--ed-linha); border-radius:8px; }
+  .ed-menu .sair-editor i{ width:18px; height:18px; }
+  .ed-opcoes{ min-height:48px; box-sizing:border-box; padding:.3rem .45rem; gap:.4rem; overflow:visible; }
+  .ed-opcoes-principais .bt{ font-size:0; width:42px; height:42px; padding:0; display:flex; align-items:center; justify-content:center; }
+  .ed-opcoes-principais .bt i{ width:18px; height:18px; }
+  .ed-opcoes-contexto{ flex:1; justify-content:center; }
+  .ed-opcoes-contexto .amostras,.ed-opcoes-contexto #folhagem{ display:none; }
+  .ed-opcoes-contexto select{ max-width:132px; }
+  .ed-opcoes > .cresce,.ed-opcoes > .ed-sep,.ed-opcoes > .btn-versao,.ed-opcoes > .ed-mais{ display:none; }
+  .ed-opcoes > #bt-guardar{ display:none; }
+  .ed-corpo{ min-height:0; padding-bottom:61px; }
+  .ed-ferramentas{ display:none; }
+  .ed-mesa{ width:100%; box-sizing:border-box; padding:12px; }
+  .ed-paineis{ top:auto; left:0; right:0; bottom:60px; width:100%; height:min(72dvh,620px);
+    box-sizing:border-box; padding-top:48px; border:1px solid var(--ed-linha); border-radius:18px 18px 0 0;
+    transform:translateY(105%); transition:transform .28s ease; }
+  body.ed-inspector-on .ed-paineis{ transform:translateY(0); }
+  .ed-painel > h3{ min-height:44px; box-sizing:border-box; padding:.65rem .8rem; }
+  .ed-painel-corpo{ max-height:none; overflow:visible; padding:.75rem .85rem; }
+  #p-props > .ed-painel-corpo{ max-height:none; }
+  .campo input[type=text],.campo input[type=number],.campo textarea,.campo select{ min-height:44px; font-size:16px; }
+  .camada{ min-height:46px; box-sizing:border-box; }
+  .camada .olho,.camada .cadeado{ width:44px; height:44px; align-items:center; justify-content:center; opacity:.85; }
+  .amostra{ width:40px; height:40px; }
+  .ferr,.bt{ min-height:42px; }
+  .ed-estado{ display:none; }
+  .ed-movel{ position:fixed; z-index:400; left:0; right:0; bottom:0; height:61px; display:grid;
+    grid-template-columns:repeat(5,1fr); padding:4px max(4px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom));
+    box-sizing:border-box; background:var(--ed-painel); border-top:1px solid var(--ed-linha); }
+  .ed-movel-bt{ min-width:0; border:0; border-radius:8px; background:transparent; color:var(--ed-texto-2);
+    font:600 .64rem/1.1 'Jost',system-ui,sans-serif; display:flex; flex-direction:column; gap:2px;
+    align-items:center; justify-content:center; }
+  .ed-movel-bt span{ font-size:1rem; line-height:1; color:var(--ed-ouro-claro); }
+  .ed-movel-bt.on{ background:#3d4a41; color:var(--ed-texto); }
+  .ed-movel-bt.guardar{ color:#1a1b17; background:var(--ed-ouro); }
+  .ed-recuperar{ top:3.1rem; flex-wrap:wrap; }
+  .ed-recuperar > div{ flex-basis:100%; }
+}
 
 /* ---- Painel de versões (assets/versoes.js) ------------------ */
 .vs-lin{ display:flex; gap:.35rem; align-items:center; }

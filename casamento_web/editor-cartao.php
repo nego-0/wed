@@ -10,6 +10,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/pecas.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/editor-modelo.php';
 [$defs, $MODELO] = defsDoEditor($conn, 'impresso');
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 // Desenhar a peça é o que distingue os escalões «com edição» dos outros: quem
@@ -141,8 +142,11 @@ $camposPorCamada = [
 <?php contagemScript(); ?>
 
 <div class="ed-opcoes">
+  <div class="ed-opcoes-principais">
   <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i data-ico="desfazer"></i> Desfazer</button>
   <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i data-ico="refazer"></i> Refazer</button>
+  </div>
+  <div class="ed-opcoes-contexto">
   <span class="ed-sep"></span>
   <span class="rot">Paleta</span>
   <div class="amostras" id="amostras">
@@ -166,6 +170,7 @@ $camposPorCamada = [
     <button class="bt bt-min" onclick="zoomPasso(1)" title="Ampliar">+</button>
     <button class="bt bt-min" onclick="ajustar()" title="Ajustar à janela">Ajustar</button>
   </div>
+  </div>
   <div class="cresce"></div>
   <?php // As versões são de um casamento: guardam o que ESTE casal decidiu. Um
         // modelo da casa não tem versões, e o seletor saía vazio — um controlo
@@ -175,9 +180,15 @@ $camposPorCamada = [
             title="Versões e modelos">—</button>
     <span class="ed-sep"></span>
   <?php endif; ?>
-  <button class="bt" onclick="reporCamada()" title="Repor os textos originais da camada escolhida">Repor esta camada</button>
-  <button class="bt" onclick="reporPosicoes()" title="Devolver todas as camadas ao sítio que o design lhes deu">Repor composição</button>
-  <button class="bt" onclick="repor()">Repor originais</button>
+  <details class="ed-mais">
+    <summary class="bt">Mais acções</summary>
+    <div class="ed-mais-menu">
+      <button type="button" onclick="reporCamada()">Repor esta camada</button>
+      <button type="button" onclick="reporPosicoes()">Repor composição</button>
+      <button type="button" id="bt-guias-impressao" aria-pressed="false">Mostrar margens de impressão</button>
+      <button type="button" class="perigo" onclick="repor()">Repor originais</button>
+    </div>
+  </details>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
 </div>
 
@@ -219,15 +230,15 @@ $camposPorCamada = [
         <div class="vazio-painel">Escolha uma camada — na lista abaixo ou clicando no cartão — para editar o que ela mostra.</div>
       </div>
     </div>
-    <div class="ed-painel cresce">
+    <div class="ed-painel cresce" data-grupo="camadas">
       <h3 onclick="alternarPainel(this)">Camadas <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="camadas"></div>
     </div>
-    <div class="ed-painel fechado" id="p-cores">
+    <div class="ed-painel fechado" id="p-cores" data-grupo="cores">
       <h3 onclick="alternarPainel(this)">Cores <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="cores"></div>
     </div>
-    <div class="ed-painel fechado" id="p-tipografia">
+    <div class="ed-painel fechado" id="p-tipografia" data-grupo="tipografia">
       <h3 onclick="alternarPainel(this)">Tipografia <span class="chev" data-ico="baixoSeta"></span></h3>
       <div class="ed-painel-corpo" id="tipografia"></div>
     </div>
@@ -241,7 +252,7 @@ $camposPorCamada = [
   <span class="cresce"></span>
   <span class="aviso-txt" id="passos"></span>
   <span class="marca-sujo" id="marca-sujo">alterações por guardar</span>
-  <span id="estado-msg"></span>
+  <span id="estado-msg" role="status" aria-live="polite"></span>
 </div>
 
 <script src="<?= asset('assets/editor-adiar.js') ?>"></script>
@@ -252,8 +263,15 @@ $camposPorCamada = [
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
-<script>window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?> };</script>
+<script>
+window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?>, ambito:'impresso' };
+window.EDITOR_HIBRIDO = {
+  ambito:'impresso', chave:<?= json_encode($MODELO ? 'modelo-'.(int)$MODELO['id'] : 'casamento-'.casamentoAtual()) ?>,
+  manifesto:<?= json_encode(manifestoEditorModelo('impresso', $defs, $MODELO), JSON_UNESCAPED_UNICODE) ?>
+};
+</script>
 <script src="<?= asset('assets/editor-espaco.js') ?>"></script>
+<script src="<?= asset('assets/editor-hibrido.js') ?>"></script>
 <script>
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $ = id => document.getElementById(id);
@@ -348,6 +366,7 @@ function marcarSujo(v){
   if (sujo === v) return;
   // O aviso é o selo ao lado; #estado-msg fica livre para as mensagens.
   sujo = v; $('marca-sujo').classList.toggle('on', v);
+  if (window.EditorHibrido) EditorHibrido.alterado(v);
 }
 function msg(t){ $('estado-msg').textContent = t; $('estado-msg').className = ''; }
 
@@ -1370,6 +1389,11 @@ aplicarPosicoes();
 renderCamadas(); renderProps(); renderCores(); renderTipografia();
 marcarBotoes(); ajustar();
 msg('Clique numa camada para a editar — ou arraste-a no cartão para a mudar de sítio.');
+EditorHibrido.ligarRascunho({
+  capturar: () => instantaneo(),
+  restaurar: estado => aplicarEstado(typeof estado === 'string' ? estado : JSON.stringify(estado)),
+  mostrarSujo: () => marcarSujo(true)
+});
 </script>
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
