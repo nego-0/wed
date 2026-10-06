@@ -13,6 +13,7 @@ exigirModulo('impresso');
 
 $defs = defsAtuais($conn);
 $CAS  = casalInfo($defs);
+$versaoCartao = versaoEmVigor($conn, 'impresso');
 
 // Estilo escolhido (pode ser pré-visualizado por ?paleta=&folhagem= sem gravar)
 $paletaSel   = $_GET['paleta']   ?? $defs['cartao.paleta'];
@@ -112,7 +113,9 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
     <div class="cresce"></div>
     <span class="tag neutra"><?= count($convites) ?> cartões</span>
     <a class="btn" href="editor-cartao.php">Editar o cartão</a>
-    <button class="btn" onclick="guardarEstilo()">Guardar estilo</button>
+    <button class="btn" id="bt-guardar-estilo" onclick="guardarEstilo()">
+      <?= $versaoCartao ? 'Actualizar' : 'Guardar Como' ?>
+    </button>
     <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
   </div>
 
@@ -154,16 +157,63 @@ function estilo(campo, valor){
   u.searchParams.set(campo, valor);
   location.href = u.toString();
 }
-// Gravar o estilo atual como predefinição do cartão
-async function guardarEstilo(){
+// A paleta e a folhagem são desenho, tal como as alterações do editor. A
+// primeira gravação nasce com nome próprio; depois actualiza a versão do casal.
+let VERSAO_CARTAO_ID = <?= $versaoCartao ? (int)$versaoCartao['id'] : 0 ?>;
+const ESTILO_GRAVADO = {
+  'cartao.paleta': <?= json_encode((string)$defs['cartao.paleta']) ?>,
+  'cartao.folhagem': <?= json_encode((string)$defs['cartao.folhagem']) ?>
+};
+function estiloAlterado(){
   const u = new URL(location.href);
-  const defs = {
+  const todos = {
     'cartao.paleta':   u.searchParams.get('paleta')   || <?= json_encode($paletaSel) ?>,
     'cartao.folhagem': u.searchParams.get('folhagem') || <?= json_encode($folhagemSel) ?>
   };
-  const r = await fetch('api.php?action=defs_save', {method:'POST', headers:{'X-CSRF-Token':CSRF}, body: JSON.stringify({defs})});
-  const d = await r.json();
-  toast(d.success ? 'Estilo guardado como predefinição.' : (d.message||'Não foi possível guardar.'));
+  const defs = {};
+  Object.keys(todos).forEach(k => { if (String(todos[k]) !== String(ESTILO_GRAVADO[k])) defs[k] = todos[k]; });
+  return defs;
+}
+async function pedir(acao, corpo){
+  const r = await fetch('api.php?action=' + acao, {method:'POST',
+    headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}, body:JSON.stringify(corpo||{})});
+  return r.json();
+}
+function abrirNomeDaVersao(defs){
+  licFormulario({
+    titulo:'Guardar como uma versão vossa',
+    dica:'A alteração fica só neste casamento; o modelo padrão da plataforma permanece intacto.',
+    guardar:'Guardar versão',
+    campos:[{id:'nome',rot:'Nome desta versão',largura:3,
+      dica2:'Ex.: dourado com folhagem de oliveira'}],
+    aoGuardar:async function(v){
+      if (!v.nome){ licJanelaErro('A vossa versão precisa de um nome.'); return false; }
+      const bt=$('bt-guardar-estilo'); bt.disabled=true;
+      const d=await pedir('defs_save', {defs,proteger_desenho:true,versao_nome:v.nome});
+      bt.disabled=false;
+      if (!d || !d.success){ licJanelaErro((d&&d.message)||'Não foi possível guardar a versão.'); return false; }
+      toast('Guardado na vossa versão «'+v.nome+'».');
+      setTimeout(()=>location.href='cartoes.php',650);
+    }
+  });
+}
+async function guardarEstilo(){
+  const defs=estiloAlterado();
+  if (!Object.keys(defs).length){ toast('Não há alterações por guardar.'); return; }
+  if (!VERSAO_CARTAO_ID){ abrirNomeDaVersao(defs); return; }
+
+  const bt=$('bt-guardar-estilo'); bt.disabled=true;
+  const d=await pedir('defs_save', {defs,proteger_desenho:true});
+  if (!d || !d.success){
+    bt.disabled=false;
+    if (d&&d.precisa_versao){ VERSAO_CARTAO_ID=0; bt.textContent='Guardar Como'; abrirNomeDaVersao(defs); return; }
+    toast((d&&d.message)||'Não foi possível guardar.'); return;
+  }
+  const u=await pedir('versao_atualizar&ambito=impresso&id='+VERSAO_CARTAO_ID, {});
+  bt.disabled=false;
+  if (!u || !u.success){ toast((u&&u.message)||'Não foi possível actualizar a versão.'); return; }
+  toast('Versão «'+(u.nome||'')+'» actualizada.');
+  setTimeout(()=>location.href='cartoes.php',650);
 }
 </script>
 <?php // A escolha da casa também aqui: uma lista com outro desenho no meio de

@@ -45,23 +45,38 @@ if (isset($_GET['modelo'])) {
 // digital sobre o estado da própria peça.
 $emVigor = versaoEmVigor($conn, 'impresso');
 $estadoVs = versaoEstado($conn, 'impresso');   // modelo partilhado com o painel
-$nVersoes = (int)($conn->query("SELECT COUNT(*) FROM {$P}versoes WHERE " . doCasamento() . " AND ambito='impresso'")
-                       ->fetch_row()[0] ?? 0);
+$versoes = [];
+$rv = $conn->query("SELECT id, nome, utilizador, criado_em, atualizado_em
+                    FROM {$P}versoes WHERE " . doCasamento() . " AND ambito='impresso' ORDER BY id DESC");
+if ($rv) $versoes = $rv->fetch_all(MYSQLI_ASSOC);
+$nVersoes = count($versoes);
 
 $abas = ['convites' => 'Lista de produção', 'manuais' => 'Manual de impressão'];
 $aba  = $_GET['aba'] ?? 'convites';
 if (!isset($abas[$aba])) $aba = 'convites';
 
 // ---- 1. Convites físicos -----------------------------------
-$convites = [];
-if ($aba === 'convites') {
-    $res = $conn->query("SELECT c.*, m.nome AS mesa_nome
-                         FROM {$P}convites c
-                         LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
-                         WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
-                         ORDER BY c.nome_exibicao");
-    $convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
-}
+$res = $conn->query("SELECT c.*, m.nome AS mesa_nome
+                     FROM {$P}convites c
+                     LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                     WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                     ORDER BY c.nome_exibicao");
+$convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+// A mesma leitura imediata da página digital: a peça real no topo, com um
+// convite existente quando houver e um destinatário neutro no estado vazio.
+$convProva = $convites[0] ?? null;
+$dadosProva = [
+    'nome' => $convProva ? nomeParaCartao($convProva) : 'Família Exemplo',
+    'mesas' => $convProva ? mesasDoConvite($conn, $convProva) : [],
+];
+$comLugProva = !$convProva || !isset($convProva['mostrar_num_mesa']) || (int)$convProva['mostrar_num_mesa'] === 1;
+$provaCartao = renderCartaoConvite(
+    cartaoDadosEvento($defs), $dadosProva, cartaoPaletaEfetiva($defs),
+    $defs['cartao.folhagem'], $comLugProva, cartaoCamadasVisiveis($defs),
+    cartaoEstiloVars($defs), cartaoPosicoes($defs)
+);
+$linkProva = 'cartoes.php' . ($convProva ? '?id=' . (int)$convProva['id'] : '');
 
 // ---- 2. Manual do cartão -----------------------------------
 // Gerado da configuração atual (manual.php), pelo que acompanha as edições.
@@ -85,18 +100,56 @@ $manual = [
 <link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
 <script src="<?= asset('assets/qrious.min.js') ?>"></script>
 <style>
-  /* Faixa com o estado da peça, acima das abas. */
-  .estado-peca{ display:flex; align-items:center; gap:.7rem; flex-wrap:wrap;
-    background:var(--card); border:1px solid var(--line); border-radius:14px;
-    padding:.7rem .95rem; margin-bottom:1rem; }
-  .estado-peca .cresce{ flex:1; }
-  .estado-peca .txt{ font-size:var(--t-denso); color:var(--ink-fraco); }
-  .estado-peca .qtd{ white-space:nowrap; }
+  /* O mesmo cabeçalho de peça do convite digital: prova, estado e versões. */
+  .peca{ display:grid; grid-template-columns:170px minmax(260px,1fr) minmax(220px,340px);
+    gap:1.4rem; align-items:start; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
+  .peca-prova{ --pv:.236111; border-radius:12px; overflow:hidden; border:1px solid var(--line);
+    background:radial-gradient(120% 100% at 50% 15%,#2a2b26 0%,#191a16 58%,#0e0f0c 100%);
+    position:relative; aspect-ratio:2/3; }
+  .peca-prova .escala{ position:absolute; left:0; top:0; width:720px; height:1080px;
+    transform:scale(var(--pv)); transform-origin:top left; pointer-events:none; }
+  .peca-prova .lupa{ position:absolute; z-index:3; left:0; right:0; bottom:0; text-align:center;
+    padding:.4rem; background:rgba(14,15,12,.82); color:var(--topo-txt);
+    font-size:var(--t-apoio); text-decoration:none; }
+  .peca-prova .lupa:hover{ background:rgba(14,15,12,.95); color:#fff; }
+  .peca-corpo{ min-width:0; }
+  .peca h2{ margin:0 0 .4rem; font-size:var(--t-titulo); }
+  .peca-abas{ display:flex; gap:.25rem; border-bottom:1px solid var(--line); margin:.5rem 0 .9rem; }
+  .p-aba{ border-bottom:2px solid var(--gold); padding:.42rem .1rem; margin-right:1.1rem;
+    font-size:var(--t-denso); color:var(--ink); font-weight:600; }
+  .estado-linha{ margin:0; font-size:var(--t-denso); line-height:1.55; color:var(--ink-fraco); }
   .selo-v{ display:inline-flex; align-items:center; gap:.35rem; border-radius:50px;
            padding:.2rem .7rem; font-size:var(--t-apoio); white-space:nowrap; }
   .selo-v.ok{ background:var(--ok-bg); border:1px solid var(--ok); color:var(--ok); }
   .selo-v.fora{ background:var(--warn-bg); border:1px solid var(--gold-soft); color:var(--warn); }
-  .btn-sm{ padding:.3rem .8rem; font-size:var(--t-apoio); }
+  .mini{ display:flex; gap:1.2rem; flex-wrap:wrap; margin:.8rem 0 0; }
+  .mini div{ font-size:var(--t-apoio); color:var(--ink-fraco); }
+  .mini b{ display:block; font-family:var(--serif); font-size:var(--t-titulo); color:var(--ink); line-height:1.1; }
+  .peca-acoes{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.9rem; justify-content:flex-start; }
+  .peca-vs{ border-left:1px solid var(--line); padding-left:1.2rem; }
+  .peca-vs h3{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase;
+    letter-spacing:.07em; color:var(--ink-fraco); margin:0 0 .5rem; }
+  .peca-vs ul{ list-style:none; margin:0; padding:0; }
+  .peca-vs li{ display:flex; align-items:baseline; gap:.45rem; padding:.28rem 0;
+    border-bottom:1px solid var(--cream); font-size:var(--t-apoio); }
+  .peca-vs li:last-child{ border-bottom:0; }
+  .peca-vs li .nm{ font-family:var(--serif); color:var(--ink); min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .peca-vs li .qd{ margin-left:auto; font-size:var(--t-apoio); color:var(--ink-fraco); white-space:nowrap; }
+  .peca-vs li .em{ font-size:var(--t-apoio); color:var(--ok); white-space:nowrap; }
+  .peca-vs .maisv{ font-size:var(--t-apoio); display:inline-block; margin-top:.5rem; }
+  .peca-vs .nada{ font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.5; }
+  @media (max-width:1100px){
+    .peca{ grid-template-columns:150px 1fr; }
+    .peca-prova{ --pv:.208333; }
+    .peca-vs{ grid-column:1 / -1; border-left:0; border-top:1px solid var(--line);
+      padding-left:0; padding-top:.9rem; }
+  }
+  @media (max-width:560px){
+    .peca{ grid-template-columns:1fr; }
+    .peca-prova{ --pv:.263889; width:190px; max-width:100%; }
+  }
 
   .abas{ display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.2rem; }
   .abas a{ background:var(--card); border:1px solid var(--line); border-radius:50px; padding:.45rem 1.1rem;
@@ -172,26 +225,60 @@ $manual = [
 
 <main id="conteudo">
 <div class="container">
-  <div class="estado-peca no-print">
-    <?php if ($estadoVs['estado'] === 'vigor'): ?>
-      <span class="selo-v ok"><i data-ico="visto"></i> Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span>
-      <span class="txt">É esta versão do cartão que se imprime, e a que o manual retrata.</span>
-    <?php elseif ($estadoVs['estado'] === 'alterada'): ?>
-      <span class="selo-v fora"><b><?= escP($estadoVs['nome']) ?></b> · com alterações</span>
-      <span class="txt">O cartão tem alterações que ainda não guardou como versão. É este estado
-        que se imprime. Guarde-as no editor, ou volte a «<?= escP($estadoVs['nome']) ?>».</span>
-    <?php elseif ($estadoVs['estado'] === 'nenhuma'): ?>
-      <span class="selo-v fora">Sem versão em vigor</span>
-      <span class="txt">Nenhuma das versões guardadas corresponde ao cartão que se imprime agora.
-        Guarde-o no editor, ou volte a uma das versões.</span>
-    <?php else: ?>
-      <span class="selo-v fora">Sem versões guardadas</span>
-      <span class="txt">Ainda não guardou nenhuma versão do cartão. Guarde uma no editor
-        para poder experimentar mudanças e voltar atrás.</span>
-    <?php endif; ?>
-    <span class="cresce"></span>
-    <span class="txt qtd"><?= $nVersoes ?> <?= $nVersoes === 1 ? 'versão guardada' : 'versões guardadas' ?></span>
-    <a class="btn btn-sm" href="editor-cartao.php">Editar o cartão</a>
+  <div class="peca estado-peca no-print">
+    <div class="peca-prova">
+      <div class="escala"><?= $provaCartao ?></div>
+      <a class="lupa" href="<?= escP($linkProva) ?>">Abrir em tamanho real</a>
+    </div>
+    <div class="peca-corpo">
+      <h2><?= escP($CAS['casal']) ?></h2>
+      <div class="peca-abas"><span class="p-aba">Estado da peça</span></div>
+      <div class="estado-linha">
+        <?php if ($estadoVs['estado'] === 'vigor'): ?>
+          <span class="selo-v ok"><i data-ico="visto"></i> Em vigor: <b><?= escP($estadoVs['nome']) ?></b></span><br>
+          É esta versão do cartão que se imprime e que o manual retrata.
+        <?php elseif ($estadoVs['estado'] === 'alterada'): ?>
+          <span class="selo-v fora"><b><?= escP($estadoVs['nome']) ?></b> · com alterações</span><br>
+          O cartão tem alterações ainda sem versão própria. É este estado que se imprime.
+          Guarde-as no editor, ou volte a «<?= escP($estadoVs['nome']) ?>».
+        <?php elseif ($estadoVs['estado'] === 'nenhuma'): ?>
+          <span class="selo-v fora">Sem versão em vigor</span><br>
+          Nenhuma versão guardada corresponde ao cartão actual. Guarde-o no editor,
+          ou volte a uma das versões ao lado.
+        <?php else: ?>
+          <span class="selo-v fora">Sem versões guardadas</span><br>
+          Guarde a primeira versão no editor para experimentar mudanças e voltar atrás.
+        <?php endif; ?>
+      </div>
+      <div class="mini">
+        <div><b><?= count($convites) ?></b> convites físicos</div>
+        <div><b><?= $nVersoes ?></b> versões guardadas</div>
+      </div>
+      <div class="peca-acoes">
+        <a class="btn btn-ouro" href="editor-cartao.php">Editar o cartão</a>
+        <a class="btn" href="<?= escP($linkProva) ?>">Abrir a prova</a>
+      </div>
+    </div>
+    <div class="peca-vs">
+      <h3>Versões guardadas</h3>
+      <?php if (!$versoes): ?>
+        <p class="nada">Nenhuma ainda. Ao alterar o modelo padrão, dê um nome à
+          primeira versão para a poder reconhecer e recuperar.</p>
+      <?php else: ?>
+        <ul>
+          <?php foreach (array_slice($versoes, 0, 5) as $v):
+            $vig = $emVigor && (int)$emVigor['id'] === (int)$v['id']; ?>
+            <li>
+              <span class="nm"><?= escP($v['nome']) ?></span>
+              <?php if ($vig): ?><span class="em"><i data-ico="visto"></i> em vigor</span><?php endif; ?>
+              <span class="qd"><?= escP($v['utilizador'] ?: '—') ?> ·
+                <?= escP(date('d/m H:i', strtotime($v['criado_em']))) ?></span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <a class="maisv" href="editor-cartao.php"><?= $nVersoes > 5 ? 'Ver as '.$nVersoes.' no editor' : 'Gerir no editor' ?></a>
+      <?php endif; ?>
+    </div>
   </div>
 
   <div class="abas no-print">

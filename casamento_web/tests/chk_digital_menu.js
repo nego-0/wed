@@ -84,6 +84,10 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForTimeout(900);
   ok(await p.locator('.estado-peca').count() === 1, 'a entrada do convite impresso mostra o estado da peça');
   ok(await p.locator('.estado-peca .selo-v').count() === 1, 'com o selo da versão em vigor');
+  ok(await p.locator('.estado-peca .peca-prova .cartao').count() === 1,
+     'mostra uma prova real do cartão em vigor, como a entrada digital');
+  ok(await p.locator('.estado-peca .peca-vs').count() === 1,
+     'e reserva a terceira coluna às versões guardadas');
   const txt = (await p.locator('.estado-peca').innerText()).replace(/\s+/g, ' ');
   console.log('   impresso:', txt.slice(0, 110));
   // Com a versão padrão a existir sempre, a peça está "em vigor" nalguma versão
@@ -92,6 +96,16 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
      'e diz em palavras qual é o estado');
   ok(await p.locator('.estado-peca a[href="editor-cartao.php"]').count() === 1,
      'com o caminho para o editor do cartão');
+  const impCx = await p.locator('.estado-peca').boundingBox();
+  ok(impCx.height <= 420, `o cabeçalho impresso mantém-se compacto (${Math.round(impCx.height)}px)`);
+  await p.screenshot({ path: OUT + '/impresso_entrada.png' });
+  for (const larg of [1280, 900, 430]) {
+    await p.setViewportSize({ width: larg, height: 900 });
+    await p.goto(BASE + '/graficas.php', { waitUntil: 'networkidle' });
+    const transborda = await p.evaluate(() =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+    ok(!transborda, `o cabeçalho impresso não transborda a ${larg}px`);
+  }
   await p.setViewportSize({ width: 1440, height: 760 });
 
   // ---------- 2. o menu "⋯" abre para cima quando não cabe ----------

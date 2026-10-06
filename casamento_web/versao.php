@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O convite impresso apresenta prova, estado e versões e guarda alterações rápidas numa versão com nome',
+         'graficas.php', 'O mesmo cabeçalho de peça do convite digital'],
         ['O botão Sair do Editor e os restantes sinais SVG aparecem nos dois editores',
          'editor-cartao.php', "asset('assets/icones.js')"],
         ['Os selectores personalizados e as camadas dos editores têm fundos realmente opacos',

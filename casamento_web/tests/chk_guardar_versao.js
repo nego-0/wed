@@ -53,6 +53,28 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(vs.length === 1, 'e não se duplicou a versão — actualizou a que estava em vigor');
   ok(vs[0].em_vigor, 'a versão do casal continua em vigor após actualizar');
 
+  // ---------- escolha rápida do cartão impresso ----------
+  // A página de cartões tinha uma saída lateral: «Guardar estilo» escrevia a
+  // paleta directamente. Agora segue a mesma regra do editor e pede um nome.
+  const wEstilo = await api('casamento_criar', { nome: 'ZZ Estilo ' + Date.now(), noiva: 'Célia', noivo: 'Dário' });
+  await api('casamento_abrir&id=' + wEstilo.id, {});
+  await p.goto(BASE + '/cartoes.php', { waitUntil: 'networkidle' });
+  await Promise.all([
+    p.waitForLoadState('networkidle'),
+    p.locator('.amostra:not(.on)').first().click()
+  ]);
+  ok((await p.textContent('#bt-guardar-estilo')).trim() === 'Guardar Como',
+     'ao alterar o modelo padrão na página impressa, a acção diz «Guardar Como»');
+  await p.click('#bt-guardar-estilo');
+  await p.waitForTimeout(1500);
+  const vsEstilo = (await api('versao_lista&ambito=impresso')).versoes.filter(v => !v.padrao);
+  ok(vsEstilo.length === 1 && vsEstilo[0].nome === NOME && vsEstilo[0].em_vigor,
+     'a escolha de estilo fica numa versão própria, com nome e em vigor');
+
+  // Volta ao casamento principal, ainda sem versão impressa, para provar o
+  // mesmo fluxo dentro do editor.
+  await api('casamento_abrir&id=' + w.id, {});
+
   // ---------- cartão impresso ----------
   await p.goto(BASE + '/editor-cartao.php', { waitUntil: 'networkidle' });
   await p.waitForTimeout(1500);
@@ -71,8 +93,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // limpeza
   await api('modelo_apagar&id=' + mod.id, {});
-  await api('casamento_estado&id=' + w.id + '&estado=arquivado', {});
-  await api('casamento_apagar&id=' + w.id, {});
+  for (const id of [w.id, wEstilo.id]) {
+    await api('casamento_estado&id=' + id + '&estado=arquivado', {});
+    await api('casamento_apagar&id=' + id, {});
+  }
 
   console.log('erros JS:', errs.length ? errs.join(' | ') : 'nenhum');
   ok(errs.length === 0, 'nenhum erro de JavaScript');
