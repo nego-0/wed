@@ -122,27 +122,28 @@ body.editor select option,body.editor select optgroup{
 .btn-versao.alterado b{ color:var(--ed-ouro-claro); }
 
 .vs-jan{ position:fixed; inset:0; z-index:8000; display:none;
-         background:rgba(10,11,9,.72); padding:2.4vh 1rem; overflow:auto; }
-.vs-jan.aberta{ display:block; }
+         background:rgba(10,11,9,.72); padding:2.4vh 1rem; overflow:hidden; }
+.vs-jan.aberta{ display:flex; align-items:flex-start; justify-content:center; }
 .vs-jan.ocupado{ cursor:progress; }
 .vs-jan.ocupado .vs-caixa{ opacity:.6; pointer-events:none; }
-.vs-caixa{ max-width:min(900px,94vw); margin:0 auto; background:var(--ed-painel);
+.vs-caixa{ max-width:min(900px,94vw); width:100%; max-height:95.2vh; margin:0 auto; background:var(--ed-painel);
            border:1px solid var(--ed-linha); border-radius:14px; overflow:hidden;
+           display:flex; flex-direction:column;
            box-shadow:0 24px 60px rgba(0,0,0,.5); }
 .vs-topo{ display:flex; align-items:center; justify-content:space-between;
           padding:.7rem 1rem; background:var(--ed-painel-2);
-          border-bottom:1px solid var(--ed-linha); }
+          border-bottom:1px solid var(--ed-linha); flex:none; }
 .vs-topo h3{ margin:0; font-size:1rem; font-weight:500; color:var(--ed-ouro-claro); }
 .vs-x{ background:none; border:0; color:var(--ed-texto-2); font-size:1.5rem;
        line-height:1; cursor:pointer; padding:0 .2rem; }
 .vs-x:hover{ color:var(--ed-texto); }
-.vs-abas{ display:flex; gap:.3rem; padding:.6rem 1rem 0; }
+.vs-abas{ display:flex; gap:.3rem; padding:.6rem 1rem 0; flex:none; }
 .vs-aba{ background:none; border:0; border-bottom:2px solid transparent; cursor:pointer;
          color:var(--ed-texto-2); font-family:inherit; font-size:.86rem;
          padding:.4rem .6rem .5rem; }
 .vs-aba b{ font-weight:500; opacity:.6; }
 .vs-aba.on{ color:var(--ed-ouro-claro); border-bottom-color:var(--ed-ouro); }
-.vs-corpo{ padding:.9rem 1rem 1.1rem; }
+.vs-corpo{ padding:.9rem 1rem 1.1rem; overflow-y:auto; min-height:0; flex:1 1 auto; overscroll-behavior:contain; }
 
 .vs-estado{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
             font-size:.88rem; margin-bottom:.9rem; padding:.55rem .8rem;
@@ -334,6 +335,9 @@ body.editor select option,body.editor select optgroup{
 /* ---- Botões ------------------------------------------------ */
 .bt{ background:#3a3d37; border:1px solid var(--ed-linha); color:var(--ed-texto); border-radius:6px;
      padding:.35rem .7rem; font-family:inherit; font-size:.8rem; cursor:pointer; }
+.ed-opcoes-principais .bt{ display:inline-flex; align-items:center; gap:.35rem; }
+.ed-opcoes-principais .bt .bt-ico{ display:inline-flex; width:16px; height:16px; flex:none; }
+.ed-opcoes-principais .bt .bt-ico .ico{ width:100%; height:100%; display:block; }
 .bt:hover{ background:#454941; }
 .bt.primario{ background:var(--ed-ouro); border-color:var(--ed-ouro); color:#1a1b17; font-weight:500; }
 .bt.primario:hover{ background:var(--ed-ouro-claro); }
@@ -467,16 +471,6 @@ body.editor select option,body.editor select optgroup{
 .ed-arte.guias-impressao::before{ inset:3px; border:1px dashed #ef6b61; }
 .ed-arte.guias-impressao::after{ inset:calc(18px * var(--esc, .5)); border:1px dashed #58a8d8; }
 
-/* Rascunho local e recuperação após fecho/queda do navegador. */
-.ed-rascunho-estado{ color:#8fc0a4; }
-.ed-recuperar{ position:fixed; z-index:8500; left:50%; top:4.7rem; transform:translateX(-50%);
-  width:min(620px,calc(100vw - 2rem)); box-sizing:border-box; display:flex; gap:.55rem; align-items:center;
-  padding:.7rem .8rem; background:#263229; border:1px solid var(--ed-sel); border-radius:11px;
-  box-shadow:0 16px 44px rgba(0,0,0,.48); color:var(--ed-texto); }
-.ed-recuperar > div{ flex:1; min-width:0; }
-.ed-recuperar b,.ed-recuperar span{ display:block; }
-.ed-recuperar span{ color:var(--ed-texto-2); font-size:.74rem; margin-top:.1rem; }
-
 /* Navegação adaptada: invisível no computador, torna-se a barra principal em
    ecrãs tácteis. */
 .ed-movel,.ed-inspector-fechar{ display:none; }
@@ -557,9 +551,12 @@ body.editor select option,body.editor select optgroup{
   .ed-movel-bt span{ font-size:1rem; line-height:1; color:var(--ed-ouro-claro); }
   .ed-movel-bt.on{ background:#3d4a41; color:var(--ed-texto); }
   .ed-movel-bt.guardar{ color:#1a1b17; background:var(--ed-ouro); }
-  .ed-recuperar{ top:3.1rem; flex-wrap:wrap; }
-  .ed-recuperar > div{ flex-basis:100%; }
 }
+
+/* O formulário "Guardar como" tem uma só linha e cabe inteiro: não deve
+   ganhar uma barra de deslocamento que sugira conteúdo escondido. */
+body.editor .pl-modal-cx.vs-guardar-como{ max-height:none; }
+body.editor .pl-modal-cx.vs-guardar-como .pl-modal-corpo{ overflow:visible; }
 
 /* ---- Painel de versões (assets/versoes.js) ------------------ */
 .vs-lin{ display:flex; gap:.35rem; align-items:center; }
@@ -572,7 +569,7 @@ body.editor select option,body.editor select optgroup{
 
 .vs-item{ border:1px solid var(--ed-linha); border-radius:7px; padding:.45rem .5rem; margin-bottom:.45rem; }
 .vs-item.vs-em-vigor{ border-color:var(--ed-sel); background:rgba(74,122,94,.10); }
-.vs-topo{ display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap; }
+.vs-item .vs-topo{ display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap; }
 .vs-nome{ font-size:.85rem; color:var(--ed-texto); word-break:break-word; }
 .vs-selo{ font-size:.63rem; text-transform:uppercase; letter-spacing:.06em;
           border-radius:9px; padding:.08rem .38rem; white-space:normal; }
@@ -628,4 +625,3 @@ body.esp-travado .ed-corpo{ pointer-events:none; }
 .cer-dentro > label .bt{ text-transform:none; letter-spacing:0; font-size:.7rem; padding:.15rem .45rem; }
 .cer-fora{ margin-bottom:.5rem; }
 .cer-fora .bt{ border-style:dashed; }
-

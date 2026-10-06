@@ -151,8 +151,8 @@ foreach ($camposPorCamada as $camada=>$campos) {
 
 <div class="ed-opcoes">
   <div class="ed-opcoes-principais">
-  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i data-ico="desfazer"></i> Desfazer</button>
-  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i data-ico="refazer"></i> Refazer</button>
+  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i class="bt-ico" data-ico="desfazer" aria-hidden="true"></i><span>Desfazer</span></button>
+  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i class="bt-ico" data-ico="refazer" aria-hidden="true"></i><span>Refazer</span></button>
   </div>
   <div class="ed-opcoes-contexto">
   <span class="ed-sep"></span>
@@ -376,7 +376,6 @@ function marcarSujo(v){
   if (sujo === v) return;
   // O aviso é o selo ao lado; #estado-msg fica livre para as mensagens.
   sujo = v; $('marca-sujo').classList.toggle('on', v);
-  if (window.EditorHibrido) EditorHibrido.alterado(v);
 }
 function msg(t){ $('estado-msg').textContent = t; $('estado-msg').className = ''; }
 
@@ -1407,11 +1406,6 @@ aplicarPosicoes();
 renderCamadas(); renderProps(); renderCores(); renderTipografia();
 marcarBotoes(); ajustar();
 msg('Clique numa camada para a editar — ou arraste-a no cartão para a mudar de sítio.');
-EditorHibrido.ligarRascunho({
-  capturar: () => instantaneo(),
-  restaurar: estado => aplicarEstado(typeof estado === 'string' ? estado : JSON.stringify(estado)),
-  mostrarSujo: () => marcarSujo(true)
-});
 </script>
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>

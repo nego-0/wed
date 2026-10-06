@@ -104,11 +104,7 @@
     function pintarBotao() {
       var v = emVigor();
       var mod = modeloEmVigor();
-      var base = escolhida() || lista.filter(function (x) { return x.padrao; })[0];
-      // A «Original» é a peça de origem derivada, não uma versão que o casal
-      // guardou. Se o casal pôs um modelo em vigor cujo desenho é o de origem,
-      // é o modelo que manda — dizer «Original» escondia a escolha que ele fez.
-      if (v && v.padrao && mod) v = null;
+      var base = escolhida();
       if (v) {
         bt.className = 'btn-versao';
         bt.innerHTML = '<b>' + esc(v.nome) + '</b> <i>em vigor</i>';
@@ -189,9 +185,7 @@
     function htmlEstado() {
       var v = emVigor();
       var mod = modeloEmVigor();
-      var base = escolhida() || lista.filter(function (x) { return x.padrao; })[0];
-      // Ver pintarBotao(): o modelo em vigor manda sobre a «Original» derivada.
-      if (v && v.padrao && mod) v = null;
+      var base = escolhida();
       if (v) {
         return '<div class="vs-estado"><span class="vs-pt ok"></span>Em vigor: <b>' + esc(v.nome) + '</b>' +
                '<em>é este o convite que os seus convidados recebem</em></div>';
@@ -209,23 +203,15 @@
     function htmlVersoes() {
       return htmlEstado() +
         '<div class="vs-lista">' + lista.map(function (v) {
-          // A peça de origem manda quando a peça repousa mesmo no desenho dela:
-          // aí mostra-se «em vigor», e não um «Pôr em vigor» que não muda nada —
-          // era esse botão a dar a entender que o desenho de origem, já em uso,
-          // ainda estava por aplicar. Nas versões guardadas, vale o em_vigor tal
-          // e qual. (A barra e o banner preferem o nome do modelo — ver
-          // htmlEstado —, mas aqui a linha da origem diz o seu próprio estado.)
           var vigora = v.em_vigor;
           var etiquetas =
             (vigora ? '<span class="vs-et ok">em vigor</span>' : '') +
-            (v.padrao ? '<span class="vs-et">peça de origem</span>' : '') +
             (!vigora && v.escolhida ? '<span class="vs-et">última aplicada</span>' : '');
           var acoes = (vigora ? '' :
                 '<button class="vs-b prim" data-ac="aplicar" data-id="' + v.id + '">Pôr em vigor</button>') +
-            (v.padrao ? '' :
                 '<button class="vs-b" data-ac="atualizar" data-id="' + v.id + '">Atualizar</button>' +
                 '<button class="vs-b" data-ac="renomear" data-id="' + v.id + '">Mudar o nome</button>' +
-                '<button class="vs-b perigo" data-ac="apagar" data-id="' + v.id + '">Apagar</button>');
+                '<button class="vs-b perigo" data-ac="apagar" data-id="' + v.id + '">Apagar</button>';
           return '<div class="vs-it' + (vigora ? ' em-vigor' : '') + '">' +
                    '<div class="vs-it-nm">' + esc(v.nome) + ' ' + etiquetas +
                      '<span class="vs-q">' + esc(quando(v.criada_em)) + '</span></div>' +
@@ -307,16 +293,19 @@
     function estadoAtual() {
       var vig = emVigor();
       return {
-        propria: lista.filter(function (v) { return v.em_vigor && !v.padrao; })[0] || null,
+        propria: lista.filter(function (v) { return v.em_vigor; })[0] || null,
         emVigor: vig || null,
-        naOrigem: !!(vig && vig.padrao),
+        naOrigem: false,
         modelo: modeloEmVigor() || null
       };
     }
 
     async function recarregar() {
       var d = await api(q('versao_lista'), { silencioso: true });
-      lista = (d && d.success) ? (d.versoes || []) : [];
+      // A peça de origem e os modelos da casa não são versões guardadas pelo
+      // utilizador. Vivem no separador Modelos; aqui entram apenas os pontos de
+      // regresso a que a própria pessoa deu um nome.
+      lista = (d && d.success) ? (d.versoes || []).filter(function (v) { return !v.padrao; }) : [];
       var m = await api('modelo_lista&ambito=' + encodeURIComponent(ambito), { silencioso: true });
       modelos = (m && m.success) ? (m.modelos || []) : [];
       pintarBotao();
@@ -353,6 +342,7 @@
       // não diz nada a ninguém.
       licFormulario({
         titulo: 'Guardar uma versão',
+        classe: 'vs-guardar-como',
         dica: 'Fotografa a peça tal como está gravada. Pode voltar a ela quando quiser.',
         guardar: 'Guardar versão',
         campos: [{ id: 'nome', rot: 'Nome desta versão', largura: 3,
@@ -377,9 +367,7 @@
 
     async function aplicar(id) {
       var v = porId(id); if (!v) return;
-      var oQueFica = v.padrao
-        ? 'A peça volta a ser como veio de origem — é o que os convidados passam a receber. As versões que guardou não se perdem.'
-        : 'A peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.';
+      var oQueFica = 'A peça passa a ser como estava quando a guardou — é o que os convidados passam a receber.';
       var r = await licConfirmar({
         titulo: 'Pôr «' + licEsc(v.nome) + '» em vigor?',
         icone: 'volta', perigo: sujo(), confirmar: 'Pôr em vigor',

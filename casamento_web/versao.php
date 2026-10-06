@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Desfazer e refazer preservam camadas trancadas, com ícones próprios nos dois editores',
+         'convite-editor.php', 'EST.trancados = new Set'],
+        ['Os editores não guardam rascunhos e mostram apenas versões criadas pelo utilizador',
+         'assets/versoes.js', 'return !v.padrao'],
+        ['O painel de versões conserva o cabeçalho e o modal Guardar como abre sem barra de rolagem',
+         'assets/editor.css', '.vs-guardar-como'],
         ['Cada modelo guarda uma ficha de capacidades que monta o inspector e limita a edição dos noivos',
          'editor-modelo.php', 'function normalizarCapacidadesModelo'],
         ['O admin gere secções, componentes, campos, cores, tipografias, movimento e limites de cada modelo',

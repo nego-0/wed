@@ -55,7 +55,9 @@ function licJanela(titulo, html, aoConfirmar, opcoes){
   if (!m.classList.contains('on')) LIC_FOCO_ANTES = document.activeElement;
   // Os botões são da janela e não da página: os editores não carregam
   // estilo.css, e as classes .btn de lá não existem lá dentro.
-  m.innerHTML = '<div class="pl-modal-cx' + (opcoes.largo ? ' largo' : '') + '" tabindex="-1"'
+  const classeCx = (opcoes.largo ? ' largo' : '')
+    + (opcoes.classe ? ' ' + String(opcoes.classe).replace(/[^a-zA-Z0-9_-]/g, '') : '');
+  m.innerHTML = '<div class="pl-modal-cx' + classeCx + '" tabindex="-1"'
     + ' role="dialog" aria-modal="true" aria-labelledby="lic-jt">'
     + '<div class="pl-modal-cab"><h3 id="lic-jt">' + titulo + '</h3>'
     + '<button type="button" class="pl-modal-x" id="lic-jx" aria-label="Fechar">×</button></div>'
@@ -246,7 +248,7 @@ function licFormulario(cfg){
     });
     licJanelaErro('');
     return await cfg.aoGuardar(vals);
-  }, { guardar: cfg.guardar, perigo: cfg.perigo, largo: cfg.largo });
+  }, { guardar: cfg.guardar, perigo: cfg.perigo, largo: cfg.largo, classe: cfg.classe });
   ligarCores();
   // A escolha com procura guarda o valor num <input type=hidden> com o mesmo
   // id de sempre — por isso o leitor acima não sabe que ela existe, e não

@@ -167,8 +167,8 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 
 <div class="ed-opcoes">
   <div class="ed-opcoes-principais">
-  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i data-ico="desfazer"></i> Desfazer</button>
-  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i data-ico="refazer"></i> Refazer</button>
+  <button class="bt bt-min" id="bt-desfazer" onclick="desfazer()" title="Desfazer (Ctrl+Z)" disabled><i class="bt-ico" data-ico="desfazer" aria-hidden="true"></i><span>Desfazer</span></button>
+  <button class="bt bt-min" id="bt-refazer" onclick="refazer()" title="Refazer (Ctrl+Shift+Z)" disabled><i class="bt-ico" data-ico="refazer" aria-hidden="true"></i><span>Refazer</span></button>
   </div>
   <div class="ed-opcoes-contexto">
   <span class="ed-sep"></span>
@@ -517,7 +517,11 @@ let focoAutomatico = false;
 // Um editor sem desfazer obriga a pensar duas vezes antes de cada gesto.
 const HIST = [instantaneo()];
 let hPos = 0;
-function instantaneo(){ return JSON.stringify(EST); }
+function instantaneo(){
+  // JSON não conhece Set: sem esta conversão `trancados` virava `{}` e o
+  // primeiro desfazer/refazer rebentava ao chamar `.has()`.
+  return JSON.stringify(EST, (chave, valor) => valor instanceof Set ? [...valor] : valor);
+}
 let tGuardaHist = null;
 function registarPasso(){
   clearTimeout(tGuardaHist);
@@ -540,6 +544,10 @@ function consolidarPasso(){
 }
 function aplicarEstado(json){
   EST = JSON.parse(json);
+  const trancados = EST.trancados;
+  EST.trancados = new Set(Array.isArray(trancados)
+    ? trancados
+    : (typeof trancados === 'string' ? trancados.split(',').filter(Boolean) : []));
   renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia();
   recarregarTela();
   marcarBotoes();
@@ -556,7 +564,6 @@ function marcarBotoes(){
 function marcarSujo(v){
   if (SUJO===v) return;
   SUJO=v; $('marca-sujo').classList.toggle('on', v);
-  if (window.EditorHibrido) EditorHibrido.alterado(v);
 }
 window.addEventListener('beforeunload', e=>{ if (SUJO){ e.preventDefault(); e.returnValue=''; } });
 // Uma foto trocada só FICA se o casal guardar/actualizar uma versão. Se sair
@@ -2005,11 +2012,6 @@ aplicarZoom(); ajustarAltura(); if (innerWidth < 1280) ajustarPrevia(); marcarBo
   f.addEventListener('load', ()=>{ ajustarAltura(); aplicarFerramenta(); }));
 recarregarTela();                       // primeira pintura da tela
 msg('Clique num texto do convite para o editar.');
-EditorHibrido.ligarRascunho({
-  capturar: () => instantaneo(),
-  restaurar: estado => aplicarEstado(typeof estado === 'string' ? estado : JSON.stringify(estado)),
-  mostrarSujo: () => marcarSujo(true)
-});
 </script>
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>

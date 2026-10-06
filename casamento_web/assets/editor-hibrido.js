@@ -3,7 +3,7 @@
 
    O convite digital e o impresso conservam mesas de trabalho próprias. O
    que é comum (capacidades do modelo, navegação adaptável, acessibilidade e
-   recuperação de rascunhos) vive aqui. Assim um modelo declara o que pode
+   adaptação dos painéis) vive aqui. Assim um modelo declara o que pode
    editar sem obrigar a manter um editor diferente para cada desenho.
    ============================================================ */
 (function (global) {
@@ -11,8 +11,6 @@
 
   var cfg = global.EDITOR_HIBRIDO || {};
   var manifesto = cfg.manifesto || {};
-  var temporizador = null;
-  var apiRascunho = null;
 
   function sel(q, raiz) { return (raiz || document).querySelector(q); }
   function todos(q, raiz) { return Array.prototype.slice.call((raiz || document).querySelectorAll(q)); }
@@ -147,48 +145,16 @@
     });
   }
 
-  function chaveRascunho() {
-    return 'kulemba.editor.rascunho.' + (cfg.ambito || 'peca') + '.' + (cfg.chave || 'actual');
-  }
-  function lerRascunho() {
-    try { return JSON.parse(localStorage.getItem(chaveRascunho()) || 'null'); }
-    catch (e) { return null; }
-  }
-  function apagarRascunho() {
-    try { localStorage.removeItem(chaveRascunho()); } catch (e) {}
-  }
-  function gravarRascunho() {
-    if (!apiRascunho || !apiRascunho.capturar) return;
+  function limparRascunhosAntigos() {
+    // As versões explícitas são o único mecanismo de recuperação. Apaga os
+    // rascunhos locais criados por versões anteriores e não volta a escrever
+    // no armazenamento do navegador.
     try {
-      localStorage.setItem(chaveRascunho(), JSON.stringify({
-        versao: 1, guardadoEm: Date.now(), estado: apiRascunho.capturar()
-      }));
-      var s = sel('.ed-rascunho-estado'); if (s) s.textContent = 'Rascunho protegido neste dispositivo';
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var chave = localStorage.key(i);
+        if (chave && chave.indexOf('kulemba.editor.rascunho.') === 0) localStorage.removeItem(chave);
+      }
     } catch (e) {}
-  }
-  function alterado(v) {
-    if (!apiRascunho) return;
-    clearTimeout(temporizador);
-    if (!v) { apagarRascunho(); return; }
-    temporizador = setTimeout(gravarRascunho, 650);
-  }
-  function montarRecuperacao(r) {
-    var box = document.createElement('div'); box.className = 'ed-recuperar';
-    var quando = new Date(r.guardadoEm || Date.now()).toLocaleString('pt-PT', { dateStyle:'short', timeStyle:'short' });
-    box.innerHTML = '<div><b>Há um rascunho por recuperar</b><span>Guardado neste dispositivo em ' + quando + '.</span></div>' +
-      '<button type="button" class="bt ed-descartar">Descartar</button>' +
-      '<button type="button" class="bt primario ed-restaurar">Recuperar</button>';
-    document.body.appendChild(box);
-    box.querySelector('.ed-descartar').addEventListener('click', function () { apagarRascunho(); box.remove(); });
-    box.querySelector('.ed-restaurar').addEventListener('click', function () {
-      try { apiRascunho.restaurar(r.estado); box.remove(); apiRascunho.mostrarSujo(); alterado(true); }
-      catch (e) { box.querySelector('span').textContent = 'Este rascunho já não é compatível com o modelo actual.'; }
-    });
-  }
-  function ligarRascunho(op) {
-    apiRascunho = op;
-    var r = lerRascunho();
-    if (r && r.estado != null) montarRecuperacao(r);
   }
 
   function observarInterface() {
@@ -199,17 +165,12 @@
   }
 
   function iniciar() {
+    limparRascunhosAntigos();
     aplicarCapacidades(); montarNavegacao(); montarMaisAcoes(); montarGuiasImpressao(); observarInterface();
-    var estado = sel('.ed-estado');
-    if (estado && !sel('.ed-rascunho-estado', estado)) {
-      var s = document.createElement('span'); s.className = 'ed-rascunho-estado'; s.setAttribute('role','status');
-      estado.insertBefore(s, estado.firstChild);
-    }
   }
 
   global.EditorHibrido = {
-    iniciar: iniciar, ligarRascunho: ligarRascunho, alterado: alterado,
-    guardado: apagarRascunho, abrirInspector: abrirInspector, fecharInspector: fecharInspector
+    iniciar: iniciar, abrirInspector: abrirInspector, fecharInspector: fecharInspector
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })(window);
