@@ -1253,6 +1253,7 @@ function guardarComo(defs){
     let respondeu = false;
     licFormulario({
       titulo: 'Guardar como uma versão vossa',
+      classe: 'vs-guardar-como',
       dica: 'Fica só para o vosso casamento — o desenho da casa não se toca.',
       guardar: 'Guardar versão',
       campos: [{ id: 'nome', rot: 'Nome desta versão', largura: 3,

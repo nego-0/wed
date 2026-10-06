@@ -109,17 +109,18 @@ body.editor select option,body.editor select optgroup{
 .btn-versao{ display:inline-flex; flex-direction:column; align-items:flex-start; gap:0;
              max-width:16rem; padding:.24rem .7rem; line-height:1.15; cursor:pointer;
              background:var(--ed-painel-2); color:var(--ed-texto);
-             border:1px solid var(--ed-linha); border-radius:8px;
+             border:1px solid var(--ed-ouro); border-radius:8px;
              font-family:inherit; text-align:left; }
 .btn-versao:hover{ border-color:var(--ed-ouro); }
 .btn-versao b{ font-weight:500; font-size:.84rem; max-width:14.6rem;
-               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+               color:var(--ed-ouro-claro); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .btn-versao i{ font-style:normal; font-size:.68rem; color:var(--ed-texto-2);
                text-transform:uppercase; letter-spacing:.05em; }
-.btn-versao.alterado{ border-color:var(--ed-ouro); }
-.btn-versao.modelo{ border-color:var(--ed-sel); }
-.btn-versao.modelo b{ color:#8fc0a4; }
-.btn-versao.alterado b{ color:var(--ed-ouro-claro); }
+/* O estado muda no texto, não na aparência do cabeçalho. Os dois editores
+   conservam assim exactamente a mesma hierarquia cromática, quer a peça esteja
+   em vigor, alterada ou ainda seja um modelo da casa. */
+.btn-versao.alterado,.btn-versao.modelo{ border-color:var(--ed-ouro); }
+.btn-versao.modelo b,.btn-versao.alterado b{ color:var(--ed-ouro-claro); }
 
 .vs-jan{ position:fixed; inset:0; z-index:8000; display:none;
          background:rgba(10,11,9,.72); padding:2.4vh 1rem; overflow:hidden; }
@@ -555,8 +556,11 @@ body.editor select option,body.editor select optgroup{
 
 /* O formulário "Guardar como" tem uma só linha e cabe inteiro: não deve
    ganhar uma barra de deslocamento que sugira conteúdo escondido. */
-body.editor .pl-modal-cx.vs-guardar-como{ max-height:none; }
-body.editor .pl-modal-cx.vs-guardar-como .pl-modal-corpo{ overflow:visible; }
+body.editor .pl-modal-cx.vs-guardar-como{ width:min(560px,calc(100vw - 1rem)); max-width:100%; max-height:none; }
+body.editor .pl-modal-cx.vs-guardar-como .pl-modal-corpo{ min-width:0; overflow:visible; }
+body.editor .pl-modal-cx.vs-guardar-como .lic-form,
+body.editor .pl-modal-cx.vs-guardar-como .lic-f-c,
+body.editor .pl-modal-cx.vs-guardar-como input{ min-width:0; max-width:100%; box-sizing:border-box; }
 
 /* ---- Painel de versões (assets/versoes.js) ------------------ */
 .vs-lin{ display:flex; gap:.35rem; align-items:center; }

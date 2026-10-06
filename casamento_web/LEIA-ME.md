@@ -1228,6 +1228,8 @@ primeiro cartão começam no mesmo eixo em vez de usarem duas grelhas distintas.
 
 **Editar o convite físico.** Em *Gráfica → Convites físicos → Editar o cartão* abre-se um editor ao estilo de um editor de imagem: barra de ferramentas à esquerda, o cartão numa mesa de trabalho ao centro e, à direita, os painéis de **Propriedades** e **Camadas**.
 
+Os editores digital e impresso partilham a mesma construção e as mesmas cores no cabeçalho, inclusive no indicador da versão em vigor. Em ambos, **Mais acções** permite repor a camada actual, a composição e toda a peça; o impresso acrescenta **Mostrar margens de impressão**, porque só a peça física possui sangria, corte e área segura. A janela **Guardar como** limita o campo *Nome desta versão* à largura útil do telemóvel.
+
 - **Camadas** — as doze partes do cartão (trepadeiras, volutas, moldura, floreados, abertura, nomes, frase, bloco do convidado, mesas, data, **cerimónias e receção** e frase final). O **olho** mostra ou oculta cada uma; a lista distingue camadas de texto (T) das decorativas (◈).
 - **Selecionar** — clicar numa camada, ou **diretamente no cartão**, marca-a e abre as suas propriedades.
 - **Propriedades** — os textos dessa camada. O que se escreve aparece **imediatamente no cartão**.

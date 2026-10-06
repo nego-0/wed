@@ -191,7 +191,9 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
   <details class="ed-mais">
     <summary class="bt">Mais acções</summary>
     <div class="ed-mais-menu">
-      <button type="button" class="perigo" id="bt-repor" data-capacidade="conteudo" onclick="reporSeccao()">Repor secção</button>
+      <button type="button" id="bt-repor" data-capacidade="conteudo" onclick="reporSeccao()">Repor esta camada</button>
+      <button type="button" data-capacidade="composicao" onclick="reporComposicao()">Repor composição</button>
+      <button type="button" class="perigo" onclick="reporConvite()">Repor originais</button>
     </div>
   </details>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
@@ -515,7 +517,8 @@ let focoAutomatico = false;
 
 // ---------- histórico (desfazer / refazer) ----------
 // Um editor sem desfazer obriga a pensar duas vezes antes de cada gesto.
-const HIST = [instantaneo()];
+const ORIGINAL = instantaneo();
+const HIST = [ORIGINAL];
 let hPos = 0;
 function instantaneo(){
   // JSON não conhece Set: sem esta conversão `trancados` virava `{}` e o
@@ -1905,6 +1908,7 @@ function guardarComo(defs){
     let respondeu = false;
     licFormulario({
       titulo: 'Guardar como uma versão vossa',
+      classe: 'vs-guardar-como',
       dica: 'Fica só para o vosso casamento — o desenho da casa não se toca.',
       guardar: 'Guardar versão',
       campos: [{ id: 'nome', rot: 'Nome desta versão', largura: 3,
@@ -1949,7 +1953,35 @@ function marcarInvalidos(inv){
 /** O botão diz sempre que secção repõe: «Repor Secção (Nome)». */
 function rotularBotaoRepor(){
   const b = document.getElementById('bt-repor'); if (!b) return;
-  b.textContent = 'Repor Secção (' + rotuloCamada(SEC) + ')';
+  b.textContent = 'Repor esta camada (' + rotuloCamada(SEC) + ')';
+}
+
+async function reporComposicao(){
+  const ids = Object.keys(EST.pos || {});
+  if (!ids.length) return msg('A composição já está nas posições de origem.');
+  const r = await licConfirmar({
+    titulo: 'Repor a composição do convite?',
+    icone: 'volta', confirmar: 'Repor composição',
+    texto: '<b>' + ids.length + '</b> bloco(s) voltam às posições definidas pelo modelo.'
+         + '<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado até guardar.'
+  });
+  if (!r.sim) return;
+  ids.forEach(id => moverLivre(id, 0, 0, 0));
+  marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+  msg('Composição de origem reposta — por guardar.');
+}
+
+async function reporConvite(){
+  const r = await licConfirmar({
+    titulo: 'Repor tudo como estava ao abrir?',
+    icone: 'volta', perigo: true, confirmar: 'Repor tudo',
+    texto: 'Todos os textos, estilos, secções e posições voltam ao estado em que abriu o editor.'
+         + '<br><br><b>Ctrl+Z desfaz</b>, e nada fica gravado até guardar.'
+  });
+  if (!r.sim) return;
+  aplicarEstado(ORIGINAL);
+  marcarSujo(true); registarPasso();
+  msg('Convite reposto ao estado inicial — por guardar. Ctrl+Z desfaz.');
 }
 
 async function reporSeccao(){
