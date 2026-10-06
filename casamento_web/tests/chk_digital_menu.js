@@ -4,6 +4,7 @@ const { chromium } = require('playwright-core');
 const EXE = process.env.CHROMIUM || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 const OUT = process.env.TEST_OUT || require('os').tmpdir();
+const USER = process.env.TEST_USER || 'admin@local';
 
 (async () => {
   const b = await chromium.launch({ executablePath: EXE, args: ['--no-sandbox'] });
@@ -14,7 +15,7 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
   let f = 0; const ok = (c, m) => { console.log((c ? 'PASS' : 'FAIL') + ':', m); if (!c) f++; };
 
   await p.goto(BASE + '/login.php', { waitUntil: 'networkidle' });
-  await p.fill('input[name=utilizador]', 'admin'); await p.fill('input[name=senha]', 'noivos2026');
+  await p.fill('input[name=utilizador]', USER); await p.fill('input[name=senha]', 'noivos2026');
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
   // O admin entra sem casamento aberto (é da plataforma, não de um casal):
   // escolhe-se o nº1, que é onde estas provas trabalham.
@@ -106,6 +107,32 @@ const OUT = process.env.TEST_OUT || require('os').tmpdir();
       document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
     ok(!transborda, `o cabeçalho impresso não transborda a ${larg}px`);
   }
+
+  // A prova individual usava sempre 78% dos 720px e, por isso, tinha 562px
+  // mesmo num telemóvel. O próprio cartão e a página têm agora de caber.
+  const provaIndividual = await p.locator('.estado-peca a[href^="cartoes.php?id="]').first().getAttribute('href');
+  ok(!!provaIndividual, 'o cabeçalho oferece uma prova impressa individual');
+  if (provaIndividual) for (const larg of [430, 390, 320]) {
+    await p.setViewportSize({ width: larg, height: 844 });
+    await p.goto(BASE + '/' + provaIndividual, { waitUntil: 'networkidle' });
+    await p.waitForTimeout(150);
+    const medida = await p.evaluate(() => {
+      const folha=document.querySelector('.grelha-cartoes.unica .folha');
+      const grelha=document.querySelector('.grelha-cartoes.unica');
+      if (!folha || !grelha) return null;
+      const f=folha.getBoundingClientRect(), g=grelha.getBoundingClientRect();
+      return { pagina:document.documentElement.scrollWidth, janela:innerWidth,
+        folha:Math.round(f.width), disponivel:Math.round(g.width),
+        dentro:f.left>=g.left-1 && f.right<=g.right+1 };
+    });
+    ok(medida && medida.pagina <= medida.janela + 1 && medida.dentro,
+       `a prova individual cabe a ${larg}px (${medida ? medida.folha + '/' + medida.disponivel : 'sem cartão'})`);
+  }
+  await p.emulateMedia({ media:'print' });
+  const escalaImpressao = await p.locator('.grelha-cartoes.unica').evaluate(el =>
+    getComputedStyle(el).getPropertyValue('--esc').trim());
+  ok(escalaImpressao === '.5248', 'a adaptação móvel não altera os 100×150 mm da impressão');
+  await p.emulateMedia({ media:'screen' });
   await p.setViewportSize({ width: 1440, height: 760 });
 
   // ---------- 2. o menu "⋯" abre para cima quando não cabe ----------

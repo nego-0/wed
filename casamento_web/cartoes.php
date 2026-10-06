@@ -62,6 +62,8 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(calc(720px * var(--esc)),1fr)); gap:1.6rem; justify-items:center; --esc:.42; }
   /* Um só cartão (?id=): mostra-se em grande, já que não compete por espaço */
   .grelha-cartoes.unica{ --esc:.78; }
+  .grelha-cartoes.unica, .grelha-cartoes.unica .cartao-item{ min-width:0; max-width:100%; }
+  .folha{ overflow:hidden; }
 
   /* ---- Barra de estilo ---- */
   .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
@@ -72,6 +74,12 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
   .rot{ font-size:var(--t-etiqueta); font-weight:600; color:var(--ink-fraco); letter-spacing:.08em; text-transform:uppercase; }
   .legenda{ text-align:center; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.45rem; }
   .legenda a{ color:var(--gold-texto); }
+  @media(max-width:640px){
+    /* Valor de primeiro desenho; o script abaixo usa depois cada píxel
+       realmente disponível, incluindo telemóveis estreitos. */
+    .grelha-cartoes.unica{ --esc:.42; grid-template-columns:minmax(0,1fr); }
+    .barra select{ max-width:100%; }
+  }
 
   /* ---- Impressão: 100×150 mm, um cartão por página, sem fundo ---- */
   @media print{
@@ -80,7 +88,8 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
     .no-print{ display:none !important; }
     .container{ padding:0; max-width:none; }
     /* A regra tem de vencer também a vista de um só cartão (.unica). */
-    .grelha-cartoes, .grelha-cartoes.unica{ display:block; --esc:.5248; }   /* 720px -> 100mm */
+    /* !important vence a escala inline calculada para o ecrã móvel. */
+    .grelha-cartoes, .grelha-cartoes.unica{ display:block; --esc:.5248 !important; }   /* 720px -> 100mm */
     /* A quebra vai no item, não na folha: a folha não é o último filho da grelha,
        pelo que o :last-child nunca lá pegava e sobrava uma página em branco. */
     .cartao-item{ margin:0; break-after:page; page-break-after:always; }
@@ -150,6 +159,18 @@ if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['i
 window.CSRF = <?= json_encode(csrfToken()) ?>;
 const $=id=>document.getElementById(id);
 function toast(m){const t=$('toast');t.textContent=m;t.className='toast mostrar';setTimeout(()=>t.className='toast',2200);}
+
+// A prova individual era sempre desenhada a 78% (562px) e saía do ecrã nos
+// telemóveis. Conserva esse máximo no desktop e reduz-se só até caber na área
+// útil. As dimensões físicas da impressão continuam a ser definidas no @print.
+function ajustarCartaoIndividual(){
+  const grelha=document.querySelector('.grelha-cartoes.unica');
+  if (!grelha || matchMedia('print').matches) return;
+  const largura=Math.max(1,grelha.clientWidth-2);
+  grelha.style.setProperty('--esc',String(Math.min(.78,largura/720)));
+}
+ajustarCartaoIndividual();
+addEventListener('resize',ajustarCartaoIndividual,{passive:true});
 
 // Pré-visualizar paleta/folhagem (só muda o URL; não grava)
 function estilo(campo, valor){
