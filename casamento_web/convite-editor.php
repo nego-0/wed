@@ -15,7 +15,8 @@ require_once __DIR__ . '/editor-modelo.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 // Desenhar um modelo da casa não é entrar em casa de casal nenhum: quem
 // responde pela plataforma chega aqui sem ter casamento aberto.
-[$DEFS_ED, $MODELO] = defsDoEditor($conn, 'digital');
+[$DEFS_ED, $MODELO, $MODELO_BASE] = defsDoEditor($conn, 'digital');
+$MANIFESTO_EDITOR = manifestoEditorModelo('digital', $DEFS_ED, $MODELO ?: $MODELO_BASE);
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 // Desenhar a peça é o que distingue os escalões «com edição» dos outros: quem
 // leva o modelo padrão sem edição vê a peça em toda a parte, mas não entra
@@ -190,7 +191,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
   <details class="ed-mais">
     <summary class="bt">Mais acções</summary>
     <div class="ed-mais-menu">
-      <button type="button" class="perigo" id="bt-repor" onclick="reporSeccao()">Repor secção</button>
+      <button type="button" class="perigo" id="bt-repor" data-capacidade="conteudo" onclick="reporSeccao()">Repor secção</button>
     </div>
   </details>
   <button class="bt primario" id="bt-guardar" onclick="guardar()">Guardar</button>
@@ -275,7 +276,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?>, ambito:'digital' };
 window.EDITOR_HIBRIDO = {
   ambito:'digital', chave:<?= json_encode($MODELO ? 'modelo-'.(int)$MODELO['id'] : 'casamento-'.casamentoAtual()) ?>,
-  manifesto:<?= json_encode(manifestoEditorModelo('digital', $DEFS_ED, $MODELO), JSON_UNESCAPED_UNICODE) ?>
+  manifesto:<?= json_encode($MANIFESTO_EDITOR, JSON_UNESCAPED_UNICODE) ?>
 };
 </script>
 <script src="<?= asset('assets/editor-espaco.js') ?>"></script>
@@ -287,16 +288,21 @@ const ATUAIS   = <?= json_encode($DEFS_ED, JSON_UNESCAPED_UNICODE) ?>;
 // Quando se está a desenhar um modelo da casa, é ele que se grava — e não as
 // definições de um casamento.
 const MODELO   = <?= json_encode($MODELO, JSON_UNESCAPED_UNICODE) ?>;
-const SECCOES  = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
+const CAPACIDADES = window.EDITOR_HIBRIDO.manifesto;
+const SECCOES_TODAS = <?= json_encode(seccoesConvite(), JSON_UNESCAPED_UNICODE) ?>;
+const SECCOES  = Object.fromEntries(Object.entries(SECCOES_TODAS)
+  .filter(([k]) => (CAPACIDADES.seccoes || []).includes(k)));
 // Blocos que se podem arrastar na tela, por camada. Só as duas telas de
 // tamanho conhecido (o envelope e a capa de entrada) os têm: o resto do
 // convite é texto que corre, e uma composição à mão numa página que cresce
 // com o conteúdo desmancha-se no telemóvel seguinte.
-const LIVRES = <?= json_encode(posicoesLivres($DEFS_ED), JSON_UNESCAPED_UNICODE) ?>;
+const LIVRES_TODOS = <?= json_encode(posicoesLivres($DEFS_ED), JSON_UNESCAPED_UNICODE) ?>;
+const LIVRES = Object.fromEntries(Object.entries(LIVRES_TODOS)
+  .filter(([k]) => (CAPACIDADES.movimentaveis || []).includes(k)));
 const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
 const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
-const BLOCOS_MAX = <?= (int)BLOCOS_MAX ?>;
+const BLOCOS_MAX = Math.min(<?= (int)BLOCOS_MAX ?>, +(CAPACIDADES.limites?.max_blocos || <?= (int)BLOCOS_MAX ?>));
 const FONTES     = <?= json_encode(fontesConvite(), JSON_UNESCAPED_UNICODE) ?>;
 const PAPEIS     = <?= json_encode(papeisTipo(), JSON_UNESCAPED_UNICODE) ?>;
 const CASAL_NOME = <?= json_encode($CAS['casal']) ?>;
@@ -468,7 +474,8 @@ function camadas(){
   EST.ordem.forEach(id=>{ if (validos.includes(id) && !ord.includes(id)) ord.push(id); });
   validos.forEach(id=>{ if (!ord.includes(id)) ord.push(id); });
   const meio = ord.filter(id=>id!==PRIMEIRO && id!==ULTIMO);
-  const final = [PRIMEIRO, ...meio, ULTIMO];
+  const final = (validos.includes(PRIMEIRO) ? [PRIMEIRO] : [])
+    .concat(meio, validos.includes(ULTIMO) ? [ULTIMO] : []);
   EST.ordem = final;
   const conteudo = final.map(id=>{
     const b = blocoLivre(id);
@@ -476,7 +483,9 @@ function camadas(){
              : { id, rotulo: SECCOES[id] ? SECCOES[id].rotulo : id, livre: false,
                  fixa: (id===PRIMEIRO || id===ULTIMO) };
   });
-  return [{ id: CAPA_ID, rotulo: CAPA_ROTULO, livre: false, fixa: true }, ...conteudo];
+  return ((CAPACIDADES.seccoes || []).includes(CAPA_ID)
+    ? [{ id: CAPA_ID, rotulo: CAPA_ROTULO, livre: false, fixa: true }]
+    : []).concat(conteudo);
 }
 /** Rótulo de uma camada, seja secção, envelope ou bloco livre. */
 function rotuloCamada(k){
@@ -493,7 +502,8 @@ function novoId(){
   return id;
 }
 
-let SEC = CAPA_ID;     // camada selecionada — abre no Envelope, a porta de entrada
+let SEC = (CAPACIDADES.seccoes || []).includes(CAPA_ID)
+  ? CAPA_ID : (Object.keys(SECCOES)[0] || CAPA_ID);
 let DEF = null;        // texto selecionado dentro dela
 let SUJO = false;
 let telaPronta = false;
@@ -980,7 +990,8 @@ function renderCamadas(){
   const lista = camadas();
   $('camadas').innerHTML = lista.map((c,i)=>{
     const chaveVis = VISIVEL[c.id];
-    const podeEsconder = !!chaveVis || c.livre;
+    const obrigatoria = (CAPACIDADES.obrigatorios || []).includes(c.id);
+    const podeEsconder = !obrigatoria && (!!chaveVis || c.livre);
     const vis = c.livre ? true : (!chaveVis || EST.val[chaveVis] !== '0');
     const trancada = EST.trancados.has(c.id);
     const movivel = !c.fixa && !trancada;
@@ -991,7 +1002,7 @@ function renderCamadas(){
       onclick="irCamada('${c.id}')">
       <button class="olho" title="${trancada ? 'Trancada: destranque para esconder'
                                              : (podeEsconder ? (vis?'Esconder esta secção':'Mostrar esta secção') : 'Esta secção é sempre visível')}"
-              onclick="event.stopPropagation();${(chaveVis && !trancada)?`alternarSec('${c.id}')`:''}">${vis?OLHO_ON:OLHO_OFF}</button>
+              onclick="event.stopPropagation();${(chaveVis && !trancada && !obrigatoria)?`alternarSec('${c.id}')`:''}">${vis?OLHO_ON:OLHO_OFF}</button>
       <span class="nome">${esc(c.rotulo)}</span>
       ${c.livre ? '<span class="op">livre</span>' : (c.fixa ? '<span class="op">fixa</span>' : '')}
       <button class="cadeado" title="${trancada ? 'Destrancar' : 'Trancar: não se arrasta nem se esconde'}"
@@ -1053,8 +1064,11 @@ function juntarBloco(){
   const b = { id: novoId(), eyebrow: m.eyebrow, titulo: m.titulo, texto: m.texto,
               itens: (m.itens||[]).map(it=>({...it})) };
   EST.blocos.push(b);
-  // Entra antes do fecho, que é sempre o último.
-  EST.ordem = EST.ordem.filter(id=>id!==ULTIMO).concat([b.id, ULTIMO]);
+  // Entra antes do fecho quando o modelo o possui. Há modelos válidos sem
+  // essa secção; nesse caso não se deve reintroduzi-la só por acrescentar um
+  // bloco livre.
+  const fim = Object.prototype.hasOwnProperty.call(SECCOES, ULTIMO) ? [ULTIMO] : [];
+  EST.ordem = EST.ordem.filter(id=>id!==ULTIMO).concat([b.id], fim);
   SEC = b.id; DEF = null;
   marcarSujo(true); registarPasso();
   renderCamadas(); renderProps(); recarregarTela();
@@ -1071,7 +1085,8 @@ async function apagarBloco(id){
   if (!r.sim) return;
   EST.blocos = EST.blocos.filter(x=>x.id!==id);
   EST.ordem  = EST.ordem.filter(x=>x!==id);
-  SEC = PRIMEIRO; DEF = null;
+  SEC = EST.ordem.find(x=>SECCOES[x] || blocoLivre(x)) || Object.keys(SECCOES)[0] || null;
+  DEF = null;
   marcarSujo(true); registarPasso();
   renderCamadas(); renderProps(); recarregarTela();
   msg('Secção apagada. Ctrl+Z devolve-a.');
@@ -1111,6 +1126,7 @@ function irCamada(k){
   msg('Camada: ' + rotuloCamada(k));
 }
 function alternarSec(k){
+  if ((CAPACIDADES.obrigatorios || []).includes(k)) return msg('Esta secção é obrigatória neste modelo.');
   const chave = VISIVEL[k]; if (!chave) return;
   EST.val[chave] = EST.val[chave]==='0' ? '1' : '0';
   marcarSujo(true); registarPasso(); renderCamadas();
@@ -1119,6 +1135,10 @@ function alternarSec(k){
 }
 
 // ---------- propriedades ----------
+function podeEditarCampo(chave){
+  return !Array.isArray(CAPACIDADES.campos_editaveis)
+    || CAPACIDADES.campos_editaveis.includes(chave);
+}
 function renderPropsJa(){
   rotularBotaoRepor();               // o botão de repor acompanha sempre a secção
   if (SEC === CAPA_ID) return renderPropsCapa();
@@ -1144,7 +1164,7 @@ function renderPropsJa(){
 function renderPropsCapa(){
   let h = `<div class="sel-nada" style="margin-bottom:.6rem"><b>${esc(CAPA_ROTULO)}</b> — a capa fechada que os convidados tocam para abrir.</div>`;
   h += campoHTML('capa.monograma');
-  h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
+  if (podeEditarCampo('capa.monograma')) h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
         O monograma aparece no selo, no separador do convite e no rodapé.</div>`;
   h += seloHTML();
   h += campoHTML('capa.dica');
@@ -1159,6 +1179,7 @@ function renderPropsCapa(){
 const ABERTURAS = [['portas','Portas ao meio'],['subir','A subir'],
                    ['cruzado','Cruzado'],['esvair','A esvair-se']];
 function aberturaHTML(){
+  if (!podeEditarCampo('capa.abertura')) return '';
   const atual = EST.val['capa.abertura'] || 'portas';
   const ops = ABERTURAS.map(([v,r])=>`<option value="${v}"${v===atual?' selected':''}>${esc(r)}</option>`).join('');
   return `<div class="campo"><label>Abertura</label>
@@ -1175,6 +1196,7 @@ function mudarAbertura(v){
 // Os feitios do selo do monograma, pela mesma ordem que o servidor aceita.
 const SELOS = [['cera','Cera'],['anel','Anel'],['camafeu','Camafeu'],['liso','Liso']];
 function seloHTML(){
+  if (!podeEditarCampo('capa.selo')) return '';
   const atual = EST.val['capa.selo'] || 'cera';
   const ops = SELOS.map(([v,r])=>`<option value="${v}"${v===atual?' selected':''}>${esc(r)}</option>`).join('');
   return `<div class="campo"><label>Selo do monograma</label>
@@ -1188,6 +1210,7 @@ function mudarSelo(v){
   enviarTela({tipo:'capa_selo', selo:v});   // troca o feitio na tela, sem recarregar
 }
 function campoHTML(chave){
+  if (!podeEditarCampo(chave)) return '';
   const [rot, tipo, max] = CAMPOS[chave];
   const v = EST.val[chave] ?? '';
   const sel = DEF===chave ? ' style="box-shadow:0 0 0 2px rgba(217,188,140,.3);border-radius:6px;padding:.2rem"' : '';
@@ -1383,7 +1406,7 @@ function renderCoresJa(){
       `<button class="tema-bt" onclick="aplicarTema('${k}')" title="${esc(t.nome)}">
         <i style="background:${t.forest}"></i><i style="background:${t.gold}"></i>${esc(t.nome)}</button>`).join('') +
       `<button class="tema-bt" onclick="aplicarTema('')">Repor</button></div>` +
-    TEMA_VARS.map(v=>{
+    TEMA_VARS.filter(v => (CAPACIDADES.cores_permitidas || []).includes(v)).map(v=>{
       const cor = EST.paleta[v] || TEMAS['floresta'][v];
       const r = TEMA_ROT[v] || {rotulo:v, onde:''};
       return `<label class="cor-linha" title="${esc(r.onde)}">
@@ -1415,7 +1438,8 @@ function limparCor(v){
 }
 function aplicarTema(k){
   EST.paleta = {};
-  if (k && TEMAS[k]) TEMA_VARS.forEach(v=>{ if (TEMAS[k][v]) EST.paleta[v] = TEMAS[k][v].toUpperCase(); });
+  if (k && TEMAS[k]) TEMA_VARS.filter(v => (CAPACIDADES.cores_permitidas || []).includes(v))
+    .forEach(v=>{ if (TEMAS[k][v]) EST.paleta[v] = TEMAS[k][v].toUpperCase(); });
   renderCores(); marcarSujo(true); registarPasso();
   if (k) enviarTela({tipo:'tema', vars:EST.paleta}); else recarregarTela();
 }
@@ -1432,7 +1456,7 @@ function lerEnq(v){
 function escreverEnq(e){ return `${Math.round(e.x*10)/10} ${Math.round(e.y*10)/10} ${Math.round(e.zoom)}`; }
 
 function renderMedia(){
-  $('media').innerHTML = MEDIA.map(([k,rot])=>{
+  $('media').innerHTML = MEDIA.filter(([k]) => (CAPACIDADES.media || []).includes(k)).map(([k,rot])=>{
     const v = EST.val[k]||'', img = k!=='media.musica';
     const f = FOTOS[k];          // as recortadas têm enquadramento
     let h = `<div class="med">
@@ -1600,7 +1624,8 @@ function renderTipografiaJa(){
   $('tipografia').innerHTML =
     Object.entries(PAPEIS).map(([papel,p])=>{
       const escolhida = EST.val[p.chave] || p.origem;
-      const opcoes = Object.entries(FONTES).filter(([,f])=>f.papeis.includes(papel));
+      const permitidas = CAPACIDADES.tipografias_permitidas || Object.keys(FONTES);
+      const opcoes = Object.entries(FONTES).filter(([k,f])=>f.papeis.includes(papel) && (permitidas.includes(k) || k===escolhida));
       return `<div class="campo"><label>${esc(p.rotulo)}</label>
         <select onchange="mudarFonte('${p.chave}',this.value)">
           ${opcoes.map(([k,f])=>`<option value="${k}" ${k===escolhida?'selected':''}>${esc(f.nome)}${k===p.origem?' (de origem)':''}</option>`).join('')}
@@ -1682,6 +1707,7 @@ function rotularBotaoGuardar(estado){
 function renderEfeitos(){
   const ambiente = EST.val['digital.estilo'] === 'kulemba' ? 'Pontos de luz suaves' : 'Pétalas a cair';
   $('efeitos').innerHTML = [['fx.petalas',ambiente],['fx.autoplay','Música arranca ao abrir']]
+    .filter(([k]) => (CAPACIDADES.efeitos || []).includes(k))
     .map(([k,rot])=>`<div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
       <input type="checkbox" ${EST.val[k]==='1'?'checked':''} onchange="alternarFx('${k}')"
              style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> ${rot}</label></div>`).join('');
@@ -1802,7 +1828,7 @@ function defsAlteradas(){
 async function gravarDefs(defs, proteger){
   if (!Object.keys(defs).length) return { success:true, invalidas:[], nada:true };
   const d = await api('defs_save', {method:'POST',
-    body:JSON.stringify({defs, proteger_desenho:!!proteger}), semAviso:!!proteger});
+    body:JSON.stringify({defs, ambito:'digital', proteger_desenho:!!proteger}), semAviso:!!proteger});
   if (d && d.success){
     const inv = d.invalidas || [];
     Object.keys(defs).forEach(k=>{ if (!inv.includes(k)) ATUAIS[k] = defs[k]; });
@@ -1988,4 +2014,3 @@ EditorHibrido.ligarRascunho({
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
 </html>
-

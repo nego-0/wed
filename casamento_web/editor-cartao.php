@@ -11,7 +11,8 @@ require_once __DIR__ . '/pecas.php';
 require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/editor-modelo.php';
-[$defs, $MODELO] = defsDoEditor($conn, 'impresso');
+[$defs, $MODELO, $MODELO_BASE] = defsDoEditor($conn, 'impresso');
+$MANIFESTO_EDITOR = manifestoEditorModelo('impresso', $defs, $MODELO ?: $MODELO_BASE);
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 // Desenhar a peça é o que distingue os escalões «com edição» dos outros: quem
 // leva o modelo padrão sem edição vê a peça em toda a parte, mas não entra
@@ -33,6 +34,9 @@ $folhagem = $defs['cartao.folhagem'];
 $camadas  = cartaoCamadasVisiveis($defs);
 $posicoes = cartaoPosicoes($defs);
 $trancadas= cartaoTrancadas($defs);
+$movimentaveis = array_flip($MANIFESTO_EDITOR['movimentaveis']);
+foreach (array_keys(cartaoCamadas()) as $k) if (!isset($movimentaveis[$k])) $trancadas[] = $k;
+$trancadas = array_values(array_unique($trancadas));
 $ev       = cartaoDadosEvento($defs);
 
 // Chaves que este editor governa — as do cartão, e só essas. Serve para gravar
@@ -103,6 +107,10 @@ $camposPorCamada = [
     'fecho'     => [['cartao.frase_final', 'Frase final', 'area', 'frase_final']],
     'data'      => [['evento.data', 'Data do evento', 'data', '']],
 ];
+$camposPermitidos = array_flip($MANIFESTO_EDITOR['campos_editaveis']);
+foreach ($camposPorCamada as $camada=>$campos) {
+    $camposPorCamada[$camada] = array_values(array_filter($campos, fn($c)=>isset($camposPermitidos[$c[0]])));
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -183,9 +191,9 @@ $camposPorCamada = [
   <details class="ed-mais">
     <summary class="bt">Mais acções</summary>
     <div class="ed-mais-menu">
-      <button type="button" onclick="reporCamada()">Repor esta camada</button>
-      <button type="button" onclick="reporPosicoes()">Repor composição</button>
-      <button type="button" id="bt-guias-impressao" aria-pressed="false">Mostrar margens de impressão</button>
+      <button type="button" data-capacidade="conteudo" onclick="reporCamada()">Repor esta camada</button>
+      <button type="button" data-capacidade="composicao" onclick="reporPosicoes()">Repor composição</button>
+      <button type="button" data-capacidade="guias" id="bt-guias-impressao" aria-pressed="false">Mostrar margens de impressão</button>
       <button type="button" class="perigo" onclick="repor()">Repor originais</button>
     </div>
   </details>
@@ -268,7 +276,7 @@ $camposPorCamada = [
 window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?>, ambito:'impresso' };
 window.EDITOR_HIBRIDO = {
   ambito:'impresso', chave:<?= json_encode($MODELO ? 'modelo-'.(int)$MODELO['id'] : 'casamento-'.casamentoAtual()) ?>,
-  manifesto:<?= json_encode(manifestoEditorModelo('impresso', $defs, $MODELO), JSON_UNESCAPED_UNICODE) ?>
+  manifesto:<?= json_encode($MANIFESTO_EDITOR, JSON_UNESCAPED_UNICODE) ?>
 };
 </script>
 <script src="<?= asset('assets/editor-espaco.js') ?>"></script>
@@ -279,7 +287,8 @@ const $ = id => document.getElementById(id);
 
 const PALETAS  = <?= json_encode(cartaoPaletas(), JSON_UNESCAPED_UNICODE) ?>;
 const RAMOS    = <?= json_encode($ramosJs, JSON_UNESCAPED_UNICODE) ?>;
-const CAMADAS  = <?= json_encode(cartaoCamadas(), JSON_UNESCAPED_UNICODE) ?>;
+const CAPACIDADES = window.EDITOR_HIBRIDO.manifesto;
+const CAMADAS  = <?= json_encode(array_intersect_key(cartaoCamadas(), array_flip($MANIFESTO_EDITOR['seccoes'])), JSON_UNESCAPED_UNICODE) ?>;
 const CAMPOS   = <?= json_encode($camposPorCamada, JSON_UNESCAPED_UNICODE) ?>;
 const ORNAMENTOS = ['ramos','volutas','moldura','floreados'];   // camadas sem texto
 const MOLDURAS  = <?= json_encode(cartaoMolduras(), JSON_UNESCAPED_UNICODE) ?>;
@@ -500,7 +509,7 @@ function renderCoresJa(){
     // Nem <label> a envolver o seletor, nem botões a nascer durante a escolha:
     // o painel de cores do navegador fecha-se assim que o elemento a que está
     // preso muda de sítio ou de tamanho. O botão de repor está sempre lá, só se apaga.
-    Object.keys(CORES_VAR).map(v =>
+    Object.keys(CORES_VAR).filter(v => (CAPACIDADES.cores_permitidas || []).includes(v)).map(v =>
       `<div class="cor-linha">
         <input type="color" value="${corDe(v)}" aria-label="${CORES_ROT[v]}" oninput="editarCor('${v}',this.value,this)">
         <span>${CORES_ROT[v]}</span>
@@ -544,7 +553,8 @@ function renderTipografiaJa(){
   $('tipografia').innerHTML =
     Object.entries(PAPEIS).map(([papel,p]) => {
       const escolhida = est.fontes[p.chave] || p.origem;
-      const opcoes = Object.entries(FONTES).filter(([,f]) => f.papeis.includes(papel));
+      const permitidas = CAPACIDADES.tipografias_permitidas || Object.keys(FONTES);
+      const opcoes = Object.entries(FONTES).filter(([k,f]) => f.papeis.includes(papel) && (permitidas.includes(k) || k===escolhida));
       return `<div class="campo"><label>${p.rotulo}</label>
         <select onchange="mudarFonte('${p.chave}',this.value)">
           ${opcoes.map(([k,f]) => `<option value="${k}" ${k===escolhida?'selected':''}>${escaparHtml(f.nome)}${k===p.origem?' (de origem)':''}</option>`).join('')}
@@ -590,10 +600,11 @@ function renderCamadas(){
   $('camadas').innerHTML = Object.entries(CAMADAS).map(([k, rot]) => {
     const vis = est.camadas[k] !== 0;
     const tr  = estaTrancada(k);
+    const obrigatoria = (CAPACIDADES.obrigatorios || []).includes(k);
     const mov = !!est.pos[k];
     return `<div class="camada ${selecionada===k?'sel':''} ${vis?'':'oculta'} ${tr?'trancada':''}" data-k="${k}" onclick="selecionar('${k}')">
-      <button class="olho" title="${tr ? 'Trancada: destranque para esconder' : (vis?'Ocultar':'Mostrar')}"
-              onclick="event.stopPropagation();${tr?'':`alternarCamada('${k}')`}">${vis?OLHO_ON:OLHO_OFF}</button>
+      <button class="olho" title="${obrigatoria ? 'Camada obrigatória neste modelo' : (tr ? 'Trancada: destranque para esconder' : (vis?'Ocultar':'Mostrar'))}"
+              onclick="event.stopPropagation();${(tr||obrigatoria)?'':`alternarCamada('${k}')`}">${vis?OLHO_ON:OLHO_OFF}</button>
       <span class="nome">${rot}</span>
       ${mov ? '<span class="mini" data-ico="mover" title="Movida do sítio de origem"></span>' : ''}
       ${ORNAMENTOS.includes(k)
@@ -605,6 +616,7 @@ function renderCamadas(){
   }).join('');
 }
 function alternarCamada(k){
+  if ((CAPACIDADES.obrigatorios || []).includes(k)) return msg(`"${CAMADAS[k]}" é obrigatória neste modelo.`);
   if (estaTrancada(k)) return msg(`"${CAMADAS[k]}" está trancada — destranque-a primeiro.`);
   est.camadas[k] = est.camadas[k] === 0 ? 1 : 0;
   const alvo = document.querySelector(`#escala [data-camada="${k}"]`);
@@ -1177,7 +1189,7 @@ function defsAlteradas(){
 async function gravarDefs(defs, proteger){
   if (!Object.keys(defs).length) return { success:true, invalidas:[], nada:true };
   const d = await api('defs_save', {method:'POST',
-    body: JSON.stringify({defs, proteger_desenho:!!proteger}), semAviso:!!proteger});
+    body: JSON.stringify({defs, ambito:'impresso', proteger_desenho:!!proteger}), semAviso:!!proteger});
   if (d && d.success){
     const inv = d.invalidas || [];
     Object.keys(defs).forEach(k => { if (!inv.includes(k)) ATUAIS[k] = defs[k]; });
@@ -1404,4 +1416,3 @@ EditorHibrido.ligarRascunho({
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
 </html>
-

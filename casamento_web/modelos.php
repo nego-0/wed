@@ -228,6 +228,13 @@ if ($aberto > 0) {
   .fr-est.falta{ color:var(--warn, #b5713a); font-weight:600; }
   .aviso{ background:var(--warn-bg); border:1px solid var(--warn); color:var(--ink);
           border-radius:10px; padding:.7rem .9rem; font-size:var(--t-denso); margin-bottom:1rem; line-height:1.5; }
+  .cap-grupo{ border:1px solid var(--line); border-radius:12px; margin:.65rem 0; background:var(--card); }
+  .cap-grupo summary{ cursor:pointer; padding:.75rem .85rem; font-weight:600; color:var(--ink); }
+  .cap-lista{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:.35rem .8rem;
+              padding:0 .85rem .85rem; max-height:280px; overflow:auto; }
+  .cap-lista .op{ min-width:0; align-items:flex-start; }
+  .cap-lista code{ font-size:.72rem; color:var(--ink-fraco); overflow-wrap:anywhere; }
+  .cap-limites{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.65rem; padding:.2rem 0; }
   @media (max-width:720px){
     .lf{ grid-template-columns:minmax(0,1fr) !important; }
     .painel{ padding:.9rem; }
@@ -550,6 +557,7 @@ async function carregar(){
               onclick="abrirMais(event,${m.id})"><svg class="ico-mais" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12.6" cy="8" r="1.5"/></svg></button>
           <span class="mm-pop" id="mm-${m.id}" style="display:none">
             <button onclick="quemVe(${m.id})">Quem vê este modelo</button>
+            <button onclick="capacidades(${m.id})">Definir capacidades</button>
             <button onclick="editar(${m.id})">Mudar o nome</button>
             ${m.de_origem
               ? (m.de_fabrica
@@ -631,6 +639,57 @@ function editar(id){
       <button class="btn btn-ouro" onclick="guardar(${id})">Guardar</button>
     </div>`);
   $('e-nome-' + id).focus();
+}
+
+function capChecks(grupo, titulo, mapa, ativos, aberto){
+  const set = new Set(ativos || []);
+  const linhas = Object.entries(mapa || {}).map(([k,rot]) => `<label class="op">
+    <input type="checkbox" data-cap-grupo="${grupo}" value="${esc(k)}" ${set.has(k)?'checked':''}>
+    <span>${esc(rot)}<br><code>${esc(k)}</code></span></label>`).join('');
+  return `<details class="cap-grupo" ${aberto?'open':''}><summary>${esc(titulo)} · ${set.size}</summary>
+    <div class="cap-lista">${linhas || '<span class="dica">Não se aplica a este suporte.</span>'}</div></details>`;
+}
+
+async function capacidades(id){
+  const d = await api('modelo_capacidades&id=' + id);
+  if (!d || !d.success) return;
+  const c=d.capacidades, cat=d.catalogo;
+  abrirModelo('Capacidades de «' + d.nome + '»', `
+    <div class="dica" style="margin:0 0 .7rem">O editor mostra apenas estas opções. Os elementos obrigatórios
+      permanecem na peça, e os noivos só alteram os campos autorizados.</div>
+    ${capChecks('seccoes','Secções e camadas',cat.seccoes,c.seccoes,true)}
+    ${capChecks('obrigatorios','Elementos obrigatórios',cat.seccoes,c.obrigatorios,false)}
+    ${capChecks('paineis','Ferramentas do inspector',cat.paineis,c.paineis,true)}
+    ${capChecks('media','Fotografias e música',cat.media,c.media,false)}
+    ${capChecks('efeitos','Efeitos disponíveis',cat.efeitos,c.efeitos,false)}
+    ${capChecks('movimentaveis','Elementos movimentáveis',cat.movimentaveis,c.movimentaveis,false)}
+    ${capChecks('componentes','Componentes reutilizáveis',cat.componentes,c.componentes,false)}
+    ${capChecks('cores_permitidas','Cores permitidas',cat.cores_permitidas,c.cores_permitidas,false)}
+    ${capChecks('tipografias_permitidas','Tipografias permitidas',cat.tipografias_permitidas,c.tipografias_permitidas,false)}
+    ${capChecks('campos_editaveis','Campos editáveis pelos noivos',cat.campos_editaveis,c.campos_editaveis,false)}
+    <details class="cap-grupo"><summary>Formato e limites</summary><div class="cap-limites">
+      ${Object.entries(cat.limites||{}).map(([k,v])=>`<div class="campo"><label>${esc(k.replaceAll('_',' '))}</label>
+        <input type="number" min="1" max="5000" data-cap-limite="${esc(k)}" value="${+(c.limites?.[k]||v)}"></div>`).join('')}
+    </div></details>
+    <div class="jan-fim"><button class="btn" onclick="fechar('ov-modelo')">Cancelar</button>
+      <button class="btn btn-ouro" onclick="guardarCapacidades(${id})">Guardar capacidades</button></div>`);
+}
+
+async function guardarCapacidades(id){
+  const ficha={};
+  document.querySelectorAll('#ov-corpo [data-cap-grupo]').forEach(el=>{
+    if(!el.checked) return; const g=el.dataset.capGrupo; (ficha[g]||(ficha[g]=[])).push(el.value);
+  });
+  ['seccoes','obrigatorios','paineis','media','efeitos','movimentaveis','componentes',
+   'cores_permitidas','tipografias_permitidas','campos_editaveis']
+    .forEach(g=>{ if(!ficha[g]) ficha[g]=[]; });
+  ficha.limites={};
+  document.querySelectorAll('#ov-corpo [data-cap-limite]').forEach(el=>ficha.limites[el.dataset.capLimite]=+el.value||1);
+  // Obrigatório implica presente: a ficha nunca pode exigir uma camada que o
+  // próprio editor omite.
+  ficha.seccoes=[...new Set(ficha.seccoes.concat(ficha.obrigatorios))];
+  const d=await api('modelo_capacidades_guardar&id='+id,{method:'POST',body:JSON.stringify({id,capacidades:ficha})});
+  if(d&&d.success){ fechar('ov-modelo'); toast('Capacidades guardadas.'); carregar(); }
 }
 
 async function guardar(id, recapturar){

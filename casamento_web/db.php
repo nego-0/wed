@@ -209,7 +209,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 65;
+const ESQUEMA_VERSAO = 66;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2657,6 +2657,13 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                               WHERE tipo='demo' AND modulo='orcamento'");
         if ($st) { $st->bind_param('s', $dados); @$st->execute(); }
         @$conn->query("UPDATE {$P}atendimento_conteudos SET stickers=''");
+    }
+
+    // v66 — cada modelo declara as ferramentas e limites que oferece. Null
+    // conserva os modelos antigos com todas as capacidades, e o admin pode
+    // afiná-los depois na página Modelos.
+    if ($versaoAtual < 66) {
+        migColuna($conn, "{$P}modelos", 'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL');
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

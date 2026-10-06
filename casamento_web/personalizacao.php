@@ -736,9 +736,26 @@ function nomeDaOrigem(mysqli $conn, string $ambito, ?int $cid = null): string {
  */
 function defsDoEditor(mysqli $conn, string $ambito): array {
     $id = (int)($_GET['modelo'] ?? 0);
-    if ($id <= 0) return [defsAtuais($conn), null, null];
     global $P;
-    $st = $conn->prepare("SELECT id, nome, ambito, defs, visivel, alcance FROM {$P}modelos WHERE id=?");
+    if ($id <= 0) {
+        // A peça do casal continua a obedecer à ficha do modelo de que deriva.
+        // Se nunca escolheu um, vale a peça de origem que lhe foi atribuída.
+        $baseId = modeloProvenienciaId($conn, $ambito);
+        if ($baseId <= 0) {
+            $origem = modeloDeOrigem($conn, $ambito);
+            $baseId = (int)($origem['id'] ?? 0);
+        }
+        $base = null;
+        if ($baseId > 0) {
+            $st = $conn->prepare("SELECT id,nome,ambito,capacidades FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+            if ($st) {
+                $st->bind_param('is', $baseId, $ambito); $st->execute();
+                $base = $st->get_result()->fetch_assoc() ?: null;
+            }
+        }
+        return [defsAtuais($conn), null, $base];
+    }
+    $st = $conn->prepare("SELECT id, nome, ambito, defs, visivel, alcance, capacidades FROM {$P}modelos WHERE id=?");
     if (!$st) return [defsAtuais($conn), null, null];
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
@@ -784,7 +801,8 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
         foreach (exemploModelo($conn) as $k => $v) $defs[$k] = $v;
         $permitidas = array_flip(chavesModelo($ambito));
         foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
-        $info = ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito];
+        $info = ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito,
+                 'capacidades' => $m['capacidades'] ?? null];
         return [$defs, $info, $info];
     }
 
@@ -814,7 +832,8 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     }
     foreach (padraoDesenho($ambito) as $k => $v) $defs[$k] = $v;
     foreach ($j as $k => $v) if (isset($desenho[$k]) && is_string($v)) $defs[$k] = $v;
-    return [$defs, null, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito]];
+    return [$defs, null, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito,
+                          'capacidades' => $m['capacidades'] ?? null]];
 }
 
 // ---- Defaults (= convite original, byte a byte) ------------

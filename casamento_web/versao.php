@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Cada modelo guarda uma ficha de capacidades que monta o inspector e limita a edição dos noivos',
+         'editor-modelo.php', 'function normalizarCapacidadesModelo'],
+        ['O admin gere secções, componentes, campos, cores, tipografias, movimento e limites de cada modelo',
+         'modelos.php', 'function guardarCapacidades'],
         ['Os editores tratam Kulemba Contemporâneo como modelo próprio, mostram versões e reposição no telemóvel e desfazem sem atraso',
          'convite-editor.php', 'function consolidarPasso()'],
         ['A prova individual do convite impresso ajusta-se à largura disponível no telemóvel',
@@ -1757,4 +1761,3 @@ function copiar(){
 <?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
 </body>
 </html>
-

@@ -5,6 +5,7 @@
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/personalizacao.php';
+require_once __DIR__ . '/editor-modelo.php';
 require_once __DIR__ . '/parcial-ajuda.php';
 
 $acao = $_GET['action'] ?? '';
@@ -5907,6 +5908,27 @@ if (in_array($acao, acoesDeEscrita(), true)) {
 if ($acao === 'defs_save') {
     $d = corpo();
     $defs = is_array($d['defs'] ?? null) ? $d['defs'] : [];
+    $ambitoEditor = isset(ambitosVersao()[$d['ambito'] ?? '']) ? (string)$d['ambito'] : '';
+    $bloqueadasCapacidade = [];
+    // O âmbito explícito cobre também os campos comuns do evento. Se alguém
+    // omitir o âmbito num pedido manual, as chaves de desenho continuam a
+    // denunciar o suporte e não contornam a ficha.
+    $ambitosCap = $ambitoEditor !== '' ? [$ambitoEditor] : [];
+    if (!$ambitosCap) foreach (array_keys(ambitosVersao()) as $amb) {
+        $desenho = array_flip(chavesDesenho($amb));
+        foreach (array_keys($defs) as $k) if (isset($desenho[$k])) { $ambitosCap[] = $amb; break; }
+    }
+    foreach ($ambitosCap as $amb) {
+        $modeloCap = modeloCapacidadesDaPeca($conn, $amb);
+        $cap = normalizarCapacidadesModelo($amb, $modeloCap['capacidades'] ?? null);
+        $campos = array_flip($cap['campos_editaveis']);
+        $doAmbito = array_flip(chavesModelo($amb));
+        foreach (array_keys($defs) as $k) {
+            if (($ambitoEditor !== '' || isset($doAmbito[$k])) && !isset($campos[$k])) {
+                $bloqueadasCapacidade[] = $k; unset($defs[$k]);
+            }
+        }
+    }
     $nomeVersao = mb_substr(trim((string)($d['versao_nome'] ?? '')), 0, 80);
     // Os editores pedem a guarda do desenho da casa; quem chama a API em cru
     // (a Gestão, os cartões, uma prova) grava como sempre gravou.
@@ -5957,6 +5979,9 @@ if ($acao === 'defs_save') {
     }
 
     $r = guardarDefinicoes($conn, $defs);
+    if ($bloqueadasCapacidade) {
+        $r['invalidas'] = array_values(array_unique(array_merge($r['invalidas'] ?? [], $bloqueadasCapacidade)));
+    }
     if ($r['gravadas'] || $r['repostas']) {
         // Mexer no desenho à mão tira o modelo de vigor: o que a peça mostra
         // deixou de ser puramente o dele. Guarda-se de onde veio, para se lhe
@@ -8741,9 +8766,12 @@ if ($acao === 'dados_exportar') {
 
     if ($ambito === 'sistema' && $incMod) {
         // Os modelos da casa — o mesmo conteúdo que 'modelos_exportar'.
-        $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel FROM {$P}modelos ORDER BY ambito, nome");
+        $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel, capacidades FROM {$P}modelos ORDER BY ambito, nome");
         $modelos = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
-        foreach ($modelos as &$m) $m['defs'] = json_decode($m['defs'], true) ?: [];
+        foreach ($modelos as &$m) {
+            $m['defs'] = json_decode($m['defs'], true) ?: [];
+            $m['capacidades'] = normalizarCapacidadesModelo($m['ambito'], $m['capacidades'] ?? null);
+        }
         unset($m);
         $saida['modelos'] = $modelos;
     }
@@ -10345,12 +10373,13 @@ if ($acao === 'modelo_criar') {
     }
     if (!$defs) erro('Não há nada para guardar neste modelo.');
 
-    $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por)
-                          VALUES (?,?,?,?,?,?)");
+    $capacidades = json_encode(capacidadesModeloPadrao($ambito), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por, capacidades)
+                          VALUES (?,?,?,?,?,?,?)");
     $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
     $vis = empty($d['visivel']) ? 0 : 1;
     $quem = utilizadorAtual() ?? '';
-    $st->bind_param('ssssis', $nome, $descricao, $ambito, $j, $vis, $quem);
+    $st->bind_param('ssssiss', $nome, $descricao, $ambito, $j, $vis, $quem, $capacidades);
     if (!$st->execute()) erro('Não foi possível guardar o modelo.');
     // O número do modelo lê-se JÁ: registar() escreve uma linha no histórico, e
     // a partir daí insert_id é o dessa linha — devolvia-se um número que não é
@@ -10393,12 +10422,33 @@ if ($acao === 'modelo_editar') {
     ok(['id' => $id, 'nome' => $nome]);
 }
 
+if ($acao === 'modelo_capacidades' || $acao === 'modelo_capacidades_guardar') {
+    if (!ehAdminPlataforma()) erro('Só o admin da plataforma define as capacidades dos modelos.');
+    $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
+    $st = $conn->prepare("SELECT id,nome,ambito,capacidades FROM {$P}modelos WHERE id=?");
+    $st->bind_param('i', $id); $st->execute();
+    $m = $st->get_result()->fetch_assoc();
+    if (!$m) erro('Modelo não encontrado.');
+    if ($acao === 'modelo_capacidades') {
+        ok(['id'=>$id, 'nome'=>$m['nome'], 'ambito'=>$m['ambito'],
+            'capacidades'=>normalizarCapacidadesModelo($m['ambito'], $m['capacidades'] ?? null),
+            'catalogo'=>catalogoCapacidadesModelo($m['ambito'])]);
+    }
+    $cap = normalizarCapacidadesModelo($m['ambito'], corpo()['capacidades'] ?? []);
+    $json = json_encode($cap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $st = $conn->prepare("UPDATE {$P}modelos SET capacidades=?, atualizado_em=NOW() WHERE id=?");
+    $st->bind_param('si', $json, $id);
+    if (!$st->execute()) erro('Não foi possível guardar as capacidades.');
+    registarDaCasa($conn, 'modelo_capacidades', (string)$m['nome'], count($cap['campos_editaveis']).' campo(s)');
+    ok(['id'=>$id, 'capacidades'=>$cap]);
+}
+
 if ($acao === 'modelo_defs') {
     // O desenho de um modelo, vindo do editor. É o que faz um modelo poder ser
     // trabalhado sem se abrir a casa de um casal.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma desenha modelos.');
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("SELECT nome, ambito FROM {$P}modelos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, ambito, defs, capacidades FROM {$P}modelos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
     if (!$m) erro('Modelo não encontrado.');
@@ -10408,9 +10458,13 @@ if ($acao === 'modelo_defs') {
     // — é o que o admin desenha aqui. Não se aplica ao casal (ver modelo_aplicar).
     $permitidas = array_flip(chavesModelo($m['ambito']));
     $padrao = defsPadrao();
+    $cap = normalizarCapacidadesModelo($m['ambito'], $m['capacidades'] ?? null);
+    $camposCap = array_flip($cap['campos_editaveis']);
+    $anteriores = json_decode((string)$m['defs'], true) ?: [];
     $defs = []; $invalidas = [];
     foreach ((array)($d['defs'] ?? []) as $k => $v) {
         if (!isset($permitidas[$k]) || !is_string($v)) continue;
+        if (!isset($camposCap[$k])) { if (isset($anteriores[$k])) $defs[$k] = $anteriores[$k]; continue; }
         $ok = validarDefinicao($k, $v);
         if ($ok === null) { $invalidas[] = $k; continue; }
         // Igual ao original não se guarda: o modelo fica só com o que o desenho
@@ -10585,9 +10639,12 @@ if ($acao === 'modelo_aplicar') {
 
 if ($acao === 'modelos_exportar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva os modelos.');
-    $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel FROM {$P}modelos ORDER BY ambito, nome");
+    $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel, capacidades FROM {$P}modelos ORDER BY ambito, nome");
     $lista = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
-    foreach ($lista as &$m) { $m['defs'] = json_decode($m['defs'], true) ?: []; }
+    foreach ($lista as &$m) {
+        $m['defs'] = json_decode($m['defs'], true) ?: [];
+        $m['capacidades'] = normalizarCapacidadesModelo($m['ambito'], $m['capacidades'] ?? null);
+    }
     unset($m);
     // Os modelos por âmbito, para o resumo do cabeçalho dizer de relance quantos
     // digitais e quantos impressos vão no ficheiro.
@@ -10626,9 +10683,10 @@ if ($acao === 'modelos_importar') {
         $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
         $vis = empty($m['visivel']) ? 0 : 1;
         $quem = utilizadorAtual() ?? '';
-        $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por)
-                              VALUES (?,?,?,?,?,?)");
-        $st->bind_param('ssssis', $nome, $descricao, $ambito, $j, $vis, $quem);
+        $cap = json_encode(normalizarCapacidadesModelo($ambito, $m['capacidades'] ?? null), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por, capacidades)
+                              VALUES (?,?,?,?,?,?,?)");
+        $st->bind_param('ssssiss', $nome, $descricao, $ambito, $j, $vis, $quem, $cap);
         if (@$st->execute()) $entrou++; else $saltou++;
     }
     if (!$entrou) erro('O ficheiro não trouxe modelo nenhum aproveitável.');
@@ -10681,8 +10739,9 @@ if ($acao === 'sistema_importar') {
             $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
             $vis = empty($m['visivel']) ? 0 : 1;
             $quem = utilizadorAtual() ?? '';
-            $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por) VALUES (?,?,?,?,?,?)");
-            $st->bind_param('ssssis', $nome, $descricao, $ambito, $j, $vis, $quem);
+            $cap = json_encode(normalizarCapacidadesModelo($ambito, $m['capacidades'] ?? null), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por, capacidades) VALUES (?,?,?,?,?,?,?)");
+            $st->bind_param('ssssiss', $nome, $descricao, $ambito, $j, $vis, $quem, $cap);
             if (@$st->execute()) $res['modelos']++;
         }
     }

@@ -50,15 +50,24 @@
   }
 
   function aplicarCapacidades() {
+    var permitidos = Array.isArray(manifesto.paineis) ? manifesto.paineis : null;
     var mapa = {
+      conteudo: '#p-props, .ed-painel[data-grupo="conteudo"]',
+      camadas: '.ed-painel[data-grupo="camadas"]',
       cores: '#p-cores, .ed-painel[data-grupo="cores"]',
       tipografia: '#p-tipografia, .ed-painel[data-grupo="tipografia"]',
       media: '.ed-painel[data-grupo="media"]',
       efeitos: '.ed-painel[data-grupo="efeitos"]'
     };
     Object.keys(mapa).forEach(function (cap) {
-      if (manifesto[cap] !== false) return;
-      todos(mapa[cap]).forEach(function (el) { el.hidden = true; });
+      if ((permitidos && permitidos.indexOf(cap) >= 0) || (!permitidos && manifesto[cap] !== false)) return;
+      todos(mapa[cap]).forEach(function (el) { el.hidden = true; el.style.display = 'none'; });
+    });
+    todos('[data-capacidade]').forEach(function (el) {
+      var cap = el.dataset.capacidade;
+      if ((permitidos && permitidos.indexOf(cap) < 0) || (!permitidos && manifesto[cap] === false)) {
+        el.hidden = true; el.style.display = 'none';
+      }
     });
     document.body.dataset.editorAmbito = cfg.ambito || '';
     document.body.dataset.editorModelo = manifesto.id || 'base';
@@ -71,7 +80,7 @@
       design: '#p-cores, #p-tipografia, .ed-painel[data-grupo="cores"], .ed-painel[data-grupo="tipografia"]',
       media: '.ed-painel[data-grupo="media"], .ed-painel[data-grupo="efeitos"]'
     };
-    return todos(alvos[nome] || '');
+    return todos(alvos[nome] || '').filter(function (p) { return !p.hidden; });
   }
 
   function abrirInspector(nome) {
