@@ -379,15 +379,20 @@ let hPos = 0, tHist = null;
 function instantaneo(){ return JSON.stringify(est); }
 function registarPasso(){
   clearTimeout(tHist);
-  tHist = setTimeout(() => {
-    const agora = instantaneo();
-    if (agora === HIST[hPos]) return;
-    HIST.length = hPos + 1;          // um passo novo apaga o "refazer"
-    HIST.push(agora);
-    if (HIST.length > 60) HIST.shift();
-    hPos = HIST.length - 1;
-    marcarBotoes();
-  }, 350);
+  tHist = setTimeout(consolidarPasso, 350);
+  $('bt-desfazer').disabled = false;
+  $('bt-refazer').disabled = true;
+}
+function consolidarPasso(){
+  clearTimeout(tHist); tHist = null;
+  const agora = instantaneo();
+  if (agora === HIST[hPos]) { marcarBotoes(); return false; }
+  HIST.length = hPos + 1;          // um passo novo apaga o "refazer"
+  HIST.push(agora);
+  if (HIST.length > 60) HIST.shift();
+  hPos = HIST.length - 1;
+  marcarBotoes();
+  return true;
 }
 /** Volta a pintar o cartão inteiro a partir de est — usado ao desfazer/refazer. */
 function repintarTudo(){
@@ -405,8 +410,8 @@ function repintarTudo(){
   renderCamadas(); renderProps(); renderCores(); renderTipografia();
 }
 function aplicarEstado(json){ est = JSON.parse(json); repintarTudo(); marcarBotoes(); }
-function desfazer(){ if (hPos<=0) return; clearTimeout(tHist); hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
-function refazer(){ if (hPos>=HIST.length-1) return; clearTimeout(tHist); hPos++; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Refeito.'); }
+function desfazer(){ consolidarPasso(); if (hPos<=0) return; hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
+function refazer(){ consolidarPasso(); if (hPos>=HIST.length-1) return; hPos++; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Refeito.'); }
 function marcarBotoes(){
   $('bt-desfazer').disabled = hPos<=0;
   $('bt-refazer').disabled  = hPos>=HIST.length-1;
@@ -1399,3 +1404,4 @@ EditorHibrido.ligarRascunho({
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
 </html>
+

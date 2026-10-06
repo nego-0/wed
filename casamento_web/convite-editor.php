@@ -171,13 +171,6 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
   </div>
   <div class="ed-opcoes-contexto">
   <span class="ed-sep"></span>
-  <span class="rot">Largura</span>
-  <select id="largura" onchange="aplicarLargura()">
-    <option value="390">Telemóvel</option>
-    <option value="640" selected>Como foi desenhado</option>
-    <option value="820">Tablet</option>
-  </select>
-  <span class="ed-sep"></span>
   <div class="zoom">
     <button class="bt bt-min" onclick="zoomPasso(-1)" title="Reduzir">−</button>
     <span class="val" id="zoom-val">100%</span>
@@ -518,15 +511,22 @@ function instantaneo(){ return JSON.stringify(EST); }
 let tGuardaHist = null;
 function registarPasso(){
   clearTimeout(tGuardaHist);
-  tGuardaHist = setTimeout(()=>{
-    const agora = instantaneo();
-    if (agora === HIST[hPos]) return;
-    HIST.length = hPos + 1;          // um passo novo apaga o "refazer"
-    HIST.push(agora);
-    if (HIST.length > 60) HIST.shift();
-    hPos = HIST.length - 1;
-    marcarBotoes();
-  }, 350);                            // agrupa a escrita contínua num só passo
+  tGuardaHist = setTimeout(consolidarPasso, 350); // agrupa a escrita contínua num só passo
+  // O gesto já aconteceu: Desfazer tem de ficar disponível agora, sem obrigar
+  // a esperar pelo agrupamento da escrita.
+  $('bt-desfazer').disabled = false;
+  $('bt-refazer').disabled = true;
+}
+function consolidarPasso(){
+  clearTimeout(tGuardaHist); tGuardaHist = null;
+  const agora = instantaneo();
+  if (agora === HIST[hPos]) { marcarBotoes(); return false; }
+  HIST.length = hPos + 1;          // um passo novo apaga o "refazer"
+  HIST.push(agora);
+  if (HIST.length > 60) HIST.shift();
+  hPos = HIST.length - 1;
+  marcarBotoes();
+  return true;
 }
 function aplicarEstado(json){
   EST = JSON.parse(json);
@@ -534,8 +534,8 @@ function aplicarEstado(json){
   recarregarTela();
   marcarBotoes();
 }
-function desfazer(){ if (hPos<=0) return; clearTimeout(tGuardaHist); hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
-function refazer(){ if (hPos>=HIST.length-1) return; clearTimeout(tGuardaHist); hPos++; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Refeito.'); }
+function desfazer(){ consolidarPasso(); if (hPos<=0) return; hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
+function refazer(){ consolidarPasso(); if (hPos>=HIST.length-1) return; hPos++; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Refeito.'); }
 function marcarBotoes(){
   $('bt-desfazer').disabled = hPos<=0;
   $('bt-refazer').disabled  = hPos>=HIST.length-1;
@@ -1143,7 +1143,6 @@ function renderPropsJa(){
 /** Propriedades da capa que abre (o envelope selado). */
 function renderPropsCapa(){
   let h = `<div class="sel-nada" style="margin-bottom:.6rem"><b>${esc(CAPA_ROTULO)}</b> — a capa fechada que os convidados tocam para abrir.</div>`;
-  h += estiloDigitalHTML();
   h += campoHTML('capa.monograma');
   h += `<div class="dica-md" style="margin-top:-.35rem">Vazio = as iniciais dos nomes (<b>${esc(monogramaAuto())}</b>).
         O monograma aparece no selo, no separador do convite e no rodapé.</div>`;
@@ -1155,19 +1154,6 @@ function renderPropsCapa(){
   h += painelLivre(CAPA_ID);
   $('props').innerHTML = h;
   if (DEF){ const el = document.querySelector('#props [data-chave="'+DEF+'"]'); if (el) el.closest('.campo').scrollIntoView({block:'nearest'}); }
-}
-const ESTILOS_DIGITAIS = [['classico','Clássico botânico'],['kulemba','Kulemba Contemporâneo']];
-function estiloDigitalHTML(){
-  const atual = EST.val['digital.estilo'] || 'classico';
-  const ops = ESTILOS_DIGITAIS.map(([v,r])=>`<option value="${v}"${v===atual?' selected':''}>${esc(r)}</option>`).join('');
-  return `<div class="campo"><label>Linguagem visual</label>
-    <select onchange="mudarEstiloDigital(this.value)">${ops}</select>
-    <div class="dica-md">Muda ícones, efeitos, molduras, bordas e separadores sem alterar o conteúdo.</div></div>`;
-}
-function mudarEstiloDigital(v){
-  if (!ESTILOS_DIGITAIS.some(([k])=>k===v)) v = 'classico';
-  EST.val['digital.estilo'] = v;
-  marcarSujo(true); registarPasso(); renderEfeitos(); renderMedia(); recarregarTela();
 }
 // As aberturas do envelope, pela mesma ordem que o servidor aceita.
 const ABERTURAS = [['portas','Portas ao meio'],['subir','A subir'],
@@ -1705,7 +1691,7 @@ function alternarFx(k){
   marcarSujo(true); registarPasso(); recarregarTela();
 }
 
-// ---------- ferramentas, zoom, largura ----------
+// ---------- ferramentas e zoom ----------
 let ferrAtual = 'selecionar';
 /** Aplica a ferramenta à tela. Sem mensagem: é chamada a cada recarga e não
  *  pode apagar o que a barra de estado esteja a dizer (ex.: o resultado de guardar). */
@@ -1736,14 +1722,9 @@ function zoomPasso(d){
   zoom = PASSOS[Math.max(0, Math.min(PASSOS.length-1, (i<0?4:i)+d))];
   aplicarZoom();
 }
-function aplicarLargura(){
-  const w = $('largura').value;
-  $('palco').style.width = w+'px';
-  dimensionarMolduraPalco();
-}
 function ajustarPrevia(){
   const m = $('mesa').getBoundingClientRect();
-  const w = Number($('largura').value || 640);
+  const w = 640; // a largura pertence ao modelo, não é uma opção da pessoa
   zoom = Math.max(.35, Math.min(1.5, (m.width - 32) / w));
   aplicarZoom(); ajustarAltura();
 }
@@ -2007,3 +1988,4 @@ EditorHibrido.ligarRascunho({
 <script src="<?= asset('assets/editor-paineis.js') ?>"></script>
 </body>
 </html>
+

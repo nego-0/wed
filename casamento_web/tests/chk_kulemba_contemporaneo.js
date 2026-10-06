@@ -77,12 +77,9 @@ const pass = message => console.log('PASS: ' + message);
     }
     pass('editor abre o modelo, mostra luzes e usa as quatro proporções correctas');
 
-    await page.evaluate(() => mudarEstiloDigital('classico'));
-    await previewReady('classico');
-    assert.match(await page.locator('#efeitos').innerText(), /Pétalas a cair/);
-    await page.evaluate(() => mudarEstiloDigital('kulemba'));
-    await previewReady('kulemba');
-    assert.match(await page.locator('#efeitos').innerText(), /Pontos de luz suaves/);
+    assert.equal(await page.getByText('Linguagem visual', { exact: true }).count(), 0,
+      'A linguagem não é uma propriedade: escolhe-se o modelo completo');
+    assert.equal(await page.evaluate(() => typeof mudarEstiloDigital), 'undefined');
     const upright = await preview().locator('.mcell svg,.t-item .node svg').evaluateAll(items =>
       items.length > 0 && items.every(e => {
         const style = getComputedStyle(e);
@@ -91,7 +88,7 @@ const pass = message => console.log('PASS: ' + message);
       }));
     assert(upright, 'Ícones compostos devem continuar direitos');
     assert.equal(await preview().locator('.mcell svg > g').first().evaluate(e => getComputedStyle(e).transform), 'none');
-    pass('mudança de linguagem actualiza a prévia e mantém os ícones direitos');
+    pass('Kulemba é um modelo próprio, sem conversor de linguagem no inspector, e mantém os ícones direitos');
 
     const frameSetting = await page.evaluate(() => EST.val['cer.moldura']);
     await page.evaluate(() => { EST.val['cer.moldura'] = '0'; recarregarTela(); });
@@ -222,3 +219,4 @@ const pass = message => console.log('PASS: ' + message);
     }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });
+

@@ -522,10 +522,15 @@ body.editor select option,body.editor select optgroup{
   .ed-opcoes{ min-height:48px; box-sizing:border-box; padding:.3rem .45rem; gap:.4rem; overflow:visible; }
   .ed-opcoes-principais .bt{ font-size:0; width:42px; height:42px; padding:0; display:flex; align-items:center; justify-content:center; }
   .ed-opcoes-principais .bt i{ width:18px; height:18px; }
-  .ed-opcoes-contexto{ flex:1; justify-content:center; }
-  .ed-opcoes-contexto .amostras,.ed-opcoes-contexto #folhagem{ display:none; }
-  .ed-opcoes-contexto select{ max-width:132px; }
-  .ed-opcoes > .cresce,.ed-opcoes > .ed-sep,.ed-opcoes > .btn-versao,.ed-opcoes > .ed-mais{ display:none; }
+  .ed-opcoes-contexto{ display:none; }
+  .ed-opcoes > .cresce,.ed-opcoes > .ed-sep{ display:none; }
+  .ed-opcoes > .btn-versao{ display:flex; flex:1; min-width:0; max-width:none; height:42px;
+    align-items:center; justify-content:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ed-opcoes > .btn-versao b,.ed-opcoes > .btn-versao i{ overflow:hidden; text-overflow:ellipsis; }
+  .ed-opcoes > .ed-mais{ display:block; }
+  .ed-opcoes > .ed-mais > summary{ width:auto; min-width:76px; height:42px; padding:.45rem .65rem;
+    display:flex; align-items:center; justify-content:center; }
+  .ed-mais-menu{ position:fixed; z-index:520; top:96px; right:.5rem; width:min(280px,calc(100vw - 1rem)); }
   .ed-opcoes > #bt-guardar{ display:none; }
   .ed-corpo{ min-height:0; padding-bottom:61px; }
   .ed-ferramentas{ display:none; }
@@ -623,3 +628,4 @@ body.esp-travado .ed-corpo{ pointer-events:none; }
 .cer-dentro > label .bt{ text-transform:none; letter-spacing:0; font-size:.7rem; padding:.15rem .45rem; }
 .cer-fora{ margin-bottom:.5rem; }
 .cer-fora .bt{ border-style:dashed; }
+

@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os editores tratam Kulemba Contemporâneo como modelo próprio, mostram versões e reposição no telemóvel e desfazem sem atraso',
+         'convite-editor.php', 'function consolidarPasso()'],
         ['A prova individual do convite impresso ajusta-se à largura disponível no telemóvel',
          'cartoes.php', 'function ajustarCartaoIndividual()'],
         ['O convite impresso apresenta prova, estado e versões e guarda alterações rápidas numa versão com nome',
@@ -1755,3 +1757,4 @@ function copiar(){
 <?php include __DIR__ . "/parcial-seletor-tema.php"; ?>
 </body>
 </html>
+
