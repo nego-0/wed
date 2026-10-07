@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "kulemba-contemporaneo",
+  "versao": "1.0.0",
+  "nome": "Kulemba Contemporâneo",
+  "ambito": "digital",
+  "adaptador": "convite-base-v1",
+  "estado": "mantido",
+  "compatibilidade": {
+    "capacidades": 2,
+    "dados": 1
+  }
+}

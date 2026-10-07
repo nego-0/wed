@@ -8766,7 +8766,9 @@ if ($acao === 'dados_exportar') {
 
     if ($ambito === 'sistema' && $incMod) {
         // Os modelos da casa — o mesmo conteúdo que 'modelos_exportar'.
-        $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel, capacidades FROM {$P}modelos ORDER BY ambito, nome");
+        $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel, capacidades,
+                                   renderer_key, renderer_version, renderer_schema
+                            FROM {$P}modelos ORDER BY ambito, nome");
         $modelos = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
         foreach ($modelos as &$m) {
             $m['defs'] = json_decode($m['defs'], true) ?: [];
@@ -10013,7 +10015,8 @@ if ($acao === 'modelo_lista') {
                                 AND id <> " . (int)padraoDoAmbito($conn, $amb) . ")";
         }
     }
-    $r = @$conn->query("SELECT id, nome, descricao, ambito, defs, visivel, alcance, criado_por, criado_em, atualizado_em
+    $r = @$conn->query("SELECT id, nome, descricao, ambito, defs, visivel, alcance, criado_por,
+                               renderer_key, renderer_version, renderer_schema, criado_em, atualizado_em
                         FROM {$P}modelos WHERE $onde ORDER BY ambito, nome");
     $modelos = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
 
@@ -10373,13 +10376,28 @@ if ($acao === 'modelo_criar') {
     }
     if (!$defs) erro('Não há nada para guardar neste modelo.');
 
+    $pacote = null;
+    if ($ambito === 'digital') {
+        $pacoteExplicito = array_key_exists('renderer_key', $d) || array_key_exists('renderer_version', $d);
+        $pacote = convitePacoteResolver($ambito, $d['renderer_key'] ?? null,
+            $d['renderer_version'] ?? null, isset($d['renderer_schema']) ? (int)$d['renderer_schema'] : null, false);
+        if ($pacoteExplicito && !$pacote) erro('O renderizador indicado não está instalado nesta versão da Kulemba.');
+        if (!$pacote) $pacote = pacoteDoModeloId($conn, $ambito, modeloProvenienciaId($conn, $ambito));
+        if (!$pacote) $pacote = convitePacoteResolver($ambito, null, null);
+    }
+    $rk = $pacote['renderer_key'] ?? null;
+    $rv = $pacote['renderer_version'] ?? null;
+    $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
     $capacidades = json_encode(capacidadesModeloPadrao($ambito), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por, capacidades)
-                          VALUES (?,?,?,?,?,?,?)");
+    $st = $conn->prepare("INSERT INTO {$P}modelos
+                          (nome, descricao, ambito, defs, visivel, criado_por, capacidades,
+                           renderer_key, renderer_version, renderer_schema)
+                          VALUES (?,?,?,?,?,?,?,?,?,?)");
     $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
     $vis = empty($d['visivel']) ? 0 : 1;
     $quem = utilizadorAtual() ?? '';
-    $st->bind_param('ssssiss', $nome, $descricao, $ambito, $j, $vis, $quem, $capacidades);
+    $st->bind_param('ssssissssi', $nome, $descricao, $ambito, $j, $vis, $quem, $capacidades,
+                    $rk, $rv, $rs);
     if (!$st->execute()) erro('Não foi possível guardar o modelo.');
     // O número do modelo lê-se JÁ: registar() escreve uma linha no histórico, e
     // a partir daí insert_id é o dessa linha — devolvia-se um número que não é
@@ -10548,7 +10566,9 @@ if ($acao === 'modelo_aplicar') {
     exigirAdminApi();
     exigirCorrecao();
     $id = (int)($_GET['id'] ?? 0);
-    $st = $conn->prepare("SELECT nome, ambito, defs, visivel, alcance FROM {$P}modelos WHERE id=?");
+    $st = $conn->prepare("SELECT nome, ambito, defs, visivel, alcance,
+                                 renderer_key, renderer_version, renderer_schema
+                          FROM {$P}modelos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
     if (!$m) erro('Modelo não encontrado.');
@@ -10579,6 +10599,11 @@ if ($acao === 'modelo_aplicar') {
             erro('A sua licença dá-lhe o modelo padrão desta peça. Para escolher entre '
                . 'todos os modelos, reforce a licença na página da Licença.');
         }
+    }
+    if ($m['ambito'] === 'digital' && !convitePacoteResolver('digital',
+        $m['renderer_key'] ?? null, $m['renderer_version'] ?? null,
+        (int)($m['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA), false)) {
+        erro('O renderizador deste modelo não está instalado nesta versão da Kulemba.');
     }
     $j = json_decode((string)$m['defs'], true);
     if (!is_array($j)) erro('Esse modelo está ilegível.');
@@ -10639,7 +10664,9 @@ if ($acao === 'modelo_aplicar') {
 
 if ($acao === 'modelos_exportar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma leva os modelos.');
-    $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel, capacidades FROM {$P}modelos ORDER BY ambito, nome");
+    $r = @$conn->query("SELECT nome, descricao, ambito, defs, visivel, capacidades,
+                               renderer_key, renderer_version, renderer_schema
+                        FROM {$P}modelos ORDER BY ambito, nome");
     $lista = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
     foreach ($lista as &$m) {
         $m['defs'] = json_decode($m['defs'], true) ?: [];
@@ -10650,7 +10677,7 @@ if ($acao === 'modelos_exportar') {
     // digitais e quantos impressos vão no ficheiro.
     $porAmbito = [];
     foreach ($lista as $m) { $a = $m['ambito'] ?? '?'; $porAmbito[$a] = ($porAmbito[$a] ?? 0) + 1; }
-    $saida = ['formato' => 'casamento-web/modelos/1', 'esquema' => ESQUEMA_VERSAO,
+    $saida = ['formato' => 'casamento-web/modelos/2', 'esquema' => ESQUEMA_VERSAO,
               'gerado_em' => date('c'), 'gerado_por' => utilizadorAtual() ?? '',
               'resumo' => ['modelos' => count($lista)] + $porAmbito,
               'modelos' => $lista];
@@ -10665,7 +10692,8 @@ if ($acao === 'modelos_importar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma traz modelos.');
     $d = corpo();
     $f = is_array($d['ficheiro'] ?? null) ? $d['ficheiro'] : null;
-    if (!$f || ($f['formato'] ?? '') !== 'casamento-web/modelos/1') {
+    $formato = (string)($f['formato'] ?? '');
+    if (!$f || !in_array($formato, ['casamento-web/modelos/1','casamento-web/modelos/2'], true)) {
         erro('Este ficheiro não é uma exportação de modelos deste sistema.');
     }
     $entrou = 0; $saltou = 0;
@@ -10683,10 +10711,24 @@ if ($acao === 'modelos_importar') {
         $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
         $vis = empty($m['visivel']) ? 0 : 1;
         $quem = utilizadorAtual() ?? '';
+        $pacote = null;
+        if ($ambito === 'digital') {
+            $estrito = $formato === 'casamento-web/modelos/2';
+            $pacote = convitePacoteResolver($ambito, $m['renderer_key'] ?? null,
+                $m['renderer_version'] ?? null,
+                isset($m['renderer_schema']) ? (int)$m['renderer_schema'] : null, !$estrito);
+            if (!$pacote) { $saltou++; continue; }
+        }
+        $rk = $pacote['renderer_key'] ?? null;
+        $rv = $pacote['renderer_version'] ?? null;
+        $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
         $cap = json_encode(normalizarCapacidadesModelo($ambito, $m['capacidades'] ?? null), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por, capacidades)
-                              VALUES (?,?,?,?,?,?,?)");
-        $st->bind_param('ssssiss', $nome, $descricao, $ambito, $j, $vis, $quem, $cap);
+        $st = $conn->prepare("INSERT INTO {$P}modelos
+                              (nome, descricao, ambito, defs, visivel, criado_por, capacidades,
+                               renderer_key, renderer_version, renderer_schema)
+                              VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $st->bind_param('ssssissssi', $nome, $descricao, $ambito, $j, $vis, $quem, $cap,
+                        $rk, $rv, $rs);
         if (@$st->execute()) $entrou++; else $saltou++;
     }
     if (!$entrou) erro('O ficheiro não trouxe modelo nenhum aproveitável.');
@@ -10739,9 +10781,22 @@ if ($acao === 'sistema_importar') {
             $j = json_encode($defs, JSON_UNESCAPED_UNICODE);
             $vis = empty($m['visivel']) ? 0 : 1;
             $quem = utilizadorAtual() ?? '';
+            $pacote = $ambito === 'digital'
+                ? convitePacoteResolver($ambito, $m['renderer_key'] ?? null,
+                    $m['renderer_version'] ?? null,
+                    isset($m['renderer_schema']) ? (int)$m['renderer_schema'] : null, true)
+                : null;
+            if ($ambito === 'digital' && !$pacote) continue;
+            $rk = $pacote['renderer_key'] ?? null;
+            $rv = $pacote['renderer_version'] ?? null;
+            $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
             $cap = json_encode(normalizarCapacidadesModelo($ambito, $m['capacidades'] ?? null), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, criado_por, capacidades) VALUES (?,?,?,?,?,?,?)");
-            $st->bind_param('ssssiss', $nome, $descricao, $ambito, $j, $vis, $quem, $cap);
+            $st = $conn->prepare("INSERT INTO {$P}modelos
+                                  (nome, descricao, ambito, defs, visivel, criado_por, capacidades,
+                                   renderer_key, renderer_version, renderer_schema)
+                                  VALUES (?,?,?,?,?,?,?,?,?,?)");
+            $st->bind_param('ssssissssi', $nome, $descricao, $ambito, $j, $vis, $quem, $cap,
+                            $rk, $rv, $rs);
             if (@$st->execute()) $res['modelos']++;
         }
     }

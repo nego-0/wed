@@ -3,6 +3,7 @@
 // db.php — Ligação, esquema e funções partilhadas
 // ============================================================
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/convite-pacotes.php';
 
 // ---- Ligação (tenta local, depois online) ------------------
 // No PHP 8.1+ o mysqli lança exceções por defeito. Desligamos esse modo
@@ -209,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 66;
+const ESQUEMA_VERSAO = 67;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2664,6 +2665,21 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // afiná-los depois na página Modelos.
     if ($versaoAtual < 66) {
         migColuna($conn, "{$P}modelos", 'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL');
+    }
+
+    // v67 — um modelo passa a declarar qual código o desenha. Até aqui todos
+    // os digitais partilhavam convite-base.html sem o dizer; ficam associados
+    // ao primeiro pacote mantido, sem alterar uma única definição ou imagem.
+    if ($versaoAtual < 67) {
+        migColuna($conn, "{$P}modelos", 'renderer_key', "VARCHAR(80) NULL DEFAULT NULL");
+        migColuna($conn, "{$P}modelos", 'renderer_version', "VARCHAR(24) NULL DEFAULT NULL");
+        migColuna($conn, "{$P}modelos", 'renderer_schema', "SMALLINT UNSIGNED NOT NULL DEFAULT 1");
+        migIndice($conn, "{$P}modelos", 'idx_modelo_renderer', 'ambito, renderer_key, renderer_version');
+        $pk = $conn->real_escape_string(CONVITE_PACOTE_PADRAO);
+        $pv = $conn->real_escape_string(CONVITE_PACOTE_PADRAO_VERSAO);
+        @$conn->query("UPDATE {$P}modelos
+                       SET renderer_key='$pk', renderer_version='$pv', renderer_schema=" . CONVITE_PACOTE_SCHEMA . "
+                       WHERE ambito='digital' AND (renderer_key IS NULL OR renderer_key='')");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

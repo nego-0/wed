@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os modelos digitais identificam um pacote de renderização instalado e versionado',
+         'convite-pacotes.php', 'function convitePacoteResolver'],
         ['Os 84 stickers da Ajuda e da Demonstração retratam a interface actual em desktop e mobile',
          'tests/gerar-capturas-ajuda.js', "'.ed-movel-bt[data-abrir=\"camadas\"]'"],
         ['As capturas usam a peça padrão actual e a identidade fictícia Marta & Pedro',

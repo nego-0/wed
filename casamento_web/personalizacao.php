@@ -5,6 +5,7 @@
 // motor de placeholders e gravação das definições (cw_definicoes).
 // ============================================================
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/convite-pacotes.php';
 
 // ---- Escape utilitário -------------------------------------
 // escP() mudou-se para config.php: é um utilitário de escrita, e páginas que
@@ -320,6 +321,21 @@ function modeloProvenienciaId(mysqli $conn, string $ambito): int {
     return $r ? (int)$r[0] : 0;
 }
 
+/** Pacote declarado por um modelo, sempre resolvido no registo instalado. */
+function pacoteDoModeloId(mysqli $conn, string $ambito, int $id, bool $fallback = true): ?array {
+    global $P;
+    if ($ambito !== 'digital') return null;
+    if ($id <= 0) return $fallback ? convitePacoteResolver($ambito, null, null) : null;
+    $st = $conn->prepare("SELECT renderer_key, renderer_version, renderer_schema
+                          FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+    if (!$st) return $fallback ? convitePacoteResolver($ambito, null, null) : null;
+    $st->bind_param('is', $id, $ambito); $st->execute();
+    $r = $st->get_result()->fetch_assoc();
+    if (!$r) return $fallback ? convitePacoteResolver($ambito, null, null) : null;
+    return convitePacoteResolver($ambito, $r['renderer_key'] ?? null,
+        $r['renderer_version'] ?? null, (int)($r['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA), $fallback);
+}
+
 /** O desenho de um modelo — só as chaves que ele impõe a quem o aplica. */
 function desenhoDoModelo(string $ambito, string $defsJson): array {
     $j = json_decode($defsJson, true);
@@ -612,6 +628,8 @@ function catalogoModelosDeCasa(): array {
                   'defs' => json_encode(['cartao.paleta' => $pal, 'cartao.folhagem' => $folha,
                                          'cartao.elo' => $elo], JSON_UNESCAPED_UNICODE)];
     }
+    foreach ($out as &$m) $m += convitePacoteOrigem((string)$m['ambito']);
+    unset($m);
     return $out;
 }
 
@@ -640,6 +658,11 @@ function catalogoModelosEmFalta(mysqli $conn): array {
 function restaurarModelosDeCasa(mysqli $conn, ?array $alvos = null, bool $repor = false): array {
     global $P;
     $criados = []; $repostos = [];
+    // Esta função também é chamada por migrações anteriores à v67. Nesse
+    // percurso as colunas do pacote ainda não existem e são preenchidas pela
+    // própria v67 alguns passos depois.
+    $colunaPacote = @$conn->query("SHOW COLUMNS FROM {$P}modelos LIKE 'renderer_key'");
+    $temPacote = $colunaPacote && $colunaPacote->num_rows > 0;
     foreach (catalogoModelosDeCasa() as $m) {
         if ($alvos !== null) {
             $quer = false;
@@ -652,16 +675,36 @@ function restaurarModelosDeCasa(mysqli $conn, ?array $alvos = null, bool $repor 
         if ($r) {
             if ($repor) {
                 $id = (int)$r[0];
-                $st = $conn->prepare("UPDATE {$P}modelos SET descricao=?, defs=?, visivel=1,
-                                      alcance='todos', criado_por='sistema', atualizado_em=NOW() WHERE id=?");
-                $st->bind_param('ssi', $m['descricao'], $m['defs'], $id); $st->execute();
+                if ($temPacote) {
+                    $st = $conn->prepare("UPDATE {$P}modelos SET descricao=?, defs=?, visivel=1,
+                                          alcance='todos', criado_por='sistema', renderer_key=?,
+                                          renderer_version=?, renderer_schema=?, atualizado_em=NOW() WHERE id=?");
+                    $st->bind_param('ssssii', $m['descricao'], $m['defs'], $m['renderer_key'],
+                                    $m['renderer_version'], $m['renderer_schema'], $id);
+                } else {
+                    $st = $conn->prepare("UPDATE {$P}modelos SET descricao=?, defs=?, visivel=1,
+                                          alcance='todos', criado_por='sistema', atualizado_em=NOW() WHERE id=?");
+                    $st->bind_param('ssi', $m['descricao'], $m['defs'], $id);
+                }
+                $st->execute();
                 $repostos[] = $m['nome'] . ' · ' . $m['ambito'];
             }
             continue;
         }
-        $st = $conn->prepare("INSERT INTO {$P}modelos (nome, descricao, ambito, defs, visivel, alcance, criado_por)
-                              VALUES (?,?,?,?,1,'todos','sistema')");
-        $st->bind_param('ssss', $m['nome'], $m['descricao'], $m['ambito'], $m['defs']); $st->execute();
+        if ($temPacote) {
+            $st = $conn->prepare("INSERT INTO {$P}modelos
+                                  (nome, descricao, ambito, defs, visivel, alcance, criado_por,
+                                   renderer_key, renderer_version, renderer_schema)
+                                  VALUES (?,?,?,?,1,'todos','sistema',?,?,?)");
+            $st->bind_param('ssssssi', $m['nome'], $m['descricao'], $m['ambito'], $m['defs'],
+                            $m['renderer_key'], $m['renderer_version'], $m['renderer_schema']);
+        } else {
+            $st = $conn->prepare("INSERT INTO {$P}modelos
+                                  (nome, descricao, ambito, defs, visivel, alcance, criado_por)
+                                  VALUES (?,?,?,?,1,'todos','sistema')");
+            $st->bind_param('ssss', $m['nome'], $m['descricao'], $m['ambito'], $m['defs']);
+        }
+        $st->execute();
         $criados[] = $m['nome'] . ' · ' . $m['ambito'];
     }
 
@@ -747,7 +790,8 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
         }
         $base = null;
         if ($baseId > 0) {
-            $st = $conn->prepare("SELECT id,nome,ambito,capacidades FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+            $st = $conn->prepare("SELECT id,nome,ambito,capacidades,renderer_key,renderer_version,renderer_schema
+                                  FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
             if ($st) {
                 $st->bind_param('is', $baseId, $ambito); $st->execute();
                 $base = $st->get_result()->fetch_assoc() ?: null;
@@ -755,7 +799,9 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
         }
         return [defsAtuais($conn), null, $base];
     }
-    $st = $conn->prepare("SELECT id, nome, ambito, defs, visivel, alcance, capacidades FROM {$P}modelos WHERE id=?");
+    $st = $conn->prepare("SELECT id, nome, ambito, defs, visivel, alcance, capacidades,
+                                 renderer_key, renderer_version, renderer_schema
+                          FROM {$P}modelos WHERE id=?");
     if (!$st) return [defsAtuais($conn), null, null];
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
@@ -802,7 +848,10 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
         $permitidas = array_flip(chavesModelo($ambito));
         foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
         $info = ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito,
-                 'capacidades' => $m['capacidades'] ?? null];
+                 'capacidades' => $m['capacidades'] ?? null,
+                 'renderer_key' => $m['renderer_key'] ?? null,
+                 'renderer_version' => $m['renderer_version'] ?? null,
+                 'renderer_schema' => (int)($m['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA)];
         return [$defs, $info, $info];
     }
 
@@ -833,7 +882,10 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     foreach (padraoDesenho($ambito) as $k => $v) $defs[$k] = $v;
     foreach ($j as $k => $v) if (isset($desenho[$k]) && is_string($v)) $defs[$k] = $v;
     return [$defs, null, ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito,
-                          'capacidades' => $m['capacidades'] ?? null]];
+                          'capacidades' => $m['capacidades'] ?? null,
+                          'renderer_key' => $m['renderer_key'] ?? null,
+                          'renderer_version' => $m['renderer_version'] ?? null,
+                          'renderer_schema' => (int)($m['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA)]];
 }
 
 // ---- Defaults (= convite original, byte a byte) ------------
