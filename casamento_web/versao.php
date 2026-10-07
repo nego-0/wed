@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Convites, editor, demonstração e exportação usam o mesmo runtime e a confirmação abre num modal acessível',
+         'assets/convite-runtime.js', "location.hash==='#confirmar'"],
+        ['O formulário real de confirmação conserva presença parcial e cabe no modal em qualquer viewport',
+         'convite.php', 'body.modo-modal .folha'],
         ['As provas dos editores cobrem o manifesto 3, o documento normalizado e a ausência de rascunhos',
          'tests/chk_historico_versoes_editor.js', 'EditorDocumento.serializar'],
         ['A página de presentes oferece texto, QR gerado no convite ou métodos com ícones personalizados',

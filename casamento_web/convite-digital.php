@@ -534,7 +534,25 @@ function embutirRecursos(string $html, string $base): string {
             return $d ? 'href="' . $d . '"' : $m[0];
         }, $html);
 
-    // 4) QRious:  <script src="assets/qrious.min.js"></script> -> inline
+    // 4) O runtime comum viaja no ficheiro exportado. Assim, calendário,
+    // galeria, música, rolagem, QR, presentes e modal de confirmação não têm
+    // uma implementação paralela para o modo offline.
+    $cssRuntime = $base . '/assets/convite-runtime.css';
+    if (is_readable($cssRuntime)) {
+        $css = file_get_contents($cssRuntime);
+        $html = preg_replace(
+            '#<link rel="stylesheet" href="assets/convite-runtime\.css(?:\?[^\"]*)?">#',
+            '<style>' . $css . '</style>', $html, 1);
+    }
+    $jsRuntime = $base . '/assets/convite-runtime.js';
+    if (is_readable($jsRuntime)) {
+        $js = file_get_contents($jsRuntime);
+        $html = preg_replace(
+            '#<script src="assets/convite-runtime\.js(?:\?[^\"]*)?"></script>#',
+            '<script>' . $js . '</script>', $html, 1);
+    }
+
+    // 5) QRious:  <script src="assets/qrious.min.js"></script> -> inline
     $qr = $base . '/assets/qrious.min.js';
     if (is_readable($qr)) {
         $js = file_get_contents($qr);

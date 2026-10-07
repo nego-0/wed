@@ -2493,7 +2493,7 @@ function cerimoniasHtml(array $defs): string {
           . ($local !== '' ? '<p class="cer-place">' . escP($local) . '</p>' : '')
           . '<div class="cer-city">' . escP($defs['evento.cidade'] ?? '') . '</div>'
           . ($maps !== ''
-              ? '<a class="cer-map" href="' . escP($maps) . '" target="_blank" rel="noopener">'
+              ? '<a class="cer-map" data-kulemba="mapa" href="' . escP($maps) . '" target="_blank" rel="noopener">'
                 . '<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/>'
                 . '<circle cx="12" cy="10" r="2.6"/></svg><span>Ver no mapa</span></a>'
               : '')
@@ -3133,7 +3133,41 @@ function convitePlaceholders(array $defs): array {
     $temaVars = $tipo['faces'] . ($vars !== '' ? ':root{'.$vars.'}' : '') . cssPosicoes($defs);
     $petais = json_encode([$pal['gold-pale'], $pal['gold-soft'], $pal['blush'], $pal['cream']]);
 
+    // Contrato de execução do convite. O modelo declara os pontos de montagem
+    // no HTML e este objecto leva apenas dados; convite publicado, editor,
+    // demonstração e exportação carregam exactamente o mesmo motor JS.
+    $runtime = [
+        'esquema' => 1,
+        'evento' => ['data' => $defs['evento.data'].'T'.$defs['evento.hora'].':00'.$dt->format('P')],
+        'autoplay' => $defs['fx.autoplay'] === '1',
+        'petalas' => [
+            'activo' => $defs['fx.petalas'] === '1',
+            'cores' => [$pal['gold-pale'], $pal['gold-soft'], $pal['blush'], $pal['cream']],
+        ],
+        'rolagem' => [
+            'activa' => ($defs['geral.rolagem_auto'] ?? '0') === '1',
+            'velocidade' => max(8, min(120, (int)($defs['geral.rolagem_velocidade'] ?? 28))),
+        ],
+        'calendario' => [
+            'ficheiro' => 'Casamento-'.$slug.'.ics',
+            'linhas' => [
+                'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kulemba//Convite digital//PT',
+                'BEGIN:VEVENT', 'UID:'.strtolower($slug).'@convite',
+                'DTSTAMP:'.$agoraUtc->format('Ymd\THis\Z'),
+                'DTSTART:'.$ini->format('Ymd\THis\Z'), 'DTEND:'.$fim->format('Ymd\THis\Z'),
+                'SUMMARY:'.str_replace(["\r","\n",'\\',','], [' ',' ',' ', '\\,'], 'Casamento de '.$casal),
+                'LOCATION:'.str_replace(["\r","\n",'\\',','], [' ',' ',' ', '\\,'], $defs['evento.local'].', '.$defs['evento.cidade']),
+                'DESCRIPTION:'.str_replace(["\r","\n",'\\',','], [' ',' ',' ', '\\,'], $defs['evento.venue_titulo'].' '.strtolower(horaTexto($defs['evento.hora'])).'. Confirme a sua presença.'),
+                'END:VEVENT', 'END:VCALENDAR',
+            ],
+        ],
+        'qr' => ['cor' => $pal['forest-deep'], 'fundo' => $pal['ivory']],
+    ];
+    $runtimeJson = json_encode($runtime, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
+
     return [
+        '{{RUNTIME_CONFIG}}' => $runtimeJson,
         '{{TITLE}}' => escP($casal.' — '.$dataExt),
         '{{MONO}}' => escP($mono),
         '{{COVER_HINT}}' => escP($defs['capa.dica']),

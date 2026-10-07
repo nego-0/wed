@@ -17,5 +17,10 @@
     "efeitos": ["fx.petalas", "fx.autoplay"],
     "componentes": ["texto", "fotografia", "galeria", "cronologia", "local_mapa", "confirmacao", "musica", "presentes"],
     "recursos": ["biblioteca_icones", "rolagem_automatica", "presentes_qr"]
+  },
+  "runtime": {
+    "esquema": 1,
+    "montagens": ["capa", "audio", "calendario", "mapa", "galeria", "confirmacao", "qr", "presentes"],
+    "eventos": ["pronto", "capa-abrir", "audio-tocar", "audio-pausar", "rolagem-iniciar", "rolagem-pausar", "calendario-descarregar", "mapa-abrir", "galeria-abrir", "galeria-fechar", "qr-gerado", "confirmacao-abrir", "confirmacao-fechar", "confirmacao-concluida"]
   }
 }

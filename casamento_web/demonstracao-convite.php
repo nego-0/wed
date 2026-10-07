@@ -19,8 +19,13 @@ $out=preg_replace_callback('~url\((assets/convite/fonts/[a-z0-9-]+\.woff2)\)~',
 $out=preg_replace('/<a\b([^>]*?)href="[^"]*"([^>]*)>/i','<a $1href="#demo-rsvp"$2>',$out);
 $out=str_replace('target="_blank"','',$out);
 $out=str_replace('</head>','<link rel="stylesheet" href="'.escP(asset('assets/demonstracao-convite.css')).'"></head>',$out);
-// A confirmação de exemplo ocupa o lugar da acção do próprio convite.
-$out=preg_replace('~<a\s+class="btn btn-gold rv d3" href="#demo-rsvp"[^>]*>.*?</a>~s',
-    '<div id="demo-rsvp"><p>Família Mendes · 2 pessoas</p><button id="demo-sim">Confirmar presença</button><p id="demo-resposta" role="status"></p></div>',$out);
-$out=str_replace('</body>','<script>document.getElementById("demo-sim").addEventListener("click",function(){this.disabled=true;this.textContent="Presença confirmada";document.getElementById("demo-resposta").textContent="Obrigado! Guardámos o vosso sim. Até ao grande dia!";});</script></body>',$out);
+// A demonstração usa o mesmo modal e o mesmo ponto de montagem do convite
+// publicado. Só o conteúdo é local e fictício, para nunca escrever numa festa.
+$demoRsvp='<div id="demo-rsvp" hidden><p>Família Mendes · 2 pessoas</p>'
+    .'<button id="demo-sim" type="button">Confirmar presença</button>'
+    .'<p id="demo-resposta" role="status"></p></div>';
+$demoJs='<script>document.addEventListener("click",function(e){if(!e.target.matches("#demo-sim"))return;'
+    .'e.target.disabled=true;e.target.textContent="Presença confirmada";'
+    .'document.getElementById("demo-resposta").textContent="Obrigado! Guardámos o vosso sim. Até ao grande dia!";});</script>';
+$out=str_replace('</body>',$demoRsvp.$demoJs.'</body>',$out);
 echo $out;

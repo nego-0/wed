@@ -16,5 +16,8 @@ foreach (['{{ROLAGEM_AUTO}}','{{ROLAGEM_VELOCIDADE}}','{{ICONE_MUSICA_PARADA}}',
     if (!isset($ph[$k]) || $ph[$k] === '') falha("marcador não composto: $k");
 $html = strtr(file_get_contents(__DIR__.'/../assets/convite-base.html'), $ph);
 if (str_contains($html, '{{ROLAGEM_')) falha('marcador de rolagem ficou no HTML');
-if (!str_contains($html, 'iniciarRolagemAutomatica')) falha('motor de rolagem ausente');
+$runtime = file_get_contents(__DIR__.'/../assets/convite-runtime.js');
+if (!str_contains($html, 'assets/convite-runtime.js')) falha('modelo não carrega o runtime comum');
+if (!str_contains($runtime, 'function iniciarRolagem')) falha('motor de rolagem ausente');
+if (!str_contains($runtime, "'kulemba:'+nome")) falha('eventos do runtime ausentes');
 echo "OK — ícones globais, música e rolagem automática.\n";

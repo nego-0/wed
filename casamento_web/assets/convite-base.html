@@ -7,6 +7,7 @@
 <link rel="icon" href="assets/icone-sistema-512.png" type="image/png" sizes="512x512">
 <link rel="alternate icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="assets/icone-sistema-180.png" sizes="180x180">
+<link rel="stylesheet" href="assets/convite-runtime.css">
 <meta name="theme-color" content="#16283a">
 <title>{{TITLE}}</title>
 <style id="fontes">
@@ -647,8 +648,8 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
 </style>
 <style id="tema">{{TEMA_VARS}}</style>
 </head>
-<body data-estilo="{{ESTILO_DIGITAL}}">
-<div id="cover" data-abre="{{ABERTURA}}" data-selo="{{SELO}}" role="button" tabindex="0" aria-label="Toque para abrir o convite">
+<body data-estilo="{{ESTILO_DIGITAL}}" data-kulemba-runtime>
+<div id="cover" data-kulemba="capa" data-abre="{{ABERTURA}}" data-selo="{{SELO}}" role="button" tabindex="0" aria-label="Toque para abrir o convite">
   <div class="gate left"></div>
   <div class="gate right"></div>
   <div class="seal-wrap">
@@ -669,7 +670,7 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
   </div>
 </div>
 <div id="petals" aria-hidden="true"></div>
-<button id="audioBtn" aria-label="Ligar ou desligar música">
+<button id="audioBtn" data-kulemba="audio" aria-label="Ligar ou desligar música">
   <svg class="audio-icon a-parada" viewBox="0 0 24 24">{{ICONE_MUSICA_PARADA}}</svg>
   <svg class="audio-icon a-tocando" viewBox="0 0 24 24">{{ICONE_MUSICA_TOCANDO}}</svg>
 </button>
@@ -768,7 +769,7 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
       <div class="cell"><div class="v" id="cd-m">—</div><div class="l">Min</div></div>
       <div class="cell"><div class="v" id="cd-s">—</div><div class="l">Seg</div></div>
     </div>
-    <a class="cal-btn rv d2" id="calBtn" href="#">
+    <a class="cal-btn rv d2" id="calBtn" data-kulemba="calendario" href="#">
       <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4M12 12v5M9.5 14.5h5"/></svg>
       Adicionar ao calendário
     </a>
@@ -787,7 +788,7 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
               {{CER_ORNAMENTO}}
               <p class="cer-place">{{VENUE_LOCAL}}</p>
               <div class="cer-city">{{VENUE_CIDADE}}</div>
-              <a class="cer-map" href="{{MAPS_URL}}" target="_blank" rel="noopener">
+              <a class="cer-map" data-kulemba="mapa" href="{{MAPS_URL}}" target="_blank" rel="noopener">
                 <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
                 <span>Local do evento</span>
               </a>
@@ -823,7 +824,7 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
       <div class="qr-card rv">
         <span class="qr-corner tl"></span><span class="qr-corner tr"></span>
         <span class="qr-corner bl"></span><span class="qr-corner br"></span>
-        <canvas class="qr-img" id="qrCanvas" width="320" height="320" aria-label="Código QR de acesso ao evento"></canvas>
+        <canvas class="qr-img" id="qrCanvas" width="320" height="320" data-kulemba-qr="{{QR_VALUE}}" data-qr-cor="{{QR_FG}}" data-qr-fundo="{{QR_BG}}" aria-label="Código QR de acesso ao evento"></canvas>
         <p class="qr-guest">{{GUEST_NAME}}</p>{{MESA_BLOCK}}
       </div>
       <p class="qr-instr rv d1">{{ACESSO_INSTRUCAO}}</p>
@@ -849,7 +850,7 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
       <h2 class="rv">{{RSVP_TITULO}}</h2>
       <p class="sub rv d1">{{RSVP_SUB}}</p>
       <p class="deadline rv d2">{{RSVP_DEADLINE}}</p>
-      <a class="btn btn-gold rv d3" href="{{CONFIRM_URL}}" target="_blank" rel="noopener">
+      <a class="btn btn-gold rv d3" data-kulemba="confirmacao" href="{{CONFIRM_URL}}" aria-haspopup="dialog">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z" stroke-linejoin="round"/></svg>
         Confirmar presença
       </a>
@@ -862,118 +863,10 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
   </section>
 <!--/BLOCO:final-->
 </main>
-<script>
-(function(){
-  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Na composição editorial, a capa cresce com os nomes e com a fotografia.
-  // O arrasto e o convite publicado usam a mesma percentagem da caixa real.
-  if(document.body.dataset.estilo==='kulemba'){
-    var heroFrame=document.querySelector('#hero .frame');
-    function medirCapa(){
-      heroFrame.style.setProperty('--uw',heroFrame.offsetWidth/100+'px');
-      heroFrame.style.setProperty('--uh',heroFrame.offsetHeight/100+'px');
-    }
-    medirCapa();
-    if(window.ResizeObserver) new ResizeObserver(medirCapa).observe(heroFrame);
-    else window.addEventListener('resize',medirCapa);
-  }
-
-  /* ---- cover ---- */
-  var cover = document.getElementById('cover');
-  function openCover(){
-    if(cover.classList.contains('open')) return;
-    cover.classList.add('open');
-    document.body.classList.add('opened');
-    if({{FX_AUTOPLAY}}) startAudio();
-    if({{ROLAGEM_AUTO}}) iniciarRolagemAutomatica();
-  }
-  cover.addEventListener('click', openCover);
-  cover.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();openCover();} });
-
-  /* ---- petals ---- */
-  if(!reduced && {{FX_PETALAS}}){
-    var pc = document.getElementById('petals');
-    var colors = {{PETAL_COLORS}};
-    for(var i=0;i<14;i++){
-      var p=document.createElement('div');p.className='petal';
-      var s=10+Math.random()*16;
-      p.style.width=s+'px';p.style.height=(s*1.25)+'px';
-      p.style.left=(Math.random()*100)+'vw';
-      var dur=12+Math.random()*12;
-      p.style.animationDuration=dur+'s';
-      p.style.animationDelay=(-Math.random()*dur)+'s';
-      var col=colors[i%colors.length];
-      p.innerHTML='<svg viewBox="0 0 20 26"><path d="M10 0C4 6 0 12 0 17c0 5 4 9 10 9s10-4 10-9C20 12 16 6 10 0z" fill="'+col+'" opacity="0.9"/><path d="M10 2C10 8 10 20 10 26" stroke="rgba(0,0,0,0.06)" stroke-width="0.6" fill="none"/></svg>';
-      pc.appendChild(p);
-    }
-  }
-
-  /* ---- ambient music via embedded audio file ---- */
-  var audioBtn=document.getElementById('audioBtn'), bgAudio=document.getElementById('bgAudio'), playing=false;
-  bgAudio.volume=0.55;
-  function startAudio(){
-    var p=bgAudio.play();
-    if(p&&p.then){ p.then(function(){ playing=true; audioBtn.classList.add('playing'); })
-                    .catch(function(){ playing=false; audioBtn.classList.remove('playing'); }); }
-    else { playing=true; audioBtn.classList.add('playing'); }
-  }
-  function stopAudio(){
-    playing=false; audioBtn.classList.remove('playing');
-    try{ bgAudio.pause(); }catch(e){}
-  }
-  bgAudio.addEventListener('play', function(){ playing=true; audioBtn.classList.add('playing'); });
-  bgAudio.addEventListener('pause', function(){ playing=false; audioBtn.classList.remove('playing'); });
-  audioBtn.style.display='flex';
-  audioBtn.addEventListener('click', function(){ playing?stopAudio():startAudio(); });
-
-  /* ---- rolagem automática comum a todos os modelos ---- */
-  var rolagemId=0, rolagemAnterior=0, rolagemPausaAte=0;
-  function passoRolagem(agora){
-    if(!rolagemAnterior) rolagemAnterior=agora;
-    var dt=Math.min(50,agora-rolagemAnterior); rolagemAnterior=agora;
-    if(agora>=rolagemPausaAte) window.scrollBy(0, {{ROLAGEM_VELOCIDADE}}*dt/1000);
-    if(window.scrollY+window.innerHeight<document.documentElement.scrollHeight-2)
-      rolagemId=requestAnimationFrame(passoRolagem);
-    else rolagemId=0;
-  }
-  function iniciarRolagemAutomatica(){
-    if(reduced||rolagemId) return;
-    rolagemAnterior=0; rolagemId=requestAnimationFrame(passoRolagem);
-  }
-  function pausarRolagem(){ rolagemPausaAte=performance.now()+4500; }
-  ['wheel','touchstart','pointerdown','keydown'].forEach(function(ev){window.addEventListener(ev,pausarRolagem,{passive:true});});
-
-  /* ---- reveals ---- */
-  var io=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.16});
-  document.querySelectorAll('.rv,.story-photo,.timeline,.thread').forEach(function(el){io.observe(el);});
-  var ioV=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in-view');ioV.unobserve(e.target);}});},{threshold:.2});
-  document.querySelectorAll('.page').forEach(function(s){ioV.observe(s);});
-
-  /* ---- countdown ---- */
-  var target=new Date('{{DATA_JS}}').getTime();
-  var eD=document.getElementById('cd-d'),eH=document.getElementById('cd-h'),eM=document.getElementById('cd-m'),eS=document.getElementById('cd-s');
-  function pad(n){return n<10?'0'+n:''+n}
-  function tick(){var d=target-Date.now();if(d<=0){eD.textContent='0';eH.textContent=eM.textContent=eS.textContent='00';return;}
-    eD.textContent=Math.floor(d/86400000);eH.textContent=pad(Math.floor(d/3600000)%24);eM.textContent=pad(Math.floor(d/60000)%60);eS.textContent=pad(Math.floor(d/1000)%60);setTimeout(tick,1000);}
-  tick();
-
-  /* ---- add to calendar (.ics) ---- */
-  document.getElementById('calBtn').addEventListener('click', function(e){
-    e.preventDefault();
-    var ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ConviteDigital//PT','BEGIN:VEVENT',
-      '{{ICS_UID}}','DTSTAMP:{{ICS_STAMP}}',
-      '{{ICS_DTSTART}}','{{ICS_DTEND}}',
-      '{{ICS_SUMMARY}}',
-      '{{ICS_LOCATION}}',
-      '{{ICS_DESC}}',
-      'END:VEVENT','END:VCALENDAR'].join('\r\n');
-    var blob=new Blob([ics],{type:'text/calendar'}), url=URL.createObjectURL(blob);
-    var a=document.createElement('a');a.href=url;a.download='{{ICS_FILE}}';document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(function(){URL.revokeObjectURL(url);},1500);
-  });
-})();
-</script>
+<script id="kulemba-runtime-config" type="application/json">{{RUNTIME_CONFIG}}</script>
+<script src="assets/qrious.min.js"></script>
+<script src="assets/convite-runtime.js"></script>
 <a id="dlBtn" href="{{DOWNLOAD_URL}}" aria-label="Descarregar o convite para ver sem internet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span>Descarregar convite</span></a>
 <style>#dlBtn{position:fixed;left:18px;bottom:18px;z-index:1200;display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.2rem;border-radius:50px;cursor:pointer;text-decoration:none;font-family:var(--f-sans);font-weight:500;font-size:14px;color:#fff;background:linear-gradient(135deg,#B4864A,#8A6031);box-shadow:0 10px 26px rgba(22,38,30,.35)}#dlBtn svg{width:17px;height:17px}#dlBtn:active{transform:translateY(1px)}@media print{#dlBtn{display:none}}</style>
 <script>
@@ -1023,10 +916,5 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
   }
 })();
 </script>
-<script src="assets/qrious.min.js"></script>
-<script>try{
-new QRious({element:document.getElementById("qrCanvas"),value:"{{QR_VALUE}}",size:320,level:"M",foreground:"{{QR_FG}}",background:"{{QR_BG}}"});
-document.querySelectorAll('[data-presente-qr]').forEach(function(c){new QRious({element:c,value:c.getAttribute('data-presente-qr'),size:260,level:'M',foreground:'{{QR_FG}}',background:'#FFFFFF'});});
-}catch(e){}</script>
 </body>
 </html>

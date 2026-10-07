@@ -147,7 +147,7 @@ function ficheirosApp(): array {
             'assets/api.js','assets/mesas.js','assets/versoes.js','assets/orcamento.js','assets/moeda.js',
             'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
-            'assets/so-ver.js',
+            'assets/so-ver.js','assets/convite-runtime.css','assets/convite-runtime.js',
             'assets/convite-base.html'];
     // As imagens de ajuda são geradas; incluí-las por padrão evita manter uma
     // lista manual de capturas e stickers sempre que os passos mudam.

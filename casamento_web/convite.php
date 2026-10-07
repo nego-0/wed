@@ -12,6 +12,7 @@ require_once __DIR__ . '/parcial-demonstracao.php';
 // casamento se trata, e cada casamento tem os seus nomes, cores e textos.
 $codigo = strtoupper(trim($_GET['c'] ?? ''));
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
+$modoModal = isset($_GET['modal']) && $_GET['modal'] === '1';
 if ($demo && !ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
 $c = $demo ? [
     'id'=>0,'codigo'=>'EXEMPLO','nome_exibicao'=>'Família Mendes','sufixo'=>null,
@@ -194,9 +195,23 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   .link-wa{ color:var(--gold); text-decoration:none; }
   .erro-pag{ text-align:center; padding:3rem 1.5rem; }
   .erro-pag .casal{ color:var(--forest); }
+  /* Dentro do convite, a própria página é o corpo do modal. O invólucro,
+     o cabeçalho e o botão Fechar pertencem ao runtime comum do convite. */
+  body.modo-modal{ display:block; min-height:100%; padding:0; background:var(--ivory); }
+  body.modo-modal .folha{ max-width:none; min-height:100vh; border:0; border-radius:0; box-shadow:none; }
+  body.modo-modal .cabeca{ padding:1.75rem 1.25rem 1.45rem; }
+  body.modo-modal .selo{ width:52px; height:52px; }
+  body.modo-modal .casal{ font-size:clamp(2.35rem,9vw,3.2rem); }
+  @media(max-width:480px){
+    body.modo-modal .corpo{ padding:1.35rem 1rem calc(1.5rem + env(safe-area-inset-bottom)); }
+    body.modo-modal .opcoes{ gap:.55rem; }
+    body.modo-modal .op{ padding:.8rem .55rem; }
+    body.modo-modal .wa-linha{ flex-direction:column; }
+    body.modo-modal .wa-linha .btn{ width:100%; }
+  }
 </style>
 </head>
-<body>
+<body<?= $modoModal ? ' class="modo-modal"' : '' ?>>
 <?php if (!$valido): ?>
   <?php
     // Código que não abre porta nenhuma: a página não nomeia casal nenhum nem
@@ -469,9 +484,11 @@ async function enviar(){
     $('form-rsvp').style.display='none';
     $('concluido').classList.add('on');
     $('concluido').scrollIntoView({behavior:'smooth'});
+    if(window.parent!==window) window.parent.postMessage({tipo:'kulemba:rsvp-concluido',decisao:'sim',codigo:CODIGO},'*');
   } else {
     $('form-rsvp').innerHTML='<div class="estado-atual"><span class="nao">Resposta registada.</span> Sentiremos a sua falta — obrigado por avisar. <i data-ico="ausencia"></i></div>';
     $('concluido').classList.remove('on');
+    if(window.parent!==window) window.parent.postMessage({tipo:'kulemba:rsvp-concluido',decisao:'nao',codigo:CODIGO},'*');
   }
 }
 </script>
