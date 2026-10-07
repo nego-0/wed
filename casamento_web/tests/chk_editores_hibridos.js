@@ -49,8 +49,9 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
         return {largura:r.width,altura:r.height};
       })()
     }));
-    ok(base.manifesto && base.manifesto.schema === 1 && base.manifesto.ambito,
-      `${nome}: recebe o manifesto de capacidades do modelo`);
+    ok(base.manifesto && base.manifesto.schema === 3 && base.manifesto.ambito &&
+       base.manifesto.inspector && base.manifesto.modo === 'noivos',
+      `${nome}: recebe o manifesto 3 com inspector e modo explícito`);
     ok(base.opcoes < 70, `${nome}: a barra principal conserva uma linha (${Math.round(base.opcoes)} px)`);
     ok(base.grupos === 2 && base.mais, `${nome}: comandos principais, contexto e Mais acções estão separados`);
     ok(base.cabecalhoTab === 0 && base.cabecalhoRole === 'button', `${nome}: painéis respondem ao teclado`);
@@ -168,18 +169,17 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8921';
     await page.locator('.ed-movel-bt[data-abrir="previa"]').click();
     ok(await page.locator('body.ed-inspector-on').count() === 0, `${nome}: Prévia devolve toda a área à peça`);
 
-    // Mudar um campo sem gravar deve criar uma cópia recuperável local. Não se
-    // envia nada ao servidor nesta prova.
+    // Versões explícitas são a única recuperação: o editor não cria rascunhos
+    // escondidos no dispositivo.
     await page.evaluate(() => marcarSujo(true));
     await page.waitForTimeout(900);
     const r = await page.evaluate(() => Object.keys(localStorage).find(k => k.startsWith('kulemba.editor.rascunho.')) || '');
-    ok(!!r, `${nome}: alterações criam rascunho recuperável neste dispositivo`);
+    ok(!r, `${nome}: alterações não criam rascunhos locais`);
     page.once('dialog', d => d.accept());
     await page.reload({ waitUntil:'networkidle' });
     await page.waitForTimeout(nome.startsWith('convite') ? 1600 : 450);
-    ok(await page.locator('.ed-recuperar').count() === 1,
-      `${nome}: ao reabrir, oferece recuperar ou descartar o rascunho`);
-    await page.locator('.ed-recuperar .ed-descartar').click();
+    ok(await page.locator('.ed-recuperar').count() === 0,
+      `${nome}: ao reabrir, não inventa uma versão por recuperar`);
   }
 
   ok(erros.length === 0, 'sem erros JavaScript: ' + erros.slice(0, 3).join(' | '));
