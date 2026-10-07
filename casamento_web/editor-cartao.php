@@ -12,7 +12,8 @@ require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 require_once __DIR__ . '/personalizacao.php';
 require_once __DIR__ . '/editor-modelo.php';
 [$defs, $MODELO, $MODELO_BASE] = defsDoEditor($conn, 'impresso');
-$MANIFESTO_EDITOR = manifestoEditorModelo('impresso', $defs, $MODELO ?: $MODELO_BASE);
+$MANIFESTO_EDITOR = manifestoEditorModelo('impresso', $defs, $MODELO ?: $MODELO_BASE,
+                                           $MODELO ? 'administrador' : 'noivos');
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 // Desenhar a peça é o que distingue os escalões «com edição» dos outros: quem
 // leva o modelo padrão sem edição vê a peça em toda a parte, mas não entra

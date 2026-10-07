@@ -7,7 +7,15 @@
   "adaptador": "convite-base-v1",
   "estado": "mantido",
   "compatibilidade": {
-    "capacidades": 2,
+    "capacidades": 3,
     "dados": 1
+  },
+  "editor": {
+    "seccoes": ["capa", "hero", "convite", "historia", "interludio", "grande-dia", "acesso", "final"],
+    "paineis": ["conteudo", "camadas", "cores", "tipografia", "media", "efeitos", "composicao"],
+    "media": ["media.hero", "media.historia", "media.interludio", "media.acesso", "media.musica"],
+    "efeitos": ["fx.petalas", "fx.autoplay"],
+    "componentes": ["texto", "fotografia", "galeria", "cronologia", "local_mapa", "confirmacao", "musica", "presentes"],
+    "recursos": ["biblioteca_icones", "rolagem_automatica", "presentes_qr"]
   }
 }

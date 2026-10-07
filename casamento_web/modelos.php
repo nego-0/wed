@@ -664,6 +664,7 @@ async function capacidades(id){
     ${capChecks('efeitos','Efeitos disponíveis',cat.efeitos,c.efeitos,false)}
     ${capChecks('movimentaveis','Elementos movimentáveis',cat.movimentaveis,c.movimentaveis,false)}
     ${capChecks('componentes','Componentes reutilizáveis',cat.componentes,c.componentes,false)}
+    ${capChecks('recursos','Recursos gerais',cat.recursos,c.recursos,false)}
     ${capChecks('cores_permitidas','Cores permitidas',cat.cores_permitidas,c.cores_permitidas,false)}
     ${capChecks('tipografias_permitidas','Tipografias permitidas',cat.tipografias_permitidas,c.tipografias_permitidas,false)}
     ${capChecks('campos_editaveis','Campos editáveis pelos noivos',cat.campos_editaveis,c.campos_editaveis,false)}
@@ -680,7 +681,7 @@ async function guardarCapacidades(id){
   document.querySelectorAll('#ov-corpo [data-cap-grupo]').forEach(el=>{
     if(!el.checked) return; const g=el.dataset.capGrupo; (ficha[g]||(ficha[g]=[])).push(el.value);
   });
-  ['seccoes','obrigatorios','paineis','media','efeitos','movimentaveis','componentes',
+  ['seccoes','obrigatorios','paineis','media','efeitos','movimentaveis','componentes','recursos',
    'cores_permitidas','tipografias_permitidas','campos_editaveis']
     .forEach(g=>{ if(!ficha[g]) ficha[g]=[]; });
   ficha.limites={};

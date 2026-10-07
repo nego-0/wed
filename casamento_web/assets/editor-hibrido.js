@@ -71,6 +71,30 @@
     document.body.dataset.editorModelo = manifesto.id || 'base';
   }
 
+  function montarInspector() {
+    var caixa = sel('.ed-paineis');
+    var descricao = manifesto.inspector && manifesto.inspector.paineis;
+    if (!caixa || !Array.isArray(descricao)) return;
+    var seletores = {
+      conteudo:'#p-props', camadas:'.ed-painel[data-grupo="camadas"]',
+      cores:'#p-cores', tipografia:'#p-tipografia', media:'.ed-painel[data-grupo="media"]',
+      efeitos:'.ed-painel[data-grupo="efeitos"]', composicao:'.ed-painel[data-grupo="composicao"]',
+      guias:'.ed-painel[data-grupo="guias"]'
+    };
+    descricao.forEach(function (p) {
+      var painel = sel(seletores[p.id] || '', caixa); if (!painel) return;
+      painel.dataset.grupo = p.id;
+      var titulo = sel(':scope > h3', painel);
+      if (titulo && p.rotulo) {
+        var seta = titulo.querySelector('.chev');
+        titulo.textContent = p.rotulo + ' ';
+        if (seta) titulo.appendChild(seta);
+      }
+      caixa.appendChild(painel);
+    });
+    document.body.dataset.editorModo = manifesto.modo || 'noivos';
+  }
+
   function painelPor(nome) {
     var alvos = {
       propriedades: '#p-props',
@@ -166,7 +190,7 @@
 
   function iniciar() {
     limparRascunhosAntigos();
-    aplicarCapacidades(); montarNavegacao(); montarMaisAcoes(); montarGuiasImpressao(); observarInterface();
+    montarInspector(); aplicarCapacidades(); montarNavegacao(); montarMaisAcoes(); montarGuiasImpressao(); observarInterface();
   }
 
   global.EditorHibrido = {

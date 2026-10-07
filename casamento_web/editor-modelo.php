@@ -25,6 +25,7 @@ function catalogoCapacidadesModelo(string $ambito): array {
             'cores_permitidas'=>array_combine(array_keys(cartaoChavesCor()), array_keys(cartaoChavesCor())),
             'tipografias_permitidas'=>array_map(fn($f)=>(string)$f['nome'], fontesConvite()),
             'componentes'=>['texto'=>'Texto','ornamento'=>'Ornamentos','local'=>'Local e logística'],
+            'recursos'=>['biblioteca_icones'=>'Biblioteca global de ícones'],
             'limites'=>['largura'=>720, 'altura'=>1080, 'sangria'=>3, 'area_segura'=>5],
         ];
     }
@@ -47,7 +48,10 @@ function catalogoCapacidadesModelo(string $ambito): array {
         'cores_permitidas'=>array_combine(TEMA_VARS_EDITAVEIS, TEMA_VARS_EDITAVEIS),
         'tipografias_permitidas'=>array_map(fn($f)=>(string)$f['nome'], fontesConvite()),
         'componentes'=>['texto'=>'Texto','fotografia'=>'Fotografia e enquadramento','galeria'=>'Galeria',
-          'cronologia'=>'Cronologia','local_mapa'=>'Local e mapa','confirmacao'=>'Confirmação','musica'=>'Música'],
+          'cronologia'=>'Cronologia','local_mapa'=>'Local e mapa','confirmacao'=>'Confirmação','musica'=>'Música',
+          'presentes'=>'Presentes e formas de oferta'],
+        'recursos'=>['biblioteca_icones'=>'Biblioteca global de ícones',
+          'rolagem_automatica'=>'Rolagem automática','presentes_qr'=>'Presentes com texto, QR e métodos'],
         'limites'=>['largura'=>640, 'max_blocos'=>BLOCOS_MAX, 'max_fotos'=>4],
     ];
 }
@@ -59,7 +63,7 @@ function capacidadesModeloPadrao(string $ambito): array {
         ? ['capa','hero','convite','grande-dia','acesso','final']
         : ['abertura','nomes','convidado','data','logistica'];
     return [
-        'schema'=>2, 'ambito'=>$ambito,
+        'schema'=>3, 'ambito'=>$ambito,
         'seccoes'=>array_keys($c['seccoes']),
         'paineis'=>array_keys($c['paineis']),
         'media'=>array_keys($c['media']),
@@ -70,6 +74,7 @@ function capacidadesModeloPadrao(string $ambito): array {
         'cores_permitidas'=>array_keys($c['cores_permitidas']),
         'tipografias_permitidas'=>array_keys($c['tipografias_permitidas']),
         'componentes'=>array_keys($c['componentes']),
+        'recursos'=>array_keys($c['recursos']),
         'limites'=>$c['limites'],
     ];
 }
@@ -81,7 +86,7 @@ function normalizarCapacidadesModelo(string $ambito, array|string|null $valor): 
     if (!is_array($valor) || !$valor) return $base;
     $cat = catalogoCapacidadesModelo($ambito);
     foreach (['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
-              'cores_permitidas','tipografias_permitidas','componentes'] as $grupo) {
+              'cores_permitidas','tipografias_permitidas','componentes','recursos'] as $grupo) {
         if (!array_key_exists($grupo, $valor) || !is_array($valor[$grupo])) continue;
         $permitidas = array_flip(array_keys($cat[$grupo] ?? []));
         $base[$grupo] = array_values(array_unique(array_filter(array_map('strval', $valor[$grupo]),
@@ -100,13 +105,92 @@ function normalizarCapacidadesModelo(string $ambito, array|string|null $valor): 
     return $base;
 }
 
+/** Metadados semânticos dos campos. O HTML dos editores deixa de ser a ficha. */
+function camposInspectorModelo(string $ambito): array {
+    $meta = [
+        'capa.monograma'=>['Monograma do selo','texto',12], 'capa.dica'=>['Dica de abertura','texto',40],
+        'casal.noiva'=>['Nome da noiva','texto',80], 'casal.noivo'=>['Nome do noivo','texto',80],
+        'textos.kicker'=>['Frase do topo','texto',80], 'textos.hero_sub'=>['Subtítulo da capa','texto',80],
+        'textos.convite_eyebrow'=>['Chamada','texto',120], 'textos.lead'=>['Texto principal','area',4000],
+        'textos.guest_label'=>['Rótulo do convidado','texto',80], 'textos.closing'=>['Texto de fecho','area',4000],
+        'historia.eyebrow'=>['Chamada','texto',120], 'historia.titulo'=>['Título','texto',120],
+        'historia.quote'=>['Citação de abertura','area',4000], 'historia.autor'=>['Autor da citação','texto',80],
+        'interludio.quote'=>['Citação','area',4000], 'interludio.autor'=>['Autor','texto',80],
+        'interludio.fecho'=>['Texto de fecho','area',4000], 'gd.eyebrow'=>['Chamada','texto',120],
+        'evento.venue_titulo'=>['Título do momento','texto',80], 'cronograma.titulo'=>['Título do cronograma','texto',120],
+        'evento.civil_titulo'=>['Nome da cerimónia civil','texto',40], 'evento.civil_hora'=>['Hora da cerimónia civil','hora',5],
+        'evento.civil_local'=>['Local da cerimónia civil','texto',80],
+        'evento.religiosa_titulo'=>['Nome da cerimónia religiosa','texto',40],
+        'evento.religiosa_hora'=>['Hora da cerimónia religiosa','hora',5],
+        'evento.religiosa_local'=>['Local da cerimónia religiosa','texto',80],
+        'acesso.eyebrow'=>['Chamada','texto',120], 'acesso.titulo'=>['Título','texto',120],
+        'acesso.instrucao'=>['Instrução junto ao QR','area',4000], 'acesso.nota'=>['Nota de rodapé','area',4000],
+        'manual.eyebrow'=>['Chamada do manual','texto',120], 'manual.titulo'=>['Título do manual','texto',120],
+        'manual.intro'=>['Introdução do manual','area',4000], 'rsvp.titulo'=>['Título do RSVP','area',4000],
+        'rsvp.sub'=>['Subtítulo do RSVP','area',4000], 'rsvp.deadline'=>['Prazo de confirmação','texto',80],
+        'footer.local'=>['Localidade no rodapé','texto',80], 'footer.quote'=>['Citação do rodapé','area',4000],
+        'evento.data'=>['Data do evento','data',10], 'evento.hora'=>['Hora','hora',5],
+        'evento.local'=>['Local','texto',120], 'evento.cidade'=>['Cidade / região','texto',80],
+        'evento.whatsapp'=>['WhatsApp de contacto','texto',20],
+        'geral.rolagem_auto'=>['Rolagem automática','booleano',1],
+        'geral.rolagem_velocidade'=>['Velocidade da rolagem','numero',3],
+        'geral.icone_musica_tocar'=>['Ícone de música parada','icone',40],
+        'geral.icone_musica_pausa'=>['Ícone de música a tocar','icone',40],
+    ];
+    $chaves = chavesModelo($ambito);
+    $out = [];
+    foreach ($chaves as $chave) {
+        $m = $meta[$chave] ?? [ucfirst(str_replace(['.','_'], ' ', $chave)), 'texto', 4000];
+        $out[] = ['chave'=>$chave, 'rotulo'=>$m[0], 'tipo'=>$m[1], 'maximo'=>$m[2]];
+    }
+    return $out;
+}
+
+/** Declaração instalada no pacote, validada contra o catálogo do servidor. */
+function declaracaoEditorPacote(string $ambito, ?array $modelo = null): array {
+    if ($ambito !== 'digital' || !function_exists('convitePacoteResolver')) return [];
+    $pacote = convitePacoteResolver($ambito, $modelo['renderer_key'] ?? null,
+        $modelo['renderer_version'] ?? null, isset($modelo['renderer_schema']) ? (int)$modelo['renderer_schema'] : null);
+    $editor = $pacote['manifesto']['editor'] ?? [];
+    return is_array($editor) ? $editor : [];
+}
+
 /** Contrato que o inspector recebe no navegador. */
-function manifestoEditorModelo(string $ambito, array $defs, ?array $modelo = null): array {
+function manifestoEditorModelo(string $ambito, array $defs, ?array $modelo = null, string $modo = 'noivos'): array {
     $id = $modelo ? ('modelo-'.(int)($modelo['id'] ?? 0)) : 'peca-actual';
-    $ficha = normalizarCapacidadesModelo($ambito, $modelo['capacidades'] ?? null);
+    $fichaNoivos = normalizarCapacidadesModelo($ambito, $modelo['capacidades'] ?? null);
+    $cat = catalogoCapacidadesModelo($ambito);
+    $declarado = declaracaoEditorPacote($ambito, $modelo);
+    $suportado = capacidadesModeloPadrao($ambito);
+    foreach (['seccoes','paineis','media','efeitos','componentes','recursos'] as $grupo) {
+        if (!isset($declarado[$grupo]) || !is_array($declarado[$grupo])) continue;
+        $aceites = array_flip(array_keys($cat[$grupo] ?? []));
+        $suportado[$grupo] = array_values(array_filter(array_map('strval', $declarado[$grupo]), fn($v)=>isset($aceites[$v])));
+    }
+    $administrador = $modo === 'administrador';
+    $ficha = $administrador ? $suportado : $fichaNoivos;
+    if ($administrador) {
+        $ficha['campos_editaveis'] = array_keys($cat['campos_editaveis']);
+        $ficha['cores_permitidas'] = array_keys($cat['cores_permitidas']);
+        $ficha['tipografias_permitidas'] = array_keys($cat['tipografias_permitidas']);
+        $ficha['movimentaveis'] = array_keys($cat['movimentaveis']);
+    }
     $paineis = array_flip($ficha['paineis']);
     if (!isset($paineis['composicao'])) $ficha['movimentaveis'] = [];
+    $rotulosPaineis = $cat['paineis'];
+    $inspector = ['paineis'=>[], 'campos'=>[]];
+    foreach ($ficha['paineis'] as $grupo) {
+        $inspector['paineis'][] = ['id'=>$grupo, 'rotulo'=>$rotulosPaineis[$grupo] ?? ucfirst($grupo)];
+    }
+    $permitidos = array_flip($ficha['campos_editaveis']);
+    foreach (camposInspectorModelo($ambito) as $campo) {
+        if ($administrador || isset($permitidos[$campo['chave']])) $inspector['campos'][] = $campo;
+    }
     return $ficha + [
+        'schema'=>3, 'id'=>$id, 'modo'=>$administrador ? 'administrador' : 'noivos',
+        'permissoes'=>['estrutura'=>$administrador, 'limites'=>$administrador,
+                       'campos'=>$ficha['campos_editaveis'], 'liberdades_noivos'=>$fichaNoivos],
+        'inspector'=>$inspector, 'pacote'=>$declarado,
         'id'=>$id, 'conteudo'=>isset($paineis['conteudo']),
         'camadas'=>$ficha['seccoes'],
         'cores'=>isset($paineis['cores']), 'tipografia'=>isset($paineis['tipografia']),

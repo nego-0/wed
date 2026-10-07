@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O manifesto do pacote monta o inspector e separa as ferramentas do admin das liberdades dos noivos',
+         'editor-modelo.php', "'liberdades_noivos'"],
         ['As versões guardadas fixam o renderizador e o esquema usados pela peça',
          'db.php', "idx_versao_renderer"],
         ['O convite digital é carregado pelo pacote do modelo, sem um caminho fixo na página',

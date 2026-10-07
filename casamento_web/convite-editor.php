@@ -16,7 +16,8 @@ require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 // Desenhar um modelo da casa não é entrar em casa de casal nenhum: quem
 // responde pela plataforma chega aqui sem ter casamento aberto.
 [$DEFS_ED, $MODELO, $MODELO_BASE] = defsDoEditor($conn, 'digital');
-$MANIFESTO_EDITOR = manifestoEditorModelo('digital', $DEFS_ED, $MODELO ?: $MODELO_BASE);
+$MANIFESTO_EDITOR = manifestoEditorModelo('digital', $DEFS_ED, $MODELO ?: $MODELO_BASE,
+                                           $MODELO ? 'administrador' : 'noivos');
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();
 // Desenhar a peça é o que distingue os escalões «com edição» dos outros: quem
 // leva o modelo padrão sem edição vê a peça em toda a parte, mas não entra
@@ -350,40 +351,8 @@ const ALHEIAS = ['cartao.', 'media.'];
 // ---------- rótulos e limites ----------
 // Os limites são os que o servidor aplica: mostrá-los evita a surpresa de ver
 // o texto cortado depois de gravar.
-const CAMPOS = {
-  'capa.monograma':['Monograma do selo','texto',12], 'capa.dica':['Dica de abertura','texto',40],
-  'casal.noiva':['Nome da noiva','texto',80], 'casal.noivo':['Nome do noivo','texto',80],
-  'textos.kicker':['Frase do topo','texto',80], 'textos.hero_sub':['Subtítulo da capa','texto',80],
-  'textos.convite_eyebrow':['Chamada','texto',120],
-  'textos.lead':['Texto principal','area',4000],
-  'textos.guest_label':['Rótulo do convidado','texto',80],
-  'textos.closing':['Texto de fecho','area',4000],
-  'historia.eyebrow':['Chamada','texto',120], 'historia.titulo':['Título','texto',120],
-  'historia.quote':['Citação de abertura','area',4000], 'historia.autor':['Autor da citação','texto',80],
-  'interludio.quote':['Citação','area',4000], 'interludio.autor':['Autor','texto',80],
-  'interludio.fecho':['Texto de fecho','area',4000],
-  'gd.eyebrow':['Chamada','texto',120],
-  'evento.venue_titulo':['Título do momento','texto',80],
-  'cronograma.titulo':['Título do cronograma','texto',120],
-  'evento.civil_titulo':['Nome da cerimónia civil','texto',40],
-  'evento.civil_hora':['Hora da cerimónia civil','hora',5],
-  'evento.civil_local':['Local da cerimónia civil','texto',80],
-  'evento.religiosa_titulo':['Nome da cerimónia religiosa','texto',40],
-  'evento.religiosa_hora':['Hora da cerimónia religiosa','hora',5],
-  'evento.religiosa_local':['Local da cerimónia religiosa','texto',80],
-  'acesso.eyebrow':['Chamada','texto',120], 'acesso.titulo':['Título','texto',120],
-  'acesso.instrucao':['Instrução junto ao QR','area',4000], 'acesso.nota':['Nota de rodapé','area',4000],
-  'manual.eyebrow':['Chamada do manual','texto',120], 'manual.titulo':['Título do manual','texto',120],
-  'manual.intro':['Introdução do manual','area',4000],
-  'rsvp.titulo':['Título do RSVP','area',4000], 'rsvp.sub':['Subtítulo do RSVP','area',4000],
-  'rsvp.deadline':['Prazo de confirmação','texto',80],
-  'footer.local':['Localidade no rodapé','texto',80], 'footer.quote':['Citação do rodapé','area',4000],
-  'evento.data':['Data do evento','data',10], 'evento.hora':['Hora','hora',5],
-  'evento.local':['Local','texto',120], 'evento.cidade':['Cidade / região','texto',80],
-  // 'evento.maps' de propósito fora: a ligação do mapa é dado do evento e
-  // edita-se só na gestão dos noivos, não neste editor.
-  'evento.whatsapp':['WhatsApp de contacto','texto',20],
-};
+const CAMPOS = Object.fromEntries((CAPACIDADES.inspector?.campos || [])
+  .map(c => [c.chave, [c.rotulo, c.tipo, c.maximo]]));
 // Campos extra que cada secção mostra, além dos que se selecionam na tela.
 const EXTRA = {
   'hero':['evento.data','evento.hora'],

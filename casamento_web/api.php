@@ -10512,13 +10512,12 @@ if ($acao === 'modelo_defs') {
     // — é o que o admin desenha aqui. Não se aplica ao casal (ver modelo_aplicar).
     $permitidas = array_flip(chavesModelo($m['ambito']));
     $padrao = defsPadrao();
-    $cap = normalizarCapacidadesModelo($m['ambito'], $m['capacidades'] ?? null);
-    $camposCap = array_flip($cap['campos_editaveis']);
-    $anteriores = json_decode((string)$m['defs'], true) ?: [];
     $defs = []; $invalidas = [];
     foreach ((array)($d['defs'] ?? []) as $k => $v) {
         if (!isset($permitidas[$k]) || !is_string($v)) continue;
-        if (!isset($camposCap[$k])) { if (isset($anteriores[$k])) $defs[$k] = $anteriores[$k]; continue; }
+        // campos_editaveis descreve a liberdade concedida aos NOIVOS. O admin
+        // desenha a origem do modelo e precisa de trabalhar todo o contrato
+        // suportado pelo pacote, inclusive para preparar escolhas bloqueadas.
         $ok = validarDefinicao($k, $v);
         if ($ok === null) { $invalidas[] = $k; continue; }
         // Igual ao original não se guarda: o modelo fica só com o que o desenho

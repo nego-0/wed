@@ -12,7 +12,8 @@ function capOk(bool $cond, string $msg): void {
 }
 
 $digital = capacidadesModeloPadrao('digital');
-capOk($digital['schema'] === 2, 'a ficha usa o esquema explícito de capacidades');
+capOk($digital['schema'] === 3, 'a ficha usa o esquema explícito de capacidades');
+capOk(in_array('rolagem_automatica', $digital['recursos'], true), 'recursos gerais pertencem à ficha');
 capOk(in_array('confirmacao', $digital['componentes'], true), 'o digital declara o componente de confirmação');
 capOk(in_array('media.musica', $digital['media'], true), 'música é uma capacidade independente');
 capOk(in_array('casal.noiva', $digital['campos_editaveis'], true), 'os campos usam chaves semânticas comuns');
