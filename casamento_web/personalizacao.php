@@ -336,6 +336,20 @@ function pacoteDoModeloId(mysqli $conn, string $ambito, int $id, bool $fallback 
         $r['renderer_version'] ?? null, (int)($r['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA), $fallback);
 }
 
+/** Pacote que deve desenhar a peça ou uma pré-visualização de modelo. */
+function pacoteDaPeca(mysqli $conn, string $ambito, ?array $modeloVisto = null): ?array {
+    if ($ambito !== 'digital') return null;
+    if ($modeloVisto !== null) {
+        return convitePacoteResolver($ambito, $modeloVisto['renderer_key'] ?? null,
+            $modeloVisto['renderer_version'] ?? null,
+            isset($modeloVisto['renderer_schema']) ? (int)$modeloVisto['renderer_schema'] : null, false);
+    }
+    $modeloId = modeloProvenienciaId($conn, $ambito);
+    return $modeloId > 0
+        ? pacoteDoModeloId($conn, $ambito, $modeloId, true)
+        : convitePacoteResolver($ambito, null, null);
+}
+
 /** O desenho de um modelo — só as chaves que ele impõe a quem o aplica. */
 function desenhoDoModelo(string $ambito, string $defsJson): array {
     $j = json_decode($defsJson, true);

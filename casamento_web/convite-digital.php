@@ -51,6 +51,7 @@ $modoProva = $demo && ($_GET['prova'] ?? '') === '1';
 // Prova de um MODELO da casa: o desenho é o do modelo, e não o de casamento
 // nenhum. É o que permite à página dos modelos mostrar o que cada um é, em vez
 // de o pedir a quem só tem o nome para adivinhar.
+$MOD = null;
 if ($demo && (int)($_GET['modelo'] ?? 0) > 0) {
     // O terceiro valor: o modelo VISTO. O segundo é o modelo em edição, que
     // só o admin tem — e usá-lo aqui fazia a prova do casal cair no convite
@@ -105,22 +106,26 @@ if (!$c) {
     exit;
 }
 
-// ---- Carregar o modelo (leve) --------------------------------
-$tplPath = __DIR__ . '/assets/convite-base.html';
+// ---- Carregar o pacote do modelo (leve) ----------------------
+// A peça escolhe uma identidade persistida; só o registo fechado a converte
+// num caminho local. Kulemba Contemporâneo 1.0.0 continua a apontar para o
+// mesmo convite-base.html, portanto esta passagem não muda um único píxel.
+$PACOTE = pacoteDaPeca($conn, 'digital', $MOD);
+$tplPath = (string)($PACOTE['template'] ?? '');
 $tpl = is_readable($tplPath) ? file_get_contents($tplPath) : false;
 if ($tpl === false || $tpl === '') {
     http_response_code(500);
     header('Content-Type: text/html; charset=utf-8');
-    $msg = 'O modelo do convite (assets/convite-base.html) não está disponível no servidor.';
+    $identidade = $PACOTE
+        ? (($PACOTE['renderer_key'] ?? '?') . '@' . ($PACOTE['renderer_version'] ?? '?'))
+        : 'não instalada';
+    $msg = 'O pacote do convite (' . escP($identidade) . ') não está disponível no servidor.';
     if (isset($_GET['diag']) && $_GET['diag'] === '1') {
-        $dir  = __DIR__ . '/assets';
-        $cvd  = __DIR__ . '/assets/convite';
-        $l1   = is_dir($dir) ? implode(', ', array_diff(scandir($dir), ['.','..'])) : '(sem pasta assets)';
-        $l2   = is_dir($cvd) ? implode(', ', array_diff(scandir($cvd), ['.','..'])) : '(sem pasta assets/convite)';
-        $msg .= '<pre style="white-space:pre-wrap;font:13px monospace">Caminho: ' . htmlspecialchars($tplPath)
-             .  "\nExiste: " . (file_exists($tplPath)?'sim':'não')
-             .  "\n/assets: " . htmlspecialchars($l1)
-             .  "\n/assets/convite: " . htmlspecialchars($l2) . '</pre>';
+        $registo = array_keys(convitePacotesRegistados()['digital'] ?? []);
+        $msg .= '<pre style="white-space:pre-wrap;font:13px monospace">Identidade: ' . htmlspecialchars($identidade)
+             .  "\nCaminho resolvido: " . htmlspecialchars($tplPath !== '' ? $tplPath : '(nenhum)')
+             .  "\nExiste: " . ($tplPath !== '' && file_exists($tplPath) ? 'sim' : 'não')
+             .  "\nPacotes digitais instalados: " . htmlspecialchars(implode(', ', $registo) ?: '(nenhum)') . '</pre>';
     } else {
         $msg .= ' Acrescente &diag=1 ao endereço para ver detalhes.';
     }

@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O convite digital é carregado pelo pacote do modelo, sem um caminho fixo na página',
+         'convite-digital.php', "pacoteDaPeca(\$conn, 'digital', \$MOD)"],
         ['Os modelos digitais identificam um pacote de renderização instalado e versionado',
          'convite-pacotes.php', 'function convitePacoteResolver'],
         ['Os 84 stickers da Ajuda e da Demonstração retratam a interface actual em desktop e mobile',
