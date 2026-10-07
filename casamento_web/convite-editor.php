@@ -1682,14 +1682,41 @@ function rotularBotaoGuardar(estado){
 // ---------- efeitos ----------
 function renderEfeitos(){
   const ambiente = EST.val['digital.estilo'] === 'kulemba' ? 'Pontos de luz suaves' : 'Pétalas a cair';
-  $('efeitos').innerHTML = [['fx.petalas',ambiente],['fx.autoplay','Música arranca ao abrir']]
+  let h = [['fx.petalas',ambiente],['fx.autoplay','Música arranca ao abrir']]
     .filter(([k]) => (CAPACIDADES.efeitos || []).includes(k))
     .map(([k,rot])=>`<div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
       <input type="checkbox" ${EST.val[k]==='1'?'checked':''} onchange="alternarFx('${k}')"
              style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> ${rot}</label></div>`).join('');
+  if ((CAPACIDADES.recursos || []).includes('rolagem_automatica') && podeEditarCampo('geral.rolagem_auto')) {
+    h += `<div class="campo"><label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0">
+      <input type="checkbox" ${EST.val['geral.rolagem_auto']==='1'?'checked':''} onchange="alternarRolagem()"
+       style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> Rolagem automática</label>
+      <div class="dica-md">Depois de abrir o convite, avança sozinho. Um gesto da pessoa faz uma pausa.</div></div>
+      <div class="campo"><label>Velocidade <span class="contador">${esc(EST.val['geral.rolagem_velocidade']||28)} px/s</span></label>
+       <input type="range" min="8" max="120" step="2" value="${esc(EST.val['geral.rolagem_velocidade']||28)}"
+        oninput="mudarVelocidadeRolagem(this)"></div>`;
+  }
+  if ((CAPACIDADES.recursos || []).includes('biblioteca_icones') && podeEditarCampo('geral.icone_musica_tocar')) {
+    h += `<div class="campo"><label>Ícone com a música parada</label><select onchange="mudarIconeMusica('geral.icone_musica_tocar',this.value)">${opcoesIcone(EST.val['geral.icone_musica_tocar'])}</select></div>
+      <div class="campo"><label>Ícone com a música a tocar</label><select onchange="mudarIconeMusica('geral.icone_musica_pausa',this.value)">${opcoesIcone(EST.val['geral.icone_musica_pausa'])}</select></div>`;
+  }
+  $('efeitos').innerHTML = h;
 }
 function alternarFx(k){
   EST.val[k] = EST.val[k]==='1' ? '0' : '1';
+  marcarSujo(true); registarPasso(); recarregarTela();
+}
+function alternarRolagem(){
+  EST.val['geral.rolagem_auto'] = EST.val['geral.rolagem_auto']==='1' ? '0' : '1';
+  marcarSujo(true); registarPasso(); renderEfeitos(); recarregarTela();
+}
+function mudarVelocidadeRolagem(el){
+  EST.val['geral.rolagem_velocidade'] = String(el.value);
+  const c=el.closest('.campo').querySelector('.contador'); if(c)c.textContent=el.value+' px/s';
+  marcarSujo(true); registarPasso();
+}
+function mudarIconeMusica(chave, valor){
+  EST.val[chave] = valor in ICONES ? valor : (chave.endsWith('pausa')?'pausa':'musica');
   marcarSujo(true); registarPasso(); recarregarTela();
 }
 

@@ -25,3 +25,16 @@ esse filtro. A API da peça do casal continua a aplicá-lo no servidor.
 Modelos anteriores, cuja ficha tem esquema 2 ou está vazia, são normalizados
 para o esquema 3 e recebem o conjunto integral compatível. As versões antigas
 continuam ligadas ao renderizador que guardaram.
+
+## Recursos gerais
+
+A ficha pode autorizar `biblioteca_icones`, `rolagem_automatica` e
+`presentes_qr`. A biblioteca de ícones é comum aos estilos e inclui símbolos
+editoriais, música, presente, QR, transferência, cartão, dinheiro, banco e
+pagamento por aplicação. Os ícones da música parada e a tocar são escolhas do
+modelo.
+
+A rolagem automática guarda uma velocidade entre 8 e 120 píxeis por segundo.
+Começa depois de abrir o convite, respeita a preferência de movimento reduzido
+do dispositivo e pausa durante 4,5 segundos quando a pessoa roda, toca, clica
+ou usa o teclado.

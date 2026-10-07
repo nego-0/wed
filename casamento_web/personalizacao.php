@@ -111,6 +111,21 @@ function iconesConvite(string $estilo = 'classico'): array {
         'coracao'   => '<path d="M12 20s-7.5-4.8-9.3-9C1.2 7.6 3.2 4.5 6.4 4.5c2 0 3.6 1.1 4.6 2.8 1-1.7 2.6-2.8 4.6-2.8 3.2 0 5.2 3.1 3.7 6.5-1.8 4.2-9.3 9-9.3 9z"/>',
         'estrela'   => '<path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8z" stroke-linejoin="round"/>',
         'camera'    => '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8.5 7l1.5-2.5h4L15.5 7"/><circle cx="12" cy="13.5" r="3.5"/>',
+    ] + iconesGlobaisConvite();
+}
+
+/** Símbolos funcionais disponíveis em todos os modelos e estilos. */
+function iconesGlobaisConvite(): array {
+    return [
+        'presente'=>'<path d="M3 10h18v11H3zM2 6h20v4H2zM12 6v15M7.5 6C4 6 4 2.5 6.5 2.5 9 2.5 12 6 12 6M16.5 6C20 6 20 2.5 17.5 2.5 15 2.5 12 6 12 6"/>',
+        'qr'=>'<path d="M3 3h7v7H3zM5 5h3v3H5zM14 3h7v7h-7zM16 5h3v3h-3zM3 14h7v7H3zM5 16h3v3H5zM14 14h3v3h-3zM19 14h2v5h-2M14 19h3v2h-3M19 21h2"/>',
+        'transferencia'=>'<path d="M4 7h15M15 3l4 4-4 4M20 17H5M9 13l-4 4 4 4"/>',
+        'cartao'=>'<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 9h18M6 15h4"/>',
+        'dinheiro'=>'<rect x="2.5" y="6" width="19" height="12" rx="1.5"/><circle cx="12" cy="12" r="3"/><path d="M6 9H4.5v1.5M18 15h1.5v-1.5"/>',
+        'banco'=>'<path d="M3 9h18L12 3 3 9ZM5 10v8M10 10v8M14 10v8M19 10v8M2 21h20M3 18h18"/>',
+        'pagamento-movel'=>'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M9.5 6h5M10 16l1.5 1.5L15 14M10 20h4"/>',
+        'pausa'=>'<path d="M7 5h3v14H7zM14 5h3v14h-3z"/>',
+        'tocar'=>'<path d="m8 5 11 7-11 7Z"/>',
     ];
 }
 
@@ -132,7 +147,8 @@ function iconesKulemba(): array {
         'estrela'   => '<path d="m12 3 2.5 5.4 5.9.7-4.3 4 .9 5.9-5-2.9-5 2.9.9-5.9-4.3-4 5.9-.7Z"/><path d="M20.5 3v3M19 4.5h3M3 18.5V21M1.8 19.8h2.4"/>',
         'camera'    => '<path d="M3 8a2 2 0 0 1 2-2h3l1.5-2h5L16 6h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="4"/><path d="M10 13a2 2 0 0 1 2-2M17.5 9H18"/>',
     ];
-    return array_map(fn($svg) => '<g stroke-linecap="round" stroke-linejoin="round">'.$svg.'</g>', $icones);
+    return array_map(fn($svg) => '<g stroke-linecap="round" stroke-linejoin="round">'.$svg.'</g>', $icones)
+         + iconesGlobaisConvite();
 }
 
 /**
@@ -159,6 +175,15 @@ function nomesIcones(): array {
         'coracao'   => 'Coração',
         'estrela'   => 'Estrela',
         'camera'    => 'Fotografia',
+        'presente'  => 'Presente',
+        'qr'        => 'Código QR',
+        'transferencia' => 'Transferência bancária',
+        'cartao'    => 'Cartão bancário',
+        'dinheiro'  => 'Dinheiro',
+        'banco'     => 'Banco',
+        'pagamento-movel' => 'Pagamento por aplicação',
+        'pausa'     => 'Pausa',
+        'tocar'     => 'Reproduzir',
     ];
 }
 
@@ -1044,6 +1069,12 @@ function defsPadrao(): array {
         'tema.paleta' => '',
         'fx.petalas' => '1',
         'fx.autoplay' => '1',
+        // Recursos transversais. Ficam desligados por origem para não mudar
+        // convites já publicados quando a aplicação é actualizada.
+        'geral.rolagem_auto' => '0',
+        'geral.rolagem_velocidade' => '28',
+        'geral.icone_musica_tocar' => 'musica',
+        'geral.icone_musica_pausa' => 'pausa',
         // ---- Cartão de convite 10×15 (impressão a dourado sobre acrílico) ----
         'cartao.paleta' => 'ouro',
         'cartao.folhagem' => 'eucalipto',
@@ -2750,6 +2781,13 @@ function validarDefinicao(string $chave, string $valor): ?string {
         case 'cronograma.icone_civil':
         case 'cronograma.icone_religiosa':
             return ($valor === 'selo' || isset(iconesConvite()[$valor])) ? $valor : 'selo';
+        case 'geral.rolagem_auto':
+            return $valor === '1' ? '1' : '0';
+        case 'geral.rolagem_velocidade':
+            return ctype_digit($valor) ? (string)max(8, min(120, (int)$valor)) : null;
+        case 'geral.icone_musica_tocar':
+        case 'geral.icone_musica_pausa':
+            return isset(iconesConvite()[$valor]) ? $valor : null;
         case 'evento.data':
             return preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) && strtotime($valor) ? $valor : null;
         case 'rsvp.prazo':
@@ -3007,6 +3045,8 @@ function convitePlaceholders(array $defs): array {
     // Blocos repetíveis: as mesmas escolhas usam o traço do modelo activo.
     $estilo = (string)($defs['digital.estilo'] ?? 'classico');
     $icones = iconesConvite($estilo);
+    $iconeMusicaParada = $icones[$defs['geral.icone_musica_tocar'] ?? 'musica'] ?? $icones['musica'];
+    $iconeMusicaTocando = $icones[$defs['geral.icone_musica_pausa'] ?? 'pausa'] ?? $icones['pausa'];
     $caps = json_decode($defs['historia.capitulos'], true) ?: [];
     $ROM = ['I','II','III','IV','V','VI','VII','VIII'];
     $htmlCaps = '';
@@ -3155,6 +3195,10 @@ function convitePlaceholders(array $defs): array {
         '{{PETAL_COLORS}}' => $petais,
         '{{FX_PETALAS}}' => $defs['fx.petalas'] === '1' ? 'true' : 'false',
         '{{FX_AUTOPLAY}}' => $defs['fx.autoplay'] === '1' ? 'true' : 'false',
+        '{{ROLAGEM_AUTO}}' => ($defs['geral.rolagem_auto'] ?? '0') === '1' ? 'true' : 'false',
+        '{{ROLAGEM_VELOCIDADE}}' => (string)max(8, min(120, (int)($defs['geral.rolagem_velocidade'] ?? 28))),
+        '{{ICONE_MUSICA_PARADA}}' => $iconeMusicaParada,
+        '{{ICONE_MUSICA_TOCANDO}}' => $iconeMusicaTocando,
         '{{QR_FG}}' => $pal['forest-deep'], '{{QR_BG}}' => $pal['ivory'],
         '{{ICS_UID}}' => 'UID:'.strtolower($slug).'@convite',
         '{{ICS_STAMP}}' => $agoraUtc->format('Ymd\THis\Z'),

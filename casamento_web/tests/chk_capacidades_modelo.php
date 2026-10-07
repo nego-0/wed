@@ -19,6 +19,7 @@ capOk(in_array('media.musica', $digital['media'], true), 'música é uma capacid
 capOk(in_array('casal.noiva', $digital['campos_editaveis'], true), 'os campos usam chaves semânticas comuns');
 
 $limitada = normalizarCapacidadesModelo('digital', [
+    'schema'=>3,
     'seccoes'=>['historia','inventada'], 'obrigatorios'=>['hero'],
     'paineis'=>['conteudo'], 'media'=>[], 'efeitos'=>[], 'movimentaveis'=>[],
     'campos_editaveis'=>['casal.noiva','chave.inventada'],

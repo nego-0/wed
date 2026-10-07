@@ -84,6 +84,7 @@ function normalizarCapacidadesModelo(string $ambito, array|string|null $valor): 
     if (is_string($valor)) $valor = json_decode($valor, true);
     $base = capacidadesModeloPadrao($ambito);
     if (!is_array($valor) || !$valor) return $base;
+    $schemaRecebido = (int)($valor['schema'] ?? 2);
     $cat = catalogoCapacidadesModelo($ambito);
     foreach (['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
               'cores_permitidas','tipografias_permitidas','componentes','recursos'] as $grupo) {
@@ -102,6 +103,16 @@ function normalizarCapacidadesModelo(string $ambito, array|string|null $valor): 
         $n = (int)($valor['limites'][$k] ?? $origem);
         $base['limites'][$k] = max(1, min(5000, $n));
     }
+    // O esquema 3 introduziu recursos gerais. Modelos anteriores recebem-nos
+    // sem perder as suas restrições antigas; o admin pode depois desligá-los.
+    if ($schemaRecebido < 3) {
+        $base['recursos'] = array_keys($cat['recursos'] ?? []);
+        foreach (array_keys($cat['campos_editaveis'] ?? []) as $chave) {
+            if (str_starts_with($chave, 'geral.')) $base['campos_editaveis'][] = $chave;
+        }
+        $base['campos_editaveis'] = array_values(array_unique($base['campos_editaveis']));
+    }
+    $base['schema'] = 3;
     return $base;
 }
 
