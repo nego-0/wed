@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os 84 stickers da Ajuda e da Demonstração retratam a interface actual em desktop e mobile',
+         'tests/gerar-capturas-ajuda.js', "'.ed-movel-bt[data-abrir=\"camadas\"]'"],
+        ['As capturas usam a peça padrão actual e a identidade fictícia Marta & Pedro',
+         'tests/gerar-capturas-ajuda.js', "nome:'Marta & Pedro',noiva:'Marta',noivo:'Pedro'"],
         ['Os dois editores usam o mesmo cabeçalho e a mesma cor para o estado da versão',
          'assets/editor.css', 'O estado muda no texto, não na aparência do cabeçalho'],
         ['Nome desta versão cabe no viewport e Mais acções digital repõe camada, composição ou convite',

@@ -62,6 +62,10 @@ módulos, em desktop e mobile. Assim, “Novo convite”, o formulário preenchi
 “Guardar convite” são estados reais; os passos finais de actualização e
 filtragem também mostram o respectivo resultado. No convite digital, a cena
 passa brevemente pela abertura e acompanha a rolagem até à secção indicada.
+Antes de fotografar, o gerador reaplica a peça padrão publicada pelo admin e
+normaliza a identidade fictícia para **Marta & Pedro**. No editor impresso
+móvel, abre e fecha a gaveta real de Camadas antes de avançar para Guardar; os
+alvos, por isso, pertencem sempre ao controlo que está realmente visível.
 
 `HELP_CAPTURE_SCENES_ONLY=1` actualiza apenas as cenas dos passos;
 `HELP_CAPTURE_DEVICE=desktop` ou `mobile` limita temporariamente a execução a

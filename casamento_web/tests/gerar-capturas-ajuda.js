@@ -84,6 +84,34 @@ async function marcar(p,loc){
 // nome. Assim o guião pode ser repetido sem acumular famílias, mesas, bebidas
 // ou despesas, e cada captura mostra dados concretos em vez de caixas vazias.
 async function prepararDados(p){
+  // Reaplica a peça de origem que o admin tem actualmente publicada. A base
+  // de capturas pode ter ficado presa a um modelo antigo, embora a galeria e a
+  // demonstração já usem outro; nesse caso os stickers deixariam de retratar
+  // aquilo que um novo casal recebe.
+  for(const ambito of ['impresso','digital']){
+    const catalogo=await api(p,'modelo_lista&ambito='+ambito);
+    const origem=(catalogo.modelos||[]).find(m=>m.de_origem)||(catalogo.modelos||[]).find(m=>m.de_fabrica);
+    if(origem){
+      // Algumas bases de teste antigas baptizaram a peça padrão com os nomes
+      // de um casal real. A galeria pública deve mostrar um nome de modelo e
+      // reservar “Marta & Pedro” para a identidade fictícia do casamento.
+      if(/isabel|abednego/i.test(origem.nome||'')){
+        const renomeado=await api(p,'modelo_editar',{
+          id:+origem.id,nome:'Peça padrão',descricao:origem.descricao||'',visivel:+origem.visivel?1:0
+        });
+        if(!renomeado.success)throw new Error('Não foi possível normalizar o nome do modelo de origem: '+(renomeado.error||''));
+      }
+      const aplicado=await api(p,'modelo_aplicar&id='+(+origem.id),{});
+      if(!aplicado.success)throw new Error('Não foi possível aplicar o modelo de origem '+ambito+': '+(aplicado.error||''));
+    }
+  }
+  // As capturas públicas usam sempre a identidade editorial configurada para
+  // os dados de exemplo. Isto também limpa valores semânticos antigos que uma
+  // base de testes possa ter deixado nos editores.
+  const identidade=await api(p,'casamento_identidade',{
+    nome:'Marta & Pedro',noiva:'Marta',noivo:'Pedro',data_evento:'2027-06-12'
+  });
+  if(!identidade.success)throw new Error('Não foi possível preparar a identidade de exemplo: '+(identidade.error||''));
   let lista=await api(p,'convite_list');
   let convite=(lista.convites||[]).find(c=>c.nome_exibicao==='Família Kiala');
   let mesas=await api(p,'mesa_list');
@@ -200,8 +228,25 @@ const sequenciasComCenas = [
   ]},
   {nome:'impresso',topico:1,url:'/graficas.php',passos:[
     {tipo:'selecionar',fazer:async p=>marcar(p,p.locator('a[href="editor-cartao.php"]:visible').first())},
-    {tipo:'editar',rolar:true,fazer:async p=>{await p.goto(BASE+'/editor-cartao.php',{waitUntil:'networkidle'});await continuarEditor(p);await marcar(p,p.locator('#camadas .camada').first());}},
-    {tipo:'guardar',fazer:async p=>{await p.locator('#bt-versao').click();await p.locator('.vs-jan.aberta').waitFor();await p.waitForTimeout(700);await marcar(p,p.locator('.vs-fim'));}},
+    {tipo:'editar',rolar:true,fazer:async p=>{
+      await p.goto(BASE+'/editor-cartao.php',{waitUntil:'networkidle'});await continuarEditor(p);
+      // No telemóvel as camadas vivem na gaveta inferior. Marcar a primeira
+      // sem abrir a gaveta fotografava um elemento transformado para fora do
+      // viewport e já não representava a interface que o utilizador vê.
+      if(p.viewportSize().width<=760){
+        await p.locator('.ed-movel-bt[data-abrir="camadas"]').click();
+        await p.locator('body.ed-inspector-on').waitFor();
+      }
+      await marcar(p,p.locator('#camadas .camada').first());
+    }},
+    {tipo:'guardar',fazer:async p=>{
+      if(p.viewportSize().width<=760&&await p.locator('body.ed-inspector-on').count()){
+        await p.locator('.ed-inspector-fechar').click();
+        await p.locator('body.ed-inspector-on').waitFor({state:'detached'}).catch(()=>{});
+      }
+      await p.locator('#bt-versao').click();await p.locator('.vs-jan.aberta').waitFor();
+      await p.waitForTimeout(700);await marcar(p,p.locator('.vs-fim'));
+    }},
   ]},
   {nome:'impresso',topico:2,url:'/graficas.php',passos:[
     {tipo:'abrir',fazer:async p=>marcar(p,p.locator('table.prod tbody tr').filter({hasText:'Família Kiala'}).locator('td.nm'))},

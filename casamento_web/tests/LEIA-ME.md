@@ -35,7 +35,10 @@ todas; `node montra.js orcamento` faz só uma. Depois, OLHE para as imagens.
 `gerar-capturas-ajuda.js` abre os módulos reais e actualiza as imagens desktop
 e mobile usadas por trás dos stickers vectoriais. Antes de cada fluxo, cria
 dados de exemplo pela API e mede o centro do controlo real; as 84 coordenadas
-ficam em `assets/ajuda/capturas/alvos-cenas.json`. `chk_experiencia_kulemba.js`
+ficam em `assets/ajuda/capturas/alvos-cenas.json`. Reaplica a peça padrão
+publicada pelo admin, usa a identidade fictícia Marta & Pedro e abre as gavetas
+móveis necessárias, inclusive Camadas no editor impresso. Deve correr apenas
+numa instalação de testes, porque prepara e normaliza esses dados. `chk_experiencia_kulemba.js`
 confirma que os 14 tópicos são pesquisáveis, os 42 passos abrem apenas a sua
 narração, a captura permanece ao lado e tudo cabe no telemóvel.
 `chk_atendimento_marketing.js` confirma que a secção pública `#demonstracao`
