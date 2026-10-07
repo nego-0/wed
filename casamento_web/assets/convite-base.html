@@ -400,6 +400,9 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .bloco-livre .mcell{text-align:center}
 .bloco-livre .mcell b{display:block;margin-bottom:8px;font-family:var(--f-sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
 .bloco-livre .mcell p:last-child{margin:0}
+.gift-qr{width:min(286px,86vw);margin:4px auto 34px;padding:13px;border:1px solid var(--gold-soft);background:#fff;border-radius:14px;box-shadow:var(--shadow)}
+.gift-qr canvas{display:block;width:100%;height:auto}
+.gift-qr small{display:block;margin:10px 4px 2px;color:var(--text);font:500 10px/1.5 var(--f-sans);letter-spacing:.08em;text-transform:uppercase}
 #rsvp{background:linear-gradient(180deg,var(--ivory),var(--cream));text-align:center;padding-top:60px;position:relative}
 #rsvp h2{font-family:var(--f-script);font-weight:400;font-size:clamp(44px,10vw,60px);color:var(--forest);line-height:1.15}
 #rsvp .sub{font-family:var(--f-serif);font-style:italic;font-size:calc(18px * var(--esc-txt,1));color:var(--text);max-width:390px;margin:16px auto 0;line-height:1.7}
@@ -1021,6 +1024,9 @@ body[data-estilo="kulemba"] .petal{width:4px!important;height:4px!important;bord
 })();
 </script>
 <script src="assets/qrious.min.js"></script>
-<script>try{new QRious({element:document.getElementById("qrCanvas"),value:"{{QR_VALUE}}",size:320,level:"M",foreground:"{{QR_FG}}",background:"{{QR_BG}}"});}catch(e){}</script>
+<script>try{
+new QRious({element:document.getElementById("qrCanvas"),value:"{{QR_VALUE}}",size:320,level:"M",foreground:"{{QR_FG}}",background:"{{QR_BG}}"});
+document.querySelectorAll('[data-presente-qr]').forEach(function(c){new QRious({element:c,value:c.getAttribute('data-presente-qr'),size:260,level:'M',foreground:'{{QR_FG}}',background:'#FFFFFF'});});
+}catch(e){}</script>
 </body>
 </html>

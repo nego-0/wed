@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A página de presentes oferece texto, QR gerado no convite ou métodos com ícones personalizados',
+         'personalizacao.php', "'tipo'=>'presentes', 'modo'=>'texto'"],
         ['Os modelos partilham biblioteca de ícones, ícones de música e rolagem automática configurável',
          'personalizacao.php', 'function iconesGlobaisConvite'],
         ['Desfazer e Refazer usam o mesmo documento normalizado nos dois editores',

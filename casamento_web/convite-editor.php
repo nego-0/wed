@@ -303,7 +303,9 @@ const SECCOES  = Object.fromEntries(Object.entries(SECCOES_TODAS)
 const LIVRES_TODOS = <?= json_encode(posicoesLivres($DEFS_ED), JSON_UNESCAPED_UNICODE) ?>;
 const LIVRES = Object.fromEntries(Object.entries(LIVRES_TODOS)
   .filter(([k]) => (CAPACIDADES.movimentaveis || []).includes(k)));
-const MODELOS  = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
+const MODELOS_TODOS = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
+const MODELOS  = Object.fromEntries(Object.entries(MODELOS_TODOS).filter(([k]) =>
+  k !== 'presentes' || (CAPACIDADES.componentes || []).includes('presentes')));
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
 const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
 const BLOCOS_MAX = Math.min(<?= (int)BLOCOS_MAX ?>, +(CAPACIDADES.limites?.max_blocos || <?= (int)BLOCOS_MAX ?>));
@@ -1039,6 +1041,7 @@ function juntarBloco(){
   const m = MODELOS[$('modelo-novo').value] || MODELOS['livre'];
   const b = { id: novoId(), eyebrow: m.eyebrow, titulo: m.titulo, texto: m.texto,
               itens: (m.itens||[]).map(it=>({...it})) };
+  if (m.tipo === 'presentes') Object.assign(b, {tipo:'presentes', modo:m.modo||'texto', qr:m.qr||''});
   EST.blocos.push(b);
   // Entra antes do fecho quando o modelo o possui. Há modelos válidos sem
   // essa secção; nesse caso não se deve reintroduzi-la só por acrescentar um
@@ -1210,13 +1213,25 @@ function renderPropsLivre(b){
     return `<div class="campo"><label>${rot}<span class="contador ${classeCont(v.length,max)}">${v.length}/${max}</span></label>${ctl}</div>`;
   };
   const itens = b.itens || [];
+  const presentes = b.tipo === 'presentes';
+  const modo = presentes ? (b.modo || 'texto') : '';
+  const opcoesPresentes = presentes ? `<div class="campo"><label>Apresentação</label>
+    <select onchange="mudarModoPresentes('${b.id}',this.value)">
+      <option value="texto"${modo==='texto'?' selected':''}>Apenas texto</option>
+      <option value="qr"${modo==='qr'?' selected':''}>Texto e código QR</option>
+      <option value="metodos"${modo==='metodos'?' selected':''}>Formas de oferta</option>
+    </select><div class="dica-md">O QR é criado no próprio convite a partir do texto indicado.</div></div>`
+    + (modo==='qr' ? `<div class="campo"><label>Texto ou endereço do QR<span class="contador ${classeCont((b.qr||'').length,1000)}">${(b.qr||'').length}/1000</span></label>
+      <textarea maxlength="1000" oninput="editarPresenteQR('${b.id}',this)">${esc(b.qr||'')}</textarea></div>` : '') : '';
+  const mostrarItens = !presentes || modo === 'metodos';
   $('props').innerHTML =
-    `<div class="sel-nada" style="margin-bottom:.6rem"><b>Secção livre</b> — acrescentada por si</div>` +
+    `<div class="sel-nada" style="margin-bottom:.6rem"><b>${presentes?'Página de presentes':'Secção livre'}</b> — acrescentada por si</div>` +
     cp('eyebrow','Chamada','texto',120) +
     cp('titulo','Título','texto',120) +
     cp('texto','Texto','area',2000) +
-    `<div class="campo"><label>Destaques<span class="contador ${classeCont(itens.length,8)}">${itens.length}/8</span></label></div>` +
-    itens.map((it,i)=>`<div class="it">
+    opcoesPresentes +
+    (mostrarItens ? `<div class="campo"><label>${presentes?'Formas de oferta':'Destaques'}<span class="contador ${classeCont(itens.length,8)}">${itens.length}/8</span></label></div>` : '') +
+    (mostrarItens ? itens.map((it,i)=>`<div class="it">
         <div class="it-topo"><span class="n">${i+1}</span>
           <select onchange="editarItemBloco('${b.id}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
             ${opcoesIcone(it.i)}</select>
@@ -1224,10 +1239,19 @@ function renderPropsLivre(b){
         </div>
         <input type="text" placeholder="Título" value="${esc(it.t||'')}" oninput="editarItemBloco('${b.id}',${i},'t',this.value)">
         <textarea placeholder="Texto" oninput="editarItemBloco('${b.id}',${i},'x',this.value)">${esc(it.x||'')}</textarea>
-      </div>`).join('') +
-    (itens.length < 8 ? `<button class="bt" style="width:100%" onclick="juntarItemBloco('${b.id}')">+ Destaque</button>` : '') +
+      </div>`).join('') : '') +
+    (mostrarItens && itens.length < 8 ? `<button class="bt" style="width:100%" onclick="juntarItemBloco('${b.id}')">+ ${presentes?'Forma de oferta':'Destaque'}</button>` : '') +
     painelLivre(b.id) +
     `<div class="campo" style="margin-top:.8rem"><button class="bt" style="width:100%;color:#e08a7d" onclick="apagarBloco('${b.id}')">Apagar esta secção</button></div>`;
+}
+function mudarModoPresentes(id, modo){
+  const b=blocoLivre(id); if(!b || !['texto','qr','metodos'].includes(modo))return;
+  b.modo=modo; marcarSujo(true); registarPasso(); renderProps(); recarregarTela();
+}
+function editarPresenteQR(id, el){
+  const b=blocoLivre(id); if(!b)return; b.qr=el.value;
+  contarAqui(el,1000); marcarSujo(true); registarPasso();
+  clearTimeout(tBloco); tBloco=setTimeout(recarregarTela,800);
 }
 /** Atualiza o contador do campo que está a ser escrito. */
 function contarAqui(el, max){

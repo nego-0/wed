@@ -1858,7 +1858,8 @@ function modelosBloco(): array {
         'presentes' => ['rotulo'=>'Lista de presentes', 'icone'=>'brinde',
             'eyebrow'=>'Com todo o carinho', 'titulo'=>'Lista de presentes',
             'texto'=>'A vossa presença é o nosso maior presente. Para quem quiser oferecer algo mais, deixamos aqui algumas ideias.',
-            'itens'=>[['i'=>'coracao','t'=>'','x'=>'']]],
+            'tipo'=>'presentes', 'modo'=>'texto', 'qr'=>'',
+            'itens'=>[['i'=>'transferencia','t'=>'Transferência bancária','x'=>'Indique aqui o IBAN ou os dados necessários.']]],
         'chegar' => ['rotulo'=>'Como chegar', 'icone'=>'envelope',
             'eyebrow'=>'Para não se perder', 'titulo'=>'Como chegar',
             'texto'=>'Deixamos as indicações para chegar ao local da celebração.',
@@ -2546,6 +2547,9 @@ function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string 
     $titulo  = trim((string)($b['titulo'] ?? ''));
     $texto   = trim((string)($b['texto'] ?? ''));
     $itens   = is_array($b['itens'] ?? null) ? $b['itens'] : [];
+    $presentes = ($b['tipo'] ?? '') === 'presentes';
+    $modo = $presentes && in_array(($b['modo'] ?? 'texto'), ['texto','qr','metodos'], true)
+        ? (string)$b['modo'] : 'texto';
     $id      = escP($b['id'] ?? 'bloco');
 
     // data-sec só no editor (é o que permite clicar na secção dentro da tela):
@@ -2556,7 +2560,12 @@ function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string 
     if ($eyebrow !== '') $h .= '    <span class="eyebrow rv">'.escP(strtr($eyebrow, $tokens)).'</span>'."\n";
     if ($titulo  !== '') $h .= '    <h2 class="rv d1">'.escP(strtr($titulo, $tokens)).'</h2>'."\n";
     if ($texto   !== '') $h .= '    <p class="bl-texto rv d1">'.mdTexto($texto, $tokens).'</p>'."\n";
-    if ($itens) {
+    if ($presentes && $modo === 'qr' && trim((string)($b['qr'] ?? '')) !== '') {
+        $h .= '    <div class="gift-qr rv d2"><canvas width="260" height="260" data-presente-qr="'
+            . escP((string)$b['qr']) . '" aria-label="Código QR da oferta"></canvas>'
+            . '<small>Leia o código com a câmara ou aplicação bancária</small></div>' . "\n";
+    }
+    if ($itens && (!$presentes || $modo === 'metodos')) {
         $celulas = '';
         foreach ($itens as $i => $it) {
             $ic = $icones[$it['i'] ?? ''] ?? $icones['coracao'];
@@ -2867,6 +2876,12 @@ function validarDefinicao(string $chave, string $valor): ?string {
                     'texto'   => mb_substr(trim((string)($b['texto'] ?? '')), 0, 2000),
                     'itens'   => $itens,
                 ];
+                if (($b['tipo'] ?? '') === 'presentes') {
+                    $out[count($out)-1]['tipo'] = 'presentes';
+                    $out[count($out)-1]['modo'] = in_array(($b['modo'] ?? ''), ['texto','qr','metodos'], true)
+                        ? (string)$b['modo'] : 'texto';
+                    $out[count($out)-1]['qr'] = mb_substr(trim((string)($b['qr'] ?? '')), 0, 1000);
+                }
             }
             return $out ? jsonOuNulo($out) : '';
         }

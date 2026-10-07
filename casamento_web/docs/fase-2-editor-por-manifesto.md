@@ -38,3 +38,18 @@ A rolagem automática guarda uma velocidade entre 8 e 120 píxeis por segundo.
 Começa depois de abrir o convite, respeita a preferência de movimento reduzido
 do dispositivo e pausa durante 4,5 segundos quando a pessoa roda, toca, clica
 ou usa o teclado.
+
+## Página de presentes
+
+“Lista de presentes” é uma secção livre especializada e continua a viajar em
+`layout.blocos`, pelo que pode entrar em qualquer pacote que declare o
+componente `presentes`. O editor oferece três apresentações:
+
+- apenas o texto definido pelos noivos;
+- texto e QR, gerado localmente no convite a partir de até 1 000 caracteres;
+- formas de oferta, cada uma com título, indicação e um ícone da biblioteca
+  global.
+
+Os símbolos incluídos são genéricos. Marcas bancárias oficiais podem ser
+acrescentadas à mesma biblioteca quando os respectivos ficheiros e direito de
+uso forem fornecidos, sem mudar o formato guardado.
