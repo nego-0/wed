@@ -133,6 +133,16 @@ if ($tpl === false || $tpl === '') {
     exit;
 }
 
+// Recursos visuais do pacote entram depois do tema base. O caminho web e o
+// ficheiro físico vêm exclusivamente do registo fechado; um modelo guardado
+// na base nunca pode injectar um URL ou escolher um ficheiro do servidor.
+foreach (($PACOTE['stylesheets'] ?? []) as $folha) {
+    $href = (string)($folha['href'] ?? '');
+    $path = (string)($folha['path'] ?? '');
+    if ($href === '' || !is_readable($path)) continue;
+    $tpl = str_replace('</head>', '<link rel="stylesheet" href="' . escP(asset($href)) . '"></head>', $tpl);
+}
+
 // ---- Personalização ------------------------------------------
 $pal  = paletaEfetiva($DEFS);
 $nome = escP(nomeConviteVisivel($c));
@@ -498,7 +508,7 @@ JS;
 // (base64), para o ficheiro poder ser visto completamente offline.
 // ============================================================
 function embutirRecursos(string $html, string $base): string {
-    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','ico'=>'image/x-icon','woff2'=>'font/woff2'];
+    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','svg'=>'image/svg+xml','ico'=>'image/x-icon','woff2'=>'font/woff2'];
 
     $paraDataUri = function (string $rel) use ($base, $mime): ?string {
         $rel = ltrim($rel, '/');
@@ -534,7 +544,27 @@ function embutirRecursos(string $html, string $base): string {
             return $d ? 'href="' . $d . '"' : $m[0];
         }, $html);
 
-    // 4) O runtime comum viaja no ficheiro exportado. Assim, calendário,
+    // 4) As folhas visuais instaladas pelos pacotes também viajam. Recursos
+    // SVG próprios referidos pela folha tornam-se data URI antes de a folha
+    // sair do seu directório.
+    $html = preg_replace_callback(
+        '#<link rel="stylesheet" href="(assets/convite/modelos/[a-z0-9./_-]+\.css)(?:\?[^\"]*)?">#i',
+        function ($m) use ($base, $paraDataUri) {
+            $abs = $base . '/' . ltrim($m[1], '/');
+            if (!is_readable($abs)) return $m[0];
+            $css = file_get_contents($abs);
+            $pastaCss = trim(str_replace('\\', '/', dirname($m[1])), '.');
+            $css = preg_replace_callback(
+                '#url\(["\']?((?:assets/convite/modelos/[a-z0-9./_-]+|[a-z0-9_-]+)\.(?:svg|png|webp|jpg|jpeg))["\']?\)#i',
+                function ($u) use ($paraDataUri, $pastaCss) {
+                    $rel = str_starts_with($u[1], 'assets/') ? $u[1] : $pastaCss . '/' . $u[1];
+                    $d = $paraDataUri($rel);
+                    return $d ? 'url("' . $d . '")' : $u[0];
+                }, $css);
+            return '<style>' . $css . '</style>';
+        }, $html);
+
+    // 5) O runtime comum viaja no ficheiro exportado. Assim, calendário,
     // galeria, música, rolagem, QR, presentes e modal de confirmação não têm
     // uma implementação paralela para o modo offline.
     $cssRuntime = $base . '/assets/convite-runtime.css';
@@ -552,7 +582,7 @@ function embutirRecursos(string $html, string $base): string {
             '<script>' . $js . '</script>', $html, 1);
     }
 
-    // 5) QRious:  <script src="assets/qrious.min.js"></script> -> inline
+    // 6) QRious:  <script src="assets/qrious.min.js"></script> -> inline
     $qr = $base . '/assets/qrious.min.js';
     if (is_readable($qr)) {
         $js = file_get_contents($qr);

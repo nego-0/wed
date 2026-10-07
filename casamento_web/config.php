@@ -148,7 +148,13 @@ function ficheirosApp(): array {
             'assets/planos.js',
             'assets/editor-paineis.js','assets/editor-adiar.js','assets/editor-diag.js',
             'assets/so-ver.js','assets/convite-runtime.css','assets/convite-runtime.js',
-            'assets/convite-base.html'];
+            'assets/convite-base.html',
+            'assets/convite/modelos/porcelain-v2/1.0.0/manifesto.json',
+            'assets/convite/modelos/porcelain-v2/1.0.0/porcelain-v2.html',
+            'assets/convite/modelos/porcelain-v2/1.0.0/porcelain-v2.css',
+            'assets/convite/modelos/porcelain-v2/1.0.0/fundo-verde.webp',
+            'assets/convite/modelos/porcelain-v2/1.0.0/fundo-rosa.webp',
+            'assets/convite/modelos/porcelain-v2/1.0.0/CREDITOS.md'];
     // As imagens de ajuda são geradas; incluí-las por padrão evita manter uma
     // lista manual de capturas e stickers sempre que os passos mudam.
     foreach (['assets/ajuda/capturas/*.jpg','assets/ajuda/stickers/*.svg'] as $padrao) {

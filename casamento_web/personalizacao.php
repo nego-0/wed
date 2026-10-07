@@ -676,6 +676,54 @@ function catalogoModelosDeCasa(): array {
         'defs' => json_encode($kulemba, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     ];
 
+    // Primeira família visual reconstruída sobre o contrato de pacotes. As
+    // duas variantes têm o mesmo documento e renderizador: mudar entre elas
+    // troca composição e paleta sem tocar nos dados semânticos do casamento.
+    foreach ([
+        [
+            'nome' => 'Porcelana Verde',
+            'estilo' => 'porcelana-verde',
+            'descricao' => 'Papel marfim, folhagem verde e filetes dourados, com composição de porcelana pintada à mão.',
+            'paleta' => ['forest'=>'#59643A','forest-deep'=>'#30371E','ivory'=>'#FFFAF0','cream'=>'#F5EDDA','gold'=>'#AA8448','gold-soft'=>'#D4B678','gold-pale'=>'#F0E3C5','text'=>'#4C5138'],
+        ],
+        [
+            'nome' => 'Porcelana Rosa',
+            'estilo' => 'porcelana-rosa',
+            'descricao' => 'Flores rosa antigo, folhas de oliveira e ouro suave sobre papel marfim.',
+            'paleta' => ['forest'=>'#D17D96','forest-deep'=>'#6E683A','ivory'=>'#FFF9F2','cream'=>'#F7EBDF','gold'=>'#A98061','gold-soft'=>'#D9B17B','gold-pale'=>'#F1DFC9','text'=>'#65584F'],
+        ],
+    ] as $porcelana) {
+        $defs = [
+            'digital.estilo' => $porcelana['estilo'],
+            'capa.abertura' => 'esvair',
+            'capa.selo' => 'liso',
+            'cer.emblema_civil' => 'aneis',
+            'cer.emblema_religiosa' => 'estrela',
+            'cer.emblema_copo' => 'taca',
+            'cer.ramos' => '0',
+            'cer.moldura' => '1',
+            'cer.tamanho' => '104',
+            'cronograma.icone_civil' => 'aneis',
+            'cronograma.icone_religiosa' => 'estrela',
+            'fx.petalas' => '0',
+            'interludio.visivel' => '0',
+            'manual.titulo' => 'Código de vestuário',
+            'manual.intro' => 'Traje formal em tons neutros.',
+            'textos.kicker' => 'Reserve a data',
+            'tema.paleta' => json_encode($porcelana['paleta'], JSON_UNESCAPED_SLASHES),
+        ];
+        $out[] = [
+            'ambito' => 'digital',
+            'nome' => $porcelana['nome'],
+            'origem' => false,
+            'descricao' => $porcelana['descricao'],
+            'defs' => json_encode($defs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'renderer_key' => CONVITE_PACOTE_PORCELANA,
+            'renderer_version' => CONVITE_PACOTE_PORCELANA_VERSAO,
+            'renderer_schema' => CONVITE_PACOTE_SCHEMA,
+        ];
+    }
+
     // Variações do convite impresso — paleta, folhagem e elo, que é o que ali se vê.
     foreach ([['salvia',    'eucalipto', 'coracao',   'Sálvia',     'Verde acinzentado e folha de oliveira.'],
               ['terracota', 'florido',   'losango',   'Terracota',  'Barro quente, com folhagem florida.'],
@@ -2771,7 +2819,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
             // O feitio do selo. Desconhecido volta ao de origem (cera).
             return in_array($valor, ['cera','anel','camafeu','liso'], true) ? $valor : 'cera';
         case 'digital.estilo':
-            return in_array($valor, ['classico','kulemba'], true) ? $valor : 'classico';
+            return in_array($valor, ['classico','kulemba','porcelana-verde','porcelana-rosa'], true) ? $valor : 'classico';
         case 'cer.emblema_civil':
         case 'cer.emblema_religiosa':
         case 'cer.emblema_copo':

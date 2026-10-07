@@ -45,6 +45,37 @@ uma identidade ao desenho actual sem alterar HTML, fotografias, animações ou
 comportamento. O pacote passa a ser a origem dos modelos digitais antigos e dos
 modelos da casa.
 
+## Família Porcelana V2
+
+`porcelain-v2@1.0.0` é o primeiro pacote com documento próprio. Não é uma
+paleta aplicada ao convite anterior: `porcelain-v2.html` define a sequência e
+a composição da família e `porcelain-v2.css` define a sua linguagem visual.
+O manifesto publica duas variantes comerciais em português:
+
+- **Porcelana Verde**, com folhagem verde, papel marfim e ouro antigo;
+- **Porcelana Rosa**, com peónias rosa, apontamentos lilás e ouro suave.
+
+As duas variantes partilham o mesmo renderizador e diferem nas definições do
+modelo. Trocar entre elas conserva nomes, data, locais e fotografias, porque
+`modelo_aplicar` escreve apenas as chaves de desenho. Cada variante continua a
+ser um modelo independente no catálogo e pode originar versões guardadas pelo
+utilizador.
+
+O pacote reconstrói a identidade estudada com recursos próprios: grande
+moldura botânica, cartão central, informações de cerimónia, galeria em
+profundidade, recepção, contagem decrescente, calendário, local, código de
+vestuário, cronograma, presentes e confirmação modal. O botão de mensagens
+não existe. Música, ícones, rolagem automática, calendário, galeria, QR,
+presentes e confirmação usam o runtime comum.
+
+### Regra para as próximas famílias
+
+Cada uma das onze identidades terá documento, estilos e recursos próprios.
+Partilhar o contrato semântico não autoriza uniformizar a apresentação: ordem,
+tipografia, cores, ornamentos, abertura, animações e ritmo visual pertencem ao
+pacote. As secções transferidas entre modelos são renderizadas pela linguagem
+do modelo de destino, sem introduzir a aparência do modelo de origem.
+
 ## Evolução prevista
 
 Os novos pacotes reutilizam os dados semânticos e as capacidades do modelo. O

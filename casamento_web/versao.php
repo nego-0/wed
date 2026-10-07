@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Porcelana Verde e Rosa são modelos independentes de um pacote com documento próprio e recursos botânicos da Kulemba',
+         'assets/convite/modelos/porcelain-v2/1.0.0/manifesto.json', 'porcelana-v2-v1'],
         ['Convites, editor, demonstração e exportação usam o mesmo runtime e a confirmação abre num modal acessível',
          'assets/convite-runtime.js', "location.hash==='#confirmar'"],
         ['O formulário real de confirmação conserva presença parcial e cabe no modal em qualquer viewport',

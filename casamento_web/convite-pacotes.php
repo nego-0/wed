@@ -10,6 +10,8 @@
 const CONVITE_PACOTE_SCHEMA = 1;
 const CONVITE_PACOTE_PADRAO = 'kulemba-contemporaneo';
 const CONVITE_PACOTE_PADRAO_VERSAO = '1.0.0';
+const CONVITE_PACOTE_PORCELANA = 'porcelain-v2';
+const CONVITE_PACOTE_PORCELANA_VERSAO = '1.0.0';
 
 /** Lê o manifesto instalado e recusa um pacote incompleto. */
 function convitePacoteManifesto(string $ficheiro): array {
@@ -37,12 +39,22 @@ function convitePacotesRegistados(): array {
     static $pacotes = null;
     if ($pacotes !== null) return $pacotes;
 
-    $raiz = __DIR__ . '/assets/convite/modelos/kulemba-contemporaneo/1.0.0';
-    $manifesto = convitePacoteManifesto($raiz . '/manifesto.json');
     $template = realpath(__DIR__ . '/assets/convite-base.html');
     $base = realpath(__DIR__);
     if ($template === false || $base === false || !str_starts_with(str_replace('\\', '/', $template), str_replace('\\', '/', $base) . '/')) {
         throw new RuntimeException('O template do pacote Kulemba Contemporâneo não está disponível.');
+    }
+
+    $raizKulemba = __DIR__ . '/assets/convite/modelos/kulemba-contemporaneo/1.0.0';
+    $manifestoKulemba = convitePacoteManifesto($raizKulemba . '/manifesto.json');
+    $raizPorcelana = __DIR__ . '/assets/convite/modelos/porcelain-v2/1.0.0';
+    $manifestoPorcelana = convitePacoteManifesto($raizPorcelana . '/manifesto.json');
+    $templatePorcelana = realpath($raizPorcelana . '/porcelain-v2.html');
+    $cssPorcelana = realpath($raizPorcelana . '/porcelain-v2.css');
+    if ($templatePorcelana === false || $cssPorcelana === false
+        || !str_starts_with(str_replace('\\', '/', $templatePorcelana), str_replace('\\', '/', $base) . '/')
+        || !str_starts_with(str_replace('\\', '/', $cssPorcelana), str_replace('\\', '/', $base) . '/')) {
+        throw new RuntimeException('O documento do pacote Porcelana V2 não está disponível.');
     }
 
     $pacotes = [
@@ -53,10 +65,29 @@ function convitePacotesRegistados(): array {
                     'renderer_key' => CONVITE_PACOTE_PADRAO,
                     'renderer_version' => CONVITE_PACOTE_PADRAO_VERSAO,
                     'renderer_schema' => CONVITE_PACOTE_SCHEMA,
-                    'manifesto' => $manifesto,
+                    'manifesto' => $manifestoKulemba,
                     // Adaptador legado: conserva o HTML actual byte a byte.
                     'template' => $template,
                     'checksum' => hash_file('sha256', $template),
+                ],
+            ],
+            CONVITE_PACOTE_PORCELANA => [
+                CONVITE_PACOTE_PORCELANA_VERSAO => [
+                    'ambito' => 'digital',
+                    'renderer_key' => CONVITE_PACOTE_PORCELANA,
+                    'renderer_version' => CONVITE_PACOTE_PORCELANA_VERSAO,
+                    'renderer_schema' => CONVITE_PACOTE_SCHEMA,
+                    'manifesto' => $manifestoPorcelana,
+                    // Documento e composição próprios; os marcadores
+                    // semânticos continuam a ser os mesmos da plataforma.
+                    'template' => $templatePorcelana,
+                    'stylesheets' => [[
+                        'path' => $cssPorcelana,
+                        'href' => 'assets/convite/modelos/porcelain-v2/1.0.0/porcelain-v2.css',
+                    ]],
+                    'checksum' => hash('sha256', hash_file('sha256', $templatePorcelana)
+                        . hash_file('sha256', $cssPorcelana)
+                        . hash_file('sha256', $raizPorcelana . '/manifesto.json')),
                 ],
             ],
         ],

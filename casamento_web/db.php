@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 68;
+const ESQUEMA_VERSAO = 69;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2694,6 +2694,17 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         @$conn->query("UPDATE {$P}versoes
                        SET renderer_key='$pk', renderer_version='$pv', renderer_schema=" . CONVITE_PACOTE_SCHEMA . "
                        WHERE ambito='digital' AND (renderer_key IS NULL OR renderer_key='')");
+    }
+
+    // v69 — primeira família visual instalada como pacote próprio. Verde e
+    // Rosa são dois modelos comerciais do mesmo renderizador, pelo que podem
+    // trocar de variante sem perder o conteúdo semântico nem versões antigas.
+    if ($versaoAtual < 69) {
+        require_once __DIR__ . '/personalizacao.php';
+        restaurarModelosDeCasa($conn, [
+            ['ambito'=>'digital', 'nome'=>'Porcelana Verde'],
+            ['ambito'=>'digital', 'nome'=>'Porcelana Rosa'],
+        ], true);
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

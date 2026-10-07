@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "id": "porcelain-v2",
+  "versao": "1.0.0",
+  "nome": "Porcelana V2",
+  "ambito": "digital",
+  "adaptador": "porcelana-v2-v1",
+  "estado": "mantido",
+  "compatibilidade": {
+    "capacidades": 3,
+    "dados": 1
+  },
+  "variantes": {
+    "verde": {
+      "nome": "Porcelana Verde",
+      "estilo": "porcelana-verde"
+    },
+    "rosa": {
+      "nome": "Porcelana Rosa",
+      "estilo": "porcelana-rosa"
+    }
+  },
+  "editor": {
+    "seccoes": ["capa", "hero", "convite", "historia", "interludio", "grande-dia", "acesso", "final"],
+    "paineis": ["conteudo", "camadas", "cores", "tipografia", "media", "efeitos", "composicao"],
+    "media": ["media.hero", "media.historia", "media.interludio", "media.acesso", "media.musica"],
+    "efeitos": ["fx.autoplay"],
+    "componentes": ["texto", "fotografia", "galeria", "cronologia", "local_mapa", "confirmacao", "musica", "presentes"],
+    "recursos": ["biblioteca_icones", "rolagem_automatica", "presentes_qr"]
+  },
+  "runtime": {
+    "esquema": 1,
+    "montagens": ["capa", "audio", "calendario", "mapa", "galeria", "confirmacao", "qr", "presentes"],
+    "eventos": ["pronto", "capa-abrir", "audio-tocar", "audio-pausar", "rolagem-iniciar", "rolagem-pausar", "calendario-descarregar", "mapa-abrir", "galeria-abrir", "galeria-fechar", "qr-gerado", "confirmacao-abrir", "confirmacao-fechar", "confirmacao-concluida"]
+  }
+}
+
