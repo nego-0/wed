@@ -6032,8 +6032,16 @@ function criarVersaoDaPeca(mysqli $conn, string $ambito, string $nome): int {
     if ($json === null) erro('Não foi possível preparar a versão.');
 
     $u = utilizadorAtual() ?? '';
-    $st = $conn->prepare("INSERT INTO {$P}versoes (casamento_id, nome, defs, utilizador, ambito) VALUES (" . casamentoAtual() . ",?,?,?,?)");
-    $st->bind_param('ssss', $nome, $json, $u, $ambito);
+    $pacote = pacoteDaPeca($conn, $ambito);
+    if ($ambito === 'digital' && !$pacote) erro('O renderizador desta peça não está instalado.');
+    $rk = $pacote['renderer_key'] ?? null;
+    $rv = $pacote['renderer_version'] ?? null;
+    $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
+    $st = $conn->prepare("INSERT INTO {$P}versoes
+                          (casamento_id, nome, defs, utilizador, ambito,
+                           renderer_key, renderer_version, renderer_schema)
+                          VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?)");
+    $st->bind_param('ssssssi', $nome, $json, $u, $ambito, $rk, $rv, $rs);
     if (!$st->execute()) erro('Não foi possível guardar a versão.');
     $id = $conn->insert_id;
     // Uma versão acabada de guardar É a peça neste momento — foi tirada dela.
@@ -6075,7 +6083,8 @@ if ($acao === 'versao_criar') {
 if ($acao === 'versao_lista') {
     exigirModuloApi(ambitoPedido());
     $ambito = ambitoPedido();
-    $st = $conn->prepare("SELECT id, nome, utilizador, criado_em, atualizado_em, predefinida, defs
+    $st = $conn->prepare("SELECT id, nome, utilizador, criado_em, atualizado_em, predefinida, defs,
+                                 renderer_key, renderer_version, renderer_schema
                           FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY predefinida DESC, id DESC");
     $st->bind_param('s', $ambito); $st->execute();
     $linhas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -6087,9 +6096,11 @@ if ($acao === 'versao_lista') {
         // versão cujo conteúdo bate certo com o que a peça mostra agora. Uma
         // marca guardada acabava a mentir — dizia "em vigor" numa versão
         // enquanto o convite enviado mostrava outra coisa.
-        $v['em_vigor'] = versaoIgualAoAtual($conn, $ambito, $v['defs']);
+        $v['em_vigor'] = versaoIgualAoAtual($conn, $ambito, $v['defs'], $v['renderer_key'] ?? null,
+            $v['renderer_version'] ?? null, isset($v['renderer_schema']) ? (int)$v['renderer_schema'] : null);
         if ($v['em_vigor']) $algumaEmVigor = true;
         unset($v['defs']);                       // a lista não precisa do conteúdo
+        unset($v['renderer_key'], $v['renderer_version'], $v['renderer_schema']);
         $v['escolhida'] = (int)$v['predefinida']; // a última que o utilizador aplicou
         unset($v['predefinida']);
         $v['padrao'] = 0;
@@ -6161,10 +6172,16 @@ if ($acao === 'versao_aplicar') {
         ok($r + ['nome' => $nomeOrigem, 'ambito' => $ambito]);
     }
 
-    $st = $conn->prepare("SELECT nome, defs, ambito FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
+    $st = $conn->prepare("SELECT nome, defs, ambito, renderer_key, renderer_version, renderer_schema
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND id=?");
     $st->bind_param('i', $id); $st->execute();
     $v = $st->get_result()->fetch_assoc();
     if (!$v) erro('Versão não encontrada.');
+    if ($v['ambito'] === 'digital' && !convitePacoteResolver('digital',
+        $v['renderer_key'] ?? null, $v['renderer_version'] ?? null,
+        isset($v['renderer_schema']) ? (int)$v['renderer_schema'] : null, false)) {
+        erro('O renderizador desta versão não está instalado nesta versão da Kulemba.');
+    }
     $j = json_decode($v['defs'], true);
     if (!is_array($j)) erro('Esta versão está ilegível.');
 
@@ -6212,8 +6229,15 @@ if ($acao === 'versao_atualizar') {
     if (!$v) erro('Versão não encontrada.');
     $json = jsonOuNulo(instantaneoAmbito($conn, $v['ambito']));
     if ($json === null) erro('Não foi possível preparar a versão.');
-    $st = $conn->prepare("UPDATE {$P}versoes SET defs=?, atualizado_em=NOW() WHERE " . doCasamento() . " AND id=?");
-    $st->bind_param('si', $json, $id);
+    $pacote = pacoteDaPeca($conn, $v['ambito']);
+    if ($v['ambito'] === 'digital' && !$pacote) erro('O renderizador desta peça não está instalado.');
+    $rk = $pacote['renderer_key'] ?? null;
+    $rv = $pacote['renderer_version'] ?? null;
+    $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
+    $st = $conn->prepare("UPDATE {$P}versoes
+                          SET defs=?, renderer_key=?, renderer_version=?, renderer_schema=?, atualizado_em=NOW()
+                          WHERE " . doCasamento() . " AND id=?");
+    $st->bind_param('sssii', $json, $rk, $rv, $rs, $id);
     if (!$st->execute()) erro('Não foi possível atualizar a versão.');
     if ($v['ambito'] === 'digital') assentarMediaPendente($conn);
     registar($conn, 'versao_atualizada', $v['nome'], '');
@@ -8610,7 +8634,8 @@ function retratoCasamento(mysqli $conn, int $cid): array {
                           LEFT JOIN {$P}convidados g ON g.id = r.convidado_id
                           WHERE r.casamento_id=$cid ORDER BY r.id");
 
-    $versoes = $um("SELECT nome, ambito, defs, predefinida, utilizador, criado_em, atualizado_em
+    $versoes = $um("SELECT nome, ambito, defs, predefinida, utilizador, criado_em, atualizado_em,
+                           renderer_key, renderer_version, renderer_schema
                     FROM {$P}versoes WHERE casamento_id=$cid ORDER BY id");
 
     $acessos = $um("SELECT u.email, u.nome, a.papel FROM {$P}acessos a
@@ -9014,14 +9039,26 @@ function impVersoes(mysqli $conn, int $cid, array $versoes): int {
     global $P; $n = 0;
     foreach ($versoes as $v) {
         if (!is_array($v) || trim((string)($v['nome'] ?? '')) === '') continue;
-        $st = $conn->prepare("INSERT INTO {$P}versoes (casamento_id, nome, ambito, defs, predefinida, utilizador)
-                              VALUES ($cid,?,?,?,?,?)");
         $vn = mb_substr((string)$v['nome'], 0, 80);
         $va = in_array($v['ambito'] ?? '', ['digital','impresso'], true) ? $v['ambito'] : 'digital';
         $vd = (string)($v['defs'] ?? '{}');
         $vp = (int)!empty($v['predefinida']);
         $vu = (string)($v['utilizador'] ?? '');
-        $st->bind_param('sssis', $vn, $va, $vd, $vp, $vu);
+        $temIdentidade = trim((string)($v['renderer_key'] ?? '')) !== ''
+            || trim((string)($v['renderer_version'] ?? '')) !== '';
+        $pacote = $va === 'digital'
+            ? convitePacoteResolver($va, $v['renderer_key'] ?? null, $v['renderer_version'] ?? null,
+                isset($v['renderer_schema']) ? (int)$v['renderer_schema'] : null, !$temIdentidade)
+            : null;
+        if ($va === 'digital' && !$pacote) continue;
+        $rk = $pacote['renderer_key'] ?? null;
+        $rv = $pacote['renderer_version'] ?? null;
+        $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
+        $st = $conn->prepare("INSERT INTO {$P}versoes
+                              (casamento_id, nome, ambito, defs, predefinida, utilizador,
+                               renderer_key, renderer_version, renderer_schema)
+                              VALUES ($cid,?,?,?,?,?,?,?,?)");
+        $st->bind_param('sssisssi', $vn, $va, $vd, $vp, $vu, $rk, $rv, $rs);
         if (@$st->execute()) $n++;
     }
     return $n;
@@ -10382,8 +10419,7 @@ if ($acao === 'modelo_criar') {
         $pacote = convitePacoteResolver($ambito, $d['renderer_key'] ?? null,
             $d['renderer_version'] ?? null, isset($d['renderer_schema']) ? (int)$d['renderer_schema'] : null, false);
         if ($pacoteExplicito && !$pacote) erro('O renderizador indicado não está instalado nesta versão da Kulemba.');
-        if (!$pacote) $pacote = pacoteDoModeloId($conn, $ambito, modeloProvenienciaId($conn, $ambito));
-        if (!$pacote) $pacote = convitePacoteResolver($ambito, null, null);
+        if (!$pacote) $pacote = pacoteDaPeca($conn, $ambito);
     }
     $rk = $pacote['renderer_key'] ?? null;
     $rv = $pacote['renderer_version'] ?? null;

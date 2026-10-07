@@ -34,4 +34,3 @@ pacoteOk(convitePacoteOrigem('impresso')['renderer_key'] === null,
     'o cartão impresso não recebe um renderizador digital por engano');
 
 exit($falhas ? 1 : 0);
-

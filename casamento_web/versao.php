@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As versões guardadas fixam o renderizador e o esquema usados pela peça',
+         'db.php', "idx_versao_renderer"],
         ['O convite digital é carregado pelo pacote do modelo, sem um caminho fixo na página',
          'convite-digital.php', "pacoteDaPeca(\$conn, 'digital', \$MOD)"],
         ['Os modelos digitais identificam um pacote de renderização instalado e versionado',

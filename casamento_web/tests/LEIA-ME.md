@@ -128,6 +128,7 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | `chk_capacidades_modelo.php` | ficha persistente de capacidades: secções, componentes, campos semânticos, cores, tipografias, movimento e limites por modelo |
 | `chk_pacotes_convite.php` | registo fechado dos renderizadores, manifesto e compatibilidade do pacote Kulemba Contemporâneo com modelos antigos |
 | `chk_renderer_convite.php` | o convite escolhe o pacote do modelo e o Kulemba Contemporâneo conserva exactamente o HTML anterior |
+| `chk_renderer_versoes.php` | versões guardadas fixam, transportam e comparam também a identidade do renderizador |
 | `chk_historico_versoes_editor.js` | histórico com camadas trancadas, ícones de desfazer/refazer, ausência de rascunhos e versões apenas do utilizador |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
 | `chk_modelo_versao.js`  | a peça chama o modelo pelo nome (em vigor e com alterações), e alterá-lo obriga a uma versão do casal, com nome, que mais ninguém vê |

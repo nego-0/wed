@@ -107,3 +107,11 @@ function convitePacoteResolver(
     return $pacote;
 }
 
+/** Compara a identidade persistível de dois pacotes já resolvidos. */
+function convitePacoteIgual(?array $a, ?array $b): bool {
+    if ($a === null || $b === null) return false;
+    return (string)($a['ambito'] ?? '') === (string)($b['ambito'] ?? '')
+        && (string)($a['renderer_key'] ?? '') === (string)($b['renderer_key'] ?? '')
+        && (string)($a['renderer_version'] ?? '') === (string)($b['renderer_version'] ?? '')
+        && (int)($a['renderer_schema'] ?? 0) === (int)($b['renderer_schema'] ?? 0);
+}

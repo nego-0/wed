@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 67;
+const ESQUEMA_VERSAO = 68;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2678,6 +2678,20 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         $pk = $conn->real_escape_string(CONVITE_PACOTE_PADRAO);
         $pv = $conn->real_escape_string(CONVITE_PACOTE_PADRAO_VERSAO);
         @$conn->query("UPDATE {$P}modelos
+                       SET renderer_key='$pk', renderer_version='$pv', renderer_schema=" . CONVITE_PACOTE_SCHEMA . "
+                       WHERE ambito='digital' AND (renderer_key IS NULL OR renderer_key='')");
+    }
+
+    // v68 — uma versão é um instantâneo completo: fixa também o código que a
+    // desenha. Assim, instalar um pacote novo não muda convites já guardados.
+    if ($versaoAtual < 68) {
+        migColuna($conn, "{$P}versoes", 'renderer_key', "VARCHAR(80) NULL DEFAULT NULL");
+        migColuna($conn, "{$P}versoes", 'renderer_version', "VARCHAR(24) NULL DEFAULT NULL");
+        migColuna($conn, "{$P}versoes", 'renderer_schema', "SMALLINT UNSIGNED NOT NULL DEFAULT 1");
+        migIndice($conn, "{$P}versoes", 'idx_versao_renderer', 'ambito, renderer_key, renderer_version');
+        $pk = $conn->real_escape_string(CONVITE_PACOTE_PADRAO);
+        $pv = $conn->real_escape_string(CONVITE_PACOTE_PADRAO_VERSAO);
+        @$conn->query("UPDATE {$P}versoes
                        SET renderer_key='$pk', renderer_version='$pv', renderer_schema=" . CONVITE_PACOTE_SCHEMA . "
                        WHERE ambito='digital' AND (renderer_key IS NULL OR renderer_key='')");
     }

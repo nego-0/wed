@@ -338,13 +338,31 @@ function pacoteDoModeloId(mysqli $conn, string $ambito, int $id, bool $fallback 
 
 /** Pacote que deve desenhar a peça ou uma pré-visualização de modelo. */
 function pacoteDaPeca(mysqli $conn, string $ambito, ?array $modeloVisto = null): ?array {
+    global $P;
     if ($ambito !== 'digital') return null;
     if ($modeloVisto !== null) {
         return convitePacoteResolver($ambito, $modeloVisto['renderer_key'] ?? null,
             $modeloVisto['renderer_version'] ?? null,
             isset($modeloVisto['renderer_schema']) ? (int)$modeloVisto['renderer_schema'] : null, false);
     }
+
+    // Uma versão aplicada ganha ao modelo de onde nasceu: é um instantâneo
+    // autónomo e deve continuar a abrir com o renderizador que guardou.
+    $st = $conn->prepare("SELECT renderer_key, renderer_version, renderer_schema
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? AND predefinida=1
+                          ORDER BY id DESC LIMIT 1");
+    if ($st) {
+        $st->bind_param('s', $ambito); $st->execute();
+        if ($v = $st->get_result()->fetch_assoc()) {
+            return convitePacoteResolver($ambito, $v['renderer_key'] ?? null,
+                $v['renderer_version'] ?? null, (int)($v['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA), false);
+        }
+    }
     $modeloId = modeloProvenienciaId($conn, $ambito);
+    if ($modeloId <= 0) {
+        $origem = modeloDeOrigem($conn, $ambito);
+        $modeloId = (int)($origem['id'] ?? 0);
+    }
     return $modeloId > 0
         ? pacoteDoModeloId($conn, $ambito, $modeloId, true)
         : convitePacoteResolver($ambito, null, null);
@@ -1558,9 +1576,21 @@ function instantaneoAmbito(mysqli $conn, string $ambito): array {
 }
 
 /** Compara uma versão guardada com o que está em vigor agora. */
-function versaoIgualAoAtual(mysqli $conn, string $ambito, string $defsJson): bool {
+function versaoIgualAoAtual(
+    mysqli $conn,
+    string $ambito,
+    string $defsJson,
+    ?string $rendererKey = null,
+    ?string $rendererVersion = null,
+    ?int $rendererSchema = null
+): bool {
     $guardado = json_decode($defsJson, true);
     if (!is_array($guardado)) return false;
+    if ($ambito === 'digital') {
+        $pacoteGuardado = convitePacoteResolver($ambito, $rendererKey, $rendererVersion,
+            $rendererSchema, false);
+        if (!convitePacoteIgual($pacoteGuardado, pacoteDaPeca($conn, $ambito))) return false;
+    }
     foreach (instantaneoAmbito($conn, $ambito) as $k => $v) {
         if ((string)($guardado[$k] ?? '') !== $v) return false;
     }
@@ -1577,13 +1607,18 @@ function versaoIgualAoAtual(mysqli $conn, string $ambito, string $defsJson): boo
  */
 function versaoEmVigor(mysqli $conn, string $ambito): ?array {
     global $P;
-    $st = $conn->prepare("SELECT id, nome, defs, criado_em, atualizado_em
+    $st = $conn->prepare("SELECT id, nome, defs, criado_em, atualizado_em,
+                                 renderer_key, renderer_version, renderer_schema
                           FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY id DESC");
     if (!$st) return null;
     $st->bind_param('s', $ambito);
     $st->execute();
     foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $v) {
-        if (versaoIgualAoAtual($conn, $ambito, $v['defs'])) { unset($v['defs']); return $v; }
+        if (versaoIgualAoAtual($conn, $ambito, $v['defs'], $v['renderer_key'] ?? null,
+            $v['renderer_version'] ?? null, isset($v['renderer_schema']) ? (int)$v['renderer_schema'] : null)) {
+            unset($v['defs'], $v['renderer_key'], $v['renderer_version'], $v['renderer_schema']);
+            return $v;
+        }
     }
     return null;
 }
@@ -1607,7 +1642,8 @@ function versaoEmVigor(mysqli $conn, string $ambito): ?array {
  */
 function versaoEstado(mysqli $conn, string $ambito): array {
     global $P;
-    $st = $conn->prepare("SELECT id, nome, predefinida, defs
+    $st = $conn->prepare("SELECT id, nome, predefinida, defs,
+                                 renderer_key, renderer_version, renderer_schema
                           FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? ORDER BY id DESC");
     $linhas = [];
     if ($st) {
@@ -1618,7 +1654,8 @@ function versaoEstado(mysqli $conn, string $ambito): array {
 
     $escolhida = null;
     foreach ($linhas as $v) {
-        if (versaoIgualAoAtual($conn, $ambito, $v['defs'])) {
+        if (versaoIgualAoAtual($conn, $ambito, $v['defs'], $v['renderer_key'] ?? null,
+            $v['renderer_version'] ?? null, isset($v['renderer_schema']) ? (int)$v['renderer_schema'] : null)) {
             return ['estado' => 'vigor', 'nome' => $v['nome'], 'id' => (int)$v['id']];
         }
         if ((int)$v['predefinida'] === 1 && $escolhida === null) $escolhida = $v;
@@ -1667,12 +1704,14 @@ function versaoEstado(mysqli $conn, string $ambito): array {
 function pecaEmModeloDaCasa(mysqli $conn, string $ambito): bool {
     global $P;
     if (modeloDaPeca($conn, $ambito) === null) return false;   // não veio de modelo nenhum
-    $st = $conn->prepare("SELECT defs FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=?");
+    $st = $conn->prepare("SELECT defs, renderer_key, renderer_version, renderer_schema
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=?");
     if ($st) {
         $st->bind_param('s', $ambito); $st->execute();
         foreach ($st->get_result()->fetch_all(MYSQLI_ASSOC) as $v) {
             // Numa versão sua, o casal manda: grava por cima à vontade.
-            if (versaoIgualAoAtual($conn, $ambito, $v['defs'])) return false;
+            if (versaoIgualAoAtual($conn, $ambito, $v['defs'], $v['renderer_key'] ?? null,
+                $v['renderer_version'] ?? null, isset($v['renderer_schema']) ? (int)$v['renderer_schema'] : null)) return false;
         }
     }
     return true;

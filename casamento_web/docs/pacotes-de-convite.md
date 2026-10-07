@@ -30,6 +30,13 @@ Cada versão instalada possui um `manifesto.json` com nome público em portuguê
 uma mudança incompatível cria outra versão e a anterior permanece disponível
 para abrir peças históricas.
 
+As versões guardadas pelos noivos fixam a mesma identidade. Comparar uma
+versão com a peça em vigor considera o conteúdo e o renderizador; dois
+instantâneos com os mesmos textos e fotografias, mas com estruturas diferentes,
+deixam de ser confundidos. Exportar e importar um casamento transporta essa
+identidade. Um ficheiro antigo, que ainda não a contém, recebe o pacote de
+origem; uma identidade explícita só entra se o pacote estiver instalado.
+
 ## Primeiro pacote
 
 `kulemba-contemporaneo@1.0.0` envolve o convite digital que já existia. O seu
