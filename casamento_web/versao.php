@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Desfazer e Refazer usam o mesmo documento normalizado nos dois editores',
+         'assets/editor-documento.js', 'function serializar(documento, esquema)'],
         ['O manifesto do pacote monta o inspector e separa as ferramentas do admin das liberdades dos noivos',
          'editor-modelo.php', "'liberdades_noivos'"],
         ['As versões guardadas fixam o renderizador e o esquema usados pela peça',

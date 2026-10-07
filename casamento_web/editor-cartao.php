@@ -273,6 +273,7 @@ foreach ($camposPorCamada as $camada=>$campos) {
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
+<script src="<?= asset('assets/editor-documento.js') ?>"></script>
 <script>
 window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?>, ambito:'impresso' };
 window.EDITOR_HIBRIDO = {
@@ -383,9 +384,12 @@ function msg(t){ $('estado-msg').textContent = t; $('estado-msg').className = ''
 // ---------- Histórico (desfazer / refazer) ----------
 // O mesmo mecanismo do editor do convite digital: fotografias do estado, com
 // as teclas seguidas agrupadas num passo só.
+const ESQUEMA_DOCUMENTO = {
+  listas:['trancados'], mapas:['cores','fontes','deco','textos','pos','camadas']
+};
 const HIST = [instantaneo()];
 let hPos = 0, tHist = null;
-function instantaneo(){ return JSON.stringify(est); }
+function instantaneo(){ return EditorDocumento.serializar(est, ESQUEMA_DOCUMENTO); }
 function registarPasso(){
   clearTimeout(tHist);
   tHist = setTimeout(consolidarPasso, 350);
@@ -418,7 +422,7 @@ function repintarTudo(){
   aplicarDeco(); aplicarPosicoes();
   renderCamadas(); renderProps(); renderCores(); renderTipografia();
 }
-function aplicarEstado(json){ est = JSON.parse(json); repintarTudo(); marcarBotoes(); }
+function aplicarEstado(json){ est = EditorDocumento.hidratar(json, ESQUEMA_DOCUMENTO); repintarTudo(); marcarBotoes(); }
 function desfazer(){ consolidarPasso(); if (hPos<=0) return; hPos--; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Desfeito.'); }
 function refazer(){ consolidarPasso(); if (hPos>=HIST.length-1) return; hPos++; aplicarEstado(HIST[hPos]); marcarSujo(true); msg('Refeito.'); }
 function marcarBotoes(){

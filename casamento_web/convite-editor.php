@@ -275,6 +275,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
 <script src="<?= asset('assets/janela.js') ?>"></script>
 <script src="<?= asset('assets/versoes.js') ?>"></script>
 <script src="<?= asset('assets/tela-livre.js') ?>"></script>
+<script src="<?= asset('assets/editor-documento.js') ?>"></script>
 <script>
 window.EDITOR_MIN = { l: <?= EDITOR_MIN_L ?>, a: <?= EDITOR_MIN_A ?>, sair: <?= json_encode($SAIR_EDITOR) ?>, ambito:'digital' };
 window.EDITOR_HIBRIDO = {
@@ -486,14 +487,14 @@ let focoAutomatico = false;
 
 // ---------- histórico (desfazer / refazer) ----------
 // Um editor sem desfazer obriga a pensar duas vezes antes de cada gesto.
+const ESQUEMA_DOCUMENTO = {
+  sets:['trancados'], listas:['blocos','ordem'],
+  mapas:['val','listas','paleta','pos']
+};
 const ORIGINAL = instantaneo();
 const HIST = [ORIGINAL];
 let hPos = 0;
-function instantaneo(){
-  // JSON não conhece Set: sem esta conversão `trancados` virava `{}` e o
-  // primeiro desfazer/refazer rebentava ao chamar `.has()`.
-  return JSON.stringify(EST, (chave, valor) => valor instanceof Set ? [...valor] : valor);
-}
+function instantaneo(){ return EditorDocumento.serializar(EST, ESQUEMA_DOCUMENTO); }
 let tGuardaHist = null;
 function registarPasso(){
   clearTimeout(tGuardaHist);
@@ -515,11 +516,7 @@ function consolidarPasso(){
   return true;
 }
 function aplicarEstado(json){
-  EST = JSON.parse(json);
-  const trancados = EST.trancados;
-  EST.trancados = new Set(Array.isArray(trancados)
-    ? trancados
-    : (typeof trancados === 'string' ? trancados.split(',').filter(Boolean) : []));
+  EST = EditorDocumento.hidratar(json, ESQUEMA_DOCUMENTO);
   renderCamadas(); renderProps(); renderCores(); renderMedia(); renderEfeitos(); renderTipografia();
   recarregarTela();
   marcarBotoes();
