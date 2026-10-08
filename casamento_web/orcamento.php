@@ -171,6 +171,15 @@ $CAS  = casalDaFicha($conn);
   .btn-sm{ padding:.4rem .8rem; font-size:var(--t-apoio); }
 
   /* ---- Despesas ---- */
+  /* A caixa de pesquisa das despesas: a lupa por dentro, discreta, a toda a
+     largura — procura por descrição, fornecedor ou categoria. */
+  .o-busca{ display:flex; align-items:center; gap:.5rem; margin-top:.9rem;
+            border:1px solid var(--line); border-radius:10px; background:var(--card);
+            padding:.1rem .7rem; }
+  .o-busca:focus-within{ border-color:var(--gold-soft); box-shadow:0 0 0 2px var(--ring); }
+  .o-busca .ic{ width:17px; height:17px; flex:none; color:var(--ink-fraco); }
+  .o-busca input{ flex:1; min-width:0; border:0; background:transparent; outline:none;
+                  font:inherit; font-size:var(--t-denso); color:var(--ink); padding:.55rem 0; }
   .tabela-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
   table.desp{ width:100%; border-collapse:collapse; min-width:560px; }
   table.desp th{ text-align:left; font-size:var(--t-etiqueta); text-transform:uppercase; letter-spacing:.06em;
@@ -414,6 +423,12 @@ $CAS  = casalDaFicha($conn);
         <p class="dica" style="margin-bottom:0">Cada compromisso, com o seu estado e a sua fatura.</p>
       </div>
       <button class="btn btn-ouro" onclick="abrirDespesa()">+ Despesa</button>
+    </div>
+    <div class="o-busca">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="orc-busca" type="search" autocomplete="off" oninput="orcBuscar(this.value)"
+             placeholder="Procurar despesa, fornecedor ou categoria…" aria-label="Procurar despesa">
     </div>
     <div id="lista-despesas" style="margin-top:1rem"></div>
   </div>

@@ -50,6 +50,15 @@ const PASS = process.env.TEST_PASSWORD || 'noivos2026';
     const selectorCategoria = page.locator('#md-categoria').locator('xpath=ancestor::div[contains(@class,"lic-sel")][1]');
     await selectorCategoria.locator('.lic-sel-bt').click();
     await selectorCategoria.locator('.lic-sel-q input').fill(nomeCategoria);
+    // A opção «Criar» aparece no TOPO da lista — antes das categorias já
+    // existentes —, que é onde a pessoa que acabou de escrever um nome novo a
+    // procura, e não no fundo depois de rolar tudo.
+    ok(await selectorCategoria.evaluate(cx => {
+      const pop = cx.querySelector('.lic-sel-pop');
+      const novo = pop.querySelector('.lic-sel-novo'), lista = pop.querySelector('.lic-sel-lista');
+      return !!novo && !novo.hidden
+        && (novo.compareDocumentPosition(lista) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
+    }), 'a opção «Criar» aparece no topo da lista, antes das categorias');
     await selectorCategoria.locator('.lic-sel-novo').click();
 
     ok(await page.locator('#md-cat-inline').isVisible(),

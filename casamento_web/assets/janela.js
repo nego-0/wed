@@ -352,13 +352,13 @@ function licSelCorpoHtml(ops, escolhido, rot, dicaProcura, procura, novo){
     +       licEsc(dicaProcura || 'Escreva para procurar') + '" '
     +       'aria-label="Procurar em ' + licEsc(rot || 'lista') + '">'
     +   '</div>'
-    +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(rot || 'lista') + '">'
-    +     ops.map(o => licSelOpcaoHtml(o, esc.v)).join('')
-    +   '</div>'
     +   (novo ? '<button type="button" class="lic-sel-novo" hidden>'
     +     '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     +       'stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
     +     '<span>Criar <b></b></span></button>' : '')
+    +   '<div class="lic-sel-lista" role="listbox" aria-label="' + licEsc(rot || 'lista') + '">'
+    +     ops.map(o => licSelOpcaoHtml(o, esc.v)).join('')
+    +   '</div>'
     +   '<div class="lic-sel-nada" hidden>Nada com esse nome.</div>'
     + '</div>';
 }
@@ -516,7 +516,12 @@ function licSelLigarUm(cx){
        e o lado mede-se pelo BOTÃO, que não depende de onde a lista está. */
     const RESPIRO = 14;      // entre a lista e a borda de quem a contém
     const MINIMO  = 132;     // três linhas: menos do que isto é uma fresta
-    const assentar = () => {
+    // `repicarLado` só é verdade ao ABRIR (e ao redimensionar): aí escolhe-se o
+    // lado com mais espaço. A ROLAR, não — senão a lista saltava de cima para
+    // baixo do campo a cada poucos pixels, que era o pisca-pisca que se via ao
+    // rolar a janela com a lista aberta. A rolar, mantém-se o lado e só se
+    // aperta a altura, para a lista nunca ficar cortada.
+    const assentar = (repicarLado) => {
       const lista = pop.querySelector('.lic-sel-lista');
       if (!lista) return;
 
@@ -549,7 +554,9 @@ function licSelLigarUm(cx){
       // e a lista aparecia ora acima ora abaixo do mesmo campo sem nada ter
       // mudado para quem a abre.
       const GANHO = Math.max(48, linha);
-      const paraCima = abaixo < quer && acima > abaixo + GANHO;
+      const paraCima = repicarLado
+        ? (abaixo < quer && acima > abaixo + GANHO)
+        : pop.classList.contains('acima');   // a rolar, não troca de lado
       const espaco = (paraCima ? acima : abaixo) - fora;
       const novoAlto = quer > (paraCima ? acima : abaixo)
         ? Math.floor(inteiras(Math.max(MINIMO, espaco))) + 'px' : '';
@@ -600,7 +607,7 @@ function licSelLigarUm(cx){
       pop.hidden = !sim;
       bt.setAttribute('aria-expanded', sim ? 'true' : 'false');
       if (sim){
-        q.value = ''; filtrar(); assentar();
+        q.value = ''; filtrar(); assentar(true);
         // Numa lista curta a procura está escondida: o foco vai para ela à
         // mesma (é quem ouve as setas), mas sem a pôr à vista.
         q.focus({ preventScroll: true });
@@ -648,7 +655,7 @@ function licSelLigarUm(cx){
     };
 
     bt.addEventListener('click', (e) => { e.stopPropagation(); abrir(pop.hidden); });
-    q.addEventListener('input', () => { filtrar(); assentar(); });
+    q.addEventListener('input', () => { filtrar(); assentar(false); });
 
     /* Enquanto está aberta, a lista acompanha o que se mexe POR BAIXO dela: uma
        janela que role com a lista aberta punha-a outra vez a meio da parede.
@@ -669,14 +676,15 @@ function licSelLigarUm(cx){
     const remedir = () => {
       if (medirMarcado || pop.hidden) return;
       medirMarcado = true;
-      requestAnimationFrame(() => { medirMarcado = false; if (!pop.hidden) assentar(); });
+      requestAnimationFrame(() => { medirMarcado = false; if (!pop.hidden) assentar(false); });
     };
     window.addEventListener('scroll', (e) => {
       if (pop.hidden) return;
       if (e.target && e.target.nodeType === 1 && pop.contains(e.target)) return;
       remedir();
     }, { passive: true, capture: true });
-    window.addEventListener('resize', remedir, { passive: true });
+    // O redimensionar (rodar o telemóvel) pode mesmo justificar outro lado.
+    window.addEventListener('resize', () => { if (!pop.hidden) assentar(true); }, { passive: true });
     q.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown'){ e.preventDefault(); andar(1); }
       else if (e.key === 'ArrowUp'){ e.preventDefault(); andar(-1); }

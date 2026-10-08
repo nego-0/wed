@@ -76,6 +76,7 @@
   // «Sem categoria» diz-se 'sem'; nos estados, null é tudo.
   var FILTRO_CAT = null;    // null = todas; 'sem' = sem categoria; senão o id (string)
   var FILTRO_EST = null;    // null = tudo; 'previsto' | 'pago' | 'atraso'
+  var FILTRO_BUSCA = '';    // texto da pesquisa (já em chave: minúsculas, sem acentos)
 
   /** Hoje, em ISO — é assim que as datas vêm do servidor. */
   function hojeISO() { return new Date().toISOString().slice(0, 10); }
@@ -117,9 +118,22 @@
    * Pela etiqueta, essa metade já paga não aparecia em lado nenhum, e a soma
    * da lista nunca chegava ao número do cartão em que se tinha carregado.
    */
+  // O texto por onde a pesquisa procura: a descrição, o fornecedor e o nome da
+  // categoria — tudo em chave (minúsculas, sem acentos), para «Fotografia»
+  // achar «fotografia» e «cafe» achar «Café».
+  function buscaDespesa(d) {
+    var cat = '';
+    if (d.categoria_id) {
+      var c = (ORC.categorias || []).find(function (x) { return +x.id === +d.categoria_id; });
+      if (c) cat = c.nome;
+    }
+    return chaveCategoria((d.descricao || '') + ' ' + (d.fornecedor || '') + ' ' + cat);
+  }
+
   function despesasFiltradas() {
     var atraso = FILTRO_EST === 'atraso' ? despesasEmAtraso() : null;
     return (ORC.despesas || []).filter(function (d) {
+      if (FILTRO_BUSCA && buscaDespesa(d).indexOf(FILTRO_BUSCA) < 0) return false;
       if (FILTRO_CAT === 'sem' && d.categoria_id) return false;
       if (FILTRO_CAT != null && FILTRO_CAT !== 'sem' && +d.categoria_id !== +FILTRO_CAT) return false;
       if (FILTRO_EST === 'atraso')   return !!atraso[d.id];
@@ -365,6 +379,17 @@
     repintarFiltrado(null);
   };
 
+  /** A caixa de pesquisa: filtra a lista de despesas pelo que se escreve. */
+  window.orcBuscar = function (v) {
+    FILTRO_BUSCA = chaveCategoria(v);           // normaliza como as categorias
+    if (ORC) renderDespesas(ORC.despesas || [], ORC.categorias || []);
+  };
+  window.orcBuscaLimpar = function () {
+    var inp = $('orc-busca'); if (inp) inp.value = '';
+    FILTRO_BUSCA = '';
+    if (ORC) renderDespesas(ORC.despesas || [], ORC.categorias || []);
+  };
+
   /**
    * A tira que diz o que a lista está a mostrar, e como sair dela.
    *
@@ -430,7 +455,10 @@
     var nome = FILTRO_CAT === 'sem' ? 'Sem categoria' : (nomeCat[FILTRO_CAT] || 'Categoria');
     var cab = tiraFiltro(lista.length + ' despesa(s)', real, nome, true);
     if (!lista.length) {
-      box.innerHTML = cab + '<div class="vazio">Nenhuma despesa responde a este filtro.</div>';
+      box.innerHTML = cab + (FILTRO_BUSCA
+        ? '<div class="vazio">Nenhuma despesa corresponde à procura.'
+          + '<br><button class="mini" onclick="orcBuscaLimpar()">&times; limpar a procura</button></div>'
+        : '<div class="vazio">Nenhuma despesa responde a este filtro.</div>');
       return;
     }
 

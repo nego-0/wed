@@ -554,6 +554,16 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
                font-weight:400; margin-right:.25rem; }
   .pg-txt{ background:var(--card); border:1px solid var(--line); border-radius:10px;
            padding:.25rem .6rem; font-size:var(--t-denso); }
+
+  /* O modal de «Novo convite» é alto e rola; a barra de origem do sistema era
+     larga e escura ao lado do convite. Fica fina e discreta — só uma pista de
+     que há mais, e não uma régua a dividir o formulário. */
+  #ov-convite .modal{ scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+  #ov-convite .modal::-webkit-scrollbar{ width:8px; }
+  #ov-convite .modal::-webkit-scrollbar-track{ background:transparent; }
+  #ov-convite .modal::-webkit-scrollbar-thumb{ background-color:var(--line); border-radius:999px;
+    border:2px solid transparent; background-clip:content-box; }
+  #ov-convite .modal:hover::-webkit-scrollbar-thumb{ background-color:var(--ink-fraco); background-clip:content-box; }
 </style>
 <script src="<?= asset('assets/api.js') ?>"></script>
 <script src="<?= asset('assets/estados.js') ?>"></script>
@@ -748,7 +758,7 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
       <div class="linha-form" style="align-items:end;">
         <div><label>Nome da mesa</label><input type="text" id="m-nome" placeholder="Ex: Mesa 1, Família, Honra…"></div>
         <div><label>Capacidade</label><input type="number" id="m-cap" min="1" placeholder="opcional"></div>
-        <div><button class="btn btn-ouro" style="width:100%; justify-content:center;" onclick="guardarMesa()">Adicionar</button></div>
+        <div><button id="m-btn" class="btn btn-ouro" style="width:100%; justify-content:center;" onclick="guardarMesa()">Adicionar</button></div>
       </div>
       <input type="hidden" id="m-id">
       <div id="lista-mesas-gestao" style="margin-top:1rem;"></div>
@@ -1996,7 +2006,19 @@ function descarregarQR(){
 }
 
 // ---------- mesas ----------
-async function abrirMesas(){ await renderMesasGestao(); abrir('ov-mesas'); }
+async function abrirMesas(){ reporFormMesa(); await renderMesasGestao(); abrir('ov-mesas'); }
+// O formulário volta ao estado de «criar»: campos limpos e o botão a dizer
+// «Adicionar». Senão, uma edição deixada a meio reaparecia como «Actualizar».
+function reporFormMesa(){ $('m-id').value=''; $('m-nome').value=''; $('m-cap').value='';
+  const b=$('m-btn'); if(b) b.textContent='Adicionar'; }
+// Um deslize suave (~1s) que leva o campo do nome ao topo da janela, dentro do
+// próprio modal — sem arrastar a página por baixo.
+function rolarSuaveAte(cont, destino, dur){
+  if(!cont) return; const ini=cont.scrollTop, dif=destino-ini; if(Math.abs(dif)<2) return;
+  const t0=performance.now(), ease=t=> t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+  (function passo(now){ const t=Math.min(1,(now-t0)/dur);
+    cont.scrollTop=ini+dif*ease(t); if(t<1) requestAnimationFrame(passo); })(t0);
+}
 async function renderMesasGestao(){
   const d=await api('mesa_list'); MESAS=d.mesas;
   $('lista-mesas-gestao').innerHTML = MESAS.length? MESAS.map(m=>{
@@ -2014,12 +2036,25 @@ async function renderMesasGestao(){
     </div>`;
   }).join('') : '<p style="color:var(--ink-fraco)">Ainda não há mesas.</p>';
 }
-function editarMesa(id){ const m=MESAS.find(x=>x.id==id); if(!m)return; $('m-id').value=m.id; $('m-nome').value=m.nome; $('m-cap').value=m.capacidade||''; }
+function editarMesa(id){ const m=MESAS.find(x=>x.id==id); if(!m)return;
+  $('m-id').value=m.id; $('m-nome').value=m.nome; $('m-cap').value=m.capacidade||'';
+  const b=$('m-btn'); if(b) b.textContent='Actualizar';
+  // Levar o campo do nome à vista, com um deslize de ~1s, e deixar o cursor
+  // lá: a edição começa onde a pessoa vai escrever, e não no fundo da lista.
+  // O formulário (nome e capacidade) é o primeiro do corpo: levar a janela ao
+  // topo põe-no inteiro à vista, por baixo do cabeçalho.
+  const modal=document.querySelector('#ov-mesas .modal');
+  const campo=$('m-nome');
+  if(modal) rolarSuaveAte(modal, 0, 1000);
+  setTimeout(()=>{ try{ campo.focus({preventScroll:true}); }catch(e){} }, 1040);
+}
 async function guardarMesa(){
   const nome=$('m-nome').value.trim(); if(!nome)return toast('Indique o nome da mesa.',true);
+  const editava=!!($('m-id').value);
   const d=await api('mesa_save',{method:'POST',body:JSON.stringify({id:$('m-id').value||0,nome,capacidade:$('m-cap').value})});
   if(!d.success)return toast(d.message,true);
-  $('m-id').value='';$('m-nome').value='';$('m-cap').value=''; MESAS=d.mesas; renderMesasGestao(); renderFiltroMesas(); renderSelectMesas(); toast('Mesa guardada.');
+  reporFormMesa(); MESAS=d.mesas; renderMesasGestao(); renderFiltroMesas(); renderSelectMesas();
+  toast(editava?'Mesa actualizada.':'Mesa guardada.');
 }
 async function eliminarMesa(id){ const m=MESAS.find(x=>x.id==id); const nome=m?m.nome:'esta mesa';
   const sentados = (CONVITES||[]).filter(c => String(c.mesa_id||'') === String(id)).length;

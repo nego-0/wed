@@ -201,6 +201,23 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.evaluate(() => orcLimparFiltros());
   await p.waitForTimeout(400);
 
+  // ============ 6b. a caixa de pesquisa das despesas ============
+  // Procura por descrição, fornecedor ou categoria, e encolhe a lista ao que
+  // corresponde — sem acentos a atrapalhar. «Fotógrafo» deixa só o fotógrafo;
+  // um disparate não deixa nada; limpar devolve tudo.
+  await p.evaluate(() => { const i = document.getElementById('orc-busca'); i.value = 'fotografo'; orcBuscar(i.value); });
+  await p.waitForTimeout(250);
+  const soFoto = await listas();
+  ok(soFoto.despesas.length === 1 && /Fotógrafo/.test(soFoto.despesas[0]),
+     'a pesquisa «fotografo» deixa só o fotógrafo: ' + soFoto.despesas.join(', '));
+  await p.evaluate(() => { const i = document.getElementById('orc-busca'); i.value = 'zzxqq disparate'; orcBuscar(i.value); });
+  await p.waitForTimeout(250);
+  ok(await p.evaluate(() => !!document.querySelector('#lista-despesas .vazio')),
+     'e uma procura sem correspondência mostra o aviso de «nada»');
+  await p.evaluate(() => orcBuscaLimpar());
+  await p.waitForTimeout(250);
+  ok((await listas()).despesas.length === 4, 'limpar a procura devolve as quatro despesas');
+
   // ============ 7. arrumar ============
   await p.evaluate(async (f) => {
     for (const id of [f.d1, f.d2, f.d3, f.d4])

@@ -21,6 +21,14 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Editar uma mesa no modal de convidados leva o campo ao topo e troca «Adicionar» por «Actualizar»',
+         'index.php', 'function rolarSuaveAte(cont, destino, dur)'],
+        ['O modal de novo convite tem uma barra de rolagem discreta',
+         'index.php', '#ov-convite .modal::-webkit-scrollbar'],
+        ['A lista pesquisável não troca de lado ao rolar (deixa de piscar) e põe o «Criar» no topo',
+         'assets/janela.js', 'a rolar, não troca de lado'],
+        ['O Orçamento tem uma caixa de pesquisa de despesas, por descrição, fornecedor ou categoria',
+         'orcamento.php', 'id="orc-busca"'],
         ['Os onze modelos comparados estão instalados como documentos próprios em português, com recursos, fontes, música e animações locais',
          'assets/convite/modelos/chungdoi-exact/1.0.0/CREDITOS.md', 'onze pacotes'],
         ['Cada modelo exacto conserva a sua identidade e liga presentes, galeria e confirmação ao runtime comum',
@@ -940,7 +948,7 @@ function correcoesEsperadas(): array {
         ['Bar: o nome de quem entrou lê-se uma vez só, dentro da pastilha',
          'bebidas.php', 'Duas pastilhas e mais nada.'],
         ['Escolha com procura: a lista assenta onde cabe, em linhas inteiras',
-         'assets/janela.js', 'const assentar = () =>'],
+         'assets/janela.js', 'const assentar = (repicarLado) =>'],
         ['E vira-se para cima quando o espaço está todo lá',
          'assets/janela.css', '.lic-sel-pop.acima{'],
         ['Janela: um botão do CORPO tem a forma dos do rodapé, e não só a cor',
