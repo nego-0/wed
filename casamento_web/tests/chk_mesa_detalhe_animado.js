@@ -81,6 +81,32 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     ok(estado.duracao >= 1000,
        `${largura}px: o fading do detalhe dura pelo menos um segundo`);
 
+    // Ao abrir a mesa vê-se primeiro quem lá está sentado: as opções de edição
+    // dobram-se atrás do cabeçalho «Editar mesa» (fechado de início) e a lista
+    // de sentados fica logo por baixo.
+    const dobra = await page.evaluate(() => {
+      const d = document.getElementById('editar-mesa-dobra');
+      const corpo = d && d.querySelector('.editar-mesa-corpo');
+      const edNome = document.getElementById('ed-nome');
+      const sum = d && d.querySelector('.editar-mesa-sum');
+      const rotLista = [...document.querySelectorAll('.mesa-detalhe .rot')]
+          .find(r => /Pessoas nesta mesa/i.test(r.textContent));
+      const listaDepois = d && rotLista
+          ? (d.compareDocumentPosition(rotLista) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 : false;
+      return { tem: !!d, fechado: d ? !d.open : null,
+               rotulo: sum ? sum.textContent.trim() : '',
+               editaDentro: !!(corpo && edNome && corpo.contains(edNome)),
+               listaDepois };
+    });
+    ok(dobra.tem && dobra.fechado,
+       `${largura}px: a mesa abre com «Editar mesa» dobrado, não com os campos à mostra`);
+    ok(/editar mesa/i.test(dobra.rotulo),
+       `${largura}px: o cabeçalho que dobra diz «Editar mesa» («${dobra.rotulo}»)`);
+    ok(dobra.editaDentro,
+       `${largura}px: os campos de edição vivem dentro da dobra`);
+    ok(dobra.listaDepois,
+       `${largura}px: a lista de sentados fica por baixo da dobra, como já estava`);
+
     // Fecha pelo próprio desenho e volta a abrir a partir da planta.
     const no = page.locator('.mesa-node[data-id="' + id + '"]');
     await no.scrollIntoViewIfNeeded();

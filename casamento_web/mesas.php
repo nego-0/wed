@@ -41,6 +41,21 @@ $CAS = casalDaFicha($conn);
     .barra-add-sum::before{ content:'+'; font-size:var(--t-sub); line-height:1; }
     .barra-add-dobra[open] .barra-add-sum::before{ content:'\2212'; }
   }
+  /* «Editar mesa»: ao abrir uma mesa, o que se quer ver primeiro é quem lá
+     está sentado, não os campos de nome, forma e cor. As opções de edição
+     dobram-se atrás deste cabeçalho (fechado de início, como o «Nova mesa»),
+     e a lista de sentados fica logo à vista por baixo. Vale no monitor e no
+     telemóvel. */
+  .editar-mesa-dobra{ margin-bottom:.5rem; border-bottom:1px solid var(--line); }
+  .editar-mesa-sum{
+    display:flex; align-items:center; gap:.5rem; min-height:40px; cursor:pointer;
+    list-style:none; padding:.25rem .1rem .45rem;
+    font-family:var(--sans); font-size:var(--t-denso); font-weight:600; color:var(--gold-texto);
+  }
+  .editar-mesa-sum::-webkit-details-marker{ display:none; }
+  .editar-mesa-sum::before{ content:'+'; font-size:var(--t-sub); line-height:1; width:1em; text-align:center; }
+  .editar-mesa-dobra[open] .editar-mesa-sum::before{ content:'\2212'; }
+  .editar-mesa-corpo{ padding:.1rem 0 .6rem; }
   .sm{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:.8rem .7rem; text-align:center; }
   .sm .n{ font-family:var(--serif); font-size:var(--t-display); font-weight:700; color:var(--ink); line-height:1; }
   .sm .l{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-fraco); margin-top:.25rem; }

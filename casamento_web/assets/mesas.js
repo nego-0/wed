@@ -1142,6 +1142,9 @@ function detalheHTML(){
   if(ehNoivos(m)) return detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras);
 
   return `
+    <details class="editar-mesa-dobra" id="editar-mesa-dobra">
+      <summary class="editar-mesa-sum">Editar mesa</summary>
+      <div class="editar-mesa-corpo">
     <div class="mesa-form">
       <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome da mesa">
       <input type="number" id="ed-cap" min="1" value="${cap||''}" placeholder="Lug.">
@@ -1178,6 +1181,12 @@ impressas, sem nada a avisar.">${esc(m.bar_token || '—')}</code>
          rel="noopener" title="Reimprimir só a folha desta mesa">Folha</a>
     </div>` : ''}
 
+        <div class="acoes-bloco">
+          <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
+        </div>
+      </div>
+    </details>
+
     <div style="margin-top:1rem">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <strong style="font-family:var(--serif);color:var(--ink)">Ocupação</strong>
@@ -1203,11 +1212,7 @@ impressas, sem nada a avisar.">${esc(m.bar_token || '—')}</code>
 
     <div class="rot">Sentar convite inteiro nesta mesa</div>
     ${comboHTML('sentar', '', 'Escolher convite…')}
-    ${convAqui.length?`<div style="margin-top:.4rem">${convAqui.map(c=>`<span class="semmesa-chip">${esc(c.nome_final)}<button class="btn-ico" title="Retirar convite da mesa" onclick="retirarConvite(${c.id})"><i data-ico="xis"></i></button></span>`).join('')}</div>`:''}
-
-    <div class="acoes-bloco">
-      <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
-    </div>`;
+    ${convAqui.length?`<div style="margin-top:.4rem">${convAqui.map(c=>`<span class="semmesa-chip">${esc(c.nome_final)}<button class="btn-ico" title="Retirar convite da mesa" onclick="retirarConvite(${c.id})"><i data-ico="xis"></i></button></span>`).join('')}</div>`:''}`;
 }
 // Painel da mesa dos noivos: alas detetadas pelo papel (padrinho/madrinha).
 function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
@@ -1225,10 +1230,18 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
   const bloco=(tit,arr)=>`<div class="rot">${tit} (${arr.length})</div>
     <div class="lista-sentados">${arr.length?arr.map(linhaPapel).join(''):'<div class="vazio-mini">Ainda ninguém.</div>'}</div>`;
   return `
-    <div class="mesa-form">
-      <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
-      <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
-    </div>
+    <details class="editar-mesa-dobra" id="editar-mesa-dobra">
+      <summary class="editar-mesa-sum">Editar mesa</summary>
+      <div class="editar-mesa-corpo">
+        <div class="mesa-form">
+          <input type="text" id="ed-nome" value="${esc(m.nome)}" placeholder="Nome">
+          <button class="btn btn-fantasma btn-sm" onclick="guardarMesaEd()">Guardar</button>
+        </div>
+        <div class="acoes-bloco">
+          <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
+        </div>
+      </div>
+    </details>
     <p style="font-size:var(--t-apoio);color:var(--ink-fraco);margin:.55rem 0 .2rem">Mesa de honra dos noivos <i data-ico="anel"></i>. Só entram <b>padrinhos</b> (ala esquerda) e <b>madrinhas</b> (ala direita), detetados automaticamente pelo <b>papel</b> de cada convidado. O papel também se define no editor do convite.</p>
     <div class="barra-ocup" style="margin:.5rem 0"><span class="${barCls}" style="width:${perc}%"></span></div>
     ${bloco('Padrinhos · ala esquerda', padrinhos)}
@@ -1238,10 +1251,6 @@ function detalheNoivos(m, cap, oc, perc, barCls, pessoas, notas, outras){
     <div class="mesa-form" style="gap:.5rem">
       <div style="flex:1 1 130px">${comboHTML('papel-add', 'padrinho', '+ Padrinho…')}</div>
       <div style="flex:1 1 130px">${comboHTML('papel-add', 'madrinha', '+ Madrinha…')}</div>
-    </div>
-
-    <div class="acoes-bloco">
-      <button class="btn btn-fantasma btn-sm" style="flex:1;justify-content:center;color:var(--danger);border-color:#e6c3bf" onclick="eliminar(${m.id})">Eliminar mesa</button>
     </div>`;
 }
 async function definirPapel(gid, papel){
