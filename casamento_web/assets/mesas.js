@@ -918,6 +918,18 @@ function revelarDetalheMesa(body, detalhe, rolarPagina){
   detalhe.classList.remove('a-surgir');
   void detalhe.offsetWidth;
   detalhe.classList.add('a-surgir');
+  // A animação é `both`: o transform fica depois de acabar, e um transform cria
+  // um contexto de empilhamento que prendia o modal do selector de mesa por
+  // baixo da barra de topo e do fundo escuro — a lista aparecia escurecida e com
+  // a pesquisa tapada pelo cabeçalho. Tira-se a classe quando a animação termina
+  // (o detalhe fica onde ela o deixa, sem salto), e o modal volta a subir acima
+  // de tudo.
+  detalhe.addEventListener('animationend', function limpar(e){
+    if(e.target === detalhe && e.animationName === 'mesa-detalhe-surgir'){
+      detalhe.classList.remove('a-surgir');
+      detalhe.removeEventListener('animationend', limpar);
+    }
+  });
 
   if(!rolarPagina) return;
   const r=detalhe.getBoundingClientRect();
@@ -1072,6 +1084,10 @@ function centrarComboMobile(){
 function abrirCombo(combo){
   if(comboAberto===combo){ fecharCombo(); return; }
   fecharCombo();
+  // Se o detalhe ainda estiver a meio da animação de entrada, o transform dela
+  // prende este modal por baixo do fundo escuro — força-se o fim da animação
+  // antes de abrir, para a lista subir acima de tudo (ver revelarDetalheMesa).
+  document.querySelectorAll('.mesa-detalhe.a-surgir').forEach(d => d.classList.remove('a-surgir'));
   const btn=combo.querySelector('.combo-btn'), pop=combo.querySelector('.combo-pop');
   const r=btn.getBoundingClientRect();
   if(comboEhModal()){
