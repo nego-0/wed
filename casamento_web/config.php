@@ -117,7 +117,7 @@ function ficheirosApp(): array {
     // partilhado ficaram de fora quando foram criados, e por isso mexer neles
     // não mudava a assinatura — que existe justamente para dizer se o que está
     // instalado é o que se julga.
-    $ficheiros = ['index.php','api.php','db.php','config.php','personalizacao.php','pecas.php',
+    $ficheiros = ['index.php','api.php','db.php','config.php','personalizacao.php','pecas.php','convite-pacotes.php',
             'editor-cartao.php','convite-editor.php','convite-digital.php','mesas.php',
             'cartoes.php','graficas.php','digital.php','manual.php','impressos.php',
             'porteiro.php','convite.php','login.php','auth.php',
@@ -155,6 +155,15 @@ function ficheirosApp(): array {
             'assets/convite/modelos/porcelain-v2/1.0.0/fundo-verde.webp',
             'assets/convite/modelos/porcelain-v2/1.0.0/fundo-rosa.webp',
             'assets/convite/modelos/porcelain-v2/1.0.0/CREDITOS.md'];
+    // Os recursos binários dos onze modelos têm nomes derivados do conteúdo;
+    // basta assinar os documentos, manifestos e runtimes que os referenciam.
+    // Alterar uma imagem gera outro nome e, por consequência, outro HTML/JSON.
+    $raizExacta = __DIR__ . '/assets/convite/modelos/chungdoi-exact/1.0.0';
+    foreach (['*.html','*.css','*.json','*.js','CREDITOS.md'] as $padrao) {
+        foreach (glob($raizExacta . '/' . $padrao) ?: [] as $ficheiro) {
+            $ficheiros[] = str_replace('\\','/',substr($ficheiro,strlen(__DIR__)+1));
+        }
+    }
     // As imagens de ajuda são geradas; incluí-las por padrão evita manter uma
     // lista manual de capturas e stickers sempre que os passos mudam.
     foreach (['assets/ajuda/capturas/*.jpg','assets/ajuda/stickers/*.svg'] as $padrao) {

@@ -508,7 +508,7 @@ JS;
 // (base64), para o ficheiro poder ser visto completamente offline.
 // ============================================================
 function embutirRecursos(string $html, string $base): string {
-    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','svg'=>'image/svg+xml','ico'=>'image/x-icon','woff2'=>'font/woff2'];
+    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif','svg'=>'image/svg+xml','ico'=>'image/x-icon','woff2'=>'font/woff2','woff'=>'font/woff','ttf'=>'font/ttf'];
 
     $paraDataUri = function (string $rel) use ($base, $mime): ?string {
         $rel = ltrim($rel, '/');
@@ -525,6 +525,21 @@ function embutirRecursos(string $html, string $base): string {
         function ($m) use ($paraDataUri) {
             $d = $paraDataUri($m[1]);
             return $d ? 'src="' . $d . '"' : $m[0];
+        }, $html);
+
+    // Recursos dos pacotes exactos incluem também SVG, GIF e as fontes que
+    // pertencem ao próprio desenho. Conservam-se no ficheiro descarregado.
+    $html = preg_replace_callback(
+        '#(src|href)="(assets/convite/modelos/[^"]+\.(?:jpg|jpeg|png|webp|gif|svg|mp3|m4a|mp4|woff2?|ttf))"#i',
+        function ($m) use ($paraDataUri) {
+            $d = $paraDataUri($m[2]);
+            return $d ? $m[1] . '="' . $d . '"' : $m[0];
+        }, $html);
+    $html = preg_replace_callback(
+        '#url\((?:&quot;|["\']?)(assets/convite/modelos/[^)&"\']+\.(?:jpg|jpeg|png|webp|gif|svg|woff2?|ttf))(?:&quot;|["\']?)\)#i',
+        function ($m) use ($paraDataUri) {
+            $d = $paraDataUri($m[1]);
+            return $d ? 'url("' . $d . '")' : $m[0];
         }, $html);
 
     // 2) Tipos de letra:  url(assets/convite/fonts/....woff2)
@@ -581,6 +596,12 @@ function embutirRecursos(string $html, string $base): string {
             '#<script src="assets/convite-runtime\.js(?:\?[^\"]*)?"></script>#',
             '<script>' . $js . '</script>', $html, 1);
     }
+    $html = preg_replace_callback(
+        '#<script src="(assets/convite/modelos/[a-z0-9./_-]+\.js)(?:\?[^\"]*)?"></script>#i',
+        function ($m) use ($base) {
+            $abs = $base . '/' . ltrim($m[1], '/');
+            return is_readable($abs) ? '<script>' . file_get_contents($abs) . '</script>' : $m[0];
+        }, $html);
 
     // 6) QRious:  <script src="assets/qrious.min.js"></script> -> inline
     $qr = $base . '/assets/qrious.min.js';

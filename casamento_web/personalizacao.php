@@ -676,25 +676,25 @@ function catalogoModelosDeCasa(): array {
         'defs' => json_encode($kulemba, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     ];
 
-    // Primeira família visual reconstruída sobre o contrato de pacotes. As
-    // duas variantes têm o mesmo documento e renderizador: mudar entre elas
-    // troca composição e paleta sem tocar nos dados semânticos do casamento.
-    foreach ([
-        [
-            'nome' => 'Porcelana Verde',
-            'estilo' => 'porcelana-verde',
-            'descricao' => 'Papel marfim, folhagem verde e filetes dourados, com composição de porcelana pintada à mão.',
-            'paleta' => ['forest'=>'#59643A','forest-deep'=>'#30371E','ivory'=>'#FFFAF0','cream'=>'#F5EDDA','gold'=>'#AA8448','gold-soft'=>'#D4B678','gold-pale'=>'#F0E3C5','text'=>'#4C5138'],
-        ],
-        [
-            'nome' => 'Porcelana Rosa',
-            'estilo' => 'porcelana-rosa',
-            'descricao' => 'Flores rosa antigo, folhas de oliveira e ouro suave sobre papel marfim.',
-            'paleta' => ['forest'=>'#D17D96','forest-deep'=>'#6E683A','ivory'=>'#FFF9F2','cream'=>'#F7EBDF','gold'=>'#A98061','gold-soft'=>'#D9B17B','gold-pale'=>'#F1DFC9','text'=>'#65584F'],
-        ],
-    ] as $porcelana) {
+    // Os onze modelos usam os documentos exactos comparados lado a lado. Cada
+    // um conserva composição, ícones, imagens e movimento próprios; o editor
+    // apenas fornece os dados semânticos e os recursos gerais autorizados.
+    $modelosExactos = [
+        ['jasmine-white','Jasmim Branco','Flores brancas, papel luminoso e composição editorial delicada.'],
+        ['royal-v2-green','Real V2 Verde','Composição real verde com molduras, dourado e ritmo cerimonial.'],
+        ['spring-garden-blue','Jardim Primaveril Azul','Jardim azul de movimento intenso e enquadramentos florais.'],
+        ['double-happiness-green','Dupla Felicidade Verde','Símbolos de dupla felicidade num desenho verde solene.'],
+        ['porcelain-brown','Porcelana Castanha','Porcelana castanha e dourada com composição clássica.'],
+        ['royal-blue','Real Azul','Azul profundo, dourado e organização cerimonial real.'],
+        ['porcelain-v2-green','Porcelana V2 Verde','Porcelana verde, botânica e dourado no desenho original.'],
+        ['hoa-kho-orange','Flor Seca Laranja','Flores secas em laranja e composição orgânica acolhedora.'],
+        ['mahal-gold','Mahal Dourado','Ornamentação dourada rica e presença visual monumental.'],
+        ['porcelain-v2-pink','Porcelana V2 Rosa','Porcelana rosa, botânica e dourado no desenho original.'],
+        ['lien-hoa-pink','Lótus Rosa','Lótus rosa e composição romântica de inspiração oriental.'],
+    ];
+    foreach ($modelosExactos as [$renderer, $nome, $descricao]) {
         $defs = [
-            'digital.estilo' => $porcelana['estilo'],
+            'digital.estilo' => $renderer,
             'capa.abertura' => 'esvair',
             'capa.selo' => 'liso',
             'cer.emblema_civil' => 'aneis',
@@ -710,16 +710,21 @@ function catalogoModelosDeCasa(): array {
             'manual.titulo' => 'Código de vestuário',
             'manual.intro' => 'Traje formal em tons neutros.',
             'textos.kicker' => 'Reserve a data',
-            'tema.paleta' => json_encode($porcelana['paleta'], JSON_UNESCAPED_SLASHES),
         ];
+        $pacoteExacto = convitePacoteResolver('digital', $renderer, '1.0.0', CONVITE_PACOTE_SCHEMA, false);
+        $manifestoExacto = $pacoteExacto['manifesto'] ?? [];
+        if (!empty($manifestoExacto['musica'])) $defs['media.musica'] = (string)$manifestoExacto['musica'];
+        foreach (['media.hero','media.historia','media.interludio','media.acesso'] as $i=>$chaveFoto) {
+            if (!empty($manifestoExacto['fotos'][$i])) $defs[$chaveFoto] = (string)$manifestoExacto['fotos'][$i];
+        }
         $out[] = [
             'ambito' => 'digital',
-            'nome' => $porcelana['nome'],
+            'nome' => $nome,
             'origem' => false,
-            'descricao' => $porcelana['descricao'],
+            'descricao' => $descricao,
             'defs' => json_encode($defs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'renderer_key' => CONVITE_PACOTE_PORCELANA,
-            'renderer_version' => CONVITE_PACOTE_PORCELANA_VERSAO,
+            'renderer_key' => $renderer,
+            'renderer_version' => '1.0.0',
             'renderer_schema' => CONVITE_PACOTE_SCHEMA,
         ];
     }

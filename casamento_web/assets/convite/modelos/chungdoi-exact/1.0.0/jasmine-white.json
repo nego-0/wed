@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "jasmine-white",
+  "versao": "1.0.0",
+  "nome": "Jasmim Branco",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/jasmine-white/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/2cddd154424770d048c1.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/079eeaa6b33566a3a5a5.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/3042950cf5adafe9f7af.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/0a3ef2b38cec2dcad96a.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/0f32aaaa1765f8670ebb.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

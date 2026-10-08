@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "spring-garden-blue",
+  "versao": "1.0.0",
+  "nome": "Jardim Primaveril Azul",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/spring-garden-blue/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/2532668e3e21ca625b8e.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/eb5e414d9ac0c9e2f1f8.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/7b9fd1b74de098f31c95.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/024aea16df0c5505ec6e.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/1372e454c1102f9a45ba.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

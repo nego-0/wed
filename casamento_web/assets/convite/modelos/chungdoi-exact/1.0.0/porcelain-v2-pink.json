@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "porcelain-v2-pink",
+  "versao": "1.0.0",
+  "nome": "Porcelana V2 Rosa",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/porcelain-v2-pink/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/7a757067cc46785854e4.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/628a51a6bb03d70c8274.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/b0928beec8c33c647cdb.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/664901e114dd06b155ed.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/ef9bd99465445aaa048d.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

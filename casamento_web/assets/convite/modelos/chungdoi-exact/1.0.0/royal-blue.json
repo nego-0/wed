@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "royal-blue",
+  "versao": "1.0.0",
+  "nome": "Real Azul",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/royal-blue/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/1c1df3399d29d2c210cb.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/5b249081c78443a5e492.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/3b2dedf3aff07895e508.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/0471374b71ed4c20ddf5.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/c010e3b7afca52d377e5.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

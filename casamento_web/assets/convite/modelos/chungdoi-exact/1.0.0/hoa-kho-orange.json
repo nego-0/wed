@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "hoa-kho-orange",
+  "versao": "1.0.0",
+  "nome": "Flor Seca Laranja",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/hoa-kho-orange/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/2cddd154424770d048c1.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/07f62bb1434cdce13bfa.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/2369c63a6d0f559bf109.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/04ecf030b67e17cad94a.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/6b37d45d0c9851e25358.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

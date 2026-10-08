@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "porcelain-brown",
+  "versao": "1.0.0",
+  "nome": "Porcelana Castanha",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/porcelain-brown/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/8f2cf0569ba865244da7.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/b94f0c074597278b06af.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/a0f3bde7cffa43d3ef23.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/91b37beebaea099e1668.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/4dca3e6bb45252b22fc1.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

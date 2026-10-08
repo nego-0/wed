@@ -45,36 +45,44 @@ uma identidade ao desenho actual sem alterar HTML, fotografias, animações ou
 comportamento. O pacote passa a ser a origem dos modelos digitais antigos e dos
 modelos da casa.
 
-## Família Porcelana V2
+## Onze modelos de composição própria
 
-`porcelain-v2@1.0.0` é o primeiro pacote com documento próprio. Não é uma
-paleta aplicada ao convite anterior: `porcelain-v2.html` define a sequência e
-a composição da família e `porcelain-v2.css` define a sua linguagem visual.
-O manifesto publica duas variantes comerciais em português:
+A pasta `assets/convite/modelos/chungdoi-exact/1.0.0` instala onze pacotes
+independentes. Cada pacote conserva o documento, a ordem das páginas, as
+fontes, cores, imagens, ícones, música, envelope, efeitos e animações da
+composição visual que foi comparada e aprovada. A aplicação não lhes aplica a
+estrutura nem a linguagem do Kulemba Contemporâneo:
 
-- **Porcelana Verde**, com folhagem verde, papel marfim e ouro antigo;
-- **Porcelana Rosa**, com peónias rosa, apontamentos lilás e ouro suave.
+- **Jasmim Branco** (`jasmine-white`);
+- **Real V2 Verde** (`royal-v2-green`);
+- **Jardim Primaveril Azul** (`spring-garden-blue`);
+- **Dupla Felicidade Verde** (`double-happiness-green`);
+- **Porcelana Castanha** (`porcelain-brown`);
+- **Real Azul** (`royal-blue`);
+- **Porcelana V2 Verde** (`porcelain-v2-green`);
+- **Flor Seca Laranja** (`hoa-kho-orange`);
+- **Mahal Dourado** (`mahal-gold`);
+- **Porcelana V2 Rosa** (`porcelain-v2-pink`);
+- **Lótus Rosa** (`lien-hoa-pink`).
 
-As duas variantes partilham o mesmo renderizador e diferem nas definições do
-modelo. Trocar entre elas conserva nomes, data, locais e fotografias, porque
-`modelo_aplicar` escreve apenas as chaves de desenho. Cada variante continua a
-ser um modelo independente no catálogo e pode originar versões guardadas pelo
-utilizador.
+O conteúdo visível está em português. Os nomes, a data, as fotografias, a
+música, os locais e os dados de presentes entram por chaves semânticas, sem
+alterar a composição de cada modelo. Galeria, música, calendário, mapa,
+rolagem automática, presentes e confirmação usam o contrato comum. A
+confirmação abre no modal Kulemba e o formulário de envio de mensagens foi
+retirado dos onze modelos, conforme a decisão funcional do produto.
 
-O pacote reconstrói a identidade estudada com recursos próprios: grande
-moldura botânica, cartão central, informações de cerimónia, galeria em
-profundidade, recepção, contagem decrescente, calendário, local, código de
-vestuário, cronograma, presentes e confirmação modal. O botão de mensagens
-não existe. Música, ícones, rolagem automática, calendário, galeria, QR,
-presentes e confirmação usam o runtime comum.
+`porcelain-v2@1.0.0`, publicado na fase anterior, permanece registado como
+pacote legado. Não aparece como novo modelo no catálogo, mas continua a abrir
+versões guardadas que tenham fixado essa identidade. Assim, a correcção visual
+dos modelos novos não reinterpreta nem apaga peças históricas.
 
-### Regra para as próximas famílias
+### Regra das famílias
 
-Cada uma das onze identidades terá documento, estilos e recursos próprios.
 Partilhar o contrato semântico não autoriza uniformizar a apresentação: ordem,
 tipografia, cores, ornamentos, abertura, animações e ritmo visual pertencem ao
-pacote. As secções transferidas entre modelos são renderizadas pela linguagem
-do modelo de destino, sem introduzir a aparência do modelo de origem.
+pacote. Uma secção transferida entre modelos recebe a linguagem do modelo de
+destino; o admin decide que capacidades expõe aos noivos.
 
 ## Evolução prevista
 

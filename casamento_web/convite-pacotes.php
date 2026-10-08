@@ -10,8 +10,27 @@
 const CONVITE_PACOTE_SCHEMA = 1;
 const CONVITE_PACOTE_PADRAO = 'kulemba-contemporaneo';
 const CONVITE_PACOTE_PADRAO_VERSAO = '1.0.0';
-const CONVITE_PACOTE_PORCELANA = 'porcelain-v2';
+const CONVITE_PACOTE_PORCELANA = 'porcelain-v2-green';
+const CONVITE_PACOTE_PORCELANA_ROSA = 'porcelain-v2-pink';
+const CONVITE_PACOTE_PORCELANA_LEGADO = 'porcelain-v2';
 const CONVITE_PACOTE_PORCELANA_VERSAO = '1.0.0';
+
+/** Os onze documentos visuais exactos instalados nesta edição. */
+function convitePacotesExactos(): array {
+    return [
+        'jasmine-white'            => 'Jasmim Branco',
+        'royal-v2-green'           => 'Real V2 Verde',
+        'spring-garden-blue'       => 'Jardim Primaveril Azul',
+        'double-happiness-green'   => 'Dupla Felicidade Verde',
+        'porcelain-brown'          => 'Porcelana Castanha',
+        'royal-blue'               => 'Real Azul',
+        'porcelain-v2-green'       => 'Porcelana V2 Verde',
+        'hoa-kho-orange'           => 'Flor Seca Laranja',
+        'mahal-gold'               => 'Mahal Dourado',
+        'porcelain-v2-pink'        => 'Porcelana V2 Rosa',
+        'lien-hoa-pink'            => 'Lótus Rosa',
+    ];
+}
 
 /** Lê o manifesto instalado e recusa um pacote incompleto. */
 function convitePacoteManifesto(string $ficheiro): array {
@@ -47,16 +66,6 @@ function convitePacotesRegistados(): array {
 
     $raizKulemba = __DIR__ . '/assets/convite/modelos/kulemba-contemporaneo/1.0.0';
     $manifestoKulemba = convitePacoteManifesto($raizKulemba . '/manifesto.json');
-    $raizPorcelana = __DIR__ . '/assets/convite/modelos/porcelain-v2/1.0.0';
-    $manifestoPorcelana = convitePacoteManifesto($raizPorcelana . '/manifesto.json');
-    $templatePorcelana = realpath($raizPorcelana . '/porcelain-v2.html');
-    $cssPorcelana = realpath($raizPorcelana . '/porcelain-v2.css');
-    if ($templatePorcelana === false || $cssPorcelana === false
-        || !str_starts_with(str_replace('\\', '/', $templatePorcelana), str_replace('\\', '/', $base) . '/')
-        || !str_starts_with(str_replace('\\', '/', $cssPorcelana), str_replace('\\', '/', $base) . '/')) {
-        throw new RuntimeException('O documento do pacote Porcelana V2 não está disponível.');
-    }
-
     $pacotes = [
         'digital' => [
             CONVITE_PACOTE_PADRAO => [
@@ -71,27 +80,58 @@ function convitePacotesRegistados(): array {
                     'checksum' => hash_file('sha256', $template),
                 ],
             ],
-            CONVITE_PACOTE_PORCELANA => [
-                CONVITE_PACOTE_PORCELANA_VERSAO => [
-                    'ambito' => 'digital',
-                    'renderer_key' => CONVITE_PACOTE_PORCELANA,
-                    'renderer_version' => CONVITE_PACOTE_PORCELANA_VERSAO,
-                    'renderer_schema' => CONVITE_PACOTE_SCHEMA,
-                    'manifesto' => $manifestoPorcelana,
-                    // Documento e composição próprios; os marcadores
-                    // semânticos continuam a ser os mesmos da plataforma.
-                    'template' => $templatePorcelana,
-                    'stylesheets' => [[
-                        'path' => $cssPorcelana,
-                        'href' => 'assets/convite/modelos/porcelain-v2/1.0.0/porcelain-v2.css',
-                    ]],
-                    'checksum' => hash('sha256', hash_file('sha256', $templatePorcelana)
-                        . hash_file('sha256', $cssPorcelana)
-                        . hash_file('sha256', $raizPorcelana . '/manifesto.json')),
-                ],
-            ],
         ],
     ];
+
+    // O pacote publicado na fase anterior continua resolvível exclusivamente
+    // para as versões que já o fixaram. O catálogo novo deixa de o oferecer.
+    $raizLegada = __DIR__ . '/assets/convite/modelos/porcelain-v2/1.0.0';
+    $templateLegado = realpath($raizLegada . '/porcelain-v2.html');
+    $cssLegado = realpath($raizLegada . '/porcelain-v2.css');
+    if ($templateLegado !== false && $cssLegado !== false) {
+        $pacotes['digital'][CONVITE_PACOTE_PORCELANA_LEGADO][CONVITE_PACOTE_PORCELANA_VERSAO] = [
+            'ambito'=>'digital', 'renderer_key'=>CONVITE_PACOTE_PORCELANA_LEGADO,
+            'renderer_version'=>CONVITE_PACOTE_PORCELANA_VERSAO,
+            'renderer_schema'=>CONVITE_PACOTE_SCHEMA,
+            'manifesto'=>convitePacoteManifesto($raizLegada . '/manifesto.json'),
+            'template'=>$templateLegado,
+            'stylesheets'=>[['path'=>$cssLegado,'href'=>'assets/convite/modelos/porcelain-v2/1.0.0/porcelain-v2.css']],
+            'checksum'=>hash('sha256', hash_file('sha256',$templateLegado) . hash_file('sha256',$cssLegado)),
+            'legado'=>true,
+        ];
+    }
+
+    $raizExacta = __DIR__ . '/assets/convite/modelos/chungdoi-exact/1.0.0';
+    $cssBase = realpath($raizExacta . '/exact-base.css');
+    $runtime = realpath($raizExacta . '/exact-runtime.js');
+    if ($cssBase === false || $runtime === false) {
+        throw new RuntimeException('A base visual dos onze convites não está disponível.');
+    }
+    foreach (convitePacotesExactos() as $key => $nome) {
+        $templateExacto = realpath($raizExacta . '/' . $key . '.html');
+        $cssExacto = realpath($raizExacta . '/' . $key . '.css');
+        $manifestoExacto = convitePacoteManifesto($raizExacta . '/' . $key . '.json');
+        foreach ([$templateExacto, $cssExacto, $cssBase, $runtime] as $ficheiro) {
+            if ($ficheiro === false || !str_starts_with(str_replace('\\', '/', $ficheiro), str_replace('\\', '/', $base) . '/')) {
+                throw new RuntimeException('O documento do modelo ' . $nome . ' não está disponível.');
+            }
+        }
+        $pacotes['digital'][$key]['1.0.0'] = [
+            'ambito' => 'digital',
+            'renderer_key' => $key,
+            'renderer_version' => '1.0.0',
+            'renderer_schema' => CONVITE_PACOTE_SCHEMA,
+            'manifesto' => $manifestoExacto,
+            'template' => $templateExacto,
+            'stylesheets' => [
+                ['path'=>$cssBase, 'href'=>'assets/convite/modelos/chungdoi-exact/1.0.0/exact-base.css'],
+                ['path'=>$cssExacto, 'href'=>'assets/convite/modelos/chungdoi-exact/1.0.0/' . $key . '.css'],
+            ],
+            'checksum' => hash('sha256', hash_file('sha256', $templateExacto)
+                . hash_file('sha256', $cssBase) . hash_file('sha256', $cssExacto)
+                . hash_file('sha256', $runtime) . hash_file('sha256', $raizExacta . '/' . $key . '.json')),
+        ];
+    }
     return $pacotes;
 }
 

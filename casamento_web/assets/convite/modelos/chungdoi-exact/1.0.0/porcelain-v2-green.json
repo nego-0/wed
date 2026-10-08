@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "porcelain-v2-green",
+  "versao": "1.0.0",
+  "nome": "Porcelana V2 Verde",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/porcelain-v2-green/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/0dd3a657b50641731f2b.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/de6c768bb23e6d7670e8.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/3f8b1e24e1c890a64d0f.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/106c4252b60b1a383d8a.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/b607b9a0b503bac6e3b6.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

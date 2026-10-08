@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "mahal-gold",
+  "versao": "1.0.0",
+  "nome": "Mahal Dourado",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/mahal-gold/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/2532668e3e21ca625b8e.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/71b573c263e8e95e3fdf.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/5caea464e55cceec116a.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/7472f4a7c401fc35304f.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/d9e18099ccb1a7d281ae.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

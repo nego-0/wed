@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 69;
+const ESQUEMA_VERSAO = 70;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2705,6 +2705,25 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
             ['ambito'=>'digital', 'nome'=>'Porcelana Verde'],
             ['ambito'=>'digital', 'nome'=>'Porcelana Rosa'],
         ], true);
+    }
+
+    // v70 — os onze modelos passam a usar os documentos exactos arquivados e
+    // traduzidos. As versões anteriores conservam o renderer que já fixaram;
+    // só o catálogo activo aponta para os novos pacotes independentes.
+    if ($versaoAtual < 70) {
+        require_once __DIR__ . '/personalizacao.php';
+        foreach ([['Porcelana Verde','Porcelana V2 Verde'], ['Porcelana Rosa','Porcelana V2 Rosa']] as [$antigo,$novo]) {
+            $a = $conn->real_escape_string($antigo); $n = $conn->real_escape_string($novo);
+            $ja = @$conn->query("SELECT 1 FROM {$P}modelos WHERE ambito='digital' AND nome='$n' LIMIT 1");
+            if ($ja && $ja->num_rows === 0) {
+                @$conn->query("UPDATE {$P}modelos SET nome='$n' WHERE ambito='digital' AND nome='$a' AND criado_por='sistema'");
+            } else {
+                @$conn->query("UPDATE {$P}modelos SET visivel=0 WHERE ambito='digital' AND nome='$a' AND criado_por='sistema'");
+            }
+        }
+        $alvosExactos = [];
+        foreach (convitePacotesExactos() as $nome) $alvosExactos[] = ['ambito'=>'digital','nome'=>$nome];
+        restaurarModelosDeCasa($conn, $alvosExactos, true);
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os onze modelos comparados estão instalados como documentos próprios em português, com recursos, fontes, música e animações locais',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/CREDITOS.md', 'onze pacotes'],
+        ['Cada modelo exacto conserva a sua identidade e liga presentes, galeria e confirmação ao runtime comum',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js', 'Abrir presentes'],
         ['Porcelana Verde e Rosa são modelos independentes de um pacote com documento próprio e recursos botânicos da Kulemba',
          'assets/convite/modelos/porcelain-v2/1.0.0/manifesto.json', 'porcelana-v2-v1'],
         ['Convites, editor, demonstração e exportação usam o mesmo runtime e a confirmação abre num modal acessível',

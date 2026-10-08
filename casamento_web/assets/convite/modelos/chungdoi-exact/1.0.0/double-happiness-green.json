@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "double-happiness-green",
+  "versao": "1.0.0",
+  "nome": "Dupla Felicidade Verde",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/double-happiness-green/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/2532668e3e21ca625b8e.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/386ec20bced76f6a6e56.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/48dfe9332c2efeaac79d.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/b8c7f21a22b0efc24857.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/ddbe1f129b414b69ea4f.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}

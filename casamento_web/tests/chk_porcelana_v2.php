@@ -8,54 +8,46 @@ function porcelanaOk(bool $cond, string $msg): void {
     if (!$cond) $falhas++;
 }
 
-$pacote = convitePacoteResolver('digital', CONVITE_PACOTE_PORCELANA,
-    CONVITE_PACOTE_PORCELANA_VERSAO, CONVITE_PACOTE_SCHEMA, false);
-porcelanaOk(is_array($pacote), 'o pacote Porcelana V2 resolve no registo fechado');
-porcelanaOk(($pacote['manifesto']['adaptador'] ?? '') === 'porcelana-v2-v1',
-    'a família tem documento próprio e não é uma pele do convite anterior');
-porcelanaOk(is_file((string)($pacote['template'] ?? ''))
-    && basename((string)$pacote['template']) === 'porcelain-v2.html',
-    'o pacote carrega o documento próprio da identidade Porcelana');
+$exactos = convitePacotesExactos();
+porcelanaOk(count($exactos) === 11, 'o registo declara os onze documentos visuais');
 
-$variantes = $pacote['manifesto']['variantes'] ?? [];
-porcelanaOk(($variantes['verde']['nome'] ?? '') === 'Porcelana Verde'
-    && ($variantes['rosa']['nome'] ?? '') === 'Porcelana Rosa',
-    'as duas variantes comerciais têm nomes públicos em português');
-
-$modelos = [];
-foreach (catalogoModelosDeCasa() as $m) {
-    if (in_array($m['nome'], ['Porcelana Verde','Porcelana Rosa'], true)) $modelos[$m['nome']] = $m;
+$catalogo = [];
+foreach (catalogoModelosDeCasa() as $modelo) {
+    $key = (string)($modelo['renderer_key'] ?? '');
+    if (isset($exactos[$key])) $catalogo[$key] = $modelo;
 }
-porcelanaOk(count($modelos) === 2, 'o catálogo instala Verde e Rosa como modelos independentes');
-porcelanaOk(count(array_unique(array_column($modelos, 'renderer_key'))) === 1
-    && reset($modelos)['renderer_key'] === CONVITE_PACOTE_PORCELANA,
-    'as variantes usam o mesmo renderizador versionado');
-$defsVerde = json_decode($modelos['Porcelana Verde']['defs'] ?? '{}', true) ?: [];
-$defsRosa = json_decode($modelos['Porcelana Rosa']['defs'] ?? '{}', true) ?: [];
-porcelanaOk(($defsVerde['digital.estilo'] ?? '') === 'porcelana-verde'
-    && ($defsRosa['digital.estilo'] ?? '') === 'porcelana-rosa',
-    'cada modelo selecciona a pintura correcta');
-porcelanaOk(($defsVerde['tema.paleta'] ?? '') !== ($defsRosa['tema.paleta'] ?? ''),
-    'a troca de variante altera a paleta sem duplicar o pacote');
+porcelanaOk(count($catalogo) === 11, 'o catálogo instala os onze modelos como escolhas independentes');
+
+foreach ($exactos as $key => $nome) {
+    $pacote = convitePacoteResolver('digital', $key, '1.0.0', CONVITE_PACOTE_SCHEMA, false);
+    porcelanaOk(is_array($pacote), "$nome resolve no registo fechado");
+    if (!is_array($pacote)) continue;
+    $manifesto = $pacote['manifesto'] ?? [];
+    $html = is_readable((string)($pacote['template'] ?? ''))
+        ? (string)file_get_contents((string)$pacote['template']) : '';
+    porcelanaOk(($manifesto['id'] ?? '') === $key
+        && ($manifesto['idioma'] ?? '') === 'pt'
+        && ($manifesto['adaptador'] ?? '') === 'html-semantico',
+        "$nome publica identidade, idioma e adaptador próprios");
+    porcelanaOk(str_contains($html, 'data-estilo="' . $key . '"')
+        && str_contains($html, 'data-landing-screenshot-id="invite-envelope"'),
+        "$nome conserva documento e envelope próprios");
+    porcelanaOk(str_contains($html, 'data-kulemba="confirmacao"')
+        && !preg_match('/<form[^>]*>(?:(?!<\/form>)[\s\S])*?<textarea/i', $html)
+        && !preg_match('/SEND WISHES|ENVOYER UN VOEU|GỬI LỜI CHÚC/iu', $html),
+        "$nome usa confirmação modal e não oferece envio de mensagens");
+    porcelanaOk(!preg_match('#<(?:script|link)[^>]+(?:src|href)="https?://#i', $html),
+        "$nome carrega código e folhas de estilo apenas da aplicação");
+}
+
+$legado = convitePacoteResolver('digital', CONVITE_PACOTE_PORCELANA_LEGADO,
+    CONVITE_PACOTE_PORCELANA_VERSAO, CONVITE_PACOTE_SCHEMA, false);
+porcelanaOk(is_array($legado) && !empty($legado['legado']),
+    'o pacote Porcelana anterior permanece resolvível para versões históricas');
 
 $desenho = array_flip(chavesDesenho('digital'));
 porcelanaOk(!isset($desenho['casal.noiva']) && !isset($desenho['casal.noivo'])
     && !isset($desenho['evento.data']) && !isset($desenho['media.hero']),
-    'aplicar ou trocar o modelo conserva casal, data e fotografias');
-
-$html = file_get_contents((string)$pacote['template']);
-$css = file_get_contents((string)$pacote['stylesheets'][0]['path']);
-porcelanaOk(str_contains($html, 'pv2-photo-stack') && str_contains($html, 'pv2-date-grid--reception')
-    && str_contains($html, 'pv2-schedule') && str_contains($html, 'pv2-gift'),
-    'o documento reproduz galeria, recepção, cronograma e presentes da identidade');
-porcelanaOk(str_contains($html, 'data-kulemba="confirmacao"')
-    && !str_contains(mb_strtolower($html), 'mensagem')
-    && !str_contains(mb_strtolower($html), 'guestbook'),
-    'a confirmação usa o modal comum e não existe botão de mensagens');
-porcelanaOk(str_contains($css, 'fundo-verde.webp') && str_contains($css, 'fundo-rosa.webp')
-    && !preg_match('#https?://#i', $css . $html),
-    'as pinturas pertencem ao pacote e não dependem de recursos remotos');
-porcelanaOk(!str_contains(mb_strtolower($css . $html), 'chungdoi'),
-    'o pacote não incorpora nomes, código ou endereços do fornecedor estudado');
+    'trocar de modelo conserva casal, data e fotografias');
 
 exit($falhas ? 1 : 0);

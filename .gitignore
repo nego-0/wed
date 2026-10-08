@@ -6,6 +6,7 @@ casamento_web/config.local.php
 .DS_Store
 Thumbs.db
 *.log
+casamento_web/tests/output/
 
 # Uploads do convite digital (personalização) — só o .htaccess é versionado
 casamento_web/assets/convite/custom/*

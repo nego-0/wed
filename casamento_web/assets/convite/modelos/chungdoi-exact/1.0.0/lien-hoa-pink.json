@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "lien-hoa-pink",
+  "versao": "1.0.0",
+  "nome": "Lótus Rosa",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/lien-hoa-pink/demo",
+  "idioma": "pt",
+  "musica": "assets/convite/modelos/chungdoi-exact/1.0.0/assets/62000ceba8a76645af6c.mp3",
+  "fotos": [
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/cc5a0842b6c531662c25.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/11f964f5b649f2a2c372.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/22d106c7fc4186063fd2.webp",
+    "assets/convite/modelos/chungdoi-exact/1.0.0/assets/a8cb240c729c7aed45dd.webp"
+  ],
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem",
+      "galeria",
+      "calendario",
+      "mapa",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  }
+}
