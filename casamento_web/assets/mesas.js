@@ -1015,7 +1015,10 @@ function comboHTML(kind, arg, placeholder, cls){
   return `<div class="combo ${cls||''}" data-kind="${kind}" data-arg="${arg??''}">
     <button type="button" class="combo-btn" aria-expanded="false"><span class="combo-txt">${esc(placeholder)}</span><span class="combo-cx" data-ico="baixoSeta"></span></button>
     <div class="combo-pop" role="dialog" aria-modal="true" aria-label="Escolher" hidden>
-      <input type="text" class="combo-search" placeholder="Procurar…" autocomplete="off">
+      <div class="combo-topo">
+        <input type="text" class="combo-search" placeholder="Procurar…" autocomplete="off">
+        <button type="button" class="combo-fecha" aria-label="Fechar" title="Fechar"><i data-ico="xis"></i></button>
+      </div>
       <div class="combo-list"></div>
     </div>
   </div>`;
@@ -1535,6 +1538,7 @@ window.addEventListener('keydown', e=>{ if(e.key==='Escape'){
 
 // Dropdowns de pesquisa no painel de abas (delegação — o conteúdo é recriado a cada render).
 $('tab-body').addEventListener('click', e=>{
+  if(e.target.closest('.combo-fecha')){ fecharCombo(); return; }
   const opt=e.target.closest('.combo-opt');
   if(opt){ const combo=opt.closest('.combo'); const {kind,arg}=combo.dataset; const v=opt.dataset.value||''; fecharCombo(); comboAcao(kind, arg, v); return; }
   const btn=e.target.closest('.combo-btn');

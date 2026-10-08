@@ -585,7 +585,16 @@ $CAS = casalDaFicha($conn);
   .combo-pop{ position:fixed; z-index:1200; background:var(--card); border:1px solid var(--line); border-radius:12px;
     box-shadow:0 12px 30px rgba(22,38,30,.20); padding:.4rem; min-width:220px; }
   .combo-pop[hidden]{ display:none; }
-  .combo-search{ width:100%; margin-bottom:.35rem; box-sizing:border-box; }
+  /* A caixa de procurar e o botão de sair, lado a lado: há sempre uma saída à
+     vista, sobretudo no modal do telemóvel, sem ser preciso adivinhar que se
+     fecha tocando por fora. */
+  .combo-topo{ display:flex; align-items:stretch; gap:.35rem; margin-bottom:.35rem; }
+  .combo-search{ flex:1; min-width:0; box-sizing:border-box; }
+  .combo-fecha{ flex:none; width:40px; display:inline-flex; align-items:center; justify-content:center;
+    padding:0; border:1px solid var(--line); background:var(--card); border-radius:9px;
+    color:var(--ink-fraco); cursor:pointer; }
+  .combo-fecha:hover{ border-color:var(--gold-soft); color:var(--ink); }
+  .combo-fecha i, .combo-fecha svg{ width:18px; height:18px; }
   .combo-list{ max-height:244px; overflow:auto; display:flex; flex-direction:column; gap:.1rem; }
   .combo-opt{ text-align:left; border:0; background:transparent; font-family:inherit; font-size:var(--t-denso); color:var(--ink);
     padding:.4rem .5rem; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; gap:.05rem; width:100%; }
@@ -602,7 +611,7 @@ $CAS = casalDaFicha($conn);
     .combo-pop{ z-index:1200; display:flex; flex-direction:column; overflow:hidden;
       border-radius:16px; padding:.65rem; }
     .combo-list{ flex:1; min-height:0; max-height:none; }
-    .combo-search{ flex:none; }
+    .combo-topo{ flex:none; }
     .sentado{ display:grid; grid-template-columns:minmax(0,1fr); gap:.4rem; }
     .sentado .nm-pega{ width:100%; max-width:100%; }
     .combo.combo-inline{ width:100%; max-width:none; min-width:0; }

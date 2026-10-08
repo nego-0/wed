@@ -82,19 +82,31 @@ const marca = 'zzl' + Math.floor(Math.random() * 1e5);
      'ao chegar, a planta está abaixo da dobra — é daqui que vem tudo o resto: y='
      + chegada.y + ' num ecrã de ' + chegada.ecra);
 
-  const r1 = await p.evaluate(async id => {
-    irAMesa(id);
+  // Centrada quando há salão dos dois lados; quando a mesa está encostada à
+  // borda da planta, o scroll já não tem para onde ir nesse eixo (chega a 0 ou
+  // ao fim), e aí o que se exige é vê-la INTEIRA e tão ao centro quanto a borda
+  // deixa — foi sempre essa a intenção do `centrarEm`, que não rola para o vazio.
+  const centradaOuEncostada = r => {
+    const okX = Math.abs(r.dx) <= 2 || (r.dx < 0 && r.scrollLeft <= 0) || (r.dx > 0 && r.scrollLeft >= r.maxL);
+    const okY = Math.abs(r.dy) <= 2 || (r.dy < 0 && r.scrollTop  <= 0) || (r.dy > 0 && r.scrollTop  >= r.maxT);
+    return r.naVista && okX && okY;
+  };
+  const medirMesa = async id => p.evaluate(async i => {
+    irAMesa(i);
     await new Promise(r => setTimeout(r, 1500));
     const vp = document.getElementById('planta-viewport');
-    const no = document.querySelector('.mesa-node[data-id="' + id + '"]');
+    const no = document.querySelector('.mesa-node[data-id="' + i + '"]');
     const rv = vp.getBoundingClientRect(), rn = no.getBoundingClientRect();
     return { aba: activeTab, sel: SEL,
              canvasY: Math.round(rv.top), ecra: innerHeight,
              dx: Math.round((rn.left + rn.width / 2) - (rv.left + rv.width / 2)),
              dy: Math.round((rn.top + rn.height / 2) - (rv.top + rv.height / 2)),
+             scrollTop: Math.round(vp.scrollTop), maxT: Math.max(0, vp.scrollHeight - vp.clientHeight),
+             scrollLeft: Math.round(vp.scrollLeft), maxL: Math.max(0, vp.scrollWidth - vp.clientWidth),
              naVista: rn.left >= rv.left - 1 && rn.right <= rv.right + 1
                    && rn.top >= rv.top - 1 && rn.bottom <= rv.bottom + 1 };
-  }, ids[0]);
+  }, id);
+  const r1 = await medirMesa(ids[0]);
 
   ok(r1.sel === ids[0], 'carregar na lista escolhe a mesa');
   ok(r1.aba === 'mesa',
@@ -104,32 +116,24 @@ const marca = 'zzl' + Math.floor(Math.random() * 1e5);
      'o canvas sobe ao ecrã em vez de ficar abaixo da dobra: y=' + r1.canvasY
      + ' num ecrã de ' + r1.ecra);
   ok(r1.naVista, 'e a mesa fica dentro da área visível do canvas');
-  ok(Math.abs(r1.dx) <= 2 && Math.abs(r1.dy) <= 2,
-     'ao centro, e não «lá para o meio»: desvio de ' + r1.dx + ',' + r1.dy + 'px (era 93,57)');
+  ok(centradaOuEncostada(r1),
+     'ao centro — ou encostada à borda da planta, vista inteira e tão ao meio '
+     + 'quanto o salão deixa (era 93,57): desvio de ' + r1.dx + ',' + r1.dy
+     + 'px, scroll ' + r1.scrollTop + '/' + r1.maxT + ' e ' + r1.scrollLeft + '/' + r1.maxL);
 
   // ---- 2. e vale para todas, não só para a primeira ----
-  let piorX = 0, piorY = 0, forasDaVista = 0;
+  let maltratadas = 0, forasDaVista = 0, pior = '';
   for (const id of ids) {
-    const r = await p.evaluate(async i => {
-      window.scrollTo(0, 0);
-      irAMesa(i);
-      await new Promise(r => setTimeout(r, 1400));
-      const vp = document.getElementById('planta-viewport');
-      const no = document.querySelector('.mesa-node[data-id="' + i + '"]');
-      const rv = vp.getBoundingClientRect(), rn = no.getBoundingClientRect();
-      return { dx: Math.round((rn.left + rn.width / 2) - (rv.left + rv.width / 2)),
-               dy: Math.round((rn.top + rn.height / 2) - (rv.top + rv.height / 2)),
-               naVista: rn.left >= rv.left - 1 && rn.right <= rv.right + 1
-                     && rn.top >= rv.top - 1 && rn.bottom <= rv.bottom + 1 };
-    }, id);
-    piorX = Math.max(piorX, Math.abs(r.dx));
-    piorY = Math.max(piorY, Math.abs(r.dy));
+    await p.evaluate(() => window.scrollTo(0, 0));
+    const r = await medirMesa(id);
     if (!r.naVista) forasDaVista++;
+    if (!centradaOuEncostada(r)) { maltratadas++; pior = r.dx + ',' + r.dy + 'px'; }
   }
   ok(forasDaVista === 0,
      'nenhuma das quatro fica fora da vista: ' + forasDaVista);
-  ok(piorX <= 2 && piorY <= 2,
-     'e todas ao centro, com o pior desvio em ' + piorX + ',' + piorY + 'px');
+  ok(maltratadas === 0,
+     'e todas ao centro (ou encostadas à borda, vistas inteiras): '
+     + maltratadas + ' mal servida(s)' + (pior ? ', pior desvio ' + pior : ''));
 
   // ---- 3. o «pôr aqui» traz a planta à vista ----
   // O ciclo acima deixou escolhida a ÚLTIMA mesa, e o «pôr aqui» serve a que

@@ -173,7 +173,23 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
         combo.querySelector('.combo-btn').click();
         await new Promise(r => setTimeout(r, 400));
         const pop = combo.querySelector('.combo-pop');
-        return { achou: true, aberta: !pop.hidden, nOpts: pop.querySelectorAll('.combo-opt').length };
+        // lê-se o estado ABERTO antes de experimentar a saída
+        const aberta = !pop.hidden, nOpts = pop.querySelectorAll('.combo-opt').length;
+        // o botão de sair fica à direita da caixa de pesquisa, na mesma linha
+        const fecha = pop.querySelector('.combo-fecha');
+        const busca = pop.querySelector('.combo-search');
+        const fr = fecha && fecha.getBoundingClientRect(), sr = busca.getBoundingClientRect();
+        const aDireita = !!fr && fr.left >= sr.right - 2
+                      && Math.abs((fr.top + fr.height / 2) - (sr.top + sr.height / 2)) < 8;
+        // e carregar nele fecha o modal
+        let fechouComBotao = null;
+        if (fecha) {
+          fecha.click();
+          await new Promise(r => setTimeout(r, 300));
+          fechouComBotao = !document.querySelector('.combo-pop:not([hidden])')
+                        && !document.body.classList.contains('combo-aberto');
+        }
+        return { achou: true, aberta, nOpts, temFecha: !!fecha, aDireita, fechouComBotao };
       }
     }
     return { achou: false };
@@ -181,6 +197,10 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   if (comboMob.achou) {
     ok(comboMob.aberta && comboMob.nOpts > 0,
        'o selector de mesa do convidado abre e fica aberto no telemóvel: ' + JSON.stringify(comboMob));
+    ok(comboMob.temFecha && comboMob.aDireita,
+       'o modal traz um botão de sair à direita da caixa de pesquisa');
+    ok(comboMob.fechouComBotao === true,
+       'e carregar nesse botão fecha o modal — uma saída à vista, sem adivinhar');
   } else {
     console.log('  (este casamento não tem mesa com pessoas para provar o selector — salta)');
   }
