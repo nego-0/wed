@@ -1087,7 +1087,9 @@ function abrirCombo(combo){
   btn.setAttribute('aria-expanded','true');
   renderComboLista(combo, '');
   if(comboEhModal()) centrarComboMobile();
-  const s=combo.querySelector('.combo-search'); s.value=''; setTimeout(()=>s.focus(), 0);
+  // `preventScroll` para o focar não dar um salto à página (no telemóvel era
+  // esse salto que rolava o painel por baixo da lista).
+  const s=combo.querySelector('.combo-search'); s.value=''; setTimeout(()=>{ try{ s.focus({preventScroll:true}); }catch(e){ s.focus(); } }, 0);
   if(comboEhModal()) return;
   const pr=pop.getBoundingClientRect();
   if(pr.bottom>window.innerHeight-8) pop.style.top=Math.max(8, Math.round(r.top-pr.height-4))+'px';
@@ -1533,9 +1535,15 @@ $('tab-body').addEventListener('input', e=>{ const s=e.target.closest('.combo-se
    remedia-se a lista a cada linha rolada e ela tremia. Ver assets/janela.js.) */
 const rolouPorFora = (e) => !(comboAberto && e.target && e.target.nodeType === 1
                               && comboAberto.contains(e.target));
-$('tab-body').addEventListener('scroll', e=>{ if(rolouPorFora(e)) fecharCombo(); }, true);
+// No telemóvel a lista é um modal centrado (position:fixed, com fundo e o corpo
+// travado): não está presa ao botão, por isso rolar o que está por baixo não a
+// deve fechar. Fechar ao rolar só vale no ambiente de secretária, onde ela
+// assenta por baixo do botão e descolaria. Sem esta ressalva, abrir a lista no
+// telemóvel focava a pesquisa, isso rolava o painel, e o rolar fechava-a outra
+// vez — a lista abria e fechava no mesmo toque, e parecia que não funcionava.
+$('tab-body').addEventListener('scroll', e=>{ if(!comboEhModal() && rolouPorFora(e)) fecharCombo(); }, true);
 document.addEventListener('pointerdown', e=>{ if(comboAberto && !e.target.closest('.combo')) fecharCombo(); }, true);
-window.addEventListener('scroll', e=>{ if(comboAberto && rolouPorFora(e)) fecharCombo(); }, true);
+window.addEventListener('scroll', e=>{ if(comboAberto && !comboEhModal() && rolouPorFora(e)) fecharCombo(); }, true);
 aplicarCanvas();
 
 carregar();

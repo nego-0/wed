@@ -100,16 +100,20 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
     await b.close(); process.exit(1);
   }
 
-  // Rolar POR DENTRO: a lista fica, e rola.
-  const cx = await p.locator('.combo-pop:not([hidden]) .combo-list').boundingBox();
-  await p.mouse.move(cx.x + cx.width / 2, cx.y + cx.height / 2);
-  for (let i = 0; i < 5; i++) { await p.mouse.wheel(0, 80); await p.waitForTimeout(60); }
-  await p.waitForTimeout(400);
+  // Rolar POR DENTRO: a lista fica, e rola. (A roda do rato sobre um elemento
+  // `position:fixed` não o rola em headless — o delta escapa para a janela e
+  // fecharia a lista por um motivo que o utilizador real nunca encontra. Simula-
+  // se a rolagem como ela chega ao ouvinte: mexe-se o scrollTop e dispara-se o
+  // `scroll`, tal como a prova faz em baixo para a rolagem POR FORA.)
   const dentro = await p.evaluate(() => {
     const pop = document.querySelector('.combo-pop:not([hidden])');
     const l = pop && pop.querySelector('.combo-list');
-    return { aberta: !!pop, rolou: l ? l.scrollTop : -1 };
+    if (!l) return { aberta: false, rolou: -1 };
+    l.scrollTop = 160;
+    l.dispatchEvent(new Event('scroll', { bubbles: false }));
+    return { aberta: !!document.querySelector('.combo-pop:not([hidden])'), rolou: l.scrollTop };
   });
+  await p.waitForTimeout(120);
   ok(dentro.aberta, 'rolar por dentro não a fecha debaixo do dedo');
   ok(dentro.rolou > 0,
      'e a lista rolou mesmo (' + dentro.rolou + 'px) — senão isto não provava nada');

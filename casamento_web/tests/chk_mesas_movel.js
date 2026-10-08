@@ -147,6 +147,44 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      + ' → ' + posto.m.x.toFixed(1) + ',' + posto.m.y.toFixed(1));
   ok(!posto.modo, 'e o modo sai sozinho depois de servir — não fica à espera de mais toques');
 
+  // ---- o disco de cor é um círculo, mesmo no toque ----
+  // Os alvos de dedo sobem a 44px de altura; o disco de cor é a excepção, senão
+  // o min-height esticava-o para uma elipse no telemóvel.
+  const disco = await p.evaluate(() => {
+    const d = document.getElementById('barra-add-dobra'); if (d) d.open = true;
+    const b = document.querySelector('.cores button');
+    if (!b) return null;
+    const r = b.getBoundingClientRect();
+    return { w: +r.width.toFixed(1), h: +r.height.toFixed(1) };
+  });
+  ok(disco && Math.abs(disco.w - disco.h) < 1,
+     'o disco de cor da mesa é um círculo perfeito no telemóvel: ' + JSON.stringify(disco));
+
+  // ---- o selector de mesa de cada convidado abre no telemóvel ----
+  // Focar a pesquisa rolava o painel, e esse rolar fechava a lista no mesmo
+  // toque — parecia que o selector não respondia.
+  const comboMob = await p.evaluate(async () => {
+    const ids = (await (await fetch('api.php?action=mesa_list')).json()).mesas.map(m => m.id);
+    for (const mid of ids) {
+      irAMesa(mid);
+      await new Promise(r => setTimeout(r, 250));
+      const combo = document.querySelector('#tab-body .combo[data-kind="mesa-pessoa"]');
+      if (combo) {
+        combo.querySelector('.combo-btn').click();
+        await new Promise(r => setTimeout(r, 400));
+        const pop = combo.querySelector('.combo-pop');
+        return { achou: true, aberta: !pop.hidden, nOpts: pop.querySelectorAll('.combo-opt').length };
+      }
+    }
+    return { achou: false };
+  });
+  if (comboMob.achou) {
+    ok(comboMob.aberta && comboMob.nOpts > 0,
+       'o selector de mesa do convidado abre e fica aberto no telemóvel: ' + JSON.stringify(comboMob));
+  } else {
+    console.log('  (este casamento não tem mesa com pessoas para provar o selector — salta)');
+  }
+
   // ---- arrumar ----
   await p.evaluate(async i => {
     await fetch('api.php?action=mesa_delete&id=' + i,

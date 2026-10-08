@@ -168,6 +168,9 @@ $CAS  = casalDaFicha($conn);
                border:2px solid transparent; cursor:pointer;
                padding:0; outline:none; box-shadow:0 0 0 1px rgba(0,0,0,.08) inset; transition:transform .1s; }
   .cat-cor-op:hover{ transform:scale(1.12); }
+  /* No toque, os botões sobem a 44px. O disco de cor é a excepção — tem de
+     ficar redondo, e não uma elipse esticada pelo min-height. */
+  @media (pointer:coarse){ .cat-cores-ops .cat-cor-op{ min-height:0; } }
   .cat-cor-op.on{ border-color:var(--ink); }
   .cat-cor-livre{ display:inline-flex; align-items:center; gap:.35rem; font-size:var(--t-apoio); color:var(--ink-fraco); cursor:pointer; }
   .cat-cor-livre input[type=color]{ width:24px; height:24px; padding:0; border:1px solid var(--line);

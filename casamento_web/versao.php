@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os discos de cor não achatam no toque: o alvo de 44px não lhes vale',
+         'mesas.php', '@media (pointer:coarse){ .cores button{ min-height:0; } }'],
+        ['E o mesmo para os discos de cor das categorias de despesas',
+         'orcamento.php', '@media (pointer:coarse){ .cat-cores-ops .cat-cor-op{ min-height:0; } }'],
+        ['No telemóvel, o selector de mesa do convidado abre e fica aberto (não se fecha ao focar a pesquisa)',
+         'assets/mesas.js', '!comboEhModal() && rolouPorFora(e)'],
         ['Os pontos de cor das categorias de despesas são círculos perfeitos, em qualquer ecrã',
          'orcamento.php', '.chip-cat i{ width:11px; height:11px; border-radius:50%'],
         ['E os pontos de cor das mesas também não achatam ao apertar o ecrã',

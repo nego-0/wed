@@ -80,6 +80,11 @@ $CAS = casalDaFicha($conn);
   .csw-neutra{ background:var(--cream); } .csw-verde{ background:#2C4536; } .csw-ouro{ background:#B4864A; }
   .csw-terracota{ background:#b5673f; } .csw-azul{ background:#4a6b7a; } .csw-ameixa{ background:#7a4a6b; }
   .csw-rosa{ background:#b56b78; } .csw-salva{ background:#6b7a53; }
+  /* No toque, os botões ganham 44px de altura (alvo de dedo). Os discos de cor
+     são a excepção: ali o alvo é o disco, que tem de ficar redondo — o
+     min-height esticava-os para elipses. A área de toque fica no espaço à
+     volta, que o gap já dá. */
+  @media (pointer:coarse){ .cores button{ min-height:0; } }
 
   /* Planta */
   .planta-cartao{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:1rem; }
