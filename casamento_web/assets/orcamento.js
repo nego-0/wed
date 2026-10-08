@@ -479,7 +479,7 @@
       var restante = (d.estado !== 'pago' && falta < num(d.valor))
         ? '<div class="d-falta">faltam ' + fmt(falta) + '</div>' : '';
       var celaCat = (d.categoria_id && nomeCat[d.categoria_id])
-        ? '<span style="display:inline-flex;align-items:center;gap:.4rem"><i style="width:10px;height:10px;border-radius:3px;background:'
+        ? '<span style="display:inline-flex;align-items:center;gap:.4rem"><i style="width:10px;height:10px;border-radius:50%;aspect-ratio:1;box-sizing:border-box;background:'
           + corCat(d.categoria_id) + ';display:inline-block;flex:none"></i>' + esc(nomeCat[d.categoria_id]) + '</span>'
         : '<span style="color:#b9beb6">—</span>';
       h += '<tr>'
@@ -858,10 +858,18 @@
     return criada.id;
   }
 
+  // O estado é um <select> vestido de lista pesquisável (licSelUpgrade). Mudar
+  // só o .value não chega: o botão à vista actualiza-se com um «change» — sem
+  // ele, abrir uma despesa «Paga» mostrava, na mesma, «Previsto».
+  function defEstado(v) {
+    var s = $('md-estado'); if (!s) return;
+    s.value = v; s.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   function abrirDespesa() {
     $('m-desp-titulo').textContent = 'Nova despesa';
     $('md-id').value = ''; $('md-desc').value = ''; $('md-valor').value = '';
-    $('md-estado').value = 'previsto'; $('md-fornecedor').value = ''; $('md-nota').value = '';
+    defEstado('previsto'); $('md-fornecedor').value = ''; $('md-nota').value = '';
     preencheCategorias('');
     $('md-parcelas-cx').style.display = 'none';    // parcelas só depois de existir
     $('md-fatura-cx').style.display = 'none';       // fatura idem
@@ -874,7 +882,7 @@
     if (!d) return;
     $('m-desp-titulo').textContent = 'Editar despesa';
     $('md-id').value = d.id; $('md-desc').value = d.descricao;
-    $('md-valor').value = paraCampo(d.valor); $('md-estado').value = d.estado;
+    $('md-valor').value = paraCampo(d.valor); defEstado(d.estado);
     $('md-fornecedor').value = d.fornecedor || ''; $('md-nota').value = d.nota || '';
     preencheCategorias(d.categoria_id);
     $('md-parcelas-cx').style.display = PODE ? '' : 'none';

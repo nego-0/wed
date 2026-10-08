@@ -73,10 +73,10 @@ $CAS = casalDaFicha($conn);
   .fsw-comprida{ width:24px; height:8px; border-radius:3px; }
   .fsw-ferradura{ width:18px; height:14px; border-radius:6px 6px 0 0; clip-path:polygon(0 0,32% 0,32% 58%,68% 58%,68% 0,100% 0,100% 100%,0 100%); }
   .cores{ display:inline-flex; gap:.3rem; flex-wrap:wrap; }
-  .cores button{ width:26px; height:26px; padding:0; border-radius:50%; border:1px solid var(--line); background:var(--card); cursor:pointer;
+  .cores button{ width:26px; height:26px; flex:none; aspect-ratio:1; box-sizing:border-box; padding:0; border-radius:50%; border:1px solid var(--line); background:var(--card); cursor:pointer;
     display:inline-flex; align-items:center; justify-content:center; }
   .cores button.on{ box-shadow:0 0 0 2px var(--forest); border-color:var(--forest); }
-  .csw{ display:block; width:18px; height:18px; border-radius:50%; border:1px solid rgba(0,0,0,.12); }
+  .csw{ display:block; width:18px; height:18px; flex:none; aspect-ratio:1; box-sizing:border-box; border-radius:50%; border:1px solid rgba(0,0,0,.12); }
   .csw-neutra{ background:var(--cream); } .csw-verde{ background:#2C4536; } .csw-ouro{ background:#B4864A; }
   .csw-terracota{ background:#b5673f; } .csw-azul{ background:#4a6b7a; } .csw-ameixa{ background:#7a4a6b; }
   .csw-rosa{ background:#b56b78; } .csw-salva{ background:#6b7a53; }
@@ -114,7 +114,7 @@ $CAS = casalDaFicha($conn);
   .dot-parcial, .lg-parcial{ --est:var(--est-parcial); }
   .dot-cheia,   .lg-cheia  { --est:var(--est-cheia); }
   .dot-excede,  .lg-excede { --est:var(--est-excede); }
-  .legenda .lg i{ width:14px; height:14px; border-radius:50%; flex:none; box-sizing:border-box;
+  .legenda .lg i{ width:14px; height:14px; border-radius:50%; aspect-ratio:1; flex:none; box-sizing:border-box;
     border:2px solid var(--est); background:var(--card); }
   .legenda .lg-parcial i{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
   .legenda .lg-cheia i, .legenda .lg-excede i{ background:var(--est); }
@@ -519,7 +519,7 @@ $CAS = casalDaFicha($conn);
   .lm-nome{ display:block; font-size:var(--t-denso); font-weight:600; line-height:1.25;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .lm-meta{ display:block; font-size:var(--t-apoio); color:var(--ink-fraco); line-height:1.2; }
-  .lm-est{ flex:none; width:14px; height:14px; border-radius:50%; box-sizing:border-box;
+  .lm-est{ flex:none; width:14px; height:14px; border-radius:50%; aspect-ratio:1; box-sizing:border-box;
     border:2px solid var(--est); background:var(--card); }
   .lm-est.dot-parcial{ background:conic-gradient(var(--est) 0 55%, #fff 55% 100%); }
   .lm-est.dot-cheia, .lm-est.dot-excede{ background:var(--est); }

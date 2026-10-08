@@ -218,6 +218,24 @@ const OUT  = process.env.TEST_OUT || require('os').tmpdir();
   await p.waitForTimeout(250);
   ok((await listas()).despesas.length === 4, 'limpar a procura devolve as quatro despesas');
 
+  // ============ 6c. o estado condiz ao abrir a despesa ============
+  // O campo de estado é um <select> vestido de lista pesquisável; mudar-lhe o
+  // valor sem avisar deixava o botão à vista a dizer o estado anterior. Abrir
+  // cada despesa tem de mostrar, no botão, o mesmo estado que a linha anuncia.
+  const estadoAbrir = await p.evaluate(async () => {
+    const r = document.querySelector('#lista-despesas tbody tr');
+    const badge = r.querySelector('.est').textContent.trim();
+    r.querySelector('button[onclick^="orcEditarDespesa"]').click();
+    await new Promise(z => setTimeout(z, 300));
+    const cx = document.querySelector('#md-estado').closest('.lic-sel');
+    const bt = cx.querySelector('.lic-sel-bt .txt').textContent.trim();
+    document.getElementById('m-desp').classList.remove('aberto');
+    return { badge, bt };
+  });
+  ok(estadoAbrir.bt.toLowerCase() === estadoAbrir.badge.toLowerCase(),
+     'o botão de estado condiz com a despesa aberta: lista «' + estadoAbrir.badge
+     + '», modal «' + estadoAbrir.bt + '»');
+
   // ============ 7. arrumar ============
   await p.evaluate(async (f) => {
     for (const id of [f.d1, f.d2, f.d3, f.d4])

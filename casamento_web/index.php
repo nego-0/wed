@@ -223,14 +223,19 @@ $totalConvites  = (int)$conn->query("SELECT COUNT(*) FROM {$P}convites c WHERE "
     background:var(--card); color:var(--gold-texto); font-size:var(--t-denso); line-height:1;
     cursor:pointer; font-family:inherit; padding:0; }
   .stat-setas button:hover{ border-color:var(--gold-soft); }
-  .stats-baixo{ display:flex; gap:.5rem; align-items:center; }
-  .stats-baixo .btn-stats-mais{ flex:1; }
-  .bt-arrumar{ flex:none; width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+  /* O «Mais filtros» e o botão de arrumar partilham a linha e o alto: esticam-se
+     os dois à mesma altura (a margem de cima passa para a linha, para nenhum
+     deles a levar e ficar desalinhado do outro). */
+  .stats-baixo{ display:flex; gap:.5rem; align-items:stretch; margin-top:.6rem; }
+  .stats-baixo .btn-stats-mais{ flex:1; margin:0; }
+  .bt-arrumar{ flex:none; width:38px; align-self:stretch; display:flex; align-items:center; justify-content:center;
     background:var(--card); border:1px solid var(--line); border-radius:12px; cursor:pointer;
     color:var(--ink-fraco); transition:.14s; }
   .bt-arrumar:hover{ border-color:var(--gold-soft); color:var(--gold-texto); }
   .bt-arrumar.on{ background:var(--gold-pale); border-color:var(--gold-soft); color:var(--gold-texto); }
-  .bt-arrumar i{ width:17px; height:17px; display:block; }
+  /* O ícone ao centro do botão, e não encostado a um canto. */
+  .bt-arrumar i{ width:17px; height:17px; display:flex; align-items:center; justify-content:center; }
+  .bt-arrumar i svg{ width:100%; height:100%; display:block; }
 
   /* Fim da lista: "mostrar mais" e a contagem do que já se vê */
   .btn-mais-lista{ display:flex; flex-direction:column; align-items:center; gap:.15rem; width:100%; margin-top:.4rem;

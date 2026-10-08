@@ -21,6 +21,14 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os pontos de cor das categorias de despesas são círculos perfeitos, em qualquer ecrã',
+         'orcamento.php', '.chip-cat i{ width:11px; height:11px; border-radius:50%'],
+        ['E os pontos de cor das mesas também não achatam ao apertar o ecrã',
+         'mesas.php', '.cores button{ width:26px; height:26px; flex:none; aspect-ratio:1'],
+        ['O estado mostrado ao abrir uma despesa condiz com a despesa',
+         'assets/orcamento.js', 'function defEstado(v)'],
+        ['O botão de arrumar os cartões alinha com o «Mais filtros» e tem o ícone ao centro',
+         'index.php', '.stats-baixo{ display:flex; gap:.5rem; align-items:stretch'],
         ['Editar uma mesa no modal de convidados leva o campo ao topo e troca «Adicionar» por «Actualizar»',
          'index.php', 'function rolarSuaveAte(cont, destino, dur)'],
         ['O modal de novo convite tem uma barra de rolagem discreta',

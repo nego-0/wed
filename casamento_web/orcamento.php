@@ -92,7 +92,8 @@ $CAS  = casalDaFicha($conn);
   .o-barra .g-prev{ background:var(--o-prev); color:var(--forest-deep); }
   .o-legenda{ display:flex; flex-wrap:wrap; gap:.4rem 1.1rem; margin-top:.8rem; font-size:var(--t-apoio); color:var(--ink-fraco); }
   .o-legenda span{ display:inline-flex; align-items:center; gap:.4rem; }
-  .o-legenda i{ width:11px; height:11px; border-radius:3px; display:inline-block; border:1px solid rgba(0,0,0,.05); }
+  .o-legenda i{ width:11px; height:11px; border-radius:50%; aspect-ratio:1; flex:none; box-sizing:border-box;
+                display:inline-block; border:1px solid rgba(0,0,0,.05); }
   .o-legenda b{ color:var(--ink); font-variant-numeric:tabular-nums; }
   /* Acima do teto: a leitura que não é fatia de nada, e por isso não é cartão. */
   .o-legenda span.mau{ color:var(--o-over); font-weight:600; }
@@ -132,7 +133,8 @@ $CAS  = casalDaFicha($conn);
              font-size:var(--t-apoio); cursor:pointer; transition:.14s; font-family:var(--sans); }
   .chip-cat:hover{ border-color:var(--gold-soft); }
   .chip-cat.on{ border-color:var(--gold); box-shadow:0 0 0 2px var(--ring); background:var(--gold-pale); }
-  .chip-cat i{ width:11px; height:11px; border-radius:3px; display:inline-block; flex:none; border:1px solid rgba(0,0,0,.08); }
+  .chip-cat i{ width:11px; height:11px; border-radius:50%; aspect-ratio:1; box-sizing:border-box;
+               display:inline-block; flex:none; border:1px solid rgba(0,0,0,.08); }
   .chip-cat b{ font-variant-numeric:tabular-nums; }
   .chip-cat .pc{ color:var(--ink-fraco); font-variant-numeric:tabular-nums; font-size:var(--t-apoio); }
   .chip-cat.on .pc{ color:var(--gold-deep); }
@@ -141,7 +143,8 @@ $CAS  = casalDaFicha($conn);
   .o-filtro{ display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.7rem;
              background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:.5rem .8rem; font-size:var(--t-denso); }
   .o-filtro .o-filtro-cat{ display:inline-flex; align-items:center; gap:.45rem; font-weight:600; color:var(--ink); }
-  .o-filtro .o-filtro-cat i{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .o-filtro .o-filtro-cat i{ width:12px; height:12px; border-radius:50%; aspect-ratio:1; flex:none;
+                             box-sizing:border-box; display:inline-block; }
   .o-filtro b{ font-variant-numeric:tabular-nums; color:var(--ink); }
   .o-filtro-acoes{ margin-left:auto; display:inline-flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
   /* A pastilha do estado, ao lado da da categoria: os dois filtros cruzam-se,
@@ -161,7 +164,8 @@ $CAS  = casalDaFicha($conn);
   .cat-cores{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-top:.55rem; }
   .cat-cores-lbl{ font-size:var(--t-etiqueta); font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-fraco); }
   .cat-cores-ops{ display:flex; gap:.3rem; flex-wrap:wrap; }
-  .cat-cor-op{ width:20px; height:20px; border-radius:50%; border:2px solid transparent; cursor:pointer;
+  .cat-cor-op{ width:20px; height:20px; border-radius:50%; aspect-ratio:1; flex:none; box-sizing:border-box;
+               border:2px solid transparent; cursor:pointer;
                padding:0; outline:none; box-shadow:0 0 0 1px rgba(0,0,0,.08) inset; transition:transform .1s; }
   .cat-cor-op:hover{ transform:scale(1.12); }
   .cat-cor-op.on{ border-color:var(--ink); }
