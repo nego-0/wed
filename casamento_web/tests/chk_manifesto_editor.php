@@ -19,4 +19,16 @@ if (count($noivos['inspector']['campos']) !== 1 || $noivos['inspector']['campos'
 if (count($admin['inspector']['campos']) < 20) falhar('admin ficou limitado pelos noivos');
 if (!in_array('rolagem_automatica', $admin['recursos'], true)) falhar('recurso do pacote ausente');
 if (($admin['pacote']['componentes'] ?? []) === []) falhar('manifesto instalado não foi lido');
-echo "OK — manifesto, inspector e modos separados.\n";
+
+$exacto = ['id'=>52, 'capacidades'=>capacidadesModeloPadrao('digital'),
+           'renderer_key'=>'porcelain-v2-pink', 'renderer_version'=>'1.0.0', 'renderer_schema'=>1];
+$exactoAdmin = manifestoEditorModelo('digital', defsPadrao(), $exacto, 'administrador');
+$exactoNoivos = manifestoEditorModelo('digital', defsPadrao(), $exacto, 'noivos');
+if ($exactoAdmin['cores_permitidas'] !== [] || $exactoAdmin['tipografias_permitidas'] !== [])
+    falhar('o inspector anunciou cores ou tipos de letra que o pacote exacto não implementa');
+if ($exactoNoivos['cores'] || $exactoNoivos['tipografia'])
+    falhar('a liberdade dos noivos ultrapassou o contrato do pacote');
+$rotulos = catalogoCapacidadesModelo('digital')['campos_editaveis'];
+if (($rotulos['casal.noiva'] ?? '') !== 'Nome da noiva') falhar('catálogo sem rótulos editoriais');
+if (!in_array('capa', $exactoAdmin['obrigatorios'], true)) falhar('secção obrigatória perdida');
+echo "OK — manifesto, inspector, contrato do pacote e modos separados.\n";

@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O editor só oferece ferramentas realmente implementadas pelo pacote visual',
+         'editor-modelo.php', 'function capacidadesSuportadasModelo(string $ambito, ?array $modelo = null): array {'],
+        ['A liberdade atribuída aos noivos nunca ultrapassa o contrato do pacote',
+         'editor-modelo.php', 'function limitarCapacidadesAoPacote(string $ambito, array|string|null $valor, ?array $modelo = null): array {'],
         ['Os discos de cor não achatam no toque: o alvo de 44px não lhes vale',
          'mesas.php', '@media (pointer:coarse){ .cores button{ min-height:0; } }'],
         ['E o mesmo para os discos de cor das categorias de despesas',

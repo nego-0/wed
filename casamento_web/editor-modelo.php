@@ -16,7 +16,9 @@ function catalogoCapacidadesModelo(string $ambito): array {
     if ($ambito === 'impresso') {
         $camadas = cartaoCamadas();
         $campos = [];
-        foreach (chavesModelo('impresso') as $k) $campos[$k] = $k;
+        foreach (camposInspectorModelo('impresso') as $campo) {
+            $campos[$campo['chave']] = $campo['rotulo'];
+        }
         return [
             'seccoes'=>$camadas,
             'paineis'=>array_intersect_key($paineis, array_flip(['conteudo','camadas','cores','tipografia','composicao','guias'])),
@@ -32,7 +34,9 @@ function catalogoCapacidadesModelo(string $ambito): array {
 
     $seccoes = ['capa'=>'Envelope'] + array_map(fn($s)=>(string)$s['rotulo'], seccoesConvite());
     $campos = [];
-    foreach (chavesModelo('digital') as $k) $campos[$k] = $k;
+    foreach (camposInspectorModelo('digital') as $campo) {
+        $campos[$campo['chave']] = $campo['rotulo'];
+    }
     $media = [
         'media.hero'=>'Fotografia de capa', 'media.historia'=>'Fotografia da história',
         'media.interludio'=>'Fotografia do interlúdio', 'media.acesso'=>'Fotografia do passe',
@@ -177,31 +181,70 @@ function declaracaoEditorPacote(string $ambito, ?array $modelo = null): array {
     return is_array($editor) ? $editor : [];
 }
 
+/**
+ * O que o código instalado consegue realmente editar neste modelo.
+ *
+ * A ficha guardada pelo administrador descreve a liberdade dos noivos. Esta
+ * função descreve o limite anterior a essa liberdade: as ferramentas que o
+ * pacote implementa. Mantê-lo num único sítio evita que a API, o editor e a
+ * página dos modelos anunciem conjuntos diferentes.
+ */
+function capacidadesSuportadasModelo(string $ambito, ?array $modelo = null): array {
+    $cat = catalogoCapacidadesModelo($ambito);
+    $declarado = declaracaoEditorPacote($ambito, $modelo);
+    $suportado = capacidadesModeloPadrao($ambito);
+    $grupos = ['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
+               'cores_permitidas','tipografias_permitidas','componentes','recursos'];
+    foreach ($grupos as $grupo) {
+        if (!array_key_exists($grupo, $declarado) || !is_array($declarado[$grupo])) continue;
+        $aceites = array_flip(array_keys($cat[$grupo] ?? []));
+        $suportado[$grupo] = array_values(array_unique(array_filter(
+            array_map('strval', $declarado[$grupo]), fn($v)=>isset($aceites[$v]))));
+    }
+    if (isset($declarado['obrigatorios']) && is_array($declarado['obrigatorios'])) {
+        $aceites = array_flip($suportado['seccoes']);
+        $suportado['obrigatorios'] = array_values(array_unique(array_filter(
+            array_map('strval', $declarado['obrigatorios']), fn($v)=>isset($aceites[$v]))));
+    } else {
+        $suportado['obrigatorios'] = array_values(array_intersect(
+            $suportado['obrigatorios'], $suportado['seccoes']));
+    }
+    if (isset($declarado['limites']) && is_array($declarado['limites'])) {
+        foreach ($suportado['limites'] as $k=>$origem) {
+            if (!array_key_exists($k, $declarado['limites'])) continue;
+            $suportado['limites'][$k] = max(1, min(5000, (int)$declarado['limites'][$k]));
+        }
+    }
+    return $suportado;
+}
+
+/** Limita uma liberdade configurada pelo admin ao contrato do pacote. */
+function limitarCapacidadesAoPacote(string $ambito, array|string|null $valor, ?array $modelo = null): array {
+    $ficha = normalizarCapacidadesModelo($ambito, $valor);
+    $suportado = capacidadesSuportadasModelo($ambito, $modelo);
+    foreach (['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
+              'cores_permitidas','tipografias_permitidas','componentes','recursos'] as $grupo) {
+        $ficha[$grupo] = array_values(array_intersect(
+            (array)($ficha[$grupo] ?? []), (array)($suportado[$grupo] ?? [])));
+    }
+    $ficha['obrigatorios'] = array_values(array_intersect(
+        (array)($ficha['obrigatorios'] ?? []), (array)($suportado['seccoes'] ?? [])));
+    $ficha['seccoes'] = array_values(array_unique(array_merge($ficha['seccoes'], $ficha['obrigatorios'])));
+    foreach ((array)($suportado['limites'] ?? []) as $k=>$maximo) {
+        $ficha['limites'][$k] = min((int)($ficha['limites'][$k] ?? $maximo), (int)$maximo);
+    }
+    return $ficha;
+}
+
 /** Contrato que o inspector recebe no navegador. */
 function manifestoEditorModelo(string $ambito, array $defs, ?array $modelo = null, string $modo = 'noivos'): array {
     $id = $modelo ? ('modelo-'.(int)($modelo['id'] ?? 0)) : 'peca-actual';
     $fichaNoivos = normalizarCapacidadesModelo($ambito, $modelo['capacidades'] ?? null);
     $cat = catalogoCapacidadesModelo($ambito);
     $declarado = declaracaoEditorPacote($ambito, $modelo);
-    $suportado = capacidadesModeloPadrao($ambito);
-    $gruposPacote = ['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
-                     'cores_permitidas','tipografias_permitidas','componentes','recursos'];
-    foreach ($gruposPacote as $grupo) {
-        if (!isset($declarado[$grupo]) || !is_array($declarado[$grupo])) continue;
-        $aceites = array_flip(array_keys($cat[$grupo] ?? []));
-        $suportado[$grupo] = array_values(array_filter(array_map('strval', $declarado[$grupo]), fn($v)=>isset($aceites[$v])));
-    }
+    $suportado = capacidadesSuportadasModelo($ambito, $modelo);
     $administrador = $modo === 'administrador';
-    $ficha = $administrador ? $suportado : $fichaNoivos;
-    if (!$administrador) {
-        // A liberdade concedida pelo admin nunca pode anunciar algo que o
-        // pacote instalado não sabe desenhar. A intersecção evita controlos
-        // que gravam valores sem qualquer efeito no convite.
-        foreach ($gruposPacote as $grupo) {
-            $ficha[$grupo] = array_values(array_intersect(
-                (array)($ficha[$grupo] ?? []), (array)($suportado[$grupo] ?? [])));
-        }
-    }
+    $ficha = $administrador ? $suportado : limitarCapacidadesAoPacote($ambito, $fichaNoivos, $modelo);
     $paineis = array_flip($ficha['paineis']);
     if (!isset($paineis['composicao'])) $ficha['movimentaveis'] = [];
     $rotulosPaineis = $cat['paineis'];
