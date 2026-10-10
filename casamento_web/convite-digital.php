@@ -160,9 +160,117 @@ if ($distrMesas) {
         . "<b style=\"font-weight:600;color:{$pal['forest']}\">{$txtMesas}</b></p>";
 }
 
-$confirmUrl  = escP(enderecoPublico() . '/convite.php?c=' . $c['codigo']);
+// Identificação central usada pelas páginas cerimoniais dos modelos exactos:
+// primeiro o nome deste convite e, só quando existe distribuição, as mesas e
+// os lugares. Não se inventa uma mesa nem se ocupa espaço quando ela não foi
+// atribuída.
+$mesaResumo = '';
+if ($distrMesas) {
+    $linhasMesa = [];
+    $rotuloLugares = escP((string)$DEFS['textos.lugares']);
+    $defLugares = $modoEditor ? ' data-def="textos.lugares"' : '';
+    foreach ($distrMesas as $mesa) {
+        $linha = '<span class="kvp-mesa-nome">' . escP((string)($mesa['nome'] ?? '')) . '</span>';
+        $n = (int)($mesa['n'] ?? 0);
+        if ($comNumMesa && $n > 0) {
+            $linha .= '<span class="kvp-mesa-ponto" aria-hidden="true">·</span>'
+                . '<span class="kvp-mesa-lugares"><strong>' . $n . '</strong> '
+                . '<span' . $defLugares . '>' . $rotuloLugares . '</span></span>';
+        }
+        $linhasMesa[] = '<span class="kvp-mesa-linha">' . $linha . '</span>';
+    }
+    $mesaResumo = '<div class="kvp-mesa-resumo">' . implode('', $linhasMesa) . '</div>';
+}
+
+// As cerimónias desta camada são opcionais e vêm dos mesmos campos semânticos
+// usados no restante sistema. Hora vazia significa que a cerimónia não existe.
+// O texto do link é editável; o endereço é validado antes de entrar no href.
+$cerimoniasResumo = '';
+$cartoesCerimonia = [];
+$dataCerimonia = null;
+try { $dataCerimonia = new DateTime((string)$DEFS['evento.data']); } catch (Throwable $e) {}
+$cerDia = $dataCerimonia ? (int)$dataCerimonia->format('j') : '';
+$cerMes = $dataCerimonia ? (MESES_PT[(int)$dataCerimonia->format('n')] ?? '') : '';
+$cerAno = $dataCerimonia ? $dataCerimonia->format('Y') : '';
+$cerSemana = $dataCerimonia ? (DIAS_PT[(int)$dataCerimonia->format('w')] ?? '') : '';
+foreach (['civil', 'religiosa'] as $tipoCerimonia) {
+    $hora = trim((string)($DEFS['evento.' . $tipoCerimonia . '_hora'] ?? ''));
+    if ($hora === '') continue;
+    $titulo = escP((string)($DEFS['evento.' . $tipoCerimonia . '_titulo'] ?? ''));
+    $local = trim((string)($DEFS['evento.' . $tipoCerimonia . '_local'] ?? ''));
+    $mapa = trim((string)($DEFS['evento.' . $tipoCerimonia . '_maps'] ?? ''));
+    if (!filter_var($mapa, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $mapa)) $mapa = '';
+    $defTitulo = $modoEditor ? ' data-def="evento.' . $tipoCerimonia . '_titulo"' : '';
+    $defLocal = $modoEditor ? ' data-def="evento.' . $tipoCerimonia . '_local"' : '';
+    $defMapa = $modoEditor ? ' data-def="textos.mapa"' : '';
+    $localHtml = $local !== ''
+        ? '<p class="kvp-cer-local"' . $defLocal . '>' . escP($local) . '</p>' : '';
+    $mapaHtml = $mapa !== ''
+        ? '<a class="kvp-map-link" href="' . escP($mapa) . '" target="_blank" rel="noopener noreferrer">'
+          . '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>'
+          . '<span' . $defMapa . '>' . escP((string)$DEFS['textos.mapa']) . '</span></a>' : '';
+    $dataHtml = $dataCerimonia
+        ? '<div class="kvp-cer-date"><strong>' . $cerDia . '</strong><i aria-hidden="true"></i>'
+          . '<span><b>' . escP(mb_strtoupper($cerMes)) . '</b><b>' . escP($cerAno) . '</b></span></div>'
+        : '';
+    $cartoesCerimonia[] = '<article class="kvp-cer-card kvp-cer-' . $tipoCerimonia . '">'
+        . '<h3' . $defTitulo . '>' . $titulo . '</h3>'
+        . $localHtml
+        . '<div class="kvp-cer-meta"><time datetime="' . escP($DEFS['evento.data'] . 'T' . $hora) . '">'
+        . escP($hora) . '</time>' . ($cerSemana !== '' ? '<span>' . escP(mb_strtoupper($cerSemana)) . '</span>' : '') . '</div>'
+        . $dataHtml . $mapaHtml . '</article>';
+}
+if ($cartoesCerimonia) {
+    $cerimoniasResumo = '<div class="kvp-cerimonias-resumo">' . implode('', $cartoesCerimonia) . '</div>';
+}
+
+$rendererExacto = (string)($PACOTE['renderer_key'] ?? '');
+$ehModeloExacto = array_key_exists($rendererExacto, convitePacotesExactos());
+$confirmParams = $demo ? ['demo' => '1'] : ['c' => $c['codigo']];
+if ($ehModeloExacto) $confirmParams['tema'] = $rendererExacto;
+$confirmUrl  = escP(enderecoPublico() . '/convite.php?' . http_build_query($confirmParams));
 $downloadUrl = escP('convite-digital.php?c=' . $c['codigo'] . '&download=1');
 $qrValue     = enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'];
+
+// Os onze documentos exactos conservam a sua composição, mas recebem o
+// mesmo conteúdo semântico. O runtime usa estes dados para substituir apenas
+// o miolo funcional (convidado, cerimónias, mapa e passe de entrada), sem
+// tocar nos fundos, molduras, ícones ou tipografia próprios de cada modelo.
+$runtimeExacto = [];
+if ($ehModeloExacto) {
+    $runtimeExacto = [
+        'modelo' => $rendererExacto,
+        'noiva' => (string)$DEFS['casal.noiva'],
+        'noivo' => (string)$DEFS['casal.noivo'],
+        'familias' => (string)$DEFS['textos.familias'],
+        'anuncio' => (string)$DEFS['textos.anuncio_cerimonia'],
+        'convidado' => nomeConviteVisivel($c),
+        'mesaHtml' => $mesaResumo,
+        'cerimoniasHtml' => $cerimoniasResumo,
+        'recepcao' => [
+            'titulo' => (string)$DEFS['recepcao.titulo'],
+            'subtitulo' => (string)$DEFS['recepcao.subtitulo'],
+            'chegadaRotulo' => (string)$DEFS['recepcao.chegada_rotulo'],
+            'chegadaHora' => (string)$DEFS['recepcao.chegada_hora'],
+            'boloRotulo' => (string)$DEFS['recepcao.bolo_rotulo'],
+            'boloHora' => (string)$DEFS['recepcao.bolo_hora'],
+            'contagemTitulo' => (string)$DEFS['recepcao.contagem_titulo'],
+            'localTitulo' => (string)$DEFS['recepcao.local_titulo'],
+        ],
+        'local' => (string)$DEFS['evento.local'],
+        'cidade' => (string)$DEFS['evento.cidade'],
+        'mapEmbed' => googleMapsEmbedUrl($DEFS),
+        'mapsUrl' => (string)$DEFS['evento.maps'],
+        'mapaRotulo' => (string)$DEFS['textos.mapa'],
+        'acesso' => [
+            'eyebrow' => (string)$DEFS['acesso.eyebrow'],
+            'titulo' => (string)$DEFS['acesso.titulo'],
+            'instrucao' => (string)$DEFS['acesso.instrucao'],
+            'nota' => (string)$DEFS['acesso.nota'],
+            'qr' => $qrValue,
+        ],
+    ];
+}
 
 // Mensagem pessoal deste convite (opcional)
 $msgPessoal = trim((string)($c['msg_pessoal'] ?? ''));
@@ -179,14 +287,29 @@ if ($modoEditor) $tpl = marcarParaEditor($tpl);
 $tpl = ordenarBlocos($tpl, $DEFS, ['{noiva}' => $DEFS['casal.noiva'], '{noivo}' => $DEFS['casal.noivo']], $modoEditor);
 
 $out = aplicarSeccoes($tpl, $DEFS);
-$out = strtr($out, convitePlaceholders($DEFS) + [
+$out = strtr($out, convitePlaceholders($DEFS, $runtimeExacto) + [
     '{{GUEST_NAME}}'   => $nome,
     '{{MESA_BLOCK}}'   => $mesaBlock,
+    '{{MESA_RESUMO}}'  => $mesaResumo,
+    '{{CERIMONIAS_RESUMO}}' => $cerimoniasResumo,
     '{{MSG_PESSOAL}}'  => $msgBlock,
     '{{CONFIRM_URL}}'  => $confirmUrl,
     '{{DOWNLOAD_URL}}' => $downloadUrl,
     '{{QR_VALUE}}'     => $qrValue,
 ]);
+
+// A composição Porcelana reserva altura apenas para as cerimónias realmente
+// preenchidas. A classe deixa o CSS distinguir zero, uma ou duas sem inventar
+// espaço vazio quando a cerimónia civil ou religiosa não se aplica.
+if ($ehModeloExacto) {
+    $qtdCerimonias = min(2, count($cartoesCerimonia));
+    $out = preg_replace(
+        '/class="kvp-ceremony\s+/',
+        'class="kvp-ceremony kvp-ceremony--' . $qtdCerimonias . ' ',
+        $out,
+        1
+    );
+}
 
 // ---- Descarga: embutir tudo e transmitir (offline) -----------
 if ($download) {

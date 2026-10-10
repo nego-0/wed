@@ -15,7 +15,8 @@
     "paineis": ["conteudo", "camadas", "cores", "tipografia", "media", "efeitos", "composicao"],
     "media": ["media.hero", "media.historia", "media.interludio", "media.acesso", "media.musica"],
     "efeitos": ["fx.petalas", "fx.autoplay"],
-    "componentes": ["texto", "fotografia", "galeria", "cronologia", "local_mapa", "confirmacao", "musica", "presentes"],
+    "componentes": ["texto", "fotografia", "galeria", "cronologia", "local_mapa", "confirmacao", "musica", "presentes", "mensagens"],
+    "componentes_incorporados": [],
     "recursos": ["biblioteca_icones", "rolagem_automatica", "presentes_qr"]
   },
   "runtime": {

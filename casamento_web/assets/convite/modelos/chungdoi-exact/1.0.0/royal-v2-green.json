@@ -23,16 +23,18 @@
       "local",
       "vestuario",
       "programa",
+      "acesso",
       "mensagens",
       "presentes",
       "confirmacao"
     ],
     "recursos": [
       "musica",
-      "rolagem",
+      "rolagem_automatica",
       "galeria",
       "calendario",
       "mapa",
+      "qr-acesso",
       "presentes",
       "confirmacao-modal"
     ]

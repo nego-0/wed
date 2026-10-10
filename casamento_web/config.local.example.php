@@ -12,6 +12,11 @@
 
 return [
 
+    // ---- Google Maps Embed API ---------------------------
+    // Restrinja esta chave aos domínios onde a Kulemba é executada e active
+    // apenas a Maps Embed API no projecto da Google Cloud.
+    'google_maps_api_key' => '',
+
     // ---- Ligação à base de dados ---------------------------
     // Tenta 'local' primeiro (XAMPP/Wamp) e depois 'online' (alojamento).
     'db' => [

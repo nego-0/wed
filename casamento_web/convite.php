@@ -13,6 +13,8 @@ require_once __DIR__ . '/parcial-demonstracao.php';
 $codigo = strtoupper(trim($_GET['c'] ?? ''));
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
 $modoModal = isset($_GET['modal']) && $_GET['modal'] === '1';
+$temaRsvp = trim((string)($_GET['tema'] ?? ''));
+$temaExacto = array_key_exists($temaRsvp, convitePacotesExactos());
 if ($demo && !ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
 $c = $demo ? [
     'id'=>0,'codigo'=>'EXEMPLO','nome_exibicao'=>'Família Mendes','sufixo'=>null,
@@ -202,8 +204,68 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   body.modo-modal .cabeca{ padding:1.75rem 1.25rem 1.45rem; }
   body.modo-modal .selo{ width:52px; height:52px; }
   body.modo-modal .casal{ font-size:clamp(2.35rem,9vw,3.2rem); }
+  body.tema-modelo-exacto{
+    --ink:#182132; --forest:#667286; --ivory:#fff; --cream:#fafafa;
+    --gold:#ccc8af; --gold-soft:#d9d5bf; --gold-pale:#ece9dc; --text:#465267;
+    --serif:Roboto,"Helvetica Neue",Arial,sans-serif;
+    --sans:Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:#fff; color:var(--text); font-family:var(--sans); font-weight:400;
+  }
+  body.tema-modelo-exacto .folha{
+    max-width:none; min-height:100%; overflow:visible; border:0; border-radius:0;
+    background:#fff; box-shadow:none;
+  }
+  body.tema-modelo-exacto .corpo{padding:40px 24px 26px}
+  .rsvp-origin-intro{display:none}
+  body.tema-modelo-exacto .rsvp-origin-intro{display:block;margin:0 42px 26px 0;text-align:left}
+  body.tema-modelo-exacto .rsvp-origin-intro h1{
+    margin:0 0 8px;color:#182132;font-size:22px;font-weight:700;line-height:1.2;
+  }
+  body.tema-modelo-exacto .rsvp-origin-intro p{
+    margin:0;color:#7d889a;font-size:13px;line-height:1.55;
+  }
+  body.tema-modelo-exacto h3.sec,
+  body.tema-modelo-exacto label{
+    color:#435067;font-family:var(--sans);font-size:13px;font-weight:600;text-align:left;
+  }
+  body.tema-modelo-exacto h3.sec{margin:18px 0 9px}
+  body.tema-modelo-exacto .rsvp-namebox{
+    min-height:50px;display:flex;align-items:center;padding:0 16px;border:1.5px solid #e1e4e9;
+    border-radius:13px;background:#fff;color:#8a95a8;font-size:14px;font-weight:400;
+  }
+  body.tema-modelo-exacto .opcoes{grid-template-columns:1fr;gap:8px;margin-bottom:14px}
+  body.tema-modelo-exacto .op{
+    display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 13px;border:1.5px solid #e6e8ec;
+    border-radius:13px;background:#fafafa;box-shadow:0 1px 2px rgba(24,33,50,.04);
+    color:#435067;font-size:14px;font-weight:600;text-align:left;
+  }
+  body.tema-modelo-exacto .op .em{
+    flex:0 0 34px;width:34px;height:34px;margin:0;padding:9px;border-radius:50%;background:#e9ebee;
+    color:#7d8999;
+  }
+  body.tema-modelo-exacto #op-sim .em,
+  body.tema-modelo-exacto #op-nao .em{color:#7d8999}
+  body.tema-modelo-exacto .op.sel-sim{border-color:#cbc8b2;background:#fbfaf5}
+  body.tema-modelo-exacto .op.sel-nao{border-color:#d7c0bd;background:#fcf8f7}
+  body.tema-modelo-exacto .campo{margin-bottom:14px}
+  body.tema-modelo-exacto .membros{gap:8px;margin-bottom:0}
+  body.tema-modelo-exacto .membro{
+    min-height:46px;padding:10px 13px;border:1.5px solid #e2e5e9;border-radius:13px;background:#fafafa;
+    color:#465267;font-size:14px;font-weight:500;
+  }
+  body.tema-modelo-exacto .membro input{accent-color:#777044}
+  body.tema-modelo-exacto input,
+  body.tema-modelo-exacto select,
+  body.tema-modelo-exacto textarea{border-color:#e1e4e9;border-radius:13px;font-family:var(--sans)}
+  body.tema-modelo-exacto .btn-ouro{
+    min-height:48px;border-radius:12px;background:#cbc8b2;color:#fff;font-size:14px;font-weight:700;
+    box-shadow:0 10px 22px rgba(119,110,56,.12);
+  }
+  body.tema-modelo-exacto .estado-atual{border-radius:13px;background:#faf9f4;font-size:13px}
+  body.tema-modelo-exacto .rodape{display:none}
   @media(max-width:480px){
     body.modo-modal .corpo{ padding:1.35rem 1rem calc(1.5rem + env(safe-area-inset-bottom)); }
+    body.modo-modal.tema-modelo-exacto .corpo{padding:40px 24px 26px}
     body.modo-modal .opcoes{ gap:.55rem; }
     body.modo-modal .op{ padding:.8rem .55rem; }
     body.modo-modal .wa-linha{ flex-direction:column; }
@@ -211,7 +273,8 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   }
 </style>
 </head>
-<body<?= $modoModal ? ' class="modo-modal"' : '' ?>>
+<?php $bodyClasses = array_filter([$modoModal ? 'modo-modal' : '', $temaExacto ? 'tema-modelo-exacto' : '']); ?>
+<body<?= $bodyClasses ? ' class="' . escP(implode(' ', $bodyClasses)) . '"' : '' ?>>
 <?php if (!$valido): ?>
   <?php
     // Código que não abre porta nenhuma: a página não nomeia casal nenhum nem
@@ -229,14 +292,27 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
   $confirmado  = in_array($c['rsvp_estado'], ['confirmado','parcial'], true);
 ?>
   <div class="folha">
+    <?php if (!$temaExacto): ?>
     <div class="cabeca">
       <div class="selo"><?= escP($CAS['mono']) ?></div>
       <div class="rotulo">Têm o prazer de o(a) convidar</div>
       <div class="casal"><?= escP($CAS['casal']) ?></div>
       <div class="quando"><?= escP($dataExt) ?> · <?= escP($horaTxt) ?></div>
     </div>
+    <?php endif; ?>
 
     <div class="corpo">
+      <?php if ($temaExacto): ?>
+      <div class="rsvp-origin-intro">
+        <h1>Confirme a sua presença</h1>
+        <p>A sua presença será uma honra. Confirme, por favor, para prepararmos a melhor recepção.</p>
+      </div>
+      <div class="campo">
+        <label>Nome no convite</label>
+        <div class="rsvp-namebox"><?= htmlspecialchars(nomeConviteVisivel($c)) ?></div>
+      </div>
+      <h3 class="sec">Confirma a sua presença?</h3>
+      <?php else: ?>
       <div class="para">
         <div class="lab">Com todo o carinho, para</div>
         <div class="nome"><?= htmlspecialchars(nomeConviteVisivel($c)) ?></div>
@@ -260,6 +336,7 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       </div>
 
       <div class="divisor">Confirmação de presença</div>
+      <?php endif; ?>
 
       <?php if ($jaRespondeu): ?>
         <div class="estado-atual">
@@ -275,13 +352,13 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
       <div id="form-rsvp">
         <div class="opcoes">
           <div class="op" id="op-sim" onclick="escolher('sim')"><span class="em" data-ico="presenca"></span>Vou comparecer</div>
-          <div class="op" id="op-nao" onclick="escolher('nao')"><span class="em" data-ico="ausencia"></span>Não poderei ir</div>
+          <div class="op" id="op-nao" onclick="escolher('nao')"><span class="em" data-ico="<?= $temaExacto ? 'xis' : 'ausencia' ?>"></span><?= $temaExacto ? 'Lamento, não poderei ir' : 'Não poderei ir' ?></div>
         </div>
 
         <div id="detalhes-sim" style="display:none;">
           <?php /* O seletor de número só aparece quando NÃO há lista nominal:
                    com nomes, são as caixas "Quem vai comparecer?" que definem a contagem. */ ?>
-          <?php if ((int)$c['lugares'] > 1 && count($c['membros']) <= 1): ?>
+          <?php if (!$temaExacto && (int)$c['lugares'] > 1 && count($c['membros']) <= 1): ?>
           <div class="campo">
             <label>Quantas pessoas irão comparecer?</label>
             <select id="confirmados">
@@ -292,9 +369,9 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
           </div>
           <?php endif; ?>
 
-          <?php if (count($c['membros']) > 1): ?>
+          <?php if (count($c['membros']) > 1 || ($temaExacto && count($c['membros']) >= 1)): ?>
           <div class="campo">
-            <label>Quem vai comparecer?</label>
+            <label><?= $temaExacto ? 'Convidados referenciados' : 'Quem vai comparecer?' ?></label>
             <div class="membros" id="membros">
               <?php foreach ($c['membros'] as $m): ?>
                 <label class="membro" data-id="<?= $m['id'] ?>">
@@ -330,11 +407,14 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
           <?php foreach ($doConvite as $p) echo campoRsvp($p, 0, $respostas); ?>
         </div>
 
+        <?php if (!$temaExacto): ?>
         <div class="campo">
           <label>Deixe uma mensagem aos noivos <span style="color:#aaa;font-weight:300">(opcional)</span></label>
           <textarea id="mensagem" rows="2" placeholder="Uma palavra de carinho…"><?= htmlspecialchars($c['rsvp_mensagem'] ?? '') ?></textarea>
         </div>
+        <?php endif; ?>
 
+        <?php if (!$temaExacto): ?>
         <?php // O prazo (RSVP-002). Um convite sem prazo é respondido «depois»,
               // e «depois» é o dia em que o catering já fechou a conta. Passado
               // o prazo não se fecha a porta — responder tarde continua a ser
@@ -352,8 +432,9 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
               : 'Agradecemos a resposta até <b>' . escP($quando) . '</b>.' ?>
           </div>
         <?php endif; ?>
+        <?php endif; ?>
 
-        <button class="btn btn-ouro" id="btn-enviar" onclick="enviar()">Confirmar resposta</button>
+        <button class="btn btn-ouro" id="btn-enviar" data-label-normal="<?= $temaExacto ? 'Confirmar' : 'Confirmar resposta' ?>" onclick="enviar()"><?= $temaExacto ? 'Confirmar' : 'Confirmar resposta' ?></button>
       </div>
 
       <!-- CONCLUSÃO (após confirmar): sem QR; PDF + WhatsApp -->
@@ -478,7 +559,7 @@ async function enviar(){
                   membros, respostas:rr.respostas, ts:agora() };
   const r=await fetch('api.php?action=rsvp_submit',{method:'POST',body:JSON.stringify(payload)});
   const d=await r.json();
-  btn.disabled=false; btn.textContent='Confirmar resposta';
+  btn.disabled=false; btn.textContent=btn.dataset.labelNormal || 'Confirmar resposta';
   if(!d.success){ alert(d.message||'Ocorreu um erro. Tente novamente.'); return; }
   if(escolha==='sim'){
     $('form-rsvp').style.display='none';

@@ -32,6 +32,8 @@ $CAS = $MODELO ? ['casal' => $MODELO['nome'], 'mono' => PLATAFORMA['mono'], 'noi
 // nenhum a contar: o modelo não é de casamento nenhum.
 [$DATA_EV, $HORA_EV] = $MODELO ? ['', ''] : diaDoCasamento();
 $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
+$TELA_URL = 'convite-digital.php?demo=1'
+          . ($MODELO ? '&modelo=' . (int)$MODELO['id'] : '');
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -162,7 +164,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
   <a href="versao.php" class="versao-app" title="Versão instalada — clique para o detalhe"><?= versaoApp() ?></a>
   <a class="sair-editor" href="<?= escP($SAIR_EDITOR) ?>"><i data-ico="setaEsquerda"></i> Sair do Editor</a>
   <span class="ed-sep"></span>
-  <a href="convite-digital.php?demo=1" target="_blank" rel="noopener">Abrir o convite</a>
+  <a href="<?= escP($TELA_URL) ?>" target="_blank" rel="noopener">Abrir o convite</a>
 </div>
 <?php contagemScript(); ?>
 
@@ -220,7 +222,7 @@ $SAIR_EDITOR = $MODELO ? 'modelos.php' : 'digital.php';
               aria-hidden="true" tabindex="-1"></iframe>
       <!-- A tela é servida por POST para poder receber o rascunho por gravar.
            O alvo é sempre a tela que NÃO está à vista. -->
-      <form id="f-tela" method="post" target="telaB" action="convite-digital.php?demo=1&editor=1" hidden>
+      <form id="f-tela" method="post" target="telaB" action="<?= escP($TELA_URL . '&editor=1') ?>" hidden>
         <input type="hidden" name="rascunho" id="rascunho">
         <!-- Onde a tela estava a ser lida, para lá voltar sem se dar por isso. -->
         <input type="hidden" name="tela_y" id="tela-y" value="0">
@@ -304,8 +306,12 @@ const LIVRES_TODOS = <?= json_encode(posicoesLivres($DEFS_ED), JSON_UNESCAPED_UN
 const LIVRES = Object.fromEntries(Object.entries(LIVRES_TODOS)
   .filter(([k]) => (CAPACIDADES.movimentaveis || []).includes(k)));
 const MODELOS_TODOS = <?= json_encode(modelosBloco(), JSON_UNESCAPED_UNICODE) ?>;
-const MODELOS  = Object.fromEntries(Object.entries(MODELOS_TODOS).filter(([k]) =>
-  k !== 'presentes' || (CAPACIDADES.componentes || []).includes('presentes')));
+const COMPONENTES_INCORPORADOS = CAPACIDADES.pacote?.componentes_incorporados || [];
+const MODELOS  = Object.fromEntries(Object.entries(MODELOS_TODOS).filter(([k]) => {
+  const componente = {galeria:'galeria', mensagens:'mensagens', presentes:'presentes'}[k];
+  return !componente || ((CAPACIDADES.componentes || []).includes(componente)
+    && !COMPONENTES_INCORPORADOS.includes(componente));
+}));
 const PRIMEIRO = <?= json_encode(BLOCO_PRIMEIRO) ?>;   // a capa abre sempre
 const ULTIMO   = <?= json_encode(BLOCO_ULTIMO) ?>;     // o fecho encerra sempre
 const BLOCOS_MAX = Math.min(<?= (int)BLOCOS_MAX ?>, +(CAPACIDADES.limites?.max_blocos || <?= (int)BLOCOS_MAX ?>));
@@ -341,8 +347,8 @@ const RECOMPOR = ['evento.data','evento.hora','evento.local','evento.cidade',
                   'evento.whatsapp','footer.local',
                   // As cerimónias são compostas pelo servidor ("Ás 15h", e o
                   // bloco inteiro a nascer e a morrer com a hora).
-                  'evento.civil_titulo','evento.civil_hora','evento.civil_local',
-                  'evento.religiosa_titulo','evento.religiosa_hora','evento.religiosa_local'];
+                  'evento.civil_titulo','evento.civil_hora','evento.civil_local','evento.civil_maps',
+                  'evento.religiosa_titulo','evento.religiosa_hora','evento.religiosa_local','evento.religiosa_maps'];
 
 const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -724,6 +730,10 @@ function blocoCerimonias(){
                  value="${esc(EST.val['evento.' + k + '_local'] || '')}"
                  placeholder="Onde é (opcional)" oninput="editar(this)" style="flex:1">
         </div>
+        ${podeEditarCampo('evento.' + k + '_maps') ? `<label style="margin-top:.5rem">Ligação para ver no mapa</label>
+          <input type="url" data-chave="evento.${k}_maps" maxlength="500"
+                 value="${esc(EST.val['evento.' + k + '_maps'] || '')}"
+                 placeholder="https://… (opcional)" oninput="editar(this)" style="margin-top:.2rem">` : ''}
       </div>`;
     }).join('')}
   </div>`;
@@ -1041,7 +1051,8 @@ function juntarBloco(){
   const m = MODELOS[$('modelo-novo').value] || MODELOS['livre'];
   const b = { id: novoId(), eyebrow: m.eyebrow, titulo: m.titulo, texto: m.texto,
               itens: (m.itens||[]).map(it=>({...it})) };
-  if (m.tipo === 'presentes') Object.assign(b, {tipo:'presentes', modo:m.modo||'texto', qr:m.qr||''});
+  if (m.tipo) b.tipo = m.tipo;
+  if (m.tipo === 'presentes') Object.assign(b, {modo:m.modo||'texto', qr:m.qr||''});
   EST.blocos.push(b);
   // Entra antes do fecho quando o modelo o possui. Há modelos válidos sem
   // essa secção; nesse caso não se deve reintroduzi-la só por acrescentar um
@@ -1214,6 +1225,8 @@ function renderPropsLivre(b){
   };
   const itens = b.itens || [];
   const presentes = b.tipo === 'presentes';
+  const galeria = b.tipo === 'galeria';
+  const mensagens = b.tipo === 'mensagens';
   const modo = presentes ? (b.modo || 'texto') : '';
   const opcoesPresentes = presentes ? `<div class="campo"><label>Apresentação</label>
     <select onchange="mudarModoPresentes('${b.id}',this.value)">
@@ -1223,24 +1236,27 @@ function renderPropsLivre(b){
     </select><div class="dica-md">O QR é criado no próprio convite a partir do texto indicado.</div></div>`
     + (modo==='qr' ? `<div class="campo"><label>Texto ou endereço do QR<span class="contador ${classeCont((b.qr||'').length,1000)}">${(b.qr||'').length}/1000</span></label>
       <textarea maxlength="1000" oninput="editarPresenteQR('${b.id}',this)">${esc(b.qr||'')}</textarea></div>` : '') : '';
-  const mostrarItens = !presentes || modo === 'metodos';
+  const mostrarItens = !galeria && (!presentes || modo === 'metodos');
+  const nomeTipo = presentes ? 'Página de presentes' : (galeria ? 'Galeria de fotografias' : (mensagens ? 'Mensagens' : 'Secção livre'));
+  const nomeItens = presentes ? 'Formas de oferta' : (mensagens ? 'Mensagens' : 'Destaques');
   $('props').innerHTML =
-    `<div class="sel-nada" style="margin-bottom:.6rem"><b>${presentes?'Página de presentes':'Secção livre'}</b> — acrescentada por si</div>` +
+    `<div class="sel-nada" style="margin-bottom:.6rem"><b>${nomeTipo}</b> — acrescentada por si</div>` +
     cp('eyebrow','Chamada','texto',120) +
     cp('titulo','Título','texto',120) +
     cp('texto','Texto','area',2000) +
     opcoesPresentes +
-    (mostrarItens ? `<div class="campo"><label>${presentes?'Formas de oferta':'Destaques'}<span class="contador ${classeCont(itens.length,8)}">${itens.length}/8</span></label></div>` : '') +
+    (galeria ? '<div class="dica-md">Usa as fotografias já escolhidas no painel “Fotos e música”.</div>' : '') +
+    (mostrarItens ? `<div class="campo"><label>${nomeItens}<span class="contador ${classeCont(itens.length,8)}">${itens.length}/8</span></label></div>` : '') +
     (mostrarItens ? itens.map((it,i)=>`<div class="it">
         <div class="it-topo"><span class="n">${i+1}</span>
-          <select onchange="editarItemBloco('${b.id}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
-            ${opcoesIcone(it.i)}</select>
+          ${mensagens ? `<strong style="flex:1">Mensagem ${i+1}</strong>` : `<select onchange="editarItemBloco('${b.id}',${i},'i',this.value)" style="width:auto;margin:0;flex:1">
+            ${opcoesIcone(it.i)}</select>`}
           <button class="bt bt-min" onclick="removerItemBloco('${b.id}',${i})" title="Remover"><i data-ico="xis"></i></button>
         </div>
-        <input type="text" placeholder="Título" value="${esc(it.t||'')}" oninput="editarItemBloco('${b.id}',${i},'t',this.value)">
-        <textarea placeholder="Texto" oninput="editarItemBloco('${b.id}',${i},'x',this.value)">${esc(it.x||'')}</textarea>
+        <input type="text" placeholder="${mensagens?'Autor':'Título'}" value="${esc(it.t||'')}" oninput="editarItemBloco('${b.id}',${i},'t',this.value)">
+        <textarea placeholder="${mensagens?'Mensagem':'Texto'}" oninput="editarItemBloco('${b.id}',${i},'x',this.value)">${esc(it.x||'')}</textarea>
       </div>`).join('') : '') +
-    (mostrarItens && itens.length < 8 ? `<button class="bt" style="width:100%" onclick="juntarItemBloco('${b.id}')">+ ${presentes?'Forma de oferta':'Destaque'}</button>` : '') +
+    (mostrarItens && itens.length < 8 ? `<button class="bt" style="width:100%" onclick="juntarItemBloco('${b.id}')">+ ${presentes?'Forma de oferta':(mensagens?'Mensagem':'Destaque')}</button>` : '') +
     painelLivre(b.id) +
     `<div class="campo" style="margin-top:.8rem"><button class="bt" style="width:100%;color:#e08a7d" onclick="apagarBloco('${b.id}')">Apagar esta secção</button></div>`;
 }
@@ -1716,8 +1732,8 @@ function renderEfeitos(){
       <input type="checkbox" ${EST.val['geral.rolagem_auto']==='1'?'checked':''} onchange="alternarRolagem()"
        style="width:15px;height:15px;accent-color:var(--ed-ouro);cursor:pointer"> Rolagem automática</label>
       <div class="dica-md">Depois de abrir o convite, avança sozinho. Um gesto da pessoa faz uma pausa.</div></div>
-      <div class="campo"><label>Velocidade <span class="contador">${esc(EST.val['geral.rolagem_velocidade']||28)} px/s</span></label>
-       <input type="range" min="8" max="120" step="2" value="${esc(EST.val['geral.rolagem_velocidade']||28)}"
+      <div class="campo"><label>Velocidade <span class="contador">${esc(EST.val['geral.rolagem_velocidade']||50)} px/s</span></label>
+       <input type="range" min="8" max="120" step="2" value="${esc(EST.val['geral.rolagem_velocidade']||50)}"
         oninput="mudarVelocidadeRolagem(this)"></div>`;
   }
   if ((CAPACIDADES.recursos || []).includes('biblioteca_icones') && podeEditarCampo('geral.icone_musica_tocar')) {

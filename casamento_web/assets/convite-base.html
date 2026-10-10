@@ -401,9 +401,21 @@ body.opened #hero img{transform:scale(var(--zoom-hero,1))}
 .bloco-livre .mcell{text-align:center}
 .bloco-livre .mcell b{display:block;margin-bottom:8px;font-family:var(--f-sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
 .bloco-livre .mcell p:last-child{margin:0}
+.extra-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:520px;margin:8px auto 0}
+.extra-gallery a{position:relative;display:block;overflow:hidden;aspect-ratio:4/5;border-radius:15px;box-shadow:var(--shadow);background:var(--cream)}
+.extra-gallery a:nth-child(2),.extra-gallery a:nth-child(3){aspect-ratio:1/1}
+.extra-gallery img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.22,.8,.3,1)}
+.extra-gallery a:hover img,.extra-gallery a:focus-visible img{transform:scale(1.045)}
+.extra-gallery a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.extra-messages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:520px;margin:6px auto 0;text-align:left}
+.extra-message{position:relative;padding:24px 22px;border:1px solid rgba(180,134,74,.38);border-radius:14px;background:linear-gradient(145deg,rgba(255,255,255,.86),rgba(246,238,222,.72));box-shadow:0 12px 28px rgba(22,38,30,.08)}
+.extra-message::before{content:"“";position:absolute;right:16px;top:4px;font:44px/1 var(--f-serif);color:rgba(180,134,74,.28)}
+.extra-message b{display:block;padding-right:24px;font:600 11px/1.4 var(--f-sans);letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.extra-message p{margin:10px 0 0;font:italic calc(16px * var(--esc-txt,1))/1.65 var(--f-serif);color:var(--text)}
 .gift-qr{width:min(286px,86vw);margin:4px auto 34px;padding:13px;border:1px solid var(--gold-soft);background:#fff;border-radius:14px;box-shadow:var(--shadow)}
 .gift-qr canvas{display:block;width:100%;height:auto}
 .gift-qr small{display:block;margin:10px 4px 2px;color:var(--text);font:500 10px/1.5 var(--f-sans);letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:520px){.extra-messages{grid-template-columns:1fr}.extra-gallery{gap:8px}.extra-gallery a{border-radius:10px}}
 #rsvp{background:linear-gradient(180deg,var(--ivory),var(--cream));text-align:center;padding-top:60px;position:relative}
 #rsvp h2{font-family:var(--f-script);font-weight:400;font-size:clamp(44px,10vw,60px);color:var(--forest);line-height:1.15}
 #rsvp .sub{font-family:var(--f-serif);font-style:italic;font-size:calc(18px * var(--esc-txt,1));color:var(--text);max-width:390px;margin:16px auto 0;line-height:1.7}

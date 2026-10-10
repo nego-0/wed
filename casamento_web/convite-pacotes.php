@@ -103,15 +103,16 @@ function convitePacotesRegistados(): array {
 
     $raizExacta = __DIR__ . '/assets/convite/modelos/chungdoi-exact/1.0.0';
     $cssBase = realpath($raizExacta . '/exact-base.css');
+    $cssAjustes = realpath($raizExacta . '/exact-adjustments.css');
     $runtime = realpath($raizExacta . '/exact-runtime.js');
-    if ($cssBase === false || $runtime === false) {
+    if ($cssBase === false || $cssAjustes === false || $runtime === false) {
         throw new RuntimeException('A base visual dos onze convites não está disponível.');
     }
     foreach (convitePacotesExactos() as $key => $nome) {
         $templateExacto = realpath($raizExacta . '/' . $key . '.html');
         $cssExacto = realpath($raizExacta . '/' . $key . '.css');
         $manifestoExacto = convitePacoteManifesto($raizExacta . '/' . $key . '.json');
-        foreach ([$templateExacto, $cssExacto, $cssBase, $runtime] as $ficheiro) {
+        foreach ([$templateExacto, $cssExacto, $cssBase, $cssAjustes, $runtime] as $ficheiro) {
             if ($ficheiro === false || !str_starts_with(str_replace('\\', '/', $ficheiro), str_replace('\\', '/', $base) . '/')) {
                 throw new RuntimeException('O documento do modelo ' . $nome . ' não está disponível.');
             }
@@ -125,10 +126,11 @@ function convitePacotesRegistados(): array {
             'template' => $templateExacto,
             'stylesheets' => [
                 ['path'=>$cssBase, 'href'=>'assets/convite/modelos/chungdoi-exact/1.0.0/exact-base.css'],
+                ['path'=>$cssAjustes, 'href'=>'assets/convite/modelos/chungdoi-exact/1.0.0/exact-adjustments.css'],
                 ['path'=>$cssExacto, 'href'=>'assets/convite/modelos/chungdoi-exact/1.0.0/' . $key . '.css'],
             ],
             'checksum' => hash('sha256', hash_file('sha256', $templateExacto)
-                . hash_file('sha256', $cssBase) . hash_file('sha256', $cssExacto)
+                . hash_file('sha256', $cssBase) . hash_file('sha256', $cssAjustes) . hash_file('sha256', $cssExacto)
                 . hash_file('sha256', $runtime) . hash_file('sha256', $raizExacta . '/' . $key . '.json')),
         ];
     }

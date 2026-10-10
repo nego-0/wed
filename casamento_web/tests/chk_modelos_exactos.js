@@ -58,7 +58,7 @@ function ok(cond, msg){ console.log((cond?'✓':'✗')+' '+msg); if(!cond) falha
     if(estado.capa){
       const abrir=page.locator('#cover a,#cover button').filter({hasText:/Abrir/i}).first();
       if(await abrir.count()) await abrir.click(); else await page.locator('#cover').click({position:{x:10,y:10}});
-      await page.waitForTimeout(1050);
+      await page.waitForTimeout(1400);
       ok(await page.locator('#cover[hidden]').count()===1,`${slug} abre o convite`);
     }else{
       console.log('  página:',page.url(),(await page.locator('body').innerText()).slice(0,500));

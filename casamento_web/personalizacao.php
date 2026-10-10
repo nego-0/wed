@@ -1049,6 +1049,21 @@ function defsPadrao(): array {
         'textos.convite_eyebrow' => 'Venha partilhar a nossa alegria',
         'textos.lead' => "Há amores que, como o amanhecer, chegam devagar — e o nosso chegou para iluminar toda uma vida. É com o coração cheio de júbilo que {noiva} e {noivo} têm a honra de convidar V.\u{00A0}Exa. a partilhar a celebração do seu enlace matrimonial, e a alegria de um dia que ficará para sempre guardado na memória.",
         'textos.guest_label' => 'Convite reservado a',
+        // Camada de apresentação do convidado nos modelos cerimoniais. São
+        // texto, e não parte rígida do desenho: cada casal pode escolher como
+        // apresenta as famílias, os lugares e a ligação para o mapa.
+        'textos.familias' => 'Junto com suas famílias',
+        'textos.anuncio_cerimonia' => 'Com o coração cheio de alegria, honram-se em convidá-los para a celebração do seu enlace matrimonial.',
+        'textos.lugares' => 'lugares',
+        'textos.mapa' => 'Ver no mapa',
+        'recepcao.titulo' => "Copo d'água",
+        'recepcao.subtitulo' => "O copo d'água terá lugar em:",
+        'recepcao.chegada_rotulo' => 'Chegado dos Noivos',
+        'recepcao.chegada_hora' => '17:00',
+        'recepcao.bolo_rotulo' => 'Corte do Bolo',
+        'recepcao.bolo_hora' => '19:30',
+        'recepcao.contagem_titulo' => 'Contagem decrescente',
+        'recepcao.local_titulo' => "Local do copo d'água",
         'textos.closing' => 'A vossa presença será o mais belo dos presentes — a luz e a música que tornarão eterno o mais feliz dos nossos dias.',
         'gd.eyebrow' => 'Guarde esta data',
         // ---- «Onde nos casamos»: o aspeto dos cartões ----
@@ -1125,7 +1140,7 @@ function defsPadrao(): array {
         // Recursos transversais. Ficam desligados por origem para não mudar
         // convites já publicados quando a aplicação é actualizada.
         'geral.rolagem_auto' => '0',
-        'geral.rolagem_velocidade' => '28',
+        'geral.rolagem_velocidade' => '50',
         'geral.icone_musica_tocar' => 'musica',
         'geral.icone_musica_pausa' => 'pausa',
         // ---- Cartão de convite 10×15 (impressão a dourado sobre acrílico) ----
@@ -1908,6 +1923,18 @@ const BLOCOS_MAX     = 6;      // secções livres, além das que já vêm no co
 /** Modelos de secção livre oferecidos no editor (só pré-preenchem o conteúdo). */
 function modelosBloco(): array {
     return [
+        'galeria' => ['rotulo'=>'Galeria de fotografias', 'icone'=>'estrela',
+            'eyebrow'=>'Os nossos momentos', 'titulo'=>'Galeria de fotografias',
+            'texto'=>'Algumas memórias do caminho que nos trouxe até aqui.',
+            'tipo'=>'galeria', 'itens'=>[]],
+        'mensagens' => ['rotulo'=>'Mensagens', 'icone'=>'coracao',
+            'eyebrow'=>'Palavras que guardamos', 'titulo'=>'Mensagens',
+            'texto'=>'O carinho de quem faz parte da nossa história.',
+            'tipo'=>'mensagens',
+            'itens'=>[
+                ['i'=>'coracao','t'=>'Família e amigos','x'=>'Que este novo capítulo seja vivido com amor, serenidade e muita alegria.'],
+                ['i'=>'aneis','t'=>'Com carinho','x'=>'Desejamos-vos uma vida inteira de cumplicidade e momentos inesquecíveis.'],
+            ]],
         'presentes' => ['rotulo'=>'Lista de presentes', 'icone'=>'brinde',
             'eyebrow'=>'Com todo o carinho', 'titulo'=>'Lista de presentes',
             'texto'=>'A vossa presença é o nosso maior presente. Para quem quiser oferecer algo mais, deixamos aqui algumas ideias.',
@@ -2594,13 +2621,17 @@ function ordemBlocos(array $defs): array {
 }
 
 /** Compõe o HTML de uma secção livre, com as classes do próprio convite. */
-function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string $estilo = 'classico'): string {
+function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string $estilo = 'classico', array $defs = []): string {
     $icones = iconesConvite($estilo);
     $eyebrow = trim((string)($b['eyebrow'] ?? ''));
     $titulo  = trim((string)($b['titulo'] ?? ''));
     $texto   = trim((string)($b['texto'] ?? ''));
     $itens   = is_array($b['itens'] ?? null) ? $b['itens'] : [];
-    $presentes = ($b['tipo'] ?? '') === 'presentes';
+    $tipo = in_array(($b['tipo'] ?? ''), ['galeria','mensagens','presentes'], true)
+        ? (string)$b['tipo'] : 'livre';
+    $presentes = $tipo === 'presentes';
+    $galeria = $tipo === 'galeria';
+    $mensagens = $tipo === 'mensagens';
     $modo = $presentes && in_array(($b['modo'] ?? 'texto'), ['texto','qr','metodos'], true)
         ? (string)$b['modo'] : 'texto';
     $id      = escP($b['id'] ?? 'bloco');
@@ -2608,17 +2639,49 @@ function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string 
     // data-sec só no editor (é o que permite clicar na secção dentro da tela):
     // o convite dos convidados sai sem marca nenhuma.
     $marca = $editor ? ' data-sec="'.$id.'"' : '';
-    $h  = '  <section id="'.$id.'"'.$marca.' class="page pad bloco-livre">'."\n";
-    $h .= '    <span class="pageno rv">— um —</span>'."\n";
+    $porcelana = in_array($estilo, ['porcelana-verde','porcelana-rosa'], true);
+    $classes = $porcelana
+        ? 'pv2-page pv2-paper pv2-added pv2-added--'.$tipo
+        : 'page pad bloco-livre bloco-livre--'.$tipo;
+    $h  = '  <section id="'.$id.'"'.$marca.' class="'.$classes.'">'."\n";
+    if (!$porcelana) $h .= '    <span class="pageno rv">— um —</span>'."\n";
     if ($eyebrow !== '') $h .= '    <span class="eyebrow rv">'.escP(strtr($eyebrow, $tokens)).'</span>'."\n";
     if ($titulo  !== '') $h .= '    <h2 class="rv d1">'.escP(strtr($titulo, $tokens)).'</h2>'."\n";
     if ($texto   !== '') $h .= '    <p class="bl-texto rv d1">'.mdTexto($texto, $tokens).'</p>'."\n";
+    if ($galeria) {
+        $fotos = [];
+        foreach (['media.hero','media.historia','media.interludio','media.acesso'] as $chave) {
+            $src = trim((string)($defs[$chave] ?? ''));
+            if ($src !== '' && !in_array($src, $fotos, true)) $fotos[] = $src;
+        }
+        if ($fotos) {
+            $h .= '    <div class="extra-gallery rv d2">'."\n";
+            foreach ($fotos as $i => $src) {
+                $alt = 'Fotografia ' . ($i + 1) . ' de ' . (($defs['casal.noiva'] ?? '') . ' e ' . ($defs['casal.noivo'] ?? ''));
+                $h .= '      <a href="'.escP($src).'" data-kulemba-galeria-item><img src="'.escP($src).'" alt="'.escP(trim($alt)).'" loading="lazy"></a>'."\n";
+            }
+            $h .= '    </div>'."\n";
+        }
+    }
     if ($presentes && $modo === 'qr' && trim((string)($b['qr'] ?? '')) !== '') {
         $h .= '    <div class="gift-qr rv d2"><canvas width="260" height="260" data-presente-qr="'
             . escP((string)$b['qr']) . '" aria-label="Código QR da oferta"></canvas>'
             . '<small>Leia o código com a câmara ou aplicação bancária</small></div>' . "\n";
     }
-    if ($itens && (!$presentes || $modo === 'metodos')) {
+    if ($mensagens && $itens) {
+        $cartoes = '';
+        foreach ($itens as $i => $it) {
+            $t = trim((string)($it['t'] ?? ''));
+            $x = trim((string)($it['x'] ?? ''));
+            if ($t === '' && $x === '') continue;
+            $cartoes .= '      <article class="extra-message rv'.($i % 2 ? ' d1' : '').'">'
+                . ($t !== '' ? '<b>'.escP(strtr($t, $tokens)).'</b>' : '')
+                . ($x !== '' ? '<p>'.mdTexto($x, $tokens).'</p>' : '')
+                . '</article>'."\n";
+        }
+        if ($cartoes !== '') $h .= '    <div class="extra-messages">'."\n".$cartoes.'    </div>'."\n";
+    }
+    if ($itens && !$galeria && !$mensagens && (!$presentes || $modo === 'metodos')) {
         $celulas = '';
         foreach ($itens as $i => $it) {
             $ic = $icones[$it['i'] ?? ''] ?? $icones['coracao'];
@@ -2653,7 +2716,7 @@ function ordenarBlocos(string $html, array $defs, array $tokens = [], bool $edit
 
     foreach (blocosLivres($defs) as $b) {
         if (!empty($b['id'])) $pecas[$b['id']] = "\n".renderBlocoLivre($b, $tokens, $editor,
-            (string)($defs['digital.estilo'] ?? 'classico'));
+            (string)($defs['digital.estilo'] ?? 'classico'), $defs);
     }
 
     $novo = '';
@@ -2922,6 +2985,8 @@ function validarDefinicao(string $chave, string $valor): ?string {
                     if ($t === '' && $x === '') continue;
                     $itens[] = ['i' => isset($icones[$it['i'] ?? '']) ? $it['i'] : 'coracao', 't' => $t, 'x' => $x];
                 }
+                $tipo = in_array(($b['tipo'] ?? ''), ['galeria','mensagens','presentes'], true)
+                    ? (string)$b['tipo'] : '';
                 $out[] = [
                     'id'      => $id,
                     'eyebrow' => mb_substr(trim((string)($b['eyebrow'] ?? '')), 0, 120),
@@ -2929,8 +2994,10 @@ function validarDefinicao(string $chave, string $valor): ?string {
                     'texto'   => mb_substr(trim((string)($b['texto'] ?? '')), 0, 2000),
                     'itens'   => $itens,
                 ];
-                if (($b['tipo'] ?? '') === 'presentes') {
-                    $out[count($out)-1]['tipo'] = 'presentes';
+                if ($tipo !== '') {
+                    $out[count($out)-1]['tipo'] = $tipo;
+                }
+                if ($tipo === 'presentes') {
                     $out[count($out)-1]['modo'] = in_array(($b['modo'] ?? ''), ['texto','qr','metodos'], true)
                         ? (string)$b['modo'] : 'texto';
                     $out[count($out)-1]['qr'] = mb_substr(trim((string)($b['qr'] ?? '')), 0, 1000);
@@ -3089,7 +3156,32 @@ function paletaEfetiva(array $defs): array {
     return $base;
 }
 
-function convitePlaceholders(array $defs): array {
+/**
+ * Endereço do mapa incorporado do local do copo d'água.
+ *
+ * Com chave configurada usa a Maps Embed API oficial. A chave chega pelo
+ * config.local.php/ambiente e deve ficar restringida aos domínios da casa.
+ * Instalações ainda sem chave conservam a incorporação pública do Google Maps
+ * para o convite não ficar com um rectângulo vazio durante a configuração.
+ */
+function googleMapsEmbedUrl(array $defs): string {
+    $local = trim((string)($defs['evento.local'] ?? '') . ', ' . (string)($defs['evento.cidade'] ?? ''), ', ');
+    $key = trim((string)cfg_local('google_maps_api_key', ''));
+    if ($key !== '') {
+        return 'https://www.google.com/maps/embed/v1/place?' . http_build_query([
+            'key' => $key,
+            'q' => $local,
+            'zoom' => 15,
+        ]);
+    }
+    return 'https://maps.google.com/maps?' . http_build_query([
+        'q' => $local,
+        'z' => 15,
+        'output' => 'embed',
+    ]);
+}
+
+function convitePlaceholders(array $defs, array $runtimeExtra = []): array {
     $noiva = $defs['casal.noiva']; $noivo = $defs['casal.noivo'];
     $tokens = ['{noiva}'=>$noiva, '{noivo}'=>$noivo];
     $casal = $noiva.' & '.$noivo;
@@ -3199,7 +3291,7 @@ function convitePlaceholders(array $defs): array {
         ],
         'rolagem' => [
             'activa' => ($defs['geral.rolagem_auto'] ?? '0') === '1',
-            'velocidade' => max(8, min(120, (int)($defs['geral.rolagem_velocidade'] ?? 28))),
+            'velocidade' => max(8, min(120, (int)($defs['geral.rolagem_velocidade'] ?? 50))),
         ],
         'calendario' => [
             'ficheiro' => 'Casamento-'.$slug.'.ics',
@@ -3216,6 +3308,7 @@ function convitePlaceholders(array $defs): array {
         ],
         'qr' => ['cor' => $pal['forest-deep'], 'fundo' => $pal['ivory']],
     ];
+    if ($runtimeExtra) $runtime['exacto'] = $runtimeExtra;
     $runtimeJson = json_encode($runtime, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
 
@@ -3239,6 +3332,19 @@ function convitePlaceholders(array $defs): array {
         '{{CONVITE_EYEBROW}}' => escP($defs['textos.convite_eyebrow']),
         '{{LEAD}}' => mdTexto($defs['textos.lead'], $tokens),
         '{{GUEST_LABEL}}' => escP($defs['textos.guest_label']),
+        '{{CER_FAMILIAS}}' => escP($defs['textos.familias']),
+        '{{CER_ANUNCIO}}' => escP($defs['textos.anuncio_cerimonia']),
+        '{{LUGARES_ROTULO}}' => escP($defs['textos.lugares']),
+        '{{MAPA_ROTULO}}' => escP($defs['textos.mapa']),
+        '{{RECEPCAO_TITULO}}' => escP($defs['recepcao.titulo']),
+        '{{RECEPCAO_SUBTITULO}}' => escP($defs['recepcao.subtitulo']),
+        '{{RECEPCAO_CHEGADA_ROTULO}}' => escP($defs['recepcao.chegada_rotulo']),
+        '{{RECEPCAO_CHEGADA_HORA}}' => escP($defs['recepcao.chegada_hora']),
+        '{{RECEPCAO_BOLO_ROTULO}}' => escP($defs['recepcao.bolo_rotulo']),
+        '{{RECEPCAO_BOLO_HORA}}' => escP($defs['recepcao.bolo_hora']),
+        '{{RECEPCAO_CONTAGEM_TITULO}}' => escP($defs['recepcao.contagem_titulo']),
+        '{{RECEPCAO_LOCAL_TITULO}}' => escP($defs['recepcao.local_titulo']),
+        '{{EVENTO_HORA}}' => escP($defs['evento.hora']),
         '{{CLOSING}}' => mdTexto($defs['textos.closing'], $tokens),
         '{{GD_EYEBROW}}' => escP($defs['gd.eyebrow']),
         '{{HIST_EYEBROW}}' => escP($defs['historia.eyebrow']),
@@ -3274,6 +3380,7 @@ function convitePlaceholders(array $defs): array {
         // 150, para o anel ficar do mesmo tamanho no ecrã (ver medidasEmblema).
         // As medidas estão no CSS; aqui só se diz em que estado se está.
         '{{CER_SEM_RAMOS}}' => (string)($defs['cer.ramos'] ?? '1') !== '0' ? '' : ' sem-ramos',
+        '{{MAP_EMBED_URL}}' => escP(googleMapsEmbedUrl($defs)),
         '{{MAPS_URL}}' => escP($defs['evento.maps']),
         '{{ACESSO_EYEBROW}}' => escP($defs['acesso.eyebrow']),
         '{{ACESSO_TITULO}}' => escP($defs['acesso.titulo']),
@@ -3298,7 +3405,7 @@ function convitePlaceholders(array $defs): array {
         '{{FX_PETALAS}}' => $defs['fx.petalas'] === '1' ? 'true' : 'false',
         '{{FX_AUTOPLAY}}' => $defs['fx.autoplay'] === '1' ? 'true' : 'false',
         '{{ROLAGEM_AUTO}}' => ($defs['geral.rolagem_auto'] ?? '0') === '1' ? 'true' : 'false',
-        '{{ROLAGEM_VELOCIDADE}}' => (string)max(8, min(120, (int)($defs['geral.rolagem_velocidade'] ?? 28))),
+        '{{ROLAGEM_VELOCIDADE}}' => (string)max(8, min(120, (int)($defs['geral.rolagem_velocidade'] ?? 50))),
         '{{ICONE_MUSICA_PARADA}}' => $iconeMusicaParada,
         '{{ICONE_MUSICA_TOCANDO}}' => $iconeMusicaTocando,
         '{{QR_FG}}' => $pal['forest-deep'], '{{QR_BG}}' => $pal['ivory'],
@@ -3339,7 +3446,8 @@ function seccoesConvite(): array {
         'convite'    => ['rotulo'=>'O convite',         'opcional'=>false, 'campos'=>['textos.convite_eyebrow','textos.lead','textos.guest_label','textos.closing']],
         'historia'   => ['rotulo'=>'História',          'opcional'=>true,  'campos'=>['historia.eyebrow','historia.titulo','historia.quote','historia.autor']],
         'interludio' => ['rotulo'=>'Interlúdio',        'opcional'=>true,  'campos'=>['interludio.quote','interludio.autor','interludio.fecho']],
-        'grande-dia' => ['rotulo'=>'O grande dia',      'opcional'=>false, 'campos'=>['gd.eyebrow','evento.venue_titulo','cronograma.titulo']],
+        'grande-dia' => ['rotulo'=>'O grande dia',      'opcional'=>false, 'campos'=>['textos.familias','textos.anuncio_cerimonia','textos.lugares','textos.mapa','gd.eyebrow','evento.venue_titulo','cronograma.titulo']],
+        'recepcao'   => ['rotulo'=>"Copo d'água",      'opcional'=>false, 'campos'=>['recepcao.titulo','recepcao.subtitulo','recepcao.chegada_rotulo','recepcao.chegada_hora','recepcao.bolo_rotulo','recepcao.bolo_hora','recepcao.contagem_titulo','recepcao.local_titulo','evento.data','evento.hora','evento.local','evento.cidade','evento.maps']],
         'acesso'     => ['rotulo'=>'Passe de entrada',  'opcional'=>false, 'campos'=>['acesso.eyebrow','acesso.titulo','acesso.instrucao','acesso.nota']],
         'final'      => ['rotulo'=>'Confirmação e fecho','opcional'=>false,'campos'=>['rsvp.titulo','rsvp.sub','rsvp.deadline','manual.titulo','footer.quote']],
     ];
@@ -3356,6 +3464,16 @@ function mapaDefEditor(): array {
         '{{CONVITE_EYEBROW}}'  => 'textos.convite_eyebrow',
         '{{LEAD}}'             => 'textos.lead',
         '{{GUEST_LABEL}}'      => 'textos.guest_label',
+        '{{CER_FAMILIAS}}'     => 'textos.familias',
+        '{{CER_ANUNCIO}}'      => 'textos.anuncio_cerimonia',
+        '{{RECEPCAO_TITULO}}'  => 'recepcao.titulo',
+        '{{RECEPCAO_SUBTITULO}}' => 'recepcao.subtitulo',
+        '{{RECEPCAO_CHEGADA_ROTULO}}' => 'recepcao.chegada_rotulo',
+        '{{RECEPCAO_CHEGADA_HORA}}' => 'recepcao.chegada_hora',
+        '{{RECEPCAO_BOLO_ROTULO}}' => 'recepcao.bolo_rotulo',
+        '{{RECEPCAO_BOLO_HORA}}' => 'recepcao.bolo_hora',
+        '{{RECEPCAO_CONTAGEM_TITULO}}' => 'recepcao.contagem_titulo',
+        '{{RECEPCAO_LOCAL_TITULO}}' => 'recepcao.local_titulo',
         '{{CLOSING}}'          => 'textos.closing',
         '{{HIST_EYEBROW}}'     => 'historia.eyebrow',
         '{{HIST_TITULO}}'      => 'historia.titulo',
