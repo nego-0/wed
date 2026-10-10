@@ -49,9 +49,12 @@ modelos da casa.
 
 A pasta `assets/convite/modelos/chungdoi-exact/1.0.0` instala onze pacotes
 independentes. Cada pacote conserva o documento, a ordem das páginas, as
-fontes, cores, imagens, ícones, música, envelope, efeitos e animações da
-composição visual que foi comparada e aprovada. A aplicação não lhes aplica a
-estrutura nem a linguagem do Kulemba Contemporâneo:
+fontes usadas, cores, ornamentos, ícones, envelope, efeitos e animações da
+composição visual que foi comparada e aprovada. As fotografias de demonstração
+e as músicas que vinham incorporadas foram eliminadas: capa, história,
+interlúdio, acesso e música são sempre recursos semânticos escolhidos na
+Kulemba. A aplicação não lhes aplica a estrutura nem a linguagem do Kulemba
+Contemporâneo:
 
 - **Jasmim Branco** (`jasmine-white`);
 - **Real V2 Verde** (`royal-v2-green`);
@@ -66,11 +69,21 @@ estrutura nem a linguagem do Kulemba Contemporâneo:
 - **Lótus Rosa** (`lien-hoa-pink`).
 
 O conteúdo visível está em português. Os nomes, a data, as fotografias, a
-música, os locais e os dados de presentes entram por chaves semânticas, sem
-alterar a composição de cada modelo. Galeria, música, calendário, mapa,
-rolagem automática, presentes e confirmação usam o contrato comum. A
-confirmação abre no modal Kulemba e o formulário de envio de mensagens foi
-retirado dos onze modelos, conforme a decisão funcional do produto.
+música opcional, os locais e os dados de presentes entram por chaves
+semânticas, sem alterar a composição de cada modelo. Cerimónia, copo d'água,
+programa, galeria, calendário, mapa, rolagem automática, presentes, acesso e
+confirmação usam o contrato comum. Se o administrador não configurar presentes
+ou mensagens, a respectiva área não é desenhada; nenhum dado bancário de
+exemplo chega ao convidado. A confirmação abre no modal Kulemba e o formulário
+de envio de mensagens foi retirado dos onze modelos, conforme a decisão
+funcional do produto.
+
+Cada manifesto contém a ficha que o editor consome: secções, painéis, campos,
+recursos, efeitos e compatibilidade. O inspector mostra apenas capacidades que
+o pacote declara e, para os noivos, cruza-as com as liberdades concedidas pelo
+administrador. As fontes foram reduzidas às famílias realmente usadas pelos
+onze desenhos; a validação estrutural impede referências partidas, música
+incorporada e o regresso das fotografias de demonstração.
 
 `porcelain-v2@1.0.0`, publicado na fase anterior, permanece registado como
 pacote legado. Não aparece como novo modelo no catálogo, mas continua a abrir

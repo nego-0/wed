@@ -131,6 +131,8 @@ BASE_URL=http://127.0.0.1:8920 TEST_USER=admin TEST_PASSWORD=noivos2026 node chk
 | `chk_renderer_versoes.php` | versões guardadas fixam, transportam e comparam também a identidade do renderizador |
 | `chk_historico_versoes_editor.js` | histórico com camadas trancadas, ícones de desfazer/refazer, ausência de rascunhos e versões apenas do utilizador |
 | `chk_modelos.js`        | modelos da casa: nascem de um convite a sério, aplicam-se, e depois disso o desenho é do casal |
+| `chk_modelos_exactos.js` | os onze modelos próprios em mobile e desktop: secções semânticas, galeria, confirmação modal, recursos locais, ausência de dados fictícios e transbordo |
+| `chk_pacotes_modelos_exactos.js` | manifestos e recursos dos onze pacotes: ficha do editor, referências existentes, ausência de fotografias/música incorporadas e limite de tamanho |
 | `chk_modelo_versao.js`  | a peça chama o modelo pelo nome (em vigor e com alterações), e alterá-lo obriga a uma versão do casal, com nome, que mais ninguém vê |
 | `chk_orcamento.js`      | o curso das despesas: contas do resumo, isolamento entre casamentos, a ida e volta no export/import, e o teto pelos formulários de registo e pela Gestão |
 | `chk_floreados.js`      | os floreados abraçam os nomes no sítio que o desenho de origem lhes deu, o clássico é o traço da referência ponto por ponto, e os cinco feitios ficam todos na mesma âncora |
