@@ -211,11 +211,12 @@
     if(location.hash==='#confirmar'&&history.replaceState)history.replaceState({},'',location.pathname+location.search);
     if(ultimoFoco&&ultimoFoco.focus)ultimoFoco.focus();
   }
-  var gatilhos=todos('[data-kulemba="confirmacao"]');gatilhos.forEach(function(g){escut(g,'click',function(e){e.preventDefault();abrirConfirmacao(g);});});
+  var gatilhos=todos('[data-kulemba="confirmacao"]');
+  escut(document,'click',function(e){var g=e.target&&e.target.closest&&e.target.closest('[data-kulemba="confirmacao"]');if(!g)return;e.preventDefault();abrirConfirmacao(g);});
   if(location.hash==='#confirmar'&&gatilhos[0])setTimeout(function(){abrirConfirmacao(gatilhos[0]);},0);
   escut(window,'hashchange',function(){if(location.hash==='#confirmar'&&gatilhos[0])abrirConfirmacao(gatilhos[0]);else if(modal&&modal.getAttribute('aria-hidden')==='false')fecharConfirmacao();});
   escut(window,'message',function(e){if(e.data&&e.data.tipo==='kulemba:rsvp-concluido'){emitir('confirmacao-concluida',e.data);}});
 
-  window.KulembaConvite={config:cfg,eventos:emitir,abrirCapa:abrirCapa,iniciarRolagem:iniciarRolagem,pausarRolagem:pausarRolagem,retomarRolagem:retomarRolagem,abrirConfirmacao:function(){if(gatilhos[0])abrirConfirmacao(gatilhos[0]);},fecharConfirmacao:fecharConfirmacao};
+  window.KulembaConvite={config:cfg,eventos:emitir,abrirCapa:abrirCapa,iniciarRolagem:iniciarRolagem,pausarRolagem:pausarRolagem,retomarRolagem:retomarRolagem,abrirConfirmacao:function(gatilho){var g=gatilho||um('[data-kulemba="confirmacao"]');if(g)abrirConfirmacao(g);},fecharConfirmacao:fecharConfirmacao};
   emitir('pronto',{runtime:window.KulembaConvite});
 })();

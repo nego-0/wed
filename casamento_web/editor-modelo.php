@@ -184,18 +184,23 @@ function manifestoEditorModelo(string $ambito, array $defs, ?array $modelo = nul
     $cat = catalogoCapacidadesModelo($ambito);
     $declarado = declaracaoEditorPacote($ambito, $modelo);
     $suportado = capacidadesModeloPadrao($ambito);
-    foreach (['seccoes','paineis','media','efeitos','componentes','recursos'] as $grupo) {
+    $gruposPacote = ['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
+                     'cores_permitidas','tipografias_permitidas','componentes','recursos'];
+    foreach ($gruposPacote as $grupo) {
         if (!isset($declarado[$grupo]) || !is_array($declarado[$grupo])) continue;
         $aceites = array_flip(array_keys($cat[$grupo] ?? []));
         $suportado[$grupo] = array_values(array_filter(array_map('strval', $declarado[$grupo]), fn($v)=>isset($aceites[$v])));
     }
     $administrador = $modo === 'administrador';
     $ficha = $administrador ? $suportado : $fichaNoivos;
-    if ($administrador) {
-        $ficha['campos_editaveis'] = array_keys($cat['campos_editaveis']);
-        $ficha['cores_permitidas'] = array_keys($cat['cores_permitidas']);
-        $ficha['tipografias_permitidas'] = array_keys($cat['tipografias_permitidas']);
-        $ficha['movimentaveis'] = array_keys($cat['movimentaveis']);
+    if (!$administrador) {
+        // A liberdade concedida pelo admin nunca pode anunciar algo que o
+        // pacote instalado não sabe desenhar. A intersecção evita controlos
+        // que gravam valores sem qualquer efeito no convite.
+        foreach ($gruposPacote as $grupo) {
+            $ficha[$grupo] = array_values(array_intersect(
+                (array)($ficha[$grupo] ?? []), (array)($suportado[$grupo] ?? [])));
+        }
     }
     $paineis = array_flip($ficha['paineis']);
     if (!isset($paineis['composicao'])) $ficha['movimentaveis'] = [];

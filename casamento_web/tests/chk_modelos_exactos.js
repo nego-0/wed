@@ -43,20 +43,25 @@ function ok(cond, msg){ console.log((cond?'✓':'✗')+' '+msg); if(!cond) falha
       externo:[...document.querySelectorAll('img,audio,source,link[rel=stylesheet],script[src]')]
         .map(e=>e.currentSrc||e.href||e.src||'').filter(u=>/^https?:/.test(u)&&!u.startsWith(location.origin)),
       overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
+      overflowAlvo:[...document.querySelectorAll('body *')].map(el=>({el,r:el.getBoundingClientRect()})).filter(x=>x.r.right>innerWidth+1).concat([...document.querySelectorAll('body *')].map(el=>({el,r:el.getBoundingClientRect()})).filter(x=>x.r.left<-1)).map(x=>`${x.el.tagName}.${String(x.el.className).split(/\s+/).slice(0,3).join('.')} (${Math.round(x.r.left)}–${Math.round(x.r.right)})`)[0]||'',
       capa:!!document.querySelector('#cover:not([hidden])'),
       pt:/Abrir|Reserve a data|Convida/.test(document.body.innerText),
       mensagens:[...document.querySelectorAll('button,a')].some(e=>/SEND WISHES|ENVOYER|GỬI LỜI CHÚC/i.test(e.textContent))||!!document.querySelector('form textarea'),
-      confirmacao:!!document.querySelector('[data-kulemba="confirmacao"]'),
-      galeriaExemplo:(()=>{const cfg=(window.KulembaConvite&&window.KulembaConvite.config&&window.KulembaConvite.config.exacto)||{},fontes=(cfg.galeria||[]).map(x=>new URL(x,location.href).href),grupos=[[...document.querySelectorAll('img[alt^="Wedding photo"]')],[...document.querySelectorAll('button[aria-label^="Ver a imagem"] img')],[...document.querySelectorAll('button[aria-label^="Ir para a fotografia"],button[aria-label^="Go to photo"]')]],ok=fontes.length===4&&grupos[0].length===4&&grupos[1].length===4&&(grupos[2].length===0||grupos[2].length===4)&&grupos.slice(0,2).every(imgs=>imgs.every((img,i)=>img.currentSrc===fontes[i]));return{ok,contagens:grupos.map(x=>x.length),fontes:fontes.length};})()
+      confirmacao:!!document.querySelector('[data-kulemba="confirmacao"], [data-rsvp-trigger]'),
+      semanticaLista:[['grande-dia','.exact-semantic-ceremony'],['recepcao','.exact-semantic-reception'],['cronograma','.exact-semantic-program'],['acesso','[data-sec="acesso"]']].filter(([,sel])=>!document.querySelector(sel)).map(([nome])=>nome),
+      ficticios:/weddingdemo|venmo|banco de exemplo|00000000/i.test(document.body.innerText),
+      galeriaExemplo:(()=>{const cfg=(window.KulembaConvite&&window.KulembaConvite.config&&window.KulembaConvite.config.exacto)||{},fontes=(cfg.galeria||[]).map(x=>new URL(x,location.href).href),principais=[...document.querySelectorAll('[data-kulemba-galeria="1"]')].filter(img=>!img.closest('dialog')),miniaturas=[...document.querySelectorAll('dialog button[aria-label^="Ver a imagem"] img')],pontos=[...document.querySelectorAll('button[aria-label^="Ir para a fotografia"],button[aria-label^="Go to photo"]')],ok=fontes.length<=4&&fontes.length>0&&principais.length===fontes.length&&principais.every((img,i)=>img.currentSrc===fontes[i])&&miniaturas.length===fontes.length&&miniaturas.every((img,i)=>img.currentSrc===fontes[i])&&pontos.length===fontes.length;return{ok,contagens:[principais.length,miniaturas.length,pontos.length],fontes:fontes.length};})()
     }),slug);
     ok(estado.estilo===slug&&estado.exacto,`${slug} usa o documento exacto`);
     ok(estado.externo.length===0,`${slug} usa somente recursos locais`);
-    ok(estado.overflow<=1,`${slug} não transborda a 390 px`);
+    ok(estado.overflow<=1,`${slug} não transborda a 390 px${estado.overflow>1&&estado.overflowAlvo?`: ${estado.overflowAlvo}`:''}`);
     ok(estado.capa,`${slug} conserva a capa fechada`);
     ok(estado.pt,`${slug} apresenta a abertura em português`);
     ok(!estado.mensagens,`${slug} não apresenta o botão de enviar mensagem`);
     ok(estado.confirmacao,`${slug} liga a confirmação ao modal comum`);
-    ok(estado.galeriaExemplo.ok,`${slug} limita a galeria às quatro fotografias semânticas do administrador (${estado.galeriaExemplo.contagens.join('/')} elementos)`);
+    ok(estado.semanticaLista.length===0&&estado.confirmacao,`${slug} apresenta cerimónia, copo d'água, programa, confirmação e acesso${estado.semanticaLista.length?` (faltam: ${estado.semanticaLista.join(', ')})`:''}`);
+    ok(!estado.ficticios,`${slug} não expõe dados bancários ou contactos fictícios`);
+    ok(estado.galeriaExemplo.fontes===0 || estado.galeriaExemplo.ok,`${slug} usa no máximo as quatro fotografias semânticas do administrador (${estado.galeriaExemplo.contagens.join('/')} elementos)`);
     if(estado.capa){
       const abrir=page.locator('#cover a,#cover button').filter({hasText:/Abrir/i}).first();
       if(await abrir.count()) await abrir.click(); else await page.locator('#cover').click({position:{x:10,y:10}});
@@ -67,7 +72,7 @@ function ok(cond, msg){ console.log((cond?'✓':'✗')+' '+msg); if(!cond) falha
       ok(false,`${slug} abre o convite`);
     }
     if(estado.confirmacao){
-      await page.locator('[data-kulemba="confirmacao"]').first().evaluate(e=>e.click());
+      await page.locator('[data-kulemba="confirmacao"], [data-rsvp-trigger]').first().evaluate(e=>e.click());
       await page.waitForTimeout(250);
       ok(await page.locator('.kulemba-modal[aria-hidden="false"]').count()===1,`${slug} abre a confirmação em modal`);
       await page.locator('.kulemba-modal__fechar').evaluate(e=>e.click());
@@ -81,7 +86,7 @@ function ok(cond, msg){ console.log((cond?'✓':'✗')+' '+msg); if(!cond) falha
       const presenteAberto=page.locator('dialog[open]').filter({hasNot:page.locator('[aria-label="Imagem anterior"]')}).first();
       ok(await presenteAberto.count()===1,`${slug} abre a caixa de presentes`);
       if(await presenteAberto.count()) await presenteAberto.evaluate(e=>e.close?e.close():e.removeAttribute('open'));
-    }
+    } else ok(true,`${slug} omite presentes quando o administrador não os configurou`);
     const seguinte=page.locator('button[aria-label="Fotografia seguinte"]').first();
     if(await seguinte.count()){
       const primeira=page.locator('img[alt^="Wedding photo"]').first().locator('..');

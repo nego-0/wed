@@ -238,6 +238,57 @@ $qrValue     = enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'];
 // tocar nos fundos, molduras, ícones ou tipografia próprios de cada modelo.
 $runtimeExacto = [];
 if ($ehModeloExacto) {
+    $dataEvento = null;
+    try { $dataEvento = new DateTime((string)$DEFS['evento.data'] . ' ' . (string)$DEFS['evento.hora']); } catch (Throwable $e) {}
+    $componentesExactos = ['presentes'=>null, 'mensagens'=>null];
+    foreach (blocosLivres($DEFS) as $blocoLivre) {
+        $tipoLivre = (string)($blocoLivre['tipo'] ?? '');
+        if (!array_key_exists($tipoLivre, $componentesExactos) || $componentesExactos[$tipoLivre] !== null) continue;
+        $itensLivres = [];
+        foreach ((array)($blocoLivre['itens'] ?? []) as $itemLivre) {
+            if (!is_array($itemLivre)) continue;
+            $tituloLivre = trim((string)($itemLivre['t'] ?? ''));
+            $textoLivre = trim((string)($itemLivre['x'] ?? ''));
+            if ($tituloLivre === '' && $textoLivre === '') continue;
+            $itensLivres[] = [
+                'icone'=>(string)($itemLivre['i'] ?? 'coracao'),
+                'titulo'=>$tituloLivre,
+                'texto'=>$textoLivre,
+                'textoHtml'=>mdTexto($textoLivre),
+            ];
+        }
+        $componentesExactos[$tipoLivre] = [
+            'eyebrow'=>trim((string)($blocoLivre['eyebrow'] ?? '')),
+            'titulo'=>trim((string)($blocoLivre['titulo'] ?? '')),
+            'texto'=>trim((string)($blocoLivre['texto'] ?? '')),
+            'textoHtml'=>mdTexto((string)($blocoLivre['texto'] ?? '')),
+            'modo'=>in_array(($blocoLivre['modo'] ?? ''), ['texto','qr','metodos'], true)
+                ? (string)$blocoLivre['modo'] : 'texto',
+            'qr'=>trim((string)($blocoLivre['qr'] ?? '')),
+            'itens'=>$itensLivres,
+        ];
+    }
+    $programaExacto = [];
+    foreach (['civil','religiosa'] as $tipoCerimonia) {
+        $horaCerimonia = trim((string)($DEFS['evento.'.$tipoCerimonia.'_hora'] ?? ''));
+        if ($horaCerimonia === '') continue;
+        $programaExacto[] = [
+            'titulo'=>(string)($DEFS['evento.'.$tipoCerimonia.'_titulo'] ?? ucfirst($tipoCerimonia)),
+            'hora'=>$horaCerimonia,
+            'icone'=>(string)($DEFS['cronograma.icone_'.$tipoCerimonia] ?? 'aneis'),
+        ];
+    }
+    foreach (json_decode((string)($DEFS['cronograma.itens'] ?? '[]'), true) ?: [] as $itemPrograma) {
+        if (!is_array($itemPrograma)) continue;
+        $tituloPrograma = trim((string)($itemPrograma['t'] ?? ''));
+        $horaPrograma = trim((string)($itemPrograma['h'] ?? ''));
+        if ($tituloPrograma === '' && $horaPrograma === '') continue;
+        $programaExacto[] = [
+            'titulo'=>$tituloPrograma,
+            'hora'=>$horaPrograma,
+            'icone'=>(string)($itemPrograma['i'] ?? 'estrela'),
+        ];
+    }
     $runtimeExacto = [
         'modelo' => $rendererExacto,
         'noiva' => (string)$DEFS['casal.noiva'],
@@ -257,6 +308,16 @@ if ($ehModeloExacto) {
             'contagemTitulo' => (string)$DEFS['recepcao.contagem_titulo'],
             'localTitulo' => (string)$DEFS['recepcao.local_titulo'],
         ],
+        'evento' => [
+            'iso'=>$dataEvento ? $dataEvento->format(DATE_ATOM) : '',
+            'dia'=>$dataEvento ? (int)$dataEvento->format('j') : '',
+            'mes'=>$dataEvento ? (MESES_PT[(int)$dataEvento->format('n')] ?? '') : '',
+            'ano'=>$dataEvento ? (int)$dataEvento->format('Y') : '',
+            'semana'=>$dataEvento ? (DIAS_PT[(int)$dataEvento->format('w')] ?? '') : '',
+            'hora'=>(string)$DEFS['evento.hora'],
+        ],
+        'programaTitulo'=>(string)$DEFS['cronograma.titulo'],
+        'programa'=>$programaExacto,
         'local' => (string)$DEFS['evento.local'],
         'cidade' => (string)$DEFS['evento.cidade'],
         // A galeria nativa dos onze modelos tinha fotografias de demonstração
@@ -270,15 +331,22 @@ if ($ehModeloExacto) {
             (string)$DEFS['media.acesso'],
         ], static fn(string $v): bool => trim($v) !== '')),
         'mapEmbed' => googleMapsEmbedUrl($DEFS),
-        'mapsUrl' => (string)$DEFS['evento.maps'],
+        'mapsUrl' => trim((string)$DEFS['evento.maps']) !== ''
+            ? (string)$DEFS['evento.maps']
+            : 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode(trim((string)$DEFS['evento.local'] . ', ' . (string)$DEFS['evento.cidade'])),
         'mapaRotulo' => (string)$DEFS['textos.mapa'],
+        'confirmUrl' => html_entity_decode($confirmUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
         'acesso' => [
             'eyebrow' => (string)$DEFS['acesso.eyebrow'],
             'titulo' => (string)$DEFS['acesso.titulo'],
             'instrucao' => (string)$DEFS['acesso.instrucao'],
+            'instrucaoHtml' => mdTexto((string)$DEFS['acesso.instrucao']),
             'nota' => (string)$DEFS['acesso.nota'],
+            'notaHtml' => mdTexto((string)$DEFS['acesso.nota']),
             'qr' => $qrValue,
         ],
+        'presentes'=>$componentesExactos['presentes'],
+        'mensagens'=>$componentesExactos['mensagens'],
     ];
 }
 
