@@ -28,16 +28,107 @@
   function pausar(){if(!audio)return;try{audio.pause();}catch(e){}estadoAudio(false);}
   if(audio&&audioBtn){audio.volume=.55;audioBtn.style.display='flex';escut(audio,'play',function(){estadoAudio(true);});escut(audio,'pause',function(){estadoAudio(false);});escut(audioBtn,'click',function(){tocando?pausar():tocar();});}
 
-  var rolagemId=0,rolagemAnterior=0,rolagemPausaAte=0;
-  function passoRolagem(agora){
-    if(!rolagemAnterior)rolagemAnterior=agora;
-    var dt=Math.min(50,agora-rolagemAnterior);rolagemAnterior=agora;
-    if(agora>=rolagemPausaAte)window.scrollBy(0,(Number(cfg.rolagem&&cfg.rolagem.velocidade)||28)*dt/1000);
-    if(window.scrollY+window.innerHeight<document.documentElement.scrollHeight-2)rolagemId=requestAnimationFrame(passoRolagem);else rolagemId=0;
+  var rolagemId=0,rolagemTimer=0,rolagemWatchdog=0,rolagemUltimoQuadro=0,rolagemInicio,rolagemPausada=false,rolagemTerminada=false,rolagemRoda=0;
+  var rolagemCompositor=null,rolagemCompositorRaiz=um('[data-showcase-root]'),rolagemCompositorBase=0,rolagemCompositorDistancia=0;
+  var usarCompositor=!!(rolagemCompositorRaiz&&rolagemCompositorRaiz.animate);
+  var rolagemVelocidade=Number(cfg.rolagem&&cfg.rolagem.velocidade)||50;
+  var rolagemAtraso=Math.max(0,Number(cfg.rolagem&&cfg.rolagem.atraso)||2000);
+  function posicaoRolagem(){return window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0;}
+  function posicaoCompositor(){
+    if(!rolagemCompositor)return posicaoRolagem();
+    var duracao=Number(rolagemCompositor.effect&&rolagemCompositor.effect.getTiming().duration)||1;
+    var tempo=Math.max(0,Math.min(duracao,Number(rolagemCompositor.currentTime)||0));
+    return rolagemCompositorBase+rolagemCompositorDistancia*(tempo/duracao);
   }
-  function iniciarRolagem(){if(reduzido||rolagemId||!(cfg.rolagem&&cfg.rolagem.activa))return;rolagemAnterior=0;rolagemId=requestAnimationFrame(passoRolagem);emitir('rolagem-iniciar');}
-  function pausarRolagem(){rolagemPausaAte=performance.now()+4500;emitir('rolagem-pausar');}
-  ['wheel','touchstart','pointerdown','keydown'].forEach(function(ev){escut(window,ev,pausarRolagem,{passive:true});});
+  function limparCompositor(sincronizar){
+    if(!rolagemCompositor)return;
+    var posicao=sincronizar?posicaoCompositor():posicaoRolagem();
+    try{rolagemCompositor.pause();rolagemCompositor.cancel();}catch(e){}
+    rolagemCompositor=null;rolagemCompositorDistancia=0;
+    rolagemCompositorRaiz.style.willChange='';rolagemCompositorRaiz.style.transform='';
+    if(sincronizar){window.scrollTo(0,posicao);document.documentElement.scrollTop=posicao;document.body.scrollTop=posicao;}
+  }
+  function iniciarCompositor(){
+    if(!usarCompositor||rolagemPausada||rolagemTerminada)return false;
+    limparCompositor(false);
+    rolagemCompositorBase=posicaoRolagem();
+    rolagemCompositorDistancia=Math.max(0,document.documentElement.scrollHeight-window.innerHeight-rolagemCompositorBase);
+    if(rolagemCompositorDistancia<2){terminarRolagem();emitir('rolagem-fim',{posicao:rolagemCompositorBase,altura:document.documentElement.scrollHeight,janela:window.innerHeight});return true;}
+    var duracao=rolagemCompositorDistancia/rolagemVelocidade*1000;
+    rolagemCompositorRaiz.style.willChange='transform';
+    rolagemCompositor=rolagemCompositorRaiz.animate([
+      {transform:'translate3d(0,0,0)'},
+      {transform:'translate3d(0,-'+rolagemCompositorDistancia+'px,0)'}
+    ],{duration:duracao,easing:'linear',fill:'forwards'});
+    rolagemCompositor.onfinish=function(){
+      var fim=rolagemCompositorBase+rolagemCompositorDistancia;
+      limparCompositor(false);window.scrollTo(0,fim);document.documentElement.scrollTop=fim;document.body.scrollTop=fim;
+      terminarRolagem();emitir('rolagem-fim',{posicao:fim,altura:document.documentElement.scrollHeight,janela:window.innerHeight});
+    };
+    return true;
+  }
+  function terminarRolagem(){
+    if(rolagemId)cancelAnimationFrame(rolagemId);rolagemId=0;
+    if(rolagemTimer)clearTimeout(rolagemTimer);rolagemTimer=0;rolagemTerminada=true;
+    if(rolagemWatchdog)clearInterval(rolagemWatchdog);rolagemWatchdog=0;
+  }
+  function actualizarRolagem(agora){
+    if(rolagemTerminada)return;
+    if(rolagemPausada)return;
+    if(rolagemInicio===undefined)rolagemInicio=agora;
+    var alvo=(agora-rolagemInicio)/1000*rolagemVelocidade;
+    window.scrollTo(0,alvo);
+    // A fonte original força ambos os scroll containers quando o navegador
+    // fica mais de dois píxeis atrás do alvo temporal.
+    if(Math.abs(posicaoRolagem()-alvo)>2){document.documentElement.scrollTop=alvo;document.body.scrollTop=alvo;}
+    if(posicaoRolagem()+window.innerHeight>=document.documentElement.scrollHeight-10){var fim={posicao:posicaoRolagem(),altura:document.documentElement.scrollHeight,janela:window.innerHeight};terminarRolagem();emitir('rolagem-fim',fim);return;}
+  }
+  function quadroRolagem(agora){
+    rolagemId=0;rolagemUltimoQuadro=agora;actualizarRolagem(agora);
+    if(!rolagemTerminada)rolagemId=requestAnimationFrame(quadroRolagem);
+  }
+  function iniciarRolagem(){
+    if(reduzido||rolagemId||rolagemTimer||rolagemWatchdog||rolagemTerminada||!(cfg.rolagem&&cfg.rolagem.activa))return;
+    rolagemInicio=undefined;rolagemTimer=setTimeout(function(){
+      rolagemTimer=0;if(rolagemTerminada)return;
+      if(iniciarCompositor())return;
+      rolagemUltimoQuadro=performance.now();rolagemId=requestAnimationFrame(quadroRolagem);
+      // Alguns browsers incorporados suspendem requestAnimationFrame mesmo
+      // com o separador visível. O relógio original continua a comandar a
+      // posição; este watchdog só desenha quando não chega um frame em 50 ms.
+      rolagemWatchdog=setInterval(function(){var agora=performance.now();if(agora-rolagemUltimoQuadro>50)actualizarRolagem(agora);},16);
+    },rolagemAtraso);
+    emitir('rolagem-iniciar',{velocidade:rolagemVelocidade,atraso:rolagemAtraso});
+  }
+  function pausarRolagem(origem){if(rolagemPausada||rolagemTerminada)return;rolagemPausada=true;if(rolagemCompositor)limparCompositor(true);emitir('rolagem-pausar',{origem:origem||'manual'});}
+  function retomarRolagem(){
+    if(!rolagemPausada||rolagemTerminada)return;
+    rolagemPausada=false;rolagemRoda=0;
+    if(!iniciarCompositor())rolagemInicio=performance.now()-posicaoRolagem()/rolagemVelocidade*1000;
+    emitir('rolagem-retomar');
+  }
+
+  if(cfg.rolagem&&cfg.rolagem.activa){
+    if('scrollRestoration' in history)history.scrollRestoration='manual';
+    window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;
+  }
+  escut(window,'wheel',function(e){if((rolagemRoda+=Math.abs(e.deltaY))>=50)pausarRolagem('roda');},{passive:true});
+  escut(window,'touchstart',function(e){if(cover&&!cover.hidden&&e.target&&cover.contains(e.target))return;pausarRolagem('toque');},{passive:true});
+  escut(window,'scroll',function(){if(rolagemCompositor&&Math.abs(posicaoRolagem()-rolagemCompositorBase)>2)pausarRolagem('barra');},{passive:true});
+  var conviteRolavel=um('[data-video-invitation]')||um('[data-showcase-root]')||document.body;
+  var selectorEditavel='input,textarea,select,[contenteditable="true"]';
+  var selectorInteractivo='img,button,a,input,textarea,select,video,audio,dialog,[role="menu"],[role="menuitem"],[role="listbox"],[role="option"],[role="dialog"],[role="alertdialog"],.modal,.dropdown-menu,[data-dropdown],[data-modal]';
+  escut(window,'focusin',function(e){if(e.target&&e.target.matches&&e.target.matches(selectorEditavel))pausarRolagem('foco');},{passive:true});
+  escut(window,'mousedown',function(e){if(e.target&&e.target.matches&&e.target.matches(selectorEditavel))pausarRolagem('edicao');},{passive:true});
+  escut(conviteRolavel,'click',function(e){
+    if(cover&&!cover.hidden)return;
+    // Actualizações automáticas de componentes (por exemplo, a rotação da
+    // galeria) podem disparar click() sem intervenção humana.
+    if(e.isTrusted===false)return;
+    var alvo=e.target&&e.target.closest?e.target:null;if(!alvo)return;
+    if(alvo.closest(selectorEditavel)||alvo.closest(selectorInteractivo)){pausarRolagem('interactivo');return;}
+    rolagemPausada?retomarRolagem():pausarRolagem('pagina');
+  });
 
   var cover=um('[data-kulemba="capa"],#cover');
   function abrirCapa(){
@@ -125,6 +216,6 @@
   escut(window,'hashchange',function(){if(location.hash==='#confirmar'&&gatilhos[0])abrirConfirmacao(gatilhos[0]);else if(modal&&modal.getAttribute('aria-hidden')==='false')fecharConfirmacao();});
   escut(window,'message',function(e){if(e.data&&e.data.tipo==='kulemba:rsvp-concluido'){emitir('confirmacao-concluida',e.data);}});
 
-  window.KulembaConvite={config:cfg,eventos:emitir,abrirCapa:abrirCapa,iniciarRolagem:iniciarRolagem,abrirConfirmacao:function(){if(gatilhos[0])abrirConfirmacao(gatilhos[0]);},fecharConfirmacao:fecharConfirmacao};
+  window.KulembaConvite={config:cfg,eventos:emitir,abrirCapa:abrirCapa,iniciarRolagem:iniciarRolagem,pausarRolagem:pausarRolagem,retomarRolagem:retomarRolagem,abrirConfirmacao:function(){if(gatilhos[0])abrirConfirmacao(gatilhos[0]);},fecharConfirmacao:fecharConfirmacao};
   emitir('pronto',{runtime:window.KulembaConvite});
 })();

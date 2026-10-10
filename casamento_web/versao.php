@@ -53,6 +53,8 @@ function correcoesEsperadas(): array {
          'assets/janela.js', 'a rolar, não troca de lado'],
         ['O Orçamento tem uma caixa de pesquisa de despesas, por descrição, fornecedor ou categoria',
          'orcamento.php', 'id="orc-busca"'],
+        ['A rolagem automática usa o compositor, mantém uma velocidade temporal estável e pode ser pausada ou retomada',
+         'assets/convite-runtime.js', 'function retomarRolagem()'],
         ['Os onze modelos comparados estão instalados como documentos próprios em português, com recursos, fontes, música e animações locais',
          'assets/convite/modelos/chungdoi-exact/1.0.0/CREDITOS.md', 'onze pacotes'],
         ['Cada modelo exacto conserva a sua identidade e liga presentes, galeria e confirmação ao runtime comum',
