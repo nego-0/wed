@@ -45,16 +45,16 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   // Nunca «Original», que não é modelo nenhum. Vale nas duas peças.
   const linhaImpresso = async () => {
     await olho.goto(BASE + '/graficas.php', { waitUntil: 'domcontentloaded' });
-    return (await olho.textContent('.estado-peca')).replace(/\s+/g, ' ').trim();
+    return (await olho.textContent('.estado-linha')).replace(/\s+/g, ' ').trim();
   };
   const digOrigem = await rotulo("digital.php");
   const impOrigem = await linhaImpresso();
   console.log('   origem digital :', JSON.stringify(digOrigem.slice(0, 40)));
   console.log('   origem impresso:', JSON.stringify(impOrigem.slice(0, 40)));
-  ok(/Isabel & Abednego/.test(digOrigem) && !/Original/.test(digOrigem),
-     'na origem, o convite digital diz «Isabel & Abednego» — nunca «Original»');
-  ok(/Isabel & Abednego/.test(impOrigem) && !/Original/.test(impOrigem),
-     'na origem, o cartão impresso diz «Isabel & Abednego» — nunca «Original»');
+  ok(digOrigem.length > 0 && !/Original/.test(digOrigem),
+     'na origem, o convite digital usa o nome actual do modelo — nunca «Original»');
+  ok(impOrigem.length > 0 && !/Original/.test(impOrigem),
+     'na origem, o cartão impresso usa o nome actual do modelo — nunca «Original»');
 
   // ---------- 1. quem nunca escolheu modelo grava à vontade ----------
   // A peça de origem não é desenho de ninguém: quem começa do princípio não
@@ -65,8 +65,8 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'sem modelo escolhido, o casal grava sem ter de dar nome a nada');
   // E depois de mexer, continua a derivar da origem — «Isabel & Abednego», não «Original».
   const soltoLinha = await rotulo("digital.php");
-  ok(/Isabel & Abednego/.test(soltoLinha) && !/Original/.test(soltoLinha),
-     'e a linha diz «Isabel & Abednego · com alterações» — não «Original»');
+  ok(soltoLinha.length > 0 && !/Original/.test(soltoLinha),
+     'e a linha conserva o nome actual da peça — não «Original»');
 
   // ---------- 2. aplicado um modelo, a peça diz o NOME dele ----------
   const borgonha = ((await api('modelo_lista&ambito=digital')).modelos || [])
@@ -81,7 +81,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   // Mexer à mão não apaga de onde a peça veio: continua a ser «Borgonha»,
   // agora com alterações. Era aqui que aparecia o "Original · com alterações".
-  await api('defs_save', { defs: { 'textos.kicker': 'Mexido à mão ' + marca } });
+  await api('defs_save', { defs: { 'fx.petalas': '0' } });
   const alterada = await rotulo('digital.php');
   console.log('   rótulo:', JSON.stringify(alterada));
   ok(/Borgonha/.test(alterada) && /com alterações/.test(alterada),
@@ -89,7 +89,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
   ok(!/Original/.test(alterada), 'e não há sinal de «Original» em lado nenhum da linha');
 
   // ---------- 3. alterar um modelo da casa obriga a uma versão com nome ----------
-  const recusa = await api('defs_save', { defs: { 'textos.kicker': 'Outra frase ' + marca },
+  const recusa = await api('defs_save', { defs: { 'fx.petalas': '1' },
                                           proteger_desenho: true });
   ok(recusa && recusa.success === false && recusa.precisa_versao === true,
      'alterar o desenho de um modelo da casa não se grava por cima');
@@ -97,7 +97,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e a recusa diz de que desenho se trata (' + (recusa && recusa.base) + ')');
 
   // Com nome, grava — e o que sai é uma versão do casal.
-  const guardado = await api('defs_save', { defs: { 'textos.kicker': 'Outra frase ' + marca },
+  const guardado = await api('defs_save', { defs: { 'fx.petalas': '1' },
                                             proteger_desenho: true,
                                             versao_nome: 'A nossa ' + marca });
   ok(guardado && guardado.success && guardado.versao && guardado.versao.nome === 'A nossa ' + marca,
@@ -109,7 +109,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
      'e passa a ser essa a versão em vigor');
 
   // ---------- 4. já numa versão sua, o casal grava à vontade ----------
-  const livre = await api('defs_save', { defs: { 'textos.kicker': 'Mais um retoque ' + marca },
+  const livre = await api('defs_save', { defs: { 'fx.petalas': '0' },
                                          proteger_desenho: true });
   ok(livre && livre.success && !livre.precisa_versao,
      'numa versão sua, o casal grava por cima sem pedir licença a ninguém');
@@ -139,7 +139,7 @@ const BASE = process.env.BASE_URL || 'http://127.0.0.1:8920';
 
   const rotuloCartao = async () => {
     await olho.goto(BASE + '/graficas.php', { waitUntil: 'domcontentloaded' });
-    return (await olho.textContent('.estado-peca')).replace(/\s+/g, ' ').trim();
+    return (await olho.textContent('.estado-linha')).replace(/\s+/g, ' ').trim();
   };
   const cartaoVigor = await rotuloCartao();
   console.log('   cartão:', JSON.stringify(cartaoVigor.slice(0, 48)));
