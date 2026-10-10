@@ -33,9 +33,7 @@ if ($demo && !ehAdmin() && !ehAdminPlataforma()) {
 $DEFS = ($demo && !$provaAtual) ? demonstracaoDefsComModelo($conn) : defsAtuais($conn);
 $download = isset($_GET['download']) && $_GET['download'] === '1';
 if ($demo) {
-    $c = ['id'=>0, 'codigo'=>'EXEMPLO', 'nome_exibicao'=>'Família Exemplo', 'sufixo'=>null,
-          'mostrar_num_mesa'=>1, 'lugares'=>4, 'mesa_nome'=>'Mesa 1',
-          'msg_pessoal'=>'', 'membros'=>[]];
+    $c = conviteDeExemplo($conn);
 }
 
 // ---- Tela do editor -----------------------------------------

@@ -236,6 +236,20 @@ function limitarCapacidadesAoPacote(string $ambito, array|string|null $valor, ?a
     return $ficha;
 }
 
+/** Catálogo administrativo já filtrado pelo pacote visual escolhido. */
+function catalogoCapacidadesDisponivel(string $ambito, ?array $modelo = null): array {
+    $catalogo = catalogoCapacidadesModelo($ambito);
+    $suportado = capacidadesSuportadasModelo($ambito, $modelo);
+    foreach (['seccoes','paineis','media','efeitos','movimentaveis','campos_editaveis',
+              'cores_permitidas','tipografias_permitidas','componentes','recursos'] as $grupo) {
+        $permitidos = array_flip((array)($suportado[$grupo] ?? []));
+        $catalogo[$grupo] = array_filter((array)($catalogo[$grupo] ?? []),
+            fn($rotulo,$chave)=>isset($permitidos[$chave]), ARRAY_FILTER_USE_BOTH);
+    }
+    $catalogo['limites'] = $suportado['limites'] ?? [];
+    return $catalogo;
+}
+
 /** Contrato que o inspector recebe no navegador. */
 function manifestoEditorModelo(string $ambito, array $defs, ?array $modelo = null, string $modo = 'noivos'): array {
     $id = $modelo ? ('modelo-'.(int)($modelo['id'] ?? 0)) : 'peca-actual';

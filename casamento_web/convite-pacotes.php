@@ -137,6 +137,25 @@ function convitePacotesRegistados(): array {
     return $pacotes;
 }
 
+/** Catálogo público dos pacotes que podem servir de base a um modelo novo. */
+function convitePacotesCatalogo(string $ambito = 'digital', bool $incluirLegados = false): array {
+    $out = [];
+    foreach ((array)(convitePacotesRegistados()[$ambito] ?? []) as $key=>$versoes) {
+        foreach ((array)$versoes as $versao=>$pacote) {
+            if (!$incluirLegados && !empty($pacote['legado'])) continue;
+            $out[] = [
+                'ambito'=>$ambito, 'renderer_key'=>(string)$key,
+                'renderer_version'=>(string)$versao,
+                'renderer_schema'=>(int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA),
+                'nome'=>(string)($pacote['manifesto']['nome'] ?? $key),
+                'descricao'=>(string)($pacote['manifesto']['descricao'] ?? ''),
+            ];
+        }
+    }
+    usort($out, fn($a,$b)=>strnatcasecmp($a['nome'], $b['nome']));
+    return $out;
+}
+
 /** Identidade persistível do pacote de origem de um âmbito. */
 function convitePacoteOrigem(string $ambito): array {
     if ($ambito !== 'digital') {

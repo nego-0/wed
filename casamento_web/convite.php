@@ -16,12 +16,8 @@ $modoModal = isset($_GET['modal']) && $_GET['modal'] === '1';
 $temaRsvp = trim((string)($_GET['tema'] ?? ''));
 $temaExacto = array_key_exists($temaRsvp, convitePacotesExactos());
 if ($demo && !ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
-$c = $demo ? [
-    'id'=>0,'codigo'=>'EXEMPLO','nome_exibicao'=>'Família Mendes','sufixo'=>null,
-    'mostrar_num_mesa'=>1,'lugares'=>2,'mesa_nome'=>'Acácia','msg_pessoal'=>'',
-    'rsvp_estado'=>'pendente','rsvp_confirmados'=>null,
-    'membros'=>[['id'=>-1,'nome'=>'Carla Mendes','rsvp'=>'pendente'],['id'=>-2,'nome'=>'Rui Mendes','rsvp'=>'pendente']],
-] : ($codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null);
+$c = $demo ? conviteDeExemplo($conn)
+           : ($codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null);
 
 $DEFS = $demo ? demonstracaoDefsComModelo($conn) : defsAtuais($conn);
 $CAS  = casalInfo($DEFS);

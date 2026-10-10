@@ -57,7 +57,7 @@ if ($aberto > 0) {
   .painel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; margin-bottom:1.2rem; }
   .painel h3{ margin:0 0 .2rem; font-size:var(--t-corpo); }
   .painel .dica{ font-size:var(--t-denso); color:var(--ink-fraco); margin-bottom:.8rem; line-height:1.5; }
-  .lf{ display:grid; grid-template-columns:2fr 3fr 1fr auto; gap:.7rem; align-items:end; }
+  .lf{ display:grid; grid-template-columns:2fr 3fr 1fr 1.5fr auto; gap:.7rem; align-items:end; }
   /* ---- A grelha dos modelos ----
      Esta página é sobre DESENHOS, e não mostrava desenho nenhum: escolher um
      modelo pelo nome é escolher às cegas. Cada um passa a trazer a sua cara,
@@ -290,8 +290,10 @@ if ($aberto > 0) {
         <div><label>Nome</label><input type="text" id="n-nome" placeholder="Ex: Clássico verde"></div>
         <div><label>Descrição</label><input type="text" id="n-desc" placeholder="Para quem é, o que tem de particular"></div>
         <div><label>Peça</label>
-          <select id="n-ambito"><option value="digital">Convite digital</option>
+          <select id="n-ambito" onchange="ajustarPacotes()"><option value="digital">Convite digital</option>
                                 <option value="impresso">Convite impresso</option></select></div>
+        <div id="n-pacote-cx"><label>Base visual</label>
+          <select id="n-pacote"><option value="">A carregar…</option></select></div>
         <div><button class="btn btn-ouro" onclick="criar()">Criar modelo</button></div>
       </div>
       <div class="dica" style="margin:.7rem 0 0">
@@ -352,7 +354,7 @@ const $ = id => document.getElementById(id);
 const esc = s => (s??'').toString().replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const TEM_CASAMENTO = <?= $aberto > 0 ? 'true' : 'false' ?>;
 const ESQ_MODELOS = <?= min(4, (int)$totalModelos) ?>;
-let AMBITO = '', MODELOS = {}, CATALOGO = [], VISTA = 'modelos';
+let AMBITO = '', MODELOS = {}, CATALOGO = [], PACOTES = [], VISTA = 'modelos';
 const rotAmb = a => a === 'impresso' ? 'convite impresso' : 'convite digital';
 
 async function restaurar(alvos){
@@ -502,6 +504,8 @@ async function carregar(){
   MODELOS = {};
   d.modelos.forEach(m => { MODELOS[m.id] = m; });
   CATALOGO = d.catalogo || [];
+  PACOTES = d.pacotes || PACOTES;
+  pintarPacotes();
   pintarNumFerramentas();
   if (VISTA === 'ferramentas') pintarFerramentas();
   const alvo = $('lista');
@@ -546,6 +550,7 @@ async function carregar(){
                 : '&#9737; todos os casais'}</span>` : ''}
           ${m.de_origem ? `<span class="et origem" title="É a peça de origem desta peça: o ponto de regresso, e o nome por que a peça se dá a conhecer">&#9873; peça de origem</span>` : ''}
           ${m.de_fabrica && !m.de_origem ? `<span class="et fabrica" title="É o ficheiro de origem de fábrica: a rede de segurança que existe sempre e não se apaga">&#128274; origem de fábrica</span>` : ''}
+          ${m.renderer_key ? `<span class="et" title="Pacote visual instalado">${esc(nomePacote(m))}</span>` : ''}
           <span>${esc((m.atualizado_em || m.criado_em || '').slice(0,10))}</span>
         </div>
       </div>
@@ -594,13 +599,35 @@ addEventListener('resize', () => {
 async function criar(){
   const nome = $('n-nome').value.trim();
   if (!nome) return toast('Dê um nome ao modelo.', true);
-  const d = await api('modelo_criar', { method:'POST', body: JSON.stringify({
-    nome, descricao: $('n-desc').value.trim(), ambito: $('n-ambito').value,
-    visivel: $('n-visivel').checked, do_zero: !!($('n-zero') && $('n-zero').checked) }) });
+  const ambito = $('n-ambito').value;
+  const pacote = ambito === 'digital' ? PACOTES.find(p => pacoteId(p) === $('n-pacote').value) : null;
+  const corpo = { nome, descricao: $('n-desc').value.trim(), ambito,
+    visivel: $('n-visivel').checked, do_zero: !!($('n-zero') && $('n-zero').checked) };
+  if (pacote) Object.assign(corpo, { renderer_key:pacote.renderer_key,
+    renderer_version:pacote.renderer_version, renderer_schema:pacote.renderer_schema });
+  const d = await api('modelo_criar', { method:'POST', body: JSON.stringify(corpo) });
   if (!d || !d.success) return;
   $('n-nome').value = $('n-desc').value = '';
   toast('Modelo criado. Carregue em «Desenhar» para o compor.');
   carregar();
+}
+
+const pacoteId = p => [p.renderer_key,p.renderer_version,p.renderer_schema].join('|');
+function nomePacote(m){
+  const p = PACOTES.find(x => x.renderer_key === m.renderer_key && x.renderer_version === m.renderer_version);
+  return p ? p.nome : m.renderer_key;
+}
+function pintarPacotes(){
+  const sel = $('n-pacote'); if (!sel) return;
+  const antes = sel.value;
+  sel.innerHTML = PACOTES.map(p => `<option value="${esc(pacoteId(p))}">${esc(p.nome)}</option>`).join('')
+    || '<option value="">Kulemba Contemporâneo</option>';
+  if ([...sel.options].some(o => o.value === antes)) sel.value = antes;
+  ajustarPacotes();
+}
+function ajustarPacotes(){
+  const digital = $('n-ambito') && $('n-ambito').value === 'digital';
+  if ($('n-pacote-cx')) $('n-pacote-cx').style.display = digital ? '' : 'none';
 }
 
 /** Abre a janela das opções de um modelo, com um título e um corpo. */
@@ -827,6 +854,13 @@ async function definirOrigem(id, on){
    <input>; 'ficheiro' é uma imagem (ou a música) com envio próprio, e `enq` diz
    qual a chave de enquadramento que a acompanha. */
 const EX_GRUPOS = [
+  { titulo:'Convite de exemplo',
+    nota:'A mesma família, mesa e lista aparecem no editor, na demonstração, na ajuda e na confirmação.',
+    campos:[
+      { k:'exemplo.convite_nome', r:'Nome do convite' },
+      { k:'exemplo.mesa_nome', r:'Mesa' },
+      { k:'exemplo.lugares', r:'Número de lugares', tipo:'number' },
+      { k:'exemplo.convidados', r:'Convidados referenciados', tipo:'textarea', ph:'um nome por linha' } ] },
   { titulo:'O casal e o dia',
     nota:'É este o nome que se lê na capa de qualquer modelo.',
     campos:[
@@ -902,8 +936,10 @@ function pintarExemplo(ex){
       ${g.nota ? `<div class="nota">${g.nota}</div>` : ''}
       ${g.campos ? `<div class="ex-campos">${g.campos.map(c => `
         <div><label for="ex-${c.k}">${c.r}</label>
-          <input type="${c.tipo || 'text'}" id="ex-${c.k}" value="${esc(ex[c.k] ?? '')}"
-                 ${c.ph ? `placeholder="${c.ph}"` : ''}></div>`).join('')}</div>` : ''}
+          ${c.tipo === 'textarea'
+            ? `<textarea id="ex-${c.k}" rows="4" ${c.ph ? `placeholder="${c.ph}"` : ''}>${esc(ex[c.k] ?? '')}</textarea>`
+            : `<input type="${c.tipo || 'text'}" id="ex-${c.k}" value="${esc(ex[c.k] ?? '')}"
+                 ${c.ph ? `placeholder="${c.ph}"` : ''}>`}</div>`).join('')}</div>` : ''}
       ${g.imagens ? `<div class="exs">${g.imagens.map(i => cartaoImagem(i, ex)).join('')}</div>` : ''}
     </div>`).join('');
 }

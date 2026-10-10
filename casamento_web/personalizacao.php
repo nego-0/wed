@@ -1291,8 +1291,9 @@ function chavesExemplo(): array {
     // casal, o evento todo, as imagens, a música e o enquadramento delas. Uma
     // lista à mão fica para trás no dia em que se acrescentar uma chave, e foi
     // o que aconteceu: metade dos campos não estava lá para preencher.
-    return array_values(array_filter(chavesDoAmbito('digital'),
+    $defs = array_values(array_filter(chavesDoAmbito('digital'),
         fn($k) => preg_match('/^(casal|evento|media|foto)\./', $k)));
+    return array_merge(['exemplo.convite_nome','exemplo.mesa_nome','exemplo.lugares','exemplo.convidados'], $defs);
 }
 
 /**
@@ -1548,6 +1549,10 @@ function exemploDeFabrica(): array {
     // Só o que é do primeiro casal é que muda; o resto (horas, títulos, número
     // de lugares, enquadramentos) é o de origem, que já não é de ninguém.
     $proprio = [
+        'exemplo.convite_nome' => 'Família Fernandes',
+        'exemplo.mesa_nome' => 'Mesa Acácia',
+        'exemplo.lugares' => '4',
+        'exemplo.convidados' => "Ana Fernandes\nCarlos Fernandes\nLuísa Fernandes\nMateus Fernandes",
         'casal.noiva'   => 'Marta',
         'casal.noivo'   => 'Pedro',
         'evento.data'   => '2027-06-12',
@@ -1590,6 +1595,24 @@ function exemploModelo(mysqli $conn): array {
         if (isset($out[$k])) $out[$k] = (string)$f['valor'];
     }
     return fotosGaleriaAtuais($out);
+}
+
+/** Convite fictício único usado nas provas, no RSVP, na ajuda e na demonstração. */
+function conviteDeExemplo(mysqli $conn): array {
+    $e = exemploModelo($conn);
+    $nomes = array_values(array_filter(array_map('trim', preg_split('/\R/u',
+        (string)($e['exemplo.convidados'] ?? '')) ?: [])));
+    if (!$nomes) $nomes = ['Ana Fernandes'];
+    $lugares = max(count($nomes), min(50, (int)($e['exemplo.lugares'] ?? count($nomes))));
+    $membros = [];
+    foreach ($nomes as $i=>$nome) $membros[] = ['id'=>-($i+1), 'nome'=>$nome, 'rsvp'=>'pendente'];
+    return [
+        'id'=>0, 'codigo'=>'EXEMPLO',
+        'nome_exibicao'=>(string)($e['exemplo.convite_nome'] ?? 'Família Fernandes'),
+        'sufixo'=>null, 'mostrar_num_mesa'=>trim((string)($e['exemplo.mesa_nome'] ?? '')) !== '' ? 1 : 0,
+        'lugares'=>$lugares, 'mesa_nome'=>(string)($e['exemplo.mesa_nome'] ?? ''),
+        'msg_pessoal'=>'', 'rsvp_estado'=>'pendente', 'rsvp_confirmados'=>null, 'membros'=>$membros,
+    ];
 }
 
 /**

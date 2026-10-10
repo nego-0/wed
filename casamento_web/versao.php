@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O admin escolhe um pacote visual instalado ao criar um modelo digital',
+         'convite-pacotes.php', 'function convitePacotesCatalogo(string $ambito = \'digital\', bool $incluirLegados = false): array {'],
+        ['Editor, demonstração, ajuda e confirmação usam o mesmo convite fictício do admin',
+         'personalizacao.php', 'function conviteDeExemplo(mysqli $conn): array {'],
         ['O editor só oferece ferramentas realmente implementadas pelo pacote visual',
          'editor-modelo.php', 'function capacidadesSuportadasModelo(string $ambito, ?array $modelo = null): array {'],
         ['A liberdade atribuída aos noivos nunca ultrapassa o contrato do pacote',

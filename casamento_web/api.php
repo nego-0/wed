@@ -10133,7 +10133,10 @@ if ($acao === 'modelo_lista') {
     // Ao admin junta-se o catálogo dos modelos de origem, com o que falta —
     // para o painel poder oferecer repô-los se algum foi apagado por lapso.
     $extra = ['modelos' => $modelos];
-    if (ehAdminPlataforma()) $extra['catalogo'] = catalogoModelosEmFalta($conn);
+    if (ehAdminPlataforma()) {
+        $extra['catalogo'] = catalogoModelosEmFalta($conn);
+        $extra['pacotes'] = convitePacotesCatalogo('digital');
+    }
     ok($extra);
 }
 
@@ -10225,7 +10228,17 @@ if ($acao === 'modelo_exemplo_guardar') {
         // Campo deixado em branco onde branco não é uma resposta (um modelo sem
         // nome de noiva não é um modelo): volta ao de fábrica, e não a um erro.
         if ($v === '' && !podeSerVazio($k)) $v = (string)($fabrica[$k] ?? '');
-        if (str_starts_with($k, 'media.')) {
+        if ($k === 'exemplo.convite_nome' || $k === 'exemplo.mesa_nome') {
+            $v = mb_substr($v, 0, $k === 'exemplo.convite_nome' ? 120 : 80);
+            if ($k === 'exemplo.convite_nome' && $v === '') $v = (string)$fabrica[$k];
+        } elseif ($k === 'exemplo.lugares') {
+            $v = (string)max(1, min(50, (int)$v));
+        } elseif ($k === 'exemplo.convidados') {
+            $linhas = array_values(array_filter(array_map('trim', preg_split('/\R/u', $v) ?: [])));
+            $linhas = array_slice(array_map(fn($nome)=>mb_substr($nome, 0, 80), $linhas), 0, 20);
+            if (!$linhas) $linhas = preg_split('/\R/u', (string)$fabrica[$k]) ?: [];
+            $v = implode("\n", $linhas);
+        } elseif (str_starts_with($k, 'media.')) {
             // Um caminho de ficheiro nosso, e um que exista: um exemplo com uma
             // imagem partida é pior do que um exemplo com a de fábrica.
             if ($v !== '' && (!preg_match('#^assets/convite/[\w./-]+$#', $v)
@@ -10391,13 +10404,23 @@ if ($acao === 'modelo_criar') {
     if ($nome === '') erro('Dê um nome ao modelo.');
     $descricao = mb_substr(trim((string)($d['descricao'] ?? '')), 0, 400);
 
+    $pacoteExplicito = $ambito === 'digital'
+        && (array_key_exists('renderer_key', $d) || array_key_exists('renderer_version', $d));
+    $pacote = null;
+    if ($ambito === 'digital') {
+        $pacote = convitePacoteResolver($ambito, $d['renderer_key'] ?? null,
+            $d['renderer_version'] ?? null, isset($d['renderer_schema']) ? (int)$d['renderer_schema'] : null, false);
+        if ($pacoteExplicito && !$pacote) erro('O renderizador indicado não está instalado nesta versão da Kulemba.');
+        if (!$pacote) $pacote = pacoteDaPeca($conn, $ambito);
+    }
+
     // Ou os valores que vieram no pedido (importação), ou o retrato do que o
     // casamento aberto mostra agora.
     if (is_array($d['defs'] ?? null)) {
         $permitidas = array_flip(chavesModelo($ambito));
         $defs = [];
         foreach ($d['defs'] as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
-    } elseif (casamentoAtual() > 0 && empty($d['do_zero'])) {
+    } elseif (!$pacoteExplicito && casamentoAtual() > 0 && empty($d['do_zero'])) {
         // Do que o casamento aberto mostra agora — é assim que se guarda um
         // convite que se acabou de desenhar para alguém. A IDENTIDADE, essa,
         // fica de exemplo: um modelo da casa não é o retrato de um casal.
@@ -10414,18 +10437,12 @@ if ($acao === 'modelo_criar') {
     }
     if (!$defs) erro('Não há nada para guardar neste modelo.');
 
-    $pacote = null;
-    if ($ambito === 'digital') {
-        $pacoteExplicito = array_key_exists('renderer_key', $d) || array_key_exists('renderer_version', $d);
-        $pacote = convitePacoteResolver($ambito, $d['renderer_key'] ?? null,
-            $d['renderer_version'] ?? null, isset($d['renderer_schema']) ? (int)$d['renderer_schema'] : null, false);
-        if ($pacoteExplicito && !$pacote) erro('O renderizador indicado não está instalado nesta versão da Kulemba.');
-        if (!$pacote) $pacote = pacoteDaPeca($conn, $ambito);
-    }
     $rk = $pacote['renderer_key'] ?? null;
     $rv = $pacote['renderer_version'] ?? null;
     $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
-    $capacidades = json_encode(capacidadesModeloPadrao($ambito), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $modeloPacote = ['renderer_key'=>$rk, 'renderer_version'=>$rv, 'renderer_schema'=>$rs];
+    $capacidades = json_encode(capacidadesSuportadasModelo($ambito, $modeloPacote),
+                               JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $st = $conn->prepare("INSERT INTO {$P}modelos
                           (nome, descricao, ambito, defs, visivel, criado_por, capacidades,
                            renderer_key, renderer_version, renderer_schema)
@@ -10480,16 +10497,17 @@ if ($acao === 'modelo_editar') {
 if ($acao === 'modelo_capacidades' || $acao === 'modelo_capacidades_guardar') {
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma define as capacidades dos modelos.');
     $id = (int)($_GET['id'] ?? (corpo()['id'] ?? 0));
-    $st = $conn->prepare("SELECT id,nome,ambito,capacidades FROM {$P}modelos WHERE id=?");
+    $st = $conn->prepare("SELECT id,nome,ambito,capacidades,renderer_key,renderer_version,renderer_schema
+                          FROM {$P}modelos WHERE id=?");
     $st->bind_param('i', $id); $st->execute();
     $m = $st->get_result()->fetch_assoc();
     if (!$m) erro('Modelo não encontrado.');
     if ($acao === 'modelo_capacidades') {
         ok(['id'=>$id, 'nome'=>$m['nome'], 'ambito'=>$m['ambito'],
-            'capacidades'=>normalizarCapacidadesModelo($m['ambito'], $m['capacidades'] ?? null),
-            'catalogo'=>catalogoCapacidadesModelo($m['ambito'])]);
+            'capacidades'=>limitarCapacidadesAoPacote($m['ambito'], $m['capacidades'] ?? null, $m),
+            'catalogo'=>catalogoCapacidadesDisponivel($m['ambito'], $m)]);
     }
-    $cap = normalizarCapacidadesModelo($m['ambito'], corpo()['capacidades'] ?? []);
+    $cap = limitarCapacidadesAoPacote($m['ambito'], corpo()['capacidades'] ?? [], $m);
     $json = json_encode($cap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $st = $conn->prepare("UPDATE {$P}modelos SET capacidades=?, atualizado_em=NOW() WHERE id=?");
     $st->bind_param('si', $json, $id);
