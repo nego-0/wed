@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Trocar de modelo conserva todo o conteúdo semântico e as fotografias do casal',
+         'personalizacao.php', 'function chavesConteudoSemantico(): array {'],
+        ['Cada versão fixa também a liberdade editorial que tinha ao ser guardada',
+         'db.php', "migColuna(\$conn, \"{\$P}versoes\", 'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL');"],
         ['O admin escolhe um pacote visual instalado ao criar um modelo digital',
          'convite-pacotes.php', 'function convitePacotesCatalogo(string $ambito = \'digital\', bool $incluirLegados = false): array {'],
         ['Editor, demonstração, ajuda e confirmação usam o mesmo convite fictício do admin',

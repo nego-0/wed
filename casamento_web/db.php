@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 70;
+const ESQUEMA_VERSAO = 71;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2724,6 +2724,13 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         $alvosExactos = [];
         foreach (convitePacotesExactos() as $nome) $alvosExactos[] = ['ambito'=>'digital','nome'=>$nome];
         restaurarModelosDeCasa($conn, $alvosExactos, true);
+    }
+
+    // v71 — a versão fixa também a liberdade editorial que tinha ao nascer.
+    // Alterar depois as capacidades do modelo de origem não abre nem fecha
+    // ferramentas numa versão que o utilizador já guardou.
+    if ($versaoAtual < 71) {
+        migColuna($conn, "{$P}versoes", 'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL');
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -6037,11 +6037,15 @@ function criarVersaoDaPeca(mysqli $conn, string $ambito, string $nome): int {
     $rk = $pacote['renderer_key'] ?? null;
     $rv = $pacote['renderer_version'] ?? null;
     $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
+    $modeloCap = modeloCapacidadesDaPeca($conn, $ambito);
+    $cap = json_encode(limitarCapacidadesAoPacote($ambito, $modeloCap['capacidades'] ?? null,
+        $modeloCap ?: ['renderer_key'=>$rk,'renderer_version'=>$rv,'renderer_schema'=>$rs]),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $st = $conn->prepare("INSERT INTO {$P}versoes
                           (casamento_id, nome, defs, utilizador, ambito,
-                           renderer_key, renderer_version, renderer_schema)
-                          VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?)");
-    $st->bind_param('ssssssi', $nome, $json, $u, $ambito, $rk, $rv, $rs);
+                           renderer_key, renderer_version, renderer_schema, capacidades)
+                          VALUES (" . casamentoAtual() . ",?,?,?,?,?,?,?,?)");
+    $st->bind_param('ssssssis', $nome, $json, $u, $ambito, $rk, $rv, $rs, $cap);
     if (!$st->execute()) erro('Não foi possível guardar a versão.');
     $id = $conn->insert_id;
     // Uma versão acabada de guardar É a peça neste momento — foi tirada dela.
@@ -6156,7 +6160,9 @@ if ($acao === 'versao_aplicar') {
     // mesmo que um regresso puro à origem. É o nome DELE que a peça passa a dar.
     if ($id === VERSAO_PADRAO_ID) {
         $ambito = ambitoPedido();
-        $base = padraoAmbito($ambito);
+        // Voltar ao modelo de origem troca apenas a apresentação. Os nomes,
+        // datas, textos, fotografias e locais continuam a ser os do casal.
+        $base = padraoDesenho($ambito);
         $orig = modeloDeOrigem($conn, $ambito);
         if ($orig) {
             $des = desenhoDoModeloId($conn, $ambito, (int)$orig['id']);
@@ -6234,10 +6240,14 @@ if ($acao === 'versao_atualizar') {
     $rk = $pacote['renderer_key'] ?? null;
     $rv = $pacote['renderer_version'] ?? null;
     $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
+    $modeloCap = modeloCapacidadesDaPeca($conn, $v['ambito']);
+    $cap = json_encode(limitarCapacidadesAoPacote($v['ambito'], $modeloCap['capacidades'] ?? null,
+        $modeloCap ?: ['renderer_key'=>$rk,'renderer_version'=>$rv,'renderer_schema'=>$rs]),
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $st = $conn->prepare("UPDATE {$P}versoes
-                          SET defs=?, renderer_key=?, renderer_version=?, renderer_schema=?, atualizado_em=NOW()
+                          SET defs=?, renderer_key=?, renderer_version=?, renderer_schema=?, capacidades=?, atualizado_em=NOW()
                           WHERE " . doCasamento() . " AND id=?");
-    $st->bind_param('sssii', $json, $rk, $rv, $rs, $id);
+    $st->bind_param('sssisi', $json, $rk, $rv, $rs, $cap, $id);
     if (!$st->execute()) erro('Não foi possível atualizar a versão.');
     if ($v['ambito'] === 'digital') assentarMediaPendente($conn);
     registar($conn, 'versao_atualizada', $v['nome'], '');
@@ -8635,7 +8645,7 @@ function retratoCasamento(mysqli $conn, int $cid): array {
                           WHERE r.casamento_id=$cid ORDER BY r.id");
 
     $versoes = $um("SELECT nome, ambito, defs, predefinida, utilizador, criado_em, atualizado_em,
-                           renderer_key, renderer_version, renderer_schema
+                           renderer_key, renderer_version, renderer_schema, capacidades
                     FROM {$P}versoes WHERE casamento_id=$cid ORDER BY id");
 
     $acessos = $um("SELECT u.email, u.nome, a.papel FROM {$P}acessos a
@@ -9054,11 +9064,14 @@ function impVersoes(mysqli $conn, int $cid, array $versoes): int {
         $rk = $pacote['renderer_key'] ?? null;
         $rv = $pacote['renderer_version'] ?? null;
         $rs = (int)($pacote['renderer_schema'] ?? CONVITE_PACOTE_SCHEMA);
+        $modeloPacote = ['renderer_key'=>$rk,'renderer_version'=>$rv,'renderer_schema'=>$rs];
+        $cap = json_encode(limitarCapacidadesAoPacote($va, $v['capacidades'] ?? null, $modeloPacote),
+                           JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $st = $conn->prepare("INSERT INTO {$P}versoes
                               (casamento_id, nome, ambito, defs, predefinida, utilizador,
-                               renderer_key, renderer_version, renderer_schema)
-                              VALUES ($cid,?,?,?,?,?,?,?,?)");
-        $st->bind_param('sssisssi', $vn, $va, $vd, $vp, $vu, $rk, $rv, $rs);
+                               renderer_key, renderer_version, renderer_schema, capacidades)
+                              VALUES ($cid,?,?,?,?,?,?,?,?,?)");
+        $st->bind_param('sssisssis', $vn, $va, $vd, $vp, $vu, $rk, $rv, $rs, $cap);
         if (@$st->execute()) $n++;
     }
     return $n;
@@ -10678,26 +10691,6 @@ if ($acao === 'modelo_aplicar') {
     // pelo meio. Um modelo vazio — o de origem da casa — devolve a peça à
     // origem, que é o que se espera de "aplicar o modelo da casa".
     $defs = array_merge(padraoDesenho($m['ambito']), $doModelo);
-    // As fotografias não são desenho — são de cada casal, e por isso um modelo
-    // não as impõe. Mas um casal que ainda não pôs foto nenhuma fica melhor
-    // servido com as do modelo (que o admin escolheu a condizer) do que com as
-    // de origem. Regra, secção a secção: se a foto do casal ainda é a de origem
-    // (não lhe mexeu), empresta-se a do modelo e o seu enquadramento; uma foto
-    // que o casal já trocou fica intocada — nunca se apaga trabalho seu.
-    if ($m['ambito'] === 'digital') {
-        $padrao = defsPadrao();
-        $atuais = defsAtuais($conn);
-        foreach (fotosDeModelo() as $kMedia => $kFoto) {
-            $doCasal  = (string)($atuais[$kMedia] ?? '');
-            $deOrigem = (string)($padrao[$kMedia] ?? '');
-            $noModelo = (array_key_exists($kMedia, $j) && is_string($j[$kMedia])) ? $j[$kMedia] : '';
-            if ($doCasal === $deOrigem && $noModelo !== '') {
-                $defs[$kMedia] = $noModelo;
-                if ($kFoto !== null && array_key_exists($kFoto, $j) && is_string($j[$kFoto]))
-                    $defs[$kFoto] = $j[$kFoto];
-            }
-        }
-    }
     // O que a peça mostrava ANTES, para se poder dizer com verdade se mudou.
     // Sem isto, aplicar um modelo que já era o desenho em vigor recarregava a
     // página sem nada mudar — e quem o fez concluía, com razão, que não tinha

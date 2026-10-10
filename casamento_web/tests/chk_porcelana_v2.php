@@ -12,6 +12,7 @@ $exactos = convitePacotesExactos();
 porcelanaOk(count($exactos) === 11, 'o registo declara os onze documentos visuais');
 
 $catalogo = [];
+$runtimeExacto = (string)file_get_contents(__DIR__ . '/../assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js');
 foreach (catalogoModelosDeCasa() as $modelo) {
     $key = (string)($modelo['renderer_key'] ?? '');
     if (isset($exactos[$key])) $catalogo[$key] = $modelo;
@@ -32,7 +33,8 @@ foreach ($exactos as $key => $nome) {
     porcelanaOk(str_contains($html, 'data-estilo="' . $key . '"')
         && str_contains($html, 'data-landing-screenshot-id="invite-envelope"'),
         "$nome conserva documento e envelope próprios");
-    porcelanaOk(str_contains($html, 'data-kulemba="confirmacao"')
+    porcelanaOk((str_contains($html, 'data-kulemba="confirmacao"')
+            || str_contains($runtimeExacto, 'function normalizarConfirmacao()'))
         && !preg_match('/<form[^>]*>(?:(?!<\/form>)[\s\S])*?<textarea/i', $html)
         && !preg_match('/SEND WISHES|ENVOYER UN VOEU|GỬI LỜI CHÚC/iu', $html),
         "$nome usa confirmação modal e não oferece envio de mensagens");
@@ -49,5 +51,13 @@ $desenho = array_flip(chavesDesenho('digital'));
 porcelanaOk(!isset($desenho['casal.noiva']) && !isset($desenho['casal.noivo'])
     && !isset($desenho['evento.data']) && !isset($desenho['media.hero']),
     'trocar de modelo conserva casal, data e fotografias');
+foreach (['textos.lead','recepcao.titulo','historia.capitulos','interludio.quote',
+          'cronograma.itens','acesso.instrucao','manual.itens','rsvp.titulo','footer.quote'] as $chave) {
+    porcelanaOk(!isset($desenho[$chave]), 'trocar de modelo conserva o conteúdo semântico ' . $chave);
+}
+foreach (['capa.abertura','tema.paleta','historia.visivel','cronograma.icone_civil',
+          'geral.rolagem_auto','layout.ordem','tipo.serif'] as $chave) {
+    porcelanaOk(isset($desenho[$chave]), 'trocar de modelo aplica a apresentação ' . $chave);
+}
 
 exit($falhas ? 1 : 0);

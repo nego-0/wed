@@ -16,6 +16,7 @@ require_once __DIR__ . '/parcial-cabecalho.php';   // tiraSuporte()
 // Desenhar um modelo da casa não é entrar em casa de casal nenhum: quem
 // responde pela plataforma chega aqui sem ter casamento aberto.
 [$DEFS_ED, $MODELO, $MODELO_BASE] = defsDoEditor($conn, 'digital');
+if (!$MODELO) $MODELO_BASE = modeloCapacidadesDaPeca($conn, 'digital') ?: $MODELO_BASE;
 $MANIFESTO_EDITOR = manifestoEditorModelo('digital', $DEFS_ED, $MODELO ?: $MODELO_BASE,
                                            $MODELO ? 'administrador' : 'noivos');
 if (!$MODELO) exigirAdmin(); elseif (!ehAdminPlataforma()) exigirAdmin();

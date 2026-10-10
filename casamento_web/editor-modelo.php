@@ -288,13 +288,25 @@ function manifestoEditorModelo(string $ambito, array $defs, ?array $modelo = nul
 /** Ficha do modelo de que a peça deriva, para limitar também o editor do casal. */
 function modeloCapacidadesDaPeca(mysqli $conn, string $ambito): ?array {
     global $P;
+    // Uma versão é autónoma: conserva o pacote e as liberdades que estavam em
+    // vigor quando foi guardada, mesmo que o modelo de origem mude depois.
+    $sv = $conn->prepare("SELECT id,nome,ambito,capacidades,renderer_key,renderer_version,renderer_schema
+                          FROM {$P}versoes WHERE " . doCasamento() . " AND ambito=? AND predefinida=1
+                          ORDER BY id DESC LIMIT 1");
+    if ($sv) {
+        $sv->bind_param('s', $ambito); $sv->execute();
+        if ($v = $sv->get_result()->fetch_assoc()) {
+            if (trim((string)($v['capacidades'] ?? '')) !== '') return $v;
+        }
+    }
     $id = modeloProvenienciaId($conn, $ambito);
     if ($id <= 0) {
         $m = modeloDeOrigem($conn, $ambito);
         $id = (int)($m['id'] ?? 0);
     }
     if ($id <= 0) return null;
-    $st = $conn->prepare("SELECT id,nome,ambito,capacidades FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
+    $st = $conn->prepare("SELECT id,nome,ambito,capacidades,renderer_key,renderer_version,renderer_schema
+                          FROM {$P}modelos WHERE id=? AND ambito=? LIMIT 1");
     if (!$st) return null;
     $st->bind_param('is', $id, $ambito); $st->execute();
     return $st->get_result()->fetch_assoc() ?: null;

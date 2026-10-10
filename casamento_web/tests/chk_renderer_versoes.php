@@ -31,5 +31,9 @@ versaoRendererOk(str_contains($api, 'O renderizador desta versão não está ins
     'aplicar uma versão recusa um pacote ausente');
 versaoRendererOk(str_contains($personalizacao, 'convitePacoteIgual($pacoteGuardado, pacoteDaPeca'),
     'o estado em vigor compara conteúdo e pacote');
+versaoRendererOk(str_contains($db, "'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL'"),
+    'a versão fixa também a liberdade editorial');
+versaoRendererOk(str_contains($api, 'renderer_schema, capacidades)'),
+    'a gravação e o transporte incluem a ficha de capacidades');
 
 exit($falhas ? 1 : 0);

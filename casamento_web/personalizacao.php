@@ -1270,8 +1270,25 @@ function chavesModelo(string $ambito): array {
 function chavesDesenho(string $ambito): array {
     // O cartão já é só desenho: tudo o que lá está começa por 'cartao.'.
     if ($ambito === 'impresso') return chavesDoAmbito('impresso');
-    return array_values(array_filter(chavesDoAmbito('digital'),
-        fn($k) => !preg_match('/^(casal|evento|media|foto)\./', $k)));
+    $conteudo = array_flip(chavesConteudoSemantico());
+    return array_values(array_filter(chavesDoAmbito('digital'), fn($k)=>!isset($conteudo[$k])));
+}
+
+/**
+ * Conteúdo que pertence ao casamento e sobrevive a qualquer troca de modelo.
+ * O pacote pode mudar a composição, a visibilidade e os ícones, mas não volta
+ * a escrever nomes, datas, fotografias nem a prosa já preparada pelo casal.
+ */
+function chavesConteudoSemantico(): array {
+    $prefixos = ['casal.','evento.','media.','foto.','textos.','recepcao.','acesso.','rsvp.','footer.'];
+    $pontuais = ['capa.monograma','capa.dica','gd.eyebrow',
+        'historia.eyebrow','historia.titulo','historia.quote','historia.autor','historia.capitulos',
+        'interludio.quote','interludio.autor','interludio.fecho',
+        'cronograma.titulo','cronograma.itens','manual.eyebrow','manual.titulo','manual.intro','manual.itens'];
+    return array_values(array_filter(chavesDoAmbito('digital'), function($k) use ($prefixos,$pontuais) {
+        foreach ($prefixos as $p) if (str_starts_with($k, $p)) return true;
+        return in_array($k, $pontuais, true);
+    }));
 }
 
 /** O desenho de origem de um âmbito, só com as chaves que um modelo impõe. */
