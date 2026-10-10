@@ -1,0 +1,245 @@
+<?php
+// ============================================================
+// cartoes.php — Cartão de convite 10×15 cm (um por convidado)
+// Design de impressão UV a dourado sobre acrílico transparente.
+// O nome do convidado e as mesas vêm da base de dados.
+// ============================================================
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/parcial-cabecalho.php';
+require_once __DIR__ . '/pecas.php';
+exigirAdmin();
+exigirModulo('impresso');
+
+$defs = defsAtuais($conn);
+$CAS  = casalInfo($defs);
+$versaoCartao = versaoEmVigor($conn, 'impresso');
+
+// Estilo escolhido (pode ser pré-visualizado por ?paleta=&folhagem= sem gravar)
+$paletaSel   = $_GET['paleta']   ?? $defs['cartao.paleta'];
+$folhagemSel = $_GET['folhagem'] ?? $defs['cartao.folhagem'];
+if (!isset(cartaoPaletas()[$paletaSel]))     $paletaSel   = $defs['cartao.paleta'];
+if (!isset(cartaoFolhagens()[$folhagemSel])) $folhagemSel = $defs['cartao.folhagem'];
+// As cores livres foram escolhidas para a paleta gravada: pré-visualizar outra
+// paleta mostra-a limpa, sem elas.
+$defsCartao = $defs;
+$defsCartao['cartao.paleta'] = $paletaSel;
+if ($paletaSel !== $defs['cartao.paleta']) $defsCartao['cartao.cores'] = '';
+$pal    = cartaoPaletaEfetiva($defsCartao);
+$estilo = cartaoEstiloVars($defsCartao);
+// As camadas desligadas no editor também não se imprimem — antes esta página
+// ignorava-as e saía um cartão diferente do que a prova mostrava.
+$camadasCartao = cartaoCamadasVisiveis($defs);
+$posicoesCartao = cartaoPosicoes($defs);
+$ev  = cartaoDadosEvento($defs);
+
+// Convites físicos (os que levam cartão impresso)
+$res = $conn->query("SELECT c.*, m.nome AS mesa_nome
+                     FROM {$P}convites c
+                     LEFT JOIN {$P}mesas m ON c.mesa_id=m.id
+                     WHERE " . doCasamento('c') . " AND c.tipo IN ('fisico','ambos') AND ".soVivos($conn,'c')."
+                     ORDER BY c.nome_exibicao");
+$convites = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+// Um único convite (?id=) — útil para imprimir só um
+$soId = (int)($_GET['id'] ?? 0);
+if ($soId) $convites = array_values(array_filter($convites, fn($c) => (int)$c['id'] === $soId));
+?>
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<?php include __DIR__ . '/parcial-icone.php'; ?>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartões 10×15 · <?= escP($CAS['casal']) ?></title>
+<link href="<?= asset('assets/fontes.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/estilo.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/janela.css') ?>" rel="stylesheet">
+<link href="<?= asset('assets/pecas.css') ?>" rel="stylesheet">
+<style>
+  /* ---- Escala: o cartão é desenhado a 720×1080 px (= 100×150 mm) ---- */
+  .folha{ width:calc(720px * var(--esc)); height:calc(1080px * var(--esc)); }
+  .escala{ width:720px; height:1080px; transform:scale(var(--esc)); }
+  .grelha-cartoes{ display:grid; grid-template-columns:repeat(auto-fill,minmax(calc(720px * var(--esc)),1fr)); gap:1.6rem; justify-items:center; --esc:.42; }
+  /* Um só cartão (?id=): mostra-se em grande, já que não compete por espaço */
+  .grelha-cartoes.unica{ --esc:.78; }
+  .grelha-cartoes.unica, .grelha-cartoes.unica .cartao-item{ min-width:0; max-width:100%; }
+  .folha{ overflow:hidden; }
+
+  /* ---- Barra de estilo ---- */
+  .barra{ display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
+  .barra .cresce{ flex:1 1 160px; }
+  .amostras{ display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+  .amostra{ width:30px; height:30px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
+  .amostra.on{ border-color:var(--ink); box-shadow:0 0 0 2px #fff inset; }
+  .rot{ font-size:var(--t-etiqueta); font-weight:600; color:var(--ink-fraco); letter-spacing:.08em; text-transform:uppercase; }
+  .legenda{ text-align:center; font-size:var(--t-apoio); color:var(--ink-fraco); margin-top:.45rem; }
+  .legenda a{ color:var(--gold-texto); }
+  @media(max-width:640px){
+    /* Valor de primeiro desenho; o script abaixo usa depois cada píxel
+       realmente disponível, incluindo telemóveis estreitos. */
+    .grelha-cartoes.unica{ --esc:.42; grid-template-columns:minmax(0,1fr); }
+    .barra select{ max-width:100%; }
+  }
+
+  /* ---- Impressão: 100×150 mm, um cartão por página, sem fundo ---- */
+  @media print{
+    @page{ size:100mm 150mm; margin:0; }
+    body{ background:#fff; }
+    .no-print{ display:none !important; }
+    .container{ padding:0; max-width:none; }
+    /* A regra tem de vencer também a vista de um só cartão (.unica). */
+    /* !important vence a escala inline calculada para o ecrã móvel. */
+    .grelha-cartoes, .grelha-cartoes.unica{ display:block; --esc:.5248 !important; }   /* 720px -> 100mm */
+    /* A quebra vai no item, não na folha: a folha não é o último filho da grelha,
+       pelo que o :last-child nunca lá pegava e sobrava uma página em branco. */
+    .cartao-item{ margin:0; break-after:page; page-break-after:always; }
+    .cartao-item:last-child{ break-after:auto; page-break-after:auto; }
+    /* Medidas exatas da página, para não transbordar por sub-pixéis. */
+    .folha{ width:100mm; height:150mm; overflow:hidden; background:#fff; border-radius:0; margin:0; }
+    .legenda{ display:none; }
+  }
+</style>
+</head>
+<body>
+<?php cabecalho('Cartões 10×15', 'Convite para impressão a dourado sobre acrílico', 'grafica', ['no_print'=>true]); ?>
+
+<main id="conteudo">
+<div class="container">
+  <div class="barra no-print">
+    <span class="rot">Paleta</span>
+    <div class="amostras">
+      <?php foreach (cartaoPaletas() as $k => $p): ?>
+        <button class="amostra <?= $k === $paletaSel ? 'on' : '' ?>" title="<?= escP($p['nome']) ?>"
+                style="background:<?= $p['accent'] ?>" onclick="estilo('paleta','<?= $k ?>')"></button>
+      <?php endforeach; ?>
+    </div>
+    <span class="rot">Folhagem</span>
+    <select id="folhagem" onchange="estilo('folhagem',this.value)">
+      <?php foreach (cartaoFolhagens() as $k => $f): ?>
+        <option value="<?= $k ?>" <?= $k === $folhagemSel ? 'selected' : '' ?>><?= escP($f['nome']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <div class="cresce"></div>
+    <span class="tag neutra"><?= count($convites) ?> cartões</span>
+    <a class="btn" href="editor-cartao.php">Editar o cartão</a>
+    <button class="btn" id="bt-guardar-estilo" onclick="guardarEstilo()">
+      <?= $versaoCartao ? 'Actualizar' : 'Guardar Como' ?>
+    </button>
+    <button class="btn btn-ouro" onclick="window.print()">Imprimir</button>
+  </div>
+
+  <?php if (!$convites): ?>
+    <div class="vazio no-print"><div class="ico" data-ico="carta"></div><p>Ainda não há convites marcados como físicos.<br>No painel, defina o tipo do convite como “Físico” ou “Ambos”.</p></div>
+  <?php else: ?>
+  <div class="grelha-cartoes <?= $soId ? 'unica' : '' ?>">
+    <?php foreach ($convites as $c):
+      // Personalização: nome tal como aparece no convite + mesas efetivas.
+      $mesas = mesasDoConvite($conn, $c);
+      // Respeita a opção "mostrar o nº de lugares" do convite (igual ao digital e às etiquetas).
+      $comLugares = !isset($c['mostrar_num_mesa']) || (int)$c['mostrar_num_mesa'] === 1;
+      $conv = ['nome' => nomeParaCartao($c), 'mesas' => $mesas];
+    ?>
+    <div class="cartao-item">
+      <div class="folha"><div class="escala"><?= renderCartaoConvite($ev, $conv, $pal, $folhagemSel, $comLugares, $camadasCartao, $estilo, $posicoesCartao) ?></div></div>
+      <div class="legenda no-print"><?= escP($c['codigo']) ?> ·
+        <a href="?id=<?= (int)$c['id'] ?>&paleta=<?= escP($paletaSel) ?>&folhagem=<?= escP($folhagemSel) ?>">imprimir só este</a></div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
+  <?php if ($soId): ?>
+    <p class="no-print" style="text-align:center;margin-top:1rem"><a href="cartoes.php"><i data-ico="setaEsquerda"></i> Ver todos os cartões</a></p>
+  <?php endif; ?>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+window.CSRF = <?= json_encode(csrfToken()) ?>;
+const $=id=>document.getElementById(id);
+function toast(m){const t=$('toast');t.textContent=m;t.className='toast mostrar';setTimeout(()=>t.className='toast',2200);}
+
+// A prova individual era sempre desenhada a 78% (562px) e saía do ecrã nos
+// telemóveis. Conserva esse máximo no desktop e reduz-se só até caber na área
+// útil. As dimensões físicas da impressão continuam a ser definidas no @print.
+function ajustarCartaoIndividual(){
+  const grelha=document.querySelector('.grelha-cartoes.unica');
+  if (!grelha || matchMedia('print').matches) return;
+  const largura=Math.max(1,grelha.clientWidth-2);
+  grelha.style.setProperty('--esc',String(Math.min(.78,largura/720)));
+}
+ajustarCartaoIndividual();
+addEventListener('resize',ajustarCartaoIndividual,{passive:true});
+
+// Pré-visualizar paleta/folhagem (só muda o URL; não grava)
+function estilo(campo, valor){
+  const u = new URL(location.href);
+  u.searchParams.set(campo, valor);
+  location.href = u.toString();
+}
+// A paleta e a folhagem são desenho, tal como as alterações do editor. A
+// primeira gravação nasce com nome próprio; depois actualiza a versão do casal.
+let VERSAO_CARTAO_ID = <?= $versaoCartao ? (int)$versaoCartao['id'] : 0 ?>;
+const ESTILO_GRAVADO = {
+  'cartao.paleta': <?= json_encode((string)$defs['cartao.paleta']) ?>,
+  'cartao.folhagem': <?= json_encode((string)$defs['cartao.folhagem']) ?>
+};
+function estiloAlterado(){
+  const u = new URL(location.href);
+  const todos = {
+    'cartao.paleta':   u.searchParams.get('paleta')   || <?= json_encode($paletaSel) ?>,
+    'cartao.folhagem': u.searchParams.get('folhagem') || <?= json_encode($folhagemSel) ?>
+  };
+  const defs = {};
+  Object.keys(todos).forEach(k => { if (String(todos[k]) !== String(ESTILO_GRAVADO[k])) defs[k] = todos[k]; });
+  return defs;
+}
+async function pedir(acao, corpo){
+  const r = await fetch('api.php?action=' + acao, {method:'POST',
+    headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}, body:JSON.stringify(corpo||{})});
+  return r.json();
+}
+function abrirNomeDaVersao(defs){
+  licFormulario({
+    titulo:'Guardar como uma versão vossa',
+    dica:'A alteração fica só neste casamento; o modelo padrão da plataforma permanece intacto.',
+    guardar:'Guardar versão',
+    campos:[{id:'nome',rot:'Nome desta versão',largura:3,
+      dica2:'Ex.: dourado com folhagem de oliveira'}],
+    aoGuardar:async function(v){
+      if (!v.nome){ licJanelaErro('A vossa versão precisa de um nome.'); return false; }
+      const bt=$('bt-guardar-estilo'); bt.disabled=true;
+      const d=await pedir('defs_save', {defs,proteger_desenho:true,versao_nome:v.nome});
+      bt.disabled=false;
+      if (!d || !d.success){ licJanelaErro((d&&d.message)||'Não foi possível guardar a versão.'); return false; }
+      toast('Guardado na vossa versão «'+v.nome+'».');
+      setTimeout(()=>location.href='cartoes.php',650);
+    }
+  });
+}
+async function guardarEstilo(){
+  const defs=estiloAlterado();
+  if (!Object.keys(defs).length){ toast('Não há alterações por guardar.'); return; }
+  if (!VERSAO_CARTAO_ID){ abrirNomeDaVersao(defs); return; }
+
+  const bt=$('bt-guardar-estilo'); bt.disabled=true;
+  const d=await pedir('defs_save', {defs,proteger_desenho:true});
+  if (!d || !d.success){
+    bt.disabled=false;
+    if (d&&d.precisa_versao){ VERSAO_CARTAO_ID=0; bt.textContent='Guardar Como'; abrirNomeDaVersao(defs); return; }
+    toast((d&&d.message)||'Não foi possível guardar.'); return;
+  }
+  const u=await pedir('versao_atualizar&ambito=impresso&id='+VERSAO_CARTAO_ID, {});
+  bt.disabled=false;
+  if (!u || !u.success){ toast((u&&u.message)||'Não foi possível actualizar a versão.'); return; }
+  toast('Versão «'+(u.nome||'')+'» actualizada.');
+  setTimeout(()=>location.href='cartoes.php',650);
+}
+</script>
+<?php // A escolha da casa também aqui: uma lista com outro desenho no meio de
+      // um sistema onde todas as outras são iguais lê-se como outra aplicação. ?>
+<script src="<?= asset('assets/janela.js') ?>"></script>
+</main>
+</body>
+</html>

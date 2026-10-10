@@ -1,0 +1,323 @@
+/* Porcelana V2 Rosa: composição exacta preservada no HTML; esta folha identifica o modelo. */
+body[data-estilo="porcelain-v2-pink"]{--modelo-exacto:"porcelain-v2-pink"}
+
+/* A camada conserva a composição vertical, a tipografia, as cores e os
+   ornamentos botânicos do modelo de origem. A moldura do destinatário é a
+   única peça visual acrescentada à composição. */
+body[data-estilo="porcelain-v2-pink"] .kvp-ceremony{min-height:980px;overflow:hidden}
+body[data-estilo="porcelain-v2-pink"] .kvp-ceremony-content{position:relative;z-index:2;display:flex;min-height:980px;flex-direction:column;align-items:center;padding:38px 48px 52px;color:rgb(119,110,56);font-family:Baskerville,"Times New Roman",serif;text-align:center}
+body[data-estilo="porcelain-v2-pink"] .kvp-family{max-width:100%;margin:0;color:rgb(220,133,153);font-family:"Times New Roman",serif;font-size:24px;font-weight:700;line-height:1.15;text-transform:uppercase}
+body[data-estilo="porcelain-v2-pink"] .kvp-couple{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;width:100%;margin-top:47px;color:rgb(220,133,153);font-family:Carattere,"The Nautigal",cursive;font-size:40px;line-height:1.05}
+body[data-estilo="porcelain-v2-pink"] .kvp-couple span{min-width:0;overflow-wrap:anywhere}
+body[data-estilo="porcelain-v2-pink"] .kvp-couple>span{overflow-wrap:normal;white-space:nowrap}
+body[data-estilo="porcelain-v2-pink"] .kvp-couple span:first-child{padding-right:22px;text-align:right}
+body[data-estilo="porcelain-v2-pink"] .kvp-couple span:last-child{padding-left:22px;text-align:left}
+body[data-estilo="porcelain-v2-pink"] .kvp-couple b{display:flex;width:40px;height:40px;align-items:center;justify-content:center;color:rgb(220,133,153);font-family:"Times New Roman",serif;font-size:25px;font-weight:400}
+body[data-estilo="porcelain-v2-pink"] .kvp-romantic-icon svg{width:29px;height:29px;overflow:visible;fill:none;stroke:currentColor;stroke-linecap:round;stroke-width:1.45}
+body[data-estilo="porcelain-v2-pink"] .kvp-romantic-icon path{stroke-width:1.15}
+body[data-estilo="porcelain-v2-pink"] .kvp-divider{display:block;width:70px;height:1px;margin:34px 0 26px;background:linear-gradient(90deg,transparent,rgba(119,110,56,.65),transparent)}
+body[data-estilo="porcelain-v2-pink"] .kvp-announcement{max-width:390px;margin:0 0 24px;color:rgb(220,133,153);font-family:"Times New Roman",serif;font-size:17px;line-height:1.4}
+body[data-estilo="porcelain-v2-pink"] .kvp-invite{position:relative;width:min(100%,330px);padding:17px 24px 15px;border:1px solid rgba(119,110,56,.55);border-radius:2px;background:rgba(254,250,240,.78);box-shadow:inset 0 0 0 4px rgba(254,250,240,.95),inset 0 0 0 5px rgba(220,133,153,.3)}
+body[data-estilo="porcelain-v2-pink"] .kvp-invite::before,body[data-estilo="porcelain-v2-pink"] .kvp-invite::after{position:absolute;top:50%;width:32px;height:1px;background:rgba(119,110,56,.55);content:""}
+body[data-estilo="porcelain-v2-pink"] .kvp-invite::before{right:100%;margin-right:10px}
+body[data-estilo="porcelain-v2-pink"] .kvp-invite::after{left:100%;margin-left:10px}
+body[data-estilo="porcelain-v2-pink"] .kvp-invite-name{margin:0;color:rgb(220,133,153);font-family:"Times New Roman",serif;font-size:20px;line-height:1.25}
+body[data-estilo="porcelain-v2-pink"] .kvp-mesa-resumo{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 12px;margin-top:9px;font-size:11px;letter-spacing:.08em;line-height:1.4;text-transform:uppercase}
+body[data-estilo="porcelain-v2-pink"] .kvp-mesa-linha{display:inline-flex;align-items:center;gap:6px}
+body[data-estilo="porcelain-v2-pink"] .kvp-mesa-ponto{color:rgb(220,133,153)}
+body[data-estilo="porcelain-v2-pink"] .kvp-mesa-lugares strong{font-weight:600}
+body[data-estilo="porcelain-v2-pink"] .kvp-cerimonias-resumo{display:flex;width:100%;flex-direction:column;align-items:center;gap:36px;margin-top:44px}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-card{display:flex;width:100%;min-width:0;flex-direction:column;align-items:center;color:rgb(119,110,56)}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-card h3{margin:0;color:rgb(119,110,56);font-family:"Times New Roman",serif;font-size:17px;font-weight:400;line-height:1.25;text-transform:uppercase}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-local{max-width:92%;margin:5px 0 0;font-family:"Times New Roman",serif;font-size:15px;line-height:1.3;text-transform:uppercase}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-meta{display:flex;align-items:center;justify-content:center;gap:26px;margin-top:8px;font-family:"Times New Roman",serif;font-size:15px;line-height:1.3;text-transform:uppercase}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-date{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;color:rgb(220,133,153);font-family:"Times New Roman",serif}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-date strong{font-size:66px;font-weight:400;line-height:.86}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-date i{width:1px;height:60px;background:rgba(220,133,153,.75)}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-date span{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+body[data-estilo="porcelain-v2-pink"] .kvp-cer-date b{font-size:19px;font-weight:400;line-height:1}
+body[data-estilo="porcelain-v2-pink"] .kvp-map-link{display:inline-flex;align-items:center;gap:5px;margin-top:12px;padding-bottom:2px;border-bottom:1px solid rgba(119,110,56,.48);color:rgb(119,110,56);font-size:12px;line-height:1.35;text-decoration:none}
+body[data-estilo="porcelain-v2-pink"] .kvp-map-link svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5}
+body[data-estilo="porcelain-v2-pink"] .kvp-flower{width:47%;filter:drop-shadow(rgba(0,0,0,.2) 4px 4px 3px)}
+body[data-estilo="porcelain-v2-pink"] .kvp-flower-left{left:-29.8%;top:22.3%}
+body[data-estilo="porcelain-v2-pink"] .kvp-flower-right{right:-29%;top:52.4%;transform:scaleX(-1)}
+
+/* A data passa a fazer parte da capa, sem alterar a moldura de origem. */
+body[data-estilo="porcelain-v2-pink"] .kvp-cover-date{
+  display:block;margin-top:10px;color:rgb(220,133,153);font-family:Baskerville,"Times New Roman",serif;
+  font-size:13px;font-weight:400;letter-spacing:.08em;white-space:nowrap
+}
+
+/* O mapa ocupa o espaço do original sem filtros, fundos ou sobreposições. */
+body[data-estilo="porcelain-v2-pink"] .kvp-map-shell{
+  width:min(100%,480px);height:230px;margin:22px auto 15px;overflow:hidden
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-map-shell iframe{
+  display:block;width:100%;height:100%;border:0
+}
+
+@media(max-width:480px){
+  body[data-estilo="porcelain-v2-pink"] .kvp-ceremony{min-height:920px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-ceremony-content{min-height:920px;padding:30px 22px 42px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-family{font-size:20px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-couple{margin-top:40px;font-size:34px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-couple span:first-child{padding-right:13px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-couple span:last-child{padding-left:13px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-couple b{font-size:21px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-divider{margin:29px 0 23px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-announcement{margin-bottom:21px;font-size:15px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-invite{width:min(100%,270px);padding:15px 19px 14px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-invite::before,body[data-estilo="porcelain-v2-pink"] .kvp-invite::after{width:18px;margin-right:7px;margin-left:7px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-invite-name{font-size:18px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cerimonias-resumo{gap:32px;margin-top:37px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-card h3{font-size:15px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-local{font-size:13px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-meta{gap:20px;font-size:13px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-date{margin-top:10px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-date strong{font-size:58px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-date i{height:53px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-cer-date b{font-size:17px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-flower{width:50%}
+  body[data-estilo="porcelain-v2-pink"] .kvp-flower-left{left:-32%;top:23%}
+  body[data-estilo="porcelain-v2-pink"] .kvp-flower-right{right:-31%;top:54%}
+  body[data-estilo="porcelain-v2-pink"] .kvp-map-shell{height:205px;margin-top:18px}
+}
+
+/* Botão e janela de confirmação do desenho original Porcelana. */
+body[data-estilo="porcelain-v2-pink"] .exact-rsvp{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:2px auto;
+  padding:7px 32px;
+  border:0;
+  border-radius:999px;
+  background:rgb(119,110,56);
+  color:rgb(222,217,215);
+  font-family:Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:13px;
+  line-height:1.35;
+  text-decoration:none;
+  transition:transform .2s ease,box-shadow .2s ease;
+}
+body[data-estilo="porcelain-v2-pink"] .exact-rsvp:hover,
+body[data-estilo="porcelain-v2-pink"] .exact-rsvp:focus-visible{transform:scale(1.03);box-shadow:0 5px 16px rgba(119,110,56,.23)}
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal{background:rgba(35,33,29,.62);backdrop-filter:blur(5px)}
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal__painel{
+  position:relative;
+  width:min(430px,calc(100vw - 32px));
+  height:min(760px,calc(100dvh - 32px));
+  grid-template-rows:minmax(0,1fr);
+  border:0;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 22px 46px rgba(0,0,0,.32);
+}
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal__cabecalho{
+  position:absolute;
+  z-index:4;
+  top:16px;
+  right:16px;
+  min-height:0;
+  padding:0;
+  border:0;
+  background:transparent;
+}
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal__titulo{display:none}
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal__fechar{
+  width:34px;
+  height:34px;
+  border:0;
+  background:#f1f2f4;
+  color:#677180;
+}
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal__corpo,
+body[data-estilo="porcelain-v2-pink"] .kulemba-modal__corpo iframe{background:#fff}
+@media(max-width:620px){
+  body[data-estilo="porcelain-v2-pink"] .kulemba-modal{display:grid;padding:16px;place-items:center}
+  body[data-estilo="porcelain-v2-pink"] .kulemba-modal__painel{width:min(430px,100%);height:min(760px,calc(100dvh - 32px));border-radius:18px}
+}
+
+/* Abertura original: parte-se o selo, dispersam-se as partículas e só o
+   cartão sobe. O fundo floral permanece estável até revelar o convite. */
+body[data-estilo="porcelain-v2-pink"] .exact-cover{
+  cursor:pointer;opacity:1!important;transform:none!important;transition:none!important
+}
+body[data-estilo="porcelain-v2-pink"] .exact-cover.is-opening{
+  opacity:1!important;transform:none!important;pointer-events:none
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-envelope-card{
+  will-change:transform,opacity;transform-origin:center
+}
+body[data-estilo="porcelain-v2-pink"] .exact-cover.is-away .kvp-envelope-card{
+  animation:envelope-away .8s ease-in forwards
+}
+body[data-estilo="porcelain-v2-pink"] .exact-cover.is-opening .kvp-envelope-seal{
+  animation:seal-break .5s cubic-bezier(.4,0,.2,1) forwards!important
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-seal-ring{
+  position:absolute;left:50%;top:50px;z-index:29;width:56px;height:56px;pointer-events:none;
+  transform:translate(-50%,-50%);border:3px solid #776e38;border-radius:50%;
+  animation:seal-ring .6s ease-out forwards
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-particle-layer{
+  position:fixed;inset:0;z-index:100;pointer-events:none
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-seal-particle{
+  position:absolute;left:50%;top:50%;pointer-events:none;text-shadow:0 0 10px currentColor;
+  animation:particle-burst 1.4s cubic-bezier(.25,.46,.45,.94) forwards
+}
+
+/* Estados inequívocos do leitor de música. */
+body[data-estilo="porcelain-v2-pink"] #audioBtn{
+  display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(255,255,255,.72);
+  background:rgb(119,110,56);color:#fff;box-shadow:0 7px 20px rgba(69,61,27,.28)
+}
+body[data-estilo="porcelain-v2-pink"] #audioBtn .kvp-audio-disc{
+  position:absolute;inset:3px;border:1px solid rgba(255,255,255,.28);border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.24) 0 9%,transparent 10% 31%,rgba(255,255,255,.12) 32% 35%,transparent 36%)
+}
+body[data-estilo="porcelain-v2-pink"] #audioBtn.playing .kvp-audio-disc{animation:spin-cd 3s linear infinite}
+body[data-estilo="porcelain-v2-pink"] #audioBtn .kvp-audio-icon{position:relative;z-index:2;width:19px;height:19px;fill:currentColor}
+body[data-estilo="porcelain-v2-pink"] #audioBtn .kvp-audio-pause{display:none}
+body[data-estilo="porcelain-v2-pink"] #audioBtn.playing .kvp-audio-play{display:none}
+body[data-estilo="porcelain-v2-pink"] #audioBtn.playing .kvp-audio-pause{display:block}
+
+/* A galeria gira sozinha; clique, toque e teclado mantêm o cartão acessível. */
+body[data-estilo="porcelain-v2-pink"] img[alt^="Wedding photo"]{pointer-events:none}
+body[data-estilo="porcelain-v2-pink"] img[alt^="Wedding photo"]:focus{outline:none}
+body[data-estilo="porcelain-v2-pink"] img[alt^="Wedding photo"]:where(:hover){filter:saturate(1.03)}
+body[data-estilo="porcelain-v2-pink"] [role="button"]:has(>img[alt^="Wedding photo"]):focus-visible{
+  outline:3px solid rgba(191,91,117,.82);outline-offset:4px
+}
+body[data-estilo="porcelain-v2-pink"] button[aria-label^="Ir para a fotografia"]{
+  width:8px!important;height:8px!important;opacity:.3!important;background:rgb(119,110,56)!important
+}
+body[data-estilo="porcelain-v2-pink"] button[aria-label^="Ir para a fotografia"][aria-current="true"]{
+  width:25px!important;opacity:.78!important
+}
+
+/* A chamada principal precisa de se destacar sobre o fundo floral. */
+body[data-estilo="porcelain-v2-pink"] .exact-rsvp{
+  min-height:46px;margin:8px auto;padding:11px 34px!important;border:2px solid #fff!important;
+  background:rgb(191,91,117)!important;color:#fff!important;font-size:14px!important;font-weight:700!important;
+  letter-spacing:.045em;box-shadow:0 7px 22px rgba(113,48,65,.36),0 0 0 2px rgba(191,91,117,.28)!important
+}
+
+/* Quando há menos cerimónias, o cartão termina junto do último conteúdo. */
+body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--1,
+body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--1 .kvp-ceremony-content{min-height:730px}
+body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--0,
+body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--0 .kvp-ceremony-content{min-height:430px}
+
+/* Passe de entrada: a função do modelo Kulemba com a porcelana botânica
+   deste convite — moldura fina, rosa antigo, azeite e papel creme. */
+body[data-estilo="porcelain-v2-pink"] .kvp-access{
+  box-sizing:border-box;overflow:hidden;margin-inline:auto;padding:0;border-color:rgb(119,110,56)!important;
+  border-radius:10px;background:rgb(253,249,240);box-shadow:4px 4px 2px rgba(0,0,0,.25)
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access::before{
+  position:absolute;inset:9px;z-index:1;border:1px solid rgba(119,110,56,.28);pointer-events:none;content:""
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-content{
+  position:relative;z-index:3;display:flex;box-sizing:border-box;width:100%;min-height:710px;align-items:center;
+  flex-direction:column;padding:48px 34px 52px;color:rgb(119,110,56);font-family:"Times New Roman",serif;text-align:center
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-flower{
+  position:absolute;z-index:2;width:43%;max-width:none;height:auto;pointer-events:none;filter:drop-shadow(3px 4px 3px rgba(0,0,0,.13))
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-flower--top{top:-13%;left:-25%;transform:rotate(18deg)}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-flower--bottom{right:-25%;bottom:-15%;transform:scaleX(-1) rotate(18deg)}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-emblem{
+  display:flex;width:50px;height:32px;align-items:center;justify-content:center;margin-bottom:8px;color:rgb(220,133,153)
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-emblem svg{width:44px;height:26px;overflow:visible;fill:none;stroke:currentColor;stroke-width:1.25}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-emblem path{stroke-width:1}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-eyebrow{
+  margin:0 0 5px;color:rgb(119,110,56);font-family:Baskerville,"Times New Roman",serif;font-size:12px;
+  letter-spacing:.18em;line-height:1.4;text-transform:uppercase
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access h2{
+  margin:0;color:rgb(220,133,153);font-family:"Times New Roman",serif;font-size:24px;font-weight:700;
+  letter-spacing:.025em;line-height:1.2;text-transform:uppercase
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-rule{display:flex;align-items:center;gap:10px;margin:14px 0 20px;color:rgba(119,110,56,.72)}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-rule i{display:block;width:44px;height:1px;background:linear-gradient(90deg,transparent,rgba(119,110,56,.65))}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-rule i:last-child{transform:scaleX(-1)}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-rule span{font-size:13px}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-pass{
+  position:relative;display:flex;box-sizing:border-box;width:min(100%,310px);align-items:center;flex-direction:column;
+  padding:25px 25px 20px;border:1px solid rgba(119,110,56,.62);background:rgba(254,250,240,.94);
+  box-shadow:inset 0 0 0 5px rgb(254,250,240),inset 0 0 0 6px rgba(220,133,153,.3),0 12px 28px rgba(83,74,39,.11)
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-pass::before{
+  position:absolute;top:-6px;left:50%;width:34px;height:11px;transform:translateX(-50%);background:rgb(253,249,240);content:""
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-pass canvas{
+  display:block;width:min(218px,100%);height:auto;aspect-ratio:1;margin:0 auto 13px;padding:7px;background:rgb(254,250,240)
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-corner{position:absolute;width:18px;height:18px;border-color:rgb(220,133,153);pointer-events:none}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-corner--tl{top:11px;left:11px;border-top:1px solid;border-left:1px solid}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-corner--tr{top:11px;right:11px;border-top:1px solid;border-right:1px solid}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-corner--bl{bottom:11px;left:11px;border-bottom:1px solid;border-left:1px solid}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-corner--br{right:11px;bottom:11px;border-right:1px solid;border-bottom:1px solid}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-guest{
+  display:block;max-width:100%;color:rgb(220,133,153);font-family:Baskerville,"Times New Roman",serif;
+  font-size:19px;font-weight:600;line-height:1.3;overflow-wrap:anywhere
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access .guest-mesa{
+  margin:5px 0 0!important;color:rgb(119,110,56)!important;font-family:"Times New Roman",serif!important;
+  font-size:11px!important;letter-spacing:.09em!important;line-height:1.4!important;text-transform:uppercase
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access .guest-mesa b{color:rgb(119,110,56)!important;font-weight:600!important}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-instruction{
+  max-width:340px;margin:21px 0 0;color:rgb(119,110,56);font-family:Baskerville,"Times New Roman",serif;font-size:14px;line-height:1.55
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-note{
+  max-width:360px;margin:13px 0 0;padding-top:13px;border-top:1px solid rgba(119,110,56,.24);color:rgba(119,110,56,.78);
+  font-family:Roboto,"Helvetica Neue",Arial,sans-serif;font-size:11px;line-height:1.5
+}
+body[data-estilo="porcelain-v2-pink"] .kvp-access-note b{color:rgb(220,133,153);font-weight:700}
+
+/* Presentes: janela centrada e cartões bancários legíveis. */
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal[open]{
+  position:fixed;inset:0;z-index:1200;display:grid!important;width:100vw;max-width:none;height:100dvh;max-height:none;
+  margin:0;padding:18px;place-items:center;border:0;background:rgba(35,31,25,.68);overflow:hidden
+}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal::backdrop{background:rgba(35,31,25,.68);backdrop-filter:blur(4px)}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .modal-box{
+  position:relative;width:min(720px,100%);max-width:720px;max-height:calc(100dvh - 36px);margin:auto;
+  overflow:auto;border:1px solid rgba(119,110,56,.28);border-radius:18px;background:rgb(254,250,240);
+  box-shadow:0 24px 70px rgba(0,0,0,.38);translate:0 0!important;transform:none!important
+}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .modal-backdrop{display:none}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .kvp-bank-card{
+  box-sizing:border-box;flex:1 1 245px;width:min(100%,285px);max-width:285px!important;min-width:0;padding:18px;
+  border:1px solid rgba(119,110,56,.2);border-radius:14px;background:rgba(255,255,255,.72);box-shadow:0 8px 24px rgba(75,65,35,.08)
+}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .kvp-bank-title{min-height:auto!important;font-size:14px!important;line-height:1.35}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .kvp-bank-label{
+  display:block;margin-top:9px;color:rgba(119,110,56,.7);font:600 10px/1.3 Roboto,"Helvetica Neue",Arial,sans-serif;
+  letter-spacing:.08em;text-transform:uppercase
+}
+body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .kvp-bank-reference{
+  margin-top:3px;color:rgb(78,72,39)!important;font-size:12px!important;font-weight:700;overflow-wrap:anywhere
+}
+
+@media(max-width:480px){
+  body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--1,
+  body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--1 .kvp-ceremony-content{min-height:690px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--0,
+  body[data-estilo="porcelain-v2-pink"] .kvp-ceremony--0 .kvp-ceremony-content{min-height:400px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-content{min-height:650px;padding:39px 20px 43px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access h2{font-size:21px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-pass{width:min(100%,270px);padding:23px 22px 19px}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-pass canvas{width:min(190px,100%)}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-flower{width:48%}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-flower--top{top:-9%;left:-31%}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-flower--bottom{right:-31%;bottom:-10%}
+  body[data-estilo="porcelain-v2-pink"] .kvp-access-instruction{font-size:13px}
+  body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal[open]{padding:12px}
+  body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .modal-box{max-height:calc(100dvh - 24px);border-radius:15px}
+  body[data-estilo="porcelain-v2-pink"] dialog.kvp-gift-modal .kvp-bank-card{width:100%;max-width:none!important}
+}

@@ -1,0 +1,36 @@
+/* Uma única área útil, incluindo teclado e barras móveis do navegador. */
+:root { --modal-altura:100vh; --modal-topo:0px; --modal-esquerda:0px; --modal-largura:100%; }
+@supports(height:100dvh) { :root { --modal-altura:100dvh; } }
+html body :is(.overlay,.modal-fundo,.pl-modal,.ov-modelo,.ft-lente,.vs-jan,.esp-aviso,#lightbox) {
+  position:fixed; inset:auto; top:var(--modal-topo); left:var(--modal-esquerda);
+  width:var(--modal-largura); height:var(--modal-altura); max-height:var(--modal-altura);
+  box-sizing:border-box; z-index:10000; overflow:auto; overscroll-behavior:contain;
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  align-items:center;
+}
+html body .pl-modal { z-index:10100; }
+html body #lightbox { z-index:10200; }
+html body :is(.overlay,.modal-fundo) > .modal,
+html body :is(.pl-modal-cx,.pl-lupa-cx,.vs-caixa,.mod-cx) {
+  box-sizing:border-box; min-height:0; min-width:0; max-height:100%; overflow:auto;
+  overscroll-behavior:contain; overflow-wrap:anywhere;
+}
+html body .pl-modal-cx { border-radius:var(--j-raio); }
+html body .pl-modal-corpo { min-height:0; flex:1 1 auto; overscroll-behavior:contain; }
+html body .modal-topo { position:sticky; top:0; z-index:2; gap:.5rem; }
+html body :is(.modal-topo,.pl-modal-cab) h3 { min-width:0; }
+html body :is(.fechar,.pl-modal-x) { flex-shrink:0; min-width:36px; min-height:36px; }
+html body :is(#lightbox,.pl-modal-img) img { max-height:calc(var(--modal-altura) - 130px); object-fit:contain; }
+html body.modal-em-uso { overflow:hidden; }
+html body .toast { z-index:10300; }
+
+/* No painel da administração, os formulários seguem o modelo do Orçamento:
+   o cartão inteiro é a área de rolagem. Título, campos, avisos e botões passam
+   juntos, em vez de prender o cabeçalho e o rodapé enquanto só o miolo anda. */
+html body.admin-plataforma .modal-topo { position:relative; top:auto; }
+html body.admin-plataforma .pl-modal-cx { display:block; overflow:auto; }
+html body.admin-plataforma .pl-modal-corpo { overflow:visible; flex:none; }
+@media(max-height:440px) {
+  html body .pl-modal-cx { display:block; overflow:auto; }
+  html body .pl-modal-corpo { overflow:visible; }
+}

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "kulemba-contemporaneo",
+  "versao": "1.0.0",
+  "nome": "Kulemba Contemporâneo",
+  "ambito": "digital",
+  "adaptador": "convite-base-v1",
+  "estado": "mantido",
+  "compatibilidade": {
+    "capacidades": 3,
+    "dados": 1
+  },
+  "editor": {
+    "seccoes": ["capa", "hero", "convite", "historia", "interludio", "grande-dia", "acesso", "final"],
+    "paineis": ["conteudo", "camadas", "cores", "tipografia", "media", "efeitos", "composicao"],
+    "media": ["media.hero", "media.historia", "media.interludio", "media.acesso", "media.musica"],
+    "efeitos": ["fx.petalas", "fx.autoplay"],
+    "componentes": ["texto", "fotografia", "galeria", "cronologia", "local_mapa", "confirmacao", "musica", "presentes", "mensagens"],
+    "componentes_incorporados": [],
+    "recursos": ["biblioteca_icones", "rolagem_automatica", "presentes_qr"]
+  },
+  "runtime": {
+    "esquema": 1,
+    "montagens": ["capa", "audio", "calendario", "mapa", "galeria", "confirmacao", "qr", "presentes"],
+    "eventos": ["pronto", "capa-abrir", "audio-tocar", "audio-pausar", "rolagem-iniciar", "rolagem-pausar", "calendario-descarregar", "mapa-abrir", "galeria-abrir", "galeria-fechar", "qr-gerado", "confirmacao-abrir", "confirmacao-fechar", "confirmacao-concluida"]
+  }
+}

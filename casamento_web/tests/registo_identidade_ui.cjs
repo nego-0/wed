@@ -1,0 +1,25 @@
+// node tests/registo_identidade_ui.cjs; testa as funções reais sem PHP/MySQL.
+const fs = require('node:fs'), path = require('node:path');
+const vm = require('node:vm'), assert = require('node:assert/strict');
+const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+const index = read('index.php');
+const cx = {innerHTML:''};
+const context = vm.createContext({esc, AUD_ROWS:[],document:{getElementById:()=>cx}, audDataInteira:s=>s});
+vm.runInContext(index.slice(index.indexOf('function quemAoCerto('), index.indexOf('async function carregarRegisto(')),context);
+assert.equal(context.quemAoCerto({email:'',utilizador:'Pessoa antiga'}),'Pessoa antiga');
+assert.equal(context.quemAoCerto({email:'',utilizador:''}),'—');
+assert.match(context.quemAoCerto({email:'pessoa@exemplo.test'}),/mailto:pessoa@exemplo.test/);
+assert.doesNotMatch(context.quemAoCerto({email:'<script>'}),/<script>/);
+const plataforma=read('plataforma.php');
+vm.runInContext(plataforma.slice(plataforma.indexOf('function pintarAuditoria('),plataforma.indexOf('/** Abre (ou fecha) o detalhe')),context);
+context.AUD_ROWS=[{id:1,email:'pessoa@exemplo.test',utilizador:'Nome',papel:'noivos',accao:'teste',criado_em:'2026-09-22',casamento_id:1}];
+context.pintarAuditoria();
+assert.match(cx.innerHTML,/\(noivos\)/);
+assert.doesNotMatch(cx.innerHTML,/>Nome<|não registado|<dt>Email<\/dt>/);
+assert.match(cx.innerHTML,/<td class="a-quem"><span class="a-email">pessoa@exemplo.test<\/span>/);
+context.AUD_ROWS=[{email:'',utilizador:'Pessoa antiga',accao:'teste',casamento_id:0}];
+context.pintarAuditoria();
+assert.match(cx.innerHTML,/Pessoa antiga/);
+assert.doesNotMatch(cx.innerHTML,/não registado|mailto:/);
+console.log('PASS: identidade por email, papel apresentado, histórico antigo e escape HTML');

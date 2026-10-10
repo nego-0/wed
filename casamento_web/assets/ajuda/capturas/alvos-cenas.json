@@ -1,0 +1,842 @@
+[
+  {
+    "modulo": "convidados",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 70.1,
+    "y": 71.4
+  },
+  {
+    "modulo": "convidados",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "convidados",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "enviar",
+    "rolar": true,
+    "x": 70.9,
+    "y": 93.2
+  },
+  {
+    "modulo": "convidados",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "pesquisar",
+    "rolar": false,
+    "x": 34.7,
+    "y": 79.2
+  },
+  {
+    "modulo": "convidados",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "editar",
+    "rolar": false,
+    "x": 50,
+    "y": 24.3
+  },
+  {
+    "modulo": "convidados",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 94.2
+  },
+  {
+    "modulo": "mesas",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "adicionar",
+    "rolar": false,
+    "x": 20.8,
+    "y": 44.9
+  },
+  {
+    "modulo": "mesas",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 20.8,
+    "y": 44.9
+  },
+  {
+    "modulo": "mesas",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "arrastar",
+    "rolar": true,
+    "x": 28.9,
+    "y": 50
+  },
+  {
+    "modulo": "mesas",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 73.3,
+    "y": 50
+  },
+  {
+    "modulo": "mesas",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 86.7,
+    "y": 66
+  },
+  {
+    "modulo": "mesas",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 79.7,
+    "y": 50
+  },
+  {
+    "modulo": "digital",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 50,
+    "y": 30.7
+  },
+  {
+    "modulo": "digital",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 50.1
+  },
+  {
+    "modulo": "digital",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "confirmar",
+    "rolar": true,
+    "x": 50,
+    "y": 56.3
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 50,
+    "y": 30.7
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "rolar",
+    "rolar": true,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "confirmar",
+    "rolar": true,
+    "x": 50,
+    "y": 57.3
+  },
+  {
+    "modulo": "porta",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "pesquisar",
+    "rolar": false,
+    "x": 45.9,
+    "y": 49.4
+  },
+  {
+    "modulo": "porta",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 50,
+    "y": 65.6
+  },
+  {
+    "modulo": "porta",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "confirmar",
+    "rolar": true,
+    "x": 50,
+    "y": 48.8
+  },
+  {
+    "modulo": "porta",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 50,
+    "y": 66.3
+  },
+  {
+    "modulo": "porta",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "desmarcar",
+    "rolar": false,
+    "x": 50,
+    "y": 70.1
+  },
+  {
+    "modulo": "porta",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 65.6
+  },
+  {
+    "modulo": "bar",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "adicionar",
+    "rolar": false,
+    "x": 83.7,
+    "y": 62.5
+  },
+  {
+    "modulo": "bar",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 38.7,
+    "y": 33.7
+  },
+  {
+    "modulo": "bar",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "activar",
+    "rolar": true,
+    "x": 61.3,
+    "y": 74.3
+  },
+  {
+    "modulo": "bar",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "enviar",
+    "rolar": false,
+    "x": 36,
+    "y": 50
+  },
+  {
+    "modulo": "bar",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "preparar",
+    "rolar": true,
+    "x": 32.3,
+    "y": 62.5
+  },
+  {
+    "modulo": "bar",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "entregar",
+    "rolar": true,
+    "x": 50,
+    "y": 75.2
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "adicionar",
+    "rolar": false,
+    "x": 78.5,
+    "y": 50
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 50,
+    "y": 30.6
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "guardar",
+    "rolar": true,
+    "x": 65.7,
+    "y": 77.2
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "comparar",
+    "rolar": false,
+    "x": 41.7,
+    "y": 36.8
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "filtrar",
+    "rolar": true,
+    "x": 48.2,
+    "y": 47.6
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 29.7,
+    "y": 50
+  },
+  {
+    "modulo": "convidados",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 78.8,
+    "y": 49.9
+  },
+  {
+    "modulo": "convidados",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "convidados",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "enviar",
+    "rolar": true,
+    "x": 73.1,
+    "y": 93
+  },
+  {
+    "modulo": "convidados",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "pesquisar",
+    "rolar": false,
+    "x": 31.1,
+    "y": 49.9
+  },
+  {
+    "modulo": "convidados",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "editar",
+    "rolar": false,
+    "x": 50,
+    "y": 27.7
+  },
+  {
+    "modulo": "convidados",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 82.9
+  },
+  {
+    "modulo": "mesas",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "adicionar",
+    "rolar": false,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "mesas",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 37,
+    "y": 50
+  },
+  {
+    "modulo": "mesas",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "arrastar",
+    "rolar": true,
+    "x": 49.9,
+    "y": 50
+  },
+  {
+    "modulo": "mesas",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 29,
+    "y": 78.2
+  },
+  {
+    "modulo": "mesas",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 50,
+    "y": 50.2
+  },
+  {
+    "modulo": "mesas",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "digital",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 50,
+    "y": 32.4
+  },
+  {
+    "modulo": "digital",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "digital",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "confirmar",
+    "rolar": true,
+    "x": 50,
+    "y": 53.7
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 50,
+    "y": 32.4
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "rolar",
+    "rolar": true,
+    "x": 50,
+    "y": 49.9
+  },
+  {
+    "modulo": "digital",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "confirmar",
+    "rolar": true,
+    "x": 50,
+    "y": 56.2
+  },
+  {
+    "modulo": "porta",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "pesquisar",
+    "rolar": false,
+    "x": 50,
+    "y": 50
+  },
+  {
+    "modulo": "porta",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 50,
+    "y": 64.7
+  },
+  {
+    "modulo": "porta",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "confirmar",
+    "rolar": true,
+    "x": 50,
+    "y": 59.5
+  },
+  {
+    "modulo": "porta",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 50,
+    "y": 64.9
+  },
+  {
+    "modulo": "porta",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "desmarcar",
+    "rolar": false,
+    "x": 50,
+    "y": 68.1
+  },
+  {
+    "modulo": "porta",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 63.5
+  },
+  {
+    "modulo": "bar",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "adicionar",
+    "rolar": false,
+    "x": 50,
+    "y": 78.8
+  },
+  {
+    "modulo": "bar",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 50,
+    "y": 17.2
+  },
+  {
+    "modulo": "bar",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "activar",
+    "rolar": true,
+    "x": 50,
+    "y": 70.9
+  },
+  {
+    "modulo": "bar",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "enviar",
+    "rolar": false,
+    "x": 26.4,
+    "y": 50
+  },
+  {
+    "modulo": "bar",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "preparar",
+    "rolar": true,
+    "x": 50,
+    "y": 50.1
+  },
+  {
+    "modulo": "bar",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "entregar",
+    "rolar": true,
+    "x": 50,
+    "y": 74.6
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "adicionar",
+    "rolar": false,
+    "x": 79.1,
+    "y": 50
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "preencher",
+    "rolar": false,
+    "x": 50,
+    "y": 24.4
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "guardar",
+    "rolar": true,
+    "x": 71.8,
+    "y": 83.7
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "comparar",
+    "rolar": false,
+    "x": 71.9,
+    "y": 35.5
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "filtrar",
+    "rolar": true,
+    "x": 24.1,
+    "y": 43.9
+  },
+  {
+    "modulo": "orcamento",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 35.1,
+    "y": 50
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 27.3,
+    "y": 50
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "editar",
+    "rolar": true,
+    "x": 88.8,
+    "y": 38.2
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "guardar",
+    "rolar": false,
+    "x": 50,
+    "y": 61.5
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 18.9,
+    "y": 90.5
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 52.7
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "descarregar",
+    "rolar": true,
+    "x": 80.2,
+    "y": 33.6
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 25.7,
+    "y": 50
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "editar",
+    "rolar": true,
+    "x": 50,
+    "y": 43.1
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "guardar",
+    "rolar": false,
+    "x": 50,
+    "y": 64.2
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 25.2,
+    "y": 91
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 52.7
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "descarregar",
+    "rolar": true,
+    "x": 27.3,
+    "y": 35.1
+  }
+]

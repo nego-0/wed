@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "id": "royal-v2-green",
+  "versao": "1.0.0",
+  "nome": "Real V2 Verde",
+  "ambito": "digital",
+  "adaptador": "html-semantico",
+  "referencia": "https://chungdoi.com/templates/royal-v2-green/demo",
+  "idioma": "pt",
+  "capacidades": {
+    "seccoes": [
+      "envelope",
+      "convite",
+      "galeria",
+      "recepcao",
+      "local",
+      "vestuario",
+      "programa",
+      "acesso",
+      "mensagens",
+      "presentes",
+      "confirmacao"
+    ],
+    "recursos": [
+      "musica",
+      "rolagem_automatica",
+      "galeria",
+      "calendario",
+      "mapa",
+      "qr-acesso",
+      "presentes",
+      "confirmacao-modal"
+    ]
+  },
+  "compatibilidade": {
+    "capacidades": 3,
+    "dados": 1
+  },
+  "editor": {
+    "seccoes": [
+      "capa",
+      "hero",
+      "convite",
+      "historia",
+      "interludio",
+      "grande-dia",
+      "acesso",
+      "final"
+    ],
+    "paineis": [
+      "conteudo",
+      "camadas",
+      "media",
+      "efeitos"
+    ],
+    "media": [
+      "media.hero",
+      "media.historia",
+      "media.interludio",
+      "media.acesso",
+      "media.musica"
+    ],
+    "efeitos": [
+      "fx.autoplay"
+    ],
+    "movimentaveis": [],
+    "campos_editaveis": [
+      "casal.noiva",
+      "casal.noivo",
+      "capa.dica",
+      "textos.familias",
+      "textos.anuncio_cerimonia",
+      "textos.lugares",
+      "textos.mapa",
+      "evento.data",
+      "evento.hora",
+      "evento.local",
+      "evento.cidade",
+      "evento.maps",
+      "evento.venue_titulo",
+      "evento.civil_titulo",
+      "evento.civil_hora",
+      "evento.civil_local",
+      "evento.civil_maps",
+      "evento.religiosa_titulo",
+      "evento.religiosa_hora",
+      "evento.religiosa_local",
+      "evento.religiosa_maps",
+      "recepcao.titulo",
+      "recepcao.subtitulo",
+      "recepcao.chegada_rotulo",
+      "recepcao.chegada_hora",
+      "recepcao.bolo_rotulo",
+      "recepcao.bolo_hora",
+      "recepcao.contagem_titulo",
+      "recepcao.local_titulo",
+      "cronograma.titulo",
+      "cronograma.itens",
+      "cronograma.icone_civil",
+      "cronograma.icone_religiosa",
+      "acesso.eyebrow",
+      "acesso.titulo",
+      "acesso.instrucao",
+      "acesso.nota",
+      "layout.blocos",
+      "layout.ordem",
+      "geral.rolagem_auto",
+      "geral.rolagem_velocidade",
+      "geral.icone_musica_tocar",
+      "geral.icone_musica_pausa"
+    ],
+    "cores_permitidas": [],
+    "tipografias_permitidas": [],
+    "componentes": [
+      "texto",
+      "fotografia",
+      "galeria",
+      "cronologia",
+      "local_mapa",
+      "confirmacao",
+      "musica",
+      "presentes",
+      "mensagens"
+    ],
+    "componentes_incorporados": [
+      "galeria"
+    ],
+    "recursos": [
+      "biblioteca_icones",
+      "rolagem_automatica",
+      "presentes_qr"
+    ]
+  },
+  "runtime": {
+    "adaptador": "exact-runtime.js",
+    "dados": "semanticos",
+    "esquema": 1,
+    "montagens": [
+      "capa",
+      "audio",
+      "calendario",
+      "mapa",
+      "galeria",
+      "confirmacao",
+      "qr",
+      "presentes",
+      "mensagens",
+      "programa"
+    ],
+    "eventos": [
+      "pronto",
+      "capa-abrir",
+      "audio-tocar",
+      "audio-pausar",
+      "rolagem-iniciar",
+      "rolagem-pausar",
+      "calendario-descarregar",
+      "mapa-abrir",
+      "galeria-abrir",
+      "galeria-fechar",
+      "qr-gerado",
+      "confirmacao-abrir",
+      "confirmacao-fechar",
+      "confirmacao-concluida"
+    ]
+  }
+}
