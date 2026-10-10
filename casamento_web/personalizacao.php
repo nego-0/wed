@@ -711,12 +711,10 @@ function catalogoModelosDeCasa(): array {
             'manual.intro' => 'Traje formal em tons neutros.',
             'textos.kicker' => 'Reserve a data',
         ];
-        $pacoteExacto = convitePacoteResolver('digital', $renderer, '1.0.0', CONVITE_PACOTE_SCHEMA, false);
-        $manifestoExacto = $pacoteExacto['manifesto'] ?? [];
-        if (!empty($manifestoExacto['musica'])) $defs['media.musica'] = (string)$manifestoExacto['musica'];
-        foreach (['media.hero','media.historia','media.interludio','media.acesso'] as $i=>$chaveFoto) {
-            if (!empty($manifestoExacto['fotos'][$i])) $defs[$chaveFoto] = (string)$manifestoExacto['fotos'][$i];
-        }
+        // Fotografias e música pertencem ao conteúdo, não ao desenho. A prova
+        // destes modelos recebe-as do conjunto de exemplo que o administrador
+        // mantém; num casamento recebe-as desse casamento. O manifesto conserva
+        // apenas os recursos decorativos indispensáveis à identidade visual.
         $out[] = [
             'ambito' => 'digital',
             'nome' => $nome,
@@ -945,18 +943,13 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     // o desenhou (os novos nascem com a de exemplo — ver instantaneoModelo).
     if (function_exists('ehAdminPlataforma') && ehAdminPlataforma()) {
         $defs = defsPadrao();
-        // A identidade em falta é a de EXEMPLO, e não a do desenho de origem.
-        //
-        // Um modelo da casa guarda só o que muda — o Borgonha são três cores e
-        // mais nada —, e o resto vinha do defsPadrao: o nome, a data e as
-        // FOTOGRAFIAS do primeiro casal. Era esse o retrato que o admin via em
-        // todos os modelos, e os dados de exemplo que ele próprio escolhe
-        // (modelo.exemplo.*) não apareciam em lado nenhum a não ser num modelo
-        // acabado de criar. Um modelo é da casa e serve todos os casais: a sua
-        // prova não pode ser o retrato de um deles.
-        foreach (exemploModelo($conn) as $k => $v) $defs[$k] = $v;
         $permitidas = array_flip(chavesModelo($ambito));
         foreach ($j as $k => $v) if (isset($permitidas[$k]) && is_string($v)) $defs[$k] = $v;
+        // A identidade da prova vem SEMPRE do conjunto de exemplo em vigor. O
+        // modelo pode ter sido criado antes desta regra e ainda guardar nomes,
+        // datas, fotografias ou música antigos; aplicar o exemplo no fim evita
+        // que esses valores históricos reapareçam no editor e nas miniaturas.
+        foreach (exemploModelo($conn) as $k => $v) $defs[$k] = $v;
         $info = ['id' => (int)$m['id'], 'nome' => (string)$m['nome'], 'ambito' => $ambito,
                  'capacidades' => $m['capacidades'] ?? null,
                  'renderer_key' => $m['renderer_key'] ?? null,

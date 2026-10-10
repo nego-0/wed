@@ -259,6 +259,16 @@ if ($ehModeloExacto) {
         ],
         'local' => (string)$DEFS['evento.local'],
         'cidade' => (string)$DEFS['evento.cidade'],
+        // A galeria nativa dos onze modelos tinha fotografias de demonstração
+        // embutidas no HTML. O adaptador recebe a mesma seleção semântica usada
+        // pelos modelos Kulemba. O adaptador limita o desenho às mesmas quatro
+        // molduras: capa, história, interlúdio e acesso.
+        'galeria' => array_values(array_filter([
+            (string)$DEFS['media.hero'],
+            (string)$DEFS['media.historia'],
+            (string)$DEFS['media.interludio'],
+            (string)$DEFS['media.acesso'],
+        ], static fn(string $v): bool => trim($v) !== '')),
         'mapEmbed' => googleMapsEmbedUrl($DEFS),
         'mapsUrl' => (string)$DEFS['evento.maps'],
         'mapaRotulo' => (string)$DEFS['textos.mapa'],

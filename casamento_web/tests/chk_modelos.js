@@ -273,10 +273,9 @@ const entrar = async (ctx, u, p) => {
   ok(!voltou['textos.kicker'],
      'aplicar o modelo de origem devolve a peça ao desenho da casa, mesmo já customizada');
 
-  // ---------- 12. os dados de exemplo dos modelos novos ----------
-  // O admin escolhe com que casal e que imagens um modelo NOVO nasce. Mexer
-  // neles não pode tocar num modelo já feito — nem no convite de origem, que é
-  // o produto e não um exemplo.
+  // ---------- 12. os dados de exemplo de todos os modelos ----------
+  // O admin escolhe a identidade comum das provas, antigas e novas. Mexer nela
+  // não reescreve o desenho guardado nem um convite real.
   const exAntes = await api('modelo_exemplo');
   ok(exAntes && exAntes.success && exAntes.exemplo['casal.noiva'],
      `os dados de exemplo leem-se (${exAntes.exemplo['casal.noiva']} & ${exAntes.exemplo['casal.noivo']})`);
@@ -383,7 +382,8 @@ const entrar = async (ctx, u, p) => {
      && reposto['evento.data'] === exAntes.fabrica['evento.data'],
      'um campo obrigatório deixado em branco volta ao de fábrica');
 
-  // Um modelo feito ANTES da mudança e outro DEPOIS: só o segundo a apanha.
+  // Um modelo feito ANTES e outro DEPOIS conservam o seu desenho guardado, mas
+  // as provas de ambos recebem o exemplo actualmente definido pelo admin.
   await api('casamento_abrir&id=' + oficina.id);
   const exAntesMod = await api('modelo_criar', { nome: 'ZZ Exemplo antes ' + marca, ambito: 'digital' });
   await api('modelo_exemplo_guardar', { 'casal.noiva': 'Zita ' + marca, 'casal.noivo': 'Zeca',
@@ -411,8 +411,8 @@ const entrar = async (ctx, u, p) => {
      `e o modelo feito ANTES fica exatamente como estava (${jaFeito.defs['casal.noiva']})`);
   const provaAntes = await admin.evaluate(async (id) =>
     await (await fetch('convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id)).text(), exAntesMod.id);
-  ok(!new RegExp('Zita ' + marca).test(provaAntes),
-     'e a prova dele também — um modelo já feito não se reescreve por baixo de quem o desenhou');
+  ok(new RegExp('Zita ' + marca).test(provaAntes),
+     'e a prova do modelo antigo usa o exemplo actual, sem reescrever o desenho guardado');
 
   // O convite de um casamento JÁ FEITO é o produto, não um exemplo: mexer nos
   // dados de exemplo do admin (Zita, acima) não lhe entra por baixo. O casamento

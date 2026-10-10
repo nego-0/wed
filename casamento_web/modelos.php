@@ -313,8 +313,8 @@ if ($aberto > 0) {
         Um modelo é um desenho, e serve todos os casais — por isso não pode nascer com o nome, a
         data e as fotografias do casamento onde foi composto. Nasce com <b>estes</b> dados, que não
         são de ninguém, e são os que se veem na prova e na miniatura do modelo.
-        <br>Isto vale para os modelos que criar <b>daqui para a frente</b>: os que já existem ficam
-        exatamente como estão.
+        <br>Ao guardar, todas as provas e miniaturas — antigas e novas — passam a usar estes dados.
+        Os desenhos dos modelos e os convites reais dos casamentos não são alterados.
       </div>
       <div id="ex-corpo"><div class="dica" style="margin:0">A carregar…</div></div>
       <div class="jan-fim">
@@ -820,9 +820,9 @@ async function definirOrigem(id, on){
   carregar();
 }
 
-/* ---- Os dados de exemplo com que um modelo novo nasce -------------------
-   Não são de casamento nenhum: vivem na linha 0 das definições. Editá-los não
-   toca em modelo nenhum já feito — só nos que se criarem a seguir. */
+/* ---- Os dados de exemplo comuns a todas as provas de modelo -------------
+   Não são de casamento nenhum: vivem na linha 0 das definições. Editá-los
+   actualiza provas e miniaturas, sem tocar em desenhos ou convites reais. */
 /* Os campos por grupos, na ordem por que se lê um convite. `tipo` é o do
    <input>; 'ficheiro' é uma imagem (ou a música) com envio próprio, e `enq` diz
    qual a chave de enquadramento que a acompanha. */
@@ -1141,7 +1141,7 @@ async function exemploFabrica(){
     titulo: 'Repor os dados de exemplo de fábrica?',
     icone: 'volta', confirmar: 'Repor de fábrica',
     texto: 'O <b>casal</b>, o <b>evento</b>, as <b>imagens</b> e o <b>som</b> de exemplo voltam '
-         + 'aos que o sistema traz.<br><br>São só os dados com que um modelo novo nasce — '
+         + 'aos que o sistema traz.<br><br>As provas e miniaturas voltam a esses dados; '
          + 'nenhum casamento é tocado.'
   });
   if (!r.sim) return;

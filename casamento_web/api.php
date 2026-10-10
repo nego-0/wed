@@ -10203,7 +10203,8 @@ if ($acao === 'modelo_visibilidade') {
 }
 
 if ($acao === 'modelo_exemplo') {
-    // Os dados com que um modelo NOVO nasce. Só de leitura.
+    // A identidade comum de todas as provas de modelo, demonstrações e ajuda.
+    // Os convites publicados continuam a usar os dados do seu casamento.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma vê os dados de exemplo.');
     // A galeria vai com o resto: o painel precisa dela para a janela de escolha.
     ok(['exemplo' => exemploModelo($conn), 'fabrica' => exemploDeFabrica(),
@@ -10212,8 +10213,8 @@ if ($acao === 'modelo_exemplo') {
 }
 
 if ($acao === 'modelo_exemplo_guardar') {
-    // O admin muda o casal e o evento de exemplo. Vale para os modelos que se
-    // criarem daqui para a frente: os que já existem ficam como estão.
+    // O admin muda a identidade comum das provas. A mudança vê-se também nos
+    // modelos já existentes, sem reescrever os seus desenhos nem casamentos.
     if (!ehAdminPlataforma()) erro('Só o admin da plataforma edita os dados de exemplo.');
     $d = corpo();
     $fabrica = exemploDeFabrica();

@@ -46,7 +46,8 @@ function ok(cond, msg){ console.log((cond?'✓':'✗')+' '+msg); if(!cond) falha
       capa:!!document.querySelector('#cover:not([hidden])'),
       pt:/Abrir|Reserve a data|Convida/.test(document.body.innerText),
       mensagens:[...document.querySelectorAll('button,a')].some(e=>/SEND WISHES|ENVOYER|GỬI LỜI CHÚC/i.test(e.textContent))||!!document.querySelector('form textarea'),
-      confirmacao:!!document.querySelector('[data-kulemba="confirmacao"]')
+      confirmacao:!!document.querySelector('[data-kulemba="confirmacao"]'),
+      galeriaExemplo:(()=>{const cfg=(window.KulembaConvite&&window.KulembaConvite.config&&window.KulembaConvite.config.exacto)||{},fontes=(cfg.galeria||[]).map(x=>new URL(x,location.href).href),grupos=[[...document.querySelectorAll('img[alt^="Wedding photo"]')],[...document.querySelectorAll('button[aria-label^="Ver a imagem"] img')],[...document.querySelectorAll('button[aria-label^="Ir para a fotografia"],button[aria-label^="Go to photo"]')]],ok=fontes.length===4&&grupos[0].length===4&&grupos[1].length===4&&(grupos[2].length===0||grupos[2].length===4)&&grupos.slice(0,2).every(imgs=>imgs.every((img,i)=>img.currentSrc===fontes[i]));return{ok,contagens:grupos.map(x=>x.length),fontes:fontes.length};})()
     }),slug);
     ok(estado.estilo===slug&&estado.exacto,`${slug} usa o documento exacto`);
     ok(estado.externo.length===0,`${slug} usa somente recursos locais`);
@@ -55,6 +56,7 @@ function ok(cond, msg){ console.log((cond?'✓':'✗')+' '+msg); if(!cond) falha
     ok(estado.pt,`${slug} apresenta a abertura em português`);
     ok(!estado.mensagens,`${slug} não apresenta o botão de enviar mensagem`);
     ok(estado.confirmacao,`${slug} liga a confirmação ao modal comum`);
+    ok(estado.galeriaExemplo.ok,`${slug} limita a galeria às quatro fotografias semânticas do administrador (${estado.galeriaExemplo.contagens.join('/')} elementos)`);
     if(estado.capa){
       const abrir=page.locator('#cover a,#cover button').filter({hasText:/Abrir/i}).first();
       if(await abrir.count()) await abrir.click(); else await page.locator('#cover').click({position:{x:10,y:10}});
