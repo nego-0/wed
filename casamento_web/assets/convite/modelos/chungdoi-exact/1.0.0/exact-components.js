@@ -31,8 +31,10 @@
     // As variáveis servem apenas as secções opcionais acrescentadas pelo
     // editor. O documento nativo conserva as suas próprias cores, famílias
     // tipográficas e textos: não se repinta o convite inteiro por herança.
-    // A camada já refinada da Porcelana Rosa é a versão canónica desta cena.
-    var native=one('.kvp-ceremony-content');if(native)native.classList.add('exact-semantic-ceremony');
+    // A Porcelana V2 Rosa define o conteúdo canónico, mas nenhum bloco nativo
+    // é dado como concluído antes de o runtime o preencher. Alguns modelos
+    // usam esta classe apenas como estrutura visual e ainda contêm o texto de
+    // origem; marcá-los aqui fazia a normalização saltar toda a cerimónia.
     // Cada estado musical aceita a escolha feita no editor.
     var b=one('#audioBtn');if(b){b.innerHTML='<span class="kvp-audio-disc" aria-hidden="true"></span><span class="exact-audio-play">'+icon(d.iconeMusicaTocar||'musica')+'</span><span class="exact-audio-pause">'+icon(d.iconeMusicaPausa||'pausa')+'</span>';}
   }

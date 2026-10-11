@@ -48,9 +48,11 @@ modelos da casa.
 ## Onze modelos de composição própria
 
 A pasta `assets/convite/modelos/chungdoi-exact/1.0.0` instala onze pacotes
-independentes. Cada pacote conserva o documento, a ordem das páginas, as
-fontes usadas, cores, ornamentos, ícones, envelope, efeitos e animações da
-composição visual que foi comparada e aprovada. As fotografias de demonstração
+independentes. Cada pacote conserva as fontes, cores, fundos, molduras,
+ornamentos, ícones, envelope, efeitos e animações da
+composição visual que foi comparada e aprovada. A estrutura de conteúdo, porém,
+é comum: a **Porcelana V2 Rosa é o documento canónico dos onze modelos**. As
+fotografias de demonstração
 e as músicas que vinham incorporadas foram eliminadas: capa, história,
 interlúdio, acesso e música são sempre recursos semânticos escolhidos na
 Kulemba. A aplicação não lhes aplica a estrutura nem a linguagem do Kulemba
@@ -78,6 +80,13 @@ exemplo chega ao convidado. A confirmação abre no modal Kulemba e o formulári
 de envio de mensagens foi retirado dos onze modelos, conforme a decisão
 funcional do produto.
 
+Sem secções opcionais activas, o fluxo canónico é: galeria, grande dia,
+copo d'água, cronograma, passe de entrada e confirmação. Todas são elementos
+`section`, ficam sob o mesmo contentor e recebem exactamente os mesmos dados e
+textos. História, interlúdio, manual, mensagens, presentes e blocos livres
+entram apenas quando configurados. O modelo decide como cada bloco se apresenta,
+mas não substitui nem repete o conteúdo com dados do documento importado.
+
 Cada manifesto contém a ficha que o editor consome: secções, painéis, campos,
 recursos, efeitos e compatibilidade. O inspector mostra apenas capacidades que
 o pacote declara e, para os noivos, cruza-as com as liberdades concedidas pelo
@@ -92,10 +101,11 @@ dos modelos novos não reinterpreta nem apaga peças históricas.
 
 ### Regra das famílias
 
-Partilhar o contrato semântico não autoriza uniformizar a apresentação: ordem,
-tipografia, cores, ornamentos, abertura, animações e ritmo visual pertencem ao
-pacote. Uma secção transferida entre modelos recebe a linguagem do modelo de
-destino; o admin decide que capacidades expõe aos noivos.
+Partilhar a estrutura semântica não autoriza uniformizar a apresentação:
+tipografia, cores, fundos, molduras, ornamentos, abertura, animações e ritmo
+visual pertencem ao pacote. Uma secção transferida entre modelos recebe a
+linguagem do modelo de destino; o admin decide que capacidades expõe aos
+noivos.
 
 ## Evolução prevista
 

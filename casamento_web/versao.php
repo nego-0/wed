@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os onze modelos usam a estrutura e o conteúdo canónicos da Porcelana V2 Rosa sem perderem a identidade visual',
+         'tests/chk_estrutura_porcelana_onze_modelos.js', 'conteúdo igual à Porcelana V2 Rosa'],
         ['Os onze modelos exactos entram em vigor sem herdarem textos ou secções do convite Kulemba',
          'tests/chk_modelos_exactos_em_vigor.js', 'sem secções herdadas'],
         ['História, interlúdio e manual são opcionais nos onze modelos exactos',
