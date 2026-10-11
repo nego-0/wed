@@ -1,0 +1,38 @@
+// Prova sem gravação: os onze estilos recebem as mesmas secções e dados.
+const {chromium}=require('playwright-core'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const BASE=process.env.BASE_URL||'http://127.0.0.1:8926';
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+try{const ctx=await browser.newContext({viewport:{width:390,height:844}}),p=await ctx.newPage();
+await p.goto(BASE+'/login.php');await p.fill('[name=utilizador]',process.env.TEST_USER||'admin');await p.fill('[name=senha]',process.env.TEST_PASSWORD||'noivos2026');await p.click('button[type=submit]');await p.waitForLoadState('networkidle');
+const lista=await p.evaluate(()=>fetch('api.php?action=modelo_lista&ambito=digital').then(r=>r.json()));
+let modelos=(lista.modelos||[]).filter(m=>m.renderer_key&&m.renderer_key!=='kulemba-contemporaneo');
+if(process.env.TEST_MODEL)modelos=modelos.filter(m=>m.renderer_key===process.env.TEST_MODEL);
+const output=path.join(__dirname,'output','componentes-modelos');fs.mkdirSync(output,{recursive:true});
+for(const m of modelos){const p=await ctx.newPage();
+ const erros=[],escritas=[];const erro=e=>erros.push(e.message);p.on('pageerror',erro);const req=r=>{if(r.url().includes('/api.php')&&r.method()!=='GET')escritas.push(r.url());};p.on('request',req);
+ const thumb=`${BASE}/convite-digital.php?demo=1&prova=1&miniatura=envelope&modelo=${m.id}`;const pedidos=[];const reg=r=>pedidos.push(r.url());p.on('request',reg);await p.goto(thumb,{waitUntil:'networkidle'});
+ assert.equal(await p.locator('script,audio,iframe,main,[data-showcase-root]').count(),0,m.nome+': só envelope');
+ assert.equal(await p.locator('#cover').count(),1);assert(!pedidos.some(u=>/exact-runtime|convite-runtime|google.*maps|\/galeria\/|\.mp3/i.test(u)),m.nome+': miniatura sem recursos completos: '+pedidos.filter(u=>/exact-runtime|convite-runtime|google.*maps|\/galeria\/|\.mp3/i.test(u)).join(', '));p.off('request',reg);
+ await p.screenshot({path:path.join(output,m.renderer_key+'-envelope.png')});
+ await p.goto(`${BASE}/convite-digital.php?demo=1&modelo=${m.id}`,{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>!!window.KulembaExactComponents);
+ const fontes=await p.evaluate(()=>KulembaConvite.config.exacto.galeria);assert.equal(fontes.length,4);
+ const dados={'casal.noiva':'Clara','casal.noivo':'Miguel \"M\"','evento.data':'2028-08-19','evento.local':'Solar do Teste','evento.cidade':'Benguela','evento.civil_hora':'','evento.religiosa_hora':'','historia.titulo':'Uma história de teste','historia.quote':'Uma frase personalizada para Clara e Miguel.','historia.capitulos':JSON.stringify([{t:'O encontro',x:'O capítulo definido pelos noivos.'}]),'historia.visivel':'1','interludio.visivel':'1','manual.visivel':'1','cronograma.visivel':'1','cronograma.itens':JSON.stringify([{h:'20:00',t:'Corte do bolo de teste',i:'bolo'}]),'geral.rolagem_auto':'0','geral.icone_musica_tocar':'coracao','geral.icone_musica_pausa':'aneis','layout.blocos':JSON.stringify([{id:'bl1',tipo:'presentes',titulo:'Ofertas de teste',texto:'Dados definidos pelos noivos.',modo:'metodos',itens:[{i:'transferencia',t:'Banco Teste',x:'IBAN: AO06 1234 5678 9012 3456 7890 1'}]},{id:'bl2',tipo:'livre',titulo:'Alojamento de teste',texto:'Uma secção opcional no estilo deste modelo.',itens:[]}])};
+ ['hero','historia','interludio','acesso'].forEach((k,i)=>dados['media.'+k]=fontes[(i+1)%4]);
+ const url=`${BASE}/convite-digital.php?demo=1&editor=1&modelo=${m.id}`;const response=await ctx.request.post(url,{form:{rascunho:JSON.stringify(dados)}});assert.equal(response.status(),200);await p.route(url,r=>r.fulfill({response}));await p.goto(url,{waitUntil:'domcontentloaded'});await p.unroute(url);await p.waitForFunction(()=>!!window.KulembaExactComponents);
+ await p.locator('#cover a,#cover button').filter({hasText:/Abrir/i}).first().click();await p.locator('#cover').waitFor({state:'hidden'});
+ const texto=await p.locator('body').textContent();assert(texto.includes('Clara')&&texto.includes('Miguel')&&texto.includes('Solar do Teste'));assert(!/Aaron Lim|Hui Ling|Hannah Hoffmann|Maximilian|Tanjong|Elbspeicher|[\u0600-\u06ff]/i.test(texto),m.nome+': sem conteúdo original');
+ assert.equal(await p.locator('img[data-media="media.historia"]').getAttribute('alt'),'Clara e Miguel "M"',m.nome+': aspas em atributos de texto');
+ assert.equal(await p.locator('.exact-semantic-ceremony').count(),1,m.nome+': cerimónia única');assert.equal(await p.locator('.kvp-cer-card').count(),0,m.nome+': cerimónias vazias sem espaço reservado');
+ assert(await p.locator('[data-sec="historia"]').textContent().then(x=>x.includes('Uma história de teste')),JSON.stringify(await p.evaluate(()=>({historia:KulembaConvite.config.exacto.historia,html:document.querySelector('[data-sec=historia]')?.outerHTML}))));assert.equal(await p.locator('[data-sec="interludio"],[data-sec="manual"],[data-sec="bl2"]').count(),3,m.nome+': secções opcionais completas');
+
+ const srcs=await p.locator('[data-kulemba-galeria="1"]').evaluateAll(es=>es.filter(e=>!e.closest('dialog')).map(e=>e.getAttribute('src')));assert.deepEqual(srcs,['hero','historia','interludio','acesso'].map(k=>dados['media.'+k]));
+ const foto=p.locator('[data-kulemba-galeria="1"]:not(dialog *)').nth(2);await foto.locator('..').click();const lb=p.locator('dialog[open]').filter({has:p.locator('[aria-label="Imagem seguinte"]')});await lb.waitFor();assert.equal(await p.locator('button[aria-current="true"][aria-label^="Ir para a fotografia"]').count(),1);assert.equal(await lb.locator('img.max-h-full,[data-exact-lightbox-image]').getAttribute('src'),new URL(dados['media.interludio'],BASE).href);await lb.locator('[aria-label="Fechar galeria"]').click();
+ const gift=p.locator('[aria-label="Abrir presentes"]');await gift.click();const dialog=p.locator('dialog.exact-gift-modal[open]');await dialog.waitFor();assert((await dialog.textContent()).includes('Banco Teste'));assert((await dialog.textContent()).includes('AO06 1234'));assert.equal(await dialog.locator('.exact-gift-icon svg').count(),1);
+ const bounds=await dialog.locator('.exact-gift-panel').boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=391&&bounds.y+bounds.height<=845,m.nome+': presentes centrados e dentro do viewport');await p.screenshot({path:path.join(output,m.renderer_key+'-presentes.png')});await dialog.locator('[aria-label="Fechar presentes"]').click();
+ await p.locator('.exact-semantic-ceremony').screenshot({path:path.join(output,m.renderer_key+'-cerimonia.png')});await p.locator('.exact-semantic-program').screenshot({path:path.join(output,m.renderer_key+'-programa.png')});
+ const pos=await p.locator('[data-sec="historia"],[data-sec="interludio"],[data-sec="grande-dia"]').evaluateAll(es=>Object.fromEntries(es.map(e=>[e.dataset.sec,e.getBoundingClientRect().top])));assert(pos.historia<pos['grande-dia']&&pos.interludio<pos['grande-dia'],m.nome+': ordem das secções do editor');
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,m.nome+': sem transbordo');assert.deepEqual(erros,[]);assert.deepEqual(escritas,[]);p.off('request',req);p.off('pageerror',erro);
+ await p.setViewportSize({width:1440,height:1000});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,m.nome+': desktop');await p.setViewportSize({width:390,height:844});
+ await p.close();console.log('PASS '+m.nome+' · envelope leve, dados próprios, secções, galeria e presentes');
+}
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});

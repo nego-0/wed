@@ -160,18 +160,27 @@
   var eD=um('#cd-d'),eH=um('#cd-h'),eM=um('#cd-m'),eS=um('#cd-s');
   function pad(n){return n<10?'0'+n:String(n)}
   function tick(){if(!eD||!isFinite(alvo))return;var d=alvo-Date.now();if(d<=0){eD.textContent='0';eH.textContent=eM.textContent=eS.textContent='00';return;}eD.textContent=Math.floor(d/86400000);eH.textContent=pad(Math.floor(d/3600000)%24);eM.textContent=pad(Math.floor(d/60000)%60);eS.textContent=pad(Math.floor(d/1000)%60);setTimeout(tick,1000);}tick();
-  todos('[data-kulemba="calendario"],#calBtn').forEach(function(botao){escut(botao,'click',function(e){
+  escut(document,'click',function(e){var botao=e.target&&e.target.closest&&e.target.closest('[data-kulemba="calendario"],#calBtn');if(!botao)return;
     e.preventDefault();var cal=cfg.calendario||{},linhas=cal.linhas||[];if(!linhas.length)return;
     emitir('calendario-descarregar',{ficheiro:cal.ficheiro});var blob=new Blob([linhas.join('\r\n')],{type:'text/calendar'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=cal.ficheiro||'casamento.ics';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
-  });});
+  });
 
   /* Mapas mantêm o destino do modelo e anunciam a acção ao runtime. */
-  todos('[data-kulemba="mapa"]').forEach(function(link){escut(link,'click',function(){emitir('mapa-abrir',{url:link.href,elemento:link});});});
+  escut(document,'click',function(e){var link=e.target&&e.target.closest&&e.target.closest('[data-kulemba="mapa"]');if(link)emitir('mapa-abrir',{url:link.href,elemento:link});});
 
   /* QR de entrada e QR da página de presentes usam o mesmo gerador local. */
   function qr(canvas,valor,cor,fundo){if(!canvas||!valor||!window.QRious)return;try{new QRious({element:canvas,value:valor,size:Number(canvas.getAttribute('width'))||320,level:'M',foreground:cor||'#16261e',background:fundo||'#fff'});emitir('qr-gerado',{canvas:canvas,valor:valor});}catch(e){emitir('erro',{recurso:'qr',erro:e});}}
   todos('canvas[data-kulemba-qr]').forEach(function(c){qr(c,c.getAttribute('data-kulemba-qr'),c.getAttribute('data-qr-cor'),c.getAttribute('data-qr-fundo'));});
   todos('canvas[data-presente-qr]').forEach(function(c){qr(c,c.getAttribute('data-presente-qr'),c.getAttribute('data-qr-cor')||(cfg.qr&&cfg.qr.cor),'#fff');});
+
+  /* Os modelos anteriores também podem incorporar presentes interactivos. */
+  todos('[data-kulemba="presentes"]').forEach(function(b){
+    var d=document.getElementById(b.getAttribute('aria-controls'));if(!d)return;
+    escut(b,'click',function(){if(d.showModal)d.showModal();else d.setAttribute('open','');});
+    var fechar=function(){if(d.close)d.close();else d.removeAttribute('open');b.focus();};
+    escut(um('[data-fechar-presentes]',d),'click',fechar);
+    escut(d,'click',function(e){if(e.target===d)fechar();});
+  });
 
   /* Galeria opcional: qualquer modelo monta-a só com atributos semânticos. */
   var itens=todos('[data-kulemba-galeria-item]');

@@ -84,7 +84,7 @@ body[data-estilo="porcelain-v2-pink"] .kvp-map-shell iframe{
 }
 
 /* Botão e janela de confirmação do desenho original Porcelana. */
-body[data-estilo="porcelain-v2-pink"] .exact-rsvp{
+body[data-estilo="porcelain-v2-pink"] [data-kulemba="confirmacao"]{
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -100,8 +100,8 @@ body[data-estilo="porcelain-v2-pink"] .exact-rsvp{
   text-decoration:none;
   transition:transform .2s ease,box-shadow .2s ease;
 }
-body[data-estilo="porcelain-v2-pink"] .exact-rsvp:hover,
-body[data-estilo="porcelain-v2-pink"] .exact-rsvp:focus-visible{transform:scale(1.03);box-shadow:0 5px 16px rgba(119,110,56,.23)}
+body[data-estilo="porcelain-v2-pink"] [data-kulemba="confirmacao"]:hover,
+body[data-estilo="porcelain-v2-pink"] [data-kulemba="confirmacao"]:focus-visible{transform:scale(1.03);box-shadow:0 5px 16px rgba(119,110,56,.23)}
 body[data-estilo="porcelain-v2-pink"] .kulemba-modal{background:rgba(35,33,29,.62);backdrop-filter:blur(5px)}
 body[data-estilo="porcelain-v2-pink"] .kulemba-modal__painel{
   position:relative;
@@ -198,7 +198,7 @@ body[data-estilo="porcelain-v2-pink"] button[aria-label^="Ir para a fotografia"]
 }
 
 /* A chamada principal precisa de se destacar sobre o fundo floral. */
-body[data-estilo="porcelain-v2-pink"] .exact-rsvp{
+body[data-estilo="porcelain-v2-pink"] [data-kulemba="confirmacao"]{
   min-height:46px;margin:8px auto;padding:11px 34px!important;border:2px solid #fff!important;
   background:rgb(191,91,117)!important;color:#fff!important;font-size:14px!important;font-weight:700!important;
   letter-spacing:.045em;box-shadow:0 7px 22px rgba(113,48,65,.36),0 0 0 2px rgba(191,91,117,.28)!important

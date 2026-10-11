@@ -21,6 +21,18 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os onze modelos partilham história, interlúdio, informações úteis e secções livres no seu estilo próprio',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-components.js', 'window.KulembaExactComponents'],
+        ['Confirmação, presentes e estados musicais conservam as cores e as fontes de cada modelo',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-components.css', 'body.tema-modelo-exacto[data-estilo]'],
+        ['Na galeria, a imagem ampliada fica também ao centro e actualiza os pontos e o contador',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js', 'mostrarFoto(indiceLightbox)'],
+        ['Os modelos Kulemba anteriores podem abrir presentes num modal com imagem animada',
+         'personalizacao.php', 'class="gift-open"'],
+        ['Dados ainda não personalizados usam o exemplo actual do admin, com precedência dos noivos',
+         'personalizacao.php', 'Qualquer dado ainda não personalizado vem do exemplo actual do admin.'],
+        ['Omitir uma cerimónia permanece guardado e não repõe a hora de origem',
+         'personalizacao.php', "(\$v === '' && !podeSerVazio(\$chave))"],
         ['As miniaturas digitais do catálogo processam apenas o envelope, sem montar o convite completo',
          'assets/versoes.js', 'miniatura=envelope'],
         ['A prova do envelope não contém scripts, áudio, mapas ou secções do convite',

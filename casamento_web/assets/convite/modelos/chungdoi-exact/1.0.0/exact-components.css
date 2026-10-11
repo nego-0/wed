@@ -1,0 +1,70 @@
+/* As funções são comuns; papel, tinta, letras e ornamentos pertencem ao modelo. */
+body[data-estilo="jasmine-white"]{--exact-ink:#404a1d;--exact-paper:#fffaf7;--exact-accent:#404a1d;--exact-title-font:Baskerville,"Times New Roman",serif;--exact-name-font:"The Nautigal",cursive}
+body[data-estilo="royal-v2-green"]{--exact-ink:#e5e4d0;--exact-paper:#10261c;--exact-accent:#e5e4d0;--exact-title-font:Baskerville,"Times New Roman",serif;--exact-name-font:"The Nautigal",cursive}
+body[data-estilo="spring-garden-blue"]{--exact-ink:#486c7d;--exact-paper:#fff;--exact-accent:#486c7d;--exact-title-font:"Noto Serif","Times New Roman",serif;--exact-name-font:"The Nautigal",cursive}
+body[data-estilo="double-happiness-green"]{--exact-ink:#1f3a25;--exact-paper:#fff7eb;--exact-accent:#1f3a25;--exact-title-font:"Big Caslon",Baskerville,serif;--exact-name-font:"Big Caslon",Baskerville,serif}
+body[data-estilo="porcelain-brown"]{--exact-ink:#8d6f32;--exact-paper:#fcfbf8;--exact-accent:#8d6f32;--exact-title-font:"Times New Roman",serif;--exact-name-font:"Viaoda Libre",cursive}
+body[data-estilo="royal-blue"]{--exact-ink:#e1bc7c;--exact-paper:#00112e;--exact-accent:#e1bc7c;--exact-title-font:"Big Caslon",Baskerville,serif;--exact-name-font:"The Nautigal",cursive}
+body[data-estilo="porcelain-v2-green"]{--exact-ink:#464f1e;--exact-paper:#fff7eb;--exact-accent:#464f1e;--exact-title-font:"Times New Roman",serif;--exact-name-font:"Times New Roman",serif}
+body[data-estilo="hoa-kho-orange"]{--exact-ink:#4c611b;--exact-paper:#fdf7ed;--exact-accent:#4c611b;--exact-title-font:"Times New Roman",serif;--exact-name-font:"Times New Roman",serif}
+body[data-estilo="mahal-gold"]{--exact-ink:#ab7a45;--exact-paper:#f7e3cd;--exact-accent:#ab7a45;--exact-title-font:Baskerville,"Times New Roman",serif;--exact-name-font:"The Nautigal",cursive}
+body[data-estilo="porcelain-v2-pink"]{--exact-ink:#776e38;--exact-paper:#fff7eb;--exact-accent:#dc8599;--exact-title-font:"Times New Roman",serif;--exact-name-font:Carattere,"The Nautigal",cursive}
+body[data-estilo="lien-hoa-pink"]{--exact-ink:#804b5b;--exact-paper:#fefefe;--exact-accent:#804b5b;--exact-title-font:Baskerville,"Times New Roman",serif;--exact-name-font:"The Nautigal",cursive}
+body[data-estilo] .exact-semantic-scene,body[data-estilo] .exact-access,body[data-estilo] .exact-component,body[data-estilo] section.exact-rsvp{background:var(--exact-paper);color:var(--exact-ink);font-family:var(--exact-title-font);border-color:color-mix(in srgb,var(--exact-ink) 32%,transparent);border-radius:var(--exact-dialog-radius);backdrop-filter:none}
+body[data-estilo] .exact-couple{font-family:var(--exact-name-font);gap:8px}
+body[data-estilo] .exact-couple>span{min-width:0;overflow-wrap:anywhere}
+body[data-estilo] .exact-semantic-ceremony{min-height:0;min-width:0}
+body[data-estilo] .exact-semantic-ceremony[data-cerimonias="0"]{padding-bottom:38px}
+body[data-estilo] .exact-semantic-ceremony[data-cerimonias="1"]{padding-bottom:48px}
+body[data-estilo] .exact-semantic-photo{width:100%;margin:20px 0;aspect-ratio:3/2;overflow:hidden;border:1px solid color-mix(in srgb,var(--exact-ink) 25%,transparent);border-radius:var(--exact-dialog-radius)}
+body[data-estilo] .exact-semantic-photo img{display:block;width:100%;height:100%;object-fit:cover}
+body[data-estilo] .exact-semantic-photo--interludio{aspect-ratio:4/5}
+body[data-estilo] .exact-chapters{display:grid;gap:24px;margin-top:28px;text-align:left}
+body[data-estilo] .exact-chapters article{padding-top:20px;border-top:1px solid color-mix(in srgb,var(--exact-ink) 25%,transparent)}
+body[data-estilo] .exact-chapters h3{margin:0 0 12px;color:var(--exact-accent);font:600 22px/1.3 var(--exact-title-font)}
+body[data-estilo] .exact-component .exact-richtext{font-size:16px;line-height:1.7}
+body[data-estilo] .exact-component blockquote{margin:24px 0 12px;font-style:italic}
+body[data-estilo] .exact-message-list article{background:color-mix(in srgb,var(--exact-ink) 5%,var(--exact-paper));border-color:color-mix(in srgb,var(--exact-ink) 25%,transparent)}
+body[data-estilo] .exact-semantic-program li{position:relative;border:0;border-bottom:1px solid color-mix(in srgb,var(--exact-ink) 18%,transparent)}
+body[data-estilo] .exact-semantic-program li::before{position:absolute;left:44px;top:-16px;bottom:-16px;z-index:-1;width:1px;background:color-mix(in srgb,var(--exact-ink) 30%,transparent);content:""}
+body[data-estilo] .exact-program-icon{border:1px solid color-mix(in srgb,var(--exact-ink) 35%,transparent);border-radius:50%;background:var(--exact-paper)}
+body[data-estilo] .exact-program-icon svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+body[data-estilo] .exact-countdown>span{background:var(--exact-paper)}
+body[data-estilo] .exact-calendar{display:inline-flex;gap:8px;align-items:center;margin:8px auto 0;padding:10px 18px;border:1px solid currentColor;border-radius:var(--exact-dialog-radius);background:transparent;color:inherit;font:14px var(--exact-title-font);cursor:pointer}
+body[data-estilo] .exact-calendar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5}
+body[data-estilo] [data-kulemba="confirmacao"]{min-height:46px;background:var(--exact-ink);color:var(--exact-paper);font-family:var(--exact-title-font);box-shadow:0 6px 20px color-mix(in srgb,var(--exact-ink) 22%,transparent)}
+body[data-estilo] .kulemba-modal{padding:16px;backdrop-filter:blur(5px)}
+body[data-estilo] .kulemba-modal__painel{position:relative;width:min(430px,calc(100vw - 32px));height:min(760px,calc(100dvh - 32px));grid-template-rows:minmax(0,1fr);border:1px solid color-mix(in srgb,var(--exact-ink) 28%,transparent);border-radius:18px;background:var(--exact-paper);box-shadow:0 22px 46px rgba(0,0,0,.32)}
+body[data-estilo] .kulemba-modal__cabecalho{position:absolute;z-index:4;top:14px;right:14px;min-height:0;padding:0;border:0;background:transparent}
+body[data-estilo] .kulemba-modal__titulo{display:none}
+body[data-estilo] .kulemba-modal__fechar{width:34px;height:34px;border:1px solid color-mix(in srgb,var(--exact-ink) 22%,transparent);background:var(--exact-paper);color:var(--exact-ink)}
+body[data-estilo] .kulemba-modal__corpo,body[data-estilo] .kulemba-modal__corpo iframe{background:var(--exact-paper)}
+body[data-estilo] dialog.exact-gift-modal{font-family:var(--exact-title-font);color:var(--exact-ink)}
+body[data-estilo] .exact-gift-panel{background:var(--exact-paper);color:var(--exact-ink);border-color:color-mix(in srgb,var(--exact-ink) 28%,transparent);font-family:var(--exact-title-font)}
+body[data-estilo] .exact-gift-panel>header{background:var(--exact-paper);color:var(--exact-ink);border-bottom:1px solid color-mix(in srgb,var(--exact-ink) 22%,transparent)}
+body[data-estilo] .exact-gift-panel>header button{color:var(--exact-ink);border-color:currentColor}
+body[data-estilo] .exact-gift-methods article{min-width:0;overflow-wrap:anywhere;background:color-mix(in srgb,var(--exact-ink) 5%,var(--exact-paper));border-color:color-mix(in srgb,var(--exact-ink) 22%,transparent)}
+body[data-estilo] .exact-gift-icon{color:var(--exact-accent)}
+body[data-estilo] .exact-gift-icon svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+body[data-estilo] .exact-gift-qr button{background:var(--exact-ink);color:var(--exact-paper)}
+body[data-estilo] #audioBtn{display:flex;align-items:center;justify-content:center;background:var(--exact-ink);color:var(--exact-paper);border:1px solid color-mix(in srgb,var(--exact-paper) 75%,transparent)}
+body[data-estilo] #audioBtn .exact-audio-play,body[data-estilo] #audioBtn .exact-audio-pause{position:relative;z-index:2;display:flex}
+body[data-estilo] #audioBtn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+body[data-estilo] #audioBtn .exact-audio-pause,body[data-estilo] #audioBtn.playing .exact-audio-play{display:none}
+body[data-estilo] #audioBtn.playing .exact-audio-pause{display:flex}
+body[data-estilo] #audioBtn .kvp-audio-disc{position:absolute;inset:3px;border:1px solid currentColor;border-radius:50%;opacity:.3}
+body[data-estilo] #audioBtn.playing .kvp-audio-disc{animation:spin-cd 3s linear infinite}
+body[data-estilo] .kvp-seal-ring{position:absolute;left:50%;top:50px;z-index:29;width:56px;height:56px;transform:translate(-50%,-50%);border:3px solid var(--exact-ink);border-radius:50%;pointer-events:none;animation:seal-ring .6s ease-out forwards}
+body[data-estilo] .kvp-particle-layer{position:fixed;inset:0;z-index:100;pointer-events:none}
+body[data-estilo] .kvp-seal-particle{position:absolute;left:50%;top:50%;animation:particle-burst 1.4s cubic-bezier(.25,.46,.45,.94) forwards}
+body[data-estilo] .exact-cover.is-away .kvp-envelope-card{animation:envelope-away .8s ease-in forwards}
+body[data-estilo] .exact-cover.is-opening .kvp-envelope-seal{animation:seal-break .5s cubic-bezier(.4,0,.2,1) forwards!important}
+body.tema-modelo-exacto[data-estilo],body.tema-modelo-exacto[data-estilo] .folha{background:var(--exact-paper);color:var(--exact-ink);font-family:var(--exact-title-font)}
+body.tema-modelo-exacto[data-estilo] :is(h1,h3.sec,label,.rsvp-namebox,.op,.membro){color:var(--exact-ink);font-family:var(--exact-title-font)}
+body.tema-modelo-exacto[data-estilo] :is(.rsvp-namebox,.op,.membro,input,select,textarea,.estado-atual){background:color-mix(in srgb,var(--exact-ink) 4%,var(--exact-paper));border-color:color-mix(in srgb,var(--exact-ink) 28%,transparent);color:var(--exact-ink)}
+body.tema-modelo-exacto[data-estilo] .op.sel-sim{border-color:var(--exact-ink);background:color-mix(in srgb,var(--exact-ink) 12%,var(--exact-paper))}
+body.tema-modelo-exacto[data-estilo] .rsvp-origin-intro p{color:var(--exact-ink);opacity:.8}
+body.tema-modelo-exacto[data-estilo] .btn-ouro{background:var(--exact-ink);color:var(--exact-paper)}
+body.tema-modelo-exacto[data-estilo] .membro input{accent-color:var(--exact-ink)}
+@media(max-width:640px){body[data-estilo] .exact-semantic-program li::before{left:33px}body[data-estilo] .kulemba-modal__painel{width:min(430px,100%);height:min(760px,calc(100dvh - 32px))}body[data-estilo] .exact-couple{font-size:clamp(25px,7vw,34px);gap:3px}body[data-estilo] .exact-gift-panel{max-height:calc(100dvh - 32px)}}
+@media(prefers-reduced-motion:reduce){body[data-estilo] .kvp-particle-layer{display:none}body[data-estilo] #audioBtn .kvp-audio-disc{animation:none!important}}

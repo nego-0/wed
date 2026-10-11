@@ -60,7 +60,7 @@ if ($demo && (int)($_GET['modelo'] ?? 0) > 0) {
         $DEFS = $defsMod;
         // O modelo muda o desenho; casal, evento e fotografias continuam a ser
         // exactamente os dados de exemplo escolhidos pelo administrador.
-        foreach (exemploModelo($conn) as $chave=>$valor) $DEFS[$chave]=$valor;
+        if (ehAdminPlataforma()) foreach (exemploModelo($conn) as $chave=>$valor) $DEFS[$chave]=$valor;
     }
 }
 
@@ -76,7 +76,7 @@ if ($modoEditor && isset($_POST['rascunho'])) {
             if (!array_key_exists($k, $padrao) || !is_string($v)) continue;
             $ok = validarDefinicao($k, $v);
             if ($ok === null) continue;                       // inválido: fica o que já lá estava
-            $DEFS[$k] = ($ok === '') ? $padrao[$k] : $ok;     // vazio = valor original
+            $DEFS[$k] = ($ok === '' && !podeSerVazio($k)) ? $padrao[$k] : $ok;
         }
     }
 }
@@ -251,12 +251,14 @@ $qrValue     = $demo ? 'DEMONSTRACAO-SEM-VALIDADE' : enderecoPublico() . '/convi
 // tocar nos fundos, molduras, ícones ou tipografia próprios de cada modelo.
 $runtimeExacto = [];
 if ($ehModeloExacto) {
+    $tokensExactos = ['{noiva}'=>(string)$DEFS['casal.noiva'], '{noivo}'=>(string)$DEFS['casal.noivo']];
+    $iconesExactos = iconesConvite((string)($DEFS['digital.estilo'] ?? 'classico'));
+    $blocosExactos = [];
     $dataEvento = null;
     try { $dataEvento = new DateTime((string)$DEFS['evento.data'] . ' ' . (string)$DEFS['evento.hora']); } catch (Throwable $e) {}
     $componentesExactos = ['presentes'=>null, 'mensagens'=>null];
     foreach (blocosLivres($DEFS) as $blocoLivre) {
         $tipoLivre = (string)($blocoLivre['tipo'] ?? '');
-        if (!array_key_exists($tipoLivre, $componentesExactos) || $componentesExactos[$tipoLivre] !== null) continue;
         $itensLivres = [];
         foreach ((array)($blocoLivre['itens'] ?? []) as $itemLivre) {
             if (!is_array($itemLivre)) continue;
@@ -265,21 +267,27 @@ if ($ehModeloExacto) {
             if ($tituloLivre === '' && $textoLivre === '') continue;
             $itensLivres[] = [
                 'icone'=>(string)($itemLivre['i'] ?? 'coracao'),
-                'titulo'=>$tituloLivre,
-                'texto'=>$textoLivre,
-                'textoHtml'=>mdTexto($textoLivre),
+                'titulo'=>strtr($tituloLivre, $tokensExactos),
+                'texto'=>strtr($textoLivre, $tokensExactos),
+                'textoHtml'=>mdTexto($textoLivre, $tokensExactos),
             ];
         }
-        $componentesExactos[$tipoLivre] = [
+        $componenteExacto = [
+            'id'=>(string)($blocoLivre['id'] ?? ''),
+            'tipo'=>$tipoLivre,
             'eyebrow'=>trim((string)($blocoLivre['eyebrow'] ?? '')),
-            'titulo'=>trim((string)($blocoLivre['titulo'] ?? '')),
+            'titulo'=>strtr(trim((string)($blocoLivre['titulo'] ?? '')), $tokensExactos),
             'texto'=>trim((string)($blocoLivre['texto'] ?? '')),
-            'textoHtml'=>mdTexto((string)($blocoLivre['texto'] ?? '')),
+            'textoHtml'=>mdTexto((string)($blocoLivre['texto'] ?? ''), $tokensExactos),
             'modo'=>in_array(($blocoLivre['modo'] ?? ''), ['texto','qr','metodos'], true)
                 ? (string)$blocoLivre['modo'] : 'texto',
             'qr'=>trim((string)($blocoLivre['qr'] ?? '')),
             'itens'=>$itensLivres,
         ];
+        $blocosExactos[] = $componenteExacto;
+        if (array_key_exists($tipoLivre, $componentesExactos) && $componentesExactos[$tipoLivre] === null) {
+            $componentesExactos[$tipoLivre] = $componenteExacto;
+        }
     }
     $programaExacto = [];
     foreach (['civil','religiosa'] as $tipoCerimonia) {
@@ -304,6 +312,41 @@ if ($ehModeloExacto) {
     }
     $runtimeExacto = [
         'modelo' => $rendererExacto,
+        'icones'=>$iconesExactos,
+        'iconeMusicaTocar'=>(string)$DEFS['geral.icone_musica_tocar'],
+        'iconeMusicaPausa'=>(string)$DEFS['geral.icone_musica_pausa'],
+        'ordem'=>ordemBlocos($DEFS),
+        'visibilidade'=>[
+            'historia'=>$DEFS['historia.visivel']==='1',
+            'interludio'=>$DEFS['interludio.visivel']==='1',
+            'cronograma'=>$DEFS['cronograma.visivel']==='1',
+            'manual'=>$DEFS['manual.visivel']==='1',
+        ],
+        'fotos'=>array_map(static fn($f)=>['src'=>(string)$DEFS[$f['media']],
+            'enquadramento'=>lerEnquadramento((string)($DEFS[$f['chave']] ?? ''))], fotosEnquadraveis()),
+        'historia'=>[
+            'eyebrow'=>(string)$DEFS['historia.eyebrow'], 'titulo'=>(string)$DEFS['historia.titulo'],
+            'textoHtml'=>mdTexto((string)$DEFS['historia.quote'], $tokensExactos),
+            'autor'=>(string)$DEFS['historia.autor'],
+            'itens'=>array_map(static fn($i)=>['titulo'=>(string)($i['t']??''),
+                'textoHtml'=>mdTexto((string)($i['x']??''), $tokensExactos)],
+                json_decode((string)$DEFS['historia.capitulos'], true) ?: []),
+        ],
+        'interludio'=>[
+            'textoHtml'=>mdTexto((string)$DEFS['interludio.quote'], $tokensExactos),
+            'autor'=>(string)$DEFS['interludio.autor'],
+            'fechoHtml'=>mdTexto((string)$DEFS['interludio.fecho'], $tokensExactos),
+        ],
+        'manual'=>[
+            'eyebrow'=>(string)$DEFS['manual.eyebrow'], 'titulo'=>(string)$DEFS['manual.titulo'],
+            'textoHtml'=>mdTexto((string)$DEFS['manual.intro'], $tokensExactos),
+            'itens'=>array_map(static fn($i)=>['icone'=>(string)($i['i']??'coracao'),
+                'textoHtml'=>mdTexto((string)($i['x']??''), $tokensExactos)],
+                json_decode((string)$DEFS['manual.itens'], true) ?: []),
+        ],
+        'rsvp'=>['tituloHtml'=>mdTexto((string)$DEFS['rsvp.titulo'], $tokensExactos),
+            'textoHtml'=>mdTexto((string)$DEFS['rsvp.sub'], $tokensExactos)],
+        'blocos'=>$blocosExactos,
         'noiva' => (string)$DEFS['casal.noiva'],
         'noivo' => (string)$DEFS['casal.noivo'],
         'familias' => (string)$DEFS['textos.familias'],

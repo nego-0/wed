@@ -980,7 +980,7 @@ function defsDoEditor(mysqli $conn, string $ambito): array {
     // miniatura tem de ser o convite DELE com o desenho do modelo.
     $proprias = definicoesBD($conn);
     foreach (exemploModelo($conn) as $k => $v) {
-        if (($proprias[$k] ?? '') === '') $defs[$k] = $v;
+        if (!array_key_exists($k,$proprias) || ($proprias[$k] === '' && !podeSerVazio($k))) $defs[$k] = $v;
     }
     foreach (padraoDesenho($ambito) as $k => $v) $defs[$k] = $v;
     foreach ($j as $k => $v) if (isset($desenho[$k]) && is_string($v)) $defs[$k] = $v;
@@ -1519,7 +1519,7 @@ function galeriaCompleta(mysqli $conn): array {
  * O casal manda a sua fotografia, ou fica com a que o modelo lhe deu.
  */
 function seccoesDeFoto(mysqli $conn, array $defs): array {
-    $padrao  = defsPadrao();
+    $padrao  = array_replace(defsPadrao(), exemploModelo($conn));
     $secs    = seccoesConvite();
     // A forma da janela de cada secção que recorta, pela chave da fotografia.
     $recorta = [];
@@ -2680,6 +2680,18 @@ function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string 
     if (!$porcelana) $h .= '    <span class="pageno rv">— um —</span>'."\n";
     if ($eyebrow !== '') $h .= '    <span class="eyebrow rv">'.escP(strtr($eyebrow, $tokens)).'</span>'."\n";
     if ($titulo  !== '') $h .= '    <h2 class="rv d1">'.escP(strtr($titulo, $tokens)).'</h2>'."\n";
+    if ($presentes) {
+        $h .= '<button type="button" class="gift-open" data-kulemba="presentes" aria-haspopup="dialog"'
+            .' aria-controls="presentes-'.$id.'" aria-label="Abrir presentes">'
+            .'<svg class="gift-open-image" viewBox="0 0 120 120" aria-hidden="true">'
+            .'<path class="gift-box" d="M23 52h74v48H23zM17 38h86v17H17z"/>'
+            .'<path class="gift-ribbon" d="M55 38h10v62H55zM60 37c-29 0-33-26-18-25 13 1 18 25 18 25Zm0 0c29 0 33-26 18-25C65 13 60 37 60 37Z"/>'
+            .'<path class="gift-spark" d="m15 19 3-7 3 7 7 3-7 3-3 7-3-7-7-3ZM94 22l2-5 2 5 5 2-5 2-2 5-2-5-5-2Z"/>'
+            .'</svg><span>Toque para abrir</span></button>'
+            .'<dialog id="presentes-'.$id.'" class="kulemba-presentes" aria-label="'.escP($titulo ?: 'Presentes').'">'
+            .'<div class="gift-dialog-panel"><button type="button" data-fechar-presentes aria-label="Fechar presentes">×</button>'
+            .'<h2>'.escP(strtr($titulo ?: 'Presentes', $tokens)).'</h2>';
+    }
     if ($texto   !== '') $h .= '    <p class="bl-texto rv d1">'.mdTexto($texto, $tokens).'</p>'."\n";
     if ($galeria) {
         $fotos = [];
@@ -2728,6 +2740,7 @@ function renderBlocoLivre(array $b, array $tokens, bool $editor = false, string 
         }
         if ($celulas !== '') $h .= '    <div class="mgrid">'."\n".$celulas.'    </div>'."\n";
     }
+    if ($presentes) $h .= '</div></dialog>';
     $h .= '  </section>'."\n";
     return $h;
 }
@@ -2836,8 +2849,14 @@ function esquecerDefinicoes(mysqli $conn): void { definicoesBD($conn, true); }
 /** Definições efetivas: defaults + valores personalizados (BD ganha). */
 function defsAtuais(mysqli $conn): array {
     $defs = defsPadrao();
+    // Qualquer dado ainda não personalizado vem do exemplo actual do admin.
+    // Nomes, evento, música e fotografias do casamento de origem não são um
+    // fallback. Os valores guardados pelos noivos continuam a prevalecer.
+    foreach (exemploModelo($conn) as $k=>$v) {
+        if (array_key_exists($k,$defs)) $defs[$k]=$v;
+    }
     foreach (definicoesBD($conn) as $k => $v) {
-        if (array_key_exists($k, $defs) && $v !== null && $v !== '') $defs[$k] = $v;
+        if (array_key_exists($k, $defs) && $v !== null && ($v !== '' || podeSerVazio($k))) $defs[$k] = $v;
     }
     return fotosGaleriaAtuais($defs);
 }
@@ -3148,7 +3167,7 @@ function validarDefinicao(string $chave, string $valor): ?string {
     return mb_substr($valor, 0, 4000); // texto simples/markdown
 }
 
-/** Grava um conjunto de definições; valor vazio ou igual ao default repõe o original. */
+/** Grava definições; branco repõe o padrão, excepto quando representa uma omissão. */
 function guardarDefinicoes(mysqli $conn, array $novos): array {
     global $P;
     $padrao = defsPadrao();
@@ -3158,7 +3177,7 @@ function guardarDefinicoes(mysqli $conn, array $novos): array {
         $v = validarDefinicao($chave, $valor);
         if ($v === null) { $invalidas[] = $chave; continue; }
         $cid = casamentoAtual();
-        if ($v === '' || $v === $padrao[$chave]) {
+        if (($v === '' && !podeSerVazio($chave)) || $v === $padrao[$chave]) {
             $st = $conn->prepare("DELETE FROM {$P}definicoes WHERE casamento_id=? AND chave=?");
             $st->bind_param('is', $cid, $chave); $st->execute();
             $repostas++;

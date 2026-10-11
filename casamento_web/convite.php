@@ -269,9 +269,12 @@ $linkPdf     = $valido ? $linkDigital . '&download=1' : '';
     body.modo-modal .wa-linha .btn{ width:100%; }
   }
 </style>
+<?php if ($temaExacto): ?>
+<link rel="stylesheet" href="<?= escP(asset('assets/convite/modelos/chungdoi-exact/1.0.0/exact-components.css')) ?>">
+<?php endif; ?>
 </head>
 <?php $bodyClasses = array_filter([$modoModal ? 'modo-modal' : '', $temaExacto ? 'tema-modelo-exacto' : '']); ?>
-<body<?= $bodyClasses ? ' class="' . escP(implode(' ', $bodyClasses)) . '"' : '' ?>>
+<body<?= $bodyClasses ? ' class="' . escP(implode(' ', $bodyClasses)) . '"' : '' ?><?= $temaExacto ? ' data-estilo="'.escP($temaRsvp).'"' : '' ?>>
 <?php if (!$valido): ?>
   <?php
     // Código que não abre porta nenhuma: a página não nomeia casal nenhum nem

@@ -52,7 +52,7 @@ async function abrirCapaPorTeclado(p){
       assert(await qr.count(),chave+': passe de acesso inclui QR');
       assert(await qr.evaluate(c=>c.width>0&&c.height>0&&c.toDataURL().length>100),chave+': QR foi desenhado');
 
-      const foto=p.locator('[data-kulemba-galeria="1"]').first(),cartao=foto.locator('..');
+      const foto=p.locator('[data-kulemba-galeria="1"]:not(dialog *)').first(),cartao=foto.locator('..');
       assert.equal(await foto.count(),1,chave+': galeria usa fotografias do admin');
       assert.equal(await cartao.getAttribute('tabindex'),'0',chave+': fotografia pode ser aberta pelo teclado');
       await cartao.focus();await p.keyboard.press('Enter');
@@ -108,7 +108,7 @@ async function abrirCapaPorTeclado(p){
       assert.equal(await r.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,chave+': sem transbordo desktop');
       const abrir=r.locator('#cover a,#cover button').filter({hasText:/Abrir/i}).first();await abrir.click();
       await r.locator('#cover').waitFor({state:'hidden',timeout:700});
-      const fotos=r.locator('[data-kulemba-galeria="1"]');
+      const fotos=r.locator('[data-kulemba-galeria="1"]:not(dialog *)');
       const antes=await fotos.evaluateAll(xs=>xs.map(x=>x.parentElement.getAttribute('style')));await r.waitForTimeout(3950);
       const depois=await fotos.evaluateAll(xs=>xs.map(x=>x.parentElement.getAttribute('style')));
       assert.deepEqual(depois,antes,chave+': movimento reduzido desliga a rotação automática');

@@ -48,3 +48,14 @@ body.kulemba-modal-aberto{overflow:hidden}
   .kulemba-modal,.kulemba-modal__painel{transition:none}
 }
 
+/* Presentes opcionais conservam as cores e letras do modelo anterior. */
+.gift-open{display:inline-flex;flex-direction:column;align-items:center;gap:12px;margin:24px auto;border:0;background:transparent;color:var(--gold);font:14px var(--f-texto,var(--sans));cursor:pointer}
+.gift-open-image{width:160px;height:160px;overflow:visible;animation:gift-bob 3s ease-in-out infinite;filter:drop-shadow(0 9px 8px rgba(0,0,0,.15))}
+.gift-open-image .gift-box{fill:var(--cream);stroke:var(--gold);stroke-width:2}.gift-open-image .gift-ribbon{fill:var(--gold);stroke:var(--gold);stroke-width:1}.gift-open-image .gift-spark{fill:var(--gold-soft);animation:gift-spark 2.5s ease-in-out infinite}
+dialog.kulemba-presentes[open]{position:fixed;inset:0;display:grid;width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:16px;place-items:center;border:0;background:transparent;color:var(--text);font-family:var(--f-texto,var(--sans))}
+dialog.kulemba-presentes::backdrop{background:rgba(10,20,14,.72);backdrop-filter:blur(5px)}
+.gift-dialog-panel{position:relative;width:min(620px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:36px 28px;border:1px solid var(--gold-soft);border-radius:16px;background:var(--ivory);text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.3)}
+.gift-dialog-panel>[data-fechar-presentes]{position:absolute;top:12px;right:12px;width:34px;height:34px;border:1px solid var(--gold-soft);border-radius:50%;background:var(--cream);color:var(--ink);font-size:24px;cursor:pointer}
+.gift-dialog-panel h2{margin:0 22px 22px;font-family:var(--f-titulos,var(--serif));font-size:28px}.gift-dialog-panel .mgrid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}.gift-dialog-panel .mcell{min-width:0;overflow-wrap:anywhere}
+@keyframes gift-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-7px) rotate(2deg)}}@keyframes gift-spark{0%,100%{opacity:.4}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.gift-open-image,.gift-open-image .gift-spark{animation:none}}
