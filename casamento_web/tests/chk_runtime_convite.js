@@ -16,12 +16,14 @@ const EXE = process.env.CHROMIUM || (process.platform === 'win32'
     await page.click('#cover');
     await page.locator('[data-kulemba="confirmacao"]').scrollIntoViewIfNeeded();
     await page.click('[data-kulemba="confirmacao"]');
-    await page.waitForTimeout(350);
+    await page.locator('.kulemba-modal iframe').waitFor();
+    await page.frameLocator('.kulemba-modal iframe').locator('#form-rsvp').waitFor();
     const estado=await page.evaluate(()=>{
       const modal=document.querySelector('.kulemba-modal');
       const painel=modal.querySelector('.kulemba-modal__painel').getBoundingClientRect();
+      const frame=modal.querySelector('iframe');
       return {runtime:!!window.KulembaConvite,aberto:modal.getAttribute('aria-hidden')==='false',
-        alvo:!document.getElementById('demo-rsvp').hidden,hash:location.hash,
+        alvo:!!frame&&/demonstracao-confirmacao\.php/.test(frame.src),hash:location.hash,
         dentro:painel.top>=0&&painel.bottom<=innerHeight+.5&&painel.left>=0&&painel.right<=innerWidth+.5,
         overflow:document.documentElement.scrollWidth-innerWidth};
     });
@@ -32,8 +34,8 @@ const EXE = process.env.CHROMIUM || (process.platform === 'win32'
     await page.click('.kulemba-modal__fechar');
     const fechado=await page.evaluate(()=>({oculto:document.querySelector('.kulemba-modal').getAttribute('aria-hidden')==='true',hash:location.hash,foco:document.activeElement&&document.activeElement.dataset.kulemba}));
     ok(fechado.oculto&&!fechado.hash&&fechado.foco==='confirmacao','fechar devolve o foco ao botão do convite');
-    await page.goto(BASE+'/demonstracao-convite.php#confirmar',{waitUntil:'networkidle'});
-    await page.waitForTimeout(250);
+    await page.goto(BASE+'/demonstracao-convite.php#confirmar',{waitUntil:'domcontentloaded'});
+    await page.locator('.kulemba-modal[aria-hidden="false"]').waitFor();
     ok(await page.getAttribute('.kulemba-modal','aria-hidden')==='false','#confirmar abre directamente a confirmação');
     await page.close();
   }

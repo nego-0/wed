@@ -6,6 +6,16 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';   // as contas vivem na base, não no ficheiro
 
 if (session_status() === PHP_SESSION_NONE) {
+    // Algumas instalações locais do WAMP apontam as sessões para uma pasta
+    // reservada ao serviço Apache. Quando a aplicação é aberta com `php -S`,
+    // essa pasta existe mas não é gravável e ninguém consegue iniciar sessão.
+    // A alternativa continua fora da área pública e é exclusiva desta app.
+    $pastaSessao = trim((string)ini_get('session.save_path'));
+    if ($pastaSessao === '' || !is_dir($pastaSessao) || !is_writable($pastaSessao)) {
+        $pastaSessao = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'kulemba-sessions';
+        if (!is_dir($pastaSessao)) @mkdir($pastaSessao, 0700, true);
+        if (is_dir($pastaSessao) && is_writable($pastaSessao)) session_save_path($pastaSessao);
+    }
     // Cookie de sessão mais seguro: inacessível ao JavaScript (HttpOnly),
     // só por HTTPS quando disponível (Secure) e restrito ao site (SameSite).
     $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');

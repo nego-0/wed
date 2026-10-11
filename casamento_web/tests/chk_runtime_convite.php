@@ -10,6 +10,7 @@ $css = file_get_contents($raiz.'/assets/convite-runtime.css');
 $pagina = file_get_contents($raiz.'/convite-digital.php');
 $rsvp = file_get_contents($raiz.'/convite.php');
 $demo = file_get_contents($raiz.'/demonstracao-convite.php');
+$demoRsvp = file_get_contents($raiz.'/demonstracao-confirmacao.php');
 
 rtOk(str_contains($modelo, '{{RUNTIME_CONFIG}}')
     && str_contains($modelo, 'assets/convite-runtime.js')
@@ -34,10 +35,11 @@ rtOk(str_contains($css, 'height:100dvh') && str_contains($css, 'env(safe-area-in
 rtOk(str_contains($pagina, "'/assets/convite-runtime.css'")
     && str_contains($pagina, "'/assets/convite-runtime.js'"),
     'a exportação incorpora o mesmo CSS e JavaScript');
-rtOk(str_contains($rsvp, 'class="modo-modal"')
+rtOk(str_contains($rsvp, '$modoModal ? \'modo-modal\' : \'\'')
     && str_contains($rsvp, 'kulemba:rsvp-concluido'),
     'a confirmação conserva o formulário real dentro do modal e comunica o resultado');
-rtOk(str_contains($demo, 'id="demo-rsvp" hidden')
-    && !str_contains($demo, 'preg_replace(\'~<a\\s+class="btn btn-gold'),
-    'a demonstração usa o modal comum com dados fictícios');
+rtOk(str_contains($demo, "define('KULEMBA_DEMONSTRACAO_PUBLICA', true)")
+    && str_contains($demo, "require __DIR__ . '/convite-digital.php';")
+    && str_contains($demoRsvp, "require __DIR__ . '/convite.php';"),
+    'a demonstração usa o convite e o formulário reais com dados fictícios');
 

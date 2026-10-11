@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['O servidor local troca uma pasta de sessões do WAMP sem permissão por uma pasta privada gravável',
+         'auth.php', "'kulemba-sessions'"],
+        ['Cada modelo exacto apresenta um comando de confirmação realmente visível',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js', "getClientRects().length>0"],
+        ['A publicação dos onze modelos é validada em mobile, desktop e movimento reduzido',
+         'tests/chk_fase9_publicacao.js', 'matriz final dos onze modelos em mobile e desktop'],
         ['A Demonstração pública usa o mesmo renderizador e o modelo de origem dos convites reais',
          'demonstracao-convite.php', "require __DIR__ . '/convite-digital.php';"],
         ['A confirmação de exemplo percorre o formulário real sem guardar respostas',
