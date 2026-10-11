@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "estado": "aprovado",
+  "ficheiro": "convite-porcelana-v2-rosa.html",
+  "origem": "tests/output/camada-cerimonia/convite-porcelana-v2-rosa.html",
+  "sha256": "45C8C637B36B701CB6FFD81095524E2623A313191CCBD42BB6B5E0BFEFE87287",
+  "aprovadoEm": "2026-10-09",
+  "marcasObrigatorias": [
+    "data-estilo=\"porcelain-v2-pink\"",
+    "data-landing-screenshot-id=\"invite-envelope\"",
+    "data-sec=\"grande-dia\"",
+    "data-sec=\"recepcao\"",
+    "data-sec=\"acesso\"",
+    "data-kulemba=\"confirmacao\"",
+    "data-kulemba=\"audio\"",
+    "Wedding photo 1"
+  ]
+}
