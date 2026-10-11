@@ -50,7 +50,7 @@
   function provaDe(ambito, id) {
     return ambito === 'impresso'
       ? 'modelo-prova.php?modelo=' + id
-      : 'convite-digital.php?c=EXEMPLO&demo=1&prova=1&modelo=' + id;
+      : 'convite-digital.php?c=EXEMPLO&demo=1&prova=1&miniatura=envelope&modelo=' + id;
   }
 
   /**

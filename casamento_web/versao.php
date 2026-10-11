@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As miniaturas digitais do catálogo processam apenas o envelope, sem montar o convite completo',
+         'assets/versoes.js', 'miniatura=envelope'],
+        ['A prova do envelope não contém scripts, áudio, mapas ou secções do convite',
+         'convite-miniatura.php', 'data-miniatura="envelope"'],
         ['O servidor local troca uma pasta de sessões do WAMP sem permissão por uma pasta privada gravável',
          'auth.php', "'kulemba-sessions'"],
         ['Cada modelo exacto apresenta um comando de confirmação realmente visível',

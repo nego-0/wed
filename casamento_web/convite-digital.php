@@ -142,6 +142,15 @@ foreach (($PACOTE['stylesheets'] ?? []) as $folha) {
     $tpl = str_replace('</head>', '<link rel="stylesheet" href="' . escP(asset($href)) . '"></head>', $tpl);
 }
 
+// No catálogo dos editores só se desenha o envelope. O navegador não recebe
+// secções, fotografias, mapas, áudio, galerias ou scripts do convite completo.
+if ($modoProva && ($_GET['miniatura'] ?? '') === 'envelope') {
+    require_once __DIR__ . '/convite-miniatura.php';
+    header('Content-Type: text/html; charset=utf-8');
+    echo conviteMiniaturaEnvelope($tpl, $DEFS, nomeConviteVisivel($c));
+    exit;
+}
+
 // ---- Personalização ------------------------------------------
 $pal  = paletaEfetiva($DEFS);
 $nome = escP(nomeConviteVisivel($c));
