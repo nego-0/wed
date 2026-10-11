@@ -51,6 +51,7 @@ function limpar(texto) {
         const galeria = secao('galeria'), cerimonia = secao('grande-dia'), recepcao = secao('recepcao');
         const programa = secao('cronograma'), acesso = secao('acesso'), confirmacao = secao('confirmacao');
         const root = document.querySelector('[data-showcase-root]');
+        const cover = document.querySelector('#cover'), textoCapa = cover.textContent.replace(/\s+/g, ' ').trim();
         return {
           estilo: document.body.dataset.estilo,
           testid: root && root.closest('[data-testid$="-template"]')?.getAttribute('data-testid'),
@@ -58,6 +59,22 @@ function limpar(texto) {
           sequencia: can.map(e => e.dataset.sec),
           tags: can.map(e => e.tagName),
           pais: new Set(can.map(e => e.parentElement)).size,
+          envelope: {
+            canonico: cover?.dataset.exactEnvelopeCanonical === '1',
+            titulos: Array.from(cover.querySelectorAll('h1,h2,h3,p')).map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean),
+            data: (textoCapa.match(/\d{1,2}\s+de\s+[A-Za-zÀ-ÿ]+\s+de\s+\d{4}/) || [''])[0],
+            accao: Array.from(cover.querySelectorAll('a,button')).map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean),
+            origem: /Família Fernandes|Há amores que, como o amanhecer/i.test(textoCapa)
+          },
+          capa: {
+            canonica: document.querySelector('[data-exact-invitation-cover-canonical="1"]') !== null,
+            semantica: document.querySelector('.exact-cover-semantic')?.textContent || '',
+            partesVisiveis: ['reserva', 'data', 'noivo', 'noiva', 'verso'].every(parte => {
+              const el = document.querySelector(`[data-exact-cover-part="${parte}"]`);
+              return !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+            }),
+            origem: /É convidado para|Vamos nos casar|O amor nunca falha|\bNoivo\b|\bNoiva\b/i.test(document.querySelector('[data-exact-invitation-cover-canonical="1"]')?.textContent || '')
+          },
           galeria: {
             titulos: Array.from(galeria.querySelectorAll(':scope > p,h1,h2,h3')).map(e => e.textContent.replace(/\s+/g, ' ').trim()),
             fotos: document.querySelectorAll('[data-kulemba-galeria="1"]:not(dialog *)').length,
@@ -85,6 +102,11 @@ function limpar(texto) {
       assert.deepEqual(prova.sequencia, ['galeria', 'grande-dia', 'recepcao', 'cronograma', 'acesso', 'confirmacao'], modelo.nome + ': sequência canónica');
       assert.deepEqual(prova.tags, ['SECTION', 'SECTION', 'SECTION', 'SECTION', 'SECTION', 'SECTION'], modelo.nome + ': secções homogéneas');
       assert.equal(prova.pais, 1, modelo.nome + ': secções no mesmo fluxo visual');
+      assert.equal(prova.envelope.canonico, true, modelo.nome + ': envelope marcado como canónico');
+      assert.equal(prova.envelope.origem, false, modelo.nome + ': envelope sem conteúdo adicional do documento importado');
+      assert.equal(prova.capa.canonica, true, modelo.nome + ': capa interna marcada como canónica');
+      assert.equal(prova.capa.partesVisiveis, true, modelo.nome + ': reserva, data, casal e verso visíveis na capa interna');
+      assert.equal(prova.capa.origem, false, modelo.nome + ': capa interna sem texto divergente do documento importado');
       assert.deepEqual(prova.unicas, { cerimonia: 1, recepcao: 1, programa: 1 }, modelo.nome + ': conteúdo sem duplicações');
       assert.equal(prova.galeria.fotos, 4, modelo.nome + ': quatro fotografias semânticas');
       assert.equal(prova.galeria.pontos, 4, modelo.nome + ': quatro controlos da galeria');
@@ -93,6 +115,8 @@ function limpar(texto) {
       assert.equal(prova.conteudoOrigem, false, modelo.nome + ': sem texto fictício do documento importado');
 
       const conteudo = {
+        envelope: prova.envelope,
+        capa: prova.capa.semantica,
         galeria: prova.galeria.titulos.map(limpar),
         cerimonia: prova.cerimonia,
         recepcao: prova.recepcao,

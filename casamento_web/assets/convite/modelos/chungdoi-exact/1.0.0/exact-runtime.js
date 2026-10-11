@@ -21,6 +21,33 @@
   function referenciaFinal(){var p=palco();if(!p)return null;var presente=um('[aria-label="Abrir presentes"]',p),b=blocoDirecto(presente);if(b)return b;var filhos=todos(':scope > *',p);return filhos.find(function(el){return /^\s*[♡♥]\s*Kulemba\s*$/i.test(texto(el));})||null;}
   function criarCena(secao){var p=palco();if(!p)return null;var s=document.createElement('section');s.className='exact-semantic-host exact-semantic-scene';s.setAttribute('data-sec',secao);p.insertBefore(s,referenciaFinal());return s;}
 
+  /* O envelope usa o conteúdo conciso da Porcelana V2 Rosa. Os símbolos,
+     molduras, cores, tipos de letra e animações continuam a ser os do pacote. */
+  function normalizarEnvelopeCanonico(){
+    if(!cover)return;cover.setAttribute('data-exact-envelope-canonical','1');var convidado=String(dados.convidado||'').replace(/\s+/g,' ').trim();
+    todos('p,h1,h2,h3',cover).forEach(function(el){
+      var t=texto(el);if((convidado&&t===convidado)||/^Há amores que, como o amanhecer,/i.test(t))el.remove();
+    });
+  }
+
+  /* A capa é a primeira página depois do envelope. Conserva fotografias,
+     ornamentos e composição do modelo, mas lê os mesmos quatro elementos da
+     Porcelana V2 Rosa: reserva, data, casal e verso de Camões. */
+  function normalizarCapaInternaCanonica(){
+    var r=raizModelo(),p=palco();if(!r||!p||!dados.modelo)return;var nome=String(dados.noivo||''),noiva=String(dados.noiva||'');
+    function menor(re,base){return todos('h1,h2,h3,p,span,div',base||r).filter(function(el){return re.test(texto(el))&&!todos('h1,h2,h3,p,span,div',el).some(function(f){return f!==el&&re.test(texto(f));});}).sort(function(a,b){return texto(a).length-texto(b).length;})[0]||null;}
+    var nomeEl=menor(new RegExp('^'+nome.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i'),r),host=blocoDirecto(nomeEl);if(!host)return;
+    host.setAttribute('data-exact-invitation-cover-canonical','1');host.classList.add('exact-invitation-cover-host');
+    var titulo=menor(/reserve a data|vamos nos casar|é convidado para.*casar/i,host),datas=todos('p,span,div',host).filter(function(el){return /\b\d{1,2}\s*[·|]\s*[A-Za-zÀ-ÿ]+\s*[·|]\s*\d{4}\b/i.test(texto(el));}),mes=(dados.evento&&dados.evento.mes)||'',data=((dados.evento&&dados.evento.dia)||'')+' · '+mes+' · '+((dados.evento&&dados.evento.ano)||''),frase='“Amor é fogo que arde sem se ver.” — Luís de Camões';
+    if(titulo){titulo.setAttribute('data-exact-cover-part','reserva');if(!/^reserve a data/i.test(texto(titulo)))titulo.textContent='Reserve a data';}else{titulo=document.createElement('p');titulo.className='exact-cover-added exact-cover-added--title';titulo.setAttribute('data-exact-cover-part','reserva');titulo.textContent='Reserve a data';host.appendChild(titulo);}
+    var dataEl=datas.sort(function(a,b){return texto(a).length-texto(b).length;})[0];if(dataEl)dataEl.setAttribute('data-exact-cover-part','data');else{dataEl=document.createElement('p');dataEl.className='exact-cover-added exact-cover-added--date';dataEl.setAttribute('data-exact-cover-part','data');dataEl.textContent=data;host.appendChild(dataEl);}
+    [nomeEl,menor(new RegExp('^'+noiva.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i'),host)].forEach(function(el,i){if(el)el.setAttribute('data-exact-cover-part',i?'noiva':'noivo');});
+    todos('p,span,div',host).forEach(function(el){if(/^(noivo|noiva|o amor nunca falha)$/i.test(texto(el))&&!el.querySelector('img,svg'))el.remove();});
+    todos('svg text',host).forEach(function(el){if(/o amor nunca falha/i.test(texto(el)))el.remove();});
+    var quote=menor(/Amor é fogo que arde sem se ver/i,r);if(quote)quote.setAttribute('data-exact-cover-part','verso');else{quote=document.createElement('p');quote.className='exact-cover-added exact-cover-added--quote';quote.setAttribute('data-exact-cover-part','verso');quote.textContent=frase;host.appendChild(quote);}
+    var sem=document.createElement('span');sem.className='exact-cover-semantic';sem.setAttribute('aria-hidden','true');sem.textContent=['Reserve a data',data,nome,'&',noiva,frase].join('|');host.appendChild(sem);
+  }
+
   /* O envelope conserva o desenho original; movimento reduzido retira apenas
      partículas e afastamentos prolongados, nunca o gesto de abertura. */
   function anelSelo(cartao){if(reduzido||!cartao)return;var anel=document.createElement('span');anel.className='kvp-seal-ring';anel.setAttribute('aria-hidden','true');cartao.appendChild(anel);setTimeout(function(){anel.remove();},700);}
@@ -141,5 +168,5 @@
   var audio=document.getElementById('bgAudio'),audioBtn=document.getElementById('audioBtn');function estadoAudio(){if(!audio||!audioBtn)return;var tocando=!audio.paused;audioBtn.classList.toggle('playing',tocando);audioBtn.setAttribute('aria-label',tocando?'Pausar música':'Reproduzir música');audioBtn.setAttribute('title',tocando?'Pausar música':'Reproduzir música');}if(audio&&audioBtn){audio.addEventListener('play',estadoAudio);audio.addEventListener('pause',estadoAudio);audio.addEventListener('ended',estadoAudio);estadoAudio();}if(audio&&(!audio.getAttribute('src')||!audio.getAttribute('src').trim())){audio.remove();if(audioBtn)audioBtn.remove();}
 
   todos('a[href="#"]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();});});
-  prepararHost();normalizarCerimonia();normalizarRecepcao();normalizarPrograma();normalizarConfirmacao();normalizarMensagens();inserirAcesso();normalizarPresentes();if(componentes.extras)componentes.extras();normalizarGaleriaCanonica();canonizarEstrutura();
+  normalizarEnvelopeCanonico();prepararHost();normalizarCapaInternaCanonica();normalizarCerimonia();normalizarRecepcao();normalizarPrograma();normalizarConfirmacao();normalizarMensagens();inserirAcesso();normalizarPresentes();if(componentes.extras)componentes.extras();normalizarGaleriaCanonica();canonizarEstrutura();
 })();

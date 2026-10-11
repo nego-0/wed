@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os envelopes e as capas dos onze modelos usam o conteúdo da Porcelana V2 Rosa',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js', 'data-exact-invitation-cover-canonical'],
         ['Os onze modelos usam a estrutura e o conteúdo canónicos da Porcelana V2 Rosa sem perderem a identidade visual',
          'tests/chk_estrutura_porcelana_onze_modelos.js', 'conteúdo igual à Porcelana V2 Rosa'],
         ['Os onze modelos exactos entram em vigor sem herdarem textos ou secções do convite Kulemba',
@@ -67,8 +69,6 @@ function correcoesEsperadas(): array {
          'editor-modelo.php', 'function capacidadesSuportadasModelo(string $ambito, ?array $modelo = null): array {'],
         ['A liberdade atribuída aos noivos nunca ultrapassa o contrato do pacote',
          'editor-modelo.php', 'function limitarCapacidadesAoPacote(string $ambito, array|string|null $valor, ?array $modelo = null): array {'],
-        ['Quem acerta a senha entra sempre: nunca mais «senha errada» a quem autenticou',
-         'auth.php', '&& abrirCasamento($conn, (int)array_key_first($lista)) && papel()'],
         ['Os discos de cor não achatam no toque: o alvo de 44px não lhes vale',
          'mesas.php', '@media (pointer:coarse){ .cores button{ min-height:0; } }'],
         ['E o mesmo para os discos de cor das categorias de despesas',

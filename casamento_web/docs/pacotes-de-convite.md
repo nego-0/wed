@@ -80,6 +80,15 @@ exemplo chega ao convidado. A confirmação abre no modal Kulemba e o formulári
 de envio de mensagens foi retirado dos onze modelos, conforme a decisão
 funcional do produto.
 
+O envelope também usa o conteúdo conciso da Porcelana V2 Rosa: nomes dos
+noivos, data, indicação «Convite reservado a» e acção «Abrir». O nome do
+convite e o texto longo que ainda existiam em cinco composições foram
+retirados do envelope; a decoração e a animação continuam a pertencer ao modelo.
+
+A capa, apresentada depois de abrir o envelope, conserva a composição visual
+do modelo e passa a usar os quatro elementos da Porcelana V2 Rosa: «Reserve a
+data», data do casamento, nomes dos noivos e o verso de Luís de Camões.
+
 Sem secções opcionais activas, o fluxo canónico é: galeria, grande dia,
 copo d'água, cronograma, passe de entrada e confirmação. Todas são elementos
 `section`, ficam sob o mesmo contentor e recebem exactamente os mesmos dados e
