@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 71;
+const ESQUEMA_VERSAO = 72;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2731,6 +2731,41 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
     // ferramentas numa versão que o utilizador já guardou.
     if ($versaoAtual < 71) {
         migColuna($conn, "{$P}versoes", 'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL');
+    }
+
+    // v72 — as secções partilhadas dos onze documentos exactos são opcionais.
+    // A primeira integração herdava o valor de fábrica do convite Kulemba e
+    // mostrava História, Interlúdio e Manual sem o utilizador os ter
+    // escolhido. Repõe o catálogo e corrige somente casamentos que ainda
+    // estão ligados a um destes modelos; conteúdo e versões ficam intactos.
+    if ($versaoAtual < 72) {
+        require_once __DIR__ . '/personalizacao.php';
+        $alvosExactos = [];
+        foreach (convitePacotesExactos() as $nome) {
+            $alvosExactos[] = ['ambito'=>'digital','nome'=>$nome];
+        }
+        restaurarModelosDeCasa($conn, $alvosExactos, true);
+
+        $ids = [];
+        $nomes = array_values(convitePacotesExactos());
+        if ($nomes) {
+            $lista = implode(',', array_map(fn($n)=>"'" . $conn->real_escape_string($n) . "'", $nomes));
+            $r = @$conn->query("SELECT id FROM {$P}modelos
+                                WHERE ambito='digital' AND criado_por='sistema' AND nome IN ($lista)");
+            if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
+        }
+        if ($ids) {
+            $listaIds = implode(',', $ids);
+            foreach (['historia.visivel','interludio.visivel','manual.visivel'] as $chaveSecao) {
+                $ch = $conn->real_escape_string($chaveSecao);
+                @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor)
+                    SELECT DISTINCT d.casamento_id,'$ch','0'
+                    FROM {$P}definicoes d
+                    WHERE d.chave IN ('modelo.vigor.digital','modelo.origem.digital')
+                      AND CAST(d.valor AS UNSIGNED) IN ($listaIds)
+                    ON DUPLICATE KEY UPDATE valor=IF(valor='1',valor,'0')");
+            }
+        }
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

@@ -706,10 +706,17 @@ function catalogoModelosDeCasa(): array {
             'cronograma.icone_civil' => 'aneis',
             'cronograma.icone_religiosa' => 'estrela',
             'fx.petalas' => '0',
+            // As secções partilhadas são capacidades do editor, não conteúdo
+            // do documento original. Um modelo exacto nasce apenas com as
+            // cenas que pertencem à sua composição; o utilizador pode juntar
+            // estas secções depois, se o admin lhas tiver permitido.
+            'historia.visivel' => '0',
             'interludio.visivel' => '0',
-            'manual.titulo' => 'Código de vestuário',
-            'manual.intro' => 'Traje formal em tons neutros.',
-            'textos.kicker' => 'Reserve a data',
+            'manual.visivel' => '0',
+            // O programa do dia faz parte do refinamento funcional pedido
+            // para esta família; usa os dados actuais e os ícones do próprio
+            // documento, sem importar prosa de um modelo antigo.
+            'cronograma.visivel' => '1',
         ];
         // Fotografias e música pertencem ao conteúdo, não ao desenho. A prova
         // destes modelos recebe-as do conjunto de exemplo que o administrador

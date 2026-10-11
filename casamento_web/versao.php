@@ -21,6 +21,10 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['Os onze modelos exactos entram em vigor sem herdarem textos ou secções do convite Kulemba',
+         'tests/chk_modelos_exactos_em_vigor.js', 'sem secções herdadas'],
+        ['História, interlúdio e manual são opcionais nos onze modelos exactos',
+         'personalizacao.php', "'historia.visivel' => '0'"],
         ['Os onze modelos partilham história, interlúdio, informações úteis e secções livres no seu estilo próprio',
          'assets/convite/modelos/chungdoi-exact/1.0.0/exact-components.js', 'window.KulembaExactComponents'],
         ['Confirmação, presentes e estados musicais conservam as cores e as fontes de cada modelo',

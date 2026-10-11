@@ -28,8 +28,9 @@
     }[d.modelo]||[cs.color,cs.backgroundColor,cs.fontFamily,cs.fontFamily];
     var accent=d.modelo==='porcelain-v2-pink'?'#dc8599':palette[0];
     [['--exact-ink',palette[0]],['--exact-paper',palette[1]],['--exact-accent',accent],['--exact-title-font',palette[2]],['--exact-name-font',palette[3]],['--exact-dialog-accent',palette[0]]].forEach(function(v){document.body.style.setProperty(v[0],v[1]);});
-    root.style.color=palette[0];root.style.fontFamily=palette[2];
-    all('#cover h2').forEach(function(e){e.textContent=d.convidado||'';});
+    // As variáveis servem apenas as secções opcionais acrescentadas pelo
+    // editor. O documento nativo conserva as suas próprias cores, famílias
+    // tipográficas e textos: não se repinta o convite inteiro por herança.
     // A camada já refinada da Porcelana Rosa é a versão canónica desta cena.
     var native=one('.kvp-ceremony-content');if(native)native.classList.add('exact-semantic-ceremony');
     // Cada estado musical aceita a escolha feita no editor.
