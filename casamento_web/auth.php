@@ -664,13 +664,20 @@ function autenticar(string $utilizador, string $senha): ?string {
         return 'plataforma';
     }
     $lista = casamentosDoUtilizador($conn);
-    if ($lista) {
-        abrirCasamento($conn, (int)array_key_first($lista));
+    // Abre-se a primeira casa a que tem direito. Mas quem já provou a senha ENTRA
+    // — mesmo que abrir essa casa falhe (um lugar que, entretanto, deixou de o
+    // ser). Devolver aqui o papel() em cru era o buraco: se `abrirCasamento` não
+    // chegasse a pôr papel na sessão, autenticar() devolvia null, e o login — que
+    // só distingue entrou/não entrou — dizia «senha errada» a quem a acertou (e
+    // já com o `ultimo_acesso` carimbado acima, o que denunciava a contradição).
+    if ($lista && abrirCasamento($conn, (int)array_key_first($lista)) && papel()) {
         return papel();
     }
+    // Autenticou-se, mas não há casa onde entrar (ou não se conseguiu abrir
+    // nenhuma): vai para a plataforma. Nunca se devolve null depois de a senha
+    // conferir — isso era dizer «incorretos» a quem, de facto, entrou.
     $_SESSION['casamento_id'] = 0;   // 0 = casamento nenhum, e não "o primeiro"
     $_SESSION['papel'] = null;
-    // Autenticou-se: não é uma senha errada. Só ainda não tem casa onde entrar.
     return 'plataforma';
 }
 
