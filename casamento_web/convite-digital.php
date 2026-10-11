@@ -25,8 +25,9 @@ $c        = $codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null;
 // as mesmas definições que os convidados recebem, embora com uma família de
 // exemplo para não expor um convite real na página de gestão.
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
+$demoPublica = $demo && defined('KULEMBA_DEMONSTRACAO_PUBLICA') && KULEMBA_DEMONSTRACAO_PUBLICA === true;
 $provaAtual = $demo && ($_GET['atual'] ?? '') === '1';
-if ($demo && !ehAdmin() && !ehAdminPlataforma()) {
+if ($demo && !$demoPublica && !ehAdmin() && !ehAdminPlataforma()) {
     http_response_code(403);
     exit('Apenas administração.');
 }
@@ -226,9 +227,14 @@ $rendererExacto = (string)($PACOTE['renderer_key'] ?? '');
 $ehModeloExacto = array_key_exists($rendererExacto, convitePacotesExactos());
 $confirmParams = $demo ? ['demo' => '1'] : ['c' => $c['codigo']];
 if ($ehModeloExacto) $confirmParams['tema'] = $rendererExacto;
-$confirmUrl  = escP(enderecoPublico() . '/convite.php?' . http_build_query($confirmParams));
-$downloadUrl = escP('convite-digital.php?c=' . $c['codigo'] . '&download=1');
-$qrValue     = enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'];
+$confirmUrl = $demoPublica
+    ? 'demonstracao-confirmacao.php?' . http_build_query(array_filter([
+        'tema' => $ehModeloExacto ? $rendererExacto : '',
+    ]))
+    : enderecoPublico() . '/convite.php?' . http_build_query($confirmParams);
+$confirmUrl  = escP($confirmUrl);
+$downloadUrl = $demoPublica ? '#' : escP('convite-digital.php?c=' . $c['codigo'] . '&download=1');
+$qrValue     = $demo ? 'DEMONSTRACAO-SEM-VALIDADE' : enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'];
 
 // Os onze documentos exactos conservam a sua composição, mas recebem o
 // mesmo conteúdo semântico. O runtime usa estes dados para substituir apenas

@@ -7,7 +7,7 @@
     "tipo": "abrir",
     "rolar": false,
     "x": 70.1,
-    "y": 71.4
+    "y": 79.2
   },
   {
     "modulo": "convidados",
@@ -66,7 +66,7 @@
     "dispositivo": "desktop",
     "tipo": "adicionar",
     "rolar": false,
-    "x": 20.8,
+    "x": 14.7,
     "y": 44.9
   },
   {
@@ -76,7 +76,7 @@
     "dispositivo": "desktop",
     "tipo": "preencher",
     "rolar": false,
-    "x": 20.8,
+    "x": 14.7,
     "y": 44.9
   },
   {
@@ -107,7 +107,7 @@
     "tipo": "selecionar",
     "rolar": false,
     "x": 86.7,
-    "y": 66
+    "y": 63.3
   },
   {
     "modulo": "mesas",
@@ -117,7 +117,67 @@
     "tipo": "rever",
     "rolar": true,
     "x": 79.7,
-    "y": 50
+    "y": 55.5
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 27.3,
+    "y": 55.7
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "editar",
+    "rolar": true,
+    "x": 88.8,
+    "y": 38.2
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "guardar",
+    "rolar": false,
+    "x": 50,
+    "y": 61.5
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "desktop",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 17.6,
+    "y": 90.5
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "desktop",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 52.7
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "desktop",
+    "tipo": "descarregar",
+    "rolar": true,
+    "x": 80.2,
+    "y": 33.6
   },
   {
     "modulo": "digital",
@@ -177,7 +237,7 @@
     "tipo": "confirmar",
     "rolar": true,
     "x": 50,
-    "y": 57.3
+    "y": 50.3
   },
   {
     "modulo": "porta",
@@ -347,7 +407,7 @@
     "tipo": "filtrar",
     "rolar": true,
     "x": 48.2,
-    "y": 47.6
+    "y": 45.5
   },
   {
     "modulo": "orcamento",
@@ -477,7 +537,67 @@
     "tipo": "rever",
     "rolar": true,
     "x": 50,
+    "y": 67.4
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "selecionar",
+    "rolar": false,
+    "x": 25.7,
     "y": 50
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "editar",
+    "rolar": true,
+    "x": 50,
+    "y": 43.1
+  },
+  {
+    "modulo": "impresso",
+    "topico": 1,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "guardar",
+    "rolar": false,
+    "x": 50,
+    "y": 64.2
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 1,
+    "dispositivo": "mobile",
+    "tipo": "abrir",
+    "rolar": false,
+    "x": 24.9,
+    "y": 91.1
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 2,
+    "dispositivo": "mobile",
+    "tipo": "rever",
+    "rolar": true,
+    "x": 50,
+    "y": 52.7
+  },
+  {
+    "modulo": "impresso",
+    "topico": 2,
+    "passo": 3,
+    "dispositivo": "mobile",
+    "tipo": "descarregar",
+    "rolar": true,
+    "x": 27.3,
+    "y": 35.1
   },
   {
     "modulo": "digital",
@@ -537,7 +657,7 @@
     "tipo": "confirmar",
     "rolar": true,
     "x": 50,
-    "y": 56.2
+    "y": 50
   },
   {
     "modulo": "porta",
@@ -707,7 +827,7 @@
     "tipo": "filtrar",
     "rolar": true,
     "x": 24.1,
-    "y": 43.9
+    "y": 45.1
   },
   {
     "modulo": "orcamento",
@@ -717,126 +837,6 @@
     "tipo": "rever",
     "rolar": true,
     "x": 35.1,
-    "y": 50
-  },
-  {
-    "modulo": "impresso",
-    "topico": 1,
-    "passo": 1,
-    "dispositivo": "desktop",
-    "tipo": "selecionar",
-    "rolar": false,
-    "x": 27.3,
-    "y": 50
-  },
-  {
-    "modulo": "impresso",
-    "topico": 1,
-    "passo": 2,
-    "dispositivo": "desktop",
-    "tipo": "editar",
-    "rolar": true,
-    "x": 88.8,
-    "y": 38.2
-  },
-  {
-    "modulo": "impresso",
-    "topico": 1,
-    "passo": 3,
-    "dispositivo": "desktop",
-    "tipo": "guardar",
-    "rolar": false,
-    "x": 50,
-    "y": 61.5
-  },
-  {
-    "modulo": "impresso",
-    "topico": 2,
-    "passo": 1,
-    "dispositivo": "desktop",
-    "tipo": "abrir",
-    "rolar": false,
-    "x": 18.9,
-    "y": 90.5
-  },
-  {
-    "modulo": "impresso",
-    "topico": 2,
-    "passo": 2,
-    "dispositivo": "desktop",
-    "tipo": "rever",
-    "rolar": true,
-    "x": 50,
-    "y": 52.7
-  },
-  {
-    "modulo": "impresso",
-    "topico": 2,
-    "passo": 3,
-    "dispositivo": "desktop",
-    "tipo": "descarregar",
-    "rolar": true,
-    "x": 80.2,
-    "y": 33.6
-  },
-  {
-    "modulo": "impresso",
-    "topico": 1,
-    "passo": 1,
-    "dispositivo": "mobile",
-    "tipo": "selecionar",
-    "rolar": false,
-    "x": 25.7,
-    "y": 50
-  },
-  {
-    "modulo": "impresso",
-    "topico": 1,
-    "passo": 2,
-    "dispositivo": "mobile",
-    "tipo": "editar",
-    "rolar": true,
-    "x": 50,
-    "y": 43.1
-  },
-  {
-    "modulo": "impresso",
-    "topico": 1,
-    "passo": 3,
-    "dispositivo": "mobile",
-    "tipo": "guardar",
-    "rolar": false,
-    "x": 50,
-    "y": 64.2
-  },
-  {
-    "modulo": "impresso",
-    "topico": 2,
-    "passo": 1,
-    "dispositivo": "mobile",
-    "tipo": "abrir",
-    "rolar": false,
-    "x": 25.2,
-    "y": 91
-  },
-  {
-    "modulo": "impresso",
-    "topico": 2,
-    "passo": 2,
-    "dispositivo": "mobile",
-    "tipo": "rever",
-    "rolar": true,
-    "x": 50,
-    "y": 52.7
-  },
-  {
-    "modulo": "impresso",
-    "topico": 2,
-    "passo": 3,
-    "dispositivo": "mobile",
-    "tipo": "descarregar",
-    "rolar": true,
-    "x": 27.3,
-    "y": 35.1
+    "y": 50.1
   }
 ]

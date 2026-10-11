@@ -21,6 +21,12 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['A Demonstração pública usa o mesmo renderizador e o modelo de origem dos convites reais',
+         'demonstracao-convite.php', "require __DIR__ . '/convite-digital.php';"],
+        ['A confirmação de exemplo percorre o formulário real sem guardar respostas',
+         'convite.php', 'A confirmação de exemplo demonstra o fluxo inteiro sem criar actividade'],
+        ['As novas capturas de Ajuda respeitam os dados de exemplo definidos pelo administrador',
+         'tests/gerar-capturas-ajuda.js', "const dadosExemplo=await api(p,'modelo_exemplo');"],
         ['Trocar de modelo conserva todo o conteúdo semântico e as fotografias do casal',
          'personalizacao.php', 'function chavesConteudoSemantico(): array {'],
         ['Cada versão fixa também a liberdade editorial que tinha ao ser guardada',

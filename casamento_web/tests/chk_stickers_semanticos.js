@@ -62,7 +62,7 @@ const DEMONSTRACAO=[
     assert.deepEqual(await page.locator('#demonstracao .aj-sticker-marca').evaluateAll(xs=>xs.map(x=>x.dataset.stickerTipo)),DEMONSTRACAO,'o telemóvel conserva a relação entre texto e sticker');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'os novos stickers não criam transbordo');
     await page.goto(BASE+'/login.php',{waitUntil:'networkidle'});await page.fill('input[name=utilizador]','admin');await page.fill('input[name=senha]','noivos2026');await page.click('button[type=submit]');await page.waitForLoadState('networkidle');
-    await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}));
+    await page.evaluate(async()=>{const l=await fetch('api.php?action=casamento_lista&estado=ativo').then(r=>r.json()),c=(l.casamentos||[])[0];if(!c)throw new Error('Sem casamento activo para testar a Ajuda');return fetch('api.php?action=casamento_abrir&id='+encodeURIComponent(c.id),{method:'POST',headers:{'X-CSRF-Token':window.CSRF}})});
     await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});
     assert.deepEqual(await page.locator('.aj-sticker-marca').evaluateAll(xs=>xs.map(x=>x.dataset.stickerTipo)),AJUDA,'os 42 passos da Ajuda usam os pictogramas contextuais aprovados');
     const marcasAjuda=await page.locator('.aj-sticker-marca').evaluateAll(xs=>xs.map(x=>({p:parseFloat(getComputedStyle(x,'::before').width),icone:getComputedStyle(x.querySelector('.aj-sticker')).display})));

@@ -39,7 +39,7 @@
   --shadow:0 22px 60px rgba(22,38,30,.20);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-x:hidden}
 body{
   font-family:var(--f-sans);background:var(--forest-deep);color:var(--text);
   font-weight:300;overflow-x:hidden;letter-spacing:.01em;
@@ -97,7 +97,7 @@ img{display:block}
 #cover.open{visibility:hidden;pointer-events:none}
 
 /* ============ PETALS ============ */
-#petals{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#petals{position:fixed;inset:0;width:100%;max-width:100vw;z-index:0;pointer-events:none;overflow:hidden;contain:strict}
 .petal{position:absolute;top:-6%;will-change:transform;opacity:0;animation:fall linear infinite}
 .petal svg{display:block;width:100%;height:100%}
 @keyframes fall{

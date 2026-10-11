@@ -12,7 +12,7 @@ fs.mkdirSync(OUT,{recursive:true});
  const browser=await chromium.launch({executablePath:EXE,headless:true});
  const page=await browser.newPage({viewport:{width:1280,height:900}});
  await page.goto(BASE+'/login.php');await page.fill('[name=utilizador]',USER);await page.fill('[name=senha]',PASSWORD);await page.click('button[type=submit]');await page.waitForLoadState('networkidle');
- const abriu=await page.evaluate(async()=>fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}).then(r=>r.json()));assert(abriu.success);
+ const abriu=await page.evaluate(async()=>{const l=await fetch('api.php?action=casamento_lista&estado=ativo').then(r=>r.json()),c=(l.casamentos||[])[0];if(!c)return{success:false,error:'Sem casamento activo'};return fetch('api.php?action=casamento_abrir&id='+encodeURIComponent(c.id),{method:'POST',headers:{'X-CSRF-Token':window.CSRF}}).then(r=>r.json())});assert(abriu.success);
  for(const [dispositivo,viewport] of [['desktop',{width:1280,height:900}],['mobile',{width:390,height:844}]]){
   await page.setViewportSize(viewport);await page.goto(BASE+'/ajuda.php',{waitUntil:'networkidle'});
   const total=await page.locator('.aj-card').count(),contagem={};assert.equal(total,14);

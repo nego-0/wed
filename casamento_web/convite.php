@@ -12,10 +12,11 @@ require_once __DIR__ . '/parcial-demonstracao.php';
 // casamento se trata, e cada casamento tem os seus nomes, cores e textos.
 $codigo = strtoupper(trim($_GET['c'] ?? ''));
 $demo = isset($_GET['demo']) && $_GET['demo'] === '1';
+$demoPublica = $demo && defined('KULEMBA_DEMONSTRACAO_PUBLICA') && KULEMBA_DEMONSTRACAO_PUBLICA === true;
 $modoModal = isset($_GET['modal']) && $_GET['modal'] === '1';
 $temaRsvp = trim((string)($_GET['tema'] ?? ''));
 $temaExacto = array_key_exists($temaRsvp, convitePacotesExactos());
-if ($demo && !ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
+if ($demo && !$demoPublica && !ehAdmin() && !ehAdminPlataforma()) { http_response_code(403); exit('Apenas administração.'); }
 $c = $demo ? conviteDeExemplo($conn)
            : ($codigo !== '' ? carregarConvite($conn, $codigo, 'codigo') : null);
 
@@ -551,8 +552,24 @@ async function enviar(){
   }
   const agora=()=>{ const d=new Date(),p=n=>String(n).padStart(2,'0');
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); };
-  const payload={ codigo:CODIGO, decisao:escolha, confirmados, mensagem:$('mensagem').value,
+  const payload={ codigo:CODIGO, decisao:escolha, confirmados, mensagem:$('mensagem')?$('mensagem').value:'',
                   membros, respostas:rr.respostas, ts:agora() };
+  <?php if ($demo): ?>
+  // A confirmação de exemplo demonstra o fluxo inteiro sem criar actividade,
+  // alterar contagens ou guardar uma resposta num casamento.
+  await new Promise(resolve=>setTimeout(resolve,260));
+  btn.disabled=false; btn.textContent=btn.dataset.labelNormal || 'Confirmar resposta';
+  if(escolha==='sim'){
+    $('form-rsvp').style.display='none';
+    $('concluido').classList.add('on');
+    $('concluido').scrollIntoView({behavior:'smooth'});
+  }else{
+    $('form-rsvp').innerHTML='<div class="estado-atual"><span class="nao">Demonstração concluída.</span> A resposta não foi guardada.</div>';
+    $('concluido').classList.remove('on');
+  }
+  if(window.parent!==window) window.parent.postMessage({tipo:'kulemba:rsvp-concluido',decisao:escolha,codigo:CODIGO,demo:true},'*');
+  return;
+  <?php endif; ?>
   const r=await fetch('api.php?action=rsvp_submit',{method:'POST',body:JSON.stringify(payload)});
   const d=await r.json();
   btn.disabled=false; btn.textContent=btn.dataset.labelNormal || 'Confirmar resposta';

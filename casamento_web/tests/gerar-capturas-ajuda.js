@@ -71,7 +71,15 @@ async function apiImagemExemplo(p,acao,id,ficheiro){
     const blob=await resposta.blob(),fd=new FormData();
     fd.append('id',String(id));
     fd.append('ficheiro',new File([blob],ficheiro.split('/').pop(),{type:blob.type||'image/jpeg'}));
-    return fetch('api.php?action='+acao,{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd}).then(r=>r.json());
+    const r=await fetch('api.php?action='+acao,{method:'POST',headers:{'X-CSRF-Token':window.CSRF},body:fd});
+    const texto=await r.text();
+    try{return JSON.parse(texto)}catch(_){
+      // O PHP embutido do WAMP pode antepor o aviso de que moveu o upload para
+      // a pasta temporária do sistema. A resposta útil continua a ser o JSON.
+      const inicio=texto.indexOf('{');
+      if(inicio>=0)try{return JSON.parse(texto.slice(inicio))}catch(__){}
+      throw new Error(`Upload ${acao} devolveu HTTP ${r.status}: ${texto.slice(0,700)}`);
+    }
   },{acao,id,ficheiro});
 }
 async function marcar(p,loc){
@@ -105,11 +113,17 @@ async function prepararDados(p){
       if(!aplicado.success)throw new Error('Não foi possível aplicar o modelo de origem '+ambito+': '+(aplicado.error||''));
     }
   }
-  // As capturas públicas usam sempre a identidade editorial configurada para
-  // os dados de exemplo. Isto também limpa valores semânticos antigos que uma
-  // base de testes possa ter deixado nos editores.
+  // As capturas públicas usam sempre a identidade editorial configurada pelo
+  // administrador. O casamento técnico recebe essa identidade só para as
+  // páginas operacionais da Ajuda; o convite e a confirmação lêem directamente
+  // a fonte global de dados de exemplo.
+  const dadosExemplo=await api(p,'modelo_exemplo');
+  if(!dadosExemplo.exemplo)throw new Error('Não foi possível ler os dados de exemplo do administrador.');
+  const noiva=dadosExemplo.exemplo['casal.noiva']||'Marta';
+  const noivo=dadosExemplo.exemplo['casal.noivo']||'Pedro';
+  const dataEvento=dadosExemplo.exemplo['evento.data']||'2027-06-12';
   const identidade=await api(p,'casamento_identidade',{
-    nome:'Marta & Pedro',noiva:'Marta',noivo:'Pedro',data_evento:'2027-06-12'
+    nome:noiva+' & '+noivo,noiva,noivo,data_evento:dataEvento
   });
   if(!identidade.success)throw new Error('Não foi possível preparar a identidade de exemplo: '+(identidade.error||''));
   let lista=await api(p,'convite_list');
@@ -224,7 +238,7 @@ const sequenciasComCenas = [
   {nome:'mesas',topico:2,url:'/mesas.php',passos:[
     {tipo:'selecionar',fazer:async p=>{await p.evaluate(()=>irTab('pessoas'));await p.fill('#busca-tab','Ana Kiala');await p.dispatchEvent('#busca-tab','input');await p.waitForTimeout(350);await marcar(p,p.locator('#busca-tab'));}},
     {tipo:'selecionar',fazer:async p=>{await p.evaluate(id=>irAMesa(id),DADOS.mesaId);await p.waitForTimeout(350);const combo=p.locator('.combo[data-kind="mesa-pessoa"]').first();DADOS.membroId=+(await combo.getAttribute('data-arg'));await combo.evaluate(e=>abrirCombo(e));await p.waitForTimeout(220);await marcar(p,combo.locator('.combo-pop'));}},
-    {tipo:'rever',rolar:true,fazer:async p=>{await api(p,'convidado_mesa',{id:DADOS.membroId,mesa_id:DADOS.mesaId});await p.reload({waitUntil:'networkidle'});await p.evaluate(id=>irAMesa(id),DADOS.mesaId);await p.waitForTimeout(450);await marcar(p,p.locator('#tab-body .mesa-form').first());}},
+    {tipo:'rever',rolar:true,fazer:async p=>{await api(p,'convidado_mesa',{id:DADOS.membroId,mesa_id:DADOS.mesaId});await p.reload({waitUntil:'networkidle'});await p.evaluate(id=>irAMesa(id),DADOS.mesaId);await p.waitForTimeout(450);await marcar(p,p.locator('#tab-body .mesa-detalhe'));}},
   ]},
   {nome:'impresso',topico:1,url:'/graficas.php',passos:[
     {tipo:'selecionar',fazer:async p=>marcar(p,p.locator('a[href="editor-cartao.php"]:visible').first())},
@@ -330,7 +344,16 @@ async function guardarCena(p,cena,passo,dispositivo,pasta=OUT){
   await p.goto(BASE+'/login.php',{waitUntil:'networkidle'});
   await p.fill('[name=utilizador]',USER); await p.fill('[name=senha]',PASSWORD);
   await p.click('button[type=submit]'); await p.waitForLoadState('networkidle');
-  const resposta=await p.evaluate(async()=>{const r=await fetch('api.php?action=casamento_abrir&id=1',{method:'POST',headers:{'X-CSRF-Token':window.CSRF}});return {estado:r.status,texto:await r.text()};});
+  // Não se assume que o primeiro casamento continue a ter id 1: bases de
+  // desenvolvimento são limpas e importadas com frequência. Escolhe-se o
+  // primeiro casamento activo que o administrador realmente pode abrir.
+  const resposta=await p.evaluate(async()=>{
+    const lista=await fetch('api.php?action=casamento_lista&estado=ativo').then(r=>r.json());
+    const casamento=(lista.casamentos||[])[0];
+    if(!casamento)return {estado:404,texto:JSON.stringify({success:false,error:'Não existe casamento activo para preparar as capturas.'})};
+    const r=await fetch('api.php?action=casamento_abrir&id='+encodeURIComponent(casamento.id),{method:'POST',headers:{'X-CSRF-Token':window.CSRF}});
+    return {estado:r.status,texto:await r.text()};
+  });
   let abriu;try{abriu=JSON.parse(resposta.texto);}catch(_){throw new Error(`Abrir casamento devolveu HTTP ${resposta.estado}: ${resposta.texto}`);}
   if(!abriu.success)throw new Error('Não foi possível abrir o casamento de demonstração: '+(abriu.error||'erro desconhecido'));
   const dispositivos=[['desktop',{width:1280,height:800}],['mobile',{width:390,height:780}]]
