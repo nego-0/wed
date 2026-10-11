@@ -60,5 +60,9 @@
     function rank(id){var i=order.indexOf(id);if(i>=0)return i;var base={recepcao:'grande-dia',cronograma:'grande-dia',galeria:'interludio',confirmacao:'final'}[id],bi=order.indexOf(base);return bi>=0?bi+(id==='recepcao'?.1:id==='cronograma'?.2:.5):order.length-1;}
     if(root&&secs.length){var anchor=document.createComment('secções editáveis');secs[0].before(anchor);secs.sort(function(a,b){return rank(a.dataset.sec)-rank(b.dataset.sec);});secs.forEach(function(s){anchor.before(s);});anchor.remove();}
   }
-  window.KulembaExactComponents={prepare:prepare,extras:extras,icon:icon};
+  // A fotografia é também usada pelas secções canónicas montadas pelo
+  // runtime (por exemplo, o passe de acesso). Mantê-la aqui garante que o
+  // mesmo recorte e o mesmo texto alternativo são usados em todos os onze
+  // documentos, sem duplicar regras no adaptador.
+  window.KulembaExactComponents={prepare:prepare,extras:extras,icon:icon,photo:photo};
 })();

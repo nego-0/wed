@@ -21,6 +21,8 @@ exigirAdmin();
 /** Uma correção, e a marca que a denuncia no código instalado. */
 function correcoesEsperadas(): array {
     return [
+        ['As quatro fotografias dos dados de exemplo aparecem na galeria e nas secções activadas dos onze modelos',
+         'assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js', "componentes.photo?componentes.photo('acesso')"],
         ['Os envelopes e as capas dos onze modelos usam o conteúdo da Porcelana V2 Rosa',
          'assets/convite/modelos/chungdoi-exact/1.0.0/exact-runtime.js', 'data-exact-invitation-cover-canonical'],
         ['Os onze modelos usam a estrutura e o conteúdo canónicos da Porcelana V2 Rosa sem perderem a identidade visual',
