@@ -23,7 +23,7 @@
 
   /* Música, capa e rolagem partilham eventos públicos. */
   var audioBtn=um('[data-kulemba="audio"],#audioBtn'),audio=um('#bgAudio'),tocando=false;
-  function estadoAudio(v){tocando=v;if(audioBtn)audioBtn.classList.toggle('playing',v);emitir(v?'audio-tocar':'audio-pausar',{audio:audio});}
+  function estadoAudio(v){tocando=v;if(audioBtn){audioBtn.classList.toggle('playing',v);audioBtn.setAttribute('aria-label',v?'Pausar música':'Reproduzir música');audioBtn.setAttribute('title',v?'Pausar música':'Reproduzir música');}emitir(v?'audio-tocar':'audio-pausar',{audio:audio});}
   function tocar(){if(!audio)return;var p=audio.play();if(p&&p.then)p.then(function(){estadoAudio(true);}).catch(function(){estadoAudio(false);});else estadoAudio(true);}
   function pausar(){if(!audio)return;try{audio.pause();}catch(e){}estadoAudio(false);}
   if(audio&&audioBtn){audio.volume=.55;audioBtn.style.display='flex';escut(audio,'play',function(){estadoAudio(true);});escut(audio,'pause',function(){estadoAudio(false);});escut(audioBtn,'click',function(){tocando?pausar():tocar();});}

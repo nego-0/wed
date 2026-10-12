@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 72;
+const ESQUEMA_VERSAO = 73;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2765,6 +2765,22 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
                       AND CAST(d.valor AS UNSIGNED) IN ($listaIds)
                     ON DUPLICATE KEY UPDATE valor=IF(valor='1',valor,'0')");
             }
+        }
+    }
+
+    // v73 — os onze modelos de casa passam para o pacote 1.1.0. A troca é
+    // feita apenas no catálogo do sistema: versões guardadas pelos noivos
+    // continuam fixas na 1.0.0 e permanecem integralmente resolvíveis.
+    if ($versaoAtual < 73) {
+        require_once __DIR__ . '/personalizacao.php';
+        $nomesExactos = array_values(convitePacotesExactos());
+        if ($nomesExactos) {
+            $lista = implode(',', array_map(fn($n)=>"'" . $conn->real_escape_string($n) . "'", $nomesExactos));
+            $versaoNova = $conn->real_escape_string(CONVITE_PACOTE_EXACTO_ACTUAL);
+            @$conn->query("UPDATE {$P}modelos
+                           SET renderer_version='$versaoNova', atualizado_em=NOW()
+                           WHERE ambito='digital' AND criado_por='sistema'
+                             AND renderer_key IS NOT NULL AND nome IN ($lista)");
         }
     }
 

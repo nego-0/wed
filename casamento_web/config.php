@@ -158,10 +158,12 @@ function ficheirosApp(): array {
     // Os recursos binários dos onze modelos têm nomes derivados do conteúdo;
     // basta assinar os documentos, manifestos e runtimes que os referenciam.
     // Alterar uma imagem gera outro nome e, por consequência, outro HTML/JSON.
-    $raizExacta = __DIR__ . '/assets/convite/modelos/chungdoi-exact/1.0.0';
-    foreach (['*.html','*.css','*.json','*.js','CREDITOS.md'] as $padrao) {
-        foreach (glob($raizExacta . '/' . $padrao) ?: [] as $ficheiro) {
-            $ficheiros[] = str_replace('\\','/',substr($ficheiro,strlen(__DIR__)+1));
+    foreach (['1.0.0', '1.1.0'] as $versaoExacta) {
+        $raizExacta = __DIR__ . '/assets/convite/modelos/chungdoi-exact/' . $versaoExacta;
+        foreach (['*.html','*.css','*.json','*.js','CREDITOS.md'] as $padrao) {
+            foreach (glob($raizExacta . '/' . $padrao) ?: [] as $ficheiro) {
+                $ficheiros[] = str_replace('\\','/',substr($ficheiro,strlen(__DIR__)+1));
+            }
         }
     }
     // As imagens de ajuda são geradas; incluí-las por padrão evita manter uma

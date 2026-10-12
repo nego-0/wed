@@ -729,7 +729,7 @@ function catalogoModelosDeCasa(): array {
             'descricao' => $descricao,
             'defs' => json_encode($defs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'renderer_key' => $renderer,
-            'renderer_version' => '1.0.0',
+            'renderer_version' => CONVITE_PACOTE_EXACTO_ACTUAL,
             'renderer_schema' => CONVITE_PACOTE_SCHEMA,
         ];
     }

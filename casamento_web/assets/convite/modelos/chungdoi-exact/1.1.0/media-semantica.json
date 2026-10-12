@@ -1,0 +1,105 @@
+{
+  "jasmine-white": {
+    "aaae23b66ba44be1a433.webp": "{{IMG_HERO}}",
+    "601626070795f3e6fadc.webp": "{{IMG_HISTORIA}}",
+    "cfbbb27f3f2f33c80b90.webp": "{{IMG_INTERLUDIO}}",
+    "2f771d30f0b6144a40c6.webp": "{{IMG_ACESSO}}",
+    "079eeaa6b33566a3a5a5.webp": "{{IMG_HERO}}",
+    "3042950cf5adafe9f7af.webp": "{{IMG_HISTORIA}}",
+    "0a3ef2b38cec2dcad96a.webp": "{{IMG_INTERLUDIO}}",
+    "0f32aaaa1765f8670ebb.webp": "{{IMG_ACESSO}}"
+  },
+  "royal-v2-green": {
+    "b40a1821a6f259bb06cc.webp": "{{IMG_HERO}}",
+    "8cdfe0fd3f819a278564.webp": "{{IMG_HISTORIA}}",
+    "0101715fe138eb330d56.webp": "{{IMG_INTERLUDIO}}",
+    "6af8f2729198da60463a.webp": "{{IMG_ACESSO}}",
+    "bb39aca89f1dac323b96.webp": "{{IMG_HERO}}",
+    "4d2f1d2ff4dfb0bb9acd.webp": "{{IMG_HISTORIA}}",
+    "6cb428cf14cf86403657.webp": "{{IMG_INTERLUDIO}}",
+    "e3c56af9fd77ee83bc13.webp": "{{IMG_ACESSO}}",
+    "1e4e53f6f7c9b49060e3.webp": "{{IMG_HERO}}",
+    "991114390613d4231ff2.webp": "{{IMG_HISTORIA}}",
+    "f2f4f5ddfe5f48af4998.webp": "{{IMG_INTERLUDIO}}"
+  },
+  "spring-garden-blue": {
+    "fde3f2b3f236a3c8e3d7.webp": "{{IMG_HERO}}",
+    "5fd4e75b37b1eb21249b.webp": "{{IMG_HISTORIA}}",
+    "a33015762e368bd8fb02.webp": "{{IMG_INTERLUDIO}}",
+    "329b22577cf80428b955.webp": "{{IMG_ACESSO}}",
+    "eb5e414d9ac0c9e2f1f8.webp": "{{IMG_HERO}}",
+    "7b9fd1b74de098f31c95.webp": "{{IMG_HISTORIA}}",
+    "024aea16df0c5505ec6e.webp": "{{IMG_INTERLUDIO}}",
+    "1372e454c1102f9a45ba.webp": "{{IMG_ACESSO}}"
+  },
+  "double-happiness-green": {
+    "48dfe9332c2efeaac79d.webp": "{{IMG_HERO}}",
+    "23d6f3b94c8f8357150b.webp": "{{IMG_HISTORIA}}",
+    "9a422159f57e7fa21b65.webp": "{{IMG_INTERLUDIO}}",
+    "347a4a3a11ef31165279.webp": "{{IMG_ACESSO}}",
+    "386ec20bced76f6a6e56.webp": "{{IMG_HERO}}",
+    "b8c7f21a22b0efc24857.webp": "{{IMG_HISTORIA}}",
+    "ddbe1f129b414b69ea4f.webp": "{{IMG_INTERLUDIO}}"
+  },
+  "porcelain-brown": {
+    "55784315feaa377b7183.webp": "{{IMG_HERO}}",
+    "b94f0c074597278b06af.webp": "{{IMG_HISTORIA}}",
+    "a0f3bde7cffa43d3ef23.webp": "{{IMG_INTERLUDIO}}",
+    "91b37beebaea099e1668.webp": "{{IMG_ACESSO}}",
+    "4dca3e6bb45252b22fc1.webp": "{{IMG_HERO}}"
+  },
+  "royal-blue": {
+    "5b249081c78443a5e492.webp": "{{IMG_HERO}}",
+    "3b2dedf3aff07895e508.webp": "{{IMG_HISTORIA}}",
+    "0471374b71ed4c20ddf5.webp": "{{IMG_INTERLUDIO}}",
+    "c010e3b7afca52d377e5.webp": "{{IMG_ACESSO}}",
+    "cff86dd4436bb680e619.webp": "{{IMG_HERO}}",
+    "135f4cd6c16fd6cd67f1.webp": "{{IMG_HISTORIA}}"
+  },
+  "porcelain-v2-green": {
+    "cee5864d8eecabfeb3d4.webp": "{{IMG_HERO}}",
+    "6a54ccbcb12432ddceb0.webp": "{{IMG_HISTORIA}}",
+    "0f72865a1f097ef9d3ea.webp": "{{IMG_INTERLUDIO}}",
+    "de6c768bb23e6d7670e8.webp": "{{IMG_ACESSO}}",
+    "3f8b1e24e1c890a64d0f.webp": "{{IMG_HERO}}",
+    "106c4252b60b1a383d8a.webp": "{{IMG_HISTORIA}}",
+    "b607b9a0b503bac6e3b6.webp": "{{IMG_INTERLUDIO}}"
+  },
+  "hoa-kho-orange": {
+    "66c95dbd2139e98c5faa.webp": "{{IMG_HERO}}",
+    "c752b79e63f2eebe53a8.webp": "{{IMG_HISTORIA}}",
+    "07f62bb1434cdce13bfa.webp": "{{IMG_INTERLUDIO}}",
+    "2369c63a6d0f559bf109.webp": "{{IMG_ACESSO}}",
+    "04ecf030b67e17cad94a.webp": "{{IMG_HERO}}",
+    "6b37d45d0c9851e25358.webp": "{{IMG_HISTORIA}}"
+  },
+  "mahal-gold": {
+    "af80b5bbfb938c3ac4e3.webp": "{{IMG_HERO}}",
+    "686140809d5120a776e1.webp": "{{IMG_HISTORIA}}",
+    "64030c2a13a5146d5629.webp": "{{IMG_INTERLUDIO}}",
+    "2e2210a0e66508326ab4.webp": "{{IMG_ACESSO}}",
+    "deb4feaac8e06cfb0192.webp": "{{IMG_HERO}}",
+    "5b3acac355dddba7acb8.webp": "{{IMG_HISTORIA}}",
+    "33b849d0edd71b1f0e1a.webp": "{{IMG_INTERLUDIO}}",
+    "71b573c263e8e95e3fdf.webp": "{{IMG_ACESSO}}",
+    "5caea464e55cceec116a.webp": "{{IMG_HERO}}",
+    "7472f4a7c401fc35304f.webp": "{{IMG_HISTORIA}}",
+    "d9e18099ccb1a7d281ae.webp": "{{IMG_INTERLUDIO}}"
+  },
+  "porcelain-v2-pink": {
+    "e3a0021a7b2df45408f9.webp": "{{IMG_HERO}}",
+    "24f1bdf9561980db6734.webp": "{{IMG_HISTORIA}}",
+    "628a51a6bb03d70c8274.webp": "{{IMG_INTERLUDIO}}",
+    "b0928beec8c33c647cdb.webp": "{{IMG_ACESSO}}",
+    "664901e114dd06b155ed.webp": "{{IMG_HERO}}",
+    "ef9bd99465445aaa048d.webp": "{{IMG_HISTORIA}}"
+  },
+  "lien-hoa-pink": {
+    "798cd87d60794b6a4bfa.webp": "{{IMG_HERO}}",
+    "8acd933b868640617b62.webp": "{{IMG_HISTORIA}}",
+    "cc5a0842b6c531662c25.webp": "{{IMG_INTERLUDIO}}",
+    "11f964f5b649f2a2c372.webp": "{{IMG_ACESSO}}",
+    "22d106c7fc4186063fd2.webp": "{{IMG_HERO}}",
+    "a8cb240c729c7aed45dd.webp": "{{IMG_HISTORIA}}"
+  }
+}
