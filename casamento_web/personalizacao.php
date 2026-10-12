@@ -676,64 +676,6 @@ function catalogoModelosDeCasa(): array {
         'defs' => json_encode($kulemba, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     ];
 
-    // Os onze modelos usam os documentos exactos comparados lado a lado. Cada
-    // um conserva composição, ícones, imagens e movimento próprios; o editor
-    // apenas fornece os dados semânticos e os recursos gerais autorizados.
-    $modelosExactos = [
-        ['jasmine-white','Jasmim Branco','Flores brancas, papel luminoso e composição editorial delicada.'],
-        ['royal-v2-green','Real V2 Verde','Composição real verde com molduras, dourado e ritmo cerimonial.'],
-        ['spring-garden-blue','Jardim Primaveril Azul','Jardim azul de movimento intenso e enquadramentos florais.'],
-        ['double-happiness-green','Dupla Felicidade Verde','Símbolos de dupla felicidade num desenho verde solene.'],
-        ['porcelain-brown','Porcelana Castanha','Porcelana castanha e dourada com composição clássica.'],
-        ['royal-blue','Real Azul','Azul profundo, dourado e organização cerimonial real.'],
-        ['porcelain-v2-green','Porcelana V2 Verde','Porcelana verde, botânica e dourado no desenho original.'],
-        ['hoa-kho-orange','Flor Seca Laranja','Flores secas em laranja e composição orgânica acolhedora.'],
-        ['mahal-gold','Mahal Dourado','Ornamentação dourada rica e presença visual monumental.'],
-        ['porcelain-v2-pink','Porcelana V2 Rosa','Porcelana rosa, botânica e dourado no desenho original.'],
-        ['lien-hoa-pink','Lótus Rosa','Lótus rosa e composição romântica de inspiração oriental.'],
-    ];
-    foreach ($modelosExactos as [$renderer, $nome, $descricao]) {
-        $defs = [
-            'digital.estilo' => $renderer,
-            'capa.abertura' => 'esvair',
-            'capa.selo' => 'liso',
-            'cer.emblema_civil' => 'aneis',
-            'cer.emblema_religiosa' => 'estrela',
-            'cer.emblema_copo' => 'taca',
-            'cer.ramos' => '0',
-            'cer.moldura' => '1',
-            'cer.tamanho' => '104',
-            'cronograma.icone_civil' => 'aneis',
-            'cronograma.icone_religiosa' => 'estrela',
-            'fx.petalas' => '0',
-            // As secções partilhadas são capacidades do editor, não conteúdo
-            // do documento original. Um modelo exacto nasce apenas com as
-            // cenas que pertencem à sua composição; o utilizador pode juntar
-            // estas secções depois, se o admin lhas tiver permitido.
-            'historia.visivel' => '0',
-            'interludio.visivel' => '0',
-            'manual.visivel' => '0',
-            // O programa do dia faz parte do refinamento funcional pedido
-            // para esta família; usa os dados actuais e os ícones do próprio
-            // documento, sem importar prosa de um modelo antigo.
-            'cronograma.visivel' => '1',
-        ];
-        // Fotografias e música pertencem ao conteúdo, não ao desenho. A prova
-        // destes modelos recebe-as do conjunto de exemplo que o administrador
-        // mantém; num casamento recebe-as desse casamento. O manifesto conserva
-        // apenas os recursos decorativos indispensáveis à identidade visual.
-        $out[] = [
-            'ambito' => 'digital',
-            'nome' => $nome,
-            'origem' => false,
-            'descricao' => $descricao,
-            'defs' => json_encode($defs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'renderer_key' => $renderer,
-            'renderer_version' => CONVITE_PACOTE_EXACTO_ACTUAL,
-            'renderer_schema' => CONVITE_PACOTE_SCHEMA,
-        ];
-    }
-
     // Variações do convite impresso — paleta, folhagem e elo, que é o que ali se vê.
     foreach ([['salvia',    'eucalipto', 'coracao',   'Sálvia',     'Verde acinzentado e folha de oliveira.'],
               ['terracota', 'florido',   'losango',   'Terracota',  'Barro quente, com folhagem florida.'],
@@ -2857,9 +2799,13 @@ function esquecerDefinicoes(mysqli $conn): void { definicoesBD($conn, true); }
 function defsAtuais(mysqli $conn): array {
     $defs = defsPadrao();
     // Qualquer dado ainda não personalizado vem do exemplo actual do admin.
-    // Nomes, evento, música e fotografias do casamento de origem não são um
-    // fallback. Os valores guardados pelos noivos continuam a prevalecer.
+    // A identidade e a data da ficha deste casamento, porém, já são dados
+    // reais: o exemplo não pode rebatizar o casal nem mudar-lhe a data. Os
+    // valores guardados pelos noivos continuam a prevalecer sobre ambos.
     foreach (exemploModelo($conn) as $k=>$v) {
+        if (array_key_exists($k,$defs)) $defs[$k]=$v;
+    }
+    foreach (identidadeCasamento() as $k=>$v) {
         if (array_key_exists($k,$defs)) $defs[$k]=$v;
     }
     foreach (definicoesBD($conn) as $k => $v) {
@@ -3240,7 +3186,7 @@ function googleMapsEmbedUrl(array $defs): string {
     ]);
 }
 
-function convitePlaceholders(array $defs, array $runtimeExtra = []): array {
+function convitePlaceholders(array $defs): array {
     $noiva = $defs['casal.noiva']; $noivo = $defs['casal.noivo'];
     $tokens = ['{noiva}'=>$noiva, '{noivo}'=>$noivo];
     $casal = $noiva.' & '.$noivo;
@@ -3367,7 +3313,6 @@ function convitePlaceholders(array $defs, array $runtimeExtra = []): array {
         ],
         'qr' => ['cor' => $pal['forest-deep'], 'fundo' => $pal['ivory']],
     ];
-    if ($runtimeExtra) $runtime['exacto'] = $runtimeExtra;
     $runtimeJson = json_encode($runtime, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}';
 

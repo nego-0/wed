@@ -10,28 +10,8 @@
 const CONVITE_PACOTE_SCHEMA = 1;
 const CONVITE_PACOTE_PADRAO = 'kulemba-contemporaneo';
 const CONVITE_PACOTE_PADRAO_VERSAO = '1.0.0';
-const CONVITE_PACOTE_PORCELANA = 'porcelain-v2-green';
-const CONVITE_PACOTE_PORCELANA_ROSA = 'porcelain-v2-pink';
 const CONVITE_PACOTE_PORCELANA_LEGADO = 'porcelain-v2';
 const CONVITE_PACOTE_PORCELANA_VERSAO = '1.0.0';
-const CONVITE_PACOTE_EXACTO_ACTUAL = '1.1.0';
-
-/** Os onze documentos visuais exactos instalados nesta edição. */
-function convitePacotesExactos(): array {
-    return [
-        'jasmine-white'            => 'Jasmim Branco',
-        'royal-v2-green'           => 'Real V2 Verde',
-        'spring-garden-blue'       => 'Jardim Primaveril Azul',
-        'double-happiness-green'   => 'Dupla Felicidade Verde',
-        'porcelain-brown'          => 'Porcelana Castanha',
-        'royal-blue'               => 'Real Azul',
-        'porcelain-v2-green'       => 'Porcelana V2 Verde',
-        'hoa-kho-orange'           => 'Flor Seca Laranja',
-        'mahal-gold'               => 'Mahal Dourado',
-        'porcelain-v2-pink'        => 'Porcelana V2 Rosa',
-        'lien-hoa-pink'            => 'Lótus Rosa',
-    ];
-}
 
 /** Lê o manifesto instalado e recusa um pacote incompleto. */
 function convitePacoteManifesto(string $ficheiro): array {
@@ -102,53 +82,6 @@ function convitePacotesRegistados(): array {
         ];
     }
 
-    // Cada versão publicada conserva os seus próprios documentos. A 1.0.0
-    // continua resolvível para convites e versões já guardados; o catálogo
-    // oferece apenas a 1.1.0 corrigida.
-    foreach (['1.0.0', CONVITE_PACOTE_EXACTO_ACTUAL] as $versaoExacta) {
-        $raizExacta = __DIR__ . '/assets/convite/modelos/chungdoi-exact/' . $versaoExacta;
-        $cssBase = realpath($raizExacta . '/exact-base.css');
-        $cssAjustes = realpath($raizExacta . '/exact-adjustments.css');
-        $runtime = realpath($raizExacta . '/exact-runtime.js');
-        $componentes = realpath($raizExacta . '/exact-components.js');
-        $cssComponentes = realpath($raizExacta . '/exact-components.css');
-        if ($cssBase === false || $cssAjustes === false || $runtime === false) {
-            throw new RuntimeException('A base visual ' . $versaoExacta . ' dos onze convites não está disponível.');
-        }
-        foreach (convitePacotesExactos() as $key => $nome) {
-            $templateExacto = realpath($raizExacta . '/' . $key . '.html');
-            $cssExacto = realpath($raizExacta . '/' . $key . '.css');
-            $manifestoExacto = convitePacoteManifesto($raizExacta . '/' . $key . '.json');
-            if ((string)$manifestoExacto['versao'] !== $versaoExacta) {
-                throw new RuntimeException('O manifesto do modelo ' . $nome . ' não corresponde à pasta ' . $versaoExacta . '.');
-            }
-            foreach ([$templateExacto, $cssExacto, $cssBase, $cssAjustes, $runtime, $componentes, $cssComponentes] as $ficheiro) {
-                if ($ficheiro === false || !str_starts_with(str_replace('\\', '/', $ficheiro), str_replace('\\', '/', $base) . '/')) {
-                    throw new RuntimeException('O documento do modelo ' . $nome . ' não está disponível.');
-                }
-            }
-            $prefixoWeb = 'assets/convite/modelos/chungdoi-exact/' . $versaoExacta . '/';
-            $pacotes['digital'][$key][$versaoExacta] = [
-                'ambito' => 'digital',
-                'renderer_key' => $key,
-                'renderer_version' => $versaoExacta,
-                'renderer_schema' => CONVITE_PACOTE_SCHEMA,
-                'manifesto' => $manifestoExacto,
-                'template' => $templateExacto,
-                'stylesheets' => [
-                    ['path'=>$cssBase, 'href'=>$prefixoWeb . 'exact-base.css'],
-                    ['path'=>$cssAjustes, 'href'=>$prefixoWeb . 'exact-adjustments.css'],
-                    ['path'=>$cssExacto, 'href'=>$prefixoWeb . $key . '.css'],
-                    ['path'=>$cssComponentes, 'href'=>$prefixoWeb . 'exact-components.css'],
-                ],
-                'checksum' => hash('sha256', hash_file('sha256', $templateExacto)
-                    . hash_file('sha256', $cssBase) . hash_file('sha256', $cssAjustes) . hash_file('sha256', $cssExacto)
-                    . hash_file('sha256', $runtime) . hash_file('sha256', $componentes) . hash_file('sha256', $cssComponentes)
-                    . hash_file('sha256', $raizExacta . '/' . $key . '.json')),
-                'legado' => $versaoExacta !== CONVITE_PACOTE_EXACTO_ACTUAL,
-            ];
-        }
-    }
     return $pacotes;
 }
 

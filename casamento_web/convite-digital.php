@@ -168,243 +168,13 @@ if ($distrMesas) {
         . "<b style=\"font-weight:600;color:{$pal['forest']}\">{$txtMesas}</b></p>";
 }
 
-// Identificação central usada pelas páginas cerimoniais dos modelos exactos:
-// primeiro o nome deste convite e, só quando existe distribuição, as mesas e
-// os lugares. Não se inventa uma mesa nem se ocupa espaço quando ela não foi
-// atribuída.
-$mesaResumo = '';
-if ($distrMesas) {
-    $linhasMesa = [];
-    $rotuloLugares = escP((string)$DEFS['textos.lugares']);
-    $defLugares = $modoEditor ? ' data-def="textos.lugares"' : '';
-    foreach ($distrMesas as $mesa) {
-        $linha = '<span class="kvp-mesa-nome">' . escP((string)($mesa['nome'] ?? '')) . '</span>';
-        $n = (int)($mesa['n'] ?? 0);
-        if ($comNumMesa && $n > 0) {
-            $linha .= '<span class="kvp-mesa-ponto" aria-hidden="true">·</span>'
-                . '<span class="kvp-mesa-lugares"><strong>' . $n . '</strong> '
-                . '<span' . $defLugares . '>' . $rotuloLugares . '</span></span>';
-        }
-        $linhasMesa[] = '<span class="kvp-mesa-linha">' . $linha . '</span>';
-    }
-    $mesaResumo = '<div class="kvp-mesa-resumo">' . implode('', $linhasMesa) . '</div>';
-}
-
-// As cerimónias desta camada são opcionais e vêm dos mesmos campos semânticos
-// usados no restante sistema. Hora vazia significa que a cerimónia não existe.
-// O texto do link é editável; o endereço é validado antes de entrar no href.
-$cerimoniasResumo = '';
-$cartoesCerimonia = [];
-$dataCerimonia = null;
-try { $dataCerimonia = new DateTime((string)$DEFS['evento.data']); } catch (Throwable $e) {}
-$cerDia = $dataCerimonia ? (int)$dataCerimonia->format('j') : '';
-$cerMes = $dataCerimonia ? (MESES_PT[(int)$dataCerimonia->format('n')] ?? '') : '';
-$cerAno = $dataCerimonia ? $dataCerimonia->format('Y') : '';
-$cerSemana = $dataCerimonia ? (DIAS_PT[(int)$dataCerimonia->format('w')] ?? '') : '';
-foreach (['civil', 'religiosa'] as $tipoCerimonia) {
-    $hora = trim((string)($DEFS['evento.' . $tipoCerimonia . '_hora'] ?? ''));
-    if ($hora === '') continue;
-    $titulo = escP((string)($DEFS['evento.' . $tipoCerimonia . '_titulo'] ?? ''));
-    $local = trim((string)($DEFS['evento.' . $tipoCerimonia . '_local'] ?? ''));
-    $mapa = trim((string)($DEFS['evento.' . $tipoCerimonia . '_maps'] ?? ''));
-    if (!filter_var($mapa, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $mapa)) $mapa = '';
-    $defTitulo = $modoEditor ? ' data-def="evento.' . $tipoCerimonia . '_titulo"' : '';
-    $defLocal = $modoEditor ? ' data-def="evento.' . $tipoCerimonia . '_local"' : '';
-    $defMapa = $modoEditor ? ' data-def="textos.mapa"' : '';
-    $localHtml = $local !== ''
-        ? '<p class="kvp-cer-local"' . $defLocal . '>' . escP($local) . '</p>' : '';
-    $mapaHtml = $mapa !== ''
-        ? '<a class="kvp-map-link" href="' . escP($mapa) . '" target="_blank" rel="noopener noreferrer">'
-          . '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>'
-          . '<span' . $defMapa . '>' . escP((string)$DEFS['textos.mapa']) . '</span></a>' : '';
-    $dataHtml = $dataCerimonia
-        ? '<div class="kvp-cer-date"><strong>' . $cerDia . '</strong><i aria-hidden="true"></i>'
-          . '<span><b>' . escP(mb_strtoupper($cerMes)) . '</b><b>' . escP($cerAno) . '</b></span></div>'
-        : '';
-    $cartoesCerimonia[] = '<article class="kvp-cer-card kvp-cer-' . $tipoCerimonia . '">'
-        . '<h3' . $defTitulo . '>' . $titulo . '</h3>'
-        . $localHtml
-        . '<div class="kvp-cer-meta"><time datetime="' . escP($DEFS['evento.data'] . 'T' . $hora) . '">'
-        . escP($hora) . '</time>' . ($cerSemana !== '' ? '<span>' . escP(mb_strtoupper($cerSemana)) . '</span>' : '') . '</div>'
-        . $dataHtml . $mapaHtml . '</article>';
-}
-if ($cartoesCerimonia) {
-    $cerimoniasResumo = '<div class="kvp-cerimonias-resumo">' . implode('', $cartoesCerimonia) . '</div>';
-}
-
-$rendererExacto = (string)($PACOTE['renderer_key'] ?? '');
-$ehModeloExacto = array_key_exists($rendererExacto, convitePacotesExactos());
 $confirmParams = $demo ? ['demo' => '1'] : ['c' => $c['codigo']];
-if ($ehModeloExacto) $confirmParams['tema'] = $rendererExacto;
 $confirmUrl = $demoPublica
-    ? 'demonstracao-confirmacao.php?' . http_build_query(array_filter([
-        'tema' => $ehModeloExacto ? $rendererExacto : '',
-    ]))
+    ? 'demonstracao-confirmacao.php'
     : enderecoPublico() . '/convite.php?' . http_build_query($confirmParams);
 $confirmUrl  = escP($confirmUrl);
 $downloadUrl = $demoPublica ? '#' : escP('convite-digital.php?c=' . $c['codigo'] . '&download=1');
 $qrValue     = $demo ? 'DEMONSTRACAO-SEM-VALIDADE' : enderecoPublico() . '/convite-digital.php?c=' . $c['codigo'];
-
-// Os onze documentos exactos conservam a sua composição, mas recebem o
-// mesmo conteúdo semântico. O runtime usa estes dados para substituir apenas
-// o miolo funcional (convidado, cerimónias, mapa e passe de entrada), sem
-// tocar nos fundos, molduras, ícones ou tipografia próprios de cada modelo.
-$runtimeExacto = [];
-if ($ehModeloExacto) {
-    $tokensExactos = ['{noiva}'=>(string)$DEFS['casal.noiva'], '{noivo}'=>(string)$DEFS['casal.noivo']];
-    $iconesExactos = iconesConvite((string)($DEFS['digital.estilo'] ?? 'classico'));
-    $blocosExactos = [];
-    $dataEvento = null;
-    try { $dataEvento = new DateTime((string)$DEFS['evento.data'] . ' ' . (string)$DEFS['evento.hora']); } catch (Throwable $e) {}
-    $componentesExactos = ['presentes'=>null, 'mensagens'=>null];
-    foreach (blocosLivres($DEFS) as $blocoLivre) {
-        $tipoLivre = (string)($blocoLivre['tipo'] ?? '');
-        $itensLivres = [];
-        foreach ((array)($blocoLivre['itens'] ?? []) as $itemLivre) {
-            if (!is_array($itemLivre)) continue;
-            $tituloLivre = trim((string)($itemLivre['t'] ?? ''));
-            $textoLivre = trim((string)($itemLivre['x'] ?? ''));
-            if ($tituloLivre === '' && $textoLivre === '') continue;
-            $itensLivres[] = [
-                'icone'=>(string)($itemLivre['i'] ?? 'coracao'),
-                'titulo'=>strtr($tituloLivre, $tokensExactos),
-                'texto'=>strtr($textoLivre, $tokensExactos),
-                'textoHtml'=>mdTexto($textoLivre, $tokensExactos),
-            ];
-        }
-        $componenteExacto = [
-            'id'=>(string)($blocoLivre['id'] ?? ''),
-            'tipo'=>$tipoLivre,
-            'eyebrow'=>trim((string)($blocoLivre['eyebrow'] ?? '')),
-            'titulo'=>strtr(trim((string)($blocoLivre['titulo'] ?? '')), $tokensExactos),
-            'texto'=>trim((string)($blocoLivre['texto'] ?? '')),
-            'textoHtml'=>mdTexto((string)($blocoLivre['texto'] ?? ''), $tokensExactos),
-            'modo'=>in_array(($blocoLivre['modo'] ?? ''), ['texto','qr','metodos'], true)
-                ? (string)$blocoLivre['modo'] : 'texto',
-            'qr'=>trim((string)($blocoLivre['qr'] ?? '')),
-            'itens'=>$itensLivres,
-        ];
-        $blocosExactos[] = $componenteExacto;
-        if (array_key_exists($tipoLivre, $componentesExactos) && $componentesExactos[$tipoLivre] === null) {
-            $componentesExactos[$tipoLivre] = $componenteExacto;
-        }
-    }
-    $programaExacto = [];
-    foreach (['civil','religiosa'] as $tipoCerimonia) {
-        $horaCerimonia = trim((string)($DEFS['evento.'.$tipoCerimonia.'_hora'] ?? ''));
-        if ($horaCerimonia === '') continue;
-        $programaExacto[] = [
-            'titulo'=>(string)($DEFS['evento.'.$tipoCerimonia.'_titulo'] ?? ucfirst($tipoCerimonia)),
-            'hora'=>$horaCerimonia,
-            'icone'=>(string)($DEFS['cronograma.icone_'.$tipoCerimonia] ?? 'aneis'),
-        ];
-    }
-    foreach (json_decode((string)($DEFS['cronograma.itens'] ?? '[]'), true) ?: [] as $itemPrograma) {
-        if (!is_array($itemPrograma)) continue;
-        $tituloPrograma = trim((string)($itemPrograma['t'] ?? ''));
-        $horaPrograma = trim((string)($itemPrograma['h'] ?? ''));
-        if ($tituloPrograma === '' && $horaPrograma === '') continue;
-        $programaExacto[] = [
-            'titulo'=>$tituloPrograma,
-            'hora'=>$horaPrograma,
-            'icone'=>(string)($itemPrograma['i'] ?? 'estrela'),
-        ];
-    }
-    $runtimeExacto = [
-        'modelo' => $rendererExacto,
-        'icones'=>$iconesExactos,
-        'iconeMusicaTocar'=>(string)$DEFS['geral.icone_musica_tocar'],
-        'iconeMusicaPausa'=>(string)$DEFS['geral.icone_musica_pausa'],
-        'ordem'=>ordemBlocos($DEFS),
-        'visibilidade'=>[
-            'historia'=>$DEFS['historia.visivel']==='1',
-            'interludio'=>$DEFS['interludio.visivel']==='1',
-            'cronograma'=>$DEFS['cronograma.visivel']==='1',
-            'manual'=>$DEFS['manual.visivel']==='1',
-        ],
-        'fotos'=>array_map(static fn($f)=>['src'=>(string)$DEFS[$f['media']],
-            'enquadramento'=>lerEnquadramento((string)($DEFS[$f['chave']] ?? ''))], fotosEnquadraveis()),
-        'historia'=>[
-            'eyebrow'=>(string)$DEFS['historia.eyebrow'], 'titulo'=>(string)$DEFS['historia.titulo'],
-            'textoHtml'=>mdTexto((string)$DEFS['historia.quote'], $tokensExactos),
-            'autor'=>(string)$DEFS['historia.autor'],
-            'itens'=>array_map(static fn($i)=>['titulo'=>(string)($i['t']??''),
-                'textoHtml'=>mdTexto((string)($i['x']??''), $tokensExactos)],
-                json_decode((string)$DEFS['historia.capitulos'], true) ?: []),
-        ],
-        'interludio'=>[
-            'textoHtml'=>mdTexto((string)$DEFS['interludio.quote'], $tokensExactos),
-            'autor'=>(string)$DEFS['interludio.autor'],
-            'fechoHtml'=>mdTexto((string)$DEFS['interludio.fecho'], $tokensExactos),
-        ],
-        'manual'=>[
-            'eyebrow'=>(string)$DEFS['manual.eyebrow'], 'titulo'=>(string)$DEFS['manual.titulo'],
-            'textoHtml'=>mdTexto((string)$DEFS['manual.intro'], $tokensExactos),
-            'itens'=>array_map(static fn($i)=>['icone'=>(string)($i['i']??'coracao'),
-                'textoHtml'=>mdTexto((string)($i['x']??''), $tokensExactos)],
-                json_decode((string)$DEFS['manual.itens'], true) ?: []),
-        ],
-        'rsvp'=>['tituloHtml'=>mdTexto((string)$DEFS['rsvp.titulo'], $tokensExactos),
-            'textoHtml'=>mdTexto((string)$DEFS['rsvp.sub'], $tokensExactos)],
-        'blocos'=>$blocosExactos,
-        'noiva' => (string)$DEFS['casal.noiva'],
-        'noivo' => (string)$DEFS['casal.noivo'],
-        'familias' => (string)$DEFS['textos.familias'],
-        'anuncio' => (string)$DEFS['textos.anuncio_cerimonia'],
-        'convidado' => nomeConviteVisivel($c),
-        'mesaHtml' => $mesaResumo,
-        'cerimoniasHtml' => $cerimoniasResumo,
-        'recepcao' => [
-            'titulo' => (string)$DEFS['recepcao.titulo'],
-            'subtitulo' => (string)$DEFS['recepcao.subtitulo'],
-            'chegadaRotulo' => (string)$DEFS['recepcao.chegada_rotulo'],
-            'chegadaHora' => (string)$DEFS['recepcao.chegada_hora'],
-            'boloRotulo' => (string)$DEFS['recepcao.bolo_rotulo'],
-            'boloHora' => (string)$DEFS['recepcao.bolo_hora'],
-            'contagemTitulo' => (string)$DEFS['recepcao.contagem_titulo'],
-            'localTitulo' => (string)$DEFS['recepcao.local_titulo'],
-        ],
-        'evento' => [
-            'iso'=>$dataEvento ? $dataEvento->format(DATE_ATOM) : '',
-            'dia'=>$dataEvento ? (int)$dataEvento->format('j') : '',
-            'mes'=>$dataEvento ? (MESES_PT[(int)$dataEvento->format('n')] ?? '') : '',
-            'ano'=>$dataEvento ? (int)$dataEvento->format('Y') : '',
-            'semana'=>$dataEvento ? (DIAS_PT[(int)$dataEvento->format('w')] ?? '') : '',
-            'hora'=>(string)$DEFS['evento.hora'],
-        ],
-        'programaTitulo'=>(string)$DEFS['cronograma.titulo'],
-        'programa'=>$programaExacto,
-        'local' => (string)$DEFS['evento.local'],
-        'cidade' => (string)$DEFS['evento.cidade'],
-        // A galeria nativa dos onze modelos tinha fotografias de demonstração
-        // embutidas no HTML. O adaptador recebe a mesma seleção semântica usada
-        // pelos modelos Kulemba. O adaptador limita o desenho às mesmas quatro
-        // molduras: capa, história, interlúdio e acesso.
-        'galeria' => array_values(array_filter([
-            (string)$DEFS['media.hero'],
-            (string)$DEFS['media.historia'],
-            (string)$DEFS['media.interludio'],
-            (string)$DEFS['media.acesso'],
-        ], static fn(string $v): bool => trim($v) !== '')),
-        'mapEmbed' => googleMapsEmbedUrl($DEFS),
-        'mapsUrl' => trim((string)$DEFS['evento.maps']) !== ''
-            ? (string)$DEFS['evento.maps']
-            : 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode(trim((string)$DEFS['evento.local'] . ', ' . (string)$DEFS['evento.cidade'])),
-        'mapaRotulo' => (string)$DEFS['textos.mapa'],
-        'confirmUrl' => html_entity_decode($confirmUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-        'acesso' => [
-            'eyebrow' => (string)$DEFS['acesso.eyebrow'],
-            'titulo' => (string)$DEFS['acesso.titulo'],
-            'instrucao' => (string)$DEFS['acesso.instrucao'],
-            'instrucaoHtml' => mdTexto((string)$DEFS['acesso.instrucao']),
-            'nota' => (string)$DEFS['acesso.nota'],
-            'notaHtml' => mdTexto((string)$DEFS['acesso.nota']),
-            'qr' => $qrValue,
-        ],
-        'presentes'=>$componentesExactos['presentes'],
-        'mensagens'=>$componentesExactos['mensagens'],
-    ];
-}
 
 // Mensagem pessoal deste convite (opcional)
 $msgPessoal = trim((string)($c['msg_pessoal'] ?? ''));
@@ -421,29 +191,14 @@ if ($modoEditor) $tpl = marcarParaEditor($tpl);
 $tpl = ordenarBlocos($tpl, $DEFS, ['{noiva}' => $DEFS['casal.noiva'], '{noivo}' => $DEFS['casal.noivo']], $modoEditor);
 
 $out = aplicarSeccoes($tpl, $DEFS);
-$out = strtr($out, convitePlaceholders($DEFS, $runtimeExacto) + [
+$out = strtr($out, convitePlaceholders($DEFS) + [
     '{{GUEST_NAME}}'   => $nome,
     '{{MESA_BLOCK}}'   => $mesaBlock,
-    '{{MESA_RESUMO}}'  => $mesaResumo,
-    '{{CERIMONIAS_RESUMO}}' => $cerimoniasResumo,
     '{{MSG_PESSOAL}}'  => $msgBlock,
     '{{CONFIRM_URL}}'  => $confirmUrl,
     '{{DOWNLOAD_URL}}' => $downloadUrl,
     '{{QR_VALUE}}'     => $qrValue,
 ]);
-
-// A composição Porcelana reserva altura apenas para as cerimónias realmente
-// preenchidas. A classe deixa o CSS distinguir zero, uma ou duas sem inventar
-// espaço vazio quando a cerimónia civil ou religiosa não se aplica.
-if ($ehModeloExacto) {
-    $qtdCerimonias = min(2, count($cartoesCerimonia));
-    $out = preg_replace(
-        '/class="kvp-ceremony\s+/',
-        'class="kvp-ceremony kvp-ceremony--' . $qtdCerimonias . ' ',
-        $out,
-        1
-    );
-}
 
 // ---- Descarga: embutir tudo e transmitir (offline) -----------
 if ($download) {
@@ -765,7 +520,7 @@ JS;
 // (base64), para o ficheiro poder ser visto completamente offline.
 // ============================================================
 function embutirRecursos(string $html, string $base): string {
-    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif','svg'=>'image/svg+xml','ico'=>'image/x-icon','woff2'=>'font/woff2','woff'=>'font/woff','ttf'=>'font/ttf'];
+    $mime = ['mp3'=>'audio/mpeg','m4a'=>'audio/mp4','mp4'=>'audio/mp4','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','svg'=>'image/svg+xml','ico'=>'image/x-icon','woff2'=>'font/woff2'];
 
     $paraDataUri = function (string $rel) use ($base, $mime): ?string {
         $rel = ltrim($rel, '/');
@@ -782,21 +537,6 @@ function embutirRecursos(string $html, string $base): string {
         function ($m) use ($paraDataUri) {
             $d = $paraDataUri($m[1]);
             return $d ? 'src="' . $d . '"' : $m[0];
-        }, $html);
-
-    // Recursos dos pacotes exactos incluem também SVG, GIF e as fontes que
-    // pertencem ao próprio desenho. Conservam-se no ficheiro descarregado.
-    $html = preg_replace_callback(
-        '#(src|href)="(assets/convite/modelos/[^"]+\.(?:jpg|jpeg|png|webp|gif|svg|mp3|m4a|mp4|woff2?|ttf))"#i',
-        function ($m) use ($paraDataUri) {
-            $d = $paraDataUri($m[2]);
-            return $d ? $m[1] . '="' . $d . '"' : $m[0];
-        }, $html);
-    $html = preg_replace_callback(
-        '#url\((?:&quot;|["\']?)(assets/convite/modelos/[^)&"\']+\.(?:jpg|jpeg|png|webp|gif|svg|woff2?|ttf))(?:&quot;|["\']?)\)#i',
-        function ($m) use ($paraDataUri) {
-            $d = $paraDataUri($m[1]);
-            return $d ? 'url("' . $d . '")' : $m[0];
         }, $html);
 
     // 2) Tipos de letra:  url(assets/convite/fonts/....woff2)
@@ -853,12 +593,6 @@ function embutirRecursos(string $html, string $base): string {
             '#<script src="assets/convite-runtime\.js(?:\?[^\"]*)?"></script>#',
             '<script>' . $js . '</script>', $html, 1);
     }
-    $html = preg_replace_callback(
-        '#<script src="(assets/convite/modelos/[a-z0-9./_-]+\.js)(?:\?[^\"]*)?"></script>#i',
-        function ($m) use ($base) {
-            $abs = $base . '/' . ltrim($m[1], '/');
-            return is_readable($abs) ? '<script>' . file_get_contents($abs) . '</script>' : $m[0];
-        }, $html);
 
     // 6) QRious:  <script src="assets/qrious.min.js"></script> -> inline
     $qr = $base . '/assets/qrious.min.js';

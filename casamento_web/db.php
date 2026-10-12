@@ -210,7 +210,7 @@ $conn->query("
 // TODAS as páginas e chamadas à API. Agora guarda-se a versão do esquema em
 // cw_definicoes e só se corre o que falta.
 // ============================================================
-const ESQUEMA_VERSAO = 73;
+const ESQUEMA_VERSAO = 74;
 
 /** Acrescenta uma coluna se ainda não existir (usado dentro das migrações). */
 function migColuna(mysqli $c, string $tabela, string $coluna, string $def): void {
@@ -2707,25 +2707,6 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         ], true);
     }
 
-    // v70 — os onze modelos passam a usar os documentos exactos arquivados e
-    // traduzidos. As versões anteriores conservam o renderer que já fixaram;
-    // só o catálogo activo aponta para os novos pacotes independentes.
-    if ($versaoAtual < 70) {
-        require_once __DIR__ . '/personalizacao.php';
-        foreach ([['Porcelana Verde','Porcelana V2 Verde'], ['Porcelana Rosa','Porcelana V2 Rosa']] as [$antigo,$novo]) {
-            $a = $conn->real_escape_string($antigo); $n = $conn->real_escape_string($novo);
-            $ja = @$conn->query("SELECT 1 FROM {$P}modelos WHERE ambito='digital' AND nome='$n' LIMIT 1");
-            if ($ja && $ja->num_rows === 0) {
-                @$conn->query("UPDATE {$P}modelos SET nome='$n' WHERE ambito='digital' AND nome='$a' AND criado_por='sistema'");
-            } else {
-                @$conn->query("UPDATE {$P}modelos SET visivel=0 WHERE ambito='digital' AND nome='$a' AND criado_por='sistema'");
-            }
-        }
-        $alvosExactos = [];
-        foreach (convitePacotesExactos() as $nome) $alvosExactos[] = ['ambito'=>'digital','nome'=>$nome];
-        restaurarModelosDeCasa($conn, $alvosExactos, true);
-    }
-
     // v71 — a versão fixa também a liberdade editorial que tinha ao nascer.
     // Alterar depois as capacidades do modelo de origem não abre nem fecha
     // ferramentas numa versão que o utilizador já guardou.
@@ -2733,55 +2714,46 @@ if ($versaoAtual < ESQUEMA_VERSAO) {
         migColuna($conn, "{$P}versoes", 'capacidades', 'MEDIUMTEXT NULL DEFAULT NULL');
     }
 
-    // v72 — as secções partilhadas dos onze documentos exactos são opcionais.
-    // A primeira integração herdava o valor de fábrica do convite Kulemba e
-    // mostrava História, Interlúdio e Manual sem o utilizador os ter
-    // escolhido. Repõe o catálogo e corrige somente casamentos que ainda
-    // estão ligados a um destes modelos; conteúdo e versões ficam intactos.
-    if ($versaoAtual < 72) {
+    // v74 — retira os onze renderizadores experimentais. Instalações que já
+    // os usaram são reapontadas para Kulemba Contemporâneo antes de os modelos
+    // serem apagados, para que convites e versões guardadas continuem a abrir.
+    if ($versaoAtual < 74) {
         require_once __DIR__ . '/personalizacao.php';
-        $alvosExactos = [];
-        foreach (convitePacotesExactos() as $nome) {
-            $alvosExactos[] = ['ambito'=>'digital','nome'=>$nome];
-        }
-        restaurarModelosDeCasa($conn, $alvosExactos, true);
+        $retirados = [
+            'jasmine-white','royal-v2-green','spring-garden-blue',
+            'double-happiness-green','porcelain-brown','royal-blue',
+            'porcelain-v2-green','hoa-kho-orange','mahal-gold',
+            'porcelain-v2-pink','lien-hoa-pink',
+        ];
+        restaurarModelosDeCasa($conn, [
+            ['ambito'=>'digital', 'nome'=>'Kulemba Contemporâneo'],
+        ], true);
+        $pk = $conn->real_escape_string(CONVITE_PACOTE_PADRAO);
+        $pv = $conn->real_escape_string(CONVITE_PACOTE_PADRAO_VERSAO);
+        $lista = implode(',', array_map(
+            fn($k)=>"'" . $conn->real_escape_string($k) . "'", $retirados
+        ));
+        $fallbackId = 0;
+        $r = @$conn->query("SELECT id FROM {$P}modelos
+                            WHERE ambito='digital' AND renderer_key='$pk'
+                            ORDER BY (nome='Kulemba Contemporâneo') DESC, id LIMIT 1");
+        if ($r && ($x = $r->fetch_assoc())) $fallbackId = (int)$x['id'];
 
         $ids = [];
-        $nomes = array_values(convitePacotesExactos());
-        if ($nomes) {
-            $lista = implode(',', array_map(fn($n)=>"'" . $conn->real_escape_string($n) . "'", $nomes));
-            $r = @$conn->query("SELECT id FROM {$P}modelos
-                                WHERE ambito='digital' AND criado_por='sistema' AND nome IN ($lista)");
-            if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
-        }
-        if ($ids) {
+        $r = @$conn->query("SELECT id FROM {$P}modelos
+                            WHERE ambito='digital' AND renderer_key IN ($lista)");
+        if ($r) while ($x = $r->fetch_assoc()) $ids[] = (int)$x['id'];
+        if ($fallbackId > 0 && $ids) {
             $listaIds = implode(',', $ids);
-            foreach (['historia.visivel','interludio.visivel','manual.visivel'] as $chaveSecao) {
-                $ch = $conn->real_escape_string($chaveSecao);
-                @$conn->query("INSERT INTO {$P}definicoes (casamento_id,chave,valor)
-                    SELECT DISTINCT d.casamento_id,'$ch','0'
-                    FROM {$P}definicoes d
-                    WHERE d.chave IN ('modelo.vigor.digital','modelo.origem.digital')
-                      AND CAST(d.valor AS UNSIGNED) IN ($listaIds)
-                    ON DUPLICATE KEY UPDATE valor=IF(valor='1',valor,'0')");
-            }
+            @$conn->query("UPDATE {$P}definicoes SET valor='$fallbackId'
+                           WHERE chave IN ('modelo.vigor.digital','modelo.origem.digital','modelo.pecaorigem.digital')
+                             AND CAST(valor AS UNSIGNED) IN ($listaIds)");
         }
-    }
-
-    // v73 — os onze modelos de casa passam para o pacote 1.1.0. A troca é
-    // feita apenas no catálogo do sistema: versões guardadas pelos noivos
-    // continuam fixas na 1.0.0 e permanecem integralmente resolvíveis.
-    if ($versaoAtual < 73) {
-        require_once __DIR__ . '/personalizacao.php';
-        $nomesExactos = array_values(convitePacotesExactos());
-        if ($nomesExactos) {
-            $lista = implode(',', array_map(fn($n)=>"'" . $conn->real_escape_string($n) . "'", $nomesExactos));
-            $versaoNova = $conn->real_escape_string(CONVITE_PACOTE_EXACTO_ACTUAL);
-            @$conn->query("UPDATE {$P}modelos
-                           SET renderer_version='$versaoNova', atualizado_em=NOW()
-                           WHERE ambito='digital' AND criado_por='sistema'
-                             AND renderer_key IS NOT NULL AND nome IN ($lista)");
-        }
+        @$conn->query("UPDATE {$P}versoes
+                       SET renderer_key='$pk', renderer_version='$pv', renderer_schema=" . CONVITE_PACOTE_SCHEMA . "
+                       WHERE ambito='digital' AND renderer_key IN ($lista)");
+        @$conn->query("DELETE FROM {$P}modelos
+                       WHERE ambito='digital' AND renderer_key IN ($lista)");
     }
 
     // A versão do esquema é do sistema, não de um casamento: vive no 0.

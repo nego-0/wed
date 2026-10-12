@@ -18,8 +18,11 @@ try {
     $st->bind_param('ss',$chave,$valor);$st->execute();
     esquecerDefinicoes($conn);
     $exemplo=exemploModelo($conn);$d=defsAtuais($conn);
-    if ($d['casal.noiva']!=='Vera de Exemplo'||$d['media.hero']!==$exemplo['media.hero'])
-        throw new RuntimeException('Os dados ausentes não seguem o exemplo do admin.');
+    $ficha=identidadeCasamento();
+    if ($d['casal.noiva']!==($ficha['casal.noiva'] ?? '')
+        ||$d['casal.noivo']!==($ficha['casal.noivo'] ?? '')
+        ||$d['media.hero']!==$exemplo['media.hero'])
+        throw new RuntimeException('A ficha do casamento e os recursos do exemplo não foram conciliados.');
     $r=guardarDefinicoes($conn,['casal.noiva'=>'Clara','casal.noivo'=>'Miguel',
         'evento.civil_hora'=>'','evento.religiosa_hora'=>'']);
     if ($r['invalidas']) throw new RuntimeException('Campos válidos foram rejeitados.');
@@ -27,7 +30,7 @@ try {
     if ($d['casal.noiva']!=='Clara'||$d['casal.noivo']!=='Miguel'
         ||$d['evento.civil_hora']!==''||$d['evento.religiosa_hora']!=='')
         throw new RuntimeException('Os dados próprios ou a omissão das cerimónias perderam-se.');
-    echo "PASS: exemplo do admin, precedência dos noivos e cerimónias omitidas.\n";
+    echo "PASS: ficha do casamento, recursos do exemplo, precedência dos noivos e cerimónias omitidas.\n";
 } finally {
     $conn->rollback();usarCasamento($anterior);esquecerDefinicoes($conn);
 }

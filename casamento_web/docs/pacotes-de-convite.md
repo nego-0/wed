@@ -45,84 +45,44 @@ uma identidade ao desenho actual sem alterar HTML, fotografias, animações ou
 comportamento. O pacote passa a ser a origem dos modelos digitais antigos e dos
 modelos da casa.
 
-## Onze modelos de composição própria
+## Família Porcelana V2
 
-As pastas `assets/convite/modelos/chungdoi-exact/1.0.0` e `1.1.0` instalam os
-onze pacotes. A versão 1.0.0 permanece intacta para abrir peças históricas. A
-versão activa 1.1.0 corrige a integração sem reescrever os documentos: cada
-pacote conserva as fontes, cores, fundos, molduras, ornamentos, ícones,
-envelope, capa, efeitos, animações e galeria da composição visual comparada.
+`porcelain-v2@1.0.0` é o primeiro pacote com documento próprio. Não é uma
+paleta aplicada ao convite anterior: `porcelain-v2.html` define a sequência e
+a composição da família e `porcelain-v2.css` define a sua linguagem visual.
+O manifesto publica duas variantes comerciais em português:
 
-A referência aprovada da Porcelana V2 Rosa está congelada em
-`tests/fixtures/convites/porcelana-v2-rosa`. O manifesto fixa o SHA-256 do HTML
-e `tests/chk_referencia_porcelana_v2.js` falha se um byte mudar. A referência é
-um critério de aceitação; não é usada para clonar o HTML da Porcelana sobre os
-outros dez modelos.
+- **Porcelana Verde**, com folhagem verde, papel marfim e ouro antigo;
+- **Porcelana Rosa**, com peónias rosa, apontamentos lilás e ouro suave.
 
-Os documentos 1.1.0 recebem âncoras `data-exact-fragment` durante a preparação
-controlada pelo script `tests/marcar_ancoras_exactas.js`. No browser, o runtime
-usa apenas essas âncoras estruturais. Não procura títulos visíveis, não infere
-secções pelo idioma, não ordena todos os nós e não apaga contentores nativos.
-Cerimónia, galeria, copo d'água, programa e acesso seguem o fluxo validado na
-Porcelana V2 Rosa, mas cada secção adopta a paleta e a tipografia do modelo em
-que é montada.
+As duas variantes partilham o mesmo renderizador e diferem nas definições do
+modelo. Trocar entre elas conserva nomes, data, locais e fotografias, porque
+`modelo_aplicar` escreve apenas as chaves de desenho. Cada variante continua a
+ser um modelo independente no catálogo e pode originar versões guardadas pelo
+utilizador.
 
-As fotografias das fontes e as músicas que vinham incorporadas foram
-eliminadas. Capa, história, interlúdio, acesso, galeria e música recebem sempre
-os recursos semânticos definidos na Kulemba. A aplicação não lhes aplica a
-estrutura nem a linguagem do Kulemba Contemporâneo:
+O pacote reconstrói a identidade estudada com recursos próprios: grande
+moldura botânica, cartão central, informações de cerimónia, galeria em
+profundidade, recepção, contagem decrescente, calendário, local, código de
+vestuário, cronograma, presentes e confirmação modal. O botão de mensagens
+não existe. Música, ícones, rolagem automática, calendário, galeria, QR,
+presentes e confirmação usam o runtime comum.
 
-- **Jasmim Branco** (`jasmine-white`);
-- **Real V2 Verde** (`royal-v2-green`);
-- **Jardim Primaveril Azul** (`spring-garden-blue`);
-- **Dupla Felicidade Verde** (`double-happiness-green`);
-- **Porcelana Castanha** (`porcelain-brown`);
-- **Real Azul** (`royal-blue`);
-- **Porcelana V2 Verde** (`porcelain-v2-green`);
-- **Flor Seca Laranja** (`hoa-kho-orange`);
-- **Mahal Dourado** (`mahal-gold`);
-- **Porcelana V2 Rosa** (`porcelain-v2-pink`);
-- **Lótus Rosa** (`lien-hoa-pink`).
+### Regra para as próximas famílias
 
-O conteúdo visível está em português. Os nomes, data, fotografias, música
-opcional, locais e presentes entram por chaves semânticas, sem alterar a
-composição de cada modelo. O runtime oculta apenas os fragmentos de dados da
-fonte assinalados no HTML e monta no mesmo lugar os dados do casamento ou do
-exemplo definido pelo administrador. Assim, nomes, locais, mensagens e contas
-bancárias dos documentos estudados nunca chegam ao convidado.
+Cada nova identidade deve ter documento, estilos e recursos próprios. Partilhar
+o contrato semântico não autoriza uniformizar a apresentação: ordem,
+tipografia, cores, ornamentos, abertura, animações e ritmo visual pertencem ao
+pacote. As secções transferidas entre modelos são renderizadas pela linguagem
+do modelo de destino, sem introduzir a aparência do modelo de origem.
 
-Envelope e capa continuam a pertencer a cada modelo. O contrato comum substitui
-somente o conteúdo variável: nomes, data, convidado e restantes campos
-autorizados. A abertura, o som, os ornamentos e o movimento permanecem os do
-respectivo documento.
+## Modelos experimentais retirados
 
-Sem secções opcionais, o fluxo de conteúdo é: grande dia, galeria, copo
-d'água com mapa, programa, passe de entrada e confirmação. História,
-interlúdio, manual, mensagens, presentes e blocos livres entram apenas quando
-configurados. O lightbox da galeria é comum e acessível, mas os cartões, pontos
-e animação continuam nativos. Presentes usam um único modal e nunca reutilizam
-o diálogo bancário da fonte.
-
-Cada manifesto contém a ficha que o editor consome: secções, painéis, campos,
-recursos, efeitos e compatibilidade. O inspector mostra apenas capacidades que
-o pacote declara e, para os noivos, cruza-as com as liberdades concedidas pelo
-administrador. As fontes foram reduzidas às famílias realmente usadas pelos
-onze desenhos; a validação estrutural impede referências partidas, música
-incorporada e o regresso das fotografias de demonstração.
-
-Os pacotes `chungdoi-exact@1.0.0` e `porcelain-v2@1.0.0`, publicados nas fases
-anteriores, permanecem registados como legados. Não aparecem como novos modelos
-no catálogo, mas continuam a abrir versões guardadas que tenham fixado essas
-identidades. A migração 73 aponta apenas os modelos exactos de sistema para
-1.1.0; não altera versões guardadas nem modelos criados pelos utilizadores.
-
-### Regra das famílias
-
-Partilhar a estrutura semântica não autoriza uniformizar a apresentação:
-tipografia, cores, fundos, molduras, ornamentos, abertura, animações e ritmo
-visual pertencem ao pacote. Uma secção transferida entre modelos recebe a
-linguagem do modelo de destino; o admin decide que capacidades expõe aos
-noivos.
+Os onze modelos digitais experimentais deixaram de fazer parte da aplicação.
+O catálogo oferece Kulemba Contemporâneo para modelos novos e mantém
+`porcelain-v2@1.0.0` apenas para abrir versões históricas dessa família. A
+migração 74 reaponta referências aos modelos retirados para Kulemba
+Contemporâneo antes de apagar os respectivos registos do catálogo.
 
 ## Evolução prevista
 
