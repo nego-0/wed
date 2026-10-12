@@ -47,16 +47,30 @@ modelos da casa.
 
 ## Onze modelos de composição própria
 
-A pasta `assets/convite/modelos/chungdoi-exact/1.0.0` instala onze pacotes
-independentes. Cada pacote conserva as fontes, cores, fundos, molduras,
-ornamentos, ícones, envelope, efeitos e animações da
-composição visual que foi comparada e aprovada. A estrutura de conteúdo, porém,
-é comum: a **Porcelana V2 Rosa é o documento canónico dos onze modelos**. As
-fotografias de demonstração
-e as músicas que vinham incorporadas foram eliminadas: capa, história,
-interlúdio, acesso e música são sempre recursos semânticos escolhidos na
-Kulemba. A aplicação não lhes aplica a estrutura nem a linguagem do Kulemba
-Contemporâneo:
+As pastas `assets/convite/modelos/chungdoi-exact/1.0.0` e `1.1.0` instalam os
+onze pacotes. A versão 1.0.0 permanece intacta para abrir peças históricas. A
+versão activa 1.1.0 corrige a integração sem reescrever os documentos: cada
+pacote conserva as fontes, cores, fundos, molduras, ornamentos, ícones,
+envelope, capa, efeitos, animações e galeria da composição visual comparada.
+
+A referência aprovada da Porcelana V2 Rosa está congelada em
+`tests/fixtures/convites/porcelana-v2-rosa`. O manifesto fixa o SHA-256 do HTML
+e `tests/chk_referencia_porcelana_v2.js` falha se um byte mudar. A referência é
+um critério de aceitação; não é usada para clonar o HTML da Porcelana sobre os
+outros dez modelos.
+
+Os documentos 1.1.0 recebem âncoras `data-exact-fragment` durante a preparação
+controlada pelo script `tests/marcar_ancoras_exactas.js`. No browser, o runtime
+usa apenas essas âncoras estruturais. Não procura títulos visíveis, não infere
+secções pelo idioma, não ordena todos os nós e não apaga contentores nativos.
+Cerimónia, galeria, copo d'água, programa e acesso seguem o fluxo validado na
+Porcelana V2 Rosa, mas cada secção adopta a paleta e a tipografia do modelo em
+que é montada.
+
+As fotografias das fontes e as músicas que vinham incorporadas foram
+eliminadas. Capa, história, interlúdio, acesso, galeria e música recebem sempre
+os recursos semânticos definidos na Kulemba. A aplicação não lhes aplica a
+estrutura nem a linguagem do Kulemba Contemporâneo:
 
 - **Jasmim Branco** (`jasmine-white`);
 - **Real V2 Verde** (`royal-v2-green`);
@@ -70,31 +84,24 @@ Contemporâneo:
 - **Porcelana V2 Rosa** (`porcelain-v2-pink`);
 - **Lótus Rosa** (`lien-hoa-pink`).
 
-O conteúdo visível está em português. Os nomes, a data, as fotografias, a
-música opcional, os locais e os dados de presentes entram por chaves
-semânticas, sem alterar a composição de cada modelo. Cerimónia, copo d'água,
-programa, galeria, calendário, mapa, rolagem automática, presentes, acesso e
-confirmação usam o contrato comum. Se o administrador não configurar presentes
-ou mensagens, a respectiva área não é desenhada; nenhum dado bancário de
-exemplo chega ao convidado. A confirmação abre no modal Kulemba e o formulário
-de envio de mensagens foi retirado dos onze modelos, conforme a decisão
-funcional do produto.
+O conteúdo visível está em português. Os nomes, data, fotografias, música
+opcional, locais e presentes entram por chaves semânticas, sem alterar a
+composição de cada modelo. O runtime oculta apenas os fragmentos de dados da
+fonte assinalados no HTML e monta no mesmo lugar os dados do casamento ou do
+exemplo definido pelo administrador. Assim, nomes, locais, mensagens e contas
+bancárias dos documentos estudados nunca chegam ao convidado.
 
-O envelope também usa o conteúdo conciso da Porcelana V2 Rosa: nomes dos
-noivos, data, indicação «Convite reservado a» e acção «Abrir». O nome do
-convite e o texto longo que ainda existiam em cinco composições foram
-retirados do envelope; a decoração e a animação continuam a pertencer ao modelo.
+Envelope e capa continuam a pertencer a cada modelo. O contrato comum substitui
+somente o conteúdo variável: nomes, data, convidado e restantes campos
+autorizados. A abertura, o som, os ornamentos e o movimento permanecem os do
+respectivo documento.
 
-A capa, apresentada depois de abrir o envelope, conserva a composição visual
-do modelo e passa a usar os quatro elementos da Porcelana V2 Rosa: «Reserve a
-data», data do casamento, nomes dos noivos e o verso de Luís de Camões.
-
-Sem secções opcionais activas, o fluxo canónico é: galeria, grande dia,
-copo d'água, cronograma, passe de entrada e confirmação. Todas são elementos
-`section`, ficam sob o mesmo contentor e recebem exactamente os mesmos dados e
-textos. História, interlúdio, manual, mensagens, presentes e blocos livres
-entram apenas quando configurados. O modelo decide como cada bloco se apresenta,
-mas não substitui nem repete o conteúdo com dados do documento importado.
+Sem secções opcionais, o fluxo de conteúdo é: grande dia, galeria, copo
+d'água com mapa, programa, passe de entrada e confirmação. História,
+interlúdio, manual, mensagens, presentes e blocos livres entram apenas quando
+configurados. O lightbox da galeria é comum e acessível, mas os cartões, pontos
+e animação continuam nativos. Presentes usam um único modal e nunca reutilizam
+o diálogo bancário da fonte.
 
 Cada manifesto contém a ficha que o editor consome: secções, painéis, campos,
 recursos, efeitos e compatibilidade. O inspector mostra apenas capacidades que
@@ -103,10 +110,11 @@ administrador. As fontes foram reduzidas às famílias realmente usadas pelos
 onze desenhos; a validação estrutural impede referências partidas, música
 incorporada e o regresso das fotografias de demonstração.
 
-`porcelain-v2@1.0.0`, publicado na fase anterior, permanece registado como
-pacote legado. Não aparece como novo modelo no catálogo, mas continua a abrir
-versões guardadas que tenham fixado essa identidade. Assim, a correcção visual
-dos modelos novos não reinterpreta nem apaga peças históricas.
+Os pacotes `chungdoi-exact@1.0.0` e `porcelain-v2@1.0.0`, publicados nas fases
+anteriores, permanecem registados como legados. Não aparecem como novos modelos
+no catálogo, mas continuam a abrir versões guardadas que tenham fixado essas
+identidades. A migração 73 aponta apenas os modelos exactos de sistema para
+1.1.0; não altera versões guardadas nem modelos criados pelos utilizadores.
 
 ### Regra das famílias
 
