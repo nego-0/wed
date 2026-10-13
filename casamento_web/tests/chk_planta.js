@@ -276,6 +276,9 @@ const entrar = async (ctx, user, pass) => {
   // à parede do lado fica de pé, uma ferradura abre-se para o palco.
   await p.evaluate((id) => selecionar(id), vazia.id);
   await p.waitForTimeout(500);
+  // Mover e Rodar vivem agora dentro da dobra «Editar mesa», fechada de início
+  // (ver assets/mesas.js): abre-se para lhes tocar, como faz quem usa a página.
+  await p.evaluate(() => { const d = document.getElementById('editar-mesa-dobra'); if (d) d.open = true; });
   await p.click('.rodar .btn-gir[title*="direita"]');
   await p.waitForTimeout(700);
   ok(await p.evaluate((id) => (MESAS.find(m => m.id === +id) || {}).rotacao, vazia.id) === 15,
@@ -311,6 +314,7 @@ const entrar = async (ctx, user, pass) => {
      'e a rotação sobrevive a recarregar — ficou guardada');
   await p.evaluate((id) => selecionar(id), vazia.id);
   await p.waitForTimeout(500);
+  await p.evaluate(() => { const d = document.getElementById('editar-mesa-dobra'); if (d) d.open = true; });
   await p.click('.rodar .btn-gir.larga');
   await p.waitForTimeout(700);
   ok(await p.evaluate((id) => (MESAS.find(m => m.id === +id) || {}).rotacao, vazia.id) === 0,
