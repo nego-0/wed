@@ -38,7 +38,7 @@ function correcoesEsperadas(): array {
         ['A Demonstração pública usa o mesmo renderizador e o modelo de origem dos convites reais',
          'demonstracao-convite.php', "require __DIR__ . '/convite-digital.php';"],
         ['A confirmação de exemplo percorre o formulário real sem guardar respostas',
-         'convite.php', 'A confirmação de exemplo demonstra o fluxo inteiro sem criar actividade'],
+         'convite.php', 'Demonstração concluída.</span> A resposta não foi guardada'],
         ['As novas capturas de Ajuda respeitam os dados de exemplo definidos pelo administrador',
          'tests/gerar-capturas-ajuda.js', "const dadosExemplo=await api(p,'modelo_exemplo');"],
         ['Trocar de modelo conserva todo o conteúdo semântico e as fotografias do casal',
