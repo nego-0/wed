@@ -1,0 +1,93 @@
+# Pacotes de convite
+
+Um modelo contém escolhas visuais, limites e capacidades. Um pacote contém o
+código instalado que transforma essas escolhas no convite entregue ao
+convidado. Esta separação permite acrescentar desenhos com estruturas
+diferentes sem transformar o editor num único ficheiro cheio de condições.
+
+## Identidade persistida
+
+Cada modelo digital guarda três valores:
+
+- `renderer_key`: identificador estável do pacote;
+- `renderer_version`: versão semântica do código;
+- `renderer_schema`: versão do contrato entre o pacote e a aplicação.
+
+Os valores são transportados pelas exportações de modelos. Ficheiros antigos,
+no formato `casamento-web/modelos/1`, continuam a entrar e recebem o pacote de
+origem. O formato `casamento-web/modelos/2` conserva a identidade e recusa um
+pacote que não esteja instalado.
+
+## Registo fechado
+
+`convite-pacotes.php` é a lista de pacotes autorizados pela aplicação. A base
+de dados nunca escolhe caminhos nem fornece PHP ou JavaScript executável. A
+resolução aceita apenas uma identidade registada e devolve caminhos calculados
+pelo código, contidos na aplicação.
+
+Cada versão instalada possui um `manifesto.json` com nome público em português,
+âmbito, versão, esquema e adaptador. Uma versão publicada não deve ser alterada:
+uma mudança incompatível cria outra versão e a anterior permanece disponível
+para abrir peças históricas.
+
+As versões guardadas pelos noivos fixam a mesma identidade. Comparar uma
+versão com a peça em vigor considera o conteúdo e o renderizador; dois
+instantâneos com os mesmos textos e fotografias, mas com estruturas diferentes,
+deixam de ser confundidos. Exportar e importar um casamento transporta essa
+identidade. Um ficheiro antigo, que ainda não a contém, recebe o pacote de
+origem; uma identidade explícita só entra se o pacote estiver instalado.
+
+## Primeiro pacote
+
+`kulemba-contemporaneo@1.0.0` envolve o convite digital que já existia. O seu
+adaptador aponta para `assets/convite-base.html`, pelo que esta migração atribui
+uma identidade ao desenho actual sem alterar HTML, fotografias, animações ou
+comportamento. O pacote passa a ser a origem dos modelos digitais antigos e dos
+modelos da casa.
+
+## Família Porcelana V2
+
+`porcelain-v2@1.0.0` é o primeiro pacote com documento próprio. Não é uma
+paleta aplicada ao convite anterior: `porcelain-v2.html` define a sequência e
+a composição da família e `porcelain-v2.css` define a sua linguagem visual.
+O manifesto publica duas variantes comerciais em português:
+
+- **Porcelana Verde**, com folhagem verde, papel marfim e ouro antigo;
+- **Porcelana Rosa**, com peónias rosa, apontamentos lilás e ouro suave.
+
+As duas variantes partilham o mesmo renderizador e diferem nas definições do
+modelo. Trocar entre elas conserva nomes, data, locais e fotografias, porque
+`modelo_aplicar` escreve apenas as chaves de desenho. Cada variante continua a
+ser um modelo independente no catálogo e pode originar versões guardadas pelo
+utilizador.
+
+O pacote reconstrói a identidade estudada com recursos próprios: grande
+moldura botânica, cartão central, informações de cerimónia, galeria em
+profundidade, recepção, contagem decrescente, calendário, local, código de
+vestuário, cronograma, presentes e confirmação modal. O botão de mensagens
+não existe. Música, ícones, rolagem automática, calendário, galeria, QR,
+presentes e confirmação usam o runtime comum.
+
+### Regra para as próximas famílias
+
+Cada nova identidade deve ter documento, estilos e recursos próprios. Partilhar
+o contrato semântico não autoriza uniformizar a apresentação: ordem,
+tipografia, cores, ornamentos, abertura, animações e ritmo visual pertencem ao
+pacote. As secções transferidas entre modelos são renderizadas pela linguagem
+do modelo de destino, sem introduzir a aparência do modelo de origem.
+
+## Modelos experimentais retirados
+
+Os onze modelos digitais experimentais deixaram de fazer parte da aplicação.
+O catálogo oferece Kulemba Contemporâneo para modelos novos e mantém
+`porcelain-v2@1.0.0` apenas para abrir versões históricas dessa família. A
+migração 74 reaponta referências aos modelos retirados para Kulemba
+Contemporâneo antes de apagar os respectivos registos do catálogo.
+
+## Evolução prevista
+
+Os novos pacotes reutilizam os dados semânticos e as capacidades do modelo. O
+admin decide as capacidades concedidas aos noivos; o pacote decide como as
+representar. Recursos transversais, como ícones, música, confirmação modal,
+presentes e deslocamento automático, entram no contrato comum e podem ser
+activados por cada modelo sem duplicar o editor.

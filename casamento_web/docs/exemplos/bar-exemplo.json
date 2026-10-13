@@ -1,0 +1,1020 @@
+{
+  "formato": "casamento-web/1",
+  "esquema": 38,
+  "ambito": "casamento",
+  "gerado_em": "2026-09-07T15:25:07+00:00",
+  "gerado_por": "exemplo",
+  "_leia_me": [
+    "Dados de exemplo para experimentar o módulo do bar de ponta a ponta.",
+    "Traz 10 convites (25 pessoas), 7 mesas, 16 bebidas em 4 gavetas, 5 motivos",
+    "de recusa e 10 regras — uma de cada forma que o motor de limites conhece.",
+    "Importa-se pela Gestão > Dados, escolhendo «substituir». O bar chega ABERTO.",
+    "Não traz pedidos nem telemóveis: são o estado de uma noite a decorrer, e o",
+    "'reservado' de cada bebida é a soma dos pedidos por entregar — importá-los",
+    "punha as duas contas do stock a divergir logo à entrada."
+  ],
+  "resumo": {
+    "casamentos": 1,
+    "convites": 10,
+    "pessoas": 25,
+    "mesas": 7,
+    "versoes": 0,
+    "orcamento_despesas": 0,
+    "bar_itens": 16
+  },
+  "casamentos": [
+    {
+      "ficha": {
+        "nome": "Beatriz & Henrique",
+        "noiva": "Beatriz",
+        "noivo": "Henrique",
+        "data_evento": "2026-12-06",
+        "estado": "ativo",
+        "endereco_publico": ""
+      },
+      "definicoes": {
+        "casal.noiva": "Beatriz",
+        "casal.noivo": "Henrique",
+        "evento.data": "2026-12-06",
+        "evento.hora": "16:00",
+        "evento.local": "Quinta da Amendoeira",
+        "evento.morada": "Estrada da Amendoeira, Sintra",
+        "bar.aberto": "1",
+        "bar.procura_min": "4",
+        "bar.ip_modo": "registo",
+        "bar.trocar_nome": "1",
+        "bar.garcon_direto": "1",
+        "bar.pedir_pin": "0",
+        "bar.mensagem_fechado": "O bar abre depois do brinde, por volta das 19h."
+      },
+      "mesas": [
+        {
+          "nome": "Noivos",
+          "capacidade": 2,
+          "forma": "retangular",
+          "cor": null,
+          "especial": "noivos",
+          "pos_x": 420,
+          "pos_y": 60,
+          "tamanho": 100,
+          "rotacao": 0
+        },
+        {
+          "nome": "Padrinhos",
+          "capacidade": 8,
+          "forma": "redonda",
+          "cor": null,
+          "especial": null,
+          "pos_x": 180,
+          "pos_y": 200,
+          "tamanho": 100,
+          "rotacao": 0
+        },
+        {
+          "nome": "Oliveira",
+          "capacidade": 8,
+          "forma": "redonda",
+          "cor": null,
+          "especial": null,
+          "pos_x": 420,
+          "pos_y": 200,
+          "tamanho": 100,
+          "rotacao": 0
+        },
+        {
+          "nome": "Amendoeira",
+          "capacidade": 8,
+          "forma": "redonda",
+          "cor": null,
+          "especial": null,
+          "pos_x": 660,
+          "pos_y": 200,
+          "tamanho": 100,
+          "rotacao": 0
+        },
+        {
+          "nome": "Figueira",
+          "capacidade": 8,
+          "forma": "redonda",
+          "cor": null,
+          "especial": null,
+          "pos_x": 180,
+          "pos_y": 380,
+          "tamanho": 100,
+          "rotacao": 0
+        },
+        {
+          "nome": "Laranjeira",
+          "capacidade": 8,
+          "forma": "redonda",
+          "cor": null,
+          "especial": null,
+          "pos_x": 420,
+          "pos_y": 380,
+          "tamanho": 100,
+          "rotacao": 0
+        },
+        {
+          "nome": "Os Jovens",
+          "capacidade": 10,
+          "forma": "redonda",
+          "cor": null,
+          "especial": null,
+          "pos_x": 660,
+          "pos_y": 380,
+          "tamanho": 100,
+          "rotacao": 0
+        }
+      ],
+      "convites": [
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Bento",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noivo",
+          "lugares": 3,
+          "mesa": "Padrinhos",
+          "telefone": "912000001",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 3,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 3,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Álvaro Bento",
+              "genero": "M",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": "padrinho",
+              "mesa": null
+            },
+            {
+              "nome": "Rita Bento",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": "madrinha",
+              "mesa": null
+            },
+            {
+              "nome": "Tomás Bento",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Craveiro",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noiva",
+          "lugares": 2,
+          "mesa": "Oliveira",
+          "telefone": "912000002",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 2,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 2,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Helena Craveiro",
+              "genero": "F",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Nuno Craveiro",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Estêvão",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noivo",
+          "lugares": 3,
+          "mesa": "Oliveira",
+          "telefone": "912000003",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 3,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 3,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Inês Estêvão",
+              "genero": "F",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Mário Estêvão",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Clara Estêvão",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Guerreiro",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noiva",
+          "lugares": 2,
+          "mesa": "Amendoeira",
+          "telefone": "912000004",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 2,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 2,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Sofia Guerreiro",
+              "genero": "F",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Duarte Guerreiro",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Lourenço",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noivo",
+          "lugares": 2,
+          "mesa": "Amendoeira",
+          "telefone": "912000005",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 2,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 2,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Beatriz Lourenço",
+              "genero": "F",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Vasco Lourenço",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Macedo",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noiva",
+          "lugares": 3,
+          "mesa": "Figueira",
+          "telefone": "912000006",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 3,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 3,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Carolina Macedo",
+              "genero": "F",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Rodrigo Macedo",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Teresa Macedo",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Pinheiro",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noivo",
+          "lugares": 2,
+          "mesa": "Figueira",
+          "telefone": "912000007",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 2,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 2,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Miguel Pinheiro",
+              "genero": "M",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Joana Pinheiro",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Quaresma",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noiva",
+          "lugares": 2,
+          "mesa": "Laranjeira",
+          "telefone": "912000008",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 2,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 2,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Leonor Quaresma",
+              "genero": "F",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Afonso Quaresma",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Família Salgueiro",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noivo",
+          "lugares": 2,
+          "mesa": "Laranjeira",
+          "telefone": "912000009",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 2,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 2,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Gonçalo Salgueiro",
+              "genero": "M",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Matilde Salgueiro",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        },
+        {
+          "codigo": "",
+          "nome_exibicao": "Os Amigos da Faculdade",
+          "sufixo": null,
+          "tipo": "ambos",
+          "lado": "noiva",
+          "lugares": 4,
+          "mesa": "Os Jovens",
+          "telefone": "912000010",
+          "msg_pessoal": null,
+          "observacoes": null,
+          "rsvp_estado": "confirmado",
+          "rsvp_confirmados": 4,
+          "rsvp_mensagem": null,
+          "checkin_estado": "presente",
+          "checkin_presentes": 4,
+          "enviado": 1,
+          "impresso": 1,
+          "mostrar_num_mesa": 1,
+          "eliminado_em": null,
+          "bar_pin": null,
+          "membros": [
+            {
+              "nome": "Francisco Tavares",
+              "genero": "M",
+              "principal": 1,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Marta Vilela",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "André Zuzarte",
+              "genero": "M",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            },
+            {
+              "nome": "Luísa Antunes",
+              "genero": "F",
+              "principal": 0,
+              "rsvp": "confirmado",
+              "presente": 1,
+              "brinde": 0,
+              "papel": null,
+              "mesa": null
+            }
+          ]
+        }
+      ],
+      "versoes": [],
+      "acessos": [],
+      "orcamento": {
+        "categorias": [],
+        "despesas": []
+      },
+      "bar": {
+        "categorias": [
+          {
+            "nome": "Espumantes e vinhos",
+            "ordem": 10,
+            "cor": "#b24c7a"
+          },
+          {
+            "nome": "Cervejas",
+            "ordem": 20,
+            "cor": "#c98a2e"
+          },
+          {
+            "nome": "Destilados",
+            "ordem": 30,
+            "cor": "#8a5a2b"
+          },
+          {
+            "nome": "Sem álcool",
+            "ordem": 40,
+            "cor": "#2f9e8f"
+          }
+        ],
+        "itens": [
+          {
+            "nome": "Espumante da casa",
+            "descricao": "Servido em flute, bem fresco.",
+            "alcoolico": 1,
+            "volume_ml": 150,
+            "max_por_pedido": 2,
+            "estado": "ativo",
+            "ordem": 10,
+            "stock": 120,
+            "categoria": "Espumantes e vinhos"
+          },
+          {
+            "nome": "Vinho branco",
+            "descricao": "Alvarinho.",
+            "alcoolico": 1,
+            "volume_ml": 150,
+            "max_por_pedido": 2,
+            "estado": "ativo",
+            "ordem": 20,
+            "stock": 90,
+            "categoria": "Espumantes e vinhos"
+          },
+          {
+            "nome": "Vinho tinto",
+            "descricao": "Douro.",
+            "alcoolico": 1,
+            "volume_ml": 150,
+            "max_por_pedido": 2,
+            "estado": "ativo",
+            "ordem": 30,
+            "stock": 90,
+            "categoria": "Espumantes e vinhos"
+          },
+          {
+            "nome": "Sangria branca",
+            "descricao": "Com pêssego e hortelã.",
+            "alcoolico": 1,
+            "volume_ml": 300,
+            "max_por_pedido": 2,
+            "estado": "ativo",
+            "ordem": 40,
+            "stock": 40,
+            "categoria": "Espumantes e vinhos"
+          },
+          {
+            "nome": "Cerveja",
+            "descricao": "Sempre gelada.",
+            "alcoolico": 1,
+            "volume_ml": 330,
+            "max_por_pedido": 3,
+            "estado": "ativo",
+            "ordem": 10,
+            "stock": 200,
+            "categoria": "Cervejas"
+          },
+          {
+            "nome": "Cerveja sem álcool",
+            "descricao": null,
+            "alcoolico": 0,
+            "volume_ml": 330,
+            "max_por_pedido": 3,
+            "estado": "ativo",
+            "ordem": 20,
+            "stock": 48,
+            "categoria": "Cervejas"
+          },
+          {
+            "nome": "Whisky",
+            "descricao": "Doze anos.",
+            "alcoolico": 1,
+            "volume_ml": 50,
+            "max_por_pedido": 1,
+            "estado": "ativo",
+            "ordem": 10,
+            "stock": 24,
+            "categoria": "Destilados"
+          },
+          {
+            "nome": "Gin tónico",
+            "descricao": "Demora um pouco mais: é feito na hora.",
+            "alcoolico": 1,
+            "volume_ml": 200,
+            "max_por_pedido": 1,
+            "estado": "ativo",
+            "ordem": 20,
+            "stock": 36,
+            "categoria": "Destilados"
+          },
+          {
+            "nome": "Caipirinha",
+            "descricao": "A da casa, com cachaça.",
+            "alcoolico": 1,
+            "volume_ml": 200,
+            "max_por_pedido": 2,
+            "estado": "ativo",
+            "ordem": 30,
+            "stock": 30,
+            "categoria": "Destilados"
+          },
+          {
+            "nome": "Vodka com sumo",
+            "descricao": null,
+            "alcoolico": 1,
+            "volume_ml": 200,
+            "max_por_pedido": 1,
+            "estado": "ativo",
+            "ordem": 40,
+            "stock": 20,
+            "categoria": "Destilados"
+          },
+          {
+            "nome": "Água",
+            "descricao": "Com ou sem gás.",
+            "alcoolico": 0,
+            "volume_ml": 500,
+            "max_por_pedido": 4,
+            "estado": "ativo",
+            "ordem": 10,
+            "stock": 300,
+            "categoria": "Sem álcool"
+          },
+          {
+            "nome": "Sumo de laranja",
+            "descricao": "Natural.",
+            "alcoolico": 0,
+            "volume_ml": 250,
+            "max_por_pedido": 3,
+            "estado": "ativo",
+            "ordem": 20,
+            "stock": 60,
+            "categoria": "Sem álcool"
+          },
+          {
+            "nome": "Refrigerante",
+            "descricao": null,
+            "alcoolico": 0,
+            "volume_ml": 330,
+            "max_por_pedido": 3,
+            "estado": "ativo",
+            "ordem": 30,
+            "stock": 80,
+            "categoria": "Sem álcool"
+          },
+          {
+            "nome": "Café",
+            "descricao": "Depois do bolo.",
+            "alcoolico": 0,
+            "volume_ml": 60,
+            "max_por_pedido": 2,
+            "estado": "ativo",
+            "ordem": 40,
+            "stock": 150,
+            "categoria": "Sem álcool"
+          },
+          {
+            "nome": "Licor Beirão (guardado)",
+            "descricao": "Só depois da meia-noite, se a copa quiser.",
+            "alcoolico": 1,
+            "volume_ml": 50,
+            "max_por_pedido": 1,
+            "estado": "oculto",
+            "ordem": 50,
+            "stock": 12,
+            "categoria": "Destilados"
+          },
+          {
+            "nome": "Moscatel",
+            "descricao": "Restam poucas — é a que a previsão vai avisar primeiro.",
+            "alcoolico": 1,
+            "volume_ml": 100,
+            "max_por_pedido": 1,
+            "estado": "ativo",
+            "ordem": 50,
+            "stock": 6,
+            "categoria": "Espumantes e vinhos"
+          }
+        ],
+        "motivos": [
+          {
+            "texto": "Já bebeu o suficiente por agora",
+            "ordem": 10,
+            "ativo": 1
+          },
+          {
+            "texto": "Acabou essa bebida",
+            "ordem": 20,
+            "ativo": 1
+          },
+          {
+            "texto": "Vai demorar — escolha outra",
+            "ordem": 30,
+            "ativo": 1
+          },
+          {
+            "texto": "Fale com a copa, por favor",
+            "ordem": 40,
+            "ativo": 1
+          },
+          {
+            "texto": "É menor de idade",
+            "ordem": 50,
+            "ativo": 1
+          }
+        ],
+        "limites": [
+          {
+            "escopo": "item",
+            "alvo_item": "Whisky",
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 1,
+            "janela_min": 60,
+            "mensagem": null,
+            "nota": "um whisky de hora a hora",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": null,
+            "alvo_convite": null
+          },
+          {
+            "escopo": "item",
+            "alvo_item": "Caipirinha",
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 2,
+            "janela_min": 0,
+            "mensagem": null,
+            "nota": "duas por pessoa, ao todo",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": null,
+            "alvo_convite": null
+          },
+          {
+            "escopo": "tudo",
+            "alvo_item": null,
+            "sujeito": "convidado",
+            "unidade": "pedidos",
+            "quantidade": 1,
+            "janela_min": 15,
+            "mensagem": null,
+            "nota": "um pedido de quinze em quinze minutos",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": null,
+            "alvo_convite": null
+          },
+          {
+            "escopo": "tudo",
+            "alvo_item": null,
+            "sujeito": "casa",
+            "unidade": "bebidas",
+            "quantidade": 40,
+            "janela_min": 10,
+            "mensagem": null,
+            "nota": "o que a copa dá conta de fazer",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": null,
+            "alvo_convite": null
+          },
+          {
+            "escopo": "categoria",
+            "alvo_categoria": "Destilados",
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 0,
+            "janela_min": 0,
+            "mensagem": "Os destilados abrem depois do jantar.",
+            "nota": "sai de vigor às 21h",
+            "vigora_em": null,
+            "expira_em": "2026-09-07 21:00:00",
+            "ativo": 1,
+            "alvo_item": null,
+            "alvo_convidado": null,
+            "alvo_convite": null
+          },
+          {
+            "escopo": "tudo",
+            "alvo_item": null,
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 1,
+            "janela_min": 60,
+            "mensagem": null,
+            "nota": "a partir das 2h, uma bebida por hora",
+            "vigora_em": "2026-09-08 02:00:00",
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": null,
+            "alvo_convite": null
+          },
+          {
+            "escopo": "categoria",
+            "alvo_categoria": "Destilados",
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 0,
+            "janela_min": 0,
+            "mensagem": null,
+            "nota": "conduz a carrinha",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_item": null,
+            "alvo_convidado": "Rodrigo Macedo",
+            "alvo_convite": null
+          },
+          {
+            "escopo": "tudo",
+            "alvo_item": null,
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 3,
+            "janela_min": 0,
+            "mensagem": null,
+            "nota": "pediu-nos para a travarmos",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": "Clara Estêvão",
+            "alvo_convite": null
+          },
+          {
+            "escopo": "item",
+            "alvo_item": "Whisky",
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 1,
+            "janela_min": 0,
+            "mensagem": null,
+            "nota": "o padrinho fica-se por um",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_categoria": null,
+            "alvo_convidado": "Álvaro Bento",
+            "alvo_convite": null
+          },
+          {
+            "escopo": "categoria",
+            "alvo_categoria": "Destilados",
+            "sujeito": "convidado",
+            "unidade": "bebidas",
+            "quantidade": 2,
+            "janela_min": 0,
+            "mensagem": null,
+            "nota": "a mesa dos jovens: dois shots cada",
+            "vigora_em": null,
+            "expira_em": null,
+            "ativo": 1,
+            "alvo_item": null,
+            "alvo_convidado": null,
+            "alvo_convite": "Os Amigos da Faculdade"
+          }
+        ]
+      }
+    }
+  ]
+}

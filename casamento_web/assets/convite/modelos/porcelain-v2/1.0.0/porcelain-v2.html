@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="assets/icone-sistema-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icone-sistema-180.png" sizes="180x180">
+<link rel="stylesheet" href="assets/convite-runtime.css">
+<meta name="theme-color" content="#faf5e8">
+<title>{{TITLE}}</title>
+<style id="fontes">
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:400;font-display:swap;src:url(assets/convite/fonts/cormorant-garamond-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:400;font-display:swap;src:url(assets/convite/fonts/cormorant-garamond-latin-400-italic.woff2) format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url(assets/convite/fonts/cormorant-garamond-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Jost';font-style:normal;font-weight:300;font-display:swap;src:url(assets/convite/fonts/jost-latin-300-normal.woff2) format('woff2')}
+@font-face{font-family:'Jost';font-style:normal;font-weight:500;font-display:swap;src:url(assets/convite/fonts/jost-latin-500-normal.woff2) format('woff2')}
+</style>
+<style>{{TEMA_VARS}}</style>
+</head>
+<body data-estilo="{{ESTILO_DIGITAL}}">
+<div id="cover" class="pv2-cover" data-kulemba="capa" data-abre="{{ABERTURA}}" data-selo="{{SELO}}" role="button" tabindex="0" aria-label="{{COVER_HINT}}">
+  <div class="pv2-cover-card">
+    <span class="pv2-overline">Reserve a data</span>
+    <strong>{{NOIVA}}</strong><i>&amp;</i><strong>{{NOIVO}}</strong>
+    <span class="pv2-date">{{DIA}} · {{MES_ABREV}} · {{ANO}}</span>
+    <span class="pv2-open">{{COVER_HINT}}</span>
+  </div>
+</div>
+<div id="petals" aria-hidden="true"></div>
+<button id="audioBtn" data-kulemba="audio" aria-label="Ligar ou desligar música">
+  <svg class="audio-icon a-parada" viewBox="0 0 24 24">{{ICONE_MUSICA_PARADA}}</svg>
+  <svg class="audio-icon a-tocando" viewBox="0 0 24 24">{{ICONE_MUSICA_TOCANDO}}</svg>
+</button>
+<audio id="bgAudio" loop preload="none" src="{{MUSICA}}"></audio>
+
+<main>
+<!--BLOCO:hero-->
+<section id="hero" class="pv2-page pv2-hero">
+  <div class="pv2-title-card rv">
+    <span class="pv2-overline">Reserve a data</span>
+    <h1>{{NOIVA}} <i>&amp;</i> {{NOIVO}}</h1>
+    <p>{{DIA}} · {{MES_ABREV}} · {{ANO}}</p>
+  </div>
+</section>
+<!--/BLOCO:hero-->
+
+<!--BLOCO:convite-->
+<section id="convite" class="pv2-page pv2-paper pv2-ceremony">
+  <div class="pv2-panel rv">
+    <h2>Informações da cerimónia</h2>
+    <div class="pv2-couple-line"><span>{{NOIVA}}</span><i>&amp;</i><span>{{NOIVO}}</span></div>
+    <p class="pv2-lead">{{LEAD}}</p>
+    <div class="guest-card">
+      <small>{{GUEST_LABEL}}</small>
+      <strong>{{GUEST_NAME}}</strong>{{MESA_BLOCK}}{{MSG_PESSOAL}}
+    </div>
+    <div class="pv2-date-grid">
+      <div><small>Cerimónia</small><b>{{DIA}}</b><span>{{MES_NOME}} · {{ANO}}</span></div>
+      <div><small>Recepção</small><b>{{HORA_TXT}}</b><span>{{VENUE_LOCAL}}</span></div>
+    </div>
+  </div>
+</section>
+<!--/BLOCO:convite-->
+
+<!--BLOCO:historia-->
+<!--SEC:historia-->
+<section id="historia" class="pv2-page pv2-paper pv2-gallery">
+  <h2 class="rv">Galeria de fotografias</h2>
+  <div class="pv2-photo-stack rv d1">
+    <a href="{{IMG_HERO}}" data-kulemba-galeria-item><img src="{{IMG_HERO}}" alt="{{CASAL_ALT}}" loading="lazy"></a>
+    <a href="{{IMG_HISTORIA}}" data-kulemba-galeria-item><img src="{{IMG_HISTORIA}}" alt="Um momento do casal" loading="lazy"></a>
+    <a href="{{IMG_INTERLUDIO}}" data-kulemba-galeria-item><img src="{{IMG_INTERLUDIO}}" alt="Uma memória do casal" loading="lazy"></a>
+  </div>
+  <div class="pv2-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="pv2-story rv d2">
+    <span>{{HIST_EYEBROW}}</span><h3>{{HIST_TITULO}}</h3>
+    <blockquote>{{HIST_QUOTE}}</blockquote><cite>{{HIST_AUTOR}}</cite>
+    <div class="thread">{{HIST_CAPITULOS}}</div>
+  </div>
+</section>
+<!--/SEC:historia-->
+<!--/BLOCO:historia-->
+
+<!--BLOCO:interludio-->
+<!--SEC:interludio-->
+<section id="interludio" class="pv2-page pv2-interlude">
+  <img src="{{IMG_INTERLUDIO}}" alt="{{CASAL_ALT}}" loading="lazy">
+  <div class="rv"><blockquote>{{INTER_QUOTE}}</blockquote><cite>{{INTER_AUTOR}}</cite><p>{{INTER_FECHO}}</p></div>
+</section>
+<!--/SEC:interludio-->
+<!--/BLOCO:interludio-->
+
+<!--BLOCO:grande-dia-->
+<section id="grande-dia" class="pv2-page pv2-paper pv2-reception">
+  <div class="pv2-panel rv">
+    <h2>Informações da recepção</h2>
+    <p class="pv2-kicker">A recepção terá lugar em</p>
+    <h3>{{VENUE_LOCAL}}</h3>
+    <div class="pv2-date-grid pv2-date-grid--reception">
+      <div><small>Data</small><b>{{DIA}}</b><span>{{MES_NOME}} · {{ANO}}</span></div>
+      <div><small>Hora</small><b>{{HORA_TXT}}</b><span>{{DIA_SEMANA}}</span></div>
+    </div>
+    <div id="countdown" aria-label="Contagem decrescente">
+      <div><b id="cd-d">—</b><small>Dias</small></div><div><b id="cd-h">—</b><small>Horas</small></div>
+      <div><b id="cd-m">—</b><small>Min</small></div><div><b id="cd-s">—</b><small>Seg</small></div>
+    </div>
+    <a id="calBtn" class="pv2-button" data-kulemba="calendario" href="#">Adicionar ao calendário</a>
+  </div>
+  <div class="cerimonias{{CER_SEM_RAMOS}}" style="--cer-tam:{{CER_TAM}}">{{CERIMONIAS}}</div>
+  <!--SEC:cronograma-->
+  <div class="pv2-schedule rv">
+    <h2>{{CRONO_TITULO}}</h2><p>{{CRONO_SUB}}</p>
+    <div class="timeline">{{CRONO_ITENS}}</div>
+  </div>
+  <!--/SEC:cronograma-->
+</section>
+<!--/BLOCO:grande-dia-->
+
+<!--BLOCO:acesso-->
+<section id="acesso" class="pv2-page pv2-paper pv2-venue">
+  <div class="pv2-venue-photo"><img src="{{IMG_ACESSO}}" alt="{{CASAL_ALT}}" loading="lazy"></div>
+  <h2>{{VENUE_TITULO}}</h2><p>{{VENUE_LOCAL}}</p><span>{{VENUE_CIDADE}}</span>
+  <a class="pv2-direction" data-kulemba="mapa" href="{{MAPS_URL}}" target="_blank" rel="noopener">Obter direcções</a>
+  <div class="pv2-pass rv">
+    <span>{{ACESSO_EYEBROW}}</span><h3>{{ACESSO_TITULO}}</h3>
+    <canvas id="qrCanvas" width="260" height="260" data-kulemba-qr="{{QR_VALUE}}" data-qr-cor="{{QR_FG}}" data-qr-fundo="{{QR_BG}}" aria-label="Código QR de acesso ao evento"></canvas>
+    <strong>{{GUEST_NAME}}</strong>{{MESA_BLOCK}}<p>{{ACESSO_INSTRUCAO}}</p>
+  </div>
+</section>
+<!--/BLOCO:acesso-->
+
+<!--BLOCO:final-->
+<section id="final" class="pv2-page pv2-paper pv2-final">
+  <!--SEC:manual-->
+  <div id="manual" class="pv2-dress rv">
+    <h2>{{MANUAL_TITULO}}</h2><p>{{MANUAL_INTRO}}</p>
+    <div class="pv2-swatches" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="mgrid">{{MANUAL_ITENS}}</div>
+  </div>
+  <!--/SEC:manual-->
+  <div class="pv2-gift rv">
+    <span class="pv2-gift-icon" aria-hidden="true">🎁</span>
+    <h2>Lista de presentes</h2><p>A vossa presença é o presente que mais desejamos.</p>
+  </div>
+  <div id="rsvp" class="pv2-rsvp rv">
+    <h2>{{RSVP_TITULO}}</h2><p>{{RSVP_SUB}}</p><small>{{RSVP_DEADLINE}}</small>
+    <a class="pv2-button" data-kulemba="confirmacao" href="{{CONFIRM_URL}}" aria-haspopup="dialog">Confirmar presença</a>
+  </div>
+  <footer><b>{{NOIVA}} &amp; {{NOIVO}}</b><span>{{FOOTER_DATA}}</span><p>{{FOOTER_QUOTE}}</p></footer>
+</section>
+<!--/BLOCO:final-->
+</main>
+
+<script id="kulemba-runtime-config" type="application/json">{{RUNTIME_CONFIG}}</script>
+<script src="assets/qrious.min.js"></script>
+<script src="assets/convite-runtime.js"></script>
+<a id="dlBtn" href="{{DOWNLOAD_URL}}" aria-label="Descarregar convite"><span>↓</span> Descarregar</a>
+</body>
+</html>
